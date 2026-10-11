@@ -1,8 +1,8 @@
 {
  "sesion": "e20b7fbf-e073-521b-8245-5328b440074a",
  "inicio": "2026-10-10T07:11:19.502Z",
- "fin": "2026-10-10T10:43:22.187Z",
- "llamadas": 1064,
+ "fin": "2026-10-10T10:55:44.542Z",
+ "llamadas": 1096,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 2,
@@ -40,29 +40,29 @@
    }
   },
   "bash": {
-   "llamadas": 609,
-   "chars_in": 417399,
-   "chars_out": 2528806,
+   "llamadas": 618,
+   "chars_in": 419379,
+   "chars_out": 2531390,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 609
+    "Bash": 618
    }
   },
   "otro": {
-   "llamadas": 81,
-   "chars_in": 88915,
-   "chars_out": 291066,
+   "llamadas": 99,
+   "chars_in": 95512,
+   "chars_out": 367153,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 39,
-    "ReadNotifications": 26,
-    "ToolSearch": 10,
+    "SubagentHandback": 43,
+    "ReadNotifications": 32,
+    "ToolSearch": 11,
     "SendMessage": 5,
-    "Monitor": 1
+    "Monitor": 8
    }
   },
   "agente:general-purpose": {
@@ -100,28 +100,28 @@
    }
   },
   "mcp:github": {
-   "llamadas": 22,
-   "chars_in": 8498,
-   "chars_out": 54983,
+   "llamadas": 26,
+   "chars_in": 10520,
+   "chars_out": 63022,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__create_pull_request": 5,
-    "mcp__github__pull_request_read": 7,
-    "mcp__github__update_pull_request": 5,
-    "mcp__github__merge_pull_request": 5
+    "mcp__github__create_pull_request": 6,
+    "mcp__github__pull_request_read": 8,
+    "mcp__github__update_pull_request": 6,
+    "mcp__github__merge_pull_request": 6
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 6,
-   "chars_in": 416,
-   "chars_out": 2323,
+   "llamadas": 7,
+   "chars_in": 489,
+   "chars_out": 2562,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 5,
+    "mcp__claude-code-remote__subscribe_pr_activity": 6,
     "mcp__claude-code-remote__read_documentation": 1
    }
   },
