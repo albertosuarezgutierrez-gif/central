@@ -256,6 +256,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
       {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
       <PresupuestosCompanias
         oportunidadId={op.id}
+        clienteId={op.clienteId}
         ramo={op.ramo}
         riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
       />
