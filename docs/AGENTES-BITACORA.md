@@ -18,6 +18,11 @@
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
 - **2026-10-11 · facturas-correo** · hizo: Vía B sana (última copia 10/10); 1 candidato Gmail (circular colegio, descartado); Giraldillo AFV-11808 72,60€ ya estaba en Drive (01/08), no re-archivado; barrido 4.0: 3 facturas `sin_revisar` sin cargo casable (SiQueBrilla 1.128,48 · Supabase 25 USD · Anthropic 180€), sin escribir nada por ser recientes; dudas: SiQueBrilla oct no casa con el TRANSF 208,32 del 28/09; fallos: —; PRs/commits: —
+- **2026-10-11 · mercado-booking** · hizo: plan max=24 (544 candidatas, 520 fuera por tope); 24/24 ventanas
+  de mercado medidas (rondas 1, 5-31 dic, aforos 2/4/5/12) = 240 comps `booking_mcp`; 4/4 escaparate
+  propio (18-22/10) reconocidos como propios por el endpoint. Medianas/noche aprox.: Navidad 2 pax
+  ~150-170€, 12 pax 28-30/12 ~800-900€ (picos ~1.870€/noche en 30/12). Sin fallos ni ventanas sin respuesta;
+  latido ok:true. 2 comps sin score (sin reviews).
 
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
