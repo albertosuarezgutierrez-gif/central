@@ -1,55 +1,57 @@
 {
  "sesion": "c1a46e07-0969-5465-94ea-40e6ec70125e",
  "inicio": "2026-10-11T02:01:32.662Z",
- "fin": "2026-10-11T02:03:11.786Z",
- "llamadas": 28,
+ "fin": "2026-10-11T06:28:35.528Z",
+ "llamadas": 66,
  "categorias": {
   "otro": {
-   "llamadas": 3,
-   "chars_in": 796,
-   "chars_out": 960,
+   "llamadas": 7,
+   "chars_in": 5778,
+   "chars_out": 1365,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 1,
-    "PushNotification": 1
+    "ToolSearch": 3,
+    "PushNotification": 1,
+    "SubagentHandback": 2
    }
   },
   "bash": {
-   "llamadas": 10,
-   "chars_in": 4931,
-   "chars_out": 13777,
+   "llamadas": 35,
+   "chars_in": 11618,
+   "chars_out": 122555,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10
+    "Bash": 35
    }
   },
   "sql": {
-   "llamadas": 11,
-   "chars_in": 5424,
-   "chars_out": 22211,
+   "llamadas": 16,
+   "chars_in": 7263,
+   "chars_out": 37451,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 11
+    "mcp__Supabase__execute_sql": 16
    }
   },
   "mcp:github": {
-   "llamadas": 3,
-   "chars_in": 380,
-   "chars_out": 10204,
+   "llamadas": 5,
+   "chars_in": 1287,
+   "chars_out": 10297,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 24562,
    "tools": {
-    "mcp__github__list_pull_requests": 1,
+    "mcp__github__list_pull_requests": 2,
     "mcp__github__actions_list": 1,
-    "mcp__github__pull_request_read": 1
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__create_pull_request": 1
    }
   },
   "agente:general": {
@@ -59,6 +61,28 @@
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1170,
+   "chars_out": 1366,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 1802,
+   "chars_out": 2012,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 114175,
    "tools": {
     "Agent": 1
    }
