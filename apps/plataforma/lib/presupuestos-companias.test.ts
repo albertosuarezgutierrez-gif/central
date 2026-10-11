@@ -120,7 +120,7 @@ test('la ficha ya no cotiza: solo enlaza a la oportunidad; la oportunidad monta 
   assert.ok(!boton.includes('tarificador/encolar') && !boton.includes('tarificador/oportunidad'), 'el botón de la ficha no encola nada')
   assert.match(boton, /#presupuestos/)
   const pantalla = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/RiesgoPantalla.tsx'), 'utf8')
-  assert.match(pantalla, /<PresupuestosCompanias\s+oportunidadId=\{op\.id\}\s+ramo=\{op\.ramo\}\s+riesgoLibre=\{/, 'y le pasa el capital y la dirección del riesgo para sembrar el formulario')
+  assert.match(pantalla, /<PresupuestosCompanias\s+oportunidadId=\{op\.id\}\s+clienteId=\{op\.clienteId\}\s+ramo=\{op\.ramo\}\s+riesgoLibre=\{/, 'y le pasa el capital y la dirección del riesgo para sembrar el formulario')
   const seccion = readFileSync(join(APP, 'app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx'), 'utf8')
   assert.match(seccion, /prepararPedido\(f, extras, elegidas, disponibles\)/, 'se valida antes de encolar')
   assert.match(seccion, /LOTE_ANTERIORES/, 'las peticiones anteriores no se montan de golpe')

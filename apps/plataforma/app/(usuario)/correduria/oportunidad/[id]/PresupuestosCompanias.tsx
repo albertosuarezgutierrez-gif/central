@@ -11,6 +11,7 @@ import { Bot, Download } from 'lucide-react'
 import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import TrazaTrabajo from '../../tarificador/TrazaTrabajo'
+import PedirEmision from './PedirEmision'
 import {
   SONDEO_MAX_MS, SONDEO_MS, estimarInfraseguro, fechaCorta, sigueEnCurso, vistaPrecio, vistaTrabajo,
 } from '@/lib/tarificador-asegura-reglas'
@@ -30,8 +31,9 @@ const LOTE_ANTERIORES = 10
 
 type Lectura = { estado: 'cargando' } | { estado: 'ok'; datos: LecturaPresupuestos } | { estado: 'error'; texto: string }
 
-export default function PresupuestosCompanias({ oportunidadId, ramo, riesgoLibre = null }: {
+export default function PresupuestosCompanias({ oportunidadId, clienteId, ramo, riesgoLibre = null }: {
   oportunidadId: string
+  clienteId: string
   ramo: string
   /** Capital y dirección del bloque «Datos del riesgo» de la oportunidad: siembran los campos vacíos del formulario. */
   riesgoLibre?: RiesgoLibreParaBots | null
@@ -312,7 +314,7 @@ export default function PresupuestosCompanias({ oportunidadId, ramo, riesgoLibre
 
       {ultimos.length > 0 && (
         <div aria-live="polite" style={COLUMNA}>
-          {ultimos.map((t) => <TarjetaTrabajo key={t.id} t={t} nombre={nombres[t.compania] ?? t.compania} />)}
+          {ultimos.map((t) => <TarjetaTrabajo key={t.id} t={t} nombre={nombres[t.compania] ?? t.compania} clienteId={clienteId} />)}
         </div>
       )}
       {trabajos !== null && claveTrabajosConOferta(trabajos) !== '' && (
@@ -344,7 +346,7 @@ export default function PresupuestosCompanias({ oportunidadId, ramo, riesgoLibre
   )
 }
 
-function TarjetaTrabajo({ t, nombre, anterior = false }: { t: TrabajoCompania; nombre: string; anterior?: boolean }) {
+function TarjetaTrabajo({ t, nombre, clienteId, anterior = false }: { t: TrabajoCompania; nombre: string; clienteId?: string; anterior?: boolean }) {
   const v = vistaTrabajo(t, nombre)
   const [trazaAbierta, setTrazaAbierta] = useState(false)
   return (
@@ -385,6 +387,13 @@ function TarjetaTrabajo({ t, nombre, anterior = false }: { t: TrabajoCompania; n
           </div>
         )
       })}
+      {/* Emisión asistida (11/10/2026): solo en la última petición de cada compañía, con oferta y con cliente conocido. */}
+      {!anterior && clienteId && t.estado === 'ok' && t.ofertas.length > 0 && (
+        <PedirEmision
+          trabajoId={t.id} compania={t.compania} nombreCompania={nombre} ramo={t.ramo} clienteId={clienteId}
+          primaOferta={vistaPrecio(t.ofertas[0], t.ofertas[0].fechaTerminoPortal).total}
+        />
+      )}
     </div>
   )
 }
