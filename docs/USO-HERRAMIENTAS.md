@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 293 | 39.837 | 32.482.099 | 0 | 0 |
-| `otro` | 289 | 9.653 | 24.922.704 | 14.761.421 | 0 |
-| `lectura-directa` | 257 | 6.854 | 22.686.768 | 0 | 0 |
-| `mcp:github` | 262 | 5.935 | 4.842.211 | 52.320.554 | 90 |
-| `escritura` | 195 | 3.994 | 57.675.534 | 0 | 0 |
-| `sql` | 183 | 3.822 | 1.917.573 | 2.351.230 | 15 |
+| `bash` | 293 | 39.882 | 32.512.226 | 0 | 0 |
+| `otro` | 289 | 9.668 | 24.967.284 | 15.008.917 | 0 |
+| `lectura-directa` | 257 | 6.867 | 22.705.075 | 0 | 0 |
+| `mcp:github` | 263 | 5.946 | 4.848.436 | 52.320.554 | 90 |
+| `escritura` | 196 | 3.997 | 58.409.234 | 0 | 0 |
+| `sql` | 183 | 3.823 | 1.917.741 | 2.351.230 | 15 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 39 | 1.126 | 1.115.270 | 0 | 70 |
 | `mcp:Booking-com` | 30 | 846 | 3.554.364 | 0 | 0 |
 | `mcp:Vercel` | 64 | 629 | 911.259 | 204.477 | 16 |
-| `agente:general-purpose` | 83 | 423 | 270.634 | 8.264.477 | 0 |
+| `agente:general-purpose` | 83 | 424 | 271.294 | 8.300.845 | 0 |
 | `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
-| `mcp:Supabase` | 113 | 323 | 46.938 | 3.415 | 4 |
-| `mcp:claude-code-remote` | 25 | 196 | 17.554 | 16.312 | 0 |
+| `mcp:Supabase` | 113 | 324 | 47.035 | 3.415 | 4 |
+| `mcp:claude-code-remote` | 26 | 198 | 17.673 | 16.312 | 0 |
 | `agente:agente-architect` | 53 | 184 | 131.540 | 5.507.599 | 0 |
 | `mcp:Google-Drive` | 18 | 123 | 109.510 | 0 | 2 |
-| `agente:agente-mecanico` | 39 | 97 | 65.728 | 5.670.628 | 0 |
+| `agente:agente-mecanico` | 40 | 98 | 66.085 | 5.917.719 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:Explore` | 33 | 75 | 37.211 | 2.124.852 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
@@ -204,9 +204,9 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Supabase_asegura` | 12 | 13 | 2.967 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:lector-correo` | 3 | 10 | 4.219 | 0 | 0 |
+| `agente:verificador-esceptico` | 6 | 8 | 2.340 | 12.827 | 0 |
 | `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
 | `mcp:openrouter` | 3 | 7 | 19.723 | 0 | 0 |
-| `agente:verificador-esceptico` | 5 | 7 | 1.867 | 3.046 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `agente:Plan` | 2 | 2 | 1.832 | 12.062 | 0 |
