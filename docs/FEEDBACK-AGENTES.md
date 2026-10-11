@@ -16,14 +16,14 @@
   local de Socorro que son deducibles — esperaba que los cruzara con perfil-fiscal
 -->
 
-- [ ] **2026-09-28 · pricing (ciclo semanal SIVRA)** · `oscilantes` (noches con ≥3 cambios de
+## Procesadas
+
+- [x] **2026-09-28 · pricing (ciclo semanal SIVRA)** · `oscilantes` (noches con ≥3 cambios de
   dirección en la misma pasada) lleva varias pasadas subiendo: 10 → 47 (27/09) → 56 (28/09), en
   vez de converger. Resto de la salud del precio sano (sin raíl roto, sin bajo mínimo). Propuesta
   para revisar: el motor puede estar en un ciclo límite en algunas fechas — mirar si el paso de
   redondeo o el ancla `ref24` amplifica pequeñas oscilaciones de mercado. Detectado en dos pasadas
-  seguidas de `/auditoria-diaria` (bloque 2bis).
-
-## Procesadas
+  seguidas de `/auditoria-diaria` (bloque 2bis). → sin acción de prompt (2026-10-11): es del motor de precios, no del prompt; la auditoría del 11/10 mide 18 oscilantes (baja desde 56). Sigue vigilado por `/auditoria-diaria`.
 
 - [x] **2026-08-14 · agente contable (vigilantes del extracto de tarjeta)** · la «🔎 Revisión de la
   tarjeta» avisó de «cargos que no reconozco» con MERCADONA/BRASERÍA/CHIRINGUITO, marcó «cobro doble»
