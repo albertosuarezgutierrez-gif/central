@@ -1,4 +1,6 @@
-// EMISIÓN asistida por el robot, con autorización de Alberto por Telegram (10/10/2026). PURO salvo `node:crypto`.
+// EMISIÓN asistida por el robot, con autorización de Alberto por Telegram (10/10/2026). PURO (sin `node:crypto`: lo importa el cliente).
+// Hash/HMAC/token viven en `emision-servidor.ts` (subpath `@central/module-tarificacion/servidor`): el index llega al
+// bundle del navegador de plataforma y `node:crypto` rompía el build de webpack (PR #4483).
 // Diseño: docs/TARIFICADOR-EMISION-DISENO.md. Decisiones de Alberto (10/10/2026): sin tope diario; solo él solicita y
 // autoriza; la solicitud vale 24 h; tolerancia de precio 0 €; precondición = presupuesto aceptado y firmado con IPID
 // registrado; la anulación de la póliza sustituida es MANUAL (solo se avisa); solo Allianz Comunidades.
@@ -8,7 +10,6 @@
 //    atado a (trabajo, hash de datos, botón). Cualquier otro botón, otro trabajo, otro hash o un segundo uso → bloqueado.
 // 🚨 Nunca, ni con permiso: RGPD, SMS/OTP, contraseñas, Pago fraccionado (`NUNCA_CON_PERMISO`).
 
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { EmisionBloqueadaError } from './guard-emision.ts'
 import { claveCompania } from './registro.ts'
 
@@ -68,18 +69,7 @@ export function primaCoincide(pantallaCents: number | null, aceptadaCents: numbe
 
 // ─── Hash de datos ───────────────────────────────────────────────────────────
 
-function canonico(v: unknown): string {
-  if (v === undefined) return 'null'
-  if (v === null || typeof v !== 'object') return JSON.stringify(v)
-  if (Array.isArray(v)) return `[${v.map(canonico).join(',')}]`
-  const o = v as Record<string, unknown>
-  return `{${Object.keys(o)
-    .filter((k) => o[k] !== undefined)
-    .sort()
-    .map((k) => `${JSON.stringify(k)}:${canonico(o[k])}`)
-    .join(',')}}`
-}
-
+// (`hashDatosEmision` está en `emision-servidor.ts`.)
 export type DatosEmision = {
   compania: string
   ramo: string
@@ -92,34 +82,8 @@ export type DatosEmision = {
   boton: BotonEmision
 }
 
-const normDoc = (d: string | null): string | null => (d ? d.toUpperCase().replace(/[\s.\-/]/g, '') || null : null)
-
-/** SHA-256 canónico de lo que se autoriza. Cambia una coma del riesgo, un céntimo o el botón → otro hash. */
-export function hashDatosEmision(d: DatosEmision): string {
-  const base = {
-    v: 1,
-    compania: claveCompania(d.compania),
-    ramo: String(d.ramo).trim().toLowerCase(),
-    presupuestoId: String(d.presupuestoId).toLowerCase(),
-    opcionId: String(d.opcionId).toLowerCase(),
-    primaCents: d.primaCents,
-    tomador: normDoc(d.tomadorDocumento),
-    riesgo: d.riesgo ?? null,
-    boton: { id: d.boton.id, texto: d.boton.texto },
-  }
-  return createHash('sha256').update(canonico(base), 'utf8').digest('hex')
-}
-
-// ─── Token de un solo uso ────────────────────────────────────────────────────
-
-/** 32 bytes aleatorios (base64url). En claro solo viaja una vez, al worker; en BD solo su SHA-256. */
-export function generarTokenEmision(): string {
-  return randomBytes(32).toString('base64url')
-}
-
-export function hashTokenEmision(token: string): string {
-  return createHash('sha256').update(String(token), 'utf8').digest('hex')
-}
+// ─── Token de un solo uso
+// (`generarTokenEmision`/`hashTokenEmision` están en `emision-servidor.ts`.) ────────────────────────────────────────────────────
 
 export const pareceTokenEmision = (t: unknown): t is string => typeof t === 'string' && /^[A-Za-z0-9_-]{43}$/.test(t)
 
@@ -193,7 +157,7 @@ export const ENV_FIRMA_AUTORIZACION = 'TARIFICADOR_EMISION_WEBHOOK_SECRET'
 /** Antigüedad máxima de una firma (s). La pulsación se reenvía en `after()`, al instante. */
 export const VENTANA_FIRMA_S = 90
 /** Reloj adelantado tolerado (s). */
-const FUTURO_FIRMA_S = 30
+export const FUTURO_FIRMA_S = 30
 /** Caracteres del hash de datos que viajan en el `callback_data` (≤ 64 bytes): `emi_ok:<uuid>:<16 hex>` = 60. */
 export const LARGO_HASH_CORTO = 16
 export const hashCortoEmision = (hashDatos: string): string => String(hashDatos).slice(0, LARGO_HASH_CORTO).toLowerCase()
@@ -215,34 +179,12 @@ export function camposFirmaAutorizacion(o: unknown): CamposFirmaAutorizacion | n
   return { trabajoId, decision, hashCorto, autorizadoPor, ts }
 }
 
-const canonicoFirma = (c: CamposFirmaAutorizacion): string =>
+/** Texto canónico que se firma (lo usa `emision-servidor.ts`). */
+export const canonicoFirma = (c: CamposFirmaAutorizacion): string =>
   ['emi-aut-v1', c.trabajoId.toLowerCase(), c.decision, c.hashCorto, c.autorizadoPor, String(c.ts)].join('\n')
 
-/** HMAC-SHA256 (hex) de la pulsación. Lanza sin secreto válido o con campos mal formados (fail-closed). */
-export function firmarAutorizacionEmision(secreto: string, c: CamposFirmaAutorizacion): string {
-  if (!secretoFirmaValido(secreto)) throw new Error(`${ENV_FIRMA_AUTORIZACION} ausente o corto (mín. 32)`)
-  const v = camposFirmaAutorizacion(c)
-  if (!v) throw new Error('campos de la autorización mal formados')
-  return createHmac('sha256', secreto).update(canonicoFirma(v)).digest('hex')
-}
-
+// (`firmarAutorizacionEmision`/`verificarFirmaAutorizacionEmision` están en `emision-servidor.ts`.)
 export type VerificacionFirma = { ok: true; campos: CamposFirmaAutorizacion } | { ok: false; motivo: 'sin_secreto' | 'campos' | 'sin_firma' | 'firma_distinta' | 'caducada' | 'futura' }
-
-/** Verifica la firma del cuerpo (`trabajoId, decision, hashCorto, autorizadoPor, ts, firma`) en tiempo constante. */
-export function verificarFirmaAutorizacionEmision(secreto: string | null | undefined, cuerpo: unknown, ahoraMs: number): VerificacionFirma {
-  if (!secretoFirmaValido(secreto)) return { ok: false, motivo: 'sin_secreto' }
-  const c = camposFirmaAutorizacion(cuerpo)
-  if (!c) return { ok: false, motivo: 'campos' }
-  const firma = (cuerpo as { firma?: unknown }).firma
-  if (typeof firma !== 'string' || !/^[0-9a-f]{64}$/.test(firma)) return { ok: false, motivo: 'sin_firma' }
-  const esperada = Buffer.from(createHmac('sha256', secreto).update(canonicoFirma(c)).digest('hex'), 'hex')
-  const recibida = Buffer.from(firma, 'hex')
-  if (recibida.length !== esperada.length || !timingSafeEqual(recibida, esperada)) return { ok: false, motivo: 'firma_distinta' }
-  const ahoraS = Math.floor(ahoraMs / 1000)
-  if (c.ts > ahoraS + FUTURO_FIRMA_S) return { ok: false, motivo: 'futura' }
-  if (ahoraS - c.ts > VENTANA_FIRMA_S) return { ok: false, motivo: 'caducada' }
-  return { ok: true, campos: c }
-}
 
 // ─── Canje (espejo puro del UPDATE atómico de asegura) ───────────────────────
 
@@ -256,19 +198,7 @@ export type FilaAutorizacion = {
 
 export type DecisionCanje = { ok: true } | { ok: false; motivo: 'sin_token' | 'otro_trabajo' | 'token_distinto' | 'ya_usado' | 'caducado' | 'hash_distinto' }
 
-/**
- * Lo que decide el canje: el SQL (`UPDATE … WHERE token_hash = $ AND trabajo_id = $ AND consumido_at IS NULL AND
- * expira_at > now() AND hash_datos = $`) y esta función tienen que decir lo mismo (lo vigila el test).
- */
-export function decidirCanje(f: FilaAutorizacion | null, p: { trabajoId: string; token: string | null | undefined; hashDatos: string; ahora: Date }): DecisionCanje {
-  if (!f || !pareceTokenEmision(p.token) || !f.tokenHash) return { ok: false, motivo: 'sin_token' }
-  if (f.trabajoId !== p.trabajoId) return { ok: false, motivo: 'otro_trabajo' }
-  if (f.tokenHash !== hashTokenEmision(p.token)) return { ok: false, motivo: 'token_distinto' }
-  if (f.consumidoAt) return { ok: false, motivo: 'ya_usado' }
-  if (f.expiraAt.getTime() <= p.ahora.getTime()) return { ok: false, motivo: 'caducado' }
-  if (f.hashDatos !== p.hashDatos) return { ok: false, motivo: 'hash_distinto' }
-  return { ok: true }
-}
+// (`decidirCanje` está en `emision-servidor.ts`: compara el SHA-256 del token.)
 
 // ─── Permiso de UN botón, UNA vez (lo usa el guard del worker) ───────────────
 

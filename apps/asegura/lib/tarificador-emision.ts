@@ -20,12 +20,8 @@ import {
   botonEmisionDe,
   claveCompania,
   decidirAutorizacion,
-  decidirCanje,
   emisionActiva,
-  generarTokenEmision,
   hashCortoEmision,
-  hashDatosEmision,
-  hashTokenEmision,
   precondicionesEmision,
   primaCoincide,
   VALIDEZ_SOLICITUD_MS,
@@ -33,6 +29,12 @@ import {
   type BotonEmision,
   type PresupuestoParaEmitir,
 } from '@central/module-tarificacion'
+import {
+  decidirCanje,
+  generarTokenEmision,
+  hashDatosEmision,
+  hashTokenEmision,
+} from '@central/module-tarificacion/servidor'
 import { prisma } from './tenant'
 import { hayEmision } from './esquema-bd'
 import { autorizacionSinResolver, autorizadorEmision, estadoTrasResultado, iniciales, mensajeEmisionTardia, mensajePrimaDistinta, type ResultadoEmisionWorker } from './tarificador-emision-reglas'

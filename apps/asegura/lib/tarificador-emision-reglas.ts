@@ -2,7 +2,8 @@
 // precondiciones) vive en `@central/module-tarificacion` (emision.ts); aquí, lo propio del puerto de asegura: leer los
 // cuerpos del worker, a qué estado pasa el trabajo y los textos (sin datos personales salvo iniciales).
 
-import { pareceTokenEmision, verificarFirmaAutorizacionEmision, ENV_FIRMA_AUTORIZACION, type CamposFirmaAutorizacion, type TipoError } from '@central/module-tarificacion'
+import { pareceTokenEmision, ENV_FIRMA_AUTORIZACION, type CamposFirmaAutorizacion, type TipoError } from '@central/module-tarificacion'
+import { verificarFirmaAutorizacionEmision } from '@central/module-tarificacion/servidor'
 import { MAX_BYTES_ADJUNTO } from './tarificador-reglas.ts'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

@@ -9,15 +9,9 @@ import {
   crearPermisoEmision,
   decidirAccionBandeja,
   decidirAutorizacion,
-  decidirCanje,
   emisionActiva,
   eurosACentimos,
-  firmarAutorizacionEmision,
-  generarTokenEmision,
   hashCortoEmision,
-  verificarFirmaAutorizacionEmision,
-  hashDatosEmision,
-  hashTokenEmision,
   pareceEmision,
   precondicionesEmision,
   primaCoincide,
@@ -27,6 +21,14 @@ import {
   type DatosEmision,
   type PresupuestoParaEmitir,
 } from './index.ts'
+import {
+  decidirCanje,
+  firmarAutorizacionEmision,
+  generarTokenEmision,
+  verificarFirmaAutorizacionEmision,
+  hashDatosEmision,
+  hashTokenEmision,
+} from './servidor.ts'
 
 const T1 = '11111111-1111-4111-8111-111111111111'
 const T2 = '22222222-2222-4222-8222-222222222222'
