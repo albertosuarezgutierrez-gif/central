@@ -8,6 +8,7 @@
 - 🟡 Codeoscopic: 12 cotizaciones (25-30/09, 3,00 €); octubre 0 €. Alberto (04/10) respondió «Codeoscopic no tope aviso Telegram»: interpretado como gasto autorizado bajo el tope Avant2 + aviso Telegram (PR #4192), pendiente de que lo confirme.
 - 🟢 TRASPASO-CORREDURIA.md:165 aclarado (hasta el 02/09/2026).
 - 🟢 13 apps = matriz; 13/13 tsc; 1318 tests de guardia; seguros 1454/45/716; PRs abiertos sin conflicto; automerge vivo.
+- 🟢 Typecheck 13/13 apps (asegura con sus dos schemas) y `pnpm test` verdes: guardián 1509 pass, module-seguros 1891, -pii 48, -portal 809.
 - Sin ejecutar: contraste de sesiones (`list_sessions`) y prueba de que los cepos fallan al romperlos.
 
 ## 11/10/2026 — pasada profunda (rutina programada)
@@ -19,4 +20,5 @@
 - 🟢 CIMA: pulls cada ~2 h con evento; `queueDepth` 204 = filas del ledger `seguros.cima_ficheros` (no cola atascada; mismo criterio que el 04/10), 0 errores, `correduria_ingesta` sin ficheros atascados. Los 4 crons de heartbeat restantes y los latidos semanales dentro de umbral.
 - 🟡 PRs: #4319 (bitácora trading, no-draft, 6 d) está `blocked` y su diff real es 169 ficheros/20 commits (rama desfasada): el automerge no lo coge. Cerrar y rehacer limpio desde `main`. Borradores >5 d: #4258, #4257, #3995 (bitácoras/fiscal), #3755 (auditoría ligera 27/09). Automerge vivo (runs hasta 02:00 UTC de hoy).
 - 🟢 13 apps = matriz de `tests.yml`. `docs/SKILLS.md` no listaba `google-contactos` → añadida.
+- 🟢 Typecheck 13/13 apps (asegura con sus dos schemas) y `pnpm test` verdes: guardián 1509 pass, module-seguros 1891, -pii 48, -portal 809.
 - Sin ejecutar: contraste de sesiones (`list_sessions` no disponible en esta sesión) y rotura deliberada de cepos.
