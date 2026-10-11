@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { parseCallback } from '@central/core-telegram'
-import { verificarFirmaAutorizacionEmision } from '@central/module-tarificacion'
+import { verificarFirmaAutorizacionEmision } from '@central/module-tarificacion/servidor'
 import {
   botonesEmision,
   componerAvisoEmision,

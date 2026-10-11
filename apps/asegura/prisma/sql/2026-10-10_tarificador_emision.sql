@@ -115,14 +115,16 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-DROP TRIGGER IF EXISTS tarificacion_emision_autorizacion_inmutable ON seguros.tarificacion_emision_autorizacion;
-CREATE TRIGGER tarificacion_emision_autorizacion_inmutable
+-- OJO: DROP TRIGGER + CREATE TRIGGER en la misma sentencia colgó el cliente MCP; CREATE OR REPLACE TRIGGER (PG14+) basta.
+CREATE OR REPLACE TRIGGER tarificacion_emision_autorizacion_inmutable
   BEFORE UPDATE ON seguros.tarificacion_emision_autorizacion
   FOR EACH ROW EXECUTE FUNCTION seguros.tarificacion_emision_autorizacion_inmutable();
 
 ALTER TABLE seguros.tarificacion_emision_autorizacion ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON seguros.tarificacion_emision_autorizacion FROM PUBLIC, anon, authenticated, crm_seguros;
 GRANT SELECT, INSERT, UPDATE ON seguros.tarificacion_emision_autorizacion TO prisma_seguros;
+-- Sin DELETE para el rol de la app (los privilegios por defecto del esquema se lo daban): rastro de auditoría.
+REVOKE DELETE ON seguros.tarificacion_emision_autorizacion FROM prisma_seguros;
 
 COMMIT;
 

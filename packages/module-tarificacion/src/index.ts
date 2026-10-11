@@ -292,6 +292,7 @@ export {
 } from './formulario-auto.ts'
 // EMISIÓN asistida con autorización de Alberto por Telegram (10/10/2026). El guard de emisión NO cambia: esto solo
 // construye el permiso de UN botón UNA vez tras canjear un token (docs/TARIFICADOR-EMISION-DISENO.md).
+// Hash/token/HMAC (node:crypto) NO van aquí: `@central/module-tarificacion/servidor` (el index llega al navegador).
 export {
   ENV_EMISION_ACTIVA,
   emisionActiva,
@@ -302,13 +303,9 @@ export {
   VALIDEZ_TOKEN_MS,
   eurosACentimos,
   primaCoincide,
-  hashDatosEmision,
-  generarTokenEmision,
-  hashTokenEmision,
   pareceTokenEmision,
   precondicionesEmision,
   decidirAutorizacion,
-  decidirCanje,
   crearPermisoEmision,
   usarPermisoEmision,
   NUNCA_CON_PERMISO,
@@ -320,8 +317,6 @@ export {
   hashCortoEmision,
   secretoFirmaValido,
   camposFirmaAutorizacion,
-  firmarAutorizacionEmision,
-  verificarFirmaAutorizacionEmision,
   type CamposFirmaAutorizacion,
   type VerificacionFirma,
   type BotonEmision,

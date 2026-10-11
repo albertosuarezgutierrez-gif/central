@@ -14,7 +14,8 @@
 //    pantalla previa SÍ va (la pide el diseño para que Alberto vea lo que autoriza) y solo al chat de Alberto.
 // 🚨 Nunca se manda nada a terceros: todo va al chat de Alberto.
 
-import { ENV_FIRMA_AUTORIZACION, LARGO_HASH_CORTO, firmarAutorizacionEmision, hashCortoEmision } from '@central/module-tarificacion'
+import { ENV_FIRMA_AUTORIZACION, LARGO_HASH_CORTO, hashCortoEmision } from '@central/module-tarificacion'
+import { firmarAutorizacionEmision } from '@central/module-tarificacion/servidor'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export const PREFIJO_EMISION = 'emi'

@@ -3,7 +3,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { firmarAutorizacionEmision, generarTokenEmision, hashCortoEmision } from '@central/module-tarificacion'
+import { hashCortoEmision } from '@central/module-tarificacion'
+import { firmarAutorizacionEmision, generarTokenEmision } from '@central/module-tarificacion/servidor'
 import {
   MENSAJE_EMISION_INCIERTA,
   autorizacionSinResolver,
@@ -189,6 +190,14 @@ test('SQL: trigger que impide des-consumir una autorización o cambiar su token_
   assert.match(sql, /CREATE OR REPLACE FUNCTION seguros\.tarificacion_emision_autorizacion_inmutable\(\)/)
   assert.match(sql, /IF OLD\.consumido_at IS NOT NULL AND NEW\.consumido_at IS DISTINCT FROM OLD\.consumido_at THEN/)
   assert.match(sql, /IF OLD\.token_hash IS NOT NULL AND NEW\.token_hash IS DISTINCT FROM OLD\.token_hash THEN/)
-  assert.match(sql, /DROP TRIGGER IF EXISTS tarificacion_emision_autorizacion_inmutable ON seguros\.tarificacion_emision_autorizacion;/)
+  // Idempotente con CREATE OR REPLACE TRIGGER (PG14+): DROP + CREATE en la misma sentencia colgó el cliente MCP.
+  assert.match(sql, /CREATE OR REPLACE TRIGGER tarificacion_emision_autorizacion_inmutable\s+BEFORE UPDATE ON seguros\.tarificacion_emision_autorizacion/)
+  assert.match(sql, /EXECUTE FUNCTION seguros\.tarificacion_emision_autorizacion_inmutable\(\)/)
   assert.match(sql, /BEFORE UPDATE ON seguros\.tarificacion_emision_autorizacion/)
+})
+
+test('SQL: el rol de la app no puede BORRAR autorizaciones (rastro de auditoría)', () => {
+  const sql = fuente('../prisma/sql/2026-10-10_tarificador_emision.sql')
+  assert.match(sql, /^REVOKE DELETE ON seguros\.tarificacion_emision_autorizacion FROM prisma_seguros;/m)
+  assert.doesNotMatch(sql, /^GRANT[^;]*\bDELETE\b[^;]*ON seguros\.tarificacion_emision_autorizacion TO prisma_seguros/m)
 })
