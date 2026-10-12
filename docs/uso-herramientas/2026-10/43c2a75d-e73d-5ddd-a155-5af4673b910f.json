@@ -1,40 +1,63 @@
 {
  "sesion": "43c2a75d-e73d-5ddd-a155-5af4673b910f",
  "inicio": "2026-10-12T09:52:29.432Z",
- "fin": "2026-10-12T09:52:57.576Z",
- "llamadas": 9,
+ "fin": "2026-10-12T14:30:10.618Z",
+ "llamadas": 25,
  "categorias": {
   "bash": {
-   "llamadas": 7,
-   "chars_in": 2051,
-   "chars_out": 28624,
+   "llamadas": 15,
+   "chars_in": 4680,
+   "chars_out": 56197,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 7
+    "Bash": 15
    }
   },
   "otro": {
-   "llamadas": 1,
-   "chars_in": 3722,
-   "chars_out": 61,
+   "llamadas": 3,
+   "chars_in": 7290,
+   "chars_out": 252,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 1
+    "SubagentHandback": 2,
+    "ToolSearch": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 1,
-   "chars_in": 1676,
-   "chars_out": 148,
+   "llamadas": 2,
+   "chars_in": 3649,
+   "chars_out": 296,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 1
+    "Agent": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 189,
+   "chars_out": 1065,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "sql": {
+   "llamadas": 4,
+   "chars_in": 580,
+   "chars_out": 2392,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 4
    }
   }
  }
