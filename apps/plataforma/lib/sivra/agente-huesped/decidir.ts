@@ -30,7 +30,7 @@ import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 import { asegurarIdioma } from './idioma-salida'
 import { procedeConsultarWeb, consultarEntorno, bloqueConsulta } from './consulta-web'
 import { buscarWeb } from '@/lib/websearch'
-import { esPeticionFactura, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA } from './factura'
+import { esTramiteFiscal, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA } from './factura'
 
 export type Decision = {
   reply: string
@@ -375,7 +375,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ES
   // Una petición de FACTURA no es un hueco de la guía (ver `factura.ts`): no se pregunta al control de
   // calidad (su ESCALAR dispararía el aviso «no lo encuentro en la guía» y guardaría datos fiscales de
   // un huésped como hecho del piso). Escala igual, pero por su propio motivo.
-  const peticionFactura = esPeticionFactura(pregunta)
+  const peticionFactura = esTramiteFiscal(pregunta, ctx.historial.filter(h => h.from === 'guest').map(h => h.text))
   const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || rev.inventado)
     ? 'ESCALAR'
     : peticionFactura

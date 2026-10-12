@@ -7,17 +7,43 @@
 // huésped como hecho del piso, listos para ofrecérselos a OTRO (fuga de datos personales).
 // Una factura es un trámite administrativo de ESTA reserva, no conocimiento del piso.
 
+import { contieneDatoPersonal } from './reglas.ts'
+
 // Palabras de factura en es/en/it/pt/fr. `\b` no sirve con tildes, de ahí el lookaround.
 const FACTURA = /(?<![\p{L}])(factura[s]?|facturar|facturaci[oó]n|invoice[s]?|invoicing|vat\s*(?:invoice|number|id)|fattura[e]?|fatturare|fatura[s]?|faturar|facture[s]?|facturer|receipt\s+for\s+(?:my|our)\s+company|tax\s+invoice)(?![\p{L}])/iu
 // Pide los papeles a nombre de una empresa: NIF/CIF/VAT/partita IVA/NIPC/TVA junto a «empresa».
 const FISCAL = /(?<![\p{L}])(n\.?i\.?f\.?|c\.?i\.?f\.?|vat(?:\s*(?:id|number|no\.?))?|partita\s+iva|nipc|n[uú]mero\s+fiscal|tva|raz[oó]n\s+social)(?![\p{L}])/iu
 const EMPRESA = /(?<![\p{L}])(empresa|compa[nñ]\W?[ií]a|sociedad|aut[oó]nomo|company|business|firm|azienda|societ[aà]|ditta|empresa|entreprise|soci[eé]t[eé])(?![\p{L}])/iu
 
+// FALSO POSITIVO conocido: «¿la factura de la luz está incluida?» / «electricity bill» hablan de los
+// suministros del piso, no piden una factura. Se quitan antes de buscar palabras de factura.
+const SUMINISTROS = /(?<![\p{L}])(?:facturas?\s+(?:de|del)\s+(?:la\s+|el\s+|los\s+|las\s+)?(?:luz|agua|gas|electricidad|suministros?|internet|wifi|calefacci[oó]n)|(?:electricity|water|gas|utility|utilities|power|energy)\s+(?:bills?|invoices?)|(?:bills?|invoices?)\s+for\s+(?:the\s+)?(?:electricity|water|gas|utilities))(?![\p{L}])/giu
+
 export function esPeticionFactura(texto: string | null | undefined): boolean {
-  const t = (texto || '').trim()
+  const t = (texto || '').replace(SUMINISTROS, ' ').trim()
   if (!t) return false
   if (FACTURA.test(t)) return true
   return FISCAL.test(t) && EMPRESA.test(t)
+}
+
+// DATOS FISCALES sueltos (el huésped manda en un mensaje APARTE solo sus datos): NIF/NIE/CIF españoles
+// y VAT intracomunitario. Sin `\b` por si pegan «NIF:B2389…». Mayús/minús indiferente.
+const NIF_ES = /(?<![\p{L}\d])(?:\d{8}[A-Z]|[XYZ]\d{7}[A-Z]|[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J])(?![\p{L}\d])/iu
+// Prefijo de país UE + 8-12 alfanuméricos, con al menos 6 dígitos (evita palabras).
+const VAT_UE = /(?<![\p{L}\d])(?:AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK|GB|XI)(?=[0-9A-Z]{8,12}(?![\p{L}\d]))(?=(?:[0-9A-Z]*\d){6})[0-9A-Z]{8,12}/iu
+
+export function contieneIdFiscal(texto: string | null | undefined): boolean {
+  const t = texto || ''
+  return NIF_ES.test(t) || VAT_UE.test(t)
+}
+
+// ¿Es un trámite fiscal (no un hueco de la guía)? Petición de factura, o un NIF/CIF/VAT suelto, o —si
+// el hilo YA era de factura— cualquier dato personal (email/teléfono/IBAN) o fiscal en este mensaje.
+// Un email suelto SIN hilo de factura NO basta («escríbeme a x@y.com» no es un trámite fiscal).
+export function esTramiteFiscal(texto: string | null | undefined, previos?: Array<string | null | undefined>): boolean {
+  if (esPeticionFactura(texto) || contieneIdFiscal(texto)) return true
+  const hiloFactura = (previos || []).some(p => esPeticionFactura(p))
+  return hiloFactura && contieneDatoPersonal(texto || '')
 }
 
 // Motivo del aviso a Alberto. 🚨 NO debe casar con /no cubre|no se pudo verificar|no est[áa] en la gu[ií]a/:

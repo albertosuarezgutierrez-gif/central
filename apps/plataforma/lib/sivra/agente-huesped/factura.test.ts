@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
-import { esPeticionFactura, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA } from './factura.ts'
+import { esPeticionFactura, esTramiteFiscal, contieneIdFiscal, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA } from './factura.ts'
 import { tipoHueco } from './reglas.ts'
 
 const FUENTE = readFileSync(new URL('./decidir.ts', import.meta.url), 'utf8')
@@ -46,4 +46,37 @@ test('una petición de factura NO es hueco de la guía (no hay aviso ni se guard
   assert.match(FUENTE, /peticionFactura\s*\n?\s*\?\s*'OK'/)
   assert.match(FUENTE, /\|\| peticionFactura\n/)
   assert.match(FUENTE, /\? MOTIVO_FACTURA/)
+})
+
+test('esTramiteFiscal: datos fiscales sueltos en un mensaje aparte', () => {
+  for (const t of [
+    'B23892946, Calle Mayor 3, 28001 Madrid, juan@x.com',
+    'mi NIF es 12345678Z',
+    'NIE X1234567L',
+    'VAT: PT123456789',
+    'IT12345678901',
+    'DE123456789',
+  ]) assert.equal(esTramiteFiscal(t), true, t)
+  assert.equal(contieneIdFiscal('12345678Z'), true)
+})
+
+test('esTramiteFiscal: un email suelto sin hilo de factura NO basta', () => {
+  for (const t of ['escríbeme a juan@x.com', 'mi correo es a@b.es', 'Llegamos a las 12345 horas', 'ESTUPENDO gracias'])
+    assert.equal(esTramiteFiscal(t), false, t)
+})
+
+test('esTramiteFiscal: hilo previo de factura + email/dato personal suelto = trámite fiscal', () => {
+  assert.equal(esTramiteFiscal('juan@x.com', ['Necesito una factura a nombre de mi empresa']), true)
+  assert.equal(esTramiteFiscal('juan@x.com', ['hola', 'qué wifi hay']), false)
+  assert.equal(esTramiteFiscal('juan@x.com', [null, undefined]), false)
+})
+
+test('factura de la luz / electricity bill NO es petición de factura', () => {
+  for (const t of ['¿La factura de la luz está incluida?', 'Is the electricity bill included?', 'las facturas de agua y gas van aparte?', 'water bill included?'])
+    assert.equal(esPeticionFactura(t), false, t)
+  assert.equal(esPeticionFactura('La factura de la luz está incluida? Y necesito una factura de mi estancia'), true)
+})
+
+test('decidir.ts usa esTramiteFiscal con los mensajes previos del huésped', () => {
+  assert.match(FUENTE, /esTramiteFiscal\(pregunta, ctx\.historial\.filter\(h => h\.from === 'guest'\)/)
 })
