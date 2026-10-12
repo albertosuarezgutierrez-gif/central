@@ -30,6 +30,7 @@ import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
 import { asegurarIdioma } from './idioma-salida'
 import { procedeConsultarWeb, consultarEntorno, bloqueConsulta } from './consulta-web'
 import { buscarWeb } from '@/lib/websearch'
+import { esPeticionFactura, MOTIVO_FACTURA, REGLA_GESTIONES, REGLA_VOZ, REGLA_FACTURA } from './factura'
 
 export type Decision = {
   reply: string
@@ -126,9 +127,9 @@ async function debeEscalar(ctx: Contexto, pregunta: string, reply: string): Prom
   const system = `Eres un control de calidad de un agente de atención al huésped de un alquiler turístico.
 Te doy la INFORMACIÓN disponible del alojamiento, el último mensaje del huésped y el BORRADOR de respuesta.
 Responde con UNA sola palabra, sin nada más:
-ESCALAR → si el borrador no resuelve lo que pide el huésped, si la INFORMACIÓN no cubre la pregunta, o si el mensaje es una queja / pide dinero, cambios, cancelación o es una emergencia.
-OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN, o si responde en la misma línea que un PRECEDENTE ya aprobado por el anfitrión.
-Los PRECEDENTES son respuestas que el anfitrión dio por buenas antes: acreditan que el asunto está resuelto, NO acreditan ningún dato concreto (cifras, horas, disponibilidad, importes). Si el borrador afirma un dato así y solo lo respalda un precedente, ESCALAR.`
+ESCALAR → si el borrador no resuelve lo que pide el huésped (una petición de FACTURA no cuenta como falta de información: es un trámite que se hace pidiendo los datos fiscales), si la INFORMACIÓN no cubre la pregunta, o si el mensaje es una queja / pide dinero, cambios, cancelación o es una emergencia.
+OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN, o si responde en la misma línea que un PRECEDENTE ya aprobado por el dueño.
+Los PRECEDENTES son respuestas que el dueño dio por buenas antes: acreditan que el asunto está resuelto, NO acreditan ningún dato concreto (cifras, horas, disponibilidad, importes). Si el borrador afirma un dato así y solo lo respalda un precedente, ESCALAR.`
   // Los HECHOS del piso van también aquí, no solo al redactor. Si el control de calidad solo ve la
   // ficha y la guía, todo lo que Alberto enseña le resulta invisible: contesta ESCALAR («la
   // INFORMACIÓN no cubre la pregunta») por muchas veces que se le haya enseñado el mismo asunto, y
@@ -145,7 +146,7 @@ Los PRECEDENTES son respuestas que el anfitrión dio por buenas antes: acreditan
   const precedentesQA = bloquePrecedentes(precedentesEstables(ctx.aprendizajes))
   const user = `INFORMACIÓN:
 ${ctx.ficha || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}${hechosQA ? `\nHECHOS DE ESTE PISO (los enseñó el anfitrión; valen tanto como la guía):\n${hechosQA}` : ''}
+${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}${hechosQA ? `\nHECHOS DE ESTE PISO (los enseñó el dueño; valen tanto como la guía):\n${hechosQA}` : ''}
 
 ${precedentesQA}
 
@@ -283,15 +284,17 @@ Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'inglés'} con un tono cálido, cer
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}${ctx.preguntaTs ? ' ' + bloqueAntiguedad(ctx.preguntaTs) : ''}
 ${REGLA_COHERENCIA}
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
-NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. Si el huésped pide una cancelación, un cambio, un reembolso o cualquier gestión, acúsale recibo con empatía y dile que trasladas su petición al anfitrión, que se encargará y le confirmará — sin darla por hecha ni prometer plazos. Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
+NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. ${REGLA_GESTIONES} Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
+${REGLA_VOZ}
+${REGLA_FACTURA}
 HILO: tienes los mensajes anteriores de esta conversación como contexto. Continúala con naturalidad teniendo en cuenta lo ya hablado y NO repitas información que ya le hayas dado antes; responde solo al ÚLTIMO mensaje del huésped.
 Ajusta la longitud al mensaje: si solo agradece, felicita o hace un comentario breve y positivo, contesta con 1-2 frases cálidas y humanas (sin bloques informativos); si hace una pregunta real, respóndela con el detalle necesario, confirmando lo que pide y ofreciéndote a ayudar en lo que necesite. Evita el relleno y las despedidas largas y genéricas. ${cierreBlock}
 
 INFORMACIÓN DISPONIBLE (única fuente de verdad; NO inventes nada que no esté aquí):
 ${fichaPrompt || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${hechosTxt ? `\nHECHOS DE ESTE PISO (te los ha enseñado el anfitrión — son ciertos y valen tanto como la guía):\n${hechosTxt}` : ''}${ordenesBlock}${accesoBlock}
+${ctx.guia ? `\nGUÍA DEL HUÉSPED:\n${ctx.guia}` : ''}${hechosTxt ? `\nHECHOS DE ESTE PISO (te los has enseñado tú mismo — son ciertos y valen tanto como la guía):\n${hechosTxt}` : ''}${ordenesBlock}${accesoBlock}
 
-${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR EL ANFITRIÓN (imítalos en tono y criterio):\n${aprend}\n` : ''}
+${aprend ? `EJEMPLOS DE RESPUESTAS APROBADAS POR TI (imítalos en tono y criterio):\n${aprend}\n` : ''}
 ${earlyBlock}
 ${lateBlock}
 ${llegadaBlock}
@@ -369,8 +372,14 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ES
   const sentimiento = sentimientoDe(pregunta)
   const sensible = esSensible(pregunta)
   // Si ya hay motivo firme para escalar, no gastamos la llamada al clasificador.
+  // Una petición de FACTURA no es un hueco de la guía (ver `factura.ts`): no se pregunta al control de
+  // calidad (su ESCALAR dispararía el aviso «no lo encuentro en la guía» y guardaría datos fiscales de
+  // un huésped como hecho del piso). Escala igual, pero por su propio motivo.
+  const peticionFactura = esPeticionFactura(pregunta)
   const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || rev.inventado)
     ? 'ESCALAR'
+    : peticionFactura
+    ? 'OK'
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
   const sinVerificar = veredicto === 'DESCONOCIDO'
@@ -437,7 +446,7 @@ ${res.datos}`
   const dentroDeLaVentana = ventanaVerificada && !pideMasAllaDeLaVentana(pregunta, SALIDA_FLEX_HASTA)
   const escalaSalida = lateCheckout && !dentroDeLaVentana
 
-  const needs_human = sensible || sentimiento === 'negativo' || rev.inventado || escalaIA || escalaSalida || bloqueaSinVerificar || rev.cierreFueraDeFase || rev.coherencia.incoherente || idiomaEquivocado || webConsultada || cambioHorario
+  const needs_human = sensible || sentimiento === 'negativo' || rev.inventado || escalaIA || escalaSalida || bloqueaSinVerificar || rev.cierreFueraDeFase || rev.coherencia.incoherente || idiomaEquivocado || webConsultada || cambioHorario || peticionFactura
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -453,6 +462,8 @@ ${res.datos}`
 
   const motivo = idiomaEquivocado
     ? `el borrador salió en español y el huésped escribe en ${LANG_NAME[ctx.lang] || ctx.lang} — no he podido traducirlo, revísalo antes de enviarlo`
+    : peticionFactura && !(sensible || sentimiento === 'negativo' || rev.inventado)
+    ? MOTIVO_FACTURA
     : webConsultada
     ? 'esto no está en la guía del piso: lo he consultado en internet y he puesto los datos en el borrador — compruébalos en las fuentes antes de enviarlo'
     : consultaWeb === 'fallida'
