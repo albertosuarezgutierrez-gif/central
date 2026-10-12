@@ -17,6 +17,11 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-12 · facturas-correo** · hizo: pasada completa; 6 candidatos Gmail (ruido Booking, 0 facturas), 0 archivados/conciliados; Vía B sana (última copia 10/10); barrido 4.0: 3 `sin_revisar` sin cargo en banco aún (Siquebrilla 1.128,48 · Supabase 25 USD · Anthropic 180 EUR, cargos Anthropic de 170 no casan), no se tocaron; colas: PDF-pendiente 2 (Endesa Socorro ago/sep), Revisar 1 (Cobros septiembre guardería, Pilar); dudas: —; fallos: `gmail-adjuntos` (Vía A) CONNECTION_CLOSED; latido enviado ok:true; PRs/commits: —
+- **2026-10-12 · mercado-booking** · hizo: plan max=24 (540 candidatas, 516 fuera por tope); 24/24 ventanas de mercado (eventos 25/10-3/11, 10 y 17/01/27, 5/06/27; aforos 2/4/5/12) = 239 comps `booking_mcp`; 4/4 escaparate propio (19/10-10/11) reconocidos como propios. Medianas/noche aprox. 2 pax: ~130-165€ en ene, ~145-190€ 25/10-3/11 (31/10 ~170-185€); 12 pax 30/10 ~750-820€/noche. 🪞 1 anuncio propio descartado por el raíl (HOUSE SEVILLANA, aforo 12, 25-27/10). dudas: —; fallos: —; latido ok:true; PRs/commits: —
+- **2026-10-12 · buscador-ia** · hizo: pasada semanal por WebSearch (Gemini 2.5 Flash cierra 16/10, ya curado; Groq/OpenRouter/Kimi/Cerebras vivos); dudas: precio/free tier de Groq gpt-oss-120b y precio punta/valle V4.1 sin zanjar (sin keys); fallos: WebFetch a catálogos bloqueado; PRs/commits: solo docs
+
+- **2026-10-12 · pricing-agente** · hizo: ciclo semanal 4 pisos, 13 fechas/piso vía 4 agentes en paralelo; comps escritos house=126, busto=130, luxury=130, duplex=130; medición ciclo 05/10 (vendidas 8/5/7/7 de 13); 52 propuestas dry-run, circuit-breaker no saltó; dudas: 16-oct-26 y 11-jun-27 sin evento identificado; fallos: —; PRs/commits: —
 - **2026-10-11 · facturas-correo** · hizo: Vía B sana (última copia 10/10); 1 candidato Gmail (circular colegio, descartado); Giraldillo AFV-11808 72,60€ ya estaba en Drive (01/08), no re-archivado; barrido 4.0: 3 facturas `sin_revisar` sin cargo casable (SiQueBrilla 1.128,48 · Supabase 25 USD · Anthropic 180€), sin escribir nada por ser recientes; dudas: SiQueBrilla oct no casa con el TRANSF 208,32 del 28/09; fallos: —; PRs/commits: —
 - **2026-10-11 · mercado-booking** · hizo: plan max=24 (544 candidatas, 520 fuera por tope); 24/24 ventanas
   de mercado medidas (rondas 1, 5-31 dic, aforos 2/4/5/12) = 240 comps `booking_mcp`; 4/4 escaparate
@@ -148,3 +153,6 @@ arriba).
 
 ### 10/10/2026 · sivra_mercado_booking
 24/24 ventanas de mercado (6-8, 20, 24-25 dic-2026; 27-nov-2026; 13-sep-2027; aforos 2/4/5/12) → 227 comps booking_mcp, 0 sin respuesta. Escaparate propio 4/4 (Busto Reform 127€/n, Dúplex 176€/n, House 767€/n, Luxury Busto 159€/n). Propio House Sevillana en aforo 12 de 8 y 20 dic (apartado por el endpoint). Navidad: House 729€/n el 20-dic vs 420€/n el 8-dic. Quedaron fuera 524 ventanas por el tope.
+
+## 12/10/2026 — sivra_mercado_booking
+24 ventanas de mercado (ene-feb 2027 eventos + 5/6/2027) = 235 comps booking_mcp; 4/4 escaparates propios medidos (House 2536€/4n, Busto Reform 358€/4n, Dúplex 288€/2n, Luxury Busto 296€/2n). 0 sin respuesta. Propio descartado: House Sevillana (5 ventanas). Tope max=24 dejó 516 ventanas fuera. Pico 19-22/02/2027 (aforo 12: 2,2-3,6k€/2n).

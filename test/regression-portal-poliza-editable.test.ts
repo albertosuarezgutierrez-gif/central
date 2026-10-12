@@ -184,9 +184,12 @@ test('el PATCH filtra por identidadId y NUNCA usa update() a secas', () => {
     'la escritura tiene que ser updateMany, no update',
   )
   // Y el WHERE lleva identidadId: sin esto, con el uuid de otro se edita su bóveda.
+  // Desde el 12/10/2026 es la DUEÑA que resuelve `accesoADeclarada` con la
+  // identidad de la sesión (propia, o la del titular solo con «Total»).
+  assert.match(fuente, /accesoADeclarada\(identidad\.id, id, 'editar'\)/, 'el PATCH resuelve el acceso con la sesión')
   assert.match(
     fuente,
-    /where:\s*\{[^}]*identidadId:\s*identidad\.id/,
+    /where:\s*\{[^}]*identidadId:\s*duenaId/,
     'el where de la escritura tiene que filtrar por identidadId',
   )
   // `update(`, `upsert(` y `delete(` por id a secas quedan prohibidos aquí.
@@ -431,7 +434,7 @@ test('las dos ramas del alta escriben datosRamo, y el PATCH distingue ausente de
   // Y el ramo con el que se valida sale de la BD, no del cuerpo: se lee con el
   // mismo filtro por identidadId que todo lo demás.
   assert.match(patch, /ramoGuardado: actual\.ramo/)
-  assert.match(patch, /findFirst\(\{\s*where: \{ id, identidadId: identidad\.id \}/)
+  assert.match(patch, /findFirst\(\{\s*where: \{ id, identidadId: duenaId \}/)
 })
 
 // ── 8. La referencia catastral es COLUMNA, y solo la del INMUEBLE ────────────

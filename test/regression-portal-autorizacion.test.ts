@@ -114,22 +114,23 @@ test('la migracion guarda la foto ANTES de apagar, y no borra relaciones', () =>
 
 // ─── 2. Un tercero ve la COSA, nunca a la PERSONA ────────────────────────────
 
-test('NINGUN alcance salvo Acceso total ensena IBAN, DNI ni documentos del otorgante', () => {
+test('NINGUN alcance salvo Acceso total ensena IBAN y DNI; documentos solo Gestion y Total', () => {
   // `total` (25/09/2026) abre al titular ENTERO por decisión expresa de Alberto,
-  // con su propio texto de consentimiento. Todo lo demás sigue igual de capado.
+  // con su propio texto de consentimiento. `gestion` (12/10/2026) abre los
+  // documentos de la póliza y actuar, nunca la PERSONA. Lo demás, igual de capado.
   for (const a of ALCANCES.filter((x) => x !== 'total')) {
     const c = camposDeAlcance(a)
     assert.equal(c.iban, false, `el alcance ${a} ensena el IBAN`)
     assert.equal(c.dniTomador, false, `el alcance ${a} ensena el DNI`)
-    assert.equal(c.documentos, false, `el alcance ${a} ensena los documentos`)
+    if (a !== 'gestion') assert.equal(c.documentos, false, `el alcance ${a} ensena los documentos`)
   }
   // El cepo muerde de verdad: el nivel del que parten SI los trae.
   assert.equal(camposVisibles('completo').iban, true)
   assert.equal(camposDeAlcance('total').iban, true, 'el acceso total SI abre el IBAN: es lo que se consintió')
 })
 
-test('NINGUN alcance salvo Acceso total deja actuar en nombre del otorgante, y NINGUNO reautoriza', () => {
-  for (const a of ALCANCES.filter((x) => x !== 'total')) {
+test('NINGUN alcance salvo Gestion y Acceso total deja actuar en nombre del otorgante, y NINGUNO reautoriza', () => {
+  for (const a of ALCANCES.filter((x) => x !== 'total' && x !== 'gestion')) {
     const c = camposDeAlcance(a)
     assert.equal(c.abrirParte, false, `el alcance ${a} deja abrir un parte`)
     assert.equal(c.crearPeticiones, false, `el alcance ${a} deja crear peticiones`)
@@ -138,14 +139,21 @@ test('NINGUN alcance salvo Acceso total deja actuar en nombre del otorgante, y N
   assert.equal(camposVisibles('tarjeta').abrirParte, true)
   assert.equal(camposDeAlcance('total').abrirParte, true)
   assert.equal(camposDeAlcance('total').autorizarTerceros, false, 'ni con acceso total se reautoriza a un cuarto')
+  assert.equal(camposDeAlcance('gestion').abrirParte, true, 'gestión da partes')
+  assert.equal(camposDeAlcance('gestion').crearPeticiones, false, 'gestión de una persona no crea peticiones')
+  assert.equal(camposDeAlcance('gestion').autorizarTerceros, false, 'ni con gestión se reautoriza a un cuarto')
 })
 
 test('el tope sigue en pie por mucho que se combinen alcances que no son el total', () => {
+  const lectura = camposDeAlcances(ALCANCES.filter((x) => x !== 'total' && x !== 'gestion'))
+  assert.notEqual(lectura, null)
+  assert.equal(lectura?.abrirParte, false)
+  // Con Gestión en la mezcla se actúa, pero la PERSONA sigue cerrada.
   const todos = camposDeAlcances(ALCANCES.filter((x) => x !== 'total'))
   assert.notEqual(todos, null)
   assert.equal(todos?.iban, false)
   assert.equal(todos?.dniTomador, false)
-  assert.equal(todos?.abrirParte, false)
+  assert.equal(todos?.siniestros, false)
   assert.equal(camposDeAlcances(ALCANCES)?.autorizarTerceros, false)
 })
 
@@ -155,10 +163,10 @@ test('sin alcances vigentes no se sirve nada, ni la tarjeta por cortesia', () =>
 
 // ─── 3. Dos permisos: Solo ver y Acceso total (25/09/2026) ──────────────────
 
-test('se conceden SOLO los dos permisos; partes y documentos sueltos ya no', () => {
+test('se conceden SOLO los tres niveles; partes y documentos sueltos ya no', () => {
   assert.equal(ALCANCES_CONCEDIBLES.includes('partes' as never), false)
   assert.equal(ALCANCES_CONCEDIBLES.includes('documentos' as never), false)
-  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver_economico', 'total'])
+  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver_economico', 'gestion', 'total'])
 })
 
 test('el acceso total NO se reparte por invitacion: la invitacion sigue en Solo ver', () => {

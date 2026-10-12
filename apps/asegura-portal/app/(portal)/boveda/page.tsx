@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 
 import {
   canalDeCompania,
+  capacidadesDeAlcances,
   entradaValida,
   nivelPuedeOperar,
   plazoComunicacion,
@@ -684,7 +685,16 @@ export default async function Boveda({
             {t.declaradas !== undefined && t.declaradas.length > 0 && (
               <ul className="polizas">
                 {t.declaradas.map((d) => (
-                  <FilaDeclarada key={d.id} p={d} avisoPartes={null} deOtro />
+                  <FilaDeclarada
+                    key={d.id}
+                    p={d}
+                    avisoPartes={null}
+                    deOtro
+                    sinEnlace={
+                      t.autorizacion?.ficha === undefined ||
+                      !capacidadesDeAlcances(t.autorizacion.ficha.alcances, t.tipoPersona).verDeclaradas
+                    }
+                  />
                 ))}
               </ul>
             )}

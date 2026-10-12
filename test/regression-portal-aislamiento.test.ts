@@ -85,6 +85,13 @@ const EXENTOS = new Set([
   // `app/api/polizas/route.ts` (que sí pasa por `lib/session`), y su único
   // `prisma.portalVinculo` va filtrado por ese id — nunca a ciegas.
   'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
+  // Niveles de acceso compartido (12/10/2026): recibe `identidadId` ya resuelto
+  // por quien llama (`/boveda/anadida/[id]`, `/api/polizas`, `/api/polizas/[id]`,
+  // `/api/siniestros`, todos por `lib/session`). Sus dos `portalPolizaDeclarada`
+  // llevan `identidadId` en el `where` (la de quien mira, o `IN` los titulares
+  // que da `identidadesTitulares` sobre la cartera de ESA identidad). Cepo propio:
+  // `test/regression-portal-niveles-acceso.test.ts`.
+  'apps/asegura-portal/lib/declarada-ajena.ts',
 ])
 
 /**
@@ -324,11 +331,18 @@ test('la ficha de una póliza AÑADIDA lleva la identidad DENTRO del where', () 
   const i = src.indexOf('prisma.portalPolizaDeclarada')
   assert.ok(i > 0, 'no encuentro la consulta de la ficha de una póliza añadida')
   const bloque = src.slice(i, src.indexOf('})', i))
+  // Desde el 12/10/2026 la identidad del `where` es la DUEÑA que resuelve
+  // `accesoADeclarada` (la propia o la del titular, fail-closed), y se resuelve
+  // ANTES de leer, con 404 si no hay acceso.
   assert.match(
     bloque,
-    /where:\s*\{[^}]*identidadId:\s*identidad\.id/,
+    /where:\s*\{[^}]*identidadId:\s*duenaId/,
     'la identidad tiene que ir DENTRO del `where`, junto al id de la URL',
   )
+  const resolver = src.indexOf("accesoADeclarada(identidad.id, id, 'ver')")
+  assert.ok(resolver > 0 && resolver < i, 'el acceso se resuelve con la identidad de la SESIÓN antes de leer')
+  assert.match(src, /if \(acceso === null\) notFound\(\)/, 'sin acceso: 404, nunca 403')
+  assert.match(src, /const duenaId = acceso\.identidadId/)
   assert.doesNotMatch(
     bloque,
     /findUnique/,

@@ -40,12 +40,19 @@
 import { camposVisibles, type CamposVisibles, type Nivel } from './acceso.ts'
 
 /**
- * El vocabulario completo. Hoy se CONCEDEN solo dos (`ALCANCES_CONCEDIBLES`):
- * «Solo ver» (`ver_economico`) y «Acceso total» (`total`, 25/09/2026). `ver`,
+ * El vocabulario completo. Hoy se CONCEDEN tres (`ALCANCES_CONCEDIBLES`), uno
+ * por cada nivel que ve la persona (`capacidades.ts`, 12/10/2026): «Consulta»
+ * (`ver_economico`), «Gestión» (`gestion`) y «Total» (`total`). `ver`,
  * `partes` y `documentos` siguen existiendo porque hay filas con ellos y hay
  * que seguir leyéndolas bien, pero ya no se ofrecen.
+ *
+ * 🚨 `gestion` es un alcance NUEVO y no una suma de `partes` + `documentos`:
+ * esos dos tienen un CHECK que exige `titulo_representacion` (solo sociedades)
+ * y, sobre todo, una fila `partes` de una persona física escrita por otro
+ * camino NO abre nada (lado restrictivo). Reinterpretarlas como «Gestión»
+ * daría a filas viejas un poder que nadie consintió con ese texto.
  */
-export const ALCANCES = ['ver', 'ver_economico', 'partes', 'documentos', 'total'] as const
+export const ALCANCES = ['ver', 'ver_economico', 'partes', 'documentos', 'gestion', 'total'] as const
 export type Alcance = (typeof ALCANCES)[number]
 
 /**
@@ -64,19 +71,23 @@ export type Alcance = (typeof ALCANCES)[number]
 export type TipoOtorgante = 'fisica' | 'juridica'
 
 /**
- * Los DOS permisos que se conceden (25/09/2026, Alberto: «tiene que haber
- * también permiso para todo, hacer como dos permisos»):
+ * Los TRES niveles que se conceden (12/10/2026, Alberto; antes eran dos desde el
+ * 25/09/2026). La persona los ve como presets, no como casillas
+ * (`capacidades.ts` dice qué puede hacer cada uno):
  *
- *   - `ver_economico` — **Solo ver**: sus seguros y lo que pagan. No actúa.
- *   - `total` — **Acceso total**: ve y hace todo lo que el titular (partes,
- *     documentos, peticiones). En una persona física incluye su DNI y su IBAN:
- *     es decisión expresa de Alberto, y por eso lleva su propio texto de
- *     consentimiento (`TEXTO_AUTORIZACION_TOTAL` en el portal), que lo dice.
+ *   - `ver_economico` — **Consulta**: sus seguros y lo que pagan. No actúa.
+ *   - `gestion` — **Gestión**: Consulta + dar partes + documentos de la póliza.
+ *     Sin DNI ni IBAN de una persona física.
+ *   - `total` — **Total**: ve y hace todo lo que el titular (partes,
+ *     documentos, peticiones, y sus pólizas AÑADIDAS a mano). En una persona
+ *     física incluye su DNI y su IBAN: es decisión expresa de Alberto, y por eso
+ *     lleva su propio texto de consentimiento (`textoDeConcesion` en el portal).
  *
+ * Ninguno deja autorizar a un cuarto ni tocar la cartera de CIMA.
  * Lo mismo para personas y sociedades. Lo que cambia con una sociedad es que
- * se exige con qué título la representa.
+ * Gestión y Total exigen con qué título se la representa.
  */
-export const ALCANCES_CONCEDIBLES: readonly Alcance[] = ['ver_economico', 'total']
+export const ALCANCES_CONCEDIBLES: readonly Alcance[] = ['ver_economico', 'gestion', 'total']
 
 /**
  * Lo que se puede PEDIR (petición de acceso). Solo «Solo ver»: `total` no se
@@ -103,7 +114,7 @@ export function alcancePeticionResoluble(v: unknown): Alcance | null {
   return a === 'ver' || a === 'ver_economico' ? (a as Alcance) : null
 }
 
-/** Los dos permisos valen para personas y sociedades; `tipo` queda por si divergen. */
+/** Los tres niveles valen para personas y sociedades; `tipo` queda por si divergen. */
 export function alcancesConcedibles(_tipo: TipoOtorgante): readonly Alcance[] {
   return ALCANCES_CONCEDIBLES
 }
@@ -258,8 +269,18 @@ const NIVEL_DE_ALCANCE: Record<Alcance, Nivel> = {
   ver_economico: 'completo',
   partes: 'gestionar',
   documentos: 'completo',
+  gestion: 'gestionar',
   total: 'gestionar',
 }
+
+/**
+ * Lo que «Gestión» abre ENCIMA del suelo de la persona física (12/10/2026,
+ * Alberto): dar partes y los documentos de la póliza (verlos y aportarlos).
+ * Nada más: ni DNI, ni IBAN, ni siniestros abiertos del titular, ni peticiones,
+ * ni reautorizar. Va como lista cerrada para que un campo nuevo de
+ * `NUNCA_A_UN_TERCERO` no se abra por arrastre.
+ */
+const ABRE_GESTION = { abrirParte: true, documentos: true } as const
 
 /** Qué enseña un alcance concreto, ya capado según quién cede. */
 export function camposDeAlcance(alcance: Alcance, tipo: TipoOtorgante = 'fisica'): CamposVisibles {
@@ -268,7 +289,11 @@ export function camposDeAlcance(alcance: Alcance, tipo: TipoOtorgante = 'fisica'
   // ha dado expresamente acceso a todo, DNI e IBAN incluidos (25/09/2026). Lo
   // único que sigue cerrado es reautorizar a un cuarto, sea quien sea quien cede.
   if (alcance === 'total') return { ...base, ...NUNCA_NI_REPRESENTANDO }
+  if (tipo === 'fisica' && alcance === 'gestion') return { ...base, ...NUNCA_A_UN_TERCERO, ...ABRE_GESTION }
   if (tipo === 'fisica') return { ...base, ...NUNCA_A_UN_TERCERO }
+  // Gestión de una sociedad = lo que ya daba `partes` (partes, documentos y
+  // peticiones), con el mismo título exigido por el código.
+  if (alcance === 'gestion') return { ...base, ...NUNCA_NI_REPRESENTANDO }
   // Una sociedad delega su gestión, pero `documentos` y `partes` son alcances
   // distintos: tener uno no da el otro. Se abren de uno en uno, no en bloque.
   return {
@@ -297,10 +322,14 @@ export function camposDeAlcances(
     for (const k of Object.keys(union) as (keyof CamposVisibles)[]) union[k] ||= c[k]
   }
   // Con `total` entre los vigentes, el suelo de la persona no se vuelve a
-  // aplicar: si no, la unión taparía lo que `total` abrió a propósito.
-  return tipo === 'fisica' && !alcances.includes('total')
-    ? { ...union, ...NUNCA_A_UN_TERCERO }
-    : { ...union, ...NUNCA_NI_REPRESENTANDO }
+  // aplicar: si no, la unión taparía lo que `total` abrió a propósito. Con
+  // `gestion`, el suelo vuelve pero deja lo que Gestión abre (y solo eso).
+  if (tipo === 'fisica' && !alcances.includes('total')) {
+    return alcances.includes('gestion')
+      ? { ...union, ...NUNCA_A_UN_TERCERO, ...ABRE_GESTION }
+      : { ...union, ...NUNCA_A_UN_TERCERO }
+  }
+  return { ...union, ...NUNCA_NI_REPRESENTANDO }
 }
 
 /**
@@ -312,8 +341,9 @@ export function camposDeAlcances(
  * («Solo ver») NO basta para declarar un siniestro en nombre de su tomador.
  */
 export function puedeDarParte(alcances: readonly Alcance[], tipo: TipoOtorgante): boolean {
-  // `total` deja actuar sea quien sea quien cede: es lo que significa «acceso total».
-  if (alcances.includes('total')) return true
+  // `total` y `gestion` dejan actuar sea quien sea quien cede: es lo que
+  // significan «acceso total» y «gestión» (12/10/2026).
+  if (alcances.includes('total') || alcances.includes('gestion')) return true
   return tipo === 'juridica' && alcances.includes('partes')
 }
 
@@ -323,6 +353,6 @@ export function puedeDarParte(alcances: readonly Alcance[], tipo: TipoOtorgante)
  * `camposDeAlcances`, que va capado. Nunca uses esto para autorizar nada.
  */
 export function etiquetaNivelAlcances(alcances: readonly Alcance[]): Nivel {
-  if (alcances.includes('partes') || alcances.includes('total')) return 'gestionar'
+  if (alcances.includes('partes') || alcances.includes('gestion') || alcances.includes('total')) return 'gestionar'
   return alcances.includes('ver_economico') || alcances.includes('documentos') ? 'completo' : 'tarjeta'
 }
