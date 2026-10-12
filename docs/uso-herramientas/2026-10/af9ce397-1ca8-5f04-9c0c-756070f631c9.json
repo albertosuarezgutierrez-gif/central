@@ -1,0 +1,81 @@
+{
+ "sesion": "af9ce397-1ca8-5f04-9c0c-756070f631c9",
+ "inicio": "2026-10-12T23:15:49.307Z",
+ "fin": "2026-10-12T23:25:04.781Z",
+ "llamadas": 103,
+ "categorias": {
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 418,
+   "chars_out": 808,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 3,
+    "Skill": 1
+   }
+  },
+  "sql": {
+   "llamadas": 2,
+   "chars_in": 359,
+   "chars_out": 5798,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 204,
+   "chars_out": 21516,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1,
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 43,
+   "chars_in": 73503,
+   "chars_out": 34343,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 43
+   }
+  },
+  "mcp:Interactive-Brokers--IBKR-": {
+   "llamadas": 50,
+   "chars_in": 2933,
+   "chars_out": 213683,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Interactive-Brokers--IBKR-__get_account_summary": 1,
+    "mcp__Interactive-Brokers--IBKR-__get_account_positions": 1,
+    "mcp__Interactive-Brokers--IBKR-__get_account_trades": 1,
+    "mcp__Interactive-Brokers--IBKR-__search_contracts": 23,
+    "mcp__Interactive-Brokers--IBKR-__get_price_history": 24
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 548,
+   "chars_out": 93,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  }
+ }
+}
