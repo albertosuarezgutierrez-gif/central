@@ -167,13 +167,13 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 311 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 312 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
 | `bash` | 302 | 40.244 | 32.893.319 | 0 | 0 |
 | `otro` | 298 | 9.776 | 25.083.281 | 15.008.917 | 0 |
-| `lectura-directa` | 262 | 6.894 | 22.793.485 | 0 | 0 |
+| `lectura-directa` | 263 | 6.900 | 22.798.491 | 0 | 0 |
 | `mcp:github` | 267 | 5.972 | 4.876.709 | 52.331.101 | 90 |
 | `escritura` | 199 | 4.002 | 58.426.818 | 0 | 0 |
 | `sql` | 188 | 3.875 | 1.939.783 | 2.351.230 | 15 |
@@ -191,8 +191,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:agente-mecanico` | 40 | 98 | 66.085 | 5.917.719 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:Explore` | 33 | 75 | 37.211 | 2.124.852 | 0 |
+| `agente:rastreador-codigo` | 45 | 74 | 22.857 | 653.355 | 0 |
 | `mcp:OpenSEO` | 4 | 74 | 57.875 | 0 | 2 |
-| `agente:rastreador-codigo` | 44 | 73 | 22.528 | 653.355 | 0 |
 | `mcp:Resend` | 7 | 61 | 31.515 | 0 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
