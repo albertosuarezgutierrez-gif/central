@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(12/10/2026)** — Auditoría diaria (ligera): sin 🔴 nuevos. Memoria completada con lo que no estaba anotado: #4499 botón «Pedir emisión» (Allianz Comunidades, OK por Telegram), #4504 fix build plataforma (`node:crypto` en la emisión del tarificador), #4506 job de CI «Build · plataforma» (`next build`).
+Vigilancia: latidos al día; CIMA entra (pulls reales, cola ~204 con 0-4 procesados/día, sin errores); pricing sano (0 bajo mínimo, 7,6 h desde la última pasada, 4 pisos enabled/apply); Codeoscopic 21 cotizaciones/10,50 € en 7 d (tope Avant2 del mes 6/70 €).
+Pendientes de Alberto (ya en #4493): reactivar `subastas_idealista` (mudo desde 27/09) y PRs de registro atascados (#4319, #4258, #4257, #3995, #3755, #4476). Nuevo: latido `cima_siniestros_corte_compania` en rojo (alerta C0468, 11/10) y `ses_transporte` sin establecimiento.
+
 **(11/10/2026)** — Caso autorizada sin acceso al portal (cliente 83fae58b, lead; propietaria en póliza d6d05e93, tomador 722315d3). No era fallo de código: su ficha no tiene correo → sin portal_vinculo/identidad → no entra al portal. Su correo propio debe ser distinto del del tomador (si no sale «ambiguo» o vería sus 14 pólizas). La autorización existente va de ella al tomador (al revés) y la póliza se dedupe en el bloque de ella por diseño (`intervinientes.ts`, `tomadoresYaServidos`).
 Hecho: PR #4491 mergeado (aviso «Figura en N póliza(s) que ya está(n) en las tuyas» en el portal; «0 como tomadora · N donde figura» en CRM relaciones).
 Pendiente: Alberto da el correo propio de 83fae58b para añadirlo a su ficha (`anadirContacto`); invitación al portal solo con su OK.
