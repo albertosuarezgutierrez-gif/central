@@ -120,7 +120,9 @@ export function capacidadesDeAlcances(
     verDocumentos: campos.documentos,
     abrirParte: puedeDarParte(a, tipo),
     subirDocumentos: actua && campos.documentos,
-    verDeclaradas: true,
+    // Abrir la ficha de una añadida ajena = ver prima, matrícula, catastro: solo con
+    // Consulta o superior (lo que da `recibos`). El legado `ver` (solo tarjeta) NO.
+    verDeclaradas: campos.recibos,
     anadirDeclaradas: total,
     editarDeclaradas: total,
     quitarDeclaradas: total,

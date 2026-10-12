@@ -108,3 +108,11 @@ test('la migración de Gestión añade el alcance sin perder flota', () => {
   const sql = readFileSync(join(ROOT, `${APP}/prisma/sql/2026-10-12_portal_autorizacion_gestion.sql`), 'utf8')
   assert.match(sql, /CHECK \(alcance IN \('ver', 'ver_economico', 'partes', 'documentos', 'gestion', 'total', 'flota'\)\)/)
 })
+
+test('🔒 abrir la ficha de una añadida ajena exige Consulta o más (no el legado `ver`)', () => {
+  const CAP = leer('packages/module-seguros-portal/src/capacidades.ts')
+  assert.match(CAP, /verDeclaradas:\s*campos\.recibos/, 'verDeclaradas sale de campos.recibos, no de un true')
+  assert.doesNotMatch(CAP, /verDeclaradas:\s*true/)
+  const LISTA = leer(`${APP}/app/(portal)/boveda/page.tsx`)
+  assert.match(LISTA, /sinEnlace=\{[\s\S]*?capacidadesDeAlcances\([\s\S]*?\.verDeclaradas/, 'la fila ajena sin acceso va sin enlace')
+})

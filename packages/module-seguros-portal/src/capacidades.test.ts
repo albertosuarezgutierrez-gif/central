@@ -133,3 +133,14 @@ test('la propia manda siempre, y la vía ajena nunca devuelve a quien mira', () 
   const vacia = { titularIdentidadId: '', capacidades: cap(['total']) }
   assert.equal(duenaDeDeclarada({ identidadQueMira: YO, propia: false, ajena: vacia, accion: 'editar' }), null)
 })
+
+test('el legado `ver` (solo tarjeta) NO abre la ficha de una añadida ajena; Consulta o más, sí', () => {
+  for (const tipo of ['fisica', 'juridica'] as const) {
+    const ver = capacidadesDeAlcances(['ver'], tipo)
+    assert.equal(ver.verDeclaradas, false, `${tipo}: ver a secas no abre la ficha`)
+    assert.equal(duenaDeDeclarada({ identidadQueMira: YO, propia: false, ajena: { titularIdentidadId: ELLA, capacidades: ver }, accion: 'ver' }), null)
+    for (const a of ['ver_economico', 'gestion', 'total']) {
+      assert.equal(capacidadesDeAlcances([a], tipo).verDeclaradas, true, `${tipo}: ${a} abre la ficha`)
+    }
+  }
+})

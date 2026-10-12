@@ -30,6 +30,7 @@ export function FilaDeclarada({
   p,
   avisoPartes,
   deOtro = false,
+  sinEnlace = false,
 }: {
   p: {
     id: string
@@ -51,6 +52,8 @@ export function FilaDeclarada({
    * lectura; Total: corregir y quitar) y da 404 si no tienes acceso.
    */
   deOtro?: boolean
+  /** Sin acceso a la ficha entera (p. ej. alcance `ver`): la fila se pinta, sin enlace. */
+  sinEnlace?: boolean
 }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
@@ -85,12 +88,16 @@ export function FilaDeclarada({
       // correduría se lo va a avisar porque no la gestionamos.
       data-estado={p.fechaVencimiento === null ? 'aviso' : undefined}
     >
-      <Link href={`/boveda/anadida/${p.id}`} className="poliza-enlace">
-        {cuerpo}
-        <span className="poliza-flecha" aria-hidden>
-          ›
-        </span>
-      </Link>
+      {sinEnlace ? (
+        <div className="poliza-enlace">{cuerpo}</div>
+      ) : (
+        <Link href={`/boveda/anadida/${p.id}`} className="poliza-enlace">
+          {cuerpo}
+          <span className="poliza-flecha" aria-hidden>
+            ›
+          </span>
+        </Link>
+      )}
       {/* 🚨 Quitarla se ofrece AQUÍ, en la lista, y no solo al final de su ficha.
           Alberto (08/09/2026): «no puedo eliminar “Póliza sin compañía
           identificada”… el cliente se puede equivocar, puede crear y quitar las
