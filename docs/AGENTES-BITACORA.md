@@ -16,6 +16,7 @@
 
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-10-12 · buscador-ia** · hizo: pasada semanal por WebSearch (Gemini 2.5 Flash cierra 16/10, ya curado; Groq/OpenRouter/Kimi/Cerebras vivos); dudas: precio/free tier de Groq gpt-oss-120b y precio punta/valle V4.1 sin zanjar (sin keys); fallos: WebFetch a catálogos bloqueado; PRs/commits: solo docs
 
 - **2026-10-11 · facturas-correo** · hizo: Vía B sana (última copia 10/10); 1 candidato Gmail (circular colegio, descartado); Giraldillo AFV-11808 72,60€ ya estaba en Drive (01/08), no re-archivado; barrido 4.0: 3 facturas `sin_revisar` sin cargo casable (SiQueBrilla 1.128,48 · Supabase 25 USD · Anthropic 180€), sin escribir nada por ser recientes; dudas: SiQueBrilla oct no casa con el TRANSF 208,32 del 28/09; fallos: —; PRs/commits: —
 - **2026-10-11 · mercado-booking** · hizo: plan max=24 (544 candidatas, 520 fuera por tope); 24/24 ventanas

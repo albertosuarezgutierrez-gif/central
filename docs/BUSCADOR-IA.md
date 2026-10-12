@@ -76,6 +76,19 @@
 
 ## Bitácora de hallazgos (lo más reciente arriba)
 
+- **2026-10-12 · pasada semanal — sin hallazgos nuevos, sin ruido.** Solo WebSearch (sin keys de
+  proveedor; WebFetch a catálogos bloqueado por el proxy). **Gemini 2.5 Flash** se apaga el 16/10/2026
+  en Gemini API (Vertex 20/10) ([foro Google](https://discuss.ai.google.dev/t/gemini-2-5-flash-deprecated-without-warning-earlier-than-shutdown-date/174217)):
+  ya curado el 28/09 (`gemini-3.8-flash` antepuesto en `contexto`/`registral`); las fuentes no nombran
+  el sucesor exacto (3.5/3.6) → comprobar tras el 16/10 que el cron elige un id vivo. **Groq**
+  `openai/gpt-oss-120b` sin deprecación (Groq mismo lo recomienda como destino de migración); free
+  tier 30 RPM/1.000 req/día citado de nuevo, precio de pago $0,15/$0,60-0,75 (fuentes discrepan) —
+  pendiente de zanjar con key, igual que el 05/10. **OpenRouter** `deepseek/deepseek-v4.1-flash`
+  vivo; precio listado $0,15/$0,60 (snapshot 20260910) frente a $0,30/$1,20 (página base/punta);
+  alias viejos `deepseek-v4-flash` enrutan a V4.1. Sin candidato nuevo que cruce el listón
+  (Paso 2); `qwen/qwen3.7-flash` sigue sin mini-eval (sin key). Visión NIM / embeddings / Kimi /
+  Cerebras: sin novedades. Preflight Telegram 200.
+
 - **2026-10-05 · pasada semanal — ⏰ `google/gemini-2.5-flash` se apaga el 16/10/2026 (afecta a las
   listas `PREFERIDOS` `contexto` y `registral` del cron `ia-director-refresh`) y ↩️ CORRECCIÓN
   probable de la alerta de Groq del 21/09.** Todo por WebSearch: sin keys de proveedor y con
