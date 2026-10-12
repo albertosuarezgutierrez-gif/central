@@ -1180,7 +1180,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (12/10/2026) Portal cliente · 3 niveles de acceso + compañía leída de PDF validada (#4515)
 - Niveles Consulta (ver_economico) / Gestión (alcance nuevo `gestion`: partes+documentos) / Total (actúa como titular sobre sus declaradas: abrir, editar, quitar, añadir con `enNombreDe`). Helper `module-seguros-portal/src/capacidades.ts`; `lib/declarada-ajena.ts` (exento en guardián de aislamiento, 404 fail-closed). Gestión y Total nacen pendientes (no por invitación). Legado `ver` ya NO abre la ficha.
-- 🚨 Migración `apps/asegura-portal/prisma/sql/2026-10-12_portal_autorizacion_gestion.sql` (CHECK + 'gestion'): sin aplicar en prod hasta OK de Alberto; sin ella «Pasar a gestión» da 23514. La de columnas de autor es solo propuesta.
+- Migración `2026-10-12_portal_autorizacion_gestion.sql` (CHECK + gestion) APLICADA en prod 12/10 (proyecto central, schema seguros). La de columnas de autor es solo propuesta.
 - Extractor PDF: compañía que no aparece en el texto → null (`lib/compania-en-texto.ts`). Caso: Pilar, «Mutua Madrileña» era Generali (la ficha la corrige ella o UPDATE con OK).
 - Abierto: ¿concesiones Total v1 cubren editar declaradas? (Alberto: Total = como propietario); documentos en Consulta exigen texto nuevo; UI de «añadir en su nombre»/parte en declarada ajena/subir docs con Gestión pendiente.
 

@@ -1,4 +1,4 @@
--- ⏳ PENDIENTE DE APLICAR. Se aplica ANTES de desplegar el código que concede
+-- ✅ APLICADA en prod (central · schema seguros) el 12/10/2026. Se aplicaba ANTES de desplegar el código que concede
 -- «Gestión»: sin ella, conceder/ampliar a `gestion` falla con 23514 (CHECK) —
 -- ruidoso, no silencioso—. Es aditiva: el código viejo nunca escribe `gestion`
 -- y los lectores viejos lo ignoran (`esAlcance` → no abre nada, fail-closed).
