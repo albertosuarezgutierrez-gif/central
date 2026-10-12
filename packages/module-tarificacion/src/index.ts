@@ -328,4 +328,5 @@ export {
   type FilaAutorizacion,
   type DecisionCanje,
   type PermisoEmision,
+  ipidConstaEnAceptacion,
 } from './emision.ts'

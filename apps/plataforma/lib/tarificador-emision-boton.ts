@@ -26,6 +26,8 @@ export type EntradaVisibilidad = {
   estadoPresupuesto: string | null
   /** ¿Consta el IPID en la aceptación? `null` = la lista no lo dice (asegura lo comprueba). */
   ipidConsta: boolean | null
+  /** ¿Consta la opción elegida en la aceptación? `null`/ausente = la lista no lo dice. */
+  opcionConsta?: boolean | null
   /** Hay una emisión pedida y sin resolver para este presupuesto (lo sabe esta pantalla o asegura). */
   emisionEnCurso: boolean
 }
@@ -43,11 +45,25 @@ export function visibilidadEmision(e: EntradaVisibilidad): Visibilidad {
     return e.estadoPresupuesto === 'emitido' ? { visible: true, activo: false, motivo: 'Este presupuesto ya figura como emitido.', aviso: null } : NO
   }
   if (e.emisionEnCurso) return { visible: true, activo: false, motivo: TEXTO_ESPERANDO, aviso: null }
-  if (e.ipidConsta === false) return { visible: true, activo: false, motivo: 'La aceptación no lleva IPID: no se emite.', aviso: null }
+  if (e.ipidConsta === false) return { visible: true, activo: false, motivo: MOTIVO_SIN_IPID, aviso: null }
+  if (e.opcionConsta === false) return { visible: true, activo: false, motivo: MOTIVO_SIN_OPCION, aviso: null }
   return {
     visible: true, activo: true, motivo: null,
     aviso: e.ipidConsta === null ? 'El IPID de la aceptación lo comprueba asegura al pedirla.' : null,
   }
+}
+
+export const MOTIVO_SIN_IPID = 'Falta el IPID del presupuesto aceptado: vuelve a aceptarlo.'
+export const MOTIVO_SIN_OPCION = 'Falta la opción elegida del presupuesto aceptado: vuelve a aceptarlo.'
+
+/**
+ * Lo que la lista dice de la aceptación. Tres estados: asegura que manda `ipidConsta` (boolean) manda también
+ * `opcionElegidaId`, y entonces su `null` SÍ es «no consta»; si `ipidConsta` no viene (asegura antiguo o no pudo leer),
+ * nada se afirma: `null`/`null` y asegura decide al pedirla.
+ */
+export function constanciaAceptacion(p: Pick<PresupuestoEnLista, 'ipidConsta' | 'opcionElegidaId'> | null): { ipidConsta: boolean | null; opcionConsta: boolean | null } {
+  if (!p || typeof p.ipidConsta !== 'boolean') return { ipidConsta: null, opcionConsta: null }
+  return { ipidConsta: p.ipidConsta, opcionConsta: p.opcionElegidaId !== null && p.opcionElegidaId !== '' }
 }
 
 const claveCia = (c: string) => c.trim().toLowerCase()

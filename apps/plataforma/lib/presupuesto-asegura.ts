@@ -359,6 +359,10 @@ export type PresupuestoEnLista = {
   necesidades: string | null
   /** Opciones visibles con sus garantías. `null` = asegura no las manda (versión anterior): no se pintan. */
   detalle: OpcionEnLista[] | null
+  /** ¿Consta el IPID en la aceptación? `null` = asegura no lo dice (versión anterior) o no pudo leerlo: NO es «no». */
+  ipidConsta: boolean | null
+  /** Opción que aceptó el cliente. `null` = no consta (o asegura no lo manda). */
+  opcionElegidaId: string | null
 }
 
 export type EstadoGarantiaLista = 'si' | 'no' | 'no_consta'
@@ -422,6 +426,9 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
     necesidades: s(o.necesidades),
     detalle: Array.isArray(o.detalle) ? o.detalle.map(leerOpcionEnLista).filter((x): x is OpcionEnLista => x !== null) : null,
+    // Solo un booleano explícito vale; ausente o de otro tipo = «no se sabe» (nunca `?? false`).
+    ipidConsta: typeof o.ipidConsta === 'boolean' ? o.ipidConsta : null,
+    opcionElegidaId: s(o.opcionElegidaId),
   }
 }
 
