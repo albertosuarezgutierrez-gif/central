@@ -578,10 +578,15 @@ export async function autorizarVer(
     // ha confirmado que la ficha existe y no está fusionada) y, si llegara, cae
     // a `'fisica'`, el lado que no abre nada de más.
     const tipoOtorgante = (await tipoPersonaDe(correduriaId, clienteId)) ?? 'fisica'
-    const alcance =
+    // 🚨 «Gestión» (12/10/2026) existe en el módulo pero NO por esta vía: el
+    // corredor no tiene texto de consentimiento para ella (solo V2 y TOTAL), y
+    // sellar una fila `gestion` con el texto de «Solo ver» diría que se aceptó
+    // otra cosa. Se rechaza con la misma razón que un alcance no concedible.
+    const concedible =
       entrada.alcance === undefined || entrada.alcance === null
         ? ALCANCE_POR_DEFECTO
         : alcanceConcedible(entrada.alcance, tipoOtorgante)
+    const alcance = concedible === 'gestion' ? null : concedible
     // Con una razón, nunca en silencio. Revocar no mira el alcance.
     if (entrada.autoriza && alcance === null) {
       return { ok: false, estado: 'invalido', motivo: motivoAlcanceNoConcedible(tipoOtorgante), status: 422 }

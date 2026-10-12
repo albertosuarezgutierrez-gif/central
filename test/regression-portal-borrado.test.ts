@@ -82,7 +82,10 @@ test('el DELETE de pólizas filtra por identidadId y consulta el ESTADO de los p
   const src = leer(`${APP}/app/api/polizas/[id]/route.ts`)
   const delete_ = src.slice(src.indexOf('export async function DELETE'))
   assert.notEqual(delete_, '', 'No hay handler DELETE de pólizas aportadas')
-  assert.match(delete_, /deleteMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*identidad\.id\s*\}/)
+  // La dueña la resuelve `accesoADeclarada` (propia, o la del titular con Total) y va en el `where`.
+  assert.match(delete_, /accesoADeclarada\(identidad\.id, id, 'quitar'\)/)
+  assert.match(delete_, /if \(acceso === null\) return NextResponse\.json\(\{ error: 'no_encontrada' \}, \{ status: 404 \}\)/)
+  assert.match(delete_, /deleteMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*duenaId\s*\}/)
   assert.match(delete_, /puedeBorrarDeclarada/)
   // `count` NO basta: lo que bloquea no es tener partes, es tener uno que la
   // compañía ya tramita. Con un contador esa distinción no se puede hacer.
