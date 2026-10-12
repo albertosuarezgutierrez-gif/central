@@ -8,6 +8,8 @@ import { guardarNecesidades, listarPresupuestos, ocultarOpcion, prepararPresupue
 import { leerOcultar } from '@/lib/presupuesto-ocultar'
 import { auditado } from '@/lib/auditoria'
 import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
+import { leerCamposEmision } from '@/lib/presupuesto-emision-campos-bd'
+import { camposEmisionDe } from '@/lib/presupuesto-emision-campos'
 import { datosParaEmitir } from '@/lib/datos-emision'
 import { marcarSeguimientoAvisado } from '@/lib/presupuesto-seguimiento-servicio'
 import { esEtapa } from '@/lib/presupuesto-seguimiento'
@@ -26,7 +28,7 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
 /**
  * El presupuesto al cliente, por el puerto de operador (plataforma → asegura).
  *
- *   GET   ?clienteId= | ?polizaId=  → los presupuestos ya preparados
+ *   GET   ?clienteId= | ?polizaId=  → los presupuestos ya preparados (+ `ipidConsta`, `opcionElegidaId`: derivados)
  *   POST  { polizaId | tarificacionId, claveNivelActual?, ocultar?: {companias?, precios?}, actor } → prepara un BORRADOR
  *   PATCH { id, motivo, actor }     → lo retira (con motivo, siempre)
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
@@ -79,7 +81,11 @@ export async function GET(req: Request) {
         return null
       })
     }
-    return NextResponse.json({ estado: 'ok', presupuestos: lista, datosEmision })
+    // `ipidConsta`/`opcionElegidaId` (derivados; sin hash ni datos personales): plataforma los usa para no ofrecer
+    // «Pedir emisión» donde asegura diría 409. `null` = no se pudo leer (no es «sin IPID»).
+    const campos = await leerCamposEmision(correduria.id, lista.map((p) => p.id))
+    const presupuestos = lista.map((p) => ({ ...p, ...(campos.get(p.id) ?? camposEmisionDe(null)) }))
+    return NextResponse.json({ estado: 'ok', presupuestos, datosEmision })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/presupuesto', e) })
   }

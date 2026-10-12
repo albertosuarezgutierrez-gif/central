@@ -10,7 +10,7 @@ import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { leerPresupuestoEnLista, type PresupuestoEnLista } from '@/lib/presupuesto-asegura'
 import {
-  TEXTO_CONFIRMACION, candidatosPresupuesto, leerRespuestaEmision, primaDeCompania, visibilidadEmision, type RespuestaEmision,
+  TEXTO_CONFIRMACION, candidatosPresupuesto, constanciaAceptacion, leerRespuestaEmision, primaDeCompania, visibilidadEmision, type RespuestaEmision,
 } from '@/lib/tarificador-emision-boton'
 
 const guardarPendiente = (id: string) => { try { sessionStorage.setItem(`emision-pedida:${id}`, '1') } catch { /* sin almacenamiento: solo se pierde la comodidad */ } }
@@ -49,10 +49,11 @@ export default function PedirEmision({ trabajoId, compania, nombreCompania, ramo
   const candidatos = Array.isArray(lista) ? candidatosPresupuesto(lista, { compania, ramo, clienteId }) : []
   const p = candidatos.find((c) => c.id === elegido) ?? (candidatos.length === 1 ? candidatos[0] : null)
   const enCurso = !!p && (pendientes[p.id] === true || hayPendiente(p.id))
+  const constancia = constanciaAceptacion(p)
   const v = visibilidadEmision({
     compania, ramo, estadoTrabajo: 'ok', conOferta: primaOferta !== null,
     estadoPresupuesto: p ? p.estado : candidatos.length > 1 ? 'aceptado' : null,
-    ipidConsta: null, // la lista no trae la huella IPID: lo comprueba asegura y su 409 se muestra tal cual
+    ipidConsta: constancia.ipidConsta, opcionConsta: constancia.opcionConsta, // null = asegura no lo dice: decide ella al pedir
     emisionEnCurso: enCurso,
   })
 
