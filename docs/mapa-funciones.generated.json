@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-12T16:41:15Z",
-  "sha": "494710a8eee133bb6caf080c6f9e11a41458db70",
+  "generadoEn": "2026-10-12T17:04:09Z",
+  "sha": "2431d809a0a65c6b57d1c5ebbff64dfb7591c77a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19460,13 +19460,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 52,
-          "resumen": "El presupuesto al cliente, por el puerto de operador (plataforma → asegura). GET ?clienteId= | ?polizaId= → los presupuestos ya preparados POST { polizaId | tarificacionId, claveNivelActual?, ocultar?"
+          "linea": 54,
+          "resumen": "El presupuesto al cliente, por el puerto de operador (plataforma → asegura). GET ?clienteId= | ?polizaId= → los presupuestos ya preparados (+ `ipidConsta`, `opcionElegidaId`: derivados) POST { polizaI"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/presupuesto",
-      "hash": "d364b6d1bfc0"
+      "hash": "c9a65b8aed54"
     },
     {
       "ruta": "apps/asegura/app/api/operador/presupuesto/seguimiento/route.ts",
@@ -39282,6 +39282,52 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "835b0004d9d7"
+    },
+    {
+      "ruta": "apps/asegura/lib/presupuesto-emision-campos-bd.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lectura de lo que `camposEmisionDe` necesita (el hash se queda aquí: no sale de asegura). Ver presupuesto-emision-campos.ts.",
+      "exporta": [
+        "leerCamposEmision"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerCamposEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ids: string[]",
+          "retorno": "Promise<Map<string, CamposEmision>>",
+          "linea": 8,
+          "resumen": "Por id de presupuesto. Si no se puede leer (sin la columna o error), TODOS `null`: «no se sabe», nunca «sin IPID»."
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "6ae4d93ec209"
+    },
+    {
+      "ruta": "apps/asegura/lib/presupuesto-emision-campos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Campos DERIVADOS que el GET de `/api/operador/presupuesto` añade a cada presupuesto para que plataforma sepa, ANTES de pedir la emisión, si asegura la rechazaría (12/10/2026). Misma regla que `precondicionesEmision` (module-tarificacion): `ipidConstaEnAceptacion`. NUNCA sale el hash del IPID ni dato",
+      "exporta": [
+        "camposEmisionDe"
+      ],
+      "funciones": [
+        {
+          "nombre": "camposEmisionDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaEmision | null | undefined",
+          "retorno": "CamposEmision",
+          "linea": 12,
+          "resumen": "`fila` `undefined`/`null` = no se leyó (≠ «no hay IPID»)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "abdc67e5b4ac"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-ocultar.ts",
@@ -96871,7 +96917,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "4c7e653079fd"
+      "hash": "f70395fe56ad"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PedirPrecioAuto.tsx",
@@ -142805,7 +142851,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "OpcionEnLista | null",
-          "linea": 369
+          "linea": 373
         },
         {
           "nombre": "filasCoberturas",
@@ -142813,7 +142859,7 @@
           "exportada": true,
           "params": "ramo: string | null, opciones: readonly OpcionEnLista[],",
           "retorno": "",
-          "linea": 391,
+          "linea": 395,
           "resumen": "La tabla «qué cubre cada opción» del catálogo del ramo: una fila por garantía, una celda por opción. Se quitan las filas en las que NINGUNA opción dice sí ni no (todo «no consta» no ayuda a elegir). `"
         },
         {
@@ -142822,7 +142868,7 @@
           "exportada": true,
           "params": "e: EstadoPresupuestoLista",
           "retorno": "boolean",
-          "linea": 404,
+          "linea": 408,
           "resumen": "Mientras no esté aceptado, retirado ni caducado, las necesidades se pueden escribir o corregir."
         },
         {
@@ -142831,7 +142877,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoEnLista | null",
-          "linea": 411,
+          "linea": 415,
           "resumen": "Una fila ilegible NO se descarta: devuelve `null` y la lista entera se declara ilegible."
         },
         {
@@ -142840,7 +142886,7 @@
           "exportada": true,
           "params": "e: EstadoPresupuestoLista",
           "retorno": "",
-          "linea": 432,
+          "linea": 439,
           "resumen": "Qué se puede hacer con él. `enlazado` NO es `enviado`: se abrió WhatsApp y no consta que saliera, así que se ofrece «Ya lo he mandado» y se deja volver a avisar."
         },
         {
@@ -142849,7 +142895,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 457,
+          "linea": 464,
           "resumen": "La frase del desenlace de «Avisar». Ningún fallo se lee como «ha salido»."
         },
         {
@@ -142858,7 +142904,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 477
+          "linea": 484
         },
         {
           "nombre": "cotizacionIdDe",
@@ -142866,13 +142912,13 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "string | null",
-          "linea": 504,
+          "linea": 511,
           "resumen": "El id de la cotización guardada (`guardado` de la respuesta de cotizar). `null` = no quedó guardada: sin él no hay de qué preparar un presupuesto ni a qué pedir la emisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f13180ab48d7"
+      "hash": "9c5157433d27"
     },
     {
       "ruta": "apps/plataforma/lib/presupuestos-companias.ts",
@@ -158121,6 +158167,7 @@
       "resumen": "Botón «Pedir emisión» del tarificador (11/10/2026) — lo PURO: cuándo se ve, a qué presupuesto apunta y cómo se cuenta la respuesta del API. Sin red ni envs: importable desde 'use client'. El servidor (asegura) re-comprueba TODO; esto solo evita ofrecer el botón donde seguro no vale y traduce los 403",
       "exporta": [
         "visibilidadEmision",
+        "constanciaAceptacion",
         "candidatosPresupuesto",
         "primaDeCompania",
         "leerRespuestaEmision"
@@ -158140,7 +158187,16 @@
           "exportada": true,
           "params": "e: EntradaVisibilidad",
           "retorno": "Visibilidad",
-          "linea": 37
+          "linea": 39
+        },
+        {
+          "nombre": "constanciaAceptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Pick<PresupuestoEnLista, 'ipidConsta' | 'opcionElegidaId'> | null",
+          "retorno": "",
+          "linea": 64,
+          "resumen": "Lo que la lista dice de la aceptación. Tres estados: asegura que manda `ipidConsta` (boolean) manda también `opcionElegidaId`, y entonces su `null` SÍ es «no consta»; si `ipidConsta` no viene (asegura"
         },
         {
           "nombre": "claveCia",
@@ -158148,7 +158204,7 @@
           "exportada": false,
           "params": "c: string",
           "retorno": null,
-          "linea": 53
+          "linea": 69
         },
         {
           "nombre": "candidatosPresupuesto",
@@ -158156,7 +158212,7 @@
           "exportada": true,
           "params": "lista: readonly PresupuestoEnLista[], b: { compania: string; ramo: string; clienteId?: string | null }",
           "retorno": "PresupuestoEnLista[]",
-          "linea": 59,
+          "linea": 75,
           "resumen": "Presupuestos de la lista a los que puede apuntar el botón de ESTE trabajo: aceptados y firmados, del mismo ramo (un ramo desconocido NO vale) y, si la lista trae las opciones, con alguna de esa compañ"
         },
         {
@@ -158165,7 +158221,7 @@
           "exportada": true,
           "params": "p: PresupuestoEnLista, compania: string",
           "retorno": "number | null",
-          "linea": 68,
+          "linea": 84,
           "resumen": "Prima de la opción de esa compañía si es INEQUÍVOCA (una sola opción con prima); si no, `null`."
         },
         {
@@ -158174,7 +158230,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown>",
-          "linea": 75
+          "linea": 91
         },
         {
           "nombre": "leerRespuestaEmision",
@@ -158182,13 +158238,13 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmision",
-          "linea": 78,
+          "linea": 94,
           "resumen": "Traduce el POST de `/api/correduria/tarificador/emision`. 202 = pedida (queda esperando el OK en Telegram)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "21b8e240bd5b"
+      "hash": "e0497b25f301"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-fichas-asegura.ts",
@@ -201110,6 +201166,7 @@
         "eurosACentimos",
         "primaCoincide",
         "pareceTokenEmision",
+        "ipidConstaEnAceptacion",
         "precondicionesEmision",
         "decidirAutorizacion",
         "hashCortoEmision",
@@ -201183,12 +201240,21 @@
           "linea": 88
         },
         {
+          "nombre": "ipidConstaEnAceptacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "ipidHuella: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 105,
+          "resumen": "¿Consta el IPID en la aceptación? Una sola regla para la precondición de emitir y para avisar ANTES de pedir."
+        },
+        {
           "nombre": "precondicionesEmision",
           "kind": "function",
           "exportada": true,
           "params": "p: PresupuestoParaEmitir, o: OpcionParaEmitir, ramo: string, ahora: Date",
           "retorno": "Precondicion",
-          "linea": 110,
+          "linea": 115,
           "resumen": "¿Se puede PEDIR emitir esta opción de este presupuesto en (compañía, ramo)? Fail-closed: cualquier dato que falte es «no». El IPID que falta se dice como «no consta», nunca como «no aplica»."
         },
         {
@@ -201197,7 +201263,7 @@
           "exportada": true,
           "params": "e: { autorizadoPor: string | null | undefined autorizador: string | null | undefined estado: string | null | undefined pedidaAt: Date | null | undefined ahora: Date }",
           "retorno": "DecisionAutorizar",
-          "linea": 132,
+          "linea": 137,
           "resumen": "¿Vale esta pulsación? Solo la persona autorizada (id de Telegram EXACTO, configurado), sobre un trabajo que espera autorización, dentro de las 24 h desde que se pidió. Sin autorizador configurado → na"
         },
         {
@@ -201206,7 +201272,7 @@
           "exportada": true,
           "params": "hashDatos: string",
           "retorno": "string",
-          "linea": 163
+          "linea": 168
         },
         {
           "nombre": "secretoFirmaValido",
@@ -201214,7 +201280,7 @@
           "exportada": true,
           "params": "s: unknown",
           "retorno": "s is string",
-          "linea": 168
+          "linea": 173
         },
         {
           "nombre": "camposFirmaAutorizacion",
@@ -201222,7 +201288,7 @@
           "exportada": true,
           "params": "o: unknown",
           "retorno": "CamposFirmaAutorizacion | null",
-          "linea": 171,
+          "linea": 176,
           "resumen": "Campos bien formados o `null` (nada se firma ni se verifica a medias)."
         },
         {
@@ -201231,7 +201297,7 @@
           "exportada": true,
           "params": "c: CamposFirmaAutorizacion",
           "retorno": "string",
-          "linea": 183,
+          "linea": 188,
           "resumen": "Texto canónico que se firma (lo usa `emision-servidor.ts`)."
         },
         {
@@ -201240,7 +201306,7 @@
           "exportada": true,
           "params": "p: { trabajoId: string; hashDatos: string; boton: BotonEmision }",
           "retorno": "PermisoEmision",
-          "linea": 216,
+          "linea": 221,
           "resumen": "Lo crea el runner del worker SOLO con la respuesta OK del canje (`{hashDatos, boton}` de asegura). Un permiso por canje: si se pide dos veces con lo mismo, son dos objetos, pero el token ya está consu"
         },
         {
@@ -201249,7 +201315,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 228
+          "linea": 233
         },
         {
           "nombre": "usarPermisoEmision",
@@ -201257,7 +201323,7 @@
           "exportada": true,
           "params": "permiso: PermisoEmision | null | undefined, vinculo: { trabajoId: string; hashDatos: string }, descripciones: readonly (string | null | undefined)[],",
           "retorno": "void",
-          "linea": 238,
+          "linea": 243,
           "resumen": "· algo del elemento casa con `NUNCA_CON_PERMISO`. Se marca USADO antes de devolver (fail-closed: si el clic falla, no hay segundo)."
         },
         {
@@ -201266,7 +201332,7 @@
           "exportada": true,
           "params": "",
           "retorno": "'requiere_humano'",
-          "linea": 262,
+          "linea": 267,
           "resumen": "Un trabajo de EMISIÓN que falla nunca se reintenta solo (ni infra: tras el clic el estado real en la compañía es incierto). Siempre `requiere_humano`; la persona mira el portal y, si procede, pide una"
         },
         {
@@ -201275,13 +201341,13 @@
           "exportada": true,
           "params": "texto: string, tokens: readonly string[] = []",
           "retorno": "string",
-          "linea": 267,
+          "linea": 272,
           "resumen": "Quita un token (o cualquier cadena con su forma) de un texto que va a salir (log, error, Telegram)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e7128f09b96f"
+      "hash": "2f166bd50f45"
     },
     {
       "ruta": "packages/module-tarificacion/src/entorno.ts",
@@ -204980,7 +205046,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4530,
-    "funciones": 16181
+    "archivos": 4532,
+    "funciones": 16185
   }
 }
