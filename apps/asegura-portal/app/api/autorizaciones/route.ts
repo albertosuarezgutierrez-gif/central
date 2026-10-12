@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { ampliarATotal, autorizacionesDeIdentidad, conceder, type ErrorConceder } from '@/lib/autorizaciones'
+import { ampliarAcceso, autorizacionesDeIdentidad, conceder, type ErrorConceder } from '@/lib/autorizaciones'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -110,13 +110,20 @@ export async function POST(req: Request) {
   // revienta con un 500 en vez de decir qué falta.
   const c = (typeof cuerpo === 'object' && cuerpo !== null ? cuerpo : {}) as Record<string, unknown>
 
-  // «Pasar a acceso total» sobre un acceso que ya existe (25/09/2026). Quién
-  // puede hacerlo y sobre qué lo decide `ampliarATotal()` contra `portal_vinculo`.
+  // «Pasar a gestión» / «Pasar a acceso total» sobre un acceso que ya existe
+  // (25/09 y 12/10/2026). Quién puede hacerlo y sobre qué lo decide
+  // `ampliarAcceso()` contra `portal_vinculo`. Sin `ampliarA` es `total` (lo que
+  // mandaba la pantalla antes de Gestión); cualquier otro valor, 400.
   if (typeof c.ampliarDesde === 'string') {
     if (!UUID.test(c.ampliarDesde)) return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 })
-    const r = await ampliarATotal({
+    const ampliarA = c.ampliarA === undefined ? 'total' : c.ampliarA
+    if (ampliarA !== 'gestion' && ampliarA !== 'total') {
+      return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 })
+    }
+    const r = await ampliarAcceso({
       identidadId: identidad.id,
       autorizacionId: c.ampliarDesde,
+      a: ampliarA,
       tituloRepresentacion: c.tituloRepresentacion,
       ip: ipDe(req),
       userAgent: userAgentDe(req),

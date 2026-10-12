@@ -45,9 +45,10 @@ export function FilaDeclarada({
    */
   avisoPartes: string | null
   /**
-   * La añadió QUIEN TE DIO ACCESO (08/10/2026), no tú: sin enlace a su ficha
-   * (`/boveda/anadida/[id]` es solo de su identidad y daría 404), sin «Quitar»
-   * y con su propio cartel. Que no se pueda confundir con una tuya.
+   * La añadió QUIEN TE DIO ACCESO (08/10/2026), no tú: con su propio cartel y
+   * sin «Quitar» en la lista. Desde el 12/10/2026 SÍ enlaza a su ficha: la ficha
+   * decide con `accesoADeclarada` qué puedes hacer (Consulta/Gestión: solo
+   * lectura; Total: corregir y quitar) y da 404 si no tienes acceso.
    */
   deOtro?: boolean
 }) {
@@ -84,16 +85,12 @@ export function FilaDeclarada({
       // correduría se lo va a avisar porque no la gestionamos.
       data-estado={p.fechaVencimiento === null ? 'aviso' : undefined}
     >
-      {deOtro ? (
-        <div className="poliza-enlace">{cuerpo}</div>
-      ) : (
-        <Link href={`/boveda/anadida/${p.id}`} className="poliza-enlace">
-          {cuerpo}
-          <span className="poliza-flecha" aria-hidden>
-            ›
-          </span>
-        </Link>
-      )}
+      <Link href={`/boveda/anadida/${p.id}`} className="poliza-enlace">
+        {cuerpo}
+        <span className="poliza-flecha" aria-hidden>
+          ›
+        </span>
+      </Link>
       {/* 🚨 Quitarla se ofrece AQUÍ, en la lista, y no solo al final de su ficha.
           Alberto (08/09/2026): «no puedo eliminar “Póliza sin compañía
           identificada”… el cliente se puede equivocar, puede crear y quitar las

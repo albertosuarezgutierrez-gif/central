@@ -4,6 +4,7 @@ import { tgSend } from '@central/core-telegram'
 import { aplicarRamoAlParte, normalizarParte, plazoComunicacion, textoAvisoParteNuevo, type ParteEntrada } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, polizasParaParte } from '@/lib/cartera-lectura'
+import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import { crearParte, fechaHechoAUtc } from '@/lib/partes-siniestro'
 import { requireIdentidad } from '@/lib/session'
@@ -37,7 +38,13 @@ export const runtime = 'nodejs'
 function datosDelAviso(
   cartera: Awaited<ReturnType<typeof carteraDeIdentidad>>,
   polizaId: string | null,
-  declarada: { compania: string | null; ramo: string | null; numeroPoliza: string | null } | null,
+  declarada: {
+    compania: string | null
+    ramo: string | null
+    numeroPoliza: string | null
+    /** Presente si la añadida es de un TITULAR que dio acceso (12/10/2026), no de quien da el parte. */
+    ajenaId?: string
+  } | null,
 ) {
   const base = process.env.PLATAFORMA_URL?.trim().replace(/\/+$/, '') || null
   const enlaceA = (ruta: string) => (base !== null && base.startsWith('https://') ? `${base}${ruta}` : null)
@@ -60,6 +67,18 @@ function datosDelAviso(
           enlace: enlaceA(`/correduria/poliza/${encodeURIComponent(p.id)}`),
         }
       }
+    }
+  }
+  // Añadida de un titular que dio acceso: el parte es de ESE titular, no de quien lo da.
+  if (declarada?.ajenaId !== undefined) {
+    const t = cartera.autorizadas.find((x) => x.declaradas?.some((d) => d.id === declarada.ajenaId))
+    return {
+      cliente: t?.nombre ?? null,
+      loDaOtro: true,
+      compania: declarada.compania,
+      numeroPoliza: declarada.numeroPoliza,
+      ramo: declarada.ramo,
+      enlace: t ? enlaceA(`/correduria/cliente/${encodeURIComponent(t.clienteId)}`) : enlaceA('/correduria'),
     }
   }
   // Sin póliza de cartera: el titular solo si la identidad tiene UNA ficha propia (si
@@ -127,17 +146,29 @@ export async function POST(req: Request) {
   // es la información que necesita quien está probando.
   // Lo que dice el aviso a Alberto de la póliza: SOLO de lo ya autorizado para
   // esta identidad (la cartera leída aquí abajo o la declarada filtrada por ella).
-  let declarada: { compania: string | null; ramo: string | null; numeroPoliza: string | null } | null = null
+  let declarada: Parameters<typeof datosDelAviso>[2] = null
   let cartera: Awaited<ReturnType<typeof carteraDeIdentidad>> | null = null
   if (valor.polizaDeclaradaId !== null) {
     // Póliza aportada por el propio cliente: el filtro por `identidadId` va
     // JUNTO al id, nunca un `findUnique({ where: { id } })` y un `if` después.
+    //
+    // Desde el 12/10/2026 también la AÑADIDA por un titular que le ha dado
+    // «Gestión» o «Total» sobre su ficha entera (`accesoADeclarada(…, 'parte')`,
+    // fail-closed): la fila del parte lleva la identidad de QUIEN lo da, que es
+    // el autor real; la póliza sigue siendo la del titular.
+    const acceso = await accesoADeclarada(identidad.id, valor.polizaDeclaradaId, 'parte')
+    if (acceso === null) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
     const propia = await prisma.portalPolizaDeclarada.findFirst({
-      where: { id: valor.polizaDeclaradaId, identidadId: identidad.id },
+      where: { id: valor.polizaDeclaradaId, identidadId: acceso.identidadId },
       select: { id: true, compania: true, ramo: true, numeroPoliza: true },
     })
     if (!propia) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
-    declarada = { compania: propia.compania, ramo: propia.ramo, numeroPoliza: propia.numeroPoliza }
+    declarada = {
+      compania: propia.compania,
+      ramo: propia.ramo,
+      numeroPoliza: propia.numeroPoliza,
+      ...(acceso.propia ? {} : { ajenaId: propia.id }),
+    }
   }
 
   if (valor.polizaId !== null) {
