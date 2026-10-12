@@ -1181,6 +1181,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (12/10/2026) Correduría · baja firmada en cola avisa por Telegram
 - Caso: baja `inmediata` Occident pól. 548238086 firmada en portal → quedó en `aprobacion` pendiente (caduca 15/10) sin avisar a nadie. Es diseño (inmediata nunca sale sola; Occident sin `recibe_anulaciones`).
 - `enviarAnulacionTrasFirma` (apps/asegura/lib/aprobaciones.ts) ahora manda Telegram si queda `en_cola` (helper puro `aviso-anulacion-en-cola.ts` + test, marca efecto retroactivo). Portal: texto «tu correduría la está revisando».
+- Auditoría de flujos (3 agentes + verificador): caducidad de `aprobacion` silenciosa, recibo devuelto caducado no se reproponía, póliza declarada con `void` sin `after()`. Arreglado: cron `correduria-red-diaria` (06:23 UTC, cron-dispatch) con Telegram de caducan<24h/caducadas, bajas firmadas sin comunicar +48h con causa y recibos aún devueltos; `proponerReciboDevuelto` reabre caducada/fallida.
+- Casos reales para Alberto: Occident GPAFS0900547 `firmada` sin carta ni firma; Mapfre 0007001518236 con propuesta rechazada (no se repropone). Colas: 74 eventos, 85 gestiones +48h, bot Allianz roto desde 06/10.
 - Pendiente: Alberto aprueba/revisa esa baja (efecto 01/10 retroactivo) y da el buzón de bajas de Occident.
 
 ## (12/10/2026) Sivra · agente huésped: voz del dueño + peticiones de factura

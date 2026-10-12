@@ -37,6 +37,10 @@ export const CRON_JOBS: CronJob[] = [
   // parte. La fecha que lo hace urgente es el 03/09/2026, cuando caduca la hoja del certificado
   // de `*.ses.mir.es` y hay que saber si la cadena sigue cerrando.
   { path: '/api/cron/ses-latido', schedule: '15 7 * * *' },
+  // RED DIARIA de la correduría (12/10/2026): 06:23 UTC (08:23 en verano, 07:23 en invierno), antes de renovaciones.
+  // Un solo Telegram, y solo si algo se ha quedado parado: aprobaciones por caducar/caducadas, bajas firmadas
+  // hace +48 h que no salen (con causa) y recibos devueltos sin aviso vivo.
+  { path: '/api/cron/correduria-red-diaria', schedule: '23 6 * * *' },
   // Renovaciones de la correduría: 06:30, antes del vigía de las 07:45 para que
   // el parte del día lea siempre una huella fresca. Lee la cartera por el puerto
   // de central-asegura; si no puede leerla, lo dice — no se calla.

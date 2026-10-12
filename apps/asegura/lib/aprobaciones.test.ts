@@ -121,3 +121,12 @@ test('🪤 Allianz (PUE): ninguna baja de Allianz sale por correo — ni propues
   assert.ok(pue > 0 && pue < decidir.indexOf("set estado = 'enviando'") && pue < decidir.indexOf('await enviarCorreo('), 'el 409 va ANTES de reclamar y de enviar')
   assert.match(src, /decidida_por = 'sistema:allianz_pue'/)
 })
+
+test('🪤 recibo devuelto: una propuesta caducada o fallida se REABRE si el recibo sigue devuelto; rechazada/ejecutada/en curso, nunca', () => {
+  const propone = src.slice(src.indexOf('export async function proponerReciboDevuelto'), src.indexOf('export const ORIGEN_ANULACION'))
+  assert.match(propone, /on conflict \(clave\) do update/)
+  assert.match(propone, /where aprobacion\.estado in \('caducada', 'fallida'\)/)
+  assert.doesNotMatch(propone, /'rechazada'|'ejecutada'|'enviando'|'pendiente'\)/, 'solo caducada y fallida se reabren')
+  // Reabrir = pendiente con decisión limpia (el CHECK exige decidida_at NULL en pendiente) y caducidad nueva.
+  assert.match(propone, /set estado = 'pendiente'[\s\S]*caduca_at = excluded\.caduca_at[\s\S]*decidida_at = null/)
+})

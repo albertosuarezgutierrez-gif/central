@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { avisarPolizaDeclaradaDesdeAlta } from '@/lib/aviso-poliza-declarada'
 import { prisma } from '@/lib/db'
@@ -102,13 +102,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   // Best-effort: `fuente === 'none'` ya ha vuelto arriba, así que aquí siempre
   // se ha leído algo — Alberto se entera con el dato real en vez de con la
   // fila vacía que vio en la subida original.
-  void avisarPolizaDeclaradaDesdeAlta({
+  after(() => avisarPolizaDeclaradaDesdeAlta({
     identidadId: identidad.id,
     compania: datos.compania,
     ramo: datos.ramo,
     numeroPoliza: datos.numeroPoliza,
     fechaVencimiento: datos.fechaVencimiento,
-  })
+  }))
 
   return NextResponse.json({ id, datos, fuente, camposRamo, motivo })
 }

@@ -60,7 +60,14 @@ export async function proponerReciboDevuelto(tx: Tx, correduriaId: string, recib
             ${`${ORIGEN_RECIBO_DEVUELTO}:${reciboId}:${r.vencimiento ?? 'sin_fecha'}`},
             ${r.clienteId}::uuid, ${r.polizaId}::uuid, ${eventoId}::uuid,
             ${JSON.stringify({ asunto: b.asunto, texto: b.texto })}::jsonb, ${b.urgente}, ${b.caduca})
-    on conflict (clave) do nothing
+    -- Una propuesta CADUCADA (nadie la miró a tiempo) o FALLIDA se REABRE si el recibo sigue devuelto (esta
+    -- función solo corre con el recibo devuelto): si no, la clave la bloquearía para siempre. Una rechazada
+    -- (Alberto dijo que no), una ejecutada o una en curso NO se tocan: no se reabre lo decidido.
+    on conflict (clave) do update
+      set estado = 'pendiente', created_at = now(), caduca_at = excluded.caduca_at, propuesta = excluded.propuesta,
+          urgente = excluded.urgente, evento_id = coalesce(excluded.evento_id, aprobacion.evento_id),
+          decidida_at = null, decidida_por = null, resultado = null
+      where aprobacion.estado in ('caducada', 'fallida') and aprobacion.correduria_id = excluded.correduria_id
     returning id::text as id`
   return ins.length > 0
 }
