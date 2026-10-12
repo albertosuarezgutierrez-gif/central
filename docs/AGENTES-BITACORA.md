@@ -18,6 +18,7 @@
 ## Entradas pendientes de procesar (lo más reciente arriba)
 - **2026-10-12 · buscador-ia** · hizo: pasada semanal por WebSearch (Gemini 2.5 Flash cierra 16/10, ya curado; Groq/OpenRouter/Kimi/Cerebras vivos); dudas: precio/free tier de Groq gpt-oss-120b y precio punta/valle V4.1 sin zanjar (sin keys); fallos: WebFetch a catálogos bloqueado; PRs/commits: solo docs
 
+- **2026-10-12 · pricing-agente** · hizo: ciclo semanal 4 pisos, 13 fechas/piso vía 4 agentes en paralelo; comps escritos house=126, busto=130, luxury=130, duplex=130; medición ciclo 05/10 (vendidas 8/5/7/7 de 13); 52 propuestas dry-run, circuit-breaker no saltó; dudas: 16-oct-26 y 11-jun-27 sin evento identificado; fallos: —; PRs/commits: —
 - **2026-10-11 · facturas-correo** · hizo: Vía B sana (última copia 10/10); 1 candidato Gmail (circular colegio, descartado); Giraldillo AFV-11808 72,60€ ya estaba en Drive (01/08), no re-archivado; barrido 4.0: 3 facturas `sin_revisar` sin cargo casable (SiQueBrilla 1.128,48 · Supabase 25 USD · Anthropic 180€), sin escribir nada por ser recientes; dudas: SiQueBrilla oct no casa con el TRANSF 208,32 del 28/09; fallos: —; PRs/commits: —
 - **2026-10-11 · mercado-booking** · hizo: plan max=24 (544 candidatas, 520 fuera por tope); 24/24 ventanas
   de mercado medidas (rondas 1, 5-31 dic, aforos 2/4/5/12) = 240 comps `booking_mcp`; 4/4 escaparate
