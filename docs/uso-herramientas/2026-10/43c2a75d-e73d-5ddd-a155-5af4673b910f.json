@@ -1,52 +1,54 @@
 {
  "sesion": "43c2a75d-e73d-5ddd-a155-5af4673b910f",
  "inicio": "2026-10-12T09:52:29.432Z",
- "fin": "2026-10-12T15:34:03.764Z",
- "llamadas": 29,
+ "fin": "2026-10-12T16:11:56.683Z",
+ "llamadas": 177,
  "categorias": {
   "bash": {
-   "llamadas": 17,
-   "chars_in": 4973,
-   "chars_out": 76774,
+   "llamadas": 131,
+   "chars_in": 137631,
+   "chars_out": 595287,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 17
+    "Bash": 131
    }
   },
   "otro": {
-   "llamadas": 3,
-   "chars_in": 7290,
-   "chars_out": 252,
+   "llamadas": 16,
+   "chars_in": 18415,
+   "chars_out": 53539,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 2,
-    "ToolSearch": 1
+    "SubagentHandback": 6,
+    "ToolSearch": 4,
+    "ReadNotifications": 6
    }
   },
   "agente:general-purpose": {
-   "llamadas": 3,
-   "chars_in": 6060,
-   "chars_out": 2903,
+   "llamadas": 4,
+   "chars_in": 7407,
+   "chars_out": 3051,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 37367,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "lectura-directa": {
-   "llamadas": 1,
-   "chars_in": 189,
-   "chars_out": 1065,
+   "llamadas": 13,
+   "chars_in": 1556,
+   "chars_out": 42756,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 1
+    "Grep": 5,
+    "Read": 8
    }
   },
   "sql": {
@@ -67,6 +69,52 @@
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 73834,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 1388,
+   "chars_out": 15767,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 12462,
+   "chars_out": 25551,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 2
+   }
+  },
+  "agente:verificador-esceptico": {
+   "llamadas": 1,
+   "chars_in": 2002,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
    "tools": {
     "Agent": 1
    }
