@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-12T17:04:09Z",
-  "sha": "2431d809a0a65c6b57d1c5ebbff64dfb7591c77a",
+  "generadoEn": "2026-10-12T18:48:20Z",
+  "sha": "82e6cf0bb22c837ef372d19f41a5415d02fd212b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -148440,7 +148440,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "limpiarReply",
@@ -148448,7 +148448,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 102,
+          "linea": 103,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -148457,7 +148457,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 125
+          "linea": 126
         },
         {
           "nombre": "decidir",
@@ -148465,12 +148465,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 175
+          "linea": 176
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b0abcd00424f"
+      "hash": "420f9a8bd3e6"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -148729,6 +148729,46 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f939d4ef22a3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/factura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Petición de FACTURA del huésped (12/10/2026, dictado de Alberto). Caso real: un huésped pidió factura a nombre de su empresa y el agente contestó «se lo traslado al anfitrión». Mal por tres lados: (1) quien responde ES el dueño, no un intermediario; (2) para emitirla faltan datos fiscales; (3) el co",
+      "exporta": [
+        "esPeticionFactura",
+        "contieneIdFiscal",
+        "esTramiteFiscal"
+      ],
+      "funciones": [
+        {
+          "nombre": "esPeticionFactura",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 22
+        },
+        {
+          "nombre": "contieneIdFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 35
+        },
+        {
+          "nombre": "esTramiteFiscal",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined, previos?: Array<string | null | undefined>",
+          "retorno": "boolean",
+          "linea": 43,
+          "resumen": "¿Es un trámite fiscal (no un hueco de la guía)? Petición de factura, o un NIF/CIF/VAT suelto, o —si el hilo YA era de factura— cualquier dato personal (email/teléfono/IBAN) o fiscal en este mensaje. U"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "11b883052487"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/fases.ts",
@@ -205046,7 +205086,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4532,
-    "funciones": 16185
+    "archivos": 4533,
+    "funciones": 16188
   }
 }
