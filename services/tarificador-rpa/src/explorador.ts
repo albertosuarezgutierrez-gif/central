@@ -130,6 +130,16 @@ export function motivoSinDato(m: MotivoSinDato): MotivoParar {
   return m === 'clave_desconocida' ? 'ambiguo' : 'dato_sensible_requerido'
 }
 
+/**
+ * Qué hacer con un `rellenar` cuya clave no tiene valor (13/10/2026). Con datos REALES y una clave del riesgo ausente
+ * (`dato_no_disponible`: p. ej. año o m², que el portal autocompleta del Catastro tras la dirección) y el control YA
+ * relleno por el portal → `saltar` (no se toca). En cualquier otro caso, parar: nunca un valor de prueba en su lugar.
+ */
+export function accionSinDato(m: MotivoSinDato, conDatosReales: boolean, controlConValor: boolean): 'saltar' | MotivoParar {
+  if (m === 'dato_no_disponible' && conDatosReales && controlConValor) return 'saltar'
+  return motivoSinDato(m)
+}
+
 /** Lo que se lee del nodo VIVO justo antes de tocarlo. */
 export type NodoVivo = { tag: string; id: string | null; name: string | null; type: string | null; texto: string }
 
@@ -260,7 +270,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
-      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada })
+      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null })
       if (!v.ok) throw new Parar('ambiguo')
       if (r.estado !== 'ok') {
         const p = v.respuesta.acciones[0]
@@ -285,7 +295,14 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         try {
           if (a.accion === 'rellenar') {
             const d = resolverDato(a.dato, { ramo: k.ramo, conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
-            if (!d.ok) throw new Parar(motivoSinDato(d.motivo))
+            if (!d.ok) {
+              const conValor = d.motivo === 'dato_no_disponible' && k.conDatosReales
+                ? await loc.inputValue({ timeout: 5_000 }).then((v) => v.trim() !== '').catch(() => false)
+                : false
+              const que = accionSinDato(d.motivo, k.conDatosReales, conValor)
+              if (que === 'saltar') continue
+              throw new Parar(que)
+            }
             await k.pausaAccion()
             // 🔑 El valor no se loguea ni sale del proceso: va directo al campo.
             await loc.fill(valorParaControl(d.valor, hit.el), { timeout: 10_000 })

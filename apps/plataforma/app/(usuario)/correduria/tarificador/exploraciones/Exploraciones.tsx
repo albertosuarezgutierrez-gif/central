@@ -25,6 +25,7 @@ import {
 } from '@/lib/tarificador-exploraciones'
 
 const API = '/api/correduria/tarificador/exploraciones'
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** Filas que se pintan de golpe (regla de rendimiento): el resto, con «Ver más». */
 const PASO = 50
 
@@ -123,19 +124,31 @@ export default function Exploraciones() {
  */
 function NuevaExploracion({ onEncolada }: { onEncolada: () => void }) {
   const [entrada, setEntrada] = useState<string>(ENTRADA_POR_DEFECTO)
+  const [oportunidadId, setOportunidadId] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [res, setRes] = useState<{ tono: 'warning' | 'negative' | 'positive'; texto: string } | null>(null)
+  const oportunidad = oportunidadId.trim()
+  const oportunidadMal = oportunidad !== '' && !UUID_RE.test(oportunidad)
   const encolar = async () => {
+    if (oportunidadMal) return
     setOcupado(true)
     setRes(null)
-    const r = await pedir(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entrada }) })
+    const body = oportunidad ? { entrada, oportunidadId: oportunidad } : { entrada }
+    const r = await pedir(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    const j = r.json as { mensaje?: unknown } | null
+    if (r.status === 409 && j && typeof j.mensaje === 'string' && j.mensaje) {
+      // Rechazo de asegura (p. ej. oportunidad_incompleta: falta …): se muestra tal cual.
+      setRes({ tono: 'negative', texto: j.mensaje })
+      setOcupado(false)
+      return
+    }
     const l = leerEncolar(r.status, r.json)
     if (l.ok) { setRes({ tono: 'positive', texto: l.texto }); onEncolada() } else setRes({ tono: l.apagado ? 'warning' : 'negative', texto: l.mensaje })
     setOcupado(false)
   }
   return (
     <section style={cardStyle}>
-      <CardHeader title="Nueva exploración" sub="Con datos de prueba (sintética): no toca ningún cliente real." />
+      <CardHeader title="Nueva exploración" sub="Sin oportunidad usa datos de prueba (sintética): no toca ningún cliente real." />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
         <label style={{ display: 'grid', gap: 4, fontSize: 13, flex: '1 1 220px', minWidth: 0 }}>
           Compañía y producto
@@ -143,7 +156,19 @@ function NuevaExploracion({ onEncolada }: { onEncolada: () => void }) {
             {OPCIONES_NUEVA.map((o) => <option key={o.entrada} value={o.entrada}>{o.compania} · {o.producto}</option>)}
           </select>
         </label>
-        <button type="button" onClick={() => void encolar()} disabled={!ENCOLAR_DISPONIBLE || ocupado} style={{ ...btnStyle('primario'), minHeight: 44 }}>
+        <label style={{ display: 'grid', gap: 4, fontSize: 13, flex: '1 1 260px', minWidth: 0 }}>
+          ID de oportunidad (datos reales)
+          <input
+            type="text" value={oportunidadId} onChange={(e) => setOportunidadId(e.target.value)} style={campo}
+            disabled={!ENCOLAR_DISPONIBLE || ocupado} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            autoComplete="off" spellCheck={false} aria-invalid={oportunidadMal} aria-describedby="ayuda-oportunidad"
+          />
+          <span id="ayuda-oportunidad" className="muted" style={{ fontSize: 12 }}>
+            Opcional. Con oportunidad, la exploración usa los datos reales del cliente y de la vivienda de esa oportunidad.
+          </span>
+          {oportunidadMal && <span role="alert" style={{ fontSize: 12, color: 'var(--negative)' }}>El ID no tiene formato válido (uuid).</span>}
+        </label>
+        <button type="button" onClick={() => void encolar()} disabled={!ENCOLAR_DISPONIBLE || ocupado || oportunidadMal} style={{ ...btnStyle('primario'), minHeight: 44 }}>
           <Plus size={15} strokeWidth={1.75} aria-hidden /> {ocupado ? 'Encolando…' : 'Nueva exploración'}
         </button>
       </div>

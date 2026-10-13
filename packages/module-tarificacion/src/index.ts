@@ -411,6 +411,8 @@ export {
   ENV_EXPLORADOR_TELEFONO,
   catalogoDe,
   catalogoParaIA,
+  CLAVES_VALOR_VISIBLE_IA,
+  valorVisibleIA,
   resolverDato,
   ACCIONES_EXPLORADOR,
   MOTIVOS_PARAR,
@@ -498,3 +500,14 @@ export {
   type TrabajoParaPurga,
   type PlanPurga,
 } from './purga-riesgo.ts'
+export {
+  riesgoExploracionDeOportunidad,
+  fechaDdMmAaaa,
+  ETIQUETAS_ID_HOGAR,
+  etiquetaIdHogar,
+  type CampoIdHogar,
+  type NoReconocidoRiesgoOportunidad,
+  type FichaTomadorExploracion,
+  type FaltaRiesgoOportunidad,
+  type ResultadoRiesgoOportunidad,
+} from './riesgo-oportunidad.ts'

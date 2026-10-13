@@ -144,24 +144,31 @@ export function leerPeticionPaso(body: unknown): { ok: true; p: PeticionPaso } |
   return { ok: true, p: { trabajoId: trabajoId!, inventario: inventario!, avancesFallidos: af as number } }
 }
 
-export type PeticionEncolarExploracion = { entrada: string; trabajoOrigenId: string | null }
+export type PeticionEncolarExploracion = { entrada: string; trabajoOrigenId: string | null; oportunidadId: string | null }
 
 /**
- * Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? }`. La entrada tiene que ser de la
- * lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Cualquier otra clave se rechaza (no se cuela un riesgo ni un cliente
- * a mano: el cliente y el riesgo solo salen del trabajo origen).
+ * Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? | oportunidadId? }`. La entrada tiene
+ * que ser de la lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Las dos anclas son EXCLUYENTES (una u otra, o
+ * ninguna = sintética). Cualquier otra clave se rechaza (no se cuela un riesgo ni un cliente a mano: el cliente y el riesgo
+ * solo salen del trabajo origen o de la oportunidad + la ficha de su cliente).
  */
 export function leerPeticionEncolarExploracion(body: unknown): { ok: true; p: PeticionEncolarExploracion } | { ok: false; errores: string[] } {
   const b = obj(body)
   if (!b) return { ok: false, errores: ['cuerpo no es un objeto'] }
   const errores: string[] = []
-  for (const k of Object.keys(b)) if (!['entrada', 'trabajoOrigenId'].includes(k)) errores.push(`clave «${k.slice(0, 30)}» no se admite`)
+  for (const k of Object.keys(b)) if (!['entrada', 'trabajoOrigenId', 'oportunidadId'].includes(k)) errores.push(`clave «${k.slice(0, 30)}» no se admite`)
   const entrada = esEntradaExploracion(b.entrada) ? b.entrada : null
   if (!entrada) errores.push('entrada fuera de la lista cerrada')
-  const o = b.trabajoOrigenId === undefined || b.trabajoOrigenId === null || b.trabajoOrigenId === '' ? null : b.trabajoOrigenId
-  if (o !== null && (typeof o !== 'string' || !RE_UUID.test(o))) errores.push('trabajoOrigenId tiene que ser un uuid')
+  const uuidOpcional = (v: unknown, nombre: string): string | null => {
+    const x = v === undefined || v === null || v === '' ? null : v
+    if (x !== null && (typeof x !== 'string' || !RE_UUID.test(x))) errores.push(`${nombre} tiene que ser un uuid`)
+    return typeof x === 'string' ? x : null
+  }
+  const o = uuidOpcional(b.trabajoOrigenId, 'trabajoOrigenId')
+  const op = uuidOpcional(b.oportunidadId, 'oportunidadId')
+  if (o !== null && op !== null) errores.push('trabajoOrigenId y oportunidadId son excluyentes: una sola ancla')
   if (errores.length) return { ok: false, errores }
-  return { ok: true, p: { entrada: entrada!, trabajoOrigenId: o as string | null } }
+  return { ok: true, p: { entrada: entrada!, trabajoOrigenId: o, oportunidadId: op } }
 }
 
 /** Fuente única en `@central/module-tarificacion` (los motivos de `parar` de la IA + los del sistema). */
@@ -205,6 +212,9 @@ REGLAS (no negociables):
 - mapeo: para cada campo que identifiques, {ref, campoCanonico (clave del catálogo o null), confianza alta|media|baja}.
 - Máximo 15 acciones. Refs SOLO del inventario de ESTA pantalla.
 - La explicación va en el "motivo" de ARRIBA (el del objeto, no el de la acción parar): motivo en una frase de 200 caracteres como máximo.
+- Los portales de las compañías AUTOCOMPLETAN año de construcción y m² desde el Catastro tras introducir la dirección: si un campo ya viene relleno (conValor), no lo toques.
+- El USO de la vivienda (hogar.uso) y el RÉGIMEN (hogar.regimen) determinan la tarifa. Con datos reales el catálogo da de cada una su "valor" (id interno, en inglés) y su "significado" (en español): casa la opción del portal con el SIGNIFICADO, nunca con el id; si ninguna opción significa EXACTAMENTE eso, parar ambiguo (nunca la más parecida). Una clave con sinValor no tiene dato: no la uses en rellenar.
+- Con datos REALES, elegir y marcar SOLO en campos de uso, régimen o tipo de vivienda que tengan "significado" en el catálogo, y ese campo tiene que ir en mapeo con su clave (hogar.uso, hogar.regimen o hogar.tipo_vivienda). Cualquier otro desplegable o radio OBLIGATORIO (provincia, tipo de vía, sí/no…) no lo decides tú: rellena lo demás y, si sin él no se puede avanzar, parar dato_no_disponible. Un desplegable que ya viene con valor (conValor), no lo toques.
 
 Responde SOLO un objeto JSON, sin prosa:
 {"version":1,"pantalla":{"nombre":"<≤60 car.>","tipo":"formulario|seleccion_producto|resultado|otro"},"acciones":[...],"mapeo":[...],"motivo":"<≤200 car.>"}`
@@ -225,7 +235,11 @@ export function historialCorto(pasos: readonly { respuesta: RespuestaExplorador 
   })
 }
 
-export type EntradaPrompt = { entrada: string; ramo: string; inventario: InventarioDom; historial: string[]; conDatosReales: boolean; avancesFallidos: number }
+export type EntradaPrompt = {
+  entrada: string; ramo: string; inventario: InventarioDom; historial: string[]; conDatosReales: boolean; avancesFallidos: number
+  /** Con datos reales: el riesgo del trabajo, SOLO para marcar claves sin valor y enseñar uso/régimen (`catalogoParaIA`). */
+  riesgo?: unknown
+}
 
 /**
  * El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección
@@ -235,9 +249,9 @@ export function promptExplorador(e: EntradaPrompt): string {
   const partes = [
     `ENTRADA: ${e.entrada} (ramo ${e.ramo}).`,
     e.conDatosReales
-      ? 'La exploración va ligada a una petición real: las claves del tomador (incluido tomador.nif) tienen valor; el robot lo pone.'
+      ? 'La exploración va ligada a una petición real: las claves del catálogo tienen valor (incluido tomador.nif) SALVO las marcadas sinValor; el robot lo pone. Nunca hay valores de prueba.'
       : 'Exploración con datos de PRUEBA: tomador.nif NO tiene valor. Si un campo obligatorio pide NIF/DNI → parar dato_sensible_requerido.',
-    `CATÁLOGO (claves que puedes usar en rellenar y mapeo):\n${JSON.stringify(catalogoParaIA(e.ramo))}`,
+    `CATÁLOGO (claves que puedes usar en rellenar y mapeo):\n${JSON.stringify(catalogoParaIA(e.ramo, e.conDatosReales ? { riesgo: e.riesgo ?? null } : undefined))}`,
     e.historial.length ? `PASOS ANTERIORES:\n${e.historial.join('\n')}` : 'PASOS ANTERIORES: ninguno (primera pantalla tras la entrada).',
     e.avancesFallidos > 0 ? `AVISO: el último avance no cambió de pantalla (${e.avancesFallidos} vez/veces). Revisa campos obligatorios o para.` : '',
     `<inventario>\n${JSON.stringify(e.inventario)}\n</inventario>`,

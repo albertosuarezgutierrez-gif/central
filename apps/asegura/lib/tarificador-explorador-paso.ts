@@ -18,6 +18,7 @@ import {
   respuestaParar,
   topesExplorador,
   validarRespuestaExplorador,
+  type ContextoValidacion,
   type InventarioDom,
   type RespuestaExplorador,
 } from '@central/module-tarificacion'
@@ -82,6 +83,17 @@ export type EntradaPaso = {
   entrada: string
   conDatosReales: boolean
   modelo: string
+  /** Con datos reales: el riesgo del trabajo (solo para el catálogo del prompt: claves sin valor, uso/régimen). */
+  riesgo?: unknown
+}
+
+/**
+ * Con datos REALES un plan de MEMORIA con `elegir`/`marcar` no se reutiliza: repetiría la opción de OTRA exploración (uso
+ * «habitual», régimen «propietario»…) y el uso/régimen decide la tarifa. Lo que sí vale es `rellenar` (va por clave y su
+ * valor sale del riesgo de ESTE trabajo). `false` = que decida la IA, que ve el uso/régimen de este riesgo.
+ */
+export function planDeMemoriaUsable(plan: RespuestaExplorador, conDatosReales: boolean): boolean {
+  return !conDatosReales || !plan.acciones.some((a) => a.accion === 'elegir' || a.accion === 'marcar')
 }
 
 export type SalidaPaso =
@@ -104,7 +116,8 @@ export function consumoPaso(st: EstadoPaso, ahora: Date): { llamadas: number; ac
 export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<SalidaPaso> {
   const inventario = e.inventario
   const huella = huellaPantalla(inventario)
-  const ctx = { inventario, ramo: e.ramo, entrada: e.entrada }
+  // Con datos reales, el riesgo entra en la validación: elegir/marcar solo sobre uso/régimen/tipo con valor conocido.
+  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null }
   const topes = topesExplorador(d.env)
 
   type Decision = { tipo: 'hecho'; salida: SalidaPaso } | { tipo: 'ia'; prompt: string; caracteres: number; peor: number; nAntes: number }
@@ -126,11 +139,11 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     // MEMORIA: lo ya mapeado no vuelve a costar IA.
     const pantalla = pantallaDeMemoria(await d.mapas(), huella)
     const plan = pantalla ? planDesdeMapa(pantalla, inventario) : null
-    if (plan) {
+    if (plan && planDeMemoriaUsable(plan, e.conDatosReales)) {
       const v = validarRespuestaExplorador(plan, ctx)
       if (v.ok) return guardar(v.respuesta, 'mapa')
     }
-    const prompt = promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos })
+    const prompt = promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo })
     const caracteres = SYSTEM_EXPLORADOR.length + prompt.length
     const peor = costeMaximoLlamada(e.modelo, caracteres, MAX_TOKENS_SALIDA_EXPLORADOR)
     const tope1 = comprobarTopes(consumo, topes, peor)
@@ -169,7 +182,7 @@ async function tx2<B>(
   d: DepsPaso<B>,
   e: EntradaPaso,
   decision: { nAntes: number },
-  x: { huella: string; inventario: InventarioDom; ctx: { inventario: InventarioDom; ramo: string; entrada: string }; coste: number; texto: string | null; fallo: string | null },
+  x: { huella: string; inventario: InventarioDom; ctx: ContextoValidacion; coste: number; texto: string | null; fallo: string | null },
 ): Promise<SalidaPaso> {
   const { huella, inventario, ctx, coste, texto, fallo } = x
   return d.conLock(async (bd): Promise<SalidaPaso> => {

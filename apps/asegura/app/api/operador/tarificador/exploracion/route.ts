@@ -15,9 +15,16 @@ export const dynamic = 'force-dynamic'
 
 /**
  * `POST /api/operador/tarificador/exploracion` — encola una EXPLORACIÓN IA del tarificador RPA (13/10/2026). Body:
- * `{ entrada: 'allianz:particulares:hogar', trabajoOrigenId? }`. Sin `trabajoOrigenId` = SINTÉTICA (sin cliente: todo lo
- * personal es de prueba y, si el portal pide NIF, para). Con él = ligada a una petición REAL: un trabajo `tarificar` de
- * esta correduría, con cliente y del mismo ramo (se copian su cliente y su riesgo; el trigger de la BD lo re-exige).
+ * `{ entrada: 'allianz:particulares:hogar', trabajoOrigenId? | oportunidadId? }` (anclas EXCLUYENTES; las dos → 400).
+ * Sin ancla = SINTÉTICA (sin cliente: todo lo personal es de prueba y, si el portal pide NIF, para). Con ancla = datos REALES:
+ *  · `trabajoOrigenId`: un trabajo `tarificar` de esta correduría, con cliente y del mismo ramo (se copian su cliente y su riesgo).
+ *  · `oportunidadId` (vía «c», 13/10/2026): una oportunidad de HOGAR de esta correduría. Riesgo = ficha de SU cliente
+ *    (NIF, nombre, apellidos, nacimiento dd/mm/aaaa; descifrada aquí, nunca en el cuerpo) + `info_riesgo.datosVivienda`.
+ *    USO (`datosVivienda.ocupacion`) y RÉGIMEN (`datosVivienda.uso`) obligatorios y explícitos: sin ellos, 409
+ *    `oportunidad_incompleta` (nunca un valor por defecto). Año y m² que falten se OMITEN: el portal los autocompleta
+ *    del Catastro. Tomador distinto del cliente o empresa → 409.
+ * En los dos casos el trigger de la BD (`tarificacion_exploracion_ancla_valida`) re-exige el mismo cliente y correduría, y
+ * con datos reales el worker NUNCA pone un valor de prueba en una clave del riesgo que falte.
  *
  * Cerrojos (todos fail-closed): Bearer de operador · `TARIFICADOR_RPA_ACTIVO=1` · `TARIFICADOR_EXPLORADOR_ACTIVO=1` (APAGADO
  * por defecto) · esquema aplicado · entrada de la lista cerrada · fila de `companias_integracion` de esa compañía/ramo activa
@@ -37,7 +44,7 @@ export const POST = auditado(async (req: Request) => {
     if (!(await hayExplorador())) return NextResponse.json({ estado: 'error', mensaje: 'explorador_sin_esquema (aplicar 2026-10-13_tarificador_explorador.sql)' }, { status: 503 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', mensaje: 'no se ha podido resolver la correduría' }, { status: 503 })
-    const r = await encolarExploracion({ correduriaId: correduria.id, entrada: l.p.entrada, trabajoOrigenId: l.p.trabajoOrigenId, solicitadoPor })
+    const r = await encolarExploracion({ correduriaId: correduria.id, entrada: l.p.entrada, trabajoOrigenId: l.p.trabajoOrigenId, oportunidadId: l.p.oportunidadId, solicitadoPor })
     if (r.estado === 'rechazado') return NextResponse.json({ estado: 'rechazado', motivo: r.motivo }, { status: r.status })
     const lanzado = await lanzarPendientes(correduria.id, r.compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,

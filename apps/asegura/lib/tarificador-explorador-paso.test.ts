@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sanearInventarioDom, type InventarioDom } from '@central/module-tarificacion'
-import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, type DepsPaso, type EstadoPaso } from './tarificador-explorador-paso.ts'
+import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, planDeMemoriaUsable, type DepsPaso, type EstadoPaso } from './tarificador-explorador-paso.ts'
 
 const inventario = sanearInventarioDom({
   marcos: [{
@@ -190,4 +190,15 @@ test('rutas: paso y cierre usan el lock por exploración y responden 409 si est�
     assert.match(f, /err instanceof PasoOcupado\) return NextResponse\.json\(\{ estado: 'conflicto', motivo: 'paso_en_curso' \}, \{ status: 409 \}\)/, `${r}: ocupado → 409`)
     assert.match(f, r === 'paso' ? /ejecutarPaso<Bd>\(/ : /ejecutarCierre<Bd>\(/)
   }
+})
+
+test('memoria con datos reales: un plan con elegir/marcar NO se reutiliza (repetiría el uso/régimen de otra exploración)', () => {
+  const plan = (acciones: unknown[]) => ({ version: 1, pantalla: { nombre: 'x', tipo: 'formulario' }, acciones, mapeo: [], motivo: 'del mapa' }) as never
+  const elegir = { accion: 'elegir', ref: 'm0e1', opcion: { valor: 'H' } }
+  const rellenar = { accion: 'rellenar', ref: 'm0e2', dato: 'inmueble.codigo_postal' }
+  const marcar = { accion: 'marcar', ref: 'm0e3' }
+  assert.equal(planDeMemoriaUsable(plan([rellenar, elegir]), true), false)
+  assert.equal(planDeMemoriaUsable(plan([marcar]), true), false)
+  assert.equal(planDeMemoriaUsable(plan([rellenar]), true), true)
+  assert.equal(planDeMemoriaUsable(plan([rellenar, elegir]), false), true)
 })

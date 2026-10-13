@@ -20,6 +20,7 @@ import {
   EXPLORADOR_VERSION,
   finDeError,
   motivoSinDato,
+  accionSinDato,
   problemaTrabajoExploracion,
   resultadoDeFin,
   valorParaControl,
@@ -463,4 +464,12 @@ test('problemaTrabajoExploracion: entrada cerrada que case con compañía y ramo
   assert.match(problemaTrabajoExploracion({ ...t, exploracion: { entrada: 'https://otro', conDatosReales: false } })!, /desconocida/)
   assert.match(problemaTrabajoExploracion({ ...t, ramo: 'comunidades', exploracion: { entrada: 'allianz:particulares:hogar', conDatosReales: false } })!, /no casa/)
   assert.match(problemaTrabajoExploracion({ ...t, compania: 'mapfre', exploracion: { entrada: 'allianz:particulares:hogar', conDatosReales: false } })!, /no casa/)
+})
+
+test('accionSinDato: con datos reales, una clave ausente solo se salta si el portal ya rellenó el campo; si no, para', () => {
+  assert.equal(accionSinDato('dato_no_disponible', true, true), 'saltar')
+  assert.equal(accionSinDato('dato_no_disponible', true, false), 'dato_sensible_requerido')
+  assert.equal(accionSinDato('dato_no_disponible', false, true), 'dato_sensible_requerido')
+  assert.equal(accionSinDato('dato_sensible_requerido', true, true), 'dato_sensible_requerido')
+  assert.equal(accionSinDato('clave_desconocida', true, true), 'ambiguo')
 })

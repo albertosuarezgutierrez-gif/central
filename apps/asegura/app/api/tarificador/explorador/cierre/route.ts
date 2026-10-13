@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { construirMapa, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador } from '@central/module-tarificacion'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
-import { PasoOcupado, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, type Bd } from '@/lib/tarificador-explorador'
+import { PasoOcupado, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
 import { ejecutarCierre } from '@/lib/tarificador-explorador-paso'
 import { leerPeticionCierre } from '@/lib/tarificador-explorador-reglas'
 
@@ -29,6 +29,9 @@ export async function POST(req: Request) {
     const e = await exploracionViva(p.trabajoId)
     if (!e) return NextResponse.json({ estado: 'no_disponible', motivo: 'exploracion_no_en_curso' }, { status: 404 })
     if (e.cerrada) return NextResponse.json({ estado: 'conflicto', motivo: 'exploracion_cerrada' }, { status: 409 })
+    // Re-validación con las MISMAS reglas que el paso: con datos reales, elegir/marcar solo con valor conocido. Sin riesgo
+    // legible (`null`), esos pasos no entran en el mapa (conservador).
+    const datosReales = e.conDatosReales ? { riesgo: await riesgoDeExploracion(e).catch(() => null) } : null
     let resumen: { pantallas: number; huecos: number; resultado: boolean; coste: { llamadas: number; eurEstimado: number } } | null = null
     const out = await ejecutarCierre<Bd>({
       conLock: (fn) => conLockExploracion(e, fn),
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
       cerrar: async (bd) => {
         const pasos = (await pasosDe(e.exploracionId, bd)).map((x) => {
           const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
-          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada }) : null
+          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada, datosReales }) : null
           return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta: v?.ok ? v.respuesta : null } : null
         }).filter((x) => x !== null)
         const c = await costeYModelo(e, bd)
