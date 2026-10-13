@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-13T16:18:47Z",
+  "generadoEn": "2026-10-13T19:46:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -965,7 +965,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 13
       },
       "asegura-web": {
         "estado": "no",
@@ -2207,7 +2207,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 124
+        "evidencias": 132
       },
       "asegura-web": {
         "estado": "usado",
@@ -2315,7 +2315,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 98
+        "evidencias": 106
       },
       "asegura-web": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 46
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "rrhh": {
         "estado": "no",
@@ -4219,6 +4219,7 @@
       "/api/operador/tarificador/emision/autorizar",
       "/api/operador/tarificador/emision/avisos",
       "/api/operador/tarificador/encolar",
+      "/api/operador/tarificador/exploracion",
       "/api/operador/tarificador/exploraciones",
       "/api/operador/tarificador/exploraciones/[id]",
       "/api/operador/tarificador/fichas",
@@ -4287,6 +4288,8 @@
       "/api/avisos/leido",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/configuracion/avisos",
+      "/api/configuracion/bienvenida",
       "/api/consentimiento",
       "/api/contacto-compania/[compania]",
       "/api/cron/avisos-cima",
@@ -4318,7 +4321,9 @@
       "/api/polizas/[id]",
       "/api/polizas/[id]/carta",
       "/api/polizas/[id]/documentos/[documentoId]",
+      "/api/polizas/[id]/gestion",
       "/api/polizas/[id]/reintentar",
+      "/api/polizas/[id]/restaurar",
       "/api/presupuesto/actividad",
       "/api/presupuesto/carta",
       "/api/presupuesto/datos",
@@ -5884,6 +5889,8 @@
       "seguros.portal_parte_siniestro",
       "seguros.portal_peticion_acceso",
       "seguros.portal_poliza_declarada",
+      "seguros.portal_poliza_declarada_historial",
+      "seguros.portal_preferencias_avisos",
       "seguros.portal_push_suscripcion",
       "seguros.portal_supresion",
       "seguros.portal_vinculo",
@@ -6877,7 +6884,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1684,
+    "apis": 1689,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
