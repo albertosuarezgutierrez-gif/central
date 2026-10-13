@@ -8,6 +8,7 @@
 // los monta, `COTIZADOR_EMBEBIDO` (`cotizadores-embebidos.tsx`, que el tipo obliga a tener completo). Un ramo que no
 // está en la lista sigue como siempre: enlace a su pantalla `…-nuevo?oportunidad=` (`rutaVariante`).
 
+import { CLAVES_HISTORIAL_DECLARADO } from '@central/module-seguros'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 import { ramoVariante, rutaVariante, type RamoVarianteNuevo } from './variante.ts'
 
@@ -54,9 +55,12 @@ export function firmaRiesgo(r: Riesgo): string {
   const figuras = [...r.figuras]
     .map((f) => ({ rol: f.rol, clienteId: f.clienteId, empresa: f.empresa, faltan: f.faltan === null ? null : [...f.faltan].sort() }))
     .sort((a, b) => a.rol.localeCompare(b.rol) || a.clienteId.localeCompare(b.clienteId))
-  // Años asegurado / en la compañía declarados en «Historial y bonificaciones» (13/10/2026): el cotizador auto los manda
-  // (`historialRiesgo`); editarlos con el cotizador abierto tiene que releerlo, o pagaría con los de antes.
-  const historial = r.historial?.historialDeclarado ?? null
+  // TODO lo declarado en «Historial y bonificaciones» (13/10/2026: seguro actual sí/no, compañía, nº de póliza, años
+  // asegurado / en la compañía / sin siniestros, siniestros en 5 años): el cotizador auto lo manda (`historialRiesgo`);
+  // editarlo con el cotizador abierto tiene que releerlo, o pagaría con lo de antes. Clave a clave (todas, `null` = sin
+  // dato), en orden fijo: una clave nueva del historial entra sola en la huella.
+  const hd = r.historial?.historialDeclarado ?? null
+  const historial = hd === null ? null : Object.fromEntries(CLAVES_HISTORIAL_DECLARADO.map((k) => [k, hd[k] ?? null]))
   // El cliente de la oportunidad entra: sin figura «tomador», el tomador ES él (`tomadorDelRiesgo`).
   return JSON.stringify({ oportunidad: r.oportunidad.id, cliente: r.oportunidad.clienteId, ramo: r.oportunidad.ramo, roles: [...r.roles].sort(), vehiculo, objeto, figuras, historial })
 }

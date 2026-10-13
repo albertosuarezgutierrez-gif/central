@@ -80,6 +80,25 @@ export function esRolMultiple(v: unknown): v is RolFiguraMultiple {
   return typeof v === 'string' && (ROLES_FIGURA_MULTIPLES as readonly string[]).includes(v)
 }
 
+/**
+ * Ramos cuya petición saca el CÓDIGO POSTAL de la ficha del TOMADOR (13/10/2026): auto (dirección del `holder`,
+ * obligatoria en `CarRisk`, y `risk.circulationAddress.postalCode`, que se supone donde vive) y moto
+ * (`circulationAddress.postalCode`, obligatorio). Hogar lleva el CP de la VIVIENDA (lo vigila `datosVivienda`, no la
+ * figura); vida, salud y decesos no lo mandan.
+ */
+export function ramoPideCpDelTomador(ramo: string): boolean {
+  return ramo === 'auto' || ramo === 'moto'
+}
+
+/**
+ * ¿Falta el código postal? `true` = la ficha no trae uno de 5 dígitos (el vendor no admite otro) · `false` = lo trae ·
+ * `null` = no se pudo leer la ficha (`undefined`): no se afirma que falte.
+ */
+export function faltaCodigoPostal(cp: string | null | undefined): boolean | null {
+  if (cp === undefined) return null
+  return !/^\d{5}$/.test((cp ?? '').trim())
+}
+
 /** Foto de figuras de una variante: cliente_id por rol; `null` = la misma persona que el tomador. */
 export type FigurasVariante = Partial<Record<RolFiguraUnico, string | null>>
 

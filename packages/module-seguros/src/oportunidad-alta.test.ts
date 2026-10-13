@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { MOTIVO_DESCARTE, aplicarAccion, historialDeclaradoDe, seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
+import { MOTIVO_DESCARTE, aplicarAccion, historialDeclaradoDe, incoherenciaHistorialDeclarado, seguroAnteriorDe, ultimosDigitosPoliza, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
 
 const hoy = new Date(Date.UTC(2026, 8, 24))
 
@@ -76,7 +76,7 @@ test('edición del historial: null = sin dato, 0 = dato, basura = error (nunca 0
   assert.deepEqual(ok({ aniosEnCompania: '' }), { aniosEnCompania: null }, 'vacío = sin dato')
   assert.deepEqual(ok({ aniosEnCompania: '4' }), { aniosEnCompania: 4 })
   // Merge sin pisar: las claves no enviadas NO aparecen (ni como null) y las que no son del historial se ignoran.
-  const solo = ok({ aniosAsegurado: 3, aniosSinSiniestros: 9, codigoDgs: 'C0058' }) as Record<string, unknown>
+  const solo = ok({ aniosAsegurado: 3, codigoDgs: 'C0058', aseguradoAntes: true }) as Record<string, unknown>
   assert.deepEqual(solo, { aniosAsegurado: 3 })
   assert.equal('aniosEnCompania' in solo, false)
   for (const malo of [-1, 1.5, 'abc', 101, true, {}]) {
@@ -97,8 +97,53 @@ test('historial declarado FUERA del seguro anterior: solo años ≠ un seguro an
   const conAnios = seguroAnteriorDe({ codigoDgs: 'C0058', aniosAsegurado: 5 }) as Record<string, unknown>
   assert.equal('aniosAsegurado' in conAnios, false, 'el saneado del seguro anterior no arrastra los años')
   // Tres estados: null pendiente · 0 revisado · dato. Basura = null, nunca 0.
-  assert.deepEqual(historialDeclaradoDe(undefined), { aniosAsegurado: null, aniosEnCompania: null })
-  assert.deepEqual(historialDeclaradoDe({ aniosAsegurado: 0, aniosEnCompania: 6 }), { aniosAsegurado: 0, aniosEnCompania: 6 })
-  assert.deepEqual(historialDeclaradoDe({ aniosAsegurado: -2, aniosEnCompania: 'x' }), { aniosAsegurado: null, aniosEnCompania: null })
-  assert.deepEqual(historialDeclaradoDe([3]), { aniosAsegurado: null, aniosEnCompania: null })
+  assert.deepEqual(historialDeclaradoDe(undefined), NADA)
+  assert.deepEqual(historialDeclaradoDe({ aniosAsegurado: 0, aniosEnCompania: 6 }), { ...NADA, aniosAsegurado: 0, aniosEnCompania: 6 })
+  assert.deepEqual(historialDeclaradoDe({ aniosAsegurado: -2, aniosEnCompania: 'x' }), NADA)
+  assert.deepEqual(historialDeclaradoDe([3]), NADA)
+})
+
+const NADA = {
+  aniosAsegurado: null, aniosEnCompania: null, tieneSeguroActual: null, companiaActual: null, numeroPoliza: null,
+  aniosSinSiniestros: null, siniestrosUltimos5: null,
+}
+
+test('historial declarado (13/10/2026): seguro actual, compañía, póliza y siniestros — tres estados, 0 y false son dato', () => {
+  const h = historialDeclaradoDe({ tieneSeguroActual: false, companiaActual: '  Mapfre ', numeroPoliza: ' 4840402030 01 ', aniosSinSiniestros: 0, siniestrosUltimos5: 0 })
+  assert.deepEqual(h, { ...NADA, tieneSeguroActual: false, companiaActual: 'Mapfre', numeroPoliza: '4840402030 01', aniosSinSiniestros: 0, siniestrosUltimos5: 0 })
+  // Basura = null (nunca false ni 0): 'si' no es un booleano, una póliza de 3 caracteres no sirve para SINCO.
+  assert.deepEqual(historialDeclaradoDe({ tieneSeguroActual: 'si', numeroPoliza: '123', siniestrosUltimos5: 51, companiaActual: 7 }), NADA)
+})
+
+test('edición del historial (13/10/2026): valida cada clave nueva y su coherencia', () => {
+  const ok = (hd: unknown) => { const r = validarEdicionOportunidad({ historialDeclarado: hd }); return r.ok ? r.cambios.historial : r.motivo }
+  assert.deepEqual(ok({ tieneSeguroActual: true, companiaActual: 'Reale', numeroPoliza: 'AB-123456' }), { tieneSeguroActual: true, companiaActual: 'Reale', numeroPoliza: 'AB-123456' })
+  assert.deepEqual(ok({ tieneSeguroActual: '', companiaActual: '', numeroPoliza: null }), { tieneSeguroActual: null, companiaActual: null, numeroPoliza: null }, 'vacío = sin dato')
+  assert.deepEqual(ok({ aniosSinSiniestros: 0, siniestrosUltimos5: 0 }), { aniosSinSiniestros: 0, siniestrosUltimos5: 0 }, '0 es dato')
+  assert.match(String(ok({ tieneSeguroActual: 'si' })), /sí, no o sin dato/)
+  assert.match(String(ok({ numeroPoliza: '12 3' })), /5 últimos/)
+  assert.match(String(ok({ companiaActual: 3 })), /no es un texto/)
+  assert.match(String(ok({ siniestrosUltimos5: 51 })), /0 a 50/)
+  assert.match(String(ok({ aniosSinSiniestros: -1 })), /0 a 100/)
+  // Coherencia: sin siniestros ≤ asegurado; ≥5 limpios = 0 siniestros en 5; sin seguro, ni compañía ni póliza.
+  assert.match(String(ok({ aniosAsegurado: 3, aniosSinSiniestros: 9 })), /sin siniestros no pueden ser más que los años asegurado/)
+  assert.deepEqual(ok({ aniosAsegurado: 9, aniosSinSiniestros: 9 }), { aniosAsegurado: 9, aniosSinSiniestros: 9 }, 'igual sí vale')
+  assert.match(String(ok({ aniosSinSiniestros: 6, siniestrosUltimos5: 1 })), /5 años o más sin siniestros/)
+  assert.match(String(ok({ tieneSeguroActual: false, companiaActual: 'Reale' })), /no tiene seguro ahora/)
+  assert.deepEqual(ok({ tieneSeguroActual: false, companiaActual: null, numeroPoliza: null }), { tieneSeguroActual: false, companiaActual: null, numeroPoliza: null })
+})
+
+test('incoherenciaHistorialDeclarado: un null no choca con nada', () => {
+  assert.equal(incoherenciaHistorialDeclarado(NADA), null)
+  assert.equal(incoherenciaHistorialDeclarado({ ...NADA, aniosSinSiniestros: 40 }), null, 'sin años asegurado no hay con qué comparar')
+  assert.match(incoherenciaHistorialDeclarado({ ...NADA, aniosAsegurado: 2, aniosEnCompania: 3 }) ?? '', /en la compañía/)
+})
+
+test('ultimosDigitosPoliza: los 5 últimos para Codeoscopic; sin sufijo Mapfre; menos de 5 = null', () => {
+  assert.equal(ultimosDigitosPoliza('4840402030 01', 'C0058'), '02030', 'Mapfre: fuera el sufijo de suplemento')
+  assert.equal(ultimosDigitosPoliza('4840402030 01', 'C0072'), '03001', 'otra compañía: se quitan los espacios')
+  assert.equal(ultimosDigitosPoliza(' ab-12/345 '), '12345')
+  assert.equal(ultimosDigitosPoliza('98765'), '98765', 'si solo se dan los 5, son esos')
+  assert.equal(ultimosDigitosPoliza('1234'), null)
+  assert.equal(ultimosDigitosPoliza(null), null)
 })

@@ -38,7 +38,9 @@ import {
   esRolFiguraUnico,
   esRolMultiple,
   estadoFigurasMulti,
+  faltaCodigoPostal,
   faltanDatosVehiculo,
+  ramoPideCpDelTomador,
   revisarAseguradoLigero,
   leerBloqueDeRamo,
   leerDatosVehiculo,
@@ -328,8 +330,13 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     // Estado civil de la ficha (texto libre del CRM) solo en los ramos de personas: se lee aparte para no meterlo en
     // `personaDeFicha` (ahí viajaría al vendor como si fuera un id de catálogo).
     const pideCivil = ramoPideEstadoCivil(op.tipo) && !f.empresa
-    const civil = pideCivil ? await clienteOrigenDe(correduriaId, f.clienteId).then((o) => (o ? o.cliente.estadoCivil : undefined)).catch(() => undefined) : undefined
-    f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil })
+    // El código postal del TOMADOR en auto/moto (13/10/2026): la petición saca de ahí la dirección del holder y la de
+    // circulación. Leído aparte, como el estado civil (`undefined` = no se pudo leer: no se afirma que falte).
+    const pideCp = ramoPideCpDelTomador(op.tipo) && f.rol === 'tomador'
+    const ficha = pideCivil || pideCp ? await clienteOrigenDe(correduriaId, f.clienteId).catch(() => null) : null
+    const civil = pideCivil && ficha ? ficha.cliente.estadoCivil : undefined
+    const cp = pideCp && ficha ? (ficha.cliente.codigoPostal ?? null) : undefined
+    f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil, pideCp, cpFicha: cp })
   }
 
   const rolCarnet = (['conductor_habitual', 'tomador'] as const).find((r) => carnetPorRol.has(r)) ?? null
@@ -818,10 +825,19 @@ export async function personaDeFicha(
 export function faltanDeFigura(
   p: PersonaFigura | EmpresaFigura | null,
   conCarnet: boolean,
-  personas: { pideEstadoCivil: boolean; estadoCivilFicha: string | null | undefined } = { pideEstadoCivil: false, estadoCivilFicha: undefined },
+  personas: {
+    pideEstadoCivil: boolean
+    estadoCivilFicha: string | null | undefined
+    /** El ramo saca de esta ficha el código postal (tomador de auto/moto: `ramoPideCpDelTomador`). */
+    pideCp?: boolean
+    /** `codigo_postal` de la ficha; `undefined` = no se pudo leer (no se afirma que falte). */
+    cpFicha?: string | null
+  } = { pideEstadoCivil: false, estadoCivilFicha: undefined },
 ): string[] {
   if (!p) return ['ficha']
   const f: string[] = []
+  // CP (13/10/2026): persona o empresa, si el ramo lo saca de esta ficha y no trae uno de 5 dígitos.
+  if (personas.pideCp === true && faltaCodigoPostal(personas.cpFicha) === true) f.push('cp')
   // Empresa: CIF y razón social (en los campos de la pantalla, `dni` y `nombre`). Conducir, nunca:
   // el vendor solo admite Dni/Nie/Passport en el conductor — `empresa_no_conduce` bloquea la figura.
   if (p.tipo === 'juridica') {

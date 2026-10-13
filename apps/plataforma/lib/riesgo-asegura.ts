@@ -241,6 +241,7 @@ const CAMPO_FALTA: Record<string, string> = {
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
   empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
   estadoCivil: 'estado civil (no consta; se elige del catálogo en la pantalla de precio)',
+  cp: 'código postal',
 }
 /**
  * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
@@ -256,6 +257,8 @@ export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambi
   dni: 'formulario', nombre: 'formulario', apellido1: 'formulario', fechaNacimiento: 'formulario', fechaCarnet: 'formulario',
   sexo: 'completar', telefono: 'completar', estadoCivil: 'pantalla_precio',
   empresa_no_conduce: 'cambiar', ficha: 'sin_ficha',
+  // CP del tomador de auto/moto (13/10/2026): sección «Dirección» del mismo editor de la ficha.
+  cp: 'formulario',
 }
 
 /** Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»). */

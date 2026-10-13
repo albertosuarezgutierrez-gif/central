@@ -135,7 +135,7 @@ test('fuera de auto/moto la variante solo lleva al tomador y ningún rol de más
 test('a hogar, vida, salud y decesos no se les pide fecha de carné (solo conduce quien conduce en auto/moto)', () => {
   const c = cuerpoDe('leerRiesgo')
   assert.match(c, /\(op\.tipo === 'auto' \|\| op\.tipo === 'moto'\) &&/)
-  assert.match(c, /faltanDeFigura\(p, conduce, \{ pideEstadoCivil: pideCivil, estadoCivilFicha: civil \}\)/)
+  assert.match(c, /faltanDeFigura\(p, conduce, \{ pideEstadoCivil: pideCivil, estadoCivilFicha: civil, pideCp, cpFicha: cp \}\)/)
   assert.match(src, /if \(conCarnet && !p\.fechaCarnet\) f\.push\('fechaCarnet'\)/, 'el carné solo se exige si conCarnet')
 })
 
@@ -148,4 +148,15 @@ test('vida, salud y decesos avisan si la ficha no trae estado civil (la pantalla
   assert.match(c, /const pideCivil = ramoPideEstadoCivil\(op\.tipo\) && !f\.empresa/, 'una empresa no tiene estado civil')
   // El texto de la ficha NO entra en `personaDeFicha`: viajaría al vendor como si fuera un id de catálogo.
   assert.doesNotMatch(cuerpoDe('personaDeFicha').split('/**')[0], /estadoCivil/)
+})
+
+test('el CP del TOMADOR de auto/moto cuenta como dato que falta (la petición saca de él holder y circulación)', () => {
+  const c = cuerpoDe('leerRiesgo')
+  assert.match(c, /const pideCp = ramoPideCpDelTomador\(op\.tipo\) && f\.rol === 'tomador'/, 'solo el tomador, solo en los ramos que lo mandan')
+  // No leído ≠ no hay: sin ficha legible el CP queda `undefined` y no se afirma que falte.
+  assert.match(c, /const cp = pideCp && ficha \? \(ficha\.cliente\.codigoPostal \?\? null\) : undefined/)
+  const f = src.slice(src.indexOf('export function faltanDeFigura'), src.indexOf('/** Ramos de personas'))
+  assert.match(f, /if \(personas\.pideCp === true && faltaCodigoPostal\(personas\.cpFicha\) === true\) f\.push\('cp'\)/)
+  // Antes de la rama de empresa: una empresa tomadora de un coche también necesita su CP.
+  assert.ok(f.indexOf("f.push('cp')") < f.indexOf("if (p.tipo === 'juridica')"), 'el CP se mira también para una empresa')
 })
