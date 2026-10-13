@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { esBajaHistorica, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, leerAnulacion, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo, type Foto, type HuellaPoliza } from './detector-cartera.ts'
+import { corteBajaHistorica, esBajaHistorica, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, leerAnulacion, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo, type Foto, type HuellaPoliza } from './detector-cartera.ts'
 
 const pol = (id: string, o: Partial<HuellaPoliza> = {}): HuellaPoliza => ({
   id, clienteId: 'c-' + id, estado: 'en_vigor', vencimiento: '2027-01-10', sustituida: false, fusionada: false, ...o,
@@ -159,4 +159,11 @@ test('baja histórica: reciente sale, >12 meses no, fecha desconocida sí se mue
   assert.equal(esBajaHistorica('POLIZA_BAJA', null, hoy), false)
   assert.equal(esBajaHistorica('POLIZA_BAJA', 'basura', hoy), false)
   assert.equal(esBajaHistorica('POLIZA_DESAPARECIDA', '2013-01-27', hoy), false)
+})
+
+test('corte de baja histórica: el que usa la consulta SQL de pendientes es el mismo de esBajaHistorica', () => {
+  assert.equal(corteBajaHistorica('2026-10-13'), '2025-10-13')
+  assert.equal(corteBajaHistorica('basura'), null)
+  // Justo en el corte no es histórica; un día antes, sí (la SQL compara `< corte`, como aquí).
+  assert.equal(esBajaHistorica('POLIZA_BAJA', corteBajaHistorica('2026-10-13'), '2026-10-13'), false)
 })

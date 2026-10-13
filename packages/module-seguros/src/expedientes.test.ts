@@ -7,6 +7,7 @@ import {
   esRescateDeRecibo,
   estadoVisible,
   fechaPospuesta,
+  importeReciboRescate,
   notasEditadas,
   textoRetomar,
   vueltaRescatePerdido,
@@ -142,4 +143,13 @@ test('notas: la edición de la oportunidad las acepta solas', () => {
   assert.deepEqual(validarEdicionOportunidad({ notas: 'año que viene: pedir precio de hogar' }), { ok: true, cambios: { notas: 'año que viene: pedir precio de hogar' } })
   assert.deepEqual(validarEdicionOportunidad({ notas: '' }), { ok: true, cambios: { notas: null } })
   assert.equal(validarEdicionOportunidad({ notas: 3 }).ok, false)
+})
+
+test('importe del recibo de un rescate: 0, negativo o ilegible = «no se sabe» (null), nunca 0€', () => {
+  assert.equal(importeReciboRescate('123.45'), 123.45)
+  assert.equal(importeReciboRescate('0'), null)
+  assert.equal(importeReciboRescate('0.00'), null)
+  assert.equal(importeReciboRescate('-50.00'), null)
+  assert.equal(importeReciboRescate('basura'), null)
+  assert.equal(importeReciboRescate(null), null)
 })

@@ -161,10 +161,20 @@ export const MESES_BAJA_HISTORICA = 12
  */
 export function esBajaHistorica(tipo: string, fecha: string | null | undefined, hoy: string): boolean {
   if (tipo !== 'POLIZA_BAJA') return false
-  if (!fecha || !/^\d{4}-\d{2}-\d{2}/.test(fecha) || !/^\d{4}-\d{2}-\d{2}$/.test(hoy)) return false
-  const [y, m, d] = hoy.split('-').map(Number)
-  const corte = new Date(Date.UTC(y, m - 1 - MESES_BAJA_HISTORICA, d)).toISOString().slice(0, 10)
+  const corte = corteBajaHistorica(hoy)
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}/.test(fecha) || corte === null) return false
   return fecha.slice(0, 10) < corte
+}
+
+/**
+ * La fecha (`AAAA-MM-DD`) por debajo de la cual una baja es histórica: la MISMA que usa `esBajaHistorica`,
+ * para que la consulta SQL de pendientes filtre con la regla de aquí y no con una copia. `null` si `hoy`
+ * es ilegible (entonces no se filtra nada).
+ */
+export function corteBajaHistorica(hoy: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hoy)) return null
+  const [y, m, d] = hoy.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1 - MESES_BAJA_HISTORICA, d)).toISOString().slice(0, 10)
 }
 
 // ── Motivo de la anulación (C0058 de EIAC) ──

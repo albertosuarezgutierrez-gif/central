@@ -21,7 +21,7 @@ import {
   esRescateDeRecibo,
   estadoVisible,
   hitoDevolucion,
-  importeEiac,
+  importeReciboRescate,
   suspensionDesde,
   type ClaseExpediente,
   type EstadoVisible,
@@ -183,7 +183,7 @@ export async function expedientesDeTrabajo(
             ? {
                 reciboId: r.reciboId,
                 idRecibo: r.idRecibo,
-                importe: importeEiac(r.importe),
+                importe: importeReciboRescate(r.importe),
                 efecto: r.efecto,
                 suspensionDesde: suspensionDesde(r.efecto),
                 hito: hitoDevolucion(r.efecto, hoyDate),

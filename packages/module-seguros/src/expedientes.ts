@@ -15,6 +15,7 @@
 import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad } from './oportunidad-aviso.ts'
 import { ORIGEN_DEVOLUCION } from './seguimiento-devolucion.ts'
 import { ORIGEN_RETENCION } from './retencion-fuga.ts'
+import { importeEiac } from './importe-eiac.ts'
 
 export const CLASES_EXPEDIENTE = ['venta_nueva', 'mejora_renovacion', 'rescate'] as const
 export type ClaseExpediente = (typeof CLASES_EXPEDIENTE)[number]
@@ -213,4 +214,14 @@ export function notasEditadas(v: unknown): string | null | 'invalido' {
   if (typeof v !== 'string') return 'invalido'
   const t = v.replace(/\r\n/g, '\n').trim()
   return t === '' ? null : t.slice(0, MAX_NOTAS)
+}
+
+/**
+ * Importe del recibo devuelto que se persigue en un rescate. Solo un importe POSITIVO es dato: un 0
+ * guardado no es «el recibo vale 0€» (regla del repo, como la prima `nullif(…, 0)`), uno negativo es un
+ * extorno (no se rescata) y un texto ilegible no se sabe → `null` («sin importe»), nunca `0,00€`.
+ */
+export function importeReciboRescate(texto: string | null | undefined): number | null {
+  const n = importeEiac(texto)
+  return n !== null && n > 0 ? n : null
 }

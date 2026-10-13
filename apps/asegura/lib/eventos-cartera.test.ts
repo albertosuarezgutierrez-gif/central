@@ -69,3 +69,14 @@ test('el aviso de fugas lee motivo, fecha de anulación y último recibo (sin co
   assert.match(src, /textoUltimoRecibo\(f\.recibo, cat\)/)
   assert.doesNotMatch(src.slice(src.indexOf('async function describirFugas')), /telefono|email|dni/i)
 })
+
+test('🚨 las bajas históricas se filtran EN LA CONSULTA de pendientes (antes del limit), con el corte del helper', () => {
+  const i = src.indexOf('async function describirFugas(')
+  const cuerpo = src.slice(i, src.indexOf('\nexport async function fugasPendientes', i))
+  const limit = cuerpo.indexOf('limit ${limite}`')
+  const filtro = cuerpo.search(/e\.estado = 'pendiente'\s+and not coalesce\(e\.tipo = 'POLIZA_BAJA' and fb\.fecha collate "C" < \$\{corteBajaHistorica\(hoy\)\}/)
+  assert.ok(filtro > 0, 'el WHERE de pendientes debe excluir las bajas históricas con corteBajaHistorica(hoy)')
+  assert.ok(limit > filtro, 'el filtro va antes del limit: filtrar después deja pendientes de verdad detrás de N históricas')
+  // NULL (fecha desconocida) → se muestra.
+  assert.match(cuerpo, /not coalesce\(e\.tipo = 'POLIZA_BAJA' and .*, false\)/)
+})
