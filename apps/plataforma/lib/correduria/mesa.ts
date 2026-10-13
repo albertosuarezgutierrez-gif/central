@@ -1,0 +1,144 @@
+/**
+ * «Mi mesa» (13/10/2026): cómo se reparten los expedientes en los cinco bloques fijos. PURO (sin red ni JSX).
+ *
+ * Cada expediente cae en UN solo bloque. Prioridad de asignación:
+ *   1) aparcada (la decide asegura con `estadoVisible`) → «Aparcadas»; NUNCA sale en los demás: una aparcada
+ *      con la próxima acción vencida no es trabajo de hoy, vuelve sola el día que toca;
+ *   2) próxima acción con fecha ≤ hoy → «Hoy y vencido»;
+ *   3) clase rescate → «Rescates» (lleva su recibo y su plazo; no se esconde entre las abiertas);
+ *   4) esperando al cliente → «Esperando cliente»;
+ *   5) el resto → «Abiertas».
+ * El ORDEN en pantalla es el de `BLOQUES_MESA`. Una próxima acción SIN fecha no es «hoy»: nadie la ha
+ * puesto en el calendario, así que va a su bloque y se marca como huérfana (`sinFecha`).
+ */
+import type { Expediente } from './expedientes.ts'
+
+export type BloqueMesa = 'hoy' | 'abiertas' | 'esperando' | 'rescates' | 'aparcadas'
+
+export const BLOQUES_MESA: readonly BloqueMesa[] = ['hoy', 'abiertas', 'esperando', 'rescates', 'aparcadas']
+
+export const TITULO_BLOQUE: Record<BloqueMesa, string> = {
+  hoy: 'Hoy y vencido',
+  abiertas: 'Abiertas',
+  esperando: 'Esperando cliente',
+  rescates: 'Rescates',
+  aparcadas: 'Aparcadas',
+}
+
+export const VACIO_BLOQUE: Record<BloqueMesa, string> = {
+  hoy: 'Nada vencido.',
+  abiertas: 'Ninguna abierta.',
+  esperando: 'Nadie te debe respuesta.',
+  rescates: 'Ningún rescate pendiente.',
+  aparcadas: 'Nada aparcado.',
+}
+
+/** Fecha `aaaa-mm-dd` de una cadena (acepta ISO con hora); `null` si no es una fecha. */
+export function soloDia(v: string | null): string | null {
+  if (!v) return null
+  const m = /^(\d{4}-\d{2}-\d{2})/.exec(v)
+  return m ? m[1] : null
+}
+
+export function bloqueDe(e: Expediente, hoy: string): BloqueMesa {
+  if (e.estadoVisible === 'aparcada') return 'aparcadas'
+  const f = soloDia(e.proximaAccion?.fecha ?? null)
+  if (f !== null && f <= hoy) return 'hoy'
+  if (e.clase === 'rescate') return 'rescates'
+  if (e.estadoVisible === 'esperando_cliente') return 'esperando'
+  return 'abiertas'
+}
+
+/** Primero lo que antes toca; sin fecha al final; a igualdad, la prima mayor (null al final); luego el id (estable). */
+function comparar(a: Expediente, b: Expediente): number {
+  const fa = soloDia(a.proximaAccion?.fecha ?? null)
+  const fb = soloDia(b.proximaAccion?.fecha ?? null)
+  if (fa !== fb) {
+    if (fa === null) return 1
+    if (fb === null) return -1
+    return fa < fb ? -1 : 1
+  }
+  if (a.prima !== b.prima) {
+    if (a.prima === null) return 1
+    if (b.prima === null) return -1
+    return b.prima - a.prima
+  }
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0
+}
+
+function comparaAparcadas(a: Expediente, b: Expediente): number {
+  const fa = soloDia(a.aparcadaHasta)
+  const fb = soloDia(b.aparcadaHasta)
+  if (fa !== fb) {
+    if (fa === null) return 1
+    if (fb === null) return -1
+    return fa < fb ? -1 : 1
+  }
+  return a.id < b.id ? -1 : 1
+}
+
+export function repartirMesa(expedientes: readonly Expediente[], hoy: string): Record<BloqueMesa, Expediente[]> {
+  const out: Record<BloqueMesa, Expediente[]> = { hoy: [], abiertas: [], esperando: [], rescates: [], aparcadas: [] }
+  for (const e of expedientes) out[bloqueDe(e, hoy)].push(e)
+  for (const b of BLOQUES_MESA) out[b].sort(b === 'aparcadas' ? comparaAparcadas : comparar)
+  return out
+}
+
+function dias(desde: string, hasta: string): number {
+  return Math.round((Date.parse(`${hasta}T12:00:00Z`) - Date.parse(`${desde}T12:00:00Z`)) / 86_400_000)
+}
+
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+/** «12 mar» / «12 mar 2027» (otro año) — sin depender de la zona del navegador. */
+export function fechaCorta(iso: string | null, hoy: string): string {
+  const d = soloDia(iso)
+  if (!d) return '—'
+  const [y, m, dd] = d.split('-').map(Number)
+  const base = `${dd} ${MESES[m - 1]}`
+  return y === Number(hoy.slice(0, 4)) ? base : `${base} ${y}`
+}
+
+/** «hoy» · «hace 3 d» · «mañana» · «en 5 d» · «12 mar» (más lejos de 14 días) · «sin fecha». */
+export function cuandoRelativo(iso: string | null, hoy: string): string {
+  const d = soloDia(iso)
+  if (!d) return 'sin fecha'
+  const n = dias(hoy, d)
+  if (n === 0) return 'hoy'
+  if (n === -1) return 'ayer'
+  if (n < 0) return `hace ${-n} d`
+  if (n === 1) return 'mañana'
+  if (n <= 14) return `en ${n} d`
+  return fechaCorta(d, hoy)
+}
+
+/** Suma `n` días a una fecha `aaaa-mm-dd`. */
+export function masDias(iso: string, n: number): string {
+  const d = new Date(`${iso}T12:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** «El año que viene» = el mismo día del año siguiente (29 feb → 28 feb). */
+export function mismoDiaAnoQueViene(hoy: string): string {
+  const [y, m, d] = hoy.split('-').map(Number)
+  const ult = new Date(Date.UTC(y + 1, m, 0)).getUTCDate()
+  return `${y + 1}-${String(m).padStart(2, '0')}-${String(Math.min(d, ult)).padStart(2, '0')}`
+}
+
+/** Los atajos de «Aparcar hasta». El puerto admite hasta 13 meses (~395 d): ninguno lo pasa. */
+export function atajosAparcar(hoy: string): { clave: string; rotulo: string; fecha: string }[] {
+  const mas = (meses: number) => {
+    const [y, m, d] = hoy.split('-').map(Number)
+    const t = m - 1 + meses
+    const ay = y + Math.floor(t / 12)
+    const am = ((t % 12) + 12) % 12
+    const ult = new Date(Date.UTC(ay, am + 1, 0)).getUTCDate()
+    return `${ay}-${String(am + 1).padStart(2, '0')}-${String(Math.min(d, ult)).padStart(2, '0')}`
+  }
+  return [
+    { clave: '3m', rotulo: '+3 meses', fecha: mas(3) },
+    { clave: '6m', rotulo: '+6 meses', fecha: mas(6) },
+    { clave: 'ano', rotulo: 'El año que viene', fecha: mismoDiaAnoQueViene(hoy) },
+  ]
+}
