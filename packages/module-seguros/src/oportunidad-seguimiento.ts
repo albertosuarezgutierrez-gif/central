@@ -1,4 +1,5 @@
 import { claveMatricula } from './compania-oportunidad.ts'
+import { notasEditadas } from './expedientes.ts'
 import { polizaAnteriorParaTarificar } from './poliza-anterior.ts'
 // packages/module-seguros/src/oportunidad-seguimiento.ts
 //
@@ -459,6 +460,8 @@ export type EdicionValida = {
    * claves presentes se tocan (`undefined` = no tocar, `null` = volver a «sin dato», número ≥0 = dato, 0 incluido).
    */
   historial?: Partial<HistorialDeclaradoRiesgo>
+  /** Notas libres (13/10/2026): `null` = borrarlas. Texto libre: al historial solo va QUE cambiaron. */
+  notas?: string | null
 }
 
 /** Entero ≥0 (≤max) o `null` si viene vacío; `'invalido'` si es otra cosa (nunca se convierte en 0). */
@@ -510,9 +513,14 @@ export function ultimosDigitosPoliza(numero: string | null | undefined, compania
  * estado NO se edita aquí: para eso están las acciones, que exigen su motivo.
  */
 export function validarEdicionOportunidad(
-  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; historialDeclarado?: unknown },
+  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; historialDeclarado?: unknown; notas?: unknown },
 ): { ok: true; cambios: EdicionValida } | { ok: false; motivo: string } {
   const out: EdicionValida = {}
+  if (d.notas !== undefined) {
+    const n = notasEditadas(d.notas)
+    if (n === 'invalido') return { ok: false, motivo: 'Las notas no son un texto.' }
+    out.notas = n
+  }
   if (d.historialDeclarado !== undefined) {
     const hd = d.historialDeclarado
     if (hd === null || typeof hd !== 'object' || Array.isArray(hd)) return { ok: false, motivo: 'El historial declarado no es un objeto.' }
