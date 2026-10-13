@@ -1,5 +1,13 @@
 # 🧠 Memoria de sesiones — central (repo GitHub: ia.rest → renombrar)
 
+### (13/10/2026) Correduría: «Mi mesa» (tareas/oportunidades) + falsa pérdida de cartera — rama `claude/tasks-opportunities-structure-ezhuxl`
+- Análisis: el modelo ya existe en `seguros.oportunidades` (estados + `aparcada_hasta`); el lío es la pantalla «Hoy» (~22 bloques, enseña `gestiones`). Aparcar NO reaparecía (cierra tareas y no crea ninguna). Informes en scratchpad (efímero).
+- Decisiones de Alberto: muy simplificado; Abierta (por contactar+negociando) · Esperando · Aparcada · Ganada · Perdida; rescate de recibo devuelto perdido → aparcado al año siguiente; siniestros fuera; campo `notas` libre; sin registrar llamadas ni detectar correos.
+- En curso: backend (endpoint de expedientes en el puerto de asegura, arreglo de aparcar, notas) y luego UI `/correduria/mesa`.
+- Hecho: `sustitucion-auto.ts` ventana de 120 días si coincide la matrícula y la vieja ya no está vigente (caso Mapfre→Allianz 5802JMJ). Limpieza BD `seguros.gestiones` (central): cerradas con marca las 42 `asegura_app:ges2` sin fecha + las de `loo-916:agenda-beta` (portal) ya resueltas; quedan 13 «pedir email portal» abiertas.
+- `public.gestiones` de Supabase_asegura es una copia PARADA desde el 10/07; la fuente es `seguros.gestiones` de central.
+- Pendiente: ¿ocultar las 10 bajas históricas (2013-2019) en «Pérdidas por revisar»?
+
 > Contexto persistente entre sesiones de Claude Code. El entorno cloud es
 > **efímero** (el contenedor se borra al acabar), así que lo único que sobrevive
 > es lo commiteado aquí. Este archivo es el "estado vivo" del proyecto entre sesiones.
