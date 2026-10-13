@@ -7,8 +7,8 @@ import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-// La elección de versión con IA corre en `after` (IA ~20 s + Fly ~20 s como mucho).
-export const maxDuration = 60
+// La elección de versión con IA corre en `after` (IA ≤30 s + Fly ~20 s + BD; con memoria no hay IA).
+export const maxDuration = 90
 
 /**
  * `POST /api/tarificador/resultado` — el worker devuelve lo que sacó del portal. Bearer
@@ -28,6 +28,10 @@ export const maxDuration = 60
  * Versión de vehículo ambigua (13/10/2026): si el fallo trae `error.opcionesVersion` y queda en `requiere_humano`, con
  * `TARIFICADOR_IA_ELECCION=1` la IA elige DESPUÉS de responder al worker (`after`: el worker no espera a la IA) y, solo
  * con confianza alta, el mismo trabajo vuelve a `pendiente` y se relanza (`lib/tarificador-eleccion.ts`).
+ *
+ * Inventario de estructura (13/10/2026): un hueco de mapa trae `error.inventarioDom` (solo estructura de la pantalla,
+ * saneado por el worker y OTRA VEZ en `leerResultadoWorker`, ≤60 KB) y se guarda con el resto del `error` jsonb del
+ * trabajo. Aquí no se loguea nunca (ni entero ni en parte).
  */
 export async function POST(req: Request) {
   if (!workerAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

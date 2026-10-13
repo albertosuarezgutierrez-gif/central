@@ -131,6 +131,9 @@
 
 ## Tarificador RPA (bots Playwright)
 Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.
+- **Elección de versión con IA + memoria (13/10/2026):** sección homónima de `docs/TARIFICADOR-RPA.md`. Interruptor `TARIFICADOR_IA_ELECCION=1`;
+  la IA solo con confianza alta y código de la lista (6 campos del vehículo, sin datos personales); memoria por correduría, humano gana,
+  la IA solo se aprende tras tarificación OK. Máx. 1 intento automático por trabajo.
 
 ## Cuando dudes
 Busca el tema en `docs/claude-md/ASEGURA-completo-2026-09-30.md` antes de suponer: casi todo lo de aquí ya se midió

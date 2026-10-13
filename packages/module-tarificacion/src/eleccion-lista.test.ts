@@ -164,3 +164,36 @@ describe('validarOpcionesVersion (lista del cable)', () => {
     expect(validarOpcionesVersion(Array.from({ length: 201 }, (_, i) => ({ codigo: `V${i}`, etiqueta: `v${i}` })))).toBeNull()
   })
 })
+
+describe('ramo auto (coche): elección de lista y contexto', () => {
+  const COCHE = [
+    { codigo: 'C001', etiqueta: 'MODELO X 1.5 110 CV' },
+    { codigo: 'C002', etiqueta: 'MODELO X 1.6 TDI 115 CV' },
+  ]
+  const peticion = { contexto: { ramo: 'auto', marca: 'MARCA PRUEBA', modelo: 'MODELO X' }, opciones: COCHE, instrucciones: 'Elige.' }
+  const resp = (t: string): PreguntarIa => async () => t
+
+  it('alta con código de la lista → elige', async () => {
+    expect(await elegirDeLista(peticion, resp('{"codigo":"C002","confianza":"alta","motivo":"TDI en la descripción"}'))).toEqual({ codigo: 'C002', confianza: 'alta', motivo: 'TDI en la descripción' })
+  })
+  it('baja → no elige', async () => {
+    expect(await elegirDeLista(peticion, resp('{"codigo":"C001","confianza":"baja","motivo":"dudoso"}'))).toMatchObject({ codigo: null, confianza: 'baja' })
+  })
+  it('código fuera de la lista (p. ej. uno de moto) → no elige', async () => {
+    const r = await elegirDeLista(peticion, resp('{"codigo":"V001","confianza":"alta","motivo":"x"}'))
+    expect(r).toMatchObject({ codigo: null, confianza: 'baja' })
+  })
+  it('contexto de coche con clase y cc nulos: sin datos personales y con nulos como null (no 0)', () => {
+    const v = validarFormularioAuto({
+      ramo: 'auto', matricula: '1234BCD', codigoPostal: '41003',
+      conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: 'mujer' },
+      tomador: { tipo: 'fisica', documentoIdentidad: '12345678Z', nombre: 'Persona', apellido1: 'Inventada', fechaNacimiento: '1980-05-17' },
+      seleccionVehiculo: { marca: 'MARCA PRUEBA', modelo: 'MODELO X' },
+    })
+    expect(v.ok).toBe(true)
+    const ctx = contextoEleccionVersion((v.ok ? v.formulario : null) as FormularioAuto)
+    expect(ctx).toEqual({ ramo: 'auto', marca: 'MARCA PRUEBA', modelo: 'MODELO X', clase: null, cilindradaCc: null, descripcion: null })
+    const dump = JSON.stringify(ctx)
+    for (const personal of ['1234BCD', '41003', '1980', '2000', 'mujer', '12345678Z', 'Persona', 'Inventada']) expect(dump.includes(personal)).toBe(false)
+  })
+})
