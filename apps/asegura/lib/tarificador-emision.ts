@@ -22,6 +22,7 @@ import {
   decidirAutorizacion,
   emisionActiva,
   hashCortoEmision,
+  origenEmisionLiberado,
   precondicionesEmision,
   primaCoincide,
   VALIDEZ_SOLICITUD_MS,
@@ -37,6 +38,7 @@ import {
 } from '@central/module-tarificacion/servidor'
 import { prisma } from './tenant'
 import { hayEmision } from './esquema-bd'
+import { purgarRiesgoTrabajos } from './tarificador-purga'
 import { autorizacionSinResolver, autorizadorEmision, estadoTrasResultado, iniciales, mensajeEmisionTardia, mensajePrimaDistinta, type ResultadoEmisionWorker } from './tarificador-emision-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
@@ -104,14 +106,22 @@ export async function solicitarEmision(e: EntradaSolicitar): Promise<{ estado: '
   if (!p.opcionElegidaId) return rechazo(409, 'el cliente no ha aceptado y firmado el presupuesto')
   const o = await leerOpcion(prisma, p.id, p.opcionElegidaId)
   if (!o) return rechazo(409, 'la opción aceptada no está')
-  const origen = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; estado: string; modo: string | null; cliente_id: string; oportunidad_id: string | null }[]>`
+  const origen = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; estado: string; modo: string | null; cliente_id: string; oportunidad_id: string | null; terminado_at: Date | null; ahora: Date; emisiones: string[] | null }[]>`
     select t.id::text as id, t.compania, t.ramo, t.riesgo, t.estado, to_jsonb(t)->>'modo' as modo,
-           t.cliente_id::text as cliente_id, t.oportunidad_id::text as oportunidad_id
+           t.cliente_id::text as cliente_id, t.oportunidad_id::text as oportunidad_id, t.terminado_at, now() as ahora,
+           (select array_agg(e.estado) from seguros.tarificacion_trabajos e
+            where e.correduria_id = t.correduria_id and to_jsonb(e)->>'modo' = 'emision'
+              and to_jsonb(e)->>'trabajo_origen_id' = t.id::text) as emisiones
     from seguros.tarificacion_trabajos t
     where t.id = ${e.trabajoOrigenId}::uuid and t.correduria_id = ${e.correduriaId}::uuid`
   const t = origen[0]
   if (!t) return rechazo(404, 'trabajo_origen_no_encontrado')
   if (t.estado !== 'ok' || (t.modo ?? 'tarificar') !== 'tarificar') return rechazo(409, 'el trabajo de origen no es una tarificación terminada')
+  // PURGA (13/10/2026): un origen cuya emisión ya se cerró, o con más de 30 días sin pedirla, ya no tiene (o va a perder)
+  // los datos del tomador. Nunca se emite con un riesgo a medias: se vuelve a tarificar.
+  if (origenEmisionLiberado({ terminadoAt: t.terminado_at, ahora: t.ahora, emisiones: t.emisiones ?? [] })) {
+    return rechazo(409, 'origen_purgado: el riesgo de esa tarificación ya se borró (su emisión se cerró o pasaron 30 días): vuelve a tarificar')
+  }
   if (t.cliente_id !== p.clienteId) return rechazo(409, 'el trabajo de origen es de otro cliente')
   if (!p.oportunidadId || t.oportunidad_id !== p.oportunidadId) return rechazo(409, 'el trabajo de origen es de otra oportunidad')
   if (claveCompania(o.compania) !== t.compania) return rechazo(409, 'la opción aceptada es de otra compañía que el trabajo de origen')
@@ -333,6 +343,9 @@ export async function registrarResultadoEmision(r: ResultadoEmisionWorker): Prom
       set estado = ${d.estado}, error = ${err}::jsonb, lease_hasta = null, emision_numero_poliza = ${numero}, emision_avisada_at = null,
           evidencia_documento_id = coalesce(${evidencia}::uuid, evidencia_documento_id), terminado_at = now(), updated_at = now()
       where id = ${t.id}::uuid`
+    // PURGA (13/10/2026): `emitido` (cerrado) → fuera los datos personales de ESTA copia del riesgo, mismo commit.
+    // `requiere_humano` lo conserva (lo decide `planPurgaRiesgo`). El trabajo de ORIGEN (Allianz Comunidades `ok`) no se toca.
+    await purgarRiesgoTrabajos(tx, [t.id])
     return { estado: 'registrado' as const, estadoTrabajo: d.estado }
   })
 }
@@ -368,6 +381,8 @@ export async function autorizarEmision(e: { correduriaId: string; trabajoId: str
         update seguros.tarificacion_trabajos set estado = 'cancelado', terminado_at = now(), updated_at = now(),
           error = ${JSON.stringify({ tipo: 'emision', mensaje: 'Emisión rechazada por Telegram', en: new Date().toISOString() })}::jsonb
         where id = ${t.id}::uuid`
+      // PURGA (13/10/2026): cancelado → fuera los datos personales de esta copia del riesgo (una emisión nueva copia del origen).
+      await purgarRiesgoTrabajos(tx, [t.id])
       return { estado: 'cancelado' as const, trabajoId: t.id, compania: t.compania }
     }
     if (t.estado === 'autorizado_emision') return { estado: 'sin_cambios' as const, trabajoId: t.id, compania: t.compania }
@@ -459,17 +474,21 @@ export async function marcarAvisosEmision(correduriaId: string, ids: string[]): 
 /** 24 h sin botón → cancelado. Una autorización que caducó sin máquina → cancelado (se pide otra). */
 export async function caducarEmisiones(correduriaId: string): Promise<{ solicitudes: number; autorizaciones: number }> {
   if (!(await hayEmision())) return { solicitudes: 0, autorizaciones: 0 }
-  const solicitudes = await prisma.$executeRaw`
+  const solicitudes = await prisma.$queryRaw<{ id: string }[]>`
     update seguros.tarificacion_trabajos
     set estado = 'cancelado', terminado_at = now(), updated_at = now(),
         error = jsonb_build_object('tipo', 'emision', 'mensaje', 'Solicitud de emisión caducada: 24 h sin autorizar')
     where correduria_id = ${correduriaId}::uuid and modo = 'emision' and estado = 'pendiente_autorizacion_emision'
-      and emision_pedida_at <= now() - ${VALIDEZ_SOLICITUD_MS / 1000}::int * interval '1 second'`
-  const autorizaciones = await prisma.$executeRaw`
+      and emision_pedida_at <= now() - ${VALIDEZ_SOLICITUD_MS / 1000}::int * interval '1 second'
+    returning id::text as id`
+  const autorizaciones = await prisma.$queryRaw<{ id: string }[]>`
     update seguros.tarificacion_trabajos t
     set estado = 'cancelado', terminado_at = now(), updated_at = now(),
         error = jsonb_build_object('tipo', 'emision', 'mensaje', 'Autorización caducada sin que arrancara la máquina: pide la emisión de nuevo')
     where t.correduria_id = ${correduriaId}::uuid and t.modo = 'emision' and t.estado = 'autorizado_emision'
-      and exists (select 1 from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = t.id and a.expira_at <= now())`
-  return { solicitudes, autorizaciones }
+      and exists (select 1 from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = t.id and a.expira_at <= now())
+    returning t.id::text as id`
+  // PURGA (13/10/2026): cancelado → fuera los datos personales del riesgo (el barrido tiene además su respaldo).
+  await purgarRiesgoTrabajos(prisma, [...solicitudes, ...autorizaciones].map((f) => f.id))
+  return { solicitudes: solicitudes.length, autorizaciones: autorizaciones.length }
 }

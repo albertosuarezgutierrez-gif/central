@@ -473,3 +473,21 @@ export {
   type PasoExploracion,
   type MetaMapa,
 } from './explorador.ts'
+
+// Purga de los datos personales del riesgo al cerrar un trabajo (13/10/2026): lista BLANCA por ramo.
+export {
+  ESTADOS_PURGA_RIESGO,
+  CLAVES_RIESGO_COMUNIDAD,
+  CLAVES_RIESGO_VEHICULO,
+  CLAVES_RIESGO_OTRO,
+  SUBCLAVES_RIESGO,
+  clavesConservadas,
+  riesgoSinDatosPersonales,
+  esOrigenDeEmision,
+  origenEmisionLiberado,
+  DIAS_ORIGEN_EMISION,
+  planPurgaRiesgo,
+  riesgoPurgadoEnEstado,
+  type TrabajoParaPurga,
+  type PlanPurga,
+} from './purga-riesgo.ts'

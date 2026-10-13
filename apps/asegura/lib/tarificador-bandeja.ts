@@ -5,6 +5,7 @@ import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { claveMemoriaDeRiesgo } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
+import { purgarRiesgoTrabajos } from './tarificador-purga'
 import { eleccionContraLista, eleccionPoblacionContraLista, proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type EleccionBandeja, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
 
 export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolean }
@@ -122,6 +123,8 @@ export async function aplicarAccionBandeja(
         update seguros.tarificacion_trabajos
         set estado = 'cancelado', lease_hasta = null, terminado_at = coalesce(terminado_at, now()), updated_at = now()
         where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+      // PURGA (13/10/2026): cancelado = cerrado → fuera los datos personales del riesgo, en el MISMO commit.
+      await purgarRiesgoTrabajos(tx, [id])
     }
     return { estado: 'aplicado' as const, estadoTrabajo: d.a, compania: f.compania }
   })

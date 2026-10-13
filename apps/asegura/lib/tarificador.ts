@@ -16,6 +16,7 @@ import {
   estadoTrasErrorEmision,
   franquiciaGeneral,
   puedeAutomatizar,
+  riesgoSinDatosPersonales,
   type OfertaNormalizada,
   type PasoTraza,
   type FormularioAuto,
@@ -28,6 +29,7 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
+import { purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import {
   ESTADOS_DUPLICADO,
   LEASE_MS,
@@ -356,6 +358,8 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         update seguros.tarificacion_trabajos
         set estado = 'ok', lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
         where id = ${t.id}::uuid and estado = 'en_curso'`
+      // PURGA (13/10/2026): cerrado → fuera los datos personales del riesgo, en el MISMO commit.
+      await purgarRiesgoTrabajos(tx, [t.id])
       return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok' }, traza: { t, captura: null } }
     }
 
@@ -385,6 +389,10 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
             lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
         where id = ${t.id}::uuid`
     }
+    // PURGA (13/10/2026): DESPUÉS de guardar la tarificación y los PDF (lo último que lee el riesgo dentro de la
+    // transacción) y en el MISMO commit. El aprendizaje de versión de abajo usa la copia en memoria (`t`), no la fila.
+    // Un `ok` de Allianz Comunidades es origen posible de una emisión y NO se purga (`esOrigenDeEmision`).
+    await purgarRiesgoTrabajos(tx, [t.id])
     return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
   // APRENDER (13/10/2026): un `ok` con tarificación que llevaba una versión AUTOMÁTICA (IA o memoria) la confirma en
@@ -419,6 +427,8 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
   // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).
   const proyectoDocumentoId = conDocs.find((o) => o.documentoId)?.documentoId ?? null
   const respuesta = { canal: 'rpa', compania: t.compania, ofertas: conDocs, proyectoDocumentoId }
+  // `peticion` NUNCA con el riesgo entero (13/10/2026): misma lista blanca que la purga del trabajo. Nadie lee de una
+  // petición de portal datos personales (los lectores de `peticion` buscan la forma de Avant2: `risk.*`, `holder`).
   const filas = await tx.$queryRaw<{ id: string }[]>`
     insert into seguros.tarificaciones (
       correduria_id, intento_id, simulado, project_id_codeoscopic, canal,
@@ -428,7 +438,7 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
     ) values (
       ${t.correduria_id}::uuid, null, false, null, 'rpa',
       ${t.ramo}, 'corredor', ${t.poliza_id}::uuid, ${t.cliente_id}::uuid, ${t.oportunidad_id}::uuid,
-      ${col.fechaEfecto}::date, ${JSON.stringify(rg)}::jsonb,
+      ${col.fechaEfecto}::date, ${JSON.stringify(riesgoSinDatosPersonales(rg, t.ramo))}::jsonb,
       ${col.codigoPostal}, ${col.m2}::int, ${col.anioConstruccion}::int,
       ${col.capitalContinente}::numeric, ${col.capitalContenido}::numeric,
       ${t.solicitado_por}, ${JSON.stringify(respuesta)}::jsonb, '[]'::jsonb
@@ -564,6 +574,9 @@ async function marcarFallo(
   // Los efectos secundarios SOLO si el UPDATE tocó la fila (si un resultado llegó a la vez y ganó, esto no hace nada).
   if (tocada && autorizacionIncierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${autorizacionIncierta}::uuid and resultado is null`
   if (tocada && deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
+  // PURGA (13/10/2026): solo si quedó en un estado cerrado (`error_definitivo`); `error_reintentable` y `requiere_humano`
+  // conservan el riesgo para el reintento (lo decide `planPurgaRiesgo`). Lo último que se hace con la fila.
+  if (tocada) await purgarRiesgoTrabajos(db, [id])
   return { estado, tocada }
 }
 
@@ -575,6 +588,8 @@ export type ResumenBarrido = {
   leasesVencidos: number
   reencolados: number
   cancelados: number
+  /** Respaldo de la purga del riesgo (13/10/2026): trabajos cerrados a los que aún les quedaba algún dato personal. */
+  riesgosPurgados?: number
   lanzar: Record<string, ResumenLanzar>
 }
 
@@ -612,7 +627,7 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
     update seguros.tarificacion_trabajos set estado = 'pendiente', updated_at = now()
     where correduria_id = ${correduriaId}::uuid and estado = 'error_reintentable' and intentos < ${MAX_INTENTOS}`
 
-  r.cancelados = await prisma.$executeRaw`
+  const cancelados = await prisma.$queryRaw<{ id: string }[]>`
     update seguros.tarificacion_trabajos w
     set estado = 'cancelado', terminado_at = now(), updated_at = now(),
         error = jsonb_build_object('tipo', 'datos', 'mensaje', 'modo_no_automatizable: la integración ya no está autorizada o activa')
@@ -620,7 +635,16 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
       and not exists (
         select 1 from seguros.companias_integracion ci
         where ci.correduria_id = w.correduria_id and ci.compania = w.compania and ci.ramo = w.ramo
-          and ci.activo and ci.modo = 'rpa_autorizada')`
+          and ci.activo and ci.modo = 'rpa_autorizada')
+    returning w.id::text as id`
+  r.cancelados = cancelados.length
+  await purgarRiesgoTrabajos(prisma, cancelados.map((c) => c.id))
+
+  // Respaldo de la purga: lo cerrado por un camino que no la llamó (o antes de existir). Sin lanzar: el barrido sigue.
+  r.riesgosPurgados = await purgarRiesgosCerrados(prisma, correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] respaldo de purga del riesgo', e instanceof Error ? e.message.slice(0, 200) : e)
+    return 0
+  })
 
   const companias = await prisma.$queryRaw<{ compania: string }[]>`
     select distinct compania from seguros.tarificacion_trabajos

@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { ESTADOS_TRABAJO, decidirAccionBandeja, motivoLegible, puedeTransitar } from './index.ts'
 
 describe('bandeja · acciones válidas solo desde los estados permitidos', () => {
-  it('reintentar: solo desde requiere_humano y error_definitivo, y lleva a pendiente', () => {
+  it('reintentar: solo desde requiere_humano (error_definitivo ya tiene el riesgo purgado, 13/10/2026), y lleva a pendiente', () => {
     for (const e of ESTADOS_TRABAJO) {
       const d = decidirAccionBandeja('reintentar', e)
-      expect(d.ok, e).toBe(e === 'requiere_humano' || e === 'error_definitivo')
+      expect(d.ok, e).toBe(e === 'requiere_humano')
       if (d.ok) expect(d.a).toBe('pendiente')
     }
   })
@@ -15,6 +15,11 @@ describe('bandeja · acciones válidas solo desde los estados permitidos', () =>
       expect(d.ok, e).toBe(['requiere_humano', 'error_definitivo', 'error_reintentable'].includes(e))
       if (d.ok) expect(d.a).toBe('cancelado')
     }
+  })
+  it('error_definitivo: no se reintenta (riesgo purgado) y el motivo dice qué hacer', () => {
+    const d = decidirAccionBandeja('reintentar', 'error_definitivo', 'portal')
+    expect(d.ok).toBe(false)
+    if (!d.ok) expect(d.motivo).toMatch(/ya se borró.*oportunidad/)
   })
   it('un error de emisión no se reintenta (pero sí se cancela)', () => {
     expect(decidirAccionBandeja('reintentar', 'error_definitivo', 'emision').ok).toBe(false)
