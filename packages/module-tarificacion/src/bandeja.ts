@@ -12,6 +12,7 @@
 import { esEstadoTrabajo, esTipoError, type EstadoTrabajo } from './estados.ts'
 import { PREFIJO_ELECCION_VERSION } from './vehiculo.ts'
 import { PREFIJO_ELECCION_POBLACION } from './poblacion.ts'
+import { riesgoPurgadoEnEstado } from './purga-riesgo.ts'
 
 /** Estados que aparecen en la bandeja: el bot ya no avanza solo. */
 export const ESTADOS_BANDEJA: readonly EstadoTrabajo[] = ['requiere_humano', 'error_definitivo']
@@ -41,6 +42,12 @@ export function decidirAccionBandeja(accion: unknown, estado: unknown, tipoError
   // Una EXPLORACIÓN (13/10/2026) no se toca desde la bandeja: tiene su pantalla y su cabecera (`tarificador_exploraciones`),
   // que quedaría abierta si se reintentara o cancelara solo el trabajo.
   if (modo === 'exploracion') return { ok: false, motivo: 'una exploración se gestiona en su pantalla, no en la bandeja' }
+  // PURGA (13/10/2026): un trabajo cerrado ya no tiene los datos personales del riesgo (`purga-riesgo.ts`). Volver a
+  // lanzarlo sería mandar al portal un riesgo a medias: se pide de nuevo desde la oportunidad. Hoy afecta a
+  // `error_definitivo`; si se saca de ESTADOS_PURGA_RIESGO, reintentar vuelve a valer sin tocar esto.
+  if (accion === 'reintentar' && riesgoPurgadoEnEstado(estado)) {
+    return { ok: false, motivo: `el riesgo de un trabajo en ${estado} ya se borró (datos personales): vuelve a pedir el presupuesto desde la oportunidad` }
+  }
   if (accion === 'reintentar' && tipoError === 'emision') return { ok: false, motivo: 'un trabajo abortado por el guard de emisión no se reintenta' }
   // Un trabajo de EMISIÓN (10/10/2026) nunca se reintenta: tras el clic el estado en la compañía es incierto. Se pide otro.
   if (accion === 'reintentar' && modo === 'emision') return { ok: false, motivo: 'un trabajo de emisión no se reintenta: se pide una emisión nueva' }

@@ -37,7 +37,10 @@ export const POST = auditado(async (req: Request) => {
   try {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', mensaje: 'no se ha podido resolver la correduría' }, { status: 503 })
-    const previo = riesgoParaReencolar(await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo))
+    const leido = await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo)
+    // Purga (13/10/2026): un riesgo ya borrado al cerrarse no se reencola; si solo hay de esos, se dice explícitamente.
+    if (leido.soloPurgados) return NextResponse.json({ estado: 'rechazado', motivo: 'origen_purgado', mensaje: 'el riesgo de los trabajos anteriores ya se borró al cerrarse (datos personales): pide el presupuesto desde la oportunidad' }, { status: 409 })
+    const previo = riesgoParaReencolar(leido.riesgo)
     if (!previo) return NextResponse.json({ estado: 'rechazado', motivo: 'sin_riesgo_previo' }, { status: 409 })
     const valida = validarEntradaRamo(ramo, previo)
     if (!valida.ok) return NextResponse.json({ estado: 'rechazado', motivo: 'riesgo_previo_invalido', errores: valida.errores ?? [] }, { status: 422 })

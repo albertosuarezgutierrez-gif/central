@@ -12,7 +12,7 @@
 //    compara ni se pinta como 0.
 
 import { createHash } from 'node:crypto'
-import { validarRiesgoComunidad, type RiesgoComunidad } from '@central/module-tarificacion'
+import { MOTIVO_ORIGEN_PURGADO, riesgoYaPurgado, validarRiesgoComunidad, type RiesgoComunidad } from '@central/module-tarificacion'
 
 // ─── Interruptores ───────────────────────────────────────────────────────────
 
@@ -86,6 +86,26 @@ export function elegirRiesgoPrevio(trabajos: TrabajoConRiesgo[], polizaId: strin
   if (polizasComunidadDelCliente !== 1) return null
   const delCliente = orden.find((t) => t.polizaId === null)
   return delCliente ? delCliente.riesgo : null
+}
+
+/**
+ * El riesgo con que se RENUEVA (13/10/2026, purga): igual que `elegirRiesgoPrevio` + `riesgoParaRenovacion`, pero un
+ * trabajo cerrado con el riesgo YA PURGADO no sirve de plantilla (renovaría sin CIF, vía ni póliza anterior): se salta y se
+ * usa el anterior que aún los tenga. Si solo había purgados → `faltan` con el motivo `origen_purgado`, explícito. PURA.
+ */
+export function riesgoPrevioRenovacion(
+  trabajos: (TrabajoConRiesgo & { estado: string })[],
+  polizaId: string,
+  polizasComunidadDelCliente: number,
+  vencimientoIso: string,
+  hoy: Date,
+): RiesgoRenovacion {
+  const utiles = trabajos.filter((t) => !riesgoYaPurgado({ estado: t.estado, ramo: 'comunidades', riesgo: t.riesgo }))
+  const previo = elegirRiesgoPrevio(utiles, polizaId, polizasComunidadDelCliente)
+  if (previo === null && elegirRiesgoPrevio(trabajos, polizaId, polizasComunidadDelCliente) !== null) {
+    return { ok: false, faltan: [`${MOTIVO_ORIGEN_PURGADO}: el riesgo cotizado antes ya se borró al cerrarse (datos personales); vuelve a cotizar desde la oportunidad`] }
+  }
+  return riesgoParaRenovacion(previo, vencimientoIso, hoy)
 }
 
 /** Los trabajos que son de ESA póliza: los suyos y, si el cliente solo tiene una comunidad, los sin póliza. */
