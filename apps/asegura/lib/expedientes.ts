@@ -29,6 +29,7 @@ import {
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { fugasPendientes, type FugaNueva } from './eventos-cartera'
 
 export type ReciboRescate = {
   reciboId: string
@@ -73,9 +74,46 @@ export type Expediente = {
   rescate: { tipo: 'recibo' | 'anulacion'; recibo: ReciboRescate | null } | null
 }
 
+/**
+ * Tarea abierta SIN oportunidad (13/10/2026: ~14, casi todas de la agenda del CRM anterior): no es un
+ * expediente, pero tampoco puede perderse. Se cierra por la misma vía que cualquier tarea (`tareaId`).
+ */
+export type TareaSuelta = {
+  tareaId: string
+  /** `null` = la tarea no cuelga de ninguna ficha (o la ficha no es de esta correduría): se dice. */
+  clienteId: string | null
+  cliente: string | null
+  polizaId: string | null
+  siniestroId: string | null
+  tipo: string
+  estado: string
+  /** `observaciones` de la tarea; `''` si no tiene texto (no se inventa uno). */
+  texto: string
+  /** Fecha límite (Madrid, aaaa-mm-dd). `null` = sin fecha. */
+  fecha: string | null
+  origen: string | null
+}
+
+/**
+ * Pérdida de cartera POR REVISAR (bajas, anulaciones al vencimiento y desapariciones sin sustitución,
+ * ya sin las históricas): una FILA, no un expediente. El evento ya tiene su ciclo (pendiente → revisado,
+ * con resolución cerrada, `POST /api/operador/eventos`); una oportunidad encima sería un segundo estado
+ * que puede divergir, y «¿es un rescate?» es precisamente lo que decide la revisión. La que ya tiene un
+ * expediente abierto en su póliza (la retención que abre CIMA, p. ej.) no se repite: se CUENTA.
+ */
+export type PerdidaPorRevisar = FugaNueva
+
 export type Expedientes = {
   hoy: string
   expedientes: Expediente[]
+  /** `null` = no se pudo leer (no «no hay ninguna»). */
+  tareasSueltas: TareaSuelta[] | null
+  /** `null` = no se pudo leer (no «no hay ninguna»). */
+  perdidasPorRevisar: PerdidaPorRevisar[] | null
+  /** Hay más tareas sueltas de las que se devuelven. */
+  tareasSueltasTruncado: boolean
+  /** Pérdidas pendientes que no se listan porque su póliza ya tiene expediente abierto. `null` = no se leyó. */
+  perdidasConExpediente: number | null
   recuento: Record<'abierta' | 'esperando_cliente' | 'aparcada', number>
   /** Hay más de las que se devuelven: la lista NO está completa. */
   truncado: boolean
@@ -214,5 +252,60 @@ export async function expedientesDeTrabajo(
       rescate,
     })
   }
-  return { hoy: hoyIso, expedientes, recuento, truncado: filas.length > TECHO, descartadas }
+  const [tareasSueltas, perdidas] = await Promise.all([
+    tareasSueltasDe(correduriaId),
+    perdidasPorRevisarDe(correduriaId),
+  ])
+  return {
+    hoy: hoyIso, expedientes, recuento, truncado: filas.length > TECHO, descartadas,
+    tareasSueltas: tareasSueltas.filas,
+    tareasSueltasTruncado: tareasSueltas.truncado,
+    perdidasPorRevisar: perdidas?.filas ?? null,
+    perdidasConExpediente: perdidas?.conExpediente ?? null,
+  }
+}
+
+const TECHO_SUELTAS = 200
+
+/** Tareas abiertas sin oportunidad. Un fallo de lectura devuelve `null` (se dice), nunca `[]`. */
+async function tareasSueltasDe(correduriaId: string): Promise<{ filas: TareaSuelta[] | null; truncado: boolean }> {
+  try {
+    const filas = await prismaAsegura().$queryRaw<(TareaSuelta & { texto: string | null })[]>(Prisma.sql`
+      select g.id::text as "tareaId", c.id::text as "clienteId",
+             nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
+             g.poliza_id::text as "polizaId", g.siniestro_id::text as "siniestroId",
+             g.tipo::text as tipo, g.estado::text as estado, g.observaciones as texto,
+             to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as fecha, g.origen_trigger as origen
+      from gestiones g
+      left join clientes c on c.id = g.cliente_id and c.correduria_id = g.correduria_id
+      where g.correduria_id = ${correduriaId}::uuid and g.oportunidad_id is null and g.estado::text <> 'cerrada'
+      order by g.fecha_limite nulls last, g.created_at
+      limit ${TECHO_SUELTAS + 1}`)
+    return { filas: filas.slice(0, TECHO_SUELTAS).map((f) => ({ ...f, texto: f.texto ?? '' })), truncado: filas.length > TECHO_SUELTAS }
+  } catch (e) {
+    console.error('[expedientes] tareas sueltas no leídas:', e instanceof Error ? e.message : e)
+    return { filas: null, truncado: false }
+  }
+}
+
+/** Pérdidas pendientes de revisar, sin las que ya tienen expediente abierto en su póliza. `null` = no se leyó. */
+async function perdidasPorRevisarDe(correduriaId: string): Promise<{ filas: PerdidaPorRevisar[]; conExpediente: number } | null> {
+  const fugas = await fugasPendientes(correduriaId)
+  if (fugas === null) return null
+  if (fugas.length === 0) return { filas: [], conExpediente: 0 }
+  try {
+    const ids = [...new Set(fugas.map((f) => f.polizaId))]
+    const con = await prismaAsegura().$queryRaw<{ polizaId: string }[]>(Prisma.sql`
+      select distinct coalesce(o.poliza_id::text, o.info_riesgo->>'polizaId') as "polizaId"
+      from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid
+        and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+        and (o.poliza_id::text = any(${ids}::text[]) or o.info_riesgo->>'polizaId' = any(${ids}::text[]))`)
+    const conExp = new Set(con.map((c) => c.polizaId))
+    const filas = fugas.filter((f) => !conExp.has(f.polizaId))
+    return { filas, conExpediente: fugas.length - filas.length }
+  } catch (e) {
+    console.error('[expedientes] pérdidas por revisar no cruzadas con expedientes:', e instanceof Error ? e.message : e)
+    return null
+  }
 }

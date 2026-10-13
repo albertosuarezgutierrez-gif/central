@@ -35,3 +35,39 @@ test('no se ha podido mirar ≠ lista vacía', () => {
   assert.equal(interpretarExpedientes(200, { estado: 'ok' }).estado, 'error')
   assert.deepEqual(interpretarExpedientes(401, null), { estado: 'error', motivo: 'secreto_rechazado' })
 })
+
+test('tareas sueltas y pérdidas: sin campo = «no se pudo leer» (null), nunca []', () => {
+  const r = interpretarExpedientes(200, { estado: 'ok', expedientes: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.tareasSueltas, null)
+  assert.equal(r.perdidasPorRevisar, null)
+  assert.equal(r.perdidasConExpediente, null)
+})
+
+test('tareas sueltas y pérdidas se leen; [] con ok sí es «no hay»', () => {
+  const r = interpretarExpedientes(200, {
+    estado: 'ok', expedientes: [],
+    tareasSueltas: [{ tareaId: 't9', clienteId: null, cliente: null, polizaId: null, siniestroId: null, tipo: 'llamada', estado: 'pendiente', texto: null, fecha: '2026-08-26', origen: 'loo-916:agenda-beta' }],
+    tareasSueltasTruncado: false,
+    perdidasPorRevisar: [], perdidasConExpediente: 2,
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.tareasSueltas?.length, 1)
+  assert.equal(r.tareasSueltas?.[0].texto, '')
+  assert.equal(r.tareasSueltas?.[0].clienteId, null)
+  assert.deepEqual(r.perdidasPorRevisar, [])
+  assert.equal(r.perdidasConExpediente, 2)
+})
+
+test('una tarea suelta malformada no se pinta y la lista se marca incompleta; una pérdida malformada → no se sabe', () => {
+  const r = interpretarExpedientes(200, {
+    estado: 'ok', expedientes: [], tareasSueltas: [{ tareaId: 't1' }], perdidasPorRevisar: [{ id: 'e1' }],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.tareasSueltas, [])
+  assert.equal(r.tareasSueltasTruncado, true)
+  assert.equal(r.perdidasPorRevisar, null)
+})

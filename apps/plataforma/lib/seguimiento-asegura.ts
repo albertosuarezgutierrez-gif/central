@@ -787,6 +787,10 @@ export function tareasHoyAsegura(): Promise<Reenvio> {
 export function expedientesAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/expedientes', { method: 'GET' })
 }
+/** Banda de avisos de «Mi mesa» (13/10/2026): se compone con `componerAvisos` de `lib/correduria/avisos.ts`. */
+export function avisosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/avisos', { method: 'GET' }, 20_000)
+}
 
 // ─── Rellenar la oportunidad leyendo un documento (24/09/2026) ──────────────
 // Alberto: «subir póliza, recibo o alguna imagen y que el agente con IA busque los
