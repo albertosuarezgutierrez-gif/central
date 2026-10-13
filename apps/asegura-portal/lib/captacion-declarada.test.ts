@@ -4,6 +4,9 @@ import assert from 'node:assert/strict'
 import {
   claveAhoraNo,
   clavePedida,
+  claveReserva,
+  MIN_RESERVA,
+  PREFIJO_RESERVA,
   DIAS_AHORA_NO,
   estadoCaptacion,
   mensajePeticionGestion,
@@ -61,4 +64,13 @@ test('el aviso lleva id y datos básicos, escapa HTML y no inventa vencimiento',
   assert.ok(m.includes(P) && m.includes('A&lt;&amp;&gt;B') && m.includes('hogar'))
   assert.ok(m.includes('Sin vencimiento indicado'))
   assert.ok(!m.includes('A<&>B'))
+})
+
+test('🪤 reserva: misma póliza y ventana = misma clave (el 2º POST choca); otra ventana u otra póliza = libre', () => {
+  const k = claveReserva(P, AHORA)
+  assert.ok(k.startsWith(PREFIJO_RESERVA) && k.includes(P))
+  assert.equal(claveReserva(P, new Date(AHORA.getTime() + 1000)), k)
+  assert.notEqual(claveReserva(P, new Date(AHORA.getTime() + MIN_RESERVA * 60_000)), k)
+  assert.notEqual(claveReserva(OTRA, AHORA), k)
+  assert.ok(PREFIJO_RESERVA.startsWith(PREFIJO_CAPTACION))
 })

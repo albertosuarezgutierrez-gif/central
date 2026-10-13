@@ -44,6 +44,20 @@ export function clavePedida(polizaId: string): string {
   return `${PREFIJO_PEDIDA}${polizaId}`
 }
 
+/**
+ * Reserva ANTES de enviar (evita el doble Telegram de dos POST simultáneos). El rol de `portal_aviso_leido`
+ * no tiene DELETE, así que una reserva de un envío fallido no se puede borrar: la clave lleva una ventana
+ * de `MIN_RESERVA` minutos y el reintento queda libre cuando cambia la ventana. Las filas de reserva
+ * también sirven para contar el tope diario por identidad (`MAX_PETICIONES_DIA`).
+ */
+export const PREFIJO_RESERVA = 'captacion-reserva:'
+export const MIN_RESERVA = 10
+export const MAX_PETICIONES_DIA = 10
+
+export function claveReserva(polizaId: string, ahora: Date): string {
+  return `${PREFIJO_RESERVA}${polizaId}:${Math.floor(ahora.getTime() / (MIN_RESERVA * 60_000))}`
+}
+
 /** Para pedir solo las marcas de esta función a la BD (`startsWith`). */
 export const PREFIJO_CAPTACION = 'captacion-'
 

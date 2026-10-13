@@ -54,6 +54,9 @@ export async function suscribirDeSesion(
     ultima: consentimientoVigente(previas, 'avisos'),
     quedanSuscripciones: true,
   })
+  // El consentimiento se sella ANTES que la suscripción: si algo falla entre los dos pasos, queda un
+  // consentimiento sin suscripción (inofensivo) y nunca una suscripción sin su consentimiento `avisos`.
+  if (registrar !== null) await sellarAvisos(identidad.id, registrar, meta)
   await prisma.portalPushSuscripcion.upsert({
     where: { endpoint: s.endpoint },
     create: { identidadId: identidad.id, endpoint: s.endpoint, p256dh: s.keys.p256dh, authKey: s.keys.auth },
@@ -61,7 +64,6 @@ export async function suscribirDeSesion(
     // entra con otro código: la fila sigue el endpoint, no la identidad original.
     update: { identidadId: identidad.id, p256dh: s.keys.p256dh, authKey: s.keys.auth },
   })
-  if (registrar !== null) await sellarAvisos(identidad.id, registrar, meta)
   return { ok: true }
 }
 

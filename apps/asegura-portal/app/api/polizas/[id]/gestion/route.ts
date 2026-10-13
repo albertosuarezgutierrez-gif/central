@@ -7,6 +7,9 @@ import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import {
   claveAhoraNo,
   clavePedida,
+  claveReserva,
+  MAX_PETICIONES_DIA,
+  PREFIJO_RESERVA,
   estadoCaptacion,
   mensajePeticionGestion,
   notaPeticionGestion,
@@ -90,6 +93,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     fechaVencimiento: p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null,
   }
 
+  // Tope por identidad contado en BD (el de IP en memoria no es el límite real) y reserva idempotente
+  // ANTES de enviar: dos POST simultáneos chocan en la clave y solo uno llega a Telegram. El rol no tiene
+  // DELETE: si el envío falla la reserva se queda y el reintento se libera al cambiar la ventana de la clave.
+  const hoy = await prisma.portalAvisoLeido.count({
+    where: { identidadId: identidad.id, clave: { startsWith: PREFIJO_RESERVA }, creadoEn: { gte: new Date(ahora.getTime() - 24 * 60 * 60 * 1000) } },
+  })
+  if (hoy >= MAX_PETICIONES_DIA) return NextResponse.json({ estado: 'demasiadas' }, { status: 429 })
+  const reserva = await prisma.portalAvisoLeido.createMany({
+    data: [{ identidadId: identidad.id, clave: claveReserva(p.id, ahora) }],
+    skipDuplicates: true,
+  })
+  if (reserva.count === 0) return NextResponse.json({ estado: 'en_curso' }, { status: 409 })
+
   let idMensaje: number | null = null
   try {
     idMensaje = await tgSend(mensajePeticionGestion(datos))
@@ -106,7 +122,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     data: [{ identidadId: identidad.id, clave: clavePedida(p.id) }],
     skipDuplicates: true,
   })
-  // Constancia en la ficha (best-effort; un lead sin ficha queda solo en Telegram).
-  void anotarEnFicha(identidad.id, notaPeticionGestion(datos))
+  // Constancia en la ficha (best-effort; un lead sin ficha queda solo en Telegram). Se espera para que la
+  // función serverless no se congele a medias, pero un fallo NO cambia la respuesta: el Telegram ya salió.
+  try {
+    await anotarEnFicha(identidad.id, notaPeticionGestion(datos))
+  } catch (e) {
+    console.error('[portal/gestion] no se pudo anotar en la ficha:', e instanceof Error ? e.message : e)
+  }
   return NextResponse.json({ estado: 'pedida' })
 }
