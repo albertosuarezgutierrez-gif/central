@@ -20,6 +20,11 @@ describe('bandeja · acciones válidas solo desde los estados permitidos', () =>
     expect(decidirAccionBandeja('reintentar', 'error_definitivo', 'emision').ok).toBe(false)
     expect(decidirAccionBandeja('cancelar', 'error_definitivo', 'emision').ok).toBe(true)
   })
+  it('una exploración no se reintenta ni se cancela desde la bandeja (tiene su pantalla)', () => {
+    expect(decidirAccionBandeja('reintentar', 'requiere_humano', 'portal', 'exploracion').ok).toBe(false)
+    expect(decidirAccionBandeja('cancelar', 'error_definitivo', 'portal', 'exploracion').ok).toBe(false)
+    expect(decidirAccionBandeja('reintentar', 'requiere_humano', 'portal', 'tarificar').ok).toBe(true)
+  })
   it('acción o estado desconocidos → no', () => {
     expect(decidirAccionBandeja('borrar', 'requiere_humano').ok).toBe(false)
     expect(decidirAccionBandeja('reintentar', 'inventado').ok).toBe(false)

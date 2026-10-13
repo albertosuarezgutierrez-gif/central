@@ -1,7 +1,7 @@
 // pedirTrabajo reintenta ante red/5xx (no ante 401/403/404/503) y la salida sin trabajo distingue infra de "nada que hacer".
 import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
-import { pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from '../src/api.ts'
+import { CABECERA_MODOS, pedirPaso, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from '../src/api.ts'
 
 const cfg: Config = { jobId: '11111111-1111-1111-1111-111111111111', apiUrl: 'https://asegura.test', secreto: 's'.repeat(20) }
 const fetchOriginal = globalThis.fetch
@@ -96,3 +96,41 @@ for (const status of [404, 503]) {
     assert.equal(x.enviados.length, 0)
   })
 }
+
+// ─── Explorador IA (13/10/2026) ──────────────────────────────────────────────
+
+test('pedirTrabajo declara los modos de ESTA imagen (asegura solo sirve una exploración a quien la declara)', async () => {
+  let cabecera: string | null = null
+  globalThis.fetch = (async (_u: unknown, init?: RequestInit) => {
+    cabecera = new Headers(init?.headers).get(CABECERA_MODOS)
+    return new Response(JSON.stringify({ trabajo }), { status: 200 })
+  }) as typeof fetch
+  await pedirTrabajo(cfg, esperar)
+  assert.equal(cabecera, 'tarificar,emision,exploracion')
+})
+
+test('pedirPaso: 200 = ok; 404 = perdido; 409 se reintenta UNA vez; red caída = parar (sin reintento ciego)', async () => {
+  const cuerpo = { trabajoId: cfg.jobId, inventario: { version: 1 as const, marcos: [], totalElementos: 0, recortado: null, textosDescartados: 0 }, avancesFallidos: 0 }
+  const responder = (pasos: Array<number | Error>) => {
+    let n = 0
+    globalThis.fetch = (async () => {
+      const p = pasos[Math.min(n++, pasos.length - 1)]
+      if (p instanceof Error) throw p
+      return new Response(JSON.stringify({ respuesta: { version: 1 }, leaseHasta: '2026-10-13T10:00:00.000Z' }), { status: p })
+    }) as typeof fetch
+    return () => n
+  }
+  let n = responder([200])
+  assert.deepEqual(await pedirPaso(cfg, cuerpo, esperar, 0), { estado: 'ok', respuesta: { version: 1 }, leaseHasta: '2026-10-13T10:00:00.000Z' })
+  n = responder([404])
+  assert.equal((await pedirPaso(cfg, cuerpo, esperar, 0)).estado, 'perdido')
+  n = responder([409, 200])
+  assert.equal((await pedirPaso(cfg, cuerpo, esperar, 0)).estado, 'ok')
+  assert.equal(n(), 2)
+  n = responder([409, 409, 200])
+  assert.equal((await pedirPaso(cfg, cuerpo, esperar, 0)).estado, 'parar')
+  assert.equal(n(), 2)
+  n = responder([new Error('fetch failed'), 200])
+  assert.equal((await pedirPaso(cfg, cuerpo, esperar, 0)).estado, 'parar')
+  assert.equal(n(), 1)
+})

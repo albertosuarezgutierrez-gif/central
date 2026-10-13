@@ -344,6 +344,16 @@ function esAvanzable(el: ElementoInventario): boolean {
 }
 
 /**
+ * El «Aceptar» de Datos básicos del servlet de Allianz no es un button: es `<div id="aceptar" onclick="btnAceptar();">`
+ * (DOM real de Comunidades, 06/10/2026). El extractor del worker lo recoge SOLO con ese id exacto y onclick, y aquí cuenta
+ * como avanzable SOLO si además es el avance AUTORIZADO de esta entrada en esta pantalla (`esAvanceAutorizado`). Ningún
+ * otro `div` se puede pulsar; y `rellenar`/`elegir`/`marcar` ya exigen input/select por su cuenta.
+ */
+export function esAceptarDivAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
+  return el.tag === 'div' && el.id === 'aceptar' && typeof el.onclick === 'string' && el.onclick.trim() !== '' && esAvanceAutorizado(entrada, el, marco)
+}
+
+/**
  * ¿Este avance es un «Aceptar» autorizado para ESTA entrada en ESTA pantalla? Además del texto exacto exige el título de
  * la pantalla (marco del botón) y que no haya ningún título de tarificación/emisión. Lo demás del guard (onclick
  * `validar_aceptar`, `btnAccept`, `idbtnAceptar`…) sigue bloqueando aunque esté autorizado.
@@ -476,7 +486,7 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         acciones.push({ accion: 'marcar', ref })
       } else {
         if (i !== (r.acciones as unknown[]).length - 1) return void errores.push(`${donde}: avanzar va el ÚLTIMO (y solo uno)`)
-        if (!esAvanzable(el)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
+        if (!esAvanzable(el) && !esAceptarDivAutorizado(ctx.entrada, el, marco)) return void errores.push(`${donde}: el elemento no es un botón/pestaña`)
         const efecto = EFECTOS_AVANCE.find((x) => x === a.efectoEsperado)
         if (!efecto) return void errores.push(`${donde}: efectoEsperado fuera de lista`)
         if (a.confianza !== 'alta' && a.confianza !== 'media') return void errores.push(`${donde}: avanzar exige confianza alta o media`)

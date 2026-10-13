@@ -4,6 +4,7 @@
 // (app `asegura-tarificador`, auto_destroy) por trabajo, y el worker le pide el riesgo y le devuelve
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
+import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import {
   envDeMaquina, esTipoError, esVersionBot, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
   type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type PasoTraza, type RiesgoComunidad, type TipoError,
@@ -14,6 +15,9 @@ export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { r
 export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
+/** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto'] as const
+
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
   if (ramo === 'comunidades') {
     const v = validarRiesgoComunidad(riesgo)
@@ -80,14 +84,14 @@ export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable']
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
  * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
  * devolverá a `pendiente`: sería el mismo encargo dos veces). Lo terminado, cancelado o pendiente de una persona, no.
- * Un trabajo de EMISIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
+ * Un trabajo de EMISIÓN o de EXPLORACIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
  */
 export function bloqueaDuplicado(
   f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null },
   ahora: Date,
   maxIntentos: number,
 ): boolean {
-  if (f.modo === 'emision') return false
+  if (f.modo === 'emision' || f.modo === 'exploracion') return false
   if (f.estado === 'pendiente') return true
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
@@ -154,6 +158,8 @@ export type ResultadoWorker =
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
+  /** Exploración terminada (13/10/2026): el MAPA ya está en su cabecera (cierre); aquí solo el desenlace del trabajo. */
+  | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin } & MetaWorker)
 
 /**
  * Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas
@@ -234,5 +240,11 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     }
   }
 
-  return { ok: false, errores: ['resultado tiene que ser «ok» o «error»'] }
+  if (e.resultado === 'explorado') {
+    const motivoFin = MOTIVOS_FIN.find((m) => m === e.motivoFin)
+    if (!motivoFin) return { ok: false, errores: ['motivoFin fuera de lista'] }
+    return { ok: true, r: { tipo: 'explorado', trabajoId, motivoFin, ...leerMetaWorker(e) } }
+  }
+
+  return { ok: false, errores: ['resultado tiene que ser «ok», «error» o «explorado»'] }
 }

@@ -58,6 +58,7 @@ export type PlanEleccion =
 export function planEleccionVersion(f: FilaEleccion, hoy: Date = new Date()): PlanEleccion {
   if (f.estado !== 'requiere_humano') return { intentar: false, motivo: `estado ${f.estado}` }
   if (f.modo === 'emision') return { intentar: false, motivo: 'trabajo de emisión' }
+  if (f.modo === 'exploracion') return { intentar: false, motivo: 'trabajo de exploración' }
   if (f.ramo !== 'moto' && f.ramo !== 'auto') return { intentar: false, motivo: `ramo ${f.ramo}` }
   const err = obj(f.error)
   if (err?.tipo !== 'captcha') return { intentar: false, motivo: 'no es una elección de versión' }

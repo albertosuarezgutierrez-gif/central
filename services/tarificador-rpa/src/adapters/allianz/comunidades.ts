@@ -475,7 +475,7 @@ async function abrirEntrada(page: Page): Promise<void> {
  * Sesión reutilizada (src/sesion.ts): con las cookies de un trabajo anterior (en memoria, TTL 10 min) se abre la
  * entrada y, si aparece la cabecera logueada, NO se hace login. Si no aparece, `false`: login normal.
  */
-export async function sesionSirve(page: Page, ctx: ContextoPortal): Promise<boolean> {
+export async function sesionSirve(page: Page, ctx: Pick<ContextoPortal, 'exigirSinCaptcha' | 'log'>): Promise<boolean> {
   await abrirEntrada(page)
   await ctx.exigirSinCaptcha()
   const ok = await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)
@@ -483,7 +483,7 @@ export async function sesionSirve(page: Page, ctx: ContextoPortal): Promise<bool
   return ok
 }
 
-export async function login(page: Page, ctx: ContextoPortal): Promise<void> {
+export async function login(page: Page, ctx: Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'>): Promise<void> {
   await abrirEntrada(page)
   await ctx.exigirSinCaptcha()
   // Login por etiqueta/rol (captura del 05/10/2026). Tracing apagado: lo vigila el guardián de la raíz.

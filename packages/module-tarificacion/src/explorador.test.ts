@@ -212,6 +212,30 @@ describe('validarRespuestaExplorador', () => {
       expect(avanzar(i, 'b4').ok).toBe(true)
     })
 
+    it('`div#aceptar` (servlet de Allianz): avanzable SOLO como el «Aceptar» autorizado de Datos básicos; ningún otro div', () => {
+      const divs = (titulos?: unknown[]) => inventario({ titulos, elementos: [
+        { tag: 'div', id: 'aceptar', texto: 'Aceptar', onclick: 'btnAceptar();' },
+        { tag: 'div', id: 'siguiente', texto: 'Siguiente', onclick: 'irA(2);' },
+        { tag: 'div', id: 'aceptar2', texto: 'Aceptar', onclick: 'btnAceptar();' },
+      ] })
+      const av = (i: InventarioDom, id: string, efecto = 'calcular') =>
+        validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: ref(i, id), efectoEsperado: efecto, confianza: 'alta' }]), ctx(i)).ok
+      expect(av(divs(), 'aceptar')).toBe(true)
+      // Mismo div fuera de Datos básicos, en Tarificar, o en otra entrada → no.
+      expect(av(divs(['Coberturas']), 'aceptar')).toBe(false)
+      expect(av(divs(['Datos básicos', 'Tarificar']), 'aceptar')).toBe(false)
+      const i = divs()
+      expect(validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: ref(i, 'aceptar'), efectoEsperado: 'calcular', confianza: 'alta' }]), { ...ctx(i), entrada: 'otra:cosa' }).ok).toBe(false)
+      // Otro div con onclick (aunque sea en Datos básicos) o con otro id → no es un botón.
+      expect(av(divs(), 'siguiente', 'siguiente_pantalla')).toBe(false)
+      expect(av(divs(), 'aceptar2')).toBe(false)
+      // Sin onclick, tampoco.
+      const sinOnclick = inventario({ elementos: [{ tag: 'div', id: 'aceptar', texto: 'Aceptar' }] })
+      expect(av(sinOnclick, 'aceptar')).toBe(false)
+      // Y el div no sirve para nada más (marcar exige radio).
+      expect(validarRespuestaExplorador(buena([{ accion: 'marcar', ref: ref(i, 'aceptar') }]), ctx(i)).ok).toBe(false)
+    })
+
     it('onclick recortado = bloqueante aunque el texto sea inocente', () => {
       const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(120)}')` }] })
       const r = avanzar(i, 'b1')

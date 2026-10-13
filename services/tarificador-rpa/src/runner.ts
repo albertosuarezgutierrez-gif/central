@@ -45,6 +45,7 @@ import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
 import { ejecutarEmision } from './emision.ts'
+import { ejecutarExploracion } from './explorador.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
 /** Techo absoluto del trabajo (dos intentos + espera), por si el lease no llega legible. */
@@ -239,6 +240,10 @@ async function main(): Promise<number> {
     return salidaSinTrabajo(cfg, t, log, redactar)
   }
   const { trabajo } = t
+
+  // EXPLORADOR IA (13/10/2026, src/explorador.ts): otro flujo (login + entrada cerrada + bucle con asegura), sin adaptador
+  // de tarificación, sin formador ni reintento. asegura solo lo sirve a una imagen que declara el modo (api.ts).
+  if (trabajo.modo === 'exploracion') return ejecutarExploracion({ cfg, trabajo, env, log, redactar })
 
   const fallo = (tipo: 'datos' | 'credenciales', mensaje: string) =>
     enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje, url: null } })

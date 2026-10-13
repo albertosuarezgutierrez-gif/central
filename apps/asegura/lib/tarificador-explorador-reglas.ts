@@ -8,6 +8,7 @@
 import {
   EFECTOS_EN_PORTAL,
   catalogoParaIA,
+  esEntradaExploracion,
   normalizarRedNoGet,
   sanearInventarioDom,
   validarMapa,
@@ -21,7 +22,11 @@ export const ENV_EXPLORADOR_ACTIVO = 'TARIFICADOR_EXPLORADOR_ACTIVO'
 export const ENV_EXPLORADOR_MODELO = 'TARIFICADOR_EXPLORADOR_MODELO'
 /** El Sonnet que ya usa el repo por OpenRouter (Director/buscador-ia). Cambiable por env, nunca a ciegas. */
 export const MODELO_EXPLORADOR_POR_DEFECTO = 'anthropic/claude-sonnet-4.5'
-export const MAX_TOKENS_SALIDA_EXPLORADOR = 1500
+/**
+ * Tope de salida de cada llamada. 1500 (fase A) no cabía: hasta 15 acciones + 60 entradas de `mapeo` (~30 tokens cada una)
+ * llegaban cortadas → JSON roto → `parar ambiguo`. 4000 cubre el peor caso con margen; el tope de 2 € lo cuenta entero.
+ */
+export const MAX_TOKENS_SALIDA_EXPLORADOR = 4000
 /** La pasarela corta a 55 s; la ruta tiene 60 s. */
 export const TIMEOUT_IA_EXPLORADOR_MS = 45_000
 /** Pasos del historial que se le cuentan a la IA (solo pantalla + acciones por clave/ref). */
@@ -41,15 +46,76 @@ export function modeloExplorador(env: Record<string, string | undefined>): strin
   return RE_SLUG.test(v) ? v : null
 }
 
+/** Cabecera con la que el worker declara los modos que su imagen sabe ejecutar (services/tarificador-rpa/src/api.ts). */
+export const CABECERA_MODOS_WORKER = 'x-tarificador-modos'
+
+/** Modos declarados por el worker. Sin cabecera (imagen anterior a la fase B) = solo `tarificar` y `emision`. */
+export function leerModosWorker(cabecera: string | null): string[] {
+  if (cabecera === null) return ['tarificar', 'emision']
+  return [...new Set(cabecera.split(',').map((x) => x.trim().toLowerCase()).filter((x) => /^[a-z]{1,20}$/.test(x)))].slice(0, 10)
+}
+
 /**
  * Qué `modo` se le sirve al worker por `/api/tarificador/trabajo/[id]`. Un modo que el worker no conoce NO se sirve
- * (`null`): la imagen actual trata todo lo que no es `emision` como `tarificar`, y una exploración tarificada a ciegas
- * con su riesgo sería un error. La fase B (worker) añade 'exploracion' aquí a la vez que lo sabe ejecutar.
+ * (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tarificar`, y una exploración
+ * tarificada a ciegas con su riesgo sería un error. `exploracion` SOLO a un worker que la declara en su cabecera.
  */
-export function modoParaWorker(modo: string | null): 'tarificar' | 'emision' | null {
+export function modoParaWorker(modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']): 'tarificar' | 'emision' | 'exploracion' | null {
   if (modo === null || modo === 'tarificar') return 'tarificar'
   if (modo === 'emision') return 'emision'
+  if (modo === 'exploracion' && modosWorker.includes('exploracion')) return 'exploracion'
   return null
+}
+
+/**
+ * Modos que el lanzador puede RECLAMAR de la cola. `exploracion` solo con el interruptor encendido (y Alberto lo enciende
+ * cuando `TARIFICADOR_FLY_IMAGE` ya es una imagen con el explorador): así una exploración no gasta máquina ni hueco de la
+ * compañía mientras está apagado, y nunca se lanza hacia una imagen vieja que no la declararía (la ruta del trabajo, 404).
+ */
+export function modosReclamables(env: Record<string, string | undefined>): string[] {
+  return exploradorActivo(env) ? ['tarificar', 'emision', 'exploracion'] : ['tarificar', 'emision']
+}
+
+/** Margen para que el worker cierre y mande el resultado tras el tope de tiempo del explorador. */
+export const MARGEN_LEASE_EXPLORACION_MS = 2 * 60_000
+
+/**
+ * Inicio ACUMULADO de la exploración: el más antiguo entre el reclamo actual (`iniciado_at`) y el primer paso guardado
+ * (un reintento tras un fallo de infra NO pone el reloj a cero). `null` = aún no consta (0 ms).
+ */
+export function inicioAcumulado(iniciadoAt: Date | null, primerPasoAt: Date | null): Date | null {
+  const ts = [iniciadoAt, primerPasoAt].filter((d): d is Date => d instanceof Date && Number.isFinite(d.getTime()))
+  return ts.length ? new Date(Math.min(...ts.map((d) => d.getTime()))) : null
+}
+
+/**
+ * Lease RENOVADO en cada paso de exploración (el de 6 min no basta si cada paso va a la IA): ahora + `leaseMs`, pero
+ * NUNCA más allá del tope de tiempo acumulado + margen de cierre. Si el tope ya pasó, devuelve ese techo (no se alarga).
+ */
+export function leaseExploracion(p: { ahora: Date; inicio: Date | null; leaseMs: number; maxMs: number }): Date {
+  const techo = (p.inicio ?? p.ahora).getTime() + p.maxMs + MARGEN_LEASE_EXPLORACION_MS
+  return new Date(Math.min(p.ahora.getTime() + p.leaseMs, techo))
+}
+
+/** Reserva de la llamada de IA (fuera de la transacción): dura lo que la IA + margen; caducada = libre. */
+export const RESERVA_IA_MS = 75_000
+
+/**
+ * Estado del trabajo de EXPLORACIÓN tras un fallo (13/10/2026). Un `error_reintentable` con la cabecera YA cerrada (el
+ * worker cierra antes de reportar) no se reintenta: el reintento recibiría 404 de `trabajoParaWorker` (`cerrada_at is null`).
+ */
+export function estadoFalloExploracion<E extends string>(estadoPolitica: E, cabeceraCerrada: boolean): E | 'error_definitivo' {
+  return estadoPolitica === 'error_reintentable' && cabeceraCerrada ? 'error_definitivo' : estadoPolitica
+}
+
+/** Un fallo que NO se reintenta deja la cabecera cerrada (la pantalla no la muestra «abierta» para siempre). */
+export function cierraCabeceraTrasFallo(estado: string): boolean {
+  return estado !== 'error_reintentable'
+}
+
+/** Un `explorado` solo vale si la cabecera está cerrada (el mapa guardado); sin cabecera = no cerrada. */
+export function exploradoValido(cabeceraCerrada: boolean | null | undefined): boolean {
+  return cabeceraCerrada === true
 }
 
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -74,6 +140,26 @@ export function leerPeticionPaso(body: unknown): { ok: true; p: PeticionPaso } |
   if (typeof af !== 'number' || !Number.isInteger(af) || af < 0 || af > 10) errores.push('avancesFallidos tiene que ser un entero 0-10')
   if (errores.length) return { ok: false, errores }
   return { ok: true, p: { trabajoId: trabajoId!, inventario: inventario!, avancesFallidos: af as number } }
+}
+
+export type PeticionEncolarExploracion = { entrada: string; trabajoOrigenId: string | null }
+
+/**
+ * Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? }`. La entrada tiene que ser de la
+ * lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Cualquier otra clave se rechaza (no se cuela un riesgo ni un cliente
+ * a mano: el cliente y el riesgo solo salen del trabajo origen).
+ */
+export function leerPeticionEncolarExploracion(body: unknown): { ok: true; p: PeticionEncolarExploracion } | { ok: false; errores: string[] } {
+  const b = obj(body)
+  if (!b) return { ok: false, errores: ['cuerpo no es un objeto'] }
+  const errores: string[] = []
+  for (const k of Object.keys(b)) if (!['entrada', 'trabajoOrigenId'].includes(k)) errores.push(`clave «${k.slice(0, 30)}» no se admite`)
+  const entrada = esEntradaExploracion(b.entrada) ? b.entrada : null
+  if (!entrada) errores.push('entrada fuera de la lista cerrada')
+  const o = b.trabajoOrigenId === undefined || b.trabajoOrigenId === null || b.trabajoOrigenId === '' ? null : b.trabajoOrigenId
+  if (o !== null && (typeof o !== 'string' || !RE_UUID.test(o))) errores.push('trabajoOrigenId tiene que ser un uuid')
+  if (errores.length) return { ok: false, errores }
+  return { ok: true, p: { entrada: entrada!, trabajoOrigenId: o as string | null } }
 }
 
 export const MOTIVOS_FIN = [
