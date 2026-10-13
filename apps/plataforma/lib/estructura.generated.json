@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-13T16:18:47Z",
+  "generadoEn": "2026-10-13T17:48:52Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 42
+        "evidencias": 44
       },
       "asegura-portal": {
         "estado": "no",
@@ -4219,6 +4219,7 @@
       "/api/operador/tarificador/emision/autorizar",
       "/api/operador/tarificador/emision/avisos",
       "/api/operador/tarificador/encolar",
+      "/api/operador/tarificador/exploracion",
       "/api/operador/tarificador/exploraciones",
       "/api/operador/tarificador/exploraciones/[id]",
       "/api/operador/tarificador/fichas",
@@ -6877,7 +6878,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1684,
+    "apis": 1685,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
