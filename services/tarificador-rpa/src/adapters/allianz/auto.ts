@@ -36,6 +36,7 @@ import {
   type FormularioAuto,
   type LecturaVehiculoPortal,
   type OfertaNormalizada,
+  type ResultadoAdaptador,
   type SeleccionVehiculo,
   type Vehiculo,
 } from '@central/module-tarificacion'
@@ -44,8 +45,13 @@ import { ErrorTarificador } from '../../errores.ts'
 import { abrirNuevaAlta, TARJETA_AUTOS } from './entrada.ts'
 import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
 
-/** Flag de registro: apagado por defecto. Nada lo enciende en producción. */
+/** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
 export const AUTO_ACTIVO = false
+/**
+ * Flag de registro de MOTO (separado de Turismos): con él, `adapters/index.ts` registra `allianzMoto`. APAGADO hasta que
+ * Alberto lo encienda tras revisar el PR del avance autorizado (13/10/2026).
+ */
+export const MOTO_ACTIVO = false
 
 /** Hueco declarado: falta un mapa de pantalla. NO transitorio → `error_definitivo`, no se reintenta. */
 export class ErrorMapaIncompleto extends ErrorTarificador {
@@ -236,17 +242,22 @@ export async function rellenarDatosBasicos(raiz: Pick<Frame, 'locator'>, f: Form
 }
 
 /**
- * HUECO: el avance entre pestañas necesita su función guardada por FASE (guard.ts). Grabación 13/10/2026: AMBOS avances
- * hacia delante (`td#datosBasicos` desde Riesgo municipio y `td#rate` desde Datos básicos) ejecutan `aceptar_onclick()`, el
- * mismo manejador que «Aceptar» y que `ctx.pulsar()` rechaza; el viaje de vuelta (`sendViewEvent`) no lo usa. Hasta que
- * guard.ts tenga esa función NO se pulsa nada. No toca guard.ts ni lo relaja.
+ * Avance entre pestañas. Grabación 13/10/2026: AMBOS avances hacia delante (`td#datosBasicos` desde Riesgo municipio y `td#rate`
+ * desde Datos básicos) ejecutan el manejador de confirmación del portal, que `ctx.pulsar()` rechaza.
+ *   · MOTO: autorizado por Alberto (13/10/2026) SOLO por `ctx.avanzarPestanaAutorizada` (guard.ts: lista blanca exacta de los
+ *     dos selectores + ventana de red con dos capas). Puede dejar un PROYECTO guardado en Allianz; nunca una póliza.
+ *   · TURISMOS (y cualquier ramo sin decir): sigue siendo HUECO (`ErrorMapaIncompleto`), sin formulario grabado.
  */
-export async function avanzarPestanaGuardada(_page: Page, _ctx: ContextoPortal, destino: 'datosBasicos' | 'tarificar'): Promise<void> {
-  throw new ErrorMapaIncompleto(
-    destino === 'datosBasicos'
-      ? 'el avance guardado por fase de Riesgo municipio a Datos básicos (td#datosBasicos, manejador de avance con confirmación)'
-      : 'el avance guardado por fase de Datos básicos a Tarificar (td#rate, manejador de avance con confirmación)',
-  )
+export async function avanzarPestanaGuardada(_page: Page, ctx: ContextoPortal, destino: 'datosBasicos' | 'tarificar', ramo: 'auto' | 'moto' = 'auto'): Promise<void> {
+  if (ramo !== 'moto') {
+    throw new ErrorMapaIncompleto(
+      destino === 'datosBasicos'
+        ? 'el avance guardado por fase de Riesgo municipio a Datos básicos (td#datosBasicos, manejador de avance con confirmación)'
+        : 'el avance guardado por fase de Datos básicos a Tarificar (td#rate, manejador de avance con confirmación)',
+    )
+  }
+  if (typeof ctx?.avanzarPestanaAutorizada !== 'function') throw new ErrorMapaIncompleto('el avance autorizado de pestaña en el contexto del worker')
+  await ctx.avanzarPestanaAutorizada(destino === 'datosBasicos' ? 'td#datosBasicos' : 'td#rate')
 }
 
 /** HUECO: el avance de Riesgo municipio / Datos básicos a Tarificar (Turismos y compatibilidad). */
@@ -599,8 +610,8 @@ export async function lanzarSiHayErrores(raiz: Pick<Frame, 'locator'>): Promise<
   throw new ErrorTarificador('datos', `allianz/auto: el portal rechaza los datos: ${errores.map((e) => `${e.campo ? `[${e.campo}] ` : ''}${e.mensaje}`).join(' · ')}`)
 }
 
-/** Flujo MOTO hasta donde llega el mapa. Los pasos tras el primer avance están listos y probados, pero sin cablear a un avance real. */
-async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<never> {
+/** Flujo MOTO: Riesgo municipio → (avance autorizado) Datos básicos → (avance autorizado) Tarificar → lectura de primas. */
+async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
   // Todo lo que se puede comprobar SIN tocar el portal, antes de abrirlo (fail-closed).
   if (!form.seleccionVehiculo) throw new ErrorTarificador('datos', 'allianz/moto: falta seleccionVehiculo (marca, modelo y clase): el portal de Moto no busca el vehículo por matrícula')
   if ((form.seleccionVehiculo.clase ?? null) === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la clase (tramo de cilindrada 1-4) de la moto')
@@ -616,13 +627,19 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await rellenarRiesgoMoto(riesgo, form, page, ctx)
   await lanzarSiHayErrores(riesgo)
   await ctx.pausa()
-  await avanzarPestanaGuardada(page, ctx, 'datosBasicos') // HUECO: hoy lanza ErrorMapaIncompleto
+  await avanzarPestanaGuardada(page, ctx, 'datosBasicos', 'moto')
   const datos = await marcoCon(page, (r) => r.locator(SEL_DATOS_MOTO.matricula), 'Datos básicos (matrícula)')
+  await lanzarSiHayErrores(datos)
   const fechaMatriculacion = await consultarMatriculaMoto(datos, form.matricula, page)
   await rellenarDatosBasicosMoto(datos, form)
   await lanzarSiHayErrores(datos)
-  void { ...vehiculo, fechaMatriculacion } // irá al resultado cuando exista el avance a Tarificar (leerPrimasTarificar → ofertasDesdePrimas)
-  return avanzarATarificarAutos(page, ctx)
+  await ctx.pausa()
+  // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión.
+  await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
+  const tarifa = await marcoCon(page, (r) => r.locator('input[name="numModality"]'), 'Tarificar (modalidades)')
+  await lanzarSiHayErrores(tarifa)
+  const primas = await leerPrimasTarificar(tarifa)
+  return { ofertas: ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }) }
 }
 
 // ───────────────────────── flujo (con huecos) ─────────────────────────
@@ -633,7 +650,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     version: '0.1.0',
-    async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<never> {
+    async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMoto(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
       if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)

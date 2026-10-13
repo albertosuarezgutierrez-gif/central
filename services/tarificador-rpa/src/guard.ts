@@ -30,21 +30,82 @@ import {
 export const VENTANA_RED_EMISION_MS = 90_000
 export type VentanaRed = { abierta(): boolean; cerrar(): void }
 
-export type GuardEmision = { violacion(): EmisionBloqueadaError | null; comprobar(): void; fases: MaquinaFases; ventana: VentanaRed }
+export type GuardEmision = {
+  violacion(): EmisionBloqueadaError | null
+  comprobar(): void
+  fases: MaquinaFases
+  ventana: VentanaRed
+  /** Ventana de red del AVANCE DE PESTAÑA autorizado (Moto, 13/10/2026). Solo la abre `pulsarAvancePestanaAutorizado`. */
+  avance: VentanaRed
+}
+
+/**
+ * AVANCE DE PESTAÑA AUTORIZADO — Allianz ePAC Moto («Motos-online»). Autorización EXPRESA de Alberto (13/10/2026, «no hay
+ * problema con aceptar»): el robot puede pasar de «Riesgo municipio» a «Datos básicos» (`td#datosBasicos`) y de «Datos
+ * básicos» a «Tarificar» (`td#rate`) aunque esas pestañas ejecuten el manejador «Aceptar» del portal. Riesgo ACEPTADO: puede
+ * quedar un PROYECTO guardado en Allianz (no una póliza). En Tarificar solo se abre la pestaña y se leen primas.
+ *
+ * LISTA BLANCA CERRADA (cualquier otro selector → `EmisionBloqueadaError` sin pulsar). Por cada selector, del DOM de la
+ * grabación del 13/10: id, texto y `onclick` EXACTOS del `td`; el `action` del `form#formulari` de la pantalla de ORIGEN (es
+ * lo que el clic envía) y el de la de DESTINO (así se confirma la llegada); y los ÚNICOS destinos (origen + ruta, sin query)
+ * a los que puede ir una petición que no sea GET mientras la ventana está abierta. La grabación NO registra la red: los
+ * destinos son el `action` del formulario que envía `aceptar_onclick()`; si en real el portal manda otro POST, el trabajo
+ * muere (fail-closed) y se añade aquí tras verlo. Lo vigila `test/regression-tarificador-rpa.test.ts` (romperla → rojo).
+ */
+export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
+  'td#datosBasicos': Object.freeze({
+    id: 'datosBasicos',
+    texto: 'Datos básicos',
+    formOrigen: '/drpc18/riesgoMunicipio/control.do',
+    formDestino: '/drpc18/datosBasicos/control.do',
+    endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do']),
+  }),
+  'td#rate': Object.freeze({
+    id: 'rate',
+    texto: 'Tarificar',
+    formOrigen: '/drpc18/datosBasicos/control.do',
+    formDestino: '/drpc18/tarifa/control.do',
+    endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/datosBasicos/control.do']),
+  }),
+})
+export type SelectorAvancePestana = keyof typeof AVANCES_PESTANA_AUTORIZADOS
+/** Tope de la ventana de red del avance: el clic + la carga de la pestaña destino. Se cierra antes en cuanto se llega (finally). */
+export const VENTANA_RED_AVANCE_MS = 20_000
+
+/**
+ * ¿Puede ir a `url` una petición que no es GET durante la ventana del avance? Solo si su origen + ruta es EXACTAMENTE uno de
+ * `endpoints`, sin query, fragmento ni credenciales (un `;jsessionid=` en la ruta tampoco casa: fail-closed). Pura.
+ */
+export function destinoAvancePermitido(url: string, endpoints: readonly string[]): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.username || u.password || u.search || u.hash) return false
+  return endpoints.includes(`${u.origin}${u.pathname}`)
+}
 
 export async function instalarGuardEmision(context: BrowserContext): Promise<GuardEmision> {
   let violacion: EmisionBloqueadaError | null = null
   const fases = new MaquinaFases()
   let ventanaHasta = 0
+  // Ventana del avance de pestaña autorizado: hasta cuándo y a qué destinos (no GET) se puede ir. `null` = cerrada.
+  let avance: { hasta: number; endpoints: readonly string[] } | null = null
+  const avanceVigente = () => (avance && Date.now() < avance.hasta ? avance : null)
   await context.route('**/*', async (route) => {
     const req = route.request()
     const url = req.url()
     const noGet = req.method() !== 'GET'
     if (req.isNavigationRequest() || noGet) {
-      const op = { permitirAceptar: fases.aceptarEnVuelo() }
+      const av = avanceVigente()
+      // Capa (a) del avance: el manejador «Aceptar» de la pestaña está autorizado (permitirAceptar), pero store/contract/
+      // validar_aceptar/emitir/contratar/formalizar… siguen casando con el patrón y abortan como siempre (ver abajo).
+      const op = { permitirAceptar: fases.aceptarEnVuelo() || av !== null }
       const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
-      if ((porUrl || porCuerpo) && Date.now() < ventanaHasta) {
+      if ((porUrl || porCuerpo) && Date.now() < ventanaHasta && av === null) {
         // Consecuencia del ÚNICO clic autorizado (ventana abierta por pulsarEmisionAutorizada): pasa.
         await route.continue()
         return
@@ -52,6 +113,18 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        await route.abort('blockedbyclient')
+        return
+      }
+      if (av && noGet && !destinoAvancePermitido(url, av.endpoints)) {
+        // Capa (b) del avance: lista blanca de destinos. Un POST/PUT/… a cualquier otro sitio se aborta y el trabajo cae.
+        // Al mensaje solo va origen + ruta (la query de ePAC lleva identificadores de la sesión y del agente).
+        let destino = '(url ilegible)'
+        try {
+          const u = new URL(url)
+          destino = `${u.origin}${u.pathname}`
+        } catch {}
+        violacion ??= new EmisionBloqueadaError('fase', `avance de pestaña: ${req.method()} a un destino fuera de la lista blanca: ${destino}`)
         await route.abort('blockedbyclient')
         return
       }
@@ -64,14 +137,24 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       abierta: () => Date.now() < ventanaHasta,
       cerrar: () => { ventanaHasta = 0 },
     },
+    avance: {
+      abierta: () => avanceVigente() !== null,
+      cerrar: () => { avance = null },
+    },
     violacion: () => violacion,
     comprobar() {
       if (violacion) throw violacion
     },
   }
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
+  ABRIR_AVANCE.set(g, (ms, endpoints) => { avance = { hasta: Date.now() + Math.min(ms, VENTANA_RED_AVANCE_MS), endpoints } })
   return g
 }
+
+/** Solo `pulsarAvancePestanaAutorizado` (este fichero) puede abrir la ventana del avance. */
+const ABRIR_AVANCE = new WeakMap<GuardEmision, (ms: number, endpoints: readonly string[]) => void>()
+/** Cada avance autorizado, UNA vez por trabajo (contexto): no hay segundo «Aceptar» de la misma pestaña. */
+const AVANCES_USADOS = new WeakMap<GuardEmision, Set<string>>()
 
 /** Solo `pulsarEmisionAutorizada` (este fichero) puede abrir la ventana: no hay `abrir` en el objeto público. */
 const ABRIR_VENTANA = new WeakMap<GuardEmision, (ms: number) => void>()
@@ -265,4 +348,76 @@ export async function pulsarEmisionAutorizada(page: Page, guard: GuardEmision, p
     guard.ventana.cerrar()
     throw e
   }
+}
+
+/**
+ * AVANCE DE PESTAÑA AUTORIZADO (Moto, Alberto 13/10/2026; ver `AVANCES_PESTANA_AUTORIZADOS`). El ÚNICO camino para pulsar
+ * `td#datosBasicos` / `td#rate`, que ejecutan el manejador «Aceptar» del portal. Exige, en este orden y sin atajos:
+ *   1. el guard de siempre limpio y la ventana de EMISIÓN cerrada;
+ *   2. selector en la lista blanca EXACTA (cualquier otro → rechazo sin pulsar) y no usado antes en este trabajo;
+ *   3. EXACTAMENTE un control visible, en un solo marco, con id, texto y `onclick` exactos, y que pase `comprobarBoton`
+ *      (con «Aceptar» permitido: «Emitir», `validar_aceptar`, `store`, `contract`… siguen bloqueados);
+ *   4. que ese marco sea la pantalla de ORIGEN (`form#formulari` con el `action` esperado).
+ * Solo entonces abre la ventana de red (capa a: `parametrosParecenEmision` en query y cuerpo; capa b: destinos no GET en lista
+ * blanca), pulsa UNA vez y espera la pantalla de DESTINO. La ventana se cierra SIEMPRE (finally), también en error.
+ */
+export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmision, selector: SelectorAvancePestana): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'avance de pestaña con la ventana de emisión abierta')
+  if (typeof selector !== 'string' || !Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)) {
+    throw new EmisionBloqueadaError('boton', `avance de pestaña no autorizado: ${String(selector).slice(0, 60)}`)
+  }
+  const regla = AVANCES_PESTANA_AUTORIZADOS[selector]
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has(selector)) throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector} ya usado en este trabajo`)
+  const onclickEsperado = new RegExp(`^\\s*goSelected\\('${regla.id}'\\);\\s*aceptar_onclick\\(\\);?\\s*$`)
+  // Un solo control visible con ese id y texto exacto, en un solo marco; ese marco tiene que ser la pantalla de origen.
+  let marco: Frame | null = null
+  let total = 0
+  for (const f of marcosVivos(page)) {
+    const n = await f.locator(selector).filter({ hasText: new RegExp(`^\\s*${regla.texto}\\s*$`) }).locator('visible=true').count().catch(() => 0)
+    if (n > 0) {
+      total += n
+      if (marco) throw new EmisionBloqueadaError('boton', `avance de pestaña ${selector}: el control aparece en más de un marco`)
+      marco = f
+    }
+  }
+  if (total !== 1 || !marco) throw new EmisionBloqueadaError('boton', `avance de pestaña ${selector}: no hay exactamente un control visible «${regla.texto}»`)
+  const boton = marco.locator(selector).filter({ hasText: new RegExp(`^\\s*${regla.texto}\\s*$`) }).locator('visible=true').first()
+  const desc = await descripcion(boton)
+  const [texto, , , , id, , , onclick] = desc
+  const tag = await boton.evaluate((el) => el.tagName)
+  if (tag !== 'TD' || id !== regla.id || (texto ?? '').trim() !== regla.texto || !onclickEsperado.test(onclick ?? '')) {
+    throw new EmisionBloqueadaError('boton', `avance de pestaña ${selector}: el control no es la pestaña grabada`)
+  }
+  comprobarBoton(desc, { permitirAceptar: true })
+  const origen = await accionFormulario(marco)
+  if (origen !== regla.formOrigen) throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector}: la pantalla actual no es la de origen`)
+  const abrir = ABRIR_AVANCE.get(guard)
+  if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')
+  usados.add(selector)
+  AVANCES_USADOS.set(guard, usados)
+  abrir(VENTANA_RED_AVANCE_MS, regla.endpoints)
+  try {
+    await boton.click()
+    const fin = Date.now() + VENTANA_RED_AVANCE_MS
+    for (;;) {
+      guard.comprobar()
+      let llegado = false
+      for (const f of marcosVivos(page)) if ((await accionFormulario(f)) === regla.formDestino) llegado = true
+      if (llegado) break
+      if (Date.now() >= fin) throw new Error(`avance de pestaña ${selector}: no apareció la pantalla de destino`)
+      await page.waitForTimeout(250)
+    }
+    guard.comprobar()
+  } finally {
+    guard.avance.cerrar()
+  }
+}
+
+/** `action` (atributo literal) del `form#formulari` del marco, o `null`. Solo lectura. */
+async function accionFormulario(f: Frame): Promise<string | null> {
+  const form = f.locator('form#formulari')
+  if ((await form.count().catch(() => 0)) !== 1) return null
+  return form.getAttribute('action').catch(() => null)
 }

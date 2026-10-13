@@ -323,3 +323,49 @@ test('EMISIÓN (10/10/2026): un solo camino para pulsar el botón de emitir, y s
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
   assert.ok(!/permiso/i.test(g), 'guard-emision.ts no puede conocer el permiso: el guard queda INTACTO por defecto')
 })
+
+test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#datosBasicos, td#rate}, ventana de red con dos capas y flag propio', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  // 1. La lista blanca: exactamente dos selectores, cada uno con su único destino de red (nunca tarifa/control.do ni MotoServlet).
+  const bloque = guard.match(/export const AVANCES_PESTANA_AUTORIZADOS = Object\.freeze\(\{([\s\S]*?)\n\}\)\n/)
+  assert.ok(bloque, 'falta AVANCES_PESTANA_AUTORIZADOS (Object.freeze) en guard.ts')
+  const claves = [...bloque![1].matchAll(/^ {2}'([^']+)': Object\.freeze\(/gm)].map((m) => m[1])
+  assert.deepEqual(claves, ['td#datosBasicos', 'td#rate'], 'la lista blanca de avances de pestaña es EXACTAMENTE td#datosBasicos y td#rate')
+  const endpoints = [...bloque![1].matchAll(/endpoints: Object\.freeze\(\[([^\]]*)\]\)/g)].map((m) => m[1].trim())
+  assert.deepEqual(endpoints, ["'https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do'", "'https://www.e-pacallianz.com/drpc18/datosBasicos/control.do'"])
+  assert.ok(!/tarifa\/control|MotoServlet|contract|store|emit/i.test(endpoints.join(' ')), 'ningún destino de Tarificar/emisión en la lista blanca de red')
+  // 2. La función: lista blanca (hasOwn) + comprobarBoton + pantalla de origen ANTES de abrir la ventana; un clic; finally cierra.
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarAvancePestanaAutorizado'))
+  assert.ok(fn, 'falta pulsarAvancePestanaAutorizado en guard.ts')
+  const abrir = fn!.indexOf('abrir(VENTANA_RED_AVANCE_MS')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)', 'aceptar_onclick', 'comprobarBoton(desc, { permitirAceptar: true })', 'regla.formOrigen']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < abrir && abrir < clic, `pulsarAvancePestanaAutorizado: «${paso}» tiene que ir ANTES de abrir la ventana y pulsar`)
+  }
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  assert.match(fn!, /\} finally \{\s*guard\.avance\.cerrar\(\)\s*\}/, 'la ventana del avance se cierra SIEMPRE (finally)')
+  // 3. El guard de red: capa (a) patrón de emisión en query y cuerpo; capa (b) destinos no GET en lista blanca.
+  assert.match(guard, /if \(av && noGet && !destinoAvancePermitido\(url, av\.endpoints\)\)/, 'capa (b): todo no-GET fuera de la lista blanca se aborta')
+  assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null\)/, 'la ventana de emisión no vale con el avance abierto')
+  // 4. Solo el runner la enchufa y solo auto.ts la usa, con los dos selectores literales; Moto con flag PROPIO y apagado.
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /avanzarPestanaAutorizada: \(selector\) => pulsarAvancePestanaAutorizado\(page, guard, selector\)/)
+  const usos = ficheros(join(SRV, 'src')).filter((f) => !f.endsWith('/src/guard.ts') && !f.endsWith('/src/runner.ts') && /pulsarAvancePestanaAutorizado\(|avanzarPestanaAutorizada\(/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(usos.map((f) => relative(RAIZ, f)), ['services/tarificador-rpa/src/adapters/allianz/auto.ts'])
+  const auto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
+  assert.match(auto, /if \(ramo !== 'moto'\) \{\s*throw new ErrorMapaIncompleto\(/, 'Turismos sigue siendo hueco')
+  assert.match(auto, /await ctx\.avanzarPestanaAutorizada\(destino === 'datosBasicos' \? 'td#datosBasicos' : 'td#rate'\)/)
+  assert.match(auto, /^export const AUTO_ACTIVO = false$/m)
+  assert.match(auto, /^export const MOTO_ACTIVO = (true|false)$/m)
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.ok(!/allianzAuto/.test(idx), 'Turismos no se registra')
+  assert.deepEqual([...idx.matchAll(/^.*registrar\(allianzMoto.*$/gm)].map((m) => m[0].startsWith('if (MOTO_ACTIVO) ')), [true], 'allianzMoto solo se registra bajo if (MOTO_ACTIVO)')
+})
+
+test('Mapfre (13/10/2026): «Generar Proyecto» / «Ir a generar proyecto» están en los textos PROHIBIDOS del guard; «Calcular» no', () => {
+  const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
+  const lista = g.slice(g.indexOf('export const TEXTOS_BLOQUEADOS_ALTA'), g.indexOf('\n]\n', g.indexOf('export const TEXTOS_BLOQUEADOS_ALTA')))
+  assert.ok(lista.split('\n').some((l) => /^\s*\/generar\[\\s_\+-\]\*proyecto\/i,\s*$/.test(l)), 'falta /generar[\\s_+-]*proyecto/i en TEXTOS_BLOQUEADOS_ALTA')
+  assert.ok(!lista.split('\n').some((l) => !/^\s*\/\//.test(l) && /calcular/i.test(l)), '«Calcular» NO se bloquea (decisión pendiente de Alberto)')
+})

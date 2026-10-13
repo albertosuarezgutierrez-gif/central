@@ -32,7 +32,7 @@ import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
-import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarProyecto } from './guard.ts'
+import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { htmlConMarcos } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
@@ -142,6 +142,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       },
       elegirOpcion: (m) => elegirOpcion(page, guard, m),
       avanzarATarificar: () => pulsarAvance(page, guard),
+      avanzarPestanaAutorizada: (selector) => pulsarAvancePestanaAutorizado(page, guard, selector),
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,

@@ -141,6 +141,21 @@ describe('guard de emisión', () => {
     },
   )
 
+  // Mapfre (13/10/2026): crean un proyecto real en el portal. «Calcular» sigue pasando (decisión pendiente de Alberto).
+  it.each(['Generar Proyecto', 'GENERAR PROYECTO', 'generar proyecto', 'Ir a generar proyecto', 'IR A GENERAR PROYECTO', 'btnGenerarProyecto', 'generar_proyecto', 'Generar  Proyecto'])(
+    'aborta el control de Mapfre «%s»',
+    (texto) => {
+      expect(() => comprobarBoton([texto])).toThrow(EmisionBloqueadaError)
+      expect(pareceEmision(texto, { permitirAceptar: true })).toBe(true)
+    },
+  )
+
+  it('Mapfre: «generar proyecto» también en URL y en el parámetro de acción; «Calcular» y «Proyecto» pasan', () => {
+    expect(() => comprobarUrl('https://x/mapfre/generarProyecto.do')).toThrow(EmisionBloqueadaError)
+    expect(parametrosParecenEmision('accion=generarProyecto')).toBe(true)
+    for (const ok of ['Calcular', 'Proyecto', 'Descargar proyecto PDF']) expect(() => comprobarBoton([ok])).not.toThrow()
+  })
+
   it('aborta también por id/value/href de los controles de alta de ePAC', () => {
     expect(() => comprobarBoton([null, 'btnAceptar'])).toThrow(/guard_emision/)
     expect(() => comprobarBoton(['', null, undefined, 'elijaUnaOpcion'])).toThrow(/guard_emision/)
