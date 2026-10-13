@@ -184,7 +184,7 @@ PR #4212 MERGEADO (03/10). Caso origen: huésped H1 (reserva 154375571) avisado 
 **(03/10/2026, CIMA cuarentena REC)** — Allianz C0109: REC 261 (2 recibos) del 03/10 atascados en cuarentena con `estado_recibo_desconocido`. Causa: `mapReciboSituacion` en `eiac-rec-mapper.ts` sin los códigos LI (Liquidado) ni RE (Rehabilitado) de EIAC §13.3.33. Fix en asegura#876 (draft): LI→cobrado, RE→pendiente, reason trae `estado_recibo_desconocido:<COD>`. Hecho: asegura#876 mergeado; reproceso dejó 1 recibo en sin_poliza_en_cartera por cero inicial ([nº de póliza retirado] vs [nº de póliza retirado]). asegura#877: matcher de recibos C0109 tolera ceros (numeroSinCerosIzquierda, exacto gana, ≥2 → unicaCarteraViva/ambiguo) + reprocesar-cuarentena ya no sella con objetos sin guardar (ficheroTotalmenteResuelto). Rescate: reprocesado_at=NULL en la fila + reproceso → 2/2 recibos en cartera. Pendiente: fusionar 15 pares duplicados C0109 (con/sin cero); mismo hueco de ceros en siniestro-matching y cef-matching.
 
 **(03/10/2026, bonificación vehículo nuevo)** — 🚗 Error descubierto: auto/moto-nuevo descartaban `seguroAnterior` (histórico es del CONDUCTOR, no del vehículo). Decisiones Alberto: (a) elegir póliza a imputar (turismo > moto, efecto antiguo sin siniestros, override corredor); (b) años sin siniestros desconocidos → PRESUPUESTO tarifica máximo «bonusSupuesto», EMISIÓN bloqueada sin verificar (art. 10 LCS); (c) leer-documento completa nº póliza/matrícula/canal/cesión/modalidad. PR1 (agente-architect, rama ccr-7156a8bc-i5qt5c): imputación+bloqueo+extracción. PR2 pendiente (tras PR1): aviso 45d vencimientos competencia, plurianuales RCI como objetivo, «pagas X→Y» anualizado (sin ahorro si no aseguro), pack coche+moto opcional (interruptor off). Codeoscopic: 0,50€/riesgo, 90d vista, Allianz vinculación (insuredFamilyInAllianz, dtoVentaCruzada).
-**(03/10/2026, figuras de póliza: caso Qover)** — Fermín (conductor principal, persona de contacto de la SL tomadora) quedaba con el nombre entero en `nombre` y solo la fecha. Ahora: nombre partido (`partirNombre`; el lead antiguo sigue reutilizándose, `leadSinDniReutilizable` compara nombre+apellidos — guardián visto en rojo); domicilio por figura (lector `domicilio*` por figura; `huecosDomicilio`+`escribirHuecos` en `ficha-desde-poliza.ts`, UNA sentencia bloqueada, compartida con el tomador).
+**(03/10/2026, figuras de póliza: caso Qover)** — cliente C63 (conductor principal, persona de contacto de la SL tomadora) quedaba con el nombre entero en `nombre` y solo la fecha. Ahora: nombre partido (`partirNombre`; el lead antiguo sigue reutilizándose, `leadSinDniReutilizable` compara nombre+apellidos — guardián visto en rojo); domicilio por figura (lector `domicilio*` por figura; `huecosDomicilio`+`escribirHuecos` en `ficha-desde-poliza.ts`, UNA sentencia bloqueada, compartida con el tomador).
 Persona de contacto (`personaContactoTomador`, solo empresa; `esPersonaDeContacto`: nombre exacto, o contenido si el corto tiene 3+ palabras —el Qover «Fermin Bueno» ya NO casa—, una sola persona): recibe teléfono/email del tomador vía `anadirContacto`, `nuncaPrincipal` SIEMPRE y `forzar` solo si la otra ficha es SOLO el tomador (`contactoSoloDelTomador`); relación «Persona de contacto · Conductor habitual (póliza N)».
 Figura con rol sin nombre (`figurasSinNombre`): sin ficha, línea `conductor_adicional_sin_nombre` (etc.) sin repetir, cuenta para joven/novel. Conductor sin DNI o sin carné → tarea `gestiones` «Pedir DNI y carné del conductor habitual/ocasional» (cliente_id = su ficha, fecha = la de la llamada, una por persona sin duplicar). `figuras[].campos` (booleanos) → «Tiene/Falta» en `AvisosLectura`. maxTokens 3000. Sin SQL nuevo. Prompt del lector sin probar contra el PDF real.
 **(03/10/2026)** — ✂️ Segunda tanda de recorte de CLAUDE.md por tokens (patrón del 30/09): `apps/plataforma` 265→16 KB, `apps/asegura-portal` 197→20 KB, `apps/ialimp` 68→17 KB (~120k tokens menos por sesión que las carga). Íntegros en `docs/claude-md/*-completo-2026-10-03.md` (Grep, no leer enteros). Nuevo cepo `test/regression-claude-md-tamano.test.ts`: ningún CLAUDE.md (raíz + apps/*) pasa de 24 KB — visto rojo restaurando el original de plataforma (259 KB). Ningún test leía el contenido de esos tres ficheros.
@@ -1326,7 +1326,7 @@ Historial `PREFIJO_HISTORIAL_CARNET_PROPIO` (sin fecha) → evento `carnet` en e
 
 ## (06/10/2026) Portal: carnés con varias fichas
 Puente `/api/portal/carnets` agrupa por titular (`carnets-titulares.ts` en asegura y portal): `ok` (1 titular, `carnets` plana como antes) /
-`varios_titulares` (200, solo `titulares`); carné de ficha no leída se descarta. Avisos/recordatorios nombran al titular («…de Ana Pérez»).
+`varios_titulares` (200, solo `titulares`); carné de ficha no leída se descarta. Avisos/recordatorios nombran al titular («…de <titular>»).
 El cliente NO escribe carnés en el portal (solo el corredor): alta/edición desde portal pendiente de decisión de Alberto. Auditoría: 5/5 confirmadas.
 
 ## (06/10/2026) Portal del cliente: instalar en iPhone con Chrome
@@ -1826,7 +1826,7 @@ El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a
 Nuevo `apps/asegura/lib/justificante-anulacion.ts`: tras la firma (after(), detrás del envío a la compañía) archiva el PDF
 firmado en `documentos` de la póliza (visible en su portal) y le manda correo con PDF+txt. Idempotente. Botón «Mandar
 justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
-Victor/Jose, también firmados sin justificante).
+dos clientes, también firmados sin justificante).
 Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaducaEn`) y enseña «Bajas que has firmado» 60 días.
 ⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de dos clientes NO están comunicadas.
 `recibe_anulaciones` de Mapfre a false, CCORREDOR re-etiquetado comercial; mapfre@mapfre.es probado → Resend «suppressed» (no
@@ -2136,7 +2136,7 @@ superpowers, `code-review`, `security-review` y `agente-architect`.
 Medido: todas de la importación del 21/06; 271 son correos que ya tiene OTRA ficha (índice único, choques del backfill del 08/09).
 Impacto real, en 7 clientes con póliza activa por CIMA que el portal no enlazaría a su ficha. Hecho: cliente C39 y cliente C40 (ya leads)
 con su correo de cabecera en la lista como principal. Pendiente de Alberto: cliente C38 (duplicado; la fusión exige el índice del DNI del
-prospecto → backfill DNI en /correduria/mantenimiento), buzones compartidos (Ansaire/Juan Carlos, Flores y Gázquez/cliente C35 «Empresa»,
+prospecto → backfill DNI en /correduria/mantenimiento), buzones compartidos (Ansaire/cliente C61, Flores y Gázquez/cliente C35 «Empresa»,
 cliente C43/cliente C44 «Cónyuge», cliente C45/cliente C46 +7, González García con 2 DNI distintos) y cliente C47/cliente C48.
 
 ## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
@@ -3636,7 +3636,7 @@ PR #2933. Sin código tocado, solo doc.
   (match por `codigoEntidadDgs` + núcleo Occident LOO-973 + fallback nunca pisa un número propio,
   8 tests verificados en rojo antes del fix). Repuestas las 16 pólizas ya duplicadas (repo `asegura`,
   `poliza_merge_log`/`cliente_merge_log`, con `verificacion_humana_alberto` cuando hacía falta —
-  incluida una fusión de CLIENTE, mismo María Rocío González García partida por un split de nombre).
+  incluida una fusión de CLIENTE, mismo cliente C59 partida por un split de nombre).
   Cartera CIMA reconciliada 1:1 contra el portal en las 5 entidades (Allianz 26, Generali 14, Reale 1,
   Mapfre 64, Occident 51). PR #838 (draft): alerta de Telegram en `cima_fichero_review` y
   `cima_situacion_desconocida` — antes solo quedaban en `operational_events`, invisibles hasta la
@@ -6506,7 +6506,7 @@ PR #2933. Sin código tocado, solo doc.
   6/67; `tramitador`, `gravedad`, `reserva` e `indemnización` en **0**. Auto: 26 de 50 son ASISTENCIA
   (una grúa, no un siniestro) — pintarlos como «siniestro abierto» exagera.
 
-- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en Josefa
+- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en cliente C62
   cliente C33 y cliente C09, y por eso su hash del índice ciego
   resolvía a 3 fichas y el portal se negaba a vincular (`ambiguo`). Foto previa en
   `seguros.cliente_emails_borrados_20260904`. Ahora resuelve a **1**. Las dos fichas se quedan con
@@ -6855,7 +6855,7 @@ PR #2933. Sin código tocado, solo doc.
   = conciliación bancaria «aún no comprobada», no 0 €. PRs previos #2029 → #2034 → #2047 → #2049.
 
 - **🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente` (03/09/2026).**
-  Alberto preguntó por María Alcalá (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
+  Alberto preguntó por cliente C60 (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
   de 225,97€ está **`pendiente`**, DOMICILIADO, póliza en vigor, y su fila no se toca desde la carga del 24/06
   mientras CIMA sigue entrando (128 ficheros, 8 recibos SÍ pasaron a `cobrado` en agosto). Nadie ha dicho que
   se devolviera. `retencion()` exige ahora la `situacion` (sin default) y devuelve **`sin_confirmar`** 🟠 con
