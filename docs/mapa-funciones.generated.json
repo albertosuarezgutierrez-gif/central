@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-13T12:22:57Z",
-  "sha": "0b057d54800f71931978d3eb435585454b75dee7",
+  "generadoEn": "2026-10-13T12:51:37Z",
+  "sha": "7a2f0bee80bde8333861a978aee61aeff1153ddb",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28134,7 +28134,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is PuertaCotizacion",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "transaccionPrisma",
@@ -28142,7 +28142,7 @@
           "exportada": true,
           "params": "fn",
           "retorno": null,
-          "linea": 139,
+          "linea": 147,
           "resumen": "La de verdad: una transacción interactiva de Prisma."
         },
         {
@@ -28151,7 +28151,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Json",
-          "linea": 147
+          "linea": 155
         },
         {
           "nombre": "texto",
@@ -28159,7 +28159,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 148
+          "linea": 156
         },
         {
           "nombre": "numero",
@@ -28167,7 +28167,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 150
+          "linea": 158
         },
         {
           "nombre": "entero",
@@ -28175,7 +28175,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 152
+          "linea": 160
         },
         {
           "nombre": "idTexto",
@@ -28183,7 +28183,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 162,
+          "linea": 170,
           "resumen": "Un catálogo viaja como `{ id }`, pero a veces el id ya viene suelto. Se aceptan las dos formas y se devuelve SIEMPRE el id, nunca un nombre: un `buildingType` guardado como texto libre no se puede cru"
         },
         {
@@ -28192,7 +28192,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 168
+          "linea": 176
         },
         {
           "nombre": "riesgoDePeticion",
@@ -28200,7 +28200,7 @@
           "exportada": true,
           "params": "peticion: unknown",
           "retorno": "RiesgoDesnormalizado",
-          "linea": 183,
+          "linea": 191,
           "resumen": "Aplana el riesgo de la petición. La dirección vive en `risk.address` (hogar) o en `risk.circulationAddress` (auto): son los dos nombres reales del vendor, y se miran en ese orden. Lo que no esté sale "
         },
         {
@@ -28209,7 +28209,7 @@
           "exportada": false,
           "params": "e: EntradaCotizacion",
           "retorno": "string | null",
-          "linea": 204,
+          "linea": 212,
           "resumen": "La fecha de efecto que confirmó el vendor; si no la dijo, la que se le pidió."
         },
         {
@@ -28218,7 +28218,7 @@
           "exportada": true,
           "params": "e: EntradaCotizacion",
           "retorno": "string | null",
-          "linea": 215,
+          "linea": 223,
           "resumen": "Comprueba el invariante ANTES de tocar la BD. Devuelve el motivo, o `null` si la entrada es coherente. Es la misma regla que el CHECK `simulada_sin_libro` de la tabla, pero dicha aquí para que el fall"
         },
         {
@@ -28227,7 +28227,7 @@
           "exportada": true,
           "params": "e: EntradaCotizacion, enTransaccion: EnTransaccion = transaccionPrisma,",
           "retorno": "Promise<string>",
-          "linea": 234,
+          "linea": 242,
           "resumen": "Guarda la cabecera y sus precios EN UNA TRANSACCIÓN. Lanza si algo falla — a propósito: el llamante decide qué hacer con ello, y en el embudo esa decisión es «no tumbar la cotización» (ver `cotizar.ts"
         },
         {
@@ -28236,7 +28236,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 331,
+          "linea": 339,
           "resumen": "JSON apto para una columna `jsonb`: Postgres rechaza el carácter nulo (`\\u0000`) dentro de un texto, y un solo carácter así tumbaría la escritura entera. Se quita; el resto va tal cual."
         },
         {
@@ -28245,7 +28245,7 @@
           "exportada": true,
           "params": "e: { correduriaId: string; cotizacionId: string; respuesta: unknown }, enTransaccion: EnTransaccion = transaccionPrisma,",
           "retorno": "Promise<boolean>",
-          "linea": 340,
+          "linea": 348,
           "resumen": "La respuesta ENTERA del vendor, en una escritura APARTE y que no lanza (29/09/2026). Va fuera de la transacción de la cotización a propósito: es un respaldo para contrastar el parser, y un fallo al gu"
         },
         {
@@ -28254,7 +28254,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 360,
+          "linea": 368,
           "resumen": "El texto de un error, sin suponer que sea un `Error`."
         },
         {
@@ -28263,7 +28263,7 @@
           "exportada": true,
           "params": "e: EntradaCotizacion, enTransaccion: EnTransaccion = transaccionPrisma,",
           "retorno": "Promise<Guardado>",
-          "linea": 375,
+          "linea": 383,
           "resumen": "El mismo guardado, pero que NO LANZA NUNCA. 🚨 Ésta es la que usa el embudo, y el porqué es de negocio: cuando se llega aquí el cliente YA ha pagado los 0,50€ y YA tiene su precio en pantalla. Perderl"
         },
         {
@@ -28272,7 +28272,7 @@
           "exportada": true,
           "params": "e: Pick<EntradaCotizacion, 'correduriaId' | 'contexto' | 'cotizacion'>, enTransaccion: EnTransaccion = transaccionPrisma,",
           "retorno": "Promise<number>",
-          "linea": 398,
+          "linea": 406,
           "resumen": "30/09/2026: si los precios que acaban de llegar no cuadran (`revisarCoherenciaCotizacion`), se deja UNA nota en la ficha con el prefijo que el muro de actividad reconoce, y de ahí sale el Telegram (`c"
         }
       ],
@@ -28280,7 +28280,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "b0975a2aa4a9"
+      "hash": "e2a66cf4f114"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/cotizar.ts",
@@ -37996,7 +37996,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; tomadorId: string; ramo?: 'decesos' | 'salud' },",
           "retorno": "Promise<",
-          "linea": 994,
+          "linea": 996,
           "resumen": "Los asegurados de un riesgo de DECESOS (rol `asegurado`), armados desde SUS fichas para `risk.insureds[1..]` (13/10/2026). Gratis. Acotado a la correduría. El tomador no se repite (ya es `insureds[0]`"
         },
         {
@@ -38005,7 +38005,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; tomadorId: string },",
           "retorno": "Promise<",
-          "linea": 1049,
+          "linea": 1053,
           "resumen": "VIDA embebida (13/10/2026): comprueba el riesgo y lee de `info_riesgo.datosCapital` lo que viaja. Gratis. Acotado a la correduría. `TermLifeRisk_V1` lleva UNA persona asegurada propia (`risk.insured`,"
         },
         {
@@ -38014,7 +38014,7 @@
           "exportada": false,
           "params": "f: EmpresaFigura, tecleado: Record<string, unknown>",
           "retorno": "Promise<DatosEmpresa>",
-          "linea": 1095,
+          "linea": 1099,
           "resumen": "La empresa propietaria lista para la petición: lo tecleado en la pantalla (`dni`/`nombre`, los mismos campos que una persona) manda sobre la ficha, y la dirección se resuelve contra los catálogos del "
         },
         {
@@ -38023,7 +38023,7 @@
           "exportada": true,
           "params": "e: Pick<DatosEmpresa, 'municipioResidenciaId' | 'nombreVia' | 'numeroVia' | 'tipoVia'>",
           "retorno": "string[]",
-          "linea": 1125,
+          "linea": 1129,
           "resumen": "Qué le falta a la dirección de una empresa propietaria para poder EMITIR. Puro."
         },
         {
@@ -38032,7 +38032,7 @@
           "exportada": false,
           "params": "v: unknown, tomadorId: string, soloTomador: boolean",
           "retorno": "FigurasVariante | null",
-          "linea": 1135,
+          "linea": 1139,
           "resumen": "Solo roles conocidos y uuids; el tomador siempre es quien cotiza (el cliente de la ruta)."
         },
         {
@@ -38041,7 +38041,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, a: string, b: string",
           "retorno": "Promise<Comparacion | null>",
-          "linea": 1159,
+          "linea": 1163,
           "resumen": "Dos variantes del MISMO riesgo, campo a campo y compañía a compañía. Gratis, solo lectura."
         },
         {
@@ -38050,7 +38050,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { polizaId: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 1198,
+          "linea": 1202,
           "resumen": "Abre (o devuelve la abierta) la oportunidad de ESTA póliza para retarificarla, con las figuras que CIMA/la ficha ya tienen enlazadas a una persona. Gratis. Nunca toca la póliza."
         },
         {
@@ -38059,7 +38059,7 @@
           "exportada": true,
           "params": "correduriaId: string, oportunidadId: string, polizaId: string,",
           "retorno": "Promise<",
-          "linea": 1296,
+          "linea": 1300,
           "resumen": "Retarificar la póliza DENTRO de su riesgo: la oportunidad tiene que ser de esta correduría y de ESTA póliza. Gratis, antes de gastar. Devuelve el contexto que cuelga la tarificación de ella."
         },
         {
@@ -38068,7 +38068,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; clave: ClaveDatosRiesgo; datos: unknown; confirmar: boolean; actor: string },",
           "retorno": "Promise<ResultadoDatosRiesgo>",
-          "linea": 1334,
+          "linea": 1338,
           "resumen": "Edita (y/o confirma) los datos del riesgo de una oportunidad, de CUALQUIER ramo. `clave` dice qué bloque (`datosVehiculo` | `datosVivienda` | `datosCapital` | `datosComercio` | `datosRiesgoLibre`) y T"
         },
         {
@@ -38077,7 +38077,7 @@
           "exportada": false,
           "params": "correduriaId: string, e: { oportunidadId: string; clave: ClaveDatosRiesgo; valor: Record<string, unknown>; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 1373,
+          "linea": 1377,
           "resumen": "Write-back de una cotización con `?oportunidad=`: anota en el riesgo lo que se USÓ para pedir precio (sin sellar `confirmadoAt`; si algo cambió respecto a lo guardado, el sello se borra). Solo claves "
         },
         {
@@ -38086,7 +38086,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; cuerpo: unknown; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 1386
+          "linea": 1390
         },
         {
           "nombre": "anotarViviendaDeCotizacion",
@@ -38094,7 +38094,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; cuerpo: unknown; catastro?: { metrosCuadrados?: number | null; anioConstruccion?: number | null; codigoPostal?: string | null } | null; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 1394,
+          "linea": 1398,
           "resumen": "Hogar: `catastro` es lo que la ruta acaba de leer del Catastro (m², año, CP), que rellena lo que no se tecleó."
         },
         {
@@ -38103,7 +38103,7 @@
           "exportada": true,
           "params": "correduriaId: string, e: { oportunidadId: string; ramo: RamoCapital; cuerpo: unknown; actor: string },",
           "retorno": "Promise<void>",
-          "linea": 1401
+          "linea": 1405
         }
       ],
       "tablas": [
@@ -38117,7 +38117,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "3f908ec50551"
+      "hash": "c42e4d3c551c"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-seguimiento.ts",
@@ -96720,7 +96720,7 @@
           "exportada": true,
           "params": "{ oportunidadId, a, b, onCerrar }: { oportunidadId: string a: VarianteRiesgo b: VarianteRiesgo onCerrar: () => void }",
           "retorno": null,
-          "linea": 16
+          "linea": 17
         },
         {
           "nombre": "Resultado",
@@ -96728,7 +96728,7 @@
           "exportada": false,
           "params": "{ c, pa, pb }: { c: Comparacion; pa: string; pb: string }",
           "retorno": null,
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "FilaPrecio",
@@ -96736,7 +96736,7 @@
           "exportada": false,
           "params": "{ f, mejorA, mejorB }: { f: FilaComparacion; mejorA: number | null; mejorB: number | null }",
           "retorno": null,
-          "linea": 108
+          "linea": 109
         },
         {
           "nombre": "Prima",
@@ -96744,12 +96744,12 @@
           "exportada": false,
           "params": "{ p, mejor }: { p: FilaComparacion['a']; mejor: number | null }",
           "retorno": null,
-          "linea": 122
+          "linea": 123
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f53f28762d6"
+      "hash": "1438949de4e4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cotizador-embebido.ts",
@@ -97357,7 +97357,7 @@
           "exportada": true,
           "params": "{ riesgo, abrirPrecios = null }: { riesgo: Riesgo /** La variante recién pedida desde el bloque «Pedir precio» (cotizador embebido): se abre con sus precios para emitir. */ abrirPrecios?: string | null }",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "Fila",
@@ -97365,7 +97365,7 @@
           "exportada": false,
           "params": "{ v, primera, abrir, precios, otroTomador, comparable, marcada, onMarcar }: { v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean /** Cotizador embebido: los precios y «Emitir» de esta variante, plegados en la pr",
           "retorno": null,
-          "linea": 116
+          "linea": 117
         },
         {
           "nombre": "Cambios",
@@ -97373,12 +97373,12 @@
           "exportada": false,
           "params": "{ cambios, primera }: { cambios: VarianteRiesgo['cambios']; primera: boolean }",
           "retorno": null,
-          "linea": 174
+          "linea": 175
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2286e3c762c1"
+      "hash": "90328d4f3aab"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/NotaVariante.tsx",
@@ -134266,7 +134266,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8d6dcf9fa1c"
+      "hash": "866f5df9f502"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/renovaciones-aviso.ts",
@@ -146854,7 +146854,7 @@
           "exportada": true,
           "params": "p: VarianteRiesgo['presupuesto']",
           "retorno": "string | null",
-          "linea": 221,
+          "linea": 216,
           "resumen": "Estado del presupuesto de una variante, en palabras. `null` = sin presupuesto preparado."
         },
         {
@@ -146863,7 +146863,7 @@
           "exportada": true,
           "params": "r: Riesgo, rol: RolFigura",
           "retorno": "FiguraRiesgo | null",
-          "linea": 233,
+          "linea": 228,
           "resumen": "Figura que ocupa un rol: la asignada o, si no hay, la del tomador (salvo el ocasional, que es opcional)."
         },
         {
@@ -146872,7 +146872,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string[]",
-          "linea": 274,
+          "linea": 269,
           "resumen": "Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»)."
         },
         {
@@ -146881,7 +146881,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "boolean",
-          "linea": 279,
+          "linea": 274,
           "resumen": "¿La ficha de la figura NO tiene móvil? `null` (no se pudo leer la ficha) = no se sabe → false: no se ofrece escribir a ciegas."
         },
         {
@@ -146890,7 +146890,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "boolean",
-          "linea": 283,
+          "linea": 278,
           "resumen": "¿La ficha de la figura NO tiene sexo? Misma regla que `faltaMovil`: `null` = no se sabe → false."
         },
         {
@@ -146899,7 +146899,7 @@
           "exportada": true,
           "params": "f: string[] | null",
           "retorno": "string | null",
-          "linea": 286
+          "linea": 281
         },
         {
           "nombre": "precioComparado",
@@ -146907,7 +146907,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PrecioComparado",
-          "linea": 302
+          "linea": 297
         },
         {
           "nombre": "interpretarComparacion",
@@ -146915,7 +146915,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "LecturaComparacion",
-          "linea": 308
+          "linea": 303
         },
         {
           "nombre": "mejoresComparacion",
@@ -146923,7 +146923,7 @@
           "exportada": true,
           "params": "filas: readonly FilaComparacion[]",
           "retorno": "",
-          "linea": 331,
+          "linea": 322,
           "resumen": "La prima más baja de cada columna (`null` = esa variante no tiene ningún precio)."
         },
         {
@@ -146932,7 +146932,7 @@
           "exportada": true,
           "params": "f: FilaComparacion",
           "retorno": "number | null",
-          "linea": 340,
+          "linea": 331,
           "resumen": "`b − a` redondeado al céntimo; `null` si falta cualquiera de las dos (no se compara con un hueco)."
         },
         {
@@ -146941,13 +146941,13 @@
           "exportada": true,
           "params": "variantes: readonly VarianteRiesgo[], ids: readonly string[]",
           "retorno": "[VarianteRiesgo, VarianteRiesgo] | null",
-          "linea": 346,
+          "linea": 337,
           "resumen": "Las dos marcadas, la más ANTIGUA como `a` (orden de `creadoAt`; sin fecha, la de más abajo en la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "539df4400110"
+      "hash": "03c498824fe3"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -198998,7 +198998,12 @@
         "ramoPideCpDelTomador",
         "faltaCodigoPostal",
         "limpiarFiguras",
+        "fotoAsegurados",
+        "fotoVarianteJson",
+        "diferenciasAsegurados",
         "diferenciasVariante",
+        "textoDiferencia",
+        "leerDiferencia",
         "resumenDiferencias"
       ],
       "funciones": [
@@ -199079,7 +199084,7 @@
           "params": "v: unknown",
           "retorno": "FigurasVariante | null",
           "linea": 109,
-          "resumen": "Normaliza lo que llega por el puerto: solo roles de UNA persona y uuids. Lo demás se descarta (los asegurados no caben en esta forma `rol → cliente_id`; su foto por variante es trabajo pendiente de la"
+          "resumen": "Normaliza lo que llega por el puerto: solo roles de UNA persona y uuids. Lo demás se descarta (los asegurados no caben en esta forma `rol → cliente_id`: su foto va aparte, en la clave `asegurados`, ve"
         },
         {
           "nombre": "obj",
@@ -199087,7 +199092,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Obj | null",
-          "linea": 125
+          "linea": 129
         },
         {
           "nombre": "en",
@@ -199095,7 +199100,7 @@
           "exportada": false,
           "params": "o: unknown, ruta: string",
           "retorno": "unknown",
-          "linea": 126
+          "linea": 130
         },
         {
           "nombre": "escalar",
@@ -199103,7 +199108,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 135
+          "linea": 139
         },
         {
           "nombre": "persona",
@@ -199111,7 +199116,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PersonaPeticion | null",
-          "linea": 147
+          "linea": 151
         },
         {
           "nombre": "mismaPersona",
@@ -199119,25 +199124,138 @@
           "exportada": false,
           "params": "a: PersonaPeticion | null, b: PersonaPeticion | null",
           "retorno": null,
-          "linea": 155
+          "linea": 159
         },
         {
           "nombre": "lineaComparable",
           "kind": "function",
           "exportada": false,
           "params": "peticion: unknown",
-          "retorno": "'vehiculo' | 'hogar' | null",
-          "linea": 191,
+          "retorno": "LineaComparable | null",
+          "linea": 201,
           "resumen": "El ramo de una petición si tiene comparador; `null` si no se lee o su ramo no se compara todavía."
+        },
+        {
+          "nombre": "fotoAsegurados",
+          "kind": "function",
+          "exportada": true,
+          "params": "figuras: unknown",
+          "retorno": "FotoAsegurados",
+          "linea": 221,
+          "resumen": "PURA. Lee `tarificaciones.figuras`: solo uuids; una lista con algo que no lo es NO consta (no se adivina)."
+        },
+        {
+          "nombre": "fotoVarianteJson",
+          "kind": "function",
+          "exportada": true,
+          "params": "figuras: Record<string, string | null> | null | undefined, asegurados: readonly string[] | null | undefined",
+          "retorno": "string | null",
+          "linea": 233,
+          "resumen": "PURA. Lo que se guarda en `tarificaciones.figuras`: la foto de figuras y, si consta, la de asegurados (clave `asegurados`). `null` = no consta ninguna. Solo uuids: un id que no lo es invalida la lista"
+        },
+        {
+          "nombre": "sexoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 242
+        },
+        {
+          "nombre": "aseguradoDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, ficha: string | null",
+          "retorno": "AseguradoPeticion | null",
+          "linea": 249
+        },
+        {
+          "nombre": "normalNombre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 255
+        },
+        {
+          "nombre": "mismaIdentidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: AseguradoPeticion, b: AseguradoPeticion",
+          "retorno": "boolean | null",
+          "linea": 261,
+          "resumen": "¿La misma persona? Por IDENTIDAD: ficha → DNI → nombre. Dos fichas (o dos DNI) distintas no se funden jamás. `null` = no se puede saber (sin ningún dato con que decidirlo)."
+        },
+        {
+          "nombre": "listaAsegurados",
+          "kind": "function",
+          "exportada": false,
+          "params": "peticion: unknown, foto: FotoAsegurados",
+          "retorno": "AseguradoPeticion[] | null",
+          "linea": 269,
+          "resumen": "Los asegurados de salud/decesos con su ficha cuando la foto la da. `null` = la lista no se puede leer."
+        },
+        {
+          "nombre": "aseguradoVida",
+          "kind": "function",
+          "exportada": false,
+          "params": "peticion: unknown, foto: FotoAsegurados",
+          "retorno": "AseguradoPeticion | null",
+          "linea": 287,
+          "resumen": "El asegurado de vida con su ficha: `[id]` = esa ficha; `[]` = el tomador. `null` = no se lee."
+        },
+        {
+          "nombre": "correcciones",
+          "kind": "function",
+          "exportada": false,
+          "params": "etiqueta: string, a: AseguradoPeticion, b: AseguradoPeticion",
+          "retorno": "Diferencia[]",
+          "linea": 293,
+          "resumen": "Nombre, nacimiento y sexo de la MISMA persona en las dos variantes: correcciones del dato."
+        },
+        {
+          "nombre": "diferenciasAsegurados",
+          "kind": "function",
+          "exportada": true,
+          "params": "antes: readonly AseguradoPeticion[], despues: readonly AseguradoPeticion[]",
+          "retorno": "Diferencia[] | null",
+          "linea": 305,
+          "resumen": "PURA. Altas, bajas y correcciones de una lista de asegurados, emparejados por IDENTIDAD, nunca por posición. `null` = no se puede emparejar con seguridad (alguien sin ningún dato, o dos candidatos par"
+        },
+        {
+          "nombre": "siNo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 337
         },
         {
           "nombre": "diferenciasVariante",
           "kind": "function",
           "exportada": true,
-          "params": "antes: unknown, despues: unknown",
+          "params": "antes: unknown, despues: unknown, fotos?: { antes?: unknown; despues?: unknown }",
           "retorno": "Diferencia[] | null",
-          "linea": 204,
+          "linea": 347,
           "resumen": "Qué cambia de la variante `antes` a la variante `despues`, en palabras. Las personas se comparan por DNI: el mismo DNI con otro carnet o nacimiento es una CORRECCIÓN del dato; otro DNI es otra persona"
+        },
+        {
+          "nombre": "textoDiferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Diferencia",
+          "retorno": "string",
+          "linea": 404,
+          "resumen": "PURA. Una diferencia en palabras: «Alta de asegurado: Ana Pérez» · «Baja de asegurado: Luis» · «CP: 41003 → 11520». Un lado `null` es «sin dato» (no consta), nunca un 0 inventado."
+        },
+        {
+          "nombre": "leerDiferencia",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: unknown",
+          "retorno": "Diferencia | null",
+          "linea": 412,
+          "resumen": "PURA. Lee una diferencia que llega por el puerto (JSON). Sin `campo` no es una diferencia."
         },
         {
           "nombre": "resumenDiferencias",
@@ -199145,13 +199263,13 @@
           "exportada": true,
           "params": "d: Diferencia[] | null",
           "retorno": "string",
-          "linea": 231,
+          "linea": 423,
           "resumen": "Una línea para la fila del historial: «Tomador: Manuel → Antonio · CP 41003 → 11520»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56618c757418"
+      "hash": "024400c2b641"
     },
     {
       "ruta": "packages/module-seguros/src/vcard.ts",
@@ -206931,6 +207049,6 @@
   ],
   "resumen": {
     "archivos": 4557,
-    "funciones": 16358
+    "funciones": 16371
   }
 }
