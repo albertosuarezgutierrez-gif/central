@@ -310,6 +310,15 @@ export {
   type ContextoEleccion,
   type PeticionEleccion,
 } from './eleccion-lista.ts'
+// MEMORIA de elecciones (13/10/2026): el bot aprende la versión por vehículo y pregunta a la IA cada vez menos.
+export {
+  claveMemoriaVersion,
+  normalizarParteClave,
+  eleccionDeMemoria,
+  fusionarMemoria,
+  type OrigenMemoria,
+  type EntradaMemoria,
+} from './eleccion-memoria.ts'
 // EMISIÓN asistida con autorización de Alberto por Telegram (10/10/2026). El guard de emisión NO cambia: esto solo
 // construye el permiso de UN botón UNA vez tras canjear un token (docs/TARIFICADOR-EMISION-DISENO.md).
 // Hash/token/HMAC (node:crypto) NO van aquí: `@central/module-tarificacion/servidor` (el index llega al navegador).
@@ -350,3 +359,17 @@ export {
   type PermisoEmision,
   ipidConstaEnAceptacion,
 } from './emision.ts'
+// Inventario de ESTRUCTURA de pantalla (13/10/2026): saneado puro del `error.inventarioDom` del worker (hueco de mapa).
+export {
+  sanearInventarioDom,
+  pareceDatoPersonalInventario,
+  urlSinQuery,
+  MAX_BYTES_INVENTARIO_DOM,
+  MAX_MARCOS_INVENTARIO,
+  MAX_OPCIONES_INVENTARIO,
+  MAX_TEXTO_INVENTARIO,
+  type InventarioDom,
+  type MarcoInventario,
+  type ElementoInventario,
+  type OpcionInventario,
+} from './inventario-dom.ts'

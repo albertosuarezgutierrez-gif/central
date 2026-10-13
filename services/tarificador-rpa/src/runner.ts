@@ -26,11 +26,13 @@ import {
   type Credenciales,
   type OfertaNormalizada,
   type PdfRef,
+  type InventarioDom,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
-import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
+import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
+import { capturarInventarioDom } from './inventario-dom.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { htmlConMarcos } from './evidencia.ts'
@@ -58,7 +60,7 @@ const MAX_BYTES_EVIDENCIA = 4 * 1024 * 1024
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
 
-type Evidencia = { url: string; captura: Buffer | null; html: string | null }
+type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null }
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] }
   | { ok: false; c: Clasificacion; evidencia: Evidencia }
@@ -192,7 +194,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
     // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
     const html = await htmlConMarcos(page, 2 * 1024 * 1024).catch(() => null)
-    return { ok: false, c, evidencia: { url: page.url(), captura, html } }
+    // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos, incluidos los de otro origen
+    // (solo lectura, saneado y ≤60 KB; inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
+    const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(page) : null
+    return { ok: false, c, evidencia: { url: page.url(), captura, html, inventarioDom } }
   } catch (e) {
     await k.sesion.alFallo(false).catch(() => undefined)
     throw e
@@ -370,6 +375,8 @@ async function main(): Promise<number> {
           url: redactar(evidencia.url).slice(0, 500),
           // Lista COMPLETA de versiones (solo catálogo), sin pasar por el redactor: asegura la valida y la usa por código.
           ...(c.opcionesVersion ? { opcionesVersion: c.opcionesVersion.slice(0, MAX_OPCIONES_VERSION_CABLE) } : {}),
+          // Estructura de la pantalla (ya saneada, sin valores de campos): NO pasa por el log, solo su cuenta.
+          ...(evidencia.inventarioDom ? { inventarioDom: evidencia.inventarioDom } : {}),
         },
         ...(evidencia.captura && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
@@ -379,7 +386,14 @@ async function main(): Promise<number> {
       // asegura/plataforma al leer este resultado (`requiere_humano` + mensaje «<Compañía> pide verificación…»).
       if (c.mensaje.startsWith(`${MOTIVO_VERIFICACION_HUMANA}:`)) log('requiere_verificacion_humana', { compania: trabajo.compania })
       const st = await enviarResultado(cfg, cuerpo)
-      log('resultado_error_enviado', { status: st, tipo: c.tipo, transitorio: c.transitorio, intentos: primerFallo ? 2 : 1, mensaje: redactar(c.mensaje).slice(0, 300) })
+      log('resultado_error_enviado', {
+        status: st,
+        tipo: c.tipo,
+        transitorio: c.transitorio,
+        intentos: primerFallo ? 2 : 1,
+        mensaje: redactar(c.mensaje).slice(0, 300),
+        ...(evidencia.inventarioDom ? { inventarioElementos: evidencia.inventarioDom.totalElementos, inventarioMarcos: evidencia.inventarioDom.marcos.length } : {}),
+      })
       return 1
     } catch (e) {
       // Fallo del propio navegador (no arrancó, se cayó): infraestructura.

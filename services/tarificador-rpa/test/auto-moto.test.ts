@@ -28,7 +28,7 @@ import {
   valorClaseMoto,
   valorOpcionExacta,
 } from '../src/adapters/allianz/auto.ts'
-import { ErrorTarificador } from '../src/errores.ts'
+import { ErrorTarificador, pideInventarioDom } from '../src/errores.ts'
 import { comprobarBoton, EmisionBloqueadaError, type FormularioAuto } from '@central/module-tarificacion'
 
 const form: FormularioAuto = {
@@ -166,8 +166,8 @@ test('CP → lupa (con pulsar guardado) → población; sin población = hueco d
   assert.equal(await page.locator('#takerOwner').inputValue(), 'S')
   assert.equal(await page.evaluate(() => (window as unknown as { archivado?: number }).archivado), undefined, 'no pulsó Archivar')
   await page.setContent(RIESGO([['V1', 'x']], false))
-  await assert.rejects(buscarPoblacion(page.mainFrame(), '00000', page, ctxPulsar, 600), ErrorMapaIncompleto)
-  assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: false, tomadorEsPropietario: true }), ErrorMapaIncompleto)
+  await assert.rejects(buscarPoblacion(page.mainFrame(), '00000', page, ctxPulsar, 600), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
+  assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: false, tomadorEsPropietario: true }), (e: unknown) => e instanceof ErrorMapaIncompleto && !pideInventarioDom(e))
   assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: true, tomadorEsPropietario: false }), ErrorMapaIncompleto)
   comprobarTitularesMoto({ tomadorEsConductor: null, tomadorEsPropietario: null })
 })
