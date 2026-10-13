@@ -698,6 +698,27 @@ export function crearTareaAsegura(body: Record<string, unknown>): Promise<Reenvi
 export function cerrarTareaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/tarea', { method: 'PATCH', body: JSON.stringify(body) })
 }
+/**
+ * Cuerpo para «Hecho»/«Posponer N días» sobre una TAREA SUELTA (sin oportunidad) de Mi mesa: solo los
+ * campos que el puerto lee, con `suelta: true` (sin él, asegura va por la vía de oportunidad y da 404).
+ * El actor lo pone la ruta con la sesión, nunca el navegador. `null` = petición mal formada (422).
+ */
+export function cuerpoTareaSuelta(b: Record<string, unknown>, actor: string): Record<string, unknown> | null {
+  const tareaId = typeof b.tareaId === 'string' ? b.tareaId.trim() : ''
+  if (tareaId === '') return null
+  if (b.accion === 'hecho') {
+    const resultado = typeof b.resultado === 'string' && b.resultado.trim() !== '' ? b.resultado.trim().slice(0, 500) : undefined
+    return { tareaId, suelta: true, accion: 'hecho', ...(resultado ? { resultado } : {}), actor }
+  }
+  if (b.accion === 'posponer') {
+    if (typeof b.dias !== 'number' && typeof b.dias !== 'string') return null
+    return { tareaId, suelta: true, accion: 'posponer', dias: b.dias, actor }
+  }
+  return null
+}
+export function tareaSueltaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/tarea', { method: 'PATCH', body: JSON.stringify(body) })
+}
 export function registrarLlamadaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/llamada', { method: 'POST', body: JSON.stringify(body) })
 }
@@ -782,6 +803,14 @@ export function whatsappAvisadoAsegura(eventoAt: string): Promise<Reenvio> {
 
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
+}
+/** «Mis expedientes» (13/10/2026): se interpreta con `interpretarExpedientes` de `lib/correduria/expedientes.ts`. */
+export function expedientesAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/expedientes', { method: 'GET' })
+}
+/** Banda de avisos de «Mi mesa» (13/10/2026): se compone con `componerAvisos` de `lib/correduria/avisos.ts`. */
+export function avisosAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/avisos', { method: 'GET' }, 20_000)
 }
 
 // ─── Rellenar la oportunidad leyendo un documento (24/09/2026) ──────────────

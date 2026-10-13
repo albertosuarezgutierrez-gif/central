@@ -17,6 +17,7 @@ import {
   texto,
   tipoDocumento,
 } from './persona.ts'
+import { hoyEnMadrid } from './fecha-efecto.ts'
 
 export type AseguradoAdicional = {
   nombre: string
@@ -28,6 +29,29 @@ export type AseguradoAdicional = {
   dni?: string | null
   /** ISO alpha-3. Obligatoria con NIE o pasaporte (misma regla que el tomador). */
   nacionalidad?: string | null
+}
+
+/** Edad máxima razonable de un asegurado (años cumplidos): por encima es un error de teclado, no una persona. */
+export const EDAD_MAXIMA_ASEGURADO = 120
+
+/**
+ * PURA. Por qué una fecha `aaaa-mm-dd` (con forma ya válida) no puede ser un nacimiento: no existe en el calendario
+ * (31/02), es futura (se compara con `hoy` en Madrid, que es como el vendor decide «hoy») o implica más de
+ * `EDAD_MAXIMA_ASEGURADO` años. `null` = vale. Una fecha sin forma ISO devuelve `null`: eso ya lo dice el formato.
+ * Sin esto el vendor responde 400 y la petición se cobra igualmente (0,50€).
+ */
+export function motivoFechaNacimientoImposible(f: string, hoy: string = hoyEnMadrid()): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(f)
+  if (!m) return null
+  const [a, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const d = new Date(Date.UTC(a, mes - 1, dia))
+  if (d.getUTCFullYear() !== a || d.getUTCMonth() !== mes - 1 || d.getUTCDate() !== dia)
+    return `la fecha de nacimiento ${f} no existe en el calendario`
+  if (f > hoy) return `la fecha de nacimiento ${f} es futura`
+  const [ah, mh, dh] = hoy.split('-').map(Number)
+  const edad = ah - a - (mh < mes || (mh === mes && dh < dia) ? 1 : 0)
+  if (edad > EDAD_MAXIMA_ASEGURADO) return `la fecha de nacimiento ${f} implica más de ${EDAD_MAXIMA_ASEGURADO} años`
+  return null
 }
 
 /** Tope de cordura contra un cuerpo absurdo; el máximo REAL lo dice `max` del rol en `person-roles`. */
@@ -75,7 +99,10 @@ function limpio(v: unknown): string | null {
 export function leerAseguradosAdicionales(v: unknown): AseguradoAdicional[] {
   if (!Array.isArray(v)) return []
   const out: AseguradoAdicional[] = []
-  for (const x of v.slice(0, MAX_ADICIONALES_CORDURA)) {
+  // Nunca se recorta en silencio: lo que pasa del tope es un error (los puntos de entrada ya lo cortan con 422
+  // vía `errorAseguradosAdicionales`; esto es la red por si alguien llama sin validar antes).
+  if (v.length > MAX_ADICIONALES_CORDURA) throw new Error(`asegurados adicionales: máximo ${MAX_ADICIONALES_CORDURA} (llegaron ${v.length}); no se descarta ninguno en silencio`)
+  for (const x of v) {
     if (typeof x !== 'object' || x === null || Array.isArray(x)) continue
     const o = x as Record<string, unknown>
     out.push({
@@ -99,6 +126,10 @@ export function revisarAsegurado(a: Partial<AseguradoAdicional>): { campo: keyof
   if (!texto(a.apellido1)) falta('apellido1', 'hace falta el primer apellido')
   if (!texto(a.fechaNacimiento)) falta('fechaNacimiento', 'hace falta la fecha de nacimiento')
   else if (!RE_FECHA.test(String(a.fechaNacimiento))) r.push({ campo: 'fechaNacimiento', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  else {
+    const imposible = motivoFechaNacimientoImposible(String(a.fechaNacimiento))
+    if (imposible) r.push({ campo: 'fechaNacimiento', motivo: imposible })
+  }
   if (a.sexo !== 'hombre' && a.sexo !== 'mujer') falta('sexo')
   if (texto(a.dni)) {
     if (documentoEspanolInvalido(a.dni)) r.push({ campo: 'dni', motivo: 'la letra del DNI/NIE no es correcta: revisa el documento' })
@@ -137,4 +168,62 @@ export function construirAsegurado(a: AseguradoAdicional): Record<string, unknow
     if (tipoDocumento(a.dni) !== 'Dni' && texto(a.nacionalidad)) p.nationality = { code: a.nacionalidad!.trim().toUpperCase() }
   }
   return p
+}
+
+// ─── Asegurados que son FIGURAS del riesgo (decesos embebido, 13/10/2026) ──────
+//
+// En la pantalla del riesgo los asegurados de decesos son FICHAS (rol `asegurado` de `oportunidad_figura`), no texto.
+// El servidor arma `risk.insureds[1..]` desde sus fichas: la pantalla nunca manda la lista (ni ve el DNI). Solo se
+// mira lo que `NaturalPerson_V1` lleva de un asegurado (ver `construirAsegurado`): nombre, apellidos, nacimiento,
+// sexo y, opcional, el documento. Teléfono, estado civil o dirección NO se piden a un asegurado: Avant2 no los lleva.
+
+/** Lo que se lee de la ficha de un asegurado (`personaDeFicha`: persona física). */
+export type FichaAsegurado = {
+  nombre?: string | null
+  apellido1?: string | null
+  apellido2?: string | null
+  fechaNacimiento?: string | null
+  sexo?: 'hombre' | 'mujer' | null
+  dni?: string | null
+}
+
+/**
+ * PURA. El asegurado tal como viaja, desde su ficha. El documento solo viaja si es un DNI español: con NIE o pasaporte
+ * el vendor exige además la nacionalidad, que la ficha NO guarda, y el documento es OPCIONAL en `NaturalPerson_V1`
+ * (nunca se inventa la nacionalidad). Lo que falte lo dice `revisarAsegurado` (vacío = se puede mandar).
+ */
+export function aseguradoDeFicha(f: FichaAsegurado): AseguradoAdicional {
+  const t = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
+  const dni = t(f.dni)
+  return {
+    nombre: t(f.nombre) ?? '',
+    apellido1: t(f.apellido1) ?? '',
+    apellido2: t(f.apellido2),
+    fechaNacimiento: t(f.fechaNacimiento) ?? '',
+    sexo: f.sexo === 'hombre' || f.sexo === 'mujer' ? f.sexo : ('' as never),
+    dni: dni !== null && tipoDocumento(dni) === 'Dni' ? dni : null,
+    nacionalidad: null,
+  }
+}
+
+/** PURA. Qué le falta a la FICHA de un asegurado para viajar a Avant2 (claves de campo, sin repetir). `[]` = nada. */
+export function faltanDeAseguradoFicha(f: FichaAsegurado): string[] {
+  const nac = aseguradoDeFicha(f).fechaNacimiento
+  // Fecha presente y con forma, pero imposible (31/02), futura o de >120 años: clave propia para decirlo claro.
+  const imposible = RE_FECHA.test(nac) && motivoFechaNacimientoImposible(nac) !== null
+  return [...new Set(revisarAsegurado(aseguradoDeFicha(f)).map((r) => (imposible && r.campo === 'fechaNacimiento' ? 'fechaNacimiento_invalida' : (r.campo as string))))]
+}
+
+/**
+ * PURA. De las figuras `asegurado` de un riesgo de vida, la persona asegurada que NO es el tomador. Identidad por
+ * `cliente_id` (ficha), nunca por posición: el tomador y los repetidos no cuentan. `ninguno` = el asegurado es el
+ * tomador; `varios` = no cabe en `risk.insured` (Avant2 lleva UNA persona asegurada).
+ */
+export function aseguradoDistintoDelTomador(
+  filas: Array<{ cliente_id: string }>,
+  tomadorId: string,
+): { tipo: 'ninguno' } | { tipo: 'uno'; clienteId: string } | { tipo: 'varios' } {
+  const otros = [...new Set(filas.map((f) => f.cliente_id))].filter((id) => id !== tomadorId)
+  if (otros.length === 0) return { tipo: 'ninguno' }
+  return otros.length === 1 ? { tipo: 'uno', clienteId: otros[0] } : { tipo: 'varios' }
 }

@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { anteriorParaTarificar, codigoCompania, historialDeclarado } from './seguro-anterior.ts'
+import { seguroAnteriorDe } from '@central/module-seguros'
 import type { OportunidadDeCliente } from './seguimiento-asegura.ts'
 
 const op = (x: Partial<OportunidadDeCliente>): OportunidadDeCliente => ({
@@ -52,4 +53,12 @@ test('historial: sin dato, el máximo; lo leído manda; menos de 5 limpios sin n
   assert.deepEqual(historialDeclarado({ ...bonus, aniosSinSiniestros: 12 }), { aniosAsegurado: 12, aniosEnCompania: 10, aniosSinSiniestros: 12, siniestrosUltimos5: 0 })
   assert.equal(historialDeclarado({ ...bonus, aniosSinSiniestros: 3, siniestrosUltimos5: null }).siniestrosUltimos5, null)
   assert.equal(historialDeclarado({ ...bonus, aniosSinSiniestros: 3, siniestrosUltimos5: 1 }).siniestrosUltimos5, 1)
+})
+
+test('solo años declarados (aunque una fila vieja los guarde dentro de seguroAnterior) NO son un seguro anterior', () => {
+  // Lo que hace el lector del puerto (`interpretarOportunidadesCliente`): pasa el JSON por `seguroAnteriorDe`.
+  const soloAnios = seguroAnteriorDe({ aniosAsegurado: 7, aniosEnCompania: 3 })
+  assert.equal(soloAnios, null)
+  assert.deepEqual(anteriorParaTarificar([op({ seguroAnterior: soloAnios })], { ramo: 'moto', oportunidadId: null }), { estado: 'ninguno' })
+  assert.deepEqual(anteriorParaTarificar([op({ seguroAnterior: soloAnios })], { ramo: 'moto', oportunidadId: 'o1' }), { estado: 'ninguno' })
 })

@@ -33,6 +33,21 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // que puede persistir el tomador real; también los enlaces del stepper con el mismo handler. Bloqueado aunque se permita «Aceptar».
   /idbtn[\s_+-]*aceptar/i,
   /boton[\s_+-]*siguiente[\s_+-]*ok/i,
+  // Allianz ePAC Autos/Moto («Motos-online», grabación del 09/10/2026): pestañas td#store «Archivar»
+  // (onclick sendActionEvent('store')) y td#contract «Emitir» (onclick validar_aceptar()); el «Aceptar» del pie de la
+  // pestaña Tarificar (div#o_N, onclick validar_aceptar()) también contrata. Bloqueados por id/handler aunque se
+  // permita «Aceptar»: «contract» (inglés) NO casa con `contrat`. «Datos básicos», «Riesgo municipio», «Tarificar»
+  // (td#rate) e «IPID» (documentoIPID) son navegación/lectura y pasan.
+  /^\s*(store|contract)\s*$/i,
+  /send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?store/i,
+  // `contract` suelto se aplica también a URL de navegación y POST. Cotejado (10/10/2026) con las URL de las grabaciones
+  // de Allianz (auto, moto, comercio, comunidades: `/drpc82/main/control.do`, `/drrg01|drrg21/SEAServlet?action=start…`,
+  // `/ngx-azs-epac/private/home|application`): ninguna lo contiene → sin falso positivo conocido. NO se acota: acotarlo
+  // sería debilitar la barrera (un `doContract`, `contractAction` o `/contract.do` pasarían). Si un día una ruta legítima
+  // lo lleva, el trabajo muere como `error_definitivo` (fail-closed) y se revisa con la grabación; lo vigila
+  // guardianes.test.ts («contract en URL»).
+  /contract/i,
+  /validar[\s_+-]*aceptar/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza
@@ -84,6 +99,36 @@ export function pareceEmision(texto: string | null | undefined, opciones: Opcion
   t = plano(decodificarUrlTolerante(t))
   if (PATRON_EMISION.test(t) || TEXTOS_BLOQUEADOS_ALTA.some((r) => r.test(t))) return true
   return !opciones.permitirAceptar && PATRON_ACEPTAR.test(t)
+}
+
+/**
+ * Claves de parámetro que llevan la ACCIÓN de un framework legado (`action=store`, `"evento":"contract"`,
+ * `sendActionEvent('store')` serializado…). Se mira la clave por su FINAL (`pfAction`, `accion`, `event_name` no).
+ */
+const CLAVE_ACCION = /(?:action|accion|event|evento|operation|operacion|command|comando|cmd|metodo|method)$/i
+/** Pares `clave=valor` (formulario/URL) y `"clave": "valor"` (JSON). Lineal: clases sin solapes, un cuantificador por trozo. */
+const PAR_CLAVE_VALOR = /["']?([A-Za-z_][\w.-]{0,63})["']?\s*[:=]\s*["']?([^&?#="',;}\]\r\n]{0,200})/g
+
+/**
+ * ¿El CUERPO de una petición (o la query de una URL) pide una acción de emisión? Además de `pareceEmision` sobre la
+ * URL, el guard de red mira esto en las peticiones que no son GET: en el framework antiguo de ePAC la acción viaja en
+ * el cuerpo del POST (`action=store` → Archivar, `contract` → Emitir) y la URL es siempre la misma. Se comprueba:
+ *   · las llamadas serializadas `sendActionEvent('store')` / `validar_aceptar()` en cualquier parte;
+ *   · el VALOR de cada parámetro con clave de acción (`action`, `accion`, `event`, `operation`, `cmd`…): `store`,
+ *     `contract` o cualquier cosa que case con `pareceEmision`.
+ * El resto del cuerpo (datos del riesgo: «planta baja», direcciones…) NO se mira con el patrón general: daría falsos
+ * positivos en cada envío de formulario.
+ */
+export function parametrosParecenEmision(cuerpo: string | null | undefined, opciones: OpcionesGuard = {}): boolean {
+  if (typeof cuerpo !== 'string' || cuerpo === '') return false
+  const t = plano(decodificarUrlTolerante(cuerpo.replace(/\+/g, ' ')))
+  if (/send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?\s*(store|contract)/i.test(t) || /validar[\s_+-]*aceptar/i.test(t)) return true
+  for (const m of t.matchAll(PAR_CLAVE_VALOR)) {
+    if (!CLAVE_ACCION.test(m[1])) continue
+    const v = m[2].trim()
+    if (/^(store|contract)$/i.test(v) || pareceEmision(v, opciones)) return true
+  }
+  return false
 }
 
 /** Lanza si la URL casa con el patrón. */

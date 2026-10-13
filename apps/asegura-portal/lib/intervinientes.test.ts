@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { camposDeInterviniente, capaInterviniente, figurasDeFichasVistas, figuraChip, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, rolesLegibles } from './intervinientes.ts'
+import { camposDeInterviniente, capaInterviniente, figurasDeFichasVistas, figuraYaServidaEnPropias, textoFiguraYaServida, figuraChip, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, rolesLegibles } from './intervinientes.ts'
 
 const NIEVES = 'c-nieves'
 const VICTOR = 'c-victor'
@@ -202,4 +202,41 @@ test('capaInterviniente apaga lo de la persona del tomador sobre cualquier nivel
   assert.equal(c.documentos, false)
   assert.equal(c.crearPeticiones, false)
   assert.equal(c.autorizarTerceros, false)
+})
+
+// ── «Figura en N que ya están en las tuyas» (Víctor/Nieves) ───────────────────
+test('figura en una póliza propia: se cuenta, sin roles ni nombres', () => {
+  const r = figuraYaServidaEnPropias({
+    filas: [
+      { polizaId: 'toyota', clienteId: 'c-nieves', rol: 'propietario' },
+      { polizaId: 'toyota', clienteId: 'c-nieves', rol: 'asegurado' },
+    ],
+    fichasVistas: ['c-nieves'],
+    polizasPropiasIds: ['toyota'],
+  })
+  assert.deepEqual(r.get('c-nieves'), ['toyota'])
+})
+
+test('póliza no servida (no viva, fusionada o sin acceso) NO cuenta como duplicada', () => {
+  const r = figuraYaServidaEnPropias({
+    filas: [{ polizaId: 'vieja', clienteId: 'c-nieves', rol: 'propietario' }],
+    fichasVistas: ['c-nieves'],
+    polizasPropiasIds: ['toyota'],
+  })
+  assert.equal(r.size, 0)
+})
+
+test('filas de fichas no vistas enteras no cuentan', () => {
+  const r = figuraYaServidaEnPropias({
+    filas: [{ polizaId: 'toyota', clienteId: 'c-otro', rol: 'propietario' }],
+    fichasVistas: ['c-nieves'],
+    polizasPropiasIds: ['toyota'],
+  })
+  assert.equal(r.size, 0)
+})
+
+test('textoFiguraYaServida: singular, plural y nada', () => {
+  assert.equal(textoFiguraYaServida(0), null)
+  assert.equal(textoFiguraYaServida(1), 'Figura en 1 póliza que ya está en las tuyas')
+  assert.equal(textoFiguraYaServida(2), 'Figura en 2 pólizas que ya están en las tuyas')
 })

@@ -14,6 +14,7 @@ import {
   respuestaIACortada,
   promptAnalisis,
   sistemaAnalisis,
+  filtrarPrimasMapa,
 } from './tarificador-grabaciones-reglas.ts'
 
 test('tope de llamadas por grabación: env 1..200, si no 60', () => {
@@ -118,4 +119,39 @@ test('borrado (guardián de fuente): orden de los DELETE, filtro de correduría 
   const ruta = readFileSync(join(import.meta.dirname, '..', 'app/api/operador/tarificador/grabaciones/[id]/route.ts'), 'utf8')
   assert.match(ruta, /export const DELETE = auditado\(/)
   assert.match(ruta, /operadorAutorizado\(req\)[\s\S]*borrarGrabacion/)
+})
+
+const HTML_HOME = '<div class="alz-numbergraph"><h3>Emisión No Vida</h3><span>12.345 €</span></div><div class="alz-numbergraph"><h3>Np Vida</h3><span>2.100 €</span></div>'
+const pantallaVacia = { campos: [] as unknown[], botones: [] as { texto: string; funcion: string | null }[] }
+
+test('🪤 primas: la home con gráficos de producción (alz-numbergraph) no da ninguna prima', () => {
+  assert.match(HTML_HOME, /alz-numbergraph/)
+  const r = filtrarPrimasMapa({
+    campos: [{ etiqueta: 'Buscar póliza' }], // aunque haya un campo, el selector/etiqueta delatan el gráfico
+    botones: [],
+    primas: [
+      { etiqueta: 'Emisión No Vida 12.345 €', selector: 'div.alz-numbergraph' },
+      { etiqueta: 'Np Vida', selector: 'div.alz-numbergraph:nth-of-type(2)' },
+      { etiqueta: 'Comisiones', selector: null },
+    ],
+  })
+  assert.equal(r.primas.length, 0)
+  assert.equal(r.descartadas, 3)
+  // sin formulario ni botón de tarificar: todas fuera aunque el selector parezca inocente
+  assert.equal(filtrarPrimasMapa({ ...pantallaVacia, primas: [{ etiqueta: 'Total', selector: '#total' }] }).primas.length, 0)
+})
+
+test('🪤 primas: una tabla de modalidades de un presupuesto se conserva', () => {
+  const primas = [{ etiqueta: 'Prima total Básica', selector: '#tabla-modalidades tr:nth-of-type(1) .total' }, { etiqueta: 'Prima total Completa', selector: null }]
+  const r = filtrarPrimasMapa({ campos: [{ etiqueta: 'Fecha nacimiento' }], botones: [{ texto: 'Calcular', funcion: 'calcular' }], primas })
+  assert.deepEqual(r.primas, primas)
+  assert.equal(r.descartadas, 0)
+  // sin campos pero con botón Tarificar (pantalla de resultado) también se conserva
+  assert.equal(filtrarPrimasMapa({ campos: [], botones: [{ texto: 'Recalcular', funcion: null }], primas }).primas.length, 2)
+})
+
+test('el prompt del análisis permite primas vacías y excluye dashboards', () => {
+  const s = sistemaAnalisis()
+  assert.match(s, /"primas": \[\]/)
+  assert.match(s, /NO son primas/)
 })

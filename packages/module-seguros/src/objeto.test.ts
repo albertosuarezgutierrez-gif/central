@@ -372,3 +372,10 @@ test('auto: PMA en kg con miles españoles, potencia con etiqueta que dice que l
   assert.equal(m['Uso (código de la compañía)'], 'PA')
   assert.equal(m['Uso'], undefined)
 })
+
+test('direccion del riesgo: solo en claro (hogar y comercio); cifrada o ausente = null, nunca el relleno del título', () => {
+  assert.equal(objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Falsa 1', localidad: 'SEVILLA' } }).direccion, 'Calle Falsa 1')
+  assert.equal(objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'cifrado', localidad: 'SEVILLA' } }).direccion, null)
+  assert.equal(objetoAsegurado({ tipo: 'hogar', datos: { localidad: 'SEVILLA', cp: '41003' } }).direccion, null)
+  assert.equal(objetoAsegurado({ tipo: 'comercio', datos: { actividad: 'Bar', direccion: 'Calle Sierpes 1' } }).direccion, 'Calle Sierpes 1')
+})

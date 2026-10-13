@@ -26,7 +26,10 @@ export const maxDuration = 180
  * campo distinto: se lee y se corrige en `peticion-vida.ts`, no se reintenta.
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones? }
+ *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, oportunidadId?, datosDelRiesgo? }
+ *   `datosDelRiesgo: true` (solo con `oportunidadId`, 13/10/2026): capital, profesión y fumador salen de «Datos del
+ *   riesgo» en el servidor; si el cuerpo los trae, 422 (no se mezclan). Un asegurado ≠ tomador viaja como
+ *   `risk.insured` desde SU ficha (`TermLifeRisk_V1` lleva una persona asegurada propia); más de uno, 422.
  */
 export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
@@ -81,13 +84,22 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
   }
 
+  // Vida EMBEBIDA en el riesgo (13/10/2026, `datosDelRiesgo: true`): lo que viaja del riesgo (capital → deathBenefit,
+  // profesión y fumador → insured) lo lee el SERVIDOR de `info_riesgo.datosCapital`; `null` = no se manda. Si el riesgo
+  // tiene una figura `asegurado` que no es el tomador, `risk.insured` es ESA persona, armada desde su ficha.
+  const resueltosPedidos = esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined
+  const dv = variante.v.vida
+  const resueltos = dv !== undefined
+    ? { ...(resueltosPedidos ?? {}), capital: dv.capital, ...(dv.profesion !== null ? { profesion: dv.profesion } : {}), ...(dv.fumador !== null ? { fumador: dv.fumador } : {}) }
+    : resueltosPedidos
   const p = await prepararRetarificacionNuevaVida({
     clienteId,
     solicitadoPor,
     cuerpo: {
-      resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
+      resueltos,
       correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
+    asegurado: dv?.asegurado ?? variante.v.aseguradoVida ?? null,
   })
   if (p.estado === 'corte') {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })

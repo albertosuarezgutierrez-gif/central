@@ -102,9 +102,10 @@ test('solo el dueno de la ficha concede: tarjeta y completo no autorizan a nadie
   assert.equal(NIVELES.filter(puedeAutorizar).length, 2)
 })
 
-test('se conceden DOS permisos: Solo ver (ver_economico) y Acceso total (total)', () => {
-  assert.deepEqual([...ALCANCES], ['ver', 'ver_economico', 'partes', 'documentos', 'total'])
-  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver_economico', 'total'])
+test('se conceden TRES niveles: Consulta (ver_economico), Gestión (gestion) y Total (total)', () => {
+  assert.deepEqual([...ALCANCES], ['ver', 'ver_economico', 'partes', 'documentos', 'gestion', 'total'])
+  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver_economico', 'gestion', 'total'])
+  assert.equal(alcanceConcedible('gestion'), 'gestion')
   // Los antiguos se siguen LEYENDO (hay filas con ellos) pero ya no se ofrecen.
   assert.equal(alcanceConcedible('partes'), null)
   assert.equal(alcanceConcedible('documentos'), null)
@@ -124,8 +125,14 @@ test('solo Acceso total ensena el IBAN y el DNI del otorgante; ningun otro alcan
     const c = camposDeAlcance(a)
     assert.equal(c.iban, false, `${a} no puede ensenar el IBAN`)
     assert.equal(c.dniTomador, false, `${a} no puede ensenar el DNI`)
-    assert.equal(c.documentos, false, `${a} no puede ensenar los documentos`)
+    assert.equal(c.siniestros, false, `${a} no puede ensenar los siniestros abiertos`)
+    // Los documentos de la póliza los abre Gestión (12/10/2026) y nadie más por debajo de Total.
+    if (a !== 'gestion') assert.equal(c.documentos, false, `${a} no puede ensenar los documentos`)
   }
+  assert.equal(camposDeAlcance('gestion', 'fisica').documentos, true)
+  // La unión con Gestión no reabre el DNI ni el IBAN.
+  assert.equal(camposDeAlcances(['ver_economico', 'gestion'], 'fisica')?.iban, false)
+  assert.equal(camposDeAlcances(['ver_economico', 'gestion'], 'fisica')?.documentos, true)
   // Y que el cepo muerde de verdad: el nivel del que parte SI los trae.
   assert.equal(camposVisibles('completo').iban, true)
   assert.equal(camposVisibles('completo').dniTomador, true)
@@ -137,13 +144,17 @@ test('solo Acceso total ensena el IBAN y el DNI del otorgante; ningun otro alcan
   assert.equal(camposDeAlcances(['ver_economico', 'total'], 'fisica')?.iban, true)
 })
 
-test('solo Acceso total deja ACTUAR en nombre de otro, y nunca reautorizar', () => {
-  for (const a of ALCANCES.filter((x) => x !== 'total')) {
+test('solo Gestión y Acceso total dejan ACTUAR en nombre de otro, y nunca reautorizar', () => {
+  for (const a of ALCANCES.filter((x) => x !== 'total' && x !== 'gestion')) {
     const c = camposDeAlcance(a)
     assert.equal(c.abrirParte, false, `${a} no puede abrir un parte`)
     assert.equal(c.crearPeticiones, false, `${a} no puede crear peticiones`)
     assert.equal(c.autorizarTerceros, false, `${a} no puede reautorizar a un cuarto`)
   }
+  const g = camposDeAlcance('gestion', 'fisica')
+  assert.equal(g.abrirParte, true, 'gestión (física) abre partes')
+  assert.equal(g.crearPeticiones, false, 'gestión (física) no crea peticiones')
+  assert.equal(g.autorizarTerceros, false, 'gestión no reautoriza a un cuarto')
   // `tarjeta` deja abrir parte a quien es de la casa; a un tercero, no.
   assert.equal(camposVisibles('tarjeta').abrirParte, true)
   for (const tipo of ['fisica', 'juridica'] as const) {
@@ -193,9 +204,9 @@ test('la etiqueta de nivel es solo texto y no decide nada', () => {
 // FÍSICAS: una sociedad no tiene datos personales, así que ahí no hay
 // consentimiento que dar — hay representación mercantil.
 
-test('personas y sociedades conceden los mismos dos permisos', () => {
-  assert.deepEqual([...alcancesConcedibles('fisica')], ['ver_economico', 'total'])
-  assert.deepEqual([...alcancesConcedibles('juridica')], ['ver_economico', 'total'])
+test('personas y sociedades conceden los mismos tres niveles', () => {
+  assert.deepEqual([...alcancesConcedibles('fisica')], ['ver_economico', 'gestion', 'total'])
+  assert.deepEqual([...alcancesConcedibles('juridica')], ['ver_economico', 'gestion', 'total'])
   assert.equal(alcanceConcedible('total', 'juridica'), 'total')
   assert.equal(alcanceConcedible('total', 'fisica'), 'total')
   assert.equal(alcanceConcedible('partes', 'juridica'), null)
@@ -253,6 +264,7 @@ test('el titulo con el que se representa a la sociedad se valida y se guarda', (
 test('la etiqueta de nivel sube a gestionar cuando hay partes o acceso total', () => {
   assert.equal(etiquetaNivelAlcances(['partes']), 'gestionar')
   assert.equal(etiquetaNivelAlcances(['total']), 'gestionar')
+  assert.equal(etiquetaNivelAlcances(['gestion']), 'gestionar')
   assert.equal(etiquetaNivelAlcances(['documentos']), 'completo')
   assert.equal(etiquetaNivelAlcances(['ver']), 'tarjeta')
 })
@@ -266,6 +278,9 @@ test('ver una póliza NO basta para dar un parte: hace falta `partes` y que conc
   // ...pero el acceso TOTAL sí deja dar partes, sea quien sea quien cede.
   assert.equal(puedeDarParte(['total'], 'fisica'), true)
   assert.equal(puedeDarParte(['total'], 'juridica'), true)
+  // Y Gestión (12/10/2026), sea quien sea quien cede.
+  assert.equal(puedeDarParte(['gestion'], 'fisica'), true)
+  assert.equal(puedeDarParte(['gestion'], 'juridica'), true)
   assert.equal(puedeDarParte(['ver_economico'], 'fisica'), false)
   assert.equal(puedeDarParte([], 'juridica'), false)
 })

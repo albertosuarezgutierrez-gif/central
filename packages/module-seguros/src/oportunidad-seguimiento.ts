@@ -1,4 +1,6 @@
 import { claveMatricula } from './compania-oportunidad.ts'
+import { notasEditadas } from './expedientes.ts'
+import { polizaAnteriorParaTarificar } from './poliza-anterior.ts'
 // packages/module-seguros/src/oportunidad-seguimiento.ts
 //
 // El SEGUIMIENTO de una oportunidad (Fase 1 de ASegura OS, PR B, 23/09/2026):
@@ -341,6 +343,55 @@ export type SeguroAnterior = {
   fechaVencimiento?: string | null
 }
 
+/**
+ * Historial DECLARADO a mano en la pantalla «Historial» (10/10/2026). Vive en `poliza_competencia.historialDeclarado`,
+ * FUERA de `seguroAnterior` a propósito: dentro, un `{aniosAsegurado}` sin compañía se tomaba por un seguro anterior
+ * leído (bloqueaba la precarga desde la póliza, «tiene seguro actual» sin compañía, «parcial» en la pantalla).
+ * `null` = pendiente (no se sabe), `0` = revisado (menos de un año), número = dato.
+ */
+export type HistorialDeclaradoRiesgo = {
+  aniosAsegurado: number | null
+  aniosEnCompania: number | null
+  // ── 13/10/2026: lo que las COMPAÑÍAS consultan en SINCO (TIREA) para la bonificación. Nosotros no consultamos SINCO:
+  // lo capturamos bien aquí (DECLARADO, nunca se mezcla con lo leído de una póliza en `seguroAnterior`). ──
+  /** `true` = tiene un seguro en vigor ahora; `false` = declarado que NO; `null` = no se sabe. */
+  tieneSeguroActual: boolean | null
+  /** Compañía actual: el CÓDIGO de la lista de Codeoscopic (lo que espera Avant2); sin lista, lo tecleado (nombre o código DGS). */
+  companiaActual: string | null
+  /** Nº de póliza actual COMPLETO si se da (o solo los últimos 5); para Codeoscopic se derivan los 5 últimos (`ultimosDigitosPoliza`). */
+  numeroPoliza: string | null
+  aniosSinSiniestros: number | null
+  siniestrosUltimos5: number | null
+}
+
+export const CLAVES_HISTORIAL_DECLARADO = [
+  'aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros', 'siniestrosUltimos5', 'tieneSeguroActual', 'companiaActual', 'numeroPoliza',
+] as const
+export type ClaveHistorialDeclarado = (typeof CLAVES_HISTORIAL_DECLARADO)[number]
+
+/** Mínimo de caracteres útiles del nº de póliza: Codeoscopic pide los 5 últimos. */
+const MIN_POLIZA = 5
+const alfanumericos = (s: string) => s.replace(/[^0-9A-Za-z]/g, '')
+
+/**
+ * Lo que es INCOHERENTE en un historial declarado (`null` = nada). Solo compara lo que se sabe: un `null` no choca con
+ * nada. Reglas: en la compañía y sin siniestros ≤ años asegurado (el vendor lo rechaza y ese 400 se paga); 5 años o más
+ * sin siniestros = 0 siniestros en 5 años; sin seguro ahora no hay compañía ni póliza actuales.
+ */
+export function incoherenciaHistorialDeclarado(h: Partial<HistorialDeclaradoRiesgo>): string | null {
+  const a = h.aniosAsegurado ?? null
+  const sin = h.aniosSinSiniestros ?? null
+  const comp = h.aniosEnCompania ?? null
+  const s5 = h.siniestrosUltimos5 ?? null
+  if (a !== null && sin !== null && sin > a) return 'Los años sin siniestros no pueden ser más que los años asegurado.'
+  if (a !== null && comp !== null && comp > a) return 'Los años en la compañía no pueden ser más que los años asegurado.'
+  if (sin !== null && sin >= 5 && s5 !== null && s5 > 0) return 'Con 5 años o más sin siniestros no puede tener siniestros en los últimos 5 años.'
+  if (h.tieneSeguroActual === false && ((h.companiaActual ?? null) !== null || (h.numeroPoliza ?? null) !== null)) {
+    return 'Si no tiene seguro ahora, no puede haber compañía ni nº de póliza actuales: quítalos.'
+  }
+  return null
+}
+
 function entero(v: unknown, max: number): number | null {
   const n = typeof v === 'string' && /^\d{1,3}$/.test(v.trim()) ? Number(v.trim()) : v
   return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max ? n : null
@@ -376,22 +427,116 @@ export function seguroAnteriorDe(v: unknown): SeguroAnterior | null {
   return Object.values(todo).every(x => x === null) ? null : todo
 }
 
+/** Nº de póliza declarado: texto ≤60 con al menos 5 caracteres alfanuméricos; si no, `null`. */
+function polizaDeclarada(v: unknown): string | null {
+  const t = texto(v, 60)
+  return t !== null && alfanumericos(t).length >= MIN_POLIZA ? t : null
+}
+
+/**
+ * Sanea `historialDeclarado`: SIEMPRE todas las claves; un 0 / `false` SÍ viajan (revisado); lo que tiene forma rara,
+ * `null` (nunca 0 ni `false`).
+ */
+export function historialDeclaradoDe(v: unknown): HistorialDeclaradoRiesgo {
+  const o = v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {}
+  return {
+    aniosAsegurado: entero(o.aniosAsegurado, 100),
+    aniosEnCompania: entero(o.aniosEnCompania, 100),
+    tieneSeguroActual: typeof o.tieneSeguroActual === 'boolean' ? o.tieneSeguroActual : null,
+    companiaActual: texto(o.companiaActual, 120),
+    numeroPoliza: polizaDeclarada(o.numeroPoliza),
+    aniosSinSiniestros: entero(o.aniosSinSiniestros, 100),
+    siniestrosUltimos5: entero(o.siniestrosUltimos5, 50),
+  }
+}
+
 export type EdicionValida = {
   ramo?: RamoOportunidad
   fechaFinVigencia?: string | null
   aseguradora?: string | null
   prima?: number | null
+  /**
+   * Historial declarado (10/10/2026), en `poliza_competencia.historialDeclarado` (NUNCA en `seguroAnterior`): SOLO las
+   * claves presentes se tocan (`undefined` = no tocar, `null` = volver a «sin dato», número ≥0 = dato, 0 incluido).
+   */
+  historial?: Partial<HistorialDeclaradoRiesgo>
+  /** Notas libres (13/10/2026): `null` = borrarlas. Texto libre: al historial solo va QUE cambiaron. */
+  notas?: string | null
+}
+
+/** Entero ≥0 (≤max) o `null` si viene vacío; `'invalido'` si es otra cosa (nunca se convierte en 0). */
+function aniosEditados(v: unknown, max = 100): number | null | 'invalido' {
+  if (vacio(v)) return null
+  const n = entero(v, max)
+  return n === null ? 'invalido' : n
+}
+
+const MOTIVO_CLAVE: Record<ClaveHistorialDeclarado, string> = {
+  aniosAsegurado: 'Los años asegurado deben ser un entero de 0 a 100 (vacío = sin dato).',
+  aniosEnCompania: 'Los años en la compañía deben ser un entero de 0 a 100 (vacío = sin dato).',
+  aniosSinSiniestros: 'Los años sin siniestros deben ser un entero de 0 a 100 (vacío = sin dato).',
+  siniestrosUltimos5: 'Los siniestros de los últimos 5 años deben ser un entero de 0 a 50 (vacío = sin dato).',
+  tieneSeguroActual: '«Tiene seguro ahora» debe ser sí, no o sin dato.',
+  companiaActual: 'La compañía actual no es un texto.',
+  numeroPoliza: `El nº de póliza necesita al menos los ${MIN_POLIZA} últimos caracteres (es lo que piden las compañías para consultar SINCO).`,
+}
+
+/** Una clave del historial editada: el valor (`null` = volver a «sin dato») o `'invalido'`. */
+function valorHistorialEditado(k: ClaveHistorialDeclarado, v: unknown): number | string | boolean | null | 'invalido' {
+  switch (k) {
+    case 'tieneSeguroActual':
+      return vacio(v) ? null : typeof v === 'boolean' ? v : 'invalido'
+    case 'companiaActual':
+      return vacio(v) ? null : typeof v === 'string' ? texto(v, 120) : 'invalido'
+    case 'numeroPoliza':
+      return vacio(v) ? null : polizaDeclarada(v) ?? 'invalido'
+    case 'siniestrosUltimos5':
+      return aniosEditados(v, 50)
+    default:
+      return aniosEditados(v)
+  }
+}
+
+/**
+ * Los últimos 5 caracteres del nº de póliza para Codeoscopic (las compañías consultan SINCO con la compañía anterior +
+ * esos 5). Antes se quita el sufijo de suplemento de Mapfre (`polizaAnteriorParaTarificar`). `null` = no llega a 5.
+ */
+export function ultimosDigitosPoliza(numero: string | null | undefined, companiaCodigoDgs?: string | null): string | null {
+  const limpio = alfanumericos(polizaAnteriorParaTarificar(numero, companiaCodigoDgs)).toUpperCase()
+  return limpio.length >= MIN_POLIZA ? limpio.slice(-MIN_POLIZA) : null
 }
 
 /**
  * Lo que se corrige a mano de una oportunidad ABIERTA: ramo, vencimiento,
- * compañía y prima actuales. `undefined` = no tocar; `null`/'' = borrar. El
+ * compañía y prima actuales (y el historial declarado: años asegurado y años
+ * en la compañía). `undefined` = no tocar; `null`/'' = borrar. El
  * estado NO se edita aquí: para eso están las acciones, que exigen su motivo.
  */
 export function validarEdicionOportunidad(
-  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown },
+  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; historialDeclarado?: unknown; notas?: unknown },
 ): { ok: true; cambios: EdicionValida } | { ok: false; motivo: string } {
   const out: EdicionValida = {}
+  if (d.notas !== undefined) {
+    const n = notasEditadas(d.notas)
+    if (n === 'invalido') return { ok: false, motivo: 'Las notas no son un texto.' }
+    out.notas = n
+  }
+  if (d.historialDeclarado !== undefined) {
+    const hd = d.historialDeclarado
+    if (hd === null || typeof hd !== 'object' || Array.isArray(hd)) return { ok: false, motivo: 'El historial declarado no es un objeto.' }
+    const o = hd as Record<string, unknown>
+    const historial: Record<string, unknown> = {}
+    for (const k of CLAVES_HISTORIAL_DECLARADO) {
+      if (o[k] === undefined) continue
+      const v = valorHistorialEditado(k, o[k])
+      if (v === 'invalido') return { ok: false, motivo: MOTIVO_CLAVE[k] }
+      historial[k] = v
+    }
+    // Coherencia de lo que viene JUNTO (lo guardado lo cruza asegura con el resultado ya mezclado).
+    const choque = incoherenciaHistorialDeclarado(historial as Partial<HistorialDeclaradoRiesgo>)
+    if (choque) return { ok: false, motivo: choque }
+    if (Object.keys(historial).length > 0) out.historial = historial as Partial<HistorialDeclaradoRiesgo>
+  }
   if (d.ramo !== undefined) {
     const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
     if (!ramo) return { ok: false, motivo: 'Ramo no válido.' }

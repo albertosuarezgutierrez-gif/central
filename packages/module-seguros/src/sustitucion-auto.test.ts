@@ -33,6 +33,25 @@ test('sin prueba no se enlaza: otra matrícula, otro cliente, otro ramo, sin mat
   assert.equal(detectarSustituciones([MAPFRE, { ...REALE, vigente: false }]).enlaces.length, 0, 'una nueva ya anulada no sustituye')
 })
 
+// Caso real (13/10/2026): Mapfre cancelada '5802-JMJ' (vence 10/08) y Allianz '5802JMJ' con efecto 08/10 (+59 días).
+const MAPFRE_BAJA = pol({ id: 'mapfre-baja', matricula: '5802-JMJ', vigente: false, fechaInicio: '2025-08-10', fechaVencimiento: '2026-08-10' })
+const ALLIANZ_NUEVA = pol({ id: 'allianz-nueva', matricula: '5802JMJ', fechaInicio: '2026-10-08', fechaVencimiento: '2027-10-08' })
+
+test('🚨 vieja dada de baja + misma matrícula a +59 días: enlaza y no es ambigua', () => {
+  const r = detectarSustituciones([MAPFRE_BAJA, ALLIANZ_NUEVA])
+  assert.deepEqual(r.enlaces, [{ viejaId: 'mapfre-baja', nuevaId: 'allianz-nueva', riesgo: { tipo: 'matricula', valor: '5802JMJ' } }])
+  assert.equal(r.ambiguas, 0)
+})
+
+test('la ventana larga tiene tope: misma matrícula a +121 días no enlaza', () => {
+  assert.equal(detectarSustituciones([MAPFRE_BAJA, { ...ALLIANZ_NUEVA, fechaInicio: '2026-12-09' }]).enlaces.length, 0)
+})
+
+test('sin matrícula o con la vieja vigente rige la ventana de 30 días (+59 no enlaza)', () => {
+  assert.equal(detectarSustituciones([{ ...MAPFRE_BAJA, matricula: null }, { ...ALLIANZ_NUEVA, matricula: null }]).enlaces.length, 0)
+  assert.equal(detectarSustituciones([{ ...MAPFRE_BAJA, vigente: true }, ALLIANZ_NUEVA]).enlaces.length, 0)
+})
+
 test('ya enlazadas no se vuelven a enlazar', () => {
   assert.equal(detectarSustituciones([{ ...MAPFRE, sustituida: true }, REALE]).enlaces.length, 0)
   assert.equal(detectarSustituciones([MAPFRE, { ...REALE, conOrigen: true }]).enlaces.length, 0)

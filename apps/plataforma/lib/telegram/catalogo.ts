@@ -619,6 +619,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'De lunes a viernes a las 07:50, y solo si hay alguna pendiente',
   },
   {
+    id: 'correduria.red-diaria', categoria: 'correduria',
+    titulo: 'Red diaria de la correduría',
+    que: 'Lo que se queda parado en silencio: aprobaciones que caducan en menos de 24 h o caducaron en las últimas 24 h, bajas firmadas hace más de 48 h que no han salido (sin carta/firma, propuesta rechazada, esperando tu OK, sin propuesta, Allianz/PUE) y recibos devueltos cuyo aviso caducó.',
+    cuando: 'Todos los días a las 08:23 (07:23 en invierno), y solo si hay algo',
+  },
+  {
     id: 'correduria.recaptacion-lote', categoria: 'correduria',
     titulo: 'Recaptación por email · lote diario',
     que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',

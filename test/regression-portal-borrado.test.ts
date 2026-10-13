@@ -82,10 +82,13 @@ test('el DELETE de pólizas filtra por identidadId y consulta el ESTADO de los p
   const src = leer(`${APP}/app/api/polizas/[id]/route.ts`)
   const delete_ = src.slice(src.indexOf('export async function DELETE'))
   assert.notEqual(delete_, '', 'No hay handler DELETE de pólizas aportadas')
+  // La dueña la resuelve `accesoADeclarada` (propia, o la del titular con Total) y va en el `where`.
+  assert.match(delete_, /accesoADeclarada\(identidad\.id, id, 'quitar'\)/)
+  assert.match(delete_, /if \(acceso === null\) return NextResponse\.json\(\{ error: 'no_encontrada' \}, \{ status: 404 \}\)/)
   // Desde el 10/10/2026 «quitar» es un borrado LÓGICO (Alberto: «nada se pierde»): `updateMany`
-  // de `eliminadaEn`, con la identidad DENTRO del where. El detalle lo vigila
+  // de `eliminadaEn`, con la identidad de la DUEÑA dentro del where. El detalle lo vigila
   // `regression-portal-declaradas-eliminadas.test.ts`.
-  assert.match(delete_, /portalPolizaDeclarada\.updateMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*identidad\.id,/)
+  assert.match(delete_, /portalPolizaDeclarada\.updateMany\(\{\s*\n?\s*where:\s*\{\s*id,\s*identidadId:\s*duenaId,/)
   assert.doesNotMatch(delete_, /portalPolizaDeclarada\.deleteMany/, 'la póliza aportada ya no se borra de verdad')
   assert.match(delete_, /puedeBorrarDeclarada/)
   // `count` NO basta: lo que bloquea no es tener partes, es tener uno que la

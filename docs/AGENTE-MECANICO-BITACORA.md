@@ -12,6 +12,10 @@
 > `- (dd/mm/aaaa) <tarea corta> — agente-mecanico|delegar-codigo — ok | fallo: <qué falló>`
 
 ## Usos (lo más reciente arriba)
+- (10/10/2026) Prioridad bot→Avant2: TARIFICADOR-MATRIZ.md (regla arriba, filas Hogar/Auto/Moto), spec riesgo-unificado (orden del cotizador) y comentario en registro-ramos.ts (sin tocar tests) + entrada CONTEXTO-SESIONES — agente-mecanico — ok (solo docs y un comentario; sin tsc: solo comentario y otro agente toca plataforma con Prisma; registro-ramos.test.ts 5/5 pass)
+- (10/10/2026) Cepo figuras multi: escáner de apps/ y packages/ para `on conflict (oportunidad_id, rol)` sin predicado (+ entrada CONTEXTO-SESIONES) — agente-mecanico — ok (7/7 pass; rojo comprobado quitando el predicado de oportunidad-riesgo.ts:509 y restaurado; tsc asegura exit 0)
+- (10/10/2026) Docs: 3 F4 de CONTEXTO-SESIONES.md marcadas como aplicadas + entrada fase 0 de ramos; spec riesgo unificado (auto+moto embebidos, RAMOS_PRESUPUESTO) — agente-mecanico — ok (solo docs, sin tsc)
+- (10/10/2026) Entrada en CONTEXTO-SESIONES.md: auto embebido en riesgo, KM_AUTO_POR_DEFECTO, años asegurado y diseño unificado (solo docs) — agente-mecanico — ok (sin tsc: no se tocó código)
 - (10/10/2026) F3 solo auto: entrada nueva en CONTEXTO-SESIONES.md (km-auto y modoPapel, sin tocar código) — agente-mecanico — ok (solo docs, sin verificación de tsc por no tocar código)
 - (06/10/2026) fix(tarificador): ramo NULL sin valor por defecto en fichas; SQL 07b/07c marcados como aplicados — agente-mecanico — ok (tsc limpio, 7 tests pass, prisma generate ok)
 - (06/10/2026) helper textoExacto en tarificador-rpa/allianz/comunidades.ts, actualizar abrirComunidades para robustecer detectores de texto con variación CSS (mayúsculas, espacios) — agente-mecanico — ok (tsc limpio, 6/6 pruebas del helper pass)
@@ -61,3 +65,5 @@
 | 06/10/2026 | asegura-portal: 4 ajustes del globo de instalar (InstalarBoton/instalacion) | agente-mecanico | ok |
 | 06/10/2026 | asegura-portal: texto Compartir Chrome iOS (instalacion.tsx) | agente-mecanico | ok |
 | 10/10/2026 | Tarificar/Riesgo /correduria: F1 SeccionCard + botón único, F2 bloque Historial (CONTEXTO-SESIONES entrada 10/10) | agente-mecanico | ok |
+| 11/10/2026 | solo docs: CONTEXTO-SESIONES (entrada SQL figuras multi aplicado + «→ aplicado 11/10» en entrada 10/10), esta bitácora | agente-mecanico | ok |
+| 13/10/2026 | explorador: transiciones del mapa validadas en servidor (`tarificador-exploraciones*.ts`, helper `transicionPermitida` + WHERE por estado leído) | agente-mecanico | ok |

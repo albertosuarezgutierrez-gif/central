@@ -118,13 +118,13 @@ test('ninguna lectura de la relación `polizas` (identidad o bien) se salta el f
   assert.deepEqual(malos, [], `Relación \`polizas\` leída sin filtrar eliminadas:\n  - ${malos.join('\n  - ')}`)
 })
 
-test('el DELETE NO borra: marca eliminadaEn por identidad, aparta las obligaciones y escribe historial', () => {
+test('el DELETE NO borra: marca eliminadaEn por identidad (la DUEÑA que resuelve `accesoADeclarada`), aparta las obligaciones y escribe historial', () => {
   const src = sinComentarios(leer(`${APP}/app/api/polizas/[id]/route.ts`))
   const del = src.slice(src.indexOf('export async function DELETE'))
   assert.doesNotMatch(del, /portalPolizaDeclarada\s*\.\s*deleteMany/, 'el DELETE vuelve a borrar de verdad')
   assert.match(
     del,
-    /portalPolizaDeclarada\.updateMany\(\{\s*where:\s*\{\s*id,\s*identidadId:\s*identidad\.id,\s*\.\.\.DECLARADA_NO_ELIMINADA\s*\},\s*data:\s*\{\s*eliminadaEn:/,
+    /portalPolizaDeclarada\.updateMany\(\{\s*where:\s*\{\s*id,\s*identidadId:\s*duenaId,\s*\.\.\.DECLARADA_NO_ELIMINADA\s*\},\s*data:\s*\{\s*eliminadaEn:/,
     'la marca va por updateMany con la identidad DENTRO del where y solo sobre una no eliminada',
   )
   // Las obligaciones se LEEN (para guardarlas) antes de quitarlas, y se guardan en el historial.

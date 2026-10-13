@@ -64,8 +64,11 @@ test('🪤 la página de la oportunidad tiene UN solo enlace a rutaVariante (el 
     const n = (activas(readFileSync(join(carpeta, f), 'utf8')).match(/\brutaVariante\(/g) ?? []).length
     for (let k = 0; k < n; k++) usos.push(f)
   }
-  // variante.ts (la define y la usa accionesPrecio) + HistorialVariantes (retomar una variante concreta, `?tarificacion=`).
-  const fuera = usos.filter((f) => f !== 'variante.ts' && f !== 'HistorialVariantes.tsx')
+  // variante.ts (la define y la usa accionesPrecio) + HistorialVariantes (retomar una variante concreta, `?tarificacion=`)
+  // + cotizador-embebido.ts (`rutaPedirPrecio`, 10/10/2026: el «Tarificar →» de la ficha; un ramo SIN cotizador embebido
+  // sigue yendo a su `…-nuevo`). Esa no se pinta en esta página.
+  const fuera = usos.filter((f) => f !== 'variante.ts' && f !== 'HistorialVariantes.tsx' && f !== 'cotizador-embebido.ts')
+  assert.equal(usos.filter((f) => f === 'cotizador-embebido.ts').length, 1, 'rutaPedirPrecio: solo la caída al …-nuevo')
   assert.deepEqual(fuera, [], 'ningún bloque de datos ni RiesgoPantalla arma su propio enlace a la pantalla de precio')
   assert.equal(usos.filter((f) => f === 'variante.ts').length, 2, 'definición + el principal de accionesPrecio, nada más')
   assert.equal((activas(leer(DIR + 'RiesgoPantalla.tsx')).match(/acciones\.principal\.href/g) ?? []).length, 1, 'un solo enlace principal en la pantalla')

@@ -1,9 +1,11 @@
 import { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { normalizarTitular, type TitularDeclarado } from '@central/module-seguros-portal'
 
+import { registrarUso } from '@/lib/autorizaciones'
 import { avisarPolizaDeclaradaDesdeAlta } from '@/lib/aviso-poliza-declarada'
+import { titularParaAnadir } from '@/lib/declarada-ajena'
 import { guardarDocumentoPropio } from '@/lib/documento-portal'
 import { prisma } from '@/lib/db'
 import { fotoHistorial, SELECT_HISTORIAL } from '@/lib/declaradas-eliminadas'
@@ -200,25 +202,46 @@ async function altaConDocumento(req: Request, identidadId: string) {
     return creada
   })
 
-  // Best-effort y no bloqueante: el aviso a Alberto no puede retrasar ni
+  // Best-effort y no bloqueante, dentro de `after()` (un `void` suelto lo puede congelar Vercel al responder): el aviso a Alberto no puede retrasar ni
   // tumbar la respuesta al cliente que acaba de subir su póliza.
-  void avisarPolizaDeclaradaDesdeAlta({
+  after(() => avisarPolizaDeclaradaDesdeAlta({
     identidadId,
     compania: datos.compania,
     ramo: datos.ramo,
     numeroPoliza: datos.numeroPoliza,
     fechaVencimiento: datos.fechaVencimiento,
-  })
+  }))
 
   return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, motivo, documentoGuardado: documentoGuardado.estado })
 }
 
-async function altaAMano(req: Request, identidadId: string) {
+/** Forma de la ficha del titular en `enNombreDe` (solo forma: quién es lo decide `titularParaAnadir`). */
+const UUID_TITULAR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+async function altaAMano(req: Request, identidadSesion: string) {
   let cuerpo: unknown
   try {
     cuerpo = await req.json()
   } catch {
     return NextResponse.json({ error: 'cuerpo_invalido' }, { status: 400 })
+  }
+
+  // 🔒 Añadir EN NOMBRE del titular (12/10/2026): solo con «Total» sobre su ficha
+  // entera. `enNombreDe` es la ficha del titular, y NO se cree: se busca dentro
+  // de la cartera autorizada de la sesión (`titularParaAnadir`, fail-closed, una
+  // sola identidad titular). Cualquier otra cosa → 404, como si no existiera.
+  // Sin el campo, la de siempre: la bóveda de quien mira.
+  const enNombreDe = (cuerpo as Record<string, unknown> | null)?.enNombreDe
+  let identidadId = identidadSesion
+  let enNombre: { autorizacionIds: string[] } | null = null
+  if (enNombreDe !== undefined && enNombreDe !== null) {
+    if (typeof enNombreDe !== 'string' || !UUID_TITULAR.test(enNombreDe)) {
+      return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    }
+    const titular = await titularParaAnadir(identidadSesion, enNombreDe)
+    if (titular === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+    identidadId = titular.identidadId
+    enNombre = { autorizacionIds: titular.autorizacionIds }
   }
 
   // La MISMA validación que el PATCH (`lib/poliza-editable.ts`): lo que se
@@ -232,11 +255,16 @@ async function altaAMano(req: Request, identidadId: string) {
   // `normalizarAlta` a propósito: aquello valida los campos de la PÓLIZA y esto
   // es de quién es, que es otra cosa y tiene su propio módulo puro.
   const cuerpoObj = (cuerpo ?? {}) as Record<string, unknown>
-  const titular = normalizarTitular({
-    tipo: cuerpoObj.titularTipo,
-    nombre: cuerpoObj.titularEmpresaNombre,
-    cif: cuerpoObj.titularEmpresaCif,
-  })
+  // En nombre del titular la póliza ES suya (`propio`): es lo que dice que se
+  // añade a SU bóveda, y lo único que quien le dio acceso vuelve a ver.
+  const titular: TitularDeclarado =
+    enNombre !== null
+      ? { tipo: 'propio', nombre: null, cif: null, cifValido: false }
+      : normalizarTitular({
+          tipo: cuerpoObj.titularTipo,
+          nombre: cuerpoObj.titularEmpresaNombre,
+          cif: cuerpoObj.titularEmpresaCif,
+        })
 
   // Las dos columnas de JSON salen del resto a propósito: Prisma NO admite
   // `null` en una columna `Json?`, y el `null` de `DatosAlta` («no se ha
@@ -285,16 +313,20 @@ async function altaAMano(req: Request, identidadId: string) {
     return creada
   })
 
+  // Autor real: hoy solo consta como USO de la autorización (lo ve el titular).
+  // La columna de autor está propuesta sin aplicar (ver la migración del 12/10/2026).
+  if (enNombre !== null) await registrarUso(identidadSesion, enNombre.autorizacionIds)
+
   const fechaVencimiento = datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null
 
   // Best-effort y no bloqueante, igual que en el alta con documento.
-  void avisarPolizaDeclaradaDesdeAlta({
+  after(() => avisarPolizaDeclaradaDesdeAlta({
     identidadId,
     compania: datos.compania,
     ramo: datos.ramo,
     numeroPoliza: datos.numeroPoliza,
     fechaVencimiento,
-  })
+  }))
 
   return NextResponse.json(
     {

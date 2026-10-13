@@ -36,3 +36,12 @@ test('🪤 moto: pedirPrecio() captura excepciones y las pinta como error con co
   const cuerpo = src.slice(ini, src.indexOf('\n  }\n', ini))
   assert.match(cuerpo, /\} catch \(e\) \{[\s\S]*estado: 'error'[\s\S]*gastoDesconocido: true[\s\S]*\} finally \{/)
 })
+
+test('🪤 hogar: cotizar() captura excepciones como error con cobro DESCONOCIDO y no paga con el riesgo bloqueado (10/10/2026)', () => {
+  const src = readFileSync(join(ROOT, BASE + 'hogar-nuevo/Formulario.tsx'), 'utf8')
+  const ini = src.indexOf('async function cotizar(forzar = false) {')
+  const cuerpo = src.slice(ini, src.indexOf('\n  }\n', ini))
+  assert.match(cuerpo, /\} catch \(e\) \{[\s\S]*estado: 'error'[\s\S]*gastoDesconocido: true[\s\S]*\} finally \{/)
+  const sin = src.indexOf('async function cotizarSinGuarda(forzar: boolean) {')
+  assert.match(src.slice(sin, sin + 300), /if \(bloqueo !== null\) return/, 'embebido: con el riesgo a medias no se paga')
+})

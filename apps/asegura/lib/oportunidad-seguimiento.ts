@@ -28,10 +28,21 @@ import {
   planLlamada,
   planLlamadaAnual,
   planTareaTrasVencimiento,
+  CLAVES_HISTORIAL_DECLARADO,
+  historialDeclaradoDe,
+  incoherenciaHistorialDeclarado,
   seguroAnteriorDe,
   validarAltaOportunidad,
   validarEdicionOportunidad,
   validarTarea,
+  MOTIVO_DESCARTE,
+  PREFIJO_TAREA_DEVOLUCION,
+  ORIGEN_BAJA_VERIFICADA,
+  ORIGEN_RESCATE_PERDIDO,
+  esRescateDeRecibo,
+  fechaPospuesta,
+  textoRetomar,
+  vueltaRescatePerdido,
   type CambiosOportunidad,
   type EstadoOportunidad,
   type EstadoPresupuesto,
@@ -44,7 +55,7 @@ import { prismaAsegura } from './asegura-db'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type Fallo = { ok: false; estado: 'invalido' | 'no_encontrado' | 'conflicto'; motivo: string; status: 404 | 409 | 422 }
+export type Fallo = { ok: false; estado: 'invalido' | 'no_encontrado' | 'conflicto' | 'sin_migracion'; motivo: string; status: 404 | 409 | 422 | 503 }
 
 export type OportunidadSeguimiento = {
   id: string
@@ -60,6 +71,8 @@ export type OportunidadSeguimiento = {
   aparcadaMotivo: string | null
   cerradaAt: string | null
   polizaGanadaId: string | null
+  /** Notas libres (13/10/2026). `null` = sin notas (o la columna aún no existe en la BD). */
+  notas: string | null
 }
 
 /** Lo que se añade a una tarea que cierra el sistema al ganar/perder: no es un contacto y no cuenta como intento. */
@@ -111,14 +124,22 @@ type FilaOportunidad = {
   aparcadaMotivo: string | null
   cerradaAt: Date | null
   polizaGanadaId: string | null
+  notas: string | null
 }
+
+/**
+ * Las notas libres (`oportunidades.notas`, SQL 2026-10-13_oportunidad_notas.sql) leídas por la fila en
+ * JSON: sin la columna dan NULL en vez de romper TODA lectura de oportunidades (código antes que el SQL).
+ */
+const SQL_NOTAS = Prisma.raw(`(to_jsonb(oportunidades.*)->>'notas')`)
 
 const SELECT_OPORTUNIDAD = Prisma.sql`
   select id::text as id, cliente_id::text as "clienteId", tipo::text as ramo, estado::text as estado,
          fecha_fin_vigencia as "fechaFin", motivo_perdida as "motivoPerdida",
          motivo_perdida_detalle as "motivoDetalle", competidor,
          prima_competidor::float8 as "primaCompetidor", aparcada_hasta as "aparcadaHasta",
-         aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId"
+         aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId",
+         ${SQL_NOTAS} as notas
   from oportunidades`
 
 function mapOportunidad(f: FilaOportunidad): OportunidadSeguimiento {
@@ -136,6 +157,7 @@ function mapOportunidad(f: FilaOportunidad): OportunidadSeguimiento {
     aparcadaMotivo: f.aparcadaMotivo,
     cerradaAt: f.cerradaAt ? f.cerradaAt.toISOString() : null,
     polizaGanadaId: f.polizaGanadaId,
+    notas: f.notas ?? null,
   }
 }
 
@@ -220,11 +242,129 @@ export async function cambiarEstadoOportunidad(
     const [fila] = await tx.$queryRaw<FilaOportunidad[]>(Prisma.sql`
       ${SELECT_OPORTUNIDAD} where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
     if (!fila) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
-    return transicionar(tx, correduriaId, mapOportunidad(fila), peticion, actor, hoy)
+    const t = await transicionar(tx, correduriaId, mapOportunidad(fila), peticion, actor, hoy)
+    if (!t.ok) return t
+    // F2 (13/10/2026): aparcar deja la próxima acción EN la fecha de vuelta, para que ese día salga
+    // sola en «Hoy» (`tareasDeHoy`). Solo aquí, en el aparcar explícito: el que deja una llamada
+    // («no le interesa») ya tiene su vuelta anual (`dejarLlamadaAnual`).
+    if (peticion.accion === 'aparcar' && t.oportunidad.aparcadaHasta) {
+      await dejarRetomar(tx, correduriaId, t.oportunidad, actor)
+    }
+    // «Traer ya» (reabrir una APARCADA): la próxima acción que dejó el aparcado (la del día de la vuelta)
+    // pasa a HOY. Si no, quedaba abierta con su «Retomar» a meses vista y no salía en «Hoy».
+    if (peticion.accion === 'reabrir' && t.antes.estado !== 'perdida' && t.antes.aparcadaHasta) {
+      await tx.$executeRaw(Prisma.sql`
+        update gestiones set fecha_limite = (${hoyMadridIso()}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+        where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
+          and origen_trigger = 'central:seguimiento' and estado::text <> 'cerrada'
+          and (fecha_limite at time zone 'Europe/Madrid')::date = ${t.antes.aparcadaHasta}::date`)
+    }
+    // Un rescate de recibo devuelto PERDIDO se aparca solo hasta el año siguiente (Alberto, 13/10/2026).
+    const anioSiguiente = await trasPerder(tx, correduriaId, peticion, t.oportunidad, actor)
+    return { ...t, anioSiguiente }
   })
   if (!r.ok) return r
   await anotarEnFicha(correduriaId, r.oportunidad.clienteId, textoCambio(peticion.accion, r.antes, r.oportunidad, actor))
+  await anotarAnioSiguiente(correduriaId, r.oportunidad, r.anioSiguiente)
   return { ok: true, oportunidad: r.oportunidad }
+}
+
+/**
+ * Lo que sigue a PERDER (por la acción explícita o por el resultado de una llamada): un rescate de recibo
+ * devuelto perdido —salvo el descarte por error de alta— abre la del año siguiente, aparcada. Un solo
+ * sitio para las dos vías: la regla de Alberto (13/10/2026) no depende del botón que se pulse.
+ */
+async function trasPerder(
+  tx: Tx, correduriaId: string, peticion: PeticionAccion | null, o: OportunidadSeguimiento, actor: string,
+): Promise<{ id: string; aparcadaHasta: string } | null> {
+  if (peticion?.accion !== 'perder' || o.estado !== 'perdida' || o.motivoPerdida === MOTIVO_DESCARTE) return null
+  return abrirAnioSiguienteRescate(tx, correduriaId, o, actor)
+}
+
+async function anotarAnioSiguiente(correduriaId: string, o: OportunidadSeguimiento, a: { aparcadaHasta: string } | null): Promise<void> {
+  if (!a) return
+  await anotarEnFicha(correduriaId, o.clienteId,
+    `Rescate perdido: oportunidad de ${o.ramo ?? 'sin ramo'} para el año que viene, aparcada hasta el ${a.aparcadaHasta} — sistema`)
+}
+
+function hoyMadridIso(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+}
+
+/**
+ * La próxima acción de una oportunidad recién aparcada: «Retomar: <motivo>» el día de la vuelta.
+ * `transicionar` ya ha cerrado sus tareas pendientes, así que queda UNA.
+ */
+async function dejarRetomar(tx: Tx, correduriaId: string, o: OportunidadSeguimiento, actor: string): Promise<void> {
+  const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+    insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+    values (${correduriaId}::uuid, cast('tarea' as gestion_tipo), cast('media' as gestion_prioridad), 'pendiente',
+            ${textoRetomar(o.aparcadaMotivo)}, (${o.aparcadaHasta}::date + time '23:59:59') at time zone 'Europe/Madrid',
+            ${o.clienteId}::uuid, ${o.id}::uuid, 'central:seguimiento')
+    returning id::text as id`)
+  await tx.$executeRaw(Prisma.sql`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${o.id}::uuid, 'tarea_creada',
+            cast(${o.estado} as estado_comercial), cast(${o.estado} as estado_comercial),
+            ${JSON.stringify({ tareaId: nueva.id, tipo: 'tarea', fechaLimite: o.aparcadaHasta, retomar: true })}::jsonb, ${actor})`)
+}
+
+/**
+ * Rescate de recibo devuelto PERDIDO → oportunidad del año siguiente, APARCADA hasta
+ * `vueltaRescatePerdido()` (45 días antes del próximo vencimiento de la póliza; sin él, el aniversario
+ * del efecto del recibo; sin ninguno, +12 meses) y con su «Retomar» ese día. `null` = no es un rescate
+ * de recibo, o ya hay una del año siguiente abierta para esa póliza (no se duplica).
+ *
+ * 🚨 La nueva NO lleva `info_riesgo.polizaId`: el seguimiento diario de devoluciones cuelga sus hitos de
+ * la oportunidad abierta con ese `polizaId`, y colgaría las llamadas del impago de la del año que viene.
+ * La póliza va en la columna `poliza_id` (como la de «el cliente se va»).
+ */
+async function abrirAnioSiguienteRescate(
+  tx: Tx, correduriaId: string, o: OportunidadSeguimiento, actor: string,
+): Promise<{ id: string; aparcadaHasta: string } | null> {
+  const [f] = await tx.$queryRaw<{
+    fuente: string | null; origen: string | null; motivo: string | null; polizaId: string | null; reciboId: string | null
+  }[]>(Prisma.sql`
+    select fuente::text as fuente, info_riesgo->>'origen' as origen, info_riesgo->>'motivo' as motivo,
+           coalesce(poliza_id::text, case when info_riesgo->>'polizaId' ~* ${UUID.source} then info_riesgo->>'polizaId' end) as "polizaId",
+           case when info_riesgo->>'reciboId' ~* ${UUID.source} then info_riesgo->>'reciboId' end as "reciboId"
+    from oportunidades where id = ${o.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+  if (!f || !esRescateDeRecibo(f)) return null
+  const [ya] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+    select id::text as id from oportunidades
+    where correduria_id = ${correduriaId}::uuid and cliente_id = ${o.clienteId}::uuid
+      and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      and (info_riesgo->>'desdeOportunidadId' = ${o.id}
+           or (${f.polizaId}::uuid is not null and poliza_id = ${f.polizaId}::uuid
+               and info_riesgo->>'origen' in (${ORIGEN_RESCATE_PERDIDO}, ${ORIGEN_BAJA_VERIFICADA})))
+    limit 1`)
+  if (ya) return null
+  const [fechas] = f.polizaId || f.reciboId
+    ? await tx.$queryRaw<{ vencePoliza: string | null; efecto: string | null; prima: number | null }[]>(Prisma.sql`
+        select (select to_char(p.fecha_vencimiento, 'YYYY-MM-DD') from polizas p
+                 where p.id = ${f.polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid) as "vencePoliza",
+               (select to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') from poliza_recibos r
+                 where r.id = ${f.reciboId}::uuid and r.correduria_id = ${correduriaId}::uuid) as efecto,
+               (select nullif(o2.prima_bruta, 0)::float8 from oportunidades o2 where o2.id = ${o.id}::uuid) as prima`)
+    : [{ vencePoliza: null, efecto: null, prima: null }]
+  const v = vueltaRescatePerdido({ vencimientoPoliza: fechas?.vencePoliza ?? null, efectoRecibo: fechas?.efecto ?? null, hoy: hoyMadridIso() })
+  const motivo = `Rescate perdido (${o.motivoPerdida}): volver a pasarle precio el año que viene${v.estimada ? ' (sin vencimiento conocido: +12 meses)' : ''}.`
+  const ramo = o.ramo ?? 'otros'
+  const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+    insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_id,
+                               aparcada_hasta, aparcada_motivo, info_riesgo)
+    values (${correduriaId}::uuid, ${o.clienteId}::uuid, cast(${ramo} as tipo_seguro), 'renovacion', 'competencia',
+            ${v.vence}::date, ${fechas?.prima ?? null}::numeric, ${f.polizaId}::uuid, ${v.aparcadaHasta}::date, ${motivo},
+            ${JSON.stringify({ origen: ORIGEN_RESCATE_PERDIDO, desdeOportunidadId: o.id, ...(f.polizaId ? { polizaAnteriorId: f.polizaId } : {}) })}::jsonb)
+    returning id::text as id`)
+  await tx.$executeRaw(Prisma.sql`
+    insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+    values (${correduriaId}::uuid, ${nueva.id}::uuid, 'creada_rescate_perdido', null, 'competencia',
+            ${JSON.stringify({ desdeOportunidadId: o.id, polizaId: f.polizaId, vence: v.vence, aparcadaHasta: v.aparcadaHasta, estimada: v.estimada })}::jsonb, ${actor})`)
+  await dejarRetomar(tx, correduriaId, {
+    ...o, id: nueva.id, estado: 'competencia', aparcadaHasta: v.aparcadaHasta, aparcadaMotivo: motivo,
+  }, actor)
+  return { id: nueva.id, aparcadaHasta: v.aparcadaHasta }
 }
 
 type Tx = Prisma.TransactionClient
@@ -276,7 +416,8 @@ async function transicionar(
       fecha_fin_vigencia as "fechaFin", motivo_perdida as "motivoPerdida",
       motivo_perdida_detalle as "motivoDetalle", competidor,
       prima_competidor::float8 as "primaCompetidor", aparcada_hasta as "aparcadaHasta",
-      aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId"`)
+      aparcada_motivo as "aparcadaMotivo", cerrada_at as "cerradaAt", poliza_ganada_id::text as "polizaGanadaId",
+      ${SQL_NOTAS} as notas`)
 
   const detalle: Record<string, unknown> = diferencias(antes, c)
   // Ganada, perdida o aparcada, sus tareas pendientes ya no tienen sentido: se
@@ -454,10 +595,13 @@ export async function registrarLlamada(
 
     // El cambio de estado va el PRIMERO: si no vale, se sale sin haber escrito nada.
     let despues = antes
+    let anioSiguiente: { id: string; aparcadaHasta: string } | null = null
     if (plan.accion) {
       const t = await transicionar(tx, correduriaId, antes, plan.accion, actor, hoy)
       if (!t.ok) return t
       despues = t.oportunidad
+      // Perder por la llamada sigue la misma regla que el `perder` explícito (rescate → año siguiente).
+      anioSiguiente = await trasPerder(tx, correduriaId, plan.accion, despues, actor)
     }
     await tx.$executeRaw(Prisma.sql`
       update gestiones set estado = 'cerrada', updated_at = now(),
@@ -501,11 +645,12 @@ export async function registrarLlamada(
       values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${plan.canal},
               cast(${antes.estado} as estado_comercial), cast(${despues.estado} as estado_comercial),
               ${JSON.stringify({ resultado: plan.resultado, canal: plan.canal, optOut: plan.optOut, siguienteTareaId, fechaSiguiente: plan.siguiente?.fechaLimite ?? null })}::jsonb, ${actor})`)
-    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, canal: plan.canal, siguienteTareaId }
+    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, canal: plan.canal, siguienteTareaId, despues, anioSiguiente }
   })
   if (!r.ok) return r
   const etiqueta = ETIQUETA_LLAMADA[r.registro] ?? 'Llamada'
   await anotarEnFicha(correduriaId, r.clienteId, `${r.canal === 'whatsapp' ? etiqueta.replace(/^Llamada/, 'WhatsApp') : etiqueta} — por ${actor}`)
+  await anotarAnioSiguiente(correduriaId, r.despues, r.anioSiguiente)
   return { ok: true, resultado: r.registro, siguienteTareaId: r.siguienteTareaId }
 }
 
@@ -802,9 +947,11 @@ export async function editarOportunidad(
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
   const c = v.cambios
   const r = await prismaAsegura().$transaction(async tx => {
-    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null })[]>(Prisma.sql`
+    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; historialDeclarado: unknown; notasColumna: boolean })[]>(Prisma.sql`
       select id::text as id, cliente_id::text as "clienteId", tipo::text as ramo, estado::text as estado,
              fecha_fin_vigencia as "fechaFin", prima_bruta::float8 as prima,
+             ${SQL_NOTAS} as notas, (to_jsonb(oportunidades.*) ? 'notas') as "notasColumna",
+             case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado' end as "historialDeclarado",
              nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
              nullif(trim(info_riesgo->>'matricula'), '') as matricula
@@ -834,6 +981,36 @@ export async function editarOportunidad(
     if (c.fechaFinVigencia !== undefined && c.fechaFinVigencia !== finAntes) detalle.fechaFinVigencia = { antes: finAntes, despues: c.fechaFinVigencia }
     if (c.prima !== undefined && c.prima !== fila.prima) detalle.prima = { antes: fila.prima, despues: c.prima }
     if (c.aseguradora !== undefined && c.aseguradora !== fila.aseguradora) detalle.aseguradora = { cambiado: true, vacio: c.aseguradora === null }
+    // Notas libres: texto escrito a mano, al historial solo QUE cambiaron (como la compañía).
+    if (c.notas !== undefined && c.notas !== (fila.notas ?? null)) {
+      if (!fila.notasColumna) {
+        return { ok: false as const, estado: 'sin_migracion' as const, motivo: 'Falta aplicar prisma/sql/2026-10-13_oportunidad_notas.sql: las notas aún no se pueden guardar.', status: 503 as const }
+      }
+      detalle.notas = { cambiado: true, vacio: c.notas === null }
+    }
+    // Historial declarado: en `poliza_competencia.historialDeclarado`, NUNCA dentro de `seguroAnterior` (ahí un
+    // `{aniosAsegurado}` sin compañía pasaba por un seguro anterior leído). Solo las claves enviadas; `null` las quita
+    // (vuelven a «sin dato»): nunca se escribe un null ni se pisa el resto.
+    // 13/10/2026: también seguro actual sí/no, compañía, nº de póliza, años sin siniestros y siniestros en 5 años (lo
+    // que las compañías consultan en SINCO): DECLARADO, nunca dentro de `seguroAnterior` (lo leído de la póliza).
+    const poner: Record<string, number | string | boolean> = {}
+    const quitar: string[] = []
+    const hdAntes = historialDeclaradoDe(fila.historialDeclarado)
+    const hdDespues = { ...hdAntes }
+    for (const k of CLAVES_HISTORIAL_DECLARADO) {
+      const nuevo = c.historial?.[k]
+      if (nuevo === undefined) continue
+      const antes = hdAntes[k]
+      if (nuevo === antes) continue
+      ;(hdDespues as Record<string, unknown>)[k] = nuevo
+      // La póliza y la compañía no van en claro al historial de cambios (como la compañía de la oportunidad).
+      detalle[k] = k === 'numeroPoliza' || k === 'companiaActual' ? { cambiado: true, vacio: nuevo === null } : { antes, despues: nuevo }
+      if (nuevo === null) quitar.push(k)
+      else poner[k] = nuevo
+    }
+    // Coherencia con lo YA guardado (la de lo enviado junto la hace `validarEdicionOportunidad`).
+    const choque = Object.keys(poner).length > 0 || quitar.length > 0 ? incoherenciaHistorialDeclarado(hdDespues) : null
+    if (choque) return { ok: false as const, estado: 'invalido' as const, motivo: choque, status: 422 as const }
     if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId, tarea: null }
     await tx.$executeRaw(Prisma.sql`
       update oportunidades set
@@ -846,6 +1023,22 @@ export async function editarOportunidad(
           else jsonb_set(coalesce(poliza_competencia, '{}'::jsonb), '{aseguradora}', to_jsonb(${c.aseguradora ?? ''}::text)) end,
         updated_at = now()
       where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    if (detalle.notas) {
+      // Sentencia aparte: sin la columna, el UPDATE de arriba no puede nombrarla (y aquí ya se sabe que existe).
+      await tx.$executeRaw(Prisma.sql`
+        update oportunidades set notas = ${c.notas ?? null}, updated_at = now()
+        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    }
+    if (Object.keys(poner).length > 0 || quitar.length > 0) {
+      await tx.$executeRaw(Prisma.sql`
+        update oportunidades set
+          poliza_competencia = jsonb_set(
+            coalesce(poliza_competencia, '{}'::jsonb), '{historialDeclarado}',
+            (case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado' else '{}'::jsonb end
+              - ${quitar}::text[]) || ${JSON.stringify(poner)}::jsonb),
+          updated_at = now()
+        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    }
     let tarea: { accion: 'crear' | 'mover'; fecha: string } | null = null
     if (opciones.reprogramar && detalle.fechaFinVigencia) {
       // La próxima de seguimiento (la misma que enseña la tarjeta). Se MUEVE, no se cierra: una
@@ -1005,6 +1198,7 @@ export async function oportunidadesDeCliente(
            o.motivo_perdida_detalle as "motivoDetalle", o.competidor,
            o.prima_competidor::float8 as "primaCompetidor", o.aparcada_hasta as "aparcadaHasta",
            o.aparcada_motivo as "aparcadaMotivo", o.cerrada_at as "cerradaAt", o.poliza_ganada_id::text as "polizaGanadaId",
+           (to_jsonb(o)->>'notas') as notas,
            nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
            ${Prisma.raw(sqlNumeroPoliza('o.'))} as "numeroPoliza",
            nullif(trim(o.info_riesgo->>'matricula'), '') as matricula,
@@ -1116,6 +1310,67 @@ export async function presupuestosSinOportunidad(
     mejorCompania: f.mejorCompania,
     presupuesto: hitos(f.presupuesto),
   }))
+}
+
+/**
+ * «Posponer N días» (13/10/2026): la próxima acción de seguimiento pasa a hoy + N (Madrid). Si no tenía
+ * ninguna, se crea una («Retomar el seguimiento») para que no quede huérfana. Se MUEVE, no se cierra: una
+ * llamada cerrada contaría como intento. Una aparcada no se pospone (su vuelta es la fecha del aparcado).
+ */
+export async function posponerOportunidad(
+  correduriaId: string,
+  id: string,
+  dias: unknown,
+  actor: string,
+  hoyIso: string = hoyMadridIso(),
+): Promise<{ ok: true; fecha: string; tarea: { accion: 'mover' | 'crear'; id: string } } | Fallo> {
+  if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  const p = fechaPospuesta(dias, hoyIso)
+  if (!p.ok) return { ok: false, estado: 'invalido', motivo: p.motivo, status: 422 }
+  const r = await prismaAsegura().$transaction(async tx => {
+    const [o] = await tx.$queryRaw<{ clienteId: string; estado: string; aparcadaHasta: string | null }[]>(Prisma.sql`
+      select cliente_id::text as "clienteId", estado::text as estado, to_char(aparcada_hasta, 'YYYY-MM-DD') as "aparcadaHasta"
+      from oportunidades where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+    if (!o) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+    if (o.estado === 'ganada' || o.estado === 'perdida') {
+      return { ok: false as const, estado: 'conflicto' as const, motivo: `Está ${o.estado}: reábrela antes de posponerla.`, status: 409 as const }
+    }
+    if (o.aparcadaHasta !== null && o.aparcadaHasta > hoyIso) {
+      return { ok: false as const, estado: 'conflicto' as const, motivo: `Está aparcada hasta el ${o.aparcadaHasta}: reábrela o aparca con otra fecha.`, status: 409 as const }
+    }
+    const [prox] = await tx.$queryRaw<{ id: string; fecha: string | null }[]>(Prisma.sql`
+      select id::text as id, to_char(fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD') as fecha
+      from gestiones
+      where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
+        and origen_trigger = 'central:seguimiento' and estado::text <> 'cerrada'
+        -- Los hitos del recibo devuelto (art. 15 LCS) NO se posponen: llevan el plazo legal. Si solo hay
+        -- hitos, abajo se crea una tarea de seguimiento nueva y el hito se queda donde está.
+        and not starts_with(coalesce(observaciones, ''), ${PREFIJO_TAREA_DEVOLUCION})
+      order by fecha_limite nulls last, created_at limit 1 for update`)
+    let tarea: { accion: 'mover' | 'crear'; id: string }
+    if (prox) {
+      await tx.$executeRaw(Prisma.sql`
+        update gestiones set fecha_limite = (${p.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+        where id = ${prox.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+      tarea = { accion: 'mover', id: prox.id }
+    } else {
+      const [nueva] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+        insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+        values (${correduriaId}::uuid, cast('tarea' as gestion_tipo), cast('media' as gestion_prioridad), 'pendiente',
+                ${textoRetomar('retomar el seguimiento')}, (${p.fecha}::date + time '23:59:59') at time zone 'Europe/Madrid',
+                ${o.clienteId}::uuid, ${id}::uuid, 'central:seguimiento')
+        returning id::text as id`)
+      tarea = { accion: 'crear', id: nueva.id }
+    }
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${id}::uuid, 'pospuesta', cast(${o.estado} as estado_comercial), cast(${o.estado} as estado_comercial),
+              ${JSON.stringify({ dias: p.dias, fecha: p.fecha, tareaId: tarea.id, accion: tarea.accion, antes: prox?.fecha ?? null })}::jsonb, ${actor})`)
+    return { ok: true as const, clienteId: o.clienteId, tarea }
+  })
+  if (!r.ok) return r
+  await anotarEnFicha(correduriaId, r.clienteId, `Seguimiento pospuesto ${p.dias} día${p.dias === 1 ? '' : 's'} (al ${p.fecha}) — por ${actor}`)
+  return { ok: true, fecha: p.fecha, tarea: r.tarea }
 }
 
 async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string): Promise<void> {

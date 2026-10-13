@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { aniversarioOportunidad, repartirSegurosCliente, estaHuerfana, estadoVencimiento, vencimientoPoliza, segurosDeReparto, contarOportunidades, precargaAlta } from './seguros-cliente.ts'
+import { aniversarioOportunidad, referenciaRiesgo, repartirSegurosCliente, estaHuerfana, estadoVencimiento, vencimientoPoliza, segurosDeReparto, contarOportunidades, precargaAlta } from './seguros-cliente.ts'
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
 
@@ -432,4 +432,20 @@ test('oportunidades: el vencimiento es un aniversario (año da igual), orden por
   assert.equal(aniversarioOportunidad('2024-06-01', hoy), '2027-06-01')
   assert.equal(aniversarioOportunidad('1900-01-01', hoy), null)
   assert.equal(aniversarioOportunidad(null, hoy), null)
+})
+
+test('referenciaRiesgo: matrícula en auto/moto, dirección en inmueble, nada en el resto ni sin dato', () => {
+  const obj = (direccion: string | null) => ({ estado: 'conocido', titulo: 'Vivienda', detalle: null, nota: null, coberturas: null, direccion }) as PolizaFicha['objeto']
+  assert.equal(referenciaRiesgo(pol('a', { tipo: 'auto', matricula: '1234ABC' })), 'Matrícula 1234ABC')
+  assert.equal(referenciaRiesgo(pol('m', { tipo: 'moto', matricula: '9999XYZ' })), 'Matrícula 9999XYZ')
+  assert.equal(referenciaRiesgo(pol('a0', { tipo: 'auto', matricula: null })), null)
+  assert.equal(referenciaRiesgo(pol('a1', { tipo: 'auto', matricula: '1234ABC' }), '1234ABC'), null)
+  assert.equal(referenciaRiesgo(pol('h', { tipo: 'hogar', objeto: obj('Calle Socorro 24, Sevilla') })), 'Calle Socorro 24, Sevilla')
+  assert.equal(referenciaRiesgo(pol('c', { tipo: 'comunidades', objeto: obj('Av. Cádiz 3') })), 'Av. Cádiz 3')
+  assert.equal(referenciaRiesgo(pol('co', { tipo: 'comercio', objeto: obj('Calle Sierpes 1') })), 'Calle Sierpes 1')
+  assert.equal(referenciaRiesgo(pol('h1', { tipo: 'hogar', objeto: obj('Calle Socorro 24') }), 'Calle Socorro 24'), null)
+  assert.equal(referenciaRiesgo(pol('h0', { tipo: 'hogar', objeto: obj(null) })), null)
+  assert.equal(referenciaRiesgo(pol('h2', { tipo: 'hogar', objeto: null })), null)
+  assert.equal(referenciaRiesgo(pol('v', { tipo: 'vida', matricula: '1234ABC', objeto: obj('Calle X') })), null)
+  assert.equal(referenciaRiesgo(pol('a2', { tipo: 'auto', objeto: obj('Calle X'), matricula: null })), null)
 })

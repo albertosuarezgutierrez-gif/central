@@ -4,7 +4,33 @@
 // (app `asegura-tarificador`, auto_destroy) por trabajo, y el worker le pide el riesgo y le devuelve
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
-import { envDeMaquina, esTipoError, esVersionBot, validarOfertas, validarTraza, type OfertaNormalizada, type PasoTraza, type TipoError } from '@central/module-tarificacion'
+import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
+import {
+  envDeMaquina, esTipoError, esVersionBot, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type PasoTraza, type RiesgoComunidad, type TipoError,
+} from '@central/module-tarificacion'
+
+/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto). */
+export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto'; riesgo: FormularioAuto }
+export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
+
+/** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
+/** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto'] as const
+
+export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
+  if (ramo === 'comunidades') {
+    const v = validarRiesgoComunidad(riesgo)
+    return v.ok ? { ok: true, entrada: { ramo, riesgo: v.riesgo } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
+  }
+  if (ramo === 'moto') {
+    const v = validarFormularioAuto(riesgo)
+    if (!v.ok) return { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
+    if (v.formulario.ramo !== 'moto') return { ok: false, mensaje: 'riesgo inválido', errores: ['ramo: el formulario de un trabajo moto tiene que ser de moto'] }
+    return { ok: true, entrada: { ramo, riesgo: v.formulario } }
+  }
+  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades o moto)' }
+}
 
 /** Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed). */
 export function rpaActivo(env: Record<string, string | undefined>): boolean {
@@ -15,6 +41,63 @@ export function rpaActivo(env: Record<string, string | undefined>): boolean {
 export const REGION_FLY = 'cdg'
 /** Lease de un trabajo `en_curso`: el worker tiene 4 min de tope global; 6 min dan margen al arranque. */
 export const LEASE_MS = 6 * 60_000
+// ─── Cola: lease, huecos y duplicados (13/10/2026) ───────────────────────────
+// La decisión vive aquí (pura); `tarificador.ts` solo trae las filas y aplica lo decidido.
+
+/**
+ * ¿El lease de un trabajo `en_curso` ya venció? `null` (no debería existir: CHECK `trabajo_en_curso_con_lease`)
+ * = «no se sabe» → NO vencido: el estado conservador es seguir contándolo como ocupado antes que lanzar un
+ * segundo bot con la misma credencial.
+ */
+export function leaseVencido(leaseHasta: Date | null, ahora: Date): boolean {
+  if (!leaseHasta || Number.isNaN(leaseHasta.getTime())) return false
+  return leaseHasta.getTime() <= ahora.getTime()
+}
+
+/** Reparte los `en_curso` de una compañía: los vivos ocupan hueco; los vencidos se dan por fallo de infra. */
+export function repartirEnCurso<T extends { leaseHasta: Date | null }>(filas: readonly T[], ahora: Date): { vivos: T[]; vencidos: T[] } {
+  const vivos: T[] = []
+  const vencidos: T[] = []
+  for (const f of filas) (leaseVencido(f.leaseHasta, ahora) ? vencidos : vivos).push(f)
+  return { vivos, vencidos }
+}
+
+/** Huecos libres bajo `max_concurrencia`. Sin integración autorizada (`null`) o con un tope raro → 0 (fail-closed). */
+export function huecosLibres(max: number | null, vivos: number): number {
+  if (max === null || !Number.isInteger(max) || max < 1) return 0
+  return Math.max(0, max - Math.max(0, vivos))
+}
+
+/**
+ * Clave de deduplicación al ENCOLAR: un mismo cliente no pide dos veces el mismo riesgo a la misma compañía y ramo.
+ * El riesgo NO va en la clave (se compara en SQL como `jsonb`, que ya es igualdad semántica: no importa el orden de
+ * las claves); la clave solo serializa a los que encolan lo mismo (`pg_advisory_xact_lock(hashtext(clave))`).
+ */
+export function claveEncolar(p: { correduriaId: string; clienteId: string; compania: string; ramo: string }): string {
+  return ['tarificador:encolar', p.correduriaId, p.clienteId, p.compania, p.ramo].join(':')
+}
+
+/** Estados en los que un trabajo previo cuenta como «ese mismo encargo sigue vivo» y el nuevo es duplicado. */
+export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable'] as const
+
+/**
+ * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
+ * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
+ * devolverá a `pendiente`: sería el mismo encargo dos veces). Lo terminado, cancelado o pendiente de una persona, no.
+ * Un trabajo de EMISIÓN o de EXPLORACIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
+ */
+export function bloqueaDuplicado(
+  f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null },
+  ahora: Date,
+  maxIntentos: number,
+): boolean {
+  if (f.modo === 'emision' || f.modo === 'exploracion') return false
+  if (f.estado === 'pendiente') return true
+  if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
+  if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
+  return false
+}
+
 /** Techo de cada PDF/captura (la tabla `documentos` admite 10 MB; el cuerpo de Vercel, ~4,5 MB). */
 export const MAX_BYTES_ADJUNTO = 4 * 1024 * 1024
 /** Techo del HTML de evidencia (se guarda como documento; más es ruido). */
@@ -67,10 +150,16 @@ export type ResultadoWorker =
   | ({
       tipo: 'error'
       trabajoId: string
-      error: { tipo: TipoError; mensaje: string; url: string | null }
+      /** `opcionesVersion` (13/10/2026): lista COMPLETA de versiones de un `requiere_eleccion_version`; se guarda en el
+       *  `error` jsonb del trabajo y es la lista contra la que se valida cualquier elección (IA o bandeja). */
+      /** `inventarioDom` (13/10/2026): ESTRUCTURA de la pantalla de un hueco de mapa (`ErrorMapaIncompleto`), saneada otra
+       *  vez aquí (sin valores de campos, sin datos personales, ≤60 KB); se guarda en el `error` jsonb. Nunca se loguea. */
+      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; inventarioDom?: InventarioDom }
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
+  /** Exploración terminada (13/10/2026): el MAPA ya está en su cabecera (cierre); aquí solo el desenlace del trabajo. */
+  | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin } & MetaWorker)
 
 /**
  * Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas
@@ -140,9 +229,22 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const html = typeof e.html === 'string' && e.html !== '' ? e.html : null
     if (html && Buffer.byteLength(html, 'utf8') > MAX_BYTES_HTML) errores.push('html supera el techo')
     const url = typeof err?.url === 'string' ? err.url.slice(0, 500) : null
+    // Accesoria, como la traza: una lista inválida se DESCARTA (sin lista no hay elección por código) y el fallo se guarda igual.
+    const opcionesVersion = err?.tipo === 'captcha' ? validarOpcionesVersion(err.opcionesVersion) : null
+    // Accesorio también: se RE-SANEA (lista blanca + filtro de datos personales + tope de bytes); sin forma → se descarta.
+    const inventarioDom = err?.inventarioDom !== undefined ? sanearInventarioDom(err.inventarioDom) : null
     if (errores.length) return { ok: false, errores }
-    return { ok: true, r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url }, captura, html, ...leerMetaWorker(e) } }
+    return {
+      ok: true,
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(inventarioDom ? { inventarioDom } : {}) }, captura, html, ...leerMetaWorker(e) },
+    }
   }
 
-  return { ok: false, errores: ['resultado tiene que ser «ok» o «error»'] }
+  if (e.resultado === 'explorado') {
+    const motivoFin = MOTIVOS_FIN.find((m) => m === e.motivoFin)
+    if (!motivoFin) return { ok: false, errores: ['motivoFin fuera de lista'] }
+    return { ok: true, r: { tipo: 'explorado', trabajoId, motivoFin, ...leerMetaWorker(e) } }
+  }
+
+  return { ok: false, errores: ['resultado tiene que ser «ok», «error» o «explorado»'] }
 }

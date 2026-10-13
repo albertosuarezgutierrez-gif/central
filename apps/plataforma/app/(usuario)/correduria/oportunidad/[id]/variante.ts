@@ -48,6 +48,8 @@ export function varianteDeRiesgo(r: Riesgo, tomadorId: string, tarificacionId: s
   const faltan: VarianteNueva['faltan'] = {}
   const empresas: VarianteNueva['empresas'] = {}
   for (const f of r.figuras) {
+    // Los asegurados (papel de varias personas) no son un papel de la petición de vehículo: no viajan aquí.
+    if (!(ROLES_EXTRA as readonly string[]).includes(f.rol) && f.rol !== 'tomador') continue
     nombres[f.rol] = f.nombre
     faltan[f.rol] = f.faltan
     if (f.empresa) empresas[f.rol] = true

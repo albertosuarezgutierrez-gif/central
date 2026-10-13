@@ -19,21 +19,31 @@ export const ESTADOS_TRABAJO = [
   'error_definitivo',
   'requiere_humano',
   'cancelado',
+  // EMISIÓN (10/10/2026, emision.ts): el worker paró en la pantalla previa y espera el botón de Alberto (24 h);
+  // Alberto autorizó y espera máquina; la póliza se emitió (terminal OK).
+  'pendiente_autorizacion_emision',
+  'autorizado_emision',
+  'emitido',
 ] as const
 
 export type EstadoTrabajo = (typeof ESTADOS_TRABAJO)[number]
 
-export const ESTADOS_TERMINALES: readonly EstadoTrabajo[] = ['ok', 'error_definitivo', 'requiere_humano', 'cancelado']
+export const ESTADOS_TERMINALES: readonly EstadoTrabajo[] = ['ok', 'error_definitivo', 'requiere_humano', 'cancelado', 'emitido']
 
 const TRANSICIONES: Record<EstadoTrabajo, readonly EstadoTrabajo[]> = {
   pendiente: ['en_curso', 'cancelado'],
-  en_curso: ['ok', 'error_reintentable', 'error_definitivo', 'requiere_humano', 'cancelado'],
+  en_curso: ['ok', 'error_reintentable', 'error_definitivo', 'requiere_humano', 'cancelado', 'pendiente_autorizacion_emision', 'emitido'],
   error_reintentable: ['pendiente', 'error_definitivo', 'cancelado'],
   ok: [],
   error_definitivo: [],
   // Lo resuelve una persona y, si procede, encola un trabajo NUEVO: este no se reanuda.
   requiere_humano: ['cancelado'],
   cancelado: [],
+  // Sin pulsar en 24 h → cancelado. Rechazar → cancelado. Autorizar → autorizado_emision.
+  pendiente_autorizacion_emision: ['autorizado_emision', 'cancelado'],
+  // La reanudación (relogin, pantalla previa, canje, UN clic) NO es un reintento: vuelve a en_curso.
+  autorizado_emision: ['en_curso', 'cancelado'],
+  emitido: [],
 }
 
 export function esEstadoTrabajo(v: unknown): v is EstadoTrabajo {

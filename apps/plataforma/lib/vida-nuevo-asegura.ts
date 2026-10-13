@@ -182,6 +182,11 @@ export async function cotizarVidaNuevaAsegura(entrada: {
   nota?: string | null
   /** Recotización EXPLÍCITA tras un 409 `duplicado` (0,50€ otra vez): salta la guarda anti-duplicado de asegura. */
   forzar?: boolean
+  /**
+   * Cotizador EMBEBIDO en el riesgo (13/10/2026): capital, profesión y fumador los lee ASEGURA de «Datos del riesgo»
+   * (la pantalla no los manda; si los mandara, 422). Solo con `oportunidadId`; el puerto compara con `=== true`.
+   */
+  datosDelRiesgo?: boolean
 }): Promise<RespuestaRetarificar> {
   try {
     const r = await pedir(
@@ -199,6 +204,7 @@ export async function cotizarVidaNuevaAsegura(entrada: {
           ...(entrada.forzar === true ? { forzar: true } : {}),
           ...(entrada.oportunidadId ? { oportunidadId: entrada.oportunidadId } : {}),
           ...(entrada.oportunidadId && entrada.nota && entrada.nota.trim() !== '' ? { nota: entrada.nota.trim().slice(0, 200) } : {}),
+          ...(entrada.oportunidadId && entrada.datosDelRiesgo === true ? { datosDelRiesgo: true } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,

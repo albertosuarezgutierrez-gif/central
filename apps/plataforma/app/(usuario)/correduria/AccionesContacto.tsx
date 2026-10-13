@@ -50,7 +50,7 @@ export default function AccionesContacto({ telefono, email, ilegible, quien, men
           <Phone size={px} strokeWidth={1.75} aria-hidden />
         </a>
       )}
-      {telefono && !ilegible && <BotonWhatsapp telefono={telefono} mensaje={mensaje} onAbrir={onWhatsapp} compacto />}
+      {telefono && !ilegible && <BotonWhatsapp telefono={telefono} mensaje={mensaje} onAbrir={onWhatsapp} compacto={tam === 'sm'} />}
       {a.email && (
         <a href={a.email} style={estilo} aria-label={`Escribir a ${quien}`} title={`Escribir a ${quien}`}>
           <Mail size={px} strokeWidth={1.75} aria-hidden />

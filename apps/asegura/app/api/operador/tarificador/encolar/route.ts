@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { validarRiesgoComunidad } from '@central/module-tarificacion'
 import { operadorAutorizado } from '@/lib/operador'
 import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { encolarTrabajo, lanzarPendientes } from '@/lib/tarificador'
-import { rpaActivo } from '@/lib/tarificador-reglas'
+import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,7 +17,9 @@ const uuidONull = (v: unknown): string | null | false =>
 /**
  * `POST /api/operador/tarificador/encolar` — pide una cotización por el TARIFICADOR RPA (bot en el
  * portal de la compañía) para un ramo que Codeoscopic no cubre. Body:
- * `{ oportunidadId?, clienteId?, polizaId?, compania, ramo: 'comunidades', riesgo: RiesgoComunidad }`.
+ * `{ oportunidadId?, clienteId?, polizaId?, compania, ramo: 'comunidades', riesgo: RiesgoComunidad }` o, desde el
+ * 13/10/2026, `ramo: 'moto'` con `riesgo: FormularioAuto` (incluida `seleccionVehiculo`: marca/modelo/clase; Allianz Moto no
+ * busca por matrícula). Hace falta además la fila `allianz/moto` de `companias_integracion` ACTIVA (nace apagada).
  *
  * Cerrojos: Bearer de operador · `TARIFICADOR_RPA_ACTIVO=1` · fila de `companias_integracion` con
  * `rpa_autorizada` (fail-closed) · riesgo validado. TARIFICAR ≠ EMITIR: nada de esto emite ni gasta
@@ -40,9 +41,9 @@ export const POST = auditado(async (req: Request) => {
   }
   const compania = typeof body.compania === 'string' ? body.compania.trim() : ''
   if (!compania) return NextResponse.json({ estado: 'error', mensaje: 'falta compania' }, { status: 400 })
-  if (body.ramo !== 'comunidades') return NextResponse.json({ estado: 'error', mensaje: 'ramo no soportado por el tarificador RPA (solo comunidades)' }, { status: 400 })
-  const v = validarRiesgoComunidad(body.riesgo)
-  if (!v.ok) return NextResponse.json({ estado: 'error', mensaje: 'riesgo inválido', errores: v.errores }, { status: 400 })
+  const valida = validarEntradaRamo(body.ramo, body.riesgo)
+  if (!valida.ok) return NextResponse.json({ estado: 'error', mensaje: valida.mensaje, ...(valida.errores ? { errores: valida.errores } : {}) }, { status: 400 })
+  const entrada = valida.entrada
 
   const actor = leerActor(req.headers.get(CABECERA_ACTOR))
   const solicitadoPor = actor.tipo === 'desconocido' ? `desconocido:${actor.motivo}` : `${actor.tipo}:${actor.id}`
@@ -51,14 +52,15 @@ export const POST = auditado(async (req: Request) => {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', mensaje: 'no se ha podido resolver la correduría' }, { status: 503 })
     const r = await encolarTrabajo({
-      correduriaId: correduria.id, oportunidadId, clienteId, polizaId, compania, ramo: 'comunidades', riesgo: v.riesgo, solicitadoPor,
+      correduriaId: correduria.id, oportunidadId, clienteId, polizaId, compania, ...entrada, solicitadoPor,
     })
     if (r.estado === 'rechazado') return NextResponse.json({ estado: 'rechazado', motivo: r.motivo }, { status: r.status })
     // Lanzar es mejor esfuerzo: si Fly falla, el trabajo queda marcado y el barrido lo reintenta UNA vez.
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
+    // `duplicado: true` = ya había un trabajo vivo con este mismo riesgo: se devuelve ESE y no se crea otro (13/10/2026).
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/encolar', e) }, { status: 503 })
   }

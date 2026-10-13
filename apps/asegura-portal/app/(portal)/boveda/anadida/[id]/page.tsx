@@ -1,9 +1,12 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
+import { registrarUso } from '@/lib/autorizaciones'
+import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
+import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
@@ -47,16 +50,31 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
 
+  // 🔒 De quién es la fila (12/10/2026): la propia, o la de un titular que le ha
+  // abierto su ficha ENTERA (`accesoADeclarada`, fail-closed). Sin acceso → 404,
+  // igual que si no existiera. Y la identidad resuelta va DENTRO del `where`.
+  const acceso = await accesoADeclarada(identidad.id, id, 'ver')
+  if (acceso === null) notFound()
+  const duenaId = acceso.identidadId
+  // Consulta y Gestión miran; solo «Total» (o la propia) corrige y quita.
+  const deOtro = !acceso.propia
+  const puedeEditar = acceso.propia || acceso.capacidades?.editarDeclaradas === true
+  const puedeQuitar = acceso.propia || acceso.capacidades?.quitarDeclaradas === true
+
   const p = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+    where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
   })
   if (!p) notFound()
 
+  // Mirar la póliza de otro es USO de su autorización: se anota (lo ve el titular).
+  if (deOtro) await registrarUso(identidad.id, acceso.autorizacionIds)
+
   // Cuántos partes cuelgan de esta póliza. Se cuenta AQUÍ, al pintar, para poder
   // decírselo antes de que confirme: el servidor lo vuelve a mirar al borrar
-  // (y con los estados), así que esto informa, no autoriza.
+  // (y con los estados), así que esto informa, no autoriza. Todos los partes de
+  // la póliza, también los que dio quien tiene acceso.
   const partes = await prisma.portalParteSiniestro.count({
-    where: { polizaDeclaradaId: p.id, identidadId: identidad.id },
+    where: { polizaDeclaradaId: p.id },
   })
 
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
@@ -68,7 +86,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   return (
     <>
       <Link href="/boveda" className="volver">
-        ‹ Mis seguros
+        ‹ {deOtro ? 'Volver' : 'Mis seguros'}
       </Link>
 
       <h1 className="ficha-titulo">
@@ -81,7 +99,8 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
       </p>
 
       <div className="chips" style={{ marginBottom: 20 }}>
-        <span className="chip acento">Añadida por ti</span>
+        <span className="chip acento">{deOtro ? 'Añadida por su titular' : 'Añadida por ti'}</span>
+        {deOtro && <span className="chip">{puedeEditar ? 'Puedes corregirla' : 'Solo lectura'}</span>}
         <span className="chip">{etiquetaProcedencia(p.procedencia)}</span>
       </div>
 
@@ -92,13 +111,13 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           que evita que cuente con algo que no tiene. */}
       <p className="hueco">
         <span className="pendiente">No la gestionamos</span>
-        Esta póliza la has añadido tú: la guardamos para que la tengas a mano, pero no la lleva la
-        correduría. No la revisamos, no te avisamos de su vencimiento y no podemos dar el parte por
-        ti. Si quieres que pase a llevarla la correduría, dínoslo.
+        {deOtro
+          ? 'Esta póliza la ha añadido su titular en su portal: no la lleva la correduría. No la revisamos, no avisamos de su vencimiento y no podemos dar el parte por él.'
+          : 'Esta póliza la has añadido tú: la guardamos para que la tengas a mano, pero no la lleva la correduría. No la revisamos, no te avisamos de su vencimiento y no podemos dar el parte por ti. Si quieres que pase a llevarla la correduría, dínoslo.'}
       </p>
 
       <section className="seccion" aria-labelledby="datos-titulo">
-        <h2 id="datos-titulo">Lo que nos has dicho de ella</h2>
+        <h2 id="datos-titulo">{deOtro ? 'Lo que consta de ella' : 'Lo que nos has dicho de ella'}</h2>
 
         <BienDeclarada
           ramo={p.ramo}
@@ -110,10 +129,24 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
         <div className="linea">
           {/* `Decimal` de Prisma → número ANTES de formatear. `null` es «no lo
               sabemos», jamás «0,00€»: un cero aquí sería una prima inventada. */}
-          {p.primaAnual == null ? 'Prima anual: no la has indicado' : `Prima anual ${eur(Number(p.primaAnual))}`}
+          {p.primaAnual == null
+            ? deOtro
+              ? 'Prima anual: no consta'
+              : 'Prima anual: no la has indicado'
+            : `Prima anual ${eur(Number(p.primaAnual))}`}
         </div>
       </section>
 
+      {!puedeEditar && (
+        <section className="seccion" aria-labelledby="venc-titulo">
+          <h2 id="venc-titulo">Vencimiento</h2>
+          <div className="linea">
+            {p.fechaVencimiento ? `Vence el ${fechaEs(p.fechaVencimiento)}` : 'No sabemos cuándo vence'}
+          </div>
+        </section>
+      )}
+
+      {puedeEditar && (
       <section className="seccion" aria-labelledby="editar-titulo">
         <h2 id="editar-titulo">Corregir o completar</h2>
         {/* El vencimiento NO se pinta arriba: lo lleva entero `EditarPoliza`,
@@ -154,6 +187,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           }}
         />
       </section>
+      )}
 
       {/* 🚨 Quitarla SOLO existe aquí, en la ficha de una póliza APORTADA. La
           ficha de una póliza de la cartera no tiene esta sección: lo que entra
@@ -164,6 +198,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           una póliza APORTADA, por lo mismo que «quitarla» — una de la cartera
           la media la correduría y ahí se habla con Alberto, no se manda una
           carta sola. La carta se compone y se enseña; no se envía desde aquí. */}
+      {!deOtro && (
       <section className="seccion" aria-labelledby="carta-titulo">
         <h2 id="carta-titulo">Si no quieres renovarla</h2>
         <p className="linea">
@@ -175,9 +210,11 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           Preparar la carta de no renovación
         </Link>
       </section>
+      )}
 
+      {puedeQuitar && (
       <section className="seccion" aria-labelledby="quitar-titulo">
-        <h2 id="quitar-titulo">Quitarla de tu bóveda</h2>
+        <h2 id="quitar-titulo">{deOtro ? 'Quitarla de su bóveda' : 'Quitarla de tu bóveda'}</h2>
         <p className="linea">
           Si la subiste por error o ya no tienes este seguro, puedes quitarla. Solo desaparece de tu
           bóveda: no cancela nada con la compañía, y lo que nos hayas contado de un siniestro se
@@ -189,6 +226,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           avisoPartes={avisoPartesConservados(partes)}
         />
       </section>
+      )}
     </>
   )
 }

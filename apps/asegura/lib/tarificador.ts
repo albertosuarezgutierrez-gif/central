@@ -7,21 +7,40 @@
 //    guardan con `canal = 'rpa'`, sin `project_id_codeoscopic` ni libro de gasto: ningún camino de
 //    Avant2 puede casarlos (CHECK `tarificacion_fuera_de_avant2`).
 
+import { cierraCabeceraTrasFallo, estadoFalloExploracion, exploradoValido, modoParaWorker, modosReclamables } from './tarificador-explorador-reglas'
 import { createHash } from 'node:crypto'
 import {
   MAX_INTENTOS,
   claveCompania,
   estadoTrasError,
+  estadoTrasErrorEmision,
   franquiciaGeneral,
   puedeAutomatizar,
   type OfertaNormalizada,
   type PasoTraza,
+  type FormularioAuto,
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
-import { LEASE_MS, configFly, peticionMaquina, rpaActivo, type ConfigFly, type ResultadoWorker } from './tarificador-reglas'
+import { caducarEmisiones } from './tarificador-emision'
+import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
+import { memoriaTrasExito } from './tarificador-eleccion-reglas'
+import { guardarMemoriaVersion } from './tarificador-memoria'
+import {
+  ESTADOS_DUPLICADO,
+  LEASE_MS,
+  bloqueaDuplicado,
+  claveEncolar,
+  configFly,
+  huecosLibres,
+  peticionMaquina,
+  repartirEnCurso,
+  rpaActivo,
+  type ConfigFly,
+  type ResultadoWorker,
+} from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 type Db = Pick<Tx, '$queryRaw' | '$executeRaw'>
@@ -45,13 +64,15 @@ export type EntradaEncolar = {
   clienteId: string | null
   polizaId: string | null
   compania: string
-  ramo: 'comunidades'
-  riesgo: RiesgoComunidad
+  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
+  ramo: 'comunidades' | 'moto'
+  riesgo: RiesgoComunidad | FormularioAuto
   solicitadoPor: string
 }
 
 export type ResultadoEncolar =
-  | { estado: 'encolado'; trabajoId: string }
+  /** `duplicado: true` = ya había un trabajo vivo con el mismo riesgo y se devuelve ESE (no se crea otro). */
+  | { estado: 'encolado'; trabajoId: string; duplicado: boolean }
   | { estado: 'rechazado'; status: number; motivo: string }
 
 export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncolar> {
@@ -86,13 +107,35 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
     if (!pol[0]) return { estado: 'rechazado', status: 404, motivo: 'poliza_no_encontrada' }
   }
 
-  const filas = await prisma.$queryRaw<{ id: string }[]>`
-    insert into seguros.tarificacion_trabajos
-      (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)
-    values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${clienteId}::uuid, ${polizaId}::uuid,
-            ${claveCompania(e.compania)}, ${e.ramo}, ${JSON.stringify(e.riesgo)}::jsonb, ${e.solicitadoPor})
-    returning id::text as id`
-  return { estado: 'encolado', trabajoId: filas[0].id }
+  // Sin duplicados (13/10/2026): mismo cliente + compañía + ramo + riesgo (igualdad `jsonb`) con un trabajo aún vivo →
+  // se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
+  // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
+  const compania = claveCompania(e.compania)
+  const riesgoJson = JSON.stringify(e.riesgo)
+  const cid = clienteId
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
+    const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date }[]>`
+      select t.id::text as id, t.estado, t.lease_hasta, t.intentos, to_jsonb(t)->>'modo' as modo, now() as ahora
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${e.correduriaId}::uuid and t.cliente_id = ${cid}::uuid
+        and t.compania = ${compania} and t.ramo = ${e.ramo}
+        and t.estado = any(${[...ESTADOS_DUPLICADO]}::text[])
+        and t.riesgo = ${riesgoJson}::jsonb
+        and t.oportunidad_id is not distinct from ${e.oportunidadId ?? null}::uuid
+        and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
+      order by t.created_at`
+    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo }, p.ahora, MAX_INTENTOS))
+    if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
+    const filas = await tx.$queryRaw<{ id: string }[]>`
+      insert into seguros.tarificacion_trabajos
+        (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)
+      values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${cid}::uuid, ${polizaId}::uuid,
+              ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor})
+      returning id::text as id`
+    return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
+  }, { timeout: 15000, maxWait: 10000 })
 }
 
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
@@ -104,7 +147,18 @@ type Reclamado = { id: string; intentos: number }
  * y la integración SIGUE autorizada. El cerrojo consultivo por compañía serializa a dos lanzadores
  * simultáneos (sin él, los dos verían 0 en curso y lanzarían 2 con la misma credencial).
  */
-export async function reclamarSiguiente(correduriaId: string, compania: string): Promise<Reclamado | null> {
+export type ReclamoCola = {
+  trabajo: Reclamado | null
+  /** Máquinas de Fly de los trabajos cuyo lease venció (se dieron por fallo): el llamante las destruye, fuera de la transacción. */
+  maquinasVencidas: string[]
+}
+
+/**
+ * 13/10/2026 (defecto 1): un `en_curso` con lease VENCIDO ya no ocupa hueco. Dentro del mismo cerrojo pasa a fallo de
+ * infra con `marcarFallo` (la política de siempre: `error_reintentable` si quedan intentos, si no `error_definitivo`;
+ * uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido.
+ */
+export async function reclamarSiguiente(correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']): Promise<ReclamoCola> {
   const clave = claveCompania(compania)
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${'tarificador:' + correduriaId + ':' + clave}))`
@@ -113,11 +167,20 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
       from seguros.companias_integracion
       where correduria_id = ${correduriaId}::uuid and compania = ${clave} and activo and modo = 'rpa_autorizada'`
     const max = cupo[0]?.max ?? null
-    if (max === null) return null
-    const vivos = await tx.$queryRaw<{ n: number }[]>`
-      select count(*)::int as n from seguros.tarificacion_trabajos
+    if (max === null) return { trabajo: null, maquinasVencidas: [] }
+    // La hora es la de la BD (la misma que compara `trabajoParaWorker`), no la del servidor de Vercel.
+    const enCurso = await tx.$queryRaw<{ id: string; intentos: number; lease_hasta: Date | null; fly_machine_id: string | null; ahora: Date }[]>`
+      select id::text as id, intentos, lease_hasta, fly_machine_id, now() as ahora from seguros.tarificacion_trabajos
       where correduria_id = ${correduriaId}::uuid and compania = ${clave} and estado = 'en_curso'`
-    if ((vivos[0]?.n ?? 0) >= max) return null
+    const ahora = enCurso[0]?.ahora ?? new Date()
+    const { vivos, vencidos } = repartirEnCurso(enCurso.map((f) => ({ ...f, leaseHasta: f.lease_hasta })), ahora)
+    const maquinasVencidas: string[] = []
+    for (const v of vencidos) {
+      // `marcarFallo` solo toca la fila si SIGUE `en_curso` (un resultado que llegó a la vez gana y esto no hace nada).
+      const f = await marcarFallo(tx, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+      if (f.tocada && v.fly_machine_id) maquinasVencidas.push(v.fly_machine_id)
+    }
+    if (huecosLibres(max, vivos.length) <= 0) return { trabajo: null, maquinasVencidas }
     const leaseHasta = new Date(Date.now() + LEASE_MS)
     const filas = await tx.$queryRaw<Reclamado[]>`
       update seguros.tarificacion_trabajos t
@@ -129,13 +192,17 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
           on ci.correduria_id = w.correduria_id and ci.compania = w.compania and ci.ramo = w.ramo
          and ci.activo and ci.modo = 'rpa_autorizada'
         where w.correduria_id = ${correduriaId}::uuid and w.compania = ${clave}
-          and w.estado = 'pendiente' and w.intentos < ${MAX_INTENTOS}
+          -- autorizado_emision: Alberto pulsó «Emitir»; la máquina 2 reanuda (no es un reintento: intentos a 0).
+          and w.estado in ('pendiente', 'autorizado_emision') and w.intentos < ${MAX_INTENTOS}
+          -- Solo los modos que se pueden lanzar ahora (13/10/2026): 'exploracion' únicamente con su interruptor
+          -- (modosReclamables); una exploración no ocupa máquina ni hueco mientras esté apagado.
+          and coalesce(to_jsonb(w)->>'modo', 'tarificar') = any(${[...modos]}::text[])
         order by w.created_at
         for update of w skip locked
         limit 1)
       returning t.id::text as id, t.intentos`
-    return filas[0] ?? null
-  })
+    return { trabajo: filas[0] ?? null, maquinasVencidas }
+  }, { timeout: 15000, maxWait: 10000 })
 }
 
 export type DepsLanzador = {
@@ -154,7 +221,9 @@ export async function lanzarPendientes(correduriaId: string, compania: string, d
   const c = configFly(deps.env)
   if (!c.ok) return { ...r, omitido: `fly_sin_configurar: ${c.faltan.join(', ')}` }
   for (let vuelta = 0; vuelta < 5; vuelta++) {
-    const t = await reclamarSiguiente(correduriaId, compania)
+    const { trabajo: t, maquinasVencidas } = await reclamarSiguiente(correduriaId, compania, modosReclamables(deps.env))
+    // Una máquina de lease vencido puede seguir viva con la credencial: se destruye ANTES de lanzar otra.
+    for (const m of maquinasVencidas) await destruirMaquina(c.cfg, m, deps.fetch)
     if (!t) break
     const res = await crearMaquina(c.cfg, t.id, deps.fetch)
     if (res.ok) {
@@ -198,16 +267,35 @@ async function destruirMaquina(cfg: ConfigFly, machineId: string, f: typeof fetc
 
 // ─── Lo que ve el worker ─────────────────────────────────────────────────────
 
-export type TrabajoParaWorker = { id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string }
+export type TrabajoParaWorker = {
+  id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string; modo: 'tarificar' | 'emision' | 'exploracion'
+  /** Solo en `modo = 'exploracion'`: la entrada cerrada y si va ligada a una petición real (la verdad: `cliente_id`). */
+  exploracion?: { entrada: string; conDatosReales: boolean }
+}
 
-/** Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. */
-export async function trabajoParaWorker(id: string): Promise<TrabajoParaWorker | null> {
-  const filas = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date }[]>`
-    select id::text as id, compania, ramo, riesgo, lease_hasta
-    from seguros.tarificacion_trabajos
-    where id = ${id}::uuid and estado = 'en_curso' and lease_hasta > now()`
+/**
+ * Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb
+ * (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo añade la ruta (`emisionParaWorker`).
+ * `modosWorker`: lo que la imagen declara saber hacer (cabecera `X-Tarificador-Modos`); una exploración solo se sirve a
+ * quien la declara, y con su entrada (sin cabecera de exploración legible → no se sirve).
+ */
+export async function trabajoParaWorker(id: string, modosWorker: readonly string[] = ['tarificar', 'emision']): Promise<TrabajoParaWorker | null> {
+  const filas = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
+    select t.id::text as id, t.compania, t.ramo, t.riesgo, t.lease_hasta, to_jsonb(t)->>'modo' as modo, (t.cliente_id is not null) as con_cliente
+    from seguros.tarificacion_trabajos t
+    where t.id = ${id}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
   const f = filas[0]
-  return f ? { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString() } : null
+  // Un modo que el worker no sabe ejecutar NO se sirve: una imagen anterior a la fase B trataría todo lo que no es
+  // `emision` como `tarificar` (`modoParaWorker`, fail-closed).
+  const modo = f ? modoParaWorker(f.modo, modosWorker) : null
+  if (!f || !modo) return null
+  const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
+  if (modo !== 'exploracion') return base
+  const x = await prisma.$queryRaw<{ entrada: string }[]>`
+    select e.entrada from seguros.tarificador_exploraciones e
+    join seguros.tarificacion_trabajos t on t.id = e.trabajo_id and t.correduria_id = e.correduria_id
+    where e.trabajo_id = ${id}::uuid and e.cerrada_at is null`
+  return x[0] ? { ...base, exploracion: { entrada: x[0].entrada, conDatosReales: f.con_cliente } } : null
 }
 
 // ─── Resultado ───────────────────────────────────────────────────────────────
@@ -215,12 +303,13 @@ export async function trabajoParaWorker(id: string): Promise<TrabajoParaWorker |
 type FilaTrabajo = {
   id: string
   correduria_id: string
-  cliente_id: string
+  /** NULL solo en una exploración SINTÉTICA (2026-10-13_tarificador_explorador.sql). */
+  cliente_id: string | null
   poliza_id: string | null
   oportunidad_id: string | null
   compania: string
   ramo: string
-  riesgo: RiesgoComunidad
+  riesgo: RiesgoComunidad | FormularioAuto
   estado: string
   intentos: number
   solicitado_por: string
@@ -237,18 +326,43 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
   const conBot = await hayBotVersion()
   type Interno = { res: ResultadoRegistro; traza: { t: FilaTrabajo; captura: 'con_captura' | null } | null }
   const interno: Interno = await prisma.$transaction(async (tx) => {
-    const filas = await tx.$queryRaw<FilaTrabajo[]>`
-      select id::text as id, correduria_id::text as correduria_id, cliente_id::text as cliente_id,
-             poliza_id::text as poliza_id, oportunidad_id::text as oportunidad_id, compania, ramo, riesgo,
-             estado, intentos, solicitado_por
-      from seguros.tarificacion_trabajos where id = ${r.trabajoId}::uuid for update`
+    const filas = await tx.$queryRaw<(FilaTrabajo & { modo: string | null })[]>`
+      select w.id::text as id, w.correduria_id::text as correduria_id, w.cliente_id::text as cliente_id,
+             w.poliza_id::text as poliza_id, w.oportunidad_id::text as oportunidad_id, w.compania, w.ramo, w.riesgo,
+             w.estado, w.intentos, w.solicitado_por, to_jsonb(w)->>'modo' as modo
+      from seguros.tarificacion_trabajos w where w.id = ${r.trabajoId}::uuid for update`
     const t = filas[0]
     if (!t) return { res: { estado: 'no_encontrado' as const }, traza: null }
+    // Un trabajo de EMISIÓN no devuelve ofertas por aquí: su resultado va por /api/tarificador/emision/resultado.
+    if (t.modo === 'emision' && r.tipo !== 'error') return { res: { estado: 'conflicto' as const, motivo: 'trabajo de emisión: usa /api/tarificador/emision/resultado' }, traza: null }
+    // EXPLORACIÓN (13/10/2026): termina `explorado` (el mapa ya está en su cabecera) o con error; nunca con ofertas. Y al
+    // revés: solo una exploración puede terminar `explorado`.
+    const deExploracion = t.modo === 'exploracion'
+    if (deExploracion && r.tipo === 'ok') return { res: { estado: 'conflicto' as const, motivo: 'trabajo de exploración: no devuelve ofertas' }, traza: null }
+    if (!deExploracion && r.tipo === 'explorado') return { res: { estado: 'conflicto' as const, motivo: 'solo una exploración termina «explorado»' }, traza: null }
     // Un resultado tardío (el barrido ya dio el lease por vencido) NO pisa lo decidido.
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
+    if (r.tipo === 'explorado') {
+      // La cabecera DEBE estar cerrada (el cierre guarda el mapa): si no, no es un `ok` sino un error con motivo claro.
+      const cab = await tx.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${t.id}::uuid`
+      if (!exploradoValido(cab[0]?.cerrada)) {
+        const { estado } = await marcarFallo(tx, t.id, t.intentos, { tipo: 'portal', mensaje: 'exploracion_sin_cierre: el worker informó «explorado» pero la cabecera no está cerrada (el mapa no se guardó)', url: null }, null)
+        return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: null } }
+      }
+      // Sin tarificación (el CHECK `trabajo_ok_con_tarificacion` lo admite solo en exploración). El motivo de fin, en `error`
+      // NO: va en la cabecera de la exploración (`motivo_fin`, lo escribió el cierre).
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set estado = 'ok', lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
+        where id = ${t.id}::uuid and estado = 'en_curso'`
+      return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok' }, traza: { t, captura: null } }
+    }
+
     if (r.tipo === 'error') {
-      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, conBot ? r.botVersion : null, conBot)
+      // Una exploración no guarda captura ni HTML como documento (puede no tener cliente y no hacen falta para el mapa).
+      const evidencia = deExploracion ? null : { trabajo: t, captura: r.captura, html: r.html }
+      const { estado } = await marcarFallo(tx, t.id, t.intentos, r.error, evidencia, conBot ? r.botVersion : null, conBot)
       return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
@@ -273,6 +387,12 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     }
     return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
+  // APRENDER (13/10/2026): un `ok` con tarificación que llevaba una versión AUTOMÁTICA (IA o memoria) la confirma en
+  // `seguros.tarificador_elecciones`. Fuera de la transacción y sin lanzar: el resultado jamás depende de la memoria.
+  if (interno.res.estado === 'registrado' && interno.res.estadoTrabajo === 'ok' && interno.res.tarificacionId && interno.traza) {
+    const aprender = memoriaTrasExito(interno.traza.t)
+    if (aprender) await guardarMemoriaVersion(aprender.k, { codigo: aprender.codigo, etiqueta: aprender.etiqueta, origen: 'ia' })
+  }
   if (interno.traza && (await hayPasos())) {
     try {
       await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
@@ -286,6 +406,14 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
   const rg = t.riesgo
+  // La columna `ramo` del trabajo manda: si el JSON del riesgo dice otra cosa, no se guarda nada con columnas equivocadas.
+  if (rg.ramo !== t.ramo) throw new Error(`tarificador: el riesgo (${String(rg.ramo)}) no casa con el ramo del trabajo (${t.ramo})`)
+  // Columnas planas de la tarificación: las de un edificio solo existen en Comunidades; un vehículo (Moto) solo aporta el CP.
+  // `null` = no consta (≠ 0): nunca se inventa un metro cuadrado ni un capital para una moto.
+  const col =
+    rg.ramo === 'comunidades'
+      ? { fechaEfecto: rg.fechaEfecto ?? null, codigoPostal: rg.direccion?.codigoPostal ?? null, m2: rg.m2Construidos ?? null, anioConstruccion: rg.anioConstruccion ?? null, capitalContinente: rg.capitalContinente ?? null, capitalContenido: rg.capitalContenido ?? null }
+      : { fechaEfecto: null, codigoPostal: rg.codigoPostal, m2: null, anioConstruccion: null, capitalContinente: null, capitalContenido: null }
   const conDocs = ofertas.map((o) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
   // ADITIVO (07/10/2026): el PDF del proyecto de la compañía (`seguros.documentos`), sin columna nueva: va en el
   // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).
@@ -300,9 +428,9 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
     ) values (
       ${t.correduria_id}::uuid, null, false, null, 'rpa',
       ${t.ramo}, 'corredor', ${t.poliza_id}::uuid, ${t.cliente_id}::uuid, ${t.oportunidad_id}::uuid,
-      ${rg.fechaEfecto ?? null}::date, ${JSON.stringify(rg)}::jsonb,
-      ${rg.direccion?.codigoPostal ?? null}, ${rg.m2Construidos ?? null}::int, ${rg.anioConstruccion ?? null}::int,
-      ${rg.capitalContinente ?? null}::numeric, ${rg.capitalContenido ?? null}::numeric,
+      ${col.fechaEfecto}::date, ${JSON.stringify(rg)}::jsonb,
+      ${col.codigoPostal}, ${col.m2}::int, ${col.anioConstruccion}::int,
+      ${col.capitalContinente}::numeric, ${col.capitalContenido}::numeric,
       ${t.solicitado_por}, ${JSON.stringify(respuesta)}::jsonb, '[]'::jsonb
     ) returning id::text as id`
   const id = filas[0]?.id
@@ -373,8 +501,30 @@ async function marcarFallo(
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
   botVersion: string | null = null,
   conBotVersion = false,
-): Promise<string> {
-  const estado = estadoTrasError(error.tipo, intentos)
+): Promise<{ estado: string; tocada: boolean }> {
+  // EMISIÓN (10/10/2026): nunca se reintenta sola (tras el clic, el estado en la compañía es incierto) → requiere_humano,
+  // con tipo `emision` (la bandeja no la deja reintentar) y el aviso a Alberto rearmado.
+  const modoFila = await db.$queryRaw<{ modo: string | null }[]>`select to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t where t.id = ${id}::uuid`
+  const deEmision = modoFila[0]?.modo === 'emision'
+  // Si el token YA se canjeó (autorización consumida sin desenlace), el clic pudo salir: INCIERTO, y la autorización queda
+  // marcada `incierto` (bloquea pedir otra emisión del presupuesto hasta que una persona lo resuelva mirando ePAC).
+  let incierta = false
+  let autorizacionIncierta: string | null = null
+  if (deEmision) {
+    const aut = await db.$queryRaw<{ id: string; consumido_at: Date | null; resultado: string | null }[]>`
+      select a.id::text as id, a.consumido_at, a.resultado from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = ${id}::uuid`
+    const a = aut[0]
+    incierta = autorizacionSinResolver(a ? { consumidoAt: a.consumido_at, resultado: a.resultado } : null)
+    autorizacionIncierta = incierta ? a!.id : null
+    const prefijo = incierta ? `${MENSAJE_EMISION_INCIERTA} Detalle: ` : ''
+    error = { ...error, tipo: 'emision', mensaje: `${prefijo}[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
+  }
+  const deExploracion = modoFila[0]?.modo === 'exploracion'
+  let estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
+  if (deExploracion) {
+    const cab = await db.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${id}::uuid`
+    estado = estadoFalloExploracion(estado, cab[0]?.cerrada === true)
+  }
   let capturaId: string | null = null
   let htmlId: string | null = null
   if (evidencia?.captura) {
@@ -383,9 +533,11 @@ async function marcarFallo(
   if (evidencia?.html) {
     htmlId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.html`, mime: 'text/html', contenido: Buffer.from(evidencia.html, 'utf8'), notas: `HTML (redactado) del fallo del tarificador RPA (${error.tipo})` })
   }
+  // `...error` lleva también los accesorios ya validados del cable (`opcionesVersion`, `inventarioDom`): van al jsonb.
   const err = JSON.stringify({ ...error, html_documento_id: htmlId, en: new Date().toISOString() })
+  let filasTocadas: number
   if (conBotVersion) {
-    await db.$executeRaw`
+    filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
@@ -393,20 +545,33 @@ async function marcarFallo(
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   } else {
-    await db.$executeRaw`
+    filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   }
-  return estado
+  const tocada = filasTocadas > 0
+  // Una exploración que ya no se reintenta cierra su cabecera con estado de error (`descartado` si no hay mapa).
+  if (tocada && deExploracion && cierraCabeceraTrasFallo(estado)) {
+    await db.$executeRaw`
+      update seguros.tarificador_exploraciones
+      set cerrada_at = now(), estado_mapa = case when mapa is null then 'descartado' else estado_mapa end,
+          motivo_fin = coalesce(motivo_fin, 'error_trabajo'), updated_at = now()
+      where trabajo_id = ${id}::uuid and cerrada_at is null`
+  }
+  // Los efectos secundarios SOLO si el UPDATE tocó la fila (si un resultado llegó a la vez y ganó, esto no hace nada).
+  if (tocada && autorizacionIncierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${autorizacionIncierta}::uuid and resultado is null`
+  if (tocada && deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
+  return { estado, tocada }
 }
 
 // ─── Barrido (enganchable a un cron existente) ───────────────────────────────
 
 export type ResumenBarrido = {
   omitido?: string
+  emisionesCaducadas?: { solicitudes: number; autorizaciones: number }
   leasesVencidos: number
   reencolados: number
   cancelados: number
@@ -414,8 +579,8 @@ export type ResumenBarrido = {
 }
 
 /**
- * Barrido de la cola. NO tiene cron propio (no se añade a vercel.json): se llama desde uno de los
- * crons existentes de asegura cuando se encienda el canal. Hace, en orden:
+ * Barrido de la cola. Cron PROPIO cada 5 min (`/api/cron/tarificador-cola`, 13/10/2026) además del de
+ * renovaciones; y al encolar se lanza en el acto (`lanzarPendientes`). Hace, en orden:
  *   1. lease vencido (`en_curso` y `lease_hasta` pasado) → fallo de infra (reintentable una vez) y
  *      destruye la máquina si sigue viva;
  *   2. `error_reintentable` bajo el tope → `pendiente`;
@@ -431,10 +596,17 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
     where correduria_id = ${correduriaId}::uuid and estado = 'en_curso' and lease_hasta < now()`
   const fly = configFly(deps.env)
   for (const v of vencidos) {
-    await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+    const f = await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+    if (!f.tocada) continue // un resultado llegó a la vez y ganó: ni se cuenta ni se destruye la máquina
     if (fly.ok && v.fly_machine_id) await destruirMaquina(fly.cfg, v.fly_machine_id, deps.fetch)
     r.leasesVencidos++
   }
+
+  // Emisión: 24 h sin botón, o autorización caducada sin máquina → cancelado (nunca se emite tarde).
+  r.emisionesCaducadas = await caducarEmisiones(correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] caducar emisiones', e instanceof Error ? e.message.slice(0, 200) : e)
+    return { solicitudes: 0, autorizaciones: 0 }
+  })
 
   r.reencolados = await prisma.$executeRaw`
     update seguros.tarificacion_trabajos set estado = 'pendiente', updated_at = now()

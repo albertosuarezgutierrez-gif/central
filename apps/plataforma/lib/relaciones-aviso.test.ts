@@ -90,3 +90,14 @@ test('🚨 una env de correo que falta NO invita a reintentar; una avería del p
   assert.match(falta, /vercel/i, 'tiene que decir DÓNDE se arregla')
   assert.match(textoAviso({ estado: 'error_envio', motivo: 'x' }, 'Pablo'), /vuelve a intentarlo/i)
 })
+
+import { textoPolizasRelacion } from './relaciones-asegura.ts'
+
+test('texto de la fila de relación: solo tomadora no cambia; con «figura» se añade', () => {
+  assert.equal(textoPolizasRelacion(null, 3), 'pólizas sin contar')
+  assert.equal(textoPolizasRelacion(2, 0), '2 pólizas vivas')
+  assert.equal(textoPolizasRelacion(1, undefined), '1 póliza viva')
+  assert.equal(textoPolizasRelacion(0, null), '0 pólizas vivas')
+  assert.equal(textoPolizasRelacion(0, 1), '0 como tomadora · 1 donde figura')
+  assert.equal(textoPolizasRelacion(2, 3), '2 como tomadora · 3 donde figura')
+})

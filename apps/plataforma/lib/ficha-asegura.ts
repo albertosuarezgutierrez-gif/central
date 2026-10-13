@@ -52,6 +52,8 @@ export type ObjetoFicha = {
   ficha?: Array<{ etiqueta: string; valor: string }> | null
   /** 🔒 Solo operador (VIN). Nunca se reenvía al portal del cliente. */
   bastidor?: string | null
+  /** Dirección del riesgo en claro (hogar/comunidad/comercio). `null`/ausente = no se sabe. */
+  direccion?: string | null
 }
 
 /** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */
@@ -514,6 +516,7 @@ export function leerObjeto(v: unknown): ObjetoFicha | null {
     ficha: leerFichaObjeto(o.ficha),
     // 🔒 Solo operador (esta es su pantalla): el VIN sigue el mismo camino que la ficha.
     bastidor: cadena(o.bastidor),
+    direccion: cadena(o.direccion),
   }
 }
 

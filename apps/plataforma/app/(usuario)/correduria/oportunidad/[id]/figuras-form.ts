@@ -3,6 +3,7 @@
 // que la ficha no trae en forma de compañía: el estado civil (catálogo del vendor) y lo que falte.
 // PURO (sin React): lo comparten `AutoNuevo.tsx` y `MotoNuevo.tsx`, y lo cubre `figuras-form.test.ts`.
 
+import { esRolMultiple, maxDelRol, type RolFigura } from '@central/module-seguros'
 import type { RolExtra } from './variante'
 
 /** Los mínimos de una persona (propietario o conductor) cuando NO es el tomador. */
@@ -89,4 +90,55 @@ export function correccionesDeFiguras(
 export function modoPapel(rol: RolExtra, figuras: Partial<Record<RolExtra, string>>, conRiesgo: boolean): 'ficha' | 'riesgo' | 'libre' {
   if (figuras[rol]) return 'ficha'
   return conRiesgo ? 'riesgo' : 'libre'
+}
+
+// ─── Papeles de VARIAS personas (asegurados), 10/10/2026 ────────────────────
+// Salud/decesos: varios asegurados; hogar/vida/comercio: uno. Cada uno es una FICHA (cliente_id) y se agrupa por
+// ese id: dos personas que se llaman igual son dos; la misma ficha no sale dos veces. La cardinalidad la da
+// `cardinalidadesDelRamo` de `@central/module-seguros` (la misma que usa el puerto de asegura).
+
+/** Los papeles del riesgo que son de UNA persona (las tarjetas de siempre) y los de VARIAS (lista). */
+export function repartirRoles(roles: readonly RolFigura[]): { unicos: RolFigura[]; multiples: RolFigura[] } {
+  return { unicos: roles.filter((r) => !esRolMultiple(r)), multiples: roles.filter((r) => esRolMultiple(r)) }
+}
+
+/** Las fichas de un papel múltiple, una por `clienteId` (identidad), en el orden en que llegan. */
+export function personasDelRol<F extends { rol: RolFigura; clienteId: string }>(figuras: readonly F[], rol: RolFigura): F[] {
+  const vistos = new Set<string>()
+  const out: F[] = []
+  for (const f of figuras) {
+    if (f.rol !== rol || vistos.has(f.clienteId)) continue
+    vistos.add(f.clienteId)
+    out.push(f)
+  }
+  return out
+}
+
+/** A quién se puede añadir: las opciones que AÚN no están en el papel (por id, nunca por nombre). */
+export function opcionesSinPoner<O extends { clienteId: string }>(opciones: readonly O[], puestas: readonly { clienteId: string }[]): O[] {
+  const ya = new Set(puestas.map((p) => p.clienteId))
+  return opciones.filter((o) => !ya.has(o.clienteId))
+}
+
+/** ¿Cabe otro en el papel? El tope es el del ramo. */
+export function cabeOtro(ramo: string, rol: RolFigura, puestas: number): boolean {
+  return puestas < maxDelRol(ramo, rol)
+}
+
+/**
+ * Qué hace la pantalla con los papeles múltiples según asegura:
+ * - `disponible` → se puede añadir y quitar.
+ * - `sin_migracion` → «pendiente de migración» (sin botones: escribir fallaría).
+ * - `desconocido`, o un asegura que aún no lo dice (`undefined`/`null`) → «no se ha podido comprobar» (tampoco se
+ *   escribe: un dato que no se ha mirado no autoriza a ofrecer el botón).
+ */
+export function estadoBloqueMulti(v: unknown): { editable: true } | { editable: false; pendienteMigracion: boolean; texto: string } {
+  if (v === 'disponible') return { editable: true }
+  if (v === 'sin_migracion') {
+    return {
+      editable: false, pendienteMigracion: true,
+      texto: 'Pendiente de migración: los asegurados con ficha llegarán cuando se aplique la actualización de la base de datos. Mientras, siguen como hasta ahora en los datos del riesgo.',
+    }
+  }
+  return { editable: false, pendienteMigracion: false, texto: 'No se ha podido comprobar si los asegurados con ficha están disponibles. Recarga en un rato.' }
 }

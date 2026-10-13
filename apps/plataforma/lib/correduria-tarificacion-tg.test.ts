@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   aplicarSexoDeducido, avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, fechaFutura, huecosPendientes, leerEntrada,
-  textoPropuesta, ventaCruzada, type Resuelto,
+  KM_AUTO_POR_DEFECTO, textoPropuesta, ventaCruzada, type Resuelto,
 } from './correduria-tarificacion-tg.ts'
 
 const HOY = new Date('2026-09-28T10:00:00Z')
@@ -352,4 +352,14 @@ test('leerEntrada: oportunidadId opcional, y uno mal formado se DICE', () => {
   const mal = leerEntrada({ ramo: 'auto', clienteId: CID, oportunidadId: 'la-de-ayer' }, HOY)
   assert.equal(mal.entrada.oportunidadId, null)
   assert.ok(mal.errores.some((e) => e.startsWith('oportunidadId')))
+})
+
+test('km: sin cifra en coche van como SUPUESTO (resueltos.kmAnualesSupuestos), nunca como corrección; con cifra, dato', () => {
+  const sin = construirCuerpo({ ...BASE, ramo: 'auto', kmAnuales: null })
+  assert.equal(sin.resueltos.kmAnualesSupuestos, KM_AUTO_POR_DEFECTO)
+  assert.equal('kmAnuales' in sin.correcciones, false)
+  const con = construirCuerpo({ ...BASE, ramo: 'auto', kmAnuales: 10000 })
+  assert.equal(con.correcciones.kmAnuales, 10000, 'si el corredor dice 10.000, es dato')
+  assert.equal('kmAnualesSupuestos' in con.resueltos, false)
+  assert.equal('kmAnualesSupuestos' in construirCuerpo({ ...BASE, ramo: 'moto', kmAnuales: null }).resueltos, false)
 })

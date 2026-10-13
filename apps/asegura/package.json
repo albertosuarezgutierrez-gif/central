@@ -16,6 +16,7 @@
     "@central/core-email": "workspace:*",
     "@central/core-firma": "workspace:*",
     "@central/core-identity": "workspace:*",
+    "@central/core-telegram": "workspace:*",
     "@central/core-vehiculos": "workspace:*",
     "@central/module-seguros": "workspace:*",
     "@central/module-seguros-pii": "workspace:*",

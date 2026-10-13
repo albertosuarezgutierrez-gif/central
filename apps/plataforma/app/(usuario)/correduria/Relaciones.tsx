@@ -40,6 +40,7 @@ import {
   interpretarRelaciones,
   textoAviso,
   textoMotivoRelaciones,
+  textoPolizasRelacion,
   type AlcancePortal,
   type AutorizacionCartera,
   type TonoAcceso,
@@ -508,7 +509,7 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
               <span style={{ ...chip('info'), ...FILA }}><Ico i={Users} size={13} /> {r.tipo}</span>
               {/* null = asegura no las contó: no es «0 pólizas». */}
               <span style={{ color: 'var(--muted)' }}>
-                {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'}`}
+                {textoPolizasRelacion(r.polizasVivas, r.polizasFigura)}
               </span>
               <ResumenAcceso r={r} nombreFicha={nombreFicha} />
             </>

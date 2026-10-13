@@ -29,3 +29,16 @@ test('ningún fichero de asegura llama a aiComplete directo salvo lib/ia.ts', as
   for (const d of ['lib', 'app']) recorrer(join(raiz, d))
   assert.deepEqual(infractores, [], 'la IA de texto va por iaTexto() de lib/ia.ts, para que cuente en ai_usos y respete los topes')
 })
+
+test('iaTexto: un modelo explícito SIN pasarela no se llama (lanza antes de gastar fuera de ai_usos)', async () => {
+  const { iaTexto } = await import('./ia.ts')
+  const antes = { u: process.env.AI_GATEWAY_URL, s: process.env.AI_GATEWAY_SECRET }
+  delete process.env.AI_GATEWAY_URL
+  delete process.env.AI_GATEWAY_SECRET
+  try {
+    await assert.rejects(iaTexto('hola', { modeloOpenRouter: 'anthropic/claude-sonnet-4.5' }), /solo va por la pasarela/)
+  } finally {
+    if (antes.u !== undefined) process.env.AI_GATEWAY_URL = antes.u
+    if (antes.s !== undefined) process.env.AI_GATEWAY_SECRET = antes.s
+  }
+})

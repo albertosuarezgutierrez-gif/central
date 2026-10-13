@@ -152,7 +152,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
   }
 
   return (
-    <section style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0 }}>
+    <section id="datos-vehiculo" style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Datos del vehículo</div>
@@ -179,7 +179,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
             <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
               {!eligiendo ? (
                 <div>
-                  <button type="button" disabled={bloqueado} onClick={() => setEligiendo(true)} style={{ ...btnStyle(d.codigoVehiculo ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
+                  <button id="elegir-version-catalogo" type="button" disabled={bloqueado} onClick={() => setEligiendo(true)} style={{ ...btnStyle(d.codigoVehiculo ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
                     {d.codigoVehiculo ? 'Cambiar versión del catálogo' : 'Elegir versión del catálogo'}
                   </button>
                 </div>

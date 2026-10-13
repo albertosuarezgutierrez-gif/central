@@ -165,13 +165,64 @@ export const TEXTO_REPRESENTACION_V2_TEXTO = [
 ].join('\n')
 
 /**
+ * 🚨 **TRES NIVELES (12/10/2026): Consulta · Gestión · Total.** Alberto los quiere
+ * como presets y con lo que hace cada uno dicho en el texto. Versiones NUEVAS, y
+ * las de antes no se tocan: cada fila sigue sellada con lo que se aceptó ENTONCES.
+ *
+ *   - Gestión de una persona: texto propio (no tenía ninguno).
+ *   - Total de una persona: v2, que dice con todas las letras que podrá añadir,
+ *     corregir y quitar las pólizas que el titular añadió en su portal. El v1
+ *     decía «hacer gestiones y peticiones sobre mis pólizas»; si eso cubre
+ *     editar las añadidas a mano es una pregunta abierta (ver informe), y para
+ *     las concesiones nuevas deja de serlo.
+ *   - Sociedad: v3, que nombra Gestión.
+ */
+export const TEXTO_AUTORIZACION_GESTION_V1 = 'v1-2026-10-12-gestion'
+
+/** El texto exacto de `TEXTO_AUTORIZACION_GESTION_V1`. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_AUTORIZACION_GESTION = [
+  'Autorizo a esta persona a GESTIONAR los seguros que tengo con Grupo ASegura.',
+  'Verá qué está asegurado y lo que pago, y eso incluye la dirección del inmueble en un seguro de hogar, y los documentos de mis pólizas.',
+  'Podrá dar partes de siniestro en mi nombre y aportar documentos a mis pólizas.',
+  'No verá mis datos personales (DNI, cuenta bancaria), no podrá añadir, corregir ni quitar las pólizas que yo añada en mi portal, y no podrá autorizar a nadie más.',
+  'La autorización no caduca: dura hasta que yo, o esa persona, la revoquemos desde el portal. Una vez al año se me preguntará si la mantengo.',
+  'Quedará registrado qué días ha consultado mis seguros, y ese registro lo veo yo.',
+].join('\n')
+
+export const TEXTO_AUTORIZACION_TOTAL_V2 = 'v2-2026-10-12-total'
+
+/** El texto exacto de `TEXTO_AUTORIZACION_TOTAL_V2`. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_AUTORIZACION_TOTAL_V2_TEXTO = [
+  'Autorizo a esta persona a ACCESO TOTAL a los seguros que tengo con Grupo ASegura.',
+  'Verá lo mismo que yo: mis seguros, lo que pago, mis documentos y también mis datos personales, incluidos mi DNI y mi cuenta bancaria.',
+  'Podrá actuar en mi nombre ante la correduría: dar partes de siniestro y hacer gestiones y peticiones sobre mis pólizas.',
+  'Podrá también añadir, corregir y quitar las pólizas que yo añada en mi portal. Las pólizas que lleva la correduría no las puede cambiar nadie desde el portal.',
+  'No podrá autorizar a nadie más.',
+  'La autorización no caduca: dura hasta que yo, o esa persona, la revoquemos desde el portal. Una vez al año se me preguntará si la mantengo.',
+  'Quedará registrado qué días ha consultado mis seguros, y ese registro lo veo yo.',
+].join('\n')
+
+export const TEXTO_REPRESENTACION_V3 = 'v3-2026-10-12-representacion'
+
+/** El texto exacto de `TEXTO_REPRESENTACION_V3`. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_REPRESENTACION_V3_TEXTO = [
+  'Autorizo a esta persona a actuar por la sociedad ante Grupo ASegura, con el título que se indica.',
+  'Verá los seguros de la sociedad, lo que paga, su CIF y la cuenta bancaria de los recibos: son datos de la empresa, no de una persona.',
+  'Con «Gestión» podrá además dar partes, aportar documentos y hacer gestiones en nombre de la sociedad; con «Total», también añadir, corregir y quitar las pólizas que la sociedad añada en su portal. Lo que declare obliga a la sociedad frente a la compañía.',
+  'No puede autorizar a nadie más: ampliar el círculo lo decide la sociedad.',
+  'La autorización no caduca: dura hasta que la revoquemos desde el portal. Una vez al año se preguntará si se mantiene.',
+  'Quedará registrado qué días ha consultado los seguros de la sociedad, y ese registro lo veo yo.',
+].join('\n')
+
+/**
  * Qué texto (versión y contenido) corresponde a una concesión. ÚNICA fuente: la
  * usan el alta directa, las invitaciones y las peticiones, para que ninguna
  * selle una fila con un texto que dice otra cosa de lo concedido.
  */
 export function textoDeConcesion(alcance: Alcance, tipo: TipoOtorgante): { version: string; texto: string } {
-  if (tipo === 'juridica') return { version: TEXTO_REPRESENTACION_V2, texto: TEXTO_REPRESENTACION_V2_TEXTO }
-  if (alcance === 'total') return { version: TEXTO_AUTORIZACION_TOTAL_V1, texto: TEXTO_AUTORIZACION_TOTAL }
+  if (tipo === 'juridica') return { version: TEXTO_REPRESENTACION_V3, texto: TEXTO_REPRESENTACION_V3_TEXTO }
+  if (alcance === 'total') return { version: TEXTO_AUTORIZACION_TOTAL_V2, texto: TEXTO_AUTORIZACION_TOTAL_V2_TEXTO }
+  if (alcance === 'gestion') return { version: TEXTO_AUTORIZACION_GESTION_V1, texto: TEXTO_AUTORIZACION_GESTION }
   return { version: TEXTO_AUTORIZACION_V3, texto: TEXTO_AUTORIZACION_V3_TEXTO }
 }
 
@@ -859,7 +910,7 @@ export async function conceder(datos: {
       // delegue una persona es dar un poder, y un tick en una pantalla no lo es
       // —si María declara mal, la compañía discute la cobertura (art. 16 LCS)
       // sin que nadie pueda decir quién firmó.
-      mensaje: 'Ese permiso ya no se concede. Elige «Solo ver» o «Acceso total».',
+      mensaje: 'Ese permiso ya no se concede. Elige «Consulta», «Gestión» o «Total».',
     }
   }
 
@@ -873,7 +924,10 @@ export async function conceder(datos: {
   // devolvería un error de Postgres en vez de decir qué falta: si quien
   // representa da un parte, la que queda obligada es la sociedad, y «alguien de
   // la empresa» no es un título que oponerle a la compañía.
-  if ((esApoderamiento(alcance) || (alcance === 'total' && tipoOtorgante === 'juridica')) && titulo === null) {
+  if (
+    (esApoderamiento(alcance) || ((alcance === 'total' || alcance === 'gestion') && tipoOtorgante === 'juridica')) &&
+    titulo === null
+  ) {
     return {
       ok: false,
       error: 'titulo_requerido',
@@ -1050,6 +1104,35 @@ export async function ampliarATotal(datos: {
   ip: string | null
   userAgent: string | null
 }): Promise<ResultadoConceder> {
+  return ampliarAcceso({ ...datos, a: 'total' })
+}
+
+/**
+ * Lo que puede subir un acceso ya aceptado. «Gestión» (12/10/2026) va por el
+ * MISMO camino que «Total» y por la misma razón: actuar en nombre de otro (dar
+ * partes) no se reparte por un enlace de correo. Invitaciones y peticiones se
+ * quedan en Consulta.
+ */
+const RANGO_AMPLIABLE: Record<'gestion' | 'total', number> = { gestion: 1, total: 2 }
+function rangoDe(a: string): number {
+  return a === 'total' ? 2 : a === 'gestion' ? 1 : 0
+}
+
+/** «Pasar a gestión» o «Pasar a acceso total» sobre un acceso que YA existe. */
+export async function ampliarAcceso(datos: {
+  identidadId: string
+  autorizacionId: string
+  a: 'gestion' | 'total'
+  tituloRepresentacion?: unknown
+  ip: string | null
+  userAgent: string | null
+}): Promise<ResultadoConceder> {
+  // Fail-closed: solo los dos destinos conocidos. Cualquier otro valor no amplía nada.
+  if (datos.a !== 'gestion' && datos.a !== 'total') {
+    return { ok: false, error: 'datos_invalidos', mensaje: 'Ese permiso no existe.' }
+  }
+  const destino = datos.a
+  const nombreDestino = destino === 'total' ? 'acceso total' : 'gestión'
   if (!UUID.test(datos.autorizacionId)) {
     return { ok: false, error: 'datos_invalidos', mensaje: 'No hemos encontrado ese acceso.' }
   }
@@ -1090,8 +1173,13 @@ export async function ampliarATotal(datos: {
       mensaje: 'Solo se puede ampliar un acceso que la otra persona ya ha aceptado y sigue en vigor.',
     }
   }
-  if (base.alcance === 'total') {
-    return { ok: false, error: 'ya_concedida', mensaje: 'Esa persona ya tiene acceso total.' }
+  // Solo se SUBE: ampliar a lo que ya tiene (o a menos) no crea nada.
+  if (rangoDe(base.alcance) >= RANGO_AMPLIABLE[destino]) {
+    return {
+      ok: false,
+      error: 'ya_concedida',
+      mensaje: base.alcance === 'total' ? 'Esa persona ya tiene acceso total.' : `Esa persona ya tiene ${nombreDestino}.`,
+    }
   }
 
   const ficha = await prisma.cliente.findFirst({
@@ -1113,15 +1201,15 @@ export async function ampliarATotal(datos: {
     }
   }
 
-  // ¿Ya hay un `total` vivo (pendiente o aceptado) para ese mismo destinatario y
-  // esa misma póliza? Las dos ramas del destinatario, con la póliza en la clave.
+  // ¿Ya hay uno vivo (pendiente o aceptado) de ese mismo nivel para ese mismo
+  // destinatario y esa misma póliza? Las dos ramas del destinatario, con la póliza en la clave.
   const previa = await prisma.portalAutorizacion.findFirst({
     where: {
       otorganteClienteId: base.otorganteClienteId,
       autorizadoClienteId: base.autorizadoClienteId,
       autorizadoIdentidadId: base.autorizadoIdentidadId,
       polizaId: base.polizaId,
-      alcance: 'total',
+      alcance: destino,
       revocadoEn: null,
     },
     select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
@@ -1130,7 +1218,7 @@ export async function ampliarATotal(datos: {
     return {
       ok: false,
       error: 'ya_concedida',
-      mensaje: 'Ya le has dado acceso total; falta que lo acepte en su portal.',
+      mensaje: `Ya le has dado ${nombreDestino}; falta que lo acepte en su portal.`,
     }
   }
 
@@ -1159,7 +1247,7 @@ export async function ampliarATotal(datos: {
       return {
         ok: false,
         error: 'sin_relacion',
-        mensaje: `No consta ninguna relación entre las dos fichas (o consta como «${SIN_VINCULO}»). Habla con tu correduría para que la registre antes de dar acceso total.`,
+        mensaje: `No consta ninguna relación entre las dos fichas (o consta como «${SIN_VINCULO}»). Habla con tu correduría para que la registre antes de dar ${nombreDestino}.`,
       }
     }
   }
@@ -1183,12 +1271,12 @@ export async function ampliarATotal(datos: {
     autorizadoClienteId: base.autorizadoClienteId,
     autorizadoIdentidadId: base.autorizadoIdentidadId,
     polizaId: base.polizaId,
-    alcance: 'total' as const,
+    alcance: destino,
     tituloRepresentacion: titulo,
     origen: 'portal',
     otorgadoPorIdentidadId: datos.identidadId,
     caducaEn: null,
-    versionTexto: textoDeConcesion('total', tipo).version,
+    versionTexto: textoDeConcesion(destino, tipo).version,
     ip: datos.ip,
     userAgent: datos.userAgent,
   }
@@ -1214,7 +1302,7 @@ export async function ampliarATotal(datos: {
   } catch (e) {
     // Doble clic: la segunda choca con el índice único. Es «ya lo has dado», no un 500.
     if (typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002') {
-      return { ok: false, error: 'ya_concedida', mensaje: 'Ya le has dado acceso total; falta que lo acepte en su portal.' }
+      return { ok: false, error: 'ya_concedida', mensaje: `Ya le has dado ${nombreDestino}; falta que lo acepte en su portal.` }
     }
     throw e
   }

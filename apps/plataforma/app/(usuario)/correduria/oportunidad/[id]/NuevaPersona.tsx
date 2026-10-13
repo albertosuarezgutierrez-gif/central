@@ -4,10 +4,12 @@
 // solo paso y sin salir de la pantalla. Pide lo que la compañía exige y nada más. Si el DNI ya existe,
 // asegura usa esa ficha en vez de crear otra (misma persona = misma ficha). Si va a CONDUCIR un coche o
 // una moto, pide también su carné (fecha, y tipo en moto): Avant2 no da precio sin él.
+// Un ASEGURADO (papel de varias personas, 10/10/2026) va con alta LIGERA: nombre, nacimiento y sexo; DNI opcional
+// (se pide al emitir). Sin DNI, asegura abre SIEMPRE una ficha nueva: nunca reutiliza otra por el nombre.
 
 import { useState } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
-import { TIPOS_RELACION, SIN_VINCULO, type RolFigura } from '@central/module-seguros'
+import { TIPOS_RELACION, SIN_VINCULO, esRolMultiple, type RolFigura } from '@central/module-seguros'
 import { ROTULO_ROL } from '@/lib/riesgo-asegura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
 
@@ -48,22 +50,29 @@ export default function NuevaPersona({ rol, ramo, conduce, oportunidadId, client
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }))
 
   const moto = ramo === 'moto'
-  const falta =
-    !f.nombre.trim() || !f.apellidos.trim() || !f.dni.trim() || !f.fechaNacimiento || !f.telefono.trim() ||
-    (f.sexo !== 'hombre' && f.sexo !== 'mujer') || !f.tipoRelacion ||
-    (conduce && (!f.fechaCarnet || (moto && !f.tipoCarnet)))
+  const ligera = esRolMultiple(rol)
+  const falta = ligera
+    ? !f.nombre.trim() || !f.fechaNacimiento || (f.sexo !== 'hombre' && f.sexo !== 'mujer') || !f.tipoRelacion
+    : !f.nombre.trim() || !f.apellidos.trim() || !f.dni.trim() || !f.fechaNacimiento || !f.telefono.trim() ||
+      (f.sexo !== 'hombre' && f.sexo !== 'mujer') || !f.tipoRelacion ||
+      (conduce && (!f.fechaCarnet || (moto && !f.tipoCarnet)))
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     if (falta || enviando) return
     setEnviando(true)
     setError(null)
-    const persona: Record<string, unknown> = {
+    const persona: Record<string, unknown> = ligera
+      ? {
+          nombre: f.nombre.trim(), apellidos: f.apellidos.trim(), fechaNacimiento: f.fechaNacimiento, sexo: f.sexo,
+          ...(f.dni.trim() ? { dni: f.dni.trim().toUpperCase() } : {}),
+        }
+      : {
       nombre: f.nombre.trim(), apellidos: f.apellidos.trim(), dni: f.dni.trim().toUpperCase(),
       fechaNacimiento: f.fechaNacimiento, telefono: f.telefono.trim(), sexo: f.sexo,
       ...(f.email.trim() ? { email: f.email.trim() } : {}),
       ...(conduce ? { fechaCarnet: f.fechaCarnet, tipoCarnet: moto ? f.tipoCarnet : 'B' } : {}),
-    }
+        }
     const r = await llamarFiguras('POST', { accion: 'nueva', oportunidadId, rol, tipoRelacion: f.tipoRelacion, persona })
     setEnviando(false)
     if (!r.ok) {
@@ -75,7 +84,7 @@ export default function NuevaPersona({ rol, ramo, conduce, oportunidadId, client
     const nombre = `${f.nombre.trim()} ${f.apellidos.trim()}`
     // El carné tiene su propio desenlace: la persona puede estar dada de alta y el carné no.
     const carnet = r.json?.carnet
-    const notaCarnet = !conduce
+    const notaCarnet = ligera || !conduce
       ? ''
       : carnet === 'guardado'
         ? ' Su carné queda en su ficha.'
@@ -86,7 +95,7 @@ export default function NuevaPersona({ rol, ramo, conduce, oportunidadId, client
             : ' ⚠️ No consta que se haya guardado el carné: revísalo en su ficha.'
     onHecho((existente
       ? `Ese DNI ya tenía ficha: se ha usado la de ${nombre} como ${ROTULO_ROL[rol].toLowerCase()}.`
-      : `${nombre} dado de alta y puesto como ${ROTULO_ROL[rol].toLowerCase()}.`) + notaCarnet)
+      : `${nombre} dado de alta y ${ligera ? 'añadido' : 'puesto'} como ${ROTULO_ROL[rol].toLowerCase()}.`) + notaCarnet)
   }
 
   return (
@@ -95,14 +104,15 @@ export default function NuevaPersona({ rol, ramo, conduce, oportunidadId, client
         <div style={{ fontSize: 14, fontWeight: 600 }}>Nueva persona · {ROTULO_ROL[rol]}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
           Solo la da de alta y la pone en este riesgo: todavía no se pide precio y no cuesta nada.
+          {ligera && ' Basta con nombre, fecha de nacimiento y sexo: el DNI se pide al emitir. Sin DNI se abre una ficha nueva: si ya la tiene, añádela desde la lista.'}
         </div>
       </div>
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))' }}>
         <label style={etiqueta}>Nombre<input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} style={campo} autoComplete="off" /></label>
-        <label style={etiqueta}>Apellidos<input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={campo} autoComplete="off" /></label>
-        <label style={etiqueta}>DNI/NIE<input value={f.dni} onChange={(e) => set('dni', e.target.value)} style={campo} autoComplete="off" /></label>
+        <label style={etiqueta}>{ligera ? 'Apellidos (opcional)' : 'Apellidos'}<input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={campo} autoComplete="off" /></label>
+        <label style={etiqueta}>{ligera ? 'DNI/NIE (opcional)' : 'DNI/NIE'}<input value={f.dni} onChange={(e) => set('dni', e.target.value)} style={campo} autoComplete="off" /></label>
         <label style={etiqueta}>Fecha de nacimiento<input type="date" value={f.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={campo} /></label>
-        <label style={etiqueta}>Móvil<input type="tel" inputMode="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} style={campo} autoComplete="off" /></label>
+        {!ligera && <label style={etiqueta}>Móvil<input type="tel" inputMode="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} style={campo} autoComplete="off" /></label>}
         <label style={etiqueta}>
           Sexo
           <select value={f.sexo} onChange={(e) => set('sexo', e.target.value as Form['sexo'])} style={campo}>
@@ -118,7 +128,7 @@ export default function NuevaPersona({ rol, ramo, conduce, oportunidadId, client
             {RELACIONES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
-        <label style={etiqueta}>Correo (opcional)<input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} style={campo} autoComplete="off" /></label>
+        {!ligera && <label style={etiqueta}>Correo (opcional)<input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} style={campo} autoComplete="off" /></label>}
         {conduce && (
           <label style={etiqueta}>
             Fecha del carné
@@ -147,7 +157,7 @@ export default function NuevaPersona({ rol, ramo, conduce, oportunidadId, client
         </button>
         <button type="button" onClick={onCerrar} style={{ ...btnStyle('secundario'), minHeight: 44 }}>Cancelar</button>
       </div>
-      {falta && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Rellena todo salvo el correo para poder guardar.</p>}
+      {falta && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>{ligera ? 'Rellena nombre, fecha de nacimiento, sexo y relación para poder guardar.' : 'Rellena todo salvo el correo para poder guardar.'}</p>}
     </form>
   )
 }

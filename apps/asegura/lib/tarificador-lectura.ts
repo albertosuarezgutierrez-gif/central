@@ -1,6 +1,7 @@
 // Lectura (solo SELECT) de un trabajo del tarificador RPA para el puerto de operador. Todo por
 // `correduria_id`. La proyección pública vive en `tarificador-lectura-reglas.ts`.
 import { prisma } from './tenant'
+import { RAMOS_TARIFICABLES_RPA } from './tarificador-reglas'
 import { documentoDePdf, proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
 
 /**
@@ -13,6 +14,7 @@ export async function leerUltimoRiesgo(correduriaId: string, clienteId: string, 
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
       and lower(t.compania) = ${compania} and t.ramo = ${ramo}
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
     order by t.created_at desc
     limit 1`
   return proyectarUltimoRiesgo(f[0] ?? null)
@@ -46,4 +48,31 @@ export async function leerPdfTrabajo(
     where id = ${docId}::uuid and correduria_id = ${correduriaId}::uuid and mime_type = 'application/pdf'`
   if (!d[0]?.contenido) return null
   return { nombre: d[0].nombre_fichero ?? `oferta-${indice + 1}.pdf`, contenido: Buffer.from(d[0].contenido) }
+}
+
+// ─── Integraciones activas y «probar» (13/10/2026) ───────────────────────────
+
+export type IntegracionActiva = { compania: string; ramo: string }
+
+/**
+ * Compañía+ramo que el bot PUEDE tarificar hoy: fila activa en `rpa_autorizada` (mismo cerrojo que `encolarTrabajo`) Y de un
+ * ramo con adaptador (`RAMOS_TARIFICABLES_RPA`): la fila `allianz/hogar` solo habilita la EXPLORACIÓN. Solo SELECT.
+ */
+export async function leerIntegracionesActivas(correduriaId: string): Promise<IntegracionActiva[]> {
+  return prisma.$queryRaw<IntegracionActiva[]>`
+    select compania, ramo from seguros.companias_integracion
+    where correduria_id = ${correduriaId}::uuid and activo and modo = 'rpa_autorizada'
+      and ramo = any(${[...RAMOS_TARIFICABLES_RPA]}::text[])
+    order by compania, ramo`
+}
+
+/** Riesgo COMPLETO del último trabajo de ese cliente+compañía+ramo. Solo para reencolar en servidor: NUNCA sale hacia plataforma. */
+export async function leerRiesgoParaReencolar(correduriaId: string, clienteId: string, compania: string, ramo: string): Promise<unknown | null> {
+  const f = await prisma.$queryRaw<{ riesgo: unknown }[]>`
+    select t.riesgo from seguros.tarificacion_trabajos t
+    where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
+      and lower(t.compania) = ${compania} and t.ramo = ${ramo}
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
+    order by t.created_at desc limit 1`
+  return f[0]?.riesgo ?? null
 }

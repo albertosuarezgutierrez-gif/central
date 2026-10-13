@@ -13,8 +13,31 @@ import type { ModalidadPortal } from './tipos.ts'
 
 export const MARCA_DATO_PERSONAL = '[DATO]'
 
+/**
+ * VEHÍCULO (10/10/2026): identifican al titular. Van PRIMERO en `PATRONES_PERSONALES` (la regla de «7+ cifras» partía
+ * un VIN y dejaba su prefijo a la vista) y los usa también `redactarHtml` (evidencias del worker).
+ *   · VIN/bastidor: 17 caracteres del alfabeto VIN (sin I, O, Q) en MAYÚSCULAS, con al menos una cifra y una letra.
+ *     Solo mayúsculas a propósito: en minúsculas casaría con ids/hash del HTML.
+ *   · Matrícula provincial antigua: código de provincia + 4 cifras + 1-2 letras («SE-1234-AB», «M 1234 AB»,
+ *     «GC1234X»). Solo mayúsculas y con la lista de provincias: «de 2019» no es una matrícula.
+ *   · Matrícula actual: 4 cifras + 3 consonantes («1234 BCD»).
+ */
+export const PATRONES_VEHICULO: readonly RegExp[] = [
+  /\b(?=[A-HJ-NPR-Z0-9]{17}\b)(?=[A-HJ-NPR-Z0-9]{0,16}\d)(?=[A-HJ-NPR-Z0-9]{0,16}[A-HJ-NPR-Z])[A-HJ-NPR-Z0-9]{17}\b/g,
+  /\b(?:A|AB|AL|AV|B|BA|BI|BU|C|CA|CC|CE|CO|CR|CS|CU|GC|GE|GI|GR|GU|H|HU|IB|J|L|LE|LO|LU|M|MA|ML|MU|NA|O|OR|OU|P|PM|PO|S|SA|SE|SG|SO|SS|T|TE|TF|TO|V|VA|VI|Z|ZA)[\s-]?\d{4}[\s-]?[A-Z]{1,2}\b/g,
+  /\b\d{4}[\s-]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi,
+]
+
+/** Tapa matrículas y VIN (ver `PATRONES_VEHICULO`). */
+export function redactarVehiculos(texto: string): string {
+  let out = String(texto)
+  for (const p of PATRONES_VEHICULO) out = out.replace(p, MARCA_DATO_PERSONAL)
+  return out
+}
+
 /** Exportada para el GRABADOR (07/10/2026): el bookmarklet lleva estos mismos patrones al navegador. */
 export const PATRONES_PERSONALES: readonly RegExp[] = [
+  ...PATRONES_VEHICULO,
   // IBAN español (y cualquiera con forma de IBAN), con o sin espacios.
   /\b[A-Z]{2}\d{2}(?:[\s-]?[A-Z0-9]{4}){3,7}(?:[\s-]?[A-Z0-9]{1,4})?\b/gi,
   // Correo.
@@ -28,8 +51,6 @@ export const PATRONES_PERSONALES: readonly RegExp[] = [
   /(?:\+?34[\s-]?)?\b[6-9]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b/g,
   // Id de usuario de portal (dos letras + 6 cifras, p. ej. PA123456).
   /\b[A-Z]{2}\d{6}\b/g,
-  // Matrícula (0000 BBB).
-  /\b\d{4}[\s-]?[BCDFGHJKLMNPRSTVWXYZ]{3}\b/gi,
   // Cualquier otra tirada de 7+ cifras (cuentas, pólizas, referencias catastrales numéricas).
   /\d[\d\s.-]{5,}\d/g,
 ]

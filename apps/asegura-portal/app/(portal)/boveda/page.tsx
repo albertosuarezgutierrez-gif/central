@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 
 import {
   canalDeCompania,
+  capacidadesDeAlcances,
   entradaValida,
   nivelPuedeOperar,
   plazoComunicacion,
@@ -29,6 +30,8 @@ import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
 import { supresionesDelUsuario } from '@/lib/supresion'
 import { getIdentidad } from '@/lib/session'
 import { cuentaDeTitular } from '@/lib/declaradas-de-titular'
+import { textoFiguraYaServida } from '@/lib/intervinientes'
+import Link from 'next/link'
 import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { FilaDeclarada } from './FilaDeclarada'
@@ -709,9 +712,30 @@ export default async function Boveda({
             {t.declaradas !== undefined && t.declaradas.length > 0 && (
               <ul className="polizas">
                 {t.declaradas.map((d) => (
-                  <FilaDeclarada key={d.id} p={d} avisoPartes={null} deOtro />
+                  <FilaDeclarada
+                    key={d.id}
+                    p={d}
+                    avisoPartes={null}
+                    deOtro
+                    sinEnlace={
+                      t.autorizacion?.ficha === undefined ||
+                      !capacidadesDeAlcances(t.autorizacion.ficha.alcances, t.tipoPersona).verDeclaradas
+                    }
+                  />
                 ))}
               </ul>
+            )}
+            {/* Figura en pólizas que ya son del que mira (no se repiten aquí): se dice y se enlaza. */}
+            {t.figuraEnTusPolizas !== undefined && textoFiguraYaServida(t.figuraEnTusPolizas.length) !== null && (
+              <p className="tenue" style={{ margin: '0 0 12px', fontSize: 14 }}>
+                {textoFiguraYaServida(t.figuraEnTusPolizas.length)}:{' '}
+                {t.figuraEnTusPolizas.map((id, i) => (
+                  <span key={id}>
+                    {i > 0 && ', '}
+                    <Link href={`/boveda/poliza/${id}`}>ver póliza{t.figuraEnTusPolizas!.length > 1 ? ` ${i + 1}` : ''}</Link>
+                  </span>
+                ))}
+              </p>
             )}
           </GrupoPlegable>
         )),

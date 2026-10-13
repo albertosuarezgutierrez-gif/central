@@ -3,7 +3,9 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { configFly, leerResultadoWorker, peticionMaquina, rpaActivo } from './tarificador-reglas.ts'
+import {
+  bloqueaDuplicado, claveEncolar, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+} from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 const JOB = '11111111-1111-4111-8111-111111111111'
@@ -92,4 +94,114 @@ test('el orquestador no toca Codeoscopic ni emite', () => {
     assert.ok(!/from ['"][^'"]*codeoscopic/i.test(src), `${f} importa algo de codeoscopic`)
     assert.ok(!/CODEOSCOPIC_/.test(src), `${f} nombra una env de Codeoscopic`)
   }
+})
+
+// Moto (13/10/2026): asegura ya encola un FormularioAuto de moto (con seleccionVehiculo) y cada ramo usa SU validador.
+const MOTO = {
+  ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003',
+  conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
+  tomadorEsConductor: true, tomadorEsPropietario: true, aniosAseguradoAnterior: 5, siniestrosUltimos5Anios: 0, garajeNoche: true,
+  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
+}
+
+test('encolar: moto con FormularioAuto válido pasa (con seleccionVehiculo); inválido, auto y ramo desconocido, no', () => {
+  const ok = validarEntradaRamo('moto', MOTO)
+  assert.equal(ok.ok, true)
+  if (ok.ok && ok.entrada.ramo === 'moto') assert.deepEqual(ok.entrada.riesgo.seleccionVehiculo, MOTO.seleccionVehiculo)
+  assert.equal(validarEntradaRamo('moto', { ...MOTO, matricula: 'x' }).ok, false)
+  assert.equal(validarEntradaRamo('moto', { ...MOTO, ramo: 'auto' }).ok, false, 'un formulario de auto no es un trabajo moto')
+  assert.equal(validarEntradaRamo('moto', { ramo: 'comunidades' }).ok, false)
+  assert.equal(validarEntradaRamo('comunidades', MOTO).ok, false, 'comunidades sigue con su validador')
+  for (const r of ['auto', 'hogar', undefined, 'MOTO']) assert.equal(validarEntradaRamo(r, MOTO).ok, false, String(r))
+})
+
+// ─── Cola: lease, huecos y duplicados (13/10/2026) ───────────────────────────
+const AHORA = new Date('2026-10-13T10:00:00Z')
+const antes = (ms: number) => new Date(AHORA.getTime() - ms)
+const despues = (ms: number) => new Date(AHORA.getTime() + ms)
+
+test('lease: pasado o justo ahora = vencido; futuro = vivo; null = no se sabe → vivo (conservador)', () => {
+  assert.equal(leaseVencido(antes(1), AHORA), true)
+  assert.equal(leaseVencido(AHORA, AHORA), true)
+  assert.equal(leaseVencido(despues(1), AHORA), false)
+  assert.equal(leaseVencido(null, AHORA), false)
+  assert.equal(leaseVencido(new Date('no-fecha'), AHORA), false)
+})
+
+test('un en_curso con lease vencido NO ocupa hueco (defecto 1: un colgado bloqueaba la cola)', () => {
+  const filas = [{ id: 'a', leaseHasta: antes(60_000) }, { id: 'b', leaseHasta: despues(60_000) }, { id: 'c', leaseHasta: null }]
+  const { vivos, vencidos } = repartirEnCurso(filas, AHORA)
+  assert.deepEqual(vivos.map((f) => f.id), ['b', 'c'])
+  assert.deepEqual(vencidos.map((f) => f.id), ['a'])
+  // max 1 y el único en curso está colgado → hay hueco
+  assert.equal(huecosLibres(1, repartirEnCurso([{ leaseHasta: antes(1) }], AHORA).vivos.length), 1)
+})
+
+test('huecos: max − vivos, nunca negativo; sin integración o tope raro → 0 (fail-closed)', () => {
+  assert.equal(huecosLibres(1, 0), 1)
+  assert.equal(huecosLibres(1, 1), 0)
+  assert.equal(huecosLibres(3, 1), 2)
+  assert.equal(huecosLibres(2, 5), 0)
+  assert.equal(huecosLibres(null, 0), 0)
+  assert.equal(huecosLibres(0, 0), 0)
+  assert.equal(huecosLibres(1.5, 0), 0)
+})
+
+test('clave de deduplicación: cambia con cliente, compañía y ramo (no funde encargos distintos)', () => {
+  const base = { correduriaId: 'c1', clienteId: 'k1', compania: 'allianz', ramo: 'moto' }
+  const k = claveEncolar(base)
+  assert.equal(k, claveEncolar({ ...base }))
+  for (const otro of [{ clienteId: 'k2' }, { compania: 'mapfre' }, { ramo: 'comunidades' }, { correduriaId: 'c2' }]) {
+    assert.notEqual(claveEncolar({ ...base, ...otro }), k, JSON.stringify(otro))
+  }
+})
+
+test('duplicado: pendiente sí; en_curso solo con lease vivo; reintentable bajo el tope; terminados y emisión no', () => {
+  const f = (estado: string, extra: Partial<{ leaseHasta: Date | null; intentos: number; modo: string | null }> = {}) =>
+    bloqueaDuplicado({ estado, leaseHasta: null, intentos: 0, modo: null, ...extra }, AHORA, 2)
+  assert.equal(f('pendiente'), true)
+  assert.equal(f('en_curso', { leaseHasta: despues(1) }), true)
+  assert.equal(f('en_curso', { leaseHasta: antes(1) }), false)
+  assert.equal(f('error_reintentable', { intentos: 1 }), true)
+  assert.equal(f('error_reintentable', { intentos: 2 }), false)
+  for (const e of ['ok', 'error_definitivo', 'requiere_humano', 'cancelado']) assert.equal(f(e), false, e)
+  assert.equal(f('pendiente', { modo: 'emision' }), false)
+})
+
+test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo y la cola tiene cron propio', () => {
+  const src = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  const tramo = (desde: string, hasta: string) => src.slice(src.indexOf(desde), src.indexOf(hasta, src.indexOf(desde)))
+  const reclamar = tramo('export async function reclamarSiguiente', 'export type DepsLanzador')
+  assert.match(reclamar, /repartirEnCurso\(/, 'reclamarSiguiente no separa los en_curso de lease vencido')
+  assert.match(reclamar, /huecosLibres\(max, vivos\.length\)/, 'reclamarSiguiente no cuenta solo los vivos')
+  assert.doesNotMatch(reclamar, /count\(\*\)/, 'reclamarSiguiente vuelve a contar en_curso a ciegas')
+  const encolar = tramo('export async function encolarTrabajo', '// ─── Reclamar y lanzar')
+  assert.match(encolar, /pg_advisory_xact_lock\(hashtext\(\$\{claveEncolar\(/, 'encolarTrabajo sin cerrojo por clave: dos peticiones simultáneas duplican')
+  assert.match(encolar, /bloqueaDuplicado\(/, 'encolarTrabajo no deduplica')
+  assert.match(encolar, /t\.oportunidad_id is not distinct from \$\{e\.oportunidadId \?\? null\}::uuid/, 'el dedupe ignora la oportunidad')
+  assert.match(encolar, /t\.poliza_id is not distinct from \$\{polizaId \?\? null\}::uuid/, 'el dedupe ignora la póliza')
+  assert.match(encolar, /\{ timeout: 15000, maxWait: 10000 \}/, 'encolarTrabajo sin timeout de transacción')
+  assert.match(reclamar, /\{ timeout: 15000, maxWait: 10000 \}/, 'reclamarSiguiente sin timeout de transacción')
+  assert.match(reclamar, /f\.tocada && v\.fly_machine_id/, 'maquinasVencidas sin comprobar que marcarFallo tocó fila')
+  const vercel = JSON.parse(readFileSync(join(APP, 'vercel.json'), 'utf8')) as { crons: { path: string }[] }
+  assert.ok(vercel.crons.some((c) => c.path === '/api/cron/tarificador-cola'), 'la cola no tiene cron propio (solo barría el de renovaciones)')
+})
+
+test('resultado «explorado» (13/10/2026): solo con un motivo de fin de la lista; nada de ofertas ni texto libre', () => {
+  const id = '00000000-0000-4000-8000-000000000001'
+  const r = leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'resultado', botVersion: '0.1.0' })
+  assert.ok(r.ok && r.r.tipo === 'explorado' && r.r.motivoFin === 'resultado' && r.r.botVersion === '0.1.0')
+  assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'cualquier cosa' }).ok, false)
+  assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado' }).ok, false)
+})
+
+test('registrarResultado: una exploración no devuelve ofertas, solo ella termina «explorado» y sus fallos no guardan captura', () => {
+  const f = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  assert.match(f, /if \(deExploracion && r\.tipo === 'ok'\) return \{ res: \{ estado: 'conflicto'/)
+  assert.match(f, /if \(!deExploracion && r\.tipo === 'explorado'\) return \{ res: \{ estado: 'conflicto'/)
+  assert.match(f, /const evidencia = deExploracion \? null : \{ trabajo: t, captura: r\.captura, html: r\.html \}/)
+  // La cola filtra por modo (la exploración solo con su interruptor) y el worker declara lo que sabe hacer.
+  assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
+  assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
+  assert.match(f, /const modo = f \? modoParaWorker\(f\.modo, modosWorker\) : null/)
 })

@@ -36,6 +36,19 @@ export function encolarTarificacionComunidad(clienteId: string, oportunidadId: s
   })
 }
 
+/**
+ * Encola una cotización de MOTO en Allianz (13/10/2026; solo precio). `formulario` = FormularioAuto con `ramo: 'moto'` y
+ * `seleccionVehiculo` (marca/modelo/clase); asegura lo valida con el validador del ramo. Sin pantalla propia todavía:
+ * la primera prueba entra por `POST /api/correduria/tarificador/encolar` con `{ ramo: 'moto', ... }`.
+ */
+export function encolarTarificacionMoto(clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>): Promise<Reenvio> {
+  return puerto('encolar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clienteId, oportunidadId, compania: COMPANIA_BOT, ramo: 'moto', riesgo: formulario }),
+  })
+}
+
 /** Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`. */
 export function leerUltimoRiesgoTarificador(clienteId: string): Promise<Reenvio> {
   const q = new URLSearchParams({ cliente_id: clienteId, compania: COMPANIA_BOT, ramo: 'comunidades' })
@@ -103,15 +116,38 @@ export function leerBandejaTarificador(limite: number, desde: number): Promise<R
 }
 
 /** Reintentar (→ pendiente) o cancelar un trabajo de la bandeja. Solo precio: nunca emite. */
-export function resolverTrabajoBandeja(id: string, accion: 'reintentar' | 'cancelar'): Promise<Reenvio> {
+export function resolverTrabajoBandeja(
+  id: string,
+  accion: 'reintentar' | 'cancelar',
+  /** Solo con reintentar: versión del vehículo elegida a mano; asegura la valida contra la lista guardada del trabajo. */
+  eleccionVersion: { codigo: string; etiqueta?: string | null } | null = null,
+): Promise<Reenvio> {
   return puerto(`bandeja/${encodeURIComponent(id)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ accion }),
+    body: JSON.stringify(eleccionVersion ? { accion, eleccionVersion } : { accion }),
   }, 30_000)
 }
 
 /** Traza de un trabajo (pasos con duración y error) y versión del bot. */
 export function leerTrazaTarificador(id: string): Promise<Reenvio> {
   return puerto(`trabajo/${encodeURIComponent(id)}/traza`, { method: 'GET' }, 15_000)
+}
+
+/** Compañía+ramo que el bot puede tarificar hoy (`companias_integracion` activa y `rpa_autorizada`). Solo lectura. */
+export function leerIntegracionesTarificador(): Promise<Reenvio> {
+  return puerto('integraciones', { method: 'GET' }, 15_000)
+}
+
+/**
+ * «Probar tarificación» de la ficha: asegura reencola en SERVIDOR el riesgo del último trabajo de ese cliente+compañía+ramo
+ * (el riesgo no cruza el puerto). Solo precio: nunca emite. 202 `{trabajoId}` · 409 `sin_riesgo_previo` · `duplicado: true`
+ * con el id del trabajo existente si asegura ya tiene uno en marcha.
+ */
+export function probarTarificacion(clienteId: string, compania: string, ramo: string): Promise<Reenvio> {
+  return puerto('probar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clienteId, compania, ramo }),
+  }, 50_000)
 }

@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 
 import { fotoDeLaPoliza, puedeBorrarDeclarada } from '@central/module-seguros-portal'
 
+import { registrarUso } from '@/lib/autorizaciones'
+import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import {
   cambiosDeEdicion,
@@ -40,6 +42,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const { id } = await ctx.params
 
+  // 🔒 De QUÉ identidad es la fila (12/10/2026). La propia, o la del titular
+  // cuando quien mira tiene «Total» sobre su ficha ENTERA (`accesoADeclarada`,
+  // fail-closed). Consulta, Gestión, sin concesión o id ajeno → `null` → 404,
+  // la misma respuesta que «no existe». Todo lo de abajo escribe con ESA
+  // identidad dentro del `where`, igual que antes con la de la cookie.
+  const acceso = await accesoADeclarada(identidad.id, id, 'editar')
+  if (acceso === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+  const duenaId = acceso.identidadId
+
   let cuerpo: unknown
   try {
     cuerpo = await req.json()
@@ -55,7 +66,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // consulta sin identidad de la cookie, ni siquiera para leer un ramo.
   // Una eliminada no se corrige: primero se restaura (404 igual que «no existe»).
   const actual = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+    where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
     select: { ramo: true },
   })
   if (!actual) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
@@ -75,13 +86,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // segunda escritura falla — y entonces «nada se pierde» sería mentira justo en la edición.
   const resultado = await prisma.$transaction(async (tx) => {
     const previa = await tx.portalPolizaDeclarada.findFirst({
-      where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+      where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
       select: SELECT_HISTORIAL,
     })
     if (!previa) return null
 
     const { count } = await tx.portalPolizaDeclarada.updateMany({
-      where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+      where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
       data: {
         ...parche,
         ...('datosRamo' in normalizado.parche ? { datosRamo: datosRamo ?? Prisma.DbNull } : {}),
@@ -105,7 +116,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (count === 0) return null
 
     const poliza = await tx.portalPolizaDeclarada.findFirst({
-      where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+      where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
       select: { id: true, ...SELECT_HISTORIAL },
     })
     if (!poliza) return null
@@ -115,13 +126,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const cambios = cambiosDeEdicion(previa, poliza)
     if (cambios !== null) {
       await tx.portalPolizaDeclaradaHistorial.create({
-        data: { polizaId: id, identidadId: identidad.id, accion: 'editada', antes: cambios.antes, despues: cambios.despues },
+        data: { polizaId: id, identidadId: duenaId, accion: 'editada', antes: cambios.antes, despues: cambios.despues },
       })
     }
     return poliza
   })
 
   if (!resultado) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+
+  // Quién lo hizo EN NOMBRE de quién: hoy el único registro que existe es el uso
+  // de la autorización (el titular lo ve en «quién ha mirado»). La columna de
+  // autor de la fila está propuesta, sin aplicar
+  // (`prisma/sql/2026-10-12_portal_poliza_declarada_autor.sql`). El historial
+  // va a nombre de la DUEÑA (es su bóveda y su «Eliminadas»).
+  if (!acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
   const poliza = resultado
 
   return NextResponse.json({
@@ -182,21 +200,31 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   const { id } = await ctx.params
 
+  // 🔒 Mismo criterio que el PATCH: la propia, o la del titular con «Total».
+  // (`accesoADeclarada` no mira `eliminadaEn`: eso lo hace el `findFirst` de abajo.)
+  const acceso = await accesoADeclarada(identidad.id, id, 'quitar')
+  if (acceso === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+  const duenaId = acceso.identidadId
+
   const resultado = await prisma
     .$transaction(async (tx) => {
-      // Existe, es suya Y está en la bóveda: las tres cosas en la misma consulta. Si no, 404 —
-      // nunca un 403, que confirmaría que esa póliza existe. Quitar dos veces es «no encontrada».
-      // Se lee ADEMÁS lo que va a la foto de los partes y al historial.
+      // Existe, es de la dueña Y está en la bóveda: las tres cosas en la misma consulta. Si no,
+      // 404 — nunca un 403, que confirmaría que esa póliza existe. Quitar dos veces es «no
+      // encontrada». Se lee ADEMÁS lo que va a la foto de los partes y al historial.
       const suya = await tx.portalPolizaDeclarada.findFirst({
-        where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
         select: { id: true, ...SELECT_HISTORIAL },
       })
       if (!suya) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
 
       // El ESTADO de cada parte, no solo cuántos hay: lo que bloquea no es tener
       // partes, es tener uno que la compañía ya está tramitando.
+      // 🚨 TODOS los partes de esta póliza, no solo los de su dueña: desde el
+      // 12/10/2026 quien tiene Gestión/Total puede dar un parte sobre ella (fila con
+      // SU identidad). Filtrarlos por la dueña dejaría el suyo fuera de la
+      // congelación. La póliza ya está autorizada arriba (`suya`), así que esto no abre nada.
       const partes = await tx.portalParteSiniestro.findMany({
-        where: { polizaDeclaradaId: id, identidadId: identidad.id },
+        where: { polizaDeclaradaId: suya.id },
         select: { id: true, estado: true, siniestroId: true },
       })
       const veredicto = puedeBorrarDeclarada({ partes })
@@ -209,7 +237,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       const foto = fotoDeLaPoliza(suya)
       if (partes.length > 0) {
         await tx.portalParteSiniestro.updateMany({
-          where: { polizaDeclaradaId: id, identidadId: identidad.id },
+          where: { polizaDeclaradaId: suya.id },
           data: {
             polizaDeclaradaId: null,
             // La fecha SIEMPRE, aunque la foto venga vacía: es lo que distingue
@@ -224,7 +252,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
       // Las obligaciones colgadas de ella se APARTAN (se guardan enteras en el historial).
       const obligaciones = await tx.portalObligacion.findMany({
-        where: { identidadId: identidad.id, polizaDeclaradaId: id },
+        where: { identidadId: duenaId, polizaDeclaradaId: id },
         select: {
           id: true,
           tipo: true,
@@ -241,22 +269,23 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
         },
       })
       if (obligaciones.length > 0) {
-        await tx.portalObligacion.deleteMany({ where: { identidadId: identidad.id, polizaDeclaradaId: id } })
+        await tx.portalObligacion.deleteMany({ where: { identidadId: duenaId, polizaDeclaradaId: id } })
       }
 
       const ahora = new Date()
       const { count } = await tx.portalPolizaDeclarada.updateMany({
-        where: { id, identidadId: identidad.id, ...DECLARADA_NO_ELIMINADA },
+        where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
         data: { eliminadaEn: ahora },
       })
       // 0 aquí solo puede ser una carrera (otra pestaña la quitó en medio): se DESHACE todo lo de
       // arriba lanzando, para no dejar partes desligados de una póliza que sigue viva.
       if (count === 0) throw new CarreraAlQuitar()
 
+      // El historial va a nombre de la DUEÑA: es su «Eliminadas» y quien la puede restaurar.
       await tx.portalPolizaDeclaradaHistorial.create({
         data: {
           polizaId: id,
-          identidadId: identidad.id,
+          identidadId: duenaId,
           accion: 'eliminada',
           antes: {
             ...fotoHistorial(suya),
@@ -277,6 +306,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
       throw e
     })
 
+  if (resultado.estado === 200 && !acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
   return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
 }
 

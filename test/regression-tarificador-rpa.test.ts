@@ -52,6 +52,65 @@ test('ningún fichero del worker pulsa con .click()/.dblclick()/.tap() salvo pul
   assert.match(guard, /isNavigationRequest\(\)/, 'el guard de navegación tiene que mirar las navegaciones')
 })
 
+// Más formas de «pulsar» que `.click()` (revisión 10/10/2026): Enter en un formulario, submit, eventos de ratón/teclado
+// sintéticos. Fuera de guard.ts están PROHIBIDAS sin excepción.
+const PULSACION_ENCUBIERTA = new RegExp(
+  [
+    String.raw`\.press\s*\(\s*[^)]*Enter`,
+    String.raw`keyboard\s*\.\s*(?:press|down|type|insertText)\s*\(`,
+    String.raw`\.(?:submit|requestSubmit)\s*\(`,
+    String.raw`dispatchEvent\(\s*['"\`](?:click|dblclick|submit|mousedown|mouseup|pointerdown|pointerup|keydown|keypress|keyup|touchstart|touchend|tap)`,
+    String.raw`new\s+(?:MouseEvent|PointerEvent|KeyboardEvent|SubmitEvent|TouchEvent)\b`,
+    String.raw`new\s+Event\(\s*['"\`](?:click|submit|keydown|keypress|keyup|mousedown|mouseup)`,
+  ].join('|'),
+)
+// Cambios que disparan los manejadores del portal (`onchange`/`onclick`): solo con `comprobarCampo(`/`comprobarBoton(`
+// en las 6 líneas anteriores. Las excepciones son las REVISADAS antes de esta regla (nº exacto: una nueva rompe).
+const CAMBIO_CON_MANEJADOR = /\.(?:check|uncheck|setChecked|dispatchEvent)\s*\(/
+const EXCEPCIONES_CAMBIO: Record<string, number> = {
+  // marcar(): checkbox solo por la vía determinista campoPorEtiqueta (ver el comentario 🔒 de comunidades.ts).
+  'services/tarificador-rpa/src/adapters/allianz/comunidades.ts': 1,
+  // fijarSelectOculto(): `change` de un <select> bootstrap oculto, valor validado contra sus opciones.
+  'services/tarificador-rpa/src/adapters/allianz/comercio.ts': 1,
+}
+
+/** Infracciones de la regla de pulsación en un fuente (sin comentarios). Exportada en el test para verla FALLAR. */
+function infraccionesPulsacion(rel: string, src: string): string[] {
+  const out: string[] = []
+  const lineas = src.split('\n')
+  let cambiosSinGuard = 0
+  lineas.forEach((l, i) => {
+    if (PULSACION_ENCUBIERTA.test(l)) out.push(`${rel}:${i + 1} pulsación encubierta`)
+    if (CAMBIO_CON_MANEJADOR.test(l) && !/comprobar(?:Campo|Boton)\(/.test(lineas.slice(Math.max(0, i - 6), i + 1).join('\n'))) cambiosSinGuard++
+  })
+  if (cambiosSinGuard !== (EXCEPCIONES_CAMBIO[rel] ?? 0)) out.push(`${rel}: ${cambiosSinGuard} check/setChecked/dispatchEvent sin comprobarCampo() (excepciones revisadas: ${EXCEPCIONES_CAMBIO[rel] ?? 0})`)
+  return out
+}
+
+test('ningún fichero del worker pulsa por la puerta de atrás (Enter, submit, eventos sintéticos, cambios sin guard)', () => {
+  const infractores: string[] = []
+  for (const f of ficheros(join(SRV, 'src'))) {
+    if (f.endsWith('/src/guard.ts')) continue
+    infractores.push(...infraccionesPulsacion(relative(RAIZ, f), sinComentarios(readFileSync(f, 'utf8'))))
+  }
+  assert.deepEqual(infractores, [], 'pulsar SOLO con ctx.pulsar(); cambiar un campo solo tras comprobarCampo()')
+})
+
+test('la regla de pulsación ve FALLAR cada forma (cepo del cepo)', () => {
+  const r = 'services/tarificador-rpa/src/adapters/x.ts'
+  for (const malo of [
+    "await campo.press('Enter')",
+    'await page.keyboard.press("Enter")',
+    'await form.evaluate((f) => f.submit())',
+    'await form.evaluate((f) => f.requestSubmit())',
+    "await boton.dispatchEvent('mousedown')",
+    "el.dispatchEvent(new MouseEvent('click'))",
+    "el.dispatchEvent(new Event('submit', { bubbles: true }))",
+  ]) assert.notDeepEqual(infraccionesPulsacion(r, malo), [], malo)
+  for (const malo of ['await c.check()', 'await c.setChecked(true)', "await c.dispatchEvent('change')"]) assert.notDeepEqual(infraccionesPulsacion(r, malo), [], malo)
+  assert.deepEqual(infraccionesPulsacion(r, "await comprobarCampo(c)\nawait c.fill(v)\nawait c.dispatchEvent('change')\nawait c.setChecked(true)"), [])
+})
+
 test('el worker nunca arranca tracing ni nombra la cartera o Codeoscopic', () => {
   for (const f of ficheros(join(SRV, 'src'))) {
     const src = sinComentarios(readFileSync(f, 'utf8'))
@@ -109,6 +168,11 @@ test('ePAC Comunidades 2020: «Aceptar» y el radio de opción solo se pulsan po
     if (acciones < 0) continue
     const nombre = fn.slice(0, fn.indexOf('('))
     const previo = fn.slice(0, acciones)
+    // La emisión autorizada (10/10/2026) NO cuenta con la fase sola: además tiene que gastar el permiso de un solo uso.
+    if (nombre === 'pulsarEmisionAutorizada') {
+      assert.ok(/fases\.autorizarEmision\(/.test(previo) && /usarPermisoEmision\(/.test(previo), `${nombre}: click sin fase de emisión Y permiso de un solo uso`)
+      continue
+    }
     assert.match(previo, /comprobarBoton\(|fases\.autorizar(Aceptar|Opcion|Proyecto)\(/, `${nombre}: click/check sin pasar antes por el guard`)
   }
   const aceptar = funciones.find((f) => f.startsWith('pulsarAvance'))!
@@ -235,4 +299,145 @@ test('formador en el adaptador ePAC: FALLBACK acotado (campos + «Calcular»), a
   // 8. setChecked solo sobre una casilla confirmada por tipoControl (no pasa por el guard).
   const m = src.slice(src.indexOf('async function marcar'), src.indexOf('async function login'))
   assert.ok(m.indexOf("(await tipoControl(campo)) !== 'checkbox'") > -1 && m.indexOf("(await tipoControl(campo)) !== 'checkbox'") < m.indexOf('setChecked('), 'marcar tiene que comprobar que es una casilla antes de setChecked')
+})
+
+test('EMISIÓN (10/10/2026): un solo camino para pulsar el botón de emitir, y solo con permiso de un solo uso', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarEmisionAutorizada'))
+  assert.ok(fn, 'falta pulsarEmisionAutorizada en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'esBotonDeListaBlanca(', 'fases.autorizarEmision(', 'pestanaActiva(', 'usarPermisoEmision(']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarEmisionAutorizada: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(fn!.indexOf('usarPermisoEmision(') < fn!.indexOf('abrir('), 'la ventana de red se abre DESPUÉS de gastar el permiso')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  // Nadie más la llama salvo el flujo de emisión del worker, y solo tras un canje OK.
+  const llamadas = ficheros(join(SRV, 'src')).filter((f) => !f.endsWith('/src/guard.ts') && /pulsarEmisionAutorizada\(/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(llamadas.map((f) => relative(RAIZ, f)), ['services/tarificador-rpa/src/emision.ts'])
+  const em = sinComentarios(readFileSync(join(SRV, 'src/emision.ts'), 'utf8'))
+  assert.ok(em.indexOf('canjearToken(') > -1 && em.indexOf('canjearToken(') < em.indexOf('crearPermisoEmision('), 'el permiso solo se crea tras el canje')
+  assert.match(em, /if \(!canje\.ok\)/)
+  assert.match(em, /botonDelCanjeValido\(/)
+  // El guard del módulo no se toca para emitir: sigue sin saber nada de permisos.
+  const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
+  assert.ok(!/permiso/i.test(g), 'guard-emision.ts no puede conocer el permiso: el guard queda INTACTO por defecto')
+})
+
+test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#datosBasicos, td#rate}, ventana de red con dos capas y flag propio', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  // 1. La lista blanca: exactamente dos selectores, cada uno con su único destino de red (nunca tarifa/control.do ni MotoServlet).
+  const bloque = guard.match(/export const AVANCES_PESTANA_AUTORIZADOS = Object\.freeze\(\{([\s\S]*?)\n\}\)\n/)
+  assert.ok(bloque, 'falta AVANCES_PESTANA_AUTORIZADOS (Object.freeze) en guard.ts')
+  const claves = [...bloque![1].matchAll(/^ {2}'([^']+)': Object\.freeze\(/gm)].map((m) => m[1])
+  assert.deepEqual(claves, ['td#datosBasicos', 'td#rate'], 'la lista blanca de avances de pestaña es EXACTAMENTE td#datosBasicos y td#rate')
+  const endpoints = [...bloque![1].matchAll(/endpoints: Object\.freeze\(\[([^\]]*)\]\)/g)].map((m) => m[1].trim())
+  assert.deepEqual(endpoints, ["'https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do'", "'https://www.e-pacallianz.com/drpc18/datosBasicos/control.do'"])
+  assert.ok(!/tarifa\/control|MotoServlet|contract|store|emit/i.test(endpoints.join(' ')), 'ningún destino de Tarificar/emisión en la lista blanca de red')
+  // 2. La función: lista blanca (hasOwn) + comprobarBoton + pantalla de origen ANTES de abrir la ventana; un clic; finally cierra.
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarAvancePestanaAutorizado'))
+  assert.ok(fn, 'falta pulsarAvancePestanaAutorizado en guard.ts')
+  const abrir = fn!.indexOf('abrir(hasta, regla.endpoints)')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)', 'aceptar_onclick', 'comprobarBoton(desc, { permitirAceptar: true })', 'regla.formOrigen']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < abrir && abrir < clic, `pulsarAvancePestanaAutorizado: «${paso}» tiene que ir ANTES de abrir la ventana y pulsar`)
+  }
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  assert.match(fn!, /\} finally \{\s*page\.off\('dialog', alDialogo\)\s*guard\.avance\.cerrar\(\)\s*\}/, 'la ventana del avance (y el manejador de diálogos) se cierra SIEMPRE (finally)')
+  // UN solo plazo: la ventana de red y la espera del destino vencen con el mismo `hasta`; ningún diálogo se acepta.
+  assert.match(fn!, /const hasta = Date\.now\(\) \+ VENTANA_RED_AVANCE_MS/)
+  assert.match(fn!, /if \(Date\.now\(\) >= hasta\)/)
+  assert.ok(!/\.accept\(/.test(fn!) && /d\.dismiss\(\)/.test(fn!), 'los diálogos del portal se descartan, nunca se aceptan')
+  // 3. El guard de red: capa (a) patrón de emisión en query y cuerpo; capa (b) destinos no GET en lista blanca.
+  assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n\s*const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
+  assert.match(guard, /if \(av && noGet && !enLista\)/, 'capa (b): todo no-GET fuera de la lista blanca se aborta')
+  assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null\)/, 'la ventana de emisión no vale con el avance abierto')
+  // 4. Solo el runner la enchufa y solo auto.ts la usa, con los dos selectores literales; Moto con flag PROPIO y apagado.
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /avanzarPestanaAutorizada: \(selector\) => pulsarAvancePestanaAutorizado\(page, guard, selector\)/)
+  const usos = ficheros(join(SRV, 'src')).filter((f) => !f.endsWith('/src/guard.ts') && !f.endsWith('/src/runner.ts') && /pulsarAvancePestanaAutorizado\(|avanzarPestanaAutorizada\(/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(usos.map((f) => relative(RAIZ, f)), ['services/tarificador-rpa/src/adapters/allianz/auto.ts'])
+  const auto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
+  assert.match(auto, /if \(ramo !== 'moto'\) \{\s*throw new ErrorMapaIncompleto\(/, 'Turismos sigue siendo hueco')
+  assert.match(auto, /await ctx\.avanzarPestanaAutorizada\(destino === 'datosBasicos' \? 'td#datosBasicos' : 'td#rate'\)/)
+  assert.match(auto, /^export const AUTO_ACTIVO = false$/m)
+  assert.match(auto, /^export const MOTO_ACTIVO = (true|false)$/m)
+  // Registro (runner tipado por ramo, 13/10/2026): Moto SOLO condicionada a su flag; Turismos nunca; sin casts dobles en el worker.
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.match(idx, /^if \(MOTO_ACTIVO\) adaptadores\.registrar\(allianzMoto\)$/m, 'allianzMoto se registra SOLO con `if (MOTO_ACTIVO)`')
+  assert.equal((idx.match(/allianzMoto/g) ?? []).length, 2, 'allianzMoto: un import y un registro condicionado, ningún otro uso')
+  assert.ok(!/allianzAuto|AUTO_ACTIVO/.test(idx), 'Turismos (allianzAuto) no se registra')
+  for (const f of ficheros(join(SRV, 'src'))) assert.ok(!/as unknown as/.test(sinComentarios(readFileSync(f, 'utf8'))), `${relative(RAIZ, f)}: sin casts dobles (as unknown as): el runner valida por ramo`)
+  const ramo = sinComentarios(readFileSync(join(SRV, 'src/ramo.ts'), 'utf8'))
+  assert.match(ramo, /case 'comunidades':[\s\S]*?validarRiesgoComunidad\(crudo\)/, 'comunidades se valida con validarRiesgoComunidad')
+  assert.match(ramo, /case 'auto':\s*case 'moto':[\s\S]*?validarFormularioAuto\(crudo, hoy\)/, 'auto/moto se validan con validarFormularioAuto')
+  assert.match(runner, /prepararTrabajo\(adaptador, trabajo\.riesgo\)/, 'el runner valida con el validador del ramo (prepararTrabajo)')
+  assert.ok(!/validarRiesgoComunidad/.test(runner), 'el runner ya no valida con el de Comunidades a pelo')
+})
+
+/** Infracciones del EXPLORADOR IA del worker (fase B, 13/10/2026). Exportada en el test para verla FALLAR. */
+function infraccionesExplorador(explorador: string, guard: string, otros: Record<string, string>): string[] {
+  const out: string[] = []
+  // 1. El bucle solo actúa así: pulsar por el guard (marcar/avanzar), el avance autorizado por su función guardada, rellenar
+  //    con el valor de `resolverDato` y elegir por valor exacto. Nada de goto, teclado ni marcar fuera del guard.
+  const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
+  if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  const fills = [...explorador.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
+  if (fills.length !== 1 || !/^valorParaControl\(d\.valor, hit\.el\), \{ timeout: 10_000 \}$/.test(fills[0])) out.push(`fill inesperado: ${fills.join(' | ')}`)
+  if (/\.goto\(|\.press\(|\.type\(|keyboard|\.check\(|setChecked|\.tap\(/.test(explorador)) out.push('el explorador navega, teclea o marca fuera del guard')
+  // 2. El valor del dato no va al log ni a asegura: `d.valor` aparece SOLO en el fill.
+  if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
+  // 3. Revalidación contra el inventario propio ANTES de actuar.
+  const iVal = explorador.indexOf('validarRespuestaExplorador(r.respuesta, { inventario: inv')
+  const iAct = explorador.indexOf('for (const a of v.respuesta.acciones)')
+  if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
+  // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
+  const iBucle = explorador.indexOf('for (;;) {')
+  const iInv = explorador.indexOf('capturarInventarioExploracion(page)', iBucle)
+  for (const p of ['exigirSinCaptcha(page)', 'exigirSinVerificacion(page, k.compania)']) {
+    const i = explorador.indexOf(p, iBucle)
+    if (i < 0 || i > iInv) out.push(`falta ${p} antes del inventario`)
+  }
+  // 5. La función guardada del avance autorizado: autorización del módulo + bloqueo + comprobarBoton ANTES de abrir y pulsar.
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarExploracionAutorizada'))
+  if (!fn) out.push('falta pulsarExploracionAutorizada en guard.ts')
+  else {
+    const abrir = fn.indexOf('abrir(hasta, [endpoint])')
+    const clic = fn.indexOf('.click(')
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })']) {
+      const i = fn.indexOf(p)
+      if (i < 0 || abrir < 0 || i > abrir || abrir > clic) out.push(`pulsarExploracionAutorizada: «${p}» tiene que ir ANTES de abrir la ventana y pulsar`)
+    }
+    if ((fn.match(/\.click\(/g) ?? []).length !== 1) out.push('pulsarExploracionAutorizada: un solo clic')
+    if (!/\} finally \{\s*page\.off\('dialog', alDialogo\)\s*guard\.avance\.cerrar\(\)\s*\}/.test(fn)) out.push('pulsarExploracionAutorizada: la ventana se cierra SIEMPRE (finally)')
+  }
+  // 6. Solo el explorador llama a la función guardada.
+  for (const [rel, src] of Object.entries(otros)) if (/pulsarExploracionAutorizada\(/.test(src)) out.push(`${rel} llama a pulsarExploracionAutorizada`)
+  return out
+}
+
+test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CAPTCHA y no saca valores', () => {
+  const explorador = sinComentarios(readFileSync(join(SRV, 'src/explorador.ts'), 'utf8'))
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const otros = Object.fromEntries(ficheros(join(SRV, 'src')).filter((f) => !/\/src\/(explorador|guard)\.ts$/.test(f)).map((f) => [relative(RAIZ, f), sinComentarios(readFileSync(f, 'utf8'))]))
+  assert.deepEqual(infraccionesExplorador(explorador, guard, otros), [])
+  // El runner solo lo arranca para `modo === 'exploracion'`.
+  assert.match(sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8')), /if \(trabajo\.modo === 'exploracion'\) return ejecutarExploracion\(/)
+  // Cepo del cepo: cada forma de romperlo se ve en ROJO.
+  const malos: [string, string][] = [
+    ['pulsación directa', explorador.replace('await k.pulsar(loc)', 'await k.pulsar(page.locator("#x"))')],
+    ['valor al log', explorador.replace("k.log('exploracion_paso', {", "k.log('exploracion_paso', { v: d.valor,")],
+    ['sin revalidar', explorador.replace("if (!v.ok) throw new Parar('ambiguo')", '')],
+    ['sin OTP', explorador.replace('await exigirSinVerificacion(page, k.compania)', '')],
+    ['navega', explorador + "\nawait page.goto('https://x')"],
+  ]
+  for (const [nombre, src] of malos) {
+    assert.notEqual(src, explorador, `el cepo «${nombre}» no cambió nada`)
+    assert.notDeepEqual(infraccionesExplorador(src, guard, otros), [], nombre)
+  }
+  const sinAut = guard.replace('esAvanceAutorizado(aut.entrada, aut.el, aut.marco) ||', '')
+  assert.notEqual(sinAut, guard)
+  assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
+  assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
 })

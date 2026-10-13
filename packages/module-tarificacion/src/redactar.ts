@@ -2,6 +2,8 @@
 // secrets del worker; ni BD, ni Vercel, ni logs, ni traces. Este redactor es la última red: todo lo
 // que sale del worker (líneas de log, mensaje de error, HTML de evidencia) pasa por aquí.
 
+import { redactarVehiculos } from './formador.ts'
+
 export const MARCA_REDACTADO = '[REDACTADO]'
 
 /** Secretos de menos de 4 caracteres no se redactan (borrarían medio log); se avisa al cargarlos. */
@@ -42,12 +44,15 @@ export function redactar(texto: string, secretos: readonly string[]): string {
   return out
 }
 
-/** HTML de evidencia: además de `redactar`, vacía el `value` de cualquier input de contraseña. */
+/**
+ * HTML de evidencia: además de `redactar`, vacía el `value` de cualquier input de contraseña y tapa matrículas
+ * (actuales y provinciales antiguas) y VIN/bastidor allí donde estén (textos, `value`, `<option>`): `redactarVehiculos`.
+ */
 export function redactarHtml(html: string, secretos: readonly string[]): string {
   const sinValores = String(html).replace(/<input\b[^>]*>/gi, (tag) =>
     /type\s*=\s*["']?password/i.test(tag) ? tag.replace(/\bvalue\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, `value="${MARCA_REDACTADO}"`) : tag,
   )
-  return redactar(sinValores, secretos)
+  return redactarVehiculos(redactar(sinValores, secretos))
 }
 
 /** Crea una función de log que nunca deja pasar un secreto. */

@@ -95,7 +95,7 @@ import { datosPolizaCima, primaAnualDudosa, type DatosPolizaCima } from './datos
 import { prisma } from './db'
 import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
-import { camposDeInterviniente, capaInterviniente, figuraEnPropias, figurasDeFichasVistas, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
+import { camposDeInterviniente, capaInterviniente, figuraEnPropias, figuraYaServidaEnPropias, figurasDeFichasVistas, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -363,6 +363,14 @@ export type TitularPortal = {
     partes: string[]
     /** `'dueno'` = no es una autorización: es su EMPRESA (relación `Dueño`). No se «deja de ver». */
     via?: 'dueno'
+    /**
+     * Presente SOLO si hay concesión sobre la ficha ENTERA (`poliza_id IS NULL`):
+     * sus ids y SUS alcances, sin mezclar con los de pólizas sueltas. Es lo único
+     * que decide qué se puede hacer con las pólizas AÑADIDAS del titular
+     * (`capacidadesDeAlcances`): un «Total» sobre la póliza del coche no da
+     * «Total» sobre lo que subió a mano.
+     */
+    ficha?: { ids: string[]; alcances: Alcance[] }
   }
   /**
    * Presente SOLO en `intervinientes`: la identidad FIGURA en estas pólizas del
@@ -374,6 +382,13 @@ export type TitularPortal = {
     rolesPorPoliza: Record<string, string[]>
   }
   polizas: PolizaPortal[]
+  /**
+   * Presente SOLO en `autorizadas` de ficha entera: ids de pólizas PROPIAS de quien mira
+   * donde esta ficha figura como interviniente y que por eso no se repiten en su bloque
+   * (ya se sirven en `propias`). Solo para el aviso «Figura en N póliza(s) que ya está(n)
+   * en las tuyas»; sin roles ni datos nuevos. `undefined` = ninguna.
+   */
+  figuraEnTusPolizas?: string[]
   /**
    * Presente SOLO en `autorizadas` abiertas ENTERAS por consentimiento: las que
    * el titular añadió en su portal (`identidadesTitulares`). `undefined` = esta
@@ -536,6 +551,41 @@ function descifrarDireccion(datos: unknown): unknown {
   } catch {
     return datos
   }
+}
+
+/**
+ * `identidadId → clienteId` de las identidades TITULARES de unas fichas que quien
+ * mira tiene abiertas ENTERAS. La regla es la pura (`identidadesTitulares`,
+ * fail-closed); esto solo trae los vínculos. La usan la bóveda (para enseñar sus
+ * declaradas) y `lib/declarada-ajena.ts` (para abrir/editar una), así las dos
+ * deciden «quién es el titular» con la MISMA consulta.
+ *
+ * 🔒 `fichasEnteras` tiene que salir de una concesión vigente sobre la ficha
+ * entera de ESTA identidad (`porOtorgante`); nunca de la request.
+ */
+export async function titularesDeFichasEnteras(
+  fichasEnteras: readonly string[],
+  identidadId: string,
+): Promise<Map<string, string>> {
+  if (fichasEnteras.length === 0) return new Map()
+  const candidatas = await prisma.portalVinculo.findMany({
+    where: { clienteId: { in: [...fichasEnteras] }, identidadId: { not: identidadId } },
+    select: { identidadId: true },
+  })
+  const idsCandidatas = [...new Set(candidatas.map((v) => v.identidadId))]
+  return identidadesTitulares({
+    fichasEnteras,
+    // TODOS los vínculos de cada candidata: la regla necesita saber si tiene otra ficha.
+    vinculos:
+      idsCandidatas.length === 0
+        ? []
+        : await prisma.portalVinculo.findMany({
+            where: { identidadId: { in: idsCandidatas } },
+            select: { identidadId: true, clienteId: true, nivel: true, origen: true },
+          }),
+    identidadQueMira: identidadId,
+    identidadCorredor: IDENTIDAD_CORREDOR_ID,
+  })
 }
 
 export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPortal> {
@@ -1305,7 +1355,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     autorizadas.push({
       ...t,
       nivel: etiquetaNivelAlcances(alcancesFinales),
-      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca, partes: [...conPartes] },
+      autorizacion: {
+        ids: idsFinales,
+        alcances: alcancesFinales,
+        caducaEn: caduca,
+        partes: [...conPartes],
+        ...(deLaFicha === null ? {} : { ficha: { ids: [...deLaFicha.ids], alcances: [...new Set(deLaFicha.alcances)] } }),
+      },
     })
     autorizacionesUsadas.push(...idsFinales)
   }
@@ -1319,24 +1375,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   // identidades que la regla da por titulares, nunca por otra columna.
   const fichasEnteras = autorizadas.map((t) => t.clienteId).filter((id) => porOtorgante.has(id))
   if (fichasEnteras.length > 0) {
-    const candidatas = await prisma.portalVinculo.findMany({
-      where: { clienteId: { in: fichasEnteras }, identidadId: { not: identidadId } },
-      select: { identidadId: true },
-    })
-    const idsCandidatas = [...new Set(candidatas.map((v) => v.identidadId))]
-    const titulares = identidadesTitulares({
-      fichasEnteras,
-      // TODOS los vínculos de cada candidata: la regla necesita saber si tiene otra ficha.
-      vinculos:
-        idsCandidatas.length === 0
-          ? []
-          : await prisma.portalVinculo.findMany({
-              where: { identidadId: { in: idsCandidatas } },
-              select: { identidadId: true, clienteId: true, nivel: true, origen: true },
-            }),
-      identidadQueMira: identidadId,
-      identidadCorredor: IDENTIDAD_CORREDOR_ID,
-    })
+    const titulares = await titularesDeFichasEnteras(fichasEnteras, identidadId)
     const filasDeclaradas =
       titulares.size === 0
         ? []
@@ -1384,6 +1423,18 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       const r = rolesSuyos.get(p.id)
       if (r !== undefined) p.figura = r
     }
+  }
+
+  // Aviso «figura en N que ya están en las tuyas»: solo cruza lo ya leído (filas de las fichas
+  // vistas enteras + las pólizas que `propias` ya sirve); no lee nada nuevo.
+  const yaEnPropias = figuraYaServidaEnPropias({
+    filas: filasFiguraAjena,
+    fichasVistas: fichasVistasEnteras,
+    polizasPropiasIds: propias.flatMap((t) => t.polizas.map((p) => p.id)),
+  })
+  for (const t of autorizadas) {
+    const ids = yaEnPropias.get(t.clienteId)
+    if (ids !== undefined && ids.length > 0) t.figuraEnTusPolizas = ids
   }
 
   // Las pólizas donde FIGURA, agrupadas por tomador. La regla (qué abre, con qué

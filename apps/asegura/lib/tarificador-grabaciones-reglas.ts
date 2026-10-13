@@ -174,8 +174,31 @@ export function sistemaAnalisis(): string {
     `  "prohibido" = cualquier cosa que emita, contrate, formalice, grabe, archive, acepte de forma definitiva, firme,`,
     `  pague, confirme o tramite (palabras de bloqueo: ${BLOQUEO_GRABADOR.join(', ')}). ANTE LA DUDA, "prohibido".`,
     '- primas: dónde aparece la prima/precio (neta, total, por modalidad o fraccionamiento), con su selector si lo hay.',
+    '  Son primas SOLO si la pantalla es el presupuesto/tarificación de UN riesgo concreto (el precio de una modalidad o',
+    '  de un fraccionamiento de ESA póliza). NO son primas los importes de dashboards, gráficos, KPI, producción, emisión,',
+    '  cartera, comisiones, recibos o listados. Si la pantalla no tiene formulario de riesgo ni tabla de precios por',
+    '  modalidad, devuelve "primas": [] (la lista vacía es válida y correcta).',
     '- No inventes elementos que no estén en el HTML. No copies datos personales ni valores.',
   ].join('\n')
+}
+
+/** Selector/etiqueta que delata un importe de dashboard (no una prima de un riesgo). */
+const SELECTOR_NO_PRIMA = /graph|chart|kpi|numbergraph/i
+const ETIQUETA_NO_PRIMA = /emisi[oó]n|producci[oó]n|cartera|comisi/i
+const BOTON_TARIFICAR = /calcul|tarif|presupuest|cotiz/i
+
+/**
+ * Post-filtro DETERMINISTA de `primas` tras la IA (la IA marcó como primas los gráficos de producción de la home de
+ * ePac Allianz). Descarta la prima cuyo selector sea de gráfico/KPI o cuya etiqueta hable de emisión/producción/
+ * cartera/comisión; y las descarta TODAS si la pantalla no tiene ningún campo ni botón de calcular/tarificar/presupuesto.
+ */
+export function filtrarPrimasMapa<P extends { etiqueta: string; selector: string | null }>(
+  pantalla: { campos: unknown[]; botones: { texto: string; funcion: string | null }[]; primas: P[] },
+): { primas: P[]; descartadas: number } {
+  const hayRiesgo = pantalla.campos.length > 0 || pantalla.botones.some((b) => BOTON_TARIFICAR.test(`${b.texto} ${b.funcion ?? ''}`))
+  if (!hayRiesgo) return { primas: [], descartadas: pantalla.primas.length }
+  const primas = pantalla.primas.filter((r) => !(SELECTOR_NO_PRIMA.test(r.selector ?? '') || ETIQUETA_NO_PRIMA.test(r.etiqueta)))
+  return { primas, descartadas: pantalla.primas.length - primas.length }
 }
 
 export function promptAnalisis(c: { compania: string; ramo: string; producto: string | null; pantalla: number; total: number; html: string; trozo?: { n: number; de: number } }): string {

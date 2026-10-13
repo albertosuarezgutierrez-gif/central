@@ -58,3 +58,27 @@ test('una póliza que se va no se puede cerrar como «abierta por error»', () =
   const fugas = readFileSync(new URL('../../plataforma/app/api/correduria/fugas/route.ts', import.meta.url), 'utf8')
   assert.match(fugas, /motivos: MOTIVOS_PERDIDA_VENTA/)
 })
+
+test('editar: los años declarados van a historialDeclarado, NUNCA dentro de seguroAnterior', () => {
+  // Dentro de seguroAnterior, unos años sin compañía pasaban por un seguro anterior leído (bloqueaba la precarga
+  // desde la póliza y la resubida del documento los pisaba con el `||` de primer nivel).
+  assert.match(editar, /jsonb_set\(\s*coalesce\(poliza_competencia, '\{\}'::jsonb\), '\{historialDeclarado\}'/)
+  assert.match(editar, /then poliza_competencia->'historialDeclarado' end as "historialDeclarado"/)
+  assert.match(editar, /const hdAntes = historialDeclaradoDe\(fila\.historialDeclarado\)/)
+  assert.doesNotMatch(editar, /'\{seguroAnterior\}'|'seguroAnterior'->>'anios/)
+  // Merge SOLO dentro de la clave (quita las enviadas a null, añade las demás) y con el filtro de correduría.
+  assert.match(editar, /else '\{\}'::jsonb end\s+- \$\{quitar\}::text\[\]\) \|\| \$\{JSON\.stringify\(poner\)\}::jsonb\),\s+updated_at = now\(\)\s+where id = \$\{id\}::uuid and correduria_id = \$\{correduriaId\}::uuid/)
+  assert.match(editar, /detalle\[k\] = k === 'numeroPoliza' \|\| k === 'companiaActual' \? \{ cambiado: true, vacio: nuevo === null \} : \{ antes, despues: nuevo \}/)
+})
+
+test('editar (13/10/2026): la coherencia del historial se mira con lo YA guardado mezclado, antes de escribir', () => {
+  const i = editar.indexOf('incoherenciaHistorialDeclarado(hdDespues)')
+  assert.ok(i > 0, 'falta el cruce con lo guardado')
+  assert.ok(i < editar.indexOf("'{historialDeclarado}'"), 'el cruce va ANTES del update')
+  assert.ok(editar.indexOf('incoherenciaHistorialDeclarado(hdDespues)') < editar.indexOf('update oportunidades set'), 'y antes de cualquier update')
+})
+
+test('resubir la póliza: el parche de poliza_competencia es de PRIMER nivel (no borra historialDeclarado)', () => {
+  assert.match(crear, /coalesce\(poliza_competencia, '\{\}'::jsonb\) \|\| \$\{JSON\.stringify\(parche\)\}::jsonb end/)
+  assert.doesNotMatch(crear, /historialDeclarado/, 'el parche no trae (ni pisa) el historial declarado')
+})

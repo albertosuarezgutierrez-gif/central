@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { rutaDe, activoPorRuta, activoEnLista, type EntradaNav } from './nav-activo.ts'
+import { rutaDe, activoPorRuta, activoEnLista, pestanaPropiaCorreduria, type EntradaNav } from './nav-activo.ts'
 
 // Las dos listas reales que tenían el fallo, recortadas a lo que importa.
 const NEGOCIO: EntradaNav[] = [
@@ -82,4 +82,13 @@ test('ninguna ruta del panel enciende dos entradas a la vez', () => {
 test('/inicio (home desde 24/09/2026) enciende solo «Inicio», y /banca pelada solo «Banca»', () => {
   assert.deepEqual(activas(NEGOCIO, '/inicio'), ['/inicio'])
   assert.deepEqual(activas(NEGOCIO, '/banca'), ['/banca'])
+})
+
+test('pestañas propias de la correduría: Mi mesa y Prospección (con sus hijas); nada más', () => {
+  assert.equal(pestanaPropiaCorreduria('/correduria/mesa'), 'mesa')
+  assert.equal(pestanaPropiaCorreduria('/correduria/vencimientos'), 'prospeccion')
+  assert.equal(pestanaPropiaCorreduria('/correduria/vencimientos/llamada'), 'prospeccion')
+  assert.equal(pestanaPropiaCorreduria('/correduria/mesa-vieja'), null)
+  assert.equal(pestanaPropiaCorreduria('/correduria'), null)
+  assert.equal(pestanaPropiaCorreduria('/correduria/cliente/abc'), null)
 })

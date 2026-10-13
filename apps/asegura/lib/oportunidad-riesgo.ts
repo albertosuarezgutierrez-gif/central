@@ -23,9 +23,11 @@ import type { DatosEmpresa, DatosPersona } from '@/lib/codeoscopic/persona'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import { municipiosPorCp, tiposDeVia } from '@/lib/codeoscopic/catalogos'
 import { partirDireccion, tipoViaDeFicha } from '@/lib/codeoscopic/direccion'
+import { aseguradoDeFicha, aseguradoDistintoDelTomador, faltanDeAseguradoFicha, MAX_ADICIONALES_CORDURA, motivoFechaNacimientoImposible, type AseguradoAdicional as AseguradoParaCotizar } from '@/lib/codeoscopic/asegurados'
 import { anotarCambio } from '@/lib/auditoria'
 import {
   admiteDatosVehiculo,
+  leerDatosCapital,
   calcularEdicionRiesgo,
   claveDatosDeRamo,
   datosCapitalDeCotizacion,
@@ -33,22 +35,33 @@ import {
   datosVehiculoDeInfoRiesgo,
   datosViviendaDeCotizacion,
   diferenciasVariante,
+  decidirFiguraMultiple,
   esRolFigura,
+  esRolFiguraUnico,
+  esRolMultiple,
+  estadoFigurasMulti,
+  faltaCodigoPostal,
   faltanDatosVehiculo,
+  ramoPideCpDelTomador,
+  revisarAseguradoLigero,
   leerBloqueDeRamo,
   leerDatosVehiculo,
   objetoAsegurado,
   precargaDePoliza,
   ramoTarificable,
   rolesDelRamo,
+  historialDeclaradoDe,
   seguroAnteriorDe,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
   type DatosVehiculoRiesgo,
+  type EstadoFigurasMulti,
   type Diferencia,
   type FigurasVariante,
   type RamoCapital,
   type RolFigura,
+  type RolFiguraUnico,
+  type HistorialDeclaradoRiesgo,
   type SeguroAnterior,
 } from '@central/module-seguros'
 
@@ -111,7 +124,16 @@ export type Riesgo = {
     prima: number | null
   }
   roles: readonly RolFigura[]
+  /**
+   * Figuras de un papel de VARIAS personas (asegurados): `rol` múltiple, una entrada por ficha, por orden de alta.
+   * Para los papeles de una persona, `find(rol)` como siempre.
+   */
   figuras: FiguraRiesgo[]
+  /**
+   * ¿Se pueden escribir los papeles de varias personas? `null` = este ramo no tiene ninguno (auto, moto…: nada
+   * cambia). `sin_migracion` = falta el SQL `2026-10-10_figuras_multi.sql`; `desconocido` = no se pudo mirar.
+   */
+  figurasMulti: EstadoFigurasMulti | null
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
   /**
@@ -134,9 +156,12 @@ export type Riesgo = {
    * (`poliza_competencia.seguroAnterior`, ya saneado); `null` = no se ha leído ninguno. `carnet`: solo en auto/moto
    * (`null` = el ramo no lo usa); `fecha` aaaa-mm-dd o tal cual la guarda la ficha, `null` = la ficha no la tiene;
    * `legible: false` = no se pudo leer la ficha del conductor (no es «sin carné»). Sin DNI ni IBAN.
+   * `historialDeclarado`: años asegurado / en la compañía tecleados en la pantalla (`poliza_competencia.historialDeclarado`,
+   * FUERA de `seguroAnterior`: unos años sin compañía no son un seguro anterior leído); `null` = sin dato, `0` = revisado.
    */
   historial: {
     seguroAnterior: SeguroAnterior | null
+    historialDeclarado: HistorialDeclaradoRiesgo
     carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
   }
 }
@@ -179,13 +204,15 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       id: string; cliente_id: string; nombre: string | null; apellidos: string | null; tipo: string; estado: string
       poliza_id: string | null; info_riesgo: Record<string, unknown> | null; fecha_fin_vigencia: Date | null
       aseguradora: string | null; aseguradora_actual: boolean; prima: string | null; seguro_anterior: unknown
+      historial_declarado: unknown
     }>
   >`
     select o.id::text as id, o.cliente_id::text as cliente_id, c.nombre, c.apellidos, o.tipo::text as tipo,
            o.estado::text as estado, o.poliza_id::text as poliza_id, o.info_riesgo, o.fecha_fin_vigencia,
            coalesce(o.poliza_competencia->>'aseguradora', o.aseguradora_ganadora) as aseguradora,
            (o.poliza_competencia->>'aseguradora') is not null as aseguradora_actual,
-           o.prima_bruta::text as prima, o.poliza_competencia->'seguroAnterior' as seguro_anterior
+           o.prima_bruta::text as prima, o.poliza_competencia->'seguroAnterior' as seguro_anterior,
+           o.poliza_competencia->'historialDeclarado' as historial_declarado
     from seguros.oportunidades o
     join seguros.clientes c on c.id = o.cliente_id and c.correduria_id = o.correduria_id
     where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
@@ -198,7 +225,8 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
              limit 1) as vinculo
     from seguros.oportunidad_figura f
     join seguros.clientes c on c.id = f.cliente_id and c.correduria_id = f.correduria_id
-    where f.oportunidad_id = ${op.id}::uuid and f.correduria_id = ${correduriaId}::uuid`
+    where f.oportunidad_id = ${op.id}::uuid and f.correduria_id = ${correduriaId}::uuid
+    order by f.creado_at asc, f.id asc`
 
   const vinculos = await prisma.$queryRaw<Array<{ cliente_id: string; nombre: string | null; apellidos: string | null; tipo: string }>>`
     select distinct on (r.cliente_b_id) r.cliente_b_id::text as cliente_id, c.nombre, c.apellidos, r.tipo_relacion as tipo
@@ -210,14 +238,14 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   const vars = await prisma.$queryRaw<
     Array<{
       id: string; creado_at: Date; cliente_id: string | null; nombre: string | null; apellidos: string | null
-      poliza_id: string | null; nota: string | null; simulado: boolean; fecha_efecto: Date | null; peticion: unknown
+      poliza_id: string | null; nota: string | null; simulado: boolean; fecha_efecto: Date | null; peticion: unknown; figuras: unknown
       n_precios: number; mejor_compania: string | null; mejor_prima: string | null
       p_id: string | null; enviado_at: Date | null; visto_at: Date | null; elegido_at: Date | null
       aceptado_at: Date | null; emitido_at: Date | null; retirado_at: Date | null
     }>
   >`
     select t.id::text as id, t.creado_at, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, c.nombre, c.apellidos, t.poliza_id::text as poliza_id, t.nota, t.simulado,
-           t.fecha_efecto, t.peticion,
+           t.fecha_efecto, t.peticion, t.figuras,
            (select count(*)::int from seguros.tarificacion_precios x where x.tarificacion_id = t.id and x.prima_eur is not null) as n_precios,
            m.compania as mejor_compania, m.prima_eur::text as mejor_prima,
            p.id::text as p_id, p.enviado_at, p.visto_at, p.elegido_at, p.aceptado_at, p.emitido_at, p.retirado_at
@@ -254,7 +282,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
           aceptadoAt: iso(v.aceptado_at), emitidoAt: iso(v.emitido_at), retiradoAt: iso(v.retirado_at),
         }
       : null,
-    cambios: i === 0 ? [] : diferenciasVariante(vars[i - 1].peticion, v.peticion),
+    cambios: i === 0 ? [] : diferenciasVariante(vars[i - 1].peticion, v.peticion, { antes: vars[i - 1].figuras, despues: v.figuras }),
   }))
   // La más reciente primero: es la que se está trabajando.
   variantes.reverse()
@@ -297,6 +325,13 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       (op.tipo === 'auto' || op.tipo === 'moto') &&
       (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || (f.rol === 'tomador' && !hayConductor))
     f.empresa = p !== null && p.tipo === 'juridica'
+    // Asegurado de DECESOS (13/10/2026), de SALUD (mismo `risk.insureds[]`, peticion-salud.ts) y de VIDA (`risk.insured`
+    // cuando no es el tomador, peticion-vida.ts): viaja como `NaturalPerson_V1` (nombre, apellidos, nacimiento, sexo y,
+    // opcional, DNI). Lo que le falta es lo de Avant2 para un asegurado, no lo de un tomador (ni teléfono ni estado civil).
+    if (f.rol === 'asegurado' && (op.tipo === 'decesos' || op.tipo === 'salud' || op.tipo === 'vida')) {
+      f.faltan = p === null ? null : p.tipo === 'juridica' ? ['empresa_no_asegurada'] : faltanDeAseguradoFicha(p)
+      continue
+    }
     if (conduce) {
       const fecha = p !== null && 'fechaCarnet' in p && typeof p.fechaCarnet === 'string' && p.fechaCarnet.trim() !== '' ? p.fechaCarnet.trim() : null
       carnetPorRol.set(f.rol, { fecha, legible: p !== null })
@@ -304,14 +339,20 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     // Estado civil de la ficha (texto libre del CRM) solo en los ramos de personas: se lee aparte para no meterlo en
     // `personaDeFicha` (ahí viajaría al vendor como si fuera un id de catálogo).
     const pideCivil = ramoPideEstadoCivil(op.tipo) && !f.empresa
-    const civil = pideCivil ? await clienteOrigenDe(correduriaId, f.clienteId).then((o) => (o ? o.cliente.estadoCivil : undefined)).catch(() => undefined) : undefined
-    f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil })
+    // El código postal del TOMADOR en auto/moto (13/10/2026): la petición saca de ahí la dirección del holder y la de
+    // circulación. Leído aparte, como el estado civil (`undefined` = no se pudo leer: no se afirma que falte).
+    const pideCp = ramoPideCpDelTomador(op.tipo) && f.rol === 'tomador'
+    const ficha = pideCivil || pideCp ? await clienteOrigenDe(correduriaId, f.clienteId).catch(() => null) : null
+    const civil = pideCivil && ficha ? ficha.cliente.estadoCivil : undefined
+    const cp = pideCp && ficha ? (ficha.cliente.codigoPostal ?? null) : undefined
+    f.faltan = p === null ? null : faltanDeFigura(p, conduce, { pideEstadoCivil: pideCivil, estadoCivilFicha: civil, pideCp, cpFicha: cp })
   }
 
   const rolCarnet = (['conductor_habitual', 'tomador'] as const).find((r) => carnetPorRol.has(r)) ?? null
   const carnetElegido = rolCarnet ? carnetPorRol.get(rolCarnet)! : null
   const historial: Riesgo['historial'] = {
     seguroAnterior: seguroAnteriorDe(op.seguro_anterior),
+    historialDeclarado: historialDeclaradoDe(op.historial_declarado),
     carnet: conVehiculo ? { fecha: carnetElegido?.fecha ?? null, conductor: rolCarnet, legible: carnetElegido?.legible ?? false } : null,
   }
 
@@ -332,6 +373,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     },
     roles: rolesDelRamo(op.tipo),
     figuras,
+    figurasMulti: rolesDelRamo(op.tipo).some((r) => esRolMultiple(r)) ? await estadoFigurasMultiBD() : null,
     vinculos: vinculos.map((v) => ({ clienteId: v.cliente_id, nombre: nombreDe(v.nombre, v.apellidos), tipo: v.tipo })),
     variantes,
     datosVehiculo,
@@ -341,7 +383,103 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   }
 }
 
-export type ResultadoFigura = { ok: true } | { ok: false; status: number; motivo: string }
+export type ResultadoFigura = { ok: true } | { ok: false; status: number; motivo: string; estado?: 'sin_migracion' }
+
+// ─── Figuras de VARIAS personas (asegurados), 10/10/2026 ───────────────────
+//
+// `oportunidad_figura` admitía una fila por (oportunidad, rol) y solo los papeles de vehículo. El SQL
+// `prisma/sql/2026-10-10_figuras_multi.sql` añade `asegurado` (varias fichas, la misma no dos veces) y deja únicos
+// los demás con un índice PARCIAL. Hasta que se aplique, escribir un asegurado choca con el check viejo: el puerto
+// lo mira ANTES (`estadoFigurasMultiBD`) y contesta 503 `sin_migracion`, sin crear ficha ni tocar nada. Los
+// papeles de una persona (auto/moto) no pasan por aquí y funcionan igual con y sin migración.
+
+/** Una vez vista aplicada, no se vuelve a mirar en este proceso (un rollback del SQL exige redeploy). */
+let figurasMultiAplicada = false
+
+/** Lee del catálogo de Postgres si la migración de figuras multi está aplicada. Nunca lanza. */
+export async function estadoFigurasMultiBD(): Promise<EstadoFigurasMulti> {
+  if (figurasMultiAplicada) return 'disponible'
+  try {
+    const [r] = await prisma.$queryRaw<Array<{ check_roles: string | null; indices: string[] | null }>>`
+      select
+        (select pg_get_constraintdef(c.oid) from pg_constraint c
+          join pg_class t on t.oid = c.conrelid join pg_namespace n on n.oid = t.relnamespace
+          where n.nspname = 'seguros' and t.relname = 'oportunidad_figura' and c.conname = 'oportunidad_figura_rol_ck') as check_roles,
+        (select array_agg(i.indexname::text) from pg_indexes i
+          where i.schemaname = 'seguros' and i.tablename = 'oportunidad_figura') as indices`
+    const est = estadoFigurasMulti(r ? { checkRoles: r.check_roles, indices: r.indices ?? [] } : null)
+    if (est === 'disponible') figurasMultiAplicada = true
+    return est
+  } catch (err) {
+    console.error('[oportunidad-riesgo] no se pudo comprobar la migración de figuras multi:', err instanceof Error ? err.message : err)
+    return 'desconocido'
+  }
+}
+
+/** `null` = se puede escribir; si no, el 503 que hay que devolver (sin haber tocado nada). */
+async function exigirFigurasMulti(): Promise<{ ok: false; status: number; motivo: string; estado?: 'sin_migracion' } | null> {
+  const est = await estadoFigurasMultiBD()
+  if (est === 'disponible') return null
+  if (est === 'sin_migracion') {
+    return { ok: false, status: 503, estado: 'sin_migracion', motivo: 'pendiente de migración: los asegurados con ficha llegan cuando se aplique el SQL de figuras multi. No se ha guardado nada.' }
+  }
+  return { ok: false, status: 503, motivo: 'no se ha podido comprobar si la migración de figuras está aplicada. No se ha guardado nada.' }
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
+
+/** La persona es quien lleva la oportunidad o alguien VINCULADO a ella (relaciones, sin «Sin vínculo»). */
+async function personaDelRiesgo(tx: Tx, correduriaId: string, clienteOportunidad: string, clienteId: string): Promise<boolean> {
+  if (clienteId === clienteOportunidad) return true
+  const [v] = await tx.$queryRaw<Array<{ n: number }>>`
+    select count(*)::int as n from seguros.cliente_relaciones r
+    join seguros.clientes c on c.id = r.cliente_b_id and c.correduria_id = r.correduria_id and c.merged_into_cliente_id is null
+    where r.correduria_id = ${correduriaId}::uuid and r.cliente_a_id = ${clienteOportunidad}::uuid
+      and r.cliente_b_id = ${clienteId}::uuid and r.tipo_relacion <> 'Sin vínculo'`
+  return !!v && v.n > 0
+}
+
+/**
+ * Añade una ficha a un papel de VARIAS personas. La misma ficha ya puesta no se duplica (200); otra ficha se
+ * añade aunque se llame igual (dos personas no se funden); el tope es el del ramo (`cardinalidadesDelRamo`).
+ */
+async function anadirFiguraMultiple(
+  correduriaId: string,
+  e: { oportunidadId: string; rol: RolFigura; clienteId: string; actor: string },
+): Promise<ResultadoFigura> {
+  const gate = await exigirFigurasMulti()
+  if (gate) return gate
+  return prisma.$transaction(async (tx) => {
+    const [op] = await tx.$queryRaw<Array<{ cliente_id: string; tipo: string }>>`
+      select cliente_id::text as cliente_id, tipo::text as tipo from seguros.oportunidades
+      where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+    if (!op) return { ok: false as const, status: 404, motivo: 'la oportunidad no es de esta correduría' }
+    if (!(await personaDelRiesgo(tx, correduriaId, op.cliente_id, e.clienteId))) {
+      return { ok: false as const, status: 422, motivo: 'esa persona no está vinculada al cliente: añádela como familiar primero' }
+    }
+    // Dos altas a la vez no se saltan el tope: en fila por oportunidad + papel.
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`figura-multi:${e.oportunidadId}:${e.rol}`}))`
+    const actuales = await tx.$queryRaw<Array<{ cliente_id: string }>>`
+      select cliente_id::text as cliente_id from seguros.oportunidad_figura
+      where oportunidad_id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and rol = ${e.rol}`
+    const d = decidirFiguraMultiple({ ramo: op.tipo, rol: e.rol, actuales: actuales.map((a) => a.cliente_id), clienteId: e.clienteId })
+    if (!d.ok) {
+      return d.motivo === 'lleno'
+        ? { ok: false as const, status: 409, motivo: `en ${op.tipo} caben como mucho ${d.max} (${e.rol}): quita uno antes de añadir otro` }
+        : { ok: false as const, status: 422, motivo: `en ${op.tipo} no hay ${e.rol}` }
+    }
+    if (d.yaEstaba) return { ok: true as const }
+    await tx.$executeRaw`
+      insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
+      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${e.rol}, ${e.clienteId}::uuid, ${e.actor})
+      on conflict do nothing`
+    await tx.$executeRaw`
+      insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
+      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, 'figura_asignada',
+              ${JSON.stringify({ rol: e.rol, clienteId: e.clienteId })}::jsonb, ${e.actor})`
+    return { ok: true as const }
+  })
+}
 
 /**
  * Asigna una ficha a un rol del riesgo. La persona tiene que ser quien lleva la oportunidad o
@@ -365,6 +503,7 @@ export async function asignarFigura(
   if (!UUID.test(e.oportunidadId) || !UUID.test(e.clienteId)) return { ok: false, status: 400, motivo: 'ids no válidos' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
   const rol = e.rol
+  if (esRolMultiple(rol)) return anadirFiguraMultiple(correduriaId, { oportunidadId: e.oportunidadId, rol, clienteId: e.clienteId, actor: e.actor })
   return prisma.$transaction(async (tx) => {
     const [op] = await tx.$queryRaw<Array<{ cliente_id: string; tipo: string }>>`
       select cliente_id::text as cliente_id, tipo::text as tipo from seguros.oportunidades
@@ -383,13 +522,13 @@ export async function asignarFigura(
       const n = await tx.$executeRaw`
         insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
         values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
-        on conflict (oportunidad_id, rol) do nothing`
+        on conflict (oportunidad_id, rol) where rol <> 'asegurado' do nothing`
       if (n === 0) return { ok: false as const, status: 409, motivo: 'ese rol ya lo tiene otra persona' }
     } else {
       await tx.$executeRaw`
         insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
         values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${rol}, ${e.clienteId}::uuid, ${e.actor})
-        on conflict (oportunidad_id, rol) do update set cliente_id = excluded.cliente_id, actor = excluded.actor, creado_at = now()`
+        on conflict (oportunidad_id, rol) where rol <> 'asegurado' do update set cliente_id = excluded.cliente_id, actor = excluded.actor, creado_at = now()`
     }
     await tx.$executeRaw`
       insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
@@ -399,13 +538,29 @@ export async function asignarFigura(
   })
 }
 
-/** Quita una figura: ese rol vuelve a ser «el mismo que el tomador» (o el cliente, si es el tomador). */
+/**
+ * Quita una figura: ese rol vuelve a ser «el mismo que el tomador» (o el cliente, si es el tomador). En un papel
+ * de VARIAS personas hay que decir cuál (`clienteId`): nunca se borran todos los asegurados de golpe.
+ */
 export async function quitarFigura(
   correduriaId: string,
-  e: { oportunidadId: string; rol: unknown; actor: string },
+  e: { oportunidadId: string; rol: unknown; actor: string; clienteId?: unknown },
 ): Promise<ResultadoFigura> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
+  if (esRolMultiple(e.rol)) {
+    const clienteId = typeof e.clienteId === 'string' ? e.clienteId.trim() : ''
+    if (!UUID.test(clienteId)) return { ok: false, status: 422, motivo: 'falta qué persona quitar (clienteId)' }
+    const n = await prisma.$executeRaw`
+      delete from seguros.oportunidad_figura
+      where oportunidad_id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and rol = ${e.rol} and cliente_id = ${clienteId}::uuid`
+    if (n > 0) {
+      await prisma.$executeRaw`
+        insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
+        values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, 'figura_quitada', ${JSON.stringify({ rol: e.rol, clienteId })}::jsonb, ${e.actor})`
+    }
+    return { ok: true }
+  }
   const n = await prisma.$executeRaw`
     delete from seguros.oportunidad_figura
     where oportunidad_id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and rol = ${e.rol}`
@@ -427,10 +582,11 @@ export async function nuevaPersonaEnRiesgo(
   e: { oportunidadId: string; rol: unknown; tipoRelacion: unknown; persona: Record<string, unknown>; actor: string },
 ): Promise<
   | { ok: true; clienteId: string; existente: boolean; carnet: 'guardado' | 'ya_tenia' | 'no_guardado' | null }
-  | { ok: false; status: number; motivo: string; conflicto?: unknown }
+  | { ok: false; status: number; motivo: string; conflicto?: unknown; estado?: 'sin_migracion' }
 > {
   if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
   if (!esRolFigura(e.rol)) return { ok: false, status: 422, motivo: 'rol desconocido' }
+  if (esRolMultiple(e.rol)) return nuevoAseguradoEnRiesgo(correduriaId, { ...e, rol: e.rol })
   // El carné se valida ANTES del alta: uno mal tecleado no puede dejar la ficha creada sin él.
   const car = carnetDeNuevaPersona(e.persona, new Date().toISOString().slice(0, 10))
   if (!car.ok) return { ok: false, status: 422, motivo: car.motivo }
@@ -497,6 +653,100 @@ export async function nuevaPersonaEnRiesgo(
     }
   }
   return { ok: true, clienteId, existente, carnet }
+}
+
+/**
+ * «+ Nuevo asegurado» (salud, decesos, vida, hogar, comercio): alta LIGERA (nombre, nacimiento y sexo; el DNI se
+ * pide al emitir) + vínculo con el cliente + añadido al riesgo. Decisión de Alberto (10/10/2026): cada asegurado
+ * es una FICHA, no texto. Identidad:
+ * - Con DNI: la ficha de ese DNI si el nombre casa (`mismaPersonaPorNombre`); con otro nombre, 409 (un DNI mal
+ *   tecleado apunta a OTRA persona). Sin ficha, alta normal con ese DNI.
+ * - Sin DNI: SIEMPRE ficha nueva. Nunca se reutiliza otra por nombre ni por nacimiento: dos hermanos o dos
+ *   homónimos son dos personas. Un duplicado se fusiona luego por SQL, con lote (regla de duplicados).
+ * Sin migración aplicada contesta 503 `sin_migracion` ANTES de crear nada. El tope del ramo se corta también
+ * antes del alta.
+ */
+async function nuevoAseguradoEnRiesgo(
+  correduriaId: string,
+  e: { oportunidadId: string; rol: RolFigura; tipoRelacion: unknown; persona: Record<string, unknown>; actor: string },
+): Promise<
+  | { ok: true; clienteId: string; existente: boolean; carnet: null }
+  | { ok: false; status: number; motivo: string; conflicto?: unknown; estado?: 'sin_migracion' }
+> {
+  const gate = await exigirFigurasMulti()
+  if (gate) return gate
+  const rev = revisarAseguradoLigero(e.persona)
+  if (!rev.ok) return { ok: false, status: 422, motivo: rev.motivo }
+  const p = rev.valor
+  const [op] = await prisma.$queryRaw<Array<{ cliente_id: string; tipo: string }>>`
+    select cliente_id::text as cliente_id, tipo::text as tipo from seguros.oportunidades
+    where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+  if (!op) return { ok: false, status: 404, motivo: 'la oportunidad no es de esta correduría' }
+  const actuales = await prisma.$queryRaw<Array<{ cliente_id: string }>>`
+    select cliente_id::text as cliente_id from seguros.oportunidad_figura
+    where oportunidad_id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and rol = ${e.rol}`
+  // La ficha aún no existe (no puede «estar ya»): aquí solo se miran ramo y tope, para no abrir una ficha que no cabe.
+  const previa = decidirFiguraMultiple({ ramo: op.tipo, rol: e.rol, actuales: actuales.map((a) => a.cliente_id), clienteId: '' })
+  if (!previa.ok) {
+    return previa.motivo === 'lleno'
+      ? { ok: false, status: 409, motivo: `en ${op.tipo} caben como mucho ${previa.max} (${e.rol}): quita uno antes de añadir otro. No se ha creado ninguna ficha.` }
+      : { ok: false, status: 422, motivo: `en ${op.tipo} no hay ${e.rol}` }
+  }
+
+  let clienteId: string
+  let existente = false
+  if (p.dni) {
+    const alta = await altaCliente(correduriaId, { nombre: p.nombre, apellidos: p.apellidos, dni: p.dni, fechaNacimiento: p.fechaNacimiento }, e.actor)
+    if (alta.ok) clienteId = alta.id
+    else {
+      const f = alta as { estado?: string; coincidencias?: Array<{ id: string; por: string }> }
+      const mismoDni = f.estado === 'conflicto' ? f.coincidencias?.find((c) => c.por === 'dni') : undefined
+      if (!mismoDni) return { ok: false, status: 'status' in alta && typeof alta.status === 'number' ? alta.status : 422, motivo: 'motivo' in alta ? String(alta.motivo) : 'no se pudo dar de alta', conflicto: f.coincidencias }
+      const [ficha] = await prisma.$queryRaw<Array<{ nombre: string | null; apellidos: string | null }>>`
+        select nombre, apellidos from seguros.clientes
+        where id = ${mismoDni.id}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+      if (!ficha || !mismaPersonaPorNombre({ nombre: p.nombre, apellidos: p.apellidos }, ficha)) {
+        const suyo = ficha ? [ficha.nombre, ficha.apellidos].filter(Boolean).join(' ') : null
+        return { ok: false, status: 409, motivo: `ese DNI ya está en la ficha de ${suyo ?? 'otra persona'}: revisa el DNI o el nombre` }
+      }
+      clienteId = mismoDni.id
+      existente = true
+    }
+  } else {
+    try {
+      clienteId = await prisma.$transaction(async (tx) => {
+        const [c] = await tx.$queryRaw<Array<{ id: string }>>`
+          insert into seguros.clientes (correduria_id, nombre, apellidos, tipo, segmento, tipo_persona, fuente, fecha_nacimiento)
+          values (${correduriaId}::uuid, ${p.nombre.slice(0, 120)}, ${p.apellidos.slice(0, 160)}, cast('lead' as seguros.tipo_cliente),
+                  cast('prospecto' as seguros.segmento_cliente), cast('fisica' as seguros.tipo_persona),
+                  cast('venta_directa' as seguros.fuente_origen), ${encryptField(p.fechaNacimiento)})
+          returning id::text as id`
+        await tx.$executeRaw`
+          insert into seguros.historial_interno (correduria_id, cliente_id, tipo, texto)
+          values (${correduriaId}::uuid, ${c.id}::uuid, cast('gestion' as seguros.tipo_historial_interno),
+                  ${`Lead abierto como asegurado de un riesgo (alta ligera, sin DNI ni contacto; el DNI se pide al emitir) — por ${e.actor}`})`
+        return c.id
+      })
+      anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: null, despues: true })
+    } catch (err) {
+      console.error('[oportunidad-riesgo] alta ligera del asegurado sin hacer:', err instanceof Error ? err.message : err)
+      return { ok: false, status: 500, motivo: 'no se ha podido abrir su ficha' }
+    }
+  }
+
+  // El sexo (saludo) solo en una ficha NUEVA: lo tecleado aquí no pisa lo que ya tenía una existente.
+  if (!existente) {
+    await prisma.$executeRaw`
+      update seguros.clientes set saludo = coalesce(saludo, ${p.sexo === 'hombre' ? '1' : '2'}), updated_at = now()
+      where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`.catch(() => 0)
+  }
+  if (clienteId !== op.cliente_id) {
+    const rel = await crearRelacion(correduriaId, op.cliente_id, { relacionadoId: clienteId, tipo: e.tipoRelacion, actor: e.actor })
+    if (!rel.ok && rel.status !== 409) return { ok: false, status: rel.status, motivo: `ficha ${clienteId} abierta, pero no se pudo vincular: ${rel.motivo}` }
+  }
+  const asig = await anadirFiguraMultiple(correduriaId, { oportunidadId: e.oportunidadId, rol: e.rol, clienteId, actor: e.actor })
+  if (!asig.ok) return { ...asig, motivo: `ficha ${clienteId} ${existente ? 'encontrada' : 'abierta'}, pero no se ha añadido al riesgo: ${asig.motivo}` }
+  return { ok: true, clienteId, existente, carnet: null }
 }
 
 /**
@@ -584,10 +834,19 @@ export async function personaDeFicha(
 export function faltanDeFigura(
   p: PersonaFigura | EmpresaFigura | null,
   conCarnet: boolean,
-  personas: { pideEstadoCivil: boolean; estadoCivilFicha: string | null | undefined } = { pideEstadoCivil: false, estadoCivilFicha: undefined },
+  personas: {
+    pideEstadoCivil: boolean
+    estadoCivilFicha: string | null | undefined
+    /** El ramo saca de esta ficha el código postal (tomador de auto/moto: `ramoPideCpDelTomador`). */
+    pideCp?: boolean
+    /** `codigo_postal` de la ficha; `undefined` = no se pudo leer (no se afirma que falte). */
+    cpFicha?: string | null
+  } = { pideEstadoCivil: false, estadoCivilFicha: undefined },
 ): string[] {
   if (!p) return ['ficha']
   const f: string[] = []
+  // CP (13/10/2026): persona o empresa, si el ramo lo saca de esta ficha y no trae uno de 5 dígitos.
+  if (personas.pideCp === true && faltaCodigoPostal(personas.cpFicha) === true) f.push('cp')
   // Empresa: CIF y razón social (en los campos de la pantalla, `dni` y `nombre`). Conducir, nunca:
   // el vendor solo admite Dni/Nie/Passport en el conductor — `empresa_no_conduce` bloquea la figura.
   if (p.tipo === 'juridica') {
@@ -608,7 +867,7 @@ export function ramoPideEstadoCivil(ramo: string): boolean {
 }
 
 /** Qué rol de figura va a qué clave de `DatosAuto` (lo que ya sabe construir la petición). */
-const CLAVE_DATOS: Partial<Record<RolFigura, 'propietario' | 'conductor' | 'conductorOcasional'>> = {
+const CLAVE_DATOS: Partial<Record<RolFiguraUnico, 'propietario' | 'conductor' | 'conductorOcasional'>> = {
   propietario: 'propietario',
   conductor_habitual: 'conductor',
   conductor_ocasional: 'conductorOcasional',
@@ -616,10 +875,30 @@ const CLAVE_DATOS: Partial<Record<RolFigura, 'propietario' | 'conductor' | 'cond
 
 export type VarianteEntrada = {
   /** Lo que se añade al contexto de la cotización: de qué riesgo es y con qué figuras. */
-  contexto: { oportunidadId: string; figuras: FigurasVariante | null; nota: string | null } | null
+  contexto: { oportunidadId: string; figuras: FigurasVariante | null; nota: string | null; asegurados?: string[] } | null
   /** Correcciones con las figuras rellenas desde SUS fichas (lo tecleado por el corredor manda encima). */
   correcciones: Record<string, unknown> | undefined
+  /**
+   * DECESOS y SALUD embebidos (13/10/2026, `aseguradosDeFiguras: true`): los asegurados además del tomador, armados desde las
+   * FICHAS de las figuras `asegurado` del riesgo (`risk.insureds[1..]`). Ausente = la pantalla no lo pidió (camino de
+   * siempre: los teclea el corredor). `[]` = el riesgo no tiene ninguno: solo el tomador.
+   */
+  asegurados?: AseguradoParaCotizar[]
+  /**
+   * VIDA embebida (13/10/2026, `datosDelRiesgo: true`): lo que viaja del asegurado y del riesgo (`risk.deathBenefit`,
+   * `insured.economicOccupation`, `insured.smoker`, peticion-vida.ts) leído de `info_riesgo.datosCapital` en el
+   * servidor, no del cuerpo. `null` en profesión/fumador = no se sabe: no se manda (nunca «no fuma» por defecto).
+   */
+  vida?: DatosVidaParaCotizar
+  /**
+   * VIDA con oportunidad pero SIN `datosDelRiesgo` (pantalla completa `vida-nuevo?oportunidad=`): el capital lo teclea el
+   * corredor, pero la persona asegurada sale igualmente de las figuras del riesgo. `null` = el asegurado es el tomador.
+   */
+  aseguradoVida?: AseguradoParaCotizar | null
 }
+
+/** Lo que en VIDA embebida viaja del riesgo. `asegurado` = la persona asegurada si NO es el tomador (`null` = el tomador). */
+export type DatosVidaParaCotizar = { capital: number; profesion: string | null; fumador: boolean | null; asegurado: AseguradoParaCotizar | null }
 
 /**
  * Prepara una cotización que es VARIANTE de un riesgo (auto-, moto-, hogar-, vida-, salud- o decesos-nuevo con
@@ -632,6 +911,23 @@ export async function prepararVariante(
   e: { tomadorId: string; ramo: 'auto' | 'moto' | 'hogar' | 'vida' | 'salud' | 'decesos'; cuerpo: Record<string, unknown>; correcciones: Record<string, unknown> | undefined },
 ): Promise<{ ok: true; v: VarianteEntrada } | { ok: false; motivo: string }> {
   const oportunidadId = typeof e.cuerpo.oportunidadId === 'string' ? e.cuerpo.oportunidadId.trim() : ''
+  const deFiguras = e.cuerpo.aseguradosDeFiguras === true
+  // Asegurados desde las figuras: solo en decesos y salud (los dos llevan `risk.insureds[]`) y solo de UN riesgo.
+  if (deFiguras && e.ramo !== 'decesos' && e.ramo !== 'salud') return { ok: false, motivo: `los asegurados desde las figuras solo existen en decesos y salud, no en ${e.ramo}` }
+  if (deFiguras && oportunidadId === '') return { ok: false, motivo: 'para leer los asegurados de las figuras hace falta la oportunidad' }
+  // `correcciones` pisa los datos (`{ ...pre.datos, ...correcciones }`): una lista tecleada ahí sustituiría a las fichas.
+  if (deFiguras && e.correcciones !== undefined && 'aseguradosAdicionales' in e.correcciones) {
+    return { ok: false, motivo: 'con los asegurados de las figuras no se manda otra lista de asegurados: se cambian en «Intervinientes»' }
+  }
+  // VIDA embebida: capital, profesión y fumador salen de «Datos del riesgo» (servidor), nunca del cuerpo.
+  const deRiesgoVida = e.cuerpo.datosDelRiesgo === true
+  if (deRiesgoVida && e.ramo !== 'vida') return { ok: false, motivo: `los datos del riesgo leídos en el servidor solo existen en vida, no en ${e.ramo}` }
+  if (deRiesgoVida && oportunidadId === '') return { ok: false, motivo: 'para leer los datos del riesgo hace falta la oportunidad' }
+  if (deRiesgoVida) {
+    const res = typeof e.cuerpo.resueltos === 'object' && e.cuerpo.resueltos !== null ? (e.cuerpo.resueltos as Record<string, unknown>) : {}
+    const pisa = CAMPOS_VIDA_DEL_RIESGO.filter((k) => k in res || (e.correcciones !== undefined && k in e.correcciones))
+    if (pisa.length > 0) return { ok: false, motivo: `con los datos del riesgo no se manda ${pisa.join(', ')} aparte: se cambian en «Datos del riesgo»` }
+  }
   if (oportunidadId === '') return { ok: true, v: { contexto: null, correcciones: e.correcciones } }
   // Fuera de auto/moto el riesgo solo tiene tomador (`rolesDelRamo`): un rol de más en el cuerpo no se cuela.
   const figuras = limpiarFigurasEntrada(e.cuerpo.figuras, e.tomadorId, !admiteDatosVehiculo(e.ramo))
@@ -647,7 +943,7 @@ export async function prepararVariante(
   let correcciones = e.correcciones
   if (figuras) {
     correcciones = { ...(correcciones ?? {}) }
-    for (const [rol, clave] of Object.entries(CLAVE_DATOS) as Array<[RolFigura, string]>) {
+    for (const [rol, clave] of Object.entries(CLAVE_DATOS) as Array<[RolFiguraUnico, string]>) {
       const id = figuras[rol]
       if (!id || id === e.tomadorId) continue
       const deFicha = await personaDeFicha(correduriaId, id, e.ramo)
@@ -680,7 +976,143 @@ export async function prepararVariante(
       if (e.ramo === 'moto' && clave === 'conductor' && c.fechaCarnet && !c.tipoCarnet) c.tipoCarnet = 'B'
     }
   }
+  if (deFiguras) {
+    const aseg = await aseguradosDeFigurasParaCotizar(correduriaId, { oportunidadId, tomadorId: e.tomadorId, ramo: e.ramo === 'salud' ? 'salud' : 'decesos' })
+    if (!aseg.ok) return aseg
+    // Foto de la variante: QUIÉN es cada asegurado (cliente_id, en el orden de `risk.insureds[1..]`). Sin DNI.
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: aseg.clienteIds }, correcciones, asegurados: aseg.asegurados } }
+  }
+  if (e.ramo === 'vida' && !deRiesgoVida) {
+    const av = await aseguradoVidaDeFiguras(correduriaId, { oportunidadId, tomadorId: e.tomadorId })
+    if (!av.ok) return av
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: av.clienteId ? [av.clienteId] : [] }, correcciones, aseguradoVida: av.asegurado } }
+  }
+  if (deRiesgoVida) {
+    const dv = await datosVidaDelRiesgoParaCotizar(correduriaId, { oportunidadId, tomadorId: e.tomadorId })
+    if (!dv.ok) return dv
+    // Foto: `[id]` = el asegurado de esa ficha; `[]` = el asegurado es el tomador (`risk.insured`).
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: dv.aseguradoClienteId ? [dv.aseguradoClienteId] : [] }, correcciones, vida: dv.vida } }
+  }
   return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones } }
+}
+
+/**
+ * Los asegurados de un riesgo de DECESOS (rol `asegurado`), armados desde SUS fichas para `risk.insureds[1..]`
+ * (13/10/2026). Gratis. Acotado a la correduría. El tomador no se repite (ya es `insureds[0]`). Una ficha que no se
+ * puede leer, o una empresa, CORTA antes de pagar: nunca se cotiza con menos personas de las que hay en el riesgo.
+ * Lo que falte en una ficha (nombre, apellidos, nacimiento, sexo…) no corta aquí: lo dice `revisarDatosDecesos`
+ * como dato que falta (gratis), igual que con el tomador.
+ */
+export async function aseguradosDeFigurasParaCotizar(
+  correduriaId: string,
+  e: { oportunidadId: string; tomadorId: string; ramo?: 'decesos' | 'salud' },
+): Promise<{ ok: true; asegurados: AseguradoParaCotizar[]; clienteIds: string[] } | { ok: false; motivo: string }> {
+  if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'la oportunidad no es válida' }
+  const ramo = e.ramo ?? 'decesos'
+  // El tomador que se cotiza tiene que ser el DEL RIESGO (figura `tomador` o, sin ella, el cliente de la oportunidad):
+  // si no, se pagaría una cotización con el tomador de un cliente y los asegurados de otra familia.
+  const [tom] = await prisma.$queryRaw<Array<{ tomador: string }>>`
+    select coalesce(
+      (select t.cliente_id::text from seguros.oportunidad_figura t
+        where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id and t.rol = 'tomador' limit 1),
+      o.cliente_id::text) as tomador
+    from seguros.oportunidades o
+    where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
+  if (!tom || tom.tomador !== e.tomadorId) return { ok: false, motivo: 'el tomador no es el de este riesgo: vuelve a abrir «Pedir precio» desde la oportunidad' }
+  const filas = await prisma.$queryRaw<Array<{ cliente_id: string; nombre: string | null; apellidos: string | null }>>`
+    select f.cliente_id::text as cliente_id, c.nombre, c.apellidos
+    from seguros.oportunidad_figura f
+    join seguros.oportunidades o on o.id = f.oportunidad_id and o.correduria_id = f.correduria_id
+    join seguros.clientes c on c.id = f.cliente_id and c.correduria_id = f.correduria_id
+    where f.oportunidad_id = ${e.oportunidadId}::uuid and f.correduria_id = ${correduriaId}::uuid
+      and f.rol = 'asegurado' and o.tipo::text = ${ramo}
+    order by f.creado_at asc, f.id asc`
+  const vistos = new Set<string>([e.tomadorId])
+  const asegurados: AseguradoParaCotizar[] = []
+  const clienteIds: string[] = []
+  for (const f of filas) {
+    if (vistos.has(f.cliente_id)) continue
+    vistos.add(f.cliente_id)
+    const quien = nombreDe(f.nombre, f.apellidos)
+    const p = await personaDeFicha(correduriaId, f.cliente_id, ramo).catch(() => null)
+    if (!p) return { ok: false, motivo: `no se pudo leer la ficha del asegurado ${quien}: no se pide precio con menos personas de las del riesgo` }
+    if (p.tipo === 'juridica') return { ok: false, motivo: `${quien} es una empresa: un asegurado de ${ramo} tiene que ser una persona. Quítalo de «Intervinientes».` }
+    const a = aseguradoDeFicha(p)
+    // Fecha imposible/futura/de >120 años: el vendor da 400 y COBRA 0,50€. Se corta aquí, gratis, con 422 (`variante`).
+    const malNac = motivoFechaNacimientoImposible(a.fechaNacimiento)
+    if (malNac) return { ok: false, motivo: `asegurado ${quien}: ${malNac}. Corrígela en su ficha («Editar datos» en «Intervinientes»).` }
+    asegurados.push(a)
+    clienteIds.push(f.cliente_id)
+  }
+  // Nunca se recorta en silencio: pasar del tope corta antes de pagar.
+  if (asegurados.length > MAX_ADICIONALES_CORDURA) return { ok: false, motivo: `hay ${asegurados.length} asegurados además del tomador y el máximo es ${MAX_ADICIONALES_CORDURA}: quita los que sobren en «Intervinientes»` }
+  return { ok: true, asegurados, clienteIds }
+}
+
+/** Lo que en VIDA embebida sale de «Datos del riesgo» y nunca del cuerpo de la petición (peticion-vida.ts). */
+export const CAMPOS_VIDA_DEL_RIESGO = ['capital', 'profesion', 'fumador'] as const
+
+/**
+ * VIDA (13/10/2026): la persona asegurada de un riesgo de vida cuando NO es el tomador, armada desde SU ficha
+ * (`risk.insured`). Gratis. `asegurado: null` = es el tomador. Corta ANTES de pagar si: la oportunidad no es de vida de
+ * esta correduría, el tomador no es el del riesgo, hay más de un asegurado distinto, su ficha no se lee, es una empresa
+ * o tiene una fecha de nacimiento imposible. Lo comparten la vida embebida y la pantalla completa `vida-nuevo`.
+ */
+export async function aseguradoVidaDeFiguras(
+  correduriaId: string,
+  e: { oportunidadId: string; tomadorId: string },
+): Promise<{ ok: true; asegurado: AseguradoParaCotizar | null; clienteId: string | null; datos: unknown } | { ok: false; motivo: string }> {
+  if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'la oportunidad no es válida' }
+  const [op] = await prisma.$queryRaw<Array<{ tomador: string; datos: unknown }>>`
+    select coalesce(
+      (select t.cliente_id::text from seguros.oportunidad_figura t
+        where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id and t.rol = 'tomador' limit 1),
+      o.cliente_id::text) as tomador,
+      o.info_riesgo -> 'datosCapital' as datos
+    from seguros.oportunidades o
+    where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid and o.tipo::text = 'vida'`
+  if (!op) return { ok: false, motivo: 'no se encuentra este riesgo de vida en la correduría' }
+  if (op.tomador !== e.tomadorId) return { ok: false, motivo: 'el tomador no es el de este riesgo: vuelve a abrir «Pedir precio» desde la oportunidad' }
+  const otros = await prisma.$queryRaw<Array<{ cliente_id: string; nombre: string | null; apellidos: string | null }>>`
+    select f.cliente_id::text as cliente_id, c.nombre, c.apellidos from seguros.oportunidad_figura f
+    join seguros.clientes c on c.id = f.cliente_id and c.correduria_id = f.correduria_id
+    where f.oportunidad_id = ${e.oportunidadId}::uuid and f.correduria_id = ${correduriaId}::uuid
+      and f.rol = 'asegurado' and f.cliente_id::text <> ${e.tomadorId}
+    order by f.creado_at asc, f.id asc`
+  const el = aseguradoDistintoDelTomador(otros, e.tomadorId)
+  if (el.tipo === 'varios') {
+    return { ok: false, motivo: 'en vida Avant2 lleva UNA persona asegurada (`insured`): deja un solo asegurado en «Intervinientes»' }
+  }
+  if (el.tipo === 'ninguno') return { ok: true, asegurado: null, clienteId: null, datos: op.datos }
+  const fila = otros.find((o) => o.cliente_id === el.clienteId)
+  const quien = nombreDe(fila?.nombre ?? null, fila?.apellidos ?? null)
+  const p = await personaDeFicha(correduriaId, el.clienteId, 'vida').catch(() => null)
+  if (!p) return { ok: false, motivo: `no se pudo leer la ficha del asegurado ${quien}: no se pide precio de otra persona` }
+  if (p.tipo === 'juridica') return { ok: false, motivo: `${quien} es una empresa: el asegurado de vida tiene que ser una persona. Quítalo de «Intervinientes».` }
+  const a = aseguradoDeFicha(p)
+  const malNac = motivoFechaNacimientoImposible(a.fechaNacimiento)
+  if (malNac) return { ok: false, motivo: `asegurado ${quien}: ${malNac}. Corrígela en su ficha («Intervinientes»).` }
+  return { ok: true, asegurado: a, clienteId: el.clienteId, datos: op.datos }
+}
+
+/**
+ * VIDA embebida (13/10/2026): comprueba el riesgo y lee de `info_riesgo.datosCapital` lo que viaja. Gratis. Acotado a la
+ * correduría. `TermLifeRisk_V1` lleva UNA persona asegurada propia (`risk.insured`, distinta de `holder`): si el riesgo
+ * tiene una figura `asegurado` que no es el tomador, se arma desde SU ficha (como los asegurados de decesos/salud).
+ * Corta ANTES de pagar si: el tomador no es el del riesgo; hay más de un asegurado distinto (no cabe en `insured`); su
+ * ficha no se lee, es una empresa o tiene una fecha de nacimiento imposible; o falta el capital (`risk.deathBenefit`,
+ * obligatorio). Profesión/fumador ausentes = `null` (no se mandan; nunca un «no fuma» inventado).
+ */
+export async function datosVidaDelRiesgoParaCotizar(
+  correduriaId: string,
+  e: { oportunidadId: string; tomadorId: string },
+): Promise<{ ok: true; vida: DatosVidaParaCotizar; aseguradoClienteId: string | null } | { ok: false; motivo: string }> {
+  const av = await aseguradoVidaDeFiguras(correduriaId, { oportunidadId: e.oportunidadId, tomadorId: e.tomadorId })
+  if (!av.ok) return av
+  const asegurado = av.asegurado
+  const d = leerDatosCapital(av.datos)
+  if (d === null || d.capital === null || !(d.capital > 0)) return { ok: false, motivo: 'falta el capital asegurado en «Datos del riesgo»: sin él Avant2 no cotiza vida' }
+  return { ok: true, vida: { capital: d.capital, profesion: d.profesion, fumador: d.fumador, asegurado }, aseguradoClienteId: av.clienteId }
 }
 
 /**
@@ -733,7 +1165,7 @@ function limpiarFigurasEntrada(v: unknown, tomadorId: string, soloTomador: boole
   const out: FigurasVariante = { tomador: tomadorId }
   if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
     for (const [k, x] of Object.entries(v as Record<string, unknown>)) {
-      if (!esRolFigura(k) || k === 'tomador' || soloTomador) continue
+      if (!esRolFiguraUnico(k) || k === 'tomador' || soloTomador) continue
       if (typeof x === 'string' && UUID.test(x)) out[k] = x
     }
   }
@@ -755,8 +1187,8 @@ export type Comparacion = {
 /** Dos variantes del MISMO riesgo, campo a campo y compañía a compañía. Gratis, solo lectura. */
 export async function compararVariantes(correduriaId: string, oportunidadId: string, a: string, b: string): Promise<Comparacion | null> {
   if (![oportunidadId, a, b].every((x) => UUID.test(x)) || a === b) return null
-  const ts = await prisma.$queryRaw<Array<{ id: string; peticion: unknown }>>`
-    select id::text as id, peticion from seguros.tarificaciones
+  const ts = await prisma.$queryRaw<Array<{ id: string; peticion: unknown; figuras: unknown }>>`
+    select id::text as id, peticion, figuras from seguros.tarificaciones
     where id = any(${[a, b]}::uuid[]) and oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
   const ta = ts.find((t) => t.id === a)
   const tb = ts.find((t) => t.id === b)
@@ -777,7 +1209,7 @@ export async function compararVariantes(correduriaId: string, oportunidadId: str
   const companias = [...porCompania.entries()]
     .map(([compania, v]) => ({ compania, ...v }))
     .sort((x, y) => Math.min(x.a?.primaEur ?? Infinity, x.b?.primaEur ?? Infinity) - Math.min(y.a?.primaEur ?? Infinity, y.b?.primaEur ?? Infinity))
-  return { a, b, cambios: diferenciasVariante(ta.peticion, tb.peticion), companias }
+  return { a, b, cambios: diferenciasVariante(ta.peticion, tb.peticion, { antes: ta.figuras, despues: tb.figuras }), companias }
 }
 
 // ─── El riesgo de una póliza (renovación / retención) ───────────────────────
@@ -875,7 +1307,7 @@ export async function abrirRiesgoDePoliza(
       await tx.$executeRaw`
         insert into seguros.oportunidad_figura (correduria_id, oportunidad_id, rol, cliente_id, actor)
         values (${correduriaId}::uuid, ${o.id}::uuid, ${rol}, ${i.cliente_id}::uuid, ${e.actor})
-        on conflict (oportunidad_id, rol) do nothing`
+        on conflict (oportunidad_id, rol) where rol <> 'asegurado' do nothing`
       figuras++
     }
     await tx.$executeRaw`

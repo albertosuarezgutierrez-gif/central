@@ -2,9 +2,18 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { destinoTarificar } from './tarificar-oportunidad.ts'
 
-test('con seguimiento abierto: enlace a la pantalla de precio del ramo con ?oportunidad= (nunca cotiza)', () => {
-  const d = destinoTarificar({ ramo: 'auto', tomadorId: 'c1', oportunidadId: 'op1', polizaId: 'p1' })
-  assert.deepEqual(d, { tipo: 'enlace', href: '/correduria/cliente/c1/auto-nuevo?oportunidad=op1' })
+test('con seguimiento abierto, los seis ramos con Avant2: a la propia oportunidad, bloque «Pedir precio» (nunca cotiza)', () => {
+  for (const ramo of ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida']) {
+    const d = destinoTarificar({ ramo, tomadorId: 'c1', oportunidadId: 'op1', polizaId: 'p1' })
+    assert.deepEqual(d, { tipo: 'enlace', href: '/correduria/oportunidad/op1#pedir-precio' }, ramo)
+  }
+})
+
+test('13/10/2026: ya ningún ramo con Avant2 manda a su pantalla aparte …-nuevo?oportunidad= (todos embebidos)', () => {
+  for (const ramo of ['vida', 'salud', 'decesos']) {
+    const d = destinoTarificar({ ramo, tomadorId: 'c1', oportunidadId: 'op1', polizaId: 'p1' })
+    assert.ok(d.tipo === 'enlace' && !d.href.includes('-nuevo?oportunidad='), ramo)
+  }
 })
 
 test('póliza sin seguimiento: primero se abre (de-poliza) y luego se navega', () => {

@@ -238,11 +238,44 @@ test('cada clave posible de faltanDeFigura() tiene un editor asociado en la pant
   assert.ok(lista, 'no se encuentra la lista de campos de persona')
   for (const m of lista[1].matchAll(/'([^']+)'/g)) claves.add(m[1])
   assert.ok(claves.size >= 9, `se esperaban al menos 9 claves, salen ${claves.size}`)
+  // Asegurado de DECESOS (13/10/2026): sus claves salen de `revisarAsegurado` (lo de Avant2 para un asegurado) y de la
+  // rama `empresa_no_asegurada` de leerRiesgo. También tienen que tener editor.
+  const rama = fuente.slice(fuente.indexOf("if (f.rol === 'asegurado' && (op.tipo === 'decesos' || op.tipo === 'salud' || op.tipo === 'vida'))"))
+  const empresa = /\['(empresa_no_asegurada)'\]/.exec(rama.slice(0, 400))
+  assert.ok(empresa, 'no se encuentra la rama del asegurado de decesos')
+  claves.add(empresa[1])
+  const aseg = readFileSync(new URL('../../asegura/lib/codeoscopic/asegurados.ts', import.meta.url), 'utf8')
+  const rev = aseg.slice(aseg.indexOf('export function revisarAsegurado('), aseg.indexOf('export function revisarAseguradosAdicionales'))
+  for (const m of rev.matchAll(/(?:falta\('|campo: ')([a-zA-Z0-9]+)'/g)) claves.add(m[1])
+  // `faltanDeAseguradoFicha` renombra la fecha imposible/futura a su propia clave.
+  const ficha = aseg.slice(aseg.indexOf('export function faltanDeAseguradoFicha'))
+  for (const m of ficha.matchAll(/'(fechaNacimiento_invalida)'/g)) claves.add(m[1])
   for (const k of claves) assert.ok(k in EDITOR_DE_FALTA, `la clave «${k}» de faltanDeFigura no tiene editor en EDITOR_DE_FALTA`)
   for (const k of Object.keys(EDITOR_DE_FALTA)) assert.ok(claves.has(k), `EDITOR_DE_FALTA tiene «${k}», que faltanDeFigura ya no devuelve`)
 })
 
 test('rotulosFaltaEnFormulario: solo lo que se corrige en los formularios, null = nada', () => {
   assert.deepEqual(rotulosFaltaEnFormulario(['dni', 'sexo', 'telefono', 'fechaCarnet']), ['DNI', 'fecha del carnet'])
+  assert.deepEqual(rotulosFaltaEnFormulario(['cp', 'sexo']), ['código postal'], 'el CP se corrige en la dirección de la ficha')
+  assert.equal(textoFaltan(['cp']), 'Falta en su ficha: código postal')
   assert.deepEqual(rotulosFaltaEnFormulario(null), [])
+})
+
+test('fecha de nacimiento imposible de un asegurado: texto claro y editor en el formulario', () => {
+  assert.match(textoFaltan(['fechaNacimiento_invalida'])!, /imposible.*calendario.*futura/)
+  assert.equal(EDITOR_DE_FALTA.fechaNacimiento_invalida, 'formulario')
+})
+
+test('comparar (13/10/2026): altas y bajas de asegurados llegan con su `tipo`; un lado sin dato sigue null, no ""', () => {
+  const r = interpretarComparacion(200, {
+    estado: 'ok', a: 'ta', b: 'tb', companias: [],
+    cambios: [
+      { campo: 'Asegurado', antes: null, despues: 'Eva Ruiz', tipo: 'alta' },
+      { campo: 'Asegurado', antes: 'Luis Ruiz', despues: null, tipo: 'baja' },
+      { campo: 'Fumador', antes: null, despues: 'sí' },
+    ],
+  })
+  if (r.estado !== 'ok') return assert.fail('debía leerse')
+  assert.deepEqual(r.comparacion.cambios?.map((c) => c.tipo ?? null), ['alta', 'baja', null])
+  assert.equal(r.comparacion.cambios?.[2].antes, null)
 })

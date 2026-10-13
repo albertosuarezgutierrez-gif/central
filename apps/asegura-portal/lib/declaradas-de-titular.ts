@@ -75,8 +75,9 @@ export const TITULAR_TIPO_VISIBLE_A_TERCERO = 'propio' as const
 /**
  * Lo que un TERCERO ve de una declarada: lo mismo que pinta la fila de las
  * propias (`FilaDeclarada`), y nada más. Sin prima, matrícula, bastidor,
- * catastro, documento ni coberturas: la ficha de una añadida no se abre desde
- * otra identidad (`/boveda/anadida/[id]` filtra por la suya y da 404).
+ * catastro, documento ni coberturas en la LISTA. La ficha (`/boveda/anadida/[id]`)
+ * sí se abre desde 12/10/2026, pero la decide `accesoADeclarada` (lib/declarada-ajena.ts):
+ * Consulta/Gestión en solo lectura, Total corrige y quita; sin acceso, 404.
  */
 export type DeclaradaDeTitular = {
   id: string

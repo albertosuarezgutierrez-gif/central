@@ -20,8 +20,12 @@ const fuente = readFileSync(RUTA, 'utf8')
 
 // 29/09/2026: arranca encendido SOLO si hay una póliza suya leída (`anterior`, de su oportunidad);
 // sin ella sigue apagado. Nunca `useState(true)`: cotizar «asegurado antes» sin saberlo es mentir al vendor.
+// 13/10/2026 (como auto): en EMBEBIDO manda lo declarado arriba («Historial y bonificaciones», `seguroActualEmbebido`); en
+// la pantalla completa `seguroArriba` es null y queda lo de siempre (`seguroLeido.tiene` = `anterior !== null`).
 test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado salvo póliza leída)', () => {
-  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(anterior !== null\)/)
+  assert.match(fuente, /tiene: anterior !== null,/)
+  assert.match(fuente, /const seguroArriba = embebido\s*\n?\s*\? seguroActualEmbebido\(/, 'fuera de embebido no hay «arriba»: null')
+  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(seguroArriba\?\.tieneSeguroActual \?\? seguroLeido\.tiene\)/)
   assert.match(fuente, /anterior = null,/, 'sin póliza leída, `anterior` es null → apagado')
   assert.match(fuente, /Sí, tiene un seguro de moto en vigor ahora mismo/)
 })
@@ -84,7 +88,7 @@ test('MotoNuevo: la moto de la última tarificación se precarga sin pisar lo te
 // contrasta con SINCO por el nº de póliza. Si vuelven a nacer vacíos, el botón se apaga y hay que teclearlos.
 test('los años del historial nacen en el máximo (o lo leído), no vacíos', () => {
   assert.match(fuente, /useState\(String\(historial\.aniosAsegurado\)\)/)
-  assert.match(fuente, /useState\(String\(historial\.aniosSinSiniestros\)\)/)
+  assert.match(fuente, /useState\(seguroArriba\?\.aniosSinSiniestros \?\? String\(historial\.aniosSinSiniestros\)\)/)
   const lib = readFileSync(join(import.meta.dirname, '..', 'packages/module-seguros/src/historial-maximo.ts'), 'utf8')
   assert.match(lib, /HISTORIAL_MAXIMO = \{ aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 \}/)
 })

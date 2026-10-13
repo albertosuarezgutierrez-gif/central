@@ -165,7 +165,7 @@ import {
   type Opcion,
 } from '@/lib/codeoscopic/catalogos'
 import { comprobarRolesRamo } from '@/lib/codeoscopic/comprobar-roles'
-import { errorAseguradosEnCuerpo, leerAseguradosAdicionales } from '@/lib/codeoscopic/asegurados'
+import { errorAseguradosEnCuerpo, leerAseguradosAdicionales, type AseguradoAdicional } from '@/lib/codeoscopic/asegurados'
 import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
 import { respuestaFalloCotizacion } from '@/lib/codeoscopic/fallo-cotizacion'
 import { avisoCilindradaDesconocida, choqueCarnetVersion, choqueReglaTrafico } from '@/lib/codeoscopic/carnet-moto'
@@ -1306,6 +1306,10 @@ async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
     adicionales: Array.isArray((datos as { aseguradosAdicionales?: unknown }).aseguradosAdicionales)
       ? ((datos as { aseguradosAdicionales: Record<string, unknown>[] }).aseguradosAdicionales)
       : [],
+    // Vida con asegurado distinto del tomador (13/10/2026): a cada uno se le exige lo de SU rol.
+    aseguradoDistinto: ramo === 'vida' && (datos as { asegurado?: unknown }).asegurado
+      ? { ...((datos as { asegurado: Record<string, unknown> }).asegurado), profesion: (datos as { profesion?: unknown }).profesion, fumador: (datos as { fumador?: unknown }).fumador }
+      : null,
   })
   if (roles.estado === 'no_disponible') {
     return { estado: 'corte', respuesta: sinGasto({ error: roles.motivo, causa: 'person_roles' }, 503) }
@@ -1361,6 +1365,8 @@ export function prepararRetarificacionNuevaVida(entrada: {
   clienteId: string
   solicitadoPor: string
   cuerpo: CuerpoRetarificacion
+  /** El asegurado cuando NO es el tomador, armado en el SERVIDOR desde la ficha de la figura (nunca del cuerpo). */
+  asegurado?: AseguradoAdicional | null
 }): Promise<PreparadoRetarificacion> {
   const resueltos: ResueltosVidaNueva = {
     estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
@@ -1368,6 +1374,7 @@ export function prepararRetarificacionNuevaVida(entrada: {
     duracionAnios: numero(entrada.cuerpo.resueltos?.duracionAnios),
     profesion: cadena(entrada.cuerpo.resueltos?.profesion),
     fumador: booleano(entrada.cuerpo.resueltos?.fumador),
+    asegurado: entrada.asegurado ?? null,
   }
   return prepararRetarificacionNuevaGenerica<ResueltosVidaNueva, SupuestoVida>({
     clienteId: entrada.clienteId,

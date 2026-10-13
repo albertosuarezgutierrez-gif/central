@@ -35,7 +35,7 @@ import { cabecerasPuerto } from './puerto-actor.ts'
 // lectura porque `apps/plataforma` no declara ese paquete y esta capa solo
 // VALIDA lo que llega por el puerto: nada de esto decide accesos — lo que
 // abre datos se decide en asegura y en el portal.
-export const ALCANCES_PORTAL = ['ver', 'ver_economico', 'partes', 'documentos', 'total'] as const
+export const ALCANCES_PORTAL = ['ver', 'ver_economico', 'partes', 'documentos', 'gestion', 'total'] as const
 export type AlcancePortal = (typeof ALCANCES_PORTAL)[number]
 export const ESTADOS_AUTORIZACION_PORTAL = ['pendiente', 'vigente', 'caducada', 'revocada'] as const
 export type EstadoAutorizacionPortal = (typeof ESTADOS_AUTORIZACION_PORTAL)[number]
@@ -51,7 +51,8 @@ export type EstadoAutorizacionPortal = (typeof ESTADOS_AUTORIZACION_PORTAL)[numb
  * consume); esto es la lectura que necesita la pantalla para no ofrecer un
  * botón que va a dar 422.
  */
-export const APODERAMIENTO_PORTAL: readonly AlcancePortal[] = ['partes', 'documentos', 'total']
+// `gestion` (12/10/2026, «Gestión»: dar partes y aportar documentos) también es actuar.
+export const APODERAMIENTO_PORTAL: readonly AlcancePortal[] = ['partes', 'documentos', 'gestion', 'total']
 
 export function esApoderamientoPortal(a: AlcancePortal): boolean {
   return APODERAMIENTO_PORTAL.includes(a)
@@ -82,6 +83,7 @@ export const ALCANCE_TEXTO_PORTAL: Record<AlcancePortal, string> = {
   ver_economico: 'ver sus seguros y lo que paga (prima y recibos)',
   partes: 'dar partes de siniestro en nombre de la sociedad',
   documentos: 'ver y subir la documentación de la sociedad',
+  gestion: 'gestión (dar partes y aportar documentos; sin DNI ni IBAN de una persona)',
   total: 'acceso total (ve y hace todo lo que el titular)',
 }
 
@@ -154,6 +156,11 @@ export type RelacionCartera = RelacionFicha & {
   tipoOtorgante: TipoOtorgantePortal | null
   /** Pólizas vivas del relacionado. `null` = asegura no las contó (NO es 0). */
   polizasVivas: number | null
+  /**
+   * Pólizas vivas de otro tomador donde el relacionado FIGURA (no es cliente por eso).
+   * `null`/`undefined` = asegura no las contó (puerto viejo): NO es 0.
+   */
+  polizasFigura?: number | null
   /** La autorización de la ficha hacia el relacionado. `null` = no hay ninguna. */
   autorizacion: AutorizacionCartera | null
   /**
@@ -217,7 +224,9 @@ export function explicarEstadoAutorizacion(a: AutorizacionCartera | null, nombre
   if (a === null) return `${nombreOtro} no ve los seguros de ${nombreFicha}: no hay ninguna autorización.`
   const nivel = a.alcances.includes('total')
     ? 'tiene ACCESO TOTAL: ve todo (también DNI e IBAN si es una persona)'
-    : a.alcances.includes('ver_economico')
+    : a.alcances.includes('gestion')
+      ? 'tiene GESTIÓN: ve lo económico y los documentos (no DNI ni IBAN si es una persona)'
+      : a.alcances.includes('ver_economico')
       ? 've también lo económico (prima y recibos)'
       : 've la tarjeta de la póliza'
   // 🚨 Si hay APODERAMIENTO, decir «ve la tarjeta» sería quedarse corto en el
@@ -352,6 +361,7 @@ export function leerRelacion(v: unknown): RelacionCartera | null {
         ? (o.tipoOtorgante as TipoOtorgantePortal)
         : null,
     polizasVivas: enteroONull(o.polizasVivas),
+    polizasFigura: 'polizasFigura' in o ? enteroONull(o.polizasFigura) : undefined,
     autorizacion: leerAutorizacion(o.autorizacion),
     // `undefined` a propósito cuando la clave no viene: ese hueco es «no lo sé».
     autorizacionInversa: 'autorizacionInversa' in o ? leerAutorizacion(o.autorizacionInversa) : undefined,
@@ -561,4 +571,17 @@ export function borrarRelacionAsegura(body: Record<string, unknown>): Promise<Re
  */
 export function avisarAccesoAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente/relaciones/aviso', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/**
+ * El texto de la fila de relación. Solo tomadora → el de siempre («2 pólizas vivas»);
+ * si además figura en pólizas de otro tomador → «0 como tomadora · 1 donde figura».
+ * `polizasFigura` `null`/`undefined`/0 no cambia el texto (no se afirma lo que no se contó).
+ */
+export function textoPolizasRelacion(polizasVivas: number | null, polizasFigura: number | null | undefined): string {
+  if (polizasVivas === null) return 'pólizas sin contar'
+  if (polizasFigura === null || polizasFigura === undefined || polizasFigura <= 0) {
+    return `${polizasVivas} póliza${polizasVivas === 1 ? '' : 's'} viva${polizasVivas === 1 ? '' : 's'}`
+  }
+  return `${polizasVivas} como tomadora · ${polizasFigura} donde figura`
 }

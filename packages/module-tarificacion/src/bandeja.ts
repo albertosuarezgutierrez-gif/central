@@ -10,6 +10,7 @@
 //    arregla y el bot volvería a entrar en un portal con nuestra credencial hacia un paso prohibido.
 
 import { esEstadoTrabajo, esTipoError, type EstadoTrabajo } from './estados.ts'
+import { PREFIJO_ELECCION_VERSION } from './vehiculo.ts'
 
 /** Estados que aparecen en la bandeja: el bot ya no avanza solo. */
 export const ESTADOS_BANDEJA: readonly EstadoTrabajo[] = ['requiere_humano', 'error_definitivo']
@@ -30,13 +31,18 @@ export type DecisionBandeja = { ok: true; a: EstadoTrabajo } | { ok: false; moti
 
 /**
  * ¿Se puede aplicar `accion` a un trabajo en `estado` (con error de tipo `tipoError`)? Estado desconocido → no.
- * `tipoError` solo importa para reintentar (`emision` prohibido).
+ * `tipoError` y `modo` solo importan para reintentar (`emision` prohibido en los dos); `modo = 'exploracion'`, ninguna acción.
  */
-export function decidirAccionBandeja(accion: unknown, estado: unknown, tipoError?: unknown): DecisionBandeja {
+export function decidirAccionBandeja(accion: unknown, estado: unknown, tipoError?: unknown, modo?: unknown): DecisionBandeja {
   if (!esAccionBandeja(accion)) return { ok: false, motivo: 'acción desconocida' }
   if (!esEstadoTrabajo(estado)) return { ok: false, motivo: 'estado desconocido' }
   if (!DESDE[accion].includes(estado)) return { ok: false, motivo: `no se puede ${accion} un trabajo en estado ${estado}` }
+  // Una EXPLORACIÓN (13/10/2026) no se toca desde la bandeja: tiene su pantalla y su cabecera (`tarificador_exploraciones`),
+  // que quedaría abierta si se reintentara o cancelara solo el trabajo.
+  if (modo === 'exploracion') return { ok: false, motivo: 'una exploración se gestiona en su pantalla, no en la bandeja' }
   if (accion === 'reintentar' && tipoError === 'emision') return { ok: false, motivo: 'un trabajo abortado por el guard de emisión no se reintenta' }
+  // Un trabajo de EMISIÓN (10/10/2026) nunca se reintenta: tras el clic el estado en la compañía es incierto. Se pide otro.
+  if (accion === 'reintentar' && modo === 'emision') return { ok: false, motivo: 'un trabajo de emisión no se reintenta: se pide una emisión nueva' }
   return { ok: true, a: A[accion] }
 }
 
@@ -59,6 +65,10 @@ const PREFIJO_VERIFICACION = 'requiere_verificacion_humana:'
 export function motivoLegible(error: unknown, estado?: unknown): string {
   const e = typeof error === 'object' && error !== null && !Array.isArray(error) ? (error as Record<string, unknown>) : null
   const mensaje = typeof e?.mensaje === 'string' ? e.mensaje : ''
+  // Versión de vehículo ambigua (vehiculo.ts): el mensaje ya es para una persona (solo nombres de catálogo).
+  if (mensaje.startsWith(PREFIJO_ELECCION_VERSION)) {
+    return `Hay que elegir la versión del vehículo:${mensaje.slice(PREFIJO_ELECCION_VERSION.length)}`.trim().slice(0, 600)
+  }
   if (mensaje.startsWith(PREFIJO_VERIFICACION)) {
     return mensaje.slice(PREFIJO_VERIFICACION.length).trim().slice(0, 300) || MOTIVO_POR_TIPO.captcha
   }

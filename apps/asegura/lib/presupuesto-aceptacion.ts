@@ -462,6 +462,14 @@ export async function firmarAceptacion(
       returning id::text as id`
     return fila?.id ?? null
   }
+  // Emisión por el robot (10/10/2026): la huella del IPID de la opción aceptada se copia a `presupuesto.ipid_huella`; sin
+  // ella el robot NO emite. Solo si el SQL 2026-10-10_tarificador_emision está aplicado (sin él, la firma sigue igual).
+  const conIpidHuella = f.ipidHuella
+    ? await db.$queryRaw<{ ok: boolean }[]>`
+        select exists (select 1 from information_schema.columns
+                        where table_schema = 'seguros' and table_name = 'presupuesto' and column_name = 'ipid_huella') as ok`
+        .then((r) => r[0]?.ok === true, () => false)
+    : false
   let ok: boolean
   try {
     ok = await db.$transaction(async (tx) => {
@@ -473,6 +481,9 @@ export async function firmarAceptacion(
                salida = ${c.anulacion ? 'cambio_compania' : null}
         where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid and aceptado_at is null and retirado_at is null`
       if (n === 0) throw new Error('el presupuesto cambió mientras se firmaba')
+      if (conIpidHuella) {
+        await tx.$executeRaw`update presupuesto set ipid_huella = ${f.ipidHuella} where id = ${presupuestoId}::uuid and correduria_id = ${correduriaId}::uuid`
+      }
       await tx.$executeRaw`update presupuesto_opcion set elegida_at = now() where id = ${opcionId}::uuid and presupuesto_id = ${presupuestoId}::uuid`
       await tx.$executeRaw`
         insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)

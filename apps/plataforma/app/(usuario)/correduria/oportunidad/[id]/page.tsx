@@ -6,6 +6,14 @@ import RiesgoPantalla from './RiesgoPantalla'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * ⏱️ El bloque «Pedir precio» cotiza AQUÍ (cotizador embebido de auto, moto y hogar): sus acciones de servidor corren
+ * dentro de este segmento, y una cotización de Codeoscopic puede tardar hasta 150 s. Sin este margen plataforma la
+ * cortaría antes y no sabríamos si nos han cobrado (0,50€). Mismo valor que `…-nuevo/page.tsx`; lo vigila
+ * `cotizador-embebido.test.ts`.
+ */
+export const maxDuration = 180
+
 const hoyMadrid = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 
 /**

@@ -44,8 +44,12 @@ test('la tarjeta «Te ha dado acceso» cuenta cartera + declaradas', () => {
   assert.match(tramo, /<FilaDeclarada[^>]*deOtro/, 'la fila ajena va marcada como de otro')
 })
 
-test('🔒 una declarada de OTRO no enlaza a su ficha ni ofrece «Quitar», y lleva su cartel', () => {
-  assert.match(FILA, /deOtro \? \(\s*<div className="poliza-enlace">/, 'sin enlace a /boveda/anadida (es de su identidad)')
+test('🔒 una declarada de OTRO enlaza a su ficha (que decide el acceso) pero no ofrece «Quitar» en la lista', () => {
+  // Desde el 12/10/2026 la ficha se abre: Consulta/Gestión en solo lectura, Total
+  // corrige y quita. Quien decide es `accesoADeclarada` en la ficha, no la fila.
+  assert.match(FILA, /<Link href=\{`\/boveda\/anadida\/\$\{p\.id\}`\} className="poliza-enlace">/)
+  const ficha = leer('apps/asegura-portal/app/(portal)/boveda/anadida/[id]/page.tsx')
+  assert.match(ficha, /accesoADeclarada\(identidad\.id, id, 'ver'\)/, 'la ficha resuelve el acceso antes de pintar')
   assert.match(FILA, /\{!deOtro && \(\s*<div className="poliza-acciones">/, 'quien mira no puede quitar la póliza de otro')
   assert.match(FILA, /'Añadida por su titular'/, 'distinguible de las tuyas y de las de cartera')
 })

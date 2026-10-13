@@ -158,3 +158,38 @@ export function figurasDeFichasVistas(args: {
   }
   return out
 }
+
+/**
+ * Pólizas donde una ficha vista ENTERA figura pero que NO se repiten en su bloque
+ * porque ya se sirven al usuario como PROPIAS (caso Víctor/Nieves: ella es
+ * `propietario` de una póliza cuyo tomador es él). Solo para decir «figura en N
+ * póliza(s) que ya está(n) en las tuyas»: ni roles ni nombres ni datos nuevos.
+ *
+ * 🔒 Solo ids que ya se leyeron y se sirven (`polizasPropiasIds` = las que
+ * `propias` ya trae, vivas y sin fusionar). Una póliza no viva, fusionada o sin
+ * acceso NO está en esa lista y por tanto NO cuenta: no es un duplicado.
+ */
+export function figuraYaServidaEnPropias(args: {
+  filas: readonly FilaInterviniente[]
+  fichasVistas: readonly string[]
+  polizasPropiasIds: readonly string[]
+}): Map<string, string[]> {
+  const vistas = new Set(args.fichasVistas)
+  const propias = new Set(args.polizasPropiasIds)
+  const out = new Map<string, Set<string>>()
+  for (const f of args.filas) {
+    if (f.clienteId === null || !vistas.has(f.clienteId) || !propias.has(f.polizaId)) continue
+    const s = out.get(f.clienteId) ?? new Set<string>()
+    s.add(f.polizaId)
+    out.set(f.clienteId, s)
+  }
+  return new Map([...out].map(([id, s]) => [id, [...s].sort()]))
+}
+
+/** «Figura en 1 póliza que ya está en las tuyas». `null` si no hay ninguna (no se pinta). */
+export function textoFiguraYaServida(n: number): string | null {
+  if (n <= 0) return null
+  return n === 1
+    ? 'Figura en 1 póliza que ya está en las tuyas'
+    : `Figura en ${n} pólizas que ya están en las tuyas`
+}

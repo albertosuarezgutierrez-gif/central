@@ -5,9 +5,9 @@
  * es «0 opciones», es «no se pudo leer».
  */
 import {
-  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, seguroAnteriorDe,
+  CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, historialDeclaradoDe, seguroAnteriorDe,
   type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
-  type RolFigura, type Diferencia, type SeguroAnterior,
+  type RolFigura, type Diferencia, leerDiferencia, type SeguroAnterior, type HistorialDeclaradoRiesgo,
 } from '@central/module-seguros'
 
 export type FiguraRiesgo = {
@@ -61,7 +61,14 @@ export type Riesgo = {
     prima: number | null
   }
   roles: RolFigura[]
+  /** Los papeles de varias personas (asegurados) traen una entrada por ficha. */
   figuras: FiguraRiesgo[]
+  /**
+   * ¿Se pueden escribir los papeles de varias personas (asegurados)? `null` = el ramo no tiene ninguno (auto, moto…).
+   * `sin_migracion` = falta el SQL de figuras multi; `desconocido` = asegura no pudo mirarlo o es una versión que aún
+   * no lo dice (nunca se toma por «disponible»).
+   */
+  figurasMulti: 'disponible' | 'sin_migracion' | 'desconocido' | null
   vinculos: Array<{ clienteId: string; nombre: string; tipo: string }>
   variantes: VarianteRiesgo[]
   /**
@@ -88,6 +95,8 @@ export type Riesgo = {
 
 export type HistorialRiesgo = {
   seguroAnterior: SeguroAnterior | null
+  /** Años asegurado / en la compañía DECLARADOS (fuera de `seguroAnterior`). Asegura sin la clave = los dos `null` (sin dato). */
+  historialDeclarado: HistorialDeclaradoRiesgo
   carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
 }
 
@@ -98,6 +107,7 @@ export function leerHistorialRiesgo(bruto: unknown): HistorialRiesgo | null {
   const c = o.carnet === null || o.carnet === undefined ? null : obj(o.carnet)
   return {
     seguroAnterior: seguroAnteriorDe(o.seguroAnterior),
+    historialDeclarado: historialDeclaradoDe(o.historialDeclarado),
     carnet: c ? { fecha: txt(c.fecha), conductor: esRolFigura(c.conductor) ? c.conductor : null, legible: c.legible === true } : null,
   }
 }
@@ -170,12 +180,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
             aceptadoAt: txt(p.aceptadoAt), emitidoAt: txt(p.emitidoAt), retiradoAt: txt(p.retiradoAt),
           }
         : null,
-      cambios: Array.isArray(x.cambios)
-        ? x.cambios.flatMap((c): Diferencia[] => {
-            const d = obj(c)
-            return txt(d.campo) ? [{ campo: d.campo as string, antes: txt(d.antes), despues: txt(d.despues) }] : []
-          })
-        : null,
+      cambios: Array.isArray(x.cambios) ? x.cambios.flatMap((c): Diferencia[] => { const d = leerDiferencia(c); return d ? [d] : [] }) : null,
     }]
   })
   return {
@@ -189,6 +194,9 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       },
       roles: (Array.isArray(o.roles) ? o.roles : []).filter(esRolFigura),
       figuras,
+      figurasMulti: o.figurasMulti === 'disponible' || o.figurasMulti === 'sin_migracion' || o.figurasMulti === 'desconocido'
+        ? o.figurasMulti
+        : o.figurasMulti === null ? null : 'desconocido',
       vinculos: (Array.isArray(o.vinculos) ? o.vinculos : []).flatMap((v) => {
         const x = obj(v)
         return txt(x.clienteId) ? [{ clienteId: x.clienteId as string, nombre: txt(x.nombre) ?? 'Sin nombre', tipo: txt(x.tipo) ?? '' }] : []
@@ -228,6 +236,12 @@ const CAMPO_FALTA: Record<string, string> = {
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
   empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
   estadoCivil: 'estado civil (no consta; se elige del catálogo en la pantalla de precio)',
+  cp: 'código postal',
+  // Asegurado de decesos (13/10/2026): lo que Avant2 pide de un asegurado (`revisarAsegurado` de asegura).
+  apellido2: 'segundo apellido (obligatorio con DNI)',
+  nacionalidad: 'nacionalidad (con NIE o pasaporte)',
+  fechaNacimiento_invalida: 'fecha de nacimiento imposible (no existe en el calendario, es futura o de más de 120 años): corrígela',
+  empresa_no_asegurada: 'es una empresa y no puede ser asegurado (quítala de los asegurados)',
 }
 /**
  * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
@@ -243,6 +257,12 @@ export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambi
   dni: 'formulario', nombre: 'formulario', apellido1: 'formulario', fechaNacimiento: 'formulario', fechaCarnet: 'formulario',
   sexo: 'completar', telefono: 'completar', estadoCivil: 'pantalla_precio',
   empresa_no_conduce: 'cambiar', ficha: 'sin_ficha',
+  // CP del tomador de auto/moto (13/10/2026): sección «Dirección» del mismo editor de la ficha.
+  cp: 'formulario',
+  // Asegurado de DECESOS (13/10/2026, `faltanDeAseguradoFicha` + rama de leerRiesgo): los apellidos van en la identidad
+  // de la ficha; la nacionalidad no tiene editor en la ficha (hoy no se pide: el NIE no viaja); una empresa se quita.
+  apellido2: 'formulario', nacionalidad: 'sin_ficha', empresa_no_asegurada: 'cambiar',
+  fechaNacimiento_invalida: 'formulario',
 }
 
 /** Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»). */
@@ -285,12 +305,8 @@ export function interpretarComparacion(status: number, j: unknown): LecturaCompa
   if (status === 404 || o.estado === 'no_encontrado') return { estado: 'no_encontrado' }
   if (status !== 200 || o.estado !== 'ok') return { estado: 'error', motivo: txt(o.motivo) ?? txt(o.causa) ?? `HTTP ${status}` }
   if (!txt(o.a) || !txt(o.b)) return { estado: 'error', motivo: 'respuesta sin variantes' }
-  const cambios = Array.isArray(o.cambios)
-    ? o.cambios.flatMap((c): Diferencia[] => {
-        const d = obj(c)
-        return txt(d.campo) ? [{ campo: d.campo as string, antes: txt(d.antes), despues: txt(d.despues) }] : []
-      })
-    : null
+  // Altas/bajas de asegurados (salud/decesos) llegan con `tipo`: se conservan.
+  const cambios = Array.isArray(o.cambios) ? o.cambios.flatMap((c): Diferencia[] => { const d = leerDiferencia(c); return d ? [d] : [] }) : null
   const companias = (Array.isArray(o.companias) ? o.companias : []).flatMap((c): FilaComparacion[] => {
     const x = obj(c)
     const compania = txt(x.compania)

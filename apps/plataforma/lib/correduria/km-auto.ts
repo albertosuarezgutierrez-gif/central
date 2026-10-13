@@ -13,6 +13,13 @@
 
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 
+/**
+ * Los km/año con los que NACE la pantalla de coche (Alberto, 25/09/2026). UNA sola constante para toda la app: la
+ * usan `AutoNuevo` (pantalla completa y cotizador embebido en la oportunidad) y el asistente de Telegram
+ * (`correduria-tarificacion-tg.ts`). Es un SUPUESTO, nunca un dato del cliente (ver `kmParaCotizar`).
+ */
+export const KM_AUTO_POR_DEFECTO = 10000
+
 export type KmParaCotizar = {
   /** `correcciones.kmAnuales`: dato del cliente. */
   correccion: number | null

@@ -1,4 +1,6 @@
+import { redirect } from 'next/navigation'
 import CorreduriaClient from './CorreduriaClient'
+import { iniciaEnLaMesa } from './secciones'
 
 /**
  * La pantalla de la correduría. Alberto usa UNA página —este cuadro de mando—
@@ -10,7 +12,11 @@ import CorreduriaClient from './CorreduriaClient'
  * plataforma, con su confirmación delante. El secreto del puerto no sale nunca
  * de las rutas de API ni de las acciones de servidor.
  */
-export default function CorreduriaPage() {
+export default async function CorreduriaPage({ searchParams }: { searchParams: Promise<{ s?: string | string[] }> }) {
+  // Sin `?s=` se entra en «Mi mesa» (13/10/2026). Con `?s=` (un aviso, un marcador viejo, las pestañas)
+  // se queda: ninguna pestaña de esta pantalla pierde su enlace.
+  const { s } = await searchParams
+  if (iniciaEnLaMesa(s)) redirect('/correduria/mesa')
   // Ya no se compone ninguna URL de asegura aquí: desde el 03/09/2026 el único
   // salto que quedaba desde esta pantalla —«Precio en otra compañía» de la cola
   // de retención— es INTERNO (`urlRetarificar` de `lib/ficha-asegura.ts`).

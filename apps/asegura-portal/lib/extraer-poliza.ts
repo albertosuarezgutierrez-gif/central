@@ -26,6 +26,7 @@
 // a mano la persona. Lo único que cambia es la reacción — aquí, un valor que no
 // tiene forma de bastidor sale `null` («no lo hemos sabido leer») y la póliza
 // se guarda igual; allí es un error que la persona ve.
+import { validarCompaniaContraTexto } from './compania-en-texto'
 import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
 import {
   MAX_TEXTO_RAMO,
@@ -164,6 +165,7 @@ const INSTRUCCION = `Eres un extractor de datos de pólizas de seguro españolas
 Devuelve SOLO un objeto JSON con estas claves, sin texto alrededor:
 {"tipoDocumento":"poliza"|"suplemento"|"recibo"|"otro"|null,"compania":string|null,"numeroPoliza":string|null,"ramo":string|null,"primaAnual":number|null,"fechaVencimiento":"YYYY-MM-DD"|null,"fechaEfecto":"YYYY-MM-DD"|null,"matricula":string|null,"marca":string|null,"modelo":string|null,"bastidor":string|null,"fechaMatriculacion":"YYYY-MM-DD"|null,"referenciaCatastral":string|null,"coberturas":string[]|null}
 Reglas:
+- "compania": la ASEGURADORA que emite/suscribe este contrato (la «entidad aseguradora» de las condiciones particulares o del pie legal). NUNCA el mediador, corredor o agente, ni una aseguradora citada como anterior, de reaseguro, de publicidad o de asistencia. Cópiala como aparece; si no la ves con claridad, null.
 - "ramo" debe ser uno de: auto, moto, hogar, vida, salud, decesos, responsabilidad_civil, comercio, comunidades, otros.
 - "fechaEfecto": la fecha de EFECTO, ENTRADA EN VIGOR o EMISIÓN de esta póliza o de su periodo actual — el día en que empezó a correr, NO la de vencimiento. Ponla SIEMPRE que aparezca en el documento, aunque también haya "fechaVencimiento": los contratos de seguro son anuales renovables y esta fecha sirve para calcular el vencimiento cuando el documento no traiga uno vigente.
 - "tipoDocumento": qué es este documento. "poliza" = el contrato o sus condiciones particulares. "suplemento" = una MODIFICACIÓN de una póliza que ya existe (cambio de vehículo, de coberturas, de tomador); suele decir "suplemento", "anexo" o "modificación". "recibo" = un justificante de cobro de un periodo. "otro" si no es ninguno de los tres. Si no lo puedes decidir, pon null: NUNCA fuerces "poliza".
@@ -447,7 +449,7 @@ export async function extraerPoliza(
     // (`OpenRouter: respuesta vacía`, `openrouter.ts:134`), que es lo que se vio
     // el 07/09/2026 con toda la cadena de suplentes apagada. No es la causa
     // demostrada —solo hay una medición— pero es la única variable barata.
-    const { datos, estado } = await leerDatosRamo(parsear(salida), (instruccion) =>
+    const { datos, estado } = await leerDatosRamo(conCompaniaValidada(parsear(salida), texto), (instruccion) =>
       aiComplete(texto.slice(0, 20_000), { system: instruccion, maxTokens: 600 }),
     )
     return { datos, fuente: 'texto', camposRamo: estado }
@@ -530,6 +532,13 @@ export function parsearPolizaExtraida(bruto: unknown, hoy: Date = new Date()): P
     datosRamoOrigen: origenesDelDocumento(datosRamo),
     coberturas: normalizarCoberturasLeidas(o.coberturas),
   }
+}
+
+/** Solo PDF (hay texto): una compañía que no aparece en el documento es invención → null. */
+function conCompaniaValidada(p: PolizaExtraida, texto: string): PolizaExtraida {
+  const compania = validarCompaniaContraTexto(p.compania, texto)
+  if (compania !== p.compania) console.warn('[portal] compañía leída no aparece en el PDF; se descarta:', p.compania)
+  return { ...p, compania }
 }
 
 function parsear(salida: string): PolizaExtraida {

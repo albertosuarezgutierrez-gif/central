@@ -7,7 +7,17 @@
 import type { Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
 
-export type PestanaEntradaAllianz = 'Particulares' | 'Empresas'
+export type PestanaEntradaAllianz = 'Particulares' | 'Empresas' | 'Autos'
+
+/**
+ * Tarjetas de la sección «Autos» del modal (DOM real, grabación de Auto del 08/10/2026): `div.box > a` con un icono
+ * `nx-icon-epac.fasttrack-icon--alz-icon-<x>` y el texto («AUTOS Turismos», «Moto»…). Por la CLASE del icono: el texto de
+ * Turismos va partido en dos líneas.
+ */
+export const TARJETA_AUTOS = {
+  turismos: '.box a:has(.fasttrack-icon--alz-icon-coches)',
+  moto: '.box a:has(.fasttrack-icon--alz-icon-moto)',
+} as const
 
 /** `^\s*texto\s*$` insensible a mayúsculas (metacaracteres escapados). */
 export function textoExacto(t: string): RegExp {
@@ -22,12 +32,13 @@ export function textoExacto(t: string): RegExp {
 export async function abrirNuevaAlta(
   page: Page,
   ctx: Pick<ContextoPortal, 'pulsar' | 'pausa'>,
-  destino: { pestana: PestanaEntradaAllianz; producto: string },
+  destino: { pestana: PestanaEntradaAllianz; producto: string; selectorTarjeta?: string },
 ): Promise<void> {
   await ctx.pulsar(page.locator('#link_new_policy').or(page.getByRole('button', { name: textoExacto('Nueva Alta') })).first())
   await ctx.pausa()
   const modal = page.getByRole('dialog').filter({ hasText: /nueva alta/i }).first()
   await ctx.pulsar(modal.getByText(textoExacto(destino.pestana)).first())
   await ctx.pausa()
-  await ctx.pulsar(modal.getByText(textoExacto(destino.producto)).first())
+  const tarjeta = destino.selectorTarjeta ? modal.locator(destino.selectorTarjeta) : modal.getByText(textoExacto(destino.producto))
+  await ctx.pulsar(tarjeta.first())
 }

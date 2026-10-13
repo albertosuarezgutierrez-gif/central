@@ -1,7 +1,8 @@
 'use client'
-import { ListChecks, Users, Shield, Receipt, LayoutGrid } from 'lucide-react'
+import Link from 'next/link'
+import { ListChecks, Users, Shield, Receipt, LayoutGrid, Briefcase, Target } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { SECCIONES, type Seccion, type Contador } from './secciones'
+import { BARRA_CORREDURIA, type Seccion, type Contador, type PestanaPropia } from './secciones'
 
 /**
  * La barra de secciones de la correduría.
@@ -27,7 +28,7 @@ import { SECCIONES, type Seccion, type Contador } from './secciones'
  */
 
 const META: Record<Seccion, { label: string; Icono: LucideIcon }> = {
-  hoy: { label: 'Hoy', Icono: ListChecks },
+  gestion: { label: 'Gestión', Icono: ListChecks },
   clientes: { label: 'Clientes', Icono: Users },
   cartera: { label: 'Cartera', Icono: Shield },
   comisiones: { label: 'Comisiones', Icono: Receipt },
@@ -40,8 +41,15 @@ export type ContadoresSeccion = Partial<Record<Seccion, {
   title?: string
 }>>
 
+const ICONO_PROPIA: Record<PestanaPropia, LucideIcon> = { mesa: Briefcase, prospeccion: Target }
+
+/**
+ * `activa` es una sección de `CorreduriaClient` o una pantalla propia de la barra (`'mesa'` en
+ * `/correduria/mesa`, `'prospeccion'` en `/correduria/vencimientos`): el enlace activo se subraya igual
+ * que una sección. Las pantallas propias no tienen contadores; pásalos vacíos.
+ */
 export default function Secciones({ activa, contadores, onCambiar }: {
-  activa: Seccion
+  activa: Seccion | PestanaPropia
   contadores: ContadoresSeccion
   onCambiar: (s: Seccion) => void
 }) {
@@ -67,7 +75,29 @@ export default function Secciones({ activa, contadores, onCambiar }: {
         background: 'var(--bg)',
       }}
     >
-      {SECCIONES.map(k => {
+      {BARRA_CORREDURIA.map(item => {
+        if (item.tipo === 'enlace') {
+          const on = activa === item.clave
+          const Icono = ICONO_PROPIA[item.clave]
+          // «Mi mesa» y «Prospección» son pantallas propias, no secciones de este cliente: enlace, no botón.
+          return (
+            <Link
+              key={item.clave}
+              href={item.href}
+              aria-current={on ? 'page' : undefined}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none',
+                fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', padding: '10px 1px', minHeight: 44,
+                borderBottom: `2px solid ${on ? 'var(--primary)' : 'transparent'}`,
+                color: on ? 'var(--text)' : 'var(--muted)',
+              }}
+            >
+              <Icono size={15} strokeWidth={1.75} aria-hidden />
+              {item.label}
+            </Link>
+          )
+        }
+        const k = item.clave
         const { label, Icono } = META[k]
         const on = activa === k
         const c = contadores[k]

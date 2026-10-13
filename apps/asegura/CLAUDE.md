@@ -127,8 +127,13 @@
 ## Oportunidad/riesgo/correduría
 - **Datos del riesgo por ramo (PR #4127):** módulo puro `@central/module-seguros/datos-riesgo-{generico,ramo,vivienda,capital,libre}.ts` con claves `datosVehiculo|datosVivienda|datosCapital|datosRiesgoLibre` en `info_riesgo`. PATCH `/api/operador/oportunidad/riesgo` edita una clave (400 si no es del ramo); precarga desde `polizas.datos_especificos` (nunca confirmada). Helper `leerRiesgo()` con validación pura `calcularEdicionRiesgo()`.
 
+- **Figuras multi (10/10/2026):** rol `asegurado` en `oportunidad_figura` (varias fichas; la misma no dos veces), cardinalidad por ramo en `cardinalidadesDelRamo()` de `module-seguros`. SQL `prisma/sql/2026-10-10_figuras_multi.sql`: **código ANTES que el SQL** (todo `on conflict (oportunidad_id, rol)` lleva `where rol <> 'asegurado'`). Sin el SQL, el puerto da 503 `sin_migracion` (`estadoFigurasMultiBD`). Alta ligera sin DNI = SIEMPRE ficha nueva. Cepo `lib/oportunidad-figuras-multi.test.ts`.
+
 ## Tarificador RPA (bots Playwright)
 Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.
+- **Elección de versión con IA + memoria (13/10/2026):** sección homónima de `docs/TARIFICADOR-RPA.md`. Interruptor `TARIFICADOR_IA_ELECCION=1`;
+  la IA solo con confianza alta y código de la lista (6 campos del vehículo, sin datos personales); memoria por correduría, humano gana,
+  la IA solo se aprende tras tarificación OK. Máx. 1 intento automático por trabajo.
 
 ## Cuando dudes
 Busca el tema en `docs/claude-md/ASEGURA-completo-2026-09-30.md` antes de suponer: casi todo lo de aquí ya se midió

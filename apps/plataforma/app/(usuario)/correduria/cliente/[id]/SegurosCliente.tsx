@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { alertaVencimiento } from '@central/module-seguros'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { ESTADOS_ABIERTOS, aniversarioOportunidad, estaHuerfana, estadoVencimiento, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
+import { ESTADOS_ABIERTOS, aniversarioOportunidad, estaHuerfana, estadoVencimiento, referenciaRiesgo, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
 import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
@@ -186,7 +186,8 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     const fechaBase = venc.delSeguimiento ? o?.fechaFinVigencia ?? null : p.fechaVencimiento
     lineas = [
       `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}${s.historica ? ' (volcado histórico)' : ''}`,
-      s.historica && p.matricula && p.objeto?.titulo ? `Matrícula ${p.matricula}` : null,
+      // Matrícula (auto/moto) o dirección del riesgo (inmueble): así se reconoce la póliza, no por su nº.
+      referenciaRiesgo(p, titulo),
       [textoVence(fechaBase, ctx.hoy, venc.delSeguimiento ? 'anotado' : 'volcado', { vencidaSiPasada: p.viva && !venc.delSeguimiento, anual: eliminable }), p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
       // El cambio de compañía va en la tarjeta de la nueva, no en una segunda del mismo bien.
       s.sustituye
@@ -252,7 +253,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
         {estado !== '' && <span>{estado}</span>}
       </div>
       <div style={{ fontSize: 15, fontWeight: 700 }}>{titulo}</div>
-      {lineas.filter(Boolean).map((l, i) => <div key={i} style={{ color: 'var(--muted)' }}>{l}</div>)}
+      {lineas.filter(Boolean).map((l, i) => <div key={i} style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}>{l}</div>)}
       {avisos.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
           {avisos.map((a, i) => <Chip key={i} a={a} />)}
