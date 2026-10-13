@@ -28,6 +28,8 @@ test('mensajeSustituciones: sin póliza nueva informada, se marca con «?» en v
   }
   const msg = mensajeSustituciones([fila])
   assert.ok(msg?.includes('→ ?'))
+  assert.ok(msg?.includes('aún sin póliza nueva enlazada'))
+  assert.ok(!msg?.includes('sin determinar'))
 })
 
 test('mensajeSustituciones: más de 20 filas, se trunca con recuento del resto', () => {

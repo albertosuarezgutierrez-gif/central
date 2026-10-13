@@ -73,7 +73,8 @@ export function mensajeSustituciones(filas: readonly SustitucionAviso[]): string
       const aviso = c.vieja === 'en_vigor'
         ? `\n  ⚠️ Confirma en ${f.polizaVieja.aseguradora} la anulación de${f.polizaVieja.numeroPoliza ? ` nº ${f.polizaVieja.numeroPoliza}` : ' la póliza vieja'} (sigue en vigor en CIMA)`
         : ''
-      return `• ${f.cliente}: ${vieja} → ${nueva} (${dias})${aviso}\n  Nueva: ${TEXTO_NUEVA[c.nueva]}`
+      const estadoNueva = f.polizaNueva ? TEXTO_NUEVA[c.nueva] : 'aún sin póliza nueva enlazada'
+      return `• ${f.cliente}: ${vieja} → ${nueva} (${dias})${aviso}\n  Nueva: ${estadoNueva}`
     })
     .join('\n')
   const pie = filas.length > 20 ? `\n\n… y ${filas.length - 20} más. Lista completa en /correduria.` : ''
