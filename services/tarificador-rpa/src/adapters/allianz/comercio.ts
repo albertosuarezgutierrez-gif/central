@@ -137,6 +137,9 @@ export async function rellenarTomador(raiz: Pick<Frame, 'locator'>, tomador: Tom
 
 // ───────────────────────── flujo (con huecos) ─────────────────────────
 
+/** Entrada en «Nueva Alta» (captura del portal real): el tile «Allianz Negocio Plus» está en el acordeón Particulares, NO en Empresas. */
+export const DESTINO_ENTRADA_COMERCIO = { pestana: 'Particulares', producto: 'Allianz Negocio Plus' } as const
+
 /** HUECO: pasos 1-3 sin grabar. */
 export async function rellenarPasos1a3(_page: Page, _riesgo: FormularioComercio, _ctx: ContextoPortal): Promise<never> {
   throw new ErrorMapaIncompleto('pasos 1-3: actividad, local/capitales, coberturas')
@@ -158,8 +161,7 @@ export const allianzComercio = {
   async tarificar(page: Page, riesgo: FormularioComercio, ctx: ContextoPortal): Promise<never> {
     if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
     await ctx.trasLogin()
-    // TODO(capturas): nombre exacto de la tarjeta «Negocio» en la pestaña Empresas del modal.
-    await abrirNuevaAlta(page, ctx, { pestana: 'Empresas', producto: 'Negocio' })
+    await abrirNuevaAlta(page, ctx, DESTINO_ENTRADA_COMERCIO)
     // Cuando existan los pasos 1-3: rellenarDatos(page, riesgo, ctx) → leerPrimaPanel(marco) → OfertaNormalizada.
     return rellenarPasos1a3(page, riesgo, ctx)
   },
