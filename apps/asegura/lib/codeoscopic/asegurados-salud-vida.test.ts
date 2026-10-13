@@ -6,7 +6,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { aseguradoDeFicha } from './asegurados.ts'
+import { aseguradoDeFicha, aseguradoDistintoDelTomador } from './asegurados.ts'
 import { construirPeticionSalud, revisarDatosSalud } from './peticion-salud.ts'
 import { construirPeticionVida, revisarDatosVida } from './peticion-vida.ts'
 import { revisarDatosDecesos } from './peticion-decesos.ts'
@@ -108,20 +108,36 @@ test('cepo: vida embebida rechaza capital/profesión/fumador del cuerpo (pisarí
 
 test('cepo: vida embebida exige el tomador del riesgo, arma el asegurado distinto desde SU ficha (uno como mucho) y corta sin capital', () => {
   const dv = fn('datosVidaDelRiesgoParaCotizar')
-  assert.match(dv, /o\.correduria_id = \$\{correduriaId\}::uuid and o\.tipo::text = 'vida'/)
-  assert.match(dv, /if \(op\.tomador !== e\.tomadorId\) return \{ ok: false/)
-  assert.match(dv, /f\.rol = 'asegurado' and f\.cliente_id::text <> \$\{e\.tomadorId\}/)
-  assert.match(dv, /if \(otros\.length > 1\) \{\s*return \{ ok: false/, 'TermLifeRisk_V1 lleva UNA persona asegurada')
-  assert.match(dv, /personaDeFicha\(correduriaId, otros\[0\]\.cliente_id, 'vida'\)\.catch\(\(\) => null\)/)
-  assert.match(dv, /if \(!p\) return \{ ok: false/, 'ficha ilegible: no se cotiza a otra persona')
-  assert.match(dv, /if \(p\.tipo === 'juridica'\) return \{ ok: false/)
-  assert.match(dv, /if \(malNac\) return \{ ok: false/)
+  assert.match(dv, /aseguradoVidaDeFiguras\(correduriaId/)
   assert.match(dv, /d\.capital === null \|\| !\(d\.capital > 0\)\) return \{ ok: false/)
-  assert.ok(dv.indexOf('op.tomador !== e.tomadorId') < dv.indexOf("f.rol = 'asegurado'"), 'la guarda del tomador va antes')
+  const av = fn('aseguradoVidaDeFiguras')
+  assert.match(av, /o\.correduria_id = \$\{correduriaId\}::uuid and o\.tipo::text = 'vida'/)
+  assert.match(av, /if \(op\.tomador !== e\.tomadorId\) return \{ ok: false/)
+  assert.match(av, /f\.rol = 'asegurado' and f\.cliente_id::text <> \$\{e\.tomadorId\}/)
+  assert.match(av, /if \(el\.tipo === 'varios'\) \{\s*return \{ ok: false/, 'TermLifeRisk_V1 lleva UNA persona asegurada')
+  assert.match(av, /personaDeFicha\(correduriaId, el\.clienteId, 'vida'\)\.catch\(\(\) => null\)/)
+  assert.match(av, /if \(!p\) return \{ ok: false/, 'ficha ilegible: no se cotiza a otra persona')
+  assert.match(av, /if \(p\.tipo === 'juridica'\) return \{ ok: false/)
+  assert.match(av, /if \(malNac\) return \{ ok: false/)
+  assert.ok(av.indexOf('op.tomador !== e.tomadorId') < av.indexOf("f.rol = 'asegurado'"), 'la guarda del tomador va antes')
+})
+
+test('cepo: vida con oportunidad SIN datosDelRiesgo (pantalla completa) también cotiza al asegurado de las figuras, nunca al tomador', () => {
+  const pv = fn('prepararVariante')
+  assert.match(pv, /if \(e\.ramo === 'vida' && !deRiesgoVida\) \{\s*const av = await aseguradoVidaDeFiguras/)
+  assert.match(rutaVida, /asegurado: dv\?\.asegurado \?\? variante\.v\.aseguradoVida \?\? null,/)
+})
+
+test('aseguradoDistintoDelTomador: identidad por ficha, no por posición; el tomador y los repetidos no cuentan', () => {
+  assert.deepEqual(aseguradoDistintoDelTomador([], 'T'), { tipo: 'ninguno' })
+  assert.deepEqual(aseguradoDistintoDelTomador([{ cliente_id: 'T' }], 'T'), { tipo: 'ninguno' })
+  assert.deepEqual(aseguradoDistintoDelTomador([{ cliente_id: 'T' }, { cliente_id: 'H' }], 'T'), { tipo: 'uno', clienteId: 'H' })
+  assert.deepEqual(aseguradoDistintoDelTomador([{ cliente_id: 'H' }, { cliente_id: 'T' }, { cliente_id: 'H' }], 'T'), { tipo: 'uno', clienteId: 'H' })
+  assert.deepEqual(aseguradoDistintoDelTomador([{ cliente_id: 'H' }, { cliente_id: 'M' }], 'T'), { tipo: 'varios' })
 })
 
 test('cepo: el asegurado de vida solo lo pone el SERVIDOR (parámetro aparte, nunca leído de resueltos del cuerpo)', () => {
-  assert.match(rutaVida, /asegurado: dv\?\.asegurado \?\? null,/)
+  assert.match(rutaVida, /asegurado: dv\?\.asegurado \?\? variante\.v\.aseguradoVida \?\? null,/)
   const rc = readFileSync(new URL('../retarificar-cartera.ts', import.meta.url), 'utf8')
   const i = rc.indexOf('export function prepararRetarificacionNuevaVida')
   const f = rc.slice(i, rc.indexOf('\n}\n', i))

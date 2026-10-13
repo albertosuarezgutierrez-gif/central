@@ -23,7 +23,7 @@ import type { DatosEmpresa, DatosPersona } from '@/lib/codeoscopic/persona'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import { municipiosPorCp, tiposDeVia } from '@/lib/codeoscopic/catalogos'
 import { partirDireccion, tipoViaDeFicha } from '@/lib/codeoscopic/direccion'
-import { aseguradoDeFicha, faltanDeAseguradoFicha, MAX_ADICIONALES_CORDURA, motivoFechaNacimientoImposible, type AseguradoAdicional as AseguradoParaCotizar } from '@/lib/codeoscopic/asegurados'
+import { aseguradoDeFicha, aseguradoDistintoDelTomador, faltanDeAseguradoFicha, MAX_ADICIONALES_CORDURA, motivoFechaNacimientoImposible, type AseguradoAdicional as AseguradoParaCotizar } from '@/lib/codeoscopic/asegurados'
 import { anotarCambio } from '@/lib/auditoria'
 import {
   admiteDatosVehiculo,
@@ -890,6 +890,11 @@ export type VarianteEntrada = {
    * servidor, no del cuerpo. `null` en profesión/fumador = no se sabe: no se manda (nunca «no fuma» por defecto).
    */
   vida?: DatosVidaParaCotizar
+  /**
+   * VIDA con oportunidad pero SIN `datosDelRiesgo` (pantalla completa `vida-nuevo?oportunidad=`): el capital lo teclea el
+   * corredor, pero la persona asegurada sale igualmente de las figuras del riesgo. `null` = el asegurado es el tomador.
+   */
+  aseguradoVida?: AseguradoParaCotizar | null
 }
 
 /** Lo que en VIDA embebida viaja del riesgo. `asegurado` = la persona asegurada si NO es el tomador (`null` = el tomador). */
@@ -977,6 +982,11 @@ export async function prepararVariante(
     // Foto de la variante: QUIÉN es cada asegurado (cliente_id, en el orden de `risk.insureds[1..]`). Sin DNI.
     return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: aseg.clienteIds }, correcciones, asegurados: aseg.asegurados } }
   }
+  if (e.ramo === 'vida' && !deRiesgoVida) {
+    const av = await aseguradoVidaDeFiguras(correduriaId, { oportunidadId, tomadorId: e.tomadorId })
+    if (!av.ok) return av
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: av.clienteId ? [av.clienteId] : [] }, correcciones, aseguradoVida: av.asegurado } }
+  }
   if (deRiesgoVida) {
     const dv = await datosVidaDelRiesgoParaCotizar(correduriaId, { oportunidadId, tomadorId: e.tomadorId })
     if (!dv.ok) return dv
@@ -1043,17 +1053,15 @@ export async function aseguradosDeFigurasParaCotizar(
 export const CAMPOS_VIDA_DEL_RIESGO = ['capital', 'profesion', 'fumador'] as const
 
 /**
- * VIDA embebida (13/10/2026): comprueba el riesgo y lee de `info_riesgo.datosCapital` lo que viaja. Gratis. Acotado a la
- * correduría. `TermLifeRisk_V1` lleva UNA persona asegurada propia (`risk.insured`, distinta de `holder`): si el riesgo
- * tiene una figura `asegurado` que no es el tomador, se arma desde SU ficha (como los asegurados de decesos/salud).
- * Corta ANTES de pagar si: el tomador no es el del riesgo; hay más de un asegurado distinto (no cabe en `insured`); su
- * ficha no se lee, es una empresa o tiene una fecha de nacimiento imposible; o falta el capital (`risk.deathBenefit`,
- * obligatorio). Profesión/fumador ausentes = `null` (no se mandan; nunca un «no fuma» inventado).
+ * VIDA (13/10/2026): la persona asegurada de un riesgo de vida cuando NO es el tomador, armada desde SU ficha
+ * (`risk.insured`). Gratis. `asegurado: null` = es el tomador. Corta ANTES de pagar si: la oportunidad no es de vida de
+ * esta correduría, el tomador no es el del riesgo, hay más de un asegurado distinto, su ficha no se lee, es una empresa
+ * o tiene una fecha de nacimiento imposible. Lo comparten la vida embebida y la pantalla completa `vida-nuevo`.
  */
-export async function datosVidaDelRiesgoParaCotizar(
+export async function aseguradoVidaDeFiguras(
   correduriaId: string,
   e: { oportunidadId: string; tomadorId: string },
-): Promise<{ ok: true; vida: DatosVidaParaCotizar; aseguradoClienteId: string | null } | { ok: false; motivo: string }> {
+): Promise<{ ok: true; asegurado: AseguradoParaCotizar | null; clienteId: string | null; datos: unknown } | { ok: false; motivo: string }> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'la oportunidad no es válida' }
   const [op] = await prisma.$queryRaw<Array<{ tomador: string; datos: unknown }>>`
     select coalesce(
@@ -1071,23 +1079,40 @@ export async function datosVidaDelRiesgoParaCotizar(
     where f.oportunidad_id = ${e.oportunidadId}::uuid and f.correduria_id = ${correduriaId}::uuid
       and f.rol = 'asegurado' and f.cliente_id::text <> ${e.tomadorId}
     order by f.creado_at asc, f.id asc`
-  if (otros.length > 1) {
+  const el = aseguradoDistintoDelTomador(otros, e.tomadorId)
+  if (el.tipo === 'varios') {
     return { ok: false, motivo: 'en vida Avant2 lleva UNA persona asegurada (`insured`): deja un solo asegurado en «Intervinientes»' }
   }
-  let asegurado: AseguradoParaCotizar | null = null
-  if (otros.length === 1) {
-    const quien = nombreDe(otros[0].nombre, otros[0].apellidos)
-    const p = await personaDeFicha(correduriaId, otros[0].cliente_id, 'vida').catch(() => null)
-    if (!p) return { ok: false, motivo: `no se pudo leer la ficha del asegurado ${quien}: no se pide precio de otra persona` }
-    if (p.tipo === 'juridica') return { ok: false, motivo: `${quien} es una empresa: el asegurado de vida tiene que ser una persona. Quítalo de «Intervinientes».` }
-    const a = aseguradoDeFicha(p)
-    const malNac = motivoFechaNacimientoImposible(a.fechaNacimiento)
-    if (malNac) return { ok: false, motivo: `asegurado ${quien}: ${malNac}. Corrígela en su ficha («Intervinientes»).` }
-    asegurado = a
-  }
-  const d = leerDatosCapital(op.datos)
+  if (el.tipo === 'ninguno') return { ok: true, asegurado: null, clienteId: null, datos: op.datos }
+  const fila = otros.find((o) => o.cliente_id === el.clienteId)
+  const quien = nombreDe(fila?.nombre ?? null, fila?.apellidos ?? null)
+  const p = await personaDeFicha(correduriaId, el.clienteId, 'vida').catch(() => null)
+  if (!p) return { ok: false, motivo: `no se pudo leer la ficha del asegurado ${quien}: no se pide precio de otra persona` }
+  if (p.tipo === 'juridica') return { ok: false, motivo: `${quien} es una empresa: el asegurado de vida tiene que ser una persona. Quítalo de «Intervinientes».` }
+  const a = aseguradoDeFicha(p)
+  const malNac = motivoFechaNacimientoImposible(a.fechaNacimiento)
+  if (malNac) return { ok: false, motivo: `asegurado ${quien}: ${malNac}. Corrígela en su ficha («Intervinientes»).` }
+  return { ok: true, asegurado: a, clienteId: el.clienteId, datos: op.datos }
+}
+
+/**
+ * VIDA embebida (13/10/2026): comprueba el riesgo y lee de `info_riesgo.datosCapital` lo que viaja. Gratis. Acotado a la
+ * correduría. `TermLifeRisk_V1` lleva UNA persona asegurada propia (`risk.insured`, distinta de `holder`): si el riesgo
+ * tiene una figura `asegurado` que no es el tomador, se arma desde SU ficha (como los asegurados de decesos/salud).
+ * Corta ANTES de pagar si: el tomador no es el del riesgo; hay más de un asegurado distinto (no cabe en `insured`); su
+ * ficha no se lee, es una empresa o tiene una fecha de nacimiento imposible; o falta el capital (`risk.deathBenefit`,
+ * obligatorio). Profesión/fumador ausentes = `null` (no se mandan; nunca un «no fuma» inventado).
+ */
+export async function datosVidaDelRiesgoParaCotizar(
+  correduriaId: string,
+  e: { oportunidadId: string; tomadorId: string },
+): Promise<{ ok: true; vida: DatosVidaParaCotizar; aseguradoClienteId: string | null } | { ok: false; motivo: string }> {
+  const av = await aseguradoVidaDeFiguras(correduriaId, { oportunidadId: e.oportunidadId, tomadorId: e.tomadorId })
+  if (!av.ok) return av
+  const asegurado = av.asegurado
+  const d = leerDatosCapital(av.datos)
   if (d === null || d.capital === null || !(d.capital > 0)) return { ok: false, motivo: 'falta el capital asegurado en «Datos del riesgo»: sin él Avant2 no cotiza vida' }
-  return { ok: true, vida: { capital: d.capital, profesion: d.profesion, fumador: d.fumador, asegurado }, aseguradoClienteId: asegurado ? otros[0].cliente_id : null }
+  return { ok: true, vida: { capital: d.capital, profesion: d.profesion, fumador: d.fumador, asegurado }, aseguradoClienteId: av.clienteId }
 }
 
 /**
