@@ -175,7 +175,7 @@ Pendiente: FK compuesta correduría en poliza_no_duplicado; ingesta no quita cer
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
 Política Alberto: GRATIS (también más allá de las 12:00, `salida.ts`: se consulta y confirma según limpieza/calendario) y SIN pedir reseña (Booking/Airbnb prohíben incentivar). «No» en rojo ofrece consignas de `CONSIGNA_POR_ZONA`.
 Pendiente: la nota de 🧹 Consultar limpieza no persiste (sin columna); bloqueos manuales del calendario quedan fuera de `incomes`, el semáforo no los ve.
-PR #4212 MERGEADO (03/10). Caso origen: Massimo (reserva 154375571) avisado por Alberto fuera del log; el 05/09 la IA le negó entrar antes con la noche previa vacía (hoy sería 🟢).
+PR #4212 MERGEADO (03/10). Caso origen: huésped H1 (reserva 154375571) avisado por Alberto fuera del log; el 05/09 la IA le negó entrar antes con la noche previa vacía (hoy sería 🟢).
 
 **(03/10/2026, tope Avant2 €)** — PR #4192 MERGEADO (fase 1): tope en euros/mes de Avant2 — aviso Telegram a 60 €, bloqueo a 70 €, +30 € por botón `cas_tope:` (idempotente); cron plataforma `correduria-tope-avant2` cada 5 min recoge los avisos por el puerto `/api/operador/codeoscopic/tope`. Fail-closed: sin leer el gasto no se llama a Avant2. Migración `2026-10-03b_codeoscopic_tope_euros.sql` APLICADA en prod (tabla `seguros.codeoscopic_tope_evento`, grants a `prisma_seguros` verificados). ReRate/Submit/límites cuentan a 0,50 € mientras no se confirme su coste. La lectura del gasto vive en `consumo.ts` (`gastadoMesCents`): el guardián `regression-simulacion-codeoscopic` solo deja tocar `codeoscopic_consumo` ahí.
 
@@ -1863,7 +1863,7 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 ## (28/09/2026) Agente de huéspedes: «olvidar» lo que ya respondió Alberto a mano
 - El pendiente de `mensajes_pendientes_tg` solo se cerraba con los botones de Telegram: si se contesta desde Smoobu/Booking seguía vivo → recordatorio a los 45 min y acuse «lo estamos revisando» al huésped a las 3 h sobre una conversación ya atendida.
 - Botón **✋ Ya respondido** (`hsp_done`) en propuesta, re-propuesta y recordatorio: borra el pendiente sin enviar nada. Y el barrido de rancios (`rancio-guardia`) mira el hilo antes de recordar/acusar: si tras la pregunta hay un mensaje del host que no es nuestro ni plantilla (`respondidoFuera()`, puro y testeado), cierra y avisa por Telegram con el texto visto.
-- Pendiente de 154692216 (Justine) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
+- Pendiente de 154692216 (huésped H3) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
 - PR #3849 mergeado. Después: 11 zombis BORRADOS, y `mensajes_log.emisor_raw` (jsonb, aplicada) guarda origen (sondeo/historial/correo) + `type`/`sent_by_owner`/`sender`/campos crudos de Smoobu del mensaje tomado como pregunta → la próxima vez que un mensaje de Alberto entre como huésped, `SELECT emisor_raw FROM mensajes_log` dice por qué.
 - Botón **🙋 Ese mensaje es mío** (`hsp_mine`) en la propuesta: mete la «pregunta» en `mensajes_enviados` (el anti-eco la trata como del host desde entonces) y cierra el pendiente. Es el arreglo manual hasta tener datos de `emisor_raw` para el automático.
 
@@ -2140,7 +2140,7 @@ prospecto → backfill DNI en /correduria/mantenimiento), buzones compartidos (A
 cliente C43/cliente C44 «Cónyuge», cliente C45/cliente C46 +7, González García con 2 DNI distintos) y cliente C47/cliente C48.
 
 ## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
-- Stephen (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
+- huésped H5 (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
 - Causa medida contra Smoobu (vía `pg_net`): `/api/reservations/{id}/messages` pagina de 25 en 25 (más antiguo primero); con 27 mensajes sus dos preguntas quedaban en la página 2, el último visible era un automático nuestro → `host_ultimo_sin_pregunta`, salida muda.
 - Fix: `lib/smoobu-paginas.ts` (puro, 6 tests, visto en rojo) + `smoobuMensajesReserva()` en `lib/smoobu.ts`; lo usan contexto, historico, seed-aprendizaje y la ficha `/sivra/mensajes/[bookingId]`. Página intermedia fallida → `null`, nunca hilo a medias.
 - Pendiente: las salidas tempranas del orquestador siguen sin dejar rastro; merece un aviso. Rotar key/secret de Smoobu (salieron en la sesión).
@@ -3706,9 +3706,9 @@ PR #2933. Sin código tocado, solo doc.
   Avisado por PushNotification. Detalle en `pricing_aprendizaje` (`ciclo_14_09_2026`) y bitácora.
 
 - **🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español" (13/09/2026, reserva
-  147382671, Daniela).** Un borrador BUENO en italiano (sin `ciao/grazie/prego`, solo "con" como
+  147382671, huésped H4).** Un borrador BUENO en italiano (sin `ciao/grazie/prego`, solo "con" como
   señal) puntuaba `es>en` y `pareceEspanol()`/`derivaAEspanol()` (PR #2378, 05/09) lo declaraba
-  falsamente en español — mismo bug que el de Massimo pero en sentido inverso (falso positivo, no
+  falsamente en español — mismo bug que el de huésped H1 pero en sentido inverso (falso positivo, no
   fallo real). Fix: el marcador de IT en `reglas.ts::detectLang` gana `hai/sì/così/però/che/
   questo/questa/molto/scusa/buonasera` (antes solo 9 palabras "de libro"). 2 tests nuevos
   (`reglas.test.ts` + `idioma-salida.test.ts`) con el texto real. De paso se corrigió en BD el
@@ -5714,7 +5714,7 @@ PR #2933. Sin código tocado, solo doc.
   su fila de facturas. Las 2 alertas son reales y ya estaban declaradas pendientes: `ses_transporte`
   (sin establecimientos; hoy manda Chekin, hasta el 06/10) y `sivra_domotica_acceso` (cerradura de
   Bustos Tavera sin conexión, Tuya 2001/1109, hasta el 12/09).
-  **Modo noche:** hubo caso real la primera noche — Mafalda (154265696) escribió a las **23:19** hora
+  **Modo noche:** hubo caso real la primera noche — huésped H2 (154265696) escribió a las **23:19** hora
   de Madrid, el mensaje escaló y **el acuse salió a las 23:19:34**. Escribió tres veces más (23:22,
   23:30, 23:31) y el acuse NO se repitió: la guarda de uno por noche y reserva hizo su trabajo.
   `urgente_nocturno=false` (preguntaba por aparcamiento, no era urgencia) y por eso `ultimo_recurso_at`
@@ -6251,7 +6251,7 @@ PR #2933. Sin código tocado, solo doc.
   por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que
   «autónomo de noche» solo añadiría autonomía sobre lo que el sistema marcó `needs_human` — sin nadie
   que lo corrija. El agujero real era otro: lo que ESCALA de noche deja al huésped sin nada hasta las
-  09:00, y desde el código eso es idéntico a una conversación atendida (caso Mafalda, 154265696).
+  09:00, y desde el código eso es idéntico a una conversación atendida (caso huésped H2, 154265696).
   Ahora: acuse de recibo automático (texto fijo por idioma, sin IA — es la red de seguridad), aviso
   🚨 por `tgSend` (no `tgAviso`: un interruptor apagado convertiría «te despierto» en silencio) si es
   urgencia de acceso/avería, y a los 15 min sin respuesta se deriva al portal de reserva —**último**
@@ -6273,7 +6273,7 @@ PR #2933. Sin código tocado, solo doc.
   nadie. Ahora `hitosBloqueantes` ignora las filas en sombra si el piso ya está activo y el reclamo las
   toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. Mergeado (**PR #2305**) y
   ✅ **verificado en producción**: la pasada de las 07:37 UTC mandó la víspera con los códigos a esa
-  huésped, en PORTUGUÉS («Olá Mafalda… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
+  huésped, en PORTUGUÉS («Olá huésped H2… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
   retirado tenía bloqueadas. **Regla que deja: un mensaje que solo vio Alberto por Telegram no está
   entregado** — al activar un piso hay que mirar qué hitos suyos quedaron en sombra.
   🚨 **Y el rescate destapó un segundo defecto (PR #2310): `visperaAyer` no distinguía la víspera que
@@ -6578,7 +6578,7 @@ PR #2933. Sin código tocado, solo doc.
   que barre todo el repo versionado. Regla anotada en los tres `CLAUDE.md` (raíz, asegura, portal).
 
 - **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026, PR #2249).**
-  Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
+  Alberto sobre la reserva 152961026 (huésped H7): «son mensajes básicos, se podrían haber enviado sin mi
   revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
   saludo» tumbaba la detección → `es_cortesia=false`, la vía de cortesía ni se intentaba; (2) el
   control de calidad caído (`DESCONOCIDO`) entra en `needs_human`, que es guarda común → tampoco
@@ -7152,7 +7152,7 @@ PR #2933. Sin código tocado, solo doc.
   lo que falta es la versión. Pendiente de Alberto: 20 suposiciones por aprobar y `CODEOSCOPIC_SIMULACION=true`.
 
 - **🧠 El agente de huéspedes «no aprendía» — y el que decidía nunca leyó lo aprendido (02/09/2026).** Queja de
-  Alberto sobre el borrador a Claudio (153122091). El aprendizaje SÍ escribía: el phishing por WhatsApp estaba
+  Alberto sobre el borrador a huésped H8 (153122091). El aprendizaje SÍ escribía: el phishing por WhatsApp estaba
   enseñado tres veces. Lo que fallaba: (1) `debeEscalar` (control de calidad) solo veía ficha+guía, nunca
   `ctx.hechos` → ESCALAR eterno, y ese veredicto es el que dispara el «❓ no lo encuentro en la guía»;
   (2) «no se pudo verificar» (clasificador mudo) se contaba como hueco de guía → nuevo `tipoHueco` puro;
@@ -8321,7 +8321,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   trabaja. **PR #1994.**
 
 ### 🧹 (01/09/2026) SIVRA: la orden a la limpieza deja de depender de que Stripe vea el dinero
-- Raquel (reserva 152490601) pagó la cuna **por Bizum**: `sivra_extras_reserva` congelada en
+- huésped H6 (reserva 152490601) pagó la cuna **por Bizum**: `sivra_extras_reserva` congelada en
   `ofrecido` y Sique Brilla sin enterarse — el email lo dispara SOLO el webhook de Stripe. Orden
   mandada a mano ese día con autorización expresa de Alberto.
 - Dictado suyo: **la orden NO lleva estado de cobro** («ni pagado ni confirmar, simplemente una orden»).
