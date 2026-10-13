@@ -31,6 +31,7 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 
 ## Renovaciones, detector y paneles
 - **Renovaciones:** cron asegura `/api/cron/tarificador-renovaciones`; `TARIFICADOR_RENOVACIONES_ACTIVO=1`, `MAX_DIA=3`.
+- **Cola (13/10/2026):** barrido propio cada 5 min (`/api/cron/tarificador-cola`, apagado con `TARIFICADOR_RPA_ACTIVO`) + lanzamiento al encolar. Un `en_curso` con lease vencido no ocupa hueco: `reclamarSiguiente` lo pasa a fallo de infra (y destruye su máquina). Encolar el mismo cliente+compañía+ramo+riesgo con un trabajo vivo devuelve ESE con `duplicado: true` (cerrojo consultivo por clave).
 - **Detector de tarifa** (cambio de tarifa del portal) y panel `/correduria/tarificador`.
 - **Grabador** `/correduria/tarificador/grabaciones`: bookmarklet, redacción de datos, mapa IA → da de alta compañías/ramos sin escribir adaptador a mano. Tope `TARIFICADOR_GRABADOR_MAX_LLAMADAS` (60).
 - **Fichas** `/correduria/tarificador/fichas`: catálogo de garantías, validador anti-alucinación, validación humana, «Extraer coberturas» del PDF y `compararOfertas` (comparador determinista).

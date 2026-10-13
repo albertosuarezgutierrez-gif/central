@@ -104,7 +104,7 @@ export type EntradaPedir = {
 }
 
 export type ResultadoCompania =
-  | { compania: string; estado: 'encolado'; trabajoId: string }
+  | { compania: string; estado: 'encolado'; trabajoId: string; duplicado: boolean }
   | { compania: string; estado: 'rechazado'; status: number; motivo: string }
 
 export type ResultadoPedir =
@@ -165,7 +165,7 @@ export async function pedirPresupuestosOportunidad(e: EntradaPedir): Promise<Res
       compania: p.compania, ramo: 'comunidades', riesgo: p.riesgo, solicitadoPor: e.solicitadoPor,
     })
     resultados.push(r.estado === 'encolado'
-      ? { compania: p.compania, estado: 'encolado', trabajoId: r.trabajoId }
+      ? { compania: p.compania, estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado }
       : { compania: p.compania, estado: 'rechazado', status: r.status, motivo: r.motivo })
   }
   for (const p of preparadas) {
