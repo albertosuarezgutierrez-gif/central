@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-13T12:19:44.358Z",
- "llamadas": 4484,
+ "fin": "2026-10-13T12:57:13.750Z",
+ "llamadas": 4540,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,16 +16,16 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 254,
-   "chars_in": 28859,
-   "chars_out": 2518825,
+   "llamadas": 284,
+   "chars_in": 32871,
+   "chars_out": 2577495,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 140,
-    "Grep": 102,
-    "Glob": 12
+    "Read": 149,
+    "Grep": 122,
+    "Glob": 13
    }
   },
   "bash": {
@@ -40,17 +40,17 @@
    }
   },
   "otro": {
-   "llamadas": 663,
-   "chars_in": 374589,
-   "chars_out": 4856861,
+   "llamadas": 668,
+   "chars_in": 375434,
+   "chars_out": 4857516,
    "errores": 0,
    "archivos_citados": 28,
    "chars_citados": 447827,
    "tools": {
     "SubagentHandback": 123,
-    "ToolSearch": 108,
+    "ToolSearch": 112,
     "ReadNotifications": 383,
-    "SendMessage": 21,
+    "SendMessage": 22,
     "SendUserFile": 1,
     "AskUserQuestion": 1,
     "Monitor": 24,
@@ -59,14 +59,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 91,
-   "chars_in": 219776,
-   "chars_out": 229327,
+   "llamadas": 95,
+   "chars_in": 225869,
+   "chars_out": 237429,
    "errores": 0,
-   "archivos_citados": 141,
-   "chars_citados": 8449452,
+   "archivos_citados": 142,
+   "chars_citados": 8478415,
    "tools": {
-    "Agent": 91
+    "Agent": 95
    }
   },
   "agente:lector-correo": {
@@ -97,15 +97,15 @@
    }
   },
   "sql": {
-   "llamadas": 213,
-   "chars_in": 107588,
-   "chars_out": 564341,
+   "llamadas": 230,
+   "chars_in": 113384,
+   "chars_out": 653466,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 15,
-    "mcp__Supabase__execute_sql": 198
+    "mcp__Supabase__execute_sql": 215
    }
   },
   "mcp:Supabase": {
