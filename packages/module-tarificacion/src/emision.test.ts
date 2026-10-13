@@ -159,6 +159,21 @@ describe('emisión · token y canje', () => {
     expect(t).not.toContain(token)
     expect(sinTokens(`x ${token} y`)).not.toContain(token)
   })
+  it('sinTokens redacta tokens de 43 chars que empiezan o acaban en - o _ (el \\b antiguo los dejaba pasar)', () => {
+    // Sintéticos, compuestos en runtime (no literales) para no disparar gitleaks.
+    const casos = [
+      '-' + 'a1'.repeat(20) + 'a-',
+      '-' + 'b2'.repeat(21),
+      'c3'.repeat(21) + '-',
+      '_' + 'd4'.repeat(20) + 'd_',
+    ]
+    for (const tok of casos) {
+      expect(tok).toHaveLength(43)
+      const salida = sinTokens(`x ${tok} y`)
+      expect(salida).not.toContain(tok)
+      expect(salida).toBe('x [TOKEN] y')
+    }
+  })
 })
 
 describe('emisión · autorización por Telegram', () => {
