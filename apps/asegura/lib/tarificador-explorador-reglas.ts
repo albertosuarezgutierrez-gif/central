@@ -203,6 +203,7 @@ REGLAS (no negociables):
 - parar {motivo}: otp | captcha | dato_sensible_requerido (piden NIF/DNI u otro dato personal que no está en el catálogo) | cerca_de_emision | ambiguo | aceptar_requerido | sin_salida. Va sola. Ante la duda, PARA.
 - mapeo: para cada campo que identifiques, {ref, campoCanonico (clave del catálogo o null), confianza alta|media|baja}.
 - Máximo 15 acciones. Refs SOLO del inventario de ESTA pantalla.
+- motivo en una frase de 200 caracteres como máximo.
 
 Responde SOLO un objeto JSON, sin prosa:
 {"version":1,"pantalla":{"nombre":"<≤60 car.>","tipo":"formulario|seleccion_producto|resultado|otro"},"acciones":[...],"mapeo":[...],"motivo":"<≤200 car.>"}`

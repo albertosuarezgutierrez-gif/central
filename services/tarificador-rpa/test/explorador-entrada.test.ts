@@ -11,7 +11,9 @@ import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { ENTRADAS_EXPLORACION } from '@central/module-tarificacion'
 import { instalarGuardEmision, pulsar, type GuardEmision } from '../src/guard.ts'
-import { abrirNuevaAlta, etiquetaProducto, type PestanaEntradaAllianz } from '../src/adapters/allianz/entrada.ts'
+import { abrirNuevaAlta, esperarMarcoApp, etiquetaProducto, NOMBRE_MARCO_APP, type PestanaEntradaAllianz } from '../src/adapters/allianz/entrada.ts'
+import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
+import { ErrorTarificador } from '../src/errores.ts'
 import { cuerpoTrasCierre, finDeEntrada, resultadoDeFin } from '../src/explorador.ts'
 
 // Compuesto en runtime: un literal con pinta de clave dispara gitleaks (ver .gitleaks.toml).
@@ -22,8 +24,9 @@ const SECRETO = ['clave', 'sintetica', 'de', 'prueba'].join('-')
  * «Particulares», una rejilla de tiles (icono + texto). Las palabras de cada tile van en nodos separados (como un tile con
  * el texto partido en dos líneas).
  */
-const HOME = (productos: string[]) => `<!doctype html><html><head><meta charset="utf-8"><title>home</title></head><body>
+const HOME = (productos: string[], cargaApp: string | null = null) => `<!doctype html><html><head><meta charset="utf-8"><title>home</title><script>window.CARGA_APP = ${JSON.stringify(cargaApp)}</script></head><body>
   <span id="cab">${SECRETO}</span>
+  <input id="buscador" type="text" aria-label="Buscar póliza">
   <button id="link_new_policy" onclick="document.getElementById('m').hidden=false">Nueva Alta</button>
   <div id="m" role="dialog" hidden>
     <h2>Nueva Alta</h2>
@@ -37,7 +40,16 @@ const HOME = (productos: string[]) => `<!doctype html><html><head><meta charset=
   <script>
     window.elegido = null
     function plegar(id) { const s = document.getElementById(id); s.hidden = !s.hidden }
-    function elegir(p) { window.elegido = p }
+    function elegir(p) {
+      window.elegido = p
+      // /con-app*: como ePAC, el modal se cierra y la app del producto entra RETRASADA en el iframe appArea.
+      if (!window.CARGA_APP) return
+      setTimeout(() => {
+        document.getElementById('m').hidden = true
+        const f = document.createElement('iframe'); f.id = 'appArea'; f.name = 'appArea'; f.src = window.CARGA_APP
+        document.body.appendChild(f)
+      }, 800)
+    }
   </script></body></html>`
 
 // Rejilla de Particulares (etiquetas de la captura real) + señuelos SINTÉTICOS que CONTIENEN «Allianz HOGAR» o «Hogar» sin
@@ -47,6 +59,12 @@ const REJILLA = ['Allianz Negocio Plus', 'Decesos Prima periódica', 'Allianz Ac
 const CON_HOGAR = [...SENUELOS, 'Allianz HOGAR', ...REJILLA]
 const SIN_HOGAR = [...SENUELOS, ...REJILLA]
 
+/** Formulario SINTÉTICO del producto dentro de `appArea` (etiquetas genéricas, sin valores). */
+const APP_HOGAR = `<!doctype html><html><head><meta charset="utf-8"></head><body><h2>Datos del riesgo</h2>
+  <label for="sup">Superficie construida</label><input id="sup" name="sup" type="text">
+  <label for="tipo">Tipo de vivienda</label><select id="tipo" name="tipo"><option value="1">Piso</option><option value="2">Unifamiliar</option></select>
+  </body></html>`
+
 let servidor: Server
 let base = ''
 let browser: Browser
@@ -54,7 +72,10 @@ before(async () => {
   servidor = createServer((req, res) => {
     const ruta = (req.url ?? '/').split('?')[0]
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    res.end(HOME(ruta === '/sin-hogar' ? SIN_HOGAR : CON_HOGAR))
+    if (ruta === '/app') return void res.end(APP_HOGAR)
+    if (ruta === '/app-vacia') return void res.end('<!doctype html><html><body><p>Cargando…</p><input type="hidden" name="t"></body></html>')
+    const cargaApp = ruta === '/con-app' ? '/app' : ruta === '/con-app-vacia' ? '/app-vacia' : ruta === '/con-app-blank' ? 'about:blank' : null
+    res.end(HOME(ruta === '/sin-hogar' ? SIN_HOGAR : CON_HOGAR, cargaApp))
   })
   await new Promise<void>((r) => servidor.listen(0, '127.0.0.1', r))
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`
@@ -148,3 +169,53 @@ test('sin «Allianz HOGAR» en la rejilla (solo nombres que lo contienen): no pu
     await context.close()
   }
 })
+
+// ─── Espera del iframe `appArea` tras el tile (13/10/2026) ───────────────────
+// Exploración real de «Allianz HOGAR»: el paso 1 se inventarió con el modal aún abierto y UN marco (la carcasa), sin
+// `appArea`. La entrada del explorador espera ahora al marco de la app con un control visible (`esperarMarcoApp`).
+
+test('tras el tile, esperarMarcoApp espera al iframe appArea con controles: el inventario ve 2 marcos, con el formulario', async () => {
+  const { context, page, guard } = await abrir('/con-app')
+  try {
+    await abrirNuevaAlta(page, ctxDe(guard), { pestana: 'Particulares', producto: 'Allianz HOGAR' })
+    // Lo que pasaba: inventario justo tras el tile → solo la carcasa.
+    const antes = await capturarInventarioExploracion(page)
+    assert.equal(antes?.inventario.marcos.length, 1)
+    await antes?.liberar()
+
+    const marco = await esperarMarcoApp(page, 5_000)
+    assert.equal(marco.name(), NOMBRE_MARCO_APP)
+    assert.equal(new URL(marco.url()).pathname, '/app')
+    const tras = await capturarInventarioExploracion(page)
+    try {
+      assert.equal(tras?.inventario.marcos.length, 2)
+      const app = tras!.inventario.marcos.find((m) => m.nombre === NOMBRE_MARCO_APP)
+      assert.ok(app, 'falta el marco appArea en el inventario')
+      assert.ok(app.elementos.some((e) => e.tag === 'select'), 'el formulario del producto tiene que estar en el inventario')
+      assert.ok((app.titulos ?? []).some((t) => /datos del riesgo/i.test(t)), 'falta el título del formulario')
+    } finally {
+      await tras?.liberar()
+    }
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+for (const [ruta, que] of [['/', 'sin iframe appArea'], ['/con-app-blank', 'appArea en about:blank'], ['/con-app-vacia', 'appArea sin ningún control visible']] as const) {
+  test(`esperarMarcoApp falla como error de PORTAL (con evidencia) si no carga: ${que}`, async () => {
+    const { context, page, guard } = await abrir(ruta)
+    try {
+      await abrirNuevaAlta(page, ctxDe(guard), { pestana: 'Particulares', producto: 'Allianz HOGAR' })
+      let error: unknown = null
+      await esperarMarcoApp(page, 2_000).catch((e: unknown) => { error = e })
+      assert.ok(error instanceof ErrorTarificador, 'tenía que fallar con ErrorTarificador')
+      assert.equal(error.tipo, 'portal')
+      const fin = await finDeEntrada(error, page, (t) => t, {})
+      assert.equal(fin.motivo, 'error_portal')
+      assert.equal(fin.pasos, 0)
+    } finally {
+      await context.close()
+    }
+  })
+}
