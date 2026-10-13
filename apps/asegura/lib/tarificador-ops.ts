@@ -122,6 +122,7 @@ async function leerRenovaciones(correduriaId: string, ahora: Date): Promise<Reno
     left join seguros.tarificaciones x on x.id = t.tarificacion_id and x.correduria_id = t.correduria_id
     where t.correduria_id = ${correduriaId}::uuid and t.compania = ${COMPANIA} and t.ramo = ${RAMO}
       and t.cliente_id::text = any(${clientes}::text[])
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
     order by t.created_at desc
     limit 2000`
 
@@ -281,8 +282,10 @@ export async function leerPanelTarificador(correduriaId: string, env: Record<str
   const [metr, completados, intervenciones, renov, iaDias] = await Promise.all([
     prisma.$queryRaw<{ compania: string; estado: string; created_at: Date; iniciado_at: Date | null; terminado_at: Date | null; error: unknown }[]>`
       select compania, estado, created_at, iniciado_at, terminado_at, error
-      from seguros.tarificacion_trabajos
-      where correduria_id = ${correduriaId}::uuid and created_at > now() - interval '40 days'
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${correduriaId}::uuid and t.created_at > now() - interval '40 days'
+        -- Métricas y coste POR TARIFICACIÓN: una exploración no es una tarificación (ni éxito ni fallo de una).
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
       order by created_at desc
       limit 5000`,
     prisma.$queryRaw<{ id: string; terminado_at: Date | null; created_at: Date; riesgo: unknown; respuesta: unknown }[]>`

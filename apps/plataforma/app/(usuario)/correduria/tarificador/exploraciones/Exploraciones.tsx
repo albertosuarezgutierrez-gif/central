@@ -10,10 +10,10 @@ import {
   ENTRADA_POR_DEFECTO,
   OPCIONES_NUEVA,
   ORIGEN_TEXTO,
-  TEXTO_ENCOLAR_PENDIENTE,
   costeExploracion,
   estadoExploracion,
   leerDetalle,
+  leerEncolar,
   leerLista,
   mensajeError,
   motivoFinTexto,
@@ -66,7 +66,7 @@ export default function Exploraciones() {
 
   return (
     <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      <NuevaExploracion />
+      <NuevaExploracion onEncolada={() => void cargar()} />
       <section style={cardStyle}>
         <CardHeader
           title="Exploraciones"
@@ -119,25 +119,35 @@ export default function Exploraciones() {
 
 /**
  * «Nueva exploración»: compañía + producto de una lista CERRADA (por defecto Allianz Hogar; sintética, con datos de
- * prueba). Hasta que asegura tenga el endpoint de encolar y el worker ejecute el modo (fase B), va deshabilitado.
+ * prueba). Encola en asegura; si el explorador está apagado allí (503), lo dice y no encola nada.
  */
-function NuevaExploracion() {
+function NuevaExploracion({ onEncolada }: { onEncolada: () => void }) {
   const [entrada, setEntrada] = useState<string>(ENTRADA_POR_DEFECTO)
+  const [ocupado, setOcupado] = useState(false)
+  const [res, setRes] = useState<{ tono: 'warning' | 'negative' | 'positive'; texto: string } | null>(null)
+  const encolar = async () => {
+    setOcupado(true)
+    setRes(null)
+    const r = await pedir(API, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entrada }) })
+    const l = leerEncolar(r.status, r.json)
+    if (l.ok) { setRes({ tono: 'positive', texto: l.texto }); onEncolada() } else setRes({ tono: l.apagado ? 'warning' : 'negative', texto: l.mensaje })
+    setOcupado(false)
+  }
   return (
     <section style={cardStyle}>
       <CardHeader title="Nueva exploración" sub="Con datos de prueba (sintética): no toca ningún cliente real." />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'end' }}>
         <label style={{ display: 'grid', gap: 4, fontSize: 13, flex: '1 1 220px', minWidth: 0 }}>
           Compañía y producto
-          <select value={entrada} onChange={(e) => setEntrada(e.target.value)} style={campo} disabled={!ENCOLAR_DISPONIBLE}>
+          <select value={entrada} onChange={(e) => setEntrada(e.target.value)} style={campo} disabled={!ENCOLAR_DISPONIBLE || ocupado}>
             {OPCIONES_NUEVA.map((o) => <option key={o.entrada} value={o.entrada}>{o.compania} · {o.producto}</option>)}
           </select>
         </label>
-        <button type="button" disabled={!ENCOLAR_DISPONIBLE} style={{ ...btnStyle('primario'), minHeight: 44 }} title={ENCOLAR_DISPONIBLE ? undefined : TEXTO_ENCOLAR_PENDIENTE}>
-          <Plus size={15} strokeWidth={1.75} aria-hidden /> Nueva exploración
+        <button type="button" onClick={() => void encolar()} disabled={!ENCOLAR_DISPONIBLE || ocupado} style={{ ...btnStyle('primario'), minHeight: 44 }}>
+          <Plus size={15} strokeWidth={1.75} aria-hidden /> {ocupado ? 'Encolando…' : 'Nueva exploración'}
         </button>
       </div>
-      {!ENCOLAR_DISPONIBLE && <p className="muted" style={{ margin: '8px 0 0', fontSize: 12 }}>Deshabilitado: {TEXTO_ENCOLAR_PENDIENTE}.</p>}
+      {res && <p role={res.tono === 'positive' ? 'status' : 'alert'} style={{ ...aviso(res.tono), marginTop: 8 }}>{res.texto}</p>}
     </section>
   )
 }

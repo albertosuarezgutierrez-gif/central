@@ -405,6 +405,7 @@ export {
   primerObjetoJsonExplorador,
   indiceRefs,
   descripcionesElemento,
+  esAceptarDivAutorizado,
   esAvanceAutorizado,
   bloqueoAvance,
   validarRespuestaExplorador,

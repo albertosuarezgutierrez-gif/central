@@ -15,6 +15,9 @@ export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { r
 export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
+/** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto'] as const
+
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
   if (ramo === 'comunidades') {
     const v = validarRiesgoComunidad(riesgo)
@@ -81,14 +84,14 @@ export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable']
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
  * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
  * devolverá a `pendiente`: sería el mismo encargo dos veces). Lo terminado, cancelado o pendiente de una persona, no.
- * Un trabajo de EMISIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
+ * Un trabajo de EMISIÓN o de EXPLORACIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
  */
 export function bloqueaDuplicado(
   f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null },
   ahora: Date,
   maxIntentos: number,
 ): boolean {
-  if (f.modo === 'emision') return false
+  if (f.modo === 'emision' || f.modo === 'exploracion') return false
   if (f.estado === 'pendiente') return true
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos

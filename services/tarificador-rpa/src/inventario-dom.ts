@@ -9,6 +9,7 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
+import { SELECTOR_AVANCE_SERVLET } from './guard.ts'
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -18,12 +19,18 @@ import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
  * `explora = true` (EXPLORADOR IA, 13/10/2026) devuelve además, EN EL MISMO ORDEN que `elementos`, la lista de NODOS (para
  * re-resolver la `ref` del inventario sin buscar por texto), `conValor` por control (SOLO el booleano: el `.value` se mira
  * dentro de la página y nunca sale de ella), `titulos` como `{ texto, tag }` (h1-h6/legend/th/caption visibles) e
- * `importes` (texto corto con € o decimales y la etiqueta de su fila). Sigue sin escribir, pulsar ni navegar.
+ * `importes` (texto corto con € o decimales y la etiqueta de su fila), y el div clicable del servlet de Allianz
+ * (`SELECTOR_AVANCE_SERVLET` de guard.ts: el avance de Datos básicos de Comunidades no es un button). Sigue sin escribir,
+ * pulsar ni navegar.
  */
 function extractor(explora: boolean): string {
   return `(() => {
   const EXPLORA = ${explora ? 'true' : 'false'};
-  const SEL = 'input,select,textarea,button,a[role=button],[role=button],[role=tab],[role=combobox],[role=checkbox],td[onclick],label';
+  // EXPLORACIÓN: también el avance del servlet de Allianz (un div con id y onclick, no un button; selector de guard.ts).
+  // SOLO ese selector exacto; el módulo solo lo deja avanzar si es el avance autorizado de Datos básicos.
+  const SEL_SERVLET = ${JSON.stringify(SELECTOR_AVANCE_SERVLET)};
+  const SEL = 'input,select,textarea,button,a[role=button],[role=button],[role=tab],[role=combobox],[role=checkbox],td[onclick],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  const esDivServlet = (el) => EXPLORA && el.matches(SEL_SERVLET);
   const CON_TEXTO = { button: 1, a: 1, td: 1, label: 1 };
   const ROLES_CON_TEXTO = { button: 1, tab: 1 };
   const corta = (s, n) => (s == null ? null : (String(s).replace(/\\s+/g, ' ').trim().slice(0, n) || null));
@@ -63,8 +70,9 @@ function extractor(explora: boolean): string {
     } else if (el.getAttribute('aria-labelledby')) {
       e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
     }
-    if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role])) e.texto = corta(el.innerText || el.textContent || '', 200);
-    if (tag === 'td' || tag === 'button' || tag === 'a') e.onclick = corta(el.getAttribute('onclick'), 200);
+    const divServlet = esDivServlet(el);
+    if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
+    if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 200);
     if (tag === 'select') {
       e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;

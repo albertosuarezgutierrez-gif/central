@@ -124,6 +124,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and t.riesgo = ${riesgoJson}::jsonb
         and t.oportunidad_id is not distinct from ${e.oportunidadId ?? null}::uuid
         and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
       order by t.created_at`
     const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo }, p.ahora, MAX_INTENTOS))
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
@@ -303,7 +304,7 @@ type FilaTrabajo = {
   id: string
   correduria_id: string
   /** NULL solo en una exploración SINTÉTICA (2026-10-13_tarificador_explorador.sql). */
-  cliente_id: string
+  cliente_id: string | null
   poliza_id: string | null
   oportunidad_id: string | null
   compania: string

@@ -11,7 +11,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
 import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEmision } from '../src/guard.ts'
-import { capturarInventarioExploracion } from '../src/inventario-dom.ts'
+import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import {
   bucleExploracion,
   coincideConInventario,
@@ -44,6 +44,17 @@ const DATOS_BASICOS = (titulo: string) => PAGINA(`
   <form id="f2" method="post" action="/tarificar">
     <label for="anio">Año de construcción</label><input id="anio" name="anio" type="text">
     <button id="avanceDB" type="submit">Aceptar</button>
+  </form>`)
+
+/** Datos básicos con el «Aceptar» del SERVLET de Allianz (Comunidades): un div con id y onclick, no un button. */
+const DATOS_BASICOS_DIV = (titulo: string) => PAGINA(`
+  <h1>${titulo}</h1>
+  <script>function btnAceptar() { document.getElementById('f3').submit() }</script>
+  <form id="f3" method="post" action="/tarificar">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="text">
+    <div id="aceptar" onclick="btnAceptar();" style="display:inline-block;padding:4px">Aceptar</div>
+    <div id="otroDiv" onclick="btnAceptar();" style="display:inline-block;padding:4px">Siguiente</div>
+    <div id="aceptarSinOnclick" style="display:inline-block;padding:4px">Aceptar</div>
   </form>`)
 
 const RESULTADO = PAGINA(`<h1>Resultado</h1><table><tr><td>Prima total</td><td>347,55 €</td></tr></table>`)
@@ -329,6 +340,64 @@ test('pulsarExploracionAutorizada: UNA vez por trabajo', async () => {
     await cap.liberar()
   } finally {
     await context.close()
+  }
+})
+
+test('div#aceptar (servlet): el inventario de EXPLORACIÓN lo recoge (solo ese div, con texto y onclick); el normal no', async () => {
+  trasPaso2 = DATOS_BASICOS_DIV('Datos básicos')
+  const { context, page } = await nuevaPagina()
+  try {
+    await page.goto(`${base}/paso2`)
+    const cap = (await capturarInventarioExploracion(page))!
+    const divs = cap.inventario.marcos.flatMap((m) => m.elementos).filter((e) => e.tag === 'div')
+    assert.deepEqual(divs.map((e) => ({ id: e.id, texto: e.texto, onclick: e.onclick })), [{ id: 'aceptar', texto: 'Aceptar', onclick: 'btnAceptar();' }])
+    await cap.liberar()
+    const normal = (await capturarInventarioDom(page))!
+    assert.ok(!normal.marcos.flatMap((m) => m.elementos).some((e) => e.tag === 'div'), 'el inventario de mapeo no cambia')
+  } finally {
+    await context.close()
+  }
+})
+
+test('div#aceptar en Datos básicos: avance autorizado (UNA pulsación, POST al formulario) y llega al precio', async () => {
+  trasPaso2 = DATOS_BASICOS_DIV('Datos básicos')
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    await page.goto(`${base}/paso2`)
+    peticiones = []
+    const { k } = contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'avanzar', ref: ref(inv, 'aceptar'), efectoEsperado: 'calcular', confianza: 'alta' }])
+      const imp = inv.marcos.flatMap((m) => m.importes ?? [])
+      return respuesta([{ accion: 'terminar', refsPrecio: [imp[0].ref] }], 'resultado')
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.deepEqual(fin.efectos, ['posible_proyecto_guardado'])
+    assert.equal(peticiones.filter((p) => p.ruta === '/tarificar' && p.metodo === 'POST').length, 1)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('div#aceptar fuera de Datos básicos, u otro div clicable: no se pulsa (ambiguo, sin POST)', async () => {
+  for (const [titulo, id] of [['Coberturas', 'aceptar'], ['Datos básicos', 'otroDiv']] as const) {
+    trasPaso2 = DATOS_BASICOS_DIV(titulo)
+    const { context, page, guard } = await nuevaPagina()
+    try {
+      await page.goto(`${base}/paso2`)
+      peticiones = []
+      const { k } = contexto(page, guard, (inv) => {
+        // `otroDiv` ni siquiera está en el inventario: la IA solo puede inventarse una ref, que no valida.
+        const r = inv.marcos.flatMap((m) => m.elementos).find((e) => e.id === id)?.ref ?? 'm0e99'
+        return respuesta([{ accion: 'avanzar', ref: r, efectoEsperado: 'calcular', confianza: 'alta' }])
+      })
+      const fin = await bucleExploracion(page, k)
+      assert.equal(fin.motivo, 'ambiguo', `${titulo}/${id}: ${JSON.stringify(fin)}`)
+      assert.ok(!peticiones.some((p) => p.ruta === '/tarificar'), `${titulo}/${id}: salió el POST`)
+    } finally {
+      await context.close()
+    }
   }
 })
 

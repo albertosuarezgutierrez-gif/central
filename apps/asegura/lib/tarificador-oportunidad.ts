@@ -70,6 +70,7 @@ export async function leerPresupuestosOportunidad(correduriaId: string, oportuni
     from seguros.tarificacion_trabajos t
     left join seguros.tarificaciones x on x.id = t.tarificacion_id and x.correduria_id = t.correduria_id
     where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
     order by t.created_at desc
     limit ${MAX_TRABAJOS_OPORTUNIDAD}`
   const guardado = leerFormularioGuardado(op.guardado)
@@ -79,6 +80,7 @@ export async function leerPresupuestosOportunidad(correduriaId: string, oportuni
       select t.id::text as id, t.created_at, t.riesgo
       from seguros.tarificacion_trabajos t
       where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${op.cliente_id}::uuid and t.ramo = ${op.tipo}
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
       order by t.created_at desc
       limit 1`
     previoCliente = proyectarUltimoRiesgo(u ?? null)
