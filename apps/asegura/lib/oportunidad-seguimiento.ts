@@ -30,6 +30,7 @@ import {
   planTareaTrasVencimiento,
   CLAVES_HISTORIAL_DECLARADO,
   historialDeclaradoDe,
+  incoherenciaHistorialDeclarado,
   seguroAnteriorDe,
   validarAltaOportunidad,
   validarEdicionOportunidad,
@@ -804,11 +805,10 @@ export async function editarOportunidad(
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
   const c = v.cambios
   const r = await prismaAsegura().$transaction(async tx => {
-    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; aniosAsegurado: string | null; aniosEnCompania: string | null })[]>(Prisma.sql`
+    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; historialDeclarado: unknown })[]>(Prisma.sql`
       select id::text as id, cliente_id::text as "clienteId", tipo::text as ramo, estado::text as estado,
              fecha_fin_vigencia as "fechaFin", prima_bruta::float8 as prima,
-             case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado'->>'aniosAsegurado' end as "aniosAsegurado",
-             case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado'->>'aniosEnCompania' end as "aniosEnCompania",
+             case when jsonb_typeof(poliza_competencia->'historialDeclarado') = 'object' then poliza_competencia->'historialDeclarado' end as "historialDeclarado",
              nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora,
              ${Prisma.raw(sqlNumeroPoliza(''))} as "numeroPoliza",
              nullif(trim(info_riesgo->>'matricula'), '') as matricula
@@ -841,17 +841,26 @@ export async function editarOportunidad(
     // Historial declarado: en `poliza_competencia.historialDeclarado`, NUNCA dentro de `seguroAnterior` (ahí un
     // `{aniosAsegurado}` sin compañía pasaba por un seguro anterior leído). Solo las claves enviadas; `null` las quita
     // (vuelven a «sin dato»): nunca se escribe un null ni se pisa el resto.
-    const poner: Record<string, number> = {}
+    // 13/10/2026: también seguro actual sí/no, compañía, nº de póliza, años sin siniestros y siniestros en 5 años (lo
+    // que las compañías consultan en SINCO): DECLARADO, nunca dentro de `seguroAnterior` (lo leído de la póliza).
+    const poner: Record<string, number | string | boolean> = {}
     const quitar: string[] = []
+    const hdAntes = historialDeclaradoDe(fila.historialDeclarado)
+    const hdDespues = { ...hdAntes }
     for (const k of CLAVES_HISTORIAL_DECLARADO) {
       const nuevo = c.historial?.[k]
       if (nuevo === undefined) continue
-      const antes = historialDeclaradoDe({ [k]: fila[k] })[k]
+      const antes = hdAntes[k]
       if (nuevo === antes) continue
-      detalle[k] = { antes, despues: nuevo }
+      ;(hdDespues as Record<string, unknown>)[k] = nuevo
+      // La póliza y la compañía no van en claro al historial de cambios (como la compañía de la oportunidad).
+      detalle[k] = k === 'numeroPoliza' || k === 'companiaActual' ? { cambiado: true, vacio: nuevo === null } : { antes, despues: nuevo }
       if (nuevo === null) quitar.push(k)
       else poner[k] = nuevo
     }
+    // Coherencia con lo YA guardado (la de lo enviado junto la hace `validarEdicionOportunidad`).
+    const choque = Object.keys(poner).length > 0 || quitar.length > 0 ? incoherenciaHistorialDeclarado(hdDespues) : null
+    if (choque) return { ok: false as const, estado: 'invalido' as const, motivo: choque, status: 422 as const }
     if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId, tarea: null }
     await tx.$executeRaw(Prisma.sql`
       update oportunidades set

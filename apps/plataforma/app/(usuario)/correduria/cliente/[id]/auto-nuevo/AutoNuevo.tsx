@@ -36,7 +36,7 @@ import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
@@ -69,8 +69,8 @@ import PanelDatosCliente from '../PanelDatosCliente'
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { ROLES_EXTRA, type RolExtra, type VarianteNueva } from '../../../oportunidad/[id]/variante'
-import { ANCLA, anclaFiguraAqui, anclaInterviniente, gruposVerificacion, verificacionCompleta } from './verificacion-embebido'
-import type { GrupoVerificacion } from './verificacion-embebido'
+import { ANCLA, anclaFiguraAqui, anclaInterviniente, gruposVerificacion, notaOrigen, rotuloVacioResumen, seguroActualEmbebido, verificacionCompleta } from './verificacion-embebido'
+import type { GrupoVerificacion, NivelVacio } from './verificacion-embebido'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import {
   CLAVE_FIGURA,
@@ -239,11 +239,12 @@ export default function AutoNuevo({
    */
   embebido?: boolean
   /**
-   * Embebido (13/10/2026): los años asegurado / en la compañía que se teclean ARRIBA, en «Historial y bonificaciones»
-   * (`riesgo.historial.historialDeclarado`). Aquí se ven en resumen y se editan allí; sin esta prop lo de arriba no
-   * llegaba a la cotización. `null` en una clave = «sin dato» arriba → se queda lo de siempre (lo leído o el máximo).
+   * Embebido (13/10/2026): el historial que se declara ARRIBA, en «Historial y bonificaciones»
+   * (`riesgo.historial.historialDeclarado`): seguro actual sí/no, compañía, nº de póliza, años asegurado / en la
+   * compañía / sin siniestros y siniestros en 5 años. Aquí se ven en resumen y se editan allí; sin esta prop lo de
+   * arriba no llegaba a la cotización. `null` en una clave = «sin dato» arriba → lo de siempre (lo leído o el máximo).
    */
-  historialRiesgo?: { aniosAsegurado: number | null; aniosEnCompania: number | null } | null
+  historialRiesgo?: Partial<HistorialDeclaradoRiesgo> | null
   /** Motivo por el que AHORA no se puede pedir precio (datos del riesgo en edición, recargando…). `null` = nada lo impide. */
   bloqueo?: string | null
   /** Avisa a la carcasa de que hay una cotización EN VUELO (para no dejar editar el riesgo mientras se paga). */
@@ -440,15 +441,34 @@ export default function AutoNuevo({
     aniosEnCompania: aniosEnCompaniaArriba ?? Math.min(historialLeido.aniosEnCompania, aniosAseguradoEf),
     aniosSinSiniestros: Math.min(historialLeido.aniosSinSiniestros, aniosAseguradoEf),
   }
-  const [tieneSeguroActual, setTieneSeguroActual] = useState(anterior !== null)
-  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(() =>
-    anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
-  const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.trim() ?? '')
+  // Lo de siempre (lo leído de su póliza o el máximo); en embebido, lo DECLARADO arriba manda (`seguroActualEmbebido`).
+  const seguroLeido = {
+    tiene: anterior !== null,
+    companiaCodigo: anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '',
+    companiaLibre: companias === null ? sa?.codigoDgs ?? '' : '',
+    poliza: anterior?.numeroPoliza?.trim() ?? '',
+    aniosSinSiniestros: historial.aniosSinSiniestros,
+    siniestrosUltimos5: historial.siniestrosUltimos5,
+  }
+  const seguroArriba = embebido
+    ? seguroActualEmbebido({
+        arriba: historialRiesgo,
+        leido: seguroLeido,
+        conCatalogo: companias !== null,
+        codigoDe: (t) => {
+          const c = t.trim().toUpperCase()
+          return companias ? codigoCompania(companias, { codigoDgs: /^[CM]\d{4}$/.test(c) ? c : null, nombre: t }) : null
+        },
+      })
+    : null
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(seguroArriba?.tieneSeguroActual ?? seguroLeido.tiene)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(seguroArriba?.companiaCodigo ?? seguroLeido.companiaCodigo)
+  const [companiaActualLibre, setCompaniaActualLibre] = useState(seguroArriba?.companiaLibre ?? seguroLeido.companiaLibre)
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(seguroArriba?.polizaDigitos ?? seguroLeido.poliza)
   const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
   const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
-  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
-  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(seguroArriba?.aniosSinSiniestros ?? String(historial.aniosSinSiniestros))
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(seguroArriba?.siniestrosUltimos5 ?? (historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5)))
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
   // Estado de partida de lo que restaura un borrador: si gana el del servidor sobre el local, el ganador SUSTITUYE
   // al estado completo (no se mezcla con lo que ya aplicó el local).
@@ -1132,6 +1152,8 @@ export default function AutoNuevo({
           siniestros5Pendiente: Number(aniosSinSiniestros) < 5 && aniosSinSiniestros.trim() !== '' && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '',
           companiaSuperaAsegurado: aniosEnCompania.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosEnCompania) > Number(aniosAsegurado),
           sinSiniestrosSuperaAsegurado: aniosSinSiniestros.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosSinSiniestros) > Number(aniosAsegurado),
+          companiaNoReconocida: seguroArriba?.companiaNoReconocida ?? null,
+          tieneSeguroSinDato: seguroArriba?.tieneSeguroSinDato ?? false,
           reparos: reparos.historial,
         },
         faltaAlgo,
@@ -1787,6 +1809,20 @@ export default function AutoNuevo({
           title={embebido ? 'Seguro en vigor' : '2c · ¿Tiene seguro EN VIGOR ahora mismo?'}
           sub="Sin esto la compañía cotiza «de calle»: no puede hacer el control de antecedentes y el precio NO es confirmable como real. Pregúntalo sobre todo en presupuestos importantes."
         />
+        {/* Embebido (13/10/2026): «tiene seguro», compañía, nº de póliza, años sin siniestros y siniestros en 5 años se
+            declaran ARRIBA («Historial y bonificaciones»): aquí solo resumen. Las compañías consultan SINCO con la
+            compañía + nº de póliza (Codeoscopic manda los 5 últimos). */}
+        {embebido && seguroArriba ? (
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))' }}>
+            <ResumenCampo
+              etiqueta="¿Tiene seguro ahora?"
+              valor={seguroArriba.tieneSeguroSinDato ? null : tieneSeguroActual ? 'Sí, en vigor' : 'No'}
+              nota={seguroArriba.tieneSeguroSinDato ? 'sin dato arriba: se cotiza «de calle» (precio estimado)' : notaOrigen(seguroArriba.origen.tiene)}
+              vacio="aviso"
+              ancla={ANCLA.historial}
+            />
+          </div>
+        ) : (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 600 }}>
           <input
             type="checkbox"
@@ -1796,7 +1832,8 @@ export default function AutoNuevo({
           />
           Sí, tiene un seguro de auto en vigor ahora mismo
         </label>
-        {anterior && (
+        )}
+        {anterior && !embebido && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
             Precargado de su póliza actual (oportunidad{anterior.etiqueta ? ` ${anterior.etiqueta}` : ''}): revísalo.
             {anterior.aseguradora && !companiaActualElegida ? ` La compañía leída es «${anterior.aseguradora}»: elígela en la lista.` : ''}
@@ -1814,6 +1851,29 @@ export default function AutoNuevo({
         {tieneSeguroActual && (
           <>
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
+              {embebido && seguroArriba ? (
+                <>
+                  <ResumenCampo
+                    etiqueta="Compañía actual"
+                    valor={companiaActualElegida ? (companias?.find((c) => c.codigoDgs === companiaActualCodigo)?.nombreComun ?? companiaActualElegida) : null}
+                    nota={seguroArriba.companiaNoReconocida
+                      ? `«${seguroArriba.companiaNoReconocida}» no está en la lista de Codeoscopic: elígela de la lista arriba («Historial y bonificaciones»)`
+                      : notaOrigen(seguroArriba.origen.compania)}
+                    notaFalta={seguroArriba.companiaNoReconocida !== null}
+                    ancla={ANCLA.historial}
+                  />
+                  <ResumenCampo
+                    etiqueta="Nº de póliza (van los 5 últimos)"
+                    valor={polizaActualDigitos.trim() !== '' ? polizaActualDigitos : null}
+                    nota={digitosPolizaSospechosos(polizaActualDigitos)
+                      ? 'Parece relleno (varios ceros seguidos): la compañía puede no encontrar el historial en SINCO y el precio quedarse en estimado.'
+                      : notaOrigen(seguroArriba.origen.poliza)}
+                    notaFalta={digitosPolizaSospechosos(polizaActualDigitos)}
+                    ancla={ANCLA.historial}
+                  />
+                </>
+              ) : (
+              <>
               <Campo etiqueta="Compañía actual" falta={!companiaActualElegida}>
                 {companias === null ? (
                   <input
@@ -1847,6 +1907,8 @@ export default function AutoNuevo({
                   </p>
                 )}
               </Campo>
+              </>
+              )}
               <Campo
                 etiqueta="Matrícula de esa póliza"
                 falta={false}
@@ -1862,31 +1924,33 @@ export default function AutoNuevo({
             </div>
             {embebido ? (
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
-                {/* Años asegurado / en la compañía: se editan arriba («Historial y bonificaciones»). Sin dato arriba, va lo
-                    de siempre (lo leído o el máximo, que la compañía contrasta con SINCO) y se dice. Los años sin
-                    siniestros y los siniestros en 5 años NO se pueden editar arriba: siguen aquí. */}
+                {/* Todo el historial se edita arriba («Historial y bonificaciones», 13/10/2026). Sin dato arriba, va lo
+                    de siempre (lo leído o el máximo, que la compañía contrasta con SINCO) y se dice. */}
                 <ResumenCampo
                   etiqueta="Años asegurado sin interrupción"
                   valor={aniosAsegurado.trim() !== '' ? aniosAsegurado : null}
-                  nota={aniosAseguradoArriba === null ? 'sin dato arriba: va lo leído de su póliza o el máximo (lo contrasta SINCO)' : undefined}
+                  nota={notaOrigen(aniosAseguradoArriba === null ? 'leido' : 'arriba')}
                   ancla={ANCLA.historial}
                 />
                 <ResumenCampo
                   etiqueta="Años en esta compañía"
                   valor={aniosEnCompania.trim() !== '' ? aniosEnCompania : null}
-                  nota={aniosEnCompaniaArriba === null ? 'sin dato arriba: va lo leído de su póliza o el máximo (lo contrasta SINCO)' : undefined}
+                  nota={notaOrigen(aniosEnCompaniaArriba === null ? 'leido' : 'arriba')}
                   ancla={ANCLA.historial}
                 />
-                <Campo etiqueta="Años sin siniestros" falta={aniosSinSiniestros.trim() === ''}>
-                  <input type="number" min={0} value={aniosSinSiniestros} onChange={(e) => setAniosSinSiniestros(e.target.value)} style={input} />
-                </Campo>
-                <Campo
-                  etiqueta="Siniestros en los últimos 5 años (si aplica)"
-                  falta={false}
-                  ayuda="Solo hace falta si lleva menos de 5 años sin siniestros: si falta y la compañía lo exige, lo dirá al pedir el precio, sin cobrar nada."
-                >
-                  <input type="number" min={0} value={siniestrosUltimos5} onChange={(e) => setSiniestrosUltimos5(e.target.value)} style={input} />
-                </Campo>
+                <ResumenCampo
+                  etiqueta="Años sin siniestros"
+                  valor={aniosSinSiniestros.trim() !== '' ? aniosSinSiniestros : null}
+                  nota={seguroArriba ? notaOrigen(seguroArriba.origen.sinSiniestros) : undefined}
+                  ancla={ANCLA.historial}
+                />
+                <ResumenCampo
+                  etiqueta="Siniestros en los últimos 5 años"
+                  valor={siniestrosUltimos5.trim() !== '' ? siniestrosUltimos5 : Number(aniosSinSiniestros) >= 5 ? 'no aplica (5 años o más sin siniestros)' : null}
+                  nota={seguroArriba && siniestrosUltimos5.trim() !== '' ? notaOrigen(seguroArriba.origen.siniestros5) : 'solo hace falta con menos de 5 años sin siniestros; si la compañía lo exige, lo dirá sin cobrar'}
+                  vacio="aviso"
+                  ancla={ANCLA.historial}
+                />
               </div>
             ) : (
             <details open={faltaAnios || undefined} style={{ marginTop: 10, fontSize: 13 }}>
@@ -2168,19 +2232,22 @@ function IrA({ ancla, alternativa, children }: { ancla: string; alternativa?: st
 }
 
 /** Un dato que se edita ARRIBA: aquí solo se lee. Vacío = aviso rojo, nunca un valor inventado. */
-function ResumenCampo({ etiqueta, valor, nota, notaFalta = false, ancla }: {
+function ResumenCampo({ etiqueta, valor, nota, notaFalta = false, vacio = 'falta', ancla }: {
   etiqueta: string
   valor: string | null
   nota?: string
   /** La nota es un error (p. ej. compra anterior a la matriculación): se pinta en rojo. */
   notaFalta?: boolean
+  /** Vacío: `falta` (rojo, bloquea como en la checklist) o `aviso` (ámbar: la checklist lo trata como aviso). */
+  vacio?: NivelVacio
   ancla: string
 }) {
+  const vacioRotulo = rotuloVacioResumen(vacio)
   return (
     <div style={{ minWidth: 0, display: 'grid', gap: 2, alignContent: 'start' }}>
       <span style={{ fontSize: 13, fontWeight: 600 }}>{etiqueta}</span>
       {valor === null ? (
-        <span style={{ color: 'var(--negative)', fontSize: 13, fontWeight: 600 }}>Falta — complétalo arriba</span>
+        <span style={{ color: vacioRotulo.color, fontSize: 13, fontWeight: 600 }}>{vacioRotulo.texto}</span>
       ) : (
         <span style={{ fontSize: 14, overflowWrap: 'anywhere' }}>{valor}</span>
       )}

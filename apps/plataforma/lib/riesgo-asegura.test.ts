@@ -244,5 +244,7 @@ test('cada clave posible de faltanDeFigura() tiene un editor asociado en la pant
 
 test('rotulosFaltaEnFormulario: solo lo que se corrige en los formularios, null = nada', () => {
   assert.deepEqual(rotulosFaltaEnFormulario(['dni', 'sexo', 'telefono', 'fechaCarnet']), ['DNI', 'fecha del carnet'])
+  assert.deepEqual(rotulosFaltaEnFormulario(['cp', 'sexo']), ['código postal'], 'el CP se corrige en la dirección de la ficha')
+  assert.equal(textoFaltan(['cp']), 'Falta en su ficha: código postal')
   assert.deepEqual(rotulosFaltaEnFormulario(null), [])
 })

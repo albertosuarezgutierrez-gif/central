@@ -42,6 +42,26 @@ test('firma: los años asegurado / en la compañía declarados arriba cambian el
   assert.equal(firmaRiesgo(con(3)), firmaRiesgo(con(3)))
 })
 
+test('firma (13/10/2026): seguro actual, compañía, nº de póliza, años sin siniestros y siniestros en 5 declarados arriba cambian el riesgo', () => {
+  const con = (hd: Record<string, unknown>) => firmaRiesgo(riesgo({ historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: null, aniosEnCompania: null, ...hd }, carnet: null } }))
+  const base = con({})
+  const cambios: Record<string, unknown[]> = {
+    tieneSeguroActual: [true, false],
+    companiaActual: ['Mapfre'],
+    numeroPoliza: ['4840402030', '4840402031'],
+    aniosSinSiniestros: [0, 7],
+    siniestrosUltimos5: [0, 2],
+  }
+  for (const [k, valores] of Object.entries(cambios)) {
+    for (const v of valores) assert.notEqual(con({ [k]: v }), base, `${k}=${String(v)} no entra en la huella`)
+  }
+  assert.notEqual(con({ numeroPoliza: '4840402030' }), con({ numeroPoliza: '4840402031' }), 'otra póliza, otro riesgo')
+  assert.notEqual(con({ tieneSeguroActual: true }), con({ tieneSeguroActual: false }))
+  assert.equal(con({ companiaActual: 'Reale' }), con({ companiaActual: 'Reale' }), 'estable')
+  // Sin la clave y con la clave a null es lo mismo (asegura vieja ≡ «sin dato»).
+  assert.equal(con({ companiaActual: null }), base)
+})
+
 test('firma: sin figura «tomador», otro cliente de la oportunidad es otro tomador (otro riesgo)', () => {
   const sinTomador = (clienteId: string) => riesgo({ clienteId, figuras: [] })
   assert.notEqual(firmaRiesgoMoto(sinTomador('c9')), firmaRiesgoMoto(sinTomador('c1')))
