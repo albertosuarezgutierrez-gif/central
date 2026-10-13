@@ -5,6 +5,12 @@
 // el grabador NO pudo leer) y del 09/10 (Moto «Motos-online», iframe `appArea` legible: Riesgo municipio, Datos
 // básicos, Tarificar, Referencia). Se asume que Turismos usa el MISMO framework legado que Moto (ids iguales):
 // TODO(capturas) confirmarlo con la grabación del formulario de Turismos.
+// ⚠️ Grabación de Turismos del 13/10/2026 (4 pantallas, la 3.ª en tres intentos): el iframe `appArea` lo carga
+// `form#applicationForm` (target="appArea", GET) contra el puente SSO de OTRO ORIGEN (`cloud.e-pacallianz.com/
+// rws-router-sso-domain-bridge/bridge`, RelayState `ngx-motor-azs/`): app Angular distinta, no el legado de Moto
+// (cuyo `appArea` sí era legible). El grabador (bookmarklet) no lee marcos de otro origen → sigue SIN formulario, sin
+// buscador de poblaciones y sin Tarificar. Indicio fuerte de que los ids de Moto (td#datosBasicos/td#rate, #licensePlate…)
+// NO valen para Turismos: no se reutilizan a ciegas. Para grabarlo: abrir la app del puente en su propia pestaña.
 //
 // MOTO, grabación del 13/10/2026 (14 pantallas, marcos legibles): ENTRADA Nueva Alta → Autos → Moto confirmada; formulario
 // EDITABLE de «Riesgo municipio» (vehículo en CASCADA marca → clase → modelo → versión, SIN búsqueda por matrícula; CP con
