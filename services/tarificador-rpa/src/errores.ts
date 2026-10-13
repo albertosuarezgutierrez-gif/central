@@ -44,6 +44,15 @@ export function opcionesVersionDe(e: unknown): CandidatoVersion[] | null {
   return Array.isArray(o) && o.length ? (o as CandidatoVersion[]).map((c) => ({ etiqueta: c.etiqueta, codigo: c.codigo })) : null
 }
 
+/**
+ * ¿El error pide adjuntar el INVENTARIO DE ESTRUCTURA de la pantalla (13/10/2026)? Lo marcan los huecos de mapa
+ * (`ErrorMapaIncompleto` de allianz/auto, `pideInventarioDom = true`); el runner lo captura (solo lectura) y viaja en
+ * `error.inventarioDom` del resultado.
+ */
+export function pideInventarioDom(e: unknown): boolean {
+  return e instanceof ErrorTarificador && (e as ErrorTarificador & { pideInventarioDom?: unknown }).pideInventarioDom === true
+}
+
 export function clasificar(e: unknown): { tipo: TipoError; mensaje: string } {
   if (e instanceof EmisionBloqueadaError) return { tipo: 'emision', mensaje: e.message }
   if (e instanceof ErrorTarificador) return { tipo: e.tipo, mensaje: e.message }

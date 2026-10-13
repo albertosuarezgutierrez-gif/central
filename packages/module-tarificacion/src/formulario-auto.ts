@@ -222,6 +222,12 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     }
   }
 
+  // Coche: la cilindrada NO es obligatoria, pero si viene ≤50 cc es un ciclomotor (producto distinto), mismo criterio que moto.
+  if (ramo === 'auto') {
+    const cc = seleccionVehiculo?.cilindradaCc ?? null
+    if (cc !== null && cc <= 50) errores.push('seleccionVehiculo.cilindradaCc: ciclomotor (≤50 cc): producto Ciclomotor de Allianz, no Moto; no soportado aún')
+  }
+
   if (errores.length || !ramo || !matricula || !codigoPostal || !conductor) return { ok: false, errores }
   return {
     ok: true,

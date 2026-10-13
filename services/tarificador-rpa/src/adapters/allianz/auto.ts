@@ -5,6 +5,16 @@
 // el grabador NO pudo leer) y del 09/10 (Moto «Motos-online», iframe `appArea` legible: Riesgo municipio, Datos
 // básicos, Tarificar, Referencia). Se asume que Turismos usa el MISMO framework legado que Moto (ids iguales):
 // TODO(capturas) confirmarlo con la grabación del formulario de Turismos.
+// ⚠️ Grabación de Turismos del 13/10/2026 (4 pantallas, la 3.ª en tres intentos): el iframe `appArea` lo carga
+// `form#applicationForm` (target="appArea", GET) contra el puente SSO de OTRO ORIGEN (`cloud.e-pacallianz.com/
+// rws-router-sso-domain-bridge/bridge`, RelayState `ngx-motor-azs/`): app Angular distinta, no el legado de Moto
+// (cuyo `appArea` sí era legible). El grabador (bookmarklet) no lee marcos de otro origen → sigue SIN formulario, sin
+// buscador de poblaciones y sin Tarificar. Indicio fuerte de que los ids de Moto (td#datosBasicos/td#rate, #licensePlate…)
+// NO valen para Turismos: no se reutilizan a ciegas. Para grabarlo: abrir la app del puente en su propia pestaña.
+// INVENTARIO (13/10/2026, OK de Alberto a que el BOT lea la estructura): al entrar en Turismos, si en 25 s no aparece
+// `#licensePlate` (o el marco que lo tiene es la app nueva), `ErrorMapaIncompleto` ANTES de rellenar nada; todo
+// `ErrorMapaIncompleto` pide al runner el inventario de estructura de TODOS los marcos (src/inventario-dom.ts, solo
+// lectura) que viaja en `error.inventarioDom` y asegura guarda en el `error` jsonb del trabajo.
 //
 // MOTO, grabación del 13/10/2026 (14 pantallas, marcos legibles): ENTRADA Nueva Alta → Autos → Moto confirmada; formulario
 // EDITABLE de «Riesgo municipio» (vehículo en CASCADA marca → clase → modelo → versión, SIN búsqueda por matrícula; CP con
@@ -55,10 +65,17 @@ export const AUTO_ACTIVO = false
  */
 export const MOTO_ACTIVO = true
 
-/** Hueco declarado: falta un mapa de pantalla. NO transitorio → `error_definitivo`, no se reintenta. */
+/**
+ * Hueco declarado: falta un mapa de pantalla. NO transitorio → `error_definitivo`, no se reintenta. Pide al runner el
+ * INVENTARIO DE ESTRUCTURA de todos los marcos (`pideInventarioDom`, OK de Alberto 13/10/2026; solo lectura, saneado)
+ * para mapear la pantalla sin grabación humana.
+ */
 export class ErrorMapaIncompleto extends ErrorTarificador {
-  constructor(que: string) {
+  /** SOLO true en dos huecos: la entrada a Turismos y el buscador de poblaciones de moto. El resto NO captura. */
+  readonly pideInventarioDom: boolean
+  constructor(que: string, pideInventarioDom = false) {
     super('portal', `allianz/auto: mapa incompleto: faltan ${que}`)
+    this.pideInventarioDom = pideInventarioDom
     this.name = 'ErrorMapaIncompleto'
   }
 }
@@ -485,7 +502,7 @@ export async function buscarPoblacion(raiz: Pick<Frame, 'locator'>, codigoPostal
   for (;;) {
     const v = await raiz.locator(SEL_RIESGO_MOTO.poblacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
     if (v.trim() !== '') return
-    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena: varias poblaciones o ventana emergente sin grabar)')
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena: varias poblaciones o ventana emergente sin grabar)', true)
     await page.waitForTimeout(300)
   }
 }
@@ -660,19 +677,51 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
 
 // ───────────────────────── flujo (con huecos) ─────────────────────────
 
+/**
+ * ¿Es la app NUEVA de Turismos? Grabación 13/10/2026: `appArea` la carga el puente SSO de otro origen
+ * (`rws-router-sso-domain-bridge`, RelayState `ngx-motor-azs/`), app Angular sin mapa. Puro.
+ */
+export function esAppNuevaTurismos(url: string): boolean {
+  return /ngx-motor-azs|rws-router-sso/i.test(url)
+}
+
+/** Lo que se espera al formulario de Turismos antes de declarar el hueco (por debajo del tope de paso de 30 s). */
+export const MS_ESPERA_FORMULARIO_TURISMOS = 25_000
+
+const HUECO_TURISMOS =
+  'el formulario de AUTOS Turismos (la app nueva ngx-motor-azs, en un iframe de otro origen, no tiene el #licensePlate del mapa de Moto)'
+
+/**
+ * Marco del formulario de Turismos con el mapa SUPUESTO (ids de Moto). Si en `timeoutMs` no aparece `#licensePlate` en
+ * ningún marco, o el marco que lo tiene es la app nueva, `ErrorMapaIncompleto` ANTES de rellenar nada: el runner adjunta
+ * el inventario de estructura de todos los marcos. Solo lectura (sondas `count()`), sin clics.
+ */
+export async function marcoFormularioTurismos(page: Page, timeoutMs = MS_ESPERA_FORMULARIO_TURISMOS): Promise<Frame> {
+  let marco: Frame
+  try {
+    marco = await marcoCon(page, (r) => r.locator(SEL_VEHICULO.matricula), 'campo de matrícula', timeoutMs)
+  } catch (e) {
+    if (e instanceof ErrorTarificador) throw new ErrorMapaIncompleto(HUECO_TURISMOS, true)
+    throw e
+  }
+  if (esAppNuevaTurismos(marco.url())) throw new ErrorMapaIncompleto(HUECO_TURISMOS, true)
+  return marco
+}
+
 function crearAdaptador(ramo: 'auto' | 'moto') {
   return {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    version: '0.1.0',
+    version: '0.2.0',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMoto(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
       if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
       await ctx.trasLogin()
       await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Turismos', selectorTarjeta: TARJETA_AUTOS.turismos })
-      const marco = await marcoCon(page, (r) => r.locator(SEL_VEHICULO.matricula), 'campo de matrícula')
+      // Antes de escribir NADA: si el formulario no es el del mapa supuesto (app nueva), hueco + inventario de estructura.
+      const marco = await marcoFormularioTurismos(page)
       const lectura = await consultarMatricula(marco, form.matricula, page)
       await ctx.pausa()
       await resolverVehiculo(marco, lectura, form)

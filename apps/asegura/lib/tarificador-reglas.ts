@@ -5,8 +5,8 @@
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
 import {
-  envDeMaquina, esTipoError, esVersionBot, validarFormularioAuto, validarOfertas, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type CandidatoVersion, type FormularioAuto, type OfertaNormalizada, type PasoTraza, type RiesgoComunidad, type TipoError,
+  envDeMaquina, esTipoError, esVersionBot, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
 /** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto). */
@@ -148,7 +148,9 @@ export type ResultadoWorker =
       trabajoId: string
       /** `opcionesVersion` (13/10/2026): lista COMPLETA de versiones de un `requiere_eleccion_version`; se guarda en el
        *  `error` jsonb del trabajo y es la lista contra la que se valida cualquier elección (IA o bandeja). */
-      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[] }
+      /** `inventarioDom` (13/10/2026): ESTRUCTURA de la pantalla de un hueco de mapa (`ErrorMapaIncompleto`), saneada otra
+       *  vez aquí (sin valores de campos, sin datos personales, ≤60 KB); se guarda en el `error` jsonb. Nunca se loguea. */
+      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; inventarioDom?: InventarioDom }
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
@@ -223,10 +225,12 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const url = typeof err?.url === 'string' ? err.url.slice(0, 500) : null
     // Accesoria, como la traza: una lista inválida se DESCARTA (sin lista no hay elección por código) y el fallo se guarda igual.
     const opcionesVersion = err?.tipo === 'captcha' ? validarOpcionesVersion(err.opcionesVersion) : null
+    // Accesorio también: se RE-SANEA (lista blanca + filtro de datos personales + tope de bytes); sin forma → se descarta.
+    const inventarioDom = err?.inventarioDom !== undefined ? sanearInventarioDom(err.inventarioDom) : null
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}) }, captura, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(inventarioDom ? { inventarioDom } : {}) }, captura, html, ...leerMetaWorker(e) },
     }
   }
 
