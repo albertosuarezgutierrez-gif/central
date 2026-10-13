@@ -49,8 +49,8 @@ import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
 /** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
 export const AUTO_ACTIVO = false
 /**
- * Flag de registro de MOTO (separado de Turismos). APAGADO. Aún no lo lee nadie: `allianzMoto` no se registra hasta que el
- * runner valide riesgos por ramo (pendiente; ver `adapters/index.ts`).
+ * Flag de registro de MOTO (separado de Turismos). APAGADO; lo enciende Alberto. `adapters/index.ts` registra `allianzMoto`
+ * solo con él en `true` y el runner ya valida el riesgo por ramo (`ramo.ts`).
  */
 export const MOTO_ACTIVO = false
 

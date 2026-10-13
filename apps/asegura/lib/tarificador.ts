@@ -17,6 +17,7 @@ import {
   puedeAutomatizar,
   type OfertaNormalizada,
   type PasoTraza,
+  type FormularioAuto,
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
@@ -48,8 +49,9 @@ export type EntradaEncolar = {
   clienteId: string | null
   polizaId: string | null
   compania: string
-  ramo: 'comunidades'
-  riesgo: RiesgoComunidad
+  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
+  ramo: 'comunidades' | 'moto'
+  riesgo: RiesgoComunidad | FormularioAuto
   solicitadoPor: string
 }
 
@@ -227,7 +229,7 @@ type FilaTrabajo = {
   oportunidad_id: string | null
   compania: string
   ramo: string
-  riesgo: RiesgoComunidad
+  riesgo: RiesgoComunidad | FormularioAuto
   estado: string
   intentos: number
   solicitado_por: string
@@ -295,6 +297,12 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
   const rg = t.riesgo
+  // Columnas planas de la tarificación: las de un edificio solo existen en Comunidades; un vehículo (Moto) solo aporta el CP.
+  // `null` = no consta (≠ 0): nunca se inventa un metro cuadrado ni un capital para una moto.
+  const col =
+    rg.ramo === 'comunidades'
+      ? { fechaEfecto: rg.fechaEfecto ?? null, codigoPostal: rg.direccion?.codigoPostal ?? null, m2: rg.m2Construidos ?? null, anioConstruccion: rg.anioConstruccion ?? null, capitalContinente: rg.capitalContinente ?? null, capitalContenido: rg.capitalContenido ?? null }
+      : { fechaEfecto: null, codigoPostal: rg.codigoPostal, m2: null, anioConstruccion: null, capitalContinente: null, capitalContenido: null }
   const conDocs = ofertas.map((o) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
   // ADITIVO (07/10/2026): el PDF del proyecto de la compañía (`seguros.documentos`), sin columna nueva: va en el
   // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).
@@ -309,9 +317,9 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
     ) values (
       ${t.correduria_id}::uuid, null, false, null, 'rpa',
       ${t.ramo}, 'corredor', ${t.poliza_id}::uuid, ${t.cliente_id}::uuid, ${t.oportunidad_id}::uuid,
-      ${rg.fechaEfecto ?? null}::date, ${JSON.stringify(rg)}::jsonb,
-      ${rg.direccion?.codigoPostal ?? null}, ${rg.m2Construidos ?? null}::int, ${rg.anioConstruccion ?? null}::int,
-      ${rg.capitalContinente ?? null}::numeric, ${rg.capitalContenido ?? null}::numeric,
+      ${col.fechaEfecto}::date, ${JSON.stringify(rg)}::jsonb,
+      ${col.codigoPostal}, ${col.m2}::int, ${col.anioConstruccion}::int,
+      ${col.capitalContinente}::numeric, ${col.capitalContenido}::numeric,
       ${t.solicitado_por}, ${JSON.stringify(respuesta)}::jsonb, '[]'::jsonb
     ) returning id::text as id`
   const id = filas[0]?.id

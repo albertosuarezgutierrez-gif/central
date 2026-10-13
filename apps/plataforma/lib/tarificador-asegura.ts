@@ -36,6 +36,19 @@ export function encolarTarificacionComunidad(clienteId: string, oportunidadId: s
   })
 }
 
+/**
+ * Encola una cotización de MOTO en Allianz (13/10/2026; solo precio). `formulario` = FormularioAuto con `ramo: 'moto'` y
+ * `seleccionVehiculo` (marca/modelo/clase); asegura lo valida con el validador del ramo. Sin pantalla propia todavía:
+ * la primera prueba entra por `POST /api/correduria/tarificador/encolar` con `{ ramo: 'moto', ... }`.
+ */
+export function encolarTarificacionMoto(clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>): Promise<Reenvio> {
+  return puerto('encolar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clienteId, oportunidadId, compania: COMPANIA_BOT, ramo: 'moto', riesgo: formulario }),
+  })
+}
+
 /** Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`. */
 export function leerUltimoRiesgoTarificador(clienteId: string): Promise<Reenvio> {
   const q = new URLSearchParams({ cliente_id: clienteId, compania: COMPANIA_BOT, ramo: 'comunidades' })

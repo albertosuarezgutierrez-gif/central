@@ -14,19 +14,17 @@
 // 🚨 TARIFICAR ≠ EMITIR (guard.ts). 🔑 Credenciales solo de fly secrets, solo en memoria, sin tracing
 //    (nunca se arranca `context.tracing`) y con todo lo que sale pasado por el redactor.
 
-import { chromium, type Browser, type BrowserContextOptions } from 'playwright'
+import { chromium, type Browser, type BrowserContextOptions, type Page } from 'playwright'
 import {
   nombresCredencial,
   redactarHtml,
   secretosDelEntorno,
   crearTraza,
-  validarRiesgoComunidad,
   type Traza,
   variablesProhibidas,
   type Credenciales,
   type OfertaNormalizada,
   type PdfRef,
-  type RiesgoComunidad,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, type Config, type CuerpoResultado } from './api.ts'
@@ -41,7 +39,8 @@ import { exigirSinVerificacion } from './verificacion.ts'
 import { textoAvisoSesionManual } from './aviso.ts'
 import { caducidadMaximaMs, claveSesion } from './boveda-sesion.ts'
 import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
-import type { AdaptadorPortal, ContextoPortal } from './adaptador.ts'
+import type { ContextoPortal } from './adaptador.ts'
+import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
 import { ejecutarEmision } from './emision.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -87,8 +86,9 @@ type Comun = {
   sesion: FuenteSesion
   trabajoId: string
   compania: string
-  adaptador: AdaptadorPortal
-  riesgo: RiesgoComunidad
+  adaptador: AdaptadorRegistrado
+  /** Tarifica con el riesgo ya validado por el validador del ramo (ramo.ts). */
+  tarificar: (page: Page, ctx: ContextoPortal) => Promise<{ ofertas: OfertaNormalizada[] }>
   credenciales: Credenciales
   formador: ContextoFormador | undefined
   traza: Traza
@@ -154,7 +154,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     let tope: ReturnType<typeof setTimeout> | undefined
     try {
       resultado = await Promise.race([
-        k.adaptador.tarificar(page, k.riesgo, ctx),
+        k.tarificar(page, ctx),
         new Promise<never>((_, rechazar) => {
           tope = setTimeout(() => rechazar(new ErrorTarificador('infra', `tope del intento de ${Math.round(topeMs / 1000)} s superado`)), topeMs)
         }),
@@ -243,7 +243,8 @@ async function main(): Promise<number> {
     await fallo('datos', `sin adaptador para ${trabajo.compania}/${trabajo.ramo} en esta imagen`)
     return 1
   }
-  const v = validarRiesgoComunidad(trabajo.riesgo)
+  // Riesgo validado con el validador DEL RAMO del adaptador (comunidades → riesgo de comunidad; auto/moto → FormularioAuto).
+  const v = prepararTrabajo(adaptador, trabajo.riesgo)
   if (!v.ok) {
     await fallo('datos', `riesgo inválido: ${v.errores.join('; ')}`)
     return 1
@@ -298,7 +299,12 @@ async function main(): Promise<number> {
   // EMISIÓN asistida (10/10/2026, src/emision.ts): otro flujo, con su propio navegador y sin formador ni reintento.
   // Sin la fase o con el interruptor de la máquina apagado, `ejecutarEmision` responde `no_emitida` sin abrir el portal.
   if (trabajo.modo === 'emision') {
-    return ejecutarEmision({ cfg, trabajo, adaptador, riesgo: v.riesgo, credenciales, env, traza: crearTraza((e) => clasificar(e).tipo), log, redactar })
+    // La emisión asistida solo existe para Comunidades (RiesgoComunidad); un ramo de vehículo no emite.
+    if (!v.comunidad) {
+      await fallo('datos', `el ramo ${trabajo.ramo} no tiene emisión asistida`)
+      return 1
+    }
+    return ejecutarEmision({ cfg, trabajo, adaptador: v.comunidad.adaptador, riesgo: v.comunidad.riesgo, credenciales, env, traza: crearTraza((e) => clasificar(e).tipo), log, redactar })
   }
 
   // Formador con IA: lo enciende asegura (`TARIFICADOR_FORMADOR_ACTIVO`); si no responde, apagado.
@@ -320,7 +326,7 @@ async function main(): Promise<number> {
   // Traza del trabajo (pasos con tiempos y código de error, sin datos): acumula los dos intentos y viaja en el POST del resultado.
   const traza = crearTraza((e) => clasificar(e).tipo)
   const meta = () => ({ pasos: traza.pasos(), botVersion: adaptador.version })
-  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, riesgo: v.riesgo, credenciales, formador, traza, log }
+  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, log }
 
   // Un trabajo a la vez por proceso (hoy la máquina solo hace uno; si atiende varios, siguen en serie).
   return enSerie(async () => {

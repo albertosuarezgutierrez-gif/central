@@ -363,7 +363,15 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.match(auto, /await ctx\.avanzarPestanaAutorizada\(destino === 'datosBasicos' \? 'td#datosBasicos' : 'td#rate'\)/)
   assert.match(auto, /^export const AUTO_ACTIVO = false$/m)
   assert.match(auto, /^export const MOTO_ACTIVO = (true|false)$/m)
-  // Ni Moto ni Turismos se registran hasta que el runner valide riesgos por ramo (hoy solo Comunidades): sin cast forzado.
+  // Registro (runner tipado por ramo, 13/10/2026): Moto SOLO condicionada a su flag; Turismos nunca; sin casts dobles en el worker.
   const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
-  assert.ok(!/allianzAuto|allianzMoto|as unknown as/.test(idx), 'adapters/index.ts no registra Auto/Moto ni fuerza tipos (pendiente: runner tipado por ramo)')
+  assert.match(idx, /^if \(MOTO_ACTIVO\) adaptadores\.registrar\(allianzMoto\)$/m, 'allianzMoto se registra SOLO con `if (MOTO_ACTIVO)`')
+  assert.equal((idx.match(/allianzMoto/g) ?? []).length, 2, 'allianzMoto: un import y un registro condicionado, ningún otro uso')
+  assert.ok(!/allianzAuto|AUTO_ACTIVO/.test(idx), 'Turismos (allianzAuto) no se registra')
+  for (const f of ficheros(join(SRV, 'src'))) assert.ok(!/as unknown as/.test(sinComentarios(readFileSync(f, 'utf8'))), `${relative(RAIZ, f)}: sin casts dobles (as unknown as): el runner valida por ramo`)
+  const ramo = sinComentarios(readFileSync(join(SRV, 'src/ramo.ts'), 'utf8'))
+  assert.match(ramo, /case 'comunidades':[\s\S]*?validarRiesgoComunidad\(crudo\)/, 'comunidades se valida con validarRiesgoComunidad')
+  assert.match(ramo, /case 'auto':\s*case 'moto':[\s\S]*?validarFormularioAuto\(crudo, hoy\)/, 'auto/moto se validan con validarFormularioAuto')
+  assert.match(runner, /prepararTrabajo\(adaptador, trabajo\.riesgo\)/, 'el runner valida con el validador del ramo (prepararTrabajo)')
+  assert.ok(!/validarRiesgoComunidad/.test(runner), 'el runner ya no valida con el de Comunidades a pelo')
 })
