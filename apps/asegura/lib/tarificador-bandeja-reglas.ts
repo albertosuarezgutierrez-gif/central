@@ -6,7 +6,7 @@
 //    enlace a la oportunidad. NUNCA el mensaje técnico crudo, la URL del portal, el riesgo, el HTML/captura ni nada
 //    del cliente.
 
-import { decidirAccionBandeja, motivoLegible, validarOpcionesVersion, type CandidatoVersion, type PasoTraza } from '@central/module-tarificacion'
+import { decidirAccionBandeja, MAX_ELECCION_POBLACION, motivoLegible, validarOpcionesPoblacion, validarOpcionesVersion, type CandidatoVersion, type OpcionPoblacion, type PasoTraza } from '@central/module-tarificacion'
 
 export const BANDEJA_LIMITE_POR_DEFECTO = 50
 export const BANDEJA_LIMITE_MAXIMO = 100
@@ -38,6 +38,8 @@ export type ItemBandeja = {
   puedeCancelar: boolean
   /** Versiones de catálogo para elegir a mano (13/10/2026). `null` = el trabajo no pide versión o no guardó la lista. */
   opcionesVersion: CandidatoVersion[] | null
+  /** Poblaciones del CP para elegir a mano (13/10/2026). `null` = el trabajo no pide población o no guardó la lista. */
+  opcionesPoblacion: OpcionPoblacion[] | null
 }
 
 const iso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : new Date(d).toISOString())
@@ -64,6 +66,7 @@ export function proyectarItemBandeja(f: FilaBandeja): ItemBandeja {
     puedeReintentar: decidirAccionBandeja('reintentar', f.estado, tipo).ok,
     puedeCancelar: decidirAccionBandeja('cancelar', f.estado, tipo).ok,
     opcionesVersion: opcionesVersionDelError(f.error),
+    opcionesPoblacion: opcionesPoblacionDelError(f.error),
   }
 }
 
@@ -103,6 +106,34 @@ export function eleccionContraLista(e: EleccionBandeja, error: unknown): { ok: t
   if (casan.length !== 1) return { ok: false, motivo: casan.length ? 'código repetido en la lista del trabajo' : 'eleccionVersion.codigo no está en la lista del trabajo' }
   if (e.etiqueta !== null && claveEtiqueta(e.etiqueta) !== claveEtiqueta(casan[0].etiqueta)) return { ok: false, motivo: 'eleccionVersion.etiqueta no es la de ese código' }
   return { ok: true, eleccion: { codigo: casan[0].codigo!, etiqueta: casan[0].etiqueta } }
+}
+
+// ─── Reintentar con la población elegida a mano (13/10/2026) ─────────────────
+// Un CP con varias poblaciones: la elige una PERSONA de la lista que guardó el fallo (`error.opcionesPoblacion`). La IA
+// no elige poblaciones (no hay base para adivinar). Se escribe en `riesgo.eleccionPoblacion` = texto EXACTO de la celda.
+
+/** La lista de poblaciones que guardó el fallo del trabajo (`error.opcionesPoblacion`), o `null`. */
+export function opcionesPoblacionDelError(error: unknown): OpcionPoblacion[] | null {
+  if (typeof error !== 'object' || error === null || Array.isArray(error)) return null
+  return validarOpcionesPoblacion((error as Record<string, unknown>).opcionesPoblacion)
+}
+
+/** Forma de `eleccionPoblacion` en el cuerpo: ausente → `null`; texto (≤120) → elección; otra cosa → error. */
+export function leerEleccionPoblacionBandeja(v: unknown): { ok: true; eleccion: string | null } | { ok: false; mensaje: string } {
+  if (v === undefined || v === null) return { ok: true, eleccion: null }
+  if (typeof v !== 'string' || !v.trim() || v.length > MAX_ELECCION_POBLACION) {
+    return { ok: false, mensaje: `eleccionPoblacion: texto de la lista del trabajo (máx. ${MAX_ELECCION_POBLACION}) o que no venga` }
+  }
+  return { ok: true, eleccion: v.replace(/\s+/g, ' ').trim() }
+}
+
+/** La elección TIENE que ser el `codigo` de UNA opción de la lista guardada. Lo que se escribe es el código DE LA LISTA. */
+export function eleccionPoblacionContraLista(eleccion: string, error: unknown): { ok: true; eleccion: string } | { ok: false; motivo: string } {
+  const lista = opcionesPoblacionDelError(error)
+  if (!lista) return { ok: false, motivo: 'el trabajo no guarda una lista de poblaciones: reintenta sin eleccionPoblacion' }
+  const casan = lista.filter((o) => o.codigo === eleccion)
+  if (casan.length !== 1) return { ok: false, motivo: casan.length ? 'población repetida en la lista del trabajo' : 'eleccionPoblacion no está en la lista del trabajo' }
+  return { ok: true, eleccion: casan[0].codigo }
 }
 
 /** `limite`: entero 1..BANDEJA_LIMITE_MAXIMO (por defecto 50). `desde`: entero ≥ 0. Basura → valores por defecto. */

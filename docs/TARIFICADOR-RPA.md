@@ -111,15 +111,20 @@ Cuando el catálogo de la compañía ofrece varias versiones del vehículo (caso
 
 **Bandeja (`aplicarAccionBandeja`, acción `reintentar` con `eleccionVersion`)**: se valida bajo `for update` contra `error.opcionesVersion` del propio trabajo (`eleccionContraLista`: código exactamente una vez; si trae etiqueta, debe ser la de ese código). Fuera de lista = `conflicto`. Escribe `riesgo.eleccionVersion`, quita `eleccionVersionIa` y vuelve a `pendiente`; después, fuera de la transacción, guarda la memoria con origen `humano`. Doble clic con la misma versión = `sin_cambios`; con otra sobre un trabajo ya en marcha = `conflicto`.
 
+**Población del CP (13/10/2026, adaptador allianz 0.3.0)**: tras la lupa, si aparecen celdas `td[onclick*=receivedDataLocationFinder]` («CP- NOMBRE»): una → se pulsa (`ctx.pulsar`); varias → `resolverPoblacion` (`module-tarificacion/src/poblacion.ts`): `riesgo.eleccionPoblacion` (texto exacto de la celda) o `riesgo.poblacion` si casa con UNA (sin mayúsculas/tildes/espacios); si no, `ErrorEleccionPoblacion` → `captcha`/`requiere_humano` con `error.opcionesPoblacion`. Tras pulsar, `#_destown` vacío = `ErrorMapaIncompleto` con inventario.
+Bandeja: `reintentar` + `eleccionPoblacion` se valida bajo `for update` contra `error.opcionesPoblacion` (`eleccionPoblacionContraLista`) y escribe `riesgo.eleccionPoblacion`; versión y población no van en la misma petición. La IA y la memoria NO eligen poblaciones.
+Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de la ficha del cliente (`seguros.clientes.ciudad`, vía `/api/operador/cliente`) solo si su `codigo_postal` = el CP del riesgo (`poblacionDesdeFicha`); sin logs del valor.
+⚠️ El guard de `pulsar` bloquea una celda cuyo nombre case con su patrón (p. ej. una población con «BAJA»): el trabajo cae como `emision` (fail-closed); no se ha tocado `guard.ts`.
+
 **Moto: clase y cilindrada** (`FormularioAuto.seleccionVehiculo {marca, modelo, clase, cilindradaCc, descripcion?}`, nombres de catálogo): clase 1 = 51-125 cc · 2 = 126-350 · 3 = 351-750 · 4 = >750. `cilindradaCc` es OBLIGATORIA en moto (Allianz separa Moto y Ciclomotor); ≤50 cc = ciclomotor = otro producto de Allianz, NO soportado (se rechaza en `validarFormularioAuto` y en `tarificarMoto`); clase que no casa con las cc = error. `descripcion` (≤200 car., p. ej. «BMW F 800 S 85 CV») es solo del vehículo: se rechaza si parece matrícula, NIF/NIE, email, teléfono, IBAN o bastidor (`pareceDatoPersonalEnDescripcion`) y el error nunca repite el valor.
 
 **Límites conocidos (no resueltos)**
-- `buscarPoblacion`: si el CP deja varias poblaciones sin mapear (ventana/lista), lanza `ErrorMapaIncompleto`; falta una grabación de Alberto de esa pantalla. No se adivina.
+- `buscarPoblacion`: la lista de celdas sale del inventario de estructura, no de una prueba real (si la sección plegable las deja ocultas, el clic fallará → `portal`). La bandeja de plataforma aún no pinta el selector de población (`opcionesPoblacion` ya viaja en el item).
 - Allianz Turismos (coche): sigue con mapa SUPUESTO, pendiente de regrabar (`AUTO_ACTIVO=false`).
 - `reclamarSiguiente` cuenta los `en_curso` para el cupo sin mirar `lease_hasta`: un lease vencido ocupa hueco hasta que lo barre `barrerTarificadorRpa`.
 - Ese barrido no tiene cron propio: solo corre desde el cron de renovaciones (`/api/cron/tarificador-renovaciones` → `tarificador-ops`).
 - `encolarTrabajo` no deduplica: encolar dos veces lo mismo crea dos trabajos.
-- La memoria solo cubre `tipo='version'` (la lista de poblaciones por CP aún no usa `elegirDeLista`).
+- La memoria solo cubre `tipo='version'` (la población la elige siempre una persona).
 
 **Errores frecuentes / cómo diagnosticar** (sin pegar datos de clientes en el chat)
 - Dónde mirar: `seguros.tarificacion_trabajos` → `estado`, `error->>'tipo'` (`captcha` + `opcionesVersion` = pidió versión), `error->>'mensaje'`, `error->'eleccionIa'` (la IA dijo `baja` y su motivo), `riesgo->'eleccionVersion'` (qué se aplicó), `riesgo->'eleccionVersionIa'` (`origen` ia|memoria, `clave`, `en`). Memoria: `seguros.tarificador_elecciones` (`origen`, `confirmaciones`, `ultima_vez`). Log: `[tarificador] elección de versión con IA <id> <estado>` (omitido|baja|carrera|aplicado) en Vercel `central-asegura`.

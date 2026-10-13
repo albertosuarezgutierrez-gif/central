@@ -5,7 +5,7 @@ import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aplicarAccionBandeja } from '@/lib/tarificador-bandeja'
-import { leerEleccionBandeja } from '@/lib/tarificador-bandeja-reglas'
+import { leerEleccionBandeja, leerEleccionPoblacionBandeja } from '@/lib/tarificador-bandeja-reglas'
 import { lanzarPendientes } from '@/lib/tarificador'
 import { rpaActivo } from '@/lib/tarificador-reglas'
 
@@ -24,6 +24,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * `eleccionVersion?: { codigo, etiqueta? }` (solo con reintentar, 13/10/2026): la versión del vehículo elegida a mano.
  * Tiene que ser un código de la lista que guardó el fallo del trabajo (409 si no); se escribe en `riesgo.eleccionVersion`
  * bajo el mismo `for update` y el MISMO trabajo vuelve a `pendiente`.
+ *
+ * `eleccionPoblacion?: string` (solo con reintentar, 13/10/2026): la población del CP elegida a mano (texto exacto de la
+ * lista `error.opcionesPoblacion` del trabajo; 409 si no está). La IA no elige poblaciones.
  */
 export const POST = auditado(async (req: Request, ctx: { params: Promise<{ id: string }> }) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -35,13 +38,16 @@ export const POST = auditado(async (req: Request, ctx: { params: Promise<{ id: s
   const ev = leerEleccionBandeja(body?.eleccionVersion)
   if (!ev.ok) return NextResponse.json({ estado: 'error', mensaje: ev.mensaje }, { status: 400 })
   if (ev.eleccion && accion !== 'reintentar') return NextResponse.json({ estado: 'error', mensaje: 'eleccionVersion solo va con reintentar' }, { status: 400 })
+  const ep = leerEleccionPoblacionBandeja(body?.eleccionPoblacion)
+  if (!ep.ok) return NextResponse.json({ estado: 'error', mensaje: ep.mensaje }, { status: 400 })
+  if (ep.eleccion && accion !== 'reintentar') return NextResponse.json({ estado: 'error', mensaje: 'eleccionPoblacion solo va con reintentar' }, { status: 400 })
   if (accion === 'reintentar' && !rpaActivo(process.env)) {
     return NextResponse.json({ estado: 'apagado', mensaje: 'el tarificador RPA está apagado (TARIFICADOR_RPA_ACTIVO)' }, { status: 503 })
   }
   try {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', mensaje: 'no se ha podido resolver la correduría' }, { status: 503 })
-    const r = await aplicarAccionBandeja(correduria.id, id, accion, ev.eleccion)
+    const r = await aplicarAccionBandeja(correduria.id, id, accion, ev.eleccion, ep.eleccion)
     if (r.estado === 'no_encontrado') return NextResponse.json(r, { status: 404 })
     if (r.estado === 'conflicto') return NextResponse.json(r, { status: 409 })
     let lanzado = false

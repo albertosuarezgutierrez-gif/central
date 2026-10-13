@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  vistaPrecio, fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
+  vistaPrecio, fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, poblacionDesdeFicha, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
 } from './tarificador-asegura-reglas.ts'
 
 import { fechaCorta, formularioConUltimoRiesgo, importeDeTexto, importeParaCampo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
@@ -218,4 +218,28 @@ test('infraseguro: el formulario lo enseña ANTES de encolar, con eur(), y no bl
   assert.match(src, /posible infraseguro: estimado \{eur\(infra\.estimado\)\}/i)
   const pedir = src.slice(src.indexOf('async function pedir'), src.indexOf('// Aviso de infraseguro'))
   assert.ok(pedir.length > 0 && !/infra/i.test(pedir), 'el aviso no puede frenar pedir(): solo informa')
+})
+
+// Población del CP desde la ficha (13/10/2026). Fixtures INVENTADAS.
+test('poblacionDesdeFicha: solo si el riesgo no la trae y el CP de la ficha es el del riesgo', () => {
+  const ficha = { codigoPostal: '00001', ciudad: '  Villa   Álamo ' }
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, ficha), 'Villa Álamo')
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001', poblacion: 'Pueblo Nuevo' }, ficha), null, 'el riesgo manda')
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00002' }, ficha), null, 'CP distinto: esa población es de otro sitio')
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: null }), null)
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: null, ciudad: 'X' }), null)
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, null), null)
+  assert.equal(poblacionDesdeFicha({}, ficha), null, 'sin CP en el riesgo')
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: 'x'.repeat(81) }), null)
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: 'Villa <Álamo>' }), null, 'caracteres que validarFormularioAuto rechaza: sin población, nunca 400')
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: 'Villa\u0007Álamo' }), null)
+})
+
+test('encolar de plataforma: rellena la población desde la ficha solo en moto y sin registrar su valor', () => {
+  const src = readFileSync(join(import.meta.dirname, '../app/api/correduria/tarificador/encolar/route.ts'), 'utf8')
+  assert.match(src, /poblacionDesdeFicha\(riesgo, f\.ficha\.contacto\)/)
+  assert.match(src, /b\.ramo === 'moto' && !/)
+  assert.match(src, /fichaAsegura\(clienteId\)\.catch\(\(\) => null\)/, 'la lectura de la ficha degrada a null: nunca un 500/400 por la ficha')
+  assert.match(src, /f\?\.estado === 'ok'/, 'solo se usa la ficha si se leyó bien')
+  assert.doesNotMatch(src, /console\./, 'sin logs (el valor es del domicilio del cliente)')
 })

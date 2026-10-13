@@ -1,7 +1,7 @@
 // Clasificación de fallos del worker → `TipoError` de @central/module-tarificacion. El orquestador
 // decide el estado (`estadoTrasError`): solo `infra` se reintenta, y UNA vez.
 
-import { EmisionBloqueadaError, type CandidatoVersion, type TipoError } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, type CandidatoVersion, type OpcionPoblacion, type TipoError } from '@central/module-tarificacion'
 import { textoAvisoVerificacion } from './aviso.ts'
 
 export class ErrorTarificador extends Error {
@@ -42,6 +42,16 @@ export function opcionesVersionDe(e: unknown): CandidatoVersion[] | null {
   if (!(e instanceof ErrorTarificador)) return null
   const o = (e as ErrorTarificador & { opcionesVersion?: unknown }).opcionesVersion
   return Array.isArray(o) && o.length ? (o as CandidatoVersion[]).map((c) => ({ etiqueta: c.etiqueta, codigo: c.codigo })) : null
+}
+
+/**
+ * Lista estructurada de poblaciones de un `ErrorEleccionPoblacion` (13/10/2026). Viaja en `error.opcionesPoblacion`;
+ * `codigo` = texto EXACTO de la celda del portal. Solo nombres de localidad.
+ */
+export function opcionesPoblacionDe(e: unknown): OpcionPoblacion[] | null {
+  if (!(e instanceof ErrorTarificador)) return null
+  const o = (e as ErrorTarificador & { opcionesPoblacion?: unknown }).opcionesPoblacion
+  return Array.isArray(o) && o.length ? (o as OpcionPoblacion[]).map((c) => ({ codigo: c.codigo, etiqueta: c.etiqueta })) : null
 }
 
 /**
@@ -89,7 +99,13 @@ export type PistasIntento = {
 
 export type MotivoTransitorio = 'timeout_navegacion' | 'sesion_caducada' | 'portal_5xx' | 'portal_transitorio'
 
-export type Clasificacion = { tipo: TipoError; mensaje: string; transitorio: MotivoTransitorio | null; opcionesVersion?: CandidatoVersion[] }
+export type Clasificacion = {
+  tipo: TipoError
+  mensaje: string
+  transitorio: MotivoTransitorio | null
+  opcionesVersion?: CandidatoVersion[]
+  opcionesPoblacion?: OpcionPoblacion[]
+}
 
 const TIMEOUT_NAVEGACION = /\b(page|frame)\.(goto|reload|waitForNavigation|waitForURL|goBack|goForward): Timeout \d+ms exceeded|Navigation timeout of \d+ ?ms exceeded/i
 
@@ -100,8 +116,9 @@ const TIMEOUT_NAVEGACION = /\b(page|frame)\.(goto|reload|waitForNavigation|waitF
 export function clasificarIntento(e: unknown, pistas: PistasIntento): Clasificacion {
   const c = clasificar(e)
   const ov = opcionesVersionDe(e)
+  const op = opcionesPoblacionDe(e)
   // Definitivos SIEMPRE: emisión/guard, datos, credenciales, captcha. `infra` lo reintenta el orquestador.
-  if (c.tipo !== 'portal') return { ...c, transitorio: null, ...(ov ? { opcionesVersion: ov } : {}) }
+  if (c.tipo !== 'portal') return { ...c, transitorio: null, ...(ov ? { opcionesVersion: ov } : {}), ...(op ? { opcionesPoblacion: op } : {}) }
   if (e instanceof ErrorTarificador && e.transitorio) return { ...c, transitorio: 'portal_transitorio' }
   if (TIMEOUT_NAVEGACION.test(c.mensaje)) return { ...c, transitorio: 'timeout_navegacion' }
   // No por URL: la home logueada de ePAC también cuelga de `/public/`. Por el formulario de login a la vista.

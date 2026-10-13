@@ -9,6 +9,7 @@
 // vive aquí y en el campo del portal; nunca en logs, trazas ni mensajes.
 import { esMatriculaEspanola, normalizarMatricula, type EleccionVersion } from './vehiculo.ts'
 import { validarTomador, type Tomador } from './tomador.ts'
+import { tieneCaracteresProhibidos } from './poblacion.ts'
 
 export const RAMOS_VEHICULO = ['auto', 'moto'] as const
 export type RamoVehiculo = (typeof RAMOS_VEHICULO)[number]
@@ -47,7 +48,19 @@ export type FormularioAuto = {
    * portal: 1 ≤125 cc · 2 ≤350 · 3 351-750 · 4 >750). Nombres de catálogo, no datos personales. Ausente = no consta.
    */
   seleccionVehiculo?: SeleccionVehiculo | null
+  /**
+   * Población del CP (13/10/2026): un CP puede tener VARIAS poblaciones y el portal pide escoger una (Allianz Moto: buscador
+   * de poblaciones). `poblacion` = nombre de la localidad (texto libre, ≤80; el robot la casa EXACTA salvo mayúsculas/tildes/
+   * espacios); `eleccionPoblacion` = texto EXACTO de la celda del portal que una persona escogió en la bandeja (≤120).
+   * Ausentes = no consta: con varias poblaciones el robot para y pide una persona (nunca adivina).
+   */
+  poblacion?: string | null
+  eleccionPoblacion?: string | null
 }
+
+/** Máximos de `poblacion` y `eleccionPoblacion`. */
+export const MAX_POBLACION = 80
+export const MAX_ELECCION_POBLACION = 120
 
 /**
  * `cilindradaCc`: Allianz separa los productos Moto y Ciclomotor (≤50 cc); sin cilindrada no se puede saber cuál es.
@@ -209,6 +222,27 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else seleccionVehiculo = { marca, modelo, clase, cilindradaCc, ...(descripcion !== null ? { descripcion } : {}) }
   }
 
+  // Población del CP (opcionales). Nunca se repite el valor en el error.
+  const textoOpcional = (v: unknown, campo: string, max: number): string | null => {
+    if (vacio(v)) return null
+    if (typeof v !== 'string') {
+      errores.push(`${campo}: tiene que ser texto (o no venir)`)
+      return null
+    }
+    const t = v.replace(/\s+/g, ' ').trim()
+    if (t.length > max) {
+      errores.push(`${campo}: máximo ${max} caracteres`)
+      return null
+    }
+    if (tieneCaracteresProhibidos(v)) {
+      errores.push(`${campo}: caracteres no permitidos`)
+      return null
+    }
+    return t
+  }
+  const poblacion = textoOpcional(e.poblacion, 'poblacion', MAX_POBLACION)
+  const eleccionPoblacion = textoOpcional(e.eleccionPoblacion, 'eleccionPoblacion', MAX_ELECCION_POBLACION)
+
   // Moto (fail-closed): Allianz tiene productos distintos «Moto» y «Ciclomotor» (≤50 cc). Solo se tarifica Moto.
   if (ramo === 'moto') {
     const cc = seleccionVehiculo?.cilindradaCc ?? null
@@ -231,6 +265,9 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   if (errores.length || !ramo || !matricula || !codigoPostal || !conductor) return { ok: false, errores }
   return {
     ok: true,
-    formulario: { ramo, matricula, codigoPostal, conductor, tomadorEsConductor, tomadorEsPropietario, aniosAseguradoAnterior, siniestrosUltimos5Anios, garajeNoche, tomador, eleccionVersion, seleccionVehiculo },
+    formulario: { ramo, matricula, codigoPostal, conductor, tomadorEsConductor, tomadorEsPropietario, aniosAseguradoAnterior, siniestrosUltimos5Anios, garajeNoche, tomador, eleccionVersion, seleccionVehiculo,
+      ...(poblacion !== null ? { poblacion } : {}),
+      ...(eleccionPoblacion !== null ? { eleccionPoblacion } : {}),
+    },
   }
 }
