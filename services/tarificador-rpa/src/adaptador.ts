@@ -67,6 +67,8 @@ export type EmisionPortal = {
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {
+  /** Adaptador de COMUNIDADES (riesgo `RiesgoComunidad`). Los de vehículo (auto/moto) son `AdaptadorVehiculo` (ramo.ts). */
+  readonly ramo: 'comunidades'
   /** Clave de la credencial: fly secrets `CRED_<clave>_USER` / `CRED_<clave>_PASS`. */
   readonly credencial: string
   /** Versión semver del adaptador (empieza en '0.1.0'); el trabajo la guarda en `bot_version`. Súbela al tocar su navegación. */

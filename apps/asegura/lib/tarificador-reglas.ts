@@ -4,7 +4,29 @@
 // (app `asegura-tarificador`, auto_destroy) por trabajo, y el worker le pide el riesgo y le devuelve
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
-import { envDeMaquina, esTipoError, esVersionBot, validarOfertas, validarTraza, type OfertaNormalizada, type PasoTraza, type TipoError } from '@central/module-tarificacion'
+import {
+  envDeMaquina, esTipoError, esVersionBot, validarFormularioAuto, validarOfertas, validarRiesgoComunidad, validarTraza,
+  type FormularioAuto, type OfertaNormalizada, type PasoTraza, type RiesgoComunidad, type TipoError,
+} from '@central/module-tarificacion'
+
+/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto). */
+export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto'; riesgo: FormularioAuto }
+export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
+
+/** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
+export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
+  if (ramo === 'comunidades') {
+    const v = validarRiesgoComunidad(riesgo)
+    return v.ok ? { ok: true, entrada: { ramo, riesgo: v.riesgo } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
+  }
+  if (ramo === 'moto') {
+    const v = validarFormularioAuto(riesgo)
+    if (!v.ok) return { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
+    if (v.formulario.ramo !== 'moto') return { ok: false, mensaje: 'riesgo inválido', errores: ['ramo: el formulario de un trabajo moto tiene que ser de moto'] }
+    return { ok: true, entrada: { ramo, riesgo: v.formulario } }
+  }
+  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades o moto)' }
+}
 
 /** Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed). */
 export function rpaActivo(env: Record<string, string | undefined>): boolean {

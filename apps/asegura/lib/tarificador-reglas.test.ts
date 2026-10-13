@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { configFly, leerResultadoWorker, peticionMaquina, rpaActivo } from './tarificador-reglas.ts'
+import { configFly, leerResultadoWorker, peticionMaquina, rpaActivo, validarEntradaRamo } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 const JOB = '11111111-1111-4111-8111-111111111111'
@@ -92,4 +92,23 @@ test('el orquestador no toca Codeoscopic ni emite', () => {
     assert.ok(!/from ['"][^'"]*codeoscopic/i.test(src), `${f} importa algo de codeoscopic`)
     assert.ok(!/CODEOSCOPIC_/.test(src), `${f} nombra una env de Codeoscopic`)
   }
+})
+
+// Moto (13/10/2026): asegura ya encola un FormularioAuto de moto (con seleccionVehiculo) y cada ramo usa SU validador.
+const MOTO = {
+  ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003',
+  conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
+  tomadorEsConductor: true, tomadorEsPropietario: true, aniosAseguradoAnterior: 5, siniestrosUltimos5Anios: 0, garajeNoche: true,
+  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2 },
+}
+
+test('encolar: moto con FormularioAuto válido pasa (con seleccionVehiculo); inválido, auto y ramo desconocido, no', () => {
+  const ok = validarEntradaRamo('moto', MOTO)
+  assert.equal(ok.ok, true)
+  if (ok.ok && ok.entrada.ramo === 'moto') assert.deepEqual(ok.entrada.riesgo.seleccionVehiculo, MOTO.seleccionVehiculo)
+  assert.equal(validarEntradaRamo('moto', { ...MOTO, matricula: 'x' }).ok, false)
+  assert.equal(validarEntradaRamo('moto', { ...MOTO, ramo: 'auto' }).ok, false, 'un formulario de auto no es un trabajo moto')
+  assert.equal(validarEntradaRamo('moto', { ramo: 'comunidades' }).ok, false)
+  assert.equal(validarEntradaRamo('comunidades', MOTO).ok, false, 'comunidades sigue con su validador')
+  for (const r of ['auto', 'hogar', undefined, 'MOTO']) assert.equal(validarEntradaRamo(r, MOTO).ok, false, String(r))
 })
