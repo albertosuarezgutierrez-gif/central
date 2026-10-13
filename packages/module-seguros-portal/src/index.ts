@@ -329,13 +329,15 @@ export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania
 export { vistaDelParte, entradaValida } from './parte-entrada.ts'
 export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
-// (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
-// existen en la BD pero NO se escriben: no hay pantalla que los pida.
+// (art. 19 LDS) al entrar, y los consentimientos `comercial` y `avisos` (este,
+// desde el 13/10/2026: la bienvenida de avisos y «Configuración»).
 export {
   TIPOS_CONSENTIMIENTO,
   TIPOS_QUE_SE_REGISTRAN,
   TEXTO_CONSENTIMIENTO_COMERCIAL,
   VERSION_TEXTO_COMERCIAL,
+  TEXTO_CONSENTIMIENTO_AVISOS,
+  VERSION_TEXTO_AVISOS,
   USER_AGENT_MAX,
   consentimientoVigente,
   necesitaRegistro,
@@ -641,3 +643,32 @@ export type {
   VehiculoFlotaEntrada,
   VencimientoFlota,
 } from './flota.ts'
+
+// Preferencias de avisos (13/10/2026): canal, antelación y «no molestar» de «Configuración».
+export {
+  CANALES_AVISO,
+  DIAS_ANTELACION_MAX,
+  DIAS_ANTELACION_OPCIONES,
+  DIAS_ANTELACION_POR_DEFECTO,
+  DIAS_POSPONER_BIENVENIDA,
+  ZONA_HORARIA_AVISOS,
+  enNoMolestar,
+  esCanalAviso,
+  esDiasAntelacion,
+  horaDeMinutos,
+  minutoEnMadrid,
+  minutosDeHora,
+  motivoSinPush,
+  resolverPreferenciasAvisos,
+  validarCambioPreferencias,
+} from './preferencias-avisos.ts'
+export type {
+  CambioPreferenciasAvisos,
+  CanalAviso,
+  DiasAntelacion,
+  FranjaNoMolestar,
+  MotivoSinPush,
+  PreferenciasAvisosEfectivas,
+  PreferenciasAvisosGuardadas,
+  ResultadoCambioPreferencias,
+} from './preferencias-avisos.ts'

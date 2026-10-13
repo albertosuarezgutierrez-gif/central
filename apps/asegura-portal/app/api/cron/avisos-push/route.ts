@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server'
 import { sendWebPush } from '@central/core-push'
-import { DIAS_VENTANA_AVISO, debeAvisarPush, textoPushObligacion } from '@central/module-seguros-portal'
+import {
+  DIAS_ANTELACION_MAX,
+  debeAvisarPush,
+  motivoSinPush,
+  resolverPreferenciasAvisos,
+  textoPushObligacion,
+  type PreferenciasAvisosEfectivas,
+} from '@central/module-seguros-portal'
 import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { mapConConcurrencia } from '@/lib/concurrencia'
+import { TAM_PAGINA_PUSH, reunirAvisables } from '@/lib/criba-avisos-push'
 import { prisma } from '@/lib/db'
 import { obligacionesDebidasDeIdentidad } from '@/lib/obligaciones-debidas'
 import { OPCIONES_AVISO, cargarVapid, topicAviso } from '@/lib/push-vapid'
@@ -42,16 +50,61 @@ export async function GET(req: Request) {
   // El rango en SQL es una CRIBA (para no traer decenas de miles de filas de golpe); quien
   // decide de verdad es `debeAvisarPush()`, más abajo — mismo patrón que
   // `apps/asegura/lib/avisos-vencimiento.ts`.
-  const filas = await prisma.portalObligacion.findMany({
-    where: {
-      avisadaPushAt: null,
-      fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
-    },
-    select: { id: true, identidadId: true, polizaId: true, tipo: true, titulo: true, fechaAccionable: true },
-    orderBy: { fechaAccionable: 'asc' },
-    take: 500,
-  })
-  const enVentana = filas.filter((o) => debeAvisarPush({ fechaAccionable: o.fechaAccionable, avisadaPushAt: null }, hoy))
+  // La criba llega hasta la MAYOR antelación que se puede elegir (30 días, «Configuración»); el orden
+  // ascendente deja primero las más cercanas, así que el tope no recorta a quien tiene los 7 de siempre.
+  const ventana = { avisadaPushAt: null, fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_ANTELACION_MAX * MS_DIA) } }
+  // Las identidades que se saltan a propósito («solo correo», «no molestar») NO pueden llenar el lote:
+  // se pagina por cursor (con tope de páginas) y el filtro de preferencias se aplica a cada página.
+  let prefsFallo = false
+  let enVentana: Array<{ id: string; identidadId: string; polizaId: string | null; tipo: string; titulo: string; fechaAccionable: Date }>
+  // Preferencias de «Configuración» (13/10/2026): antelación, canal y «no molestar» de cada identidad.
+  // Sin fila = lo de siempre (`resolverPreferenciasAvisos(null)`: 7 días, push, sin franja). Si no se
+  // pueden leer NO se manda con valores supuestos (podría saltarse un «no molestar»): 500 y se
+  // reintenta en la pasada siguiente — nada queda sellado.
+  let omitidasPorPreferencia = 0
+  try {
+    const r = await reunirAvisables({
+      leerPagina: (cursorId) =>
+        prisma.portalObligacion.findMany({
+          where: ventana,
+          select: { id: true, identidadId: true, polizaId: true, tipo: true, titulo: true, fechaAccionable: true },
+          orderBy: [{ fechaAccionable: 'asc' }, { id: 'asc' }],
+          take: TAM_PAGINA_PUSH,
+          ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+        }),
+      filtrar: async (filas) => {
+        const idsCandidatas = [...new Set(filas.map((o) => o.identidadId))]
+        let prefsPorIdentidad: Map<string, PreferenciasAvisosEfectivas>
+        try {
+          const guardadas = await prisma.portalPreferenciasAvisos.findMany({
+            where: { identidadId: { in: idsCandidatas } },
+            select: { identidadId: true, canal: true, diasAntelacion: true, noMolestarDesde: true, noMolestarHasta: true },
+          })
+          prefsPorIdentidad = new Map(guardadas.map((g) => [g.identidadId, resolverPreferenciasAvisos(g)]))
+        } catch (e) {
+          prefsFallo = true
+          console.error('[avisos-push] no se han podido leer las preferencias:', e instanceof Error ? e.message : e)
+          throw e
+        }
+        const prefsDe = (identidadId: string) => prefsPorIdentidad.get(identidadId) ?? resolverPreferenciasAvisos(null)
+        // «Solo por correo» o dentro de su franja de «no molestar» (hora de Madrid): esa identidad no recibe
+        // push en esta pasada y NO se sella — se reintenta en la siguiente.
+        return filas.filter((o) => {
+          const p = prefsDe(o.identidadId)
+          if (!debeAvisarPush({ fechaAccionable: o.fechaAccionable, avisadaPushAt: null }, hoy, p.diasAntelacion)) return false
+          if (motivoSinPush(p, hoy) !== null) {
+            omitidasPorPreferencia += 1
+            return false
+          }
+          return true
+        })
+      },
+    })
+    enVentana = r.filas
+  } catch (e) {
+    if (!prefsFallo) throw e
+    return NextResponse.json({ estado: 'error', causa: 'preferencias_no_leidas' }, { status: 500 })
+  }
 
   // 🚨 Re-comprobar que la póliza SIGUE viva Y sigue siendo DE ESA IDENTIDAD: una obligación se
   // deriva cuando el cliente entra en su bóveda (`sincronizarObligacionesDeIdentidad`) y puede no
@@ -155,5 +208,5 @@ export async function GET(req: Request) {
     }
   })
 
-  return NextResponse.json({ estado: 'ok', candidatas, avisadas, sinSuscripcion, sinExito, saltadas, fallidas })
+  return NextResponse.json({ estado: 'ok', candidatas, avisadas, sinSuscripcion, sinExito, saltadas, fallidas, omitidasPorPreferencia })
 }

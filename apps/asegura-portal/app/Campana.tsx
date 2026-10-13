@@ -3,7 +3,6 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
 import type { Aviso, Avisos } from '@/lib/avisos'
 
-import { ActivarPush } from './ActivarPush'
 
 /**
  * La campana de la cabecera: lo que la persona tiene pendiente, en un solo
@@ -155,7 +154,13 @@ export function Campana() {
               setAbierto(false)
             }}
           />
-          <ActivarPush />
+          {/* 13/10/2026: activar las notificaciones y elegir qué avisar vive en «Configuración»;
+              la campana solo enlaza (antes llevaba aquí el interruptor y las casillas). */}
+          <div className="campana-push">
+            <a className="campana-reintentar campana-configurar" href="/configuracion#avisos" onClick={() => setAbierto(false)}>
+              Configurar avisos
+            </a>
+          </div>
         </div>
       )}
     </div>

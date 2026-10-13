@@ -41,9 +41,14 @@ export function idVencimientoDerivado(polizaId: string, fechaVencimiento: Date):
  */
 export const DIAS_VENTANA_AVISO = 7
 
-export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date }): boolean {
+/**
+ * `dias` (13/10/2026): la antelación que la persona eligió para SUS avisos push en «Configuración»
+ * (`diasAntelacionEfectivos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre: el correo de
+ * `apps/asegura` y la campana no lo pasan y no cambian.
+ */
+export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date; dias?: number }): boolean {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
-  return faltan >= 0 && faltan <= DIAS_VENTANA_AVISO
+  return faltan >= 0 && faltan <= (x.dias ?? DIAS_VENTANA_AVISO)
 }
 
 /**
