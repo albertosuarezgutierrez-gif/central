@@ -33,6 +33,8 @@ export interface OpenRouterUsage {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
+  /** Coste en créditos (USD) cuando OpenRouter lo informa. Opcional: no siempre viene. */
+  cost?: number
 }
 
 /** Resultado extendido: el modelo REAL usado (puede ser un suplente) + usage para el auditor de coste. */

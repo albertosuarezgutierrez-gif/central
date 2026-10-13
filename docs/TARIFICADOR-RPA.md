@@ -130,6 +130,13 @@ Cuando el catálogo de la compañía ofrece varias versiones del vehículo (caso
 - 409 en la bandeja: la versión no está en `error.opcionesVersion` de ese trabajo, o ya está en marcha con otra.
 - «ciclomotor (≤50 cc)» / «falta la cilindrada» al encolar: dato de entrada, no fallo del bot.
 
+## Explorador IA (fase A hecha 13/10/2026; B worker y C plataforma pendientes)
+`modo='exploracion'`: el worker llega a una ENTRADA cerrada (`ENTRADAS_EXPLORACION`: `allianz:particulares:hogar`, y comunidades como oráculo) y en cada pantalla manda el inventario SANEADO a `POST /api/tarificador/explorador/paso`; asegura responde un lote de la LISTA BLANCA (`rellenar` clave · `elegir` opción · `marcar` radio · `avanzar` · `terminar` · `parar`) que sale de la MEMORIA (mapa ya visto, sin IA) o de la IA, siempre validado (`validarRespuestaExplorador`, `@central/module-tarificacion/explorador.ts`). Al final `POST …/cierre` y asegura construye el MAPA v1 (`construirMapa`) desde sus pasos.
+- **Datos:** la IA solo elige CLAVES del catálogo; el valor lo pone el worker (`resolverDato`). NIF real SOLO si el trabajo cuelga de una petición REAL del mismo cliente (trabajo `tarificar` u oportunidad suya; trigger en BD); si no, sintético y se PARA si piden NIF. Contacto = `TARIFICADOR_EXPLORADOR_EMAIL`/`_TELEFONO` (de Alberto, solo env).
+- **Paradas:** OTP/SMS, CAPTCHA y títulos de emisión (Revisión, Forma de pago, IBAN, Firma, Emitir, Contratar, Formalizar, Grabar, Archivar) → `parar`, nunca se automatizan. «Aceptar» SOLO el de Datos básicos (Alberto, 13/10/2026; puede quedar proyecto en ePAC).
+- **Topes (techo; el env solo baja):** 30 llamadas, 80 acciones, 40 pasos, 15 min, **2 €** (peor caso ANTES de llamar). Coste real en `ai_usos` con `cliente_ref='explorador:<trabajo>'`.
+- **Envs:** `TARIFICADOR_EXPLORADOR_ACTIVO=1`, `TARIFICADOR_EXPLORADOR_MODELO` (por defecto `anthropic/claude-sonnet-4.5`, por OpenRouter con `modeloOpenRouter` de la pasarela: NO con `model`, que es el pin a NIM). SQL `2026-10-13_tarificador_explorador.sql` (NO aplicado).
+
 ## Rutina «Médico del bot tarificador»
 `trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.
 

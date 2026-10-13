@@ -18,7 +18,7 @@ import { aiCompleteConProveedor, geminiSearch, openrouterChatEx, type NimChatMes
 import {
   registrarUso, estimarTokens, costeEur, costePorUso, dentroDePresupuestoDiario,
 } from '@/lib/ai-gateway'
-import { elegirModelo, elegirPorCategoria, openrouterConfigPasarela } from '@/lib/ia-director'
+import { elegirModelo, elegirPorCategoria, getDirectorEstado, openrouterConfigPasarela } from '@/lib/ia-director'
 import { cacheActiva, buscarCache, guardarCache } from '@/lib/ia-cache'
 
 export type ChatDirectorOpts = {
@@ -33,6 +33,10 @@ export type ChatDirectorOpts = {
   timeoutMs?: number
   /** Pin de modelo: SALTA el Director/OpenRouter y lo fija también en la cadena clásica. */
   modelo?: string
+  /** Modelo de OpenRouter EXPLÍCITO (slug ya validado con `modeloOpenRouterValido`): va POR OpenRouter con ese único
+   *  modelo, aplica el presupuesto diario y registra el coste; si falla, LANZA (no degrada a otro modelo ni a la cadena
+   *  gratis: quien lo pide —el explorador del tarificador— prefiere parar). Gana a `modelo` y a `categoria`. */
+  modeloOpenRouter?: string
   /** Modelo preferido SOLO para la cadena clásica; NO salta el Director (para migrar agentes). */
   modeloClasico?: string
   /** Categoría del catálogo a servir SIN hop al decisor (p. ej. 'codigo' para el ejecutor de
@@ -69,8 +73,38 @@ export async function chatConDirector(messages: NimChatMessage[], opts: ChatDire
     }
   }
 
-  // ── Camino primario: OpenRouter + Director (solo sin modelo pinneado) ──────────────────────
   const or = openrouterConfigPasarela()
+
+  // ── Modelo de OpenRouter explícito (13/10/2026): sin Director, sin suplentes, sin caché, sin degradar ──────────────
+  if (opts.modeloOpenRouter) {
+    if (!or) throw new Error('modeloOpenRouter sin OPENROUTER_API_KEY')
+    const presupuesto = await dentroDePresupuestoDiario(app, clienteRef)
+    if (!presupuesto.ok) {
+      await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: opts.modeloOpenRouter, ok: false, ms: 0, error: presupuesto.motivo, clienteRef })
+      throw new Error(presupuesto.motivo ?? 'presupuesto diario excedido')
+    }
+    const t0 = Date.now()
+    try {
+      const res = await openrouterChatEx(or, messages, {
+        system, maxTokens, temperature, models: [opts.modeloOpenRouter],
+        privacidad: opts.privado === true, cacheSystem: opts.cacheSystem === true,
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      const tokens = res.usage?.total_tokens ?? estimarTokens(entrada, res.text)
+      // Coste: el que informa OpenRouter si viene; si no, precios del catálogo del Director; si no, la tarifa genérica.
+      const costeEurReal = typeof res.usage?.cost === 'number' && Number.isFinite(res.usage.cost)
+        ? +(res.usage.cost * Number(process.env.AI_USD_EUR ?? 0.9)).toFixed(6)
+        : costePorUso(res.model, res.usage, (await getDirectorEstado().catch(() => null))?.modelos ?? [])
+      await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: res.model, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEurReal, clienteRef })
+      return { text: res.text, modelo: res.model }
+    } catch (e) {
+      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
+      await registrarUso({ app, endpoint, proveedor: 'openrouter', modelo: opts.modeloOpenRouter, ok: false, ms: Date.now() - t0, error: msg, clienteRef })
+      throw e
+    }
+  }
+
+  // ── Camino primario: OpenRouter + Director (solo sin modelo pinneado) ──────────────────────
   let openrouterBloqueado = false
   if (or && !modelo) {
     const presupuesto = await dentroDePresupuestoDiario(app, clienteRef)

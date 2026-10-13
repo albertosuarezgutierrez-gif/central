@@ -40,11 +40,18 @@ export function gatewayChat(
      *  esa categoría SIN saltarse OpenRouter (un `model` pinneado sí se lo salta). Opcional; una
      *  pasarela que no la conoce la ignora. */
     categoria?: string
+    /** Modelo de OpenRouter EXPLÍCITO (slug, p. ej. `anthropic/claude-sonnet-4.5`): la pasarela lo sirve POR OpenRouter
+     *  con ese único modelo, registra su coste y, si falla, responde error (no degrada a otro). Distinto de `model`, que
+     *  es el pin a la cadena clásica (NIM…). Una pasarela antigua lo ignora. */
+    modeloOpenRouter?: string
+    /** Cachea el `system` en el proveedor (prompts largos repetidos). La pasarela ya lo admitía. */
+    cacheSystem?: boolean
   } = {},
 ): Promise<string> {
   return llamar(config, '/api/ai/chat', {
     messages, system: opts.system, model: opts.model, maxTokens: opts.maxTokens,
     cliente: opts.cliente, privado: opts.privado, cache: opts.cache, categoria: opts.categoria,
+    modeloOpenRouter: opts.modeloOpenRouter, cacheSystem: opts.cacheSystem,
     // La pasarela acota el timeout contra el proveedor con este valor (sin él, 25 s por defecto).
     timeoutMs: opts.timeoutMs,
   }, opts.timeoutMs ?? 25_000)

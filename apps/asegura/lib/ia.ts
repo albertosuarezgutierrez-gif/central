@@ -30,14 +30,27 @@ export async function iaTexto(
     /** Categoría del catálogo de la pasarela (p. ej. `redaccion`: un modelo más capaz que el flash por
      *  defecto). Solo por la pasarela; en la llamada directa no aplica. */
     categoria?: string
+    /** Modelo de OpenRouter EXPLÍCITO (slug). SOLO por la pasarela (va por OpenRouter con ese modelo y registra su coste);
+     *  sin pasarela LANZA: un gasto con modelo elegido no puede quedar fuera de `ai_usos` y de los topes. */
+    modeloOpenRouter?: string
+    /** Atribución de coste en `ai_usos.cliente_ref` (p. ej. `explorador:<trabajo>`). Solo por la pasarela. */
+    cliente?: string
+    /** Cachear el `system` en el proveedor (prompt largo repetido). Solo por la pasarela. */
+    cacheSystem?: boolean
   } = {},
 ): Promise<string> {
+  const via = viaIA()
+  // Antes de cargar nada: un modelo explícito sin pasarela no se llama (gasto fuera de `ai_usos` y de los topes).
+  if (via !== 'pasarela' && opts.modeloOpenRouter) throw new Error('iaTexto: un modelo explícito solo va por la pasarela (AI_GATEWAY_URL/AI_GATEWAY_SECRET)')
   const core = await import('@central/core-ai')
-  if (viaIA() === 'pasarela') {
+  if (via === 'pasarela') {
     return core.gatewayChat(
       { url: process.env.AI_GATEWAY_URL!, secret: process.env.AI_GATEWAY_SECRET!, app: 'asegura' },
       [{ role: 'user', content: prompt }],
-      { system: opts.system, maxTokens: opts.maxTokens, timeoutMs: opts.timeoutMs, privado: opts.privado, categoria: opts.categoria },
+      {
+        system: opts.system, maxTokens: opts.maxTokens, timeoutMs: opts.timeoutMs, privado: opts.privado, categoria: opts.categoria,
+        modeloOpenRouter: opts.modeloOpenRouter, cliente: opts.cliente, cacheSystem: opts.cacheSystem,
+      },
     )
   }
   if (!avisadoDirecto) {

@@ -20,3 +20,5 @@ export const hayPasos = () => esquema.existeTabla('tarificacion_trabajo_pasos')
 // Emisión asistida (SQL 2026-10-10_tarificador_emision): sin él, la emisión responde 503 y la firma no guarda ipid_huella.
 export const hayEmision = () => esquema.existeTabla('tarificacion_emision_autorizacion')
 export const hayIpidHuella = () => esquema.existeColumna('presupuesto', 'ipid_huella')
+// Explorador IA (SQL 2026-10-13_tarificador_explorador): sin él, `/api/tarificador/explorador/*` responde 503.
+export const hayExplorador = () => esquema.existeTabla('tarificador_exploracion_pasos')
