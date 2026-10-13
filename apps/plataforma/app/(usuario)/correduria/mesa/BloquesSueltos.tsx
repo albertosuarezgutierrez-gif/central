@@ -3,9 +3,10 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { MOTIVOS_PERDIDA_VENTA } from '@central/module-seguros'
+import AccionesContacto from '../AccionesContacto'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import type { PerdidaPorRevisar } from '@/lib/correduria/expedientes'
-import { cuandoRelativo, fechaCorta, ROTULO_MOTIVO_PERDIDA, type Lectura, type TareaSueltaMesa } from '@/lib/correduria/mesa'
+import { cuandoRelativo, fechaCorta, motivoFalloTareaSuelta, ROTULO_MOTIVO_PERDIDA, type Lectura, type TareaSueltaMesa } from '@/lib/correduria/mesa'
 
 const PAGINA = 50
 const AMBIGUO = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
@@ -15,13 +16,35 @@ const AVISO_LECTURA: React.CSSProperties = { ...cardStyle, borderColor: 'var(--w
 const ROTULO_TIPO_TAREA: Record<string, string> = { llamada: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', tarea: 'Tarea' }
 
 /**
- * «Tareas sueltas»: tareas abiertas SIN oportunidad (no son expediente, pero no pueden perderse). Asegura NO
- * deja cerrarlas ni posponerlas por tarea suelta (el cierre exige oportunidad), así que aquí solo se abre la
- * ficha del cliente: nunca un botón «Hecho» que fallaría.
+ * «Tareas sueltas»: tareas abiertas SIN oportunidad (no son expediente, pero no pueden perderse). Se cierran
+ * («Hecho») o se posponen (3/7 días) por el proxy de tarea suelta; 409 (hito de devolución / ya cerrada) y 404
+ * se muestran con su motivo. Sin diálogos de confirmación del navegador.
  * Tres estados: `no_leido` se DICE (no es «no hay»); vacío comprobado no ocupa sitio.
  */
-export function TareasSueltas({ lectura, truncado, hoy }: { lectura: Lectura<TareaSueltaMesa>; truncado: boolean; hoy: string }) {
+export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: Lectura<TareaSueltaMesa>; truncado: boolean; hoy: string; onCambio: () => Promise<void> }) {
   const [limite, setLimite] = useState(PAGINA)
+  const [ocupada, setOcupada] = useState<string | null>(null)
+  const [fallo, setFallo] = useState<{ id: string; texto: string } | null>(null)
+
+  async function actuar(tareaId: string, accion: { accion: 'hecho' } | { accion: 'posponer'; dias: number }) {
+    setOcupada(tareaId)
+    setFallo(null)
+    try {
+      const r = await fetch('/api/correduria/oportunidad/tarea', {
+        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ tareaId, suelta: true, ...accion }),
+      })
+      const j = (await r.json().catch(() => null)) as unknown
+      const motivo = motivoFalloTareaSuelta(r.status, j)
+      if (motivo) { setFallo({ id: tareaId, texto: motivo }); return }
+      await onCambio() // recarga sin desmontar: la fila se queda hasta que llega la lista nueva
+    } catch {
+      setFallo({ id: tareaId, texto: AMBIGUO })
+    } finally {
+      setOcupada(null)
+    }
+  }
+
   if (lectura.estado === 'no_leido') {
     return (
       <section aria-label="Tareas sueltas" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
@@ -38,15 +61,16 @@ export function TareasSueltas({ lectura, truncado, hoy }: { lectura: Lectura<Tar
   return (
     <section aria-label="Tareas sueltas" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
       <h2 style={TITULO}>Tareas sueltas · {filas.length}{truncado ? '+' : ''}</h2>
-      <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Tareas abiertas que no cuelgan de ningún expediente. Se trabajan en la ficha del cliente.</p>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Tareas abiertas que no cuelgan de ningún expediente.</p>
       {truncado && <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>La lista está recortada: hay más tareas sueltas de las que se muestran.</p>}
       {filas.slice(0, limite).map(t => (
-        <article key={t.tareaId} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, padding: 14 }}>
+        <article key={t.tareaId} style={{ ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, padding: 14, opacity: ocupada === t.tareaId ? 0.7 : 1 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minWidth: 0 }}>
             {t.clienteId
               ? <Link href={`/correduria/cliente/${t.clienteId}`} style={{ fontWeight: 700, color: 'var(--primary)', overflowWrap: 'anywhere' }}>{t.cliente ?? 'Cliente sin nombre'}</Link>
               : <span style={{ fontWeight: 700, color: 'var(--muted)' }}>Sin cliente asociado</span>}
             <Badge tono="neutral">{ROTULO_TIPO_TAREA[t.tipo] ?? t.tipo}</Badge>
+            <AccionesContacto telefono={t.contacto?.telefono} email={t.contacto?.email} quien={t.cliente ?? 'el cliente'} tam="md" />
           </div>
           <div style={{ fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: '2px 10px', minWidth: 0 }}>
             <span style={{ overflowWrap: 'anywhere' }}>{t.texto.trim() !== '' ? t.texto : ROTULO_TIPO_TAREA[t.tipo] ?? t.tipo}</span>
@@ -54,9 +78,14 @@ export function TareasSueltas({ lectura, truncado, hoy }: { lectura: Lectura<Tar
               {t.dia ? `${cuandoRelativo(t.dia, hoy)} · ${fechaCorta(t.dia, hoy)}` : 'sin fecha'}
             </span>
           </div>
-          {t.clienteId && (
-            <div><Link href={`/correduria/cliente/${t.clienteId}`} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Abrir la ficha</Link></div>
-          )}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <button type="button" disabled={ocupada !== null} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }} onClick={() => void actuar(t.tareaId, { accion: 'hecho' })}>Hecho</button>
+            {[3, 7].map(n => (
+              <button key={n} type="button" disabled={ocupada !== null} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} onClick={() => void actuar(t.tareaId, { accion: 'posponer', dias: n })}>Posponer {n} días</button>
+            ))}
+            {t.clienteId && <Link href={`/correduria/cliente/${t.clienteId}`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Abrir la ficha</Link>}
+          </div>
+          {fallo?.id === t.tareaId && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{fallo.texto}</p>}
         </article>
       ))}
       {filas.length > limite && (
@@ -133,6 +162,7 @@ export function PerdidasPorRevisar({ lectura, conExpediente, onCambio }: {
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minWidth: 0 }}>
               <Link href={`/correduria/cliente/${f.clienteId}`} style={{ fontWeight: 700, color: 'var(--primary)', overflowWrap: 'anywhere' }}>{f.cliente ?? 'Cliente sin nombre'}</Link>
               <Badge tono="negativo">{f.titulo}</Badge>
+              <AccionesContacto telefono={f.contacto?.telefono} email={f.contacto?.email} quien={f.cliente ?? 'el cliente'} tam="md" />
             </div>
             <div style={{ fontSize: 13, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{detalle || 'póliza sin número'}</div>
             {f.nota && <div style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{f.nota}</div>}

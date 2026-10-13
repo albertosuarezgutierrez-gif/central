@@ -12,6 +12,7 @@ import {
   type BloqueMesa,
 } from '@/lib/correduria/mesa'
 import Secciones from '../Secciones'
+import AccionesContacto from '../AccionesContacto'
 import BuscadorCartera from '../BuscadorCartera'
 import BandaAvisos from './BandaAvisos'
 import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
@@ -125,7 +126,7 @@ export default function MesaClient() {
           {BLOQUES_MESA.map(b => (
             <Fragment key={b}>
               {/* Lo que no es expediente va antes de «Aparcadas» (que es lo único que va plegado). */}
-              {b === 'aparcadas' && <TareasSueltas lectura={mesa.sueltas} truncado={mesa.sueltasTruncado} hoy={hoy} />}
+              {b === 'aparcadas' && <TareasSueltas lectura={mesa.sueltas} truncado={mesa.sueltasTruncado} hoy={hoy} onCambio={cargar} />}
               {b === 'aparcadas' && <PerdidasPorRevisar lectura={mesa.perdidas} conExpediente={mesa.perdidasConExpediente} onCambio={cargar} />}
               <Bloque bloque={b} filas={mesa.bloques[b]} hoy={hoy} onCambio={cargar} />
             </Fragment>
@@ -190,6 +191,7 @@ function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa;
           {e.cliente ?? 'Cliente sin nombre'}
         </Link>
         {e.ramo && <span style={{ fontSize: 13, color: 'var(--muted)' }}>· {e.ramo}</span>}
+        <AccionesContacto telefono={e.contacto?.telefono} email={e.contacto?.email} quien={e.cliente ?? 'el cliente'} tam="md" />
         <Badge tono={TONO_CLASE[e.clase]}>{ROTULO_CLASE[e.clase]}</Badge>
         {e.delVolcado && <span title="Viene del volcado del CRM anterior" style={{ fontSize: 11, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 999, padding: '1px 8px' }}>del CRM anterior</span>}
         <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 14 }}>{e.prima === null ? '—' : eur(e.prima)}</span>

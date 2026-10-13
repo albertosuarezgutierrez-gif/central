@@ -206,3 +206,20 @@ export const ROTULO_MOTIVO_PERDIDA: Record<string, string> = {
   ya_asegurado: 'Ya estaba asegurado',
   otro: 'Otro',
 }
+
+const AMBIGUO_TAREA = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
+
+/**
+ * Resultado de `PATCH /api/correduria/oportunidad/tarea` (tarea suelta) → `null` si se guardó, o el motivo que
+ * se enseña en la fila. 409 (hito de devolución o ya cerrada) y 404 se DICEN con su motivo; un 5xx o una
+ * respuesta ilegible es «no sé si se guardó» (no se afirma ni éxito ni fallo).
+ */
+export function motivoFalloTareaSuelta(status: number, json: unknown): string | null {
+  const j = (typeof json === 'object' && json !== null ? json : {}) as { motivo?: unknown; estado?: unknown }
+  const motivo = typeof j.motivo === 'string' && j.motivo.trim() !== '' ? j.motivo.trim() : null
+  if (status >= 200 && status < 300 && j.estado !== 'error' && j.estado !== 'invalido') return null
+  if (status === 409) return `No se ha guardado: ${motivo ?? 'es un hito de devolución o ya está cerrada.'}`
+  if (status === 404) return `No se ha guardado: ${motivo ?? 'la tarea ya no existe.'}`
+  if (status >= 500 || status === 0) return AMBIGUO_TAREA
+  return `No se ha guardado: ${motivo ?? `HTTP ${status}`}`
+}

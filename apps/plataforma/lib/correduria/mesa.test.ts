@@ -134,3 +134,14 @@ test('mesa completa: reparte expedientes, sueltas y pérdidas sin perder ninguna
   assert.equal(r.sueltasTruncado, true)
   assert.equal(r.perdidas.estado === 'ok' ? r.perdidas.filas.length : -1, 2)
 })
+
+test('motivoFalloTareaSuelta: 2xx = guardado; 409/404 dicen su motivo; 5xx = ambiguo', async () => {
+  const { motivoFalloTareaSuelta: m } = await import('./mesa.ts')
+  assert.equal(m(200, { estado: 'ok' }), null)
+  assert.match(m(409, { motivo: 'hito de devolución' }) ?? '', /No se ha guardado: hito de devolución/)
+  assert.match(m(409, null) ?? '', /No se ha guardado/)
+  assert.match(m(404, {}) ?? '', /ya no existe/)
+  assert.match(m(502, null) ?? '', /No se ha podido confirmar/)
+  assert.match(m(422, { estado: 'invalido', motivo: 'Falta tareaId' }) ?? '', /Falta tareaId/)
+  assert.notEqual(m(200, { estado: 'error' }), null)
+})
