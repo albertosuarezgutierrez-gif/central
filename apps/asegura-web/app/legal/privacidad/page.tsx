@@ -220,6 +220,14 @@ const BASES = [
     base: 'Tu consentimiento, que confirmas desde el enlace que te enviamos (art. 6.1.a RGPD). Puedes retirarlo con un clic en cada aviso, y la baja vale para todos los avisos de esa dirección. El de llamarte es aparte (el móvil es opcional) y lo retiras diciéndonoslo en la llamada o por correo. Sin confirmar, la solicitud no se usa y se borra en un mes.',
   },
   {
+    finalidad: 'Atender los mensajes que nos escribes por WhatsApp y guardarlos en tu ficha para poder ayudarte',
+    base: 'Medidas precontractuales a petición tuya y ejecución del contrato de mediación (art. 6.1.b RGPD), la misma que cuando nos escribes por el formulario. El apartado 5 lo explica.',
+  },
+  {
+    finalidad: 'Leer esas conversaciones con una herramienta de inteligencia artificial para proponer tareas y notas en tu ficha',
+    base: 'La misma que la anterior, porque sirve solo para atender lo que nos has escrito. La herramienta no decide nada ni te contesta: propone, y se excluyen las conversaciones personales o de quien no quiere este tratamiento (apartado 5).',
+  },
+  {
     finalidad: 'Conservar la documentación de la mediación y atender a los organismos que la exijan',
     base: 'Obligación legal (art. 6.1.c RGPD): normativa de distribución de seguros y de prevención del blanqueo de capitales.',
   },
@@ -316,7 +324,7 @@ export default function Privacidad() {
             Este sitio no pide contraseñas, ni datos bancarios, ni datos de pago: no se contrata ni
             se cobra nada desde la web. Tampoco te perfila ni construye un historial tuyo. Si aceptas
             las cookies de medición, se recogen estadísticas de navegación agregadas —qué páginas se
-            visitan— y solo eso; el apartado 7 lo explica y ahí puedes retirar el permiso.
+            visitan— y solo eso; el apartado 8 lo explica y ahí puedes retirar el permiso.
           </p>
 
           <h3 style={h3}>Datos de salud</h3>
@@ -381,20 +389,111 @@ export default function Privacidad() {
               al aviso de cookies la guardamos nosotros mismos, en tu propio navegador.
             </li>
             <li>
+              <strong>Meta Platforms Ireland Limited</strong>, que presta el canal de WhatsApp
+              Business por el que nos escribes. Tus mensajes pasan por su plataforma, y su
+              tratamiento se rige también por sus propias condiciones.
+            </li>
+            <li>
+              <strong>Un proveedor de inteligencia artificial</strong>, que recibe el texto de las
+              conversaciones de WhatsApp ya depurado de datos personales (apartado 5), por cuenta
+              nuestra. Se usan solo proveedores que no
+              entrenan sus modelos con ese texto.
+            </li>
+            <li>
               <strong>La Administración</strong> y los tribunales, cuando una norma nos obligue a
               facilitarlos.
             </li>
           </ul>
           <p style={nota}>
-            No están previstas transferencias internacionales de datos. Si en algún momento
-            existieran, se harían con las garantías del capítulo V del RGPD y se diría en esta
-            página antes de empezar.
+            No hacemos transferencias internacionales por decisión propia. Algunos proveedores de
+            los que se citan arriba (el canal de WhatsApp y la herramienta de inteligencia
+            artificial) pueden tratar datos fuera del Espacio Económico Europeo; si es así, se
+            hace con las garantías del capítulo V del RGPD.
+          </p>
+        </section>
+
+        <section style={tarjeta} aria-labelledby="whatsapp">
+          <h2 id="whatsapp" style={h2}>
+            5. Si nos escribes por WhatsApp
+          </h2>
+          <p style={parrafo}>
+            Este apartado vale solo para las conversaciones de WhatsApp con la correduría. No afecta
+            al formulario de la web.
+          </p>
+          <h3 style={{ ...h3, marginTop: 0 }}>Qué hacemos</h3>
+          <ul style={lista}>
+            <li>
+              Recibimos los mensajes que nos escribes al WhatsApp Business de la correduría, a
+              través de la interfaz oficial de Meta. Guardamos también los que te escribe la
+              correduría desde su aplicación, para que la conversación quede completa.
+            </li>
+            <li>
+              <strong>No enviamos nada automáticamente ni te contesta ninguna inteligencia
+              artificial.</strong> Si te escribimos, lo hace una persona.
+            </li>
+            <li>
+              Guardamos tu teléfono, el nombre de tu perfil de WhatsApp (si lo tienes) y el texto
+              de los mensajes. El texto y el teléfono se guardan cifrados. Para reconocer tu número
+              sin descifrarlo, guardamos además una huella irreversible de él.
+            </li>
+            <li>
+              Si tu número ya está en nuestra cartera, la conversación se une a tu ficha. Si no,
+              queda aparte, sin crearte ficha.
+            </li>
+          </ul>
+
+          <h3 style={h3}>La herramienta de inteligencia artificial</h3>
+          <p style={parrafo}>
+            Cuando una conversación lleva un rato en silencio, una herramienta de inteligencia
+            artificial la lee y propone cambios en tu ficha: una tarea para llamarte, una nota, una
+            oportunidad de seguro o el estado de una gestión. Lo hace así:
+          </p>
+          <ul style={lista}>
+            <li>
+              Antes de enviarle nada se borran del texto los datos personales que reconoce
+              (DNI, IBAN, tarjetas, correos, teléfonos, matrículas) y tu nombre. No recibe tu
+              teléfono.
+            </li>
+            <li>
+              Solo puede proponer unas pocas acciones de una lista cerrada (crear o actualizar
+              tareas, notas, oportunidades y el estado del contacto). Cualquier otra cosa se
+              rechaza. No puede marcar una venta como ganada ni como perdida.
+            </li>
+            <li>
+              Todo lo que se anota queda registrado, con el origen indicado.
+            </li>
+          </ul>
+
+          <h3 style={h3}>Conversaciones personales y oposición</h3>
+          <p style={parrafo}>
+            Si la conversación no trata de seguros (por ejemplo, es de familia o amigos), no es un
+            asunto de la correduría: se descarta, se borra su texto y solo queda la huella del
+            número para reconocer mensajes futuros y no volver a guardarlos. Si no quieres que
+            leamos tus conversaciones con esta herramienta, díselo a la correduría o escribe a{' '}
+            <a href={`mailto:${identidad.email}`} style={enlace}>
+              {identidad.email}
+            </a>
+            : marcamos tu conversación o tu ficha y deja de pasar por ella.
+          </p>
+
+          <h3 style={h3}>Cuánto tiempo y cómo borrarlo</h3>
+          <p style={parrafoUltimo}>
+            El texto de los mensajes se conserva, por defecto, <strong>dos años</strong>. Pasado
+            ese plazo se borra; quedan solo la fecha y quién escribió. Los datos en bruto que nos
+            entrega Meta se reducen a lo imprescindible en cuanto se procesan y, si no se ha
+            podido, a los 30 días. Puedes pedir en cualquier momento que borremos una conversación
+            entera siguiendo lo que se explica en{' '}
+            <a href="#derechos" style={enlace}>
+              tus derechos
+            </a>
+            . Lo que ya se haya anotado en tu ficha se trata como el resto de tu cartera
+            (apartado 6).
           </p>
         </section>
 
         <section style={tarjeta} aria-labelledby="conservacion">
           <h2 id="conservacion" style={h2}>
-            5. Cuánto tiempo los guardamos
+            6. Cuánto tiempo los guardamos
           </h2>
           <ul style={lista}>
             <li>
@@ -405,6 +504,9 @@ export default function Privacidad() {
             <li>
               Si acabas siendo cliente, mientras dure la relación de mediación y después durante los
               plazos de prescripción de las responsabilidades que puedan derivarse de ella.
+            </li>
+            <li>
+              El texto de tus conversaciones de WhatsApp, dos años desde cada mensaje (apartado 5).
             </li>
             <li>
               La documentación de la mediación, durante los plazos que exigen la normativa de
@@ -420,7 +522,7 @@ export default function Privacidad() {
 
         <section style={tarjeta} aria-labelledby="derechos">
           <h2 id="derechos" style={h2}>
-            6. Tus derechos
+            7. Tus derechos
           </h2>
           <p style={parrafo}>
             Los artículos 15 a 22 del RGPD te dan estos derechos sobre tus datos:
@@ -448,8 +550,10 @@ export default function Privacidad() {
               situación particular.
             </li>
             <li>
-              <strong>No ser objeto de decisiones automatizadas</strong> (art. 22). No las hacemos:
-              quien analiza y recomienda es una persona.
+              <strong>No ser objeto de decisiones automatizadas</strong> (art. 22). Ninguna decisión
+              sobre ti (aceptarte, rechazarte, fijar un precio o contratar) la toma una máquina: la
+              herramienta de inteligencia artificial del apartado 5 solo anota tareas y notas
+              internas, y quien decide y contacta contigo es una persona.
             </li>
             <li>
               <strong>Retirar el consentimiento</strong> en cualquier momento, cuando el tratamiento
@@ -462,7 +566,8 @@ export default function Privacidad() {
               {identidad.email}
             </a>{' '}
             o por correo postal a {identidad.domicilio}, indicando qué derecho ejerces y acreditando
-            tu identidad. Contestamos en el plazo de un mes.
+            tu identidad. Contestamos en el plazo de un mes. Si tu petición es sobre una conversación
+            de WhatsApp, indica el teléfono desde el que nos escribiste.
           </p>
           <p style={parrafoUltimo}>
             Si no te contestamos o no estás conforme con la respuesta, puedes reclamar ante la{' '}
@@ -476,7 +581,7 @@ export default function Privacidad() {
 
         <section style={tarjeta} aria-labelledby="cookies">
           <h2 id="cookies" style={h2}>
-            7. Cookies
+            8. Cookies
           </h2>
           <p style={parrafo}>
             Este sitio usa <strong>cookies técnicas imprescindibles</strong> para que las páginas se
@@ -503,7 +608,7 @@ export default function Privacidad() {
 
         <section style={tarjeta} aria-labelledby="cambios">
           <h2 id="cambios" style={h2}>
-            8. Cambios en esta política
+            9. Cambios en esta política
           </h2>
           <p style={parrafoUltimo}>
             Si cambia lo que hacemos con tus datos, cambia esta página y sube su número de versión,
