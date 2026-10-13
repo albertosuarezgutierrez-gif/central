@@ -113,9 +113,9 @@ const ctxPulsar = {
   },
 }
 
-test('Moto y Turismos siguen inactivos (flags separados, apagados)', () => {
+test('Flags separados: Turismos apagado, Moto encendido (primera prueba real, Alberto 13/10/2026)', () => {
   assert.equal(AUTO_ACTIVO, false)
-  assert.equal(MOTO_ACTIVO, false)
+  assert.equal(MOTO_ACTIVO, true)
 })
 
 test('valorOpcionExacta / valorClaseMoto: exactas o nada (nunca la parecida)', () => {
