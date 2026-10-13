@@ -17,6 +17,7 @@ Resultado: login + datos básicos + modelo OK. El catálogo Allianz agrupa «F 8
 Defectos: (1) `reclamarSiguiente` cuenta `en_curso` sin mirar lease vencido → un trabajo colgado bloquea la concurrencia; (2) el barrido solo corre en el cron de renovaciones (8:23/11:23/14:23 L-V); (3) la bandeja no permite elegir versión y reintentar el mismo trabajo; (4) encolar no deduplica (Claude in Chrome lanzó duplicados al no ver la respuesta).
 Pendiente acordado: que plataforma descifre fecha de nacimiento/carné del cliente y rellene el riesgo en servidor (`agente-architect`).
 
+**(13/10/2026)** — Aviso «Seguimiento de sustituciones» (Grupo ASegura) reescrito. Caso real (póliza nueva `86d3f0c3`, Occident → Allianz): CIMA ya trajo un RECIBO cobrado de la nueva (03/10), pero no su ficha POL. La vieja sigue EV en CIMA, sin anulación → posible DOBLE SEGURO. Ingesta sana: los 10 ficheros del portal 07-12/10 están `confirmed`, heartbeat 13/10. Ahora la consulta (`apps/asegura/lib/cartera-sustituciones.ts`) devuelve `nuevaConfirmadaCima`/`nuevaReciboCima` (`poliza_recibos.origen='cima'` cobrado)/`viejaEnVigorCima` (tres estados). La fila entra mientras falte la ficha nueva O la vieja siga en vigor. `clasificarSustitucion()` (plataforma) pone primero «⚠️ Confirma en <cía> la anulación». Hoy salen 4 filas (3 nuevas: vieja aún EV con nueva confirmada). Pendiente Alberto/Manuel: confirmar anulación en el portal de Occident. El archivo CIMA de Drive solo llega al 24/09.
 **(13/10/2026)** — Correduría: la pantalla completa `cliente/[id]/vida-nuevo?oportunidad=` ya NO asegura al tomador. La ruta asegura `vida-nuevo` solo armaba el asegurado distinto con `datosDelRiesgo` (embebido); ahora `prepararVariante` usa `aseguradoVidaDeFiguras` (compartida con el embebido; identidad por ficha, mismas guardas: >1 asegurado, empresa, fecha imposible → corta antes de pagar). Helper puro `aseguradoDistintoDelTomador` + cepos en `asegurados-salud-vida.test.ts` (vistos en rojo). Pendiente: probar con una cotización real (0,50€, OK de Alberto).
 
 **(13/10/2026)** — Correduría: comparador de variantes en DECESOS/SALUD/VIDA (`diferenciasVariante` empareja asegurados por identidad ficha→DNI→nombre, altas/bajas explícitas, ambiguo = «no se puede comparar»; vida: asegurado, capital, profesión, fumador). Foto por variante = solo cliente_ids en `tarificaciones.figuras.asegurados` (sin DNI, sin SQL); UI con `textoDiferencia` («sin dato» ≠ 0).
@@ -29,7 +30,7 @@ Pendiente: salud embebido, comparador de variantes en decesos, códigos DGS de l
 Alberto pidió medir «rebote en soporte histórico con volumen»: preregistrada como H16 (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`, commit d34112a) y medida sobre el retrovisor mensual → INCONCLUSA (2011-18 n=101 <200; 2019-26 +1,66 pp <2 pp).
 El control sin soporte rinde igual o más → el soporte no aporta; no se cabla nada.
 
-**(13/10/2026)** — Correduría «Mi mesa» (PR #4538, rama `claude/tasks-opportunities-structure-ezhuxl`): `/correduria/mesa` lista expedientes (= `seguros.oportunidades`, sin tabla nueva) en Hoy/Abiertas/Esperando/Rescates/Aparcadas vía `GET /api/operador/expedientes`; aparcar crea «Retomar» en la fecha de vuelta (antes no volvía), posponer N días, rescate perdido → aparcado (45 días antes del aniversario), columna `notas` (migración aplicada). Decisión de Alberto: muy simplificado, sin registrar llamadas, siniestros fuera. Pérdidas de cartera: sustitución con misma matrícula hasta 120 días (caso Mapfre→Allianz 5802JMJ) y bajas de >12 meses ocultas. BD: cerradas con marca 51 `gestiones` heredadas (42 `asegura_app:ges2` + 9 `loo-916`); `public.gestiones` de Supabase_asegura es copia PARADA, la fuente es `seguros.gestiones` de central.
+**(13/10/2026)** — Correduría «Mi mesa» (PR #4538, rama `claude/tasks-opportunities-structure-ezhuxl`): `/correduria/mesa` lista expedientes (= `seguros.oportunidades`, sin tabla nueva) en Hoy/Abiertas/Esperando/Rescates/Aparcadas vía `GET /api/operador/expedientes`; aparcar crea «Retomar» en la fecha de vuelta (antes no volvía), posponer N días, rescate perdido → aparcado (45 días antes del aniversario), columna `notas` (migración aplicada). Decisión de Alberto: muy simplificado, sin registrar llamadas, siniestros fuera. Pérdidas de cartera: sustitución con misma matrícula hasta 120 días (caso Mapfre→Allianz [matrícula retirada]) y bajas de >12 meses ocultas. BD: cerradas con marca 51 `gestiones` heredadas (42 `asegura_app:ges2` + 9 `loo-916`); `public.gestiones` de Supabase_asegura es copia PARADA, la fuente es `seguros.gestiones` de central.
 
 **(13/10/2026)** — Correduría: cotizador de MOTO embebido igualado a auto (historial declarado arriba manda, resúmenes «Editar arriba», «Verificación antes de pedir precio» con `ramo: 'moto'`; piezas en `auto-nuevo/piezas-embebido.tsx`).
 «Parrilla de precios» en el riesgo: Avant2 (última tarificación ya pagada, solo lectura, 0€) vs bot por código DGS, «cuadra» si |dif| ≤ 2%. Hoy sin solapamiento: los bots solo cotizan comunidades.
@@ -89,7 +90,7 @@ Decisiones: JEV (TypeSafe) solo PREPARE como recuperación de selectores, siempr
 **(08/10/2026)** — Correduría · duplicados: #4183 mergeado; aviso de duplicados unificado: se queda el de main (`polizasDuplicadas` en `correduria-ingesta`, `correduria.ingesta`).
 Retirado el vigía duplicado del cron `correduria-sustituciones` (`duplicados-aviso.ts`, catálogo `correduria.duplicados-nuevos`, lectura/escritura de `duplicados/vistos` en el puerto). La ruta `apps/asegura/.../duplicados/vistos` queda sin consumidor (no borrada).
 Borrados después: ruta `duplicados/vistos`, `cartera-duplicados-vistos.ts`, `duplicados-vistos.ts` (+test) de asegura y `duplicadosAsegura` del puerto de plataforma.
-Corrige el 07/10: la 0107 de asegura es índice de BÚSQUEDA (no único, asegura#879), nada la bloquea; 9 grupos aparentes, 0 fusiones (2 = decide Alberto por tomador vigente). asegura#884: la ingesta ya no reasigna `cliente_id` (evento `cima_poliza_cliente_discrepante`) + override `proxy-addr` 2.0.8 (critical). Aplicado con OK de Alberto: bandeja de revisión sembrada (28 casos: 5 fichas + 23 «PENDIENTE») y Mapfre 0005919201037 marcada «no duplicado». Cerrado después: Mapfre 5919201223 y Generali G UV 410010322 → `cancelada` + `baja_verificada_at` (Alberto confirma anuladas; 4 fichas, sin fusionar). S0H152914 SÍ existe como «S0 H15 2914» (sin DGS, 2 fichas legacy pol/pol2:9600, clientes distintos, vencida 22/03/2015): la de pol2 pasaba por «activa» → `vencida` con OK de Alberto + audit `poliza_estado_corregido_manual`. Ojo: buscar números siempre normalizados (sin espacios). Las «13 renovaciones renumeradas» eran riesgos distintos vigentes: 0 pares reales, nada sembrado. asegura#885: tomador sin ficha + póliza existente → no crea cliente huérfano.
+Corrige el 07/10: la 0107 de asegura es índice de BÚSQUEDA (no único, asegura#879), nada la bloquea; 9 grupos aparentes, 0 fusiones (2 = decide Alberto por tomador vigente). asegura#884: la ingesta ya no reasigna `cliente_id` (evento `cima_poliza_cliente_discrepante`) + override `proxy-addr` 2.0.8 (critical). Aplicado con OK de Alberto: bandeja de revisión sembrada (28 casos: 5 fichas + 23 «PENDIENTE») y Mapfre [nº de póliza retirado] marcada «no duplicado». Cerrado después: Mapfre [nº de póliza retirado] y [nº de póliza retirado] → `cancelada` + `baja_verificada_at` (Alberto confirma anuladas; 4 fichas, sin fusionar). S0H152914 SÍ existe como «S0 H15 2914» (sin DGS, 2 fichas legacy pol/pol2:9600, clientes distintos, vencida 22/03/2015): la de pol2 pasaba por «activa» → `vencida` con OK de Alberto + audit `poliza_estado_corregido_manual`. Ojo: buscar números siempre normalizados (sin espacios). Las «13 renovaciones renumeradas» eran riesgos distintos vigentes: 0 pares reales, nada sembrado. asegura#885: tomador sin ficha + póliza existente → no crea cliente huérfano.
 
 **(07/10/2026)** — Correduría · duplicados: asegura#875 mergeado (la ingesta CIMA adopta la ficha viva en vez de crear un duplicado). La migración 0107 (índice único) NO está aplicada: hay 8 grupos que la violarían, 4 de clientes distintos.
 #4183: vigía de duplicados, bandeja `/correduria/revision`, avisos CIMA↔ficha diagnosticables (`cima_sincro_resumen`) y aviso de duplicados nuevos; al fusionar con main se reutiliza SU criterio (`agruparDuplicadas`, señal `polizasDuplicadas`) y se retira `esNumeroPolizaComodin`/`duplicadosVivos`.
@@ -122,7 +123,7 @@ Pendiente: validar umbrales de infraseguro (1.100/1.400/1.800 €/m²), revisar 
 Pendiente: revisar `AI_GATEWAY_LIMITE_MENSUAL` frente a 5€/día.
 
 **(06/10/2026)** — Correduría · ofertas multicompañía en la oportunidad: #4305 (F1-F4: `oportunidad_oferta`, extracción IA con evidencia, comparador determinista, presupuesto `origen='ofertas'`, PDF con marca y portal), #4323 (menú «+ Nueva oportunidad → Con ofertas de compañías») y #4326 (12 ramos nuevos: empresas, rc_profesional, dyo, flotas, transporte_mercancias, ciberriesgos, decenal, embarcaciones, mascotas, impago_alquiler, viaje, caucion). Enum `seguros.tipo_seguro` = 23 valores, aplicado por Alberto vía Chrome (IRREVERSIBLE); guardián `ramos-alineacion.test.ts` + copia en `asegura-portal/prisma`. Empresas usa coberturas de comercio; el resto, genérico.
-Pendiente: piloto Néstor Serrano / Pl. Blasco de Garay 5 (Santa Lucía actual + Avant2 → Generar presupuesto, NO enviar); Alberto revisa el texto de aceptación 'ofertas'; luego F5-F7 y bots por compañía (andamiaje #4310 ya en main).
+Pendiente: piloto cliente C53 / [dirección retirada] (Santa Lucía actual + Avant2 → Generar presupuesto, NO enviar); Alberto revisa el texto de aceptación 'ofertas'; luego F5-F7 y bots por compañía (andamiaje #4310 ya en main).
 **(06/10/2026)** — Tarificador RPA (Allianz ePAC Comunidades, solo cotiza) EN PRODUCCIÓN: #4310 (andamiaje, Fly app asegura-tarificador, imagen v20261005) y #4327 (botón «Precio Allianz (bot)» en /correduria/cliente/[id], GET operador trabajo/pdf, presupuesto por póliza ignora canal rpa). SQL 2026-10-05_tarificador_rpa.sql aplicado. Secretos: ePAC + TARIFICADOR_WORKER_SECRET en fly secrets; Vercel central-asegura con WORKER_SECRET, FLY_API_TOKEN y TARIFICADOR_RPA_ACTIVO=1 (encendido para 1.ª prueba, apagar después). Pendiente: 1.ª prueba (precio bot vs ePAC manual), catálogo tipoVivienda/uso/listaPropietarios, cron barrerTarificadorRpa, secreto GitHub FLY_API_TOKEN_TARIFICADOR caducado, token worker por trabajo (HMAC).
 **(06/10/2026)** — CIMA/Mapfre: Lección recogida de incidente 05/10. POL 05/10 con 47 pólizas, 25 AN (bajas reales hechas hasta semanas antes: renovación anulada 15/07, recibos anulados 25/08) llegaron TODAS juntas 05/10. Retraso es de compañía (CIMA), no del pipeline. POL EIAC trae DatosAnulacion → polizas.datos_especificos.anulacion; motivos C0058: IM impago, EX otra entidad/venta, SI siniestralidad. **`baja_motivo` es del corredor, no del CIMA.** Vigía ampliado (#4328, mergeado 06/10): motivo y fecha real en aviso fugas, agrupado por cliente, retención según motivo, renovación anulada ≠ «no llega», aviso en bloque (≥30% y ≥10), mediana retraso/compañía. Reclamación a Mapfre innecesaria: el POL 05/10 trajo las 10 (8 renovadas, 2 AN); falta comprobar que Autos/No Vida tienen «Renovación pólizas» diaria.
 **(06/10/2026)** — RRHH: acceso del empleado por EMAIL + CÓDIGO en `/e/entrar` (OTP HMAC 6 díg./10 min/5 intentos, topes email+IP, sin enumerar, multi-empresa, PIN después) y sesión de empleado 90 d revocable (`empleados.sesion_version`, «Cerrar sesiones»). OTP generalizado a `@central/core-identity/codigo-otp`. Rama `claude/gifted-hopper-21ntem`, sin commit/PR aún.
@@ -140,9 +141,9 @@ Coste Avant2 real: 14,50€ (sep+oct), casi todo pruebas en prod → usar sandbo
 
 **(05/10/2026)** — agente-facturas/forma-pago: aviso semanal clasifica por forma de pago (transferencia/automático/plataforma/desconocida) y botones de pago solo para transferencias. Conciliación arreglada: asignación global 1:1 (antes 3 Anthropic de 170€ perdían por cargo compartido); USD ±15% tolerancia (no ±3%). Pendientes: migración `facturas_proveedor.divisa`, feeds PSD2 parados (Kutxabank 31/07, N26 03/07, Pilar fin junio), 4 cargos Anthropic 170€ sin factura, 19 duplicados gastos, 60 gastos sin negocio, 82 sin IVA.
 
-**(05/10/2026)** — correduría, tarificación: (1) Mapfre guarda el nº de póliza con sufijo de versión («4840402030 01») y SINCO no lo encontraba: helper `polizaAnteriorParaTarificar` (module-seguros, DGS C0058) quita el « NN» al armar `previousInsurance.policyNumber` (auto y moto, imputado y manual); el desplegable muestra el nº tal cual se envía. (2) Generali COCHE iba con descuento 0 %: `opcionesParaReRate` aplica `commercialDiscountNumber`=50 solo si el vendor trae ese id (id en auto supuesto por moto/hogar; confirmar en el primer ReRate real, ver CODEOSCOPIC-PENDIENTES).
+**(05/10/2026)** — correduría, tarificación: (1) Mapfre guarda el nº de póliza con sufijo de versión («[nº de póliza retirado]») y SINCO no lo encontraba: helper `polizaAnteriorParaTarificar` (module-seguros, DGS C0058) quita el « NN» al armar `previousInsurance.policyNumber` (auto y moto, imputado y manual); el desplegable muestra el nº tal cual se envía. (2) Generali COCHE iba con descuento 0 %: `opcionesParaReRate` aplica `commercialDiscountNumber`=50 solo si el vendor trae ese id (id en auto supuesto por moto/hogar; confirmar en el primer ReRate real, ver CODEOSCOPIC-PENDIENTES).
 
-**(05/10/2026)** — correduría, bloque identidad del tomador: completar apellidos («Slava» → «Slava Antoli», o vacío → algo) ya NO pide motivo ni DNI (helper puro `completaApellidos`/`edicionSoloCompletaApellidos` en `module-seguros/cliente-edicion.ts`, usado por plataforma y asegura; historial «apellidos completados sin documento: antes → después»). Cambiar/quitar palabras sí lo pide. Cuadro ámbar solo si lo editado lo requiere, foco al motivo, 3 motivos rápidos (decisión: el DNI se cambia sin pedir documento pero con motivo, 1 clic). «Falta en la ficha: segundo apellido», «persona física». `partirApellidos` pega partículas (de/del/la…).
+**(05/10/2026)** — correduría, bloque identidad del tomador: completar apellidos («nombre incompleto» → «nombre y apellido», o vacío → algo) ya NO pide motivo ni DNI (helper puro `completaApellidos`/`edicionSoloCompletaApellidos` en `module-seguros/cliente-edicion.ts`, usado por plataforma y asegura; historial «apellidos completados sin documento: antes → después»). Cambiar/quitar palabras sí lo pide. Cuadro ámbar solo si lo editado lo requiere, foco al motivo, 3 motivos rápidos (decisión: el DNI se cambia sin pedir documento pero con motivo, 1 clic). «Falta en la ficha: segundo apellido», «persona física». `partirApellidos` pega partículas (de/del/la…).
 
 **(05/10/2026)** — correduría: presupuesto auto edita la ficha in-page (panel); borrador también en servidor (`/api/*/borrador-presupuesto`, gana el más reciente y SUSTITUYE al local);
 identidad editable con motivo del corredor (auditado) o por documento/póliza con DNI coincidente (portal nunca); propuesta de apellidos desde la póliza;
@@ -171,8 +172,8 @@ Rutina cima-guardia (trig_01GHN3678GAAgcNuLYrZUwu3, diaria 8:48 Madrid): creada 
 Pendiente: reprocesar 181 ficheros CIMA anteriores al 03/10 (zips en Drive, lote cifrado con CIMA_LOTE_CLAVE, orden por fecha del dato); comentario de columna 0106 y domicilio (DDL, por el gate); confirmar AD con SIN real; borrado RGPD no limpia siniestros.
 
 **(04/10/2026)** — asegura#879 (0108 poliza_no_duplicado, con CASCADE) y central#4221 (vigía de duplicadas + botón «No es duplicado») mergeados. 0108 aplicada en prod (audit 1f45b1a2) + REVOKE UPDATE (8b7e4aad).
-Pares marcados «no duplicado»: 32742526, 35374290, 8414300028 y 36088166.
-Fusiones del lote duplicadas-revision-2026-10-04 (evento 2f5cafd9): UVG410081428 (C0072; clientes distintos, manda el tomador de CIMA; combustible volcado no heredado porque contradice a CIMA), 3021500279880 y 3021500306694 (C0613). Quedan 0 grupos.
+Pares marcados «no duplicado»: [nº de póliza retirado], [nº de póliza retirado], [nº de póliza retirado] y [nº de póliza retirado].
+Fusiones del lote duplicadas-revision-2026-10-04 (evento 2f5cafd9): [nº de póliza retirado] (C0072; clientes distintos, manda el tomador de CIMA; combustible volcado no heredado porque contradice a CIMA), [nº de póliza retirado] y [nº de póliza retirado] (C0613). Quedan 0 grupos.
 central#4228: vigía ya no da «objetos en revisión» de ficheros que el reproceso de cuarentena dejó todo guardado (CUARENTENA_SELLO_FIABLE_DESDE). Alerta C0109 REC 20261003 era falsa.
 Pendiente: FK compuesta correduría en poliza_no_duplicado; ingesta no quita ceros; reclamar a Mapfre 10 renovaciones desde 05/06.
 
@@ -182,16 +183,16 @@ Pendiente: FK compuesta correduría en poliza_no_duplicado; ingesta no quita cer
 **(03/10/2026, early/late check-in y maletas)** — Compuerta: early/late/maletas NUNCA auto-envío, siempre propuesta por Telegram. Semáforo puro `cambio-horario.ts` (rojo/amarillo/verde; dato desconocido = amarillo); botones `hsp_chsi`/`hsp_chhasta`/`hsp_chno`/`hsp_chlimp`.
 Política Alberto: GRATIS (también más allá de las 12:00, `salida.ts`: se consulta y confirma según limpieza/calendario) y SIN pedir reseña (Booking/Airbnb prohíben incentivar). «No» en rojo ofrece consignas de `CONSIGNA_POR_ZONA`.
 Pendiente: la nota de 🧹 Consultar limpieza no persiste (sin columna); bloqueos manuales del calendario quedan fuera de `incomes`, el semáforo no los ve.
-PR #4212 MERGEADO (03/10). Caso origen: Massimo (reserva 154375571) avisado por Alberto fuera del log; el 05/09 la IA le negó entrar antes con la noche previa vacía (hoy sería 🟢).
+PR #4212 MERGEADO (03/10). Caso origen: huésped H1 (reserva 154375571) avisado por Alberto fuera del log; el 05/09 la IA le negó entrar antes con la noche previa vacía (hoy sería 🟢).
 
 **(03/10/2026, tope Avant2 €)** — PR #4192 MERGEADO (fase 1): tope en euros/mes de Avant2 — aviso Telegram a 60 €, bloqueo a 70 €, +30 € por botón `cas_tope:` (idempotente); cron plataforma `correduria-tope-avant2` cada 5 min recoge los avisos por el puerto `/api/operador/codeoscopic/tope`. Fail-closed: sin leer el gasto no se llama a Avant2. Migración `2026-10-03b_codeoscopic_tope_euros.sql` APLICADA en prod (tabla `seguros.codeoscopic_tope_evento`, grants a `prisma_seguros` verificados). ReRate/Submit/límites cuentan a 0,50 € mientras no se confirme su coste. La lectura del gasto vive en `consumo.ts` (`gastadoMesCents`): el guardián `regression-simulacion-codeoscopic` solo deja tocar `codeoscopic_consumo` ahí.
 
-**(04/10/2026, CIMA/Allianz C0109 cierre)** — siniestros y CEF también toleran cero inicial (DGS_TOLERA_CEROS en poliza-matching; en CEF solo índice de pólizas, no IdRecibo). Fusionados 13 pares C0109 (lotes `allianz-c0109-cero-inicial-2026-10` = 11 y `allianz-c0109-decision-alberto-2026-10` = 37687651 + 37620653), vía poliza_merge_log + tombstone; CIMA manda (8 pasan a no activas). No fusionados por decisión de Alberto: 32742526 y 35374290 (pólizas distintas), 36088166 (matrículas distintas, CIMA no lo trae). Las absorbidas conservan estado pero todas las lecturas de cartera filtran merged_into_poliza_id. Quedan grupos vivos con mismo número en C0058 (4), C0072 (2), C0613 (2), C0468 (1) sin revisar. En curso: marcador «no duplicado» (migración pendiente de revisión de Alberto) + señal de duplicados en el vigía de ingesta.
+**(04/10/2026, CIMA/Allianz C0109 cierre)** — siniestros y CEF también toleran cero inicial (DGS_TOLERA_CEROS en poliza-matching; en CEF solo índice de pólizas, no IdRecibo). Fusionados 13 pares C0109 (lotes `allianz-c0109-cero-inicial-2026-10` = 11 y `allianz-c0109-decision-alberto-2026-10` = [nº de póliza retirado] + [nº de póliza retirado]), vía poliza_merge_log + tombstone; CIMA manda (8 pasan a no activas). No fusionados por decisión de Alberto: [nº de póliza retirado] y [nº de póliza retirado] (pólizas distintas), [nº de póliza retirado] (matrículas distintas, CIMA no lo trae). Las absorbidas conservan estado pero todas las lecturas de cartera filtran merged_into_poliza_id. Quedan grupos vivos con mismo número en C0058 (4), C0072 (2), C0613 (2), C0468 (1) sin revisar. En curso: marcador «no duplicado» (migración pendiente de revisión de Alberto) + señal de duplicados en el vigía de ingesta.
 
-**(03/10/2026, CIMA cuarentena REC)** — Allianz C0109: REC 261 (2 recibos) del 03/10 atascados en cuarentena con `estado_recibo_desconocido`. Causa: `mapReciboSituacion` en `eiac-rec-mapper.ts` sin los códigos LI (Liquidado) ni RE (Rehabilitado) de EIAC §13.3.33. Fix en asegura#876 (draft): LI→cobrado, RE→pendiente, reason trae `estado_recibo_desconocido:<COD>`. Hecho: asegura#876 mergeado; reproceso dejó 1 recibo en sin_poliza_en_cartera por cero inicial (061048939 vs 61048939). asegura#877: matcher de recibos C0109 tolera ceros (numeroSinCerosIzquierda, exacto gana, ≥2 → unicaCarteraViva/ambiguo) + reprocesar-cuarentena ya no sella con objetos sin guardar (ficheroTotalmenteResuelto). Rescate: reprocesado_at=NULL en la fila + reproceso → 2/2 recibos en cartera. Pendiente: fusionar 15 pares duplicados C0109 (con/sin cero); mismo hueco de ceros en siniestro-matching y cef-matching.
+**(03/10/2026, CIMA cuarentena REC)** — Allianz C0109: REC 261 (2 recibos) del 03/10 atascados en cuarentena con `estado_recibo_desconocido`. Causa: `mapReciboSituacion` en `eiac-rec-mapper.ts` sin los códigos LI (Liquidado) ni RE (Rehabilitado) de EIAC §13.3.33. Fix en asegura#876 (draft): LI→cobrado, RE→pendiente, reason trae `estado_recibo_desconocido:<COD>`. Hecho: asegura#876 mergeado; reproceso dejó 1 recibo en sin_poliza_en_cartera por cero inicial ([nº de póliza retirado] vs [nº de póliza retirado]). asegura#877: matcher de recibos C0109 tolera ceros (numeroSinCerosIzquierda, exacto gana, ≥2 → unicaCarteraViva/ambiguo) + reprocesar-cuarentena ya no sella con objetos sin guardar (ficheroTotalmenteResuelto). Rescate: reprocesado_at=NULL en la fila + reproceso → 2/2 recibos en cartera. Pendiente: fusionar 15 pares duplicados C0109 (con/sin cero); mismo hueco de ceros en siniestro-matching y cef-matching.
 
 **(03/10/2026, bonificación vehículo nuevo)** — 🚗 Error descubierto: auto/moto-nuevo descartaban `seguroAnterior` (histórico es del CONDUCTOR, no del vehículo). Decisiones Alberto: (a) elegir póliza a imputar (turismo > moto, efecto antiguo sin siniestros, override corredor); (b) años sin siniestros desconocidos → PRESUPUESTO tarifica máximo «bonusSupuesto», EMISIÓN bloqueada sin verificar (art. 10 LCS); (c) leer-documento completa nº póliza/matrícula/canal/cesión/modalidad. PR1 (agente-architect, rama ccr-7156a8bc-i5qt5c): imputación+bloqueo+extracción. PR2 pendiente (tras PR1): aviso 45d vencimientos competencia, plurianuales RCI como objetivo, «pagas X→Y» anualizado (sin ahorro si no aseguro), pack coche+moto opcional (interruptor off). Codeoscopic: 0,50€/riesgo, 90d vista, Allianz vinculación (insuredFamilyInAllianz, dtoVentaCruzada).
-**(03/10/2026, figuras de póliza: caso Qover)** — Fermín (conductor principal, persona de contacto de la SL tomadora) quedaba con el nombre entero en `nombre` y solo la fecha. Ahora: nombre partido (`partirNombre`; el lead antiguo sigue reutilizándose, `leadSinDniReutilizable` compara nombre+apellidos — guardián visto en rojo); domicilio por figura (lector `domicilio*` por figura; `huecosDomicilio`+`escribirHuecos` en `ficha-desde-poliza.ts`, UNA sentencia bloqueada, compartida con el tomador).
+**(03/10/2026, figuras de póliza: caso Qover)** — cliente C63 (conductor principal, persona de contacto de la SL tomadora) quedaba con el nombre entero en `nombre` y solo la fecha. Ahora: nombre partido (`partirNombre`; el lead antiguo sigue reutilizándose, `leadSinDniReutilizable` compara nombre+apellidos — guardián visto en rojo); domicilio por figura (lector `domicilio*` por figura; `huecosDomicilio`+`escribirHuecos` en `ficha-desde-poliza.ts`, UNA sentencia bloqueada, compartida con el tomador).
 Persona de contacto (`personaContactoTomador`, solo empresa; `esPersonaDeContacto`: nombre exacto, o contenido si el corto tiene 3+ palabras —el Qover «Fermin Bueno» ya NO casa—, una sola persona): recibe teléfono/email del tomador vía `anadirContacto`, `nuncaPrincipal` SIEMPRE y `forzar` solo si la otra ficha es SOLO el tomador (`contactoSoloDelTomador`); relación «Persona de contacto · Conductor habitual (póliza N)».
 Figura con rol sin nombre (`figurasSinNombre`): sin ficha, línea `conductor_adicional_sin_nombre` (etc.) sin repetir, cuenta para joven/novel. Conductor sin DNI o sin carné → tarea `gestiones` «Pedir DNI y carné del conductor habitual/ocasional» (cliente_id = su ficha, fecha = la de la llamada, una por persona sin duplicar). `figuras[].campos` (booleanos) → «Tiene/Falta» en `AvisosLectura`. maxTokens 3000. Sin SQL nuevo. Prompt del lector sin probar contra el PDF real.
 **(03/10/2026)** — ✂️ Segunda tanda de recorte de CLAUDE.md por tokens (patrón del 30/09): `apps/plataforma` 265→16 KB, `apps/asegura-portal` 197→20 KB, `apps/ialimp` 68→17 KB (~120k tokens menos por sesión que las carga). Íntegros en `docs/claude-md/*-completo-2026-10-03.md` (Grep, no leer enteros). Nuevo cepo `test/regression-claude-md-tamano.test.ts`: ningún CLAUDE.md (raíz + apps/*) pasa de 24 KB — visto rojo restaurando el original de plataforma (259 KB). Ningún test leía el contenido de esos tres ficheros.
@@ -202,7 +203,7 @@ Línea «Hay un conductor joven/novel: revisar antes de tarificar» (accion `con
 
 **(03/10/2026, SEO)** — 🔎 Pasada SEO mensual (OpenSEO, rutina trig_015R…): keywords en seo-asegura/references/keywords.md §5; mejora CTR de 2 artículos del blog (preaviso 363 impr/0 clics → título más específico; como-dar-de-baja 202 impr/1 clic → descripción más operativa). Pendiente de Alberto: marcar generate_lead como evento clave en GA4, gestionar reseñas (1), 301 de /mejoramos-tu-seguro/.
 
-**(03/10/2026)** — 🧬 Duplicados vivos: fusionada la Mapfre 236788463 (lote `mapfre-carga-2026-previa-manuales`); lote `doble-import-intranet-2026-10` (30 parejas, estado no tocado).
+**(03/10/2026)** — 🧬 Duplicados vivos: fusionada la Mapfre [nº de póliza retirado] (lote `mapfre-carga-2026-previa-manuales`); lote `doble-import-intranet-2026-10` (30 parejas, estado no tocado).
 Nuevo: vigía `/api/operador/duplicados/vivos` (tras el merge con main usa el criterio único `duplicadasCartera`/`agruparDuplicadas`, sin SQL ni comodines propios) y bandeja `/correduria/revision`
 (casos en `operational_events`: `poliza_revision_manual` / `poliza_revision_resuelta`; «misma» NO fusiona, la fusión va por CTE con OK de Alberto). Sin commitear al cierre.
 Pendiente: las 309 pólizas activas con el vencimiento pasado; la SIEMBRA de casos en la bandeja (otra sesión, con OK de Alberto).
@@ -214,13 +215,13 @@ Vigía diario de duplicados NUEVOS en `correduria-sustituciones` (`gruposDuplica
 DDL 0106 aplicado en prod (`seguros.`) el 03/10 tras CI verde y OK de Alberto. Audit en operational_events `e9eb789b`. El portal no tiene grant sobre la columna.
 central#4176: «Más datos de CIMA» por recibo en la ficha de póliza (solo operador). El Monitor muestra los descartados aparte. Aviso «posible doble seguro» en el cron `correduria-sustituciones`: la póliza vieja sigue viva y la nueva está vigente; tolerancia 30 días. Guardián `test/regression-portal-sin-cimaextra.test.ts`.
 Mapfre: fusionadas 41 parejas duplicadas (volcado + C0058), 39 supervivientes, lote `mapfre-carga-2026-previa` en `poliza_merge_log`. ⚠️ En 24 parejas la superviviente CIMA está CANCELADA, así que esas pólizas ya no salen activas. Quedan 7 grupos más el comodín «PENDIENTE» para revisar a mano.
-Pendiente: comprobar la carga masiva Mapfre 2026 cuando llegue (cuarentena, las 10 renovaciones EV, cimaExtra); aparcados CIMA_LOTE_CLAVE y el reproceso de los 46 SIN / archivo de Drive; Alberto pide a Occident la anulación de GPAFS0900547 (doble seguro con 61048939).
+Pendiente: comprobar la carga masiva Mapfre 2026 cuando llegue (cuarentena, las 10 renovaciones EV, cimaExtra); aparcados CIMA_LOTE_CLAVE y el reproceso de los 46 SIN / archivo de Drive; Alberto pide a Occident la anulación de [nº de póliza retirado] (doble seguro con [nº de póliza retirado]).
 
 **(03/10/2026, cierre CIMA)** — 🗄️ Auditoría #869/#870/#871/#872: situación PR/ES oficial, fechas centinela null, huecos de valor guardados. Rescate (ingerir-manual/cima-rescate-lote) SIN confirma a TIREA; reprocesar-cuarentena sigue confirmando; SIN viejo solo rellena (coalesce). Migración 0105 prod: cima_cobertura_campos 4916→2636, medidor 445/933 sin leer. Drive (Q1–Q2): 103 POL/REC/CEF, 5 pólizas+10 REC recortadas. CimaExtra (resto de campos, PII denegada por subárbol+valor tras 2 revisiones) mergeado asegura#873; pintado en /correduria → bloque «Más datos de CIMA» de la ficha de póliza (#4164, solo operador; 0/28.889 pólizas lo traen aún: se llena con ficheros nuevos/reproceso). Reproceso 46 SIN espera secret CIMA_LOTE_CLAVE (Alberto crea). Mapfre: 10 renovaciones EV → carga masiva portal (Alberto); borrador a CIMA NO se envía. Fallos visuales /correduria y portal mergeados en #4157 (una alerta de vencimiento, capital PS real, RC obligatoria = límites legales, claves no adivinadas, potencia CV); sin probar en navegador. PENDIENTE: borrar tmp-* y runs 37111902041/25432/27442.
 
 **(03/10/2026)** — 📄 «Subir póliza» rellena los HUECOS de la ficha del tomador (fecha nac., domicilio, tel/email, carné). PR #4147. Helper puro `parcheFichaDesdePoliza` (`module-seguros/datos-ficha-de-poliza.ts`): nunca pisa; DNI distinto → nada; 01/01 → se escribe + nota «a confirmar». Escritura en `asegura/lib/ficha-desde-poliza.ts` (RETURNING: la nota solo cuenta lo escrito).
 Seguridad: desde portal/solicitud solo vuelca si la ficha es la de quien sube; el email volcado NUNCA queda principal (`nuncaPrincipal`; el portal enlaza por email). Carné solo si el tomador es conductor habitual. Por tel/email nunca se asigna ficha ni DNI: lead + nota «posible duplicado».
-`documentos.extraccion jsonb` (migración 2026-10-03, YA APLICADA) guarda la lectura IA con lista BLANCA sin PII. Estibaliz Eslava: lead 0ae88ac0 fusionado en 02ac1883 (móvil confirmado por Alberto). Pendiente: re-subir sus 2 pólizas MAPFRE tras el deploy; Juke vence 10/10.
+`documentos.extraccion jsonb` (migración 2026-10-03, YA APLICADA) guarda la lectura IA con lista BLANCA sin PII. cliente C19: lead 0ae88ac0 fusionado en 02ac1883 (móvil confirmado por Alberto). Pendiente: re-subir sus 2 pólizas MAPFRE tras el deploy; Juke vence 10/10.
 Compañía «P.P.» (antefirma MAPFRE): prompt pide aseguradora del membrete/razón social + `cifCompania` (lista blanca); sin DGS, `companiaPorNombre` (exacto vía `resolverCompania`, ambiguo=null). `companias_dgs` NO tiene CIF. Oportunidades ae28b62d/e25110af de 02ac1883 → «Mapfre» por SQL.
 Tomador EMPRESA (póliza Qover/Helvetia a nombre de una SL): `tomadorEsEmpresa` + `cifTomador` (NIF-IVA «ES…» sin prefijo, `normalizarDni`) = identidad, mismo criterio que el DNI, va en `clientes.dni` cifrado + `dni_lookup_hash`; el lead nace con su CIF; ficha empresa nunca recibe fecha nac./carné. `conductorPrincipal` → solo nota en historial con el NOMBRE (sin fecha: historial en claro e imborrable). `fechaTextoAIso` («2 de jul. de 1971»). Lista blanca sin conductor ni CIF.
 «Subir póliza» = ficha → Documentos (03/10, tarde): `planTomador` (reglas puras, cepos vistos en rojo) decide con UNA búsqueda ciega; solo DNI/CIF asigna ficha, tel/email → lead con su DNI/CIF + nota. `leer-documento` devuelve `ficha` {clienteId, creada, rellenados (nombres), avisos}, guarda el doc también si la oportunidad falla tras resolver ficha; la pantalla enlaza la ficha y ya no dice «se descarta». Sin commitear.
@@ -229,21 +230,21 @@ Tomador EMPRESA (póliza Qover/Helvetia a nombre de una SL): `tomadorEsEmpresa` 
 
 **(03/10/2026, Codeoscopic)** — 🔍 Auditoría: host prod `api.codeoscopic.io`, endpoints OK, sin IP allowlist; tarifación 0,50€/POST /insurances 200 (sept = 28 facturables). Correos soporte: `juan.fernandez@codeoscopic.com` / `soporteapi@codeoscopic.com` (PM Juanma, CEO Ángel Blesa). **Descubrimiento autónomo sin dependencia de Manuel:** cron `correduria-descubrir-emisiones` (plataforma, `10,40 5-21 * * *` UTC) consulta GET /insurances gratis, acuña por hash DNI, cola `seguros.codeoscopic_emisiones_revision` para pendientes. Rotación en anillo: tope 40 llamadas/pasada, latido `correduria_descubrir_emisiones` rojo tras 3 pasadas con pendientes por tope. Cron verificado a las 10:10 UTC: ok, 2 revisados, 1 en revisión. Pantalla «Emisiones a revisar» en /correduria > Más (PR #4156). Acuñado atómico por `registrarPolizaEmitida` (compuerta), PR #4158 mergeado; docs PR #4163 mergeado. `ASEGURA_FUENTE` no existe en Vercel → valor por defecto `central` (correcto). Webhook → https://api.grupoasegura.es/api/webhooks/codeoscopic (Vercel central-asegura, CNAME IONOS): PENDIENTE que Codeoscopic cambie URL (borrador Gmail a Juanma para Alberto). Correo sin preguntas de API (resolvió spec OpenAPI); lo envía Alberto. Descuentos: cuadro en `docs/CODEOSCOPIC-PENDIENTES.md`, defecto 50 (no 30). Credenciales 02/10 actualizadas. PRs #4141, #4148, #4153 mergeados.
 
-**(03/10/2026)** — 🏛️ Auditoría CIMA tras alerta Monitor: tubería sana (6/6 diario, 5 compañías). Root cause POL 131 Allianz (C0109, 209-C-0018638-0000) del 30/09: riesgo en bloque genérico EIAC `OtrosRiesgos` no reconocido. asegura PR #868 (LOO-806): `OtrosRiesgos` → `otros`, hijo-objeto desconocido → `riesgo_no_reconocido:<X>`. Fichero se reprocesa solo tras desplegar (cima-reprocesar-cuarentena 06:30 UTC). Pilar Franco sustitución NO está (Allianz aún no envió por CIMA). Mapfre: 9 renovaciones perdidas (envío diario desde 25/09 no rellena pasado) → SAU-24238 (OK Alberto pendiente). Datos CIMA (recibo/contrato/vehículo/hogar) ya pintados en `/correduria`.
+**(03/10/2026)** — 🏛️ Auditoría CIMA tras alerta Monitor: tubería sana (6/6 diario, 5 compañías). Root cause POL 131 Allianz (C0109, [nº de póliza retirado]) del 30/09: riesgo en bloque genérico EIAC `OtrosRiesgos` no reconocido. asegura PR #868 (LOO-806): `OtrosRiesgos` → `otros`, hijo-objeto desconocido → `riesgo_no_reconocido:<X>`. Fichero se reprocesa solo tras desplegar (cima-reprocesar-cuarentena 06:30 UTC). cliente C06 sustitución NO está (Allianz aún no envió por CIMA). Mapfre: 9 renovaciones perdidas (envío diario desde 25/09 no rellena pasado) → SAU-24238 (OK Alberto pendiente). Datos CIMA (recibo/contrato/vehículo/hogar) ya pintados en `/correduria`.
 
-**(30/09/2026)** — 📞 Llamadas grabadas de clientes → Drive «Conversaciones clientes» (ASEGURA); por ahora se procesan a mano en sesión. 1.ª: Fco Javier Padilla Gallardo (lead 43e91878). Alta de su mujer **Carmen Torres Ruiz** (cc3ef3f2, lead; relación cónyuge en ambas fichas; DNI dictado NO guardado (ni aquí: PII): sin clave PII en el contenedor, pendiente de documento). Oportunidad comercio 9580bf63 (bar del Club de Tenis de Almería) con `datosComercio` rellenado sin confirmar; faltan CP y régimen del local. Ojo: Fco Javier tiene además una oportunidad hogar 8615833a (¿mismo riesgo?). Avant2 NO tiene comercio por API: se tarifica a mano. PR #4132 mergeado (absorbe #4127, cerrado). El MCP `Supabase_asegura` NO es la BD de la cartera (no tiene schema `seguros`): usar `mcp__Supabase__*`.
+**(30/09/2026)** — 📞 Llamadas grabadas de clientes → Drive «Conversaciones clientes» (ASEGURA); por ahora se procesan a mano en sesión. 1.ª: cliente C21 (lead 43e91878). Alta de su mujer **cliente C22** (cc3ef3f2, lead; relación cónyuge en ambas fichas; DNI dictado NO guardado (ni aquí: PII): sin clave PII en el contenedor, pendiente de documento). Oportunidad comercio 9580bf63 (bar del Club de Tenis de Almería) con `datosComercio` rellenado sin confirmar; faltan CP y régimen del local. Ojo: Fco Javier tiene además una oportunidad hogar 8615833a (¿mismo riesgo?). Avant2 NO tiene comercio por API: se tarifica a mano. PR #4132 mergeado (absorbe #4127, cerrado). El MCP `Supabase_asegura` NO es la BD de la cartera (no tiene schema `seguros`): usar `mcp__Supabase__*`.
 
 **(30/09/2026)** — 🏪 Comercio con datos PROPIOS en la oportunidad (antes caía en el riesgo libre): clave nueva `info_riesgo.datosComercio` (`datos-comercio-riesgo.ts`, module-seguros). Campos = solo los de CIMA `RiesgoComercios` (actividad, direccion/otrosDatosVia/cp/localidad/provincia, metrosCuadrados, superficieTotal, anioConstruccion, zona, `capitales[{bien,importe,modalidad,descripcion}]`, `medidasProteccion[{medida,valor}]`, con los nombres del mapper) + `regimenLocal` (propietario|inquilino, no-CIMA). Listas con 3 estados (null/[]/filas). «Falta para tarificar»: actividad, situación, superficie, régimen y ≥1 capital >0. Comercio sigue sin tarifa (`ramoTarificable` false); RC/comunidades/otros siguen en libre. `info_riesgo` viejo se lee sin romper y no se pierde ninguna clave ajena. Ni cocina, ni aforo, ni empleados (Alberto): se añadirán si el día a día lo pide.
 
 **(30/09/2026)** — 🏠 Correduría (PR #4127): la oportunidad (`/correduria/oportunidad/[id]`) edita y confirma los DATOS DEL RIESGO de cualquier ramo y completa la ficha de las personas sin salir (modal EditarCliente+EditarCarnets; fecha de nacimiento sigue exigiendo DNI). Claves nuevas en `info_riesgo` (las viejas no se pisan, cepo): `datosVehiculo` (auto/moto), `datosVivienda` (hogar), `datosCapital` (vida/salud/decesos), `datosRiesgoLibre` (RC/comercio/comunidades/otros, sin «faltan»). Módulo puro `datos-riesgo-*` en module-seguros; UN PATCH `/api/operador/oportunidad/riesgo` (400 si la clave no es del ramo, historial en `oportunidad_historial`). Pedir precio desde la oportunidad en los 6 ramos tarificables, con precarga y write-back tras guardar (nunca repite el 0,50€) y `oportunidad_id` enlazado (regla 9, cepo en `test/regression-datos-riesgo-ramo.test.ts`). Pendiente: probar en navegador/320px; retomar variante y enlace «completa tus datos» solo auto/moto; versión de catálogo solo en la pantalla de precio.
 
-**(30/09/2026)** — 🔐 Codeoscopic: webhook producción (401 desde 17/09) → Juanma confirmó credenciales distintas pruebas/prod; Alberto envió las de PRODUCCIÓN hoy (en claro; PENDIENTE rotarlas a Bitwarden tras verificar HTTP 200 de 40769244/40804066/40841279/40842815). Pendiente Codeoscopic: por qué duplicados y qué campo descartar (Ángel/Juanma sin respuesta). Riesgo: contraseñas en Drive.
+**(30/09/2026)** — 🔐 Codeoscopic: webhook producción (401 desde 17/09) → Juanma confirmó credenciales distintas pruebas/prod; Alberto envió las de PRODUCCIÓN hoy (en claro; PENDIENTE rotarlas a Bitwarden tras verificar HTTP 200 de [nº de proyecto retirado]/[nº de proyecto retirado]/[nº de proyecto retirado]/[nº de proyecto retirado]). Pendiente Codeoscopic: por qué duplicados y qué campo descartar (Ángel/Juanma sin respuesta). Riesgo: contraseñas en Drive.
 **(30/09/2026)** — 🏦 Allianz: (1) bloqueos → aviso con «responde SOLO en su intranet; sin otra póliza suya no admite robo/daños → la básica» (`textoBloqueoCorredor(motivo, compania)`); (2) **emisión escalonada**: TR, TR con franquicia o robo → aviso ámbar «emite la básica y añade por suplemento» (`emisionEscalonadaRecomendada`), regla 22 de `correduria-crm`; (3) retenidas: Telegram cada mañana mientras sigan bloqueadas + al registrarla; (4) **bajas de Allianz (C0109) SOLO por el PUE** de su extranet, nunca por correo: queda `firmada`, bloque «Bajas de Allianz para tramitar en el PUE» en «Hoy» con ficha copiable y «Ya la he tramitado», Telegram 07:50 L-V (`docs/ALLIANZ-PUE.md`: por qué no se automatiza y qué hacer si crece el volumen). + 4 arreglos de la revisión Graphify de #4112 (cliente no se reasigna, vista de emitida, compañía vacía, rotación de la cola). Moto de Manuel: Allianz no admite robo; pedida la básica.
 **(30/09/2026)** — ♻️ Correduría: Recaptación → oportunidades + la sesión solo ordena y revisa. Alberto eligió la opción (a): los antiguos clientes de Recaptación pasan a oportunidades (SQL `apps/asegura/prisma/sql/2026-09-30_recaptacion_a_oportunidades.sql`: 1.517 oportunidades / 1.079 clientes, fecha = aniversario de su vencimiento antiguo o de su fecha de inicio, `import_ref recaptacion:<póliza>`; ensayado, **PENDIENTE de aplicar**: el sistema de permisos bloqueó la escritura en producción). Se quita el bloque Recaptación de `/correduria`; el correo diario de recaptación SIGUE y avisa una vez (`correduria.recaptacion-fin`) cuando se ha escrito a todos los solo-correo en ventana. Vencimientos: los ya contactados salen aunque venzan a >90 días, y el filtro «Vence en» solo aplica a «Por enviar». Lote de correo: un correo por persona y pasada. **PENDIENTE (bloqueado por permisos):** `colaLlamadas` de `lib/seguimiento-asegura.ts` solo con `dias ≤ 90 || respondió || tarea pendiente`. Regla nueva en `CLAUDE.md`: todo lo ejecutan agentes; la sesión ordena y revisa.
 
-**(30/09/2026)** — 🔒 Emisiones hechas en la WEB de Avant2 y RETENIDAS por la compañía (OK de Alberto). asegura: `sincronizarEmisionExterna` (`lib/emision-externa.ts`) lee gratis `GET /insurances/{id}`, comprueba tomador por hash de DNI y registra el proyecto; «retenida» = `riesgo_condicionado` sin póliza (derivado, sin estado comercial nuevo); aprobada con nº → acuña (con el candado `submit_in_flight_at` de `/emitir`, anti-duplicado) y gana la oportunidad; nada sale al cliente. Rutas `operador/codeoscopic/emision-externa` (vista/registrar) y `/retenidas` (vigilancia). plataforma: cron `correduria-retenidas` 07:40 y 13:40 (Telegram solo si cambia), distintivo «⛔ Emitida · retenida» en la oportunidad y botón «Registrar emisión en la intranet» en Avant2. `veredictoSolicitud` reconoce «condition». Sin fixture real de `policyApplications`: primera prueba real = moto de Manuel Piña (40967960).
+**(30/09/2026)** — 🔒 Emisiones hechas en la WEB de Avant2 y RETENIDAS por la compañía (OK de Alberto). asegura: `sincronizarEmisionExterna` (`lib/emision-externa.ts`) lee gratis `GET /insurances/{id}`, comprueba tomador por hash de DNI y registra el proyecto; «retenida» = `riesgo_condicionado` sin póliza (derivado, sin estado comercial nuevo); aprobada con nº → acuña (con el candado `submit_in_flight_at` de `/emitir`, anti-duplicado) y gana la oportunidad; nada sale al cliente. Rutas `operador/codeoscopic/emision-externa` (vista/registrar) y `/retenidas` (vigilancia). plataforma: cron `correduria-retenidas` 07:40 y 13:40 (Telegram solo si cambia), distintivo «⛔ Emitida · retenida» en la oportunidad y botón «Registrar emisión en la intranet» en Avant2. `veredictoSolicitud` reconoce «condition». Sin fixture real de `policyApplications`: primera prueba real = moto de cliente C03 ([nº de proyecto retirado]).
 
-**(30/09/2026)** — 🏍️ Moto de Manuel Antonio Piña (oportunidad `f0d25e68`): emitida el 29/09 en Allianz desde la **web de Avant2** y RETENIDA por la compañía (incendio-robo sin daños). En BD NO había nada de esa emisión: ni `codeoscopic_projects`, ni webhook (0 eventos en 3 días), ni póliza. Hecho por SQL (con `oportunidad_historial` + `historial_interno`): cerrada la tarea «Presentarle el presupuesto» y abierta tarea ALTA 02/10 «EMITIDA · RETENIDA POR ALLIANZ» (op. 279136633). Con captura de Avant2: proyecto **40967960** (oportunidad Avant2 12774518, solicitud 061101695) registrado en `codeoscopic_projects` como `riesgo_condicionado` y enlazado a la oportunidad; sin póliza hasta que Allianz dé número. La oportunidad sigue `en_negociacion`: «ganada» exige póliza y no hay nº. No se pudo leer Codeoscopic (sin secretos en el contenedor). Propuesta pendiente de OK (regla 6): importar una emisión HECHA en Avant2 (sin Submit) acuñando la póliza con el proyecto en `riesgo_condicionado` (ya existe en el enum), «retenida» DERIVADA de ese estado + sin confirmar por CIMA, y vigilancia gratis `GET /insurances/{id}` hasta `Approved`.
+**(30/09/2026)** — 🏍️ Moto de cliente C03 (oportunidad `f0d25e68`): emitida el 29/09 en Allianz desde la **web de Avant2** y RETENIDA por la compañía (incendio-robo sin daños). En BD NO había nada de esa emisión: ni `codeoscopic_projects`, ni webhook (0 eventos en 3 días), ni póliza. Hecho por SQL (con `oportunidad_historial` + `historial_interno`): cerrada la tarea «Presentarle el presupuesto» y abierta tarea ALTA 02/10 «EMITIDA · RETENIDA POR ALLIANZ» (op. [nº de póliza retirado]). Con captura de Avant2: proyecto **[nº de proyecto retirado]** (oportunidad Avant2 [nº de póliza retirado], solicitud [nº de póliza retirado]) registrado en `codeoscopic_projects` como `riesgo_condicionado` y enlazado a la oportunidad; sin póliza hasta que Allianz dé número. La oportunidad sigue `en_negociacion`: «ganada» exige póliza y no hay nº. No se pudo leer Codeoscopic (sin secretos en el contenedor). Propuesta pendiente de OK (regla 6): importar una emisión HECHA en Avant2 (sin Submit) acuñando la póliza con el proyecto en `riesgo_condicionado` (ya existe en el enum), «retenida» DERIVADA de ese estado + sin confirmar por CIMA, y vigilancia gratis `GET /insurances/{id}` hasta `Approved`.
 **(30/09/2026)** — 🔎 Buscador en los leads de `/correduria/vencimientos` (Alberto: «un buscador aquí»): nombre, teléfono (por dígitos), correo y compañía, en las tres pestañas a la vez; los contadores cuentan lo que coincide. Regla pura `leadCoincide()` en `lib/seguimiento-asegura.ts` con test. Combinado con #4119: «Vence en» solo filtra «Por enviar», la búsqueda sí cruza las tres. PR #4120 (mergeado).
 
 **(30/09/2026)** — ✂️ `CLAUDE.md` raíz (72→12 KB) y `apps/asegura/CLAUDE.md` (170→11 KB) recortados a reglas + índice para gastar menos tokens (se cargan en cada sesión y subagente, ~60k tokens). Los originales íntegros están en `docs/claude-md/*-completo-2026-09-30.md`: buscar con Grep, no leer enteros. Nueva sección «Agentes y tokens» (verificador sonnet por defecto, architect solo alto riesgo, informes ≤15 líneas). Único código que lee el contenido: `regression-matriz-typecheck` (frase de la matriz conservada). Siguientes candidatos: `apps/plataforma` (264 KB), `apps/asegura-portal` (197 KB), `apps/ialimp` (68 KB). PR #4110.
@@ -254,9 +255,9 @@ Tomador EMPRESA (póliza Qover/Helvetia a nombre de una SL): `tomadorEsEmpresa` 
 
 **(29/09/2026)** — 🗄️ Cotizaciones: se guarda TODO lo del vendor (Alberto: «guarda toda la información… no se puede fallar ahí»). Aplicada la migración que estaba escrita y sin ejecutar (`2026-09-21_tarificacion_identidad_y_fallos.sql`: `fallos` + `id_precio`/`forma_pago`/`frecuencia_pago`/`meses`) y nueva `2026-09-29b`: `tarificaciones.respuesta` = respuesta ENTERA (escritura aparte que no tumba el guardado). Al retomar una cotización en coche/moto ya no se pinta «ningún producto falló» (`fallos: []` inventado): salen los guardados, o «no se guardó» en las antiguas. Auditoría campo a campo de la cadena vendor→pantalla en curso (agente).
 
-**(29/09/2026)** — 🔗 **Oportunidad del Navara 5655DSM (Antonio Cruz Sánchez, `5ca953b0…`) sin presupuestos:** se creó a mano por SQL el 24/09 y sus 4 tarificaciones del 21/09 (Avant2 40819818/40819875/40821835/40821944) se quedaron con `oportunidad_id = NULL` → «Aún no se ha pedido precio», y Alberto iba a volver a tarificar (0,50€). Enlazadas por SQL; quitado de `info_riesgo` el «pendiente: IBAN», porque la cuenta ya está en la ficha. Barrido: era el único caso. Regla 9 nueva en la skill `correduria-crm` (enlazar al crear a mano + consulta de control). Pendiente: fecha del carnet en la ficha, emitir la 40821944 (**Reale** Terceros 276,69€; la fecha de matriculación y el preaviso a Mapfre (carné ya puesto; el sexo se elige en la propia pantalla de emitir). Mismo PR #4087: cabecera «ahora en <compañía>» (`aseguradoraActual`), casilla «Lleva remolque» (decía «No lleva» vacía), efecto por defecto hoy+15 en decesos/salud/vida/hogar sin póliza (antes mañana → caducaba) y campo «Fecha de efecto» editable en auto/moto/decesos/salud/vida.
+**(29/09/2026)** — 🔗 **Oportunidad del Navara [matrícula retirada] (cliente `5ca953b0…`) sin presupuestos:** se creó a mano por SQL el 24/09 y sus 4 tarificaciones del 21/09 (Avant2 [nº de proyecto retirado]/[nº de proyecto retirado]/[nº de proyecto retirado]/[nº de proyecto retirado]) se quedaron con `oportunidad_id = NULL` → «Aún no se ha pedido precio», y Alberto iba a volver a tarificar (0,50€). Enlazadas por SQL; quitado de `info_riesgo` el «pendiente: IBAN», porque la cuenta ya está en la ficha. Barrido: era el único caso. Regla 9 nueva en la skill `correduria-crm` (enlazar al crear a mano + consulta de control). Pendiente: fecha del carnet en la ficha, emitir la [nº de proyecto retirado] (**Reale** Terceros 276,69€; la fecha de matriculación y el preaviso a Mapfre (carné ya puesto; el sexo se elige en la propia pantalla de emitir). Mismo PR #4087: cabecera «ahora en <compañía>» (`aseguradoraActual`), casilla «Lleva remolque» (decía «No lleva» vacía), efecto por defecto hoy+15 en decesos/salud/vida/hogar sin póliza (antes mañana → caducaba) y campo «Fecha de efecto» editable en auto/moto/decesos/salud/vida.
 
-**(29/09/2026)** — 🧭 Parrilla del corredor coherente (proyecto 40975463, Reale/Mapfre/Occident/Generali/Allianz). Lo que aún no tiene coberturas leídas ya no sale como «no dice si incluye grúa» (va aparte y se relee solo cada 3 s, ~30 s); cada fila enseña la modalidad y los avisos de la compañía («tiene que aceptar el riesgo», Sinco); franquicia/firmeza iguales en todas se dicen una vez. Los productos sin precio separan **fallo técnico** (Generali, código 2115: avisar a soporte de Avant2) de **rechazo** (Allianz, vehículo no permitido) en las 6 parrillas (`FallosTarificacion`). Al emitir se manda la prima **confirmada** por la compañía y se avisa si cambió (antes, la estimada). Catálogo v4 (Mapfre «daños propios por…» ≠ todo riesgo, RC peatón de Occident = RC voluntaria, opción de Reale de colisión con animales) y el cron `coberturas-backfill` reclasifica lo ya guardado con versión vieja (solo BD). Reglas puras en `lib/correduria/parrilla-coherencia.ts`. Pendiente: casar la emisión por `precioId` exacto en asegura y guardar los fallos de cada tarificación (migración).
+**(29/09/2026)** — 🧭 Parrilla del corredor coherente (proyecto [nº de proyecto retirado], Reale/Mapfre/Occident/Generali/Allianz). Lo que aún no tiene coberturas leídas ya no sale como «no dice si incluye grúa» (va aparte y se relee solo cada 3 s, ~30 s); cada fila enseña la modalidad y los avisos de la compañía («tiene que aceptar el riesgo», Sinco); franquicia/firmeza iguales en todas se dicen una vez. Los productos sin precio separan **fallo técnico** (Generali, código 2115: avisar a soporte de Avant2) de **rechazo** (Allianz, vehículo no permitido) en las 6 parrillas (`FallosTarificacion`). Al emitir se manda la prima **confirmada** por la compañía y se avisa si cambió (antes, la estimada). Catálogo v4 (Mapfre «daños propios por…» ≠ todo riesgo, RC peatón de Occident = RC voluntaria, opción de Reale de colisión con animales) y el cron `coberturas-backfill` reclasifica lo ya guardado con versión vieja (solo BD). Reglas puras en `lib/correduria/parrilla-coherencia.ts`. Pendiente: casar la emisión por `precioId` exacto en asegura y guardar los fallos de cada tarificación (migración).
 
 **(29/09/2026)** — 🎨 El panel de emisión (`retarificar/emision.tsx`) salía sin estilo en las altas nuevas (auto, moto, hogar) y en «Traer de Avant2»: su CSS vivía solo en la página de retarificar, y «Confirmar precio con la compañía» parecía texto, así que Alberto no pudo emitir una Reale. El CSS pasa a `retarificar/estilos.ts` y `Emision` se envuelve sola en `.retarificar` con su `<style>`. Test en `lib/retarificar-asegura-emitir.test.ts`, visto en rojo.
 
@@ -274,9 +275,9 @@ Tomador EMPRESA (póliza Qover/Helvetia a nombre de una SL): `tomadorEsEmpresa` 
 
 **(29/09/2026)** — 💳 **Cuenta para pólizas nuevas en la ficha** (pestaña Contactos, bajo la dirección): hasta hoy la cuenta solo entraba por el portal del cliente o tecleada en la pantalla de emisión, y el bot de Telegram se paraba en «la ficha no tiene cuenta». Puerto `GET/PUT /api/operador/cliente/cuenta` (asegura: módulo 97, cifrada, historial con máscara, solo la ficha) + proxy `/api/correduria/cliente/cuenta` + `CuentaCargo`. Alberto: «un cliente puede tener varias cuentas» → cada póliza conserva la suya (`polizas.cuenta_bancaria`); la de la ficha es la de lo NUEVO. Revisión de alto riesgo aplicada: no pisa la cuenta firmada en un presupuesto aceptado sin emitir (409), el portal no dice «ya es tu cuenta» si alguna póliza paga de otra, y una cuenta vieja sin módulo 97 se avisa. PR #4060 (fecha de efecto dictada) **mergeado**.
 
-**(29/09/2026)** — 📅 Emisión nueva por Telegram con **fecha de efecto dictada**: `preparar_emision_nueva` acepta `fechaEfecto` (aaaa-mm-dd o dd/mm/aaaa) y la pasa como `fechaEfectoCorregida` al ReRate (lo mismo que la pantalla web); sin ella, una tarificación con efecto pasado sigue sin botón y ahora pide la fecha en vez de «vuelve a pedir precio». El resumen enseña la fecha nueva y con cuál se cotizó. Cepos vistos en rojo (4 brazos). Motivo: auditoría previa a la 1ª prueba real — el PDF que pasó Alberto era el Qashqai del hijo (Antonio Cruz Martínez), que YA tiene Mapfre en vigor desde el 22/09 (doble seguro si se emitía); la cartilla y el presupuesto aceptado (40821944, Reale Terceros 276,69€) son del PADRE (Antonio Cruz Sánchez, Navara), cuya ficha no tenía cuenta. Pendiente antes de emitir: IBAN en la ficha del padre, confirmar fecha de matriculación (01/01/2005 en el aceptado vs 31/10/2005 en el primero) y el preaviso a Mapfre.
+**(29/09/2026)** — 📅 Emisión nueva por Telegram con **fecha de efecto dictada**: `preparar_emision_nueva` acepta `fechaEfecto` (aaaa-mm-dd o dd/mm/aaaa) y la pasa como `fechaEfectoCorregida` al ReRate (lo mismo que la pantalla web); sin ella, una tarificación con efecto pasado sigue sin botón y ahora pide la fecha en vez de «vuelve a pedir precio». El resumen enseña la fecha nueva y con cuál se cotizó. Cepos vistos en rojo (4 brazos). Motivo: auditoría previa a la 1ª prueba real — el PDF que pasó Alberto era el Qashqai del hijo (cliente C02), que YA tiene Mapfre en vigor desde el 22/09 (doble seguro si se emitía); la cartilla y el presupuesto aceptado ([nº de proyecto retirado], Reale Terceros 276,69€) son del PADRE (cliente C01, Navara), cuya ficha no tenía cuenta. Pendiente antes de emitir: IBAN en la ficha del padre, confirmar fecha de matriculación (01/01/2005 en el aceptado vs 31/10/2005 en el primero) y el preaviso a Mapfre.
 
-**(29/09/2026)** — 🚀 Emitir por Telegram una póliza NUEVA (cliente sin póliza que sustituir): herramienta `preparar_emision_nueva` del asistente (`lib/correduria-emision-nueva-tg.ts`) → última tarificación guardada del cliente, elige precio por compañía/modalidad/prima, confirma precio (ReRate) y manda resumen con el `cas_emitir` de siempre; si asegura pide confirmar figuras, segundo botón con los cambios. `correduria_asistente_emision.poliza_id` admite NULL (migración aplicada). Caso: moto de Manuel Piña (Allianz Terceros ampliado 200,20€ prorrateado, 217,47€ anual; Allianz avisa «quedará bloqueada: incendio-robo sin daños»). Cadena post-emisión verificada en real con la póliza del 26/09 (PDF en portal + correo con PDF); sin Telegram a Alberto al emitir desde la web. Va junto al autorrelleno del cuestionario IDD y el «Emitir» por fila.
+**(29/09/2026)** — 🚀 Emitir por Telegram una póliza NUEVA (cliente sin póliza que sustituir): herramienta `preparar_emision_nueva` del asistente (`lib/correduria-emision-nueva-tg.ts`) → última tarificación guardada del cliente, elige precio por compañía/modalidad/prima, confirma precio (ReRate) y manda resumen con el `cas_emitir` de siempre; si asegura pide confirmar figuras, segundo botón con los cambios. `correduria_asistente_emision.poliza_id` admite NULL (migración aplicada). Caso: moto de cliente C03 (Allianz Terceros ampliado 200,20€ prorrateado, 217,47€ anual; Allianz avisa «quedará bloqueada: incendio-robo sin daños»). Cadena post-emisión verificada en real con la póliza del 26/09 (PDF en portal + correo con PDF); sin Telegram a Alberto al emitir desde la web. Va junto al autorrelleno del cuestionario IDD y el «Emitir» por fila.
 
 **(29/09/2026)** — 🧮 Calculadora pública del seguro de la hipoteca en `grupoasegura.es/calculadora-bonificacion-hipoteca` (bonificación = capital × puntos / 100; coste real = prima − bonificación, negativo si compensa; cuenta del primer año). La hizo esta sesión porque la sesión encargada (session_01JwFW…) llevaba desde las 10:51 bloqueada en un permiso sin subir nada: **archivarla**. Lógica pura en `lib/bonificacion-hipoteca.ts` con test, formulario con ramo «vida», enlace en el pie y sitemap, evento `bonificacion_calculo`. Medido a 320/390/1280 px sin desborde.
 
@@ -305,7 +306,7 @@ Tomador EMPRESA (póliza Qover/Helvetia a nombre de una SL): `tomadorEsEmpresa` 
 
 **(29/09/2026)** — 👩‍💼 **rrhh: el gestor edita y borra solicitudes** (petición de Pilar). `/admin/solicitudes` gana Editar (tipo, fechas, motivo y estado, en cualquier estado) y Borrar (con confirmación; se lleva el justificante del storage). `PUT`/`DELETE` en `/api/admin/solicitudes/[id]` → `editarSolicitud`/`borrarSolicitud` (scoped por `empresa_id`). Volver a «solicitada» limpia la resolución; pasar a aprobada/rechazada avisa al empleado. ⚠️ Sin rastro de auditoría: rrhh no tiene log de cambios y el borrado es definitivo.
 
-**(29/09/2026)** — 🚗 Portal: cliente con Mapfre 0005727783313 (Toyota 8022KXY) veía «Renovación sin confirmar». Causa: Mapfre no envía nada a CIMA desde el 23/06 (ticket SAU-24238); de C0058 solo 1 recibo desde mayo (el emitido por nosotros), frente a 8-26 del resto. Corregida A MANO desde el portal de Mapfre (vigente 18/06/2026→18/06/2027, anual, 524,46€ neta / 573,45€ total) + nota en `historial_interno`; SIN recibo (cobro no consta). Un reproceso de un POL viejo lo revertiría. Pendiente: otras 11 Mapfre vivas sin renovación (7 ya vencidas) → reclamar en SAU-24238 o corregir una a una con captura de Mapfre.
+**(29/09/2026)** — 🚗 Portal: cliente con Mapfre [nº de póliza retirado] (Toyota [matrícula retirada]) veía «Renovación sin confirmar». Causa: Mapfre no envía nada a CIMA desde el 23/06 (ticket SAU-24238); de C0058 solo 1 recibo desde mayo (el emitido por nosotros), frente a 8-26 del resto. Corregida A MANO desde el portal de Mapfre (vigente 18/06/2026→18/06/2027, anual, 524,46€ neta / 573,45€ total) + nota en `historial_interno`; SIN recibo (cobro no consta). Un reproceso de un POL viejo lo revertiría. Pendiente: otras 11 Mapfre vivas sin renovación (7 ya vencidas) → reclamar en SAU-24238 o corregir una a una con captura de Mapfre.
 
 **(29/09/2026)** — 🔗 Devolución por correo cuyo recibo aún no ha mandado CIMA (Mapfre, renovación sep/2026): el BEFORE INSERT lo marcaba devuelto pero en un INSERT no podía escribir `recibo_devolucion.recibo_id` → quedaba sin enlace para siempre (sin importe ni comisión en la ficha). Trigger AFTER INSERT `recibo_enlaza_devolucion` (migración `2026-09-29g`, **aplicada**; probado en la BD real con rollback, y en rojo desactivándolo). La de Mapfre se enlazará sola cuando CIMA traiga el recibo.
 
@@ -347,7 +348,7 @@ IBAN por portal: ver entrada de arriba.
 
 **(28/09/2026)** — 🔎 Buscador de /correduria: cada ficha muestra sus **oportunidades abiertas** (competencia/en_negociacion/pendiente_cliente, igual que la ficha), enlazando a `?tab=oportunidades`. asegura (`cartera-busqueda.ts`) lo cuenta; plataforma lo parsea con `null` = no se sabe (no 0). Cepo en `test/regression-correduria-puerto.test.ts`.
 
-**(28/09/2026)** — 🔒 Retirados de docs/tests los identificadores REALES de clientes de la correduría (Graphify, PR #3887): 14 matrículas (incl. la del lead de Rafael Campa) y ~45 nº de póliza/IDs CIMA, verificados contra `seguros.polizas` antes de tocar. Tests → valores ficticios con la MISMA forma (ceros, prefijos, separadores; ojo a los asserts de «últimos 4»); docs/memoria → `[matrícula retirada]`/`[nº de póliza retirado]` (un falso en memoria se leería como dato). Siguen en comentarios de código `.ts`, SQL de migraciones, `mapa-funciones.generated.json` y la historia git; los nombres de clientes siguen en la memoria.
+**(28/09/2026)** — 🔒 Retirados de docs/tests los identificadores REALES de clientes de la correduría (Graphify, PR #3887): 14 matrículas (incl. la del lead de cliente C08) y ~45 nº de póliza/IDs CIMA, verificados contra `seguros.polizas` antes de tocar. Tests → valores ficticios con la MISMA forma (ceros, prefijos, separadores; ojo a los asserts de «últimos 4»); docs/memoria → `[matrícula retirada]`/`[nº de póliza retirado]` (un falso en memoria se leería como dato). Siguen en comentarios de código `.ts`, SQL de migraciones, `mapa-funciones.generated.json` y la historia git; los nombres de clientes siguen en la memoria.
 
 **(28/09/2026)** — 📐 Correduría «todo muy junto»: la ficha de cliente y 7 pantallas más (póliza, compañías, vencimientos, llamada, hogar, mantenimiento, nuevo cliente) no usaban `<Pagina>` y salían sin padding, pegadas al menú. Ahora `<Pagina ancho="tabla">` como la lista; cabecera agrupada, 24 entre bloques, KPIs con `cardStyle`. PR #3893.
 
@@ -358,7 +359,7 @@ IBAN por portal: ver entrada de arriba.
 **(28/09/2026)** — 💳 Presupuesto: CUENTA + IPID al aceptar en el portal y logos de compañía (PR #3879). El cliente elige la cuenta de su ficha (enmascarada) u otra IBAN (módulo 97 en servidor, cifrada `v1:` en `clientes.cuenta_bancaria` en la transacción de la firma, solo máscara en eventos/Telegram, fail-closed antes de gastar el código). Casilla dice «he recibido la información previa» solo si la opción tiene IPID subido. Emitir: cuenta NUEVA firmada va antes que la de la póliza vieja y, si la ficha da otra máscara que la firmada, 422 y se pide teclearla (bloqueante del architect). Pendiente: medir portal a 320 px; menores (hash IBAN en huella).
 
 **(28/09/2026)** — 🛡️ Presupuesto al cliente y emisión a clientes nuevos (correduría). PRs #3862 (logos en todas las tablas de precios + «Preparar presupuesto» desde auto/moto/hogar nuevo y bloque Presupuestos en ficha→Oportunidades), #3868 (portal: «Revisa tus datos» con DNI enmascarado + casilla obligatoria de autorización + aviso de dato incorrecto; coberturas por oferta leídas de Codeoscopic al preparar, tabla Sí/No/ver texto/no consta, resumen y comparador con IA que no recomienda y valida su salida) y #3874 (emitir SIN póliza previa: `codeoscopic_projects.tarificacion_id` —SQL APLICADO en prod—, identidad fail-closed, duplicado por matrícula en toda la correduría, `proyecto_liberado` contra doble seguro; botón Emitir en auto/moto/hogar nuevo).
-🚨 La emisión nueva va APAGADA hasta `CODEOSCOPIC_EMISION_NUEVO=1` en Vercel central-asegura (lo enciende Alberto). Sin verificar contra la API real: `/coverages` sobre la oferta inicial y calidad de la IA → primera prueba vigilada con Manuel Antonio Piña Franco (moto; su ficha duplicada ya estaba fusionada).
+🚨 La emisión nueva va APAGADA hasta `CODEOSCOPIC_EMISION_NUEVO=1` en Vercel central-asegura (lo enciende Alberto). Sin verificar contra la API real: `/coverages` sobre la oferta inicial y calidad de la IA → primera prueba vigilada con cliente C03 (moto; su ficha duplicada ya estaba fusionada).
 Pendiente en curso: IBAN en el portal al autorizar + IPID por opción (agente, PR aparte). Después: seguimiento si no contesta, embudo en Actividad, venta cruzada; vida/salud/decesos aún sin presupuesto comparativo.
 
 **(28/09/2026)** — 🗂️ CIMA siniestros (SIN) reprocesados. PR #3853 (portal: todo el siniestro al cliente) mergeado (squash, 32 checks verdes). Run `cima-rescate-lote` sobre rama `cima-lote-sin-2026-09-28` (46 ficheros SIN) ✅ 6m21s.
@@ -366,11 +367,11 @@ Recuento en `seguros.siniestros` (101): fecha_declaracion 100, responsabilidad_c
 **tramitador_nombre, perito_nombre y descripcion_cima = 0** → el lote CIMA no los trae o el parser no los extrae (pendiente revisar).
 Ramas `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` borradas. Pendiente: borrar runs de `cima-rescate-lote` (inputs con clave); ramas viejas `cima-lote-sin-2409` y `rescate/cima-lote-20260924`; mover la clave a un secret de Actions.
 
-**(28/09/2026)** — 📭 Webhook de Codeoscopic: las 4 emisiones reales (17-28/09) NO han generado ni un aviso. Medido: desde el 17/09 llega un POST cada ~30 min a `app.grupoasegura.com` que la RUTA del CRM (no el middleware: `/api/webhooks/codeoscopic` ya es pública) rechaza con 401 — `webhook_signature_invalid`, cabecera presente, `authUserPresente:false`: el USUARIO de la Basic Auth no es el nuestro. Las peticiones con credenciales válidas (proyectos de 6 cifras, otra alta) sí pasaban → Codeoscopic tiene DOS altas del webhook con credenciales distintas; no se arregla con código, hay que alinear credenciales con Codeoscopic (pendiente del OK de Alberto). Parece un solo aviso reintentándose en cola. Cero pérdida en cartera (las emisiones se cierran sin el aviso). Nueva señal del vigía `emisionesSinAviso` (>24 h emitida, 30 días, sin evento) → degrada + Telegram por cambio de firma (8º tramo, normalizador 7→8); hoy salta con 40769244/40804066/40841279.
+**(28/09/2026)** — 📭 Webhook de Codeoscopic: las 4 emisiones reales (17-28/09) NO han generado ni un aviso. Medido: desde el 17/09 llega un POST cada ~30 min a `app.grupoasegura.com` que la RUTA del CRM (no el middleware: `/api/webhooks/codeoscopic` ya es pública) rechaza con 401 — `webhook_signature_invalid`, cabecera presente, `authUserPresente:false`: el USUARIO de la Basic Auth no es el nuestro. Las peticiones con credenciales válidas (proyectos de 6 cifras, otra alta) sí pasaban → Codeoscopic tiene DOS altas del webhook con credenciales distintas; no se arregla con código, hay que alinear credenciales con Codeoscopic (pendiente del OK de Alberto). Parece un solo aviso reintentándose en cola. Cero pérdida en cartera (las emisiones se cierran sin el aviso). Nueva señal del vigía `emisionesSinAviso` (>24 h emitida, 30 días, sin evento) → degrada + Telegram por cambio de firma (8º tramo, normalizador 7→8); hoy salta con [nº de proyecto retirado]/[nº de proyecto retirado]/[nº de proyecto retirado].
 
 **(28/09/2026)** — Auditoría de la ingesta CIMA «sin huecos» + pintar: asegura #859/#860/#861/#862/#864/#865 **MERGEADOS** (papeles por fila, PII fuera de recibos, recibos/CEF, siniestros, pólizas: fechas, `pagador`, cobro cifrado, riesgos, contacto del tomador solo huecos, prima anual L10 con C0058 **Mapfre** + C0072). Migraciones 0100-0104 aplicadas a mano en `seguros`. central#3820 **MERGEADO** (figura en el portal + enum `pagador`). Reproceso de los 36 POL de Drive hecho: 158/159 pólizas con los campos nuevos, pagador 0→26, 0 IBAN en claro; C0109 no manda importes (prima NULL correcta). Pintado en `/correduria` (ficha póliza: contrato/cobro/riesgos/recibos; siniestros: detalle CIMA) y en la ficha del portal: PR de central «pintar datos CIMA». ⚠️ Pendiente a mano: borrar en GitHub la rama `cima-lote-2026-09-28` y el run 36403813502 de `asegura` (el proxy no deja borrar). Detalle: `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md` § Auditoría.
 
-**(28/09/2026)** — Ficha correduría: el acceso «Contactos» cuenta también los vínculos declarados (`contarPersonas` en `cliente/[id]/tabs.ts`, misma lista que el bloque «Personas»; antes solo personas de pólizas → Antonio Lozano salía sin ninguna). Fusionada a mano «Antonio Antonio» (ec2fd283) → Antonio Lozano Lanagran (a3cf7a99): su DNI era ILEGIBLE y `fusionar_clientes` bloquea para siempre con `dni_sin_indice`; se anuló el dni en la misma transacción y el cifrado original quedó en la justificación. Portal ya invitable. Hueco propuesto como tarea aparte.
+**(28/09/2026)** — Ficha correduría: el acceso «Contactos» cuenta también los vínculos declarados (`contarPersonas` en `cliente/[id]/tabs.ts`, misma lista que el bloque «Personas»; antes solo personas de pólizas → cliente C41 salía sin ninguna). Fusionada a mano «cliente C41» (ec2fd283) → cliente C41 (a3cf7a99): su DNI era ILEGIBLE y `fusionar_clientes` bloquea para siempre con `dni_sin_indice`; se anuló el dni en la misma transacción y el cifrado original quedó en la justificación. Portal ya invitable. Hueco propuesto como tarea aparte.
 
 **(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
 recibo, bajo el mismo rótulo. Ahora siempre la total (bruta de la póliza → recibo anual, vía `primaConRecibos`) y el rótulo dice
@@ -405,15 +406,15 @@ cron `ia-director-refresh`) deja de darse a API keys nuevas de Google (enruta a 
 curado anteponiendo `gemini-3.8-flash` en las dos listas, sin retirar el viejo. Groq de pago sin
 presupuesto (hallazgo 21/09) sigue abierto, decisión de Alberto pendiente, sin novedad esta semana.
 
-**(28/09/2026)** — Ficha↔CIMA: el email nuevo de CIMA se AÑADE como secundario (`email:anadir`, antes `discrepa`) salvo que esté en OTRA ficha (`avisarContactosCompartidos`, el email vincula el portal). «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas; nueva acción automática `corregir` (mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas). «Maria Lopez»/«Mario Lopes» sigue preguntando. PR #3802.
+**(28/09/2026)** — Ficha↔CIMA: el email nuevo de CIMA se AÑADE como secundario (`email:anadir`, antes `discrepa`) salvo que esté en OTRA ficha (`avisarContactosCompartidos`, el email vincula el portal). «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas; nueva acción automática `corregir` (mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas). «cliente C49»/«cliente C50» sigue preguntando. PR #3802.
 
 **(28/09/2026)** — Bot de oportunidades: un vencimiento leído que ya pasó (recibo del periodo anterior) ya no se descarta: se proyecta a la siguiente renovación anual (`siguienteRenovacion`, máx. 2 años; 29/02→28/02) y se dice en el mensaje. Caso: recibo Línea Directa [matrícula retirada] «Vigencia 18/11/24 al 18/11/25» → vence 18/11/2026. Ojo: la fecha de la CARTA (03/02/25) no es la del periodo.
 
 **(27/09/2026)** — Correduría, bot de Telegram «sabe más que Alberto»: (1) si el nº de póliza del documento está en nuestra cartera EN VIGOR (`polizaEnCartera`, asegura `leer-documento` → `enCartera`) contesta «YA ES NUESTRA» y no propone; (2) marcar un documento «de un cliente» ya no pregunta «¿qué hago?»: el asistente propone solo (`ORDEN_DOCUMENTO_CLIENTE`); (3) matrícula y vehículo leídos → identidad (`mismoSeguro`: nº → matrícula → compañía), texto, ficha y `auto-nuevo?matricula=`; (4) eval con las 5 conversaciones reales (`scripts/eval-asistente-correduria.ts`, necesita OPENROUTER_API_KEY; el veredicto puro va en CI). ⚠️ El nº de póliza de una oportunidad vive en la COLUMNA `oportunidades.numero_poliza` (y el CRM viejo lo dejaba en `poliza_competencia.nPoliza`); el #3792 lo escribía en una clave nueva — corregido, se leen las tres. Con eso 1.386/3.680 abiertas ya tienen nº y 1.733 matrícula: no hizo falta backfill.
 
-**(27/09/2026)** — Correduría: un cliente puede tener VARIAS oportunidades abiertas del mismo ramo si son de compañías distintas (segundo coche: MUSSAP + Línea Directa de Rafael Campa). Regla en asegura `crearOportunidad`/`editarOportunidad`: 409 `duplicada` solo si hay una abierta del ramo con la MISMA compañía o sin compañía en un lado (ante la duda, la misma). Comparación única `mismaCompania()` en `@central/module-seguros`; plataforma `mismaPoliza` la reutiliza. Después (mismo PR #3792): la identidad es el **nº de póliza** (`mismoSeguro()`), guardado en `poliza_competencia.numeroPoliza` al abrir; sin número en un lado se cae a la compañía. Y el prompt del bot: con documento reciente no pregunta nada, lo lee.
+**(27/09/2026)** — Correduría: un cliente puede tener VARIAS oportunidades abiertas del mismo ramo si son de compañías distintas (segundo coche: MUSSAP + Línea Directa de cliente C08). Regla en asegura `crearOportunidad`/`editarOportunidad`: 409 `duplicada` solo si hay una abierta del ramo con la MISMA compañía o sin compañía en un lado (ante la duda, la misma). Comparación única `mismaCompania()` en `@central/module-seguros`; plataforma `mismaPoliza` la reutiliza. Después (mismo PR #3792): la identidad es el **nº de póliza** (`mismoSeguro()`), guardado en `poliza_competencia.numeroPoliza` al abrir; sin número en un lado se cae a la compañía. Y el prompt del bot: con documento reciente no pregunta nada, lo lee.
 
-**(27/09/2026)** — Recibo Línea Directa de Rafael Campa (OTRO coche, [matrícula retirada]): el 409 «ya tiene una de auto» habría ofrecido
+**(27/09/2026)** — Recibo Línea Directa de cliente C08 (OTRO coche, [matrícula retirada]): el 409 «ya tiene una de auto» habría ofrecido
 «Actualizar la existente» y pisado la de MUSSAP. `mismaPoliza()` compara compañía: distinta ⇒ sin botón y se dice. Pendiente
 (decisión de Alberto): varias oportunidades de auto por cliente, una por vehículo/póliza (hoy asegura admite una por ramo).
 
@@ -431,7 +432,7 @@ o, si cae al recibo, el total con impuestos bajo el mismo rótulo; (3) check-in 
 MUSSAP salió con 374,90€ por mezclar dos subidas). Si ya tenía oportunidad del ramo: «✏️ Actualizar la existente»
 (antes→después, un solo uso `actualizada_at`, migración aplicada) y «📎 Guardar en la ficha» también ahí.
 
-**(27/09/2026)** — Tras #3773 el bot ya lee el tomador (Rafael Campa, localizado por DNI), pero el enlace final llevaba a la ficha:
+**(27/09/2026)** — Tras #3773 el bot ya lee el tomador (cliente C08, localizado por DNI), pero el enlace final llevaba a la ficha:
 `resultadoAlta()` enlaza ahora a la oportunidad (`?tab=oportunidades&op=<id>`), también cuando ya había una abierta (409).
 
 **(27/09/2026)** — PR #3773: tras desplegar #3765 el bot seguía preguntando «¿a quién?» con la póliza de MUSSAP subida:
@@ -540,12 +541,12 @@ Telegram, sin tocar código. Detalle en `docs/AGENTES-BITACORA.md`.
 nueva del tomador desde el corte 26/09 (≤30 días), clave compañía+número (la emitida y la que trae CIMA = un aviso);
 si sustituye a otra, la campana dice «sustituye a tu póliza anterior de X, que se da de baja». El correo no lleva
 compañía ni número. Push al móvil NO incluido. Agente de la correduría: 6 revisiones nuevas (paso 2c; la 1 = cambios
-de compañía sin anulación, caso Pablo Guzmán). Pablo se emite desde la intranet (nuevo precio, efecto 29/09).
+de compañía sin anulación, caso cliente C04). Pablo se emite desde la intranet (nuevo precio, efecto 29/09).
 
 **(26/09/2026)** Diferencias con CIMA, reglas de Alberto: teléfono nuevo → se AÑADE solo como secundario (si ya
 está en otra ficha, pregunta con aviso); nombre de ficha en MAYÚSCULAS → «Nombre Propio» solo; nombre al que CIMA
-le quita un nombre de pila (Moncosi: no era mayúsculas, faltaba «Carlos") y carné a ±1 día ya NO son diferencias.
-Nombre de CIMA que contiene el de la ficha y dice más («Maria Gonzalez» → «M Carmen Baena Gonzalez») → se toma
+le quita un nombre de pila (cliente C56: no era mayúsculas, faltaba «Carlos") y carné a ±1 día ya NO son diferencias.
+Nombre de CIMA que contiene el de la ficha y dice más («cliente C52» → «cliente C51») → se toma
 CIMA solo. Email distinto SIGUE preguntando (vincula el portal: añadirlo a ciegas abre la cartera). El agente de la correduría
 revisa lo que queda cada semana (paso 2b). Sin probar sobre datos reales hasta que corra el cron.
 
@@ -577,11 +578,11 @@ Punto único `lib/correo-envio.ts` (API de Resend, cae a SMTP «sin seguimiento�
 ⚠️ «Abierto» no prueba lectura (Apple MPP); la prueba es «entregado» y el clic. Pendiente: pasar los otros 12 remitentes al punto único.
 
 **(25/09/2026)** 🏢 **Portal: el dueño de una empresa ve y gestiona su empresa automáticamente** (caso Flores y Gazquez SL /
-Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
+cliente C35). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
 escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
-vínculo por correo se retira al cambiar el correo (#3600, caso Guzmán Lozano→Pueyo) y cambio de correo con código (#3614).
+vínculo por correo se retira al cambiar el correo (#3600, caso C05→C04) y cambio de correo con código (#3614).
 
-**(25/09/2026)** 📧 **Portal asegura: «No hemos podido enviarte el código» (502) para TODOS desde las 13:56 UTC.** Causa: se cambió `PORTAL_MAIL_FROM` a `hola@grupoasegura.es` sin cambiar la `RESEND_API_KEY`, que solo autorizaba `envios.grupoasegura.es` (Resend: `550 This API key is not authorized…`, solo visible en logs de Vercel). Arreglo en paneles, sin código: `grupoasegura.es` verificado en Resend (faltaba el CNAME `links`→`links2.resend-dns.com` en IONOS), clave nueva «asegura-portal (grupoasegura.es)» **Sending access solo a ese dominio** (Full access descartado: daría lectura de todos los correos con PII), `PORTAL_MAIL_FROM` = `hola@` y redeploy. Probado 17:18 UTC: llega firmado por `grupoasegura.es`. **Regla: remitente y clave se cambian en el mismo paso**; vaciar la env NO vuelve a `envios.` (el defecto del código es `hola@`). Pendiente: mirar si `asegura` (`ASEGURA_MAIL_FROM`) necesita la misma clave; la ficha de Pilar Franco tiene `piilarfrancoruz@` (doble i, rebotó el 23/09).
+**(25/09/2026)** 📧 **Portal asegura: «No hemos podido enviarte el código» (502) para TODOS desde las 13:56 UTC.** Causa: se cambió `PORTAL_MAIL_FROM` a `hola@grupoasegura.es` sin cambiar la `RESEND_API_KEY`, que solo autorizaba `envios.grupoasegura.es` (Resend: `550 This API key is not authorized…`, solo visible en logs de Vercel). Arreglo en paneles, sin código: `grupoasegura.es` verificado en Resend (faltaba el CNAME `links`→`links2.resend-dns.com` en IONOS), clave nueva «asegura-portal (grupoasegura.es)» **Sending access solo a ese dominio** (Full access descartado: daría lectura de todos los correos con PII), `PORTAL_MAIL_FROM` = `hola@` y redeploy. Probado 17:18 UTC: llega firmado por `grupoasegura.es`. **Regla: remitente y clave se cambian en el mismo paso**; vaciar la env NO vuelve a `envios.` (el defecto del código es `hola@`). Pendiente: mirar si `asegura` (`ASEGURA_MAIL_FROM`) necesita la misma clave; la ficha de cliente C06 tiene [email retirado] (doble i, rebotó el 23/09).
 
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
 (felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
@@ -605,7 +606,7 @@ con nombre «No» (venía «NO»), a revisar por Alberto. 16 pólizas EV con ven
 **(26/09/2026)** 🗄️ **CIMA: auditoría «¿se guarda y vuelca todo?»** — Copia cifrada de cada fichero pasa de 30/90 días a **6 años**
 (asegura#855 + UPDATE de las 101 filas existentes; si entra un pull antes del merge, repetir el UPDATE). Único fichero a medias: POL
 Allianz (carga 199) 25/26 — la que falta choca con `uq_clientes_dni_lookup_hash` porque su DNI solo vive en una ficha FUSIONADA
-(1af806b6 → 12f99b7b, «Juan Manuel Durán Ibáñez», **DNIs distintos**; mismo patrón en Hassan Pimienta 0d16579c → cc0d0547).
+(1af806b6 → 12f99b7b, «cliente C10», **DNIs distintos**; mismo patrón en cliente C18 0d16579c → cc0d0547).
 ✅ Alberto (DNIs consultados): **misma persona, fusión se mantiene**. asegura#856: si el DNI del fichero solo está en una ficha
 absorbida, `resolveCliente` sigue `merged_into_cliente_id` al superviviente (cadena rota → cuarentena). Reprocesado: póliza
 [nº de póliza retirado] actualizada en 12f99b7b, 0 clientes nuevos, fichero sellado. #855 mergeado. Cobertura EIAC (30%): tarea aparte.
@@ -631,7 +632,7 @@ consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el úni
 
 **(25/09/2026)** 🔑 **Portal: cambiar o añadir un correo exige un código a ESE correo** (decisión de Alberto tras el caso Guzmán). `POST /api/mis-datos/codigo-correo` + `codigoCorreo` obligatorio en `/api/mis-datos` y `/api/mis-datos/contactos`; código atado a la identidad (no abre sesión), gastado solo si el guardado sale bien. `lib/verificar-correo.ts`, cepo `test/regression-portal-cambio-correo-codigo.test.ts`. Queda de Alberto: si un correo de contacto debe seguir dando acceso completo, y valorar la brecha RGPD.
 
-**(25/09/2026)** 🔒 **Portal: Pablo Guzmán Lozano veía la cartera de Pablo Guzmán Pueyo (otra persona).** Su correo estuvo en la ficha de Pueyo → vínculo `email_hash`/`gestionar`; al corregirlo en el CRM el vínculo viejo SE QUEDÓ (solo se añadían). Borrado el vínculo sobrante y su recordatorio huérfano; único caso (13 vínculos auditados). No hizo nada sobre la ficha ajena (5 accesos, 0 mensajes/partes/peticiones). Arreglo: el login retira los `email_hash` que el correo ya no resuelve + trigger en BD (aplicado) al cambiar/borrar un correo de ficha + los vencimientos de cartera no se pintan sin vínculo (sin borrarlos, para no perder el sello de aviso). La revisión de código cazó dos fallos antes de fusionar (re-aviso al borrar obligaciones; correo que se muda de ficha) y se corrigieron. Pendiente de Alberto: «Mis datos» cambia el correo principal SIN verificarlo; un correo secundario vincula con `gestionar`; valorar si es brecha RGPD notificable.
+**(25/09/2026)** 🔒 **Portal: cliente C05 veía la cartera de cliente C04 (otra persona).** Su correo estuvo en la ficha de Pueyo → vínculo `email_hash`/`gestionar`; al corregirlo en el CRM el vínculo viejo SE QUEDÓ (solo se añadían). Borrado el vínculo sobrante y su recordatorio huérfano; único caso (13 vínculos auditados). No hizo nada sobre la ficha ajena (5 accesos, 0 mensajes/partes/peticiones). Arreglo: el login retira los `email_hash` que el correo ya no resuelve + trigger en BD (aplicado) al cambiar/borrar un correo de ficha + los vencimientos de cartera no se pintan sin vínculo (sin borrarlos, para no perder el sello de aviso). La revisión de código cazó dos fallos antes de fusionar (re-aviso al borrar obligaciones; correo que se muda de ficha) y se corrigieron. Pendiente de Alberto: «Mis datos» cambia el correo principal SIN verificarlo; un correo secundario vincula con `gestionar`; valorar si es brecha RGPD notificable.
 
 **(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas). **Mergeado en #3573** (CI verde; ajuste de 320 px incluido; sin probar aún en pantalla).
 
@@ -682,7 +683,7 @@ Ninguna orden real, todo paper/simulado. Detalle en `docs/AGENTES-BITACORA.md`.
 
 **(24/09/2026)** — Memoria pedida por Alberto: **Google Drive, carpeta «CIMA», guarda copia de TODO lo de CIMA** (zips del Portal por trimestre). Es la vía para reprocesar cuando el lector aprende un campo (TIREA no reentrega). Inventario de TODOS los campos que trae CIMA, por compañía y sin valores: `docs/CIMA-CAMPOS.md` (941 rutas: POL 470, SIN 275, CEF 108, REC 88). Regla: CIMA trae casi todo el PDF; antes de pedir un dato a mano o decir «no consta», mira si CIMA lo manda.
 
-**(24/09/2026)** — CIMA «trae casi todo el PDF» (Alberto) y no se leía. Con los 2 zip del Portal CIMA en Drive (carpeta «CIMA», 36 POL, 264 pólizas) se midió: el mapper del CRM tiraba anulación (83), póliza reemplazada (4), suplementos (27), «otros datos» (148) y media ficha del inmueble; y las direcciones faltaban porque esas pólizas entraron ANTES del 20/09 (cuando se empezó a leer SituacionRiesgo), no porque la compañía no la mande (María Antonia: comunidad [nº de póliza retirado] y hogar Mapfre sí la traen). asegura#851 amplía el mapper (datos personales fuera: texto tapado, «otros datos» de persona y de vida/salud descartados; año en `anioConstruccionCima`; `anulacion:null` en vigor). Central: `leerDatosCompaniaCima` + tarjeta «🏢 Lo que dice la compañía (CIMA)» en la ficha de póliza + portal decide la gemela por contenido. Falta: reprocesar los 36 POL con `cima-rescate-manual` (admite xz) y borrar esos runs.
+**(24/09/2026)** — CIMA «trae casi todo el PDF» (Alberto) y no se leía. Con los 2 zip del Portal CIMA en Drive (carpeta «CIMA», 36 POL, 264 pólizas) se midió: el mapper del CRM tiraba anulación (83), póliza reemplazada (4), suplementos (27), «otros datos» (148) y media ficha del inmueble; y las direcciones faltaban porque esas pólizas entraron ANTES del 20/09 (cuando se empezó a leer SituacionRiesgo), no porque la compañía no la mande (cliente C13: comunidad [nº de póliza retirado] y hogar Mapfre sí la traen). asegura#851 amplía el mapper (datos personales fuera: texto tapado, «otros datos» de persona y de vida/salud descartados; año en `anioConstruccionCima`; `anulacion:null` en vigor). Central: `leerDatosCompaniaCima` + tarjeta «🏢 Lo que dice la compañía (CIMA)» en la ficha de póliza + portal decide la gemela por contenido. Falta: reprocesar los 36 POL con `cima-rescate-manual` (admite xz) y borrar esos runs.
 
 **(24/09/2026)** — Tipografía de marca de Grupo ASegura (parche de Alberto): Quicksand en titulares/menús/botones y Nunito Sans en el cuerpo, sin cursivas, con el logotipo «Grupo ASegura» con el monograma dentro, en la web y el portal; y extendida a `/correduria` de plataforma con next/font, acotada a `.correduria`. De paso, revisión de la fase 2: el aviso «la compañía tiene otro dato» ya no atribuye a CIMA un teléfono que asegura rellena con el de la propia ficha (`telefonoPropio`/`emailPropio`), y las notas conservan los saltos de línea.
 
@@ -767,16 +768,16 @@ del cuadre deja de restar lo cobrado). Además
 DNI/NIE nunca como clave de regla y Pelayo tras «TRANSFERENCIAS //». Pendiente de Alberto: dónde cobra Allianz
 (0 abonos en ninguna cuenta) y Mapfre abr-ago sin periodos en el libro (CIMA no trae su devengo).
 
-**(24/09/2026)** 🧾 **Alta manual por SQL de Mapfre 2002600520435** (auto, Antonio Cruz Martínez, póliza `c981968f…`) en la
-ficha `8016986c…` (antes «Antonio» sin apellidos; ya tenía Cuñado/a con Gabriel Cabrera `3146922c…`). `id_poliza_entidad`
+**(24/09/2026)** 🧾 **Alta manual por SQL de Mapfre [nº de póliza retirado]** (auto, cliente C02, póliza `c981968f…`) en la
+ficha `8016986c…` (antes «Antonio» sin apellidos; ya tenía Cuñado/a con cliente C15 `3146922c…`). `id_poliza_entidad`
 y hash a NULL (sin confirmar por CIMA, que no recibe nada de Mapfre desde el 23/06). + oportunidad `e9c155e4…` de su Allianz
-058366323 (Grupo PACC, fin 31/01/2027). Intervinientes NO cargados (columnas cifradas). Pendiente de Alberto: DNI de Antonio
-en la ficha desde la UI; revisar si `edc7248d…` «Antonio Cruz Sánchez» es un duplicado; la póliza Mapfre lleva el email de
+[nº de póliza retirado] (Grupo PACC, fin 31/01/2027). Intervinientes NO cargados (columnas cifradas). Pendiente de Alberto: DNI de Antonio
+en la ficha desde la UI; revisar si `edc7248d…` «cliente C01» es un duplicado; la póliza Mapfre lleva el email de
 Alberto como email del tomador. ➕ Mismo día: `edc7248d` FUSIONADA en `8016986c` (OK de Alberto, `prisma/sql/2026-09-24_fusion_antonio_cruz.sql`,
-hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`). 🚨 El DNI heredado de la fusión acababa en 335B ≠ 77321266G de las pólizas → quitado
+hereda DNI+hash) y cliente C15 añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`). 🚨 El DNI heredado de la fusión acababa en otra terminación ≠ [DNI retirado] de las pólizas → quitado
 (dni/hash a NULL). Editar identidad exige un documento tipo DNI recibido en la ficha: por eso la UI «no deja modificar».
-⛔ Y la fusión se REVIRTIÓ: `edc7248d` es el PADRE (presupuesto Codeoscopic 40821944). Relación Padre/Hijo + oportunidad
-del padre (Navara 5655DSM, Mapfre 2002500565564 → Reale 276,69€ / 332,42€ con lunas). `cliente_merge_log` es append-only.
+⛔ Y la fusión se REVIRTIÓ: `edc7248d` es el PADRE (presupuesto Codeoscopic [nº de proyecto retirado]). Relación Padre/Hijo + oportunidad
+del padre (Navara [matrícula retirada], Mapfre [nº de póliza retirado] → Reale 276,69€ / 332,42€ con lunas). `cliente_merge_log` es append-only.
 Presupuesto del padre ACEPTADO (24/09): oportunidad → `pendiente_cliente` + tarea alta «emitir cuando el hijo confirme el IBAN».
 
 **(24/09/2026)** 📄 **La carta y la anulación firmadas van a la compañía en PDF + el original en texto.** Un `.txt` suelto
@@ -837,8 +838,8 @@ riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituid
 se anula»); el portal la retira de la LISTA, no del acceso. Al constar la nueva: presupuesto aceptado → emitido solo y su
 anulación firmada a la cola; emitida fuera (web) → expediente `sustitucion` pidiendo firma (aviso `anulacion_por_firmar`).
 Correo de no renovación a Mapfre (CCORREDOR@) enviado con OK de Alberto, fuera del mes del art. 22 → vigilar respuesta.
-Drive «POLIZAS EMITIDAS»: Reale de José y Occident moto de Víctor = las sustituciones detectadas; proyecto 40804066 → `emitida`.
-Pendiente: Mapfre 2002600520435 (Antonio Cruz Martínez) no está aún en CIMA y su ficha parece duplicada: verificar DNI.
+Drive «POLIZAS EMITIDAS»: Reale de cliente C14 y Occident moto de cliente C17 = las sustituciones detectadas; proyecto [nº de proyecto retirado] → `emitida`.
+Pendiente: Mapfre [nº de póliza retirado] (cliente C02) no está aún en CIMA y su ficha parece duplicada: verificar DNI.
 
 **(23/09/2026)** 🧾 **Aviso de ingesta: Mapfre muda y 36 recibos de Occident sin guardar.** Mapfre C0058: 0 ficheros desde el
 23/06 (el resto entra a diario) → correo a soporte@cimaseg.es (cc accesos.cima@tirea.es) con OK de Alberto. Recibos: 39 del
@@ -990,7 +991,7 @@ plataforma → retarificar hogar, que ofrece «Usar X€» (nunca rellena solo).
 compañía, [Probable] tarifica por dentro): detrás de `CODEOSCOPIC_TARIFICACION_ACTIVA`, `confirmado:true`, libro de consumo con
 motivo `limites_hogar` (coste en env a 0 = sin confirmar, tope propio) y 4ª excepción del guardián de gasto. Falta para `hogar-nuevo`.
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
-La moto de Víctor (Allianz [nº de póliza retirado]) salía con catálogo de coche porque CIMA la guardó como `auto`
+La moto de cliente C17 (Allianz [nº de póliza retirado]) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
 + ingesta parcheada (matrícula ya moto → moto; guarda clase/categoría/Base7/cilindrada en crudo). ⚠️ Ahora
 una `moto` da 409 al retarificar: `retarificar-cartera.ts` solo hace auto/hogar → punto 1 del plan.
@@ -1013,7 +1014,7 @@ con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejem
 #3351 mergeado. Carné B en moto: si la ficha tiene carné de moto Y B con fecha, el B viaja detrás (`drivingLicenses[1]`,
 `fechaCarnetB`); el de moto sigue en `[0]`. Arreglado de paso: el PATCH de `fechaCarnet` tras un 400 (`interprete-400`)
 pisaba el A de una moto con un B de España y se llevaba el resto de carnés.
-#3355 y asegura#848 mergeados (23/09): la ingesta de CIMA ya no devuelve a `auto` las 18 motos corregidas. Moto de Víctor
+#3355 y asegura#848 mergeados (23/09): la ingesta de CIMA ya no devuelve a `auto` las 18 motos corregidas. Moto de cliente C17
 ([nº de póliza retirado]) lista para la 1ª emisión real desde plataforma: faltan en pantalla versión, estado civil y sexo (ficha sin ellos).
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
@@ -1026,7 +1027,7 @@ extendió para aceptar las tres formas reales del crudo (test visto fallar sin e
 
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
-`product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
+`product.options` del Submit (proyecto [nº de proyecto retirado], oferta [nº de póliza retirado], Allianz), cierra el caveat
 del PR de emisión que quedaba "sin probar en real"; (2) **Comercios y Comunidades NO están
 disponibles por API REST** aunque estén activados en el panel de Avant2 con Occident/Reale — solo
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
@@ -1204,16 +1205,16 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 
 - **(29/09/2026) Buscador de la correduría: la matrícula de las OPORTUNIDADES no se buscaba.** «5655dsm» decía «nadie coincide» teniendo una oportunidad de auto abierta: `porMatricula` solo miraba `polizas.datos_especificos` y había 1.735 matrículas de leads (`oportunidades.info_riesgo`) invisibles. Ahora busca en las dos (gana la póliza; la de lead sale «(oportunidad)») y la cobertura cuenta ambas. Cepo `test/regression-busqueda-matricula-oportunidad.test.ts` (visto en rojo). PR #4079 mergeado.
-- **(29/09/2026) Documento REPETIDO en una ficha no abría oportunidad.** Manuel Antonio Piña: su póliza del Terracan (PDF con contraseña = DNI; se abre bien) se subió antes de #4015 y, al re-subirla, asegura la vio repetida (mismo sha256) y se saltó la lectura en silencio. Fix: `/api/operador/documentos` lee también los repetidos (`crearOportunidad` ya deduplica). Cepo `test/regression-oportunidad-documento-repetido.test.ts` (visto en rojo). PR #4052 mergeado. Para esta ficha: re-subir o «Leer para oportunidad».
+- **(29/09/2026) Documento REPETIDO en una ficha no abría oportunidad.** cliente C03: su póliza del Terracan (PDF con contraseña = DNI; se abre bien) se subió antes de #4015 y, al re-subirla, asegura la vio repetida (mismo sha256) y se saltó la lectura en silencio. Fix: `/api/operador/documentos` lee también los repetidos (`crearOportunidad` ya deduplica). Cepo `test/regression-oportunidad-documento-repetido.test.ts` (visto en rojo). PR #4052 mergeado. Para esta ficha: re-subir o «Leer para oportunidad».
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).** Herramientas nuevas: `estado_oportunidad`, `cerrar_tarea`, `ver_siniestro`/`seguir_siniestro`, `contacto_cliente`, `ver_riesgo` y **`precio_hogar`** (Catastro → ficha de hogar → mismo cobro/cola que coche). Arreglos: descripciones por modo (en autónomo ya no dicen «botón»), **huella entre mensajes** (tabla `correduria_asistente_huella`, 30 min, `repetir=true`), `forzar` prohibido en el mismo turno, DNI tapado rechazado, timeout duro. Migración aplicada (huella + ramo `hogar`). Medido antes: 0 👍/👎 en 25 turnos; `preparar_emision` 5/5 fallaba por pasar nº de póliza en vez de uuid (regla nueva en el prompt).
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
 ## (12/10/2026) Correduría · baja firmada en cola avisa por Telegram + red diaria (#4521, mergeado)
-- Caso: baja `inmediata` Occident pól. 548238086 firmada en portal → quedó en `aprobacion` pendiente (caduca 15/10) sin avisar a nadie. Es diseño (inmediata nunca sale sola; Occident sin `recibe_anulaciones`).
+- Caso: baja `inmediata` Occident pól. [nº de póliza retirado] firmada en portal → quedó en `aprobacion` pendiente (caduca 15/10) sin avisar a nadie. Es diseño (inmediata nunca sale sola; Occident sin `recibe_anulaciones`).
 - `enviarAnulacionTrasFirma` (apps/asegura/lib/aprobaciones.ts) ahora manda Telegram si queda `en_cola` (helper puro `aviso-anulacion-en-cola.ts` + test, marca efecto retroactivo). Portal: texto «tu correduría la está revisando».
 - Auditoría de flujos (3 agentes + verificador): caducidad de `aprobacion` silenciosa, recibo devuelto caducado no se reproponía, póliza declarada con `void` sin `after()`. Arreglado: cron `correduria-red-diaria` (06:23 UTC, cron-dispatch) con Telegram de caducan<24h/caducadas, bajas firmadas sin comunicar +48h con causa y recibos aún devueltos; `proponerReciboDevuelto` reabre caducada/fallida.
-- Casos reales para Alberto: Occident GPAFS0900547 `firmada` sin carta ni firma; Mapfre 0007001518236 con propuesta rechazada (no se repropone). Colas: 74 eventos, 85 gestiones +48h, bot Allianz roto desde 06/10.
+- Casos reales para Alberto: Occident [nº de póliza retirado] `firmada` sin carta ni firma; Mapfre [nº de póliza retirado] con propuesta rechazada (no se repropone). Colas: 74 eventos, 85 gestiones +48h, bot Allianz roto desde 06/10.
 - Pendiente: Alberto aprueba/revisa esa baja (efecto 01/10 retroactivo) y da el buzón de bajas de Occident.
 
 ## (12/10/2026) Sivra · agente huésped: voz del dueño + peticiones de factura
@@ -1243,7 +1244,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Desplegable de seguro anterior: grupo «del cónyuge/pareja», orden por antigüedad, aviso si no se pudo mirar.
 - Propuesta conjunta: `seguros.presupuesto_propuesta` (+item), SQL `2026-10-07e_presupuesto_propuesta.sql` APLICADO en producción (07/10/2026), verificado: RLS en las 3 tablas, prisma_seguros sin DELETE/TRUNCATE ni UPDATE en item, triggers presentes; solo faltan los COMMENT ON (cosméticos). PDF junta escenarios; aviso uno por tomador (el portal solo enseña lo suyo), WhatsApp con código por escenario, valida todo antes de rotar enlaces.
 - «Duplicar con otro tomador» en la oportunidad. Rafael/Ana (Mercedes 5802-JMJ) preparado: Rafael tomador, Ana conductora.
-- Pendiente Alberto: teclear en la ficha de Ana Isabel Dañino (lead 6a986813) DNI, nacimiento y carné (van cifrados, no por SQL).
+- Pendiente Alberto: teclear en la ficha de cliente C20 (lead 6a986813) DNI, nacimiento y carné (van cifrados, no por SQL).
 
 ## (07/10/2026) Correduría · botón «Tarificar» en Oportunidades de la ficha
 - `TarificarOportunidad.tsx` + helper puro `lib/correduria/tarificar-oportunidad.ts` (test). Reutiliza `rutaVariante()`/`ramoVariante()` → `/<ramo>-nuevo?oportunidad=`.
@@ -1308,7 +1309,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Paso 2 APARCADO (decide Alberto): formulario de auto sin login vía `/datos/[token]` del portal. Hoy el portal no tiene formulario de auto y un lead no entra sin invitación + OTP.
 
 ## (06/10/2026) Portal: instrucciones Chrome iOS con las dos posiciones del botón Compartir
-Víctor confirma que instala desde Chrome iOS; Chrome movió Compartir de abajo a arriba a la derecha. `instalacion.tsx` menciona ambas.
+Un cliente confirma que instala desde Chrome iOS; Chrome movió Compartir de abajo a arriba a la derecha. `instalacion.tsx` menciona ambas.
 
 ## (06/10/2026) Portal: cierre de la auditoría final (H1-H5)
 Botones de baja/mejorar precio solo con nivel que opera (`NIVELES_QUE_OPERAN`/`nivelPuedeOperar` en module-seguros-portal/acceso.ts,
@@ -1333,11 +1334,11 @@ Historial `PREFIJO_HISTORIAL_CARNET_PROPIO` (sin fecha) → evento `carnet` en e
 
 ## (06/10/2026) Portal: carnés con varias fichas
 Puente `/api/portal/carnets` agrupa por titular (`carnets-titulares.ts` en asegura y portal): `ok` (1 titular, `carnets` plana como antes) /
-`varios_titulares` (200, solo `titulares`); carné de ficha no leída se descarta. Avisos/recordatorios nombran al titular («…de Ana Pérez»).
+`varios_titulares` (200, solo `titulares`); carné de ficha no leída se descarta. Avisos/recordatorios nombran al titular («…de <titular>»).
 El cliente NO escribe carnés en el portal (solo el corredor): alta/edición desde portal pendiente de decisión de Alberto. Auditoría: 5/5 confirmadas.
 
 ## (06/10/2026) Portal del cliente: instalar en iPhone con Chrome
-Víctor Manuel de la Fuente no podía añadir el portal a inicio desde Chrome iOS (en Safari sí). `apps/asegura-portal`:
+cliente C17 no podía añadir el portal a inicio desde Chrome iOS (en Safari sí). `apps/asegura-portal`:
 helper `puedeAnadirDesdeNavegador` (Chrome/Firefox/Edge iOS solo ≥16.4; vista integrada Gmail/WhatsApp nunca) + test;
 instrucciones Chrome iOS (Compartir arriba dcha → «Ver más») y salida «Ábrela en Safari» con copiar enlace; globo de
 instalar se abre solo UNA vez al entrar (descarte en localStorage), en Android lanza el prompt nativo; `appleWebApp` +
@@ -1368,11 +1369,11 @@ vinculadas con nivel gestionar/administrar; cuenta, contacto, documento suelto y
 ## (06/10/2026) Correduría: CP en la cabecera de la ficha de cliente
 - `Cabecera.tsx` (`Contacto`) pinta «CP Ciudad, Provincia» junto al pin. El CP ya llegaba de asegura (`ContactoFicha.codigoPostal`); solo faltaba pintarlo. Sin cambios de BD/puerto.
 
-## (05/10/2026) Correduría: «Solicitar baja» desde el portal del cliente + baja moto Hassan Pimienta
+## (05/10/2026) Correduría: «Solicitar baja» desde el portal del cliente + baja moto cliente C18
 - Portal `/boveda`: botón por póliza propia en vigor, motivo OBLIGATORIO (venta→`inmediata`+fecha; precio→ofrece presupuesto y guarda competidor/precio en `motivo_texto`; otro→`no_renovacion`). `origen='portal'` retenida 48 h (`LIBERADA_SQL` en `pendientesDe` + CHECK en BD), Telegram a Alberto, «Liberar para firma» en «Hoy». ≤3 días al efecto → se libera sola.
-- SQL `apps/asegura/prisma/sql/2026-10-05a_seguros_anulacion_solicitud_portal.sql` APLICADO 06/10 (+ baja Hassan id 1230d99a…, no_renovacion).
+- SQL `apps/asegura/prisma/sql/2026-10-05a_seguros_anulacion_solicitud_portal.sql` APLICADO 06/10 (+ baja cliente C18 id 1230d99a…, no_renovacion).
 - Allianz (C0109) NO sale por correo tras firmar: queda `firmada` → PUE a mano → marcar comunicada.
-- Hassan (póliza f19a195e…, vence 01/12, se va a Línea Directa por precio): Alberto invita y abre `no_renovacion`; recordatorio 25/10 (plazo ~31/10).
+- cliente C18 (póliza f19a195e…, vence 01/12, se va a Línea Directa por precio): Alberto invita y abre `no_renovacion`; recordatorio 25/10 (plazo ~31/10).
 ## (05/10/2026) RRHH: rotación masiva de acceso_token tras PR #4313
 - Con OK de Alberto, tras el deploy READY del fix: 36 tokens renovados (Global2 14, Mariscos González 22), formato `generarAccesoToken()`, transacción con verificación. Auditoría en `seguros.operational_events` (`rrhh_acceso_token_rotacion_masiva`).
 - Los enlaces antiguos ya no valen: cada responsable saca el nuevo con «Ver enlace» en la ficha. Aviso a empleados pendiente del OK de Alberto.
@@ -1384,10 +1385,10 @@ vinculadas con nivel gestionar/administrar; cuenta, contacto, documento suelto y
 
 ## (05/10/2026) Vigía «🚨 Reserva que Smoobu NO tiene»: falso positivo de Expedia
 - Alerta «reserva 102699405 · piso sin identificar»: era un MENSAJE de huésped de Expedia Partner Central
-  (Reka Bekesi, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
+  (un huésped, llega 06/11 20:00, pide balcón); 102699405 = ID de alojamiento Expedia de «Busto Reform» (`htid`).
 - Fix: `lib/correo/num-confirmacion.ts` descarta htid/ID de alojamiento y, con remitente Expedia, solo acepta
   «confirmación: N»; el vigía excluye en SQL las filas `mensaje_huesped` de Expedia; `canalDeAsunto` reconoce «huésped de Expedia».
-- Reserva de Reka Bekesi (06/11) confirmada en Smoobu por Alberto.
+- Reserva de un huésped (06/11) confirmada en Smoobu por Alberto.
 
 ## (05/10/2026) Correduría: Google Contacts — MERGEADO (#4286 + #4298)
 - Gmail personal sin DPA (aceptado). Etiqueta «Grupo ASegura»: 🟢 cliente en vigor, 🟡 lead, 🔵 compañía, ⏰ vence ≤30 d; nota con pólizas+vencimiento+URL, cumpleaños; adopción del volcado .vcf sin duplicar; simular antes de activar. Skill `google-contactos`.
@@ -1477,7 +1478,7 @@ Aviso de un huésped. `acceso.ts` paso 2 decía apartamento+portal+ascensor (con
 - `seguros.presupuesto.referencia` (trigger + contador por correduría/año, inmutable) y `documento_descargado_at`; migración `2026-09-30b_presupuesto_referencia.sql` **a aplicar ANTES de desplegar asegura**. PDF con la referencia, nunca el nº de Avant2. Preparar reutiliza el vigente con el mismo conjunto visible (`oculta_at IS NULL` = en documento).
 - Buscador: `AS-26-0042` → tarjeta del presupuesto → pantalla de emisión existente. `/emitir` sella `emitido_at`/`poliza_emitida_id`. Pendiente: opción preseleccionada en AutoNuevo/MotoNuevo (choca con PR #4127) y referencia en el texto de WhatsApp/correo.
 - Dictado de Alberto: solo bloquea lo que la compañía ANUNCIA (BLOQUEADA); sin anuncio se emite directo. Retiradas `emisionEscalonadaRecomendada`/`textoEmisionEscalonada` (guardián `regression-sin-aviso-emision-escalonada`).
-- Antonio Cruz 5655DSM (Reale TA, efecto 10/10): se emite por el asistente de Telegram; bloqueó por falta de nº de vía en la dirección. Vencimiento de la Mapfre 2002500565564 sin confirmar.
+- cliente C01 [matrícula retirada] (Reale TA, efecto 10/10): se emite por el asistente de Telegram; bloqueó por falta de nº de vía en la dirección. Vencimiento de la Mapfre [nº de póliza retirado] sin confirmar.
 
 ## (30/09/2026) Correduría: ficha = Seguro (en vigor) vs Oportunidad; el vencimiento manda (PR #4128)
 - Decisión de Alberto: solo hay DOS cosas. Seguro = con nosotros en vigor (solo eso hace cliente). Todo lo demás (volcado, competencia) = Oportunidad; «recuperable» NO existe.
@@ -1517,7 +1518,7 @@ Aviso de un huésped. `acceso.ts` paso 2 decía apartamento+portal+ascensor (con
 
 ## (29/09/2026) CIMA: devuelto de póliza SUSTITUIDA ya no se pide pagar en el portal (PR #4088, mergeado)
 - CIMA del día OK (4 ficheros, 0 cuarentena). Mapfre mandó su 1.er POL diario el 28/09.
-- Caso José Suárez (Kona 9833LJC Mapfre→Reale): enlace de sustitución y anulación firmada ya existían (23-24/09);
+- Caso cliente C14 (Kona [matrícula retirada] Mapfre→Reale): enlace de sustitución y anulación firmada ya existían (23-24/09);
   la renovación Mapfre llegó `devuelto` y el portal le decía «paga o te quedas sin cobertura» + volvía a enseñar la Mapfre.
 - `devueltoPorSustitucion` (module-seguros) + aplicado en `cartera-lectura.ts` del portal; cepo de fuente probado en rojo.
 - Pendiente de Alberto: aprobar el correo de anulación a Mapfre (aprobación `pendiente` del 29/09; la del 26/09 CADUCÓ sin decidir).
@@ -1540,10 +1541,10 @@ Aviso de un huésped. `acceso.ts` paso 2 decía apartamento+portal+ascensor (con
 - Pendiente: la abierta por `de-poliza` nace sin tarea («Sin próximo paso») hasta el aviso de #4019.
 
 ## (29/09/2026) Correduría: bot «pedir precio → Emitir» sin gastos inútiles (PR #4047)
-Hereda el seguro anterior de la última petición pagada del MISMO vehículo (sin él la moto de Manuel Piña pasó de 200 a 360€); `sinSeguroAnterior` lo corta.
+Hereda el seguro anterior de la última petición pagada del MISMO vehículo (sin él la moto de cliente C03 pasó de 200 a 360€); `sinSeguroAnterior` lo corta.
 asegura comprueba gratis la dirección de la empresa propietaria (tipo de vía) antes de cobrar. `emitirCompania/Modalidad/PrimaEur` → tras un precio real se prepara la emisión de ESE proyecto y llega el botón «Emitir».
 Lección cara: 7-8 tarificaciones de 0,50€ por campos que se podían ver gratis antes. Toda comprobación posible va ANTES del cobro.
-Allianz avisa «ESTA POLIZA QUEDARÁ BLOQUEADA … INCENDIO-ROBO SIN DAÑOS» ya en el precio; se emitió por Avant2 y quedó bloqueada (borrador a sucursal 209 + CTS Autos Sur, op. 279136633). REGLA de Alberto: con aviso de bloqueo, emitir primero la básica y ampliar después por suplemento con la documentación. `bloqueoCompania()` (module-seguros) lo enseña ANTES de emitir: en la parrilla, el panel de emisión, Telegram y la comparativa del cliente.
+Allianz avisa «ESTA POLIZA QUEDARÁ BLOQUEADA … INCENDIO-ROBO SIN DAÑOS» ya en el precio; se emitió por Avant2 y quedó bloqueada (borrador a sucursal 209 + CTS Autos Sur, op. [nº de póliza retirado]). REGLA de Alberto: con aviso de bloqueo, emitir primero la básica y ampliar después por suplemento con la documentación. `bloqueoCompania()` (module-seguros) lo enseña ANTES de emitir: en la parrilla, el panel de emisión, Telegram y la comparativa del cliente.
 Alberto: «pide el precio pero con mi OK» → el precio (0,50€) va SIEMPRE con botón también en modo autónomo (`PRECIO_SIN_BOTON = false`); el resto del autónomo no cambia.
 
 ## (29/09/2026) Correduría: cuestionario IDD autorrellenado + «Emitir» en cada fila de «Qué verá el cliente»
@@ -1553,7 +1554,7 @@ Alberto: «pide el precio pero con mi OK» → el precio (0,50€) va SIEMPRE co
 
 ## (29/09/2026) Correduría: EMPRESA (CIF) como propietaria del vehículo en moto y auto
 - Desde el riesgo de la oportunidad, una ficha `tipo_persona = juridica` puede ocupar el papel **propietario**: viaja como `JuridicalPerson_V1` (`Cif` + razón social + contacto/dirección de su ficha, `construirEmpresa` en `persona.ts`). CIF validado con dígito de control antes de pagar. Nunca conductor (el vendor solo admite Dni/Nie/Passport ahí): se corta gratis.
-- 🚧 **Sin verificar contra Codeoscopic** qué más exige `owner` jurídico: la primera cotización real (Manuel Antonio Piña + Global 2, oportunidad moto) lo dirá.
+- 🚧 **Sin verificar contra Codeoscopic** qué más exige `owner` jurídico: la primera cotización real (cliente C03 + Global 2, oportunidad moto) lo dirá.
 - Tomador empresa también (auto y moto): ficha jurídica en el papel de tomador → `holder` `Cif`, propietaria por defecto la misma empresa, y exige conductor habitual persona en el riesgo (se corta gratis si falta). Así cada papel se puede alternar empresa/particular para comparar precios. Hogar no declara `owner` distinto; vida/salud/decesos, asegurado = persona.
 
 ## (29/09/2026) asegura-web: la píldora de la cabecera vuelve a CLARA
@@ -1577,8 +1578,8 @@ llamadas de «Hoy» y el badge de Clientes. Ahora van por `/api/correduria/conta
 CRM de Manuel (`crm_seguros`, ~8,5k filas pero bytes mínimos). Sigue recomendado pasar a Pro antes del ~4 oct.
 
 ## (29/09/2026) Descuento comercial por defecto al 50 % (Allianz coche)
-- Alberto: «dejamos 50 si no da error, por si la compañía va variando descuentos». Prueba en web (40961885): 50+50 = mismo precio que 20+20 en Allianz, Generali aplica ~12 %, sin error. Catálogo Allianz auto `dtoCap`/`dtoVentaCruzada` 25→50 (`DESCUENTO_POR_DEFECTO`), textos de la pantalla de emisión al día.
-- Pendiente: Allianz moto, Generali y Catalana en moto necesitan el id del campo (traer el 40961885 y leer opciones). No confirmado si el descuento sale de la comisión.
+- Alberto: «dejamos 50 si no da error, por si la compañía va variando descuentos». Prueba en web ([nº de proyecto retirado]): 50+50 = mismo precio que 20+20 en Allianz, Generali aplica ~12 %, sin error. Catálogo Allianz auto `dtoCap`/`dtoVentaCruzada` 25→50 (`DESCUENTO_POR_DEFECTO`), textos de la pantalla de emisión al día.
+- Pendiente: Allianz moto, Generali y Catalana en moto necesitan el id del campo (traer el [nº de proyecto retirado] y leer opciones). No confirmado si el descuento sale de la comisión.
 
 ## (29/09/2026) Correduría: todo documento de seguro subido abre (o completa) su oportunidad
 - Donde se suba (ficha, portal, enlace de datos, «Subir póliza»), un documento de seguro abre sola la oportunidad: llamada 45 días antes del vencimiento, y si no se lee la fecha, tarea para pedirla. PDF con contraseña: se prueba el DNI de la ficha (PR #3994). PR #4015.
@@ -1596,8 +1597,8 @@ CRM de Manuel (`crm_seguros`, ~8,5k filas pero bytes mínimos). Sigue recomendad
 - Checklist vivo de la conexión (confirmado, descuentos por compañía, lo que hay que mirar en la pantalla): `docs/CODEOSCOPIC-PENDIENTES.md`.
 - `previousInsurance` no se corrige por PATCH: tiene que ir bien en la primera tarificación.
 
-## (29/09/2026) Bonus de moto no aplicado (2121NST): matrícula anterior + lista de compañías de Avant2
-- Medido en `tarificaciones` (3 de Manuel Piña): Mapfre responde «el cliente no aparece asociado a una póliza de otra compañía», Reale ignora el historial, Occident −41% sin verificar. Causa: `previousInsurance.registrationPlate` iba SIEMPRE con la matrícula actual (`peticion-moto.ts`/`peticion-auto.ts`); con vehículo nuevo la compañía no encuentra el historial.
+## (29/09/2026) Bonus de moto no aplicado ([matrícula retirada]): matrícula anterior + lista de compañías de Avant2
+- Medido en `tarificaciones` (3 de cliente C03): Mapfre responde «el cliente no aparece asociado a una póliza de otra compañía», Reale ignora el historial, Occident −41% sin verificar. Causa: `previousInsurance.registrationPlate` iba SIEMPRE con la matrícula actual (`peticion-moto.ts`/`peticion-auto.ts`); con vehículo nuevo la compañía no encuentra el historial.
 - Arreglo: campo «Matrícula de esa póliza» (`matriculaAnterior`) en auto-nuevo y moto-nuevo; vacío = la actual. Test que falla sin él.
 - El desplegable de moto leía el directorio de la correduría (14); ahora `/motorcycle/insurance-companies` de Avant2 (`companias-anteriores-moto`), como auto desde el 25/09.
 - Pendiente: aviso «bonificación NO verificada» a partir de los avisos de compañía (propuesto, sin hacer).
@@ -1707,7 +1708,7 @@ Los dos botones (ficha y cabecera de /correduria) saltaban a `asegura/cartera/su
 Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla propia `/correduria/subir-poliza`
 (lee por `leer-documento` con tomador; `sello` no llega al navegador) → póliza nuestra / ficha / alta.
 Cepo `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo 4/5 brazos).
-Telegram: si la oportunidad ya existía («duplicada»), los documentos se guardan SOLOS en la ficha (antes botón que nadie pulsaba: Rafael Campa, 3 envíos, 0 guardados).
+Telegram: si la oportunidad ya existía («duplicada»), los documentos se guardan SOLOS en la ficha (antes botón que nadie pulsaba: cliente C08, 3 envíos, 0 guardados).
 
 ## (28/09/2026) Opciones del producto por precio (asistencia estándar vs ampliada)
 - Avant2 manda `formattedOptions` en cada precio («Asistencia en viaje: Estándar») y se TIRABAN. Nueva columna `seguros.tarificacion_precios.opciones` (sobre `leidas|no_manda|sin_precio|fallo`; NULL = sin intentar), migración `2026-09-28d_…` APLICADA.
@@ -1766,7 +1767,7 @@ Telegram: si la oportunidad ya existía («duplicada»), los documentos se guard
 ## (28/09/2026) Correo de presupuesto: diseño de marca + acceso directo a la intranet (#3900)
 - El correo «Tu presupuesto está listo» usa la plantilla de cumpleaños (logo, botón, 3 pasos) y el botón entra DIRECTO al
   portal con la llave de un solo uso y 24 h (`crearEnlaceDirecto`); al pie, el enlace de siempre (código). Firmar sigue con código.
-  WhatsApp sin llave. Primera prueba real: presupuesto de moto de Manuel Piña enviado por Telegram (`enviar_presupuesto`, #3890).
+  WhatsApp sin llave. Primera prueba real: presupuesto de moto de cliente C03 enviado por Telegram (`enviar_presupuesto`, #3890).
 
 ## (28/09/2026) Telegram de la correduría ya ENVÍA presupuestos (rescata la tarificación guardada)
 - #3888 mergeado (retomar sin pagar la última tarificación de moto de un cliente nuevo). Nueva herramienta
@@ -1780,12 +1781,12 @@ Telegram: si la oportunidad ya existía («duplicada»), los documentos se guard
   fija el precio. Algunas la hacen ya al estimar. Descartado preguntar a TIREA (spec 2026-09-01 §3 actualizada).
 - Medido en `tarificacion_precios`: Reale avisa «PENDIENTE REALIZAR CONSULTA SINCO» (79/89 auto); Occident
   «compañía no sinco sin certificado» (supeditada); Mutua «descuentos de siniestralidad»; el resto no dice nada.
-- Rafael Campa (lead): oportunidad auto completada por SQL desde Drive (MUSSAP, vence
+- cliente C08 (lead): oportunidad auto completada por SQL desde Drive (MUSSAP, vence
   20/10/2026, 374,90€). Pendiente con OK de Alberto: presupuestar auto eligiendo la póliza/historial de cada coche
   y el bug de `oportunidad-presupuesto.ts:52` (con 2 auto abiertas cuelga todo de la más antigua).
 
 ## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
-Caso: Generali [nº de póliza retirado] — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
+Caso: Generali [nº de póliza retirado] — tomador cliente C25 (conductor habitual), GLOBAL 2 propietaria+asegurada;
 no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido: 28 pólizas vivas / 22 fichas en ese caso.
 Ficha del corredor: `figuraEn` (`polizasDondeFigura`, por `cliente_id` o DNI) → bloque «Donde figura en pólizas de otro tomador».
 Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa del dueño) ve también donde ESA ficha figura,
@@ -1811,7 +1812,7 @@ Confirmado con las condiciones particulares de Generali: tomador y conductor hab
 - La provincia ahora se sobrescribe con la del CP al teclear un CP completo (antes solo si estaba vacía).
 
 ## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
-- `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
+- `[matrícula retirada]` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
   toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio
   de 12 meses acotado a [último hito, hoy]; una serie imposible (más allá de hoy+20 d al ritmo máximo) sigue `null`.
 - Moto: «¿Dónde duerme?» arranca en «Vía pública», como auto.
@@ -1823,19 +1824,19 @@ Confirmado con las condiciones particulares de Generali: tomador y conductor hab
   → `/motorcycle/registration-date`. Hasta que despliegue asegura, plataforma cae a la estimación por serie.
 
 ## (28/09/2026) Sincro CIMA: la fecha de carné de una MOTO se comparaba con el carné B
-- Aviso falso en Manuel León Sotelo ([nº de póliza retirado], BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
+- Aviso falso en cliente C24 ([nº de póliza retirado], BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
 - Nuevo `esPolizaDeCoche()` en `@central/module-seguros` (`sincro-cima.ts`): moto si `categoriaVehiculo`/`claseVehiculo` ∈ MO/MT/CI (raíz o riesgos). Test visto en rojo.
-- Francisco Sánchez Torres ([nº de póliza retirado], Toyota Avensis) NO es este caso: discrepancia real del B, la decide Alberto. Su conductor habitual cuelga de otra ficha (`851b9766…`): posible duplicado.
+- cliente C23 ([nº de póliza retirado], Toyota Avensis) NO es este caso: discrepancia real del B, la decide Alberto. Su conductor habitual cuelga de otra ficha (`851b9766…`): posible duplicado.
 
 ## (28/09/2026) Baja firmada en el portal → justificante al cliente + archivo en su póliza
-Auditoría de la baja Mapfre de Pablo Guzmán Pueyo: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
+Auditoría de la baja Mapfre de cliente C04: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
 El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a leer el código (iPhone). Y tras firmar no recibía NADA.
 Nuevo `apps/asegura/lib/justificante-anulacion.ts`: tras la firma (after(), detrás del envío a la compañía) archiva el PDF
 firmado en `documentos` de la póliza (visible en su portal) y le manda correo con PDF+txt. Idempotente. Botón «Mandar
 justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
-Victor/Jose, también firmados sin justificante).
+dos clientes, también firmados sin justificante).
 Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaducaEn`) y enseña «Bajas que has firmado» 60 días.
-⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de Pablo y Jose NO están comunicadas.
+⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de dos clientes NO están comunicadas.
 `recibe_anulaciones` de Mapfre a false, CCORREDOR re-etiquetado comercial; mapfre@mapfre.es probado → Resend «suppressed» (no
 entrega). Borradores en Gmail a jmreal@mapfre.com (comercial) preguntando el buzón de bajas. Los otros 4 buzones «general» sin verificar.
 ## (28/09/2026) Fusión de fichas: el DNI ILEGIBLE ya no bloquea para siempre
@@ -1865,12 +1866,12 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 - Acuse «lo estamos revisando» ya no sale el día de salida; se cierra el peldaño y se avisa a Alberto.
 - 2ª tanda: filtro de plantillas (`esPlantillaHost`: nombre completo al principio = bienvenida/despedida nuestra; 8 contestadas solas en sep), categorías con `\b` + seguridad/camas/avisos (el phishing caía en «parking» por «card»), `mensajes_log.respuesta_enviada` + `edited` real + vista `v_agente_huesped_calidad`, aviso de antigüedad en el prompt (>6 h), y lo aprobado SIN editar entra como hecho `propuesto` con botones.
 - ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
-- Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
+- Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is un huésped…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
 
 ## (28/09/2026) Agente de huéspedes: «olvidar» lo que ya respondió Alberto a mano
 - El pendiente de `mensajes_pendientes_tg` solo se cerraba con los botones de Telegram: si se contesta desde Smoobu/Booking seguía vivo → recordatorio a los 45 min y acuse «lo estamos revisando» al huésped a las 3 h sobre una conversación ya atendida.
 - Botón **✋ Ya respondido** (`hsp_done`) en propuesta, re-propuesta y recordatorio: borra el pendiente sin enviar nada. Y el barrido de rancios (`rancio-guardia`) mira el hilo antes de recordar/acusar: si tras la pregunta hay un mensaje del host que no es nuestro ni plantilla (`respondidoFuera()`, puro y testeado), cierra y avisa por Telegram con el texto visto.
-- Pendiente de 154692216 (Justine) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
+- Pendiente de 154692216 (huésped H3) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
 - PR #3849 mergeado. Después: 11 zombis BORRADOS, y `mensajes_log.emisor_raw` (jsonb, aplicada) guarda origen (sondeo/historial/correo) + `type`/`sent_by_owner`/`sender`/campos crudos de Smoobu del mensaje tomado como pregunta → la próxima vez que un mensaje de Alberto entre como huésped, `SELECT emisor_raw FROM mensajes_log` dice por qué.
 - Botón **🙋 Ese mensaje es mío** (`hsp_mine`) en la propuesta: mete la «pregunta» en `mensajes_enviados` (el anti-eco la trata como del host desde entonces) y cierra el pendiente. Es el arreglo manual hasta tener datos de `emisor_raw` para el automático.
 
@@ -1892,8 +1893,8 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 correo). 177 fusionadas con `fusionar_clientes` (mismo nombre normalizado, sin DNI contradictorio); 19 las paró
 `dni_sin_indice` y NO se forzaron; esas y las de nombre distinto ya se encuentran por su correo secundario. Queda 1:
 Easy Fuel / Clara Montilla (ninguna con índice). 8 relaciones «Empleado/a» estaban al revés (persona→empresa):
-giradas; 5 personas-empresa marcadas jurídicas; 3 persona↔persona sin tocar. Teléfono «sin forma»: Carlos Solano
-Freixanet (lead), no se descifra desde SQL. Las 31 gemelas volcado+CIMA se dejan: el código lee la dirección de ahí.
+giradas; 5 personas-empresa marcadas jurídicas; 3 persona↔persona sin tocar. Teléfono «sin forma»: cliente C36
+cliente C55 (lead), no se descifra desde SQL. Las 31 gemelas volcado+CIMA se dejan: el código lee la dirección de ahí.
 
 ## (28/09/2026) Martin (Gymcisa) fusionado: su DNI del volcado no lo abre la clave
 Backfill de DNI pulsado: 0 rellenables y la ficha lead 2a6c38e9 seguía sin hash → su DNI cifrado es de los 935
@@ -1918,11 +1919,11 @@ distintos (no se funden); Materiales Llido Gomez S.l. ×2 = mismo CIF+tel, leads
 
 ## (27/09/2026) Pólizas «vencidas» que sí estaban en vigor: Allianz (recibos) y Mapfre (sin datos)
 - Allianz no manda POL por CIMA pero sí REC: el recibo 2027 cobrado no movía el vencimiento. Nuevo pg_cron `seguros-avanzar-vencimientos-recibo` (06:30 UTC, función `seguros.avanzar_vencimientos_por_recibo()`, SQL en apps/asegura/prisma/sql/2026-09-27_renovacion_por_recibo.sql, APLICADO): solo avanza pólizas YA vencidas (el recibo de renovación llega semanas antes; avanzar antes borraría el aviso de no-renovación). 4 Allianz avanzadas.
-- Mapfre: 10 pólizas vencidas sin ningún dato de renovación (Mapfre mudo 23/06→25/09, aún sin POL). Portal: `renovacionSinConfirmar` → «Renovación sin confirmar» en vez de esconderlas de «En vigor» (Toyota de Víctor). Vigía de ingesta con señal por compañía: en curso (PR aparte).
+- Mapfre: 10 pólizas vencidas sin ningún dato de renovación (Mapfre mudo 23/06→25/09, aún sin POL). Portal: `renovacionSinConfirmar` → «Renovación sin confirmar» en vez de esconderlas de «En vigor» (Toyota de cliente C17). Vigía de ingesta con señal por compañía: en curso (PR aparte).
 
 ## (27/09/2026) Portal: quien figura en una póliza (propietario, conductor, asegurado…) la ve
 - Decisión de Alberto: el interviniente ve ESA póliza con los datos del tomador y puede dar parte; nunca las otras del tomador. Nueva lista `CarteraPortal.intervinientes` (grupo «Figuras en su póliza»). Regla pura en `apps/asegura-portal/lib/intervinientes.ts`; IBAN/DNI/documentos siempre fuera (el portal no los carga). Cepo: `test/regression-portal-intervinientes.test.ts` (visto en rojo, 6 mutaciones).
-- Solo funciona si el interviniente tiene `portal_vinculo`: Nieves Rodríguez aún no tiene acceso al portal.
+- Solo funciona si el interviniente tiene `portal_vinculo`: cliente C42 aún no tiene acceso al portal.
 
 ## (27/09/2026) El bot de seguros ya HACE cosas: tarea, llamada, nota, siniestro, portal (PR #3748)
 - Tools `proponer_tarea`/`registrar_llamada`/`anotar_nota`/`abrir_siniestro`/`invitar_portal` → tabla `correduria_asistente_accion` (aplicada) → botón «✅ Hacer» (un uso, 15 min, `from.id`, interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA`) → mismos puertos que la ficha. Portal: comprueba `invitable` antes de ofrecer (es un correo real). Sin respuesta = «incierta».
@@ -1941,10 +1942,10 @@ distintos (no se funden); Materiales Llido Gomez S.l. ×2 = mismo CIF+tel, leads
 - Tablas `correduria_asistente_documento` + `_oportunidad` (aplicadas). Lógica pura en `lib/correduria-oportunidad-tg.ts` (+12 cepos, vistos en rojo).
 - ⚠️ Depende del interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (el mismo de emitir/corregir). Si el lead no tiene ficha, el asistente manda a crearla en /correduria.
 ## (27/09/2026) Correduría: sustitución futura = un seguro, buscador de relaciones, fichas descartadas con póliza viva (PR #3756)
-- Portal: Allianz→Occident de Víctor de la Fuente (efecto 01/11) salían dos «En vigor». La vieja se retira de la bóveda ya; la fila nueva dice «Empieza el… / Hasta entonces, Allianz». La hoja QR sigue enseñando la que cubre HOY (`carteraALaVista(c, { soloSiYaCubre })`).
+- Portal: Allianz→Occident de cliente C17 (efecto 01/11) salían dos «En vigor». La vieja se retira de la bóveda ya; la fila nueva dice «Empieza el… / Hasta entonces, Allianz». La hoja QR sigue enseñando la que cubre HOY (`carteraALaVista(c, { soloSiYaCubre })`).
 - Buscador de relaciones decía «nadie» sobre fichas YA relacionadas (Studium como «Empleado/a» del volcado): ahora las nombra con su tipo.
-- «Descartar» ya no deja descartar a quien es INTERVINIENTE de una póliza viva. Reactivadas en BD 7 fichas descartadas con póliza viva (Nieves Rodríguez, Pablo Guzmán, La Ponde, Monte Carmelo 68, Úrsula Navarro, CP Cancionera 4, Mª del Mar Guzmán). Causa: la ingesta CIMA (repo `asegura`) no llama a `reactivarPorPoliza`.
-- Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota [matrícula retirada] de Víctor en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
+- «Descartar» ya no deja descartar a quien es INTERVINIENTE de una póliza viva. Reactivadas en BD 7 fichas descartadas con póliza viva (cliente C42, cliente C04, La Ponde, Monte Carmelo 68, cliente C54, CP Cancionera 4, cliente C26). Causa: la ingesta CIMA (repo `asegura`) no llama a `reactivarPorPoliza`.
+- Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota [matrícula retirada] de cliente C17 en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
 - Pendiente de decisión: que los intervinientes vean en el portal las pólizas donde aparecen (propuesto: nivel mínimo, sin prima/recibos/datos del tomador).
 
 ## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
@@ -1986,7 +1987,7 @@ Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin
 - 🚨 El móvil NO verifica nada: al confirmar se AÑADE a la ficha decidida por el correo (`anadirContacto`), nunca busca/funde fichas; si está en otra ficha no se toca y el Telegram lo avisa.
 
 ## (27/09/2026) Agente huésped: early check-in dicho «libre» con la víspera OCUPADA
-- Reserva 157252361 (Duplex Center, llega 28/09): el borrador decía «la noche anterior está libre» y la 150035011 (stephen martin) SALÍA el 28 (medido en `incomes`). No se envió (needs_human).
+- Reserva 157252361 (Duplex Center, llega 28/09): el borrador decía «la noche anterior está libre» y la 150035011 (un huésped) SALÍA el 28 (medido en `incomes`). No se envió (needs_human).
 - La consulta a Smoobu usaba `apartments[]`+`from/to` en /api/reservations; causa exacta no medible sin clave. Ahora: `apartmentId`+`departureFrom/To` (early) y `arrivalFrom/To` (late), y `estanciasFiables()` devuelve null (= no verificado) si la lista viene paginada o con estancias fuera de ventana.
 - Alberto: «tienes el calendario volcado» → `incomes` (webhook Smoobu en tiempo real) pasa a fuente PRINCIPAL; Smoobu en vivo queda de refuerzo (bloqueos). `combinarFuentes()`: una que diga ocupado manda. `lateOferta` de los mensajes programados usa la misma regla (calendario + Smoobu). Cepo visto en rojo.
 
@@ -2050,7 +2051,7 @@ Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin
 - El flotante se porta a `<body>`: el cajón se esconde con `transform` y un `fixed` dentro saldría fuera de vista. 150 ms de retardo anti-parpadeo; `prefers-reduced-motion` sin animación.
 
 ## (26/09/2026) Portal: el aviso de la campana lleva DIRECTO a aceptar la autorización
-- Caso Pablo Franco Ruz ← Grupo ELCA 83 (`ver_economico`, concedida por Alberto, pendiente de que Pablo acepte; aún no ha entrado nunca).
+- Caso cliente C07 ← Grupo ELCA 83 (`ver_economico`, concedida por Alberto, pendiente de que Pablo acepte; aún no ha entrado nunca).
 - Aviso `autorizacion_pendiente` → `/autorizaciones?aceptar=<id>`: pliega «Qué es lo que das», pone «Te han dado acceso a» primero y ABIERTO si hay pendientes (antes plegado = botón escondido), baja a la tarjeta y la resalta.
 - Aceptar sigue SOLO en la pantalla (no en la campana), decisión confirmada por Alberto.
 - Recordatorio: «Administración» NO abre la empresa entera; solo «Dueño» (`dueno-empresa.ts`).
@@ -2059,10 +2060,10 @@ Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin
 - Botón «📥 Traer póliza de Codeoscopic» en la ficha de póliza (plataforma) → `POST asegura /api/operador/poliza/traer-pdf`
   {polizaId, projectId?}. Gratis (GET). Exige que el nº de la solicitud aprobada = el de la póliza (si no, 422 y no guarda).
 - El cron `polizas-pdf` además archiva solo (sin correo) el PDF de las emitidas con proyecto enlazado y sin PDF (90 días).
-- Drive POLIZAS EMITIDAS: Reale [nº de póliza retirado] (proyecto 40804066, enlazado → cron) · Occident [nº de póliza retirado] (40841279, a mano) ·
-  2002600520435 (sin nº de proyecto conocido).
+- Drive POLIZAS EMITIDAS: Reale [nº de póliza retirado] (proyecto [nº de proyecto retirado], enlazado → cron) · Occident [nº de póliza retirado] ([nº de proyecto retirado], a mano) ·
+  [nº de póliza retirado] (sin nº de proyecto conocido).
 
-## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
+## (26/09/2026) cliente C04: correo de emisión ENVIADO con PDF (verificado en BD)
 - 18:29 UTC `emision_con_poliza` a Pablo (Allianz [nº de póliza retirado]) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
   El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.
 - Baja de la Mapfre en `solicitada`: al firmar Pablo sale sola a CCORREDOR@mapfre.com. Pendiente: verificar firma→comunicada.
@@ -2078,7 +2079,7 @@ Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin
   ya propone «Póliza» primero). Así se cargan las emitidas que están en Drive `ASEGURA/POLIZAS EMITIDAS` (PR #3683 → sigue).
 
 ## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
-Primera emisión por Telegram hecha (Pablo Guzmán, Allianz [nº de póliza retirado]). Alberto pidió: correo moderno al cliente + firma
+Primera emisión por Telegram hecha (cliente C04, Allianz [nº de póliza retirado]). Alberto pidió: correo moderno al cliente + firma
 de la baja de la anterior + envío automático a la compañía. **Casi todo existía** (expediente `anulacion`, firma en portal,
 cola de aprobaciones). Nuevo: `trasEmision()` al acuñar (abre la baja YA y manda UN correo sin datos de cartera),
 `enviarAnulacionTrasFirma` (única excepción a «aprobar»: firmada + `no_renovacion`/`sustitucion` + buzón recordado),
@@ -2141,13 +2142,13 @@ superpowers, `code-review`, `security-review` y `agente-architect`.
 
 ## (26/09/2026) Correduría: 328 fichas con el correo de la ficha distinto del principal de su lista
 Medido: todas de la importación del 21/06; 271 son correos que ya tiene OTRA ficha (índice único, choques del backfill del 08/09).
-Impacto real, en 7 clientes con póliza activa por CIMA que el portal no enlazaría a su ficha. Hecho: Reyes Tejero y Sabeino Nosti (ya leads)
-con su correo de cabecera en la lista como principal. Pendiente de Alberto: Aguilera Reina (duplicado; la fusión exige el índice del DNI del
-prospecto → backfill DNI en /correduria/mantenimiento), buzones compartidos (Ansaire/Juan Carlos, Flores y Gázquez/Diego Flores «Empresa»,
-González Lozano/Manuel Puerto «Cónyuge», Molera Cantos/Ricardo Domínguez +7, González García con 2 DNI distintos) y Antonio Sánchez/Toni Villegas.
+Impacto real, en 7 clientes con póliza activa por CIMA que el portal no enlazaría a su ficha. Hecho: cliente C39 y cliente C40 (ya leads)
+con su correo de cabecera en la lista como principal. Pendiente de Alberto: cliente C38 (duplicado; la fusión exige el índice del DNI del
+prospecto → backfill DNI en /correduria/mantenimiento), buzones compartidos (Ansaire/cliente C61, Flores y Gázquez/cliente C35 «Empresa»,
+cliente C43/cliente C44 «Cónyuge», cliente C45/cliente C46 +7, González García con 2 DNI distintos) y cliente C47/cliente C48.
 
 ## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
-- Stephen (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
+- huésped H5 (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
 - Causa medida contra Smoobu (vía `pg_net`): `/api/reservations/{id}/messages` pagina de 25 en 25 (más antiguo primero); con 27 mensajes sus dos preguntas quedaban en la página 2, el último visible era un automático nuestro → `host_ultimo_sin_pregunta`, salida muda.
 - Fix: `lib/smoobu-paginas.ts` (puro, 6 tests, visto en rojo) + `smoobuMensajesReserva()` en `lib/smoobu.ts`; lo usan contexto, historico, seed-aprendizaje y la ficha `/sivra/mensajes/[bookingId]`. Página intermedia fallida → `null`, nunca hilo a medias.
 - Pendiente: las salidas tempranas del orquestador siguen sin dejar rastro; merece un aviso. Rotar key/secret de Smoobu (salieron en la sesión).
@@ -2158,7 +2159,7 @@ El trigger `seguros.portal_retirar_vinculos_email_de_ficha` (PR #3600) leía `OL
 fallaba con 42703. Reescrito por ramas de tabla y APLICADO en central (`seguros_portal_vinculo_retira_fix_clientes`);
 las 4 rutas verificadas en bloque revertido (mismo hash conserva vínculo, hash cambiado lo retira).
 Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes` con el viejo, y reintentar no re-espejaba
-(«valor no cambiado»). Re-espejada a mano la ficha de Pilar Franco Ruz; `cambiarContacto` ahora re-espeja siempre que se guarda el principal.
+(«valor no cambiado»). Re-espejada a mano la ficha de cliente C06; `cambiarContacto` ahora re-espeja siempre que se guarda el principal.
 
 
 ## (26/09/2026) Fila 13 CONSTRUIDA: importar un proyecto de Avant2 y emitirlo desde la intranet (PR #3657)
@@ -2170,7 +2171,7 @@ Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes`
 - Spec en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Nada construido.
 - Hallazgo: `/emitir` NO necesita línea previa en `codeoscopic_consumo`; basta enlazar proyecto→póliza en `codeoscopic_projects` (el requisito venía de la FK de `tarificaciones`). Fila 13 corregida.
 - Orden: fila 13 → fila 5 (timeouts, requisito previo) → fase 3a (resumen construido en servidor + botón `cas_emitir` de un solo uso con huella) → 3b (correcciones por chat).
-- Pablo Guzmán (Mapfre `[nº de póliza retirado]` vence 29/09): se emite A MANO en Avant2, no espera a esto.
+- cliente C04 (Mapfre `[nº de póliza retirado]` vence 29/09): se emite A MANO en Avant2, no espera a esto.
 
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
@@ -2185,7 +2186,7 @@ Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes`
 
 ## (25/09/2026) Correduría · emisión: el doc decía «sin envío al vendor» y ya emite
 - Medido en BD: 2 proyectos `emitida` (Allianz 17/09 pól. [nº de póliza retirado], Reale 23/09). Corregidos `apps/asegura/CLAUDE.md` («flag que nunca se activó»), `CORREDURIA-CRM-VISION.md` §4/§9 y la skill `correduria-crm`.
-- Límite real: solo se emite desde «Retarificar» de una póliza auto/moto. Negocio nuevo (`*-nuevo`), hogar/vida/salud/decesos y proyectos hechos a mano en Avant2 (p. ej. 40842815, Allianz de Pablo Guzmán Pueyo, ML 250) NO se emiten ni importan por id → se emiten en Avant2 y entran por CIMA.
+- Límite real: solo se emite desde «Retarificar» de una póliza auto/moto. Negocio nuevo (`*-nuevo`), hogar/vida/salud/decesos y proyectos hechos a mano en Avant2 (p. ej. [nº de proyecto retirado], Allianz de cliente C04, ML 250) NO se emiten ni importan por id → se emiten en Avant2 y entran por CIMA.
 - «📄 Subir póliza» NO escribe `polizas` (solo documento + `portal_poliza_declarada`): no sirve para registrar una emitida fuera.
 - Pendiente con spec + OK: importar proyecto de Avant2 por id y emitir negocio nuevo.
 - Retarificar (auto): la fecha de efecto arranca en el VENCIMIENTO de la póliza si es fiable (viva, no cancelada, no emitida nuestra) y cae en [hoy, hoy+90]; si no, mañana (regla de Alberto: misma fecha). Moto no cambia.
@@ -2198,7 +2199,7 @@ Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes`
 - Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
 - Personas: el formulario de autorización (alcance) va PLEGADO detrás de su botón, y ese botón pasa a secundario: el caso normal (nadie ve nada de nadie) ya no parece una tarea pendiente.
 - Cabecera: número y correo pasan a texto seleccionable (los iconos ya llaman/escriben; eran la misma acción dos veces).
-- El titular saliendo como «persona» ajena (PABLO JUAN GUZMAN LOZANO en su propia ficha) NO se toca aquí: lo arregla el PR #3596.
+- El titular saliendo como «persona» ajena (CLIENTE C05 en su propia ficha) NO se toca aquí: lo arregla el PR #3596.
 
 ## (25/09/2026) Ficha cliente: «Eliminar» también en pólizas VIVAS canceladas de Oportunidades
 El botón quedaba suelto bajo la rejilla y parecía «borrar todas»: ahora va DENTRO del marco de su tarjeta.
@@ -2214,7 +2215,7 @@ resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue si
 - `PolizaPortal.cambiosCompania` + sección en `/boveda/poliza/[id]` (también en la ficha de la vieja, con enlace).
 
 ## (25/09/2026) Ficha: el tomador con ficha duplicada salía en «Personas» como un tercero
-- Pablo Guzmán Lozano: CIMA colgaba al propietario de su coche de OTRA ficha suya (lead, mismo hash de
+- cliente C05: CIMA colgaba al propietario de su coche de OTRA ficha suya (lead, mismo hash de
   DNI, 0 pólizas) → salía «sin vínculo» con botón «Declarar». `leerIntervinientes` (asegura) marca ahora
   `esTomador` también por NIF igual al del tomador. Y el formulario de «Declarar» hace scroll al abrirse
   (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
@@ -2237,8 +2238,8 @@ resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue si
 ## (25/09/2026) Ficha de cliente: añadir contacto con lista vacía + fechas de CIMA
 - Con los contactos leídos y VACÍOS no había botón «Añadir» (colgaba del modo «Corregir», que exige chips). Arreglado.
 - CIMA deja fecha de nacimiento y de carné en `poliza_intervinientes`, NO en `clientes`: la ingesta (repo `asegura`, `pull-persist.ts`) solo escribe nombre/DNI/tipo_persona del tomador. La ficha las rellena ya al LEER (`dePolizas` de `cartera-ficha.ts`, casando por `nif_lookup_hash` = DNI), marcadas «(póliza)».
-- Medido: de 101 fichas vivas, 64 tienen interviniente propio; recuperables fnac 5 · tel 2 · email 4 · carné 1. 8 DNIs con varias fichas (Pablo Guzmán, p. ej.).
-- Pablo Guzmán: su póliza de auto NO trae conductor → CIMA no manda fecha de carné. Solo 21 de 73 autos CIMA traen `conductor_habitual`.
+- Medido: de 101 fichas vivas, 64 tienen interviniente propio; recuperables fnac 5 · tel 2 · email 4 · carné 1. 8 DNIs con varias fichas (cliente C04, p. ej.).
+- cliente C04: su póliza de auto NO trae conductor → CIMA no manda fecha de carné. Solo 21 de 73 autos CIMA traen `conductor_habitual`.
 - Decisión de Alberto: 1º CIMA manda (volcado) · 2º cada diferencia se avisa y decide él. Hecho SIN tocar la ingesta: `apps/asegura/lib/sincro-cima.ts` (puerto `/api/operador/cima-sincro`), comparación pura `compararConCima` (module-seguros), bloque «Diferencias con CIMA» en /correduria → Hoy (botón «Aplicar CIMA en todas» = el volcado; «Usar CIMA»/«Mantener el mío» por campo), cron `cima-sincro` 12:50 UTC rellena huecos + Telegram `correduria.cima-diferencias`. Tabla `seguros.cima_decisiones` (aplicada). Tel/email de CIMA entran como principal y el anterior queda secundario.
 - Tras el deploy «no veo el botón»: la comparación hacía ~4 consultas por ficha en serie (el bloque no pintaba nada mientras cargaba y coincidió con «Too many database connections» en /correduria). Reescrita en bloque (3 consultas) y el bloque se ve cargando y cuando todo coincide.
 - Hueco conocido: el tomador que no figura como interviniente (37 fichas) no trae nada comparable — su contacto lo descarta el parser de la ingesta (repo `asegura`).
@@ -2273,7 +2274,7 @@ resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue si
   campos vacíos; cepo `regression-auto-nuevo-supuestos` actualizado. Moto nuevo NO tocado.
 
 ## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
-- Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
+- Caso cliente C08: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
 - `repartirSegurosCliente`: del volcado histórico, la más reciente de cada ramo no cubierto → tarjeta de oportunidad (`historica: true`); el resto sigue plegado. «Ya no lo necesita» retira el ramo.
 - `proximoAniversario()`: fechas de fin pasadas se pintan como la próxima renovación (vida 24/10/2023 → 24/10/2026).
 - `resumenFicha`: con solo pólizas de `total: 0` recibos, devueltos/pendientes = `null` («—»), no «0 · ninguno devuelto».
@@ -2739,7 +2740,7 @@ declarado. tsc 0, `pnpm test` asegura 552/552.
 
 **(21/09/2026)** Respuesta de Codeoscopic por mail (Juan Manuel Fernández), documentada en
 `apps/asegura/CLAUDE.md`: (1) **primera emisión de auto en real VERIFICADA** con el fix del
-`product.options` del Submit (proyecto 40769244, oferta Q2021593788, Allianz), cierra el caveat
+`product.options` del Submit (proyecto [nº de proyecto retirado], oferta [nº de póliza retirado], Allianz), cierra el caveat
 del PR de emisión que quedaba "sin probar en real"; (2) **Comercios y Comunidades NO están
 disponibles por API REST** aunque estén activados en el panel de Avant2 con Occident/Reale — solo
 6 ramos por API (Car/Motorcycle/Home/Health/Burial/Term Life) y sin intención de ampliar. Sin PR
@@ -2936,7 +2937,7 @@ plan idéntico. Es la regla del propio fichero aplicada a sí mismo — un índi
 paga escrituras. ⏸️ **Sin tocar y sigue siendo de Alberto:** RLS (89 tablas, 0 políticas — en bloque con
 BYPASSRLS no daría error, VACIARÍA el portal en silencio). 🚨 **Y lo de «2 pólizas de CIMA que purgan el
 17/10» era FALSO, corregido el mismo día:** entraron solas en el reconcile del 17/09 (`[nº de póliza retirado]` de
-Occident y `6E-G-475000053` de Generali, las dos activas y en vigor). Se leyó el evento del PRIMER intento
+Occident y `[nº de póliza retirado]` de Generali, las dos activas y en vigor). Se leyó el evento del PRIMER intento
 y se llamó «el estado»; el estado está en `cima_ficheros`/`polizas`, no en el log. No se mandó ningún correo.
 El residuo real sobre los 147 ficheros es **1 póliza** (Occident `M00171`, 20/06, crudo ya purgado) y los
 3 siniestros de Allianz sin póliza en cartera. Detalle y receta SQL en `docs/CIMA-CUARENTENA.md`.
@@ -3057,7 +3058,7 @@ asegura/asegura-portal/plataforma; suite completa en verde.
 del cliente (`asegura-portal`, queda para otra sesión).
 
 **(20/09/2026)** Codeoscopic · Alberto preguntó si el 400 de Occident (leasing/renting, tipo de
-adquisición — 2ª vez, proyectos 40788414/40802035) se podía detectar antes. El Product Form Library
+adquisición — 2ª vez, proyectos [nº de proyecto retirado]/[nº de proyecto retirado]) se podía detectar antes. El Product Form Library
 (17/09) solo cubría el Submit; extendido también al ReRate: `interpretarCamposProducto()` reconoce el
 patrón español de campo-de-producto y devuelve `faltan_producto` (422) con `quoteCrudo` en vez del JSON
 crudo, reutilizando el mismo `ProductFormWidget`. El mismo día llegó un 3er error de Reale ("NO SE
@@ -3155,7 +3156,7 @@ registro de esta pasada + PR de carril 2 (fix del allowlist) enlazados por Teleg
   y deja la póliza en `seguros.portal_poliza_declarada` (`procedencia:'documento'`). **NO en `polizas`**:
   ahí `import_ref` NULL sería cartera viva y su número colisionaría con el emparejamiento de CIMA.
   La identidad del portal se crea **sin canal** — carpeta, no cuenta: no da acceso a nadie.
-- Alberto mandó una póliza REAL (Allianz 055993459, Qashqai) y destapó tres: **«Total Recibo» ≠ prima**
+- Alberto mandó una póliza REAL (Allianz [nº de póliza retirado], Qashqai) y destapó tres: **«Total Recibo» ≠ prima**
   (22,09€ tras un extorno de 231,50; la real ~253€, plausible y sin nada que lo delate) · el vencimiento
   del papel **caducado con la póliza viva** (prórroga tácita → `proyectarVencimiento`, declarado) · el
   **mediador** es otra correduría, y hoy se tira porque `AutoLeido` no tiene ese campo.
@@ -3237,7 +3238,7 @@ pero sí trae fecha de EFECTO/emisión, el día y mes de esa fecha SON los del p
 Nuevo `vencimientoDesdeEfecto()` en `module-seguros-portal/poliza-leida.ts` (calcula la próxima
 ocurrencia del día/mes, clamp 29-feb→28 en año no bisiesto) + `extraerPoliza()` pide `fechaEfecto` a
 la IA y lo usa SOLO si `fechaVencimiento` viene `null`. Aplicado a mano también a la póliza de hogar
-de Alejandro Soler (SegurCaixa, efecto 30/01 → vencimiento 30/01/2027).
+de cliente C09 (SegurCaixa, efecto 30/01 → vencimiento 30/01/2027).
 
 **(19/09/2026)** `apps/asegura-portal`: nav a menú hamburguesa en móvil (la decisión de NO
 tenerla era de cuando había 4 pestañas; hoy son 6+ y Alberto lo pidió explícito), «Mis seguros»
@@ -3267,7 +3268,7 @@ nadie ha vuelto a mirarlo. El backlog de PRs de registro sigue atascado por el m
 diagnosticó #2877 hace 6 días (checks de commits de bot sin aprobar), sin cambios. Detalle en
 `docs/AUDITORIA-2026-09.md` (19/09).
 
-**(19/09/2026)** Portal cliente · Las 2 pólizas de Alejandro Soler que salían "sin ramo/sin compañía"
+**(19/09/2026)** Portal cliente · Las 2 pólizas de cliente C09 que salían "sin ramo/sin compañía"
 en `/correduria` son PDFs con contraseña real (no vacía): `pdf-parse` lanza `PasswordException` (medido
 descargando los 2 ficheros de su Drive y probando con `pdf-parse` y `pdfjs-dist` 4.x directo — ninguno
 abre sin contraseña). No es bug de extracción: el documento la exige de verdad. `extraerPoliza()` ahora
@@ -3283,7 +3284,7 @@ la lista, medido en `pricing-fuga-canal`) puede ver 687-827€ en Booking, por d
 No verificable sin sesión logueada en Booking.
 
 **(19/09/2026) Cartera viva ≠ en vigor: cancelada = lead.** Alberto vio a Kartenbrot (1 póliza cancelada)
-  como «Cartera viva» y «6 vivas» en Víctor De la Fuente (4 en vigor). Nuevo `esCarteraEnVigor()` /
+  como «Cartera viva» y «6 vivas» en cliente C17 (4 en vigor). Nuevo `esCarteraEnVigor()` /
   `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` en `cartera-viva.ts` = viva Y `POLIZA_ESTADOS_VIGENTES`;
   lo usan el listado (`cartera-filtro.ts`, leads = complementario exacto), y la base de «clientes sin
   canal». Medido: 95 → **67 clientes / 105 pólizas**; 9 de los 10 «ilocalizables» eran ex-clientes.
@@ -3320,7 +3321,7 @@ vía squash). Con eso se mergearon asegura#838 (alerta Telegram CIMA) y central#
 Probado en real: `cima-pull` disparado a mano tras el merge — `ok:true, processed:0` (nada
 pendiente en ese momento; el aviso se verá la próxima vez que CIMA mande un review/situación real).
 
-**(17/09/2026)** Portal cliente · Alberto reportó que la póliza de Alejandro Soler no guardó dirección
+**(17/09/2026)** Portal cliente · Alberto reportó que la póliza de cliente C09 no guardó dirección
 ni garantías/capitales, y que el PDF no llegó a su ficha. Medido en logs reales de Vercel:
 `POST /api/portal/documento` y `GET /api/portal/contacto` responden **401** desde `central-asegura`
 (mismo fallo que el 09/09: `ASEGURA_PORTAL_PUENTE_SECRET` desincronizado entre `asegura-portal` y
@@ -3337,7 +3338,7 @@ prima en la BD: **falso**, la prima se lee de `ImportesDEC.PrimaNetaAnualizada`,
 medidor acierta. Huecos reales a mirar: `DatosAnulacion.*` (motivo/fecha de anulación), `DatosCargos.*`,
 `DescripcionRamo`/`RamoEntidad`, `ClasePoliza`. Sin ficheros nuevos desde el 16/09 10:10 (Mapfre sigue muda).
 
-**(17/09/2026)** Portal cliente · Alberto reportó que Alejandro José Soler Fernández Gao subió
+**(17/09/2026)** Portal cliente · Alberto reportó que cliente C09 subió
 pólizas y no se enteró ni por Telegram ni como oportunidad. Medido en BD: solo hay UNA declarada
 (la segunda subida no se guardó, probablemente falló en el cliente), vinculada bien a su ficha,
 vence 17/04/2027 — fuera de la ventana de 60 días de `cartera-declaradas.ts`, por eso no era
@@ -3356,10 +3357,10 @@ Alberto probar el widget contra un proyecto real (`CODEOSCOPIC_EMISION_ACTIVA`).
 Manuel (Codeoscopic) sobre catálogos por compañía sigue SIN enviar — probablemente ya no hace falta.
 
 **(17/09/2026)** Codeoscopic · **primera emisión real con éxito** tras el fix del PR #3045
-(`conProductoPorDefecto`, consentimientos de Allianz en el Submit). Proyecto nuevo 40769244
-(Pilar Franco Ruz) → `estado=emitida`, oferta Q2021593788, sin error. Referencia de compañía
+(`conProductoPorDefecto`, consentimientos de Allianz en el Submit). Proyecto nuevo [nº de proyecto retirado]
+(cliente C06) → `estado=emitida`, oferta [nº de póliza retirado], sin error. Referencia de compañía
 [nº de póliza retirado], recibo domiciliado en su cuenta habitual. Queda "pendiente de confirmación por CIMA"
-(normal, es la ingesta async). El proyecto viejo 40685793 sigue `error` y no se toca — es historia.
+(normal, es la ingesta async). El proyecto viejo [nº de proyecto retirado] sigue `error` y no se toca — es historia.
 Causa raíz cerrada de verdad: el bug no era del vendor, era el `product.options` del Submit que
 faltaba.
 
@@ -3426,7 +3427,7 @@ en cuanto se arregla un gap del mapeador, sin depender de la compañía. **Migra
 APLICAR** (gate DDL de AGENTS.md: PR-review + 2-eyes antes de `apply_migration` contra Supabase
 Frankfurt) — desplegar #830 sin aplicarla antes rompería el pull de CIMA. Dos borradores en Gmail
 (sin enviar, a la espera de que Alberto los revise): reenvío a Occident de las 4 pólizas y cierre
-del SAU-24103. Generali C0072 tiene 1 caso igual (6E-G-475000053) que se resolverá solo con #829.
+del SAU-24103. Generali C0072 tiene 1 caso igual ([nº de póliza retirado]) que se resolverá solo con #829.
 
 **(15/09/2026)** ASegura · `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula`
 **mergeados** (PR #2998, `resolverMatricula()` sobre APIVehículo, adaptador intercambiable). Pendiente
@@ -3643,21 +3644,21 @@ PR #2933. Sin código tocado, solo doc.
   (match por `codigoEntidadDgs` + núcleo Occident LOO-973 + fallback nunca pisa un número propio,
   8 tests verificados en rojo antes del fix). Repuestas las 16 pólizas ya duplicadas (repo `asegura`,
   `poliza_merge_log`/`cliente_merge_log`, con `verificacion_humana_alberto` cuando hacía falta —
-  incluida una fusión de CLIENTE, mismo María Rocío González García partida por un split de nombre).
+  incluida una fusión de CLIENTE, mismo cliente C59 partida por un split de nombre).
   Cartera CIMA reconciliada 1:1 contra el portal en las 5 entidades (Allianz 26, Generali 14, Reale 1,
   Mapfre 64, Occident 51). PR #838 (draft): alerta de Telegram en `cima_fichero_review` y
   `cima_situacion_desconocida` — antes solo quedaban en `operational_events`, invisibles hasta la
   próxima auditoría manual (así se destapó todo esto). Pendiente: `TELEGRAM_BOT_TOKEN`/`CHAT_ID` en
   Vercel de `asegura` para que la alerta de #838 funcione en producción.
 
-- **🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba (17/09/2026).**
+- **🔓 Causa real de los 500 del Submit (proyecto [nº de proyecto retirado]): un `product.options` que nunca se mandaba (17/09/2026).**
   Codeoscopic (Juan Manuel Fernández) contestó al correo del 13/09: nunca llegó a Allianz — faltaban 4
   consentimientos obligatorios del formulario de Allianz (`insuredFamilyInAllianz`, `publicityConsent`,
   `allianzGroupProductsConsent`, `commercialProfilingConsent`) en `product.options` del propio Submit, DISTINTO
   del `product.options` del ReRate que ya existía (`opciones-producto.ts`). Arreglado: `conProductoPorDefecto()`
   (puro, los 4 en `false`, no pisa el JSON avanzado del corredor), cableado en `emitir/route.ts`. Cepo visto
   en rojo (2 tests) antes de restaurar. 463/463 tests asegura + tsc 0 + code-review (2 hallazgos, los 2
-  aplicados). El 40685793 sigue muerto (fecha de efecto caducada); el arreglo es para el SIGUIENTE Submit.
+  aplicados). El [nº de proyecto retirado] sigue muerto (fecha de efecto caducada); el arreglo es para el SIGUIENTE Submit.
 
 - **Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
   (15/09/2026).** DGT rechazó la vía de dato abierto (datos.gob.es, 15/09: "no disponemos de API REST
@@ -3713,9 +3714,9 @@ PR #2933. Sin código tocado, solo doc.
   Avisado por PushNotification. Detalle en `pricing_aprendizaje` (`ciclo_14_09_2026`) y bitácora.
 
 - **🇮🇹 `detectLang` marcaba italiano correcto como "deriva al español" (13/09/2026, reserva
-  147382671, Daniela).** Un borrador BUENO en italiano (sin `ciao/grazie/prego`, solo "con" como
+  147382671, huésped H4).** Un borrador BUENO en italiano (sin `ciao/grazie/prego`, solo "con" como
   señal) puntuaba `es>en` y `pareceEspanol()`/`derivaAEspanol()` (PR #2378, 05/09) lo declaraba
-  falsamente en español — mismo bug que el de Massimo pero en sentido inverso (falso positivo, no
+  falsamente en español — mismo bug que el de huésped H1 pero en sentido inverso (falso positivo, no
   fallo real). Fix: el marcador de IT en `reglas.ts::detectLang` gana `hai/sì/così/però/che/
   questo/questa/molto/scusa/buonasera` (antes solo 9 palabras "de libro"). 2 tests nuevos
   (`reglas.test.ts` + `idioma-salida.test.ts`) con el texto real. De paso se corrigió en BD el
@@ -3759,7 +3760,7 @@ PR #2933. Sin código tocado, solo doc.
   `PUBLIC` del middleware (Resend también recibía el login). PR #2901 mergeado y verificado en prod (`GET` → 405 con
   `x-matched-path`); envs `CODEOSCOPIC_WEBHOOK_BASIC_USER/BASIC_PASS` puestas por Alberto en `central-asegura`. **Decisión de
   Alberto:** primero emitir; el repunte de la URL a JM se pide cuando la emisión funcione al 100 % y **con dominio propio,
-  nunca `vercel.app`** (host de `central-asegura` aún sin atar; propuesta `api.grupoasegura.es`). 40685793 leído a las 14:27 UTC:
+  nunca `vercel.app`** (host de `central-asegura` aún sin atar; propuesta `api.grupoasegura.es`). [nº de proyecto retirado] leído a las 14:27 UTC:
   sin `policyApplication`; fecha de efecto 13/09 → caduca mañana. Con OK explícito de Alberto se envió seguimiento por Gmail a
   Juan Manuel **Fernández** (PM API; el «López» de la cartera es otro) en el hilo de las 07:55. Escalado: Ángel Blesa.
 
@@ -3774,7 +3775,7 @@ PR #2933. Sin código tocado, solo doc.
   `GET /api/operador/companias` en `apps/asegura` + proxy `GET /api/correduria/companias`. Se añadió además
   `contacto_telefono` (Mapfre, Occident, Helvetia — minados de firmas de correo). `tsc` limpio en ambas apps.
 
-- **🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en Pablo Franco Ruz — no era el móvil
+- **🔎 Diagnóstico (sin código): botón WhatsApp/Invitar ausente en cliente C07 — no era el móvil
   (13/09/2026).** Alberto reportó el botón ausente; se confirmó por BD que teléfono (móvil válido) y
   email de la ficha (`1e831058-…`) están bien y el email resuelve de forma ÚNICA a su propia ficha
   (sin ambigüedad, sin `resuelve_a_otra`). El bloque entero (✉️ Invitar + WhatsApp) solo se oculta
@@ -3812,19 +3813,19 @@ PR #2933. Sin código tocado, solo doc.
 
 - **🔌 `sivra_rates_snapshot` en 401 desde el 11/09 — NO es la credencial HMAC, es el endpoint `/api/rates` de Smoobu (13/09/2026).** El monitor de latidos avisó del 401 en las 4 propiedades; `smoobu_sync`/`reservas_booking_vigia` (mismo key/secret, mismo día) funcionan bien → descarta credencial rota. Prueba de fuego: `pricing_applied.dry_run=false` (escrituras REALES a Smoobu) se cortó en seco el **11/09 08:30**, exactamente cuando el snapshot dejó de leer — lectura Y escritura de `/api/rates` rotas a la vez, mientras `/api/reservations` sigue viva. Apunta a un permiso/scope de la API key de Smoobu ("Rates & Availability") desactivado, no arreglado por la regeneración de credenciales del PR #2753 (esa solo tocó el HMAC general). **Pendiente de Alberto:** revisar en el panel de Smoobu que la API key `usr_live_ed2a936…` tenga marcado el permiso de tarifas/disponibilidad. No se tocó código: no hay bug de repo que corregir.
 
-- **📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta (13/09/2026, tras el 500 del 40685793).**
+- **📮 El portal de Codeoscopic SÍ documenta cómo reconciliar un Submit sin respuesta (13/09/2026, tras el 500 del [nº de proyecto retirado]).**
   Leído con Claude en Chrome: `GET /insurances/{id}` trae `policyApplications[]` con `status.id` (`Approved`) y
   `policyNumber`; 500 = «report to support» (`soporteapi@avant2.es`), 502/503/504 = «try again». Sin webhooks ni
   idempotencia. Cableado: `solicitudesEmision()`/`consejoTrasFallo()` (`reintento-emision.ts`), 409 con `solicitudes`,
   **aprobada con nº → se acuña (`acunarExistente`) sin reenviar**, pendiente → sin reintento. Literal en
   `docs/CODEOSCOPIC-API-PORTAL.md` § Policy application. #2870 mergeado antes (fail-closed base). #2872 mergeado y
-  probado: el 40685793 sale con `policyApplications[]` VACÍO (Codeoscopic no registró la solicitud). **Alberto escribió a
+  probado: el [nº de proyecto retirado] sale con `policyApplications[]` VACÍO (Codeoscopic no registró la solicitud). **Alberto escribió a
   Juan Manuel Fernández (Product Manager API, cc soporteapi@avant2.es) con el requestId** — pendiente de respuesta; el
   hilo de Manuel del 03/06 (sandbox + Basic Auth del webhook) sigue sin contestar. Hueco siguiente: al acuñar, bajar
   `issuedDocuments[]` (`InsuranceFile_V1`) a `seguros.documentos` — falta la forma del tag `File` del portal.
 
 - **🛑 Primer Submit que LLEGA a la compañía… y Codeoscopic contesta 500 «Unknown error while waiting for the operation to complete» (13/09/2026).**
-  Proyecto 40685793 (Pilar, Allianz; 0,50€ del ReRate, el Submit no cobra): la persona iba completa (ya no hay 400 de
+  Proyecto [nº de proyecto retirado] (Pilar, Allianz; 0,50€ del ReRate, el Submit no cobra): la persona iba completa (ya no hay 400 de
   email/calle — el `POST /insurances` de #2859 la manda entera) y el 500 es del vendor esperando a la compañía, a las
   08:27 de un domingo. **No es un rechazo: no se sabe si Allianz emitió**, y el vendor no deduplica. Fail-closed en
   `/emitir` (`lib/codeoscopic/reintento-emision.ts`, puro): si el proyecto ya cuenta una `policyApplication` → 409
@@ -3834,7 +3835,7 @@ PR #2933. Sin código tocado, solo doc.
   `emitida` aunque `poliza_id` ya estuviera puesta (antes no, y un 2º `/emitir` habría reenviado). PR #2870.
   Sin webhook real de Codeoscopic (la tabla solo tiene smoke tests de junio) ni fixture del proyecto post-Submit.
 
-- **⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día (13/09/2026).**
+- **⏳ La fecha de efecto CADUCA: el proyecto [nº de proyecto retirado] murió al cambiar de día (13/09/2026).**
   Con #2859 desplegado, Alberto pulsó «Confirmar precio» y la compañía contestó «The effective date cannot be
   before today»: se cotizó el 12/09 con efecto 12/09 (la pantalla precarga HOY) y `effectiveDate` es de solo
   lectura → proyecto muerto, 0€ gastados (medido en `codeoscopic_consumo`). Nuevo `fechaEfectoCaducada()`
@@ -3860,7 +3861,7 @@ PR #2933. Sin código tocado, solo doc.
   `VAPID_PRIVATE_KEY` + `CRON_SECRET` en Vercel `asegura-portal` (detalle en su `CLAUDE.md`). PR #2850.
 
 - **📧 El vendor devuelve `emails: []`, no `email` — medido, y reparación GRATIS antes del Submit (13/09/2026).**
-  Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto 40685666:
+  Alberto abrió «Retarificar» de Pilar y el log de `/precalificar` enseñó la persona real del proyecto [nº de proyecto retirado]:
   `holder.emails` array vacío, sin clave `email` → el PATCH del 12/09 «no aplicaba» porque el vendor tira la clave
   desconocida en silencio. `CLAVE_EMAIL_VENDOR='emails'` + `elementoEmail()`; la clave del elemento
   (`address`/`email`/`value`) la descubre `completarPersonas` (PATCH+relectura por orden, log). Y `emitir/route.ts`
@@ -3889,7 +3890,7 @@ PR #2933. Sin código tocado, solo doc.
   falta Generali, que se conecta la semana del 15/09/2026** (hoy sin acceso, ver `apps/asegura/CLAUDE.md`).
 
 - **💸 Causa de fondo del día de emisión fallida: el `POST /insurances` mandaba la persona SIN email ni calle completa (12/09/2026).**
-  Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de Pilar Franco Ruz, los 7 con la misma
+  Medido en `codeoscopic_consumo`: 7 cargos de 0,50€ (11-12/09) sobre la póliza de cliente C06, los 7 con la misma
   persona incompleta — `persona.ts` los omitía a propósito («no hacen falta para el precio»), el Submit los exige y el
   vendor NO aplica el correo por PATCH (`roadName` sí). Cada capa de la cascada descubría un campo por cargo.
   Fix (PR de esta rama): `construirPersona` manda lo que la ficha tiene (email por `emailDeFicha`, calle troceada, `roadType`
@@ -3899,7 +3900,7 @@ PR #2933. Sin código tocado, solo doc.
   antes del próximo cargo; `error_mensaje` ya guarda el 400 del Submit. PR #2847 (desplegable post-pago) mergeado.
 
 - **🛣️ `tipoVia` en `faltan_vendor` era una caja de texto que pedía un id de catálogo a ciegas (12/09/2026).**
-  Alberto, sobre el ReRate de Allianz para Pilar Franco Ruz: «no entiendo que pida otra vez poner calle».
+  Alberto, sobre el ReRate de Allianz para cliente C06: «no entiendo que pida otra vez poner calle».
   El panel de Emisión (`retarificar/emision.tsx`, plataforma) pintaba `tipoVia` y `estadoCivil` como
   `<input>` pidiendo «el id del catálogo /road-types, no el nombre» — un id que nadie tiene a la vista y
   que la regla de la casa prohíbe inventar. El puerto YA servía ese catálogo gratis (`tipo=vias`,
@@ -4053,7 +4054,7 @@ PR #2933. Sin código tocado, solo doc.
   recuperada a la vista el botón está apagado y lo dice; «Descartar» es el ÚNICO gesto que manda
   `forzarNuevo` (= `guardadaDescartada`, nunca un `true` fijo); y el 409 con `proyectoExistente` es
   su propio estado (`proyecto_vigente`), no «este ramo no se retarifica». Medido en BD: Pilar lleva
-  8 tarificaciones reales (4€) desde el 10/09; el vigente es `40684860` (Allianz, Q2018415779) y su
+  8 tarificaciones reales (4€) desde el 10/09; el vigente es `[nº de proyecto retirado]` (Allianz, [nº de póliza retirado]) y su
   ficha SÍ tiene dirección cifrada, así que el ReRate debería repararse solo. 3 cepos vistos en rojo.
 
 - **🤖 El 400 del ReRate deja de ser un error: es una lista de huecos (12/09/2026).** Alberto: «un
@@ -4093,7 +4094,7 @@ PR #2933. Sin código tocado, solo doc.
   ficha no trae dirección o el trocebo sale mal. 344/344 tests + tsc limpios.
 
 - **🚨 Undécimo 400 real de Codeoscopic — ReRate exige la calle del tomador (12/09/2026).**
-  `POST /insurances/40684860/offers` rechazado: «The road name of the address of the holder/primary
+  `POST /insurances/[nº de proyecto retirado]/offers` rechazado: «The road name of the address of the holder/primary
   driver/owner is mandatory.» La cotización inicial nunca lo pedía (por eso `construirPersona()` solo
   mandaba CP+municipio, deliberadamente sin calle) — el ReRate sí lo exige cuando SÍ viaja dirección de
   residencia. `DatosPersona` gana `nombreVia` (opcional; hogar no lo necesita), `construirPersona` lo
@@ -4102,8 +4103,8 @@ PR #2933. Sin código tocado, solo doc.
   DNI/teléfono. 342/342 tests + tsc limpios.
 
 - **🛑 No crear proyecto por proyecto en Codeoscopic — guardián de reutilización (12/09/2026).**
-  Alberto, revisando el proceso: el reintento de Pilar creó un proyecto NUEVO (`40684860`) en vez de
-  reusar el `40684815` (que seguía vigente) — otros 0,50€ gastados y riesgo de que la compañía dé OTRO
+  Alberto, revisando el proceso: el reintento de Pilar creó un proyecto NUEVO (`[nº de proyecto retirado]`) en vez de
+  reusar el `[nº de proyecto retirado]` (que seguía vigente) — otros 0,50€ gastados y riesgo de que la compañía dé OTRO
   precio. `prepararRetarificacion()` (`lib/retarificar-cartera.ts`) ahora comprueba GRATIS (`GET`, vía
   `proyectoVigenteDePoliza`) si ya hay un proyecto con oferta confirmada y sin caducar antes de dejar
   pedir precio de nuevo; si lo hay, corta con 409 y da el proyecto a reutilizar. Escape hatch
@@ -4111,12 +4112,12 @@ PR #2933. Sin código tocado, solo doc.
   `expirationDate`, antes descartado). 340/340 tests + tsc limpios, mismo PR #2790.
 
 - **🚨 Décimo 400 real de Codeoscopic — Submit sin el body part `policyApplications` (12/09/2026).**
-  Reintento de emisión de Pilar (proyecto nuevo `40684860`, Allianz) rechazado: «The
+  Reintento de emisión de Pilar (proyecto nuevo `[nº de proyecto retirado]`, Allianz) rechazado: «The
   `policyApplications` body part is required.» `enviarEmision()` mandaba `offerId` + campos sueltos
   como partes multipart independientes; el vendor exige UNA parte `policyApplications` con un JSON
   ARRAY dentro (`quote.id` + campos), según `docs/CODEOSCOPIC-TRASPASO-MANUEL.md` (única referencia
   con la forma real). Corregido en `lib/codeoscopic/emitir-envio.ts`; 340/340 tests + tsc limpios.
-  Diagnóstico previo del corte de las 09:41:54 (proyecto `40684815`) confirmó que Codeoscopic NUNCA
+  Diagnóstico previo del corte de las 09:41:54 (proyecto `[nº de proyecto retirado]`) confirmó que Codeoscopic NUNCA
   procesó ese Submit — sin duplicado que conciliar. Pendiente: que Alberto reintente con el fix ya
   desplegado.
 
@@ -4159,11 +4160,11 @@ PR #2933. Sin código tocado, solo doc.
   5 más recientes, ninguno zombi. Detalle en `docs/AGENTES-BITACORA.md`.
 
 - **🎯 Retarificar: fecha de efecto corregible ANTES de pagar, no después (12/09/2026).** Cierra el
-  ciclo del ReRate de Pilar Franco Ruz (proyecto 40681298): `effectiveDate` es inmutable tras el
+  ciclo del ReRate de cliente C06 (proyecto [nº de proyecto retirado]): `effectiveDate` es inmutable tras el
   `POST /insurances` (PR #2761) — el campo «Fecha de efecto» de `emision.tsx` no servía y **se retiró**.
   Arreglo real en `retarificador.tsx` (pantalla de cotizar, Paso 2): input opcional «Fecha de efecto» →
   `correcciones.fechaEfecto`, pisa el supuesto auto-derivado del vencimiento antes del `POST` pagado.
-  **Para retomar a Pilar:** el proyecto 40681298 se da por perdido; «Pedir precio» de cero y rellenar
+  **Para retomar a Pilar:** el proyecto [nº de proyecto retirado] se da por perdido; «Pedir precio» de cero y rellenar
   esa fecha a ≤90 días vista (su vencimiento real cae a más de un año). Sin PR abierto aún.
 
 - **✏️ Correduría: RC en "Pólizas vivas" ya no vuelca las coberturas en la celda (12/09/2026, PR #2760).**
@@ -4246,7 +4247,7 @@ PR #2933. Sin código tocado, solo doc.
 
 - **🐛 «Qué asegura» de una RC seguía «sin informar» con coberturas REALES de CIMA (12/09/2026, PR
   #2730 + fix).** El PR #2730 añadió modalidad manual de RC para cuando CIMA no manda coberturas —
-  pero Alberto probó sobre la RC de Gabriel Duran Martinez (Occident [nº de póliza retirado], la del caso
+  pero Alberto probó sobre la RC de cliente C16 (Occident [nº de póliza retirado], la del caso
   fundacional) y seguía igual. Causa real, distinta: `objetoConGemela()` de
   `apps/asegura/lib/cartera-ficha.ts` (la ficha del CLIENTE, `/correduria/cliente/[id]`) pasaba
   `coberturas: null` SIEMPRE a `objetoAsegurado()` — un hardcode preexistente, no relacionado con el
@@ -4276,7 +4277,7 @@ PR #2933. Sin código tocado, solo doc.
 
 - **🐛 Primer ReRate real: 400 por confundir el id del mainQuote con el del producto (11/09/2026).**
   Con `CODEOSCOPIC_EMISION_ACTIVA=true` ya activada por Alberto, el primer «Confirmar precio» real
-  (Pilar Franco Ruz, proyecto 40681298) devolvió `400`: `mainQuote` sin `id` y `mainQuote.product` sin
+  (cliente C06, proyecto [nº de proyecto retirado]) devolvió `400`: `mainQuote` sin `id` y `mainQuote.product` sin
   `options`. Nada se cobró ni se comprometió (falló antes de eso, tal como estaba diseñado). Causa
   real, confirmada contra el fixture: `Precio.id` («Q7601460») es el id del **mainQuote**;
   `product.id` es OTRO campo, un número (10, «Reale Autos»), y `reRate()` mandaba el primero donde
@@ -4300,7 +4301,7 @@ PR #2933. Sin código tocado, solo doc.
   pólizas retroactivas. 2730/2730 + 774/774 tests, tsc 0 en plataforma.
 
 - **🔁 Retomar una cotización sin volver a pagar + prellenar el formulario (11/09/2026).**
-  Alberto, probando la emisión de Pilar Franco Ruz: rellenó combustible/versión/garaje/móvil,
+  Alberto, probando la emisión de cliente C06: rellenó combustible/versión/garaje/móvil,
   vio que no se persistía y preguntó si se podía "rescatar la preemisión de antes". Diagnóstico
   en BD: la cotización SÍ se guardaba (`seguros.tarificaciones`); lo que faltaba era que la
   pantalla comprobara si ya había una antes de mostrar el formulario en blanco — recargar
@@ -4311,7 +4312,7 @@ PR #2933. Sin código tocado, solo doc.
   (editable) cuando existe. 774/774 + 330/330 + 2730/2730 tests, tsc 0 en las dos apps.
 
 - **🧾 Emisión real por Codeoscopic: ReRate + Submit construidos, sin sandbox (11/09/2026).**
-  Caso real: Pilar Franco Ruz, auto → Allianz Terceros Ampliado (319,02€), OK explícito de Alberto.
+  Caso real: cliente C06, auto → Allianz Terceros Ampliado (319,02€), OK explícito de Alberto.
   Nuevos `apps/asegura/lib/codeoscopic/{emitir,emitir-envio}.ts` (ReRate + Submit multipart, candado
   `submit_in_flight_at`, índice único nuevo en `codeoscopic_projects`) + puertos
   `/api/operador/codeoscopic/{oferta,emitir}` + `emision.tsx` en plataforma (sustituye la maqueta
@@ -4527,14 +4528,14 @@ PR #2933. Sin código tocado, solo doc.
   (rama `claude/quitar-confusion-3bxugj`) mergeado en `main` (`4fe76c9`), 20/20 checks en verde; sin pendientes.
 
 - **👁 Vista de corredor: Alberto abre el portal como lo ve un cliente (08/09/2026).** Pidió acceso a la
-  intranet de Víctor de la Fuente Rojas para revisarla antes de invitarle; se le devolvió que no existía
+  intranet de cliente C17 para revisarla antes de invitarle; se le devolvió que no existía
   «ver como cliente» y él zanjó: «el corredor puede acceder a cualquier cosa». Botón «👁 Ver su portal»
   en Contactos de la ficha → puerto `POST /api/operador/cliente/portal/vista` (asegura) → enlace de UN uso
   (10 min) → `/corredor/[token]` del portal: identidad REAL dedicada (`IDENTIDAD_CORREDOR_ID`) + vínculo
   temporal `origen='corredor'`, así las 10 lecturas del portal no cambian. `accesoDe()` de asegura EXCLUYE
   ese origen (mirar ≠ «ya entra»); `middleware.ts` veta escrituras en modo corredor (403 `modo_corredor`);
   banda ámbar y `Salir` suelta el vínculo. Migración `2026-09-08_portal_vista_corredor.sql` APLICADA.
-  Dato del camino: Víctor YA entró el 06/09 (código a `victor@grupostudium.com`); 4 pólizas vivas, 3 caducadas.
+  Dato del camino: cliente C17 YA entró el 06/09 (código a [email retirado]); 4 pólizas vivas, 3 caducadas.
 
 - **📲 Fuera la franja «Tenlo a mano» del portal: la campana es el único sitio que ofrece instalar (08/09/2026).**
   Alberto, sobre el banner de esa misma mañana: «yo subiría el instalador arriba al lado de salir, queda más
@@ -4616,7 +4617,7 @@ PR #2933. Sin código tocado, solo doc.
   el evento llega tras cargar y el contenido baja un salto una vez al aparecer el aviso.
 
 - **📲 El WhatsApp de invitación saluda por el NOMBRE DE PILA (08/09/2026).** Alberto, al ver «Hola,
-  Gabriel Duran Martinez:»: «solo pondría el nombre... apellidos es demasiado formal, al ser cliente tiene
+  cliente C16:»: «solo pondría el nombre... apellidos es demasiado formal, al ser cliente tiene
   que ser trato más cercano». `mensajeInvitacionWhatsapp` usa ahora `nombreDePila` —la misma regla que el
   «Buenas tardes, Alberto» de la bóveda—, que **bajó de `module-seguros-portal` a `@central/module-seguros`**
   (plataforma no depende del portal a propósito; el portal la re-exporta). Sociedad o nombre con coma →
@@ -5079,7 +5080,7 @@ PR #2933. Sin código tocado, solo doc.
   pasan a pedirse en la 1ª pasada, que es la que funciona.
   🚨 **Pilar Piña Franco NO necesitaba invitación**: ya está vinculada por índice ciego del correo y fue
   ELLA quien subió el PDF. Faltaba la **autorización de GLOBAL 2** (5 pólizas vivas). Se avisó de que
-  por la regla del 03/09 («el papel PROPONE el acceso, no lo concede») quien la da es Manuel Antonio, el
+  por la regla del 03/09 («el papel PROPONE el acceso, no lo concede») quien la da es cliente C03, el
   dueño; **Alberto lo reafirmó dos veces («dale acceso yo mando», «yo soy el único que estoy autorizado
   a todo») y se anotó por instrucción suya**: `portal_autorizacion` `cf8884c8`, `origen: 'corredor'`,
   alcance `ver_economico`, título `empleado_autorizado`, `poliza_id` NULL (todas, también las futuras),
@@ -5551,7 +5552,7 @@ PR #2933. Sin código tocado, solo doc.
 - **🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión (06/09/2026, PR #2447, EJECUTADO).**
   Al preparar el lote de «provincias falsas» que Alberto tenía pendiente de aprobar, dos cifras mías
   resultaron falsas al medirlas: no eran 473 sino **523**, y **520 son volcado muerto** (solo 3 tocaban
-  cartera viva). Y la fusión de Piña Franco que llevaba tres mensajes pidiendo permiso **ya estaba
+  cartera viva). Y la fusión de cliente C03 que llevaba tres mensajes pidiendo permiso **ya estaba
   hecha** (`d3ea3a53` tiene `merged_into_cliente_id`). Lo que quedaba vivo era otra cosa y más general:
   **`fusion_*` hereda HUECOS, y `34304` no es un hueco** — es el identificador de población del CRM
   viejo en la columna `ciudad`, así que la herencia no lo pisó y el nombre bueno se quedó en la lápida.
@@ -5721,7 +5722,7 @@ PR #2933. Sin código tocado, solo doc.
   su fila de facturas. Las 2 alertas son reales y ya estaban declaradas pendientes: `ses_transporte`
   (sin establecimientos; hoy manda Chekin, hasta el 06/10) y `sivra_domotica_acceso` (cerradura de
   Bustos Tavera sin conexión, Tuya 2001/1109, hasta el 12/09).
-  **Modo noche:** hubo caso real la primera noche — Mafalda (154265696) escribió a las **23:19** hora
+  **Modo noche:** hubo caso real la primera noche — huésped H2 (154265696) escribió a las **23:19** hora
   de Madrid, el mensaje escaló y **el acuse salió a las 23:19:34**. Escribió tres veces más (23:22,
   23:30, 23:31) y el acuse NO se repitió: la guarda de uno por noche y reserva hizo su trabajo.
   `urgente_nocturno=false` (preguntaba por aparcamiento, no era urgencia) y por eso `ultimo_recurso_at`
@@ -5730,7 +5731,7 @@ PR #2933. Sin código tocado, solo doc.
   AlbertoZ» a las 23:19 y a las 23:30) y la última salió con `respuesta` vacía. Puede ser el huésped
   escribiendo dos veces o un reproceso del sondeo; **no se ha determinado** y no se toca sin mirarlo.
 
-- **📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas (05/09/2026).** Alberto, desde el móvil: «no puedo modificar movil ni mails» y «a Manuel Piña Franco también le sale Tarragona». Dos fallos: (1) la pestaña Contactos dejaba añadir/borrar/hacer principal pero NO cambiar un valor — `cambiarContacto` acepta ahora `valor` (recifra + recalcula índice ciego + re-espeja la columna), el `col:telefono` del volcado se baja antes a la hija, la regla de duplicados sale a `duplicadoContacto()` compartida con el alta, y el editor —que vive a pantalla y media en móvil— se abre con un botón desde la tira de arriba; (2) el sitio se pintaba con un `join`: «41807 34304, Tarragona» = CP de Espartinas + id de población del CRM viejo + provincia falsa. Medido sobre 31.809 fichas vivas: **473 con provincia que contradice al CP** (386 «Tarragona» con CP 41xxx, todas `intranet:` de mayo, ninguna de CIMA), 455 con número en `ciudad`, 602 con el CP sin el cero. `leerSitio()` (puro, 8 tests) no afirma lo que se contradice y lo explica; **no sustituye** la provincia por la del CP (el equivocado puede ser cualquiera de los dos). PR #2410. **Pendiente:** lote SQL para corregir esas 473 y fusionar el duplicado de Manuel Antonio Piña Franco (la ficha buena dice ESPARTINAS/Sevilla) — con OK de Alberto.
+- **📇 Correduría: se pueden CORREGIR teléfonos y emails, y la ficha deja de afirmar provincias falsas (05/09/2026).** Alberto, desde el móvil: «no puedo modificar movil ni mails» y «a cliente C03 también le sale Tarragona». Dos fallos: (1) la pestaña Contactos dejaba añadir/borrar/hacer principal pero NO cambiar un valor — `cambiarContacto` acepta ahora `valor` (recifra + recalcula índice ciego + re-espeja la columna), el `col:telefono` del volcado se baja antes a la hija, la regla de duplicados sale a `duplicadoContacto()` compartida con el alta, y el editor —que vive a pantalla y media en móvil— se abre con un botón desde la tira de arriba; (2) el sitio se pintaba con un `join`: «41807 34304, Tarragona» = CP de Espartinas + id de población del CRM viejo + provincia falsa. Medido sobre 31.809 fichas vivas: **473 con provincia que contradice al CP** (386 «Tarragona» con CP 41xxx, todas `intranet:` de mayo, ninguna de CIMA), 455 con número en `ciudad`, 602 con el CP sin el cero. `leerSitio()` (puro, 8 tests) no afirma lo que se contradice y lo explica; **no sustituye** la provincia por la del CP (el equivocado puede ser cualquiera de los dos). PR #2410. **Pendiente:** lote SQL para corregir esas 473 y fusionar el duplicado de cliente C03 (la ficha buena dice ESPARTINAS/Sevilla) — con OK de Alberto.
 
 - **🏷️ Compañías del muro y el ramo que llegaba mal etiquetado (05/09/2026).** Alberto, viendo la web
   ya en `grupoasegura.es`: «¿y los logos de más compañías?». En `seguros.companias_dgs` hay 15 filas
@@ -5842,7 +5843,7 @@ PR #2933. Sin código tocado, solo doc.
   los tres sitios de antes · SEIS con el cuarto.** (En pantalla ponía 16: cifra anterior al lote 10.)
   🚨 Y una corrección de CRITERIO suya, no de código: «un cliente puede ser muy mayor... es mejor
   contactar con el familiar» — el familiar NO es un contacto de segunda, así que un solo estado y **viaja
-  el parentesco** («Llama a Pablo Franco Ruz (administración)»). La consulta busca en las DOS direcciones
+  el parentesco** («Llama a cliente C07 (administración)»). La consulta busca en las DOS direcciones
   porque el volcado no respeta el convenio «A→B = B es <tipo> de A». Los SEIS restantes son trabajo de
   Alberto; uno se llama «NO DISPONIBLE NO DISPONIBLE» y es un centinela, no un cliente sin datos.
   🎨 «Contactos está muy mal aprovechada, ocupa todo mucho»: el coste FIJO de la pestaña era ~1.245px
@@ -5941,7 +5942,7 @@ PR #2933. Sin código tocado, solo doc.
   distancia no está medida para ellos. El dato que no se tiene se declara, no se estima.
 
 - **🗣️ El borrador salía en ESPAÑOL con el huésped escribiendo en inglés (05/09/2026).** Caso real: reserva
-  154375571 (House Sevillana, Massimo). Todos los prompts del agente van en español y la orden «responde en
+  154375571 (House Sevillana, un huésped). Todos los prompts del agente van en español y la orden «responde en
   inglés» es UNA línea dentro del muro → el modelo deriva al idioma ambiental. Pasaba MUDO: el aviso decía
   «Borrador (en EN)» (`ctx.lang` sí era 'en') y la línea 🔁 «no he podido traducirlo al español» —traducir
   español a español devuelve lo mismo y `traduccionUtil` lo descarta—, así que un fallo de REDACCIÓN se leía
@@ -6026,11 +6027,11 @@ PR #2933. Sin código tocado, solo doc.
   antes, 70 después. El motor pasa a fusionar grupos de **N** (el del lote 7 solo sabía de pares y
   saltaba los tríos); los uuid van **escritos a mano** en el lote, no leídos de la foto, porque la
   foto se recalcula en cada visita y su ordinal no es estable.
-  🚫 **3 grupos NO se tocan, y ahí está el valor:** el 12 (Mejias Heredia / Yolanda Rios) y el 15
-  (Fernando Martin Verdugo / Catalina Verdugo Garcia) son **dos personas** con un DNI mal tecleado,
-  y el 10 es el centinela de 20 fichas. Fuera también «Elisa De paz campo» del grupo 5 (parcial).
+  🚫 **3 grupos NO se tocan, y ahí está el valor:** el 12 (cliente C31 / cliente C32) y el 15
+  (cliente C28 / cliente C29) son **dos personas** con un DNI mal tecleado,
+  y el 10 es el centinela de 20 fichas. Fuera también «cliente C34» del grupo 5 (parcial).
   🔎 El hallazgo bonito: «**Gerente Chapisa (sin apellidos)**» no era una persona sin nombre — mismo
-  DNI y mismo teléfono que **Francisco Javier Zamora Flores**, o sea él.
+  DNI y mismo teléfono que **cliente C27**, o sea él.
 
 - **🗄️ Archivar, no borrar: decisión de Alberto sobre las 26.463 fichas sin contacto (05/09/2026).**
   «no la elimines, archívala y pon recordatorio en 6 meses… siempre habrá tiempo de borrarlo». Hecho:
@@ -6108,10 +6109,10 @@ PR #2933. Sin código tocado, solo doc.
   que vence antes, y sin fecha al FINAL de su grupo** (una fecha ausente no es ni próxima ni lejana).
   🚫 **Y «haz lo mismo con los 336» no se puede**: de los **1.322 pares** que solo comparten nombre, **277 tienen
   DNI DISTINTO** (probados personas distintas) y **ninguno comparte DNI**. Solo 6 traían prueba de los lotes 4/5
-  (vehículo o póliza común) → **lote 9, 3 fusiones**: 1 cayó por DNI contradictorio («Jose Manuel Seijas Vazquez»,
+  (vehículo o póliza común) → **lote 9, 3 fusiones**: 1 cayó por DNI contradictorio («cliente C30»,
   mismo coche y dos DNI: padre e hijo homónimos) y **2 por ser grupos de TRES**. ⚠️ Dije «5 fusionables» contando
   PARES: en un trío hay tres pares y la guarda `count(*)=2` los excluye a propósito. Visibles 5.102 → **5.099**,
-  cartera viva 80 intacta, 0 pólizas huérfanas. También se anotó a mano que Manuel Suárez es hijo de José Suárez
+  cartera viva 80 intacta, 0 pólizas huérfanas. También se anotó a mano que Manuel Suárez es hijo de cliente C14
   Salas (el campo `tipo_relacion` mezcla parentescos y roles de póliza; `relacionesDeFicha` ya prioriza el
   parentesco, así que bastó el dato).
 
@@ -6258,7 +6259,7 @@ PR #2933. Sin código tocado, solo doc.
   por qué: `auto.ts` YA no mira la hora (lo apoyado en fuente sale solo a las 3 de la mañana), así que
   «autónomo de noche» solo añadiría autonomía sobre lo que el sistema marcó `needs_human` — sin nadie
   que lo corrija. El agujero real era otro: lo que ESCALA de noche deja al huésped sin nada hasta las
-  09:00, y desde el código eso es idéntico a una conversación atendida (caso Mafalda, 154265696).
+  09:00, y desde el código eso es idéntico a una conversación atendida (caso huésped H2, 154265696).
   Ahora: acuse de recibo automático (texto fijo por idioma, sin IA — es la red de seguridad), aviso
   🚨 por `tgSend` (no `tgAviso`: un interruptor apagado convertiría «te despierto» en silencio) si es
   urgencia de acceso/avería, y a los 15 min sin respuesta se deriva al portal de reserva —**último**
@@ -6280,7 +6281,7 @@ PR #2933. Sin código tocado, solo doc.
   nadie. Ahora `hitosBloqueantes` ignora las filas en sombra si el piso ya está activo y el reclamo las
   toma con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`. Mergeado (**PR #2305**) y
   ✅ **verificado en producción**: la pasada de las 07:37 UTC mandó la víspera con los códigos a esa
-  huésped, en PORTUGUÉS («Olá Mafalda… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
+  huésped, en PORTUGUÉS («Olá huésped H2… AQUI ESTÃO OS…»), más dos confirmaciones que el chequeo
   retirado tenía bloqueadas. **Regla que deja: un mensaje que solo vio Alberto por Telegram no está
   entregado** — al activar un piso hay que mirar qué hitos suyos quedaron en sombra.
   🚨 **Y el rescate destapó un segundo defecto (PR #2310): `visperaAyer` no distinguía la víspera que
@@ -6341,10 +6342,10 @@ PR #2933. Sin código tocado, solo doc.
   05/09: era el backfill del índice ciego de DNI**, del propio Alberto. Ver la entrada del 05/09.
 
 - **📵 «19 clientes ilocalizables» eran 15: el contacto vive en TRES sitios, no en la ficha (04/09/2026).**
-  Lo vio Alberto en `/correduria`: `Esquiansa` salía «no se puede contactar» teniendo a Juan Manuel López
-  Benjumea de conductor habitual, con ficha, email y teléfono. `clientes-sin-canal.ts` miraba SOLO las
+  Lo vio Alberto en `/correduria`: `Esquiansa` salía «no se puede contactar» teniendo a cliente C11
+  cliente C57 de conductor habitual, con ficha, email y teléfono. `clientes-sin-canal.ts` miraba SOLO las
   columnas de la ficha del tomador. Medido: de 19, **2 tienen su PROPIO email en un interviniente de su
-  póliza y nadie lo copió a la ficha** (`MORALES ISABEL MALDONADO`, `Juan Manuel Duran Ibañez` — el cron
+  póliza y nadie lo copió a la ficha** (`CLIENTE C58`, `cliente C10` — el cron
   de avisos lee la ficha, así que no les llega) y **2 tienen a otra persona localizable** en ella.
   Estados nuevos `canal_en_poliza` / `contacto_via_tercero`; el titular pasa a `resumen.ilocalizables`.
   ⚖️ No se funden en «localizable»: el art. 22 LCS avisa al TOMADOR. Mismo agujero tapado en
@@ -6513,8 +6514,8 @@ PR #2933. Sin código tocado, solo doc.
   6/67; `tramitador`, `gravedad`, `reserva` e `indemnización` en **0**. Auto: 26 de 50 son ASISTENCIA
   (una grúa, no un siniestro) — pintarlos como «siniestro abierto» exagera.
 
-- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en Josefa
-  Julia Vicente Lucas y Alejandro José Soler Fernández Gao, y por eso su hash del índice ciego
+- **🧹 Borrado el mail de Alberto de dos fichas ajenas (04/09/2026).** Estaba de contacto en cliente C62
+  cliente C33 y cliente C09, y por eso su hash del índice ciego
   resolvía a 3 fichas y el portal se negaba a vincular (`ambiguo`). Foto previa en
   `seguros.cliente_emails_borrados_20260904`. Ahora resuelve a **1**. Las dos fichas se quedan con
   cero emails: el dato era falso de todas formas.
@@ -6522,7 +6523,7 @@ PR #2933. Sin código tocado, solo doc.
 - **🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez (04/09/2026).** El
   360009410197 salía de la URL de un artículo del Zendesk de **HomeExchange** (correo de Irene et
   Rico, un intercambio de casa, ni siquiera una reserva); el colador `\b(\d{9,})\b` miraba dentro de
-  los enlaces. Y el 6144978627 (Booking, luis ortiz benito) SÍ estaba en Smoobu e `incomes`
+  los enlaces. Y el 6144978627 (Booking, un huésped) SÍ estaba en Smoobu e `incomes`
   (id 145652821, Luxury Busto) pero con llegada **23/04/2027**, fuera de la ventana de ±180 días.
   Arreglado: `lib/correo/num-confirmacion.ts` (puro, quita URLs + whitelist de dominios de canal,
   HomeExchange NO lo es), `resolverBookingId` con 2ª pasada ancha paginada y ventana del vigía a
@@ -6559,7 +6560,7 @@ PR #2933. Sin código tocado, solo doc.
   asegura, no la ingesta de CIMA (vive en el CRM); `apps/asegura-portal` no filtra `activo` (hoy
   inocuo).
 
-- **🔁 «Sigue habiendo duplicidad» (04/09/2026).** Alberto vio dos Manuel Antonio y dos Pilar Piña Franco en `/correduria`:
+- **🔁 «Sigue habiendo duplicidad» (04/09/2026).** Alberto vio dos cliente C03 y dos Pilar Piña Franco en `/correduria`:
   son el VOLCADO (`intranet:cli:N` / `asegura_app:cli2:N`), fuera del lote CIMA a propósito. Medido: **561 grupos** mismo
   nombre+teléfono (584 fichas de más), 0 con póliza viva, 517 pares con el mismo N legado — y la lápida de casi todos
   tiene DNI cifrado SIN hash, así que fusionar por nombre sería a ciegas. Puente hecho: el plan del backfill deja foto en
@@ -6568,7 +6569,7 @@ PR #2933. Sin código tocado, solo doc.
   probado en seco (`2026-09-04_fusion_mismo_dni_lote7.sql`: motor del lote 2, pares leídos de la foto, guardas de
   identidad dentro). Foto hecha a las 21:03 UTC (PR #2267 mergeado): 620 grupos = 604 pares + 16 tríos; el
   pre-vuelo pasa los 604 sin saltar guardas, pero DOS pares son personas distintas con el mismo DNI (249 Mejias
-  Heredia/Rios Vazquez, 366 Martin Verdugo/Verdugo Garcia) → lista `excluidos` en el script. ✅ **EJECUTADO con
+  C31/C32, 366 C28/C29) → lista `excluidos` en el script. ✅ **EJECUTADO con
   el «ok» de Alberto (21:16-21:20 UTC): 602 fusiones, 958 pólizas movidas, 0 pólizas en lápida, 110 CIMA vivas
   intactas.** Lección: el cliente SQL de Supabase corta a 60 s y la primera pasada se deshizo entera → el bloque
   lee `information_schema` UNA vez y va en tandas de 150 (5 pasadas). Siguiente: escribir los 14.148 índices.** Segundo hallazgo: el cron `e2e-smoke`
@@ -6585,7 +6586,7 @@ PR #2933. Sin código tocado, solo doc.
   que barre todo el repo versionado. Regla anotada en los tres `CLAUDE.md` (raíz, asegura, portal).
 
 - **💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno (04/09/2026, PR #2249).**
-  Alberto sobre la reserva 152961026 (Esther): «son mensajes básicos, se podrían haber enviado sin mi
+  Alberto sobre la reserva 152961026 (huésped H7): «son mensajes básicos, se podrían haber enviado sin mi
   revisión». Medido: (1) `RE_CIERRE` solo admitía «muchas» y NADA detrás, así que la coletilla «, un
   saludo» tumbaba la detección → `es_cortesia=false`, la vía de cortesía ni se intentaba; (2) el
   control de calidad caído (`DESCONOCIDO`) entra en `needs_human`, que es guarda común → tampoco
@@ -6757,7 +6758,7 @@ PR #2933. Sin código tocado, solo doc.
   índice único haría fallar la escritura a la mitad.
 
 - **🔴 «Sin dato» en el capital de hogar era un «no lo he mirado» (03/09/2026).** La ficha de Occident
-  `GPDFS3000276` decía «sin dato» en continente y contenido y lo justificaba afirmando que «esta compañía
+  `[nº de póliza retirado]` decía «sin dato» en continente y contenido y lo justificaba afirmando que «esta compañía
   las manda sin importe propio» — falso: 11 de sus 40 coberturas SÍ traen capital (sublímites y RC). Y el
   capital estaba guardado: `continente 61000 / contenido 7000` en la copia del volcado, **el mismo objeto
   del que la pantalla ya sacaba los 76 m² y el 1994**. Medido al preguntar Alberto de dónde sale: las
@@ -6778,8 +6779,8 @@ PR #2933. Sin código tocado, solo doc.
   GET seco / POST escribe; regla pura `planBackfillDni` + 11 tests).
 
 - **🃏 «Matito no se puede borrar»: era un COMODÍN del volcado, y el DELETE no existe (03/09/2026).**
-  Francisco Chacón Matito salía de conductor ocasional en la ficha de Pilar; medido, figura en pólizas
-  de **52 tomadores sin relación entre sí** (Antonio Sevico, 16). Las 408 filas `origen='manual'` de
+  cliente C37 salía de conductor ocasional en la ficha de Pilar; medido, figura en pólizas
+  de **52 tomadores sin relación entre sí** (cliente C12, 16). Las 408 filas `origen='manual'` de
   `poliza_intervinientes` son del 21/06 y NINGUNA toca cartera viva; las 96 de CIMA sí. 🚨 **Matito es
   real**: 59 filas basura + **1 de CIMA (conductor habitual, con NIF, póliza viva) que se queda**. Lote
   lote reversible **EJECUTADO** (`..._purga_intervinientes_comodin_lote6.sql`): **77 intervinientes +
@@ -6862,7 +6863,7 @@ PR #2933. Sin código tocado, solo doc.
   = conciliación bancaria «aún no comprobada», no 0 €. PRs previos #2029 → #2034 → #2047 → #2049.
 
 - **🔴 «Sin cobertura» era falso: la cola de retención mezclaba `devuelto` con `pendiente` (03/09/2026).**
-  Alberto preguntó por María Alcalá (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
+  Alberto preguntó por cliente C60 (hogar Mapfre, «🔴 Sin cobertura · hace 56 días»). Medido en BD: el recibo
   de 225,97€ está **`pendiente`**, DOMICILIADO, póliza en vigor, y su fila no se toca desde la carga del 24/06
   mientras CIMA sigue entrando (128 ficheros, 8 recibos SÍ pasaron a `cobrado` en agosto). Nadie ha dicho que
   se devolviera. `retencion()` exige ahora la `situacion` (sin default) y devuelve **`sin_confirmar`** 🟠 con
@@ -6946,20 +6947,20 @@ PR #2933. Sin código tocado, solo doc.
   logo (Drive) es b/n y lleva «Low Cost», que ya no se usa, y ni `grupoasegura.es` ni la web de
   Manuel son alcanzables desde el contenedor (proxy de egress + SSO de Vercel).
 
-- **👪 «Antonio Sevico no aparece en Relaciones»: no era un fallo de lectura (03/09/2026).** En la ficha de
-  José Suárez Salas, la tarjeta 👤 mandaba a anotar el vínculo «en Relaciones y autorizaciones» y allí no
+- **👪 «cliente C12 no aparece en Relaciones»: no era un fallo de lectura (03/09/2026).** En la ficha de
+  cliente C14 Salas, la tarjeta 👤 mandaba a anotar el vínculo «en Relaciones y autorizaciones» y allí no
   había ni rastro: esa tarjeta solo pinta `cliente_relaciones`, y el volcado del CRM creó filas para el
   propietario y el contacto pero NO para el conductor ocasional. **Medido: 17 pares persona↔ficha así, en
   15 fichas** (de 326). Ahora salen en la propia tarjeta 👪 con botón «Declarar vínculo» que preselecciona
-  la ficha (nada de teclear el nombre y acertar). **Y el duplicado que Alberto no preguntó:** María Antonia
+  la ficha (nada de teclear el nombre y acertar). **Y el duplicado que Alberto no preguntó:** cliente C13
   sale dos veces porque hay DOS fichas suyas (`intranet:cli:48` con DNI y `asegura_app:cli2:48` sin él) y
   el vínculo «Cónyuge» cuelga de la del volcado, la que no tiene ninguna póliza viva. Se marca en pantalla
   (`homonimia`). **Mergeado (PR #2161) y probado con los datos REALES de la ficha**: 4 personas, las dos
-  María Antonia marcadas `sin_distinguir`, Antonio en el bloque nuevo, y tras «No hay vínculo» deja de
+  cliente C13 marcadas `sin_distinguir`, Antonio en el bloque nuevo, y tras «No hay vínculo» deja de
   pedirse y NO ve las pólizas de José. Alberto dictó «prepara» → **lote 5 escrito y SIN EJECUTAR**
   (`apps/asegura/prisma/sql/2026-09-03_fusion_mismo_vehiculo_lote5.sql`): 3 pares, guarda = mismo nombre
   normalizado **+ mismo vehículo** + no dos DNI; con solo el nombre habría 1.010 y fundiría homónimos.
-  Y su segundo dictado —«Antonio Sevico no tiene vinculación ninguna»— destapó que no se podía ANOTAR eso:
+  Y su segundo dictado —«cliente C12 no tiene vinculación ninguna»— destapó que no se podía ANOTAR eso:
   nuevo tipo `Sin vínculo` (no autoriza nada, ni con el flag puesto: la guarda vive en `clientesVisiblesPara`
   y en el puerto, no solo en el botón). **Pendiente: que Alberto ejecute el lote 5.**
 
@@ -7159,7 +7160,7 @@ PR #2933. Sin código tocado, solo doc.
   lo que falta es la versión. Pendiente de Alberto: 20 suposiciones por aprobar y `CODEOSCOPIC_SIMULACION=true`.
 
 - **🧠 El agente de huéspedes «no aprendía» — y el que decidía nunca leyó lo aprendido (02/09/2026).** Queja de
-  Alberto sobre el borrador a Claudio (153122091). El aprendizaje SÍ escribía: el phishing por WhatsApp estaba
+  Alberto sobre el borrador a huésped H8 (153122091). El aprendizaje SÍ escribía: el phishing por WhatsApp estaba
   enseñado tres veces. Lo que fallaba: (1) `debeEscalar` (control de calidad) solo veía ficha+guía, nunca
   `ctx.hechos` → ESCALAR eterno, y ese veredicto es el que dispara el «❓ no lo encuentro en la guía»;
   (2) «no se pudo verificar» (clasificador mudo) se contaba como hueco de guía → nuevo `tipoHueco` puro;
@@ -7273,8 +7274,8 @@ PR #2933. Sin código tocado, solo doc.
   trabajo §9) + skill router **`correduria-crm`**. Nada de código: el punto 1 del orden exige spec y OK.
 
 - **👪 Relaciones entre clientes + autorización para ver los seguros del otro (02/09/2026).** Alberto, tras
-  probar la edición (José: móvil principal, verificado en `historial_interno`): «es marido de María Antonia…
-  por si autoriza María Antonia que José vea sus seguros». La tabla `cliente_relaciones` YA existía (1.708 filas
+  probar la edición (José: móvil principal, verificado en `historial_interno`): «es marido de cliente C13…
+  por si autoriza cliente C13 que José vea sus seguros». La tabla `cliente_relaciones` YA existía (1.708 filas
   del CRM, dos por vínculo). Fijado: fila A→B = «B es <tipo> de A», `puede_ver_polizas` = **A autoriza a B**,
   direccional y solo desde la ficha de quien autoriza. Módulo puro `module-seguros/relaciones.ts` (3 tests),
   `apps/asegura/lib/cartera-relaciones.ts` + puerto `/cliente/relaciones`, tarjeta «👪 Relaciones» en la ficha
@@ -7559,7 +7560,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 
 ### 🏠 (02/09/2026, noche) Codeoscopic: retarificar HOGAR, cableado de punta a punta (PR #2071 mergeado)
 - Alberto: «revisa todo lo de Codeoscopic para probar tarificar con un seguro de hogar… con algún hogar de
-  José Suárez Salas». Auditado con agente: TODA la infraestructura (interruptor, libro, tope, `cotizar()`,
+  cliente C14 Salas». Auditado con agente: TODA la infraestructura (interruptor, libro, tope, `cotizar()`,
   puerto, botón) era agnóstica del ramo; faltaban las piezas de hogar y el contrato del `risk` del vendor.
 - Hecho: `persona.ts` (tomador compartido auto/hogar), `peticion-hogar.ts` (+6 tests), `desde-cartera-hogar.ts`
   (+6; riesgo de póliza / gemela / Catastro, rotulado), `retarificabilidad()` en module-seguros (+5; sustituye
@@ -7567,7 +7568,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   `/cartera/poliza/[id]`, botón por ramo en plataforma. `origenRetarificacion` carga la gemela.
 - 🚨 El esquema del `risk` de hogar NO está en el repo ni se puede leer desde aquí (portal bloqueado):
   `CAMPOS_VENDOR` es provisional; un 400 de validación no se cobra. Alberto exporta el ejemplo del portal
-  (`docs/CODEOSCOPIC-API-PORTAL.md` § Hogar). Caso de prueba: Occident GPDFS3000276 (Sevilla, 76 m²/1994).
+  (`docs/CODEOSCOPIC-API-PORTAL.md` § Hogar). Caso de prueba: Occident [nº de póliza retirado] (Sevilla, 76 m²/1994).
 
 ### 🧹 (02/09/2026) Cerrado lo que quedaba del auditor: novedades fuera del generado + la ambigüedad, vigilada
 
@@ -8027,9 +8028,9 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 
 ### 📌 Buscador ya distingue ficha viva de volcado; Vercel deja de comentar en los PRs (02/09/2026)
 
-- **Duplicado «Jose Suarez Salas»**: dos fichas `tipo='cliente'`, la de 14 pólizas es el volcado (vence 2016) y la de 7 la viva (vence 2027). `clientes.tipo` no sirve → `vitalidadFicha()` en `@central/module-seguros` (CIMA o vencimiento < 18 meses = viva; `null` = no contado ≠ histórica). Buscador rotula y enlaza «Abrir la ficha viva →».
+- **Duplicado «cliente C14»**: dos fichas `tipo='cliente'`, la de 14 pólizas es el volcado (vence 2016) y la de 7 la viva (vence 2027). `clientes.tipo` no sirve → `vitalidadFicha()` en `@central/module-seguros` (CIMA o vencimiento < 18 meses = viva; `null` = no contado ≠ histórica). Buscador rotula y enlaza «Abrir la ficha viva →».
 
-- **Auditoría de duplicidades** (Alberto): 80 vivos, 48 con otra ficha; 740 grupos por teléfono, 203 con nombres distintos (familias, NO se fusiona); **16/109 pólizas vivas en las dos caras**, en 10 la copia del volcado tiene la dirección del riesgo y la de CIMA el vencimiento; **1 cliente partido en dos fichas vivas por la propia ingesta CIMA** (Juan Manuel Duran Ibañez) → Manuel.
+- **Auditoría de duplicidades** (Alberto): 80 vivos, 48 con otra ficha; 740 grupos por teléfono, 203 con nombres distintos (familias, NO se fusiona); **16/109 pólizas vivas en las dos caras**, en 10 la copia del volcado tiene la dirección del riesgo y la de CIMA el vencimiento; **1 cliente partido en dos fichas vivas por la propia ingesta CIMA** (cliente C10) → Manuel.
 
 - **Corrección**: «dirección imposible» era rotundo de más — la calle va cifrada pero `localidad`/`cp` del riesgo van en claro y asegura tiene la clave. No hecho aún.
 - `github.silent: true` en los 12 `vercel.json` → adiós a ~50 ediciones de comentario por PR.
@@ -8047,7 +8048,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 
 - **Coberturas CIMA leídas de verdad (PR #2068 mergeado):** `interpretarCapital()`/`extraerDetalleCobertura()` en module-seguros; `0` = «sin capital propio», `INF` = ilimitado; límites/franquicias/prima desde `datos_extra`. Inventario en `docs/ASEGURA-CIMA-COBERTURAS.md`.
 
-- **FUSIÓN de fichas, con OK de Alberto (solo clientes CIMA):** regla = ficha CIMA sobrevive; gemela = mismo nombre o teléfono + nº de póliza compartido (sin ceros a la izquierda) o mismo DNI → **33 pares** medidos (nunca por nombre solo: 94 pares por nombre no se tocan; 7 con póliza común y nombre distinto, tampoco). Piloto **José Suárez Salas HECHO** en BD (lote `fusion-cima-2026-09-02`, fila en `cliente_merge_log` con snapshot): 14 pólizas + 7 bienes + tels/emails reapuntados, ciudad `34143` → SEVILLA, lápida en la de junio. **HECHOS los 34 (validado José → resto en una pasada):** 33 supervivientes, 143 pólizas reapuntadas, 26 ciudades numéricas curadas; función `pg_temp.fusionar` (reapunta 24 FKs, hereda solo huecos; los índices ciegos son ÚNICOS: la lápida suelta email/teléfono antes de heredarlos). **Juan Manuel Durán Ibáñez unificado por decisión de Alberto** («seguros en vigor, los de CIMA») pese a DNI/nacimiento distintos en la base: sobrevive la ficha con Allianz 2027. Clientes CIMA: 80 → 79. **Provincia por CP** en 32 vivas (30 «Tarragona» falsas + 2 NULL); 17 siguen sin provincia porque tampoco tienen CP. Comprobar tras el pull CIMA de mañana (05:30 UTC) que no reaparece ficha nueva para ninguno de los 33. Al verla Alberto: «Tarragona» = provincia basura de la ingesta CIMA (**29/80 vivas** con provincia ≠ CP, 19 sin provincia; José corregido a mano, el resto con su OK); **«recibo pendiente» NO es deuda**: EIAC `pendiente` = emitido y sin cargar aún (rótulo cambiado a «al cobro» en fichas y `explicarCobro`); **Juan Manuel Durán Ibáñez NO es un duplicado** (DNI y nacimiento distintos: dos personas, corrige la nota del día anterior). Tel/email «cifrado» = falta `PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY` en Vercel `central-asegura` (copiar del proyecto `asegura`; nombres confirmados en el código del CRM, 92 y 40 usos). Claude Chrome vio `PII_ENCRYPTION_KEY` marcada «needs-rotation» en `asegura`: es la **cadencia de 90 días del runbook de Manuel** (`docs/runbooks/secret-rotation-LOO-132.md` del repo `asegura`; clave del 13/04, vencida desde julio), no una fuga. ⏸️ **Rotarla es tarea aparte**: el cifrado `v1:` es de clave ÚNICA (sin doble clave), así que rotar = job que descifra con la vieja y recifra con la nueva las columnas PII de `seguros` + cambiar las DOS Vercel a la vez. Primero copiar, rotar después. ✅ **Copiadas por Alberto y REDESPLEGADO central-asegura: la ficha de José Suárez ya pinta teléfono y email en claro.** La marca «Needs Attention» de Vercel resultó ser SU aviso «parece un secreto y es visible: guárdala como Sensitive» (no el runbook de Manuel: corrección a lo anterior); «Rotate Variable» NO se pulsa. De paso: `estadoClavePii()` (`apps/asegura/lib/pii-estado.ts`, 5 tests) viaja en `/api/operador/cliente` como `pii.clave` y la ficha de plataforma dice POR QUÉ no descifra (`sin_clave` · `mal_formada` · `no_abre`) — antes «cifrado» era el mismo texto para tres arreglos distintos y Alberto copió a ciegas tres veces. El índice de `module-seguros-pii` lleva ahora extensiones `.ts` (sin ellas `node --test` no lo resolvía).
+- **FUSIÓN de fichas, con OK de Alberto (solo clientes CIMA):** regla = ficha CIMA sobrevive; gemela = mismo nombre o teléfono + nº de póliza compartido (sin ceros a la izquierda) o mismo DNI → **33 pares** medidos (nunca por nombre solo: 94 pares por nombre no se tocan; 7 con póliza común y nombre distinto, tampoco). Piloto **cliente C14 Salas HECHO** en BD (lote `fusion-cima-2026-09-02`, fila en `cliente_merge_log` con snapshot): 14 pólizas + 7 bienes + tels/emails reapuntados, ciudad `34143` → SEVILLA, lápida en la de junio. **HECHOS los 34 (validado José → resto en una pasada):** 33 supervivientes, 143 pólizas reapuntadas, 26 ciudades numéricas curadas; función `pg_temp.fusionar` (reapunta 24 FKs, hereda solo huecos; los índices ciegos son ÚNICOS: la lápida suelta email/teléfono antes de heredarlos). **cliente C10 unificado por decisión de Alberto** («seguros en vigor, los de CIMA») pese a DNI/nacimiento distintos en la base: sobrevive la ficha con Allianz 2027. Clientes CIMA: 80 → 79. **Provincia por CP** en 32 vivas (30 «Tarragona» falsas + 2 NULL); 17 siguen sin provincia porque tampoco tienen CP. Comprobar tras el pull CIMA de mañana (05:30 UTC) que no reaparece ficha nueva para ninguno de los 33. Al verla Alberto: «Tarragona» = provincia basura de la ingesta CIMA (**29/80 vivas** con provincia ≠ CP, 19 sin provincia; José corregido a mano, el resto con su OK); **«recibo pendiente» NO es deuda**: EIAC `pendiente` = emitido y sin cargar aún (rótulo cambiado a «al cobro» en fichas y `explicarCobro`); **cliente C10 NO es un duplicado** (DNI y nacimiento distintos: dos personas, corrige la nota del día anterior). Tel/email «cifrado» = falta `PII_ENCRYPTION_KEY`/`PII_LOOKUP_KEY` en Vercel `central-asegura` (copiar del proyecto `asegura`; nombres confirmados en el código del CRM, 92 y 40 usos). Claude Chrome vio `PII_ENCRYPTION_KEY` marcada «needs-rotation» en `asegura`: es la **cadencia de 90 días del runbook de Manuel** (`docs/runbooks/secret-rotation-LOO-132.md` del repo `asegura`; clave del 13/04, vencida desde julio), no una fuga. ⏸️ **Rotarla es tarea aparte**: el cifrado `v1:` es de clave ÚNICA (sin doble clave), así que rotar = job que descifra con la vieja y recifra con la nueva las columnas PII de `seguros` + cambiar las DOS Vercel a la vez. Primero copiar, rotar después. ✅ **Copiadas por Alberto y REDESPLEGADO central-asegura: la ficha de cliente C14 ya pinta teléfono y email en claro.** La marca «Needs Attention» de Vercel resultó ser SU aviso «parece un secreto y es visible: guárdala como Sensitive» (no el runbook de Manuel: corrección a lo anterior); «Rotate Variable» NO se pulsa. De paso: `estadoClavePii()` (`apps/asegura/lib/pii-estado.ts`, 5 tests) viaja en `/api/operador/cliente` como `pii.clave` y la ficha de plataforma dice POR QUÉ no descifra (`sin_clave` · `mal_formada` · `no_abre`) — antes «cifrado» era el mismo texto para tres arreglos distintos y Alberto copió a ciegas tres veces. El índice de `module-seguros-pii` lleva ahora extensiones `.ts` (sin ellas `node --test` no lo resolvía).
 
 ### 🔑 (02/09/2026) Domótica: el aviso «PIN con la ventana desactualizada» lleva botón para reponerla desde Telegram (PR #2003)
 - Disparador: aviso 🕒 de Socorro con 2 PIN (reservas 152490601 y 150885616) caducando 2 h antes de lo debido,
@@ -8107,7 +8108,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   pie con solo ⏻. Estado en `localStorage('nav-plegado')` aplicado por el **script anti-parpadeo de
   `layout.tsx`** (`html[data-nav-plegado]`, CSS en `globals.css`), igual que tema y saldo oculto: sin salto
   al recargar. Móvil (drawer) intacto.
-- 🔎 Hallazgo de paso, SIN tocar: en la ficha de Jose Suarez Salas sale «📍 34143, Tarragona» porque en la BD
+- 🔎 Hallazgo de paso, SIN tocar: en la ficha de cliente C14 sale «📍 34143, Tarragona» porque en la BD
   de **Manuel** (sigue siendo la fuente, `ASEGURA_DATABASE_URL`; NO hay copia) la ficha `intranet:cli:17`
   tiene `ciudad='34143'` / `provincia='Tarragona'` (CP correcto 41003). **504 fichas** del volcado
   `intranet:` tienen `ciudad` numérica y 488 `provincia='Tarragona'`: columnas corridas en ESA importación.
@@ -8305,14 +8306,14 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 
 ### 🚨 (01/09/2026) Vigía de reservas: los 3 avisos que mandó eran FALSOS (y no solo hay Booking)
 - El 🚨 «reserva 153896946 que Smoobu NO tiene» era falso: está en Smoobu y en `incomes` (Expedia,
-  Busto Reform, 03→07/09, Karl Brunelliere). El nº salía del **enlace del propio correo de Smoobu**
+  Busto Reform, 03→07/09, un huésped). El nº salía del **enlace del propio correo de Smoobu**
   (`login.smoobu.com/es/booking/detail/153896946` = `incomes.reservationId`), y el vigía solo
   comparaba contra las referencias de la OTA. Las 3 alertas emitidas hasta hoy, falsas.
 - Arreglado: la notificación de `service@smoobu.com` ya no entra al vigía ni al agente de huéspedes
   (parser `lib/correo/smoobu-notificacion.ts`, 8 tests con el correo real); el vigía compara también
   contra `b.id` y mira `incomes` antes de preguntar; y el aviso dice el **canal REAL** (Expedia,
   Agoda…) o ninguno — ya no manda a la extranet de Booking a por una reserva de Expedia.
-- Fila 10 (cancelación de JUAN PONCE) corregida a mano en BD: era `nueva`/`huerfana`. PR #1978, mergeado.
+- Fila 10 (cancelación de un cliente) corregida a mano en BD: era `nueva`/`huerfana`. PR #1978, mergeado.
 
 ### 🧹 (01/09/2026) Vanesa = Sique Brilla, y su ÚNICA pantalla es /invitado/limpieza
 - Tras el PR #1991, Alberto miró el viernes 04/09 en la intranet y **la cuna no estaba**: la orden
@@ -8328,7 +8329,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   trabaja. **PR #1994.**
 
 ### 🧹 (01/09/2026) SIVRA: la orden a la limpieza deja de depender de que Stripe vea el dinero
-- Raquel (reserva 152490601) pagó la cuna **por Bizum**: `sivra_extras_reserva` congelada en
+- huésped H6 (reserva 152490601) pagó la cuna **por Bizum**: `sivra_extras_reserva` congelada en
   `ofrecido` y Sique Brilla sin enterarse — el email lo dispara SOLO el webhook de Stripe. Orden
   mandada a mano ese día con autorización expresa de Alberto.
 - Dictado suyo: **la orden NO lleva estado de cobro** («ni pagado ni confirmar, simplemente una orden»).
@@ -8809,7 +8810,7 @@ Botón «Descargar PDF» en cada presupuesto (`PresupuestosPoliza`, ficha de cli
 `/api/correduria/presupuesto/pdf` → asegura `GET /api/operador/presupuesto/pdf` (pdf-lib, `lib/presupuesto-pdf.ts` puro +
 `presupuesto-pdf-datos.ts`). Mismas opciones y primas que ve el cliente en el portal (sin ocultas), datos del cálculo
 (matrícula, km, garaje), necesidades y pie legal; SIN DNI/IBAN/dirección, sin avisos internos de la compañía y sin enlace
-con token. Solo descarga: no avisa a nadie. Caso Manuel Piña (moto 2121NST): su único presupuesto (366dbbba) es de la
+con token. Solo descarga: no avisa a nadie. Caso cliente C03 (moto [matrícula retirada]): su único presupuesto (366dbbba) es de la
 tarificación vieja (15.000 km, sin garaje) — hay que retarificar antes de mandarle un PDF.
 Diseño de marca: Quicksand/Nunito Sans embebidas (`@pdf-lib/fontkit`), logotipo y logos de compañía en PNG base64
 (`presupuesto-pdf-recursos.ts`, regenerar al cambiar un logo). Y el carné: cliente NUEVO con carné B en la ficha ya no se

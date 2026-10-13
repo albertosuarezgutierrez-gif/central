@@ -41,6 +41,9 @@ export async function GET(req: NextRequest) {
       diasSustituida: f.diasSustituida,
       polizaVieja: f.polizaVieja,
       polizaNueva: f.polizaNueva,
+      nuevaConfirmadaCima: f.nuevaConfirmadaCima,
+      nuevaReciboCima: f.nuevaReciboCima,
+      viejaEnVigorCima: f.viejaEnVigorCima,
     })),
   )
 

@@ -8,6 +8,7 @@
 // de abrir la ficha — Alberto, 20/09/2026: «hay que hacerle seguimiento a que
 // el cliente la pague y eso lo confirma CIMA».
 //
+// Entran mientras la nueva no tenga ficha CIMA O la vieja siga en vigor en CIMA (13/10/2026).
 // Solo entran las que llevan sustituidas ≥3 días: CIMA tarda en traer la
 // confirmación (no es instantáneo) y meter aquí lo de esta misma mañana solo
 // añadiría ruido a una lista que se supone que hay que trabajar.
@@ -24,6 +25,12 @@ export type SustitucionSeguimiento = {
   sustituidaAt: string
   polizaVieja: { id: string; aseguradora: string; numeroPoliza: string | null }
   polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
+  /** La nueva ya tiene ficha CIMA (`id_poliza_entidad`). `null` = no hay nueva enlazada (no se sabe). */
+  nuevaConfirmadaCima: boolean | null
+  /** CIMA ya trajo algún RECIBO COBRADO de la nueva (`poliza_recibos.origen = 'cima'` y `situacion = 'cobrado'`). `null` = no hay nueva enlazada. */
+  nuevaReciboCima: boolean | null
+  /** La vieja sigue EN VIGOR para CIMA: estado vigente + `id_poliza_entidad` + sin baja CIMA. `null` = estado ilegible. */
+  viejaEnVigorCima: boolean | null
 }
 
 /** `null` = no se pudo leer (no es «no hay ninguna pendiente»). */
@@ -43,20 +50,35 @@ export async function sustitucionesEnSeguimiento(correduriaId: string): Promise<
         nueva_id: string | null
         nueva_aseguradora: string | null
         nueva_numero: string | null
+        nueva_confirmada: boolean | null
+        nueva_recibo_cima: boolean | null
+        vieja_en_vigor_cima: boolean | null
       }[]
     >`
       select
         c.id::text as cliente_id, (c.nombre || ' ' || c.apellidos) as cliente,
         v.sustituida_at, extract(day from now() - v.sustituida_at)::int as dias,
         v.id::text as vieja_id, v.aseguradora as vieja_aseguradora, v.numero_poliza as vieja_numero,
-        n.id::text as nueva_id, n.aseguradora as nueva_aseguradora, n.numero_poliza as nueva_numero
+        n.id::text as nueva_id, n.aseguradora as nueva_aseguradora, n.numero_poliza as nueva_numero,
+        case when n.id is null then null else (n.id_poliza_entidad is not null) end as nueva_confirmada,
+        case when n.id is null then null else exists (
+          select 1 from poliza_recibos r
+          where r.poliza_id = n.id and r.origen::text = 'cima' and r.situacion::text = 'cobrado') end as nueva_recibo_cima,
+        case when v.estado is null then null
+             else (v.estado::text = any(${[...POLIZA_ESTADOS_VIGENTES]}::text[])
+                   and v.id_poliza_entidad is not null
+                   and v.baja_cima_at is null and v.baja_estado_cima is null) end as vieja_en_vigor_cima
       from polizas v
       join clientes c on c.id = v.cliente_id
       left join polizas n on n.poliza_origen_id = v.id
       where v.correduria_id = ${correduriaId}::uuid
         and v.sustituida_at is not null
         and v.sustituida_at <= now() - make_interval(days => ${DIAS_GRACIA}::int)
-        and (n.id is null or n.id_poliza_entidad is null)
+        -- Entra mientras la nueva no tenga ficha CIMA O la vieja siga en vigor en CIMA (posible doble seguro).
+        and (n.id is null or n.id_poliza_entidad is null
+             or (v.estado::text = any(${[...POLIZA_ESTADOS_VIGENTES]}::text[])
+                 and v.id_poliza_entidad is not null
+                 and v.baja_cima_at is null and v.baja_estado_cima is null))
       order by v.sustituida_at asc
       limit 200`
     return filas.map((f) => ({
@@ -68,6 +90,9 @@ export async function sustitucionesEnSeguimiento(correduriaId: string): Promise<
       polizaNueva: f.nueva_id
         ? { id: f.nueva_id, aseguradora: f.nueva_aseguradora ?? '', numeroPoliza: f.nueva_numero }
         : null,
+      nuevaConfirmadaCima: f.nueva_confirmada,
+      nuevaReciboCima: f.nueva_recibo_cima,
+      viejaEnVigorCima: f.vieja_en_vigor_cima,
     }))
   } catch {
     return null
