@@ -9,6 +9,7 @@ import {
   allianzAuto,
   allianzMoto,
   AUTO_ACTIVO,
+  MOTO_ACTIVO,
   comprobarCampo,
   consultarMatricula,
   ErrorEleccionVersion,
@@ -79,9 +80,10 @@ after(async () => {
   await browser?.close()
 })
 
-test('inactivo y sin registrar', () => {
+test('Turismos inactivo y sin registrar; Moto registrado SOLO por su flag', () => {
   assert.equal(AUTO_ACTIVO, false)
-  for (const a of [allianzAuto, allianzMoto]) assert.equal(adaptadores.obtener(a.compania, a.ramo), null)
+  assert.equal(adaptadores.obtener(allianzAuto.compania, allianzAuto.ramo), null)
+  assert.equal(adaptadores.obtener(allianzMoto.compania, allianzMoto.ramo) !== null, MOTO_ACTIVO)
 })
 
 test('consulta por matrícula con VARIAS versiones y sin elección → requiere_humano con las opciones (no elige)', async () => {
