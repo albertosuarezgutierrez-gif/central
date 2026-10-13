@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-12T18:48:20Z",
-  "sha": "82e6cf0bb22c837ef372d19f41a5415d02fd212b",
+  "generadoEn": "2026-10-13T05:34:47Z",
+  "sha": "0381381d180493e2f31af6a8c0ba02a09fab1bc2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3808,7 +3808,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "81f3eae72c04"
+      "hash": "323ae73283c2"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/GestionContactos.tsx",
@@ -6548,7 +6548,7 @@
         "next"
       ],
       "rutaApi": "/api/polizas/[id]/reintentar",
-      "hash": "5ff9f4de7337"
+      "hash": "5b5c4f75c29e"
     },
     {
       "ruta": "apps/asegura-portal/app/api/polizas/[id]/route.ts",
@@ -6637,7 +6637,7 @@
         "next"
       ],
       "rutaApi": "/api/polizas",
-      "hash": "d79a39581c49"
+      "hash": "14432c342953"
     },
     {
       "ruta": "apps/asegura-portal/app/api/presupuesto/actividad/route.ts",
@@ -19595,6 +19595,27 @@
       "hash": "c5aa14668e0b"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/red-diaria/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "Red diaria de la correduría (cron `correduria-red-diaria` de plataforma). Solo LEE, pero antes aplica `retirarObsoletas` (la caducidad perezosa) para que lo leído sea lo que «Hoy» enseñaría. GET → { e"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/red-diaria",
+      "hash": "60569ab158ce"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/renovaciones/contacto/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -21787,7 +21808,7 @@
           "exportada": true,
           "params": "tx: Tx, correduriaId: string, reciboId: string, eventoId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 35,
+          "linea": 37,
           "resumen": "`true` si ha dejado una propuesta nueva. Idempotente por `clave` (una por recibo y vencimiento)."
         },
         {
@@ -21796,7 +21817,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 75,
+          "linea": 84,
           "resumen": "Propone comunicar a la compañía las anulaciones FIRMADAS por el cliente en el portal (pieza 2-d-3) sin propuesta viva. Solo las de firma electrónica (`firma_id` + `carta_texto`): una firma en papel la"
         },
         {
@@ -21805,8 +21826,25 @@
           "exportada": true,
           "params": "correduriaId: string, anulacionId: string",
           "retorno": "Promise<EnvioTrasFirma>",
-          "linea": 138,
+          "linea": 147,
           "resumen": "La carta que el cliente acaba de FIRMAR sale sola hacia su compañía (regla `anulacionSeEnviaSola` de module-seguros). No es un camino paralelo: propone como siempre y aprueba la MISMA propuesta por `d"
+        },
+        {
+          "nombre": "avisarAnulacionEnCola",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, anulacionId: string",
+          "retorno": "Promise<void>",
+          "linea": 154,
+          "resumen": "Telegram a la correduría: la baja firmada espera su OK en «Hoy». Best effort: un fallo se loguea y no rompe nada."
+        },
+        {
+          "nombre": "intentarEnvioTrasFirma",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, anulacionId: string",
+          "retorno": "Promise<EnvioTrasFirma>",
+          "linea": 174
         },
         {
           "nombre": "proponerCartasFirmadas",
@@ -21814,7 +21852,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 177,
+          "linea": 213,
           "resumen": "Propone mandar a la compañía las cartas de nombramiento de mediador FIRMADAS en el portal sin propuesta viva (mismas reglas que las anulaciones: fallida o caducada se repropone; rechazada no, la manda"
         },
         {
@@ -21823,7 +21861,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<void>",
-          "linea": 242,
+          "linea": 278,
           "resumen": "Retira lo que ya no es verdad: lo caducado, y el aviso de un recibo que ya no consta devuelto (se cobró o la compañía lo rectificó). Escribirle «no consta pagado» a quien ya ha pagado es justo lo que "
         },
         {
@@ -21832,7 +21870,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<AprobacionPendiente[]>",
-          "linea": 277,
+          "linea": 313,
           "resumen": "Pendientes, urgentes primero."
         },
         {
@@ -21841,7 +21879,7 @@
           "exportada": true,
           "params": "mensaje: string",
           "retorno": "boolean",
-          "linea": 350,
+          "linea": 386,
           "resumen": "Cortes de red o de espera: el proveedor pudo haber aceptado el mensaje antes de cortarse."
         },
         {
@@ -21850,7 +21888,7 @@
           "exportada": true,
           "params": "base: string, texto: string, f: FirmaGuardada | undefined",
           "retorno": "Promise<Adjunto[]>",
-          "linea": 369,
+          "linea": 405,
           "resumen": "Lo que se adjunta a la compañía: el ORIGINAL en texto (el que respalda la huella de la firma) y, si hay evidencia, el mismo texto en PDF con el justificante debajo — un `.txt` suelto se lee como un bo"
         },
         {
@@ -21859,7 +21897,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: string, destino: string, asunto: string, texto: string, adjuntos?: Adjunto[],",
           "retorno": "Promise<",
-          "linea": 389
+          "linea": 425
         },
         {
           "nombre": "destinoAnulacion",
@@ -21867,7 +21905,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string | null, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 409,
+          "linea": 445,
           "resumen": "A quién y con qué adjunto va la anulación firmada: el buzón de la compañía que Alberto ELIGE en la tarjeta (tiene que ser un contacto activo de la compañía de ESA póliza). No se deduce por área."
         },
         {
@@ -21876,7 +21914,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 433,
+          "linea": 469,
           "resumen": "Igual que `destinoAnulacion`, para la carta de nombramiento firmada. El adjunto es la carta GUARDADA (cifrada en BD)."
         },
         {
@@ -21885,7 +21923,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 458,
+          "linea": 494,
           "resumen": "La carta pasa a «enviada»: el correo salió. Un fallo aquí no puede invitar a repetir el envío."
         },
         {
@@ -21894,7 +21932,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string",
           "retorno": "Promise<boolean>",
-          "linea": 472,
+          "linea": 508,
           "resumen": "La anulación pasa a «comunicada»: el correo salió (o Alberto ha comprobado que salió)."
         },
         {
@@ -21903,7 +21941,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, d: Decision, actor: string",
           "retorno": "Promise<ResultadoDecision>",
-          "linea": 487
+          "linea": 523
         },
         {
           "nombre": "anotarHistorial",
@@ -21911,7 +21949,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, nota: string",
           "retorno": "Promise<void>",
-          "linea": 627
+          "linea": 663
         },
         {
           "nombre": "enviosInciertos",
@@ -21919,7 +21957,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EnvioIncierto[]>",
-          "linea": 643
+          "linea": 679
         }
       ],
       "tablas": [
@@ -21936,10 +21974,11 @@
         "poliza_recibos",
         "polizas",
         "presupuesto",
-        "recibo_devolucion"
+        "recibo_devolucion",
+        "set"
       ],
       "rutaApi": null,
-      "hash": "b71066e3fc83"
+      "hash": "e74f01db5f63"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -22159,6 +22198,45 @@
       ],
       "rutaApi": null,
       "hash": "e60baadcd44d"
+    },
+    {
+      "ruta": "apps/asegura/lib/aviso-anulacion-en-cola.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Aviso por Telegram a la correduría cuando una baja FIRMADA por el cliente no sale sola y se queda en «Hoy · Esperan tu OK». PURO (el envío y la consulta viven en `aprobaciones.ts`). El texto va en HTML de `tgSend`: todo lo que viene de la BD, escapado.",
+      "exporta": [
+        "efectoRetroactivo",
+        "textoAvisoAnulacionEnCola"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaEs",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 22
+        },
+        {
+          "nombre": "efectoRetroactivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaEfecto: string, firmadaEl: string",
+          "retorno": "boolean",
+          "linea": 28,
+          "resumen": "¿El efecto cae ANTES del día de la firma? (YYYY-MM-DD compara bien como cadena.)"
+        },
+        {
+          "nombre": "textoAvisoAnulacionEnCola",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaAvisoAnulacionEnCola",
+          "retorno": "string",
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "63b0ec39d3e4"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web-reglas.ts",
@@ -41176,6 +41254,85 @@
       ],
       "rutaApi": null,
       "hash": "e93f14867ac6"
+    },
+    {
+      "ruta": "apps/asegura/lib/red-diaria-clasificar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Red diaria de la correduría (12/10/2026): lo que se queda parado EN SILENCIO en la cola de aprobaciones. PURO: sin BD ni red (la consulta vive en `red-diaria.ts`). Lo consume el cron `correduria-red-diaria` de plataforma por `/api/operador/red-diaria`. Por qué existe: la caducidad de `aprobacion` es",
+      "exporta": [
+        "clasificarAprobaciones",
+        "causaAnulacionParada",
+        "clasificarAnulaciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "item",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "f: FilaAprobacion",
+          "retorno": "ItemAprobacion",
+          "linea": 32
+        },
+        {
+          "nombre": "clasificarAprobaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaAprobacion[], ahora: Date",
+          "retorno": "",
+          "linea": 38,
+          "resumen": "Pendientes que caducan en <24 h y caducadas POR TIEMPO en las últimas 24 h (la fecha manda, no cuándo se retiró)."
+        },
+        {
+          "nombre": "causaAnulacionParada",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaAnulacion",
+          "retorno": "CausaAnulacionParada",
+          "linea": 79,
+          "resumen": "Por qué NO ha salido. El orden importa: la causa más \"de raíz\" gana."
+        },
+        {
+          "nombre": "clasificarAnulaciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaAnulacion[], ahora: Date, horasMin: number = HORAS_ANULACION_PARADA",
+          "retorno": "ItemAnulacion[]",
+          "linea": 92,
+          "resumen": "Solo las firmadas hace MÁS de 48 h, de la más antigua a la más reciente."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d6398de6f792"
+    },
+    {
+      "ruta": "apps/asegura/lib/red-diaria.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lectura de la red diaria (12/10/2026). La clasificación es pura (`red-diaria-clasificar.ts`). El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.",
+      "exporta": [
+        "redDiaria"
+      ],
+      "funciones": [
+        {
+          "nombre": "redDiaria",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ahora: Date = new Date()",
+          "retorno": "Promise<RedDiaria>",
+          "linea": 19
+        }
+      ],
+      "tablas": [
+        "anulacion",
+        "aprobacion",
+        "clientes",
+        "companias_dgs",
+        "poliza_recibos",
+        "polizas",
+        "presupuesto"
+      ],
+      "rutaApi": null,
+      "hash": "be645b994722"
     },
     {
       "ruta": "apps/asegura/lib/relaciones-figura.ts",
@@ -112147,6 +112304,27 @@
       "hash": "fb4c9504e7d8"
     },
     {
+      "ruta": "apps/plataforma/app/api/cron/correduria-red-diaria/route.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "──────────────────────────────────────────────────────────────────────────── RED DIARIA de la correduría (12/10/2026): lo que se queda parado en silencio. Cada mañana pide a asegura el cuadro (aplicando antes la caducidad perezosa de `aprobacion`) y manda UN solo mensaje por Telegram, SOLO si hay al",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 22
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/correduria-red-diaria",
+      "hash": "32d24b0a30ff"
+    },
+    {
       "ruta": "apps/plataforma/app/api/cron/correduria-renovaciones/route.ts",
       "ambito": "apps/plataforma",
       "resumen": "──────────────────────────────────────────────────────────────────────────── Aviso diario de RENOVACIONES de la correduría (Grupo ASegura). Lee la cartera por el puerto HTTP de central-asegura y avisa por Telegram de las pólizas que entran en ventana. La ventana la marca la LCS art. 22, no un calend",
@@ -132662,6 +132840,143 @@
       "hash": "06608f3f97a1"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/red-diaria.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Red diaria de la correduría (12/10/2026): lo que se queda parado en silencio. La caducidad de `aprobacion` es perezosa (solo al abrir «Hoy») y una baja firmada que no sale (sin carta, propuesta rechazada, Allianz…) no avisaba a nadie. asegura sirve ya clasificado el cuadro (`/api/operador/red-diaria",
+      "exporta": [
+        "interpretarRedDiaria",
+        "leerRedDiaria",
+        "mensajeRedDiaria"
+      ],
+      "funciones": [
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 37
+        },
+        {
+          "nombre": "rec",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 38
+        },
+        {
+          "nombre": "leerAprobacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "AprobacionRed | null",
+          "linea": 40
+        },
+        {
+          "nombre": "leerAnulacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "AnulacionRed | null",
+          "linea": 47
+        },
+        {
+          "nombre": "leerRecibo",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "ReciboRed | null",
+          "linea": 54
+        },
+        {
+          "nombre": "lista",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, leer: (x: unknown) => T | null",
+          "retorno": "T[] | null",
+          "linea": 61
+        },
+        {
+          "nombre": "interpretarRedDiaria",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaRedDiaria",
+          "linea": 68,
+          "resumen": "Una fila ilegible no se esconde: si falta una, el cuadro no es el cuadro."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 82
+        },
+        {
+          "nombre": "leerRedDiaria",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<LecturaRedDiaria>",
+          "linea": 86
+        },
+        {
+          "nombre": "esc",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "string",
+          "linea": 101
+        },
+        {
+          "nombre": "enlace",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "clienteId: string, nombre: string | null, base: string",
+          "retorno": "string",
+          "linea": 120
+        },
+        {
+          "nombre": "cuando",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 123
+        },
+        {
+          "nombre": "que",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: AprobacionRed",
+          "retorno": "string",
+          "linea": 129
+        },
+        {
+          "nombre": "bloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulo: string, lineas: string[], max: number",
+          "retorno": "string[]",
+          "linea": 132
+        },
+        {
+          "nombre": "mensajeRedDiaria",
+          "kind": "function",
+          "exportada": true,
+          "params": "red: RedDiaria, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
+          "retorno": "string | null",
+          "linea": 139,
+          "resumen": "`null` = nada que avisar: no se manda «todo en orden»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "52c369ee00e8"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/redes-borradores.ts",
       "ambito": "apps/plataforma",
       "resumen": "Borradores para LinkedIn — el canal que Alberto eligió el 07/09/2026. ─── Por qué esto es DATO y no un chat ───────────────────────────────────── Un post publicado no se puede editar como una página. Si un texto promete un precio, ya lo ha visto quien lo iba a ver. Por eso el copy de redes pasa por ",
@@ -134368,7 +134683,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 259,
+          "linea": 263,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -134377,7 +134692,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 289,
+          "linea": 293,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -134386,7 +134701,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 311
+          "linea": 315
         },
         {
           "nombre": "ventanaMinutos",
@@ -134394,7 +134709,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 319,
+          "linea": 323,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -134403,13 +134718,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 331,
+          "linea": 335,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "aebd6982a737"
+      "hash": "fb35096bda17"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -159003,7 +159318,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 769
+          "linea": 775
         },
         {
           "nombre": "avisosDe",
@@ -159011,7 +159326,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 774,
+          "linea": 780,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -159020,13 +159335,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 784,
+          "linea": 790,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b776b402b2cb"
+      "hash": "9970c1383ab9"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -205086,7 +205401,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4533,
-    "funciones": 16188
+    "archivos": 4539,
+    "funciones": 16215
   }
 }

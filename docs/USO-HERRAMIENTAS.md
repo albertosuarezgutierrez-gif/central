@@ -167,25 +167,25 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 312 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 313 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 302 | 40.244 | 32.893.319 | 0 | 0 |
-| `otro` | 298 | 9.776 | 25.083.281 | 15.008.917 | 0 |
-| `lectura-directa` | 263 | 6.900 | 22.798.491 | 0 | 0 |
-| `mcp:github` | 267 | 5.972 | 4.876.709 | 52.331.101 | 90 |
+| `bash` | 303 | 40.376 | 33.027.888 | 0 | 0 |
+| `otro` | 299 | 9.831 | 25.147.335 | 15.037.734 | 0 |
+| `lectura-directa` | 264 | 6.919 | 22.816.413 | 0 | 0 |
+| `mcp:github` | 268 | 5.984 | 4.884.761 | 52.344.962 | 90 |
 | `escritura` | 199 | 4.002 | 58.426.818 | 0 | 0 |
-| `sql` | 188 | 3.875 | 1.939.783 | 2.351.230 | 15 |
+| `sql` | 189 | 3.901 | 1.955.332 | 2.351.230 | 15 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 41 | 1.132 | 1.121.726 | 0 | 70 |
 | `mcp:Booking-com` | 34 | 948 | 3.964.693 | 0 | 0 |
 | `mcp:Vercel` | 64 | 629 | 911.259 | 204.477 | 16 |
-| `agente:general-purpose` | 86 | 438 | 276.879 | 8.337.130 | 0 |
+| `agente:general-purpose` | 87 | 445 | 279.694 | 8.390.840 | 0 |
 | `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
-| `mcp:Supabase` | 113 | 324 | 47.035 | 3.415 | 4 |
-| `mcp:claude-code-remote` | 27 | 206 | 18.038 | 16.312 | 0 |
+| `mcp:Supabase` | 114 | 327 | 47.329 | 3.415 | 4 |
+| `mcp:claude-code-remote` | 28 | 210 | 18.179 | 16.312 | 0 |
 | `agente:agente-architect` | 54 | 186 | 133.172 | 5.528.992 | 0 |
 | `mcp:Google-Drive` | 20 | 129 | 116.796 | 0 | 2 |
 | `agente:agente-mecanico` | 40 | 98 | 66.085 | 5.917.719 | 0 |
@@ -203,8 +203,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:general` | 11 | 15 | 9.445 | 592.852 | 0 |
 | `mcp:Supabase_asegura` | 12 | 13 | 2.967 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
+| `agente:verificador-esceptico` | 8 | 10 | 2.414 | 12.827 | 0 |
 | `agente:lector-correo` | 3 | 10 | 4.219 | 0 | 0 |
-| `agente:verificador-esceptico` | 7 | 9 | 2.377 | 12.827 | 0 |
 | `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
 | `mcp:openrouter` | 3 | 7 | 19.723 | 0 | 0 |
 | `mcp:bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a` | 1 | 6 | 162 | 0 | 0 |
