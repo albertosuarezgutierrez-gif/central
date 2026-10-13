@@ -25,9 +25,12 @@ test('cotizador del registro == lo que hace hoy la pantalla (ramoVariante / ramo
 })
 
 test('un ramo sin comparador pinta «no comparable»: el registro y diferenciasVariante coinciden (H1)', () => {
-  const linea: Record<string, string> = { auto: 'Car', moto: 'Motorcycle', hogar: 'Home', vida: 'Life', salud: 'Health', decesos: 'Funeral', comercio: 'Business', rc: 'Liability', comunidades: 'Community', otros: 'Other' }
+  // Ids reales de `insuranceLine` (importar.ts): TermLife, Health, Burial. Vida lleva `risk.insured`; salud y decesos
+  // `risk.insureds[]` (13/10/2026: los tres comparan por identidad del asegurado).
+  const linea: Record<string, string> = { auto: 'Car', moto: 'Motorcycle', hogar: 'Home', vida: 'TermLife', salud: 'Health', decesos: 'Burial', comercio: 'Business', rc: 'Liability', comunidades: 'Community', otros: 'Other' }
+  const ana = { name: 'Ana', surname: 'Ruiz', birthDate: '1980-01-01', gender: { id: 'Female' } }
   for (const r of RAMOS_RIESGO) {
-    const p = (x: number) => ({ insuranceLine: { id: linea[r] }, effectiveDate: '2026-10-01', risk: { capital: x } })
+    const p = (x: number) => ({ insuranceLine: { id: linea[r] }, effectiveDate: '2026-10-01', risk: { capital: x, insured: ana, insureds: [ana] } })
     const d = diferenciasVariante(p(1), p(1))
     assert.equal(d !== null, REGISTRO_RAMOS[r].comparable, r)
   }

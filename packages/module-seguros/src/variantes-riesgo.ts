@@ -104,7 +104,7 @@ export type FigurasVariante = Partial<Record<RolFiguraUnico, string | null>>
 
 /**
  * Normaliza lo que llega por el puerto: solo roles de UNA persona y uuids. Lo demás se descarta (los asegurados
- * no caben en esta forma `rol → cliente_id`; su foto por variante es trabajo pendiente de la fase 2).
+ * no caben en esta forma `rol → cliente_id`: su foto va aparte, en la clave `asegurados`, ver `fotoAsegurados`).
  */
 export function limpiarFiguras(v: unknown): FigurasVariante | null {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
@@ -119,7 +119,11 @@ export function limpiarFiguras(v: unknown): FigurasVariante | null {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-export type Diferencia = { campo: string; antes: string | null; despues: string | null }
+/**
+ * Una diferencia entre dos variantes. `antes`/`despues` `null` = no consta en esa petición (nunca «0» ni «no»).
+ * `tipo` solo en las personas de una LISTA (asegurados de salud/decesos): `alta` = entra en la posterior, `baja` = sale.
+ */
+export type Diferencia = { campo: string; antes: string | null; despues: string | null; tipo?: 'alta' | 'baja' }
 
 type Obj = Record<string, unknown>
 const obj = (v: unknown): Obj | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Obj) : null)
@@ -186,27 +190,168 @@ const CAMPOS: Array<[string, string]> = [
 /** Ids con los que el vendor nombra los ramos que SÍ comparamos (`insuranceLine.id`, minúsculas). */
 const LINEAS_VEHICULO = new Set(['car', 'auto', 'motorcycle', 'moto', 'motorbike'])
 const LINEAS_HOGAR = new Set(['home', 'hogar', 'household', 'homeowner'])
+/** Salud y decesos (13/10/2026): `risk.insureds[]` (`HealthRisk_V1`, `BurialRisk_V1`). */
+const LINEAS_LISTA_ASEGURADOS = new Set(['health', 'salud', 'burial', 'decesos'])
+/** Vida (13/10/2026): `risk.insured` + `risk.deathBenefit` (`TermLifeRisk_V1`). */
+const LINEAS_VIDA = new Set(['termlife', 'life', 'vida'])
+
+type LineaComparable = 'vehiculo' | 'hogar' | 'asegurados' | 'vida'
 
 /** El ramo de una petición si tiene comparador; `null` si no se lee o su ramo no se compara todavía. */
-function lineaComparable(peticion: unknown): 'vehiculo' | 'hogar' | null {
+function lineaComparable(peticion: unknown): LineaComparable | null {
   const id = escalar(en(peticion, 'insuranceLine.id') ?? en(peticion, 'insuranceLine'))?.toLowerCase()
   if (!id) return null
   if (LINEAS_VEHICULO.has(id)) return 'vehiculo'
   if (LINEAS_HOGAR.has(id)) return 'hogar'
+  if (LINEAS_LISTA_ASEGURADOS.has(id)) return 'asegurados'
+  if (LINEAS_VIDA.has(id)) return 'vida'
   return null
 }
+
+// ─── Foto de asegurados de una variante (13/10/2026) ────────────────────────
+//
+// La petición enviada YA lleva nombre, nacimiento y sexo de cada asegurado: eso no se copia. Lo único que se guarda
+// aparte (en `tarificaciones.figuras`, clave `asegurados`) es QUIÉN es cada uno: el cliente_id de su ficha, en el
+// orden en que viajan (`risk.insureds[1..]` en salud/decesos; `risk.insured` en vida, `[]` = el tomador). Nada de DNI.
+
+/** Lo que se lee de la foto de una variante. `asegurados: null` = no consta (variante anterior, o tecleada a mano). */
+export type FotoAsegurados = { tomador: string | null; asegurados: string[] | null }
+
+/** PURA. Lee `tarificaciones.figuras`: solo uuids; una lista con algo que no lo es NO consta (no se adivina). */
+export function fotoAsegurados(figuras: unknown): FotoAsegurados {
+  const o = obj(figuras)
+  const tomador = typeof o?.tomador === 'string' && UUID.test(o.tomador) ? o.tomador : null
+  const lista = o?.asegurados
+  const asegurados = Array.isArray(lista) && lista.every((x) => typeof x === 'string' && UUID.test(x)) ? (lista as string[]) : null
+  return { tomador, asegurados }
+}
+
+/**
+ * PURA. Lo que se guarda en `tarificaciones.figuras`: la foto de figuras y, si consta, la de asegurados (clave
+ * `asegurados`). `null` = no consta ninguna. Solo uuids: un id que no lo es invalida la lista entera (no se recorta).
+ */
+export function fotoVarianteJson(figuras: Record<string, string | null> | null | undefined, asegurados: readonly string[] | null | undefined): string | null {
+  const lista = Array.isArray(asegurados) && asegurados.every((x) => typeof x === 'string' && UUID.test(x)) ? [...asegurados] : null
+  if (!figuras && lista === null) return null
+  return JSON.stringify({ ...(figuras ?? {}), ...(lista !== null ? { asegurados: lista } : {}) })
+}
+
+/** Un asegurado tal como viajó: identidad (ficha, DNI) para emparejar; lo demás, lo que se enseña. El DNI NUNCA sale. */
+export type AseguradoPeticion = { ficha: string | null; dni: string | null; nombre: string | null; nacimiento: string | null; sexo: string | null }
+
+function sexoDe(v: unknown): string | null {
+  const s = escalar(v)
+  if (s === null) return null
+  const k = s.toLowerCase()
+  return k === 'male' ? 'hombre' : k === 'female' ? 'mujer' : k
+}
+
+function aseguradoDe(v: unknown, ficha: string | null): AseguradoPeticion | null {
+  const p = persona(v)
+  if (!p) return null
+  return { ficha, dni: p.dni, nombre: p.nombre, nacimiento: p.nacimiento, sexo: sexoDe(en(v, 'gender')) }
+}
+
+const normalNombre = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+/**
+ * ¿La misma persona? Por IDENTIDAD: ficha → DNI → nombre. Dos fichas (o dos DNI) distintas no se funden jamás.
+ * `null` = no se puede saber (sin ningún dato con que decidirlo).
+ */
+function mismaIdentidad(a: AseguradoPeticion, b: AseguradoPeticion): boolean | null {
+  if (a.ficha && b.ficha) return a.ficha === b.ficha
+  if (a.dni && b.dni) return a.dni === b.dni
+  if (a.nombre && b.nombre) return normalNombre(a.nombre) === normalNombre(b.nombre)
+  return null
+}
+
+/** Los asegurados de salud/decesos con su ficha cuando la foto la da. `null` = la lista no se puede leer. */
+function listaAsegurados(peticion: unknown, foto: FotoAsegurados): AseguradoPeticion[] | null {
+  const lista = en(peticion, 'risk.insureds')
+  if (!Array.isArray(lista) || lista.length === 0) return null
+  // La foto solo vale si cuadra con la lista enviada; si no, se ignora (nunca se reparte por posición a ojo).
+  const fichas = foto.asegurados !== null && foto.asegurados.length === lista.length - 1 ? foto.asegurados : null
+  const holder = JSON.stringify(en(peticion, 'holder') ?? null)
+  const out: AseguradoPeticion[] = []
+  for (const [i, x] of lista.entries()) {
+    // El primero es el tomador SOLO si es literalmente el `holder` (así lo arma `construirPeticionSalud/Decesos`).
+    const ficha = i === 0 ? (JSON.stringify(x) === holder ? foto.tomador : null) : (fichas?.[i - 1] ?? null)
+    const a = aseguradoDe(x, ficha)
+    if (!a) return null
+    out.push(a)
+  }
+  return out
+}
+
+/** El asegurado de vida con su ficha: `[id]` = esa ficha; `[]` = el tomador. `null` = no se lee. */
+function aseguradoVida(peticion: unknown, foto: FotoAsegurados): AseguradoPeticion | null {
+  const ficha = foto.asegurados === null ? null : foto.asegurados.length === 1 ? foto.asegurados[0] : foto.asegurados.length === 0 ? foto.tomador : null
+  return aseguradoDe(en(peticion, 'risk.insured'), ficha)
+}
+
+/** Nombre, nacimiento y sexo de la MISMA persona en las dos variantes: correcciones del dato. */
+function correcciones(etiqueta: string, a: AseguradoPeticion, b: AseguradoPeticion): Diferencia[] {
+  const r: Diferencia[] = []
+  if ((a.nombre && normalNombre(a.nombre)) !== (b.nombre && normalNombre(b.nombre))) r.push({ campo: `${etiqueta}: nombre`, antes: a.nombre, despues: b.nombre })
+  if (a.nacimiento !== b.nacimiento) r.push({ campo: `${etiqueta}: nacimiento`, antes: a.nacimiento, despues: b.nacimiento })
+  if (a.sexo !== b.sexo) r.push({ campo: `${etiqueta}: sexo`, antes: a.sexo, despues: b.sexo })
+  return r
+}
+
+/**
+ * PURA. Altas, bajas y correcciones de una lista de asegurados, emparejados por IDENTIDAD, nunca por posición.
+ * `null` = no se puede emparejar con seguridad (alguien sin ningún dato, o dos candidatos para la misma persona).
+ */
+export function diferenciasAsegurados(antes: readonly AseguradoPeticion[], despues: readonly AseguradoPeticion[]): Diferencia[] | null {
+  const pareja = new Map<number, number>()
+  const usadosB = new Set<number>()
+  for (const [i, a] of antes.entries()) {
+    const cand: number[] = []
+    for (const [j, b] of despues.entries()) {
+      const m = mismaIdentidad(a, b)
+      if (m === null) return null
+      if (m) cand.push(j)
+    }
+    if (cand.length > 1) return null
+    if (cand.length === 1) {
+      if (usadosB.has(cand[0])) return null
+      pareja.set(i, cand[0])
+      usadosB.add(cand[0])
+    }
+  }
+  const r: Diferencia[] = []
+  for (const [i, a] of antes.entries()) {
+    const j = pareja.get(i)
+    if (j === undefined) r.push({ campo: 'Asegurado', antes: a.nombre, despues: null, tipo: 'baja' })
+    else r.push(...correcciones(`Asegurado ${a.nombre ?? despues[j].nombre ?? ''}`.trim(), a, despues[j]))
+  }
+  for (const [j, b] of despues.entries()) if (!usadosB.has(j)) r.push({ campo: 'Asegurado', antes: null, despues: b.nombre, tipo: 'alta' })
+  return r
+}
+
+/** Vida: lo que del riesgo cambia el precio, además del asegurado. Fumador en palabras; ausente = no consta. */
+const CAMPOS_VIDA: Array<[string, string]> = [
+  ['risk.deathBenefit', 'Capital de fallecimiento'],
+  ['risk.insured.economicOccupation.code', 'Profesión (CNO)'],
+]
+const siNo = (v: unknown): string | null => (v === true ? 'sí' : v === false ? 'no' : escalar(v))
 
 /**
  * Qué cambia de la variante `antes` a la variante `despues`, en palabras. Las personas se comparan
  * por DNI: el mismo DNI con otro carnet o nacimiento es una CORRECCIÓN del dato; otro DNI es otra
  * persona. Sin petición legible de alguna de las dos, `null` = «no se puede comparar», nunca «igual».
+ *
+ * Salud, decesos y vida (13/10/2026): los asegurados se emparejan por identidad (ficha de la foto → DNI → nombre),
+ * con altas y bajas explícitas; `fotos` es `tarificaciones.figuras` de cada variante (puede faltar: no consta).
  */
-export function diferenciasVariante(antes: unknown, despues: unknown): Diferencia[] | null {
+export function diferenciasVariante(antes: unknown, despues: unknown, fotos?: { antes?: unknown; despues?: unknown }): Diferencia[] | null {
   if (!obj(antes) || !obj(despues)) return null
-  // H1 (10/10/2026): solo se afirma «mismos datos» donde hay comparador. Vida, salud, decesos, RC… no
-  // tienen rutas comparadas (`risk.insured`, capital…): «no comparado» ≠ «igual». Línea ilegible = null.
+  // H1 (10/10/2026): solo se afirma «mismos datos» donde hay comparador. RC, comercio… no tienen rutas
+  // comparadas: «no comparado» ≠ «igual». Línea ilegible = null.
   const la = lineaComparable(antes)
   if (la === null || la !== lineaComparable(despues)) return null
+  const fa = fotoAsegurados(fotos?.antes)
+  const fb = fotoAsegurados(fotos?.despues)
   const r: Diferencia[] = []
   for (const [ruta, campo] of PERSONAS) {
     const a = persona(en(antes, ruta))
@@ -219,6 +364,31 @@ export function diferenciasVariante(antes: unknown, despues: unknown): Diferenci
     if (a && b && a.nacimiento !== b.nacimiento) r.push({ campo: `${campo}: nacimiento`, antes: a.nacimiento, despues: b.nacimiento })
     if (a && b && a.carnet !== b.carnet) r.push({ campo: `${campo}: carnet`, antes: a.carnet, despues: b.carnet })
   }
+  if (la === 'asegurados') {
+    const xa = listaAsegurados(antes, fa)
+    const xb = listaAsegurados(despues, fb)
+    if (!xa || !xb) return null
+    const d = diferenciasAsegurados(xa, xb)
+    if (d === null) return null
+    r.push(...d)
+  }
+  if (la === 'vida') {
+    const a = aseguradoVida(antes, fa)
+    const b = aseguradoVida(despues, fb)
+    if (!a || !b) return null
+    const m = mismaIdentidad(a, b)
+    if (m === null) return null
+    if (!m) r.push({ campo: 'Asegurado', antes: a.nombre, despues: b.nombre })
+    else r.push(...correcciones('Asegurado', a, b))
+    for (const [ruta, campo] of CAMPOS_VIDA) {
+      const x = escalar(en(antes, ruta))
+      const y = escalar(en(despues, ruta))
+      if (x !== y) r.push({ campo, antes: x, despues: y })
+    }
+    const fx = siNo(en(antes, 'risk.insured.smoker'))
+    const fy = siNo(en(despues, 'risk.insured.smoker'))
+    if (fx !== fy) r.push({ campo: 'Fumador', antes: fx, despues: fy })
+  }
   for (const [ruta, campo] of CAMPOS) {
     const a = escalar(en(antes, ruta))
     const b = escalar(en(despues, ruta))
@@ -227,9 +397,31 @@ export function diferenciasVariante(antes: unknown, despues: unknown): Diferenci
   return r
 }
 
+/**
+ * PURA. Una diferencia en palabras: «Alta de asegurado: Ana Pérez» · «Baja de asegurado: Luis» ·
+ * «CP: 41003 → 11520». Un lado `null` es «sin dato» (no consta), nunca un 0 inventado.
+ */
+export function textoDiferencia(d: Diferencia): string {
+  const v = (x: string | null) => x ?? 'sin dato'
+  if (d.tipo === 'alta') return `Alta de ${d.campo.toLowerCase()}: ${v(d.despues)}`
+  if (d.tipo === 'baja') return `Baja de ${d.campo.toLowerCase()}: ${v(d.antes)}`
+  return `${d.campo}: ${v(d.antes)} → ${v(d.despues)}`
+}
+
+/** PURA. Lee una diferencia que llega por el puerto (JSON). Sin `campo` no es una diferencia. */
+export function leerDiferencia(c: unknown): Diferencia | null {
+  const d = obj(c)
+  if (!d) return null
+  const t = (x: unknown) => (typeof x === 'string' && x.trim() !== '' ? x : null)
+  const campo = t(d.campo)
+  if (!campo) return null
+  const tipo = d.tipo === 'alta' || d.tipo === 'baja' ? d.tipo : undefined
+  return { campo, antes: t(d.antes), despues: t(d.despues), ...(tipo ? { tipo } : {}) }
+}
+
 /** Una línea para la fila del historial: «Tomador: Manuel → Antonio · CP 41003 → 11520». */
 export function resumenDiferencias(d: Diferencia[] | null): string {
   if (d === null) return 'No se puede comparar con la anterior'
   if (d.length === 0) return 'Mismos datos que la anterior'
-  return d.map((x) => `${x.campo}: ${x.antes ?? '—'} → ${x.despues ?? '—'}`).join(' · ')
+  return d.map(textoDiferencia).join(' · ')
 }

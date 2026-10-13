@@ -33,7 +33,7 @@ const COTIZADOR: Record<RamoRiesgo, TipoCotizador> = {
   comercio: 'fuera', rc: 'fuera', comunidades: 'bots', otros: 'fuera',
 }
 const COMPARABLE: Record<RamoRiesgo, boolean> = {
-  auto: true, moto: true, hogar: true, vida: false, salud: false, decesos: false, comercio: false, rc: false, comunidades: false, otros: false,
+  auto: true, moto: true, hogar: true, vida: true, salud: true, decesos: true, comercio: false, rc: false, comunidades: false, otros: false,
 }
 
 export const REGISTRO_RAMOS: Readonly<Record<RamoRiesgo, DefinicionRamo>> = Object.fromEntries(

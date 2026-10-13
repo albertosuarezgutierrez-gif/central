@@ -238,14 +238,14 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
   const vars = await prisma.$queryRaw<
     Array<{
       id: string; creado_at: Date; cliente_id: string | null; nombre: string | null; apellidos: string | null
-      poliza_id: string | null; nota: string | null; simulado: boolean; fecha_efecto: Date | null; peticion: unknown
+      poliza_id: string | null; nota: string | null; simulado: boolean; fecha_efecto: Date | null; peticion: unknown; figuras: unknown
       n_precios: number; mejor_compania: string | null; mejor_prima: string | null
       p_id: string | null; enviado_at: Date | null; visto_at: Date | null; elegido_at: Date | null
       aceptado_at: Date | null; emitido_at: Date | null; retirado_at: Date | null
     }>
   >`
     select t.id::text as id, t.creado_at, coalesce(t.cliente_id, pol.cliente_id)::text as cliente_id, c.nombre, c.apellidos, t.poliza_id::text as poliza_id, t.nota, t.simulado,
-           t.fecha_efecto, t.peticion,
+           t.fecha_efecto, t.peticion, t.figuras,
            (select count(*)::int from seguros.tarificacion_precios x where x.tarificacion_id = t.id and x.prima_eur is not null) as n_precios,
            m.compania as mejor_compania, m.prima_eur::text as mejor_prima,
            p.id::text as p_id, p.enviado_at, p.visto_at, p.elegido_at, p.aceptado_at, p.emitido_at, p.retirado_at
@@ -282,7 +282,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
           aceptadoAt: iso(v.aceptado_at), emitidoAt: iso(v.emitido_at), retiradoAt: iso(v.retirado_at),
         }
       : null,
-    cambios: i === 0 ? [] : diferenciasVariante(vars[i - 1].peticion, v.peticion),
+    cambios: i === 0 ? [] : diferenciasVariante(vars[i - 1].peticion, v.peticion, { antes: vars[i - 1].figuras, despues: v.figuras }),
   }))
   // La más reciente primero: es la que se está trabajando.
   variantes.reverse()
@@ -875,7 +875,7 @@ const CLAVE_DATOS: Partial<Record<RolFiguraUnico, 'propietario' | 'conductor' | 
 
 export type VarianteEntrada = {
   /** Lo que se añade al contexto de la cotización: de qué riesgo es y con qué figuras. */
-  contexto: { oportunidadId: string; figuras: FigurasVariante | null; nota: string | null } | null
+  contexto: { oportunidadId: string; figuras: FigurasVariante | null; nota: string | null; asegurados?: string[] } | null
   /** Correcciones con las figuras rellenas desde SUS fichas (lo tecleado por el corredor manda encima). */
   correcciones: Record<string, unknown> | undefined
   /**
@@ -974,12 +974,14 @@ export async function prepararVariante(
   if (deFiguras) {
     const aseg = await aseguradosDeFigurasParaCotizar(correduriaId, { oportunidadId, tomadorId: e.tomadorId, ramo: e.ramo === 'salud' ? 'salud' : 'decesos' })
     if (!aseg.ok) return aseg
-    return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones, asegurados: aseg.asegurados } }
+    // Foto de la variante: QUIÉN es cada asegurado (cliente_id, en el orden de `risk.insureds[1..]`). Sin DNI.
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: aseg.clienteIds }, correcciones, asegurados: aseg.asegurados } }
   }
   if (deRiesgoVida) {
     const dv = await datosVidaDelRiesgoParaCotizar(correduriaId, { oportunidadId, tomadorId: e.tomadorId })
     if (!dv.ok) return dv
-    return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones, vida: dv.vida } }
+    // Foto: `[id]` = el asegurado de esa ficha; `[]` = el asegurado es el tomador (`risk.insured`).
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota, asegurados: dv.aseguradoClienteId ? [dv.aseguradoClienteId] : [] }, correcciones, vida: dv.vida } }
   }
   return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones } }
 }
@@ -994,7 +996,7 @@ export async function prepararVariante(
 export async function aseguradosDeFigurasParaCotizar(
   correduriaId: string,
   e: { oportunidadId: string; tomadorId: string; ramo?: 'decesos' | 'salud' },
-): Promise<{ ok: true; asegurados: AseguradoParaCotizar[] } | { ok: false; motivo: string }> {
+): Promise<{ ok: true; asegurados: AseguradoParaCotizar[]; clienteIds: string[] } | { ok: false; motivo: string }> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'la oportunidad no es válida' }
   const ramo = e.ramo ?? 'decesos'
   // El tomador que se cotiza tiene que ser el DEL RIESGO (figura `tomador` o, sin ella, el cliente de la oportunidad):
@@ -1017,6 +1019,7 @@ export async function aseguradosDeFigurasParaCotizar(
     order by f.creado_at asc, f.id asc`
   const vistos = new Set<string>([e.tomadorId])
   const asegurados: AseguradoParaCotizar[] = []
+  const clienteIds: string[] = []
   for (const f of filas) {
     if (vistos.has(f.cliente_id)) continue
     vistos.add(f.cliente_id)
@@ -1029,10 +1032,11 @@ export async function aseguradosDeFigurasParaCotizar(
     const malNac = motivoFechaNacimientoImposible(a.fechaNacimiento)
     if (malNac) return { ok: false, motivo: `asegurado ${quien}: ${malNac}. Corrígela en su ficha («Editar datos» en «Intervinientes»).` }
     asegurados.push(a)
+    clienteIds.push(f.cliente_id)
   }
   // Nunca se recorta en silencio: pasar del tope corta antes de pagar.
   if (asegurados.length > MAX_ADICIONALES_CORDURA) return { ok: false, motivo: `hay ${asegurados.length} asegurados además del tomador y el máximo es ${MAX_ADICIONALES_CORDURA}: quita los que sobren en «Intervinientes»` }
-  return { ok: true, asegurados }
+  return { ok: true, asegurados, clienteIds }
 }
 
 /** Lo que en VIDA embebida sale de «Datos del riesgo» y nunca del cuerpo de la petición (peticion-vida.ts). */
@@ -1049,7 +1053,7 @@ export const CAMPOS_VIDA_DEL_RIESGO = ['capital', 'profesion', 'fumador'] as con
 export async function datosVidaDelRiesgoParaCotizar(
   correduriaId: string,
   e: { oportunidadId: string; tomadorId: string },
-): Promise<{ ok: true; vida: DatosVidaParaCotizar } | { ok: false; motivo: string }> {
+): Promise<{ ok: true; vida: DatosVidaParaCotizar; aseguradoClienteId: string | null } | { ok: false; motivo: string }> {
   if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'la oportunidad no es válida' }
   const [op] = await prisma.$queryRaw<Array<{ tomador: string; datos: unknown }>>`
     select coalesce(
@@ -1083,7 +1087,7 @@ export async function datosVidaDelRiesgoParaCotizar(
   }
   const d = leerDatosCapital(op.datos)
   if (d === null || d.capital === null || !(d.capital > 0)) return { ok: false, motivo: 'falta el capital asegurado en «Datos del riesgo»: sin él Avant2 no cotiza vida' }
-  return { ok: true, vida: { capital: d.capital, profesion: d.profesion, fumador: d.fumador, asegurado } }
+  return { ok: true, vida: { capital: d.capital, profesion: d.profesion, fumador: d.fumador, asegurado }, aseguradoClienteId: asegurado ? otros[0].cliente_id : null }
 }
 
 /**
@@ -1158,8 +1162,8 @@ export type Comparacion = {
 /** Dos variantes del MISMO riesgo, campo a campo y compañía a compañía. Gratis, solo lectura. */
 export async function compararVariantes(correduriaId: string, oportunidadId: string, a: string, b: string): Promise<Comparacion | null> {
   if (![oportunidadId, a, b].every((x) => UUID.test(x)) || a === b) return null
-  const ts = await prisma.$queryRaw<Array<{ id: string; peticion: unknown }>>`
-    select id::text as id, peticion from seguros.tarificaciones
+  const ts = await prisma.$queryRaw<Array<{ id: string; peticion: unknown; figuras: unknown }>>`
+    select id::text as id, peticion, figuras from seguros.tarificaciones
     where id = any(${[a, b]}::uuid[]) and oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
   const ta = ts.find((t) => t.id === a)
   const tb = ts.find((t) => t.id === b)
@@ -1180,7 +1184,7 @@ export async function compararVariantes(correduriaId: string, oportunidadId: str
   const companias = [...porCompania.entries()]
     .map(([compania, v]) => ({ compania, ...v }))
     .sort((x, y) => Math.min(x.a?.primaEur ?? Infinity, x.b?.primaEur ?? Infinity) - Math.min(y.a?.primaEur ?? Infinity, y.b?.primaEur ?? Infinity))
-  return { a, b, cambios: diferenciasVariante(ta.peticion, tb.peticion), companias }
+  return { a, b, cambios: diferenciasVariante(ta.peticion, tb.peticion, { antes: ta.figuras, despues: tb.figuras }), companias }
 }
 
 // ─── El riesgo de una póliza (renovación / retención) ───────────────────────
