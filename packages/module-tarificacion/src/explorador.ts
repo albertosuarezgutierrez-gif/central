@@ -277,6 +277,12 @@ export const MAX_MAPEO_RESPUESTA = 60
 const MAX_NOMBRE_PANTALLA = 60
 const MAX_MOTIVO = 200
 
+/** Recorta el `motivo` libre a {@link MAX_MOTIVO} caracteres con «…» (no invalida la respuesta). */
+export function recortarMotivo(t: string | null): string | null {
+  if (t === null) return null
+  return t.length > MAX_MOTIVO ? t.slice(0, MAX_MOTIVO - 1).trimEnd() + '…' : t
+}
+
 export type ContextoValidacion = {
   inventario: InventarioDom
   ramo: string
@@ -424,7 +430,10 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
     if (!tipo) errores.push('pantalla.tipo fuera de lista')
     pantalla = { nombre: textoCorto(p.nombre, MAX_NOMBRE_PANTALLA, 'pantalla.nombre'), tipo: tipo ?? 'otro' }
   }
-  const motivo = textoCorto(r.motivo, MAX_MOTIVO, 'motivo')
+  // `motivo` es texto libre INFORMATIVO (no es una acción): uno largo se recorta, no invalida el lote
+  // (13/10/2026: un motivo de >200 car. tiró un paso 1 bueno a `parar/ambiguo`). El cepo de dato
+  // personal sigue mirando el texto ENTERO, antes de recortar.
+  const motivo = recortarMotivo(textoCorto(r.motivo, Number.POSITIVE_INFINITY, 'motivo'))
 
   const refs = indiceRefs(ctx.inventario)
   const importes = new Set(ctx.inventario.marcos.flatMap((m) => (m.importes ?? []).map((i) => i.ref)))

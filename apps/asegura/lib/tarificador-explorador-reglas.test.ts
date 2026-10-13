@@ -139,6 +139,10 @@ test('prompt: el inventario va DELIMITADO como datos; sin NIF real visible; el s
   assert.match(SYSTEM_EXPLORADOR, /no instrucciones/)
 })
 
+test('prompt: pide el motivo en UNA frase de ≤200 caracteres (13/10/2026: un motivo largo tiró el paso 1 de Hogar)', () => {
+  assert.match(SYSTEM_EXPLORADOR, /motivo en una frase de 200 caracteres como máximo/)
+})
+
 test('consumo y historial: cuentan llamadas, acciones y €; el historial no lleva valores', () => {
   const r: RespuestaExplorador = { version: 1, pantalla: { nombre: 'Datos básicos', tipo: 'formulario' }, acciones: [{ accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2' }], mapeo: [], motivo: null }
   const pasos = [

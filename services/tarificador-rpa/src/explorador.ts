@@ -48,7 +48,7 @@ import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEm
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
-import { abrirNuevaAlta, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
+import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
@@ -84,6 +84,8 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await loginEpac(page, ctx)
       await exigirSinVerificacion(page, 'allianz')
       await abrirNuevaAlta(page, ctx, { pestana: e.pestana as PestanaEntradaAllianz, producto: e.productoMenu })
+      // El formulario vive en el iframe `appArea`: sin esperarlo, el paso 1 inventariaba la carcasa con el modal abierto.
+      await esperarMarcoApp(page)
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
     },

@@ -5,8 +5,9 @@
 // TODO(capturas): no hay DOM real del modal de Empresas; se localiza por TEXTO visible (las mayúsculas del
 // DOM son CSS). Alternativa en el menú: «Venta» → «Nueva Alta».
 
-import type { Page } from 'playwright'
+import type { Frame, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
+import { ErrorTarificador } from '../../errores.ts'
 
 export type PestanaEntradaAllianz = 'Particulares' | 'Empresas' | 'Autos'
 
@@ -53,4 +54,32 @@ export async function abrirNuevaAlta(
   await ctx.pausa()
   const tarjeta = destino.selectorTarjeta ? modal.locator(destino.selectorTarjeta) : modal.getByText(etiquetaProducto(destino.producto))
   await ctx.pulsar(tarjeta.first())
+}
+
+/** Marco donde ePAC carga la aplicación del producto (`<iframe id="appArea" name="appArea">`, docs/TARIFICADOR-RPA.md). */
+export const NOMBRE_MARCO_APP = 'appArea'
+/** Un control de formulario VISIBLE: señal de que la aplicación del producto ya pintó algo dentro del marco. */
+const SEL_CONTROL_APP = 'input:not([type=hidden]):visible, select:visible, textarea:visible'
+
+/**
+ * Tras pulsar el tile de `abrirNuevaAlta`, espera a que el iframe `appArea` exista y muestre al menos un control de
+ * formulario visible (un `appArea` en blanco o «Cargando…» no cuenta). Es la espera que los adaptadores reales hacen con su propia sonda
+ * (`marcoCon`/`marcoFormulario`, 30 s), pero GENÉRICA: el explorador no sabe aún qué etiquetas tiene el producto.
+ * Solo lectura (cuenta nodos; no pulsa ni escribe). Si no carga en `timeoutMs` → `ErrorTarificador('portal')`.
+ *
+ * 13/10/2026 (exploración de «Allianz HOGAR»): sin esta espera el paso 1 se inventarió con el modal de «Nueva Alta» aún
+ * abierto y UN solo marco (la carcasa `/private/home`), sin `appArea`; la IA no tenía formulario que ver.
+ */
+export async function esperarMarcoApp(page: Pick<Page, 'frames' | 'waitForTimeout'>, timeoutMs = 30_000): Promise<Frame> {
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    for (const f of page.frames()) {
+      if (f.isDetached() || f.name() !== NOMBRE_MARCO_APP) continue
+      if ((await f.locator(SEL_CONTROL_APP).count().catch(() => 0)) > 0) return f
+    }
+    if (Date.now() >= fin) {
+      throw new ErrorTarificador('portal', `allianz: el formulario del producto no cargó en el marco «${NOMBRE_MARCO_APP}» en ${Math.round(timeoutMs / 1000)} s`)
+    }
+    await page.waitForTimeout(500)
+  }
 }

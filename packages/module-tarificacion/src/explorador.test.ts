@@ -181,6 +181,32 @@ describe('validarRespuestaExplorador', () => {
     it(`rechaza: ${nombre}`, () => expect(validarRespuestaExplorador(entrada, ctx(inv)).ok).toBe(false))
   }
 
+  describe('motivo largo (13/10/2026: paso 1 de Allianz Hogar tirado a parar/ambiguo)', () => {
+    const largo = 'La pantalla muestra el menú de productos de ePAC y no aparece todavía ningún campo del formulario de hogar; '.repeat(3)
+
+    it('un motivo de más de 200 caracteres NO invalida el lote: se recorta a 200 con «…»', () => {
+      const r = validarRespuestaExplorador(buena([{ accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' }], { motivo: largo }), ctx(inv))
+      expect(r.ok).toBe(true)
+      if (!r.ok) return
+      expect(largo.length).toBeGreaterThan(200)
+      expect(r.respuesta.motivo).toHaveLength(200)
+      expect(r.respuesta.motivo!.endsWith('…')).toBe(true)
+      expect(r.respuesta.acciones).toHaveLength(1)
+    })
+
+    it('un motivo de 200 o menos se deja intacto', () => {
+      const corto = 'x'.repeat(200)
+      const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }], { motivo: corto }), ctx(inv))
+      expect(r.ok && r.respuesta.motivo).toBe(corto)
+    })
+
+    it('el recorte no relaja lo demás: motivo largo + acción inválida sigue rechazado; dato personal en el motivo también', () => {
+      expect(validarRespuestaExplorador(buena([{ accion: 'navegar', url: 'https://x.test' }], { motivo: largo }), ctx(inv)).ok).toBe(false)
+      expect(validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }], { motivo: largo + ' 00000000T' }), ctx(inv)).ok).toBe(false)
+      expect(validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'ambiguo' }], { motivo: 42 }), ctx(inv)).ok).toBe(false)
+    })
+  })
+
   it('«Aceptar» solo en la pantalla autorizada: en Tarificar (o sin título de Datos básicos) se rechaza', () => {
     const a = (i: InventarioDom) => validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: ref(i, 'btnAceptarBasicos'), efectoEsperado: 'calcular', confianza: 'alta' }]), ctx(i)).ok
     expect(a(inventario())).toBe(true)
