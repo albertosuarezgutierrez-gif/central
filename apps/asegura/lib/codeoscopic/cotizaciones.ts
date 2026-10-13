@@ -26,6 +26,7 @@
 // Con `prisma_seguros` en BYPASSRLS, olvidarlo no da error: mezcla la cartera
 // de dos corredurías. Lo vigila test/regression-asegura-aislamiento.test.ts.
 
+import { fotoVarianteJson } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
 import type { Cotizacion } from './respuesta.ts'
 import { sobreOpciones } from './coberturas.ts'
@@ -61,6 +62,13 @@ export type ContextoCotizacion = {
   oportunidadId?: string | null
   /** Foto de figuras de la variante (rol → cliente_id). NULL = no consta. */
   figuras?: Record<string, string | null> | null
+  /**
+   * Foto de ASEGURADOS de la variante (13/10/2026): cliente_id de cada ficha en el orden en que viaja
+   * (`risk.insureds[1..]` en salud/decesos; `risk.insured` en vida, `[]` = el asegurado es el tomador). Solo ids:
+   * nombre, nacimiento y sexo ya van en la petición (no se duplican; nada de DNI). Ausente/null = no consta.
+   * Se guarda dentro de `tarificaciones.figuras` (clave `asegurados`), sin migración.
+   */
+  asegurados?: string[] | null
   /** Etiqueta libre del corredor («a nombre del padre»). */
   nota?: string | null
 }
@@ -273,7 +281,7 @@ export async function guardarCotizacion(
         ${r.uso},
         ${r.ocupacion},
         ${e.solicitadoPor},
-        ${e.contexto.figuras ? JSON.stringify(e.contexto.figuras) : null}::jsonb,
+        ${fotoVarianteJson(e.contexto.figuras, e.contexto.asegurados)}::jsonb,
         ${e.contexto.nota ?? null},
         ${fallosJson}::jsonb
       )

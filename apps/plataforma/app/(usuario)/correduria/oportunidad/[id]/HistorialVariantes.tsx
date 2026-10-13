@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Badge, BtnLink, btnStyle, cardStyle } from '@/components/ui'
+import { textoDiferencia } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { estadoPresupuestoVariante, ordenarParaComparar, type Riesgo, type VarianteRiesgo } from '@/lib/riesgo-asegura'
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
@@ -178,7 +179,7 @@ function Cambios({ cambios, primera }: { cambios: VarianteRiesgo['cambios']; pri
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
       {cambios.map((c, i) => (
         <span key={`${c.campo}-${i}`} style={{ fontSize: 12, padding: '3px 8px', borderRadius: 999, background: 'var(--primary-light)', color: 'var(--text)', overflowWrap: 'anywhere', maxWidth: '100%' }}>
-          {c.campo}: {c.antes ?? '—'} → {c.despues ?? '—'}
+          {textoDiferencia(c)}
         </span>
       ))}
     </div>

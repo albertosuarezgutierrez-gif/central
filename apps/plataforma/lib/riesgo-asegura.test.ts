@@ -265,3 +265,17 @@ test('fecha de nacimiento imposible de un asegurado: texto claro y editor en el 
   assert.match(textoFaltan(['fechaNacimiento_invalida'])!, /imposible.*calendario.*futura/)
   assert.equal(EDITOR_DE_FALTA.fechaNacimiento_invalida, 'formulario')
 })
+
+test('comparar (13/10/2026): altas y bajas de asegurados llegan con su `tipo`; un lado sin dato sigue null, no ""', () => {
+  const r = interpretarComparacion(200, {
+    estado: 'ok', a: 'ta', b: 'tb', companias: [],
+    cambios: [
+      { campo: 'Asegurado', antes: null, despues: 'Eva Ruiz', tipo: 'alta' },
+      { campo: 'Asegurado', antes: 'Luis Ruiz', despues: null, tipo: 'baja' },
+      { campo: 'Fumador', antes: null, despues: 'sí' },
+    ],
+  })
+  if (r.estado !== 'ok') return assert.fail('debía leerse')
+  assert.deepEqual(r.comparacion.cambios?.map((c) => c.tipo ?? null), ['alta', 'baja', null])
+  assert.equal(r.comparacion.cambios?.[2].antes, null)
+})

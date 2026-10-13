@@ -7,7 +7,7 @@
 import {
   CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, historialDeclaradoDe, seguroAnteriorDe,
   type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
-  type RolFigura, type Diferencia, type SeguroAnterior, type HistorialDeclaradoRiesgo,
+  type RolFigura, type Diferencia, leerDiferencia, type SeguroAnterior, type HistorialDeclaradoRiesgo,
 } from '@central/module-seguros'
 
 export type FiguraRiesgo = {
@@ -180,12 +180,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
             aceptadoAt: txt(p.aceptadoAt), emitidoAt: txt(p.emitidoAt), retiradoAt: txt(p.retiradoAt),
           }
         : null,
-      cambios: Array.isArray(x.cambios)
-        ? x.cambios.flatMap((c): Diferencia[] => {
-            const d = obj(c)
-            return txt(d.campo) ? [{ campo: d.campo as string, antes: txt(d.antes), despues: txt(d.despues) }] : []
-          })
-        : null,
+      cambios: Array.isArray(x.cambios) ? x.cambios.flatMap((c): Diferencia[] => { const d = leerDiferencia(c); return d ? [d] : [] }) : null,
     }]
   })
   return {
@@ -310,12 +305,8 @@ export function interpretarComparacion(status: number, j: unknown): LecturaCompa
   if (status === 404 || o.estado === 'no_encontrado') return { estado: 'no_encontrado' }
   if (status !== 200 || o.estado !== 'ok') return { estado: 'error', motivo: txt(o.motivo) ?? txt(o.causa) ?? `HTTP ${status}` }
   if (!txt(o.a) || !txt(o.b)) return { estado: 'error', motivo: 'respuesta sin variantes' }
-  const cambios = Array.isArray(o.cambios)
-    ? o.cambios.flatMap((c): Diferencia[] => {
-        const d = obj(c)
-        return txt(d.campo) ? [{ campo: d.campo as string, antes: txt(d.antes), despues: txt(d.despues) }] : []
-      })
-    : null
+  // Altas/bajas de asegurados (salud/decesos) llegan con `tipo`: se conservan.
+  const cambios = Array.isArray(o.cambios) ? o.cambios.flatMap((c): Diferencia[] => { const d = leerDiferencia(c); return d ? [d] : [] }) : null
   const companias = (Array.isArray(o.companias) ? o.companias : []).flatMap((c): FilaComparacion[] => {
     const x = obj(c)
     const compania = txt(x.compania)

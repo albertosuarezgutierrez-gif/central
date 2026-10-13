@@ -1232,6 +1232,7 @@ export {
 export {
   ROLES_FIGURA, ROLES_FIGURA_UNICOS, ROLES_FIGURA_MULTIPLES, MAX_ASEGURADOS_PERSONAS, ETIQUETA_ROL, rolesDelRamo, cardinalidadesDelRamo, maxDelRol,
   esRolFigura, esRolFiguraUnico, esRolMultiple, ramoPideCpDelTomador, faltaCodigoPostal, limpiarFiguras, diferenciasVariante, resumenDiferencias,
+  diferenciasAsegurados, fotoAsegurados, fotoVarianteJson, textoDiferencia, leerDiferencia, type FotoAsegurados, type AseguradoPeticion,
   type RolFigura, type RolFiguraUnico, type RolFiguraMultiple, type CardinalidadRol, type FigurasVariante, type Diferencia,
 } from './variantes-riesgo.ts'
 export {
