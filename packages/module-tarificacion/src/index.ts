@@ -310,6 +310,15 @@ export {
   type ContextoEleccion,
   type PeticionEleccion,
 } from './eleccion-lista.ts'
+// MEMORIA de elecciones (13/10/2026): el bot aprende la versión por vehículo y pregunta a la IA cada vez menos.
+export {
+  claveMemoriaVersion,
+  normalizarParteClave,
+  eleccionDeMemoria,
+  fusionarMemoria,
+  type OrigenMemoria,
+  type EntradaMemoria,
+} from './eleccion-memoria.ts'
 // EMISIÓN asistida con autorización de Alberto por Telegram (10/10/2026). El guard de emisión NO cambia: esto solo
 // construye el permiso de UN botón UNA vez tras canjear un token (docs/TARIFICADOR-EMISION-DISENO.md).
 // Hash/token/HMAC (node:crypto) NO van aquí: `@central/module-tarificacion/servidor` (el index llega al navegador).

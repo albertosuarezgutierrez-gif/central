@@ -25,6 +25,8 @@ import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
+import { memoriaTrasExito } from './tarificador-eleccion-reglas'
+import { guardarMemoriaVersion } from './tarificador-memoria'
 import { LEASE_MS, configFly, peticionMaquina, rpaActivo, type ConfigFly, type ResultadoWorker } from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
@@ -284,6 +286,12 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     }
     return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok', tarificacionId }, traza: { t, captura: null } }
   })
+  // APRENDER (13/10/2026): un `ok` con tarificación que llevaba una versión AUTOMÁTICA (IA o memoria) la confirma en
+  // `seguros.tarificador_elecciones`. Fuera de la transacción y sin lanzar: el resultado jamás depende de la memoria.
+  if (interno.res.estado === 'registrado' && interno.res.estadoTrabajo === 'ok' && interno.res.tarificacionId && interno.traza) {
+    const aprender = memoriaTrasExito(interno.traza.t)
+    if (aprender) await guardarMemoriaVersion(aprender.k, { codigo: aprender.codigo, etiqueta: aprender.etiqueta, origen: 'ia' })
+  }
   if (interno.traza && (await hayPasos())) {
     try {
       await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)

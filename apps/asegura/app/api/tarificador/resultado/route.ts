@@ -7,8 +7,8 @@ import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-// La elección de versión con IA corre en `after` (IA ~20 s + Fly ~20 s como mucho).
-export const maxDuration = 60
+// La elección de versión con IA corre en `after` (IA ≤30 s + Fly ~20 s + BD; con memoria no hay IA).
+export const maxDuration = 90
 
 /**
  * `POST /api/tarificador/resultado` — el worker devuelve lo que sacó del portal. Bearer

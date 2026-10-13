@@ -4,13 +4,22 @@
 // IA: `iaTexto()` (pasarela de plataforma → cadena de fallback de `@central/core-ai`; queda en `ai_usos` con
 // app='asegura' y bajo sus topes). `privado: true` aunque solo viajan datos del VEHÍCULO (marca, modelo, clase,
 // cilindrada, descripción) y la lista de catálogo: nada de personas.
+// Modelo (13/10/2026): categoría `redaccion` del catálogo de la pasarela (hoy Claude Sonnet; la misma que ya leen las
+// fichas y las ofertas de asegura) en vez del flash por defecto: distinguir «F 800 ST» de «F 800 S» es razonamiento
+// fino y la llamada es rara (la MEMORIA, `tarificador-memoria.ts`, la evita en cuanto el vehículo se repite). La
+// categoría solo SIRVE ese modelo con `DIRECTOR_MODO=activo` en plataforma; en sombra se sirve el default.
 //
 // Las rutas del worker solo conocen el id del trabajo; aquí el trabajo se lee por id y se relanza con SU correduría.
 
 import { iaTexto } from './ia'
 import { prisma } from './tenant'
 import { lanzarPendientes } from './tarificador'
-import { procesarEleccionVersion, type DepsEleccion, type FilaEleccion, type ResultadoEleccion } from './tarificador-eleccion-reglas'
+import { invalidarMemoriaVersion, leerMemoriaVersion } from './tarificador-memoria'
+import { procesarEleccionVersion, type DepsEleccion, type FilaEleccion, type MarcaAutomatica, type ResultadoEleccion } from './tarificador-eleccion-reglas'
+
+/** Categoría del catálogo de la pasarela para elegir de la lista (exportada para su test). */
+export const CATEGORIA_IA_ELECCION = 'redaccion'
+const TIMEOUT_IA_ELECCION_MS = 30_000
 
 async function leer(trabajoId: string): Promise<FilaEleccion | null> {
   const filas = await prisma.$queryRaw<FilaEleccion[]>`
@@ -23,9 +32,10 @@ async function leer(trabajoId: string): Promise<FilaEleccion | null> {
 /**
  * Aplica en UNA transacción con `for update`: el trabajo sigue en `requiere_humano`, con EL MISMO fallo (`error.en`) y
  * sin elección previa en el riesgo. Escribe `riesgo.eleccionVersion` (+ `eleccionVersionIa`: la marca del intento
- * automático) y lo devuelve a `pendiente` con los intentos a 0, como «Reintentar» de la bandeja.
+ * automático, con su `origen` ia|memoria y la `clave` del vehículo con la que se aprende si sale bien) y lo devuelve a
+ * `pendiente` con los intentos a 0, como «Reintentar» de la bandeja.
  */
-async function aplicar(f: FilaEleccion, e: { codigo: string; etiqueta: string }, motivo: string, errorEn: string | null): Promise<boolean> {
+async function aplicar(f: FilaEleccion, e: { codigo: string; etiqueta: string }, motivo: string, errorEn: string | null, m: MarcaAutomatica): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
     const filas = await tx.$queryRaw<{ estado: string; error_en: string | null; tiene_eleccion: boolean }[]>`
       select t.estado, t.error->>'en' as error_en,
@@ -35,7 +45,7 @@ async function aplicar(f: FilaEleccion, e: { codigo: string; etiqueta: string },
     const a = filas[0]
     if (!a || a.estado !== 'requiere_humano' || a.tiene_eleccion || (a.error_en ?? null) !== errorEn) return false
     const eleccion = JSON.stringify({ codigo: e.codigo, etiqueta: e.etiqueta })
-    const marca = JSON.stringify({ motivo: motivo.slice(0, 300), en: new Date().toISOString() })
+    const marca = JSON.stringify({ motivo: motivo.slice(0, 300), en: new Date().toISOString(), origen: m.origen, clave: m.clave })
     const n = await tx.$executeRaw`
       update seguros.tarificacion_trabajos
       set riesgo = riesgo || jsonb_build_object('eleccionVersion', ${eleccion}::jsonb, 'eleccionVersionIa', ${marca}::jsonb),
@@ -59,7 +69,9 @@ async function anotarBaja(f: FilaEleccion, r: { motivo: string }, errorEn: strin
 const depsReales = (): DepsEleccion => ({
   env: process.env,
   leer,
-  ia: (system, prompt) => iaTexto(prompt, { system, maxTokens: 300, timeoutMs: 20_000, privado: true }),
+  ia: (system, prompt) => iaTexto(prompt, { system, maxTokens: 300, timeoutMs: TIMEOUT_IA_ELECCION_MS, privado: true, categoria: CATEGORIA_IA_ELECCION }),
+  leerMemoria: leerMemoriaVersion,
+  invalidarMemoria: invalidarMemoriaVersion,
   aplicar,
   anotarBaja,
   lanzar: (correduriaId, compania) => lanzarPendientes(correduriaId, compania),
@@ -69,7 +81,7 @@ const depsReales = (): DepsEleccion => ({
 export async function intentarEleccionVersionIa(trabajoId: string, deps: DepsEleccion = depsReales()): Promise<ResultadoEleccion | null> {
   try {
     const r = await procesarEleccionVersion(trabajoId, deps)
-    console.info('[tarificador] elección de versión con IA', trabajoId, r.estado, r.estado === 'aplicado' ? r.codigo : '')
+    console.info('[tarificador] elección de versión con IA', trabajoId, r.estado, r.estado === 'aplicado' ? `${r.codigo} (${r.origen})` : '')
     return r
   } catch (e) {
     console.error('[tarificador] elección de versión con IA', trabajoId, e instanceof Error ? e.message.slice(0, 200) : e)
