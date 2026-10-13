@@ -158,6 +158,16 @@ export function NavPortal({ llamar, whatsapp }: {
             </Link>
           )
         })}
+        {/* «Mi resumen» (13/10/2026): resumen anual para la renta. Otra RUTA; no está en `pestanasPortal()`. */}
+        <Link
+          href="/resumen"
+          className="portal-nav-item"
+          aria-current={ruta === '/resumen' ? 'page' : undefined}
+          data-activa={ruta === '/resumen' ? 'si' : undefined}
+          onClick={cerrar}
+        >
+          Mi resumen
+        </Link>
         {/* Llamar al corredor, a un toque desde cualquier sección (24/09/2026). El
             número llega del servidor (`MEDIADOR`): importar `@central/module-seguros`
             aquí arrastraría la cartera entera al bundle del navegador. */}

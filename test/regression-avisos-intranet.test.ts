@@ -380,7 +380,8 @@ test('push y campana: los cambios de póliza de un tercero solo con «Acceso tot
   assert.match(lib, /autorizacionVigente\(a, hoy\)/)
   const cron = fuente('apps/asegura-portal/app/api/cron/avisos-cima/route.ts')
   assert.match(cron, /polizasModificadasDeIdentidad\(identidadId\)/)
-  assert.match(cron, /nuevas,\s*modificadas,\s*\)/)
+  // Fase B (13/10/2026) añade un séptimo argumento (`extra`) detrás: `modificadas` sigue llegando al plan.
+  assert.match(cron, /nuevas,\s*modificadas,\s*(?:extra,\s*)?\)/)
 })
 
 test('revisión #3760: parte a quien lo dio, obligación por fecha, sin doble aviso, detector honesto', () => {

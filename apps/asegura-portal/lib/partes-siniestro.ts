@@ -37,6 +37,7 @@ import {
 import { adjuntosPorParte, type AdjuntoParte } from './adjuntos-parte'
 import { prisma } from './db'
 import { getIdentidad } from './session'
+import type { UbicacionParte } from './ubicacion-parte'
 
 /** Cuántos partes se traen a la bóveda. Regla de rendimiento UI de la casa. */
 const MAX_PARTES = 50
@@ -161,7 +162,11 @@ export async function partesDeSesion(): Promise<PartePortal[] | null> {
  * falso o un `{ ok: true }` dejaría al cliente creyendo que ha declarado un
  * siniestro que no existe en ninguna parte.
  */
-export async function crearParte(identidadId: string, valor: ParteNormalizado): Promise<{ id: string }> {
+export async function crearParte(
+  identidadId: string,
+  valor: ParteNormalizado,
+  ubicacion: UbicacionParte | null = null,
+): Promise<{ id: string }> {
   // 🔒 Los datos personales de TERCEROS (contrarios, heridos, afectados) se
   // separan y se cifran ANTES de tocar la BD; en `datos_ramo` solo va lo no
   // personal. Sin `PII_ENCRYPTION_KEY` esto LANZA (`requireSecret` sin
@@ -184,6 +189,9 @@ export async function crearParte(identidadId: string, valor: ParteNormalizado): 
       fechaHecho: fechaHechoAUtc(valor.fechaHecho),
       horaAproximada: valor.horaAproximada,
       lugar: valor.lugar,
+      // Solo si la persona pulsó «Usar mi ubicación»; ya redondeada. `null` = no la dio.
+      ubicacionLat: ubicacion?.lat ?? null,
+      ubicacionLng: ubicacion?.lng ?? null,
       hayHeridos: valor.hayHeridos,
       hayTerceros: valor.hayTerceros,
       tipoSiniestro: valor.tipoSiniestro,

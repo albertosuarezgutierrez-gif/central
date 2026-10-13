@@ -6,7 +6,9 @@ import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
-import { estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
+import { clavePedida, estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
+import { entradaDesdeFila, hayClaveIA, huellaRevision } from '@/lib/revision-poliza'
+import { leerRevision } from '@/lib/revision-poliza-bd'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
@@ -14,6 +16,7 @@ import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
 import { CaptacionDeclarada } from '../../CaptacionDeclarada'
 import { EditarPoliza } from '../../EditarPoliza'
 import { EliminarPoliza } from '../../EliminarPoliza'
+import { RevisarPoliza } from './RevisarPoliza'
 import { avisoPartesConservados, etiquetaProcedencia } from '@central/module-seguros-portal'
 
 export const dynamic = 'force-dynamic'
@@ -95,6 +98,12 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
     ahora: new Date(),
   })
 
+  // «Revisar mi póliza»: solo en las PROPIAS. Si ya hay una revisión cacheada de lo leído (misma huella)
+  // se enseña sin llamar a la IA; si la caché no se puede leer (`null`), no se ofrece nada (ni se afirma).
+  const revisionCache = acceso.propia ? await leerRevision(identidad.id, p.id, huellaRevision(entradaDesdeFila(p))) : null
+  const revisionDisponible = hayClaveIA(process.env) || Array.isArray(revisionCache)
+  const revisionPedida = captacion === 'ya_pedida' || marcasCaptacion.some((m) => m.clave === clavePedida(p.id))
+
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
   const objeto =
     p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
@@ -135,6 +144,15 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
       </p>
 
       {captacion !== 'oculta' && <CaptacionDeclarada polizaId={p.id} estado={captacion} />}
+
+      {acceso.propia && revisionCache !== null && (
+        <RevisarPoliza
+          polizaId={p.id}
+          disponible={revisionDisponible}
+          inicial={Array.isArray(revisionCache) ? revisionCache : null}
+          pedidaInicial={revisionPedida}
+        />
+      )}
 
       <section className="seccion" aria-labelledby="datos-titulo">
         <h2 id="datos-titulo">{deOtro ? 'Lo que consta de ella' : 'Lo que nos has dicho de ella'}</h2>

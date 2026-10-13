@@ -325,7 +325,7 @@ test('la ficha de una póliza AÑADIDA lleva la identidad DENTRO del where', () 
   // y comprobar el dueño en la línea siguiente compila, typechequea y funciona…
   // hasta que alguien mueva esa comprobación o la envuelva en un `if`.
   const src = readFileSync(
-    join(process.cwd(), 'apps/asegura-portal/app/(portal)/boveda/anadida/[id]/page.tsx'),
+    join(ROOT, 'apps/asegura-portal/app/(portal)/boveda/anadida/[id]/page.tsx'),
     'utf8',
   )
   const i = src.indexOf('prisma.portalPolizaDeclarada')

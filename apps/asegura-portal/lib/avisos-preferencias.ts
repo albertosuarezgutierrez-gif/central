@@ -8,6 +8,7 @@ import {
   type DiasAntelacion,
   type PreferenciasAvisosGuardadas,
   type TipoAvisoCima,
+  type UmbralSubidaPrima,
 } from '@central/module-seguros-portal'
 
 import { prisma } from './db'
@@ -44,6 +45,8 @@ export interface ConfiguracionAvisos {
   canal: CanalAviso
   diasAntelacion: DiasAntelacion
   noMolestar: { desde: string; hasta: string } | null
+  /** % de subida del precio a partir del que se avisa (`subida_prima`, fase B). Sin configurar = 10. */
+  umbralSubidaPrima: UmbralSubidaPrima
   /** `true` si la persona lo ha tocado alguna vez (si no, lo de arriba son los valores de siempre). */
   configurado: boolean
   bienvenida: { pospuestaEn: string | null; pospuestaVista: VistaPospuesta | null }
@@ -57,6 +60,7 @@ const SELECT_PREFS = {
   diasAntelacion: true,
   noMolestarDesde: true,
   noMolestarHasta: true,
+  umbralSubidaPrima: true,
   bienvenidaPospuestaEn: true,
   bienvenidaPospuestaVista: true,
 } as const
@@ -77,6 +81,7 @@ export async function configuracionAvisosDeSesion(): Promise<ConfiguracionAvisos
     canal: p.canal,
     diasAntelacion: p.diasAntelacion,
     noMolestar: p.noMolestar ? { desde: horaDeMinutos(p.noMolestar.desde), hasta: horaDeMinutos(p.noMolestar.hasta) } : null,
+    umbralSubidaPrima: p.umbralSubidaPrima,
     configurado: fila !== null && (fila.canal !== null || fila.diasAntelacion !== null || fila.noMolestarDesde !== null),
     bienvenida: {
       pospuestaEn: fila?.bienvenidaPospuestaEn?.toISOString() ?? null,

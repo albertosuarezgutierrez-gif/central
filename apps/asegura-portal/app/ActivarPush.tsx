@@ -157,6 +157,9 @@ const TIPOS: { tipo: string; texto: string }[] = [
   { tipo: 'siniestro', texto: 'Novedades de un siniestro' },
   { tipo: 'poliza_nueva', texto: 'Póliza nueva (y cambios de compañía)' },
   { tipo: 'poliza_modificada', texto: 'Cambios en tus pólizas (precio, fechas, coberturas…)' },
+  { tipo: 'subida_prima', texto: 'Subidas de precio de tus seguros' },
+  { tipo: 'vencimiento_aportada', texto: 'Vencimiento de las pólizas que has añadido tú (con la opción de pedir una comparativa)' },
+  { tipo: 'vencimiento_autorizado', texto: 'Avisarme también de las pólizas de las personas que me han dado acceso' },
 ]
 
 /**

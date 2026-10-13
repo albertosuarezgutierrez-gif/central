@@ -35,7 +35,18 @@ import type { TramitacionSiniestro } from './siniestro-tramitacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 import { textoPushPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
 
-export const TIPOS_AVISO_CIMA = ['recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva', 'poliza_modificada'] as const
+export const TIPOS_AVISO_CIMA = [
+  'recibo_nuevo',
+  'recibo_devuelto',
+  'siniestro',
+  'poliza_nueva',
+  'poliza_modificada',
+  // Fase B (13/10/2026), reglas en `avisos-ampliados.ts`. No vienen de CIMA, pero comparten sello
+  // (`portal_aviso_cima`), interruptor (`portal_aviso_silenciado`) y cron: un tipo = una casilla.
+  'vencimiento_aportada',
+  'subida_prima',
+  'vencimiento_autorizado',
+] as const
 export type TipoAvisoCima = (typeof TIPOS_AVISO_CIMA)[number]
 
 /** Lo que se sella además de los tipos: la semilla. Los dos van al CHECK de la tabla. */
@@ -47,6 +58,9 @@ export const ETIQUETA_AVISO_CIMA: Record<TipoAvisoCima, string> = {
   siniestro: 'Novedades de un siniestro',
   poliza_nueva: 'Póliza nueva',
   poliza_modificada: 'Cambios en una póliza',
+  vencimiento_aportada: 'Tu seguro vence pronto',
+  subida_prima: 'Sube el precio de tu seguro',
+  vencimiento_autorizado: 'Vence una póliza que sigues',
 }
 
 /** Más viejo que esto (por su fecha propia) no es una novedad, aunque no esté sellado. */
@@ -78,6 +92,8 @@ export type EventoCima = {
   /** Fecha propia del hecho (`null` = no consta): la mira la ventana de antigüedad. */
   fecha: Date | null
   texto: string
+  /** A dónde lleva la notificación si es la ÚNICA de la pasada (`urlPushCima`). Sin ella, a la bóveda. */
+  url?: string
 }
 
 const MS_DIA = 86_400_000
@@ -217,6 +233,12 @@ export function planificarAvisos(
   nuevas: readonly PolizaNuevaParaAviso[] = [],
   /** Pólizas con cambios (`polizasModificadasParaAviso`). Sin semilla: la regla ya acota la ventana. */
   modificadas: readonly PolizaModificadaParaAviso[] = [],
+  /**
+   * Eventos ya construidos fuera (`avisos-ampliados.ts`: vencimiento de aportadas, subida de prima,
+   * vencimiento de pólizas autorizadas). Sin semilla —cada generador ya decide qué es novedad—, pero
+   * SÍ con la ventana de antigüedad sobre su `fecha` (una subida detectada hace meses no se avisa).
+   */
+  extra: readonly EventoCima[] = [],
 ): PlanAvisos {
   const enviar: EventoCima[] = []
   const sellarSiempre: { clave: string; tipo: string }[] = []
@@ -246,7 +268,19 @@ export function planificarAvisos(
     if (silenciados.has(e.tipo)) sellarSiempre.push({ clave: e.clave, tipo: e.tipo })
     else enviar.push(e)
   }
+  for (const e of extra) {
+    if (selladas.has(e.clave) || vistas.has(e.clave)) continue
+    vistas.add(e.clave)
+    const viejo = e.fecha !== null && e.fecha.getTime() < limite
+    if (viejo || silenciados.has(e.tipo)) sellarSiempre.push({ clave: e.clave, tipo: e.tipo })
+    else enviar.push(e)
+  }
   return { enviar, sellarSiempre }
+}
+
+/** A dónde abre la notificación: a la ficha si solo hay UNA novedad y la trae; si no, a la bóveda. */
+export function urlPushCima(eventos: readonly EventoCima[]): string {
+  return eventos.length === 1 && eventos[0].url ? eventos[0].url : '/boveda'
 }
 
 /** Una notificación por identidad y pasada: con varias novedades, un resumen. */

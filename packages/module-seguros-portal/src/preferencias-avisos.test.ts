@@ -93,3 +93,20 @@ test('validar: solo pasa lo que existe; la franja exige dos horas distintas', ()
   assert.deepEqual(validarCambioPreferencias({ noMolestar: { desde: '25:00', hasta: '08:00' } }), { ok: false, error: 'franja_invalida' })
   assert.deepEqual(validarCambioPreferencias({}), { ok: false, error: 'sin_cambios' })
 })
+
+// ─── Fase B (13/10/2026): umbral de subida de precio ─────────────────────────
+
+test('🪤 umbral de subida: sin configurar (o valor desconocido) = 10 %, nunca «no avisar»', () => {
+  assert.equal(resolverPreferenciasAvisos(null).umbralSubidaPrima, 10)
+  const base = { canal: null, diasAntelacion: null, noMolestarDesde: null, noMolestarHasta: null }
+  assert.equal(resolverPreferenciasAvisos({ ...base, umbralSubidaPrima: null }).umbralSubidaPrima, 10)
+  assert.equal(resolverPreferenciasAvisos({ ...base, umbralSubidaPrima: 12 }).umbralSubidaPrima, 10)
+  // Un lector que no selecciona la columna (fase A) sigue valiendo.
+  assert.equal(resolverPreferenciasAvisos(base).umbralSubidaPrima, 10)
+  assert.equal(resolverPreferenciasAvisos({ ...base, umbralSubidaPrima: 20 }).umbralSubidaPrima, 20)
+})
+
+test('🪤 umbral de subida: solo 5/10/15/20 se guardan', () => {
+  for (const u of [5, 10, 15, 20]) assert.deepEqual(validarCambioPreferencias({ umbralSubidaPrima: u }), { ok: true, datos: { umbralSubidaPrima: u } })
+  for (const u of [0, 12, '10', null]) assert.deepEqual(validarCambioPreferencias({ umbralSubidaPrima: u }), { ok: false, error: 'umbral_invalido' })
+})

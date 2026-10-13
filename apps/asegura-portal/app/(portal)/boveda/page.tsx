@@ -35,7 +35,15 @@ import Link from 'next/link'
 import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
 import { estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
+import {
+  carteraLeidaParaHuecos,
+  declaradaVigente,
+  estadoHuecos,
+  huecosDeProteccion,
+  PREFIJO_HUECOS,
+} from '@/lib/huecos-proteccion'
 import { FilaDeclarada } from './FilaDeclarada'
+import { HuecosProteccion } from './HuecosProteccion'
 import { DeclaradasEliminadas, LIMITE_ELIMINADAS } from './DeclaradasEliminadas'
 import { FiltroVigencia } from './FiltroVigencia'
 import { GrupoPlegable } from './GrupoPlegable'
@@ -68,6 +76,7 @@ import { ConsentimientoComercial } from './ConsentimientoComercial'
 import { ParteSiniestro, type ParteEnviado, type PolizaOpcionParte } from './ParteSiniestro'
 import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
+import { EscanerDocumento } from './EscanerDocumento'
 import { GestionContactos } from './GestionContactos'
 import { MisCarnets } from './MisCarnets'
 import { MisDatos } from './MisDatos'
@@ -357,6 +366,29 @@ export default async function Boveda({
       : null
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
+
+  // «Lo que no tienes asegurado» (13/10/2026): ramos básicos sin póliza VIGENTE entre las suyas (cartera
+  // propia + aportadas). Solo en «Mis seguros»; si no se pudo mirar la cartera o la marca, sin tarjeta.
+  let huecosTarjeta: ReturnType<typeof huecosDeProteccion> = []
+  let estadoTarjetaHuecos: ReturnType<typeof estadoHuecos> = 'oculta'
+  if (vista === 'seguros' && !identidad.corredor) {
+    const marcasHuecos = await prisma.portalAvisoLeido
+      .findMany({
+        where: { identidadId: identidad.id, clave: { startsWith: PREFIJO_HUECOS } },
+        select: { clave: true, creadoEn: true },
+      })
+      .catch(() => null)
+    if (marcasHuecos !== null) {
+      huecosTarjeta = huecosDeProteccion({
+        carteraLeida: carteraLeidaParaHuecos({ fichasVinculadas: cartera.propias.length, vinculo: cartera.vinculo }),
+        ramos: [
+          ...cartera.propias.flatMap((t) => t.polizas.filter(cuentaComoEnVigor).map((p) => p.ramo)),
+          ...declaradas.filter((d) => declaradaVigente(d.fechaVencimiento ? d.fechaVencimiento.toISOString().slice(0, 10) : null, hoyMadrid)).map((d) => d.ramo),
+        ],
+      })
+      estadoTarjetaHuecos = estadoHuecos({ huecos: huecosTarjeta, marcas: marcasHuecos, ahora: new Date() })
+    }
+  }
   const correduria = cartera.correduria ?? 'Grupo ASegura'
 
   // ── Los tres cajones (07/09/2026) ─────────────────────────────────────────
@@ -581,10 +613,15 @@ export default async function Boveda({
               MISMAS que ofrece `EditarPoliza`: un alta a mano y una corrección
               tienen que ofrecer la misma lista. */}
           <SubirPoliza ramos={RAMOS_OPCIONES} />
+          {/* «Escanear un documento» (13/10/2026), discreto junto al alta: recibo o carta de la compañía →
+              propone a qué póliza SUYA va → confirma. No en vista de corredor (escribe). */}
+          {!identidad.corredor && <EscanerDocumento />}
           {/* La casilla comercial, corta, junto al alta: solo mientras no la
               contestado: a quien dijo que no no se le vuelve a preguntar en cada visita.
               Cambiarla (en los dos sentidos) sigue estando en «Mis datos». */}
           {consentimientoComercial === null && <ConsentimientoComercial inicial={consentimientoComercial} compacto />}
+
+          {estadoTarjetaHuecos !== 'oculta' && <HuecosProteccion huecos={huecosTarjeta} estado={estadoTarjetaHuecos} />}
 
       {/* 🚨 UNA sola sección para las dos cosas (05/09/2026). Alberto, mirando
           su portal: «mis seguros y mis pólizas es lo mismo… que venga de CIMA,
