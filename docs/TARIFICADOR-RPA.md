@@ -82,6 +82,53 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 
 `services/tarificador-rpa/src/adapters/mapfre/auto.ts`, `MAPFRE_AUTO_ACTIVO=false`, sin registrar (`adapters/index.ts` no lo conoce; lo vigila `test/mapfre-auto.test.ts`). Fuente: una grabación de 19 pantallas de wmediadores.mapfre.com (app NSEI, SPA Angular Material **sin iframes**: todo legible). **Llega a precio**: 3 productos con «PRIMA TOTAL» anual en el paso 4 Coberturas (`app-primas > prima-producto`; `.caja-primas p strong`; icono `.ccttVerificacion .warning-color` = exige verificar el vehículo antes de contratar). Selectores por `name`/`formcontrolname` con ámbito de componente (`app-datos-vehiculo`, `app-conductor-habitual`, `app-historial-siniestralidad`…); los `mat-input-N` NO se usan (contadores de Angular Material). Hecho: mapa de pantallas, lector de primas, lector de filas del diálogo «Selección de vehículo» (sin matrícula ni bastidor), lector del «Resumen vehículo», plan de campos de texto con `comprobarCampo`. **Nada pulsa**: faltan (a) login y entrada (la grabación empieza ya dentro de NSEI), (b) el avance «Continuar» (el del paso 3 calcula las primas: decisión de Alberto), (c) elegir fila y confirmar el diálogo de vehículo, (d) los `mat-select` (uso, ámbito, clase de permiso, compañía anterior: no se grabaron abiertos), (e) la búsqueda del tomador/conductor por NIF (lupa). Mapfre no separa marca/modelo/versión (una sola «denominación comercial»): el `Vehiculo` canónico no se puede construir sin decidir cómo partirla. **Guard**: «Generar Proyecto» / «Ir a generar proyecto» (crean un nº de proyecto y documentación) están PERMITIDOS por decisión de Alberto del 13/10/2026 («el bot SÍ puede hacer proyectos»): no los bloquea `guard-emision.ts`. Sigue prohibido emitir/contratar/formalizar/grabar póliza, pago y RGPD «Sí»; «Contratar» y todo «Aceptar» siguen bloqueados. «Calcular» pasa.
 
+## Elección de versión con IA y memoria (13/10/2026)
+Cuando el catálogo de la compañía ofrece varias versiones del vehículo (caso real: Allianz Moto, BMW «F 800» → 20 versiones en `#version`), el bot NO adivina. Código: `module-tarificacion/src/eleccion-lista.ts` y `eleccion-memoria.ts` (puros), `apps/asegura/lib/tarificador-eleccion-reglas.ts` (reglas puras con test), `tarificador-eleccion.ts` (cableado BD+IA), `tarificador-memoria.ts` (BD), `tarificador-bandeja.ts`.
+
+**Flujo (máx. 1 intento automático por trabajo)**
+1. Worker: `ErrorEleccionVersion` (`allianz/auto.ts`) para y devuelve error `captcha` con la lista COMPLETA en `error.opcionesVersion` (sin IA en el worker).
+2. `POST /api/tarificador/resultado` registra el fallo → `requiere_humano` y responde al worker. Si `l.r.error.opcionesVersion` y estado `requiere_humano` y `TARIFICADOR_IA_ELECCION=1`, lanza `intentarEleccionVersionIa` en `after()` (`maxDuration` 90 s; el worker no espera).
+3. `procesarEleccionVersion`: (a) si la versión de una elección de MEMORIA vuelve a pedir versión, se borra esa entrada (`memoriaAInvalidar`); (b) `planEleccionVersion` decide si se intenta; (c) MEMORIA primero (`seguros.tarificador_elecciones`); (d) si no hay, IA; (e) con elección válida, `aplicar` (transacción `for update`) escribe `riesgo.eleccionVersion {codigo, etiqueta}` + `riesgo.eleccionVersionIa {origen: ia|memoria, clave, motivo, en}`, y devuelve EL MISMO trabajo a `pendiente` (intentos 0, error null); (f) `lanzarPendientes` (mejor esfuerzo: si Fly falla queda `pendiente` para el barrido).
+4. Si la IA no se atreve (`baja`), el trabajo sigue `requiere_humano` y se anota `error.eleccionIa {confianza:'baja', motivo}`. Una persona decide en la bandeja.
+
+**Tope de 1 intento:** no se intenta si el riesgo ya trae `eleccionVersion` (de IA o persona) o `eleccionVersionIa`. Tampoco si estado ≠ `requiere_humano`, `modo = emision`, ramo ∉ {moto, auto}, error ≠ `captcha`, sin lista válida, riesgo no válido, o la lista tiene opciones sin código/repetidas. `aplicar` re-comprueba bajo lock (mismo `error.en`, sin elección previa): si no, `carrera` y no hace nada.
+
+**Interruptor:** `TARIFICADOR_IA_ELECCION=1` exacto (cualquier otro valor = apagado, fail-closed), en Vercel `central-asegura`. Apagado: no hay IA ni se USA la memoria; la elección HUMANA sí se guarda siempre.
+
+**IA**
+- Solo acepta `confianza: "alta"` con un `codigo` que esté EXACTAMENTE una vez en la lista (`validarEleccionIa`). Código inventado, JSON ilegible, IA caída/timeout (30 s), dudas o <2 opciones = `baja`. Nunca «la más parecida». Se aplica la etiqueta del CATÁLOGO, no la de la IA.
+- Lista blanca de 6 campos enviados (`contextoEleccionVersion`): `ramo, marca, modelo, clase, cilindradaCc, descripcion` + la lista de opciones. Nada de matrícula, CP, conductor, fechas ni tomador. Un campo nuevo no se cuela solo (test congelado).
+- `iaTexto(..., privado: true, categoria: 'redaccion')` por la pasarela (queda en `ai_usos`, app `asegura`). La categoría `redaccion` solo sirve su modelo (hoy Claude Sonnet) si en plataforma `DIRECTOR_MODO=activo`; en sombra se sirve el modelo por defecto.
+
+**Memoria** (`seguros.tarificador_elecciones`; SQL `prisma/sql/2026-10-13_tarificador_elecciones.sql`, deshacer: `drop table`)
+- Única por (`correduria_id`, `compania`, `ramo`, `tipo='version'`, `clave_normalizada`). Todo va por `correduria_id`. Clave = `MARCA|MODELO|CLASE|CC|DESCRIPCION` en mayúsculas, sin tildes, espacios colapsados (`claveMemoriaVersion`); sin marca o sin modelo = sin clave (no se recuerda).
+- Lo recordado solo se usa si su código está exactamente una vez en la lista de HOY; si el catálogo cambió, se ignora y se pregunta a la IA.
+- Humano gana a IA (`fusionarMemoria`): la IA no pisa una humana; mismo código suma `confirmaciones`; humano sustituye; IA sobre IA sustituye.
+- La IA NO enseña al elegir: su elección (o la de memoria) se guarda con origen `ia` SOLO cuando el trabajo termina `ok` con `tarificacionId` (`registrarResultado` → `memoriaTrasExito`). Marcas antiguas sin `origen`/`clave` no enseñan.
+- Se invalida (delete solo si sigue apuntando a ese código) cuando una versión sacada de memoria vuelve a pedir versión.
+- Fail-soft: sin la tabla (SQL sin aplicar) o BD caída, leer = «no se sabe» (va a la IA) y guardar no hace nada. Nunca rompe bandeja ni resultado.
+
+**Bandeja (`aplicarAccionBandeja`, acción `reintentar` con `eleccionVersion`)**: se valida bajo `for update` contra `error.opcionesVersion` del propio trabajo (`eleccionContraLista`: código exactamente una vez; si trae etiqueta, debe ser la de ese código). Fuera de lista = `conflicto`. Escribe `riesgo.eleccionVersion`, quita `eleccionVersionIa` y vuelve a `pendiente`; después, fuera de la transacción, guarda la memoria con origen `humano`. Doble clic con la misma versión = `sin_cambios`; con otra sobre un trabajo ya en marcha = `conflicto`.
+
+**Moto: clase y cilindrada** (`FormularioAuto.seleccionVehiculo {marca, modelo, clase, cilindradaCc, descripcion?}`, nombres de catálogo): clase 1 = 51-125 cc · 2 = 126-350 · 3 = 351-750 · 4 = >750. `cilindradaCc` es OBLIGATORIA en moto (Allianz separa Moto y Ciclomotor); ≤50 cc = ciclomotor = otro producto de Allianz, NO soportado (se rechaza en `validarFormularioAuto` y en `tarificarMoto`); clase que no casa con las cc = error. `descripcion` (≤200 car., p. ej. «BMW F 800 S 85 CV») es solo del vehículo: se rechaza si parece matrícula, NIF/NIE, email, teléfono, IBAN o bastidor (`pareceDatoPersonalEnDescripcion`) y el error nunca repite el valor.
+
+**Límites conocidos (no resueltos)**
+- `buscarPoblacion`: si el CP deja varias poblaciones sin mapear (ventana/lista), lanza `ErrorMapaIncompleto`; falta una grabación de Alberto de esa pantalla. No se adivina.
+- Allianz Turismos (coche): sigue con mapa SUPUESTO, pendiente de regrabar (`AUTO_ACTIVO=false`).
+- `reclamarSiguiente` cuenta los `en_curso` para el cupo sin mirar `lease_hasta`: un lease vencido ocupa hueco hasta que lo barre `barrerTarificadorRpa`.
+- Ese barrido no tiene cron propio: solo corre desde el cron de renovaciones (`/api/cron/tarificador-renovaciones` → `tarificador-ops`).
+- `encolarTrabajo` no deduplica: encolar dos veces lo mismo crea dos trabajos.
+- La memoria solo cubre `tipo='version'` (la lista de poblaciones por CP aún no usa `elegirDeLista`).
+
+**Errores frecuentes / cómo diagnosticar** (sin pegar datos de clientes en el chat)
+- Dónde mirar: `seguros.tarificacion_trabajos` → `estado`, `error->>'tipo'` (`captcha` + `opcionesVersion` = pidió versión), `error->>'mensaje'`, `error->'eleccionIa'` (la IA dijo `baja` y su motivo), `riesgo->'eleccionVersion'` (qué se aplicó), `riesgo->'eleccionVersionIa'` (`origen` ia|memoria, `clave`, `en`). Memoria: `seguros.tarificador_elecciones` (`origen`, `confirmaciones`, `ultima_vez`). Log: `[tarificador] elección de versión con IA <id> <estado>` (omitido|baja|carrera|aplicado) en Vercel `central-asegura`.
+- Se queda en `requiere_humano` y no hay `eleccionIa`: interruptor ≠ `1`; o `omitido` (mira el motivo del log: ya tuvo elección, `modo=emision`, lista sin códigos, riesgo no válido).
+- Hay `eleccionIa` baja: legítimo (ambigua). Elegir a mano en la bandeja; queda aprendida.
+- Vuelve a pedir versión tras aplicar: tope de 1 intento → persona. Si venía de memoria, la entrada se borró sola.
+- No aprende: el trabajo no llegó a `ok` con tarificación, la tabla no existe (SQL sin aplicar), o el vehículo no tiene marca/modelo.
+- 409 en la bandeja: la versión no está en `error.opcionesVersion` de ese trabajo, o ya está en marcha con otra.
+- «ciclomotor (≤50 cc)» / «falta la cilindrada» al encolar: dato de entrada, no fallo del bot.
+
 ## Rutina «Médico del bot tarificador»
 `trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.
 
