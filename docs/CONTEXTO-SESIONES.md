@@ -2191,7 +2191,7 @@ Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes`
 - Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
 - Personas: el formulario de autorización (alcance) va PLEGADO detrás de su botón, y ese botón pasa a secundario: el caso normal (nadie ve nada de nadie) ya no parece una tarea pendiente.
 - Cabecera: número y correo pasan a texto seleccionable (los iconos ya llaman/escriben; eran la misma acción dos veces).
-- El titular saliendo como «persona» ajena (PABLO JUAN GUZMAN LOZANO en su propia ficha) NO se toca aquí: lo arregla el PR #3596.
+- El titular saliendo como «persona» ajena (CLIENTE C05 en su propia ficha) NO se toca aquí: lo arregla el PR #3596.
 
 ## (25/09/2026) Ficha cliente: «Eliminar» también en pólizas VIVAS canceladas de Oportunidades
 El botón quedaba suelto bajo la rejilla y parecía «borrar todas»: ahora va DENTRO del marco de su tarjeta.
@@ -5544,7 +5544,7 @@ PR #2933. Sin código tocado, solo doc.
 - **🏠 La dirección buena ya estaba en casa: en la LÁPIDA de la fusión (06/09/2026, PR #2447, EJECUTADO).**
   Al preparar el lote de «provincias falsas» que Alberto tenía pendiente de aprobar, dos cifras mías
   resultaron falsas al medirlas: no eran 473 sino **523**, y **520 son volcado muerto** (solo 3 tocaban
-  cartera viva). Y la fusión de Piña Franco que llevaba tres mensajes pidiendo permiso **ya estaba
+  cartera viva). Y la fusión de cliente C03 que llevaba tres mensajes pidiendo permiso **ya estaba
   hecha** (`d3ea3a53` tiene `merged_into_cliente_id`). Lo que quedaba vivo era otra cosa y más general:
   **`fusion_*` hereda HUECOS, y `34304` no es un hueco** — es el identificador de población del CRM
   viejo en la columna `ciudad`, así que la herencia no lo pisó y el nombre bueno se quedó en la lápida.
@@ -8305,7 +8305,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   (parser `lib/correo/smoobu-notificacion.ts`, 8 tests con el correo real); el vigía compara también
   contra `b.id` y mira `incomes` antes de preguntar; y el aviso dice el **canal REAL** (Expedia,
   Agoda…) o ninguno — ya no manda a la extranet de Booking a por una reserva de Expedia.
-- Fila 10 (cancelación de JUAN PONCE) corregida a mano en BD: era `nueva`/`huerfana`. PR #1978, mergeado.
+- Fila 10 (cancelación de un cliente) corregida a mano en BD: era `nueva`/`huerfana`. PR #1978, mergeado.
 
 ### 🧹 (01/09/2026) Vanesa = Sique Brilla, y su ÚNICA pantalla es /invitado/limpieza
 - Tras el PR #1991, Alberto miró el viernes 04/09 en la intranet y **la cuna no estaba**: la orden
