@@ -14,8 +14,7 @@ import {
   textoAvisoImpago,
   type TipoEscaner,
 } from '@/lib/escaner-documento'
-import { polizasPropiasParaEscanerDeSesion } from '@/lib/escaner-documento-polizas'
-import { rateLimit } from '@/lib/rate-limit'
+import { polizasPropiasParaEscanerDeSesion, reservarArchivoDeSesion } from '@/lib/escaner-documento-polizas'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -39,8 +38,18 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
-  const tope = rateLimit(`escaner-archivo:${identidad.id}`, 30, 24 * 60 * 60 * 1000)
-  if (!tope.allowed) return NextResponse.json({ error: 'demasiadas_peticiones', retryAfter: tope.retryAfter ?? 3600 }, { status: 429 })
+  // Cupo diario en BD (mismo patrón que `escanear`), no en memoria. Un fallo de BD no es «hay cupo»: 503.
+  let cupo: Awaited<ReturnType<typeof reservarArchivoDeSesion>>
+  try {
+    cupo = await reservarArchivoDeSesion()
+  } catch (e) {
+    console.error('[portal/escaner] no se pudo comprobar el cupo de archivo:', e instanceof Error ? e.message : e)
+    return NextResponse.json({ error: 'cupo_no_disponible' }, { status: 503 })
+  }
+  if (cupo === null) return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
+  if (cupo === 'tope') {
+    return NextResponse.json({ error: 'demasiadas_peticiones', retryAfter: 3600 }, { status: 429, headers: { 'retry-after': '3600' } })
+  }
 
   let form: FormData
   try {
@@ -66,7 +75,8 @@ export async function POST(req: Request) {
   if (typeof polizaCampo === 'string' && polizaCampo !== '') {
     const propias = await polizasPropiasParaEscanerDeSesion().catch(() => null)
     const elegida = propias?.find((p) => p.id === polizaCampo)
-    if (!elegida) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
+    // 404, nunca 403: un 403 confirmaría que ese id existe y es de otra persona.
+    if (!elegida) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
     compania = elegida.compania
     numeroPoliza = elegida.numeroPoliza
   }

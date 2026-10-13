@@ -16,7 +16,7 @@
  *     mensual mete el recargo de fraccionamiento: no es una subida). `null` = no se sabe → no se avisa
  *     y NO se pisa lo guardado.
  *  3. `vencimiento_autorizado` — el vencimiento de una póliza de quien te dio acceso de GESTIÓN o TOTAL
- *     sobre ESA póliza (`capacidadesDeAlcances(...).abrirParte` + la lista `partes` por póliza). Con
+ *     sobre ESA póliza (alcance `gestion` o `total` EXPLÍCITO + la lista `partes` por póliza). Con
  *     «Consulta» (`ver`, `ver_economico`, `documentos`) NO: ese nivel mira, no actúa; avisarle sería
  *     servirle activamente el dato de otro para que decida algo que su nivel no le deja hacer. La vía
  *     `dueno` (su empresa) tampoco: no es una autorización y el encargo es solo de autorizaciones.
@@ -28,7 +28,6 @@
  * aviso. Nada de matrícula, número de póliza, DNI ni dirección en ninguno.
  */
 import type { EventoCima } from './avisos-cima.ts'
-import { capacidadesDeAlcances } from './capacidades.ts'
 import type { TipoOtorgante } from './autorizacion.ts'
 import {
   DIAS_PREAVISO_TOMADOR,
@@ -162,9 +161,23 @@ export type ObservacionPrima = { importe: number; unidad: string; subida: Subida
 const centimos = (n: number): number => Math.round(n * 100)
 
 /**
+ * 🚨 Cotas de una prima observable (13/10/2026). Fuera de ellas el dato es basura (céntimos, un importe
+ * del periodo leído como anual, un cero de más) y NO se observa ni se avisa: la fila no se escribe, así
+ * que tampoco puede reventar `portal_prima_observada` (`importe numeric(10,2) CHECK (importe > 0)`,
+ * `subida_porcentaje numeric(7,2)`) y dejar a la identidad entera sin pushes en esa pasada.
+ *  · `MIN_IMPORTE_OBSERVABLE` 1€: por debajo, redondear a 2 decimales puede dar 0 y el CHECK falla.
+ *  · `MAX_IMPORTE_OBSERVABLE` 1.000.000€: ninguna prima personal llega; por encima, desborde de la columna.
+ *  · `MAX_SUBIDA_OBSERVABLE` 500 %: multiplicar por seis el precio no es una subida, es un dato malo.
+ */
+export const MIN_IMPORTE_OBSERVABLE = 1
+export const MAX_IMPORTE_OBSERVABLE = 1_000_000
+export const MAX_SUBIDA_OBSERVABLE = 500
+
+/**
  * Qué se guarda tras mirar la prima de hoy. `null` = no se escribe nada.
  *  · Hoy no se sabe (`actual === null`) → nada: `null` no es 0 ni «ha bajado», y pisar lo guardado
  *    haría que al volver el dato se comparase contra nada.
+ *  · Importe fuera de [1€, 1.000.000€] o subida > 500 % → nada (dato malo; ver las cotas de arriba).
  *  · Primera vez → semilla (sin subida): la prima que ya tenía no es una novedad.
  *  · Otra unidad → re-semilla (sin subida): nunca se comparan importes de unidades distintas.
  *  · Mismo importe → nada (la subida pendiente, si la hay, sigue).
@@ -179,6 +192,7 @@ export function observarPrima(
   ahora: Date,
 ): ObservacionPrima | null {
   if (actual === null) return null
+  if (!Number.isFinite(actual.importe) || actual.importe < MIN_IMPORTE_OBSERVABLE || actual.importe > MAX_IMPORTE_OBSERVABLE) return null
   if (anterior === null || anterior.unidad !== actual.unidad || centimos(anterior.importe) <= 0) {
     return { importe: actual.importe, unidad: actual.unidad, subida: null }
   }
@@ -186,6 +200,8 @@ export function observarPrima(
   const n = centimos(actual.importe)
   if (a === n) return null
   const porcentaje = ((n - a) / a) * 100
+  // Subida absurda: dato malo, ni se observa (no se pisa lo guardado) ni se avisa.
+  if (porcentaje > MAX_SUBIDA_OBSERVABLE) return null
   const subida = porcentaje > umbral ? { desde: a / 100, hasta: n / 100, porcentaje: Math.round(porcentaje * 100) / 100, en: ahora } : null
   return { importe: actual.importe, unidad: actual.unidad, subida }
 }
@@ -268,7 +284,9 @@ export function eventosVencimientoAutorizado(
   for (const t of titulares) {
     const a = t.autorizacion
     if (!a || a.via === 'dueno') continue
-    if (!capacidadesDeAlcances(a.alcances, t.tipoPersona).abrirParte) continue
+    // Explícito: Gestión o Total. No `abrirParte`/`puedeDarParte`, que también abren con alcances heredados
+    // (`partes`) que no son ninguno de los dos niveles que actúan.
+    if (!a.alcances.some((x) => x === 'gestion' || x === 'total')) continue
     for (const p of t.polizas) {
       // Una póliza de OTRO tomador en la que la ficha solo figura: el acceso no es a ella.
       if (p.figuraTitular !== undefined) continue

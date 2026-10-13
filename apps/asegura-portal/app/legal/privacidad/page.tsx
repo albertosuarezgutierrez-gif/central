@@ -26,6 +26,14 @@ export const metadata: Metadata = {
  *   - No hay analítica, ni píxeles, ni terceros en el navegador. Una sola cookie.
  *   - Los documentos que sube el cliente SÍ salen a un tercero (OpenRouter) para
  *     leerlos. Es el punto más sensible de la app y va dicho con todas las letras.
+ *   - Escáner (`lib/escaner-documento-ia.ts`) y «Revisar mi póliza»
+ *     (`app/api/polizas/[id]/revision`) llaman SOLO a OpenRouter (`openrouterChat`/
+ *     `openrouterVision`), nunca a la cadena de suplentes de `aiComplete`. A la revisión
+ *     solo van las claves de `CLAVES_RAMO_PARA_IA` (`lib/revision-poliza.ts`).
+ *   - La ubicación del parte solo existe si se pulsa «Usar mi ubicación», redondeada a
+ *     4 decimales, y se retira si la persona cambia «Dónde» (`ParteSiniestro.tsx`).
+ *   - `portal_prima_observada` guarda la última prima vista por póliza y muere con la
+ *     identidad (ON DELETE CASCADE). El enlace de familia: token hasheado, 30 días, 10 usos.
  */
 export default function Privacidad() {
   const { identidad, marca } = MEDIADOR
@@ -85,10 +93,37 @@ export default function Privacidad() {
           </li>
           <li>
             Los partes que abres: qué pasó, cuándo, dónde, y si hubo heridos o terceros implicados.
+            Si pulsas «Usar mi ubicación», también las coordenadas de dónde estás en ese momento,
+            redondeadas a unos once metros. Es opcional: el portal solo pide el permiso cuando
+            pulsas ese botón, no sigue tu ubicación, y si después cambias el campo «Dónde» las
+            coordenadas no se envían.
+          </li>
+          <li>
+            Los documentos que escaneas (un recibo o una carta de tu compañía) y lo que confirmas de
+            ellos: qué son, su fecha, su importe y a qué póliza tuya pertenecen.
           </li>
           <li>
             Las autorizaciones que concedes o aceptas para que otra persona vea alguno de tus
             seguros.
+          </li>
+        </ul>
+
+        <h3>Lo que el portal anota para avisarte</h3>
+        <ul>
+          <li>
+            La <strong>última prima</strong> que vemos de cada una de tus pólizas, la de nuestra
+            cartera y la que tú declaraste, para avisarte si sube más del porcentaje que elijas en
+            «Configuración». Solo se usa para ese aviso.
+          </li>
+          <li>
+            Si usas <strong>«Revisar mi póliza»</strong>, los puntos que salieron, para no repetir la
+            revisión mientras los datos de la póliza no cambien.
+          </li>
+          <li>
+            Si creas un <strong>enlace para invitar a tu familia</strong>, el enlace (guardado de forma
+            que no se puede leer), cuándo caduca (a los 30 días) y cuántas cuentas nuevas se han creado
+            con él (diez como máximo). Tú ves solo esa cifra, nunca quién entró. El enlace no da acceso
+            a ninguno de tus seguros.
           </li>
         </ul>
 
@@ -132,7 +167,7 @@ export default function Privacidad() {
               </tr>
               <tr>
                 <td>Enseñarte tus seguros y avisarte de un vencimiento a tiempo</td>
-                <td>Ejecución del contrato (art. 6.1.b) y deber de asesoramiento del corredor (Ley 16/2018)</td>
+                <td>Ejecución del contrato (art. 6.1.b) y deber de asesoramiento del corredor (Real Decreto-ley 3/2020, de distribución de seguros, título II)</td>
               </tr>
               <tr>
                 <td>Recibir tu parte y trasladarlo a la compañía</td>
@@ -141,6 +176,29 @@ export default function Privacidad() {
               <tr>
                 <td>Leer automáticamente la póliza que subes para rellenar sus campos</td>
                 <td>Ejecución del contrato (art. 6.1.b): es el servicio que has pedido al subirla</td>
+              </tr>
+              <tr>
+                <td>
+                  Leer el documento que escaneas para proponerte qué es y de qué póliza, y guardarlo cuando
+                  lo confirmas
+                </td>
+                <td>Ejecución del contrato (art. 6.1.b): es el servicio que pides al escanearlo</td>
+              </tr>
+              <tr>
+                <td>Revisar una póliza que has añadido y señalarte puntos que comentar, cuando pulsas el botón</td>
+                <td>Ejecución del contrato (art. 6.1.b) y deber de asesoramiento del corredor (Real Decreto-ley 3/2020, de distribución de seguros, título II)</td>
+              </tr>
+              <tr>
+                <td>Guardar la ubicación de un parte, si pulsas «Usar mi ubicación»</td>
+                <td>Ejecución del contrato (art. 6.1.b): sirve para tramitar ese siniestro</td>
+              </tr>
+              <tr>
+                <td>Avisarte de que sube el precio de una póliza, y del vencimiento de las que has añadido tú</td>
+                <td>Ejecución del contrato (art. 6.1.b), con los avisos que tienes activados en «Configuración»</td>
+              </tr>
+              <tr>
+                <td>Saber cuántas personas se han unido con tu enlace de invitación</td>
+                <td>Interés legítimo (art. 6.1.f RGPD) en conocer cómo llega gente nueva al portal, sin saber quién es</td>
               </tr>
               <tr>
                 <td>Conservar la documentación de la mediación</td>
@@ -188,7 +246,12 @@ export default function Privacidad() {
           </li>
           <li>
             <strong>OpenRouter</strong> y el proveedor de modelo al que enrute — leen el documento que
-            subes para extraer los datos de la póliza. Explicado justo debajo.
+            subes o escaneas, y los datos de la póliza que pides revisar. Explicado justo debajo.
+          </li>
+          <li>
+            <strong>Telegram</strong> — el canal interno por el que la correduría recibe los avisos del
+            portal que piden atención (por ejemplo, una carta de impago que escaneas o una petición de
+            contacto). Lleva lo justo para atenderte.
           </li>
           <li>
             <strong>Sede Electrónica del Catastro</strong> — si escribes la dirección de una vivienda
@@ -211,7 +274,23 @@ export default function Privacidad() {
           escribir los datos de tu póliza a mano y el portal funciona igual.
         </p>
         <p>
-          Lo que el modelo devuelve es una propuesta, no una decisión: nada se da por bueno hasta que
+          Lo mismo ocurre con el <strong>escáner de documentos</strong>: el contenido de la foto o del
+          PDF que escaneas se envía por OpenRouter para proponerte qué es, su fecha, su importe y de qué
+          póliza es. El documento no se guarda hasta que lo confirmas; entonces queda en tu ficha de la
+          correduría. Si confirmas que es una carta de impago, avisamos a tu corredor.
+        </p>
+        <p>
+          <strong>«Revisar mi póliza»</strong> solo funciona cuando pulsas el botón, y solo con las
+          pólizas que has añadido tú. Al modelo, a través de OpenRouter, le enviamos lo que se leyó de la
+          póliza: ramo, compañía, prima anual, vencimiento, coberturas y características del riesgo
+          (capitales, metros, año de construcción, uso…). <strong>No le enviamos datos que te
+          identifiquen</strong>: ni tu nombre, ni el de otras personas, ni tu DNI, ni la dirección, ni la
+          fecha de nacimiento, ni la matrícula, ni el número de póliza. Lo que devuelve es orientativo:
+          si quieres, tu corredor lo revisa contigo.
+        </p>
+        <p>
+          Para el escáner y para la revisión no usamos ningún otro proveedor de inteligencia artificial
+          que OpenRouter. Lo que el modelo devuelve es una propuesta, no una decisión: nada se da por bueno hasta que
           tú lo confirmas en pantalla. No hay decisiones automatizadas con efectos jurídicos sobre ti
           en el sentido del art. 22 RGPD.
         </p>

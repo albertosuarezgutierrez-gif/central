@@ -8,7 +8,7 @@ import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
 import { clavePedida, estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { entradaDesdeFila, hayClaveIA, huellaRevision } from '@/lib/revision-poliza'
-import { leerRevision } from '@/lib/revision-poliza-bd'
+import { leerRevisionDeSesion } from '@/lib/revision-poliza-bd'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
@@ -100,7 +100,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
 
   // «Revisar mi póliza»: solo en las PROPIAS. Si ya hay una revisión cacheada de lo leído (misma huella)
   // se enseña sin llamar a la IA; si la caché no se puede leer (`null`), no se ofrece nada (ni se afirma).
-  const revisionCache = acceso.propia ? await leerRevision(identidad.id, p.id, huellaRevision(entradaDesdeFila(p))) : null
+  const revisionCache = acceso.propia ? await leerRevisionDeSesion(p.id, huellaRevision(entradaDesdeFila(p))) : null
   const revisionDisponible = hayClaveIA(process.env) || Array.isArray(revisionCache)
   const revisionPedida = captacion === 'ya_pedida' || marcasCaptacion.some((m) => m.clave === clavePedida(p.id))
 
@@ -139,8 +139,8 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
       <p className="hueco">
         <span className="pendiente">No la gestionamos</span>
         {deOtro
-          ? 'Esta póliza la ha añadido su titular en su portal: no la lleva la correduría. No la revisamos, no avisamos de su vencimiento y no podemos dar el parte por él.'
-          : 'Esta póliza la has añadido tú: la guardamos para que la tengas a mano, pero no la lleva la correduría. No la revisamos, no te avisamos de su vencimiento y no podemos dar el parte por ti. Si quieres que pase a llevarla la correduría, dínoslo.'}
+          ? 'Esta póliza la ha añadido su titular en su portal: no la lleva la correduría. Avisamos de su vencimiento, pero sus recibos y siniestros no se actualizan solos: los datos son los que su titular nos dio, y no podemos dar el parte por él.'
+          : 'Esta póliza la has añadido tú: la guardamos para que la tengas a mano, pero no la lleva la correduría. Te avisamos de su vencimiento, pero sus recibos y siniestros no se actualizan solos: los datos son los que nos diste. No podemos dar el parte por ti. Si quieres que pase a llevarla la correduría, dínoslo.'}
       </p>
 
       {captacion !== 'oculta' && <CaptacionDeclarada polizaId={p.id} estado={captacion} />}

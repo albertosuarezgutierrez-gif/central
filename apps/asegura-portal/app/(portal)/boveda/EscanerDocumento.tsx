@@ -3,7 +3,7 @@
 // clasifica y PROPONE a qué póliza suya va → la persona confirma → se archiva. Sin key de IA el
 // servidor responde `ia:false` y se archiva a mano (se elige el tipo y la póliza). Una carta de
 // impago deja SIEMPRE el aviso «Contacta con tu corredor». No pide ningún permiso del navegador.
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import { eur } from '@/lib/dinero'
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
@@ -37,6 +37,18 @@ export function EscanerDocumento() {
   const [polizaId, setPolizaId] = useState('')
   const [motivo, setMotivo] = useState<PropuestaPoliza['motivo'] | null>(null)
   const [fin, setFin] = useState<{ archivado: boolean; aviso: string | null } | null>(null)
+  const primerCampo = useRef<HTMLSelectElement>(null)
+  const mensajeFinal = useRef<HTMLParagraphElement>(null)
+  const faseAnterior = useRef<Fase>('reposo')
+
+  // Al cambiar de fase, el foco va a lo nuevo: al primer campo tras leer, al mensaje final tras guardar.
+  // (Volver a «confirmar» por un error de archivado no mueve el foco: el error ya se anuncia con role=alert.)
+  useEffect(() => {
+    const antes = faseAnterior.current
+    faseAnterior.current = fase
+    if (fase === 'confirmar' && antes === 'leyendo') primerCampo.current?.focus()
+    if (fase === 'hecho') mensajeFinal.current?.focus()
+  }, [fase])
 
   function reiniciar() {
     setFase('reposo'); setFichero(null); setError(null); setTipo(''); setFecha(''); setImporteTxt('')
@@ -105,7 +117,7 @@ export function EscanerDocumento() {
   const importeNum = Number(importeTxt.replace(/\./g, '').replace(',', '.'))
 
   return (
-    <section className="editor-campo" aria-live="polite" style={{ minWidth: 0 }}>
+    <section className="editor-campo" style={{ minWidth: 0 }}>
       {fase === 'reposo' && (
         <>
           <button type="button" className="boton secundario" style={{ minHeight: 44 }} onClick={() => entrada.current?.click()}>
@@ -115,14 +127,14 @@ export function EscanerDocumento() {
         </>
       )}
       <input ref={entrada} type="file" accept="image/*,application/pdf" hidden onChange={(e) => void elegido(e.target.files?.[0])} />
-      {fase === 'leyendo' && <p className="editor-ayuda">Leyendo el documento…</p>}
+      {fase === 'leyendo' && <p className="editor-ayuda" role="status" aria-live="polite">Leyendo el documento…</p>}
       {(fase === 'confirmar' || fase === 'archivando') && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
-          {!ia && <p className="editor-ayuda">La lectura automática no está disponible ahora. Puedes guardarlo indicando tú qué es.</p>}
-          {ia && !legible && <p className="editor-ayuda">No hemos podido leer el documento. Puedes guardarlo indicando tú qué es.</p>}
+          {!ia && <p className="editor-ayuda" role="status" aria-live="polite">La lectura automática no está disponible ahora. Puedes guardarlo indicando tú qué es.</p>}
+          {ia && !legible && <p className="editor-ayuda" role="status" aria-live="polite">No hemos podido leer el documento. Puedes guardarlo indicando tú qué es.</p>}
           <div>
             <label htmlFor={`${uid}-tipo`}>¿Qué es?</label>
-            <select id={`${uid}-tipo`} className="campo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoEscaner | '')} style={{ minHeight: 44 }}>
+            <select ref={primerCampo} id={`${uid}-tipo`} className="campo" value={tipo} onChange={(e) => setTipo(e.target.value as TipoEscaner | '')} style={{ minHeight: 44 }}>
               <option value="">Elige…</option>
               {TIPOS_ESCANER.map((t) => <option key={t} value={t}>{ETIQUETA_TIPO_ESCANER[t]}</option>)}
             </select>
@@ -144,7 +156,7 @@ export function EscanerDocumento() {
             <input id={`${uid}-importe`} className="campo" inputMode="decimal" value={importeTxt} onChange={(e) => setImporteTxt(e.target.value)} style={{ minHeight: 44 }} />
             {Number.isFinite(importeNum) && importeNum > 0 && <p className="editor-ayuda">{eur(importeNum)}</p>}
           </div>
-          {ia && legible && <p className="editor-ayuda">Lo hemos leído de tu documento; revisa que sea correcto. No es un dato confirmado por tu compañía.</p>}
+          {ia && legible && <p className="editor-ayuda" role="status" aria-live="polite">Lo hemos leído de tu documento; revisa que sea correcto. No es un dato confirmado por tu compañía.</p>}
           {tipo === 'carta_impago' && <p className="editor-error" role="alert">Contacta con tu corredor: una carta de impago puede acabar en la baja de la póliza.</p>}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button type="button" className="boton" style={{ minHeight: 44 }} onClick={() => void archivar()} disabled={tipo === '' || fase === 'archivando'}>
@@ -156,7 +168,7 @@ export function EscanerDocumento() {
       )}
       {fase === 'hecho' && fin && (
         <>
-          <p className="editor-ayuda">{fin.archivado ? 'Documento guardado.' : 'No hemos podido guardar el fichero ahora mismo; inténtalo más tarde.'}</p>
+          <p ref={mensajeFinal} tabIndex={-1} className="editor-ayuda" role="status" aria-live="polite">{fin.archivado ? 'Documento guardado.' : 'No hemos podido guardar el fichero ahora mismo; inténtalo más tarde.'}</p>
           {fin.aviso && <p className="editor-error" role="alert">{fin.aviso}</p>}
           <button type="button" className="boton secundario" style={{ minHeight: 44 }} onClick={reiniciar}>Escanear otro</button>
         </>

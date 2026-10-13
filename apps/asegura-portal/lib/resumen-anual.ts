@@ -13,6 +13,14 @@
 //     quedan fuera aunque la bóveda se las enseñe).
 import { reciboAnulado } from '@central/module-seguros-portal'
 
+/**
+ * Las pólizas que entran en el resumen: las de los titulares PROPIOS, menos las de OTRO tomador en las que
+ * la ficha solo figura (`figuraTitular` definido; misma regla que el cron `avisos-cima`): no las paga ella.
+ */
+export function polizasDelResumen<P extends { figuraTitular?: unknown }>(titulares: readonly { polizas: readonly P[] }[]): P[] {
+  return titulares.flatMap((t) => t.polizas.filter((p) => p.figuraTitular === undefined))
+}
+
 export type ReciboEntrada = {
   situacion: string
   importe: number | null

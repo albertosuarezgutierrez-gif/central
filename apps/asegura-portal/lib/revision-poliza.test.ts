@@ -95,7 +95,25 @@ test('decidirRevision: lo cacheado gana a todo; luego clave, material, tope', ()
 test('hayClaveIA: una vacía o en blanco no cuenta', () => {
   assert.equal(hayClaveIA({}), false)
   assert.equal(hayClaveIA({ OPENROUTER_API_KEY: '  ' }), false)
-  assert.equal(hayClaveIA({ GROQ_API_KEY: 'gsk_x' }), true)
+  assert.equal(hayClaveIA({ OPENROUTER_API_KEY: 'sk-or-x' }), true)
+})
+
+test('🔒 hayClaveIA: solo OpenRouter (el declarado en la privacidad); Groq, Cerebras o Kimi no abren la revisión', () => {
+  assert.equal(hayClaveIA({ GROQ_API_KEY: 'gsk_x', CEREBRAS_API_KEY: 'c', MOONSHOT_API_KEY: 'm', NVIDIA_API_KEY: 'n' }), false)
+})
+
+test('🔒 lista blanca de datosRamo: ni dirección, piso, nacimiento, DNI, matrícula, póliza ni nombres llegan a la IA', () => {
+  const sensibles = {
+    direccion: 'Calle Falsa 1', piso: '3º', puerta: 'B', codigoPostal: '41003', fechaNacimiento: '1980-01-01',
+    dni: '12345678Z', matricula: '1234ABC', numeroPoliza: 'P-998877', nombre: 'Lucía Pérez', beneficiarios: 'Juan Pérez',
+    marca: 'Seat', modelo: 'Ibiza', profesion: 'Abogada', descripcion: 'Anillo de Lucía',
+  }
+  const p = promptRevision({ ...E, coberturas: null, datosRamo: { ...sensibles, metrosCuadrados: 80 } })
+  for (const v of Object.values(sensibles)) assert.ok(!p.includes(v), `el prompt lleva «${v}»`)
+  assert.match(p, /metrosCuadrados: 80/)
+  // Lo que no está en la lista no cuenta como material (la IA solo inventaría) ni cambia la huella.
+  assert.equal(tieneMaterial({ ...E, coberturas: null, datosRamo: sensibles }), false)
+  assert.equal(huellaRevision({ ...E, datosRamo: { metrosCuadrados: 80 } }), huellaRevision({ ...E, datosRamo: { metrosCuadrados: 80, dni: 'x' } }))
 })
 
 test('puntosGuardados: forma defensiva', () => {

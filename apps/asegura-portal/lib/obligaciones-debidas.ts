@@ -47,3 +47,21 @@ export async function obligacionesDebidasDeIdentidad<T extends ObligacionAvisabl
   const conBaja = polizasConBajaEnMarcha(firmas, { conConfirmadas: true })
   return { estado: 'ok', debidas: sinObligacionesDePolizasConBaja(delVinculo, conBaja), retenidas: 0 }
 }
+
+/**
+ * 🚨 UN solo push por vencimiento de póliza APORTADA (13/10/2026). Ese vencimiento ya lo avisa el cron
+ * `/api/cron/avisos-cima` como `vencimiento_aportada` (ventana 45→30 días, `avisos-ampliados.ts`); si además
+ * saliera aquí la obligación `poliza` de esa aportada, llegarían dos pushes por la misma fecha. Regla: este
+ * cron NO manda la obligación de póliza aportada cuando `vencimiento_aportada` está ACTIVO para la identidad
+ * (no silenciado) y esa aportada no tiene la captación ya pedida (con ella el otro cron calla, y entonces
+ * avisa este). La obligación sigue en el calendario: solo se omite el push (sin sello, nada se pierde).
+ */
+export function sinVencimientoAportadaDuplicado<T extends { tipo: string; polizaDeclaradaId: string | null }>(
+  obligaciones: readonly T[],
+  p: { silenciados: ReadonlySet<string>; captacionPedida: ReadonlySet<string> },
+): T[] {
+  if (p.silenciados.has('vencimiento_aportada')) return [...obligaciones]
+  return obligaciones.filter(
+    (o) => !(o.tipo === 'poliza' && o.polizaDeclaradaId !== null && !p.captacionPedida.has(o.polizaDeclaradaId)),
+  )
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { anioDePeticion, anioPorDefecto, resumenAnual, type PolizaGestionadaEntrada } from './resumen-anual.ts'
+import { anioDePeticion, anioPorDefecto, polizasDelResumen, resumenAnual, type PolizaGestionadaEntrada } from './resumen-anual.ts'
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`)
 const rec = (situacion: string, importe: number | null, f: string | null) => ({ situacion, importe, fechaSituacion: f ? d(f) : null })
@@ -106,4 +106,19 @@ test('aportado: solo `declarado` con prima y no vencida antes del año; nunca se
   assert.equal(r.aportado.total, 200)
   assert.equal(r.aportado.noIncluidas, 3)
   assert.equal(r.gestionado.total, 100)
+})
+
+test('🪤 fuera las pólizas de OTRO tomador en las que la ficha solo figura (figuraTitular definido)', () => {
+  const r = polizasDelResumen([
+    { polizas: [{ id: 'mia' }, { id: 'de-otro', figuraTitular: { papel: 'asegurado' } }] },
+    { polizas: [{ id: 'mia-2', figuraTitular: undefined }] },
+  ])
+  assert.deepEqual(r.map((p) => p.id), ['mia', 'mia-2'])
+})
+
+test('🪤 cableado: /resumen saca las gestionadas de polizasDelResumen (no de t.polizas a pelo)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const pagina = readFileSync(new URL('../app/(portal)/resumen/page.tsx', import.meta.url), 'utf8')
+  assert.match(pagina, /polizasDelResumen\(propias\)\.map\(/)
+  assert.doesNotMatch(pagina, /t\.polizas\.map\(/)
 })

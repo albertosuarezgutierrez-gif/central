@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import { carteraDeIdentidad } from './cartera-lectura'
 import { prisma } from './db'
 import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
-import { MAX_ESCANEOS_POR_DIA, claveEscaneo, prefijoEscaneosDelDia, type PolizaCandidata } from './escaner-documento'
+import { MAX_ARCHIVOS_POR_DIA, MAX_ESCANEOS_POR_DIA, prefijoArchivosDelDia, prefijoEscaneosDelDia, type PolizaCandidata } from './escaner-documento'
 import { getIdentidad } from './session'
 
 /**
@@ -44,9 +44,19 @@ async function polizasPropiasParaEscaner(identidadId: string): Promise<PolizaCan
 export async function reservarEscaneoDeSesion(ahora: Date = new Date()): Promise<'ok' | 'tope' | null> {
   const identidad = await getIdentidad()
   if (!identidad) return null
-  const identidadId = identidad.id
-  const delDia = { identidadId, clave: { startsWith: prefijoEscaneosDelDia(ahora) } }
-  if ((await prisma.portalAvisoLeido.count({ where: delDia })) >= MAX_ESCANEOS_POR_DIA) return 'tope'
-  await prisma.portalAvisoLeido.create({ data: { identidadId, clave: claveEscaneo(ahora, randomUUID()), creadoEn: ahora }, select: { clave: true } })
-  return (await prisma.portalAvisoLeido.count({ where: delDia })) > MAX_ESCANEOS_POR_DIA ? 'tope' : 'ok'
+  return reservarCupoDelDia(identidad.id, prefijoEscaneosDelDia(ahora), MAX_ESCANEOS_POR_DIA, ahora)
+}
+
+/** Lo mismo para ARCHIVAR (paso 2, `MAX_ARCHIVOS_POR_DIA`): tope en BD, no en memoria por instancia. */
+export async function reservarArchivoDeSesion(ahora: Date = new Date()): Promise<'ok' | 'tope' | null> {
+  const identidad = await getIdentidad()
+  if (!identidad) return null
+  return reservarCupoDelDia(identidad.id, prefijoArchivosDelDia(ahora), MAX_ARCHIVOS_POR_DIA, ahora)
+}
+
+async function reservarCupoDelDia(identidadId: string, prefijo: string, max: number, ahora: Date): Promise<'ok' | 'tope'> {
+  const delDia = { identidadId, clave: { startsWith: prefijo } }
+  if ((await prisma.portalAvisoLeido.count({ where: delDia })) >= max) return 'tope'
+  await prisma.portalAvisoLeido.create({ data: { identidadId, clave: `${prefijo}${randomUUID()}`, creadoEn: ahora }, select: { clave: true } })
+  return (await prisma.portalAvisoLeido.count({ where: delDia })) > max ? 'tope' : 'ok'
 }

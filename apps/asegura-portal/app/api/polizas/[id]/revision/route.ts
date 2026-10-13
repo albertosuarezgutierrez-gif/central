@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { aiComplete } from '@central/core-ai'
+import { openrouterChat } from '@central/core-ai'
 
 import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
@@ -14,7 +14,7 @@ import {
   SISTEMA_REVISION,
   tieneMaterial,
 } from '@/lib/revision-poliza'
-import { guardarRevision, leerRevision, revisionesDeHoy } from '@/lib/revision-poliza-bd'
+import { guardarRevisionDeSesion, leerRevisionDeSesion, revisionesDeHoyDeSesion } from '@/lib/revision-poliza-bd'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -54,12 +54,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const entrada = entradaDesdeFila(p)
   const huella = huellaRevision(entrada)
-  const cache = await leerRevision(identidad.id, p.id, huella)
+  const cache = await leerRevisionDeSesion(p.id, huella)
   // Caché ilegible (tabla ausente, BD caída): sin ella no hay tope ni «no recalcular» → NO se llama a la IA.
   if (cache === null) return NextResponse.json({ estado: 'error' }, { status: 503 })
   const hayIa = hayClaveIA(process.env)
 
-  const usadasHoy = cache === undefined && hayIa && tieneMaterial(entrada) ? await revisionesDeHoy(identidad.id) : 0
+  const usadasHoy = cache === undefined && hayIa && tieneMaterial(entrada) ? await revisionesDeHoyDeSesion() : 0
   const decision = decidirRevision({
     hayIa,
     tieneMaterial: tieneMaterial(entrada),
@@ -74,7 +74,16 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   let salida: string
   try {
-    salida = await aiComplete(promptRevision(entrada), { system: SISTEMA_REVISION, maxTokens: 700, temperature: 0.2 })
+    // 🔒 Solo OpenRouter (el proveedor que declara la privacidad), sin la cadena de suplentes de `aiComplete`.
+    salida = await openrouterChat(
+      {
+        apiKey: (process.env.OPENROUTER_API_KEY ?? '').trim(),
+        textModel: process.env.OPENROUTER_MODEL || undefined,
+        baseUrl: process.env.OPENROUTER_BASE_URL || undefined,
+      },
+      [{ role: 'user', content: promptRevision(entrada) }],
+      { system: SISTEMA_REVISION, maxTokens: 700, temperature: 0.2 },
+    )
   } catch (e) {
     console.error('[portal/revision] la IA falló:', e instanceof Error ? e.message : e)
     return NextResponse.json({ estado: 'error' }, { status: 502 })
@@ -85,7 +94,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ estado: 'error' }, { status: 502 })
   }
   try {
-    await guardarRevision(identidad.id, p.id, huella, puntos)
+    await guardarRevisionDeSesion(p.id, huella, puntos)
   } catch (e) {
     // Sin caché no hay tope: se enseña igual, pero queda dicho en el log (probablemente falta el SQL).
     console.error('[portal/revision] no se pudo guardar la revisión:', e instanceof Error ? e.message : e)

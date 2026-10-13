@@ -109,7 +109,17 @@ async function registrarEntradaFamilia(tokenCrudo: unknown, identidadId: string)
   })
   if (decision !== 'registrar') return 'no_aplica'
   try {
-    await prisma.portalInvitacionEnlaceUso.create({ data: { enlaceId: fila.id, identidadId, usadoEn: ahora }, select: { id: true } })
+    // 🚨 Tope de usos ATÓMICO: el recuento de arriba es una foto; dos entradas a la vez lo verían por debajo
+    // del máximo y entrarían las dos. Se bloquea la fila del enlace (FOR UPDATE: las entradas al MISMO
+    // enlace hacen cola), se vuelve a contar dentro y solo entonces se inserta.
+    const entro = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM seguros.portal_invitacion_enlace WHERE id = ${fila.id}::uuid FOR UPDATE`
+      const usos = await tx.portalInvitacionEnlaceUso.count({ where: { enlaceId: fila.id } })
+      if (usos >= fila.maxUsos) return false
+      await tx.portalInvitacionEnlaceUso.create({ data: { enlaceId: fila.id, identidadId, usadoEn: ahora }, select: { id: true } })
+      return true
+    })
+    if (!entro) return 'no_aplica'
   } catch (e) {
     if (typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002') return 'no_aplica'
     throw e

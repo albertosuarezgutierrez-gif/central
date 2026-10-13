@@ -18,7 +18,7 @@ import { requireIdentidad } from '@/lib/session'
 export const runtime = 'nodejs'
 
 /**
- * POST /api/huecos-proteccion — la tarjeta «Lo que no tienes asegurado» de la bóveda (13/10/2026).
+ * POST /api/huecos-proteccion — la tarjeta «Seguros que no nos constan» de la bóveda (13/10/2026).
  * Cuerpo: `{ accion: 'cerrar' }` | `{ accion: 'pedir', ramos: [...] }`. Estado en `portal_aviso_leido`
  * (`lib/huecos-proteccion.ts`), sin tabla nueva.
  *

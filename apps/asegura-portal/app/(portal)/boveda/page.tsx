@@ -367,7 +367,7 @@ export default async function Boveda({
 
   const propiasVacia = cartera.propias.every((t) => t.polizas.length === 0)
 
-  // «Lo que no tienes asegurado» (13/10/2026): ramos básicos sin póliza VIGENTE entre las suyas (cartera
+  // «Seguros que no nos constan» (13/10/2026): ramos básicos sin póliza VIGENTE entre las suyas (cartera
   // propia + aportadas). Solo en «Mis seguros»; si no se pudo mirar la cartera o la marca, sin tarjeta.
   let huecosTarjeta: ReturnType<typeof huecosDeProteccion> = []
   let estadoTarjetaHuecos: ReturnType<typeof estadoHuecos> = 'oculta'

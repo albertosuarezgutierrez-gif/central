@@ -38,3 +38,15 @@ test('geolocation solo se llama desde usarMiUbicacion, nunca al cargar', () => {
   const ruta = readFileSync(new URL('../app/api/siniestros/route.ts', import.meta.url), 'utf8')
   assert.match(ruta, /normalizarUbicacion\(/, 'el servidor re-redondea')
 })
+
+test('🪤 tocar «Dónde» tras usar la ubicación retira las coordenadas (no viaja un GPS que la persona ya corrigió)', () => {
+  const f = readFileSync(new URL('../app/(portal)/boveda/ParteSiniestro.tsx', import.meta.url), 'utf8')
+  const ini = f.indexOf('function escribir(campo: Campo')
+  const cuerpo = f.slice(ini, f.indexOf('\n  }\n', ini))
+  assert.ok(ini > 0, 'sin escribir()')
+  assert.match(cuerpo, /campo === 'lugar' && ubic !== null\) \{\s*setUbic\(null\)/)
+  // El input de «Dónde» pasa por escribir() (si se cambia a un setForm directo, el cepo de arriba no sirve).
+  assert.match(f, /onChange=\{\(e\) => escribir\('lugar', e\.target\.value\)\}/)
+  // Los mensajes de ubicación se anuncian (role="status").
+  assert.equal((f.match(/geo === '(ok|retirada|error)' && \(\s*<p className="editor-ayuda" role="status">/g) ?? []).length, 3)
+})

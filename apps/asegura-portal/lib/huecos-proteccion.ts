@@ -1,5 +1,5 @@
 /**
- * «Lo que no tienes asegurado» (13/10/2026): una tarjeta discreta en la bóveda con hasta 2 ramos básicos
+ * «Seguros que no nos constan» (13/10/2026): una tarjeta discreta en la bóveda con hasta 2 ramos básicos
  * de los que NO consta ninguna póliza vigente (cartera + aportadas). Sin presión ni importes.
  *
  * Módulo PURO (sin Prisma ni red). Persistencia SIN tabla nueva, como `lib/captacion-declarada.ts`, en
@@ -34,10 +34,11 @@ export const MIN_RESERVA_HUECOS = 10
 export const MAX_PETICIONES_HUECOS_DIA = 5
 
 export const TEXTO_HUECOS = {
-  titulo: 'Lo que no tienes asegurado',
+  titulo: 'Seguros que no nos constan',
   intro: 'Con lo que consta en tu bóveda, estos seguros no aparecen. Puede que los tengas en otro sitio.',
   boton: '¿Lo vemos juntos?',
-  cerrar: 'Cerrar',
+  bajoBoton: 'Si lo pides, te contactamos',
+  cerrar: 'No volver a mostrar',
   yaPedido: 'Ya lo hemos recibido, te contactaremos',
   errorEnvio: 'No hemos podido registrar tu petición. Vuelve a intentarlo en un rato.',
 } as const
@@ -142,7 +143,7 @@ export function mensajePeticionHuecos(d: { identidadId: string; nombre: string |
   const lista = d.ramos.map((r) => RAMOS_BASICOS.find((b) => b.ramo === r)?.etiqueta ?? r).join(', ')
   return (
     `🤝 Petición desde el portal: ${quien} quiere hablar de lo que no le consta asegurado (${esc(lista)}).\n` +
-    `Salió de la tarjeta «Lo que no tienes asegurado»; puede tenerlo en otra parte.\nIdentidad ${d.identidadId}`
+    `Salió de la tarjeta «Seguros que no nos constan»; puede tenerlo en otra parte.\nIdentidad ${d.identidadId}`
   )
 }
 

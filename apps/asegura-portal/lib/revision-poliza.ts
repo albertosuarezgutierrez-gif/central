@@ -31,6 +31,7 @@ export const TEXTO_REVISION = {
   sinDatos:
     'De esta póliza consta muy poco (ni coberturas ni datos del seguro), así que no podemos revisarla bien. Si completas sus datos, o nos la enseñas, la miramos contigo.',
   tope: 'Hoy ya has hecho varias revisiones. Vuelve mañana o, si prefieres, lo vemos juntos.',
+  ctaInvitacion: 'Si quieres, tu corredor lo revisa contigo.',
   error: 'No hemos podido revisarla ahora. Vuelve a intentarlo en un rato.',
 } as const
 
@@ -52,11 +53,29 @@ export type EntradaRevision = {
 
 const texto = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
 
-/** Solo claves de datosRamo con valor simple y no vacío, ordenadas (la huella no puede depender del orden). */
+/**
+ * 🔒 LISTA BLANCA de claves de `datosRamo` que pueden ir a la IA (ids de `campos-ramo.ts`). Solo
+ * características del riesgo (capitales, metros, año, uso, modalidad…), nunca algo que identifique a una
+ * persona o un bien: fuera dirección, código postal, fecha de nacimiento, profesión, beneficiarios, marca y
+ * modelo, actividad, descripción u objeto (texto libre) y cualquier clave que no esté aquí (DNI, matrícula,
+ * nº de póliza, nombres, piso, puerta…). Una clave nueva del catálogo NO entra sola: hay que añadirla a mano.
+ */
+export const CLAVES_RAMO_PARA_IA: ReadonlySet<string> = new Set([
+  'uso', 'kilometrosAnuales', 'garaje', 'valorVehiculo', 'cilindrada',
+  'metrosCuadrados', 'anioConstruccion', 'tipoVivienda', 'regimen', 'usoVivienda',
+  'capitalContinente', 'capitalContenido', 'capitalExistencias', 'alarmaConectada',
+  'numeroViviendas', 'tieneAscensor', 'tienePiscina', 'tieneGarajeComunitario',
+  'modalidad', 'capitalAsegurado', 'vinculadaHipoteca', 'numeroAsegurados',
+  'copago', 'incluyeHospitalizacion', 'incluyeDental',
+  'numeroEmpleados', 'facturacionAnual', 'ambitoTerritorial',
+])
+
+/** Solo claves de la lista blanca, con valor simple y no vacío, ordenadas (la huella no puede depender del orden). */
 function datosSimples(d: EntradaRevision['datosRamo']): Array<[string, string | number | boolean]> {
   if (!d) return []
   return Object.entries(d)
     .filter((e): e is [string, string | number | boolean] => {
+      if (!CLAVES_RAMO_PARA_IA.has(e[0])) return false
       const v = e[1]
       return (typeof v === 'string' && v.trim() !== '') || typeof v === 'number' || typeof v === 'boolean'
     })
@@ -152,11 +171,15 @@ export function normalizarPuntos(salida: string): Punto[] | null {
   return puntos
 }
 
-/** Hay IA si está al menos una de las claves de la cadena de `core-ai` que sirven texto (NIM y Gemini, apagados). */
+/**
+ * 🔒 Proveedores a los que puede ir la revisión: SOLO los que declara la política de privacidad
+ * (`app/legal/privacidad`): OpenRouter. Por eso la ruta llama a `openrouterChat` y no a `aiComplete`
+ * (cuya cadena de suplentes saltaría a Groq, Cerebras o Kimi, no declarados). Sin su clave → `sin_ia`.
+ */
+export const CLAVES_IA_REVISION = ['OPENROUTER_API_KEY'] as const
+
 export function hayClaveIA(env: Record<string, string | undefined>): boolean {
-  return ['OPENROUTER_API_KEY', 'GROQ_API_KEY', 'CEREBRAS_API_KEY', 'MOONSHOT_API_KEY'].some(
-    (k) => (env[k] ?? '').trim() !== '',
-  )
+  return CLAVES_IA_REVISION.some((k) => (env[k] ?? '').trim() !== '')
 }
 
 export type DecisionRevision =

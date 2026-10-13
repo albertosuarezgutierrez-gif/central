@@ -319,8 +319,16 @@ async function eventosFaseB(
       }),
     )
   }
-  if (escrituras.length > 0) await prisma.$transaction(escrituras)
-  const subidas = eventosSubidaPrima(observadas)
+  // Una fila mala (las cotas de `observarPrima` ya descartan importes y % absurdos) no puede dejar a la
+  // identidad sin el resto de sus pushes: si la escritura falla, esta pasada no avisa de subidas (no se
+  // anuncia lo que no quedó guardado) y lo demás sigue.
+  let subidas: EventoCima[] = []
+  try {
+    if (escrituras.length > 0) await prisma.$transaction(escrituras)
+    subidas = eventosSubidaPrima(observadas)
+  } catch (e) {
+    console.error('[portal/avisos-cima] identidad', identidadId, 'prima observada sin guardar:', e instanceof Error ? e.message : e)
+  }
 
   // 3) Vencimientos de lo AJENO que esta identidad gestiona, con SU antelación.
   const ajenos = eventosVencimientoAutorizado(cartera.autorizadas, ahora, prefs.diasAntelacion)

@@ -1,7 +1,7 @@
 // La llamada a la IA del escáner (13/10/2026). Patrón de `extraer-poliza.ts`: PDF → texto →
-// `aiComplete`; imagen → `openrouterVision`. Sin key de IA devuelve `{ ia: false }` y la ruta
+// `openrouterChat` (solo OpenRouter); imagen → `openrouterVision`. Sin key de IA devuelve `{ ia: false }` y la ruta
 // deja archivar a mano; un fallo de la IA es «no se ha podido leer», nunca «no hay datos».
-import { aiComplete, cleanJSON, openrouterVision } from '@central/core-ai'
+import { cleanJSON, openrouterChat, openrouterVision } from '@central/core-ai'
 
 import { lecturaVacia, normalizarLecturaEscaner, type LecturaEscaner } from './escaner-documento'
 
@@ -37,7 +37,8 @@ export async function leerDocumentoEscaneado(buffer: Buffer, mime: string, nombr
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const texto: string = (await require('pdf-parse')(buffer)).text || ''
       if (!texto.trim()) return { ia: true, ok: false, lectura: lecturaVacia() }
-      const salida = await aiComplete(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 400 })
+      // 🔒 Solo OpenRouter (el declarado en la privacidad): sin la cadena de suplentes de `aiComplete`.
+      const salida = await openrouterChat({ apiKey }, [{ role: 'user', content: texto.slice(0, 20_000) }], { system: INSTRUCCION, maxTokens: 400 })
       return { ia: true, ok: true, lectura: parsear(salida) }
     }
     if (mime.startsWith('image/')) {

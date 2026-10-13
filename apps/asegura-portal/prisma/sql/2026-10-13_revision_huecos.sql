@@ -43,7 +43,7 @@ COMMIT;
 -- ── Marcha atrás ─────────────────────────────────────────────────────────────
 --   DROP TABLE IF EXISTS seguros.portal_revision_poliza;
 --
--- ── Bloque Prisma (lo añade quien tenga el schema; el código actual usa $queryRaw y NO lo necesita) ──
+-- ── Bloque Prisma (YA en `schema.prisma`: `lib/revision-poliza-bd.ts` usa el modelo tipado) ──
 -- model PortalRevisionPoliza {
 --   id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
 --   identidadId       String   @map("identidad_id") @db.Uuid

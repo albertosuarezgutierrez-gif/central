@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { RAMOS_BASICOS, TEXTO_HUECOS, type EstadoHuecos, type RamoBasico } from '@/lib/huecos-proteccion'
 
 /**
- * «Lo que no tienes asegurado»: tarjeta discreta de la bóveda (13/10/2026). El servidor decide si sale y
+ * «Seguros que no nos constan»: tarjeta discreta de la bóveda (13/10/2026). El servidor decide si sale y
  * qué huecos (`huecosDeProteccion`/`estadoHuecos`); aquí solo se pinta y se pulsa. Sin importes ni presión,
  * cerrable. «Ya lo hemos recibido» solo cuando el servidor lo confirma.
  */
@@ -37,7 +37,7 @@ export function HuecosProteccion({ huecos, estado }: { huecos: RamoBasico[]; est
 
   return (
     <section className="aviso-linea" aria-labelledby="huecos-titulo" style={{ marginBottom: 20, minWidth: 0 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <strong id="huecos-titulo">{TEXTO_HUECOS.titulo}</strong>
         <button
           type="button"
@@ -51,15 +51,15 @@ export function HuecosProteccion({ huecos, estado }: { huecos: RamoBasico[]; est
         </button>
       </div>
       {vista === 'pedido' ? (
-        <p className="linea" role="status" style={{ margin: '6px 0 0' }}>
+        <p className="suave" role="status" style={{ margin: '6px 0 0' }}>
           {TEXTO_HUECOS.yaPedido}
         </p>
       ) : (
         <>
-          <p className="linea" style={{ margin: '6px 0 0' }}>
+          <p className="suave" style={{ margin: '6px 0 0' }}>
             {TEXTO_HUECOS.intro}
           </p>
-          <ul className="linea" style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+          <ul className="suave" style={{ margin: '6px 0 0', paddingLeft: 18 }}>
             {huecos.map((h) => (
               <li key={h}>{RAMOS_BASICOS.find((b) => b.ramo === h)?.frase ?? h}</li>
             ))}
@@ -74,6 +74,9 @@ export function HuecosProteccion({ huecos, estado }: { huecos: RamoBasico[]; est
               {enviando ? 'Enviando…' : TEXTO_HUECOS.boton}
             </button>
           </div>
+          <p className="suave" style={{ margin: '6px 0 0', fontSize: 14 }}>
+            {TEXTO_HUECOS.bajoBoton}
+          </p>
         </>
       )}
     </section>

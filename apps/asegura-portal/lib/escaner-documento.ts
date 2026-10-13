@@ -172,3 +172,11 @@ export function prefijoEscaneosDelDia(ahora: Date): string {
 export function claveEscaneo(ahora: Date, id: string): string {
   return `${prefijoEscaneosDelDia(ahora)}${id}`
 }
+
+/** Cupo diario de ARCHIVADOS (paso 2), aparte del de lecturas con IA. Prefijo distinto: no se pisan. */
+export const MAX_ARCHIVOS_POR_DIA = 30
+export const PREFIJO_ARCHIVO = 'escaner-archivo:'
+
+export function prefijoArchivosDelDia(ahora: Date): string {
+  return `${PREFIJO_ARCHIVO}${ahora.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })}:`
+}

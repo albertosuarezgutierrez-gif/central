@@ -816,7 +816,7 @@ export function ParteSiniestro({
   const [ficheros, setFicheros] = useState<Elegido[]>([])
   /** Estado del botón «Usar mi ubicación»: solo afecta a la geolocalización
    *  (fecha y hora se rellenan siempre, al instante, sin esperar al GPS). */
-  const [geo, setGeo] = useState<'reposo' | 'buscando' | 'ok' | 'error'>('reposo')
+  const [geo, setGeo] = useState<'reposo' | 'buscando' | 'ok' | 'error' | 'retirada'>('reposo')
   /** Coordenadas redondeadas que dio la persona al pulsar «Usar mi ubicación». `null` = no las dio. */
   const [ubic, setUbic] = useState<{ lat: number; lng: number } | null>(null)
   /**
@@ -1045,6 +1045,12 @@ export function ParteSiniestro({
   function escribir(campo: Campo, valor: string) {
     setForm((f) => ({ ...f, [campo]: valor }))
     setErrores((e) => ({ ...e, [campo]: undefined }))
+    // 🚨 Tocar «Dónde» después de usar la ubicación (borrarlo o escribir otro sitio) RETIRA las
+    // coordenadas: lo que viaja tiene que ser lo que la persona ve, no un GPS que ya ha corregido.
+    if (campo === 'lugar' && ubic !== null) {
+      setUbic(null)
+      setGeo('retirada')
+    }
   }
 
   /** Los tri-estado no tienen error propio: cualquiera de las tres respuestas
@@ -1739,9 +1745,18 @@ export function ParteSiniestro({
               {geo === 'buscando' ? 'Buscando tu ubicación…' : 'Usar mi ubicación'}
             </button>
             <p className="editor-ayuda">Solo para indicar dónde ha ocurrido; no seguimos tu ubicación.</p>
-            {geo === 'ok' && <p className="editor-ayuda">Ubicación añadida. Puedes escribir la calle en el campo de arriba.</p>}
+            {geo === 'ok' && (
+              <p className="editor-ayuda" role="status">
+                Ubicación añadida. Si cambias el campo de arriba, la quitamos y se envía solo lo que escribas.
+              </p>
+            )}
+            {geo === 'retirada' && (
+              <p className="editor-ayuda" role="status">
+                Has cambiado «Dónde»: ya no enviaremos la ubicación. Pulsa «Usar mi ubicación» si quieres añadirla de nuevo.
+              </p>
+            )}
             {geo === 'error' && (
-              <p className="editor-ayuda">No hemos podido situarte; escribe el sitio a mano si lo sabes.</p>
+              <p className="editor-ayuda" role="status">No hemos podido situarte; escribe el sitio a mano si lo sabes.</p>
             )}
           </div>
 

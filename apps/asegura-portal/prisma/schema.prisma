@@ -114,6 +114,7 @@ model PortalIdentidad {
   primasObservadas  PortalPrimaObservada[]
   enlacesFamilia    PortalInvitacionEnlace[]
   usoEnlaceFamilia  PortalInvitacionEnlaceUso?
+  revisionesPoliza  PortalRevisionPoliza[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -442,6 +443,25 @@ model PortalPreferenciasAvisos {
   identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
 
   @@map("portal_preferencias_avisos")
+  @@schema("seguros")
+}
+
+/// «Revisar mi póliza» (13/10/2026): la revisión con IA de una póliza APORTADA, cacheada por huella de lo
+/// leído (`lib/revision-poliza.ts`). Cuenta además el tope diario por identidad. Append-only: el rol solo
+/// INSERTA y LEE. DDL: `prisma/sql/2026-10-13_revision_huecos.sql`.
+model PortalRevisionPoliza {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId       String   @map("identidad_id") @db.Uuid
+  polizaDeclaradaId String   @map("poliza_declarada_id") @db.Uuid
+  huella            String
+  puntos            Json
+  creadaEn          DateTime @default(now()) @map("creada_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@unique([polizaDeclaradaId, huella], map: "portal_revision_poliza_una_por_huella")
+  @@index([identidadId, creadaEn(sort: Desc)], map: "idx_portal_revision_poliza_identidad")
+  @@map("portal_revision_poliza")
   @@schema("seguros")
 }
 

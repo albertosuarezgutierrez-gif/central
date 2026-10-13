@@ -15,7 +15,8 @@ import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { mapConConcurrencia } from '@/lib/concurrencia'
 import { TAM_PAGINA_PUSH, reunirAvisables } from '@/lib/criba-avisos-push'
 import { prisma } from '@/lib/db'
-import { obligacionesDebidasDeIdentidad } from '@/lib/obligaciones-debidas'
+import { PREFIJO_PEDIDA } from '@/lib/captacion-declarada'
+import { obligacionesDebidasDeIdentidad, sinVencimientoAportadaDuplicado } from '@/lib/obligaciones-debidas'
 import { OPCIONES_AVISO, cargarVapid, topicAviso } from '@/lib/push-vapid'
 
 export const dynamic = 'force-dynamic'
@@ -56,7 +57,7 @@ export async function GET(req: Request) {
   // Las identidades que se saltan a propósito («solo correo», «no molestar») NO pueden llenar el lote:
   // se pagina por cursor (con tope de páginas) y el filtro de preferencias se aplica a cada página.
   let prefsFallo = false
-  let enVentana: Array<{ id: string; identidadId: string; polizaId: string | null; tipo: string; titulo: string; fechaAccionable: Date }>
+  let enVentana: Array<{ id: string; identidadId: string; polizaId: string | null; polizaDeclaradaId: string | null; tipo: string; titulo: string; fechaAccionable: Date }>
   // Preferencias de «Configuración» (13/10/2026): antelación, canal y «no molestar» de cada identidad.
   // Sin fila = lo de siempre (`resolverPreferenciasAvisos(null)`: 7 días, push, sin franja). Si no se
   // pueden leer NO se manda con valores supuestos (podría saltarse un «no molestar»): 500 y se
@@ -67,7 +68,7 @@ export async function GET(req: Request) {
       leerPagina: (cursorId) =>
         prisma.portalObligacion.findMany({
           where: ventana,
-          select: { id: true, identidadId: true, polizaId: true, tipo: true, titulo: true, fechaAccionable: true },
+          select: { id: true, identidadId: true, polizaId: true, polizaDeclaradaId: true, tipo: true, titulo: true, fechaAccionable: true },
           orderBy: [{ fechaAccionable: 'asc' }, { id: 'asc' }],
           take: TAM_PAGINA_PUSH,
           ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
@@ -154,8 +155,19 @@ export async function GET(req: Request) {
   const lotes = [...porIdentidad.entries()]
   await mapConConcurrencia(lotes, CONCURRENCIA_PUENTE, async ([identidadId, obligaciones]) => {
     try {
+      // El vencimiento de una APORTADA ya lo avisa `avisos-cima` (`vencimiento_aportada`): uno solo por fecha.
+      const [silenciados, pedidas] = obligaciones.some((o) => o.tipo === 'poliza' && o.polizaDeclaradaId !== null)
+        ? await Promise.all([
+            prisma.portalAvisoSilenciado.findMany({ where: { identidadId }, select: { tipo: true } }),
+            prisma.portalAvisoLeido.findMany({ where: { identidadId, clave: { startsWith: PREFIJO_PEDIDA } }, select: { clave: true } }),
+          ])
+        : [[], []]
+      const sinDuplicado = sinVencimientoAportadaDuplicado(obligaciones, {
+        silenciados: new Set(silenciados.map((s) => s.tipo)),
+        captacionPedida: new Set(pedidas.map((p) => p.clave.slice(PREFIJO_PEDIDA.length))),
+      })
       const r = await obligacionesDebidasDeIdentidad({
-        obligaciones,
+        obligaciones: sinDuplicado,
         clientesVinculados: clientesPorIdentidad.get(identidadId) ?? new Set<string>(),
         clientePorPoliza,
         leerFirmas: () => anulacionesPendientes(identidadId).catch(() => null),

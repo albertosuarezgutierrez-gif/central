@@ -93,6 +93,22 @@ test('🪤 unidades distintas (anual → mensual): re-semilla sin avisar', () =>
   assert.deepEqual(r, { importe: 600, unidad: 'cartera-bruta-anual|mensual', subida: null })
 })
 
+test('🪤 cotas: importe < 1€ o > 1.000.000€ no se observa (si no, revienta el CHECK y la identidad se queda sin pushes)', () => {
+  assert.equal(observarPrima(null, { importe: 0.004, unidad: U }, 10, HOY), null)
+  assert.equal(observarPrima(null, { importe: 0.99, unidad: U }, 10, HOY), null)
+  assert.equal(observarPrima({ importe: 400, unidad: U, subida: null }, { importe: 0.5, unidad: U }, 10, HOY), null)
+  assert.equal(observarPrima(null, { importe: 2_000_000, unidad: U }, 10, HOY), null)
+  assert.equal(observarPrima(null, { importe: Number.NaN, unidad: U }, 10, HOY), null)
+  assert.deepEqual(observarPrima(null, { importe: 1, unidad: U }, 10, HOY), { importe: 1, unidad: U, subida: null })
+})
+
+test('🪤 subida > 500 % = dato malo: ni se observa ni se avisa (y numeric(7,2) no desborda)', () => {
+  assert.equal(observarPrima({ importe: 1, unidad: U, subida: null }, { importe: 999_999, unidad: U }, 10, HOY), null)
+  assert.equal(observarPrima({ importe: 100, unidad: U, subida: null }, { importe: 601, unidad: U }, 10, HOY), null)
+  const limite = observarPrima({ importe: 100, unidad: U, subida: null }, { importe: 600, unidad: U }, 10, HOY)
+  assert.equal(limite?.subida?.porcentaje, 500)
+})
+
 test('🪤 null = no se sabe: ni avisa ni pisa lo guardado', () => {
   assert.equal(observarPrima({ importe: 400, unidad: U, subida: null }, null, 10, HOY), null)
   assert.equal(primaCarteraObservable(null), null)
@@ -179,6 +195,13 @@ test('🪤 Consulta (ver / ver_economico / documentos) NO recibe avisos de lo aj
   for (const a of [['ver'], ['ver_economico'], ['documentos'], ['ver', 'ver_economico']]) {
     // `partes` con la póliza A PROPÓSITO: aunque la lista por póliza viniera mal, el nivel corta solo.
     assert.equal(eventosVencimientoAutorizado([titular(a, { autorizacion: { alcances: a, partes: ['p9'] } })], HOY, 7).length, 0, a.join('+'))
+  }
+})
+
+test('🪤 solo Gestión o Total EXPLÍCITOS: el alcance heredado `partes` (puede dar parte) no recibe el vencimiento', () => {
+  for (const tipoPersona of ['fisica', 'juridica'] as const) {
+    const t = titular(['partes'], { tipoPersona, autorizacion: { alcances: ['partes'], partes: ['p9'] } })
+    assert.equal(eventosVencimientoAutorizado([t], HOY, 7).length, 0, tipoPersona)
   }
 })
 

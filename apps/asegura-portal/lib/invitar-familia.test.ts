@@ -83,6 +83,20 @@ test('capa BD: token hasheado, tope en BD, nunca el token en claro en la fila ni
   assert.doesNotMatch(bd, /destinatario|email|nombre/i, 'el aviso y la tabla no llevan datos del invitado')
 })
 
+test('🪤 tope de 10 usos ATÓMICO: bloqueo de la fila del enlace, recuento y alta en la MISMA transacción', () => {
+  const bd = fuente('lib/invitar-familia-bd.ts')
+  const i = bd.indexOf('prisma.$transaction(async (tx)')
+  assert.ok(i !== -1, 'el alta del uso no va en una transacción')
+  const tx = bd.slice(i, bd.indexOf('})', bd.indexOf('return true', i)))
+  const bloqueo = tx.search(/FROM seguros\.portal_invitacion_enlace WHERE id = \$\{fila\.id\}::uuid FOR UPDATE/)
+  const cuenta = tx.indexOf('tx.portalInvitacionEnlaceUso.count(')
+  const alta = tx.indexOf('tx.portalInvitacionEnlaceUso.create(')
+  assert.ok(bloqueo !== -1 && bloqueo < cuenta && cuenta < alta, 'orden: FOR UPDATE → count → create, todo dentro')
+  assert.match(tx, /if \(usos >= fila\.maxUsos\) return false/)
+  // Fuera de la transacción no queda ningún alta suelta del uso.
+  assert.equal((bd.match(/portalInvitacionEnlaceUso\.create\(/g) ?? []).length, 1)
+})
+
 test('rutas: la de uso responde igual pase lo que pase y la identidad sale de la cookie', () => {
   const usar = fuente('app/api/invitaciones/familia/usar/route.ts')
   assert.match(usar, /requireIdentidad\(\)/)

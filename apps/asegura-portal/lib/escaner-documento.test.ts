@@ -8,6 +8,7 @@ import {
   esCartaImpago,
   nombreDeArchivo,
   normalizarLecturaEscaner,
+  prefijoArchivosDelDia,
   prefijoEscaneosDelDia,
   proponerPoliza,
   textoAvisoImpago,
@@ -54,9 +55,13 @@ import { readFileSync } from 'node:fs'
 test('contrato: archivar valida la póliza contra las propias y avisa del impago', () => {
   const r = readFileSync(new URL('../app/api/documentos/archivar/route.ts', import.meta.url), 'utf8')
   assert.match(r, /polizasPropiasParaEscanerDeSesion\(\)/)
-  assert.match(r, /poliza_no_tuya/)
+  // Póliza ajena o inexistente: 404, nunca 403 (no confirmar que el id existe).
+  assert.match(r, /error: 'no_encontrada' \}, \{ status: 404 \}/)
+  assert.doesNotMatch(r, /status: 403/)
   assert.match(r, /esCartaImpago\(tipo\)/)
-  assert.match(r, /rateLimit\(/)
+  // El tope de archivado también en BD (un `rateLimit` en memoria no es un tope entre instancias).
+  assert.match(r, /reservarArchivoDeSesion\(\)/)
+  assert.doesNotMatch(r, /rateLimit\(/)
   const e = readFileSync(new URL('../app/api/documentos/escanear/route.ts', import.meta.url), 'utf8')
   // El cupo de IA va en BD: un `rateLimit` en memoria se reinicia en cada instancia y no es un tope.
   assert.match(e, /reservarEscaneoDeSesion\(\)/)
@@ -69,4 +74,7 @@ test('cupo del escáner: clave por día de MADRID, no UTC', () => {
   assert.equal(prefijoEscaneosDelDia(new Date('2026-10-13T10:00:00Z')), 'escaner:2026-10-13:')
   assert.equal(claveEscaneo(new Date('2026-10-13T10:00:00Z'), 'u1'), 'escaner:2026-10-13:u1')
   assert.equal(MAX_ESCANEOS_POR_DIA, 15)
+  // El cupo de archivado no comparte prefijo con el de lecturas (si no, uno gastaría el del otro).
+  assert.equal(prefijoArchivosDelDia(new Date('2026-10-13T10:00:00Z')), 'escaner-archivo:2026-10-13:')
+  assert.ok(!prefijoArchivosDelDia(new Date('2026-10-13T10:00:00Z')).startsWith(prefijoEscaneosDelDia(new Date('2026-10-13T10:00:00Z'))))
 })

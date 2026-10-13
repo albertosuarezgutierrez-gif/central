@@ -11,6 +11,7 @@ import { fechaEs } from '@/lib/fechas'
 import {
   anioDePeticion,
   aniosSeleccionables,
+  polizasDelResumen,
   resumenAnual,
   type PolizaAportadaEntrada,
   type PolizaGestionadaEntrada,
@@ -58,8 +59,8 @@ export default async function ResumenPage({
   ])
 
   const propias = cartera.propias
-  const gestionadas: PolizaGestionadaEntrada[] = propias.flatMap((t) =>
-    t.polizas.map((p) => ({
+  // Fuera las de OTRO tomador en las que su ficha solo figura (`figuraTitular`), igual que el cron.
+  const gestionadas: PolizaGestionadaEntrada[] = polizasDelResumen(propias).map((p) => ({
       id: p.id,
       compania: p.compania,
       ramo: ramoLegible(p.ramo),
@@ -70,8 +71,7 @@ export default async function ResumenPage({
       siniestros: p.siniestros === null
         ? null
         : p.siniestros.map((s) => ({ id: s.id, fechaHora: s.fechaHora, indemnizacion: s.tramitacion?.indemnizacion ?? null })),
-    })),
-  )
+    }))
   // Las que declaró como de su EMPRESA no son un gasto personal: fuera y se dice.
   const deEmpresa = declaradas.filter((d) => d.titularTipo === 'empresa').length
   const aportadas: PolizaAportadaEntrada[] = declaradas
@@ -104,12 +104,14 @@ export default async function ResumenPage({
         .resumen-tabla th, .resumen-tabla td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
         .resumen-tabla td.num, .resumen-tabla th.num { text-align: right; white-space: nowrap; }
         .resumen-tabla-caja { overflow-x: auto; }
+        .resumen-cifra { font-family: var(--display, var(--serif)); font-size: 28px; font-weight: 700; margin: 4px 0; }
       `}</style>
 
       <div className="solo-pantalla resumen-pantalla">
         <p className="antetitulo">Declaración de la renta</p>
       </div>
       <h1>Mi resumen {anio}</h1>
+      <p className="suave" style={{ marginTop: 0 }}>No sustituye a los justificantes de la compañía.</p>
       {titulares && <p className="suave" style={{ marginTop: 0 }}>Titular: {titulares}</p>}
 
       <nav className="solo-pantalla" aria-label="Año" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '12px 0' }}>
@@ -146,7 +148,7 @@ export default async function ResumenPage({
               </p>
             ) : (
               <>
-                <p style={{ fontSize: 28, fontWeight: 700, margin: '4px 0' }}>
+                <p className="resumen-cifra">
                   {g.total === null ? 'No nos consta ningún cobro' : eur(g.total)}
                 </p>
                 {g.total !== null && g.totalIncompleto && (
@@ -160,7 +162,7 @@ export default async function ResumenPage({
                   </p>
                 )}
                 <div className="resumen-tabla-caja">
-                  <table className="resumen-tabla">
+                  <table className="resumen-tabla" aria-label={`Recibos cobrados en ${anio}, por seguro`}>
                     <thead><tr><th>Seguro</th><th className="num">Pagado</th></tr></thead>
                     <tbody>
                       {g.filas.map((f) => (
@@ -186,7 +188,7 @@ export default async function ResumenPage({
                   <>
                     <h3>Por ramo</h3>
                     <div className="resumen-tabla-caja">
-                      <table className="resumen-tabla">
+                      <table className="resumen-tabla" aria-label={`Recibos cobrados en ${anio}, por ramo`}>
                         <tbody>
                           {g.porRamo.map((x) => (
                             <tr key={x.ramo}><td>{x.ramo}</td><td className="num">{eur(x.total)}</td></tr>
@@ -222,7 +224,7 @@ export default async function ResumenPage({
                 )}
                 {g.siniestros.lista.length > 0 && (
                   <div className="resumen-tabla-caja">
-                    <table className="resumen-tabla">
+                    <table className="resumen-tabla" aria-label={`Siniestros de ${anio}`}>
                       <thead><tr><th>Fecha</th><th>Seguro</th><th className="num">Indemnización</th></tr></thead>
                       <tbody>
                         {g.siniestros.lista.map((s) => (
@@ -253,12 +255,12 @@ export default async function ResumenPage({
               <p className="suave" style={{ margin: 0 }}>No has declarado ninguna prima anual en seguros que nos hayas aportado.</p>
             ) : (
               <>
-                <p style={{ fontSize: 28, fontWeight: 700, margin: '4px 0' }}>{eur(a.total)}</p>
+                <p className="resumen-cifra">{eur(a.total)}</p>
                 <p className="suave" style={{ margin: '0 0 8px' }}>
                   Son importes que escribiste tú, no recibos cobrados: no los hemos comprobado con la compañía.
                 </p>
                 <div className="resumen-tabla-caja">
-                  <table className="resumen-tabla">
+                  <table className="resumen-tabla" aria-label="Primas anuales que declaraste, por seguro">
                     <tbody>
                       {a.filas.map((f) => (
                         <tr key={f.id}><td>{f.etiqueta}</td><td className="num">{eur(f.prima)}</td></tr>
