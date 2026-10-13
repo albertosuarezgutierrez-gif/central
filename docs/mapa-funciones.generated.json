@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-13T05:42:21Z",
-  "sha": "da209ebf7d4d6f456e439a0352d7e574256b499b",
+  "generadoEn": "2026-10-13T07:58:47Z",
+  "sha": "153c0c25273c6f41528deaef6d9e98413aaa9011",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -91351,7 +91351,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 151,
+          "linea": 155,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -91360,7 +91360,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 165,
+          "linea": 169,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -91369,7 +91369,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, matriculaInicial = '', etiquetaCliente, faltanInicial, garajes, civiles, zonasCarnet, tiposCarnet, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, c",
           "retorno": null,
-          "linea": 203
+          "linea": 207
         },
         {
           "nombre": "BloquePersona",
@@ -91377,7 +91377,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 1869,
+          "linea": 2020,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -91386,7 +91386,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1941,
+          "linea": 2092,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -91395,7 +91395,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 1946
+          "linea": 2097
         },
         {
           "nombre": "PapelDelTomador",
@@ -91403,7 +91403,7 @@
           "exportada": false,
           "params": "{ rol, oportunidadId, aqui = false }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional' oportunidadId: string /** Embebido en la propia oportunidad: «Intervinientes» está arriba, en esta misma página (sin enlace). */ aqui?",
           "retorno": null,
-          "linea": 1955,
+          "linea": 2106,
           "resumen": "Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se"
         },
         {
@@ -91412,7 +91412,33 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1981
+          "linea": 2132
+        },
+        {
+          "nombre": "IrA",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ ancla, alternativa, children }: { ancla: string; alternativa?: string; children: React.ReactNode }",
+          "retorno": null,
+          "linea": 2152,
+          "resumen": "Enlace que lleva (scroll) a un bloque de la página. En plataforma el scroller es `LayoutShell`: `scrollIntoView` vale."
+        },
+        {
+          "nombre": "ResumenCampo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ etiqueta, valor, nota, notaFalta = false, ancla }: { etiqueta: string valor: string | null nota?: string /** La nota es un error (p. ej. compra anterior a la matriculación): se pinta en rojo. */ notaFalta?: boolean ancla: string }",
+          "retorno": null,
+          "linea": 2171,
+          "resumen": "Un dato que se edita ARRIBA: aquí solo se lee. Vacío = aviso rojo, nunca un valor inventado."
+        },
+        {
+          "nombre": "Verificacion",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ grupos, completa }: { grupos: GrupoVerificacion[]; completa: boolean }",
+          "retorno": null,
+          "linea": 2193
         },
         {
           "nombre": "Contador",
@@ -91420,7 +91446,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 1995
+          "linea": 2229
         },
         {
           "nombre": "Precios",
@@ -91428,7 +91454,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId, actual, familiaAllianz }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. ",
           "retorno": null,
-          "linea": 2014
+          "linea": 2248
         },
         {
           "nombre": "PreciosVarianteAuto",
@@ -91436,7 +91462,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 2131,
+          "linea": 2365,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (10/10/2026, oportunidad de AUTO; hermano de `PreciosVarianteMoto`): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con e"
         }
       ],
@@ -91446,7 +91472,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c0004af7bdf2"
+      "hash": "f9ae1f4692b3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/datos-cotizador.ts",
@@ -91489,6 +91515,64 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "b8c584fb58fb"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/verificacion-embebido.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lógica PURA (sin JSX) de la «Verificación antes de pedir precio» del cotizador auto embebido (13/10/2026). La importan `AutoNuevo.tsx` y su test directamente.",
+      "exporta": [
+        "anclaInterviniente",
+        "anclaFiguraAqui",
+        "gruposVerificacion",
+        "verificacionCompleta"
+      ],
+      "funciones": [
+        {
+          "nombre": "anclaInterviniente",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "rol: 'tomador' | RolExtra",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "anclaFiguraAqui",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "rol: RolExtra",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "estado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "falta: boolean",
+          "retorno": "EstadoVerificacion",
+          "linea": 74
+        },
+        {
+          "nombre": "gruposVerificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaVerificacion",
+          "retorno": "GrupoVerificacion[]",
+          "linea": 80,
+          "resumen": "PURA: la checklist «Verificación antes de pedir precio» en 3 grupos y en este orden: figuras, riesgo (vehículo) e historial. Cada ítem ✓/✗ sale de los mismos booleanos que apagan el botón (`faltaAlgo`"
+        },
+        {
+          "nombre": "verificacionCompleta",
+          "kind": "function",
+          "exportada": true,
+          "params": "grupos: GrupoVerificacion[]",
+          "retorno": "boolean",
+          "linea": 163,
+          "resumen": "Todo en ✓ (los avisos no bloquean). Sin grupos (pantalla completa) no hay verificación que exigir."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f4f84874163a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/Cabecera.tsx",
@@ -96191,7 +96275,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "string",
-          "linea": 67,
+          "linea": 70,
           "resumen": "El nombre del bloque del objeto del riesgo en la pantalla, para decir qué hay a medias arriba."
         },
         {
@@ -96200,13 +96284,13 @@
           "exportada": true,
           "params": "e: { /** El bloque del objeto (vehículo, vivienda…) tiene una edición a medias. */ editandoObjeto: boolean /** Su nombre en pantalla (`bloqueObjetoDeRamo`). Sin él, «Datos del vehículo» (el de siempre). */ objeto?: string editandoFiguras: b",
           "retorno": "string | null",
-          "linea": 75,
+          "linea": 78,
           "resumen": "Por qué AHORA no se puede pedir precio desde el cotizador embebido (`null` = nada lo impide). Orden: lo que el corredor tiene a medias arriba manda (así sabe qué cerrar); después, la relectura en curs"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f8c276c2e122"
+      "hash": "916389dd2f9e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cotizador-hogar.ts",
@@ -96437,7 +96521,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "75b14d570744"
+      "hash": "6ca60a6ea2de"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/duplicar-tomador.ts",
@@ -96661,7 +96745,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "566cc5835335"
+      "hash": "72fcbcc7eaf3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/HistorialRiesgo.tsx",
@@ -96691,7 +96775,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7a1803a7251c"
+      "hash": "e1e754540d74"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/HistorialVariantes.tsx",
@@ -97102,7 +97186,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22a4331651f9"
+      "hash": "ce940c046cd7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PedirPrecioEmbebido.tsx",
@@ -97503,7 +97587,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b0c667ce8b48"
+      "hash": "5cbecdd999c7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -205401,7 +205485,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4539,
-    "funciones": 16215
+    "archivos": 4540,
+    "funciones": 16223
   }
 }
