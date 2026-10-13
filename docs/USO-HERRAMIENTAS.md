@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 311 | 42.336 | 35.190.826 | 0 | 0 |
-| `otro` | 307 | 10.218 | 25.718.652 | 15.334.019 | 0 |
-| `lectura-directa` | 269 | 7.158 | 23.296.838 | 0 | 0 |
-| `mcp:github` | 274 | 6.087 | 4.936.653 | 52.605.850 | 91 |
+| `bash` | 311 | 42.538 | 35.351.825 | 0 | 0 |
+| `otro` | 307 | 10.236 | 25.794.067 | 15.334.019 | 0 |
+| `lectura-directa` | 269 | 7.167 | 23.315.993 | 0 | 0 |
+| `mcp:github` | 274 | 6.100 | 4.940.392 | 52.605.850 | 91 |
 | `sql` | 193 | 4.117 | 2.073.488 | 2.351.230 | 18 |
-| `escritura` | 201 | 4.084 | 60.522.011 | 0 | 0 |
+| `escritura` | 202 | 4.110 | 60.687.813 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 42 | 1.134 | 1.125.098 | 0 | 70 |
 | `mcp:Booking-com` | 36 | 1.004 | 4.179.478 | 0 | 0 |
 | `mcp:Vercel` | 64 | 659 | 920.520 | 204.477 | 19 |
-| `agente:general-purpose` | 91 | 504 | 312.615 | 10.215.555 | 0 |
+| `agente:general-purpose` | 91 | 505 | 313.359 | 10.223.679 | 0 |
 | `mcp:Google_Drive` | 21 | 356 | 404.813 | 0 | 37 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
 | `mcp:Supabase` | 115 | 337 | 48.025 | 3.415 | 4 |
-| `mcp:claude-code-remote` | 30 | 254 | 20.549 | 16.312 | 0 |
-| `agente:agente-architect` | 56 | 203 | 144.574 | 5.936.469 | 0 |
+| `mcp:claude-code-remote` | 31 | 260 | 20.851 | 16.312 | 0 |
+| `agente:agente-architect` | 56 | 207 | 147.139 | 5.941.105 | 0 |
 | `mcp:Google-Drive` | 21 | 131 | 117.731 | 0 | 2 |
 | `agente:agente-mecanico` | 40 | 101 | 66.484 | 5.917.719 | 0 |
 | `agente:rastreador-codigo` | 45 | 77 | 24.123 | 653.355 | 0 |

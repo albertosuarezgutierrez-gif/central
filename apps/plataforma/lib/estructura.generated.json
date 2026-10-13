@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-13T15:14:15Z",
+  "generadoEn": "2026-10-13T16:18:47Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 35
+        "evidencias": 42
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "no",
@@ -4219,6 +4219,8 @@
       "/api/operador/tarificador/emision/autorizar",
       "/api/operador/tarificador/emision/avisos",
       "/api/operador/tarificador/encolar",
+      "/api/operador/tarificador/exploraciones",
+      "/api/operador/tarificador/exploraciones/[id]",
       "/api/operador/tarificador/fichas",
       "/api/operador/tarificador/fichas/[id]",
       "/api/operador/tarificador/grabaciones",
@@ -4260,6 +4262,8 @@
       "/api/publico/recaptacion/baja",
       "/api/tarificador/emision/canje",
       "/api/tarificador/emision/resultado",
+      "/api/tarificador/explorador/cierre",
+      "/api/tarificador/explorador/paso",
       "/api/tarificador/formador/cierre",
       "/api/tarificador/formador/confirmar",
       "/api/tarificador/formador/conocimiento",
@@ -5257,6 +5261,8 @@
       "/api/correduria/tarificador/coberturas",
       "/api/correduria/tarificador/emision",
       "/api/correduria/tarificador/encolar",
+      "/api/correduria/tarificador/exploraciones",
+      "/api/correduria/tarificador/exploraciones/[id]",
       "/api/correduria/tarificador/fichas",
       "/api/correduria/tarificador/fichas/[id]",
       "/api/correduria/tarificador/grabaciones",
@@ -5846,6 +5852,8 @@
       "seguros.tarificador_coberturas_presupuesto",
       "seguros.tarificador_conocimiento",
       "seguros.tarificador_elecciones",
+      "seguros.tarificador_exploracion_pasos",
+      "seguros.tarificador_exploraciones",
       "seguros.tarificador_fichas",
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
@@ -6869,7 +6877,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1678,
+    "apis": 1684,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
