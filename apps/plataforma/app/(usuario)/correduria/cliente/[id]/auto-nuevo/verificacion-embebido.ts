@@ -1,5 +1,7 @@
-// Lógica PURA (sin JSX) de la «Verificación antes de pedir precio» del cotizador auto embebido (13/10/2026).
-// La importan `AutoNuevo.tsx` y su test directamente.
+// Lógica PURA (sin JSX) de la «Verificación antes de pedir precio» del cotizador embebido (13/10/2026: auto; el mismo
+// día, moto con `ramo: 'moto'`). La importan `AutoNuevo.tsx`, `../moto-nuevo/CotizadorMoto.tsx` y sus tests.
+// Moto (campos de Avant2, `apps/asegura/lib/codeoscopic/peticion-moto.ts`): SIN conductor ocasional ni remolque, CON
+// experiencia de conducción (y el código de la moto anterior si viene de otra moto).
 import { ultimosDigitosPoliza, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import type { RolExtra } from '../../../oportunidad/[id]/variante'
 
@@ -11,6 +13,8 @@ export const ANCLA = {
   historial: 'historial-riesgo',
   tomadorAqui: 'cotizador-tomador',
   seguroAqui: 'cotizador-seguro-actual',
+  /** Moto: la experiencia de conducción (y el código de la moto anterior), que se elige en el propio cotizador. */
+  experienciaAqui: 'cotizador-experiencia',
 } as const
 export const anclaInterviniente = (rol: 'tomador' | RolExtra) => `interviniente-${rol}`
 export const anclaFiguraAqui = (rol: RolExtra) => `cotizador-figura-${rol}`
@@ -28,6 +32,8 @@ export type ItemVerificacion = {
 }
 export type GrupoVerificacion = { titulo: string; items: ItemVerificacion[] }
 export type EntradaVerificacion = {
+  /** Sin él, auto (el de siempre). Moto cambia el rótulo del objeto y admite `faltaMotoAnterior` / `ocasionalIgnorado`. */
+  ramo?: 'auto' | 'moto'
   tomador: {
     empresa: boolean
     /** No se pudo precalificar la ficha: no se sabe qué falta (el servidor corta antes de gastar). */
@@ -52,7 +58,13 @@ export type EntradaVerificacion = {
   figuraRepetida: boolean
   ocasionalDuplicado: boolean
   personaLibreIncompleta: boolean
-  vehiculo: { faltaVersion: boolean; faltaMatriculacion: boolean; faltaGaraje: boolean; kmInvalido: boolean; compraInvalida: boolean }
+  /** Moto: el riesgo trae un conductor ocasional que la compañía no admite en moto (no se declara). Aviso, no bloquea. */
+  ocasionalIgnorado?: boolean
+  vehiculo: {
+    faltaVersion: boolean; faltaMatriculacion: boolean; faltaGaraje: boolean; kmInvalido: boolean; compraInvalida: boolean
+    /** Moto: experiencia «viene de otra moto» sin el código Base7 de esa moto (`previousMotorcycle.code`, obligatorio). */
+    faltaMotoAnterior?: boolean
+  }
   historial: {
     tieneSeguro: boolean
     faltaCompania: boolean
@@ -125,6 +137,7 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
   if (e.figuraRepetida) figuras.push({ clave: 'figura-repetida', texto: 'La misma persona es conductor habitual y ocasional', estado: 'falta', nota: 'quita el ocasional en «Intervinientes»', ancla: ANCLA.intervinientes, arriba: true })
   if (e.ocasionalDuplicado) figuras.push({ clave: 'ocasional-duplicado', texto: 'El conductor ocasional tiene el mismo DNI que el habitual', estado: 'falta', ancla: ANCLA.intervinientes, arriba: true })
   if (e.personaLibreIncompleta) figuras.push({ clave: 'persona-libre', texto: 'Faltan datos de un propietario o conductor distinto del tomador', estado: 'falta', ancla: ANCLA.intervinientes, arriba: true })
+  if (e.ocasionalIgnorado) figuras.push({ clave: 'ocasional-ignorado', texto: 'El riesgo tiene un conductor ocasional', estado: 'aviso', nota: 'en moto la compañía no lo admite: esta cotización no lo declara', ancla: ANCLA.intervinientes, arriba: true })
 
   const v = e.vehiculo
   const vehiculo: ItemVerificacion[] = [
@@ -134,6 +147,10 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
     { clave: 'km', texto: 'Kilómetros al año', estado: estado(v.kmInvalido), ancla: ANCLA.vehiculo, arriba: true, nota: v.kmInvalido ? 'no se entiende como kilometraje' : undefined },
     { clave: 'compra', texto: 'Fecha de compra', estado: estado(v.compraInvalida), ancla: ANCLA.vehiculo, arriba: true, nota: v.compraInvalida ? 'no puede ser anterior a la matriculación' : undefined },
   ]
+  // Moto: con experiencia en OTRA moto, Avant2 exige su código (`previousMotorcycle.code`); se teclea en este cotizador.
+  if (v.faltaMotoAnterior !== undefined) {
+    vehiculo.push({ clave: 'moto-anterior', texto: 'Experiencia de conducción (código de la moto anterior si viene de otra)', estado: estado(v.faltaMotoAnterior), ancla: ANCLA.experienciaAqui, nota: v.faltaMotoAnterior ? 'falta el código Base7 de la moto anterior' : undefined })
+  }
 
   const h = e.historial
   const historial: ItemVerificacion[] = []
@@ -164,7 +181,7 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
 
   const grupos: GrupoVerificacion[] = [
     { titulo: '1 · Figuras (tomador e intervinientes)', items: figuras },
-    { titulo: '2 · Riesgo: el vehículo', items: vehiculo },
+    { titulo: e.ramo === 'moto' ? '2 · Riesgo: la moto' : '2 · Riesgo: el vehículo', items: vehiculo },
     { titulo: '3 · Historial y bonificaciones', items: historial },
   ]
   if (e.faltaAlgo && verificacionCompleta(grupos)) {
@@ -265,4 +282,27 @@ export function rotuloVacioResumen(n: NivelVacio): { texto: string; color: strin
   return n === 'aviso'
     ? { texto: 'Sin dato — complétalo arriba', color: 'var(--warning)' }
     : { texto: 'Falta — complétalo arriba', color: 'var(--negative)' }
+}
+
+/**
+ * PURA (13/10/2026, moto; misma regla que el cálculo en línea de `AutoNuevo.tsx`): los años del historial que manda el
+ * cotizador embebido. Lo DECLARADO arriba manda (asegurado / en la compañía); lo que no viene de arriba (lo leído de su
+ * póliza o el máximo) se TOPA a los años asegurado: Avant2 exige en la compañía y sin siniestros ≤ asegurado y ese 400
+ * se paga. Lo declarado arriba NO se topa: si es incoherente, la checklist lo marca ✗ y se corrige arriba.
+ */
+export function historialConTopes<T extends { aniosAsegurado: number; aniosEnCompania: number; aniosSinSiniestros: number }>(
+  leido: T,
+  arriba: Partial<HistorialDeclaradoRiesgo> | null,
+): T & { origenAsegurado: OrigenDato; origenEnCompania: OrigenDato } {
+  const aseguradoArriba = arriba?.aniosAsegurado ?? null
+  const enCompaniaArriba = arriba?.aniosEnCompania ?? null
+  const asegurado = aseguradoArriba ?? leido.aniosAsegurado
+  return {
+    ...leido,
+    aniosAsegurado: asegurado,
+    aniosEnCompania: enCompaniaArriba ?? Math.min(leido.aniosEnCompania, asegurado),
+    aniosSinSiniestros: Math.min(leido.aniosSinSiniestros, asegurado),
+    origenAsegurado: aseguradoArriba !== null ? 'arriba' : 'leido',
+    origenEnCompania: enCompaniaArriba !== null ? 'arriba' : 'leido',
+  }
 }

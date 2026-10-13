@@ -1,11 +1,11 @@
 'use client'
 
-// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · presupuestos P1…Pn · historial de variantes.
+// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · parrilla de precios Avant2 ↔ bot (13/10/2026) · presupuestos P1…Pn · historial de variantes.
 // Tras cualquier cambio de figuras se RELEE el riesgo entero del puerto: lo que se pinta es siempre
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { Badge, BtnLink, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -24,10 +24,12 @@ import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
+import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
+import type { LadoBot } from './parrilla-precios'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
-import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
+import { avisoRamoSinTarifa, companiasDisponibles, type TrabajoCompania } from '@/lib/presupuestos-companias'
 
 export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy: string }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
@@ -48,6 +50,13 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   const alEditarObjeto = useCallback((b: boolean) => setEditandoObjeto(b), [])
   const alEditarFiguras = useCallback((b: boolean) => setEditandoFiguras(b), [])
   const op = riesgo.oportunidad
+  // «Parrilla de precios»: el lado bot llega de la MISMA lectura (y sondeo) de «Presupuestos de compañías»; sin bot
+  // para el ramo, ese bloque no se pinta ni lee, y el lado es «no aplica». `null` = aún leyéndose.
+  const botsDelRamo = useMemo(() => companiasDisponibles(op.ramo).map((c) => c.compania), [op.ramo])
+  const [ladoBot, setLadoBot] = useState<LadoBot | null>(() => (botsDelRamo.length === 0 ? { estado: 'no_aplica' } : null))
+  const alLeerBots = useCallback((l: { estado: 'ok'; trabajos: TrabajoCompania[] } | { estado: 'error'; texto: string }) => {
+    setLadoBot(l.estado === 'ok' ? { estado: 'ok', disponibles: botsDelRamo, trabajos: trabajosParaParrilla(l.trabajos) } : { estado: 'sin_leer', motivo: l.texto })
+  }, [botsDelRamo])
 
   async function recargar(texto?: string) {
     setRecargando(true)
@@ -263,6 +272,10 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         )}
       </section>
 
+      {/* UNA parrilla por oportunidad (13/10/2026): Avant2 frente al bot, por compañía. Solo compara; los precios con su
+          «Emitir», PDF y traza siguen en «Presupuestos de compañías» y en «Presupuestos de este riesgo» (P1…Pn). */}
+      <ParrillaPrecios oportunidadId={op.id} claveVariantes={riesgo.variantes.map((v) => v.id).join(',')} bot={ladoBot} />
+
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
 
       {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
@@ -271,6 +284,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         clienteId={op.clienteId}
         ramo={op.ramo}
         riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
+        onLectura={alLeerBots}
       />
 
       <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />
