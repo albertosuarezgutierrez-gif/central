@@ -167,26 +167,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 317 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 318 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 307 | 40.817 | 33.470.380 | 0 | 0 |
-| `otro` | 303 | 9.931 | 25.266.431 | 15.039.977 | 0 |
-| `lectura-directa` | 266 | 6.950 | 22.924.948 | 0 | 0 |
-| `mcp:github` | 271 | 6.012 | 4.899.885 | 52.355.878 | 90 |
-| `escritura` | 200 | 4.016 | 59.232.923 | 0 | 0 |
-| `sql` | 192 | 3.976 | 1.987.798 | 2.351.230 | 17 |
+| `bash` | 308 | 40.908 | 33.520.041 | 0 | 0 |
+| `otro` | 304 | 9.957 | 25.320.964 | 15.047.154 | 0 |
+| `lectura-directa` | 267 | 6.953 | 22.925.509 | 0 | 0 |
+| `mcp:github` | 271 | 6.021 | 4.902.039 | 52.355.878 | 90 |
+| `escritura` | 200 | 4.017 | 59.241.261 | 0 | 0 |
+| `sql` | 192 | 3.988 | 1.997.316 | 2.351.230 | 17 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 42 | 1.134 | 1.125.098 | 0 | 70 |
 | `mcp:Booking-com` | 35 | 976 | 4.073.762 | 0 | 0 |
-| `mcp:Vercel` | 64 | 629 | 911.259 | 204.477 | 16 |
-| `agente:general-purpose` | 88 | 456 | 285.713 | 8.449.145 | 0 |
+| `mcp:Vercel` | 64 | 631 | 911.663 | 204.477 | 17 |
+| `agente:general-purpose` | 89 | 458 | 287.089 | 8.480.094 | 0 |
 | `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
-| `mcp:Supabase` | 115 | 332 | 47.724 | 3.415 | 4 |
-| `mcp:claude-code-remote` | 29 | 226 | 19.280 | 16.312 | 0 |
-| `agente:agente-architect` | 55 | 192 | 136.949 | 5.549.632 | 0 |
+| `mcp:Supabase` | 115 | 333 | 47.728 | 3.415 | 4 |
+| `mcp:claude-code-remote` | 29 | 230 | 19.463 | 16.312 | 0 |
+| `agente:agente-architect` | 55 | 193 | 137.738 | 5.568.083 | 0 |
 | `mcp:Google-Drive` | 21 | 131 | 117.731 | 0 | 2 |
 | `agente:agente-mecanico` | 40 | 99 | 66.122 | 5.917.719 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
