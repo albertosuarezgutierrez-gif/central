@@ -1,13 +1,17 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { ENTRADAS_EXPLORACION } from '@central/module-tarificacion'
 import {
   ENCOLAR_DISPONIBLE,
   ENTRADA_POR_DEFECTO,
   OPCIONES_NUEVA,
   costeExploracion,
+  esEntradaNueva,
   estadoExploracion,
   leerDetalle,
+  leerEncolar,
   leerLista,
   mensajeError,
   motivoFinTexto,
@@ -94,10 +98,42 @@ test('puedeAprobarMapa: solo con mapa válido, cerrada y sin aprobar ya', () => 
   assert.equal(puedeAprobarMapa({ ...d, estadoMapa: 'descartado' }).ok, false)
 })
 
-test('nueva exploración: lista cerrada = ENTRADAS_EXPLORACION, por defecto Allianz Hogar; encolar aún no existe', () => {
+test('nueva exploración: lista cerrada = ENTRADAS_EXPLORACION, por defecto Allianz Hogar; encolar conectado (fase B)', () => {
   assert.deepEqual(OPCIONES_NUEVA.map((o) => o.entrada).sort(), Object.keys(ENTRADAS_EXPLORACION).sort())
   assert.equal(ENTRADA_POR_DEFECTO, 'allianz:particulares:hogar')
-  assert.equal(ENCOLAR_DISPONIBLE, false)
+  assert.equal(ENCOLAR_DISPONIBLE, true)
+  assert.equal(esEntradaNueva('allianz:particulares:hogar'), true)
+  assert.equal(esEntradaNueva('allianz:particulares:auto'), false)
+  assert.equal(esEntradaNueva(undefined), false)
+})
+
+test('leerEncolar: 503 apagado → «Explorador apagado» (y no es un error de red)', () => {
+  const r = leerEncolar(503, { estado: 'apagado', mensaje: 'el explorador IA está apagado (TARIFICADOR_EXPLORADOR_ACTIVO)' })
+  assert.equal(r.ok, false)
+  assert.ok(!r.ok && r.apagado && r.mensaje.startsWith('Explorador apagado'))
+})
+
+test('leerEncolar: 202 encolada (lanzada o en cola), 409 con motivo, 503 sin «apagado» no es apagado', () => {
+  assert.deepEqual(leerEncolar(202, { estado: 'encolado', trabajoId: 't1', lanzado: true }), { ok: true, trabajoId: 't1', lanzado: true, texto: 'Exploración encolada y en marcha.' })
+  const cola = leerEncolar(202, { estado: 'encolado', trabajoId: 't2', lanzado: false })
+  assert.ok(cola.ok && !cola.lanzado)
+  assert.equal(leerEncolar(202, { estado: 'raro' }).ok, false)
+  const r409 = leerEncolar(409, { estado: 'rechazado', motivo: 'exploracion_viva' })
+  assert.ok(!r409.ok && !r409.apagado && r409.mensaje.includes('exploracion_viva'))
+  const sinEsquema = leerEncolar(503, { estado: 'error', mensaje: 'explorador_sin_esquema' })
+  assert.ok(!sinEsquema.ok && !sinEsquema.apagado)
+})
+
+test('cableado: la pantalla llama al POST de plataforma y la ruta exige correduría y reenvía al encolar de asegura', () => {
+  const ruta = readFileSync(join(import.meta.dirname, '..', 'app/api/correduria/tarificador/exploraciones/route.ts'), 'utf8')
+  const post = ruta.slice(ruta.indexOf('export async function POST'))
+  assert.ok(post.indexOf('exigirCorreduria()') >= 0 && post.indexOf('exigirCorreduria()') < post.indexOf('encolarExploracionAsegura('), 'POST sin exigirCorreduria antes de reenviar')
+  assert.match(post, /esEntradaNueva\(b\?\.entrada\)/)
+  const red = readFileSync(join(import.meta.dirname, 'tarificador-exploraciones-asegura.ts'), 'utf8')
+  assert.match(red, /puerto\('exploracion', \{ method: 'POST'/)
+  const ui = readFileSync(join(import.meta.dirname, '..', 'app/(usuario)/correduria/tarificador/exploraciones/Exploraciones.tsx'), 'utf8')
+  assert.match(ui, /pedir\(API, \{ method: 'POST'/)
+  assert.match(ui, /leerEncolar\(r\.status, r\.json\)/)
 })
 
 test('refCosteExplorador: la misma clave que graba la pasarela', () => {

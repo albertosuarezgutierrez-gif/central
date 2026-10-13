@@ -16,3 +16,8 @@ export function leerExploracionAsegura(id: string) {
 export function revisarExploracionAsegura(id: string, estado: 'revisado' | 'descartado' | 'borrador') {
   return puerto(base(id), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ estado }) }, 15_000)
 }
+
+/** Encola una exploración (fase B). Asegura re-exige sus cerrojos; aquí solo viaja la entrada de la lista cerrada. */
+export function encolarExploracionAsegura(entrada: string) {
+  return puerto('exploracion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entrada }) }, 30_000)
+}

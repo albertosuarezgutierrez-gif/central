@@ -186,3 +186,22 @@ test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo 
   const vercel = JSON.parse(readFileSync(join(APP, 'vercel.json'), 'utf8')) as { crons: { path: string }[] }
   assert.ok(vercel.crons.some((c) => c.path === '/api/cron/tarificador-cola'), 'la cola no tiene cron propio (solo barría el de renovaciones)')
 })
+
+test('resultado «explorado» (13/10/2026): solo con un motivo de fin de la lista; nada de ofertas ni texto libre', () => {
+  const id = '00000000-0000-4000-8000-000000000001'
+  const r = leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'resultado', botVersion: '0.1.0' })
+  assert.ok(r.ok && r.r.tipo === 'explorado' && r.r.motivoFin === 'resultado' && r.r.botVersion === '0.1.0')
+  assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'cualquier cosa' }).ok, false)
+  assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado' }).ok, false)
+})
+
+test('registrarResultado: una exploración no devuelve ofertas, solo ella termina «explorado» y sus fallos no guardan captura', () => {
+  const f = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  assert.match(f, /if \(deExploracion && r\.tipo === 'ok'\) return \{ res: \{ estado: 'conflicto'/)
+  assert.match(f, /if \(!deExploracion && r\.tipo === 'explorado'\) return \{ res: \{ estado: 'conflicto'/)
+  assert.match(f, /const evidencia = deExploracion \? null : \{ trabajo: t, captura: r\.captura, html: r\.html \}/)
+  // La cola filtra por modo (la exploración solo con su interruptor) y el worker declara lo que sabe hacer.
+  assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
+  assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
+  assert.match(f, /const modo = f \? modoParaWorker\(f\.modo, modosWorker\) : null/)
+})

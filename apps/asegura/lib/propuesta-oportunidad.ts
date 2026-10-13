@@ -40,6 +40,7 @@ export async function cargarPropuestaOportunidad(correduriaId: string, oportunid
     from seguros.tarificacion_trabajos t
     left join seguros.tarificaciones x on x.id = t.tarificacion_id and x.correduria_id = t.correduria_id
     where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
     order by t.created_at desc
     limit ${MAX_TRABAJOS}`
   const trabajos: TrabajoParaPropuesta[] = filas.map((f) => ({

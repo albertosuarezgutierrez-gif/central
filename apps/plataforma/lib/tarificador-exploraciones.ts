@@ -172,8 +172,36 @@ export const OPCIONES_NUEVA = [
 export const ENTRADA_POR_DEFECTO = 'allianz:particulares:hogar'
 
 /**
- * ¿Existe en asegura el endpoint que encola una exploración? Hoy NO: el worker aún no ejecuta el modo `exploracion`
- * (fase B) y `modoParaWorker` no lo sirve. Mientras sea `false` el botón «Nueva exploración» va deshabilitado.
+ * ¿Existe en asegura el endpoint que encola una exploración? SÍ desde la fase B (13/10/2026):
+ * `POST /api/operador/tarificador/exploracion`, que plataforma alcanza por `POST /api/correduria/tarificador/exploraciones`.
+ * Lo que decide si de verdad arranca es asegura (`TARIFICADOR_RPA_ACTIVO` + `TARIFICADOR_EXPLORADOR_ACTIVO` + integración):
+ * si está apagado responde 503 `apagado` y la pantalla dice «Explorador apagado».
  */
-export const ENCOLAR_DISPONIBLE = false
-export const TEXTO_ENCOLAR_PENDIENTE = 'pendiente fase B'
+export const ENCOLAR_DISPONIBLE = true
+
+/** ¿La entrada es de la lista cerrada? (la ruta de plataforma no reenvía otra cosa). */
+export const esEntradaNueva = (v: unknown): v is (typeof OPCIONES_NUEVA)[number]['entrada'] =>
+  typeof v === 'string' && OPCIONES_NUEVA.some((o) => o.entrada === v)
+
+export type ResultadoEncolar =
+  | { ok: true; trabajoId: string; lanzado: boolean; texto: string }
+  | { ok: false; apagado: boolean; mensaje: string }
+
+/**
+ * Lee la respuesta de encolar. 503 `apagado` (RPA o explorador) → «Explorador apagado» con el interruptor que dice asegura.
+ * 202 → encolada (y si la máquina arrancó ya o queda en cola). Lo demás, con `mensajeError` (+ el `motivo` de un 409).
+ */
+export function leerEncolar(status: number, json: unknown): ResultadoEncolar {
+  const o = obj(json)
+  if (status === 503 && o?.estado === 'apagado') {
+    const detalle = typeof o.mensaje === 'string' ? ` (${o.mensaje})` : ''
+    return { ok: false, apagado: true, mensaje: `Explorador apagado${detalle}. No se ha encolado nada.` }
+  }
+  if (status >= 200 && status < 300) {
+    if (o?.estado !== 'encolado' || typeof o.trabajoId !== 'string') return { ok: false, apagado: false, mensaje: 'La respuesta de asegura no tiene la forma esperada.' }
+    const lanzado = o.lanzado === true
+    return { ok: true, trabajoId: o.trabajoId, lanzado, texto: lanzado ? 'Exploración encolada y en marcha.' : 'Exploración encolada: arrancará cuando haya hueco.' }
+  }
+  if (status === 409 && typeof o?.motivo === 'string') return { ok: false, apagado: false, mensaje: `Nueva exploración: rechazada (${o.motivo}).` }
+  return { ok: false, apagado: false, mensaje: mensajeError(status, json, 'Nueva exploración') ?? 'Nueva exploración: no ha ido bien.' }
+}
