@@ -1,21 +1,21 @@
 {
  "sesion": "c0fbd684-f4df-52f6-ad9e-cefd931baeb0",
  "inicio": "2026-10-12T07:02:38.930Z",
- "fin": "2026-10-13T12:28:52.989Z",
- "llamadas": 101,
+ "fin": "2026-10-13T12:56:52.354Z",
+ "llamadas": 163,
  "categorias": {
   "otro": {
-   "llamadas": 20,
-   "chars_in": 15350,
-   "chars_out": 63120,
+   "llamadas": 44,
+   "chars_in": 15520,
+   "chars_out": 256030,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 5828,
+   "archivos_citados": 2,
+   "chars_citados": 1005729,
    "tools": {
-    "ToolSearch": 10,
+    "ToolSearch": 12,
     "SubagentHandback": 5,
     "SendMessage": 2,
-    "ReadNotifications": 2,
+    "ReadNotifications": 24,
     "Skill": 1
    }
   },
@@ -44,14 +44,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 3,
-   "chars_in": 7119,
-   "chars_out": 4491,
+   "llamadas": 4,
+   "chars_in": 9539,
+   "chars_out": 7106,
    "errores": 0,
-   "archivos_citados": 4,
-   "chars_citados": 20849,
+   "archivos_citados": 5,
+   "chars_citados": 1021149,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "mcp:Google_Drive": {
@@ -67,28 +67,29 @@
    }
   },
   "bash": {
-   "llamadas": 32,
-   "chars_in": 23802,
-   "chars_out": 81555,
+   "llamadas": 64,
+   "chars_in": 41054,
+   "chars_out": 265420,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 32
+    "Bash": 64
    }
   },
   "mcp:github": {
-   "llamadas": 4,
-   "chars_in": 2005,
-   "chars_out": 3312,
+   "llamadas": 9,
+   "chars_in": 4074,
+   "chars_out": 18587,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 1,
+   "chars_citados": 999889,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
-    "mcp__github__pull_request_read": 1,
-    "mcp__github__update_pull_request": 1
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__actions_list": 1
    }
   },
   "escritura": {
