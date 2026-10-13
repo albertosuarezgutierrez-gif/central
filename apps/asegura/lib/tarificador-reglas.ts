@@ -37,6 +37,63 @@ export function rpaActivo(env: Record<string, string | undefined>): boolean {
 export const REGION_FLY = 'cdg'
 /** Lease de un trabajo `en_curso`: el worker tiene 4 min de tope global; 6 min dan margen al arranque. */
 export const LEASE_MS = 6 * 60_000
+// ─── Cola: lease, huecos y duplicados (13/10/2026) ───────────────────────────
+// La decisión vive aquí (pura); `tarificador.ts` solo trae las filas y aplica lo decidido.
+
+/**
+ * ¿El lease de un trabajo `en_curso` ya venció? `null` (no debería existir: CHECK `trabajo_en_curso_con_lease`)
+ * = «no se sabe» → NO vencido: el estado conservador es seguir contándolo como ocupado antes que lanzar un
+ * segundo bot con la misma credencial.
+ */
+export function leaseVencido(leaseHasta: Date | null, ahora: Date): boolean {
+  if (!leaseHasta || Number.isNaN(leaseHasta.getTime())) return false
+  return leaseHasta.getTime() <= ahora.getTime()
+}
+
+/** Reparte los `en_curso` de una compañía: los vivos ocupan hueco; los vencidos se dan por fallo de infra. */
+export function repartirEnCurso<T extends { leaseHasta: Date | null }>(filas: readonly T[], ahora: Date): { vivos: T[]; vencidos: T[] } {
+  const vivos: T[] = []
+  const vencidos: T[] = []
+  for (const f of filas) (leaseVencido(f.leaseHasta, ahora) ? vencidos : vivos).push(f)
+  return { vivos, vencidos }
+}
+
+/** Huecos libres bajo `max_concurrencia`. Sin integración autorizada (`null`) o con un tope raro → 0 (fail-closed). */
+export function huecosLibres(max: number | null, vivos: number): number {
+  if (max === null || !Number.isInteger(max) || max < 1) return 0
+  return Math.max(0, max - Math.max(0, vivos))
+}
+
+/**
+ * Clave de deduplicación al ENCOLAR: un mismo cliente no pide dos veces el mismo riesgo a la misma compañía y ramo.
+ * El riesgo NO va en la clave (se compara en SQL como `jsonb`, que ya es igualdad semántica: no importa el orden de
+ * las claves); la clave solo serializa a los que encolan lo mismo (`pg_advisory_xact_lock(hashtext(clave))`).
+ */
+export function claveEncolar(p: { correduriaId: string; clienteId: string; compania: string; ramo: string }): string {
+  return ['tarificador:encolar', p.correduriaId, p.clienteId, p.compania, p.ramo].join(':')
+}
+
+/** Estados en los que un trabajo previo cuenta como «ese mismo encargo sigue vivo» y el nuevo es duplicado. */
+export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable'] as const
+
+/**
+ * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
+ * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
+ * devolverá a `pendiente`: sería el mismo encargo dos veces). Lo terminado, cancelado o pendiente de una persona, no.
+ * Un trabajo de EMISIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
+ */
+export function bloqueaDuplicado(
+  f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null },
+  ahora: Date,
+  maxIntentos: number,
+): boolean {
+  if (f.modo === 'emision') return false
+  if (f.estado === 'pendiente') return true
+  if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
+  if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
+  return false
+}
+
 /** Techo de cada PDF/captura (la tabla `documentos` admite 10 MB; el cuerpo de Vercel, ~4,5 MB). */
 export const MAX_BYTES_ADJUNTO = 4 * 1024 * 1024
 /** Techo del HTML de evidencia (se guarda como documento; más es ruido). */

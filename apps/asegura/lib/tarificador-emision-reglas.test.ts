@@ -151,7 +151,9 @@ test('lease vencido tras canjear → INCIERTO; emitida tardía se guarda; no se 
   const mf = barrido.slice(barrido.indexOf('async function marcarFallo'), barrido.indexOf('// ─── Barrido'))
   assert.match(mf, /incierta = autorizacionSinResolver\(/)
   assert.match(mf, /incierta \? `\$\{MENSAJE_EMISION_INCIERTA\}/)
-  assert.match(mf, /set resultado = 'incierto' where id = \$\{a!\.id\}::uuid and resultado is null/)
+  assert.match(mf, /set resultado = 'incierto' where id = \$\{autorizacionIncierta\}::uuid and resultado is null/)
+  assert.match(mf, /if \(tocada && autorizacionIncierta\)/, 'el «incierto» solo si el UPDATE tocó la fila')
+  assert.match(mf, /if \(tocada && deEmision\)/, 'el reset de emision_avisada_at solo si el UPDATE tocó la fila')
 
   const src = fuente('tarificador-emision.ts')
   const reg = src.slice(src.indexOf('export async function registrarResultadoEmision'), src.indexOf('// ─── 5.'))

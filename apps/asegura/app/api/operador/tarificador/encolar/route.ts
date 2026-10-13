@@ -59,7 +59,8 @@ export const POST = auditado(async (req: Request) => {
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
+    // `duplicado: true` = ya había un trabajo vivo con este mismo riesgo: se devuelve ESE y no se crea otro (13/10/2026).
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/encolar', e) }, { status: 503 })
   }

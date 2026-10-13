@@ -27,7 +27,19 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
-import { LEASE_MS, configFly, peticionMaquina, rpaActivo, type ConfigFly, type ResultadoWorker } from './tarificador-reglas'
+import {
+  ESTADOS_DUPLICADO,
+  LEASE_MS,
+  bloqueaDuplicado,
+  claveEncolar,
+  configFly,
+  huecosLibres,
+  peticionMaquina,
+  repartirEnCurso,
+  rpaActivo,
+  type ConfigFly,
+  type ResultadoWorker,
+} from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 type Db = Pick<Tx, '$queryRaw' | '$executeRaw'>
@@ -58,7 +70,8 @@ export type EntradaEncolar = {
 }
 
 export type ResultadoEncolar =
-  | { estado: 'encolado'; trabajoId: string }
+  /** `duplicado: true` = ya había un trabajo vivo con el mismo riesgo y se devuelve ESE (no se crea otro). */
+  | { estado: 'encolado'; trabajoId: string; duplicado: boolean }
   | { estado: 'rechazado'; status: number; motivo: string }
 
 export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncolar> {
@@ -93,13 +106,34 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
     if (!pol[0]) return { estado: 'rechazado', status: 404, motivo: 'poliza_no_encontrada' }
   }
 
-  const filas = await prisma.$queryRaw<{ id: string }[]>`
-    insert into seguros.tarificacion_trabajos
-      (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)
-    values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${clienteId}::uuid, ${polizaId}::uuid,
-            ${claveCompania(e.compania)}, ${e.ramo}, ${JSON.stringify(e.riesgo)}::jsonb, ${e.solicitadoPor})
-    returning id::text as id`
-  return { estado: 'encolado', trabajoId: filas[0].id }
+  // Sin duplicados (13/10/2026): mismo cliente + compañía + ramo + riesgo (igualdad `jsonb`) con un trabajo aún vivo →
+  // se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
+  // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
+  const compania = claveCompania(e.compania)
+  const riesgoJson = JSON.stringify(e.riesgo)
+  const cid = clienteId
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
+    const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date }[]>`
+      select t.id::text as id, t.estado, t.lease_hasta, t.intentos, to_jsonb(t)->>'modo' as modo, now() as ahora
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${e.correduriaId}::uuid and t.cliente_id = ${cid}::uuid
+        and t.compania = ${compania} and t.ramo = ${e.ramo}
+        and t.estado = any(${[...ESTADOS_DUPLICADO]}::text[])
+        and t.riesgo = ${riesgoJson}::jsonb
+        and t.oportunidad_id is not distinct from ${e.oportunidadId ?? null}::uuid
+        and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
+      order by t.created_at`
+    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo }, p.ahora, MAX_INTENTOS))
+    if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
+    const filas = await tx.$queryRaw<{ id: string }[]>`
+      insert into seguros.tarificacion_trabajos
+        (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)
+      values (${e.correduriaId}::uuid, ${e.oportunidadId}::uuid, ${cid}::uuid, ${polizaId}::uuid,
+              ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor})
+      returning id::text as id`
+    return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
+  }, { timeout: 15000, maxWait: 10000 })
 }
 
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
@@ -111,7 +145,18 @@ type Reclamado = { id: string; intentos: number }
  * y la integración SIGUE autorizada. El cerrojo consultivo por compañía serializa a dos lanzadores
  * simultáneos (sin él, los dos verían 0 en curso y lanzarían 2 con la misma credencial).
  */
-export async function reclamarSiguiente(correduriaId: string, compania: string): Promise<Reclamado | null> {
+export type ReclamoCola = {
+  trabajo: Reclamado | null
+  /** Máquinas de Fly de los trabajos cuyo lease venció (se dieron por fallo): el llamante las destruye, fuera de la transacción. */
+  maquinasVencidas: string[]
+}
+
+/**
+ * 13/10/2026 (defecto 1): un `en_curso` con lease VENCIDO ya no ocupa hueco. Dentro del mismo cerrojo pasa a fallo de
+ * infra con `marcarFallo` (la política de siempre: `error_reintentable` si quedan intentos, si no `error_definitivo`;
+ * uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido.
+ */
+export async function reclamarSiguiente(correduriaId: string, compania: string): Promise<ReclamoCola> {
   const clave = claveCompania(compania)
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${'tarificador:' + correduriaId + ':' + clave}))`
@@ -120,11 +165,20 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
       from seguros.companias_integracion
       where correduria_id = ${correduriaId}::uuid and compania = ${clave} and activo and modo = 'rpa_autorizada'`
     const max = cupo[0]?.max ?? null
-    if (max === null) return null
-    const vivos = await tx.$queryRaw<{ n: number }[]>`
-      select count(*)::int as n from seguros.tarificacion_trabajos
+    if (max === null) return { trabajo: null, maquinasVencidas: [] }
+    // La hora es la de la BD (la misma que compara `trabajoParaWorker`), no la del servidor de Vercel.
+    const enCurso = await tx.$queryRaw<{ id: string; intentos: number; lease_hasta: Date | null; fly_machine_id: string | null; ahora: Date }[]>`
+      select id::text as id, intentos, lease_hasta, fly_machine_id, now() as ahora from seguros.tarificacion_trabajos
       where correduria_id = ${correduriaId}::uuid and compania = ${clave} and estado = 'en_curso'`
-    if ((vivos[0]?.n ?? 0) >= max) return null
+    const ahora = enCurso[0]?.ahora ?? new Date()
+    const { vivos, vencidos } = repartirEnCurso(enCurso.map((f) => ({ ...f, leaseHasta: f.lease_hasta })), ahora)
+    const maquinasVencidas: string[] = []
+    for (const v of vencidos) {
+      // `marcarFallo` solo toca la fila si SIGUE `en_curso` (un resultado que llegó a la vez gana y esto no hace nada).
+      const f = await marcarFallo(tx, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+      if (f.tocada && v.fly_machine_id) maquinasVencidas.push(v.fly_machine_id)
+    }
+    if (huecosLibres(max, vivos.length) <= 0) return { trabajo: null, maquinasVencidas }
     const leaseHasta = new Date(Date.now() + LEASE_MS)
     const filas = await tx.$queryRaw<Reclamado[]>`
       update seguros.tarificacion_trabajos t
@@ -142,8 +196,8 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
         for update of w skip locked
         limit 1)
       returning t.id::text as id, t.intentos`
-    return filas[0] ?? null
-  })
+    return { trabajo: filas[0] ?? null, maquinasVencidas }
+  }, { timeout: 15000, maxWait: 10000 })
 }
 
 export type DepsLanzador = {
@@ -162,7 +216,9 @@ export async function lanzarPendientes(correduriaId: string, compania: string, d
   const c = configFly(deps.env)
   if (!c.ok) return { ...r, omitido: `fly_sin_configurar: ${c.faltan.join(', ')}` }
   for (let vuelta = 0; vuelta < 5; vuelta++) {
-    const t = await reclamarSiguiente(correduriaId, compania)
+    const { trabajo: t, maquinasVencidas } = await reclamarSiguiente(correduriaId, compania)
+    // Una máquina de lease vencido puede seguir viva con la credencial: se destruye ANTES de lanzar otra.
+    for (const m of maquinasVencidas) await destruirMaquina(c.cfg, m, deps.fetch)
     if (!t) break
     const res = await crearMaquina(c.cfg, t.id, deps.fetch)
     if (res.ok) {
@@ -261,7 +317,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
     if (r.tipo === 'error') {
-      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, conBot ? r.botVersion : null, conBot)
+      const { estado } = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, conBot ? r.botVersion : null, conBot)
       return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
@@ -400,7 +456,7 @@ async function marcarFallo(
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
   botVersion: string | null = null,
   conBotVersion = false,
-): Promise<string> {
+): Promise<{ estado: string; tocada: boolean }> {
   // EMISIÓN (10/10/2026): nunca se reintenta sola (tras el clic, el estado en la compañía es incierto) → requiere_humano,
   // con tipo `emision` (la bandeja no la deja reintentar) y el aviso a Alberto rearmado.
   const modoFila = await db.$queryRaw<{ modo: string | null }[]>`select to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t where t.id = ${id}::uuid`
@@ -408,12 +464,13 @@ async function marcarFallo(
   // Si el token YA se canjeó (autorización consumida sin desenlace), el clic pudo salir: INCIERTO, y la autorización queda
   // marcada `incierto` (bloquea pedir otra emisión del presupuesto hasta que una persona lo resuelva mirando ePAC).
   let incierta = false
+  let autorizacionIncierta: string | null = null
   if (deEmision) {
     const aut = await db.$queryRaw<{ id: string; consumido_at: Date | null; resultado: string | null }[]>`
       select a.id::text as id, a.consumido_at, a.resultado from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = ${id}::uuid`
     const a = aut[0]
     incierta = autorizacionSinResolver(a ? { consumidoAt: a.consumido_at, resultado: a.resultado } : null)
-    if (incierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${a!.id}::uuid and resultado is null`
+    autorizacionIncierta = incierta ? a!.id : null
     const prefijo = incierta ? `${MENSAJE_EMISION_INCIERTA} Detalle: ` : ''
     error = { ...error, tipo: 'emision', mensaje: `${prefijo}[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
   }
@@ -428,8 +485,9 @@ async function marcarFallo(
   }
   // `...error` lleva también los accesorios ya validados del cable (`opcionesVersion`, `inventarioDom`): van al jsonb.
   const err = JSON.stringify({ ...error, html_documento_id: htmlId, en: new Date().toISOString() })
+  let filasTocadas: number
   if (conBotVersion) {
-    await db.$executeRaw`
+    filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
@@ -437,15 +495,18 @@ async function marcarFallo(
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   } else {
-    await db.$executeRaw`
+    filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   }
-  if (deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
-  return estado
+  const tocada = filasTocadas > 0
+  // Los efectos secundarios SOLO si el UPDATE tocó la fila (si un resultado llegó a la vez y ganó, esto no hace nada).
+  if (tocada && autorizacionIncierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${autorizacionIncierta}::uuid and resultado is null`
+  if (tocada && deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
+  return { estado, tocada }
 }
 
 // ─── Barrido (enganchable a un cron existente) ───────────────────────────────
@@ -460,8 +521,8 @@ export type ResumenBarrido = {
 }
 
 /**
- * Barrido de la cola. NO tiene cron propio (no se añade a vercel.json): se llama desde uno de los
- * crons existentes de asegura cuando se encienda el canal. Hace, en orden:
+ * Barrido de la cola. Cron PROPIO cada 5 min (`/api/cron/tarificador-cola`, 13/10/2026) además del de
+ * renovaciones; y al encolar se lanza en el acto (`lanzarPendientes`). Hace, en orden:
  *   1. lease vencido (`en_curso` y `lease_hasta` pasado) → fallo de infra (reintentable una vez) y
  *      destruye la máquina si sigue viva;
  *   2. `error_reintentable` bajo el tope → `pendiente`;
@@ -477,7 +538,8 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
     where correduria_id = ${correduriaId}::uuid and estado = 'en_curso' and lease_hasta < now()`
   const fly = configFly(deps.env)
   for (const v of vencidos) {
-    await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+    const f = await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+    if (!f.tocada) continue // un resultado llegó a la vez y ganó: ni se cuenta ni se destruye la máquina
     if (fly.ok && v.fly_machine_id) await destruirMaquina(fly.cfg, v.fly_machine_id, deps.fetch)
     r.leasesVencidos++
   }
