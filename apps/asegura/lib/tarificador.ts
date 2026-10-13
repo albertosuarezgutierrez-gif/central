@@ -297,6 +297,8 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {
   const rg = t.riesgo
+  // La columna `ramo` del trabajo manda: si el JSON del riesgo dice otra cosa, no se guarda nada con columnas equivocadas.
+  if (rg.ramo !== t.ramo) throw new Error(`tarificador: el riesgo (${String(rg.ramo)}) no casa con el ramo del trabajo (${t.ramo})`)
   // Columnas planas de la tarificación: las de un edificio solo existen en Comunidades; un vehículo (Moto) solo aporta el CP.
   // `null` = no consta (≠ 0): nunca se inventa un metro cuadrado ni un capital para una moto.
   const col =
