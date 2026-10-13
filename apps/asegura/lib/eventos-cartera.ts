@@ -19,6 +19,7 @@ import {
   TIPOS_FUGA,
   decidirRetencion,
   detectarCambios,
+  esBajaHistorica,
   esFugaSinExplicar,
   leerAnulacion,
   planRetencionPorMotivo,
@@ -431,11 +432,11 @@ async function anotarRetencion(correduriaId: string, r: Retencion): Promise<void
 async function describirFugas(db: Consultor, correduriaId: string, claves: string[] | null): Promise<FugaNueva[]> {
   const limite = claves ? claves.length : 100
   const tipos = TIPOS_FUGA as readonly string[]
-  const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null; anulacion: unknown; recibo: string | null }[]>`
+  const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null; anulacion: unknown; recibo: string | null; vencimiento: string | null }[]>`
     select e.id, e.tipo, e.cliente_id, c.nombre, c.apellidos, p.numero_poliza, p.aseguradora, e.datos->>'despues' as despues,
            -- El motivo CIMA de la póliza (puede llegar después que la baja); si no, el que guardó el evento.
            coalesce(p.datos_especificos->'anulacion', jsonb_strip_nulls(jsonb_build_object('motivo', e.datos->>'motivoCima', 'fecha', e.datos->>'fechaAnulacion'))) as anulacion,
-           ur.situacion as recibo
+           ur.situacion as recibo, to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento
     from evento e
     left join clientes c on c.id = e.cliente_id
     left join polizas p on p.id = e.entidad_id
@@ -450,9 +451,12 @@ async function describirFugas(db: Consultor, correduriaId: string, claves: strin
                         and (h.poliza_padre_id = e.entidad_id or h.poliza_origen_id = e.entidad_id))
       and ${claves ? Prisma.sql`e.clave = any(${claves}::text[])` : Prisma.sql`e.estado = 'pendiente'`}
     order by e.created_at desc
-    limit ${limite}`
+    limit ${claves ? limite : limite * 5}`
   const hoy = hoyMadrid()
-  return filas.map((f) => {
+  // Solo en la lista de pendientes: las bajas de hace más de un año son histórico, no «por revisar».
+  // Solo se filtra la lectura; el estado en BD no cambia.
+  const visibles = claves ? filas : filas.filter((f) => !esBajaHistorica(f.tipo, leerAnulacion(f.anulacion)?.fecha ?? f.vencimiento, hoy)).slice(0, limite)
+  return visibles.map((f) => {
     const an = leerAnulacion(f.anulacion)
     const cat = categoriaMotivo(an?.motivo)
     return {

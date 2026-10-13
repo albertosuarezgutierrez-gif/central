@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, leerAnulacion, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo, type Foto, type HuellaPoliza } from './detector-cartera.ts'
+import { esBajaHistorica, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, leerAnulacion, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo, type Foto, type HuellaPoliza } from './detector-cartera.ts'
 
 const pol = (id: string, o: Partial<HuellaPoliza> = {}): HuellaPoliza => ({
   id, clienteId: 'c-' + id, estado: 'en_vigor', vencimiento: '2027-01-10', sustituida: false, fusionada: false, ...o,
@@ -148,4 +148,15 @@ test('retención según motivo: SI no abre, IM y EX abren con nota, sin motivo c
   assert.match(planRetencionPorMotivo('EX').nota ?? '', /mejorar precio/)
   assert.deepEqual(planRetencionPorMotivo(null), { abrir: true, nota: null })
   assert.deepEqual(planRetencionPorMotivo('ZZ'), { abrir: true, nota: null })
+})
+
+test('baja histórica: reciente sale, >12 meses no, fecha desconocida sí se muestra', () => {
+  const hoy = '2026-10-13'
+  assert.equal(esBajaHistorica('POLIZA_BAJA', '2026-08-10', hoy), false)
+  assert.equal(esBajaHistorica('POLIZA_BAJA', '2025-10-13', hoy), false)
+  assert.equal(esBajaHistorica('POLIZA_BAJA', '2025-10-12', hoy), true)
+  assert.equal(esBajaHistorica('POLIZA_BAJA', '2013-01-27', hoy), true)
+  assert.equal(esBajaHistorica('POLIZA_BAJA', null, hoy), false)
+  assert.equal(esBajaHistorica('POLIZA_BAJA', 'basura', hoy), false)
+  assert.equal(esBajaHistorica('POLIZA_DESAPARECIDA', '2013-01-27', hoy), false)
 })

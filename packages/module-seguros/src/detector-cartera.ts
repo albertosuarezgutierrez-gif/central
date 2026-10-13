@@ -151,6 +151,22 @@ export function esFugaSinExplicar(e: Pick<EventoCartera, 'tipo' | 'datos'>): boo
   return TIPOS_FUGA.includes(e.tipo) && e.datos.sustituida !== true
 }
 
+/** Una baja de hace más de estos meses es histórico, no «pérdida por revisar» (Alberto, 13/10/2026). */
+export const MESES_BAJA_HISTORICA = 12
+
+/**
+ * ¿Es una baja HISTÓRICA (fecha de baja/anulación, o vencimiento si no hay, de hace más de
+ * `MESES_BAJA_HISTORICA` meses)? Solo `POLIZA_BAJA`. Fecha desconocida o ilegible → `false`: se muestra.
+ * `fecha` y `hoy` van como `AAAA-MM-DD`.
+ */
+export function esBajaHistorica(tipo: string, fecha: string | null | undefined, hoy: string): boolean {
+  if (tipo !== 'POLIZA_BAJA') return false
+  if (!fecha || !/^\d{4}-\d{2}-\d{2}/.test(fecha) || !/^\d{4}-\d{2}-\d{2}$/.test(hoy)) return false
+  const [y, m, d] = hoy.split('-').map(Number)
+  const corte = new Date(Date.UTC(y, m - 1 - MESES_BAJA_HISTORICA, d)).toISOString().slice(0, 10)
+  return fecha.slice(0, 10) < corte
+}
+
 // ── Motivo de la anulación (C0058 de EIAC) ──
 
 export type CategoriaMotivo = 'impago' | 'competencia' | 'siniestralidad'
