@@ -1,8 +1,8 @@
 {
  "sesion": "e20b7fbf-e073-521b-8245-5328b440074a",
  "inicio": "2026-10-10T07:11:19.502Z",
- "fin": "2026-10-13T11:07:08.841Z",
- "llamadas": 1681,
+ "fin": "2026-10-13T11:31:54.134Z",
+ "llamadas": 1811,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 3,
@@ -27,38 +27,38 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 231,
-   "chars_in": 35680,
-   "chars_out": 1276919,
+   "llamadas": 232,
+   "chars_in": 35801,
+   "chars_out": 1320349,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 10,
     "Grep": 119,
-    "Read": 102
+    "Read": 103
    }
   },
   "bash": {
-   "llamadas": 1043,
-   "chars_in": 790447,
-   "chars_out": 4687849,
+   "llamadas": 1159,
+   "chars_in": 863929,
+   "chars_out": 5305554,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1043
+    "Bash": 1159
    }
   },
   "otro": {
-   "llamadas": 144,
-   "chars_in": 141468,
-   "chars_out": 666275,
+   "llamadas": 146,
+   "chars_in": 148422,
+   "chars_out": 666397,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "SubagentHandback": 57,
+    "SubagentHandback": 59,
     "ReadNotifications": 53,
     "ToolSearch": 17,
     "SendMessage": 9,
@@ -66,14 +66,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 30,
-   "chars_in": 51820,
-   "chars_out": 56983,
+   "llamadas": 32,
+   "chars_in": 54856,
+   "chars_out": 60461,
    "errores": 0,
-   "archivos_citados": 46,
-   "chars_citados": 3115515,
+   "archivos_citados": 48,
+   "chars_citados": 4128909,
    "tools": {
-    "Agent": 30
+    "Agent": 32
    }
   },
   "agente:agente-mecanico": {
@@ -88,15 +88,15 @@
    }
   },
   "escritura": {
-   "llamadas": 101,
-   "chars_in": 257237,
-   "chars_out": 14311724,
+   "llamadas": 110,
+   "chars_in": 293401,
+   "chars_out": 15561328,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 67,
-    "Write": 34
+    "Edit": 71,
+    "Write": 39
    }
   },
   "mcp:github": {
