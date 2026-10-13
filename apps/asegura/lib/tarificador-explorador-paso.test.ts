@@ -103,6 +103,33 @@ test('IA ya en vuelo (otro paso) o lock ocupado: PasoOcupado (→ 409) sin llama
   assert.ok(!b.traza.includes('ia'))
 })
 
+test('si la tx2 lanza (PasoOcupado o error de BD) tras pagar la IA, el rescate anota el coste y libera; el error original sube', async () => {
+  for (const fallo of [new PasoOcupado(), new Error('bd caída')]) {
+    const { d, traza } = dobles()
+    const lock = d.conLock
+    let n = 0
+    d.conLock = (fn) => (++n === 2 ? Promise.reject(fallo) : lock(fn))
+    let rescatado: number | null = null
+    d.rescate = async (c) => { rescatado = c; traza.push('rescate') }
+    await assert.rejects(ejecutarPaso(entrada, d), (err) => err === fallo)
+    assert.ok(rescatado !== null && rescatado > 0, 'el coste de la IA pagada se anota')
+  }
+  // Un rescate que falla no tapa el error original.
+  const { d } = dobles()
+  const lock = d.conLock
+  let n = 0
+  const original = new Error('bd caída')
+  d.conLock = (fn) => (++n === 2 ? Promise.reject(original) : lock(fn))
+  d.rescate = async () => { throw new Error('rescate caído') }
+  await assert.rejects(ejecutarPaso(entrada, d), (err) => err === original)
+  // Sin IA (lock ocupado en tx1) no hay nada que rescatar.
+  const b = dobles({ ocupado: true })
+  let llamado = false
+  b.d.rescate = async () => { llamado = true }
+  await assert.rejects(ejecutarPaso(entrada, b.d), PasoOcupado)
+  assert.equal(llamado, false)
+})
+
 test('IA caída: se registra «parar ambiguo» con el PEOR caso de coste', async () => {
   const { d, costes } = dobles({ iaFalla: true })
   const r = await ejecutarPaso(entrada, d)

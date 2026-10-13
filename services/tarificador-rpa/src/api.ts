@@ -243,8 +243,9 @@ export async function cerrarExploracion(c: Config, cuerpo: CuerpoCierre, esperar
         body: JSON.stringify(cuerpo),
         signal: AbortSignal.timeout(30_000),
       })
-      ultimo = res.status
       const ocupado = res.status === 409 && ((await res.json().catch(() => null)) as { motivo?: unknown } | null)?.motivo === 'paso_en_curso'
+      // Ocupado tras los reintentos = NO cerrada (0): un 409 final no debe confundirse con «ya estaba cerrada».
+      ultimo = ocupado ? 0 : res.status
       if (res.status < 500 && !ocupado) return res.status
     } catch {
       ultimo = 0

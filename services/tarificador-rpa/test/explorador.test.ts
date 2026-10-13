@@ -14,6 +14,8 @@ import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEm
 import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import {
   bucleExploracion,
+  cierreCorrecto,
+  cuerpoTrasCierre,
   coincideConInventario,
   finDeError,
   motivoSinDato,
@@ -437,6 +439,20 @@ test('resultadoDeFin: paradas normales = explorado; OTP/CAPTCHA = captcha; guard
   assert.ok(g.resultado === 'error' && g.error.tipo === 'emision')
   const p = r('error_portal', { tipo: 'infra', mensaje: 'caído' })!
   assert.ok(p.resultado === 'error' && p.error.tipo === 'infra')
+})
+
+test('cuerpoTrasCierre: si la cabecera no se cerró, NUNCA «explorado» (fallo de infra)', () => {
+  const id = '00000000-0000-4000-8000-000000000001'
+  const f = (st: number, motivo: Parameters<typeof resultadoDeFin>[2]['motivo'] = 'resultado') => cuerpoTrasCierre(id, 'allianz', { motivo, error: null }, st, (t) => t)!
+  for (const st of [200, 204, 409]) assert.equal(f(st).resultado, 'explorado')
+  for (const st of [0, 400, 401, 404, 503]) {
+    const c = f(st)
+    assert.ok(c.resultado === 'error' && c.error.tipo === 'infra', `status ${st}`)
+  }
+  assert.equal(cierreCorrecto(0), false)
+  // Un fallo que ya era error se queda como era.
+  const c = f(0, 'captcha')
+  assert.ok(c.resultado === 'error' && c.error.tipo === 'captcha')
 })
 
 test('problemaTrabajoExploracion: entrada cerrada que case con compañía y ramo', () => {

@@ -344,6 +344,26 @@ export function problemaTrabajoExploracion(t: Trabajo): string | null {
   return null
 }
 
+/**
+ * ¿Quedó cerrada la cabecera? 2xx, o 409 (`exploracion_cerrada`: un intento anterior ya la cerró). `cerrarExploracion`
+ * devuelve 0 si tras los reintentos el servidor seguía ocupado o inalcanzable.
+ */
+export function cierreCorrecto(status: number): boolean {
+  return (status >= 200 && status < 300) || status === 409
+}
+
+/**
+ * El cuerpo que cierra el TRABAJO, sabiendo cómo fue el cierre de la cabecera. Si la cabecera NO se cerró, nunca se informa
+ * `explorado` (el mapa no está guardado y la pantalla la vería abierta): se informa un fallo de infra.
+ */
+export function cuerpoTrasCierre(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error'>, stCierre: number, redactar: (t: string) => string): CuerpoResultado | null {
+  const cuerpo = resultadoDeFin(trabajoId, compania, fin, redactar)
+  if (cuerpo?.resultado === 'explorado' && !cierreCorrecto(stCierre)) {
+    return { trabajoId, resultado: 'error', error: { tipo: 'infra', mensaje: `exploración: no se pudo cerrar la cabecera (estado ${stCierre})`, url: null }, botVersion: EXPLORADOR_VERSION }
+  }
+  return cuerpo
+}
+
 /** Ejecuta un trabajo `modo = 'exploracion'` de punta a punta. Devuelve el código de salida del proceso. */
 export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> {
   const { cfg, trabajo, env, log, redactar } = p
@@ -429,7 +449,7 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
   }
   const stCierre = await cerrarExploracion(cfg, { trabajoId: trabajo.id, motivoFin: finExp.motivo, redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos })
   log('exploracion_cierre', { status: stCierre })
-  const cuerpo = resultadoDeFin(trabajo.id, trabajo.compania, finExp, redactar)
+  const cuerpo = cuerpoTrasCierre(trabajo.id, trabajo.compania, finExp, stCierre, redactar)
   const st = cuerpo ? await enviarResultado(cfg, cuerpo) : 0
   log('exploracion_resultado_enviado', { status: st, resultado: cuerpo?.resultado ?? null })
   clearTimeout(respaldo)

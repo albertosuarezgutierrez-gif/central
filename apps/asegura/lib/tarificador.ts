@@ -7,7 +7,7 @@
 //    guardan con `canal = 'rpa'`, sin `project_id_codeoscopic` ni libro de gasto: ningún camino de
 //    Avant2 puede casarlos (CHECK `tarificacion_fuera_de_avant2`).
 
-import { modoParaWorker, modosReclamables } from './tarificador-explorador-reglas'
+import { cierraCabeceraTrasFallo, estadoFalloExploracion, exploradoValido, modoParaWorker, modosReclamables } from './tarificador-explorador-reglas'
 import { createHash } from 'node:crypto'
 import {
   MAX_INTENTOS,
@@ -344,6 +344,12 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
     if (r.tipo === 'explorado') {
+      // La cabecera DEBE estar cerrada (el cierre guarda el mapa): si no, no es un `ok` sino un error con motivo claro.
+      const cab = await tx.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${t.id}::uuid`
+      if (!exploradoValido(cab[0]?.cerrada)) {
+        const { estado } = await marcarFallo(tx, t.id, t.intentos, { tipo: 'portal', mensaje: 'exploracion_sin_cierre: el worker informó «explorado» pero la cabecera no está cerrada (el mapa no se guardó)', url: null }, null)
+        return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: null } }
+      }
       // Sin tarificación (el CHECK `trabajo_ok_con_tarificacion` lo admite solo en exploración). El motivo de fin, en `error`
       // NO: va en la cabecera de la exploración (`motivo_fin`, lo escribió el cierre).
       await tx.$executeRaw`
@@ -513,7 +519,12 @@ async function marcarFallo(
     const prefijo = incierta ? `${MENSAJE_EMISION_INCIERTA} Detalle: ` : ''
     error = { ...error, tipo: 'emision', mensaje: `${prefijo}[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
   }
-  const estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
+  const deExploracion = modoFila[0]?.modo === 'exploracion'
+  let estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
+  if (deExploracion) {
+    const cab = await db.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${id}::uuid`
+    estado = estadoFalloExploracion(estado, cab[0]?.cerrada === true)
+  }
   let capturaId: string | null = null
   let htmlId: string | null = null
   if (evidencia?.captura) {
@@ -542,6 +553,14 @@ async function marcarFallo(
       where id = ${id}::uuid and estado = 'en_curso'`
   }
   const tocada = filasTocadas > 0
+  // Una exploración que ya no se reintenta cierra su cabecera con estado de error (`descartado` si no hay mapa).
+  if (tocada && deExploracion && cierraCabeceraTrasFallo(estado)) {
+    await db.$executeRaw`
+      update seguros.tarificador_exploraciones
+      set cerrada_at = now(), estado_mapa = case when mapa is null then 'descartado' else estado_mapa end,
+          motivo_fin = coalesce(motivo_fin, 'error_trabajo'), updated_at = now()
+      where trabajo_id = ${id}::uuid and cerrada_at is null`
+  }
   // Los efectos secundarios SOLO si el UPDATE tocó la fila (si un resultado llegó a la vez y ganó, esto no hace nada).
   if (tocada && autorizacionIncierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${autorizacionIncierta}::uuid and resultado is null`
   if (tocada && deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`

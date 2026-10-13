@@ -100,6 +100,24 @@ export function leaseExploracion(p: { ahora: Date; inicio: Date | null; leaseMs:
 /** Reserva de la llamada de IA (fuera de la transacción): dura lo que la IA + margen; caducada = libre. */
 export const RESERVA_IA_MS = 75_000
 
+/**
+ * Estado del trabajo de EXPLORACIÓN tras un fallo (13/10/2026). Un `error_reintentable` con la cabecera YA cerrada (el
+ * worker cierra antes de reportar) no se reintenta: el reintento recibiría 404 de `trabajoParaWorker` (`cerrada_at is null`).
+ */
+export function estadoFalloExploracion<E extends string>(estadoPolitica: E, cabeceraCerrada: boolean): E | 'error_definitivo' {
+  return estadoPolitica === 'error_reintentable' && cabeceraCerrada ? 'error_definitivo' : estadoPolitica
+}
+
+/** Un fallo que NO se reintenta deja la cabecera cerrada (la pantalla no la muestra «abierta» para siempre). */
+export function cierraCabeceraTrasFallo(estado: string): boolean {
+  return estado !== 'error_reintentable'
+}
+
+/** Un `explorado` solo vale si la cabecera está cerrada (el mapa guardado); sin cabecera = no cerrada. */
+export function exploradoValido(cabeceraCerrada: boolean | null | undefined): boolean {
+  return cabeceraCerrada === true
+}
+
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
 

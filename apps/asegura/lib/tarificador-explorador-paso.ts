@@ -64,6 +64,11 @@ export type DepsPaso<B> = {
   registrar: (bd: B, p: PasoARegistrar & { huella: string; inventario: InventarioDom }) => Promise<string | null>
   /** Una llamada descartada (carrera): su coste a la cabecera, sin fila de paso. */
   anotarDescartada: (bd: B, costeEur: number) => Promise<void>
+  /**
+   * Red de seguridad si la tx2 LANZA (`PasoOcupado` o error de BD) con la IA ya pagada: anota el coste en la cabecera y libera
+   * la reserva, SIN lock (una sola sentencia). Opcional; si falla, se ignora (el error original es el que sube).
+   */
+  rescate?: (costeEur: number) => Promise<void>
   mapas: () => Promise<{ estado: string; mapa: unknown }[]>
   ia: (prompt: string) => Promise<string>
   ahora: () => Date
@@ -147,6 +152,26 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
   const coste = texto === null ? decision.peor : costeLlamada(e.modelo, decision.caracteres, texto.length)
 
   // ── tx2: registrar, si nada cambió entretanto ──
+  try {
+    return await tx2(d, e, decision, { huella, inventario, ctx, coste, texto, fallo })
+  } catch (err) {
+    // La IA ya se pagó: que el tope la cuente y la reserva no quede colgada hasta caducar. Nunca tapa el error original.
+    try {
+      await d.rescate?.(coste)
+    } catch {
+      /* el error que sube es el original */
+    }
+    throw err
+  }
+}
+
+async function tx2<B>(
+  d: DepsPaso<B>,
+  e: EntradaPaso,
+  decision: { nAntes: number },
+  x: { huella: string; inventario: InventarioDom; ctx: { inventario: InventarioDom; ramo: string; entrada: string }; coste: number; texto: string | null; fallo: string | null },
+): Promise<SalidaPaso> {
+  const { huella, inventario, ctx, coste, texto, fallo } = x
   return d.conLock(async (bd): Promise<SalidaPaso> => {
     const st = await d.leer(bd)
     if (st.cerrada || st.pasos.length !== decision.nAntes) {

@@ -13,6 +13,7 @@ import {
   mapasMemoria,
   type Bd,
   registrarPaso,
+  rescatarIA,
   reservarIA,
   riesgoDeExploracion,
 } from '@/lib/tarificador-explorador'
@@ -28,7 +29,7 @@ import {
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 60 // RESERVA_IA_MS (75 s) debe ser mayor: lo ata tarificador-explorador-paso.test.ts
 
 /**
  * `POST /api/tarificador/explorador/paso` — el worker, en modo exploración, manda el INVENTARIO SANEADO de la pantalla y
@@ -83,6 +84,7 @@ export async function POST(req: Request) {
         liberarIA: (bd) => liberarIA(e, bd),
         registrar: (bd, paso) => registrarPaso(e, paso, inicio, bd),
         anotarDescartada: (bd, coste) => anotarDescartada(e, coste, bd),
+        rescate: (coste) => rescatarIA(e, coste),
         mapas: () => mapasMemoria(e),
         ia: (prompt) => iaTexto(prompt, {
           system: SYSTEM_EXPLORADOR, maxTokens: MAX_TOKENS_SALIDA_EXPLORADOR, timeoutMs: TIMEOUT_IA_EXPLORADOR_MS, privado: true,

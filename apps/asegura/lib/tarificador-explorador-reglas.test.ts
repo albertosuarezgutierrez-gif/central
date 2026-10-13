@@ -7,6 +7,10 @@ import { fileURLToPath } from 'node:url'
 import { construirMapa, huellaPantalla, sanearInventarioDom, type RespuestaExplorador } from '@central/module-tarificacion'
 import {
   MODELO_EXPLORADOR_POR_DEFECTO,
+  RESERVA_IA_MS,
+  cierraCabeceraTrasFallo,
+  estadoFalloExploracion,
+  exploradoValido,
   SYSTEM_EXPLORADOR,
   consumoDe,
   exploradorActivo,
@@ -205,4 +209,43 @@ test('lock del paso NO bloqueante: pg_try_advisory_xact_lock; ocupado → 409 si
   assert.doesNotMatch(lib, /iaTexto/)
   const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
   assert.match(f, /err instanceof PasoOcupado\) return NextResponse\.json\(\{ estado: 'conflicto', motivo: 'paso_en_curso' \}, \{ status: 409 \}\)/)
+})
+
+// ─── Cierre de la cabecera y reserva de IA (revisión de #4576) ───────────────
+
+test('RESERVA_IA_MS > maxDuration de la ruta de paso (la reserva no caduca antes de que el paso termine)', () => {
+  const ruta = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../app/api/tarificador/explorador/paso/route.ts'), 'utf8')
+  const m = /export const maxDuration = (\d+)/.exec(ruta)
+  assert.ok(m, 'la ruta declara maxDuration')
+  assert.ok(RESERVA_IA_MS > Number(m[1]) * 1000, `RESERVA_IA_MS (${RESERVA_IA_MS}) debe superar maxDuration (${m[1]} s)`)
+})
+
+test('estadoFalloExploracion: infra con la cabecera ya cerrada NO se reintenta', () => {
+  assert.equal(estadoFalloExploracion('error_reintentable', true), 'error_definitivo')
+  assert.equal(estadoFalloExploracion('error_reintentable', false), 'error_reintentable')
+  assert.equal(estadoFalloExploracion('error_definitivo', true), 'error_definitivo')
+  assert.equal(estadoFalloExploracion('requiere_humano', false), 'requiere_humano')
+})
+
+test('cierraCabeceraTrasFallo: todo fallo que no se reintenta cierra la cabecera', () => {
+  assert.equal(cierraCabeceraTrasFallo('error_definitivo'), true)
+  assert.equal(cierraCabeceraTrasFallo('requiere_humano'), true)
+  assert.equal(cierraCabeceraTrasFallo('error_reintentable'), false)
+})
+
+test('exploradoValido: «explorado» solo con la cabecera cerrada (sin cabecera = no)', () => {
+  assert.equal(exploradoValido(true), true)
+  assert.equal(exploradoValido(false), false)
+  assert.equal(exploradoValido(null), false)
+  assert.equal(exploradoValido(undefined), false)
+})
+
+test('registrarResultado: el cableado de las reglas de cierre existe en tarificador.ts y registrarPaso solo limpia la reserva de un paso de IA', () => {
+  const dir = path.dirname(fileURLToPath(import.meta.url))
+  const t = readFileSync(path.join(dir, 'tarificador.ts'), 'utf8')
+  assert.match(t, /exploradoValido\(cab\[0\]\?\.cerrada\)/)
+  assert.match(t, /estadoFalloExploracion\(estado,/)
+  assert.match(t, /cierraCabeceraTrasFallo\(estado\)/)
+  const x = readFileSync(path.join(dir, 'tarificador-explorador.ts'), 'utf8')
+  assert.match(x, /ia_en_vuelo_hasta = case when \$\{llamada\}::boolean then null else ia_en_vuelo_hasta end/)
 })

@@ -137,6 +137,14 @@ export async function anotarDescartada(e: ExploracionViva, costeEur: number, bd:
     where id = ${e.exploracionId}::uuid and correduria_id = ${e.correduriaId}::uuid`
 }
 
+/** Rescate sin lock cuando la tx2 lanza tras pagar la IA: coste a la cabecera y reserva liberada, en UNA sentencia. */
+export async function rescatarIA(e: ExploracionViva, costeEur: number, bd: Bd = prisma): Promise<void> {
+  await bd.$executeRaw`
+    update seguros.tarificador_exploraciones
+    set llamadas_ia = llamadas_ia + 1, coste_estimado_eur = coste_estimado_eur + ${costeEur}, ia_en_vuelo_hasta = null, updated_at = now()
+    where id = ${e.exploracionId}::uuid and correduria_id = ${e.correduriaId}::uuid`
+}
+
 /**
  * Inserta el paso (n = siguiente), acumula llamadas/coste en la cabecera, LIBERA la IA reservada y RENUEVA el lease del
  * trabajo (`leaseExploracion`: nunca más allá del tope de tiempo acumulado + margen; nunca lo acorta). Devuelve el lease (ISO).
@@ -155,7 +163,11 @@ export async function registrarPaso(e: ExploracionViva, p: PasoARegistrar & { hu
   await bd.$executeRaw`
     update seguros.tarificador_exploraciones
     set llamadas_ia = llamadas_ia + ${llamada ? 1 : 0}, coste_estimado_eur = coste_estimado_eur + ${p.costeEur},
-        modelo = coalesce(${p.modelo}, modelo), ia_en_vuelo_hasta = null, updated_at = now()
+        modelo = coalesce(${p.modelo}, modelo),
+        -- Invariante: una sola reserva viva por exploración (tx1 la toma bajo lock y 409 a quien llegue con ella viva) y
+        -- RESERVA_IA_MS > maxDuration de la ruta (la reserva no caduca antes de que este paso termine). Solo el paso de IA
+        -- la limpia: un paso de memoria/regla (origen ≠ 'ia') no tiene reserva propia y no toca la de otro.
+        ia_en_vuelo_hasta = case when ${llamada}::boolean then null else ia_en_vuelo_hasta end, updated_at = now()
     where id = ${e.exploracionId}::uuid and correduria_id = ${e.correduriaId}::uuid`
   const lease = leaseExploracion({ ahora: new Date(), inicio, leaseMs: LEASE_MS, maxMs: topesExplorador(process.env).maxMs })
   const t = await bd.$queryRaw<{ lease_hasta: Date | null }[]>`
