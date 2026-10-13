@@ -48,7 +48,7 @@ const HOME = (productos: string[], cargaApp: string | null = null) => `<!doctype
         document.getElementById('m').hidden = true
         const f = document.createElement('iframe'); f.id = 'appArea'; f.name = 'appArea'; f.src = window.CARGA_APP
         document.body.appendChild(f)
-      }, 800)
+      }, 3000) // holgado: el inventario «antes» (1 marco) tiene que caer siempre dentro de este retraso, también en CI lento
     }
   </script></body></html>`
 
