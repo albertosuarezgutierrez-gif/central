@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(13/10/2026)** — Auditoría diaria (ligera): sin 🔴 nuevos. Memoria completada: #4517 «Pedir emisión» avisa si falta IPID/opción, #4519 agente huésped de sivra habla como el dueño y trata peticiones de factura.
+Vigilancia: CIMA entra (pulls reales, cola 205, 0 procesados, 0 errores); pricing sano (0 bajo mínimo, 7,6 h, 4 pisos on) con `oscilantes` 14 (bajó de 47); Codeoscopic 20 cotizaciones/10 € en 7 d.
+Nuevo 🟡: latido `correduria_ingesta` DEGRADADA (C0072, 15 días sin mandar nada) y `seo_correduria` con GSC 403 (sin permiso en sc-domain:grupoasegura.es). Siguen: `subastas_idealista` mudo (27/09), `ses_transporte`, alerta C0468 y PRs de registro atascados (ver #4493).
+
 **(13/10/2026)** — Pedir precio simplificado en el riesgo unificado: orden Intervinientes → objeto → Historial y bonificaciones → Verificación → Pedir precio; lo de arriba va en resumen solo lectura en el cotizador; la checklist «Verificación antes de pedir precio» bloquea el pago de 0,50€ (lógica pura en `auto-nuevo/verificacion-embebido.ts` + test; «sin ubicar» = aviso, no bloquea); los años asegurado de arriba viajan a la cotización con topes coherentes.
 Decisión de Alberto: Avant2 y bots en paralelo, comparar en la parrilla hasta retirar Avant2 por compañía.
 Pendientes: subir compañía/póliza/años sin siniestros/siniestros 5a a Historial; CP en faltantes de figuras (`apps/asegura/lib/oportunidad-riesgo.ts`); rol «autorizado» por confirmar; consulta de bonificaciones (no existe; Alberto debe aclarar qué es «la consulta del 5»); desplegables de la parrilla solo con bots (con Avant2 cada cambio = 0,50€); pasada equivalente en moto.
