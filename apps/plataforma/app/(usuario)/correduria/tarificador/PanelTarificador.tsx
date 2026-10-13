@@ -54,7 +54,8 @@ export default function PanelTarificador() {
       {/* Alta de compañías/ramos nuevos en el bot: grabar el portal a mano y las fichas de producto. */}
       <nav aria-label="Alta de compañías en el bot" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Link href="/correduria/tarificador/grabaciones" style={{ ...btnStyle('secundario'), minHeight: 44, textDecoration: 'none' }}>Grabaciones de portales</Link>
-        <Link href="/correduria/tarificador/fichas" style={{ ...btnStyle('secundario'), minHeight: 44, textDecoration: 'none' }}>Fichas de producto</Link>
+        <Link href="/correduria/tarificador/exploraciones" style={{ ...btnStyle('secundario'), minHeight: 44, textDecoration: 'none' }}>Exploraciones del bot</Link>
+        <Link href="/correduria/tarificador/fichas"style={{ ...btnStyle('secundario'), minHeight: 44, textDecoration: 'none' }}>Fichas de producto</Link>
       </nav>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <button type="button" onClick={() => void cargar()} disabled={cargando} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
