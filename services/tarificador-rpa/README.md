@@ -6,6 +6,7 @@ org `grupo-asegura`, región `cdg`, shared-cpu-2x / 2 GB, `auto_destroy`). La la
 (`lib/tarificador.ts`); la cola es `seguros.tarificacion_trabajos`.
 
 > Estado, decisiones, DOM de ePAC y plan: **`docs/TARIFICADOR-RPA.md`** (este README es solo la técnica del worker).
+> Conocimiento de portales (qué pide cada producto, reglas de datos): **`docs/tarificador/CONOCIMIENTO-PORTALES.md`**.
 
 **TARIFICAR ≠ EMITIR.** `src/guard.ts` aborta (→ `error_definitivo`) cualquier navegación o botón que case
 con `emit|emisi|contrat|formaliz|suplement|anul|baja`. Los adaptadores pulsan solo con `ctx.pulsar()`.
