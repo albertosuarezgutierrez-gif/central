@@ -1,8 +1,8 @@
 {
  "sesion": "90c3bffe-6bee-5c50-bd89-0e2c18ff8ab4",
  "inicio": "2026-10-12T18:25:04.975Z",
- "fin": "2026-10-13T06:22:22.983Z",
- "llamadas": 106,
+ "fin": "2026-10-13T06:24:44.442Z",
+ "llamadas": 108,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 2,
@@ -95,16 +95,18 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 3,
-   "chars_in": 232,
-   "chars_out": 7340,
+   "llamadas": 5,
+   "chars_in": 432,
+   "chars_out": 8615,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_projects": 1,
     "mcp__Vercel__filter_project_envs": 1,
-    "mcp__Vercel__list_deployments": 1
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__list_project_domains": 1,
+    "mcp__Vercel__get_project_env": 1
    }
   }
  }
