@@ -133,8 +133,10 @@ test('ruta último riesgo: Bearer primero, uuid 400, por correduría; SQL por cl
   const sql = lib.slice(lib.indexOf('export async function leerUltimoRiesgo'), lib.indexOf('type FilaTrabajo'))
   assert.match(sql, /t\.correduria_id = \$\{correduriaId\}/)
   assert.match(sql, /t\.cliente_id = \$\{clienteId\}/)
-  assert.match(sql, /order by t\.created_at desc\s+limit 1/)
-  assert.ok(!/estado/.test(sql.replace(/^\s*\*.*$/gm, '')), 'cualquier estado: no se filtra por estado')
+  assert.match(sql, /order by t\.created_at desc\s+limit \$\{CANDIDATOS_PLANTILLA\}/)
+  // Cualquier estado en SQL (no se filtra por estado); el riesgo ya PURGADO se salta en TS (purga, 13/10/2026).
+  assert.ok(!/t\.estado\s*(=|<>|in)/.test(sql), 'cualquier estado: no se filtra por estado')
+  assert.match(sql, /proyectarUltimoRiesgo\(primeroReutilizable\(f\)\.fila\)/)
   assert.ok(!/evidencia_documento_id|html_documento_id|t\.error/.test(sql))
 })
 
@@ -144,5 +146,5 @@ test('probar: la eleccionVersion de la IA no se arrastra; la de una persona sí'
   assert.deepEqual(riesgoParaReencolar({ ...base, eleccionVersion: ev, eleccionVersionIa: { motivo: 'm' } }), base)
   assert.deepEqual(riesgoParaReencolar({ ...base, eleccionVersion: ev }), { ...base, eleccionVersion: ev })
   assert.equal(riesgoParaReencolar(null), null)
-  assert.match(leer('app/api/operador/tarificador/probar/route.ts'), /riesgoParaReencolar\(await leerRiesgoParaReencolar\(/, 'probar no filtra la elección de la IA')
+  assert.match(leer('app/api/operador/tarificador/probar/route.ts'), /riesgoParaReencolar\(leido\.riesgo\)/, 'probar no filtra la elección de la IA')
 })

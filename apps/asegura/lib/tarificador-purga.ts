@@ -78,29 +78,33 @@ export async function purgarRiesgosCerrados(db: DbPurga, correduriaId: string, l
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid
       and t.estado = any(${[...ESTADOS_PURGA_RIESGO]}::text[])
+      -- Un riesgo que no es objeto no se toca (ni se lee con jsonb_object_keys).
+      and jsonb_typeof(t.riesgo) = 'object'
       and not (t.estado = 'ok' and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'tarificar'
                and (t.compania || '::' || t.ramo) = any(${clavesEmision()}::text[])
-               -- origen NO liberado: alguna emisión suya abierta, o ninguna cerrada y aún dentro del plazo
+               -- origen NO liberado (= origenEmisionLiberado falso): alguna emisión suya abierta, o ninguna emitido
+               -- y aún dentro del plazo desde su ok (una rechazada/caducada no libera: se puede volver a pedir).
                and (exists (select 1 from seguros.tarificacion_trabajos e
                             where e.correduria_id = t.correduria_id and to_jsonb(e)->>'modo' = 'emision'
                               and to_jsonb(e)->>'trabajo_origen_id' = t.id::text and e.estado <> all(${[...ESTADOS_PURGA_RIESGO]}::text[]))
                     or (not exists (select 1 from seguros.tarificacion_trabajos e
                                     where e.correduria_id = t.correduria_id and to_jsonb(e)->>'modo' = 'emision'
-                                      and to_jsonb(e)->>'trabajo_origen_id' = t.id::text)
+                                      and to_jsonb(e)->>'trabajo_origen_id' = t.id::text and e.estado = 'emitido')
                         and (t.terminado_at is null or t.terminado_at > now() - ${DIAS_ORIGEN_EMISION}::int * interval '1 day'))))
       and (
-        exists (select 1 from jsonb_object_keys(t.riesgo) k
+        exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo) = 'object' then t.riesgo else '{}'::jsonb end) k
                 where k <> all(case when t.ramo = 'comunidades' then ${[...CLAVES_RIESGO_COMUNIDAD]}::text[]
                                     when t.ramo in ('moto', 'auto') then ${[...CLAVES_RIESGO_VEHICULO]}::text[]
                                     else ${[...CLAVES_RIESGO_OTRO]}::text[] end))
-        or (jsonb_typeof(t.riesgo->'direccion') = 'object'
-            and exists (select 1 from jsonb_object_keys(t.riesgo->'direccion') k where k <> all(${sub('direccion')}::text[])))
-        or (jsonb_typeof(t.riesgo->'seleccionVehiculo') = 'object'
-            and exists (select 1 from jsonb_object_keys(t.riesgo->'seleccionVehiculo') k where k <> all(${sub('seleccionVehiculo')}::text[])))
-        or (jsonb_typeof(t.riesgo->'eleccionVersion') = 'object'
-            and exists (select 1 from jsonb_object_keys(t.riesgo->'eleccionVersion') k where k <> all(${sub('eleccionVersion')}::text[])))
-        or (jsonb_typeof(t.riesgo->'eleccionVersionIa') = 'object'
-            and exists (select 1 from jsonb_object_keys(t.riesgo->'eleccionVersionIa') k where k <> all(${sub('eleccionVersionIa')}::text[])))
+        -- Sub-objetos: el CASE garantiza que jsonb_object_keys solo ve un objeto (el AND no fija el orden de evaluación).
+        or exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo->'direccion') = 'object' then t.riesgo->'direccion' else '{}'::jsonb end) k
+                   where k <> all(${sub('direccion')}::text[]))
+        or exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo->'seleccionVehiculo') = 'object' then t.riesgo->'seleccionVehiculo' else '{}'::jsonb end) k
+                   where k <> all(${sub('seleccionVehiculo')}::text[]))
+        or exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo->'eleccionVersion') = 'object' then t.riesgo->'eleccionVersion' else '{}'::jsonb end) k
+                   where k <> all(${sub('eleccionVersion')}::text[]))
+        or exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo->'eleccionVersionIa') = 'object' then t.riesgo->'eleccionVersionIa' else '{}'::jsonb end) k
+                   where k <> all(${sub('eleccionVersionIa')}::text[]))
       )
     order by t.updated_at desc
     limit ${limite}::int`

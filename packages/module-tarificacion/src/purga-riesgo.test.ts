@@ -7,6 +7,7 @@ import {
   esOrigenDeEmision,
   origenEmisionLiberado,
   DIAS_ORIGEN_EMISION,
+  riesgoYaPurgado,
 } from './index.ts'
 
 // Datos personales de mentira, pero con la forma de los de verdad: el cepo busca CLAVES y VALORES.
@@ -179,9 +180,14 @@ describe('purga del riesgo · cuándo se LIBERA el origen de una emisión', () =
       expect(origenEmisionLiberado({ terminadoAt: hace(90), ahora: AHORA, emisiones: ['cancelado', abierta] }), abierta).toBe(false)
     }
   })
-  it('con su emisión cerrada (emitida, rechazada o caducada = cancelado) → sí, aunque sea de ayer', () => {
+  it('CEPO: SOLO una emisión `emitido` lo libera antes de plazo (aunque sea de ayer)', () => {
     expect(origenEmisionLiberado({ terminadoAt: hace(1), ahora: AHORA, emisiones: ['emitido'] })).toBe(true)
-    expect(origenEmisionLiberado({ terminadoAt: hace(1), ahora: AHORA, emisiones: ['cancelado'] })).toBe(true)
+    expect(origenEmisionLiberado({ terminadoAt: hace(1), ahora: AHORA, emisiones: ['cancelado', 'emitido'] })).toBe(true)
+  })
+  it('CEPO: una emisión rechazada o caducada (`cancelado`) NO lo libera: sigue su plazo desde el ok y se puede volver a pedir', () => {
+    expect(origenEmisionLiberado({ terminadoAt: hace(1), ahora: AHORA, emisiones: ['cancelado'] })).toBe(false)
+    expect(origenEmisionLiberado({ terminadoAt: hace(DIAS_ORIGEN_EMISION - 1), ahora: AHORA, emisiones: ['cancelado', 'cancelado'] })).toBe(false)
+    expect(origenEmisionLiberado({ terminadoAt: hace(DIAS_ORIGEN_EMISION), ahora: AHORA, emisiones: ['cancelado'] })).toBe(true)
   })
   it(`sin emisiones → a los ${DIAS_ORIGEN_EMISION} días del ok; sin fecha de fin → no (la duda conserva)`, () => {
     expect(origenEmisionLiberado({ terminadoAt: hace(DIAS_ORIGEN_EMISION - 1), ahora: AHORA, emisiones: [] })).toBe(false)
@@ -192,5 +198,22 @@ describe('purga del riesgo · cuándo se LIBERA el origen de una emisión', () =
     const p = planPurgaRiesgo({ estado: 'ok', modo: null, compania: 'allianz', ramo: 'comunidades', riesgo: COMUNIDAD, origenLiberado: true })
     expect(p.purgar).toBe(true)
     if (p.purgar) expect(quedaAlgoPersonal(p.riesgo)).toEqual([])
+  })
+})
+
+describe('purga del riesgo · un riesgo que NO es objeto no se toca (NULL no se convierte en {})', () => {
+  it('cerrado con riesgo null / texto / lista → no se purga', () => {
+    for (const r of [null, undefined, 'x', ['x'], 3]) expect(plan('ok', r, 'moto')).toEqual({ purgar: false, motivo: 'no_es_objeto' })
+  })
+})
+
+describe('purga del riesgo · plantillas: un riesgo YA purgado no se reutiliza', () => {
+  it('cerrado y purgado → sí; cerrado con datos aún (antes de limpiar / origen retenido) → no; vivo → nunca', () => {
+    const purgado = riesgoSinDatosPersonales(MOTO, 'moto')
+    expect(riesgoYaPurgado({ estado: 'ok', ramo: 'moto', riesgo: purgado })).toBe(true)
+    expect(riesgoYaPurgado({ estado: 'cancelado', ramo: 'moto', riesgo: null })).toBe(true)
+    expect(riesgoYaPurgado({ estado: 'ok', ramo: 'moto', riesgo: MOTO })).toBe(false)
+    expect(riesgoYaPurgado({ estado: 'ok', ramo: 'comunidades', riesgo: COMUNIDAD })).toBe(false)
+    expect(riesgoYaPurgado({ estado: 'requiere_humano', ramo: 'moto', riesgo: purgado })).toBe(false)
   })
 })

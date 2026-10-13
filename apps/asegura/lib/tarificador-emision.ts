@@ -117,10 +117,10 @@ export async function solicitarEmision(e: EntradaSolicitar): Promise<{ estado: '
   const t = origen[0]
   if (!t) return rechazo(404, 'trabajo_origen_no_encontrado')
   if (t.estado !== 'ok' || (t.modo ?? 'tarificar') !== 'tarificar') return rechazo(409, 'el trabajo de origen no es una tarificación terminada')
-  // PURGA (13/10/2026): un origen cuya emisión ya se cerró, o con más de 30 días sin pedirla, ya no tiene (o va a perder)
+  // PURGA (13/10/2026): un origen ya EMITIDO, o a más de 30 días de su ok, ya no tiene (o va a perder)
   // los datos del tomador. Nunca se emite con un riesgo a medias: se vuelve a tarificar.
   if (origenEmisionLiberado({ terminadoAt: t.terminado_at, ahora: t.ahora, emisiones: t.emisiones ?? [] })) {
-    return rechazo(409, 'origen_purgado: el riesgo de esa tarificación ya se borró (su emisión se cerró o pasaron 30 días): vuelve a tarificar')
+    return rechazo(409, 'origen_purgado: el riesgo de esa tarificación ya se borró (ya se emitió o pasaron 30 días desde la tarificación): vuelve a tarificar')
   }
   if (t.cliente_id !== p.clienteId) return rechazo(409, 'el trabajo de origen es de otro cliente')
   if (!p.oportunidadId || t.oportunidad_id !== p.oportunidadId) return rechazo(409, 'el trabajo de origen es de otra oportunidad')
@@ -344,7 +344,8 @@ export async function registrarResultadoEmision(r: ResultadoEmisionWorker): Prom
           evidencia_documento_id = coalesce(${evidencia}::uuid, evidencia_documento_id), terminado_at = now(), updated_at = now()
       where id = ${t.id}::uuid`
     // PURGA (13/10/2026): `emitido` (cerrado) → fuera los datos personales de ESTA copia del riesgo, mismo commit.
-    // `requiere_humano` lo conserva (lo decide `planPurgaRiesgo`). El trabajo de ORIGEN (Allianz Comunidades `ok`) no se toca.
+    // `requiere_humano` lo conserva (lo decide `planPurgaRiesgo`). Si quedó `emitido`, `purgarRiesgoTrabajos` purga también su
+    // ORIGEN (Allianz Comunidades `ok`); un `cancelado`/`requiere_humano` no lo libera.
     await purgarRiesgoTrabajos(tx, [t.id])
     return { estado: 'registrado' as const, estadoTrabajo: d.estado }
   })
@@ -381,7 +382,8 @@ export async function autorizarEmision(e: { correduriaId: string; trabajoId: str
         update seguros.tarificacion_trabajos set estado = 'cancelado', terminado_at = now(), updated_at = now(),
           error = ${JSON.stringify({ tipo: 'emision', mensaje: 'Emisión rechazada por Telegram', en: new Date().toISOString() })}::jsonb
         where id = ${t.id}::uuid`
-      // PURGA (13/10/2026): cancelado → fuera los datos personales de esta copia del riesgo (una emisión nueva copia del origen).
+      // PURGA (13/10/2026): cancelado → fuera los datos personales de ESTA copia del riesgo. El ORIGEN no se libera: sigue en
+      // su plazo de 30 días desde el ok y se puede volver a pedir la emisión (que copia de él).
       await purgarRiesgoTrabajos(tx, [t.id])
       return { estado: 'cancelado' as const, trabajoId: t.id, compania: t.compania }
     }
@@ -488,7 +490,8 @@ export async function caducarEmisiones(correduriaId: string): Promise<{ solicitu
     where t.correduria_id = ${correduriaId}::uuid and t.modo = 'emision' and t.estado = 'autorizado_emision'
       and exists (select 1 from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = t.id and a.expira_at <= now())
     returning t.id::text as id`
-  // PURGA (13/10/2026): cancelado → fuera los datos personales del riesgo (el barrido tiene además su respaldo).
+  // PURGA (13/10/2026): cancelado → fuera los datos personales de ESTAS copias del riesgo; su ORIGEN no se libera (sigue
+  // en su plazo de 30 días y se puede volver a pedir la emisión). El barrido tiene además su respaldo.
   await purgarRiesgoTrabajos(prisma, [...solicitudes, ...autorizaciones].map((f) => f.id))
   return { solicitudes: solicitudes.length, autorizaciones: autorizaciones.length }
 }

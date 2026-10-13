@@ -4,7 +4,7 @@
 //    ofertas con sus primas. NUNCA la URL del portal, el HTML/captura del fallo (`html_documento_id`,
 //    `evidencia_documento_id`: solo operador interno), ni el riesgo, ni credenciales.
 
-import { motivoLegible, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
+import { motivoLegible, riesgoYaPurgado, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
 
 export type FilaTrabajoLectura = {
   estado: string
@@ -164,6 +164,16 @@ export function proyectarUltimoRiesgo(fila: { id: string; created_at: Date | str
   const riesgo = riesgoPublico(fila.riesgo)
   if (!riesgo) return vacio
   return { riesgo, trabajoId: fila.id, creadoEn: iso(fila.created_at) }
+}
+
+/**
+ * PLANTILLA (13/10/2026, purga): de los trabajos más recientes primero, el primero cuyo riesgo NO esté ya purgado. Un
+ * trabajo cerrado y purgado se SALTA (nunca se precarga ni se reencola un riesgo a medias). `soloPurgados` = había
+ * candidatos pero todos purgados (quien llama lo dice con el motivo `origen_purgado`). PURA.
+ */
+export function primeroReutilizable<T extends { estado: string; ramo: string; riesgo: unknown }>(filas: readonly T[]): { fila: T | null; soloPurgados: boolean } {
+  const fila = filas.find((f) => !riesgoYaPurgado(f)) ?? null
+  return { fila, soloPurgados: fila === null && filas.length > 0 }
 }
 
 /**

@@ -7,7 +7,9 @@
 -- Qué hace (una transacción; IDEMPOTENTE: solo toca filas cuyo JSON aún tiene algo fuera de la lista; re-aplicada → 0 y 0):
 --   1. `tarificacion_trabajos.riesgo` de los trabajos CERRADOS (ok, error_definitivo, cancelado, emitido).
 --      Excepción: el ORIGEN posible de una emisión (`ok` de tarificar de Allianz Comunidades) solo si está LIBERADO:
---      sin emisión suya abierta y (con alguna emisión suya ya cerrada, o a los 30 días de terminar sin pedirla).
+--      sin emisión suya abierta y (con alguna emisión suya `emitido`, o a los 30 días de su ok). Una emisión rechazada o
+--      caducada (`cancelado`) NO lo libera: dentro del plazo se puede volver a pedir.
+--   Un riesgo/petición que NO es un objeto JSON (NULL incluido) no se toca: nunca se convierte en `{}`.
 --      NO toca requiere_humano ni error_reintentable (el reintento necesita el riesgo), ni lo vivo.
 --   2. `tarificaciones.peticion` de canal `rpa` (copia del riesgo del trabajo): la misma lista, siempre (nadie lee de ahí
 --      datos personales; los lectores de `peticion` buscan la forma de Avant2, que una petición de portal no tiene).
@@ -28,7 +30,8 @@ RETURNS jsonb
 LANGUAGE sql
 IMMUTABLE
 AS $f$
-  SELECT CASE WHEN r IS NULL OR jsonb_typeof(r) <> 'object' THEN '{}'::jsonb ELSE (
+  -- Lo que no es objeto se devuelve TAL CUAL (los UPDATE además lo excluyen): NULL no se convierte en {}.
+  SELECT CASE WHEN r IS NULL OR jsonb_typeof(r) <> 'object' THEN r ELSE (
     SELECT coalesce(jsonb_object_agg(e.key,
              CASE
                WHEN e.key IN ('direccion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa') AND jsonb_typeof(e.value) = 'object' THEN (
@@ -69,10 +72,10 @@ AS $f$
                WHERE e.correduria_id = t.correduria_id AND to_jsonb(e)->>'modo' = 'emision'
                  AND to_jsonb(e)->>'trabajo_origen_id' = t.id::text
                  AND e.estado <> ALL (/*lista:estados*/ array['ok','error_definitivo','cancelado','emitido']::text[]))
-       -- o ninguna emisión y aún dentro del plazo (sin fecha de fin: se conserva)
+       -- o ninguna `emitido` y aún dentro del plazo desde el ok (sin fecha de fin: se conserva)
        OR (NOT EXISTS (SELECT 1 FROM seguros.tarificacion_trabajos e
                        WHERE e.correduria_id = t.correduria_id AND to_jsonb(e)->>'modo' = 'emision'
-                         AND to_jsonb(e)->>'trabajo_origen_id' = t.id::text)
+                         AND to_jsonb(e)->>'trabajo_origen_id' = t.id::text AND e.estado = 'emitido')
            AND (t.terminado_at IS NULL OR t.terminado_at > now() - /*dias_origen_emision*/ 30 * interval '1 day'))
      )
 $f$;
@@ -84,14 +87,14 @@ $f$;
 --                           and t.riesgo is distinct from pg_temp.riesgo_sin_datos_personales(t.riesgo, t.ramo)) as se_purgaria,
 --        count(*) as total
 -- from seguros.tarificacion_trabajos t
--- where t.estado in ('ok', 'error_definitivo', 'cancelado', 'emitido')
+-- where t.estado in ('ok', 'error_definitivo', 'cancelado', 'emitido') and jsonb_typeof(t.riesgo) = 'object'
 -- group by 2, 3
 -- union all
 -- select 'tarificaciones rpa', null, x.ramo::text, null,
 --        count(*) filter (where x.peticion is distinct from pg_temp.riesgo_sin_datos_personales(x.peticion, x.ramo::text)),
 --        count(*)
 -- from seguros.tarificaciones x
--- where coalesce(to_jsonb(x)->>'canal', 'codeoscopic') = 'rpa' and x.peticion is not null
+-- where coalesce(to_jsonb(x)->>'canal', 'codeoscopic') = 'rpa' and jsonb_typeof(x.peticion) = 'object'
 -- group by 3
 -- order by 1, 2, 3;
 
@@ -101,6 +104,7 @@ BEGIN;
 UPDATE seguros.tarificacion_trabajos t
 SET riesgo = pg_temp.riesgo_sin_datos_personales(t.riesgo, t.ramo)
 WHERE t.estado = ANY (/*lista:estados*/ array['ok','error_definitivo','cancelado','emitido']::text[])
+  AND jsonb_typeof(t.riesgo) = 'object'
   AND NOT pg_temp.origen_emision_retenido(t)
   AND t.riesgo IS DISTINCT FROM pg_temp.riesgo_sin_datos_personales(t.riesgo, t.ramo);
 -- psql: «UPDATE n» = trabajos cerrados a los que se les quitó algo.
@@ -109,7 +113,7 @@ WHERE t.estado = ANY (/*lista:estados*/ array['ok','error_definitivo','cancelado
 UPDATE seguros.tarificaciones x
 SET peticion = pg_temp.riesgo_sin_datos_personales(x.peticion, x.ramo::text)
 WHERE coalesce(to_jsonb(x)->>'canal', 'codeoscopic') = 'rpa'
-  AND x.peticion IS NOT NULL
+  AND jsonb_typeof(x.peticion) = 'object'
   AND x.peticion IS DISTINCT FROM pg_temp.riesgo_sin_datos_personales(x.peticion, x.ramo::text);
 -- psql: «UPDATE m» = tarificaciones RPA recortadas.
 

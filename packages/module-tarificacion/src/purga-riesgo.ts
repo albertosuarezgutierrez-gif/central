@@ -96,16 +96,17 @@ export type TrabajoParaPurga = { estado: unknown; modo: unknown; compania: unkno
 export const DIAS_ORIGEN_EMISION = 30
 
 /**
- * ¿El ORIGEN de una emisión ya puede perder sus datos personales? (Alberto, 13/10/2026)
+ * ¿El ORIGEN de una emisión ya puede perder sus datos personales? (Alberto, 13/10/2026; revisión del PR #4588)
  *   · con alguna emisión suya ABIERTA (cualquier estado que no sea de cierre, `requiere_humano` incluido) → NO;
- *   · si alguna emisión suya ya se CERRÓ (emitida, rechazada, caducada, cancelada) → SÍ;
- *   · sin emisiones: SÍ a los `DIAS_ORIGEN_EMISION` días de terminar. Sin fecha de fin legible → NO (la duda conserva).
+ *   · si alguna emisión suya terminó `emitido` → SÍ (la póliza ya existe);
+ *   · si no (sin emisiones, o solo rechazadas/caducadas = `cancelado`): SÍ a los `DIAS_ORIGEN_EMISION` días de su `ok`,
+ *     y hasta entonces se puede volver a pedir la emisión. Sin fecha de fin legible → NO (la duda conserva).
  * Una vez liberado, `solicitarEmision` ya no lo acepta como origen: se vuelve a tarificar.
  */
 export function origenEmisionLiberado(e: { terminadoAt: Date | string | null; ahora: Date; emisiones: readonly unknown[] }): boolean {
   const cerrado = (x: unknown) => typeof x === 'string' && (ESTADOS_PURGA_RIESGO as readonly string[]).includes(x)
   if (e.emisiones.some((x) => !cerrado(x))) return false
-  if (e.emisiones.length > 0) return true
+  if (e.emisiones.includes('emitido')) return true
   const fin = e.terminadoAt === null ? NaN : new Date(e.terminadoAt).getTime()
   if (!Number.isFinite(fin)) return false
   return e.ahora.getTime() - fin >= DIAS_ORIGEN_EMISION * 86_400_000
@@ -113,7 +114,7 @@ export function origenEmisionLiberado(e: { terminadoAt: Date | string | null; ah
 
 export type PlanPurga =
   | { purgar: true; riesgo: Record<string, unknown> }
-  | { purgar: false; motivo: 'estado_vivo' | 'origen_de_emision' | 'ya_purgado' }
+  | { purgar: false; motivo: 'estado_vivo' | 'origen_de_emision' | 'ya_purgado' | 'no_es_objeto' }
 
 /**
  * ¿Es este trabajo el ORIGEN posible de una emisión? Una tarificación `ok` de (compañía, ramo) con botón de emisión
@@ -129,14 +130,31 @@ export function esOrigenDeEmision(t: Pick<TrabajoParaPurga, 'estado' | 'modo' | 
 /** Qué hacer con el riesgo de un trabajo en su estado ACTUAL. PURO. Ante cualquier duda de estado: no se purga nada. */
 export function planPurgaRiesgo(t: TrabajoParaPurga): PlanPurga {
   if (typeof t.estado !== 'string' || !(ESTADOS_PURGA_RIESGO as readonly string[]).includes(t.estado)) return { purgar: false, motivo: 'estado_vivo' }
+  // Un riesgo que no es objeto (NULL, texto, lista) NO se convierte en `{}`: no se sabe qué es y no se escribe nada.
+  if (!esObjeto(t.riesgo)) return { purgar: false, motivo: 'no_es_objeto' }
   if (esOrigenDeEmision(t) && t.origenLiberado !== true) return { purgar: false, motivo: 'origen_de_emision' }
   const riesgo = riesgoSinDatosPersonales(t.riesgo, t.ramo)
   // Comparación estable: la purga conserva el orden de las claves que quedan.
-  if (esObjeto(t.riesgo) && JSON.stringify(riesgo) === JSON.stringify(t.riesgo)) return { purgar: false, motivo: 'ya_purgado' }
+  if (JSON.stringify(riesgo) === JSON.stringify(t.riesgo)) return { purgar: false, motivo: 'ya_purgado' }
   return { purgar: true, riesgo }
 }
 
 /** ¿El riesgo de un trabajo en este estado ya no se puede reutilizar para volver a lanzarlo (está o estará purgado)? */
 export function riesgoPurgadoEnEstado(estado: unknown): boolean {
   return typeof estado === 'string' && (ESTADOS_PURGA_RIESGO as readonly string[]).includes(estado)
+}
+
+/** Motivo explícito cuando se rechaza reutilizar un riesgo purgado como plantilla. */
+export const MOTIVO_ORIGEN_PURGADO = 'origen_purgado'
+
+/**
+ * ¿Este riesgo de un trabajo CERRADO ya está purgado (no le queda nada fuera de la lista blanca)? Entonces NO sirve de
+ * PLANTILLA (renovación, precarga, «Probar», exploración con datos reales): reutilizarlo sería tarificar con un riesgo a
+ * medias (sin NIF/CIF, vía, matrícula, conductor…). Un trabajo vivo nunca lo está; un cerrado que aún conserva datos
+ * (origen de emisión retenido, o anterior a la limpieza) todavía sirve. Riesgo que no es objeto → inservible (true).
+ */
+export function riesgoYaPurgado(t: Pick<TrabajoParaPurga, 'estado' | 'ramo' | 'riesgo'>): boolean {
+  if (typeof t.estado !== 'string' || !(ESTADOS_PURGA_RIESGO as readonly string[]).includes(t.estado)) return false
+  if (!esObjeto(t.riesgo)) return true
+  return JSON.stringify(riesgoSinDatosPersonales(t.riesgo, t.ramo)) === JSON.stringify(t.riesgo)
 }

@@ -9,7 +9,8 @@
 import { catalogoCotizacion, prepararSolicitud, type RiesgoComunidad } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
-import { proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
+import { primeroReutilizable, proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
+import { CANDIDATOS_PLANTILLA } from './tarificador-lectura'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /** Tope de trabajos que se devuelven por oportunidad (los más recientes): nada de cientos de filas. */
@@ -76,14 +77,15 @@ export async function leerPresupuestosOportunidad(correduriaId: string, oportuni
   const guardado = leerFormularioGuardado(op.guardado)
   let previoCliente: UltimoRiesgo | null = null
   if (!guardado && op.cliente_id) {
-    const [u] = await prisma.$queryRaw<{ id: string; created_at: Date; riesgo: unknown }[]>`
-      select t.id::text as id, t.created_at, t.riesgo
+    const us = await prisma.$queryRaw<{ id: string; created_at: Date; riesgo: unknown; estado: string; ramo: string }[]>`
+      select t.id::text as id, t.created_at, t.riesgo, t.estado, t.ramo
       from seguros.tarificacion_trabajos t
       where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${op.cliente_id}::uuid and t.ramo = ${op.tipo}
         and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
       order by t.created_at desc
-      limit 1`
-    previoCliente = proyectarUltimoRiesgo(u ?? null)
+      limit ${CANDIDATOS_PLANTILLA}`
+    // Purga (13/10/2026): un riesgo ya borrado al cerrarse no precarga; se salta al anterior que aún lo tenga (o ninguno).
+    previoCliente = proyectarUltimoRiesgo(primeroReutilizable(us).fila)
   }
   return {
     oportunidadId,

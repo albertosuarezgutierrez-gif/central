@@ -2,22 +2,26 @@
 // `correduria_id`. La proyección pública vive en `tarificador-lectura-reglas.ts`.
 import { prisma } from './tenant'
 import { RAMOS_TARIFICABLES_RPA } from './tarificador-reglas'
-import { documentoDePdf, proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
+import { documentoDePdf, primeroReutilizable, proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
+
+/** Cuántos trabajos recientes se miran para encontrar uno cuyo riesgo no esté purgado (plantillas). */
+export const CANDIDATOS_PLANTILLA = 20
 
 /**
  * Riesgo del trabajo MÁS RECIENTE de ese cliente (cualquier estado, también error: interesan los datos
  * tecleados). Por `correduria_id`; solo SELECT; sin html/captura/error. Pre-rellena el modal del bot.
  */
 export async function leerUltimoRiesgo(correduriaId: string, clienteId: string, compania: string, ramo: string): Promise<UltimoRiesgo> {
-  const f = await prisma.$queryRaw<{ id: string; created_at: Date; riesgo: unknown }[]>`
-    select t.id::text as id, t.created_at, t.riesgo
+  const f = await prisma.$queryRaw<{ id: string; created_at: Date; riesgo: unknown; estado: string; ramo: string }[]>`
+    select t.id::text as id, t.created_at, t.riesgo, t.estado, t.ramo
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
       and lower(t.compania) = ${compania} and t.ramo = ${ramo}
       and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
     order by t.created_at desc
-    limit 1`
-  return proyectarUltimoRiesgo(f[0] ?? null)
+    limit ${CANDIDATOS_PLANTILLA}`
+  // Un riesgo ya purgado no precarga (se salta al anterior que aún lo tenga).
+  return proyectarUltimoRiesgo(primeroReutilizable(f).fila)
 }
 
 type FilaTrabajo = { estado: string; created_at: Date; updated_at: Date; error: unknown; respuesta: unknown }
@@ -66,13 +70,17 @@ export async function leerIntegracionesActivas(correduriaId: string): Promise<In
     order by compania, ramo`
 }
 
-/** Riesgo COMPLETO del último trabajo de ese cliente+compañía+ramo. Solo para reencolar en servidor: NUNCA sale hacia plataforma. */
-export async function leerRiesgoParaReencolar(correduriaId: string, clienteId: string, compania: string, ramo: string): Promise<unknown | null> {
-  const f = await prisma.$queryRaw<{ riesgo: unknown }[]>`
-    select t.riesgo from seguros.tarificacion_trabajos t
+/**
+ * Riesgo COMPLETO del último trabajo de ese cliente+compañía+ramo cuyo riesgo NO esté purgado. Solo para reencolar en
+ * servidor: NUNCA sale hacia plataforma. `soloPurgados` = los había, pero todos purgados (la ruta responde `origen_purgado`).
+ */
+export async function leerRiesgoParaReencolar(correduriaId: string, clienteId: string, compania: string, ramo: string): Promise<{ riesgo: unknown | null; soloPurgados: boolean }> {
+  const f = await prisma.$queryRaw<{ riesgo: unknown; estado: string; ramo: string }[]>`
+    select t.riesgo, t.estado, t.ramo from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.cliente_id = ${clienteId}::uuid
       and lower(t.compania) = ${compania} and t.ramo = ${ramo}
       and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
-    order by t.created_at desc limit 1`
-  return f[0]?.riesgo ?? null
+    order by t.created_at desc limit ${CANDIDATOS_PLANTILLA}`
+  const r = primeroReutilizable(f)
+  return { riesgo: r.fila?.riesgo ?? null, soloPurgados: r.soloPurgados }
 }

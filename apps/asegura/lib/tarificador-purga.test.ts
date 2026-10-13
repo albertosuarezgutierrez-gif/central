@@ -9,6 +9,8 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { purgarRiesgoTrabajos, type DbPurga } from './tarificador-purga.ts'
 import { validarEntradaRamo } from './tarificador-reglas.ts'
+import { riesgoPrevioRenovacion } from './tarificador-ops-reglas.ts'
+import { primeroReutilizable } from './tarificador-lectura-reglas.ts'
 import { decidirAccionBandeja, riesgoSinDatosPersonales } from '@central/module-tarificacion'
 
 const APP = join(import.meta.dirname, '..')
@@ -92,6 +94,25 @@ test('origen de emisión: al cerrarse SU emisión, purgar la emisión purga tamb
   assert.equal(await purgarRiesgoTrabajos(db, ['e1']), 2)
   assert.deepEqual(escrito.map((e) => e.id), ['e1', 'o1'])
   for (const e of escrito) assert.ok(!JSON.stringify(e.riesgo).includes('H12345678') && !JSON.stringify(e.riesgo).includes('Socorro'))
+})
+test('CEPO origen: una emisión RECHAZADA/CADUCADA (cancelado) purga su copia pero NO el origen (sigue en plazo)', async () => {
+  const filasPorLlamada = [
+    [fila('cancelado', { id: 'e1', modo: 'emision', ramo: 'comunidades', riesgo: COMUNIDAD, origen_id: 'o1' })],
+    [fila('ok', { id: 'o1', ramo: 'comunidades', riesgo: COMUNIDAD, emisiones: ['cancelado'], terminado_at: new Date(Date.now() - 2 * 86_400_000) })],
+  ]
+  const escrito: unknown[] = []
+  const db = {
+    $queryRaw: async () => filasPorLlamada.shift() ?? [],
+    $executeRaw: async (_s: TemplateStringsArray, _r: string, id: unknown) => { escrito.push(id); return 1 },
+  } as unknown as DbPurga
+  assert.equal(await purgarRiesgoTrabajos(db, ['e1']), 1)
+  assert.deepEqual(escrito, ['e1'])
+})
+test('CEPO origen: solicitarEmision acepta de nuevo un origen cuya emisión se rechazó (dentro del plazo)', () => {
+  // La regla es la misma función pura; aquí se fija que la ruta la usa y que el texto dice «ya se emitió o 30 días».
+  const t = trozo('lib/tarificador-emision.ts', 'export async function solicitarEmision', 'const pre = precondicionesEmision')
+  assert.match(t, /ya se emitió o pasaron 30 días desde la tarificación/)
+  assert.doesNotMatch(leer('lib/tarificador-emision.ts'), /su emisión se cerró/)
 })
 test('origen de emisión: sin emisión, se conserva dentro de los 30 días y se purga después', async () => {
   const dentro = bdFalsa([fila('ok', { ramo: 'comunidades', riesgo: COMUNIDAD, terminado_at: new Date(Date.now() - 29 * 86_400_000) })])
@@ -193,3 +214,38 @@ test('bandeja · un error_definitivo (riesgo purgado) ya no se reintenta; requie
   assert.equal(decidirAccionBandeja('reintentar', 'requiere_humano', 'captcha').ok, true)
   assert.equal(decidirAccionBandeja('cancelar', 'error_definitivo', 'portal').ok, true)
 })
+
+// ─── 5 · CEPO plantillas: un riesgo ya PURGADO no se reutiliza ───────────────
+const COM_LLENO = { ramo: 'comunidades', direccion: { via: 'Calle Socorro', numero: '24', codigoPostal: '41003', municipio: 'Sevilla', provincia: 'Sevilla' }, documentoIdentidad: 'H12345678', m2Construidos: 900, anioConstruccion: 1975, tipoVivienda: 'Viviendas Pisos en Alto', uso: 'Habitual', plantas: 5, numEdificios: 1, numViviendasYLocales: 20, listaPropietarios: '> 50%', capitalContinente: 900000, numViviendas: null, numLocales: null, m2: null, ascensor: null, capitalContenido: null, fechaEfecto: null }
+const COM_PURGADO = riesgoSinDatosPersonales(COM_LLENO, 'comunidades')
+test('CEPO plantillas · renovación: salta el previo purgado y usa el anterior que aún tiene el CIF', () => {
+  const r = riesgoPrevioRenovacion([
+    { polizaId: 'p1', estado: 'cancelado', riesgo: COM_PURGADO, creadoEn: '2026-09-01' },
+    { polizaId: 'p1', estado: 'requiere_humano', riesgo: COM_LLENO, creadoEn: '2026-08-01' },
+  ], 'p1', 1, '2027-01-15', new Date('2026-12-01'))
+  assert.equal(r.ok, true)
+  if (r.ok) assert.equal(r.riesgo.documentoIdentidad, 'H12345678')
+})
+test('CEPO plantillas · renovación: si solo hay purgados → faltan con origen_purgado (nunca renueva a medias)', () => {
+  const r = riesgoPrevioRenovacion([{ polizaId: 'p1', estado: 'ok', riesgo: COM_PURGADO, creadoEn: '2026-09-01' }], 'p1', 1, '2027-01-15', new Date('2026-12-01'))
+  assert.equal(r.ok, false)
+  if (!r.ok) assert.match(r.faltan[0], /^origen_purgado:/)
+})
+test('CEPO plantillas · precarga / «Probar»: el primero NO purgado; solo purgados → soloPurgados', () => {
+  const a = primeroReutilizable([{ estado: 'ok', ramo: 'comunidades', riesgo: COM_PURGADO, id: 'x' }, { estado: 'error_reintentable', ramo: 'comunidades', riesgo: COM_LLENO, id: 'y' }])
+  assert.equal(a.fila?.id, 'y')
+  const b = primeroReutilizable([{ estado: 'cancelado', ramo: 'moto', riesgo: riesgoSinDatosPersonales(MOTO, 'moto') }])
+  assert.deepEqual(b, { fila: null, soloPurgados: true })
+  assert.deepEqual(primeroReutilizable([]), { fila: null, soloPurgados: false })
+})
+const PLANTILLAS: [string, string, string, string | undefined, RegExp][] = [
+  ['renovaciones', 'lib/tarificador-ops.ts', 'async function leerRenovaciones', 'const sinRiesgo', /riesgoPrevioRenovacion\(delCliente,/],
+  ['precarga previoCliente', 'lib/tarificador-oportunidad.ts', 'let previoCliente', 'return {', /proyectarUltimoRiesgo\(primeroReutilizable\(us\)\.fila\)/],
+  ['modal último riesgo', 'lib/tarificador-lectura.ts', 'export async function leerUltimoRiesgo', 'type FilaTrabajo', /primeroReutilizable\(f\)\.fila/],
+  ['«Probar» (lectura)', 'lib/tarificador-lectura.ts', 'export async function leerRiesgoParaReencolar', undefined, /primeroReutilizable\(f\)/],
+  ['«Probar» (ruta)', 'app/api/operador/tarificador/probar/route.ts', 'const leido =', 'const valida', /if \(leido\.soloPurgados\) return NextResponse\.json\(\{ estado: 'rechazado', motivo: 'origen_purgado'/],
+  ['explorador con datos reales', 'lib/tarificador-explorador.ts', 'if (e.trabajoOrigenId) {', 'clienteId = f.cliente_id', /if \(riesgoYaPurgado\(f\)\) return \{ estado: 'rechazado', status: 409, motivo: `\$\{MOTIVO_ORIGEN_PURGADO\}/],
+]
+for (const [nombre, fichero, desde, hasta, re] of PLANTILLAS) {
+  test(`CEPO plantillas · cableado: ${nombre} no reutiliza un riesgo purgado`, () => assert.match(trozo(fichero, desde, hasta), re))
+}

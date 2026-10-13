@@ -488,6 +488,8 @@ export {
   DIAS_ORIGEN_EMISION,
   planPurgaRiesgo,
   riesgoPurgadoEnEstado,
+  riesgoYaPurgado,
+  MOTIVO_ORIGEN_PURGADO,
   type TrabajoParaPurga,
   type PlanPurga,
 } from './purga-riesgo.ts'

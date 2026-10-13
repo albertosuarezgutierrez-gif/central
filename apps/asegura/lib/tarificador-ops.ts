@@ -25,12 +25,11 @@ import {
   detectarCambiosTarifa,
   diasEntre,
   elegirParaEncolar,
-  elegirRiesgoPrevio,
+  riesgoPrevioRenovacion,
   enVentanaRenovacion,
   maxRenovacionesDia,
   primaAnualMinima,
   renovacionesActivas,
-  riesgoParaRenovacion,
   trabajosDeLaPoliza,
   type AlertaTarifa,
   type EstadoRenovacion,
@@ -136,8 +135,8 @@ async function leerRenovaciones(correduriaId: string, ahora: Date): Promise<Reno
     const recientes = propios
       .filter((t) => t.created_at.getTime() >= desdeRecientes)
       .map((t) => ({ trabajoId: t.id, estado: t.estado, creadoEn: t.creadoEn, primaAllianz: t.estado === 'ok' ? primaAnualMinima(ofertasPublicas(t.respuesta).ofertas) : null }))
-    const previo = elegirRiesgoPrevio(delCliente, p.polizaId, p.nCliente)
-    const c = clasificarRenovacion(recientes, riesgoParaRenovacion(previo, vencimiento, ahora))
+    // Un riesgo ya PURGADO (trabajo cerrado) no es plantilla: se salta (o `faltan: origen_purgado`).
+    const c = clasificarRenovacion(recientes, riesgoPrevioRenovacion(delCliente, p.polizaId, p.nCliente, vencimiento, ahora))
     return {
       polizaId: p.polizaId,
       clienteId: p.clienteId,

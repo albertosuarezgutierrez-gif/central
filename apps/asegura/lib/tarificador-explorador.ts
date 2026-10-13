@@ -4,7 +4,7 @@
 // 🛡️ Las rutas del worker solo conocen el id del trabajo: correduría, compañía, ramo, entrada y si hay datos reales salen
 //    SIEMPRE de las filas (trabajo `en_curso` con lease vivo y modo 'exploracion' + su cabecera), nunca del cuerpo.
 
-import { ENTRADAS_EXPLORACION, claveCompania, esEntradaExploracion, puedeAutomatizar, topesExplorador, type InventarioDom, type MapaExploracion, type RespuestaExplorador } from '@central/module-tarificacion'
+import { ENTRADAS_EXPLORACION, MOTIVO_ORIGEN_PURGADO, claveCompania, esEntradaExploracion, puedeAutomatizar, riesgoYaPurgado, topesExplorador, type InventarioDom, type MapaExploracion, type RespuestaExplorador } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import { LEASE_MS } from './tarificador-reglas'
 import { RESERVA_IA_MS, inicioAcumulado, leaseExploracion, type PasoGuardado } from './tarificador-explorador-reglas'
@@ -239,8 +239,8 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
   let clienteId: string | null = null
   let riesgo: unknown = {}
   if (e.trabajoOrigenId) {
-    const o = await prisma.$queryRaw<{ cliente_id: string | null; ramo: string; modo: string | null; riesgo: unknown }[]>`
-      select cliente_id::text as cliente_id, ramo, to_jsonb(t)->>'modo' as modo, riesgo
+    const o = await prisma.$queryRaw<{ cliente_id: string | null; ramo: string; modo: string | null; riesgo: unknown; estado: string }[]>`
+      select cliente_id::text as cliente_id, ramo, to_jsonb(t)->>'modo' as modo, riesgo, estado
       from seguros.tarificacion_trabajos t
       where t.id = ${e.trabajoOrigenId}::uuid and t.correduria_id = ${e.correduriaId}::uuid`
     const f = o[0]
@@ -248,6 +248,8 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
     if ((f.modo ?? 'tarificar') !== 'tarificar' || !f.cliente_id) return { estado: 'rechazado', status: 409, motivo: 'trabajo_origen_no_es_una_tarificacion_de_cliente' }
     if (f.ramo !== def.ramo) return { estado: 'rechazado', status: 409, motivo: `trabajo_origen_de_otro_ramo (${f.ramo} ≠ ${def.ramo})` }
     if (typeof f.riesgo !== 'object' || f.riesgo === null || Array.isArray(f.riesgo)) return { estado: 'rechazado', status: 409, motivo: 'trabajo_origen_sin_riesgo' }
+    // Purga (13/10/2026): «con datos reales» y un riesgo ya borrado al cerrarse sería explorar con datos a medias. Se dice.
+    if (riesgoYaPurgado(f)) return { estado: 'rechazado', status: 409, motivo: `${MOTIVO_ORIGEN_PURGADO}: el riesgo de ese trabajo ya se borró al cerrarse (datos personales); elige uno abierto o explora en sintético` }
     clienteId = f.cliente_id
     riesgo = f.riesgo
   }
