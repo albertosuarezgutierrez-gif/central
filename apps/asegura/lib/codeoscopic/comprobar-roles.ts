@@ -22,14 +22,23 @@ export type ResultadoRoles =
 
 export type LectorRoles = (config: ConfigCodeoscopic, ramo: RamoPersonas) => Promise<unknown>
 
+/** Campos nuestros del asegurado de VIDA cuando no es el tomador: los de una persona asegurada + profesión y tabaco. */
+export const CAMPOS_ASEGURADO_VIDA: ReadonlySet<string> = new Set([...CAMPOS_ASEGURADO_ADICIONAL, 'profesion', 'fumador'])
+
 /**
  * `datos` = lo que se mandaría del TITULAR (la misma persona va de tomador y de asegurado);
  * `adicionales` = los demás asegurados (solo se les exige lo del rol del asegurado).
+ * `aseguradoDistinto` (VIDA, 13/10/2026) = el `risk.insured` cuando NO es el tomador (con su profesión y tabaco): el
+ * tomador solo responde de lo del rol del tomador y el asegurado de lo del rol del asegurado.
  */
 export async function comprobarRolesRamo(
   config: ConfigCodeoscopic,
   ramo: RamoPersonas,
-  entrada: { datos: Readonly<Record<string, unknown>>; adicionales?: readonly Record<string, unknown>[] },
+  entrada: {
+    datos: Readonly<Record<string, unknown>>
+    adicionales?: readonly Record<string, unknown>[]
+    aseguradoDistinto?: Readonly<Record<string, unknown>> | null
+  },
   leer: LectorRoles = rolesDePersonas,
 ): Promise<ResultadoRoles> {
   let crudo: unknown
@@ -47,9 +56,18 @@ export async function comprobarRolesRamo(
   }
   const { roles } = lectura
 
-  // El titular es tomador Y asegurado: se le exige la unión de los dos roles.
-  const exigidosTitular = [...new Set([...roles.tomador, ...roles.asegurado])]
+  const distinto = entrada.aseguradoDistinto ?? null
+  // El titular es tomador Y asegurado: se le exige la unión de los dos roles. Con un asegurado distinto (vida), solo
+  // lo del tomador; lo del asegurado se le exige a él (profesión y tabaco conservan su campo: la pantalla los pinta).
+  const exigidosTitular = distinto ? [...roles.tomador] : [...new Set([...roles.tomador, ...roles.asegurado])]
   const faltan = faltantesPorRoles(exigidosTitular, entrada.datos, ramo)
+  if (distinto) {
+    for (const f of faltantesPorRoles(roles.asegurado, distinto, ramo, CAMPOS_ASEGURADO_VIDA)) {
+      if (f.campo === 'profesion' || f.campo === 'fumador') {
+        if (!faltan.some((x) => x.campo === f.campo)) faltan.push(f)
+      } else faltan.push({ campo: 'asegurado', motivo: `asegurado: ${f.campo} — ${f.motivo}` })
+    }
+  }
 
   const adicionales = entrada.adicionales ?? []
   if (roles.maxAsegurados !== null && adicionales.length + 1 > roles.maxAsegurados) {

@@ -396,7 +396,7 @@ export default function DecesosNuevo({
  * es el primero; los asegurados son FICHAS (una vez cada una, por id). Lo que falte en una ficha se dice aquí y en la
  * verificación; nunca se rellena solo.
  */
-function AseguradosResumen({ riesgo, tomadorId }: { riesgo: Riesgo | null; tomadorId: string }) {
+export function AseguradosResumen({ riesgo, tomadorId }: { riesgo: Riesgo | null; tomadorId: string }) {
   if (!riesgo) return null
   const tomador = riesgo.figuras.find((f) => f.rol === 'tomador') ?? null
   const { asegurados, aseguradosSinFicha } = desdeRiesgoDecesos(riesgo, tomadorId)

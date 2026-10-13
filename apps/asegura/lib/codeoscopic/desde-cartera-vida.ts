@@ -8,6 +8,7 @@
 // una suposición razonada, no un contrato verificado.
 
 import { revisarDatosVida, type DatosVida, type ReparoVida } from './peticion-vida.ts'
+import type { AseguradoAdicional } from './asegurados.ts'
 import { partirApellidos, sexoDeSaludo, type ClienteCartera } from './desde-cartera.ts'
 import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 
@@ -45,6 +46,8 @@ export type ResueltosVidaNueva = {
   profesion?: string | null
   /** ¿Fuma? `null` = no se sabe. 🚨 Nunca se supone `false`: abarataría el precio sin base. */
   fumador?: boolean | null
+  /** El asegurado cuando NO es el tomador (`risk.insured`). Solo lo pone el SERVIDOR desde la ficha de la figura. */
+  asegurado?: AseguradoAdicional | null
 }
 
 export function precalificarVidaNueva(
@@ -79,6 +82,7 @@ export function precalificarVidaNueva(
     duracionAnios: resueltos.duracionAnios ?? undefined,
     profesion: limpio(resueltos.profesion) ?? undefined,
     fumador: typeof resueltos.fumador === 'boolean' ? resueltos.fumador : undefined,
+    ...(resueltos.asegurado ? { asegurado: resueltos.asegurado } : {}),
     fechaEfecto,
   }
 

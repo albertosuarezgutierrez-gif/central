@@ -20,6 +20,7 @@
 import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
 import {
   construirAsegurado,
+  motivoFechaNacimientoImposible,
   revisarAseguradosAdicionales,
   type AseguradoAdicional,
 } from './asegurados.ts'
@@ -58,6 +59,12 @@ export function revisarDatosSalud(d: Partial<DatosSalud>): ReparoSalud[] {
   const falta = (c: keyof DatosSalud, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
   for (const x of revisarPersona(d)) r.push(x as ReparoSalud)
+  // La persona que se ASEGURA (el tomador es siempre el primero de los asegurados/el asegurado): una fecha de
+  // nacimiento imposible, futura o de más de 120 años da 400 en el vendor y se COBRA. Se corta aquí, gratis (13/10/2026).
+  if (typeof d.fechaNacimiento === 'string' && RE_FECHA.test(d.fechaNacimiento)) {
+    const imposible = motivoFechaNacimientoImposible(d.fechaNacimiento)
+    if (imposible) r.push({ campo: 'fechaNacimiento', motivo: imposible })
+  }
 
   // El capital es OPCIONAL: la API no tiene campo para él en este ramo y no
   // viaja (ver `construirPeticion*`). Exigirlo haría creer al corredor que el

@@ -7,6 +7,9 @@
 // documento opcional) y `effectiveDate`. NO hay capital, modalidad, forma de pago, parentesco ni seguro anterior: aquí
 // no se piden ni se marcan.
 //
+// SALUD (13/10/2026) reutiliza esta misma verificación (`ramo: 'salud'`): su petición (`peticion-salud.ts`) lleva
+// exactamente lo mismo — `holder`, `risk.insureds[]` y `effectiveDate`; capital y modalidad son notas que NO viajan.
+//
 // Cada ✗ sale de lo mismo que apaga el botón de 0,50€; un `faltaAlgo` sin ✗ que lo explique añade uno genérico (nunca
 // un ✓ falso). Lo cubre `verificacion-decesos.test.ts`.
 import { CLAVES_HISTORIAL_DECLARADO } from '@central/module-seguros'
@@ -35,6 +38,8 @@ export type AseguradoVerificacion = {
 }
 
 export type EntradaVerificacionDecesos = {
+  /** El ramo de personas con `risk.insureds[]` (decesos por defecto; salud tiene la misma forma). */
+  ramo?: 'decesos' | 'salud'
   tomador: {
     /** No se pudo precalificar su ficha: no se sabe qué falta (el servidor corta antes de gastar). */
     sinPrecalificar: boolean
@@ -59,6 +64,7 @@ const estado = (falta: boolean) => (falta ? ('falta' as const) : ('ok' as const)
 
 export function gruposVerificacionDecesos(e: EntradaVerificacionDecesos): GrupoVerificacion[] {
   const t = e.tomador
+  const ramo = e.ramo ?? 'decesos'
   const figuras: ItemVerificacion[] = []
   const arribaTomador = { ancla: ANCLA_DECESOS.tomadorArriba, alternativa: ANCLA_DECESOS.intervinientes, arriba: true } as const
   if (t.sinPrecalificar) {
@@ -74,7 +80,7 @@ export function gruposVerificacionDecesos(e: EntradaVerificacionDecesos): GrupoV
   for (const a of e.asegurados) {
     const arriba = { ancla: ANCLA_DECESOS.intervinientes, arriba: true } as const
     if (a.empresa || (a.faltan ?? []).includes('empresa_no_asegurada')) {
-      figuras.push({ clave: `asegurado-${a.clienteId}`, texto: `Asegurado ${a.nombre}: es una empresa`, estado: 'falta', nota: 'un asegurado de decesos tiene que ser una persona: quítalo de «Intervinientes»', ...arriba })
+      figuras.push({ clave: `asegurado-${a.clienteId}`, texto: `Asegurado ${a.nombre}: es una empresa`, estado: 'falta', nota: `un asegurado de ${ramo} tiene que ser una persona: quítalo de «Intervinientes»`, ...arriba })
     } else if (a.faltan === null) {
       // No se pudo leer AQUÍ: el servidor la vuelve a leer y, si no puede, corta antes de pagar. Aviso, no ✓.
       figuras.push({ clave: `asegurado-${a.clienteId}`, texto: `Asegurado ${a.nombre}: no se pudo leer su ficha`, estado: 'aviso', nota: 'si sigue sin leerse, no se pide precio (no se cotiza con menos personas)', ...arriba })
@@ -111,12 +117,12 @@ export function gruposVerificacionDecesos(e: EntradaVerificacionDecesos): GrupoV
 
   const grupos: GrupoVerificacion[] = [
     { titulo: '1 · Figuras (tomador y asegurados)', items: figuras },
-    { titulo: '2 · Riesgo: decesos', items: riesgo },
+    { titulo: `2 · Riesgo: ${ramo}`, items: riesgo },
   ]
   if (e.historialDeclarado) {
     grupos.push({
       titulo: '3 · Historial y bonificaciones',
-      items: [{ clave: 'historial-no-viaja', texto: 'Lo declarado en «Historial y bonificaciones» no viaja', estado: 'aviso', nota: 'Avant2 no admite seguro anterior en decesos: queda para el expediente', ancla: ANCLA_DECESOS.historial, arriba: true }],
+      items: [{ clave: 'historial-no-viaja', texto: 'Lo declarado en «Historial y bonificaciones» no viaja', estado: 'aviso', nota: `Avant2 no admite seguro anterior en ${ramo}: queda para el expediente`, ancla: ANCLA_DECESOS.historial, arriba: true }],
     })
   }
   if (e.faltaAlgo && grupos.every((g) => g.items.every((i) => i.estado !== 'falta'))) {

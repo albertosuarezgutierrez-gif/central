@@ -45,3 +45,27 @@ test('hogar (fase 3): embebido, con propietario y asegurado como personas y la v
   assert.equal(h.claveObjeto, 'datosVivienda')
   assert.equal(h.comparable, true)
 })
+
+test('13/10/2026: los SEIS ramos con Avant2 en el repo son embebidos; el registro y la parrilla dicen lo mismo', async () => {
+  const { RAMOS_AVANT2 } = await import('../../app/(usuario)/correduria/oportunidad/[id]/parrilla-precios.ts')
+  const { tieneAvant2 } = await import('./registro-ramos.ts')
+  for (const r of RAMOS_RIESGO) {
+    assert.equal(tieneAvant2(r), (RAMOS_AVANT2 as readonly string[]).includes(r), r)
+    assert.equal(REGISTRO_RAMOS[r].cotizador === 'embebido', (RAMOS_AVANT2 as readonly string[]).includes(r), `${r}: con Avant2 = embebido`)
+  }
+  assert.deepEqual(RAMOS_RIESGO.filter((r) => REGISTRO_RAMOS[r].cotizador === 'pantalla'), [], 'ya no queda ningún ramo en pantalla aparte')
+})
+
+test('sin Avant2 (comercio, RC, comunidades, otros, tipos fuera del registro): aviso explícito, nunca cotizador inventado', async () => {
+  const { avisoSinAvant2 } = await import('./registro-ramos.ts')
+  for (const r of ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos']) assert.equal(avisoSinAvant2(r, { hayBots: false }), null, r)
+  for (const r of ['comercio', 'rc', 'otros', 'accidentes', 'empresas', null, undefined, '']) {
+    const a = avisoSinAvant2(r, { hayBots: false })
+    assert.ok(a, String(r))
+    assert.match(a!, /Sin precio automático por Avant2/)
+    assert.match(a!, /no hay bot de compañía activo/)
+  }
+  assert.match(avisoSinAvant2('comunidades', { hayBots: true })!, /bots de compañía/)
+  assert.equal(REGISTRO_RAMOS.comunidades.cotizador, 'bots')
+  for (const r of ['comercio', 'rc', 'otros'] as const) assert.equal(REGISTRO_RAMOS[r].cotizador, 'fuera', r)
+})
