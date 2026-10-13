@@ -14,6 +14,9 @@
 >
 **(13/10/2026)** — Correduría: DECESOS en el riesgo unificado (`PedirPrecioDecesos.tsx` monta `DecesosNuevo` embebido; verificación en `verificacion-decesos.ts` apaga el botón de 0,50€). Asegurados = fichas rol `asegurado` (asegura las arma con `aseguradosDeFigurasParaCotizar`; exige que el tomador sea el del riesgo y rechaza `correcciones.aseguradosAdicionales`); Avant2 solo pide nombre/apellidos/nacimiento/sexo/doc; el capital no viaja; sin SQL.
 Pendiente: salud embebido, comparador de variantes en decesos, códigos DGS de las compañías de decesos.
+**(13/10/2026)** — Trading: NKE fuera del agente porque nunca entró en el top-10 de factores (momentum 12-1 −46,5%, Piotroski 5/9; nunca tuvo tesis); NKE no fue caso de la señal.
+Alberto pidió medir «rebote en soporte histórico con volumen»: preregistrada como H16 (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`, commit d34112a) y medida sobre el retrovisor mensual → INCONCLUSA (2011-18 n=101 <200; 2019-26 +1,66 pp <2 pp).
+El control sin soporte rinde igual o más → el soporte no aporta; no se cabla nada.
 
 **(13/10/2026)** — Correduría «Mi mesa» (PR #4538, rama `claude/tasks-opportunities-structure-ezhuxl`): `/correduria/mesa` lista expedientes (= `seguros.oportunidades`, sin tabla nueva) en Hoy/Abiertas/Esperando/Rescates/Aparcadas vía `GET /api/operador/expedientes`; aparcar crea «Retomar» en la fecha de vuelta (antes no volvía), posponer N días, rescate perdido → aparcado (45 días antes del aniversario), columna `notas` (migración aplicada). Decisión de Alberto: muy simplificado, sin registrar llamadas, siniestros fuera. Pérdidas de cartera: sustitución con misma matrícula hasta 120 días (caso Mapfre→Allianz 5802JMJ) y bajas de >12 meses ocultas. BD: cerradas con marca 51 `gestiones` heredadas (42 `asegura_app:ges2` + 9 `loo-916`); `public.gestiones` de Supabase_asegura es copia PARADA, la fuente es `seguros.gestiones` de central.
 

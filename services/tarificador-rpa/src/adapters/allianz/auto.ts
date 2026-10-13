@@ -49,10 +49,11 @@ import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
 /** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
 export const AUTO_ACTIVO = false
 /**
- * Flag de registro de MOTO (separado de Turismos). APAGADO; lo enciende Alberto. `adapters/index.ts` registra `allianzMoto`
- * solo con él en `true` y el runner ya valida el riesgo por ramo (`ramo.ts`).
+ * Flag de registro de MOTO (separado de Turismos). ENCENDIDO por Alberto el 13/10/2026 para la primera prueba real
+ * (la fila `allianz/moto` de `companias_integracion` sigue siendo el interruptor de BD). `adapters/index.ts` registra
+ * `allianzMoto` solo con él en `true` y el runner ya valida el riesgo por ramo (`ramo.ts`).
  */
-export const MOTO_ACTIVO = false
+export const MOTO_ACTIVO = true
 
 /** Hueco declarado: falta un mapa de pantalla. NO transitorio → `error_definitivo`, no se reintenta. */
 export class ErrorMapaIncompleto extends ErrorTarificador {
