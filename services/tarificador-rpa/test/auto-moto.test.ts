@@ -9,6 +9,7 @@ import { chromium, type Browser, type Locator, type Page } from 'playwright'
 import {
   allianzMoto,
   AUTO_ACTIVO,
+  MOTO_ACTIVO,
   avanzarPestanaGuardada,
   buscarPoblacion,
   comprobarTitularesMoto,
@@ -112,7 +113,10 @@ const ctxPulsar = {
   },
 }
 
-test('Moto sigue inactiva', () => assert.equal(AUTO_ACTIVO, false))
+test('Moto y Turismos siguen inactivos (flags separados, apagados)', () => {
+  assert.equal(AUTO_ACTIVO, false)
+  assert.equal(MOTO_ACTIVO, false)
+})
 
 test('valorOpcionExacta / valorClaseMoto: exactas o nada (nunca la parecida)', () => {
   const o = [{ valor: '', etiqueta: '' }, { valor: 'A', etiqueta: 'Marca Prueba' }, { valor: 'B', etiqueta: 'MARCA PRUEBA 2' }, { valor: 'C', etiqueta: 'Otra' }, { valor: 'D', etiqueta: 'OTRA ' }]
@@ -224,11 +228,20 @@ test('pantalla de error: fila de error → datos con campo y mensaje; fila infor
   assert.equal(incidenciaDesdeFila('rowAppErrorTextBlock', '<script>', 'm')?.campo, null)
 })
 
-test('GUARD: los avances de pestaña del portal (aceptar_onclick) siguen rechazados y son un hueco declarado', async () => {
+test('GUARD: el pulsar() genérico sigue rechazando los avances; Turismos es hueco; Moto va SOLO por ctx.avanzarPestanaAutorizada', async () => {
   for (const h of ["goSelected('datosBasicos'); aceptar_onclick();", "goSelected('rate'); aceptar_onclick();"]) {
     assert.throws(() => comprobarBoton(['Tarificar', 'rate', h]), EmisionBloqueadaError, h)
   }
-  for (const d of ['datosBasicos', 'tarificar'] as const) await assert.rejects(avanzarPestanaGuardada(page, {} as never, d), ErrorMapaIncompleto)
+  for (const d of ['datosBasicos', 'tarificar'] as const) {
+    await assert.rejects(avanzarPestanaGuardada(page, {} as never, d), ErrorMapaIncompleto)
+    await assert.rejects(avanzarPestanaGuardada(page, { avanzarPestanaAutorizada: async () => {} } as never, d, 'auto'), ErrorMapaIncompleto)
+    await assert.rejects(avanzarPestanaGuardada(page, {} as never, d, 'moto'), ErrorMapaIncompleto)
+  }
+  const pedidos: string[] = []
+  const ctx = { avanzarPestanaAutorizada: async (s: string) => void pedidos.push(s) }
+  await avanzarPestanaGuardada(page, ctx as never, 'datosBasicos', 'moto')
+  await avanzarPestanaGuardada(page, ctx as never, 'tarificar', 'moto')
+  assert.deepEqual(pedidos, ['td#datosBasicos', 'td#rate'])
 })
 
 test('los manejadores reales de los campos de Moto pasan el guard; los de Archivar/Emitir no', async () => {
