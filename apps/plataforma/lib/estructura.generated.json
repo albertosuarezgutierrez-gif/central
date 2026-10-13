@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-13T12:22:57Z",
+  "generadoEn": "2026-10-13T15:09:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -367,7 +367,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 233
+        "evidencias": 240
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 183
+        "evidencias": 186
       },
       "rrhh": {
         "estado": "no",
@@ -2311,7 +2311,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 39
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 35
       },
       "asegura-portal": {
         "estado": "no",
@@ -4048,6 +4048,7 @@
       "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
+      "/api/cron/tarificador-cola",
       "/api/cron/tarificador-renovaciones",
       "/api/cron/whatsapp-analizar",
       "/api/cron/whatsapp-retencion",
@@ -4060,6 +4061,7 @@
       "/api/operador/anulaciones/pue",
       "/api/operador/aprobaciones",
       "/api/operador/aviso-web",
+      "/api/operador/avisos",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/borrador-presupuesto",
@@ -4140,6 +4142,7 @@
       "/api/operador/eventos",
       "/api/operador/eventos/detectar",
       "/api/operador/expedientes",
+      "/api/operador/expedientes/auto",
       "/api/operador/export-rgpd",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
@@ -4222,10 +4225,12 @@
       "/api/operador/tarificador/grabaciones/[id]",
       "/api/operador/tarificador/grabaciones/[id]/analizar",
       "/api/operador/tarificador/grabaciones/[id]/pantallas",
+      "/api/operador/tarificador/integraciones",
       "/api/operador/tarificador/intervenciones",
       "/api/operador/tarificador/oportunidad",
       "/api/operador/tarificador/oportunidad/[id]/propuesta",
       "/api/operador/tarificador/panel",
+      "/api/operador/tarificador/probar",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/operador/tarificador/trabajo/[id]/traza",
@@ -5144,6 +5149,7 @@
       "/api/correduria/aprobaciones",
       "/api/correduria/avant2-emision",
       "/api/correduria/avant2-proyectos",
+      "/api/correduria/avisos",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/bajas-pue",
@@ -5257,9 +5263,11 @@
       "/api/correduria/tarificador/grabaciones/[id]",
       "/api/correduria/tarificador/grabaciones/[id]/analizar",
       "/api/correduria/tarificador/grabaciones/[id]/pantallas",
+      "/api/correduria/tarificador/integraciones",
       "/api/correduria/tarificador/oportunidad",
       "/api/correduria/tarificador/oportunidad/[id]/propuesta",
       "/api/correduria/tarificador/panel",
+      "/api/correduria/tarificador/probar",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/correduria/tarificador/trabajo/[id]/traza",
@@ -5837,6 +5845,7 @@
       "seguros.tarificador_acompanamiento",
       "seguros.tarificador_coberturas_presupuesto",
       "seguros.tarificador_conocimiento",
+      "seguros.tarificador_elecciones",
       "seguros.tarificador_fichas",
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
@@ -6860,7 +6869,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1670,
+    "apis": 1678,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
