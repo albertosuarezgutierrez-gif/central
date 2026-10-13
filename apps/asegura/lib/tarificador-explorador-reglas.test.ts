@@ -97,13 +97,36 @@ test('MAX_TOKENS_SALIDA_EXPLORADOR: cabe una respuesta con 15 acciones y 60 entr
 })
 
 test('leerPeticionEncolarExploracion: entrada de la lista cerrada, origen uuid opcional y ninguna otra clave', () => {
-  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar' }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: null } })
-  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', trabajoOrigenId: UUID }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: UUID } })
+  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar' }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: null, oportunidadId: null } })
+  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', trabajoOrigenId: UUID }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: UUID, oportunidadId: null } })
   assert.equal(leerPeticionEncolarExploracion({ entrada: 'https://portal.example.test' }).ok, false)
   assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', trabajoOrigenId: 'x' }).ok, false)
   assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', riesgo: {} }).ok, false)
   assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', clienteId: UUID }).ok, false)
   assert.equal(leerPeticionEncolarExploracion(null).ok, false)
+})
+
+test('leerPeticionEncolarExploracion: oportunidadId (vía c) uuid, EXCLUYENTE con trabajoOrigenId', () => {
+  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', oportunidadId: UUID }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: null, oportunidadId: UUID } })
+  const ambas = leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', oportunidadId: UUID, trabajoOrigenId: UUID })
+  assert.equal(ambas.ok, false)
+  if (!ambas.ok) assert.match(ambas.errores.join(' '), /excluyentes/)
+  assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', oportunidadId: 'no-uuid' }).ok, false)
+})
+
+test('prompt con datos reales: catálogo sin pistas de prueba, uso/régimen visibles, claves sinValor, ningún dato personal', () => {
+  const l = leerPeticionPaso({ trabajoId: UUID, inventario: crudo })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio', apellido1: 'Deprueba' }, inmueble: { codigoPostal: '00000' }, hogar: { uso: 'TouristRental', regimen: 'Tenant' } }
+  const pr = promptExplorador({ entrada: 'allianz:particulares:hogar', ramo: 'hogar', inventario: l.p.inventario, historial: [], conDatosReales: true, avancesFallidos: 0, riesgo })
+  assert.match(pr, /"clave":"hogar\.uso"[^}]*"valor":"TouristRental"/)
+  assert.match(pr, /"clave":"hogar\.regimen"[^}]*"valor":"Tenant"/)
+  assert.match(pr, /"clave":"inmueble\.anio_construccion"[^}]*"sinValor":true/)
+  assert.doesNotMatch(pr, /"pista"/)
+  for (const x of ['00000000T', 'Ficticio', 'Deprueba', '"00000"']) assert.doesNotMatch(pr, new RegExp(x))
+  assert.match(SYSTEM_EXPLORADOR, /autocompletan año de construcción y m² desde el Catastro/i)
+  assert.match(SYSTEM_EXPLORADOR, /hogar\.uso[\s\S]*EXACTAMENTE[\s\S]*parar ambiguo/)
 })
 
 test('leerPeticionPaso: re-sanea (sin valores ni datos personales) y asigna refs', () => {
@@ -252,4 +275,14 @@ test('registrarResultado: el cableado de las reglas de cierre existe en tarifica
   assert.match(t, /cierraCabeceraTrasFallo\(estado\)/)
   const x = readFileSync(path.join(dir, 'tarificador-explorador.ts'), 'utf8')
   assert.match(x, /ia_en_vuelo_hasta = case when \$\{llamada\}::boolean then null else ia_en_vuelo_hasta end/)
+})
+
+test('encolar por oportunidad: monta el riesgo con el helper puro y guarda el ancla en oportunidad_id', () => {
+  const f = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'tarificador-explorador.ts'), 'utf8')
+  assert.match(f, /riesgoExploracionDeOportunidad\(/)
+  assert.match(f, /personaDeFicha\(e\.correduriaId, f\.cliente_id, 'hogar'\)/)
+  assert.match(f, /trabajo_origen_id, oportunidad_id, compania/)
+  assert.match(f, /oportunidad_incompleta: falta \$\{r\.faltan\.join/)
+  const r = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../app/api/operador/tarificador/exploracion/route.ts'), 'utf8')
+  assert.match(r, /oportunidadId: l\.p\.oportunidadId/)
 })

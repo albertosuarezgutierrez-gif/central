@@ -72,7 +72,7 @@ export async function POST(req: Request) {
 
     let inicio: Date | null = null
     const out = await ejecutarPaso<Bd>(
-      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo },
+      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo },
       {
         conLock: (fn) => conLockExploracion(e, fn),
         leer: async (bd) => {

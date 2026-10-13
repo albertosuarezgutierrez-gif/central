@@ -125,7 +125,31 @@ describe('catálogo y resolución de datos', () => {
     expect(resolverDato('tomador.nif', real)).toEqual({ ok: true, valor: '00000000T' })
     expect(resolverDato('tomador.nombre', real)).toEqual({ ok: false, motivo: 'dato_sensible_requerido' })
     expect(resolverDato('inmueble.superficie_m2', real)).toEqual({ ok: true, valor: '120' })
-    expect(resolverDato('inmueble.anio_construccion', real)).toEqual({ ok: true, valor: '1990' })
+    // 🚨 CEPO (13/10/2026): con datos reales, una clave del riesgo AUSENTE nunca cae al valor de prueba (NIF real + «PRUEBA 1», CP 41001).
+    expect(resolverDato('inmueble.anio_construccion', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    expect(resolverDato('inmueble.codigo_postal', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    expect(resolverDato('inmueble.nombre_via', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    expect(resolverDato('hogar.uso', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    // Sin ruta en el riesgo (fecha de efecto) sigue siendo la de mañana; en sintético, lo de prueba sigue igual.
+    expect(resolverDato('efecto.fecha', real)).toEqual({ ok: true, valor: '14/10/2026' })
+    expect(resolverDato('inmueble.anio_construccion', { ...real, conDatosReales: false })).toEqual({ ok: true, valor: '1990' })
+  })
+
+  it('catálogo con datos reales: sin pistas de prueba, claves ausentes marcadas y solo uso/régimen/tipo con valor visible', () => {
+    const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio' }, inmueble: { codigoPostal: '00000' }, hogar: { uso: 'MainResidence', regimen: 'Owner' } }
+    const c = catalogoParaIA('hogar', { riesgo })
+    const de = (k: string) => c.find((d) => d.clave === k)!
+    expect(c.some((d) => d.pista !== undefined && d.clave !== 'efecto.fecha')).toBe(false)
+    expect(de('inmueble.anio_construccion')).toMatchObject({ sinValor: true })
+    expect(de('inmueble.superficie_m2')).toMatchObject({ sinValor: true })
+    // El CP real NO se enseña (dato de la dirección); solo se sabe que hay valor.
+    expect(de('inmueble.codigo_postal').valor).toBeUndefined()
+    expect(de('inmueble.codigo_postal').sinValor).toBeUndefined()
+    expect(de('tomador.nif')).toEqual({ clave: 'tomador.nif', descripcion: expect.any(String), tipo: 'texto' })
+    expect(de('hogar.uso').valor).toBe('MainResidence')
+    expect(de('hogar.regimen').valor).toBe('Owner')
+    expect(JSON.stringify(c)).not.toContain('00000000T')
+    expect(JSON.stringify(c)).not.toContain('Ficticio')
   })
 
   it('contacto solo de entorno; sin entorno o mal formado → para', () => {

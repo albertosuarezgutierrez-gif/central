@@ -4,8 +4,9 @@
 // 🛡️ Las rutas del worker solo conocen el id del trabajo: correduría, compañía, ramo, entrada y si hay datos reales salen
 //    SIEMPRE de las filas (trabajo `en_curso` con lease vivo y modo 'exploracion' + su cabecera), nunca del cuerpo.
 
-import { ENTRADAS_EXPLORACION, MOTIVO_ORIGEN_PURGADO, claveCompania, esEntradaExploracion, puedeAutomatizar, riesgoYaPurgado, topesExplorador, type InventarioDom, type MapaExploracion, type RespuestaExplorador } from '@central/module-tarificacion'
+import { ENTRADAS_EXPLORACION, MOTIVO_ORIGEN_PURGADO, claveCompania, riesgoExploracionDeOportunidad, esEntradaExploracion, puedeAutomatizar, riesgoYaPurgado, topesExplorador, type InventarioDom, type MapaExploracion, type RespuestaExplorador } from '@central/module-tarificacion'
 import { prisma } from './tenant'
+import { personaDeFicha } from './oportunidad-riesgo'
 import { LEASE_MS } from './tarificador-reglas'
 import { RESERVA_IA_MS, inicioAcumulado, leaseExploracion, type PasoGuardado } from './tarificador-explorador-reglas'
 import { PasoOcupado, type EstadoPaso, type PasoARegistrar } from './tarificador-explorador-paso'
@@ -214,15 +215,16 @@ export async function costeYModelo(e: ExploracionViva, bd: Bd = prisma): Promise
 
 // ─── Encolar (puerto de operador, 13/10/2026) ────────────────────────────────
 
-export type EntradaEncolarExploracion = { correduriaId: string; entrada: string; trabajoOrigenId: string | null; solicitadoPor: string }
+export type EntradaEncolarExploracion = { correduriaId: string; entrada: string; trabajoOrigenId: string | null; oportunidadId?: string | null; solicitadoPor: string }
 export type ResultadoEncolarExploracion =
   | { estado: 'encolado'; trabajoId: string; exploracionId: string; compania: string; conDatosReales: boolean }
   | { estado: 'rechazado'; status: number; motivo: string }
 
 /**
- * Encola UNA exploración. Sintética (sin `trabajoOrigenId`: `cliente_id NULL`, riesgo vacío, todo lo personal de prueba) o
- * ligada a una petición REAL: un trabajo `tarificar` de ESTA correduría, con cliente y del MISMO ramo que la entrada (se
- * copian su cliente y su riesgo; el trigger de la BD lo vuelve a exigir). Cerrojos: entrada de la lista cerrada, fila de
+ * Encola UNA exploración. Sintética (sin ancla: `cliente_id NULL`, riesgo vacío, todo lo personal de prueba) o ligada a
+ * datos REALES por una de dos anclas EXCLUYENTES: un trabajo `tarificar` de ESTA correduría, con cliente y del MISMO ramo
+ * (se copian su cliente y su riesgo), o una OPORTUNIDAD de Hogar de esta correduría (cliente de la oportunidad; riesgo =
+ * ficha + `datosVivienda`, con uso y régimen obligatorios). El trigger de la BD re-exige el mismo cliente. Cerrojos: entrada de la lista cerrada, fila de
  * `companias_integracion` activa y `rpa_autorizada` (la misma que mira `reclamarSiguiente`), y una exploración viva por
  * compañía (índice único → 409). No lanza la máquina: eso lo hace quien llama (`lanzarPendientes`).
  */
@@ -253,11 +255,37 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
     clienteId = f.cliente_id
     riesgo = f.riesgo
   }
+  const oportunidadId = e.trabajoOrigenId ? null : (e.oportunidadId ?? null)
+  if (oportunidadId) {
+    // Vía (c), 13/10/2026: ancla = una OPORTUNIDAD de Hogar de esta correduría. El riesgo se monta con la ficha de SU
+    // cliente (descifrada en el servidor, `personaDeFicha`) + `info_riesgo.datosVivienda`. Nada se inventa ni se supone.
+    const o = await prisma.$queryRaw<{ cliente_id: string | null; tipo: string | null; datos_vivienda: unknown; tomador_distinto: boolean }[]>`
+      select o.cliente_id::text as cliente_id, o.tipo::text as tipo, o.info_riesgo->'datosVivienda' as datos_vivienda,
+             exists (select 1 from seguros.oportunidad_figura f
+                     where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'tomador' and f.cliente_id <> o.cliente_id) as tomador_distinto
+      from seguros.oportunidades o
+      where o.id = ${oportunidadId}::uuid and o.correduria_id = ${e.correduriaId}::uuid`
+    const f = o[0]
+    if (!f) return { estado: 'rechazado', status: 404, motivo: 'oportunidad_no_encontrada' }
+    if (!f.cliente_id) return { estado: 'rechazado', status: 409, motivo: 'oportunidad_sin_cliente' }
+    if (f.tipo !== 'hogar' || def.ramo !== 'hogar') return { estado: 'rechazado', status: 409, motivo: `oportunidad_de_otro_ramo (${f.tipo ?? 'sin ramo'} ≠ ${def.ramo}): la vía oportunidad solo explora Hogar` }
+    // El trigger exige que el cliente del trabajo sea el de la oportunidad: un tomador distinto no se mezcla con él.
+    if (f.tomador_distinto) return { estado: 'rechazado', status: 409, motivo: 'tomador_distinto_del_cliente: el tomador de la oportunidad no es su cliente' }
+    const ficha = await personaDeFicha(e.correduriaId, f.cliente_id, 'hogar')
+    if (!ficha) return { estado: 'rechazado', status: 409, motivo: 'ficha_del_cliente_no_legible' }
+    if ('tipo' in ficha && ficha.tipo === 'juridica') return { estado: 'rechazado', status: 409, motivo: 'tomador_empresa_no_soportado' }
+    const p = ficha as { dni?: string; nombre?: string; apellido1?: string; apellido2?: string; fechaNacimiento?: string }
+    const r = riesgoExploracionDeOportunidad({ nif: p.dni, nombre: p.nombre, apellido1: p.apellido1, apellido2: p.apellido2, fechaNacimiento: p.fechaNacimiento }, f.datos_vivienda)
+    // Solo NOMBRES de campo en el motivo, nunca valores.
+    if (!r.ok) return { estado: 'rechazado', status: 409, motivo: `oportunidad_incompleta: falta ${r.faltan.join(', ')}` }
+    clienteId = f.cliente_id
+    riesgo = r.riesgo
+  }
   try {
     return await prisma.$transaction(async (tx) => {
       const t = await tx.$queryRaw<{ id: string }[]>`
-        insert into seguros.tarificacion_trabajos (correduria_id, cliente_id, trabajo_origen_id, compania, ramo, riesgo, solicitado_por, modo)
-        values (${e.correduriaId}::uuid, ${clienteId}::uuid, ${e.trabajoOrigenId}::uuid, ${compania}, ${def.ramo}, ${JSON.stringify(riesgo)}::jsonb, ${e.solicitadoPor}, 'exploracion')
+        insert into seguros.tarificacion_trabajos (correduria_id, cliente_id, trabajo_origen_id, oportunidad_id, compania, ramo, riesgo, solicitado_por, modo)
+        values (${e.correduriaId}::uuid, ${clienteId}::uuid, ${e.trabajoOrigenId}::uuid, ${oportunidadId}::uuid, ${compania}, ${def.ramo}, ${JSON.stringify(riesgo)}::jsonb, ${e.solicitadoPor}, 'exploracion')
         returning id::text as id`
       const x = await tx.$queryRaw<{ id: string }[]>`
         insert into seguros.tarificador_exploraciones (correduria_id, trabajo_id, entrada, compania, producto, con_datos_reales, solicitado_por)

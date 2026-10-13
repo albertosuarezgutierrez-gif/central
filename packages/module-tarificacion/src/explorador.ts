@@ -127,9 +127,9 @@ const DATOS_INMUEBLE: readonly DatoCatalogo[] = [
 ]
 
 const DATOS_HOGAR: readonly DatoCatalogo[] = [
-  D({ clave: 'hogar.tipo_vivienda', descripcion: 'Tipo de vivienda: piso en altura', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Piso', rutaRiesgo: 'hogar.tipoVivienda' }),
-  D({ clave: 'hogar.uso', descripcion: 'Uso: vivienda habitual', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Habitual', rutaRiesgo: 'hogar.uso' }),
-  D({ clave: 'hogar.regimen', descripcion: 'Régimen: propietario', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Propietario', rutaRiesgo: 'hogar.regimen' }),
+  D({ clave: 'hogar.tipo_vivienda', descripcion: 'Tipo de vivienda (piso, casa…)', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Piso', rutaRiesgo: 'hogar.tipoVivienda' }),
+  D({ clave: 'hogar.uso', descripcion: 'Uso de la vivienda (habitual, secundaria, alquiler, alquiler turístico…): decide la tarifa', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Habitual', rutaRiesgo: 'hogar.uso' }),
+  D({ clave: 'hogar.regimen', descripcion: 'Régimen (propietario / inquilino): decide la tarifa', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'Propietario', rutaRiesgo: 'hogar.regimen' }),
   D({ clave: 'hogar.capital_continente', descripcion: 'Capital de continente en euros', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '120000', rutaRiesgo: 'hogar.capitalContinente' }),
   D({ clave: 'hogar.capital_contenido', descripcion: 'Capital de contenido en euros', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '30000', rutaRiesgo: 'hogar.capitalContenido' }),
 ]
@@ -153,14 +153,31 @@ export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
  * Lo que la IA ve del catálogo: clave, descripción y tipo. La `pista` (el valor de prueba) SOLO de lo no personal; de un
  * dato personal la IA no ve nada más que su clave.
  */
-export function catalogoParaIA(ramo: string): { clave: string; descripcion: string; tipo: TipoDato; pista?: string }[] {
-  return catalogoDe(ramo).map((d) => ({
-    clave: d.clave,
-    descripcion: d.descripcion,
-    tipo: d.tipo,
-    ...(!d.personal && d.sintetico && d.sintetico !== '@manana' ? { pista: d.sintetico } : {}),
-  }))
+export function catalogoParaIA(
+  ramo: string,
+  real?: { riesgo: unknown },
+): { clave: string; descripcion: string; tipo: TipoDato; pista?: string; valor?: string; sinValor?: true }[] {
+  return catalogoDe(ramo).map((d) => {
+    const base = { clave: d.clave, descripcion: d.descripcion, tipo: d.tipo }
+    // Con datos REALES (13/10/2026): nada de pistas de prueba en las claves del riesgo (la IA creería que hay un valor).
+    // La clave sin valor se MARCA (`sinValor`); el valor solo se enseña de las claves de opción no personales de
+    // `CLAVES_VALOR_VISIBLE_IA` (uso, régimen…), que la IA necesita para elegir la opción exacta del portal.
+    if (real && d.rutaRiesgo) {
+      const v = enRuta(real.riesgo, d.rutaRiesgo)
+      if (v === null) return { ...base, sinValor: true as const }
+      return CLAVES_VALOR_VISIBLE_IA.includes(d.clave) && !d.personal && RE_VALOR_OPCION.test(v) ? { ...base, valor: v } : base
+    }
+    return { ...base, ...(!d.personal && d.sintetico && d.sintetico !== '@manana' ? { pista: d.sintetico } : {}) }
+  })
 }
+
+/**
+ * Claves cuyo VALOR real ve la IA con datos reales: opciones de catálogo, no personales, que deciden la tarifa (el uso
+ * de la vivienda y el régimen) y que la IA tiene que casar con una opción del portal. Nunca dirección, CP ni persona.
+ */
+export const CLAVES_VALOR_VISIBLE_IA: readonly string[] = Object.freeze(['hogar.uso', 'hogar.regimen', 'hogar.tipo_vivienda'])
+/** Un id de catálogo (`MainResidence`, `Owner`…): palabra corta sin datos. Lo que no casa no se enseña. */
+const RE_VALOR_OPCION = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 _-]{0,40}$/
 
 export type ContextoDatos = {
   ramo: string
@@ -214,8 +231,10 @@ export function resolverDato(clave: string, ctx: ContextoDatos): DatoResuelto {
     return d.sintetico ? { ok: true, valor: d.sintetico } : { ok: false, motivo: 'dato_sensible_requerido' }
   }
   if (ctx.conDatosReales && d.rutaRiesgo) {
+    // 🚨 Con datos REALES una clave del riesgo sale del riesgo o NO sale: nunca su valor de prueba («PRUEBA», CP 41001)
+    //    junto a un NIF real. Sin valor, el worker deja el campo como está si el portal ya lo rellenó (Catastro) o para.
     const v = enRuta(ctx.riesgo, d.rutaRiesgo)
-    if (v !== null) return { ok: true, valor: v }
+    return v !== null ? { ok: true, valor: v } : { ok: false, motivo: 'dato_no_disponible' }
   }
   if (d.sintetico === '@manana') return { ok: true, valor: ddmmaaaa(new Date(ctx.hoy.getTime() + 86_400_000)) }
   return d.sintetico ? { ok: true, valor: d.sintetico } : { ok: false, motivo: 'dato_no_disponible' }
