@@ -2,7 +2,7 @@
 // de pasos (SIN inventario) y el mapa re-validado. No toca el worker ni la lógica de los pasos (fase B).
 import { validarMapa, type MapaExploracion } from '@central/module-tarificacion'
 import { prisma } from './tenant'
-import { puedeAprobar, resumirPaso, type EstadoMapa, type PasoResumen } from './tarificador-exploraciones-reglas'
+import { puedeAprobar, resumirPaso, transicionPermitida, type EstadoMapa, type PasoResumen } from './tarificador-exploraciones-reglas'
 
 export type ResumenExploracion = {
   id: string
@@ -87,26 +87,31 @@ export async function leerExploracion(correduriaId: string, id: string): Promise
 export type ResultadoRevision =
   | { estado: 'ok'; estadoMapa: EstadoMapa }
   | { estado: 'no_encontrada' }
-  | { estado: 'sin_mapa' | 'sin_cerrar' | 'mapa_invalido' }
+  | { estado: 'sin_mapa' | 'sin_cerrar' | 'mapa_invalido' | 'transicion_invalida' | 'conflicto' }
 
 /**
  * Marca el mapa `revisado` (aprobado), `descartado` o de vuelta a `borrador`. Aprobar solo cambia el ESTADO: no exporta
  * ni genera código (eso es un PR aparte, con un agente). Sin mapa, sin cerrar o con un mapa que no valida → no se aprueba.
+ * La transición se valida contra el estado LEÍDO y el UPDATE repite ese estado en el WHERE: si alguien lo cambió
+ * entre medias, no actualiza filas → `conflicto` (409).
  */
 export async function revisarMapa(correduriaId: string, id: string, estado: EstadoMapa, quien: string): Promise<ResultadoRevision> {
-  const f = await prisma.$queryRaw<{ mapa: unknown; cerrada: boolean }[]>`
-    select mapa, (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones
+  const f = await prisma.$queryRaw<{ mapa: unknown; cerrada: boolean; estado_mapa: EstadoMapa }[]>`
+    select mapa, (cerrada_at is not null) as cerrada, estado_mapa from seguros.tarificador_exploraciones
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!f[0]) return { estado: 'no_encontrada' }
+  const desde = f[0].estado_mapa
+  if (!transicionPermitida(desde, estado)) return { estado: 'transicion_invalida' }
   if (estado === 'revisado') {
     const p = puedeAprobar({ tieneMapa: f[0].mapa !== null, cerrada: f[0].cerrada })
     if (p !== 'ok') return { estado: p }
     if (validarMapa(f[0].mapa) === null) return { estado: 'mapa_invalido' }
   }
   const borrador = estado === 'borrador'
-  await prisma.$executeRaw`
+  const filas = await prisma.$executeRaw`
     update seguros.tarificador_exploraciones
     set estado_mapa = ${estado}, revisado_por = ${borrador ? null : quien}, revisado_at = ${borrador ? null : new Date()}, updated_at = now()
-    where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado_mapa = ${desde}`
+  if (filas === 0) return { estado: 'conflicto' }
   return { estado: 'ok', estadoMapa: estado }
 }

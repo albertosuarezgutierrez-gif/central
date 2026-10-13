@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { leerCambioMapa, puedeAprobar, resumirPaso } from './tarificador-exploraciones-reglas.ts'
+import { leerCambioMapa, puedeAprobar, resumirPaso, transicionPermitida } from './tarificador-exploraciones-reglas.ts'
 
 const resp = {
   version: 1,
@@ -49,4 +49,20 @@ test('puedeAprobar: exige mapa y exploración cerrada', () => {
   assert.equal(puedeAprobar({ tieneMapa: false, cerrada: true }), 'sin_mapa')
   assert.equal(puedeAprobar({ tieneMapa: true, cerrada: false }), 'sin_cerrar')
   assert.equal(puedeAprobar({ tieneMapa: true, cerrada: true }), 'ok')
+})
+
+test('transicionPermitida: solo las transiciones que ofrece la UI', () => {
+  // borrador → revisado / descartado
+  assert.equal(transicionPermitida('borrador', 'revisado'), true)
+  assert.equal(transicionPermitida('borrador', 'descartado'), true)
+  // revisado → borrador (y nada más: no re-aprobar)
+  assert.equal(transicionPermitida('revisado', 'borrador'), true)
+  assert.equal(transicionPermitida('revisado', 'revisado'), false)
+  assert.equal(transicionPermitida('revisado', 'descartado'), false)
+  // descartado → borrador; NO a revisado directo
+  assert.equal(transicionPermitida('descartado', 'borrador'), true)
+  assert.equal(transicionPermitida('descartado', 'revisado'), false)
+  assert.equal(transicionPermitida('descartado', 'descartado'), false)
+  // mismo estado nunca
+  assert.equal(transicionPermitida('borrador', 'borrador'), false)
 })

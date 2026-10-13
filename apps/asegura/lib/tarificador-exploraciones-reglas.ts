@@ -78,6 +78,18 @@ export function leerCambioMapa(body: unknown): CambioMapa {
   return { ok: true, estado }
 }
 
+/** Transiciones del estado del mapa que ofrece la UI (y que el servidor hace cumplir): nada de «al mismo estado». */
+const TRANSICIONES: Record<EstadoMapa, readonly EstadoMapa[]> = {
+  borrador: ['revisado', 'descartado'],
+  revisado: ['borrador'],
+  descartado: ['borrador'],
+}
+
+/** ¿Se puede pasar el mapa de `desde` a `hacia`? Un descartado no se aprueba directo: antes vuelve a borrador. */
+export function transicionPermitida(desde: EstadoMapa, hacia: EstadoMapa): boolean {
+  return TRANSICIONES[desde].includes(hacia)
+}
+
 /** ¿Se puede pasar el mapa a `revisado`? Hace falta un mapa y la exploración cerrada. Aprobar NO genera código. */
 export function puedeAprobar(f: { tieneMapa: boolean; cerrada: boolean }): 'ok' | 'sin_mapa' | 'sin_cerrar' {
   if (!f.tieneMapa) return 'sin_mapa'
