@@ -4,8 +4,9 @@
 // `@central/module-seguros` → datos-vivienda-riesgo.ts) a la forma que lee el worker por `rutaRiesgo` del catálogo
 // (`explorador.ts`): `{ tomador, inmueble, hogar }`.
 //
-// 🚨 Nada se inventa: lo que la oportunidad no trae se OMITE (año de construcción y m² los autocompleta el portal desde el
-//    Catastro al meter la dirección). 🚨 USO de la vivienda y RÉGIMEN deciden la tarifa: tienen que venir EXPLÍCITOS en
+// 🚨 Nada se inventa: lo que la oportunidad no trae se OMITE. Año de construcción y m² (obligatorios en Allianz Hogar, que
+//    NO los autocompleta antes de avanzar) los completa asegura al encolar desde el Catastro, solo si es inequívoco
+//    (`completarInmuebleConCatastro` / `inmuebleUnicoCatastro`, abajo). 🚨 USO de la vivienda y RÉGIMEN deciden la tarifa: tienen que venir EXPLÍCITOS en
 //    `datosVivienda` (`ocupacion` = uso habitual/secundaria/alquiler…, `uso` = régimen propietario/inquilino, ids del
 //    catálogo de Codeoscopic). Sin ellos no hay riesgo: la exploración no se encola. Nunca un valor por defecto.
 //    Y su id tiene que estar en el mapa cerrado `ETIQUETAS_ID_HOGAR` (la IA ve su significado en español).
@@ -149,4 +150,82 @@ export function riesgoExploracionDeOportunidad(ficha: FichaTomadorExploracion | 
   if (ct !== null) hogar.capitalContenido = ct
 
   return { ok: true, riesgo: { tomador, inmueble, hogar } }
+}
+
+// ─── Catastro para el año y los m² (14/10/2026) ───────────────────────────────
+//
+// La pantalla «Datos del tomador y vivienda» de Allianz Hogar EXIGE año y m² y no los autocompleta antes de avanzar. Si la
+// oportunidad no los trae, asegura los consulta en el Catastro al ENCOLAR (solo para el `riesgo` del trabajo; nunca se
+// guardan en la oportunidad). Estas son las reglas puras; la red vive en asegura (`tarificador-explorador-catastro.ts`).
+// 🚨 Solo un resultado INEQUÍVOCO: un único inmueble que casa con planta/puerta. Varios o ninguno → sin valor.
+
+/** Lo mínimo de un inmueble de `Consulta_DNPLOC` (`InmuebleCatastro` de `@central/core-catastro`). */
+export type InmuebleCatastroMin = { refCompleta: string; planta: string | null; puerta: string | null; codigoPostal: string | null }
+
+export type EleccionInmueble = { estado: 'unico'; refCompleta: string } | { estado: 'varios' } | { estado: 'ninguno' }
+
+/** Planta/puerta comparables: mayúsculas, sin «º/ª/.»/espacios, números sin ceros a la izquierda, «BAJO/BJ» = 0. */
+export function normPlantaPuerta(v: unknown): string | null {
+  if (typeof v !== 'string' && typeof v !== 'number') return null
+  const t = String(v).toUpperCase().replace(/[ºª°.\s-]/g, '')
+  if (t === '') return null
+  if (/^(BAJO|BAJA|BJ|BJO|PB)$/.test(t)) return '0'
+  return /^\d+$/.test(t) ? String(Number.parseInt(t, 10)) : t
+}
+
+const normCp = (v: unknown): string | null => {
+  const t = typeof v === 'string' || typeof v === 'number' ? String(v).trim() : ''
+  return /^\d{4,5}$/.test(t) ? t.padStart(5, '0') : null
+}
+
+/**
+ * El inmueble del portal que es LA vivienda, solo si es inequívoco. Con planta y/o puerta: los que casan con lo dado
+ * (normalizado); sin ninguna de las dos: solo si el portal tiene UN inmueble (unifamiliar). Un CP distinto (si los dos lo
+ * tienen) descarta. Uno → `unico`; más → `varios`; cero → `ninguno`. Pura.
+ */
+export function inmuebleUnicoCatastro(inmuebles: readonly InmuebleCatastroMin[], q: { planta?: unknown; puerta?: unknown; codigoPostal?: unknown }): EleccionInmueble {
+  const planta = normPlantaPuerta(q.planta)
+  const puerta = normPlantaPuerta(q.puerta)
+  const cp = normCp(q.codigoPostal)
+  const casan = inmuebles.filter((i) => {
+    if (!/^[0-9A-Z]{20}$/.test(i.refCompleta)) return false
+    const icp = normCp(i.codigoPostal)
+    if (cp && icp && cp !== icp) return false
+    if (planta !== null && normPlantaPuerta(i.planta) !== planta) return false
+    if (puerta !== null && normPlantaPuerta(i.puerta) !== puerta) return false
+    return true
+  })
+  if (casan.length === 0) return { estado: 'ninguno' }
+  if (casan.length > 1 || (planta === null && puerta === null && inmuebles.length > 1)) return { estado: 'varios' }
+  return { estado: 'unico', refCompleta: casan[0].refCompleta }
+}
+
+/** Lo que falta en `riesgo.inmueble` y el Catastro puede dar. */
+export type CampoCatastroRiesgo = 'anioConstruccion' | 'superficieM2'
+
+export function faltanDatosCatastro(riesgo: { inmueble: Record<string, string | number> }): CampoCatastroRiesgo[] {
+  return (['anioConstruccion', 'superficieM2'] as const).filter((k) => !(k in riesgo.inmueble))
+}
+
+/**
+ * Copia del riesgo con año/m² del Catastro SOLO donde faltaban y SOLO si son válidos (mismos rangos que la oportunidad).
+ * Nunca pisa lo que ya trae la oportunidad. Devuelve también qué se añadió (nombres, nunca valores). Pura.
+ */
+export function completarInmuebleConCatastro<R extends { inmueble: Record<string, string | number> }>(
+  riesgo: R,
+  catastro: { anioConstruccion: number | null; metrosCuadrados: number | null },
+): { riesgo: R; anadidos: CampoCatastroRiesgo[] } {
+  const inmueble = { ...riesgo.inmueble }
+  const anadidos: CampoCatastroRiesgo[] = []
+  const anio = catastro.anioConstruccion
+  if (!('anioConstruccion' in inmueble) && typeof anio === 'number' && Number.isInteger(anio) && anio >= 1500 && anio <= 2100) {
+    inmueble.anioConstruccion = anio
+    anadidos.push('anioConstruccion')
+  }
+  const m2 = positivo(catastro.metrosCuadrados, 100_000)
+  if (!('superficieM2' in inmueble) && m2 !== null) {
+    inmueble.superficieM2 = m2
+    anadidos.push('superficieM2')
+  }
+  return { riesgo: { ...riesgo, inmueble }, anadidos }
 }

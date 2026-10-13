@@ -6,7 +6,10 @@
 
 import { ENTRADAS_EXPLORACION, MOTIVO_ORIGEN_PURGADO, claveCompania, riesgoExploracionDeOportunidad, esEntradaExploracion, puedeAutomatizar, riesgoYaPurgado, topesExplorador, type InventarioDom, type MapaExploracion, type RespuestaExplorador } from '@central/module-tarificacion'
 import { ESTADOS_OPORTUNIDAD_ABIERTA } from '@central/module-seguros'
+import { inmueblesPorDireccion } from '@central/core-catastro/http'
 import { prisma } from './tenant'
+import { catastroPorReferencia } from './codeoscopic/catastro-referencia'
+import { completarRiesgoConCatastro, type DepsCatastroExploracion } from './tarificador-explorador-catastro'
 import { personaDeFicha } from './oportunidad-riesgo'
 import { LEASE_MS } from './tarificador-reglas'
 import { RESERVA_IA_MS, inicioAcumulado, leaseExploracion, type PasoGuardado } from './tarificador-explorador-reglas'
@@ -216,6 +219,16 @@ export async function costeYModelo(e: ExploracionViva, bd: Bd = prisma): Promise
 
 // ─── Encolar (puerto de operador, 13/10/2026) ────────────────────────────────
 
+/** El Catastro de verdad para `completarRiesgoConCatastro` (lo mismo que usa la pantalla de Hogar nuevo). */
+const DEPS_CATASTRO: DepsCatastroExploracion = {
+  porReferencia: async (ref) => {
+    const c = await catastroPorReferencia(ref)
+    return c.estado === 'ok' ? { estado: 'ok', catastro: { anioConstruccion: c.catastro.anioConstruccion, metrosCuadrados: c.catastro.metrosCuadrados } } : c
+  },
+  inmuebles: (p) => inmueblesPorDireccion(p),
+  timeoutMs: 10_000,
+}
+
 export type EntradaEncolarExploracion = { correduriaId: string; entrada: string; trabajoOrigenId: string | null; oportunidadId?: string | null; solicitadoPor: string }
 export type ResultadoEncolarExploracion =
   | { estado: 'encolado'; trabajoId: string; exploracionId: string; compania: string; conDatosReales: boolean }
@@ -285,7 +298,12 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
       return { estado: 'rechazado', status: 409, motivo: `oportunidad_incompleta: ${partes.join('; ')}` }
     }
     clienteId = f.cliente_id
-    riesgo = r.riesgo
+    // Año y m² que la oportunidad no trae: del Catastro, SOLO si es inequívoco y SOLO al riesgo del trabajo (la
+    // oportunidad no se toca). Sin valor → la exploración parará con `dato_no_disponible`. Nunca lanza ni da 500.
+    const cat = await completarRiesgoConCatastro(r.riesgo, f.datos_vivienda, DEPS_CATASTRO)
+      .catch(() => ({ riesgo: r.riesgo, estado: 'error' as const, anadidos: [] }))
+    if (cat.estado !== 'no_hacia_falta') console.info('[tarificador/explorador] catastro al encolar', { estado: cat.estado, anadidos: cat.anadidos })
+    riesgo = cat.riesgo
   }
   try {
     return await prisma.$transaction(async (tx) => {

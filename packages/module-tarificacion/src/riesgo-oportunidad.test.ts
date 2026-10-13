@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { etiquetaIdHogar, fechaDdMmAaaa, riesgoExploracionDeOportunidad } from './riesgo-oportunidad.ts'
+import { completarInmuebleConCatastro, etiquetaIdHogar, faltanDatosCatastro, fechaDdMmAaaa, inmuebleUnicoCatastro, normPlantaPuerta, riesgoExploracionDeOportunidad } from './riesgo-oportunidad.ts'
 import { catalogoParaIA, resolverDato } from './explorador.ts'
 
 // Valores SINTÉTICOS obvios: ninguna persona ni dirección real.
@@ -92,5 +92,57 @@ describe('riesgoExploracionDeOportunidad', () => {
     expect(fechaDdMmAaaa('15/01/1980')).toBe('15/01/1980')
     expect(fechaDdMmAaaa('15-1-80')).toBeNull()
     expect(fechaDdMmAaaa(null)).toBeNull()
+  })
+})
+
+// Referencias SINTÉTICAS (20 caracteres con forma válida, no son de ningún inmueble real).
+const inm = (sufijo: string, planta: string | null, puerta: string | null, cp: string | null = '00000') =>
+  ({ refCompleta: `0000000XX0000X${sufijo}`, planta, puerta, codigoPostal: cp })
+
+describe('inmuebleUnicoCatastro (año/m² del Catastro: solo si es inequívoco)', () => {
+  const portal = [inm('0001AA', '00', '01'), inm('0002AA', '01', 'A'), inm('0003AA', '01', 'B'), inm('0004AA', '02', 'A')]
+  it('planta + puerta que casan con UNO → único (normalizando ceros y «º»)', () => {
+    expect(inmuebleUnicoCatastro(portal, { planta: '1º', puerta: 'a' })).toEqual({ estado: 'unico', refCompleta: '0000000XX0000X0002AA' })
+    expect(inmuebleUnicoCatastro(portal, { planta: 'Bajo', puerta: '1' })).toEqual({ estado: 'unico', refCompleta: '0000000XX0000X0001AA' })
+  })
+  it('solo planta con dos puertas en ella → varios (no se elige)', () => {
+    expect(inmuebleUnicoCatastro(portal, { planta: '1' })).toEqual({ estado: 'varios' })
+  })
+  it('sin planta ni puerta: único solo si el portal tiene un inmueble', () => {
+    expect(inmuebleUnicoCatastro(portal, {})).toEqual({ estado: 'varios' })
+    expect(inmuebleUnicoCatastro([inm('0009AA', null, null)], {}).estado).toBe('unico')
+  })
+  it('nada casa, CP distinto o lista vacía → ninguno', () => {
+    expect(inmuebleUnicoCatastro(portal, { planta: '7', puerta: 'Z' })).toEqual({ estado: 'ninguno' })
+    expect(inmuebleUnicoCatastro(portal, { planta: '1', puerta: 'A', codigoPostal: '99999' })).toEqual({ estado: 'ninguno' })
+    expect(inmuebleUnicoCatastro([], { planta: '1' })).toEqual({ estado: 'ninguno' })
+  })
+  it('normPlantaPuerta', () => {
+    expect(normPlantaPuerta('01')).toBe('1')
+    expect(normPlantaPuerta('BJ')).toBe('0')
+    expect(normPlantaPuerta(' iz ')).toBe('IZ')
+    expect(normPlantaPuerta('')).toBe(null)
+    expect(normPlantaPuerta(null)).toBe(null)
+  })
+})
+
+describe('completarInmuebleConCatastro', () => {
+  const base = { tomador: {}, inmueble: { codigoPostal: '00000' } as Record<string, string | number>, hogar: {} }
+  it('rellena SOLO lo que falta y solo con valores válidos; dice qué (sin valores)', () => {
+    expect(faltanDatosCatastro(base)).toEqual(['anioConstruccion', 'superficieM2'])
+    const r = completarInmuebleConCatastro(base, { anioConstruccion: 1975, metrosCuadrados: 85 })
+    expect(r.riesgo.inmueble).toMatchObject({ anioConstruccion: 1975, superficieM2: 85 })
+    expect(r.anadidos).toEqual(['anioConstruccion', 'superficieM2'])
+    expect('anioConstruccion' in base.inmueble).toBe(false)
+  })
+  it('nunca pisa lo que trae la oportunidad', () => {
+    const r = completarInmuebleConCatastro({ ...base, inmueble: { anioConstruccion: 2001 } }, { anioConstruccion: 1975, metrosCuadrados: 85 })
+    expect(r.riesgo.inmueble.anioConstruccion).toBe(2001)
+    expect(r.anadidos).toEqual(['superficieM2'])
+  })
+  it('null o fuera de rango → no se añade (null = no se sabe)', () => {
+    const r = completarInmuebleConCatastro(base, { anioConstruccion: null, metrosCuadrados: 0 })
+    expect(r.anadidos).toEqual([])
+    expect(completarInmuebleConCatastro(base, { anioConstruccion: 1200, metrosCuadrados: null }).anadidos).toEqual([])
   })
 })

@@ -6,6 +6,7 @@
 //    catálogo. Nunca credenciales, cookies, HTML ni capturas. Lo que devuelve se valida aquí y otra vez en el worker.
 
 import {
+  DETALLES_FIN_EXPLORACION,
   EFECTOS_EN_PORTAL,
   MOTIVOS_FIN_EXPLORACION,
   catalogoParaIA,
@@ -14,6 +15,7 @@ import {
   normalizarRedNoGet,
   sanearInventarioDom,
   validarMapa,
+  type DetalleFinExploracion,
   type InventarioDom,
   type MapaExploracion,
   type PantallaMapaExploracion,
@@ -175,7 +177,15 @@ export function leerPeticionEncolarExploracion(body: unknown): { ok: true; p: Pe
 export const MOTIVOS_FIN = MOTIVOS_FIN_EXPLORACION
 export type MotivoFin = (typeof MOTIVOS_FIN)[number]
 
-export type PeticionCierre = { trabajoId: string; motivoFin: MotivoFin; redNoGet: string[]; efectosEnPortal: MapaExploracion['efectosEnPortal'] }
+export type PeticionCierre = { trabajoId: string; motivoFin: MotivoFin; detalleFin: DetalleFinExploracion | null; redNoGet: string[]; efectosEnPortal: MapaExploracion['efectosEnPortal'] }
+
+/**
+ * El hueco que deja en el mapa el DETALLE de la parada del worker (14/10/2026): qué comprobación cortó, sin valores. `null`
+ * si no hay detalle. No hay columna propia: va a `mapa.huecos`, que es lo que se revisa de cada exploración.
+ */
+export function huecoDeDetalleFin(motivoFin: MotivoFin, detalle: DetalleFinExploracion | null): string | null {
+  return detalle ? `fin «${motivoFin}» en el worker: ${detalle}` : null
+}
 
 /** Cuerpo de `POST /api/tarificador/explorador/cierre`. La red va SOLO como origen + ruta (se re-normaliza aquí). */
 export function leerPeticionCierre(body: unknown): { ok: true; p: PeticionCierre } | { ok: false; errores: string[] } {
@@ -192,7 +202,9 @@ export function leerPeticionCierre(body: unknown): { ok: true; p: PeticionCierre
   if (!Array.isArray(ef) || !ef.every((e) => EFECTOS_EN_PORTAL.includes(e as never))) errores.push('efectosEnPortal fuera de lista')
   if (errores.length) return { ok: false, errores }
   const redNoGet = [...new Set((red as unknown[]).map(normalizarRedNoGet).filter((x): x is string => x !== null))].slice(0, 50)
-  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])] } }
+  // Opcional y TOLERANTE: un código fuera de la lista cerrada (worker más nuevo) se ignora; nunca tumba el cierre.
+  const detalleFin = DETALLES_FIN_EXPLORACION.find((d) => d === b.detalleFin) ?? null
+  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])] } }
 }
 
 // ─── Prompt ──────────────────────────────────────────────────────────────────
