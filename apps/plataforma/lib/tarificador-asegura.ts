@@ -133,3 +133,21 @@ export function resolverTrabajoBandeja(
 export function leerTrazaTarificador(id: string): Promise<Reenvio> {
   return puerto(`trabajo/${encodeURIComponent(id)}/traza`, { method: 'GET' }, 15_000)
 }
+
+/** Compañía+ramo que el bot puede tarificar hoy (`companias_integracion` activa y `rpa_autorizada`). Solo lectura. */
+export function leerIntegracionesTarificador(): Promise<Reenvio> {
+  return puerto('integraciones', { method: 'GET' }, 15_000)
+}
+
+/**
+ * «Probar tarificación» de la ficha: asegura reencola en SERVIDOR el riesgo del último trabajo de ese cliente+compañía+ramo
+ * (el riesgo no cruza el puerto). Solo precio: nunca emite. 202 `{trabajoId}` · 409 `sin_riesgo_previo` · `duplicado: true`
+ * con el id del trabajo existente si asegura ya tiene uno en marcha.
+ */
+export function probarTarificacion(clienteId: string, compania: string, ramo: string): Promise<Reenvio> {
+  return puerto('probar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clienteId, compania, ramo }),
+  }, 50_000)
+}

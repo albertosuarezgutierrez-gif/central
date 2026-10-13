@@ -4,6 +4,8 @@
 //    ofertas con sus primas. NUNCA la URL del portal, el HTML/captura del fallo (`html_documento_id`,
 //    `evidencia_documento_id`: solo operador interno), ni el riesgo, ni credenciales.
 
+import { motivoLegible, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
+
 export type FilaTrabajoLectura = {
   estado: string
   created_at: Date | string
@@ -31,6 +33,10 @@ export type TrabajoLectura = {
   creadoEn: string
   actualizadoEn: string
   error: { tipo: string; mensaje: string } | null
+  /** Motivo legible de la parada (misma regla que la bandeja). `null` si el trabajo no ha fallado ni está parado. */
+  motivo: string | null
+  /** Versiones de catálogo para elegir a mano (solo si el fallo guardó la lista). `null` = no se pide elección. */
+  opcionesVersion: CandidatoVersion[] | null
   ofertas: OfertaLectura[]
   pdfs: { indice: number; nombre: string }[]
 }
@@ -91,6 +97,9 @@ export function proyectarTrabajo(fila: FilaTrabajoLectura, respuesta: unknown): 
     creadoEn: iso(fila.created_at),
     actualizadoEn: iso(fila.updated_at),
     error: errorPublico(fila.error),
+    motivo: fila.estado === 'error' || fila.estado === 'requiere_humano' ? motivoLegible(fila.error, fila.estado) : null,
+    opcionesVersion: fila.error && typeof fila.error === 'object' && !Array.isArray(fila.error)
+      ? validarOpcionesVersion((fila.error as Record<string, unknown>).opcionesVersion) : null,
     ofertas,
     pdfs,
   }

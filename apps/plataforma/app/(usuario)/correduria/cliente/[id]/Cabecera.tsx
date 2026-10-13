@@ -10,6 +10,7 @@ import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import EditarFicha from './EditarFicha'
 import PedirPresupuestoBot from './PedirPresupuestoBot'
+import ProbarTarificacion from './ProbarTarificacion'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
@@ -432,6 +433,8 @@ function Acciones({ clienteId }: { clienteId: string }) {
       </BtnLink>
       {/* Presupuesto por bots (07/10/2026): ya no se cotiza desde la ficha; abre la oportunidad con el formulario común. */}
       <PedirPresupuestoBot clienteId={clienteId} />
+      {/* Prueba del tarificador RPA (13/10/2026): encola y muestra estado/resultado en la propia ficha. Solo precio. */}
+      <ProbarTarificacion clienteId={clienteId} />
     </div>
   )
 }
