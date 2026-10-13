@@ -625,6 +625,10 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   // Todo lo que se puede comprobar SIN tocar el portal, antes de abrirlo (fail-closed).
   if (!form.seleccionVehiculo) throw new ErrorTarificador('datos', 'allianz/moto: falta seleccionVehiculo (marca, modelo y clase): el portal de Moto no busca el vehículo por matrícula')
   if ((form.seleccionVehiculo.clase ?? null) === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la clase (tramo de cilindrada 1-4) de la moto')
+  // Allianz separa Moto y Ciclomotor (≤50 cc): sin cilindrada, o ciclomotor, no se tarifica con el producto Moto.
+  const cc = form.seleccionVehiculo.cilindradaCc ?? null
+  if (cc === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la cilindrada (Allianz separa Moto y Ciclomotor)')
+  if (cc <= 50) throw new ErrorTarificador('datos', 'allianz/moto: ciclomotor (≤50 cc): producto Ciclomotor de Allianz, no Moto; no soportado aún')
   comprobarTitularesMoto(form)
   planDatosBasicosMoto(form)
   if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)

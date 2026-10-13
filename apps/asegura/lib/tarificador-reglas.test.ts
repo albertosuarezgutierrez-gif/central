@@ -99,7 +99,7 @@ const MOTO = {
   ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003',
   conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
   tomadorEsConductor: true, tomadorEsPropietario: true, aniosAseguradoAnterior: 5, siniestrosUltimos5Anios: 0, garajeNoche: true,
-  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2 },
+  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
 }
 
 test('encolar: moto con FormularioAuto válido pasa (con seleccionVehiculo); inválido, auto y ramo desconocido, no', () => {
