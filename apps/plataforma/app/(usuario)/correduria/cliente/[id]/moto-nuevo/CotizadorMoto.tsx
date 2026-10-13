@@ -70,6 +70,7 @@ import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduri
 import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
 import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
+import PrecioPorBot from './PrecioPorBot'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -1369,6 +1370,33 @@ export default function CotizadorMoto({
         />
       )}
 
+      {/* «Precio por bot (gratis)» (13/10/2026): los mismos datos, al tarificador RPA de cada compañía con bot de moto. */}
+      {poliza === null && (
+        <PrecioPorBot
+          clienteId={clienteId}
+          oportunidadId={variante?.oportunidadId ?? null}
+          cilindradaInicial={datosRiesgo?.cilindradaCc ?? null}
+          entrada={{
+            matricula,
+            marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
+            modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
+            version: embebido ? datosRiesgo?.version ?? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,
+            // Lo que el navegador no tiene (CP del cliente, nacimiento, carné) lo lee el servidor de la ficha; si la
+            // precalificación dice que FALTA en la ficha, solo vale lo tecleado arriba.
+            codigoPostal: /^\d{5}$/.test(datosRiesgo?.cpCirculacion ?? '') ? datosRiesgo!.cpCirculacion : 'ficha',
+            fechaNacimiento: datoDePersona('fechaNacimiento', faltanInicial, correcciones),
+            fechaCarne: datoDePersona('fechaCarnet', faltanInicial, correcciones),
+            sexo: correcciones.sexo ?? null,
+            conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual,
+            propietarioEnOtraFicha: !!figs.propietario,
+            tieneSeguroActual,
+            aniosAsegurado,
+            aniosSinSiniestros,
+            siniestrosUltimos5,
+          }}
+        />
+      )}
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -1437,6 +1465,17 @@ export default function CotizadorMoto({
       </div>
     </div>
   )
+}
+
+/**
+ * Un dato personal del conductor para el bot: lo tecleado arriba, o `'ficha'` si la precalificación no lo da por faltante
+ * (la ficha lo tiene y el servidor lo lee), o `null` si falta y no se ha tecleado. Sin precalificación (`faltan === null`) se
+ * deja a la ficha: el servidor corta, sin gastar, si tampoco está allí.
+ */
+function datoDePersona(campo: string, faltan: Reparo[] | null, correcciones: Record<string, string>): string | null {
+  const tecleado = (correcciones[campo] ?? '').trim()
+  if (tecleado !== '') return tecleado
+  return faltan === null || !faltan.some((f) => f.campo === campo) ? 'ficha' : null
 }
 
 /** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */

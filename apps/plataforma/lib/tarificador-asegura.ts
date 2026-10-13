@@ -28,24 +28,25 @@ export async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): 
 }
 
 /** Encola una cotización de COMUNIDAD en Allianz (solo precio; nunca emite). 202 `{trabajoId}`. */
-export function encolarTarificacionComunidad(clienteId: string, oportunidadId: string | null, riesgo: Record<string, unknown>): Promise<Reenvio> {
+export function encolarTarificacionComunidad(clienteId: string, oportunidadId: string | null, riesgo: Record<string, unknown>, compania: string = COMPANIA_BOT): Promise<Reenvio> {
   return puerto('encolar', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ clienteId, oportunidadId, compania: COMPANIA_BOT, ramo: 'comunidades', riesgo }),
+    body: JSON.stringify({ clienteId, oportunidadId, compania, ramo: 'comunidades', riesgo }),
   })
 }
 
 /**
- * Encola una cotización de MOTO en Allianz (13/10/2026; solo precio). `formulario` = FormularioAuto con `ramo: 'moto'` y
- * `seleccionVehiculo` (marca/modelo/clase); asegura lo valida con el validador del ramo. Sin pantalla propia todavía:
- * la primera prueba entra por `POST /api/correduria/tarificador/encolar` con `{ ramo: 'moto', ... }`.
+ * Encola una cotización de MOTO en el bot de una compañía (13/10/2026; solo precio). `formulario` = FormularioAuto con
+ * `ramo: 'moto'` y `seleccionVehiculo` (marca/modelo/clase); asegura lo valida con el validador del ramo y comprueba que la
+ * compañía tenga `companias_integracion` activa y `rpa_autorizada`. `compania` por defecto Allianz. Lo usa el bloque
+ * «Precio por bot (gratis)» del cotizador de moto vía `POST /api/correduria/tarificador/encolar`.
  */
-export function encolarTarificacionMoto(clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>): Promise<Reenvio> {
+export function encolarTarificacionMoto(clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT): Promise<Reenvio> {
   return puerto('encolar', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ clienteId, oportunidadId, compania: COMPANIA_BOT, ramo: 'moto', riesgo: formulario }),
+    body: JSON.stringify({ clienteId, oportunidadId, compania, ramo: 'moto', riesgo: formulario }),
   })
 }
 
