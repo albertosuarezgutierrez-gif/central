@@ -69,10 +69,13 @@ export class ErrorMapaIncompleto extends ErrorTarificador {
  */
 export class ErrorEleccionVersion extends ErrorTarificador {
   readonly opciones: CandidatoVersion[]
+  /** La lista COMPLETA viaja estructurada en `error.opcionesVersion` del resultado (`opcionesVersionDe` en errores.ts). */
+  readonly opcionesVersion: CandidatoVersion[]
   constructor(opciones: CandidatoVersion[]) {
     super('captcha', mensajeEleccionVersion(opciones))
     this.name = 'ErrorEleccionVersion'
     this.opciones = opciones
+    this.opcionesVersion = opciones
   }
 }
 

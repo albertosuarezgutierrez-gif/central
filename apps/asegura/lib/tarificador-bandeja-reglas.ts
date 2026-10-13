@@ -6,7 +6,7 @@
 //    enlace a la oportunidad. NUNCA el mensaje técnico crudo, la URL del portal, el riesgo, el HTML/captura ni nada
 //    del cliente.
 
-import { decidirAccionBandeja, motivoLegible, type PasoTraza } from '@central/module-tarificacion'
+import { decidirAccionBandeja, motivoLegible, validarOpcionesVersion, type CandidatoVersion, type PasoTraza } from '@central/module-tarificacion'
 
 export const BANDEJA_LIMITE_POR_DEFECTO = 50
 export const BANDEJA_LIMITE_MAXIMO = 100
@@ -36,6 +36,8 @@ export type ItemBandeja = {
   oportunidadId: string | null
   puedeReintentar: boolean
   puedeCancelar: boolean
+  /** Versiones de catálogo para elegir a mano (13/10/2026). `null` = el trabajo no pide versión o no guardó la lista. */
+  opcionesVersion: CandidatoVersion[] | null
 }
 
 const iso = (d: Date | string): string => (d instanceof Date ? d.toISOString() : new Date(d).toISOString())
@@ -61,7 +63,46 @@ export function proyectarItemBandeja(f: FilaBandeja): ItemBandeja {
     oportunidadId: f.oportunidad_id,
     puedeReintentar: decidirAccionBandeja('reintentar', f.estado, tipo).ok,
     puedeCancelar: decidirAccionBandeja('cancelar', f.estado, tipo).ok,
+    opcionesVersion: opcionesVersionDelError(f.error),
   }
+}
+
+/** La lista de versiones que guardó el fallo del trabajo (`error.opcionesVersion`), o `null`. Solo catálogo. */
+export function opcionesVersionDelError(error: unknown): CandidatoVersion[] | null {
+  if (typeof error !== 'object' || error === null || Array.isArray(error)) return null
+  return validarOpcionesVersion((error as Record<string, unknown>).opcionesVersion)
+}
+
+// ─── Reintentar con la versión elegida a mano (13/10/2026) ───────────────────
+
+export type EleccionBandeja = { codigo: string; etiqueta: string | null }
+
+/** Forma de `eleccionVersion` en el cuerpo: ausente → `null`; `{ codigo, etiqueta? }` → elección; otra cosa → error. */
+export function leerEleccionBandeja(v: unknown): { ok: true; eleccion: EleccionBandeja | null } | { ok: false; mensaje: string } {
+  if (v === undefined || v === null) return { ok: true, eleccion: null }
+  if (typeof v !== 'object' || Array.isArray(v)) return { ok: false, mensaje: 'eleccionVersion tiene que ser { codigo, etiqueta? }' }
+  const o = v as Record<string, unknown>
+  if (typeof o.codigo !== 'string' || !o.codigo.trim() || o.codigo.length > 60) return { ok: false, mensaje: 'eleccionVersion.codigo: obligatorio (código de la lista, máx. 60)' }
+  if (o.etiqueta !== undefined && o.etiqueta !== null && (typeof o.etiqueta !== 'string' || o.etiqueta.length > 200)) {
+    return { ok: false, mensaje: 'eleccionVersion.etiqueta: texto de máx. 200 (o no venga)' }
+  }
+  const etiqueta = typeof o.etiqueta === 'string' && o.etiqueta.trim() ? o.etiqueta : null
+  return { ok: true, eleccion: { codigo: o.codigo.trim(), etiqueta } }
+}
+
+const claveEtiqueta = (s: string) => s.replace(/\s+/g, ' ').trim().toLocaleUpperCase('es')
+
+/**
+ * La elección TIENE que ser un código de la lista que guardó el fallo del trabajo. Si trae etiqueta, debe ser la de ese
+ * código (salvo mayúsculas/espacios). Lo que se escribe en el riesgo es el código y la etiqueta DE LA LISTA.
+ */
+export function eleccionContraLista(e: EleccionBandeja, error: unknown): { ok: true; eleccion: { codigo: string; etiqueta: string } } | { ok: false; motivo: string } {
+  const lista = opcionesVersionDelError(error)
+  if (!lista) return { ok: false, motivo: 'el trabajo no guarda una lista de versiones: reintenta sin eleccionVersion' }
+  const casan = lista.filter((o) => o.codigo === e.codigo)
+  if (casan.length !== 1) return { ok: false, motivo: casan.length ? 'código repetido en la lista del trabajo' : 'eleccionVersion.codigo no está en la lista del trabajo' }
+  if (e.etiqueta !== null && claveEtiqueta(e.etiqueta) !== claveEtiqueta(casan[0].etiqueta)) return { ok: false, motivo: 'eleccionVersion.etiqueta no es la de ese código' }
+  return { ok: true, eleccion: { codigo: casan[0].codigo!, etiqueta: casan[0].etiqueta } }
 }
 
 /** `limite`: entero 1..BANDEJA_LIMITE_MAXIMO (por defecto 50). `desde`: entero ≥ 0. Basura → valores por defecto. */

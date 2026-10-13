@@ -16,6 +16,7 @@
 
 import { chromium, type Browser, type BrowserContextOptions, type Page } from 'playwright'
 import {
+  MAX_OPCIONES_VERSION_CABLE,
   nombresCredencial,
   redactarHtml,
   secretosDelEntorno,
@@ -363,7 +364,13 @@ async function main(): Promise<number> {
       const cuerpo: CuerpoResultado = {
         trabajoId: trabajo.id,
         resultado: 'error',
-        error: { tipo: c.tipo, mensaje: redactar(mensaje).slice(0, 2000), url: redactar(evidencia.url).slice(0, 500) },
+        error: {
+          tipo: c.tipo,
+          mensaje: redactar(mensaje).slice(0, 2000),
+          url: redactar(evidencia.url).slice(0, 500),
+          // Lista COMPLETA de versiones (solo catálogo), sin pasar por el redactor: asegura la valida y la usa por código.
+          ...(c.opcionesVersion ? { opcionesVersion: c.opcionesVersion.slice(0, MAX_OPCIONES_VERSION_CABLE) } : {}),
+        },
         ...(evidencia.captura && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
         ...meta(),
