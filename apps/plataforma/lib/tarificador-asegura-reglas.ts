@@ -2,6 +2,8 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: esto pide un PRECIO al portal de la compañía. Nada de aquí contrata.
 
+import { MAX_POBLACION, tieneCaracteresProhibidos } from '@central/module-tarificacion'
+
 export const COMPANIA_BOT = 'allianz'
 
 /**
@@ -370,6 +372,8 @@ export function poblacionDesdeFicha(
   const cpRiesgo = typeof riesgo.codigoPostal === 'string' ? riesgo.codigoPostal.trim() : ''
   const cpFicha = contacto?.codigoPostal?.replace(/\s+/g, '') ?? ''
   const ciudad = contacto?.ciudad?.replace(/\s+/g, ' ').trim() ?? ''
-  if (!/^\d{5}$/.test(cpRiesgo) || cpFicha !== cpRiesgo || ciudad === '' || ciudad.length > 80) return null
+  if (!/^\d{5}$/.test(cpRiesgo) || cpFicha !== cpRiesgo || ciudad === '' || ciudad.length > MAX_POBLACION) return null
+  // Mismo filtro que `validarFormularioAuto`: una ciudad que el formulario rechazaría no viaja (encolar sigue sin población).
+  if (tieneCaracteresProhibidos(ciudad)) return null
   return ciudad
 }

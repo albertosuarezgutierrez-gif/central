@@ -9,6 +9,7 @@
 // vive aquí y en el campo del portal; nunca en logs, trazas ni mensajes.
 import { esMatriculaEspanola, normalizarMatricula, type EleccionVersion } from './vehiculo.ts'
 import { validarTomador, type Tomador } from './tomador.ts'
+import { tieneCaracteresProhibidos } from './poblacion.ts'
 
 export const RAMOS_VEHICULO = ['auto', 'moto'] as const
 export type RamoVehiculo = (typeof RAMOS_VEHICULO)[number]
@@ -233,7 +234,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       errores.push(`${campo}: máximo ${max} caracteres`)
       return null
     }
-    if (/[<>{}\[\]\\`$]|[\u0000-\u001f]/.test(v)) {
+    if (tieneCaracteresProhibidos(v)) {
       errores.push(`${campo}: caracteres no permitidos`)
       return null
     }

@@ -51,6 +51,10 @@ describe('resolverPoblacion: exacta y única, o pide persona', () => {
     expect(resolverPoblacion(OPC, { eleccionPoblacion: '00001- PUEBLO NUEVO', poblacion: 'villa alamo' })).toMatchObject({ tipo: 'elegida', por: 'eleccion', opcion: { etiqueta: 'PUEBLO NUEVO' } })
     expect(resolverPoblacion(OPC, { eleccionPoblacion: '00001- OTRA' }).tipo).toBe('ambigua')
   })
+  it('eleccionPoblacion que no casa NO cae a la poblacion de la ficha: ambigua', () => {
+    const r = resolverPoblacion(OPC, { eleccionPoblacion: '00001- OTRA', poblacion: 'villa alamo' })
+    expect(r.tipo).toBe('ambigua')
+  })
 })
 
 describe('mensaje, motivo y cable', () => {
@@ -65,6 +69,11 @@ describe('mensaje, motivo y cable', () => {
     expect(validarOpcionesPoblacion([...OPC, { codigo: '', etiqueta: 'x' }])).toBeNull()
     expect(validarOpcionesPoblacion([{ codigo: 'x'.repeat(121), etiqueta: 'x' }])).toBeNull()
     expect(validarOpcionesPoblacion('x')).toBeNull()
+  })
+  it('validarOpcionesPoblacion: descarta opciones con caracteres que validarFormularioAuto rechaza', () => {
+    const mala = { codigo: '00001- <B>', etiqueta: '<B>' }
+    expect(validarOpcionesPoblacion([...OPC, mala])).toHaveLength(3)
+    expect(validarOpcionesPoblacion([mala])).toBeNull()
   })
 })
 

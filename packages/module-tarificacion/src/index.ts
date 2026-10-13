@@ -303,6 +303,7 @@ export {
   MAX_OPCIONES_POBLACION,
   MAX_OPCIONES_POBLACION_CABLE,
   clavePoblacion,
+  tieneCaracteresProhibidos,
   leerCeldaPoblacion,
   opcionesPoblacionDesdeCeldas,
   resolverPoblacion,

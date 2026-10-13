@@ -231,11 +231,15 @@ test('poblacionDesdeFicha: solo si el riesgo no la trae y el CP de la ficha es e
   assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, null), null)
   assert.equal(poblacionDesdeFicha({}, ficha), null, 'sin CP en el riesgo')
   assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: 'x'.repeat(81) }), null)
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: 'Villa <Álamo>' }), null, 'caracteres que validarFormularioAuto rechaza: sin población, nunca 400')
+  assert.equal(poblacionDesdeFicha({ codigoPostal: '00001' }, { codigoPostal: '00001', ciudad: 'Villa\u0007Álamo' }), null)
 })
 
 test('encolar de plataforma: rellena la población desde la ficha solo en moto y sin registrar su valor', () => {
   const src = readFileSync(join(import.meta.dirname, '../app/api/correduria/tarificador/encolar/route.ts'), 'utf8')
   assert.match(src, /poblacionDesdeFicha\(riesgo, f\.ficha\.contacto\)/)
   assert.match(src, /b\.ramo === 'moto' && !/)
+  assert.match(src, /fichaAsegura\(clienteId\)\.catch\(\(\) => null\)/, 'la lectura de la ficha degrada a null: nunca un 500/400 por la ficha')
+  assert.match(src, /f\?\.estado === 'ok'/, 'solo se usa la ficha si se leyó bien')
   assert.doesNotMatch(src, /console\./, 'sin logs (el valor es del domicilio del cliente)')
 })

@@ -14,6 +14,12 @@ export const MAX_OPCIONES_POBLACION = 12
 export const MAX_OPCIONES_POBLACION_CABLE = 60
 const MAX_TEXTO_OPCION = 120
 
+/** Caracteres que `validarFormularioAuto` rechaza en el texto libre de población (única fuente del filtro). */
+const CARACTERES_PROHIBIDOS = /[<>{}\[\]\\`$]|[\u0000-\u001f]/
+export function tieneCaracteresProhibidos(texto: string): boolean {
+  return CARACTERES_PROHIBIDOS.test(texto)
+}
+
 /** `codigo` = texto EXACTO de la celda del portal (lo que se vuelve a buscar para pulsarla); `etiqueta` = nombre legible. */
 export type OpcionPoblacion = { codigo: string; etiqueta: string }
 
@@ -56,6 +62,8 @@ export function resolverPoblacion(opciones: readonly OpcionPoblacion[], f: { pob
   if (ele !== '') {
     const casan = opciones.filter((o) => o.codigo.replace(/\s+/g, ' ').trim() === ele.replace(/\s+/g, ' ').trim())
     if (casan.length === 1) return { tipo: 'elegida', opcion: casan[0], por: 'eleccion' }
+    // Una persona escogió y no casa con la lista: que decida una persona, nunca caer a la población de la ficha.
+    return { tipo: 'ambigua', opciones: [...opciones] }
   }
   const k = clavePoblacion(f.poblacion ?? '')
   if (k !== '') {
@@ -71,7 +79,7 @@ export function mensajeEleccionPoblacion(opciones: readonly OpcionPoblacion[]): 
   return `${PREFIJO_ELECCION_POBLACION} el código postal tiene ${opciones.length} poblaciones; elige una en la bandeja y reintenta: ${lista.join(' · ')}${resto > 0 ? ` (+${resto} más)` : ''}`
 }
 
-/** Valida la lista del cable (`error.opcionesPoblacion`). `null` = ausente o inválida; una opción mala invalida la lista. */
+/** Valida la lista del cable (`error.opcionesPoblacion`). `null` = ausente, inválida o sin opciones ofrecibles; una opción estructuralmente mala invalida la lista y una con caracteres prohibidos se descarta. */
 export function validarOpcionesPoblacion(v: unknown): OpcionPoblacion[] | null {
   if (!Array.isArray(v) || v.length === 0 || v.length > MAX_OPCIONES_POBLACION_CABLE) return null
   const out: OpcionPoblacion[] = []
@@ -80,7 +88,9 @@ export function validarOpcionesPoblacion(v: unknown): OpcionPoblacion[] | null {
     const r = o as Record<string, unknown>
     if (typeof r.codigo !== 'string' || !r.codigo.trim() || r.codigo.length > MAX_TEXTO_OPCION) return null
     if (typeof r.etiqueta !== 'string' || !r.etiqueta.trim() || r.etiqueta.length > MAX_TEXTO_OPCION) return null
+    // Una opción con caracteres que el formulario rechazaría no se ofrece (su elección daría 400): se descarta.
+    if (tieneCaracteresProhibidos(r.codigo) || tieneCaracteresProhibidos(r.etiqueta)) continue
     out.push({ codigo: r.codigo.replace(/\s+/g, ' ').trim(), etiqueta: r.etiqueta.replace(/\s+/g, ' ').trim() })
   }
-  return out
+  return out.length > 0 ? out : null
 }

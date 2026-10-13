@@ -33,6 +33,12 @@ test('bandeja: eleccionPoblacion tiene que ser una opción EXACTA de la lista gu
   assert.equal(eleccionPoblacionContraLista(OPCIONES[0].codigo, dup).ok, false, 'repetida')
 })
 
+test('bandeja: una opción con caracteres que validarFormularioAuto rechaza se descarta de la lista', () => {
+  const mala = { codigo: '00001- <B>', etiqueta: '<B>' }
+  assert.deepEqual(opcionesPoblacionDelError({ ...ERROR, opcionesPoblacion: [...OPCIONES, mala] }), OPCIONES)
+  assert.equal(opcionesPoblacionDelError({ ...ERROR, opcionesPoblacion: [mala] }), null)
+})
+
 test('bandeja: forma de eleccionPoblacion en el cuerpo', () => {
   assert.deepEqual(leerEleccionPoblacionBandeja(undefined), { ok: true, eleccion: null })
   assert.deepEqual(leerEleccionPoblacionBandeja(' 00001-  PUEBLO NUEVO '), { ok: true, eleccion: '00001- PUEBLO NUEVO' })
