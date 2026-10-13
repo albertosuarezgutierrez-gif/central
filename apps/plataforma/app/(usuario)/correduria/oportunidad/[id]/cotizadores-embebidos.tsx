@@ -4,7 +4,7 @@
 // por ramo, qué cotizador despliega SIN salir de la oportunidad. Un ramo que no está en `RAMOS_COTIZADOR_EMBEBIDO`
 // (`cotizador-embebido.ts`) sigue con el enlace a su pantalla `…-nuevo?oportunidad=`.
 //
-// Dar de alta un ramo nuevo (vida, salud, decesos…; hogar entró el 10/10/2026):
+// Dar de alta un ramo nuevo (vida, salud…; hogar entró el 10/10/2026, decesos el 13/10/2026):
 //   1. Añadirlo a `RAMOS_COTIZADOR_EMBEBIDO` (el tipo de abajo obliga entonces a registrarlo aquí).
 //   2. Un `PedirPrecio<Ramo>.tsx` que monte su cotizador en modo «solo condiciones» con la carcasa común
 //      `PedirPrecioEmbebido` (lectura del riesgo al abrir, bloqueo con datos viejos, nunca cotiza sin confirmar), y su
@@ -15,16 +15,20 @@ import type { ComponentType } from 'react'
 import type { RamoCotizadorEmbebido } from './cotizador-embebido'
 import type { PropsPedirPrecioEmbebido } from './PedirPrecioEmbebido'
 import PedirPrecioAuto from './PedirPrecioAuto'
+import PedirPrecioDecesos from './PedirPrecioDecesos'
 import PedirPrecioHogar from './PedirPrecioHogar'
 import PedirPrecioMoto from './PedirPrecioMoto'
 import { PreciosVarianteAuto } from '../../cliente/[id]/auto-nuevo/AutoNuevo'
 import { PreciosVarianteMoto } from '../../cliente/[id]/moto-nuevo/CotizadorMoto'
 import { PreciosVarianteHogar } from '../../cliente/[id]/hogar-nuevo/Formulario'
+import { PreciosVarianteDecesos } from '../../cliente/[id]/decesos-nuevo/DecesosNuevo'
 
 export const COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = {
   auto: PedirPrecioAuto,
   moto: PedirPrecioMoto,
   hogar: PedirPrecioHogar,
+  // 13/10/2026: asegurados como fichas de «Intervinientes»; sin emisión directa en decesos (solo ver precios).
+  decesos: PedirPrecioDecesos,
 }
 
 /** Lo que «Presupuestos de este riesgo» le da al panel «Ver precios y emitir» de una variante ya pedida. */
@@ -42,4 +46,5 @@ export const PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<Props
   auto: PreciosVarianteAuto,
   moto: PreciosVarianteMoto,
   hogar: PreciosVarianteHogar,
+  decesos: PreciosVarianteDecesos,
 }

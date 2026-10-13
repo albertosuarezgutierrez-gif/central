@@ -242,6 +242,11 @@ const CAMPO_FALTA: Record<string, string> = {
   empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
   estadoCivil: 'estado civil (no consta; se elige del catálogo en la pantalla de precio)',
   cp: 'código postal',
+  // Asegurado de decesos (13/10/2026): lo que Avant2 pide de un asegurado (`revisarAsegurado` de asegura).
+  apellido2: 'segundo apellido (obligatorio con DNI)',
+  nacionalidad: 'nacionalidad (con NIE o pasaporte)',
+  fechaNacimiento_invalida: 'fecha de nacimiento imposible (no existe en el calendario, es futura o de más de 120 años): corrígela',
+  empresa_no_asegurada: 'es una empresa y no puede ser asegurado (quítala de los asegurados)',
 }
 /**
  * Dónde se rellena cada clave que puede devolver `faltanDeFigura()` (apps/asegura/lib/oportunidad-riesgo.ts).
@@ -259,6 +264,10 @@ export const EDITOR_DE_FALTA: Record<string, 'completar' | 'formulario' | 'cambi
   empresa_no_conduce: 'cambiar', ficha: 'sin_ficha',
   // CP del tomador de auto/moto (13/10/2026): sección «Dirección» del mismo editor de la ficha.
   cp: 'formulario',
+  // Asegurado de DECESOS (13/10/2026, `faltanDeAseguradoFicha` + rama de leerRiesgo): los apellidos van en la identidad
+  // de la ficha; la nacionalidad no tiene editor en la ficha (hoy no se pide: el NIE no viaja); una empresa se quita.
+  apellido2: 'formulario', nacionalidad: 'sin_ficha', empresa_no_asegurada: 'cambiar',
+  fechaNacimiento_invalida: 'formulario',
 }
 
 /** Rótulos de lo que falta y se corrige en los formularios del modal (no en «Falta por completar»). */

@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(13/10/2026)** — Correduría: DECESOS en el riesgo unificado (`PedirPrecioDecesos.tsx` monta `DecesosNuevo` embebido; verificación en `verificacion-decesos.ts` apaga el botón de 0,50€). Asegurados = fichas rol `asegurado` (asegura las arma con `aseguradosDeFigurasParaCotizar`; exige que el tomador sea el del riesgo y rechaza `correcciones.aseguradosAdicionales`); Avant2 solo pide nombre/apellidos/nacimiento/sexo/doc; el capital no viaja; sin SQL.
+Pendiente: salud embebido, comparador de variantes en decesos, códigos DGS de las compañías de decesos.
 **(13/10/2026)** — Trading: NKE fuera del agente porque nunca entró en el top-10 de factores (momentum 12-1 −46,5%, Piotroski 5/9; nunca tuvo tesis); NKE no fue caso de la señal.
 Alberto pidió medir «rebote en soporte histórico con volumen»: preregistrada como H16 (`docs/TRADING-HIPOTESIS-PREREGISTRO.md`, commit d34112a) y medida sobre el retrovisor mensual → INCONCLUSA (2011-18 n=101 <200; 2019-26 +1,66 pp <2 pp).
 El control sin soporte rinde igual o más → el soporte no aporta; no se cabla nada.

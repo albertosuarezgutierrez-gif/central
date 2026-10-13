@@ -23,7 +23,8 @@ export const maxDuration = 180
  * primer intento real puede devolver un 400 que nombre un campo distinto.
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones? }
+ *   { clienteId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, oportunidadId?, aseguradosDeFiguras? }
+ *   `aseguradosDeFiguras: true` (solo con `oportunidadId`): los asegurados salen de las fichas del riesgo.
  */
 export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
@@ -78,11 +79,16 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: variante.motivo, gastado: '0,00€' }, { status: 422 })
   }
 
+  // Decesos EMBEBIDO en el riesgo (13/10/2026, `aseguradosDeFiguras: true`): los asegurados son las FICHAS de las
+  // figuras `asegurado`, armadas en el servidor; lo que la pantalla tecleara como lista no cuenta (no se mezclan).
+  // El write-back de abajo usa el `cuerpo` ORIGINAL: ningún dato de esas fichas se copia a `info_riesgo`.
+  const resueltosPedidos = esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined
+  const resueltos = variante.v.asegurados !== undefined ? { ...(resueltosPedidos ?? {}), asegurados: variante.v.asegurados } : resueltosPedidos
   const p = await prepararRetarificacionNuevaDecesos({
     clienteId,
     solicitadoPor,
     cuerpo: {
-      resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
+      resueltos,
       correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
   })

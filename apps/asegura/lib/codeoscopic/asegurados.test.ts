@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { construirAsegurado, leerAseguradosAdicionales, MAX_ADICIONALES_CORDURA, revisarAsegurado, revisarAseguradosAdicionales } from './asegurados.ts'
+import { construirAsegurado, faltanDeAseguradoFicha, leerAseguradosAdicionales, MAX_ADICIONALES_CORDURA, revisarAsegurado, revisarAseguradosAdicionales } from './asegurados.ts'
 
 const OK = { nombre: ' Ana ', apellido1: 'Pérez', fechaNacimiento: '2012-05-01', sexo: 'mujer' as const }
 
@@ -15,9 +15,10 @@ test('leer: descarta lo que no es un objeto, recorta y deja vacío lo mal tipado
   assert.equal(l[0].dni, null)
 })
 
-test('leer: tope de cordura contra un cuerpo absurdo', () => {
+test('leer: tope de cordura contra un cuerpo absurdo (rechaza, no recorta)', () => {
   const muchos = Array.from({ length: 500 }, () => OK)
-  assert.equal(leerAseguradosAdicionales(muchos).length, MAX_ADICIONALES_CORDURA)
+  assert.throws(() => leerAseguradosAdicionales(muchos), /máximo/)
+  assert.equal(leerAseguradosAdicionales(muchos.slice(0, MAX_ADICIONALES_CORDURA)).length, MAX_ADICIONALES_CORDURA)
 })
 
 test('revisar: nombre, primer apellido, nacimiento aaaa-mm-dd y sexo son obligatorios; el DNI no', () => {
@@ -81,4 +82,28 @@ test('cuerpo: resueltos.asegurados también se valida', () => {
   assert.notEqual(errorAseguradosEnCuerpo({ asegurados: Array.from({ length: 21 }, () => OK) }, undefined), null)
   assert.notEqual(errorAseguradosEnCuerpo({ asegurados: 'x' }, undefined), null)
   assert.equal(errorAseguradosEnCuerpo({ asegurados: [OK] }, undefined), null)
+})
+
+// ─── Fecha de nacimiento REAL y límite de 20 (13/10/2026) ───
+import { motivoFechaNacimientoImposible } from './asegurados.ts'
+
+test('fecha de nacimiento: 31/02, futura o de más de 120 años se rechazan; las reales valen', () => {
+  const hoy = '2026-10-13'
+  assert.ok(motivoFechaNacimientoImposible('2012-02-31', hoy))
+  assert.ok(motivoFechaNacimientoImposible('2027-01-01', hoy))
+  assert.ok(motivoFechaNacimientoImposible('1900-01-01', hoy))
+  assert.equal(motivoFechaNacimientoImposible('2024-02-29', hoy), null) // bisiesto real
+  assert.ok(motivoFechaNacimientoImposible('2023-02-29', hoy)) // no bisiesto
+  assert.equal(motivoFechaNacimientoImposible('2026-10-13', hoy), null) // nacido hoy
+  assert.equal(motivoFechaNacimientoImposible('1905-10-14', hoy), null) // 120 años
+  assert.ok(motivoFechaNacimientoImposible('1905-10-13', hoy)) // cumple 121 hoy
+  assert.ok(revisarAsegurado({ ...OK, fechaNacimiento: '2012-02-31' }).some((r) => r.campo === 'fechaNacimiento' && /calendario/.test(r.motivo)))
+  assert.ok(revisarAsegurado({ ...OK, fechaNacimiento: '2999-01-01' }).some((r) => /futura/.test(r.motivo)))
+  assert.deepEqual(faltanDeAseguradoFicha({ nombre: 'A', apellido1: 'B', sexo: 'mujer', fechaNacimiento: '2012-02-31' }), ['fechaNacimiento_invalida'])
+})
+
+test('leerAseguradosAdicionales no recorta en silencio: más de 20 lanza', () => {
+  const x = { nombre: 'A', apellido1: 'B', fechaNacimiento: '2012-05-01', sexo: 'mujer' }
+  assert.equal(leerAseguradosAdicionales(Array.from({ length: 20 }, () => x)).length, 20)
+  assert.throws(() => leerAseguradosAdicionales(Array.from({ length: 21 }, () => x)), /máximo 20/)
 })
