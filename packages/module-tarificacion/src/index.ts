@@ -365,6 +365,7 @@ export {
   pareceDatoPersonalInventario,
   urlSinQuery,
   MAX_BYTES_INVENTARIO_DOM,
+  MAX_MARCOS_INVENTARIO,
   MAX_OPCIONES_INVENTARIO,
   MAX_TEXTO_INVENTARIO,
   type InventarioDom,

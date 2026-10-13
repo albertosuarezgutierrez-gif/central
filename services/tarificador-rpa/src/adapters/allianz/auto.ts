@@ -71,9 +71,11 @@ export const MOTO_ACTIVO = true
  * para mapear la pantalla sin grabación humana.
  */
 export class ErrorMapaIncompleto extends ErrorTarificador {
-  readonly pideInventarioDom = true
-  constructor(que: string) {
+  /** SOLO true en dos huecos: la entrada a Turismos y el buscador de poblaciones de moto. El resto NO captura. */
+  readonly pideInventarioDom: boolean
+  constructor(que: string, pideInventarioDom = false) {
     super('portal', `allianz/auto: mapa incompleto: faltan ${que}`)
+    this.pideInventarioDom = pideInventarioDom
     this.name = 'ErrorMapaIncompleto'
   }
 }
@@ -500,7 +502,7 @@ export async function buscarPoblacion(raiz: Pick<Frame, 'locator'>, codigoPostal
   for (;;) {
     const v = await raiz.locator(SEL_RIESGO_MOTO.poblacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
     if (v.trim() !== '') return
-    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena: varias poblaciones o ventana emergente sin grabar)')
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena: varias poblaciones o ventana emergente sin grabar)', true)
     await page.waitForTimeout(300)
   }
 }
@@ -699,10 +701,10 @@ export async function marcoFormularioTurismos(page: Page, timeoutMs = MS_ESPERA_
   try {
     marco = await marcoCon(page, (r) => r.locator(SEL_VEHICULO.matricula), 'campo de matrícula', timeoutMs)
   } catch (e) {
-    if (e instanceof ErrorTarificador) throw new ErrorMapaIncompleto(HUECO_TURISMOS)
+    if (e instanceof ErrorTarificador) throw new ErrorMapaIncompleto(HUECO_TURISMOS, true)
     throw e
   }
-  if (esAppNuevaTurismos(marco.url())) throw new ErrorMapaIncompleto(HUECO_TURISMOS)
+  if (esAppNuevaTurismos(marco.url())) throw new ErrorMapaIncompleto(HUECO_TURISMOS, true)
   return marco
 }
 

@@ -59,13 +59,18 @@ export async function guardarMemoriaVersion(k: ClaveMemoria, e: { codigo: string
       const nueva = fusionarMemoria(actual, e)
       if (!nueva) return
       if (!actual) {
-        // Carrera con otro alta de la misma clave: gana la primera (on conflict do nothing).
+        // Carrera con otro alta de la misma clave: la persona gana a la IA (do update solo si entra humana o la existente es IA).
+        // Mismo código = +1 confirmación (y humano si alguna lo es); código distinto = sustituye con 1 (como fusionarMemoria).
         await tx.$executeRaw`
           insert into seguros.tarificador_elecciones
             (correduria_id, compania, ramo, tipo, clave_normalizada, codigo, etiqueta, origen, confirmaciones, ultima_vez)
           values (${k.correduriaId}::uuid, ${k.compania}, ${k.ramo}, ${TIPO_VERSION}, ${k.clave}, ${nueva.codigo},
                   ${nueva.etiqueta.slice(0, 200)}, ${nueva.origen}, ${nueva.confirmaciones}::int, now())
-          on conflict (correduria_id, compania, ramo, tipo, clave_normalizada) do nothing`
+          on conflict (correduria_id, compania, ramo, tipo, clave_normalizada) do update set
+            confirmaciones = case when seguros.tarificador_elecciones.codigo = excluded.codigo then seguros.tarificador_elecciones.confirmaciones + 1 else 1 end,
+            origen = case when seguros.tarificador_elecciones.codigo = excluded.codigo and seguros.tarificador_elecciones.origen = 'humano' then 'humano' else excluded.origen end,
+            codigo = excluded.codigo, etiqueta = excluded.etiqueta, ultima_vez = now()
+          where excluded.origen = 'humano' or seguros.tarificador_elecciones.origen = 'ia'`
         return
       }
       await tx.$executeRaw`

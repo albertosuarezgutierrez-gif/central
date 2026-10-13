@@ -8,6 +8,7 @@ import { after, afterEach, before, test } from 'node:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
+import { MAX_MARCOS_INVENTARIO } from '@central/module-tarificacion'
 import { capturarInventarioDom } from '../src/inventario-dom.ts'
 import { ErrorMapaIncompleto, esAppNuevaTurismos, marcoFormularioTurismos } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador, pideInventarioDom } from '../src/errores.ts'
@@ -93,6 +94,25 @@ test('Turismos: sin #licensePlate → ErrorMapaIncompleto (pide inventario) ANTE
   const antes = await page.frame({ name: 'appArea' })!.inputValue('#doc')
   await assert.rejects(marcoFormularioTurismos(page, 1_000), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
   assert.equal(await page.frame({ name: 'appArea' })!.inputValue('#doc'), antes)
+})
+
+test('pideInventarioDom: el resto de huecos NO captura (Turismos y buscador de poblaciones sí: ver su test y auto-moto)', async () => {
+  assert.ok(!pideInventarioDom(new ErrorMapaIncompleto('el NIF del conductor distinto')))
+  assert.ok(!pideInventarioDom(new ErrorMapaIncompleto('siniestros > 0')))
+})
+
+test('tope de marcos y tope global de tiempo', async () => {
+  let lecturas = 0
+  const marco = (colgado: boolean) => ({ isDetached: () => false, url: () => 'https://x.test/', name: () => '', evaluate: () => { lecturas++; return colgado ? new Promise(() => {}) : Promise.resolve([]) } })
+  const muchos = { frames: () => Array.from({ length: MAX_MARCOS_INVENTARIO + 20 }, () => marco(false)) } as never
+  const inv = await capturarInventarioDom(muchos)
+  assert.equal(lecturas, MAX_MARCOS_INVENTARIO)
+  assert.ok(inv && inv.marcos.length <= MAX_MARCOS_INVENTARIO)
+  lecturas = 0
+  const t0 = Date.now()
+  await capturarInventarioDom({ frames: () => Array.from({ length: 10 }, () => marco(true)) } as never, undefined, 100, 250)
+  assert.ok(Date.now() - t0 < 600, 'el tope global corta aunque cada marco cuelgue')
+  assert.ok(lecturas < 10)
 })
 
 test('esAppNuevaTurismos y pideInventarioDom', () => {

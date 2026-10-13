@@ -7,7 +7,7 @@
 // (catálogo), nunca cuál está elegida. Lo crudo pasa por `sanearInventarioDom` (@central/module-tarificacion): lista
 // blanca de claves, filtro de datos personales, truncados y tope de 60 KB.
 
-import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, type InventarioDom } from '@central/module-tarificacion'
+import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
 import type { Frame, Page } from 'playwright'
 
 /**
@@ -70,12 +70,15 @@ const conTope = <T>(p: Promise<T>, ms: number): Promise<T | null> =>
  * Inventario saneado de TODOS los marcos de la página (incluidos los de otro origen: Playwright entra en ellos). Un marco
  * que no responde en `msPorMarco` sale con `ilegible`. Nunca lanza: si no se puede, `null`.
  */
-export async function capturarInventarioDom(page: Pick<Page, 'frames'>, maxBytes = MAX_BYTES_INVENTARIO_DOM, msPorMarco = 5_000): Promise<InventarioDom | null> {
+export async function capturarInventarioDom(page: Pick<Page, 'frames'>, maxBytes = MAX_BYTES_INVENTARIO_DOM, msPorMarco = 5_000, msTotal = 15_000): Promise<InventarioDom | null> {
   try {
     const marcos: unknown[] = []
-    for (const f of page.frames() as MarcoLeible[]) {
+    const fin = Date.now() + msTotal
+    for (const f of (page.frames() as MarcoLeible[]).slice(0, MAX_MARCOS_INVENTARIO)) {
       if (f.isDetached()) continue
-      const elementos = await conTope(f.evaluate(EXTRACTOR_INVENTARIO) as Promise<unknown>, msPorMarco)
+      const resta = fin - Date.now()
+      if (resta <= 0) break
+      const elementos = await conTope(f.evaluate(EXTRACTOR_INVENTARIO) as Promise<unknown>, Math.min(msPorMarco, resta))
       marcos.push({ url: f.url(), nombre: f.name() || null, elementos: Array.isArray(elementos) ? elementos : [], ...(Array.isArray(elementos) ? {} : { ilegible: true }) })
     }
     return sanearInventarioDom({ marcos }, maxBytes)

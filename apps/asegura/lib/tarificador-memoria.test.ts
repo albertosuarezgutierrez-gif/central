@@ -29,6 +29,13 @@ test('insertar escribe la columna ramo con el ramo de la clave, y su on conflict
   assert.match(ins[0], /on conflict \(correduria_id, compania, ramo, tipo, clave_normalizada\)/)
 })
 
+test('insertar en carrera: do update donde la humana gana a la IA (nunca do nothing ni pisar humano con IA)', () => {
+  const ins = sobre(/insert into seguros\.tarificador_elecciones/)[0]
+  assert.doesNotMatch(ins, /do nothing/)
+  assert.match(ins, /do update set/)
+  assert.match(ins, /where excluded\.origen = 'humano' or (?:seguros\.)?tarificador_elecciones\.origen = 'ia'/)
+})
+
 test('actualizar va por id de la fila ya bloqueada (que se leyó con filtro de ramo) y por correduria_id', () => {
   const up = sobre(/update seguros\.tarificador_elecciones/)
   assert.equal(up.length, 1)
