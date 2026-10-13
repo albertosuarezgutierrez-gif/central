@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 311 | 42.538 | 35.351.825 | 0 | 0 |
-| `otro` | 307 | 10.236 | 25.794.067 | 15.334.019 | 0 |
-| `lectura-directa` | 269 | 7.167 | 23.315.993 | 0 | 0 |
-| `mcp:github` | 274 | 6.100 | 4.940.392 | 52.605.850 | 91 |
-| `sql` | 193 | 4.117 | 2.073.488 | 2.351.230 | 18 |
-| `escritura` | 202 | 4.110 | 60.687.813 | 0 | 0 |
+| `bash` | 311 | 43.089 | 35.804.649 | 0 | 0 |
+| `otro` | 307 | 10.359 | 26.026.960 | 15.361.441 | 0 |
+| `lectura-directa` | 269 | 7.235 | 23.524.287 | 0 | 0 |
+| `mcp:github` | 274 | 6.143 | 4.955.798 | 52.615.204 | 91 |
+| `escritura` | 202 | 4.155 | 61.123.013 | 0 | 0 |
+| `sql` | 194 | 4.135 | 2.087.986 | 2.351.230 | 18 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 42 | 1.134 | 1.125.098 | 0 | 70 |
 | `mcp:Booking-com` | 36 | 1.004 | 4.179.478 | 0 | 0 |
-| `mcp:Vercel` | 64 | 659 | 920.520 | 204.477 | 19 |
-| `agente:general-purpose` | 91 | 505 | 313.359 | 10.223.679 | 0 |
+| `mcp:Vercel` | 65 | 678 | 935.497 | 204.477 | 22 |
+| `agente:general-purpose` | 91 | 520 | 321.744 | 10.301.873 | 0 |
 | `mcp:Google_Drive` | 21 | 356 | 404.813 | 0 | 37 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
-| `mcp:Supabase` | 115 | 337 | 48.025 | 3.415 | 4 |
-| `mcp:claude-code-remote` | 31 | 260 | 20.851 | 16.312 | 0 |
-| `agente:agente-architect` | 56 | 207 | 147.139 | 5.941.105 | 0 |
+| `mcp:Supabase` | 116 | 342 | 48.578 | 3.415 | 5 |
+| `mcp:claude-code-remote` | 31 | 276 | 21.913 | 16.312 | 0 |
+| `agente:agente-architect` | 56 | 212 | 149.738 | 5.978.722 | 0 |
 | `mcp:Google-Drive` | 21 | 131 | 117.731 | 0 | 2 |
-| `agente:agente-mecanico` | 40 | 101 | 66.484 | 5.917.719 | 0 |
+| `agente:agente-mecanico` | 41 | 103 | 67.362 | 5.920.650 | 0 |
 | `agente:rastreador-codigo` | 45 | 77 | 24.123 | 653.355 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:Explore` | 33 | 75 | 37.211 | 2.124.852 | 0 |
