@@ -178,6 +178,11 @@ test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo 
   const encolar = tramo('export async function encolarTrabajo', '// ─── Reclamar y lanzar')
   assert.match(encolar, /pg_advisory_xact_lock\(hashtext\(\$\{claveEncolar\(/, 'encolarTrabajo sin cerrojo por clave: dos peticiones simultáneas duplican')
   assert.match(encolar, /bloqueaDuplicado\(/, 'encolarTrabajo no deduplica')
+  assert.match(encolar, /t\.oportunidad_id is not distinct from \$\{e\.oportunidadId \?\? null\}::uuid/, 'el dedupe ignora la oportunidad')
+  assert.match(encolar, /t\.poliza_id is not distinct from \$\{polizaId \?\? null\}::uuid/, 'el dedupe ignora la póliza')
+  assert.match(encolar, /\{ timeout: 15000, maxWait: 10000 \}/, 'encolarTrabajo sin timeout de transacción')
+  assert.match(reclamar, /\{ timeout: 15000, maxWait: 10000 \}/, 'reclamarSiguiente sin timeout de transacción')
+  assert.match(reclamar, /f\.tocada && v\.fly_machine_id/, 'maquinasVencidas sin comprobar que marcarFallo tocó fila')
   const vercel = JSON.parse(readFileSync(join(APP, 'vercel.json'), 'utf8')) as { crons: { path: string }[] }
   assert.ok(vercel.crons.some((c) => c.path === '/api/cron/tarificador-cola'), 'la cola no tiene cron propio (solo barría el de renovaciones)')
 })
