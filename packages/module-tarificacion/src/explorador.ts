@@ -58,7 +58,9 @@ const ACEPTAR_DATOS_BASICOS: AvanceAutorizado = Object.freeze({
 
 export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> = Object.freeze({
   'allianz:particulares:hogar': Object.freeze({
-    compania: 'allianz', ramo: 'hogar', producto: 'hogar', pestana: 'Particulares', productoMenu: 'Hogar',
+    compania: 'allianz', ramo: 'hogar', producto: 'hogar', pestana: 'Particulares',
+    // Etiqueta REAL del tile en el acordeón «Particulares» de «Nueva Alta» (captura de Alberto, 13/10/2026): «Allianz HOGAR».
+    productoMenu: 'Allianz HOGAR',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
   }),
   // Oráculo: ya tiene adaptador real; sirve para comparar el mapa que sale con el conocido.

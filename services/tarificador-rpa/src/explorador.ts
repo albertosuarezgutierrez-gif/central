@@ -28,7 +28,9 @@ import {
   indiceRefs,
   nombresCredencial,
   normalizarRedNoGet,
+  redactarHtml,
   resolverDato,
+  secretosDelEntorno,
   topesExplorador,
   validarRespuestaExplorador,
   type Credenciales,
@@ -45,13 +47,14 @@ import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores
 import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEmision } from './guard.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
+import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.1.0'
+export const EXPLORADOR_VERSION = '0.1.1'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -59,6 +62,9 @@ const TOPE_PASO_MS = 30_000
 /** Margen sobre el tope de tiempo del explorador para cerrar y mandar el resultado. */
 const MARGEN_CIERRE_MS = 90_000
 const ATRIBUTO_MARCA = 'data-explorador-ref'
+/** Mismos topes de evidencia que el flujo real (runner.ts). */
+const MAX_BYTES_CAPTURA = 4 * 1024 * 1024
+const MAX_BYTES_HTML = 2 * 1024 * 1024
 
 // ─── Portales: login y entrada, por CÓDIGO (la IA arranca después) ────────────
 
@@ -97,6 +103,24 @@ export type FinBucle = {
   efectos: EfectoPortal[]
   pasos: number
   acciones: number
+  /** Solo en los fallos de la ENTRADA cerrada (antes del primer paso): URL, captura y HTML ya redactados. */
+  evidencia?: EvidenciaSaneada
+}
+
+/** Evidencia lista para salir hacia asegura: URL redactada, captura y HTML con marcos pasado por `redactarHtml`. */
+export type EvidenciaSaneada = { url: string | null; capturaBase64?: string; html?: string }
+
+/**
+ * Evidencia cruda → la que sale (como el runner del flujo real): URL por el redactor, HTML por `redactarHtml` con los
+ * secretos del entorno, y captura/HTML solo si caben en los topes. Pura.
+ */
+export function sanearEvidencia(ev: EvidenciaFallo, redactar: (t: string) => string, secretos: readonly string[]): EvidenciaSaneada {
+  const html = ev.html ? redactarHtml(ev.html, secretos) : null
+  return {
+    url: ev.url ? redactar(ev.url).slice(0, 500) : null,
+    ...(ev.captura && ev.captura.length <= MAX_BYTES_CAPTURA ? { capturaBase64: ev.captura.toString('base64') } : {}),
+    ...(html && Buffer.byteLength(html) <= MAX_BYTES_HTML ? { html } : {}),
+  }
 }
 
 /** Un dato que no se puede poner → por qué se para (fail-closed: nunca se inventa). */
@@ -147,14 +171,18 @@ export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: {
  * de asegura). Guard de emisión → `emision`. Fallo del portal/infra → su tipo. Cualquier otra parada (incluido llegar al
  * precio, `cerca_de_emision`, `dato_sensible_requerido`, bucle, topes) es una exploración TERMINADA: `explorado`.
  */
-export function resultadoDeFin(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error'>, redactar: (t: string) => string): CuerpoResultado | null {
+export function resultadoDeFin(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error' | 'evidencia'>, redactar: (t: string) => string): CuerpoResultado | null {
   const meta = { botVersion: EXPLORADOR_VERSION }
+  // Evidencia de la entrada (si la hay): URL en el error; captura y HTML al lado, como en el flujo real.
+  const ev = fin.evidencia
+  const url = ev?.url ?? null
+  const adjuntos = { ...(ev?.capturaBase64 ? { capturaBase64: ev.capturaBase64 } : {}), ...(ev?.html ? { html: ev.html } : {}) }
   if (fin.motivo === 'perdido') return null
-  if (fin.motivo === 'otp') return { trabajoId, resultado: 'error', error: { tipo: 'captcha', mensaje: new ErrorVerificacionHumana(compania).message, url: null }, ...meta }
-  if (fin.motivo === 'captcha') return { trabajoId, resultado: 'error', error: { tipo: 'captcha', mensaje: 'exploración: el portal presenta un CAPTCHA: requiere una persona', url: null }, ...meta }
+  if (fin.motivo === 'otp') return { trabajoId, resultado: 'error', error: { tipo: 'captcha', mensaje: new ErrorVerificacionHumana(compania).message, url }, ...adjuntos, ...meta }
+  if (fin.motivo === 'captcha') return { trabajoId, resultado: 'error', error: { tipo: 'captcha', mensaje: 'exploración: el portal presenta un CAPTCHA: requiere una persona', url }, ...adjuntos, ...meta }
   if (fin.motivo === 'guard_emision' || fin.motivo === 'error_portal') {
     const tipo: TipoError = fin.error?.tipo ?? (fin.motivo === 'guard_emision' ? 'emision' : 'portal')
-    return { trabajoId, resultado: 'error', error: { tipo, mensaje: redactar(`exploración: ${fin.error?.mensaje ?? fin.motivo}`).slice(0, 2000), url: null }, ...meta }
+    return { trabajoId, resultado: 'error', error: { tipo, mensaje: redactar(`exploración: ${fin.error?.mensaje ?? fin.motivo}`).slice(0, 2000), url }, ...adjuntos, ...meta }
   }
   return { trabajoId, resultado: 'explorado', motivoFin: fin.motivo, ...meta }
 }
@@ -325,6 +353,17 @@ async function localizar(nodo: InventarioExploracion['nodos'] extends Map<string
 
 // ─── El trabajo completo ─────────────────────────────────────────────────────
 
+/**
+ * Fin de una exploración que murió en la ENTRADA cerrada (antes del primer paso): su motivo/error y la evidencia de la
+ * pantalla en la que se quedó (la del flujo real: URL, captura y HTML con marcos, redactados). Nunca lanza.
+ */
+export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string) => string, env: Record<string, string | undefined>): Promise<FinBucle> {
+  const f = finDeError(e)
+  // La evidencia es un extra: si sanearla fallara, el fin conserva su motivo/error en vez de caer al catch genérico.
+  const evidencia = await capturarEvidencia(page).then((ev) => sanearEvidencia(ev, redactar, secretosDelEntorno(env))).catch(() => undefined)
+  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(evidencia ? { evidencia } : {}) }
+}
+
 export type EntradaEjecucion = {
   cfg: Config
   trabajo: Trabajo
@@ -356,7 +395,7 @@ export function cierreCorrecto(status: number): boolean {
  * El cuerpo que cierra el TRABAJO, sabiendo cómo fue el cierre de la cabecera. Si la cabecera NO se cerró, nunca se informa
  * `explorado` (el mapa no está guardado y la pantalla la vería abierta): se informa un fallo de infra.
  */
-export function cuerpoTrasCierre(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error'>, stCierre: number, redactar: (t: string) => string): CuerpoResultado | null {
+export function cuerpoTrasCierre(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error' | 'evidencia'>, stCierre: number, redactar: (t: string) => string): CuerpoResultado | null {
   const cuerpo = resultadoDeFin(trabajoId, compania, fin, redactar)
   if (cuerpo?.resultado === 'explorado' && !cierreCorrecto(stCierre)) {
     return { trabajoId, resultado: 'error', error: { tipo: 'infra', mensaje: `exploración: no se pudo cerrar la cabecera (estado ${stCierre})`, url: null }, botVersion: EXPLORADOR_VERSION }
@@ -432,8 +471,9 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
         log,
       })
     } catch (e) {
-      const f = finDeError(guard.violacion() ?? e)
-      finExp = { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0 }
+      // Fallo de la ENTRADA cerrada (login, «Nueva Alta», producto): antes del primer paso. Con la evidencia del flujo
+      // real (URL, captura y HTML con marcos, redactados) para ver la pantalla en la que se quedó.
+      finExp = await finDeEntrada(guard.violacion() ?? e, page, redactar, env)
     }
   } catch (e) {
     const c = clasificar(e)
