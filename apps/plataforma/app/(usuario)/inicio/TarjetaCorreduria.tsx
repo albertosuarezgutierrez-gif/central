@@ -32,7 +32,7 @@ export default async function TarjetaCorreduria() {
   if (acceso.estado === 'no-autorizado') return null
   if (acceso.estado === 'sin-comprobar') {
     return (
-      <Tarjeta titulo="Correduría" href="/correduria" enlace="Abrir Hoy">
+      <Tarjeta titulo="Correduría" href="/correduria" enlace="Abrir Mi mesa">
         <NoDisponible que="Correduría" motivo={`no se ha podido comprobar el acceso (${acceso.detalle})`} donde={<Link href="/correduria">/correduria</Link>} />
       </Tarjeta>
     )
@@ -41,7 +41,7 @@ export default async function TarjetaCorreduria() {
   // El buscador sale YA, sin esperar al puerto de asegura (hasta 8 s): buscar un cliente es lo más
   // usado de la correduría y no puede depender de que carguen las cifras del día.
   return (
-    <Tarjeta titulo="Correduría · lo que tienes entre manos" href="/correduria" enlace="Abrir Hoy">
+    <Tarjeta titulo="Correduría · lo que tienes entre manos" href="/correduria" enlace="Abrir Mi mesa">
       <BuscadorCartera />
       <Suspense fallback={<p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Cargando lo de hoy…</p>}>
         <DatosCorreduria />

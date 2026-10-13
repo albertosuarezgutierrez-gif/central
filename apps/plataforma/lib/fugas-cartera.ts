@@ -59,6 +59,21 @@ export type Deteccion = {
   oportunidadesGanadas: number | null
   /** `true` = el cierre de oportunidades ganadas falló en esa pasada. */
   oportunidadesFallidas: boolean
+  /** Renovaciones/declaradas abiertas solas como expediente en «Mi mesa»; `null` = no consta. */
+  expedientesAbiertos: number | null
+  /** Renovaciones abiertas solas que se cerraron (renovó o la sustituyó otra); `null` = no consta. */
+  expedientesCerrados: number | null
+  /**
+   * `true` = el paso de expedientes automáticos FALLÓ en esa pasada (asegura manda `null` explícito).
+   * Desde el 13/10/2026 es la ÚNICA vía por la que una renovación propia llega a «Mi mesa»: si falla en
+   * silencio, las renovaciones dejan de verse. Un asegura viejo que no manda la clave NO es un fallo.
+   */
+  expedientesFallidos: boolean
+}
+
+/** PURO: ¿falló el paso de expedientes automáticos? Solo con `null` EXPLÍCITO (clave presente). */
+export function expedientesAutoFallidos(o: Record<string, unknown>): boolean {
+  return ('expedientesAbiertos' in o && o.expedientesAbiertos === null) || ('expedientesCerrados' in o && o.expedientesCerrados === null)
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -151,6 +166,9 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       anulacionesPorSustitucion: numONull(o.anulacionesPorSustitucion),
       oportunidadesGanadas: numONull(o.oportunidadesGanadas),
       oportunidadesFallidas: o.oportunidadesFallidas === true,
+      expedientesAbiertos: numONull(o.expedientesAbiertos),
+      expedientesCerrados: numONull(o.expedientesCerrados),
+      expedientesFallidos: expedientesAutoFallidos(o),
     },
   }
 }

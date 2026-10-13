@@ -11,7 +11,7 @@
  * El ORDEN en pantalla es el de `BLOQUES_MESA`. Una próxima acción SIN fecha no es «hoy»: nadie la ha
  * puesto en el calendario, así que va a su bloque y se marca como huérfana (`sinFecha`).
  */
-import type { Expediente } from './expedientes.ts'
+import type { Expediente, Expedientes, PerdidaPorRevisar, TareaSuelta } from './expedientes.ts'
 
 export type BloqueMesa = 'hoy' | 'abiertas' | 'esperando' | 'rescates' | 'aparcadas'
 
@@ -141,4 +141,85 @@ export function atajosAparcar(hoy: string): { clave: string; rotulo: string; fec
     { clave: '6m', rotulo: '+6 meses', fecha: mas(6) },
     { clave: 'ano', rotulo: 'El año que viene', fecha: mismoDiaAnoQueViene(hoy) },
   ]
+}
+
+// ── Tareas sueltas y pérdidas por revisar (13/10/2026) ──────────────────────────────────────────────
+// Lo que asegura manda ADEMÁS de los expedientes. Tres estados cada una: `null` = no se pudo leer en
+// asegura (se DICE, nunca «no hay»), `[]` = leído y vacío (no ocupa sitio), filas = trabajo.
+
+/** Lectura de una lista opcional del puerto. */
+export type Lectura<T> = { estado: 'no_leido' } | { estado: 'ok'; filas: T[] }
+
+export type TareaSueltaMesa = TareaSuelta & { dia: string | null; vencida: boolean }
+
+/** Primero lo vencido y lo de hoy (más antigua antes); sin fecha al final; a igualdad, por id (estable). */
+export function ordenarTareasSueltas(tareas: readonly TareaSuelta[], hoy: string): TareaSueltaMesa[] {
+  const filas = tareas.map(t => {
+    const dia = soloDia(t.fecha)
+    return { ...t, dia, vencida: dia !== null && dia <= hoy }
+  })
+  return filas.sort((a, b) => {
+    if (a.dia !== b.dia) {
+      if (a.dia === null) return 1
+      if (b.dia === null) return -1
+      return a.dia < b.dia ? -1 : 1
+    }
+    return a.tareaId < b.tareaId ? -1 : a.tareaId > b.tareaId ? 1 : 0
+  })
+}
+
+/** Por cliente y póliza, para que las del mismo cliente queden juntas; estable por id. */
+export function ordenarPerdidas(perdidas: readonly PerdidaPorRevisar[]): PerdidaPorRevisar[] {
+  const clave = (p: PerdidaPorRevisar) => `${(p.cliente ?? '\uffff').toLowerCase()}|${p.polizaNumero ?? ''}|${p.id}`
+  return [...perdidas].sort((a, b) => (clave(a) < clave(b) ? -1 : clave(a) > clave(b) ? 1 : 0))
+}
+
+export type MesaCompleta = {
+  bloques: Record<BloqueMesa, Expediente[]>
+  sueltas: Lectura<TareaSueltaMesa>
+  /** La lista llegó recortada: hay más tareas sueltas de las que se ven. */
+  sueltasTruncado: boolean
+  perdidas: Lectura<PerdidaPorRevisar>
+  /** Pérdidas que no se listan porque su póliza ya tiene expediente. `null` = no consta (no se supone 0). */
+  perdidasConExpediente: number | null
+}
+
+/** Reparte TODO lo que trae el puerto en la mesa: los cinco bloques + tareas sueltas + pérdidas por revisar. */
+export function repartirMesaCompleta(d: Extract<Expedientes, { estado: 'ok' }>, hoy: string): MesaCompleta {
+  return {
+    bloques: repartirMesa(d.expedientes, hoy),
+    sueltas: d.tareasSueltas === null ? { estado: 'no_leido' } : { estado: 'ok', filas: ordenarTareasSueltas(d.tareasSueltas, hoy) },
+    sueltasTruncado: d.tareasSueltasTruncado,
+    perdidas: d.perdidasPorRevisar === null ? { estado: 'no_leido' } : { estado: 'ok', filas: ordenarPerdidas(d.perdidasPorRevisar) },
+    perdidasConExpediente: d.perdidasConExpediente,
+  }
+}
+
+/** Motivos de pérdida de una póliza de cartera (los mismos que la pantalla de pérdidas de cartera de siempre). */
+export const ROTULO_MOTIVO_PERDIDA: Record<string, string> = {
+  precio: 'Precio',
+  competidor: 'Se fue a otro corredor/compañía',
+  coberturas: 'Coberturas',
+  cliente_desiste: 'Ya no lo necesita',
+  sin_respuesta: 'Sin respuesta',
+  no_contactable: 'No contactable',
+  ya_asegurado: 'Ya estaba asegurado',
+  otro: 'Otro',
+}
+
+const AMBIGUO_TAREA = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
+
+/**
+ * Resultado de `PATCH /api/correduria/oportunidad/tarea` (tarea suelta) → `null` si se guardó, o el motivo que
+ * se enseña en la fila. 409 (hito de devolución o ya cerrada) y 404 se DICEN con su motivo; un 5xx o una
+ * respuesta ilegible es «no sé si se guardó» (no se afirma ni éxito ni fallo).
+ */
+export function motivoFalloTareaSuelta(status: number, json: unknown): string | null {
+  const j = (typeof json === 'object' && json !== null ? json : {}) as { motivo?: unknown; estado?: unknown }
+  const motivo = typeof j.motivo === 'string' && j.motivo.trim() !== '' ? j.motivo.trim() : null
+  if (status >= 200 && status < 300 && j.estado !== 'error' && j.estado !== 'invalido') return null
+  if (status === 409) return `No se ha guardado: ${motivo ?? 'es un hito de devolución o ya está cerrada.'}`
+  if (status === 404) return `No se ha guardado: ${motivo ?? 'la tarea ya no existe.'}`
+  if (status >= 500 || status === 0) return AMBIGUO_TAREA
+  return `No se ha guardado: ${motivo ?? `HTTP ${status}`}`
 }

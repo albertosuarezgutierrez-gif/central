@@ -12,7 +12,10 @@ export const dynamic = 'force-dynamic'
  * (abiertas, esperando al cliente y aparcadas con su vuelta), con clase, estado visible, próxima
  * acción, prima, notas y, si es rescate, su recibo y su plazo. Excluye el volcado del CRM anterior sin
  * tocar. Respuesta:
- *   { estado:'ok', hoy, expedientes:[…], recuento:{abierta,esperando_cliente,aparcada}, truncado, descartadas }
+ *   { estado:'ok', hoy, expedientes:[…], recuento:{abierta,esperando_cliente,aparcada}, truncado, descartadas,
+ *     tareasSueltas:[{tareaId,clienteId,cliente,polizaId,siniestroId,tipo,estado,texto,fecha,origen}]|null, tareasSueltasTruncado,
+ *     perdidasPorRevisar:[FugaNueva + polizaId]|null, perdidasConExpediente:number|null }
+ * `tareasSueltas`/`perdidasPorRevisar` `null` = esa parte no se pudo leer (la lista principal sí).
  * Lista vacía con `ok` = no hay; `sin_configurar`/`error` = no se ha podido mirar (nunca «0 abiertas»).
  */
 export async function GET(req: Request) {

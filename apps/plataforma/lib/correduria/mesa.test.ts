@@ -1,14 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { atajosAparcar, bloqueDe, cuandoRelativo, fechaCorta, masDias, repartirMesa, BLOQUES_MESA } from './mesa.ts'
-import type { Expediente } from './expedientes.ts'
+import {
+  atajosAparcar, bloqueDe, cuandoRelativo, fechaCorta, masDias, repartirMesa, repartirMesaCompleta, ordenarTareasSueltas, ordenarPerdidas, BLOQUES_MESA,
+} from './mesa.ts'
+import type { Expediente, Expedientes, PerdidaPorRevisar, TareaSuelta } from './expedientes.ts'
 
 const HOY = '2026-10-13'
 const exp = (o: Partial<Expediente> = {}): Expediente => ({
   id: 'e1', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', clase: 'venta_nueva', estadoVisible: 'abierta', estado: 'en_negociacion',
   delVolcado: false, aparcadaHasta: null, aparcadaMotivo: null,
   proximaAccion: { tareaId: 't1', texto: 'Llamar', tipo: 'llamada', fecha: '2026-10-20' },
-  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, ...o,
+  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, ...o,
 })
 const con = (p: Partial<NonNullable<Expediente['proximaAccion']>> | null): Partial<Expediente> =>
   ({ proximaAccion: p === null ? null : { tareaId: 't', texto: '', tipo: 'llamada', fecha: '2026-10-20', ...p } })
@@ -80,4 +82,66 @@ test('fechas: relativo, corta y atajos de aparcar', () => {
   assert.deepEqual(a.map(x => x.fecha), ['2026-11-30', '2027-02-28', '2027-08-31'])
   // Ningún atajo pasa el máximo del puerto (13 meses ≈ 395 d).
   for (const x of atajosAparcar('2028-02-29')) assert.ok(Date.parse(x.fecha) - Date.parse('2028-02-29') <= 395 * 86_400_000)
+})
+
+const suelta = (o: Partial<TareaSuelta> = {}): TareaSuelta => ({
+  tareaId: 't1', clienteId: 'c1', cliente: 'Ana', polizaId: null, siniestroId: null, tipo: 'llamada', estado: 'pendiente',
+  texto: 'Llamar', fecha: '2026-10-13', origen: null, contacto: null, ...o,
+})
+const perdida = (o: Partial<PerdidaPorRevisar> = {}): PerdidaPorRevisar => ({
+  id: 'p1', tipo: 'baja', titulo: 'Baja', clienteId: 'c1', cliente: 'Ana', polizaId: 'z1', polizaNumero: '1', aseguradora: null,
+  motivo: null, anulacion: null, ultimoRecibo: null, nota: null, contacto: null, ...o,
+})
+type Ok = Extract<Expedientes, { estado: 'ok' }>
+const datos = (o: Partial<Ok> = {}): Ok => ({
+  estado: 'ok', hoy: HOY, expedientes: [], tareasSueltas: [], tareasSueltasTruncado: false, perdidasPorRevisar: [],
+  perdidasConExpediente: 0, recuento: null, truncado: false, descartadas: 0, ...o,
+})
+
+test('tareas sueltas: vencida = fecha <= hoy; sin fecha NO es vencida y va al final', () => {
+  const r = ordenarTareasSueltas([
+    suelta({ tareaId: 'd', fecha: null }), suelta({ tareaId: 'c', fecha: '2026-10-20' }),
+    suelta({ tareaId: 'b', fecha: '2026-10-13T08:00:00Z' }), suelta({ tareaId: 'a', fecha: '2026-09-30' }),
+  ], HOY)
+  assert.deepEqual(r.map(t => t.tareaId), ['a', 'b', 'c', 'd'])
+  assert.deepEqual(r.map(t => t.vencida), [true, true, false, false])
+})
+
+test('pérdidas: orden estable por cliente; sin nombre al final', () => {
+  const r = ordenarPerdidas([perdida({ id: 'z', cliente: null }), perdida({ id: 'b', cliente: 'Zoe' }), perdida({ id: 'a', cliente: 'ana' })])
+  assert.deepEqual(r.map(p => p.id), ['a', 'b', 'z'])
+})
+
+test('mesa completa: null = «no se pudo leer», [] = comprobado y vacío; nunca se confunden', () => {
+  const noLeido = repartirMesaCompleta(datos({ tareasSueltas: null, perdidasPorRevisar: null, perdidasConExpediente: null }), HOY)
+  assert.deepEqual(noLeido.sueltas, { estado: 'no_leido' })
+  assert.deepEqual(noLeido.perdidas, { estado: 'no_leido' })
+  assert.equal(noLeido.perdidasConExpediente, null)
+  const vacio = repartirMesaCompleta(datos(), HOY)
+  assert.deepEqual(vacio.sueltas, { estado: 'ok', filas: [] })
+  assert.deepEqual(vacio.perdidas, { estado: 'ok', filas: [] })
+  assert.equal(vacio.perdidasConExpediente, 0)
+})
+
+test('mesa completa: reparte expedientes, sueltas y pérdidas sin perder ninguna', () => {
+  const r = repartirMesaCompleta(datos({
+    expedientes: [exp({ id: 'a', ...con({ fecha: HOY }) }), exp({ id: 'b' })],
+    tareasSueltas: [suelta({ tareaId: 's1' }), suelta({ tareaId: 's2', fecha: null })], tareasSueltasTruncado: true,
+    perdidasPorRevisar: [perdida({ id: 'p1' }), perdida({ id: 'p2', cliente: 'Zoe' })],
+  }), HOY)
+  assert.equal(BLOQUES_MESA.reduce((n, b) => n + r.bloques[b].length, 0), 2)
+  assert.equal(r.sueltas.estado === 'ok' ? r.sueltas.filas.length : -1, 2)
+  assert.equal(r.sueltasTruncado, true)
+  assert.equal(r.perdidas.estado === 'ok' ? r.perdidas.filas.length : -1, 2)
+})
+
+test('motivoFalloTareaSuelta: 2xx = guardado; 409/404 dicen su motivo; 5xx = ambiguo', async () => {
+  const { motivoFalloTareaSuelta: m } = await import('./mesa.ts')
+  assert.equal(m(200, { estado: 'ok' }), null)
+  assert.match(m(409, { motivo: 'hito de devolución' }) ?? '', /No se ha guardado: hito de devolución/)
+  assert.match(m(409, null) ?? '', /No se ha guardado/)
+  assert.match(m(404, {}) ?? '', /ya no existe/)
+  assert.match(m(502, null) ?? '', /No se ha podido confirmar/)
+  assert.match(m(422, { estado: 'invalido', motivo: 'Falta tareaId' }) ?? '', /Falta tareaId/)
+  assert.notEqual(m(200, { estado: 'error' }), null)
 })

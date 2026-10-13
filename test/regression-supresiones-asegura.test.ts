@@ -167,15 +167,20 @@ test('la ruta reenvía al puerto de asegura; plataforma no toca la BD de la corr
   assert.ok(!/prisma/i.test(leer(RUTA)), 'la ruta de plataforma está tocando Prisma')
 })
 
-test('el bloque está MONTADO en la pantalla y suma al contador de «Hoy»', () => {
+test('el bloque está MONTADO en la pantalla y suma al contador de «Gestión»', () => {
   // Un bloque construido y no montado es exactamente el fallo que este PR viene
   // a arreglar: la solicitud existiría y no la vería nadie.
   const src = leer(CLIENTE)
   assert.match(src, /<Supresiones onContador=\{setNSupresiones\} \/>/)
-  // Desde el 26/09/2026 el badge de «Hoy» se construye desde `colasIncid`
-  // (una sola lista para el badge y la franja): supresiones tiene que estar ahí.
+  // Desde el 13/10/2026 «Hoy» es «Gestión»: el bloque tiene que estar MONTADO DENTRO de su panel (no en
+  // otra pestaña ni suelto), que es adonde enlaza la banda de avisos de «Mi mesa».
+  const ini = src.indexOf('aria-label="Gestión"')
+  const fin = src.indexOf('aria-label="Clientes"', ini)
+  assert.ok(ini >= 0 && fin > ini, 'no se encontró el panel «Gestión»')
+  assert.match(src.slice(ini, fin), /<Supresiones onContador=\{setNSupresiones\} \/>/, '«Supresiones» ya no está en el panel «Gestión»')
+  // El badge de «Gestión» se construye desde `colasIncid`: supresiones tiene que estar ahí.
   assert.match(src, /const colasIncid = \[[^\]]*\bnSupresiones\b/)
-  assert.match(src, /agregarContadores\(\[\.\.\.colasIncid, nTareasHoy\]\)/)
+  assert.match(src, /agregarContadores\(colasIncid\)/)
 })
 
 test('la escritura separa «no se hizo por esto» de «no se pudo hacer»', () => {
