@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { normalizarTitular, type TitularDeclarado } from '@central/module-seguros-portal'
 
@@ -193,15 +193,15 @@ async function altaConDocumento(req: Request, identidadId: string) {
     select: { id: true },
   })
 
-  // Best-effort y no bloqueante: el aviso a Alberto no puede retrasar ni
+  // Best-effort y no bloqueante, dentro de `after()` (un `void` suelto lo puede congelar Vercel al responder): el aviso a Alberto no puede retrasar ni
   // tumbar la respuesta al cliente que acaba de subir su póliza.
-  void avisarPolizaDeclaradaDesdeAlta({
+  after(() => avisarPolizaDeclaradaDesdeAlta({
     identidadId,
     compania: datos.compania,
     ramo: datos.ramo,
     numeroPoliza: datos.numeroPoliza,
     fechaVencimiento: datos.fechaVencimiento,
-  })
+  }))
 
   return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, motivo, documentoGuardado: documentoGuardado.estado })
 }
@@ -303,13 +303,13 @@ async function altaAMano(req: Request, identidadSesion: string) {
   const fechaVencimiento = datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null
 
   // Best-effort y no bloqueante, igual que en el alta con documento.
-  void avisarPolizaDeclaradaDesdeAlta({
+  after(() => avisarPolizaDeclaradaDesdeAlta({
     identidadId,
     compania: datos.compania,
     ramo: datos.ramo,
     numeroPoliza: datos.numeroPoliza,
     fechaVencimiento,
-  })
+  }))
 
   return NextResponse.json(
     {

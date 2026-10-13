@@ -154,6 +154,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-telegram':
+        specifier: workspace:*
+        version: link:../../packages/core-telegram
       '@central/core-vehiculos':
         specifier: workspace:*
         version: link:../../packages/core-vehiculos
