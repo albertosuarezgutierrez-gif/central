@@ -843,6 +843,10 @@ export type SustitucionPendiente = {
   sustituidaAt: string
   polizaVieja: { id: string; aseguradora: string; numeroPoliza: string | null }
   polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
+  /** Tres estados: `null` = asegura no lo manda / no se sabe (≠ false). */
+  nuevaConfirmadaCima: boolean | null
+  nuevaReciboCima: boolean | null
+  viejaEnVigorCima: boolean | null
 }
 
 /** Póliza sustituida que sigue viva (posible doble seguro). Sin datos personales. */
@@ -885,6 +889,9 @@ export function interpretarSustituciones(status: number, json: unknown): Sustitu
             sustituidaAt: cadena(x.sustituidaAt) ?? '',
             polizaVieja,
             polizaNueva: leerRelacionadaPuerto(x.polizaNueva),
+            nuevaConfirmadaCima: typeof x.nuevaConfirmadaCima === 'boolean' ? x.nuevaConfirmadaCima : null,
+            nuevaReciboCima: typeof x.nuevaReciboCima === 'boolean' ? x.nuevaReciboCima : null,
+            viejaEnVigorCima: typeof x.viejaEnVigorCima === 'boolean' ? x.viejaEnVigorCima : null,
           }
         })
         .filter((x): x is SustitucionPendiente => x !== null)
