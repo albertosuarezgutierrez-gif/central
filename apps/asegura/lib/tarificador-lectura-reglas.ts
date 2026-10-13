@@ -165,3 +165,16 @@ export function proyectarUltimoRiesgo(fila: { id: string; created_at: Date | str
   if (!riesgo) return vacio
   return { riesgo, trabajoId: fila.id, creadoEn: iso(fila.created_at) }
 }
+
+/**
+ * Riesgo previo para REENCOLAR (probar ficha). Si la `eleccionVersion` la puso la IA (`eleccionVersionIa` presente en el
+ * riesgo guardado) NO se arrastra como definitiva: se quitan ambas y el robot vuelve a pararse/elegir. Si la puso una
+ * persona (no hay marca de IA), se conserva. PURO.
+ */
+export function riesgoParaReencolar(previo: unknown): unknown {
+  if (!previo || typeof previo !== 'object' || Array.isArray(previo)) return previo
+  const r = previo as Record<string, unknown>
+  if (r.eleccionVersionIa === undefined) return previo
+  const { eleccionVersion: _e, eleccionVersionIa: _m, ...resto } = r
+  return resto
+}

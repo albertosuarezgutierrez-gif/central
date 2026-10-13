@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { documentoDePdf, errorPublico, indicePdfValido, proyectarTrabajo, proyectarUltimoRiesgo, riesgoPublico } from './tarificador-lectura-reglas.ts'
+import { documentoDePdf, errorPublico, indicePdfValido, proyectarTrabajo, proyectarUltimoRiesgo, riesgoParaReencolar, riesgoPublico } from './tarificador-lectura-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
 const RUTA = 'app/api/operador/tarificador/trabajo/[id]/route.ts'
@@ -136,4 +136,13 @@ test('ruta último riesgo: Bearer primero, uuid 400, por correduría; SQL por cl
   assert.match(sql, /order by t\.created_at desc\s+limit 1/)
   assert.ok(!/estado/.test(sql.replace(/^\s*\*.*$/gm, '')), 'cualquier estado: no se filtra por estado')
   assert.ok(!/evidencia_documento_id|html_documento_id|t\.error/.test(sql))
+})
+
+test('probar: la eleccionVersion de la IA no se arrastra; la de una persona sí', () => {
+  const base = { ramo: 'auto', matricula: '1234ABC' }
+  const ev = { codigo: 'V002', etiqueta: 'X' }
+  assert.deepEqual(riesgoParaReencolar({ ...base, eleccionVersion: ev, eleccionVersionIa: { motivo: 'm' } }), base)
+  assert.deepEqual(riesgoParaReencolar({ ...base, eleccionVersion: ev }), { ...base, eleccionVersion: ev })
+  assert.equal(riesgoParaReencolar(null), null)
+  assert.match(leer('app/api/operador/tarificador/probar/route.ts'), /riesgoParaReencolar\(await leerRiesgoParaReencolar\(/, 'probar no filtra la elección de la IA')
 })

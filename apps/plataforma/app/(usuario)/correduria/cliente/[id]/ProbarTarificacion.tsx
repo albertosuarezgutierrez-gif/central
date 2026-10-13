@@ -55,7 +55,7 @@ export default function ProbarTarificacion({ clienteId }: { clienteId: string })
   }, [])
 
   function alternar() {
-    if (abierto) { parar(); setAbierto(false); return }
+    if (abierto) { parar(); setSeg(null); setAbierto(false); return }
     setAbierto(true)
     if (integ.estado !== 'ok') void cargarIntegraciones()
   }

@@ -6,6 +6,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { CABECERA_ACTOR, leerActor } from '@/lib/actor'
 import { encolarTrabajo, lanzarPendientes } from '@/lib/tarificador'
 import { leerRiesgoParaReencolar } from '@/lib/tarificador-lectura'
+import { riesgoParaReencolar } from '@/lib/tarificador-lectura-reglas'
 import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
@@ -36,7 +37,7 @@ export const POST = auditado(async (req: Request) => {
   try {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', mensaje: 'no se ha podido resolver la correduría' }, { status: 503 })
-    const previo = await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo)
+    const previo = riesgoParaReencolar(await leerRiesgoParaReencolar(correduria.id, clienteId, compania, ramo))
     if (!previo) return NextResponse.json({ estado: 'rechazado', motivo: 'sin_riesgo_previo' }, { status: 409 })
     const valida = validarEntradaRamo(ramo, previo)
     if (!valida.ok) return NextResponse.json({ estado: 'rechazado', motivo: 'riesgo_previo_invalido', errores: valida.errores ?? [] }, { status: 422 })
