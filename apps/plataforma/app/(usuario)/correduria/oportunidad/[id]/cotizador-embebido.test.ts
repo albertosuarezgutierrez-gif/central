@@ -5,7 +5,7 @@ import { RAMOS_COTIZADOR_EMBEBIDO, abrirAlCargar, bloqueObjetoDeRamo, firmaRiesg
 import { RAMOS_VARIANTE, rutaVariante } from './variante.ts'
 import { interpretarRiesgo } from '../../../../../lib/riesgo-asegura.ts'
 
-function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unknown[]; variantes?: unknown[]; roles?: string[]; clienteId?: string } = {}) {
+function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unknown[]; variantes?: unknown[]; roles?: string[]; clienteId?: string; historial?: unknown } = {}) {
   const r = interpretarRiesgo(200, {
     estado: 'ok',
     oportunidad: { id: 'op1', clienteId: extra.clienteId ?? 'c1', ramo: 'moto' },
@@ -14,6 +14,7 @@ function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unkn
     vinculos: [],
     variantes: extra.variantes ?? [],
     datosVehiculo: { matricula: '1234ABC', codigoVehiculo: '777', marcaId: 'm', modeloId: 'mo', motorId: 'Gasoline', garaje: 'G1', kmAnuales: 5000, ...(extra.datosVehiculo ?? {}) },
+    ...(extra.historial !== undefined ? { historial: extra.historial } : {}),
   })
   if (r.estado !== 'ok') throw new Error('no se pudo leer')
   return r.riesgo
@@ -32,6 +33,13 @@ test('firma: otra persona en un papel, o lo que le falta a su ficha, también ca
   assert.notEqual(firmaRiesgoMoto(conConductor), base)
   const yaConCarne = riesgo({ figuras: [{ rol: 'tomador', clienteId: 'c1', nombre: 'Ana', faltan: [] }, { rol: 'conductor_habitual', clienteId: 'c2', nombre: 'Luis', faltan: [] }] })
   assert.notEqual(firmaRiesgoMoto(yaConCarne), firmaRiesgoMoto(conConductor))
+})
+
+test('firma: los años asegurado / en la compañía declarados arriba cambian el riesgo (el cotizador auto los manda)', () => {
+  const con = (aniosAsegurado: number | null) => riesgo({ historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado, aniosEnCompania: null }, carnet: null } })
+  assert.notEqual(firmaRiesgo(con(3)), firmaRiesgo(con(null)))
+  assert.notEqual(firmaRiesgo(con(0)), firmaRiesgo(con(null)))
+  assert.equal(firmaRiesgo(con(3)), firmaRiesgo(con(3)))
 })
 
 test('firma: sin figura «tomador», otro cliente de la oportunidad es otro tomador (otro riesgo)', () => {

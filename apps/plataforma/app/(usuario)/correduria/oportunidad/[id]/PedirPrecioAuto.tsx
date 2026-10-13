@@ -62,6 +62,8 @@ function Montaje({ apertura, n, bloqueo, onCotizando, onCotizado }: MontajeEmbeb
         companias={datos.companias}
         variante={variante}
         datosRiesgo={riesgo.datosVehiculo}
+        // Años asegurado / en la compañía declarados arriba («Historial y bonificaciones»): mandan en la cotización.
+        historialRiesgo={riesgo.historial?.historialDeclarado ?? null}
         anterior={datos.anterior}
         anteriorAmbiguo={datos.anteriorAmbiguo}
         otroVehiculo={datos.otroVehiculo}

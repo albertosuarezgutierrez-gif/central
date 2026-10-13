@@ -88,7 +88,7 @@ export default function HistorialRiesgo({ riesgo, hoy }: { riesgo: Riesgo; hoy: 
   return (
     <section id="historial-riesgo" aria-labelledby="historial-riesgo-titulo" style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0 }}>
       <div>
-        <div id="historial-riesgo-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Historial</div>
+        <div id="historial-riesgo-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Historial y bonificaciones</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
           Lo que se sabe del seguro de hoy y del conductor, tal como consta. «Sin dato» es que no se sabe, no que sea cero: al pedir precio se declara.
         </div>

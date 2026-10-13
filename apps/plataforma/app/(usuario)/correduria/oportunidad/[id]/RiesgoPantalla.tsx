@@ -134,6 +134,15 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         </div>
       )}
 
+      {/* Orden (Alberto, 13/10/2026): intervinientes → objeto del riesgo → historial → verificación + pedir precio. */}
+      <FigurasRiesgo
+        riesgo={riesgo}
+        ocupado={ocupado}
+        onCambio={(texto) => void recargar(texto)}
+        onError={(texto) => setAviso({ ok: false, texto })}
+        onEditando={alEditarFiguras}
+      />
+
       {esVehiculo ? (
         <DatosVehiculo
           riesgo={riesgo}
@@ -153,15 +162,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         />
       )}
 
-      <FigurasRiesgo
-        riesgo={riesgo}
-        ocupado={ocupado}
-        onCambio={(texto) => void recargar(texto)}
-        onError={(texto) => setAviso({ ok: false, texto })}
-        onEditando={alEditarFiguras}
-      />
-
-      {/* Historial (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. Solo lectura. */}
+      {/* «Historial y bonificaciones» (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. */}
       <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
@@ -179,13 +180,17 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
               {op.polizaId && acciones.secundario
                 ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
                 : 'Se pide precio con los intervinientes y los datos de esta página.'}{' '}
-              {CotizadorEmbebido ? 'Se confirma aquí mismo, sin salir de esta página' : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
+              {CotizadorEmbebido
+                ? 'Abrir el cotizador es gratis; solo se paga en su botón final, que se enciende con la verificación completa'
+                : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
+              {/* Cotizador embebido: se despliega en este mismo bloque; ningún enlace a la pantalla `…-nuevo` de su ramo.
+                  Abierto, el botón que lo abre sobra (el formulario ES esa acción): no se repite. */}
+              {!(CotizadorEmbebido && cotizadorAbierto) && (
               <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
-                {/* Cotizador embebido: se despliega en este mismo bloque; ningún enlace a la pantalla `…-nuevo` de su ramo. */}
                 {CotizadorEmbebido ? (
-                  <button type="button" onClick={() => setCotizadorAbierto(true)} disabled={cotizadorAbierto} aria-expanded={cotizadorAbierto} aria-controls="pedir-precio-cotizador"
+                  <button type="button" onClick={() => setCotizadorAbierto(true)} aria-expanded={false} aria-controls="pedir-precio-cotizador"
                     style={{ ...btnStyle('primario', 'md'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
                     {acciones.principal.etiqueta}
                   </button>
@@ -193,9 +198,10 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                   <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
                 )}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {CotizadorEmbebido ? (esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
+                  {CotizadorEmbebido ? (op.ramo === 'auto' ? 'Aquí solo se piden las condiciones (efecto, remolque, seguro actual…).' : esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
                 </span>
               </div>
+              )}
               {acciones.secundario && (
                 <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
                   <BtnLink href={acciones.secundario.href} variante="secundario">{acciones.secundario.etiqueta}</BtnLink>
@@ -203,14 +209,6 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                 </div>
               )}
             </div>
-            {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. */}
-            <DuplicarOtroTomador
-              riesgo={riesgo}
-              ocupado={ocupado || editandoFiguras || editandoObjeto || cotizadorAbierto}
-              onCambio={(texto) => void recargar(texto)}
-              onError={(texto) => setAviso({ ok: false, texto })}
-              onRecargar={() => void recargar()}
-            />
             {CotizadorEmbebido && cotizadorAbierto && (
               <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <CotizadorEmbebido
@@ -229,6 +227,20 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                   onCerrar={() => setCotizadorAbierto(false)}
                 />
               </div>
+            )}
+            {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. Acción SECUNDARIA: apartada,
+                debajo del cotizador, para que no compita con el botón de pedir precio. */}
+            {ramo && riesgo.roles.includes('conductor_habitual') && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Otras opciones</div>
+              <DuplicarOtroTomador
+                riesgo={riesgo}
+                ocupado={ocupado || editandoFiguras || editandoObjeto || cotizadorAbierto}
+                onCambio={(texto) => void recargar(texto)}
+                onError={(texto) => setAviso({ ok: false, texto })}
+                onRecargar={() => void recargar()}
+              />
+            </div>
             )}
           </>
         ) : hayBots ? (
