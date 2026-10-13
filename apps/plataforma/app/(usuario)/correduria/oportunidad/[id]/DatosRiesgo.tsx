@@ -480,16 +480,16 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
 
   return (
     <Marco
-      // Decesos (13/10/2026): «Datos del riesgo» (`bloqueObjetoDeRamo`); sus asegurados son FICHAS en «Intervinientes».
-      titulo={ramo === 'vida' ? 'Capital y asegurado' : ramo === 'decesos' ? 'Datos del riesgo' : 'Capital y asegurados'}
+      // Decesos, salud y vida (13/10/2026): «Datos del riesgo» (`bloqueObjetoDeRamo`); sus personas, en «Intervinientes».
+      titulo="Datos del riesgo"
       ayuda={ramo === 'vida'
-        ? 'Capital, profesión y si fuma: lo que viaja a la compañía en vida. Al pedir precio se precargan aquí y lo que se use se anota de vuelta.'
+        ? 'Capital, profesión y si fuma: lo que viaja a la compañía en vida (del asegurado: el tomador o la persona asegurada de «Intervinientes»). «Pedir precio» lo lee de aquí.'
         : ramo === 'decesos'
           ? 'En decesos Avant2 solo pide las personas (tomador y asegurados, en «Intervinientes») y la fecha de efecto. Lo de aquí es para el expediente.'
-          : 'Lo que se sabe de lo que quiere el cliente y de quién más se asegura. Al pedir precio se precarga aquí y lo que se use se anota de vuelta.'}
+          : 'En salud Avant2 solo pide las personas (tomador y asegurados, en «Intervinientes») y la fecha de efecto. Lo de aquí es para el expediente.'}
       nota={ramo === 'vida' ? null : ramo === 'decesos'
         ? 'El capital no viaja a la compañía (cotiza su prestación estándar). Los asegurados tecleados aquí sin ficha tampoco: añádelos como asegurados en «Intervinientes».'
-        : `En ${ramo} el capital es opcional: no viaja a la compañía, queda para el expediente.`}
+        : 'Ni el importe ni la modalidad viajan a la compañía (cotiza su producto). Los asegurados tecleados aquí sin ficha tampoco: añádelos como asegurados en «Intervinientes».'}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
       aviso={null}
       editando={E.editando} bloqueado={E.bloqueado} enviando={E.enviando} errorForm={E.errorForm}
@@ -498,7 +498,7 @@ function DatosCapital(props: Props & { d: Record<string, unknown>; faltan: strin
         <dl style={{ ...REJILLA, margin: 0 }}>
           {campos.map((k) => (
             <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0, ...(k === 'asegurados' ? { gridColumn: '1 / -1' } : {}) }}>
-              <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ramo === 'decesos' && k === 'asegurados' ? 'Asegurados tecleados sin ficha (no viajan)' : ramo === 'decesos' && k === 'capital' ? 'Capital (nota, no viaja)' : ETIQUETA_CAMPO_CAPITAL[k]}</dt>
+              <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ramo !== 'vida' && k === 'asegurados' ? 'Asegurados tecleados sin ficha (no viajan)' : ramo !== 'vida' && k === 'capital' ? 'Capital (nota, no viaja)' : ramo === 'salud' && k === 'modalidadDeseada' ? 'Modalidad deseada (nota, no viaja)' : ETIQUETA_CAMPO_CAPITAL[k]}</dt>
               <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere' }}>{filaLectura(k)}</dd>
             </div>
           ))}

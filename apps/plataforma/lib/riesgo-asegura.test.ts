@@ -240,7 +240,7 @@ test('cada clave posible de faltanDeFigura() tiene un editor asociado en la pant
   assert.ok(claves.size >= 9, `se esperaban al menos 9 claves, salen ${claves.size}`)
   // Asegurado de DECESOS (13/10/2026): sus claves salen de `revisarAsegurado` (lo de Avant2 para un asegurado) y de la
   // rama `empresa_no_asegurada` de leerRiesgo. También tienen que tener editor.
-  const rama = fuente.slice(fuente.indexOf("if (f.rol === 'asegurado' && op.tipo === 'decesos')"))
+  const rama = fuente.slice(fuente.indexOf("if (f.rol === 'asegurado' && (op.tipo === 'decesos' || op.tipo === 'salud' || op.tipo === 'vida'))"))
   const empresa = /\['(empresa_no_asegurada)'\]/.exec(rama.slice(0, 400))
   assert.ok(empresa, 'no se encuentra la rama del asegurado de decesos')
   claves.add(empresa[1])

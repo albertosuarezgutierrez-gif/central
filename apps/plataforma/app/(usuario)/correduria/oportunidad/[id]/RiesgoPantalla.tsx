@@ -24,6 +24,7 @@ import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
+import { avisoSinAvant2 } from '@/lib/correduria/registro-ramos'
 import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
 import type { LadoBot } from './parrilla-precios'
 import PropuestaEscenarios from './PropuestaEscenarios'
@@ -82,6 +83,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   const ramo = ramoVariante(op.ramo)
   const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
   const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
+  // Ramo SIN cotizador Avant2 (comercio, RC, comunidades, otros…): aviso explícito; no se inventa cotizador (13/10/2026).
+  const sinAvant2 = acciones.principal ? null : avisoSinAvant2(op.ramo, { hayBots })
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
   const ramoEmbebido = ramoCotizadorEmbebido(op.ramo)
   const CotizadorEmbebido = ramoEmbebido ? COTIZADOR_EMBEBIDO[ramoEmbebido] : null
@@ -254,6 +257,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           </>
         ) : hayBots ? (
           <>
+            {sinAvant2 && <p role="status" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>{sinAvant2}</p>}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               Este ramo se cotiza con los bots de compañía: el formulario de presupuestos de más abajo va ya sembrado con el capital y la dirección de los datos; allí eliges compañías y lo pides.
             </p>
@@ -264,11 +268,14 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
             </div>
           </>
         ) : (
+          <>
+          {sinAvant2 && <p role="status" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>{sinAvant2}</p>}
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
             {avisoRamoSinTarifa(op.ramo, 'Este ramo se cotiza fuera (no hay tarifa a la que pedir precio desde aquí): los datos de arriba son para el expediente.')} La{' '}
             <Link href={`/correduria/cliente/${encodeURIComponent(op.clienteId)}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>ficha del cliente</Link>{' '}
             sigue siendo el sitio de sus pólizas y gestiones.
           </p>
+          </>
         )}
       </section>
 

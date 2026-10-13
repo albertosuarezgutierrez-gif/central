@@ -4,7 +4,8 @@
 // por ramo, qué cotizador despliega SIN salir de la oportunidad. Un ramo que no está en `RAMOS_COTIZADOR_EMBEBIDO`
 // (`cotizador-embebido.ts`) sigue con el enlace a su pantalla `…-nuevo?oportunidad=`.
 //
-// Dar de alta un ramo nuevo (vida, salud…; hogar entró el 10/10/2026, decesos el 13/10/2026):
+// Dar de alta un ramo nuevo (hogar entró el 10/10/2026; decesos, salud y vida el 13/10/2026 — con ellos están TODOS los
+// ramos con cotizador Avant2 en el repo; comercio, RC y comunidades no tienen, ver `registro-ramos.ts`):
 //   1. Añadirlo a `RAMOS_COTIZADOR_EMBEBIDO` (el tipo de abajo obliga entonces a registrarlo aquí).
 //   2. Un `PedirPrecio<Ramo>.tsx` que monte su cotizador en modo «solo condiciones» con la carcasa común
 //      `PedirPrecioEmbebido` (lectura del riesgo al abrir, bloqueo con datos viejos, nunca cotiza sin confirmar), y su
@@ -18,10 +19,14 @@ import PedirPrecioAuto from './PedirPrecioAuto'
 import PedirPrecioDecesos from './PedirPrecioDecesos'
 import PedirPrecioHogar from './PedirPrecioHogar'
 import PedirPrecioMoto from './PedirPrecioMoto'
+import PedirPrecioSalud from './PedirPrecioSalud'
+import PedirPrecioVida from './PedirPrecioVida'
 import { PreciosVarianteAuto } from '../../cliente/[id]/auto-nuevo/AutoNuevo'
 import { PreciosVarianteMoto } from '../../cliente/[id]/moto-nuevo/CotizadorMoto'
 import { PreciosVarianteHogar } from '../../cliente/[id]/hogar-nuevo/Formulario'
 import { PreciosVarianteDecesos } from '../../cliente/[id]/decesos-nuevo/DecesosNuevo'
+import { PreciosVarianteSalud } from '../../cliente/[id]/salud-nuevo/SaludNuevo'
+import { PreciosVarianteVida } from '../../cliente/[id]/vida-nuevo/VidaNuevo'
 
 export const COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = {
   auto: PedirPrecioAuto,
@@ -29,6 +34,9 @@ export const COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<Pro
   hogar: PedirPrecioHogar,
   // 13/10/2026: asegurados como fichas de «Intervinientes»; sin emisión directa en decesos (solo ver precios).
   decesos: PedirPrecioDecesos,
+  // 13/10/2026: salud = decesos (asegurados como fichas); vida = el tomador es el asegurado y el capital sale del riesgo.
+  salud: PedirPrecioSalud,
+  vida: PedirPrecioVida,
 }
 
 /** Lo que «Presupuestos de este riesgo» le da al panel «Ver precios y emitir» de una variante ya pedida. */
@@ -47,4 +55,6 @@ export const PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<Props
   moto: PreciosVarianteMoto,
   hogar: PreciosVarianteHogar,
   decesos: PreciosVarianteDecesos,
+  salud: PreciosVarianteSalud,
+  vida: PreciosVarianteVida,
 }

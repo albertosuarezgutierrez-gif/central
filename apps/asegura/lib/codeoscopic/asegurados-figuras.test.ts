@@ -50,8 +50,8 @@ const riesgo = readFileSync(new URL('../oportunidad-riesgo.ts', import.meta.url)
 const ruta = readFileSync(new URL('../../app/api/operador/codeoscopic/decesos-nuevo/route.ts', import.meta.url), 'utf8')
 
 test('cepo: en decesos la figura asegurado se revisa con lo de Avant2, ANTES del estado civil y el CP del tomador', () => {
-  const i = riesgo.indexOf("if (f.rol === 'asegurado' && op.tipo === 'decesos')")
-  assert.ok(i > 0, 'falta la rama del asegurado de decesos en leerRiesgo')
+  const i = riesgo.indexOf("if (f.rol === 'asegurado' && (op.tipo === 'decesos' || op.tipo === 'salud' || op.tipo === 'vida'))")
+  assert.ok(i > 0, 'falta la rama del asegurado de decesos/salud/vida en leerRiesgo')
   const bloque = riesgo.slice(i, i + 400)
   assert.match(bloque, /faltanDeAseguradoFicha\(p\)/)
   assert.match(bloque, /p === null \? null/, 'ficha ilegible = null («no se pudo leer»), nunca []')

@@ -20,6 +20,7 @@
 // (`revisarDatosVida`) para lo que SÍ se puede comprobar sin llamar al vendor.
 
 import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import { construirAsegurado, motivoFechaNacimientoImposible, revisarAsegurado, type AseguradoAdicional } from './asegurados.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
 export type DatosVida = DatosPersona & {
@@ -45,6 +46,11 @@ export type DatosVida = DatosPersona & {
    * campo de rol documentado; su TIPO (boolean) no lo está: si el vendor contesta otra cosa, se
    * corrige aquí. */
   fumador?: boolean | null
+
+  /** El ASEGURADO cuando NO es el tomador (13/10/2026). `TermLifeRisk_V1` lleva `insured` como persona PROPIA, distinta
+   * de `holder`: ausente/`null` = se asegura al tomador (lo de siempre). Viaja como `NaturalPerson_V1`
+   * (`construirAsegurado`) + profesión y tabaco. Solo lo arma el servidor desde la FICHA de la figura `asegurado`. */
+  asegurado?: AseguradoAdicional | null
 
   fechaEfecto: string
   referenciaExterna?: string | null
@@ -72,6 +78,18 @@ export function revisarDatosVida(d: Partial<DatosVida>): ReparoVida[] {
   const falta = (c: keyof DatosVida, m = 'hace falta para poder cotizar') => r.push({ campo: c, motivo: m })
 
   for (const x of revisarPersona(d)) r.push(x as ReparoVida)
+  // Fecha de nacimiento del tomador imposible, futura o de más de 120 años: 400 en el vendor, y se COBRA. Se corta
+  // aquí, gratis (13/10/2026).
+  if (typeof d.fechaNacimiento === 'string' && RE_FECHA.test(d.fechaNacimiento)) {
+    const imposible = motivoFechaNacimientoImposible(d.fechaNacimiento)
+    if (imposible) r.push({ campo: 'fechaNacimiento', motivo: imposible })
+  }
+  // Asegurado distinto del tomador: lo que `NaturalPerson_V1` necesita de él (nombre, apellidos, nacimiento posible,
+  // sexo; documento opcional). Incluye la fecha imposible (`revisarAsegurado`).
+  if (d.asegurado !== undefined && d.asegurado !== null) {
+    const rs = revisarAsegurado(d.asegurado)
+    if (rs.length > 0) r.push({ campo: 'asegurado', motivo: `asegurado: ${rs.map((x) => `${x.campo} (${x.motivo})`).join(' · ')}` })
+  }
 
   if (d.capital === undefined || d.capital === null) falta('capital')
   else if (!numero(d.capital) || d.capital <= 0)
@@ -122,7 +140,8 @@ export function construirPeticionVida(d: DatosVida, lineaId: string): Record<str
   // documentado y mandar uno inventado es lo que tenía bloqueado el ramo.
   // El asegurado lleva además lo que SOLO tiene sentido en él (profesión y tabaco); el tomador
   // (`holder`) sigue siendo la persona básica, así que con estos datos ya no son idénticos.
-  const asegurado: Record<string, unknown> = { ...persona }
+  // `insured` es una persona PROPIA en `TermLifeRisk_V1`: el tomador salvo que el riesgo tenga otro asegurado.
+  const asegurado: Record<string, unknown> = d.asegurado ? construirAsegurado(d.asegurado) : { ...persona }
   if (texto(d.profesion)) asegurado.economicOccupation = { code: String(d.profesion).trim() }
   if (typeof d.fumador === 'boolean') asegurado.smoker = d.fumador
   // 🔒 Peso y altura NO viajan: el vendor los conoce (`weight`, `height` en `person-roles`) pero ni
