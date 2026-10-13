@@ -88,6 +88,31 @@ export function mensajeEleccionVersion(opciones: readonly CandidatoVersion[]): s
   return `${PREFIJO_ELECCION_VERSION} el catálogo ofrece ${opciones.length} versiones para este vehículo; elige una en la bandeja y reintenta: ${lista.join(' · ')}${resto > 0 ? ` (+${resto} más)` : ''}`
 }
 
+/**
+ * Lista ESTRUCTURADA y COMPLETA de versiones que viaja en el resultado de error del worker (`error.opcionesVersion`,
+ * 13/10/2026), además del mensaje truncado. Solo nombres y códigos de catálogo (nada personal). Topes de cable.
+ */
+export const MAX_OPCIONES_VERSION_CABLE = 200
+const MAX_CODIGO_OPCION = 60
+const MAX_ETIQUETA_OPCION = 200
+
+/**
+ * Valida la lista del cable. `null` = ausente o inválida (accesoria: el resultado se guarda igual, sin lista → sin
+ * elección automática ni manual por código). Nunca se «arregla» una opción: una mala invalida la lista entera.
+ */
+export function validarOpcionesVersion(v: unknown): CandidatoVersion[] | null {
+  if (!Array.isArray(v) || v.length === 0 || v.length > MAX_OPCIONES_VERSION_CABLE) return null
+  const out: CandidatoVersion[] = []
+  for (const o of v) {
+    if (typeof o !== 'object' || o === null || Array.isArray(o)) return null
+    const r = o as Record<string, unknown>
+    if (typeof r.etiqueta !== 'string' || !r.etiqueta.trim() || r.etiqueta.length > MAX_ETIQUETA_OPCION) return null
+    if (r.codigo !== null && r.codigo !== undefined && (typeof r.codigo !== 'string' || !r.codigo.trim() || r.codigo.length > MAX_CODIGO_OPCION)) return null
+    out.push({ etiqueta: espacios(r.etiqueta), codigo: typeof r.codigo === 'string' ? r.codigo.trim() : null })
+  }
+  return out
+}
+
 /** Normaliza el combustible que escribe un portal. Lo que no se reconoce → `null` (no se fuerza a un valor). */
 export function normalizarCombustible(texto: string | null | undefined): Combustible | null {
   if (typeof texto !== 'string') return null

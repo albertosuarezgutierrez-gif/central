@@ -1,6 +1,6 @@
 // Cliente HTTP del worker hacia apps/asegura. El ÚNICO canal del worker con la casa: sin BD.
 
-import type { OfertaNormalizada, PasoTraza, TipoError } from '@central/module-tarificacion'
+import type { CandidatoVersion, OfertaNormalizada, PasoTraza, TipoError } from '@central/module-tarificacion'
 
 export type Config = { jobId: string; apiUrl: string; secreto: string }
 
@@ -95,7 +95,7 @@ export type MetaTraza = { pasos?: PasoTraza[]; botVersion?: string }
 
 export type CuerpoResultado =
   | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & MetaTraza)
-  | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null }; capturaBase64?: string; html?: string } & MetaTraza)
+  | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[] }; capturaBase64?: string; html?: string } & MetaTraza)
 
 /** Hasta 3 intentos ante red caída o 5xx (un 409 = ya registrado o lease vencido: no se insiste). */
 export async function enviarResultado(c: Config, cuerpo: CuerpoResultado): Promise<number> {

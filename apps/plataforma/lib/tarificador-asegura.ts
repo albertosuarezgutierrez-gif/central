@@ -116,11 +116,16 @@ export function leerBandejaTarificador(limite: number, desde: number): Promise<R
 }
 
 /** Reintentar (→ pendiente) o cancelar un trabajo de la bandeja. Solo precio: nunca emite. */
-export function resolverTrabajoBandeja(id: string, accion: 'reintentar' | 'cancelar'): Promise<Reenvio> {
+export function resolverTrabajoBandeja(
+  id: string,
+  accion: 'reintentar' | 'cancelar',
+  /** Solo con reintentar: versión del vehículo elegida a mano; asegura la valida contra la lista guardada del trabajo. */
+  eleccionVersion: { codigo: string; etiqueta?: string | null } | null = null,
+): Promise<Reenvio> {
   return puerto(`bandeja/${encodeURIComponent(id)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ accion }),
+    body: JSON.stringify(eleccionVersion ? { accion, eleccionVersion } : { accion }),
   }, 30_000)
 }
 

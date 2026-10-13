@@ -263,6 +263,8 @@ export {
   COMBUSTIBLES,
   PREFIJO_ELECCION_VERSION,
   MAX_OPCIONES_VERSION,
+  MAX_OPCIONES_VERSION_CABLE,
+  validarOpcionesVersion,
   esOpcionVacia,
   resolverVersion,
   mensajeEleccionVersion,
@@ -284,6 +286,8 @@ export {
   RAMOS_VEHICULO,
   SEXOS_CONDUCTOR,
   validarFormularioAuto,
+  MAX_DESCRIPCION_VEHICULO,
+  pareceDatoPersonalEnDescripcion,
   type RamoVehiculo,
   type SexoConductor,
   type ConductorHabitual,
@@ -291,6 +295,21 @@ export {
   type SeleccionVehiculo,
   type ValidacionFormularioAuto,
 } from './formulario-auto.ts'
+// Elegir UNA opción de una lista cerrada con IA INYECTADA (13/10/2026): versión del vehículo; después, población por CP.
+export {
+  elegirDeLista,
+  validarEleccionIa,
+  mensajesEleccion,
+  contextoEleccionVersion,
+  peticionEleccionVersion,
+  INSTRUCCIONES_VERSION_VEHICULO,
+  type OpcionLista,
+  type ConfianzaEleccion,
+  type EleccionIa,
+  type PreguntarIa,
+  type ContextoEleccion,
+  type PeticionEleccion,
+} from './eleccion-lista.ts'
 // EMISIÓN asistida con autorización de Alberto por Telegram (10/10/2026). El guard de emisión NO cambia: esto solo
 // construye el permiso de UN botón UNA vez tras canjear un token (docs/TARIFICADOR-EMISION-DISENO.md).
 // Hash/token/HMAC (node:crypto) NO van aquí: `@central/module-tarificacion/servidor` (el index llega al navegador).

@@ -3,7 +3,7 @@
 import { decidirAccionBandeja, ESTADOS_BANDEJA, type AccionBandeja } from '@central/module-tarificacion'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
-import { proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
+import { eleccionContraLista, proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type EleccionBandeja, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
 
 export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolean }
 
@@ -43,19 +43,37 @@ export type ResultadoAccion =
  * Reintentar (→ `pendiente`) o cancelar (→ `cancelado`) un trabajo de la bandeja. `for update` + transición válida solo
  * desde los estados permitidos. IDEMPOTENTE: pedir el estado en el que ya está es `sin_cambios` (200), no un error — un
  * doble clic no encola dos veces. Reintentar pone los intentos a 0 (decisión de una persona, no reintento automático).
+ *
+ * `eleccion` (solo reintentar, 13/10/2026): versión elegida a mano. Se valida contra la lista que guardó el fallo
+ * (`error.opcionesVersion`) bajo el MISMO `for update` y se escribe en `riesgo.eleccionVersion` (quitando la marca
+ * `eleccionVersionIa`: ahora decide una persona). Fuera de la lista → `conflicto`.
  */
-export async function aplicarAccionBandeja(correduriaId: string, id: string, accion: AccionBandeja): Promise<ResultadoAccion> {
+export async function aplicarAccionBandeja(correduriaId: string, id: string, accion: AccionBandeja, eleccion: EleccionBandeja | null = null): Promise<ResultadoAccion> {
   return prisma.$transaction(async (tx) => {
     // `modo` por to_jsonb: sin el SQL de emisión (2026-10-10) la columna no existe y sale null (= tarificar).
-    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; modo: string | null }[]>`
-      select t.estado, t.error, t.compania, to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t
+    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; modo: string | null; eleccion_codigo: string | null }[]>`
+      select t.estado, t.error, t.compania, to_jsonb(t)->>'modo' as modo, t.riesgo->'eleccionVersion'->>'codigo' as eleccion_codigo
+      from seguros.tarificacion_trabajos t
       where t.id = ${id}::uuid and t.correduria_id = ${correduriaId}::uuid for update`
     const f = filas[0]
     if (!f) return { estado: 'no_encontrado' as const }
-    if (yaEnElDestino(accion, f.estado)) return { estado: 'sin_cambios' as const, estadoTrabajo: f.estado }
+    if (yaEnElDestino(accion, f.estado)) {
+      // Doble clic con la MISMA versión: sin cambios. Con otra versión sobre un trabajo ya en marcha: no se pisa.
+      if (eleccion && f.eleccion_codigo !== eleccion.codigo) return { estado: 'conflicto' as const, motivo: 'el trabajo ya está en marcha con otra versión', estadoTrabajo: f.estado }
+      return { estado: 'sin_cambios' as const, estadoTrabajo: f.estado }
+    }
     const d = decidirAccionBandeja(accion, f.estado, tipoDeError(f.error), f.modo)
     if (!d.ok) return { estado: 'conflicto' as const, motivo: d.motivo, estadoTrabajo: f.estado }
-    if (accion === 'reintentar') {
+    if (accion === 'reintentar' && eleccion) {
+      const v = eleccionContraLista(eleccion, f.error)
+      if (!v.ok) return { estado: 'conflicto' as const, motivo: v.motivo, estadoTrabajo: f.estado }
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set riesgo = (riesgo - 'eleccionVersionIa') || jsonb_build_object('eleccionVersion', ${JSON.stringify(v.eleccion)}::jsonb),
+            estado = 'pendiente', intentos = 0, lease_hasta = null, fly_machine_id = null, error = null,
+            iniciado_at = null, terminado_at = null, updated_at = now()
+        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+    } else if (accion === 'reintentar') {
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos
         set estado = 'pendiente', intentos = 0, lease_hasta = null, fly_machine_id = null, error = null,
