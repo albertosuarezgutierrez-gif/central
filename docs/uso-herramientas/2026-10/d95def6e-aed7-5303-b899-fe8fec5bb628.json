@@ -1,19 +1,19 @@
 {
  "sesion": "d95def6e-aed7-5303-b899-fe8fec5bb628",
  "inicio": "2026-10-13T14:46:16.434Z",
- "fin": "2026-10-13T18:50:13.958Z",
- "llamadas": 948,
+ "fin": "2026-10-13T19:21:22.639Z",
+ "llamadas": 1037,
  "categorias": {
   "otro": {
-   "llamadas": 116,
-   "chars_in": 9702,
-   "chars_out": 1075408,
+   "llamadas": 131,
+   "chars_in": 9970,
+   "chars_out": 1178410,
    "errores": 0,
-   "archivos_citados": 7,
-   "chars_citados": 109689,
+   "archivos_citados": 11,
+   "chars_citados": 1155858,
    "tools": {
-    "ToolSearch": 15,
-    "ReadNotifications": 83,
+    "ToolSearch": 18,
+    "ReadNotifications": 95,
     "SendUserFile": 1,
     "SendMessage": 5,
     "Monitor": 10,
@@ -22,35 +22,35 @@
    }
   },
   "bash": {
-   "llamadas": 594,
-   "chars_in": 409773,
-   "chars_out": 1952286,
+   "llamadas": 640,
+   "chars_in": 439452,
+   "chars_out": 2037817,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 594
+    "Bash": 640
    }
   },
   "mcp:github": {
-   "llamadas": 54,
-   "chars_in": 19359,
-   "chars_out": 63856,
+   "llamadas": 60,
+   "chars_in": 22261,
+   "chars_out": 66245,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 11050,
    "tools": {
     "mcp__github__list_pull_requests": 2,
-    "mcp__github__create_pull_request": 9,
+    "mcp__github__create_pull_request": 10,
     "mcp__github__update_pull_request": 6,
     "mcp__github__pull_request_read": 7,
-    "mcp__github__merge_pull_request": 8,
+    "mcp__github__merge_pull_request": 10,
     "mcp__github__get_job_logs": 2,
-    "mcp__github__add_issue_comment": 4,
+    "mcp__github__add_issue_comment": 5,
     "mcp__github__add_reply_to_pull_request_comment": 5,
     "mcp__github__resolve_review_thread": 5,
-    "mcp__github__actions_run_trigger": 2,
-    "mcp__github__actions_list": 2,
+    "mcp__github__actions_run_trigger": 3,
+    "mcp__github__actions_list": 3,
     "mcp__github__actions_get": 2
    }
   },
@@ -78,14 +78,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 12,
-   "chars_in": 27884,
-   "chars_out": 30190,
+   "llamadas": 13,
+   "chars_in": 31066,
+   "chars_out": 33568,
    "errores": 0,
-   "archivos_citados": 9,
-   "chars_citados": 194478,
+   "archivos_citados": 12,
+   "chars_citados": 294559,
    "tools": {
-    "Agent": 12
+    "Agent": 13
    }
   },
   "escritura": {
@@ -101,15 +101,15 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 14,
-   "chars_in": 1022,
-   "chars_out": 2781,
+   "llamadas": 17,
+   "chars_in": 1241,
+   "chars_out": 3272,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 9,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 5
+    "mcp__claude-code-remote__subscribe_pr_activity": 10,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 7
    }
   },
   "agente:agente-mecanico": {
@@ -124,9 +124,9 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 17,
-   "chars_in": 3020,
-   "chars_out": 23931,
+   "llamadas": 23,
+   "chars_in": 3867,
+   "chars_out": 34234,
    "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -134,10 +134,11 @@
     "mcp__Vercel__create_project_env": 2,
     "mcp__Vercel__filter_project_envs": 3,
     "mcp__Vercel__get_project_env": 2,
-    "mcp__Vercel__edit_project_env": 2,
-    "mcp__Vercel__list_deployments": 4,
-    "mcp__Vercel__create_deployment": 3,
-    "mcp__Vercel__get_runtime_logs": 1
+    "mcp__Vercel__edit_project_env": 3,
+    "mcp__Vercel__list_deployments": 6,
+    "mcp__Vercel__create_deployment": 4,
+    "mcp__Vercel__get_runtime_logs": 2,
+    "mcp__Vercel__get_deployment": 1
    }
   },
   "mcp:Supabase": {
@@ -154,14 +155,14 @@
    }
   },
   "sql": {
-   "llamadas": 8,
-   "chars_in": 6677,
-   "chars_out": 11303,
+   "llamadas": 20,
+   "chars_in": 12717,
+   "chars_out": 26661,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 8
+    "mcp__Supabase__execute_sql": 20
    }
   }
  }
