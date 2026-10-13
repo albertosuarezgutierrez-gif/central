@@ -462,6 +462,83 @@ es tocar el modelo y necesita su propia entrada firmada.
   ~3.800 sesiones) para medir la base como se define de verdad. Con dos tests en contra, no se gasta salvo
   que Alberto lo pida explícitamente.
 
+## H16 — «Castigado que rebota en un soporte histórico, con volumen» · PRE-REGISTRADA 13/10/2026 · SIN RESULTADOS
+- **Estado: PRE-REGISTRADA. No se ha calculado ningún conteo, retorno ni caso que cumpla la regla.** Todo lo
+  de abajo se fija ANTES de ejecutar la consulta; ningún parámetro se ajusta después de verla.
+- **Origen:** Alberto, 13/10/2026, caso NKE: «un valor muy castigado que rebota en un soporte histórico
+  (mínimo plurianual previo) con volumen tiende a rendir mejor después». NKE es la anécdota que inspira la
+  idea, **no** una muestra de ajuste: ningún umbral se ha calibrado mirando NKE ni ningún otro símbolo
+  (NKE ya estaba entre los 7 valores del estudio previo de H8, que NO midió soportes).
+- **Hipótesis nula:** entrar en un valor con la señal H16 no da `ret91` medio distinto del resto del universo
+  en la misma fecha.
+- **Datos disponibles (`trading_backtest.datos.porFecha`, comprobado solo en estructura):** una foto
+  MENSUAL por símbolo (día 1 de cada mes, 2011-10 → 2026-07, ~178 fechas) con `precio` (último cierre
+  ≤ día 1), `caidaMes`, `volRelMes`, `sobreSmaMes`, `ret28`, `ret91` (y ret182/364). **No hay serie diaria,
+  ni mínimos/máximos intradía, ni volumen bruto.** `volRelMes` = volumen del último mes CERRADO / media de
+  los 12 anteriores (`velas.ts::volumenRelativo`; `null` = no se sabe o serie rota → el caso se EXCLUYE,
+  nunca cuenta como «sin volumen»).
+- **Definición operativa (UNA variante principal)**, sobre la serie mensual `P` = `precio` de las fotos del
+  propio símbolo, punto-en-el-tiempo (en la foto *t* solo se usa lo anterior o igual a *t*):
+  - **SOPORTE** `S` = mínimo de `P` entre *t−60* y *t−7* meses (5 años previos, **excluidos los últimos 6
+    meses**). Exige ≥ 36 fotos válidas en esa ventana; si no, `null` y el caso queda fuera.
+  - **TROUGH** `L` = mínimo de `P` entre *t−3* y *t−1* (suelo reciente).
+  - **CASTIGADO**: `L / max(P entre t−12 y t−1) − 1 ≤ −30%`.
+  - **TOCA SOPORTE**: `0,80·S ≤ L ≤ 1,10·S` (a ≤10% por encima del soporte, o por debajo hasta −20%: pinchazo
+    admitido; más allá es ruptura del soporte, no rebote en él).
+  - **REBOTE**: `P_t / L − 1 ≥ +10%`.
+  - **VOLUMEN**: `volRelMes_t ≥ 1,3` (mismo umbral que la RUPTURA de «Base perfecta»).
+  - **SEÑAL H16** = CASTIGADO ∧ TOCA SOPORTE ∧ REBOTE ∧ VOLUMEN. Entrada en la foto *t*, medida con `ret91`
+    (`ret28` se reporta como contexto). Series con costura (`serie-rota`, `caidaMes`/`volRelMes` nulos) fuera.
+- **Sensibilidad declarada (solo estas dos, informativas; no pueden salvar un veredicto negativo):**
+  (a) misma regla **sin** el filtro de volumen (aísla si el volumen aporta); (b) soporte a 36 meses
+  (*t−36…t−7*) y tolerancia ≤5% por encima.
+- **Control declarado:** CASTIGADO ∧ REBOTE ∧ VOLUMEN **pero NO** TOCA SOPORTE. Sirve para separar «castigo +
+  rebote» de «el soporte aporta algo». Se reporta junto al resultado.
+- **Criterio de éxito (firmado ahora):** `ret91` medio de la SEÑAL ≥ **+2 pp** sobre el resto del universo
+  (mismo cálculo que «Base perfecta») **y mismo signo en las DOS mitades** (2011-2018 / 2019-2026) **y**
+  n ≥ **200** observaciones y ≥ **80** símbolos distintos en CADA mitad. Si no se llega a ese n, el veredicto
+  es **INCONCLUSA** (no «rechazada» ni «aceptada»). Además, si el control iguala o supera a la señal, no se
+  atribuye nada al soporte aunque se cumpla el umbral. Se reporta también con un caso por episodio
+  (≥ 6 meses sin señal del mismo símbolo) porque meses consecutivos de un valor no son independientes.
+- **Límites declarados ahora, no cuando molesten:**
+  - Es un proxy **MENSUAL de cierres**, no un soporte técnico: el «mínimo plurianual» es el mínimo de fotos
+    mensuales, no el mínimo intradía; el volumen es el del mes cerrado, **no el del día del toque**. Con la
+    granularidad actual no se puede medir un soporte «de verdad» ni el volumen en el rebote.
+  - **Sesgo de supervivencia CONCENTRADO en este brazo:** el universo son los símbolos vivos hoy; los
+    castigados que perforaron el soporte y quebraron no están. Es justo la población de la hipótesis, así
+    que el nivel absoluto estará inflado. Un resultado positivo NO cablea nada: solo justifica un test
+    forward / datos con quebrados.
+  - Hay antecedentes en contra del patrón «rebote en nivel técnico» (H8: rebote en la media larga refutado;
+    «Base perfecta»: signo invertido entre mitades). La carga de la prueba es de H16.
+- **Si no pasa:** se archiva como RECHAZADA con la partición por mitades. **Qué haría falta para medirla de
+  verdad:** series diarias (OHLCV) de ≥ 15 años, idealmente con símbolos deslistados.
+- **Acción mientras tanto:** ninguna. No toca ranking, cestas ni pesos; nada se recolecta de nuevo (todo sale
+  de campos que ya guarda el retrovisor).
+
+### Resultado (13/10/2026)
+- **Medido tal cual está firmado**, una sola ejecución, sin ajustar nada (SQL de solo lectura sobre `trading_backtest.datos.porFecha`, 1.303 símbolos, ventanas por mes de calendario, fotos válidas = `precio` > 0). «Resto» = observaciones del universo con `ret91` no nulo y fuera de la señal (≈ universo; la señal pesa <0,3%).
+- **Lecturas literales declaradas:** `L`/máx exigen ≥1 foto en su ventana; `ret91` nulo = excluido; mitades por año de la foto (≤2018 / ≥2019); «un caso por episodio» = señal sin otra del mismo símbolo en los 6 meses previos (hueco ≥7 en el índice mensual); sensibilidad (b): la ventana t−36…t−7 solo tiene 30 meses, así que el «≥36 fotos» es imposible y se usó ≥24 (80%), con L ≤ 1,05·S; control = CASTIGADO ∧ REBOTE ∧ VOLUMEN ∧ soporte definido pero fuera de rango.
+
+| brazo | mitad | n | símbolos | ret91 medio | mediana | vs resto |
+|---|---|---|---|---|---|---|
+| **SEÑAL H16** | 2011-18 | 101 | 69 | 13,76% | 5,80% | **+9,96 pp** (resto 3,81%) |
+| **SEÑAL H16** | 2019-26 | 461 | 273 | 7,34% | 4,50% | **+1,66 pp** (resto 5,68%) |
+| SEÑAL H16 | total | 562 | — | 8,50% | — | +3,64 pp (resto 4,85%) |
+| un caso/episodio | 2011-18 | 73 | 69 | 11,33% | 5,80% | +7,5 pp |
+| un caso/episodio | 2019-26 | 307 | 272 | 9,15% | 6,97% | +3,5 pp |
+| (a) sin volumen | 2011-18 | 434 | 165 | 6,02% | 2,83% | +2,2 pp |
+| (a) sin volumen | 2019-26 | 1.966 | 525 | 8,34% | 6,16% | +2,7 pp |
+| (b) soporte 36m, ≤5% | 2011-18 | 149 | 98 | 8,95% | 4,25% | +5,1 pp |
+| (b) soporte 36m, ≤5% | 2019-26 | 490 | 298 | 7,25% | 4,07% | +1,6 pp |
+| CONTROL (sin soporte) | 2011-18 | 402 | 192 | 7,84% | 3,28% | +4,0 pp |
+| CONTROL (sin soporte) | 2019-26 | 1.848 | 648 | 13,34% | 5,08% | +7,7 pp |
+| universo (referencia) | 2011-18 / 2019-26 | 84.101 / 106.350 | 1.052 / 1.291 | 3,82% / 5,69% | 3,23% / 2,96% | — |
+
+- **Veredicto: INCONCLUSA.** La señal principal no llega al n firmado en la mitad 2011-2018 (n = 101 < 200 y 69 símbolos < 80); el criterio dice que entonces no es ni aceptada ni rechazada. El signo es positivo en las dos mitades, pero la diferencia es +9,96 pp en la primera y solo +1,66 pp (< +2) en la segunda; con el n actual no cumpliría el umbral en ninguna lectura. Con un caso por episodio el n baja a 73/307 (la mitad 1 sigue lejos de 200).
+- **Soporte no atribuible:** el control (castigado + rebote + volumen, sin tocar soporte) supera a la señal en 2019-26 (13,34% vs 7,34%) y en el total; solo la iguala a la baja en 2011-18. Quitar el volumen (a) no empeora la señal. Nada se atribuye al soporte.
+- **NKE:** NO es caso de la señal principal en ninguna fecha. Con la regla sin volumen (a) aparece en 2024-09, 2024-10 y 2025-09 (volRelMes 1,16 / 1,15 / 0,60, todos < 1,3), con `ret91` de −5,1%, −15,1% y −15,5%: la anécdota no se reproduce.
+- Sesgo de supervivencia (universo vivo hoy) y proxy mensual, como se declaró: nada se cablea.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
