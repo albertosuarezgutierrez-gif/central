@@ -52,4 +52,8 @@ regexes = [
   # apps/{sivra,plataforma,ialimp}/lib/smoobu-firma.test.ts para verificar byte a byte que
   # la firma coincide con la de Smoobu. No es una credencial real ni ha existido nunca.
   '''usr_live_abc123''',
+  # Fixture de test (NO es un secreto real): contraseña inventada que vivió en
+  # services/tarificador-rpa/test/explorador-entrada.test.ts (commit f59f7e11a del PR #4585). El test actual la
+  # compone en runtime; se allowlista el literal por el historial del PR.
+  '''clave-sintetica-de-prueba-9f3a''',
 ]
