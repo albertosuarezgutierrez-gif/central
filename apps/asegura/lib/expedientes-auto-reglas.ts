@@ -74,6 +74,7 @@ export type MotivoNoAbrir =
   | 'ya_abierta'
   | 'ya_tratada_este_ciclo'
   | 'sin_vincular'
+  | 'ya_en_cartera'
 
 export type DecisionApertura =
   | { abrir: true; vence: string; dias: number; fechaAccion: string; texto: string }
@@ -128,6 +129,11 @@ export type CandidatoDeclarada = {
   compania: string | null
   yaAbierta: boolean
   yaEsteCiclo: boolean
+  /**
+   * Su nº de póliza ya está en la cartera de esta correduría (cualquier ficha: también la de su sociedad).
+   * Es NUESTRA: «pásale precio» sería ofrecerle lo que ya se le vendió (la misma regla que `leadDeclarada`).
+   */
+  yaEnCartera: boolean
 }
 
 export function decidirDeclarada(c: CandidatoDeclarada, hoy: string): DecisionApertura {
@@ -137,6 +143,7 @@ export function decidirDeclarada(c: CandidatoDeclarada, hoy: string): DecisionAp
   if (dias >= 0 && dias < DIAS_PREAVISO_TOMADOR) return { abrir: false, motivo: 'tarde', dias }
   if (!enVentanaExpediente(dias)) return { abrir: false, motivo: 'fuera_de_ventana', dias }
   if (!c.clienteId) return { abrir: false, motivo: 'sin_vincular', dias }
+  if (c.yaEnCartera) return { abrir: false, motivo: 'ya_en_cartera', dias }
   if (c.yaEsteCiclo) return { abrir: false, motivo: 'ya_tratada_este_ciclo', dias }
   if (c.yaAbierta) return { abrir: false, motivo: 'ya_abierta', dias }
   const que = [c.ramo ?? 'seguro', c.compania ? `con ${c.compania}` : null].filter(Boolean).join(' ')

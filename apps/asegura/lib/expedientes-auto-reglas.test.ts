@@ -15,7 +15,7 @@ const ren = (o: Partial<CandidatoRenovacion> = {}): CandidatoRenovacion => ({
   vence: sumar(45), ramo: 'auto', compania: 'Mapfre', numeroPoliza: '123', yaAbierta: false, yaEsteCiclo: false, ...o,
 })
 const dec = (o: Partial<CandidatoDeclarada> = {}): CandidatoDeclarada => ({
-  declaradaId: 'd1', clienteId: 'c1', vence: sumar(55), ramo: 'hogar', compania: 'Allianz', yaAbierta: false, yaEsteCiclo: false, ...o,
+  declaradaId: 'd1', clienteId: 'c1', vence: sumar(55), ramo: 'hogar', compania: 'Allianz', yaAbierta: false, yaEsteCiclo: false, yaEnCartera: false, ...o,
 })
 
 test('ventana 60→30 días, bordes incluidos (art. 22 LCS: dos meses la compañía, un mes el tomador)', () => {
@@ -79,6 +79,8 @@ test('declarada sin vínculo a ficha: no se abre (no hay a quién llamar) y se d
   assert.deepEqual(decidirDeclarada(dec({ clienteId: null }), HOY), { abrir: false, motivo: 'sin_vincular', dias: 55 })
   assert.equal(decidirDeclarada(dec({ yaAbierta: true }), HOY).abrir, false)
   assert.equal(decidirDeclarada(dec({ yaEsteCiclo: true }), HOY).abrir, false)
+  // Su nº ya está en nuestra cartera: es NUESTRA, no se le «pasa precio» (misma regla que `leadDeclarada`).
+  assert.deepEqual(decidirDeclarada(dec({ yaEnCartera: true }), HOY), { abrir: false, motivo: 'ya_en_cartera', dias: 55 })
 })
 
 test('ramo declarado desconocido → «otros» (nunca un cast que tumbe el lote)', () => {

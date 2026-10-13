@@ -67,7 +67,7 @@ type FilaRenovacion = {
 
 type FilaDeclarada = {
   declaradaId: string; clienteId: string | null; ramo: string | null; compania: string | null
-  numeroPoliza: string | null; vence: string | null; yaAbierta: boolean; yaEsteCiclo: boolean
+  numeroPoliza: string | null; vence: string | null; yaAbierta: boolean; yaEsteCiclo: boolean; yaEnCartera: boolean
 }
 
 function contar(m: Partial<Record<MotivoNoAbrir, number>>, k: MotivoNoAbrir) {
@@ -128,6 +128,12 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
                         and ${numNorm(Prisma.sql`coalesce(o.numero_poliza, o.poliza_competencia->>'nPoliza')`)} = ${numNorm(Prisma.sql`d.numero_poliza`)}
                         and not (o.import_ref is not null and o.estado::text = 'competencia')))
            )) as "yaAbierta",
+           -- Su número ya está en NUESTRA cartera (cualquier ficha: la sociedad del que la sube también): no es un lead.
+           (${numNorm(Prisma.sql`d.numero_poliza`)} <> '' and exists (
+             select 1 from polizas p
+             where p.correduria_id = ${correduriaId}::uuid
+               and ${numNorm(Prisma.sql`p.numero_poliza`)} = ${numNorm(Prisma.sql`d.numero_poliza`)}
+           )) as "yaEnCartera",
            exists (
              select 1 from oportunidades o
              where o.correduria_id = ${correduriaId}::uuid and o.info_riesgo->>'origen' = ${ORIGEN_DECLARADA_PORTAL}
