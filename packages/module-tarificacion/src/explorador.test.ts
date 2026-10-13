@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   ACCIONES_EXPLORADOR,
+  MAX_TITULOS_MARCO,
   catalogoParaIA,
   comprobarTopes,
   construirMapa,
@@ -12,8 +13,10 @@ import {
   normalizarRedNoGet,
   planDesdeMapa,
   resolverDato,
+  redactarValoresInventario,
   sanearInventarioDom,
   topesExplorador,
+  valoresSensiblesExploracion,
   TOPES_EXPLORADOR,
   validarMapa,
   validarRespuestaExplorador,
@@ -24,14 +27,15 @@ import {
 const ENTRADA = 'allianz:particulares:hogar'
 
 /** Inventario de una pantalla «Datos básicos» de Hogar inventada. */
-function inventario(extra: { titulos?: string[]; elementos?: unknown[]; importes?: unknown[]; url?: string } = {}): InventarioDom {
+/** Títulos en texto = encabezado `h2` de la pantalla; un objeto `{ texto, tag }` (o un texto sin etiqueta) va tal cual. */
+function inventario(extra: { titulos?: unknown[]; elementos?: unknown[]; importes?: unknown[]; url?: string } = {}): InventarioDom {
   return sanearInventarioDom(
     {
       marcos: [
         {
           url: extra.url ?? 'https://portal.example.test/epac/alta?sid=1',
           nombre: 'appArea',
-          titulos: extra.titulos ?? ['Datos básicos'],
+          titulos: (extra.titulos ?? ['Datos básicos']).map((t) => (typeof t === 'string' ? { texto: t, tag: 'h2' } : t)),
           importes: extra.importes,
           elementos: extra.elementos ?? [
             { tag: 'input', id: 'superficie', type: 'text', etiqueta: 'Superficie (m²)', requerido: true, conValor: false },
@@ -63,6 +67,7 @@ describe('inventario con refs (explorador)', () => {
     expect(ref(inv, 'superficie')).toBe('m0e0')
     const otraVez = sanearInventarioDom(JSON.parse(JSON.stringify(inv)), undefined, { refs: true })!
     expect(otraVez.marcos[0].elementos.map((e) => e.ref)).toEqual(inv.marcos[0].elementos.map((e) => e.ref))
+    expect(otraVez.marcos[0].titulosPantalla).toEqual(['Datos básicos'])
     // Una ref repetida en el cable no se puede señalar sin ambigüedad: fuera.
     const dup = sanearInventarioDom({ marcos: [{ url: 'x', elementos: [{ tag: 'input', ref: 'm0e5' }, { tag: 'button', ref: 'm0e5' }, { tag: 'button' }] }] }, undefined, { refs: true })!
     expect(dup.marcos[0].elementos.map((e) => e.ref)).toEqual(['m0e5', 'm0e2'])
@@ -186,6 +191,56 @@ describe('validarRespuestaExplorador', () => {
     expect(validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: ref(i, 'btnAceptarBasicos'), efectoEsperado: 'calcular', confianza: 'alta' }]), { ...ctx(i), entrada: 'otra:cosa' }).ok).toBe(false)
   })
 
+  describe('avanzar: solo sobre lo que se sabe qué es (13/10/2026)', () => {
+    const avanzar = (i: InventarioDom, id: string) =>
+      validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: ref(i, id), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }]), ctx(i))
+    const largo = 'Continuar al siguiente paso del alta de la vivienda con los datos que ya constan arriba'
+
+    it('botón sin ninguna descripción completa (texto recortado «…», sin aria) → rechazado; con aria entera, vale', () => {
+      const i = inventario({ elementos: [
+        { tag: 'button', id: 'b1', texto: largo },
+        { tag: 'button', id: 'b2', texto: largo, ariaLabel: 'Siguiente' },
+        { tag: 'button', id: 'b3' },
+        { tag: 'button', id: 'b4', texto: 'Siguiente' },
+      ] })
+      expect(i.marcos[0].elementos[0].texto?.endsWith('…')).toBe(true)
+      const r1 = avanzar(i, 'b1')
+      expect(r1.ok).toBe(false)
+      if (!r1.ok) expect(r1.errores.join()).toMatch(/sin_descripcion_completa/)
+      expect(avanzar(i, 'b2').ok).toBe(true)
+      expect(avanzar(i, 'b3').ok).toBe(false)
+      expect(avanzar(i, 'b4').ok).toBe(true)
+    })
+
+    it('onclick recortado = bloqueante aunque el texto sea inocente', () => {
+      const i = inventario({ elementos: [{ tag: 'button', id: 'b1', texto: 'Siguiente', onclick: `irA('${'x'.repeat(120)}')` }] })
+      const r = avanzar(i, 'b1')
+      expect(r.ok).toBe(false)
+      if (!r.ok) expect(r.errores.join()).toMatch(/onclick_truncado/)
+    })
+
+    const aceptar = (i: InventarioDom) =>
+      validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: ref(i, 'btnAceptarBasicos'), efectoEsperado: 'calcular', confianza: 'alta' }]), ctx(i)).ok
+
+    it('lista de títulos en el TOPE (recortada) → ningún «Aceptar»', () => {
+      const relleno = Array.from({ length: MAX_TITULOS_MARCO + 5 }, (_, n) => `Bloque ${n + 1}`)
+      const i = inventario({ titulos: ['Datos básicos', ...relleno] })
+      expect(i.marcos[0].titulos).toHaveLength(MAX_TITULOS_MARCO)
+      expect(aceptar(i)).toBe(false)
+      expect(aceptar(inventario({ titulos: ['Datos básicos', ...relleno.slice(0, MAX_TITULOS_MARCO - 2)] }))).toBe(true)
+    })
+
+    it('un `th` de tabla (o un título sin etiqueta) no autoriza «Aceptar»; sí prohíbe', () => {
+      expect(aceptar(inventario({ titulos: [{ texto: 'Datos básicos', tag: 'th' }] }))).toBe(false)
+      expect(aceptar(inventario({ titulos: [{ texto: 'Datos básicos' }] }))).toBe(false)
+      expect(aceptar(inventario({ titulos: [{ texto: 'Datos básicos', tag: 'legend' }] }))).toBe(true)
+      expect(aceptar(inventario({ titulos: ['Datos básicos', { texto: 'Tarificar', tag: 'th' }] }))).toBe(false)
+      // Del cable no se cuela un título de pantalla que no esté entre los títulos.
+      const i = sanearInventarioDom({ marcos: [{ url: 'x', titulos: ['Otra cosa'], titulosPantalla: ['Datos básicos'], elementos: [] }] })!
+      expect(i.marcos[0].titulosPantalla).toBeUndefined()
+    })
+  })
+
   it('la lista blanca de acciones está CONGELADA', () => {
     expect([...ACCIONES_EXPLORADOR]).toEqual(['rellenar', 'elegir', 'marcar', 'avanzar', 'terminar', 'parar'])
   })
@@ -269,5 +324,50 @@ describe('mapa determinista y memoria', () => {
     expect(normalizarRedNoGet('https://Portal.Example.test/drpc/main/control.do?action=rate&nif=1')).toBe('https://portal.example.test/drpc/main/control.do')
     expect(normalizarRedNoGet('https://portal.example.test/cliente/00000000T')).toBeNull()
     expect(normalizarRedNoGet('javascript:alert(1)')).toBeNull()
+  })
+})
+
+describe('redacción de los valores del cliente (exploración con datos reales)', () => {
+  // Riesgo INVENTADO (sintético): nombre, calle, CP, fecha y matrícula ficticios.
+  const riesgo = {
+    tomador: { nombre: 'Nombreinventado', apellido1: 'Apellidoficticio', apellido2: 'De', fechaNacimiento: '1980-01-15', nif: '00000000T' },
+    inmueble: { tipoVia: 'Calle', nombreVia: 'Rúa  Imaginaria', numero: 7, codigoPostal: '41999', municipio: 'Villaficticia' },
+    vehiculo: { matricula: '0000 ZZZ' },
+  }
+  const env = { TARIFICADOR_EXPLORADOR_EMAIL: 'buzon@example.test', TARIFICADOR_EXPLORADOR_TELEFONO: '+34 699 000 000' }
+  const crudo = inventario({
+    titulos: ['Datos básicos', 'Póliza de NOMBREINVENTADO apellidoficticio'],
+    elementos: [
+      { tag: 'label', texto: 'Tomador: Nombreinventado Apellidoficticio' },
+      { tag: 'label', texto: 'Domicilio: RUA   IMAGINARIA' },
+      { tag: 'label', texto: 'CP 41999 Villaficticia' },
+      { tag: 'label', texto: 'Nacido el 15/01/1980' },
+      { tag: 'label', texto: 'Vehículo 0000-ZZZ' },
+      { tag: 'label', texto: 'Contacto 699 000 000' },
+      { tag: 'select', id: 'tipoVia', etiqueta: 'Tipo de vía', opciones: [{ valor: 'CL', texto: 'Calle' }, { valor: 'RI', texto: 'Rúa Imaginaria' }] },
+      { tag: 'label', texto: 'Datos de la vivienda' },
+      { tag: 'button', id: 'btnAceptarBasicos', texto: 'Aceptar' },
+    ],
+  })
+
+  it('el inventario que repite nombre y calle del riesgo sale SIN ellos (acentos, mayúsculas y espacios dan igual)', () => {
+    const valores = valoresSensiblesExploracion({ conDatosReales: true, riesgo, env })!
+    const r = redactarValoresInventario(crudo, valores)
+    const s = JSON.stringify(r).toLowerCase()
+    for (const d of ['nombreinventado', 'apellidoficticio', 'imaginaria', 'villaficticia', '41999', '1980', '0000', '699']) expect(s).not.toContain(d)
+    // Lo que no es del cliente sigue: «Calle» (tipo de vía), «de» (< 3 caracteres no se busca), el botón y el título.
+    expect(r.marcos[0].elementos.find((e) => e.id === 'tipoVia')?.opciones).toEqual([{ valor: 'CL', texto: 'Calle' }, { valor: 'RI', texto: null }])
+    expect(s).toContain('datos de la vivienda')
+    expect(r.marcos[0].titulos).toEqual(['Datos básicos'])
+    expect(r.marcos[0].titulosPantalla).toEqual(['Datos básicos'])
+    expect(r.textosDescartados).toBeGreaterThan(crudo.textosDescartados)
+    // No muta la entrada.
+    expect(JSON.stringify(crudo)).toContain('Nombreinventado')
+  })
+
+  it('fail-closed: con datos reales y sin riesgo legible → null (la ruta PARA); sin datos reales, solo el contacto de entorno', () => {
+    expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: null, env })).toBeNull()
+    expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: 'x', env })).toBeNull()
+    expect(valoresSensiblesExploracion({ conDatosReales: false, riesgo, env })).toEqual(['buzon@example.test', '+34 699 000 000', '699000000'])
   })
 })

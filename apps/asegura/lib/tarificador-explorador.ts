@@ -43,6 +43,18 @@ export async function exploracionViva(trabajoId: string): Promise<ExploracionViv
   }
 }
 
+/**
+ * El `riesgo` del trabajo de exploración (copiado del de la petición real). Solo lo usa la ruta `paso` para saber QUÉ
+ * valores quitar del inventario; nunca sale de aquí. `null` = no hay fila o no hay riesgo (quien llama decide: con datos
+ * reales, PARA).
+ */
+export async function riesgoDeExploracion(e: Pick<ExploracionViva, 'trabajoId' | 'correduriaId'>): Promise<unknown | null> {
+  const f = await prisma.$queryRaw<{ riesgo: unknown }[]>`
+    select riesgo from seguros.tarificacion_trabajos
+    where id = ${e.trabajoId}::uuid and correduria_id = ${e.correduriaId}::uuid`
+  return f[0]?.riesgo ?? null
+}
+
 type Bd = Pick<typeof prisma, '$queryRaw' | '$executeRaw'>
 
 export type PasoLeido = PasoGuardado & { n: number; inventario: InventarioDom }
@@ -103,15 +115,24 @@ export async function registrarPaso(e: ExploracionViva, p: PasoNuevo, bd: Bd): P
 /** La IA corta a 45 s; la transacción que la envuelve, con margen (la ruta tiene 60 s). */
 const TIMEOUT_TX_PASO_MS = 55_000
 
+/** Otro paso de la MISMA exploración tiene el lock: quien llega segundo no espera (ni gasta IA) → 409. */
+export class PasoOcupado extends Error {
+  constructor() {
+    super('paso_en_curso')
+    this.name = 'PasoOcupado'
+  }
+}
+
 /**
  * Un paso cada vez por exploración: lectura del consumo + (IA) + registro en UNA transacción con
- * `pg_advisory_xact_lock`. Dos peticiones simultáneas del mismo trabajo se serializan y la segunda ve el gasto de la
- * primera: el tope de 2 € no se puede saltar por concurrencia (mismo patrón que `conLlamadaIA` del formador).
+ * `pg_try_advisory_xact_lock`. Si otro paso del mismo trabajo lo tiene, NO se espera: `PasoOcupado` (la ruta → 409, sin
+ * IA). Así el tope de 2 € no se salta por concurrencia y una petición duplicada no se queda colgada 45 s tras la IA.
  */
 export async function conPasoExclusivo<T>(e: ExploracionViva, fn: (bd: Bd) => Promise<T>): Promise<T> {
   return prisma.$transaction(
     async (tx) => {
-      await tx.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`tarificador_explorador:${e.exploracionId}`}, 0))`
+      const r = await tx.$queryRaw<{ ok: boolean }[]>`select pg_try_advisory_xact_lock(hashtextextended(${`tarificador_explorador:${e.exploracionId}`}, 0)) as ok`
+      if (r[0]?.ok !== true) throw new PasoOcupado()
       return fn(tx)
     },
     { timeout: TIMEOUT_TX_PASO_MS, maxWait: 10_000 },

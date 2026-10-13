@@ -62,8 +62,11 @@ export type MarcoInventario = {
   nombre: string | null
   elementos: ElementoInventario[]
   ilegible?: true
-  /** Encabezados visibles (h1-h3, legend, th…), saneados. Solo si el crudo los trae. */
+  /** Encabezados visibles (h1-h3, legend, th…), saneados. Solo si el crudo los trae. Sirven para PARAR (emisión). */
   titulos?: string[]
+  /** Subconjunto de `titulos` que el crudo marcó como TÍTULO DE PANTALLA (h1-h6, legend: `{ texto, tag }`), nunca un `th`
+   *  de tabla ni un texto sin etiqueta. SOLO estos autorizan un «Aceptar» de exploración (fail-closed: sin etiqueta, no). */
+  titulosPantalla?: string[]
   /** Importes visibles (pantalla de resultado). Solo si el crudo los trae. */
   importes?: ImporteInventario[]
 }
@@ -79,6 +82,8 @@ export const MAX_TITULOS_MARCO = 20
 export const MAX_IMPORTES_MARCO = 40
 const RE_REF_ELEMENTO = /^m\d{1,2}e\d{1,3}$/
 const RE_REF_IMPORTE = /^m\d{1,2}p\d{1,3}$/
+/** Etiquetas que cuentan como TÍTULO DE PANTALLA (no `th`, no `caption`, no texto suelto). */
+const TAGS_TITULO_PANTALLA = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'legend'])
 /** Importe en formato español (o con punto decimal), con € opcional delante o detrás. Nada más en el texto. */
 const RE_IMPORTE = /^(?:€\s*)?(-?\d{1,3}(?:\.\d{3})*(?:,\d{1,2})?|-?\d+(?:[.,]\d{1,2})?)\s*(?:€|eur(?:os)?)?$/i
 /** El texto con forma de importe lleva € o decimales: «2019» suelto no es un importe. */
@@ -146,7 +151,8 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
   for (const m of c.marcos.slice(0, MAX_MARCOS_INVENTARIO)) {
     const mo = obj(m)
     if (!mo) continue
-    if (Array.isArray(mo.titulos)) mo.titulos.slice(0, MAX_TITULOS_MARCO * 2).forEach(aprender)
+    if (Array.isArray(mo.titulos)) mo.titulos.slice(0, MAX_TITULOS_MARCO * 2).forEach((t) => aprender(obj(t)?.texto ?? t))
+    if (Array.isArray(mo.titulosPantalla)) mo.titulosPantalla.slice(0, MAX_TITULOS_MARCO * 2).forEach(aprender)
     for (const e of Array.isArray(mo.elementos) ? mo.elementos.slice(0, MAX_ELEMENTOS_MARCO_INVENTARIO) : []) {
       const eo = obj(e)
       if (eo) for (const k of ['texto', 'etiqueta', 'ariaLabel', 'placeholder', 'onclick']) aprender(eo[k])
@@ -240,13 +246,31 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       ...(mo.ilegible === true ? { ilegible: true as const } : {}),
     }
     if (Array.isArray(mo.titulos)) {
+      // Crudo del worker: texto suelto o `{ texto, tag }`. Segunda pasada (asegura): `titulos` en texto + `titulosPantalla`.
       const titulos: string[] = []
+      const dePantalla: string[] = []
+      const ponPantalla = (s: string) => {
+        if (!dePantalla.includes(s) && dePantalla.length < MAX_TITULOS_MARCO) dePantalla.push(s)
+      }
       for (const t of mo.titulos.slice(0, MAX_TITULOS_MARCO * 2)) {
-        const s = texto(t, MAX_TEXTO_INVENTARIO)
-        if (s !== undefined && !titulos.includes(s)) titulos.push(s)
+        const to = obj(t)
+        const s = texto(to ? to.texto : t, MAX_TEXTO_INVENTARIO)
+        if (s === undefined) continue
+        if (!titulos.includes(s)) titulos.push(s)
+        const tag = typeof to?.tag === 'string' ? to.tag.toLowerCase() : ''
+        if (TAGS_TITULO_PANTALLA.has(tag)) ponPantalla(s)
         if (titulos.length >= MAX_TITULOS_MARCO) break
       }
+      // Un título de pantalla solo vale si TAMBIÉN está (saneado) en `titulos`: no se cuela uno que no se vea en la lista.
+      if (Array.isArray(mo.titulosPantalla)) {
+        for (const t of mo.titulosPantalla.slice(0, MAX_TITULOS_MARCO * 2)) {
+          if (typeof t !== 'string' || !titulos.includes(t.replace(/\s+/g, ' ').trim())) continue
+          const s = texto(t, MAX_TEXTO_INVENTARIO)
+          if (s !== undefined && titulos.includes(s)) ponPantalla(s)
+        }
+      }
       marco.titulos = titulos
+      if (dePantalla.length > 0) marco.titulosPantalla = dePantalla
     }
     if (Array.isArray(mo.importes)) {
       const importes: ImporteInventario[] = []
@@ -293,4 +317,109 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
     quitados += marcos.pop()!.elementos.length
   }
   return armar({ elementosDescartados: quitados, maxBytes: tope })
+}
+
+// ─── Redacción de los valores CONOCIDOS de una exploración con datos reales (13/10/2026) ──────────────────────────────
+// El saneado de arriba quita lo que TIENE FORMA de dato personal (NIF, correo, teléfono…), pero un nombre o una calle son
+// texto llano: si el portal repite en una etiqueta el nombre o la dirección del tomador que el worker acaba de escribir,
+// se escaparía a la IA y a `tarificador_exploracion_pasos.inventario`. Aquí se quitan los VALORES concretos que se saben
+// (los del riesgo del trabajo y el contacto de entorno). Igual que arriba: el texto que los contiene se QUITA, no se tapa.
+
+/** Valores más cortos que esto no se buscan (un «1» o «A» casaría con todo). */
+export const MIN_VALOR_REDACTAR = 3
+
+/** Minúsculas, sin acentos, espacios colapsados. */
+export function normalizarParaRedactar(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+/** Solo letras y dígitos, ya sin acentos (sin `\p{L}`: asegura compila con target ES2017) (para valores con dígitos: «1234 ABC» = «1234-abc», «15/01/1980» = «15.01.1980»). */
+const compacto = (s: string) => normalizarParaRedactar(s).replace(/[^a-z0-9]/g, '')
+const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** ¿El texto contiene alguno de los valores? Con dígitos se compara en compacto; sin dígitos, por palabra completa. */
+export function contieneValorSensible(texto: string, valores: readonly string[]): boolean {
+  const n = normalizarParaRedactar(texto)
+  const c = compacto(texto)
+  for (const v of valores) {
+    const nv = normalizarParaRedactar(v)
+    if (nv.length < MIN_VALOR_REDACTAR) continue
+    if (/\d/.test(nv)) {
+      const cv = compacto(v)
+      if (cv.length >= MIN_VALOR_REDACTAR && c.includes(cv)) return true
+    } else if (new RegExp(`(^|[^a-z0-9])${escapar(nv)}($|[^a-z0-9])`).test(n)) return true
+  }
+  return false
+}
+
+const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick'] as const
+
+/**
+ * Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta
+ * lo quitado en `textosDescartados`. Pura; nunca muta la entrada. Las `ref` y el `tag` no se tocan (son del inventario).
+ */
+export function redactarValoresInventario(inv: InventarioDom, valores: readonly string[]): InventarioDom {
+  const vs = valores.filter((v) => typeof v === 'string' && normalizarParaRedactar(v).length >= MIN_VALOR_REDACTAR)
+  if (vs.length === 0) return inv
+  let quitados = 0
+  const limpio = (t: string | null | undefined): t is string => {
+    if (typeof t !== 'string') return false
+    if (!contieneValorSensible(t, vs)) return true
+    quitados++
+    return false
+  }
+  const marcos = inv.marcos.map((m): MarcoInventario => {
+    const elementos = m.elementos.map((e) => {
+      const el: ElementoInventario = { ...e }
+      for (const k of CLAVES_ELEMENTO_TEXTO) if (el[k] !== undefined && !limpio(el[k])) delete el[k]
+      if (el.opciones) {
+        el.opciones = el.opciones
+          .map((o) => ({ valor: limpio(o.valor) ? o.valor : null, texto: limpio(o.texto) ? o.texto : null }))
+          .filter((o) => o.valor !== null || o.texto !== null)
+      }
+      return el
+    })
+    const out: MarcoInventario = { ...m, url: limpio(m.url) ? m.url : '', nombre: limpio(m.nombre) ? m.nombre : null, elementos }
+    if (m.titulos) out.titulos = m.titulos.filter(limpio)
+    if (m.titulosPantalla) out.titulosPantalla = m.titulosPantalla.filter(limpio)
+    if (m.importes) out.importes = m.importes.map((i) => (i.etiqueta === undefined || limpio(i.etiqueta) ? i : { ref: i.ref, eur: i.eur }))
+    return out
+  })
+  return { ...inv, marcos, textosDescartados: inv.textosDescartados + quitados }
+}
+
+/** Claves del riesgo (sin mayúsculas ni `_`) cuyo valor es de la PERSONA o de SU dirección/vehículo. `tipoVia` no está. */
+const CLAVES_RIESGO_SENSIBLES = new Set([
+  'nombre', 'nombrecompleto', 'apellido', 'apellido1', 'apellido2', 'apellidos', 'razonsocial',
+  'direccion', 'domicilio', 'via', 'nombrevia', 'calle', 'codigopostal', 'cp', 'poblacion', 'municipio', 'localidad',
+  'fechanacimiento', 'matricula', 'nif', 'dni', 'nie', 'documento', 'email', 'correo', 'telefono', 'movil',
+])
+
+/**
+ * Los valores sensibles de un `riesgo` (cualquier forma: auto, hogar, comunidades): recorre el objeto y recoge los textos
+ * y números de las claves de `CLAVES_RIESGO_SENSIBLES`. Una fecha ISO añade también su forma dd/mm/aaaa.
+ */
+export function valoresSensiblesDeRiesgo(riesgo: unknown): string[] {
+  const out = new Set<string>()
+  const pon = (v: string) => {
+    const t = v.trim()
+    if (t.length < MIN_VALOR_REDACTAR || t.length > 200) return
+    out.add(t)
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t)
+    if (iso) out.add(`${iso[3]}/${iso[2]}/${iso[1]}`)
+  }
+  const andar = (v: unknown, prof: number) => {
+    if (prof > 8 || out.size > 500) return
+    if (Array.isArray(v)) return v.slice(0, 50).forEach((x) => andar(x, prof + 1))
+    const o = obj(v)
+    if (!o) return
+    for (const [k, x] of Object.entries(o)) {
+      if (CLAVES_RIESGO_SENSIBLES.has(k.toLowerCase().replace(/_/g, ''))) {
+        if (typeof x === 'string') pon(x)
+        else if (typeof x === 'number' && Number.isFinite(x)) pon(String(x))
+      }
+      andar(x, prof + 1)
+    }
+  }
+  andar(riesgo, 0)
+  return [...out]
 }

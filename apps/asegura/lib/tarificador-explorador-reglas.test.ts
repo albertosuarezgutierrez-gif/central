@@ -128,3 +128,24 @@ test('ruta paso: modelo explícito + cliente_ref por exploración + privado; par
   // Nunca el inventario ni el texto de la IA en un log.
   for (const m of f.matchAll(/console\.(?:log|warn|error)\(([^\n]*)/g)) assert.doesNotMatch(m[1], /inventario|texto|prompt|respuesta/)
 })
+
+// PII (13/10/2026): el inventario se REDACTA con los valores del riesgo ANTES de la IA y de guardarlo; sin riesgo, para.
+test('ruta paso: redacta el inventario antes de la IA y de registrarPaso; con datos reales sin riesgo → para sin lock ni IA', () => {
+  const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
+  const redacta = f.indexOf('redactarValoresInventario(p.inventario, valores)')
+  const lock = f.indexOf('conPasoExclusivo(e,')
+  assert.ok(redacta > 0 && redacta < lock, 'la redacción va ANTES del lock (y de todo lo que usa el inventario)')
+  assert.equal(f.split('p.inventario').length - 1, 1, 'el inventario crudo solo se usa para redactarlo')
+  assert.match(f, /e\.conDatosReales \? await riesgoDeExploracion\(e\)/)
+  const corte = f.indexOf('if (valores === null)')
+  assert.ok(corte > 0 && corte < redacta && f.slice(corte, redacta).includes('return NextResponse.json('), 'sin riesgo → respuesta y fuera')
+})
+
+test('lock del paso NO bloqueante: pg_try_advisory_xact_lock; ocupado → 409 sin IA', () => {
+  const lib = readFileSync(path.join(aqui, 'tarificador-explorador.ts'), 'utf8')
+  assert.match(lib, /pg_try_advisory_xact_lock\(/)
+  assert.doesNotMatch(lib, /select pg_advisory_xact_lock\(/)
+  assert.match(lib, /if \(r\[0\]\?\.ok !== true\) throw new PasoOcupado\(\)/)
+  const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
+  assert.match(f, /err instanceof PasoOcupado\) return NextResponse\.json\(\{ estado: 'conflicto', motivo: 'paso_en_curso' \}, \{ status: 409 \}\)/)
+})

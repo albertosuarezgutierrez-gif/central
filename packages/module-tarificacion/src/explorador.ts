@@ -16,7 +16,14 @@
 // en el portal: solo claves del catálogo y valores de opciones que YA están en el inventario.
 
 import { pareceEmision } from './guard-emision.ts'
-import { pareceDatoPersonalInventario, type ElementoInventario, type InventarioDom, type MarcoInventario } from './inventario-dom.ts'
+import {
+  MAX_TITULOS_MARCO,
+  pareceDatoPersonalInventario,
+  valoresSensiblesDeRiesgo,
+  type ElementoInventario,
+  type InventarioDom,
+  type MarcoInventario,
+} from './inventario-dom.ts'
 
 // ─── Entradas ────────────────────────────────────────────────────────────────
 
@@ -212,6 +219,26 @@ export function resolverDato(clave: string, ctx: ContextoDatos): DatoResuelto {
   return d.sintetico ? { ok: true, valor: d.sintetico } : { ok: false, motivo: 'dato_no_disponible' }
 }
 
+/**
+ * Valores que hay que QUITAR del inventario antes de mandarlo a la IA o guardarlo (`redactarValoresInventario`): el
+ * contacto de entorno siempre y, con datos reales, los del riesgo del trabajo. `null` = exploración con datos reales SIN
+ * riesgo legible → quien llama PARA (fail-closed: sin saber qué quitar no se manda nada).
+ */
+export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined> }): string[] | null {
+  const valores: string[] = []
+  for (const k of [ENV_EXPLORADOR_EMAIL, ENV_EXPLORADOR_TELEFONO]) {
+    const v = ctx.env[k]?.trim()
+    if (!v) continue
+    valores.push(v)
+    // «+34 600…» en el entorno y «600…» en el portal: también los 9 últimos dígitos.
+    const dig = v.replace(/\D/g, '')
+    if (k === ENV_EXPLORADOR_TELEFONO && dig.length > 9) valores.push(dig.slice(-9))
+  }
+  if (!ctx.conDatosReales) return valores
+  if (typeof ctx.riesgo !== 'object' || ctx.riesgo === null || Array.isArray(ctx.riesgo)) return null
+  return [...valores, ...valoresSensiblesDeRiesgo(ctx.riesgo)]
+}
+
 // ─── Respuesta de la IA: lista blanca y validador ────────────────────────────
 
 export const ACCIONES_EXPLORADOR = ['rellenar', 'elegir', 'marcar', 'avanzar', 'terminar', 'parar'] as const
@@ -324,13 +351,24 @@ function esAvanzable(el: ElementoInventario): boolean {
 export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marco: MarcoInventario): boolean {
   const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
   if (!e || typeof el.texto !== 'string') return false
-  const titulos = (marco.titulos ?? []).map(plano)
+  // Lista de títulos en el TOPE = recortada: el título de Tarificar podría ser justo el que no llegó → ningún «Aceptar».
+  if ((marco.titulos?.length ?? 0) >= MAX_TITULOS_MARCO || (marco.titulosPantalla?.length ?? 0) >= MAX_TITULOS_MARCO) return false
+  // Autoriza SOLO un título de pantalla (h1-h6/legend), nunca el `th` de una tabla; prohíbe CUALQUIER título.
+  const dePantalla = (marco.titulosPantalla ?? []).map(plano)
+  const todos = [...(marco.titulos ?? []), ...(marco.titulosPantalla ?? [])].map(plano)
   const texto = plano(el.texto)
-  return e.avancesAutorizados.some((a) => a.texto.test(texto) && titulos.some((t) => a.enTitulo.test(t)) && !titulos.some((t) => a.nuncaConTitulo.test(t)))
+  return e.avancesAutorizados.some((a) => a.texto.test(texto) && dePantalla.some((t) => a.enTitulo.test(t)) && !todos.some((t) => a.nuncaConTitulo.test(t)))
 }
+
+/** Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final. */
+const truncado = (s: string) => s.endsWith('…')
 
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
 export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
+  // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
+  if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
+  // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
+  if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
   const desc = descripcionesElemento(el)
   // Emisión dura (emitir, contratar, formalizar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…): siempre.
   if (desc.some((d) => pareceEmision(d, { permitirAceptar: true }))) return 'boton_de_emision'
