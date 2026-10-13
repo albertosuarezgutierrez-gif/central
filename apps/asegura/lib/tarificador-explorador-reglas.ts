@@ -7,7 +7,9 @@
 
 import {
   EFECTOS_EN_PORTAL,
+  MOTIVOS_FIN_EXPLORACION,
   catalogoParaIA,
+  lineaMotivosPararParaIA,
   esEntradaExploracion,
   normalizarRedNoGet,
   sanearInventarioDom,
@@ -162,10 +164,8 @@ export function leerPeticionEncolarExploracion(body: unknown): { ok: true; p: Pe
   return { ok: true, p: { entrada: entrada!, trabajoOrigenId: o as string | null } }
 }
 
-export const MOTIVOS_FIN = [
-  'resultado', 'otp', 'captcha', 'cerca_de_emision', 'dato_sensible_requerido', 'aceptar_requerido', 'bucle', 'tope',
-  'sin_salida', 'ambiguo', 'error_portal', 'guard_emision',
-] as const
+/** Fuente única en `@central/module-tarificacion` (los motivos de `parar` de la IA + los del sistema). */
+export const MOTIVOS_FIN = MOTIVOS_FIN_EXPLORACION
 export type MotivoFin = (typeof MOTIVOS_FIN)[number]
 
 export type PeticionCierre = { trabajoId: string; motivoFin: MotivoFin; redNoGet: string[]; efectosEnPortal: MapaExploracion['efectosEnPortal'] }
@@ -199,11 +199,12 @@ REGLAS (no negociables):
 - elegir: solo en <select>; "valor" exacto de una de sus opciones del inventario.
 - marcar: solo radios (nunca checkbox); nunca un consentimiento (RGPD, publicidad, cesión…).
 - avanzar: UNO por lote y el ÚLTIMO; efectoEsperado ∈ siguiente_pantalla|calcular|abrir_seccion|ver_resultado; confianza alta|media. NUNCA Emitir, Contratar, Formalizar, Grabar, Guardar, Archivar, Firmar, Pagar, Proyecto ampliado, Pago fraccionado. "Aceptar" solo si es el de Datos básicos que lleva a Tarificar.
+- Un elemento "deshabilitado" no se toca. Si el botón de avance está deshabilitado porque faltan campos, manda SOLO los rellenar/elegir/marcar (sin avanzar): el robot vuelve con la pantalla actualizada y entonces avanzas. Eso no es motivo para parar.
 - terminar: SOLO si la pantalla muestra el precio (importes); refsPrecio = refs de esos importes. Va sola.
-- parar {motivo}: otp | captcha | dato_sensible_requerido (piden NIF/DNI u otro dato personal que no está en el catálogo) | cerca_de_emision | ambiguo | aceptar_requerido | sin_salida. Va sola. Ante la duda, PARA.
+- parar {motivo}: "motivo" es EXACTAMENTE uno de estos códigos, sin más texto: ${lineaMotivosPararParaIA()}. Va sola. Ante la duda, PARA.
 - mapeo: para cada campo que identifiques, {ref, campoCanonico (clave del catálogo o null), confianza alta|media|baja}.
 - Máximo 15 acciones. Refs SOLO del inventario de ESTA pantalla.
-- motivo en una frase de 200 caracteres como máximo.
+- La explicación va en el "motivo" de ARRIBA (el del objeto, no el de la acción parar): motivo en una frase de 200 caracteres como máximo.
 
 Responde SOLO un objeto JSON, sin prosa:
 {"version":1,"pantalla":{"nombre":"<≤60 car.>","tipo":"formulario|seleccion_producto|resultado|otro"},"acciones":[...],"mapeo":[...],"motivo":"<≤200 car.>"}`
