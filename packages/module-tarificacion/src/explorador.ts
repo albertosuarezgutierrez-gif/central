@@ -312,6 +312,35 @@ export const DESCRIPCION_MOTIVOS_PARAR: Readonly<Record<MotivoParar, string>> = 
 export const MOTIVOS_FIN_EXPLORACION = [...MOTIVOS_PARAR, 'resultado', 'bucle', 'tope', 'error_portal', 'guard_emision'] as const
 export type MotivoFinExploracion = (typeof MOTIVOS_FIN_EXPLORACION)[number]
 
+/**
+ * DETALLE interno de una parada del worker (14/10/2026): QUÉ comprobación la cortó, para distinguir los `ambiguo` entre sí
+ * sin abrir la traza. Lista CERRADA de códigos, sin valores ni textos del portal. Viaja en el cierre (`detalleFin`,
+ * opcional) y asegura lo deja en `mapa.huecos`. Añadir uno = añadirlo aquí (worker y asegura validan contra ESTA lista).
+ */
+export const DETALLES_FIN_EXPLORACION = [
+  /** El lote de la IA/memoria no pasó la revalidación del worker contra su propio inventario. */
+  'lote_no_valido',
+  /** asegura devolvió el paso en un estado distinto de `ok` sin un `parar` propio. */
+  'paso_no_ok',
+  /** La ref del lote no está en la captura del worker (incoherencia inventario ↔ captura). */
+  'ref_fuera_de_captura',
+  /** El nodo de la PRIMERA acción del lote ya no es el inventariado (anti-TOCTOU) y aún no se había tocado nada. */
+  'nodo_no_localizado',
+  /** `elegir`: el portal no dejó seleccionada exactamente la opción pedida. */
+  'opcion_no_aplicada',
+  /** `rellenar` con una clave fuera del catálogo. */
+  'clave_desconocida',
+  /** Demasiados lotes seguidos cortados por repintado de la pantalla (sin completar ninguno). */
+  'repintados_seguidos',
+] as const
+export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
+
+/**
+ * Claves del catálogo cuyo `rellenar` suele disparar AUTOCOMPLETADO en el portal (población/vía tras el CP, municipios tras
+ * la provincia…): tras rellenarlas el worker corta el lote y vuelve a inventariar (la pantalla ya no es la que vio la IA).
+ */
+export const CLAVES_AUTOCOMPLETADO: ReadonlySet<string> = new Set(['inmueble.codigo_postal', 'inmueble.provincia', 'inmueble.municipio'])
+
 /** La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}. */
 export function lineaMotivosPararParaIA(): string {
   return MOTIVOS_PARAR.map((m) => `${m} (${DESCRIPCION_MOTIVOS_PARAR[m]})`).join(' | ')

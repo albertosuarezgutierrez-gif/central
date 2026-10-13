@@ -390,8 +390,9 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
   // 3. Revalidación contra el inventario propio ANTES de actuar.
   const iVal = explorador.indexOf('validarRespuestaExplorador(r.respuesta, { inventario: inv')
-  const iAct = explorador.indexOf('for (const a of v.respuesta.acciones)')
-  if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
+  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación.
+  const iAct = explorador.indexOf('const lote = v.respuesta.acciones')
+  if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'(?:, '[a-z_]+')?\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
   // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
   const iBucle = explorador.indexOf('for (;;) {')
   const iInv = explorador.indexOf('capturarInventarioExploracion(page)', iBucle)
@@ -428,7 +429,7 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
   const malos: [string, string][] = [
     ['pulsación directa', explorador.replace('await k.pulsar(loc)', 'await k.pulsar(page.locator("#x"))')],
     ['valor al log', explorador.replace("k.log('exploracion_paso', {", "k.log('exploracion_paso', { v: d.valor,")],
-    ['sin revalidar', explorador.replace("if (!v.ok) throw new Parar('ambiguo')", '')],
+    ['sin revalidar', explorador.replace("if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')", '')],
     ['sin OTP', explorador.replace('await exigirSinVerificacion(page, k.compania)', '')],
     ['navega', explorador + "\nawait page.goto('https://x')"],
   ]

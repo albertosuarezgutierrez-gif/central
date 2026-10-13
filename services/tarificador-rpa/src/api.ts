@@ -230,7 +230,8 @@ export async function pedirPaso(
   return { estado: 'parar', status: 409, respuesta: null }
 }
 
-export type CuerpoCierre = { trabajoId: string; motivoFin: string; redNoGet: string[]; efectosEnPortal: string[] }
+/** `detalleFin` (opcional, 14/10/2026): código de `DETALLES_FIN_EXPLORACION`; un asegura anterior lo ignora. */
+export type CuerpoCierre = { trabajoId: string; motivoFin: string; detalleFin?: string; redNoGet: string[]; efectosEnPortal: string[] }
 
 /** `POST /api/tarificador/explorador/cierre`: hasta 3 intentos ante red caída, 5xx o 409 «paso en curso». */
 export async function cerrarExploracion(c: Config, cuerpo: CuerpoCierre, esperar: (ms: number) => Promise<void> = dormir): Promise<number> {

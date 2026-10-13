@@ -18,6 +18,7 @@
 import { randomUUID } from 'node:crypto'
 import { chromium, type Browser, type Locator, type Page } from 'playwright'
 import {
+  CLAVES_AUTOCOMPLETADO,
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
   detectarBucle,
@@ -34,6 +35,7 @@ import {
   topesExplorador,
   validarRespuestaExplorador,
   type Credenciales,
+  type DetalleFinExploracion,
   type ElementoInventario,
   type EntradaExploracion,
   type MarcoInventario,
@@ -54,7 +56,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.1.1'
+export const EXPLORADOR_VERSION = '0.1.2'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -62,6 +64,10 @@ const TOPE_PASO_MS = 30_000
 /** Margen sobre el tope de tiempo del explorador para cerrar y mandar el resultado. */
 const MARGEN_CIERRE_MS = 90_000
 const ATRIBUTO_MARCA = 'data-explorador-ref'
+/** Lotes seguidos cortados por repintado (sin completar ninguno) antes de darlo por bucle. */
+const MAX_REPINTADOS_SEGUIDOS = 4
+/** Tras rellenar un campo que autocompleta (CP, provincia…): margen para que el portal repinte antes de reinventariar. */
+const ESPERA_REPINTADO_MS = 1_500
 /** Mismos topes de evidencia que el flujo real (runner.ts). */
 const MAX_BYTES_CAPTURA = 4 * 1024 * 1024
 const MAX_BYTES_HTML = 2 * 1024 * 1024
@@ -105,6 +111,8 @@ export type FinBucle = {
   efectos: EfectoPortal[]
   pasos: number
   acciones: number
+  /** Qué comprobación del worker cortó (lista cerrada, sin valores): distingue los `ambiguo` entre sí. */
+  detalle?: DetalleFinExploracion
   /** Solo en los fallos de la ENTRADA cerrada (antes del primer paso): URL, captura y HTML ya redactados. */
   evidencia?: EvidenciaSaneada
 }
@@ -124,6 +132,17 @@ export function sanearEvidencia(ev: EvidenciaFallo, redactar: (t: string) => str
     ...(html && Buffer.byteLength(html) <= MAX_BYTES_HTML ? { html } : {}),
   }
 }
+
+/**
+ * ¿Se corta el lote tras este `rellenar` para volver a inventariar? Sí si la clave suele disparar autocompletado
+ * (`CLAVES_AUTOCOMPLETADO`) o si la pantalla cambió de estructura (huella o nº de elementos) tras escribir. Pura.
+ */
+export function cortarLoteTrasRellenar(dato: string, antes: { huella: string; elementos: number }, despues: { huella: string; elementos: number } | null): boolean {
+  if (CLAVES_AUTOCOMPLETADO.has(dato)) return true
+  return despues !== null && (despues.huella !== antes.huella || despues.elementos !== antes.elementos)
+}
+
+const nElementos = (inv: InventarioExploracion['inventario']) => inv.marcos.reduce((n, m) => n + m.elementos.length, 0)
 
 /** Un dato que no se puede poner → por qué se para (fail-closed: nunca se inventa). */
 export function motivoSinDato(m: MotivoSinDato): MotivoParar {
@@ -219,10 +238,12 @@ export type ContextoBucle = {
   log: Log
   ahora?: () => number
   hoy?: () => Date
+  /** Espera tras rellenar un campo que autocompleta, antes de reinventariar (por defecto `ESPERA_REPINTADO_MS`). */
+  esperaRepintadoMs?: number
 }
 
 class Parar extends Error {
-  constructor(readonly motivo: MotivoFinExploracion | 'perdido') {
+  constructor(readonly motivo: MotivoFinExploracion | 'perdido', readonly detalle?: DetalleFinExploracion) {
     super(`parar:${motivo}`)
   }
 }
@@ -243,8 +264,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   let avancesFallidos = 0
   let huellaAntesDeAvanzar: string | null = null
   let captura: InventarioExploracion | null = null
-  const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null): FinBucle => ({
+  /** El lote anterior se CORTÓ porque la pantalla se repintó (no terminó): esta pantalla no cuenta para el bucle. */
+  let trasRepintado = false
+  let repintadosSeguidos = 0
+  const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion): FinBucle => ({
     motivo, error, redNoGet: [...red].slice(0, 50), efectos: efectos.size ? [...efectos] : ['ninguno_visto'], pasos, acciones,
+    ...(detalle ? { detalle } : {}),
   })
   try {
     for (;;) {
@@ -263,18 +288,26 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       const huella = huellaPantalla(inv)
       if (huellaAntesDeAvanzar !== null) avancesFallidos = huella === huellaAntesDeAvanzar ? avancesFallidos + 1 : 0
       huellaAntesDeAvanzar = null
-      if (detectarBucle(huellas, huella, avancesFallidos)) throw new Parar('bucle')
-      huellas.push(huella)
+      // Un lote cortado por repintado no es un intento fallido de avanzar: la pantalla que sigue no cuenta para el bucle
+      // (lo acotan los repintados seguidos y los topes de acciones/pasos/tiempo).
+      if (trasRepintado) {
+        if (++repintadosSeguidos > MAX_REPINTADOS_SEGUIDOS) throw new Parar('bucle', 'repintados_seguidos')
+      } else {
+        repintadosSeguidos = 0
+        if (detectarBucle(huellas, huella, avancesFallidos)) throw new Parar('bucle')
+        huellas.push(huella)
+      }
+      trasRepintado = false
 
       const r = await k.pedirPaso({ trabajoId: k.trabajoId, inventario: inv, avancesFallidos })
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
       const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null })
-      if (!v.ok) throw new Parar('ambiguo')
+      if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')
       if (r.estado !== 'ok') {
         const p = v.respuesta.acciones[0]
-        throw new Parar(p?.accion === 'parar' ? p.motivo : 'ambiguo')
+        throw p?.accion === 'parar' ? new Parar(p.motivo) : new Parar('ambiguo', 'paso_no_ok')
       }
       const refs = indiceRefs(inv)
       k.log('exploracion_paso', {
@@ -283,15 +316,31 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         acciones: v.respuesta.acciones.map((a) => (a.accion === 'rellenar' ? `rellenar ${a.ref}=${a.dato}` : 'ref' in a ? `${a.accion} ${a.ref}` : a.accion)),
       })
 
-      for (const a of v.respuesta.acciones) {
+      const antes = { huella, elementos: nElementos(inv) }
+      /** Acciones de ESTE lote que ya tocaron el portal: con alguna hecha, un nodo que ya no está = repintado, no ambigüedad. */
+      let hechas = 0
+      const lote = v.respuesta.acciones
+      lote: for (let i = 0; i < lote.length; i++) {
+        const a = lote[i]
         if (a.accion === 'parar') throw new Parar(a.motivo)
         if (a.accion === 'terminar') throw new Parar('resultado')
         if (++acciones > topes.maxAcciones) throw new Parar('tope')
         const hit = refs.get(a.ref)
         const nodo = captura.nodos.get(a.ref)
-        if (!hit || !nodo) throw new Parar('ambiguo')
+        if (!hit || !nodo) throw new Parar('ambiguo', 'ref_fuera_de_captura')
         const loc = await localizar(nodo, hit.el)
-        if (!loc) throw new Parar('ambiguo')
+        if (!loc) {
+          // Lo ya hecho en este lote pudo repintar la pantalla (autocompletado): se corta aquí y se reinventaría; la IA ve
+          // la pantalla nueva. Sin nada hecho, el nodo cambió sin que lo tocásemos: anti-TOCTOU, se para.
+          if (hechas > 0) {
+            acciones--
+            trasRepintado = true
+            k.log('exploracion_lote_cortado', { n: pasos, causa: 'nodo_no_localizado', hechas })
+            break lote
+          }
+          throw new Parar('ambiguo', 'nodo_no_localizado')
+        }
+        let cortar = false
         try {
           if (a.accion === 'rellenar') {
             const d = resolverDato(a.dato, { ramo: k.ramo, conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
@@ -301,17 +350,35 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
                 : false
               const que = accionSinDato(d.motivo, k.conDatosReales, conValor)
               if (que === 'saltar') continue
-              throw new Parar(que)
+              throw new Parar(que, d.motivo === 'clave_desconocida' ? 'clave_desconocida' : undefined)
             }
             await k.pausaAccion()
             // 🔑 El valor no se loguea ni sale del proceso: va directo al campo.
             await loc.fill(valorParaControl(d.valor, hit.el), { timeout: 10_000 })
+            hechas++
+            const quedan = i < lote.length - 1
+            if (CLAVES_AUTOCOMPLETADO.has(a.dato)) {
+              // El autocompletado suele colgar del `change`, que sale al perder el foco: se le quita (sin clic ni Enter) y se
+              // deja repintar ANTES de seguir, aunque fuera la última acción (la próxima captura ya ve la pantalla nueva).
+              await loc.blur({ timeout: 5_000 }).catch(() => undefined)
+              await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
+              await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+              cortar = quedan
+            } else if (quedan) {
+              // ¿Cambió la estructura al escribir? Solo importa si quedan acciones (si no, el bucle reinventaría igualmente).
+              const sonda = await capturarInventarioExploracion(page).catch(() => null)
+              const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
+              await sonda?.liberar()
+              cortar = cortarLoteTrasRellenar(a.dato, antes, despues)
+            }
           } else if (a.accion === 'elegir') {
             await k.pausaAccion()
             const elegidas = await loc.selectOption({ value: a.opcion.valor }, { timeout: 10_000 })
-            if (elegidas.length !== 1 || elegidas[0] !== a.opcion.valor) throw new Parar('ambiguo')
+            if (elegidas.length !== 1 || elegidas[0] !== a.opcion.valor) throw new Parar('ambiguo', 'opcion_no_aplicada')
+            hechas++
           } else if (a.accion === 'marcar') {
             await k.pulsar(loc)
+            hechas++
           } else {
             const alPedir = (q: { method(): string; url(): string }) => {
               if (q.method() === 'GET') return
@@ -337,10 +404,15 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         } finally {
           await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
         }
+        if (cortar) {
+          trasRepintado = true
+          k.log('exploracion_lote_cortado', { n: pasos, causa: 'repintado_tras_rellenar', hechas })
+          break lote
+        }
       }
     }
   } catch (e) {
-    if (e instanceof Parar) return fin(e.motivo)
+    if (e instanceof Parar) return fin(e.motivo, null, e.detalle)
     // Una violación del guard en segundo plano manda sobre el error con el que se cortó.
     const f = finDeError(k.guard.violacion() ?? e)
     return fin(f.motivo, f.error)
@@ -501,12 +573,12 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
     await (browser as Browser | null)?.close().catch(() => undefined)
   }
 
-  log('exploracion_fin', { motivo: finExp.motivo, pasos: finExp.pasos, acciones: finExp.acciones, red: finExp.redNoGet.length, ...(finExp.error ? { tipo: finExp.error.tipo, mensaje: redactar(finExp.error.mensaje).slice(0, 300) } : {}) })
+  log('exploracion_fin', { motivo: finExp.motivo, ...(finExp.detalle ? { detalle: finExp.detalle } : {}), pasos: finExp.pasos, acciones: finExp.acciones, red: finExp.redNoGet.length, ...(finExp.error ? { tipo: finExp.error.tipo, mensaje: redactar(finExp.error.mensaje).slice(0, 300) } : {}) })
   if (finExp.motivo === 'perdido') {
     clearTimeout(respaldo)
     return 0
   }
-  const stCierre = await cerrarExploracion(cfg, { trabajoId: trabajo.id, motivoFin: finExp.motivo, redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos })
+  const stCierre = await cerrarExploracion(cfg, { trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos })
   log('exploracion_cierre', { status: stCierre })
   const cuerpo = cuerpoTrasCierre(trabajo.id, trabajo.compania, finExp, stCierre, redactar)
   const st = cuerpo ? await enviarResultado(cfg, cuerpo) : 0

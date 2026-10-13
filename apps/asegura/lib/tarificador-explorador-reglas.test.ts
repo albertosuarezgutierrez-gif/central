@@ -17,6 +17,7 @@ import {
   exploradorActivo,
   historialCorto,
   leerPeticionCierre,
+  huecoDeDetalleFin,
   leerPeticionPaso,
   modeloExplorador,
   modoParaWorker,
@@ -151,6 +152,17 @@ test('leerPeticionCierre: red solo origen+ruta; motivos y efectos de lista', () 
   if (l.ok) assert.deepEqual(l.p.redNoGet, ['https://p.example.test/a.do'])
   assert.equal(leerPeticionCierre({ trabajoId: UUID, motivoFin: 'me_canse' }).ok, false)
   assert.equal(leerPeticionCierre({ trabajoId: UUID, motivoFin: 'resultado', efectosEnPortal: ['emitida'] }).ok, false)
+})
+
+test('leerPeticionCierre: detalleFin opcional de lista cerrada (uno desconocido se ignora, no tumba el cierre) → hueco del mapa', () => {
+  const con = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'ambiguo', detalleFin: 'nodo_no_localizado' })
+  assert.ok(con.ok && con.p.detalleFin === 'nodo_no_localizado')
+  if (con.ok) assert.equal(huecoDeDetalleFin(con.p.motivoFin, con.p.detalleFin), 'fin «ambiguo» en el worker: nodo_no_localizado')
+  const raro = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'ambiguo', detalleFin: 'valor 12345678Z' })
+  assert.ok(raro.ok && raro.p.detalleFin === null)
+  const sin = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'resultado' })
+  assert.ok(sin.ok && sin.p.detalleFin === null)
+  if (sin.ok) assert.equal(huecoDeDetalleFin(sin.p.motivoFin, sin.p.detalleFin), null)
 })
 
 test('prompt: el inventario va DELIMITADO como datos; sin NIF real visible; el system prohíbe emitir', () => {

@@ -17,6 +17,7 @@ import {
   cierreCorrecto,
   cuerpoTrasCierre,
   coincideConInventario,
+  cortarLoteTrasRellenar,
   EXPLORADOR_VERSION,
   finDeError,
   motivoSinDato,
@@ -62,6 +63,38 @@ const DATOS_BASICOS_DIV = (titulo: string) => PAGINA(`
   </form>`)
 
 const RESULTADO = PAGINA(`<h1>Resultado</h1><table><tr><td>Prima total</td><td>347,55 €</td></tr></table>`)
+
+/** El portal REPINTA un control al escribir en otro (como Allianz tras el CP): el nodo de «anio» se sustituye por un clon. */
+const REPINTA_NODO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="superficie">Superficie construida</label><input id="superficie" name="superficie" type="text">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="text">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>document.getElementById('superficie').addEventListener('input', () => { const a = document.getElementById('anio'); a.replaceWith(a.cloneNode(true)) })</script>`)
+
+/** Al escribir en «superficie» aparece un control NUEVO (la estructura cambia; los nodos viejos siguen vivos). */
+const CRECE = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="superficie">Superficie construida</label><input id="superficie" name="superficie" type="text">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="text">
+    <span id="hueco"></span>
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>document.getElementById('superficie').addEventListener('input', () => { document.getElementById('hueco').innerHTML = '<label for="extra">Plantas del edificio</label><input id="extra" name="extra" type="text">' })</script>`)
+
+/** El CP autocompleta la población al perder el foco (`change`), como el portal real. */
+const CP_AUTOCOMPLETA = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="cp">Código postal</label><input id="cp" name="cp" type="text">
+    <span id="pob"></span>
+    <label for="superficie">Superficie construida</label><input id="superficie" name="superficie" type="text">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>document.getElementById('cp').addEventListener('change', () => { document.getElementById('pob').innerHTML = '<label for="poblacion">Población</label><select id="poblacion" name="poblacion"><option value="">--</option><option value="P1">Pueblo</option></select>' })</script>`)
 
 const OTP = PAGINA(`<h1>Verificación</h1><label for="c">Código</label><input id="c" autocomplete="one-time-code">`)
 
@@ -215,6 +248,7 @@ test('la IA pide pulsar «Emitir»: el worker lo rechaza al revalidar y no pulsa
     const { k } = contexto(page, guard, (inv) => respuesta([{ accion: 'avanzar', ref: ref(inv, 'emitir'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }]))
     const fin = await bucleExploracion(page, k)
     assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(fin.detalle, 'lote_no_valido')
     assert.equal(pulsado, false)
   } finally {
     await context.close()
@@ -248,10 +282,111 @@ test('anti-TOCTOU: si el control cambia entre el inventario y la acción, no se 
     })
     const fin = await bucleExploracion(page, k)
     assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(fin.detalle, 'nodo_no_localizado', 'primera acción del lote: anti-TOCTOU, no repintado')
     assert.ok(!peticiones.some((x) => x.ruta === '/paso2'), 'no se envió el formulario')
   } finally {
     await context.close()
   }
+})
+
+// ─── Repintado de la pantalla a mitad de lote (14/10/2026: Allianz Hogar paró «ambiguo» en el paso 1) ──────────
+
+const tiene = (inv: InventarioDom, id: string) => inv.marcos.some((m) => m.elementos.some((e) => e.id === id))
+
+test('el nodo DESAPARECE tras el primer rellenar (repintado): corta el lote y reinventaría, no para «ambiguo»', async () => {
+  inicio = REPINTA_NODO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let lotes = 0
+    const { k, enviados, lineas } = contexto(page, guard, (inv) => {
+      if (!tiene(inv, 'superficie')) return respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado')
+      lotes++
+      return lotes === 1
+        ? respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+          { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+        ])
+        : respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+        ])
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.equal(enviados.length, 3, 'la pantalla repintada se volvió a inventariar y a preguntar')
+    assert.equal(fin.acciones, 3, 'la acción que no se pudo hacer no cuenta (superficie + anio + avanzar)')
+    const post = peticiones.find((p) => p.ruta === '/tarificar')!
+    assert.match(post.cuerpo, /superficie=90/)
+    assert.match(post.cuerpo, /anio=1990/)
+    assert.ok(lineas.some((l) => /exploracion_lote_cortado/.test(l) && /nodo_no_localizado/.test(l)))
+  } finally {
+    await context.close()
+  }
+})
+
+test('rellenar que cambia la ESTRUCTURA (aparece un control): corta el lote aunque el resto siga vivo', async () => {
+  inicio = CRECE
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (!tiene(inv, 'superficie')) return respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado')
+      return n === 1
+        ? respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+          { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+        ])
+        : respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+        ])
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.ok(tiene(enviados[1].inventario, 'extra'), 'el 2.º paso ve el control nuevo')
+    assert.equal(fin.acciones, 3, 'tras el corte, «anio» no se rellenó en el lote 1')
+  } finally {
+    await context.close()
+  }
+})
+
+test('rellenar el CÓDIGO POSTAL: quita el foco, deja autocompletar y reinventaría antes de seguir con el lote', async () => {
+  inicio = CP_AUTOCOMPLETA
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (!tiene(inv, 'cp')) return respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado')
+      return n === 1
+        ? respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+          { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+        ])
+        : respuesta([
+          { accion: 'elegir', ref: ref(inv, 'poblacion'), opcion: { valor: 'P1' } },
+          { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+        ])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.ok(tiene(enviados[1].inventario, 'poblacion'), 'el 2.º paso ve la población autocompletada')
+    assert.match(peticiones.find((p) => p.ruta === '/tarificar')!.cuerpo, /cp=41001.*poblacion=P1.*superficie=90/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('cortarLoteTrasRellenar: claves de autocompletado o cambio de huella/nº de elementos', () => {
+  const a = { huella: 'h1', elementos: 5 }
+  assert.equal(cortarLoteTrasRellenar('inmueble.codigo_postal', a, a), true)
+  assert.equal(cortarLoteTrasRellenar('inmueble.provincia', a, null), true)
+  assert.equal(cortarLoteTrasRellenar('inmueble.municipio', a, a), true)
+  assert.equal(cortarLoteTrasRellenar('inmueble.superficie_m2', a, a), false)
+  assert.equal(cortarLoteTrasRellenar('inmueble.superficie_m2', a, null), false)
+  assert.equal(cortarLoteTrasRellenar('inmueble.superficie_m2', a, { huella: 'h2', elementos: 5 }), true)
+  assert.equal(cortarLoteTrasRellenar('inmueble.superficie_m2', a, { huella: 'h1', elementos: 6 }), true)
 })
 
 test('dato personal sin valor (NIF en exploración sintética): para dato_sensible_requerido sin escribir', async () => {

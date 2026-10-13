@@ -4,7 +4,7 @@ import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
 import { PasoOcupado, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
 import { ejecutarCierre } from '@/lib/tarificador-explorador-paso'
-import { leerPeticionCierre } from '@/lib/tarificador-explorador-reglas'
+import { huecoDeDetalleFin, leerPeticionCierre } from '@/lib/tarificador-explorador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,7 @@ class MapaInvalido extends Error {}
 
 /**
  * `POST /api/tarificador/explorador/cierre` — fin de la exploración. Bearer `TARIFICADOR_WORKER_SECRET`. Cuerpo
- * `{ trabajoId, motivoFin, redNoGet?, efectosEnPortal? }`. asegura CONSTRUYE el mapa a partir de SUS pasos guardados
+ * `{ trabajoId, motivoFin, detalleFin?, redNoGet?, efectosEnPortal? }` (`detalleFin`: código cerrado de qué cortó → `mapa.huecos`). asegura CONSTRUYE el mapa a partir de SUS pasos guardados
  * (re-saneados y re-validados): el worker no escribe el mapa, solo aporta la red (origen + ruta) y los efectos vistos.
  * Toma el MISMO try-lock por exploración que `paso` y respeta la IA reservada (`ejecutarCierre`): nunca corre a la vez que
  * un paso en vuelo → 409 `paso_en_curso` (el worker reintenta). 200 `{ estado:'ok', pantallas, huecos, coste }` · 409 si ya
@@ -50,6 +50,8 @@ export async function POST(req: Request) {
           },
           pasos,
         )
+        const hueco = huecoDeDetalleFin(p.motivoFin, p.detalleFin)
+        if (hueco) mapa.huecos.push(hueco)
         if (!validarMapa(mapa)) throw new MapaInvalido('mapa_invalido')
         resumen = { pantallas: mapa.pantallas.length, huecos: mapa.huecos.length, resultado: mapa.resultado.alcanzado, coste: mapa.coste }
         return guardarMapa(e, mapa, p.motivoFin, bd)
