@@ -167,26 +167,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 318 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 319 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 308 | 41.557 | 34.352.928 | 0 | 0 |
-| `otro` | 304 | 10.024 | 25.409.894 | 15.047.154 | 0 |
-| `lectura-directa` | 267 | 7.013 | 23.138.180 | 0 | 0 |
-| `mcp:github` | 271 | 6.043 | 4.915.795 | 52.355.878 | 91 |
-| `escritura` | 200 | 4.040 | 60.097.244 | 0 | 0 |
-| `sql` | 192 | 4.023 | 2.011.617 | 2.351.230 | 17 |
+| `bash` | 309 | 42.081 | 34.954.568 | 0 | 0 |
+| `otro` | 305 | 10.157 | 25.599.233 | 15.329.848 | 0 |
+| `lectura-directa` | 268 | 7.074 | 23.202.951 | 0 | 0 |
+| `mcp:github` | 272 | 6.072 | 4.931.038 | 52.605.850 | 91 |
+| `sql` | 193 | 4.104 | 2.069.806 | 2.351.230 | 18 |
+| `escritura` | 201 | 4.060 | 60.189.516 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 42 | 1.134 | 1.125.098 | 0 | 70 |
 | `mcp:Booking-com` | 35 | 976 | 4.073.762 | 0 | 0 |
-| `mcp:Vercel` | 64 | 646 | 915.025 | 204.477 | 18 |
-| `agente:general-purpose` | 89 | 476 | 297.141 | 9.606.954 | 0 |
-| `mcp:Google_Drive` | 20 | 353 | 401.220 | 0 | 36 |
+| `mcp:Vercel` | 64 | 654 | 917.774 | 204.477 | 19 |
+| `agente:general-purpose` | 90 | 495 | 307.286 | 10.176.543 | 0 |
+| `mcp:Google_Drive` | 21 | 356 | 404.813 | 0 | 37 |
 | `mcp:Interactive-Brokers--IBKR-` | 7 | 351 | 429.469 | 0 | 0 |
-| `mcp:Supabase` | 115 | 333 | 47.728 | 3.415 | 4 |
-| `mcp:claude-code-remote` | 29 | 239 | 19.859 | 16.312 | 0 |
-| `agente:agente-architect` | 55 | 194 | 138.430 | 5.631.694 | 0 |
+| `mcp:Supabase` | 115 | 336 | 48.021 | 3.415 | 4 |
+| `mcp:claude-code-remote` | 30 | 249 | 20.307 | 16.312 | 0 |
+| `agente:agente-architect` | 55 | 199 | 141.345 | 5.659.237 | 0 |
 | `mcp:Google-Drive` | 21 | 131 | 117.731 | 0 | 2 |
 | `agente:agente-mecanico` | 40 | 99 | 66.122 | 5.917.719 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
