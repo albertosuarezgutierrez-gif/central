@@ -515,6 +515,30 @@ es tocar el modelo y necesita su propia entrada firmada.
 - **Acción mientras tanto:** ninguna. No toca ranking, cestas ni pesos; nada se recolecta de nuevo (todo sale
   de campos que ya guarda el retrovisor).
 
+### Resultado (13/10/2026)
+- **Medido tal cual está firmado**, una sola ejecución, sin ajustar nada (SQL de solo lectura sobre `trading_backtest.datos.porFecha`, 1.303 símbolos, ventanas por mes de calendario, fotos válidas = `precio` > 0). «Resto» = observaciones del universo con `ret91` no nulo y fuera de la señal (≈ universo; la señal pesa <0,3%).
+- **Lecturas literales declaradas:** `L`/máx exigen ≥1 foto en su ventana; `ret91` nulo = excluido; mitades por año de la foto (≤2018 / ≥2019); «un caso por episodio» = señal sin otra del mismo símbolo en los 6 meses previos (hueco ≥7 en el índice mensual); sensibilidad (b): la ventana t−36…t−7 solo tiene 30 meses, así que el «≥36 fotos» es imposible y se usó ≥24 (80%), con L ≤ 1,05·S; control = CASTIGADO ∧ REBOTE ∧ VOLUMEN ∧ soporte definido pero fuera de rango.
+
+| brazo | mitad | n | símbolos | ret91 medio | mediana | vs resto |
+|---|---|---|---|---|---|---|
+| **SEÑAL H16** | 2011-18 | 101 | 69 | 13,76% | 5,80% | **+9,96 pp** (resto 3,81%) |
+| **SEÑAL H16** | 2019-26 | 461 | 273 | 7,34% | 4,50% | **+1,66 pp** (resto 5,68%) |
+| SEÑAL H16 | total | 562 | — | 8,50% | — | +3,64 pp (resto 4,85%) |
+| un caso/episodio | 2011-18 | 73 | 69 | 11,33% | 5,80% | +7,5 pp |
+| un caso/episodio | 2019-26 | 307 | 272 | 9,15% | 6,97% | +3,5 pp |
+| (a) sin volumen | 2011-18 | 434 | 165 | 6,02% | 2,83% | +2,2 pp |
+| (a) sin volumen | 2019-26 | 1.966 | 525 | 8,34% | 6,16% | +2,7 pp |
+| (b) soporte 36m, ≤5% | 2011-18 | 149 | 98 | 8,95% | 4,25% | +5,1 pp |
+| (b) soporte 36m, ≤5% | 2019-26 | 490 | 298 | 7,25% | 4,07% | +1,6 pp |
+| CONTROL (sin soporte) | 2011-18 | 402 | 192 | 7,84% | 3,28% | +4,0 pp |
+| CONTROL (sin soporte) | 2019-26 | 1.848 | 648 | 13,34% | 5,08% | +7,7 pp |
+| universo (referencia) | 2011-18 / 2019-26 | 84.101 / 106.350 | 1.052 / 1.291 | 3,82% / 5,69% | 3,23% / 2,96% | — |
+
+- **Veredicto: INCONCLUSA.** La señal principal no llega al n firmado en la mitad 2011-2018 (n = 101 < 200 y 69 símbolos < 80); el criterio dice que entonces no es ni aceptada ni rechazada. El signo es positivo en las dos mitades, pero la diferencia es +9,96 pp en la primera y solo +1,66 pp (< +2) en la segunda; con el n actual no cumpliría el umbral en ninguna lectura. Con un caso por episodio el n baja a 73/307 (la mitad 1 sigue lejos de 200).
+- **Soporte no atribuible:** el control (castigado + rebote + volumen, sin tocar soporte) supera a la señal en 2019-26 (13,34% vs 7,34%) y en el total; solo la iguala a la baja en 2011-18. Quitar el volumen (a) no empeora la señal. Nada se atribuye al soporte.
+- **NKE:** NO es caso de la señal principal en ninguna fecha. Con la regla sin volumen (a) aparece en 2024-09, 2024-10 y 2025-09 (volRelMes 1,16 / 1,15 / 0,60, todos < 1,3), con `ret91` de −5,1%, −15,1% y −15,5%: la anécdota no se reproduce.
+- Sesgo de supervivencia (universo vivo hoy) y proxy mensual, como se declaró: nada se cablea.
+
 ## 📦 Archivo — pre-registro original de la cohorte 1 (tabla `trading_forward_paper`, retirada 01/08/2026)
 La primera cohorte se pre-registró el 18/07/2026 en una tabla ad-hoc (`trading_forward_paper`, con
 `trading_forward_paper_marca` para marcas interinas) que quedó huérfana cuando el forward pasó a
