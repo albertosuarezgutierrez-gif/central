@@ -1,74 +1,45 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-import { decidirVistaPush, type PermisoNotificaciones, type VistaPush } from '@/lib/push-estado'
+import { TEXTO_CONSENTIMIENTO_AVISOS } from '@central/module-seguros-portal'
+
+import { decidirVistaPush, type VistaPush } from '@/lib/push-estado'
 
 import { InstruccionesIOS, useInstalacion } from './instalacion'
+import { CLAVE_PUBLICA, activarEnEsteDispositivo, desactivarEnEsteDispositivo, leerDispositivo, type LecturaDispositivo } from './push-cliente'
 
 /**
- * Interruptor de avisos por notificación push (12/09/2026), dentro del panel de la campana: es el
- * sitio natural — «avisos» es justo lo que esto añade como canal.
+ * Interruptor de avisos por notificación push en ESTE dispositivo. Desde el 13/10/2026 vive en
+ * «Configuración → Avisos» (`/configuracion`); la campana solo enlaza aquí.
  *
  * Qué se enseña lo decide `decidirVistaPush` (`lib/push-estado.ts`, puro y con test): activadas,
  * desactivadas o «bloqueadas por el navegador» (permiso denegado: se explica cómo desbloquear, sin
  * botón de reintento que no puede funcionar). Sin soporte NO se calla: en iPhone/iPad sin instalar se
  * manda a instalar la app (la guía es `InstruccionesIOS` de `instalacion.tsx`, la misma de la barra;
  * el `ios` de `useInstalacion` ya significa «iOS y no instalada»), y en un navegador sin soporte se
- * dice. Solo sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` no se pinta nada: ahí el fallo es nuestro.
- * `RegistrarSW` ya registró el service worker en el layout raíz; aquí solo se pide permiso y se
- * suscribe sobre él.
+ * dice. Sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` se dice que no está disponible: ahí el fallo es nuestro.
+ *
+ * 🚨 Junto al botón de activar va `TEXTO_CONSENTIMIENTO_AVISOS`: activar sella el consentimiento
+ * `avisos` con su versión (`push-cliente.ts` → `/api/push/suscribir`). Leer y suscribir lo hace
+ * `push-cliente.ts`, el mismo que usa la bienvenida (`BienvenidaAvisos.tsx`).
  */
-interface Lectura {
-  serviceWorker: boolean
-  pushManager: boolean
-  notificaciones: boolean
-  permiso: PermisoNotificaciones | null
-  suscripcionLocal: boolean
-}
-
 type Accion = 'reposo' | 'trabajando' | 'error' | 'error_desactivar'
-
-const CLAVE_PUBLICA = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
 /** Táctil ≥44 px: los botones de este panel son del tamaño de un dedo, no de un enlace. */
 const BOTON: React.CSSProperties = { minHeight: 44, padding: '0 4px', textAlign: 'left' }
-const TEXTO: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: '0 0 6px', lineHeight: 1.45 }
-
-function leerPermiso(): PermisoNotificaciones | null {
-  try {
-    return typeof Notification === 'undefined' ? null : Notification.permission
-  } catch {
-    return null
-  }
-}
+const TEXTO: React.CSSProperties = { fontSize: 14, color: 'var(--muted)', margin: '0 0 8px', lineHeight: 1.5 }
 
 export function ActivarPush() {
   const instalacion = useInstalacion()
-  const [lectura, setLectura] = useState<Lectura | null>(null)
+  const [lectura, setLectura] = useState<LecturaDispositivo | null>(null)
   const [accion, setAccion] = useState<Accion>('reposo')
   const [guiaAbierta, setGuiaAbierta] = useState(false)
 
   useEffect(() => {
-    void (async () => {
-      const base = {
-        serviceWorker: 'serviceWorker' in navigator,
-        pushManager: 'PushManager' in window,
-        notificaciones: 'Notification' in window,
-        permiso: leerPermiso(),
-      }
-      if (!base.serviceWorker || !base.pushManager || !base.notificaciones) {
-        setLectura({ ...base, suscripcionLocal: false })
-        return
-      }
-      try {
-        const registro = await navigator.serviceWorker.ready
-        const sub = await registro.pushManager.getSubscription()
-        setLectura({ ...base, suscripcionLocal: sub !== null })
-      } catch {
-        setLectura({ ...base, suscripcionLocal: false })
-        setAccion('error')
-      }
-    })()
+    void leerDispositivo().then((l) => {
+      setLectura(l)
+      if (l.fallo) setAccion('error')
+    })
   }, [])
 
   // Hasta saber qué navegador es (la instalación se decide tras montar) no se pinta nada: evita
@@ -81,7 +52,13 @@ export function ActivarPush() {
     iosSinInstalar: instalacion === 'ios',
   })
 
-  if (vista === 'sin_configurar') return null
+  if (vista === 'sin_configurar') {
+    return (
+      <div className="campana-push">
+        <p style={TEXTO}>Las notificaciones no están disponibles ahora mismo en el portal.</p>
+      </div>
+    )
+  }
 
   if (vista === 'instalar_ios') {
     return (
@@ -123,28 +100,18 @@ export function ActivarPush() {
 
   const activar = async () => {
     setAccion('trabajando')
-    try {
-      const permiso = leerPermiso() === 'granted' ? 'granted' : await Notification.requestPermission()
-      setLectura((l) => (l ? { ...l, permiso } : l))
-      if (permiso !== 'granted') {
-        // `denied` pinta «bloqueadas» (sin reintento); `default` (lo cerró sin elegir) vuelve al botón.
-        setAccion('reposo')
-        return
-      }
-      const registro = await navigator.serviceWorker.ready
-      const sub = await registro.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(CLAVE_PUBLICA!),
-      })
-      const r = await fetch('/api/push/suscribir', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
-      })
-      if (!r.ok) throw new Error(String(r.status))
-      setLectura((l) => (l ? { ...l, suscripcionLocal: true } : l))
+    const r = await activarEnEsteDispositivo()
+    if (r === 'activadas') {
+      setLectura((l) => (l ? { ...l, permiso: 'granted', suscripcionLocal: true } : l))
       setAccion('reposo')
-    } catch {
+    } else if (r === 'denegado') {
+      // `denied` pinta «bloqueadas» (sin reintento).
+      setLectura((l) => (l ? { ...l, permiso: 'denied' } : l))
+      setAccion('reposo')
+    } else if (r === 'sin_elegir') {
+      // Cerró el diálogo sin elegir: vuelve el botón.
+      setAccion('reposo')
+    } else {
       setAccion('error')
     }
   }
@@ -152,16 +119,7 @@ export function ActivarPush() {
   const desactivar = async () => {
     setAccion('trabajando')
     try {
-      const registro = await navigator.serviceWorker.ready
-      const sub = await registro.pushManager.getSubscription()
-      if (sub) {
-        await fetch('/api/push/desuscribir', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-        })
-        await sub.unsubscribe()
-      }
+      await desactivarEnEsteDispositivo()
       setLectura((l) => (l ? { ...l, suscripcionLocal: false } : l))
       setAccion('reposo')
     } catch {
@@ -175,17 +133,17 @@ export function ActivarPush() {
     <div className="campana-push">
       {vista === 'activas' ? (
         <>
-          <p style={TEXTO}>Avisos por notificación: <strong>activados</strong>.</p>
-          <PreferenciasAvisos />
+          <p style={TEXTO}>Notificaciones en este dispositivo: <strong>activadas</strong>.</p>
           <button type="button" className="campana-reintentar" style={BOTON} onClick={desactivar} disabled={accion === 'trabajando'}>
-            {accion === 'error_desactivar' ? 'No se han podido desactivar — reintentar' : 'Desactivar avisos por notificación'}
+            {accion === 'error_desactivar' ? 'No se han podido desactivar — reintentar' : 'Desactivar en este dispositivo'}
           </button>
         </>
       ) : (
         <>
-          <p style={TEXTO}>Avisos por notificación: <strong>desactivados</strong>.</p>
+          <p style={TEXTO}>Notificaciones en este dispositivo: <strong>desactivadas</strong>.</p>
+          <p style={TEXTO}>{TEXTO_CONSENTIMIENTO_AVISOS}</p>
           <button type="button" className="campana-reintentar" style={BOTON} onClick={activar} disabled={accion === 'trabajando'}>
-            {accion === 'error' ? 'No se ha podido activar — reintentar' : 'Avisarme también con una notificación'}
+            {accion === 'error' ? 'No se ha podido activar — reintentar' : 'Acepto: activar las notificaciones'}
           </button>
         </>
       )}
@@ -202,11 +160,11 @@ const TIPOS: { tipo: string; texto: string }[] = [
 ]
 
 /**
- * Qué novedades de la compañía (llegan por CIMA) avisa la notificación. Solo se pinta con el push
- * activo: sin él no hay nada que elegir. Si no se pueden leer se DICE — unas casillas pintadas por
- * defecto mentirían sobre lo que de verdad está guardado.
+ * Qué novedades de la compañía (llegan por CIMA) avisa la notificación. Valen para TODOS tus
+ * dispositivos, por eso «Configuración» las pinta aparte del interruptor de este. Si no se pueden
+ * leer se DICE — unas casillas pintadas por defecto mentirían sobre lo que de verdad está guardado.
  */
-function PreferenciasAvisos() {
+export function PreferenciasAvisos() {
   const [prefs, setPrefs] = useState<Record<string, boolean> | null | 'error'>(null)
   const [fallo, setFallo] = useState(false)
 
@@ -247,14 +205,4 @@ function PreferenciasAvisos() {
       {fallo && <p className="campana-prefs-error">No se ha podido guardar el cambio. Inténtalo de nuevo.</p>}
     </fieldset>
   )
-}
-
-/** VAPID exige la clave pública como `Uint8Array`, y el navegador la da en base64url. */
-function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
-  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
-  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = atob(b64)
-  const salida = new Uint8Array(new ArrayBuffer(raw.length))
-  for (let i = 0; i < raw.length; i++) salida[i] = raw.charCodeAt(i)
-  return salida
 }

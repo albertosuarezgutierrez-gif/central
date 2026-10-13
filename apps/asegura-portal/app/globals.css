@@ -4279,3 +4279,54 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   gap: 6px;
   justify-items: start;
 }
+
+/* ── Configuración y bienvenida de avisos (13/10/2026) ─────────────────────── */
+.bienvenida-avisos h2 { font-size: 20px; }
+.bienvenida-avisos-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+.bienvenida-avisos-botones .boton { min-height: 44px; flex: 1 1 160px; }
+.config-avisos .campana-push { border-top: 0; margin-top: 0; padding: 0; }
+.config-subtitulo {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 8px;
+}
+.config-nota { font-size: 13px; margin: 4px 0 12px; }
+.config-ajustes { margin-top: 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.config-campo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.config-campo select,
+.config-campo input[type='time'] {
+  min-height: 44px;
+  font: inherit;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+  background: var(--surface);
+  color: var(--text);
+  max-width: 100%;
+}
+.config-franja { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.config-franja .boton { min-height: 44px; }
+.config-consentimientos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.config-consentimientos li {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.config-version { font-size: 12px; color: var(--muted); }
+.campana-configurar { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; }

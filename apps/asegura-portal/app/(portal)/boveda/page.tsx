@@ -34,6 +34,7 @@ import { textoFiguraYaServida } from '@/lib/intervinientes'
 import Link from 'next/link'
 import { puedeOfrecerMejorarPrecio, puedeOfrecerSolicitarBaja, titularesQueOperan, vencimientosEnVentana } from '@/lib/vencimientos'
 
+import { estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { FilaDeclarada } from './FilaDeclarada'
 import { DeclaradasEliminadas, LIMITE_ELIMINADAS } from './DeclaradasEliminadas'
 import { FiltroVigencia } from './FiltroVigencia'
@@ -153,6 +154,18 @@ export default async function Boveda({
     polizasElegibles(identidad.id),
     leerMisDatos(identidad.id),
   ])
+
+  // Chip «Ponla al día con Grupo ASegura» en las filas de las pólizas aportadas que aún se ofrecen
+  // (`estadoCaptacion`). Si la lectura falla, sin chip: es un extra, no puede romper la bóveda.
+  const marcasCaptacion = await prisma.portalAvisoLeido
+    .findMany({
+      where: { identidadId: identidad.id, clave: { startsWith: PREFIJO_CAPTACION } },
+      select: { clave: true, creadoEn: true },
+    })
+    .catch(() => null)
+  const ofreceCaptacion = (polizaId: string) =>
+    marcasCaptacion !== null &&
+    estadoCaptacion({ propia: true, eliminada: false, polizaId, marcas: marcasCaptacion, ahora: new Date() }) === 'ofrecer'
 
   // Las obligaciones se derivan de la cartera que YA se ha leído arriba (no se
   // vuelve a leer). Ya no se pintan aquí (el calendario se quitó de la bóveda
@@ -656,6 +669,7 @@ export default async function Boveda({
                 avisoPartes={avisoPartesConservados(
                   partes.filter((x: PartePortal) => x.polizaDeclaradaId === d.id).length,
                 )}
+                captacion={ofreceCaptacion(d.id)}
               />
             ))}
           </ul>

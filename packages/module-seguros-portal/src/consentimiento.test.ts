@@ -7,6 +7,8 @@ import {
   TEXTO_CONSENTIMIENTO_COMERCIAL,
   TIPOS_CONSENTIMIENTO,
   TIPOS_QUE_SE_REGISTRAN,
+  TEXTO_CONSENTIMIENTO_AVISOS,
+  VERSION_TEXTO_AVISOS,
   VERSION_TEXTO_COMERCIAL,
   consentimientoVigente,
   necesitaRegistro,
@@ -21,11 +23,19 @@ test('los tipos son exactamente los del CHECK de la tabla', () => {
   assert.deepEqual([...TIPOS_CONSENTIMIENTO], ['avisos', 'comercial', 'lds_art19'])
 })
 
-test('se registran lds_art19 y comercial; `avisos` sigue sin casilla en ninguna pantalla', () => {
+test('se registran lds_art19, comercial y avisos (este último desde el 13/10/2026, con su pantalla)', () => {
   // Guardián de una decisión, no de una implementación: escribir `avisos` sin
-  // que la persona lo haya marcado es fabricar una prueba. `comercial` entró
-  // el 19/09/2026 CON su casilla (`ConsentimientoComercial.tsx`).
-  assert.deepEqual([...TIPOS_QUE_SE_REGISTRAN], ['lds_art19', 'comercial'])
+  // que la persona lo haya visto es fabricar una prueba. `comercial` entró
+  // el 19/09/2026 CON su casilla (`ConsentimientoComercial.tsx`); `avisos`, con
+  // la bienvenida y «Configuración» (cepo en `test/regression-portal-configuracion-avisos.test.ts`).
+  assert.deepEqual([...TIPOS_QUE_SE_REGISTRAN], ['lds_art19', 'comercial', 'avisos'])
+})
+
+test('el texto de avisos dice qué se autoriza y cómo retirarlo, y tiene versión', () => {
+  assert.deepEqual(revisarCopy(TEXTO_CONSENTIMIENTO_AVISOS), [])
+  assert.match(VERSION_TEXTO_AVISOS, /^\d{4}-\d{2}-a\d+$/)
+  assert.match(TEXTO_CONSENTIMIENTO_AVISOS, /desactivar/i)
+  assert.match(TEXTO_CONSENTIMIENTO_AVISOS, /Grupo ASegura/)
 })
 
 test('el texto de la casilla comercial no promete precio ni acota ámbito, y tiene versión', () => {

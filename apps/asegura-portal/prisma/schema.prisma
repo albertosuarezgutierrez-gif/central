@@ -109,6 +109,7 @@ model PortalIdentidad {
   avisosCima        PortalAvisoCima[]
   avisosSilenciados PortalAvisoSilenciado[]
   avisosLeidos      PortalAvisoLeido[]
+  preferenciasAvisos PortalPreferenciasAvisos?
   historialDeclaradas PortalPolizaDeclaradaHistorial[]
 
   @@map("portal_identidad")
@@ -415,6 +416,26 @@ model PortalAvisoSilenciado {
 
   @@id([identidadId, tipo])
   @@map("portal_aviso_silenciado")
+  @@schema("seguros")
+}
+
+/// Preferencias de avisos de «Configuración» (13/10/2026): canal, antelación, «no molestar» y el
+/// «Ahora no» de la bienvenida. Una fila por identidad, solo si tocó algo. 🚨 NULL = no configurado
+/// (manda lo de antes), nunca «no quiere». Reglas: `module-seguros-portal/src/preferencias-avisos.ts`.
+/// DDL: `prisma/sql/2026-10-13_configuracion_avisos.sql` (SELECT, INSERT, UPDATE; sin DELETE).
+model PortalPreferenciasAvisos {
+  identidadId              String    @id @map("identidad_id") @db.Uuid
+  canal                    String?
+  diasAntelacion           Int?      @map("dias_antelacion") @db.SmallInt
+  noMolestarDesde          Int?      @map("no_molestar_desde") @db.SmallInt
+  noMolestarHasta          Int?      @map("no_molestar_hasta") @db.SmallInt
+  bienvenidaPospuestaEn    DateTime? @map("bienvenida_pospuesta_en") @db.Timestamptz(6)
+  bienvenidaPospuestaVista String?   @map("bienvenida_pospuesta_vista")
+  actualizadoEn            DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@map("portal_preferencias_avisos")
   @@schema("seguros")
 }
 

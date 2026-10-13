@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { TEXTO_CAPTACION } from '@/lib/captacion-declarada'
 import { fechaEs } from '@/lib/fechas'
 
 import { EliminarPoliza } from './EliminarPoliza'
@@ -31,6 +32,7 @@ export function FilaDeclarada({
   avisoPartes,
   deOtro = false,
   sinEnlace = false,
+  captacion = false,
 }: {
   p: {
     id: string
@@ -54,6 +56,8 @@ export function FilaDeclarada({
   deOtro?: boolean
   /** Sin acceso a la ficha entera (p. ej. alcance `ver`): la fila se pinta, sin enlace. */
   sinEnlace?: boolean
+  /** Chip discreto «Ponla al día con Grupo ASegura» (solo propias; lo decide `estadoCaptacion` en el padre). */
+  captacion?: boolean
 }) {
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
@@ -75,6 +79,7 @@ export function FilaDeclarada({
               Importa porque lo leído de un PDF puede estar mal y esta pantalla
               es donde se corrige. */}
           {p.deDocumento && <span className="chip">{deOtro ? 'Leída de su PDF' : 'Leída de tu PDF'}</span>}
+          {captacion && !deOtro && <span className="chip">{TEXTO_CAPTACION.chip}</span>}
         </span>
       </span>
     </>

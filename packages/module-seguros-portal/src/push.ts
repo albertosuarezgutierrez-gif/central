@@ -6,9 +6,10 @@
 import { entraEnVentana } from './obligacion.ts'
 import { TIPOS_RECORDATORIO_PROPIO } from './recordatorio-libre.ts'
 
-export function debeAvisarPush(o: { fechaAccionable: Date; avisadaPushAt: Date | null }, hoy: Date): boolean {
+/** `dias`: la antelación elegida por la persona (sin él, `DIAS_VENTANA_AVISO`). */
+export function debeAvisarPush(o: { fechaAccionable: Date; avisadaPushAt: Date | null }, hoy: Date, dias?: number): boolean {
   if (o.avisadaPushAt !== null) return false
-  return entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy })
+  return entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy, dias })
 }
 
 /**

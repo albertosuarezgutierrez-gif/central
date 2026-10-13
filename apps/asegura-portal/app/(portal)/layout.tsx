@@ -3,6 +3,7 @@ import { MEDIADOR, telefonoLegible, whatsappUrl } from '@central/module-seguros'
 
 import { NavPortal } from './NavPortal'
 import { BandaCorredor } from './BandaCorredor'
+import { BienvenidaAvisos } from './BienvenidaAvisos'
 import { SALUDO_CLIENTE } from '../WhatsappFlotante'
 
 /**
@@ -33,6 +34,9 @@ export default async function PortalLayout({ children }: { children: React.React
         />
       </Suspense>
       <main className="portal-contenido">
+        {/* «¿Te avisamos…?» (13/10/2026): se decide en el navegador (permiso y suscripción son de
+            ESTE dispositivo) con el «Ahora no» guardado en la BD. Ver `BienvenidaAvisos.tsx`. */}
+        <BienvenidaAvisos />
         {children}
       </main>
     </div>
