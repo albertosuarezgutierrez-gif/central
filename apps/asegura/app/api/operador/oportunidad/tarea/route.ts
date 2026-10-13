@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { cerrarTarea, crearTarea } from '@/lib/oportunidad-seguimiento'
+import { cerrarTareaSuelta, posponerTareaSuelta } from '@/lib/tarea-suelta'
 import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,11 @@ export const dynamic = 'force-dynamic'
 /**
  * Tareas de seguimiento de una oportunidad (tabla heredada `gestiones`).
  *   POST  { oportunidadId, tipo, fechaLimite, observaciones, prioridad?, actor } → crea
- *   PATCH { tareaId, resultado?, actor }                                        → cierra
+ *   PATCH { tareaId, resultado?, actor }                                        → cierra (de una oportunidad)
+ *   PATCH { tareaId, suelta: true, accion: 'hecho', resultado?, actor }         → cierra una tarea SUELTA (sin oportunidad)
+ *   PATCH { tareaId, suelta: true, accion: 'posponer', dias, actor }            → su fecha límite pasa a hoy + dias (1-365)
+ * Las sueltas (`lib/tarea-suelta.ts`): 409 si la tarea cuelga de una oportunidad o es un hito del recibo
+ * devuelto (art. 15 LCS); la vía sin `suelta` sigue exigiendo oportunidad.
  * Sin fecha límite no hay tarea: una tarea sin fecha es una nota que nadie vuelve a mirar.
  */
 export const POST = auditado(async (req: Request) => {
@@ -25,6 +30,11 @@ export const PATCH = auditado(async (req: Request) => {
   return escribir(req, async (correduriaId, b) => {
     if (typeof b.tareaId !== 'string') return { ok: false, estado: 'invalido', motivo: 'falta tareaId', status: 422 }
     const resultado = typeof b.resultado === 'string' && b.resultado.trim() !== '' ? b.resultado.trim().slice(0, 500) : null
+    if (b.suelta === true) {
+      if (b.accion === 'posponer') return posponerTareaSuelta(correduriaId, b.tareaId, b.dias, actorDe(b))
+      if (b.accion === 'hecho') return cerrarTareaSuelta(correduriaId, b.tareaId, resultado, actorDe(b))
+      return { ok: false, estado: 'invalido', motivo: "accion de tarea suelta: 'hecho' o 'posponer'", status: 422 }
+    }
     return cerrarTarea(correduriaId, b.tareaId, resultado, actorDe(b))
   })
 })

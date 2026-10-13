@@ -30,6 +30,15 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { fugasPendientes, type FugaNueva } from './eventos-cartera'
+import { contactosDe } from './cartera-busqueda'
+import { contactoDeFila, type ContactoFila } from './expedientes-contacto'
+
+/**
+ * Teléfono/email del cliente de la fila, para llamar · WhatsApp · correo desde Mi mesa (contrato en
+ * `expedientes-contacto.ts`). `null` = no se pudo leer o la fila no cuelga de ninguna ficha; un campo
+ * `null` = no consta o no se descifra. Nunca «no tiene» sin más.
+ */
+export type { ContactoFila }
 
 export type ReciboRescate = {
   reciboId: string
@@ -72,6 +81,7 @@ export type Expediente = {
    * el recibo no se ha podido localizar (no «no hay recibo»).
    */
   rescate: { tipo: 'recibo' | 'anulacion'; recibo: ReciboRescate | null } | null
+  contacto: ContactoFila | null
 }
 
 /**
@@ -92,6 +102,7 @@ export type TareaSuelta = {
   /** Fecha límite (Madrid, aaaa-mm-dd). `null` = sin fecha. */
   fecha: string | null
   origen: string | null
+  contacto: ContactoFila | null
 }
 
 /**
@@ -101,7 +112,7 @@ export type TareaSuelta = {
  * que puede divergir, y «¿es un rescate?» es precisamente lo que decide la revisión. La que ya tiene un
  * expediente abierto en su póliza (la retención que abre CIMA, p. ej.) no se repite: se CUENTA.
  */
-export type PerdidaPorRevisar = FugaNueva
+export type PerdidaPorRevisar = FugaNueva & { contacto: ContactoFila | null }
 
 export type Expedientes = {
   hoy: string
@@ -250,17 +261,30 @@ export async function expedientesDeTrabajo(
       notas: f.notas,
       creada: f.creada.toISOString(),
       rescate,
+      contacto: null,
     })
   }
   const [tareasSueltas, perdidas] = await Promise.all([
     tareasSueltasDe(correduriaId),
     perdidasPorRevisarDe(correduriaId),
   ])
+  // El contacto de las TRES partes en una sola lectura, con el lector único de N fichas (descifra campo a
+  // campo: una ficha ilegible no arrastra a las demás). Si falla entero, todas las filas llevan
+  // `contacto: null` («no se pudo leer») y la lista sale igual.
+  const ids = [...new Set([
+    ...expedientes.map((e) => e.clienteId),
+    ...(tareasSueltas.filas ?? []).map((t) => t.clienteId),
+    ...(perdidas?.filas ?? []).map((p) => p.clienteId),
+  ].filter((id): id is string => typeof id === 'string' && id !== ''))]
+  const contactos = ids.length === 0 ? new Map() : await contactosDe(correduriaId, ids).catch(() => null)
+  const conContacto = <T extends { clienteId: string | null }>(f: T): T & { contacto: ContactoFila | null } =>
+    ({ ...f, contacto: contactoDeFila(contactos, f.clienteId) })
   return {
-    hoy: hoyIso, expedientes, recuento, truncado: filas.length > TECHO, descartadas,
-    tareasSueltas: tareasSueltas.filas,
+    hoy: hoyIso, recuento, truncado: filas.length > TECHO, descartadas,
+    expedientes: expedientes.map(conContacto),
+    tareasSueltas: tareasSueltas.filas?.map(conContacto) ?? null,
     tareasSueltasTruncado: tareasSueltas.truncado,
-    perdidasPorRevisar: perdidas?.filas ?? null,
+    perdidasPorRevisar: perdidas?.filas.map(conContacto) ?? null,
     perdidasConExpediente: perdidas?.conExpediente ?? null,
   }
 }
@@ -268,9 +292,9 @@ export async function expedientesDeTrabajo(
 const TECHO_SUELTAS = 200
 
 /** Tareas abiertas sin oportunidad. Un fallo de lectura devuelve `null` (se dice), nunca `[]`. */
-async function tareasSueltasDe(correduriaId: string): Promise<{ filas: TareaSuelta[] | null; truncado: boolean }> {
+async function tareasSueltasDe(correduriaId: string): Promise<{ filas: Omit<TareaSuelta, 'contacto'>[] | null; truncado: boolean }> {
   try {
-    const filas = await prismaAsegura().$queryRaw<(TareaSuelta & { texto: string | null })[]>(Prisma.sql`
+    const filas = await prismaAsegura().$queryRaw<(Omit<TareaSuelta, 'contacto' | 'texto'> & { texto: string | null })[]>(Prisma.sql`
       select g.id::text as "tareaId", c.id::text as "clienteId",
              nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
              g.poliza_id::text as "polizaId", g.siniestro_id::text as "siniestroId",
@@ -289,7 +313,7 @@ async function tareasSueltasDe(correduriaId: string): Promise<{ filas: TareaSuel
 }
 
 /** Pérdidas pendientes de revisar, sin las que ya tienen expediente abierto en su póliza. `null` = no se leyó. */
-async function perdidasPorRevisarDe(correduriaId: string): Promise<{ filas: PerdidaPorRevisar[]; conExpediente: number } | null> {
+async function perdidasPorRevisarDe(correduriaId: string): Promise<{ filas: FugaNueva[]; conExpediente: number } | null> {
   const fugas = await fugasPendientes(correduriaId)
   if (fugas === null) return null
   if (fugas.length === 0) return { filas: [], conExpediente: 0 }

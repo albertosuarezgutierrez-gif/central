@@ -15,6 +15,14 @@ import {
   type EstadoVisible,
 } from '@central/module-seguros'
 
+/**
+ * Teléfono/email del cliente de la fila (lo descifra asegura con su lector único `contactosDe`), para
+ * llamar · WhatsApp · correo. `null` = no se pudo leer, la fila no cuelga de ninguna ficha, o asegura
+ * todavía no lo manda. Un campo `null` = no consta o no se descifra: la pantalla no pinta el icono, NUNCA
+ * dice «no tiene teléfono» (es el contacto del titular, sin caer a los intervinientes de sus pólizas).
+ */
+export type ContactoFila = { telefono: string | null; email: string | null }
+
 export type ReciboRescate = {
   reciboId: string
   idRecibo: string | null
@@ -46,6 +54,7 @@ export type Expediente = {
   creada: string
   /** Solo en un rescate; `recibo: null` = no se ha podido localizar el recibo (no «no hay»). */
   rescate: { tipo: 'recibo' | 'anulacion'; recibo: ReciboRescate | null } | null
+  contacto: ContactoFila | null
 }
 
 /** Tarea abierta SIN oportunidad (no es expediente, pero no puede perderse). Se cierra por su `tareaId`. */
@@ -60,6 +69,7 @@ export type TareaSuelta = {
   texto: string
   fecha: string | null
   origen: string | null
+  contacto: ContactoFila | null
 }
 
 /** Pérdida de cartera por revisar (fila sin expediente; se resuelve con `PATCH /api/correduria/fugas`). */
@@ -76,6 +86,7 @@ export type PerdidaPorRevisar = {
   anulacion: string | null
   ultimoRecibo: string | null
   nota: string | null
+  contacto: ContactoFila | null
 }
 
 export type Expedientes =
@@ -110,6 +121,12 @@ function importe(v: unknown): number | null {
 }
 function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
+}
+
+/** Sin objeto = «no se sabe» (`null`), nunca `{ telefono: null, email: null }` («se miró y no consta»). */
+function contacto(v: unknown): ContactoFila | null {
+  const c = objeto(v)
+  return c ? { telefono: texto(c.telefono), email: texto(c.email) } : null
 }
 
 const VISIBLES_ABIERTOS = ESTADOS_VISIBLES.filter((e): e is Expediente['estadoVisible'] => e !== 'ganada' && e !== 'perdida')
@@ -163,6 +180,7 @@ function fila(v: unknown): Expediente | null {
     notas: texto(r.notas),
     creada,
     rescate: tipoRescate ? { tipo: tipoRescate, recibo: recibo(resc?.recibo) } : null,
+    contacto: contacto(r.contacto),
   }
 }
 
@@ -176,6 +194,7 @@ function tareaSuelta(v: unknown): TareaSuelta | null {
     tareaId, tipo, estado,
     clienteId: texto(r.clienteId), cliente: texto(r.cliente), polizaId: texto(r.polizaId), siniestroId: texto(r.siniestroId),
     texto: typeof r.texto === 'string' ? r.texto : '', fecha: texto(r.fecha), origen: texto(r.origen),
+    contacto: contacto(r.contacto),
   }
 }
 
@@ -189,6 +208,7 @@ function perdida(v: unknown): PerdidaPorRevisar | null {
     id, tipo, clienteId, titulo: texto(r.titulo) ?? tipo,
     cliente: texto(r.cliente), polizaId: texto(r.polizaId), polizaNumero: texto(r.polizaNumero), aseguradora: texto(r.aseguradora),
     motivo: texto(r.motivo), anulacion: texto(r.anulacion), ultimoRecibo: texto(r.ultimoRecibo), nota: texto(r.nota),
+    contacto: contacto(r.contacto),
   }
 }
 

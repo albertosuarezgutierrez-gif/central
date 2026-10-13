@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible, ramoInicialValido, ramosConOfertas, urlOportunidadNueva } from './seguimiento-asegura.ts'
+import { colaLlamadas, diasSinRespuesta, guionLlamada, tramoLead, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible, ramoInicialValido, ramosConOfertas, urlOportunidadNueva, cuerpoTareaSuelta } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -296,4 +296,13 @@ test('urlOportunidadNueva: con ramo lo preselecciona; «Otro ramo» (sin ramo) n
   assert.equal(urlOportunidadNueva('c1', 'viaje'), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva&ramo=viaje')
   assert.equal(urlOportunidadNueva('c1'), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva')
   assert.equal(urlOportunidadNueva('c1', null), '/correduria/cliente/c1?tab=oportunidades&oportunidad=nueva')
+})
+
+test('🪤 tarea suelta: solo pasan los campos del puerto, con suelta:true y el actor de la SESIÓN', () => {
+  assert.deepEqual(cuerpoTareaSuelta({ tareaId: ' t1 ', accion: 'hecho', resultado: ' llamado ', actor: 'hacker', correduriaId: 'otra' }, 'alberto@x'),
+    { tareaId: 't1', suelta: true, accion: 'hecho', resultado: 'llamado', actor: 'alberto@x' })
+  assert.deepEqual(cuerpoTareaSuelta({ tareaId: 't1', accion: 'posponer', dias: 7 }, 'a'), { tareaId: 't1', suelta: true, accion: 'posponer', dias: 7, actor: 'a' })
+  assert.equal(cuerpoTareaSuelta({ tareaId: 't1', accion: 'posponer' }, 'a'), null, 'posponer sin días')
+  assert.equal(cuerpoTareaSuelta({ tareaId: 't1', accion: 'borrar' }, 'a'), null)
+  assert.equal(cuerpoTareaSuelta({ accion: 'hecho' }, 'a'), null)
 })

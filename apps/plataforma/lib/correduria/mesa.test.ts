@@ -10,7 +10,7 @@ const exp = (o: Partial<Expediente> = {}): Expediente => ({
   id: 'e1', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', clase: 'venta_nueva', estadoVisible: 'abierta', estado: 'en_negociacion',
   delVolcado: false, aparcadaHasta: null, aparcadaMotivo: null,
   proximaAccion: { tareaId: 't1', texto: 'Llamar', tipo: 'llamada', fecha: '2026-10-20' },
-  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, ...o,
+  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, ...o,
 })
 const con = (p: Partial<NonNullable<Expediente['proximaAccion']>> | null): Partial<Expediente> =>
   ({ proximaAccion: p === null ? null : { tareaId: 't', texto: '', tipo: 'llamada', fecha: '2026-10-20', ...p } })
@@ -86,11 +86,11 @@ test('fechas: relativo, corta y atajos de aparcar', () => {
 
 const suelta = (o: Partial<TareaSuelta> = {}): TareaSuelta => ({
   tareaId: 't1', clienteId: 'c1', cliente: 'Ana', polizaId: null, siniestroId: null, tipo: 'llamada', estado: 'pendiente',
-  texto: 'Llamar', fecha: '2026-10-13', origen: null, ...o,
+  texto: 'Llamar', fecha: '2026-10-13', origen: null, contacto: null, ...o,
 })
 const perdida = (o: Partial<PerdidaPorRevisar> = {}): PerdidaPorRevisar => ({
   id: 'p1', tipo: 'baja', titulo: 'Baja', clienteId: 'c1', cliente: 'Ana', polizaId: 'z1', polizaNumero: '1', aseguradora: null,
-  motivo: null, anulacion: null, ultimoRecibo: null, nota: null, ...o,
+  motivo: null, anulacion: null, ultimoRecibo: null, nota: null, contacto: null, ...o,
 })
 type Ok = Extract<Expedientes, { estado: 'ok' }>
 const datos = (o: Partial<Ok> = {}): Ok => ({
