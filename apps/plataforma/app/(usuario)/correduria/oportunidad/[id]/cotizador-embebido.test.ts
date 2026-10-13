@@ -84,23 +84,25 @@ test('bloqueo: editar arriba manda; luego relectura; luego desfase; sin nada, nu
   assert.match(motivoBloqueoCotizador({ ...nada, pantallaDesfasada: true })!, /no coincide/)
 })
 
-test('registro: auto, moto y hogar se cotizan DENTRO de la oportunidad; el resto de ramos sigue con su pantalla', () => {
-  assert.deepEqual([...RAMOS_COTIZADOR_EMBEBIDO].sort(), ['auto', 'hogar', 'moto'])
+test('registro: auto, moto, hogar y decesos se cotizan DENTRO de la oportunidad; el resto de ramos sigue con su pantalla', () => {
+  assert.deepEqual([...RAMOS_COTIZADOR_EMBEBIDO].sort(), ['auto', 'decesos', 'hogar', 'moto'])
   for (const r of RAMOS_COTIZADOR_EMBEBIDO) assert.ok((RAMOS_VARIANTE as readonly string[]).includes(r), `${r} tiene que ser un ramo cotizable`)
-  for (const r of ['vida', 'salud', 'decesos', 'comunidades', 'otros', '', null, undefined]) assert.equal(ramoCotizadorEmbebido(r), null, String(r))
+  for (const r of ['vida', 'salud', 'comunidades', 'otros', '', null, undefined]) assert.equal(ramoCotizadorEmbebido(r), null, String(r))
 })
 
 test('rutaPedirPrecio: auto, moto y hogar → la oportunidad con #pedir-precio; vida… → su pantalla …-nuevo?oportunidad=', () => {
   assert.equal(rutaPedirPrecio('auto', 'c1', 'op 1'), '/correduria/oportunidad/op%201#pedir-precio')
   assert.equal(rutaPedirPrecio('moto', 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio')
   assert.equal(rutaPedirPrecio('hogar', 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio')
-  for (const r of ['vida', 'salud', 'decesos'] as const) assert.equal(rutaPedirPrecio(r, 'c1', 'op1'), rutaVariante(r, 'c1', 'op1'), r)
+  assert.equal(rutaPedirPrecio('decesos', 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio')
+  for (const r of ['vida', 'salud'] as const) assert.equal(rutaPedirPrecio(r, 'c1', 'op1'), rutaVariante(r, 'c1', 'op1'), r)
 })
 
 test('abrirAlCargar: solo con el ancla exacta y un ramo con cotizador embebido', () => {
   assert.equal(abrirAlCargar('#pedir-precio', 'auto'), true)
   assert.equal(abrirAlCargar('#pedir-precio', 'moto'), true)
   assert.equal(abrirAlCargar('#pedir-precio', 'hogar'), true)
+  assert.equal(abrirAlCargar('#pedir-precio', 'decesos'), true)
   assert.equal(abrirAlCargar('#pedir-precio', 'vida'), false)
   assert.equal(abrirAlCargar('', 'auto'), false)
   assert.equal(abrirAlCargar('#presupuestos', 'auto'), false)

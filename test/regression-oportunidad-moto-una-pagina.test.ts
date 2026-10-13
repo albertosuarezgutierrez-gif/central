@@ -23,6 +23,7 @@ const OP = CORR + 'oportunidad/[id]/'
 const MOTO = CORR + 'cliente/[id]/moto-nuevo/'
 const AUTO = CORR + 'cliente/[id]/auto-nuevo/'
 const HOGAR = CORR + 'cliente/[id]/hogar-nuevo/'
+const DECESOS = CORR + 'cliente/[id]/decesos-nuevo/'
 const leer = (f: string) => readFileSync(join(ROOT, f), 'utf8')
 const activas = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
 
@@ -47,10 +48,10 @@ test('🪤 RiesgoPantalla: con cotizador embebido el principal es un BOTÓN que 
   assert.match(r, /if \(acciones\.principal && abrirAlCargar\(window\.location\.hash, op\.ramo\)\) setCotizadorAbierto\(true\)/)
 })
 
-test('🪤 registro: moto, auto y hogar dados de alta, y el tipo obliga a registrar cada ramo de la lista', () => {
+test('🪤 registro: moto, auto, hogar y decesos dados de alta, y el tipo obliga a registrar cada ramo de la lista', () => {
   const c = activas(leer(OP + 'cotizadores-embebidos.tsx'))
-  assert.match(c, /COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = \{\s*auto: PedirPrecioAuto,\s*moto: PedirPrecioMoto,\s*hogar: PedirPrecioHogar,\s*\}/)
-  assert.match(c, /PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<PropsPreciosVariante>> = \{\s*auto: PreciosVarianteAuto,\s*moto: PreciosVarianteMoto,\s*hogar: PreciosVarianteHogar,\s*\}/)
+  assert.match(c, /COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = \{\s*auto: PedirPrecioAuto,\s*moto: PedirPrecioMoto,\s*hogar: PedirPrecioHogar,\s*decesos: PedirPrecioDecesos,\s*\}/)
+  assert.match(c, /PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<PropsPreciosVariante>> = \{\s*auto: PreciosVarianteAuto,\s*moto: PreciosVarianteMoto,\s*hogar: PreciosVarianteHogar,\s*decesos: PreciosVarianteDecesos,\s*\}/)
 })
 
 test('🪤 la carcasa común (PedirPrecioEmbebido): bloqueo, relectura y una instancia nueva por lectura del riesgo', () => {
@@ -81,7 +82,7 @@ for (const [fichero, cotizador, accion] of [
   })
 }
 
-for (const [dir, Ramo, ramo] of [[MOTO, 'Moto', 'moto'], [AUTO, 'Auto', 'auto'], [HOGAR, 'Hogar', 'hogar']] as const) {
+for (const [dir, Ramo, ramo] of [[MOTO, 'Moto', 'moto'], [AUTO, 'Auto', 'auto'], [HOGAR, 'Hogar', 'hogar'], [DECESOS, 'Decesos', 'decesos']] as const) {
 test(`🪤 la acción que abre el bloque exige acceso a la correduría y que el riesgo sea de ${ramo}`, () => {
   const a = activas(leer(dir + 'acciones.ts'))
   const f = a.slice(a.indexOf(`export async function abrirCotizador${Ramo}DeOportunidad`))

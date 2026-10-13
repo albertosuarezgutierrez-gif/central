@@ -125,3 +125,29 @@ test('piezas de pantalla: última variante por fecha, % con signo y coma, rótul
   assert.equal(esRamoAvant2('auto'), true)
   assert.equal(esRamoAvant2('comunidades'), false)
 })
+
+test('decesos (13/10/2026): Avant2 sí, sin bot → filas «solo Avant2»; sin código DGS, fila propia (nunca fundida ni inventada)', () => {
+  assert.equal(esRamoAvant2('decesos'), true)
+  const p = construirParrilla(
+    avant2([
+      { compania: 'Allianz', primaEur: 210.5, meses: 12 },
+      { compania: 'Fiatc', primaEur: 180, meses: 12 },
+      { compania: 'Fiatc', primaEur: 195, meses: 12 },
+      { compania: 'Preventiva', primaEur: null, meses: 12 },
+    ]),
+    { estado: 'no_aplica' },
+  )
+  assert.equal(p.vacia, false)
+  const fila = (n: string) => p.filas.find((f) => f.nombre === n)!
+  assert.equal(fila('Allianz').veredicto.tipo, 'solo_avant2')
+  assert.equal(fila('Allianz').bot.estado, 'sin_bot')
+  const fiatc = fila('Fiatc')
+  assert.equal(fiatc.codigoDgs, null)
+  assert.equal(fiatc.avant2.estado === 'precio' && fiatc.avant2.prima, 180, 'la más barata de la compañía')
+  assert.equal(fila('Preventiva').avant2.estado, 'sin_precio', 'sin importe ≠ 0 €')
+  assert.deepEqual([...p.sinIdentificar].sort(), ['Fiatc', 'Preventiva'])
+  // Sin ninguna tarificación aún: la parrilla se pinta («aún no hay precios»), no desaparece ni dice 0.
+  const nada = construirParrilla({ estado: 'ninguna' }, { estado: 'no_aplica' })
+  assert.equal(nada.vacia, false)
+  assert.deepEqual(nada.filas, [])
+})

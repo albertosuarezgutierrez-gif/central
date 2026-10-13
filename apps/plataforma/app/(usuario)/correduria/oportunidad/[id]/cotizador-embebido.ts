@@ -1,4 +1,4 @@
-// Reglas PURAS del cotizador EMBEBIDO en la oportunidad (07/10/2026 moto, 10/10/2026 auto y hogar; Fase 1 «la
+// Reglas PURAS del cotizador EMBEBIDO en la oportunidad (07/10/2026 moto, 10/10/2026 auto y hogar, 13/10/2026 decesos; Fase 1 «la
 // oportunidad es la única página»). El cotizador lee el objeto (vehículo o vivienda) y las figuras del RIESGO; si eso
 // cambia mientras está abierto, lo que tiene en memoria es el riesgo ANTERIOR y pagar 0,50€ con él sería cotizar otro
 // vehículo, otra casa u otras personas.
@@ -13,7 +13,7 @@ import type { Riesgo } from '@/lib/riesgo-asegura'
 import { ramoVariante, rutaVariante, type RamoVarianteNuevo } from './variante.ts'
 
 /** Los ramos con cotizador embebido en el bloque «Pedir precio» del riesgo. Añadir uno = alta en `COTIZADOR_EMBEBIDO`. */
-export const RAMOS_COTIZADOR_EMBEBIDO = ['auto', 'moto', 'hogar'] as const satisfies readonly RamoVarianteNuevo[]
+export const RAMOS_COTIZADOR_EMBEBIDO = ['auto', 'moto', 'hogar', 'decesos'] as const satisfies readonly RamoVarianteNuevo[]
 export type RamoCotizadorEmbebido = (typeof RAMOS_COTIZADOR_EMBEBIDO)[number]
 
 export function ramoCotizadorEmbebido(ramo: string | null | undefined): RamoCotizadorEmbebido | null {
@@ -73,6 +73,7 @@ export const firmaRiesgoMoto = firmaRiesgo
 /** El nombre del bloque del objeto del riesgo en la pantalla, para decir qué hay a medias arriba. */
 export function bloqueObjetoDeRamo(ramo: string): string {
   return ramo === 'auto' || ramo === 'moto' ? 'Datos del vehículo' : ramo === 'hogar' ? 'Datos de la vivienda' : 'Datos del riesgo'
+  // Decesos (13/10/2026): su bloque se titula «Datos del riesgo» (`DatosCapital`); sus personas, en «Intervinientes».
 }
 
 /**

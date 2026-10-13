@@ -23,6 +23,7 @@ import type { DatosEmpresa, DatosPersona } from '@/lib/codeoscopic/persona'
 import { resolverConfig } from '@/lib/codeoscopic/config'
 import { municipiosPorCp, tiposDeVia } from '@/lib/codeoscopic/catalogos'
 import { partirDireccion, tipoViaDeFicha } from '@/lib/codeoscopic/direccion'
+import { aseguradoDeFicha, faltanDeAseguradoFicha, MAX_ADICIONALES_CORDURA, motivoFechaNacimientoImposible, type AseguradoAdicional as AseguradoParaCotizar } from '@/lib/codeoscopic/asegurados'
 import { anotarCambio } from '@/lib/auditoria'
 import {
   admiteDatosVehiculo,
@@ -323,6 +324,12 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       (op.tipo === 'auto' || op.tipo === 'moto') &&
       (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || (f.rol === 'tomador' && !hayConductor))
     f.empresa = p !== null && p.tipo === 'juridica'
+    // Asegurado de DECESOS (13/10/2026): viaja como `NaturalPerson_V1` (nombre, apellidos, nacimiento, sexo y, opcional,
+    // DNI). Lo que le falta es lo de Avant2 para un asegurado, no lo de un tomador (ni teléfono ni estado civil).
+    if (f.rol === 'asegurado' && op.tipo === 'decesos') {
+      f.faltan = p === null ? null : p.tipo === 'juridica' ? ['empresa_no_asegurada'] : faltanDeAseguradoFicha(p)
+      continue
+    }
     if (conduce) {
       const fecha = p !== null && 'fechaCarnet' in p && typeof p.fechaCarnet === 'string' && p.fechaCarnet.trim() !== '' ? p.fechaCarnet.trim() : null
       carnetPorRol.set(f.rol, { fecha, legible: p !== null })
@@ -869,6 +876,12 @@ export type VarianteEntrada = {
   contexto: { oportunidadId: string; figuras: FigurasVariante | null; nota: string | null } | null
   /** Correcciones con las figuras rellenas desde SUS fichas (lo tecleado por el corredor manda encima). */
   correcciones: Record<string, unknown> | undefined
+  /**
+   * DECESOS embebido (13/10/2026, `aseguradosDeFiguras: true`): los asegurados además del tomador, armados desde las
+   * FICHAS de las figuras `asegurado` del riesgo (`risk.insureds[1..]`). Ausente = la pantalla no lo pidió (camino de
+   * siempre: los teclea el corredor). `[]` = el riesgo no tiene ninguno: solo el tomador.
+   */
+  asegurados?: AseguradoParaCotizar[]
 }
 
 /**
@@ -882,6 +895,14 @@ export async function prepararVariante(
   e: { tomadorId: string; ramo: 'auto' | 'moto' | 'hogar' | 'vida' | 'salud' | 'decesos'; cuerpo: Record<string, unknown>; correcciones: Record<string, unknown> | undefined },
 ): Promise<{ ok: true; v: VarianteEntrada } | { ok: false; motivo: string }> {
   const oportunidadId = typeof e.cuerpo.oportunidadId === 'string' ? e.cuerpo.oportunidadId.trim() : ''
+  const deFiguras = e.cuerpo.aseguradosDeFiguras === true
+  // Asegurados desde las figuras: solo en decesos y solo de UN riesgo. Sin riesgo no se sabe de quién leerlos.
+  if (deFiguras && e.ramo !== 'decesos') return { ok: false, motivo: `los asegurados desde las figuras solo existen en decesos, no en ${e.ramo}` }
+  if (deFiguras && oportunidadId === '') return { ok: false, motivo: 'para leer los asegurados de las figuras hace falta la oportunidad' }
+  // `correcciones` pisa los datos (`{ ...pre.datos, ...correcciones }`): una lista tecleada ahí sustituiría a las fichas.
+  if (deFiguras && e.correcciones !== undefined && 'aseguradosAdicionales' in e.correcciones) {
+    return { ok: false, motivo: 'con los asegurados de las figuras no se manda otra lista de asegurados: se cambian en «Intervinientes»' }
+  }
   if (oportunidadId === '') return { ok: true, v: { contexto: null, correcciones: e.correcciones } }
   // Fuera de auto/moto el riesgo solo tiene tomador (`rolesDelRamo`): un rol de más en el cuerpo no se cuela.
   const figuras = limpiarFigurasEntrada(e.cuerpo.figuras, e.tomadorId, !admiteDatosVehiculo(e.ramo))
@@ -930,7 +951,62 @@ export async function prepararVariante(
       if (e.ramo === 'moto' && clave === 'conductor' && c.fechaCarnet && !c.tipoCarnet) c.tipoCarnet = 'B'
     }
   }
+  if (deFiguras) {
+    const aseg = await aseguradosDeFigurasParaCotizar(correduriaId, { oportunidadId, tomadorId: e.tomadorId })
+    if (!aseg.ok) return aseg
+    return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones, asegurados: aseg.asegurados } }
+  }
   return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones } }
+}
+
+/**
+ * Los asegurados de un riesgo de DECESOS (rol `asegurado`), armados desde SUS fichas para `risk.insureds[1..]`
+ * (13/10/2026). Gratis. Acotado a la correduría. El tomador no se repite (ya es `insureds[0]`). Una ficha que no se
+ * puede leer, o una empresa, CORTA antes de pagar: nunca se cotiza con menos personas de las que hay en el riesgo.
+ * Lo que falte en una ficha (nombre, apellidos, nacimiento, sexo…) no corta aquí: lo dice `revisarDatosDecesos`
+ * como dato que falta (gratis), igual que con el tomador.
+ */
+export async function aseguradosDeFigurasParaCotizar(
+  correduriaId: string,
+  e: { oportunidadId: string; tomadorId: string },
+): Promise<{ ok: true; asegurados: AseguradoParaCotizar[] } | { ok: false; motivo: string }> {
+  if (!UUID.test(e.oportunidadId)) return { ok: false, motivo: 'la oportunidad no es válida' }
+  // El tomador que se cotiza tiene que ser el DEL RIESGO (figura `tomador` o, sin ella, el cliente de la oportunidad):
+  // si no, se pagaría una cotización con el tomador de un cliente y los asegurados de otra familia.
+  const [tom] = await prisma.$queryRaw<Array<{ tomador: string }>>`
+    select coalesce(
+      (select t.cliente_id::text from seguros.oportunidad_figura t
+        where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id and t.rol = 'tomador' limit 1),
+      o.cliente_id::text) as tomador
+    from seguros.oportunidades o
+    where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
+  if (!tom || tom.tomador !== e.tomadorId) return { ok: false, motivo: 'el tomador no es el de este riesgo: vuelve a abrir «Pedir precio» desde la oportunidad' }
+  const filas = await prisma.$queryRaw<Array<{ cliente_id: string; nombre: string | null; apellidos: string | null }>>`
+    select f.cliente_id::text as cliente_id, c.nombre, c.apellidos
+    from seguros.oportunidad_figura f
+    join seguros.oportunidades o on o.id = f.oportunidad_id and o.correduria_id = f.correduria_id
+    join seguros.clientes c on c.id = f.cliente_id and c.correduria_id = f.correduria_id
+    where f.oportunidad_id = ${e.oportunidadId}::uuid and f.correduria_id = ${correduriaId}::uuid
+      and f.rol = 'asegurado' and o.tipo::text = 'decesos'
+    order by f.creado_at asc, f.id asc`
+  const vistos = new Set<string>([e.tomadorId])
+  const asegurados: AseguradoParaCotizar[] = []
+  for (const f of filas) {
+    if (vistos.has(f.cliente_id)) continue
+    vistos.add(f.cliente_id)
+    const quien = nombreDe(f.nombre, f.apellidos)
+    const p = await personaDeFicha(correduriaId, f.cliente_id, 'decesos').catch(() => null)
+    if (!p) return { ok: false, motivo: `no se pudo leer la ficha del asegurado ${quien}: no se pide precio con menos personas de las del riesgo` }
+    if (p.tipo === 'juridica') return { ok: false, motivo: `${quien} es una empresa: un asegurado de decesos tiene que ser una persona. Quítalo de «Intervinientes».` }
+    const a = aseguradoDeFicha(p)
+    // Fecha imposible/futura/de >120 años: el vendor da 400 y COBRA 0,50€. Se corta aquí, gratis, con 422 (`variante`).
+    const malNac = motivoFechaNacimientoImposible(a.fechaNacimiento)
+    if (malNac) return { ok: false, motivo: `asegurado ${quien}: ${malNac}. Corrígela en su ficha («Editar datos» en «Intervinientes»).` }
+    asegurados.push(a)
+  }
+  // Nunca se recorta en silencio: pasar del tope corta antes de pagar.
+  if (asegurados.length > MAX_ADICIONALES_CORDURA) return { ok: false, motivo: `hay ${asegurados.length} asegurados además del tomador y el máximo es ${MAX_ADICIONALES_CORDURA}: quita los que sobren en «Intervinientes»` }
+  return { ok: true, asegurados }
 }
 
 /**

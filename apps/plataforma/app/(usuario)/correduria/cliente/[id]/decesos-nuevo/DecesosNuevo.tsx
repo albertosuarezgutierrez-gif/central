@@ -4,6 +4,14 @@
 // 🚧 Ver el aviso de `page.tsx`: el `risk` que se manda al vendor NO está
 // verificado. Cubre al TOMADOR y a los asegurados adicionales que se añadan
 // (`insureds[]`); la prestación de referencia es una nota que NO viaja.
+//
+// Dos modos (13/10/2026, como `CotizadorMoto`):
+//   - pantalla completa (`decesos-nuevo`, con o sin `?oportunidad=`): como siempre, asegurados tecleados aquí;
+//   - `embebido` (bloque «Pedir precio» de la oportunidad, `PedirPrecioDecesos.tsx`): las PERSONAS son las del riesgo.
+//     Los asegurados son las fichas de «Intervinientes» (los arma asegura: `aseguradosDeFiguras`), aquí se ven en
+//     resumen con «Editar arriba». Solo se pide lo de ESTA cotización que Avant2 lleva: estado civil del tomador (y lo
+//     que falte de su ficha) y la fecha de efecto. Ni capital, ni modalidad, ni forma de pago: Avant2 no los pide en
+//     decesos. «Verificación antes de pedir precio» (`verificacion-decesos.ts`): el botón de 0,50€ solo con todo en ✓.
 
 import { useRef, useState } from 'react'
 import { FlaskConical } from 'lucide-react'
@@ -21,6 +29,13 @@ import type { VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { FallosTarificacion } from '../../../FallosTarificacion'
 import AseguradosAdicionales, { aseguradoCompleto, aseguradosDeRiesgo, aseguradosParaEnviar, type AseguradoForm } from '../AseguradosAdicionales'
 import type { AseguradoAdicional } from '@central/module-seguros'
+import type { Riesgo } from '@/lib/riesgo-asegura'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
+import { verificacionCompleta } from '../auto-nuevo/verificacion-embebido'
+import { IrA, Verificacion } from '../auto-nuevo/piezas-embebido'
+import { ANCLA_DECESOS, desdeRiesgoDecesos, gruposVerificacionDecesos } from './verificacion-decesos'
+import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
+import { pedirTarificacionGuardadaDecesos } from './acciones'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -48,7 +63,8 @@ type Resultado =
       avisoSimulacion: string | null
       resumen: string
       precios: Precio[]
-      fallos: Fallo[]
+      /** `null` = variante recuperada que no guardó qué compañías fallaron (≠ ninguna). */
+      fallos: Fallo[] | null
       supuestos: Supuesto[]
       guardado: unknown
     }
@@ -66,6 +82,11 @@ export default function DecesosNuevo({
   simulacion,
   variante = null,
   inicial = null,
+  embebido = false,
+  riesgo = null,
+  bloqueo = null,
+  onCotizando,
+  onCotizado,
 }: {
   clienteId: string
   etiquetaCliente: string
@@ -79,6 +100,15 @@ export default function DecesosNuevo({
   variante?: VarianteNueva | null
   /** Lo que el riesgo ya sabe (`info_riesgo.datosCapital`): precarga; `null` = no se sabe, nunca 0. */
   inicial?: { capital: number | null; asegurados: AseguradoAdicional[] | null } | null
+  /** Montado en el bloque «Pedir precio» de la oportunidad: personas y riesgo son los de arriba (ver cabecera). */
+  embebido?: boolean
+  /** El riesgo leído al abrir el bloque (embebido): asegurados con ficha, lista tecleada e historial. */
+  riesgo?: Riesgo | null
+  /** Embebido: por qué ahora no se puede pedir precio (`motivoBloqueoCotizador`). `null` = nada lo impide. */
+  bloqueo?: string | null
+  onCotizando?: (enVuelo: boolean) => void
+  /** Embebido: la cotización quedó guardada y enlazada a la oportunidad (regla 9). */
+  onCotizado?: (tarificacionId: string) => void
 }) {
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState(inicial?.capital != null ? String(inicial.capital) : '')
@@ -101,8 +131,29 @@ export default function DecesosNuevo({
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   // Un hueco que esta pantalla no sabe resolver (p. ej. «dato que falta: weight», o person-roles ilegible) también bloquea: no se paga un 400 evitable.
-  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0 || huerfanos.length > 0 || asegurados.some((a) => !aseguradoCompleto(a))
-  const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
+  // Embebido: los asegurados tecleados no cuentan (los de Avant2 salen de las fichas del riesgo).
+  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0 || huerfanos.length > 0 || (!embebido && asegurados.some((a) => !aseguradoCompleto(a)))
+  const puedePulsar = !cotizando && !faltaAlgo && bloqueo === null && (simulacion || consumoPermite)
+  const efectoFuera = fechaEfecto !== '' && (fechaEfecto < limitesEfecto.min || fechaEfecto > limitesEfecto.max)
+
+  // ── «Verificación antes de pedir precio» (embebido, 13/10/2026) ───────────────────────────────────────────────────
+  const delRiesgo = embebido && riesgo ? desdeRiesgoDecesos(riesgo, clienteId) : null
+  const verificacion = delRiesgo
+    ? gruposVerificacionDecesos({
+        tomador: {
+          sinPrecalificar: faltanInicial === null,
+          faltaCivil,
+          aMano: aMano.map((f) => ({ campo: f.campo, etiqueta: f.campo === 'sexo' ? 'Sexo' : CAMPOS_A_MANO[f.campo]?.etiqueta ?? f.campo, relleno: (correcciones[f.campo] ?? '').trim() !== '' })),
+          enFicha: huerfanos.map((f) => ({ campo: String(f.campo), motivo: f.motivo })),
+        },
+        ...delRiesgo,
+        efecto: { vacia: fechaEfecto === '', fueraDeLimites: efectoFuera },
+        faltaAlgo: faltaAlgo || efectoFuera,
+      })
+    : []
+  const verificacionOk = verificacionCompleta(verificacion)
+  // Embebido sin riesgo leído no se paga: no se sabría a quién se asegura.
+  const puedePulsarEmb = puedePulsar && (!embebido || (delRiesgo !== null && verificacionOk))
 
   // Guarda SÍNCRONA contra el doble clic: cada consulta cuesta 0,50€ y no es idempotente. El estado de React llega
   // tarde (un segundo clic en el mismo tick ve aún `cotizando`=false); el ref no.
@@ -112,23 +163,36 @@ export default function DecesosNuevo({
     cotizandoEnVuelo.current = true
     try {
       await cotizarSinGuarda(forzar)
+    } catch {
+      // Se cortó a mitad (red, servidor): la petición pudo llegar a la compañía. Nunca se queda en «cotizando».
+      setResultado({ estado: 'error', mensaje: 'Se ha cortado la comunicación a mitad de la cotización.', gastoDesconocido: true })
     } finally {
       cotizandoEnVuelo.current = false
+      onCotizando?.(false)
     }
   }
 
   async function cotizarSinGuarda(forzar: boolean) {
+    // Embebido: con algo a medias arriba, o sin la verificación completa, no se paga (guarda también aquí, no solo el botón).
+    if (bloqueo !== null) return
+    if (embebido && !(delRiesgo !== null && verificacionOk)) return
+    onCotizando?.(true)
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionDecesos({
       forzar,
       clienteId,
-      resueltos: {
-        estadoCivilId,
-        ...(Number(capital) > 0 ? { capital: Number(capital) } : {}),
-        ...(asegurados.length > 0 ? { asegurados: aseguradosParaEnviar(asegurados) } : {}),
-      },
+      // Embebido: solo lo que Avant2 lleva y se decide aquí (estado civil). Ni capital (no viaja) ni lista tecleada:
+      // los asegurados los arma asegura desde las fichas del riesgo (`aseguradosDeFiguras`).
+      resueltos: embebido
+        ? { estadoCivilId }
+        : {
+            estadoCivilId,
+            ...(Number(capital) > 0 ? { capital: Number(capital) } : {}),
+            ...(asegurados.length > 0 ? { asegurados: aseguradosParaEnviar(asegurados) } : {}),
+          },
       correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
       variante: variante ? { oportunidadId: variante.oportunidadId, nota: null } : null,
+      aseguradosDeFiguras: embebido,
     })
     switch (r.estado) {
       case 'faltan':
@@ -162,6 +226,12 @@ export default function DecesosNuevo({
           supuestos: r.supuestos,
           guardado: r.guardado,
         })
+        // Embebido: guardada y enlazada a la oportunidad → el padre relee el riesgo y la abre en «Presupuestos de este
+        // riesgo». Sin id guardado se queda aquí, a la vista: no se pierde un precio pagado.
+        if (embebido && onCotizado) {
+          const id = cotizacionIdDe(r.guardado)
+          if (id !== null) onCotizado(id)
+        }
         return
       default: {
         const _exhaustivo: never = r
@@ -180,6 +250,20 @@ export default function DecesosNuevo({
         </div>
       )}
 
+      {embebido ? (
+        <div style={cardStyle}>
+          <CardHeader
+            title="1 · Condiciones de esta cotización"
+            sub="En decesos Avant2 solo pide las personas y la fecha de efecto: ni capital, ni modalidad, ni forma de pago (la compañía cotiza su prestación estándar). Las personas son las de «Intervinientes»."
+          />
+          <div id={ANCLA_DECESOS.efectoAqui} style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', minWidth: 0 }}>
+            <Campo etiqueta="Fecha de efecto" falta={efectoFuera} faltaTexto={efectoFuera ? 'fuera de fechas' : undefined} ayuda={AYUDA_FECHA_EFECTO}>
+              <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
+            </Campo>
+          </div>
+          <AseguradosResumen riesgo={riesgo} tomadorId={clienteId} />
+        </div>
+      ) : (
       <div style={cardStyle}>
         <CardHeader title="1 · El capital" sub="La API de decesos no tiene campo de capital: la compañía cotiza su prestación estándar. El resto de la familia se añade abajo como asegurados adicionales (sí viajan)." />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -191,8 +275,9 @@ export default function DecesosNuevo({
           </Campo>
         </div>
       </div>
+      )}
 
-      <div style={cardStyle}>
+      <div id={ANCLA_DECESOS.tomadorAqui} style={cardStyle}>
         <CardHeader
           title="2 · El tomador"
           sub={aMano.length > 0 ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.' : 'La ficha trae todo lo personal; solo hay que confirmar el estado civil.'}
@@ -236,7 +321,8 @@ export default function DecesosNuevo({
           </div>
         )}
 
-        <AseguradosAdicionales lista={asegurados} onChange={setAsegurados} deshabilitado={cotizando} />
+        {/* Embebido: los asegurados son las fichas de «Intervinientes» (resumen en el paso 1), nunca una lista tecleada aquí. */}
+        {!embebido && <AseguradosAdicionales lista={asegurados} onChange={setAsegurados} deshabilitado={cotizando} />}
 
         {huerfanos.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--negative)', padding: 12 }}>
@@ -268,10 +354,17 @@ export default function DecesosNuevo({
 
         <Contador consumo={consumo} simulacion={simulacion} />
 
-        <button type="button" onClick={() => void cotizar()} disabled={!puedePulsar} style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 12 }}>
-          {cotizando ? (simulacion ? 'Simulando…' : 'Cotizando… (puede tardar hasta 2 min)') : simulacion ? 'Simular precio — no cuesta nada' : 'Pedir precio — cuesta 0,50€'}
+        {embebido && delRiesgo === null && (
+          <p role="status" style={{ color: 'var(--negative)', fontSize: 13, margin: '8px 0 0' }}>No se ha leído el riesgo: sin él no se sabe a quién se asegura y no se pide precio.</p>
+        )}
+        {embebido && delRiesgo !== null && <Verificacion grupos={verificacion} completa={verificacionOk} />}
+        {bloqueo !== null && (
+          <p role="status" style={{ color: 'var(--warning)', fontSize: 13, fontWeight: 600, margin: '8px 0 0' }}>{bloqueo}</p>
+        )}
+        <button type="button" onClick={() => void cotizar()} disabled={!puedePulsarEmb} style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 12, minHeight: 44 }}>
+          {cotizando ? (simulacion ? 'Simulando…' : 'Cotizando… (puede tardar hasta 2 min)') : simulacion ? 'Simular precio — no cuesta nada' : embebido ? 'Pedir precio — cuesta 0,50€ reales' : 'Pedir precio — cuesta 0,50€'}
         </button>
-        {faltaAlgo && (
+        {faltaAlgo && !embebido && (
           <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 8 }}>
             El botón se enciende cuando no falte nada arriba. Corregir arriba no cuesta nada.
           </p>
@@ -290,11 +383,81 @@ export default function DecesosNuevo({
           </p>
         )}
         {resultado.estado === 'error' && resultado.duplicado && (
-          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsar} />
+          <RecotizarIgualmente onRecotizar={() => void cotizar(true)} deshabilitado={!puedePulsarEmb} />
         )}
         {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
       </div>
     </div>
+  )
+}
+
+/**
+ * Embebido: quién se asegura, en RESUMEN de solo lectura (se cambia arriba, en «Intervinientes»). El tomador siempre
+ * es el primero; los asegurados son FICHAS (una vez cada una, por id). Lo que falte en una ficha se dice aquí y en la
+ * verificación; nunca se rellena solo.
+ */
+function AseguradosResumen({ riesgo, tomadorId }: { riesgo: Riesgo | null; tomadorId: string }) {
+  if (!riesgo) return null
+  const tomador = riesgo.figuras.find((f) => f.rol === 'tomador') ?? null
+  const { asegurados, aseguradosSinFicha } = desdeRiesgoDecesos(riesgo, tomadorId)
+  return (
+    <div style={{ marginTop: 12, display: 'grid', gap: 6, minWidth: 0 }}>
+      <div style={{ fontSize: 13, fontWeight: 600 }}>Personas aseguradas</div>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4, minWidth: 0 }}>
+        <li style={{ fontSize: 14, overflowWrap: 'anywhere' }}>{tomador?.nombre ?? riesgo.oportunidad.clienteNombre} <span style={{ color: 'var(--muted)', fontSize: 12 }}>· tomador (siempre el primero)</span></li>
+        {asegurados.map((a) => (
+          <li key={a.clienteId} style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+            {a.nombre}{' '}
+            {a.textoFalta
+              ? <span style={{ color: a.faltan === null ? 'var(--warning)' : 'var(--negative)', fontSize: 12, fontWeight: 600 }}>· {a.textoFalta}</span>
+              : <span style={{ color: 'var(--muted)', fontSize: 12 }}>· asegurado</span>}
+          </li>
+        ))}
+      </ul>
+      {asegurados.length === 0 && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sin asegurados con ficha: se asegura solo al tomador.</span>}
+      {aseguradosSinFicha > 0 && (
+        <span style={{ fontSize: 12, color: 'var(--negative)', fontWeight: 600 }}>
+          {aseguradosSinFicha === 1 ? 'Hay 1 asegurado tecleado sin ficha' : `Hay ${aseguradosSinFicha} asegurados tecleados sin ficha`} en «Datos del riesgo»: no viaja{aseguradosSinFicha === 1 ? '' : 'n'}.
+        </span>
+      )}
+      <IrA ancla={ANCLA_DECESOS.intervinientes}>Editar arriba</IrA>
+    </div>
+  )
+}
+
+/**
+ * «Ver precios» de una variante de decesos YA PEDIDA, dentro de «Presupuestos de este riesgo» (13/10/2026). La lectura
+ * y sus guardas (ESA variante, no caducada) son las comunes (`PreciosVarianteGuardada`). Decesos no se emite desde aquí.
+ */
+export function PreciosVarianteDecesos({ clienteId, oportunidadId, tarificacionId, simulado }: {
+  clienteId: string
+  oportunidadId: string
+  tarificacionId: string
+  simulado: boolean
+}) {
+  return (
+    <PreciosVarianteGuardada
+      clienteId={clienteId} oportunidadId={oportunidadId} tarificacionId={tarificacionId}
+      leer={pedirTarificacionGuardadaDecesos}
+      pintar={(g) => (
+        <Precios
+          r={{
+            estado: 'ok',
+            coste: '0 € (ya estaba pagada)',
+            restantesHoy: null,
+            simulado,
+            avisoSimulacion: null,
+            resumen: resumenGuardada(g),
+            precios: g.precios,
+            fallos: g.fallos,
+            supuestos: [],
+            guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+          }}
+          simulacion={false}
+          clienteId={clienteId}
+        />
+      )}
+    />
   )
 }
 
