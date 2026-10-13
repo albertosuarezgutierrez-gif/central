@@ -1,8 +1,8 @@
 {
  "sesion": "c0fbd684-f4df-52f6-ad9e-cefd931baeb0",
  "inicio": "2026-10-12T07:02:38.930Z",
- "fin": "2026-10-13T12:58:22.036Z",
- "llamadas": 176,
+ "fin": "2026-10-13T12:58:29.597Z",
+ "llamadas": 178,
  "categorias": {
   "otro": {
    "llamadas": 47,
@@ -67,14 +67,14 @@
    }
   },
   "bash": {
-   "llamadas": 74,
-   "chars_in": 45493,
-   "chars_out": 346550,
+   "llamadas": 76,
+   "chars_in": 46315,
+   "chars_out": 358574,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 74
+    "Bash": 76
    }
   },
   "mcp:github": {
