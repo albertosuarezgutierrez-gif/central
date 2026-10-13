@@ -21,7 +21,7 @@ const formularioMoto = {
   aniosAseguradoAnterior: 5,
   siniestrosUltimos5Anios: 0,
   garajeNoche: true,
-  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2 },
+  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
 }
 
 function adaptadorMotoFalso() {
@@ -57,7 +57,7 @@ test('MOTO con formulario válido llega al adaptador (con seleccionVehiculo inta
   await p.tarificar(page, ctx)
   assert.equal(llamadas.length, 1)
   assert.equal(llamadas[0].ramo, 'moto')
-  assert.deepEqual(llamadas[0].seleccionVehiculo, { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2 })
+  assert.deepEqual(llamadas[0].seleccionVehiculo, { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 })
 })
 
 test('MOTO con formulario inválido NO llega al adaptador: errores (→ `datos`) y sin tarificar', () => {

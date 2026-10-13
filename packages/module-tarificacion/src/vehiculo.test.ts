@@ -158,15 +158,31 @@ describe('validarFormularioAuto', () => {
     if (!r.ok) expect(r.errores.join(' ')).not.toContain('ZZ-999')
   })
   it('seleccionVehiculo (portales sin búsqueda por matrícula): opcional, null por defecto, validada si viene', () => {
-    const a = validarFormularioAuto({ ...ok, ramo: 'moto' }, hoy)
+    const a = validarFormularioAuto({ ...ok }, hoy)
     expect(a.ok && a.formulario.seleccionVehiculo).toBeNull()
-    const b = validarFormularioAuto({ ...ok, ramo: 'moto', seleccionVehiculo: { marca: ' MARCA PRUEBA ', modelo: 'MODELO X', clase: 1 } }, hoy)
-    expect(b.ok && b.formulario.seleccionVehiculo).toEqual({ marca: 'MARCA PRUEBA', modelo: 'MODELO X', clase: 1 })
-    for (const mala of [{ marca: '', modelo: 'X' }, { marca: 'M' }, 'texto', { marca: 'M', modelo: 'X', clase: 9 }]) {
+    const b = validarFormularioAuto({ ...ok, ramo: 'moto', seleccionVehiculo: { marca: ' MARCA PRUEBA ', modelo: 'MODELO X', clase: 1, cilindradaCc: 125 } }, hoy)
+    expect(b.ok && b.formulario.seleccionVehiculo).toEqual({ marca: 'MARCA PRUEBA', modelo: 'MODELO X', clase: 1, cilindradaCc: 125 })
+    for (const mala of [{ marca: '', modelo: 'X' }, { marca: 'M' }, 'texto', { marca: 'M', modelo: 'X', clase: 9, cilindradaCc: 125 }]) {
       const r = validarFormularioAuto({ ...ok, ramo: 'moto', seleccionVehiculo: mala }, hoy)
       expect(r.ok).toBe(false)
       if (!r.ok) expect(r.errores.some((e) => e.startsWith('seleccionVehiculo'))).toBe(true)
     }
+  })
+  it('moto: cilindrada obligatoria, ciclomotor (≤50 cc) rechazado y clase coherente con la cilindrada', () => {
+    const con = (sv: Record<string, unknown> | undefined) => validarFormularioAuto({ ...ok, ramo: 'moto', ...(sv ? { seleccionVehiculo: { marca: 'M', modelo: 'X', ...sv } } : {}) }, hoy)
+    const errs = (r: ReturnType<typeof con>) => (r.ok ? [] : r.errores.join(' | '))
+    expect(errs(con(undefined))).toMatch(/falta la cilindrada \(Allianz separa Moto y Ciclomotor\)/)
+    expect(errs(con({ clase: 1 }))).toMatch(/falta la cilindrada/)
+    expect(errs(con({ clase: 1, cilindradaCc: 49 }))).toMatch(/ciclomotor \(≤50 cc\)/)
+    expect(errs(con({ clase: 1, cilindradaCc: 50 }))).toMatch(/ciclomotor/)
+    expect(con({ clase: 1, cilindradaCc: 125 }).ok).toBe(true)
+    expect(con({ clase: 4, cilindradaCc: 1200 }).ok).toBe(true)
+    expect(errs(con({ clase: 1, cilindradaCc: 300 }))).toMatch(/no casa con la cilindrada/)
+    expect(errs(con({ clase: 4, cilindradaCc: 125 }))).toMatch(/no casa con la cilindrada/)
+    expect(con({ clase: 2, cilindradaCc: 126 }).ok).toBe(true)
+    expect(con({ clase: 3, cilindradaCc: 750 }).ok).toBe(true)
+    // auto no cambia: sin cilindrada sigue válido
+    expect(validarFormularioAuto({ ...ok }, hoy).ok).toBe(true)
   })
   it('carné anterior al nacimiento, CP fuera de España, ramo raro y elección vacía → errores', () => {
     const r = validarFormularioAuto({ ...ok, ramo: 'camion', codigoPostal: '99000', conductor: { fechaNacimiento: '1985-04-02', fechaCarne: '1980-01-01' }, eleccionVersion: {} }, hoy)
