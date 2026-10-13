@@ -1,5 +1,6 @@
 'use client'
-import { ListChecks, Users, Shield, Receipt, LayoutGrid } from 'lucide-react'
+import Link from 'next/link'
+import { ListChecks, Users, Shield, Receipt, LayoutGrid, Briefcase } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SECCIONES, type Seccion, type Contador } from './secciones'
 
@@ -67,6 +68,18 @@ export default function Secciones({ activa, contadores, onCambiar }: {
         background: 'var(--bg)',
       }}
     >
+      {/* «Mi mesa» es una pantalla propia (`/correduria/mesa`), no una sección de este cliente: enlace, no botón. */}
+      <Link
+        href="/correduria/mesa"
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7, textDecoration: 'none',
+          fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', padding: '10px 1px', minHeight: 44,
+          borderBottom: '2px solid transparent', color: 'var(--muted)',
+        }}
+      >
+        <Briefcase size={15} strokeWidth={1.75} aria-hidden />
+        Mi mesa
+      </Link>
       {SECCIONES.map(k => {
         const { label, Icono } = META[k]
         const on = activa === k

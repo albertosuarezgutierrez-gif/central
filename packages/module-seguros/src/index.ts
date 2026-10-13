@@ -995,7 +995,7 @@ export {
 export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
 export { libroVcard, nombreVisible, vcardContacto } from './vcard.ts'
 export type { ContactoMovil, GrupoContacto } from './vcard.ts'
-export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, categoriaMotivo, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, leerAnulacion, nombreEvento, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo } from './detector-cartera.ts'
+export { MESES_BAJA_HISTORICA, corteBajaHistorica, esBajaHistorica, TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, categoriaMotivo, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, leerAnulacion, nombreEvento, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo } from './detector-cartera.ts'
 export type { AnulacionEiac, CategoriaMotivo, PlanRetencion, Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
@@ -1463,3 +1463,11 @@ export {
   type PersonaEscenario, type FigurasEscenario, type SeguroAnteriorEscenario, type OpcionEscenario, type EscenarioEntrada,
   type EscenarioOrdenado, type DatosAvisoPropuesta, type DatosWhatsappPropuesta,
 } from './propuesta-escenarios.ts'
+
+// «Mis expedientes» (13/10/2026): clase, estado visible, vuelta de un rescate perdido, posponer y notas.
+export {
+  CLASES_EXPEDIENTE, ESTADOS_VISIBLES, MAX_DIAS_POSPONER, MAX_NOTAS, ORIGEN_BAJA_VERIFICADA, ORIGEN_RESCATE_PERDIDO,
+  PREFIJO_RETOMAR, ROTULO_CLASE, ROTULO_ESTADO_VISIBLE,
+  claseOportunidad, esExpedienteDeTrabajo, esRescateDeRecibo, estadoVisible, fechaPospuesta, importeReciboRescate, notasEditadas, textoRetomar, vueltaRescatePerdido,
+} from './expedientes.ts'
+export type { ClaseExpediente, EntradaClase, EstadoVisible, VueltaRescate } from './expedientes.ts'

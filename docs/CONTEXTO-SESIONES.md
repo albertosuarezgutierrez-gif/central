@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(13/10/2026)** — Correduría «Mi mesa» (PR #4538, rama `claude/tasks-opportunities-structure-ezhuxl`): `/correduria/mesa` lista expedientes (= `seguros.oportunidades`, sin tabla nueva) en Hoy/Abiertas/Esperando/Rescates/Aparcadas vía `GET /api/operador/expedientes`; aparcar crea «Retomar» en la fecha de vuelta (antes no volvía), posponer N días, rescate perdido → aparcado (45 días antes del aniversario), columna `notas` (migración aplicada). Decisión de Alberto: muy simplificado, sin registrar llamadas, siniestros fuera. Pérdidas de cartera: sustitución con misma matrícula hasta 120 días (caso Mapfre→Allianz 5802JMJ) y bajas de >12 meses ocultas. BD: cerradas con marca 51 `gestiones` heredadas (42 `asegura_app:ges2` + 9 `loo-916`); `public.gestiones` de Supabase_asegura es copia PARADA, la fuente es `seguros.gestiones` de central.
+
 **(13/10/2026)** — Correduría: cotizador de MOTO embebido igualado a auto (historial declarado arriba manda, resúmenes «Editar arriba», «Verificación antes de pedir precio» con `ramo: 'moto'`; piezas en `auto-nuevo/piezas-embebido.tsx`).
 «Parrilla de precios» en el riesgo: Avant2 (última tarificación ya pagada, solo lectura, 0€) vs bot por código DGS, «cuadra» si |dif| ≤ 2%. Hoy sin solapamiento: los bots solo cotizan comunidades.
 Pendiente: bots de auto/moto/hogar; modalidad/franquicia en los bots; confirmar los nombres Avant2→DGS y el código de Fiatc; migrar `AutoNuevo.tsx` a `piezas-embebido.tsx`.
