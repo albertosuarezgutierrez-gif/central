@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-12T17:04:09Z",
+  "generadoEn": "2026-10-13T05:42:21Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -960,8 +960,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4193,6 +4193,7 @@
       "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
       "/api/operador/recibos/devolucion",
+      "/api/operador/red-diaria",
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
@@ -5285,6 +5286,7 @@
       "/api/cron/correduria-eventos",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
+      "/api/cron/correduria-red-diaria",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correduria-retenidas",
       "/api/cron/correduria-seguimiento-presupuestos",
@@ -6856,7 +6858,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1666,
+    "apis": 1668,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
