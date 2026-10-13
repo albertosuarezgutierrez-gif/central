@@ -426,6 +426,7 @@ async function marcarFallo(
   if (evidencia?.html) {
     htmlId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.html`, mime: 'text/html', contenido: Buffer.from(evidencia.html, 'utf8'), notas: `HTML (redactado) del fallo del tarificador RPA (${error.tipo})` })
   }
+  // `...error` lleva también los accesorios ya validados del cable (`opcionesVersion`, `inventarioDom`): van al jsonb.
   const err = JSON.stringify({ ...error, html_documento_id: htmlId, en: new Date().toISOString() })
   if (conBotVersion) {
     await db.$executeRaw`

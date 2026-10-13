@@ -359,3 +359,16 @@ export {
   type PermisoEmision,
   ipidConstaEnAceptacion,
 } from './emision.ts'
+// Inventario de ESTRUCTURA de pantalla (13/10/2026): saneado puro del `error.inventarioDom` del worker (hueco de mapa).
+export {
+  sanearInventarioDom,
+  pareceDatoPersonalInventario,
+  urlSinQuery,
+  MAX_BYTES_INVENTARIO_DOM,
+  MAX_OPCIONES_INVENTARIO,
+  MAX_TEXTO_INVENTARIO,
+  type InventarioDom,
+  type MarcoInventario,
+  type ElementoInventario,
+  type OpcionInventario,
+} from './inventario-dom.ts'
