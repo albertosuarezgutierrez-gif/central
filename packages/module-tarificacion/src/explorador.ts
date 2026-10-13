@@ -246,8 +246,55 @@ export function valoresSensiblesExploracion(ctx: { conDatosReales: boolean; ries
 export const ACCIONES_EXPLORADOR = ['rellenar', 'elegir', 'marcar', 'avanzar', 'terminar', 'parar'] as const
 export type AccionExplorador = (typeof ACCIONES_EXPLORADOR)[number]
 
+/**
+ * Motivos de `parar` que puede dar la IA. FUENTE ÚNICA: el prompt de asegura se genera de aquí
+ * (`lineaMotivosPararParaIA`) y `MOTIVOS_FIN_EXPLORACION` los incluye. Añadir uno = añadirlo aquí con su descripción.
+ */
 export const MOTIVOS_PARAR = ['otp', 'captcha', 'dato_sensible_requerido', 'cerca_de_emision', 'ambiguo', 'aceptar_requerido', 'sin_salida'] as const
 export type MotivoParar = (typeof MOTIVOS_PARAR)[number]
+
+/** Qué significa cada motivo (va al prompt tal cual). */
+export const DESCRIPCION_MOTIVOS_PARAR: Readonly<Record<MotivoParar, string>> = Object.freeze({
+  otp: 'piden un código de verificación (SMS, correo, app)',
+  captcha: 'hay un CAPTCHA o una comprobación de humano',
+  dato_sensible_requerido: 'un campo OBLIGATORIO pide NIF/DNI u otro dato personal sin clave con valor en el catálogo',
+  cerca_de_emision: 'la pantalla es de contratar, emitir, firmar o pagar',
+  ambiguo: 'no sabes qué hacer en esta pantalla',
+  aceptar_requerido: 'solo se sigue con un «Aceptar» que no es el autorizado',
+  sin_salida: 'no hay ningún control con el que avanzar',
+})
+
+/**
+ * Motivos de FIN de una exploración (`motivo_fin` en BD, cuerpo de cierre del worker): los de `parar` más los que pone
+ * el propio sistema. asegura y el worker validan contra ESTA lista.
+ */
+export const MOTIVOS_FIN_EXPLORACION = [...MOTIVOS_PARAR, 'resultado', 'bucle', 'tope', 'error_portal', 'guard_emision'] as const
+export type MotivoFinExploracion = (typeof MOTIVOS_FIN_EXPLORACION)[number]
+
+/** La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}. */
+export function lineaMotivosPararParaIA(): string {
+  return MOTIVOS_PARAR.map((m) => `${m} (${DESCRIPCION_MOTIVOS_PARAR[m]})`).join(' | ')
+}
+
+const planoMotivo = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
+/**
+ * El motivo de `parar` que manda la IA, a su código. Admite mayúsculas, espacios/guiones por «_» y un código seguido de
+ * una explicación («dato_sensible_requerido: piden NIF», «ambiguo (…)»). Una frase libre sin código delante → `null`
+ * (no se adivina el motivo por palabras sueltas). Parar es siempre seguro: esto no relaja ninguna acción.
+ */
+export function normalizarMotivoParar(v: unknown): MotivoParar | null {
+  if (typeof v !== 'string' || v.length > 400) return null
+  const cabeza = planoMotivo(v).split(/\s+[-–—]\s+|[:(,.;–—]/)[0].trim().replace(/[\s-]+/g, '_')
+  return MOTIVOS_PARAR.find((m) => m === cabeza) ?? null
+}
+
+/** Para el error del validador: el motivo rechazado SOLO si es un código corto sin cifras (nunca un texto con datos). */
+function motivoRechazadoParaLog(v: unknown): string {
+  if (typeof v !== 'string') return `(${v === undefined ? 'sin motivo' : typeof v})`
+  const t = planoMotivo(v)
+  return /^[a-z_ ]{1,40}$/.test(t) && !pareceDatoPersonalInventario(t) ? `«${t}»` : `(texto libre de ${v.length} car.)`
+}
 
 export const EFECTOS_AVANCE = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado'] as const
 export const CONFIANZAS = ['alta', 'media', 'baja'] as const
@@ -460,8 +507,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (r.acciones !== undefined && (r.acciones as unknown[]).length !== 1) errores.push(`${donde}: ${tipo} va SOLO`)
       }
       if (tipo === 'parar') {
-        const m = MOTIVOS_PARAR.find((x) => x === a.motivo)
-        if (!m) return void errores.push(`${donde}: motivo de parada fuera de lista`)
+        const m = normalizarMotivoParar(a.motivo)
+        if (!m) return void errores.push(`${donde}: motivo de parada fuera de lista ${motivoRechazadoParaLog(a.motivo)}`)
         acciones.push({ accion: 'parar', motivo: m })
         return
       }
