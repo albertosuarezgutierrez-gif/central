@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(13/10/2026)** — Correduría: SALUD y VIDA embebidos en el riesgo unificado → los 6 ramos Avant2 (auto, moto, hogar, decesos, salud, vida) cotizan dentro de la oportunidad (`PedirPrecioSalud/Vida`, `verificacion-vida.ts`; salud reutiliza la de decesos). Salud = asegurados desde fichas (como decesos); vida = asegurado es el tomador (asegurado distinto → 422) y capital/profesión/fumador los lee asegura de `datosCapital` (`datosDelRiesgo`). Fecha nacimiento del tomador validada en vida/salud/decesos. Comercio/RC/comunidades/otros: aviso «sin precio automático por Avant2» (`avisoSinAvant2`). Sin SQL.
+Pendiente: verificar esquema real salud/vida con UNA cotización con OK (0,50€); comparador de variantes en vida/salud/decesos; asegurado ≠ tomador en vida si Avant2 lo admite.
 **(13/10/2026)** — Correduría: DECESOS en el riesgo unificado (`PedirPrecioDecesos.tsx` monta `DecesosNuevo` embebido; verificación en `verificacion-decesos.ts` apaga el botón de 0,50€). Asegurados = fichas rol `asegurado` (asegura las arma con `aseguradosDeFigurasParaCotizar`; exige que el tomador sea el del riesgo y rechaza `correcciones.aseguradosAdicionales`); Avant2 solo pide nombre/apellidos/nacimiento/sexo/doc; el capital no viaja; sin SQL.
 Pendiente: salud embebido, comparador de variantes en decesos, códigos DGS de las compañías de decesos.
 **(13/10/2026)** — Trading: NKE fuera del agente porque nunca entró en el top-10 de factores (momentum 12-1 −46,5%, Piotroski 5/9; nunca tuvo tesis); NKE no fue caso de la señal.
