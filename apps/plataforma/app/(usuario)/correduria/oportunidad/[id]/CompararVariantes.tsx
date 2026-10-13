@@ -6,6 +6,7 @@
 
 import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
+import { textoDiferencia } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import {
   diferenciaComparacion, mejoresComparacion,
@@ -66,7 +67,7 @@ function Resultado({ c, pa, pb }: { c: Comparacion; pa: string; pb: string }) {
           <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 2, fontSize: 13 }}>
             {c.cambios.map((d, i) => (
               <li key={`${d.campo}-${i}`} style={{ overflowWrap: 'anywhere' }}>
-                <strong>{d.campo}</strong>: {d.antes ?? '—'} → {d.despues ?? '—'}
+                {textoDiferencia(d)}
               </li>
             ))}
           </ul>
