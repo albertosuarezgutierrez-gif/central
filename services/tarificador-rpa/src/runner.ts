@@ -27,7 +27,7 @@ import {
   type PdfRef,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
-import { enviarResultado, leerConfig, pedirTrabajo, type Config, type CuerpoResultado } from './api.ts'
+import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, type Clasificacion } from './errores.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarProyecto } from './guard.ts'
@@ -229,9 +229,8 @@ async function main(): Promise<number> {
 
   const t = await pedirTrabajo(cfg).catch((e: unknown) => ({ estado: 'no_disponible' as const, status: 0, e }))
   if (t.estado !== 'ok') {
-    // 404 = ya no está en curso (lease vencido/cancelado); 503 = canal apagado. Nada que hacer.
-    log('trabajo_no_disponible', { status: t.status })
-    return 0
+    // 404 = ya no está en curso (lease vencido/cancelado); 503 = canal apagado: salida 0. Red agotada = infra: salida 1.
+    return salidaSinTrabajo(cfg, t, log, redactar)
   }
   const { trabajo } = t
 
