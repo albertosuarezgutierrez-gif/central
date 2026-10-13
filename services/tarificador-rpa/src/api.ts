@@ -24,15 +24,70 @@ export type EmisionTrabajo = { fase: 'preparar' } | { fase: 'ejecutar'; token: s
 /** `leaseHasta` (ISO): hasta cuándo asegura acepta el resultado; el runner no reintenta si no cabe. */
 export type Trabajo = { id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string; modo?: 'tarificar' | 'emision'; emision?: EmisionTrabajo }
 
-export async function pedirTrabajo(c: Config): Promise<{ estado: 'ok'; trabajo: Trabajo } | { estado: 'no_disponible'; status: number }> {
-  const res = await fetch(`${c.apiUrl}/api/tarificador/trabajo/${encodeURIComponent(c.jobId)}`, {
-    headers: { Authorization: `Bearer ${c.secreto}` },
-    signal: AbortSignal.timeout(15_000),
-  })
-  if (!res.ok) return { estado: 'no_disponible', status: res.status }
-  const j = (await res.json()) as { trabajo?: Trabajo }
-  if (!j.trabajo) return { estado: 'no_disponible', status: res.status }
-  return { estado: 'ok', trabajo: j.trabajo }
+const ESPERAS_PEDIR_MS = [2_000, 4_000, 8_000]
+const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+/**
+ * Hasta 4 intentos (esperas 2 s, 4 s, 8 s) ante excepción de red (fetch lanza/aborta) o HTTP 5xx salvo 503
+ * (503 = RPA apagado; 401/403/404 = definitivos). Agotados: tras excepción, RELANZA la última (el runner registra
+ * el motivo); tras 5xx, devuelve ese status. `esperar` es inyectable para los tests.
+ */
+export async function pedirTrabajo(
+  c: Config,
+  esperar: (ms: number) => Promise<void> = dormir,
+): Promise<{ estado: 'ok'; trabajo: Trabajo } | { estado: 'no_disponible'; status: number }> {
+  const intentos = ESPERAS_PEDIR_MS.length + 1
+  for (let i = 0; ; i++) {
+    const ultimo = i === intentos - 1
+    let res: Response
+    try {
+      res = await fetch(`${c.apiUrl}/api/tarificador/trabajo/${encodeURIComponent(c.jobId)}`, {
+        headers: { Authorization: `Bearer ${c.secreto}` },
+        signal: AbortSignal.timeout(15_000),
+      })
+    } catch (e) {
+      if (ultimo) throw e
+      await esperar(ESPERAS_PEDIR_MS[i])
+      continue
+    }
+    if (res.status >= 500 && res.status !== 503 && !ultimo) {
+      await esperar(ESPERAS_PEDIR_MS[i])
+      continue
+    }
+    if (!res.ok) return { estado: 'no_disponible', status: res.status }
+    const j = (await res.json()) as { trabajo?: Trabajo }
+    if (!j.trabajo) return { estado: 'no_disponible', status: res.status }
+    return { estado: 'ok', trabajo: j.trabajo }
+  }
+}
+
+/**
+ * Salida del worker cuando no hay trabajo. 404/503 (y 4xx) = nada que hacer (0). Red agotada (status 0) o 5xx
+ * persistente = INFRA: se loguea el motivo (redactado, sin URL ni cabeceras), se avisa a asegura para que el
+ * orquestador reintente y se sale con 1 (también si el aviso falla).
+ */
+export async function salidaSinTrabajo(
+  cfg: Config,
+  t: { status: number; e?: unknown },
+  log: (mensaje: string, datos?: Record<string, unknown>) => void,
+  redactar: (t: string) => string,
+  enviar: (c: Config, cuerpo: CuerpoResultado) => Promise<number> = enviarResultado,
+): Promise<number> {
+  const err = t.e as { message?: unknown; cause?: { code?: unknown } } | undefined
+  const infra = t.status === 0 || (t.status >= 500 && t.status !== 503)
+  if (!infra) {
+    log('trabajo_no_disponible', { status: t.status })
+    return 0
+  }
+  const motivo = redactar(String(err?.message ?? (t.status ? `HTTP ${t.status}` : 'sin respuesta'))).slice(0, 200)
+  log('trabajo_no_disponible', { status: t.status, motivo, codigo: err?.cause?.code })
+  const enviado = await enviar(cfg, {
+    trabajoId: cfg.jobId,
+    resultado: 'error',
+    error: { tipo: 'infra', mensaje: `no se pudo pedir el trabajo (status ${t.status}): ${motivo}`, url: null },
+  }).catch(() => 0)
+  if (enviado === 0 || enviado >= 500) log('aviso_infra_fallido', { status: enviado })
+  return 1
 }
 
 /** Traza (pasos con tiempos y códigos, sin datos personales) y versión del adaptador; viajan en el MISMO POST del resultado. */
