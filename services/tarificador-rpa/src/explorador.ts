@@ -359,8 +359,9 @@ async function localizar(nodo: InventarioExploracion['nodos'] extends Map<string
  */
 export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string) => string, env: Record<string, string | undefined>): Promise<FinBucle> {
   const f = finDeError(e)
-  const evidencia = sanearEvidencia(await capturarEvidencia(page), redactar, secretosDelEntorno(env))
-  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, evidencia }
+  // La evidencia es un extra: si sanearla fallara, el fin conserva su motivo/error en vez de caer al catch genérico.
+  const evidencia = await capturarEvidencia(page).then((ev) => sanearEvidencia(ev, redactar, secretosDelEntorno(env))).catch(() => undefined)
+  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(evidencia ? { evidencia } : {}) }
 }
 
 export type EntradaEjecucion = {
