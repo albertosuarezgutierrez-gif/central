@@ -1,8 +1,8 @@
 {
  "sesion": "90c3bffe-6bee-5c50-bd89-0e2c18ff8ab4",
  "inicio": "2026-10-12T18:25:04.975Z",
- "fin": "2026-10-13T06:24:44.442Z",
- "llamadas": 108,
+ "fin": "2026-10-13T09:17:27.774Z",
+ "llamadas": 112,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 2,
@@ -69,14 +69,14 @@
    }
   },
   "bash": {
-   "llamadas": 31,
-   "chars_in": 23783,
-   "chars_out": 135903,
+   "llamadas": 34,
+   "chars_in": 24289,
+   "chars_out": 137972,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 31
+    "Bash": 34
    }
   },
   "mcp:claude-code-remote": {
@@ -107,6 +107,17 @@
     "mcp__Vercel__list_deployments": 1,
     "mcp__Vercel__list_project_domains": 1,
     "mcp__Vercel__get_project_env": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 2168,
+   "chars_out": 2378,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
