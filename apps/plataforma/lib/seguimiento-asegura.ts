@@ -783,6 +783,10 @@ export function whatsappAvisadoAsegura(eventoAt: string): Promise<Reenvio> {
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }
+/** «Mis expedientes» (13/10/2026): se interpreta con `interpretarExpedientes` de `lib/correduria/expedientes.ts`. */
+export function expedientesAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/expedientes', { method: 'GET' })
+}
 
 // ─── Rellenar la oportunidad leyendo un documento (24/09/2026) ──────────────
 // Alberto: «subir póliza, recibo o alguna imagen y que el agente con IA busque los

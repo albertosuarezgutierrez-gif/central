@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
+import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
 import type { AccionOportunidad } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
 
@@ -16,11 +16,15 @@ export const dynamic = 'force-dynamic'
  *                                   y `sinOportunidad`: lo tarificado que no cuelga de ninguna (`null` = no se pudo leer)
  *   POST { accion:'crear', clienteId, ramo, estado?, fechaFinVigencia?, aseguradora?, prima?, tipoTarea?, fechaTarea, nota?, actor }
  *        → abre una a mano con su primer paso (409 `duplicada` + id si ya hay una abierta del ramo)
- *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, historialDeclarado?:{aniosAsegurado?,aniosEnCompania?}, reprogramar?, actor } → corrige una abierta
- *        (`reprogramar: true` con vencimiento nuevo → su próxima tarea va a 45 días antes, o se crea)
+ *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, historialDeclarado?:{aniosAsegurado?,aniosEnCompania?}, notas?, reprogramar?, actor } → corrige una abierta
+ *        (`reprogramar: true` con vencimiento nuevo → su próxima tarea va a 45 días antes, o se crea;
+ *        `notas`: texto libre, '' o null las borra; sin el SQL 2026-10-13 → 503 `sin_migracion`)
+ *   POST { accion:'posponer', id, dias, actor } → su próxima acción pasa a hoy + dias (1-365); si no tenía, se crea
  *   POST { id, accion, ..., actor } → cambia su estado:
  *        interesado · propuesta_enviada · ganar {polizaGanadaId?}
  *        perder {motivo, detalle?, competidor?, primaCompetidor?} · aparcar {aparcadaHasta, detalle} · reabrir
+ *        (aparcar deja «Retomar: <motivo>» el día de la vuelta; perder un rescate de recibo devuelto abre la
+ *        del año siguiente, aparcada)
  * Perder sin motivo es 422, no un cambio: la regla está en `aplicarAccion` y en un CHECK de la BD.
  */
 export async function GET(req: Request) {
@@ -73,9 +77,16 @@ export const POST = auditado(async (req: Request) => {
       if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
       const r = await editarOportunidad(correduria.id, b.id, {
         ramo: b.ramo, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora, prima: b.prima, historialDeclarado: b.historialDeclarado,
+        notas: b.notas,
       }, actorDe(b), { reprogramar: b.reprogramar === true })
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
       return NextResponse.json({ estado: 'ok', oportunidad: r.oportunidad, tarea: r.tarea })
+    }
+    if (b?.accion === 'posponer') {
+      if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
+      const r = await posponerOportunidad(correduria.id, b.id, b.dias, actorDe(b))
+      if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
+      return NextResponse.json({ estado: 'ok', fecha: r.fecha, tarea: r.tarea })
     }
     const accion = ACCIONES.find(a => a === b?.accion)
     if (!b || typeof b.id !== 'string' || !accion) {

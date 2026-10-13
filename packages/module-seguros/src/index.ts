@@ -956,7 +956,7 @@ export {
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
 export {
   ESTADOS_ALTA, ESTADOS_ALTA_SERVIDOR, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
-  CLAVES_HISTORIAL_DECLARADO, historialDeclaradoDe, seguroAnteriorDe, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
+  CLAVES_HISTORIAL_DECLARADO, historialDeclaradoDe, incoherenciaHistorialDeclarado, seguroAnteriorDe, ultimosDigitosPoliza, validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
 } from './oportunidad-seguimiento.ts'
 export {
   DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
@@ -970,6 +970,7 @@ export type {
   EdicionValida as EdicionOportunidadValida,
   EstadoActual as EstadoActualOportunidad,
   EstadoOportunidad,
+  ClaveHistorialDeclarado,
   HistorialDeclaradoRiesgo,
   MotivoPerdida,
   PeticionAccion,
@@ -994,7 +995,7 @@ export {
 export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
 export { libroVcard, nombreVisible, vcardContacto } from './vcard.ts'
 export type { ContactoMovil, GrupoContacto } from './vcard.ts'
-export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, categoriaMotivo, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, leerAnulacion, nombreEvento, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo } from './detector-cartera.ts'
+export { MESES_BAJA_HISTORICA, corteBajaHistorica, esBajaHistorica, TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, categoriaMotivo, datosAnulacion, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, leerAnulacion, nombreEvento, planRetencionPorMotivo, textoFechaAnulacion, textoMotivoAnulacion, textoUltimoRecibo } from './detector-cartera.ts'
 export type { AnulacionEiac, CategoriaMotivo, PlanRetencion, Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
@@ -1230,7 +1231,7 @@ export {
 } from './figuras-poliza.ts'
 export {
   ROLES_FIGURA, ROLES_FIGURA_UNICOS, ROLES_FIGURA_MULTIPLES, MAX_ASEGURADOS_PERSONAS, ETIQUETA_ROL, rolesDelRamo, cardinalidadesDelRamo, maxDelRol,
-  esRolFigura, esRolFiguraUnico, esRolMultiple, limpiarFiguras, diferenciasVariante, resumenDiferencias,
+  esRolFigura, esRolFiguraUnico, esRolMultiple, ramoPideCpDelTomador, faltaCodigoPostal, limpiarFiguras, diferenciasVariante, resumenDiferencias,
   type RolFigura, type RolFiguraUnico, type RolFiguraMultiple, type CardinalidadRol, type FigurasVariante, type Diferencia,
 } from './variantes-riesgo.ts'
 export {
@@ -1462,3 +1463,11 @@ export {
   type PersonaEscenario, type FigurasEscenario, type SeguroAnteriorEscenario, type OpcionEscenario, type EscenarioEntrada,
   type EscenarioOrdenado, type DatosAvisoPropuesta, type DatosWhatsappPropuesta,
 } from './propuesta-escenarios.ts'
+
+// «Mis expedientes» (13/10/2026): clase, estado visible, vuelta de un rescate perdido, posponer y notas.
+export {
+  CLASES_EXPEDIENTE, ESTADOS_VISIBLES, MAX_DIAS_POSPONER, MAX_NOTAS, ORIGEN_BAJA_VERIFICADA, ORIGEN_RESCATE_PERDIDO,
+  PREFIJO_RETOMAR, ROTULO_CLASE, ROTULO_ESTADO_VISIBLE,
+  claseOportunidad, esExpedienteDeTrabajo, esRescateDeRecibo, estadoVisible, fechaPospuesta, importeReciboRescate, notasEditadas, textoRetomar, vueltaRescatePerdido,
+} from './expedientes.ts'
+export type { ClaseExpediente, EntradaClase, EstadoVisible, VueltaRescate } from './expedientes.ts'

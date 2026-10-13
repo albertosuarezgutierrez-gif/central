@@ -45,7 +45,7 @@ test('lo personal sigue solo en su ficha: registrarUso y Mis datos no ven la emp
   const i = src.indexOf('export async function registrarUso')
   assert.match(src.slice(i, i + 800), /fichasDeIdentidad\(/)
   assert.doesNotMatch(src.slice(i), /fichasOtorgablesDe\(/)
-  for (const fn of ['autorizacionesDeIdentidad', 'conceder', 'ampliarATotal', 'resolver']) {
+  for (const fn of ['autorizacionesDeIdentidad', 'conceder', 'ampliarAcceso', 'resolver']) {
     const j = src.indexOf(`export async function ${fn}`)
     const k = src.indexOf('export async function', j + 10)
     assert.match(src.slice(j, k), /fichasOtorgablesDe\(/, `${fn} no deja al dueño autorizar sobre su empresa`)

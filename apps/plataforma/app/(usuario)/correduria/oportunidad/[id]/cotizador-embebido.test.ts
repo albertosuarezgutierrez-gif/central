@@ -5,7 +5,7 @@ import { RAMOS_COTIZADOR_EMBEBIDO, abrirAlCargar, bloqueObjetoDeRamo, firmaRiesg
 import { RAMOS_VARIANTE, rutaVariante } from './variante.ts'
 import { interpretarRiesgo } from '../../../../../lib/riesgo-asegura.ts'
 
-function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unknown[]; variantes?: unknown[]; roles?: string[]; clienteId?: string } = {}) {
+function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unknown[]; variantes?: unknown[]; roles?: string[]; clienteId?: string; historial?: unknown } = {}) {
   const r = interpretarRiesgo(200, {
     estado: 'ok',
     oportunidad: { id: 'op1', clienteId: extra.clienteId ?? 'c1', ramo: 'moto' },
@@ -14,6 +14,7 @@ function riesgo(extra: { datosVehiculo?: Record<string, unknown>; figuras?: unkn
     vinculos: [],
     variantes: extra.variantes ?? [],
     datosVehiculo: { matricula: '1234ABC', codigoVehiculo: '777', marcaId: 'm', modeloId: 'mo', motorId: 'Gasoline', garaje: 'G1', kmAnuales: 5000, ...(extra.datosVehiculo ?? {}) },
+    ...(extra.historial !== undefined ? { historial: extra.historial } : {}),
   })
   if (r.estado !== 'ok') throw new Error('no se pudo leer')
   return r.riesgo
@@ -32,6 +33,33 @@ test('firma: otra persona en un papel, o lo que le falta a su ficha, también ca
   assert.notEqual(firmaRiesgoMoto(conConductor), base)
   const yaConCarne = riesgo({ figuras: [{ rol: 'tomador', clienteId: 'c1', nombre: 'Ana', faltan: [] }, { rol: 'conductor_habitual', clienteId: 'c2', nombre: 'Luis', faltan: [] }] })
   assert.notEqual(firmaRiesgoMoto(yaConCarne), firmaRiesgoMoto(conConductor))
+})
+
+test('firma: los años asegurado / en la compañía declarados arriba cambian el riesgo (el cotizador auto los manda)', () => {
+  const con = (aniosAsegurado: number | null) => riesgo({ historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado, aniosEnCompania: null }, carnet: null } })
+  assert.notEqual(firmaRiesgo(con(3)), firmaRiesgo(con(null)))
+  assert.notEqual(firmaRiesgo(con(0)), firmaRiesgo(con(null)))
+  assert.equal(firmaRiesgo(con(3)), firmaRiesgo(con(3)))
+})
+
+test('firma (13/10/2026): seguro actual, compañía, nº de póliza, años sin siniestros y siniestros en 5 declarados arriba cambian el riesgo', () => {
+  const con = (hd: Record<string, unknown>) => firmaRiesgo(riesgo({ historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: null, aniosEnCompania: null, ...hd }, carnet: null } }))
+  const base = con({})
+  const cambios: Record<string, unknown[]> = {
+    tieneSeguroActual: [true, false],
+    companiaActual: ['Mapfre'],
+    numeroPoliza: ['4840402030', '4840402031'],
+    aniosSinSiniestros: [0, 7],
+    siniestrosUltimos5: [0, 2],
+  }
+  for (const [k, valores] of Object.entries(cambios)) {
+    for (const v of valores) assert.notEqual(con({ [k]: v }), base, `${k}=${String(v)} no entra en la huella`)
+  }
+  assert.notEqual(con({ numeroPoliza: '4840402030' }), con({ numeroPoliza: '4840402031' }), 'otra póliza, otro riesgo')
+  assert.notEqual(con({ tieneSeguroActual: true }), con({ tieneSeguroActual: false }))
+  assert.equal(con({ companiaActual: 'Reale' }), con({ companiaActual: 'Reale' }), 'estable')
+  // Sin la clave y con la clave a null es lo mismo (asegura vieja ≡ «sin dato»).
+  assert.equal(con({ companiaActual: null }), base)
 })
 
 test('firma: sin figura «tomador», otro cliente de la oportunidad es otro tomador (otro riesgo)', () => {
@@ -56,24 +84,27 @@ test('bloqueo: editar arriba manda; luego relectura; luego desfase; sin nada, nu
   assert.match(motivoBloqueoCotizador({ ...nada, pantallaDesfasada: true })!, /no coincide/)
 })
 
-test('registro: auto, moto y hogar se cotizan DENTRO de la oportunidad; el resto de ramos sigue con su pantalla', () => {
-  assert.deepEqual([...RAMOS_COTIZADOR_EMBEBIDO].sort(), ['auto', 'hogar', 'moto'])
+test('registro: los SEIS ramos con Avant2 (auto, moto, hogar, decesos, salud, vida) se cotizan DENTRO de la oportunidad', () => {
+  assert.deepEqual([...RAMOS_COTIZADOR_EMBEBIDO].sort(), ['auto', 'decesos', 'hogar', 'moto', 'salud', 'vida'])
   for (const r of RAMOS_COTIZADOR_EMBEBIDO) assert.ok((RAMOS_VARIANTE as readonly string[]).includes(r), `${r} tiene que ser un ramo cotizable`)
-  for (const r of ['vida', 'salud', 'decesos', 'comunidades', 'otros', '', null, undefined]) assert.equal(ramoCotizadorEmbebido(r), null, String(r))
+  for (const r of ['comercio', 'rc', 'comunidades', 'otros', '', null, undefined]) assert.equal(ramoCotizadorEmbebido(r), null, String(r))
 })
 
 test('rutaPedirPrecio: auto, moto y hogar → la oportunidad con #pedir-precio; vida… → su pantalla …-nuevo?oportunidad=', () => {
   assert.equal(rutaPedirPrecio('auto', 'c1', 'op 1'), '/correduria/oportunidad/op%201#pedir-precio')
   assert.equal(rutaPedirPrecio('moto', 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio')
   assert.equal(rutaPedirPrecio('hogar', 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio')
-  for (const r of ['vida', 'salud', 'decesos'] as const) assert.equal(rutaPedirPrecio(r, 'c1', 'op1'), rutaVariante(r, 'c1', 'op1'), r)
+  for (const r of ['decesos', 'salud', 'vida'] as const) assert.equal(rutaPedirPrecio(r, 'c1', 'op1'), '/correduria/oportunidad/op1#pedir-precio', r)
 })
 
 test('abrirAlCargar: solo con el ancla exacta y un ramo con cotizador embebido', () => {
   assert.equal(abrirAlCargar('#pedir-precio', 'auto'), true)
   assert.equal(abrirAlCargar('#pedir-precio', 'moto'), true)
   assert.equal(abrirAlCargar('#pedir-precio', 'hogar'), true)
-  assert.equal(abrirAlCargar('#pedir-precio', 'vida'), false)
+  assert.equal(abrirAlCargar('#pedir-precio', 'decesos'), true)
+  assert.equal(abrirAlCargar('#pedir-precio', 'salud'), true)
+  assert.equal(abrirAlCargar('#pedir-precio', 'vida'), true)
+  assert.equal(abrirAlCargar('#pedir-precio', 'comunidades'), false)
   assert.equal(abrirAlCargar('', 'auto'), false)
   assert.equal(abrirAlCargar('#presupuestos', 'auto'), false)
 })

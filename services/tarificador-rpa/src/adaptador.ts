@@ -1,10 +1,11 @@
 // Tipos del worker sobre el contrato de @central/module-tarificacion: el adaptador recibe la página
 // de Playwright y un contexto con `pulsar()` (el único modo de pulsar algo: guardado contra emisión).
 
-import type { Locator, Page } from 'playwright'
+import type { Frame, Locator, Page } from 'playwright'
 import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
+import type { SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -15,6 +16,12 @@ export type ContextoPortal = ContextoTarificacion & {
   elegirOpcion: (modalidad: ModalidadPortal) => Promise<void>
   /** Avanza de Datos Básicos a Tarificar. Único «Aceptar» permitido (el de Tarificar EMITE: bloqueado). */
   avanzarATarificar: () => Promise<void>
+  /**
+   * Avance de pestaña AUTORIZADO de Allianz ePAC Moto (Alberto, 13/10/2026): `td#datosBasicos` o `td#rate`, nada más, por
+   * `pulsarAvancePestanaAutorizado` de guard.ts (lista blanca de selectores + ventana de red con dos capas). Puede dejar un
+   * PROYECTO guardado en Allianz (riesgo aceptado), nunca una póliza. Devuelve el marco del formulario de la pestaña destino.
+   */
+  avanzarPestanaAutorizada?: (selector: SelectorAvancePestana) => Promise<Frame>
   /** Pulsa la pestaña «Proyecto» (genera el PDF sin grabar). Solo desde Tarificar. */
   abrirProyecto: (pestana: Locator) => Promise<void>
   /**
@@ -60,6 +67,8 @@ export type EmisionPortal = {
 }
 
 export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, ContextoPortal> & {
+  /** Adaptador de COMUNIDADES (riesgo `RiesgoComunidad`). Los de vehículo (auto/moto) son `AdaptadorVehiculo` (ramo.ts). */
+  readonly ramo: 'comunidades'
   /** Clave de la credencial: fly secrets `CRED_<clave>_USER` / `CRED_<clave>_PASS`. */
   readonly credencial: string
   /** Versión semver del adaptador (empieza en '0.1.0'); el trabajo la guarda en `bot_version`. Súbela al tocar su navegación. */

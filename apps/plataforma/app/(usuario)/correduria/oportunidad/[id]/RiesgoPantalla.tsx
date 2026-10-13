@@ -1,11 +1,11 @@
 'use client'
 
-// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · presupuestos P1…Pn · historial de variantes.
+// La pantalla del riesgo (29/09/2026): cabecera · datos · intervinientes · historial del seguro y del carné · pedir precio (bloque único) · parrilla de precios Avant2 ↔ bot (13/10/2026) · presupuestos P1…Pn · historial de variantes.
 // Tras cualquier cambio de figuras se RELEE el riesgo entero del puerto: lo que se pinta es siempre
 // lo que asegura tiene, nunca una suposición local de cómo quedó.
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import { Badge, BtnLink, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -24,10 +24,13 @@ import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
+import { avisoSinAvant2 } from '@/lib/correduria/registro-ramos'
+import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
+import type { LadoBot } from './parrilla-precios'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
-import { avisoRamoSinTarifa, companiasDisponibles } from '@/lib/presupuestos-companias'
+import { avisoRamoSinTarifa, companiasDisponibles, type TrabajoCompania } from '@/lib/presupuestos-companias'
 
 export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy: string }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
@@ -48,6 +51,13 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   const alEditarObjeto = useCallback((b: boolean) => setEditandoObjeto(b), [])
   const alEditarFiguras = useCallback((b: boolean) => setEditandoFiguras(b), [])
   const op = riesgo.oportunidad
+  // «Parrilla de precios»: el lado bot llega de la MISMA lectura (y sondeo) de «Presupuestos de compañías»; sin bot
+  // para el ramo, ese bloque no se pinta ni lee, y el lado es «no aplica». `null` = aún leyéndose.
+  const botsDelRamo = useMemo(() => companiasDisponibles(op.ramo).map((c) => c.compania), [op.ramo])
+  const [ladoBot, setLadoBot] = useState<LadoBot | null>(() => (botsDelRamo.length === 0 ? { estado: 'no_aplica' } : null))
+  const alLeerBots = useCallback((l: { estado: 'ok'; trabajos: TrabajoCompania[] } | { estado: 'error'; texto: string }) => {
+    setLadoBot(l.estado === 'ok' ? { estado: 'ok', disponibles: botsDelRamo, trabajos: trabajosParaParrilla(l.trabajos) } : { estado: 'sin_leer', motivo: l.texto })
+  }, [botsDelRamo])
 
   async function recargar(texto?: string) {
     setRecargando(true)
@@ -73,6 +83,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   const ramo = ramoVariante(op.ramo)
   const acciones = accionesPrecio({ ramo: op.ramo, polizaId: op.polizaId, tomadorId: tomadorDelRiesgo(riesgo), oportunidadId: op.id })
   const hayBots = !acciones.principal && companiasDisponibles(op.ramo).length > 0
+  // Ramo SIN cotizador Avant2 (comercio, RC, comunidades, otros…): aviso explícito; no se inventa cotizador (13/10/2026).
+  const sinAvant2 = acciones.principal ? null : avisoSinAvant2(op.ramo, { hayBots })
   const esVehiculo = op.ramo === 'auto' || op.ramo === 'moto'
   const ramoEmbebido = ramoCotizadorEmbebido(op.ramo)
   const CotizadorEmbebido = ramoEmbebido ? COTIZADOR_EMBEBIDO[ramoEmbebido] : null
@@ -134,6 +146,15 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         </div>
       )}
 
+      {/* Orden (Alberto, 13/10/2026): intervinientes → objeto del riesgo → historial → verificación + pedir precio. */}
+      <FigurasRiesgo
+        riesgo={riesgo}
+        ocupado={ocupado}
+        onCambio={(texto) => void recargar(texto)}
+        onError={(texto) => setAviso({ ok: false, texto })}
+        onEditando={alEditarFiguras}
+      />
+
       {esVehiculo ? (
         <DatosVehiculo
           riesgo={riesgo}
@@ -153,15 +174,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         />
       )}
 
-      <FigurasRiesgo
-        riesgo={riesgo}
-        ocupado={ocupado}
-        onCambio={(texto) => void recargar(texto)}
-        onError={(texto) => setAviso({ ok: false, texto })}
-        onEditando={alEditarFiguras}
-      />
-
-      {/* Historial (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. Solo lectura. */}
+      {/* «Historial y bonificaciones» (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. */}
       <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
@@ -179,13 +192,17 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
               {op.polizaId && acciones.secundario
                 ? 'Este riesgo es de una póliza en cartera. Lo normal es pedir precio con los intervinientes y los datos de esta página; retarificar la póliza usa sus datos de hoy.'
                 : 'Se pide precio con los intervinientes y los datos de esta página.'}{' '}
-              {CotizadorEmbebido ? 'Se confirma aquí mismo, sin salir de esta página' : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
+              {CotizadorEmbebido
+                ? 'Abrir el cotizador es gratis; solo se paga en su botón final, que se enciende con la verificación completa'
+                : 'En la siguiente pantalla se confirma'}; pedir precio cuesta 0,50€.
             </p>
             <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
+              {/* Cotizador embebido: se despliega en este mismo bloque; ningún enlace a la pantalla `…-nuevo` de su ramo.
+                  Abierto, el botón que lo abre sobra (el formulario ES esa acción): no se repite. */}
+              {!(CotizadorEmbebido && cotizadorAbierto) && (
               <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
-                {/* Cotizador embebido: se despliega en este mismo bloque; ningún enlace a la pantalla `…-nuevo` de su ramo. */}
                 {CotizadorEmbebido ? (
-                  <button type="button" onClick={() => setCotizadorAbierto(true)} disabled={cotizadorAbierto} aria-expanded={cotizadorAbierto} aria-controls="pedir-precio-cotizador"
+                  <button type="button" onClick={() => setCotizadorAbierto(true)} aria-expanded={false} aria-controls="pedir-precio-cotizador"
                     style={{ ...btnStyle('primario', 'md'), minHeight: 44, maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
                     {acciones.principal.etiqueta}
                   </button>
@@ -193,9 +210,10 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                   <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
                 )}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {CotizadorEmbebido ? (esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
+                  {CotizadorEmbebido ? (op.ramo === 'auto' ? 'Aquí solo se piden las condiciones (efecto, remolque, seguro actual…).' : esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
                 </span>
               </div>
+              )}
               {acciones.secundario && (
                 <div style={{ display: 'grid', gap: 4, alignContent: 'start', minWidth: 0 }}>
                   <BtnLink href={acciones.secundario.href} variante="secundario">{acciones.secundario.etiqueta}</BtnLink>
@@ -203,14 +221,6 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                 </div>
               )}
             </div>
-            {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. */}
-            <DuplicarOtroTomador
-              riesgo={riesgo}
-              ocupado={ocupado || editandoFiguras || editandoObjeto || cotizadorAbierto}
-              onCambio={(texto) => void recargar(texto)}
-              onError={(texto) => setAviso({ ok: false, texto })}
-              onRecargar={() => void recargar()}
-            />
             {CotizadorEmbebido && cotizadorAbierto && (
               <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <CotizadorEmbebido
@@ -230,9 +240,24 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                 />
               </div>
             )}
+            {/* Escenarios (07/10/2026): otra persona de tomador sin tocar figura a figura. Acción SECUNDARIA: apartada,
+                debajo del cotizador, para que no compita con el botón de pedir precio. */}
+            {ramo && riesgo.roles.includes('conductor_habitual') && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600, marginBottom: 6 }}>Otras opciones</div>
+              <DuplicarOtroTomador
+                riesgo={riesgo}
+                ocupado={ocupado || editandoFiguras || editandoObjeto || cotizadorAbierto}
+                onCambio={(texto) => void recargar(texto)}
+                onError={(texto) => setAviso({ ok: false, texto })}
+                onRecargar={() => void recargar()}
+              />
+            </div>
+            )}
           </>
         ) : hayBots ? (
           <>
+            {sinAvant2 && <p role="status" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>{sinAvant2}</p>}
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               Este ramo se cotiza con los bots de compañía: el formulario de presupuestos de más abajo va ya sembrado con el capital y la dirección de los datos; allí eliges compañías y lo pides.
             </p>
@@ -243,13 +268,20 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
             </div>
           </>
         ) : (
+          <>
+          {sinAvant2 && <p role="status" style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--warning)' }}>{sinAvant2}</p>}
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
             {avisoRamoSinTarifa(op.ramo, 'Este ramo se cotiza fuera (no hay tarifa a la que pedir precio desde aquí): los datos de arriba son para el expediente.')} La{' '}
             <Link href={`/correduria/cliente/${encodeURIComponent(op.clienteId)}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>ficha del cliente</Link>{' '}
             sigue siendo el sitio de sus pólizas y gestiones.
           </p>
+          </>
         )}
       </section>
+
+      {/* UNA parrilla por oportunidad (13/10/2026): Avant2 frente al bot, por compañía. Solo compara; los precios con su
+          «Emitir», PDF y traza siguen en «Presupuestos de compañías» y en «Presupuestos de este riesgo» (P1…Pn). */}
+      <ParrillaPrecios oportunidadId={op.id} claveVariantes={riesgo.variantes.map((v) => v.id).join(',')} bot={ladoBot} />
 
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
 
@@ -259,6 +291,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         clienteId={op.clienteId}
         ramo={op.ramo}
         riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
+        onLectura={alLeerBots}
       />
 
       <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />

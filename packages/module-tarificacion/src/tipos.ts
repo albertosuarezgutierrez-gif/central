@@ -5,7 +5,7 @@
 // oferta «sin franquicia».
 
 /** Ramos que el canal RPA sabe tarificar. Se amplía cuando haya un adaptador de otro ramo. */
-export type RamoRpa = 'comunidades'
+export type RamoRpa = 'comunidades' | 'auto' | 'moto'
 
 /** Dirección del riesgo (la del EDIFICIO, no la del tomador). */
 export type DireccionRiesgo = {

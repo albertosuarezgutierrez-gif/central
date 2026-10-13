@@ -288,6 +288,7 @@ export {
   type SexoConductor,
   type ConductorHabitual,
   type FormularioAuto,
+  type SeleccionVehiculo,
   type ValidacionFormularioAuto,
 } from './formulario-auto.ts'
 // EMISIÓN asistida con autorización de Alberto por Telegram (10/10/2026). El guard de emisión NO cambia: esto solo
@@ -328,4 +329,5 @@ export {
   type FilaAutorizacion,
   type DecisionCanje,
   type PermisoEmision,
+  ipidConstaEnAceptacion,
 } from './emision.ts'

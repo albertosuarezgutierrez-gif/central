@@ -28,7 +28,12 @@ test('dar de baja: cierra la devolución, anula, pierde lo del impago y abre la 
   // El correo al cliente que esperaba el OK no sale: ya no hay recibo que reclamar.
   assert.match(f, /update aprobacion set estado = 'rechazada'[\s\S]*origen = \$\{'recibo_devuelto'\} and estado = 'pendiente'/)
   assert.match(f, /'renovacion', 'competencia',\s+\$\{vence\}::date/)
-  assert.match(f, /vencimientoCompetencia\(r\.efecto, r\.vencePoliza, hoy\)/)
+  // 13/10/2026 (Alberto): la del año que viene nace APARCADA hasta su vuelta (aniversario del efecto del
+  // recibo → vencimiento de la póliza → +12 meses), con la llamada ese mismo día.
+  assert.match(f, /vueltaRescatePerdido\(\{ vencimientoPoliza: r\.vencePoliza, efectoRecibo: r\.efecto, hoy \}\)/)
+  assert.match(f, /\$\{r\.polizaId\}::uuid, \$\{llamada\}::date, \$\{aparcadaMotivo\}/)
+  // La del año siguiente que ya abrió un rescate perdido a mano no se pierde ni se duplica.
+  assert.match(f, /not in \(\$\{ORIGEN_RESCATE_PERDIDO\}, \$\{ORIGEN_BAJA_VERIFICADA\}\)/)
   // La matrícula viaja a la oportunidad: con ella se tarifica y la sustitución automática la casa con la póliza nueva.
   assert.match(f, /nullif\(trim\(p\.datos_especificos->>'matricula'\), ''\) as matricula/)
   assert.match(f, /\.\.\.\(r\.matricula \? \{ matricula: r\.matricula \} : \{\}\)/)

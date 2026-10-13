@@ -82,7 +82,7 @@ function Firmada({ f }: { f: AnulacionFirmada }) {
       ? `${compania} ha confirmado la baja${f.confirmadaEl ? ` (${fecha(f.confirmadaEl)})` : ''}.`
       : f.estado === 'comunicada'
         ? `Enviada a ${compania}${f.comunicadaEl ? ` el ${fecha(f.comunicadaEl)}` : ''}. Te avisamos cuando la confirme.`
-        : `Nosotros se la comunicamos a ${compania} y te avisamos cuando la confirme.`
+        : `Tu correduría la está revisando y se la comunicará a ${compania}. Te avisamos cuando la confirme.`
   return (
     <article className="vencimiento-tarjeta">
       <div style={{ display: 'grid', gap: 2 }}>

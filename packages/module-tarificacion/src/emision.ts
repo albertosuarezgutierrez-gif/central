@@ -101,6 +101,11 @@ export type PresupuestoParaEmitir = {
 }
 export type OpcionParaEmitir = { id: string; compania: string; primaEur: unknown }
 
+/** ¿Consta el IPID en la aceptación? Una sola regla para la precondición de emitir y para avisar ANTES de pedir. */
+export function ipidConstaEnAceptacion(ipidHuella: string | null | undefined): boolean {
+  return typeof ipidHuella === 'string' && ipidHuella.trim() !== ''
+}
+
 export type Precondicion = { ok: true; primaCents: number } | { ok: false; motivo: string }
 
 /**
@@ -112,7 +117,7 @@ export function precondicionesEmision(p: PresupuestoParaEmitir, o: OpcionParaEmi
   if (p.origen !== 'ofertas') return { ok: false, motivo: 'solo se emite por el robot un presupuesto de ofertas de compañía' }
   if (!p.aceptadoAt || !p.firmaId || !p.opcionElegidaId) return { ok: false, motivo: 'el cliente no ha aceptado y firmado el presupuesto' }
   if (p.opcionElegidaId !== o.id) return { ok: false, motivo: 'la opción no es la que aceptó el cliente' }
-  if (!p.ipidHuella || !p.ipidHuella.trim()) return { ok: false, motivo: 'IPID no consta en la aceptación: no se emite' }
+  if (!ipidConstaEnAceptacion(p.ipidHuella)) return { ok: false, motivo: 'IPID no consta en la aceptación: no se emite' }
   if (p.retiradoAt) return { ok: false, motivo: 'presupuesto retirado' }
   if (p.emitidoAt) return { ok: false, motivo: 'presupuesto ya emitido' }
   if (!p.venceEl || p.venceEl.getTime() <= ahora.getTime()) return { ok: false, motivo: 'presupuesto caducado' }

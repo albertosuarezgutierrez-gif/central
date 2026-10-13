@@ -362,6 +362,14 @@ export type TitularPortal = {
     partes: string[]
     /** `'dueno'` = no es una autorización: es su EMPRESA (relación `Dueño`). No se «deja de ver». */
     via?: 'dueno'
+    /**
+     * Presente SOLO si hay concesión sobre la ficha ENTERA (`poliza_id IS NULL`):
+     * sus ids y SUS alcances, sin mezclar con los de pólizas sueltas. Es lo único
+     * que decide qué se puede hacer con las pólizas AÑADIDAS del titular
+     * (`capacidadesDeAlcances`): un «Total» sobre la póliza del coche no da
+     * «Total» sobre lo que subió a mano.
+     */
+    ficha?: { ids: string[]; alcances: Alcance[] }
   }
   /**
    * Presente SOLO en `intervinientes`: la identidad FIGURA en estas pólizas del
@@ -542,6 +550,41 @@ function descifrarDireccion(datos: unknown): unknown {
   } catch {
     return datos
   }
+}
+
+/**
+ * `identidadId → clienteId` de las identidades TITULARES de unas fichas que quien
+ * mira tiene abiertas ENTERAS. La regla es la pura (`identidadesTitulares`,
+ * fail-closed); esto solo trae los vínculos. La usan la bóveda (para enseñar sus
+ * declaradas) y `lib/declarada-ajena.ts` (para abrir/editar una), así las dos
+ * deciden «quién es el titular» con la MISMA consulta.
+ *
+ * 🔒 `fichasEnteras` tiene que salir de una concesión vigente sobre la ficha
+ * entera de ESTA identidad (`porOtorgante`); nunca de la request.
+ */
+export async function titularesDeFichasEnteras(
+  fichasEnteras: readonly string[],
+  identidadId: string,
+): Promise<Map<string, string>> {
+  if (fichasEnteras.length === 0) return new Map()
+  const candidatas = await prisma.portalVinculo.findMany({
+    where: { clienteId: { in: [...fichasEnteras] }, identidadId: { not: identidadId } },
+    select: { identidadId: true },
+  })
+  const idsCandidatas = [...new Set(candidatas.map((v) => v.identidadId))]
+  return identidadesTitulares({
+    fichasEnteras,
+    // TODOS los vínculos de cada candidata: la regla necesita saber si tiene otra ficha.
+    vinculos:
+      idsCandidatas.length === 0
+        ? []
+        : await prisma.portalVinculo.findMany({
+            where: { identidadId: { in: idsCandidatas } },
+            select: { identidadId: true, clienteId: true, nivel: true, origen: true },
+          }),
+    identidadQueMira: identidadId,
+    identidadCorredor: IDENTIDAD_CORREDOR_ID,
+  })
 }
 
 export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPortal> {
@@ -1311,7 +1354,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     autorizadas.push({
       ...t,
       nivel: etiquetaNivelAlcances(alcancesFinales),
-      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca, partes: [...conPartes] },
+      autorizacion: {
+        ids: idsFinales,
+        alcances: alcancesFinales,
+        caducaEn: caduca,
+        partes: [...conPartes],
+        ...(deLaFicha === null ? {} : { ficha: { ids: [...deLaFicha.ids], alcances: [...new Set(deLaFicha.alcances)] } }),
+      },
     })
     autorizacionesUsadas.push(...idsFinales)
   }
@@ -1325,24 +1374,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   // identidades que la regla da por titulares, nunca por otra columna.
   const fichasEnteras = autorizadas.map((t) => t.clienteId).filter((id) => porOtorgante.has(id))
   if (fichasEnteras.length > 0) {
-    const candidatas = await prisma.portalVinculo.findMany({
-      where: { clienteId: { in: fichasEnteras }, identidadId: { not: identidadId } },
-      select: { identidadId: true },
-    })
-    const idsCandidatas = [...new Set(candidatas.map((v) => v.identidadId))]
-    const titulares = identidadesTitulares({
-      fichasEnteras,
-      // TODOS los vínculos de cada candidata: la regla necesita saber si tiene otra ficha.
-      vinculos:
-        idsCandidatas.length === 0
-          ? []
-          : await prisma.portalVinculo.findMany({
-              where: { identidadId: { in: idsCandidatas } },
-              select: { identidadId: true, clienteId: true, nivel: true, origen: true },
-            }),
-      identidadQueMira: identidadId,
-      identidadCorredor: IDENTIDAD_CORREDOR_ID,
-    })
+    const titulares = await titularesDeFichasEnteras(fichasEnteras, identidadId)
     const filasDeclaradas =
       titulares.size === 0
         ? []

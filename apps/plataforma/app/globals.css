@@ -738,6 +738,18 @@ em { font-style: normal; }
   .tabla-polizas tr.fila-hija { border-top: 0 !important; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 0; }
 }
 
+/* === «Parrilla de precios» del riesgo en MÓVIL (13/10/2026): Avant2 ↔ bot por compañía, de tabla a fichas apiladas.
+   Mismo patrón que `.tabla-polizas`: la compañía arriba, cada lado con su rótulo (`data-label`). */
+@media (max-width: 768px) {
+  .tabla-parrilla thead { display: none; }
+  .tabla-parrilla, .tabla-parrilla tbody, .tabla-parrilla tr, .tabla-parrilla td { display: block; width: 100%; }
+  .tabla-parrilla tr { border: 1px solid var(--border) !important; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .tabla-parrilla td { padding: 4px 0 !important; min-width: 0; overflow-wrap: anywhere; }
+  .tabla-parrilla td[data-label] { position: relative; padding-left: 96px !important; min-height: 24px; }
+  .tabla-parrilla td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 6px; width: 88px; font-size: 12px; color: var(--muted); }
+  .tabla-parrilla td[data-rol="cabeza"] { font-size: 15px; }
+}
+
 /* === Armazón como el portal del cliente (24/09/2026) =======================================
    Lateral sobre el fondo tintado de marca y el contenido como «isla» (radio amplio + sombra
    plana + 8 px de margen) en escritorio. En móvil la isla ocupa todo y la barra de arriba lleva

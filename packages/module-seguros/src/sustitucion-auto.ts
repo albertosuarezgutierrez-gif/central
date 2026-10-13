@@ -27,6 +27,9 @@ import { normalizarDireccion } from './busqueda.ts'
 export const SUSTITUCION_DIAS_ANTES = 60
 /** Días después del vencimiento de la vieja en los que aún se considera continuación. */
 export const SUSTITUCION_DIAS_DESPUES = 30
+/** Ventana larga tras el vencimiento cuando la vieja YA NO está vigente (baja/anulada) y el riesgo es
+ *  una matrícula válida: caso real 2026 — Mapfre cancelada (vence 10/08) y Allianz con efecto 08/10 (+59). */
+export const SUSTITUCION_DIAS_DESPUES_BAJA_CON_MATRICULA = 120
 
 export type PolizaParaSustitucion = {
   id: string
@@ -157,7 +160,8 @@ export function detectarSustituciones(polizas: readonly PolizaParaSustitucion[])
         if (nv !== null && nv === normalizarNumeroPoliza(nueva.numeroPoliza)) continue
         if (nueva.fechaInicio <= vieja.fechaInicio!) continue
         const d = distanciaAniversario(vieja.fechaInicio!, vieja.fechaVencimiento, nueva.fechaInicio)
-        if (d < -SUSTITUCION_DIAS_ANTES || d > SUSTITUCION_DIAS_DESPUES) {
+        const diasDespues = !vieja.vigente && riesgo.tipo === 'matricula' ? SUSTITUCION_DIAS_DESPUES_BAJA_CON_MATRICULA : SUSTITUCION_DIAS_DESPUES
+        if (d < -SUSTITUCION_DIAS_ANTES || d > diasDespues) {
           // No se suceden: si las dos siguen vigentes y se pisan, es una duplicidad.
           if (vieja.vigente && nueva.fechaInicio < vieja.fechaVencimiento) duplicidades.push({ aId: vieja.id, bId: nueva.id, riesgo })
           continue

@@ -25,8 +25,11 @@ export interface DefinicionRamo {
 
 // Prioridad de cotización (Alberto, 10/10/2026): BOT primero (gratis); Avant2/CDS solo como respaldo y con OK de coste (0,50 €).
 // Metadato, no conducta: `cotizador` sigue diciendo lo que hay HOY. Ver docs/TARIFICADOR-MATRIZ.md.
+// 13/10/2026: los SEIS ramos con cotizador Avant2 en el repo (auto, moto, hogar, decesos, salud, vida) ya son `embebido`.
+// Comercio y RC: `fuera` (Avant2 no tiene endpoint y no hay bot activo); comunidades: `bots` (RPA Allianz). Sin Avant2,
+// la pantalla pinta figuras + datos del riesgo + Parrilla (lado bot) y el aviso `AVISO_SIN_AVANT2`.
 const COTIZADOR: Record<RamoRiesgo, TipoCotizador> = {
-  auto: 'embebido', moto: 'embebido', hogar: 'embebido', vida: 'pantalla', salud: 'pantalla', decesos: 'pantalla',
+  auto: 'embebido', moto: 'embebido', hogar: 'embebido', vida: 'embebido', salud: 'embebido', decesos: 'embebido',
   comercio: 'fuera', rc: 'fuera', comunidades: 'bots', otros: 'fuera',
 }
 const COMPARABLE: Record<RamoRiesgo, boolean> = {
@@ -40,4 +43,23 @@ export const REGISTRO_RAMOS: Readonly<Record<RamoRiesgo, DefinicionRamo>> = Obje
 /** El ramo del registro, o `null` si es un tipo que no conocemos (nunca se inventa una definición). */
 export function definicionDeRamo(ramo: string | null | undefined): DefinicionRamo | null {
   return typeof ramo === 'string' && (RAMOS_RIESGO as readonly string[]).includes(ramo) ? REGISTRO_RAMOS[ramo as RamoRiesgo] : null
+}
+
+/** ¿El ramo tiene cotizador Avant2 en el repo? (= `embebido` o `pantalla` en el registro; un tipo desconocido, no). */
+export function tieneAvant2(ramo: string | null | undefined): boolean {
+  const d = definicionDeRamo(ramo)
+  return d !== null && (d.cotizador === 'embebido' || d.cotizador === 'pantalla')
+}
+
+/**
+ * PURA (13/10/2026). El aviso del bloque «Pedir precio» de un ramo SIN cotizador Avant2 (comercio, RC, comunidades,
+ * otros y cualquier tipo de oportunidad fuera del registro: accidentes, empresas…). `null` = el ramo sí tiene Avant2.
+ * Codeoscopic confirmó (21/09/2026, docs/TARIFICADOR-MATRIZ.md) que RC, comercio y comunidades no existen en su API:
+ * aquí no se inventa cotizador. `hayBots` = la pantalla tiene algún bot de compañía para el ramo (`companiasDisponibles`).
+ */
+export function avisoSinAvant2(ramo: string | null | undefined, e: { hayBots: boolean }): string | null {
+  if (tieneAvant2(ramo)) return null
+  return e.hayBots
+    ? 'Sin precio automático por Avant2: Codeoscopic no tiene tarifa de este ramo. El precio lo piden los bots de compañía («Presupuestos de compañías», más abajo) y la parrilla lo compara.'
+    : 'Sin precio automático por Avant2: Codeoscopic no tiene tarifa de este ramo y no hay bot de compañía activo. Se cotiza fuera y el precio se anota como oferta; intervinientes y datos del riesgo quedan en el expediente.'
 }

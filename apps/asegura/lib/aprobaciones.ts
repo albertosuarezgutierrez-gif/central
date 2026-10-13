@@ -23,6 +23,8 @@ import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import { pdfDocumentoFirmado } from './documento-firmado-pdf'
 import { rechazoDeRemitente } from './correo-invitacion-portal.ts'
 import { estadoEmailDeFicha } from './email-ficha'
+import { tgSend } from '@central/core-telegram'
+import { textoAvisoAnulacionEnCola } from './aviso-anulacion-en-cola.ts'
 import { canalBajaCompania, MOTIVO_NO_CORREO_ALLIANZ } from './canal-baja.ts'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
@@ -58,7 +60,14 @@ export async function proponerReciboDevuelto(tx: Tx, correduriaId: string, recib
             ${`${ORIGEN_RECIBO_DEVUELTO}:${reciboId}:${r.vencimiento ?? 'sin_fecha'}`},
             ${r.clienteId}::uuid, ${r.polizaId}::uuid, ${eventoId}::uuid,
             ${JSON.stringify({ asunto: b.asunto, texto: b.texto })}::jsonb, ${b.urgente}, ${b.caduca})
-    on conflict (clave) do nothing
+    -- Una propuesta CADUCADA (nadie la miró a tiempo) o FALLIDA se REABRE si el recibo sigue devuelto (esta
+    -- función solo corre con el recibo devuelto): si no, la clave la bloquearía para siempre. Una rechazada
+    -- (Alberto dijo que no), una ejecutada o una en curso NO se tocan: no se reabre lo decidido.
+    on conflict (clave) do update
+      set estado = 'pendiente', created_at = now(), caduca_at = excluded.caduca_at, propuesta = excluded.propuesta,
+          urgente = excluded.urgente, evento_id = coalesce(excluded.evento_id, aprobacion.evento_id),
+          decidida_at = null, decidida_por = null, resultado = null
+      where aprobacion.estado in ('caducada', 'fallida') and aprobacion.correduria_id = excluded.correduria_id
     returning id::text as id`
   return ins.length > 0
 }
@@ -136,6 +145,33 @@ export type EnvioTrasFirma =
  * propuesta se queda pendiente en la cola, que es exactamente lo que había antes.
  */
 export async function enviarAnulacionTrasFirma(correduriaId: string, anulacionId: string): Promise<EnvioTrasFirma> {
+  const r = await intentarEnvioTrasFirma(correduriaId, anulacionId)
+  if (r.estado === 'en_cola') await avisarAnulacionEnCola(correduriaId, anulacionId)
+  return r
+}
+
+/** Telegram a la correduría: la baja firmada espera su OK en «Hoy». Best effort: un fallo se loguea y no rompe nada. */
+async function avisarAnulacionEnCola(correduriaId: string, anulacionId: string): Promise<void> {
+  try {
+    if (!UUID.test(anulacionId)) return
+    const [f] = await prismaAsegura().$queryRaw<{ tomador: string; compania: string | null; numeroPoliza: string | null; tipo: string; fechaEfecto: string; firmadaEl: string; caducaEl: string }[]>`
+      select trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador, coalesce(cd.nombre_comun, p.aseguradora) as compania,
+             p.numero_poliza as "numeroPoliza", n.tipo::text as tipo, to_char(n.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto",
+             to_char(n.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl",
+             to_char(x.caduca_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "caducaEl"
+      from aprobacion x join anulacion n on n.id = x.anulacion_id join polizas p on p.id = n.poliza_id
+        join clientes c on c.id = n.cliente_id left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+      where x.anulacion_id = ${anulacionId}::uuid and x.correduria_id = ${correduriaId}::uuid
+        and x.accion = 'enviar_correo_compania' and x.estado = 'pendiente' and x.caduca_at >= now()
+      order by x.created_at desc limit 1`
+    if (!f) return
+    await tgSend(textoAvisoAnulacionEnCola(f))
+  } catch (e) {
+    console.error('[aprobaciones] aviso Telegram de baja en cola falló:', e instanceof Error ? e.message : e)
+  }
+}
+
+async function intentarEnvioTrasFirma(correduriaId: string, anulacionId: string): Promise<EnvioTrasFirma> {
   if (!UUID.test(anulacionId)) return { estado: 'en_cola', motivo: 'anulación no válida' }
   const db = prismaAsegura()
   // Allianz NUNCA por correo: se para antes de proponer nada. La anulación queda `firmada` (pendiente de PUE).

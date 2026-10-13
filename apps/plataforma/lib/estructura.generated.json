@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-11T08:36:18Z",
+  "generadoEn": "2026-10-13T11:42:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -960,8 +960,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,11 +2203,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 232
+        "evidencias": 233
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 123
+        "evidencias": 124
       },
       "asegura-web": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 177
+        "evidencias": 182
       },
       "rrhh": {
         "estado": "no",
@@ -2315,7 +2315,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 97
+        "evidencias": 98
       },
       "asegura-web": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 31
+        "evidencias": 32
       },
       "asegura-portal": {
         "estado": "no",
@@ -4139,6 +4139,7 @@
       "/api/operador/emision/aviso",
       "/api/operador/eventos",
       "/api/operador/eventos/detectar",
+      "/api/operador/expedientes",
       "/api/operador/export-rgpd",
       "/api/operador/formacion",
       "/api/operador/formacion/baja",
@@ -4193,6 +4194,7 @@
       "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
       "/api/operador/recibos/devolucion",
+      "/api/operador/red-diaria",
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
@@ -5192,6 +5194,7 @@
       "/api/correduria/emision-aviso",
       "/api/correduria/emisiones-revision",
       "/api/correduria/emisiones-revision/[id]/resolver",
+      "/api/correduria/expedientes",
       "/api/correduria/export-rgpd",
       "/api/correduria/formacion",
       "/api/correduria/formacion/baja",
@@ -5285,6 +5288,7 @@
       "/api/cron/correduria-eventos",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
+      "/api/cron/correduria-red-diaria",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correduria-retenidas",
       "/api/cron/correduria-seguimiento-presupuestos",
@@ -6856,7 +6860,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1666,
+    "apis": 1670,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

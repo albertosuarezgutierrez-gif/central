@@ -4,17 +4,17 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { clavesEmision } from '@central/module-tarificacion'
 import {
-  EMISION_PERMITIDA, TEXTO_CONFIRMACION, TEXTO_ESPERANDO, candidatosPresupuesto, leerRespuestaEmision, primaDeCompania, visibilidadEmision,
+  EMISION_PERMITIDA, MOTIVO_SIN_OPCION, constanciaAceptacion, TEXTO_CONFIRMACION, TEXTO_ESPERANDO, candidatosPresupuesto, leerRespuestaEmision, primaDeCompania, visibilidadEmision,
   type EntradaVisibilidad,
 } from './tarificador-emision-boton.ts'
-import type { PresupuestoEnLista } from './presupuesto-asegura.ts'
+import { leerPresupuestoEnLista, type PresupuestoEnLista } from './presupuesto-asegura.ts'
 
 const base: EntradaVisibilidad = { compania: 'allianz', ramo: 'comunidades', estadoTrabajo: 'ok', conOferta: true, estadoPresupuesto: 'aceptado', ipidConsta: true, emisionEnCurso: false }
 
 const pres = (o: Partial<PresupuestoEnLista> = {}): PresupuestoEnLista => ({
   id: '11111111-1111-4111-8111-111111111111', referencia: 'AS-26-0001', documentoDescargadoAt: null, estado: 'aceptado', clienteId: 'c1', ramo: 'comunidades',
   creadoAt: '2026-10-01T10:00:00Z', venceEl: '2026-11-01', enviadoAt: null, enlaceGeneradoAt: null, vistoAt: null, opciones: 1, desdeEur: 347.55, necesidades: null,
-  detalle: [{ id: 'o1', compania: 'Allianz', modalidad: null, primaEur: 347.55, garantias: null }], ...o,
+  detalle: [{ id: 'o1', compania: 'Allianz', modalidad: null, primaEur: 347.55, garantias: null }], ipidConsta: null, opcionElegidaId: null, ...o,
 })
 
 test('la lista blanca de la pantalla es la del robot', () => {
@@ -36,6 +36,33 @@ test('sin IPID (false) se ve pero inactivo; IPID desconocido (null) activo con a
   assert.equal(sin.visible, true); assert.equal(sin.activo, false); assert.match(sin.motivo ?? '', /IPID/)
   const desc = visibilidadEmision({ ...base, ipidConsta: null })
   assert.equal(desc.activo, true); assert.match(desc.aviso ?? '', /IPID/)
+})
+
+test('sin IPID o sin opción elegida (false explícito): inactivo con el motivo claro; ausente (null/undefined): no bloquea', () => {
+  const sin = visibilidadEmision({ ...base, ipidConsta: false })
+  assert.equal(sin.activo, false); assert.equal(sin.motivo, 'Falta el IPID del presupuesto aceptado: vuelve a aceptarlo.')
+  const sinOp = visibilidadEmision({ ...base, opcionConsta: false })
+  assert.equal(sinOp.activo, false); assert.equal(sinOp.motivo, MOTIVO_SIN_OPCION)
+  for (const opcionConsta of [null, undefined, true]) assert.equal(visibilidadEmision({ ...base, opcionConsta }).activo, true)
+  assert.equal(visibilidadEmision({ ...base, ipidConsta: null }).activo, true)
+})
+
+test('constanciaAceptacion: tres estados, nunca afirma ausencia sin dato', () => {
+  // asegura antiguo (no manda ipidConsta): ni IPID ni opción se dan por ausentes
+  assert.deepEqual(constanciaAceptacion(pres({ ipidConsta: null, opcionElegidaId: null })), { ipidConsta: null, opcionConsta: null })
+  assert.deepEqual(constanciaAceptacion(null), { ipidConsta: null, opcionConsta: null })
+  // asegura nuevo: false/true leídos; opción null = no consta
+  assert.deepEqual(constanciaAceptacion(pres({ ipidConsta: false, opcionElegidaId: 'o1' })), { ipidConsta: false, opcionConsta: true })
+  assert.deepEqual(constanciaAceptacion(pres({ ipidConsta: true, opcionElegidaId: null })), { ipidConsta: true, opcionConsta: false })
+  assert.deepEqual(constanciaAceptacion(pres({ ipidConsta: true, opcionElegidaId: 'o1' })), { ipidConsta: true, opcionConsta: true })
+})
+
+test('leerPresupuestoEnLista conserva ipidConsta solo si es booleano', () => {
+  const fila = { id: 'a', estado: 'aceptado', creadoAt: 'x', venceEl: 'y' }
+  assert.equal(leerPresupuestoEnLista({ ...fila, ipidConsta: false, opcionElegidaId: 'o' })?.ipidConsta, false)
+  assert.equal(leerPresupuestoEnLista({ ...fila })?.ipidConsta, null)
+  assert.equal(leerPresupuestoEnLista({ ...fila, ipidConsta: 'no' })?.ipidConsta, null)
+  assert.equal(leerPresupuestoEnLista({ ...fila, ipidConsta: true, opcionElegidaId: 'o' })?.opcionElegidaId, 'o')
 })
 
 test('emisión en curso: inactivo y dice que espera el OK', () => {

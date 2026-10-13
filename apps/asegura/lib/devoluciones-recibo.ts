@@ -15,7 +15,9 @@
 // hoy». La idempotencia por hito la da `oportunidad_historial` (accion `tarea_devolucion`).
 
 import {
+  ORIGEN_BAJA_VERIFICADA,
   ORIGEN_DEVOLUCION,
+  ORIGEN_RESCATE_PERDIDO,
   POLIZA_ESTADOS_VIGENTES,
   PREFIJO_TAREA_DEVOLUCION,
   clasificarMotivoDevolucion,
@@ -25,13 +27,14 @@ import {
   normalizarIdRecibo,
   suspensionDesde,
   textoTareaDevolucion,
+  vueltaRescatePerdido,
   type HitoDevolucion,
   type TipoMotivoDevolucion,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { MARCA_CIERRE_AUTOMATICO } from './oportunidad-seguimiento'
-import { ROTULO_MOTIVO_BAJA, fechaLlamada, vencimientoCompetencia, type MotivoBaja } from './baja-devolucion-reglas'
+import { ROTULO_MOTIVO_BAJA, type MotivoBaja } from './baja-devolucion-reglas'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -508,6 +511,8 @@ export async function darDeBajaPorDevolucion(
       where o.correduria_id = ${correduriaId}::uuid
         and (o.poliza_id = ${r.polizaId}::uuid or o.info_riesgo->>'polizaId' = ${r.polizaId})
         and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+        -- La del AÑO SIGUIENTE (de un rescate ya perdido a mano) no se pierde: es justo la que queda.
+        and coalesce(o.info_riesgo->>'origen', '') not in (${ORIGEN_RESCATE_PERDIDO}, ${ORIGEN_BAJA_VERIFICADA})
       for update`
     for (const o of perdidas) {
       await tx.$executeRaw`
@@ -532,20 +537,33 @@ export async function darDeBajaPorDevolucion(
       where correduria_id = ${correduriaId}::uuid and poliza_id = ${r.polizaId}::uuid
         and origen = ${'recibo_devuelto'} and estado = 'pendiente'`
 
-    // 4. La oportunidad del año que viene.
-    const vence = vencimientoCompetencia(r.efecto, r.vencePoliza, hoy)
-    const llamada = fechaLlamada(vence, hoy)
+    // 4. La oportunidad del año que viene, APARCADA hasta su vuelta (Alberto, 13/10/2026: «rescate perdido
+    // → se aparca solo hasta el año siguiente»), con la llamada ese mismo día: así reaparece sola en «Hoy».
+    // Sin ninguna fecha, +12 meses (`vueltaRescatePerdido`); el vencimiento solo se escribe si es real.
+    const vuelta = vueltaRescatePerdido({ vencimientoPoliza: r.vencePoliza, efectoRecibo: r.efecto, hoy })
+    const vence = vuelta.vence
+    const llamada = vuelta.aparcadaHasta
     const motivoTxt = ROTULO_MOTIVO_BAJA[motivo]
     const cia = r.compania ?? 'la compañía'
     let oportunidadId = ''
+    // Si ya la abrió el rescate perdido a mano (misma póliza), se queda esa: no se duplica.
+    const [yaHay] = await tx.$queryRaw<{ id: string }[]>`
+      select id::text as id from oportunidades
+      where correduria_id = ${correduriaId}::uuid and poliza_id = ${r.polizaId}::uuid
+        and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+        and info_riesgo->>'origen' in (${ORIGEN_RESCATE_PERDIDO}, ${ORIGEN_BAJA_VERIFICADA})
+      limit 1`
+    if (yaHay) oportunidadId = yaHay.id
     // Una por PÓLIZA, no por cliente+ramo: con dos motos (o una flota) la oportunidad abierta de la otra
     // matrícula no cubre esta. Las abiertas de ESTA póliza ya se han perdido arriba.
-    {
+    else {
+      const aparcadaMotivo = `El cliente se fue (${motivoTxt}): pasarle precio antes de que renueve${vuelta.estimada ? ' (sin vencimiento conocido: +12 meses)' : ''}.`
       const [o] = await tx.$queryRaw<{ id: string }[]>`
-        insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_id, info_riesgo)
+        insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_id,
+                                   aparcada_hasta, aparcada_motivo, info_riesgo)
         values (${correduriaId}::uuid, ${r.clienteId}::uuid, cast(${r.ramo} as tipo_seguro), 'renovacion', 'competencia',
-                ${vence}::date, ${r.prima}::numeric, ${r.polizaId}::uuid,
-                ${JSON.stringify({ origen: 'baja_verificada', polizaId: r.polizaId, companiaAnterior: r.compania, numeroPolizaAnterior: r.numeroPoliza, motivo, ...(r.matricula ? { matricula: r.matricula } : {}) })}::jsonb)
+                ${vence}::date, ${r.prima}::numeric, ${r.polizaId}::uuid, ${llamada}::date, ${aparcadaMotivo},
+                ${JSON.stringify({ origen: ORIGEN_BAJA_VERIFICADA, polizaId: r.polizaId, companiaAnterior: r.compania, numeroPolizaAnterior: r.numeroPoliza, motivo, ...(r.matricula ? { matricula: r.matricula } : {}) })}::jsonb)
         returning id::text as id`
       oportunidadId = o.id
       await tx.$executeRaw`
@@ -557,7 +575,7 @@ export async function darDeBajaPorDevolucion(
       await tx.$executeRaw`
         insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
         values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_baja_verificada', null, 'competencia',
-                ${JSON.stringify({ polizaId: r.polizaId, vence, llamada })}::jsonb, ${actor})`
+                ${JSON.stringify({ polizaId: r.polizaId, vence, llamada, aparcadaHasta: llamada, estimada: vuelta.estimada })}::jsonb, ${actor})`
     }
 
     // 5. El rastro en la ficha: de dónde salió cada cosa (correo, CIMA, el corredor).
@@ -568,7 +586,9 @@ export async function darDeBajaPorDevolucion(
       `Recibo devuelto${importe !== null ? ` de ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€` : ''}${r.efecto ? ` (efecto ${fechaEs(r.efecto)})` : ''} sin pagar; devolución conocida por ${fuente}.`,
       nota ? `Nota: ${nota}` : null,
       'Pendiente de que CIMA confirme la anulación.',
-      vence ? `Oportunidad de competencia para el ${fechaEs(vence)} (llamada el ${fechaEs(llamada)}).` : `Oportunidad de competencia sin fecha de renovación (llamada el ${fechaEs(llamada)}).`,
+      yaHay
+        ? 'Ya tenía abierta la oportunidad del año que viene (del rescate perdido): se queda esa.'
+        : vence ? `Oportunidad de competencia para el ${fechaEs(vence)}, aparcada hasta el ${fechaEs(llamada)} (ese día, llamada).` : `Oportunidad de competencia sin fecha de renovación, aparcada hasta el ${fechaEs(llamada)} (+12 meses; ese día, llamada).`,
     ].filter(Boolean).join(' ')
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)

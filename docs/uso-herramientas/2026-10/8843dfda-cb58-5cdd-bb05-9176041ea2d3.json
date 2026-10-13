@@ -1,0 +1,120 @@
+{
+ "sesion": "8843dfda-cb58-5cdd-bb05-9176041ea2d3",
+ "inicio": "2026-10-12T19:04:34.728Z",
+ "fin": "2026-10-13T05:35:24.327Z",
+ "llamadas": 276,
+ "categorias": {
+  "otro": {
+   "llamadas": 60,
+   "chars_in": 35057,
+   "chars_out": 286175,
+   "errores": 0,
+   "archivos_citados": 5,
+   "chars_citados": 115269,
+   "tools": {
+    "ToolSearch": 14,
+    "SubagentHandback": 9,
+    "ReadNotifications": 36,
+    "SendMessage": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 19,
+   "chars_in": 2298,
+   "chars_out": 71689,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 11,
+    "Read": 8
+   }
+  },
+  "sql": {
+   "llamadas": 26,
+   "chars_in": 12312,
+   "chars_out": 62195,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__execute_sql": 3,
+    "mcp__Supabase__execute_sql": 23
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 3,
+   "chars_in": 6,
+   "chars_out": 1173,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 3
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 7,
+   "chars_in": 13604,
+   "chars_out": 11260,
+   "errores": 0,
+   "archivos_citados": 9,
+   "chars_citados": 214840,
+   "tools": {
+    "Agent": 7
+   }
+  },
+  "bash": {
+   "llamadas": 139,
+   "chars_in": 90755,
+   "chars_out": 548481,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 139
+   }
+  },
+  "mcp:github": {
+   "llamadas": 14,
+   "chars_in": 4906,
+   "chars_out": 32408,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 55444,
+   "tools": {
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__add_reply_to_pull_request_comment": 2,
+    "mcp__github__resolve_review_thread": 2,
+    "mcp__github__merge_pull_request": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 7,
+   "chars_in": 669,
+   "chars_out": 1805,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 2,
+    "mcp__claude-code-remote__send_later": 3,
+    "mcp__claude-code-remote__delete_trigger": 1,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 1
+   }
+  },
+  "agente:verificador-esceptico": {
+   "llamadas": 1,
+   "chars_in": 1911,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

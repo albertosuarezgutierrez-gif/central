@@ -92,6 +92,7 @@ En absoluto Luxury «empeora» (29→33); en porcentaje mejora (39% → 35%).
 | 14/09/2026 | 0,91× (13/91) | 1,47× (33/90) | 1,03× (10/92) | 0,88× (18/90) | 30% | ✅ `antelacion_k` de House **vuelve a 0**. Los 3 convergidos, quietos. El 1,47× de House **no es que suba: es que ya no nos engañábamos** — su `channel_markup` pasó de 1,056 a 1,20 el 12/09 y su neto BAJÓ. ⚠️ Cobertura clavada al 30% tres semanas; barrido sigue monotemático |
 | 28/09/2026 | 0,87× (2/106) | 1,33× (27/107) | 0,91× (8/106) | 0,82× (6/105) | 34-35% | 🎉 **Cobertura se mueve por primera vez en 3 semanas** (30%→34-35%): la prioridad jul-ago 2027 del barrido se quitó (100%→0-5% de los comps del día desde el 19/09) y el calendario vuelve a refrescarse entero. House sigue bajando (1,47×→1,33×, «más caros que todos» 37%→25%). **Fuga de canal: n=1→4** (busto/duplex/luxury), las tres nuevas también negativas. **Sin fila el 21/09** (la sesión se desvió a un problema de guardado en el editor de la propia rutina) — esta compara contra 14/09 |
 | 05/10/2026 | 0,92× (4/123) | 1,23× (25/124) | 0,92× (15/122) | 0,82× (11/122) | 40-41% | **Cobertura sigue subiendo** (34-35%→40-41%), segunda semana seguida tras quitar la prioridad jul-ago del barrido. **House sigue bajando** (1,33×→1,23×): a solo 0,03 de la condición 1, «más caros que todos» baja de 25% a 20%. Busto y Dúplex suben un poco (0,87→0,92 / 0,91→0,92) pero siguen muy por debajo del techo. **Heartbeat `sivra_mercado_booking` vuelve a `ok:true`** — el fallo del escaparate propio de la semana pasada ya tenía arreglo mergeado (PR #4118/#4220, filtro `ventanaLibre`) |
+| 12/10/2026 | 0,91× (3/118) | **1,20× (22/119)** | 0,93× (12/117) | 0,82× (6/117) | 38-39% | 🚨 **House cruza el umbral: 1,20×, condición 1 cumplida en los CUATRO pisos por primera vez** («más caros que todos» 20%→18,5%). ⚠️ **Pero la cobertura BAJA** (40-41%→38-39%), rompiendo la racha de dos subidas — sigue > 25% en número, pero la tendencia que sostenía la condición 2 se frena. Fuga de canal no remedida esta semana, sigue en n=4 |
 
 #### Lectura del 31/08/2026
 
@@ -236,7 +237,8 @@ Con eso dicho, y contando solo lo que sigue vivo hoy:
 | 14/09 | 18 | 52 | 212,00€ | 2 |
 | 21/09 | 25 | 67 | 159,96€ | 6 |
 | 28/09 | 19 | 57 | 274,62€ | 3 |
-| 05/10 | — | — | — | *semana en curso, no cerrada: contar sus reservas ahora infla la próxima fila* |
+| 05/10 | 20 | 49 | 270,90€ | 2 |
+| 12/10 | — | — | — | *semana en curso, no cerrada: contar sus reservas ahora infla la próxima fila* |
 
 **El volumen se ha multiplicado y el ADR se ha hundido**, que es exactamente lo que uno espera tras
 bajar precios un 20-26%. Los ingresos de la semana salen por encima (49 x 230 = 11.270,00€ y
@@ -333,6 +335,51 @@ Ninguna condición se cumple aún del todo, pero la 1 está a un paso. Si House 
 que viene con la cobertura manteniendo la tendencia, ya habría dos de tres — momento de proponerle a
 Alberto, con los números, si tiene sentido revisar `antelacion_k`. Hoy no: **sin Telegram**, nada se
 ha estancado y ningún piso ha empeorado.
+
+#### Lectura del 12/10/2026 — House cruza el umbral, pero la cobertura rompe la racha
+
+**Condición 1, cumplida en los cuatro pisos por primera vez desde que existe esta tabla.** House
+Sevillana pasa de 1,23× a **1,20×**, exactamente en el límite que este documento fija como «≤~1,2×».
+Los otros tres siguen cómodos y estables: Busto Reform 0,91× (igual que la semana pasada en la
+práctica), Dúplex Center 0,93× (0,92× → 0,93×, ruido), Luxury Busto 0,82× (sin cambios). «Más caros
+que todos los comps» de House sigue cayendo: 25/124 (20,2%) → 22/119 (18,5%).
+
+⚠️ **Pero la condición 2 se frena: la cobertura BAJA por primera vez desde que se quitó la prioridad
+jul-ago del barrido.** 40-41% → **38-39%** (118/304, 117/304, 119/304 y 117/304 según el piso, frente
+a las 304 noches lejanas por piso de siempre). Sigue por encima del 25% mínimo, así que la condición
+sigue cumplida en número, pero rompe las dos semanas de subida que este documento venía celebrando —
+no es la confirmación de tendencia que se esperaba la semana pasada («si la cobertura mantiene la
+tendencia, momento de proponerle a Alberto»). El latido de hoy explica por qué sin apuntar a un fallo:
+`sivra_mercado_booking` sigue en `ok:true`, con 239 comps en **24/24 ventanas, pero el plan está
+acotado a un máximo de 24 ventanas por pasada y 516 ventanas quedaron fuera por ese tope** — el barrido
+tiene un techo diario de diseño, así que la cobertura puede estancarse o retroceder algún día sin que
+nada esté roto, simplemente porque ese día tocó refrescar otra esquina del calendario. No se ha mirado
+si el reparto de esas 24 ventanas diarias prioriza mal; queda anotado para la próxima pasada si vuelve
+a bajar.
+
+**Reservas: la semana del 05/10 cierra en 20 reservas / 49 noches / 270,90€ de ADR** (2 canceladas ya
+vistas, las 2 en `incomes`) — tercer ADR más alto de la serie tras 28/09 (274,62€) y 24/08 (529,00€),
+en línea con que ningún piso ha vuelto a subir precio base. **Tendencia, no prueba**: n pequeño, mezcla
+de pisos y aforos, sin contrafactual, y como siempre esta fila todavía puede bajar si llegan
+cancelaciones nuevas sobre ella.
+
+**No se re-midió la fuga de canal esta semana** (no estaba en el alcance de esta pasada); sigue
+documentada en n=4 de hace dos semanas.
+
+##### Las tres condiciones, hoy
+
+- **1 — ratio ≤ ~1,2×: SÍ, por primera vez en los cuatro.** 0,91× / 1,20× / 0,93× / 0,82×. House
+  llega justo al límite, no por debajo con margen.
+- **2 — cobertura > 25%: SÍ en número (38-39%), pero con una reserva nueva.** Es la primera semana
+  que BAJA desde que arrancó la subida (28/09). No está «estancada» en el sentido de clavada, está
+  retrocediendo un par de puntos — hay que ver la próxima pasada antes de hablar de tendencia rota.
+- **3 — fuga de canal medida: NO, sigue en n=4,** sin remedir esta semana.
+
+🚨 **Dos de las tres condiciones están hoy satisfechas en número** (1 y 2), algo que no había pasado
+antes en esta tabla. No se cumplen las tres, y la condición 2 llega con el matiz de la bajada de
+cobertura, así que esto no es todavía el punto de proponer reencender `antelacion_k` — pero es el
+momento más cerca que ha estado nunca, y merece que Alberto lo vea con estos números antes de la
+semana que viene.
 
 ### La consulta (reproducible tal cual)
 

@@ -17,8 +17,10 @@ import {
   ORIGEN_RETENCION,
   POLIZA_ESTADOS_VIGENTES,
   TIPOS_FUGA,
+  corteBajaHistorica,
   decidirRetencion,
   detectarCambios,
+  esBajaHistorica,
   esFugaSinExplicar,
   leerAnulacion,
   planRetencionPorMotivo,
@@ -431,14 +433,21 @@ async function anotarRetencion(correduriaId: string, r: Retencion): Promise<void
 async function describirFugas(db: Consultor, correduriaId: string, claves: string[] | null): Promise<FugaNueva[]> {
   const limite = claves ? claves.length : 100
   const tipos = TIPOS_FUGA as readonly string[]
-  const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null; anulacion: unknown; recibo: string | null }[]>`
+  const hoy = hoyMadrid()
+  const filas = await db.$queryRaw<{ id: string; tipo: TipoEventoCartera; cliente_id: string; nombre: string | null; apellidos: string | null; numero_poliza: string | null; aseguradora: string | null; despues: string | null; anulacion: unknown; recibo: string | null; vencimiento: string | null }[]>`
     select e.id, e.tipo, e.cliente_id, c.nombre, c.apellidos, p.numero_poliza, p.aseguradora, e.datos->>'despues' as despues,
            -- El motivo CIMA de la póliza (puede llegar después que la baja); si no, el que guardó el evento.
-           coalesce(p.datos_especificos->'anulacion', jsonb_strip_nulls(jsonb_build_object('motivo', e.datos->>'motivoCima', 'fecha', e.datos->>'fechaAnulacion'))) as anulacion,
-           ur.situacion as recibo
+           an.anulacion, ur.situacion as recibo, to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento
     from evento e
     left join clientes c on c.id = e.cliente_id
     left join polizas p on p.id = e.entidad_id
+    cross join lateral (select coalesce(p.datos_especificos->'anulacion', jsonb_strip_nulls(jsonb_build_object('motivo', e.datos->>'motivoCima', 'fecha', e.datos->>'fechaAnulacion'))) as anulacion) an
+    -- La fecha con la que se juzga si es histórica, leída como leerAnulacion(anulacion)?.fecha ?? vencimiento.
+    cross join lateral (select coalesce(
+        case when jsonb_typeof(an.anulacion) = 'object' and jsonb_typeof(an.anulacion->'fecha') = 'string'
+                  and btrim(an.anulacion->>'fecha', E' \t\r\n') ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+             then btrim(an.anulacion->>'fecha', E' \t\r\n') end,
+        to_char(p.fecha_vencimiento, 'YYYY-MM-DD')) as fecha) fb
     left join lateral (
       select r.situacion::text as situacion from poliza_recibos r where r.poliza_id = e.entidad_id
       order by coalesce(r.fecha_emision, r.fecha_efecto_actual) desc nulls last, r.created_at desc limit 1) ur on true
@@ -448,11 +457,19 @@ async function describirFugas(db: Consultor, correduriaId: string, claves: strin
       and not exists (select 1 from polizas s where s.id = e.entidad_id and s.sustituida_at is not null)
       and not exists (select 1 from polizas h where h.merged_into_poliza_id is null
                         and (h.poliza_padre_id = e.entidad_id or h.poliza_origen_id = e.entidad_id))
-      and ${claves ? Prisma.sql`e.clave = any(${claves}::text[])` : Prisma.sql`e.estado = 'pendiente'`}
+      and ${claves
+        ? Prisma.sql`e.clave = any(${claves}::text[])`
+        // Solo en la lista de pendientes: las bajas de hace más de un año son histórico, no «por revisar».
+        // Se filtran EN LA CONSULTA (antes del limit): filtrando después, más de N históricas recientes
+        // tapaban pendientes de verdad. Corte de `corteBajaHistorica` (la regla de module-seguros); fecha
+        // desconocida → NULL → se muestra. El estado en BD no cambia.
+        : Prisma.sql`e.estado = 'pendiente'
+            and not coalesce(e.tipo = 'POLIZA_BAJA' and fb.fecha collate "C" < ${corteBajaHistorica(hoy)}::text collate "C", false)`}
     order by e.created_at desc
     limit ${limite}`
-  const hoy = hoyMadrid()
-  return filas.map((f) => {
+  // Segunda barrera, con el helper puro (por si la SQL y la regla se separan).
+  const visibles = claves ? filas : filas.filter((f) => !esBajaHistorica(f.tipo, leerAnulacion(f.anulacion)?.fecha ?? f.vencimiento, hoy)).slice(0, limite)
+  return visibles.map((f) => {
     const an = leerAnulacion(f.anulacion)
     const cat = categoriaMotivo(an?.motivo)
     return {

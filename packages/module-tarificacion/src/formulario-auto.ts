@@ -41,7 +41,15 @@ export type FormularioAuto = {
   tomador?: Tomador | null
   /** Elección de versión hecha por una persona (bandeja). Ausente = el robot no elige si hay varias. */
   eleccionVersion?: EleccionVersion | null
+  /**
+   * Portales que NO buscan por matrícula (Allianz MOTO, grabación 13/10/2026: el vehículo se elige en cascada
+   * marca → clase → modelo → versión) necesitan marca, modelo y, en moto, la CLASE (1-4, tramos de cilindrada del
+   * portal: 1 ≤125 cc · 2 ≤350 · 3 351-750 · 4 >750). Nombres de catálogo, no datos personales. Ausente = no consta.
+   */
+  seleccionVehiculo?: SeleccionVehiculo | null
 }
+
+export type SeleccionVehiculo = { marca: string; modelo: string; clase?: number | null }
 
 export type ValidacionFormularioAuto = { ok: true; formulario: FormularioAuto } | { ok: false; errores: string[] }
 
@@ -150,9 +158,19 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else eleccionVersion = { codigo, etiqueta }
   }
 
+  let seleccionVehiculo: SeleccionVehiculo | null = null
+  if (!vacio(e.seleccionVehiculo)) {
+    const sv = typeof e.seleccionVehiculo === 'object' && e.seleccionVehiculo !== null && !Array.isArray(e.seleccionVehiculo) ? (e.seleccionVehiculo as Record<string, unknown>) : null
+    const marca = typeof sv?.marca === 'string' ? sv.marca.trim().slice(0, 80) : ''
+    const modelo = typeof sv?.modelo === 'string' ? sv.modelo.trim().slice(0, 120) : ''
+    const clase = sv ? entero(sv.clase, 'seleccionVehiculo.clase', errores, 1, 4) : null
+    if (!sv || marca === '' || modelo === '') errores.push('seleccionVehiculo: trae marca y modelo (nombres de catálogo), o no venga')
+    else seleccionVehiculo = { marca, modelo, clase }
+  }
+
   if (errores.length || !ramo || !matricula || !codigoPostal || !conductor) return { ok: false, errores }
   return {
     ok: true,
-    formulario: { ramo, matricula, codigoPostal, conductor, tomadorEsConductor, tomadorEsPropietario, aniosAseguradoAnterior, siniestrosUltimos5Anios, garajeNoche, tomador, eleccionVersion },
+    formulario: { ramo, matricula, codigoPostal, conductor, tomadorEsConductor, tomadorEsPropietario, aniosAseguradoAnterior, siniestrosUltimos5Anios, garajeNoche, tomador, eleccionVersion, seleccionVehiculo },
   }
 }

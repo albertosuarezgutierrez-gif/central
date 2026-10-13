@@ -115,7 +115,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
   }
 
   return (
-    <section style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0 }}>
+    <section id="intervinientes" style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0 }}>
       <div>
         <div style={{ fontSize: 14, fontWeight: 600 }}>Intervinientes</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
@@ -140,7 +140,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
           const puedeQuitar = f !== null && !f.porDefecto && !(esTomador && f.clienteId === op.clienteId)
           const abiertoAqui = abierto === rol
           return (
-            <div key={rol} style={{ border: `1px solid ${abiertoAqui ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 12, padding: 12, display: 'grid', gap: 6, minWidth: 0 }}>
+            <div key={rol} id={`interviniente-${rol}`} style={{ border: `1px solid ${abiertoAqui ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 12, padding: 12, display: 'grid', gap: 6, minWidth: 0 }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ROTULO_ROL[rol]}</div>
               <div style={{ fontWeight: 700, color: f ? 'var(--text)' : 'var(--muted)', overflowWrap: 'anywhere' }}>{nombre}</div>
               {vinculo && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{vinculo}</div>}

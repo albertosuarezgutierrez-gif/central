@@ -48,7 +48,7 @@ import { SugerenciasContactos } from './SugerenciasContactos'
  * `.opcion` de `globals.css`.
  */
 
-export type Alcance = 'ver' | 'ver_economico' | 'partes' | 'documentos' | 'total'
+export type Alcance = 'ver' | 'ver_economico' | 'partes' | 'documentos' | 'gestion' | 'total'
 export type EstadoAutorizacion = 'pendiente' | 'vigente' | 'caducada' | 'revocada'
 /**
  * Qué es quien cede. Parte la pantalla en dos, y no por estética: de una PERSONA
@@ -212,7 +212,7 @@ function esApoderamiento(a: Alcance): boolean {
 
 /** ¿Deja ACTUAR en nombre de quien cede? Los alcances antiguos de apoderamiento y el «Acceso total». */
 function dejaActuar(a: Alcance): boolean {
-  return a === 'total' || esApoderamiento(a)
+  return a === 'total' || a === 'gestion' || esApoderamiento(a)
 }
 
 /** Los tres títulos, en el orden en que se ofrecen (de más a menos poder). */
@@ -249,11 +249,14 @@ const QUE_VE: Record<Alcance, string> = {
   // CRM: se describen para no pintar el identificador crudo.
   partes: 'los datos de la póliza y dar partes',
   documentos: 'los datos de la póliza y sus documentos',
+  // Gestión (12/10/2026): actuar sin la PERSONA — ni DNI ni cuenta, ni sus pólizas añadidas a mano.
+  gestion:
+    'los datos de la póliza, lo que se paga y sus documentos, y puede dar partes y aportar documentos en su nombre (sin su DNI ni su cuenta bancaria)',
   // 🚨 Decisión de Alberto (25/09/2026): el acceso total de una PERSONA incluye su
   // DNI y su cuenta bancaria. La frase lo dice entero: callarlo sería prometer
   // una protección que ya no existe.
   total:
-    'TODO, como el titular: las pólizas, lo que se paga, los documentos y también los datos personales (DNI y cuenta bancaria), y puede dar partes y hacer gestiones en su nombre',
+    'TODO, como el titular: las pólizas, lo que se paga, los documentos y también los datos personales (DNI y cuenta bancaria), puede dar partes y hacer gestiones en su nombre, y añadir, corregir o quitar las pólizas que el titular añadió en su portal',
 }
 
 /**
@@ -268,6 +271,8 @@ const QUE_VE_SOCIEDAD: Record<Alcance, string> = {
     'los datos de las pólizas y, además, lo que paga la sociedad: primas, recibos, su CIF y la cuenta bancaria de los cobros',
   partes: 'los datos de las pólizas y puede DAR PARTES en nombre de la sociedad',
   documentos: 'los datos de las pólizas y sus documentos, y puede subir documentación por la sociedad',
+  gestion:
+    'los datos de las pólizas, lo que paga, su CIF y su cuenta, sus documentos, y puede DAR PARTES y aportar documentación en nombre de la sociedad',
   total:
     'TODO lo de la sociedad: las pólizas, lo que paga, su CIF, su cuenta bancaria y sus documentos, y puede dar partes y hacer gestiones en su nombre',
 }
@@ -292,9 +297,10 @@ function queVe(alcance: Alcance, tipo: TipoOtorgante | null): string {
  */
 const ETIQUETA_OPCION: Record<Alcance, string> = {
   ver: 'Solo ver sus seguros — la compañía, el número de póliza y las coberturas',
-  // Los dos permisos que se conceden desde el 25/09/2026.
-  ver_economico: 'Solo ver — los seguros y lo que se paga (prima y recibos)',
-  total: 'Acceso total — ve y gestiona todo, también dar partes',
+  // Los tres niveles que se conceden desde el 12/10/2026 (presets, no casillas).
+  ver_economico: 'Consulta — ve los seguros y lo que se paga (prima y recibos)',
+  gestion: 'Gestión — además da partes y aporta documentos',
+  total: 'Total — como el titular, también sus pólizas añadidas',
   partes: 'Dar partes de siniestro en su nombre',
   documentos: 'Subir y ver su documentación',
 }
@@ -302,8 +308,10 @@ const ETIQUETA_OPCION: Record<Alcance, string> = {
 const AYUDA_OPCION: Record<Alcance, string> = {
   ver: 'No ve nada de lo que se paga.',
   ver_economico: 'No puede dar partes ni cambiar nada. De una persona no ve su DNI ni su cuenta bancaria.',
+  gestion:
+    'Puede dar partes y aportar documentos en su nombre. De una persona no ve su DNI ni su cuenta bancaria, y no toca las pólizas que añadió a mano. No puede autorizar a nadie más.',
   total:
-    'Ve lo mismo que el titular —de una persona, también su DNI y su cuenta bancaria— y puede dar partes y hacer gestiones en su nombre. No puede autorizar a nadie más.',
+    'Ve lo mismo que el titular —de una persona, también su DNI y su cuenta bancaria—, puede dar partes y hacer gestiones en su nombre, y añadir, corregir o quitar las pólizas que añadió a mano. No puede autorizar a nadie más.',
   partes:
     'Lo que declare OBLIGA a la sociedad frente a la compañía: si el parte va mal, la que responde es la empresa.',
   documentos: 'Podrá ver y subir documentos de la sociedad. No incluye dar partes.',
@@ -316,7 +324,7 @@ const ERROR_CONCEDER: Record<string, string> = {
     'Estás viendo el portal como corredor: aquí no se concede nada en nombre del cliente. Tiene que entrar él con su email y hacerlo desde su propio acceso.',
   sin_sesion: 'Se ha cerrado tu sesión. Vuelve a entrar con tu email y lo intentamos otra vez.',
   datos_invalidos: 'Falta algún dato: elige a la persona y marca al menos qué puede ver.',
-  alcance_no_disponible: 'Ese permiso ya no se concede. Elige «Solo ver» o «Acceso total».',
+  alcance_no_disponible: 'Ese permiso ya no se concede. Elige «Consulta», «Gestión» o «Total».',
   titulo_requerido:
     'Falta decir con qué título representa a la sociedad: administrador, apoderado o empleado autorizado. Sin eso no se puede anotar, porque lo que esa persona declare obliga a la empresa.',
   ficha_no_tuya: 'Esa ficha no es tuya, así que no podemos dar acceso a sus seguros desde tu cuenta.',
@@ -929,10 +937,13 @@ function RevisarYAmpliar({
 }) {
   const [enviando, setEnviando] = useState<'mantener' | 'ampliar' | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [ampliando, setAmpliando] = useState(false)
+  // A qué preset se está subiendo (12/10/2026: Gestión o Total), o `null`.
+  const [ampliando, setAmpliando] = useState<'gestion' | 'total' | null>(null)
   const [titulo, setTitulo] = useState<TituloRepresentacion | ''>('')
   const esSociedad = a.tipoOtorgante === 'juridica'
   const puedeAmpliar = a.estado === 'vigente' && a.alcance !== 'total'
+  // Gestión solo como SUBIDA: desde Consulta (o un alcance viejo de lectura), nunca desde Gestión.
+  const puedeGestion = puedeAmpliar && a.alcance !== 'gestion' && !(esSociedad && a.alcance === 'partes')
 
   async function mantener() {
     setEnviando('mantener')
@@ -967,10 +978,14 @@ function RevisarYAmpliar({
       const r = await fetch('/api/autorizaciones', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ ampliarDesde: a.id, ...(esSociedad ? { tituloRepresentacion: titulo } : {}) }),
+        body: JSON.stringify({
+          ampliarDesde: a.id,
+          ampliarA: ampliando ?? 'total',
+          ...(esSociedad ? { tituloRepresentacion: titulo } : {}),
+        }),
       })
       if (r.status === 201) {
-        setAmpliando(false)
+        setAmpliando(null)
         await onCambio()
         return
       }
@@ -1009,17 +1024,25 @@ function RevisarYAmpliar({
         </div>
       )}
 
-      {puedeAmpliar && !ampliando && (
-        <div className="editor" style={{ marginTop: 12 }}>
-          <button type="button" className="boton secundario" onClick={() => setAmpliando(true)}>
+      {puedeAmpliar && ampliando === null && (
+        <div className="editor editor-acciones" style={{ marginTop: 12 }}>
+          {puedeGestion && (
+            <button type="button" className="boton secundario" onClick={() => setAmpliando('gestion')}>
+              Pasar a gestión
+            </button>
+          )}
+          <button type="button" className="boton secundario" onClick={() => setAmpliando('total')}>
             Pasar a acceso total
           </button>
         </div>
       )}
 
-      {puedeAmpliar && ampliando && (
+      {puedeAmpliar && ampliando !== null && (
         <div className="aviso-linea">
-          <strong>¿Le das acceso total a {quien}?</strong> Verá {queVe('total', esSociedad ? 'juridica' : 'fisica')}.
+          <strong>
+            {ampliando === 'total' ? `¿Le das acceso total a ${quien}?` : `¿Le das gestión a ${quien}?`}
+          </strong>{' '}
+          Verá {queVe(ampliando, esSociedad ? 'juridica' : 'fisica')}.
           No podrá autorizar a nadie más. Tendrá que aceptarlo en su portal, y podrás revocarlo cuando quieras.
           {esSociedad && (
             <div className="editor-campo" style={{ marginTop: 10 }}>
@@ -1042,12 +1065,12 @@ function RevisarYAmpliar({
           )}
           <div className="editor-acciones" style={{ marginTop: 10 }}>
             <button type="button" className="boton" onClick={() => void ampliar()} disabled={enviando !== null}>
-              {enviando === 'ampliar' ? 'Guardando…' : 'Sí, dar acceso total'}
+              {enviando === 'ampliar' ? 'Guardando…' : ampliando === 'total' ? 'Sí, dar acceso total' : 'Sí, dar gestión'}
             </button>
             <button
               type="button"
               className="boton secundario"
-              onClick={() => setAmpliando(false)}
+              onClick={() => setAmpliando(null)}
               disabled={enviando !== null}
             >
               No, dejarlo como está
@@ -1424,6 +1447,14 @@ function TarjetaRecibida({
  */
 function LoQuePuedes({ a }: { a: AutorizacionVista }) {
   const titulo = comoTitulo(a.tituloRepresentacion)
+  if (a.alcance === 'gestion') {
+    return (
+      <div className="linea">
+        Gestión: te deja ver {queVe('gestion', a.tipoOtorgante === 'juridica' ? 'juridica' : 'fisica')}
+        {titulo ? ` — actúas ${titulo} de la sociedad` : ''}. No puedes autorizar a nadie más.
+      </div>
+    )
+  }
   if (a.alcance === 'total') {
     return (
       <div className="linea">

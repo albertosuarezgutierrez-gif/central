@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 
 import { fotoDeLaPoliza, puedeBorrarDeclarada } from '@central/module-seguros-portal'
 
+import { registrarUso } from '@/lib/autorizaciones'
+import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import { normalizarParche } from '@/lib/poliza-editable'
 import { requireIdentidad } from '@/lib/session'
@@ -33,6 +35,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   const { id } = await ctx.params
 
+  // 🔒 De QUÉ identidad es la fila (12/10/2026). La propia, o la del titular
+  // cuando quien mira tiene «Total» sobre su ficha ENTERA (`accesoADeclarada`,
+  // fail-closed). Consulta, Gestión, sin concesión o id ajeno → `null` → 404,
+  // la misma respuesta que «no existe». Todo lo de abajo escribe con ESA
+  // identidad dentro del `where`, igual que antes con la de la cookie.
+  const acceso = await accesoADeclarada(identidad.id, id, 'editar')
+  if (acceso === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+  const duenaId = acceso.identidadId
+
   let cuerpo: unknown
   try {
     cuerpo = await req.json()
@@ -47,7 +58,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   // la columna. Se lee con el MISMO filtro por `identidadId`: aquí no hay
   // consulta sin identidad de la cookie, ni siquiera para leer un ramo.
   const actual = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: duenaId },
     select: { ramo: true },
   })
   if (!actual) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
@@ -63,7 +74,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const { datosRamo, datosRamoOrigen, ...parche } = normalizado.parche
 
   const { count } = await prisma.portalPolizaDeclarada.updateMany({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: duenaId },
     data: {
       ...parche,
       ...('datosRamo' in normalizado.parche ? { datosRamo: datosRamo ?? Prisma.DbNull } : {}),
@@ -86,8 +97,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
   if (count === 0) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
 
+  // Quién lo hizo EN NOMBRE de quién: hoy el único registro que existe es el uso
+  // de la autorización (el titular lo ve en «quién ha mirado»). La columna de
+  // autor de la fila está propuesta, sin aplicar
+  // (`prisma/sql/2026-10-12_portal_poliza_declarada_autor.sql`).
+  if (!acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
+
   const poliza = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: identidad.id },
+    where: { id, identidadId: duenaId },
     select: {
       id: true,
       compania: true,
@@ -154,6 +171,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   const { id } = await ctx.params
 
+  // 🔒 Mismo criterio que el PATCH: la propia, o la del titular con «Total».
+  const acceso = await accesoADeclarada(identidad.id, id, 'quitar')
+  if (acceso === null) return NextResponse.json({ error: 'no_encontrada' }, { status: 404 })
+  const duenaId = acceso.identidadId
+
   const resultado = await prisma.$transaction(async (tx) => {
     // Existe Y es suya: las dos cosas en la misma consulta. Si no, 404 — nunca
     // un 403, que confirmaría que esa póliza existe.
@@ -161,15 +183,20 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     // pidieran después del `deleteMany` ya no existirían, y esta es la única
     // ventana en la que la póliza y sus partes están vivos a la vez.
     const suya = await tx.portalPolizaDeclarada.findFirst({
-      where: { id, identidadId: identidad.id },
+      where: { id, identidadId: duenaId },
       select: { id: true, compania: true, numeroPoliza: true, ramo: true },
     })
     if (!suya) return { estado: 404 as const, cuerpo: { error: 'no_encontrada' } }
 
     // El ESTADO de cada parte, no solo cuántos hay: lo que bloquea no es tener
     // partes, es tener uno que la compañía ya está tramitando.
+    // 🚨 TODOS los partes de esta póliza, no solo los de su dueña: desde el
+    // 12/10/2026 quien tiene Gestión/Total puede dar un parte sobre ella (fila con
+    // SU identidad). Filtrarlos por la dueña dejaría el suyo fuera de la
+    // congelación y el `ON DELETE SET NULL` lo dejaría huérfano sin avisar.
+    // La póliza ya está autorizada arriba (`suya`), así que esto no abre nada.
     const partes = await tx.portalParteSiniestro.findMany({
-      where: { polizaDeclaradaId: id, identidadId: identidad.id },
+      where: { polizaDeclaradaId: suya.id },
       select: { estado: true, siniestroId: true },
     })
     const veredicto = puedeBorrarDeclarada({ partes })
@@ -188,7 +215,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     const foto = fotoDeLaPoliza(suya)
     if (partes.length > 0) {
       await tx.portalParteSiniestro.updateMany({
-        where: { polizaDeclaradaId: id, identidadId: identidad.id },
+        where: { polizaDeclaradaId: suya.id },
         data: {
           polizaDeclaradaId: null,
           // La fecha SIEMPRE, aunque la foto venga vacía: es lo que distingue
@@ -202,7 +229,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     }
 
     const { count } = await tx.portalPolizaDeclarada.deleteMany({
-      where: { id, identidadId: identidad.id },
+      where: { id, identidadId: duenaId },
     })
     // 0 aquí solo puede ser una carrera (otra pestaña la borró en medio). No es
     // un error que el cliente pueda arreglar, y el resultado que ve es el mismo
@@ -212,5 +239,6 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
     return { estado: 200 as const, cuerpo: { ok: true, partesDesligados: partes.length } }
   })
 
+  if (resultado.estado === 200 && !acceso.propia) await registrarUso(identidad.id, acceso.autorizacionIds)
   return NextResponse.json(resultado.cuerpo, { status: resultado.estado })
 }

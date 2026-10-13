@@ -6,6 +6,13 @@
 // básicos, Tarificar, Referencia). Se asume que Turismos usa el MISMO framework legado que Moto (ids iguales):
 // TODO(capturas) confirmarlo con la grabación del formulario de Turismos.
 //
+// MOTO, grabación del 13/10/2026 (14 pantallas, marcos legibles): ENTRADA Nueva Alta → Autos → Moto confirmada; formulario
+// EDITABLE de «Riesgo municipio» (vehículo en CASCADA marca → clase → modelo → versión, SIN búsqueda por matrícula; CP con
+// buscador de poblaciones; ¿tomador es conductor/propietario?) y de «Datos básicos» (uso, conductor, sexo, matrícula que
+// autorrellena la 1ª matriculación, antecedentes); pantalla de ERROR («INFORME DE AVISO E INCIDENCIAS»). Todo lo de Moto está
+// en la sección «MOTO» de este fichero. Lo que FALTA (ver docs/TARIFICADOR-MATRIZ.md 0b): el buscador de poblaciones tras
+// pulsar la lupa, el avance entre pestañas (usa `aceptar_onclick()`, que el guard rechaza) y qué campos son obligatorios.
+//
 // Flujo: login → «Nueva Alta» → sección Autos → tarjeta (Turismos | Moto) → consulta por MATRÍCULA (el portal rellena
 // marca/modelo/versión) → vehículo canónico (si hay varias versiones: requiere_humano con las opciones) → Datos básicos
 // del conductor → [HUECO] avance a Tarificar → lector de primas (hecho, puro).
@@ -20,22 +27,33 @@ import type { Frame, Locator, Page } from 'playwright'
 import {
   comprobarBoton,
   esOpcionVacia,
+  fechaIsoDesdeTexto,
   importeEs,
   mensajeEleccionVersion,
+  redactarDatosPersonales,
   vehiculoDesdeLectura,
   type CandidatoVersion,
   type FormularioAuto,
   type LecturaVehiculoPortal,
   type OfertaNormalizada,
+  type ResultadoAdaptador,
+  type SeleccionVehiculo,
   type Vehiculo,
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { ErrorAvanceSinLlegar } from '../../guard.ts'
 import { abrirNuevaAlta, TARJETA_AUTOS } from './entrada.ts'
 import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
 
-/** Flag de registro: apagado por defecto. Nada lo enciende en producción. */
+/** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
 export const AUTO_ACTIVO = false
+/**
+ * Flag de registro de MOTO (separado de Turismos). ENCENDIDO por Alberto el 13/10/2026 para la primera prueba real
+ * (la fila `allianz/moto` de `companias_integracion` sigue siendo el interruptor de BD). `adapters/index.ts` registra
+ * `allianzMoto` solo con él en `true` y el runner ya valida el riesgo por ramo (`ramo.ts`).
+ */
+export const MOTO_ACTIVO = true
 
 /** Hueco declarado: falta un mapa de pantalla. NO transitorio → `error_definitivo`, no se reintenta. */
 export class ErrorMapaIncompleto extends ErrorTarificador {
@@ -225,8 +243,36 @@ export async function rellenarDatosBasicos(raiz: Pick<Frame, 'locator'>, f: Form
   }
 }
 
-/** HUECO: el avance de Riesgo municipio / Datos básicos a Tarificar necesita su función guardada por fase (guard.ts). */
-export async function avanzarATarificarAutos(_page: Page, _ctx: ContextoPortal): Promise<never> {
+/**
+ * Avance entre pestañas. Grabación 13/10/2026: AMBOS avances hacia delante (`td#datosBasicos` desde Riesgo municipio y `td#rate`
+ * desde Datos básicos) ejecutan el manejador de confirmación del portal, que `ctx.pulsar()` rechaza.
+ *   · MOTO: autorizado por Alberto (13/10/2026) SOLO por `ctx.avanzarPestanaAutorizada` (guard.ts: lista blanca exacta de los
+ *     dos selectores + ventana de red con dos capas). Puede dejar un PROYECTO guardado en Allianz; nunca una póliza.
+ *   Devuelve el marco donde está el formulario de la pestaña DESTINO (ahí se leen incidencias y campos).
+ *   · TURISMOS (y cualquier ramo sin decir): sigue siendo HUECO (`ErrorMapaIncompleto`), sin formulario grabado.
+ */
+export async function avanzarPestanaGuardada(_page: Page, ctx: ContextoPortal, destino: 'datosBasicos' | 'tarificar', ramo: 'auto' | 'moto' = 'auto'): Promise<Frame> {
+  if (ramo !== 'moto') {
+    throw new ErrorMapaIncompleto(
+      destino === 'datosBasicos'
+        ? 'el avance guardado por fase de Riesgo municipio a Datos básicos (td#datosBasicos, manejador de avance con confirmación)'
+        : 'el avance guardado por fase de Datos básicos a Tarificar (td#rate, manejador de avance con confirmación)',
+    )
+  }
+  if (typeof ctx?.avanzarPestanaAutorizada !== 'function') throw new ErrorMapaIncompleto('el avance autorizado de pestaña en el contexto del worker')
+  try {
+    return await ctx.avanzarPestanaAutorizada(destino === 'datosBasicos' ? 'td#datosBasicos' : 'td#rate')
+  } catch (e) {
+    // El portal no dejó avanzar: si su informe de incidencias trae errores (en el marco de ORIGEN o donde aparezcan), el
+    // trabajo cae como `datos` con SU mensaje (redactado); si no, sigue el error del guard (`portal`).
+    if (e instanceof ErrorAvanceSinLlegar) for (const m of e.marcos) await lanzarSiHayErrores(m)
+    throw e
+  }
+}
+
+/** HUECO: el avance de Riesgo municipio / Datos básicos a Tarificar (Turismos y compatibilidad). */
+export async function avanzarATarificarAutos(page: Page, ctx: ContextoPortal): Promise<never> {
+  await avanzarPestanaGuardada(page, ctx, 'tarificar')
   throw new ErrorMapaIncompleto('el avance guardado por fase a Tarificar (pantallas editables de Riesgo municipio y Datos básicos ANTES de calcular)')
 }
 
@@ -296,6 +342,315 @@ export function ofertasDesdePrimas(primas: readonly PrimaModalidad[], producto: 
   }))
 }
 
+// ───────────────────────── MOTO: formulario editable (grabación 13/10/2026) ─────────────────────────
+// Orden real del portal: «Riesgo municipio» (vehículo en CASCADA marca → clase → modelo → versión, CP con buscador de
+// poblaciones, ¿tomador es conductor/propietario?) → «Datos básicos» (uso, conductor, matrícula, antecedentes) → «Tarificar».
+// La matrícula NO elige el vehículo en Moto: solo autorrellena la 1ª matriculación (campo bloqueado) y es «obligatoria para
+// emisión», no para tarificar. Ningún valor de este bloque es de una persona: selectores, códigos de catálogo y literales.
+
+/** «Riesgo municipio» editable. */
+export const SEL_RIESGO_MOTO = {
+  marca: '#marca',
+  /** Tramo de cilindrada: «1.Hasta 125 c.c.» · «2.Hasta 350 c.c.» · «3.De 351 c.c. hasta 750 c.c.» · «4.Mas de 750 c.c.». */
+  clase: '#clase',
+  modelo: '#modelo',
+  version: '#version',
+  codigoPostal: '#_cpostalCode',
+  /** Población: la rellena el buscador (Datos básicos la enseña bloqueada en `#cpPoblacion`). */
+  poblacion: '#_destown',
+  /** Lupa del buscador de poblaciones: `<img onclick="sendRequestLocationFinder(...)">`. */
+  buscarPoblacion: '#_cpostalCodeAjaxLocFinderImg',
+  tomadorEsConductor: '#takerDriver',
+  tomadorEsPropietario: '#takerOwner',
+} as const
+
+/** «Datos básicos» editable. Valores de los desplegables = los del portal (grabación 13/10/2026). */
+export const SEL_DATOS_MOTO = {
+  uso: '#use',
+  conductorNacimiento: '#driverBirthDate',
+  conductorCarne: '#driverLicenseDate',
+  conductorSexo: '#driverSex',
+  matricula: '#licensePlate',
+  /** Bloqueado (`disabled`) tras la consulta por matrícula: solo lectura. */
+  fechaMatriculacion: '#fechaMatriculacion',
+  garajeNoche: '#garageNight',
+  aseguradoOtraCia: '#aseguradoOtraCia',
+  aniosCompaniaAnterior: '#yearsOrigCompany',
+  aniosSinSiniestros: '#aniosSinSiniestros',
+  /** Se bloquea solo cuando «años sin siniestros» = 5: no se escribe. */
+  siniestros: '#numDisasters',
+} as const
+
+/** Valores del portal. `driverSex`: V = Hombre · H = Mujer (sin opción vacía: el portal asume Hombre si no se toca). */
+export const SEXO_PORTAL = { hombre: 'V', mujer: 'H' } as const
+export const USO_PARTICULAR = '1'
+/** `yearsOrigCompany`: 0-5 y «6» = «Más de 5». */
+export const ANIOS_MAS_DE_5 = '6'
+
+/** Informe de aviso e incidencias («INFORME DE AVISO E INCIDENCIAS»): filas de error y filas informativas. */
+export const SEL_INCIDENCIAS = 'tr.rowAppErrorTextBlock, tr.rowAppErrorInfoTextBlock'
+
+// ── desplegables en cascada ──
+
+export type OpcionSelect = { valor: string; etiqueta: string }
+
+const claveCatalogo = (s: string) => s.replace(/\s+/g, ' ').trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase()
+
+/** Valor de la ÚNICA opción cuya etiqueta es igual (salvo mayúsculas/tildes/espacios). Ninguna o varias → `null` (nunca «la parecida»). */
+export function valorOpcionExacta(opciones: readonly OpcionSelect[], buscada: string): string | null {
+  const k = claveCatalogo(buscada)
+  if (k === '') return null
+  const casan = opciones.filter((o) => !esOpcionVacia(o.etiqueta) && claveCatalogo(o.etiqueta) === k)
+  return casan.length === 1 ? casan[0].valor : null
+}
+
+/** Valor de la opción de `#clase` cuya etiqueta empieza por «<n>.» (tramo de cilindrada 1-4). */
+export function valorClaseMoto(opciones: readonly OpcionSelect[], clase: number): string | null {
+  const casan = opciones.filter((o) => o.etiqueta.trim().startsWith(`${clase}.`))
+  return casan.length === 1 ? casan[0].valor : null
+}
+
+async function leerSelect(raiz: Pick<Frame, 'locator'>, sel: string) {
+  const l = raiz.locator(sel).first()
+  if ((await l.count()) === 0) return null
+  return l.evaluate((el) => {
+    const s = el as HTMLSelectElement
+    return { deshabilitado: s.disabled, valor: s.value, opciones: Array.from(s.options).map((o) => ({ valor: o.value, etiqueta: (o.textContent ?? '').trim() })) }
+  })
+}
+
+/**
+ * Espera a que el desplegable esté habilitado y con opciones, elige UNA con `elegir` (valor o `null` = no está en el
+ * catálogo → error `datos`), la fija y relee: si el portal no la dejó puesta, aborta (`portal`).
+ */
+async function elegirOpcion(raiz: Pick<Frame, 'locator'>, sel: string, que: string, elegir: (o: readonly OpcionSelect[]) => string | null, page: Pick<Page, 'waitForTimeout'>, timeoutMs = 15_000): Promise<void> {
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    const s = await leerSelect(raiz, sel)
+    if (!s) throw new ErrorTarificador('portal', `allianz/auto: no aparece el desplegable de ${que}`)
+    if (!s.deshabilitado && s.opciones.some((o) => !esOpcionVacia(o.etiqueta))) {
+      const v = elegir(s.opciones)
+      if (v === null) throw new ErrorTarificador('datos', `allianz/auto: ${que} no está (o está repetido) en el catálogo del portal`)
+      const campo = raiz.locator(sel).first()
+      if (s.valor !== v) {
+        await comprobarCampo(campo)
+        await campo.selectOption(v)
+      }
+      if ((await campo.inputValue()) !== v) throw new ErrorTarificador('portal', `allianz/auto: el portal no dejó fijado el desplegable de ${que}`)
+      return
+    }
+    if (Date.now() >= fin) throw new ErrorTarificador('portal', `allianz/auto: el desplegable de ${que} no se llenó a tiempo`)
+    await page.waitForTimeout(300)
+  }
+}
+
+/**
+ * Riesgo municipio: marca → clase → modelo, cada uno por su etiqueta EXACTA, y espera a que el portal ofrezca versiones.
+ * La versión la resuelve después `resolverVehiculo` (una sola → ok; varias sin elección → requiere_humano).
+ */
+export async function elegirVehiculoMoto(raiz: Pick<Frame, 'locator'>, sel: SeleccionVehiculo, page: Pick<Page, 'waitForTimeout'>): Promise<void> {
+  if (sel.clase == null) throw new ErrorTarificador('datos', 'allianz/moto: falta la clase (tramo de cilindrada 1-4) de la moto')
+  await elegirOpcion(raiz, SEL_RIESGO_MOTO.marca, 'la marca', (o) => valorOpcionExacta(o, sel.marca), page)
+  await elegirOpcion(raiz, SEL_RIESGO_MOTO.clase, 'la clase', (o) => valorClaseMoto(o, sel.clase as number), page)
+  await elegirOpcion(raiz, SEL_RIESGO_MOTO.modelo, 'el modelo', (o) => valorOpcionExacta(o, sel.modelo), page)
+  // Versiones: esperar a que haya alguna; no se elige aquí.
+  const fin = Date.now() + 15_000
+  for (;;) {
+    const v = await leerSelect(raiz, SEL_RIESGO_MOTO.version)
+    if (!v) throw new ErrorTarificador('portal', 'allianz/auto: no aparece el desplegable de versión')
+    if (v.opciones.some((o) => !esOpcionVacia(o.etiqueta))) return
+    if (Date.now() >= fin) throw new ErrorTarificador('portal', 'allianz/moto: el portal no ofreció ninguna versión para ese modelo')
+    await page.waitForTimeout(300)
+  }
+}
+
+// ── Riesgo municipio: población y titulares ──
+
+/**
+ * CP → buscador de poblaciones: se teclea el CP y se pulsa la LUPA con `ctx.pulsar` (no Enter: el Enter de un campo de un
+ * formulario legado puede enviarlo). Si el portal no rellena la población, no se sigue: la pantalla del buscador (varias
+ * poblaciones por CP) NO está grabada → hueco declarado, no se adivina.
+ */
+export async function buscarPoblacion(raiz: Pick<Frame, 'locator'>, codigoPostal: string, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'pulsar'>, timeoutMs = 10_000): Promise<void> {
+  const cp = raiz.locator(SEL_RIESGO_MOTO.codigoPostal).first()
+  const lupa = raiz.locator(SEL_RIESGO_MOTO.buscarPoblacion).first()
+  if ((await cp.count()) === 0 || (await lupa.count()) === 0) throw new ErrorTarificador('portal', 'allianz/moto: no aparece el buscador de poblaciones')
+  await comprobarCampo(cp)
+  await cp.fill(codigoPostal)
+  await ctx.pulsar(lupa)
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    const v = await raiz.locator(SEL_RIESGO_MOTO.poblacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
+    if (v.trim() !== '') return
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena: varias poblaciones o ventana emergente sin grabar)')
+    await page.waitForTimeout(300)
+  }
+}
+
+/** ¿Tomador = conductor = propietario? `false` pide el NIF del otro (`#idNifDriver_doc`/`#idNifOwner_doc`): sin mapa → hueco. */
+export function comprobarTitularesMoto(f: Pick<FormularioAuto, 'tomadorEsConductor' | 'tomadorEsPropietario'>): void {
+  if (f.tomadorEsConductor === false || f.tomadorEsPropietario === false) {
+    throw new ErrorMapaIncompleto('el NIF del conductor/propietario distinto del tomador (campos idNifDriver_doc/idNifOwner_doc, sin mapa de qué exige el portal)')
+  }
+}
+
+export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'pulsar'>): Promise<void> {
+  comprobarTitularesMoto(f)
+  await buscarPoblacion(raiz, f.codigoPostal, page, ctx)
+  for (const [sel, dato] of [[SEL_RIESGO_MOTO.tomadorEsConductor, f.tomadorEsConductor], [SEL_RIESGO_MOTO.tomadorEsPropietario, f.tomadorEsPropietario]] as const) {
+    if (dato !== true) continue // null = no consta: no se toca
+    await fijarSelect(raiz, sel, 'S')
+  }
+}
+
+async function fijarSelect(raiz: Pick<Frame, 'locator'>, sel: string, valor: string): Promise<void> {
+  const campo = raiz.locator(sel).first()
+  if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${sel}`)
+  await comprobarCampo(campo)
+  await campo.selectOption(valor)
+  if ((await campo.inputValue()) !== valor) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó fijado ${sel}`)
+}
+
+// ── Datos básicos ──
+
+export type OperacionCampo = { sel: string; tipo: 'texto' | 'select' | 'casilla'; valor: string | boolean }
+
+/**
+ * Plan de escritura de Datos básicos de MOTO. Puro. FAIL-CLOSED: el portal NO tiene «sin dato» en sexo ni en
+ * antecedentes (asume Hombre / 0 años), así que si el formulario no los trae se para en vez de cotizar con un valor de cajón.
+ *   · `aniosAseguradoAnterior` → «ha estado asegurado» (S si > 0) y `yearsOrigCompany` (0-5; más de 5 → «6»).
+ *   · 0 siniestros en 5 años → `aniosSinSiniestros` = min(5, años asegurado): ASUNCIÓN (sin siniestros durante todo el
+ *     tiempo asegurado); se relee y, si el portal lo cambia, aborta. Con siniestros > 0 → hueco (el portal pide «años sin
+ *     siniestros» y «nº en el último año», que el formulario canónico no distingue).
+ */
+export function planDatosBasicosMoto(f: FormularioAuto): OperacionCampo[] {
+  if (f.conductor.sexo === null) throw new ErrorTarificador('datos', 'allianz/moto: falta el sexo del conductor (el portal asumiría «Hombre»)')
+  if (f.aniosAseguradoAnterior === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la antigüedad en la compañía anterior (el portal asumiría 0 años)')
+  if (f.siniestrosUltimos5Anios === null) throw new ErrorTarificador('datos', 'allianz/moto: faltan los siniestros de los últimos años (el portal asumiría ninguno)')
+  if (f.siniestrosUltimos5Anios > 0) throw new ErrorMapaIncompleto('la traducción de siniestros > 0 a «años sin siniestros» y «nº de siniestros en el último año» de Antecedentes')
+  const anios = f.aniosAseguradoAnterior
+  const plan: OperacionCampo[] = [
+    { sel: SEL_DATOS_MOTO.uso, tipo: 'select', valor: USO_PARTICULAR },
+    { sel: SEL_DATOS_MOTO.conductorNacimiento, tipo: 'texto', valor: fechaEs(f.conductor.fechaNacimiento) },
+    { sel: SEL_DATOS_MOTO.conductorCarne, tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne) },
+    { sel: SEL_DATOS_MOTO.conductorSexo, tipo: 'select', valor: SEXO_PORTAL[f.conductor.sexo] },
+  ]
+  if (f.garajeNoche !== null) plan.push({ sel: SEL_DATOS_MOTO.garajeNoche, tipo: 'casilla', valor: f.garajeNoche })
+  plan.push(
+    { sel: SEL_DATOS_MOTO.aseguradoOtraCia, tipo: 'select', valor: anios > 0 ? 'S' : 'N' },
+    // Primero los años en la compañía (su onchange recalcula «años sin siniestros»), después estos.
+    { sel: SEL_DATOS_MOTO.aniosCompaniaAnterior, tipo: 'select', valor: anios > 5 ? ANIOS_MAS_DE_5 : String(anios) },
+    { sel: SEL_DATOS_MOTO.aniosSinSiniestros, tipo: 'select', valor: `0${Math.min(5, anios)}` },
+  )
+  return plan
+}
+
+export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto): Promise<void> {
+  for (const op of planDatosBasicosMoto(f)) {
+    const campo = raiz.locator(op.sel).first()
+    if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${op.sel} de Datos básicos`)
+    await comprobarCampo(campo)
+    if (op.tipo === 'texto') {
+      await campo.fill(String(op.valor))
+      await campo.dispatchEvent('change')
+    } else if (op.tipo === 'select') {
+      await campo.selectOption(String(op.valor))
+    } else {
+      await comprobarCampo(campo)
+      await campo.setChecked(op.valor === true)
+    }
+  }
+  // Releer: los selects encadenados (años en la compañía → años sin siniestros) pueden revertirse.
+  for (const op of planDatosBasicosMoto(f).filter((o) => o.tipo === 'select')) {
+    if ((await raiz.locator(op.sel).first().inputValue()) !== op.valor) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó fijado ${op.sel}`)
+  }
+}
+
+/**
+ * Matrícula (solo `fill` + `change`; el manejador del portal es `eventoMatriculaDatosBasicos()`) → el portal autorrellena la
+ * 1ª matriculación en un campo bloqueado. Devuelve esa fecha ISO. Sin fecha a tiempo → error `datos` (la antigüedad del
+ * vehículo cambia el precio: no se cotiza sin ella). La matrícula no sale en ningún mensaje.
+ */
+export async function consultarMatriculaMoto(raiz: Pick<Frame, 'locator'>, matricula: string, page: Pick<Page, 'waitForTimeout'>, timeoutMs = 15_000): Promise<string> {
+  const campo = raiz.locator(SEL_DATOS_MOTO.matricula).first()
+  if ((await campo.count()) === 0) throw new ErrorTarificador('portal', 'allianz/moto: no aparece el campo de matrícula')
+  await comprobarCampo(campo)
+  await campo.fill(matricula)
+  await campo.dispatchEvent('change')
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    const t = await raiz.locator(SEL_DATOS_MOTO.fechaMatriculacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
+    const iso = fechaIsoDesdeTexto(t)
+    if (iso) return iso
+    if (Date.now() >= fin) throw new ErrorTarificador('datos', 'allianz/moto: la matrícula no devolvió la fecha de primera matriculación')
+    await page.waitForTimeout(300)
+  }
+}
+
+// ── pantalla de error («INFORME DE AVISO E INCIDENCIAS») ──
+
+export type Incidencia = { tipo: 'error' | 'aviso'; /** Id del campo si el portal lo da. */ campo: string | null; mensaje: string }
+
+/**
+ * Una fila del informe → incidencia. Puro. Filas de error: `tr.rowAppErrorTextBlock` (celda 1 = «NN <b>campo</b>», celda 2 =
+ * mensaje); informativas (p. ej. «Alerta — Proyecto archivado correctamente»): `tr.rowAppErrorInfoTextBlock`. El mensaje se
+ * pasa por el redactor de datos personales (el portal podría repetir un valor tecleado) y se corta.
+ */
+export function incidenciaDesdeFila(clase: string, campoNegrita: string | null, mensaje: string): Incidencia | null {
+  const tipo = /\browAppErrorInfoTextBlock\b/.test(clase) ? 'aviso' : /\browAppErrorTextBlock\b/.test(clase) ? 'error' : null
+  if (!tipo) return null
+  const c = (campoNegrita ?? '').trim()
+  return { tipo, campo: /^[A-Za-z_][A-Za-z0-9_.]{0,39}$/.test(c) ? c : null, mensaje: redactarDatosPersonales(mensaje.replace(/\s+/g, ' ').trim()).slice(0, 200) }
+}
+
+export async function leerIncidencias(raiz: Pick<Frame, 'locator'>): Promise<Incidencia[]> {
+  const filas = await raiz.locator(`#dataErrorSection ${SEL_INCIDENCIAS.replace(', ', ', #dataErrorSection ')}`).evaluateAll((els) =>
+    els.map((e) => {
+      const celdas = Array.from(e.querySelectorAll('td'))
+      return { clase: e.className, campo: celdas[0]?.querySelector('b')?.textContent ?? null, mensaje: celdas[1]?.textContent ?? '' }
+    }),
+  )
+  return filas.map((f) => incidenciaDesdeFila(f.clase, f.campo, f.mensaje)).filter((i): i is Incidencia => i !== null)
+}
+
+/** Hay errores de validación del portal → error `datos` con campo y mensaje saneados (nunca se avanza con ellos). */
+export async function lanzarSiHayErrores(raiz: Pick<Frame, 'locator'>): Promise<void> {
+  const errores = (await leerIncidencias(raiz)).filter((i) => i.tipo === 'error')
+  if (errores.length === 0) return
+  throw new ErrorTarificador('datos', `allianz/auto: el portal rechaza los datos: ${errores.map((e) => `${e.campo ? `[${e.campo}] ` : ''}${e.mensaje}`).join(' · ')}`)
+}
+
+/** Flujo MOTO: Riesgo municipio → (avance autorizado) Datos básicos → (avance autorizado) Tarificar → lectura de primas. */
+async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
+  // Todo lo que se puede comprobar SIN tocar el portal, antes de abrirlo (fail-closed).
+  if (!form.seleccionVehiculo) throw new ErrorTarificador('datos', 'allianz/moto: falta seleccionVehiculo (marca, modelo y clase): el portal de Moto no busca el vehículo por matrícula')
+  if ((form.seleccionVehiculo.clase ?? null) === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la clase (tramo de cilindrada 1-4) de la moto')
+  comprobarTitularesMoto(form)
+  planDatosBasicosMoto(form)
+  if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
+  await ctx.trasLogin()
+  await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Moto', selectorTarjeta: TARJETA_AUTOS.moto })
+  const riesgo = await marcoCon(page, (r) => r.locator(SEL_RIESGO_MOTO.marca), 'Riesgo municipio (marca)')
+  await elegirVehiculoMoto(riesgo, form.seleccionVehiculo, page)
+  const vehiculo = await resolverVehiculo(riesgo, await leerVehiculoPortal(riesgo), form)
+  await ctx.pausa()
+  await rellenarRiesgoMoto(riesgo, form, page, ctx)
+  await lanzarSiHayErrores(riesgo)
+  await ctx.pausa()
+  // El marco de Datos básicos es el del formulario de DESTINO que confirma el guard (no uno elegido por otro selector).
+  const datos = await avanzarPestanaGuardada(page, ctx, 'datosBasicos', 'moto')
+  await lanzarSiHayErrores(datos)
+  const fechaMatriculacion = await consultarMatriculaMoto(datos, form.matricula, page)
+  await rellenarDatosBasicosMoto(datos, form)
+  await lanzarSiHayErrores(datos)
+  await ctx.pausa()
+  // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión.
+  const tarifa = await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
+  await lanzarSiHayErrores(tarifa)
+  const primas = await leerPrimasTarificar(tarifa)
+  return { ofertas: ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }) }
+}
+
 // ───────────────────────── flujo (con huecos) ─────────────────────────
 
 function crearAdaptador(ramo: 'auto' | 'moto') {
@@ -304,11 +659,12 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     version: '0.1.0',
-    async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<never> {
+    async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
+      if (ramo === 'moto') return tarificarMoto(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
       if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
       await ctx.trasLogin()
-      await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: ramo === 'moto' ? 'Moto' : 'Turismos', selectorTarjeta: ramo === 'moto' ? TARJETA_AUTOS.moto : TARJETA_AUTOS.turismos })
+      await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Turismos', selectorTarjeta: TARJETA_AUTOS.turismos })
       const marco = await marcoCon(page, (r) => r.locator(SEL_VEHICULO.matricula), 'campo de matrícula')
       const lectura = await consultarMatricula(marco, form.matricula, page)
       await ctx.pausa()

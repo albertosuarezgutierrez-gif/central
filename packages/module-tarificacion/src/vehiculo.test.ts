@@ -157,6 +157,17 @@ describe('validarFormularioAuto', () => {
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.errores.join(' ')).not.toContain('ZZ-999')
   })
+  it('seleccionVehiculo (portales sin búsqueda por matrícula): opcional, null por defecto, validada si viene', () => {
+    const a = validarFormularioAuto({ ...ok, ramo: 'moto' }, hoy)
+    expect(a.ok && a.formulario.seleccionVehiculo).toBeNull()
+    const b = validarFormularioAuto({ ...ok, ramo: 'moto', seleccionVehiculo: { marca: ' MARCA PRUEBA ', modelo: 'MODELO X', clase: 1 } }, hoy)
+    expect(b.ok && b.formulario.seleccionVehiculo).toEqual({ marca: 'MARCA PRUEBA', modelo: 'MODELO X', clase: 1 })
+    for (const mala of [{ marca: '', modelo: 'X' }, { marca: 'M' }, 'texto', { marca: 'M', modelo: 'X', clase: 9 }]) {
+      const r = validarFormularioAuto({ ...ok, ramo: 'moto', seleccionVehiculo: mala }, hoy)
+      expect(r.ok).toBe(false)
+      if (!r.ok) expect(r.errores.some((e) => e.startsWith('seleccionVehiculo'))).toBe(true)
+    }
+  })
   it('carné anterior al nacimiento, CP fuera de España, ramo raro y elección vacía → errores', () => {
     const r = validarFormularioAuto({ ...ok, ramo: 'camion', codigoPostal: '99000', conductor: { fechaNacimiento: '1985-04-02', fechaCarne: '1980-01-01' }, eleccionVersion: {} }, hoy)
     expect(r.ok).toBe(false)

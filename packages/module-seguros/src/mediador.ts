@@ -84,11 +84,14 @@ export const FECHA_TEXTOS_LEGALES = '2026-09-19'
  *
  * `w3` (24/09/2026): el aviso legal decía «no hay área privada de cliente»
  * cuando la web ya enlaza al portal de clientes; ahora dice dónde está.
+ *
+ * `w1` de octubre (11/10/2026): la política de privacidad incorpora el tratamiento de las
+ * conversaciones de WhatsApp (canal de Meta, cifrado, análisis con IA minimizado, retención).
  */
-export const VERSION_TEXTOS_WEB = '2026-09-w3'
+export const VERSION_TEXTOS_WEB = '2026-10-w1'
 
 /** Fecha de la última revisión de fondo de los textos de la web pública. */
-export const FECHA_TEXTOS_WEB = '2026-09-24'
+export const FECHA_TEXTOS_WEB = '2026-10-11'
 
 export const MEDIADOR = {
   /** Nombre comercial. La persona que responde legalmente es `identidad`. */

@@ -23,6 +23,9 @@ const OP = CORR + 'oportunidad/[id]/'
 const MOTO = CORR + 'cliente/[id]/moto-nuevo/'
 const AUTO = CORR + 'cliente/[id]/auto-nuevo/'
 const HOGAR = CORR + 'cliente/[id]/hogar-nuevo/'
+const DECESOS = CORR + 'cliente/[id]/decesos-nuevo/'
+const SALUD = CORR + 'cliente/[id]/salud-nuevo/'
+const VIDA = CORR + 'cliente/[id]/vida-nuevo/'
 const leer = (f: string) => readFileSync(join(ROOT, f), 'utf8')
 const activas = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
 
@@ -47,10 +50,10 @@ test('🪤 RiesgoPantalla: con cotizador embebido el principal es un BOTÓN que 
   assert.match(r, /if \(acciones\.principal && abrirAlCargar\(window\.location\.hash, op\.ramo\)\) setCotizadorAbierto\(true\)/)
 })
 
-test('🪤 registro: moto, auto y hogar dados de alta, y el tipo obliga a registrar cada ramo de la lista', () => {
+test('🪤 registro: moto, auto, hogar, decesos, salud y vida dados de alta, y el tipo obliga a registrar cada ramo de la lista', () => {
   const c = activas(leer(OP + 'cotizadores-embebidos.tsx'))
-  assert.match(c, /COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = \{\s*auto: PedirPrecioAuto,\s*moto: PedirPrecioMoto,\s*hogar: PedirPrecioHogar,\s*\}/)
-  assert.match(c, /PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<PropsPreciosVariante>> = \{\s*auto: PreciosVarianteAuto,\s*moto: PreciosVarianteMoto,\s*hogar: PreciosVarianteHogar,\s*\}/)
+  assert.match(c, /COTIZADOR_EMBEBIDO: Record<RamoCotizadorEmbebido, ComponentType<PropsPedirPrecioEmbebido>> = \{\s*auto: PedirPrecioAuto,\s*moto: PedirPrecioMoto,\s*hogar: PedirPrecioHogar,\s*decesos: PedirPrecioDecesos,(?:\s*\/\/[^\n]*)?\s*salud: PedirPrecioSalud,\s*vida: PedirPrecioVida,\s*\}/)
+  assert.match(c, /PRECIOS_VARIANTE: Record<RamoCotizadorEmbebido, ComponentType<PropsPreciosVariante>> = \{\s*auto: PreciosVarianteAuto,\s*moto: PreciosVarianteMoto,\s*hogar: PreciosVarianteHogar,\s*decesos: PreciosVarianteDecesos,\s*salud: PreciosVarianteSalud,\s*vida: PreciosVarianteVida,\s*\}/)
 })
 
 test('🪤 la carcasa común (PedirPrecioEmbebido): bloqueo, relectura y una instancia nueva por lectura del riesgo', () => {
@@ -81,7 +84,7 @@ for (const [fichero, cotizador, accion] of [
   })
 }
 
-for (const [dir, Ramo, ramo] of [[MOTO, 'Moto', 'moto'], [AUTO, 'Auto', 'auto'], [HOGAR, 'Hogar', 'hogar']] as const) {
+for (const [dir, Ramo, ramo] of [[MOTO, 'Moto', 'moto'], [AUTO, 'Auto', 'auto'], [HOGAR, 'Hogar', 'hogar'], [DECESOS, 'Decesos', 'decesos'], [SALUD, 'Salud', 'salud'], [VIDA, 'Vida', 'vida']] as const) {
 test(`🪤 la acción que abre el bloque exige acceso a la correduría y que el riesgo sea de ${ramo}`, () => {
   const a = activas(leer(dir + 'acciones.ts'))
   const f = a.slice(a.indexOf(`export async function abrirCotizador${Ramo}DeOportunidad`))
@@ -201,4 +204,12 @@ test('🪤 HOGAR: abrir el bloque deriva «el tomador es el propietario» de Int
   assert.match(f, /const propietarioEsTomador = propietarioEsTomadorDeRiesgo\(/)
   assert.match(f, /if \(propietarioEsTomador !== null\) iniciales\.resueltos\.propietarioEsTomador = propietarioEsTomador/)
   assert.match(f, /if \(l\.riesgo\.datosRiesgo === null\) return \{ estado: 'error'/, 'sin el bloque de la vivienda no se cotiza')
+})
+
+test('🪤 ramos SIN Avant2: el bloque «Pedir precio» dice que no hay precio automático por Avant2 (no inventa cotizador)', () => {
+  const r = activas(leer(OP + 'RiesgoPantalla.tsx'))
+  assert.match(r, /const sinAvant2 = acciones\.principal \? null : avisoSinAvant2\(op\.ramo, \{ hayBots \}\)/)
+  // En las dos ramas sin cotizador (bots y «se cotiza fuera») se pinta el aviso; la parrilla sigue para todos los ramos.
+  assert.equal(r.match(/\{sinAvant2 && <p role="status"/g)?.length, 2)
+  assert.match(r, /<ParrillaPrecios oportunidadId=\{op\.id\}/)
 })

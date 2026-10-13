@@ -219,6 +219,14 @@ export {
   puedeDarParte,
   puedeAutorizar,
 } from './autorizacion.ts'
+export {
+  NIVELES_COMPARTIDOS,
+  ALCANCE_DE_NIVEL,
+  nivelCompartido,
+  capacidadesDeAlcances,
+  duenaDeDeclarada,
+} from './capacidades.ts'
+export type { NivelCompartido, Capacidades, AccionDeclarada } from './capacidades.ts'
 export type {
   Alcance,
   AutorizacionFechas,
