@@ -8,6 +8,11 @@
 //     vehículo / Intervinientes, que se editan arriba). Aquí solo se piden las condiciones de la cotización: fecha
 //     de efecto, carné/experiencia si faltan, km/garaje, seguro actual/historial y estado civil. Si arriba se está
 //     editando o el riesgo cambia, el bloque padre (`oportunidad/[id]/PedirPrecioMoto.tsx`) lo bloquea o lo recarga.
+//     13/10/2026 (como auto): garaje, km, fecha de compra y TODO el historial (seguro actual, compañía, póliza, años,
+//     siniestros) se declaran ARRIBA y aquí van en resumen de solo lectura («Editar arriba»); el historial declarado del
+//     riesgo (`historialRiesgo`) manda y viaja a Avant2 con la compañía del catálogo de MOTO y los 5 últimos de la
+//     póliza. «Verificación antes de pedir precio» (`../auto-nuevo/verificacion-embebido.ts`, `ramo: 'moto'`): el botón
+//     de 0,50€ solo se enciende sin ✗. Moto NO tiene conductor ocasional ni remolque (`peticion-moto.ts`).
 //
 // La pantalla de presupuesto de MOTO SIN PÓLIZA («oportunidad nueva»), DENTRO
 // de `/correduria` — mismo diseño que el resto del panel (`components/ui.tsx`).
@@ -38,7 +43,11 @@ import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
+import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
+import { textoFaltan } from '@/lib/riesgo-asegura'
+import { ANCLA, gruposVerificacion, historialConTopes, notaOrigen, seguroActualEmbebido, verificacionCompleta } from '../auto-nuevo/verificacion-embebido'
+import { IrA, ResumenCampo, Verificacion } from '../auto-nuevo/piezas-embebido'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
@@ -49,6 +58,7 @@ import type { RolExtra, VarianteNueva } from '../../../oportunidad/[id]/variante
 import {
   PERSONA_VACIA,
   correccionesDeFiguras,
+  esCampoFigura,
   figuraCompleta,
   type PersonaForm,
 } from '../../../oportunidad/[id]/figuras-form'
@@ -149,6 +159,7 @@ export default function CotizadorMoto({
   otroVehiculo = null,
   variante = null,
   datosRiesgo: datosRiesgoProp = null,
+  historialRiesgo = null,
   anterior = null,
   anteriorAmbiguo = null,
   seguroImputado = null,
@@ -172,6 +183,12 @@ export default function CotizadorMoto({
    * pantalla no guarda borrador local. `null` = sin riesgo o sin datos, o retarificando una póliza.
    */
   datosRiesgo?: DatosVehiculoRiesgo | null
+  /**
+   * Embebido (13/10/2026): el historial DECLARADO arriba («Historial y bonificaciones»: tiene seguro, compañía —código
+   * del catálogo de compañías de MOTO—, nº de póliza, años asegurado / en la compañía / sin siniestros, siniestros en
+   * 5 años). Manda sobre lo leído de su póliza; sin dato arriba, lo de siempre. Fuera de embebido no se usa.
+   */
+  historialRiesgo?: Partial<HistorialDeclaradoRiesgo> | null
   poliza?: PolizaMoto | null
   /** Pack coche + moto (03/10/2026): la otra oportunidad del cliente (el coche). `null` = no se han podido leer sus oportunidades. */
   otroVehiculo?: OtroVehiculo | null
@@ -383,21 +400,45 @@ export default function CotizadorMoto({
   // Precargado del seguro que tiene hoy (29/09/2026): lo leído de su póliza al abrir la oportunidad.
   // Solo lo que el documento DICE; lo que no, se queda vacío y se pide como siempre.
   const sa = anterior?.seguroAnterior ?? null
-  const [tieneSeguroActual, setTieneSeguroActual] = useState(anterior !== null)
-  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(() =>
-    anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
-  const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.trim() ?? '')
+  // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el
+  // bonus real contrastando el nº de póliza con SINCO. Lo leído de su póliza manda sobre el máximo.
+  // Embebido (13/10/2026): lo declarado ARRIBA manda, y lo que no viene de arriba se topa a los años asegurado
+  // (`historialConTopes`: Avant2 rechaza en la compañía / sin siniestros > asegurado, y ese 400 se paga).
+  const historialLeido = historialDeclarado(sa)
+  const historialEmb = embebido ? historialConTopes(historialLeido, historialRiesgo) : null
+  const historial = historialEmb ?? historialLeido
+  // Lo de siempre (lo leído de su póliza); en embebido, lo DECLARADO arriba manda (`seguroActualEmbebido`), con la
+  // compañía traducida al código del catálogo de compañías de MOTO de Codeoscopic (`companias`).
+  const seguroLeido = {
+    tiene: anterior !== null,
+    companiaCodigo: anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '',
+    companiaLibre: companias === null ? sa?.codigoDgs ?? '' : '',
+    poliza: anterior?.numeroPoliza?.trim() ?? '',
+    aniosSinSiniestros: historial.aniosSinSiniestros,
+    siniestrosUltimos5: historial.siniestrosUltimos5,
+  }
+  const seguroArriba = embebido
+    ? seguroActualEmbebido({
+        arriba: historialRiesgo,
+        leido: seguroLeido,
+        conCatalogo: companias !== null,
+        codigoDe: (t) => {
+          const c = t.trim().toUpperCase()
+          return companias ? codigoCompania(companias, { codigoDgs: /^[CM]\d{4}$/.test(c) ? c : null, nombre: t }) : null
+        },
+      })
+    : null
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(seguroArriba?.tieneSeguroActual ?? seguroLeido.tiene)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(seguroArriba?.companiaCodigo ?? seguroLeido.companiaCodigo)
+  const [companiaActualLibre, setCompaniaActualLibre] = useState(seguroArriba?.companiaLibre ?? seguroLeido.companiaLibre)
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(seguroArriba?.polizaDigitos ?? seguroLeido.poliza)
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
   // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
   const [eleccionAnterior, setEleccionAnterior] = useState(() => seguroImputado?.elegida?.id ?? '')
-  // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el
-  // bonus real contrastando el nº de póliza con SINCO. Lo leído de su póliza manda sobre el máximo.
-  const historial = historialDeclarado(sa)
   const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
   const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
-  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(String(historial.aniosSinSiniestros))
-  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5))
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(seguroArriba?.aniosSinSiniestros ?? String(historial.aniosSinSiniestros))
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(seguroArriba?.siniestrosUltimos5 ?? (historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5)))
 
   useEffect(() => {
     void catalogo('tipo=experiencia-moto')
@@ -482,6 +523,10 @@ export default function CotizadorMoto({
   const faltaMatricula = false
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
+  // Embebido (13/10/2026): la fecha de compra es la de «Datos del vehículo» (Avant2 `purchaseDate`; sin ella va la de
+  // matriculación). Una moto no se compra antes de matricularse: el vendor no lo comprueba, aquí es gratis.
+  const fechaCompra = embebido ? datosRiesgo?.fechaCompra ?? '' : ''
+  const compraInvalida = fechaCompra !== '' && matriculacion !== '' && fechaCompra < matriculacion
   const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula, hoyLocal())
 
   // Hermano del efecto de `AutoNuevo.tsx`: con cada matrícula tecleada se
@@ -535,6 +580,12 @@ export default function CotizadorMoto({
       !CAMPOS_A_MANO[f.campo],
   )
 
+  // Embebido: cada hueco del tomador, a donde de verdad se arregla (`lib/correduria/campos-faltan.ts`), como en auto.
+  const reparos = clasificarFaltan(
+    faltanTomador.map((f) => ({ campo: f.campo as string, motivo: f.motivo })),
+    (c) => Boolean(CAMPOS_A_MANO[c]) || RESUELTOS_EN_PANTALLA.has(c),
+  )
+
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
   // En modo póliza la tarjeta del toggle no se pinta, así que se queda en false.
   const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
@@ -554,13 +605,74 @@ export default function CotizadorMoto({
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial || kmInvalido || faltaFigura
+    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial || kmInvalido || faltaFigura || compraInvalida
     // En modo póliza, un hueco que no se arregla aquí (compañía o nº anterior,
     // CP de circulación, matrícula) también apaga el botón: el servidor lo
     // rechazaría igual, y el botón encendido prometería un precio que no llega.
     || (poliza !== null && huerfanos.length > 0)
 
   const puedePulsar = !cotizando && !faltaAlgo && bloqueo === null && (simulacion || consumoPermite)
+
+  // ── «Verificación antes de pedir precio» (embebido, 13/10/2026, como auto) ───
+  // La LISTA de lo obligatorio, con ✓/✗/! y a dónde se arregla. Sale de los MISMOS booleanos que `faltaAlgo`
+  // (`gruposVerificacion`, `ramo: 'moto'`); el botón de pago pide además que todo esté en ✓.
+  const verificacion = embebido
+    ? gruposVerificacion({
+        ramo: 'moto',
+        tomador: {
+          empresa: tomadorEmpresa,
+          sinPrecalificar: faltanInicial === null,
+          faltaCivil,
+          faltaMunicipio,
+          aMano: aMano.map((f) => ({
+            campo: f.campo,
+            etiqueta: f.campo === 'sexo' ? 'Sexo' : CAMPOS_A_MANO[f.campo]?.etiqueta ?? f.campo,
+            relleno: (correcciones[f.campo] ?? '').trim() !== '',
+          })),
+          enFicha: reparos.ficha,
+          sinUbicar: reparos.desconocidos,
+        },
+        figuras: ROLES_MOTO.filter((rol) => !!figs[rol]).map((rol) => {
+          const faltan = variante?.faltan[rol] ?? null
+          const p = figCorr[rol]
+          const empresa = variante?.empresas[rol] ?? false
+          const pendientesFicha = (faltan ?? []).filter((c) => c !== 'fechaCarnet' && !(esCampoFigura(c) && (c === 'sexo' ? p.sexo === 'hombre' || p.sexo === 'mujer' : p[c].trim() !== '')))
+          return {
+            rol,
+            nombre: variante?.nombres[rol] ?? null,
+            empresa,
+            faltaCivil: !empresa && p.estadoCivil === '',
+            carnet: faltan !== null && faltan.includes('fechaCarnet') ? (p.fechaCarnet.trim() !== '' ? 'ok' as const : 'falta' as const) : 'no_aplica' as const,
+            enFicha: pendientesFicha.length > 0 ? textoFaltan(pendientesFicha) : null,
+            sinLeer: faltan === null,
+            completa: figuraCompleta(p, faltan, empresa),
+          }
+        }),
+        // Moto no admite conductor ocasional: no hay «habitual = ocasional» ni DNI duplicado que vigilar.
+        figuraRepetida: false,
+        ocasionalDuplicado: false,
+        personaLibreIncompleta: false,
+        ocasionalIgnorado,
+        vehiculo: { faltaVersion, faltaMatriculacion, faltaGaraje, kmInvalido, compraInvalida, faltaMotoAnterior },
+        historial: {
+          tieneSeguro: tieneSeguroActual,
+          faltaCompania: !companiaActualElegida,
+          faltaPoliza: !polizaActualDigitos.trim(),
+          faltaAniosAsegurado: aniosAsegurado.trim() === '',
+          faltaAniosCompania: aniosEnCompania.trim() === '',
+          faltaAniosSinSiniestros: aniosSinSiniestros.trim() === '',
+          siniestros5Pendiente: Number(aniosSinSiniestros) < 5 && aniosSinSiniestros.trim() !== '' && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '',
+          companiaSuperaAsegurado: aniosEnCompania.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosEnCompania) > Number(aniosAsegurado),
+          sinSiniestrosSuperaAsegurado: aniosSinSiniestros.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosSinSiniestros) > Number(aniosAsegurado),
+          companiaNoReconocida: seguroArriba?.companiaNoReconocida ?? null,
+          tieneSeguroSinDato: seguroArriba?.tieneSeguroSinDato ?? false,
+          reparos: reparos.historial,
+        },
+        faltaAlgo,
+      })
+    : []
+  const verificacionOk = verificacionCompleta(verificacion)
+  const puedePulsarEmb = puedePulsar && (!embebido || verificacionOk)
 
   async function cotizar() {
     await pedirPrecio(false)
@@ -591,14 +703,17 @@ export default function CotizadorMoto({
   }
 
   async function pedirPrecioSinGuarda(forzarNuevo: boolean, forzar: boolean) {
-    // Embebido: el riesgo se está editando o recargando → no se paga con datos que van a cambiar.
+    // Embebido: el riesgo se está editando o recargando → no se paga con datos que van a cambiar; y nunca con un ✗.
     if (bloqueo !== null) return
+    if (embebido && !verificacionOk) return
     setResultado({ estado: 'cotizando' })
     const correccionesFinal: Record<string, unknown> = {
       ...correcciones,
       ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
       ...(kmLeidos !== null ? { kmAnuales: kmLeidos } : {}),
       ...(fechaEfecto !== '' ? { fechaEfecto } : {}),
+      // Embebido: la fecha de compra de «Datos del vehículo» (Avant2 `purchaseDate`); vacía = la de matriculación.
+      ...(fechaCompra !== '' && !compraInvalida ? { fechaCompra } : {}),
     }
     if (tieneSeguroActual) {
       correccionesFinal.aseguradoAntes = true
@@ -740,7 +855,7 @@ export default function CotizadorMoto({
       <div style={cardStyle}>
         <CardHeader
           title={embebido ? '1 · Condiciones de la moto' : '1 · La moto'}
-          sub={embebido ? 'La moto, la matrícula y la versión son las de «Datos del vehículo»: se cambian allí. Aquí, solo lo de esta cotización.' : 'Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis.'}
+          sub={embebido ? 'Lo que viene de «Datos del vehículo» se ve aquí en resumen y se cambia allí («Editar arriba»). Aquí, solo lo de esta cotización.' : 'Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis.'}
         />
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
         {embebido && (
@@ -753,10 +868,16 @@ export default function CotizadorMoto({
               {' · '}<strong>Matriculación:</strong> {matriculacion ? fechaCorta(matriculacion) : <span style={{ color: 'var(--muted)' }}>sin dato</span>}
             </span>
             {faltaVersion && (
-              <span style={{ color: 'var(--negative)' }}>Falta elegir la versión del catálogo (marca, modelo, combustible y versión): hazlo en «Datos del vehículo».</span>
+              <span style={{ color: 'var(--negative)' }}>
+                Falta elegir la versión del catálogo (marca, modelo, combustible y versión): hazlo en «Datos del vehículo».{' '}
+                <IrA ancla={ANCLA.version} alternativa={ANCLA.vehiculo}>Elegir versión arriba</IrA>
+              </span>
             )}
             {faltaMatriculacion && (
-              <span style={{ color: 'var(--negative)' }}>Falta la fecha de matriculación (o la prevista, si aún no está matriculada): ponla en «Datos del vehículo».</span>
+              <span style={{ color: 'var(--negative)' }}>
+                Falta la fecha de matriculación (o la prevista, si aún no está matriculada): ponla en «Datos del vehículo».{' '}
+                <IrA ancla={ANCLA.vehiculo}>Editar arriba</IrA>
+              </span>
             )}
           </div>
         )}
@@ -861,6 +982,31 @@ export default function CotizadorMoto({
           <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
             <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
+          {embebido ? (<>
+          {/* Embebido (13/10/2026): garaje, km y compra se editan en «Datos del vehículo»; aquí, solo resumen. El estado
+              es el mismo precargado del riesgo, así que lo que viaja al pedir precio no cambia. */}
+          <ResumenCampo
+            etiqueta="¿Dónde duerme?"
+            valor={garaje ? garajes.find((g) => g.id === garaje)?.nombre ?? garaje : null}
+            nota={garaje && !garajeDelRiesgo ? 'por defecto: viaja como supuesto' : undefined}
+            ancla={ANCLA.vehiculo}
+          />
+          <ResumenCampo
+            etiqueta="Kilómetros al año"
+            valor={kmLeidos !== null ? `${kmLeidos.toLocaleString('es-ES')} km` : kmInvalido ? kmAnuales : null}
+            nota={kmInvalido ? 'no se entiende como kilometraje' : kmLeidos === null ? `sin dato arriba: se supone la media (${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')} km) y viaja como supuesto` : undefined}
+            notaFalta={kmInvalido}
+            vacio="aviso"
+            ancla={ANCLA.vehiculo}
+          />
+          <ResumenCampo
+            etiqueta="Fecha de compra"
+            valor={fechaCompra ? fechaCorta(fechaCompra) : matriculacion ? fechaCorta(matriculacion) : null}
+            nota={compraInvalida ? 'no puede ser anterior a la matriculación' : !fechaCompra && matriculacion ? 'la de matriculación' : undefined}
+            notaFalta={compraInvalida}
+            ancla={ANCLA.vehiculo}
+          />
+          </>) : (<>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
             <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>
               <option value="">Elige garaje</option>
@@ -881,6 +1027,8 @@ export default function CotizadorMoto({
               style={input}
             />
           </Campo>
+          </>)}
+          <div id="cotizador-experiencia" style={{ minWidth: 0 }}>
           <Campo
             etiqueta="Experiencia de conducción"
             falta={false}
@@ -897,6 +1045,7 @@ export default function CotizadorMoto({
               ))}
             </select>
           </Campo>
+          </div>
           {experienciaConduccion === 'OtherMotorcycle' && (
             <Campo etiqueta="Código de la moto anterior" falta={faltaMotoAnterior} ayuda="El vendor lo exige cuando la experiencia viene de OTRA moto. Es el código Base7: si no se tiene, cambia la experiencia arriba.">
               <input value={motoAnteriorCodigo} onChange={(e) => setMotoAnteriorCodigo(e.target.value)} style={input} />
@@ -905,7 +1054,7 @@ export default function CotizadorMoto({
         </div>
       </div>
 
-      <div style={cardStyle}>
+      <div id="cotizador-tomador" style={cardStyle}>
         <CardHeader
           title="2 · El tomador"
           sub={aMano.length > 0 ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.' : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'}
@@ -993,7 +1142,7 @@ export default function CotizadorMoto({
               : 'Los papeles que el riesgo pone en otra ficha salen de esa ficha: aquí solo se pide su estado civil y lo que falte. Los que no, los ocupa el tomador.'}
           />
           {ROLES_MOTO.filter((rol) => figs[rol]).map((rol, i) => (
-            <div key={rol} style={i > 0 ? { marginTop: 12 } : undefined}>
+            <div key={rol} id={`cotizador-figura-${rol}`} style={i > 0 ? { marginTop: 12 } : undefined}>
               <BloqueFigura rol={rol} nombre={variante?.nombres[rol] ?? null} faltan={variante?.faltan[rol] ?? null} empresa={variante?.empresas[rol] ?? false}
                 persona={figCorr[rol]} onPersona={(p) => setFigCorr((f) => ({ ...f, [rol]: p }))} civiles={civiles} soloCondiciones={embebido} />
             </div>
@@ -1015,11 +1164,25 @@ export default function CotizadorMoto({
         <p style={{ fontSize: 13, margin: 0 }}>{poliza.anterior}</p>
       </div>
       ) : (
-      <div style={cardStyle}>
+      <div id="cotizador-seguro-actual" style={cardStyle}>
         <CardHeader
-          title="2c · ¿Tiene seguro EN VIGOR ahora mismo?"
+          title={embebido ? '2c · Seguro en vigor' : '2c · ¿Tiene seguro EN VIGOR ahora mismo?'}
           sub="Sin esto la compañía cotiza «de calle»: no puede hacer el control de antecedentes y el precio NO es confirmable como real. Pregúntalo sobre todo en presupuestos importantes."
         />
+        {/* Embebido (13/10/2026): «tiene seguro», compañía, nº de póliza, años y siniestros se declaran ARRIBA
+            («Historial y bonificaciones»): aquí solo resumen. Las compañías consultan SINCO con la compañía + nº de
+            póliza (Codeoscopic manda los 5 últimos). */}
+        {embebido && seguroArriba ? (
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))' }}>
+            <ResumenCampo
+              etiqueta="¿Tiene seguro ahora?"
+              valor={seguroArriba.tieneSeguroSinDato ? null : tieneSeguroActual ? 'Sí, en vigor' : 'No'}
+              nota={seguroArriba.tieneSeguroSinDato ? 'sin dato arriba: se cotiza «de calle» (precio estimado)' : notaOrigen(seguroArriba.origen.tiene)}
+              vacio="aviso"
+              ancla={ANCLA.historial}
+            />
+          </div>
+        ) : (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 600 }}>
           <input
             type="checkbox"
@@ -1029,7 +1192,8 @@ export default function CotizadorMoto({
           />
           Sí, tiene un seguro de moto en vigor ahora mismo
         </label>
-        {anterior && (
+        )}
+        {anterior && !embebido && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
             Precargado de su póliza actual (oportunidad{anterior.etiqueta ? ` ${anterior.etiqueta}` : ''}): revísalo.
             {anterior.aseguradora && !companiaActualElegida ? ` La compañía leída es «${anterior.aseguradora}»: elígela en la lista.` : ''}
@@ -1047,6 +1211,29 @@ export default function CotizadorMoto({
 
         {tieneSeguroActual && (
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
+            {embebido && seguroArriba ? (
+              <>
+                <ResumenCampo
+                  etiqueta="Compañía actual"
+                  valor={companiaActualElegida ? (companias?.find((c) => c.codigoDgs === companiaActualCodigo)?.nombreComun ?? companiaActualElegida) : null}
+                  nota={seguroArriba.companiaNoReconocida
+                    ? `«${seguroArriba.companiaNoReconocida}» no está en la lista de compañías de moto de Codeoscopic: elígela de la lista arriba («Historial y bonificaciones»)`
+                    : notaOrigen(seguroArriba.origen.compania)}
+                  notaFalta={seguroArriba.companiaNoReconocida !== null}
+                  ancla={ANCLA.historial}
+                />
+                <ResumenCampo
+                  etiqueta="Nº de póliza (van los 5 últimos)"
+                  valor={polizaActualDigitos.trim() !== '' ? polizaActualDigitos : null}
+                  nota={digitosPolizaSospechosos(polizaActualDigitos)
+                    ? 'Parece relleno (varios ceros seguidos): la compañía puede no encontrar el historial en SINCO y el precio quedarse en estimado.'
+                    : notaOrigen(seguroArriba.origen.poliza)}
+                  notaFalta={digitosPolizaSospechosos(polizaActualDigitos)}
+                  ancla={ANCLA.historial}
+                />
+              </>
+            ) : (
+            <>
             <Campo etiqueta="Compañía actual" falta={!companiaActualElegida}>
               {companias === null ? (
                 <input
@@ -1080,6 +1267,8 @@ export default function CotizadorMoto({
                 </p>
               )}
             </Campo>
+            </>
+            )}
             <Campo
               etiqueta="Matrícula de esa póliza"
                 falta={false}
@@ -1094,7 +1283,38 @@ export default function CotizadorMoto({
             </Campo>
           </div>
         )}
-        {tieneSeguroActual && (
+        {tieneSeguroActual && embebido && (
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
+            {/* Todo el historial se edita arriba («Historial y bonificaciones», 13/10/2026). Sin dato arriba, va lo de
+                siempre (lo leído o el máximo, topado a los años asegurado; la compañía lo contrasta con SINCO) y se dice. */}
+            <ResumenCampo
+              etiqueta="Años asegurado sin interrupción"
+              valor={aniosAsegurado.trim() !== '' ? aniosAsegurado : null}
+              nota={notaOrigen(historialEmb?.origenAsegurado ?? 'leido')}
+              ancla={ANCLA.historial}
+            />
+            <ResumenCampo
+              etiqueta="Años en esta compañía"
+              valor={aniosEnCompania.trim() !== '' ? aniosEnCompania : null}
+              nota={notaOrigen(historialEmb?.origenEnCompania ?? 'leido')}
+              ancla={ANCLA.historial}
+            />
+            <ResumenCampo
+              etiqueta="Años sin siniestros"
+              valor={aniosSinSiniestros.trim() !== '' ? aniosSinSiniestros : null}
+              nota={seguroArriba ? notaOrigen(seguroArriba.origen.sinSiniestros) : undefined}
+              ancla={ANCLA.historial}
+            />
+            <ResumenCampo
+              etiqueta="Siniestros en los últimos 5 años"
+              valor={siniestrosUltimos5.trim() !== '' ? siniestrosUltimos5 : Number(aniosSinSiniestros) >= 5 ? 'no aplica (5 años o más sin siniestros)' : null}
+              nota={seguroArriba && siniestrosUltimos5.trim() !== '' ? notaOrigen(seguroArriba.origen.siniestros5) : 'solo hace falta con menos de 5 años sin siniestros; si la compañía lo exige, lo dirá sin cobrar'}
+              vacio="aviso"
+              ancla={ANCLA.historial}
+            />
+          </div>
+        )}
+        {tieneSeguroActual && !embebido && (
           <details open={faltaAnios || undefined} style={{ marginTop: 10, fontSize: 13 }}>
             <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>
               Historial declarado: {aniosAsegurado || '—'} años asegurado · {aniosEnCompania || '—'} en la compañía · {aniosSinSiniestros || '—'} sin siniestros
@@ -1165,13 +1385,14 @@ export default function CotizadorMoto({
 
         <Contador consumo={consumo} simulacion={simulacion} />
 
+        {embebido && <Verificacion grupos={verificacion} completa={verificacionOk} />}
         {bloqueo !== null && (
           <p role="status" style={{ color: 'var(--warning)', fontSize: 13, fontWeight: 600, margin: '8px 0 0' }}>{bloqueo}</p>
         )}
-        <button type="button" onClick={() => void cotizar()} disabled={!puedePulsar} style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 12, minHeight: 44 }}>
-          {cotizando ? (simulacion ? 'Simulando…' : 'Cotizando… (puede tardar hasta 2 min)') : simulacion ? 'Simular precio — no cuesta nada' : 'Pedir precio — cuesta 0,50€'}
+        <button type="button" onClick={() => void cotizar()} disabled={!puedePulsarEmb} style={{ ...btnStyle('primario'), width: '100%', maxWidth: 420, marginTop: 12, minHeight: 44 }}>
+          {cotizando ? (simulacion ? 'Simulando…' : 'Cotizando… (puede tardar hasta 2 min)') : simulacion ? 'Simular precio — no cuesta nada' : embebido ? 'Pedir precio — cuesta 0,50€ reales' : 'Pedir precio — cuesta 0,50€'}
         </button>
-        {faltaAlgo && (
+        {faltaAlgo && !embebido && (
           <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 8 }}>
             El botón se enciende cuando no falte nada arriba. Corregir arriba no cuesta nada.
           </p>
@@ -1200,7 +1421,7 @@ export default function CotizadorMoto({
           </p>
         )}
         {resultado.estado === 'error' && resultado.duplicado && (
-          <RecotizarIgualmente onRecotizar={() => void pedirPrecio(false, true)} deshabilitado={!puedePulsar} />
+          <RecotizarIgualmente onRecotizar={() => void pedirPrecio(false, true)} deshabilitado={!puedePulsarEmb} />
         )}
         {resultado.estado === 'error' && resultado.proyectoVigente && poliza && (
           <button

@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(13/10/2026)** — Correduría: cotizador de MOTO embebido igualado a auto (historial declarado arriba manda, resúmenes «Editar arriba», «Verificación antes de pedir precio» con `ramo: 'moto'`; piezas en `auto-nuevo/piezas-embebido.tsx`).
+«Parrilla de precios» en el riesgo: Avant2 (última tarificación ya pagada, solo lectura, 0€) vs bot por código DGS, «cuadra» si |dif| ≤ 2%. Hoy sin solapamiento: los bots solo cotizan comunidades.
+Pendiente: bots de auto/moto/hogar; modalidad/franquicia en los bots; confirmar los nombres Avant2→DGS y el código de Fiatc; migrar `AutoNuevo.tsx` a `piezas-embebido.tsx`.
+
 **(13/10/2026)** — Auditoría diaria (ligera): sin 🔴 nuevos. Memoria completada: #4517 «Pedir emisión» avisa si falta IPID/opción, #4519 agente huésped de sivra habla como el dueño y trata peticiones de factura.
 Vigilancia: CIMA entra (pulls reales, cola 205, 0 procesados, 0 errores); pricing sano (0 bajo mínimo, 7,6 h, 4 pisos on) con `oscilantes` 14 (bajó de 47); Codeoscopic 20 cotizaciones/10 € en 7 d.
 Nuevo 🟡: latido `correduria_ingesta` DEGRADADA (C0072, 15 días sin mandar nada) y `seo_correduria` con GSC 403 (sin permiso en sc-domain:grupoasegura.es). Siguen: `subastas_idealista` mudo (27/09), `ses_transporte`, alerta C0468 y PRs de registro atascados (ver #4493).
