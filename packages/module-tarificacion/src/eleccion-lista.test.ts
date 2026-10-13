@@ -118,6 +118,9 @@ describe('seleccionVehiculo.descripcion', () => {
     const r = con('  BMW  F 800 S 85 CV ')
     expect(r.ok && r.formulario.seleccionVehiculo?.descripcion).toBe('BMW F 800 S 85 CV')
     expect(con('BMW R1250GS Adventure').ok).toBe(true)
+    for (const modelo of ['BMW F 800 S 85 CV', 'Yamaha MT-07 2006 798 cc', 'Honda CBR600RR 2006 85 CV', 'BMW R1250GS 2006 85 CV']) {
+      expect(con(modelo).ok, modelo).toBe(true)
+    }
   })
 
   it('más de 200, matrícula actual o NIF/NIE → error, sin repetir el valor', () => {
@@ -126,6 +129,24 @@ describe('seleccionVehiculo.descripcion', () => {
       const r = con(malo)
       expect(r.ok, malo).toBe(false)
       if (!r.ok) expect(r.errores.join(' ')).not.toMatch(/1234|12345678Z|X1234567L/)
+    }
+  })
+
+  it('email, teléfono, IBAN y bastidor → error (cada patrón nuevo por separado)', () => {
+    const malos = [
+      'BMW F 800 juan.perez@correo.es',           // email
+      'BMW F 800 612 345 678',                    // teléfono con espacios
+      'BMW F 800 +34 612-345-678',                // teléfono con +34
+      'BMW F 800 0034612345678',                  // teléfono con 0034
+      'BMW F 800 600123456',                      // teléfono sin separadores
+      'BMW F 800 ES12 1234 5678 9012 3456 7890',  // IBAN con espacios
+      'BMW F 800 ES9121000418450200051332',       // IBAN sin espacios
+      'BMW F 800 WVWZZZ1JZXW000001',              // bastidor (17, sin I/O/Q)
+    ]
+    for (const malo of malos) {
+      const r = con(malo)
+      expect(r.ok, malo).toBe(false)
+      if (!r.ok) expect(r.errores.join(' ')).not.toMatch(/juan|612|600123456|ES12|ES91|WVWZZZ/)
     }
   })
 })

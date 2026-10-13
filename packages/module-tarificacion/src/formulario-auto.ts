@@ -53,7 +53,7 @@ export type FormularioAuto = {
  * `cilindradaCc`: Allianz separa los productos Moto y Ciclomotor (≤50 cc); sin cilindrada no se puede saber cuál es.
  * `descripcion` (13/10/2026): DESCRIPCIÓN DEL VEHÍCULO tal como viene en la póliza o la ficha (p. ej. «BMW F 800 S 85 CV»),
  * máx. 200. Es lo único libre que se manda a la IA que elige la versión del catálogo: SOLO el vehículo, nunca matrícula,
- * bastidor, nombres ni documentos. Se rechaza si contiene algo con forma de matrícula actual o de NIF/NIE.
+ * bastidor, nombres ni documentos. Se rechaza si contiene algo con forma de matrícula, NIF/NIE, email, teléfono, IBAN o bastidor (ver `pareceDatoPersonalEnDescripcion`).
  */
 export type SeleccionVehiculo = { marca: string; modelo: string; clase?: number | null; cilindradaCc?: number | null; descripcion?: string | null }
 
@@ -61,15 +61,22 @@ export type SeleccionVehiculo = { marca: string; modelo: string; clase?: number 
 export const MAX_DESCRIPCION_VEHICULO = 200
 
 /**
- * ¿La descripción lleva algo con forma de dato personal? Matrícula ACTUAL (0000BBB) o de ciclomotor (C0000BBB) y NIF/NIE.
- * La provincial antigua (SE-1234-AB) NO se mira a propósito: «R1250GS» o «S1000RR» son modelos de moto con esa forma.
+ * ¿La descripción lleva algo con forma de dato personal o de contacto? Comprueba (sobre el texto en mayúsculas):
+ * matrícula ACTUAL (0000BBB) o de ciclomotor (C0000BBB); NIF (8 dígitos + letra); NIE (X/Y/Z + 7 dígitos + letra);
+ * email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales
+ * y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastidor/VIN (17 alfanuméricos sin I, O ni Q).
+ * La matrícula provincial antigua (SE-1234-AB) NO se mira a propósito: «R1250GS» o «S1000RR» son modelos de moto con esa forma.
  */
 export function pareceDatoPersonalEnDescripcion(texto: string): boolean {
   const t = texto.toUpperCase()
   return (
     /(^|[^A-Z0-9])C?\d{4}[\s-]?[BCDFGHJKLMNPRSTVWXYZ]{3}(?![A-Z0-9])/.test(t) ||
     /(^|[^A-Z0-9])\d{8}-?[A-Z](?![A-Z0-9])/.test(t) ||
-    /(^|[^A-Z0-9])[XYZ]-?\d{7}-?[A-Z](?![A-Z0-9])/.test(t)
+    /(^|[^A-Z0-9])[XYZ]-?\d{7}-?[A-Z](?![A-Z0-9])/.test(t) ||
+    /[A-Z0-9._%+-]+@[A-Z0-9-]+(\.[A-Z0-9-]+)+/.test(t) ||
+    /(?<!\d)(?:(?:\+|00)34[\s-]?)?[6-9](?:[\s-]?\d){8}(?!\d)/.test(t) ||
+    /(^|[^A-Z0-9])ES\d{2}(?:\s?\d){20}(?![A-Z0-9])/.test(t) ||
+    /(^|[^A-Z0-9])[A-HJ-NPR-Z0-9]{17}(?![A-Z0-9])/.test(t)
   )
 }
 
@@ -195,7 +202,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     if (sv && !vacio(sv.descripcion)) {
       if (typeof sv.descripcion !== 'string') errores.push('seleccionVehiculo.descripcion: tiene que ser texto (o no venir)')
       else if (sv.descripcion.trim().length > MAX_DESCRIPCION_VEHICULO) errores.push(`seleccionVehiculo.descripcion: máximo ${MAX_DESCRIPCION_VEHICULO} caracteres`)
-      else if (pareceDatoPersonalEnDescripcion(sv.descripcion)) errores.push('seleccionVehiculo.descripcion: solo la descripción del vehículo (sin matrícula, NIF ni nombres)')
+      else if (pareceDatoPersonalEnDescripcion(sv.descripcion)) errores.push('seleccionVehiculo.descripcion: solo la descripción del vehículo (sin matrícula, NIF, bastidor, email, teléfono, IBAN ni nombres)')
       else descripcion = sv.descripcion.replace(/\s+/g, ' ').trim()
     }
     if (!sv || marca === '' || modelo === '') errores.push('seleccionVehiculo: trae marca y modelo (nombres de catálogo), o no venga')
