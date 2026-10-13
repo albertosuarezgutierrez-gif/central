@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { enviarAvisosIndependientes, mensajeDobleSeguro, mensajeSustituciones, type SustitucionAviso } from './sustituciones-aviso.ts'
+import { clasificarSustitucion, enviarAvisosIndependientes, mensajeDobleSeguro, mensajeSustituciones, type SustitucionAviso } from './sustituciones-aviso.ts'
 
 test('mensajeSustituciones: lista vacía → null, nunca un mensaje de «0 pendientes»', () => {
   assert.equal(mensajeSustituciones([]), null)
@@ -28,6 +28,8 @@ test('mensajeSustituciones: sin póliza nueva informada, se marca con «?» en v
   }
   const msg = mensajeSustituciones([fila])
   assert.ok(msg?.includes('→ ?'))
+  assert.ok(msg?.includes('aún sin póliza nueva enlazada'))
+  assert.ok(!msg?.includes('sin determinar'))
 })
 
 test('mensajeSustituciones: más de 20 filas, se trunca con recuento del resto', () => {
@@ -77,4 +79,45 @@ test('interpretarDuplicados: total y muestra; lo ilegible es error, nunca «0 du
   assert.equal(interpretarDuplicados(200, { estado: 'ok', total: 1, muestra: [{ numero: 'A1' }] }).estado, 'error')
   assert.equal(interpretarDuplicados(401, null).estado, 'error')
   assert.equal(interpretarDuplicados(200, { estado: 'sin_configurar' }).estado, 'sin_configurar')
+})
+
+const pilar = (extra: Partial<SustitucionAviso> = {}): SustitucionAviso => ({
+  cliente: 'Pilar Franco Ruz', diasSustituida: 19,
+  polizaVieja: { aseguradora: 'Occident', numeroPoliza: 'GPAFS0900547' },
+  polizaNueva: { aseguradora: 'Allianz', numeroPoliza: '61048939' },
+  nuevaConfirmadaCima: false, nuevaReciboCima: true, viejaEnVigorCima: true, ...extra,
+})
+
+test('clasificarSustitucion: caso Pilar = cobrada sin ficha + vieja en vigor', () => {
+  assert.deepEqual(clasificarSustitucion(pilar()), { nueva: 'cobrada_sin_ficha', vieja: 'en_vigor' })
+})
+
+test('clasificarSustitucion: sin rastro, confirmada y anulada', () => {
+  assert.deepEqual(clasificarSustitucion(pilar({ nuevaReciboCima: false, viejaEnVigorCima: false })), { nueva: 'sin_rastro', vieja: 'anulada' })
+  assert.deepEqual(clasificarSustitucion(pilar({ nuevaConfirmadaCima: true })).nueva, 'confirmada')
+})
+
+test('clasificarSustitucion: null NUNCA es false (ni sin_rastro ni anulada)', () => {
+  const r = clasificarSustitucion({ nuevaConfirmadaCima: null, nuevaReciboCima: null, viejaEnVigorCima: null })
+  assert.deepEqual(r, { nueva: 'desconocido', vieja: 'desconocido' })
+  assert.equal(clasificarSustitucion({ nuevaConfirmadaCima: false, nuevaReciboCima: null, viejaEnVigorCima: undefined }).nueva, 'desconocido')
+  assert.equal(clasificarSustitucion({}).vieja, 'desconocido')
+})
+
+test('mensajeSustituciones: caso Pilar destaca el doble seguro y dice el estado de la nueva', () => {
+  const sinRastro = pilar({ cliente: 'Otro', polizaVieja: { aseguradora: 'Mapfre', numeroPoliza: 'M1' }, nuevaReciboCima: false, viejaEnVigorCima: false })
+  const msg = mensajeSustituciones([sinRastro, pilar()])!
+  assert.ok(msg.includes('Grupo ASegura'))
+  assert.ok(msg.includes('⚠️ Confirma en Occident la anulación de nº GPAFS0900547'))
+  assert.ok(msg.includes('Nueva: cobrada (recibo en CIMA), falta la ficha de póliza'))
+  assert.ok(msg.includes('Nueva: sin rastro en CIMA'))
+  assert.ok(msg.indexOf('Pilar') < msg.indexOf('Otro'), 'el doble seguro va primero')
+  assert.equal(msg.split('⚠️ Confirma').length, 2, 'solo la vieja en vigor lleva el aviso')
+})
+
+test('mensajeSustituciones: campos null no inventan ni «sin rastro» ni aviso de doble seguro', () => {
+  const msg = mensajeSustituciones([pilar({ nuevaConfirmadaCima: null, nuevaReciboCima: null, viejaEnVigorCima: null })])!
+  assert.ok(!msg.includes('sin rastro'))
+  assert.ok(!msg.includes('⚠️ Confirma'))
+  assert.ok(msg.includes('sin determinar'))
 })

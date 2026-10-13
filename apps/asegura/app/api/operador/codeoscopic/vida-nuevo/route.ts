@@ -99,7 +99,7 @@ export const POST = auditado(async (req: Request) => {
       resueltos,
       correcciones: variante.v.correcciones,
     } satisfies CuerpoRetarificacion,
-    asegurado: dv?.asegurado ?? null,
+    asegurado: dv?.asegurado ?? variante.v.aseguradoVida ?? null,
   })
   if (p.estado === 'corte') {
     return NextResponse.json(p.respuesta.cuerpo, { status: p.respuesta.status })

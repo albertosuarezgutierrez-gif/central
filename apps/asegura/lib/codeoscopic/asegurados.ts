@@ -213,3 +213,17 @@ export function faltanDeAseguradoFicha(f: FichaAsegurado): string[] {
   const imposible = RE_FECHA.test(nac) && motivoFechaNacimientoImposible(nac) !== null
   return [...new Set(revisarAsegurado(aseguradoDeFicha(f)).map((r) => (imposible && r.campo === 'fechaNacimiento' ? 'fechaNacimiento_invalida' : (r.campo as string))))]
 }
+
+/**
+ * PURA. De las figuras `asegurado` de un riesgo de vida, la persona asegurada que NO es el tomador. Identidad por
+ * `cliente_id` (ficha), nunca por posición: el tomador y los repetidos no cuentan. `ninguno` = el asegurado es el
+ * tomador; `varios` = no cabe en `risk.insured` (Avant2 lleva UNA persona asegurada).
+ */
+export function aseguradoDistintoDelTomador(
+  filas: Array<{ cliente_id: string }>,
+  tomadorId: string,
+): { tipo: 'ninguno' } | { tipo: 'uno'; clienteId: string } | { tipo: 'varios' } {
+  const otros = [...new Set(filas.map((f) => f.cliente_id))].filter((id) => id !== tomadorId)
+  if (otros.length === 0) return { tipo: 'ninguno' }
+  return otros.length === 1 ? { tipo: 'uno', clienteId: otros[0] } : { tipo: 'varios' }
+}

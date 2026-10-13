@@ -49,7 +49,11 @@ export type FormularioAuto = {
   seleccionVehiculo?: SeleccionVehiculo | null
 }
 
-export type SeleccionVehiculo = { marca: string; modelo: string; clase?: number | null }
+/** `cilindradaCc`: Allianz separa los productos Moto y Ciclomotor (≤50 cc); sin cilindrada no se puede saber cuál es. */
+export type SeleccionVehiculo = { marca: string; modelo: string; clase?: number | null; cilindradaCc?: number | null }
+
+/** Tramos de cilindrada de la clase de Allianz Moto (cc mínimo y máximo, ambos inclusivos). */
+const TRAMOS_CLASE_MOTO: Record<number, readonly [number, number]> = { 1: [51, 125], 2: [126, 350], 3: [351, 750], 4: [751, 3000] }
 
 export type ValidacionFormularioAuto = { ok: true; formulario: FormularioAuto } | { ok: false; errores: string[] }
 
@@ -164,8 +168,22 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     const marca = typeof sv?.marca === 'string' ? sv.marca.trim().slice(0, 80) : ''
     const modelo = typeof sv?.modelo === 'string' ? sv.modelo.trim().slice(0, 120) : ''
     const clase = sv ? entero(sv.clase, 'seleccionVehiculo.clase', errores, 1, 4) : null
+    const cilindradaCc = sv ? entero(sv.cilindradaCc, 'seleccionVehiculo.cilindradaCc', errores, 1, 3000) : null
     if (!sv || marca === '' || modelo === '') errores.push('seleccionVehiculo: trae marca y modelo (nombres de catálogo), o no venga')
-    else seleccionVehiculo = { marca, modelo, clase }
+    else seleccionVehiculo = { marca, modelo, clase, cilindradaCc }
+  }
+
+  // Moto (fail-closed): Allianz tiene productos distintos «Moto» y «Ciclomotor» (≤50 cc). Solo se tarifica Moto.
+  if (ramo === 'moto') {
+    const cc = seleccionVehiculo?.cilindradaCc ?? null
+    const claseSel = seleccionVehiculo?.clase ?? null
+    if (cc === null) {
+      if (!errores.some((x) => x.startsWith('seleccionVehiculo.cilindradaCc'))) errores.push('seleccionVehiculo.cilindradaCc: falta la cilindrada (Allianz separa Moto y Ciclomotor)')
+    } else if (cc <= 50) errores.push('seleccionVehiculo.cilindradaCc: ciclomotor (≤50 cc): producto Ciclomotor de Allianz, no Moto; no soportado aún')
+    else if (claseSel !== null) {
+      const [min, max] = TRAMOS_CLASE_MOTO[claseSel]
+      if (cc < min || cc > max) errores.push(`seleccionVehiculo.clase: la clase ${claseSel} no casa con la cilindrada (clase 1 ≤125 cc · 2 126-350 · 3 351-750 · 4 >750)`)
+    }
   }
 
   if (errores.length || !ramo || !matricula || !codigoPostal || !conductor) return { ok: false, errores }

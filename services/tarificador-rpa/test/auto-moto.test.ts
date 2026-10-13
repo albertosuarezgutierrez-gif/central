@@ -43,7 +43,7 @@ const form: FormularioAuto = {
   garajeNoche: true,
   tomador: null,
   eleccionVersion: null,
-  seleccionVehiculo: { marca: 'Marca Prueba', modelo: 'Modelo X', clase: 1 },
+  seleccionVehiculo: { marca: 'Marca Prueba', modelo: 'Modelo X', clase: 1, cilindradaCc: 125 },
 }
 
 const OPC = (xs: Array<[string, string]>) => xs.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')
@@ -149,10 +149,10 @@ test('varias versiones sin elección → requiere_humano (no elige); con la elec
 
 test('marca/modelo que no están en el catálogo o clase sin dar → error datos, sin tocar nada más', async () => {
   await page.setContent(RIESGO())
-  await assert.rejects(elegirVehiculoMoto(page.mainFrame(), { marca: 'Inexistente', modelo: 'X', clase: 1 }, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  await assert.rejects(elegirVehiculoMoto(page.mainFrame(), { marca: 'Inexistente', modelo: 'X', clase: 1, cilindradaCc: 125 }, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
   await assert.rejects(elegirVehiculoMoto(page.mainFrame(), { marca: 'Marca Prueba', modelo: 'X', clase: null }, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
   await page.setContent(RIESGO())
-  await assert.rejects(elegirVehiculoMoto(page.mainFrame(), { marca: 'Marca Prueba', modelo: 'Modelo Z', clase: 1 }, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  await assert.rejects(elegirVehiculoMoto(page.mainFrame(), { marca: 'Marca Prueba', modelo: 'Modelo Z', clase: 1, cilindradaCc: 125 }, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
   await page.setContent(RIESGO())
   await assert.rejects(elegirVehiculoMoto(page.mainFrame(), { marca: 'Marca Prueba', modelo: 'Modelo X', clase: 3 }, page), (e) => e instanceof ErrorTarificador && e.tipo === 'datos', 'clase 3 no existe en el catálogo sintético')
 })
@@ -248,6 +248,13 @@ test('los manejadores reales de los campos de Moto pasan el guard; los de Archiv
   const ok = ['displayDriver()', 'displayOwner()', 'menores25()', 'funcTrue()', 'setAniosSinisters()', 'setNumSinisters()', 'eventoMatriculaDatosBasicos()', 'displayFechasFuncUso(IS_PORTUGAL)', "sendRequestLocationFinder({'idConcejo':'concejo','id':'_cpostalCode'});"]
   for (const h of ok) comprobarBoton([h])
   for (const h of ["sendActionEvent('store')", 'validar_aceptar()']) assert.throws(() => comprobarBoton([h]), EmisionBloqueadaError, h)
+})
+
+test('allianzMoto.tarificar rechaza ciclomotor (≤50 cc) y cilindrada ausente con ErrorTarificador datos, antes del portal', async () => {
+  for (const cilindradaCc of [50, 49, null, undefined]) {
+    const f = { ...form, seleccionVehiculo: { ...form.seleccionVehiculo!, cilindradaCc } }
+    await assert.rejects(allianzMoto.tarificar({} as never, f, {} as never), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /cilindrada|ciclomotor/.test(e.message), String(cilindradaCc))
+  }
 })
 
 test('allianzMoto.tarificar para ANTES de abrir el portal si faltan datos que el portal asumiría', async () => {
