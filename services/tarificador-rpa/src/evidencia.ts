@@ -57,3 +57,18 @@ export function separarMarcos(html: string): { principal: string; marcos: { ruta
   })
   return { principal: partes[0], marcos }
 }
+
+/** Evidencia CRUDA de un fallo (sin redactar): URL, captura y HTML con marcos. Nunca lanza. */
+export type EvidenciaFallo = { url: string; captura: Buffer | null; html: string | null }
+
+/**
+ * La evidencia que el flujo real adjunta a sus errores (runner) y la exploración a los de su entrada cerrada. Lo que sale
+ * hacia asegura pasa ANTES por el redactor (`redactarHtml` + `redactar`) en quien la envía.
+ */
+export async function capturarEvidencia(page: Page, maxBytesHtml = 2 * 1024 * 1024): Promise<EvidenciaFallo> {
+  const url = (() => { try { return page.url() } catch { return '' } })()
+  const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
+  // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
+  const html = await htmlConMarcos(page, maxBytesHtml).catch(() => null)
+  return { url, captura, html }
+}

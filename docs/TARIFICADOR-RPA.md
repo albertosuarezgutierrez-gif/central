@@ -13,6 +13,8 @@ Todo desde `/correduria/oportunidad/[id]`, sección **Presupuestos de compañía
 ## Hechos del DOM — Allianz ePAC Comunidades
 - Formulario en `iframe#appArea`; nueva póliza `#link_new_policy`; **Calcular = `div#calcular`**, **Aceptar = `div#aceptar`** (no son `<button>`, #4370). Edificación: capital obligatorio.
 - Población: lupa del CP `img#codigoPostalAjaxLocFinderImg`.
+- **«Nueva Alta»** (Venta → Nueva Alta, `#link_new_policy`): modal con ACORDEONES plegados (Autos · Particulares · Empresas · Vida y Salud); se pulsa la sección para desplegarla. Dentro, rejilla de tiles (icono + texto). Particulares (captura de Alberto, 13/10/2026): «Allianz HOGAR», «Allianz Negocio Plus», «Decesos Prima periódica», «Allianz Accidentes Plus», «Decesos Prima única», «Comunidades», «RC Cazador/Pescador», «Embarcaciones», «Allianz Mascotas».
+- El tile se elige por etiqueta EXACTA (`etiquetaProducto` en `allianz/entrada.ts`: sin mayúsculas, tolerante al espacio entre palabras, nunca «contiene»). Hogar = «Allianz HOGAR», no «Hogar» (causa del timeout de la 1.ª exploración del 13/10).
 - Resultado: tabla `#tablaTarificacion` con tabla ANIDADA. **Columna «Anual» = PRIMER RECIBO prorrateado** (ePAC fija el vencimiento al día 1); **«Sucesivos» = prima anual real**. La UI muestra la anual y aparte el primer recibo (#4383).
 - Término real: `#fechaTermino` / `#fechaTerminoTarificar`.
 - Proyecto (PDF): `td#MENU` → «Proyecto». **«Proyecto Ampliado» (`td#EMISION_PROJ`) PROHIBIDO.**
@@ -66,7 +68,7 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - Prohibido siempre: Archivar, Proyecto ampliado, Datos emisión, Aceptar (#btnAccept → emision_ipid), Pago fraccionado.
 
 ## Allianz Negocio 2038 (en construcción)
-- `allianz/comercio.ts` (`COMERCIO_ACTIVO=false`, no registrado): hecho paso 4 «Datos» (tomador canónico `tomador.ts`, solo `fill`, RGPD intacto) y lector de prima `.alz-presupuesto-precio span` (fail-closed); HUECO pasos 1-3 (`ErrorMapaIncompleto`); prohibido «Siguiente» (#idbtnAceptar → Revisión), bloqueado en el guard.
+- `allianz/comercio.ts` (`COMERCIO_ACTIVO=false`, no registrado; entrada: acordeón «Particulares» → tile «Allianz Negocio Plus», no Empresas/«Negocio»): hecho paso 4 «Datos» (tomador canónico `tomador.ts`, solo `fill`, RGPD intacto) y lector de prima `.alz-presupuesto-precio span` (fail-closed); HUECO pasos 1-3 (`ErrorMapaIncompleto`); prohibido «Siguiente» (#idbtnAceptar → Revisión), bloqueado en el guard.
 
 ## Allianz Autos/Moto (en construcción, 10/10/2026)
 - `allianz/auto.ts` → `allianzAuto` y `allianzMoto` (`AUTO_ACTIVO=false`, Turismos no se registra; Moto solo con `MOTO_ACTIVO`). Mapa de la grabación de Moto del 09/10 (app legada «Motos-online» en el iframe `appArea`); se SUPONE que Turismos usa los mismos ids (la grabación de Auto del 08/10 no pudo leer el iframe).

@@ -17,6 +17,7 @@ import {
   cierreCorrecto,
   cuerpoTrasCierre,
   coincideConInventario,
+  EXPLORADOR_VERSION,
   finDeError,
   motivoSinDato,
   problemaTrabajoExploracion,
@@ -432,7 +433,7 @@ test('resultadoDeFin: paradas normales = explorado; OTP/CAPTCHA = captcha; guard
   const id = '00000000-0000-4000-8000-000000000001'
   const r = (motivo: Parameters<typeof resultadoDeFin>[2]['motivo'], error: Parameters<typeof resultadoDeFin>[2]['error'] = null) => resultadoDeFin(id, 'allianz', { motivo, error }, (t) => t)
   for (const m of ['resultado', 'cerca_de_emision', 'dato_sensible_requerido', 'bucle', 'tope', 'sin_salida', 'ambiguo', 'aceptar_requerido'] as const) {
-    assert.deepEqual(r(m), { trabajoId: id, resultado: 'explorado', motivoFin: m, botVersion: '0.1.0' })
+    assert.deepEqual(r(m), { trabajoId: id, resultado: 'explorado', motivoFin: m, botVersion: EXPLORADOR_VERSION })
   }
   assert.equal(r('captcha')!.resultado, 'error')
   const g = r('guard_emision', { tipo: 'emision', mensaje: 'bloqueado' })!
