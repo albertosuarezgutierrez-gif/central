@@ -18,6 +18,7 @@ import {
   respuestaParar,
   topesExplorador,
   validarRespuestaExplorador,
+  type ContextoValidacion,
   type InventarioDom,
   type RespuestaExplorador,
 } from '@central/module-tarificacion'
@@ -115,7 +116,8 @@ export function consumoPaso(st: EstadoPaso, ahora: Date): { llamadas: number; ac
 export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<SalidaPaso> {
   const inventario = e.inventario
   const huella = huellaPantalla(inventario)
-  const ctx = { inventario, ramo: e.ramo, entrada: e.entrada }
+  // Con datos reales, el riesgo entra en la validación: elegir/marcar solo sobre uso/régimen/tipo con valor conocido.
+  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null }
   const topes = topesExplorador(d.env)
 
   type Decision = { tipo: 'hecho'; salida: SalidaPaso } | { tipo: 'ia'; prompt: string; caracteres: number; peor: number; nAntes: number }
@@ -180,7 +182,7 @@ async function tx2<B>(
   d: DepsPaso<B>,
   e: EntradaPaso,
   decision: { nAntes: number },
-  x: { huella: string; inventario: InventarioDom; ctx: { inventario: InventarioDom; ramo: string; entrada: string }; coste: number; texto: string | null; fallo: string | null },
+  x: { huella: string; inventario: InventarioDom; ctx: ContextoValidacion; coste: number; texto: string | null; fallo: string | null },
 ): Promise<SalidaPaso> {
   const { huella, inventario, ctx, coste, texto, fallo } = x
   return d.conLock(async (bd): Promise<SalidaPaso> => {

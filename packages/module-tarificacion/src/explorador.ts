@@ -24,6 +24,7 @@ import {
   type InventarioDom,
   type MarcoInventario,
 } from './inventario-dom.ts'
+import { etiquetaIdHogar, type CampoIdHogar } from './riesgo-oportunidad.ts'
 
 // ─── Entradas ────────────────────────────────────────────────────────────────
 
@@ -156,16 +157,17 @@ export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
 export function catalogoParaIA(
   ramo: string,
   real?: { riesgo: unknown },
-): { clave: string; descripcion: string; tipo: TipoDato; pista?: string; valor?: string; sinValor?: true }[] {
+): { clave: string; descripcion: string; tipo: TipoDato; pista?: string; valor?: string; significado?: string; sinValor?: true }[] {
   return catalogoDe(ramo).map((d) => {
     const base = { clave: d.clave, descripcion: d.descripcion, tipo: d.tipo }
     // Con datos REALES (13/10/2026): nada de pistas de prueba en las claves del riesgo (la IA creería que hay un valor).
-    // La clave sin valor se MARCA (`sinValor`); el valor solo se enseña de las claves de opción no personales de
-    // `CLAVES_VALOR_VISIBLE_IA` (uso, régimen…), que la IA necesita para elegir la opción exacta del portal.
+    // La clave sin valor se MARCA (`sinValor`); el valor solo se enseña de las claves de `CLAVES_VALOR_VISIBLE_IA` (uso,
+    // régimen, tipo de vivienda) y SOLO con su significado en español del mapa cerrado (`valorVisibleIA`): la IA casa la
+    // opción del portal con el `significado`, nunca con el id inglés de Codeoscopic.
     if (real && d.rutaRiesgo) {
-      const v = enRuta(real.riesgo, d.rutaRiesgo)
-      if (v === null) return { ...base, sinValor: true as const }
-      return CLAVES_VALOR_VISIBLE_IA.includes(d.clave) && !d.personal && RE_VALOR_OPCION.test(v) ? { ...base, valor: v } : base
+      if (enRuta(real.riesgo, d.rutaRiesgo) === null) return { ...base, sinValor: true as const }
+      const vis = valorVisibleIA(d.clave, real.riesgo)
+      return vis ? { ...base, ...vis } : base
     }
     return { ...base, ...(!d.personal && d.sintetico && d.sintetico !== '@manana' ? { pista: d.sintetico } : {}) }
   })
@@ -173,11 +175,30 @@ export function catalogoParaIA(
 
 /**
  * Claves cuyo VALOR real ve la IA con datos reales: opciones de catálogo, no personales, que deciden la tarifa (el uso
- * de la vivienda y el régimen) y que la IA tiene que casar con una opción del portal. Nunca dirección, CP ni persona.
+ * de la vivienda, el régimen, el tipo de vivienda) y que la IA tiene que casar con una opción del portal. Nunca
+ * dirección, CP ni persona. Cada una con su catálogo del mapa cerrado id → significado (`ETIQUETAS_ID_HOGAR`).
+ * 🚨 Con datos reales son las ÚNICAS que se pueden `elegir`/`marcar` (`validarRespuestaExplorador`).
  */
-export const CLAVES_VALOR_VISIBLE_IA: readonly string[] = Object.freeze(['hogar.uso', 'hogar.regimen', 'hogar.tipo_vivienda'])
-/** Un id de catálogo (`MainResidence`, `Owner`…): palabra corta sin datos. Lo que no casa no se enseña. */
-const RE_VALOR_OPCION = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 _-]{0,40}$/
+const CAMPO_ID_DE_CLAVE: Readonly<Record<string, CampoIdHogar>> = Object.freeze({
+  'hogar.uso': 'uso',
+  'hogar.regimen': 'regimen',
+  'hogar.tipo_vivienda': 'tipoVivienda',
+})
+export const CLAVES_VALOR_VISIBLE_IA: readonly string[] = Object.freeze(Object.keys(CAMPO_ID_DE_CLAVE))
+
+/**
+ * El valor REAL que la IA puede ver de una clave: id + significado, SOLO si la clave es de {@link CLAVES_VALOR_VISIBLE_IA},
+ * no personal, con valor en el riesgo y ese id en el mapa cerrado. `null` = la IA no sabe el valor (y con datos reales
+ * no puede elegir/marcar nada en su nombre).
+ */
+export function valorVisibleIA(clave: string, riesgo: unknown): { valor: string; significado: string } | null {
+  if (!Object.hasOwn(CAMPO_ID_DE_CLAVE, clave)) return null
+  const d = catalogoDe('hogar').find((x) => x.clave === clave)
+  if (!d || d.personal || !d.rutaRiesgo) return null
+  const v = enRuta(riesgo, d.rutaRiesgo)
+  const significado = v === null ? null : etiquetaIdHogar(CAMPO_ID_DE_CLAVE[clave], v)
+  return v !== null && significado !== null ? { valor: v, significado } : null
+}
 
 export type ContextoDatos = {
   ramo: string
@@ -269,7 +290,7 @@ export type AccionExplorador = (typeof ACCIONES_EXPLORADOR)[number]
  * Motivos de `parar` que puede dar la IA. FUENTE ÚNICA: el prompt de asegura se genera de aquí
  * (`lineaMotivosPararParaIA`) y `MOTIVOS_FIN_EXPLORACION` los incluye. Añadir uno = añadirlo aquí con su descripción.
  */
-export const MOTIVOS_PARAR = ['otp', 'captcha', 'dato_sensible_requerido', 'cerca_de_emision', 'ambiguo', 'aceptar_requerido', 'sin_salida'] as const
+export const MOTIVOS_PARAR = ['otp', 'captcha', 'dato_sensible_requerido', 'dato_no_disponible', 'cerca_de_emision', 'ambiguo', 'aceptar_requerido', 'sin_salida'] as const
 export type MotivoParar = (typeof MOTIVOS_PARAR)[number]
 
 /** Qué significa cada motivo (va al prompt tal cual). */
@@ -277,6 +298,7 @@ export const DESCRIPCION_MOTIVOS_PARAR: Readonly<Record<MotivoParar, string>> = 
   otp: 'piden un código de verificación (SMS, correo, app)',
   captcha: 'hay un CAPTCHA o una comprobación de humano',
   dato_sensible_requerido: 'un campo OBLIGATORIO pide NIF/DNI u otro dato personal sin clave con valor en el catálogo',
+  dato_no_disponible: 'con datos REALES, un desplegable o radio OBLIGATORIO pide un dato cuyo valor no se te ha dado (solo se elige/marca uso, régimen o tipo de vivienda con su significado)',
   cerca_de_emision: 'la pantalla es de contratar, emitir, firmar o pagar',
   ambiguo: 'no sabes qué hacer en esta pantalla',
   aceptar_requerido: 'solo se sigue con un «Aceptar» que no es el autorizado',
@@ -354,6 +376,12 @@ export type ContextoValidacion = {
   ramo: string
   /** Clave de `ENTRADAS_EXPLORACION` (para los avances «Aceptar» autorizados). */
   entrada: string
+  /**
+   * OBLIGATORIO a propósito (que ningún llamante lo olvide): `null` = exploración sintética; con datos reales, el riesgo
+   * del trabajo. Con datos reales un `elegir`/`marcar` solo vale sobre un campo mapeado a una clave con valor visible
+   * (`valorVisibleIA`): lo demás lo decidiría la IA sin dato junto a un NIF real.
+   */
+  datosReales: { riesgo: unknown } | null
 }
 
 export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[] }
@@ -589,6 +617,24 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         if (!c) return void errores.push(`${donde}: confianza fuera de lista`)
         mapeo.push({ ref: m.ref, campoCanonico: m.campoCanonico as string | null, confianza: c })
       })
+  }
+
+  // 🚨 Datos REALES: un desplegable/radio no se elige «a ojo». Solo si su ref está MAPEADA (en esta misma respuesta) a una
+  //    clave cuyo valor real ve la IA (uso, régimen, tipo de vivienda, con significado) y a ninguna otra; y una sola
+  //    elección por clave. Lo demás → rechazo (quien llama: parar ambiguo); la IA tiene que parar dato_no_disponible.
+  if (ctx.datosReales) {
+    const riesgo = ctx.datosReales.riesgo
+    const usadas = new Set<string>()
+    acciones.forEach((a, i) => {
+      if (a.accion !== 'elegir' && a.accion !== 'marcar') return
+      const campos = [...new Set(mapeo.filter((m) => m.ref === a.ref).map((m) => m.campoCanonico))]
+      const campo = campos.length === 1 ? campos[0] : null
+      if (campo === null || valorVisibleIA(campo, riesgo) === null) {
+        return void errores.push(`acciones[${i}]: con datos reales, ${a.accion} solo sobre un campo mapeado a una clave con valor conocido (${CLAVES_VALOR_VISIBLE_IA.join(', ')}); si no, parar dato_no_disponible`)
+      }
+      if (usadas.has(campo)) return void errores.push(`acciones[${i}]: con datos reales, ${campo} se elige una sola vez`)
+      usadas.add(campo)
+    })
   }
 
   if (errores.length) return { ok: false, errores: errores.slice(0, 20) }

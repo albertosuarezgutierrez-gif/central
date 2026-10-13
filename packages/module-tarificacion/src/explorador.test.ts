@@ -64,7 +64,7 @@ function inventario(extra: { titulos?: unknown[]; elementos?: unknown[]; importe
 }
 
 const ref = (inv: InventarioDom, id: string) => inv.marcos[0].elementos.find((e) => e.id === id)!.ref!
-const ctx = (inv: InventarioDom) => ({ inventario: inv, ramo: 'hogar', entrada: ENTRADA })
+const ctx = (inv: InventarioDom) => ({ inventario: inv, ramo: 'hogar', entrada: ENTRADA, datosReales: null })
 
 describe('inventario con refs (explorador)', () => {
   it('asigna refs estables y la segunda pasada (asegura) las CONSERVA', () => {
@@ -151,8 +151,13 @@ describe('catálogo y resolución de datos', () => {
     expect(de('inmueble.codigo_postal').valor).toBeUndefined()
     expect(de('inmueble.codigo_postal').sinValor).toBeUndefined()
     expect(de('tomador.nif')).toEqual({ clave: 'tomador.nif', descripcion: expect.any(String), tipo: 'texto' })
-    expect(de('hogar.uso').valor).toBe('MainResidence')
-    expect(de('hogar.regimen').valor).toBe('Owner')
+    // Id de Codeoscopic + su SIGNIFICADO en español (mapa cerrado): la IA casa la opción del portal con el significado.
+    expect(de('hogar.uso')).toMatchObject({ valor: 'MainResidence', significado: 'Vivienda habitual' })
+    expect(de('hogar.regimen')).toMatchObject({ valor: 'Owner', significado: 'Propietario' })
+    // tipo de vivienda sin dato → sinValor; un id fuera del mapa cerrado no se enseña (ni se traduce a ojo).
+    expect(de('hogar.tipo_vivienda')).toMatchObject({ sinValor: true })
+    const raro = catalogoParaIA('hogar', { riesgo: { ...riesgo, hogar: { uso: 'IdRaro', regimen: 'Owner' } } })
+    expect(raro.find((d) => d.clave === 'hogar.uso')!.valor).toBeUndefined()
     expect(JSON.stringify(c)).not.toContain('00000000T')
     expect(JSON.stringify(c)).not.toContain('Ficticio')
   })
@@ -182,6 +187,61 @@ describe('validarRespuestaExplorador', () => {
     )
     expect(r.ok).toBe(true)
     if (r.ok) expect(r.respuesta.acciones).toHaveLength(4)
+  })
+
+  describe('con datos REALES: elegir/marcar solo sobre uso/régimen/tipo de vivienda con valor conocido', () => {
+    const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio' }, inmueble: { provincia: 'PROVINCIA PRUEBA' }, hogar: { uso: 'MainResidence', regimen: 'Owner', tipoVivienda: 'MiddleFloor' } }
+    const invP = inventario({
+      elementos: [
+        { tag: 'select', id: 'provincia', etiqueta: 'Provincia', opciones: [{ valor: '41', texto: 'Sevilla' }, { valor: '28', texto: 'Madrid' }] },
+        { tag: 'select', id: 'tipoVivienda', etiqueta: 'Tipo de vivienda', opciones: [{ valor: '1', texto: 'Piso' }, { valor: '2', texto: 'Chalet' }] },
+        { tag: 'input', id: 'regimenProp', type: 'radio', etiqueta: 'Propietario' },
+        { tag: 'input', id: 'regimenInq', type: 'radio', etiqueta: 'Inquilino' },
+      ],
+    })
+    const real = (r: unknown = riesgo) => ({ ...ctx(invP), datosReales: { riesgo: r } })
+    const elegirProvincia = (campo: string | null) =>
+      buena([{ accion: 'elegir', ref: ref(invP, 'provincia'), opcion: { valor: '41' } }], { mapeo: campo === undefined ? [] : [{ ref: ref(invP, 'provincia'), campoCanonico: campo, confianza: 'alta' }] })
+
+    it('CEPO: elegir la provincia con datos reales → rechazado (la IA no tiene ese valor); en sintético, igual que antes', () => {
+      const r = validarRespuestaExplorador(elegirProvincia('inmueble.provincia'), real())
+      expect(r.ok).toBe(false)
+      if (!r.ok) expect(r.errores.join(' ')).toMatch(/parar dato_no_disponible/)
+      expect(validarRespuestaExplorador(elegirProvincia('inmueble.provincia'), ctx(invP)).ok).toBe(true)
+    })
+
+    it('rechaza elegir/marcar sin mapeo, mapeado a null, a dos claves, o a una clave visible SIN valor conocido', () => {
+      expect(validarRespuestaExplorador(buena([{ accion: 'elegir', ref: ref(invP, 'tipoVivienda'), opcion: { valor: '1' } }]), real()).ok).toBe(false)
+      expect(validarRespuestaExplorador(elegirProvincia(null), real()).ok).toBe(false)
+      const dos = buena([{ accion: 'marcar', ref: ref(invP, 'regimenProp') }], {
+        mapeo: [{ ref: ref(invP, 'regimenProp'), campoCanonico: 'hogar.regimen', confianza: 'alta' }, { ref: ref(invP, 'regimenProp'), campoCanonico: 'hogar.uso', confianza: 'alta' }],
+      })
+      expect(validarRespuestaExplorador(dos, real()).ok).toBe(false)
+      const marcarReg = buena([{ accion: 'marcar', ref: ref(invP, 'regimenProp') }], { mapeo: [{ ref: ref(invP, 'regimenProp'), campoCanonico: 'hogar.regimen', confianza: 'alta' }] })
+      expect(validarRespuestaExplorador(marcarReg, real({ ...riesgo, hogar: { uso: 'MainResidence' } })).ok).toBe(false)
+      expect(validarRespuestaExplorador(marcarReg, real({ ...riesgo, hogar: { uso: 'MainResidence', regimen: 'IdRaro' } })).ok).toBe(false)
+    })
+
+    it('acepta marcar el régimen y elegir el tipo de vivienda mapeados a su clave con valor; nunca dos veces la misma clave', () => {
+      const ok = buena([
+        { accion: 'marcar', ref: ref(invP, 'regimenProp') },
+        { accion: 'elegir', ref: ref(invP, 'tipoVivienda'), opcion: { valor: '1' } },
+      ], { mapeo: [
+        { ref: ref(invP, 'regimenProp'), campoCanonico: 'hogar.regimen', confianza: 'alta' },
+        { ref: ref(invP, 'tipoVivienda'), campoCanonico: 'hogar.tipo_vivienda', confianza: 'alta' },
+      ] })
+      expect(validarRespuestaExplorador(ok, real()).ok).toBe(true)
+      const ambos = buena([{ accion: 'marcar', ref: ref(invP, 'regimenProp') }, { accion: 'marcar', ref: ref(invP, 'regimenInq') }], { mapeo: [
+        { ref: ref(invP, 'regimenProp'), campoCanonico: 'hogar.regimen', confianza: 'alta' },
+        { ref: ref(invP, 'regimenInq'), campoCanonico: 'hogar.regimen', confianza: 'alta' },
+      ] })
+      expect(validarRespuestaExplorador(ambos, real()).ok).toBe(false)
+    })
+
+    it('parar dato_no_disponible es un motivo válido', () => {
+      const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'dato_no_disponible' }]), real())
+      expect(r.ok && r.respuesta.acciones[0]).toEqual({ accion: 'parar', motivo: 'dato_no_disponible' })
+    })
   })
 
   const casos: [string, unknown][] = [

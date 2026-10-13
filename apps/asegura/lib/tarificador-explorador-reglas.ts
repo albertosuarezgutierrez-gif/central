@@ -213,7 +213,8 @@ REGLAS (no negociables):
 - Máximo 15 acciones. Refs SOLO del inventario de ESTA pantalla.
 - La explicación va en el "motivo" de ARRIBA (el del objeto, no el de la acción parar): motivo en una frase de 200 caracteres como máximo.
 - Los portales de las compañías AUTOCOMPLETAN año de construcción y m² desde el Catastro tras introducir la dirección: si un campo ya viene relleno (conValor), no lo toques.
-- El USO de la vivienda (hogar.uso) y el RÉGIMEN (hogar.regimen) determinan la tarifa: elige SOLO la opción del portal que corresponda EXACTAMENTE a su valor; si ninguna encaja con seguridad, parar ambiguo (nunca la más parecida). Una clave con sinValor no tiene dato: no la uses en rellenar.
+- El USO de la vivienda (hogar.uso) y el RÉGIMEN (hogar.regimen) determinan la tarifa. Con datos reales el catálogo da de cada una su "valor" (id interno, en inglés) y su "significado" (en español): casa la opción del portal con el SIGNIFICADO, nunca con el id; si ninguna opción significa EXACTAMENTE eso, parar ambiguo (nunca la más parecida). Una clave con sinValor no tiene dato: no la uses en rellenar.
+- Con datos REALES, elegir y marcar SOLO en campos de uso, régimen o tipo de vivienda que tengan "significado" en el catálogo, y ese campo tiene que ir en mapeo con su clave (hogar.uso, hogar.regimen o hogar.tipo_vivienda). Cualquier otro desplegable o radio OBLIGATORIO (provincia, tipo de vía, sí/no…) no lo decides tú: rellena lo demás y, si sin él no se puede avanzar, parar dato_no_disponible. Un desplegable que ya viene con valor (conValor), no lo toques.
 
 Responde SOLO un objeto JSON, sin prosa:
 {"version":1,"pantalla":{"nombre":"<≤60 car.>","tipo":"formulario|seleccion_producto|resultado|otro"},"acciones":[...],"mapeo":[...],"motivo":"<≤200 car.>"}`

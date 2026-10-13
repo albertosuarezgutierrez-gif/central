@@ -8,6 +8,7 @@
 //    Catastro al meter la dirección). 🚨 USO de la vivienda y RÉGIMEN deciden la tarifa: tienen que venir EXPLÍCITOS en
 //    `datosVivienda` (`ocupacion` = uso habitual/secundaria/alquiler…, `uso` = régimen propietario/inquilino, ids del
 //    catálogo de Codeoscopic). Sin ellos no hay riesgo: la exploración no se encola. Nunca un valor por defecto.
+//    Y su id tiene que estar en el mapa cerrado `ETIQUETAS_ID_HOGAR` (la IA ve su significado en español).
 
 const obj = (v: unknown): Record<string, unknown> | null =>
   typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
@@ -21,11 +22,29 @@ const texto = (v: unknown, max = 120): string | null => {
 
 const positivo = (v: unknown, max: number): number | null => (typeof v === 'number' && Number.isFinite(v) && v > 0 && v <= max ? v : null)
 
-/** Id de catálogo (`MainResidence`, `Owner`…): una palabra corta. Lo que no lo parece cuenta como ausente. */
-const RE_ID_CATALOGO = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 _-]{0,40}$/
-const idCatalogo = (v: unknown): string | null => {
-  const t = texto(v, 41)
-  return t !== null && RE_ID_CATALOGO.test(t) ? t : null
+/**
+ * MAPA CERRADO id de Codeoscopic → su significado en español, para los tres catálogos de Hogar cuyo valor ve la IA
+ * (`CLAVES_VALOR_VISIBLE_IA` de `explorador.ts`). La IA casa la opción del portal (en español) con el SIGNIFICADO, no con
+ * el id inglés. Solo ids con su etiqueta atestiguada en el repo (DEFECTOS_HOGAR y tests de `apps/asegura/lib/codeoscopic`,
+ * `docs/CODEOSCOPIC-API-PORTAL.md` § Hogar): `Owner`/«Propietario», `Tenant`/«Inquilino», `MainResidence`/«Habitual»,
+ * `MiddleFloor`/«Piso intermedio». 🚨 Un id que no esté aquí NO se traduce ni se adivina: la oportunidad se rechaza
+ * (`noReconocidos` → 409 `oportunidad_incompleta`). Añadir uno = verlo en el catálogo vivo (`GET /home/<catálogo>`).
+ */
+export const ETIQUETAS_ID_HOGAR = Object.freeze({
+  /** `datosVivienda.ocupacion` → catálogo `/home/occupancy-types` = USO de la vivienda. */
+  uso: Object.freeze({ MainResidence: 'Vivienda habitual' }) as Readonly<Record<string, string>>,
+  /** `datosVivienda.uso` → catálogo `/home/uses` = RÉGIMEN. */
+  regimen: Object.freeze({ Owner: 'Propietario', Tenant: 'Inquilino' }) as Readonly<Record<string, string>>,
+  /** `datosVivienda.tipoVivienda` → catálogo `/home/property-types`. */
+  tipoVivienda: Object.freeze({ MiddleFloor: 'Piso intermedio' }) as Readonly<Record<string, string>>,
+})
+export type CampoIdHogar = keyof typeof ETIQUETAS_ID_HOGAR
+
+/** El significado en español de un id del mapa cerrado; `null` si no está (nunca se adivina). */
+export function etiquetaIdHogar(campo: CampoIdHogar, id: unknown): string | null {
+  if (typeof id !== 'string') return null
+  const m = ETIQUETAS_ID_HOGAR[campo]
+  return Object.hasOwn(m, id) ? m[id] : null
 }
 
 /** Tipo de vía solo si ya es una palabra («Calle», «Avenida»): un código numérico de catálogo no lo es. */
@@ -53,9 +72,12 @@ export type FichaTomadorExploracion = {
 export type FaltaRiesgoOportunidad =
   | 'tomador.nif' | 'tomador.nombre' | 'tomador.apellido1' | 'datosVivienda' | 'datosVivienda.ocupacion' | 'datosVivienda.uso'
 
+/** Ids presentes en `datosVivienda` pero fuera de {@link ETIQUETAS_ID_HOGAR}: no se sabe qué significan. */
+export type NoReconocidoRiesgoOportunidad = 'datosVivienda.ocupacion' | 'datosVivienda.uso' | 'datosVivienda.tipoVivienda'
+
 export type ResultadoRiesgoOportunidad =
   | { ok: true; riesgo: { tomador: Record<string, string>; inmueble: Record<string, string | number>; hogar: Record<string, string | number> } }
-  | { ok: false; faltan: FaltaRiesgoOportunidad[] }
+  | { ok: false; faltan: FaltaRiesgoOportunidad[]; noReconocidos?: NoReconocidoRiesgoOportunidad[] }
 
 /**
  * Ficha + `datosVivienda` → `{ tomador, inmueble, hogar }`. Obligatorios: NIF, nombre y primer apellido del tomador, el
@@ -73,14 +95,30 @@ export function riesgoExploracionDeOportunidad(ficha: FichaTomadorExploracion | 
   if (!nombre) faltan.push('tomador.nombre')
   if (!apellido1) faltan.push('tomador.apellido1')
   const v = obj(datosVivienda)
-  const uso = idCatalogo(v?.ocupacion)
-  const regimen = idCatalogo(v?.uso)
+  const noReconocidos: NoReconocidoRiesgoOportunidad[] = []
+  // Id → solo si está en el mapa cerrado. Vacío = falta; presente y desconocido = no reconocido (los dos → 409).
+  const idConocido = (campo: CampoIdHogar, bruto: unknown, nombre: NoReconocidoRiesgoOportunidad, obligatorio: boolean): string | null => {
+    const t = texto(bruto, 60)
+    if (t === null) {
+      if (obligatorio) faltan.push(nombre as FaltaRiesgoOportunidad)
+      return null
+    }
+    if (etiquetaIdHogar(campo, t) === null) {
+      noReconocidos.push(nombre)
+      return null
+    }
+    return t
+  }
+  let uso: string | null = null
+  let regimen: string | null = null
+  let tipoVivienda: string | null = null
   if (!v) faltan.push('datosVivienda')
   else {
-    if (!uso) faltan.push('datosVivienda.ocupacion')
-    if (!regimen) faltan.push('datosVivienda.uso')
+    uso = idConocido('uso', v.ocupacion, 'datosVivienda.ocupacion', true)
+    regimen = idConocido('regimen', v.uso, 'datosVivienda.uso', true)
+    tipoVivienda = idConocido('tipoVivienda', v.tipoVivienda, 'datosVivienda.tipoVivienda', false)
   }
-  if (faltan.length) return { ok: false, faltan }
+  if (faltan.length || noReconocidos.length) return { ok: false, faltan, ...(noReconocidos.length ? { noReconocidos } : {}) }
 
   const tomador: Record<string, string> = { nif: nif!, nombre: nombre!, apellido1: apellido1! }
   if (apellido2) tomador.apellido2 = apellido2
@@ -104,7 +142,6 @@ export function riesgoExploracionDeOportunidad(ficha: FichaTomadorExploracion | 
   pon('anioConstruccion', typeof anio === 'number' && Number.isInteger(anio) && anio >= 1500 && anio <= 2100 ? anio : null)
 
   const hogar: Record<string, string | number> = { uso: uso!, regimen: regimen! }
-  const tipoVivienda = idCatalogo(v!.tipoVivienda)
   if (tipoVivienda) hogar.tipoVivienda = tipoVivienda
   const cc = positivo(v!.capitalContinente, 100_000_000)
   if (cc !== null) hogar.capitalContinente = cc

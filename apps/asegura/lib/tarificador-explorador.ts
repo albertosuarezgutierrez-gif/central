@@ -5,6 +5,7 @@
 //    SIEMPRE de las filas (trabajo `en_curso` con lease vivo y modo 'exploracion' + su cabecera), nunca del cuerpo.
 
 import { ENTRADAS_EXPLORACION, MOTIVO_ORIGEN_PURGADO, claveCompania, riesgoExploracionDeOportunidad, esEntradaExploracion, puedeAutomatizar, riesgoYaPurgado, topesExplorador, type InventarioDom, type MapaExploracion, type RespuestaExplorador } from '@central/module-tarificacion'
+import { ESTADOS_OPORTUNIDAD_ABIERTA } from '@central/module-seguros'
 import { prisma } from './tenant'
 import { personaDeFicha } from './oportunidad-riesgo'
 import { LEASE_MS } from './tarificador-reglas'
@@ -259,14 +260,16 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
   if (oportunidadId) {
     // Vía (c), 13/10/2026: ancla = una OPORTUNIDAD de Hogar de esta correduría. El riesgo se monta con la ficha de SU
     // cliente (descifrada en el servidor, `personaDeFicha`) + `info_riesgo.datosVivienda`. Nada se inventa ni se supone.
-    const o = await prisma.$queryRaw<{ cliente_id: string | null; tipo: string | null; datos_vivienda: unknown; tomador_distinto: boolean }[]>`
-      select o.cliente_id::text as cliente_id, o.tipo::text as tipo, o.info_riesgo->'datosVivienda' as datos_vivienda,
+    const o = await prisma.$queryRaw<{ cliente_id: string | null; tipo: string | null; estado: string | null; datos_vivienda: unknown; tomador_distinto: boolean }[]>`
+      select o.cliente_id::text as cliente_id, o.tipo::text as tipo, o.estado::text as estado, o.info_riesgo->'datosVivienda' as datos_vivienda,
              exists (select 1 from seguros.oportunidad_figura f
                      where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'tomador' and f.cliente_id <> o.cliente_id) as tomador_distinto
       from seguros.oportunidades o
       where o.id = ${oportunidadId}::uuid and o.correduria_id = ${e.correduriaId}::uuid`
     const f = o[0]
     if (!f) return { estado: 'rechazado', status: 404, motivo: 'oportunidad_no_encontrada' }
+    // Solo oportunidades ABIERTAS (la lista del módulo): una ganada o perdida ya no se tarifica con los datos del cliente.
+    if (!(ESTADOS_OPORTUNIDAD_ABIERTA as readonly string[]).includes(f.estado ?? '')) return { estado: 'rechazado', status: 409, motivo: `oportunidad_cerrada (${f.estado ?? 'sin estado'}): solo se explora una oportunidad abierta` }
     if (!f.cliente_id) return { estado: 'rechazado', status: 409, motivo: 'oportunidad_sin_cliente' }
     if (f.tipo !== 'hogar' || def.ramo !== 'hogar') return { estado: 'rechazado', status: 409, motivo: `oportunidad_de_otro_ramo (${f.tipo ?? 'sin ramo'} ≠ ${def.ramo}): la vía oportunidad solo explora Hogar` }
     // El trigger exige que el cliente del trabajo sea el de la oportunidad: un tomador distinto no se mezcla con él.
@@ -277,7 +280,10 @@ export async function encolarExploracion(e: EntradaEncolarExploracion): Promise<
     const p = ficha as { dni?: string; nombre?: string; apellido1?: string; apellido2?: string; fechaNacimiento?: string }
     const r = riesgoExploracionDeOportunidad({ nif: p.dni, nombre: p.nombre, apellido1: p.apellido1, apellido2: p.apellido2, fechaNacimiento: p.fechaNacimiento }, f.datos_vivienda)
     // Solo NOMBRES de campo en el motivo, nunca valores.
-    if (!r.ok) return { estado: 'rechazado', status: 409, motivo: `oportunidad_incompleta: falta ${r.faltan.join(', ')}` }
+    if (!r.ok) {
+      const partes = [r.faltan.length ? `falta ${r.faltan.join(', ')}` : '', r.noReconocidos?.length ? `id no reconocido en ${r.noReconocidos.join(', ')}` : ''].filter(Boolean)
+      return { estado: 'rechazado', status: 409, motivo: `oportunidad_incompleta: ${partes.join('; ')}` }
+    }
     clienteId = f.cliente_id
     riesgo = r.riesgo
   }

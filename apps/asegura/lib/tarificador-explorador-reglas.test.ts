@@ -119,10 +119,12 @@ test('prompt con datos reales: catálogo sin pistas de prueba, uso/régimen visi
   const l = leerPeticionPaso({ trabajoId: UUID, inventario: crudo })
   assert.ok(l.ok)
   if (!l.ok) return
-  const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio', apellido1: 'Deprueba' }, inmueble: { codigoPostal: '00000' }, hogar: { uso: 'TouristRental', regimen: 'Tenant' } }
+  const riesgo = { tomador: { nif: '00000000T', nombre: 'Ficticio', apellido1: 'Deprueba' }, inmueble: { codigoPostal: '00000' }, hogar: { uso: 'MainResidence', regimen: 'Tenant' } }
   const pr = promptExplorador({ entrada: 'allianz:particulares:hogar', ramo: 'hogar', inventario: l.p.inventario, historial: [], conDatosReales: true, avancesFallidos: 0, riesgo })
-  assert.match(pr, /"clave":"hogar\.uso"[^}]*"valor":"TouristRental"/)
-  assert.match(pr, /"clave":"hogar\.regimen"[^}]*"valor":"Tenant"/)
+  // Id + su SIGNIFICADO en español (mapa cerrado): la IA casa la opción del portal con el significado.
+  assert.match(pr, /"clave":"hogar\.uso"[^}]*"valor":"MainResidence","significado":"Vivienda habitual"/)
+  assert.match(pr, /"clave":"hogar\.regimen"[^}]*"valor":"Tenant","significado":"Inquilino"/)
+  assert.match(SYSTEM_EXPLORADOR, /Con datos REALES, elegir y marcar SOLO[\s\S]*parar dato_no_disponible/)
   assert.match(pr, /"clave":"inmueble\.anio_construccion"[^}]*"sinValor":true/)
   assert.doesNotMatch(pr, /"pista"/)
   for (const x of ['00000000T', 'Ficticio', 'Deprueba', '"00000"']) assert.doesNotMatch(pr, new RegExp(x))
@@ -283,7 +285,11 @@ test('encolar por oportunidad: monta el riesgo con el helper puro y guarda el an
   assert.match(f, /riesgoExploracionDeOportunidad\(/)
   assert.match(f, /personaDeFicha\(e\.correduriaId, f\.cliente_id, 'hogar'\)/)
   assert.match(f, /trabajo_origen_id, oportunidad_id, compania/)
-  assert.match(f, /oportunidad_incompleta: falta \$\{r\.faltan\.join/)
+  assert.match(f, /oportunidad_incompleta: \$\{partes\.join/)
+  assert.match(f, /id no reconocido en \$\{r\.noReconocidos\.join/)
+  // Solo oportunidades ABIERTAS, con la lista del módulo (nada de estados escritos a mano).
+  assert.match(f, /\(ESTADOS_OPORTUNIDAD_ABIERTA as readonly string\[\]\)\.includes\(f\.estado \?\? ''\)\) return \{ estado: 'rechazado', status: 409, motivo: `oportunidad_cerrada/)
+  assert.match(f, /o\.estado::text as estado/)
   const r = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../app/api/operador/tarificador/exploracion/route.ts'), 'utf8')
   assert.match(r, /oportunidadId: l\.p\.oportunidadId/)
 })
@@ -298,7 +304,7 @@ test('prompt ↔ validador: los motivos de parar del prompt son EXACTAMENTE los 
   assert.ok(l.ok)
   if (!l.ok) return
   for (const c of codigos) {
-    const r = validarRespuestaExplorador({ version: 1, pantalla: { nombre: null, tipo: 'otro' }, acciones: [{ accion: 'parar', motivo: c }], mapeo: [], motivo: null }, { inventario: l.p.inventario, ramo: 'hogar', entrada: 'allianz:particulares:hogar' })
+    const r = validarRespuestaExplorador({ version: 1, pantalla: { nombre: null, tipo: 'otro' }, acciones: [{ accion: 'parar', motivo: c }], mapeo: [], motivo: null }, { inventario: l.p.inventario, ramo: 'hogar', entrada: 'allianz:particulares:hogar', datosReales: null })
     assert.ok(r.ok, `el validador acepta «${c}», que pide el prompt`)
   }
 })

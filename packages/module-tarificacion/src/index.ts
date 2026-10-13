@@ -412,6 +412,7 @@ export {
   catalogoDe,
   catalogoParaIA,
   CLAVES_VALOR_VISIBLE_IA,
+  valorVisibleIA,
   resolverDato,
   ACCIONES_EXPLORADOR,
   MOTIVOS_PARAR,
@@ -502,6 +503,10 @@ export {
 export {
   riesgoExploracionDeOportunidad,
   fechaDdMmAaaa,
+  ETIQUETAS_ID_HOGAR,
+  etiquetaIdHogar,
+  type CampoIdHogar,
+  type NoReconocidoRiesgoOportunidad,
   type FichaTomadorExploracion,
   type FaltaRiesgoOportunidad,
   type ResultadoRiesgoOportunidad,
