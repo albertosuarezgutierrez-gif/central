@@ -7,7 +7,8 @@
 //      value, id, name y href del elemento y se niega a pulsar si casa con el patrón. (Lo vigila
 //      `test/regression-tarificador-rpa.test.ts` en la raíz.)
 
-import type { BrowserContext, Frame, Locator, Page, Request } from 'playwright'
+import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
+import { ErrorTarificador } from './errores.ts'
 import {
   EmisionBloqueadaError,
   MaquinaFases,
@@ -15,6 +16,7 @@ import {
   esBotonDeListaBlanca,
   parametrosParecenEmision,
   pareceEmision,
+  redactarDatosPersonales,
   usarPermisoEmision,
   type ModalidadPortal,
   type PermisoEmision,
@@ -100,9 +102,11 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     const noGet = req.method() !== 'GET'
     if (req.isNavigationRequest() || noGet) {
       const av = avanceVigente()
-      // Capa (a) del avance: el manejador «Aceptar» de la pestaña está autorizado (permitirAceptar), pero store/contract/
-      // validar_aceptar/emitir/contratar/formalizar… siguen casando con el patrón y abortan como siempre (ver abajo).
-      const op = { permitirAceptar: fases.aceptarEnVuelo() || av !== null }
+      // Capa (a) del avance: el manejador «Aceptar» está autorizado SOLO para las peticiones a un destino de la lista blanca
+      // del avance vigente (origen + ruta exactos, sin query). Cualquier otra (GET incluida) se mira como siempre: con
+      // «aceptar» bloqueado. store/contract/validar_aceptar/emitir/contratar… abortan siempre, también en la lista.
+      const enLista = av !== null && destinoAvancePermitido(url, av.endpoints)
+      const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista }
       const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
       if ((porUrl || porCuerpo) && Date.now() < ventanaHasta && av === null) {
@@ -116,7 +120,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
         await route.abort('blockedbyclient')
         return
       }
-      if (av && noGet && !destinoAvancePermitido(url, av.endpoints)) {
+      if (av && noGet && !enLista) {
         // Capa (b) del avance: lista blanca de destinos. Un POST/PUT/… a cualquier otro sitio se aborta y el trabajo cae.
         // Al mensaje solo va origen + ruta (la query de ePAC lleva identificadores de la sesión y del agente).
         let destino = '(url ilegible)'
@@ -147,12 +151,12 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     },
   }
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
-  ABRIR_AVANCE.set(g, (ms, endpoints) => { avance = { hasta: Date.now() + Math.min(ms, VENTANA_RED_AVANCE_MS), endpoints } })
+  ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
   return g
 }
 
 /** Solo `pulsarAvancePestanaAutorizado` (este fichero) puede abrir la ventana del avance. */
-const ABRIR_AVANCE = new WeakMap<GuardEmision, (ms: number, endpoints: readonly string[]) => void>()
+const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[]) => void>()
 /** Cada avance autorizado, UNA vez por trabajo (contexto): no hay segundo «Aceptar» de la misma pestaña. */
 const AVANCES_USADOS = new WeakMap<GuardEmision, Set<string>>()
 
@@ -361,7 +365,7 @@ export async function pulsarEmisionAutorizada(page: Page, guard: GuardEmision, p
  * Solo entonces abre la ventana de red (capa a: `parametrosParecenEmision` en query y cuerpo; capa b: destinos no GET en lista
  * blanca), pulsa UNA vez y espera la pantalla de DESTINO. La ventana se cierra SIEMPRE (finally), también en error.
  */
-export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmision, selector: SelectorAvancePestana): Promise<void> {
+export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmision, selector: SelectorAvancePestana): Promise<Frame> {
   guard.comprobar()
   if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'avance de pestaña con la ventana de emisión abierta')
   if (typeof selector !== 'string' || !Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)) {
@@ -397,21 +401,57 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
   if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')
   usados.add(selector)
   AVANCES_USADOS.set(guard, usados)
-  abrir(VENTANA_RED_AVANCE_MS, regla.endpoints)
+  // UN plazo para todo: la ventana de red y la espera de la pantalla de destino vencen en el MISMO instante (`hasta`), y la
+  // ventana se cierra antes en cuanto se llega (finally).
+  const hasta = Date.now() + VENTANA_RED_AVANCE_MS
+  // Un diálogo del portal (confirm/alert) durante el avance NO se acepta: se descarta y el trabajo cae con motivo claro.
+  let dialogo: { tipo: string; mensaje: string } | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= { tipo: d.type(), mensaje: redactarDatosPersonales(d.message().replace(/\s+/g, ' ').trim()).slice(0, 200) }
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  abrir(hasta, regla.endpoints)
   try {
     await boton.click()
-    const fin = Date.now() + VENTANA_RED_AVANCE_MS
     for (;;) {
       guard.comprobar()
-      let llegado = false
-      for (const f of marcosVivos(page)) if ((await accionFormulario(f)) === regla.formDestino) llegado = true
-      if (llegado) break
-      if (Date.now() >= fin) throw new Error(`avance de pestaña ${selector}: no apareció la pantalla de destino`)
+      const dlg = dialogo as { tipo: string; mensaje: string } | null // lo escribe el manejador del diálogo (TS no lo ve)
+      if (dlg) {
+        if (dlg.tipo === 'alert') throw new ErrorTarificador('datos', `allianz: el portal avisó al avanzar a ${regla.texto}: ${dlg.mensaje}`)
+        throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector}: el portal pidió confirmación («${dlg.tipo}») y el robot no confirma`)
+      }
+      for (const f of marcosVivos(page)) if ((await accionFormulario(f)) === regla.formDestino) {
+        guard.comprobar()
+        return f
+      }
+      // ¿El portal rechazó el avance? (filas de error de su «INFORME DE AVISO E INCIDENCIAS»): no se espera al tope.
+      const conError = []
+      for (const f of marcosVivos(page)) if ((await f.locator(SEL_ERROR_EPAC).count().catch(() => 0)) > 0) conError.push(f)
+      if (conError.length > 0) throw new ErrorAvanceSinLlegar(selector, [...new Set([marco, ...conError].filter((f) => !f.isDetached()))], true)
+      if (Date.now() >= hasta) throw new ErrorAvanceSinLlegar(selector, marco.isDetached() ? marcosVivos(page) : [marco], false)
       await page.waitForTimeout(250)
     }
-    guard.comprobar()
   } finally {
+    page.off('dialog', alDialogo)
     guard.avance.cerrar()
+  }
+}
+
+/** Filas de ERROR del informe de incidencias del framework legado de ePAC (las de aviso no paran). */
+export const SEL_ERROR_EPAC = '#dataErrorSection tr.rowAppErrorTextBlock'
+
+/**
+ * El avance no llegó a la pantalla de destino. `marcos`: dónde leer las incidencias del portal (el de ORIGEN y los que
+ * tengan filas de error). El adaptador las lee y, si las hay, lanza `datos` con el mensaje del portal; si no, este error
+ * (`portal`, no transitorio) se propaga tal cual.
+ */
+export class ErrorAvanceSinLlegar extends ErrorTarificador {
+  readonly marcos: Frame[]
+  constructor(selector: string, marcos: Frame[], conIncidencias: boolean) {
+    super('portal', `avance de pestaña ${selector}: ${conIncidencias ? 'el portal lo rechazó (informe de incidencias)' : 'no apareció la pantalla de destino'}`)
+    this.name = 'ErrorAvanceSinLlegar'
+    this.marcos = marcos
   }
 }
 

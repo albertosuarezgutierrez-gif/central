@@ -160,7 +160,7 @@ export type TarjetaProductoLeida = {
 
 export type PrimaProductoMapfre = { producto: string; periodicidad: 'anual'; primaTotalEur: number; requiereVerificacionVehiculo: boolean }
 
-const limpiar = (s: string) => s.replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
+const limpiar = (s: string) => s.replace(/\s+/g, ' ').trim()
 
 /**
  * Importe de «PRIMA TOTAL: 1.234,56 €». Fail-closed: sin la etiqueta, con basura o ≤ 0 → `null` (nunca 0).
@@ -337,6 +337,7 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
   if (f.ramo !== 'auto') throw new ErrorTarificador('datos', `mapfre/auto: el formulario es de ${f.ramo}`)
   if (!CP.test(f.codigoPostal)) throw new ErrorTarificador('datos', 'mapfre/auto: el código postal de circulación tiene que tener 5 dígitos')
   if (f.siniestrosUltimos5Anios === null) throw new ErrorTarificador('datos', 'mapfre/auto: faltan los siniestros RC de los últimos 5 años (el portal no admite «sin dato»)')
+  if (f.aniosAseguradoAnterior === null) throw new ErrorTarificador('datos', 'mapfre/auto: faltan los años asegurado en la compañía anterior (el portal pregunta si tiene compañía anterior: no se asume)')
   const escribibles: OperacionNsei[] = [
     { sel: SEL_OBJETO.matricula, etiqueta: 'matrícula', tipo: 'texto', valor: f.matricula },
     { sel: SEL_OBJETO.cpCirculacion, etiqueta: 'CP de circulación', tipo: 'texto', valor: f.codigoPostal },
@@ -349,10 +350,8 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
     { sel: SEL_OBJETO.ambitoCirculacion, etiqueta: 'ámbito de circulación', tipo: 'mat-select', valor: '' },
     { sel: SEL_CONDUCTOR.claseCarne, etiqueta: 'clase del permiso', tipo: 'mat-select', valor: '' },
   ]
-  if (f.aniosAseguradoAnterior !== null) {
-    pendientes.push({ sel: SEL_HISTORIAL.tieneCompaniaAnterior, etiqueta: '¿tiene compañía anterior?', tipo: 'interruptor', valor: f.aniosAseguradoAnterior > 0 })
-    if (f.aniosAseguradoAnterior > 0) pendientes.push({ sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: '' })
-  }
+  pendientes.push({ sel: SEL_HISTORIAL.tieneCompaniaAnterior, etiqueta: '¿tiene compañía anterior?', tipo: 'interruptor', valor: f.aniosAseguradoAnterior > 0 })
+  if (f.aniosAseguradoAnterior > 0) pendientes.push({ sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: '' })
   return { escribibles, pendientes }
 }
 

@@ -38,9 +38,6 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // pestaña Tarificar (div#o_N, onclick validar_aceptar()) también contrata. Bloqueados por id/handler aunque se
   // permita «Aceptar»: «contract» (inglés) NO casa con `contrat`. «Datos básicos», «Riesgo municipio», «Tarificar»
   // (td#rate) e «IPID» (documentoIPID) son navegación/lectura y pasan.
-  // Mapfre (grabación analizada el 13/10/2026): «Generar Proyecto» e «Ir a generar proyecto» CREAN un proyecto real en el
-  // portal. Bloqueados en botón, id, URL y parámetro de acción. «Calcular» NO (decisión pendiente de Alberto).
-  /generar[\s_+-]*proyecto/i,
   /^\s*(store|contract)\s*$/i,
   /send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?store/i,
   // `contract` suelto se aplica también a URL de navegación y POST. Cotejado (10/10/2026) con las URL de las grabaciones

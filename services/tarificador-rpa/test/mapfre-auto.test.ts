@@ -188,6 +188,7 @@ test('planObjetoYFiguras: escribe solo lo conocido y deja el resto como pendient
   assert.ok(plan.pendientes.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior), 'con años asegurado > 0 hay compañía anterior pendiente')
   assert.ok(!plan.escribibles.some((o) => o.sel === SEL_HISTORIAL.aniosCompaniaAnterior), 'el campo deshabilitado nunca se escribe')
   assert.throws(() => planObjetoYFiguras({ ...form, siniestrosUltimos5Anios: null }), /siniestros/)
+  assert.throws(() => planObjetoYFiguras({ ...form, aniosAseguradoAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
   assert.throws(() => planObjetoYFiguras({ ...form, codigoPostal: '123' }), /5 dígitos/)
   assert.throws(() => planObjetoYFiguras({ ...form, ramo: 'moto' }), /moto/)
 })

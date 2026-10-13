@@ -8,8 +8,11 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import { EmisionBloqueadaError } from '@central/module-tarificacion'
+import { ErrorTarificador } from '../src/errores.ts'
+import { avanzarPestanaGuardada } from '../src/adapters/allianz/auto.ts'
 import {
   AVANCES_PESTANA_AUTORIZADOS,
+  ErrorAvanceSinLlegar,
   destinoAvancePermitido,
   instalarGuardEmision,
   pulsarAvancePestanaAutorizado,
@@ -46,6 +49,8 @@ type Escenario = {
   td: string
   /** Petición que dispara `aceptar_onclick()` (como el envío del formulario del portal). */
   peticion?: { url: string; body: string }
+  /** JS propio de `aceptar_onclick()` en lugar de petición + llegada (el portal rechaza, pide confirmación, navega…). */
+  alClic?: string
 }
 
 /** El evento `requestfailed` llega asíncrono: espera (≤ 2 s) a que alguno cumpla `pred`. */
@@ -76,6 +81,8 @@ async function pantalla(e: Escenario): Promise<{ page: Page; guard: GuardEmision
       function validar_aceptar() { window.p.push('emitir') }
       function aceptar_onclick() {
         window.p.push('avance')
+        ${e.alClic ?? ''}
+        if (${e.alClic ? 'true' : 'false'}) return
         const pet = ${JSON.stringify(e.peticion ?? null)}
         const llegar = () => document.getElementById('formulari').setAttribute('action', ${JSON.stringify(e.destino)})
         if (!pet) return llegar()
@@ -191,5 +198,62 @@ test('ventana CERRADA tras el error: después, un POST con «aceptar» al mismo 
   const antes = fallos().length
   await page.evaluate((u) => fetch(u, { method: 'POST', body: 'action=aceptar' }).catch(() => {}), `${EPAC}${DATOS}`)
   assert.ok(await hayFallo(page, () => fallos().slice(antes), (f) => f.includes(DATOS) && /BLOCKED_BY_CLIENT/.test(f)), fallos().join(' | '))
+  await page.context().close()
+})
+
+test('NEGATIVO capa (a) acotada: durante la ventana, una NAVEGACIÓN GET con «aceptar» a otra ruta (o a la de la lista con query) se bloquea', async () => {
+  for (const url of [`${EPAC}/drpc18/otra/control.do?action=aceptar`, `${EPAC}${DATOS}?action=aceptar`, 'https://otro.example/x?accion=aceptar']) {
+    const { page, guard, fallos } = await pantalla({
+      origen: DATOS,
+      destino: TARIFA,
+      td: TD_RATE,
+      alClic: `const f = document.createElement('iframe'); f.src = ${JSON.stringify(url)}; document.body.appendChild(f); f.onerror = f.onload = () => document.getElementById('formulari').setAttribute('action', ${JSON.stringify(TARIFA)})`,
+    })
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), EmisionBloqueadaError, url)
+    assert.ok(guard.violacion(), url)
+    assert.ok(await hayFallo(page, fallos, (f) => /^GET /.test(f) && /BLOCKED_BY_CLIENT/.test(f)), `${url}: ${fallos().join(' | ')}`)
+    assert.equal(guard.avance.abierta(), false)
+    await page.context().close()
+  }
+})
+
+test('NEGATIVO: el portal pide confirmación (confirm) → NO se acepta, el trabajo cae y la ventana se cierra; un alert → datos', async () => {
+  {
+    const { page, guard } = await pantalla({ origen: DATOS, destino: TARIFA, td: TD_RATE, alClic: `window.confirmado = confirm('¿Desea grabar el proyecto?')` })
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), (e) => e instanceof EmisionBloqueadaError && /confirmaci/.test(e.message))
+    assert.equal(await page.evaluate(() => (window as unknown as { confirmado?: boolean }).confirmado), false, 'el confirm se descartó')
+    assert.equal(guard.avance.abierta(), false)
+    await page.context().close()
+  }
+  {
+    const { page, guard } = await pantalla({ origen: DATOS, destino: TARIFA, td: TD_RATE, alClic: `alert('Falta la fecha de carné del conductor 12345678Z')` })
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /fecha de carn/.test(e.message) && !/12345678Z/.test(e.message))
+    assert.equal(guard.avance.abierta(), false)
+    await page.context().close()
+  }
+})
+
+test('el portal RECHAZA el avance (informe de incidencias, el form no cambia) → enseguida ErrorAvanceSinLlegar; el adaptador lo da como datos con el mensaje del portal', async () => {
+  const informe = `document.body.insertAdjacentHTML('beforeend', '<div id="errorSection"><div id="dataErrorSection"><table><tbody><tr class="rowAppErrorTextBlock"><td>&nbsp;01&nbsp;<b>sexo</b></td><td>&nbsp;El sexo del conductor es obligatorio</td></tr></tbody></table></div></div>')`
+  {
+    const { page, guard } = await pantalla({ origen: DATOS, destino: TARIFA, td: TD_RATE, alClic: informe })
+    const t0 = Date.now()
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), (e) => e instanceof ErrorAvanceSinLlegar && e.tipo === 'portal' && e.marcos.length === 1)
+    assert.ok(Date.now() - t0 < 5_000, 'no espera al tope de 20 s')
+    assert.equal(guard.avance.abierta(), false)
+    await page.context().close()
+  }
+  {
+    const { page, guard } = await pantalla({ origen: DATOS, destino: TARIFA, td: TD_RATE, alClic: informe })
+    const ctx = { avanzarPestanaAutorizada: (s: SelectorAvancePestana) => pulsarAvancePestanaAutorizado(page, guard, s) }
+    await assert.rejects(avanzarPestanaGuardada(page, ctx as never, 'tarificar', 'moto'), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /sexo del conductor es obligatorio/.test(e.message))
+    await page.context().close()
+  }
+})
+
+test('al llegar devuelve el marco del formulario de DESTINO', async () => {
+  const { page, guard } = await pantalla({ origen: RIESGO, destino: DATOS, td: TD_DATOS })
+  const f = await pulsarAvancePestanaAutorizado(page, guard, 'td#datosBasicos')
+  assert.equal(await f.locator('form#formulari').getAttribute('action'), DATOS)
   await page.context().close()
 })

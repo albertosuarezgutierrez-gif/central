@@ -42,14 +42,15 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { ErrorAvanceSinLlegar } from '../../guard.ts'
 import { abrirNuevaAlta, TARJETA_AUTOS } from './entrada.ts'
 import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
 
 /** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
 export const AUTO_ACTIVO = false
 /**
- * Flag de registro de MOTO (separado de Turismos): con él, `adapters/index.ts` registra `allianzMoto`. APAGADO hasta que
- * Alberto lo encienda tras revisar el PR del avance autorizado (13/10/2026).
+ * Flag de registro de MOTO (separado de Turismos). APAGADO. Aún no lo lee nadie: `allianzMoto` no se registra hasta que el
+ * runner valide riesgos por ramo (pendiente; ver `adapters/index.ts`).
  */
 export const MOTO_ACTIVO = false
 
@@ -246,9 +247,10 @@ export async function rellenarDatosBasicos(raiz: Pick<Frame, 'locator'>, f: Form
  * desde Datos básicos) ejecutan el manejador de confirmación del portal, que `ctx.pulsar()` rechaza.
  *   · MOTO: autorizado por Alberto (13/10/2026) SOLO por `ctx.avanzarPestanaAutorizada` (guard.ts: lista blanca exacta de los
  *     dos selectores + ventana de red con dos capas). Puede dejar un PROYECTO guardado en Allianz; nunca una póliza.
+ *   Devuelve el marco donde está el formulario de la pestaña DESTINO (ahí se leen incidencias y campos).
  *   · TURISMOS (y cualquier ramo sin decir): sigue siendo HUECO (`ErrorMapaIncompleto`), sin formulario grabado.
  */
-export async function avanzarPestanaGuardada(_page: Page, ctx: ContextoPortal, destino: 'datosBasicos' | 'tarificar', ramo: 'auto' | 'moto' = 'auto'): Promise<void> {
+export async function avanzarPestanaGuardada(_page: Page, ctx: ContextoPortal, destino: 'datosBasicos' | 'tarificar', ramo: 'auto' | 'moto' = 'auto'): Promise<Frame> {
   if (ramo !== 'moto') {
     throw new ErrorMapaIncompleto(
       destino === 'datosBasicos'
@@ -257,7 +259,14 @@ export async function avanzarPestanaGuardada(_page: Page, ctx: ContextoPortal, d
     )
   }
   if (typeof ctx?.avanzarPestanaAutorizada !== 'function') throw new ErrorMapaIncompleto('el avance autorizado de pestaña en el contexto del worker')
-  await ctx.avanzarPestanaAutorizada(destino === 'datosBasicos' ? 'td#datosBasicos' : 'td#rate')
+  try {
+    return await ctx.avanzarPestanaAutorizada(destino === 'datosBasicos' ? 'td#datosBasicos' : 'td#rate')
+  } catch (e) {
+    // El portal no dejó avanzar: si su informe de incidencias trae errores (en el marco de ORIGEN o donde aparezcan), el
+    // trabajo cae como `datos` con SU mensaje (redactado); si no, sigue el error del guard (`portal`).
+    if (e instanceof ErrorAvanceSinLlegar) for (const m of e.marcos) await lanzarSiHayErrores(m)
+    throw e
+  }
 }
 
 /** HUECO: el avance de Riesgo municipio / Datos básicos a Tarificar (Turismos y compatibilidad). */
@@ -627,16 +636,15 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await rellenarRiesgoMoto(riesgo, form, page, ctx)
   await lanzarSiHayErrores(riesgo)
   await ctx.pausa()
-  await avanzarPestanaGuardada(page, ctx, 'datosBasicos', 'moto')
-  const datos = await marcoCon(page, (r) => r.locator(SEL_DATOS_MOTO.matricula), 'Datos básicos (matrícula)')
+  // El marco de Datos básicos es el del formulario de DESTINO que confirma el guard (no uno elegido por otro selector).
+  const datos = await avanzarPestanaGuardada(page, ctx, 'datosBasicos', 'moto')
   await lanzarSiHayErrores(datos)
   const fechaMatriculacion = await consultarMatriculaMoto(datos, form.matricula, page)
   await rellenarDatosBasicosMoto(datos, form)
   await lanzarSiHayErrores(datos)
   await ctx.pausa()
   // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión.
-  await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
-  const tarifa = await marcoCon(page, (r) => r.locator('input[name="numModality"]'), 'Tarificar (modalidades)')
+  const tarifa = await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
   await lanzarSiHayErrores(tarifa)
   const primas = await leerPrimasTarificar(tarifa)
   return { ofertas: ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }) }
