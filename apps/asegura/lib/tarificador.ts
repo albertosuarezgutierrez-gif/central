@@ -119,6 +119,8 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and t.compania = ${compania} and t.ramo = ${e.ramo}
         and t.estado = any(${[...ESTADOS_DUPLICADO]}::text[])
         and t.riesgo = ${riesgoJson}::jsonb
+        and t.oportunidad_id is not distinct from ${e.oportunidadId ?? null}::uuid
+        and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
       order by t.created_at`
     const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo }, p.ahora, MAX_INTENTOS))
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
@@ -129,7 +131,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
               ${compania}, ${e.ramo}, ${riesgoJson}::jsonb, ${e.solicitadoPor})
       returning id::text as id`
     return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
-  })
+  }, { timeout: 15000, maxWait: 10000 })
 }
 
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
@@ -171,8 +173,8 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
     const maquinasVencidas: string[] = []
     for (const v of vencidos) {
       // `marcarFallo` solo toca la fila si SIGUE `en_curso` (un resultado que llegó a la vez gana y esto no hace nada).
-      await marcarFallo(tx, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
-      if (v.fly_machine_id) maquinasVencidas.push(v.fly_machine_id)
+      const f = await marcarFallo(tx, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+      if (f.tocada && v.fly_machine_id) maquinasVencidas.push(v.fly_machine_id)
     }
     if (huecosLibres(max, vivos.length) <= 0) return { trabajo: null, maquinasVencidas }
     const leaseHasta = new Date(Date.now() + LEASE_MS)
@@ -193,7 +195,7 @@ export async function reclamarSiguiente(correduriaId: string, compania: string):
         limit 1)
       returning t.id::text as id, t.intentos`
     return { trabajo: filas[0] ?? null, maquinasVencidas }
-  })
+  }, { timeout: 15000, maxWait: 10000 })
 }
 
 export type DepsLanzador = {
@@ -313,7 +315,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
 
     if (r.tipo === 'error') {
-      const estado = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, conBot ? r.botVersion : null, conBot)
+      const { estado } = await marcarFallo(tx, t.id, t.intentos, r.error, { trabajo: t, captura: r.captura, html: r.html }, conBot ? r.botVersion : null, conBot)
       return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
@@ -446,7 +448,7 @@ async function marcarFallo(
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
   botVersion: string | null = null,
   conBotVersion = false,
-): Promise<string> {
+): Promise<{ estado: string; tocada: boolean }> {
   // EMISIÓN (10/10/2026): nunca se reintenta sola (tras el clic, el estado en la compañía es incierto) → requiere_humano,
   // con tipo `emision` (la bandeja no la deja reintentar) y el aviso a Alberto rearmado.
   const modoFila = await db.$queryRaw<{ modo: string | null }[]>`select to_jsonb(t)->>'modo' as modo from seguros.tarificacion_trabajos t where t.id = ${id}::uuid`
@@ -454,12 +456,13 @@ async function marcarFallo(
   // Si el token YA se canjeó (autorización consumida sin desenlace), el clic pudo salir: INCIERTO, y la autorización queda
   // marcada `incierto` (bloquea pedir otra emisión del presupuesto hasta que una persona lo resuelva mirando ePAC).
   let incierta = false
+  let autorizacionIncierta: string | null = null
   if (deEmision) {
     const aut = await db.$queryRaw<{ id: string; consumido_at: Date | null; resultado: string | null }[]>`
       select a.id::text as id, a.consumido_at, a.resultado from seguros.tarificacion_emision_autorizacion a where a.trabajo_id = ${id}::uuid`
     const a = aut[0]
     incierta = autorizacionSinResolver(a ? { consumidoAt: a.consumido_at, resultado: a.resultado } : null)
-    if (incierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${a!.id}::uuid and resultado is null`
+    autorizacionIncierta = incierta ? a!.id : null
     const prefijo = incierta ? `${MENSAJE_EMISION_INCIERTA} Detalle: ` : ''
     error = { ...error, tipo: 'emision', mensaje: `${prefijo}[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
   }
@@ -473,8 +476,9 @@ async function marcarFallo(
     htmlId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.html`, mime: 'text/html', contenido: Buffer.from(evidencia.html, 'utf8'), notas: `HTML (redactado) del fallo del tarificador RPA (${error.tipo})` })
   }
   const err = JSON.stringify({ ...error, html_documento_id: htmlId, en: new Date().toISOString() })
+  let filasTocadas: number
   if (conBotVersion) {
-    await db.$executeRaw`
+    filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
@@ -482,15 +486,18 @@ async function marcarFallo(
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   } else {
-    await db.$executeRaw`
+    filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
           terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   }
-  if (deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
-  return estado
+  const tocada = filasTocadas > 0
+  // Los efectos secundarios SOLO si el UPDATE tocó la fila (si un resultado llegó a la vez y ganó, esto no hace nada).
+  if (tocada && autorizacionIncierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${autorizacionIncierta}::uuid and resultado is null`
+  if (tocada && deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
+  return { estado, tocada }
 }
 
 // ─── Barrido (enganchable a un cron existente) ───────────────────────────────
@@ -522,7 +529,8 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
     where correduria_id = ${correduriaId}::uuid and estado = 'en_curso' and lease_hasta < now()`
   const fly = configFly(deps.env)
   for (const v of vencidos) {
-    await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+    const f = await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+    if (!f.tocada) continue // un resultado llegó a la vez y ganó: ni se cuenta ni se destruye la máquina
     if (fly.ok && v.fly_machine_id) await destruirMaquina(fly.cfg, v.fly_machine_id, deps.fetch)
     r.leasesVencidos++
   }
