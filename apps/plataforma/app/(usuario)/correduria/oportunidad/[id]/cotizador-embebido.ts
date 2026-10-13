@@ -54,8 +54,11 @@ export function firmaRiesgo(r: Riesgo): string {
   const figuras = [...r.figuras]
     .map((f) => ({ rol: f.rol, clienteId: f.clienteId, empresa: f.empresa, faltan: f.faltan === null ? null : [...f.faltan].sort() }))
     .sort((a, b) => a.rol.localeCompare(b.rol) || a.clienteId.localeCompare(b.clienteId))
+  // Años asegurado / en la compañía declarados en «Historial y bonificaciones» (13/10/2026): el cotizador auto los manda
+  // (`historialRiesgo`); editarlos con el cotizador abierto tiene que releerlo, o pagaría con los de antes.
+  const historial = r.historial?.historialDeclarado ?? null
   // El cliente de la oportunidad entra: sin figura «tomador», el tomador ES él (`tomadorDelRiesgo`).
-  return JSON.stringify({ oportunidad: r.oportunidad.id, cliente: r.oportunidad.clienteId, ramo: r.oportunidad.ramo, roles: [...r.roles].sort(), vehiculo, objeto, figuras })
+  return JSON.stringify({ oportunidad: r.oportunidad.id, cliente: r.oportunidad.clienteId, ramo: r.oportunidad.ramo, roles: [...r.roles].sort(), vehiculo, objeto, figuras, historial })
 }
 
 /** @deprecated nombres de cuando solo había vehículo: es la misma huella para cualquier ramo. */
