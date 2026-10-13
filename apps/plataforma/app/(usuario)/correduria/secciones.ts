@@ -58,9 +58,40 @@
  * exactamente lo que impide que esta pantalla repita aquel fallo.
  */
 
-export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'mas'
+export type Seccion = 'gestion' | 'clientes' | 'cartera' | 'comisiones' | 'mas'
 
-export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'mas']
+export const SECCIONES: readonly Seccion[] = ['clientes', 'cartera', 'comisiones', 'gestion', 'mas']
+
+/**
+ * ─── «Hoy» se unificó en «Mi mesa» + «Gestión» (13/10/2026, Alberto) ────────
+ * «Hoy» (tareas, renovaciones, declaradas, pérdidas, retención…) y «Vencimientos» se repartían el mismo
+ * trabajo en dos pantallas. Ahora:
+ *   Mi mesa     → LO QUE TRABAJAS: expedientes (también las renovaciones y declaradas, que el sistema abre
+ *                 solo), pérdidas por revisar, tareas sueltas y UNA banda de avisos con plazo. Pantalla propia
+ *                 (`/correduria/mesa`) y destino por defecto de `/correduria`.
+ *   Gestión     → la antigua «Hoy», sin lo que ya vive en la mesa: lo administrativo que se TRABAJA aquí
+ *                 (partes, supresiones, quejas, cambios de cuenta, anulaciones, bajas PUE, recibos…). Los
+ *                 avisos de la mesa con plazo enlazan a esta pestaña.
+ *   Prospección → la pesca en frío: leads del CRM anterior (`/correduria/vencimientos`). Pantalla propia.
+ * `?s=hoy` (marcadores y avisos viejos) sigue funcionando: abre «Gestión».
+ */
+export type ItemBarra =
+  | { tipo: 'enlace'; clave: 'mesa' | 'prospeccion'; href: string; label: string }
+  | { tipo: 'seccion'; clave: Seccion }
+
+/** El orden EXACTO de la barra: Mi mesa · Clientes · Cartera · Comisiones · Gestión · Prospección · Más. */
+export const BARRA_CORREDURIA: readonly ItemBarra[] = [
+  { tipo: 'enlace', clave: 'mesa', href: '/correduria/mesa', label: 'Mi mesa' },
+  { tipo: 'seccion', clave: 'clientes' },
+  { tipo: 'seccion', clave: 'cartera' },
+  { tipo: 'seccion', clave: 'comisiones' },
+  { tipo: 'seccion', clave: 'gestion' },
+  { tipo: 'enlace', clave: 'prospeccion', href: '/correduria/vencimientos', label: 'Prospección' },
+  { tipo: 'seccion', clave: 'mas' },
+]
+
+/** Pantallas propias de la barra: Mi mesa y Prospección no son secciones de `CorreduriaClient`. */
+export type PestanaPropia = 'mesa' | 'prospeccion'
 
 /**
  * ─── De ocho pestañas a cinco (24/09/2026) ──────────────────────────────────
@@ -83,13 +114,24 @@ export const BLOQUES_MAS: readonly BloqueMas[] = ['ingesta', 'emisiones', 'redes
 export type Destino = Seccion | BloqueMas
 
 /**
- * Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy».
+ * Un `?s=` desconocido no deja la pantalla en blanco: cae a «Gestión» (sin `?s=` se va a «Mi mesa»: `iniciaEnLaMesa`).
  * Los nombres de las pestañas antiguas abren «Más» y dicen a qué bloque bajar.
  */
 export function destinoDeParametro(v: string | string[] | undefined): { seccion: Seccion; bloque: BloqueMas | null } {
   const s = Array.isArray(v) ? v[0] : v
   if (BLOQUES_MAS.includes(s as BloqueMas)) return { seccion: 'mas', bloque: s as BloqueMas }
-  return { seccion: SECCIONES.includes(s as Seccion) ? (s as Seccion) : 'hoy', bloque: null }
+  // `hoy` es el nombre de antes de la unificación con «Mi mesa»: los enlaces viejos abren «Gestión».
+  if (s === 'hoy') return { seccion: 'gestion', bloque: null }
+  return { seccion: SECCIONES.includes(s as Seccion) ? (s as Seccion) : 'gestion', bloque: null }
+}
+
+/**
+ * ¿Entra alguien a `/correduria` sin decir adónde? Entonces va a «Mi mesa». Con `?s=` (cualquier valor)
+ * se queda donde lo pide: un aviso o un marcador viejo no se desvían.
+ */
+export function iniciaEnLaMesa(v: string | string[] | undefined): boolean {
+  const s = Array.isArray(v) ? v[0] : v
+  return s === undefined || s.trim() === ''
 }
 
 export function seccionDeParametro(v: string | string[] | undefined): Seccion {

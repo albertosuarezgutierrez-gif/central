@@ -62,7 +62,7 @@ export type TareaSuelta = {
   origen: string | null
 }
 
-/** Pérdida de cartera por revisar (fila sin expediente; se resuelve con `POST /api/correduria/fugas`). */
+/** Pérdida de cartera por revisar (fila sin expediente; se resuelve con `PATCH /api/correduria/fugas`). */
 export type PerdidaPorRevisar = {
   id: string
   tipo: string

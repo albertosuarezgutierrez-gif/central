@@ -44,19 +44,19 @@ export type Aviso = {
 
 export type Avisos = { estado: 'ok'; hoy: string; avisos: Aviso[] }
 
-/** Dónde se trabaja cada cola. Cuando exista la pestaña «Gestión», se cambia AQUÍ y solo aquí. */
+/** Dónde se trabaja cada cola. Es la pestaña «Gestión» (antes «Hoy»); si cambia su ruta, se cambia AQUÍ y solo aquí (lo vigila avisos.test.ts). */
 export const HREF_AVISO: Record<TipoAviso, string> = {
-  partes: '/correduria?s=hoy',
-  supresiones: '/correduria?s=hoy',
-  quejas: '/correduria?s=hoy',
-  cambios_cuenta: '/correduria?s=hoy',
-  recibos_lcs: '/correduria?s=hoy',
-  aprobaciones: '/correduria?s=hoy',
-  bajas_pue: '/correduria?s=hoy',
-  anulaciones: '/correduria?s=hoy',
-  recibos_sin_confirmar: '/correduria?s=hoy',
+  partes: '/correduria?s=gestion',
+  supresiones: '/correduria?s=gestion',
+  quejas: '/correduria?s=gestion',
+  cambios_cuenta: '/correduria?s=gestion',
+  recibos_lcs: '/correduria?s=gestion',
+  aprobaciones: '/correduria?s=gestion',
+  bajas_pue: '/correduria?s=gestion',
+  anulaciones: '/correduria?s=gestion',
+  recibos_sin_confirmar: '/correduria?s=gestion',
   ingesta: '/correduria?s=ingesta',
-  puerto: '/correduria?s=hoy',
+  puerto: '/correduria?s=gestion',
 }
 
 /** [singular, plural, qué se dice cuando no se pudo leer]. */

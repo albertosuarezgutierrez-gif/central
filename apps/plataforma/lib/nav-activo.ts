@@ -45,3 +45,15 @@ export function activoEnLista(entrada: EntradaNav, lista: EntradaNav[], path: st
   const hermanos = lista.filter(n => n.tab !== undefined && rutaDe(n.href) === ruta)
   return !hermanos.some(n => n.tab === (tabActual || ''))
 }
+
+/**
+ * Las pestañas de la correduría que son PANTALLAS propias, no secciones de `/correduria` (13/10/2026):
+ * «Mi mesa» (`/correduria/mesa`) y «Prospección» (`/correduria/vencimientos`, con su `/llamada`).
+ * Por segmentos completos, como el resto: `/correduria/mesa-vieja` no enciende «Mi mesa».
+ * Fuera de las dos (la pantalla con secciones), `null`: la activa la decide `?s=`.
+ */
+export function pestanaPropiaCorreduria(path: string): 'mesa' | 'prospeccion' | null {
+  if (activoPorRuta('/correduria/mesa', path)) return 'mesa'
+  if (activoPorRuta('/correduria/vencimientos', path)) return 'prospeccion'
+  return null
+}

@@ -2,7 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { COLAS_AVISO, avisoDeCola, avisoDeIngesta, componerAvisos, ordenarAvisos, type Aviso } from './avisos.ts'
+import { destinoDeParametro, SECCIONES } from '../../app/(usuario)/correduria/secciones.ts'
+import { COLAS_AVISO, HREF_AVISO, avisoDeCola, avisoDeIngesta, componerAvisos, ordenarAvisos, type Aviso } from './avisos.ts'
 
 const HOY = '2026-10-13'
 const ok = (n: number, plazo: string | null = null, urgentes = 0) => ({ estado: 'ok', n, plazo, urgentes })
@@ -25,7 +26,7 @@ test('con plazo: texto, días restantes, urgente si el puerto lo cuenta urgente'
   const a = avisoDeCola('quejas', ok(2, '2026-10-18', 1), HOY)
   assert.deepEqual(a, {
     tipo: 'quejas', nivel: 'urgente', texto: '2 quejas abiertas · plazo 18/10/2026 (5 d)', n: 2, plazo: '2026-10-18', diasRestantes: 5,
-    href: '/correduria?s=hoy',
+    href: '/correduria?s=gestion',
   })
   assert.equal(avisoDeCola('partes', ok(1, '2026-10-10', 1), HOY)?.texto, '1 parte del portal sin mirar · plazo vencido el 10/10/2026')
   assert.equal(avisoDeCola('cambios_cuenta', ok(1), HOY)?.nivel, 'aviso')
@@ -66,4 +67,16 @@ test('las colas de plataforma y las de asegura son LAS MISMAS (una nueva en un l
   const bloque = src.slice(src.indexOf('export const COLAS_AVISO = ['), src.indexOf('] as const'))
   const deAsegura = [...bloque.matchAll(/'([a-z_]+)'/g)].map((m) => m[1])
   assert.deepEqual(deAsegura, [...COLAS_AVISO])
+})
+
+test('cada aviso lleva a una pestaña que existe (los enlaces no caen en una sección inventada ni en el «hoy» viejo)', () => {
+  for (const [tipo, href] of Object.entries(HREF_AVISO)) {
+    const m = /^\/correduria\?s=([a-z_]+)$/.exec(href)
+    assert.ok(m, `${tipo}: ${href}`)
+    assert.notEqual(m[1], 'hoy', `${tipo} sigue enlazando a la sección vieja «hoy»`)
+    const d = destinoDeParametro(m[1])
+    assert.ok(SECCIONES.includes(d.seccion), tipo)
+    // Lo que se trabaja en «Gestión» enlaza a `gestion` tal cual (sin pasar por el alias); la ingesta baja a su bloque de «Más».
+    assert.equal(m[1], tipo === 'ingesta' ? 'ingesta' : 'gestion', tipo)
+  }
 })

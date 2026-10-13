@@ -1,15 +1,20 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Badge, btnStyle, cardStyle, PageHeader } from '@/components/ui'
+import { useRouter } from 'next/navigation'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { MOTIVOS_PERDIDA_UI } from '@/lib/seguimiento-asegura'
 import type { Expediente, Expedientes } from '@/lib/correduria/expedientes'
 import {
-  atajosAparcar, BLOQUES_MESA, cuandoRelativo, fechaCorta, masDias, repartirMesa, soloDia, TITULO_BLOQUE, VACIO_BLOQUE,
+  atajosAparcar, BLOQUES_MESA, cuandoRelativo, fechaCorta, masDias, repartirMesaCompleta, soloDia, TITULO_BLOQUE, VACIO_BLOQUE,
   type BloqueMesa,
 } from '@/lib/correduria/mesa'
+import Secciones from '../Secciones'
+import BuscadorCartera from '../BuscadorCartera'
+import BandaAvisos from './BandaAvisos'
+import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
 
 const PAGINA = 50
 const AMBIGUO = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
@@ -51,6 +56,7 @@ export default function MesaClient() {
   const [recargando, setRecargando] = useState(false)
   const [errorRecarga, setErrorRecarga] = useState<string | null>(null)
   const peticion = useRef(0)
+  const router = useRouter()
 
   const cargar = useCallback(async () => {
     const mia = ++peticion.current
@@ -78,15 +84,18 @@ export default function MesaClient() {
   useEffect(() => { void cargar() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const hoy = datos?.estado === 'ok' && datos.hoy !== '' ? datos.hoy : hoyMadrid()
-  const bloques = useMemo(() => (datos?.estado === 'ok' ? repartirMesa(datos.expedientes, hoy) : null), [datos, hoy])
+  const mesa = useMemo(() => (datos?.estado === 'ok' ? repartirMesaCompleta(datos, hoy) : null), [datos, hoy])
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
-      <PageHeader
-        titulo="Mi mesa"
-        sub="Lo que traes entre manos, de todos los clientes."
-        acciones={<Link href="/correduria" style={btnStyle('sutil')}>Volver a la correduría</Link>}
-      />
+      <h1 className="solo-lectores">Mi mesa</h1>
+      <BuscadorCartera />
+      {/* La misma barra que `/correduria`: «Mi mesa» y «Prospección» son pantallas propias, el resto son secciones. */}
+      <Secciones activa="mesa" contadores={{}} onCambiar={s => router.push(`/correduria?s=${s}`)} />
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>Lo que traes entre manos, de todos los clientes.</p>
+
+      {/* Avisos con plazo: arriba y sin esperar a los expedientes (un plazo legal no espera a que cargue la lista). */}
+      <BandaAvisos />
 
       {datos === null && <p style={{ margin: 0, fontSize: 14, color: 'var(--muted)' }}>Cargando tu mesa…</p>}
 
@@ -98,7 +107,7 @@ export default function MesaClient() {
         </div>
       )}
 
-      {datos?.estado === 'ok' && bloques && (
+      {datos?.estado === 'ok' && mesa && (
         <>
           {errorRecarga && (
             <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>
@@ -114,7 +123,12 @@ export default function MesaClient() {
           )}
           {recargando && <p aria-live="polite" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Actualizando…</p>}
           {BLOQUES_MESA.map(b => (
-            <Bloque key={b} bloque={b} filas={bloques[b]} hoy={hoy} onCambio={cargar} />
+            <Fragment key={b}>
+              {/* Lo que no es expediente va antes de «Aparcadas» (que es lo único que va plegado). */}
+              {b === 'aparcadas' && <TareasSueltas lectura={mesa.sueltas} truncado={mesa.sueltasTruncado} hoy={hoy} />}
+              {b === 'aparcadas' && <PerdidasPorRevisar lectura={mesa.perdidas} conExpediente={mesa.perdidasConExpediente} onCambio={cargar} />}
+              <Bloque bloque={b} filas={mesa.bloques[b]} hoy={hoy} onCambio={cargar} />
+            </Fragment>
           ))}
         </>
       )}
