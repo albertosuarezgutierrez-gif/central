@@ -5,7 +5,8 @@ import { after, before, test } from 'node:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
-import { allianzComercio, COMERCIO_ACTIVO, ErrorMapaIncompleto, fijarSelectOculto, leerPrimaPanel, planTomador, primaDesdeTextos, rellenarTomador } from '../src/adapters/allianz/comercio.ts'
+import { abrirNuevaAlta } from '../src/adapters/allianz/entrada.ts'
+import { allianzComercio, COMERCIO_ACTIVO, DESTINO_ENTRADA_COMERCIO, ErrorMapaIncompleto, fijarSelectOculto, leerPrimaPanel, planTomador, primaDesdeTextos, rellenarTomador } from '../src/adapters/allianz/comercio.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { comprobarBoton, EmisionBloqueadaError, type Tomador } from '@central/module-tarificacion'
 
@@ -93,4 +94,19 @@ test('el adaptador no está activo y tarificar deja el hueco de los pasos 1-3', 
   assert.equal(COMERCIO_ACTIVO, false)
   assert.equal(allianzComercio.ramo, 'comercio')
   assert.ok(ErrorMapaIncompleto.prototype instanceof ErrorTarificador)
+})
+
+// Entrada «Nueva Alta»: portal SINTÉTICO con acordeones; Particulares plegado, tile «Allianz Negocio Plus» y un señuelo «Negocio» en Empresas.
+const MODAL = `<body><button id="link_new_policy" onclick="document.getElementById('m').style.display='block'">Nueva Alta</button>
+<div id="m" role="dialog" style="display:none"><h2>Nueva Alta</h2>
+<div><a id="hp" href="#" onclick="document.getElementById('p').style.display='block';return false">Particulares</a>
+<div id="p" style="display:none"><a href="#" onclick="window.pulsado='hogar';return false">Allianz HOGAR</a><a href="#" onclick="window.pulsado='negocio-plus';return false">Allianz Negocio Plus</a><a href="#" onclick="window.pulsado='comunidades';return false">Comunidades</a></div></div>
+<div><a id="he" href="#" onclick="document.getElementById('e').style.display='block';return false">Empresas</a>
+<div id="e" style="display:block"><a href="#" onclick="window.pulsado='senuelo-negocio';return false">Negocio</a></div></div></div></body>`
+
+test('comercio entra por Particulares → «Allianz Negocio Plus» y NO pulsa el señuelo «Negocio» de Empresas', async () => {
+  await page.setContent(MODAL)
+  const ctx = { pulsar: async (l: { click: () => Promise<void> }) => l.click(), pausa: async () => {} }
+  await abrirNuevaAlta(page, ctx as never, DESTINO_ENTRADA_COMERCIO)
+  assert.equal(await page.evaluate(() => (window as unknown as Record<string, unknown>).pulsado ?? null), 'negocio-plus')
 })
