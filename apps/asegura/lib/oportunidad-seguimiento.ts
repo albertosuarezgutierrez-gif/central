@@ -36,6 +36,7 @@ import {
   validarEdicionOportunidad,
   validarTarea,
   MOTIVO_DESCARTE,
+  PREFIJO_TAREA_DEVOLUCION,
   ORIGEN_BAJA_VERIFICADA,
   ORIGEN_RESCATE_PERDIDO,
   esRescateDeRecibo,
@@ -249,20 +250,41 @@ export async function cambiarEstadoOportunidad(
     if (peticion.accion === 'aparcar' && t.oportunidad.aparcadaHasta) {
       await dejarRetomar(tx, correduriaId, t.oportunidad, actor)
     }
-    // Un rescate de recibo devuelto PERDIDO se aparca solo hasta el año siguiente (Alberto, 13/10/2026).
-    let anioSiguiente: { id: string; aparcadaHasta: string } | null = null
-    if (peticion.accion === 'perder' && t.oportunidad.estado === 'perdida' && t.oportunidad.motivoPerdida !== MOTIVO_DESCARTE) {
-      anioSiguiente = await abrirAnioSiguienteRescate(tx, correduriaId, t.oportunidad, actor)
+    // «Traer ya» (reabrir una APARCADA): la próxima acción que dejó el aparcado (la del día de la vuelta)
+    // pasa a HOY. Si no, quedaba abierta con su «Retomar» a meses vista y no salía en «Hoy».
+    if (peticion.accion === 'reabrir' && t.antes.estado !== 'perdida' && t.antes.aparcadaHasta) {
+      await tx.$executeRaw(Prisma.sql`
+        update gestiones set fecha_limite = (${hoyMadridIso()}::date + time '23:59:59') at time zone 'Europe/Madrid', updated_at = now()
+        where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
+          and origen_trigger = 'central:seguimiento' and estado::text <> 'cerrada'
+          and (fecha_limite at time zone 'Europe/Madrid')::date = ${t.antes.aparcadaHasta}::date`)
     }
+    // Un rescate de recibo devuelto PERDIDO se aparca solo hasta el año siguiente (Alberto, 13/10/2026).
+    const anioSiguiente = await trasPerder(tx, correduriaId, peticion, t.oportunidad, actor)
     return { ...t, anioSiguiente }
   })
   if (!r.ok) return r
   await anotarEnFicha(correduriaId, r.oportunidad.clienteId, textoCambio(peticion.accion, r.antes, r.oportunidad, actor))
-  if (r.anioSiguiente) {
-    await anotarEnFicha(correduriaId, r.oportunidad.clienteId,
-      `Rescate perdido: oportunidad de ${r.oportunidad.ramo ?? 'sin ramo'} para el año que viene, aparcada hasta el ${r.anioSiguiente.aparcadaHasta} — sistema`)
-  }
+  await anotarAnioSiguiente(correduriaId, r.oportunidad, r.anioSiguiente)
   return { ok: true, oportunidad: r.oportunidad }
+}
+
+/**
+ * Lo que sigue a PERDER (por la acción explícita o por el resultado de una llamada): un rescate de recibo
+ * devuelto perdido —salvo el descarte por error de alta— abre la del año siguiente, aparcada. Un solo
+ * sitio para las dos vías: la regla de Alberto (13/10/2026) no depende del botón que se pulse.
+ */
+async function trasPerder(
+  tx: Tx, correduriaId: string, peticion: PeticionAccion | null, o: OportunidadSeguimiento, actor: string,
+): Promise<{ id: string; aparcadaHasta: string } | null> {
+  if (peticion?.accion !== 'perder' || o.estado !== 'perdida' || o.motivoPerdida === MOTIVO_DESCARTE) return null
+  return abrirAnioSiguienteRescate(tx, correduriaId, o, actor)
+}
+
+async function anotarAnioSiguiente(correduriaId: string, o: OportunidadSeguimiento, a: { aparcadaHasta: string } | null): Promise<void> {
+  if (!a) return
+  await anotarEnFicha(correduriaId, o.clienteId,
+    `Rescate perdido: oportunidad de ${o.ramo ?? 'sin ramo'} para el año que viene, aparcada hasta el ${a.aparcadaHasta} — sistema`)
 }
 
 function hoyMadridIso(): string {
@@ -573,10 +595,13 @@ export async function registrarLlamada(
 
     // El cambio de estado va el PRIMERO: si no vale, se sale sin haber escrito nada.
     let despues = antes
+    let anioSiguiente: { id: string; aparcadaHasta: string } | null = null
     if (plan.accion) {
       const t = await transicionar(tx, correduriaId, antes, plan.accion, actor, hoy)
       if (!t.ok) return t
       despues = t.oportunidad
+      // Perder por la llamada sigue la misma regla que el `perder` explícito (rescate → año siguiente).
+      anioSiguiente = await trasPerder(tx, correduriaId, plan.accion, despues, actor)
     }
     await tx.$executeRaw(Prisma.sql`
       update gestiones set estado = 'cerrada', updated_at = now(),
@@ -620,11 +645,12 @@ export async function registrarLlamada(
       values (${correduriaId}::uuid, ${oportunidadId}::uuid, ${plan.canal},
               cast(${antes.estado} as estado_comercial), cast(${despues.estado} as estado_comercial),
               ${JSON.stringify({ resultado: plan.resultado, canal: plan.canal, optOut: plan.optOut, siguienteTareaId, fechaSiguiente: plan.siguiente?.fechaLimite ?? null })}::jsonb, ${actor})`)
-    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, canal: plan.canal, siguienteTareaId }
+    return { ok: true as const, clienteId: antes.clienteId, registro: plan.resultado, canal: plan.canal, siguienteTareaId, despues, anioSiguiente }
   })
   if (!r.ok) return r
   const etiqueta = ETIQUETA_LLAMADA[r.registro] ?? 'Llamada'
   await anotarEnFicha(correduriaId, r.clienteId, `${r.canal === 'whatsapp' ? etiqueta.replace(/^Llamada/, 'WhatsApp') : etiqueta} — por ${actor}`)
+  await anotarAnioSiguiente(correduriaId, r.despues, r.anioSiguiente)
   return { ok: true, resultado: r.registro, siguienteTareaId: r.siguienteTareaId }
 }
 
@@ -1317,6 +1343,9 @@ export async function posponerOportunidad(
       from gestiones
       where oportunidad_id = ${id}::uuid and correduria_id = ${correduriaId}::uuid
         and origen_trigger = 'central:seguimiento' and estado::text <> 'cerrada'
+        -- Los hitos del recibo devuelto (art. 15 LCS) NO se posponen: llevan el plazo legal. Si solo hay
+        -- hitos, abajo se crea una tarea de seguimiento nueva y el hito se queda donde está.
+        and not starts_with(coalesce(observaciones, ''), ${PREFIJO_TAREA_DEVOLUCION})
       order by fecha_limite nulls last, created_at limit 1 for update`)
     let tarea: { accion: 'mover' | 'crear'; id: string }
     if (prox) {
