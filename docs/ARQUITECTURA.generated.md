@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-13T12:22:57Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-10-13T13:15:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -282,7 +282,7 @@
 - (29/09/2026) (29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.
 - (19/09/2026) 💸 Huésped de House (5-7/02/2027, 9-10 pax): «la web sale más cara que Booking» — diagnóstico, sin tocar código
 - (17/09/2026) 🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué
-- (17/09/2026) 🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba
+- (17/09/2026) 🔓 Causa real de los 500 del Submit (proyecto [nº de proyecto retirado]): un `product.options` que nunca se mandaba
 - (15/09/2026) Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo
 - (14/09/2026) 🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN`
 
