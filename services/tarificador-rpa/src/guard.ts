@@ -12,7 +12,9 @@ import { ErrorTarificador } from './errores.ts'
 import {
   EmisionBloqueadaError,
   MaquinaFases,
+  bloqueoAvance,
   comprobarBoton,
+  esAvanceAutorizado,
   esBotonDeListaBlanca,
   parametrosParecenEmision,
   pareceEmision,
@@ -21,6 +23,8 @@ import {
   type ModalidadPortal,
   type PermisoEmision,
   type PestanaActiva,
+  type ElementoInventario,
+  type MarcoInventario,
 } from '@central/module-tarificacion'
 
 /**
@@ -460,4 +464,80 @@ async function accionFormulario(f: Frame): Promise<string | null> {
   const form = f.locator('form#formulari')
   if ((await form.count().catch(() => 0)) !== 1) return null
   return form.getAttribute('action').catch(() => null)
+}
+
+/**
+ * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
+ * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard
+ * de siempre bloquea por «aceptar». Exige, en este orden y sin atajos:
+ *   1. el guard limpio, la ventana de EMISIÓN cerrada y que no se haya usado antes en este trabajo (una vez);
+ *   2. que el módulo lo autorice sobre el INVENTARIO del worker (`esAvanceAutorizado`: entrada cerrada, texto exacto, título
+ *      de pantalla h1-h6/legend «Datos básicos» y ningún título de tarificación/emisión) y que no tenga otro bloqueo
+ *      (`bloqueoAvance`: emitir, contratar, `validar_aceptar`, onclick recortado…);
+ *   3. EXACTAMENTE un control vivo, cuyo texto visible sea el del inventario, y que pase `comprobarBoton` con «Aceptar»
+ *      permitido (todo lo demás de emisión sigue bloqueado);
+ *   4. un formulario de envío conocido (el del control, o el único del marco) del MISMO origen que el marco.
+ * Solo entonces abre la ventana de red con ESE único destino (capa a: `parametrosParecenEmision` en query y cuerpo; capa b:
+ * todo no-GET a otro sitio se aborta), pulsa UNA vez y espera a que la pantalla cambie. Diálogos: se descartan y cae.
+ */
+export async function pulsarExploracionAutorizada(
+  page: Page,
+  guard: GuardEmision,
+  boton: Locator,
+  aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario },
+): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'avance de exploración con la ventana de emisión abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
+    throw new EmisionBloqueadaError('boton', 'avance de exploración no autorizado para esta entrada y esta pantalla')
+  }
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'avance de exploración: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  const plano = (t: string | null) => (t ?? '').replace(/\s+/g, ' ').trim()
+  if (plano(desc[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'avance de exploración: el control vivo no es el del inventario')
+  comprobarBoton(desc, { permitirAceptar: true })
+  const destino = await boton.evaluate((el) => {
+    const d = el.ownerDocument
+    const f = el.closest('form') ?? (d.forms.length === 1 ? d.forms[0] : null)
+    return f ? { accion: f.action, pagina: d.location.href } : null
+  })
+  let endpoint: string | null = null
+  try {
+    if (destino) {
+      const a = new URL(destino.accion)
+      const p = new URL(destino.pagina)
+      if ((a.protocol === 'https:' || a.protocol === 'http:') && a.origin === p.origin && !a.username && !a.password) endpoint = `${a.origin}${a.pathname}`
+    }
+  } catch {
+    endpoint = null
+  }
+  if (!endpoint) throw new EmisionBloqueadaError('fase', 'avance de exploración: sin formulario de envío conocido del mismo origen')
+  const abrir = ABRIR_AVANCE.get(guard)
+  if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de avance')
+  usados.add('exploracion')
+  AVANCES_USADOS.set(guard, usados)
+  const hasta = Date.now() + VENTANA_RED_AVANCE_MS
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  abrir(hasta, [endpoint])
+  try {
+    await boton.click()
+    // La pantalla cambió cuando el control ya no está (navegación, recarga del marco o re-pintado).
+    for (;;) {
+      guard.comprobar()
+      if (dialogo) throw new EmisionBloqueadaError('fase', `avance de exploración: el portal abrió un diálogo («${dialogo}») y el robot no confirma`)
+      if ((await boton.count().catch(() => 0)) === 0) return
+      if (Date.now() >= hasta) return
+      await page.waitForTimeout(250)
+    }
+  } finally {
+    page.off('dialog', alDialogo)
+    guard.avance.cerrar()
+  }
 }

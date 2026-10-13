@@ -15,6 +15,12 @@ import {
   leerPeticionPaso,
   modeloExplorador,
   modoParaWorker,
+  leerModosWorker,
+  modosReclamables,
+  leaseExploracion,
+  inicioAcumulado,
+  leerPeticionEncolarExploracion,
+  MAX_TOKENS_SALIDA_EXPLORADOR,
   pantallaDeMemoria,
   promptExplorador,
 } from './tarificador-explorador-reglas.ts'
@@ -44,12 +50,56 @@ test('modelo: por defecto el Sonnet de OpenRouter; un valor que no es slug → n
   assert.equal(modeloExplorador({ TARIFICADOR_EXPLORADOR_MODELO: 'https://x.test/modelo' }), null)
 })
 
-test('modoParaWorker: un modo desconocido (exploracion antes de la fase B) NO se sirve como tarificar', () => {
+test('modoParaWorker: exploracion SOLO a un worker que la declara; un modo desconocido nunca se sirve como tarificar', () => {
   assert.equal(modoParaWorker(null), 'tarificar')
   assert.equal(modoParaWorker('tarificar'), 'tarificar')
   assert.equal(modoParaWorker('emision'), 'emision')
+  // Imagen anterior a la fase B (sin cabecera): no se le sirve.
   assert.equal(modoParaWorker('exploracion'), null)
-  assert.equal(modoParaWorker('otra'), null)
+  assert.equal(modoParaWorker('exploracion', leerModosWorker(null)), null)
+  assert.equal(modoParaWorker('exploracion', leerModosWorker('tarificar,emision')), null)
+  assert.equal(modoParaWorker('exploracion', leerModosWorker('tarificar, emision, EXPLORACION')), 'exploracion')
+  assert.equal(modoParaWorker('otra', leerModosWorker('otra,exploracion')), null)
+})
+
+test('modosReclamables: la cola solo lanza exploraciones con TARIFICADOR_EXPLORADOR_ACTIVO=1 exacto', () => {
+  assert.deepEqual(modosReclamables({}), ['tarificar', 'emision'])
+  assert.deepEqual(modosReclamables({ TARIFICADOR_EXPLORADOR_ACTIVO: 'true' }), ['tarificar', 'emision'])
+  assert.deepEqual(modosReclamables({ TARIFICADOR_EXPLORADOR_ACTIVO: '1' }), ['tarificar', 'emision', 'exploracion'])
+})
+
+test('lease de exploración: se renueva por pasos pero nunca más allá del tope de tiempo ACUMULADO + margen', () => {
+  const t0 = new Date('2026-10-13T10:00:00Z')
+  const min = (m: number) => new Date(t0.getTime() + m * 60_000)
+  const L = 6 * 60_000
+  const MAX = 15 * 60_000
+  assert.equal(leaseExploracion({ ahora: min(1), inicio: t0, leaseMs: L, maxMs: MAX }).toISOString(), min(7).toISOString())
+  assert.equal(leaseExploracion({ ahora: min(14), inicio: t0, leaseMs: L, maxMs: MAX }).toISOString(), min(17).toISOString())
+  assert.equal(leaseExploracion({ ahora: min(30), inicio: t0, leaseMs: L, maxMs: MAX }).toISOString(), min(17).toISOString())
+  // Un reintento NO pone el reloj a cero: manda el primer paso si es anterior al reclamo actual.
+  assert.equal(inicioAcumulado(min(20), t0)!.toISOString(), t0.toISOString())
+  assert.equal(inicioAcumulado(t0, null)!.toISOString(), t0.toISOString())
+  assert.equal(inicioAcumulado(null, null), null)
+})
+
+test('MAX_TOKENS_SALIDA_EXPLORADOR: cabe una respuesta con 15 acciones y 60 entradas de mapeo (~3 caracteres/token)', () => {
+  const r = {
+    version: 1, pantalla: { nombre: 'x'.repeat(60), tipo: 'formulario' },
+    acciones: Array.from({ length: 15 }, (_, i) => ({ accion: 'rellenar', ref: `m12e${100 + i}`, dato: 'inmueble.anio_construccion' })),
+    mapeo: Array.from({ length: 60 }, (_, i) => ({ ref: `m12e${100 + i}`, campoCanonico: 'inmueble.anio_construccion', confianza: 'media' })),
+    motivo: 'x'.repeat(200),
+  }
+  assert.ok(JSON.stringify(r, null, 1).length / 3 < MAX_TOKENS_SALIDA_EXPLORADOR, `${JSON.stringify(r, null, 1).length / 3} tokens no caben en ${MAX_TOKENS_SALIDA_EXPLORADOR}`)
+})
+
+test('leerPeticionEncolarExploracion: entrada de la lista cerrada, origen uuid opcional y ninguna otra clave', () => {
+  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar' }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: null } })
+  assert.deepEqual(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', trabajoOrigenId: UUID }), { ok: true, p: { entrada: 'allianz:particulares:hogar', trabajoOrigenId: UUID } })
+  assert.equal(leerPeticionEncolarExploracion({ entrada: 'https://portal.example.test' }).ok, false)
+  assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', trabajoOrigenId: 'x' }).ok, false)
+  assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', riesgo: {} }).ok, false)
+  assert.equal(leerPeticionEncolarExploracion({ entrada: 'allianz:particulares:hogar', clienteId: UUID }).ok, false)
+  assert.equal(leerPeticionEncolarExploracion(null).ok, false)
 })
 
 test('leerPeticionPaso: re-sanea (sin valores ni datos personales) y asigna refs', () => {
@@ -113,27 +163,31 @@ test('memoria: gana el mapa REVISADO; un mapa inválido se ignora', () => {
 // La ruta no es importable desde `node --test` (alias @/): se lee el FUENTE.
 test('ruta paso: modelo explícito + cliente_ref por exploración + privado; para ANTES de la IA (parada, bucle, topes)', () => {
   const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
-  const ia = f.indexOf('await iaTexto(')
+  const ia = f.indexOf('iaTexto(prompt, {')
   assert.ok(ia > 0)
-  for (const antes of ['detectarParada(', 'detectarBucle(', 'comprobarTopes(consumo, topes, peor)']) {
-    const i = f.indexOf(antes)
-    assert.ok(i > 0 && i < ia, `${antes} tiene que ir ANTES de la llamada a la IA`)
-  }
   const llamada = f.slice(ia, f.indexOf('})', ia))
   assert.match(llamada, /modeloOpenRouter:\s*modelo/)
   assert.match(llamada, /cliente:\s*`explorador:\$\{e\.trabajoId\}`/)
   assert.match(llamada, /privado:\s*true/)
-  assert.match(f, /validarRespuestaExplorador\(texto, ctx\)/)
-  assert.match(f, /conPasoExclusivo\(/)
+  assert.match(f, /ejecutarPaso<Bd>\(/)
+  // El orden (parada, bucle, topes y reserva ANTES de la IA; validación DESPUÉS) vive en la orquestación.
+  const o = readFileSync(path.join(aqui, 'tarificador-explorador-paso.ts'), 'utf8')
+  const llamaIA = o.indexOf('await d.ia(decision.prompt)')
+  assert.ok(llamaIA > 0)
+  for (const antes of ['detectarParada(', 'detectarBucle(', 'comprobarTopes(consumo, topes, peor)', 'await d.reservarIA(bd)']) {
+    const i = o.indexOf(antes)
+    assert.ok(i > 0 && i < llamaIA, `${antes} tiene que ir ANTES de la llamada a la IA`)
+  }
+  assert.ok(o.indexOf('validarRespuestaExplorador(texto, ctx)') > llamaIA)
   // Nunca el inventario ni el texto de la IA en un log.
-  for (const m of f.matchAll(/console\.(?:log|warn|error)\(([^\n]*)/g)) assert.doesNotMatch(m[1], /inventario|texto|prompt|respuesta/)
+  for (const m of [...f.matchAll(/console\.(?:log|warn|error)\(([^\n]*)/g), ...o.matchAll(/console\.(?:log|warn|error)\(([^\n]*)/g)]) assert.doesNotMatch(m[1], /inventario|texto|prompt|respuesta/)
 })
 
 // PII (13/10/2026): el inventario se REDACTA con los valores del riesgo ANTES de la IA y de guardarlo; sin riesgo, para.
 test('ruta paso: redacta el inventario antes de la IA y de registrarPaso; con datos reales sin riesgo → para sin lock ni IA', () => {
   const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
   const redacta = f.indexOf('redactarValoresInventario(p.inventario, valores)')
-  const lock = f.indexOf('conPasoExclusivo(e,')
+  const lock = f.indexOf('conLockExploracion(e, fn)')
   assert.ok(redacta > 0 && redacta < lock, 'la redacción va ANTES del lock (y de todo lo que usa el inventario)')
   assert.equal(f.split('p.inventario').length - 1, 1, 'el inventario crudo solo se usa para redactarlo')
   assert.match(f, /e\.conDatosReales \? await riesgoDeExploracion\(e\)/)
@@ -146,6 +200,9 @@ test('lock del paso NO bloqueante: pg_try_advisory_xact_lock; ocupado → 409 si
   assert.match(lib, /pg_try_advisory_xact_lock\(/)
   assert.doesNotMatch(lib, /select pg_advisory_xact_lock\(/)
   assert.match(lib, /if \(r\[0\]\?\.ok !== true\) throw new PasoOcupado\(\)/)
+  // La transacción del lock ya no envuelve la IA: corta (la IA va FUERA, ver tarificador-explorador-paso.test.ts).
+  assert.match(lib, /const TIMEOUT_TX_PASO_MS = 15_000/)
+  assert.doesNotMatch(lib, /iaTexto/)
   const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
   assert.match(f, /err instanceof PasoOcupado\) return NextResponse\.json\(\{ estado: 'conflicto', motivo: 'paso_en_curso' \}, \{ status: 409 \}\)/)
 })

@@ -4,6 +4,7 @@
 // (app `asegura-tarificador`, auto_destroy) por trabajo, y el worker le pide el riesgo y le devuelve
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
+import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import {
   envDeMaquina, esTipoError, esVersionBot, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
   type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type PasoTraza, type RiesgoComunidad, type TipoError,
@@ -154,6 +155,8 @@ export type ResultadoWorker =
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
+  /** Exploración terminada (13/10/2026): el MAPA ya está en su cabecera (cierre); aquí solo el desenlace del trabajo. */
+  | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin } & MetaWorker)
 
 /**
  * Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas
@@ -234,5 +237,11 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     }
   }
 
-  return { ok: false, errores: ['resultado tiene que ser «ok» o «error»'] }
+  if (e.resultado === 'explorado') {
+    const motivoFin = MOTIVOS_FIN.find((m) => m === e.motivoFin)
+    if (!motivoFin) return { ok: false, errores: ['motivoFin fuera de lista'] }
+    return { ok: true, r: { tipo: 'explorado', trabajoId, motivoFin, ...leerMetaWorker(e) } }
+  }
+
+  return { ok: false, errores: ['resultado tiene que ser «ok», «error» o «explorado»'] }
 }

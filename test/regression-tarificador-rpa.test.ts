@@ -375,3 +375,69 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.match(runner, /prepararTrabajo\(adaptador, trabajo\.riesgo\)/, 'el runner valida con el validador del ramo (prepararTrabajo)')
   assert.ok(!/validarRiesgoComunidad/.test(runner), 'el runner ya no valida con el de Comunidades a pelo')
 })
+
+/** Infracciones del EXPLORADOR IA del worker (fase B, 13/10/2026). Exportada en el test para verla FALLAR. */
+function infraccionesExplorador(explorador: string, guard: string, otros: Record<string, string>): string[] {
+  const out: string[] = []
+  // 1. El bucle solo actúa así: pulsar por el guard (marcar/avanzar), el avance autorizado por su función guardada, rellenar
+  //    con el valor de `resolverDato` y elegir por valor exacto. Nada de goto, teclado ni marcar fuera del guard.
+  const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
+  if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  const fills = [...explorador.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
+  if (fills.length !== 1 || !/^valorParaControl\(d\.valor, hit\.el\), \{ timeout: 10_000 \}$/.test(fills[0])) out.push(`fill inesperado: ${fills.join(' | ')}`)
+  if (/\.goto\(|\.press\(|\.type\(|keyboard|\.check\(|setChecked|\.tap\(/.test(explorador)) out.push('el explorador navega, teclea o marca fuera del guard')
+  // 2. El valor del dato no va al log ni a asegura: `d.valor` aparece SOLO en el fill.
+  if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
+  // 3. Revalidación contra el inventario propio ANTES de actuar.
+  const iVal = explorador.indexOf('validarRespuestaExplorador(r.respuesta, { inventario: inv')
+  const iAct = explorador.indexOf('for (const a of v.respuesta.acciones)')
+  if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
+  // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
+  const iBucle = explorador.indexOf('for (;;) {')
+  const iInv = explorador.indexOf('capturarInventarioExploracion(page)', iBucle)
+  for (const p of ['exigirSinCaptcha(page)', 'exigirSinVerificacion(page, k.compania)']) {
+    const i = explorador.indexOf(p, iBucle)
+    if (i < 0 || i > iInv) out.push(`falta ${p} antes del inventario`)
+  }
+  // 5. La función guardada del avance autorizado: autorización del módulo + bloqueo + comprobarBoton ANTES de abrir y pulsar.
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarExploracionAutorizada'))
+  if (!fn) out.push('falta pulsarExploracionAutorizada en guard.ts')
+  else {
+    const abrir = fn.indexOf('abrir(hasta, [endpoint])')
+    const clic = fn.indexOf('.click(')
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta()', "usados.has('exploracion')", 'esAvanceAutorizado(aut.entrada, aut.el, aut.marco)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'comprobarBoton(desc, { permitirAceptar: true })']) {
+      const i = fn.indexOf(p)
+      if (i < 0 || abrir < 0 || i > abrir || abrir > clic) out.push(`pulsarExploracionAutorizada: «${p}» tiene que ir ANTES de abrir la ventana y pulsar`)
+    }
+    if ((fn.match(/\.click\(/g) ?? []).length !== 1) out.push('pulsarExploracionAutorizada: un solo clic')
+    if (!/\} finally \{\s*page\.off\('dialog', alDialogo\)\s*guard\.avance\.cerrar\(\)\s*\}/.test(fn)) out.push('pulsarExploracionAutorizada: la ventana se cierra SIEMPRE (finally)')
+  }
+  // 6. Solo el explorador llama a la función guardada.
+  for (const [rel, src] of Object.entries(otros)) if (/pulsarExploracionAutorizada\(/.test(src)) out.push(`${rel} llama a pulsarExploracionAutorizada`)
+  return out
+}
+
+test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CAPTCHA y no saca valores', () => {
+  const explorador = sinComentarios(readFileSync(join(SRV, 'src/explorador.ts'), 'utf8'))
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const otros = Object.fromEntries(ficheros(join(SRV, 'src')).filter((f) => !/\/src\/(explorador|guard)\.ts$/.test(f)).map((f) => [relative(RAIZ, f), sinComentarios(readFileSync(f, 'utf8'))]))
+  assert.deepEqual(infraccionesExplorador(explorador, guard, otros), [])
+  // El runner solo lo arranca para `modo === 'exploracion'`.
+  assert.match(sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8')), /if \(trabajo\.modo === 'exploracion'\) return ejecutarExploracion\(/)
+  // Cepo del cepo: cada forma de romperlo se ve en ROJO.
+  const malos: [string, string][] = [
+    ['pulsación directa', explorador.replace('await k.pulsar(loc)', 'await k.pulsar(page.locator("#x"))')],
+    ['valor al log', explorador.replace("k.log('exploracion_paso', {", "k.log('exploracion_paso', { v: d.valor,")],
+    ['sin revalidar', explorador.replace("if (!v.ok) throw new Parar('ambiguo')", '')],
+    ['sin OTP', explorador.replace('await exigirSinVerificacion(page, k.compania)', '')],
+    ['navega', explorador + "\nawait page.goto('https://x')"],
+  ]
+  for (const [nombre, src] of malos) {
+    assert.notEqual(src, explorador, `el cepo «${nombre}» no cambió nada`)
+    assert.notDeepEqual(infraccionesExplorador(src, guard, otros), [], nombre)
+  }
+  const sinAut = guard.replace('esAvanceAutorizado(aut.entrada, aut.el, aut.marco) ||', '')
+  assert.notEqual(sinAut, guard)
+  assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
+  assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
+})

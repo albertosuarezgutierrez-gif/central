@@ -2,18 +2,22 @@ import { NextResponse } from 'next/server'
 import { construirMapa, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador } from '@central/module-tarificacion'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
-import { costeYModelo, exploracionViva, guardarMapa, pasosDe } from '@/lib/tarificador-explorador'
+import { PasoOcupado, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, type Bd } from '@/lib/tarificador-explorador'
+import { ejecutarCierre } from '@/lib/tarificador-explorador-paso'
 import { leerPeticionCierre } from '@/lib/tarificador-explorador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+class MapaInvalido extends Error {}
+
 /**
  * `POST /api/tarificador/explorador/cierre` — fin de la exploración. Bearer `TARIFICADOR_WORKER_SECRET`. Cuerpo
  * `{ trabajoId, motivoFin, redNoGet?, efectosEnPortal? }`. asegura CONSTRUYE el mapa a partir de SUS pasos guardados
  * (re-saneados y re-validados): el worker no escribe el mapa, solo aporta la red (origen + ruta) y los efectos vistos.
- * 200 `{ estado:'ok', pantallas, huecos, coste }` · 409 si ya estaba cerrada. No cambia el estado del trabajo (eso va por
- * el puerto de resultado, fase B).
+ * Toma el MISMO try-lock por exploración que `paso` y respeta la IA reservada (`ejecutarCierre`): nunca corre a la vez que
+ * un paso en vuelo → 409 `paso_en_curso` (el worker reintenta). 200 `{ estado:'ok', pantallas, huecos, coste }` · 409 si ya
+ * estaba cerrada. No cambia el estado del trabajo: eso va por `/api/tarificador/resultado` (`resultado: 'explorado'`).
  */
 export async function POST(req: Request) {
   if (!workerAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -25,23 +29,34 @@ export async function POST(req: Request) {
     const e = await exploracionViva(p.trabajoId)
     if (!e) return NextResponse.json({ estado: 'no_disponible', motivo: 'exploracion_no_en_curso' }, { status: 404 })
     if (e.cerrada) return NextResponse.json({ estado: 'conflicto', motivo: 'exploracion_cerrada' }, { status: 409 })
-    const pasos = (await pasosDe(e.exploracionId)).map((x) => {
-      const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
-      const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada }) : null
-      return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta: v?.ok ? v.respuesta : null } : null
-    }).filter((x) => x !== null)
-    const c = await costeYModelo(e)
-    const mapa = construirMapa(
-      {
-        entrada: e.entrada, compania: e.compania, producto: e.producto, modelo: c.modelo, fecha: new Date().toISOString().slice(0, 10),
-        efectosEnPortal: p.efectosEnPortal, redNoGet: p.redNoGet, coste: { llamadas: c.llamadas, eurEstimado: c.eur }, motivoFin: p.motivoFin,
+    let resumen: { pantallas: number; huecos: number; resultado: boolean; coste: { llamadas: number; eurEstimado: number } } | null = null
+    const out = await ejecutarCierre<Bd>({
+      conLock: (fn) => conLockExploracion(e, fn),
+      leer: (bd) => leerEstadoPaso(e, bd),
+      cerrar: async (bd) => {
+        const pasos = (await pasosDe(e.exploracionId, bd)).map((x) => {
+          const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
+          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada }) : null
+          return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta: v?.ok ? v.respuesta : null } : null
+        }).filter((x) => x !== null)
+        const c = await costeYModelo(e, bd)
+        const mapa = construirMapa(
+          {
+            entrada: e.entrada, compania: e.compania, producto: e.producto, modelo: c.modelo, fecha: new Date().toISOString().slice(0, 10),
+            efectosEnPortal: p.efectosEnPortal, redNoGet: p.redNoGet, coste: { llamadas: c.llamadas, eurEstimado: c.eur }, motivoFin: p.motivoFin,
+          },
+          pasos,
+        )
+        if (!validarMapa(mapa)) throw new MapaInvalido('mapa_invalido')
+        resumen = { pantallas: mapa.pantallas.length, huecos: mapa.huecos.length, resultado: mapa.resultado.alcanzado, coste: mapa.coste }
+        return guardarMapa(e, mapa, p.motivoFin, bd)
       },
-      pasos,
-    )
-    if (!validarMapa(mapa)) return NextResponse.json({ estado: 'error', motivo: 'mapa_invalido' }, { status: 500 })
-    if (!(await guardarMapa(e, mapa, p.motivoFin))) return NextResponse.json({ estado: 'conflicto', motivo: 'exploracion_cerrada' }, { status: 409 })
-    return NextResponse.json({ estado: 'ok', pantallas: mapa.pantallas.length, huecos: mapa.huecos.length, resultado: mapa.resultado.alcanzado, coste: mapa.coste })
+    })
+    if (out.tipo === 'conflicto') return NextResponse.json({ estado: 'conflicto', motivo: out.motivo }, { status: 409 })
+    return NextResponse.json({ estado: 'ok', ...(resumen ?? {}) })
   } catch (err) {
+    if (err instanceof PasoOcupado) return NextResponse.json({ estado: 'conflicto', motivo: 'paso_en_curso' }, { status: 409 })
+    if (err instanceof MapaInvalido) return NextResponse.json({ estado: 'error', motivo: 'mapa_invalido' }, { status: 500 })
     console.error('[tarificador/explorador] cierre', p.trabajoId, err instanceof Error ? err.message.slice(0, 200) : 'error')
     return NextResponse.json({ estado: 'error' }, { status: 503 })
   }

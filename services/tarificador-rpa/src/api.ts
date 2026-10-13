@@ -21,8 +21,24 @@ export function leerConfig(env: Record<string, string | undefined>): Config {
  */
 export type EmisionTrabajo = { fase: 'preparar' } | { fase: 'ejecutar'; token: string; primaCents: number }
 
+/**
+ * EXPLORACIÓN (13/10/2026): la entrada (clave de `ENTRADAS_EXPLORACION`) y si va ligada a una petición REAL del mismo
+ * cliente (entonces lo personal sale del `riesgo`; si no, sintético y se para si piden NIF). Lo decide asegura.
+ */
+export type ExploracionTrabajo = { entrada: string; conDatosReales: boolean }
+
 /** `leaseHasta` (ISO): hasta cuándo asegura acepta el resultado; el runner no reintenta si no cabe. */
-export type Trabajo = { id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string; modo?: 'tarificar' | 'emision'; emision?: EmisionTrabajo }
+export type Trabajo = {
+  id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string
+  modo?: 'tarificar' | 'emision' | 'exploracion'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
+}
+
+/**
+ * Modos que ESTA imagen sabe ejecutar. Viajan en la cabecera `X-Tarificador-Modos` al pedir el trabajo: asegura solo
+ * sirve un trabajo de exploración a un worker que lo declara (una imagen vieja lo trataría como `tarificar`).
+ */
+export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion'] as const
+export const CABECERA_MODOS = 'X-Tarificador-Modos'
 
 const ESPERAS_PEDIR_MS = [2_000, 4_000, 8_000]
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
@@ -42,7 +58,7 @@ export async function pedirTrabajo(
     let res: Response
     try {
       res = await fetch(`${c.apiUrl}/api/tarificador/trabajo/${encodeURIComponent(c.jobId)}`, {
-        headers: { Authorization: `Bearer ${c.secreto}` },
+        headers: { Authorization: `Bearer ${c.secreto}`, [CABECERA_MODOS]: MODOS_SOPORTADOS.join(',') },
         signal: AbortSignal.timeout(15_000),
       })
     } catch (e) {
@@ -96,6 +112,8 @@ export type MetaTraza = { pasos?: PasoTraza[]; botVersion?: string }
 export type CuerpoResultado =
   | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & MetaTraza)
   | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; inventarioDom?: InventarioDom }; capturaBase64?: string; html?: string } & MetaTraza)
+  /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
+  | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string } & MetaTraza)
 
 /** Hasta 3 intentos ante red caída o 5xx (un 409 = ya registrado o lease vencido: no se insiste). */
 export async function enviarResultado(c: Config, cuerpo: CuerpoResultado): Promise<number> {
@@ -164,6 +182,74 @@ export async function enviarResultadoEmision(c: Config, cuerpo: CuerpoEmision): 
       ultimo = 0
     }
     await new Promise((r) => setTimeout(r, 2_000 * (i + 1)))
+  }
+  return ultimo
+}
+
+// ─── Explorador IA (13/10/2026) ──────────────────────────────────────────────
+
+export type RespuestaPaso =
+  /** `respuesta` sin validar: el worker la REVALIDA contra su propio inventario antes de tocar nada. */
+  | { estado: 'ok'; respuesta: unknown; leaseHasta: string | null }
+  /** asegura dijo «para» (503 con su `parar`, explorador apagado, error): se cierra la exploración. */
+  | { estado: 'parar'; status: number; respuesta: unknown }
+  /** 404: la exploración ya no está en curso (lease vencido, cancelada). Se sale sin resultado. */
+  | { estado: 'perdido'; status: number }
+
+/**
+ * `POST /api/tarificador/explorador/paso`. Sin reintento ciego (cada paso puede costar una llamada de IA): solo un 409
+ * `paso_en_curso` se reintenta UNA vez tras `esperaMs`. Red caída = `parar`.
+ */
+export async function pedirPaso(
+  c: Config,
+  cuerpo: { trabajoId: string; inventario: InventarioDom; avancesFallidos: number },
+  esperar: (ms: number) => Promise<void> = dormir,
+  esperaMs = 5_000,
+): Promise<RespuestaPaso> {
+  for (let i = 0; i < 2; i++) {
+    let res: Response
+    try {
+      res = await fetch(`${c.apiUrl}/api/tarificador/explorador/paso`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+        signal: AbortSignal.timeout(75_000),
+      })
+    } catch {
+      return { estado: 'parar', status: 0, respuesta: null }
+    }
+    const j = (await res.json().catch(() => null)) as { respuesta?: unknown; leaseHasta?: unknown } | null
+    if (res.status === 200) return { estado: 'ok', respuesta: j?.respuesta ?? null, leaseHasta: typeof j?.leaseHasta === 'string' ? j.leaseHasta : null }
+    if (res.status === 404) return { estado: 'perdido', status: 404 }
+    if (res.status === 409 && i === 0) {
+      await esperar(esperaMs)
+      continue
+    }
+    return { estado: 'parar', status: res.status, respuesta: j?.respuesta ?? null }
+  }
+  return { estado: 'parar', status: 409, respuesta: null }
+}
+
+export type CuerpoCierre = { trabajoId: string; motivoFin: string; redNoGet: string[]; efectosEnPortal: string[] }
+
+/** `POST /api/tarificador/explorador/cierre`: hasta 3 intentos ante red caída, 5xx o 409 «paso en curso». */
+export async function cerrarExploracion(c: Config, cuerpo: CuerpoCierre, esperar: (ms: number) => Promise<void> = dormir): Promise<number> {
+  let ultimo = 0
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(`${c.apiUrl}/api/tarificador/explorador/cierre`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${c.secreto}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cuerpo),
+        signal: AbortSignal.timeout(30_000),
+      })
+      ultimo = res.status
+      const ocupado = res.status === 409 && ((await res.json().catch(() => null)) as { motivo?: unknown } | null)?.motivo === 'paso_en_curso'
+      if (res.status < 500 && !ocupado) return res.status
+    } catch {
+      ultimo = 0
+    }
+    await esperar(2_000 * (i + 1))
   }
   return ultimo
 }
