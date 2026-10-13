@@ -27,6 +27,7 @@ import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seg
 import { VERSION_TEXTO_COMERCIAL, consentimientoVigente, tocaRevisionAnual, type MotivoNoRevision } from '@central/module-seguros-portal'
 
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { DECLARADA_VIVA } from './declaradas-eliminadas'
 import { destinatarioDeCliente } from './avisos-vencimiento'
 import { textoRevisionAnual, type PolizaEnRevision } from './texto-revision-anual'
 
@@ -90,7 +91,7 @@ export async function ejecutarRevisionAnual(opts: { hoy?: Date; forzarContar?: b
       select: { identidadId: true, clienteId: true, correduriaId: true },
     }),
     db.portalPolizaDeclarada.findMany({
-      where: { identidadId: { in: conConsentimiento }, fechaVencimiento: { not: null } },
+      where: { identidadId: { in: conConsentimiento }, fechaVencimiento: { not: null }, ...DECLARADA_VIVA },
       select: { identidadId: true, ramo: true, compania: true, fechaVencimiento: true },
     }),
   ])

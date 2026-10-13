@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { registrarUso } from '@/lib/autorizaciones'
 import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
@@ -61,7 +62,7 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   const puedeQuitar = acceso.propia || acceso.capacidades?.quitarDeclaradas === true
 
   const p = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id, identidadId: duenaId },
+    where: { id, identidadId: duenaId, ...DECLARADA_NO_ELIMINADA },
   })
   if (!p) notFound()
 

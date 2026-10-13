@@ -6,6 +6,7 @@ import { aplicarRamoAlParte, normalizarParte, plazoComunicacion, textoAvisoParte
 import { carteraDeIdentidad, polizasParaParte } from '@/lib/cartera-lectura'
 import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
+import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { crearParte, fechaHechoAUtc } from '@/lib/partes-siniestro'
 import { requireIdentidad } from '@/lib/session'
 
@@ -159,7 +160,7 @@ export async function POST(req: Request) {
     const acceso = await accesoADeclarada(identidad.id, valor.polizaDeclaradaId, 'parte')
     if (acceso === null) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
     const propia = await prisma.portalPolizaDeclarada.findFirst({
-      where: { id: valor.polizaDeclaradaId, identidadId: acceso.identidadId },
+      where: { id: valor.polizaDeclaradaId, identidadId: acceso.identidadId, ...DECLARADA_NO_ELIMINADA },
       select: { id: true, compania: true, ramo: true, numeroPoliza: true },
     })
     if (!propia) return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })

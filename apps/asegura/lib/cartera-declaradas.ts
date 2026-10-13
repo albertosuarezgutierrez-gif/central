@@ -21,6 +21,7 @@
 import { diasHastaVencimiento } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { DECLARADA_VIVA } from './declaradas-eliminadas'
 
 export const DIAS_AVISO_DECLARADAS = 60
 
@@ -80,7 +81,7 @@ export async function declaradasPorVencer(
   hasta.setUTCDate(hasta.getUTCDate() + dias)
 
   const declaradas = await db.portalPolizaDeclarada.findMany({
-    where: { fechaVencimiento: { gte: hoyRef, lte: hasta } },
+    where: { ...DECLARADA_VIVA, fechaVencimiento: { gte: hoyRef, lte: hasta } },
     select: {
       id: true, identidadId: true, compania: true, numeroPoliza: true, ramo: true,
       fechaVencimiento: true,

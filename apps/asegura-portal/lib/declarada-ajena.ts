@@ -33,6 +33,7 @@ import {
 import { carteraDeIdentidad, titularesDeFichasEnteras } from './cartera-lectura'
 import { prisma } from './db'
 import { TITULAR_TIPO_VISIBLE_A_TERCERO } from './declaradas-de-titular'
+import { DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
 
 export type AccesoDeclarada = {
   /** La identidad DUEÑA de la fila: la de quien mira, o la del titular. */
@@ -65,7 +66,8 @@ async function declaradaAjena(identidadId: string, declaradaId: string): Promise
     const ids = [...titulares].filter(([, c]) => c === t.clienteId).map(([i]) => i)
     if (ids.length === 0) return null
     const fila = await prisma.portalPolizaDeclarada.findFirst({
-      where: { id: declaradaId, identidadId: { in: ids }, titularTipo: TITULAR_TIPO_VISIBLE_A_TERCERO },
+      // Una que el titular QUITÓ (borrado lógico) no la toca un tercero: solo él la restaura.
+      where: { id: declaradaId, identidadId: { in: ids }, titularTipo: TITULAR_TIPO_VISIBLE_A_TERCERO, ...DECLARADA_NO_ELIMINADA },
       select: { identidadId: true },
     })
     if (fila === null) return null
@@ -88,8 +90,10 @@ export async function accesoADeclarada(
   declaradaId: string,
   accion: AccionDeclarada,
 ): Promise<AccesoDeclarada | null> {
+  // Sin las QUITADAS (borrado lógico): una eliminada no se ve, corrige, quita ni recibe partes;
+  // solo vuelve por `POST /api/polizas/[id]/restaurar`, que no pasa por aquí.
   const propia = await prisma.portalPolizaDeclarada.findFirst({
-    where: { id: declaradaId, identidadId },
+    where: { id: declaradaId, identidadId, ...DECLARADA_NO_ELIMINADA },
     select: { id: true },
   })
   const ajena = propia === null ? await declaradaAjena(identidadId, declaradaId) : null

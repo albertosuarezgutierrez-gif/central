@@ -49,7 +49,8 @@ test('🔒 la fila ajena se relee con identidadId IN titulares y solo «propio»
 test('🔒 la propia se mira con la identidad de quien mira DENTRO del where', () => {
   const i = AJENA.indexOf('export async function accesoADeclarada')
   const cuerpo = AJENA.slice(i)
-  assert.match(cuerpo, /findFirst\(\{\s*where:\s*\{\s*id:\s*declaradaId,\s*identidadId\s*\}/)
+  // (y sin las QUITADAS: borrado lógico del 10/10/2026)
+  assert.match(cuerpo, /findFirst\(\{\s*where:\s*\{\s*id:\s*declaradaId,\s*identidadId,\s*\.\.\.DECLARADA_NO_ELIMINADA\s*\}/)
 })
 
 test('🔒 las capacidades salen SOLO de la concesión de ficha entera (no de las sueltas)', () => {

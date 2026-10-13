@@ -18,6 +18,7 @@
 import { DIAS_PREAVISO_ASEGURADOR, sqlCarteraEnVigor, sqlCarteraViva } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { sqlDeclaradaViva } from './declaradas-eliminadas'
 import { sqlPrimaDeRecibo, sqlVencimientoConRecibos } from './recibos-vigencia'
 import {
   ORIGEN_DECLARADA_PORTAL,
@@ -116,7 +117,8 @@ export async function planExpedientesAuto(db: Db, correduriaId: string, hoy: str
                where v.identidad_id = d.identidad_id and v.correduria_id = ${correduriaId}::uuid
                order by v.creado_en limit 1) as cliente_id
       from portal_poliza_declarada d
-      where d.fecha_vencimiento between ${hoy}::date and ${hoy}::date + ${DIAS_PREAVISO_ASEGURADOR}::int
+      where ${sqlDeclaradaViva('d')}
+        and d.fecha_vencimiento between ${hoy}::date and ${hoy}::date + ${DIAS_PREAVISO_ASEGURADOR}::int
     )
     select d.id::text as "declaradaId", d.cliente_id::text as "clienteId", d.ramo, d.compania,
            d.numero_poliza as "numeroPoliza", to_char(d.fecha_vencimiento, 'YYYY-MM-DD') as vence,

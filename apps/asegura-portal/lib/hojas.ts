@@ -33,6 +33,7 @@ import {
 
 import { carteraDeIdentidad, type PolizaPortal } from './cartera-lectura'
 import { prisma } from './db'
+import { cuentaElegidasVivas, DECLARADA_NO_ELIMINADA } from './declaradas-eliminadas'
 import { hashCanal } from './auth'
 import { getIdentidad } from './session'
 
@@ -85,9 +86,19 @@ export async function hojasDeIdentidad(identidadId: string): Promise<HojaResumen
       creadaEn: true,
       anuladaEn: true,
       ultimoUsoEn: true,
-      polizas: { select: { id: true } },
+      polizas: { select: { polizaId: true, polizaDeclaradaId: true } },
     },
   })
+  // Una declarada eliminada sigue como fila de la selección pero ya no se enseña
+  // (ni en el QR): no cuenta. Se cruza con las vivas.
+  const vivas = new Set(
+    (
+      await prisma.portalPolizaDeclarada.findMany({
+        where: { identidadId, ...DECLARADA_NO_ELIMINADA },
+        select: { id: true },
+      })
+    ).map((d) => d.id),
+  )
   return filas.map((h) => ({
     id: h.id,
     nombre: h.nombre,
@@ -97,7 +108,7 @@ export async function hojasDeIdentidad(identidadId: string): Promise<HojaResumen
     // 🚨 Cero filas = TODAS, no «ninguna». Es el vocabulario de la tabla y
     // colapsarlo aquí en un 0 haría que la pantalla dijera «0 pólizas» de la
     // hoja que más enseña de todas.
-    cuantasElegidas: h.polizas.length === 0 ? null : h.polizas.length,
+    cuantasElegidas: h.polizas.length === 0 ? null : cuentaElegidasVivas(h.polizas, vivas),
   }))
 }
 
@@ -114,7 +125,7 @@ export async function polizasElegibles(
   const [cartera, declaradas] = await Promise.all([
     carteraDeIdentidad(identidadId),
     prisma.portalPolizaDeclarada.findMany({
-      where: { identidadId },
+      where: { identidadId, ...DECLARADA_NO_ELIMINADA },
       orderBy: { creadaEn: 'desc' },
       take: 50,
       select: { id: true, compania: true, ramo: true, numeroPoliza: true, fechaVencimiento: true },
@@ -160,7 +171,7 @@ export type DeclaradaEnHoja = {
  */
 export async function declaradasDeIdentidad(identidadId: string): Promise<DeclaradaEnHoja[]> {
   return prisma.portalPolizaDeclarada.findMany({
-    where: { identidadId },
+    where: { identidadId, ...DECLARADA_NO_ELIMINADA },
     orderBy: { creadaEn: 'desc' },
     take: 50,
     select: {

@@ -4251,3 +4251,31 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   .ofertas-tabla { display: block; }
   .ofertas-cards { display: none; }
 }
+
+/* «Eliminadas» de la bóveda (10/10/2026): texto y botón «Restaurar» en la misma fila; por
+ * debajo de ~320 px el botón baja a su propia línea (flex-wrap) en vez de estrujar el texto. */
+.eliminadas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.eliminadas-fila {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.eliminadas-fila-texto {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 200px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.eliminadas-fila-accion {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}

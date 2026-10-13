@@ -1206,10 +1206,30 @@ model PortalPolizaDeclarada {
   /// La señal de lead más fuerte que hay: la lee `lib/leads-portal.ts`.
   cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
   cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
+  /// Borrado LÓGICO (10/10/2026): `null` = en la bóveda del cliente; con fecha = la quitó
+  /// él (y puede restaurarla). 🚨 Toda lectura de esta app filtra `eliminadaEn: null`
+  /// (`DECLARADA_VIVA`, `lib/declaradas-eliminadas.ts`); el único que ve las eliminadas es
+  /// el export RGPD. Lo vigila `test/regression-asegura-declaradas-eliminadas.test.ts`.
+  eliminadaEn          DateTime?         @map("eliminada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 
   @@map("portal_poliza_declarada")
+}
+
+/// Qué hizo el cliente con cada póliza que aportó (creada/editada/eliminada/restaurada), con
+/// antes/después. APPEND-ONLY y SOLO LECTURA aquí (`prisma_seguros` tiene SELECT): lo escribe el
+/// portal. Sin relaciones ni FK a propósito: sobrevive a la póliza. Lo lee el export RGPD.
+model PortalPolizaDeclaradaHistorial {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  polizaId    String   @map("poliza_id") @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  accion      String
+  antes       Json?
+  despues     Json?
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_poliza_declarada_historial")
 }
 
 model PortalVinculo {

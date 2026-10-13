@@ -46,6 +46,7 @@ import { PREFIJO_HISTORIAL_COTIZACION_INCOHERENTE } from '@central/module-seguro
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
+import { sqlDeclaradaViva } from './declaradas-eliminadas'
 
 export type RespuestaActividad =
   | { estado: 'ok'; eventos: EventoActividad[]; total: number; embudo: EmbudoPortal }
@@ -146,6 +147,7 @@ function consultaEventos(
       from portal_poliza_declarada d
       join vinc v on v.identidad_id = d.identidad_id
       where d.creada_en >= ${desde}
+        and ${sqlDeclaradaViva('d')}
 
       union all
 

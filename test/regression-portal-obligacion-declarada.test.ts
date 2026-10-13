@@ -108,8 +108,8 @@ test('la poda de declaradas no puede llevarse por delante las de la cartera', ()
   // que las acaba de crear.
   assert.match(
     FUENTE,
-    /deleteMany\(\{\s*where:\s*\{\s*identidadId,\s*polizaDeclaradaId:\s*\{\s*not:\s*null,\s*notIn:\s*avisables\s*\}/,
-    'la poda de las declaradas cambió de forma: comprueba que sigue acotada a `polizaDeclaradaId` no nulo',
+    /deleteMany\(\{\s*where:\s*\{\s*identidadId,\s*tipo:\s*\{\s*in:\s*\['poliza',\s*'recibo'\]\s*\},\s*polizaDeclaradaId:\s*\{\s*not:\s*null,\s*notIn:\s*avisables\s*\}/,
+    'la poda de las declaradas cambió de forma: comprueba que sigue acotada a `polizaDeclaradaId` no nulo Y a tipo poliza/recibo (no borra recordatorios propios: ITV, mantenimiento)',
   )
 })
 

@@ -21,6 +21,7 @@ import {
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { sqlDeclaradaViva } from './declaradas-eliminadas'
 
 const fechaIso = (d: Date | null): string | null => (d instanceof Date ? d.toISOString().slice(0, 10) : null)
 
@@ -67,7 +68,7 @@ export async function siguientesAcciones(
       select v.cliente_id::text as cliente_id, d.ramo::text as ramo, d.compania, d.fecha_vencimiento
       from portal_vinculo v
       join portal_poliza_declarada d on d.identidad_id = v.identidad_id
-      where v.correduria_id = ${correduriaId}::uuid and v.cliente_id in (${Prisma.join(ids.map((i) => Prisma.sql`${i}::uuid`))})
+      where ${sqlDeclaradaViva('d')} and v.correduria_id = ${correduriaId}::uuid and v.cliente_id in (${Prisma.join(ids.map((i) => Prisma.sql`${i}::uuid`))})
     `.catch(() => null),
     db.$queryRaw<{ cliente_id: string; n: bigint }[]>`
       select cliente_id::text as cliente_id, count(*)::bigint as n

@@ -9,6 +9,7 @@ import {
 
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
+import { DECLARADA_CON_ELIMINADAS } from './declaradas-eliminadas'
 
 /**
  * Monta el paquete del **derecho de acceso (art. 15 RGPD)** y de
@@ -181,8 +182,24 @@ export async function exportRgpdDeIdentidad(
       }),
     ),
 
-    await bloque('polizas_declaradas', () =>
-      db.portalPolizaDeclarada.findMany({ where: { identidadId }, orderBy: { creadaEn: 'asc' } }),
+    // 🚨 Derecho de acceso: TAMBIÉN las que la persona quitó (borrado lógico). Son suyas y las
+    // conservamos; se marcan para que el paquete no las presente como vigentes. Es la ÚNICA
+    // lectura de esta app que NO filtra `DECLARADA_VIVA` (el guardián la deja pasar por aquí).
+    await bloque('polizas_declaradas', async () => {
+      const filas = await db.portalPolizaDeclarada.findMany({
+        where: { identidadId, ...DECLARADA_CON_ELIMINADAS },
+        orderBy: { creadaEn: 'asc' },
+      })
+      return filas.map((f) => ({ ...f, estado: f.eliminadaEn === null ? 'vigente' : 'eliminada' }))
+    }),
+
+    // Qué hizo con cada una (creada/editada/eliminada/restaurada), con antes y después.
+    await bloque('polizas_declaradas_historial', () =>
+      db.portalPolizaDeclaradaHistorial.findMany({
+        where: { identidadId },
+        select: { id: true, polizaId: true, accion: true, antes: true, despues: true, creadoEn: true },
+        orderBy: { creadoEn: 'asc' },
+      }),
     ),
 
     await bloque('partes', () => partesDeIdentidad(db, identidadId, fichas)),

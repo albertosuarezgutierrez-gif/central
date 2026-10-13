@@ -2,8 +2,11 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
+import { TEXTO_CONFIRMAR_QUITAR } from '@/lib/declaradas-eliminadas'
+
 /**
- * Quitar de la bóveda una póliza que aportó el propio cliente.
+ * Quitar de la bóveda una póliza que aportó el propio cliente. Desde el 10/10/2026 NO la borra:
+ * la pasa a «Eliminadas» (`DeclaradasEliminadas.tsx`), de donde se restaura tal cual.
  *
  * 🚨 Este botón NO existe en la ficha de una póliza de la CARTERA, y no es un
  * olvido: lo que entra por CIMA es el registro de la correduría y el cliente no
@@ -88,9 +91,7 @@ export function EliminarPoliza({
 
       {confirmando && (
         <div className="aviso-linea">
-          <strong>¿Quitas {titulo} de tu bóveda?</strong> Se borran los datos que nos diste de ella y no
-          la vas a poder recuperar. Esto no cancela el seguro: si lo tienes contratado, sigue en vigor
-          con su compañía.
+          <strong>¿Quitas {titulo} de tu bóveda?</strong> {TEXTO_CONFIRMAR_QUITAR}
           {avisoPartes && <span className="linea">{avisoPartes}</span>}
           <div className="editor-acciones" style={{ marginTop: 10 }}>
             <button type="button" className="boton" onClick={() => void eliminar()} disabled={borrando}>
