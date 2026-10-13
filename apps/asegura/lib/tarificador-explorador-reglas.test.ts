@@ -4,9 +4,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { construirMapa, huellaPantalla, sanearInventarioDom, type RespuestaExplorador } from '@central/module-tarificacion'
+import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import {
   MODELO_EXPLORADOR_POR_DEFECTO,
+  MOTIVOS_FIN,
   RESERVA_IA_MS,
   cierraCabeceraTrasFallo,
   estadoFalloExploracion,
@@ -285,4 +286,31 @@ test('encolar por oportunidad: monta el riesgo con el helper puro y guarda el an
   assert.match(f, /oportunidad_incompleta: falta \$\{r\.faltan\.join/)
   const r = readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '../app/api/operador/tarificador/exploracion/route.ts'), 'utf8')
   assert.match(r, /oportunidadId: l\.p\.oportunidadId/)
+})
+
+test('prompt ↔ validador: los motivos de parar del prompt son EXACTAMENTE los que acepta el validador (exploración 313a04d1)', () => {
+  const linea = SYSTEM_EXPLORADOR.split('\n').find((l) => l.startsWith('- parar {motivo}:'))
+  assert.ok(linea, 'el prompt tiene la línea de parar')
+  const lista = linea!.slice(linea!.indexOf('sin más texto:') + 'sin más texto:'.length)
+  const codigos = [...lista.matchAll(/(?:^|\|)\s*([a-z_]+) \(/g)].map((m) => m[1])
+  assert.deepEqual(codigos, [...MOTIVOS_PARAR])
+  const l = leerPeticionPaso({ trabajoId: UUID, inventario: crudo })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  for (const c of codigos) {
+    const r = validarRespuestaExplorador({ version: 1, pantalla: { nombre: null, tipo: 'otro' }, acciones: [{ accion: 'parar', motivo: c }], mapeo: [], motivo: null }, { inventario: l.p.inventario, ramo: 'hogar', entrada: 'allianz:particulares:hogar' })
+    assert.ok(r.ok, `el validador acepta «${c}», que pide el prompt`)
+  }
+})
+
+test('motivo_fin: una sola lista; incluye todos los de parar (ambiguo incluido) y lo que pone el sistema', () => {
+  assert.deepEqual([...MOTIVOS_FIN], [...MOTIVOS_FIN_EXPLORACION])
+  for (const m of MOTIVOS_PARAR) assert.ok(MOTIVOS_FIN.includes(m), m)
+  for (const m of ['ambiguo', 'resultado', 'bucle', 'tope', 'error_portal', 'guard_emision'] as const) assert.ok(MOTIVOS_FIN.includes(m), m)
+  assert.ok(leerPeticionCierre({ trabajoId: UUID, motivoFin: 'ambiguo' }).ok)
+})
+
+test('prompt: botón de avance deshabilitado → rellenar sin avanzar, no parar (exploración 313a04d1: SIGUIENTE deshabilitado)', () => {
+  assert.match(SYSTEM_EXPLORADOR, /deshabilitado porque faltan campos, manda SOLO los rellenar/)
+  assert.match(SYSTEM_EXPLORADOR, /EXACTAMENTE uno de estos códigos, sin más texto/)
 })

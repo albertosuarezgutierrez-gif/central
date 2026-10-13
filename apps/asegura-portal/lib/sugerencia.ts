@@ -65,7 +65,7 @@ export async function enviarSugerencia(
  * qué pasó — una nota perdida en silencio es justo lo que convierte «queda en su
  * historial» en una promesa que nadie comprueba.
  */
-async function anotarEnFicha(identidadId: string, texto: string): Promise<void> {
+export async function anotarEnFicha(identidadId: string, texto: string): Promise<void> {
   const base = process.env.ASEGURA_PUENTE_URL
   const secret = process.env.ASEGURA_PORTAL_PUENTE_SECRET
   if (!base || !secret) return

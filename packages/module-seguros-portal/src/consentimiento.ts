@@ -12,12 +12,14 @@
  * - **`avisos`** y **`comercial`** — esos SÍ son consentimiento (art. 6.1.a
  *   RGPD). `comercial` tiene casilla desde el 19/09/2026 (pestaña «Mis
  *   datos» del portal, `ConsentimientoComercial.tsx`, escrita por
- *   `POST /api/consentimiento`); `avisos` sigue **sin pedirse en ninguna
- *   pantalla**. Mientras no exista su casilla, escribir una fila
- *   `otorgado: true` sería fabricar una prueba de algo que la persona nunca
- *   marcó: exactamente el fallo que estas filas existen para evitar. El aviso
- *   de vencimiento se presta hoy por el contrato de mediación (art. 6.1.b), no
- *   por consentimiento.
+ *   `POST /api/consentimiento`). `avisos` se pide desde el 13/10/2026: la
+ *   bienvenida de avisos (`BienvenidaAvisos.tsx`) y «Configuración → Avisos»
+ *   (`ActivarPush.tsx`) enseñan `TEXTO_CONSENTIMIENTO_AVISOS` junto al botón, y
+ *   `POST /api/push/suscribir` solo escribe la fila si el navegador manda la
+ *   versión de ESE texto. La revocación la escribe `POST /api/push/desuscribir`
+ *   cuando la identidad se queda sin ningún dispositivo suscrito. El aviso de
+ *   vencimiento por CORREO se sigue prestando por el contrato de mediación
+ *   (art. 6.1.b); lo que se consiente es la notificación en el dispositivo.
  *
  * Regla al tocar esto: **una fila solo se escribe si la pantalla lo enseñó**.
  * Si alguien añade `avisos`, va con su casilla en la UI en el MISMO PR, y
@@ -35,10 +37,19 @@ export const TIPOS_CONSENTIMIENTO = ['avisos', 'comercial', 'lds_art19'] as cons
 export type TipoConsentimiento = (typeof TIPOS_CONSENTIMIENTO)[number]
 
 /**
- * Los tipos que el portal ESCRIBE hoy. `avisos` existe en la BD pero no se
- * emite porque no hay pantalla que lo pida (ver cabecera).
+ * Los tipos que el portal ESCRIBE hoy. `avisos` entró el 13/10/2026 CON su
+ * pantalla (ver cabecera).
  */
-export const TIPOS_QUE_SE_REGISTRAN: readonly TipoConsentimiento[] = ['lds_art19', 'comercial']
+export const TIPOS_QUE_SE_REGISTRAN: readonly TipoConsentimiento[] = ['lds_art19', 'comercial', 'avisos']
+
+/**
+ * El texto que se enseña junto al botón de activar los avisos en el dispositivo,
+ * y su versión. Mismo trato que el comercial: si cambia de fondo, sube la
+ * versión; un «sí» sobre el texto viejo no consiente el nuevo.
+ */
+export const VERSION_TEXTO_AVISOS = '2026-10-a1'
+export const TEXTO_CONSENTIMIENTO_AVISOS =
+  'Acepto que Grupo ASegura me mande notificaciones a este dispositivo cuando se acerque el vencimiento de una póliza, me devuelvan un recibo o haya novedades en mis seguros. Puedo desactivarlas cuando quiera desde Configuración.'
 
 /**
  * La casilla de `comercial`, palabra por palabra, y su versión.

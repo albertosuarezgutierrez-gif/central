@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
 import { sendWebPush } from '@central/core-push'
-import { planificarAvisos, textoPushCima, type PolizaParaAviso } from '@central/module-seguros-portal'
+import {
+  TIPOS_AVISO_CIMA,
+  motivoSinPush,
+  planificarAvisos,
+  resolverPreferenciasAvisos,
+  textoPushCima,
+  type PolizaParaAviso,
+  type PreferenciasAvisosEfectivas,
+} from '@central/module-seguros-portal'
 
 import { registrarUso } from '@/lib/autorizaciones'
 import { carteraALaVista, carteraDeIdentidad, type TitularPortal } from '@/lib/cartera-lectura'
@@ -56,8 +64,25 @@ export async function GET(req: Request) {
     orderBy: { identidadId: 'asc' },
     take: MAX_IDENTIDADES,
   })
+  // Preferencias de «Configuración» (13/10/2026). Sin fila = lo de siempre. Si no se pueden leer no se
+  // manda nada con valores supuestos: 500, nada sellado, reintento en la pasada siguiente.
+  let prefsPorIdentidad: Map<string, PreferenciasAvisosEfectivas>
+  try {
+    const guardadas = conSub.length
+      ? await prisma.portalPreferenciasAvisos.findMany({
+          where: { identidadId: { in: conSub.map((c) => c.identidadId) } },
+          select: { identidadId: true, canal: true, diasAntelacion: true, noMolestarDesde: true, noMolestarHasta: true },
+        })
+      : []
+    prefsPorIdentidad = new Map(guardadas.map((g) => [g.identidadId, resolverPreferenciasAvisos(g)]))
+  } catch (e) {
+    console.error('[portal/avisos-cima] no se han podido leer las preferencias:', e instanceof Error ? e.message : e)
+    return NextResponse.json({ estado: 'error', causa: 'preferencias_no_leidas' }, { status: 500 })
+  }
+
   const inicio = Date.now()
   let cortado = false
+  let enNoMolestar = 0
 
   let avisadas = 0
   let sembradas = 0
@@ -69,6 +94,14 @@ export async function GET(req: Request) {
     if (Date.now() - inicio > PRESUPUESTO_MS) {
       cortado = true
       break
+    }
+    // Dentro de su franja de «no molestar» (hora de Madrid): ni se envía ni se sella; las novedades
+    // siguen pendientes para la pasada siguiente. Antes de leer la cartera: no se gasta en balde.
+    const prefs = prefsPorIdentidad.get(identidadId) ?? resolverPreferenciasAvisos(null)
+    const motivo = motivoSinPush(prefs, new Date())
+    if (motivo === 'no_molestar') {
+      enNoMolestar += 1
+      continue
     }
     try {
       const cartera = carteraALaVista(await carteraDeIdentidad(identidadId))
@@ -90,10 +123,13 @@ export async function GET(req: Request) {
         prisma.portalAvisoCima.findMany({ where: { identidadId }, select: { clave: true } }),
         prisma.portalAvisoSilenciado.findMany({ where: { identidadId }, select: { tipo: true } }),
       ])
+      // «Solo por correo» = todos los tipos apagados para el push, con la MISMA semántica que una
+      // casilla desmarcada: se sellan sin enviar (al volver a «móvil» no llega el atraso de golpe).
+      const apagados = motivo === 'canal_correo' ? new Set<string>(TIPOS_AVISO_CIMA) : new Set(silenciados.map((s) => s.tipo))
       const plan = planificarAvisos(
         polizas,
         new Set(selladas.map((s) => s.clave)),
-        new Set(silenciados.map((s) => s.tipo)),
+        apagados,
         new Date(),
         nuevas,
         modificadas,
@@ -165,6 +201,7 @@ export async function GET(req: Request) {
     sinNovedad,
     sinExito,
     fallos,
+    enNoMolestar,
   })
 }
 

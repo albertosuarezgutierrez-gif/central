@@ -6,10 +6,12 @@ import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
+import { estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
+import { CaptacionDeclarada } from '../../CaptacionDeclarada'
 import { EditarPoliza } from '../../EditarPoliza'
 import { EliminarPoliza } from '../../EliminarPoliza'
 import { avisoPartesConservados, etiquetaProcedencia } from '@central/module-seguros-portal'
@@ -77,6 +79,22 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
     where: { polizaDeclaradaId: p.id },
   })
 
+  // La tarjeta «¿Quieres verla siempre al día?»: solo en las PROPIAS (no las de un titular que dio
+  // acceso) y vivas; lo decide `estadoCaptacion` con las marcas de ESTA identidad.
+  const marcasCaptacion = acceso.propia
+    ? await prisma.portalAvisoLeido.findMany({
+        where: { identidadId: identidad.id, clave: { startsWith: PREFIJO_CAPTACION } },
+        select: { clave: true, creadoEn: true },
+      })
+    : []
+  const captacion = estadoCaptacion({
+    propia: acceso.propia,
+    eliminada: false,
+    polizaId: p.id,
+    marcas: marcasCaptacion,
+    ahora: new Date(),
+  })
+
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
   const objeto =
     p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
@@ -115,6 +133,8 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           ? 'Esta póliza la ha añadido su titular en su portal: no la lleva la correduría. No la revisamos, no avisamos de su vencimiento y no podemos dar el parte por él.'
           : 'Esta póliza la has añadido tú: la guardamos para que la tengas a mano, pero no la lleva la correduría. No la revisamos, no te avisamos de su vencimiento y no podemos dar el parte por ti. Si quieres que pase a llevarla la correduría, dínoslo.'}
       </p>
+
+      {captacion !== 'oculta' && <CaptacionDeclarada polizaId={p.id} estado={captacion} />}
 
       <section className="seccion" aria-labelledby="datos-titulo">
         <h2 id="datos-titulo">{deOtro ? 'Lo que consta de ella' : 'Lo que nos has dicho de ella'}</h2>

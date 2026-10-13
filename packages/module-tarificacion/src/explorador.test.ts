@@ -2,6 +2,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   ACCIONES_EXPLORADOR,
+  DESCRIPCION_MOTIVOS_PARAR,
+  MOTIVOS_FIN_EXPLORACION,
+  MOTIVOS_PARAR,
+  lineaMotivosPararParaIA,
+  normalizarMotivoParar,
   MAX_TITULOS_MARCO,
   catalogoParaIA,
   comprobarTopes,
@@ -204,6 +209,96 @@ describe('validarRespuestaExplorador', () => {
   for (const [nombre, entrada] of casos) {
     it(`rechaza: ${nombre}`, () => expect(validarRespuestaExplorador(entrada, ctx(inv)).ok).toBe(false))
   }
+
+  describe('motivos de parar: una sola lista (13/10/2026: exploración 313a04d1, «motivo de parada fuera de lista»)', () => {
+    it('cada motivo de la lista se acepta tal cual', () => {
+      for (const m of MOTIVOS_PARAR) {
+        const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: m }]), ctx(inv))
+        expect(r.ok && r.respuesta.acciones[0]).toEqual({ accion: 'parar', motivo: m })
+      }
+    })
+
+    it('el código con explicación detrás, en mayúsculas o con espacios, se lleva a su código', () => {
+      expect(normalizarMotivoParar('dato_sensible_requerido: piden número de documento')).toBe('dato_sensible_requerido')
+      expect(normalizarMotivoParar('Dato sensible requerido (NIF)')).toBe('dato_sensible_requerido')
+      expect(normalizarMotivoParar('AMBIGUO')).toBe('ambiguo')
+      expect(normalizarMotivoParar('sin-salida - no hay botón')).toBe('sin_salida')
+      const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'dato_sensible_requerido: el formulario exige el documento' }]), ctx(inv))
+      expect(r.ok && r.respuesta.acciones[0]).toEqual({ accion: 'parar', motivo: 'dato_sensible_requerido' })
+    })
+
+    it('una frase libre sin código delante NO se adivina (sigue rechazada)', () => {
+      expect(normalizarMotivoParar('El formulario pide un dato sensible requerido')).toBeNull()
+      expect(normalizarMotivoParar('dato_sensible')).toBeNull()
+      expect(normalizarMotivoParar(3)).toBeNull()
+    })
+
+    it('el error del validador dice QUÉ motivo llegó, solo si es un código corto sin cifras', () => {
+      const r1 = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'requiere_nif' }]), ctx(inv))
+      expect(!r1.ok && r1.errores.join(' ')).toContain('«requiere_nif»')
+      const r2 = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'El tomador 00000000T no está' }]), ctx(inv))
+      expect(!r2.ok && r2.errores.join(' ')).toContain('(texto libre de')
+      expect(!r2.ok && r2.errores.join(' ')).not.toContain('00000000T')
+    })
+
+    it('la línea del prompt sale de la lista (todos, con descripción) y motivo_fin los incluye', () => {
+      const linea = lineaMotivosPararParaIA()
+      for (const m of MOTIVOS_PARAR) {
+        expect(linea).toContain(`${m} (`)
+        expect(DESCRIPCION_MOTIVOS_PARAR[m]).toBeTruthy()
+        expect(MOTIVOS_FIN_EXPLORACION).toContain(m)
+      }
+      expect(linea.split(' | ')).toHaveLength(MOTIVOS_PARAR.length)
+    })
+  })
+
+  describe('paso 1 de Allianz Hogar (forma de 313a04d1: tomador + vivienda, «SIGUIENTE»)', () => {
+    const paso1 = (siguienteDeshabilitado: boolean) =>
+      inventario({
+        titulos: ['¿Quién es el tomador?', 'Datos de la vivienda'],
+        elementos: [
+          { tag: 'nx-multi-step-item', role: 'tab', texto: 'Vivienda', ariaLabel: 'Vivienda' },
+          { tag: 'nx-multi-step-item', role: 'tab', texto: 'Pago', ariaLabel: 'Pago', deshabilitado: true },
+          { tag: 'nx-dropdown', role: 'combobox', etiqueta: 'Tipo de documento', formControlName: 'idType' },
+          { tag: 'input', id: 'doc', type: 'text', etiqueta: 'Número de documento', requerido: true, formControlName: 'idNumber' },
+          { tag: 'input', id: 'nac', etiqueta: 'Fecha de nacimiento', requerido: true, formControlName: 'dateOfBirth' },
+          { tag: 'input', id: 'cp', type: 'text', etiqueta: 'Código postal', requerido: true, formControlName: 'postalCode' },
+          { tag: 'input', id: 'anio', type: 'number', etiqueta: 'Año de construcción', requerido: true, formControlName: 'yearOfConstruction' },
+          { tag: 'input', id: 'sup', etiqueta: 'Superficie de la vivienda', requerido: true, formControlName: 'surfaceAreaLiving' },
+          { tag: 'button', id: 'NextPageFromRisk', type: 'button', texto: 'SIGUIENTE', deshabilitado: siguienteDeshabilitado },
+        ],
+      })
+    const r1 = (i: InventarioDom, id: string) => ref(i, id)
+
+    it('«SIGUIENTE» habilitado es un avance admitido (navegación, no emisión)', () => {
+      const i = paso1(false)
+      const r = validarRespuestaExplorador(buena([
+        { accion: 'rellenar', ref: r1(i, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'avanzar', ref: r1(i, 'NextPageFromRisk'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ]), ctx(i))
+      expect(r.ok).toBe(true)
+    })
+
+    it('«SIGUIENTE» deshabilitado no se pulsa; el lote solo de rellenar (sin avanzar) sí vale', () => {
+      const i = paso1(true)
+      const avz = validarRespuestaExplorador(buena([{ accion: 'avanzar', ref: r1(i, 'NextPageFromRisk'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }]), ctx(i))
+      expect(!avz.ok && avz.errores.join(' ')).toContain('deshabilitado')
+      const lote = validarRespuestaExplorador(buena([
+        { accion: 'rellenar', ref: r1(i, 'nac'), dato: 'tomador.fecha_nacimiento' },
+        { accion: 'rellenar', ref: r1(i, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: r1(i, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: r1(i, 'sup'), dato: 'inmueble.superficie_m2' },
+      ]), ctx(i))
+      expect(lote.ok).toBe(true)
+    })
+
+    it('sin datos reales, el documento del tomador PARA en el robot (sin NIF sintético); la parada de la IA queda tipada', () => {
+      expect(resolverDato('tomador.nif', { ramo: 'hogar', conDatosReales: false, riesgo: {}, env: {}, hoy: new Date() })).toEqual({ ok: false, motivo: 'dato_sensible_requerido' })
+      const i = paso1(true)
+      const r = validarRespuestaExplorador(buena([{ accion: 'parar', motivo: 'dato_sensible_requerido' }], { motivo: 'Número de documento obligatorio y tomador.nif sin valor' }), ctx(i))
+      expect(r.ok && r.respuesta.acciones[0]).toEqual({ accion: 'parar', motivo: 'dato_sensible_requerido' })
+    })
+  })
 
   describe('motivo largo (13/10/2026: paso 1 de Allianz Hogar tirado a parar/ambiguo)', () => {
     const largo = 'La pantalla muestra el menú de productos de ePAC y no aparece todavía ningún campo del formulario de hogar; '.repeat(3)

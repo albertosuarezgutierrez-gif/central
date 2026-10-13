@@ -166,6 +166,9 @@ export function pestanasPortal(): PestanaPortal[] {
     // seguros, y por eso va al final: quien entra viene a mirar pólizas, y su
     // ficha es lo que se toca una vez al mudarse o cambiar de número.
     { vista: 'datos', etiqueta: 'Datos', href: '/boveda?vista=datos' },
+    // 13/10/2026: «Configuración» (avisos: este dispositivo, qué, por dónde, cuándo y «no
+    // molestar»; y lo consentido). Otra RUTA, como «Contactos». La última: se toca una vez.
+    { vista: null, etiqueta: 'Configuración', href: '/configuracion' },
   ]
 }
 
