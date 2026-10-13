@@ -7,6 +7,7 @@ import { ConIcono } from '../../../iconos'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { capitalDeRiesgo, paramTexto } from '../../../oportunidad/[id]/variante'
 import VidaNuevo from './VidaNuevo'
+import { desdeRiesgoVida } from './verificacion-vida'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,8 @@ export default async function VidaNuevoPage({ params, searchParams }: { params: 
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
+  // Con oportunidad, el asegurado es el de las figuras del riesgo (lo arma asegura desde su ficha); nunca el tomador por defecto.
+  const distinto = carga.estado === 'ok' ? desdeRiesgoVida(carga.riesgo, clienteId).aseguradosDistintos : []
   const sub = nombreCliente
     ? <><Link href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{nombreCliente}</Link> · presupuesto de vida (oportunidad nueva)</>
     : 'Presupuesto de vida (oportunidad nueva) · sin ninguna póliza en la cartera'
@@ -49,6 +52,11 @@ export default async function VidaNuevoPage({ params, searchParams }: { params: 
       </Link>
       <PageHeader titulo="Presupuesto de vida" icono={<HeartPulse size={20} strokeWidth={1.75} />} sub={sub} />
       {carga.estado === 'ok' && <FranjaVariante variante={carga.variante} />}
+      {distinto.length === 1 && (
+        <div style={{ ...cardStyle, fontSize: 13, marginTop: 10 }}>
+          Se cotiza al asegurado <strong>{distinto[0].nombre}</strong> (no es el tomador): sus datos salen de su ficha en «Intervinientes».
+        </div>
+      )}
       <div
         style={{
           ...cardStyle,
