@@ -3,6 +3,7 @@ import type { NimChatMessage } from '@central/core-ai'
 import { verificarSecreto, registrarUso, dentroDePresupuesto, PROVEEDOR_PASARELA } from '@/lib/ai-gateway'
 import { chatConDirector } from '@/lib/pasarela'
 import { acotarTimeoutMs } from '@/lib/timeout-ia'
+import { modeloOpenRouterValido } from '@/lib/modelo-openrouter'
 
 export const maxDuration = 60
 
@@ -27,6 +28,10 @@ export async function POST(req: Request) {
     : (body?.prompt ? [{ role: 'user', content: String(body.prompt) }] : [])
   if (!messages.length) return NextResponse.json({ error: 'Faltan messages' }, { status: 400 })
 
+  // Modelo de OpenRouter explícito: si viene y no es un slug válido, 400 (no se degrada en silencio a otro modelo).
+  const modeloOR = body?.modeloOpenRouter === undefined || body?.modeloOpenRouter === null ? undefined : modeloOpenRouterValido(body.modeloOpenRouter)
+  if (modeloOR === null) return NextResponse.json({ error: 'modeloOpenRouter no válido' }, { status: 400 })
+
   const cacheCfg = body?.cache && typeof body.cache === 'object' && typeof body.cache.ambito === 'string'
     ? { ambito: String(body.cache.ambito).slice(0, 80), ttlHoras: Number(body.cache.ttlHoras) || undefined }
     : null
@@ -36,6 +41,7 @@ export async function POST(req: Request) {
       app, endpoint: 'chat',
       system: typeof body?.system === 'string' ? body.system : undefined,
       modelo: typeof body?.model === 'string' ? body.model : undefined,
+      modeloOpenRouter: modeloOR,
       // Categoría del catálogo (p. ej. `redaccion` para la lectura de ofertas de asegura): modelo por
       // tag SIN hop al decisor. Una categoría desconocida degrada al default (`elegirPorCategoria`).
       categoria: typeof body?.categoria === 'string' && /^[a-z_]{2,30}$/.test(body.categoria) ? body.categoria : undefined,

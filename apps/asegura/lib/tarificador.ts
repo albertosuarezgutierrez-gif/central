@@ -7,6 +7,7 @@
 //    guardan con `canal = 'rpa'`, sin `project_id_codeoscopic` ni libro de gasto: ningún camino de
 //    Avant2 puede casarlos (CHECK `tarificacion_fuera_de_avant2`).
 
+import { modoParaWorker } from './tarificador-explorador-reglas'
 import { createHash } from 'node:crypto'
 import {
   MAX_INTENTOS,
@@ -274,7 +275,10 @@ export async function trabajoParaWorker(id: string): Promise<TrabajoParaWorker |
     from seguros.tarificacion_trabajos t
     where t.id = ${id}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
   const f = filas[0]
-  return f ? { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString(), modo: f.modo === 'emision' ? 'emision' : 'tarificar' } : null
+  // Un modo que el worker no sabe ejecutar (p. ej. 'exploracion' antes de la fase B) NO se sirve: la imagen actual
+  // trataría todo lo que no es `emision` como `tarificar` (`modoParaWorker`, fail-closed).
+  const modo = f ? modoParaWorker(f.modo) : null
+  return f && modo ? { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString(), modo } : null
 }
 
 // ─── Resultado ───────────────────────────────────────────────────────────────
