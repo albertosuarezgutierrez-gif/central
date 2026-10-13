@@ -12,9 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(13/10/2026)** — Auditoría diaria (ligera): sin 🔴 nuevos. Memoria completada: #4517 «Pedir emisión» avisa si falta IPID/opción, #4519 agente huésped de sivra habla como el dueño y trata peticiones de factura.
+Vigilancia: CIMA entra (pulls reales, cola 205, 0 procesados, 0 errores); pricing sano (0 bajo mínimo, 7,6 h, 4 pisos on) con `oscilantes` 14 (bajó de 47); Codeoscopic 20 cotizaciones/10 € en 7 d.
+Nuevo 🟡: latido `correduria_ingesta` DEGRADADA (C0072, 15 días sin mandar nada) y `seo_correduria` con GSC 403 (sin permiso en sc-domain:grupoasegura.es). Siguen: `subastas_idealista` mudo (27/09), `ses_transporte`, alerta C0468 y PRs de registro atascados (ver #4493).
+
 **(13/10/2026)** — Pedir precio simplificado en el riesgo unificado: orden Intervinientes → objeto → Historial y bonificaciones → Verificación → Pedir precio; lo de arriba va en resumen solo lectura en el cotizador; la checklist «Verificación antes de pedir precio» bloquea el pago de 0,50€ (lógica pura en `auto-nuevo/verificacion-embebido.ts` + test; «sin ubicar» = aviso, no bloquea); los años asegurado de arriba viajan a la cotización con topes coherentes.
 Decisión de Alberto: Avant2 y bots en paralelo, comparar en la parrilla hasta retirar Avant2 por compañía.
-Pendientes: subir compañía/póliza/años sin siniestros/siniestros 5a a Historial; CP en faltantes de figuras (`apps/asegura/lib/oportunidad-riesgo.ts`); rol «autorizado» por confirmar; consulta de bonificaciones (no existe; Alberto debe aclarar qué es «la consulta del 5»); desplegables de la parrilla solo con bots (con Avant2 cada cambio = 0,50€); pasada equivalente en moto.
+Hecho después: Historial y bonificaciones editable (SINCO: compañía del catálogo Codeoscopic + nº póliza, a Avant2 los 5 últimos; siniestros) y CP del tomador como faltante en auto/moto. «Conductor autorizado» descartado: Avant2 solo tiene primaryDriver/secondaryDriver (regla: los campos son los de Avant2). Pendientes: moto embebido no lee el historial declarado; parrilla Avant2 vs bot.
 
 **(12/10/2026)** — Auditoría diaria (ligera): sin 🔴 nuevos. Memoria completada con lo que no estaba anotado: #4499 botón «Pedir emisión» (Allianz Comunidades, OK por Telegram), #4504 fix build plataforma (`node:crypto` en la emisión del tarificador), #4506 job de CI «Build · plataforma» (`next build`).
 Vigilancia: latidos al día; CIMA entra (pulls reales, cola ~204 con 0-4 procesados/día, sin errores); pricing sano (0 bajo mínimo, 7,6 h desde la última pasada, 4 pisos enabled/apply); Codeoscopic 21 cotizaciones/10,50 € en 7 d (tope Avant2 del mes 6/70 €).
