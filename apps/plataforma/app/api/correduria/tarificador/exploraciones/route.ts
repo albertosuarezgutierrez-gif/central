@@ -8,6 +8,7 @@ import { conCosteReal, costesRealesExploracion } from '@/lib/tarificador-explora
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const NO_STORE = { 'cache-control': 'private, no-store' }
 
 /**
@@ -25,15 +26,20 @@ export async function GET() {
 }
 
 /**
- * POST /api/correduria/tarificador/exploraciones { entrada } — «Nueva exploración» (SINTÉTICA: sin cliente). Solo la
- * entrada de la lista cerrada; reenvía a `POST /api/operador/tarificador/exploracion` de asegura, que decide (interruptores,
+ * POST /api/correduria/tarificador/exploraciones { entrada, oportunidadId? } — «Nueva exploración» (SINTÉTICA sin
+ * oportunidad; con `oportunidadId` uuid, datos reales de esa oportunidad). Solo la entrada de la lista cerrada; reenvía a `POST /api/operador/tarificador/exploracion` de asegura, que decide (interruptores,
  * integración, una viva por compañía) y responde 503 `apagado` si el explorador está apagado. Nunca emite.
  */
 export async function POST(req: Request) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
-  const b = (await req.json().catch(() => null)) as { entrada?: unknown } | null
+  const b = (await req.json().catch(() => null)) as { entrada?: unknown; oportunidadId?: unknown } | null
   if (!esEntradaNueva(b?.entrada)) return NextResponse.json({ estado: 'error', mensaje: 'entrada no válida' }, { status: 400 })
-  const r = await encolarExploracionAsegura(b.entrada)
+  const crudo = b.oportunidadId
+  const oportunidadId = typeof crudo === 'string' ? crudo.trim() : crudo
+  if (oportunidadId !== undefined && oportunidadId !== null && oportunidadId !== '' && (typeof oportunidadId !== 'string' || !UUID_RE.test(oportunidadId))) {
+    return NextResponse.json({ estado: 'error', mensaje: 'oportunidadId no válido (uuid)' }, { status: 400 })
+  }
+  const r = await encolarExploracionAsegura(b.entrada, typeof oportunidadId === 'string' && oportunidadId ? oportunidadId : undefined)
   return NextResponse.json(r.json ?? { estado: 'error' }, { status: r.status, headers: NO_STORE })
 }

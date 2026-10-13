@@ -17,7 +17,8 @@ export function revisarExploracionAsegura(id: string, estado: 'revisado' | 'desc
   return puerto(base(id), { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ estado }) }, 15_000)
 }
 
-/** Encola una exploración (fase B). Asegura re-exige sus cerrojos; aquí solo viaja la entrada de la lista cerrada. */
-export function encolarExploracionAsegura(entrada: string) {
-  return puerto('exploracion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ entrada }) }, 30_000)
+/** Encola una exploración (fase B). Asegura re-exige sus cerrojos; aquí viaja la entrada de la lista cerrada y, opcional, la oportunidad (clave omitida si no hay). */
+export function encolarExploracionAsegura(entrada: string, oportunidadId?: string) {
+  const cuerpo = oportunidadId ? { entrada, oportunidadId } : { entrada }
+  return puerto('exploracion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) }, 30_000)
 }
