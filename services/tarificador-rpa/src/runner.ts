@@ -35,7 +35,7 @@ import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, 
 import { capturarInventarioDom } from './inventario-dom.ts'
 import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
-import { htmlConMarcos } from './evidencia.ts'
+import { capturarEvidencia } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
@@ -192,9 +192,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (rechazada) error = new ErrorVerificacionHumana(k.compania, textoAvisoSesionManual(k.compania))
     await k.sesion.alFallo(rechazada).catch(() => log('sesion_no_borrada'))
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
-    const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
-    // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
-    const html = await htmlConMarcos(page, 2 * 1024 * 1024).catch(() => null)
+    const { captura, html } = await capturarEvidencia(page)
     // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos, incluidos los de otro origen
     // (solo lectura, saneado y ≤60 KB; inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
     const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(page) : null

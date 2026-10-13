@@ -13,6 +13,8 @@ Todo desde `/correduria/oportunidad/[id]`, sección **Presupuestos de compañía
 ## Hechos del DOM — Allianz ePAC Comunidades
 - Formulario en `iframe#appArea`; nueva póliza `#link_new_policy`; **Calcular = `div#calcular`**, **Aceptar = `div#aceptar`** (no son `<button>`, #4370). Edificación: capital obligatorio.
 - Población: lupa del CP `img#codigoPostalAjaxLocFinderImg`.
+- **«Nueva Alta»** (Venta → Nueva Alta, `#link_new_policy`): modal con ACORDEONES plegados (Autos · Particulares · Empresas · Vida y Salud); se pulsa la sección para desplegarla. Dentro, rejilla de tiles (icono + texto). Particulares (captura de Alberto, 13/10/2026): «Allianz HOGAR», «Allianz Negocio Plus», «Decesos Prima periódica», «Allianz Accidentes Plus», «Decesos Prima única», «Comunidades», «RC Cazador/Pescador», «Embarcaciones», «Allianz Mascotas».
+- El tile se elige por etiqueta EXACTA (`etiquetaProducto` en `allianz/entrada.ts`: sin mayúsculas, tolerante al espacio entre palabras, nunca «contiene»). Hogar = «Allianz HOGAR», no «Hogar» (causa del timeout de la 1.ª exploración del 13/10).
 - Resultado: tabla `#tablaTarificacion` con tabla ANIDADA. **Columna «Anual» = PRIMER RECIBO prorrateado** (ePAC fija el vencimiento al día 1); **«Sucesivos» = prima anual real**. La UI muestra la anual y aparte el primer recibo (#4383).
 - Término real: `#fechaTermino` / `#fechaTerminoTarificar`.
 - Proyecto (PDF): `td#MENU` → «Proyecto». **«Proyecto Ampliado» (`td#EMISION_PROJ`) PROHIBIDO.**
