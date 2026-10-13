@@ -11,6 +11,7 @@
 
 import { esEstadoTrabajo, esTipoError, type EstadoTrabajo } from './estados.ts'
 import { PREFIJO_ELECCION_VERSION } from './vehiculo.ts'
+import { PREFIJO_ELECCION_POBLACION } from './poblacion.ts'
 
 /** Estados que aparecen en la bandeja: el bot ya no avanza solo. */
 export const ESTADOS_BANDEJA: readonly EstadoTrabajo[] = ['requiere_humano', 'error_definitivo']
@@ -65,6 +66,9 @@ export function motivoLegible(error: unknown, estado?: unknown): string {
   // Versión de vehículo ambigua (vehiculo.ts): el mensaje ya es para una persona (solo nombres de catálogo).
   if (mensaje.startsWith(PREFIJO_ELECCION_VERSION)) {
     return `Hay que elegir la versión del vehículo:${mensaje.slice(PREFIJO_ELECCION_VERSION.length)}`.trim().slice(0, 600)
+  }
+  if (mensaje.startsWith(PREFIJO_ELECCION_POBLACION)) {
+    return `Hay que elegir la población del código postal:${mensaje.slice(PREFIJO_ELECCION_POBLACION.length)}`.trim().slice(0, 600)
   }
   if (mensaje.startsWith(PREFIJO_VERIFICACION)) {
     return mensaje.slice(PREFIJO_VERIFICACION.length).trim().slice(0, 300) || MOTIVO_POR_TIPO.captcha

@@ -12,6 +12,7 @@ import {
   MOTO_ACTIVO,
   avanzarPestanaGuardada,
   buscarPoblacion,
+  ErrorEleccionPoblacion,
   comprobarTitularesMoto,
   consultarMatriculaMoto,
   elegirVehiculoMoto,
@@ -28,7 +29,7 @@ import {
   valorClaseMoto,
   valorOpcionExacta,
 } from '../src/adapters/allianz/auto.ts'
-import { ErrorTarificador, pideInventarioDom } from '../src/errores.ts'
+import { clasificarIntento, ErrorTarificador, opcionesPoblacionDe, pideInventarioDom } from '../src/errores.ts'
 import { comprobarBoton, EmisionBloqueadaError, type FormularioAuto } from '@central/module-tarificacion'
 
 const form: FormularioAuto = {
@@ -83,6 +84,27 @@ const DATOS = (revertirAnios = false) => `<body><form>
 </form><script>
 document.getElementById('licensePlate').addEventListener('change', () => setTimeout(() => { document.getElementById('fechaMatriculacion').value = '07/08/2015' }, 30))
 ${revertirAnios ? "document.getElementById('aniosSinSiniestros').addEventListener('change', (e) => setTimeout(() => (e.target.value = '00'), 0))" : ''}
+</script></body>`
+
+// Buscador de poblaciones con VARIAS (inventario de estructura 13/10/2026, datos INVENTADOS): la lupa pinta celdas
+// `receivedDataLocationFinder` «CP- NOMBRE»; pulsar una copia su nombre a `#_destown` (o no, si `efecto` = false).
+const POBLACIONES = (nombres: string[], efecto = true) => `<body><form>
+<input id="_cpostalCode" type="tel"><input id="_destown" type="text">
+<img id="_cpostalCodeAjaxLocFinderImg" src="data:," onclick="sendRequestLocationFinder({'id':'_cpostalCode'});">
+<table><tbody id="res"></tbody></table>
+<table><tr><td id="store" onclick="window.archivado=1">Archivar</td></tr></table>
+</form><script>
+window.pulsadas = 0; window.archivado = undefined;
+var receivedDataLocationFinder = (o) => { window.pulsadas = (window.pulsadas || 0) + 1; ${efecto ? "document.getElementById('_destown').value = o.nombre" : '0'} }
+var sendRequestLocationFinder = () => setTimeout(() => {
+  const cp = document.getElementById('_cpostalCode').value;
+  ${JSON.stringify(nombres)}.forEach((n) => {
+    const td = document.createElement('td')
+    td.textContent = cp + '- ' + n
+    td.setAttribute('onclick', 'receivedDataLocationFinder({"idDesc":"_destown","cp1":"' + cp + '","cia":2,"id":"_cpostalCode","nombre":"' + n + '"})')
+    const tr = document.createElement('tr'); tr.appendChild(td); document.getElementById('res').appendChild(tr)
+  })
+}, 50)
 </script></body>`
 
 let browser: Browser
@@ -170,6 +192,48 @@ test('CP → lupa (con pulsar guardado) → población; sin población = hueco d
   assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: false, tomadorEsPropietario: true }), (e: unknown) => e instanceof ErrorMapaIncompleto && !pideInventarioDom(e))
   assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: true, tomadorEsPropietario: false }), ErrorMapaIncompleto)
   comprobarTitularesMoto({ tomadorEsConductor: null, tomadorEsPropietario: null })
+})
+
+test('buscador de poblaciones: una celda → la pulsa; varias + poblacion que casa → esa; sin casar → requiere persona con la lista', async () => {
+  await page.setContent(POBLACIONES(['VILLA PRUEBA']))
+  await buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000)
+  assert.equal(await page.locator('#_destown').inputValue(), 'VILLA PRUEBA')
+
+  await page.setContent(POBLACIONES(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+  await buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, { poblacion: '  pueblo   nuevo ' })
+  assert.equal(await page.locator('#_destown').inputValue(), 'PUEBLO NUEVO')
+  assert.equal(await page.evaluate(() => (window as unknown as { pulsadas?: number }).pulsadas), 1, 'una sola celda pulsada')
+
+  await page.setContent(POBLACIONES(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+  await buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, { poblacion: 'villa alamo' })
+  assert.equal(await page.locator('#_destown').inputValue(), 'VILLA ÁLAMO', 'sin tildes ni mayúsculas casa')
+
+  for (const eleccion of [{}, { poblacion: 'VILLA' }, { poblacion: 'Otra' }, { eleccionPoblacion: '00001- OTRA' }]) {
+    await page.setContent(POBLACIONES(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+    await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, eleccion), (e: unknown) => {
+      assert.ok(e instanceof ErrorEleccionPoblacion)
+      assert.equal(e.tipo, 'captcha')
+      assert.deepEqual(opcionesPoblacionDe(e), [{ codigo: '00001- VILLA ÁLAMO', etiqueta: 'VILLA ÁLAMO' }, { codigo: '00001- PUEBLO NUEVO', etiqueta: 'PUEBLO NUEVO' }])
+      return true
+    })
+    assert.equal(await page.evaluate(() => (window as unknown as { pulsadas?: number }).pulsadas), 0, 'no pulsó ninguna celda')
+    assert.equal(await page.locator('#_destown').inputValue(), '')
+  }
+})
+
+test('buscador de poblaciones: eleccionPoblacion de la bandeja manda; si la celda no rellena la población → hueco con inventario', async () => {
+  await page.setContent(POBLACIONES(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+  await buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, { eleccionPoblacion: '00001- VILLA ÁLAMO', poblacion: 'pueblo nuevo' })
+  assert.equal(await page.locator('#_destown').inputValue(), 'VILLA ÁLAMO')
+  await page.setContent(POBLACIONES(['VILLA PRUEBA'], false))
+  await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 600), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
+  assert.equal(await page.evaluate(() => (window as unknown as { archivado?: number }).archivado), undefined, 'no pulsó Archivar')
+  // Viaja estructurada: el runner la clasifica como captcha (definitivo) con la lista.
+  const c = clasificarIntento(new ErrorEleccionPoblacion([{ codigo: '00001- A', etiqueta: 'A' }, { codigo: '00001- B', etiqueta: 'B' }]), { logueado: true, loginVisible: false, ultimo5xx: null })
+  assert.equal(c.tipo, 'captcha')
+  assert.equal(c.transitorio, null)
+  assert.equal(c.opcionesPoblacion?.length, 2)
+  assert.match(c.mensaje, /^requiere_eleccion_poblacion: /)
 })
 
 test('planDatosBasicosMoto: valores del portal; lo que el portal asumiría por defecto se exige (fail-closed)', () => {

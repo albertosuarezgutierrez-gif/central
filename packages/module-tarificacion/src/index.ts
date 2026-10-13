@@ -287,6 +287,8 @@ export {
   SEXOS_CONDUCTOR,
   validarFormularioAuto,
   MAX_DESCRIPCION_VEHICULO,
+  MAX_POBLACION,
+  MAX_ELECCION_POBLACION,
   pareceDatoPersonalEnDescripcion,
   type RamoVehiculo,
   type SexoConductor,
@@ -295,6 +297,20 @@ export {
   type SeleccionVehiculo,
   type ValidacionFormularioAuto,
 } from './formulario-auto.ts'
+// Población de un CP con varias localidades (13/10/2026): la elige el riesgo (exacta) o una persona; nunca la IA.
+export {
+  PREFIJO_ELECCION_POBLACION,
+  MAX_OPCIONES_POBLACION,
+  MAX_OPCIONES_POBLACION_CABLE,
+  clavePoblacion,
+  leerCeldaPoblacion,
+  opcionesPoblacionDesdeCeldas,
+  resolverPoblacion,
+  mensajeEleccionPoblacion,
+  validarOpcionesPoblacion,
+  type OpcionPoblacion,
+  type ResolucionPoblacion,
+} from './poblacion.ts'
 // Elegir UNA opción de una lista cerrada con IA INYECTADA (13/10/2026): versión del vehículo; después, población por CP.
 export {
   elegirDeLista,

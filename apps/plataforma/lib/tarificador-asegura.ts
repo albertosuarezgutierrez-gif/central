@@ -121,11 +121,13 @@ export function resolverTrabajoBandeja(
   accion: 'reintentar' | 'cancelar',
   /** Solo con reintentar: versión del vehículo elegida a mano; asegura la valida contra la lista guardada del trabajo. */
   eleccionVersion: { codigo: string; etiqueta?: string | null } | null = null,
+  /** Solo con reintentar: población del CP elegida a mano (texto de la lista del trabajo; la valida asegura). */
+  eleccionPoblacion: string | null = null,
 ): Promise<Reenvio> {
   return puerto(`bandeja/${encodeURIComponent(id)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(eleccionVersion ? { accion, eleccionVersion } : { accion }),
+    body: JSON.stringify({ accion, ...(eleccionVersion ? { eleccionVersion } : {}), ...(eleccionPoblacion ? { eleccionPoblacion } : {}) }),
   }, 30_000)
 }
 

@@ -16,6 +16,7 @@
 
 import { chromium, type Browser, type BrowserContextOptions, type Page } from 'playwright'
 import {
+  MAX_OPCIONES_POBLACION_CABLE,
   MAX_OPCIONES_VERSION_CABLE,
   nombresCredencial,
   redactarHtml,
@@ -375,6 +376,8 @@ async function main(): Promise<number> {
           url: redactar(evidencia.url).slice(0, 500),
           // Lista COMPLETA de versiones (solo catálogo), sin pasar por el redactor: asegura la valida y la usa por código.
           ...(c.opcionesVersion ? { opcionesVersion: c.opcionesVersion.slice(0, MAX_OPCIONES_VERSION_CABLE) } : {}),
+          // Lista de poblaciones del CP (nombres de localidad; `codigo` = texto exacto de la celda). Asegura la valida.
+          ...(c.opcionesPoblacion ? { opcionesPoblacion: c.opcionesPoblacion.slice(0, MAX_OPCIONES_POBLACION_CABLE) } : {}),
           // Estructura de la pantalla (ya saneada, sin valores de campos): NO pasa por el log, solo su cuenta.
           ...(evidencia.inventarioDom ? { inventarioDom: evidencia.inventarioDom } : {}),
         },

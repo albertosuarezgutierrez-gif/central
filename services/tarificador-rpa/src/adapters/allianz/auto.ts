@@ -21,7 +21,7 @@
 // buscador de poblaciones; ¿tomador es conductor/propietario?) y de «Datos básicos» (uso, conductor, sexo, matrícula que
 // autorrellena la 1ª matriculación, antecedentes); pantalla de ERROR («INFORME DE AVISO E INCIDENCIAS»). Todo lo de Moto está
 // en la sección «MOTO» de este fichero. Lo que FALTA (ver docs/TARIFICADOR-MATRIZ.md 0b): el buscador de poblaciones tras
-// pulsar la lupa, el avance entre pestañas (usa `aceptar_onclick()`, que el guard rechaza) y qué campos son obligatorios.
+// pulsar la lupa (HECHO 13/10/2026 con el inventario de estructura: celdas `receivedDataLocationFinder`), el avance entre pestañas (usa `aceptar_onclick()`, que el guard rechaza) y qué campos son obligatorios.
 //
 // Flujo: login → «Nueva Alta» → sección Autos → tarjeta (Turismos | Moto) → consulta por MATRÍCULA (el portal rellena
 // marca/modelo/versión) → vehículo canónico (si hay varias versiones: requiere_humano con las opciones) → Datos básicos
@@ -39,13 +39,17 @@ import {
   esOpcionVacia,
   fechaIsoDesdeTexto,
   importeEs,
+  mensajeEleccionPoblacion,
   mensajeEleccionVersion,
+  opcionesPoblacionDesdeCeldas,
   redactarDatosPersonales,
+  resolverPoblacion,
   vehiculoDesdeLectura,
   type CandidatoVersion,
   type FormularioAuto,
   type LecturaVehiculoPortal,
   type OfertaNormalizada,
+  type OpcionPoblacion,
   type ResultadoAdaptador,
   type SeleccionVehiculo,
   type Vehiculo,
@@ -93,6 +97,20 @@ export class ErrorEleccionVersion extends ErrorTarificador {
     this.name = 'ErrorEleccionVersion'
     this.opciones = opciones
     this.opcionesVersion = opciones
+  }
+}
+
+/**
+ * El CP tiene VARIAS poblaciones y ni la `poblacion` del riesgo casa con UNA ni hay `eleccionPoblacion` válida: para y pide
+ * una persona (`requiere_humano`, en el cable `captcha`, como `ErrorEleccionVersion`). La lista viaja en
+ * `error.opcionesPoblacion` (`opcionesPoblacionDe` en errores.ts): `codigo` = texto EXACTO de la celda del portal.
+ */
+export class ErrorEleccionPoblacion extends ErrorTarificador {
+  readonly opcionesPoblacion: OpcionPoblacion[]
+  constructor(opciones: OpcionPoblacion[]) {
+    super('captcha', mensajeEleccionPoblacion(opciones))
+    this.name = 'ErrorEleccionPoblacion'
+    this.opcionesPoblacion = opciones
   }
 }
 
@@ -487,11 +505,35 @@ export async function elegirVehiculoMoto(raiz: Pick<Frame, 'locator'>, sel: Sele
 // ── Riesgo municipio: población y titulares ──
 
 /**
- * CP → buscador de poblaciones: se teclea el CP y se pulsa la LUPA con `ctx.pulsar` (no Enter: el Enter de un campo de un
- * formulario legado puede enviarlo). Si el portal no rellena la población, no se sigue: la pantalla del buscador (varias
- * poblaciones por CP) NO está grabada → hueco declarado, no se adivina.
+ * Celdas de resultado del buscador de poblaciones (inventario de estructura del 13/10/2026, marco `appArea`): un `td` por
+ * población, texto «CP- NOMBRE», `onclick="receivedDataLocationFinder({…})"` (copia la población a `#_destown`; no emite).
  */
-export async function buscarPoblacion(raiz: Pick<Frame, 'locator'>, codigoPostal: string, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'pulsar'>, timeoutMs = 10_000): Promise<void> {
+export const SEL_CELDA_POBLACION = 'td[onclick*="receivedDataLocationFinder"]'
+
+const leerCeldasPoblacion = (raiz: Pick<Frame, 'locator'>) =>
+  raiz.locator(SEL_CELDA_POBLACION).evaluateAll((els) => els.map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim()))
+
+const valorPoblacion = (raiz: Pick<Frame, 'locator'>) =>
+  raiz.locator(SEL_RIESGO_MOTO.poblacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
+
+/**
+ * CP → buscador de poblaciones: se teclea el CP y se pulsa la LUPA con `ctx.pulsar` (no Enter: el Enter de un campo de un
+ * formulario legado puede enviarlo). Después:
+ *   · el portal rellena `#_destown` solo → hecho;
+ *   · aparecen celdas `receivedDataLocationFinder` («CP- NOMBRE»): una → se pulsa; varias → `resolverPoblacion` (la
+ *     `eleccionPoblacion` de la bandeja si está en la lista; si no, la `poblacion` del riesgo si casa con UNA, salvo
+ *     mayúsculas/tildes/espacios) y se pulsa con `ctx.pulsar`; sin elección posible → `ErrorEleccionPoblacion` (persona);
+ *   · tras pulsar, `#_destown` tiene que quedar relleno; si no, hueco declarado con inventario de estructura.
+ * Ni celdas ni población a tiempo → hueco declarado con inventario. La población del cliente no sale en ningún mensaje.
+ */
+export async function buscarPoblacion(
+  raiz: Pick<Frame, 'locator'>,
+  codigoPostal: string,
+  page: Pick<Page, 'waitForTimeout'>,
+  ctx: Pick<ContextoPortal, 'pulsar'>,
+  timeoutMs = 10_000,
+  eleccion: Pick<FormularioAuto, 'poblacion' | 'eleccionPoblacion'> = {},
+): Promise<void> {
   const cp = raiz.locator(SEL_RIESGO_MOTO.codigoPostal).first()
   const lupa = raiz.locator(SEL_RIESGO_MOTO.buscarPoblacion).first()
   if ((await cp.count()) === 0 || (await lupa.count()) === 0) throw new ErrorTarificador('portal', 'allianz/moto: no aparece el buscador de poblaciones')
@@ -499,10 +541,31 @@ export async function buscarPoblacion(raiz: Pick<Frame, 'locator'>, codigoPostal
   await cp.fill(codigoPostal)
   await ctx.pulsar(lupa)
   const fin = Date.now() + timeoutMs
+  let textos: string[] = []
   for (;;) {
-    const v = await raiz.locator(SEL_RIESGO_MOTO.poblacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
-    if (v.trim() !== '') return
-    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena: varias poblaciones o ventana emergente sin grabar)', true)
+    if ((await valorPoblacion(raiz)).trim() !== '') return
+    textos = await leerCeldasPoblacion(raiz)
+    if (textos.length > 0) {
+      // La respuesta del buscador puede pintar las celdas en varias pasadas: una relectura tras una pausa corta.
+      await page.waitForTimeout(300)
+      textos = await leerCeldasPoblacion(raiz)
+      break
+    }
+    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena ni celdas de resultado)', true)
+    await page.waitForTimeout(300)
+  }
+  const opciones = opcionesPoblacionDesdeCeldas(textos)
+  if (opciones.length === 0) throw new ErrorMapaIncompleto('el formato de las celdas del buscador de poblaciones (no son «CP- NOMBRE»)', true)
+  const r = resolverPoblacion(opciones, eleccion)
+  if (r.tipo === 'ambigua') throw new ErrorEleccionPoblacion(r.opciones)
+  if (r.tipo === 'ninguna') throw new ErrorMapaIncompleto('las celdas del buscador de poblaciones', true)
+  const indice = textos.findIndex((t) => t === r.opcion.codigo)
+  if (indice < 0) throw new ErrorTarificador('portal', 'allianz/moto: la celda de la población elegida ya no está en el buscador')
+  await ctx.pulsar(raiz.locator(SEL_CELDA_POBLACION).nth(indice))
+  const finPulsar = Date.now() + timeoutMs
+  for (;;) {
+    if ((await valorPoblacion(raiz)).trim() !== '') return
+    if (Date.now() >= finPulsar) throw new ErrorMapaIncompleto('el efecto de la celda del buscador de poblaciones (tras pulsarla, la población no quedó rellena)', true)
     await page.waitForTimeout(300)
   }
 }
@@ -516,7 +579,7 @@ export function comprobarTitularesMoto(f: Pick<FormularioAuto, 'tomadorEsConduct
 
 export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'pulsar'>): Promise<void> {
   comprobarTitularesMoto(f)
-  await buscarPoblacion(raiz, f.codigoPostal, page, ctx)
+  await buscarPoblacion(raiz, f.codigoPostal, page, ctx, undefined, { poblacion: f.poblacion ?? null, eleccionPoblacion: f.eleccionPoblacion ?? null })
   for (const [sel, dato] of [[SEL_RIESGO_MOTO.tomadorEsConductor, f.tomadorEsConductor], [SEL_RIESGO_MOTO.tomadorEsPropietario, f.tomadorEsPropietario]] as const) {
     if (dato !== true) continue // null = no consta: no se toca
     await fijarSelect(raiz, sel, 'S')
@@ -713,7 +776,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    version: '0.2.0',
+    version: '0.3.0',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMoto(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

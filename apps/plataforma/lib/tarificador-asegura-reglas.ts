@@ -355,3 +355,21 @@ export function mensajeEncolar(status: number, json: unknown): { ok: true; traba
   if (status === 502) return { ok: false, mensaje: 'asegura no ha respondido: vuelve a intentarlo' }
   return { ok: false, mensaje: `asegura respondió ${status}${typeof j.mensaje === 'string' ? `: ${j.mensaje}` : typeof j.motivo === 'string' ? `: ${j.motivo}` : ''}` }
 }
+
+/**
+ * Población del CP para el riesgo de moto (13/10/2026): un CP puede tener varias y el bot pide escoger una. Si el riesgo NO
+ * trae `poblacion`, se toma la población (`ciudad`) del domicilio de la FICHA del cliente, SOLO si el CP de la ficha es el
+ * MISMO que el del riesgo (si no, esa población es de otro sitio). Puro. `null` = no se rellena (el bot pedirá persona si
+ * hace falta). El valor no se escribe en ningún log.
+ */
+export function poblacionDesdeFicha(
+  riesgo: Record<string, unknown>,
+  contacto: { codigoPostal: string | null; ciudad: string | null } | null | undefined,
+): string | null {
+  if (typeof riesgo.poblacion === 'string' && riesgo.poblacion.trim()) return null
+  const cpRiesgo = typeof riesgo.codigoPostal === 'string' ? riesgo.codigoPostal.trim() : ''
+  const cpFicha = contacto?.codigoPostal?.replace(/\s+/g, '') ?? ''
+  const ciudad = contacto?.ciudad?.replace(/\s+/g, ' ').trim() ?? ''
+  if (!/^\d{5}$/.test(cpRiesgo) || cpFicha !== cpRiesgo || ciudad === '' || ciudad.length > 80) return null
+  return ciudad
+}
