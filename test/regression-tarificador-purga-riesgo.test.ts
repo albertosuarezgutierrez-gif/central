@@ -36,6 +36,7 @@ const PARES: [string, readonly string[], number][] = [
   ['sub:seleccionVehiculo', SUBCLAVES_RIESGO.seleccionVehiculo, 1],
   ['sub:eleccionVersion', SUBCLAVES_RIESGO.eleccionVersion, 1],
   ['sub:eleccionVersionIa', SUBCLAVES_RIESGO.eleccionVersionIa, 1],
+  ['sub:vehiculoConfirmado', SUBCLAVES_RIESGO.vehiculoConfirmado, 1],
   ['estados', ESTADOS_PURGA_RIESGO, 2],
   ['emision', clavesEmision(), 1],
 ]

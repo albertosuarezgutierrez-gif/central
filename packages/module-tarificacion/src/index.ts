@@ -310,6 +310,24 @@ export {
   type SeleccionVehiculo,
   type ValidacionFormularioAuto,
 } from './formulario-auto.ts'
+// Vehículo de catálogo CONFIRMADO por matrícula en Mapfre (14/10/2026): sin matrícula ni bastidor; elige versión en otros bots.
+export {
+  ORIGENES_VEHICULO_CONFIRMADO,
+  CLAVES_VEHICULO_CONFIRMADO,
+  MAX_DENOMINACION_VEHICULO,
+  validarVehiculoConfirmado,
+  vehiculoConfirmadoDesdeMapfre,
+  eleccionPorVehiculoConfirmado,
+  eleccionPorVehiculoConfirmadoDeEtiquetas,
+  datosDesdeEtiquetaVersion,
+  type OrigenVehiculoConfirmado,
+  type VehiculoConfirmado,
+  type ValidacionVehiculoConfirmado,
+  type FilaCatalogoMapfre,
+  type DatosVersionCatalogo,
+  type CandidataConDatos,
+  type ResolucionPorVehiculoConfirmado,
+} from './vehiculo-confirmado.ts'
 // Población de un CP con varias localidades (13/10/2026): la elige el riesgo (exacta) o una persona; nunca la IA.
 export {
   PREFIJO_ELECCION_POBLACION,

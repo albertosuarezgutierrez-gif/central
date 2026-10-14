@@ -56,6 +56,11 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // guardianes.test.ts («contract en URL»).
   /contract/i,
   /validar[\s_+-]*aceptar/i,
+  // Mapfre NSEI, diálogo «Selección de vehículo» (14/10/2026): el bot NUNCA dice que el vehículo no es el suyo ni lo da de
+  // alta fuera de catálogo; si la fila no casa, PARA. Bloqueados en todo `pulsar()` y también en la función guardada
+  // del diálogo (guard.ts), aunque esta permita «Aceptar».
+  /no[\s_+-]*es[\s_+-]*el[\s_+-]*vehiculo/i,
+  /vehiculo[\s_+-]*no[\s_+-]*catalogado/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza

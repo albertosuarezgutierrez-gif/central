@@ -4,6 +4,8 @@
 // ascensor declarado no es un riesgo «sin ascensor», y una oferta sin franquicia leída no es una
 // oferta «sin franquicia».
 
+import type { VehiculoConfirmado } from './vehiculo-confirmado.ts'
+
 /** Ramos que el canal RPA sabe tarificar. Se amplía cuando haya un adaptador de otro ramo. */
 export type RamoRpa = 'comunidades' | 'auto' | 'moto'
 
@@ -186,7 +188,11 @@ export type ContextoTarificacion = {
   adjuntarPdf: (nombre: string, contenido: Uint8Array) => PdfRef
 }
 
-export type ResultadoAdaptador = { ofertas: OfertaNormalizada[] }
+/**
+ * `vehiculoConfirmado` (14/10/2026): el vehículo de catálogo que un bot confirmó por matrícula (hoy solo Mapfre). Sin
+ * matrícula ni bastidor. Opcional; el encadenado hacia otros bots es la fase siguiente (todavía no viaja por el cable).
+ */
+export type ResultadoAdaptador = { ofertas: OfertaNormalizada[]; vehiculoConfirmado?: VehiculoConfirmado | null }
 
 /**
  * Contrato de un adaptador de portal. `P` es la página del navegador (Playwright `Page` en el

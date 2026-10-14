@@ -105,6 +105,8 @@ export async function purgarRiesgosCerrados(db: DbPurga, correduriaId: string, l
                    where k <> all(${sub('eleccionVersion')}::text[]))
         or exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo->'eleccionVersionIa') = 'object' then t.riesgo->'eleccionVersionIa' else '{}'::jsonb end) k
                    where k <> all(${sub('eleccionVersionIa')}::text[]))
+        or exists (select 1 from jsonb_object_keys(case when jsonb_typeof(t.riesgo->'vehiculoConfirmado') = 'object' then t.riesgo->'vehiculoConfirmado' else '{}'::jsonb end) k
+                   where k <> all(${sub('vehiculoConfirmado')}::text[]))
       )
     order by t.updated_at desc
     limit ${limite}::int`
