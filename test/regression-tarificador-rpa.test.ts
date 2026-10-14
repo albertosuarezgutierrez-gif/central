@@ -472,7 +472,8 @@ test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en g
   assert.deepEqual(usos.map((f) => relative(RAIZ, f)), ['services/tarificador-rpa/src/explorador.ts'])
   // El guard del módulo: Archivar sigue en TEXTOS_BLOQUEADOS_ALTA (solo se abre con la opción) y PATRON_EMISION intacto.
   const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
-  assert.match(g, /export const PATRON_EMISION = \/emit\|emisi\|contrat\|formaliz\|suplement\|anul\|baja\/i/)
+  // Tras fusionar con la frontera (14/10/2026): las mismas alternativas de siempre + los verbos prohibidos (firmar/pagar/domiciliar).
+  assert.match(g, /export const PATRON_EMISION = new RegExp\(`emit\|emisi\|contrat\|formaliz\|suplement\|anul\|baja\|\$\{VERBOS_PROHIBIDOS\}`, 'i'\)/)
   assert.match(g, /\.\.\.PATRONES_GUARDADO_GUARD,/)
   assert.match(g, /const accionesDuras = opciones\.permitirGuardarPresupuesto \? 'contract' : 'store\|contract'/)
   // La lista única: emisión con todo lo que pidió Alberto; Proyecto ampliado NO es guardar.

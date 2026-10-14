@@ -170,7 +170,7 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
   if (!p) return error('no_encontrado', 'Ese presupuesto no existe en esta correduría.')
   const estado = estadoPresupuesto(p, ahora)
   if (!AVISABLE.has(estado)) return error('no_enviable', `Está ${estado}: ya no se le avisa. Prepara otro si hace falta.`)
-  // IDD (art. 20 Ley 16/2018): las necesidades del cliente se especifican ANTES de proponerle nada.
+  // IDD (art. 175.1 RDL 3/2020): las necesidades del cliente se especifican ANTES de proponerle nada.
   if (!p.necesidades?.trim()) return error('sin_necesidades', 'Antes de avisarle, escribe sus exigencias y necesidades: qué quiere asegurar y qué le importa. Es lo que luego firma con la aceptación.')
 
   // Mismo criterio que el trigger de la BD (`presupuesto_no_enviar_simulado`), por ORIGEN:

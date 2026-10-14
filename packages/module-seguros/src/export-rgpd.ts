@@ -77,7 +77,7 @@ export const FICHA_CATEGORIA: Record<CategoriaExport, Ficha> = {
     titulo: 'Constancia de que se te informó',
     origen: 'generado_por_el_sistema',
     descripcion:
-      'Cuándo se te mostró la información del mediador, con qué versión de los textos legales, desde qué IP y con qué navegador (art. 19 de la Ley 16/2018).',
+      'Cuándo se te mostró la información del mediador, con qué versión de los textos legales, desde qué IP y con qué navegador (art. 173 del RDL 3/2020).',
   },
   bienes: {
     titulo: 'Lo que aseguras',

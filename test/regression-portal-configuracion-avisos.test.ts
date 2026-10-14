@@ -129,11 +129,43 @@ test('la campana ya no lleva el interruptor de push: enlaza a Configuración', (
   assert.match(pagina, /id="avisos"/)
 })
 
-test('🚨 TODO fase B: el selector de canal NO se enseña mientras no exista el envío por correo', () => {
-  // «Solo por correo» dejaría a la persona sin recibos, siniestros ni recordatorios por ningún canal.
-  // La columna y la lógica de los crons se quedan (NULL = push); lo que no puede existir es el control.
-  const ui = sinComentarios(leer(`${APP}/app/(portal)/configuracion/AjustesAvisos.tsx`))
-  assert.doesNotMatch(ui, /guardar\(\{\s*canal/, 'la pantalla vuelve a guardar el canal')
-  assert.doesNotMatch(ui, /Solo por correo|name="canal-avisos"/, 'la pantalla vuelve a ofrecer el canal')
-  assert.match(leer(`${APP}/app/(portal)/configuracion/AjustesAvisos.tsx`), /TODO fase B/)
+// Fase B: el selector de canal ofrece SOLO `ambos` y `movil`. «Solo por correo» dejaría a la persona sin
+// recibos, siniestros ni recordatorios por ningún canal (solo existen como push).
+const UI_AVISOS = `${APP}/app/(portal)/configuracion/AjustesAvisos.tsx`
+const opcionesDelCanal = () => {
+  const ui = sinComentarios(leer(UI_AVISOS))
+  const i = ui.indexOf('Cómo quiero recibir los avisos')
+  assert.ok(i !== -1, 'no encuentro el selector de canal')
+  return ui.slice(i, ui.indexOf('</label>', i))
+}
+
+test('🚨 fase B: el selector de canal guarda el canal elegido', () => {
+  assert.match(sinComentarios(leer(UI_AVISOS)), /guardar\(\{\s*canal/)
+})
+
+test('🚨 fase B: el selector de canal ofrece «ambos» (En el móvil y por correo)', () => {
+  assert.match(opcionesDelCanal(), /<option value="ambos">En el móvil y por correo<\/option>/)
+})
+
+test('🚨 fase B: el selector de canal ofrece «movil» (Solo en el móvil)', () => {
+  assert.match(opcionesDelCanal(), /<option value="movil">Solo en el móvil<\/option>/)
+})
+
+test('🚨 fase B: la pantalla NO ofrece «correo» como canal', () => {
+  const sel = opcionesDelCanal()
+  assert.doesNotMatch(sel, /value="correo"/, 'el selector ofrece «correo»')
+  assert.doesNotMatch(sel, /Solo por correo/, 'el selector dice «Solo por correo»')
+  assert.doesNotMatch(sinComentarios(leer(UI_AVISOS)), /Solo por correo|CANALES_AVISO|guardar\(\{\s*canal:\s*'correo'/)
+})
+
+test('🚨 fase B: la nota de «Solo en el móvil» avisa de que, si no llega, se manda por correo', () => {
+  assert.match(sinComentarios(leer(UI_AVISOS)), /Si el aviso no te llega al móvil, te lo mandamos igualmente por correo\./)
+})
+
+test('🚨 fase B: la ruta del portal rechaza canal «correo» con 400', () => {
+  const r = sinComentarios(leer(`${APP}/app/api/configuracion/avisos/route.ts`))
+  const i = r.indexOf("cuerpo.canal === 'correo'")
+  assert.ok(i !== -1, 'la ruta no corta «correo»')
+  assert.match(r.slice(i, i + 120), /status: 400/)
+  assert.ok(i < r.indexOf('validarCambioPreferencias('), 'el corte tiene que ir antes de validar/guardar')
 })

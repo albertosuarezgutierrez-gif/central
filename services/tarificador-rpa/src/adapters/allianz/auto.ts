@@ -56,7 +56,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { ErrorAvanceSinLlegar } from '../../guard.ts'
+import { ErrorAvanceSinLlegar, exigirCampoNoBancario } from '../../guard.ts'
 import { abrirNuevaAlta, TARJETA_AUTOS } from './entrada.ts'
 import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
 
@@ -159,6 +159,8 @@ export async function comprobarCampo(campo: Locator): Promise<void> {
     ATRIBUTOS_CAMPO,
   )
   comprobarBoton(desc)
+  // Frontera de emisión (14/10/2026): un campo de cuenta bancaria nunca se escribe ni se elige.
+  await exigirCampoNoBancario(campo)
 }
 
 /** Lo que describe un control antes de cambiarlo: etiquetas y TODOS los manejadores que un cambio puede disparar. */

@@ -12,10 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/10/2026)** — Tarificador RPA · arranque bot **Mapfre Auto** (rama `claude/mapfre-tarificador-bot-9t5zpf`). SQL `2026-10-14_tarificador_mapfre_auto.sql` (fila mapfre/auto, `activo=false`, credencial `MAPFRE_WMEDIADORES`) **sin aplicar**; capa Mapfre en `CONOCIMIENTO-PORTALES.md`.
+Pendiente de Alberto: URL de login wmediadores, ¿SMS/2FA?, ruta de menús hasta Auto, si «Continuar» paso 3 solo tarifica, botón guardar/PDF, uso/ámbito/permiso, secrets Fly `CRED_MAPFRE_WMEDIADORES_USER/_PASS`. Alberto autorizó tocar las listas compartidas del explorador para añadir Mapfre.
 **(14/10/2026)** — Portal cliente · fase B mergeada (#4601) + arreglo de build (#4611). Avisos de aportadas, subida de prima y autorizados (umbral configurable), revisión IA de póliza (solo OpenRouter, sin datos identificativos) y «seguros que no nos constan», resumen anual, parte con ubicación, escáner de documentos, enlace para invitar a la familia (10 usos). Privacidad a `2026-10-v1` (todos re-aceptan).
 SQL aplicado el 14/10 en wswbehlcuxqxyinousql (OK de Alberto): `avisos_fase_b`, `parte_fotos_escaner`, `invitar_familia`, `revision_huecos`; RLS off, grants y REVOKE crm_seguros verificados.
 🚨 Lección: tsc/tests no ven `node:crypto` en un `'use client'`; solo `next build`. Cepo `apps/asegura-portal/lib/cliente-sin-servidor.test.ts`. Antes de mergear UI nueva del portal, `next build` local.
-Pendiente: Alberto activa push en su móvil (0 suscripciones); citas «Ley 16/2018» del portal (probable error); pantalla detalle de subida de prima; correo de vencimiento que respete canal/antelación; ficha duplicada María del Pilar (`94fa2f31`).
+Push verificado extremo a extremo (14/10): suscripción del móvil de Alberto + botón «Enviar aviso de prueba» en Configuración (#4620, `/api/push/prueba`). Pendiente: citas «Ley 16/2018» del portal (probable error); pantalla detalle de subida de prima; correo de vencimiento que respete canal/antelación; ficha duplicada María del Pilar (`94fa2f31`).
 **(13/10/2026)** — Tarificador RPA · conocimiento de portales guardado en `docs/tarificador/CONOCIMIENTO-PORTALES.md` (capa común + Allianz ePAC; enlazado desde `apps/asegura/CLAUDE.md` y el README del worker).
 Mergeados: #4585 (Hogar por la tesela «Allianz HOGAR» + evidencia en fallos de entrada), #4587 (Comercio entra por Particulares → «Allianz Negocio Plus»), #4589 (motivo recortado y espera al iframe `appArea`), #4594 (motivos de parada tipados desde una sola lista).
 En curso (`claude/explorador-oportunidad`): exploración con datos reales anclada a una oportunidad; uso y régimen de Hogar obligatorios, sin valor por defecto; nunca mezclar valores de prueba con reales.
@@ -1236,8 +1238,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Nuevo `leerCorreoEventoAseguradora` (module-seguros): siniestro/pre_anulacion/impago/anulacion/suplemento, sin IA ni IBAN/NIF. Emisión fuera (PDF/xls).
 - `POST /api/operador/correo/evento` (asegura) + tabla `seguros.correo_evento_entrante` (SQL 2026-10-14) + cola Mi mesa «Correos de compañía». Anulaciones: solo nota+tarea, nunca expediente automático.
 - Keywords: info.mapfre.com ya no es seguridad-sospechosa; +Helvetia, Mutua, Santalucía, DKV, etc.
-- Pendiente: aplicar SQL, recuperar devoluciones Occident 14/09 y 13/10 tras desplegar (OK de Alberto), botón «marcar como mirado».
+- SQL aplicado en BD (14/10). Pendiente: recuperar devoluciones Occident 14/09 y 13/10 tras desplegar (OK de Alberto), botón «marcar como mirado».
 - MAPFRE pól. 0008414300069 recibo …954 delegado: baja comunicada por intranet el 14/10 (nota en historial); vigilar anulación antes del ~19/10.
+
+## (14/10/2026) Correduría · vencimiento de oportunidad: un solo camino + «Por qué sale» en la lista de WhatsApp
+- Alberto no encontraba dónde cambiar el vencimiento de un lead (Leandro Díaz: «vence en junio, no en octubre»). Estaba escondido en «Gestionar» y por DOS caminos: `FormEdicion` cambiaba la fecha SIN mover la llamada de −45 días.
+- Ahora solo `EditarVencimiento` (siempre `reprogramar`), con botón visible «📅 Cambiar vencimiento» bajo «vence cada año…» y en cada fila de `/correduria/vencimientos`, que además lleva «Por qué sale:» (`lib/correduria/por-que-sale.ts`). asegura sirve `proximaLlamada` en leads-competencia.
+- Guardián `test/regression-un-solo-camino-vencimiento.test.ts` (visto en rojo). Pendiente: decidir si se pinta `oportunidades.fuente` (enum comercial, sin medir) y traer coche/matrícula a la fila.
 
 ## (12/10/2026) Correduría · baja firmada en cola avisa por Telegram + red diaria (#4521, mergeado)
 - Caso: baja `inmediata` Occident pól. [nº de póliza retirado] firmada en portal → quedó en `aprobacion` pendiente (caduca 15/10) sin avisar a nadie. Es diseño (inmediata nunca sale sola; Occident sin `recibe_anulaciones`).

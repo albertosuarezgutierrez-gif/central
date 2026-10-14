@@ -950,7 +950,10 @@ model PortalObligacion {
   confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
   /// Sello del envío. Que exista es lo único que impide avisar dos veces.
   avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
-  creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
+  /// Sello del PUSH (lo escribe el cron `avisos-push` del portal). Aquí solo se LEE (14/10/2026): un
+  /// correo de vencimiento se calla por «solo en el móvil» únicamente si el push salió de verdad.
+  avisadaPushAt     DateTime?            @map("avisada_push_at") @db.Timestamptz(6)
+  creadaAt         DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
   actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
 
   // 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
@@ -1245,6 +1248,17 @@ model PortalVinculo {
   @@map("portal_vinculo")
 }
 
+/// «Configuración → Avisos» del portal (14/10/2026). AQUÍ SOLO SE LEE `canal`, para que el correo de
+/// vencimiento respete «solo en el móvil» (`lib/avisos-vencimiento-canal.ts`). Lo escribe el portal; su
+/// DDL y el resto de columnas están en `apps/asegura-portal` (`prisma/sql/2026-10-13_configuracion_avisos.sql`).
+/// 🚨 `null` = «no lo ha configurado», nunca «no quiere».
+model PortalPreferenciasAvisos {
+  identidadId String  @id @map("identidad_id") @db.Uuid
+  canal       String?
+
+  @@map("portal_preferencias_avisos")
+}
+
 model PortalConsentimiento {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   identidadId  String   @map("identidad_id") @db.Uuid
@@ -1516,7 +1530,7 @@ model Presupuesto {
   salida           String?
   polizaEmitidaId  String?   @map("poliza_emitida_id") @db.Uuid
   creadoPor        String    @map("creado_por")
-  /// Exigencias y necesidades del cliente (art. 20 Ley 16/2018), escritas por el corredor. NULL = no constan.
+  /// Exigencias y necesidades del cliente (art. 175.1 RDL 3/2020), escritas por el corredor. NULL = no constan.
   necesidades      String?
   necesidadesAt    DateTime? @map("necesidades_at") @db.Timestamptz(6)
   /// Referencia propia AS-AA-NNNN que se le da al cliente (nunca el nº de Avant2). La pone la BD

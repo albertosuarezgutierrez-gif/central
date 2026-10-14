@@ -7,6 +7,8 @@ import Link from 'next/link'
 import { btnStyle } from '@/components/ui'
 import { destinoTarificar } from '@/lib/correduria/tarificar-oportunidad'
 import TarificarOportunidad from './TarificarOportunidad'
+import EditarVencimiento from './EditarVencimiento'
+import { aniversarioOportunidad } from '@/lib/correduria/seguros-cliente'
 import { eur } from '@/lib/dinero'
 import {
   RAMOS_OPORTUNIDAD_UI,
@@ -301,6 +303,10 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         {aparcada && <span style={{ color: 'var(--muted)' }}>· aparcada hasta el {fmt(o.aparcadaHasta!)}</span>}
       </div>
       <Resumen o={o} />
+      {/* Único camino para cambiar el vencimiento (14/10/2026): visible, pegado a la línea «vence cada año». */}
+      <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+        <EditarVencimiento oportunidadId={o.id} vence={aniversarioOportunidad(o.fechaFinVigencia, new Date())} proximaLlamada={o.proximaTarea?.fechaLimite.slice(0, 10) ?? null} onGuardado={onRecargar} />
+      </div>
       {o.presupuestos && <div>{textoPresupuestos(o.presupuestos)}</div>}
       {o.emision?.estado === 'riesgo_condicionado' && (
         <div style={{ color: 'var(--negative)', overflowWrap: 'anywhere' }}>
@@ -650,7 +656,6 @@ function FormEdicion({ o, onCancelar, onHecho }: {
   onHecho: (t: { ok: boolean; texto: string }) => void
 }) {
   const [ramo, setRamo] = useState(o.ramo ?? '')
-  const [vence, setVence] = useState(o.fechaFinVigencia ?? '')
   const [compania, setCompania] = useState(o.aseguradora ?? '')
   const [prima, setPrima] = useState(o.prima !== null ? String(o.prima).replace('.', ',') : '')
   const [ocupado, setOcupado] = useState(false)
@@ -664,7 +669,7 @@ function FormEdicion({ o, onCancelar, onHecho }: {
     // Solo lo que cambia: mandar un campo sin tocar lo reescribiría con lo que había en pantalla.
     const cambios: Record<string, unknown> = {}
     if (ramo && ramo !== o.ramo) cambios.ramo = ramo
-    if ((vence || null) !== o.fechaFinVigencia) cambios.fechaFinVigencia = vence || null
+    // El vencimiento NO se cambia aquí (14/10/2026): único camino = <EditarVencimiento> (con su llamada).
     if ((compania.trim() || null) !== o.aseguradora) cambios.aseguradora = compania
     if (p !== o.prima) cambios.prima = p
     if (Object.keys(cambios).length === 0) { onCancelar(); return }
@@ -684,11 +689,6 @@ function FormEdicion({ o, onCancelar, onHecho }: {
             {o.ramo === null && <option value="">Sin ramo</option>}
             {RAMOS_OPORTUNIDAD_UI.map(r => <option key={r.valor} value={r.valor}>{r.rotulo}</option>)}
           </select>
-        </label>
-        <label style={etiqueta}>
-          Le vence
-          <input type="date" value={vence} onChange={e => setVence(e.target.value)} style={campo} />
-          <AvisoFechaDudosa fecha={vence} hoy={hoyMadrid()} />
         </label>
         <label style={etiqueta}>
           Compañía actual

@@ -160,7 +160,7 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId, 
 const NOTA: React.CSSProperties = { margin: 0, fontSize: 13, color: 'var(--muted)' }
 
 /**
- * Exigencias y necesidades del cliente (IDD, art. 20 Ley 16/2018). Sin ellas asegura no deja avisarle.
+ * Exigencias y necesidades del cliente (IDD, art. 175.1 del RDL 3/2020). Sin ellas asegura no deja avisarle.
  * Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de texto de
  * siempre, que es lo que el cliente firma con la aceptación, y las respuestas van a la auditoría.
  */

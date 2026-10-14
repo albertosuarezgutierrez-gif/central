@@ -213,7 +213,7 @@ const BASES = [
   },
   {
     finalidad: 'Gestionar tus pólizas, tus renovaciones y tus siniestros mientras seas cliente',
-    base: 'Ejecución del contrato de mediación (art. 6.1.b RGPD) y deber de asesoramiento del corredor (Ley 16/2018).',
+    base: 'Ejecución del contrato de mediación (art. 6.1.b RGPD) y deber de asesoramiento del corredor (Real Decreto-ley 3/2020).',
   },
   {
     finalidad: 'Avisarte por correo antes del vencimiento de tu seguro si lo pides en la web (dos avisos por renovación) y, al confirmar tu correo, abrirte ficha para ayudarte con esa renovación; si además nos dejas tu móvil y lo aceptas, llamarte para esa misma renovación',

@@ -63,6 +63,9 @@ export {
   obligacionDerivable,
   reparoDeclarada,
   declaradaGeneraObligacion,
+  sellosAReiniciar,
+  selloDeEsteCiclo,
+  DIAS_VIGENCIA_SELLO,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
 export {
@@ -329,7 +332,7 @@ export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania
 export { vistaDelParte, entradaValida } from './parte-entrada.ts'
 export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
-// (art. 19 LDS) al entrar, y los consentimientos `comercial` y `avisos` (este,
+// (art. 173 RDL 3/2020) al entrar, y los consentimientos `comercial` y `avisos` (este,
 // desde el 13/10/2026: la bienvenida de avisos y «Configuración»).
 export {
   TIPOS_CONSENTIMIENTO,
@@ -706,3 +709,5 @@ export type {
   PreferenciasAvisosGuardadas,
   ResultadoCambioPreferencias,
 } from './preferencias-avisos.ts'
+// Evolución de la prima (14/10/2026): detalle al que lleva el push de subida de prima.
+export { baseDeUnidad, evolucionDePrima, porcentajeDeSubida, type EvolucionPrima, type FilaPrimaObservada } from './evolucion-prima.ts'

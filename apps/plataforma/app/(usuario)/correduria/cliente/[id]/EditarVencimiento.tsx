@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { planTareaTrasVencimiento } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { DIAS_POR_MES, NOMBRES_MES, ajustarDiaAlMes, fechaDeDiaYMes, proximoAniversario } from '@/lib/correduria/aniversario'
@@ -29,8 +29,15 @@ const fmt = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice
 
 const selectStyle = { minHeight: 44, minWidth: 0, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 14, background: 'var(--surface)', color: 'var(--text)' } as const
 
-export default function EditarVencimiento(props: { vence: string | null; proximaLlamada: string | null } & ({ oportunidadId: string } | { polizaId: string })) {
+/**
+ * Único camino para cambiar el vencimiento de una oportunidad (14/10/2026): siempre manda
+ * `reprogramar` y siempre enseña el plan de la llamada. Se usa en la ficha (tarjeta de oportunidad y
+ * póliza) y en la lista de WhatsApp de Vencimientos; ahí `onGuardado` recarga la lista sin desmontar
+ * (sin él, se refresca la ruta). Guardián: `test/regression-un-solo-camino-vencimiento.test.ts`.
+ */
+export default function EditarVencimiento(props: { vence: string | null; proximaLlamada: string | null; onGuardado?: () => void } & ({ oportunidadId: string } | { polizaId: string })) {
   const router = useRouter()
+  const etqId = useId()
   const [abierto, setAbierto] = useState(false)
   const [dia, setDia] = useState(props.vence ? String(Number(props.vence.slice(8, 10))) : '')
   const [mes, setMes] = useState(props.vence ? String(Number(props.vence.slice(5, 7))) : '')
@@ -64,7 +71,8 @@ export default function EditarVencimiento(props: { vence: string | null; proxima
       const r = await post('/api/correduria/oportunidad', { accion: 'editar', id, fechaFinVigencia: fecha, reprogramar: textoPlan !== null && reprogramar })
       if (!r.ok) return setError(sinSeguimiento ? `Se abrió su seguimiento, pero la fecha no se ha guardado: ${motivo(r)}` : `No se ha guardado: ${motivo(r)}`)
       setAbierto(false)
-      router.refresh()
+      if (props.onGuardado) props.onGuardado()
+      else router.refresh()
     } catch {
       setError('Sin conexión: no se sabe si se guardó. Recarga antes de repetirlo.')
     } finally {
@@ -75,15 +83,15 @@ export default function EditarVencimiento(props: { vence: string | null; proxima
   if (!abierto) {
     return (
       <button type="button" onClick={() => { setDia(props.vence ? String(Number(props.vence.slice(8, 10))) : ''); setMes(props.vence ? String(Number(props.vence.slice(5, 7))) : ''); setError(null); setAbierto(true) }} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
-        {props.vence ? 'Cambiar vencimiento' : 'Poner vencimiento'}
+        {props.vence ? '📅 Cambiar vencimiento' : '📅 Poner vencimiento'}
       </button>
     )
   }
   return (
     <div role="group" aria-label="Fecha de vencimiento" style={{ display: 'grid', gap: 8, flexBasis: '100%', fontSize: 13 }}>
       <div style={{ display: 'grid', gap: 4, color: 'var(--muted)' }}>
-        <span id="venc-etq">Le vence cada año el (día y mes)</span>
-        <div role="group" aria-labelledby="venc-etq" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)', gap: 8 }}>
+        <span id={etqId}>Le vence cada año el (día y mes)</span>
+        <div role="group" aria-labelledby={etqId} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 2fr)', gap: 8 }}>
           <select aria-label="Día" value={dia} onChange={e => setDia(e.target.value)} autoFocus style={selectStyle}>
             <option value="">Día</option>
             {Array.from({ length: Number(mes) >= 1 ? DIAS_POR_MES[Number(mes) - 1] : 31 }, (_, i) => i + 1).map(n => <option key={n} value={n}>{n}</option>)}

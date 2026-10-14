@@ -3,7 +3,7 @@
 // que se cuida más que el resto: campos grandes, teclado correcto en móvil y
 // tres estados visibles (enviando · recibido · el motivo exacto por el que no).
 //
-// 🚨 Art. 13 RGPD y art. 19 de la Ley 16/2018: quién trata los datos y quién
+// 🚨 Art. 13 RGPD y art. 173 del RDL 3/2020: quién trata los datos y quién
 // media se dicen ANTES de que la persona escriba su correo, no en una página
 // aparte a la que nadie entra. De ahí el bloque de aviso encima del botón y el
 // consentimiento explícito, que va sin marcar por defecto (una casilla premarcada

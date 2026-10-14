@@ -1,7 +1,7 @@
 /**
  * Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al
- * cliente final: información precontractual del art. 19 de la Ley 16/2018 de
- * Distribución de Seguros (LDS), pies de página legales y políticas.
+ * cliente final: información precontractual del art. 173 del Real Decreto-ley
+ * 3/2020 (distribución de seguros), pies de página legales y políticas.
  *
  * Vive en `@central/module-seguros` y no en una app porque los DOS lados de la
  * correduría lo necesitan y tienen que decir exactamente lo mismo: el panel del
@@ -11,7 +11,7 @@
  *
  * 🚨 Lo que NO se declara aquí, a propósito:
  *
- * - **La lista de ramos.** El art. 19 LDS no la exige (pide identidad, registro,
+ * - **La lista de ramos.** El art. 173 RDL 3/2020 no la exige (pide identidad, registro,
  *   participaciones, ausencia de vinculación y procedimiento de reclamación), y
  *   el alcance exacto de la inscripción en el Registro Administrativo de la
  *   DGSFP no se ha comprobado contra el registro público. Enumerar ramos sin
@@ -174,21 +174,21 @@ export const MEDIADOR = {
      */
     portal: 'https://clientes.grupoasegura.es',
   },
-  /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
+  /** Seguro de responsabilidad civil profesional, art. 157.1.g RDL 3/2020. */
   responsabilidadCivil: {
     aseguradora: "Lloyd's of London",
     poliza: 'M201900135',
-    referenciaLegal: 'Art. 156.3 Ley 16/2018',
+    referenciaLegal: 'Art. 157.1.g RDL 3/2020',
   },
   remuneracion: {
     naturaleza: 'Comisión sobre la prima, abonada por la entidad aseguradora',
-    /** Redacción breve para la pantalla precontractual (art. 19.1.f LDS). */
+    /** Redacción breve para la pantalla precontractual (art. 173 RDL 3/2020). */
     resumen:
       'El mediador percibe una comisión sobre la prima que abona la entidad aseguradora. El cliente no paga ningún honorario adicional por el servicio de mediación.',
   },
 } as const
 
-/** Ausencia de vinculación contractual exclusiva (art. 19.1.b LDS). */
+/** Ausencia de vinculación contractual exclusiva (art. 173 RDL 3/2020). */
 export const NO_EXCLUSIVIDAD =
   'Como corredor de seguros, el mediador no mantiene vinculación contractual exclusiva con ninguna entidad aseguradora, ni posee participación directa o indirecta superior al 10 % en ninguna de ellas, ni ninguna entidad aseguradora participa en más del 10 % en el mediador. El asesoramiento se presta con criterio de imparcialidad sobre las compañías disponibles.'
 
@@ -226,7 +226,7 @@ export type CanalReclamacion = (typeof CANALES_RECLAMACION)[number]
 export type IdCanalReclamacion = CanalReclamacion['id']
 
 /**
- * Los cuatro apartados obligatorios del art. 19 LDS en formato escaneable. Es lo
+ * Los cuatro apartados obligatorios del art. 173 RDL 3/2020 en formato escaneable. Es lo
  * que va en la pantalla precontractual y en el pie de las apps; la versión larga
  * vive en la página de información del mediador de cada app.
  */
@@ -259,7 +259,7 @@ export type IdPuntoPrecontractual = PuntoPrecontractual['id']
 
 /**
  * Una línea con la identificación mínima del mediador, para pies de página donde
- * no cabe la ficha entera. Es lo que el art. 19 exige que el cliente vea SIEMPRE,
+ * no cabe la ficha entera. Es lo que el art. 173 RDL 3/2020 exige que el cliente vea SIEMPRE,
  * no solo si entra en una página aparte.
  */
 export function lineaIdentificacion(): string {

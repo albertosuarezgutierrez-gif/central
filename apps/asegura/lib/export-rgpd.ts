@@ -155,7 +155,7 @@ export async function exportRgpdDeIdentidad(
     // 🚨 Con `select` explícito, no con la fila entera. Una columna nueva en la
     // tabla entraría sola en un documento que se le manda a una persona, sin
     // que nadie lo decidiera. La IP y el navegador SÍ van: son datos suyos y el
-    // propio paquete dice que se guardan y por qué (art. 19 de la Ley 16/2018),
+    // propio paquete dice que se guardan y por qué (art. 173 del RDL 3/2020),
     // así que quitarlos dejaría la descripción mintiendo y le negaría algo a lo
     // que el art. 15 le da derecho.
     await bloque('acreditaciones', () =>

@@ -12,7 +12,11 @@
 // dispara: falso positivo aceptado).
 import { PATRONES_GUARDADO_GUARD } from './acciones-portal.ts'
 
-export const PATRON_EMISION = /emit|emisi|contrat|formaliz|suplement|anul|baja/i
+// Verbos de botón que Alberto prohíbe sin su OK (14/10/2026): firmar, pagar, domiciliar. SOLO como palabra completa
+// (sin `\b`: `btn_pagar` y `btnPagar` cuentan; «confirmar» se salva con `(?<!con)`) para no tocar etiquetas de formulario: «Forma de pago»,
+// «Fraccionamiento de pago», «Domicilio», «Confirmar».
+const VERBOS_PROHIBIDOS = '(?:(?<!con)firmar|firma[\\s_+-]*digital|pagar|pago[\\s_+-]*con[\\s_+-]*tarjeta|realizar[\\s_+-]*(?:el[\\s_+-]*)?pago|domiciliar)(?![a-z])'
+export const PATRON_EMISION = new RegExp(`emit|emisi|contrat|formaliz|suplement|anul|baja|${VERBOS_PROHIBIDOS}`, 'i')
 
 // Textos de Allianz ePAC (capturas del 05/10/2026) que el bot NUNCA debe pulsar, sea cual sea la fase:
 // el radio «ELIJA UNA OPCIÓN» (por texto; la elección legítima va por la máquina de fases), «RECUPERACIÓN
@@ -159,6 +163,18 @@ export function comprobarUrl(url: string, opciones: OpcionesGuard = {}): void {
  */
 export function comprobarBoton(descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}): void {
   for (const d of descripciones) {
-    if (pareceEmision(d, opciones)) throw new EmisionBloqueadaError('boton', String(d))
+    if (pareceEmision(d, opciones) || esTextoBotonProhibido(d)) throw new EmisionBloqueadaError('boton', String(d))
   }
+}
+
+/**
+ * Textos de BOTÓN prohibidos solo como texto ENTERO (Alberto, 14/10/2026): «Pago», «Ir al pago», «Confirmar pago»,
+ * «Firma», «Firmar», «Domiciliación (bancaria)». Anclado y FUERA de `PATRON_EMISION` (que también mira URLs y cuerpos):
+ * «Forma de pago», «Fraccionamiento de pago» o «Confirmar» siguen pasando. Se ignoran signos/flechas en los extremos.
+ */
+const RE_TEXTO_BOTON_PROHIBIDO = /^(?:pago|ir al pago|confirmar (?:el )?pago|firma|firmar|domiciliacion(?: bancaria)?)$/
+export function esTextoBotonProhibido(texto: string | null | undefined): boolean {
+  if (typeof texto !== 'string' || texto === '') return false
+  const t = plano(texto).toLowerCase().replace(/\s+/g, ' ').replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
+  return RE_TEXTO_BOTON_PROHIBIDO.test(t)
 }
