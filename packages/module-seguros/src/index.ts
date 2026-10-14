@@ -1176,6 +1176,8 @@ export {
   MOTIVO_POLIZA_ANULADA,
   clasificarMotivoDevolucion,
   normalizarIdRecibo,
+  elegirReciboEmparejado,
+  SUFIJO_ID_RECIBO_SQL,
   type DevolucionLeida,
   type LecturaCorreoDevolucion,
   type CorreoDevolucion,
