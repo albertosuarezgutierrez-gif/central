@@ -81,8 +81,7 @@
   Acuerdos)», «… (Acuerdos)» y «Tarificación y Emisión» (`pulsarEnlaceEntradaAutorizado`, cada una una vez). Con sufijo,
   prefijo u otra redacción, desde el bucle IA u otra compañía: bloqueado. La URL de la pestaña nueva sigue pasando por el
   guard de red: si llevara «emision», se aborta (fail-closed; verlo en el primer intento real).
-- 🚨 **Hueco:** el ramo `auto` aún NO tiene catálogo de exploración (`CATALOGO_EXPLORACION` solo hogar/comunidades): el
-  bucle IA en NSEI rechazará todo lote (`ambiguo` / `lote_no_valido`) hasta que se añada.
+- **Catálogo auto (14/10/2026):** `CATALOGO_EXPLORACION.auto` (explorador.ts) con claves de `FormularioAuto` (efecto, tomador, matrícula, CP, marca/modelo/cc, conductor nacimiento/carné, siniestros 5 años, años asegurado). Fuera por no tener origen en `FormularioAuto`: uso, ámbito, clase de permiso, compañía anterior (nombre) y NIF del conductor. Guard: `firmar/pagar/domiciliar` añadidos a `PATRON_EMISION`.
 - **Tecnología:** SPA Angular Material **sin iframes**; todo el DOM es legible. Los `mat-input-N` NO se usan
   (son contadores de Angular Material); los selectores van por `name`/`formcontrolname` con ámbito de componente.
 - **Stepper de 6 pasos** (todos los componentes viven a la vez en el DOM; manda el paso activo):

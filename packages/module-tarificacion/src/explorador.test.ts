@@ -166,6 +166,49 @@ describe('catálogo y resolución de datos', () => {
     expect(JSON.stringify(c)).not.toContain('Ficticio')
   })
 
+  describe('catálogo de AUTO (Mapfre NSEI)', () => {
+    const auto = { ramo: 'auto', riesgo: {}, env: {}, hoy: new Date('2026-10-14T10:00:00Z') }
+    const claves = () => catalogoParaIA('auto').map((d) => d.clave)
+
+    it('tiene catálogo y las claves del formulario de auto', () => {
+      for (const k of ['efecto.fecha', 'tomador.nif', 'tomador.fecha_nacimiento', 'vehiculo.matricula', 'vehiculo.codigo_postal', 'conductor.fecha_nacimiento', 'conductor.fecha_carne', 'historial.siniestros_5_anios', 'historial.anios_asegurado']) {
+        expect(claves(), k).toContain(k)
+      }
+    })
+    it('claves únicas', () => {
+      expect(new Set(claves()).size).toBe(claves().length)
+    })
+    it('la IA no ve valores de lo personal (NIF, matrícula, fechas del conductor)', () => {
+      const c = catalogoParaIA('auto')
+      for (const k of ['tomador.nif', 'vehiculo.matricula', 'conductor.fecha_nacimiento', 'conductor.fecha_carne']) {
+        expect(c.find((d) => d.clave === k), k).toEqual({ clave: k, descripcion: expect.any(String), tipo: expect.any(String) })
+      }
+    })
+    it('sin petición real: NIF y matrícula PARAN (sin valor sintético)', () => {
+      expect(resolverDato('tomador.nif', { ...auto, conDatosReales: false })).toEqual({ ok: false, motivo: 'dato_sensible_requerido' })
+      expect(resolverDato('vehiculo.matricula', { ...auto, conDatosReales: false })).toEqual({ ok: false, motivo: 'dato_sensible_requerido' })
+    })
+    it('con petición real: sale del FormularioAuto, la fecha ISO pasa a dd/mm/aaaa y lo ausente PARA', () => {
+      const riesgo = { matricula: '0000BBB', codigoPostal: '41001', conductor: { fechaNacimiento: '1985-03-07', fechaCarne: '2004-05-09' }, tomador: { documentoIdentidad: '00000000T' }, siniestrosUltimos5Anios: 0 }
+      const real = { ...auto, conDatosReales: true, riesgo }
+      expect(resolverDato('vehiculo.matricula', real)).toEqual({ ok: true, valor: '0000BBB' })
+      expect(resolverDato('tomador.nif', real)).toEqual({ ok: true, valor: '00000000T' })
+      expect(resolverDato('conductor.fecha_nacimiento', real)).toEqual({ ok: true, valor: '07/03/1985' })
+      expect(resolverDato('conductor.fecha_carne', real)).toEqual({ ok: true, valor: '09/05/2004' })
+      expect(resolverDato('historial.siniestros_5_anios', real)).toEqual({ ok: true, valor: '0' })
+      expect(resolverDato('historial.anios_asegurado', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+      expect(resolverDato('vehiculo.marca', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    })
+    it('los valores del riesgo de auto se quitan del inventario (NIF del tomador y fecha del carné)', () => {
+      const v = valoresSensiblesExploracion({ conDatosReales: true, env: {}, riesgo: { tomador: { documentoIdentidad: '00000000T' }, conductor: { fechaCarne: '2004-05-09' } } })!
+      expect(v).toContain('00000000T')
+      expect(v).toContain('09/05/2004')
+    })
+    it('no hay uso, ámbito, clase de permiso ni compañía anterior inventados', () => {
+      expect(claves().filter((k) => /uso|ambito|permiso|compania/.test(k))).toEqual([])
+    })
+  })
+
   it('contacto solo de entorno; sin entorno o mal formado → para', () => {
     expect(resolverDato('contacto.email', { ...base, conDatosReales: false })).toEqual({ ok: false, motivo: 'dato_no_disponible' })
     expect(resolverDato('contacto.email', { ...base, conDatosReales: false, env: { TARIFICADOR_EXPLORADOR_EMAIL: 'no-es-correo' } }).ok).toBe(false)

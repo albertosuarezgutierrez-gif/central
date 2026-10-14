@@ -20,6 +20,28 @@ import {
   nombresCredencial,
 } from './index.ts'
 
+describe('guard de emisión · verbos firmar/pagar/domiciliar (14/10/2026)', () => {
+  it.each(['Firmar', 'firmar póliza', 'Firma digital', 'btn_firmar', 'Pagar', 'Pago con tarjeta', 'Realizar pago', 'Realizar el pago', 'btnPagar', 'Domiciliar', 'Domiciliar recibo'])(
+    'bloquea «%s»',
+    (d) => {
+      expect(pareceEmision(d, { permitirAceptar: true })).toBe(true)
+      expect(() => comprobarBoton([d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+    },
+  )
+  it('bloquea cada verbo por separado (arm firmar)', () => {
+    expect(pareceEmision('firmar')).toBe(true)
+  })
+  it('bloquea cada verbo por separado (arm pagar)', () => {
+    expect(pareceEmision('pagar')).toBe(true)
+  })
+  it('bloquea cada verbo por separado (arm domiciliar)', () => {
+    expect(pareceEmision('domiciliar')).toBe(true)
+  })
+  it.each(['Forma de pago', 'Fraccionamiento de pago', 'Domicilio', 'Domicilio del riesgo', 'Confirmar', 'Firmante', 'Código postal', 'Tipo de pago'])('deja pasar la etiqueta «%s»', (d) => {
+    expect(pareceEmision(d, { permitirAceptar: true })).toBe(false)
+  })
+})
+
 describe('guard de emisión · Allianz RC PYME (07/10/2026)', () => {
   it.each(['menu3', 'menu4', 'menu5', 'MENU5', 'btnAccept', 'btnFracciona', 'Pago fraccionado', 'Proyecto ampliado', 'Datos emisión', 'Archivar', 'emision_ipid()'])(
     'bloquea «%s»',

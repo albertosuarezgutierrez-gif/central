@@ -147,9 +147,32 @@ const DATOS_COMUNIDADES: readonly DatoCatalogo[] = [
   D({ clave: 'comunidad.capital_continente', descripcion: 'Capital de continente en euros', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '1500000', rutaRiesgo: 'comunidad.capitalContinente' }),
 ]
 
+/**
+ * Riesgo de AUTO (Mapfre NSEI, 14/10/2026): rutas = `FormularioAuto` (formulario-auto.ts). Sin valor sintético lo que puede
+ * ser de una persona real (NIF, matrícula) o que la IA no puede inventar sin falsear la tarifa (marca, modelo, siniestros).
+ * FUERA a propósito (sin origen claro en FormularioAuto): uso del vehículo, ámbito de circulación, clase de permiso,
+ * compañía anterior (nombre) y NIF del conductor (si es otra persona que el tomador no consta). Nada de cuenta bancaria.
+ */
+const DATOS_AUTO: readonly DatoCatalogo[] = [
+  D({ clave: 'tomador.nif', descripcion: 'NIF/NIE/CIF del tomador', tipo: 'texto', personal: true, fuente: 'riesgo', rutaRiesgo: 'tomador.documentoIdentidad' }),
+  D({ clave: 'vehiculo.matricula', descripcion: 'Matrícula del vehículo', tipo: 'texto', personal: true, fuente: 'riesgo', rutaRiesgo: 'matricula' }),
+  D({ clave: 'vehiculo.codigo_postal', descripcion: 'Código postal de circulación/pernocta', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: '41001', rutaRiesgo: 'codigoPostal' }),
+  D({ clave: 'vehiculo.marca', descripcion: 'Marca del vehículo', tipo: 'texto', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.marca' }),
+  D({ clave: 'vehiculo.modelo', descripcion: 'Modelo del vehículo', tipo: 'texto', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.modelo' }),
+  D({ clave: 'vehiculo.cilindrada_cc', descripcion: 'Cilindrada en cc', tipo: 'numero', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.cilindradaCc' }),
+  D({ clave: 'conductor.fecha_nacimiento', descripcion: 'Fecha de nacimiento del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/1980', rutaRiesgo: 'conductor.fechaNacimiento' }),
+  D({ clave: 'conductor.fecha_carne', descripcion: 'Fecha del carné de conducir del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/2000', rutaRiesgo: 'conductor.fechaCarne' }),
+  D({ clave: 'historial.siniestros_5_anios', descripcion: 'Siniestros con culpa (RC) en los últimos 5 años', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '0', rutaRiesgo: 'siniestrosUltimos5Anios' }),
+  D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
+]
+
+/** Fecha de efecto y contacto: los comunes. En auto, el NIF y la fecha de nacimiento del tomador salen del formulario de auto (arriba y comunes). */
+const DATOS_COMUNES_AUTO: readonly DatoCatalogo[] = DATOS_COMUNES.filter((d) => d.clave !== 'tomador.nif' && d.clave !== 'tomador.nombre_completo')
+
 export const CATALOGO_EXPLORACION: Readonly<Record<string, readonly DatoCatalogo[]>> = Object.freeze({
   hogar: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_HOGAR]),
   comunidades: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_COMUNIDADES]),
+  auto: Object.freeze([...DATOS_COMUNES_AUTO, ...DATOS_AUTO]),
 })
 
 export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
@@ -242,6 +265,15 @@ const RE_TELEFONO = /^\+?\d[\d\s]{7,15}$/
  * IA, ni a asegura, ni al log. Fail-closed: sin valor seguro → motivo de parada.
  */
 export function resolverDato(clave: string, ctx: ContextoDatos): DatoResuelto {
+  const r = resolverDatoCrudo(clave, ctx)
+  if (!r.ok) return r
+  const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
+  // El riesgo de auto guarda las fechas en ISO (AAAA-MM-DD); el portal las pide dd/mm/aaaa.
+  const iso = d?.tipo === 'fecha' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.valor) : null
+  return iso ? { ok: true, valor: `${iso[3]}/${iso[2]}/${iso[1]}` } : r
+}
+
+function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
   const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
   if (!d) return { ok: false, motivo: 'clave_desconocida' }
   if (d.fuente === 'entorno') {

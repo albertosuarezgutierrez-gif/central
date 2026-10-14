@@ -391,7 +391,7 @@ export function redactarValoresInventario(inv: InventarioDom, valores: readonly 
 const CLAVES_RIESGO_SENSIBLES = new Set([
   'nombre', 'nombrecompleto', 'apellido', 'apellido1', 'apellido2', 'apellidos', 'razonsocial',
   'direccion', 'domicilio', 'via', 'nombrevia', 'calle', 'codigopostal', 'cp', 'poblacion', 'municipio', 'localidad',
-  'fechanacimiento', 'matricula', 'nif', 'dni', 'nie', 'documento', 'email', 'correo', 'telefono', 'movil',
+  'fechanacimiento', 'fechacarne', 'matricula', 'nif', 'documentoidentidad', 'dni', 'nie', 'documento', 'email', 'correo', 'telefono', 'movil',
 ])
 
 /**
