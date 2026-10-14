@@ -123,7 +123,10 @@ test('Mapfre: la entrada resuelve sus tres pulsaciones con respaldo (pestaña, o
 export function stubsDeHueco(fuente: string): string[] {
   const sf = ts.createSourceFile('x.ts', fuente, ts.ScriptTarget.Latest, true)
   const out: string[] = []
-  const esHueco = (s: ts.Statement) => ts.isThrowStatement(s) && !!s.expression && ts.isNewExpression(s.expression) && ts.isIdentifier(s.expression.expression) && /^ErrorMapa/.test(s.expression.expression.text)
+  const esNuevoHueco = (e: ts.Expression | undefined) => !!e && ts.isNewExpression(e) && ts.isIdentifier(e.expression) && /^ErrorMapa/.test(e.expression.text)
+  // `throw new ErrorMapa…` o `return Promise.reject(new ErrorMapa…)`
+  const esRechazo = (e: ts.Expression | undefined) => !!e && ts.isCallExpression(e) && e.expression.getText(sf) === 'Promise.reject' && esNuevoHueco(e.arguments[0])
+  const esHueco = (s: ts.Statement) => (ts.isThrowStatement(s) && esNuevoHueco(s.expression)) || (ts.isReturnStatement(s) && esRechazo(s.expression))
   const visitar = (n: ts.Node): void => {
     if ((ts.isFunctionDeclaration(n) || ts.isArrowFunction(n) || ts.isFunctionExpression(n) || ts.isMethodDeclaration(n)) && n.body && ts.isBlock(n.body)) {
       const st = n.body.statements
@@ -138,5 +141,6 @@ export function stubsDeHueco(fuente: string): string[] {
 test('ningún adaptador registrado tiene una función-stub que solo lanza un hueco de mapa (va por la capa común)', () => {
   for (const f of new Set(registrados().values())) assert.deepEqual(stubsDeHueco(leer(f)), [], `${f}: stub de hueco sin respaldo IA/atasco`)
   assert.deepEqual(stubsDeHueco('export async function lupa(_p: unknown): Promise<void> {\n  throw new ErrorMapaIncompleto(\'x\', true)\n}'), ['lupa'])
+  assert.deepEqual(stubsDeHueco('function g() { return Promise.reject(new ErrorMapaIncompleto(\'x\')) }'), ['g'], 'Promise.reject también')
   assert.deepEqual(stubsDeHueco('function f(a: number) { if (a) throw new ErrorMapaIncompleto(\'x\'); return 1 }'), [], 'un throw condicional no es stub')
 })

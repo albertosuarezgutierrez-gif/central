@@ -670,7 +670,7 @@ test('MAPFRE · la LUPA del tomador solo por pulsarBuscarTomadorMapfre: comproba
   const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarBuscarTomadorMapfre'))
   assert.ok(fn, 'falta pulsarBuscarTomadorMapfre en guard.ts')
   const clic = fn!.indexOf('.click(')
-  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'usados.has(clave)', "usados.has('mapfre:continuar:datosBasicos')", 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'DATOS BASICOS'", 'SEL_DATOS_BASICOS_MAPFRE', 'comprobarBoton(await descripcion(boton))', 'esControlBuscarTomador(ctl)', 'usados.add(clave)']) {
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'usados.has(clave)', "usados.has('mapfre:continuar:datosBasicos')", 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'DATOS BASICOS'", 'SEL_DATOS_BASICOS_MAPFRE', 'comprobarBoton(await descripcion(boton, true))', 'esControlBuscarTomador(ctl)', 'usados.add(clave)']) {
     const i = fn!.indexOf(paso)
     assert.ok(i > -1 && i < clic, `pulsarBuscarTomadorMapfre: «${paso}» tiene que ir ANTES del clic`)
   }
@@ -690,4 +690,14 @@ test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactad
   assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
   const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
   assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
+})
+
+test('la clave `buscar_tomador` (lupa del tomador) solo existe en Mapfre auto (+ formador.ts y guard.ts, donde se define), en ningún otro adaptador', () => {
+  const infractores = ficheros(join(SRV, 'src/adapters'))
+    .filter((f) => !f.endsWith(join('adapters', 'mapfre', 'auto.ts')))
+    .filter((f) => /buscar_tomador/.test(readFileSync(f, 'utf8')))
+    .map((f) => relative(RAIZ, f))
+  assert.deepEqual(infractores, [], 'buscar_tomador fuera de mapfre/auto.ts')
+  assert.match(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'), /buscar_tomador/, 'el guardián ve la clave donde debe estar')
+  for (const f of ['src/formador.ts', 'src/guard.ts']) assert.match(readFileSync(join(SRV, f), 'utf8'), /buscar_tomador/, f)
 })

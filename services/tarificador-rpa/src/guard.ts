@@ -415,9 +415,11 @@ async function enMarcos(page: Page, buscar: (f: Frame) => Locator): Promise<{ to
   return { total, locator, marcos }
 }
 
-async function descripcion(boton: Locator): Promise<(string | null)[]> {
-  return boton.evaluate((el) => {
-    const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
+async function descripcion(boton: Locator, alContenedor = false): Promise<(string | null)[]> {
+  return boton.evaluate((el, subir) => {
+    // `subir`: si el control es un hijo (p. ej. `mat-icon`) de un botón/enlace/ng-click, la decisión es sobre ESE contenedor.
+    const base = subir ? (el.closest('button,a,[role=button],[role=menuitem],[role=tab],nx-button,[ng-click],[onclick],[\\(click\\)]') ?? el) : el
+    const h = base as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
     return [
       h.innerText ?? h.textContent ?? '',
       h.getAttribute('aria-label'),
@@ -445,7 +447,7 @@ async function descripcion(boton: Locator): Promise<(string | null)[]> {
         return out
       })(),
     ]
-  })
+  }, alContenedor)
 }
 
 /** Elige la modalidad (radio bajo la fila de opción): Datos Básicos, una vez, pestaña verificada. */
@@ -996,7 +998,9 @@ export async function pulsarBuscarTomadorMapfre(page: Page, guard: GuardEmision,
   if (!activo.includes('DATOS BASICOS')) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre solo en «Datos básicos»')
   if ((await boton.count()) !== 1 || !(await boton.isVisible())) throw new EmisionBloqueadaError('boton', 'lupa del tomador: no hay exactamente un control visible')
   const ctl = await boton.evaluate((el, s) => {
-    const h = el as HTMLElement & { disabled?: unknown }
+    // Un clic sobre un hijo (mat-icon…) lo recibe su contenedor pulsable: se juzga el CONTENEDOR, no el icono.
+    const cont = el.closest('button,a,[role=button],[role=menuitem],[role=tab],nx-button,[ng-click],[onclick],[\\(click\\)]')
+    const h = (cont ?? el) as HTMLElement & { disabled?: unknown }
     const ICONO = 'mat-icon, [data-mat-icon-name], [fonticon], [svgicon], i[class], svg'
     const iconos = h.matches(ICONO) ? [h] : Array.from(h.querySelectorAll(ICONO))
     const icono = iconos
@@ -1005,8 +1009,8 @@ export async function pulsarBuscarTomadorMapfre(page: Page, guard: GuardEmision,
     const clon = h.cloneNode(true) as HTMLElement
     clon.querySelectorAll('mat-icon').forEach((x) => x.remove())
     return {
-      dentro: h.closest(s.ambito) !== null,
-      enDialogo: h.closest(s.dialogo) !== null,
+      dentro: h.closest(s.ambito) !== null && el.closest(s.ambito) !== null,
+      enDialogo: h.closest(s.dialogo) !== null || el.closest(s.dialogo) !== null,
       deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
       textoSinIcono: h.tagName === 'MAT-ICON' ? '' : (clon.textContent ?? '').replace(/\s+/g, ' ').trim(),
       ariaLabel: h.getAttribute('aria-label'),
@@ -1017,7 +1021,7 @@ export async function pulsarBuscarTomadorMapfre(page: Page, guard: GuardEmision,
   }, { ambito: SEL_DATOS_BASICOS_MAPFRE, dialogo: SEL_DIALOGO_ABIERTO_MAPFRE })
   if (!ctl.dentro || ctl.enDialogo) throw new EmisionBloqueadaError('boton', 'la lupa del tomador tiene que estar en «Datos básicos», fuera de diálogos')
   if (ctl.deshabilitado) throw new ErrorTarificador('portal', 'mapfre: la lupa del tomador está deshabilitada')
-  comprobarBoton(await descripcion(boton))
+  comprobarBoton(await descripcion(boton, true))
   if (!esControlBuscarTomador(ctl)) throw new EmisionBloqueadaError('boton', 'lupa del tomador: el control no es una lupa de búsqueda')
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)

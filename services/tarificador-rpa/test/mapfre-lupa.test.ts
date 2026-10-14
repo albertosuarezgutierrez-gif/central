@@ -135,6 +135,22 @@ test('puerta: «Buscar y contratar» / «Emitir» / mattooltip «Contratar» con
   }
 })
 
+test('puerta: un mat-icon «search» DENTRO de un contenedor pulsable que no es de búsqueda (Emitir) no se pulsa; se juzga el contenedor', async () => {
+  for (const malo of [
+    `<button aria-label="Emitir" onclick="${CARGAR}"><mat-icon id="lupa">search</mat-icon></button>`,
+    `<div ng-click="emitir()" aria-label="Emitir" onclick="${CARGAR}"><mat-icon id="lupa">search</mat-icon></div>`,
+  ]) {
+    const { page, guard } = await preparar(PANTALLA(malo))
+    await assert.rejects(() => pulsarBuscarTomadorMapfre(page, guard, page.locator('#lupa')), EmisionBloqueadaError, malo)
+    assert.equal(await busquedas(page), 0, malo)
+    await page.context().close()
+  }
+  const bueno = await preparar(PANTALLA(`<button aria-label="Buscar" onclick="${CARGAR}"><mat-icon id="lupa">search</mat-icon></button>`))
+  await pulsarBuscarTomadorMapfre(bueno.page, bueno.guard, bueno.page.locator('#lupa'))
+  assert.equal(await busquedas(bueno.page), 1, 'el icono dentro del botón «Buscar» sí')
+  await bueno.page.context().close()
+})
+
 test('puerta: fuera de «Datos básicos», con otro paso activo o tras el «Continuar» del paso 1 → bloqueada', async () => {
   const fuera = await preparar(PANTALLA('', { extra: `<app-conductor-habitual>${LUPA_BUSCAR}</app-conductor-habitual>` }))
   await assert.rejects(() => pulsarBuscarTomadorMapfre(fuera.page, fuera.guard, fuera.page.locator('#lupa')), EmisionBloqueadaError)
