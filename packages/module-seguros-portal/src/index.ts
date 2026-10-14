@@ -63,6 +63,9 @@ export {
   obligacionDerivable,
   reparoDeclarada,
   declaradaGeneraObligacion,
+  sellosAReiniciar,
+  selloDeEsteCiclo,
+  DIAS_VIGENCIA_SELLO,
 } from './obligacion.ts'
 export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
 export {
