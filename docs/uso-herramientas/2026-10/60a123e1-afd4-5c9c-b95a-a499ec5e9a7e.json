@@ -1,21 +1,21 @@
 {
  "sesion": "60a123e1-afd4-5c9c-b95a-a499ec5e9a7e",
  "inicio": "2026-10-14T16:16:19.394Z",
- "fin": "2026-10-14T19:21:33.162Z",
- "llamadas": 82,
+ "fin": "2026-10-14T19:55:47.723Z",
+ "llamadas": 91,
  "categorias": {
   "otro": {
-   "llamadas": 11,
-   "chars_in": 11003,
-   "chars_out": 2399,
+   "llamadas": 17,
+   "chars_in": 16219,
+   "chars_out": 3062,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 6,
-    "SubagentHandback": 3,
+    "ToolSearch": 7,
+    "SubagentHandback": 6,
     "SendUserFile": 1,
-    "SendMessage": 1
+    "SendMessage": 3
    }
   },
   "lectura-directa": {
@@ -31,9 +31,9 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 10,
-   "chars_in": 542,
-   "chars_out": 110632,
+   "llamadas": 12,
+   "chars_in": 666,
+   "chars_out": 143303,
    "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -41,7 +41,9 @@
     "mcp__Gmail__search_threads": 3,
     "mcp__Gmail__get_message": 1,
     "mcp__Gmail__list_labels": 1,
-    "mcp__Gmail__get_thread": 5
+    "mcp__Gmail__get_thread": 5,
+    "mcp__Gmail__list_drafts": 1,
+    "mcp__Gmail__get_draft": 1
    }
   },
   "bash": {
@@ -79,14 +81,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 3,
-   "chars_in": 7322,
-   "chars_out": 5727,
+   "llamadas": 4,
+   "chars_in": 8374,
+   "chars_out": 5875,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   }
  }
