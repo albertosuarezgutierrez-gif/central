@@ -46,12 +46,18 @@
     explorador, el validador y el guard del worker. Tres categorías:
     - **Emisión — prohibida siempre:** Emitir, Contratar, Formalizar, Firmar, Pagar/Pago, Pago fraccionado, Tramitar póliza,
       Confirmar contratación, Domiciliar, Suplemento, Anular/Baja, `validar_aceptar`/`btnAccept`.
-    - **Prohibida (no emite, pero no se pulsa):** **Proyecto ampliado** (no hay certeza de que solo enseñe/descargue: ePAC lo
-      pone junto a Archivar/Emitir; se abrirá cuando Alberto confirme qué hace), Enviar, Salir/Cerrar sesión.
+    - **Prohibida (no emite, pero no se pulsa):** Enviar, Salir/Cerrar sesión.
     - **Guardar presupuesto — permitida SOLO en la pantalla de resultado (con el precio a la vista) y con
       `efectoEsperado: 'guardar_presupuesto'`:** Grabar, Guardar (presupuesto/proyecto), Archivar (ePAC `td#store`,
-      `action=store`), Descargar, Imprimir, Generar PDF. Fuera de ahí (formulario, sin precio, como navegación), prohibida.
+      `action=store`), **Proyecto ampliado** (Alberto, 14/10/2026: «es el proyecto que hay que descargarse»; mismas condiciones que
+      Descargar y cuenta en el tope de `pulsarGuardadoPresupuesto`; «Proyecto ampliado y emitir» sigue siendo emisión; excepción estrecha Allianz: id EXACTO `EMISION_PROJ` (igualdad, no patrón) + texto visible exactamente «proyecto ampliado», constante `EXCEPCION_PROYECTO_AMPLIADO`; cualquier otro id con «emisi» sigue bloqueado), Descargar, Imprimir, Generar PDF. Fuera de ahí (formulario, sin precio, como navegación), prohibida.
       Un botón que mezcle guardar con emitir/contratar/pagar («Guardar y emitir») cae como emisión.
+  - **Frontera de emisión por campos (14/10/2026):** la compañía pide la cuenta bancaria solo para emitir, tras la aceptación
+    del cliente. Si el inventario de una pantalla tiene un campo de IBAN, cuenta bancaria, número de cuenta, domiciliación,
+    titular de la cuenta, entidad bancaria o SWIFT/BIC (etiqueta, name, id o placeholder; sin mayúsculas ni acentos), el
+    explorador PARA con `cerca_de_emision` antes de llamar a la IA: nunca recibe ni rellena ese campo. Lista en
+    `CAMPOS_BANCARIOS` (acciones-portal.ts), aplicada en `detectarParada`. La **fecha de efecto** NO para por sí sola (sale
+    también al tarificar); solo cuenta si coincide en la pantalla con un campo bancario.
   - Flujo al ver el precio: guardar → (pantalla siguiente) descargar/imprimir el PDF si hay botón → terminar. El robot lee la
     **referencia** del presupuesto del texto de la pantalla (solo con etiqueta «Referencia / Nº de presupuesto / proyecto…»;
     nada con forma de NIF, teléfono o IBAN; nunca al log) y escucha el **PDF** desde antes del clic (descarga, ventana nueva o

@@ -8,7 +8,8 @@
 // SEGURIDAD: el robot NUNCA emite. Aquí no hay selectores ni lógica para el botón «Siguiente» (id `idbtnAceptar`,
 // handler `botonSiguienteOk()`, avanza a «5. Revisión», que puede persistir al tomador real), ni para los
 // enlaces del stepper con el mismo handler, ni para «Confirmar/Editar» cuenta bancaria, «Acceder» ecliente,
-// Archivar o Proyecto ampliado: los bloquea `guard-emision.ts`. Solo se pulsa con `ctx.pulsar()`; este paso solo
+// Archivar: lo bloquea `guard-emision.ts` (Archivar y Proyecto ampliado solo los abre el explorador, por
+// `pulsarGuardadoPresupuesto`, en resultado). Solo se pulsa con `ctx.pulsar()`; este paso solo
 // ESCRIBE en campos (`fill`), no pulsa nada.
 // RGPD: las tres preguntas de consentimiento (promociones, productos, perfilado) NO se tocan nunca: quedan como
 // vienen. Tampoco «¿Tomador y asegurado son la misma persona?», ni «coincide la dirección con el riesgo?».

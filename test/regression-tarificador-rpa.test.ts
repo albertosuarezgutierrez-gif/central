@@ -476,10 +476,17 @@ test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en g
   assert.match(g, /export const PATRON_EMISION = new RegExp\(`emit\|emisi\|contrat\|formaliz\|suplement\|anul\|baja\|\$\{VERBOS_PROHIBIDOS\}`, 'i'\)/)
   assert.match(g, /\.\.\.PATRONES_GUARDADO_GUARD,/)
   assert.match(g, /const accionesDuras = opciones\.permitirGuardarPresupuesto \? 'contract' : 'store\|contract'/)
-  // La lista única: emisión con todo lo que pidió Alberto; Proyecto ampliado NO es guardar.
+  // La lista única: emisión con todo lo que pidió Alberto; Proyecto ampliado ES guardar (Alberto, 14/10/2026), nunca prohibida.
   const lista = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/acciones-portal.ts'), 'utf8')
   for (const n of ['Emitir', 'Contratar', 'Formalizar', 'Firmar', 'Pagar / Pago', 'Pago fraccionado', 'Tramitar póliza', 'Confirmar contratación', 'Domiciliar']) {
     assert.match(lista, new RegExp(`A\\('emision', '${n.replace(/[/]/g, '\\/')}'`), `«${n}» tiene que estar en EMISIÓN`)
   }
-  assert.match(lista, /A\('prohibida', 'Proyecto ampliado'/)
+  assert.match(lista, /A\('guardar_presupuesto', 'Proyecto ampliado'/)
+  assert.doesNotMatch(lista, /A\('prohibida', 'Proyecto ampliado'/)
+  // Frontera de emisión por campos: la lista de campos bancarios vive AQUÍ (fuente única) y la aplica `detectarParada`.
+  assert.match(lista, /export const CAMPOS_BANCARIOS/)
+  assert.match(lista, /export const EXCEPCION_PROYECTO_AMPLIADO = Object\.freeze\(\{ id: 'EMISION_PROJ', texto: 'proyecto ampliado' \}\)/)
+  assert.match(lista, /id === EXCEPCION_PROYECTO_AMPLIADO\.id/)
+  const expl = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/explorador.ts'), 'utf8')
+  assert.match(expl, /fronteraEmisionPorCampos\(campos\)/)
 })

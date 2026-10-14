@@ -736,7 +736,7 @@ describe('frontera de emisión: cuenta bancaria', () => {
     })
   }
   it('el motivo es legible e incluye la etiqueta del campo', () => {
-    expect(detectarParada(campo({ etiqueta: 'Número de cuenta' }))?.senal).toBe('frontera de emisión: el portal pide cuenta bancaria («Número de cuenta»)')
+    expect(detectarParada(campo({ etiqueta: 'Número de cuenta' }))?.senal).toBe('frontera de emisión: el portal pide cuenta bancaria — Número de cuenta («Número de cuenta»)')
   })
   it('manda sobre un título de emisión (el detalle es el de la cuenta)', () => {
     expect(detectarParada(inventario({ titulos: ['Datos de emisión'], elementos: [{ tag: 'input', etiqueta: 'IBAN' }] }))?.detalle).toBe('frontera_cuenta_bancaria')
