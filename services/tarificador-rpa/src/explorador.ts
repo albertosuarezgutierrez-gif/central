@@ -14,6 +14,9 @@
 //        `guardar_presupuesto` (Grabar/Guardar/Archivar/Descargar/Imprimir/PDF; lista única del módulo) va SOLO por
 //        `pulsarGuardadoPresupuesto` (guard.ts): se escucha el PDF ANTES del clic (`esperarPdf`), se lee la REFERENCIA del
 //        texto de la pantalla (`extraerReferenciaPresupuesto`; nunca al log) y ambos viajan en el cierre/resultado.
+//     7. «GUARDAR» DE UN MODAL autorizado por entrada (Alberto, 14/10/2026; hoy solo Occident Hogar, modal «Datos de la
+//        situación»): un `avanzar` sobre ese botón va SOLO por `pulsarGuardadoDialogoAutorizado` (guard.ts), que repite vivo
+//        el diálogo y su título exactos y exige un único candidato; no abre ventana de red.
 //   → `POST …/cierre` (asegura construye el MAPA de SUS pasos) → `POST /api/tarificador/resultado` (`explorado` o error).
 //
 // 🚨 TARIFICAR ≠ EMITIR: este fichero no pulsa nada por su cuenta (sin `.click()`), no navega a URLs libres, no teclea
@@ -33,6 +36,7 @@ import {
   MOTIVO_FRONTERA_CUENTA,
   senalCuentaBancaria,
   esAvanceAutorizado,
+  esGuardadoEnDialogoAutorizado,
   esEntradaExploracion,
   huellaPantalla,
   huellaRelleno,
@@ -62,7 +66,7 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { ESTABILIDAD_POR_DEFECTO, esperarEstable, vigilarRed, type OpcionesEstabilidad, type VigiaRed } from './estabilidad.ts'
@@ -72,6 +76,7 @@ import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './a
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
+import { abrirTarificacionHogar, login as loginOccident } from './adapters/occident/hogar.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
@@ -139,6 +144,19 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await exigirSinCaptcha(nsei)
       return nsei
+    },
+  }),
+  // Occident (14/10/2026): SSO → menú «Productos › Análisis de necesidades › Hogar › Tarificación» → ruta SPA de hogar, con el
+  // formulario en un iframe (el inventario ya recorre los marcos, como el `appArea` de Allianz). Mismo login y entrada que
+  // `occident/hogar.ts`; hosts = lista blanca de `occident/guarda.ts` (sin ampliar). La misma `page` (sin pestaña nueva).
+  occident: Object.freeze({
+    credencial: 'OCCIDENT_PORTAL',
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
+      await loginOccident(page, ctx)
+      await exigirSinVerificacion(page, 'occident')
+      await abrirTarificacionHogar(page, ctx)
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await ctx.exigirSinCaptcha()
     },
   }),
 })
@@ -319,6 +337,8 @@ export type ContextoBucle = {
   pulsarAutorizado: (boton: Locator, el: ElementoInventario, marco: MarcoInventario) => Promise<void>
   /** El guardado de presupuesto autorizado (guard.ts, `pulsarGuardadoPresupuesto`). `trasClic` espera el PDF dentro de la ventana. */
   pulsarGuardado: (boton: Locator, el: ElementoInventario, pantalla: PantallaGuardado, trasClic: () => Promise<void>) => Promise<void>
+  /** El «Guardar» de un modal autorizado por entrada (guard.ts, `pulsarGuardadoDialogoAutorizado`). */
+  pulsarGuardadoDialogo: (boton: Locator, el: ElementoInventario, marco: MarcoInventario) => Promise<void>
   pausaAccion: () => Promise<void>
   /** `incidencias` (14/10/2026): lo que el lote ANTERIOR no pudo aplicar (ref + clave + causa; nunca el valor). */
   pedirPaso: (cuerpo: { trabajoId: string; inventario: InventarioExploracion['inventario']; avancesFallidos: number; incidencias?: IncidenciaEjecucion[] }) => Promise<RespuestaPaso>
@@ -575,6 +595,11 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
               } else if (esAvanceAutorizado(k.entrada, hit.el, hit.marco)) {
                 efectos.add('posible_proyecto_guardado')
                 await k.pulsarAutorizado(loc, hit.el, hit.marco)
+              } else if (esGuardadoEnDialogoAutorizado(k.entrada, hit.el)) {
+                // «Guardar» de un modal autorizado por entrada (Occident, «Datos de la situación»): por SU puerta, que lo
+                // repite vivo (diálogo y título exactos, un solo candidato). No se sabe si el portal persiste algo: se anota.
+                efectos.add('posible_proyecto_guardado')
+                await k.pulsarGuardadoDialogo(loc, hit.el, hit.marco)
               } else {
                 await k.pulsar(loc)
               }
@@ -844,6 +869,10 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
         pulsarGuardado: async (boton, el, pantalla, trasClic) => {
           await dormir(azar(300, 1_200))
           await pulsarGuardadoPresupuesto(pagina, guard, boton, { el, pantalla }, trasClic)
+        },
+        pulsarGuardadoDialogo: async (boton, el, marco) => {
+          await dormir(azar(300, 1_200))
+          await pulsarGuardadoDialogoAutorizado(pagina, guard, boton, { entrada: exp.entrada, el, marco })
         },
         pausaAccion: () => dormir(azar(300, 1_200)),
         pedirPaso: (cuerpo) => pedirPaso(cfg, cuerpo),

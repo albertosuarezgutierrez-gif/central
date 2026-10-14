@@ -47,6 +47,21 @@
 9. **Guardianes:** ampliar `test/regression-tarificador-rpa.test.ts` (sin `.click()`, sin emisión, lista blanca) y, si el portal tiene botones peligrosos propios, su patrón en `guard-emision.ts` con test en rojo antes de darlo por bueno.
 10. **Docs:** sección de la compañía en `docs/tarificador/CONOCIMIENTO-PORTALES.md` (pantallas, teselas, trampas) y estado en `docs/TARIFICADOR-RPA.md`.
 
+## 3 bis. Entrada al formulario (patrón general, decisión de Alberto, 14/10/2026)
+Patrón preferido para TODAS las compañías:
+1. **Login siempre** por la URL de acceso en cada ejecución (máquina nueva, sin sesión guardada).
+2. **Ya logueado, `goto` a la URL DIRECTA del formulario del producto** (no por menús).
+3. **Respaldo:** si el formulario no aparece (sesión caducada, redirección al login, URL que cambió), ruta por menús; si tampoco, parar con `ErrorMapaIncompleto` citando ambos intentos.
+
+Por qué: es más rápido, tiene menos clics (cada clic es un punto de fallo y de guard) y evita menús desplegables e iframes.
+
+Condiciones para adoptar la URL directa en un portal:
+- Que sea estable y **SIN tokens/ids de sesión ni datos personales** en la URL. Si lleva parámetros de sesión, no vale: menús.
+- Que el formulario no dependa de un contexto que solo fijan los menús (producto/acuerdo seleccionado en servidor). Se confirma con una exploración real.
+- La navegación por URL **no pasa por el guard de botones**: la URL constante se comprueba con un test contra `PATRON_EMISION`.
+
+Estado: **Mapfre Auto (NSEI)** adopta el patrón (`https://wmediadores.mapfre.com/evt21_nsei_fe-web/#/evt21_nsei_fe-web/autos/oferta`). **Allianz y demás:** pendientes de revisar con su URL de producto; no se cambian todavía.
+
 ## 4. Bucle de trabajo
 1. **Explorar.** Sintética para llegar hasta la pantalla que pide NIF; con datos reales solo anclada a oportunidad real (`encolarExploracion`, `apps/asegura/lib/tarificador-explorador.ts`). Topes duros: 30 llamadas IA, 80 acciones, 40 pasos, 15 min, 2 € (el env solo los baja). Envs: `TARIFICADOR_EXPLORADOR_ACTIVO=1`, `TARIFICADOR_EXPLORADOR_MODELO`, contacto `TARIFICADOR_EXPLORADOR_EMAIL/_TELEFONO` (de Alberto, solo env).
 2. **Leer** en plataforma (`/correduria/tarificador/exploraciones`) o por el puerto: mapa, `huecos`, `motivoFin`, `detalleFin` (códigos cerrados de `DETALLES_FIN_EXPLORACION`). Sin pegar datos de clientes en el chat.

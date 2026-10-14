@@ -79,6 +79,7 @@
 
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
+| 14/10/2026 | Mapfre | Tercera exploración real: login OK y llega a la página «Automóviles», pero no halla «Tarificación y Emisión Rápida» (0 coincidencias visibles) | La página no expone el enlace en el DOM principal (probable iframe o elemento no estándar) | URL directa del formulario NSEI como entrada principal (pestaña nueva, vale si aparece `app-datos-basicos`; el 401 no cuenta) con respaldo por menús; error con los dos motivos | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (4 casos de URL directa + `URL_NSEI_AUTO` vs `PATRON_EMISION`) |
 | 14/10/2026 | Mapfre | Segunda exploración real: login OK, llega a la página «Automóviles» (título y «Turismos y Motos» encontrados) pero falla: no halla el enlace «Tarificación y Emisión Rápida» en la tarjeta | El acotado a la tarjeta (`tarjetaDe`) no casa con el DOM real (desconocido); y el HTML del fallo no queda guardado: asegura descarta captura/HTML de las exploraciones (`lib/tarificador.ts`, «una exploración no guarda captura ni HTML») | Tarjeta (3 s) → si no, texto EXACTO en TODA la página, subiendo al control pulsable, y solo con EXACTAMENTE 1 coincidencia visible (0 o ≥2 → `ErrorMapaIncompleto` con el nº y los candidatos sin datos personales en el mensaje). Regla común: un acotado por contenedor lleva fallback a texto exacto único, nunca a «el primero» | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
 | 14/10/2026 | Mapfre | Primera exploración real: login OK, pero la entrada falló con mapa incompleto (la URL seguía en `#/`) | Se asumió que «Turismos y Motos» era pulsable y no se pulsaba la opción «Automóviles» del desplegable de «Nueva producción» | Ruta real: pestaña → opción «Automóviles» (se pulsa) → página con tarjetas → enlace «Tarificación y Emisión Rápida» dentro de la tarjeta «Turismos y Motos» (que no se pulsa). Lección: los menús desplegables se confirman con captura antes de mapear | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (fixture con menú + página y enlaces homónimos) |
 | 14/10/2026 | Mapfre | Enlace de menú «Tarificación y Emisión …» bloqueado por el guard de emisión | «Emisión» como sustantivo de menú casa `PATRON_EMISION` (falso positivo) | Lista cerrada de etiquetas EXACTAS, solo en la fase de ENTRADA (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`). Nunca relajar `PATRON_EMISION`; nunca desde el bucle IA | `services/tarificador-rpa/test/frontera-cuenta.test.ts` (importa `pulsarEnlaceEntradaAutorizado`) |
@@ -169,6 +170,11 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 > (sección «Mapfre Auto · NSEI»). Fuente: una grabación de 19 pantallas del 13/10/2026. Adaptador SIN registrar,
 > `MAPFRE_AUTO_ACTIVO=false`, fila de integración `mapfre/auto` apagada (`2026-10-14_tarificador_mapfre_auto.sql`).
 
+- **Entrada PRINCIPAL = URL directa (14/10/2026, 3ª exploración):** ya logueado, el bot abre en una pestaña nueva del mismo contexto
+  `https://wmediadores.mapfre.com/evt21_nsei_fe-web/#/evt21_nsei_fe-web/autos/oferta` (`URL_NSEI_AUTO` en `entrada.ts`; misma sesión,
+  pública dentro de ella, sin datos personales ni ids). Vale solo si aparece `app-datos-basicos` (30 s); un 401/4xx del `goto` (desafío
+  de auth básica, que se cancela) no cuenta. Si no aparece, cierra esa pestaña y cae a la ruta por menús de abajo (respaldo); si
+  también falla, `ErrorMapaIncompleto` cita ambos intentos. La URL se comprueba contra `PATRON_EMISION` en test.
 - **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
   (usuario + contraseña; **no pide SMS**). Pantalla: bloque «Acceso», «Código de usuario (NUUMA)» y «Contraseña:»; el botón «Entrar»
   está **deshabilitado** hasta rellenar ambos (Angular: el bot espera a que se habilite o falla con `ErrorMapaIncompleto`); «Cambiar contraseña» jamás se pulsa. Después: pestaña «Nueva producción» (despliega un MENÚ) → PULSAR la opción «Automóviles» del
@@ -251,3 +257,11 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   - ~~Qué se elige en «Coberturas».~~ **RESUELTO (14/10/2026):** coberturas por defecto; el bot solo avanza.
   - Botón exacto de guardar en «Proyectos».
   - Cómo sale el PDF.
+
+## Descuentos comerciales (regla de Alberto, 14/10/2026)
+
+**Descuentos comerciales: siempre al máximo; nunca los que se pagan con comisión** (Occident: «Descuentos ABC» / «Ajuste contra
+comisión», que rebaja la comisión de la correduría: no se toca, ni lápiz ni papelera). Occident Hogar, paso 2 «Proyecto»: caja
+«Ajustes comerciales» → «Modificar» (no el de «Datos principales del riesgo») → secciones «Descuentos cliente» y «Descuentos por
+perfil/actividad» (lápiz → máximo disponible); la papelera nunca. Código: `elegirMaximoDescuento` en `occident/hogar.ts`.
+Selector desplegado y guardado de los ajustes: sin ver. «Imprimir» (cabecera) guarda el proyecto y descarga el PDF.

@@ -38,6 +38,21 @@ export type AvanceAutorizado = {
   nuncaConTitulo: RegExp
 }
 
+/**
+ * «Guardar» de un MODAL concreto que NO emite (guarda un dato del formulario, p. ej. la dirección del riesgo). Separado de
+ * `AvanceAutorizado` a propósito: nunca abre «Aceptar» ni la ventana de red; solo levanta `guardar_solo_en_resultado` para
+ * ESE botón en ESE diálogo. Ambos patrones van sobre texto PLANO (sin tildes, minúsculas) y anclados (texto EXACTO).
+ */
+export type GuardadoEnDialogo = {
+  /** Texto EXACTO del botón (y de su aria-label, si lo tiene). */
+  texto: RegExp
+  /** Título accesible EXACTO del diálogo que lo contiene (`ElementoInventario.dialogo`; el worker lo repite VIVO). */
+  dialogo: RegExp
+}
+
+/** Tope de pulsaciones de `GuardadoEnDialogo` por trabajo (abrir/cerrar el modal un par de veces, con margen). */
+export const MAX_GUARDADOS_DIALOGO = 3
+
 export type EntradaExploracion = {
   compania: string
   ramo: string
@@ -46,6 +61,8 @@ export type EntradaExploracion = {
   pestana: string
   productoMenu: string
   avancesAutorizados: readonly AvanceAutorizado[]
+  /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
+  guardadosEnDialogo?: readonly GuardadoEnDialogo[]
 }
 
 /**
@@ -75,6 +92,16 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'mapfre:nueva_produccion:auto': Object.freeze({
     compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
     avancesAutorizados: Object.freeze([]),
+  }),
+  // Occident Hogar (14/10/2026): «Productos» › «Análisis de necesidades» › «Hogar» › «Tarificación» (menú fijo en el código de
+  // Occident, `occident/hogar.ts`); navega a /productos/multirriesgos/hogar/tarificacion y el formulario va en un iframe. Sin
+  // avances autorizados: ningún botón visto necesita el permiso de «Aceptar». El «Guardar» del modal «Datos de la situación»
+  // (solo guarda la dirección del riesgo, no emite) lo autorizó Alberto el 14/10/2026: SOLO ese texto exacto dentro de un
+  // diálogo con ese título exacto; el worker lo repite vivo en `pulsarGuardadoDialogoAutorizado` (guard.ts).
+  'occident:productos:hogar': Object.freeze({
+    compania: 'occident', ramo: 'hogar', producto: 'hogar', pestana: 'Productos', productoMenu: 'Hogar',
+    avancesAutorizados: Object.freeze([]),
+    guardadosEnDialogo: Object.freeze([Object.freeze({ texto: /^guardar$/, dialogo: /^datos de la situacion$/ })]),
   }),
 })
 
@@ -784,6 +811,40 @@ export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marc
 /** Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final. */
 const truncado = (s: string) => s.endsWith('…')
 
+/** Reglas de «Guardar» en modal de la entrada (lista vacía si no tiene). */
+export function guardadosEnDialogoDe(entrada: string): readonly GuardadoEnDialogo[] {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return e?.guardadosEnDialogo ?? []
+}
+
+/**
+ * ¿Casan texto del botón y título del diálogo con una regla `GuardadoEnDialogo` de la entrada? Pura y compartida con el
+ * worker, que la aplica a lo que lee VIVO del DOM. Textos planos; vacíos o recortados (`…`) → no.
+ */
+export function casaGuardadoEnDialogo(entrada: string, texto: string | null | undefined, dialogo: string | null | undefined): boolean {
+  if (typeof texto !== 'string' || typeof dialogo !== 'string' || truncado(texto) || truncado(dialogo)) return false
+  const t = plano(texto)
+  const d = plano(dialogo)
+  if (!t || !d) return false
+  return guardadosEnDialogoDe(entrada).some((r) => r.texto.test(t) && r.dialogo.test(d))
+}
+
+/**
+ * ¿Es este elemento del INVENTARIO un «Guardar» de modal autorizado para ESTA entrada? Exige: botón/pestaña pulsable, texto
+ * y título de diálogo exactos de una regla, aria-label (si lo hay) igual de exacto, onclick no recortado y NADA de emisión
+ * ni de acción prohibida en ninguna descripción (un «Guardar y emitir» no casa ni por texto ni por la lista única).
+ */
+export function esGuardadoEnDialogoAutorizado(entrada: string, el: ElementoInventario): boolean {
+  if (!esAvanzable(el)) return false
+  if (!casaGuardadoEnDialogo(entrada, el.texto, el.dialogo)) return false
+  if (typeof el.ariaLabel === 'string' && el.ariaLabel.trim() !== '' && !casaGuardadoEnDialogo(entrada, el.ariaLabel, el.dialogo)) return false
+  if (typeof el.onclick === 'string' && truncado(el.onclick)) return false
+  const desc = descripcionesElemento(el)
+  if (desc.some((d) => pareceEmision(d))) return false
+  const cat = clasificarAccionPortal(desc)
+  return !cat.emision && !cat.prohibida
+}
+
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
 export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
   // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
@@ -802,7 +863,9 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   if (cat.prohibida) return 'boton_prohibido'
   // GUARDAR PRESUPUESTO (grabar, guardar, imprimir, descargar…): nunca como navegación; solo con `efectoEsperado:
   // 'guardar_presupuesto'` en resultado (`bloqueoGuardadoPresupuesto`).
-  if (cat.guardar) return 'guardar_solo_en_resultado'
+  // Excepción ESTRECHA (Alberto, 14/10/2026): el «Guardar» de un modal autorizado para ESTA entrada (texto y título del
+  // diálogo exactos). El worker lo pulsa SOLO por `pulsarGuardadoDialogoAutorizado`, que lo repite vivo.
+  if (cat.guardar) return esGuardadoEnDialogoAutorizado(entrada, el) ? null : 'guardar_solo_en_resultado'
   return null
 }
 

@@ -8,9 +8,9 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, MAX_GUARDADOS_DIALOGO, type InventarioDom } from '@central/module-tarificacion'
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
-import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
+import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, GuardadoDialogoBloqueadoError, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import { esperarEstable, vigilarRed } from '../src/estabilidad.ts'
 import {
@@ -223,6 +223,7 @@ function contexto(page: Page, guard: GuardEmision, guion: Guion, extra: Partial<
     pulsar: (b) => pulsar(b, guard),
     pulsarAutorizado: (b, el, marco) => pulsarExploracionAutorizada(page, guard, b, { entrada: 'allianz:particulares:hogar', el, marco }),
     pulsarGuardado: (b, el, pantalla, trasClic) => pulsarGuardadoPresupuesto(page, guard, b, { el, pantalla }, trasClic),
+    pulsarGuardadoDialogo: (b, el, marco) => pulsarGuardadoDialogoAutorizado(page, guard, b, { entrada: extra.entrada ?? 'allianz:particulares:hogar', el, marco }),
     topePdfMs: 3_000,
     pausaAccion: async () => undefined,
     pedirPaso: async (c): Promise<RespuestaPaso> => {
@@ -925,6 +926,44 @@ test('presupuestoParaCierre: tres estados del PDF (null = no se intentó); sin g
   assert.ok(r?.resultado === 'explorado' && !('presupuesto' in r))
 })
 
+// ─── «Guardar» del modal «Datos de la situación» (Occident Hogar, Alberto 14/10/2026) ────────────────────────────────
+
+const OCC = 'occident:productos:hogar'
+/** Modal de Occident inventado: un «Guardar» DENTRO (cierra el modal) y otro FUERA, en el formulario de detrás. */
+const MODAL_SITUACION = (titulo = 'Datos de la situación', botonModal = 'Guardar', extraModal = '') => PAGINA(`
+  <h1>Tarificación</h1>
+  <form id="fOcc" method="post" action="/guardar-fuera">
+    <button id="btnFuera" type="button" onclick="window.pulsadoFuera = true">Guardar</button>
+  </form>
+  <div id="modalSit" role="dialog" aria-modal="true" aria-labelledby="tSit">
+    <h3 id="tSit">${titulo}</h3>
+    <label for="cpSit">Código postal:*</label><input id="cpSit" name="cpSit" type="text">
+    <button id="btnSit" type="button" onclick="cerrarSit()">${botonModal}</button>
+    ${extraModal}
+  </div>
+  <script>function cerrarSit() { window.guardadoSit = (window.guardadoSit || 0) + 1; document.getElementById('modalSit').style.display = 'none' }</script>`)
+const pulsados = (page: Page) => page.evaluate(() => ({ dentro: (window as unknown as { guardadoSit?: number }).guardadoSit ?? 0, fuera: (window as unknown as { pulsadoFuera?: boolean }).pulsadoFuera ?? false }))
+const occ = { compania: 'occident', ramo: 'hogar', entrada: OCC }
+const avanzarSobre = (id: string): Guion => (inv, n) => n === 1
+  ? respuesta([{ accion: 'avanzar', ref: ref(inv, id), efectoEsperado: 'abrir_seccion', confianza: 'alta' }])
+  : respuesta([{ accion: 'parar', motivo: 'sin_salida' }])
+
+test('MODAL OCCIDENT: «Guardar» dentro de «Datos de la situación» se pulsa UNA vez por su puerta, sin red de emisión', async () => {
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION())
+  try {
+    const { k, enviados } = contexto(page, guard, avanzarSobre('btnSit'), occ)
+    assert.equal(enviados.length, 0)
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'sin_salida', JSON.stringify(fin))
+    assert.deepEqual(await pulsados(page), { dentro: 1, fuera: false })
+    assert.ok(fin.efectos.includes('posible_proyecto_guardado'))
+    assert.equal(enviados[0].inventario.marcos[0].elementos.find((e) => e.id === 'btnSit')?.dialogo, 'Datos de la situación')
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
 // ─── Año y m² que no se quedaban en Allianz Hogar (14/10/2026). Valores FICTICIOS. ───────────────────────────────────
 
 /** Riesgo ficticio de una exploración con datos reales: año y m² como los deja el Catastro (m² con decimales). */
@@ -960,6 +999,97 @@ test('🪤 repintado ANTES del lote: la 1.ª acción (rellenar año, input type=
     assert.match(log, /"exploracion_relocalizacion".*"estado":"ok"/)
     assert.ok(!/1975|85\.5/.test(log), 'el log no lleva valores')
     assert.equal(fin.incidencias, undefined)
+  } finally {
+    await context.close()
+  }
+})
+
+for (const [nombre, html, id, entrada] of [
+  ['«Guardar» FUERA del modal', MODAL_SITUACION(), 'btnFuera', OCC],
+  ['modal con OTRO título', MODAL_SITUACION('Datos del tomador'), 'btnSit', OCC],
+  ['«Guardar y emitir» dentro del modal', MODAL_SITUACION('Datos de la situación', 'Guardar y emitir'), 'btnSit', OCC],
+  ['entrada Allianz Hogar', MODAL_SITUACION(), 'btnSit', 'allianz:particulares:hogar'],
+] as const) {
+  test(`MODAL OCCIDENT: ${nombre} → rechazado al revalidar, sin pulsar`, async () => {
+    const { context, page, guard } = await paginaEn(html)
+    try {
+      const { k } = contexto(page, guard, avanzarSobre(id), { ...occ, entrada })
+      const fin = await bucleExploracion(page, k)
+      assert.equal(fin.motivo, 'ambiguo')
+      assert.equal(fin.detalle, 'lote_no_valido')
+      assert.deepEqual(await pulsados(page), { dentro: 0, fuera: false })
+    } finally {
+      await context.close()
+    }
+  })
+}
+
+/** Lo que el inventario dice de un id (para llamar a la puerta directamente, como haría un bucle con el DOM cambiado). */
+async function deInventario(page: Page, id: string) {
+  const cap = await capturarInventarioExploracion(page)
+  const marco = cap!.inventario.marcos.find((m) => m.elementos.some((e) => e.id === id))!
+  await cap!.liberar()
+  return { el: marco.elementos.find((e) => e.id === id)!, marco }
+}
+const motivoDe = (m: string) => (e: unknown) => e instanceof GuardadoDialogoBloqueadoError && e.motivo === m
+
+test('MODAL OCCIDENT (puerta directa): DOS candidatos «Guardar» en «Datos de la situación» → no pulsa', async () => {
+  const otro = `<button id="btnSit2" type="button" onclick="window.guardadoSit = 99">Guardar</button>`
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION('Datos de la situación', 'Guardar', otro))
+  try {
+    const { el, marco } = await deInventario(page, 'btnSit')
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco }), motivoDe('candidatos'))
+    assert.deepEqual(await pulsados(page), { dentro: 0, fuera: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('MODAL OCCIDENT (puerta directa): el título VIVO cambió tras el inventario, o el control vivo está fuera del modal → no pulsa', async () => {
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION())
+  try {
+    const { el, marco } = await deInventario(page, 'btnSit')
+    // Inventario que dice «dentro del modal» para el botón de FUERA (anti-TOCTOU / inventario falseado).
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnFuera'), { entrada: OCC, el, marco }), motivoDe('fuera_de_dialogo'))
+    await page.evaluate(() => { document.getElementById('tSit')!.textContent = 'Datos de la póliza' })
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco }), motivoDe('titulo_no_casa'))
+    // Otra entrada con el mismo elemento: no autorizado.
+    await page.evaluate(() => { document.getElementById('tSit')!.textContent = 'Datos de la situación' })
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: 'allianz:particulares:hogar', el, marco }), motivoDe('no_autorizado'))
+    assert.deepEqual(await pulsados(page), { dentro: 0, fuera: false })
+    // Y con todo en orden, pasa.
+    await pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco })
+    assert.deepEqual(await pulsados(page), { dentro: 1, fuera: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('MODAL OCCIDENT (puerta directa): como mucho MAX_GUARDADOS_DIALOGO pulsaciones por trabajo', async () => {
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION())
+  try {
+    const { el, marco } = await deInventario(page, 'btnSit')
+    const reabrir = () => page.evaluate(() => { document.getElementById('modalSit')!.style.display = '' })
+    for (let i = 0; i < MAX_GUARDADOS_DIALOGO; i++) {
+      await pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco })
+      await reabrir()
+    }
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco }), motivoDe('tope'))
+    assert.deepEqual(await pulsados(page), { dentro: MAX_GUARDADOS_DIALOGO, fuera: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('MODAL OCCIDENT: la red sigue cerrada — si ese «Guardar» manda action=store/contract, se aborta y el trabajo cae', async () => {
+  const html = MODAL_SITUACION().replace("function cerrarSit() {", "function cerrarSit() { fetch('/ctl-sit', { method: 'POST', body: 'action=store' }).catch(() => {});")
+  const { context, page, guard } = await paginaEn(html)
+  try {
+    const { k } = contexto(page, guard, avanzarSobre('btnSit'), occ)
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'guard_emision', JSON.stringify(fin))
+    assert.ok(guard.violacion() instanceof EmisionBloqueadaError)
+    assert.ok(!peticiones.some((p) => p.ruta === '/ctl-sit'), 'el POST no salió')
   } finally {
     await context.close()
   }

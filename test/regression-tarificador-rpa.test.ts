@@ -381,8 +381,12 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   const out: string[] = []
   // 1. El bucle solo actúa así: pulsar por el guard (marcar/avanzar), el avance autorizado por su función guardada, rellenar
   //    con el valor de `resolverDato` y elegir por valor exacto. Nada de goto, teclado ni marcar fuera del guard.
-  const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
-  if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado|k\.pulsarGuardadoDialogo)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
+  if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$|^k\.pulsarGuardadoDialogo\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  // 1b. «Guardar» de modal (Alberto, 14/10/2026): una sola llamada, y SOLO bajo la autorización del módulo para ESA entrada.
+  const dialogo = [...explorador.matchAll(/k\.pulsarGuardadoDialogo\(/g)].length
+  if (dialogo > 1) out.push('pulsarGuardadoDialogo: más de una llamada')
+  if (dialogo === 1 && !/\} else if \(esGuardadoEnDialogoAutorizado\(k\.entrada, hit\.el\)\) \{\n(?:[^\n]*\n){0,4}?\s*await k\.pulsarGuardadoDialogo\(loc, hit\.el, hit\.marco\)/.test(explorador)) out.push('pulsarGuardadoDialogo fuera de su rama autorizada (esGuardadoEnDialogoAutorizado)')
   // `escrito` = `valorParaControl(d.valor, hit.el)` y nada más; se escribe UNA vez con `fill` y, si el portal lo vació (datepicker,
   // 14/10/2026), se reteclea UNA vez en `fijarValor` con ESE mismo valor (`pressSequentially`, sin Enter ni Tab).
   const fills = [...explorador.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
@@ -420,8 +424,25 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
     if ((fn.match(/\.click\(/g) ?? []).length !== 1) out.push('pulsarExploracionAutorizada: un solo clic')
     if (!/\} finally \{\s*page\.off\('dialog', alDialogo\)\s*guard\.avance\.cerrar\(\)\s*\}/.test(fn)) out.push('pulsarExploracionAutorizada: la ventana se cierra SIEMPRE (finally)')
   }
-  // 6. Solo el explorador llama a la función guardada.
-  for (const [rel, src] of Object.entries(otros)) if (/pulsarExploracionAutorizada\(/.test(src)) out.push(`${rel} llama a pulsarExploracionAutorizada`)
+  // 5b. La puerta del «Guardar» de modal: autorización del módulo por ENTRADA + diálogo y título VIVOS + un solo candidato +
+  //     comprobarBoton SIN permisos, todo ANTES del único clic; sin ventana de red y con el manejador de diálogos retirado.
+  const fd = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarGuardadoDialogoAutorizado'))
+  if (!fd) out.push('falta pulsarGuardadoDialogoAutorizado en guard.ts')
+  else {
+    const clic = fd.indexOf('.click(')
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()', 'MAX_GUARDADOS_DIALOGO', 'exigirSinCuentaBancaria(page)', 'esGuardadoEnDialogoAutorizado(aut.entrada, aut.el)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'boton.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO)', 'casaGuardadoEnDialogo(aut.entrada, desc[0], titulo)', 'candidatos !== 1', 'comprobarBoton(desc)\n', 'cat.emision || cat.prohibida']) {
+      const i = fd.indexOf(p)
+      if (i < 0 || clic < 0 || i > clic) out.push(`pulsarGuardadoDialogoAutorizado: «${p.trim()}» tiene que ir ANTES del clic`)
+    }
+    if ((fd.match(/\.click\(/g) ?? []).length !== 1) out.push('pulsarGuardadoDialogoAutorizado: un solo clic')
+    if (/ABRIR_|abrir\(|permitirAceptar|permitirGuardarPresupuesto/.test(fd)) out.push('pulsarGuardadoDialogoAutorizado: no abre ventanas de red ni permisos del guard')
+    if (!/\} finally \{\s*page\.off\('dialog', alDialogo\)\s*\}/.test(fd)) out.push('pulsarGuardadoDialogoAutorizado: el manejador de diálogos se retira SIEMPRE (finally)')
+  }
+  // 6. Solo el explorador llama a las funciones guardadas.
+  for (const [rel, src] of Object.entries(otros)) {
+    if (/pulsarExploracionAutorizada\(/.test(src)) out.push(`${rel} llama a pulsarExploracionAutorizada`)
+    if (/pulsarGuardadoDialogoAutorizado\(/.test(src)) out.push(`${rel} llama a pulsarGuardadoDialogoAutorizado`)
+  }
   return out
 }
 
@@ -450,6 +471,23 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
   assert.notEqual(sinAut, guard)
   assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
   assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
+  // Cepos del «Guardar» de modal (14/10/2026): cada brazo, en ROJO.
+  const cambia = (src: string, de: string, a: string) => {
+    const r = src.replace(de, a)
+    assert.notEqual(r, src, `el cepo no cambió nada: «${de}»`)
+    return r
+  }
+  const malosDialogo: [string, string, string][] = [
+    ['puerta sin autorización por entrada', explorador, cambia(guard, 'esGuardadoEnDialogoAutorizado(aut.entrada, aut.el) ||', '')],
+    ['puerta sin título vivo', explorador, cambia(guard, 'if (!casaGuardadoEnDialogo(aut.entrada, desc[0], titulo))', 'if (false)')],
+    ['puerta sin candidato único', explorador, cambia(guard, 'if (candidatos !== 1)', 'if (false)')],
+    ['puerta sin comprobarBoton', explorador, ((m) => guard.slice(0, guard.indexOf(m)) + cambia(guard.slice(guard.indexOf(m)), '  comprobarBoton(desc)\n', ''))('export async function pulsarGuardadoDialogoAutorizado')],
+    ['puerta que abre la red', explorador, cambia(guard, '  usados.add(`dialogo:${n + 1}`)', '  ABRIR_GUARDADO.get(guard)?.(origen)\n  usados.add(`dialogo:${n + 1}`)')],
+    ['bucle sin la rama autorizada', cambia(explorador, '} else if (esGuardadoEnDialogoAutorizado(k.entrada, hit.el)) {', '} else if (true) {'), guard],
+    ['bucle con otro botón', cambia(explorador, 'await k.pulsarGuardadoDialogo(loc, hit.el, hit.marco)', 'await k.pulsarGuardadoDialogo(page.locator("#x"), hit.el, hit.marco)'), guard],
+  ]
+  for (const [nombre, e, g] of malosDialogo) assert.notDeepEqual(infraccionesExplorador(e, g, otros), [], nombre)
+  assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarGuardadoDialogoAutorizado(page, guard, b, a)' }), [], 'otro fichero llama a la puerta del modal')
 })
 
 test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en guard.ts y la emisión intacta', () => {

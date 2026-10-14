@@ -57,6 +57,11 @@ export type ElementoInventario = {
   /** ¿El control AUTOCOMPLETA (aria-autocomplete list/both/inline o `list` de datalist)? Solo el booleano (14/10/2026): su
    *  `rellenar` puede repintar la sección, y el worker lo deja para el final del lote (`ordenarLote`). */
   autocompletar?: true
+  /**
+   * Título accesible del DIÁLOGO/MODAL que contiene al control (14/10/2026; el más cercano: `SELECTOR_DIALOGO` de guard.ts),
+   * saneado. Solo si el crudo lo trae. Sirve para el «Guardar» de un modal autorizado por entrada (`guardadosEnDialogo`).
+   */
+  dialogo?: string
 }
 
 /** Un importe visible de la pantalla (`m<marco>p<índice crudo>`): SOLO el número en euros, nunca el texto. */
@@ -160,7 +165,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
     if (Array.isArray(mo.titulosPantalla)) mo.titulosPantalla.slice(0, MAX_TITULOS_MARCO * 2).forEach(aprender)
     for (const e of Array.isArray(mo.elementos) ? mo.elementos.slice(0, MAX_ELEMENTOS_MARCO_INVENTARIO) : []) {
       const eo = obj(e)
-      if (eo) for (const k of ['texto', 'etiqueta', 'ariaLabel', 'placeholder', 'onclick']) aprender(eo[k])
+      if (eo) for (const k of ['texto', 'etiqueta', 'ariaLabel', 'placeholder', 'onclick', 'dialogo']) aprender(eo[k])
     }
   }
   const esCabeceraPersonal = (t: string): boolean => {
@@ -220,6 +225,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       pon('etiqueta', texto(eo.etiqueta, MAX_TEXTO_INVENTARIO))
       pon('texto', texto(eo.texto, MAX_TEXTO_INVENTARIO))
       pon('onclick', texto(eo.onclick, MAX_ATRIBUTO))
+      pon('dialogo', texto(eo.dialogo, MAX_TEXTO_INVENTARIO))
       if (eo.requerido === true) el.requerido = true
       if (eo.deshabilitado === true) el.deshabilitado = true
       if (typeof eo.conValor === 'boolean' && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.conValor = eo.conValor
@@ -358,7 +364,7 @@ export function contieneValorSensible(texto: string, valores: readonly string[])
   return false
 }
 
-const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick'] as const
+const CLAVES_ELEMENTO_TEXTO = ['id', 'name', 'type', 'role', 'ariaLabel', 'placeholder', 'formControlName', 'etiqueta', 'texto', 'onclick', 'dialogo'] as const
 
 /**
  * Copia del inventario SIN ningún texto que contenga uno de `valores` (normalizado; se ignoran los < 3 caracteres). Cuenta
