@@ -329,6 +329,15 @@ REGLAS DE LA FASE DE LOGIN (no negociables):
 Responde SOLO un objeto JSON, sin prosa:
 {"version":1,"fase":"login","pantalla":{"nombre":"<≤60 car.>","tipo":"formulario|otro"},"acciones":[...],"mapeo":[],"motivo":"<≤200 car.>"}`
 
+/**
+ * El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede
+ * cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo válido (esos signos solo estaban dentro de
+ * cadenas) y los refs rN no llevan ángulos. Misma regla que el árbol aria (`neutralizarAngulos`).
+ */
+export function inventarioParaPrompt(inv: InventarioDom): string {
+  return neutralizarAngulos(JSON.stringify(inv))
+}
+
 /** El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS. */
 export function promptLoginExplorador(e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }): string {
   return [
@@ -336,7 +345,7 @@ export function promptLoginExplorador(e: { entrada: string; inventario: Inventar
     `CLAVES (las únicas que puedes usar en rellenar/elegir):\n${JSON.stringify(catalogoLoginParaIA())}`,
     e.historial.length ? `PASOS ANTERIORES:\n${e.historial.join('\n')}` : 'PASOS ANTERIORES: ninguno (el robot ya envió el usuario en la primera pantalla del acceso).',
     e.avancesFallidos > 0 ? `AVISO: el último avance no cambió de pantalla (${e.avancesFallidos} vez/veces). Si hay un mensaje de error, parar ambiguo.` : '',
-    `<inventario>\n${JSON.stringify(e.inventario)}\n</inventario>`,
+    `<inventario>\n${inventarioParaPrompt(e.inventario)}\n</inventario>`,
   ].filter(Boolean).join('\n\n')
 }
 
@@ -380,7 +389,7 @@ export function promptExplorador(e: EntradaPrompt): string {
       : '',
     e.historial.length ? `PASOS ANTERIORES:\n${e.historial.join('\n')}` : 'PASOS ANTERIORES: ninguno (primera pantalla tras la entrada).',
     e.avancesFallidos > 0 ? `AVISO: el último avance no cambió de pantalla (${e.avancesFallidos} vez/veces). Revisa campos obligatorios o para.` : '',
-    `<inventario>\n${JSON.stringify(e.inventario)}\n</inventario>`,
+    `<inventario>\n${inventarioParaPrompt(e.inventario)}\n</inventario>`,
     e.vistaAria ? `Árbol de accesibilidad (solo lectura; actúa SIEMPRE con los refs rN del inventario, nunca con los eN/fNeN de este árbol):\n<arbol_accesibilidad>\n${e.vistaAria}\n</arbol_accesibilidad>` : '',
   ]
   return partes.filter(Boolean).join('\n\n')

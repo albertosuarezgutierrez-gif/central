@@ -217,11 +217,11 @@ export function configFly(env: Record<string, string | undefined>): { ok: true; 
 
 /**
  * La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista
- * blanca de `envDeMaquina` (JOB_ID + URL): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
+ * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
  * credenciales de portal (esas son fly secrets de la app del worker).
  */
-export function peticionMaquina(cfg: ConfigFly, jobId: string): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
-  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl })
+export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
+  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador })
   const body = {
     name: `tarificar-${jobId.slice(0, 8)}`,
     region: REGION_FLY,
