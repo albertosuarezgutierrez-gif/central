@@ -51,6 +51,12 @@ test('🚨 hacen falta las DOS condiciones: aseguradora Y asunto de recibo', () 
   assert.equal(clasificarPorKeyword('mediadores@occidentinforma.com', 'Siniestro Diversos 42000037')?.categoria, 'correduria')
 })
 
+test('🚨 mediador@ (singular) de aseguradora → correduria, pero solo desde su dominio', () => {
+  assert.equal(clasificarPorKeyword('mediador@allianz.es', 'Rel. Emisión Producción 14/10/2026')?.categoria, 'correduria')
+  // Mismo prefijo desde un dominio que no es aseguradora: no se infiere, decide la IA.
+  assert.equal(clasificarPorKeyword('mediador@empresa-ajena.com', 'Rel. Emisión Producción 14/10/2026'), null)
+})
+
 test('marketing masivo conocido → ruido', () => {
   assert.equal(clasificarPorKeyword('comunicaciones@comunica.endesaclientes.com', 'Gana un iPhone 17 Pro')?.categoria, 'ruido')
   assert.equal(clasificarPorKeyword('noresponder@club.cortefiel.com', 'ALBERTO, no compartas el secreto')?.categoria, 'ruido')

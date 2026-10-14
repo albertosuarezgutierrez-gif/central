@@ -30,14 +30,18 @@ import {
   type OfertaNormalizada,
   type PdfRef,
   type InventarioDom,
+  type AtascoWorker,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
+import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { confirmarVehiculoMapfre, elegirOpcion, pulsarBuscarTomadorMapfre, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
+import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
+import { elegirOpcionMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
@@ -67,7 +71,7 @@ const azar = (min: number, max: number) => min + Math.random() * (max - min)
 type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null }
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] }
-  | { ok: false; c: Clasificacion; evidencia: Evidencia }
+  | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
 
 /**
  * De dónde sale y a dónde vuelve la sesión del navegador en un intento.
@@ -114,6 +118,9 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     acceptDownloads: true,
     ...(previa ? { storageState: previa as BrowserContextOptions['storageState'] } : {}),
   })
+  const ti = crearTrazaIntento(k.traza)
+  // ATASCO (F2): el checkpoint es de ESTE intento (un reintento empieza de cero).
+  if (k.formador) k.formador.atasco = null
   let logueado = false
   let ultimo5xx: number | null = null
   try {
@@ -135,6 +142,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       sesionManual: k.sesion.manual,
       trasLogin: async () => {
         logueado = true
+        ti.marcarLogin()
         log('tras_login')
         // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
         await exigirSinVerificacion(page, k.compania)
@@ -158,7 +166,21 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       },
       continuarMapfre: async (pagina, paso) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
-        await pulsarContinuarMapfre(pagina, guard, paso)
+        await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))
+      },
+      buscarTomadorMapfre: async (pagina, boton) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de la lupa no es de este trabajo')
+        await ctx.pausaAccion()
+        await pulsarBuscarTomadorMapfre(pagina, guard, boton)
+      },
+      continuar: async (pagina, o) => {
+        const destino = pagina ?? page
+        if (destino.context() !== context) throw new ErrorTarificador('portal', 'continuar: la pestaña no es de este trabajo')
+        await pulsarContinuarSeguro(destino, { pulsar: ctx.pulsar, formador: k.formador, ...o })
+      },
+      elegirMatSelect: (select, valores, o) => {
+        if (select.page().context() !== context) throw new ErrorTarificador('portal', 'mat-select: la pestaña no es de este trabajo')
+        return elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar })
       },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       marcarOpcionHogar: async (marco, etiqueta) => {
@@ -167,14 +189,22 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         await ctx.pausaAccion()
         return marcarOpcionRiesgoHogarAllianz(marco, guard, etiqueta)
       },
+      marcarOpcionHogarResuelta: async (marco, etiqueta) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/hogar: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return marcarOpcionResueltaHogarAllianz(marco, guard, etiqueta)
+      },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
-      paso: k.traza.paso,
+      paso: ti.paso,
     }
 
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
     let error: unknown = null
     let tope: ReturnType<typeof setTimeout> | undefined
+    // Traza (14/10/2026): los adaptadores de Moto/Auto/Mapfre no llaman a `ctx.paso`; sin esto su traza salía VACÍA. Si el
+    // adaptador no deja ningún paso, se anotan `login` (hasta `ctx.trasLogin`) + `formulario` (el resto) con el código FINAL
+    // del intento (traza-intento.ts). Tras el timeout el adaptador sigue en segundo plano: su `ctx.paso` tardío ya no anota.
     try {
       resultado = await Promise.race([
         k.tarificar(page, ctx),
@@ -187,9 +217,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       error = guard.violacion() ?? e
     } finally {
       clearTimeout(tope)
+      ti.cerrar()
     }
 
     if (resultado && !error) {
+      ti.cubrir({ ok: true })
       // Sesión buena: se guarda EN MEMORIA (sin `path`: nunca a disco) para el siguiente trabajo de este proceso.
       const estado = await context.storageState().catch(() => null)
       if (estado) await k.sesion.alExito(estado).catch(() => log('sesion_no_guardada'))
@@ -211,6 +243,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (rechazada) error = new ErrorVerificacionHumana(k.compania, textoAvisoSesionManual(k.compania))
     await k.sesion.alFallo(rechazada).catch(() => log('sesion_no_borrada'))
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
+    ti.cubrir({ ok: false, codigo: c.tipo }) // el MISMO código que el runner reporta para el intento
     // Mapfre abre el formulario en una PESTAÑA NUEVA (14/10/2026): la evidencia sale de la pestaña abierta MÁS RECIENTE
     // (con una sola pestaña, la de siempre).
     const abiertas = context.pages().filter((p) => !p.isClosed())
@@ -220,8 +253,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
     // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
     const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(marcosDePestanas(abiertas, page)) : null
-    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom } }
+    // ATASCO (F2): solo un hueco del PORTAL no transitorio con checkpoint (nadie resolvió el paso). Lo decide asegura.
+    const atasco = c.tipo === 'portal' && !c.transitorio ? (k.formador?.atasco ?? null) : null
+    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom }, atasco }
   } catch (e) {
+    ti.cubrir({ ok: false, codigo: 'desconocido' })
     await k.sesion.alFallo(false).catch(() => undefined)
     throw e
   } finally {
@@ -411,6 +447,8 @@ async function main(): Promise<number> {
           ...(c.opcionesPoblacion ? { opcionesPoblacion: c.opcionesPoblacion.slice(0, MAX_OPCIONES_POBLACION_CABLE) } : {}),
           // Estructura de la pantalla (ya saneada, sin valores de campos): NO pasa por el log, solo su cuenta.
           ...(evidencia.inventarioDom ? { inventarioDom: evidencia.inventarioDom } : {}),
+          // Checkpoint del ATASCO (F2): candidatos ya redactados y numerados; asegura los re-sanea y decide si se atasca.
+          ...(r.atasco ? { atasco: r.atasco } : {}),
         },
         ...(evidencia.captura && secretosRiesgo.length === 0 && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
@@ -427,6 +465,7 @@ async function main(): Promise<number> {
         intentos: primerFallo ? 2 : 1,
         mensaje: redactarTrabajo(c.mensaje).slice(0, 300),
         ...(evidencia.inventarioDom ? { inventarioElementos: evidencia.inventarioDom.totalElementos, inventarioMarcos: evidencia.inventarioDom.marcos.length } : {}),
+        ...(r.atasco ? { atasco: r.atasco.clave, atascoCandidatos: r.atasco.candidatos.length } : {}),
       })
       return 1
     } catch (e) {

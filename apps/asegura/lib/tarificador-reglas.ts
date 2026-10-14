@@ -6,30 +6,32 @@
 
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import {
-  claveCompania, envDeMaquina, esCif, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
+  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type AtascoWorker, type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
-/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto). */
-export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto'; riesgo: FormularioAuto }
+/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
+export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto' | 'auto'; riesgo: FormularioAuto }
 export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
 /** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
-export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto'] as const
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto'] as const
 
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
   if (ramo === 'comunidades') {
     const v = validarRiesgoComunidad(riesgo)
     return v.ok ? { ok: true, entrada: { ramo, riesgo: v.riesgo } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
   }
-  if (ramo === 'moto') {
+  // Vehículo (moto 13/10/2026; auto/coche 14/10/2026, Mapfre NSEI): el MISMO validador, y el formulario tiene que ser del
+  // ramo del trabajo (un formulario de coche no es un trabajo de moto ni al revés: el worker lo repite en `prepararTrabajo`).
+  if (ramo === 'moto' || ramo === 'auto') {
     const v = validarFormularioAuto(riesgo)
     if (!v.ok) return { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
-    if (v.formulario.ramo !== 'moto') return { ok: false, mensaje: 'riesgo inválido', errores: ['ramo: el formulario de un trabajo moto tiene que ser de moto'] }
+    if (v.formulario.ramo !== ramo) return { ok: false, mensaje: 'riesgo inválido', errores: [`ramo: el formulario de un trabajo ${ramo} tiene que ser de ${ramo}`] }
     return { ok: true, entrada: { ramo, riesgo: v.formulario } }
   }
-  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades o moto)' }
+  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades, moto o auto)' }
 }
 
 // ─── NIF del tomador para Mapfre (14/10/2026, decisión de Alberto) ──────────
@@ -174,7 +176,7 @@ export function claveEncolar(p: { correduriaId: string; clienteId: string; compa
 }
 
 /** Estados en los que un trabajo previo cuenta como «ese mismo encargo sigue vivo» y el nuevo es duplicado. */
-export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable'] as const
+export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable', 'atascado'] as const
 
 /**
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
@@ -191,6 +193,8 @@ export function bloqueaDuplicado(
   if (f.estado === 'pendiente') return true
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
+  // ATASCO (F2): espera la elección de Alberto y volverá a la cola: pedir lo mismo otra vez sería el mismo encargo dos veces.
+  if (f.estado === 'atascado') return true
   return false
 }
 
@@ -213,11 +217,11 @@ export function configFly(env: Record<string, string | undefined>): { ok: true; 
 
 /**
  * La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista
- * blanca de `envDeMaquina` (JOB_ID + URL): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
+ * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
  * credenciales de portal (esas son fly secrets de la app del worker).
  */
-export function peticionMaquina(cfg: ConfigFly, jobId: string): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
-  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl })
+export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
+  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador })
   const body = {
     name: `tarificar-${jobId.slice(0, 8)}`,
     region: REGION_FLY,
@@ -250,7 +254,9 @@ export type ResultadoWorker =
        *  `error` jsonb del trabajo y es la lista contra la que se valida cualquier elección (IA o bandeja). */
       /** `inventarioDom` (13/10/2026): ESTRUCTURA de la pantalla de un hueco de mapa (`ErrorMapaIncompleto`), saneada otra
        *  vez aquí (sin valores de campos, sin datos personales, ≤60 KB); se guarda en el `error` jsonb. Nunca se loguea. */
-      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom }
+      /** `atasco` (F2, 14/10/2026): checkpoint de un paso que nadie resolvió, re-saneado (`leerAtascoWorker`). Accesorio:
+       *  inválido → se descarta y el trabajo falla como antes. NO va al `error` jsonb: vive en `tarificador_atascos`. */
+      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; atasco?: AtascoWorker }
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
@@ -272,6 +278,21 @@ export function leerMetaWorker(e: Record<string, unknown>): MetaWorker {
   const v = validarTraza(e.pasos)
   const botVersion = esVersionBot(e.botVersion) ? e.botVersion : null
   return v.ok ? { pasos: v.pasos, botVersion } : { pasos: [], botVersion, trazaRechazada: v.errores.slice(0, 5) }
+}
+
+/**
+ * Aviso de log de la traza (14/10/2026). La traza es accesoria y su fallo NO rompe el resultado, pero tampoco puede ser mudo:
+ * `tarificacion_trabajo_pasos` estuvo vacía semanas sin una línea de log útil. Prefijo fijo para filtrar en los logs de
+ * Vercel. Solo id del trabajo y el motivo (nombre de la clave/paso, nunca un valor); el motivo se recorta y se le quita
+ * cualquier URL (una de BD llevaría credenciales).
+ */
+export const PREFIJO_TRAZA = '[tarificador-traza]'
+export function avisoTraza(trabajoId: string, motivo: unknown): string {
+  const m = (motivo instanceof Error ? motivo.message : typeof motivo === 'string' ? motivo : String(motivo))
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
+    .replace(/\s+/g, ' ')
+    .slice(0, 300)
+  return `${PREFIJO_TRAZA} trabajo ${trabajoId}: ${m}`
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -337,10 +358,12 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const opcionesPoblacion = err?.tipo === 'captcha' ? validarOpcionesPoblacion(err.opcionesPoblacion) : null
     // Accesorio también: se RE-SANEA (lista blanca + filtro de datos personales + tope de bytes); sin forma → se descarta.
     const inventarioDom = err?.inventarioDom !== undefined ? sanearInventarioDom(err.inventarioDom) : null
+    // Checkpoint de ATASCO (F2): solo en un hueco del portal; accesorio (inválido → se descarta).
+    const atasco = err?.tipo === 'portal' && err.atasco !== undefined ? leerAtascoWorker(err.atasco) : null
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}) }, captura, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(atasco ? { atasco } : {}) }, captura, html, ...leerMetaWorker(e) },
     }
   }
 

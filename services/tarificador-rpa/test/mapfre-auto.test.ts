@@ -231,6 +231,7 @@ const ctxFalso = (registro: string[] = []) => ({
   pulsarEnlaceEntrada: async () => { registro.push('entrada') },
   confirmarVehiculoMapfre: async () => { registro.push('vehiculo') },
   continuarMapfre: async (_p: Page, paso: string) => { registro.push(`continuar:${paso}`) },
+  buscarTomadorMapfre: async () => { registro.push('lupa') },
 }) as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
 
 test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de navegar; otro ramo → datos', async () => {
@@ -289,4 +290,45 @@ test('el guard rechaza los botones peligrosos de NSEI y el adaptador no pulsa na
     .join('\n')
   assert.ok(!/\.click\s*\(|pulsar\s*\(|\.check\s*\(|setChecked|dispatchEvent|keyboard|\.press\s*\(/.test(src), 'el adaptador de Mapfre no pulsa, marca ni teclea teclas')
   assert.ok(!/aceptar|emitir|archivar|formalizar|has-text|text=/i.test(src), 'ningún selector por texto ni verbo de acción peligrosa en el código')
+})
+
+// ───────────── mat-select: mapeo explícito + capa común (pieza 4, 14/10/2026) ─────────────
+import { MAPEO_MAPFRE_AUTO, rellenarMatSelects, textosMapfreDe } from '../src/adapters/mapfre/auto.ts'
+
+test('MAPEO_MAPFRE_AUTO: datos explícitos y congelados; sin valor o sin mapeo → null (no se supone nada)', () => {
+  assert.deepEqual(textosMapfreDe('uso', 'Particular'), ['Particular', 'Privado'])
+  assert.deepEqual(textosMapfreDe('ambito', 'espana'), ['España', 'Nacional'])
+  assert.deepEqual(textosMapfreDe('clasePermiso', 'B'), ['B'])
+  for (const v of [null, undefined, '', 'taxi', '__proto__', 'toString']) assert.equal(textosMapfreDe('uso', v), null, String(v))
+  assert.ok(Object.isFrozen(MAPEO_MAPFRE_AUTO) && Object.isFrozen(MAPEO_MAPFRE_AUTO.uso.particular))
+})
+
+test('planObjetoYFiguras: con los valores del formulario los mat-select pasan a escribibles (con sus textos de Mapfre); sin ellos, pendientes como antes', () => {
+  const sin = planObjetoYFiguras(form)
+  assert.deepEqual(sin.pendientes.map((o) => o.etiqueta).slice(0, 3), ['uso del vehículo', 'ámbito de circulación', 'clase del permiso'])
+  const con = planObjetoYFiguras({ ...form, usoVehiculo: 'particular', ambitoCirculacion: 'espana', clasePermiso: 'b', companiaAnterior: 'Aseguradora Ficticia' } as FormularioAuto)
+  const selects = con.escribibles.filter((o) => o.tipo === 'mat-select')
+  assert.deepEqual(selects.map((o) => [o.etiqueta, o.opciones]), [
+    ['uso del vehículo', ['Particular', 'Privado']],
+    ['ámbito de circulación', ['España', 'Nacional']],
+    ['clase del permiso', ['B']],
+    ['compañía anterior', ['Aseguradora Ficticia']],
+  ])
+  assert.deepEqual(con.pendientes.map((o) => o.etiqueta), ['¿tiene compañía anterior?'], 'el interruptor sigue sin DOM: pendiente')
+  // Un valor sin mapeo NO se inventa: sigue pendiente.
+  const raro = planObjetoYFiguras({ ...form, usoVehiculo: 'taxi' } as unknown as FormularioAuto)
+  assert.ok(raro.pendientes.some((o) => o.etiqueta === 'uso del vehículo'))
+})
+
+test('rellenarMatSelects: cada mat-select del plan por ctx.elegirMatSelect con sus textos; sin la función o sin desplegable → hueco con inventario', async () => {
+  const plan = planDelPaso(planObjetoYFiguras({ ...form, usoVehiculo: 'particular', ambitoCirculacion: 'espana', clasePermiso: 'b' } as FormularioAuto), 'objetoAsegurado')
+  await page.setContent(`<body><app-datos-vehiculo><mat-select formcontrolname="uso">x</mat-select><mat-select formcontrolname="ambitoCirculacion">y</mat-select></app-datos-vehiculo></body>`)
+  const vistos: unknown[] = []
+  const hechos = await rellenarMatSelects(page, plan, { elegirMatSelect: async (_s, valores, o) => { vistos.push([o.etiqueta, valores]); return { texto: 'x', origen: 'coincidencia' as const } } })
+  assert.deepEqual(hechos, ['uso del vehículo', 'ámbito de circulación'])
+  assert.deepEqual(vistos, [['uso del vehículo', ['Particular', 'Privado']], ['ámbito de circulación', ['España', 'Nacional']]])
+  await assert.rejects(() => rellenarMatSelects(page, plan, {}), (e) => e instanceof ErrorMapaIncompleto)
+  await page.setContent('<body></body>')
+  await assert.rejects(() => rellenarMatSelects(page, plan, { elegirMatSelect: async () => ({ texto: '', origen: 'ia' as const }) }), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom)
+  assert.deepEqual(await rellenarMatSelects(page, { escribibles: [], pendientes: [] }, {}), [])
 })

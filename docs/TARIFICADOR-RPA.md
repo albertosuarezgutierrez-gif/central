@@ -28,6 +28,71 @@ Todo desde `/correduria/oportunidad/[id]`, sección **Presupuestos de compañía
 ## IA formador (`src/formador.ts`)
 Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de acciones + `pareceEmision`); **modo acompañado** (hasta 10 cotizaciones) con contraste por etiqueta; registro inmutable `tarificador_intervenciones`. Tope de llamadas por trabajo: `TARIFICADOR_FORMADOR_MAX_LLAMADAS` (12).
 
+## Regla: todo bot con IA detrás y aprendizaje (Alberto, 14/10/2026)
+- **Para TODOS los bots** (Allianz, Mapfre, Occident y los que vengan). Capa común: `services/tarificador-rpa/src/formador.ts`
+  (`conRespaldoIA` para acciones, `campoConRespaldo` para campos). Orden: **selector fijo → aprendido** (`tarificador_conocimiento`,
+  por compañía/ramo) **→ IA** (asegura `/api/tarificador/formador/sugerir`, pasarela/OpenRouter, `privado`). Lo que funciona se
+  **confirma** y queda aprendido. La IA solo devuelve el índice de un candidato; el worker lo **valida** (tablas cerradas
+  `ACCIONES_PERMITIDAS` + enlace de entrada de `guard.ts`, `pareceEmision`, `BLOQUEO_FORMADOR`, campo editable con etiqueta
+  contrastada) y lo pulsa por el MISMO guard que el fijo. Lo aprendido pasa la misma validación: nunca abre una acción nueva.
+- **Sin PII ni credenciales al modelo**: estructura sin `value`, textos por el redactor y `redactarDatosPersonales` en asegura.
+- **Plan B (nunca colgado)**: por trabajo ≤10 consultas y ≤150 s de IA en el worker (`PRESUPUESTO_RESPALDO`), ≤12 llamadas y ≤0,50 € en
+  asegura (`TARIFICADOR_FORMADOR_MAX_LLAMADAS`/`_MAX_EUR`), tope del intento del runner; si nada resuelve → el error ORIGINAL
+  (`ErrorMapaIncompleto` + inventario de todos los marcos + captura + HTML). Sin reintentos (un hueco de mapa no es transitorio).
+- **Encendido**: `TARIFICADOR_FORMADOR_ACTIVO=1` en `central-asegura`; modelo potente `TARIFICADOR_FORMADOR_MODELO` (por defecto
+  `anthropic/claude-sonnet-4.5`). Guardián: `services/tarificador-rpa/test/regla-respaldo-ia.test.ts` (todo adaptador registrado
+  usa la capa o está en `PENDIENTES_RESPALDO_IA` con motivo; hoy: Allianz Moto).
+
+## Plan de robustez (fases)
+- **F1 (este PR)**: fijo → aprendido → IA en la capa común; Mapfre Auto (entrada + campos) y Allianz Comunidades (campos +
+  «Calcular») la usan. **IA escalonada**: 1º modelo por defecto (barato), 2º el potente solo si el 1º no señala nada; tope de € por
+  trabajo. Aprendido: se usa al momento y suma confirmaciones.
+- **F2**: aprendido con confianza (se consolida tras 3 éxitos o confirmación de Alberto, se descarta tras 2 fallos: necesita
+  columna de fallos en `tarificador_conocimiento`); **corte por compañía/ramo tras 3 fallos seguidos** con aviso Telegram; estado
+  «atascado» + Telegram y pantalla «Bots atascados» con captura y elementos numerados: Alberto elige/escribe, queda aprendido y se
+  reanuda re-ejecutando el camino aprendido (checkpoint, sin máquina esperando). Allianz Moto a la capa común. Respaldo para
+  «Continuar» de Mapfre, la lupa del tomador y los `mat-select` (hoy en guard.ts / sin DOM: necesitan su propia puerta).
+- **F2 hecha (14/10/2026, sin desplegar)** — reglas puras `packages/module-tarificacion/src/robustez.ts`, BD
+  `apps/asegura/lib/tarificador-robustez.ts`, SQL `apps/asegura/prisma/sql/2026-10-14e_tarificador_robustez_f2.sql` (aplicar ANTES):
+  · **Aprendido con confianza**: `fallos` seguidos + `consolidado_at` + `descartado_at` en `tarificador_conocimiento`. Consolida a los
+    3 éxitos (o al momento si es `humano`), se descarta a los 2 fallos seguidos (no resolvió/no validó, o usado y el trabajo cayó sin
+    confirmarlo: el worker lo manda en `aprendidoFallido` del cierre). Lo descartado no se sirve; un éxito lo rehabilita.
+  · **Corte por compañía/ramo** (`tarificador_pausas`): 3 trabajos seguidos en `error_definitivo` por portal/infra (desde la última
+    reanudación) → pausa: ni se encola (409 `bot_pausado`) ni se reclama. Telegram `correduria.tarificador-pausa` con «▶️ Reanudar»
+    (`tpa_r`) y botón en /correduria/tarificador. `companias_integracion` no se toca.
+  · **Atasco** (estado `atascado`, `tarificador_atascos`): si fijo + aprendido + IA no resuelven un paso de `conRespaldoIA` /
+    `campoConRespaldo`, el worker manda en `error.atasco` los candidatos ELEGIBLES (acción: solo texto de su fila de
+    `ACCIONES_PERMITIDAS`; campo: solo editable sin casillas; nunca palabras de emisión/pago), redactados y numerados (≤20). asegura
+    (con `TARIFICADOR_ATASCO_ACTIVO=1`, ≤3 rondas por trabajo) deja el trabajo `atascado` SIN purgar el riesgo; Telegram
+    `correduria.tarificador-atasco` con la captura (si el worker la hizo) + botones numerados (`atq_e`/`atq_x`, solo
+    `from.id = TELEGRAM_CHAT_ID`), y pantalla «Bots atascados» en /correduria/tarificador. Elegir = se aprende como `humano`
+    (consolidado) y el MISMO trabajo vuelve a `pendiente` (intentos 0): el worker repite el camino y lo aprendido lo resuelve por la
+    MISMA validación (en un campo humano solo se relaja el contraste de etiqueta; una acción, nunca). Sin respuesta en
+    `TARIFICADOR_ATASCO_HORAS` (24) → `error_definitivo` en el barrido. Descartar = `cancelado`.
+  · **Pieza 4 hecha (14/10/2026, sin desplegar)** — helpers COMUNES para todos los bots: `src/continuar.ts` (`pulsarContinuarSeguro`:
+    botón de texto ENTERO «Continuar»/«Siguiente» → aprendido → IA, SIEMPRE por `ctx.pulsar` = guard, fuera de diálogos, espera el
+    cambio de pantalla y si no llega error tipado; nueva fila `continuar` en `ACCIONES_PERMITIDAS`) y `src/mat-select.ts`
+    (`elegirOpcionMatSelect`: abre el panel, lee `mat-option`/`role=option` del overlay, coincidencia normalizada → IA con la lista
+    de opciones (`sugerirOpcion`, solo un índice) → `ErrorOpcionSinResolver` que pide inventario). Runner: `ctx.continuar` y
+    `ctx.elegirMatSelect`; Mapfre: `continuarMapfre` con respaldo y mapeo explícito `MAPEO_MAPFRE_AUTO` (textos candidatos).
+    **Abierto**: `FormularioAuto` aún no trae uso/ámbito/clase de permiso/compañía anterior (siguen pendientes → paran en el paso 2
+    con inventario hasta ampliar validador + plataforma), el interruptor «¿compañía anterior?», la lupa del NIF y «Generar
+    Proyecto»; el atasco F2 de un mat-select sin resolver no es elegible por Telegram (las opciones no tienen selector).
+  · **Lupa del NIF hecha (14/10/2026, Mapfre auto 0.6.0)** — tras el trabajo d7987f90 (murió en «mapa incompleto: faltan la lupa…» sin
+    IA ni atasco): acción `buscar_tomador` en `ACCIONES_PERMITIDAS` (= `TEXTOS_BUSCAR_TOMADOR` de guard.ts, test de igualdad); se
+    localiza por la capa común (fijo = único botón del `mat-form-field` del NIF validado como lupa → aprendido → IA → ATASCO F2) y
+    se pulsa SOLO por `pulsarBuscarTomadorMapfre` (paso activo «Datos básicos», dentro de `app-datos-basicos`, una vez y antes del
+    «Continuar» del paso 1, `comprobarBoton` + `mattooltip`, sin ventana de red). Icono sin texto (RIESGO aceptado): manda el texto
+    visible ENTERO; sin él, aria-label/title/mattooltip (todos de la lista); sin ellos, icono de lupa. «Buscar y contratar»/«Emitir»
+    con lupa → fuera. Lo resuelto se aprende solo si el «Continuar» llega a «Objeto asegurado». Tras la lupa: «no existe ningún
+    registro» → `datos`; un DIÁLOGO (selección de persona) → hueco con inventario SIN atasco (no hay puerta para elegir fila: abierto).
+    Capa común: `mat-icon` suelto es candidato de acción y un botón de solo icono viaja con su nombre accesible o «search»;
+    guardián `stubsDeHueco` (regla-respaldo-ia.test.ts): ningún adaptador con una función que solo lanza `ErrorMapa…`.
+  · **Pendiente de la F2**: Allianz Moto a la capa común; diálogo de selección de tomador de Mapfre (si aparece en real).
+- **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
+  clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).
+- **Futuro**: las mismas capas para otras tareas (siniestros…) con su lista blanca por tarea.
+
 ## Robustez
 Reintento único y solo transitorio (infraestructura); sesión en memoria con TTL 10 min (hoy NO ahorra logins: cada máquina hace 1 trabajo); pausas de ritmo humano; `VARIANTES` vacía (sin variantes de modalidad por ahora).
 
@@ -165,7 +230,7 @@ Encolar moto desde plataforma: sin `poblacion` en el riesgo, se toma `ciudad` de
 - **Topes (techo; el env solo baja):** 30 llamadas, 80 acciones, 40 pasos, 15 min, **2 €** (peor caso ANTES de llamar). Coste real en `ai_usos` con `cliente_ref='explorador:<trabajo>'`.
 - **PII y concurrencia (revisión 13/10):** con datos reales la ruta `paso` carga el `riesgo` del trabajo y QUITA del inventario todo texto con sus valores (nombre, dirección, CP, fecha de nacimiento, matrícula, NIF, contacto de env) antes de la IA y de guardarlo; sin riesgo legible → 503 `parar`. «Aceptar» solo con título `h1-h6/legend` (nunca `th`) y lista de títulos sin recortar; `avanzar` exige texto/aria entero y onclick sin recortar. Lock `pg_try_advisory_xact_lock`: ocupado → 409 sin IA.
 - **Fase B (worker, 13/10/2026, rama `claude/explorador-ia-worker`):** `services/tarificador-rpa/src/explorador.ts` (login ePAC por código → `abrirNuevaAlta` → bucle: CAPTCHA/OTP/ventana nueva = parar; inventario con refs y handles en el MISMO orden que el crudo; REVALIDA el lote; anti-TOCTOU por nodo; `rellenar` con `resolverDato` sin log; `marcar`/`avanzar` por `ctx.pulsar()`; el «Aceptar» de Datos básicos SOLO por `pulsarExploracionAutorizada` de `guard.ts`, una vez, con ventana de red al `action` del formulario; red no-GET → `redNoGet`) → `/cierre` → resultado `explorado` (o `captcha`/`emision`/error). El worker declara sus modos en `X-Tarificador-Modos`: asegura solo sirve una exploración a quien la declara; la cola solo la RECLAMA con `TARIFICADOR_EXPLORADOR_ACTIVO=1`. Lease renovado en cada paso con techo = inicio ACUMULADO + 15 min + 2 min. `MAX_TOKENS_SALIDA_EXPLORADOR` = 4000. `paso` ya no tiene la conexión abierta durante la IA (tx1 reserva `ia_en_vuelo_hasta` y suelta → IA fuera → tx2 registra o descarta con 409 si el estado cambió); `cierre` toma el mismo try-lock. Encolar: `POST /api/operador/tarificador/exploracion {entrada, trabajoOrigenId?}` (sintética o ligada a un `tarificar` del mismo cliente y ramo). SQL nuevo `2026-10-13c_tarificador_explorador_fase_b.sql` (columna de reserva + fila `allianz/hogar` APAGADA), NO aplicado.
-- **Envs:** `TARIFICADOR_EXPLORADOR_ACTIVO=1`, `TARIFICADOR_EXPLORADOR_MODELO` (por defecto `anthropic/claude-sonnet-4.5`, por OpenRouter con `modeloOpenRouter` de la pasarela: NO con `model`, que es el pin a NIM). SQL `2026-10-13_tarificador_explorador.sql` (NO aplicado).
+- **Envs:** `TARIFICADOR_EXPLORADOR_VISTA=dom|aria|ambas` (defecto `dom`; se pone en Vercel `central-asegura` y `peticionMaquina` la REENVÍA a la máquina Fly — lista blanca `ENV_MAQUINA_PERMITIDAS`; ausente o con otro valor no viaja y el worker usa `dom`), `TARIFICADOR_EXPLORADOR_ACTIVO=1`, `TARIFICADOR_EXPLORADOR_MODELO` (por defecto `anthropic/claude-sonnet-4.5`, por OpenRouter con `modeloOpenRouter` de la pasarela: NO con `model`, que es el pin a NIM). SQL `2026-10-13_tarificador_explorador.sql` (NO aplicado).
 
 ## Rutina «Médico del bot tarificador»
 `trig_011zoZZAiTQnQ48qEWdRJq2Y`: laborables 8:52 Madrid; mira Supabase + repo; abre PR **draft**; **nunca mergea**.

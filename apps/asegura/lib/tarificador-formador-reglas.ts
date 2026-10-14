@@ -14,6 +14,40 @@ export function formadorActivo(env: Record<string, string | undefined>): boolean
   return env.TARIFICADOR_FORMADOR_ACTIVO === '1'
 }
 
+/** Modelo POTENTE del 2º escalón del respaldo IA si no hay env (el mismo que el explorador). */
+export const MODELO_FORMADOR_POTENTE_POR_DEFECTO = 'anthropic/claude-sonnet-4.5'
+
+/**
+ * Modelo de OpenRouter del 2º ESCALÓN del respaldo IA (`sugerir`, 14/10/2026: «modelo potente»): `TARIFICADOR_FORMADOR_MODELO`
+ * con un slug válido, o el por defecto. Va POR LA PASARELA (queda en `ai_usos` y le aplican los topes). Env con basura →
+ * `null` = sin 2º escalón (fail-closed: no se llama a un modelo que no se ha validado).
+ */
+export function modeloFormador(env: Record<string, string | undefined>): string | null {
+  const v = env.TARIFICADOR_FORMADOR_MODELO?.trim()
+  if (!v) return MODELO_FORMADOR_POTENTE_POR_DEFECTO
+  return /^[a-z0-9][a-z0-9-]{0,40}\/[a-z0-9][a-z0-9._-]{0,80}(?::[a-z]{1,20})?$/.test(v) ? v : null
+}
+
+/**
+ * IA ESCALONADA: 1º el modelo por defecto de `iaTexto` (barato), 2º el potente SOLO si el 1º no señaló nada con confianza.
+ * `undefined` = el por defecto. Cada escalón es una llamada (cuenta para el tope de llamadas y el de coste del trabajo).
+ */
+export function escaleraModelos(env: Record<string, string | undefined>): (string | undefined)[] {
+  const potente = modeloFormador(env)
+  return potente ? [undefined, potente] : [undefined]
+}
+
+export const MAX_EUR_POR_DEFECTO = 0.5
+/** Tope de COSTE estimado de IA del formador por trabajo (`TARIFICADOR_FORMADOR_MAX_EUR`, 0.01..5 €; si no, 0,50 €). */
+export function maxEurIA(env: Record<string, string | undefined>): number {
+  const n = Number((env.TARIFICADOR_FORMADOR_MAX_EUR ?? '').trim().replace(',', '.'))
+  return Number.isFinite(n) && n >= 0.01 && n <= 5 ? n : MAX_EUR_POR_DEFECTO
+}
+
+export function quedaPresupuestoEur(usado: number, max: number): boolean {
+  return Number.isFinite(usado) && usado >= 0 && usado < max
+}
+
 export const MAX_LLAMADAS_POR_DEFECTO = 12
 /** Tope de llamadas a la IA por trabajo (`TARIFICADOR_FORMADOR_MAX_LLAMADAS`, 1..60; si no, 12). */
 export function maxLlamadasIA(env: Record<string, string | undefined>): number {
@@ -175,12 +209,24 @@ export function leerPeticionConfirmar(body: unknown): { ok: true; p: PeticionCon
   return { ok: true, p: { ...c, clave, tipo: tipo!, selector, marco, origen: origen! } }
 }
 
-export function leerPeticionCierre(body: unknown): { ok: true; p: { trabajoId: string; resultado: 'ok' | 'error' } } | { ok: false; errores: string[] } {
+/** F2: lo aprendido que falló en el trabajo (máx. 50). Accesorio: una entrada mal formada se descarta sola, no tumba el cierre. */
+export type AprendidoFallido = { clave: string; tipo: TipoClave; selector: string }
+export const MAX_APRENDIDO_FALLIDO = 50
+
+export function leerPeticionCierre(body: unknown): { ok: true; p: { trabajoId: string; resultado: 'ok' | 'error'; aprendidoFallido: AprendidoFallido[] } } | { ok: false; errores: string[] } {
   const o = obj(body)
   const trabajoId = typeof o?.trabajoId === 'string' ? o.trabajoId.trim() : ''
   const resultado = o?.resultado === 'ok' || o?.resultado === 'error' ? o.resultado : null
   const errores = [...(UUID.test(trabajoId) ? [] : ['trabajoId no es un uuid']), ...(resultado ? [] : ["resultado: 'ok' | 'error'"])]
-  return errores.length ? { ok: false, errores } : { ok: true, p: { trabajoId, resultado: resultado! } }
+  const aprendidoFallido: AprendidoFallido[] = []
+  for (const x of Array.isArray(o?.aprendidoFallido) ? o.aprendidoFallido.slice(0, MAX_APRENDIDO_FALLIDO) : []) {
+    const e = obj(x)
+    const clave = typeof e?.clave === 'string' ? e.clave.trim() : ''
+    const tipo = e?.tipo === 'campo' || e?.tipo === 'accion' ? e.tipo : null
+    const selector = typeof e?.selector === 'string' ? e.selector.trim() : ''
+    if (CLAVE.test(clave) && tipo && selector && selector.length <= 2000) aprendidoFallido.push({ clave, tipo, selector })
+  }
+  return errores.length ? { ok: false, errores } : { ok: true, p: { trabajoId, resultado: resultado!, aprendidoFallido } }
 }
 
 /** Con intervención = la IA tuvo que señalar algo o hubo un aviso bloqueante en el trabajo. */
@@ -214,7 +260,8 @@ export function promptSugerir(p: PeticionSugerir): string {
   return [
     `Compañía: ${p.compania}. Ramo: ${p.ramo}.`,
     `Busco ${que}.${p.descripcion ? ` Descripción: ${p.descripcion}` : ''}`,
-    p.tipo === 'campo' ? 'Tiene que ser un control editable (input, select, textarea, desplegable), nunca un botón o enlace.' : 'Tiene que ser un botón, enlace o pestaña.',
+    p.tipo === 'campo' ? 'Tiene que ser un control editable (input, select, textarea, desplegable), nunca un botón o enlace.' : 'Tiene que ser un botón, enlace, pestaña u opción de menú (puede ser un elemento clicable de una tarjeta, p. ej. un div de menú).',
+    ...(p.clave === 'enlace_entrada' ? ['Aquí «Emisión» es parte del NOMBRE de un menú del portal: el enlace solo abre el formulario de cotización (lo autoriza la correduría); no emite nada.'] : []),
     'Candidatos:',
     ...p.estructura.map(lineaCandidato),
   ].join('\n')
@@ -310,9 +357,39 @@ export function incidenciasResultado(p: PeticionRevisar): IncidenciaPrecio[] {
 export const EUR_POR_MTOK_ENTRADA = 0.3
 export const EUR_POR_MTOK_SALIDA = 1.2
 
-/** ~4 caracteres por token. Redondeado a 6 decimales (numeric(10,6)). */
-export function costeEstimado(caracteresEntrada: number, caracteresSalida: number): number {
+/**
+ * Tarifas de REFERENCIA por modelo (€/Mtok, redondeadas HACIA ARRIBA). `undefined` = el modelo por defecto de `iaTexto` (flash).
+ * Un slug que no está aquí se tarifica como el MÁS CARO de la tabla (conservador: el tope de € nunca se queda corto).
+ */
+export const TARIFAS_EUR_POR_MTOK: Readonly<Record<string, { entrada: number; salida: number }>> = Object.freeze({
+  'anthropic/claude-sonnet-4.5': { entrada: 3, salida: 15 },
+})
+
+export function tarifaModelo(modelo?: string): { entrada: number; salida: number } {
+  if (!modelo) return { entrada: EUR_POR_MTOK_ENTRADA, salida: EUR_POR_MTOK_SALIDA }
+  const t = TARIFAS_EUR_POR_MTOK[modelo]
+  if (t) return t
+  const todas = [{ entrada: EUR_POR_MTOK_ENTRADA, salida: EUR_POR_MTOK_SALIDA }, ...Object.values(TARIFAS_EUR_POR_MTOK)]
+  return { entrada: Math.max(...todas.map((x) => x.entrada)), salida: Math.max(...todas.map((x) => x.salida)) }
+}
+
+/** ~4 caracteres por token, con la tarifa del `modelo` (sin él, la del por defecto). Redondeado a 6 decimales (numeric(10,6)). */
+export function costeEstimado(caracteresEntrada: number, caracteresSalida: number, modelo?: string): number {
+  const t = tarifaModelo(modelo)
   const e = Math.max(0, caracteresEntrada) / 4
   const s = Math.max(0, caracteresSalida) / 4
-  return Math.round(((e * EUR_POR_MTOK_ENTRADA + s * EUR_POR_MTOK_SALIDA) / 1e6) * 1e6) / 1e6
+  return Math.round(((e * t.entrada + s * t.salida) / 1e6) * 1e6) / 1e6
+}
+
+/** Tokens de salida máximos de `preguntarIA` (lo que se reserva al estimar ANTES de llamar). */
+export const MAX_TOKENS_SALIDA_FORMADOR = 600
+
+/** Coste MÁXIMO de una llamada antes de hacerla: entrada real + salida al tope de tokens, con la tarifa del modelo. */
+export function costeMaximoLlamadaFormador(caracteresEntrada: number, modelo?: string): number {
+  return costeEstimado(caracteresEntrada, MAX_TOKENS_SALIDA_FORMADOR * 4, modelo)
+}
+
+/** ¿Cabe la llamada siguiente en el tope de € del trabajo (lo gastado + lo máximo que puede costar esta)? Pura. */
+export function cabeLlamadaEur(usado: number, maximoLlamada: number, max: number): boolean {
+  return Number.isFinite(usado) && usado >= 0 && Number.isFinite(maximoLlamada) && maximoLlamada >= 0 && usado + maximoLlamada <= max
 }

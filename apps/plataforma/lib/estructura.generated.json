@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T10:25:09Z",
+  "generadoEn": "2026-10-14T14:32:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 246
+        "evidencias": 247
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2257,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 57
+        "evidencias": 58
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 47
+        "evidencias": 49
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -4134,6 +4134,7 @@
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
       "/api/operador/correo/evento",
+      "/api/operador/correo/evento/reevaluar",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
@@ -4215,6 +4216,8 @@
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
+      "/api/operador/tarificador/atascos",
+      "/api/operador/tarificador/atascos/[id]",
       "/api/operador/tarificador/avisos-verificacion",
       "/api/operador/tarificador/bandeja",
       "/api/operador/tarificador/bandeja/[id]",
@@ -4237,6 +4240,7 @@
       "/api/operador/tarificador/oportunidad",
       "/api/operador/tarificador/oportunidad/[id]/propuesta",
       "/api/operador/tarificador/panel",
+      "/api/operador/tarificador/pausas/[id]",
       "/api/operador/tarificador/probar",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5276,6 +5280,8 @@
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
+      "/api/correduria/tarificador/atascos",
+      "/api/correduria/tarificador/atascos/[id]",
       "/api/correduria/tarificador/bandeja",
       "/api/correduria/tarificador/bandeja/[id]",
       "/api/correduria/tarificador/coberturas",
@@ -5293,6 +5299,7 @@
       "/api/correduria/tarificador/oportunidad",
       "/api/correduria/tarificador/oportunidad/[id]/propuesta",
       "/api/correduria/tarificador/panel",
+      "/api/correduria/tarificador/pausas/[id]",
       "/api/correduria/tarificador/probar",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5872,6 +5879,7 @@
       "seguros.tarificacion_trabajos",
       "seguros.tarificaciones",
       "seguros.tarificador_acompanamiento",
+      "seguros.tarificador_atascos",
       "seguros.tarificador_coberturas_presupuesto",
       "seguros.tarificador_conocimiento",
       "seguros.tarificador_elecciones",
@@ -5881,6 +5889,7 @@
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
       "seguros.tarificador_intervenciones",
+      "seguros.tarificador_pausas",
       "seguros.tarificador_sesiones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
@@ -6906,7 +6915,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1703,
+    "apis": 1710,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

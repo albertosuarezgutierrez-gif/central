@@ -44,6 +44,8 @@ for (const [nombre, fichero, desde, hasta] of LECTORES) {
 test('«Probar tarificación»: solo integraciones de un ramo con adaptador (Hogar solo explora)', () => {
   assert.match(trozo('lib/tarificador-lectura.ts', 'export async function leerIntegracionesActivas', 'export async function leerRiesgoParaReencolar'), /ramo = any\(\$\{\[\.\.\.RAMOS_TARIFICABLES_RPA\]\}::text\[\]\)/)
   assert.ok(!(RAMOS_TARIFICABLES_RPA as readonly string[]).includes('hogar'))
+  // Lista FIJADA (14/10/2026: + auto, coche de Mapfre NSEI). Un ramo nuevo aquí abre «Probar tarificación» e integraciones.
+  assert.deepEqual([...RAMOS_TARIFICABLES_RPA], ['comunidades', 'moto', 'auto'])
   for (const r of RAMOS_TARIFICABLES_RPA) {
     const v = validarEntradaRamo(r, {})
     assert.ok(v.ok || !v.mensaje.startsWith('ramo no soportado'), `${r} sin adaptador`)

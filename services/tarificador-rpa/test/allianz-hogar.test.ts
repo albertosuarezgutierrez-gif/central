@@ -8,8 +8,9 @@ import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame, type Page } from 'playwright'
 import { EmisionBloqueadaError, type FormularioHogar } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
+import { prepararFormador, type ContextoFormador } from '../src/formador.ts'
 import { pideInventarioDom } from '../src/errores.ts'
-import { OPCIONES_RIESGO_HOGAR_ALLIANZ, etiquetaOpcionHogarCasa, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, pulsar } from '../src/guard.ts'
+import { OPCIONES_RIESGO_HOGAR_ALLIANZ, etiquetaOpcionHogarCasa, instalarGuardEmision, marcarOpcionResueltaHogarAllianz, marcarOpcionRiesgoHogarAllianz, pulsar } from '../src/guard.ts'
 import { prepararTrabajo } from '../src/ramo.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import {
@@ -334,6 +335,74 @@ test('guard: una etiqueta con «emitir» en el control no se pulsa aunque esté 
     await marco.evaluate(() => { document.getElementById('u4')!.setAttribute('onclick', 'emitirPoliza()') })
     await assert.rejects(() => marcarOpcionRiesgoHogarAllianz(marco, guard, 'Secundaria'), EmisionBloqueadaError)
     assert.equal(await marcado('u4'), false)
+  } finally {
+    await context.close()
+  }
+})
+
+test('guard: marcarOpcionResueltaHogarAllianz marca solo un <label for> de un radio de la app (no un campo, no otro marco, no «emitir»)', async () => {
+  const { context, page, marco, guard, marcado } = await abrir()
+  try {
+    // «En venta y/o deshabitada» NO está en la lista cerrada, pero una etiqueta resuelta por la capa común (IA/atasco) sí se marca.
+    assert.deepEqual(await marcarOpcionResueltaHogarAllianz(marco, guard, marco.locator('label[for="u3"]')), { estado: 'marcada' })
+    assert.equal(await marcado('u3'), true)
+    assert.deepEqual(await marcarOpcionResueltaHogarAllianz(marco, guard, marco.locator('label[for="u3"]')), { estado: 'ya_marcada' })
+    // No es un <label for>: hueco, sin pulsar.
+    assert.equal((await marcarOpcionResueltaHogarAllianz(marco, guard, marco.locator('#comprobar'))).estado, 'no_unica')
+    assert.equal((await marcarOpcionResueltaHogarAllianz(marco, guard, marco.locator('label')) ).estado, 'no_unica', 'varias etiquetas = ambigua')
+    // Marco ajeno a la app de Hogar.
+    await assert.rejects(() => marcarOpcionResueltaHogarAllianz(page.mainFrame(), guard, marco.locator('label[for="u4"]')), EmisionBloqueadaError)
+    // Control con «emitir»: comprobarBoton lo frena antes del clic.
+    await marco.evaluate(() => { document.getElementById('u4')!.setAttribute('onclick', 'emitirPoliza()') })
+    await assert.rejects(() => marcarOpcionResueltaHogarAllianz(marco, guard, marco.locator('label[for="u4"]')), EmisionBloqueadaError)
+    assert.equal(await marcado('u4'), false)
+  } finally {
+    await context.close()
+  }
+})
+
+// ───────────── opciones del riesgo: etiqueta exacta NO casa → capa común (fijo → aprendido → IA → atasco) ─────────────
+async function formadorDe(elegir: (e: { texto: string | null }[]) => number | null, llamadas: string[]): Promise<ContextoFormador> {
+  return prepararFormador({
+    trabajoId: '00000000-0000-4000-8000-000000000000', compania: 'allianz', ramo: 'hogar', apiUrl: 'https://asegura.test', secreto: 'x'.repeat(20),
+    redactar: (t) => t, log: () => undefined,
+    fetchImpl: (async (url: string, init?: { body?: string }) => {
+      const ruta = String(url).split('/formador/')[1]!.split('?')[0]!
+      llamadas.push(ruta)
+      if (ruta === 'conocimiento') return new Response(JSON.stringify({ formadorActivo: true, conocimiento: [], acompanamiento: { activo: false } }))
+      if (ruta === 'sugerir') return new Response(JSON.stringify({ indice: elegir((JSON.parse(init!.body!) as { estructura: { texto: string | null }[] }).estructura) }))
+      return new Response('{}')
+    }) as unknown as typeof fetch,
+  })
+}
+
+test('opción del riesgo con etiqueta distinta a la vista → la IA elige entre las etiquetas visibles y se marca por la puerta guardada', async () => {
+  const { context, page, marco, guard, ctx, marcado } = await abrir()
+  try {
+    await marco.evaluate(() => { document.querySelector('label[for="u4"]')!.textContent = 'Vivienda secundaria' })
+    const llamadas: string[] = []
+    const formador = await formadorDe((e) => e.findIndex((c) => c.texto === 'Vivienda secundaria'), llamadas)
+    const ctx2 = { ...ctx, formador, marcarOpcionHogarResuelta: (m: Frame, l: Parameters<typeof marcarOpcionResueltaHogarAllianz>[2]) => marcarOpcionResueltaHogarAllianz(m, guard, l) }
+    await rellenarPantallaVivienda(page, marco, { ...FORM, hogar: { ...FORM.hogar, uso: 'secundaria' } }, ctx2)
+    assert.equal(await marcado('u4'), true)
+    assert.ok(llamadas.includes('sugerir'), 'preguntó a la IA')
+  } finally {
+    await context.close()
+  }
+})
+
+test('opción del riesgo: la IA no resuelve → ATASCO con las etiquetas visibles (ErrorMapaIncompleto, nada marcado)', async () => {
+  const { context, page, marco, ctx, marcado } = await abrir()
+  try {
+    await marco.evaluate(() => { document.querySelector('label[for="u4"]')!.textContent = 'Vivienda secundaria' })
+    const formador = await formadorDe(() => null, [])
+    await assert.rejects(
+      () => rellenarPantallaVivienda(page, marco, { ...FORM, hogar: { ...FORM.hogar, uso: 'secundaria' } }, { ...ctx, formador }),
+      (e) => e instanceof ErrorMapaIncompleto && /Secundaria/.test((e as Error).message),
+    )
+    assert.equal(await marcado('u4'), false)
+    assert.equal(formador.atasco?.clave, 'elegir_opcion_secundaria')
+    assert.ok((formador.atasco?.candidatos.length ?? 0) > 1)
   } finally {
     await context.close()
   }

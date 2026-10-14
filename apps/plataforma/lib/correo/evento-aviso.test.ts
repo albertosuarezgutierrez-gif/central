@@ -113,3 +113,27 @@ test('PDFs: el lector de eventos solo los recibe si su formato los necesita, y n
   assert.match(TRIAJE, /pdfsLeidos \?\?= textoDePdfs\(correo\)/)
   assert.doesNotMatch(TRIAJE, /textoConPdfs\(correo\)/)
 })
+
+test('emisión (póliza nueva): «Póliza nueva emitida» con producto, efecto y prima; ya en CIMA o pendiente de CIMA', () => {
+  const emision: EventoAseguradora = {
+    compania: 'allianz', codigoDgs: 'C0109', ilegibles: 0, tipo: 'emision',
+    polizas: [
+      { numeroPoliza: '061000001', idRecibo: '900000001', producto: 'Allianz Moto V.03', fechaEfecto: '2026-09-29', prima: 1113.3 },
+      { numeroPoliza: '061000002', idRecibo: '900000002', producto: null, fechaEfecto: null, prima: null },
+    ],
+  }
+  const r = (clave: string, estado: ResultadoPuertoEvento['estado'], resumen: string, motivo: string | null): ResultadoPuertoEvento => ({
+    clave, estado, repetido: false, resumen, motivo, clienteId: null, cliente: null, numeroPoliza: clave, tareaVence: null,
+  })
+  const t = textoAvisoEvento(emision, 'Rel. Emisión Producción', [
+    r('061000001', 'duplicado_cima', 'póliza nueva 061000001 ya en CIMA: nada que hacer', 'CIMA ya trae la póliza en vigor'),
+    r('061000002', 'sin_resolver', 'póliza nueva 061000002 emitida, aún no llegada por CIMA → bandeja', 'póliza nueva aún no llegada por CIMA'),
+  ], (id) => `/c/${id}`)
+  assert.match(t, /2 pólizas nuevas emitidas<\/b> — Allianz/)
+  assert.match(t, /• Póliza nueva emitida: 061000001 · Allianz Moto V\.03 · efecto 29\/09\/2026 · 1\.113,30€/)
+  assert.match(t, /• Póliza nueva emitida: 061000002\n/)
+  assert.match(t, /ℹ️ póliza nueva 061000001 ya en CIMA/)
+  assert.match(t, /❔ póliza nueva 061000002 emitida, aún no llegada por CIMA/)
+  assert.match(t, /Queda 1 en «Correos de compañía»/)
+  assert.doesNotMatch(t, /asegura no devolvió/)
+})

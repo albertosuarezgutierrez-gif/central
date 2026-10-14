@@ -47,3 +47,54 @@ describe('documentoTomador (Mapfre paso 1, 14/10/2026)', () => {
     expect(secretosDelRiesgo(null)).toEqual([])
   })
 })
+
+describe('mat-select de Mapfre: uso, ámbito, clase del permiso y compañía anterior (14/10/2026)', () => {
+  it('auto sin ellos → defectos particular / espana / b; compañía anterior ausente', () => {
+    const r = validarFormularioAuto(base, hoy)
+    expect(r.ok && r.formulario.usoVehiculo).toBe('particular')
+    expect(r.ok && r.formulario.ambitoCirculacion).toBe('espana')
+    expect(r.ok && r.formulario.clasePermiso).toBe('b')
+    expect(r.ok && 'companiaAnterior' in r.formulario).toBe(false)
+  })
+  it('moto sin ellos → ausentes (no consta; sin defecto)', () => {
+    const r = validarFormularioAuto({ ...base, ramo: 'moto', seleccionVehiculo: { marca: 'MARCA PRUEBA', modelo: 'MODELO X', clase: 1, cilindradaCc: 125 } }, hoy)
+    expect(r.ok).toBe(true)
+    expect(r.ok && ['usoVehiculo', 'ambitoCirculacion', 'clasePermiso'].some((k) => k in r.formulario)).toBe(false)
+  })
+  it('valores válidos (mayúsculas y espacios se normalizan) y compañía anterior recortada', () => {
+    const r = validarFormularioAuto({ ...base, usoVehiculo: ' Particular ', ambitoCirculacion: 'ESPANA', clasePermiso: 'A2', companiaAnterior: '  Compañía  Ejemplo ' }, hoy)
+    expect(r.ok && [r.formulario.usoVehiculo, r.formulario.ambitoCirculacion, r.formulario.clasePermiso, r.formulario.companiaAnterior]).toEqual(['particular', 'espana', 'a2', 'Compañía Ejemplo'])
+  })
+  it('null / vacío = el defecto en auto', () => {
+    const r = validarFormularioAuto({ ...base, usoVehiculo: null, clasePermiso: '' }, hoy)
+    expect(r.ok && [r.formulario.usoVehiculo, r.formulario.clasePermiso]).toEqual(['particular', 'b'])
+  })
+  it('valores fuera de la lista cerrada se rechazan sin repetir el valor', () => {
+    for (const [campo, v] of [['usoVehiculo', 'taxi-zzz'], ['ambitoCirculacion', 'marte-zzz'], ['clasePermiso', 'Z9zzz'], ['usoVehiculo', 7]] as const) {
+      const r = validarFormularioAuto({ ...base, [campo]: v }, hoy)
+      expect(r.ok).toBe(false)
+      const t = r.ok ? '' : r.errores.join(' | ')
+      expect(t).toContain(campo)
+      expect(t).not.toMatch(/zzz/)
+    }
+  })
+  it('compañía anterior: >80 o con caracteres prohibidos o no texto → error', () => {
+    for (const v of ['x'.repeat(81), 'Cía <script>', 5]) expect(validarFormularioAuto({ ...base, companiaAnterior: v }, hoy).ok).toBe(false)
+  })
+  it('los valores del validador casan con las claves de MAPEO_MAPFRE_AUTO del bot (mismo contrato)', async () => {
+    const { USOS_VEHICULO, AMBITOS_CIRCULACION, CLASES_PERMISO } = await import('./index.ts')
+    const { readFileSync } = await import('node:fs')
+    const src = readFileSync(new URL('../../../services/tarificador-rpa/src/adapters/mapfre/auto.ts', import.meta.url), 'utf8')
+    const tabla = src.slice(src.indexOf('export const MAPEO_MAPFRE_AUTO'), src.indexOf('export function textosMapfreDe'))
+    const claves = (campo: string) => {
+      const m = new RegExp(`${campo}:\\s*Object\\.freeze\\(\\{([^}]*)\\}\\)`).exec(tabla)
+      return [...(m?.[1] ?? '').matchAll(/(\w+):\s*Object\.freeze/g)].map((x) => x[1]!)
+    }
+    // Todo valor aceptado por el validador tiene texto en el mapeo del bot (si no, el campo quedaría pendiente en silencio).
+    for (const [campo, lista] of [['uso', USOS_VEHICULO], ['ambito', AMBITOS_CIRCULACION], ['clasePermiso', CLASES_PERMISO]] as const) {
+      const ks = claves(campo)
+      expect(ks.length).toBeGreaterThan(0)
+      for (const v of lista) expect(ks).toContain(v)
+    }
+  })
+})

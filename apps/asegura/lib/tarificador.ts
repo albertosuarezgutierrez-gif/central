@@ -20,6 +20,7 @@ import {
   type OfertaNormalizada,
   type PasoTraza,
   type FormularioAuto,
+  type AtascoWorker,
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
@@ -31,9 +32,11 @@ import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
 import { purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
+import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import {
   ESTADOS_DUPLICADO,
   LEASE_MS,
+  avisoTraza,
   bloqueaDuplicado,
   claveEncolar,
   configFly,
@@ -73,8 +76,8 @@ export type EntradaEncolar = {
   clienteId: string | null
   polizaId: string | null
   compania: string
-  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
-  ramo: 'comunidades' | 'moto'
+  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto y (14/10/2026) Auto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
+  ramo: 'comunidades' | 'moto' | 'auto'
   riesgo: RiesgoComunidad | FormularioAuto
   solicitadoPor: string
 }
@@ -89,6 +92,10 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   // Fail-closed: sin fila, inactiva o con un modo que no es rpa_autorizada, no se encola.
   if (!integ || !integ.activo || !puedeAutomatizar(integ.modo)) {
     return { estado: 'rechazado', status: 409, motivo: `modo_no_automatizable: ${integ ? (integ.activo ? integ.modo : 'inactiva') : 'sin_integracion'}` }
+  }
+  // CORTE (F2): la pareja está en pausa tras 3 fallos seguidos del bot; no se encola hasta que Alberto la reanude.
+  if (await pausaViva(prisma, e.correduriaId, claveCompania(e.compania), e.ramo)) {
+    return { estado: 'rechazado', status: 409, motivo: `bot_pausado: ${claveCompania(e.compania)}/${e.ramo} está en pausa tras varios fallos seguidos; reanúdalo en /correduria/tarificador` }
   }
 
   // Anclas: el cliente sale de la oportunidad (si viene) y TIENE que ser de esta correduría.
@@ -184,6 +191,8 @@ export type ReclamoCola = {
  */
 export async function reclamarSiguiente(correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']): Promise<ReclamoCola> {
   const clave = claveCompania(compania)
+  // CORTE (F2): una pareja (compañía, ramo) en pausa no se reclama. Vacío sin el SQL de la F2.
+  const sinPausa = await sqlSinPausa()
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${'tarificador:' + correduriaId + ':' + clave}))`
     const cupo = await tx.$queryRaw<{ max: number | null }[]>`
@@ -221,6 +230,7 @@ export async function reclamarSiguiente(correduriaId: string, compania: string, 
           -- Solo los modos que se pueden lanzar ahora (13/10/2026): 'exploracion' únicamente con su interruptor
           -- (modosReclamables); una exploración no ocupa máquina ni hueco mientras esté apagado.
           and coalesce(to_jsonb(w)->>'modo', 'tarificar') = any(${[...modos]}::text[])
+          ${sinPausa}
         order by w.created_at
         for update of w skip locked
         limit 1)
@@ -265,7 +275,7 @@ export async function lanzarPendientes(correduriaId: string, compania: string, d
 
 async function crearMaquina(cfg: ConfigFly, jobId: string, f: typeof fetch): Promise<{ ok: true; machineId: string } | { ok: false; motivo: string }> {
   try {
-    const p = peticionMaquina(cfg, jobId)
+    const p = peticionMaquina(cfg, jobId, process.env.TARIFICADOR_EXPLORADOR_VISTA)
     const res = await f(p.url, { ...p.init, signal: AbortSignal.timeout(20_000) })
     const texto = await res.text()
     if (!res.ok) return { ok: false, motivo: `HTTP ${res.status}: ${texto.slice(0, 300)}` }
@@ -450,12 +460,19 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     const aprender = memoriaTrasExito(interno.traza.t)
     if (aprender) await guardarMemoriaVersion(aprender.k, { codigo: aprender.codigo, etiqueta: aprender.etiqueta, origen: 'ia' })
   }
-  if (interno.traza && (await hayPasos())) {
-    try {
-      await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
-    } catch (e) {
-      // Sin datos personales: solo el id del trabajo y el mensaje del error.
-      console.warn('[tarificador] no se pudo guardar la traza del trabajo', interno.traza.t.id, e instanceof Error ? e.message : String(e))
+  if (interno.traza) {
+    if (!(await hayPasos())) {
+      console.error(avisoTraza(interno.traza.t.id, 'la tabla tarificacion_trabajo_pasos no existe: no se guarda la traza (¿SQL de 08/10/2026 sin aplicar?)'))
+    } else if (r.pasos.length === 0) {
+      // Sin pasos y sin rechazo (ese ya se avisó en la ruta): el adaptador no instrumenta ctx.paso, o el worker es anterior a la traza.
+      if (!r.trazaRechazada && r.tipo !== 'explorado' && (interno.traza.t as { modo?: string | null }).modo !== 'exploracion') console.error(avisoTraza(interno.traza.t.id, 'el worker no mandó ningún paso (adaptador sin ctx.paso o imagen antigua)'))
+    } else {
+      try {
+        await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
+      } catch (e) {
+        // Sin datos personales: solo el id del trabajo y el mensaje del error (`avisoTraza` quita URLs y recorta).
+        console.error(avisoTraza(interno.traza.t.id, `no se pudo guardar la traza (${r.pasos.length} pasos): ${e instanceof Error ? e.message : String(e)}`))
+      }
     }
   }
   return interno.res
@@ -561,7 +578,7 @@ async function marcarFallo(
   db: Db,
   id: string,
   intentos: number,
-  error: { tipo: TipoError; mensaje: string; url: string | null },
+  error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker },
   evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null,
   botVersion: string | null = null,
   conBotVersion = false,
@@ -589,6 +606,16 @@ async function marcarFallo(
     const cab = await db.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${id}::uuid`
     estado = estadoFalloExploracion(estado, cab[0]?.cerrada === true)
   }
+  // ATASCO (F2): un hueco del portal con checkpoint, en un trabajo de tarificar, con el interruptor y bajo el tope de rondas →
+  // `atascado` (espera la elección de Alberto) en vez de `error_definitivo`. El checkpoint NO va al `error` jsonb.
+  const { atasco: atascoCable, ...errorSinAtasco } = error
+  error = errorSinAtasco
+  const atasco = !deEmision && !deExploracion
+    ? await atascoParaFallo(db, { trabajoId: id, estado, modo: modoFila[0]?.modo ?? null, tipoError: error.tipo, atasco: atascoCable })
+    : null
+  if (atasco) estado = 'atascado'
+  // Un atascado (como un reintentable) sigue abierto: sin `terminado_at`.
+  const abierto = estado === 'error_reintentable' || estado === 'atascado'
   let capturaId: string | null = null
   let htmlId: string | null = null
   if (evidencia?.captura) {
@@ -606,14 +633,14 @@ async function marcarFallo(
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
           bot_version = coalesce(${botVersion}, bot_version),
-          terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
+          terminado_at = case when ${abierto} then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   } else {
     filasTocadas = await db.$executeRaw`
       update seguros.tarificacion_trabajos
       set estado = ${estado}, error = ${err}::jsonb, lease_hasta = null,
           evidencia_documento_id = coalesce(${capturaId}::uuid, evidencia_documento_id),
-          terminado_at = case when ${estado} = 'error_reintentable' then null else now() end, updated_at = now()
+          terminado_at = case when ${abierto} then null else now() end, updated_at = now()
       where id = ${id}::uuid and estado = 'en_curso'`
   }
   const tocada = filasTocadas > 0
@@ -628,9 +655,17 @@ async function marcarFallo(
   // Los efectos secundarios SOLO si el UPDATE tocó la fila (si un resultado llegó a la vez y ganó, esto no hace nada).
   if (tocada && autorizacionIncierta) await db.$executeRaw`update seguros.tarificacion_emision_autorizacion set resultado = 'incierto' where id = ${autorizacionIncierta}::uuid and resultado is null`
   if (tocada && deEmision) await db.$executeRaw`update seguros.tarificacion_trabajos set emision_avisada_at = null where id = ${id}::uuid and estado = 'requiere_humano'`
-  // PURGA (13/10/2026): solo si quedó en un estado cerrado (`error_definitivo`); `error_reintentable` y `requiere_humano`
-  // conservan el riesgo para el reintento (lo decide `planPurgaRiesgo`). Lo último que se hace con la fila.
+  // ATASCO (F2): el checkpoint con la captura del fallo (misma transacción).
+  if (tocada && atasco) {
+    const fila = await db.$queryRaw<{ correduria_id: string; compania: string; ramo: string }[]>`
+      select correduria_id::text as correduria_id, compania, ramo from seguros.tarificacion_trabajos where id = ${id}::uuid`
+    if (fila[0]) await guardarAtasco(db, { id, correduriaId: fila[0].correduria_id, compania: fila[0].compania, ramo: fila[0].ramo }, atasco, capturaId)
+  }
+  // PURGA (13/10/2026): solo si quedó en un estado cerrado (`error_definitivo`); `error_reintentable`, `requiere_humano` y
+  // `atascado` conservan el riesgo para el reintento (lo decide `planPurgaRiesgo`).
   if (tocada) await purgarRiesgoTrabajos(db, [id])
+  // CORTE (F2): tras un `error_definitivo` de tarificar, ¿lleva la pareja N fallos seguidos del bot? → pausa (una viva).
+  if (tocada && estado === 'error_definitivo' && !deEmision && !deExploracion) await evaluarCorte(db, id)
   return { estado, tocada }
 }
 
@@ -644,6 +679,8 @@ export type ResumenBarrido = {
   cancelados: number
   /** Respaldo de la purga del riesgo (13/10/2026): trabajos cerrados a los que aún les quedaba algún dato personal. */
   riesgosPurgados?: number
+  /** F2: atascos sin respuesta que pasaron a `error_definitivo`. */
+  atascosCaducados?: number
   lanzar: Record<string, ResumenLanzar>
 }
 
@@ -675,6 +712,12 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
   r.emisionesCaducadas = await caducarEmisiones(correduriaId).catch((e: unknown) => {
     console.error('[tarificador] caducar emisiones', e instanceof Error ? e.message.slice(0, 200) : e)
     return { solicitudes: 0, autorizaciones: 0 }
+  })
+
+  // ATASCO (F2): sin respuesta pasada su hora → error_definitivo (riesgo purgado y corte evaluado). Sin lanzar: el barrido sigue.
+  r.atascosCaducados = await caducarAtascos(correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] caducar atascos', e instanceof Error ? e.message.slice(0, 200) : e)
+    return 0
   })
 
   r.reencolados = await prisma.$executeRaw`

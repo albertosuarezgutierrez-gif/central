@@ -97,10 +97,17 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
     <div style={cardStyle}>
       <CardHeader title="Bots (gratis)" sub="Pide precio al portal de la compañía con los datos de este formulario. No cuesta 0,50€, tarda un par de minutos y solo da precio: no emite." />
       {adaptador.campos.map((c) => (
-        <label key={c.clave} style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260 }}>
+        <label key={c.clave} style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260, marginTop: 8 }}>
           <span>{c.etiqueta}{c.ayuda && <span style={{ color: 'var(--muted)' }}> — {c.ayuda}</span>}</span>
-          <input inputMode="numeric" value={extra[c.clave] ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} placeholder={c.placeholder}
-            style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
+          {c.opciones ? (
+            <select value={extra[c.clave] ?? c.porDefecto ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))}
+              style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }}>
+              {c.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
+            </select>
+          ) : (
+            <input inputMode="numeric" value={extra[c.clave] ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} placeholder={c.placeholder}
+              style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
+          )}
         </label>
       ))}
       {!resultado.ok && (

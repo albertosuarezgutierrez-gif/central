@@ -38,6 +38,7 @@ import {
   esAvanceAutorizado,
   esGuardadoEnDialogoAutorizado,
   esEntradaExploracion,
+  loginAsistidoDe,
   huellaPantalla,
   huellaRelleno,
   incidenciasLoteCortado,
@@ -57,7 +58,10 @@ import {
   type EntradaExploracion,
   type IncidenciaEjecucion,
   type MarcoInventario,
+  type MotivoCorteLote,
+  type MotivoNoLocalizado,
   type MotivoParar,
+  type VisibilidadNoVisible,
   type MotivoSinDato,
   type PantallaGuardado,
   type PresupuestoMapa,
@@ -69,19 +73,21 @@ import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores
 import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
+import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
 import { ESTABILIDAD_POR_DEFECTO, esperarEstable, vigilarRed, type OpcionesEstabilidad, type VigiaRed } from './estabilidad.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
-import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
-import { login as loginEpac } from './adapters/allianz/comunidades.ts'
+import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
-import { abrirTarificacionHogar, login as loginOccident } from './adapters/occident/hogar.ts'
+import { abrirTarificacionHogar, cabeceraPortalVisible, esperarPortalOSso as esperarPortalOSsoOccident, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
+import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
+import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.2.3'
+export const EXPLORADOR_VERSION = '0.3.1'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -106,6 +112,11 @@ const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
   /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /**
+   * LOGIN ASISTIDO (14/10/2026): SOLO si la compañía de la entrada está en `LOGIN_ASISTIDO` (hoy Occident). Lo que la fase
+   * necesita además del contexto: la entrada, el guard (ventana de red del login) y el paso de login hacia asegura.
+   */
+  loginAsistido?: Pick<CtxLoginAsistido, 'entrada' | 'guard' | 'pedirPaso' | 'log'>
 }
 
 export type PortalExploracion = {
@@ -147,12 +158,31 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
     },
   }),
   // Occident (14/10/2026): SSO → menú «Productos › Análisis de necesidades › Hogar › Tarificación» → ruta SPA de hogar, con el
-  // formulario en un iframe (el inventario ya recorre los marcos, como el `appArea` de Allianz). Mismo login y entrada que
-  // `occident/hogar.ts`; hosts = lista blanca de `occident/guarda.ts` (sin ampliar). La misma `page` (sin pestaña nueva).
+  // formulario en un iframe (el inventario ya recorre los marcos, como el `appArea` de Allianz). Paso 1 del SSO grabado
+  // (`occident/hogar.ts`); la 2.ª pantalla (dos variantes sin DOM) la resuelve el LOGIN ASISTIDO (`login-asistido.ts`: la IA
+  // solo ve claves, nunca credenciales). Hosts = lista blanca de `occident/guarda.ts` (sin ampliar). La misma `page`.
   occident: Object.freeze({
     credencial: 'OCCIDENT_PORTAL',
     entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
-      await loginOccident(page, ctx)
+      const resolverSso = async () => {
+        if (!ctx.loginAsistido) throw new ErrorTarificador('portal', 'occident: la 2.ª pantalla del SSO solo se resuelve con el login asistido')
+        await loginAsistido(page, {
+          ...ctx.loginAsistido, credenciales: ctx.credenciales, pausa: ctx.pausa, exigirSinCaptcha: ctx.exigirSinCaptcha,
+          pulsar: (boton) => pulsarSeguroOccident(ctx, boton),
+          enPortal: (ms) => cabeceraPortalVisible(page, ms),
+        })
+      }
+      if (await loginPaso1Occident(page, ctx)) {
+        await resolverSso()
+      } else if (esUrlSsoOccident(page.url())) {
+        await resolverSso()
+      } else {
+        // Carrera SSO/cabecera (la cabecera puede ser fugaz y acabar en el SSO); gana el SSO → login asistido.
+        const donde = await esperarPortalOSsoOccident(page, 25_000)
+        if (donde === 'sso') await resolverSso()
+        else if (donde === null) throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
+      }
+      ctx.log('login ok')
       await exigirSinVerificacion(page, 'occident')
       await abrirTarificacionHogar(page, ctx)
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
@@ -220,8 +250,15 @@ export function sanearEvidencia(ev: EvidenciaFallo, redactar: (t: string) => str
  * (`CLAVES_AUTOCOMPLETADO`) o si la pantalla cambió de estructura (huella o nº de elementos) tras escribir. Pura.
  */
 export function cortarLoteTrasRellenar(dato: string, antes: { huella: string; elementos: number }, despues: { huella: string; elementos: number } | null): boolean {
-  if (CLAVES_AUTOCOMPLETADO.has(dato)) return true
-  return despues !== null && (despues.huella !== antes.huella || despues.elementos !== antes.elementos)
+  return motivoCorteTrasRellenar(dato, antes, despues) !== null
+}
+
+/** El MOTIVO del corte tras un `rellenar` (`null` = no se corta): autocompletar, huella o nº de elementos. Pura. */
+export function motivoCorteTrasRellenar(dato: string, antes: { huella: string; elementos: number }, despues: { huella: string; elementos: number } | null): MotivoCorteLote | null {
+  if (CLAVES_AUTOCOMPLETADO.has(dato)) return 'autocompletar'
+  if (despues === null) return null
+  if (despues.huella !== antes.huella) return 'huella'
+  return despues.elementos !== antes.elementos ? 'n_elementos' : null
 }
 
 const nElementos = (inv: InventarioExploracion['inventario']) => inv.marcos.reduce((n, m) => n + m.elementos.length, 0)
@@ -269,14 +306,35 @@ const plano = (s: string | null | undefined) => (s ?? '').replace(/\s+/g, ' ').t
  * no tiene un atributo (p. ej. lo quitó el filtro de datos personales) no se compara: lo demás tiene que casar.
  */
 export function coincideConInventario(vivo: NodoVivo | null, el: ElementoInventario): boolean {
-  if (!vivo || vivo.tag !== el.tag) return false
+  return motivoNoCoincide(vivo, el) === null
+}
+
+/**
+ * La misma comprobación que {@link coincideConInventario}, pero diciendo QUÉ no casa (`null` = es él): `desconectado` (sin
+ * nodo vivo) o `no_coincide_<tag|id|name|type|texto>`. Solo el nombre del atributo, nunca su valor. Pura.
+ */
+export function motivoNoCoincide(vivo: NodoVivo | null, el: ElementoInventario): MotivoNoLocalizado | null {
+  if (!vivo) return 'desconectado'
+  if (vivo.tag !== el.tag) return 'no_coincide_tag'
   const igual = (inv: string | undefined, v: string | null) => {
     if (inv === undefined) return true
     const base = sinElipsis(inv)
     return inv.endsWith('…') ? plano(v).startsWith(base) : plano(v) === inv
   }
-  if (!igual(el.id, vivo.id) || !igual(el.name, vivo.name) || !igual(el.type, vivo.type)) return false
-  return igual(el.texto, vivo.texto)
+  if (!igual(el.id, vivo.id)) return 'no_coincide_id'
+  if (!igual(el.name, vivo.name)) return 'no_coincide_name'
+  if (!igual(el.type, vivo.type)) return 'no_coincide_type'
+  return igual(el.texto, vivo.texto) ? null : 'no_coincide_texto'
+}
+
+/** Lo que se lee de la CAJA de un nodo que Playwright no ve (solo medidas y estilo; nunca valores). */
+export type CajaNodo = { ancho: number; alto: number; estiloVisible: boolean }
+
+/** Por qué no se ve: oculto por estilo/ancestro (`checkVisibility`, `visibility`), o la caja sin ancho, sin alto o sin ambos. Pura. */
+export function visibilidadDeCaja(c: CajaNodo): VisibilidadNoVisible {
+  if (!c.estiloVisible) return 'oculto'
+  if (c.ancho <= 0 && c.alto <= 0) return 'sin_caja'
+  return c.ancho <= 0 ? 'sin_ancho' : c.alto <= 0 ? 'sin_alto' : 'oculto'
 }
 
 /** Fecha dd/mm/aaaa → aaaa-mm-dd para un `<input type=date>` (el catálogo da dd/mm/aaaa). Otra forma: tal cual. */
@@ -341,7 +399,7 @@ export type ContextoBucle = {
   pulsarGuardadoDialogo: (boton: Locator, el: ElementoInventario, marco: MarcoInventario) => Promise<void>
   pausaAccion: () => Promise<void>
   /** `incidencias` (14/10/2026): lo que el lote ANTERIOR no pudo aplicar (ref + clave + causa; nunca el valor). */
-  pedirPaso: (cuerpo: { trabajoId: string; inventario: InventarioExploracion['inventario']; avancesFallidos: number; incidencias?: IncidenciaEjecucion[] }) => Promise<RespuestaPaso>
+  pedirPaso: (cuerpo: { trabajoId: string; inventario: InventarioExploracion['inventario']; avancesFallidos: number; incidencias?: IncidenciaEjecucion[]; vistaAria?: string }) => Promise<RespuestaPaso>
   log: Log
   ahora?: () => number
   hoy?: () => Date
@@ -369,6 +427,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   const ahora = k.ahora ?? Date.now
   const inicio = ahora()
   const topes = topesExplorador(k.env)
+  const modoVista = modoVistaExplorador(k.env)
   const red = new Set<string>()
   const efectos = new Set<EfectoPortal>()
   const huellas: string[] = []
@@ -437,7 +496,11 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       }
       trasRepintado = false
 
-      const r = await k.pedirPaso({ trabajoId: k.trabajoId, inventario: inv, avancesFallidos, ...(incidencias.length ? { incidencias } : {}) })
+      // Vista aria opcional (TARIFICADOR_EXPLORADOR_VISTA; defecto `dom` = nada cambia). Mide tamaños dom vs aria, sin datos.
+      // En modo `dom` (el de siempre) ni se serializa el inventario para medirlo ni se loguea nada: coste cero.
+      const vista = modoVista === 'dom' ? { metrica: null, vistaAria: undefined } : await vistaDelPaso(page, modoVista, JSON.stringify(inv).length)
+      if (vista.metrica) k.log('exploracion_vista', { n: pasos + 1, ...vista.metrica })
+      const r = await k.pedirPaso({ trabajoId: k.trabajoId, inventario: inv, avancesFallidos, ...(incidencias.length ? { incidencias } : {}), ...(vista.vistaAria ? { vistaAria: vista.vistaAria } : {}) })
       incidencias = []
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
@@ -462,11 +525,11 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       /** Acciones de ESTE lote que ya tocaron el portal: con alguna hecha, un nodo que ya no está = repintado, no ambigüedad. */
       let hechas = 0
       /** Corta el lote: las acciones que quedan SIN ejecutar viajan como incidencias `lote_cortado` (ref + clave; sin valor). */
-      const cortarLote = (desde: number, causa: string) => {
-        const pendientes = incidenciasLoteCortado(lote.slice(desde))
+      const cortarLote = (desde: number, corte: MotivoCorteLote, primera?: Exclude<Localizado, { loc: Locator }>) => {
+        const pendientes = incidenciasLoteCortado(lote.slice(desde), corte, primera)
         incidencias.push(...pendientes)
         trasRepintado = true
-        k.log('exploracion_lote_cortado', { n: pasos, causa, hechas, pendientes: pendientes.length })
+        k.log('exploracion_lote_cortado', { n: pasos, corte, ...(primera ? { motivo: primera.motivo } : {}), hechas, pendientes: pendientes.length })
       }
       lote: for (let i = 0; i < lote.length; i++) {
         const a = lote[i]
@@ -487,7 +550,17 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         exigirSinCuenta(hit.el)
         // Antes del PRIMER rellenar del lote: pantalla quieta (un repintado a medias dejaría el nodo a punto de caducar).
         if (i === 0 && a.accion === 'rellenar') await asentar('primer_rellenar')
-        let loc = await localizar(nodo, hit.el)
+        const localizado = await localizar(nodo, hit.el)
+        let loc: Locator | null = 'loc' in localizado ? localizado.loc : null
+        const fallo = 'loc' in localizado ? undefined : localizado
+        if (fallo) k.log('exploracion_no_localizado', { n: pasos, ref: a.ref, motivo: fallo.motivo, ...(fallo.visibilidad ? { visibilidad: fallo.visibilidad } : {}) })
+        // ES el control (conectado, misma identidad) pero no se ve ni traído a la vista: NO es un repintado (b921b476: el
+        // corte del lote y la re-localización eran falsos positivos). No se escribe nunca en un control oculto: incidencia
+        // `control_no_visible` (sin valor) y el lote SIGUE con lo demás.
+        if (fallo?.motivo === 'no_visible' && a.accion === 'rellenar') {
+          incidencias.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'control_no_visible', motivo: 'no_visible', ...(fallo.visibilidad ? { visibilidad: fallo.visibilidad } : {}) })
+          continue
+        }
         // `rellenar` como PRIMERA acción con el nodo repintado (14/10/2026, Allianz Hogar: Angular re-renderiza el formulario
         // entre el inventario y el lote): se re-inventaría UNA vez y se busca el MISMO control por su identidad.
         if (!loc && hechas === 0 && a.accion === 'rellenar') {
@@ -504,7 +577,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
               throw err
             }
           } else {
-            incidencias.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'nodo_no_relocalizado' })
+            incidencias.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'nodo_no_relocalizado', ...(fallo ? { motivo: fallo.motivo, ...(fallo.visibilidad ? { visibilidad: fallo.visibilidad } : {}) } : {}) })
             throw new Parar('ambiguo', 'nodo_no_relocalizado')
           }
         }
@@ -513,12 +586,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           // la pantalla nueva. Sin nada hecho, el nodo cambió sin que lo tocásemos: anti-TOCTOU, se para.
           if (hechas > 0) {
             acciones--
-            cortarLote(i, 'nodo_no_localizado')
+            cortarLote(i, 'repintado', fallo)
             break lote
           }
           throw new Parar('ambiguo', 'nodo_no_localizado')
         }
-        let cortar = false
+        let cortar: MotivoCorteLote | null = null
         try {
           if (a.accion === 'rellenar') {
             const d = resolverDato(a.dato, { ramo: k.ramo, conDatosReales: k.conDatosReales, riesgo: k.riesgo, env: k.env, hoy: (k.hoy ?? (() => new Date()))() })
@@ -542,7 +615,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
               await loc.blur({ timeout: 5_000 }).catch(() => undefined)
               await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
               await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
-              cortar = quedan
+              cortar = quedan ? 'autocompletar' : null
             } else {
               const fijado = await fijarValor(loc, escrito)
               if (fijado !== 'ok') k.log('exploracion_valor', { n: pasos, ref: a.ref, estado: fijado })
@@ -553,7 +626,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
                 const sonda = await capturarInventarioExploracion(page).catch(() => null)
                 const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
                 await sonda?.liberar()
-                cortar = cortarLoteTrasRellenar(a.dato, antes, despues)
+                cortar = motivoCorteTrasRellenar(a.dato, antes, despues)
               }
             }
           } else if (a.accion === 'elegir') {
@@ -615,7 +688,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
         }
         if (cortar) {
-          cortarLote(i + 1, 'repintado_tras_rellenar')
+          cortarLote(i + 1, cortar)
           break lote
         }
       }
@@ -682,8 +755,8 @@ async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInven
     const hit = ref ? indiceRefs(nueva.inventario).get(ref) : undefined
     const nodo = ref ? nueva.nodos.get(ref) : undefined
     if (!hit || !nodo) return null
-    const loc = await localizar(nodo, hit.el)
-    return loc ? { loc, hit } : null
+    const r = await localizar(nodo, hit.el)
+    return 'loc' in r ? { loc: r.loc, hit } : null
   } catch {
     // Revisión: «nunca lanza» de verdad. Un fallo aquí = no se relocaliza (fail-closed: el bucle para «nodo_no_relocalizado»).
     return null
@@ -692,25 +765,77 @@ async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInven
   }
 }
 
+/** Resultado de {@link localizar}: el Locator, o POR QUÉ no (lista cerrada; nunca valores). */
+type Localizado = { loc: Locator } | { motivo: MotivoNoLocalizado; visibilidad?: VisibilidadNoVisible }
+type NodoInv = InventarioExploracion['nodos'] extends Map<string, infer N> ? N : never
+
+/** Cuánto se espera, tras traer el nodo a la vista, a que el portal lo pinte (NDBX perezoso, animaciones). */
+const ESPERA_VISIBLE_MS = 1_500
+
+/** Lee el nodo VIVO: `null` = desconectado; lanza si `evaluate` falla (lo traduce `localizar`). */
+const leerVivo = (nodo: NodoInv) => nodo.handle.evaluate((n) => {
+  const e = n as HTMLElement
+  if (!e.isConnected || typeof e.getAttribute !== 'function') return null
+  return { tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'), type: e.getAttribute('type'), texto: (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() }
+})
+
 /**
- * Re-resuelve la ref: el MISMO nodo inventariado, aún conectado y visible, con tag/id/name/type/texto iguales. Devuelve un
- * Locator único (marca temporal en el nodo) para pasar por `ctx.pulsar()`/`fill`/`selectOption`. `null` = ya no es él.
+ * ¿Lo ve Playwright? Si no, lo TRAE a la vista (14/10/2026, b921b476: año y m² de Allianz Hogar, inventariados con etiqueta,
+ * no pasaban `isVisible()`) y espera un poco a que se pinte. Nunca relaja la identidad: el llamante la vuelve a comprobar
+ * sobre el MISMO handle. Nunca lanza.
  */
-async function localizar(nodo: InventarioExploracion['nodos'] extends Map<string, infer N> ? N : never, el: ElementoInventario): Promise<Locator | null> {
-  const vivo = await nodo.handle
-    .evaluate((n) => {
-      const e = n as HTMLElement
-      if (!e.isConnected || typeof e.getAttribute !== 'function') return null
-      return { tag: e.tagName.toLowerCase(), id: e.id || null, name: e.getAttribute('name'), type: e.getAttribute('type'), texto: (e.innerText || e.textContent || '').replace(/\s+/g, ' ').trim() }
-    })
-    .catch(() => null)
-  if (!coincideConInventario(vivo, el)) return null
-  if (!(await nodo.handle.isVisible().catch(() => false))) return null
+async function visibleTrasTraer(nodo: NodoInv): Promise<boolean> {
+  const visible = () => nodo.handle.isVisible().catch(() => false)
+  if (await visible()) return true
+  await nodo.handle.scrollIntoViewIfNeeded({ timeout: 2_000 }).catch(() => undefined)
+  // Si Playwright no pudo (nodo sin caja), el scroll nativo, dentro de su contenedor con scroll también.
+  await nodo.handle.evaluate((n) => (n as Element).scrollIntoView({ block: 'center', inline: 'nearest' })).catch(() => undefined)
+  const hasta = Date.now() + ESPERA_VISIBLE_MS
+  while (Date.now() < hasta) {
+    if (await visible()) return true
+    await dormir(100)
+  }
+  return visible()
+}
+
+/**
+ * Re-resuelve la ref: el MISMO nodo inventariado, aún conectado y visible (traído a la vista si hace falta), con
+ * tag/id/name/type/texto iguales. Devuelve un Locator único (marca temporal en el nodo) para `ctx.pulsar()`/`fill`/
+ * `selectOption`, o el MOTIVO por el que no (desconectado | no_coincide_<campo> | no_visible | error_evaluate | no_unico).
+ */
+async function localizar(nodo: NodoInv, el: ElementoInventario): Promise<Localizado> {
+  const comprobar = async (): Promise<MotivoNoLocalizado | null> => {
+    let vivo: NodoVivo | null
+    try {
+      vivo = await leerVivo(nodo)
+    } catch {
+      return 'error_evaluate'
+    }
+    return motivoNoCoincide(vivo, el)
+  }
+  const m = await comprobar()
+  if (m) return { motivo: m }
+  if (!(await visibleTrasTraer(nodo))) {
+    const caja = await nodo.handle
+      .evaluate((n) => {
+        const e = n as HTMLElement
+        const r = e.getBoundingClientRect()
+        const cv = typeof e.checkVisibility === 'function' ? e.checkVisibility() : true
+        return { ancho: r.width, alto: r.height, estiloVisible: cv && getComputedStyle(e).visibility === 'visible' }
+      })
+      .catch(() => null)
+    return caja ? { motivo: 'no_visible', visibilidad: visibilidadDeCaja(caja) } : { motivo: 'error_evaluate' }
+  }
+  // Traerlo a la vista pudo despertar al portal: la identidad se REPITE sobre el mismo nodo antes de marcarlo.
+  const m2 = await comprobar()
+  if (m2) return { motivo: m2 }
   const marca = randomUUID().slice(0, 12)
-  const ok = await nodo.handle.evaluate((n, [at, m]) => { (n as HTMLElement).setAttribute(at, m); return true }, [ATRIBUTO_MARCA, marca] as const).catch(() => false)
-  if (!ok) return null
+  const ok = await nodo.handle.evaluate((n, [at, mc]) => { (n as HTMLElement).setAttribute(at, mc); return true }, [ATRIBUTO_MARCA, marca] as const).catch(() => false)
+  if (!ok) return { motivo: 'error_evaluate' }
   const loc = nodo.marco.locator(`[${ATRIBUTO_MARCA}="${marca}"]`)
-  return (await loc.count().catch(() => 0)) === 1 ? loc : null
+  if ((await loc.count().catch(() => 0)) === 1) return { loc }
+  await nodo.handle.evaluate((n, at) => (n as HTMLElement).removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
+  return { motivo: 'no_unico' }
 }
 
 // ─── El trabajo completo ─────────────────────────────────────────────────────
@@ -857,6 +982,8 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
         await dormir(azar(300, 1_200))
         await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania)
       },
+      // Login asistido SOLO para las compañías de la lista cerrada del módulo (asegura lo vuelve a comprobar por la entrada).
+      ...(loginAsistidoDe(exp.entrada) ? { loginAsistido: { entrada: exp.entrada, guard, log, pedirPaso: (c) => pedirPaso(cfg, { trabajoId: trabajo.id, ...c, fase: 'login' }) } } : {}),
     }
     finExp = await entrarYExplorar(page, portal, ctxEntrada, entrada, {
       guard, redactar, env,

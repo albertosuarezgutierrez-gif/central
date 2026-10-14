@@ -37,6 +37,8 @@ import type { Frame, Locator, Page } from 'playwright'
 import { EmisionBloqueadaError, importeEs, type FormularioHogar, type OfertaNormalizada, type ResultadoAdaptador } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { claveCampo, conRespaldoIA, normalizarTexto, registrarAtasco, type PeticionResolver } from '../../formador.ts'
+import { esTextoContinuar } from '../../continuar.ts'
 import { esAppHogarAllianz } from '../../guard.ts'
 import { comprobarCampo } from './auto.ts'
 import { login, sesionSirve } from './comunidades.ts'
@@ -252,11 +254,28 @@ const ESPERA_PASO_MS = 30_000
 const selControl = (control: string) => `[formcontrolname="${control}"]`
 
 /** Exactamente UN control visible con ese `formcontrolname` (input, o el propio nodo si es un input). */
-async function controlUnico(marco: Frame, control: string, que: string): Promise<Locator> {
-  const loc = marco.locator(`input${selControl(control)}:visible, textarea${selControl(control)}:visible`)
-  const n = await loc.count()
-  if (n !== 1) throw new ErrorMapaIncompleto(`el control «${que}» de la pantalla «Vivienda» (${n} coincidencias)`)
-  return loc
+function controlFijo(marco: Frame, control: string, que: string): () => Promise<Locator> {
+  return async () => {
+    const loc = marco.locator(`input${selControl(control)}:visible, textarea${selControl(control)}:visible`)
+    const n = await loc.count()
+    if (n !== 1) throw new ErrorMapaIncompleto(`el control «${que}» de la pantalla «Vivienda» (${n} coincidencias)`)
+    return loc
+  }
+}
+
+/**
+ * CAPA COMÚN (formador.ts): selector fijo por `formcontrolname` → lo APRENDIDO → la IA (solo un candidato de la pantalla, validado
+ * por etiqueta) → ATASCO (Telegram). Sin formador/presupuesto/candidato, el error ORIGINAL (con inventario). `confirmar` solo tras
+ * comprobar que el valor quedó escrito.
+ */
+async function controlUnico(marco: Frame, ctx: Pick<ContextoPortal, 'formador'>, control: string, que: string): Promise<{ loc: Locator; confirmar: () => Promise<void> }> {
+  const r = await conRespaldoIA(marco.page(), ctx.formador, controlFijo(marco, control, que), {
+    clave: claveCampo(que),
+    tipo: 'campo',
+    etiqueta: que,
+    descripcion: `Campo editable «${que}» de la pantalla «Vivienda» de Allianz Hogar (solo se escribe el dato del riesgo; NUNCA cuenta bancaria ni nada de emisión o pago)`,
+  })
+  return { loc: r.locator, confirmar: r.confirmar }
 }
 
 async function leer(loc: Locator): Promise<string | null> {
@@ -273,19 +292,23 @@ async function esInvalido(loc: Locator): Promise<boolean> {
 }
 
 /** Escribe un valor (tras `comprobarCampo`) y comprueba que QUEDÓ; si no, reintenta tecleando una vez; si no, hueco. */
-async function escribir(marco: Frame, ctx: Pick<ContextoPortal, 'pausaAccion'>, op: Extract<OperacionVivienda, { tipo: 'escribir' }>): Promise<Locator> {
-  const loc = await controlUnico(marco, op.control, op.que)
+async function escribir(marco: Frame, ctx: Pick<ContextoPortal, 'pausaAccion' | 'formador'>, op: Extract<OperacionVivienda, { tipo: 'escribir' }>): Promise<Locator> {
+  const { loc, confirmar } = await controlUnico(marco, ctx, op.control, op.que)
   if (await loc.isDisabled()) throw new ErrorMapaIncompleto(`por qué «${op.que}» está deshabilitado`)
   await comprobarCampo(loc)
   await ctx.pausaAccion()
   await loc.fill(op.valor, { timeout: 10_000 })
   await loc.blur({ timeout: 5_000 }).catch(() => undefined)
-  if (valorQuedo(op.valor, await leer(loc))) return loc
+  if (valorQuedo(op.valor, await leer(loc))) {
+    await confirmar().catch(() => undefined)
+    return loc
+  }
   await comprobarCampo(loc)
   await loc.clear({ timeout: 5_000 })
   await loc.pressSequentially(op.valor, { delay: 60, timeout: 15_000 })
   await loc.blur({ timeout: 5_000 }).catch(() => undefined)
   if (!valorQuedo(op.valor, await leer(loc))) throw new ErrorMapaIncompleto(`cómo acepta el portal el valor de «${op.que}» (no quedó escrito)`)
+  await confirmar().catch(() => undefined)
   return loc
 }
 
@@ -301,14 +324,76 @@ async function esperarValor(marco: Frame, control: string, page: Pick<Page, 'wai
 }
 
 /** Contexto que usa la pantalla «Vivienda»: `ctx.pulsar` (SIGUIENTE) y `ctx.marcarOpcionHogar` (opciones, guard.ts). */
-export type CtxVivienda = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionHogar'>
+export type CtxVivienda = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionHogar' | 'formador'>
 
 /** Marca la opción del riesgo SOLO por la puerta guardada (`ctx.marcarOpcionHogar`); lo que no casa EXACTO → hueco. */
 async function marcarOpcion(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionVivienda, { tipo: 'opcion' }>): Promise<void> {
   if (typeof ctx.marcarOpcionHogar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Hogar en el contexto del worker', false)
   const r = await ctx.marcarOpcionHogar(marco, op.etiqueta)
-  if (r.estado === 'no_unica') throw new ErrorMapaIncompleto(`la opción «${op.etiqueta}» (${op.que}) de la pantalla «Vivienda» (${r.coincidencias} coincidencias exactas)`)
-  if (r.estado === 'no_quedo') throw new ErrorMapaIncompleto(`cómo se marca «${op.etiqueta}» (${op.que}): tras pulsar no quedó marcada`)
+  if (r.estado === 'no_unica') return opcionPorCapaComun(marco, ctx, op, `la opción «${op.etiqueta}» (${op.que}) de la pantalla «Vivienda» (${r.coincidencias} coincidencias exactas)`)
+  if (r.estado === 'no_quedo') return opcionPorCapaComun(marco, ctx, op, `cómo se marca «${op.etiqueta}» (${op.que}): tras pulsar no quedó marcada`)
+}
+
+const slug = (t: string) => normalizarTexto(t).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'x'
+
+/**
+ * La etiqueta exacta no casó: CAPA COMÚN. Fijo (ya falló) → aprendido → IA (índice entre las etiquetas visibles de la pantalla,
+ * acción `elegir_opcion`, validada por forma y sin palabras de emisión) → ATASCO (Telegram). Se marca por la puerta guardada
+ * `ctx.marcarOpcionHogarResuelta` (label único + radio único + `comprobarBoton`). La clave lleva la OPCIÓN pedida: lo aprendido
+ * de «Habitual» nunca se usa para «Alquiler».
+ */
+async function opcionPorCapaComun(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionVivienda, { tipo: 'opcion' }>, hueco: string): Promise<void> {
+  const peticion: PeticionResolver = {
+    clave: `elegir_opcion_${slug(op.etiqueta)}`,
+    tipo: 'accion',
+    descripcion: `Etiqueta (label) de la opción «${op.etiqueta}» (${op.que}) en la pantalla «Vivienda» de Allianz Hogar. Solo marca un dato del riesgo; NUNCA emitir, contratar, grabar ni pagar.`,
+  }
+  // Fijo real: UNA sola etiqueta visible con el texto ENTERO pedido (nunca «contiene»: sería elegir «la más parecida»).
+  const fijo = async () => {
+    const exacto = new RegExp(`^\\s*${op.etiqueta.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}\\s*$`, 'i')
+    const l = marco.locator('label[for]:visible').filter({ hasText: exacto })
+    const n = await l.count()
+    if (n !== 1) throw new ErrorMapaIncompleto(hueco)
+    return l
+  }
+  const r = await conRespaldoIA(marco.page(), ctx.formador, fijo, peticion)
+  const res = typeof ctx.marcarOpcionHogarResuelta === 'function' ? await ctx.marcarOpcionHogarResuelta(marco, r.locator) : null
+  if (!res || res.estado === 'no_unica' || res.estado === 'no_quedo') {
+    await registrarAtasco(marco.page(), ctx.formador, peticion).catch(() => undefined)
+    throw new ErrorMapaIncompleto(hueco)
+  }
+  await r.confirmar().catch(() => undefined)
+}
+
+/**
+ * Autocompletado que no rellenó el valor (CP con varias poblaciones, vía sin resolver): CAPA COMÚN con `elegir_opcion_<que>`.
+ * Se pulsa por `ctx.pulsar` (guard) SOLO una opción de lista (nunca una etiqueta de casilla) y se espera a que el control tenga valor.
+ * `true` = quedó con valor (el llamante valida y, si procede, confirma lo aprendido).
+ */
+async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, control: string, que: string, hueco: string): Promise<{ ok: boolean; confirmar: () => Promise<void> }> {
+  const peticion: PeticionResolver = {
+    clave: `elegir_opcion_${slug(que)}`,
+    tipo: 'accion',
+    descripcion: `Opción de la lista desplegable de «${que}» (pantalla «Vivienda» de Allianz Hogar) que corresponde a la del riesgo. Solo elige un valor de la lista; NUNCA emitir, contratar, grabar ni pagar.`,
+  }
+  // Fijo real: si la lista desplegada tiene UNA sola opción visible, esa es (sin ambigüedad).
+  const fijo = async () => {
+    const l = marco.locator('mat-option:visible, [role=option]:visible')
+    const n = await l.count()
+    if (n !== 1) throw new ErrorMapaIncompleto(hueco)
+    return l
+  }
+  const r = await conRespaldoIA(page, ctx.formador, fijo, peticion)
+  const tag = await r.locator.evaluate((el) => el.tagName).catch(() => '')
+  if (tag === 'LABEL' || tag === '') {
+    await registrarAtasco(page, ctx.formador, peticion).catch(() => undefined)
+    throw new ErrorMapaIncompleto(hueco)
+  }
+  await ctx.pausaAccion()
+  await ctx.pulsar(r.locator)
+  if (await esperarValor(marco, control, page, ESPERA_AUTOCOMPLETADO_MS)) return { ok: true, confirmar: r.confirmar }
+  await registrarAtasco(page, ctx.formador, peticion).catch(() => undefined)
+  return { ok: false, confirmar: r.confirmar }
 }
 
 /** Pasos del asistente leídos del DOM (solo lectura). */
@@ -361,13 +446,23 @@ async function obligatoriosInvalidos(marco: Frame): Promise<string[]> {
  */
 export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: FormularioHogar, ctx: CtxVivienda): Promise<void> {
   await exigirPaso(marco, 'Vivienda')
-  const tipoDoc = marco.locator(`nx-dropdown${selControl(CONTROLES.tipoDocumento)}`)
-  if ((await tipoDoc.count()) !== 1) throw new ErrorMapaIncompleto('el desplegable «Tipo de documento»')
+  // Solo se LEE (el robot no cambia el tipo): fijo por `formcontrolname` → aprendido → IA → atasco (capa común).
+  const { loc: tipoDoc, confirmar: confirmarTipoDoc } = (await conRespaldoIA(
+    page,
+    ctx.formador,
+    async () => {
+      const l = marco.locator(`nx-dropdown${selControl(CONTROLES.tipoDocumento)}`)
+      if ((await l.count()) !== 1) throw new ErrorMapaIncompleto('el desplegable «Tipo de documento»')
+      return l
+    },
+    { clave: 'tipo_documento', tipo: 'campo', etiqueta: 'Tipo de documento', descripcion: 'Desplegable «Tipo de documento» del tomador en la pantalla «Vivienda» de Allianz Hogar (solo se lee)' },
+  ).then((r) => ({ loc: r.locator, confirmar: r.confirmar })))
   const mostrado = await tipoDoc.evaluate((el) => ((el as HTMLElement).innerText || el.textContent || '').replace(/\s+/g, ' ').trim())
   if (!tipoDocumentoCasa(mostrado, f.tomador.documentoIdentidad)) {
     // Lo que muestra el desplegable es una etiqueta de catálogo (no un dato personal); recortada por si acaso.
     throw new ErrorMapaIncompleto(`la opción de «Tipo de documento» para un ${claseDocumento(f.tomador.documentoIdentidad).toUpperCase()} (el desplegable muestra «${mostrado.slice(0, 30)}»)`)
   }
+  await confirmarTipoDoc().catch(() => undefined)
   for (const op of planPantallaVivienda(f)) {
     if (op.tipo === 'opcion') {
       await marcarOpcion(marco, ctx, op)
@@ -375,16 +470,24 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
     }
     const loc = await escribir(marco, ctx, op)
     if (op.autocompleta === 'poblacion') {
+      let confirmarPob: (() => Promise<void>) | null = null
       if (!(await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS))) {
-        throw new ErrorMapaIncompleto('la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)')
+        const hueco = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
+        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco)
+        if (!e.ok) throw new ErrorMapaIncompleto(hueco)
+        confirmarPob = e.confirmar
       }
       if (f.inmueble.municipio !== null) {
         const pob = await leer(marco.locator(`input${selControl(CONTROLES.poblacion)}`))
         if (plano(pob) !== plano(f.inmueble.municipio)) throw new ErrorMapaIncompleto('la elección de población del CP (el portal autocompletó otra distinta de la del riesgo)')
+        await confirmarPob?.().catch(() => undefined)
       }
     } else if (op.autocompleta === 'via') {
       if (!(await esperarValor(marco, CONTROLES.tipoVia, page, ESPERA_AUTOCOMPLETADO_MS))) {
-        throw new ErrorMapaIncompleto('la elección de la vía en el autocompletado (el tipo de vía no se rellenó)')
+        const hueco = 'la elección de la vía en el autocompletado (el tipo de vía no se rellenó)'
+        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.tipoVia, 'via', hueco)
+        if (!e.ok) throw new ErrorMapaIncompleto(hueco)
+        await e.confirmar().catch(() => undefined)
       }
     } else if (await esInvalido(loc)) {
       throw new ErrorMapaIncompleto(`por qué el portal marca inválido «${op.que}» tras rellenarlo`)
@@ -396,9 +499,21 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
 
 /** «SIGUIENTE» de la pantalla 1 por `ctx.pulsar` (guard de emisión) y espera a que el asistente cambie de paso. */
 export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxVivienda, esperaMs = ESPERA_PASO_MS): Promise<PasoHogar> {
-  const boton = marco.locator(SEL_SIGUIENTE)
-  if ((await boton.count()) !== 1) throw new ErrorMapaIncompleto('el botón «SIGUIENTE» de la pantalla «Vivienda»')
-  if (plano(await boton.innerText()) !== plano(TEXTO_SIGUIENTE)) throw new ErrorMapaIncompleto('el botón «SIGUIENTE» (texto distinto del visto)')
+  // Capa común: fijo (`#NextPageFromRisk`, texto «SIGUIENTE») → aprendido → IA (acción `continuar`, texto ENTERO Continuar/Siguiente)
+  // → atasco. Se pulsa SIEMPRE por `ctx.pulsar` (guard de emisión), venga de donde venga.
+  const r = await conRespaldoIA(
+    page,
+    ctx.formador,
+    async () => {
+      const b = marco.locator(SEL_SIGUIENTE)
+      if ((await b.count()) !== 1) throw new ErrorMapaIncompleto('el botón «SIGUIENTE» de la pantalla «Vivienda»')
+      if (plano(await b.innerText()) !== plano(TEXTO_SIGUIENTE)) throw new ErrorMapaIncompleto('el botón «SIGUIENTE» (texto distinto del visto)')
+      return b
+    },
+    { clave: 'continuar', tipo: 'accion', textoEsperado: TEXTO_SIGUIENTE, descripcion: 'Botón «SIGUIENTE» de la pantalla «Vivienda» de Allianz Hogar que lleva al paso siguiente del asistente (NUNCA emitir, contratar, grabar ni pagar)' },
+  )
+  const boton = r.locator
+  if (r.origen !== 'fijo' && !esTextoContinuar(await boton.innerText().catch(() => ''))) throw new ErrorMapaIncompleto('el botón «SIGUIENTE» (el candidato no muestra «Continuar»/«Siguiente»)')
   if (await boton.isDisabled()) throw new ErrorMapaIncompleto('por qué «SIGUIENTE» sigue deshabilitado con todo relleno (¿hace falta «Comprobar» la dirección?)')
   await ctx.pausaAccion()
   await ctx.pulsar(boton)
@@ -406,7 +521,10 @@ export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxViv
   for (;;) {
     const paso = pasoActual(await leerPasos(marco).catch(() => []))
     if (paso !== null && PASOS_EMISION.includes(paso)) throw new EmisionBloqueadaError('fase', `${ADAPTADOR}: tras «SIGUIENTE» el asistente está en «${paso}» (emisión): el robot no toca nada`)
-    if (paso !== null && paso !== 'Vivienda') return paso
+    if (paso !== null && paso !== 'Vivienda') {
+      await r.confirmar().catch(() => undefined)
+      return paso
+    }
     if (Date.now() >= fin) throw new ErrorMapaIncompleto('el efecto de «SIGUIENTE» (el asistente no cambió de paso)')
     await page.waitForTimeout(300)
   }
@@ -419,6 +537,35 @@ export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxViv
 export function huecoTrasVivienda(paso: PasoHogar): never {
   if (paso === 'Precio') throw new ErrorMapaIncompleto('el lector de la pantalla «Precio» (sin explorar: primas, modalidades y referencia)')
   throw new ErrorMapaIncompleto(`la pantalla «${paso}» del asistente (sin explorar; después viene «Precio», tampoco explorada)`)
+}
+
+/**
+ * «Valoración de bienes» y «Precio» NO están mapeadas: ya no se lanza un error mudo. Se pide por la CAPA COMÚN el botón que
+ * sigue (en Valoración, «Continuar»/«Siguiente»; en Precio, «Calcular») → aprendido → IA → ATASCO con candidatos (Telegram);
+ * lo resuelto se pulsa por `ctx.pulsar` (guard) y NO se confirma (no se sabe si era lo correcto). Después, hueco con inventario.
+ */
+export async function pasoSinMapa(page: Page, marco: Frame, ctx: CtxVivienda, paso: PasoHogar): Promise<never> {
+  const clave = paso === 'Precio' ? 'calcular' : 'continuar'
+  try {
+    const nombre = clave === 'calcular' ? /^\s*calcular\s*$/i : /^\s*(continuar|siguiente)\s*$/i
+    // Fijo real: UN solo botón visible con ese texto ENTERO en la app de Hogar.
+    const fijo = async () => {
+      const b = marco.getByRole('button', { name: nombre })
+      const n = await b.count()
+      if (n !== 1) throw new ErrorMapaIncompleto(`el botón «${clave}» de la pantalla «${paso}» (sin explorar)`)
+      return b
+    }
+    const r = await conRespaldoIA(page, ctx.formador, fijo, {
+      clave,
+      tipo: 'accion',
+      descripcion: `Botón «${clave === 'calcular' ? 'Calcular' : 'Continuar/Siguiente'}» de la pantalla «${paso}» del asistente de Allianz Hogar (NUNCA emitir, contratar, grabar ni pagar)`,
+    })
+    await ctx.pausaAccion()
+    await ctx.pulsar(r.locator)
+  } catch (e) {
+    if (!(e instanceof ErrorMapaIncompleto)) throw e
+  }
+  return huecoTrasVivienda(paso)
 }
 
 export const allianzHogar = {
@@ -434,6 +581,6 @@ export const allianzHogar = {
     const marco = await marcoHogar(page)
     await ctx.paso('formulario', () => rellenarPantallaVivienda(page, marco, f, ctx))
     const paso = await ctx.paso('tarificar', () => avanzarDesdeVivienda(page, marco, ctx))
-    return huecoTrasVivienda(paso)
+    return pasoSinMapa(page, marco, ctx, paso)
   },
 } as const

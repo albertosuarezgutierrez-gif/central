@@ -123,6 +123,24 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   // Ventana del guardado de presupuesto: hasta cuándo y desde qué ORIGEN (el del marco del botón). `null` = cerrada.
   let guardado: { hasta: number; origen: string } | null = null
   const guardadoVigente = () => (guardado && Date.now() < guardado.hasta ? guardado : null)
+  // Ventana del LOGIN ASISTIDO (14/10/2026): mientras está abierta, lo que no es GET SOLO puede ir al origen del SSO.
+  let login: { hasta: number; origen: string } | null = null
+  const loginVigente = () => (login && Date.now() < login.hasta ? login : null)
+  let rechazoLogin: string | null = null
+  // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
+  // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
+  context.on('request', (req) => {
+    const lg = loginVigente()
+    if (!lg || !req.isNavigationRequest()) return
+    let principal = false
+    try {
+      principal = req.frame().parentFrame() === null
+    } catch {
+      principal = false
+    }
+    // Solo una navegación GET (la redirección al portal): un POST/307 a otro origen sigue en la ventana y se aborta.
+    if (principal && req.method() === 'GET' && origenDe(req.url()) !== lg.origen) login = null
+  })
   await context.route('**/*', async (route) => {
     const req = route.request()
     const url = req.url()
@@ -148,6 +166,14 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        await route.abort('blockedbyclient')
+        return
+      }
+      const lg = loginVigente()
+      if (lg && noGet && origenDe(url) !== lg.origen) {
+        // Login asistido: un POST/PUT/… a otro origen mientras se envía el formulario del SSO. Se aborta y se anota (solo el
+        // origen); quien abrió la ventana lo convierte en error del login. No es una violación de EMISIÓN.
+        rechazoLogin ??= origenDe(url) ?? '(url ilegible)'
         await route.abort('blockedbyclient')
         return
       }
@@ -194,7 +220,41 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
   ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
+  VENTANA_LOGIN.set(g, {
+    abrir: (origen) => { login = { hasta: Date.now() + VENTANA_RED_LOGIN_MS, origen }; rechazoLogin = null },
+    cerrar: () => { login = null },
+    abierta: () => loginVigente() !== null,
+    rechazo: () => rechazoLogin,
+  })
   return g
+}
+
+/** Tope de la ventana de red del LOGIN ASISTIDO: un envío del formulario del SSO y su carga. */
+export const VENTANA_RED_LOGIN_MS = 30_000
+type VentanaLogin = { abrir(origen: string): void; cerrar(): void; abierta(): boolean; rechazo(): string | null }
+const VENTANA_LOGIN = new WeakMap<GuardEmision, VentanaLogin>()
+
+/**
+ * LOGIN ASISTIDO (14/10/2026): abre la ventana de red del envío del formulario del SSO. Mientras está abierta, toda petición
+ * que no sea GET a un origen distinto de `origen` se ABORTA (y queda en `rechazoVentanaLogin`). Solo un origen https sin ruta.
+ * No relaja NADA del guard de emisión (patrones en URL y cuerpo siguen abortando antes).
+ */
+export function abrirVentanaLogin(guard: GuardEmision, origen: string): void {
+  const v = VENTANA_LOGIN.get(guard)
+  if (!v) throw new EmisionBloqueadaError('fase', 'guard sin ventana de login')
+  if (!/^https:\/\/[a-z0-9.-]+$/.test(origen)) throw new EmisionBloqueadaError('fase', 'ventana de login: origen no válido')
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'ventana de login con otra ventana de red abierta')
+  v.abrir(origen)
+}
+export function cerrarVentanaLogin(guard: GuardEmision): void {
+  VENTANA_LOGIN.get(guard)?.cerrar()
+}
+export function ventanaLoginAbierta(guard: GuardEmision): boolean {
+  return VENTANA_LOGIN.get(guard)?.abierta() === true
+}
+/** Origen al que el SSO intentó enviar algo (no GET) fuera de su origen durante la última ventana; `null` = nada. */
+export function rechazoVentanaLogin(guard: GuardEmision): string | null {
+  return VENTANA_LOGIN.get(guard)?.rechazo() ?? null
 }
 
 /** Origen (`https://host:puerto`) de una URL http(s), o `null`. */
@@ -299,21 +359,8 @@ export async function exigirCampoNoBancario(campo: Locator): Promise<void> {
 export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void> {
   guard.comprobar()
   await exigirSinCuentaBancaria(boton.page())
-  const desc = await boton.evaluate((el) => {
-    const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
-    return [
-      h.innerText ?? h.textContent ?? '',
-      h.getAttribute('aria-label'),
-      h.getAttribute('title'),
-      typeof h.value === 'string' ? h.value : null,
-      h.id || null,
-      typeof h.name === 'string' ? h.name : null,
-      typeof h.href === 'string' ? h.href : h.getAttribute('href'),
-      h.getAttribute('onclick'),
-      h.getAttribute('formaction'),
-    ]
-  })
-  comprobarBoton(desc)
+  // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
+  comprobarBoton(await descripcion(boton))
   await boton.click()
   guard.comprobar()
 }
@@ -368,9 +415,11 @@ async function enMarcos(page: Page, buscar: (f: Frame) => Locator): Promise<{ to
   return { total, locator, marcos }
 }
 
-async function descripcion(boton: Locator): Promise<(string | null)[]> {
-  return boton.evaluate((el) => {
-    const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
+async function descripcion(boton: Locator, alContenedor = false): Promise<(string | null)[]> {
+  return boton.evaluate((el, subir) => {
+    // `subir`: si el control es un hijo (p. ej. `mat-icon`) de un botón/enlace/ng-click, la decisión es sobre ESE contenedor.
+    const base = subir ? (el.closest('button,a,[role=button],[role=menuitem],[role=tab],nx-button,[ng-click],[onclick],[\\(click\\)]') ?? el) : el
+    const h = base as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
     return [
       h.innerText ?? h.textContent ?? '',
       h.getAttribute('aria-label'),
@@ -381,8 +430,24 @@ async function descripcion(boton: Locator): Promise<(string | null)[]> {
       typeof h.href === 'string' ? h.href : h.getAttribute('href'),
       h.getAttribute('onclick'),
       h.getAttribute('formaction'),
+      // AngularJS (14/10/2026, wmediadores: las tarjetas son `div[ng-click]`): su manejador cuenta como un onclick.
+      h.getAttribute('ng-click'),
+      h.getAttribute('data-ng-click'),
+      // Tooltip de Angular Material (14/10/2026, lupa de Mapfre): un botón de solo icono se nombra por él. Solo AÑADE bloqueo.
+      h.getAttribute('mattooltip'),
+      // ANCESTROS cercanos (revisión 14/10/2026): un clic BURBUJEA; el manejador del padre (onclick/ng-click) o el href del
+      // <a> que envuelve al control también se ejecutan. Hasta 3 niveles (atravesando el host de un shadow DOM).
+      ...(() => {
+        const out: (string | null)[] = []
+        let p: Element | null = h.parentElement ?? ((h.getRootNode() as ShadowRoot).host ?? null)
+        for (let i = 0; p && i < 3; i++) {
+          out.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
+          p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)
+        }
+        return out
+      })(),
     ]
-  })
+  }, alContenedor)
 }
 
 /** Elige la modalidad (radio bajo la fila de opción): Datos Básicos, una vez, pestaña verificada. */
@@ -801,7 +866,17 @@ export async function pasoActivoMapfre(page: Page): Promise<string | null> {
  *      emisión; no llega a tiempo → hueco con inventario (¿un obligatorio sin rellenar?).
  * No abre ninguna ventana de red: lo que el clic pida que case con el patrón de emisión se aborta (fail-closed).
  */
-export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, paso: PasoContinuarMapfre): Promise<void> {
+export async function pulsarContinuarMapfre(
+  page: Page,
+  guard: GuardEmision,
+  paso: PasoContinuarMapfre,
+  /**
+   * RESPALDO (pieza 4): si NO hay exactamente un botón «Continuar» exacto, el runner pasa la localización de la capa común
+   * (aprendido → IA; continuar.ts). Lo que devuelva pasa por las MISMAS comprobaciones de abajo (fuera de diálogos, texto
+   * «Continuar»/«Siguiente», `comprobarBoton`, paso activo, destino); `confirmar` se llama solo tras llegar al destino.
+   */
+  respaldo?: (page: Page) => Promise<{ locator: Locator; confirmar: () => Promise<void> }>,
+): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Continuar» de Mapfre con una ventana de red abierta')
   if (typeof paso !== 'string' || !Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)) throw new EmisionBloqueadaError('boton', `«Continuar» de Mapfre no autorizado desde «${String(paso).slice(0, 40)}»`)
@@ -817,11 +892,20 @@ export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, pas
   if (activo.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: el paso activo es «Contratación»')
   if (!activo.includes(sinTildesMayus(regla.origen))) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el paso activo no es «${regla.origen}»`)
   const botones = page.locator('button, [role="button"]').filter({ hasText: /^\s*Continuar\s*$/i }).locator('visible=true')
-  if ((await botones.count()) !== 1) throw new ErrorMapaGuardMapfre(`el botón «Continuar» del paso «${regla.origen}» (no hay exactamente uno visible)`)
-  const boton = botones.first()
+  let boton: Locator
+  let confirmarRespaldo: (() => Promise<void>) | null = null
+  if ((await botones.count()) === 1) boton = botones.first()
+  else {
+    const hueco = new ErrorMapaGuardMapfre(`el botón «Continuar» del paso «${regla.origen}» (no hay exactamente uno visible)`)
+    if (!respaldo) throw hueco
+    const r = await respaldo(page).catch(() => null)
+    if (!r) throw hueco
+    boton = r.locator
+    confirmarRespaldo = r.confirmar
+  }
   if (await boton.evaluate((el) => el.closest('mat-dialog-container, [role="dialog"], app-matricula-dialog') !== null)) throw new EmisionBloqueadaError('boton', '«Continuar» de Mapfre dentro de un diálogo')
   const desc = await descripcion(boton)
-  if (sinTildesMayus(desc[0]) !== 'CONTINUAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  if (!['CONTINUAR', 'SIGUIENTE'].includes(sinTildesMayus(desc[0]))) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
   comprobarBoton(desc)
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)
@@ -840,13 +924,109 @@ export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, pas
       if (dialogoNativo) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
       const ahora = await pasoActivoMapfre(page)
       if (ahora?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: tras «Continuar» el paso activo es «Contratación»')
-      if (ahora?.includes(destino)) return
+      if (ahora?.includes(destino)) {
+        await confirmarRespaldo?.().catch(() => undefined)
+        return
+      }
       if (Date.now() >= hasta) throw new ErrorMapaGuardMapfre(`la llegada a «${regla.destino}» tras «Continuar» desde «${regla.origen}» (¿un campo obligatorio sin rellenar o un control sin mapear?)`)
       await page.waitForTimeout(250)
     }
   } finally {
     page.off('dialog', alDialogo)
   }
+}
+
+// ─────────── Mapfre NSEI · LUPA del tomador en «Datos básicos» (14/10/2026, v0.6.0) ───────────
+// La lupa LANZA UNA BÚSQUEDA (lee el tomador por su NIF/CIF): no emite, no graba, no contrata. Sin DOM grabado: el control lo
+// localiza el adaptador por la capa común (fijo junto al campo NIF → aprendido → IA → atasco F2) y SOLO se pulsa aquí.
+// RIESGO del icono: una lupa suele no tener texto visible. Se acepta, en este orden: el texto VISIBLE (sin la ligadura de
+// `mat-icon`), ENTERO, de `TEXTOS_BUSCAR_TOMADOR`; si no hay texto visible, aria-label/title/mattooltip (todos los que haya,
+// cada uno ENTERO de la lista); y si tampoco hay ninguno, un icono de lupa (`esIconoBusqueda`). Un control con texto o
+// etiqueta que no sea de búsqueda NO pasa aunque lleve el icono («Buscar y contratar» con lupa → fuera, además de por
+// `comprobarBoton`). Lo que el clic pida a la red sigue con el guard de siempre (sin ventana abierta: emitir/contratar → abortado).
+
+/** Textos (minúsculas, sin tildes) que nombran la lupa. MISMA lista que `ACCIONES_PERMITIDAS.buscar_tomador` de formador.ts (test). */
+export const TEXTOS_BUSCAR_TOMADOR: readonly string[] = Object.freeze(['buscar', 'search', 'lupa', 'buscar tomador', 'buscar por nif', 'buscar nif'])
+/** Nombres de icono de lupa (ligadura de `mat-icon`, `fonticon`/`svgicon`/`data-mat-icon-name`, clase `fa-search`…), por TOKEN entero. */
+export const ICONOS_BUSQUEDA: readonly string[] = Object.freeze(['search', 'lupa', 'magnify', 'magnifier', 'magnifying'])
+
+const textoPlano = (t: string | null | undefined) => sinTildesMayus(t).toLowerCase()
+
+/** ¿La descripción de icono (texto de `mat-icon` + atributos + clases) nombra una lupa? Por token entero. PURA. */
+export function esIconoBusqueda(icono: string | null | undefined): boolean {
+  if (typeof icono !== 'string') return false
+  return icono.toLowerCase().split(/[^a-z0-9]+/).some((t) => ICONOS_BUSQUEDA.includes(t))
+}
+
+/** Lo que se mira de un control para decidir si es la LUPA (nunca valores de campos). */
+export type ControlBusqueda = { textoSinIcono: string | null; ariaLabel: string | null; title: string | null; tooltip: string | null; icono: string | null }
+
+/** ¿Es la lupa de búsqueda? Ver el bloque de arriba (texto visible → etiquetas accesibles → icono). PURA. */
+export function esControlBuscarTomador(c: ControlBusqueda): boolean {
+  const texto = textoPlano(c.textoSinIcono)
+  if (texto !== '') return TEXTOS_BUSCAR_TOMADOR.includes(texto)
+  const etiquetas = [c.ariaLabel, c.title, c.tooltip].map(textoPlano).filter((t) => t !== '')
+  if (etiquetas.length > 0) return etiquetas.every((t) => TEXTOS_BUSCAR_TOMADOR.includes(t))
+  return esIconoBusqueda(c.icono)
+}
+
+/** Ámbito del paso 1 de NSEI: la lupa tiene que estar DENTRO (no la del conductor de «Figuras» ni la del buscador de vehículos). */
+export const SEL_DATOS_BASICOS_MAPFRE = 'app-datos-basicos'
+
+/**
+ * El ÚNICO camino para pulsar la LUPA del tomador en Mapfre NSEI. Exige, en este orden y sin atajos:
+ *   1. guard limpio, todas las ventanas de red cerradas; una vez por trabajo y ANTES del «Continuar» del paso 1;
+ *   2. sin campo de cuenta bancaria visible y sin diálogo abierto;
+ *   3. paso ACTIVO del stepper = «Datos básicos» (no reconocible → hueco con inventario; «Contratación» → bloqueo);
+ *   4. EXACTAMENTE un control visible, habilitado, dentro de `app-datos-basicos` y fuera de diálogos;
+ *   5. `comprobarBoton` sobre su descripción (texto, aria-label, title, mattooltip, ids, onclick/ng-click y ancestros) y que
+ *      sea la lupa (`esControlBuscarTomador`).
+ * Pulsa UNA vez. No abre ninguna ventana de red. El resultado (tomador cargado, diálogo, «no existe») lo espera el adaptador.
+ */
+export async function pulsarBuscarTomadorMapfre(page: Page, guard: GuardEmision, boton: Locator): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'lupa del tomador de Mapfre con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = 'mapfre:buscar_tomador'
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre ya se usó en este trabajo')
+  if (usados.has('mapfre:continuar:datosBasicos')) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre fuera de orden (ya se salió de «Datos básicos»)')
+  await exigirSinCuentaBancaria(page)
+  if ((await page.locator(SEL_DIALOGO_ABIERTO_MAPFRE).locator('visible=true').count()) > 0) throw new ErrorTarificador('portal', 'mapfre: lupa del tomador con un diálogo abierto')
+  const activo = await pasoActivoMapfre(page)
+  if (activo === null) throw new ErrorMapaGuardMapfre(`el paso activo del stepper de NSEI (no hay exactamente una cabecera «${SEL_PASO_ACTIVO_MAPFRE}» visible)`)
+  if (activo.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: el paso activo es «Contratación»')
+  if (!activo.includes('DATOS BASICOS')) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre solo en «Datos básicos»')
+  if ((await boton.count()) !== 1 || !(await boton.isVisible())) throw new EmisionBloqueadaError('boton', 'lupa del tomador: no hay exactamente un control visible')
+  const ctl = await boton.evaluate((el, s) => {
+    // Un clic sobre un hijo (mat-icon…) lo recibe su contenedor pulsable: se juzga el CONTENEDOR, no el icono.
+    const cont = el.closest('button,a,[role=button],[role=menuitem],[role=tab],nx-button,[ng-click],[onclick],[\\(click\\)]')
+    const h = (cont ?? el) as HTMLElement & { disabled?: unknown }
+    const ICONO = 'mat-icon, [data-mat-icon-name], [fonticon], [svgicon], i[class], svg'
+    const iconos = h.matches(ICONO) ? [h] : Array.from(h.querySelectorAll(ICONO))
+    const icono = iconos
+      .map((i) => [i.tagName === 'MAT-ICON' ? i.textContent : '', i.getAttribute('data-mat-icon-name'), i.getAttribute('fonticon'), i.getAttribute('svgicon'), i.getAttribute('class')].filter(Boolean).join(' '))
+      .join(' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+    const clon = h.cloneNode(true) as HTMLElement
+    clon.querySelectorAll('mat-icon').forEach((x) => x.remove())
+    return {
+      dentro: h.closest(s.ambito) !== null && el.closest(s.ambito) !== null,
+      enDialogo: h.closest(s.dialogo) !== null || el.closest(s.dialogo) !== null,
+      deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
+      textoSinIcono: h.tagName === 'MAT-ICON' ? '' : (clon.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ariaLabel: h.getAttribute('aria-label'),
+      title: h.getAttribute('title'),
+      tooltip: h.getAttribute('mattooltip'),
+      icono: icono || null,
+    }
+  }, { ambito: SEL_DATOS_BASICOS_MAPFRE, dialogo: SEL_DIALOGO_ABIERTO_MAPFRE })
+  if (!ctl.dentro || ctl.enDialogo) throw new EmisionBloqueadaError('boton', 'la lupa del tomador tiene que estar en «Datos básicos», fuera de diálogos')
+  if (ctl.deshabilitado) throw new ErrorTarificador('portal', 'mapfre: la lupa del tomador está deshabilitada')
+  comprobarBoton(await descripcion(boton, true))
+  if (!esControlBuscarTomador(ctl)) throw new EmisionBloqueadaError('boton', 'lupa del tomador: el control no es una lupa de búsqueda')
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
 }
 
 /**
@@ -1227,6 +1407,39 @@ export async function marcarOpcionRiesgoHogarAllianz(marco: Frame, guard: GuardE
   const desc = await descripcion(label)
   comprobarBoton(desc)
   await label.click()
+  guard.comprobar()
+  return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}
+
+/**
+ * Marca un radio de Allianz HOGAR a partir de su ETIQUETA ya resuelta por la capa común (aprendido, IA o elección humana en un
+ * atasco) cuando la etiqueta exacta de `OPCIONES_RIESGO_HOGAR_ALLIANZ` no casó. Mismas exigencias que
+ * `marcarOpcionRiesgoHogarAllianz` salvo la lista cerrada de textos, que aquí la sustituye lo estructural: la etiqueta es un
+ * `<label for>` ÚNICO de ESTE marco (app de Hogar), su control es un `input[type=radio]` único (nunca una casilla ni un botón),
+ * `comprobarBoton` sobre ambos antes del único clic (sin permisos: nada de Aceptar, Archivar, emitir…) y que quede marcado.
+ */
+export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: GuardEmision, etiqueta: Locator): Promise<ResultadoOpcionHogar> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'opción del riesgo de hogar con una ventana de red abierta')
+  if (marco.isDetached() || !esAppHogarAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción del riesgo de hogar fuera de la app de Allianz HOGAR')
+  await exigirSinCuentaBancaria(marco.page())
+  const n = await etiqueta.count()
+  if (n !== 1) return { estado: 'no_unica', coincidencias: n }
+  const h = await etiqueta.elementHandle()
+  if (!h || (await h.ownerFrame()) !== marco) throw new EmisionBloqueadaError('fase', 'opción del riesgo de hogar: la etiqueta no es de este marco')
+  const leida = await etiqueta.evaluate((el) => ({ tag: el.tagName, para: el.getAttribute('for') }))
+  if (leida.tag !== 'LABEL' || !leida.para) return { estado: 'no_unica', coincidencias: 0 }
+  const id = leida.para.replace(/["\\]/g, '')
+  const control = marco.locator(`input[type=radio][id="${id}"]`)
+  const nc = await control.count()
+  if (nc !== 1) return { estado: 'no_unica', coincidencias: nc }
+  if (await control.isChecked()) return { estado: 'ya_marcada' }
+  comprobarBoton(await control.evaluate((el) => {
+    const r = el as HTMLInputElement
+    return [r.id || null, r.name || null, r.getAttribute('onclick'), r.getAttribute('onchange'), r.getAttribute('aria-label'), r.getAttribute('formaction')]
+  }))
+  comprobarBoton(await descripcion(etiqueta))
+  await etiqueta.click()
   guard.comprobar()
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
 }
