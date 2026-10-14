@@ -15,6 +15,7 @@
 // que el cliente decide no mirar. Es la regla del `CLAUDE.md` de la raíz (dato
 // que NO hay ≠ dato que NO se ha mirado), un piso más abajo.
 import { entraEnVentana } from './obligacion.ts'
+import { diasVentanaVencimiento } from './preferencias-avisos.ts'
 import type { EstadoAutorizacion } from './autorizacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 import type { ParteParaAviso } from './parte-aviso.ts'
@@ -255,6 +256,12 @@ export type EntradaAvisos = {
    * aviso ya leído es mejor que esconder uno que no lo está.
    */
   leidos?: ReadonlySet<string> | null
+  /**
+   * Antelación de los vencimientos en días (14/10/2026): la que eligió la identidad en «Configuración»
+   * (campana) o la ya resuelta de la ficha (digest de la intranet). Pasa por `diasVentanaVencimiento()`:
+   * nunca menos de 7. `null`/ausente = no se sabe o no se leyó → 7, lo de siempre.
+   */
+  diasAntelacion?: number | null
   hoy: Date
 }
 
@@ -446,10 +453,12 @@ export function avisosDe(x: EntradaAvisos): Avisos {
   if (x.obligaciones === null) {
     fuentesIlegibles.push('obligaciones')
   } else {
+    const ventanaObligaciones = diasVentanaVencimiento(x.diasAntelacion == null ? null : [x.diasAntelacion])
     for (const o of x.obligaciones) {
       // La ventana la decide el módulo (7 días antes de la fecha ACCIONABLE, que
-      // ya lleva descontado el preaviso del art. 22 LCS). No se reimplementa.
-      if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: x.hoy })) continue
+      // ya lleva descontado el preaviso del art. 22 LCS; más si la persona eligió
+      // más antelación: `diasVentanaVencimiento`). No se reimplementa.
+      if (!entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy: x.hoy, dias: ventanaObligaciones })) continue
       avisos.push({
         tipo: 'obligacion_en_ventana',
         // 🚨 El id lleva la fecha del ciclo SOLO si la obligación se repite, y

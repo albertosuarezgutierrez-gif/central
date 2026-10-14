@@ -15,6 +15,7 @@ import { colaCambiosCuenta } from './cambio-cuenta'
 import { bajasPendientesPue } from './baja-pue'
 import { anulacionesAbiertas } from './anulaciones'
 import { colaRetencion } from './cartera-impagados'
+import { eventosCorreoSinResolver } from './correo-evento-bd'
 import {
   COLAS_AVISO, itemParte, recibosConRelojSinRescate, recibosSinConfirmar, resumirCola,
   type ColaAviso, type LecturaCola,
@@ -64,7 +65,7 @@ export async function avisosMesa(
     },
   )
 
-  const [partes, supresiones, quejas, cambios, recLcs, aprob, pue, anul, recSin] = await Promise.all([
+  const [partes, supresiones, quejas, cambios, recLcs, aprob, pue, anul, recSin, correos] = await Promise.all([
     leer('partes', async () => {
       // «Sin atender» = `enviado` (nadie lo ha mirado): la misma regla que `partesSinAtender` de plataforma.
       const filas = await db.portalParteSiniestro.findMany({ where: { estado: 'enviado' }, select: { fechaHecho: true }, take: 500 })
@@ -110,9 +111,16 @@ export async function avisosMesa(
       const { filas } = await recibos
       return resumirCola(recibosSinConfirmar(filas), hoy)
     }),
+    leer('correos_compania_sin_resolver', async () => {
+      // Avisos de compañías leídos del correo cuya póliza no se encontró (o quedaron a medias): NO se
+      // escribió nada en la cartera y la única señal es esta. Sin la tabla (SQL 2026-10-14 sin aplicar)
+      // la lectura falla y la cola sale «no se ha podido comprobar», nunca 0.
+      const filas = await eventosCorreoSinResolver(correduriaId)
+      return resumirCola(filas.map((f) => ({ plazo: f.plazo })), hoy)
+    }),
   ])
 
-  const colas = { partes, supresiones, quejas, cambios_cuenta: cambios, recibos_lcs: recLcs, aprobaciones: aprob, bajas_pue: pue, anulaciones: anul, recibos_sin_confirmar: recSin }
+  const colas = { partes, supresiones, quejas, cambios_cuenta: cambios, recibos_lcs: recLcs, aprobaciones: aprob, bajas_pue: pue, anulaciones: anul, recibos_sin_confirmar: recSin, correos_compania_sin_resolver: correos }
   // Red: si alguien añade una cola a COLAS_AVISO y no la lee aquí, sale como «no se pudo comprobar».
   for (const k of COLAS_AVISO) if (!colas[k]) (colas as Record<ColaAviso, LecturaCola>)[k] = ERROR
   return { hoy, colas }

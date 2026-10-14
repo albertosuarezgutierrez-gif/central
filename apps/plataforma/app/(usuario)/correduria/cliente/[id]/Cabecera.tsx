@@ -3,6 +3,7 @@ import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lo
 import { Ico, FILA } from '../../iconos'
 import { alertaVencimiento, contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, personaDeFicha, esTelefonoComodin, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { ramosConOfertas, urlOportunidadNueva } from '@/lib/seguimiento-asegura'
+import { ramosConBot } from '@/lib/presupuestos-companias'
 import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
@@ -113,6 +114,16 @@ export default function Cabecera({ ficha, resumen, seguros }: {
       <Acciones clienteId={ficha.id} />
 
       <Titulares resumen={resumen} />
+
+      {/* Herramientas (Fase 1, 14/10/2026): «Probar tarificación» salió de los botones de la cabecera. Plegado por defecto. */}
+      <details className="plegable-dato">
+        <summary style={{ ...btnStyle('secundario'), listStyle: 'none', userSelect: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>
+          ⋯ Más
+        </summary>
+        <div style={{ marginTop: 8, minWidth: 0, maxWidth: '100%' }}>
+          <ProbarTarificacion clienteId={ficha.id} />
+        </div>
+      </details>
     </div>
   )
 }
@@ -400,8 +411,10 @@ function Acciones({ clienteId }: { clienteId: string }) {
               {r.sinVerificar && <span title="esquema sin verificar" style={{ marginLeft: 'auto' }}><Ico i={Construction} size={12} /></span>}
             </Link>
           ))}
+          {/* Presupuesto por bots (Fase 1, 14/10/2026): antes era un botón suelto; ahora una entrada por ramo con bot. */}
+          <PedirPresupuestoBot clienteId={clienteId} />
           <p style={{ margin: '8px 4px 4px', fontSize: 11, color: 'var(--muted)', borderTop: '1px solid var(--border)', paddingTop: 6 }}>Con ofertas de compañías</p>
-          {ramosConOfertas(RAMOS_PRESUPUESTO).map(r => (
+          {ramosConOfertas(RAMOS_PRESUPUESTO).filter(r => !ramosConBot().includes(r.valor)).map(r => (
             <Link
               key={r.valor}
               role="menuitem"
@@ -431,10 +444,6 @@ function Acciones({ clienteId }: { clienteId: string }) {
       <BtnLink href={`/correduria/cliente/${clienteId}?tab=documentos&subir=poliza`} variante="secundario">
         <Ico i={FileText} /> Subir póliza
       </BtnLink>
-      {/* Presupuesto por bots (07/10/2026): ya no se cotiza desde la ficha; abre la oportunidad con el formulario común. */}
-      <PedirPresupuestoBot clienteId={clienteId} />
-      {/* Prueba del tarificador RPA (13/10/2026): encola y muestra estado/resultado en la propia ficha. Solo precio. */}
-      <ProbarTarificacion clienteId={clienteId} />
     </div>
   )
 }

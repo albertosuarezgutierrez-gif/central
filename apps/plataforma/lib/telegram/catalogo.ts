@@ -319,6 +319,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
+    id: 'correo.correduria-evento', categoria: 'correo',
+    titulo: 'Avisos de compañías aplicados a la cartera',
+    que: 'Siniestros, pre-anulaciones, impagos, anulaciones y suplementos que mandan las compañías por correo, con lo que se hizo: siniestro abierto en la ficha, tarea creada y cuándo vence, o póliza no encontrada (queda en Mi mesa).',
+    cuando: 'Al llegar (revisión cada 10 min)',
+  },
+  {
     id: 'correo.leads', categoria: 'correo',
     titulo: 'Oportunidades de negocio',
     que: 'Leads entrantes, partnerships y respuestas a mailings de ia-rest / ialimp.',

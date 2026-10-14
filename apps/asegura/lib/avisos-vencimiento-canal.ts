@@ -23,10 +23,15 @@
  * No se pueden leer las preferencias → se manda (fail-OPEN) y el cron lo dice. Es el preaviso del
  * art. 22 LCS: callárselo a toda la cartera por un GRANT perdido es peor que un correo de más.
  *
- * Lo que NO decide: la antelación (`dias_antelacion` es la del PUSH) ni «no molestar» (un correo no suena).
+ * Lo que NO decide: «no molestar» (un correo no suena).
+ *
+ * 📅 La ANTELACIÓN del correo (14/10/2026) sale de la MISMA lectura (`leerCanalesDeFichas`): por ficha,
+ * la mayor `dias_antelacion` entre sus identidades y nunca menos de 7 (`diasEfectivosDeFicha` →
+ * `diasVentanaVencimiento` del módulo). Lectura fallida → 7, lo de antes (fail-safe: el comportamiento
+ * previo), y quien llama lo registra. Ficha sin identidades (el vencimiento DERIVADO) → 7.
  */
 
-import { selloDeEsteCiclo } from '@central/module-seguros-portal'
+import { diasVentanaVencimiento, selloDeEsteCiclo } from '@central/module-seguros-portal'
 
 export const CANAL_SOLO_MOVIL = 'movil'
 
@@ -34,6 +39,8 @@ export interface PreferenciaIdentidad {
   identidadId: string
   /** `null` = sin fila o sin canal. */
   canal: string | null
+  /** `null` = sin fila o sin antelación (= no configurado, vale 7). */
+  diasAntelacion: number | null
 }
 
 /** Lo leído en una pasada: identidades por ficha. `null` = la lectura falló. */
@@ -61,14 +68,28 @@ export function decidirAvisoVencimiento(x: { origen: OrigenAviso; fichaId: strin
   return { enviar: false, motivo: 'solo_movil' }
 }
 
+/**
+ * Días de la ventana del correo de vencimiento (y del digest) para ESTA ficha: max(7, la mayor
+ * antelación de sus identidades). `canales === null` (lectura fallida) → 7; ficha sin identidades → 7.
+ */
+export function diasEfectivosDeFicha(canales: CanalesDeFichas, fichaId: string): number {
+  if (canales === null) return diasVentanaVencimiento(null)
+  return diasVentanaVencimiento((canales.get(fichaId) ?? []).map((i) => i.diasAntelacion))
+}
+
 /** De las filas leídas a las identidades de cada ficha (una identidad, una vez; sin fila = `null`). */
 export function canalesPorFicha(x: {
   vinculos: { identidadId: string; clienteId: string }[]
-  canalDe: Map<string, string | null>
+  prefsDe: Map<string, { canal: string | null; diasAntelacion: number | null }>
 }): Map<string, PreferenciaIdentidad[]> {
   const ids = new Map<string, Set<string>>()
   for (const v of x.vinculos) ids.set(v.clienteId, (ids.get(v.clienteId) ?? new Set()).add(v.identidadId))
   const out = new Map<string, PreferenciaIdentidad[]>()
-  for (const [ficha, s] of ids) out.set(ficha, [...s].map((identidadId) => ({ identidadId, canal: x.canalDe.get(identidadId) ?? null })))
+  for (const [ficha, s] of ids) {
+    out.set(ficha, [...s].map((identidadId) => {
+      const p = x.prefsDe.get(identidadId)
+      return { identidadId, canal: p?.canal ?? null, diasAntelacion: p?.diasAntelacion ?? null }
+    }))
+  }
   return out
 }

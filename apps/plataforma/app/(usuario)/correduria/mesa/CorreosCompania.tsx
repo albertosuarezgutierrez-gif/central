@@ -1,0 +1,133 @@
+'use client'
+
+import Link from 'next/link'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Badge, btnStyle, cardStyle } from '@/components/ui'
+import { eur } from '@/lib/dinero'
+import {
+  interpretarCorreosCompania, pideMirar, ROTULO_COMPANIA, ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO,
+  type LecturaCorreosCompania,
+} from '@/lib/correduria/correos-compania'
+
+const PAGINA = 50
+const TITULO: React.CSSProperties = { margin: 0, fontSize: 16, fontWeight: 700 }
+const AVISO_LECTURA: React.CSSProperties = { ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', display: 'grid', gap: 6, fontSize: 14 }
+
+const fechaEs = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`
+
+/**
+ * «Correos de compañía» (14/10/2026): los avisos que el triaje leyó en los correos de las compañías
+ * (siniestros, pre-anulaciones, impagos, anulaciones, suplementos) en los últimos 30 días y qué se hizo con
+ * cada uno. Los SIN RESOLVER van primero y destacados: la póliza no casó y NO se escribió nada en la cartera.
+ * La banda de avisos enlaza aquí (`#correos-compania`). ≤50 + «Ver más»; recarga sin desmontar.
+ */
+export default function CorreosCompania() {
+  const [lectura, setLectura] = useState<LecturaCorreosCompania | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [limite, setLimite] = useState(PAGINA)
+  const peticion = useRef(0)
+
+  const cargar = useCallback(async () => {
+    const mia = ++peticion.current
+    setCargando(true)
+    try {
+      const r = await fetch('/api/correduria/correos-compania', { cache: 'no-store' })
+      const j = await r.json().catch(() => null)
+      if (mia === peticion.current) setLectura(interpretarCorreosCompania(r.status, j))
+    } catch {
+      if (mia === peticion.current) setLectura({ estado: 'error', motivo: 'no se ha podido conectar' })
+    } finally {
+      if (mia === peticion.current) setCargando(false)
+    }
+  }, [])
+
+  useEffect(() => { void cargar() }, [cargar])
+
+  const cabecera = (n: string | null) => <h2 style={TITULO}>Correos de compañía{n ? ` · ${n}` : ''}</h2>
+
+  if (lectura === null) {
+    return (
+      <section id="correos-compania" aria-label="Correos de compañía" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+        {cabecera(null)}
+        <p aria-live="polite" style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>{cargando ? 'Cargando…' : ''}</p>
+      </section>
+    )
+  }
+
+  if (lectura.estado !== 'ok') {
+    return (
+      <section id="correos-compania" aria-label="Correos de compañía" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+        {cabecera(null)}
+        <div role="alert" style={AVISO_LECTURA}>
+          <strong>{lectura.estado === 'sin_migracion' ? 'La bandeja aún no está activa: falta aplicar su migración en la BD.' : `No se han podido leer los correos de compañía (${lectura.motivo}).`}</strong>
+          <span>Esto no significa que no haya: los avisos siguen llegando por Telegram.</span>
+          <div>
+            <button type="button" disabled={cargando} onClick={() => void cargar()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+              {cargando ? 'Reintentando…' : 'Reintentar'}
+            </button>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  const filas = lectura.filas
+  const pendientes = filas.filter(pideMirar).length
+  return (
+    <section id="correos-compania" aria-label="Correos de compañía" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      {cabecera(`${filas.length}${lectura.truncado ? '+' : ''}`)}
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+        Avisos de las compañías leídos del correo (últimos 30 días).{' '}
+        {pendientes > 0
+          ? <strong style={{ color: 'var(--negative)' }}>{pendientes} sin resolver: no se ha escrito nada en la cartera.</strong>
+          : filas.length > 0 ? 'Todos aplicados o ya en CIMA.' : 'No ha llegado ninguno.'}
+      </p>
+      {lectura.truncado && <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>La lista está recortada: hay más de los que se muestran.</p>}
+      {lectura.descartadas > 0 && (
+        <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>
+          {lectura.descartadas} fila{lectura.descartadas === 1 ? '' : 's'} no se ha podido leer y no aparece{lectura.descartadas === 1 ? '' : 'n'}.
+        </p>
+      )}
+      {cargando && <p aria-live="polite" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Actualizando…</p>}
+      {filas.slice(0, limite).map(e => {
+        const mirar = pideMirar(e)
+        const est = ROTULO_ESTADO_CORREO[e.estado]
+        return (
+          <article key={e.id} style={{
+            ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, padding: 14,
+            ...(mirar ? { borderColor: 'var(--negative)', background: 'var(--negative-bg)' } : {}),
+          }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minWidth: 0 }}>
+              <Badge tono={est.tono}>{est.texto}</Badge>
+              <Badge tono="neutral">{ROTULO_TIPO_CORREO[e.tipo] ?? e.tipo}</Badge>
+              <span style={{ fontWeight: 600 }}>{ROTULO_COMPANIA[e.compania] ?? e.compania}</span>
+              <span style={{ fontSize: 13, color: 'var(--muted)' }}>{fechaEs(e.creado)}</span>
+            </div>
+            <div style={{ fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: '2px 10px', minWidth: 0 }}>
+              {e.clienteId
+                ? <Link href={`/correduria/cliente/${e.clienteId}`} style={{ fontWeight: 700, color: 'var(--primary)', overflowWrap: 'anywhere' }}>{e.cliente ?? 'Cliente sin nombre'}</Link>
+                : <span style={{ color: 'var(--muted)' }}>Sin cliente</span>}
+              <span style={{ overflowWrap: 'anywhere' }}>
+                {e.tipo === 'siniestro' ? `Siniestro ${e.clave}` : `Póliza ${e.numeroPoliza ?? e.clave}`}
+                {e.numeroPoliza && e.tipo === 'siniestro' ? ` · póliza ${e.numeroPoliza}` : ''}
+              </span>
+              {e.importe !== null && <span>{eur(e.importe)}</span>}
+              {e.fechaLimite && <span style={{ fontWeight: 600 }}>vence {fechaEs(e.fechaLimite)}</span>}
+            </div>
+            <div style={{ fontSize: 13, color: mirar ? 'var(--negative)' : 'var(--muted)', overflowWrap: 'anywhere' }}>
+              {e.resumen ?? (mirar ? 'Sin desenlace: míralo en el correo.' : '')}
+              {e.motivo && e.motivo !== e.resumen ? ` — ${e.motivo}` : ''}
+            </div>
+          </article>
+        )
+      })}
+      {filas.length > limite && (
+        <div>
+          <button type="button" onClick={() => setLimite(l => l + PAGINA)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+            Ver más ({filas.length - limite})
+          </button>
+        </div>
+      )}
+    </section>
+  )
+}
