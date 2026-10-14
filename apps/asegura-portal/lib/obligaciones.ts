@@ -16,6 +16,7 @@ import {
   obligacionDerivable,
   proximoCobroDeclarado,
   reparoDeclarada,
+  sellosAReiniciar,
   type Procedencia,
 } from '@central/module-seguros-portal'
 
@@ -91,6 +92,17 @@ export async function sincronizarObligacionesDeIdentidad(
   const vivas: string[] = []
   const ops = []
 
+  // Los sellos que YA tenía cada obligación de cartera, para soltar los de un ciclo anterior cuando la
+  // póliza renueva (`sellosAReiniciar`, 14/10/2026). Sin esto, el año 2 ni correo ni push.
+  const previas = new Map(
+    (
+      await prisma.portalObligacion.findMany({
+        where: { identidadId, tipo: 'poliza', polizaId: { not: null } },
+        select: { polizaId: true, avisadaAt: true, avisadaPushAt: true },
+      })
+    ).map((r) => [r.polizaId as string, r]),
+  )
+
   for (const titular of c.propias) {
     for (const p of titular.polizas) {
       // ⚠️ `confirmadaCima` NO sirve para este cepo: es `id_poliza_entidad !== null`
@@ -142,13 +154,15 @@ export async function sincronizarObligacionesDeIdentidad(
             fechaAccionable: accionable,
             procedencia: 'compania',
           },
-          // `avisadaAt` NO se toca: el sello del envío es lo único que impide
-          // avisar dos veces de lo mismo.
+          // Los sellos (`avisadaAt`, `avisadaPushAt`) de ESTE ciclo NO se tocan: son lo único que impide
+          // avisar dos veces de lo mismo. 🚨 Uno anterior a `accionable − 31 días` es del vencimiento del
+          // año pasado y se suelta: si no, nadie avisaría de la renovación (también cura filas ya renovadas).
           update: {
             titulo: tituloCartera(p),
             fechaEvento: evento,
             fechaAccionable: accionable,
             actualizadaAt: new Date(),
+            ...sellosAReiniciar(previas.get(p.id), accionable),
           },
         }),
       )
@@ -223,6 +237,18 @@ async function opsDeDeclaradas(identidadId: string, hoy: Date = new Date()) {
     ).map((r) => [r.polizaDeclaradaId as string, r.fechaEvento]),
   )
 
+  // Los sellos de la obligación `poliza` de cada declarada, para soltar los de un ciclo anterior cuando
+  // la persona renueva o corrige el vencimiento (`sellosAReiniciar`, 14/10/2026): la misma regla que
+  // la rama de la cartera. Sin esto, tras editar el vencimiento ni correo ni push.
+  const polizasPrevias = new Map(
+    (
+      await prisma.portalObligacion.findMany({
+        where: { identidadId, tipo: 'poliza', polizaDeclaradaId: { not: null } },
+        select: { polizaDeclaradaId: true, avisadaAt: true, avisadaPushAt: true },
+      })
+    ).map((r) => [r.polizaDeclaradaId as string, r]),
+  )
+
   const avisables: string[] = []
   // Subconjunto de `avisables` que además genera obligación de RECIBO. No es
   // lo mismo que «tiene periodicidad»: `anual` la tiene y no genera nada (ver
@@ -257,10 +283,16 @@ async function opsDeDeclaradas(identidadId: string, hoy: Date = new Date()) {
           fechaAccionable: accionable,
           procedencia: 'declarado',
         },
-        // `avisadaAt` NO se toca, igual que en la rama de la cartera: el sello
-        // del envío es lo único que impide avisar dos veces de lo mismo, y esta
-        // función corre en CADA carga de la bóveda.
-        update: { titulo, fechaEvento: evento, fechaAccionable: accionable, actualizadaAt: new Date() },
+        // Los sellos de ESTE ciclo NO se tocan, igual que en la rama de la cartera: son lo único que
+        // impide avisar dos veces de lo mismo, y esta función corre en CADA carga de la bóveda. Los de
+        // un ciclo anterior se sueltan (`sellosAReiniciar`).
+        update: {
+          titulo,
+          fechaEvento: evento,
+          fechaAccionable: accionable,
+          actualizadaAt: new Date(),
+          ...sellosAReiniciar(polizasPrevias.get(p.id), accionable),
+        },
       }),
     )
 
@@ -299,7 +331,10 @@ async function opsDeDeclaradas(identidadId: string, hoy: Date = new Date()) {
             fechaEvento: proximoCobro,
             fechaAccionable: accionableRecibo,
             actualizadaAt: new Date(),
-            ...(esCicloNuevo ? { avisadaAt: null } : {}),
+            // 🚨 Los DOS sellos (14/10/2026): soltar solo el del correo dejaba el push del cobro nuevo
+            // mudo para siempre. Aquí el criterio es «cambió el cobro» y no la antigüedad del sello de
+            // `sellosAReiniciar`: un recibo MENSUAL tiene ciclos más cortos que esa ventana de 31 días.
+            ...(esCicloNuevo ? { avisadaAt: null, avisadaPushAt: null } : {}),
           },
         }),
       )

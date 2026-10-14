@@ -50,7 +50,10 @@ import {
   type ReciboVigencia,
 } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
+import { ORIGEN_VINCULO_CORREDOR } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { registrarErrorCartera } from './error-cartera'
+import { canalesPorFicha, decidirAvisoVencimiento, type CanalesDeFichas } from './avisos-vencimiento-canal.ts'
 import {
   LIMITE_OBLIGACIONES,
   MARGEN_CANDIDATA_MS,
@@ -91,6 +94,17 @@ export type ResumenAvisos = {
    * dicen: un `enviados` corto sin esto se lee como «hoy tocaban pocas».
    */
   pendientes: number
+  /**
+   * Candidatas que NO se mandan porque su push ya salió a una persona de la ficha y todas las de la
+   * ficha eligieron «solo en el móvil» (`decidirAvisoVencimiento`). No se sellan: si cambia de opinión dentro de la
+   * ventana, el correo sale en la pasada siguiente (y sin `avisada_at` tampoco hay recordatorio).
+   */
+  omitidosSoloMovil: number
+  /**
+   * `false` = no se pudieron leer los vínculos/preferencias del portal y se ha mandado como antes de
+   * existir la preferencia (fail-open). `true` cuando se leyeron o no hizo falta mirar.
+   */
+  preferenciasLeidas: boolean
 }
 
 /**
@@ -239,6 +253,36 @@ async function leerAllegadosDeTomador(
 }
 
 /**
+ * Las identidades vinculadas a estas fichas y el canal que eligió cada una en el portal (14/10/2026),
+ * para `decidirAvisoVencimiento()`. La usan también los correos de vencimiento de `avisos-intranet.ts`.
+ * Solo LEE. Sin el vínculo temporal del CORREDOR (apunta a la ficha que Alberto tuviera abierta, no
+ * es una persona de esa ficha). Lápidas: no hace falta mirarlas, `fusionar_clientes()` re-apunta los
+ * vínculos a la superviviente (ver la cabecera de `avisos-vencimiento-canal.ts`).
+ * `null` = la lectura falló (fail-open en quien llama, y se dice).
+ */
+export async function leerCanalesDeFichas(
+  db: ReturnType<typeof prismaAsegura>,
+  fichaIds: string[],
+  contexto = 'avisos-vencimiento',
+): Promise<CanalesDeFichas> {
+  if (fichaIds.length === 0) return new Map()
+  try {
+    const vinculos = await db.portalVinculo.findMany({
+      where: { clienteId: { in: fichaIds }, origen: { not: ORIGEN_VINCULO_CORREDOR } },
+      select: { identidadId: true, clienteId: true },
+    })
+    const identidadIds = [...new Set(vinculos.map((v) => v.identidadId))]
+    const prefs = identidadIds.length
+      ? await db.portalPreferenciasAvisos.findMany({ where: { identidadId: { in: identidadIds } }, select: { identidadId: true, canal: true } })
+      : []
+    return canalesPorFicha({ vinculos, canalDe: new Map(prefs.map((p) => [p.identidadId, p.canal])) })
+  } catch (e) {
+    registrarErrorCartera(`${contexto}/preferencias-portal`, e)
+    return null
+  }
+}
+
+/**
  * Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el
  * proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin
  * remitente—, para que el endpoint responda 503 en vez de un `enviados: 0` que
@@ -349,9 +393,17 @@ export async function ejecutarAvisosVencimiento(opts: {
 
   const resumen: ResumenAvisos = {
     candidatas: candidatas.length, enviados: 0, enviadosATercero: 0, sinCanal: 0, fallidos: 0,
-    soloContar, truncado, pendientes: 0,
+    soloContar, truncado, pendientes: 0, omitidosSoloMovil: 0, preferenciasLeidas: true,
   }
   if (candidatas.length === 0) return resumen
+
+  // «Configuración → Avisos» del portal (14/10/2026): una lectura para toda la pasada. También en el
+  // ensayo, para que el recuento diga cuántos saldrían de verdad.
+  const canalesDeFicha = await leerCanalesDeFichas(db, [...new Set(polizas.map((p) => p.cliente.id))])
+  if (canalesDeFicha === null) {
+    resumen.preferenciasLeidas = false
+    console.error('[avisos] preferencias del portal NO leídas: se manda como antes (fail-open)')
+  }
 
   // Sin proveedor no se «envía 0 correos»: es una avería de configuración y
   // tiene que verse como tal. El envío real va por `enviarCorreoSeguido`
@@ -398,6 +450,20 @@ export async function ejecutarAvisosVencimiento(opts: {
       const ya = await db.portalAvisoEnviado.findFirst({ where: { clienteId: poliza.cliente.id, clave }, select: { id: true } })
       if (ya) {
         await db.portalObligacion.update({ where: { id: o.id }, data: { avisadaAt: new Date() } })
+        continue
+      }
+    }
+    // 🚨 Antes de resolver destinatario: «solo en el móvil» calla también el correo a la persona de
+    // referencia, que es el mismo aviso sobre la misma póliza. Sin sello (ver `omitidosSoloMovil`).
+    if (poliza) {
+      const decision = decidirAvisoVencimiento({
+        origen: { tipo: 'obligacion', identidadId: o.identidadId, avisadaPushAt: o.avisadaPushAt, fechaAccionable: o.fechaAccionable },
+        fichaId: poliza.cliente.id,
+        canales: canalesDeFicha,
+      })
+      if (!decision.enviar) {
+        resumen.omitidosSoloMovil += 1
+        console.info(`[avisos] obligación ${o.id} omitida: ${decision.motivo}`)
         continue
       }
     }
