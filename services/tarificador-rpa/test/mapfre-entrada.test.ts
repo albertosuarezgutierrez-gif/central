@@ -49,6 +49,24 @@ const NSEI = '<!doctype html><html><body><app-datos-basicos><label for="f1">Fech
 const MENU = (textos: string[]) => `<!doctype html><html><body>${textos.map((t, i) => `<a id="e${i}" href="/nada">${t}</a>`).join('')}</body></html>`
 const SIN_NSEI = '<!doctype html><html><body><p>Cargando…</p></body></html>'
 
+
+const USUARIO_FICTICIO = 'USUARIO_FICTICIO'
+const CLAVE_FICTICIA = 'CLAVE_FICTICIA'
+/** Fixture del login antiguo de Mapfre: «Código Usuario» (texto), «Contraseña» (password), enlace «entrar» en minúsculas. */
+const LOGIN_ANTIGUO = `<!doctype html><html><head><title>Login 2026</title></head><body>
+  <div id="msg"></div>
+  <label for="u">Código Usuario</label><input id="u" type="text">
+  <label for="p">Contraseña</label><input id="p" type="password">
+  <a href="#" id="e" onclick="entrar(); return false">entrar</a>
+  <script>
+    function entrar() {
+      const q = new URLSearchParams(location.search)
+      const u = document.getElementById('u').value, p = document.getElementById('p').value
+      if (q.get('modo') === 'ok' && u === '${USUARIO_FICTICIO}' && p === '${CLAVE_FICTICIA}') location.href = q.get('page')
+      else document.getElementById('msg').textContent = 'Credenciales incorrectas para ' + u + ' / ' + p
+    }
+  </script></body></html>`
+
 let servidor: Server
 let base = ''
 let browser: Browser
@@ -62,6 +80,18 @@ before(async () => {
     if (ruta === '/nada') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       return void res.end('<!doctype html><html><body>ok</body></html>')
+    }
+    if (ruta === '/nsei-login-ok' || ruta === '/nsei-login-mal') { // la URL directa redirige al login antiguo
+      res.writeHead(302, { Location: `/loginexternopi/docs/html/loginFormPage.html?page=%2Fnsei-dest&modo=${ruta.endsWith('ok') ? 'ok' : 'mal'}` })
+      return void res.end()
+    }
+    if (ruta === '/loginexternopi/docs/html/loginFormPage.html') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      return void res.end(LOGIN_ANTIGUO)
+    }
+    if (ruta === '/nsei-dest') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      return void res.end(NSEI)
     }
     if (ruta === '/directa-ok') { // URL directa: 200 con formulario
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
@@ -458,4 +488,74 @@ test('URL_NSEI_AUTO: mismo dominio, no casa con PATRON_EMISION y el explorador u
   assert.doesNotMatch(URL_NSEI_AUTO, PATRON_EMISION)
   const exp = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
   assert.match(exp, /const nsei = await abrirTarificacionRapidaAuto\(page, ctx\)[\s\S]*?return nsei/)
+})
+
+// Diagnóstico de pantalla (14/10/2026): el mensaje de fallo dice qué había, sin query strings ni dígitos.
+import { resumenDiagnosticoPagina, urlSinQuery, ocultarSecretos } from '../src/adapters/mapfre/entrada.ts'
+
+test('resumenDiagnosticoPagina: quita query strings (url e iframes, también la del hash) y enmascara dígitos', () => {
+  const r = resumenDiagnosticoPagina({
+    estadoHttp: 401,
+    url: 'https://wmediadores.mapfre.com/evt21/#/login?token=SECRETO123&nif=12345678Z',
+    titulo: 'Acceso 2026',
+    iframes: ['https://x.mapfre.com/frame/a?sid=ABC999', 'https://y.mapfre.com/b'],
+    hayPassword: true,
+    textoBody: 'Bienvenido 12345678Z, póliza 987654 teléfono 600 111 222',
+  })
+  assert.ok(r.includes('http 401'))
+  assert.ok(r.includes('https://wmediadores.mapfre.com/evt21/#/login'))
+  assert.ok(r.includes('https://x.mapfre.com/frame/a') && r.includes('iframes 2'))
+  assert.ok(!/SECRETO|ABC999|token=|sid=|nif=/.test(r), r)
+  assert.ok(!/\d/.test(r.slice(r.indexOf('título'), r.indexOf('; iframes')) + r.slice(r.indexOf('texto'))), r)
+  assert.ok(r.includes('########Z') && r.includes('Acceso ####'))
+  assert.ok(r.includes('password visible sí'))
+})
+
+test('resumenDiagnosticoPagina: sin respuesta, recorta título (80) y texto (200); urlSinQuery tolera basura', () => {
+  const r = resumenDiagnosticoPagina({ estadoHttp: null, url: '', titulo: 'T'.repeat(200), iframes: [], hayPassword: false, textoBody: 'a'.repeat(500) })
+  assert.ok(r.includes('http sin respuesta') && r.includes('password visible no'))
+  assert.ok(r.includes(`«${'T'.repeat(80)}»`) && !r.includes('T'.repeat(81)))
+  assert.ok(r.includes(`«${'a'.repeat(200)}»`) && !r.includes('a'.repeat(201)))
+  assert.equal(urlSinQuery('no-es-url?x=1'), 'no-es-url')
+})
+
+// ─── Login antiguo (`/loginexternopi/`) ante la URL directa ────────────────────────────────────────────────────────────
+const CREDS = { usuario: USUARIO_FICTICIO, contrasena: CLAVE_FICTICIA }
+
+test('login antiguo: rellena, pulsa «entrar» (con el guard real) y llega al formulario NSEI', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/')
+  try {
+    const nueva = await abrirNuevo(page, { ...ctxGuard, credenciales: CREDS }, { urlDirecta: `${base}/nsei-login-ok`, menuMs: 1_000, formularioMs: 5_000 })
+    assert.match(nueva.url(), /\/nsei-dest$/)
+    assert.equal(await nueva.locator('app-datos-basicos').count(), 1)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('login antiguo rechazado: error claro con diagnóstico y SIN credenciales (ni usuario ni clave)', async () => {
+  const { context, page, ctx } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
+    await assert.rejects(
+      () => abrirNuevo(page, { ...ctx, credenciales: CREDS }, { urlDirecta: `${base}/nsei-login-mal`, menuMs: 1_000, formularioMs: 2_000 }),
+      (e) => {
+        const m = (e as Error).message
+        assert.ok(e instanceof ErrorMapaIncompleto)
+        assert.match(m, /login antiguo NSEI rechazado\/no superado/)
+        assert.match(m, /pantalla: http \d+; url http:\/\/127\.0\.0\.1:#+\/loginexternopi\/docs\/html\/loginFormPage\.html|pantalla: http 200; url http:\/\/127\.0\.0\.1:\d+\/loginexternopi/)
+        assert.match(m, /password visible sí/)
+        assert.ok(!m.includes(USUARIO_FICTICIO) && !m.includes(CLAVE_FICTICIA) && !/page=|modo=/.test(m), m)
+        return true
+      },
+    )
+  } finally {
+    await context.close()
+  }
+})
+
+test('ocultarSecretos: quita usuario y clave aunque la pantalla los repita', () => {
+  const t = ocultarSecretos('Credenciales incorrectas para USUARIO_FICTICIO / CLAVE_FICTICIA', [USUARIO_FICTICIO, CLAVE_FICTICIA, undefined])
+  assert.ok(!t.includes('FICTICI'), t)
 })

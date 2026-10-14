@@ -469,7 +469,7 @@ export const mapfreAuto = {
     if (!pulsarEnlaceEntrada || !ctx.confirmarVehiculoMapfre) throw new ErrorMapaIncompleto('las funciones guardadas de la entrada y del vehículo en el contexto del runner')
     await login(page, ctx)
     await ctx.trasLogin()
-    const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada })
+    const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, credenciales: ctx.credenciales })
     await pasoDatosBasicos(nsei, form)
     const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx)
     ctx.log('vehiculo confirmado')
