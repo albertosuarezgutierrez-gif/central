@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { conLlamadaIA, registrarIntervencion, trabajoVivo } from '@/lib/tarificador-formador'
 import { preguntarIA } from '@/lib/tarificador-formador-ia'
-import { SYSTEM_SUGERIR, escaleraModelos, formadorActivo, leerPeticionSugerir, maxEurIA, maxLlamadasIA, parsearRespuestaSugerir, promptSugerir } from '@/lib/tarificador-formador-reglas'
+import { SYSTEM_SUGERIR, costeMaximoLlamadaFormador, escaleraModelos, formadorActivo, leerPeticionSugerir, maxEurIA, maxLlamadasIA, parsearRespuestaSugerir, promptSugerir } from '@/lib/tarificador-formador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,12 +35,18 @@ export async function POST(req: Request) {
     const escalera = escaleraModelos(process.env)
     // Tope ATÓMICO por trabajo (llamadas y € estimados): comprobación + llamada + registro en una transacción con lock.
     // IA ESCALONADA (14/10/2026): 1º el modelo barato; SOLO si no señala nada con confianza, el potente. Cada escalón se registra.
-    const res = await conLlamadaIA(t, max, async (registrar) => {
+    const prompt = promptSugerir(p)
+    const res = await conLlamadaIA(t, max, async (registrar, cabe) => {
       for (const [n, modelo] of escalera.entries()) {
         const etiquetaModelo = modelo ?? 'por defecto'
+        // Presupuesto ANTES de CADA escalón (llamadas y €: lo gastado + lo máximo que puede costar esta, con la tarifa de SU modelo).
+        if (!(await cabe(costeMaximoLlamadaFormador(SYSTEM_SUGERIR.length + prompt.length, modelo)))) {
+          await registrar({ paso: 'formador', tipo: 'tope', llamadaIA: false, resumen: `${p.tipo} «${p.clave}» [${etiquetaModelo}]: sin presupuesto para este escalón`, coste: 0 })
+          break
+        }
         let r: { texto: string; coste: number }
         try {
-          r = await preguntarIA(SYSTEM_SUGERIR, promptSugerir(p), modelo, escalera.length > 1 ? 15_000 : 20_000)
+          r = await preguntarIA(SYSTEM_SUGERIR, prompt, modelo, escalera.length > 1 ? 15_000 : 20_000)
         } catch (e) {
           await registrar({ paso: 'formador', tipo: 'error_ia', llamadaIA: true, resumen: `${p.tipo} «${p.clave}» [${etiquetaModelo}]: la IA no respondió (${e instanceof Error ? e.message.slice(0, 150) : 'error'})`, coste: 0 })
           continue

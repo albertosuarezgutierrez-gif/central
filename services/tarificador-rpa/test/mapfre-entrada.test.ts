@@ -565,3 +565,20 @@ test('RESPALDO: lo APRENDIDO va antes que la IA (sin llamada a «sugerir»)', as
     await context.close()
   }
 })
+
+test('guard `pulsar()`: mira ng-click del control y los manejadores/href de sus ANCESTROS cercanos (el clic burbujea)', async () => {
+  const { context, page, ctxGuard } = await abrir('/nada')
+  try {
+    await page.setContent(`<div id="a" ng-click="contratarSeguro()">Ver</div>
+      <div onclick="emitirPoliza()"><span><b id="b">Ver</b></span></div>
+      <div ng-click="formalizar()"><p id="c">Ver</p></div>
+      <a href="/poliza/emitir"><span id="d">Ver</span></a>
+      <div ng-click="abrirAplicacion(enlace)"><p id="ok">Ver</p></div>`)
+    for (const id of ['a', 'b', 'c', 'd']) {
+      await assert.rejects(() => ctxGuard.pulsar(page.locator(`#${id}`)), /emisi|bloquead|guard/i, id)
+    }
+    await ctxGuard.pulsar(page.locator('#ok'))
+  } finally {
+    await context.close()
+  }
+})

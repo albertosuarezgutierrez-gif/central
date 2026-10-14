@@ -345,9 +345,39 @@ export function incidenciasResultado(p: PeticionRevisar): IncidenciaPrecio[] {
 export const EUR_POR_MTOK_ENTRADA = 0.3
 export const EUR_POR_MTOK_SALIDA = 1.2
 
-/** ~4 caracteres por token. Redondeado a 6 decimales (numeric(10,6)). */
-export function costeEstimado(caracteresEntrada: number, caracteresSalida: number): number {
+/**
+ * Tarifas de REFERENCIA por modelo (€/Mtok, redondeadas HACIA ARRIBA). `undefined` = el modelo por defecto de `iaTexto` (flash).
+ * Un slug que no está aquí se tarifica como el MÁS CARO de la tabla (conservador: el tope de € nunca se queda corto).
+ */
+export const TARIFAS_EUR_POR_MTOK: Readonly<Record<string, { entrada: number; salida: number }>> = Object.freeze({
+  'anthropic/claude-sonnet-4.5': { entrada: 3, salida: 15 },
+})
+
+export function tarifaModelo(modelo?: string): { entrada: number; salida: number } {
+  if (!modelo) return { entrada: EUR_POR_MTOK_ENTRADA, salida: EUR_POR_MTOK_SALIDA }
+  const t = TARIFAS_EUR_POR_MTOK[modelo]
+  if (t) return t
+  const todas = [{ entrada: EUR_POR_MTOK_ENTRADA, salida: EUR_POR_MTOK_SALIDA }, ...Object.values(TARIFAS_EUR_POR_MTOK)]
+  return { entrada: Math.max(...todas.map((x) => x.entrada)), salida: Math.max(...todas.map((x) => x.salida)) }
+}
+
+/** ~4 caracteres por token, con la tarifa del `modelo` (sin él, la del por defecto). Redondeado a 6 decimales (numeric(10,6)). */
+export function costeEstimado(caracteresEntrada: number, caracteresSalida: number, modelo?: string): number {
+  const t = tarifaModelo(modelo)
   const e = Math.max(0, caracteresEntrada) / 4
   const s = Math.max(0, caracteresSalida) / 4
-  return Math.round(((e * EUR_POR_MTOK_ENTRADA + s * EUR_POR_MTOK_SALIDA) / 1e6) * 1e6) / 1e6
+  return Math.round(((e * t.entrada + s * t.salida) / 1e6) * 1e6) / 1e6
+}
+
+/** Tokens de salida máximos de `preguntarIA` (lo que se reserva al estimar ANTES de llamar). */
+export const MAX_TOKENS_SALIDA_FORMADOR = 600
+
+/** Coste MÁXIMO de una llamada antes de hacerla: entrada real + salida al tope de tokens, con la tarifa del modelo. */
+export function costeMaximoLlamadaFormador(caracteresEntrada: number, modelo?: string): number {
+  return costeEstimado(caracteresEntrada, MAX_TOKENS_SALIDA_FORMADOR * 4, modelo)
+}
+
+/** ¿Cabe la llamada siguiente en el tope de € del trabajo (lo gastado + lo máximo que puede costar esta)? Pura. */
+export function cabeLlamadaEur(usado: number, maximoLlamada: number, max: number): boolean {
+  return Number.isFinite(usado) && usado >= 0 && Number.isFinite(maximoLlamada) && maximoLlamada >= 0 && usado + maximoLlamada <= max
 }

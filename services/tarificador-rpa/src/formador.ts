@@ -415,7 +415,9 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
               type: type || null,
               role: h.getAttribute('role'),
               clases: typeof h.className === 'string' ? h.className.split(/\s+/).slice(0, 4).join(' ') : null,
-              texto: esAccion && tag !== 'input' ? (h.innerText || h.textContent || '').slice(0, 200) : null,
+              // Un [ng-click] que no es <a>/<button>/rol (fila, tarjeta…) puede envolver nombres: texto CORTO (80). Luego pasa por
+              // el redactor (`limpiarTextoAviso`) en `proyectarCandidato`, como todos.
+              texto: esAccion && tag !== 'input' ? (h.innerText || h.textContent || '').slice(0, h.matches('a, button, [role]') ? 200 : 80) : null,
               valorBoton: esAccion && esBoton ? h.getAttribute('value') : null,
               etiqueta: etiquetaDe(el),
               selector,

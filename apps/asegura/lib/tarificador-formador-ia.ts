@@ -4,10 +4,10 @@
 // de inputs y con los datos personales tapados (`leerEstructura`, `limpiarTextoAviso`).
 
 import { iaTexto } from './ia'
-import { costeEstimado } from './tarificador-formador-reglas'
+import { MAX_TOKENS_SALIDA_FORMADOR, costeEstimado } from './tarificador-formador-reglas'
 
 /** `modelo`: slug de OpenRouter por la pasarela (escalón potente); sin él, el por defecto. `timeoutMs` por llamada (escalera: 15 s). */
 export async function preguntarIA(system: string, prompt: string, modelo?: string, timeoutMs = 20_000): Promise<{ texto: string; coste: number }> {
-  const texto = await iaTexto(prompt, { system, maxTokens: 600, timeoutMs, privado: true, ...(modelo ? { modeloOpenRouter: modelo } : {}) })
-  return { texto, coste: costeEstimado(system.length + prompt.length, texto.length) }
+  const texto = await iaTexto(prompt, { system, maxTokens: MAX_TOKENS_SALIDA_FORMADOR, timeoutMs, privado: true, ...(modelo ? { modeloOpenRouter: modelo } : {}) })
+  return { texto, coste: costeEstimado(system.length + prompt.length, texto.length, modelo) }
 }

@@ -16,6 +16,9 @@ import {
   escaleraModelos,
   maxEurIA,
   quedaPresupuestoEur,
+  tarifaModelo,
+  cabeLlamadaEur,
+  costeMaximoLlamadaFormador,
   parsearRespuestaRevisar,
   parsearRespuestaSugerir,
   primerObjetoJson,
@@ -185,4 +188,27 @@ test('tope de coste por trabajo: 0,50 € por defecto, rango 0,01..5', () => {
   assert.equal(quedaPresupuestoEur(0.49, 0.5), true)
   assert.equal(quedaPresupuestoEur(0.5, 0.5), false)
   assert.equal(quedaPresupuestoEur(Number.NaN, 0.5), false)
+})
+
+test('coste por MODELO: el potente se tarifa como tal; un slug desconocido, como el más caro (conservador)', () => {
+  const flash = costeEstimado(4000, 400)
+  const sonnet = costeEstimado(4000, 400, 'anthropic/claude-sonnet-4.5')
+  assert.ok(sonnet > flash * 5, `${sonnet} vs ${flash}`)
+  assert.deepEqual(tarifaModelo('raro/modelo-x'), tarifaModelo('anthropic/claude-sonnet-4.5'))
+  assert.deepEqual(tarifaModelo(undefined), { entrada: 0.3, salida: 1.2 })
+})
+
+test('presupuesto ANTES de cada escalón: lo gastado + lo máximo de ESTA llamada tiene que caber', () => {
+  const max = 0.5
+  const potente = costeMaximoLlamadaFormador(40_000, 'anthropic/claude-sonnet-4.5')
+  assert.equal(cabeLlamadaEur(0, potente, max), true)
+  assert.equal(cabeLlamadaEur(max - potente / 2, potente, max), false, 'no cabe aunque lo gastado esté por debajo del tope')
+  assert.equal(cabeLlamadaEur(Number.NaN, potente, max), false)
+})
+
+test('la ruta sugerir recomprueba el presupuesto dentro del bucle de escalones, con el modelo de cada uno', () => {
+  const src = readFileSync(new URL('../app/api/tarificador/formador/sugerir/route.ts', import.meta.url), 'utf8')
+  const bucle = src.slice(src.indexOf('for (const [n, modelo] of escalera.entries())'), src.indexOf('let r: { texto: string; coste: number }'))
+  assert.match(bucle, /await cabe\(costeMaximoLlamadaFormador\(SYSTEM_SUGERIR\.length \+ prompt\.length, modelo\)\)/)
+  assert.match(readFileSync(new URL('./tarificador-formador-ia.ts', import.meta.url), 'utf8'), /costeEstimado\(system\.length \+ prompt\.length, texto\.length, modelo\)/)
 })

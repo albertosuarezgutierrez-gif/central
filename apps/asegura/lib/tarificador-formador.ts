@@ -7,7 +7,7 @@
 
 import { acompanamientoInicial, siguienteAcompanamiento, type EstadoAcompanamiento } from '@central/module-tarificacion'
 import { prisma } from './tenant'
-import { eventoCierre, quedaPresupuestoEur, quedanLlamadas, type Paso, type TipoClave } from './tarificador-formador-reglas'
+import { cabeLlamadaEur, eventoCierre, quedaPresupuestoEur, quedanLlamadas, type Paso, type TipoClave } from './tarificador-formador-reglas'
 
 export type TrabajoVivo = { id: string; correduriaId: string; compania: string; ramo: string }
 
@@ -50,7 +50,11 @@ const TIMEOUT_TX_LLAMADA_MS = 50_000
 export async function conLlamadaIA<T>(
   t: TrabajoVivo,
   max: number,
-  llamar: (registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>) => Promise<T>,
+  llamar: (
+    registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>,
+    /** ANTES de cada llamada extra (escalón): ¿quedan llamadas y cabe `maximoEur` en el tope de € del trabajo? (misma tx) */
+    cabe: (maximoEur: number) => Promise<boolean>,
+  ) => Promise<T>,
   maxEur = Number.POSITIVE_INFINITY,
 ): Promise<{ tope: true } | { tope: false; valor: T }> {
   return prisma.$transaction(
@@ -58,7 +62,9 @@ export async function conLlamadaIA<T>(
       await tx.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`tarificador_formador:${t.id}`}, 0))`
       if (!quedanLlamadas(await llamadasIAUsadas(t.id, tx), max)) return { tope: true as const }
       if (Number.isFinite(maxEur) && !quedaPresupuestoEur(await costeIAUsado(t.id, tx), maxEur)) return { tope: true as const }
-      const valor = await llamar((i) => registrarIntervencion({ ...i, trabajo: t }, tx))
+      const cabe = async (maximoEur: number) =>
+        quedanLlamadas(await llamadasIAUsadas(t.id, tx), max) && (!Number.isFinite(maxEur) || cabeLlamadaEur(await costeIAUsado(t.id, tx), maximoEur, maxEur))
+      const valor = await llamar((i) => registrarIntervencion({ ...i, trabajo: t }, tx), cabe)
       return { tope: false as const, valor }
     },
     { timeout: TIMEOUT_TX_LLAMADA_MS, maxWait: 10_000 },

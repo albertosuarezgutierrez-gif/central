@@ -90,7 +90,9 @@ function extractor(explora: boolean): string {
     }
     const divServlet = esDivServlet(el);
     const ng = ngClick(el);
-    if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet || ng) e.texto = corta(el.innerText || el.textContent || '', 200);
+    // Un [ng-click] que no es control de texto (fila, tarjeta…) puede envolver nombres: su texto, CORTO (80); el saneado lo filtra.
+    if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
+    else if (ng) e.texto = corta(el.innerText || el.textContent || '', 80);
     if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 200);
     if (ng && !e.onclick) e.onclick = corta(ng, 200);
     if (tag === 'select') {

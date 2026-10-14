@@ -249,3 +249,11 @@ test('conRespaldoIA: el fijo manda; solo un hueco de selector (portal) consulta 
   const datos = new ErrorTarificador('datos', 'falta el CP')
   await assert.rejects(() => conRespaldoIA(page, undefined, async () => { throw datos }, { clave: 'calcular', tipo: 'accion', descripcion: '' }), (e) => e === datos)
 })
+
+test('candidato [ng-click] de una fila: texto CORTO (≤80) y por el redactor (sin el NIF ni lo que pasa de 80)', () => {
+  const largo = `Cliente 12345678Z ${'Nombre Apellido '.repeat(12)}FINAL`
+  const c = proyectarCandidato({ tag: 'tr', texto: largo, selector: 'xpath=/html/body/table/tr[1]', marco: 'principal' }, 'accion', (t) => t)!
+  assert.ok((c.texto ?? '').length <= 80, c.texto ?? '')
+  assert.ok(!(c.texto ?? '').includes('12345678Z'))
+  assert.ok(!(c.texto ?? '').includes('FINAL'))
+})
