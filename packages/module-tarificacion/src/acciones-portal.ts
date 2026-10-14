@@ -123,46 +123,77 @@ export function lineaAccionesPortalParaIA(): { emision: string; prohibidas: stri
   }
 }
 
-// ─── Frontera de emisión POR CAMPOS (14/10/2026) ─────────────────────────────
-// La compañía pide la cuenta bancaria (y normalmente la fecha de efecto) solo para EMITIR, tras la aceptación del cliente.
-// Un campo bancario en pantalla = frontera: el explorador para con `cerca_de_emision` (`detectarParada`, explorador.ts, que
-// usan el paso de asegura y el worker ANTES de llamar a la IA: la IA nunca recibe ni rellena ese campo). La fecha de efecto
-// SOLA no para (también aparece al tarificar); cuenta solo junto a un campo bancario en la misma pantalla.
-// Patrones sobre texto PLANO (minúsculas, sin tildes: `txtIBAN` → `txtiban`, no hay frontera de camelCase), así que IBAN/BIC/«num cuenta»
-// NO llevan `\b` delante. Falsos positivos que pararían el tarificar de Hogar/Auto y se excluyen: «Ibáñez», «Asistencia domiciliaria»,
-// «Tenga en cuenta», «Suzuki Swift», «vehículo financiado» (entidad financiera). Ver los negativos en acciones-portal.test.ts.
+// ─── Frontera de emisión POR CAMPOS (14/10/2026) — FUENTE ÚNICA ──────────────
+// Sin número de cuenta no se emite (Alberto, 14/10/2026, TODAS las compañías): la compañía pide la cuenta bancaria (y
+// normalmente la fecha de efecto) solo para EMITIR. Un campo bancario en pantalla = frontera: el explorador para con
+// `cerca_de_emision` / `frontera_cuenta_bancaria` (`detectarParada`, explorador.ts, que usan el paso de asegura y el worker
+// ANTES de llamar a la IA) y el worker NUNCA lo rellena ni pulsa con él visible (`senalCuentaBancaria` en guard.ts y en la
+// segunda barrera del bucle). La fecha de efecto SOLA no para (también sale al tarificar); se menciona si va con un campo bancario.
+// Unifica (fusión con #4617, Mapfre): la lista de esta rama + la cobertura de la frontera de Mapfre (CCC, «cuenta cliente»,
+// «Cuenta» a secas, «no. de cuenta», entidad/oficina/DC, dígito de control, camelCase y `_` separados). Cada descripción se
+// mira en DOS formas (plana y con camelCase/`_` separados): casa si casa cualquiera.
+// Falsos positivos excluidos (pararían el tarificar de Hogar/Auto): «Ibáñez», «Asistencia domiciliaria», «Tenga en cuenta»,
+// «no cuenta con alarma», «Suzuki Swift» (SWIFT solo como etiqueta EXACTA: las descripciones nunca son valores), «entidad financiera», «Oficina de la entidad mediadora», «accc».
+// Ver los negativos en acciones-portal.test.ts y explorador.test.ts.
 
 export type CampoBancario = { readonly nombre: string; readonly patron: RegExp }
 
 export const CAMPOS_BANCARIOS: readonly CampoBancario[] = Object.freeze([
   Object.freeze({ nombre: 'IBAN', patron: /iban(?!ez)/ }),
-  Object.freeze({ nombre: 'Cuenta bancaria', patron: /cuenta[\s_.-]*(?:bancaria|corriente)|\bccc\b/ }),
-  Object.freeze({ nombre: 'Número de cuenta', patron: /(?:num(?:ero)?|nro|\bn\.?[º°])\.?[\s_.-]*(?:de[\s_.-]*)?cuenta/ }),
-  Object.freeze({ nombre: 'Domiciliación', patron: /domiciliacion|domiciliar\b/ }),
+  Object.freeze({ nombre: 'Cuenta bancaria', patron: /cuenta[\s_.-]*(?:bancaria|corriente|cliente)|\bccc\b|^cuenta$/ }),
+  Object.freeze({ nombre: 'Número de cuenta', patron: /(?:num(?:ero)?|nro|\bn\.?[º°])[\s_.º-]*(?:de[\s_.-]*)?cuenta|\bn\.?\s*(?:[º°]|o\.)\s*(?:de\s*)?cuenta\b/ }),
+  Object.freeze({ nombre: 'Domiciliación', patron: /domiciliacion|domiciliar(?!i)/ }),
   Object.freeze({ nombre: 'Titular de la cuenta', patron: /titular[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?cuenta/ }),
   Object.freeze({ nombre: 'Entidad bancaria', patron: /entidad[\s_.-]*bancaria/ }),
-  Object.freeze({ nombre: 'SWIFT / BIC', patron: /swift[\s_.-]*(?:bic|code|codigo)|(?:code|codigo)[\s_.-]*swift|(?:^|[^a-z])bic(?![a-z])/ }),
+  Object.freeze({ nombre: 'Entidad / oficina / DC', patron: /entidad[^a-z]{0,20}oficina|oficina[^a-z]{0,20}entidad|digito[\s_-]*de[\s_-]*control/ }),
+  Object.freeze({ nombre: 'SWIFT / BIC', patron: /swift[\s_.-]*(?:bic|code|codigo)|(?:code|codigo)[\s_.-]*swift|(?:^|[^a-z])bic(?![a-z])|^swift$/ }),
   Object.freeze({ nombre: 'Datos bancarios', patron: /datos[\s_.-]*bancari/ }),
 ])
 
+/** Todas las alternativas de {@link CAMPOS_BANCARIOS} en un regex (DERIVADO, no se edita a mano). Sobre texto plano. */
+export const RE_CAMPO_CUENTA_BANCARIA = new RegExp(CAMPOS_BANCARIOS.map((c) => `(?:${c.patron.source})`).join('|'))
+
+/** Motivo legible de la frontera (va al log, a la señal de `detectarParada` y al error del flujo determinista). */
+export const MOTIVO_FRONTERA_CUENTA = 'frontera de emisión: el portal pide cuenta bancaria'
+
 export const PATRON_FECHA_EFECTO = /fecha[\s_.-]*(?:de[\s_.-]*)?efecto|efecto[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?(?:poliza|fecha)/
 
-export type FronteraCampos = { frontera: boolean; campoBancario: string | null; fechaEfecto: boolean }
+export type FronteraCampos = { frontera: boolean; campoBancario: string | null; etiqueta: string | null; fechaEfecto: boolean }
+
+/** Las dos formas en que se mira una descripción: plana, y con camelCase y `_` separados (`numCCC` → `num ccc`). */
+const formasCampo = (d: string): string[] => [plano(d), plano(d.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' '))]
+
+/** El {@link CampoBancario} con el que casa UNA descripción, o `null`. */
+function campoBancarioDe(d: string): CampoBancario | null {
+  const formas = formasCampo(d)
+  return CAMPOS_BANCARIOS.find((c) => formas.some((t) => c.patron.test(t))) ?? null
+}
 
 /**
  * Descripciones (etiqueta, name, id, placeholder, aria…) de los CAMPOS de una pantalla → ¿hay frontera de emisión?
- * `frontera` ⇔ hay un campo bancario. La fecha de efecto se informa pero por sí sola NO es frontera. Pura.
+ * `frontera` ⇔ hay un campo bancario; `campoBancario` = su nombre canónico y `etiqueta` = la descripción que casó (tal
+ * cual, recortada a 80; nunca el valor). La fecha de efecto se informa pero por sí sola NO es frontera. Pura.
  */
 export function fronteraEmisionPorCampos(camposDesc: readonly (string | null | undefined)[]): FronteraCampos {
-  const out: FronteraCampos = { frontera: false, campoBancario: null, fechaEfecto: false }
+  const out: FronteraCampos = { frontera: false, campoBancario: null, etiqueta: null, fechaEfecto: false }
   for (const d of camposDesc) {
     if (typeof d !== 'string' || d === '') continue
-    const t = plano(d)
-    if (out.campoBancario === null) out.campoBancario = CAMPOS_BANCARIOS.find((c) => c.patron.test(t))?.nombre ?? null
-    if (!out.fechaEfecto && PATRON_FECHA_EFECTO.test(t)) out.fechaEfecto = true
+    if (out.campoBancario === null) {
+      const c = campoBancarioDe(d)
+      if (c !== null) {
+        out.campoBancario = c.nombre
+        out.etiqueta = d.replace(/\s+/g, ' ').trim().slice(0, 80)
+      }
+    }
+    if (!out.fechaEfecto && formasCampo(d).some((t) => PATRON_FECHA_EFECTO.test(t))) out.fechaEfecto = true
   }
   out.frontera = out.campoBancario !== null
   return out
+}
+
+/** La primera descripción de un control que es campo bancario (tal cual, recortada), o `null`. Pura. La usa el worker. */
+export function senalCuentaBancaria(descripciones: readonly (string | null | undefined)[]): string | null {
+  return fronteraEmisionPorCampos(descripciones).etiqueta
 }
 
 // ─── Referencia del presupuesto ──────────────────────────────────────────────

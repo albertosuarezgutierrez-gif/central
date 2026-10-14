@@ -9,6 +9,8 @@ import {
   descripcionesSinExcepcionProyecto,
   EXCEPCION_PROYECTO_AMPLIADO,
   fronteraEmisionPorCampos,
+  RE_CAMPO_CUENTA_BANCARIA,
+  senalCuentaBancaria,
   PATRONES_GUARDADO_GUARD,
   TEXTOS_BLOQUEADOS_ALTA,
   clasificarAccionPortal,
@@ -268,6 +270,8 @@ describe('frontera de emisión por campos: IBAN / cuenta bancaria (14/10/2026)',
     [{ tag: 'input', type: 'text', placeholder: 'BIC' }, 'SWIFT / BIC'],
     [{ tag: 'input', type: 'text', etiqueta: 'Código SWIFT' }, 'SWIFT / BIC'],
     [{ tag: 'input', type: 'text', id: 'swiftCode' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Swift' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', name: 'SWIFT' }, 'SWIFT / BIC'],
     [{ tag: 'input', type: 'text', id: 'codigo_iban' }, 'IBAN'],
     [{ tag: 'input', type: 'text', id: 'ibanCuenta' }, 'IBAN'],
     [{ tag: 'input', type: 'text', etiqueta: 'iban' }, 'IBAN'],
@@ -297,7 +301,7 @@ describe('frontera de emisión por campos: IBAN / cuenta bancaria (14/10/2026)',
 
   it.each([
     'Asistencia domiciliaria', 'Tenga en cuenta', 'Con cuenta propia', 'Ibáñez', 'Ibanez', 'Apellido: IBÁÑEZ',
-    'Entidad financiera', 'Vehículo financiado por entidad financiera', 'Suzuki Swift', 'Swift', 'No tiene cuenta',
+    'Entidad financiera', 'Vehículo financiado por entidad financiera', 'Suzuki Swift', 'No tiene cuenta',
   ])('NEGATIVO falso positivo «%s» no para', (t) => {
     expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: t }]))).toBeNull()
     expect(fronteraEmisionPorCampos([t]).frontera).toBe(false)
@@ -310,10 +314,36 @@ describe('frontera de emisión por campos: IBAN / cuenta bancaria (14/10/2026)',
   })
 
   it('fronteraEmisionPorCampos es pura: fecha sola = sin frontera; banco = frontera; lista congelada', () => {
-    expect(fronteraEmisionPorCampos(['Fecha de efecto'])).toEqual({ frontera: false, campoBancario: null, fechaEfecto: true })
-    expect(fronteraEmisionPorCampos(['fecha efecto', 'iban'])).toEqual({ frontera: true, campoBancario: 'IBAN', fechaEfecto: true })
-    expect(fronteraEmisionPorCampos([null, undefined, ''])).toEqual({ frontera: false, campoBancario: null, fechaEfecto: false })
+    expect(fronteraEmisionPorCampos(['Fecha de efecto'])).toEqual({ frontera: false, campoBancario: null, etiqueta: null, fechaEfecto: true })
+    expect(fronteraEmisionPorCampos(['fecha efecto', 'iban'])).toEqual({ frontera: true, campoBancario: 'IBAN', etiqueta: 'iban', fechaEfecto: true })
+    expect(fronteraEmisionPorCampos([null, undefined, ''])).toEqual({ frontera: false, campoBancario: null, etiqueta: null, fechaEfecto: false })
     expect(CAMPOS_BANCARIOS.every((c) => Object.isFrozen(c))).toBe(true)
+  })
+
+  // Fusión con #4617 (Mapfre): UNA fuente. La cobertura de su frontera vive en CAMPOS_BANCARIOS (un brazo por caso).
+  it.each([
+    ['CCC', 'Cuenta bancaria'], ['num_ccc', 'Cuenta bancaria'], ['numCCC', 'Cuenta bancaria'], ['Cuenta', 'Cuenta bancaria'],
+    ['cuentaCliente', 'Cuenta bancaria'], ['no. de cuenta', 'Número de cuenta'], ['Nº de cuenta', 'Número de cuenta'],
+    ['N.º cuenta', 'Número de cuenta'], ['Entidad - Oficina - DC', 'Entidad / oficina / DC'], ['Entidad/Oficina', 'Entidad / oficina / DC'],
+    ['Dígito de control', 'Entidad / oficina / DC'], ['domiciliacionBancaria', 'Domiciliación'], ['domiciliarRecibos', 'Domiciliación'],
+    ['cuentaBancaria', 'Cuenta bancaria'], ['ibanTomador', 'IBAN'],
+  ])('cobertura Mapfre: «%s» → %s', (t, nombre) => {
+    expect(fronteraEmisionPorCampos([t]).campoBancario).toBe(nombre)
+    expect(senalCuentaBancaria([t])).toBe(t)
+  })
+
+  it.each(['Asistencia domiciliaria', 'Servicio domiciliario', 'Ibáñez', 'Suzuki Swift', 'El inmueble no cuenta con alarma', 'Oficina de la entidad mediadora', 'accc'])(
+    'NEGATIVO también en la API del worker (senalCuentaBancaria): «%s»', (t) => {
+      expect(senalCuentaBancaria([t])).toBeNull()
+    })
+
+  it('RE_CAMPO_CUENTA_BANCARIA es DERIVADO de CAMPOS_BANCARIOS (no una segunda lista)', () => {
+    for (const c of CAMPOS_BANCARIOS) expect(RE_CAMPO_CUENTA_BANCARIA.source).toContain(c.patron.source)
+  })
+
+  it('título «Datos bancarios» (sin campos) también para', () => {
+    const inv = sanearInventarioDom({ marcos: [{ url: 'https://portal.example.test/x', titulos: [{ texto: 'Datos bancarios', tag: 'h2' }], importes: [], elementos: [] }] }, undefined, { refs: true })!
+    expect(detectarParada(inv)?.motivo).toBe('cerca_de_emision')
   })
 
   it('la IA no recibe el campo: el valor ficticio de un IBAN no llega a ningún sitio porque se para antes (paso de asegura/worker)', () => {
