@@ -4,7 +4,7 @@ import ContactosMovil from './ContactosMovil'
 import AvisoGoogleContactos from './AvisoGoogleContactos'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity, ClipboardCheck } from 'lucide-react'
+import { Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity, ClipboardCheck, Mail } from 'lucide-react'
 import { Pagina, Badge, btnStyle } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -32,6 +32,7 @@ import DiferenciasCima from './DiferenciasCima'
 import Quejas from './Quejas'
 import Bloque from './Bloque'
 import Redes from './Redes'
+import Campanas from './Campanas'
 import Blog from './Blog'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import ListaCartera from './ListaCartera'
@@ -594,6 +595,9 @@ export default function CorreduriaClient() {
 
         <SubMas id="emisiones" Icono={ClipboardCheck} titulo="Emisiones a revisar" />
         <EmisionesRevision onContador={setNEmisiones} primero />
+
+        <SubMas id="campanas" Icono={Mail} titulo="Campañas de correo" />
+        {montada('mas') && <Campanas />}
 
         <SubMas id="redes" Icono={Megaphone} titulo="Redes y blog" />
         <Blog onContador={setNBlog} />

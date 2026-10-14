@@ -330,6 +330,8 @@ export type EventoCorreoFila = {
   cliente: string | null
   fechaLimite: string | null
   importe: number | null
+  /** `true` = alguien lo marcó como mirado (`revisado_at` no nulo). */
+  revisado: boolean
 }
 
 const TECHO_LISTA = 300
@@ -341,7 +343,8 @@ export async function eventosCorreoRecientes(correduriaId: string, dias = 30): P
     select e.id::text as id, to_char(e.created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD"T"HH24:MI') as creado,
            e.tipo, e.subtipo, e.clave, e.compania, e.numero_poliza as "numeroPoliza", e.estado, e.motivo, e.resumen,
            e.cliente_id::text as "clienteId", nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
-           to_char(e.fecha_limite, 'YYYY-MM-DD') as "fechaLimite", e.importe::text as importe
+           to_char(e.fecha_limite, 'YYYY-MM-DD') as "fechaLimite", e.importe::text as importe,
+           (e.revisado_at is not null) as revisado
     from correo_evento_entrante e
     left join clientes c on c.id = e.cliente_id and c.correduria_id = e.correduria_id
     where e.correduria_id = ${correduriaId}::uuid and e.created_at >= now() - make_interval(days => ${d}::int)
@@ -351,6 +354,18 @@ export async function eventosCorreoRecientes(correduriaId: string, dias = 30): P
     filas: filas.slice(0, TECHO_LISTA).map((f) => ({ ...f, importe: f.importe === null ? null : Number(f.importe) })),
     truncado: filas.length > TECHO_LISTA,
   }
+}
+
+/**
+ * Pone (`true`) o quita (`false`) la marca de «mirado». Solo la fila de ESA correduría: `false` = no existe
+ * o es de otra (la ruta responde 404). Quitarla deja la fila otra vez en la cola de avisos.
+ */
+export async function marcarEventoRevisado(correduriaId: string, id: string, revisado: boolean): Promise<boolean> {
+  const n = await prismaAsegura().$executeRaw(Prisma.sql`
+    update correo_evento_entrante
+    set revisado_at = ${revisado ? Prisma.sql`now()` : Prisma.sql`null`}, updated_at = now()
+    where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+  return n > 0
 }
 
 /** Para la cola de avisos: los sin resolver (o a medias) de los últimos 30 días que nadie ha marcado como mirados. */

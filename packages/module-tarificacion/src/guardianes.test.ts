@@ -34,6 +34,13 @@ describe('guard de emisión · verbos firmar/pagar/domiciliar (14/10/2026)', () 
   it('bloquea cada verbo por separado (arm pagar)', () => {
     expect(pareceEmision('pagar')).toBe(true)
   })
+  it.each(['Grabar póliza', 'btnGrabarPoliza', 'GRABAR POLIZA', 'grabar_poliza'])('bloquea «%s» (grabar póliza, 14/10/2026)', (d) => {
+    expect(pareceEmision(d, { permitirAceptar: true })).toBe(true)
+    expect(() => comprobarBoton([d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+  })
+  it('deja pasar «Grabación» (no es el verbo)', () => {
+    expect(pareceEmision('Grabación de datos', { permitirAceptar: true })).toBe(false)
+  })
   it('bloquea cada verbo por separado (arm domiciliar)', () => {
     expect(pareceEmision('domiciliar')).toBe(true)
   })

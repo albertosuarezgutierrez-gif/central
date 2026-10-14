@@ -24,7 +24,8 @@
 // guard sigue bloqueando emitir/contratar. Textos EXACTOS (sin distinguir mayúsculas; el DOM puede pintarlas por CSS).
 // Acotado a la tarjeta con fallback (14/10/2026, 2ª exploración: el acotado no casó con el DOM real): si la tarjeta no da el enlace
 // en ~3 s, se busca el texto EXACTO en toda la página y solo se acepta con EXACTAMENTE 1 coincidencia visible.
-// TODO(captura): sin DOM real de los menús; se localizan por rol o texto visible. Fail-closed: no aparece → ErrorMapaIncompleto.
+// TODO(captura): sin DOM real de los menús; se localizan por rol o texto visible. Fail-closed: no aparece → ErrorMapaIncompleto
+// CON inventario de estructura (14/10/2026): el runner lo captura de TODAS las pestañas para mapear el menú sin otra grabación.
 // «Automóviles» sale dos veces (opción del menú y título de la página): se pulsa la del menú, visible solo tras abrir el desplegable.
 
 import type { Locator, Page } from 'playwright'
@@ -72,7 +73,7 @@ async function localizar(raiz: Raiz, roles: Rol[], texto: string, que: string, e
   try {
     await l.waitFor({ state: 'visible', timeout: espera })
   } catch {
-    throw new ErrorMapaIncompleto(`el elemento de menú «${texto}» (${que}) de wmediadores`)
+    throw new ErrorMapaIncompleto(`el elemento de menú «${texto}» (${que}) de wmediadores`, true)
   }
   return l
 }
@@ -130,7 +131,7 @@ async function enlaceDeEntrada(page: Page, tituloPagina: Locator, menuMs: number
   const n = await todos.count().catch(() => 0)
   if (n === 1) return todos.first()
   const detalle = n === 0 ? 'ninguna coincidencia exacta visible' : `${n} coincidencias exactas visibles, ambiguo`
-  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en toda la página: ${detalle}${await describirCandidatos(page)}) de wmediadores`)
+  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en toda la página: ${detalle}${await describirCandidatos(page)}) de wmediadores`, true)
 }
 
 /**
@@ -186,7 +187,7 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   try {
     await titulo.waitFor({ state: 'visible', timeout: menuMs })
   } catch {
-    throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`)
+    throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`, true)
   }
   await localizar(page, [], TARJETA_TURISMOS_Y_MOTOS, 'tarjeta (solo se comprueba)', menuMs)
   // El enlace: primero acotado a la tarjeta «Turismos y Motos» (otras tarjetas traen enlaces parecidos); si el DOM real no
@@ -201,13 +202,13 @@ async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuM
   try {
     destino = await nueva
   } catch {
-    throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ENLACE_TARIFICACION_RAPIDA}» (no se abrió)`)
+    throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ENLACE_TARIFICACION_RAPIDA}» (no se abrió)`, true)
   }
   // Sin `httpCredentials` en el contexto, el desafío de auth básica se responde 401 (= cancelar) y el formulario sigue ahí.
   try {
     await destino.locator(SEL_FORMULARIO_NSEI).first().waitFor({ state: 'attached', timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS })
   } catch {
-    throw new ErrorMapaIncompleto(`el formulario NSEI (${SEL_FORMULARIO_NSEI}) en la pestaña nueva`)
+    throw new ErrorMapaIncompleto(`el formulario NSEI (${SEL_FORMULARIO_NSEI}) en la pestaña nueva`, true)
   }
   return destino
 }

@@ -594,3 +594,57 @@ test('LOGIN ASISTIDO (14/10/2026): la IA solo da claves; el valor va SOLO al cam
   for (const [nombre, l, e] of malos) assert.notDeepEqual(infraccionesLoginAsistido(l, e ?? explorador, otros), [], nombre)
   assert.notDeepEqual(infraccionesLoginAsistido(login, explorador, { 'x.ts': 'abrirVentanaLogin(guard, o)' }), [], 'otro fichero abre la ventana')
 })
+
+// ─── Mapfre NSEI (Alberto, 14/10/2026) ───────────────────────────────────────
+
+test('MAPFRE · la PUERTA es la fila companias_integracion: el worker registra siempre y asegura no encola/reclama sin ella', () => {
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.ok(!/TARIFICADOR_MAPFRE_ACTIVO|mapfreActivo|process\.env/.test(idx), 'el registro de adaptadores no lee interruptores del entorno para Mapfre')
+  assert.match(idx, /^adaptadores\.registrar\(mapfreAuto\)$/m)
+  assert.match(idx, /^adaptadores\.registrar\(mapfreMoto\)$/m)
+  const t = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador.ts'), 'utf8'))
+  const encolar = t.slice(t.indexOf('export async function encolarTrabajo'), t.indexOf('export async function reclamarSiguiente'))
+  const puerta = encolar.indexOf('if (!integ || !integ.activo || !puedeAutomatizar(integ.modo))')
+  assert.ok(puerta > -1 && puerta < encolar.indexOf('insert into seguros.tarificacion_trabajos'), 'encolarTrabajo: sin fila activa rpa_autorizada no se inserta')
+  const reclamar = t.slice(t.indexOf('export async function reclamarSiguiente'), t.indexOf('export type DepsLanzador'))
+  assert.match(reclamar, /where correduria_id = \$\{correduriaId\}::uuid and compania = \$\{clave\} and activo and modo = 'rpa_autorizada'/, 'el cupo sale SOLO de filas activas rpa_autorizada')
+  assert.match(reclamar, /join seguros\.companias_integracion ci[\s\S]*?and ci\.activo and ci\.modo = 'rpa_autorizada'[\s\S]*?set estado = 'en_curso'|set estado = 'en_curso'[\s\S]*?join seguros\.companias_integracion ci[\s\S]*?and ci\.activo and ci\.modo = 'rpa_autorizada'/, 'solo se pone en_curso un trabajo con fila activa rpa_autorizada')
+  // `en_curso` (lo único que el worker recibe) solo lo pone reclamarSiguiente.
+  const todos = ficheros(join(RAIZ, 'apps/asegura/lib')).concat(ficheros(join(RAIZ, 'apps/asegura/app')))
+    .filter((f) => !f.endsWith('.test.ts'))
+    .filter((f) => /tarificacion_trabajos/.test(readFileSync(f, 'utf8')) && /estado\s*=\s*'en_curso'\s*,/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(todos.map((f) => relative(RAIZ, f)), ['apps/asegura/lib/tarificador.ts'])
+  const mod = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/modo-integracion.ts'), 'utf8')
+  assert.match(mod, /export function puedeAutomatizar\(modo: unknown\): boolean \{\s*return modo === 'rpa_autorizada'\s*\}/)
+})
+
+test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→2→3 y todas las comprobaciones ANTES del único clic', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const bloque = guard.match(/export const PASOS_CONTINUAR_MAPFRE = Object\.freeze\(\{([\s\S]*?)\n\}\)\n/)
+  assert.ok(bloque, 'falta PASOS_CONTINUAR_MAPFRE (Object.freeze) en guard.ts')
+  assert.deepEqual([...bloque![1].matchAll(/^ {2}(\w+): Object\.freeze\(/gm)].map((m) => m[1]), ['datosBasicos', 'objetoAsegurado', 'figuras'])
+  assert.ok(!/contrataci|proyecto|emisi/i.test(bloque![1]), 'ningún «Continuar» desde Coberturas/Proyectos ni hacia Contratación')
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarContinuarMapfre'))
+  assert.ok(fn, 'falta pulsarContinuarMapfre en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)', 'usados.has(clave)', 'regla.previos.some(', 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'CONTINUAR'", 'comprobarBoton(desc)', 'usados.add(clave)']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarContinuarMapfre: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(!/permitirAceptar|ABRIR_(VENTANA|AVANCE|GUARDADO)/.test(fn!), 'sin «Aceptar» permitido y sin abrir ventanas de red')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  // El adaptador de Mapfre llega a «Continuar» solo por la función guardada del contexto.
+  const mapfre = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'))
+  assert.ok(!/ctx\.pulsar\(|continuar['"]?\s*\)?\s*\.click|Continuar/.test(mapfre.replace(/'[^'\n]*'|`[^`\n]*`/g, '')), 'mapfre/auto.ts no nombra «Continuar» ni pulsa')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /continuarMapfre: async \(pagina, paso\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await pulsarContinuarMapfre\(pagina, guard, paso\)\s*\}/)
+})
+
+test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactado en mensajes/URL/HTML y sin captura', () => {
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /const secretosRiesgo = secretosDelRiesgo\(trabajo\.riesgo\)/)
+  assert.match(runner, /const secretos = \[\.\.\.secretosDelEntorno\(env\), \.\.\.secretosRiesgo\]/)
+  assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
+  const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
+  assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
+})

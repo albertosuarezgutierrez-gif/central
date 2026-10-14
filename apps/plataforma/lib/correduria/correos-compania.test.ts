@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { interpretarCorreosCompania, pideMirar } from './correos-compania.ts'
+import { admiteMarca, conRevisado, interpretarCorreosCompania, pideMirar } from './correos-compania.ts'
 
 const f = (o: Record<string, unknown> = {}) => ({
   id: 'e1', creado: '2026-10-14T09:10', tipo: 'pre_anulacion', subtipo: null, clave: 'BIDS1/480-H', compania: 'occident',
@@ -41,4 +41,27 @@ test('la bandeja pinta ≤50 + «Ver más», importes con eur() y tiene el ancla
   assert.match(src, /eur\(/)
   assert.doesNotMatch(src, /toFixed\(/)
   assert.match(src, /id="correos-compania"/)
+})
+
+test('revisado: ausente = no mirado; un mirado ya no pide mirar y va al final', () => {
+  const r = interpretarCorreosCompania(200, { estado: 'ok', filas: [
+    f({ id: 'a', estado: 'sin_resolver', revisado: true, creado: '2026-10-14T10:00' }),
+    f({ id: 'b', estado: 'aplicado', creado: '2026-10-13T10:00' }),
+    f({ id: 'c', estado: 'procesando', creado: '2026-10-01T10:00' }),
+  ] })
+  if (r.estado !== 'ok') throw new Error('esperaba ok')
+  assert.deepEqual(r.filas.map((x) => x.id), ['c', 'b', 'a'])
+  assert.equal(r.filas[0].revisado, false)
+  assert.equal(admiteMarca({ estado: 'aplicado' }), false)
+  assert.equal(pideMirar({ estado: 'sin_resolver', revisado: true }), false)
+})
+
+test('conRevisado: marca y deshace en local; solo filas que admiten marca', () => {
+  const r = interpretarCorreosCompania(200, { estado: 'ok', filas: [f({ id: 'a', estado: 'sin_resolver' }), f({ id: 'b', estado: 'aplicado' })] })
+  if (r.estado !== 'ok') throw new Error('esperaba ok')
+  const m = conRevisado(r.filas, 'a', true)
+  assert.deepEqual(m.map((x) => [x.id, x.revisado]), [['b', false], ['a', true]])
+  assert.deepEqual(conRevisado(m, 'a', false).map((x) => x.id), ['a', 'b'])
+  assert.equal(conRevisado(r.filas, 'b', true).find((x) => x.id === 'b')?.revisado, false)
+  assert.deepEqual(conRevisado(r.filas, 'zz', true), r.filas)
 })

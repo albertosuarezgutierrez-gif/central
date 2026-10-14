@@ -106,9 +106,9 @@ export type PestanaPropia = 'mesa' | 'prospeccion'
  * así que una avería de CIMA o un artículo del blog esperando se siguen viendo
  * desde cualquier pestaña.
  */
-export type BloqueMas = 'actividad' | 'datos' | 'emisiones' | 'ingesta' | 'redes'
+export type BloqueMas = 'actividad' | 'campanas' | 'datos' | 'emisiones' | 'ingesta' | 'redes'
 
-export const BLOQUES_MAS: readonly BloqueMas[] = ['ingesta', 'emisiones', 'redes', 'datos', 'actividad']
+export const BLOQUES_MAS: readonly BloqueMas[] = ['ingesta', 'emisiones', 'campanas', 'redes', 'datos', 'actividad']
 
 /** Adónde puede mandar un enlace o un botón: una sección, o un bloque de «Más». */
 export type Destino = Seccion | BloqueMas

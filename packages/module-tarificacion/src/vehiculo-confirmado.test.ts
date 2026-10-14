@@ -91,30 +91,38 @@ describe('VehiculoConfirmado · desde la fila de Mapfre', () => {
   })
 })
 
-describe('elección de versión por el vehículo confirmado (nunca «la más parecida»)', () => {
-  const c = (codigo: string, cv: number | null, cc: number | null, puertas: number | null = null, fechaInicio: string | null = null): CandidataConDatos =>
-    ({ etiqueta: `VERSION ${codigo}`, codigo, datos: { cv, cc, puertas, fechaInicio } })
-  it('exactamente una casa y las demás quedan descartadas → única', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 90, 1598), c('B', 110, 1598), c('C', 110, 1995)])).toEqual({ tipo: 'unica', eleccion: { codigo: 'B', etiqueta: 'VERSION B' } })
+describe('elección de versión por SIMILITUD con el vehículo de Mapfre (CV ±10 %, CC ±5 %)', () => {
+  const c = (codigo: string, cv: number | null, cc: number | null, puertas: number | null = null, etiqueta = `VERSION ${codigo}`): CandidataConDatos =>
+    ({ etiqueta, codigo, datos: { cv, cc, puertas, fechaInicio: null } })
+  const elige = (codigo: string, etiqueta = `VERSION ${codigo}`) => ({ tipo: 'unica', porSimilitud: true, eleccion: { codigo, etiqueta } })
+  it('exacta → esa, aunque haya cercanas', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 105, 1598), c('B', 110, 1598), c('C', 115, 1600)])).toEqual(elige('B'))
   })
-  it('varias casan → sin decidir (flujo de siempre)', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598), c('B', 110, null)])).toEqual({ tipo: 'sin_decidir', motivo: 'varias_casan' })
+  it('cercana dentro de tolerancia (sin exacta) → se elige', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 150, 2000), c('B', 105, 1620)])).toEqual(elige('B'))
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 99, null)])).toEqual(elige('A')) // límite del 10 %
   })
-  it('ninguna casa → sin decidir', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 90, 1598), c('B', 120, 1598)])).toEqual({ tipo: 'sin_decidir', motivo: 'ninguna_casa' })
+  it('dos cercanas → gana la más próxima', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 100, 1560), c('B', 108, 1590), c('C', 118, 1650)])).toEqual(elige('B'))
   })
-  it('una casa pero otra no se puede descartar (sin datos) → sin decidir', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598), c('B', null, null)])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_datos' })
+  it('empate de distancia → desempatan las palabras de la denominación; si siguen iguales, la PRIMERA de la lista', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598), c('B', 110, 1598)])).toEqual(elige('A'))
+    expect(
+      eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598, null, 'OTRO 110 CV'), c('B', 110, 1598, null, 'MODELO X ACABADO Y 110 CV')]),
+    ).toEqual(elige('B', 'MODELO X ACABADO Y 110 CV'))
   })
-  it('solo puertas o fecha no bastan para identificar (hace falta CV o CC)', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', null, null, 5), c('B', null, null, 3)])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_datos' })
+  it('fuera de tolerancia (CV o CC) o puertas que contradicen → no elige', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 90, 1598), c('B', 125, 1598)])).toEqual({ tipo: 'sin_decidir', motivo: 'fuera_de_tolerancia' })
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1800)])).toEqual({ tipo: 'sin_decidir', motivo: 'fuera_de_tolerancia' })
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598, 3)])).toEqual({ tipo: 'sin_decidir', motivo: 'fuera_de_tolerancia' })
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598, 3), c('B', 112, 1600, 5)])).toEqual(elige('B'))
   })
-  it('puertas y fecha también DESCARTAN si contradicen', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598, 3), c('B', 110, 1598, 5)]).tipo).toBe('unica')
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 110, 1598, null, '2015-01-01'), c('B', 110, 1598, null, '2019-03-01')])).toEqual({ tipo: 'unica', eleccion: { codigo: 'B', etiqueta: 'VERSION B' } })
+  it('sin datos legibles (ni CV ni CC en la lista, o solo puertas) → no elige', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', null, null), c('B', null, null, 5)])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_datos' })
+    expect(eleccionPorVehiculoConfirmado({ ...VC, cv: null, cc: null }, [c('A', 110, 1598)])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_datos' })
   })
-  it('igualdad EXACTA: 109 CV no casa con 110', () => {
-    expect(eleccionPorVehiculoConfirmado(VC, [c('A', 109, 1598)])).toEqual({ tipo: 'sin_decidir', motivo: 'ninguna_casa' })
+  it('una candidata sin datos no impide elegir otra legible dentro de tolerancia', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [c('A', null, null), c('B', 112, null)])).toEqual(elige('B'))
   })
   it('sin vehículo confirmado o sin candidatas → sin decidir; las opciones vacías no cuentan', () => {
     expect(eleccionPorVehiculoConfirmado(null, [c('A', 110, 1598)])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_vehiculo' })
@@ -135,10 +143,12 @@ describe('datos de la etiqueta de una versión (solo cifras con unidad explícit
     expect(datosDesdeEtiquetaVersion('MODELO 110 CV / 120 CV').cv).toBeNull()
     expect(datosDesdeEtiquetaVersion('X5 PREMIUM').puertas).toBeNull()
   })
-  it('atajo por etiquetas (Allianz): una sola casa → elección por código; si no, null', () => {
+  it('atajo por etiquetas (Allianz): la más próxima dentro de tolerancia, con su origen; fuera de tolerancia → null', () => {
     const versiones = [{ etiqueta: 'MODELO X 90 CV', codigo: 'V1' }, { etiqueta: 'MODELO X 110 CV', codigo: 'V2' }, { etiqueta: 'MODELO X 150 CV', codigo: 'V3' }]
     expect(eleccionPorVehiculoConfirmadoDeEtiquetas(VC, versiones)).toEqual({ codigo: 'V2', etiqueta: 'MODELO X 110 CV' })
-    expect(eleccionPorVehiculoConfirmadoDeEtiquetas(VC, [...versiones, { etiqueta: 'MODELO X ACABADO Z', codigo: 'V4' }])).toBeNull()
+    expect(eleccionPorVehiculoConfirmadoDeEtiquetas(VC, [{ etiqueta: 'MODELO X 108 CV', codigo: 'V9' }, ...versiones.slice(0, 1)])).toEqual({ codigo: 'V9', etiqueta: 'MODELO X 108 CV' })
+    expect(eleccionPorVehiculoConfirmadoDeEtiquetas(VC, [versiones[0]!, versiones[2]!])).toBeNull()
+    expect(eleccionPorVehiculoConfirmadoDeEtiquetas(VC, [{ etiqueta: 'MODELO X ACABADO Z', codigo: 'V4' }])).toBeNull()
     expect(eleccionPorVehiculoConfirmadoDeEtiquetas(null, versiones)).toBeNull()
   })
 })
