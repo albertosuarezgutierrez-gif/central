@@ -1172,6 +1172,7 @@ export {
 
 export {
   leerCorreoDevolucion,
+  esCorreoDevolucion,
   MOTIVO_POLIZA_ANULADA,
   clasificarMotivoDevolucion,
   normalizarIdRecibo,
@@ -1475,7 +1476,8 @@ export type { ClaseExpediente, EntradaClase, EstadoVisible, VueltaRescate } from
 
 // Correos de compañías que no son recibos devueltos → eventos de la correduría (14/10/2026).
 export {
-  leerCorreoEventoAseguradora, sinDatosSensibles, contieneIban,
+  leerCorreoEventoAseguradora, eventoNecesitaAdjuntos, sinDatosSensibles, contieneIban, ACCIONES_TRAMITADOR,
+  type AccionTramitador,
   type CompaniaEvento, type CorreoEventoAseguradora, type EventoAseguradora, type EventoSiniestro, type EventoPreAnulacion,
   type EventoImpago, type EventoAnulacion, type EventoSuplemento, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
 } from './evento-correo-aseguradora.ts'

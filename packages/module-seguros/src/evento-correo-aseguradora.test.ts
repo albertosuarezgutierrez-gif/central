@@ -243,8 +243,9 @@ test('Occident «Tramitador Siniestro»: nº y ramo del asunto, nota del tramita
   assert.equal(s.ramo, 'RC.constr.')
   assert.equal(s.numeroPoliza, null)
   assert.equal(s.fechaAccion, '2026-09-09')
-  assert.match(s.accion ?? '', /^Una vez revisada la documentación aportada/)
-  assert.ok((s.accion ?? '').length <= 200)
+  // La nota del tramitador (firma, perjudicado) NO sale: solo un estado de lista cerrada.
+  assert.equal(s.accion, 'Pago o propuesta de pago')
+  assert.doesNotMatch(JSON.stringify(e), /Una vez revisada|Tramitador\./)
   assert.doesNotMatch(JSON.stringify(e), /M00000|https?:/)
 })
 

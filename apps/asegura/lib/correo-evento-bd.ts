@@ -24,9 +24,9 @@ import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import {
-  ACTOR_CORREO, ORIGEN_TAREA_CORREO, claveNumero, claveTareaDe, planItem, resolverPolizaEvento, tareaValida,
-  type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan, type PolizaCandidata,
-  type SiniestroExistente,
+  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, planItem, resolverPolizaEvento,
+  tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
+  type PolizaCandidata,
 } from './correo-evento'
 
 export type ResultadoItemCorreo = {
@@ -83,22 +83,28 @@ async function polizasCandidatas(db: Db, correduriaId: string): Promise<(PolizaC
   }))
 }
 
-async function siniestroPorNumero(db: Db, correduriaId: string, codigoDgs: string, numero: string): Promise<SiniestroExistente | null> {
+/** El siniestro con ese nº: la consulta acota por «contiene»; compañía y póliza las decide `elegirSiniestro` (puro, con test). */
+async function siniestroPorNumero(
+  db: Db, correduriaId: string, compania: string, codigoDgs: string, numero: string, numeroPolizaCorreo: string | null,
+): Promise<EleccionSiniestro> {
   const n = claveNumero(numero)
-  if (!n) return null
+  if (!n) return { estado: 'ninguno' }
   const filas = await db.siniestro.findMany({
     where: {
       correduriaId, fusionadoEnSiniestroId: null,
       OR: [{ idSiniestroEntidad: { contains: n } }, { referencia: { contains: n } }],
     },
-    select: { id: true, origen: true, clienteId: true, polizaId: true, idSiniestroEntidad: true, referencia: true, codigoEntidadDgs: true },
+    select: {
+      id: true, origen: true, clienteId: true, polizaId: true, idSiniestroEntidad: true, referencia: true, codigoEntidadDgs: true,
+      poliza: { select: { numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true } },
+    },
     take: 20,
   })
-  const casan = filas.filter((s) => (s.codigoEntidadDgs === null || s.codigoEntidadDgs === codigoDgs)
-    && (claveNumero(s.idSiniestroEntidad) === n || claveNumero(s.referencia) === n))
-  // El de CIMA manda (es el que la compañía mantiene); si hubiera dos nuestros, el primero basta para la nota.
-  const s = casan.find((x) => x.origen === 'cima') ?? casan[0]
-  return s ? { id: s.id, origen: String(s.origen), clienteId: s.clienteId, polizaId: s.polizaId } : null
+  return elegirSiniestro(filas.map((s) => ({
+    id: s.id, origen: String(s.origen), clienteId: s.clienteId, polizaId: s.polizaId,
+    idSiniestroEntidad: s.idSiniestroEntidad, referencia: s.referencia, codigoEntidadDgs: s.codigoEntidadDgs,
+    poliza: s.poliza ? { numeroPoliza: s.poliza.numeroPoliza, codigoDgs: s.poliza.codigoEntidadDgs, aseguradora: s.poliza.aseguradora } : null,
+  })), numero, compania, codigoDgs, numeroPolizaCorreo)
 }
 
 async function expedienteAbierto(db: Db, correduriaId: string, polizaId: string): Promise<ExpedienteAbierto | null> {
@@ -115,6 +121,22 @@ async function hayTareaAbierta(db: Db, correduriaId: string, claveTarea: string)
     select count(*)::int as n from correo_evento_entrante e
     join gestiones g on g.id = e.gestion_id and g.correduria_id = e.correduria_id
     where e.correduria_id = ${correduriaId}::uuid and e.clave_tarea = ${claveTarea} and g.estado::text <> 'cerrada'`)
+  return (r?.n ?? 0) > 0
+}
+
+/**
+ * ¿Ya se anotó ESTE aviso? Fila `aplicado` de la misma clave de tarea (póliza/recibo) con la misma fecha de la
+ * compañía. El resumen diario de Occident («próximos a la anulación») repite el mismo recibo cada día con otro
+ * Message-ID: la idempotencia por correo no lo para, y la ficha se llenaba de la misma nota.
+ */
+async function notaYaAnotada(
+  db: Db, correduriaId: string, filaId: string, claveTarea: string, campo: string, fecha: string | null,
+): Promise<boolean> {
+  const [r] = await db.$queryRaw<{ n: number }[]>(Prisma.sql`
+    select count(*)::int as n from correo_evento_entrante e
+    where e.correduria_id = ${correduriaId}::uuid and e.id <> ${filaId}::uuid
+      and e.estado = 'aplicado' and e.clave_tarea = ${claveTarea}
+      and (e.detalle->>${campo}) is not distinct from ${fecha}`)
   return (r?.n ?? 0) > 0
 }
 
@@ -185,7 +207,11 @@ async function procesarItem(
 
   try {
     // 2. Contexto.
-    const siniestro = item.tipo === 'siniestro' ? await siniestroPorNumero(db, correduriaId, entrada.codigoDgs, item.numeroSiniestro) : null
+    const eleccion = item.tipo === 'siniestro'
+      ? await siniestroPorNumero(db, correduriaId, entrada.compania, entrada.codigoDgs, item.numeroSiniestro, item.numeroPoliza)
+      : null
+    const siniestro = eleccion?.estado === 'casa' ? eleccion.siniestro : null
+    const siniestroPolizaDistinta = eleccion?.estado === 'poliza_distinta'
     // Si el siniestro ya está en la cartera, la nota va a SU ficha (el plan no mira la póliza).
     const resolucion = resolverPolizaEvento(numeroPoliza, entrada.compania, entrada.codigoDgs, candidatas)
     const poliza = resolucion.estado === 'sin_resolver' ? null : (resolucion.poliza as (typeof candidatas)[number])
@@ -193,7 +219,7 @@ async function procesarItem(
     const claveProvisional = poliza && item.tipo !== 'siniestro' ? claveTareaDe(item, poliza.id) : null
     const tareaAbierta = claveProvisional ? await hayTareaAbierta(db, correduriaId, claveProvisional) : false
 
-    const plan = planItem(item, entrada.compania, { resolucion, siniestro, expediente, tareaAbierta, fechaCorreo, hoy })
+    const plan = planItem(item, entrada.compania, { resolucion, siniestro, siniestroPolizaDistinta, expediente, tareaAbierta, fechaCorreo, hoy })
 
     // 3. Escrituras. NINGUNA si no hay póliza en vigor resuelta (o siniestro ya en cartera).
     const clienteId = siniestro ? siniestro.clienteId : poliza?.clienteId ?? null
@@ -204,6 +230,11 @@ async function procesarItem(
     let siniestroId = plan.siniestroId
     let gestionId: string | null = null
     let fechaLimite: string | null = null
+    // La clave de «una tarea por póliza/recibo» se guarda en toda fila con póliza (también la de solo nota),
+    // para que el mismo aviso repetido otro día la encuentre.
+    const claveGuardada = plan.claveTarea ?? claveProvisional
+    const campoFecha = campoFechaDedupe(item.tipo)
+    const fechaAviso = campoFecha ? ((item as Record<string, unknown>)[campoFecha] as string | null | undefined) ?? null : null
 
     if (plan.estado !== 'sin_resolver' && clienteId) {
       if (plan.abrirSiniestro && polizaId) {
@@ -227,7 +258,11 @@ async function procesarItem(
           if (plan.notaSiDuplicado) await anotar(db, correduriaId, clienteId, polizaId, 'siniestro', `${plan.notaSiDuplicado}. No se abrió solo: ${r.motivo}.`)
         }
       }
-      if (plan.nota) await anotar(db, correduriaId, clienteId, polizaId, plan.tipoNota, plan.nota)
+      // Solo nota (sin tarea nueva) de un aviso ya anotado con la misma fecha: no se repite.
+      const notaRepetida = !!(plan.nota && !plan.tarea && claveGuardada && campoFecha && plan.estado === 'aplicado')
+        && await notaYaAnotada(db, correduriaId, filaId, claveGuardada, campoFecha, fechaAviso)
+      if (notaRepetida) resumen = 'el mismo aviso ya está anotado en la ficha: nada nuevo'
+      if (plan.nota && !notaRepetida) await anotar(db, correduriaId, clienteId, polizaId, plan.tipoNota, plan.nota)
       if (plan.tarea && polizaId) {
         const v = tareaValida(plan.tarea, new Date(`${hoy}T12:00:00Z`))
         if (v.ok) {
@@ -241,7 +276,7 @@ async function procesarItem(
 
     await db.$executeRaw(Prisma.sql`
       update correo_evento_entrante set estado = ${estado}, motivo = ${motivo}, resumen = ${resumen.slice(0, 300)},
-             clave_tarea = ${gestionId ? plan.claveTarea : null}, poliza_id = ${polizaId}::uuid, cliente_id = ${clienteId}::uuid,
+             clave_tarea = ${claveGuardada}, poliza_id = ${polizaId}::uuid, cliente_id = ${clienteId}::uuid,
              siniestro_id = ${siniestroId}::uuid, gestion_id = ${gestionId}::uuid, fecha_limite = ${fechaLimite}::date,
              importe = ${item.tipo === 'pre_anulacion' || item.tipo === 'impago' ? item.importe : null}::numeric, updated_at = now()
       where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)

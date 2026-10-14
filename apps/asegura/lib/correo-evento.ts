@@ -194,7 +194,7 @@ export function claveNumero(n: string | null | undefined): string | null {
   return t === '' ? null : t
 }
 
-function esDeLaCompania(p: PolizaCandidata, compania: string, codigoDgs: string): boolean {
+function esDeLaCompania(p: Pick<PolizaCandidata, 'codigoDgs' | 'aseguradora'>, compania: string, codigoDgs: string): boolean {
   if (p.codigoDgs) return p.codigoDgs === codigoDgs
   const nombre = (p.aseguradora ?? '').toLowerCase()
   return nombre !== '' && (COMPANIAS[compania]?.claves ?? []).some((c) => nombre.includes(c))
@@ -221,12 +221,64 @@ export function resolverPolizaEvento(
 // ── Decidir ──────────────────────────────────────────────────────────────────
 
 export type SiniestroExistente = { id: string; origen: string; clienteId: string; polizaId: string }
+
+/** Un siniestro de la cartera con ese nº (la consulta busca por «contiene»; aquí se exige el nº entero). */
+export type SiniestroCandidato = SiniestroExistente & {
+  idSiniestroEntidad: string | null
+  referencia: string | null
+  codigoEntidadDgs: string | null
+  /** La póliza del siniestro; `null` = no se pudo leer (entonces no se sabe de qué compañía es). */
+  poliza: { numeroPoliza: string | null; codigoDgs: string | null; aseguradora: string | null } | null
+}
+
+export type EleccionSiniestro =
+  | { estado: 'casa'; siniestro: SiniestroExistente }
+  /** Hay un siniestro de esa compañía con ese nº, pero el correo trae OTRA póliza: no se elige. */
+  | { estado: 'poliza_distinta' }
+  | { estado: 'ninguno' }
+
+/**
+ * El siniestro de la cartera al que se refiere el correo. Un nº de siniestro solo es único DENTRO de una
+ * compañía: sin código DGS en el siniestro, la compañía se mira en SU póliza (sin póliza, no casa). Y si
+ * el correo trae un nº de póliza distinto del de la póliza del siniestro, no se apunta a ninguno: es otro
+ * siniestro con el mismo nº o un correo mal leído → `sin_resolver`, nunca una nota en la ficha equivocada.
+ */
+export function elegirSiniestro(
+  filas: readonly SiniestroCandidato[], numero: string, compania: string, codigoDgs: string, numeroPolizaCorreo: string | null,
+): EleccionSiniestro {
+  const n = claveNumero(numero)
+  if (!n) return { estado: 'ninguno' }
+  const polizaCorreo = claveNumero(numeroPolizaCorreo)
+  const deLaCompania = filas.filter((s) => (claveNumero(s.idSiniestroEntidad) === n || claveNumero(s.referencia) === n)
+    && (s.codigoEntidadDgs !== null ? s.codigoEntidadDgs === codigoDgs : s.poliza !== null && esDeLaCompania(s.poliza, compania, codigoDgs)))
+  const casan = deLaCompania.filter((s) => {
+    const suya = claveNumero(s.poliza?.numeroPoliza)
+    return !polizaCorreo || !suya || suya === polizaCorreo
+  })
+  // El de CIMA manda (es el que la compañía mantiene); si hubiera dos nuestros, el primero basta para la nota.
+  const s = casan.find((x) => x.origen === 'cima') ?? casan[0]
+  if (s) return { estado: 'casa', siniestro: { id: s.id, origen: s.origen, clienteId: s.clienteId, polizaId: s.polizaId } }
+  return deLaCompania.length > 0 ? { estado: 'poliza_distinta' } : { estado: 'ninguno' }
+}
+
+/**
+ * La fecha del aviso que distingue «la compañía repite lo mismo» de «dice algo nuevo» (para no anotar cada
+ * día el mismo resumen de Occident, que llega con otro Message-ID). `null` = el tipo no se deduplica así.
+ */
+export function campoFechaDedupe(tipo: TipoEventoCorreo): 'fechaLimite' | 'fechaEfecto' | 'periodoHasta' | null {
+  if (tipo === 'pre_anulacion' || tipo === 'impago') return 'fechaLimite'
+  if (tipo === 'anulacion') return 'fechaEfecto'
+  if (tipo === 'suplemento') return 'periodoHasta'
+  return null
+}
 export type ExpedienteAbierto = { id: string; estado: string; fechaEfecto: string | null }
 
 export type ContextoItem = {
   resolucion: ResolucionEvento
   /** El siniestro con ese nº ya en la cartera (CIMA o nuestro). Solo para `siniestro`. */
   siniestro: SiniestroExistente | null
+  /** Hay un siniestro de la compañía con ese nº pero con OTRA póliza que la del correo → sin_resolver. */
+  siniestroPolizaDistinta?: boolean
   /** Expediente de /anulaciones abierto en esa póliza. Solo para `anulacion`. */
   expediente: ExpedienteAbierto | null
   /** Ya hay una tarea abierta de un aviso de compañía para esa póliza/recibo. */
@@ -300,6 +352,9 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
   if (item.tipo === 'siniestro') {
     const que = item.subtipo === 'apertura' ? 'apertura' : item.subtipo === 'cierre' ? 'cierre' : 'actualización'
     const detalle = `${que}${item.accion ? `: ${item.accion}` : ''}`
+    if (ctx.siniestroPolizaDistinta) {
+      return sinResolver('el siniestro con ese nº está en la cartera con otra póliza que la del correo: no se elige')
+    }
     if (ctx.siniestro) {
       const nota = `Siniestro ${item.numeroSiniestro} — ${cia} avisa por correo${delCorreo}: ${detalle}`
       const deCima = ctx.siniestro.origen === 'cima'

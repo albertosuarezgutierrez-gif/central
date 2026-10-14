@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { leerResultadosEvento, textoAvisoEvento, type ResultadoPuertoEvento } from './evento-aviso.ts'
+import { eventoConfirmado, leerResultadosEvento, textoAvisoEvento, type ResultadoPuertoEvento } from './evento-aviso.ts'
 import type { EventoAseguradora } from '@central/module-seguros'
 
 const url = (id: string) => `https://x/ficha/${id}`
@@ -82,4 +82,34 @@ test('el triaje lee eventos de TODO correo correduria* que no fue devolución, y
   assert.ok(TRIAJE.indexOf('registrarDevolucionesAsegura(') < evento, 'las devoluciones van antes')
   assert.match(TRIAJE, /c\.categoria === 'correduria' \|\| c\.categoria === 'correduria-recibo'/)
   assert.match(TRIAJE, /tgAviso\('correo\.correduria-evento'/)
+})
+
+test('eventoConfirmado: solo «aplicado» o «duplicado_cima» quitan la nota genérica; sin_resolver/procesando la dejan', () => {
+  assert.equal(eventoConfirmado(null), false)
+  assert.equal(eventoConfirmado([]), false)
+  assert.equal(eventoConfirmado([{ ...base, estado: 'sin_resolver' }, { ...base, estado: 'procesando' }]), false)
+  assert.equal(eventoConfirmado([{ ...base, estado: 'sin_resolver' }, { ...base, estado: 'duplicado_cima' }]), true)
+  assert.equal(eventoConfirmado([{ ...base, estado: 'aplicado' }]), true)
+})
+
+test('el triaje usa eventoConfirmado para decidir la nota genérica (no «hay algún resultado»)', () => {
+  assert.match(TRIAJE, /eventoAplicado = eventoConfirmado\(resultados\)/)
+  assert.doesNotMatch(TRIAJE, /eventoAplicado = resultados !== null && resultados\.length > 0/)
+})
+
+test('el reencaminado correduria → correduria-recibo decide SOLO por remitente + asunto', () => {
+  const ini = TRIAJE.indexOf("const c = clasificado.categoria === 'correduria'")
+  const fin = TRIAJE.indexOf('const ruta = rutaDe(c.categoria)')
+  assert.ok(ini > 0 && fin > ini)
+  const tramo = TRIAJE.slice(ini, fin)
+  assert.match(tramo, /esCorreoDevolucion\(\{ remitente: correo\.from, asunto: correo\.subject \}\)/)
+  assert.doesNotMatch(tramo, /correo\.texto|extracto|leerCorreoDevolucion/)
+})
+
+test('PDFs: el lector de eventos solo los recibe si su formato los necesita, y nunca se leen dos veces', () => {
+  assert.match(TRIAJE, /textoAdjuntos: eventoNecesitaAdjuntos\(\{ remitente: correo\.from, asunto: correo\.subject \}\) \? await textoPdfs\(\) : null/)
+  // Una sola lectura por correo: `textoDePdfs(correo)` aparece una vez, dentro del memo.
+  assert.equal(TRIAJE.match(/textoDePdfs\(correo\)/g)?.length, 1)
+  assert.match(TRIAJE, /pdfsLeidos \?\?= textoDePdfs\(correo\)/)
+  assert.doesNotMatch(TRIAJE, /textoConPdfs\(correo\)/)
 })

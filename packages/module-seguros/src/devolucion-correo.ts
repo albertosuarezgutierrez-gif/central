@@ -16,6 +16,8 @@
 // - Un correo que no es de devoluciones devuelve `null`; uno que sí lo es pero sin filas legibles
 //   devuelve `devoluciones: []` con `ilegibles` > 0.
 
+import { celdasPorLinea, esFilaEnLinea } from './tabla-correo.ts'
+
 export type TipoMotivoDevolucion =
   /** Faltan o están mal la cuenta o los datos del titular (SEPA AC0x, RR0x, MD01…). Se arregla con el IBAN bueno. */
   | 'cuenta'
@@ -186,7 +188,7 @@ function leerOccident(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
   const ls = lineas(c.texto)
   // 1) Tabla en una línea por fila (celdas con `|` o tabulador).
   for (const bruta of ls) {
-    if (!bruta.includes('|') && !bruta.includes('\t')) continue
+    if (!esFilaEnLinea(bruta)) continue
     const celdas = (bruta.includes('|') ? bruta.split('|') : bruta.split('\t')).map((x) => x.trim())
     const vivas = celdas[0] === '' ? celdas.slice(1) : celdas
     if (vivas.length < 2 || !POLIZA_OCCIDENT.test(vivas[0] ?? '') || !RECIBO_OCCIDENT.test(vivas[1] ?? '')) continue
@@ -197,7 +199,7 @@ function leerOccident(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
   //    fila se contaría dos veces. La fila arranca en póliza + recibo + producto + «NN,NN Eur»; con una
   //    celda de menos las diez siguientes no cuadran (las fechas no caen en su sitio) → ilegible.
   if (filasVistas === 0) {
-    const celdas = ls.map((x) => x.trim()).filter((x) => x !== '')
+    const celdas = celdasPorLinea(c.texto)
     for (let i = 0; i + 1 < celdas.length; i++) {
       if (!POLIZA_OCCIDENT.test(celdas[i]) || !RECIBO_OCCIDENT.test(celdas[i + 1])) continue
       if (importeEs(celdas[i + 3]) === null) continue
@@ -337,4 +339,14 @@ function leerAllianz(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
 /** `null` = no es un correo de devolución que se sepa leer. */
 export function leerCorreoDevolucion(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
   return leerReale(c) ?? leerOccident(c) ?? leerMapfre(c) ?? leerAllianz(c)
+}
+
+/**
+ * ¿Es un aviso de devolución, decidido SOLO por remitente + asunto? Lo usa el triaje para reencaminar a
+ * `correduria-recibo` un correo que una regla manual mandó a `correduria`. No mira el cuerpo a propósito:
+ * Allianz decide por el texto de su carta, y un boletín o una conversación que mencionase «recibos
+ * bancarios devueltos» se colaría. La lectura de verdad (cuerpo + PDF) va después, con `leerCorreoDevolucion`.
+ */
+export function esCorreoDevolucion(c: { remitente: string; asunto: string }): boolean {
+  return leerCorreoDevolucion({ remitente: c.remitente, asunto: c.asunto, texto: '', fecha: '1970-01-01' }) !== null
 }

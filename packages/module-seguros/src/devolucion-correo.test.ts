@@ -247,3 +247,18 @@ test('Allianz devueltos: el motivo partido entre palabras lleva espacio; un toma
   assert.equal(empresa?.devoluciones[0].motivo, 'DISCONFORM')
   assert.equal(empresa?.devoluciones[0].tipoMotivo, 'cliente_rechaza')
 })
+
+// ── El triaje decide el reencaminado a `correduria-recibo` SOLO por remitente + asunto ──────────────
+import { esCorreoDevolucion } from './devolucion-correo.ts'
+
+test('esCorreoDevolucion: decide por remitente + asunto, nunca por el cuerpo', () => {
+  assert.equal(esCorreoDevolucion({ remitente: 'mediadores@occidentinforma.com', asunto: 'Recibos devueltos de banco 14-09-2026' }), true)
+  assert.equal(esCorreoDevolucion({ remitente: 'contabilidad@reale.es', asunto: 'Devolución recibos 28-09-2026' }), true)
+  assert.equal(esCorreoDevolucion({ remitente: 'avisosrecibos@info.mapfre.com', asunto: 'Devolución de Recibo MAPFRE' }), true)
+  assert.equal(esCorreoDevolucion({ remitente: 'x@allianz.es', asunto: 'Rel. recibos ventanilla' }), true)
+  // Allianz con un asunto cualquiera: aunque el CUERPO hablara de «recibos bancarios devueltos» (un boletín,
+  // una conversación), no se secuestra el correo: ese texto ni se mira.
+  assert.equal(esCorreoDevolucion({ remitente: 'comunicacion.mediadores@allianz.es', asunto: 'Novedades de octubre' }), false)
+  assert.equal(esCorreoDevolucion({ remitente: 'mediadores@occidentinforma.com', asunto: 'Siniestro Diversos 43000001 X' }), false)
+  assert.equal(esCorreoDevolucion({ remitente: 'alguien@gmail.com', asunto: 'Recibos devueltos de banco' }), false)
+})

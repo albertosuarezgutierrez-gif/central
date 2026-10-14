@@ -94,9 +94,26 @@ test('Codeoscopic: operativo → correduria, newsletter → ruido', () => {
   assert.equal(clasificarPorKeyword('equipo@codeoscopic.com', 'Webinar: nueva versión')?.categoria, 'ruido')
 })
 
+test('Codeoscopic: sus FACTURAS no son correduría operativa → decide la IA (como antes de la regla)', () => {
+  assert.equal(clasificarPorKeyword('facturacion@codeoscopic.com', 'Su factura de octubre'), null)
+  assert.equal(clasificarPorKeyword('facturas@codeoscopic.com', 'Documento 2026-123'), null)
+  assert.equal(clasificarPorKeyword('soporte@codeoscopic.com', 'Factura 2026-123 disponible'), null)
+  // «invoice» sigue la regla genérica de asunto de siempre (contabilidad), nunca correduría.
+  assert.notEqual(clasificarPorKeyword('billing@codeoscopic.com', 'Your invoice is ready')?.categoria, 'correduria')
+})
+
 test('nuevas aseguradoras: recibo devuelto → correduria-recibo', () => {
-  for (const d of ['helvetia.es', 'mutua.es', 'santalucia.es', 'dkv.es', 'pelayo.com', 'asisa.es', 'sanitas.es', 'segurcaixaadeslas.es', 'fiatc.es', 'verti.es', 'lineadirecta.es']) {
+  for (const d of ['helvetia.es', 'santalucia.es', 'pelayo.com', 'segurcaixaadeslas.es', 'fiatc.es', 'mapfre.es']) {
     assert.equal(clasificarPorKeyword(`mediadores@${d}`, 'Recibos devueltos de banco')?.categoria, 'correduria-recibo', d)
+  }
+})
+
+test('🚨 venta directa / salud NO son aseguradora de la correduría: pueden ser pólizas PERSONALES de Alberto', () => {
+  // Un «recibo devuelto» de Sanitas o Línea Directa puede ser el seguro de Alberto, no de un cliente:
+  // no se manda a correduría ni a la cartera; decide la IA.
+  for (const d of ['sanitas.es', 'dkv.es', 'asisa.es', 'verti.es', 'lineadirecta.es', 'mutua.es', 'mutuamadrilena.es']) {
+    assert.equal(clasificarPorKeyword(`clientes@${d}`, 'Recibos devueltos de banco'), null, d)
+    assert.equal(clasificarPorKeyword(`avisos@${d}`, 'Siniestro 123456: documentación'), null, d)
   }
 })
 

@@ -36,8 +36,10 @@ export const ASEGURADORAS = [
   'mapfre.com', 'allianz.es', 'reale.es', 'generali.com', 'tugenerali.es', 'fidelidade.pt',
   'zurich.es', 'axa.es', 'catalanaoccidente.com', 'libertyseguros.es', 'plusultra.es', 'caser.es',
   // Añadidas 14/10/2026 (dominios corporativos de sobra conocidos; ante la duda de un dominio, fuera).
-  'mapfre.es', 'helvetia.es', 'mutua.es', 'mutuamadrilena.es', 'santalucia.es', 'dkv.es', 'pelayo.com',
-  'asisa.es', 'sanitas.es', 'segurcaixaadeslas.es', 'fiatc.es', 'verti.es', 'lineadirecta.es',
+  // 🚨 FUERA a propósito las de venta directa / salud (Sanitas, DKV, Asisa, Verti, Línea Directa, Mutua
+  // Madrileña): un «recibo devuelto» o un «siniestro» suyo puede ser una póliza PERSONAL de Alberto, no de
+  // un cliente de la correduría. Esos los decide la IA.
+  'mapfre.es', 'helvetia.es', 'santalucia.es', 'pelayo.com', 'segurcaixaadeslas.es', 'fiatc.es',
 ]
 // Solo lo que habla de un recibo que no ha entrado. `anulad|anulacion` cubre «pólizas anuladas
 // por impago» y «recibos próximos a la anulación», que es el aviso que llega ANTES de que caiga
@@ -63,6 +65,9 @@ const ASUNTO_OPERATIVO_COMPANIA =
 const CODEOSCOPIC = 'codeoscopic.com'
 const CODEOSCOPIC_NEWSLETTER_BUZON = ['newsletter', 'news@', 'marketing', 'comunicacion', 'hola@', 'info@']
 const CODEOSCOPIC_NEWSLETTER_ASUNTO = /newsletter|boletin|webinar|\bseminario|novedades del mes|\bevento\b/i
+// Sus facturas no son correduría operativa: siguen las reglas de siempre (o la IA), como antes de esta regla.
+const CODEOSCOPIC_FACTURA_BUZON = /^factur/
+const CODEOSCOPIC_FACTURA_ASUNTO = /\bfacturas?\b|\binvoices?\b/i
 
 function operativoCompania(f: string, dom: string, subject: string): boolean {
   if (!dom || !ASEGURADORAS.some(d => enDominio(dom, d))) return false
@@ -116,7 +121,8 @@ export function clasificarPorKeyword(from: string, subject: string): KeywordMatc
   if (dom && ASEGURADORAS.some(d => enDominio(dom, d)) && PUBLICIDAD_COMPANIA.test(f)) {
     return { categoria: 'ruido', motivo: `publicidad de compañía (${dom})` }
   }
-  if (dom && enDominio(dom, CODEOSCOPIC)) {
+  if (dom && enDominio(dom, CODEOSCOPIC)
+    && !CODEOSCOPIC_FACTURA_BUZON.test(f) && !CODEOSCOPIC_FACTURA_ASUNTO.test(sinTildes(subject || ''))) {
     const categoria = categoriaCodeoscopic(f, subject)
     return { categoria, motivo: `Codeoscopic (${categoria === 'ruido' ? 'newsletter' : 'operativo'})` }
   }

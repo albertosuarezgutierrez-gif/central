@@ -14,7 +14,10 @@
 -- el segundo intento devuelva lo que ya se hizo sin escribir nada.
 --
 -- Sin datos personales: ni IBAN ni NIF ni nombres (el lector ya los quita y el puerto vuelve a pasar
--- `sinDatosSensibles`). `detalle` guarda el elemento leído tal cual (nº, fechas, importe, acción).
+-- `sinDatosSensibles`). `detalle` guarda el elemento leído (nº, fechas, importe y `accion`). La `accion`
+-- NUNCA es texto libre de una persona: o es la frase fija de la plantilla de la compañía («Apertura de
+-- expediente…», «Apertura: Daños por agua»; el reparador y el asegurado no se leen) o, para la nota del
+-- «Tramitador» de Occident, un valor de la lista cerrada `ACCIONES_TRAMITADOR` de @central/module-seguros.
 --
 -- ADITIVA: tabla nueva. Código ANTES que el SQL: sin la tabla, el puerto responde 503 `sin_migracion`
 -- (el triaje sigue con su nota de siempre) y la cola de avisos sale como «no se ha podido comprobar».
@@ -38,7 +41,9 @@ CREATE TABLE IF NOT EXISTS seguros.correo_evento_entrante (
   motivo             text,
   -- Lo que se hizo, en corto («tarea creada, vence 15/10/2026»).
   resumen            text,
-  -- Una tarea por póliza/recibo (`claveTareaDe`): la siguiente fila de esa clave no crea otra.
+  -- Una tarea por póliza/recibo (`claveTareaDe`): la siguiente fila de esa clave no crea otra. Se guarda en
+  -- toda fila con póliza (también la de solo nota): un aviso repetido otro día con la misma fecha de la
+  -- compañía (`detalle`) y una fila `aplicado` previa de esa clave no vuelve a anotar en la ficha.
   clave_tarea        text,
   poliza_id          uuid REFERENCES seguros.polizas (id) ON DELETE SET NULL,
   cliente_id         uuid,

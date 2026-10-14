@@ -20,11 +20,11 @@ import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { pareceContactoPersonal } from './contacto-sugerido'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
-import { MOTIVO_POLIZA_ANULADA, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { MOTIVO_POLIZA_ANULADA, esCorreoDevolucion, eventoNecesitaAdjuntos, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
 import { registrarDevolucionesAsegura, registrarEventoCorreoAsegura } from '@/lib/correduria-puerto'
-import { leerResultadosEvento, textoAvisoEvento } from './evento-aviso'
+import { eventoConfirmado, leerResultadosEvento, textoAvisoEvento } from './evento-aviso'
 import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
@@ -117,10 +117,11 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
         // 🚨 Un aviso de DEVOLUCIÓN que una regla de `correo_reglas` manda a `correduria` vuelve a
         // `correduria-recibo` (14/10/2026). La regla manual `@occidentinforma.com → correduria` corre
         // ANTES que la de recibos de keywords.ts, así que «Recibos devueltos de banco» de Occident
-        // caía al digest sin pasar nunca por el lector ni por la cartera. El lector decide por
-        // remitente + asunto (devuelve null a todo lo demás), así que no secuestra otros correos.
+        // caía al digest sin pasar nunca por el lector ni por la cartera. Se decide SOLO por remitente +
+        // asunto (`esCorreoDevolucion`): el cuerpo no cuenta, así que no secuestra otros correos (un boletín
+        // de Allianz que hablase de «recibos devueltos»). La lectura de verdad, con cuerpo y PDF, va después.
         const c = clasificado.categoria === 'correduria'
-          && leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: correo.texto ?? correo.extracto, fecha: correo.fecha.toISOString() }) !== null
+          && esCorreoDevolucion({ remitente: correo.from, asunto: correo.subject })
           ? { ...clasificado, categoria: 'correduria-recibo', via: 'regla' as const }
           : clasificado
         const ruta = rutaDe(c.categoria)
@@ -183,6 +184,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
           let devolucion: LecturaCorreoDevolucion | null = null
           let evento: EventoAseguradora | null = null
+          // El texto de los PDF se saca UNA vez por correo y solo si algún lector lo pide (devolución, o un
+          // formato de evento que lo necesite): no se leen dos veces en `correduria-recibo`.
+          let pdfsLeidos: Promise<string | null> | undefined
+          const textoPdfs = (): Promise<string | null> => (pdfsLeidos ??= textoDePdfs(correo))
           // `true` = asegura confirmó lo que hizo con el aviso de compañía: la nota genérica de abajo sobra.
           let eventoAplicado = false
           const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
@@ -195,7 +200,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const nombre = avisoAgoda.propertyId ? (ACCESO[avisoAgoda.propertyId]?.nombre ?? null) : null
             await tgAviso('correo.agoda', textoAvisoAgoda(avisoAgoda, nombre ?? undefined))
             stats.avisados++
-          } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: await textoConPdfs(correo), fecha: correo.fecha.toISOString() })) !== null) {
+          } else if (c.categoria === 'correduria-recibo' && (devolucion = leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: conPdfs(correo, await textoPdfs()), fecha: correo.fecha.toISOString() })) !== null) {
             // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,
             // abre la llamada) y el aviso dice quién, cuánto y hasta cuándo. Si el puerto no contesta,
             // el aviso sale IGUAL con lo leído del correo y declara que no está registrado.
@@ -215,7 +220,9 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           } else if ((c.categoria === 'correduria' || c.categoria === 'correduria-recibo')
             && (evento = leerCorreoEventoAseguradora({
               remitente: correo.from, asunto: correo.subject, cuerpoTexto: correo.texto ?? correo.extracto,
-              textoAdjuntos: await textoDePdfs(correo), fecha: correo.fecha.toISOString(),
+              // Solo las listas de pre-anulación miran los adjuntos: al resto no se le abre ningún PDF.
+              textoAdjuntos: eventoNecesitaAdjuntos({ remitente: correo.from, asunto: correo.subject }) ? await textoPdfs() : null,
+              fecha: correo.fecha.toISOString(),
             })) !== null) {
             // Aviso de COMPAÑÍA que no es una devolución (14/10/2026): siniestro, pre-anulación, impago,
             // anulación o suplemento — venga la categoría por regla de `correo_reglas`, keyword o IA. asegura
@@ -225,7 +232,8 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
               .catch(() => ({ estado: 'sin_respuesta' as const, motivo: 'no se pudo llegar a asegura' }))
             const resultados = res.estado === 'ok' ? leerResultadosEvento(res.json) : null
             if (res.estado !== 'ok') console.error('[triaje] evento de compañía no registrado:', res.motivo)
-            eventoAplicado = resultados !== null && resultados.length > 0
+            // Solo lo CONFIRMADO en la ficha quita la nota genérica: con todo sin_resolver/procesando, la nota sigue de red.
+            eventoAplicado = eventoConfirmado(resultados)
             const texto = textoAvisoEvento(evento, correo.subject, resultados, (id) => urlFichaCliente(id), res.estado === 'ok' ? null : res)
             const enviado = await tgAviso('correo.correduria-evento', texto).catch(() => null)
             if (enviado !== null) stats.avisados++
@@ -383,9 +391,7 @@ async function textoDePdfs(correo: CorreoNuevo): Promise<string | null> {
  * un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO
  * leído (sin cabecera de tabla), en vez de darlo por una carta sin recibos.
  */
-async function textoConPdfs(correo: CorreoNuevo): Promise<string> {
+function conPdfs(correo: CorreoNuevo, textoPdf: string | null): string {
   const base = correo.texto ?? correo.extracto
-  if (!correo.pdfs?.length) return base
-  const textos = await Promise.all(correo.pdfs.map((b) => textoPdfPorFilas(b)))
-  return [base, ...textos.filter((t): t is string => !!t)].join('\n')
+  return textoPdf ? `${base}\n${textoPdf}` : base
 }

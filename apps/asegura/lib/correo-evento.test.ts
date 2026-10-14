@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  PREFIJO_TAREA_CORREO, claveNumero, claveTareaDe, planItem, resolverPolizaEvento, tareaValida, validarEntradaEvento, venceTarea,
+  PREFIJO_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, planItem, resolverPolizaEvento, tareaValida, validarEntradaEvento, venceTarea,
   type ContextoItem, type ItemEvento, type PolizaCandidata,
 } from './correo-evento.ts'
 
@@ -245,6 +245,55 @@ test('ningún texto del plan lleva IBAN ni NIF', () => {
   }
 })
 
+// ── Siniestro ya en la cartera: compañía y póliza tienen que cuadrar ──────────
+
+type FilaSin = Parameters<typeof elegirSiniestro>[0][number]
+function sin(f: Partial<FilaSin> = {}): FilaSin {
+  return {
+    id: 's1', origen: 'cima', clienteId: 'c1', polizaId: 'p1', idSiniestroEntidad: '43000001', referencia: null, codigoEntidadDgs: 'C0468',
+    poliza: { numeroPoliza: '806000001', codigoDgs: 'C0468', aseguradora: 'Occident' }, ...f,
+  }
+}
+
+test('elegirSiniestro: con código DGS de la compañía y la misma póliza → casa (CIMA primero)', () => {
+  const r = elegirSiniestro([sin({ id: 's2', origen: 'gestionado_correduria' }), sin()], '43000001', 'occident', 'C0468', '806000001')
+  assert.deepEqual(r, { estado: 'casa', siniestro: { id: 's1', origen: 'cima', clienteId: 'c1', polizaId: 'p1' } })
+})
+
+test('🪤 elegirSiniestro: siniestro SIN código DGS solo casa si SU póliza es de esa compañía', () => {
+  const deMapfre = sin({ codigoEntidadDgs: null, poliza: { numeroPoliza: '806000001', codigoDgs: 'C0058', aseguradora: 'Mapfre' } })
+  assert.equal(elegirSiniestro([deMapfre], '43000001', 'occident', 'C0468', null).estado, 'ninguno')
+  const sinPoliza = sin({ codigoEntidadDgs: null, poliza: null })
+  assert.equal(elegirSiniestro([sinPoliza], '43000001', 'occident', 'C0468', null).estado, 'ninguno')
+  const porNombre = sin({ codigoEntidadDgs: null, poliza: { numeroPoliza: '806000001', codigoDgs: null, aseguradora: 'Occident Seguros' } })
+  assert.equal(elegirSiniestro([porNombre], '43000001', 'occident', 'C0468', null).estado, 'casa')
+})
+
+test('🪤 elegirSiniestro: el correo trae OTRA póliza que la del siniestro → poliza_distinta (sin_resolver)', () => {
+  assert.equal(elegirSiniestro([sin()], '43000001', 'occident', 'C0468', '547000001').estado, 'poliza_distinta')
+  // Mismo nº con otro formato (ceros, puntos) sí es la misma póliza.
+  assert.equal(elegirSiniestro([sin()], '43000001', 'occident', 'C0468', '0806.000.001').estado, 'casa')
+  const p = planItem(siniestro(), 'occident', ctx({ siniestroPolizaDistinta: true }))
+  assert.equal(p.estado, 'sin_resolver')
+  assert.equal(p.nota, null)
+  assert.equal(p.abrirSiniestro, null)
+  assert.match(p.motivo ?? '', /otra póliza/)
+})
+
+test('elegirSiniestro: el nº tiene que casar entero (no «contiene»)', () => {
+  assert.equal(elegirSiniestro([sin({ idSiniestroEntidad: '943000001' })], '43000001', 'occident', 'C0468', null).estado, 'ninguno')
+})
+
+// ── Una nota por aviso repetido (el resumen diario de Occident llega cada día con otro Message-ID) ──
+
+test('campoFechaDedupe: la fecha que distingue un aviso repetido de uno nuevo, por tipo', () => {
+  assert.equal(campoFechaDedupe('pre_anulacion'), 'fechaLimite')
+  assert.equal(campoFechaDedupe('impago'), 'fechaLimite')
+  assert.equal(campoFechaDedupe('anulacion'), 'fechaEfecto')
+  assert.equal(campoFechaDedupe('suplemento'), 'periodoHasta')
+  assert.equal(campoFechaDedupe('siniestro'), null)
+})
+
 // ── Cepos sobre el FUENTE de la BD (lo que tsc no ve) ────────────────────────
 
 const BD = readFileSync(join(import.meta.dirname, 'correo-evento-bd.ts'), 'utf8')
@@ -263,4 +312,19 @@ test('la BD no escribe nada en la cartera si el plan es sin_resolver', () => {
 
 test('el SQL crudo no prefija el schema (lo vigila el guardián de aislamiento)', () => {
   assert.doesNotMatch(BD, /seguros\.\w+/)
+})
+
+test('la BD resuelve el siniestro con elegirSiniestro (compañía + póliza), no con un «contains» suelto', () => {
+  assert.match(BD, /elegirSiniestro\(/)
+  assert.match(BD, /siniestroPolizaDistinta/)
+})
+
+test('la BD no repite la nota si ya hay fila aplicada con la misma clave de tarea y la misma fecha', () => {
+  const guarda = BD.indexOf('await notaYaAnotada(')
+  assert.ok(guarda > 0, 'falta la guarda de nota repetida')
+  assert.ok(guarda < BD.indexOf('if (plan.nota && !notaRepetida) await anotar(db'), 'la guarda va antes de anotar')
+  assert.match(BD, /e\.estado = 'aplicado' and e\.clave_tarea = \$\{claveTarea\}/)
+  assert.match(BD, /is not distinct from \$\{fecha\}/)
+  // La primera fila guarda su clave de tarea aunque no cree tarea (solo nota): si no, la siguiente no la ve.
+  assert.match(BD, /clave_tarea = \$\{claveGuardada\}/)
 })

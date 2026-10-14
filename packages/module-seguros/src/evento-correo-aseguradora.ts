@@ -18,6 +18,11 @@
 //   por no tener con qué leerlos sin inventar: Allianz «Rel. Emisión Producción» (la lista va en un PDF
 //   que no se ha visto en texto), Mapfre «Welcome Pack Digital» (no trae nº de póliza), Reale «Recibos
 //   Pendientes» (la tabla va en un .xls) y Reale «Impago de recibo» (va al cliente y no trae datos).
+// - 🚨 Las tablas HTML llegan al triaje CELDA POR LÍNEA y sin `|` (IMAP + `mailparser`, ver `tabla-correo.ts`);
+//   las barras son de la vista de Gmail. Todo lector de tabla acepta los dos formatos y tiene su fixture
+//   en celda-por-línea (`evento-correo-aseguradora-celdas.test.ts`).
+
+import { celdasPorLinea } from './tabla-correo.ts'
 
 export type CompaniaEvento = 'occident' | 'reale' | 'mapfre' | 'allianz'
 
@@ -26,7 +31,7 @@ const CODIGO: Record<CompaniaEvento, string> = { reale: 'C0613', occident: 'C046
 export type CorreoEventoAseguradora = {
   remitente: string
   asunto: string
-  /** Cuerpo en texto plano (las tablas HTML llegan con `|`). */
+  /** Cuerpo en texto plano: las tablas HTML llegan CELDA POR LÍNEA (triaje, `mailparser`) o con `|` (Gmail). */
   cuerpoTexto: string
   /** Texto de los adjuntos (PDF/Excel) si el triaje lo ha sacado. */
   textoAdjuntos?: string | null
@@ -47,7 +52,7 @@ export type SiniestroLeido = {
   fechaOcurrencia: string | null
   /** `YYYY-MM-DD`: día de la última acción que trae el correo. */
   fechaAccion: string | null
-  /** Qué ha pasado, en corto y sin datos personales. */
+  /** Qué ha pasado, en corto y sin datos personales. Del «Tramitador», solo un valor de `ACCIONES_TRAMITADOR`. */
   accion: string | null
 }
 
@@ -162,6 +167,8 @@ function base(compania: CompaniaEvento): Base {
 // | 2026-09-15-18.50 | |
 // | Apertura de expediente con cargo a póliza |
 // | * NOMBRE DEL REPARADOR |            ← no sale: puede ser un autónomo
+// Por IMAP la misma tabla llega sin barras: `2026-09-15-18.50` / `Apertura de …` (partida a ~80 col.) / ` * NOMBRE`.
+const FECHA_ACCION = /^\|?\s*(\d{4})-(\d{2})-(\d{2})-\d{2}\.\d{2}\s*(?:\|.*)?$/
 function subtipoDeAcciones(acciones: string[]): SubtipoSiniestro {
   if (acciones.some((a) => /apertura\s+de\s+expediente/i.test(a))) return 'apertura'
   if (acciones.some((a) => /\b(finalizad[oa]|terminad[oa]|cerrad[oa]|cierre\s+del?\s+(expediente|siniestro))\b/i.test(a))) return 'cierre'
@@ -180,11 +187,20 @@ function leerOccidentSiniestroDetalle(c: CorreoEventoAseguradora): EventoSiniest
   let fechaAccion: string | null = null
   const ls = lineas(c.cuerpoTexto)
   for (let i = 0; i < ls.length; i++) {
-    const f = /^\|\s*(\d{4})-(\d{2})-(\d{2})-\d{2}\.\d{2}\s*\|/.exec(ls[i].trim())
+    const f = FECHA_ACCION.exec(ls[i].trim())
     if (!f) continue
-    const siguiente = ls.slice(i + 1).find((l) => l.trim() !== '')
-    const texto = siguiente ? plano(siguiente) : ''
-    if (texto === '' || texto.startsWith('*')) { out.ilegibles++; continue }
+    // La acción: las líneas que siguen hasta una vacía, la viñeta del reparador (`*`) o la fecha siguiente.
+    // Con barras es UNA línea; por IMAP puede venir partida en dos.
+    let j = i + 1
+    while (j < ls.length && ls[j].trim() === '') j++
+    const trozos: string[] = []
+    for (; j < ls.length; j++) {
+      const t = plano(ls[j])
+      if (t === '' || t.startsWith('*') || FECHA_ACCION.test(ls[j].trim())) break
+      trozos.push(t)
+    }
+    const texto = trozos.join(' ')
+    if (texto === '') { out.ilegibles++; continue }
     if (!acciones.includes(texto)) acciones.push(texto)
     fechaAccion = iso(Number(f[3]), Number(f[2]), Number(f[1]))
   }
@@ -205,30 +221,80 @@ function leerOccidentSiniestroDetalle(c: CorreoEventoAseguradora): EventoSiniest
 // | Apertura de Siniestros | / | Terminaciones | / | Pagos Realizados |
 // | Número Siniestro | Póliza | Cliente | NIF | Matrícula | Fecha de Ocurrencia | Subtipo de Siniestro |
 // Cliente y NIF NO salen. «Pagos» no se ha visto con filas: se cuentan como ilegibles, no se inventan.
+// Por IMAP llega CELDA POR LÍNEA y la Matrícula vacía DESAPARECE: la fila se lee anclada en el nº de
+// siniestro (6+ cifras) y en la fecha de ocurrencia (dd.mm.aaaa) 2-6 celdas después; la póliza es la celda
+// siguiente al nº y el subtipo la siguiente a la fecha. Lo que no cuadra se cuenta, no se descarta.
+type SeccionResumen = 'apertura' | 'cierre' | 'pagos'
+const NUM_SINIESTRO = /^\d{6,}$/
+const FECHA_OCURRENCIA = /^\d{2}\.\d{2}\.\d{4}$/
+
+function seccionResumen(p: string): SeccionResumen | null {
+  if (/^apertura\s+de\s+siniestros$/i.test(p)) return 'apertura'
+  if (/^terminaciones$/i.test(p)) return 'cierre'
+  if (/^pagos\s+realizados$/i.test(p)) return 'pagos'
+  return null
+}
+
+function siniestroDeResumen(seccion: 'apertura' | 'cierre', numero: string, poliza: string, fecha: string, subtipoTexto: string | null): SiniestroLeido {
+  return {
+    subtipo: seccion,
+    numeroSiniestro: numero,
+    numeroPoliza: /^[A-Z0-9-]{4,}$/i.test(poliza) ? poliza : null,
+    ramo: null,
+    fechaOcurrencia: isoDeFecha(fecha),
+    fechaAccion: null,
+    accion: textoCorto(`${seccion === 'apertura' ? 'Apertura' : 'Terminación'}${subtipoTexto ? `: ${subtipoTexto}` : ''}`),
+  }
+}
+
 function leerOccidentSiniestroResumen(c: CorreoEventoAseguradora): EventoSiniestro | null {
   if (!esDe(c.remitente, 'occidentinforma.com')) return null
   if (!/comunicaci[oó]n\s+de\s+las\s+acciones\s+generadas\s+en\s+su\s+expediente/i.test(c.asunto)) return null
   const out: EventoSiniestro = { ...base('occident'), tipo: 'siniestro', siniestros: [] }
-  let seccion: 'apertura' | 'cierre' | 'pagos' | null = null
+  let seccion: SeccionResumen | null = null
   let vistaSeccion = false
+  let filasConBarras = 0
+  // 1) Una fila por línea con `|` (vista de Gmail).
   for (const l of lineas(c.cuerpoTexto)) {
-    const p = plano(l)
-    if (/^apertura\s+de\s+siniestros$/i.test(p)) { seccion = 'apertura'; vistaSeccion = true; continue }
-    if (/^terminaciones$/i.test(p)) { seccion = 'cierre'; vistaSeccion = true; continue }
-    if (/^pagos\s+realizados$/i.test(p)) { seccion = 'pagos'; vistaSeccion = true; continue }
+    const s = seccionResumen(plano(l))
+    if (s) { seccion = s; vistaSeccion = true; continue }
     const cs = celdas(l.trim())
-    if (cs.length === 0 || !/^\d{6,}$/.test(cs[0] ?? '')) continue
+    if (cs.length === 0 || !NUM_SINIESTRO.test(cs[0] ?? '')) continue
+    filasConBarras++
     if (seccion === null || seccion === 'pagos' || cs.length !== 7) { out.ilegibles++; continue }
     const [numero, poliza, , , , fecha, subtipoTexto] = cs
-    out.siniestros.push({
-      subtipo: seccion,
-      numeroSiniestro: numero,
-      numeroPoliza: /^[A-Z0-9-]{4,}$/i.test(poliza) ? poliza : null,
-      ramo: null,
-      fechaOcurrencia: isoDeFecha(fecha),
-      fechaAccion: null,
-      accion: textoCorto(`${seccion === 'apertura' ? 'Apertura' : 'Terminación'}${subtipoTexto ? `: ${subtipoTexto}` : ''}`),
-    })
+    out.siniestros.push(siniestroDeResumen(seccion, numero, poliza, fecha, subtipoTexto || null))
+  }
+  // 2) Celda por línea (lo que llega por IMAP). Solo si no había filas con barras: si no, contaría doble.
+  if (filasConBarras === 0) {
+    const cs = celdasPorLinea(c.cuerpoTexto)
+    seccion = null
+    let pagosContados = false
+    for (let i = 0; i < cs.length; i++) {
+      const s = seccionResumen(cs[i])
+      if (s) { seccion = s; continue }
+      if (!NUM_SINIESTRO.test(cs[i])) continue
+      if (seccion === null || seccion === 'pagos') {
+        // Formato no visto: una vez por sección basta para que el aviso diga «míralo».
+        if (!(seccion === 'pagos' && pagosContados)) out.ilegibles++
+        if (seccion === 'pagos') pagosContados = true
+        continue
+      }
+      // Fecha de ocurrencia entre 2 y 6 celdas después (cliente, NIF y matrícula, que puede no estar), sin
+      // cruzar otro nº de siniestro ni un título de sección: eso sería ya la fila siguiente.
+      let j = -1
+      for (let k = i + 2; k <= i + 6 && k < cs.length; k++) {
+        if (FECHA_OCURRENCIA.test(cs[k])) { j = k; break }
+        if (NUM_SINIESTRO.test(cs[k]) || seccionResumen(cs[k])) break
+      }
+      // Sin fecha: fila ilegible. Se salta también la celda de la póliza (puede ser solo cifras y
+      // contarse otra vez como un nº de siniestro).
+      if (j < 0) { out.ilegibles++; i++; continue }
+      const siguiente = cs[j + 1]
+      const subtipoTexto = siguiente && !NUM_SINIESTRO.test(siguiente) && !seccionResumen(siguiente) ? siguiente : null
+      out.siniestros.push(siniestroDeResumen(seccion, cs[i], cs[i + 1], cs[j], subtipoTexto))
+      i = subtipoTexto ? j + 1 : j
+    }
   }
   if (!vistaSeccion) out.ilegibles++
   return out
@@ -238,6 +304,22 @@ function leerOccidentSiniestroResumen(c: CorreoEventoAseguradora): EventoSiniest
 // Contrato: M00000            ← el contrato del MEDIADOR, no la póliza: no sale
 // <primer párrafo = lo que dice el tramitador>
 // https://…NUMSINI=…
+// La nota es texto LIBRE de una persona: lleva su firma, el nombre del perjudicado, a veces un teléfono.
+// NO sale (ni a la BD ni a Telegram): se reduce a un estado de esta lista cerrada.
+export const ACCIONES_TRAMITADOR = [
+  'Cierre del expediente', 'Rehúse', 'Pago o propuesta de pago', 'Pide documentación', 'Nota del tramitador (ver el correo)',
+] as const
+export type AccionTramitador = (typeof ACCIONES_TRAMITADOR)[number]
+
+function accionTramitador(nota: string): AccionTramitador {
+  const t = nota.replace(/\s+/g, ' ')
+  if (/\b(finalizad[oa]|cerrad[oa]|cierre\s+del?\s+(expediente|siniestro))\b/i.test(t)) return 'Cierre del expediente'
+  if (/\brehus|\brechaz/i.test(t)) return 'Rehúse'
+  if (/\b(en\s+disposici[oó]n|indemniz\w*|abonad[oa]|abonar|pago|transferencia)\b/i.test(t)) return 'Pago o propuesta de pago'
+  if (/\b(aport[ea]\w*|documentaci[oó]n|copia\s+de|certificado|factura|presupuesto)\b/i.test(t)) return 'Pide documentación'
+  return 'Nota del tramitador (ver el correo)'
+}
+
 function leerOccidentTramitador(c: CorreoEventoAseguradora): EventoSiniestro | null {
   if (!esDe(c.remitente, 'comunicacionesoccident.com')) return null
   const m = /^\s*tramitador\s+siniestro\s+(.+?)\s+-\s+(\d{6,})\s+-/i.exec(c.asunto)
@@ -246,9 +328,9 @@ function leerOccidentTramitador(c: CorreoEventoAseguradora): EventoSiniestro | n
   const parrafos = c.cuerpoTexto.replace(/\r/g, '').split(/\n\s*\n/).map((x) => x.trim()).filter(Boolean)
   const nota = parrafos.find((x) => !/^contrato:/i.test(x) && !/^https?:\/\//i.test(x) && !/^LOPD/i.test(x)) ?? null
   if (!nota) out.ilegibles++
-  const accion = textoCorto(nota)
+  const accion = nota ? accionTramitador(nota) : null
   out.siniestros.push({
-    subtipo: accion && /\b(finalizad[oa]|cerrad[oa]|cierre\s+del?\s+(expediente|siniestro))\b/i.test(accion) ? 'cierre' : 'actualizacion',
+    subtipo: accion === 'Cierre del expediente' ? 'cierre' : 'actualizacion',
     numeroSiniestro: m[2],
     numeroPoliza: null,
     ramo: m[1].trim(),
@@ -390,6 +472,17 @@ function limpiarEvento<E extends EventoAseguradora>(e: E): E {
     return v
   }
   return limpia(e) as E
+}
+
+/**
+ * ¿Este correo es de un formato cuyo lector mira el texto de los ADJUNTOS? Solo las listas de pre-anulación
+ * (Occident, Reale) pueden traer la tabla adjunta. El triaje lo pregunta ANTES de leer ningún PDF: para el
+ * resto no hace falta abrirlos. Decide solo por remitente + asunto (no hace falta el cuerpo).
+ */
+export function eventoNecesitaAdjuntos(c: { remitente: string; asunto: string }): boolean {
+  if (/^\s*(fwd?|rv|re)\s*:/i.test(c.asunto)) return false
+  if (esDe(c.remitente, 'occidentinforma.com') && /recibos\s+pr[oó]ximos\s+a\s+la\s+anulaci[oó]n/i.test(c.asunto)) return true
+  return esDe(c.remitente, 'reale.es') && /pre-?\s*anulaciones\s+autom/i.test(c.asunto)
 }
 
 /**

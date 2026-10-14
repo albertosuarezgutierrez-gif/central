@@ -52,6 +52,15 @@ export function leerResultadosEvento(json: unknown): ResultadoPuertoEvento[] | n
   })
 }
 
+/**
+ * ¿asegura CONFIRMÓ que el aviso quedó en la ficha? Solo `aplicado` o `duplicado_cima`. Con todo
+ * `sin_resolver`/`procesando` (o sin respuesta) la cartera no tiene nada: el triaje deja su nota genérica
+ * como red, que es lo que había antes de los eventos.
+ */
+export function eventoConfirmado(resultados: readonly ResultadoPuertoEvento[] | null): boolean {
+  return resultados !== null && resultados.some((r) => r.estado === 'aplicado' || r.estado === 'duplicado_cima')
+}
+
 const COMPANIA: Record<string, string> = { reale: 'Reale', occident: 'Occident', mapfre: 'Mapfre', allianz: 'Allianz' }
 
 /** Lo leído del correo, elemento a elemento (con la MISMA clave que usa asegura). */
