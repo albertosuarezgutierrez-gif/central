@@ -166,7 +166,7 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 
 > Solo lo que consta en `services/tarificador-rpa/src/adapters/mapfre/auto.ts` y `docs/TARIFICADOR-RPA.md`
 > (sección «Mapfre Auto · NSEI»). Fuente: una grabación de 19 pantallas del 13/10/2026. Adaptador SIN registrar,
-> `MAPFRE_AUTO_ACTIVO=false`, fila de integración `mapfre/auto` apagada (`2026-10-14_tarificador_mapfre_auto.sql`).
+> interruptor de máquina `TARIFICADOR_MAPFRE_ACTIVO=1` (apagado por defecto), fila de integración `mapfre/auto` apagada (`2026-10-14_tarificador_mapfre_auto.sql`).
 
 - **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
   (usuario + contraseña; **no pide SMS**). Pantalla: bloque «Acceso», «Código de usuario (NUUMA)» y «Contraseña:»; el botón «Entrar»

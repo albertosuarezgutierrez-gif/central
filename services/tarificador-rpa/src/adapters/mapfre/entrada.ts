@@ -16,7 +16,8 @@
 // Pulsar SOLO con `ctx.pulsar()` (guard de emisión): la pestaña y la opción «Automóviles». «Tarificación y Emisión Rápida» es NAVEGACIÓN (entra al formulario) y
 // casa con `emisi`: se pulsa por `ctx.pulsarEnlaceEntrada` (excepción EXACTA del guard, solo en la entrada de Mapfre); el
 // guard sigue bloqueando emitir/contratar. Textos EXACTOS (sin distinguir mayúsculas; el DOM puede pintarlas por CSS).
-// TODO(captura): sin DOM real de los menús; se localizan por rol o texto visible. Fail-closed: no aparece → ErrorMapaIncompleto.
+// TODO(captura): sin DOM real de los menús; se localizan por rol o texto visible. Fail-closed: no aparece → ErrorMapaIncompleto
+// CON inventario de estructura (14/10/2026): el runner lo captura de TODAS las pestañas para mapear el menú sin otra grabación.
 // «Automóviles» sale dos veces (opción del menú y título de la página): se pulsa la del menú, visible solo tras abrir el desplegable.
 
 import type { Locator, Page } from 'playwright'
@@ -60,7 +61,7 @@ async function localizar(raiz: Raiz, roles: Rol[], texto: string, que: string, e
   try {
     await l.waitFor({ state: 'visible', timeout: espera })
   } catch {
-    throw new ErrorMapaIncompleto(`el elemento de menú «${texto}» (${que}) de wmediadores`)
+    throw new ErrorMapaIncompleto(`el elemento de menú «${texto}» (${que}) de wmediadores`, true)
   }
   return l
 }
@@ -99,7 +100,7 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
   try {
     await titulo.waitFor({ state: 'visible', timeout: menuMs })
   } catch {
-    throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`)
+    throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`, true)
   }
   await localizar(page, [], TARJETA_TURISMOS_Y_MOTOS, 'tarjeta (solo se comprueba)', menuMs)
   // El enlace, acotado a la tarjeta «Turismos y Motos»: otras tarjetas traen enlaces parecidos.
@@ -114,13 +115,13 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
   try {
     destino = await nueva
   } catch {
-    throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ENLACE_TARIFICACION_RAPIDA}» (no se abrió)`)
+    throw new ErrorMapaIncompleto(`la pestaña nueva que abre «${ENLACE_TARIFICACION_RAPIDA}» (no se abrió)`, true)
   }
   // Sin `httpCredentials` en el contexto, el desafío de auth básica se responde 401 (= cancelar) y el formulario sigue ahí.
   try {
     await destino.locator(SEL_FORMULARIO_NSEI).first().waitFor({ state: 'attached', timeout: esperas.formularioMs ?? ESPERA_FORMULARIO_MS })
   } catch {
-    throw new ErrorMapaIncompleto(`el formulario NSEI (${SEL_FORMULARIO_NSEI}) en la pestaña nueva`)
+    throw new ErrorMapaIncompleto(`el formulario NSEI (${SEL_FORMULARIO_NSEI}) en la pestaña nueva`, true)
   }
   return destino
 }

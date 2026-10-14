@@ -14,7 +14,7 @@ import {
   leerFilasDialogoVehiculo,
   leerPrimasMapfre,
   leerResumenVehiculo,
-  MAPFRE_AUTO_ACTIVO,
+  mapfreActivo,
   mapfreAuto,
   ofertasDesdePrimasMapfre,
   PANTALLAS_GRABACION,
@@ -96,9 +96,14 @@ after(async () => {
   await browser?.close()
 })
 
-test('Mapfre auto está APAGADO y NO está registrado', () => {
-  assert.equal(MAPFRE_AUTO_ACTIVO, false)
+test('Mapfre está APAGADO por defecto: solo el valor exacto «1» lo enciende, y sin él NO está registrado', () => {
+  assert.equal(mapfreActivo({}), false)
+  for (const v of ['0', 'true', 'TRUE', ' 1', '1 ', 'si', '']) assert.equal(mapfreActivo({ TARIFICADOR_MAPFRE_ACTIVO: v }), false, `«${v}» no enciende`)
+  assert.equal(mapfreActivo({ TARIFICADOR_MAPFRE_ACTIVO: '1' }), true)
+  // El proceso de test no lleva el interruptor: ni coche ni moto quedan registrados.
+  assert.notEqual(process.env.TARIFICADOR_MAPFRE_ACTIVO, '1')
   assert.equal(adaptadores.obtener('mapfre', 'auto'), null)
+  assert.equal(adaptadores.obtener('mapfre', 'moto'), null)
 })
 
 test('el mapa de pantallas cubre 1..19 sin huecos ni solapes', () => {

@@ -1,5 +1,6 @@
-// Mapfre wmediadores · NSEI «Nueva Alta» AUTO (turismo) — MAPA DE PANTALLAS, APAGADO (13/10/2026).
-// NO está registrado en `adapters/index.ts`: nada de producción lo ejecuta (MAPFRE_AUTO_ACTIVO = false).
+// Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO — MAPA DE PANTALLAS, APAGADO POR DEFECTO (13-14/10/2026).
+// Se registra en `adapters/index.ts` SOLO con el interruptor de la máquina `TARIFICADOR_MAPFRE_ACTIVO=1` (fly secret de la
+// app del worker; `mapfreActivo`). Sin él, un trabajo de Mapfre cae como `datos` («sin adaptador») sin abrir el navegador.
 // Ver docs/TARIFICADOR-RPA.md y docs/TARIFICADOR-MATRIZ.md (fila Mapfre).
 //
 // Fuente: UNA grabación del marcador del 13/10/2026 (19 pantallas, 0 marcos sin leer: la app NSEI es una SPA Angular
@@ -49,8 +50,15 @@ import { fechaEs } from '../allianz/comunidades.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
 
-/** Flag de registro: apagado por defecto. Nada lo enciende en producción. */
-export const MAPFRE_AUTO_ACTIVO = false
+/**
+ * Interruptor de registro (14/10/2026, primera prueba real): SOLO el valor exacto `'1'` de `TARIFICADOR_MAPFRE_ACTIVO` en
+ * el entorno de la máquina lo enciende; ausente o cualquier otro valor = apagado. Encenderlo no salta ningún otro cerrojo:
+ * asegura sigue exigiendo la fila `companias_integracion` mapfre/<ramo> activa y `rpa_autorizada`.
+ */
+export const ENV_MAPFRE_ACTIVO = 'TARIFICADOR_MAPFRE_ACTIVO'
+export function mapfreActivo(env: Readonly<Record<string, string | undefined>>): boolean {
+  return env[ENV_MAPFRE_ACTIVO] === '1'
+}
 
 /**
  * Hueco declarado: falta un dato de la grabación. NO transitorio → `error_definitivo`, no se reintenta. Con
@@ -454,7 +462,7 @@ async function precioDesdeObjetoAsegurado(_nsei: Page, _f: FormularioAuto, _vehi
 }
 
 /**
- * Adaptador SIN registrar (`MAPFRE_AUTO_ACTIVO = false`). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 [HUECO] →
+ * Adaptador de Mapfre (registrado solo con `mapfreActivo`). Coche y moto comparten NSEI («Turismos y Motos»). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 [HUECO] →
  * vehículo confirmado por matrícula → «Continuar» del paso 2 [HUECO] → … precio. Hoy para en el paso 1 con inventario.
  */
 export const mapfreAuto = {
@@ -475,3 +483,6 @@ export const mapfreAuto = {
     return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado)
   },
 } as const
+
+/** MOTO: el mismo flujo NSEI que el coche (misma entrada «Turismos y Motos»), registrado con su propio ramo. */
+export const mapfreMoto = { ...mapfreAuto, ramo: 'moto' } as const

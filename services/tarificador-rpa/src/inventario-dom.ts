@@ -29,10 +29,12 @@ function extractor(explora: boolean): string {
   // EXPLORACIÓN: también el avance del servlet de Allianz (un div con id y onclick, no un button; selector de guard.ts).
   // SOLO ese selector exacto; el módulo solo lo deja avanzar si es el avance autorizado de Datos básicos.
   const SEL_SERVLET = ${JSON.stringify(SELECTOR_AVANCE_SERVLET)};
-  const SEL = 'input,select,textarea,button,a[role=button],[role=button],[role=tab],[role=combobox],[role=checkbox],td[onclick],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  // Enlaces, menús, opciones y mat-icon (14/10/2026, Mapfre wmediadores/NSEI: menús de enlaces y lupas con mat-icon).
+  // Solo estructura y texto visible del control; nunca valores. Los controles de elección de fila NO (guardián: solo guard.ts).
+  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=checkbox],mat-icon,td[onclick],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
   const esDivServlet = (el) => EXPLORA && el.matches(SEL_SERVLET);
-  const CON_TEXTO = { button: 1, a: 1, td: 1, label: 1 };
-  const ROLES_CON_TEXTO = { button: 1, tab: 1 };
+  const CON_TEXTO = { button: 1, a: 1, td: 1, label: 1, 'mat-icon': 1 };
+  const ROLES_CON_TEXTO = { button: 1, tab: 1, link: 1, menuitem: 1, option: 1 };
   const corta = (s, n) => (s == null ? null : (String(s).replace(/\\s+/g, ' ').trim().slice(0, n) || null));
   const visible = (el) => {
     const cs = getComputedStyle(el);
@@ -118,6 +120,16 @@ function extractor(explora: boolean): string {
 
 export const EXTRACTOR_INVENTARIO = extractor(false)
 export const EXTRACTOR_EXPLORACION = extractor(true)
+
+/**
+ * Los marcos de VARIAS pestañas como si fueran una página (14/10/2026: Mapfre abre NSEI en una pestaña nueva). La pestaña
+ * más reciente va PRIMERO (el inventario se trunca por tamaño y la que importa es la última abierta). Sin pestañas abiertas,
+ * los de `porDefecto`. Puro.
+ */
+export function marcosDePestanas<F>(abiertas: ReadonlyArray<{ frames(): F[] }>, porDefecto: { frames(): F[] }): { frames(): F[] } {
+  const lista = abiertas.length > 0 ? [...abiertas].reverse() : [porDefecto]
+  return { frames: () => lista.flatMap((p) => p.frames()) }
+}
 
 /** Lo mínimo de un marco que usa el inventario (inyectable en los tests). */
 type MarcoLeible = Pick<Frame, 'url' | 'name' | 'isDetached' | 'evaluate'>

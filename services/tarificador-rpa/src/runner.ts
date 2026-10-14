@@ -33,7 +33,7 @@ import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
-import { capturarInventarioDom } from './inventario-dom.ts'
+import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { confirmarVehiculoMapfre, elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { capturarEvidencia } from './evidencia.ts'
@@ -199,11 +199,16 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (rechazada) error = new ErrorVerificacionHumana(k.compania, textoAvisoSesionManual(k.compania))
     await k.sesion.alFallo(rechazada).catch(() => log('sesion_no_borrada'))
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
-    const { captura, html } = await capturarEvidencia(page)
-    // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos, incluidos los de otro origen
-    // (solo lectura, saneado y ≤60 KB; inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
-    const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(page) : null
-    return { ok: false, c, evidencia: { url: page.url(), captura, html, inventarioDom } }
+    // Mapfre abre el formulario en una PESTAÑA NUEVA (14/10/2026): la evidencia sale de la pestaña abierta MÁS RECIENTE
+    // (con una sola pestaña, la de siempre).
+    const abiertas = context.pages().filter((p) => !p.isClosed())
+    const actual = abiertas.at(-1) ?? page
+    const { captura, html } = await capturarEvidencia(actual)
+    // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos de TODAS las pestañas (la más
+    // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
+    // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
+    const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(marcosDePestanas(abiertas, page)) : null
+    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom } }
   } catch (e) {
     await k.sesion.alFallo(false).catch(() => undefined)
     throw e
