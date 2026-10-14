@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { ListChecks, Users, Shield, Receipt, LayoutGrid, Briefcase, Target } from 'lucide-react'
+import { ListChecks, Users, Shield, Receipt, LayoutGrid, Briefcase, Target, Mail } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { BARRA_CORREDURIA, type Seccion, type Contador, type PestanaPropia } from './secciones'
 
@@ -32,6 +32,7 @@ const META: Record<Seccion, { label: string; Icono: LucideIcon }> = {
   clientes: { label: 'Clientes', Icono: Users },
   cartera: { label: 'Cartera', Icono: Shield },
   comisiones: { label: 'Comisiones', Icono: Receipt },
+  campanas: { label: 'Campañas', Icono: Mail },
   mas: { label: 'Más', Icono: LayoutGrid },
 }
 

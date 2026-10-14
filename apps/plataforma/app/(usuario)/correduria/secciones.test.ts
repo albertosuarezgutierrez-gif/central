@@ -50,12 +50,15 @@ test('la salud de la ingesta de CIMA tiene sección propia en esta pantalla', ()
 test('las pestañas antiguas (actividad, datos, ingesta, redes) abren «Más» y bajan a su bloque', () => {
   // Un enlace guardado, un Telegram viejo o un botón de «Hoy» con `?s=datos`
   // no puede caer en «Hoy» sin decir nada: el trabajo que buscaba se perdería.
-  for (const b of ['actividad', 'campanas', 'datos', 'ingesta', 'redes'] as const) {
+  for (const b of ['actividad', 'datos', 'ingesta', 'redes'] as const) {
     assert.deepEqual(destinoDeParametro(b), { seccion: 'mas', bloque: b })
   }
   assert.deepEqual(destinoDeParametro(['redes', 'gestion']), { seccion: 'mas', bloque: 'redes' })
   assert.deepEqual(destinoDeParametro('comisiones'), { seccion: 'comisiones', bloque: null })
-  assert.deepEqual(SECCIONES, ['clientes', 'cartera', 'comisiones', 'gestion', 'mas'])
+  assert.deepEqual(SECCIONES, ['clientes', 'cartera', 'comisiones', 'campanas', 'gestion', 'mas'])
+  // «Campañas» es sección de primer nivel (no bloque de «Más», que en móvil queda fuera de pantalla).
+  assert.deepEqual(destinoDeParametro('campanas'), { seccion: 'campanas', bloque: null })
+  assert.ok(!BLOQUES_MAS.includes('campanas' as never))
 })
 
 test('combinarContadores: el badge de «Más» nunca convierte un «no se sabe» en 0', () => {
@@ -239,8 +242,8 @@ test('🚨 una lectura de comisiones RECORTADA marca el libro como no comprobado
   assert.match(src, /com\.truncado === null/, 'el «no se sabe» se colapsó con «lectura completa»')
 })
 
-test('la barra: Mi mesa · Clientes · Cartera · Comisiones · Gestión · Prospección · Más, y ninguna pestaña sin lugar', () => {
-  assert.deepEqual(BARRA_CORREDURIA.map(i => i.clave), ['mesa', 'clientes', 'cartera', 'comisiones', 'gestion', 'prospeccion', 'mas'])
+test('la barra: Mi mesa · Clientes · Cartera · Comisiones · Campañas · Gestión · Prospección · Más, y ninguna pestaña sin lugar', () => {
+  assert.deepEqual(BARRA_CORREDURIA.map(i => i.clave), ['mesa', 'clientes', 'cartera', 'comisiones', 'campanas', 'gestion', 'prospeccion', 'mas'])
   const enlaces = Object.fromEntries(BARRA_CORREDURIA.flatMap(i => (i.tipo === 'enlace' ? [[i.clave, i.href]] : [])))
   assert.deepEqual(enlaces, { mesa: '/correduria/mesa', prospeccion: '/correduria/vencimientos' })
   // Toda sección declarada está en la barra (si no, existiría un panel al que no lleva ninguna pestaña).
