@@ -10,8 +10,9 @@
  * Qué respeta cada canal HOY (y la pantalla lo dice tal cual):
  *  · Los dos crons de push del portal (`avisos-push`, `avisos-cima`) leen el canal, la antelación y
  *    la franja.
- *  · El CORREO de vencimiento lo manda `apps/asegura` y todavía NO lee esta tabla: elegir «solo en el
- *    móvil» no lo detiene. Pendiente, anotado en el informe de la fase A.
+ *  · El CORREO de vencimiento lo manda `apps/asegura`: solo se omite si el push de ese ciclo salió; si
+ *    no, se manda igualmente. La pantalla del portal ofrece `ambos` y `movil` (no `correo`, que dejaría
+ *    sin canal a los avisos que solo existen como push; la ruta del portal lo rechaza).
  */
 
 // Umbral de subida de precio (fase B, 13/10/2026): la regla vive en `avisos-ampliados.ts`; aquí solo

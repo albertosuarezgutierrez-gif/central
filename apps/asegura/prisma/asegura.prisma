@@ -1530,7 +1530,7 @@ model Presupuesto {
   salida           String?
   polizaEmitidaId  String?   @map("poliza_emitida_id") @db.Uuid
   creadoPor        String    @map("creado_por")
-  /// Exigencias y necesidades del cliente (art. 20 Ley 16/2018), escritas por el corredor. NULL = no constan.
+  /// Exigencias y necesidades del cliente (art. 175.1 RDL 3/2020), escritas por el corredor. NULL = no constan.
   necesidades      String?
   necesidadesAt    DateTime? @map("necesidades_at") @db.Timestamptz(6)
   /// Referencia propia AS-AA-NNNN que se le da al cliente (nunca el nº de Avant2). La pone la BD
