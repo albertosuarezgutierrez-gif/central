@@ -1472,3 +1472,10 @@ export {
   claseOportunidad, esExpedienteDeTrabajo, esRescateDeRecibo, estadoVisible, fechaPospuesta, importeReciboRescate, notasEditadas, textoRetomar, vueltaRescatePerdido,
 } from './expedientes.ts'
 export type { ClaseExpediente, EntradaClase, EstadoVisible, VueltaRescate } from './expedientes.ts'
+
+// Correos de compañías que no son recibos devueltos → eventos de la correduría (14/10/2026).
+export {
+  leerCorreoEventoAseguradora, sinDatosSensibles, contieneIban,
+  type CompaniaEvento, type CorreoEventoAseguradora, type EventoAseguradora, type EventoSiniestro, type EventoPreAnulacion,
+  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
+} from './evento-correo-aseguradora.ts'
