@@ -274,6 +274,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                 Ir a pedir presupuestos →
               </a>
             </div>
+            {/* Sin acción principal (p. ej. sin Avant2) el coche sigue teniendo sus bots con entrada propia. */}
+            {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
           </>
         ) : (
           <>
