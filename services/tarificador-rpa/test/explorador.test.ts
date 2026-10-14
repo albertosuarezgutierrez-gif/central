@@ -769,6 +769,35 @@ test('GUARDAR (d): el GUARD del worker bloquea Emitir aunque se le llame directa
   }
 })
 
+/** Controles compuestos: «Guardar y firmar» visible; y dos «Guardar presupuesto» cuyo VIVO lleva emisión (title, onclick pagar()). */
+const RESULTADO_COMPUESTOS = PAGINA(`
+  <h1>Resultado</h1><table><tr><td>Prima total</td><td>347,55 €</td></tr></table>
+  <button id="btnFirma" type="button" onclick="window.pulsadoCompuesto = true">Guardar y firmar</button>
+  <button id="btnTitulo" type="button" title="Guardar y firmar" onclick="window.pulsadoCompuesto = true">Guardar presupuesto</button>
+  <div id="divPagar" role="button" onclick="pagar('x')">Guardar presupuesto</div>
+  <script>function pagar(x) { window.pulsadoCompuesto = true }</script>`)
+
+test('GUARDAR (e): control VIVO con emisión (Guardar y firmar; title o onclick pagar()) → aborta sin hacer click', async () => {
+  const { context, page, guard } = await paginaEn(RESULTADO_COMPUESTOS)
+  try {
+    const cap = await capturarInventarioExploracion(page)
+    const elementos = cap!.inventario.marcos.flatMap((m) => m.elementos)
+    const el = (id: string) => elementos.find((e) => e.id === id)!
+    const pantalla = { tipoPantalla: 'resultado' as const, hayImportes: true, presupuestoEnCurso: false }
+    // 1) Texto visible «Guardar y firmar»: el inventario ya lo ve como emisión.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnFirma'), { el: el('btnFirma'), pantalla }), EmisionBloqueadaError)
+    // 2) El inventario dice «Guardar presupuesto»; el VIVO lleva «Guardar y firmar» en el title → lo corta el control vivo.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnTitulo'), { el: el('btnTitulo'), pantalla }), EmisionBloqueadaError)
+    // 3) div con onclick pagar(…) (el inventario no lo vio) → lo corta el control vivo.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#divPagar'), { el: el('divPagar'), pantalla }), EmisionBloqueadaError)
+    assert.equal(await page.evaluate(() => (window as unknown as { pulsadoCompuesto?: boolean }).pulsadoCompuesto ?? false), false, 'ningún control compuesto se pulsó')
+    assert.ok(!peticiones.some((p) => p.ruta === '/guardar' || p.ruta === '/emitir'), 'no salió ninguna petición')
+    await cap!.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
 test('GUARDAR: como mucho MAX_GUARDADOS_PRESUPUESTO pulsaciones por trabajo', async () => {
   const { context, page, guard } = await paginaEn(ARCHIVADO)
   try {
