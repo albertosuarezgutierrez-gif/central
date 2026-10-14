@@ -19,7 +19,10 @@ test('reservarSinDuplicado comprueba hayHuella ANTES de tocar `huella`, y sin el
 test('tarificador: bot_version y pasos solo con esquema presente', () => {
   const s = leer('./tarificador.ts')
   assert.match(s, /const conBot = await hayBotVersion\(\)/)
-  assert.match(s, /interno\.traza && \(await hayPasos\(\)\)/)
+  // Sin la tabla de pasos se avisa y NO se llama a guardarPasos (la guarda va antes del insert).
+  const iGuarda = s.indexOf('if (!(await hayPasos()))')
+  const iGuardar = s.indexOf('await guardarPasos(prisma')
+  assert.ok(iGuarda > 0 && iGuarda < iGuardar, 'la guarda hayPasos debe ir antes de guardarPasos')
   assert.match(s, /conBotVersion/)
 })
 
