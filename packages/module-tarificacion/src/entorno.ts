@@ -26,14 +26,17 @@ export function variablesProhibidas(env: Record<string, string | undefined>): st
 }
 
 /** Las ÚNICAS variables que el orquestador pone en la config de la máquina (no son secretos). */
-export const ENV_MAQUINA_PERMITIDAS = ['JOB_ID', 'TARIFICADOR_API_URL'] as const
+export const ENV_MAQUINA_PERMITIDAS = ['JOB_ID', 'TARIFICADOR_API_URL', 'TARIFICADOR_EXPLORADOR_VISTA'] as const
+
+/** Valores de `TARIFICADOR_EXPLORADOR_VISTA` que se reenvían a la máquina (EXACTOS, sin recortar ni pasar a minúsculas). */
+export const VISTAS_EXPLORADOR = ['dom', 'aria', 'ambas'] as const
 
 /**
  * El `env` de la máquina efímera. Solo el id del trabajo y a dónde preguntar. El Bearer del worker
  * y las credenciales de portal son fly secrets de la app `asegura-tarificador`: no viajan en la
  * config de la máquina (que se lee por la API de Fly).
  */
-export function envDeMaquina(entrada: { jobId: string; apiUrl: string }): Record<(typeof ENV_MAQUINA_PERMITIDAS)[number], string> {
+export function envDeMaquina(entrada: { jobId: string; apiUrl: string; vistaExplorador?: string | null }): Record<'JOB_ID' | 'TARIFICADOR_API_URL', string> & { TARIFICADOR_EXPLORADOR_VISTA?: string } {
   const jobId = String(entrada.jobId ?? '').trim()
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(jobId)) {
     throw new Error('envDeMaquina: jobId no es un uuid')
@@ -46,7 +49,9 @@ export function envDeMaquina(entrada: { jobId: string; apiUrl: string }): Record
   }
   if (url.protocol !== 'https:') throw new Error('envDeMaquina: apiUrl tiene que ser https')
   if (url.username || url.password) throw new Error('envDeMaquina: apiUrl no puede llevar credenciales')
-  return { JOB_ID: jobId, TARIFICADOR_API_URL: url.origin }
+  // Interruptor no secreto del explorador: solo con un valor válido EXACTO; ausente o inválido → no viaja (el worker cae a `dom`).
+  const vista = (VISTAS_EXPLORADOR as readonly unknown[]).includes(entrada.vistaExplorador) ? { TARIFICADOR_EXPLORADOR_VISTA: entrada.vistaExplorador as string } : {}
+  return { JOB_ID: jobId, TARIFICADOR_API_URL: url.origin, ...vista }
 }
 
 /** Nombre de las variables de credencial de un portal: `CRED_ALLIANZ_EPAC_USER` / `_PASS`. */

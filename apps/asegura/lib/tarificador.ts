@@ -266,7 +266,7 @@ export async function lanzarPendientes(correduriaId: string, compania: string, d
 
 async function crearMaquina(cfg: ConfigFly, jobId: string, f: typeof fetch): Promise<{ ok: true; machineId: string } | { ok: false; motivo: string }> {
   try {
-    const p = peticionMaquina(cfg, jobId)
+    const p = peticionMaquina(cfg, jobId, process.env.TARIFICADOR_EXPLORADOR_VISTA)
     const res = await f(p.url, { ...p.init, signal: AbortSignal.timeout(20_000) })
     const texto = await res.text()
     if (!res.ok) return { ok: false, motivo: `HTTP ${res.status}: ${texto.slice(0, 300)}` }
