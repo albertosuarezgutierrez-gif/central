@@ -21,6 +21,7 @@ import {
   POLIZA_ESTADOS_VIGENTES,
   PREFIJO_TAREA_DEVOLUCION,
   clasificarMotivoDevolucion,
+  elegirReciboEmparejado,
   fechaEs,
   hitoDevolucion,
   importeEiac,
@@ -31,7 +32,9 @@ import {
   type HitoDevolucion,
   type TipoMotivoDevolucion,
 } from '@central/module-seguros'
+import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { NORM_R_ID_RECIBO, idReciboNorm } from './id-recibo-sql'
 import { anotarCambio } from './auditoria'
 import { MARCA_CIERRE_AUTOMATICO } from './oportunidad-seguimiento'
 import { ROTULO_MOTIVO_BAJA, type MotivoBaja } from './baja-devolucion-reglas'
@@ -103,9 +106,10 @@ export type ResultadoDevolucion = {
   codigoDgs: string
   /**
    * `sin_recibo` = aún no está en la cartera: se guarda y se enlaza al llegar · `ya_en_cima` = CIMA ya lo
-   * trae devuelto (la resuelve CIMA) · `ya_resuelta` = CIMA ya sabe algo posterior (cobro o anulación).
+   * trae devuelto (la resuelve CIMA) · `ya_resuelta` = CIMA ya sabe algo posterior (cobro o anulación) ·
+   * `ambiguo` = dos recibos distintos de la compañía casan con ese nº: NO se registra, se mira a mano.
    */
-  estado: 'registrada' | 'ya_registrada' | 'sin_recibo' | 'ya_en_cima' | 'ya_resuelta'
+  estado: 'registrada' | 'ya_registrada' | 'sin_recibo' | 'ya_en_cima' | 'ya_resuelta' | 'ambiguo'
   clienteId: string | null
   cliente: string | null
   polizaId: string | null
@@ -139,8 +143,8 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
     const tipoMotivo = clasificarMotivoDevolucion(d.motivo)
     const r = await db.$transaction(async (tx) => {
       // Primero el recibo: lo que CIMA ya sabe decide qué se hace con el aviso.
-      const [rec] = await tx.$queryRaw<(FilaRecibo & { situacion: string; diaCima: string | null; abierta: boolean })[]>`
-        select r.id::text as "reciboId", p.id::text as "polizaId", p.cliente_id::text as "clienteId", p.tipo::text as ramo,
+      const filas = await tx.$queryRaw<(FilaRecibo & { idRecibo: string; situacion: string; diaCima: string | null; abierta: boolean })[]>`
+        select r.id::text as "reciboId", r.id_recibo as "idRecibo", p.id::text as "polizaId", p.cliente_id::text as "clienteId", p.tipo::text as ramo,
                p.aseguradora as compania, p.numero_poliza as "numeroPoliza",
                to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto, r.prima_total::text as importe,
                r.comision_bruta::text as comision,
@@ -148,15 +152,20 @@ export async function registrarDevoluciones(correduriaId: string, devoluciones: 
                c.nombre, c.apellidos, r.situacion::text as situacion,
                to_char(r.fecha_situacion at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "diaCima",
                exists (select 1 from recibo_devolucion x where x.correduria_id = r.correduria_id
-                         and x.codigo_entidad_dgs = r.codigo_entidad_dgs and x.id_recibo_norm = ltrim(r.id_recibo, '0')
+                         and x.codigo_entidad_dgs = r.codigo_entidad_dgs and x.id_recibo_norm = ${NORM_R_ID_RECIBO}
                          and x.resuelta_at is null) as abierta
         from poliza_recibos r
         join polizas p on p.id = r.poliza_id and p.merged_into_poliza_id is null
         left join clientes c on c.id = p.cliente_id
         where r.correduria_id = ${correduriaId}::uuid and r.codigo_entidad_dgs = ${d.codigoDgs}
-          and ltrim(r.id_recibo, '0') = ${norm}
+          and ${NORM_R_ID_RECIBO} = ${norm}
         order by r.updated_at desc nulls last
-        limit 1`
+        limit 20`
+      // Dos recibos DISTINTOS con el mismo nº normalizado (Occident `…-A`/`…-B`): no se elige uno ni se
+      // registra nada; lo mira una persona. Medido el 14/10/2026: 0 casos en la cartera.
+      const emparejado = elegirReciboEmparejado(filas)
+      if (emparejado.estado === 'ambiguo') return { nueva: false, rec: null, tarea: 'no_aplica' as const, estado: 'ambiguo' as const }
+      const rec = emparejado.estado === 'unico' ? emparejado.fila : undefined
       // CIMA ya lo trae devuelto y no hay aviso nuestro: la devolución es de CIMA y la resuelve CIMA.
       // Registrarla también por correo permitiría un «cobrado» a mano que el siguiente pull deshace.
       const yaEnCima = !!rec && rec.situacion === 'devuelto' && !rec.abierta
@@ -271,7 +280,7 @@ async function asegurarTareaDevolucion(tx: Tx, correduriaId: string, r: ReciboSe
       (select count(*)::int from oportunidades
         where correduria_id = ${correduriaId}::uuid and estado::text in ('ganada', 'perdida')
           and (info_riesgo->>'reciboId' = ${r.reciboId}
-               or (info_riesgo->>'polizaId' = ${r.polizaId} and ltrim(coalesce(info_riesgo->>'idRecibo', info_riesgo->>'reciboId', ''), '0') = ${normalizarIdRecibo(r.idRecibo)}))) as cerrada`
+               or (info_riesgo->>'polizaId' = ${r.polizaId} and ${idReciboNorm(Prisma.sql`coalesce(info_riesgo->>'idRecibo', info_riesgo->>'reciboId', '')`)} = ${normalizarIdRecibo(r.idRecibo)}))) as cerrada`
   if ((visto?.hito ?? 0) > 0 || (visto?.cerrada ?? 0) > 0) return 'ya_habia'
   const [abierta] = await tx.$queryRaw<{ id: string; estado: string }[]>`
     select o.id::text as id, o.estado::text as estado from oportunidades o
@@ -350,7 +359,7 @@ export async function seguirDevoluciones(tx: Tx, correduriaId: string, hoy: Date
     left join lateral (
       select x.importe, x.tipo_motivo, x.motivo from recibo_devolucion x
       where x.correduria_id = r.correduria_id and x.codigo_entidad_dgs = r.codigo_entidad_dgs
-        and x.id_recibo_norm = ltrim(r.id_recibo, '0') and x.resuelta_at is null
+        and x.id_recibo_norm = ${NORM_R_ID_RECIBO} and x.resuelta_at is null
       limit 1) d on true
     where r.correduria_id = ${correduriaId}::uuid and r.situacion::text = 'devuelto'
       and p.estado::text = any(${ESTADOS_VIGENTES}::text[])
@@ -377,13 +386,13 @@ async function cerrarDevolucionesCobradas(tx: Tx, correduriaId: string): Promise
   const filas = await tx.$queryRaw<{ id: string }[]>`
     select o.id::text as id from oportunidades o
     join poliza_recibos r on r.correduria_id = o.correduria_id and r.poliza_id = (o.info_riesgo->>'polizaId')::uuid
-      and ltrim(r.id_recibo, '0') = ltrim(coalesce(o.info_riesgo->>'idRecibo', o.info_riesgo->>'reciboId', ''), '0')
+      and ${NORM_R_ID_RECIBO} = ${idReciboNorm(Prisma.sql`coalesce(o.info_riesgo->>'idRecibo', o.info_riesgo->>'reciboId', '')`)}
     where o.correduria_id = ${correduriaId}::uuid
       and (o.info_riesgo->>'origen' = ${ORIGEN_DEVOLUCION} or o.info_riesgo->>'motivo' = ${ORIGEN_DEVOLUCION})
       and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
       and r.situacion::text = 'cobrado'
       and not exists (select 1 from recibo_devolucion x where x.correduria_id = r.correduria_id
-                        and x.codigo_entidad_dgs = r.codigo_entidad_dgs and x.id_recibo_norm = ltrim(r.id_recibo, '0') and x.resuelta_at is null)
+                        and x.codigo_entidad_dgs = r.codigo_entidad_dgs and x.id_recibo_norm = ${NORM_R_ID_RECIBO} and x.resuelta_at is null)
     for update of o`
   for (const f of filas) {
     await tx.$executeRaw`
@@ -421,7 +430,7 @@ export async function resolverDevolucion(correduriaId: string, reciboId: string,
       update recibo_devolucion set resuelta_at = now(), resuelta_motivo = 'manual:cobrado', resuelta_por = ${actor}
       where correduria_id = ${correduriaId}::uuid and resuelta_at is null
         and (recibo_id = ${reciboId}::uuid
-             or (id_recibo_norm, codigo_entidad_dgs) = (select ltrim(id_recibo, '0'), codigo_entidad_dgs from poliza_recibos where id = ${reciboId}::uuid))`
+             or (id_recibo_norm, codigo_entidad_dgs) = (select ${idReciboNorm(Prisma.raw('id_recibo'))}, codigo_entidad_dgs from poliza_recibos where id = ${reciboId}::uuid))`
     if (resueltas === 0) {
       return { ok: false as const, estado: 'conflicto' as const, motivo: 'Esta devolución la trae CIMA: se da por cobrada cuando CIMA mande el cobro.', status: 409 }
     }
@@ -495,7 +504,7 @@ export async function darDeBajaPorDevolucion(
       update recibo_devolucion set resuelta_at = now(), resuelta_motivo = 'manual:baja', resuelta_por = ${actor}
       where correduria_id = ${correduriaId}::uuid and resuelta_at is null
         and (recibo_id = ${reciboId}::uuid
-             or (id_recibo_norm, codigo_entidad_dgs) = (select ltrim(id_recibo, '0'), codigo_entidad_dgs from poliza_recibos where id = ${reciboId}::uuid))
+             or (id_recibo_norm, codigo_entidad_dgs) = (select ${idReciboNorm(Prisma.raw('id_recibo'))}, codigo_entidad_dgs from poliza_recibos where id = ${reciboId}::uuid))
       returning to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha`
 
     // 2. La póliza, anulada ya por nosotros.

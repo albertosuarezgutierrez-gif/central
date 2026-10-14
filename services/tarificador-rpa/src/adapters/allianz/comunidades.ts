@@ -1137,7 +1137,8 @@ export async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; su
  * Pestaña «Proyecto» de Tarificar. DOM real (06/10/2026, trabajo 083c0927):
  * `<td id="MENU" onclick="goSelected('MENU'); sendEventMenuPDFJasper();">Proyecto</td>` (genera el PDF por
  * `/drrg18/jsp4pdf/proyecto.jsp`, sin grabar). Por id Y texto EXACTO: nunca «Proyecto Ampliado»
- * (`td#EMISION_PROJ`, la bloquea además el guard) ni las vecinas de alta.
+ * (`td#EMISION_PROJ`: este adaptador nunca lo pulsa; «Proyecto ampliado» es GUARDAR solo para el explorador, en resultado, con la excepción estrecha
+ * `EXCEPCION_PROYECTO_AMPLIADO`: id `EMISION_PROJ` exacto + texto exacto) ni las vecinas de alta.
  */
 export function pestanaProyecto(raiz: Raiz): Locator {
   return raiz.locator('td#MENU').filter({ hasText: textoExacto('Proyecto') })

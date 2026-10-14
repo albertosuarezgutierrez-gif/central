@@ -16,7 +16,7 @@
 // en el portal: solo claves del catálogo y valores de opciones que YA están en el inventario.
 
 import { pareceEmision } from './guard-emision.ts'
-import { clasificarAccionPortal, referenciaPresupuestoValida } from './acciones-portal.ts'
+import { clasificarAccionPortal, descripcionesSinExcepcionProyecto, fronteraEmisionPorCampos, MOTIVO_FRONTERA_CUENTA, referenciaPresupuestoValida } from './acciones-portal.ts'
 import {
   MAX_TITULOS_MARCO,
   pareceDatoPersonalInventario,
@@ -406,7 +406,7 @@ export const DESCRIPCION_MOTIVOS_PARAR: Readonly<Record<MotivoParar, string>> = 
   captcha: 'hay un CAPTCHA o una comprobación de humano',
   dato_sensible_requerido: 'un campo OBLIGATORIO pide NIF/DNI u otro dato personal sin clave con valor en el catálogo',
   dato_no_disponible: 'con datos REALES, un desplegable o radio OBLIGATORIO pide un dato cuyo valor no se te ha dado (solo se elige/marca uso, régimen o tipo de vivienda con su significado)',
-  cerca_de_emision: 'la pantalla es de contratar, emitir, firmar o pagar',
+  cerca_de_emision: 'la pantalla es de contratar, emitir, firmar o pagar, o pide la cuenta bancaria (IBAN, titular, SWIFT)',
   ambiguo: 'no sabes qué hacer en esta pantalla',
   aceptar_requerido: 'solo se sigue con un «Aceptar» que no es el autorizado',
   sin_salida: 'no hay ningún control con el que avanzar',
@@ -727,10 +727,11 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   const cat = clasificarAccionPortal(desc)
   // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
   // categoría EMISIÓN de la lista única: firmar, pagar, tramitar, confirmar, domiciliar…): siempre.
-  if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || cat.emision) return 'boton_de_emision'
+  //   «Archivar» y «Proyecto ampliado» (GUARDAR) no se pulsan como navegación: caen abajo en `guardar_solo_en_resultado`.
+  if (desc.some((d) => pareceEmision(d, { permitirAceptar: true, permitirGuardarPresupuesto: true })) || cat.emision) return 'boton_de_emision'
   // «Aceptar» (y lo que solo cae por él): solo el autorizado.
   if (desc.some((d) => pareceEmision(d)) && !esAvanceAutorizado(entrada, el, marco)) return 'aceptar_no_autorizado'
-  // Lista única, categoría PROHIBIDA (enviar, salir, proyecto ampliado…).
+  // Lista única, categoría PROHIBIDA (enviar, salir…). «Proyecto ampliado» ya NO está aquí: es GUARDAR (excepción estrecha EMISION_PROJ).
   if (cat.prohibida) return 'boton_prohibido'
   // GUARDAR PRESUPUESTO (grabar, guardar, imprimir, descargar…): nunca como navegación; solo con `efectoEsperado:
   // 'guardar_presupuesto'` en resultado (`bloqueoGuardadoPresupuesto`).
@@ -760,13 +761,14 @@ export type PantallaGuardado = {
 export function bloqueoGuardadoPresupuesto(el: ElementoInventario, p: PantallaGuardado): string | null {
   if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
-  const desc = descripcionesElemento(el)
+  const desc = descripcionesSinExcepcionProyecto(descripcionesElemento(el), el.id, el.texto)
   if (desc.some((d) => pareceEmision(d, { permitirGuardarPresupuesto: true }))) return 'boton_de_emision'
   const cat = clasificarAccionPortal(desc)
   if (cat.emision) return 'boton_de_emision'
   if (cat.prohibida) return 'boton_prohibido'
   if (!cat.guardar) return 'no_es_guardar_presupuesto'
   if (p.tipoPantalla !== 'resultado') return 'guardar_fuera_de_resultado'
+
   if (!p.hayImportes && !p.presupuestoEnCurso) return 'guardar_sin_precio'
   return null
 }
@@ -939,32 +941,14 @@ export function respuestaParar(motivo: MotivoParar, detalle: string | null = nul
 
 export type Parada = { motivo: 'otp' | 'captcha' | 'cerca_de_emision'; senal: string; detalle?: DetalleFinExploracion }
 
-/**
- * FRONTERA DE EMISIÓN (Alberto, 14/10/2026, TODAS las compañías): sin número de cuenta no se puede emitir. Un control de
- * cuenta bancaria en pantalla = el portal ya está en la fase de emisión → el bot PARA sin pulsar nada más y NUNCA lo
- * rellena ni lo elige. Se mira sobre la descripción del control (name, id, formcontrolname, etiqueta, placeholder,
- * aria-label, title) sin tildes y en minúsculas. «domicilio» (dirección) NO casa; «domiciliación» sí.
- * Falsos positivos cerrados (14/10/2026, regresión Allianz/Occident): «no cuenta con alarma» (el «nº» exige º/°/«o.»),
- * «Oficina de la entidad mediadora» (entre entidad y oficina solo separadores, ≤20) y «accc» (`ccc` como palabra; el
- * camelCase y `_` se separan antes: `numCCC`, `num_ccc` siguen casando).
- */
-export const RE_CAMPO_CUENTA_BANCARIA = /iban|\bbic\b|swift|\bccc\b|cuenta[\s_.-]*(?:bancaria|corriente)|cuenta[\s_.-]*cliente|(?:numero|num|nro)[\s_.º-]*(?:de[\s_-]*)?cuenta|\bn\.?\s*(?:[º°]|o\.)\s*(?:de\s*)?cuenta\b|^cuenta$|domiciliacion|domiciliar|entidad[^a-z]{0,20}oficina|oficina[^a-z]{0,20}entidad|digito[\s_-]*de[\s_-]*control/
-/** Motivo legible de la frontera (va al log y al error del flujo determinista, con la etiqueta del campo). */
-export const MOTIVO_FRONTERA_CUENTA = 'frontera de emisión: el portal pide cuenta bancaria'
-const sinTildes = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
-/** La primera descripción de un control que casa con {@link RE_CAMPO_CUENTA_BANCARIA} (tal cual, recortada), o `null`. Pura. */
-export function senalCuentaBancaria(descripciones: readonly (string | null | undefined)[]): string | null {
-  for (const d of descripciones) if (typeof d === 'string' && d !== '' && RE_CAMPO_CUENTA_BANCARIA.test(sinTildes(d.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ')))) return d.replace(/\s+/g, ' ').trim().slice(0, 80)
-  return null
-}
-
 const RE_OTP = /\botp\b|\bsms\b|codigo (?:de )?(?:verificacion|seguridad|confirmacion|acceso)|clave de un solo uso|one.?time|doble factor|segundo factor|\b2fa\b|autenticacion reforzada|verificacion en dos pasos/
 const RE_CAPTCHA = /captcha|no soy un robot|i'?m not a robot|verifica que eres humano|desafio de seguridad/
 /** Títulos de pantalla de emisión. Solo TÍTULOS: «Contratación» como pestaña futura o «Forma de pago» como desplegable de
  *  periodicidad aparecen en pantallas de tarificar y no son parada. */
-const RE_TITULO_EMISION = /\brevision\b|forma de pago|domiciliacion|\biban\b|cuenta bancaria|\bfirma\b|firmar|\bemitir\b|emision|contrat|formaliz|\bgrabar\b|archivar|datos (?:de|para) (?:la )?emision|resumen de (?:la )?contratacion|pago con tarjeta/
-/** Campos que solo existen en una pantalla de emisión/pago (por etiqueta/name/id). */
-const RE_CAMPO_EMISION = /\biban\b|cuenta bancaria|numero de cuenta|\bccc\b|tarjeta de credito|\bcvv\b|\bcvc\b|caducidad de la tarjeta|firma digital|firma manuscrita/
+const RE_TITULO_EMISION = /\brevision\b|forma de pago|domiciliacion|\biban\b|cuenta bancaria|datos bancarios|\bfirma\b|firmar|\bemitir\b|emision|contrat|formaliz|\bgrabar\b|archivar|datos (?:de|para) (?:la )?emision|resumen de (?:la )?contratacion|pago con tarjeta/
+/** Campos de pago/firma que solo existen en emisión (por etiqueta/name/id). Los BANCARIOS (IBAN, cuenta, SWIFT…) viven en
+ *  `CAMPOS_BANCARIOS` (acciones-portal.ts, fuente única) y se miran con `fronteraEmisionPorCampos`. */
+const RE_CAMPO_EMISION = /tarjeta de credito|\bcvv\b|\bcvc\b|caducidad de la tarjeta|firma digital|firma manuscrita/
 
 /** Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El
  *  inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaBancaria`) en cada pulsación. */
@@ -985,19 +969,21 @@ export function detectarParada(inv: InventarioDom): Parada | null {
   }
   const textos: string[] = []
   const titulos: string[] = []
+  /** Descripciones CRUDAS de los controles (la frontera bancaria separa camelCase/`_` antes de normalizar). */
   const campos: string[] = []
   for (const m of inv.marcos) {
     titulos.push(...(m.titulos ?? []).map(plano))
     for (const el of m.elementos) {
-      const desc = descripcionesElemento(el).map(plano)
-      textos.push(...desc)
-      if (esControlFrontera(el)) {
-        campos.push(...desc)
-        // Antes que nada: la frontera de emisión (cuenta bancaria) manda sobre CAPTCHA/OTP y títulos.
-        const cuenta = senalCuentaBancaria(descripcionesElemento(el))
-        if (cuenta !== null) return { motivo: 'cerca_de_emision', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)`.slice(0, 120), detalle: 'frontera_cuenta_bancaria' }
-      }
+      const desc = descripcionesElemento(el)
+      textos.push(...desc.map(plano))
+      if (esControlFrontera(el)) campos.push(...desc)
     }
+  }
+  // Antes que nada: la frontera de emisión (cuenta bancaria) manda sobre CAPTCHA/OTP y títulos.
+  const banco = fronteraEmisionPorCampos(campos)
+  if (banco.frontera) {
+    const senal = `${MOTIVO_FRONTERA_CUENTA} — ${banco.campoBancario}${banco.fechaEfecto ? ' + fecha de efecto' : ''} («${(banco.etiqueta ?? '').slice(0, 40)}»)`
+    return { motivo: 'cerca_de_emision', senal, detalle: 'frontera_cuenta_bancaria' }
   }
   const todos = [...titulos, ...textos]
   const t1 = todos.find((t) => RE_CAPTCHA.test(t))
@@ -1006,7 +992,7 @@ export function detectarParada(inv: InventarioDom): Parada | null {
   if (t2 !== undefined) return { motivo: 'otp', senal: t2.slice(0, 60) }
   const t3 = titulos.find((t) => RE_TITULO_EMISION.test(t))
   if (t3 !== undefined) return { motivo: 'cerca_de_emision', senal: t3.slice(0, 60) }
-  const t4 = campos.find((t) => RE_CAMPO_EMISION.test(t))
+  const t4 = campos.map(plano).find((t) => RE_CAMPO_EMISION.test(t))
   if (t4 !== undefined) return { motivo: 'cerca_de_emision', senal: t4.slice(0, 60) }
   return null
 }

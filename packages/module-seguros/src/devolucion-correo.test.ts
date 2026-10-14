@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { clasificarMotivoDevolucion, leerCorreoDevolucion, normalizarIdRecibo } from './devolucion-correo.ts'
+import { clasificarMotivoDevolucion, elegirReciboEmparejado, leerCorreoDevolucion, normalizarIdRecibo } from './devolucion-correo.ts'
 
 // Textos copiados de los correos reales (28/09/2026) con números, nombres e IBAN cambiados.
 
@@ -97,6 +97,9 @@ test('no es de devoluciones → null (otro asunto, otra compañía, un dominio p
 test('normalizarIdRecibo y clasificarMotivoDevolucion', () => {
   assert.equal(normalizarIdRecibo('08808116169'), normalizarIdRecibo('8808116169'))
   assert.equal(normalizarIdRecibo('0'), '0')
+  // Sin sufijo, intacto: solo caen los ceros de la izquierda.
+  assert.equal(normalizarIdRecibo(' 0690000000001 '), '690000000001')
+  assert.equal(normalizarIdRecibo('8808116169'), '8808116169')
   assert.equal(clasificarMotivoDevolucion('RR01 cuenta'), 'cuenta')
   assert.equal(clasificarMotivoDevolucion('AM04'), 'fondos')
   assert.equal(clasificarMotivoDevolucion('MD06'), 'cliente_rechaza')
@@ -261,4 +264,26 @@ test('esCorreoDevolucion: decide por remitente + asunto, nunca por el cuerpo', (
   assert.equal(esCorreoDevolucion({ remitente: 'comunicacion.mediadores@allianz.es', asunto: 'Novedades de octubre' }), false)
   assert.equal(esCorreoDevolucion({ remitente: 'mediadores@occidentinforma.com', asunto: 'Siniestro Diversos 43000001 X' }), false)
   assert.equal(esCorreoDevolucion({ remitente: 'alguien@gmail.com', asunto: 'Recibos devueltos de banco' }), false)
+})
+
+test('🪤 Occident: CIMA guarda el recibo con sufijo `-<letra>` y el correo sin él; deben casar', () => {
+  // CIMA (C0468): `400000001-K`; el aviso de devolución de Occident: `400000001`.
+  assert.equal(normalizarIdRecibo('400000001-K'), normalizarIdRecibo('400000001'))
+  assert.equal(normalizarIdRecibo('0400000001-A'), '400000001')
+  // Solo UNA letra mayúscula al FINAL tras guion: lo demás no se toca.
+  assert.equal(normalizarIdRecibo('400000001-AB'), '400000001-AB')
+  assert.equal(normalizarIdRecibo('400000001-k'), '400000001-k')
+  assert.equal(normalizarIdRecibo('40-A0000001'), '40-A0000001')
+})
+
+test('emparejado: uno casa, ninguno, o AMBIGUO (dos recibos distintos con el mismo nº normalizado) — nunca se elige uno', () => {
+  const a = { idRecibo: '400000001-A', reciboId: 'r1' }
+  const b = { idRecibo: '400000001-B', reciboId: 'r2' }
+  assert.deepEqual(elegirReciboEmparejado([]), { estado: 'ninguno' })
+  assert.deepEqual(elegirReciboEmparejado([a]), { estado: 'unico', fila: a })
+  assert.deepEqual(elegirReciboEmparejado([a, b]), { estado: 'ambiguo' })
+  // Sin sufijo frente a con sufijo: también son dos recibos distintos.
+  assert.deepEqual(elegirReciboEmparejado([a, { idRecibo: '0400000001', reciboId: 'r3' }]), { estado: 'ambiguo' })
+  // La MISMA fila repetida (mismo id_recibo) no es ambigüedad: se queda la primera (la más reciente).
+  assert.deepEqual(elegirReciboEmparejado([a, { ...a, reciboId: 'r9' }]), { estado: 'unico', fila: a })
 })
