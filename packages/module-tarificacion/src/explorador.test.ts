@@ -207,8 +207,13 @@ describe('catálogo y resolución de datos', () => {
       expect(v).toContain('00000000T')
       expect(v).toContain('09/05/2004')
     })
-    it('no hay uso, ámbito, clase de permiso ni compañía anterior inventados', () => {
-      expect(claves().filter((k) => /uso|ambito|permiso|compania/.test(k))).toEqual([])
+    it('no hay uso, ámbito ni compañía anterior inventados', () => {
+      expect(claves().filter((k) => /uso|ambito|compania/.test(k))).toEqual([])
+    })
+    it('clase del permiso: «B» fijo (decisión de negocio), con y sin datos reales, y la IA ve la pista', () => {
+      expect(resolverDato('conductor.clase_permiso', { ...auto, conDatosReales: false })).toEqual({ ok: true, valor: 'B' })
+      expect(resolverDato('conductor.clase_permiso', { ...auto, conDatosReales: true })).toEqual({ ok: true, valor: 'B' })
+      expect(catalogoParaIA('auto').find((d) => d.clave === 'conductor.clase_permiso')).toMatchObject({ pista: 'B' })
     })
   })
 

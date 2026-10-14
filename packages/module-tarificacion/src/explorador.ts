@@ -151,7 +151,7 @@ const DATOS_COMUNIDADES: readonly DatoCatalogo[] = [
 /**
  * Riesgo de AUTO (Mapfre NSEI, 14/10/2026): rutas = `FormularioAuto` (formulario-auto.ts). Sin valor sintético lo que puede
  * ser de una persona real (NIF, matrícula) o que la IA no puede inventar sin falsear la tarifa (marca, modelo, siniestros).
- * FUERA a propósito (sin origen claro en FormularioAuto): uso del vehículo, ámbito de circulación, clase de permiso,
+ * FUERA a propósito (sin origen claro en FormularioAuto): uso del vehículo, ámbito de circulación,
  * compañía anterior (nombre) y NIF del conductor (si es otra persona que el tomador no consta). Nada de cuenta bancaria.
  */
 const DATOS_AUTO: readonly DatoCatalogo[] = [
@@ -163,6 +163,8 @@ const DATOS_AUTO: readonly DatoCatalogo[] = [
   D({ clave: 'vehiculo.cilindrada_cc', descripcion: 'Cilindrada en cc', tipo: 'numero', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.cilindradaCc' }),
   D({ clave: 'conductor.fecha_nacimiento', descripcion: 'Fecha de nacimiento del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/1980', rutaRiesgo: 'conductor.fechaNacimiento' }),
   D({ clave: 'conductor.fecha_carne', descripcion: 'Fecha del carné de conducir del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/2000', rutaRiesgo: 'conductor.fechaCarne' }),
+  // Valor fijo de NEGOCIO (Alberto, 14/10/2026): turismos = siempre «B». Sin `rutaRiesgo` → también con datos reales sale este valor.
+  D({ clave: 'conductor.clase_permiso', descripcion: 'Clase del permiso de conducir (turismo: siempre B)', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'B' }),
   D({ clave: 'historial.siniestros_5_anios', descripcion: 'Siniestros con culpa (RC) en los últimos 5 años', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '0', rutaRiesgo: 'siniestrosUltimos5Anios' }),
   D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
 ]

@@ -112,8 +112,13 @@
 | `conductor.fecha_carne` | — | `fechaExpedicion` (`app-conductor-habitual`) |
 | `historial.siniestros_5_anios` | — | «Siniestros RC 5 últimos años» (`siniestros`) |
 | `historial.anios_asegurado` | — | `tiempoAntComp`: lo calcula el portal, llega DESHABILITADO; nunca se escribe |
+| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): valor fijo «B» |
 
-Fuera del catálogo a propósito (`DATOS_AUTO`): uso, ámbito de circulación y clase de permiso (`mat-select`; Mapfre: `uso`, `ambitoCirculacion`, `codigoTipoLicencia`) y compañía anterior (`companiaAnterior`).
+Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (`mat-select`; Mapfre: `uso`, `ambitoCirculacion`) y compañía anterior (`companiaAnterior`).
+
+**Decisiones de Alberto (14/10/2026) para Auto, válidas para TODAS las compañías:**
+- «Clase» del permiso de conducir = siempre **«B»** en turismos (`conductor.clase_permiso`, valor fijo de negocio; sale también con datos reales).
+- Paso «Coberturas»: se dejan las coberturas **POR DEFECTO**; el bot no cambia nada ahí, solo avanza.
 
 ### Hogar
 
@@ -229,7 +234,7 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso, ámbito de circulación y 
   Continuar → precio.
 - **Resuelto por esta vista:** cómo se elige el vehículo (radio por fila + «Aceptar») y la búsqueda del tomador por NIF (lupa).
 - **PENDIENTE (Alberto):**
-  - Valor habitual de «Clase» del permiso de conducir.
-  - Qué se elige en «Coberturas».
+  - ~~Valor habitual de «Clase» del permiso de conducir.~~ **RESUELTO (14/10/2026):** siempre «B» en turismos.
+  - ~~Qué se elige en «Coberturas».~~ **RESUELTO (14/10/2026):** coberturas por defecto; el bot solo avanza.
   - Botón exacto de guardar en «Proyectos».
   - Cómo sale el PDF.
