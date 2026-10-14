@@ -22,17 +22,17 @@ function cuerpoFormEdicion(src: string): string {
 
 test('FormEdicion no manda fechaFinVigencia sin reprogramar (ni lleva campo de fecha)', () => {
   const f = cuerpoFormEdicion(leer('cliente', '[id]', 'OportunidadesCliente.tsx'))
-  if (/fechaFinVigencia/.test(f)) assert.match(f, /reprogramar/, 'FormEdicion manda fechaFinVigencia sin reprogramar: la llamada quedaría en la fecha vieja')
+  assert.doesNotMatch(f, /fechaFinVigencia/, 'FormEdicion manda fechaFinVigencia: la llamada quedaría en la fecha vieja (el vencimiento se cambia con EditarVencimiento)')
   assert.doesNotMatch(f, /type="date"/, 'FormEdicion vuelve a tener un campo de fecha: el vencimiento se cambia con EditarVencimiento')
 })
 
 test('la tarjeta de oportunidad monta EditarVencimiento, visible y fuera de «Gestionar»', () => {
   const src = leer('cliente', '[id]', 'OportunidadesCliente.tsx')
   assert.match(src, /<EditarVencimiento\b/)
-  const resumen = src.indexOf('<Resumen o={o} />')
-  const montaje = src.indexOf('<EditarVencimiento')
-  const form = src.indexOf('<FormEdicion')
-  assert.ok(resumen >= 0 && montaje > resumen && montaje < form, 'el botón debe ir pegado a Resumen, antes de FormEdicion')
+  const form = cuerpoFormEdicion(src)
+  assert.doesNotMatch(form, /<EditarVencimiento[\s/]/,'EditarVencimiento no debe estar dentro de FormEdicion («Gestionar»)')
+  const fuera = src.replace(form, '')
+  assert.match(fuera, /<EditarVencimiento\b/, 'EditarVencimiento debe montarse fuera de FormEdicion, en la tarjeta')
 })
 
 test('EditarVencimiento manda siempre reprogramar', () => {
