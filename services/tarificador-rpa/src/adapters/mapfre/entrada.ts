@@ -16,6 +16,8 @@
 // Pulsar SOLO con `ctx.pulsar()` (guard de emisión): la pestaña y la opción «Automóviles». «Tarificación y Emisión Rápida» es NAVEGACIÓN (entra al formulario) y
 // casa con `emisi`: se pulsa por `ctx.pulsarEnlaceEntrada` (excepción EXACTA del guard, solo en la entrada de Mapfre); el
 // guard sigue bloqueando emitir/contratar. Textos EXACTOS (sin distinguir mayúsculas; el DOM puede pintarlas por CSS).
+// Acotado a la tarjeta con fallback (14/10/2026, 2ª exploración: el acotado no casó con el DOM real): si la tarjeta no da el enlace
+// en ~3 s, se busca el texto EXACTO en toda la página y solo se acepta con EXACTAMENTE 1 coincidencia visible.
 // TODO(captura): sin DOM real de los menús; se localizan por rol o texto visible. Fail-closed: no aparece → ErrorMapaIncompleto
 // CON inventario de estructura (14/10/2026): el runner lo captura de TODAS las pestañas para mapear el menú sin otra grabación.
 // «Automóviles» sale dos veces (opción del menú y título de la página): se pulsa la del menú, visible solo tras abrir el desplegable.
@@ -39,6 +41,8 @@ export const SEL_FORMULARIO_NSEI = 'app-datos-basicos'
 
 const ESPERA_MENU_MS = 15_000
 const ESPERA_FORMULARIO_MS = 30_000
+/** Espera del enlace DENTRO de la tarjeta antes de caer a la búsqueda por toda la página. */
+const ESPERA_TARJETA_MS = 3_000
 
 /** `^\s*texto\s*$` insensible a mayúsculas y a espacios entre palabras; nunca «contiene». */
 export function etiquetaExacta(t: string): RegExp {
@@ -80,6 +84,48 @@ function tarjetaDe(page: Page, titulo: string, tituloPagina: Locator): Locator {
     .last()
 }
 
+/** Control pulsable (<a>/<button>/role link|button) que contiene el texto EXACTO, en toda la página (sin acotar). */
+function enlacesExactos(page: Page, texto: string): Locator {
+  const exacto = etiquetaExacta(texto)
+  return page
+    .getByText(exacto)
+    .locator('xpath=ancestor-or-self::*[self::a or self::button or @role="link" or @role="button"][1]')
+    .or(page.getByRole('link', { name: exacto }))
+    .filter({ visible: true })
+}
+
+/** Descripción SIN datos personales (etiqueta, rol, clase, texto del enlace) de los controles que mencionan «Tarificación». */
+async function describirCandidatos(page: Page): Promise<string> {
+  const filas = await page
+    .locator('a, button, [role=link], [role=button]')
+    .filter({ hasText: /tarificaci/i })
+    .filter({ visible: true })
+    .evaluateAll((els) =>
+      els.slice(0, 8).map((e) => `${e.tagName.toLowerCase()}${e.getAttribute('role') ? `[${e.getAttribute('role')}]` : ''}.${(e.getAttribute('class') ?? '').slice(0, 40)}«${(e.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60)}»`),
+    )
+    .catch(() => [] as string[])
+  return filas.length ? `; candidatos: ${filas.join(' | ')}` : ''
+}
+
+/**
+ * «Tarificación y Emisión Rápida»: 1) dentro de la tarjeta «Turismos y Motos» (espera corta); 2) si el acotado no casa con
+ * el DOM, en TODA la página por texto exacto, y solo si hay EXACTAMENTE una coincidencia visible (0 o ≥2 → no se adivina).
+ */
+async function enlaceDeEntrada(page: Page, tituloPagina: Locator, menuMs: number): Promise<Locator> {
+  const que = `enlace en la tarjeta «${TARJETA_TURISMOS_Y_MOTOS}»`
+  try {
+    return await localizar(tarjetaDe(page, TARJETA_TURISMOS_Y_MOTOS, tituloPagina), ['link'], ENLACE_TARIFICACION_RAPIDA, que, Math.min(ESPERA_TARJETA_MS, menuMs), true)
+  } catch (e) {
+    if (!(e instanceof ErrorMapaIncompleto)) throw e
+  }
+  const todos = enlacesExactos(page, ENLACE_TARIFICACION_RAPIDA)
+  await todos.first().waitFor({ state: 'visible', timeout: menuMs }).catch(() => undefined)
+  const n = await todos.count().catch(() => 0)
+  if (n === 1) return todos.first()
+  const detalle = n === 0 ? 'ninguna coincidencia exacta visible' : `${n} coincidencias exactas visibles, ambiguo`
+  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en toda la página: ${detalle}${await describirCandidatos(page)}) de wmediadores`, true)
+}
+
 /**
  * Home de wmediadores (ya con sesión) → pestaña nueva con el formulario NSEI. Devuelve la PESTAÑA NUEVA: la exploración
  * debe continuar en ella (la original queda abierta). Sin `ctx.pulsar` fuera de la pestaña y la opción «Automóviles».
@@ -103,9 +149,9 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
     throw new ErrorMapaIncompleto(`el título de la página «${OPCION_AUTOMOVILES}» de wmediadores`, true)
   }
   await localizar(page, [], TARJETA_TURISMOS_Y_MOTOS, 'tarjeta (solo se comprueba)', menuMs)
-  // El enlace, acotado a la tarjeta «Turismos y Motos»: otras tarjetas traen enlaces parecidos.
-  const tarjeta = tarjetaDe(page, TARJETA_TURISMOS_Y_MOTOS, titulo)
-  const enlace = await localizar(tarjeta, ['link'], ENLACE_TARIFICACION_RAPIDA, `enlace en la tarjeta «${TARJETA_TURISMOS_Y_MOTOS}»`, menuMs, true)
+  // El enlace: primero acotado a la tarjeta «Turismos y Motos» (otras tarjetas traen enlaces parecidos); si el DOM real no
+  // casa con el acotado, cae a la página entera pero SOLO con una coincidencia exacta única.
+  const enlace = await enlaceDeEntrada(page, titulo, menuMs)
 
   // El listener va ANTES del clic: la pestaña se abre durante él.
   const nueva = page.context().waitForEvent('page', { timeout: menuMs })
