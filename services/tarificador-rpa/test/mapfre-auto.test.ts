@@ -231,6 +231,7 @@ const ctxFalso = (registro: string[] = []) => ({
   pulsarEnlaceEntrada: async () => { registro.push('entrada') },
   confirmarVehiculoMapfre: async () => { registro.push('vehiculo') },
   continuarMapfre: async (_p: Page, paso: string) => { registro.push(`continuar:${paso}`) },
+  buscarTomadorMapfre: async () => { registro.push('lupa') },
 }) as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
 
 test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de navegar; otro ramo → datos', async () => {

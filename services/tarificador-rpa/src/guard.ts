@@ -431,6 +431,8 @@ async function descripcion(boton: Locator): Promise<(string | null)[]> {
       // AngularJS (14/10/2026, wmediadores: las tarjetas son `div[ng-click]`): su manejador cuenta como un onclick.
       h.getAttribute('ng-click'),
       h.getAttribute('data-ng-click'),
+      // Tooltip de Angular Material (14/10/2026, lupa de Mapfre): un botón de solo icono se nombra por él. Solo AÑADE bloqueo.
+      h.getAttribute('mattooltip'),
       // ANCESTROS cercanos (revisión 14/10/2026): un clic BURBUJEA; el manejador del padre (onclick/ng-click) o el href del
       // <a> que envuelve al control también se ejecutan. Hasta 3 niveles (atravesando el host de un shadow DOM).
       ...(() => {
@@ -930,6 +932,97 @@ export async function pulsarContinuarMapfre(
   } finally {
     page.off('dialog', alDialogo)
   }
+}
+
+// ─────────── Mapfre NSEI · LUPA del tomador en «Datos básicos» (14/10/2026, v0.6.0) ───────────
+// La lupa LANZA UNA BÚSQUEDA (lee el tomador por su NIF/CIF): no emite, no graba, no contrata. Sin DOM grabado: el control lo
+// localiza el adaptador por la capa común (fijo junto al campo NIF → aprendido → IA → atasco F2) y SOLO se pulsa aquí.
+// RIESGO del icono: una lupa suele no tener texto visible. Se acepta, en este orden: el texto VISIBLE (sin la ligadura de
+// `mat-icon`), ENTERO, de `TEXTOS_BUSCAR_TOMADOR`; si no hay texto visible, aria-label/title/mattooltip (todos los que haya,
+// cada uno ENTERO de la lista); y si tampoco hay ninguno, un icono de lupa (`esIconoBusqueda`). Un control con texto o
+// etiqueta que no sea de búsqueda NO pasa aunque lleve el icono («Buscar y contratar» con lupa → fuera, además de por
+// `comprobarBoton`). Lo que el clic pida a la red sigue con el guard de siempre (sin ventana abierta: emitir/contratar → abortado).
+
+/** Textos (minúsculas, sin tildes) que nombran la lupa. MISMA lista que `ACCIONES_PERMITIDAS.buscar_tomador` de formador.ts (test). */
+export const TEXTOS_BUSCAR_TOMADOR: readonly string[] = Object.freeze(['buscar', 'search', 'lupa', 'buscar tomador', 'buscar por nif', 'buscar nif'])
+/** Nombres de icono de lupa (ligadura de `mat-icon`, `fonticon`/`svgicon`/`data-mat-icon-name`, clase `fa-search`…), por TOKEN entero. */
+export const ICONOS_BUSQUEDA: readonly string[] = Object.freeze(['search', 'lupa', 'magnify', 'magnifier', 'magnifying'])
+
+const textoPlano = (t: string | null | undefined) => sinTildesMayus(t).toLowerCase()
+
+/** ¿La descripción de icono (texto de `mat-icon` + atributos + clases) nombra una lupa? Por token entero. PURA. */
+export function esIconoBusqueda(icono: string | null | undefined): boolean {
+  if (typeof icono !== 'string') return false
+  return icono.toLowerCase().split(/[^a-z0-9]+/).some((t) => ICONOS_BUSQUEDA.includes(t))
+}
+
+/** Lo que se mira de un control para decidir si es la LUPA (nunca valores de campos). */
+export type ControlBusqueda = { textoSinIcono: string | null; ariaLabel: string | null; title: string | null; tooltip: string | null; icono: string | null }
+
+/** ¿Es la lupa de búsqueda? Ver el bloque de arriba (texto visible → etiquetas accesibles → icono). PURA. */
+export function esControlBuscarTomador(c: ControlBusqueda): boolean {
+  const texto = textoPlano(c.textoSinIcono)
+  if (texto !== '') return TEXTOS_BUSCAR_TOMADOR.includes(texto)
+  const etiquetas = [c.ariaLabel, c.title, c.tooltip].map(textoPlano).filter((t) => t !== '')
+  if (etiquetas.length > 0) return etiquetas.every((t) => TEXTOS_BUSCAR_TOMADOR.includes(t))
+  return esIconoBusqueda(c.icono)
+}
+
+/** Ámbito del paso 1 de NSEI: la lupa tiene que estar DENTRO (no la del conductor de «Figuras» ni la del buscador de vehículos). */
+export const SEL_DATOS_BASICOS_MAPFRE = 'app-datos-basicos'
+
+/**
+ * El ÚNICO camino para pulsar la LUPA del tomador en Mapfre NSEI. Exige, en este orden y sin atajos:
+ *   1. guard limpio, todas las ventanas de red cerradas; una vez por trabajo y ANTES del «Continuar» del paso 1;
+ *   2. sin campo de cuenta bancaria visible y sin diálogo abierto;
+ *   3. paso ACTIVO del stepper = «Datos básicos» (no reconocible → hueco con inventario; «Contratación» → bloqueo);
+ *   4. EXACTAMENTE un control visible, habilitado, dentro de `app-datos-basicos` y fuera de diálogos;
+ *   5. `comprobarBoton` sobre su descripción (texto, aria-label, title, mattooltip, ids, onclick/ng-click y ancestros) y que
+ *      sea la lupa (`esControlBuscarTomador`).
+ * Pulsa UNA vez. No abre ninguna ventana de red. El resultado (tomador cargado, diálogo, «no existe») lo espera el adaptador.
+ */
+export async function pulsarBuscarTomadorMapfre(page: Page, guard: GuardEmision, boton: Locator): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'lupa del tomador de Mapfre con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = 'mapfre:buscar_tomador'
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre ya se usó en este trabajo')
+  if (usados.has('mapfre:continuar:datosBasicos')) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre fuera de orden (ya se salió de «Datos básicos»)')
+  await exigirSinCuentaBancaria(page)
+  if ((await page.locator(SEL_DIALOGO_ABIERTO_MAPFRE).locator('visible=true').count()) > 0) throw new ErrorTarificador('portal', 'mapfre: lupa del tomador con un diálogo abierto')
+  const activo = await pasoActivoMapfre(page)
+  if (activo === null) throw new ErrorMapaGuardMapfre(`el paso activo del stepper de NSEI (no hay exactamente una cabecera «${SEL_PASO_ACTIVO_MAPFRE}» visible)`)
+  if (activo.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: el paso activo es «Contratación»')
+  if (!activo.includes('DATOS BASICOS')) throw new EmisionBloqueadaError('fase', 'la lupa del tomador de Mapfre solo en «Datos básicos»')
+  if ((await boton.count()) !== 1 || !(await boton.isVisible())) throw new EmisionBloqueadaError('boton', 'lupa del tomador: no hay exactamente un control visible')
+  const ctl = await boton.evaluate((el, s) => {
+    const h = el as HTMLElement & { disabled?: unknown }
+    const ICONO = 'mat-icon, [data-mat-icon-name], [fonticon], [svgicon], i[class], svg'
+    const iconos = h.matches(ICONO) ? [h] : Array.from(h.querySelectorAll(ICONO))
+    const icono = iconos
+      .map((i) => [i.tagName === 'MAT-ICON' ? i.textContent : '', i.getAttribute('data-mat-icon-name'), i.getAttribute('fonticon'), i.getAttribute('svgicon'), i.getAttribute('class')].filter(Boolean).join(' '))
+      .join(' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+    const clon = h.cloneNode(true) as HTMLElement
+    clon.querySelectorAll('mat-icon').forEach((x) => x.remove())
+    return {
+      dentro: h.closest(s.ambito) !== null,
+      enDialogo: h.closest(s.dialogo) !== null,
+      deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
+      textoSinIcono: h.tagName === 'MAT-ICON' ? '' : (clon.textContent ?? '').replace(/\s+/g, ' ').trim(),
+      ariaLabel: h.getAttribute('aria-label'),
+      title: h.getAttribute('title'),
+      tooltip: h.getAttribute('mattooltip'),
+      icono: icono || null,
+    }
+  }, { ambito: SEL_DATOS_BASICOS_MAPFRE, dialogo: SEL_DIALOGO_ABIERTO_MAPFRE })
+  if (!ctl.dentro || ctl.enDialogo) throw new EmisionBloqueadaError('boton', 'la lupa del tomador tiene que estar en «Datos básicos», fuera de diálogos')
+  if (ctl.deshabilitado) throw new ErrorTarificador('portal', 'mapfre: la lupa del tomador está deshabilitada')
+  comprobarBoton(await descripcion(boton))
+  if (!esControlBuscarTomador(ctl)) throw new EmisionBloqueadaError('boton', 'lupa del tomador: el control no es una lupa de búsqueda')
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
 }
 
 /**

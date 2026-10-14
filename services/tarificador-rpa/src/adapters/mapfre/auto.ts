@@ -18,12 +18,13 @@
 // `consultarVehiculoPorMatricula` teclea la matrícula, lee la fila (sin matrícula ni bastidor) y la confirma SOLO por
 // `ctx.confirmarVehiculoMapfre` (función guardada de guard.ts: la PRIMERA fila, y solo si su matrícula es la del riesgo,
 // comparada dentro del guard). Devuelve `VehiculoConfirmado` (module-tarificacion), que alimentará a los demás bots (fase siguiente).
-// NIF del tomador (paso 1): lo pone ASEGURA desde la ficha (`documentoTomador`); campo mapeado, LUPA sin DOM grabado.
-// «Continuar» 1 → 2 → 3 por `ctx.continuarMapfre` (guard.ts). Lo que depende de pantallas NO mapeadas (lupa, mat-select)
-// es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura en la primera prueba real.
+// NIF del tomador (paso 1): lo pone ASEGURA desde la ficha (`documentoTomador`); campo mapeado. La LUPA (sin DOM grabado) va
+// por la capa común (fijo → aprendido → IA → atasco F2) y se pulsa por `ctx.buscarTomadorMapfre` (guard.ts) — v0.6.0.
+// «Continuar» 1 → 2 → 3 por `ctx.continuarMapfre` (guard.ts). Lo que depende de pantallas NO mapeadas (mat-select sin valor,
+// diálogo tras la lupa) es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura.
 //
 // 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`, ni `ctx.pulsar`): solo lee y rellena campos de texto, siempre
-// tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo y «Continuar», por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Generar
+// tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo, la lupa y «Continuar», por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Generar
 // Proyecto» / «Ir a generar proyecto» (crean un nº de proyecto REAL en Mapfre y generan documentación), el «Aceptar» de
 // documentos, el «Aceptar Obs. y Cláusulas», el «Aceptar» de descuentos/verificación, ni la casilla de la cláusula de
 // declaración. «Continuar» del paso 3 NO es un avance neutro: lanza «Verificando controles técnicos» + «Calculando las
@@ -49,7 +50,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
-import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
+import { campoConRespaldo, conRespaldoIA, describirElemento, registrarAtasco, validarAccion, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
 
@@ -132,8 +133,10 @@ export const SEL_RESUMEN_VEHICULO = {
   pares: 'app-datos-vehiculo mat-expansion-panel-header ~ div div > div',
 } as const
 
-/** Paso 1 · Datos básicos: tomador y compañía. El NIF se teclea y se busca con la lupa (clic → hueco). */
+/** Paso 1 · Datos básicos: tomador y compañía. El NIF se teclea y se busca con la lupa (capa común + `ctx.buscarTomadorMapfre`). */
 export const SEL_TOMADOR = {
+  /** Ámbito del paso 1 (la lupa tiene que estar dentro). */
+  ambito: 'app-datos-basicos',
   documento: 'app-datos-basicos input[name="codigoDocumento"]',
   razonSocial: 'app-datos-basicos input[name="razonSocial"]',
 } as const
@@ -512,28 +515,117 @@ const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'>, pas
   return ctx.continuarMapfre(nsei, paso)
 }
 
+// ───────────────────────── paso 1: LUPA del tomador (v0.6.0, 14/10/2026) ─────────────────────────
+// Sin DOM grabado de la lupa (la grabación empieza con el tomador ya cargado). Antes era un hueco que mataba el trabajo SIN
+// consultar a la IA ni avisar (trabajo d7987f90). Ahora va por la CAPA COMÚN: fijo (el único botón/icono del `mat-form-field`
+// del NIF, validado como lupa) → aprendido → IA (`buscar_tomador` de ACCIONES_PERMITIDAS) → ATASCO F2 (candidatos + Telegram
+// desde asegura). Se pulsa SOLO por `ctx.buscarTomadorMapfre` (guard.ts). Lo resuelto se confirma como aprendido solo cuando
+// el «Continuar» del paso 1 llega a «Objeto asegurado» (el paso posterior lo valida).
+
+/** Hueco de la lupa (portal, con inventario). Mensaje sin NIF. */
+const HUECO_LUPA = 'la lupa de búsqueda del tomador por NIF/CIF del paso 1 «Datos básicos» (ni el selector fijo, ni lo aprendido, ni la IA la localizaron)'
+
+/** Petición a la capa común para la lupa (descripción para la IA, sin datos del cliente). */
+export const PETICION_LUPA_TOMADOR = Object.freeze({
+  clave: 'buscar_tomador',
+  tipo: 'accion' as const,
+  descripcion: 'Botón o icono de LUPA (buscar) junto al campo del NIF/CIF del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor ni el buscador de vehículos). Solo lanza la búsqueda; NUNCA un botón de emisión, contratación, grabación ni pago.',
+})
+
 /**
- * HUECO · la LUPA que busca al tomador por NIF/CIF en el paso 1. Sin DOM grabado del control (la grabación empieza con el
- * tomador ya cargado; Alberto la describió, sin selector). Para ANTES de teclear el NIF: tecleado y sin buscar, quedaría en
- * la pantalla de la evidencia. Pide el inventario de estructura (que ya recoge `mat-icon`) para mapearla en la 1.ª prueba.
+ * Selector FIJO de la lupa: el ÚNICO botón visible del `mat-form-field` del campo NIF (o, sin botones, el único `mat-icon`
+ * visible), y solo si `validarAccion(…, 'buscar_tomador')` lo da por lupa. Si no → hueco de selector (la capa común sigue).
  */
-export async function buscarTomadorPorNif(_nsei: Page, _campo: Locator): Promise<void> {
-  throw new ErrorMapaIncompleto('la lupa de búsqueda del tomador por NIF/CIF del paso 1 «Datos básicos» (sin DOM grabado; el campo NIF sí está mapeado)', true)
+export async function lupaFijaTomador(campo: Locator): Promise<Locator> {
+  const caja = campo.locator('xpath=ancestor::mat-form-field[1]')
+  if ((await caja.count().catch(() => 0)) !== 1) throw new ErrorMapaIncompleto(HUECO_LUPA, true)
+  const botones = caja.locator('button, [role="button"]').locator('visible=true')
+  const nb = await botones.count()
+  const lista = nb > 0 ? botones : caja.locator('mat-icon').locator('visible=true')
+  const total = await lista.count()
+  if (total !== 1) throw new ErrorMapaIncompleto(HUECO_LUPA, true)
+  const d = await describirElemento(lista.first(), 1)
+  if (!d || !validarAccion(d, PETICION_LUPA_TOMADOR.clave).ok) throw new ErrorMapaIncompleto(HUECO_LUPA, true)
+  return lista.first()
+}
+
+const ESPERA_RESULTADO_TOMADOR_MS = 15_000
+const SEL_DIALOGO_NSEI = 'mat-dialog-container, [role="dialog"], [role="alertdialog"], app-matricula-dialog'
+/** Respuesta del portal cuando el NIF no está en su base (visto en la búsqueda del conductor, p09 de la grabación). */
+const RE_SIN_REGISTRO = /NO EXISTE NINGUN REGISTRO|NO SE HA(N)? ENCONTRADO|SIN RESULTADOS/
+
+export type ResultadoBusquedaTomador = 'cargado' | 'sin_registro' | 'dialogo' | 'sin_cambio'
+
+const plano = (t: string | null) => (t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
+const huellaDatosBasicos = (nsei: Page) => nsei.locator(SEL_TOMADOR.ambito).first().innerText({ timeout: 1_000 }).catch(() => null)
+const textoPagina = (nsei: Page) => nsei.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
+
+/**
+ * Tras pulsar la lupa: espera el RESULTADO sin pulsar nada. «no existe ningún registro» (nuevo en la página) → `sin_registro`;
+ * un diálogo visible → `dialogo` (selección de persona: NO se elige a ciegas); la sección «Datos básicos» cambia y se queda
+ * quieta → `cargado`; nada en `ms` → `sin_cambio`. Solo lectura; nunca devuelve texto de la página (lleva datos personales).
+ */
+export async function esperarResultadoBusquedaTomador(nsei: Page, antes: { huella: string | null; sinRegistro: boolean }, ms = ESPERA_RESULTADO_TOMADOR_MS): Promise<ResultadoBusquedaTomador> {
+  const hasta = Date.now() + ms
+  let previa: string | null = null
+  for (;;) {
+    if (!antes.sinRegistro && RE_SIN_REGISTRO.test(plano(await textoPagina(nsei)))) return 'sin_registro'
+    if ((await nsei.locator(SEL_DIALOGO_NSEI).locator('visible=true').count().catch(() => 0)) > 0) return 'dialogo'
+    const ahora = await huellaDatosBasicos(nsei)
+    if (ahora !== null && ahora !== antes.huella) {
+      if (ahora === previa) return 'cargado'
+      previa = ahora
+    }
+    if (Date.now() >= hasta) return 'sin_cambio'
+    await nsei.waitForTimeout(250)
+  }
+}
+
+/**
+ * LUPA del tomador (paso 1): localizarla por la capa común ANTES de teclear (si nadie la localiza, el NIF no queda en la
+ * pantalla de la evidencia y el trabajo se ATASCA con candidatos), teclear el NIF, pulsarla por la puerta guardada y esperar
+ * el resultado. Devuelve `confirmar` (lo aprendido/IA de la lupa), que el llamante invoca cuando el paso posterior valida.
+ */
+export async function buscarTomadorPorNif(nsei: Page, campo: Locator, nif: string, ctx: Pick<ContextoPortal, 'buscarTomadorMapfre' | 'formador'>, esperaMs = ESPERA_RESULTADO_TOMADOR_MS): Promise<{ confirmar: () => Promise<void> }> {
+  if (!ctx.buscarTomadorMapfre) throw new ErrorMapaIncompleto('la función guardada «lupa del tomador» de Mapfre en el contexto del runner')
+  const r = await conRespaldoIA(nsei, ctx.formador, () => lupaFijaTomador(campo), { ...PETICION_LUPA_TOMADOR })
+  // Lo aprendido o la IA pueden señalar una lupa válida FUERA del paso 1 (la del conductor): no se pulsa; atasco para Alberto.
+  if (!(await r.locator.evaluate((el, s) => el.closest(s) !== null, SEL_TOMADOR.ambito).catch(() => false))) {
+    await registrarAtasco(nsei, ctx.formador, { ...PETICION_LUPA_TOMADOR }).catch(() => undefined)
+    throw new ErrorMapaIncompleto(`${HUECO_LUPA}; lo señalado no está en «Datos básicos»`, true)
+  }
+  await comprobarCampo(campo)
+  await campo.fill(nif)
+  if ((await campo.inputValue()).trim().toUpperCase() !== nif.trim().toUpperCase()) throw new ErrorTarificador('portal', 'mapfre/auto: el portal no dejó fijado el NIF/CIF del tomador')
+  const antes = { huella: await huellaDatosBasicos(nsei), sinRegistro: RE_SIN_REGISTRO.test(plano(await textoPagina(nsei))) }
+  await ctx.buscarTomadorMapfre(nsei, r.locator)
+  const res = await esperarResultadoBusquedaTomador(nsei, antes, esperaMs)
+  if (res === 'sin_registro') throw new ErrorTarificador('datos', 'mapfre/auto: Mapfre no encuentra al tomador por su NIF/CIF («no existe ningún registro»): revisa el documento de la ficha')
+  if (res === 'dialogo') throw new ErrorMapaIncompleto('el diálogo que abre la búsqueda del tomador (sin DOM grabado; el robot no elige persona a ciegas)', true)
+  if (res === 'sin_cambio') {
+    // Si la lupa la puso lo aprendido o la IA, quizá no era: atasco con los candidatos para que elija Alberto.
+    if (r.origen !== 'fijo') await registrarAtasco(nsei, ctx.formador, { ...PETICION_LUPA_TOMADOR }).catch(() => undefined)
+    throw new ErrorMapaIncompleto('el resultado de la búsqueda del tomador (tras la lupa, «Datos básicos» no cambió)', true)
+  }
+  return { confirmar: r.confirmar }
 }
 
 /**
  * Paso 1 «Datos básicos»: NIF/CIF del tomador → lupa → «Continuar» (guardado). El NIF lo pone asegura desde la ficha del
  * cliente (`documentoTomador`) o viene en `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a
- * su campo: nunca a logs, mensajes ni resultado.
+ * su campo: nunca a logs, mensajes ni resultado. Lo resuelto por el respaldo (campo y lupa) se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador'>): Promise<void> {
-  if (documentoTomadorDe(f) === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'buscarTomadorMapfre'>): Promise<void> {
+  const nif = documentoTomadorDe(f)
+  if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
   if (!r) throw new ErrorMapaIncompleto('el campo NIF/CIF del tomador del paso 1 «Datos básicos» (no aparece)', true)
   const campo = r.campo
   await comprobarCampo(campo)
-  await buscarTomadorPorNif(nsei, campo)
+  const lupa = await buscarTomadorPorNif(nsei, campo, nif, ctx)
   await continuar(nsei, ctx, 'datosBasicos')
+  await r.confirmar().catch(() => undefined)
+  await lupa.confirmar().catch(() => undefined)
 }
 
 /**
@@ -560,14 +652,14 @@ export async function precioDesdeObjetoAsegurado(nsei: Page, f: FormularioAuto, 
 
 /**
  * Adaptador de Mapfre (registrado SIEMPRE; la puerta es la fila `companias_integracion`). Coche y moto comparten NSEI
- * («Turismos y Motos»). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 (NIF; lupa = HUECO) → vehículo confirmado
- * por matrícula → CP → «Continuar» → figuras → «Continuar» (precio). Hoy para en la lupa del paso 1 con inventario.
+ * («Turismos y Motos»). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 (NIF → lupa por la capa común y la puerta del guard →
+ * «Continuar») → vehículo confirmado por matrícula → CP → «Continuar» → figuras → «Continuar» (precio).
  */
 export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.5.0',
+  version: '0.6.0',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

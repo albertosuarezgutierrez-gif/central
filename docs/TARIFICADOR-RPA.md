@@ -78,7 +78,17 @@ Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de accio
     **Abierto**: `FormularioAuto` aún no trae uso/ámbito/clase de permiso/compañía anterior (siguen pendientes → paran en el paso 2
     con inventario hasta ampliar validador + plataforma), el interruptor «¿compañía anterior?», la lupa del NIF y «Generar
     Proyecto»; el atasco F2 de un mat-select sin resolver no es elegible por Telegram (las opciones no tienen selector).
-  · **Pendiente de la F2**: lupa del NIF (puerta propia de guard.ts: decisión y revisión de seguridad) y Allianz Moto a la capa común.
+  · **Lupa del NIF hecha (14/10/2026, Mapfre auto 0.6.0)** — tras el trabajo d7987f90 (murió en «mapa incompleto: faltan la lupa…» sin
+    IA ni atasco): acción `buscar_tomador` en `ACCIONES_PERMITIDAS` (= `TEXTOS_BUSCAR_TOMADOR` de guard.ts, test de igualdad); se
+    localiza por la capa común (fijo = único botón del `mat-form-field` del NIF validado como lupa → aprendido → IA → ATASCO F2) y
+    se pulsa SOLO por `pulsarBuscarTomadorMapfre` (paso activo «Datos básicos», dentro de `app-datos-basicos`, una vez y antes del
+    «Continuar» del paso 1, `comprobarBoton` + `mattooltip`, sin ventana de red). Icono sin texto (RIESGO aceptado): manda el texto
+    visible ENTERO; sin él, aria-label/title/mattooltip (todos de la lista); sin ellos, icono de lupa. «Buscar y contratar»/«Emitir»
+    con lupa → fuera. Lo resuelto se aprende solo si el «Continuar» llega a «Objeto asegurado». Tras la lupa: «no existe ningún
+    registro» → `datos`; un DIÁLOGO (selección de persona) → hueco con inventario SIN atasco (no hay puerta para elegir fila: abierto).
+    Capa común: `mat-icon` suelto es candidato de acción y un botón de solo icono viaja con su nombre accesible o «search»;
+    guardián `stubsDeHueco` (regla-respaldo-ia.test.ts): ningún adaptador con una función que solo lanza `ErrorMapa…`.
+  · **Pendiente de la F2**: Allianz Moto a la capa común; diálogo de selección de tomador de Mapfre (si aparece en real).
 - **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
   clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).
 - **Futuro**: las mismas capas para otras tareas (siniestros…) con su lista blanca por tarea.
