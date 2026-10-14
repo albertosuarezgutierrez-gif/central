@@ -16,7 +16,7 @@
 `TARIFICADOR_FLY_IMAGE`=`…:v20261014-nsei` PERO el redeploy de central-asegura que la aplica lo denegó Alberto: en prod sigue `…-lupa`. Truco: redeploy
 de `dpl_DDrEUdTiNyvvacErA8fygwpmnbwu` (commit #4699, toca apps/asegura); un redeploy del último commit lo salta el ignoreCommand. MERGEADOS #4665
 (login NSEI + parada ante CAPTCHA/bloqueo, sin reintento) y #4705 (lead de auto: «Bots (gratis)» con entrada propia, ya no colgado de Avant2).
-#4669 Allianz Hogar (apagado) fuera de draft: radios/población/vía/Valoración/Precio por capa común, acción genérica `elegir_opcion`; lo aprendido
+#4669 Allianz Hogar (apagado) MERGEADO: radios/población/vía/Valoración/Precio por capa común, acción genérica `elegir_opcion`; lo aprendido
 solo se confirma si coincide con el riesgo. Mapfre auto real: trabajo copiado `5f8f9ba6` rechazado por riesgo antiguo sin matrícula/conductor;
 `tarificador_atascos` vacía. Pendiente: Alberto lanza Mapfre auto desde el lead → leer atasco del diálogo «elegir persona». BD del tarificador = MCP
 `Supabase` (wswbehlcuxqxyinousql), no `Supabase_asegura`. Tests del servicio: `clave-campo` falla solo sin `pnpm install` en la raíz.
