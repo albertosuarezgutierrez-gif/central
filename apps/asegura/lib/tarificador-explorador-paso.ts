@@ -15,6 +15,7 @@ import {
   detectarParada,
   huellaPantalla,
   planDesdeMapa,
+  presupuestoEnCursoDe,
   respuestaParar,
   topesExplorador,
   validarRespuestaExplorador,
@@ -117,7 +118,9 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
   const inventario = e.inventario
   const huella = huellaPantalla(inventario)
   // Con datos reales, el riesgo entra en la validación: elegir/marcar solo sobre uso/régimen/tipo con valor conocido.
-  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null }
+  // `presupuestoEnCurso` (guardado del presupuesto, 14/10/2026) sale de los pasos YA guardados: se fija dentro del lock (tx1) y
+  // tx2 solo registra si nada cambió (mismo nº de pasos), así que vale para las dos.
+  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null, presupuestoEnCurso: false }
   const topes = topesExplorador(d.env)
 
   type Decision = { tipo: 'hecho'; salida: SalidaPaso } | { tipo: 'ia'; prompt: string; caracteres: number; peor: number; nAntes: number }
@@ -126,6 +129,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     const st = await d.leer(bd)
     if (st.cerrada) return { tipo: 'hecho', salida: { tipo: 'conflicto', motivo: 'exploracion_cerrada' } }
     if (st.iaEnVuelo) throw new PasoOcupado()
+    ctx.presupuestoEnCurso = presupuestoEnCursoDe(st.pasos.map((p) => p.respuesta))
     const consumo = consumoPaso(st, d.ahora())
     const guardar = async (respuesta: RespuestaExplorador, origen: 'mapa' | 'regla'): Promise<Decision> => {
       const leaseHasta = await d.registrar(bd, { huella, inventario, respuesta, origen, errores: null, costeEur: 0, modelo: null })

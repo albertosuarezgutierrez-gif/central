@@ -2,7 +2,7 @@
 
 > Qué sabemos de cada portal de compañía y cómo se trabaja con él. Sin datos personales ni valores reales:
 > solo nombres de pantalla y claves de catálogo. Estado vivo, DOM detallado y plan: `docs/TARIFICADOR-RPA.md`.
-> Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 13/10/2026.
+> Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 14/10/2026.
 
 ## Capa común (todas las compañías)
 
@@ -27,6 +27,27 @@
   - Datos reales SOLO anclados a una tarificación u oportunidad real del mismo cliente.
   - Nunca mezclar datos reales con valores de prueba.
   - Nada de emitir sin OK de Alberto (TARIFICAR ≠ EMITIR).
+- **Guardar el presupuesto SÍ; emitir NO (Alberto, 13-14/10/2026: «el bot tiene que hacer absolutamente todo, menos la
+  emisión […] el presupuesto hay que guardarlo; lo guardas con la referencia y ahí te descarga el presupuesto»).**
+  - Lista ÚNICA en `packages/module-tarificacion/src/acciones-portal.ts` (`ACCIONES_PORTAL`): de ella salen el prompt del
+    explorador, el validador y el guard del worker. Tres categorías:
+    - **Emisión — prohibida siempre:** Emitir, Contratar, Formalizar, Firmar, Pagar/Pago, Pago fraccionado, Tramitar póliza,
+      Confirmar contratación, Domiciliar, Suplemento, Anular/Baja, `validar_aceptar`/`btnAccept`.
+    - **Prohibida (no emite, pero no se pulsa):** **Proyecto ampliado** (no hay certeza de que solo enseñe/descargue: ePAC lo
+      pone junto a Archivar/Emitir; se abrirá cuando Alberto confirme qué hace), Enviar, Salir/Cerrar sesión.
+    - **Guardar presupuesto — permitida SOLO en la pantalla de resultado (con el precio a la vista) y con
+      `efectoEsperado: 'guardar_presupuesto'`:** Grabar, Guardar (presupuesto/proyecto), Archivar (ePAC `td#store`,
+      `action=store`), Descargar, Imprimir, Generar PDF. Fuera de ahí (formulario, sin precio, como navegación), prohibida.
+      Un botón que mezcle guardar con emitir/contratar/pagar («Guardar y emitir») cae como emisión.
+  - Flujo al ver el precio: guardar → (pantalla siguiente) descargar/imprimir el PDF si hay botón → terminar. El robot lee la
+    **referencia** del presupuesto del texto de la pantalla (solo con etiqueta «Referencia / Nº de presupuesto / proyecto…»;
+    nada con forma de NIF, teléfono o IBAN; nunca al log) y escucha el **PDF** desde antes del clic (descarga, ventana nueva o
+    respuesta PDF). Ambos van al mapa (`mapa.presupuesto`: guardado, referencia, pdf) y al resultado del trabajo; el PDF se
+    guarda en `seguros.documentos` y en `evidencia_documento_id` del trabajo **solo si la exploración va ligada a un
+    cliente/póliza** (una exploración sintética no tiene de qué colgarlo).
+  - En el worker, el guardado va SOLO por `pulsarGuardadoPresupuesto` (guard.ts): re-clasifica el control vivo, abre
+    únicamente Archivar en la red y solo hacia el origen del marco; `contract`/emitir/«Aceptar» siguen abortando. Como
+    mucho 3 pulsaciones por trabajo. Si el portal pide confirmar con un diálogo, el robot no confirma y para.
   - A la compañía no se la contacta.
 - **Organización:** una conversación de Claude por compañía/bot, abierta cuando el bot anterior esté estable.
   Orden previsto: Allianz Hogar primero, luego Mapfre…

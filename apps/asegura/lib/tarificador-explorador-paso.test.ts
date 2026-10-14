@@ -202,3 +202,22 @@ test('memoria con datos reales: un plan con elegir/marcar NO se reutiliza (repet
   assert.equal(planDeMemoriaUsable(plan([rellenar]), true), true)
   assert.equal(planDeMemoriaUsable(plan([rellenar, elegir]), false), true)
 })
+
+test('guardado del presupuesto: tras un guardar_presupuesto YA registrado, la pantalla siguiente sin importes admite Descargar y terminar []', async () => {
+  const trasGuardar = sanearInventarioDom({
+    marcos: [{ url: 'https://portal.example.test/archivado', titulos: [{ texto: 'Proyecto archivado', tag: 'h2' }], elementos: [{ tag: 'button', id: 'pdf', texto: 'Descargar PDF' }] }],
+  }, undefined, { refs: true }) as InventarioDom
+  const descargar = JSON.stringify({ version: 1, pantalla: { nombre: 'Archivado', tipo: 'resultado' }, acciones: [{ accion: 'avanzar', ref: 'm0e0', efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], mapeo: [], motivo: null })
+  const guardado = { version: 1 as const, pantalla: { nombre: 'Precio', tipo: 'resultado' as const }, acciones: [{ accion: 'avanzar' as const, ref: 'm0e9', efectoEsperado: 'guardar_presupuesto' as const, confianza: 'alta' as const }], mapeo: [], motivo: null }
+  for (const previo of [true, false]) {
+    const { d, st } = dobles()
+    d.ia = async () => descargar
+    if (previo) st.pasos.push({ huella: '0000000000000000', respuesta: guardado, origen: 'ia', llamadaIA: true, costeEur: 0, acciones: 1 })
+    const r = await ejecutarPaso({ ...entrada, inventario: trasGuardar }, d)
+    assert.equal(r.tipo, 'ok')
+    if (r.tipo !== 'ok') continue
+    const a = r.respuesta.acciones[0]
+    // Sin guardado previo (sin precio visto) el validador lo rechaza → parar.
+    assert.equal(a.accion, previo ? 'avanzar' : 'parar', `previo=${previo}`)
+  }
+})

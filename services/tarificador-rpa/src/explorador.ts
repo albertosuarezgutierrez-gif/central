@@ -10,10 +10,15 @@
 //        trabajo / env de contacto; nunca a la IA ni al log), `elegir` por valor exacto, `marcar` y `avanzar` SOLO por
 //        `ctx.pulsar()` (guard de emisión) o, el único «avance autorizado» de exploración, por la función guardada de
 //        guard.ts. Se recoge la red no-GET (origen + ruta) de cada avance para el mapa.
+//     6. GUARDAR EL PRESUPUESTO (Alberto, 14/10/2026): en la pantalla de RESULTADO, un `avanzar` con efecto
+//        `guardar_presupuesto` (Grabar/Guardar/Archivar/Descargar/Imprimir/PDF; lista única del módulo) va SOLO por
+//        `pulsarGuardadoPresupuesto` (guard.ts): se escucha el PDF ANTES del clic (`esperarPdf`), se lee la REFERENCIA del
+//        texto de la pantalla (`extraerReferenciaPresupuesto`; nunca al log) y ambos viajan en el cierre/resultado.
 //   → `POST …/cierre` (asegura construye el MAPA de SUS pasos) → `POST /api/tarificador/resultado` (`explorado` o error).
 //
 // 🚨 TARIFICAR ≠ EMITIR: este fichero no pulsa nada por su cuenta (sin `.click()`), no navega a URLs libres, no teclea
-//    Enter ni ejecuta JS del portal. 🚨 Nunca se emite. 🔑 Ningún valor de campo ni credencial va al log, a asegura ni a la IA.
+//    Enter ni ejecuta JS del portal. 🚨 Nunca se emite (guardar el presupuesto NO es emitir: Emitir/Contratar/Pagar… siguen
+//    prohibidos en el validador, en `pulsar()` y en `pulsarGuardadoPresupuesto`). 🔑 Ningún valor de campo ni credencial va al log, a asegura ni a la IA.
 
 import { randomUUID } from 'node:crypto'
 import { chromium, type Browser, type Locator, type Page } from 'playwright'
@@ -21,6 +26,7 @@ import {
   CLAVES_AUTOCOMPLETADO,
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
+  extraerReferenciaPresupuesto,
   detectarBucle,
   detectarParada,
   esAvanceAutorizado,
@@ -41,12 +47,15 @@ import {
   type MarcoInventario,
   type MotivoParar,
   type MotivoSinDato,
+  type PantallaGuardado,
+  type PresupuestoMapa,
   type TipoError,
 } from '@central/module-tarificacion'
-import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type RespuestaPaso, type Trabajo } from './api.ts'
+import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEmision } from './guard.ts'
+import { GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
@@ -56,7 +65,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.1.2'
+export const EXPLORADOR_VERSION = '0.2.0'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -71,6 +80,10 @@ const ESPERA_REPINTADO_MS = 1_500
 /** Mismos topes de evidencia que el flujo real (runner.ts). */
 const MAX_BYTES_CAPTURA = 4 * 1024 * 1024
 const MAX_BYTES_HTML = 2 * 1024 * 1024
+/** Espera del PDF tras cada pulsación de guardado (si el portal no da PDF en ese clic, se sigue sin él). */
+const TOPE_PDF_GUARDADO_MS = 15_000
+/** Tope del PDF del presupuesto (el de asegura para un adjunto es 10 MB). */
+const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 
 // ─── Portales: login y entrada, por CÓDIGO (la IA arranca después) ────────────
 
@@ -101,7 +114,22 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
 // ─── Reglas puras (con test) ─────────────────────────────────────────────────
 
 export type MotivoFinExploracion = MotivoParar | 'resultado' | 'bucle' | 'tope' | 'error_portal' | 'guard_emision'
-export type EfectoPortal = 'posible_proyecto_guardado' | 'ninguno_visto'
+export type EfectoPortal = 'posible_proyecto_guardado' | 'presupuesto_guardado' | 'ninguno_visto'
+
+/** Lo que dejó el guardado del presupuesto en el worker (el PDF va en bytes; al cierre solo si llegó). */
+export type PresupuestoWorker = { guardado: boolean; referencia: string | null; pdf: Buffer | null; pdfIntentado: boolean }
+
+/** Para el cierre (`mapa.presupuesto`): tres estados del PDF (`null` = no se intentó). Pura. */
+export function presupuestoParaCierre(p: PresupuestoWorker): PresupuestoMapa {
+  if (!p.guardado) return { guardado: false, referencia: null, pdf: null }
+  return { guardado: true, referencia: p.referencia, pdf: p.pdf ? true : p.pdfIntentado ? false : null }
+}
+
+/** Para el resultado del trabajo: `null` sin guardado; si no, referencia y PDF (base64) si llegó. Pura. */
+export function presupuestoParaResultado(p: PresupuestoWorker, compania: string): CuerpoResultadoPresupuesto | null {
+  if (!p.guardado) return null
+  return { referencia: p.referencia, pdf: p.pdf ? { nombre: `presupuesto-${compania}.pdf`, base64: p.pdf.toString('base64') } : null }
+}
 
 export type FinBucle = {
   /** `perdido` = asegura ya no reconoce la exploración (404): ni cierre ni resultado. */
@@ -111,6 +139,8 @@ export type FinBucle = {
   efectos: EfectoPortal[]
   pasos: number
   acciones: number
+  /** Guardado del presupuesto (14/10/2026). Ausente = nada guardado. */
+  presupuesto?: PresupuestoWorker
   /** Qué comprobación del worker cortó (lista cerrada, sin valores): distingue los `ambiguo` entre sí. */
   detalle?: DetalleFinExploracion
   /** Solo en los fallos de la ENTRADA cerrada (antes del primer paso): URL, captura y HTML ya redactados. */
@@ -202,7 +232,7 @@ export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: {
  * de asegura). Guard de emisión → `emision`. Fallo del portal/infra → su tipo. Cualquier otra parada (incluido llegar al
  * precio, `cerca_de_emision`, `dato_sensible_requerido`, bucle, topes) es una exploración TERMINADA: `explorado`.
  */
-export function resultadoDeFin(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error' | 'evidencia'>, redactar: (t: string) => string): CuerpoResultado | null {
+export function resultadoDeFin(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error' | 'evidencia' | 'presupuesto'>, redactar: (t: string) => string): CuerpoResultado | null {
   const meta = { botVersion: EXPLORADOR_VERSION }
   // Evidencia de la entrada (si la hay): URL en el error; captura y HTML al lado, como en el flujo real.
   const ev = fin.evidencia
@@ -215,7 +245,9 @@ export function resultadoDeFin(trabajoId: string, compania: string, fin: Pick<Fi
     const tipo: TipoError = fin.error?.tipo ?? (fin.motivo === 'guard_emision' ? 'emision' : 'portal')
     return { trabajoId, resultado: 'error', error: { tipo, mensaje: redactar(`exploración: ${fin.error?.mensaje ?? fin.motivo}`).slice(0, 2000), url }, ...adjuntos, ...meta }
   }
-  return { trabajoId, resultado: 'explorado', motivoFin: fin.motivo, ...meta }
+  // Presupuesto guardado: su referencia y su PDF viajan con el resultado (asegura guarda el PDF como documento del trabajo).
+  const presupuesto = fin.presupuesto ? presupuestoParaResultado(fin.presupuesto, compania) : null
+  return { trabajoId, resultado: 'explorado', motivoFin: fin.motivo, ...(presupuesto ? { presupuesto } : {}), ...meta }
 }
 
 // ─── El bucle (sobre una página ya dentro del portal) ────────────────────────
@@ -233,6 +265,8 @@ export type ContextoBucle = {
   pulsar: (boton: Locator) => Promise<void>
   /** El único avance «autorizado» de exploración (guard.ts). */
   pulsarAutorizado: (boton: Locator, el: ElementoInventario, marco: MarcoInventario) => Promise<void>
+  /** El guardado de presupuesto autorizado (guard.ts, `pulsarGuardadoPresupuesto`). `trasClic` espera el PDF dentro de la ventana. */
+  pulsarGuardado: (boton: Locator, el: ElementoInventario, pantalla: PantallaGuardado, trasClic: () => Promise<void>) => Promise<void>
   pausaAccion: () => Promise<void>
   pedirPaso: (cuerpo: { trabajoId: string; inventario: InventarioExploracion['inventario']; avancesFallidos: number }) => Promise<RespuestaPaso>
   log: Log
@@ -240,6 +274,8 @@ export type ContextoBucle = {
   hoy?: () => Date
   /** Espera tras rellenar un campo que autocompleta, antes de reinventariar (por defecto `ESPERA_REPINTADO_MS`). */
   esperaRepintadoMs?: number
+  /** Espera del PDF tras cada guardado (por defecto `TOPE_PDF_GUARDADO_MS`). */
+  topePdfMs?: number
 }
 
 class Parar extends Error {
@@ -267,9 +303,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   /** El lote anterior se CORTÓ porque la pantalla se repintó (no terminó): esta pantalla no cuenta para el bucle. */
   let trasRepintado = false
   let repintadosSeguidos = 0
+  /** Guardado del presupuesto: se rellena al pulsar un guardar_presupuesto (y habilita el 2.º y el `terminar` sin importes). */
+  const presupuesto: PresupuestoWorker = { guardado: false, referencia: null, pdf: null, pdfIntentado: false }
   const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion): FinBucle => ({
     motivo, error, redNoGet: [...red].slice(0, 50), efectos: efectos.size ? [...efectos] : ['ninguno_visto'], pasos, acciones,
     ...(detalle ? { detalle } : {}),
+    ...(presupuesto.guardado ? { presupuesto: { ...presupuesto } } : {}),
   })
   try {
     for (;;) {
@@ -303,7 +342,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')
       // REVALIDACIÓN contra el inventario PROPIO (el que se mandó): lo que no valida aquí no toca el portal.
-      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null })
+      const v = validarRespuestaExplorador(r.respuesta, { inventario: inv, ramo: k.ramo, entrada: k.entrada, datosReales: k.conDatosReales ? { riesgo: k.riesgo } : null, presupuestoEnCurso: presupuesto.guardado })
       if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')
       if (r.estado !== 'ok') {
         const p = v.respuesta.acciones[0]
@@ -387,7 +426,27 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             }
             page.on('request', alPedir)
             try {
-              if (esAvanceAutorizado(k.entrada, hit.el, hit.marco)) {
+              if (a.efectoEsperado === 'guardar_presupuesto') {
+                // GUARDAR PRESUPUESTO: por su puerta (guard.ts), con el PDF escuchado ANTES del clic.
+                const pantalla: PantallaGuardado = { tipoPantalla: v.respuesta.pantalla.tipo, hayImportes: inv.marcos.some((m) => (m.importes?.length ?? 0) > 0), presupuestoEnCurso: presupuesto.guardado }
+                const espera = presupuesto.pdf ? null : esperarPdf(page, k.topePdfMs ?? TOPE_PDF_GUARDADO_MS)
+                try {
+                  await k.pulsarGuardado(loc, hit.el, pantalla, async () => {
+                    const pdf = espera ? await espera.promesa : null
+                    if (pdf && pdf.bytes.length <= MAX_BYTES_PDF_PRESUPUESTO) presupuesto.pdf = pdf.bytes
+                  })
+                } finally {
+                  espera?.cancelar()
+                }
+                presupuesto.guardado = true
+                presupuesto.pdfIntentado ||= espera !== null
+                efectos.add('presupuesto_guardado')
+                await page.waitForLoadState('domcontentloaded', { timeout: TOPE_PASO_MS }).catch(() => undefined)
+                await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
+                // La REFERENCIA, del texto visible de la pantalla tras guardar (no se loguea; solo si se vio).
+                presupuesto.referencia ??= await referenciaVisible(page)
+                k.log('exploracion_presupuesto', { n: pasos, pdf: presupuesto.pdf ? 'si' : 'no', referencia: presupuesto.referencia ? 'si' : 'no' })
+              } else if (esAvanceAutorizado(k.entrada, hit.el, hit.marco)) {
                 efectos.add('posible_proyecto_guardado')
                 await k.pulsarAutorizado(loc, hit.el, hit.marco)
               } else {
@@ -413,12 +472,25 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
     }
   } catch (e) {
     if (e instanceof Parar) return fin(e.motivo, null, e.detalle)
+    // Un diálogo al guardar (confirm/alert): el robot no confirma; se para con su detalle (no es un fallo del guard).
+    if (e instanceof GuardadoConDialogoError && !k.guard.violacion()) return fin('ambiguo', null, 'guardado_con_dialogo')
     // Una violación del guard en segundo plano manda sobre el error con el que se cortó.
     const f = finDeError(k.guard.violacion() ?? e)
     return fin(f.motivo, f.error)
   } finally {
     await captura?.liberar()
   }
+}
+
+/** Texto visible de todos los marcos (acotado) → referencia del presupuesto, o `null`. El texto no sale de aquí. */
+async function referenciaVisible(page: Page): Promise<string | null> {
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const t = await f.evaluate(() => (document.body?.innerText ?? '').slice(0, 20_000)).catch(() => '')
+    const r = extraerReferenciaPresupuesto(t)
+    if (r) return r
+  }
+  return null
 }
 
 /**
@@ -486,7 +558,7 @@ export function cierreCorrecto(status: number): boolean {
  * El cuerpo que cierra el TRABAJO, sabiendo cómo fue el cierre de la cabecera. Si la cabecera NO se cerró, nunca se informa
  * `explorado` (el mapa no está guardado y la pantalla la vería abierta): se informa un fallo de infra.
  */
-export function cuerpoTrasCierre(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error' | 'evidencia'>, stCierre: number, redactar: (t: string) => string): CuerpoResultado | null {
+export function cuerpoTrasCierre(trabajoId: string, compania: string, fin: Pick<FinBucle, 'motivo' | 'error' | 'evidencia' | 'presupuesto'>, stCierre: number, redactar: (t: string) => string): CuerpoResultado | null {
   const cuerpo = resultadoDeFin(trabajoId, compania, fin, redactar)
   if (cuerpo?.resultado === 'explorado' && !cierreCorrecto(stCierre)) {
     return { trabajoId, resultado: 'error', error: { tipo: 'infra', mensaje: `exploración: no se pudo cerrar la cabecera (estado ${stCierre})`, url: null }, botVersion: EXPLORADOR_VERSION }
@@ -529,7 +601,8 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
   let finExp: FinBucle
   try {
     browser = await chromium.launch({ headless: true })
-    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: false })
+    // Descargas ACEPTADAS (14/10/2026): el PDF del presupuesto guardado llega como descarga; solo lo lee `esperarPdf` en memoria.
+    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: true })
     const guard = await instalarGuardEmision(context)
     const page = await context.newPage()
     page.setDefaultTimeout(TOPE_PASO_MS)
@@ -557,6 +630,10 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
           await dormir(azar(300, 1_200))
           await pulsarExploracionAutorizada(page, guard, boton, { entrada: exp.entrada, el, marco })
         },
+        pulsarGuardado: async (boton, el, pantalla, trasClic) => {
+          await dormir(azar(300, 1_200))
+          await pulsarGuardadoPresupuesto(page, guard, boton, { el, pantalla }, trasClic)
+        },
         pausaAccion: () => dormir(azar(300, 1_200)),
         pedirPaso: (cuerpo) => pedirPaso(cfg, cuerpo),
         log,
@@ -578,7 +655,10 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
     clearTimeout(respaldo)
     return 0
   }
-  const stCierre = await cerrarExploracion(cfg, { trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos })
+  const stCierre = await cerrarExploracion(cfg, {
+    trabajoId: trabajo.id, motivoFin: finExp.motivo, ...(finExp.detalle ? { detalleFin: finExp.detalle } : {}), redNoGet: finExp.redNoGet, efectosEnPortal: finExp.efectos,
+    presupuesto: presupuestoParaCierre(finExp.presupuesto ?? { guardado: false, referencia: null, pdf: null, pdfIntentado: false }),
+  })
   log('exploracion_cierre', { status: stCierre })
   const cuerpo = cuerpoTrasCierre(trabajo.id, trabajo.compania, finExp, stCierre, redactar)
   const st = cuerpo ? await enviarResultado(cfg, cuerpo) : 0
