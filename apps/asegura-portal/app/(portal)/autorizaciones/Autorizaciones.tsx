@@ -12,6 +12,7 @@ import {
 
 import { SeccionPlegable, textoPersonas } from './SeccionPlegable'
 import { SugerenciasContactos } from './SugerenciasContactos'
+import { InvitarFamilia } from './InvitarFamilia'
 
 /**
  * «Quién puede ver mis seguros» — la parte viva de la pantalla.
@@ -769,6 +770,7 @@ export function Autorizaciones({ aceptarId = null }: { aceptarId?: string | null
         ? [recibidas, otorgadas]
         : [otorgadas, recibidas])}
       <SugerenciasContactos />
+      <InvitarFamilia />
       <Invitaciones
         uid={uid}
         carga={cargaInv}

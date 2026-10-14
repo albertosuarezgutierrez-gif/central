@@ -111,6 +111,10 @@ model PortalIdentidad {
   avisosLeidos      PortalAvisoLeido[]
   preferenciasAvisos PortalPreferenciasAvisos?
   historialDeclaradas PortalPolizaDeclaradaHistorial[]
+  primasObservadas  PortalPrimaObservada[]
+  enlacesFamilia    PortalInvitacionEnlace[]
+  usoEnlaceFamilia  PortalInvitacionEnlaceUso?
+  revisionesPoliza  PortalRevisionPoliza[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -431,11 +435,57 @@ model PortalPreferenciasAvisos {
   noMolestarHasta          Int?      @map("no_molestar_hasta") @db.SmallInt
   bienvenidaPospuestaEn    DateTime? @map("bienvenida_pospuesta_en") @db.Timestamptz(6)
   bienvenidaPospuestaVista String?   @map("bienvenida_pospuesta_vista")
+  /// 5 | 10 | 15 | 20 (% de subida de prima que avisa). NULL = no configurado (= 10 %), nunca «no quiere».
+  /// DDL: `prisma/sql/2026-10-13_avisos_fase_b.sql`.
+  umbralSubidaPrima        Int?      @map("umbral_subida_prima") @db.SmallInt
   actualizadoEn            DateTime  @default(now()) @updatedAt @map("actualizado_en") @db.Timestamptz(6)
 
   identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
 
   @@map("portal_preferencias_avisos")
+  @@schema("seguros")
+}
+
+/// «Revisar mi póliza» (13/10/2026): la revisión con IA de una póliza APORTADA, cacheada por huella de lo
+/// leído (`lib/revision-poliza.ts`). Cuenta además el tope diario por identidad. Append-only: el rol solo
+/// INSERTA y LEE. DDL: `prisma/sql/2026-10-13_revision_huecos.sql`.
+model PortalRevisionPoliza {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId       String   @map("identidad_id") @db.Uuid
+  polizaDeclaradaId String   @map("poliza_declarada_id") @db.Uuid
+  huella            String
+  puntos            Json
+  creadaEn          DateTime @default(now()) @map("creada_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@unique([polizaDeclaradaId, huella], map: "portal_revision_poliza_una_por_huella")
+  @@index([identidadId, creadaEn(sort: Desc)], map: "idx_portal_revision_poliza_identidad")
+  @@map("portal_revision_poliza")
+  @@schema("seguros")
+}
+
+/// Última prima VISTA de cada póliza por identidad (avisos fase B, 13/10/2026): contra qué se compara la de
+/// hoy y la subida pendiente de avisar (las cuatro `subida*` o ninguna, CHECK). `origen` 'cartera'
+/// (`refId` = polizas.id) | 'aportada' (`refId` = portal_poliza_declarada.id), sin FK a propósito.
+/// Solo se comparan importes con la misma `unidad`. DDL: `prisma/sql/2026-10-13_avisos_fase_b.sql`
+/// (SELECT, INSERT, UPDATE; sin DELETE).
+model PortalPrimaObservada {
+  identidadId      String    @map("identidad_id") @db.Uuid
+  origen           String
+  refId            String    @map("ref_id") @db.Uuid
+  importe          Decimal   @db.Decimal(10, 2)
+  unidad           String
+  observadoEn      DateTime  @default(now()) @map("observado_en") @db.Timestamptz(6)
+  subidaDesde      Decimal?  @map("subida_desde") @db.Decimal(10, 2)
+  subidaHasta      Decimal?  @map("subida_hasta") @db.Decimal(10, 2)
+  subidaPorcentaje Decimal?  @map("subida_porcentaje") @db.Decimal(7, 2)
+  subidaEn         DateTime? @map("subida_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@id([identidadId, origen, refId])
+  @@map("portal_prima_observada")
   @@schema("seguros")
 }
 
@@ -491,6 +541,10 @@ model PortalParteSiniestro {
   abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
   descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
   motivoDescarte      String?           @map("motivo_descarte")
+  /// Ubicación OPCIONAL («Usar mi ubicación»), redondeada a 4 decimales. NULL = no la dio, nunca (0,0);
+  /// las dos o ninguna (CHECK). DDL: `prisma/sql/2026-10-13_parte_fotos_escaner.sql`.
+  ubicacionLat        Decimal?          @map("ubicacion_lat") @db.Decimal(7, 4)
+  ubicacionLng        Decimal?          @map("ubicacion_lng") @db.Decimal(8, 4)
   /// 🚨 La FOTO de la póliza APORTADA que el cliente quitó de su bóveda. Es texto
   /// y no una relación a propósito: vale porque la fila de origen ya NO existe.
   /// Sin esto, borrar la póliza dejaría el parte huérfano (la FK es
@@ -745,6 +799,43 @@ model PortalInvitacion {
   @@index([otorganteClienteId, creadaEn])
   @@index([otorgadaPorIdentidadId, creadaEn])
   @@map("portal_invitacion")
+  @@schema("seguros")
+}
+
+/// «Invita a tu familia» (13/10/2026): enlace PERSONAL y compartible que solo PRESENTA el portal (no abre
+/// sesión, ni seguros, ni datos). Token HASHEADO (`hashCanal`). Reglas: `lib/invitar-familia.ts`.
+/// DDL: `prisma/sql/2026-10-13_invitar_familia.sql` (SELECT, INSERT, UPDATE; sin DELETE).
+model PortalInvitacionEnlace {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId         String    @map("correduria_id") @db.Uuid
+  creadaPorIdentidadId String    @map("creada_por_identidad_id") @db.Uuid
+  tokenHash            String    @unique(map: "idx_portal_invitacion_enlace_token") @map("token_hash")
+  creadaEn             DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn             DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadaEn           DateTime? @map("revocada_en") @db.Timestamptz(6)
+  maxUsos              Int       @default(10) @map("max_usos")
+
+  creadaPor PortalIdentidad             @relation(fields: [creadaPorIdentidadId], references: [id], onDelete: Cascade)
+  usos      PortalInvitacionEnlaceUso[]
+
+  @@index([creadaPorIdentidadId, creadaEn(sort: Desc)], map: "idx_portal_invitacion_enlace_creador")
+  @@map("portal_invitacion_enlace")
+  @@schema("seguros")
+}
+
+/// Quién ENTRÓ por un enlace de familia y creó su identidad. UNA fila por identidad (índice único: impide
+/// el doble aviso al corredor). Solo SELECT e INSERT.
+model PortalInvitacionEnlaceUso {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enlaceId    String   @map("enlace_id") @db.Uuid
+  identidadId String   @unique(map: "idx_portal_invitacion_enlace_uso_identidad") @map("identidad_id") @db.Uuid
+  usadoEn     DateTime @default(now()) @map("usado_en") @db.Timestamptz(6)
+
+  enlace    PortalInvitacionEnlace @relation(fields: [enlaceId], references: [id], onDelete: Cascade)
+  identidad PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@index([enlaceId], map: "idx_portal_invitacion_enlace_uso_enlace")
+  @@map("portal_invitacion_enlace_uso")
   @@schema("seguros")
 }
 

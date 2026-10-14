@@ -1,10 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-import { DIAS_ANTELACION_OPCIONES, type DiasAntelacion } from '@central/module-seguros-portal'
+import { DIAS_ANTELACION_OPCIONES, UMBRALES_SUBIDA_PRIMA, type DiasAntelacion, type UmbralSubidaPrima } from '@central/module-seguros-portal'
 
 /**
- * Antelación y «no molestar» (13/10/2026). Valen para todos los dispositivos de la persona.
+ * Antelación, «no molestar» (13/10/2026) y umbral de subida de precio (fase B). Valen para todos los
+ * dispositivos de la persona.
  *
  * TODO fase B: el selector de CANAL (móvil / correo / ambos) está OCULTO a propósito. Hoy «Solo por
  * correo» dejaría a la persona sin recibos, siniestros ni recordatorios por NINGÚN canal (solo existen
@@ -22,6 +23,7 @@ import { DIAS_ANTELACION_OPCIONES, type DiasAntelacion } from '@central/module-s
 interface Config {
   diasAntelacion: DiasAntelacion
   noMolestar: { desde: string; hasta: string } | null
+  umbralSubidaPrima: UmbralSubidaPrima
 }
 
 const FRANJA_SUGERIDA = { desde: '22:00', hasta: '09:00' }
@@ -35,7 +37,7 @@ export function AjustesAvisos() {
   useEffect(() => {
     void fetch('/api/configuracion/avisos')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: Config) => setConfig({ diasAntelacion: d.diasAntelacion, noMolestar: d.noMolestar }))
+      .then((d: Config) => setConfig({ diasAntelacion: d.diasAntelacion, noMolestar: d.noMolestar, umbralSubidaPrima: d.umbralSubidaPrima }))
       .catch(() => setConfig('error'))
   }, [])
 
@@ -80,7 +82,26 @@ export function AjustesAvisos() {
       </label>
       <p className="suave config-nota">
         Cuenta hacia atrás desde el último día en que puedes decidir si renuevas (30 días antes del vencimiento).
-        Cambia el aviso por notificación.
+        Cambia el aviso por notificación. También vale para las pólizas de las personas que te han dado acceso.
+      </p>
+
+      <label className="config-campo">
+        <span>Avisarme si el precio de un seguro sube más de</span>
+        <select
+          value={config.umbralSubidaPrima}
+          disabled={estado === 'guardando'}
+          onChange={(e) => void guardar({ umbralSubidaPrima: Number(e.target.value) as UmbralSubidaPrima })}
+        >
+          {UMBRALES_SUBIDA_PRIMA.map((u) => (
+            <option key={u} value={u}>
+              un {u}%
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="suave config-nota">
+        Comparamos el precio anual con el último que vimos de esa misma póliza. Si cambia la forma de pago
+        (por ejemplo, de anual a mensual) no lo comparamos, porque no serían cifras equivalentes.
       </p>
 
       <fieldset className="campana-prefs">

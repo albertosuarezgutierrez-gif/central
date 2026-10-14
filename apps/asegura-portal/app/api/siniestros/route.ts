@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { crearParte, fechaHechoAUtc } from '@/lib/partes-siniestro'
 import { requireIdentidad } from '@/lib/session'
+import { normalizarUbicacion } from '@/lib/ubicacion-parte'
 
 export const runtime = 'nodejs'
 
@@ -203,7 +204,9 @@ export async function POST(req: Request) {
   // Sin `try/catch`: si la BD falla, que salga como error. Un `{ ok: true }` de
   // consuelo dejaría al cliente creyendo que ha declarado un siniestro que no
   // existe en ninguna parte, que es la peor mentira que puede contar el portal.
-  const { id } = await crearParte(identidad.id, valor)
+  // Ubicación opcional: solo si vino de «Usar mi ubicación»; se re-redondea y valida en servidor.
+  const ubicacion = normalizarUbicacion((entrada as { ubicacion?: unknown }).ubicacion)
+  const { id } = await crearParte(identidad.id, valor, ubicacion)
 
   // Aviso INMEDIATO a Alberto (26/09/2026). Antes solo existía el resumen de
   // las 06:55 de plataforma, que se comía hasta un día de los siete del art.

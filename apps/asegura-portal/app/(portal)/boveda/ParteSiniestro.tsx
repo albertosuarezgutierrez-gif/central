@@ -51,6 +51,7 @@ import * as borrador from '@/lib/parte-borrador'
 import { logoCompania } from '@/lib/logos-companias'
 
 import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
+import { coordenadasRedondeadas, textoCoordenadas } from '@/lib/ubicacion-parte'
 
 import { EnviarACompania } from './EnviarACompania'
 import { SeguimientoDeParte } from './SeguimientoParte'
@@ -813,9 +814,11 @@ export function ParteSiniestro({
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
   const [recibido, setRecibido] = useState<Plazo | null>(null)
   const [ficheros, setFicheros] = useState<Elegido[]>([])
-  /** Estado del botón «Ha pasado ahora mismo»: solo afecta a la geolocalización
+  /** Estado del botón «Usar mi ubicación»: solo afecta a la geolocalización
    *  (fecha y hora se rellenan siempre, al instante, sin esperar al GPS). */
-  const [geo, setGeo] = useState<'reposo' | 'buscando' | 'ok' | 'error'>('reposo')
+  const [geo, setGeo] = useState<'reposo' | 'buscando' | 'ok' | 'error' | 'retirada'>('reposo')
+  /** Coordenadas redondeadas que dio la persona al pulsar «Usar mi ubicación». `null` = no las dio. */
+  const [ubic, setUbic] = useState<{ lat: number; lng: number } | null>(null)
   /**
    * El parte YA creado. Se guarda porque los adjuntos cuelgan de él: si alguno
    * falla, «Reintentar» tiene que poder volver a subirlo SIN crear otro parte.
@@ -952,6 +955,7 @@ export function ParteSiniestro({
     setParaCompania(null)
     setEstado('reposo')
     setGeo('reposo')
+    setUbic(null)
     setPaso(polizas.length === 0 ? 'datos' : 'poliza')
     setAbierto(true)
     sesionRef.current += 1
@@ -990,7 +994,15 @@ export function ParteSiniestro({
     const horaAhora = `${pad(ahora.getHours())}:${pad(ahora.getMinutes())}`
     setForm((f) => ({ ...f, fechaHecho: fechaHoy, horaAproximada: horaAhora }))
     setErrores((e) => ({ ...e, fechaHecho: undefined, horaAproximada: undefined }))
+  }
 
+  /**
+   * «Usar mi ubicación» (13/10/2026): la ÚNICA puerta a `navigator.geolocation`. Solo se llama
+   * desde el clic; nunca al cargar ni al abrir el formulario. Guarda lat/lng REDONDEADOS
+   * (`ubicacion-parte.ts`) y, si el campo «Dónde» está vacío, deja ahí la coordenada para que la
+   * persona la sustituya por la calle. Denegado o sin señal: campo manual, sin mensaje de error.
+   */
+  function usarMiUbicacion() {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGeo('error')
       return
@@ -1000,17 +1012,21 @@ export function ParteSiniestro({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (sesionRef.current !== sesion) return // el formulario se cerró/reabrió mientras se buscaba
-        const lat = pos.coords.latitude.toFixed(5)
-        const lon = pos.coords.longitude.toFixed(5)
-        const precision = Math.round(pos.coords.accuracy)
-        setForm((f) => ({ ...f, lugar: `Ubicación GPS: ${lat}, ${lon} (±${precision} m)`.slice(0, LUGAR_MAX) }))
+        const u = coordenadasRedondeadas(pos.coords.latitude, pos.coords.longitude)
+        if (u === null) {
+          setGeo('error')
+          return
+        }
+        setUbic(u)
+        setForm((f) =>
+          f.lugar.trim() === '' ? { ...f, lugar: textoCoordenadas(u, pos.coords.accuracy).slice(0, LUGAR_MAX) } : f,
+        )
         setGeo('ok')
       },
-      // Denegado, sin señal, o sin HTTPS: no se inventa nada, se dice que no se pudo.
       () => {
         if (sesionRef.current === sesion) setGeo('error')
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 60_000 },
     )
   }
 
@@ -1029,6 +1045,12 @@ export function ParteSiniestro({
   function escribir(campo: Campo, valor: string) {
     setForm((f) => ({ ...f, [campo]: valor }))
     setErrores((e) => ({ ...e, [campo]: undefined }))
+    // 🚨 Tocar «Dónde» después de usar la ubicación (borrarlo o escribir otro sitio) RETIRA las
+    // coordenadas: lo que viaja tiene que ser lo que la persona ve, no un GPS que ya ha corregido.
+    if (campo === 'lugar' && ubic !== null) {
+      setUbic(null)
+      setGeo('retirada')
+    }
   }
 
   /** Los tri-estado no tienen error propio: cualquiera de las tres respuestas
@@ -1249,6 +1271,7 @@ export function ParteSiniestro({
           fechaHecho: form.fechaHecho,
           horaAproximada: form.horaAproximada || null,
           lugar: form.lugar.trim() || null,
+          ubicacion: ubic,
           polizaId: tipo === 'cartera' ? id : null,
           polizaDeclaradaId: tipo === 'declarada' ? id : null,
           // 🚨 `null` cuando no lo ha contestado. No se colapsa a `false`.
@@ -1645,14 +1668,6 @@ export function ParteSiniestro({
             <button type="button" className="boton secundario" onClick={marcarAhoraMismo} disabled={enviando}>
               Ha pasado ahora mismo
             </button>
-            {geo === 'buscando' && <p className="editor-ayuda">Buscando tu ubicación…</p>}
-            {geo === 'ok' && <p className="editor-ayuda">Fecha, hora y ubicación rellenadas. Revísalas.</p>}
-            {geo === 'error' && (
-              <p className="editor-ayuda">
-                Fecha y hora rellenadas. No hemos podido situarte (revisa el permiso de ubicación) — escribe el
-                sitio a mano si lo sabes.
-              </p>
-            )}
           </div>
 
           {/* La fecha SÍ es obligatoria aquí, y es la única que lo es. Ojo al
@@ -1720,6 +1735,29 @@ export function ParteSiniestro({
               disabled={enviando}
             />
             {errores.lugar && <p className="editor-error">{errores.lugar}</p>}
+            <button
+              type="button"
+              className="boton secundario"
+              onClick={usarMiUbicacion}
+              disabled={enviando || geo === 'buscando'}
+              style={{ minHeight: 44 }}
+            >
+              {geo === 'buscando' ? 'Buscando tu ubicación…' : 'Usar mi ubicación'}
+            </button>
+            <p className="editor-ayuda">Solo para indicar dónde ha ocurrido; no seguimos tu ubicación.</p>
+            {geo === 'ok' && (
+              <p className="editor-ayuda" role="status">
+                Ubicación añadida. Si cambias el campo de arriba, la quitamos y se envía solo lo que escribas.
+              </p>
+            )}
+            {geo === 'retirada' && (
+              <p className="editor-ayuda" role="status">
+                Has cambiado «Dónde»: ya no enviaremos la ubicación. Pulsa «Usar mi ubicación» si quieres añadirla de nuevo.
+              </p>
+            )}
+            {geo === 'error' && (
+              <p className="editor-ayuda" role="status">No hemos podido situarte; escribe el sitio a mano si lo sabes.</p>
+            )}
           </div>
 
           {/* 🚨 TRES opciones, no un checkbox. Ver la cabecera del fichero: un

@@ -14,6 +14,10 @@
  *    móvil» no lo detiene. Pendiente, anotado en el informe de la fase A.
  */
 
+// Umbral de subida de precio (fase B, 13/10/2026): la regla vive en `avisos-ampliados.ts`; aquí solo
+// se resuelve el `null` (= no configurado → 10%).
+import { UMBRAL_SUBIDA_POR_DEFECTO, esUmbralSubidaPrima, type UmbralSubidaPrima } from './avisos-ampliados.ts'
+
 export const CANALES_AVISO = ['movil', 'correo', 'ambos'] as const
 export type CanalAviso = (typeof CANALES_AVISO)[number]
 
@@ -42,6 +46,8 @@ export interface PreferenciasAvisosGuardadas {
   /** Minutos desde medianoche (0..1439), hora de Madrid. */
   noMolestarDesde: number | null
   noMolestarHasta: number | null
+  /** Fase B. Opcional para que los lectores que no la seleccionan sigan valiendo (= sin configurar). */
+  umbralSubidaPrima?: number | null
 }
 
 export interface FranjaNoMolestar {
@@ -54,6 +60,7 @@ export interface PreferenciasAvisosEfectivas {
   canal: CanalAviso
   diasAntelacion: DiasAntelacion
   noMolestar: FranjaNoMolestar | null
+  umbralSubidaPrima: UmbralSubidaPrima
 }
 
 export function esCanalAviso(v: unknown): v is CanalAviso {
@@ -79,7 +86,8 @@ export function resolverPreferenciasAvisos(g: PreferenciasAvisosGuardadas | null
   const desde = g?.noMolestarDesde
   const hasta = g?.noMolestarHasta
   const noMolestar = esMinutoDelDia(desde) && esMinutoDelDia(hasta) && desde !== hasta ? { desde, hasta } : null
-  return { canal, diasAntelacion, noMolestar }
+  const umbralSubidaPrima: UmbralSubidaPrima = g && esUmbralSubidaPrima(g.umbralSubidaPrima) ? g.umbralSubidaPrima : UMBRAL_SUBIDA_POR_DEFECTO
+  return { canal, diasAntelacion, noMolestar, umbralSubidaPrima }
 }
 
 /** Minutos desde medianoche de `ahora` en hora de Madrid (cambia sola con el horario de verano). */
@@ -136,11 +144,13 @@ export interface CambioPreferenciasAvisos {
   diasAntelacion?: unknown
   /** `null` = quitar la franja; `{desde, hasta}` en `"HH:MM"`. */
   noMolestar?: unknown
+  /** 5 | 10 | 15 | 20 (% de subida del precio a partir del que se avisa). */
+  umbralSubidaPrima?: unknown
 }
 
 export type ResultadoCambioPreferencias =
   | { ok: true; datos: Partial<PreferenciasAvisosGuardadas> }
-  | { ok: false; error: 'canal_invalido' | 'dias_invalidos' | 'franja_invalida' | 'sin_cambios' }
+  | { ok: false; error: 'canal_invalido' | 'dias_invalidos' | 'franja_invalida' | 'umbral_invalido' | 'sin_cambios' }
 
 /** Valida el cambio y lo deja en la forma de las columnas. Nada se escribe que no se haya validado. */
 export function validarCambioPreferencias(c: CambioPreferenciasAvisos): ResultadoCambioPreferencias {
@@ -165,6 +175,10 @@ export function validarCambioPreferencias(c: CambioPreferenciasAvisos): Resultad
       datos.noMolestarDesde = desde
       datos.noMolestarHasta = hasta
     }
+  }
+  if (c.umbralSubidaPrima !== undefined) {
+    if (!esUmbralSubidaPrima(c.umbralSubidaPrima)) return { ok: false, error: 'umbral_invalido' }
+    datos.umbralSubidaPrima = c.umbralSubidaPrima
   }
   if (Object.keys(datos).length === 0) return { ok: false, error: 'sin_cambios' }
   return { ok: true, datos }

@@ -27,7 +27,7 @@
 // tiene forma de bastidor sale `null` («no lo hemos sabido leer») y la póliza
 // se guarda igual; allí es un error que la persona ve.
 import { validarCompaniaContraTexto } from './compania-en-texto'
-import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
+import { openrouterChat, openrouterVision, cleanJSON } from '@central/core-ai'
 import {
   MAX_TEXTO_RAMO,
   camposDeRamo,
@@ -433,13 +433,19 @@ export async function extraerPoliza(
       console.warn('[portal] pdf-parse falló:', e)
     }
     if (!texto.trim()) return nadaLeido(motivoSinTexto)
+    // 🔒 Solo OpenRouter (el proveedor que declara la privacidad, `app/legal/privacidad`), sin la
+    // cadena de suplentes de `aiComplete` (Groq, Cerebras, Kimi). Sin clave = «no hemos podido leerla».
+    const apiKey = (process.env.OPENROUTER_API_KEY ?? '').trim()
+    if (!apiKey) return nadaLeido()
+    const pedirTexto = (system: string) =>
+      openrouterChat({ apiKey }, [{ role: 'user', content: texto.slice(0, 20_000) }], { system, maxTokens: 600 })
     // Un fallo de IA es «no lo hemos podido mirar», no «no hay datos»: se degrada
     // a `none` y la póliza se guarda igual, para completarla a mano.
     let salida: string
     try {
-      salida = await aiComplete(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 600 })
+      salida = await pedirTexto(INSTRUCCION)
     } catch (e) {
-      console.warn('[portal] aiComplete falló:', e)
+      console.warn('[portal] openrouterChat falló:', e)
       return nadaLeido()
     }
     // 🚨 El mismo presupuesto que la 1ª pasada (600), no 400. La 2ª pide MÁS
@@ -449,14 +455,12 @@ export async function extraerPoliza(
     // (`OpenRouter: respuesta vacía`, `openrouter.ts:134`), que es lo que se vio
     // el 07/09/2026 con toda la cadena de suplentes apagada. No es la causa
     // demostrada —solo hay una medición— pero es la única variable barata.
-    const { datos, estado } = await leerDatosRamo(conCompaniaValidada(parsear(salida), texto), (instruccion) =>
-      aiComplete(texto.slice(0, 20_000), { system: instruccion, maxTokens: 600 }),
-    )
+    const { datos, estado } = await leerDatosRamo(conCompaniaValidada(parsear(salida), texto), pedirTexto)
     return { datos, fuente: 'texto', camposRamo: estado }
   }
 
   if (mimeType.startsWith('image/')) {
-    const apiKey = process.env.OPENROUTER_API_KEY ?? ''
+    const apiKey = (process.env.OPENROUTER_API_KEY ?? '').trim()
     if (!apiKey) return nadaLeido()
     let salida: string
     try {

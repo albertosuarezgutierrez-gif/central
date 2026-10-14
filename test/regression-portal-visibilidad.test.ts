@@ -271,7 +271,10 @@ test('🚨 la 2ª pasada NO tiene menos presupuesto que la 1ª', () => {
   // truncada de OpenRouter no llega a medias: llega VACÍA.
   const src = sinComentarios(leer(EXTRACTOR))
   const topes = [...src.matchAll(/maxTokens:\s*(\d+)/g)].map((m) => Number(m[1]))
-  assert.ok(topes.length >= 2, 'se esperan al menos dos llamadas con maxTokens')
+  // Texto (OpenRouter): UN solo `pedirTexto` sirve a las dos pasadas, así que no pueden divergir.
+  // Visión: sus llamadas no llevan tope propio. Se exige que haya tope y que las dos pasadas del texto lo compartan.
+  assert.ok(topes.length >= 1, 'se espera al menos una llamada con maxTokens')
+  assert.ok(/leerDatosRamo\(conCompaniaValidada\(parsear\(salida\), texto\), pedirTexto\)/.test(src), 'la 2ª pasada del PDF debe usar el mismo pedirTexto (mismo presupuesto) que la 1ª')
   assert.ok(
     Math.min(...topes) >= 600,
     `ninguna pasada puede ir por debajo de 600 tokens (mínimo encontrado: ${Math.min(...topes)})`,

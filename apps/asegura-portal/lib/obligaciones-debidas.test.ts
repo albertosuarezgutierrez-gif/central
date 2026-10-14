@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
-import { obligacionesDebidasDeIdentidad } from './obligaciones-debidas.ts'
+import { obligacionesDebidasDeIdentidad, sinVencimientoAportadaDuplicado } from './obligaciones-debidas.ts'
 
 const P1 = 'p1'
 const P2 = 'p2'
@@ -93,4 +93,27 @@ test('cableado: el cron decide con el helper, cuenta las retenidas por puente ca
   assert.match(cron, /catch \(e\)/)
   assert.doesNotMatch(cron, /\?\? null\)\.length > 0/, 'ya no se trata el fallo del puente como «sin bajas»')
   assert.doesNotMatch(cron, /polizasConBajaEnMarcha|sinObligacionesDePolizasConBaja/, 'esa decisión vive solo en el helper')
+})
+
+// ─── Un solo push por vencimiento de póliza APORTADA (13/10/2026) ────────────
+const od = (tipo: string, polizaDeclaradaId: string | null) => ({ tipo, polizaDeclaradaId })
+
+test('🪤 vencimiento de aportada con `vencimiento_aportada` activo: este cron NO lo manda (ya sale por avisos-cima)', () => {
+  const obligaciones = [od('poliza', 'd1'), od('recibo', 'd1'), od('poliza', null), od('itv', null)]
+  const r = sinVencimientoAportadaDuplicado(obligaciones, { silenciados: new Set(), captacionPedida: new Set() })
+  assert.deepEqual(r, [od('recibo', 'd1'), od('poliza', null), od('itv', null)])
+})
+
+test('con `vencimiento_aportada` silenciado, o la captación ya pedida, el vencimiento sí sale por aquí', () => {
+  const obligaciones = [od('poliza', 'd1'), od('poliza', 'd2')]
+  assert.deepEqual(sinVencimientoAportadaDuplicado(obligaciones, { silenciados: new Set(['vencimiento_aportada']), captacionPedida: new Set() }), obligaciones)
+  assert.deepEqual(sinVencimientoAportadaDuplicado(obligaciones, { silenciados: new Set(['siniestro']), captacionPedida: new Set(['d2']) }), [od('poliza', 'd2')])
+})
+
+test('🪤 cableado: avisos-push filtra las aportadas ANTES de decidir y lee polizaDeclaradaId', () => {
+  const ruta = readFileSync(new URL('../app/api/cron/avisos-push/route.ts', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  assert.match(ruta, /polizaDeclaradaId: true/)
+  assert.match(ruta, /obligacionesDebidasDeIdentidad\(\{\s*obligaciones: sinDuplicado,/)
+  assert.match(ruta, /portalAvisoSilenciado\.findMany\(\{ where: \{ identidadId \}/)
 })

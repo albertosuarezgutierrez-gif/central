@@ -584,7 +584,41 @@ export {
 } from './mejorar-precio.ts'
 export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
-export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima } from './avisos-cima.ts'
+export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, eventosPolizasNuevas, eventosPolizasModificadas, planificarAvisos, textoPushCima, urlPushCima } from './avisos-cima.ts'
+// Fase B de avisos (13/10/2026): vencimiento de aportadas, subida de prima, vencimientos de pólizas autorizadas.
+export {
+  DIAS_CAPTACION_APORTADA,
+  PREGUNTA_COMPARATIVA,
+  UMBRALES_SUBIDA_PRIMA,
+  UMBRAL_SUBIDA_POR_DEFECTO,
+  esUmbralSubidaPrima,
+  eventosSubidaPrima,
+  eventosVencimientoAportada,
+  eventosVencimientoAutorizado,
+  fechaCorta,
+  MAX_IMPORTE_OBSERVABLE,
+  MAX_SUBIDA_OBSERVABLE,
+  MIN_IMPORTE_OBSERVABLE,
+  nombreTitularParaAviso,
+  observarPrima,
+  primaAportadaObservable,
+  primaCarteraObservable,
+  TEXTO_SUBIDA_PRIMA,
+  TEXTO_VENCIMIENTO_AUTORIZADO,
+  textoSubidaPrima,
+  textoVencimientoAportada,
+  textoVencimientoAutorizado,
+} from './avisos-ampliados.ts'
+export type {
+  DeclaradaParaAviso,
+  ObservacionGuardada,
+  ObservacionPrima,
+  OrigenPrima,
+  PrimaObservable,
+  Subida,
+  TitularAutorizadoParaAviso,
+  UmbralSubidaPrima,
+} from './avisos-ampliados.ts'
 export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima } from './avisos-cima.ts'
 export { vistaCobertura, capitalDeCobertura, nombreCobertura, LIMITES_LEGALES, type CoberturaVista, type CapitalVista } from './cobertura-vista.ts'
 // Personas de la póliza y terceros del siniestro (CIMA, asegura#880): lista blanca de lo que ve el cliente.
