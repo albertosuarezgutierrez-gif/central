@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-13T20:33:16.475Z",
- "llamadas": 5531,
+ "fin": "2026-10-14T07:48:33.234Z",
+ "llamadas": 5535,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -40,15 +40,15 @@
    }
   },
   "otro": {
-   "llamadas": 808,
-   "chars_in": 381818,
-   "chars_out": 5943751,
+   "llamadas": 809,
+   "chars_in": 381879,
+   "chars_out": 5943865,
    "errores": 0,
    "archivos_citados": 38,
    "chars_citados": 1524935,
    "tools": {
     "SubagentHandback": 123,
-    "ToolSearch": 142,
+    "ToolSearch": 143,
     "ReadNotifications": 481,
     "SendMessage": 25,
     "SendUserFile": 1,
@@ -98,15 +98,15 @@
    }
   },
   "sql": {
-   "llamadas": 251,
-   "chars_in": 130162,
-   "chars_out": 711805,
+   "llamadas": 254,
+   "chars_in": 131014,
+   "chars_out": 713757,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 15,
-    "mcp__Supabase__execute_sql": 236
+    "mcp__Supabase__execute_sql": 239
    }
   },
   "mcp:Supabase": {
