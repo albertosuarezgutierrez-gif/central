@@ -6,7 +6,7 @@
 
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import {
-  envDeMaquina, esTipoError, esVersionBot, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  envDeMaquina, esTipoError, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
   type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
@@ -158,8 +158,14 @@ export type ResultadoWorker =
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
-  /** Exploración terminada (13/10/2026): el MAPA ya está en su cabecera (cierre); aquí solo el desenlace del trabajo. */
-  | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin } & MetaWorker)
+  /**
+   * Exploración terminada (13/10/2026): el MAPA ya está en su cabecera (cierre); aquí el desenlace del trabajo y, si se guardó
+   * el presupuesto (14/10/2026), su PDF (como mucho uno) y la referencia del portal (`null` = no se vio).
+   */
+  | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin; presupuesto: PresupuestoExplorado | null } & MetaWorker)
+
+/** El presupuesto GUARDADO por el explorador: PDF descargado (o `null`) y referencia (o `null`). */
+export type PresupuestoExplorado = { referencia: string | null; pdf: { nombre: string; contenido: Buffer } | null }
 
 /**
  * Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas
@@ -245,7 +251,27 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
   if (e.resultado === 'explorado') {
     const motivoFin = MOTIVOS_FIN.find((m) => m === e.motivoFin)
     if (!motivoFin) return { ok: false, errores: ['motivoFin fuera de lista'] }
-    return { ok: true, r: { tipo: 'explorado', trabajoId, motivoFin, ...leerMetaWorker(e) } }
+    // Presupuesto guardado (14/10/2026): opcional; si viene, forma ESTRICTA (un PDF de verdad, referencia sin forma de dato personal).
+    let presupuesto: PresupuestoExplorado | null = null
+    if (e.presupuesto !== undefined && e.presupuesto !== null) {
+      const pr = obj(e.presupuesto)
+      if (!pr || Object.keys(pr).some((k) => !['referencia', 'pdf'].includes(k))) return { ok: false, errores: ['presupuesto con forma no válida'] }
+      const referencia = pr.referencia === undefined || pr.referencia === null ? null : referenciaPresupuestoValida(pr.referencia) ? pr.referencia : undefined
+      if (referencia === undefined) return { ok: false, errores: ['presupuesto.referencia no válida'] }
+      let pdf: PresupuestoExplorado['pdf'] = null
+      if (pr.pdf !== undefined && pr.pdf !== null) {
+        const o = obj(pr.pdf)
+        const b = o ? base64(o.base64, 'presupuesto.pdf.base64', errores, MAX_BYTES_ADJUNTO) : null
+        if (!o) errores.push('presupuesto.pdf no es un objeto')
+        else if (!b) errores.push('presupuesto.pdf.base64: falta')
+        else if (!esPdf(b)) errores.push('presupuesto.pdf: no empieza por %PDF-')
+        if (errores.length) return { ok: false, errores }
+        const nombre = typeof o!.nombre === 'string' && /^[\w.() -]{1,120}$/.test(o!.nombre.trim()) ? o!.nombre.trim() : 'presupuesto.pdf'
+        pdf = { nombre, contenido: b! }
+      }
+      presupuesto = { referencia, pdf }
+    }
+    return { ok: true, r: { tipo: 'explorado', trabajoId, motivoFin, presupuesto, ...leerMetaWorker(e) } }
   }
 
   return { ok: false, errores: ['resultado tiene que ser «ok», «error» o «explorado»'] }

@@ -11,7 +11,9 @@ import {
   MOTIVOS_FIN_EXPLORACION,
   catalogoParaIA,
   lineaMotivosPararParaIA,
+  lineaAccionesPortalParaIA,
   esEntradaExploracion,
+  leerPresupuestoMapa,
   normalizarRedNoGet,
   sanearInventarioDom,
   validarMapa,
@@ -19,6 +21,7 @@ import {
   type InventarioDom,
   type MapaExploracion,
   type PantallaMapaExploracion,
+  type PresupuestoMapa,
   type RespuestaExplorador,
 } from '@central/module-tarificacion'
 
@@ -177,7 +180,15 @@ export function leerPeticionEncolarExploracion(body: unknown): { ok: true; p: Pe
 export const MOTIVOS_FIN = MOTIVOS_FIN_EXPLORACION
 export type MotivoFin = (typeof MOTIVOS_FIN)[number]
 
-export type PeticionCierre = { trabajoId: string; motivoFin: MotivoFin; detalleFin: DetalleFinExploracion | null; redNoGet: string[]; efectosEnPortal: MapaExploracion['efectosEnPortal'] }
+export type PeticionCierre = {
+  trabajoId: string
+  motivoFin: MotivoFin
+  detalleFin: DetalleFinExploracion | null
+  redNoGet: string[]
+  efectosEnPortal: MapaExploracion['efectosEnPortal']
+  /** Guardado del presupuesto (14/10/2026). `null` = el worker no lo informó (imagen anterior): el mapa no lo lleva. */
+  presupuesto: PresupuestoMapa | null
+}
 
 /**
  * El hueco que deja en el mapa el DETALLE de la parada del worker (14/10/2026): qué comprobación cortó, sin valores. `null`
@@ -200,14 +211,20 @@ export function leerPeticionCierre(body: unknown): { ok: true; p: PeticionCierre
   if (!Array.isArray(red) || red.length > 200) errores.push('redNoGet tiene que ser una lista (≤200)')
   const ef = b.efectosEnPortal === undefined ? [] : b.efectosEnPortal
   if (!Array.isArray(ef) || !ef.every((e) => EFECTOS_EN_PORTAL.includes(e as never))) errores.push('efectosEnPortal fuera de lista')
+  // Opcional; si viene, forma ESTRICTA (referencia sin forma de dato personal): uno mal formado tumba el cierre (400).
+  const presupuesto = b.presupuesto === undefined ? null : leerPresupuestoMapa(b.presupuesto)
+  if (b.presupuesto !== undefined && !presupuesto) errores.push('presupuesto con forma no válida')
   if (errores.length) return { ok: false, errores }
   const redNoGet = [...new Set((red as unknown[]).map(normalizarRedNoGet).filter((x): x is string => x !== null))].slice(0, 50)
   // Opcional y TOLERANTE: un código fuera de la lista cerrada (worker más nuevo) se ignora; nunca tumba el cierre.
   const detalleFin = DETALLES_FIN_EXPLORACION.find((d) => d === b.detalleFin) ?? null
-  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])] } }
+  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])], presupuesto } }
 }
 
 // ─── Prompt ──────────────────────────────────────────────────────────────────
+
+/** Las listas de acciones del prompt salen de la LISTA ÚNICA del módulo (`ACCIONES_PORTAL`, acciones-portal.ts). */
+const ACCIONES_IA = lineaAccionesPortalParaIA()
 
 export const SYSTEM_EXPLORADOR = `Eres el EXPLORADOR del tarificador de una correduría de seguros: un robot está dentro del portal de una aseguradora para COTIZAR (nunca contratar). En cada pantalla recibes su INVENTARIO (estructura, sin valores) y decides el siguiente lote de acciones para llegar a la pantalla de PRECIO.
 
@@ -217,9 +234,11 @@ REGLAS (no negociables):
 - rellenar: "dato" es SIEMPRE una CLAVE del catálogo que se te da; nunca escribas un valor. Solo en input de texto/número/fecha o textarea.
 - elegir: solo en <select>; "valor" exacto de una de sus opciones del inventario.
 - marcar: solo radios (nunca checkbox); nunca un consentimiento (RGPD, publicidad, cesión…).
-- avanzar: UNO por lote y el ÚLTIMO; efectoEsperado ∈ siguiente_pantalla|calcular|abrir_seccion|ver_resultado; confianza alta|media. NUNCA Emitir, Contratar, Formalizar, Grabar, Guardar, Archivar, Firmar, Pagar, Proyecto ampliado, Pago fraccionado. "Aceptar" solo si es el de Datos básicos que lleva a Tarificar.
+- avanzar: UNO por lote y el ÚLTIMO; efectoEsperado ∈ siguiente_pantalla|calcular|abrir_seccion|ver_resultado|guardar_presupuesto; confianza alta|media. "Aceptar" solo si es el de Datos básicos que lleva a Tarificar.
+- EMISIÓN, NUNCA (ni con permiso, ni aunque el portal lo pida; esa la hace una persona): ${ACCIONES_IA.emision}. Tampoco: ${ACCIONES_IA.prohibidas}.
+- GUARDAR EL PRESUPUESTO, SÍ (decisión de Alberto, 14/10/2026), pero SOLO al llegar al precio: en la pantalla de resultado (pantalla.tipo "resultado", con los importes a la vista), ANTES de terminar, avanzar con efectoEsperado "guardar_presupuesto" sobre el botón de guardar (${ACCIONES_IA.guardar}). En la pantalla siguiente (también tipo "resultado"): si hay un botón para descargar/imprimir/generar el PDF del presupuesto, otro avanzar "guardar_presupuesto" sobre él; después terminar (refsPrecio con los importes si siguen a la vista; [] si ya no se ven). La REFERENCIA del presupuesto la lee el robot del texto de la pantalla: tú no la escribes. Si no hay botón de guardar, terminar como siempre. Un botón de guardar fuera de la pantalla de resultado, o con cualquier otro efecto, NO se pulsa. Si un botón mezcla guardar con emitir, contratar o pagar, NO se pulsa.
 - Un elemento "deshabilitado" no se toca. Si el botón de avance está deshabilitado porque faltan campos, manda SOLO los rellenar/elegir/marcar (sin avanzar): el robot vuelve con la pantalla actualizada y entonces avanzas. Eso no es motivo para parar.
-- terminar: SOLO si la pantalla muestra el precio (importes); refsPrecio = refs de esos importes. Va sola.
+- terminar: SOLO si la pantalla muestra el precio (importes); refsPrecio = refs de esos importes. Va sola. Excepción: tras guardar el presupuesto, terminar con refsPrecio [] si la pantalla ya no enseña el precio.
 - parar {motivo}: "motivo" es EXACTAMENTE uno de estos códigos, sin más texto: ${lineaMotivosPararParaIA()}. Va sola. Ante la duda, PARA.
 - mapeo: para cada campo que identifiques, {ref, campoCanonico (clave del catálogo o null), confianza alta|media|baja}.
 - Máximo 15 acciones. Refs SOLO del inventario de ESTA pantalla.

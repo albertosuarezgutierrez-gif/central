@@ -352,11 +352,24 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         const { estado } = await marcarFallo(tx, t.id, t.intentos, { tipo: 'portal', mensaje: 'exploracion_sin_cierre: el worker informó «explorado» pero la cabecera no está cerrada (el mapa no se guardó)', url: null }, null)
         return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: null } }
       }
+      // PRESUPUESTO GUARDADO (14/10/2026): su PDF va a `seguros.documentos` como el de una tarificación (mismo `guardarAdjunto`)
+      // y queda en `evidencia_documento_id` del trabajo; la referencia del portal, en las notas del documento (y en
+      // `mapa.presupuesto`, que escribió el cierre). Un documento tiene que colgar de un cliente o póliza
+      // (`documentos_colgado_de_algo`): en una exploración SINTÉTICA (sin cliente) el PDF no se guarda (el mapa dice `pdf`).
+      const pdfDoc = r.presupuesto?.pdf && (t.cliente_id || t.poliza_id)
+        ? await guardarAdjunto(tx, t, {
+            nombre: r.presupuesto.pdf.nombre,
+            mime: 'application/pdf',
+            contenido: r.presupuesto.pdf.contenido,
+            notas: notasPresupuestoExplorado(t.compania, t.ramo, r.presupuesto.referencia),
+          })
+        : null
       // Sin tarificación (el CHECK `trabajo_ok_con_tarificacion` lo admite solo en exploración). El motivo de fin, en `error`
       // NO: va en la cabecera de la exploración (`motivo_fin`, lo escribió el cierre).
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos
-        set estado = 'ok', lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
+        set estado = 'ok', lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
+            evidencia_documento_id = coalesce(${pdfDoc}::uuid, evidencia_documento_id)
         where id = ${t.id}::uuid and estado = 'en_curso'`
       // PURGA (13/10/2026): cerrado → fuera los datos personales del riesgo, en el MISMO commit.
       await purgarRiesgoTrabajos(tx, [t.id])
@@ -410,6 +423,11 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     }
   }
   return interno.res
+}
+
+/** Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal). */
+export function notasPresupuestoExplorado(compania: string, ramo: string, referencia: string | null): string {
+  return `Presupuesto de ${compania} (${ramo}) guardado por el explorador del tarificador RPA${referencia ? ` · referencia del portal: ${referencia}` : ' · referencia: no se vio'}`
 }
 
 async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]): Promise<string> {

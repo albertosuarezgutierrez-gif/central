@@ -27,6 +27,7 @@ import {
   TOPES_EXPLORADOR,
   validarMapa,
   validarRespuestaExplorador,
+  bloqueoGuardadoPresupuesto,
   type InventarioDom,
   type RespuestaExplorador,
 } from './index.ts'
@@ -625,5 +626,42 @@ describe('redacción de los valores del cliente (exploración con datos reales)'
     expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: null, env })).toBeNull()
     expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: 'x', env })).toBeNull()
     expect(valoresSensiblesExploracion({ conDatosReales: false, riesgo, env })).toEqual(['buzon@example.test', '+34 699 000 000', '699000000'])
+  })
+})
+
+describe('guardado de presupuesto: botones compuestos (emisión + guardar) nunca pasan', () => {
+  // Pantalla de RESULTADO con importes: el único caso en el que «guardar» podría pulsarse.
+  const resultado = (texto: string) =>
+    inventario({
+      titulos: ['Resultado de tarificación'],
+      importes: [{ texto: '347,55 €', etiqueta: 'Prima total' }],
+      elementos: [{ tag: 'button', id: 'btnCompuesto', texto }],
+    })
+  const avanzarGuardar = (inv: InventarioDom) => ({
+    version: 1,
+    pantalla: { nombre: 'Resultado', tipo: 'resultado' },
+    acciones: [{ accion: 'avanzar', ref: ref(inv, 'btnCompuesto'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }],
+    mapeo: [],
+    motivo: null,
+  })
+
+  it.each(['Guardar y firmar', 'Guardar y pagar', 'Grabar y contratar', 'Archivar y domiciliar'])(
+    'avanzar guardar_presupuesto sobre «%s» en resultado con importes → rechazado',
+    (texto) => {
+      const inv = resultado(texto)
+      const v = validarRespuestaExplorador(avanzarGuardar(inv), ctx(inv))
+      expect(v.ok).toBe(false)
+    },
+  )
+
+  it('control: «Guardar presupuesto» en la misma pantalla sí se acepta (el cepo no es un bloqueo general)', () => {
+    const inv = resultado('Guardar presupuesto')
+    expect(validarRespuestaExplorador(avanzarGuardar(inv), ctx(inv)).ok).toBe(true)
+  })
+
+  it('bloqueoGuardadoPresupuesto: el motivo de un compuesto con emisión es de emisión', () => {
+    const inv = resultado('Guardar y firmar')
+    const el = inv.marcos[0].elementos.find((e) => e.id === 'btnCompuesto')!
+    expect(bloqueoGuardadoPresupuesto(el, { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false })).toBe('boton_de_emision')
   })
 })

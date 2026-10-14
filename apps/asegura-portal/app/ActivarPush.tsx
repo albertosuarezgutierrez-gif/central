@@ -137,6 +137,7 @@ export function ActivarPush() {
           <button type="button" className="campana-reintentar" style={BOTON} onClick={desactivar} disabled={accion === 'trabajando'}>
             {accion === 'error_desactivar' ? 'No se han podido desactivar — reintentar' : 'Desactivar en este dispositivo'}
           </button>
+          <AvisoDePrueba />
         </>
       ) : (
         <>
@@ -145,8 +146,44 @@ export function ActivarPush() {
           <button type="button" className="campana-reintentar" style={BOTON} onClick={activar} disabled={accion === 'trabajando'}>
             {accion === 'error' ? 'No se ha podido activar — reintentar' : 'Acepto: activar las notificaciones'}
           </button>
+          {lectura.permiso === 'granted' && <AvisoDePrueba />}
         </>
       )}
+    </div>
+  )
+}
+
+type EstadoPrueba = 'reposo' | 'enviando' | 'ok' | 'sin_suscripcion' | 'sin_vapid' | 'demasiadas' | 'error'
+
+const TEXTO_PRUEBA: Record<Exclude<EstadoPrueba, 'reposo' | 'enviando'>, string> = {
+  ok: 'Enviado. Debería llegarte en unos segundos.',
+  sin_suscripcion: 'Primero activa los avisos en este móvil.',
+  sin_vapid: 'Los avisos no están disponibles ahora mismo.',
+  demasiadas: 'Has hecho varias pruebas seguidas. Espera unos minutos y vuelve a intentarlo.',
+  error: 'No se ha podido enviar el aviso de prueba. Inténtalo de nuevo.',
+}
+
+/** «Enviar aviso de prueba»: un push fijo a TUS dispositivos (`POST /api/push/prueba`, sin cuerpo). */
+function AvisoDePrueba() {
+  const [estado, setEstado] = useState<EstadoPrueba>('reposo')
+  const enviar = async () => {
+    setEstado('enviando')
+    const r = await fetch('/api/push/prueba', { method: 'POST' }).catch(() => null)
+    if (r === null) return setEstado('error')
+    if (r.ok) return setEstado('ok')
+    if (r.status === 409) return setEstado('sin_suscripcion')
+    if (r.status === 503) return setEstado('sin_vapid')
+    if (r.status === 429) return setEstado('demasiadas')
+    setEstado('error')
+  }
+  return (
+    <div style={{ marginTop: 8 }}>
+      <button type="button" className="campana-reintentar" style={BOTON} onClick={enviar} disabled={estado === 'enviando'}>
+        {estado === 'enviando' ? 'Enviando…' : 'Enviar aviso de prueba'}
+      </button>
+      <p role="status" aria-live="polite" style={{ ...TEXTO, margin: '4px 0 0' }}>
+        {estado === 'reposo' || estado === 'enviando' ? '' : TEXTO_PRUEBA[estado]}
+      </p>
     </div>
   )
 }

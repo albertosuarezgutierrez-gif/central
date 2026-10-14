@@ -1,0 +1,242 @@
+// Cepos de la LISTA ÚNICA de acciones de portal y del GUARDADO DE PRESUPUESTO del explorador (14/10/2026). Fixtures
+// SINTÉTICAS (sin datos personales). Decisión de Alberto: guardar el presupuesto SÍ (solo en resultado); emitir NUNCA.
+import { describe, it, expect } from 'vitest'
+import {
+  ACCIONES_PORTAL,
+  PATRONES_GUARDADO_GUARD,
+  TEXTOS_BLOQUEADOS_ALTA,
+  clasificarAccionPortal,
+  comprobarBoton,
+  construirMapa,
+  extraerReferenciaPresupuesto,
+  leerPresupuestoMapa,
+  lineaAccionesPortalParaIA,
+  nombresAccionesPortal,
+  parametrosParecenEmision,
+  pareceEmision,
+  planDesdeMapa,
+  presupuestoEnCursoDe,
+  sanearInventarioDom,
+  validarMapa,
+  validarRespuestaExplorador,
+  type InventarioDom,
+  type RespuestaExplorador,
+} from './index.ts'
+
+const ENTRADA = 'allianz:particulares:hogar'
+
+/** Pantalla con botones de guardado y de emisión; `conPrecio` añade importes (pantalla de resultado). */
+function pantalla(conPrecio: boolean, titulo = 'Tarificación'): InventarioDom {
+  return sanearInventarioDom(
+    {
+      marcos: [
+        {
+          url: 'https://portal.example.test/epac/tarifa',
+          titulos: [{ texto: titulo, tag: 'h2' }],
+          importes: conPrecio ? [{ texto: '347,55 €', etiqueta: 'Prima total' }] : [],
+          elementos: [
+            { tag: 'input', id: 'superficie', type: 'text', etiqueta: 'Superficie (m²)' },
+            { tag: 'button', id: 'btnGuardar', texto: 'Guardar presupuesto' },
+            { tag: 'button', id: 'btnGrabar', texto: 'Grabar' },
+            // td#store del ePAC: «Archivar», onclick sendActionEvent('store').
+            { tag: 'td', id: 'store', texto: 'Archivar', onclick: "sendActionEvent('store')" },
+            { tag: 'button', id: 'btnPdf', texto: 'Descargar PDF' },
+            { tag: 'button', id: 'btnEmitir', texto: 'Emitir' },
+            { tag: 'button', id: 'btnContratar', texto: 'Contratar' },
+            { tag: 'td', id: 'contract', texto: 'Emitir', onclick: 'validar_aceptar()' },
+            { tag: 'button', id: 'btnGuardarEmitir', texto: 'Guardar y emitir' },
+            { tag: 'button', id: 'btnFirmar', texto: 'Firmar' },
+            { tag: 'button', id: 'btnPagar', texto: 'Pagar' },
+            { tag: 'button', id: 'btnDomiciliar', texto: 'Domiciliar recibo' },
+            { tag: 'button', id: 'btnTramitar', texto: 'Tramitar póliza' },
+            { tag: 'button', id: 'btnConfirmar', texto: 'Confirmar contratación' },
+            { tag: 'button', id: 'btnFracciona', texto: 'Pago fraccionado' },
+            { tag: 'button', id: 'btnAmpliado', texto: 'Proyecto ampliado' },
+            { tag: 'button', id: 'guardarOk', texto: 'Guardar', onclick: 'btnAceptar()' },
+            { tag: 'button', id: 'btnSiguiente', texto: 'Siguiente' },
+          ],
+        },
+      ],
+    },
+    undefined,
+    { refs: true },
+  )!
+}
+
+const ref = (inv: InventarioDom, id: string) => inv.marcos[0].elementos.find((e) => e.id === id)!.ref!
+const resp = (inv: InventarioDom, id: string, tipo: string, efecto = 'guardar_presupuesto') => ({
+  version: 1,
+  pantalla: { nombre: 'P', tipo },
+  acciones: [{ accion: 'avanzar', ref: ref(inv, id), efectoEsperado: efecto, confianza: 'alta' }],
+  mapeo: [],
+  motivo: null,
+})
+const ctx = (inv: InventarioDom, presupuestoEnCurso = false) => ({ inventario: inv, ramo: 'hogar', entrada: ENTRADA, datosReales: null, presupuestoEnCurso })
+
+describe('lista única de acciones de portal', () => {
+  it('tres categorías; emisión y guardar con lo que pidió Alberto', () => {
+    expect(nombresAccionesPortal('emision')).toEqual(expect.arrayContaining(['Emitir', 'Contratar', 'Formalizar', 'Firmar', 'Pagar / Pago', 'Tramitar póliza', 'Confirmar contratación', 'Domiciliar', 'Pago fraccionado']))
+    expect(nombresAccionesPortal('guardar_presupuesto')).toEqual(['Grabar', 'Guardar (presupuesto / proyecto)', 'Archivar', 'Descargar', 'Imprimir', 'Generar PDF'])
+    // «Proyecto ampliado»: sin certeza de qué hace → prohibido (no es guardar).
+    expect(nombresAccionesPortal('prohibida')).toContain('Proyecto ampliado')
+    expect(clasificarAccionPortal(['Proyecto ampliado']).guardar).toBeNull()
+    expect(ACCIONES_PORTAL.every((a) => Object.isFrozen(a))).toBe(true)
+  })
+
+  it.each(['Emitir', 'Emisión', 'Contratar', 'Formalizar', 'Firmar', 'Pagar', 'Pago', 'Tramitar póliza', 'Confirmar contratación', 'Domiciliar', 'Pago fraccionado', 'validar_aceptar()', 'contract'])(
+    '«%s» es EMISIÓN',
+    (t) => expect(clasificarAccionPortal([t]).emision).not.toBeNull(),
+  )
+
+  it.each(['Grabar', 'Guardar', 'Guardar presupuesto', 'Guardar proyecto', 'Archivar', 'Descargar', 'Imprimir', 'Generar PDF', 'store', "sendActionEvent('store')"])(
+    '«%s» es GUARDAR PRESUPUESTO y no emisión',
+    (t) => {
+      const c = clasificarAccionPortal([t])
+      expect(c.guardar).not.toBeNull()
+      expect(c.emision).toBeNull()
+    },
+  )
+
+  it('el prompt sale de la lista', () => {
+    const l = lineaAccionesPortalParaIA()
+    expect(l.emision).toContain('Tramitar póliza')
+    expect(l.guardar).toContain('Archivar')
+    expect(l.prohibidas).toContain('Proyecto ampliado')
+  })
+})
+
+describe('guard: permitirGuardarPresupuesto abre SOLO Archivar', () => {
+  it('sin la opción, Archivar / store siguen bloqueados (como siempre)', () => {
+    for (const t of ['Archivar', 'store', "sendActionEvent('store')"]) expect(pareceEmision(t)).toBe(true)
+    expect(parametrosParecenEmision('action=store')).toBe(true)
+    expect(() => comprobarBoton(['Archivar'], { permitirAceptar: true })).toThrow()
+  })
+  it('con la opción, Archivar pasa; emitir, contract, validar_aceptar, aceptar, ampliado y fraccionado NO', () => {
+    const op = { permitirGuardarPresupuesto: true }
+    for (const t of ['Archivar', 'store', "sendActionEvent('store')"]) expect(pareceEmision(t, op)).toBe(false)
+    expect(parametrosParecenEmision('action=store', op)).toBe(false)
+    for (const t of ['Emitir', 'contract', 'validar_aceptar()', 'Aceptar', 'Proyecto ampliado', 'Pago fraccionado', 'menu4', 'btnAccept', 'Datos emisión'])
+      expect(pareceEmision(t, op), t).toBe(true)
+    expect(parametrosParecenEmision('action=contract', op)).toBe(true)
+    expect(parametrosParecenEmision("x=sendActionEvent('contract')", op)).toBe(true)
+  })
+  it('los patrones de Archivar SIGUEN en la lista del guard (no se quitaron)', () => {
+    for (const r of PATRONES_GUARDADO_GUARD) expect(TEXTOS_BLOQUEADOS_ALTA).toContain(r)
+  })
+})
+
+describe('validador: GUARDAR presupuesto solo en resultado; EMITIR nunca', () => {
+  // CEPO (a): Guardar en pantalla FORMULARIO sin precio → rechazado.
+  it('(a) Guardar/Grabar/Archivar en formulario SIN precio → rechazado', () => {
+    const inv = pantalla(false, 'Datos del riesgo')
+    for (const id of ['btnGuardar', 'btnGrabar', 'store']) {
+      const v = validarRespuestaExplorador(resp(inv, id, 'formulario'), ctx(inv))
+      expect(v.ok, id).toBe(false)
+    }
+    // Ni declarándola «resultado» sin importes ni guardado previo.
+    expect(validarRespuestaExplorador(resp(inv, 'btnGuardar', 'resultado'), ctx(inv)).ok).toBe(false)
+  })
+
+  it('(a) con importes pero pantalla «formulario» → rechazado (guardar_fuera_de_resultado)', () => {
+    const inv = pantalla(true)
+    const v = validarRespuestaExplorador(resp(inv, 'btnGuardar', 'formulario'), ctx(inv))
+    expect(v.ok).toBe(false)
+    if (!v.ok) expect(v.errores.join(' ')).toMatch(/guardar_fuera_de_resultado/)
+  })
+
+  // CEPO (b): Guardar en pantalla RESULTADO (con importes) → aceptado.
+  it('(b) Guardar / Grabar / Archivar / Descargar PDF en RESULTADO con precio → aceptado', () => {
+    const inv = pantalla(true)
+    for (const id of ['btnGuardar', 'btnGrabar', 'store', 'btnPdf']) {
+      const v = validarRespuestaExplorador(resp(inv, id, 'resultado'), ctx(inv))
+      expect(v.ok, `${id}: ${v.ok ? '' : v.errores.join(' | ')}`).toBe(true)
+    }
+  })
+
+  it('guardar SIN efecto guardar_presupuesto (como navegación) → rechazado, también en resultado', () => {
+    const inv = pantalla(true)
+    for (const efecto of ['siguiente_pantalla', 'ver_resultado', 'calcular']) {
+      const v = validarRespuestaExplorador(resp(inv, 'btnGuardar', 'resultado', efecto), ctx(inv))
+      expect(v.ok, efecto).toBe(false)
+    }
+  })
+
+  it('efecto guardar_presupuesto sobre un botón que NO es de guardar → rechazado', () => {
+    const inv = pantalla(true)
+    expect(validarRespuestaExplorador(resp(inv, 'btnSiguiente', 'resultado'), ctx(inv)).ok).toBe(false)
+  })
+
+  // CEPO (c): Emitir/Contratar en resultado → rechazado SIEMPRE (con cualquier efecto, y aunque ya se guardara).
+  it('(c) Emitir / Contratar / firmar / pagar… en RESULTADO → rechazado con cualquier efecto', () => {
+    const inv = pantalla(true)
+    const ids = ['btnEmitir', 'btnContratar', 'contract', 'btnGuardarEmitir', 'btnFirmar', 'btnPagar', 'btnDomiciliar', 'btnTramitar', 'btnConfirmar', 'btnFracciona', 'btnAmpliado', 'guardarOk']
+    for (const id of ids) for (const efecto of ['guardar_presupuesto', 'siguiente_pantalla', 'ver_resultado']) for (const previo of [false, true]) {
+      const v = validarRespuestaExplorador(resp(inv, id, 'resultado', efecto), ctx(inv, previo))
+      expect(v.ok, `${id} / ${efecto} / previo=${previo}`).toBe(false)
+    }
+  })
+
+  it('tras guardar (presupuestoEnCurso): Descargar en la pantalla siguiente sin importes → aceptado; terminar sin refs → aceptado', () => {
+    const inv = pantalla(false, 'Proyecto archivado')
+    expect(validarRespuestaExplorador(resp(inv, 'btnPdf', 'resultado'), ctx(inv, true)).ok).toBe(true)
+    const term = { version: 1, pantalla: { nombre: 'P', tipo: 'resultado' }, acciones: [{ accion: 'terminar', refsPrecio: [] }], mapeo: [], motivo: null }
+    expect(validarRespuestaExplorador(term, ctx(inv, true)).ok).toBe(true)
+    // Sin guardado previo, terminar sin importes sigue rechazado.
+    expect(validarRespuestaExplorador(term, ctx(inv, false)).ok).toBe(false)
+  })
+
+  it('presupuestoEnCursoDe: solo cuenta un avanzar guardar_presupuesto validado', () => {
+    const inv = pantalla(true)
+    const v = validarRespuestaExplorador(resp(inv, 'btnGuardar', 'resultado'), ctx(inv))
+    expect(v.ok).toBe(true)
+    expect(presupuestoEnCursoDe([null, v.ok ? v.respuesta : null])).toBe(true)
+    expect(presupuestoEnCursoDe([null])).toBe(false)
+  })
+})
+
+describe('mapa: pantalla de guardado y presupuesto', () => {
+  it('el avance de guardado entra en el mapa como tipo guardar_presupuesto, marca el resultado y se reutiliza', () => {
+    const inv = pantalla(true)
+    const v = validarRespuestaExplorador(resp(inv, 'store', 'resultado'), ctx(inv))
+    expect(v.ok).toBe(true)
+    const r = (v as { ok: true; respuesta: RespuestaExplorador }).respuesta
+    const mapa = construirMapa(
+      { entrada: ENTRADA, compania: 'allianz', producto: 'hogar', modelo: null, fecha: '2026-10-14', efectosEnPortal: ['presupuesto_guardado'], redNoGet: [], coste: { llamadas: 1, eurEstimado: 0.01 }, motivoFin: 'resultado', presupuesto: { guardado: true, referencia: 'P2026-000123', pdf: true } },
+      [{ huella: 'aaaaaaaaaaaaaaaa', inventario: inv, respuesta: r }],
+    )
+    expect(mapa.pantallas[0].avance).toMatchObject({ efecto: 'guardar_presupuesto', tipo: 'guardar_presupuesto' })
+    expect(mapa.resultado.alcanzado).toBe(true)
+    expect(mapa.presupuesto).toEqual({ guardado: true, referencia: 'P2026-000123', pdf: true })
+    expect(validarMapa(JSON.parse(JSON.stringify(mapa)))).not.toBeNull()
+    const plan = planDesdeMapa(mapa.pantallas[0], inv)!
+    expect(validarRespuestaExplorador(plan, ctx(inv)).ok).toBe(true)
+    // Un mapa con tipo y efecto descasados no vale.
+    const roto = JSON.parse(JSON.stringify(mapa))
+    roto.pantallas[0].avance.tipo = 'navegacion'
+    expect(validarMapa(roto)).toBeNull()
+  })
+
+  it('leerPresupuestoMapa: forma estricta, tres estados y sin datos personales', () => {
+    expect(leerPresupuestoMapa({ guardado: false, referencia: null, pdf: null })).toEqual({ guardado: false, referencia: null, pdf: null })
+    expect(leerPresupuestoMapa({ guardado: true, referencia: null, pdf: false })).not.toBeNull()
+    expect(leerPresupuestoMapa({ guardado: false, referencia: 'P1234', pdf: null })).toBeNull()
+    for (const pii of ['12345678Z', 'X1234567L', '612345678', 'ES9121000418450200051332', '4111111111111111'])
+      expect(leerPresupuestoMapa({ guardado: true, referencia: pii, pdf: true }), pii).toBeNull()
+    expect(leerPresupuestoMapa({ guardado: true, referencia: 'x y', pdf: true })).toBeNull()
+    expect(leerPresupuestoMapa({ guardado: true, referencia: null, pdf: true, otra: 1 })).toBeNull()
+  })
+})
+
+describe('referencia del presupuesto', () => {
+  it.each([
+    ['Referencia: P2026-000123', 'P2026-000123'],
+    ['Nº de presupuesto: 123456789', '123456789'],
+    ['Número de proyecto 2026/000777.', '2026/000777'],
+    ['El proyecto nº 55667788 se ha archivado', '55667788'],
+    ['Referencia del presupuesto #AB12CD', 'AB12CD'],
+  ])('«%s» → %s', (t, esperado) => expect(extraerReferenciaPresupuesto(t)).toBe(esperado))
+
+  it.each(['Prima total 347,55 €', 'Referencia: pendiente', 'Presupuesto guardado correctamente', '', 'Referencia: 12345678Z', 'Nº de presupuesto: 612345678'])('«%s» → null (no se vio)', (t) => {
+    expect(extraerReferenciaPresupuesto(t)).toBeNull()
+  })
+})

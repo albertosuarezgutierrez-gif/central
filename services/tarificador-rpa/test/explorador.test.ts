@@ -10,7 +10,7 @@ import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
-import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEmision } from '../src/guard.ts'
+import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
 import {
   bucleExploracion,
@@ -23,6 +23,7 @@ import {
   motivoSinDato,
   accionSinDato,
   problemaTrabajoExploracion,
+  presupuestoParaCierre,
   resultadoDeFin,
   valorAplicado,
   valorParaControl,
@@ -131,6 +132,8 @@ let peticiones: Peticion[] = []
 /** Qué pantalla sirve `/` y a qué lleva `/paso2` (cada test lo fija). */
 let inicio = RIESGO
 let trasPaso2 = DATOS_BASICOS('Datos básicos')
+/** Rutas extra por test (guardado del presupuesto): cuerpo y cabeceras. */
+let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string> }> = {}
 
 let browser: Browser
 before(async () => {
@@ -140,6 +143,12 @@ before(async () => {
     req.on('end', () => {
       const ruta = (req.url ?? '/').split('?')[0]
       peticiones.push({ metodo: req.method ?? 'GET', ruta, cuerpo })
+      const extra = rutasExtra[ruta]
+      if (extra) {
+        res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
+        res.end(extra.cuerpo)
+        return
+      }
       const html = ruta === '/' ? inicio : ruta === '/paso2' ? trasPaso2 : ruta === '/tarificar' ? RESULTADO : PAGINA('<h1>404</h1>')
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       res.end(html)
@@ -190,6 +199,8 @@ function contexto(page: Page, guard: GuardEmision, guion: Guion, extra: Partial<
     conDatosReales: false, riesgo: {}, env: {}, guard,
     pulsar: (b) => pulsar(b, guard),
     pulsarAutorizado: (b, el, marco) => pulsarExploracionAutorizada(page, guard, b, { entrada: 'allianz:particulares:hogar', el, marco }),
+    pulsarGuardado: (b, el, pantalla, trasClic) => pulsarGuardadoPresupuesto(page, guard, b, { el, pantalla }, trasClic),
+    topePdfMs: 3_000,
     pausaAccion: async () => undefined,
     pedirPaso: async (c): Promise<RespuestaPaso> => {
       enviados.push({ inventario: c.inventario, avancesFallidos: c.avancesFallidos })
@@ -688,4 +699,205 @@ test('accionSinDato: con datos reales, una clave ausente solo se salta si el por
   assert.equal(accionSinDato('dato_no_disponible', false, true), 'dato_no_disponible')
   assert.equal(accionSinDato('dato_sensible_requerido', true, true), 'dato_sensible_requerido')
   assert.equal(accionSinDato('clave_desconocida', true, true), 'ambiguo')
+})
+
+// ─── GUARDAR EL PRESUPUESTO (Alberto, 14/10/2026): sí en resultado; emitir NUNCA ─────────────────────────────────────
+
+const PDF_PRUEBA = Buffer.from('%PDF-1.4\n% presupuesto sintetico de prueba\n%%EOF\n', 'latin1')
+
+/** Resultado con precio y los botones de guardar (POST /guardar) y de emitir. */
+const RESULTADO_CON_GUARDAR = PAGINA(`
+  <h1>Resultado</h1><table><tr><td>Prima total</td><td>347,55 €</td></tr></table>
+  <form id="fg" method="post" action="/guardar"><button id="btnGuardar" type="submit">Guardar presupuesto</button></form>
+  <form id="fe" method="post" action="/emitir"><button id="btnEmitir" type="submit" onclick="window.pulsadoEmitir = true">Emitir</button></form>
+  <script>function g() { fetch('/control.do', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'action=contract' }).catch(() => {}) }</script>
+  <button id="btnGuardarX" type="button" onclick="g()">Guardar</button>`)
+
+/** Tras guardar: la referencia y el enlace al PDF (descarga). Ya no enseña el precio. */
+const ARCHIVADO = PAGINA(`
+  <h1>Proyecto archivado</h1><p>Referencia del presupuesto: P2026-000123</p>
+  <a id="lnkPdf" href="/presupuesto.pdf" role="button">Descargar PDF</a>`)
+
+/** ePAC: td#store «Archivar» que envía `action=store` al control del framework legado. */
+const RESULTADO_EPAC = PAGINA(`
+  <h1>Tarificación</h1><table><tr><td>Prima total</td><td>347,55 €</td></tr></table>
+  <script>function sendActionEvent(a) { document.getElementById('fa').elements.action.value = a; document.getElementById('fa').submit() }</script>
+  <form id="fa" method="post" action="/control.do"><input type="hidden" name="action" value=""></form>
+  <table><tr><td id="store" onclick="sendActionEvent('store')">Archivar</td><td id="contract" onclick="sendActionEvent('contract')">Emitir</td></tr></table>`)
+
+function rutasGuardado(): void {
+  rutasExtra = {
+    '/guardar': { tipo: 'text/html; charset=utf-8', cuerpo: ARCHIVADO },
+    '/control.do': { tipo: 'text/html; charset=utf-8', cuerpo: ARCHIVADO },
+    '/presupuesto.pdf': { tipo: 'application/pdf', cuerpo: PDF_PRUEBA, cabeceras: { 'Content-Disposition': 'attachment; filename="presupuesto.pdf"' } },
+    '/emitir': { tipo: 'text/html; charset=utf-8', cuerpo: PAGINA('<h1>Póliza emitida</h1>') },
+  }
+}
+
+async function paginaEn(html: string): Promise<{ context: BrowserContext; page: Page; guard: GuardEmision }> {
+  peticiones = []
+  rutasGuardado()
+  rutasExtra['/inicio'] = { tipo: 'text/html; charset=utf-8', cuerpo: html }
+  const context = await browser.newContext({ acceptDownloads: true })
+  const guard = await instalarGuardEmision(context)
+  const page = await context.newPage()
+  page.setDefaultTimeout(5_000)
+  await page.goto(`${base}/inicio`)
+  return { context, page, guard }
+}
+
+const importesDe = (inv: InventarioDom) => inv.marcos.flatMap((m) => m.importes ?? [])
+
+test('GUARDAR (b): en el resultado guarda, lee la referencia, descarga el PDF y termina; ni un POST de emisión', async () => {
+  const { context, page, guard } = await paginaEn(RESULTADO_CON_GUARDAR)
+  try {
+    const { k, lineas } = contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'avanzar', ref: ref(inv, 'btnGuardar'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], 'resultado')
+      if (n === 2) return respuesta([{ accion: 'avanzar', ref: ref(inv, 'lnkPdf'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], 'resultado')
+      return respuesta([{ accion: 'terminar', refsPrecio: importesDe(inv).length ? [importesDe(inv)[0].ref] : [] }], 'resultado')
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify({ ...fin, presupuesto: undefined }))
+    assert.ok(fin.efectos.includes('presupuesto_guardado'))
+    assert.equal(fin.presupuesto?.guardado, true)
+    assert.equal(fin.presupuesto?.referencia, 'P2026-000123')
+    assert.ok(fin.presupuesto?.pdf && fin.presupuesto.pdf.subarray(0, 5).toString('latin1') === '%PDF-', 'el PDF llegó')
+    assert.ok(peticiones.some((p) => p.metodo === 'POST' && p.ruta === '/guardar'))
+    assert.ok(!peticiones.some((p) => p.ruta === '/emitir'), 'nada de emitir')
+    assert.equal(guard.violacion(), null)
+    assert.ok(!lineas.join('\n').includes('P2026-000123'), 'la referencia no va al log')
+    // Lo que sale: cierre (tres estados) y resultado (referencia + PDF en base64).
+    const cuerpo = resultadoDeFin('00000000-0000-4000-8000-000000000001', 'allianz', fin, (t) => t)
+    assert.ok(cuerpo?.resultado === 'explorado' && cuerpo.presupuesto?.referencia === 'P2026-000123' && cuerpo.presupuesto.pdf?.base64 === PDF_PRUEBA.toString('base64'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('GUARDAR ePAC: td#store «Archivar» (action=store) pasa SOLO por la puerta del guardado; td#contract «Emitir» nunca', async () => {
+  const { context, page, guard } = await paginaEn(RESULTADO_EPAC)
+  try {
+    const { k } = contexto(page, guard, (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'avanzar', ref: ref(inv, 'store'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], 'resultado')
+      return respuesta([{ accion: 'terminar', refsPrecio: [] }], 'resultado')
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify({ ...fin, presupuesto: undefined }))
+    assert.match(peticiones.find((p) => p.ruta === '/control.do')!.cuerpo, /action=store/)
+    assert.equal(guard.violacion(), null)
+    assert.equal(fin.presupuesto?.referencia, 'P2026-000123')
+    assert.equal(guard.guardado.abierta(), false, 'la ventana se cierra')
+    // Fuera de la ventana, la MISMA acción store vuelve a estar bloqueada en la red.
+    await page.goto(`${base}/inicio`)
+    await page.evaluate(() => (window as unknown as { sendActionEvent: (a: string) => void }).sendActionEvent('store')).catch(() => undefined)
+    await page.waitForTimeout(300)
+    assert.ok(guard.violacion(), 'store fuera de la ventana: abortado')
+  } finally {
+    await context.close()
+  }
+})
+
+test('GUARDAR (a): «Guardar» en un FORMULARIO sin precio → rechazado al revalidar, sin pulsar', async () => {
+  const form = PAGINA(`<h2>Datos del riesgo</h2><form method="post" action="/guardar"><label for="s">Superficie</label><input id="s" name="s"><button id="btnGuardar" type="submit">Guardar</button></form>`)
+  const { context, page, guard } = await paginaEn(form)
+  try {
+    const { k } = contexto(page, guard, (inv) => respuesta([{ accion: 'avanzar', ref: ref(inv, 'btnGuardar'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], 'resultado'))
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(fin.detalle, 'lote_no_valido')
+    assert.ok(!peticiones.some((p) => p.ruta === '/guardar'), 'no se pulsó')
+    assert.equal(fin.presupuesto, undefined)
+  } finally {
+    await context.close()
+  }
+})
+
+test('GUARDAR (c): la IA pide «Emitir» en el resultado como guardar_presupuesto → rechazado, sin pulsar', async () => {
+  const { context, page, guard } = await paginaEn(RESULTADO_CON_GUARDAR)
+  try {
+    const { k } = contexto(page, guard, (inv) => respuesta([{ accion: 'avanzar', ref: ref(inv, 'btnEmitir'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], 'resultado'))
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.ok(!peticiones.some((p) => p.ruta === '/emitir'))
+    assert.equal(await page.evaluate(() => (window as unknown as { pulsadoEmitir?: boolean }).pulsadoEmitir ?? false), false, 'Emitir NO se pulsó')
+  } finally {
+    await context.close()
+  }
+})
+
+test('GUARDAR (d): el GUARD del worker bloquea Emitir aunque se le llame directamente y la pantalla tenga precio', async () => {
+  const { context, page, guard } = await paginaEn(RESULTADO_CON_GUARDAR)
+  try {
+    const cap = await capturarInventarioExploracion(page)
+    const inv = cap!.inventario
+    const el = (id: string) => inv.marcos.flatMap((m) => m.elementos).find((e) => e.id === id)!
+    const pantalla = { tipoPantalla: 'resultado' as const, hayImportes: true, presupuestoEnCurso: false }
+    // 1) El elemento ES «Emitir».
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnEmitir'), { el: el('btnEmitir'), pantalla }), EmisionBloqueadaError)
+    // 2) La IA/inventario dice «Guardar», pero el control VIVO es «Emitir» (el texto no casa) → rechazado.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnEmitir'), { el: el('btnGuardar'), pantalla }), EmisionBloqueadaError)
+    // 3) Sin precio en pantalla y sin guardado previo → rechazado.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnGuardar'), { el: el('btnGuardar'), pantalla: { ...pantalla, hayImportes: false } }), EmisionBloqueadaError)
+    assert.ok(!peticiones.some((p) => p.ruta === '/emitir' || p.ruta === '/guardar'), 'no salió nada')
+    assert.equal(await page.evaluate(() => (window as unknown as { pulsadoEmitir?: boolean }).pulsadoEmitir ?? false), false, 'Emitir NO se pulsó (ni siquiera con la red cortándolo)')
+    // 4) Un «Guardar» cuyo clic manda la acción de EMITIR (action=contract): la red lo aborta y el trabajo cae.
+    await pulsarGuardadoPresupuesto(page, guard, page.locator('#btnGuardarX'), { el: el('btnGuardarX'), pantalla }, () => page.waitForTimeout(500)).catch(() => undefined)
+    assert.ok(guard.violacion() instanceof EmisionBloqueadaError, 'action=contract abortado por la red')
+    assert.ok(!peticiones.some((p) => p.ruta === '/control.do'), 'el POST de contract no salió')
+    await cap!.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+/** Controles compuestos: «Guardar y firmar» visible; y dos «Guardar presupuesto» cuyo VIVO lleva emisión (title, onclick pagar()). */
+const RESULTADO_COMPUESTOS = PAGINA(`
+  <h1>Resultado</h1><table><tr><td>Prima total</td><td>347,55 €</td></tr></table>
+  <button id="btnFirma" type="button" onclick="window.pulsadoCompuesto = true">Guardar y firmar</button>
+  <button id="btnTitulo" type="button" title="Guardar y firmar" onclick="window.pulsadoCompuesto = true">Guardar presupuesto</button>
+  <div id="divPagar" role="button" onclick="pagar('x')">Guardar presupuesto</div>
+  <script>function pagar(x) { window.pulsadoCompuesto = true }</script>`)
+
+test('GUARDAR (e): control VIVO con emisión (Guardar y firmar; title o onclick pagar()) → aborta sin hacer click', async () => {
+  const { context, page, guard } = await paginaEn(RESULTADO_COMPUESTOS)
+  try {
+    const cap = await capturarInventarioExploracion(page)
+    const elementos = cap!.inventario.marcos.flatMap((m) => m.elementos)
+    const el = (id: string) => elementos.find((e) => e.id === id)!
+    const pantalla = { tipoPantalla: 'resultado' as const, hayImportes: true, presupuestoEnCurso: false }
+    // 1) Texto visible «Guardar y firmar»: el inventario ya lo ve como emisión.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnFirma'), { el: el('btnFirma'), pantalla }), EmisionBloqueadaError)
+    // 2) El inventario dice «Guardar presupuesto»; el VIVO lleva «Guardar y firmar» en el title → lo corta el control vivo.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#btnTitulo'), { el: el('btnTitulo'), pantalla }), EmisionBloqueadaError)
+    // 3) div con onclick pagar(…) (el inventario no lo vio) → lo corta el control vivo.
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#divPagar'), { el: el('divPagar'), pantalla }), EmisionBloqueadaError)
+    assert.equal(await page.evaluate(() => (window as unknown as { pulsadoCompuesto?: boolean }).pulsadoCompuesto ?? false), false, 'ningún control compuesto se pulsó')
+    assert.ok(!peticiones.some((p) => p.ruta === '/guardar' || p.ruta === '/emitir'), 'no salió ninguna petición')
+    await cap!.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+test('GUARDAR: como mucho MAX_GUARDADOS_PRESUPUESTO pulsaciones por trabajo', async () => {
+  const { context, page, guard } = await paginaEn(ARCHIVADO)
+  try {
+    const cap = await capturarInventarioExploracion(page)
+    const el = cap!.inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'lnkPdf')!
+    const pantalla = { tipoPantalla: 'resultado' as const, hayImportes: false, presupuestoEnCurso: true }
+    for (let i = 0; i < MAX_GUARDADOS_PRESUPUESTO; i++) await pulsarGuardadoPresupuesto(page, guard, page.locator('#lnkPdf'), { el, pantalla }, () => page.waitForTimeout(200))
+    await assert.rejects(pulsarGuardadoPresupuesto(page, guard, page.locator('#lnkPdf'), { el, pantalla }), EmisionBloqueadaError)
+    await cap!.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+test('presupuestoParaCierre: tres estados del PDF (null = no se intentó); sin guardado, nada', () => {
+  assert.deepEqual(presupuestoParaCierre({ guardado: false, referencia: null, pdf: null, pdfIntentado: false }), { guardado: false, referencia: null, pdf: null })
+  assert.deepEqual(presupuestoParaCierre({ guardado: true, referencia: null, pdf: null, pdfIntentado: true }), { guardado: true, referencia: null, pdf: false })
+  assert.deepEqual(presupuestoParaCierre({ guardado: true, referencia: 'P1234', pdf: PDF_PRUEBA, pdfIntentado: true }), { guardado: true, referencia: 'P1234', pdf: true })
+  // Sin guardado no viaja presupuesto en el resultado.
+  const r = resultadoDeFin('00000000-0000-4000-8000-000000000001', 'allianz', { motivo: 'resultado', error: null }, (t) => t)
+  assert.ok(r?.resultado === 'explorado' && !('presupuesto' in r))
 })
