@@ -132,6 +132,7 @@
 ## Tarificador RPA (bots Playwright)
 Guía viva (arquitectura, DOM de ePAC, seguridad, interruptores, plan): **`docs/TARIFICADOR-RPA.md`**. TARIFICAR ≠ EMITIR; guardián `test/regression-tarificador-rpa.test.ts`.
 Conocimiento de portales (capa común, Allianz ePAC, uso/régimen de Hogar): **`docs/tarificador/CONOCIMIENTO-PORTALES.md`**.
+Bot de una compañía nueva (Mapfre, etc.): manual paso a paso y prompt inicial en **`docs/tarificador/MANUAL-NUEVO-BOT.md`**.
 - **Elección de versión con IA + memoria (13/10/2026):** sección homónima de `docs/TARIFICADOR-RPA.md`. Interruptor `TARIFICADOR_IA_ELECCION=1`;
   la IA solo con confianza alta y código de la lista (6 campos del vehículo, sin datos personales); memoria por correduría, humano gana,
   la IA solo se aprende tras tarificación OK. Máx. 1 intento automático por trabajo.
