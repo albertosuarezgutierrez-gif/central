@@ -199,7 +199,7 @@ export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
 export type OperacionHogar = {
   seccion: string
   etiqueta: string
-  tipo: 'radio' | 'desplegable' | 'texto' | 'modal-texto'
+  tipo: 'eleccion' | 'desplegable' | 'texto' | 'modal-texto'
   valor: string
 }
 
@@ -225,12 +225,12 @@ export function planFormularioHogar(riesgo: unknown): OperacionHogar[] {
   if (faltan.length) throw new ErrorTarificador('datos', `occident/hogar: faltan datos del riesgo: ${faltan.join(', ')}`)
   const E = ETIQUETAS_HOGAR
   const ops: OperacionHogar[] = [
-    { seccion: 'Datos del tomador', etiqueta: E.persona, tipo: 'radio', valor: E.personaFisica },
+    { seccion: 'Datos del tomador', etiqueta: E.persona, tipo: 'eleccion', valor: E.personaFisica },
     { seccion: 'Datos del tomador', etiqueta: E.documento, tipo: 'desplegable', valor: E.tipoDocumento },
     { seccion: 'Datos del tomador', etiqueta: E.documento, tipo: 'texto', valor: nif! },
     { seccion: 'Datos del tomador', etiqueta: E.fechaNacimiento, tipo: 'texto', valor: nac! },
     { seccion: 'Tipología', etiqueta: E.tipoVivienda, tipo: 'desplegable', valor: tipo! },
-    { seccion: 'Situación', etiqueta: E.busquedaDireccion, tipo: 'radio', valor: E.busquedaDireccion },
+    { seccion: 'Situación', etiqueta: E.busquedaDireccion, tipo: 'eleccion', valor: E.busquedaDireccion },
     { seccion: 'Situación', etiqueta: E.codigoPostalSituacion, tipo: 'modal-texto', valor: cp! },
     { seccion: 'Situación', etiqueta: E.nombreVia, tipo: 'modal-texto', valor: via! },
   ]
