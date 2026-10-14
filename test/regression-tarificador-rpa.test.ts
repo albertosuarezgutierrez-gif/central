@@ -529,3 +529,68 @@ test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en g
   const expl = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/explorador.ts'), 'utf8')
   assert.match(expl, /fronteraEmisionPorCampos\(campos\)/)
 })
+
+/** Infracciones del LOGIN ASISTIDO (14/10/2026). Exportada en el test para verla FALLAR. */
+function infraccionesLoginAsistido(login: string, explorador: string, otros: Record<string, string>): string[] {
+  const out: string[] = []
+  // 1. Un solo `fill`, con el valor LOCAL de la clave validada, y justo antes la comprobación de host del SSO.
+  const fills = [...login.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
+  if (fills.length !== 1 || fills[0] !== 'valorCredencial(a.dato, k.credenciales), { timeout: 10_000 }') out.push(`fill inesperado: ${fills.join(' | ')}`)
+  const iFill = login.indexOf('.fill(valorCredencial(')
+  const previo = login.slice(Math.max(0, iFill - 400), iFill)
+  if (!/if \(!enSso\(\)\) throw/.test(previo)) out.push('el fill no va precedido de la comprobación de host del SSO')
+  if (!/a\.dato === CLAVE_CONTRASENA && tipo !== 'password'/.test(login.slice(0, iFill))) out.push('la contraseña no exige un campo password VIVO')
+  // 2. El valor no va a ningún otro sitio: `valorCredencial(` solo en su definición y en el fill; `.contrasena` solo dentro.
+  if ((login.match(/valorCredencial\(/g) ?? []).length !== 2) out.push('valorCredencial se usa fuera del fill')
+  if ((login.match(/\.contrasena\b/g) ?? []).length !== 1) out.push('la contraseña se nombra fuera de valorCredencial')
+  if (/\.goto\(|\.press\(|\.type\(|keyboard|\.check\(|setChecked|\.tap\(|pressSequentially/.test(login)) out.push('el login asistido navega, teclea o marca fuera del guard')
+  // 3. Lo que sale: marcado + última red ANTES de pedir el paso; revalidación ANTES de actuar; OTP/CAPTCHA ANTES del inventario.
+  const iPedir = login.indexOf('k.pedirPaso(')
+  for (const p of ['marcarCredencialesInventario(captura.inventario, k.credenciales)', 'inventarioSinCredenciales(inv, k.credenciales)']) {
+    const i = login.indexOf(p)
+    if (i < 0 || i > iPedir) out.push(`«${p}» tiene que ir ANTES de pedir el paso`)
+  }
+  const iVal = login.indexOf('validarRespuestaLogin(r.respuesta, { inventario: inv, entrada: k.entrada })')
+  const iEje = login.indexOf('await ejecutar(')
+  if (iVal < 0 || iEje < 0 || iVal > iEje || !/if \(!v\.ok\) throw/.test(login)) out.push('el lote del login no se revalida contra el inventario propio antes de actuar')
+  const iInv = login.indexOf('capturarInventarioExploracion(page)')
+  for (const p of ['await k.exigirSinCaptcha()', 'await exigirSinVerificacion(page, la.compania)', 'esUrlSsoLoginAsistido(la.compania, page.url())']) {
+    const i = login.indexOf(p)
+    if (i < 0 || i > iInv) out.push(`falta «${p}» antes del inventario`)
+  }
+  // 4. Avance: ventana de red del login abierta SOLO alrededor de la pulsación (y cerrada siempre).
+  if (!/abrirVentanaLogin\(k\.guard, origen\)\n\s*try \{\n\s*await k\.pulsar\(loc\)[\s\S]*?\} finally \{\n\s*cerrarVentanaLogin\(k\.guard\)/.test(login)) out.push('el avance del login no va con la ventana de red abierta y cerrada en finally')
+  // 5. El explorador solo le da el login asistido a las compañías de la lista cerrada; nadie más abre la ventana.
+  if (!/\.\.\.\(loginAsistidoDe\(exp\.entrada\) \? \{ loginAsistido:/.test(explorador)) out.push('el login asistido no está atado a loginAsistidoDe(entrada)')
+  for (const [rel, src] of Object.entries(otros)) if (/abrirVentanaLogin\(/.test(src)) out.push(`${rel} abre la ventana de red del login`)
+  return out
+}
+
+test('LOGIN ASISTIDO (14/10/2026): la IA solo da claves; el valor va SOLO al campo del SSO; revalida y para en OTP', () => {
+  const login = sinComentarios(readFileSync(join(SRV, 'src/login-asistido.ts'), 'utf8'))
+  const explorador = sinComentarios(readFileSync(join(SRV, 'src/explorador.ts'), 'utf8'))
+  const otros = Object.fromEntries(ficheros(join(SRV, 'src')).filter((f) => !/\/src\/(login-asistido|guard)\.ts$/.test(f)).map((f) => [relative(RAIZ, f), sinComentarios(readFileSync(f, 'utf8'))]))
+  assert.deepEqual(infraccionesLoginAsistido(login, explorador, otros), [])
+  // Cepo del cepo: cada brazo, en ROJO.
+  const cambia = (src: string, de: string, a: string) => {
+    const r = src.replace(de, a)
+    assert.notEqual(r, src, `el cepo no cambió nada: «${de}»`)
+    return r
+  }
+  const malos: [string, string, string?][] = [
+    ['fill con otro valor', cambia(login, 'loc.fill(valorCredencial(a.dato, k.credenciales), {', "loc.fill('x', {")],
+    ['sin host antes del fill', cambia(login, "if (!enSso()) throw new ErrorTarificador('portal', 'login asistido: el campo no está en el SSO: no se escribe')", '')],
+    ['contraseña sin password vivo', cambia(login, "a.dato === CLAVE_CONTRASENA && tipo !== 'password'", 'false')],
+    ['valor al log', cambia(login, "k.log('login_asistido_paso', { n,", "k.log('login_asistido_paso', { v: valorCredencial(CLAVE_CONTRASENA, k.credenciales), n,")],
+    ['contraseña nombrada fuera', login + '\nconst x = k.credenciales.contrasena'],
+    ['sin marcar el inventario', cambia(login, 'marcarCredencialesInventario(captura.inventario, k.credenciales)', 'captura.inventario')],
+    ['sin última red', cambia(login, 'inventarioSinCredenciales(inv, k.credenciales)', 'true')],
+    ['sin revalidar', cambia(login, 'validarRespuestaLogin(r.respuesta, { inventario: inv, entrada: k.entrada })', 'r.respuesta as never')],
+    ['sin OTP', cambia(login, 'await exigirSinVerificacion(page, la.compania)', '')],
+    ['navega', login + "\nawait page.goto('https://x')"],
+    ['sin ventana de red', cambia(login, 'abrirVentanaLogin(k.guard, origen)\n', '')],
+    ['explorador sin puerta por entrada', login, cambia(explorador, '...(loginAsistidoDe(exp.entrada) ? { loginAsistido:', '...(true ? { loginAsistido:')],
+  ]
+  for (const [nombre, l, e] of malos) assert.notDeepEqual(infraccionesLoginAsistido(l, e ?? explorador, otros), [], nombre)
+  assert.notDeepEqual(infraccionesLoginAsistido(login, explorador, { 'x.ts': 'abrirVentanaLogin(guard, o)' }), [], 'otro fichero abre la ventana')
+})

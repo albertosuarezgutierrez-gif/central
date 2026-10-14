@@ -996,6 +996,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
       }
       if (tipo === 'rellenar') {
         if (!esControlTexto(el)) return void errores.push(`${donde}: rellenar solo en input de texto/número/fecha o textarea`)
+        // Las claves de CREDENCIAL solo existen en la fase de login (`validarRespuestaLogin`): aquí, nunca (aunque un catálogo las trajera).
+        if (typeof a.dato === 'string' && a.dato.startsWith('credencial.')) return void errores.push(`${donde}: las claves de credencial solo valen en la fase de login`)
         if (typeof a.dato !== 'string' || !claves.has(a.dato)) return void errores.push(`${donde}: dato fuera del catálogo`)
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {
