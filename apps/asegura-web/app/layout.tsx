@@ -141,7 +141,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="wrap pie-cols">
             <div>
               <h4>Grupo ASegura</h4>
-              {/* Art. 19 Ley 16/2018: la identificación del mediador se ve
+              {/* Art. 173 RDL 3/2020: la identificación del mediador se ve
                   SIEMPRE, no solo si el visitante entra en una página aparte. */}
               <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>{lineaIdentificacion()}</p>
               <p className="tenue" style={{ margin: 0, fontSize: 14 }}>

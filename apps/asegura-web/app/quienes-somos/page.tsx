@@ -277,7 +277,7 @@ export default function QuienesSomos() {
             Información obligatoria
           </h2>
           <p style={parrafoUltimo}>
-            La información precontractual que la Ley 16/2018 de Distribución de Seguros obliga a
+            La información precontractual que el Real Decreto-ley 3/2020 (distribución de seguros) obliga a
             darte antes de contratar está completa en{' '}
             <Link href="/legal/informacion-mediador" style={enlace}>
               información del mediador
