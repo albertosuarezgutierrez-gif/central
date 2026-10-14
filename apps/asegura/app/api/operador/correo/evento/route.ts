@@ -4,8 +4,8 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { auditado } from '@/lib/auditoria'
-import { fechaCorreoMadrid, validarEntradaEvento } from '@/lib/correo-evento'
-import { eventosCorreoRecientes, registrarEventoCorreo } from '@/lib/correo-evento-bd'
+import { fechaCorreoMadrid, validarEntradaEvento, validarMarcaRevisado } from '@/lib/correo-evento'
+import { eventosCorreoRecientes, marcarEventoRevisado, registrarEventoCorreo } from '@/lib/correo-evento-bd'
 import { esTablaInexistente } from '@/lib/correo-avisos-intranet'
 
 export const runtime = 'nodejs'
@@ -25,6 +25,9 @@ export const dynamic = 'force-dynamic'
  *        Póliza no resuelta (o casa con dos) → `sin_resolver`: NO se escribe nada en la cartera.
  *   GET  ?dias=30 → { estado:'ok', filas, truncado } — la bandeja «Correos de compañía» de Mi mesa.
  *
+ *   PATCH { id, revisado } → { estado:'ok', id, revisado } — «Marcar como mirado» / «Deshacer» de la bandeja.
+ *        422 `invalido` · 404 `no_encontrado` (la fila no es de esta correduría) · 503 `sin_migracion`.
+ *
  * Lógica de despacho: `lib/correo-evento.ts` (puro, con test). Escrituras: `lib/correo-evento-bd.ts`.
  */
 export const POST = auditado(async (req: Request) => {
@@ -41,6 +44,23 @@ export const POST = auditado(async (req: Request) => {
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: 503 })
     return NextResponse.json({ estado: 'ok', ilegibles: v.entrada.ilegibles, resultados: r.resultados })
   } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/correo/evento', e) }, { status: 500 })
+  }
+})
+
+export const PATCH = auditado(async (req: Request) => {
+  if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  try {
+    if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+    const correduria = await correduriaUnica()
+    if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
+    const v = validarMarcaRevisado(await req.json().catch(() => null))
+    if (!v.ok) return NextResponse.json({ estado: 'invalido', motivo: v.motivo }, { status: 422 })
+    const hecho = await marcarEventoRevisado(correduria.id, v.id, v.revisado)
+    if (!hecho) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
+    return NextResponse.json({ estado: 'ok', id: v.id, revisado: v.revisado })
+  } catch (e) {
+    if (esTablaInexistente(e)) return NextResponse.json({ estado: 'sin_migracion', motivo: 'falta aplicar 2026-10-14_correo_evento_entrante.sql' }, { status: 503 })
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/correo/evento', e) }, { status: 500 })
   }
 })
