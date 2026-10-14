@@ -441,6 +441,9 @@ async function descripcion(boton: Locator): Promise<(string | null)[]> {
       typeof h.href === 'string' ? h.href : h.getAttribute('href'),
       h.getAttribute('onclick'),
       h.getAttribute('formaction'),
+      // AngularJS (14/10/2026, wmediadores: las tarjetas son `div[ng-click]`): su manejador cuenta como un onclick.
+      h.getAttribute('ng-click'),
+      h.getAttribute('data-ng-click'),
     ]
   })
 }

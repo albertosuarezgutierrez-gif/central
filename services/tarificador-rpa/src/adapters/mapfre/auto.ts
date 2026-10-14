@@ -49,6 +49,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/comunidades.ts'
+import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
 
@@ -166,6 +167,14 @@ export const SEL_PRIMAS = {
   /** Icono de aviso junto al botón de contratar: «Es obligatorio realizar la verificación del vehículo». */
   avisoVerificacion: '.ccttVerificacion .warning-color',
 } as const
+
+/**
+ * RESPALDO de campos (Regla «todo bot con IA detrás», 14/10/2026): la pestaña NSEI y el formador del trabajo. Si el selector
+ * fijo de un campo no aparece, `campoConRespaldo` (formador.ts) prueba lo aprendido y la IA (campo editable con la etiqueta de
+ * su fila contrastada). Sin él (tests, explorador) = como siempre. Este fichero sigue sin pulsar: solo escribe en campos.
+ */
+export type RespaldoCampos = { page: Page | null; formador: ContextoFormador | undefined }
+const SIN_RESPALDO: RespaldoCampos = { page: null, formador: undefined }
 
 // ───────────────────────── lectura de primas (puro + lector) ─────────────────────────
 
@@ -305,13 +314,16 @@ export async function consultarVehiculoPorMatricula(
   matricula: string,
   ctx: Pick<ContextoPortal, 'confirmarVehiculoMapfre'>,
   esperaDialogoMs = ESPERA_DIALOGO_VEHICULO_MS,
+  respaldo: RespaldoCampos = SIN_RESPALDO,
 ): Promise<VehiculoConfirmado> {
   if (!ctx.confirmarVehiculoMapfre) throw new ErrorMapaIncompleto('la función guardada que confirma el vehículo (contexto sin `confirmarVehiculoMapfre`)')
-  const campo = nsei.locator(SEL_OBJETO.matricula).first()
-  if ((await campo.count()) === 0) throw new ErrorMapaIncompleto('el campo de matrícula del paso «Objeto asegurado» (no aparece)', true)
+  const r = await campoConRespaldo(nsei, SEL_OBJETO.matricula, { ...respaldo, page: respaldo.page ?? null, etiqueta: 'Matrícula', descripcion: 'Campo «Matrícula» del vehículo en el paso «Objeto asegurado» de Mapfre NSEI' })
+  if (!r) throw new ErrorMapaIncompleto('el campo de matrícula del paso «Objeto asegurado» (no aparece)', true)
+  const campo = r.campo
   await comprobarCampo(campo)
   await campo.fill(matricula)
   if (normalizarMatricula(await campo.inputValue()) !== normalizarMatricula(matricula)) throw new ErrorTarificador('portal', 'mapfre/auto: el portal no dejó fijada la matrícula')
+  await r.confirmar().catch(() => undefined)
   try {
     await nsei.locator(SEL_DIALOGO_VEHICULO.contenedor).first().waitFor({ state: 'visible', timeout: esperaDialogoMs })
   } catch {
@@ -412,14 +424,16 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
  * `fill` de Playwright lanza `input`, que es lo que escucha Angular Material (no hace falta `change` a mano). Devuelve las
  * etiquetas de lo que quedó sin escribir para que el llamante lo sepa (no se calla).
  */
-export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: PlanNsei): Promise<string[]> {
+export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, respaldo: RespaldoCampos = SIN_RESPALDO): Promise<string[]> {
   for (const op of plan.escribibles) {
     if (op.tipo !== 'texto') continue
-    const campo: Locator = raiz.locator(op.sel).first()
-    if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `mapfre/auto: no aparece el campo «${op.etiqueta}» (${op.sel})`)
+    const r = await campoConRespaldo(raiz, op.sel, { ...respaldo, etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI` })
+    if (!r) throw new ErrorMapaIncompleto(`el campo «${op.etiqueta}» (${op.sel}; no aparece)`, true)
+    const campo: Locator = r.campo
     await comprobarCampo(campo)
     await campo.fill(String(op.valor))
     if ((await campo.inputValue()) !== String(op.valor)) throw new ErrorTarificador('portal', `mapfre/auto: el portal no dejó fijado el campo «${op.etiqueta}»`)
+    await r.confirmar().catch(() => undefined)
   }
   return plan.pendientes.map((p) => p.etiqueta)
 }
@@ -463,10 +477,11 @@ export async function buscarTomadorPorNif(_nsei: Page, _campo: Locator): Promise
  * cliente (`documentoTomador`) o viene en `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a
  * su campo: nunca a logs, mensajes ni resultado.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre'>): Promise<void> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador'>): Promise<void> {
   if (documentoTomadorDe(f) === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
-  const campo = nsei.locator(SEL_TOMADOR.documento).first()
-  if ((await campo.count()) === 0) throw new ErrorMapaIncompleto('el campo NIF/CIF del tomador del paso 1 «Datos básicos» (no aparece)', true)
+  const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
+  if (!r) throw new ErrorMapaIncompleto('el campo NIF/CIF del tomador del paso 1 «Datos básicos» (no aparece)', true)
+  const campo = r.campo
   await comprobarCampo(campo)
   await buscarTomadorPorNif(nsei, campo)
   await continuar(nsei, ctx, 'datosBasicos')
@@ -478,13 +493,14 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
  * «Continuar», `exigirPasoCompleto`: hoy uso/ámbito (paso 2) y clase de permiso / compañía anterior (paso 3) son mat-select
  * sin DOM grabado abierto → para con inventario en el paso 2, sin precio supuesto.
  */
-export async function precioDesdeObjetoAsegurado(nsei: Page, f: FormularioAuto, vehiculo: VehiculoConfirmado, ctx: Pick<ContextoPortal, 'continuarMapfre'>): Promise<ResultadoAdaptador> {
+export async function precioDesdeObjetoAsegurado(nsei: Page, f: FormularioAuto, vehiculo: VehiculoConfirmado, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador'>): Promise<ResultadoAdaptador> {
   if (f.ramo === 'moto') throw new ErrorMapaIncompleto('el plan de campos de MOTO en NSEI (clase de permiso y figuras sin grabación de moto)', true)
   const plan = planObjetoYFiguras(f)
-  await rellenarCamposTexto(nsei, planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]))
+  const respaldo: RespaldoCampos = { page: nsei, formador: ctx.formador }
+  await rellenarCamposTexto(nsei, planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]), respaldo)
   exigirPasoCompleto(plan, 'objetoAsegurado')
   await continuar(nsei, ctx, 'objetoAsegurado')
-  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras'))
+  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras'), respaldo)
   exigirPasoCompleto(plan, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await leerPrimasMapfre(nsei)
@@ -500,7 +516,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.3.0',
+  version: '0.4.0',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -509,9 +525,9 @@ export const mapfreAuto = {
     if (documentoTomadorDe(form) === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
     await login(page, ctx)
     await ctx.trasLogin()
-    const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada })
+    const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador })
     await pasoDatosBasicos(nsei, form, ctx)
-    const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx)
+    const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador })
     ctx.log('vehiculo confirmado')
     return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx)
   },

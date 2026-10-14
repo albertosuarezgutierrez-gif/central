@@ -14,6 +14,7 @@ import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, t
 import type { RespuestaPaso } from '../src/api.ts'
 import { abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
+import { prepararFormador } from '../src/formador.ts'
 
 type EsperasEntrada = NonNullable<Parameters<typeof abrirNuevo>[2]>
 /** Los tests de MENÚS desactivan la URL directa (que apunta al portal real); los de URL directa usan `abrirNuevo`. */
@@ -49,6 +50,26 @@ const NSEI = '<!doctype html><html><body><app-datos-basicos><label for="f1">Fech
 const MENU = (textos: string[]) => `<!doctype html><html><body>${textos.map((t, i) => `<a id="e${i}" href="/nada">${t}</a>`).join('')}</body></html>`
 const SIN_NSEI = '<!doctype html><html><body><p>Cargando…</p></body></html>'
 
+// ─── DOM REAL de wmediadores (HTML del fallo a5f06f70, 14/10/2026, sin datos personales) ───
+// Tarjetas AngularJS: el enlace es `div.card-link[ng-click]` con un `<p>` dentro (ni <a> ni <button>), en el DOM principal.
+// El manejador de prueba abre la URL de `data-u` (como hace `abrirAplicacion(enlace)`), sin onclick en el atributo.
+const TARJETA_NG = (titulo: string, enlaces: [string, string, string?][]) => `<div class="cards-np"><div class="col-md-12"><h2 class="cards-np-title">${titulo}</h2>
+  <div class="cards-links">${enlaces.map(([t, u, id]) => `<div ng-click="abrirAplicacion(enlace)" class="card-link"${id ? ` id="${id}"` : ''} data-u="${u}"><p title="${t} (Nuevo sistema)">${t}</p></div>`).join('')}</div></div></div>`
+/** `ia = true`: la tarjeta de turismos no se reconoce (título distinto) y hay DOS enlaces exactos → el fijo para y entra el respaldo. */
+const PAGINA_TARJETAS = (conScript: boolean, ia = false) => `<h1 class="titulo-pagina">Automóviles</h1>
+  ${TARJETA_NG('Flotas', [['Tarificación y Emisión Rápida', '/otro-flotas']])}
+  ${TARJETA_NG(ia ? 'Turismos, motos y similares' : 'Turismos y Motos', [['Tarificación y Emisión Rápida', '/nsei', 'tr-ok'], ['Tarificación y Emisión (General)', '/otro-general']])}
+  ${TARJETA_NG('Patinetes', [['Contratar patinete', '/otro-contratar', 'trampa']])}
+  ${conScript ? `<script>document.addEventListener('click', (ev) => { const c = ev.target.closest('[ng-click]'); if (c) window.open(c.dataset.u, '_blank') })</script>` : ''}`
+const ANGULAR = (donde: 'main' | 'iframe' | 'shadow', ia = false) => `<!doctype html><html><body>
+  <nav><a role="tab" onclick="mostrar('menu')">Nueva producción</a></nav>
+  <ul id="menu" hidden><li><a role="menuitem" onclick="mostrar('pag')">Automóviles</a></li></ul>
+  <div id="pag" hidden>${donde === 'main' ? PAGINA_TARJETAS(true, ia) : donde === 'iframe' ? '<iframe src="/angular-marco" style="width:900px;height:900px"></iframe>' : '<mp-tarjetas></mp-tarjetas>'}</div>
+  ${donde === 'shadow' ? `<template id="t">${PAGINA_TARJETAS(false)}</template><script>
+    customElements.define('mp-tarjetas', class extends HTMLElement { connectedCallback() { const r = this.attachShadow({ mode: 'open' }); r.appendChild(document.getElementById('t').content.cloneNode(true)); r.addEventListener('click', (ev) => { const c = ev.target.closest('[ng-click]'); if (c) window.open(c.dataset.u, '_blank') }) } })
+  </script>` : ''}
+  <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
+
 let servidor: Server
 let base = ''
 let browser: Browser
@@ -82,6 +103,11 @@ before(async () => {
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
     if (ruta === '/span-trampa') return void res.end(HOME_SPAN_EMITIR)
+    if (ruta === '/angular') return void res.end(ANGULAR('main'))
+    if (ruta === '/angular-iframe') return void res.end(ANGULAR('iframe'))
+    if (ruta === '/angular-marco') return void res.end(PAGINA_TARJETAS(true))
+    if (ruta === '/angular-shadow') return void res.end(ANGULAR('shadow'))
+    if (ruta === '/angular-ia') return void res.end(ANGULAR('main', true))
     res.end(HOME.replace('href="/nsei"', `href="${ruta === '/vacio' ? '/nsei-vacio' : '/nsei'}"`))
   })
   await new Promise<void>((r) => servidor.listen(0, '127.0.0.1', r))
@@ -458,4 +484,84 @@ test('URL_NSEI_AUTO: mismo dominio, no casa con PATRON_EMISION y el explorador u
   assert.doesNotMatch(URL_NSEI_AUTO, PATRON_EMISION)
   const exp = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
   assert.match(exp, /const nsei = await abrirTarificacionRapidaAuto\(page, ctx\)[\s\S]*?return nsei/)
+})
+
+// ─── DOM real de wmediadores (fallo a5f06f70) y RESPALDO IA de la capa común (14/10/2026) ───
+
+for (const [ruta, donde] of [['/angular', 'DOM principal'], ['/angular-iframe', 'un iframe'], ['/angular-shadow', 'shadow DOM abierto']] as const) {
+  test(`DOM real (div.card-link[ng-click] > p) en ${donde}: entra por el guard REAL, en la tarjeta «Turismos y Motos»`, async () => {
+    const { context, page, ctxGuard, guard } = await abrir(ruta)
+    try {
+      const nueva = await abrirTarificacionRapidaAuto(page, ctxGuard, { menuMs: 3_000 })
+      assert.match(nueva.url(), /\/nsei$/, 'abre el formulario de la tarjeta de turismos (no el de Flotas)')
+      assert.equal(await nueva.locator('app-datos-basicos').count(), 1)
+      assert.equal(guard.violacion(), null)
+    } finally {
+      await context.close()
+    }
+  })
+}
+
+test('guard: un div[ng-click] con el texto exacto pero un manejador de emisión NO se pulsa (ng-click cuenta como onclick)', async () => {
+  const { context, page, ctxGuard } = await abrir('/angular')
+  try {
+    await page.evaluate(() => { document.getElementById('pag')!.hidden = false; document.getElementById('tr-ok')!.setAttribute('ng-click', 'emitirPoliza(enlace)') })
+    await assert.rejects(() => ctxGuard.pulsarEnlaceEntrada(page.locator('#tr-ok')), /emisi|bloquead|guard/i)
+  } finally {
+    await context.close()
+  }
+})
+
+/** Formador de prueba: GET conocimiento → activo; POST sugerir → `elegir(estructura)`; registra lo que se llama (sin red). */
+function formadorFalso(elegir: (estructura: { id: string | null; texto: string | null }[]) => number | null, conocimiento: unknown[] = []) {
+  const rutas: string[] = []
+  const fetchImpl = (async (url: string, init?: { body?: string }) => {
+    const r = String(url).replace(/^.*\/formador\//, '').split('?')[0]!
+    rutas.push(r)
+    if (r === 'conocimiento') return new Response(JSON.stringify({ formadorActivo: true, conocimiento, acompanamiento: { activo: false } }))
+    if (r === 'sugerir') return new Response(JSON.stringify({ indice: elegir(JSON.parse(init?.body ?? '{}').estructura ?? []), motivo: 'prueba' }))
+    return new Response(JSON.stringify({ estado: 'ok' }))
+  }) as unknown as typeof fetch
+  return { rutas, fetchImpl }
+}
+
+test('RESPALDO IA: el fijo no reconoce la tarjeta (2 enlaces exactos) → la IA señala el bueno, se valida, se pulsa por el guard y se APRENDE', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/angular-ia')
+  try {
+    const f = formadorFalso((e) => e.findIndex((c) => c.id === 'tr-ok'))
+    const formador = await prepararFormador({ trabajoId: '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b', compania: 'mapfre', ramo: 'auto', apiUrl: 'https://x.test', secreto: 's'.repeat(20), redactar: (t) => t, log: () => undefined, fetchImpl: f.fetchImpl })
+    const nueva = await abrirTarificacionRapidaAuto(page, { ...ctxGuard, formador }, { menuMs: 1_000 })
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.equal(guard.violacion(), null)
+    assert.ok(f.rutas.includes('sugerir'), 'preguntó a la IA')
+    assert.ok(f.rutas.includes('confirmar'), 'lo que funcionó queda aprendido')
+  } finally {
+    await context.close()
+  }
+})
+
+test('RESPALDO IA: si la IA señala algo fuera de la lista blanca («Contratar…»), NO se pulsa y sale el error ORIGINAL', async () => {
+  const { context, page, ctxGuard } = await abrir('/angular-ia')
+  try {
+    const f = formadorFalso((e) => e.findIndex((c) => c.id === 'trampa'))
+    const formador = await prepararFormador({ trabajoId: '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b', compania: 'mapfre', ramo: 'auto', apiUrl: 'https://x.test', secreto: 's'.repeat(20), redactar: (t) => t, log: () => undefined, fetchImpl: f.fetchImpl })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, { ...ctxGuard, formador }, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Turismos y Motos/.test((e as Error).message))
+    assert.equal(context.pages().length, 1, 'no se abrió ninguna pestaña (nada pulsado)')
+    assert.ok(!f.rutas.includes('confirmar'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('RESPALDO: lo APRENDIDO va antes que la IA (sin llamada a «sugerir»)', async () => {
+  const { context, page, ctxGuard } = await abrir('/angular-ia')
+  try {
+    const f = formadorFalso(() => null, [{ clave: 'enlace_entrada', tipo: 'accion', selector: '#tr-ok', marco: 'principal', origen: 'ia', confirmaciones: 3 }])
+    const formador = await prepararFormador({ trabajoId: '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b', compania: 'mapfre', ramo: 'auto', apiUrl: 'https://x.test', secreto: 's'.repeat(20), redactar: (t) => t, log: () => undefined, fetchImpl: f.fetchImpl })
+    const nueva = await abrirTarificacionRapidaAuto(page, { ...ctxGuard, formador }, { menuMs: 1_000 })
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.ok(!f.rutas.includes('sugerir'), 'con lo aprendido no se gasta IA')
+  } finally {
+    await context.close()
+  }
 })

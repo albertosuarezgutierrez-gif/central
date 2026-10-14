@@ -167,3 +167,21 @@ test('marcosDePestanas: sin pestañas abiertas, los de la página por defecto', 
   assert.deepEqual(marcosDePestanas([], p('def')).frames(), ['def'])
   assert.deepEqual(marcosDePestanas([p('a'), p('b')], p('def')).frames(), ['b', 'a'])
 })
+
+test('fallo a5f06f70 (14/10/2026): las tarjetas AngularJS (div.card-link[ng-click] > p) entran con su texto y su ng-click; y el shadow DOM abierto', async () => {
+  const context = await browser.newContext()
+  await context.route('**/*', (r) => r.abort())
+  const p = await context.newPage()
+  await p.setContent(`<h2 class="cards-np-title">Turismos y Motos</h2>
+    <div class="cards-links"><div ng-click="abrirAplicacion(enlace)" class="card-link"><p>Tarificación y Emisión Rápida</p></div></div>
+    <mp-x></mp-x>
+    <script>customElements.define('mp-x', class extends HTMLElement { connectedCallback() { this.attachShadow({ mode: 'open' }).innerHTML = '<button id="enSombra">Calcular</button>' } })</script>`)
+  const inv = await capturarInventarioDom(p)
+  assert.ok(inv)
+  const els = inv.marcos.flatMap((m) => m.elementos)
+  const tarjeta = els.find((e) => e.tag === 'div' && e.texto === 'Tarificación y Emisión Rápida')
+  assert.ok(tarjeta, JSON.stringify(els))
+  assert.equal(tarjeta!.onclick, 'abrirAplicacion(enlace)')
+  assert.ok(els.some((e) => e.tag === 'button' && e.id === 'enSombra'), 'el inventario de diagnóstico entra en shadow DOM abierto')
+  await context.close()
+})

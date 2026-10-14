@@ -14,6 +14,40 @@ export function formadorActivo(env: Record<string, string | undefined>): boolean
   return env.TARIFICADOR_FORMADOR_ACTIVO === '1'
 }
 
+/** Modelo POTENTE del 2º escalón del respaldo IA si no hay env (el mismo que el explorador). */
+export const MODELO_FORMADOR_POTENTE_POR_DEFECTO = 'anthropic/claude-sonnet-4.5'
+
+/**
+ * Modelo de OpenRouter del 2º ESCALÓN del respaldo IA (`sugerir`, 14/10/2026: «modelo potente»): `TARIFICADOR_FORMADOR_MODELO`
+ * con un slug válido, o el por defecto. Va POR LA PASARELA (queda en `ai_usos` y le aplican los topes). Env con basura →
+ * `null` = sin 2º escalón (fail-closed: no se llama a un modelo que no se ha validado).
+ */
+export function modeloFormador(env: Record<string, string | undefined>): string | null {
+  const v = env.TARIFICADOR_FORMADOR_MODELO?.trim()
+  if (!v) return MODELO_FORMADOR_POTENTE_POR_DEFECTO
+  return /^[a-z0-9][a-z0-9-]{0,40}\/[a-z0-9][a-z0-9._-]{0,80}(?::[a-z]{1,20})?$/.test(v) ? v : null
+}
+
+/**
+ * IA ESCALONADA: 1º el modelo por defecto de `iaTexto` (barato), 2º el potente SOLO si el 1º no señaló nada con confianza.
+ * `undefined` = el por defecto. Cada escalón es una llamada (cuenta para el tope de llamadas y el de coste del trabajo).
+ */
+export function escaleraModelos(env: Record<string, string | undefined>): (string | undefined)[] {
+  const potente = modeloFormador(env)
+  return potente ? [undefined, potente] : [undefined]
+}
+
+export const MAX_EUR_POR_DEFECTO = 0.5
+/** Tope de COSTE estimado de IA del formador por trabajo (`TARIFICADOR_FORMADOR_MAX_EUR`, 0.01..5 €; si no, 0,50 €). */
+export function maxEurIA(env: Record<string, string | undefined>): number {
+  const n = Number((env.TARIFICADOR_FORMADOR_MAX_EUR ?? '').trim().replace(',', '.'))
+  return Number.isFinite(n) && n >= 0.01 && n <= 5 ? n : MAX_EUR_POR_DEFECTO
+}
+
+export function quedaPresupuestoEur(usado: number, max: number): boolean {
+  return Number.isFinite(usado) && usado >= 0 && usado < max
+}
+
 export const MAX_LLAMADAS_POR_DEFECTO = 12
 /** Tope de llamadas a la IA por trabajo (`TARIFICADOR_FORMADOR_MAX_LLAMADAS`, 1..60; si no, 12). */
 export function maxLlamadasIA(env: Record<string, string | undefined>): number {
@@ -214,7 +248,8 @@ export function promptSugerir(p: PeticionSugerir): string {
   return [
     `Compañía: ${p.compania}. Ramo: ${p.ramo}.`,
     `Busco ${que}.${p.descripcion ? ` Descripción: ${p.descripcion}` : ''}`,
-    p.tipo === 'campo' ? 'Tiene que ser un control editable (input, select, textarea, desplegable), nunca un botón o enlace.' : 'Tiene que ser un botón, enlace o pestaña.',
+    p.tipo === 'campo' ? 'Tiene que ser un control editable (input, select, textarea, desplegable), nunca un botón o enlace.' : 'Tiene que ser un botón, enlace, pestaña u opción de menú (puede ser un elemento clicable de una tarjeta, p. ej. un div de menú).',
+    ...(p.clave === 'enlace_entrada' ? ['Aquí «Emisión» es parte del NOMBRE de un menú del portal: el enlace solo abre el formulario de cotización (lo autoriza la correduría); no emite nada.'] : []),
     'Candidatos:',
     ...p.estructura.map(lineaCandidato),
   ].join('\n')

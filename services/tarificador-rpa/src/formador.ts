@@ -22,6 +22,17 @@ import type { Frame, Locator, Page } from 'playwright'
 import { limpiarTextoAviso, pareceEmision, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
 import { ErrorTarificador } from './errores.ts'
 import { rutaMarco } from './evidencia.ts'
+import { ENLACES_ENTRADA_AUTORIZADOS } from './guard.ts'
+
+// ─── REGLA (14/10/2026, Alberto): todo bot con IA detrás y aprendizaje ─────────
+// Este fichero es la CAPA COMÚN de respaldo de TODOS los adaptadores de tarificación (docs/TARIFICADOR-RPA.md, «Regla: todo
+// bot con IA detrás y aprendizaje»). Orden: selector FIJO del adaptador → lo APRENDIDO (`tarificador_conocimiento`, por
+// compañía/ramo) → la IA (asegura, por la pasarela). Lo que funciona se CONFIRMA y queda aprendido. Lo aprendido y la IA
+// pasan SIEMPRE por la misma validación determinista (tablas cerradas + `pareceEmision` + `BLOQUEO_FORMADOR`): nunca
+// habilitan una acción fuera de ellas, y lo que se pulsa va por el guard de emisión (`ctx.pulsar` y familia).
+// PLAN B: tope de consultas a la IA y de tiempo de IA por trabajo (`PRESUPUESTO_RESPALDO`); agotado o sin respuesta →
+// `null` y el adaptador lanza su error ORIGINAL (el runner adjunta inventario + captura). Nunca se cuelga ni reintenta.
+// Los adaptadores lo usan con `conRespaldoIA` (acciones) y `campoConRespaldo` (campos); lo vigila test/regla-respaldo-ia.test.ts.
 
 // ─── Listas CERRADAS ─────────────────────────────────────────────────────────
 
@@ -35,7 +46,23 @@ export const BLOQUEO_FORMADOR = ['emitir', 'emision', 'contratar', 'contratacion
  */
 export const ACCIONES_PERMITIDAS = {
   calcular: ['calcular', 'calcular prima', 'recalcular'],
+  // NAVEGACIÓN de menús (Alberto, 14/10/2026: «el botón con IA para no quedarse parado»). Textos EXACTOS de wmediadores.
+  pestana_nueva_produccion: ['nueva produccion'],
+  menu_automoviles: ['automoviles'],
 } as const satisfies Record<string, readonly string[]>
+
+/**
+ * ENLACE DE ENTRADA de una compañía (Mapfre «Tarificación y Emisión Rápida»): sus textos NO están en la tabla de arriba
+ * (casan con el patrón de emisión); son los de `ENLACES_ENTRADA_AUTORIZADOS` de guard.ts, y lo resuelto SOLO se pulsa por
+ * `ctx.pulsarEnlaceEntrada` (que vuelve a exigir el texto exacto, una vez por trabajo y fase de entrada).
+ */
+export const ACCION_ENLACE_ENTRADA = 'enlace_entrada'
+
+/** Textos de entrada autorizados de la compañía, normalizados (vacío si no tiene). */
+export function textosEntradaDe(compania: string): string[] {
+  if (typeof compania !== 'string' || !Object.hasOwn(ENLACES_ENTRADA_AUTORIZADOS, compania)) return []
+  return ENLACES_ENTRADA_AUTORIZADOS[compania]!.map(normalizarTexto)
+}
 
 export type AccionPermitida = keyof typeof ACCIONES_PERMITIDAS
 export type TipoClave = 'campo' | 'accion'
@@ -128,6 +155,8 @@ export type DescripcionElemento = {
   etiquetaFila: string | null
   deshabilitado: boolean
   editableContenido: boolean
+  /** Manejador AngularJS (`ng-click`/`data-ng-click`): cuenta como un onclick. Opcional (descripciones antiguas). */
+  ngClick?: string | null
 }
 
 export type Validacion = { ok: true } | { ok: false; motivo: string }
@@ -168,7 +197,7 @@ export function validarAccion(d: DescripcionElemento, clave: string, textoEspera
   }
   const bloqueo = bloqueoPalabras([
     ['texto', d.texto], ['value', d.valorBoton], ['title', d.title], ['aria-label', d.ariaLabel], ['id', d.id],
-    ['name', d.name], ['href', d.href], ['onclick', d.onclick], ['onchange', d.onchange], ['formaction', d.formaction],
+    ['name', d.name], ['href', d.href], ['onclick', d.onclick], ['onchange', d.onchange], ['formaction', d.formaction], ['ng-click', d.ngClick ?? null],
   ])
   if (bloqueo) return bloqueo
   const objetivo = textoEsperado ? [normalizarTexto(textoEsperado)] : permitidos
@@ -203,7 +232,33 @@ export function validarCampo(d: DescripcionElemento, etiqueta: string | null | u
   return contrastarEtiqueta(etiqueta, d.etiquetaFila)
 }
 
-export function validarResolucion(p: Pick<PeticionResolver, 'tipo' | 'clave' | 'textoEsperado' | 'etiqueta'>, d: DescripcionElemento): Validacion {
+/**
+ * El ENLACE DE ENTRADA (`ACCION_ENLACE_ENTRADA`): como `validarAccion`, pero los textos son los de guard.ts para ESA compañía
+ * y el texto visible tiene que ser EXACTAMENTE el esperado. Solo ese texto exacto se exime del bloqueo de palabras (es
+ * «Emisión» de un nombre de menú); id, href, onclick, ng-click, title… que no sean exactamente él se siguen mirando.
+ */
+export function validarAccionEntrada(d: DescripcionElemento, compania: string, textoEsperado: string | null | undefined): Validacion {
+  const esperado = normalizarTexto(textoEsperado)
+  if (!esperado || !textosEntradaDe(compania).includes(esperado)) return { ok: false, motivo: 'enlace de entrada fuera de la lista del guard para esta compañía' }
+  const u = exigirUnicoVisible(d)
+  if (u) return u
+  const tag = d.tag.toLowerCase()
+  const type = (d.type ?? '').toLowerCase()
+  if (tag === 'select' || tag === 'textarea' || (tag === 'input' && !(TIPOS_INPUT_BOTON as readonly string[]).includes(type))) {
+    return { ok: false, motivo: `<${tag}${type ? ` type=${type}` : ''}> no es un control de acción` }
+  }
+  const exento = (x: string | null) => x !== null && normalizarTexto(x) === esperado
+  const bloqueo = bloqueoPalabras(([
+    ['texto', d.texto], ['value', d.valorBoton], ['title', d.title], ['aria-label', d.ariaLabel], ['id', d.id],
+    ['name', d.name], ['href', d.href], ['onclick', d.onclick], ['onchange', d.onchange], ['formaction', d.formaction], ['ng-click', d.ngClick ?? null],
+  ] as [string, string | null][]).filter(([, x]) => !exento(x)))
+  if (bloqueo) return bloqueo
+  if (normalizarTexto(d.texto) !== esperado) return { ok: false, motivo: 'su texto visible no es exactamente el del enlace de entrada' }
+  return { ok: true }
+}
+
+export function validarResolucion(p: Pick<PeticionResolver, 'tipo' | 'clave' | 'textoEsperado' | 'etiqueta'>, d: DescripcionElemento, compania = ''): Validacion {
+  if (p.tipo === 'accion' && p.clave === ACCION_ENLACE_ENTRADA) return validarAccionEntrada(d, compania, p.textoEsperado)
   return p.tipo === 'accion' ? validarAccion(d, p.clave, p.textoEsperado) : validarCampo(d, p.etiqueta)
 }
 
@@ -263,7 +318,7 @@ export function sinSelector(c: CandidatoLocal): Candidato {
   return resto
 }
 
-export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [role=button], [role=tab], [role=menuitem], nx-button'
+export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button'
 export const SELECTOR_CAMPOS = 'input:not([type=hidden]):not([type=password]):not([type=radio]), select, textarea, nx-dropdown, nx-datefield, [role=combobox], [role=textbox], [role=spinbutton], [contenteditable=true]'
 export const MAX_CANDIDATOS = 400
 
@@ -421,6 +476,7 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
         onclick: h.getAttribute('onclick'),
         onchange: h.getAttribute('onchange'),
         formaction: h.getAttribute('formaction'),
+        ngClick: h.getAttribute('ng-click') ?? h.getAttribute('data-ng-click'),
         etiquetaFila: etiquetaFila(h),
         deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
         editableContenido: h.isContentEditable === true,
@@ -492,11 +548,26 @@ export type ContextoFormador = {
   redactar: (t: string) => string
   log: (m: string, datos?: Record<string, unknown>) => void
   fetchImpl?: typeof fetch
+  /** PLAN B: consumo del respaldo IA en ESTE trabajo (se crea al primer uso). Ver `PRESUPUESTO_RESPALDO`. */
+  usoIA?: { consultas: number; ms: number }
+}
+
+/**
+ * PLAN B (14/10/2026): por trabajo, como mucho estas consultas a la IA del respaldo y este tiempo acumulado esperándola.
+ * Agotado → `null` sin preguntar (el adaptador lanza su error original con inventario). El tope de llamadas y de gasto de
+ * asegura (`TARIFICADOR_FORMADOR_MAX_LLAMADAS`, `ai_usos`) sigue mandando además de este.
+ */
+export const PRESUPUESTO_RESPALDO = { consultas: 10, msIA: 150_000 } as const
+
+/** ¿Queda presupuesto de IA en este trabajo? Pura. */
+export function quedaPresupuestoIA(uso: { consultas: number; ms: number } | undefined): boolean {
+  const u = uso ?? { consultas: 0, ms: 0 }
+  return u.consultas < PRESUPUESTO_RESPALDO.consultas && u.ms < PRESUPUESTO_RESPALDO.msIA
 }
 
 const TIMEOUT_CORTO_MS = 8_000
-/** La IA puede tardar: el endpoint corta a 20 s. */
-const TIMEOUT_IA_MS = 25_000
+/** La IA puede tardar: el endpoint escala de modelo (2 × 15 s) dentro de su transacción; margen de red encima. */
+const TIMEOUT_IA_MS = 45_000
 
 async function llamar<T>(ctx: Pick<ContextoFormador, 'apiUrl' | 'secreto' | 'fetchImpl'>, ruta: string, init: { metodo: 'GET' | 'POST'; cuerpo?: unknown; timeoutMs: number }): Promise<T | null> {
   try {
@@ -573,7 +644,7 @@ async function validarSelector(page: Page, ctx: ContextoFormador, p: PeticionRes
   if (!locator) return { motivo: 'no resuelve a ningún elemento' }
   const d = await describirElemento(locator, total)
   if (!d) return { motivo: 'no se pudo describir el elemento' }
-  const v = validarResolucion(p, d)
+  const v = validarResolucion(p, d, ctx.compania)
   if (!v.ok) return { motivo: v.motivo }
   ctx.resueltos.set(claveSelector(selector, marco), p.clave)
   return { locator: locator.first() }
@@ -585,7 +656,7 @@ async function validarSelector(page: Page, ctx: ContextoFormador, p: PeticionRes
  */
 export async function resolverConFormador(page: Page, ctx: ContextoFormador | undefined, p: PeticionResolver): Promise<ResolucionFormador | null> {
   if (!ctx?.activo) return null
-  if (p.tipo === 'accion' && !esAccionPermitida(p.clave)) {
+  if (p.tipo === 'accion' && !esAccionPermitida(p.clave) && !(p.clave === ACCION_ENLACE_ENTRADA && textosEntradaDe(ctx.compania).length > 0)) {
     ctx.log('formador_accion_no_permitida', { clave: p.clave })
     return null
   }
@@ -608,9 +679,16 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
     }
   }
 
-  // 2º La IA señala; aquí se valida.
+  // 2º La IA señala; aquí se valida. PLAN B: sin presupuesto en este trabajo, no se pregunta.
+  if (!quedaPresupuestoIA(ctx.usoIA)) {
+    ctx.log('formador_sin_presupuesto', { clave: p.clave })
+    return null
+  }
   const candidatos = await extraerCandidatos(page, p.tipo, ctx.redactar)
   if (!candidatos.length) return null
+  ctx.usoIA ??= { consultas: 0, ms: 0 }
+  ctx.usoIA.consultas++
+  const t0 = Date.now()
   const r = await llamar<{ indice?: number | null; motivo?: string }>(ctx, 'sugerir', {
     metodo: 'POST',
     timeoutMs: TIMEOUT_IA_MS,
@@ -624,6 +702,7 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
       estructura: candidatos.map(sinSelector),
     },
   })
+  ctx.usoIA.ms += Date.now() - t0
   const i = r?.indice
   if (typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= candidatos.length) {
     ctx.log('formador_sin_sugerencia', { clave: p.clave, motivo: r?.motivo ?? 'sin_respuesta' })
@@ -637,6 +716,60 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
   }
   ctx.log('formador_sugerencia_valida', { clave: p.clave })
   return { locator: v.locator, selector: elegido.selector, marco: elegido.marco, origen: 'ia', confirmar: confirmarCon(elegido.selector, elegido.marco, 'ia') }
+}
+
+// ─── CAPA COMÚN para los adaptadores (Regla «todo bot con IA detrás») ─────────
+
+/** ¿El error es un «no encuentro el control» (lo que el respaldo puede resolver)? `portal` sí; datos, credenciales, emisión… no. */
+export function esHuecoDeSelector(e: unknown): boolean {
+  return e instanceof ErrorTarificador && e.tipo === 'portal'
+}
+
+/**
+ * ACCIÓN con respaldo: `fijo()` (selector del adaptador) → si lanza un hueco de selector, lo aprendido y la IA
+ * (`resolverConFormador`, validado aquí). Sin formador, sin presupuesto o sin candidato válido → relanza el error ORIGINAL.
+ * Devuelve el locator (NO pulsa: el adaptador lo pulsa por el MISMO camino guardado que el fijo) y `confirmar`, que el
+ * adaptador llama cuando la acción tuvo efecto (así se aprende solo lo que funcionó; en el fijo no hace nada).
+ */
+export async function conRespaldoIA(
+  page: Page,
+  formador: ContextoFormador | undefined,
+  fijo: () => Promise<Locator>,
+  p: PeticionResolver,
+): Promise<{ locator: Locator; origen: 'fijo' | 'conocimiento' | 'ia'; confirmar: () => Promise<void> }> {
+  try {
+    return { locator: await fijo(), origen: 'fijo', confirmar: async () => undefined }
+  } catch (e) {
+    if (!esHuecoDeSelector(e)) throw e
+    const r = await resolverConFormador(page, formador, p).catch(() => null)
+    if (!r) throw e
+    formador?.log(`respaldo: «${p.clave}» resuelto por ${r.origen}`)
+    return { locator: r.locator, origen: r.origen, confirmar: r.confirmar }
+  }
+}
+
+/**
+ * CAMPO con respaldo: `raiz.locator(sel)` → si no existe, lo aprendido y la IA (campo editable, etiqueta de su fila
+ * contrastada con `etiqueta`, sin palabras de emisión). `null` = ni fijo ni respaldo (el adaptador lanza su error). NO
+ * escribe: devuelve el control (el adaptador hace `comprobarCampo` + escribe + relee) y `confirmar` para tras la relectura.
+ */
+export async function campoConRespaldo(
+  raiz: Pick<Frame, 'locator'>,
+  sel: string,
+  r: { page: Page | null; formador: ContextoFormador | undefined; etiqueta: string; descripcion?: string },
+): Promise<{ campo: Locator; origen: 'fijo' | 'conocimiento' | 'ia'; confirmar: () => Promise<void> } | null> {
+  const fijo = raiz.locator(sel).first()
+  if ((await fijo.count().catch(() => 0)) > 0) return { campo: fijo, origen: 'fijo', confirmar: async () => undefined }
+  if (!r.page) return null
+  const res = await resolverConFormador(r.page, r.formador, {
+    clave: claveCampo(r.etiqueta),
+    tipo: 'campo',
+    descripcion: r.descripcion ?? `Campo editable del formulario «${r.etiqueta}»`,
+    etiqueta: r.etiqueta,
+  }).catch(() => null)
+  if (!res) return null
+  r.formador?.log(`respaldo: campo «${r.etiqueta}» resuelto por ${res.origen}`)
+  return { campo: res.locator, origen: res.origen, confirmar: res.confirmar }
 }
 
 // ─── Modo acompañado ─────────────────────────────────────────────────────────

@@ -28,6 +28,34 @@ Todo desde `/correduria/oportunidad/[id]`, sección **Presupuestos de compañía
 ## IA formador (`src/formador.ts`)
 Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de acciones + `pareceEmision`); **modo acompañado** (hasta 10 cotizaciones) con contraste por etiqueta; registro inmutable `tarificador_intervenciones`. Tope de llamadas por trabajo: `TARIFICADOR_FORMADOR_MAX_LLAMADAS` (12).
 
+## Regla: todo bot con IA detrás y aprendizaje (Alberto, 14/10/2026)
+- **Para TODOS los bots** (Allianz, Mapfre, Occident y los que vengan). Capa común: `services/tarificador-rpa/src/formador.ts`
+  (`conRespaldoIA` para acciones, `campoConRespaldo` para campos). Orden: **selector fijo → aprendido** (`tarificador_conocimiento`,
+  por compañía/ramo) **→ IA** (asegura `/api/tarificador/formador/sugerir`, pasarela/OpenRouter, `privado`). Lo que funciona se
+  **confirma** y queda aprendido. La IA solo devuelve el índice de un candidato; el worker lo **valida** (tablas cerradas
+  `ACCIONES_PERMITIDAS` + enlace de entrada de `guard.ts`, `pareceEmision`, `BLOQUEO_FORMADOR`, campo editable con etiqueta
+  contrastada) y lo pulsa por el MISMO guard que el fijo. Lo aprendido pasa la misma validación: nunca abre una acción nueva.
+- **Sin PII ni credenciales al modelo**: estructura sin `value`, textos por el redactor y `redactarDatosPersonales` en asegura.
+- **Plan B (nunca colgado)**: por trabajo ≤10 consultas y ≤150 s de IA en el worker (`PRESUPUESTO_RESPALDO`), ≤12 llamadas y ≤0,50 € en
+  asegura (`TARIFICADOR_FORMADOR_MAX_LLAMADAS`/`_MAX_EUR`), tope del intento del runner; si nada resuelve → el error ORIGINAL
+  (`ErrorMapaIncompleto` + inventario de todos los marcos + captura + HTML). Sin reintentos (un hueco de mapa no es transitorio).
+- **Encendido**: `TARIFICADOR_FORMADOR_ACTIVO=1` en `central-asegura`; modelo potente `TARIFICADOR_FORMADOR_MODELO` (por defecto
+  `anthropic/claude-sonnet-4.5`). Guardián: `services/tarificador-rpa/test/regla-respaldo-ia.test.ts` (todo adaptador registrado
+  usa la capa o está en `PENDIENTES_RESPALDO_IA` con motivo; hoy: Allianz Moto).
+
+## Plan de robustez (fases)
+- **F1 (este PR)**: fijo → aprendido → IA en la capa común; Mapfre Auto (entrada + campos) y Allianz Comunidades (campos +
+  «Calcular») la usan. **IA escalonada**: 1º modelo por defecto (barato), 2º el potente solo si el 1º no señala nada; tope de € por
+  trabajo. Aprendido: se usa al momento y suma confirmaciones.
+- **F2**: aprendido con confianza (se consolida tras 3 éxitos o confirmación de Alberto, se descarta tras 2 fallos: necesita
+  columna de fallos en `tarificador_conocimiento`); **corte por compañía/ramo tras 3 fallos seguidos** con aviso Telegram; estado
+  «atascado» + Telegram y pantalla «Bots atascados» con captura y elementos numerados: Alberto elige/escribe, queda aprendido y se
+  reanuda re-ejecutando el camino aprendido (checkpoint, sin máquina esperando). Allianz Moto a la capa común. Respaldo para
+  «Continuar» de Mapfre, la lupa del tomador y los `mat-select` (hoy en guard.ts / sin DOM: necesitan su propia puerta).
+- **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
+  clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).
+- **Futuro**: las mismas capas para otras tareas (siniestros…) con su lista blanca por tarea.
+
 ## Robustez
 Reintento único y solo transitorio (infraestructura); sesión en memoria con TTL 10 min (hoy NO ahorra logins: cada máquina hace 1 trabajo); pausas de ritmo humano; `VARIANTES` vacía (sin variantes de modalidad por ahora).
 

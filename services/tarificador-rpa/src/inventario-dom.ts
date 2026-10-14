@@ -31,7 +31,11 @@ function extractor(explora: boolean): string {
   const SEL_SERVLET = ${JSON.stringify(SELECTOR_AVANCE_SERVLET)};
   // Enlaces, menús, opciones y mat-icon (14/10/2026, Mapfre wmediadores/NSEI: menús de enlaces y lupas con mat-icon).
   // Solo estructura y texto visible del control; nunca valores. Los controles de elección de fila NO (guardián: solo guard.ts).
-  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=checkbox],mat-icon,td[onclick],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  // AngularJS (14/10/2026, fallo a5f06f70): las tarjetas de wmediadores son \`div.card-link[ng-click]\` con un \`<p>\` dentro (ni
+  // <a> ni <button>); sin esto el inventario solo veía el menú superior. Su manejador viaja como \`onclick\` (el saneado lo
+  // admite y la IA/el validador lo miran igual). En exploración un div no es avanzable (\`esAvanzable\`): no amplía acciones.
+  const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=checkbox],mat-icon,td[onclick],[ng-click],[data-ng-click],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
+  const ngClick = (el) => el.getAttribute('ng-click') || el.getAttribute('data-ng-click');
   const esDivServlet = (el) => EXPLORA && el.matches(SEL_SERVLET);
   // EXPLORACIÓN: título del DIÁLOGO/modal más cercano (la MISMA función y el MISMO selector que la comprobación viva de
   // guard.ts, \`pulsarGuardadoDialogoAutorizado\`). Solo se lee.
@@ -48,7 +52,15 @@ function extractor(explora: boolean): string {
   };
   const out = [];
   const nodos = [];
-  const lista = Array.from(document.querySelectorAll(SEL));
+  // DIAGNÓSTICO (no exploración): también dentro de shadow DOM ABIERTO (componentes web). En exploración no: sus refs se
+  // re-resuelven por handle y el bucle IA queda como estaba.
+  const todos = (raiz, acc, prof) => {
+    for (const el of Array.from(raiz.querySelectorAll(SEL))) acc.push(el);
+    if (EXPLORA || prof > 4 || acc.length > 2000) return acc;
+    for (const h of Array.from(raiz.querySelectorAll('*'))) if (h.shadowRoot) todos(h.shadowRoot, acc, prof + 1);
+    return acc;
+  };
+  const lista = todos(document, [], 0);
   for (let i = 0; i < lista.length && out.length < 600; i++) {
     const el = lista[i];
     const tag = el.tagName.toLowerCase();
@@ -77,8 +89,10 @@ function extractor(explora: boolean): string {
       e.etiqueta = corta(el.getAttribute('aria-labelledby').split(/\\s+/).map((id) => { const x = document.getElementById(id); return x ? (x.innerText || x.textContent || '') : ''; }).join(' '), 200);
     }
     const divServlet = esDivServlet(el);
-    if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet) e.texto = corta(el.innerText || el.textContent || '', 200);
+    const ng = ngClick(el);
+    if (CON_TEXTO[tag] || (role && ROLES_CON_TEXTO[role]) || divServlet || ng) e.texto = corta(el.innerText || el.textContent || '', 200);
     if (tag === 'td' || tag === 'button' || tag === 'a' || divServlet) e.onclick = corta(el.getAttribute('onclick'), 200);
+    if (ng && !e.onclick) e.onclick = corta(ng, 200);
     if (tag === 'select') {
       e.opciones = Array.from(el.options).slice(0, 40).map((o) => ({ valor: o.value, texto: o.textContent }));
       e.opcionesTotal = el.options.length;

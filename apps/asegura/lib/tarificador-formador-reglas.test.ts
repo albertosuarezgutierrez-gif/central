@@ -12,6 +12,10 @@ import {
   leerPeticionRevisar,
   leerPeticionSugerir,
   maxLlamadasIA,
+  modeloFormador,
+  escaleraModelos,
+  maxEurIA,
+  quedaPresupuestoEur,
   parsearRespuestaRevisar,
   parsearRespuestaSugerir,
   primerObjetoJson,
@@ -152,4 +156,33 @@ test('rutas: las del worker usan el secreto del worker y el kill-switch; la de o
   assert.match(op, /operadorAutorizado\(req\)/)
   assert.match(op, /correduriaUnica\(\)/)
   assert.ok(!/export\s+(async\s+)?function\s+(POST|PATCH|PUT|DELETE)/.test(op), 'la intranet solo LEE')
+})
+
+test('respaldo IA (14/10/2026): modelo potente por env con slug válido, basura → null (sin 2º escalón), sin env → por defecto', () => {
+  assert.equal(modeloFormador({}), 'anthropic/claude-sonnet-4.5')
+  assert.equal(modeloFormador({ TARIFICADOR_FORMADOR_MODELO: 'anthropic/claude-sonnet-4.5' }), 'anthropic/claude-sonnet-4.5')
+  assert.equal(modeloFormador({ TARIFICADOR_FORMADOR_MODELO: 'rm -rf /' }), null)
+})
+
+test('respaldo IA: el enlace de entrada explica que «Emisión» es nombre de menú; otra acción no lleva esa línea', () => {
+  const pe = leerPeticionSugerir({ trabajoId: T, compania: 'mapfre', ramo: 'auto', clave: 'enlace_entrada', tipo: 'accion', descripcion: 'enlace de la tarjeta', estructura: [{ tag: 'div', clases: 'card-link', texto: 'Tarificación y Emisión Rápida' }] })
+  assert.ok(pe.ok)
+  if (pe.ok) assert.match(promptSugerir(pe.p), /NOMBRE de un menú/)
+  const pc = leerPeticionSugerir({ trabajoId: T, compania: 'allianz', ramo: 'comunidades', clave: 'calcular', tipo: 'accion', descripcion: 'botón', estructura: CAND })
+  assert.ok(pc.ok)
+  if (pc.ok) assert.doesNotMatch(promptSugerir(pc.p), /NOMBRE de un menú/)
+})
+
+test('IA escalonada: barato primero, potente después; env inválido → solo el barato', () => {
+  assert.deepEqual(escaleraModelos({}), [undefined, 'anthropic/claude-sonnet-4.5'])
+  assert.deepEqual(escaleraModelos({ TARIFICADOR_FORMADOR_MODELO: 'no vale' }), [undefined])
+})
+
+test('tope de coste por trabajo: 0,50 € por defecto, rango 0,01..5', () => {
+  assert.equal(maxEurIA({}), 0.5)
+  assert.equal(maxEurIA({ TARIFICADOR_FORMADOR_MAX_EUR: '1,2' }), 1.2)
+  assert.equal(maxEurIA({ TARIFICADOR_FORMADOR_MAX_EUR: '50' }), 0.5)
+  assert.equal(quedaPresupuestoEur(0.49, 0.5), true)
+  assert.equal(quedaPresupuestoEur(0.5, 0.5), false)
+  assert.equal(quedaPresupuestoEur(Number.NaN, 0.5), false)
 })
