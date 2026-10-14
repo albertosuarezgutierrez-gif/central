@@ -496,6 +496,24 @@ export async function registrarDevolucionesAsegura(devoluciones: unknown[], mens
   }
 }
 
+/**
+ * `POST /api/operador/correo/evento` — un aviso de compañía ya leído (`leerCorreoEventoAseguradora`):
+ * siniestro, pre-anulación, impago, anulación o suplemento (14/10/2026). Mismos tres desenlaces que las
+ * devoluciones. Idempotente en asegura por Message-ID: releer el correo no escribe dos veces.
+ */
+export async function registrarEventoCorreoAsegura(evento: unknown, mensajeId: string, fechaCorreo: string | null): Promise<RegistroDevoluciones> {
+  try {
+    const r = await pedirPost('/api/operador/correo/evento', { evento, mensajeId, fechaCorreo })
+    if (r === null) return { estado: 'sin_respuesta', motivo: 'falta ASEGURA_OPERADOR_SECRET' }
+    if (r.status === 200) return { estado: 'ok', json: r.json }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    const motivo = typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}`
+    return r.status >= 400 && r.status < 500 ? { estado: 'rechazado', motivo } : { estado: 'sin_respuesta', motivo }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
 export type ResolucionDevolucion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }
 
 /** `PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor. */
