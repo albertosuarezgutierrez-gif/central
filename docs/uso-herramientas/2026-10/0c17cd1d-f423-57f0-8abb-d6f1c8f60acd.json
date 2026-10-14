@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-14T09:56:46.926Z",
- "llamadas": 5987,
+ "fin": "2026-10-14T09:56:49.279Z",
+ "llamadas": 5989,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -99,15 +99,15 @@
    }
   },
   "sql": {
-   "llamadas": 264,
-   "chars_in": 136365,
-   "chars_out": 731617,
+   "llamadas": 265,
+   "chars_in": 136534,
+   "chars_out": 733154,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 15,
-    "mcp__Supabase__execute_sql": 249
+    "mcp__Supabase__execute_sql": 250
    }
   },
   "mcp:Supabase": {
@@ -168,15 +168,15 @@
    }
   },
   "escritura": {
-   "llamadas": 270,
-   "chars_in": 1425339,
-   "chars_out": 8187881,
+   "llamadas": 271,
+   "chars_in": 1426442,
+   "chars_out": 9191622,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Write": 189,
-    "Edit": 81
+    "Edit": 82
    }
   },
   "agente:agente-mecanico": {
