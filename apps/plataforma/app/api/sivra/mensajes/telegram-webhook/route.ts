@@ -32,6 +32,7 @@ import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat
 import { decidirBlogPr } from '@/lib/correduria/blog-pr'
 import { ACCION_BOTON_TOPE, ampliarTopeAvant2 } from '@/lib/correduria/tope-avant2'
 import { PREFIJO_EMISION, autorizarEnAsegura, decidirBotonEmision, lineaTrasPulsar } from '@/lib/tarificador-emision-asegura'
+import { PREFIJO_ATASCO, PREFIJO_PAUSA, aplicarBotonAtasco, decidirBotonAtasco, lineaTrasAtasco } from '@/lib/tarificador-atascos-asegura'
 import { requireSecret } from '@central/core-identity'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
@@ -810,6 +811,30 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       after(async () => {
         const r = await autorizarEnAsegura({ trabajoId: d.trabajoId, decision: d.decision, hashCorto: d.hashCorto, autorizadoPor: d.autorizadoPor }, () => requireSecret(ENV_FIRMA_AUTORIZACION))
         const linea = lineaTrasPulsar(d.decision, r)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── BOT ATASCADO / EN PAUSA del tarificador (atq_e / atq_x / tpa_r, F2 14/10/2026) ──────────
+    // Elegir el elemento N de un atasco (queda aprendido y el MISMO trabajo vuelve a la cola), descartarlo, o reanudar una
+    // compañía/ramo en pausa. Solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID). Se contesta YA y asegura (que valida
+    // el número contra la lista guardada y el estado bajo `for update`) va en after(). Doble pulsación = idempotente.
+    // Nada de esto emite: el worker revalida lo elegido con sus tablas cerradas.
+    if (prefix === PREFIJO_ATASCO || prefix === PREFIJO_PAUSA) {
+      const d = decidirBotonAtasco(cb, prefix, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.tipo === 'elegir' ? `⏳ Elegido el ${d.n}…` : d.tipo === 'descartar' ? 'Descartando…' : '⏳ Reanudando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const r = await aplicarBotonAtasco(d).catch(() => ({ status: 502, json: { motivo: 'red' } }))
+        const linea = lineaTrasAtasco(d, r)
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

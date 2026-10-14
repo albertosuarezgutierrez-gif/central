@@ -1,6 +1,6 @@
 // Cliente HTTP del worker hacia apps/asegura. El ÚNICO canal del worker con la casa: sin BD.
 
-import type { CandidatoVersion, IncidenciaEjecucion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, TipoError } from '@central/module-tarificacion'
+import type { AtascoWorker, CandidatoVersion, IncidenciaEjecucion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, TipoError } from '@central/module-tarificacion'
 
 export type Config = { jobId: string; apiUrl: string; secreto: string }
 
@@ -111,7 +111,7 @@ export type MetaTraza = { pasos?: PasoTraza[]; botVersion?: string }
 
 export type CuerpoResultado =
   | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & MetaTraza)
-  | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom }; capturaBase64?: string; html?: string } & MetaTraza)
+  | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; atasco?: AtascoWorker }; capturaBase64?: string; html?: string } & MetaTraza)
   /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
   | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string; presupuesto?: CuerpoResultadoPresupuesto } & MetaTraza)
 

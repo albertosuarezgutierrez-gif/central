@@ -30,6 +30,7 @@ import {
   type OfertaNormalizada,
   type PdfRef,
   type InventarioDom,
+  type AtascoWorker,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
@@ -68,7 +69,7 @@ const azar = (min: number, max: number) => min + Math.random() * (max - min)
 type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null }
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] }
-  | { ok: false; c: Clasificacion; evidencia: Evidencia }
+  | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
 
 /**
  * De dónde sale y a dónde vuelve la sesión del navegador en un intento.
@@ -116,6 +117,8 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     ...(previa ? { storageState: previa as BrowserContextOptions['storageState'] } : {}),
   })
   const ti = crearTrazaIntento(k.traza)
+  // ATASCO (F2): el checkpoint es de ESTE intento (un reintento empieza de cero).
+  if (k.formador) k.formador.atasco = null
   let logueado = false
   let ultimo5xx: number | null = null
   try {
@@ -223,7 +226,9 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
     // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
     const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(marcosDePestanas(abiertas, page)) : null
-    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom } }
+    // ATASCO (F2): solo un hueco del PORTAL no transitorio con checkpoint (nadie resolvió el paso). Lo decide asegura.
+    const atasco = c.tipo === 'portal' && !c.transitorio ? (k.formador?.atasco ?? null) : null
+    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom }, atasco }
   } catch (e) {
     ti.cubrir({ ok: false, codigo: 'desconocido' })
     await k.sesion.alFallo(false).catch(() => undefined)
@@ -415,6 +420,8 @@ async function main(): Promise<number> {
           ...(c.opcionesPoblacion ? { opcionesPoblacion: c.opcionesPoblacion.slice(0, MAX_OPCIONES_POBLACION_CABLE) } : {}),
           // Estructura de la pantalla (ya saneada, sin valores de campos): NO pasa por el log, solo su cuenta.
           ...(evidencia.inventarioDom ? { inventarioDom: evidencia.inventarioDom } : {}),
+          // Checkpoint del ATASCO (F2): candidatos ya redactados y numerados; asegura los re-sanea y decide si se atasca.
+          ...(r.atasco ? { atasco: r.atasco } : {}),
         },
         ...(evidencia.captura && secretosRiesgo.length === 0 && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
@@ -431,6 +438,7 @@ async function main(): Promise<number> {
         intentos: primerFallo ? 2 : 1,
         mensaje: redactarTrabajo(c.mensaje).slice(0, 300),
         ...(evidencia.inventarioDom ? { inventarioElementos: evidencia.inventarioDom.totalElementos, inventarioMarcos: evidencia.inventarioDom.marcos.length } : {}),
+        ...(r.atasco ? { atasco: r.atasco.clave, atascoCandidatos: r.atasco.candidatos.length } : {}),
       })
       return 1
     } catch (e) {

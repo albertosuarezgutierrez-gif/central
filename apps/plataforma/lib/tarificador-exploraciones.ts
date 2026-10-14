@@ -98,6 +98,7 @@ export function estadoExploracion(r: Pick<ResumenExploracion, 'estadoTrabajo' | 
     case 'pendiente': return { texto: 'En cola', tono: 'info' }
     case 'en_curso': return { texto: 'Explorando', tono: 'info' }
     case 'requiere_humano': return { texto: 'Pide una persona', tono: 'aviso' }
+    case 'atascado': return { texto: 'Atascado', tono: 'aviso' }
     case 'error_reintentable': return { texto: 'Error (reintenta)', tono: 'aviso' }
     case 'error_definitivo': return { texto: 'Error', tono: 'negativo' }
     case 'cancelado': return { texto: 'Cancelada', tono: 'neutral' }
