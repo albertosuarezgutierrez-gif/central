@@ -22,7 +22,16 @@ export async function POST(req: Request) {
     if (!t) return NextResponse.json({ estado: 'trabajo_no_en_curso' }, { status: 404 })
     const r = await cerrarAcompanamiento(t, l.p.resultado)
     // F2: lo aprendido que falló suma un fallo (2 seguidos = descartado). Solo en el PRIMER cierre (un repetido no cuenta doble).
-    const fallos = r.repetido ? 0 : await registrarFallosConocimiento(t, l.p.aprendidoFallido)
+    // El cierre ya está aplicado: si esto falla NO se tumba la respuesta (un reintento vería `repetido` y no contaría nada). null = no se sabe.
+    let fallos: number | null = 0
+    if (!r.repetido) {
+      try {
+        fallos = await registrarFallosConocimiento(t, l.p.aprendidoFallido)
+      } catch (e) {
+        fallos = null
+        console.error('[tarificador/formador] cierre: fallos de lo aprendido', l.p.trabajoId, e instanceof Error ? e.message.slice(0, 300) : 'error')
+      }
+    }
     return NextResponse.json({ estado: r.repetido ? 'ya_cerrado' : 'ok', acompanamiento: r.estado, aprendidoFallido: fallos })
   } catch (e) {
     console.error('[tarificador/formador] cierre', l.p.trabajoId, e instanceof Error ? e.message.slice(0, 300) : e)

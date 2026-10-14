@@ -67,7 +67,8 @@ test('cierre del formador: aprendidoFallido es accesorio (lo malo se descarta, n
   const sin = leerPeticionCierre({ trabajoId: ID, resultado: 'ok' })
   assert.ok(sin.ok && sin.p.aprendidoFallido.length === 0)
   const cierre = leer('app/api/tarificador/formador/cierre/route.ts')
-  assert.match(cierre, /const fallos = r\.repetido \? 0 : await registrarFallosConocimiento\(t, l\.p\.aprendidoFallido\)/, 'un cierre repetido no suma fallos dos veces')
+  assert.match(cierre, /if \(!r\.repetido\) \{\s*try \{\s*fallos = await registrarFallosConocimiento\(t, l\.p\.aprendidoFallido\)/, 'un cierre repetido no suma fallos dos veces')
+  assert.match(cierre, /catch \(e\) \{\s*fallos = null/, 'un fallo al registrar lo aprendido tumba el cierre ya aplicado')
 })
 
 test('aprendido: lo descartado no se sirve y un éxito pone los fallos a cero', () => {
@@ -76,6 +77,8 @@ test('aprendido: lo descartado no se sirve y un éxito pone los fallos a cero', 
   assert.match(leerC, /and descartado_at is null/, 'lo descartado se sigue sirviendo al worker')
   const conf = tramo(src, 'export async function confirmarConocimiento', '\n}\n')
   assert.match(conf, /fallos = 0, descartado_at = null/, 'un éxito no limpia los fallos')
+  assert.match(conf, /consolidado_at = coalesce\([\s\S]*?excluded\.origen = 'humano'/, 'elegir a mano un selector ya aprendido no lo consolida')
+  assert.match(conf, /origen = case when excluded\.origen = 'humano' then 'humano'/, 'la confirmación humana no sube el origen')
   const fallo = tramo(src, 'export async function registrarFallosConocimiento', '\n}\n')
   assert.match(fallo, /fallos \+ 1 >= \$\{UMBRAL_DESCARTAR_APRENDIDO\}::int then now\(\)/)
 })

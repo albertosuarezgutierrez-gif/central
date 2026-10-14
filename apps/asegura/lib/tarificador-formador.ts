@@ -127,10 +127,11 @@ export async function confirmarConocimiento(t: TrabajoVivo, e: { clave: string; 
       on conflict (correduria_id, compania, ramo, clave, selector)
       do update set confirmaciones = seguros.tarificador_conocimiento.confirmaciones + 1, ultimo_uso_at = now(), marco = excluded.marco,
                     fallos = 0, descartado_at = null,
+                    origen = case when excluded.origen = 'humano' then 'humano' else seguros.tarificador_conocimiento.origen end,
                     consolidado_at = coalesce(seguros.tarificador_conocimiento.consolidado_at,
-                      case when seguros.tarificador_conocimiento.origen = 'humano' or seguros.tarificador_conocimiento.confirmaciones + 1 >= ${umbral}::int then now() end),
+                      case when excluded.origen = 'humano' or seguros.tarificador_conocimiento.origen = 'humano' or seguros.tarificador_conocimiento.confirmaciones + 1 >= ${umbral}::int then now() end),
                     consolidado_por = coalesce(seguros.tarificador_conocimiento.consolidado_por,
-                      case when seguros.tarificador_conocimiento.origen = 'humano' or seguros.tarificador_conocimiento.confirmaciones + 1 >= ${umbral}::int then 'regla:exitos' end)
+                      case when excluded.origen = 'humano' or seguros.tarificador_conocimiento.origen = 'humano' or seguros.tarificador_conocimiento.confirmaciones + 1 >= ${umbral}::int then 'regla:exitos' end)
       returning confirmaciones`
     return filas[0]?.confirmaciones ?? 0
   }
