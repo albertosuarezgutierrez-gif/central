@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/10/2026)** — Tarificador RPA · arranque bot **Mapfre Auto** (rama `claude/mapfre-tarificador-bot-9t5zpf`). SQL `2026-10-14_tarificador_mapfre_auto.sql` (fila mapfre/auto, `activo=false`, credencial `MAPFRE_WMEDIADORES`) **sin aplicar**; capa Mapfre en `CONOCIMIENTO-PORTALES.md`.
+Pendiente de Alberto: URL de login wmediadores, ¿SMS/2FA?, ruta de menús hasta Auto, si «Continuar» paso 3 solo tarifica, botón guardar/PDF, uso/ámbito/permiso, secrets Fly `CRED_MAPFRE_WMEDIADORES_USER/_PASS`. Alberto autorizó tocar las listas compartidas del explorador para añadir Mapfre.
 **(14/10/2026)** — Portal cliente · fase B mergeada (#4601) + arreglo de build (#4611). Avisos de aportadas, subida de prima y autorizados (umbral configurable), revisión IA de póliza (solo OpenRouter, sin datos identificativos) y «seguros que no nos constan», resumen anual, parte con ubicación, escáner de documentos, enlace para invitar a la familia (10 usos). Privacidad a `2026-10-v1` (todos re-aceptan).
 SQL aplicado el 14/10 en wswbehlcuxqxyinousql (OK de Alberto): `avisos_fase_b`, `parte_fotos_escaner`, `invitar_familia`, `revision_huecos`; RLS off, grants y REVOKE crm_seguros verificados.
 🚨 Lección: tsc/tests no ven `node:crypto` en un `'use client'`; solo `next build`. Cepo `apps/asegura-portal/lib/cliente-sin-servidor.test.ts`. Antes de mergear UI nueva del portal, `next build` local.
