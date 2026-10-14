@@ -34,6 +34,7 @@ import {
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
+import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
@@ -114,6 +115,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     acceptDownloads: true,
     ...(previa ? { storageState: previa as BrowserContextOptions['storageState'] } : {}),
   })
+  const ti = crearTrazaIntento(k.traza)
   let logueado = false
   let ultimo5xx: number | null = null
   try {
@@ -135,6 +137,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       sesionManual: k.sesion.manual,
       trasLogin: async () => {
         logueado = true
+        ti.marcarLogin()
         log('tras_login')
         // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
         await exigirSinVerificacion(page, k.compania)
@@ -163,12 +166,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
-      paso: k.traza.paso,
+      paso: ti.paso,
     }
 
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
     let error: unknown = null
     let tope: ReturnType<typeof setTimeout> | undefined
+    // Traza (14/10/2026): los adaptadores de Moto/Auto/Mapfre no llaman a `ctx.paso`; sin esto su traza salía VACÍA. Si el
+    // adaptador no deja ningún paso, se anotan `login` (hasta `ctx.trasLogin`) + `formulario` (el resto) con el código FINAL
+    // del intento (traza-intento.ts). Tras el timeout el adaptador sigue en segundo plano: su `ctx.paso` tardío ya no anota.
     try {
       resultado = await Promise.race([
         k.tarificar(page, ctx),
@@ -181,9 +187,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       error = guard.violacion() ?? e
     } finally {
       clearTimeout(tope)
+      ti.cerrar()
     }
 
     if (resultado && !error) {
+      ti.cubrir({ ok: true })
       // Sesión buena: se guarda EN MEMORIA (sin `path`: nunca a disco) para el siguiente trabajo de este proceso.
       const estado = await context.storageState().catch(() => null)
       if (estado) await k.sesion.alExito(estado).catch(() => log('sesion_no_guardada'))
@@ -205,6 +213,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (rechazada) error = new ErrorVerificacionHumana(k.compania, textoAvisoSesionManual(k.compania))
     await k.sesion.alFallo(rechazada).catch(() => log('sesion_no_borrada'))
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
+    ti.cubrir({ ok: false, codigo: c.tipo }) // el MISMO código que el runner reporta para el intento
     // Mapfre abre el formulario en una PESTAÑA NUEVA (14/10/2026): la evidencia sale de la pestaña abierta MÁS RECIENTE
     // (con una sola pestaña, la de siempre).
     const abiertas = context.pages().filter((p) => !p.isClosed())
@@ -216,6 +225,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(marcosDePestanas(abiertas, page)) : null
     return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom } }
   } catch (e) {
+    ti.cubrir({ ok: false, codigo: 'desconocido' })
     await k.sesion.alFallo(false).catch(() => undefined)
     throw e
   } finally {

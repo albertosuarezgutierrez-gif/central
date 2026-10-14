@@ -70,11 +70,11 @@ import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores
 import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
+import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
 import { ESTABILIDAD_POR_DEFECTO, esperarEstable, vigilarRed, type OpcionesEstabilidad, type VigiaRed } from './estabilidad.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
-import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
-import { login as loginEpac } from './adapters/allianz/comunidades.ts'
+import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import { abrirTarificacionHogar, cabeceraPortalVisible, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
@@ -359,7 +359,7 @@ export type ContextoBucle = {
   pulsarGuardadoDialogo: (boton: Locator, el: ElementoInventario, marco: MarcoInventario) => Promise<void>
   pausaAccion: () => Promise<void>
   /** `incidencias` (14/10/2026): lo que el lote ANTERIOR no pudo aplicar (ref + clave + causa; nunca el valor). */
-  pedirPaso: (cuerpo: { trabajoId: string; inventario: InventarioExploracion['inventario']; avancesFallidos: number; incidencias?: IncidenciaEjecucion[] }) => Promise<RespuestaPaso>
+  pedirPaso: (cuerpo: { trabajoId: string; inventario: InventarioExploracion['inventario']; avancesFallidos: number; incidencias?: IncidenciaEjecucion[]; vistaAria?: string }) => Promise<RespuestaPaso>
   log: Log
   ahora?: () => number
   hoy?: () => Date
@@ -387,6 +387,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   const ahora = k.ahora ?? Date.now
   const inicio = ahora()
   const topes = topesExplorador(k.env)
+  const modoVista = modoVistaExplorador(k.env)
   const red = new Set<string>()
   const efectos = new Set<EfectoPortal>()
   const huellas: string[] = []
@@ -455,7 +456,11 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       }
       trasRepintado = false
 
-      const r = await k.pedirPaso({ trabajoId: k.trabajoId, inventario: inv, avancesFallidos, ...(incidencias.length ? { incidencias } : {}) })
+      // Vista aria opcional (TARIFICADOR_EXPLORADOR_VISTA; defecto `dom` = nada cambia). Mide tamaños dom vs aria, sin datos.
+      // En modo `dom` (el de siempre) ni se serializa el inventario para medirlo ni se loguea nada: coste cero.
+      const vista = modoVista === 'dom' ? { metrica: null, vistaAria: undefined } : await vistaDelPaso(page, modoVista, JSON.stringify(inv).length)
+      if (vista.metrica) k.log('exploracion_vista', { n: pasos + 1, ...vista.metrica })
+      const r = await k.pedirPaso({ trabajoId: k.trabajoId, inventario: inv, avancesFallidos, ...(incidencias.length ? { incidencias } : {}), ...(vista.vistaAria ? { vistaAria: vista.vistaAria } : {}) })
       incidencias = []
       pasos++
       if (r.estado === 'perdido') throw new Parar('perdido')

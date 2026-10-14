@@ -114,6 +114,8 @@ export type EntradaPaso = {
   riesgo?: unknown
   /** Lo que el lote ANTERIOR no pudo aplicar (worker, 14/10/2026). */
   incidencias?: IncidenciaEjecucion[]
+  /** Vista aria ya saneada (opcional). */
+  vistaAria?: string
   /**
    * `login` = fase de LOGIN ASISTIDO (14/10/2026): prompt y validador propios (`validarRespuestaLogin`: solo claves
    * `credencial.*`), SIN memoria, y como mucho `MAX_PANTALLAS_LOGIN` pasos de login. La ruta ya comprobó la entrada.
@@ -204,7 +206,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     }
     const prompt = login
       ? promptLoginExplorador({ entrada: e.entrada, inventario, historial: historialCorto(st.pasos.filter((x) => esRespuestaLogin(x.respuesta))), avancesFallidos: e.avancesFallidos, pantallasLogin: pasosLogin })
-      : promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo })
+      : promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo, ...(e.vistaAria ? { vistaAria: e.vistaAria } : {}) })
     const caracteres = system.length + prompt.length
     const peor = costeMaximoLlamada(e.modelo, caracteres, maxTokens)
     const tope1 = comprobarTopes(consumo, topes, peor)

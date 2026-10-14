@@ -76,3 +76,15 @@ describe('versión del bot', () => {
   it.each(['0.1.0', '1.12.3'])('«%s» es válida', (v) => expect(esVersionBot(v)).toBe(true))
   it.each(['0.1', 'v0.1.0', '0.1.0-beta', '', null, 1])('«%s» no lo es', (v) => expect(esVersionBot(v)).toBe(false))
 })
+
+describe('traza · anotar a posteriori (adaptadores sin ctx.paso)', () => {
+  it('un paso anotado pasa por validarTraza con el código del fallo', () => {
+    const t = crearTraza((e) => (e instanceof Error ? 'portal' : 'x'), () => 5_000)
+    t.anotar('formulario', 3_000)
+    t.anotar('formulario', 3_000, { e: new Error('boom') })
+    t.anotar('formulario', 3_000, { e: 'cosa rara' })
+    const p = t.pasos()
+    expect(p.map((x) => [x.ok, x.errorCodigo, x.duracionMs])).toEqual([[true, null, 2000], [false, 'portal', 2000], [false, 'desconocido', 2000]])
+    expect(validarTraza(p).ok).toBe(true)
+  })
+})

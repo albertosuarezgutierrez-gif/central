@@ -27,6 +27,7 @@ import {
   exploradorActivo,
   faseLoginPermitida,
   leerPeticionPaso,
+  sanearVistaAria,
   modeloExplorador,
 } from '@/lib/tarificador-explorador-reglas'
 
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
 
     let inicio: Date | null = null
     const out = await ejecutarPaso<Bd>(
-      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, fase: p.fase },
+      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, vistaAria: sanearVistaAria(p.vistaAria, valores), fase: p.fase },
       {
         conLock: (fn) => conLockExploracion(e, fn),
         leer: async (bd) => {

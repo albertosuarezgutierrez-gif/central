@@ -20,6 +20,8 @@ import {
   DIAS_SIN_REPETIR,
   ORIGEN_RENOVACION,
   calcularMetricas,
+  tasaOkPorGrupo,
+  type TasaGrupo,
   clasificarRenovacion,
   cupoPasada,
   detectarCambiosTarifa,
@@ -231,6 +233,8 @@ export type PanelTarificador = {
   generadoEn: string
   interruptores: { rpa: boolean; renovaciones: boolean; topeDia: number }
   metricas: { d7: MetricasPeriodo; d30: MetricasPeriodo; fallos: FalloAgrupado[] }
+  /** Éxito por compañía/ramo/modo (últimos 40 días, sin exploraciones). `tasa_ok` null = sin desenlace. */
+  tasaOk: TasaGrupo[]
   intervenciones: IntervencionesResumen
   renovaciones: { porEstado: Record<EstadoRenovacion, number>; lista: Renovacion[] }
   alertasTarifa: AlertaTarifa[]
@@ -279,8 +283,8 @@ async function leerIaPorDia(): Promise<IaDia[] | null> {
 
 export async function leerPanelTarificador(correduriaId: string, env: Record<string, string | undefined> = process.env, ahora = new Date()): Promise<PanelTarificador> {
   const [metr, completados, intervenciones, renov, iaDias] = await Promise.all([
-    prisma.$queryRaw<{ compania: string; estado: string; created_at: Date; iniciado_at: Date | null; terminado_at: Date | null; error: unknown }[]>`
-      select compania, estado, created_at, iniciado_at, terminado_at, error
+    prisma.$queryRaw<{ compania: string; ramo: string; modo: string; estado: string; created_at: Date; iniciado_at: Date | null; terminado_at: Date | null; error: unknown }[]>`
+      select compania, ramo, coalesce(to_jsonb(t)->>'modo', 'tarificar') as modo, estado, created_at, iniciado_at, terminado_at, error
       from seguros.tarificacion_trabajos t
       where t.correduria_id = ${correduriaId}::uuid and t.created_at > now() - interval '40 days'
         -- Métricas y coste POR TARIFICACIÓN: una exploración no es una tarificación (ni éxito ni fallo de una).
@@ -321,6 +325,7 @@ export async function leerPanelTarificador(correduriaId: string, env: Record<str
     generadoEn: ahora.toISOString(),
     interruptores: { rpa: rpaActivo(env), renovaciones: renovacionesActivas(env), topeDia: maxRenovacionesDia(env) },
     metricas,
+    tasaOk: tasaOkPorGrupo(metr.map((t) => ({ compania: t.compania, ramo: t.ramo, modo: t.modo, estado: t.estado }))),
     intervenciones,
     renovaciones: { porEstado: contarPorEstado(renov), lista: renov.slice(0, 100).map(sinRiesgo) },
     alertasTarifa,

@@ -108,7 +108,7 @@ test('sin pasos ni versión (worker antiguo) el resultado sigue siendo válido',
   if (r.ok) assert.deepEqual([r.r.pasos, r.r.botVersion], [[], null])
 })
 
-test('🪤 la traza se guarda FUERA de la transacción del resultado, en su propio try/catch con console.warn', async () => {
+test('🪤 la traza se guarda FUERA de la transacción del resultado, en su propio try/catch con console.error', async () => {
   const { readFileSync } = await import('node:fs')
   const f = readFileSync(new URL('./tarificador.ts', import.meta.url), 'utf8')
   const ini = f.indexOf('export async function registrarResultado')
@@ -118,7 +118,7 @@ test('🪤 la traza se guarda FUERA de la transacción del resultado, en su prop
   const llamada = cuerpo.indexOf('guardarPasos(')
   assert.ok(cierreTx > 0 && llamada > cierreTx, 'guardarPasos debe llamarse tras cerrar la transacción')
   assert.doesNotMatch(cuerpo.slice(0, cierreTx), /guardarPasos\(/)
-  assert.match(cuerpo.slice(llamada), /guardarPasos\(prisma,[\s\S]*catch[\s\S]*console\.warn/)
+  assert.match(cuerpo.slice(llamada), /guardarPasos\(prisma,[\s\S]*catch[\s\S]*console\.error/)
   // Sin datos personales en el aviso: solo el id del trabajo y el mensaje del error.
   assert.doesNotMatch(cuerpo.slice(llamada), /riesgo|cliente_id|JSON\.stringify/)
 })
