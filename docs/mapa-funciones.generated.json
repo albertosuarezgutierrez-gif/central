@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T12:42:37Z",
-  "sha": "1f505a0bad5f8f48e86acd5313be58350365ae5c",
+  "generadoEn": "2026-10-14T13:32:22Z",
+  "sha": "a61de0e62ec1def5e0ca8e5dcefb947bf6a445fa",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -23240,13 +23240,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 21,
+          "linea": 24,
           "resumen": "`POST /api/tarificador/formador/sugerir` — el worker no encuentra un campo o una acción PERMITIDA y pregunta qué candidato de su lista es. Bearer `TARIFICADOR_WORKER_SECRET` (el mismo de `/api/tarific"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/tarificador/formador/sugerir",
-      "hash": "1ad87fd97041"
+      "hash": "d276d76607fc"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/resultado/route.ts",
@@ -47922,14 +47922,15 @@
           "nombre": "preguntarIA",
           "kind": "function",
           "exportada": true,
-          "params": "system: string, prompt: string",
+          "params": "system: string, prompt: string, modelo?: string, timeoutMs = 20_000",
           "retorno": "Promise<",
-          "linea": 9
+          "linea": 10,
+          "resumen": "`modelo`: slug de OpenRouter por la pasarela (escalón potente); sin él, el por defecto. `timeoutMs` por llamada (escalera: 15 s)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d61a1c8f3d06"
+      "hash": "87952cca7836"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-formador-reglas.ts",
@@ -47937,6 +47938,10 @@
       "resumen": "Formador con IA del tarificador RPA — reglas PURAS del lado de asegura (06/10/2026). `node --test`. El worker (services/tarificador-rpa/src/formador.ts) no encuentra un campo o una acción PERMITIDA y pregunta aquí qué candidato es. La IA solo devuelve un ÍNDICE de la lista que mandó el worker; el wo",
       "exporta": [
         "formadorActivo",
+        "modeloFormador",
+        "escaleraModelos",
+        "maxEurIA",
+        "quedaPresupuestoEur",
         "maxLlamadasIA",
         "quedanLlamadas",
         "leerEstructura",
@@ -47951,7 +47956,10 @@
         "parsearRespuestaSugerir",
         "parsearRespuestaRevisar",
         "incidenciasResultado",
-        "costeEstimado"
+        "tarifaModelo",
+        "costeEstimado",
+        "costeMaximoLlamadaFormador",
+        "cabeLlamadaEur"
       ],
       "funciones": [
         {
@@ -47963,12 +47971,47 @@
           "linea": 13
         },
         {
+          "nombre": "modeloFormador",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "string | null",
+          "linea": 25,
+          "resumen": "Modelo de OpenRouter del 2º ESCALÓN del respaldo IA (`sugerir`, 14/10/2026: «modelo potente»): `TARIFICADOR_FORMADOR_MODELO` con un slug válido, o el por defecto. Va POR LA PASARELA (queda en `ai_usos"
+        },
+        {
+          "nombre": "escaleraModelos",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "(string | undefined)[]",
+          "linea": 35,
+          "resumen": "IA ESCALONADA: 1º el modelo por defecto de `iaTexto` (barato), 2º el potente SOLO si el 1º no señaló nada con confianza. `undefined` = el por defecto. Cada escalón es una llamada (cuenta para el tope "
+        },
+        {
+          "nombre": "maxEurIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "number",
+          "linea": 42,
+          "resumen": "Tope de COSTE estimado de IA del formador por trabajo (`TARIFICADOR_FORMADOR_MAX_EUR`, 0.01..5 €; si no, 0,50 €)."
+        },
+        {
+          "nombre": "quedaPresupuestoEur",
+          "kind": "function",
+          "exportada": true,
+          "params": "usado: number, max: number",
+          "retorno": "boolean",
+          "linea": 47
+        },
+        {
           "nombre": "maxLlamadasIA",
           "kind": "function",
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "number",
-          "linea": 19,
+          "linea": 53,
           "resumen": "Tope de llamadas a la IA por trabajo (`TARIFICADOR_FORMADOR_MAX_LLAMADAS`, 1..60; si no, 12)."
         },
         {
@@ -47977,7 +48020,7 @@
           "exportada": true,
           "params": "usadas: number, max: number",
           "retorno": "boolean",
-          "linea": 24
+          "linea": 58
         },
         {
           "nombre": "obj",
@@ -47985,7 +48028,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 49
+          "linea": 83
         },
         {
           "nombre": "cad",
@@ -47993,7 +48036,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, pii = false",
           "retorno": "string | null",
-          "linea": 51
+          "linea": 85
         },
         {
           "nombre": "leerEstructura",
@@ -48001,7 +48044,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Candidato[] | null",
-          "linea": 63,
+          "linea": 97,
           "resumen": "Re-proyecta lo que manda el worker a una LISTA BLANCA de claves (defensa en profundidad: aunque el worker se equivocara y mandara `value`, aquí no pasa) y tapa datos personales en lo legible."
         },
         {
@@ -48010,7 +48053,7 @@
           "exportada": false,
           "params": "o: Record<string, unknown>, errores: string[]",
           "retorno": "",
-          "linea": 91
+          "linea": 125
         },
         {
           "nombre": "leerPeticionSugerir",
@@ -48018,7 +48061,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 101
+          "linea": 135
         },
         {
           "nombre": "numONull",
@@ -48026,7 +48069,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 132
+          "linea": 166
         },
         {
           "nombre": "modalidad",
@@ -48034,7 +48077,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "ModalidadPortal | null",
-          "linea": 133
+          "linea": 167
         },
         {
           "nombre": "leerPeticionRevisar",
@@ -48042,7 +48085,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 135
+          "linea": 169
         },
         {
           "nombre": "leerPeticionConfirmar",
@@ -48050,7 +48093,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 160
+          "linea": 194
         },
         {
           "nombre": "leerPeticionCierre",
@@ -48058,7 +48101,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 178
+          "linea": 212
         },
         {
           "nombre": "eventoCierre",
@@ -48066,7 +48109,7 @@
           "exportada": true,
           "params": "resultado: 'ok' | 'error', conIntervencion: boolean",
           "retorno": "EventoAcompanamiento",
-          "linea": 187,
+          "linea": 221,
           "resumen": "Con intervención = la IA tuvo que señalar algo o hubo un aviso bloqueante en el trabajo."
         },
         {
@@ -48075,7 +48118,7 @@
           "exportada": false,
           "params": "c: Candidato, i: number",
           "retorno": "string",
-          "linea": 194
+          "linea": 228
         },
         {
           "nombre": "promptSugerir",
@@ -48083,7 +48126,7 @@
           "exportada": true,
           "params": "p: PeticionSugerir",
           "retorno": "string",
-          "linea": 212
+          "linea": 246
         },
         {
           "nombre": "promptRevisar",
@@ -48091,7 +48134,7 @@
           "exportada": true,
           "params": "p: PeticionRevisar",
           "retorno": "string",
-          "linea": 229
+          "linea": 264
         },
         {
           "nombre": "primerObjetoJson",
@@ -48099,7 +48142,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 241,
+          "linea": 276,
           "resumen": "Primer objeto JSON balanceado del texto (la IA a veces añade prosa o ```json)."
         },
         {
@@ -48108,7 +48151,7 @@
           "exportada": true,
           "params": "texto: string, nCandidatos: number",
           "retorno": "Sugerencia | null",
-          "linea": 270
+          "linea": 305
         },
         {
           "nombre": "parsearRespuestaRevisar",
@@ -48116,7 +48159,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Revision | null",
-          "linea": 284,
+          "linea": 319,
           "resumen": "`null` si no se entiende. Un `bloqueante` que no es exactamente `true` NO bloquea (no se para un trabajo por ruido)."
         },
         {
@@ -48125,22 +48168,48 @@
           "exportada": true,
           "params": "p: PeticionRevisar",
           "retorno": "IncidenciaPrecio[]",
-          "linea": 302,
+          "linea": 337,
           "resumen": "Coherencia DETERMINISTA del paso `resultado` (no depende de la IA ni de que esté encendida)."
+        },
+        {
+          "nombre": "tarifaModelo",
+          "kind": "function",
+          "exportada": true,
+          "params": "modelo?: string",
+          "retorno": "",
+          "linea": 356
         },
         {
           "nombre": "costeEstimado",
           "kind": "function",
           "exportada": true,
-          "params": "caracteresEntrada: number, caracteresSalida: number",
+          "params": "caracteresEntrada: number, caracteresSalida: number, modelo?: string",
           "retorno": "number",
-          "linea": 314,
-          "resumen": "~4 caracteres por token. Redondeado a 6 decimales (numeric(10,6))."
+          "linea": 365,
+          "resumen": "~4 caracteres por token, con la tarifa del `modelo` (sin él, la del por defecto). Redondeado a 6 decimales (numeric(10,6))."
+        },
+        {
+          "nombre": "costeMaximoLlamadaFormador",
+          "kind": "function",
+          "exportada": true,
+          "params": "caracteresEntrada: number, modelo?: string",
+          "retorno": "number",
+          "linea": 376,
+          "resumen": "Coste MÁXIMO de una llamada antes de hacerla: entrada real + salida al tope de tokens, con la tarifa del modelo."
+        },
+        {
+          "nombre": "cabeLlamadaEur",
+          "kind": "function",
+          "exportada": true,
+          "params": "usado: number, maximoLlamada: number, max: number",
+          "retorno": "boolean",
+          "linea": 381,
+          "resumen": "¿Cabe la llamada siguiente en el tope de € del trabajo (lo gastado + lo máximo que puede costar esta)? Pura."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e3e19577083b"
+      "hash": "0ba24aeed08d"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-formador.ts",
@@ -48149,6 +48218,7 @@
       "exporta": [
         "trabajoVivo",
         "llamadasIAUsadas",
+        "costeIAUsado",
         "conLlamadaIA",
         "registrarIntervencion",
         "leerConocimiento",
@@ -48176,12 +48246,21 @@
           "linea": 27
         },
         {
+          "nombre": "costeIAUsado",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajoId: string, bd: Bd = prisma",
+          "retorno": "Promise<number>",
+          "linea": 34,
+          "resumen": "Coste estimado acumulado de la IA del formador en el trabajo (para el tope de € por trabajo)."
+        },
+        {
           "nombre": "conLlamadaIA",
           "kind": "function",
           "exportada": true,
-          "params": "t: TrabajoVivo, max: number, llamar: (registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>) => Promise<T>,",
+          "params": "t: TrabajoVivo, max: number, llamar: ( registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>, /** ANTES de cada llamada extra (escalón): ¿quedan llamadas y cabe `maximoEur` en el tope de € del trabajo",
           "retorno": "Promise<",
-          "linea": 43,
+          "linea": 50,
           "resumen": "Tope de llamadas a la IA por trabajo, ATÓMICO: comprobación + llamada + registro dentro de UNA transacción con `pg_advisory_xact_lock` por trabajo. Dos peticiones simultáneas del mismo trabajo se seri"
         },
         {
@@ -48190,7 +48269,7 @@
           "exportada": true,
           "params": "i: { trabajo: TrabajoVivo paso: Paso | 'formador' tipo: TipoIntervencion llamadaIA: boolean resumen: string coste: number }, bd: Bd = prisma",
           "retorno": "Promise<void>",
-          "linea": 61
+          "linea": 76
         },
         {
           "nombre": "leerConocimiento",
@@ -48198,7 +48277,7 @@
           "exportada": true,
           "params": "t: TrabajoVivo",
           "retorno": "Promise<EntradaConocimiento[]>",
-          "linea": 78
+          "linea": 93
         },
         {
           "nombre": "confirmarConocimiento",
@@ -48206,7 +48285,7 @@
           "exportada": true,
           "params": "t: TrabajoVivo, e: { clave: string; tipo: TipoClave; selector: string; marco: string | null; origen: 'ia' | 'codigo' | 'humano' }",
           "retorno": "Promise<number>",
-          "linea": 88,
+          "linea": 103,
           "resumen": "Alta o +1. Lo llama el worker SOLO tras validar el elemento y usarlo sin error."
         },
         {
@@ -48215,7 +48294,7 @@
           "exportada": true,
           "params": "t: TrabajoVivo",
           "retorno": "Promise<EstadoAcompanamiento>",
-          "linea": 100
+          "linea": 115
         },
         {
           "nombre": "cerrarAcompanamiento",
@@ -48223,7 +48302,7 @@
           "exportada": true,
           "params": "t: TrabajoVivo, resultado: 'ok' | 'error'",
           "retorno": "Promise<",
-          "linea": 113,
+          "linea": 128,
           "resumen": "Cierre del trabajo para el contador: UNA vez por trabajo (índice único parcial `un_cierre`). Intervención = la IA señaló algo o hubo aviso bloqueante / incidencia de precio en el trabajo."
         },
         {
@@ -48232,7 +48311,7 @@
           "exportada": true,
           "params": "correduriaId: string, f: { trabajoId: string | null; limite: number }",
           "retorno": "Promise<",
-          "linea": 142
+          "linea": 157
         }
       ],
       "tablas": [
@@ -48240,7 +48319,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "f355baf9b170"
+      "hash": "cf16fe49ac87"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-grabaciones-http.ts",
@@ -216090,6 +216169,6 @@
   ],
   "resumen": {
     "archivos": 4686,
-    "funciones": 17171
+    "funciones": 17179
   }
 }
