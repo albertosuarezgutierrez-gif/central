@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
-  interpretarCorreosCompania, pideMirar, ROTULO_COMPANIA, ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO,
+  admiteMarca, conRevisado, interpretarCorreosCompania, pideMirar, ROTULO_COMPANIA, ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO,
   type LecturaCorreosCompania,
 } from '@/lib/correduria/correos-compania'
 
@@ -25,6 +25,8 @@ export default function CorreosCompania() {
   const [lectura, setLectura] = useState<LecturaCorreosCompania | null>(null)
   const [cargando, setCargando] = useState(true)
   const [limite, setLimite] = useState(PAGINA)
+  const [enCurso, setEnCurso] = useState<ReadonlySet<string>>(new Set())
+  const [falloMarca, setFalloMarca] = useState<string | null>(null)
   const peticion = useRef(0)
 
   const cargar = useCallback(async () => {
@@ -42,6 +44,29 @@ export default function CorreosCompania() {
   }, [])
 
   useEffect(() => { void cargar() }, [cargar])
+
+  // «Marcar como mirado» / «Deshacer»: PATCH y, si el puerto confirma, se actualiza SOLO esa fila en local
+  // (sin recargar ni desmontar la lista). Si falla, la fila queda como estaba y se dice.
+  const marcar = useCallback(async (id: string, revisado: boolean) => {
+    setFalloMarca(null)
+    setEnCurso(p => new Set(p).add(id))
+    try {
+      const r = await fetch('/api/correduria/correos-compania', {
+        method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, revisado }),
+      })
+      const j = (await r.json().catch(() => null)) as { estado?: string } | null
+      if (r.status === 200 && j?.estado === 'ok') {
+        setLectura(l => (l && l.estado === 'ok' ? { ...l, filas: conRevisado(l.filas, id, revisado) } : l))
+        window.dispatchEvent(new Event('correduria:avisos-cambiaron'))
+      } else {
+        setFalloMarca(r.status === 404 ? 'Ese aviso ya no existe: recarga la lista.' : `No se ha podido guardar (respuesta ${r.status}). Sigue como estaba.`)
+      }
+    } catch {
+      setFalloMarca('No se ha podido guardar (sin conexión). Sigue como estaba.')
+    } finally {
+      setEnCurso(p => { const n = new Set(p); n.delete(id); return n })
+    }
+  }, [])
 
   const cabecera = (n: string | null) => <h2 style={TITULO}>Correos de compañía{n ? ` · ${n}` : ''}</h2>
 
@@ -80,7 +105,7 @@ export default function CorreosCompania() {
         Avisos de las compañías leídos del correo (últimos 30 días).{' '}
         {pendientes > 0
           ? <strong style={{ color: 'var(--negative)' }}>{pendientes} sin resolver: no se ha escrito nada en la cartera.</strong>
-          : filas.length > 0 ? 'Todos aplicados o ya en CIMA.' : 'No ha llegado ninguno.'}
+          : filas.length > 0 ? 'Nada pendiente de mirar.' : 'No ha llegado ninguno.'}
       </p>
       {lectura.truncado && <p style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>La lista está recortada: hay más de los que se muestran.</p>}
       {lectura.descartadas > 0 && (
@@ -88,14 +113,18 @@ export default function CorreosCompania() {
           {lectura.descartadas} fila{lectura.descartadas === 1 ? '' : 's'} no se ha podido leer y no aparece{lectura.descartadas === 1 ? '' : 'n'}.
         </p>
       )}
+      {falloMarca && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--warning)' }}>{falloMarca}</p>}
       {cargando && <p aria-live="polite" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Actualizando…</p>}
       {filas.slice(0, limite).map(e => {
         const mirar = pideMirar(e)
+        const marcable = admiteMarca(e)
+        const ocupado = enCurso.has(e.id)
         const est = ROTULO_ESTADO_CORREO[e.estado]
         return (
           <article key={e.id} style={{
             ...cardStyle, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, padding: 14,
             ...(mirar ? { borderColor: 'var(--negative)', background: 'var(--negative-bg)' } : {}),
+            ...(marcable && e.revisado ? { opacity: 0.6 } : {}),
           }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minWidth: 0 }}>
               <Badge tono={est.tono}>{est.texto}</Badge>
@@ -118,6 +147,22 @@ export default function CorreosCompania() {
               {e.resumen ?? (mirar ? 'Sin desenlace: míralo en el correo.' : '')}
               {e.motivo && e.motivo !== e.resumen ? ` — ${e.motivo}` : ''}
             </div>
+            {marcable && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                {e.revisado ? (
+                  <>
+                    <strong style={{ fontSize: 13 }}>Mirado</strong>
+                    <button type="button" disabled={ocupado} onClick={() => void marcar(e.id, false)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+                      {ocupado ? 'Guardando…' : 'Deshacer'}
+                    </button>
+                  </>
+                ) : (
+                  <button type="button" disabled={ocupado} onClick={() => void marcar(e.id, true)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+                    {ocupado ? 'Guardando…' : 'Marcar como mirado'}
+                  </button>
+                )}
+              </div>
+            )}
           </article>
         )
       })}

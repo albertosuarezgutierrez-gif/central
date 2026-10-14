@@ -485,3 +485,16 @@ export function tareaValida(t: TareaPlan, hoy: Date): { ok: true } | { ok: false
   const v = validarTarea(t, hoy)
   return v.ok ? { ok: true } : { ok: false, motivo: v.motivo }
 }
+
+// ── «Marcar como mirado» (14/10/2026) ────────────────────────────────────────
+
+const UUID_EVENTO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Cuerpo de `PATCH /api/operador/correo/evento`: `{ id: uuid, revisado: boolean }`. Nada se coacciona. */
+export function validarMarcaRevisado(b: unknown): { ok: true; id: string; revisado: boolean } | { ok: false; motivo: string } {
+  if (typeof b !== 'object' || b === null || Array.isArray(b)) return { ok: false, motivo: 'cuerpo no válido' }
+  const o = b as Record<string, unknown>
+  if (typeof o.id !== 'string' || !UUID_EVENTO.test(o.id)) return { ok: false, motivo: 'id no válido' }
+  if (typeof o.revisado !== 'boolean') return { ok: false, motivo: 'revisado debe ser true o false' }
+  return { ok: true, id: o.id, revisado: o.revisado }
+}

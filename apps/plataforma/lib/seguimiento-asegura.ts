@@ -816,6 +816,10 @@ export function expedientesAsegura(): Promise<Reenvio> {
 export function correosCompaniaAsegura(dias = 30): Promise<Reenvio> {
   return llamar(`/api/operador/correo/evento?dias=${dias}`, { method: 'GET' })
 }
+/** «Marcar como mirado» / «Deshacer» de la bandeja (14/10/2026). */
+export function marcarCorreoCompaniaAsegura(body: { id: string; revisado: boolean }): Promise<Reenvio> {
+  return llamar('/api/operador/correo/evento', { method: 'PATCH', body: JSON.stringify(body) })
+}
 export function avisosAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/avisos', { method: 'GET' }, 20_000)
 }
