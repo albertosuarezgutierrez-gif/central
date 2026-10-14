@@ -1,5 +1,5 @@
 /**
- * Cuestionario de exigencias y necesidades (IDD, art. 20 Ley 16/2018 → hoy RDL 3/2020).
+ * Cuestionario de exigencias y necesidades (IDD, art. 175.1 RDL 3/2020).
  *
  * Antes era un texto libre que escribía el corredor. Con preguntas cerradas por ramo:
  *  - todos los presupuestos preguntan lo mismo (prueba uniforme ante la DGSFP), y

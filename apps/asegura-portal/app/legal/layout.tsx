@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
  * Marco de las páginas legales. Va aparte del `(portal)` a propósito: estas
  * cuatro páginas tienen que poder leerse SIN sesión — quien llega al portal por
  * primera vez todavía no ha metido el código, y la información precontractual
- * del art. 19 LDS y la política de privacidad son justo lo que tiene que poder
+ * del art. 173 RDL 3/2020 y la política de privacidad son justo lo que tiene que poder
  * ver ANTES de darnos un dato.
  */
 export default function LegalLayout({ children }: { children: ReactNode }) {

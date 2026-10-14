@@ -329,7 +329,7 @@ export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania
 export { vistaDelParte, entradaValida } from './parte-entrada.ts'
 export type { OpcionEntradaParte, VistaParte } from './parte-entrada.ts'
 // La acreditación de que se enseñó la información precontractual del mediador
-// (art. 19 LDS) al entrar, y los consentimientos `comercial` y `avisos` (este,
+// (art. 173 RDL 3/2020) al entrar, y los consentimientos `comercial` y `avisos` (este,
 // desde el 13/10/2026: la bienvenida de avisos y «Configuración»).
 export {
   TIPOS_CONSENTIMIENTO,

@@ -7,7 +7,7 @@
  *
  * - **`lds_art19`** — no es un consentimiento del RGPD: es la **acreditación de
  *   que se facilitó la información precontractual del mediador ANTES de operar**
- *   (art. 19 de la Ley 16/2018). La carga de la prueba la tiene el mediador, y
+ *   (art. 173 del RDL 3/2020). La carga de la prueba la tiene el mediador, y
  *   por eso la fila se sella con la versión EXACTA del texto que se enseñó.
  * - **`avisos`** y **`comercial`** — esos SÍ son consentimiento (art. 6.1.a
  *   RGPD). `comercial` tiene casilla desde el 19/09/2026 (pestaña «Mis

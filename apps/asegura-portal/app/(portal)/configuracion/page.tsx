@@ -65,7 +65,7 @@ export default async function ConfiguracionPage() {
 const NOMBRE_TIPO: Record<string, string> = {
   avisos: 'Notificaciones de avisos',
   comercial: 'Propuestas de la correduría',
-  lds_art19: 'Información del mediador (art. 19 Ley 16/2018)',
+  lds_art19: 'Información del mediador (art. 173 RDL 3/2020)',
 }
 
 function fechaHora(d: Date): string {

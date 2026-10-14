@@ -226,8 +226,8 @@ export function SinEquivalenteAviso({ motivo }: { motivo: SinEquivalente | null 
 // ─── El bloque del mediador: VISIBLE y sin plegar ───────────────────────────
 
 /**
- * Art. 19 de la Ley 16/2018 y el «asesoramiento sobre la base de un análisis
- * objetivo» del RDL 3/2020. Todo sale de `MEDIADOR` de `@central/module-seguros`:
+ * Art. 173 del RDL 3/2020 (información general previa del mediador) y el
+ * «asesoramiento sobre la base de un análisis objetivo» del mismo texto. Todo sale de `MEDIADOR` de `@central/module-seguros`:
  * 🚨 **ni el nombre ni la clave DGSFP se teclean aquí**. Dos copias de un
  * número de registro es una copia de más.
  *
