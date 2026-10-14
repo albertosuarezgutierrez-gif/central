@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-14T09:26:28.210Z",
- "llamadas": 5823,
+ "fin": "2026-10-14T09:56:46.926Z",
+ "llamadas": 5987,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,58 +16,59 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 449,
-   "chars_in": 53253,
-   "chars_out": 3642262,
+   "llamadas": 451,
+   "chars_in": 53450,
+   "chars_out": 3660602,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 249,
+    "Read": 251,
     "Grep": 183,
     "Glob": 17
    }
   },
   "bash": {
-   "llamadas": 3353,
-   "chars_in": 2802489,
-   "chars_out": 13001048,
+   "llamadas": 3489,
+   "chars_in": 2907678,
+   "chars_out": 13442150,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3353
+    "Bash": 3489
    }
   },
   "otro": {
-   "llamadas": 828,
-   "chars_in": 383067,
-   "chars_out": 6087700,
+   "llamadas": 850,
+   "chars_in": 386717,
+   "chars_out": 6091042,
    "errores": 0,
    "archivos_citados": 44,
    "chars_citados": 2140865,
    "tools": {
     "SubagentHandback": 123,
-    "ToolSearch": 150,
+    "ToolSearch": 152,
     "ReadNotifications": 492,
     "SendMessage": 26,
     "SendUserFile": 1,
     "AskUserQuestion": 1,
-    "Monitor": 31,
+    "Monitor": 49,
     "WebSearch": 1,
     "Skill": 2,
-    "TaskStop": 1
+    "TaskStop": 2,
+    "WebFetch": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 113,
-   "chars_in": 265470,
-   "chars_out": 286099,
+   "llamadas": 114,
+   "chars_in": 266844,
+   "chars_out": 287669,
    "errores": 0,
-   "archivos_citados": 171,
-   "chars_citados": 8796629,
+   "archivos_citados": 172,
+   "chars_citados": 8833142,
    "tools": {
-    "Agent": 113
+    "Agent": 114
    }
   },
   "agente:lector-correo": {
@@ -156,26 +157,26 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 24,
-   "chars_in": 55844,
-   "chars_out": 60845,
+   "llamadas": 25,
+   "chars_in": 57938,
+   "chars_out": 63149,
    "errores": 0,
    "archivos_citados": 39,
    "chars_citados": 1457339,
    "tools": {
-    "Agent": 24
+    "Agent": 25
    }
   },
   "escritura": {
-   "llamadas": 268,
-   "chars_in": 1412709,
-   "chars_out": 8143232,
+   "llamadas": 270,
+   "chars_in": 1425339,
+   "chars_out": 8187881,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 188,
-    "Edit": 80
+    "Write": 189,
+    "Edit": 81
    }
   },
   "agente:agente-mecanico": {
