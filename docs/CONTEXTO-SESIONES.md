@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/10/2026)** — Tarificador · Mapfre SIN LUPA (#4710 MERGEADO; regla de Alberto: al teclear NIF Mapfre busca solo; si no existe se crea en el
+mismo formulario). Bot 0.7.1: «nuevo» solo con aviso «NO EXISTE NINGÚN REGISTRO»; sin aviso → indeterminado → atasco; nunca pisa autorrelleno;
+fecha nacimiento verificada tras blur. Asegura inyecta nombre/apellidos/nacimiento al ENTREGAR (nunca en `riesgo`); 422 `falta_datos_tomador`
+al encolar (afecta también a Mapfre moto). Imagen `v20261014-alta`, env + redeploy `dpl_5xNz…`. Pendiente: prueba real desde el lead Terracan;
+redactor no tapa nombres <4 letras (follow-up).
 **(14/10/2026)** — Tarificador · conversación única de bots. Imágenes `v20261014-lupa` (main #4703) y `v20261014-nsei` (+#4665) construidas;
 `TARIFICADOR_FLY_IMAGE`=`…:v20261014-nsei` y redeploy (OK de Alberto 19:02, `dpl_B5L2…`). Truco: redeploy
 de `dpl_DDrEUdTiNyvvacErA8fygwpmnbwu` (commit #4699, toca apps/asegura); un redeploy del último commit lo salta el ignoreCommand. MERGEADOS #4665
