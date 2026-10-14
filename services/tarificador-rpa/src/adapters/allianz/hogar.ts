@@ -324,7 +324,7 @@ async function esperarValor(marco: Frame, control: string, page: Pick<Page, 'wai
 }
 
 /** Contexto que usa la pantalla «Vivienda»: `ctx.pulsar` (SIGUIENTE) y `ctx.marcarOpcionHogar` (opciones, guard.ts). */
-export type CtxVivienda = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionHogar' | 'formador'>
+export type CtxVivienda = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionHogar' | 'marcarOpcionHogarResuelta' | 'formador'>
 
 /** Marca la opción del riesgo SOLO por la puerta guardada (`ctx.marcarOpcionHogar`); lo que no casa EXACTO → hueco. */
 async function marcarOpcion(marco: Frame, ctx: CtxVivienda, op: Extract<OperacionVivienda, { tipo: 'opcion' }>): Promise<void> {
@@ -357,12 +357,39 @@ async function opcionPorCapaComun(marco: Frame, ctx: CtxVivienda, op: Extract<Op
     return l
   }
   const r = await conRespaldoIA(marco.page(), ctx.formador, fijo, peticion)
+  // ANTES de pulsar: el texto de la etiqueta elegida (fijo, aprendido, IA o persona) debe ser el de la opción del riesgo (plano).
+  // Si no, NO se marca (daría precio con un dato falso): atasco con inventario, sin aprender.
+  const textoElegido = await r.locator.evaluate((el) => (el as HTMLElement).innerText || el.textContent || '').catch(() => null)
+  if (textoElegido === null || plano(textoElegido) !== plano(op.etiqueta)) {
+    await registrarAtasco(marco.page(), ctx.formador, peticion).catch(() => undefined)
+    throw new ErrorMapaIncompleto(hueco)
+  }
   const res = typeof ctx.marcarOpcionHogarResuelta === 'function' ? await ctx.marcarOpcionHogarResuelta(marco, r.locator) : null
   if (!res || res.estado === 'no_unica' || res.estado === 'no_quedo') {
     await registrarAtasco(marco.page(), ctx.formador, peticion).catch(() => undefined)
     throw new ErrorMapaIncompleto(hueco)
   }
-  await r.confirmar().catch(() => undefined)
+  // Se aprende SOLO si el radio concreto de ESA etiqueta quedó marcado (el texto ya se contrastó antes de pulsar).
+  const marcada = await r.locator
+    .evaluate((el) => {
+      const para = el.getAttribute('for')
+      const c = para ? document.getElementById(para) : null
+      return { texto: (el as HTMLElement).innerText || el.textContent || '', marcado: !!c && (c as HTMLInputElement).checked === true }
+    })
+    .catch(() => null)
+  if (marcada && marcada.marcado && plano(marcada.texto) === plano(op.etiqueta)) await r.confirmar().catch(() => undefined)
+  else throw new ErrorMapaIncompleto(hueco)
+}
+
+/**
+ * ¿La vía que dejó el portal (tipo + nombre) es la del riesgo? Por `plano()`: el nombre solo, o «tipo nombre». PURA: es lo que
+ * decide si una elección POSICIONAL de la lista de vías se confirma como aprendida.
+ */
+export function viaCoincide(tipoLeido: string | null, nombreLeido: string | null, nombreRiesgo: string): boolean {
+  const esperado = plano(nombreRiesgo)
+  const nombre = plano(nombreLeido)
+  if (!esperado || !nombre) return false
+  return nombre === esperado || `${plano(tipoLeido)} ${nombre}`.trim() === esperado
 }
 
 /**
@@ -370,11 +397,17 @@ async function opcionPorCapaComun(marco: Frame, ctx: CtxVivienda, op: Extract<Op
  * Se pulsa por `ctx.pulsar` (guard) SOLO una opción de lista (nunca una etiqueta de casilla) y se espera a que el control tenga valor.
  * `true` = quedó con valor (el llamante valida y, si procede, confirma lo aprendido).
  */
-async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, control: string, que: string, hueco: string): Promise<{ ok: boolean; confirmar: () => Promise<void> }> {
+async function opcionAutocompletada(page: Page, marco: Frame, ctx: CtxVivienda, control: string, que: string, hueco: string, contrastable: boolean): Promise<{ ok: boolean; confirmar: () => Promise<void> }> {
   const peticion: PeticionResolver = {
     clave: `elegir_opcion_${slug(que)}`,
     tipo: 'accion',
     descripcion: `Opción de la lista desplegable de «${que}» (pantalla «Vivienda» de Allianz Hogar) que corresponde a la del riesgo. Solo elige un valor de la lista; NUNCA emitir, contratar, grabar ni pagar.`,
+  }
+  // Lo aprendido de una lista es un selector POSICIONAL (#mat-option-N): sin dato del riesgo con que contrastar el resultado no se
+  // usa lo aprendido ni se aprende ni se pregunta a la IA (no se podría verificar): atasco directo.
+  if (!contrastable) {
+    await registrarAtasco(page, ctx.formador, peticion).catch(() => undefined)
+    return { ok: false, confirmar: async () => undefined }
   }
   // Fijo real: si la lista desplegada tiene UNA sola opción visible, esa es (sin ambigüedad).
   const fijo = async () => {
@@ -473,7 +506,7 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
       let confirmarPob: (() => Promise<void>) | null = null
       if (!(await esperarValor(marco, CONTROLES.poblacion, page, ESPERA_AUTOCOMPLETADO_MS))) {
         const hueco = 'la elección de población del CP (el portal no la autocompletó: CP con varias poblaciones o buscador sin mapear)'
-        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco)
+        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.poblacion, 'poblacion', hueco, f.inmueble.municipio !== null)
         if (!e.ok) throw new ErrorMapaIncompleto(hueco)
         confirmarPob = e.confirmar
       }
@@ -485,8 +518,12 @@ export async function rellenarPantallaVivienda(page: Page, marco: Frame, f: Form
     } else if (op.autocompleta === 'via') {
       if (!(await esperarValor(marco, CONTROLES.tipoVia, page, ESPERA_AUTOCOMPLETADO_MS))) {
         const hueco = 'la elección de la vía en el autocompletado (el tipo de vía no se rellenó)'
-        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.tipoVia, 'via', hueco)
+        const e = await opcionAutocompletada(page, marco, ctx, CONTROLES.tipoVia, 'via', hueco, true)
         if (!e.ok) throw new ErrorMapaIncompleto(hueco)
+        // Se confirma como aprendido SOLO si la vía que quedó es la del riesgo (tipo + nombre, plano).
+        const tipo = await leer(marco.locator(`input${selControl(CONTROLES.tipoVia)}`))
+        const nombre = await leer(marco.locator(`input${selControl(CONTROLES.nombreVia)}`))
+        if (!viaCoincide(tipo, nombre, f.inmueble.nombreVia)) throw new ErrorMapaIncompleto('la elección de la vía en el autocompletado (el portal dejó una vía distinta de la del riesgo)')
         await e.confirmar().catch(() => undefined)
       }
     } else if (await esInvalido(loc)) {

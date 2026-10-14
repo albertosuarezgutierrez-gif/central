@@ -95,7 +95,9 @@ export function esAccionPermitida(clave: string): boolean {
  * ¿Tiene forma de OPCIÓN de una lista (la etiqueta de un radio, una `mat-option`/`[role=option]`, un `li` de autocompletado)?
  * Nunca un botón, enlace o campo. Con texto visible corto. PURA (vale para `Candidato` y `DescripcionElemento`).
  */
-export function esElementoOpcion(e: { tag: string; role: string | null; texto: string | null }): boolean {
+export function esElementoOpcion(e: { tag: string; role: string | null; texto: string | null; paraCheckbox?: boolean }): boolean {
+  // Un `label` de una CASILLA (su `for` apunta a un checkbox, o envuelve uno) no es una opción de lista: marcarla cambia un dato suelto.
+  if (e.paraCheckbox === true) return false
   const tag = e.tag.toLowerCase()
   const role = (e.role ?? '').toLowerCase()
   const texto = (e.texto ?? '').trim()
@@ -188,6 +190,8 @@ export type DescripcionElemento = {
   etiquetaFila: string | null
   deshabilitado: boolean
   editableContenido: boolean
+  /** Solo `label`: su `for` apunta a un checkbox o envuelve uno (no es una opción de lista). Opcional. */
+  paraCheckbox?: boolean
   /** Manejador AngularJS (`ng-click`/`data-ng-click`): cuenta como un onclick. Opcional (descripciones antiguas). */
   ngClick?: string | null
   /** `mattooltip` (Angular Material). Opcional: cuenta para el bloqueo y, en la lupa, como etiqueta. */
@@ -326,6 +330,8 @@ export type Candidato = {
   texto: string | null
   etiqueta: string | null
   marco: string | null
+  /** Solo `label`: su `for` apunta a un checkbox o envuelve uno. Solo local (`sinSelector` lo quita: no viaja). */
+  paraCheckbox?: boolean
 }
 /** Candidato con lo que el worker se guarda para volver a encontrarlo (el selector no sale). */
 export type CandidatoLocal = Candidato & { selector: string }
@@ -363,17 +369,20 @@ export function proyectarCandidato(raw: Record<string, unknown>, tipo: TipoClave
     texto: textoAccion ? limpiarTextoAviso(textoAccion, redactar, 80) : null,
     etiqueta: limpiarTextoAviso(recorta(raw.etiqueta, 120), redactar, 120),
     marco: recorta(raw.marco, 120),
+    ...(raw.paraCheckbox === true ? { paraCheckbox: true } : {}),
     selector,
   }
 }
 
 export function sinSelector(c: CandidatoLocal): Candidato {
-  const { selector: _s, ...resto } = c
+  const { selector: _s, paraCheckbox: _p, ...resto } = c
   return resto
 }
 
 /** Incluye el `mat-icon` SUELTO (Angular enlaza su `(click)` sin atributo: una lupa puede ser solo el icono); el de dentro de un botón/enlace no (sería el mismo control). */
-export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, label[for], mat-option, [role=option], mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)'
+export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)'
+/** Solo para la acción `elegir_opcion`: la etiqueta de un radio y las opciones de un autocompletado. NO entra en `SELECTOR_ACCIONES`. */
+export const SELECTOR_OPCIONES = 'label[for], mat-option, [role=option]'
 export const SELECTOR_CAMPOS = 'input:not([type=hidden]):not([type=password]):not([type=radio]), select, textarea, nx-dropdown, nx-datefield, [role=combobox], [role=textbox], [role=spinbutton], [contenteditable=true]'
 export const MAX_CANDIDATOS = 400
 
@@ -392,8 +401,13 @@ export function nombreMarco(page: Page, f: Frame): string {
   return f === page.mainFrame() ? 'principal' : rutaMarco(f)
 }
 
+/** ¿La petición es de la acción `elegir_opcion` (la única que ve labels y opciones)? Pura. */
+export function esPeticionOpcion(p: Pick<PeticionResolver, 'tipo' | 'clave'>): boolean {
+  return p.tipo === 'accion' && baseAccion(p.clave) === 'elegir_opcion'
+}
+
 /** Recorre TODOS los marcos vivos y devuelve los candidatos visibles del tipo pedido (tope `MAX_CANDIDATOS`). */
-export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (t: string) => string = (t) => t): Promise<CandidatoLocal[]> {
+export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (t: string) => string = (t) => t, opciones = false): Promise<CandidatoLocal[]> {
   const out: CandidatoLocal[] = []
   for (const f of page.frames()) {
     if (f.isDetached() || out.length >= MAX_CANDIDATOS) continue
@@ -449,6 +463,13 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
             const celda = h.closest('td')?.previousElementSibling
             return celda?.textContent ?? null
           }
+          // `label` cuyo `for` apunta a un checkbox (o que envuelve uno): una casilla, no una opción de lista.
+          const esDeCasilla = (l: HTMLElement): boolean => {
+            const para = l.getAttribute('for')
+            const dest = para ? document.getElementById(para) : l.querySelector('input')
+            const casilla = (x: Element | null) => !!x && ((x as HTMLInputElement).type === 'checkbox' || x.getAttribute('role') === 'checkbox')
+            return casilla(dest) || !!l.querySelector('input[type=checkbox], [role=checkbox]')
+          }
           const res: Record<string, unknown>[] = []
           for (const el of Array.from(document.querySelectorAll(sel))) {
             if (res.length >= tope) break
@@ -482,12 +503,13 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
                 : null,
               valorBoton: esAccion && esBoton ? h.getAttribute('value') : null,
               etiqueta: etiquetaDe(el),
+              paraCheckbox: tag === 'label' && esDeCasilla(h),
               selector,
             })
           }
           return res
         }),
-        { sel: tipo === 'accion' ? SELECTOR_ACCIONES : SELECTOR_CAMPOS, esAccion: tipo === 'accion', tope: MAX_CANDIDATOS - out.length },
+        { sel: tipo === 'accion' ? (opciones ? `${SELECTOR_ACCIONES}, ${SELECTOR_OPCIONES}` : SELECTOR_ACCIONES) : SELECTOR_CAMPOS, esAccion: tipo === 'accion', tope: MAX_CANDIDATOS - out.length },
       )
       .catch(() => [] as Record<string, unknown>[])
     for (const r of crudos) {
@@ -547,6 +569,15 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
         etiquetaFila: etiquetaFila(h),
         deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
         editableContenido: h.isContentEditable === true,
+        paraCheckbox: tag === 'label' && labelDeCasilla(h),
+      }
+
+      // `label` cuyo `for` apunta a un checkbox (o que envuelve uno): una casilla, no una opción de lista.
+      function labelDeCasilla(l: HTMLElement): boolean {
+        const para = l.getAttribute('for')
+        const dest = para ? document.getElementById(para) : l.querySelector('input')
+        const casilla = (x: Element | null) => !!x && ((x as HTMLInputElement).type === 'checkbox' || x.getAttribute('role') === 'checkbox')
+        return casilla(dest) || !!l.querySelector('input[type=checkbox], [role=checkbox]')
       }
 
       // Icono del control (él mismo o sus descendientes): ligadura de mat-icon, fonticon/svgicon/data-mat-icon-name y clases.
@@ -810,7 +841,7 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
     ctx.log('formador_sin_presupuesto', { clave: p.clave })
     return null
   }
-  const candidatos = await extraerCandidatos(page, p.tipo, ctx.redactar)
+  const candidatos = await extraerCandidatos(page, p.tipo, ctx.redactar, esPeticionOpcion(p))
   if (!candidatos.length) return null
   ctx.usoIA ??= { consultas: 0, ms: 0 }
   ctx.usoIA.consultas++
@@ -1010,7 +1041,7 @@ export function ordenarParaAtasco<T extends Candidato>(l: readonly T[], etiqueta
 export async function registrarAtasco(page: Page | null, ctx: ContextoFormador | undefined, p: PeticionResolver): Promise<void> {
   if (!ctx?.activo || !page || !CLAVE_ATASCO.test(p.clave)) return
   if (p.tipo === 'accion' && !esAccionPermitida(p.clave)) return
-  const todos = await extraerCandidatos(page, p.tipo, ctx.redactar)
+  const todos = await extraerCandidatos(page, p.tipo, ctx.redactar, esPeticionOpcion(p))
   const elegibles = ordenarParaAtasco(todos.filter((c) => candidatoElegibleAtasco(c, p)), p.etiqueta).slice(0, MAX_CANDIDATOS_ATASCO)
   if (!elegibles.length) {
     ctx.log('atasco_sin_candidatos', { clave: p.clave })

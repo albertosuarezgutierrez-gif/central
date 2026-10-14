@@ -147,6 +147,7 @@ test('proyección de candidatos: nunca un value, ni un password, ni texto de un 
   assert.equal(campo.texto, null)
   assert.equal(campo.tag, 'input')
   assert.ok(!('selector' in sinSelector(campo)))
+  assert.ok(!("paraCheckbox" in sinSelector({ ...campo, paraCheckbox: true })), "paraCheckbox es local: no viaja")
   assert.equal(proyectarCandidato({ tag: 'input', type: 'password', selector: '#p' }, 'campo'), null)
   const boton = proyectarCandidato({ tag: 'input', type: 'submit', valorBoton: 'Calcular', value: 'x', selector: '#c' }, 'accion')!
   assert.equal(boton.texto, 'Calcular')
@@ -282,6 +283,11 @@ test('elegir_opcion: genérica, sin textos; solo elementos con FORMA de opción,
   assert.equal(validarAccion({ ...label, visible: false }, 'elegir_opcion_uso').ok, false)
   assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: '' }), false)
   assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: 'x'.repeat(121) }), false)
+  // La etiqueta de una CASILLA (for → checkbox / envolviéndola) no es una opción de lista.
+  assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: 'Acepto', paraCheckbox: true }), false)
+  assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: 'Habitual', paraCheckbox: false }), true)
+  assert.equal(validarAccion(d({ tag: 'label', texto: 'Acepto', paraCheckbox: true }), 'elegir_opcion_uso').ok, false)
+  assert.equal(candidatoElegibleAtasco({ tag: 'label', id: null, name: null, type: null, role: null, clases: null, texto: 'Acepto', etiqueta: null, marco: null, paraCheckbox: true }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), false)
   // Atasco: solo candidatos con forma de opción.
   assert.equal(candidatoElegibleAtasco({ tag: 'label', id: null, name: null, type: null, role: null, clases: null, texto: 'Habitual', etiqueta: null, marco: null }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), true)
   assert.equal(candidatoElegibleAtasco({ tag: 'button', id: null, name: null, type: null, role: null, clases: null, texto: 'Habitual', etiqueta: null, marco: null }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), false)

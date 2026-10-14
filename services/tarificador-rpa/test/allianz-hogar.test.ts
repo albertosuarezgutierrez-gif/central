@@ -8,7 +8,7 @@ import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame, type Page } from 'playwright'
 import { EmisionBloqueadaError, type FormularioHogar } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../src/adaptador.ts'
-import { prepararFormador, type ContextoFormador } from '../src/formador.ts'
+import { SELECTOR_ACCIONES, describirElemento, extraerCandidatos, prepararFormador, type ContextoFormador } from '../src/formador.ts'
 import { pideInventarioDom } from '../src/errores.ts'
 import { OPCIONES_RIESGO_HOGAR_ALLIANZ, etiquetaOpcionHogarCasa, instalarGuardEmision, marcarOpcionResueltaHogarAllianz, marcarOpcionRiesgoHogarAllianz, pulsar } from '../src/guard.ts'
 import { prepararTrabajo } from '../src/ramo.ts'
@@ -33,6 +33,7 @@ import {
   rellenarPantallaVivienda,
   tipoDocumentoCasa,
   valorQuedo,
+  viaCoincide,
 } from '../src/adapters/allianz/hogar.ts'
 
 const HOY = new Date('2026-10-14T10:00:00Z')
@@ -138,7 +139,19 @@ test('prepararTrabajo con un adaptador de hogar: valida con validarFormularioHog
 
 const CARCASA = `<!doctype html><html><body><h1>ePac</h1><iframe name="appArea" id="appArea" src="https://cloud.e-pacallianz.com/ngx-allianzhogar2053/"></iframe></body></html>`
 
-type OpcionesApp = { tipoDoc?: string; poblaciones?: string; sinAutocompletar?: boolean; anioSiempreInvalido?: boolean; pasoInicial?: string }
+type OpcionesApp = {
+  tipoDoc?: string
+  poblaciones?: string
+  sinAutocompletar?: boolean
+  anioSiempreInvalido?: boolean
+  pasoInicial?: string
+  /** El nombre de la vía NO rellena el tipo de vía (hace falta elegir en la lista). */
+  sinVia?: boolean
+  /** Lista desplegada de `mat-option` (como la del portal): al pulsar una, rellena la población o la vía elegida. */
+  lista?: { para: 'poblacion' | 'via'; textos: string[] }
+  /** Una casilla (checkbox) con su `label for` y un `label` que envuelve otra. */
+  casilla?: boolean
+}
 
 function app(o: OpcionesApp = {}): string {
   const radio = (id: string, grupo: string, etiqueta: string, marcado = false) =>
@@ -162,7 +175,14 @@ ${radio('t1', 'tipo', 'Piso en alto', true)}${radio('t2', 'tipo', 'Unifamiliar A
 ${radio('r1', 'regimen', '<i></i>Propietario Propietario', true)}${radio('r2', 'regimen', '<i></i>Inquilino Inquilino')}
 ${radio('u1', 'uso', 'Habitual', true)}${radio('u2', 'uso', 'Alquiler')}${radio('u3', 'uso', 'En venta y/o deshabitada')}${radio('u4', 'uso', 'Secundaria')}${radio('u5', 'uso', 'Turístico o vacacional')}
 <button type="button" id="NextPageFromRisk" disabled>SIGUIENTE</button>
+${o.casilla ? `<span><input type="checkbox" id="c1"><label for="c1">Acepto condiciones</label></span><label id="envuelve"><input type="checkbox"> Recibir avisos</label>` : ''}
+${o.lista ? o.lista.textos.map((t, i) => `<mat-option id="mat-option-${i + 7}" role="option" data-para="${o.lista!.para}">${t}</mat-option>`).join('') : ''}
 <script>
+  document.querySelectorAll('mat-option').forEach((m) => m.addEventListener('click', () => {
+    if (m.dataset.para === 'poblacion') { document.querySelector('[formcontrolname="province"]').value = 'SEVILLA'; document.querySelector('[formcontrolname="town"]').value = m.textContent; }
+    else { document.querySelector('[formcontrolname="streetType"]').value = 'CALLE'; document.querySelector('[formcontrolname="streetName"]').value = m.textContent; }
+    valida();
+  }));
   const $ = (f) => document.querySelector('[formcontrolname="' + f + '"]');
   const valida = () => {
     for (const el of document.querySelectorAll('input[formcontrolname]')) {
@@ -179,7 +199,7 @@ ${radio('u1', 'uso', 'Habitual', true)}${radio('u2', 'uso', 'Alquiler')}${radio(
     if (${o.sinAutocompletar ? 'true' : 'false'}) return;
     $('province').value = 'SEVILLA'; $('town').value = ${JSON.stringify(o.poblaciones ?? 'SEVILLA')}; valida();
   }, 200));
-  $('streetName').addEventListener('change', () => setTimeout(() => { $('streetType').value = 'CALLE'; valida(); }, 200));
+  $('streetName').addEventListener('change', () => setTimeout(() => { if (${o.sinVia ? 'true' : 'false'}) return; $('streetType').value = 'CALLE'; valida(); }, 200));
   document.getElementById('NextPageFromRisk').addEventListener('click', () => {
     const items = document.querySelectorAll('nx-multi-step-item');
     items[1].removeAttribute('aria-disabled');
@@ -362,29 +382,29 @@ test('guard: marcarOpcionResueltaHogarAllianz marca solo un <label for> de un ra
 })
 
 // ───────────── opciones del riesgo: etiqueta exacta NO casa → capa común (fijo → aprendido → IA → atasco) ─────────────
-async function formadorDe(elegir: (e: { texto: string | null }[]) => number | null, llamadas: string[]): Promise<ContextoFormador> {
+async function formadorDe(elegir: (e: { texto: string | null }[]) => number | null, llamadas: string[], conocimiento: unknown[] = []): Promise<ContextoFormador> {
   return prepararFormador({
     trabajoId: '00000000-0000-4000-8000-000000000000', compania: 'allianz', ramo: 'hogar', apiUrl: 'https://asegura.test', secreto: 'x'.repeat(20),
     redactar: (t) => t, log: () => undefined,
     fetchImpl: (async (url: string, init?: { body?: string }) => {
       const ruta = String(url).split('/formador/')[1]!.split('?')[0]!
       llamadas.push(ruta)
-      if (ruta === 'conocimiento') return new Response(JSON.stringify({ formadorActivo: true, conocimiento: [], acompanamiento: { activo: false } }))
+      if (ruta === 'conocimiento') return new Response(JSON.stringify({ formadorActivo: true, conocimiento, acompanamiento: { activo: false } }))
       if (ruta === 'sugerir') return new Response(JSON.stringify({ indice: elegir((JSON.parse(init!.body!) as { estructura: { texto: string | null }[] }).estructura) }))
       return new Response('{}')
     }) as unknown as typeof fetch,
   })
 }
 
-test('opción del riesgo con etiqueta distinta a la vista → la IA elige entre las etiquetas visibles y se marca por la puerta guardada', async () => {
+test('opción del riesgo con etiqueta distinta a la vista → se pregunta a la IA, pero una etiqueta de otro texto NO se marca (atasco)', async () => {
   const { context, page, marco, guard, ctx, marcado } = await abrir()
   try {
     await marco.evaluate(() => { document.querySelector('label[for="u4"]')!.textContent = 'Vivienda secundaria' })
     const llamadas: string[] = []
     const formador = await formadorDe((e) => e.findIndex((c) => c.texto === 'Vivienda secundaria'), llamadas)
     const ctx2 = { ...ctx, formador, marcarOpcionHogarResuelta: (m: Frame, l: Parameters<typeof marcarOpcionResueltaHogarAllianz>[2]) => marcarOpcionResueltaHogarAllianz(m, guard, l) }
-    await rellenarPantallaVivienda(page, marco, { ...FORM, hogar: { ...FORM.hogar, uso: 'secundaria' } }, ctx2)
-    assert.equal(await marcado('u4'), true)
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, { ...FORM, hogar: { ...FORM.hogar, uso: 'secundaria' } }, ctx2), ErrorMapaIncompleto)
+    assert.equal(await marcado('u4'), false)
     assert.ok(llamadas.includes('sugerir'), 'preguntó a la IA')
   } finally {
     await context.close()
@@ -406,4 +426,120 @@ test('opción del riesgo: la IA no resuelve → ATASCO con las etiquetas visible
   } finally {
     await context.close()
   }
+})
+
+// ───────────── revisión PR #4669: no envenenar tarificador_conocimiento (autocompletados), confirmar solo lo verificado ─────────────
+const confirmaciones = (llamadas: string[]) => llamadas.filter((r) => r === 'confirmar').length
+
+test('viaCoincide: nombre solo o «tipo nombre» por plano(); otra vía o vacío → no', () => {
+  assert.equal(viaCoincide('CALLE', 'PRUEBA', 'PRUEBA'), true)
+  assert.equal(viaCoincide('CALLE', 'Socorro', 'Calle Socorro'), true)
+  assert.equal(viaCoincide(null, 'SOCORRO', 'Socorro'), true)
+  assert.equal(viaCoincide('CALLE', 'OTRA', 'PRUEBA'), false)
+  assert.equal(viaCoincide('CALLE', '', 'PRUEBA'), false)
+  assert.equal(viaCoincide('CALLE', null, 'PRUEBA'), false)
+})
+
+test('población elegida de la lista que COINCIDE con la del riesgo → se confirma lo aprendido; que NO coincide → hueco y NO se confirma', async () => {
+  for (const [elegida, ok] of [['SEVILLA', true], ['DOS HERMANAS', false]] as const) {
+    const { context, page, ctx, marco } = await abrir({ sinAutocompletar: true, lista: { para: 'poblacion', textos: ['DOS HERMANAS', 'SEVILLA'] } })
+    try {
+      const llamadas: string[] = []
+      const formador = await formadorDe((e) => e.findIndex((c) => c.texto === elegida), llamadas)
+      const r = rellenarPantallaVivienda(page, marco, FORM, { ...ctx, formador })
+      if (ok) await r
+      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /otra distinta/.test((e as Error).message))
+      assert.equal(confirmaciones(llamadas), ok ? 1 : 0, `confirmaciones eligiendo ${elegida}`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('población: riesgo SIN municipio → no se usa lo aprendido, no se pregunta a la IA, no se aprende: atasco', async () => {
+  const { context, page, ctx, marco, valor } = await abrir({ sinAutocompletar: true, lista: { para: 'poblacion', textos: ['DOS HERMANAS', 'SEVILLA'] } })
+  try {
+    const llamadas: string[] = []
+    const aprendido = [{ clave: 'elegir_opcion_poblacion', tipo: 'accion', selector: '#mat-option-7', marco: null, origen: 'ia', confirmaciones: 5, consolidado: true }]
+    const formador = await formadorDe((e) => e.findIndex((c) => c.texto === 'DOS HERMANAS'), llamadas, aprendido)
+    await assert.rejects(() => rellenarPantallaVivienda(page, marco, { ...FORM, inmueble: { ...FORM.inmueble, municipio: null } }, { ...ctx, formador }), ErrorMapaIncompleto)
+    assert.ok(!llamadas.includes('sugerir'), 'no pregunta a la IA')
+    assert.equal(confirmaciones(llamadas), 0)
+    assert.equal(await valor('town'), '', 'la opción aprendida no se pulsó')
+    assert.equal(formador.atasco?.clave, 'elegir_opcion_poblacion')
+  } finally {
+    await context.close()
+  }
+})
+
+test('vía elegida de la lista: la del riesgo → se confirma; otra distinta → hueco y NO se confirma', async () => {
+  for (const [elegida, ok] of [['PRUEBA', true], ['OTRA', false]] as const) {
+    const { context, page, ctx, marco } = await abrir({ sinVia: true, lista: { para: 'via', textos: ['OTRA', 'PRUEBA'] } })
+    try {
+      const llamadas: string[] = []
+      const formador = await formadorDe((e) => e.findIndex((c) => c.texto === elegida), llamadas)
+      const r = rellenarPantallaVivienda(page, marco, FORM, { ...ctx, formador })
+      if (ok) await r
+      else await assert.rejects(() => r, (e) => e instanceof ErrorMapaIncompleto && /vía distinta/.test((e as Error).message))
+      assert.equal(confirmaciones(llamadas), ok ? 1 : 0, `confirmaciones eligiendo ${elegida}`)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('elegir_opcion de un radio: se marca y confirma SOLO si el texto de la etiqueta es el de la opción del riesgo; otro texto → atasco, sin marcar ni aprender', async () => {
+  // Distinto texto («Vivienda secundaria»): ni se marca ni se aprende; atasco.
+  const a = await abrir()
+  try {
+    await a.marco.evaluate(() => { document.querySelector('label[for="u4"]')!.textContent = 'Vivienda secundaria' })
+    const llamadas: string[] = []
+    const formador = await formadorDe((e) => e.findIndex((c) => c.texto === 'Vivienda secundaria'), llamadas)
+    const ctx2 = { ...a.ctx, formador, marcarOpcionHogarResuelta: (m: Frame, l: Parameters<typeof marcarOpcionResueltaHogarAllianz>[2]) => marcarOpcionResueltaHogarAllianz(m, a.guard, l) }
+    await assert.rejects(() => rellenarPantallaVivienda(a.page, a.marco, FORM, ctx2), ErrorMapaIncompleto)
+    assert.equal(await a.marcado('u4'), false, 'texto distinto: NO se marca')
+    assert.equal(confirmaciones(llamadas), 0, 'texto distinto: no se aprende')
+    assert.equal(formador.atasco?.clave, 'elegir_opcion_secundaria', 'atasco con inventario')
+  } finally {
+    await a.context.close()
+  }
+  // Mismo texto (hay DOS «Secundaria»: la puerta exacta no es única y la IA elige una): sí se aprende.
+  const b = await abrir()
+  try {
+    await b.marco.evaluate(() => { document.querySelector('label[for="u4"]')!.parentElement!.insertAdjacentHTML('afterend', '<span><input type="radio" id="u6" name="uso" class="cdk-visually-hidden"><label for="u6">Secundaria</label></span>') })
+    const llamadas: string[] = []
+    const formador = await formadorDe((e) => e.findIndex((c) => c.texto === 'Secundaria'), llamadas)
+    const ctx2 = { ...b.ctx, formador, marcarOpcionHogarResuelta: (m: Frame, l: Parameters<typeof marcarOpcionResueltaHogarAllianz>[2]) => marcarOpcionResueltaHogarAllianz(m, b.guard, l) }
+    await rellenarPantallaVivienda(b.page, b.marco, FORM, ctx2)
+    assert.equal(await b.marcado('u4'), true)
+    assert.equal(confirmaciones(llamadas), 1, 'mismo texto: se aprende')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('candidatos: la etiqueta de una CASILLA (for → checkbox o envolviéndola) no es opción; label/mat-option solo se ven con elegir_opcion', async () => {
+  const { context, page, marco } = await abrir({ casilla: true, lista: { para: 'poblacion', textos: ['SEVILLA'] } })
+  try {
+    const conOpciones = await extraerCandidatos(page, 'accion', (t) => t, true)
+    const flag = (texto: string) => conOpciones.find((c) => c.texto?.includes(texto))
+    assert.equal(flag('Acepto condiciones')?.paraCheckbox, true, 'label for → checkbox')
+    assert.equal(flag('Secundaria')?.paraCheckbox, undefined, 'label de un radio: sí es opción')
+    assert.ok(conOpciones.some((c) => c.tag === 'mat-option'))
+    const d1 = await describirElemento(marco.locator('label[for="c1"]'), 1)
+    const d2 = await describirElemento(marco.locator('label[for="u4"]'), 1)
+    assert.equal(d1?.paraCheckbox, true)
+    assert.equal(d2?.paraCheckbox, false)
+    assert.equal((await describirElemento(marco.locator('#envuelve'), 1))?.paraCheckbox, true, 'label que envuelve un checkbox')
+    // Sin `elegir_opcion` (Mapfre: continuar, buscar_tomador, navegación…) la lista de candidatos es la de siempre: ni label ni mat-option.
+    const sin = await extraerCandidatos(page, 'accion', (t) => t)
+    assert.ok(!sin.some((c) => c.tag === 'label' || c.tag === 'mat-option'), sin.map((c) => c.tag).join(','))
+    assert.ok(sin.some((c) => c.tag === 'button'))
+  } finally {
+    await context.close()
+  }
+})
+
+test('SELECTOR_ACCIONES compartido: idéntico al de origin/main (sin label[for], mat-option ni [role=option])', () => {
+  assert.equal(SELECTOR_ACCIONES, 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)')
 })
