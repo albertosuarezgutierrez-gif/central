@@ -9,7 +9,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import { MAX_MARCOS_INVENTARIO } from '@central/module-tarificacion'
-import { capturarInventarioDom } from '../src/inventario-dom.ts'
+import { capturarInventarioDom, marcosDePestanas } from '../src/inventario-dom.ts'
 import { ErrorMapaIncompleto, esAppNuevaTurismos, marcoFormularioTurismos } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador, pideInventarioDom } from '../src/errores.ts'
 import { enviarResultado, type Config } from '../src/api.ts'
@@ -138,4 +138,32 @@ test('enviarResultado manda error.inventarioDom tal cual', async () => {
   const st = await enviarResultado(cfg, { trabajoId: cfg.jobId, resultado: 'error', error: { tipo: 'portal', mensaje: 'allianz/auto: mapa incompleto: faltan x', url: null, inventarioDom } })
   assert.equal(st, 200)
   assert.deepEqual((cuerpo as { error: { inventarioDom: unknown } }).error.inventarioDom, inventarioDom)
+})
+
+test('Mapfre (14/10/2026): dos pestañas → la MÁS RECIENTE primero; enlaces, menús y mat-icon con su texto', async () => {
+  const context = await browser.newContext()
+  await context.route('**/*', (r) => r.abort())
+  const home = await context.newPage()
+  await home.setContent(`<div class="tarjeta"><h3>Turismos y Motos</h3><a href="#x">Tarificación y Emisión Rápida</a></div>
+    <div role="menuitem">Automóviles</div><span role="link">Otros acuerdos</span>`)
+  const nsei = await context.newPage()
+  await nsei.setContent(`<app-datos-basicos><input name="codigoDocumento" value="12345678Z"><mat-icon role="img">search</mat-icon></app-datos-basicos>
+    <app-matricula-dialog><table><tbody><tr><td><mat-radio-button><input type="radio" value="0000BBB"></mat-radio-button></td></tr></tbody></table></app-matricula-dialog>`)
+  const inv = await capturarInventarioDom(marcosDePestanas(context.pages(), home))
+  assert.ok(inv)
+  const textos = inv.marcos.map((m) => m.elementos.map((e) => `${e.tag}:${e.texto ?? ''}`))
+  // Primero los marcos de la pestaña NSEI (la última abierta), luego la de inicio.
+  assert.ok(textos[0]!.includes('mat-icon:search'), JSON.stringify(textos[0]))
+  assert.ok(textos[1]!.includes('a:Tarificación y Emisión Rápida'), JSON.stringify(textos[1]))
+  assert.ok(textos[1]!.includes('div:Automóviles'))
+  assert.ok(textos[1]!.includes('span:Otros acuerdos'))
+  // Nunca values: ni el NIF tecleado ni el value del radio.
+  assert.ok(!/12345678Z|0000BBB/.test(JSON.stringify(inv)))
+  await context.close()
+})
+
+test('marcosDePestanas: sin pestañas abiertas, los de la página por defecto', () => {
+  const p = (n: string) => ({ frames: () => [n] })
+  assert.deepEqual(marcosDePestanas([], p('def')).frames(), ['def'])
+  assert.deepEqual(marcosDePestanas([p('a'), p('b')], p('def')).frames(), ['b', 'a'])
 })

@@ -157,6 +157,8 @@ export async function rescatarIA(e: ExploracionViva, costeEur: number, bd: Bd = 
 export async function registrarPaso(e: ExploracionViva, p: PasoARegistrar & { huella: string; inventario: InventarioDom }, inicio: Date | null, bd: Bd): Promise<string | null> {
   const llamada = p.origen === 'ia'
   const acciones = p.respuesta.acciones.filter((a) => a.accion !== 'parar' && a.accion !== 'terminar').length
+  // ANTES del insert: el «último paso» es el que pidió las acciones que el worker no pudo aplicar.
+  if (p.erroresPasoAnterior?.length) await anotarErroresUltimoPaso(e, p.erroresPasoAnterior, bd)
   await bd.$queryRaw<{ n: number }[]>`
     insert into seguros.tarificador_exploracion_pasos
       (correduria_id, exploracion_id, trabajo_id, n, huella, inventario, respuesta, origen, llamada_ia, errores, coste_estimado_eur, acciones)
@@ -181,6 +183,23 @@ export async function registrarPaso(e: ExploracionViva, p: PasoARegistrar & { hu
     where id = ${e.trabajoId}::uuid and correduria_id = ${e.correduriaId}::uuid and estado = 'en_curso' and modo = 'exploracion'
     returning lease_hasta`
   return t[0]?.lease_hasta ? t[0].lease_hasta.toISOString() : null
+}
+
+/**
+ * AÑADE errores de ejecución del worker (`ejecucion: …`, sin valores) a los `errores` del ÚLTIMO paso de la exploración
+ * (14/10/2026: antes quedaban en `null` y no había traza de qué acción falló). Tope de 20 en total, como al insertar.
+ */
+export async function anotarErroresUltimoPaso(e: Pick<ExploracionViva, 'exploracionId' | 'correduriaId'>, errores: readonly string[], bd: Bd): Promise<void> {
+  if (!errores.length) return
+  await bd.$executeRaw`
+    update seguros.tarificador_exploracion_pasos p
+    set errores = (
+      select coalesce(jsonb_agg(x order by i), '[]'::jsonb)
+      from jsonb_array_elements(coalesce(p.errores, '[]'::jsonb) || ${JSON.stringify(errores.slice(0, 20))}::jsonb) with ordinality as t(x, i)
+      where i <= 20
+    )
+    where p.exploracion_id = ${e.exploracionId}::uuid and p.correduria_id = ${e.correduriaId}::uuid
+      and p.n = (select max(n) from seguros.tarificador_exploracion_pasos where exploracion_id = ${e.exploracionId}::uuid and correduria_id = ${e.correduriaId}::uuid)`
 }
 
 /** La transacción del paso dura lecturas + escrituras (la IA va FUERA); con margen. */

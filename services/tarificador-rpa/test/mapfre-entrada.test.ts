@@ -8,12 +8,16 @@ import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser } from 'playwright'
-import { ENTRADAS_EXPLORACION } from '@central/module-tarificacion'
+import { ENTRADAS_EXPLORACION, PATRON_EMISION } from '@central/module-tarificacion'
 import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
 import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, type PortalExploracion } from '../src/explorador.ts'
 import type { RespuestaPaso } from '../src/api.ts'
-import { abrirTarificacionRapidaAuto, etiquetaExacta } from '../src/adapters/mapfre/entrada.ts'
+import { abrirTarificacionRapidaAuto as abrirNuevo, etiquetaExacta, URL_NSEI_AUTO } from '../src/adapters/mapfre/entrada.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
+
+type EsperasEntrada = NonNullable<Parameters<typeof abrirNuevo>[2]>
+/** Los tests de MENÚS desactivan la URL directa (que apunta al portal real); los de URL directa usan `abrirNuevo`. */
+const abrirTarificacionRapidaAuto = (p: Parameters<typeof abrirNuevo>[0], c: Parameters<typeof abrirNuevo>[1], e: EsperasEntrada = {}) => abrirNuevo(p, c, { urlDirecta: null, ...e })
 
 const HOME = `<!doctype html><html><body>
   <nav><a role="tab" onclick="mostrar('np')">Inicio</a><a role="tab" onclick="mostrar('menu')">Nueva producción</a></nav>
@@ -58,6 +62,18 @@ before(async () => {
     if (ruta === '/nada') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       return void res.end('<!doctype html><html><body>ok</body></html>')
+    }
+    if (ruta === '/directa-ok') { // URL directa: 200 con formulario
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      return void res.end(NSEI)
+    }
+    if (ruta === '/directa-401') { // URL directa: 401 + WWW-Authenticate con el formulario en el cuerpo
+      res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8', 'WWW-Authenticate': 'Basic realm="sintetico"' })
+      return void res.end(NSEI)
+    }
+    if (ruta === '/directa-vacia') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      return void res.end(SIN_NSEI)
     }
     if (ruta === '/nsei' || ruta === '/nsei-vacio') {
       // Desafío de auth básica con el formulario ya en el cuerpo (como el portal real tras cancelar el diálogo).
@@ -166,11 +182,44 @@ test('sin la tarjeta «Turismos y Motos» → ErrorMapaIncompleto (no se pulsa e
   }
 })
 
-test('sin el enlace «Tarificación y Emisión Rápida» en la tarjeta → ErrorMapaIncompleto (Patinetes tiene uno igual y NO se usa)', async () => {
+test('sin el enlace «Tarificación y Emisión Rápida» en ninguna parte → ErrorMapaIncompleto (0 coincidencias)', async () => {
   const { context, page, ctx, pulsados } = await abrir('/')
   try {
-    await page.evaluate(() => { document.getElementById('tr')?.remove() })
-    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Tarificación y Emisión Rápida/.test((e as Error).message))
+    await page.evaluate(() => { document.getElementById('tr')?.remove(); document.querySelector('#patinetes a')?.remove() })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Tarificación y Emisión Rápida/.test((e as Error).message) && /ninguna coincidencia/.test((e as Error).message))
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
+  } finally {
+    await context.close()
+  }
+})
+
+/** Quita los contenedores de tarjeta reconocibles (div → span): título y enlaces quedan sueltos, como un DOM que `tarjetaDe` no casa. */
+const SIN_TARJETAS = () => {
+  document.querySelectorAll('.tarjeta').forEach((d) => {
+    const s = document.createElement('span')
+    s.innerHTML = d.innerHTML
+    d.replaceWith(s)
+  })
+}
+
+test('DOM sin tarjeta reconocible y enlace exacto ÚNICO en la página → lo pulsa', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelector('#patinetes a')?.remove() }) // sin el homónimo de Patinetes
+    await page.evaluate(SIN_TARJETAS)
+    const nueva = await abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 })
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión Rápida'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('DOM sin tarjeta reconocible y DOS enlaces exactos → para (no se adivina)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(SIN_TARJETAS)
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /2 coincidencias/.test((e as Error).message))
     assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
   } finally {
     await context.close()
@@ -303,6 +352,7 @@ function ctxBucle(guard: Awaited<ReturnType<typeof instalarGuardEmision>>, visto
     pulsar: (b) => pulsar(b, guard),
     pulsarAutorizado: async () => { throw new Error('sin avances autorizados en Mapfre') },
     pulsarGuardado: async () => { throw new Error('sin guardado en esta prueba') },
+    pulsarGuardadoDialogo: async () => { throw new Error('sin guardado en esta prueba') },
     pausaAccion: async () => undefined,
     pedirPaso: async (c): Promise<RespuestaPaso> => {
       vistos.push(c.inventario.marcos.flatMap((m) => m.elementos.map((e) => e.etiqueta ?? e.texto ?? '')).join('|'))
@@ -348,4 +398,64 @@ test('pestaña nueva: una ventana abierta DURANTE el bucle sigue parando con sin
   } finally {
     await context.close()
   }
+})
+
+// ─── URL directa del formulario NSEI (estrategia principal) ───────────────────────────────────────────────────────────
+test('URL directa: carga app-datos-basicos → no se pulsa ningún menú', async () => {
+  const { context, page, ctx, pulsados, guard } = await abrir('/')
+  try {
+    const nueva = await abrirNuevo(page, ctx, { urlDirecta: `${base}/directa-ok`, menuMs: 1_000, formularioMs: 5_000 })
+    assert.notEqual(nueva, page)
+    assert.match(nueva.url(), /\/directa-ok$/)
+    assert.equal(await nueva.locator('app-datos-basicos').count(), 1)
+    assert.deepEqual(pulsados, [])
+    assert.equal(context.pages().length, 2)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('URL directa: responde 401 pero el formulario aparece → OK (el estado HTTP no cuenta)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    const nueva = await abrirNuevo(page, ctx, { urlDirecta: `${base}/directa-401`, menuMs: 1_000, formularioMs: 5_000 })
+    assert.match(nueva.url(), /\/directa-401$/)
+    assert.equal(await nueva.locator('app-datos-basicos').count(), 1)
+    assert.deepEqual(pulsados, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('URL directa sin formulario → cierra esa pestaña y cae a los menús', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    const nueva = await abrirNuevo(page, ctx, { urlDirecta: `${base}/directa-vacia`, menuMs: 3_000, formularioMs: 1_500 })
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión Rápida'])
+    assert.equal(context.pages().length, 2, 'la pestaña de la URL directa se cerró')
+  } finally {
+    await context.close()
+  }
+})
+
+test('URL directa y menús fallan → ErrorMapaIncompleto con los DOS motivos', async () => {
+  const { context, page, ctx } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
+    await assert.rejects(
+      () => abrirNuevo(page, ctx, { urlDirecta: `${base}/directa-vacia`, menuMs: 1_000, formularioMs: 1_500 }),
+      (e) => e instanceof ErrorMapaIncompleto && /Nueva producción/.test((e as Error).message) && /URL directa/.test((e as Error).message) && /app-datos-basicos/.test((e as Error).message),
+    )
+  } finally {
+    await context.close()
+  }
+})
+
+test('URL_NSEI_AUTO: mismo dominio, no casa con PATRON_EMISION y el explorador usa la página devuelta', () => {
+  assert.match(URL_NSEI_AUTO, /^https:\/\/wmediadores\.mapfre\.com\//)
+  assert.doesNotMatch(URL_NSEI_AUTO, PATRON_EMISION)
+  const exp = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
+  assert.match(exp, /const nsei = await abrirTarificacionRapidaAuto\(page, ctx\)[\s\S]*?return nsei/)
 })

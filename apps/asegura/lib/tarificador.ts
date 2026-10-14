@@ -23,6 +23,7 @@ import {
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
+import { decryptField } from '@central/module-seguros-pii'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
@@ -39,6 +40,12 @@ import {
   huecosLibres,
   peticionMaquina,
   repartirEnCurso,
+  aplicarNifTomador,
+  lecturaNifFicha,
+  necesitaNifTomador,
+  riesgoParaEncolar,
+  riesgoSinNifTomador,
+  tipoFalloNifTomador,
   rpaActivo,
   type ConfigFly,
   type ResultadoWorker,
@@ -109,11 +116,19 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
     if (!pol[0]) return { estado: 'rechazado', status: 404, motivo: 'poliza_no_encontrada' }
   }
 
+  // NIF del tomador para Mapfre (14/10/2026): lo pone ASEGURA desde la ficha, pero NO aquí. Al encolar solo se COMPRUEBA
+  // que la ficha (de ESTA correduría) lo tiene legible y válido; sin NIF / ilegible / no válido → rechazo SIN encolar. Lo
+  // que se guarda es el riesgo SIN documento (el NIF en claro no se persiste): se descifra e inyecta al ENTREGAR el trabajo
+  // al worker (`trabajoParaWorker`). El documento no sale en ningún motivo ni en la respuesta.
+  const dniFicha = necesitaNifTomador(e.compania, e.ramo, riesgoSinNifTomador(e.riesgo)) ? await leerDniFicha(e.correduriaId, clienteId) : null
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, e.riesgo, () => lecturaNifFicha(dniFicha, decryptField))
+  if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
+
   // Sin duplicados (13/10/2026): mismo cliente + compañía + ramo + riesgo (igualdad `jsonb`) con un trabajo aún vivo →
   // se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
   // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
   const compania = claveCompania(e.compania)
-  const riesgoJson = JSON.stringify(e.riesgo)
+  const riesgoJson = JSON.stringify(guardar.riesgo)
   const cid = clienteId
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
@@ -138,6 +153,13 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
       returning id::text as id`
     return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
   }, { timeout: 15000, maxWait: 10000 })
+}
+
+/** DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`. */
+async function leerDniFicha(correduriaId: string, clienteId: string): Promise<string | null> {
+  const filas = await prisma.$queryRaw<{ dni: string | null }[]>`
+    select dni from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+  return filas[0]?.dni ?? null
 }
 
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
@@ -282,8 +304,9 @@ export type TrabajoParaWorker = {
  * quien la declara, y con su entrada (sin cabecera de exploración legible → no se sirve).
  */
 export async function trabajoParaWorker(id: string, modosWorker: readonly string[] = ['tarificar', 'emision']): Promise<TrabajoParaWorker | null> {
-  const filas = await prisma.$queryRaw<{ id: string; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
-    select t.id::text as id, t.compania, t.ramo, t.riesgo, t.lease_hasta, to_jsonb(t)->>'modo' as modo, (t.cliente_id is not null) as con_cliente
+  const filas = await prisma.$queryRaw<{ id: string; correduria_id: string; cliente_id: string | null; intentos: number; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
+    select t.id::text as id, t.correduria_id::text as correduria_id, t.cliente_id::text as cliente_id, t.intentos,
+           t.compania, t.ramo, t.riesgo, t.lease_hasta, to_jsonb(t)->>'modo' as modo, (t.cliente_id is not null) as con_cliente
     from seguros.tarificacion_trabajos t
     where t.id = ${id}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
   const f = filas[0]
@@ -291,7 +314,20 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   // `emision` como `tarificar` (`modoParaWorker`, fail-closed).
   const modo = f ? modoParaWorker(f.modo, modosWorker) : null
   if (!f || !modo) return null
-  const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
+  let riesgo = f.riesgo
+  // NIF del tomador (Mapfre auto/moto, 14/10/2026): se descifra AQUÍ, solo para la respuesta (canal del worker, con su
+  // Bearer); nunca se escribe en BD. Si la ficha ya no lo permite (borrado, ilegible, no válido) el trabajo FALLA con el
+  // motivo (sin documento) y no se sirve: el worker sale sin entrar en el portal.
+  if (modo !== 'exploracion' && necesitaNifTomador(f.compania, f.ramo, riesgo)) {
+    const dni = f.cliente_id ? await leerDniFicha(f.correduria_id, f.cliente_id) : null
+    const conNif = aplicarNifTomador(f.compania, f.ramo, riesgo, () => lecturaNifFicha(dni, decryptField))
+    if (!conNif.ok) {
+      await prisma.$transaction((tx) => marcarFallo(tx, f.id, f.intentos, { tipo: tipoFalloNifTomador(conNif.status), mensaje: conNif.motivo, url: null }, null))
+      return null
+    }
+    riesgo = conNif.riesgo
+  }
+  const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base
   const x = await prisma.$queryRaw<{ entrada: string }[]>`
     select e.entrada from seguros.tarificador_exploraciones e

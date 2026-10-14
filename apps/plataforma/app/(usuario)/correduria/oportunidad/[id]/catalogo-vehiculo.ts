@@ -5,7 +5,7 @@
  * 🚨 Elegir versión escribe SIEMPRE los 7 campos juntos (marca, modelo, versión con el nombre del catálogo + codigoVehiculo
  * + marcaId, modeloId, motorId): el PATCH de asegura, si llegan marca/modelo/versión sin `codigoVehiculo`, borra los ids.
  */
-import type { DatosVehiculoRiesgo } from '@central/module-seguros'
+import { soloLoQueCambia, type DatosVehiculoRiesgo } from '@central/module-seguros'
 
 export type RamoCatalogo = 'auto' | 'moto'
 
@@ -91,4 +91,28 @@ export function motivoSinPrecio(
   if (!d.codigoVehiculo) falta.push('la versión del catálogo')
   if (!d.matricula && !d.fechaMatriculacion) falta.push('la matrícula o la fecha de matriculación')
   return falta.length === 0 ? null : `Falta elegir ${falta.join(' y ')}.`
+}
+
+/** El tipo de vehículo se DEDUCE del ramo (el catálogo ya es el de ese ramo): auto → coche, moto → moto; otro ramo, sin deducir. */
+export function tipoVehiculoDeRamo(ramo: string): 'coche' | 'moto' | '' {
+  return ramo === 'moto' ? 'moto' : ramo === 'auto' ? 'coche' : ''
+}
+
+/**
+ * Qué se manda al guardar la edición. Con el catálogo (`sel` o sin tocar marca/modelo/versión) esos tres campos NO se
+ * comparan a mano; si se eligió versión, van los 7 juntos (`payloadVersion`). En modo manual, todo el formulario por
+ * `soloLoQueCambia` (asegura suelta entonces el código del catálogo).
+ */
+export function cambiosEdicion(
+  inicial: Record<string, unknown> | null,
+  form: Record<string, string>,
+  e: { manual: boolean; seleccion: SeleccionVersion | null; tipoPorDefecto?: string },
+): Record<string, unknown> {
+  if (e.manual) return soloLoQueCambia(inicial, form)
+  const { marca: _m, modelo: _mo, version: _v, ...resto } = form
+  const cambios = soloLoQueCambia(inicial, resto)
+  if (!e.seleccion) return cambios
+  // El tipo deducido del ramo solo se guarda al elegir una versión del catálogo (que ya es de ese ramo) y si no hay tipo: nunca por abrir y guardar.
+  const tipo = !inicial?.tipoVehiculo && !resto.tipoVehiculo && e.tipoPorDefecto ? { tipoVehiculo: e.tipoPorDefecto } : {}
+  return { ...cambios, ...tipo, ...payloadVersion(e.seleccion) }
 }

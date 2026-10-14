@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/10/2026)** — Tarificador · Mapfre (rama `ccr-96bfe66d-qynbqo`, decisiones de Alberto «haz tú todo»): (1) interruptor `TARIFICADOR_MAPFRE_ACTIVO` RETIRADO: el worker registra Mapfre siempre; la puerta es la fila `companias_integracion` (cepo raíz). (2) NIF del tomador: asegura lo pone en `encolarTrabajo` desde la ficha (`riesgo.documentoTomador`, solo Mapfre auto/moto, se purga al cerrar; sin NIF 422 / ilegible 503 sin encolar); en el worker es secreto del trabajo (sin captura). (3) «Continuar» 1→2→3 solo por `pulsarContinuarMapfre` (el 3 calcula precio: permitido).
+Pendiente: lupa del NIF (sin DOM: para antes de teclear, con inventario) y mat-select uso/ámbito/clase/compañía anterior. Hallazgo: `comprobarBoton` deja pasar «Grabar póliza» (el doc dice prohibido); `validarEntradaRamo` no acepta `auto` (Mapfre coche no se puede encolar).
+**(14/10/2026)** — Tarificador RPA · bot **Occident Hogar** (rama `claude/sharp-cray-tv3lbo`). `occident/hogar.ts` (flag `OCCIDENT_HOGAR_ACTIVO` apagado, sin registrar: `RamoRpa` no tiene hogar) + conectado al explorador IA (`occident:productos:hogar`). Flujo visto por capturas: SSO → Productos › Análisis de necesidades › Hogar › Tarificación (ruta SPA, iframe) → paso 1 Datos del riesgo (modal situación + Catastro) → flecha «›» arriba dcha → paso 2 Proyecto (4 primas) → «Imprimir» guarda proyecto + PDF.
+Regla de Alberto: descuentos comerciales SIEMPRE al máximo; NUNCA «Descuentos ABC / Ajuste contra comisión» (cepo). Fila `companias_integracion` occident/hogar `activo=false` APLICADA (SQL 2026-10-14). Secrets `CRED_OCCIDENT_PORTAL_*` puestos por Alberto.
+Huecos: SSO paso 2 real, desplegables del paso 1, selector del lápiz de descuentos y guardar del modal, Recalcular, ref. de proyecto, host/ramoGco del iframe. El «Guardar» del modal de situación el explorador solo lo pulsa como guardar_presupuesto: decidir. `clave-campo.test.ts` ya fallaba en main.
 **(14/10/2026)** — Tarificador RPA · arranque bot **Mapfre Auto** (rama `claude/mapfre-tarificador-bot-9t5zpf`). SQL `2026-10-14_tarificador_mapfre_auto.sql` (fila mapfre/auto, `activo=false`, credencial `MAPFRE_WMEDIADORES`) **sin aplicar**; capa Mapfre en `CONOCIMIENTO-PORTALES.md`.
 Pendiente de Alberto: URL de login wmediadores, ¿SMS/2FA?, ruta de menús hasta Auto, si «Continuar» paso 3 solo tarifica, botón guardar/PDF, uso/ámbito/permiso, secrets Fly `CRED_MAPFRE_WMEDIADORES_USER/_PASS`. Alberto autorizó tocar las listas compartidas del explorador para añadir Mapfre.
 **(14/10/2026)** — Portal cliente · fase B mergeada (#4601) + arreglo de build (#4611). Avisos de aportadas, subida de prima y autorizados (umbral configurable), revisión IA de póliza (solo OpenRouter, sin datos identificativos) y «seguros que no nos constan», resumen anual, parte con ubicación, escáner de documentos, enlace para invitar a la familia (10 usos). Privacidad a `2026-10-v1` (todos re-aceptan).
@@ -1239,6 +1244,17 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - CIMA guarda los recibos de Occident (C0468) como `NNNNNNNNN-<letra>`; el correo los trae sin letra → ninguna devolución casaba. `normalizarIdRecibo()` + `id-recibo-sql.ts` quitan ceros y sufijo; nº ambiguo → `ambiguo`, nunca el primero.
 - Migración `2026-10-14b` APLICADA en BD (columna generada + 2 triggers con guarda de ambigüedad). #4633 también mergeado (eventos de correo de compañías).
 - Recibos perdidos: …346 (13/10) ya llegó `devuelto` por CIMA el 14/10 → `ya_en_cima`, la tarea la abre el detector diario; …663 ya devuelto en CIMA. Nada que reprocesar.
+
+## (14/10/2026) Correduría · «Datos del vehículo»: desplegables del catálogo al editar (PR #4666, draft)
+- Causa: el selector en cascada del catálogo solo se montaba FUERA de edición; «Editar» tenía marca/modelo/versión a texto libre. Ahora en edición son desplegables encadenados (fallback «escribirlo a mano»); tipo por defecto según ramo. Helpers `tipoVehiculoDeRamo`/`cambiosEdicion` + tests.
+- Datos: oportunidad `9f3c6355` (cliente auto) → `info_riesgo.datosVehiculo` = marca, modelo, versión, fecha de matriculación y CP; historial + auditoría como el endpoint. Sin confirmar.
+- Pendiente: tipo ya puesto a «coche» (OK de Alberto); falta versión de catálogo, km/año y garaje para pedir precio. NIF no verificado (cifrado): identificada por póliza+matrícula.
+
+## (14/10/2026) Correduría · campaña «presentación app» a leads (goteo medido, APAGADA; rama claude/lead-email-tracking-bwxp2m)
+- Diagnóstico: la recaptación solo tocó 46 clientes con enlace plano (0 clics, 0 altas atribuibles); 0 leads contactados. De 29.592 leads solo 2.959 tienen correo.
+- Nuevo: cron `presentacion-app` (APAGADO salvo `ASEGURA_PRESENTACION_APP_ACTIVA=1`, 20/día, A/B, `?contar=1` ensayo), enlace `?r=` con token hasheado → visita + `portal_alta_origen`, baja de un clic (List-Unsubscribe), embudo por lote/variante/persona en `GET /api/operador/campana/presentacion-app`.
+- Antes de encender: aplicar `apps/asegura/prisma/sql/2026-10-14c_campana_presentacion_app.sql`, OK de Alberto al texto y a la base legal (LSSI art. 21 con leads sin contrato), fijar dominio público de la baja (no vercel.app).
+- Hallado: `CRON_SECRET` falta en asegura-portal → crons avisos-cima/avisos-push denegados a diario.
 
 ## (14/10/2026) Correduría · correos de compañías → eventos accionables (PR pendiente, rama claude/email-agent-insurance-tracking-az19y2)
 - Causa de devoluciones Occident perdidas: `correo_reglas` id 10 (`@occidentinforma.com`→correduria) gana a la keyword de recibo + lector no leía el HTML de mailparser (una celda por línea). Triaje reencamina; lector arreglado.

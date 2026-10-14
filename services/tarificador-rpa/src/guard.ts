@@ -14,7 +14,10 @@ import {
   MaquinaFases,
   bloqueoAvance,
   bloqueoGuardadoPresupuesto,
+  casaGuardadoEnDialogo,
   clasificarAccionPortal,
+  esGuardadoEnDialogoAutorizado,
+  MAX_GUARDADOS_DIALOGO,
   descripcionesSinExcepcionProyecto,
   comprobarBoton,
   esAvanceAutorizado,
@@ -654,28 +657,17 @@ const SELECTORES_RADIO_FILA = ['mat-radio-button', 'input[type="radio"]', '[role
 const ESPERA_HABILITADO_MAPFRE_MS = 5_000
 const ESPERA_CIERRE_DIALOGO_MAPFRE_MS = 10_000
 
-/**
- * Para y pide una persona (`requiere_humano`; en el cable `captcha`, como la elección de versión): el diálogo trae VARIAS
- * filas y el bot solo confirma con una. El mensaje lleva el nº de filas, nunca matrículas ni bastidores.
- */
-export class ErrorSeleccionVehiculoMapfre extends ErrorTarificador {
-  readonly filas: number
-  constructor(filas: number) {
-    super('captcha', `mapfre: «Selección de vehículo» trae ${filas} vehículos para la matrícula; el bot solo confirma si hay exactamente uno: elige una persona en el portal`)
-    this.name = 'ErrorSeleccionVehiculoMapfre'
-    this.filas = filas
-  }
-}
-
 const sinTildesMayus = (t: string | null | undefined) => (t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
 
 /**
  * CONFIRMAR EL VEHÍCULO en el diálogo «Selección de vehículo» de Mapfre NSEI. El ÚNICO camino para marcar la fila y pulsar
  * su «Aceptar» (el adaptador no los nombra). Exige, en este orden y sin atajos:
  *   1. guard limpio, todas las ventanas de red cerradas, sin campo de cuenta bancaria y una sola vez por trabajo;
- *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`; más de una → `ErrorSeleccionVehiculoMapfre` (requiere_humano);
- *   3. la MATRÍCULA de esa única fila igual (normalizada) a la del riesgo. La comparación se hace aquí y la matrícula NO
- *      sale: ni a logs, ni a mensajes de error, ni a la IA, ni al resultado (el radio se describe sin su `value`);
+ *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`. Con VARIAS filas se toma la PRIMERA (decisión de Alberto,
+ *      14/10/2026: antes era requiere_humano); las demás no se miran ni se marcan;
+ *   3. la MATRÍCULA de la PRIMERA fila igual (normalizada) a la del riesgo; si no casa → `datos` (nunca se prueba otra
+ *      fila). La comparación se hace aquí y la matrícula NO sale: ni a logs, ni a mensajes de error, ni a la IA, ni al
+ *      resultado (el radio se describe sin su `value`);
  *   4. EXACTAMENTE un control de elección en la fila, que pase `comprobarBoton`; se marca;
  *   5. EXACTAMENTE un «Aceptar» visible DENTRO del diálogo, texto exacto, que se habilite y pase `comprobarBoton` con
  *      «Aceptar» permitido (emitir, contratar, «No es el vehículo», «Vehículo NO catalogado», `validar_aceptar`… siguen
@@ -696,7 +688,7 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   const filas = dialogo.locator('table tbody tr')
   const n = await filas.count()
   if (n === 0) throw new ErrorTarificador('datos', 'mapfre: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  if (n > 1) throw new ErrorSeleccionVehiculoMapfre(n)
+  // Varias filas → la PRIMERA (Alberto, 14/10/2026). Solo se compara y se marca esa; nunca se busca otra que case.
   // Si hay cabecera, la columna tiene que llamarse «Matrícula» (si el portal reordena, se para en vez de comparar otra cosa).
   const cabecera = await dialogo.locator('table thead th').evaluateAll((els) => els.map((e) => e.textContent ?? ''))
   if (cabecera.length > 0 && sinTildesMayus(cabecera[COLUMNA_MATRICULA_MAPFRE]) !== 'MATRICULA') {
@@ -706,7 +698,7 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   const enFila = await fila.locator('td').nth(COLUMNA_MATRICULA_MAPFRE).textContent({ timeout: 1_000 }).catch(() => null)
   if (enFila === null) throw new ErrorTarificador('portal', 'mapfre: no se pudo leer la columna «Matrícula» de «Selección de vehículo»')
   if (normalizarMatricula(enFila.trim()) !== normalizarMatricula(matriculaRiesgo)) {
-    throw new ErrorTarificador('datos', 'mapfre: el único vehículo de «Selección de vehículo» no tiene la matrícula del riesgo')
+    throw new ErrorTarificador('datos', 'mapfre: el primer vehículo de «Selección de vehículo» no tiene la matrícula del riesgo')
   }
   let radio: Locator | null = null
   for (const sel of SELECTORES_RADIO_FILA) {
@@ -753,6 +745,104 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
       if ((await page.locator(SEL_DIALOGO_VEHICULO_MAPFRE).locator('visible=true').count()) === 0) return
       if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: «Selección de vehículo» no se cerró tras confirmar')
       await page.waitForTimeout(200)
+    }
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+}
+
+// ─────────── Mapfre NSEI · «Continuar» del stepper (Alberto, 14/10/2026) ───────────
+
+/**
+ * «Continuar» AUTORIZADO de Mapfre NSEI, por paso de ORIGEN. Lista CERRADA: el pie del stepper avanza 1 → 2 → 3 → 4.
+ * El del paso 3 («Figuras») lanza «Verificando controles técnicos» + «Calculando las primas» y lleva a PRECIO: PERMITIDO
+ * por decisión de Alberto (14/10/2026). No hay «Continuar» autorizado desde Coberturas (4), Proyectos (5) ni hacia
+ * Contratación (6): emitir/contratar/formalizar/grabar siguen bloqueados por `comprobarBoton` y por la red.
+ * `previos`: lo que tiene que haber pasado ANTES en este trabajo (orden del flujo; el vehículo confirmado antes del paso 2).
+ */
+export const PASOS_CONTINUAR_MAPFRE = Object.freeze({
+  datosBasicos: Object.freeze({ origen: 'Datos básicos', destino: 'Objeto asegurado', previos: Object.freeze([] as string[]), esperaMs: 20_000 }),
+  objetoAsegurado: Object.freeze({ origen: 'Objeto asegurado', destino: 'Figuras', previos: Object.freeze(['mapfre:continuar:datosBasicos', 'mapfre:seleccion_vehiculo']), esperaMs: 20_000 }),
+  figuras: Object.freeze({ origen: 'Figuras', destino: 'Coberturas', previos: Object.freeze(['mapfre:continuar:objetoAsegurado']), esperaMs: 90_000 }),
+})
+export type PasoContinuarMapfre = keyof typeof PASOS_CONTINUAR_MAPFRE
+
+/** Cabecera del paso ACTIVO del stepper de Angular Material (`mat-step-header`, role=tab, `aria-selected`). */
+export const SEL_PASO_ACTIVO_MAPFRE = 'mat-step-header[aria-selected="true"]'
+const SEL_DIALOGO_ABIERTO_MAPFRE = 'mat-dialog-container, [role="dialog"], app-matricula-dialog'
+
+/** Hueco de mapa detectado por el guard (stepper o botón no reconocibles): para SIN pulsar y pide el inventario de estructura. */
+export class ErrorMapaGuardMapfre extends ErrorTarificador {
+  readonly pideInventarioDom = true
+  constructor(que: string) {
+    super('portal', `mapfre: mapa incompleto: faltan ${que}`)
+    this.name = 'ErrorMapaGuardMapfre'
+  }
+}
+
+/** Texto de la cabecera del paso activo de NSEI (sin tildes, mayúsculas), o `null` si no hay EXACTAMENTE una visible. */
+export async function pasoActivoMapfre(page: Page): Promise<string | null> {
+  const h = page.locator(SEL_PASO_ACTIVO_MAPFRE).locator('visible=true')
+  if ((await h.count().catch(() => 0)) !== 1) return null
+  const t = await h.first().textContent({ timeout: 1_000 }).catch(() => null)
+  return t === null ? null : sinTildesMayus(t)
+}
+
+/**
+ * El ÚNICO camino para pulsar «Continuar» en Mapfre NSEI. Exige, en este orden y sin atajos:
+ *   1. guard limpio, todas las ventanas de red cerradas, `paso` de la lista cerrada, una vez por paso y trabajo, y lo
+ *      `previos` ya hecho en este trabajo (orden 1 → 2 → 3; el vehículo confirmado antes de salir del paso 2);
+ *   2. sin campo de cuenta bancaria visible y sin diálogo abierto;
+ *   3. el paso ACTIVO del stepper (exactamente una cabecera seleccionada) es el de ORIGEN; si no se reconoce → hueco con
+ *      inventario (sin pulsar);
+ *   4. EXACTAMENTE un botón visible de texto exacto «Continuar», fuera de diálogos, que pase `comprobarBoton` (sin
+ *      «Aceptar» permitido);
+ *   5. tras el clic, llega al paso DESTINO; un diálogo nativo se descarta y el trabajo cae; «Contratación» → bloqueo de
+ *      emisión; no llega a tiempo → hueco con inventario (¿un obligatorio sin rellenar?).
+ * No abre ninguna ventana de red: lo que el clic pida que case con el patrón de emisión se aborta (fail-closed).
+ */
+export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, paso: PasoContinuarMapfre): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Continuar» de Mapfre con una ventana de red abierta')
+  if (typeof paso !== 'string' || !Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)) throw new EmisionBloqueadaError('boton', `«Continuar» de Mapfre no autorizado desde «${String(paso).slice(0, 40)}»`)
+  const regla = PASOS_CONTINUAR_MAPFRE[paso]
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = `mapfre:continuar:${paso}`
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre desde «${regla.origen}» ya se usó en este trabajo`)
+  if (regla.previos.some((x) => !usados.has(x))) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre desde «${regla.origen}» fuera de orden`)
+  await exigirSinCuentaBancaria(page)
+  if ((await page.locator(SEL_DIALOGO_ABIERTO_MAPFRE).locator('visible=true').count()) > 0) throw new ErrorTarificador('portal', `mapfre: «Continuar» desde «${regla.origen}» con un diálogo abierto`)
+  const activo = await pasoActivoMapfre(page)
+  if (activo === null) throw new ErrorMapaGuardMapfre(`el paso activo del stepper de NSEI (no hay exactamente una cabecera «${SEL_PASO_ACTIVO_MAPFRE}» visible)`)
+  if (activo.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: el paso activo es «Contratación»')
+  if (!activo.includes(sinTildesMayus(regla.origen))) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el paso activo no es «${regla.origen}»`)
+  const botones = page.locator('button, [role="button"]').filter({ hasText: /^\s*Continuar\s*$/i }).locator('visible=true')
+  if ((await botones.count()) !== 1) throw new ErrorMapaGuardMapfre(`el botón «Continuar» del paso «${regla.origen}» (no hay exactamente uno visible)`)
+  const boton = botones.first()
+  if (await boton.evaluate((el) => el.closest('mat-dialog-container, [role="dialog"], app-matricula-dialog') !== null)) throw new EmisionBloqueadaError('boton', '«Continuar» de Mapfre dentro de un diálogo')
+  const desc = await descripcion(boton)
+  if (sinTildesMayus(desc[0]) !== 'CONTINUAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  let dialogoNativo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogoNativo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await boton.click()
+    const destino = sinTildesMayus(regla.destino)
+    const hasta = Date.now() + regla.esperaMs
+    for (;;) {
+      guard.comprobar()
+      if (dialogoNativo) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
+      const ahora = await pasoActivoMapfre(page)
+      if (ahora?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: tras «Continuar» el paso activo es «Contratación»')
+      if (ahora?.includes(destino)) return
+      if (Date.now() >= hasta) throw new ErrorMapaGuardMapfre(`la llegada a «${regla.destino}» tras «Continuar» desde «${regla.origen}» (¿un campo obligatorio sin rellenar o un control sin mapear?)`)
+      await page.waitForTimeout(250)
     }
   } finally {
     page.off('dialog', alDialogo)
@@ -912,5 +1002,144 @@ export async function pulsarGuardadoPresupuesto(
   } finally {
     page.off('dialog', alDialogo)
     guard.guardado.cerrar()
+  }
+}
+
+// ─────────── «GUARDAR» DE UN MODAL AUTORIZADO (explorador, Alberto 14/10/2026) ───────────
+
+/**
+ * Contenedores de DIÁLOGO/MODAL. El MÁS CERCANO al control (`closest`) es el que da el título; lo usan igual el inventario de
+ * exploración (`inventario-dom.ts`, solo LEER) y `pulsarGuardadoDialogoAutorizado` (VIVO). Ampliarlo no abre nada por sí
+ * solo: el título del diálogo tiene que ser EXACTAMENTE el de la regla de la entrada.
+ */
+export const SELECTOR_DIALOGO = 'dialog,[role=dialog],[aria-modal=true],mat-dialog-container,.modal-dialog,.modal'
+/** Controles pulsables que se cuentan como CANDIDATOS dentro de un diálogo (los del inventario que tienen texto). */
+const SELECTOR_PULSABLES_DIALOGO = 'button,a[role=button],[role=button],[role=tab],td[onclick]'
+
+/**
+ * Título accesible del diálogo más cercano que contiene a `el` (aria-labelledby → aria-label → primer encabezado del
+ * diálogo), o `null` si no está en ninguno o no tiene título. Corre EN LA PÁGINA: sin funciones con nombre dentro (tsx les
+ * mete `__name`) ni variables de fuera (el selector va por argumento). El inventario la incrusta por su `toString()`.
+ */
+export const tituloDialogoVivo = (el: Element, sel: string): string | null => {
+  const c = el.closest(sel) as HTMLElement | null
+  if (!c) return null
+  let t: string | null = null
+  const ids = (c.getAttribute('aria-labelledby') || '').split(/\s+/).filter((x) => x !== '')
+  if (ids.length > 0) {
+    t = ids.map((id) => {
+      const x = c.ownerDocument.getElementById(id) as HTMLElement | null
+      return x ? (x.innerText || x.textContent || '') : ''
+    }).join(' ')
+  }
+  if (!t || !t.trim()) t = c.getAttribute('aria-label')
+  if (!t || !t.trim()) {
+    const h = c.querySelector('h1,h2,h3,h4,h5,h6,[role=heading],.modal-title,[mat-dialog-title],.mat-dialog-title,.mat-mdc-dialog-title') as HTMLElement | null
+    t = h ? (h.innerText || h.textContent || '') : null
+  }
+  if (!t) return null
+  const limpio = String(t).replace(/\s+/g, ' ').trim().slice(0, 200)
+  return limpio || null
+}
+
+/** Por qué no se pulsó un «Guardar» de modal (sin pulsar: fail-closed; el explorador lo cierra como `guard_emision`). */
+export type MotivoGuardadoDialogo =
+  | 'ventana_abierta'
+  | 'tope'
+  | 'no_autorizado'
+  | 'no_unico'
+  | 'no_visible'
+  | 'no_es_el_del_inventario'
+  | 'fuera_de_dialogo'
+  | 'titulo_no_casa'
+  | 'candidatos'
+  | 'emision'
+  | 'dialogo_del_portal'
+
+export class GuardadoDialogoBloqueadoError extends EmisionBloqueadaError {
+  readonly motivo: MotivoGuardadoDialogo
+  constructor(motivo: MotivoGuardadoDialogo, detalle = '') {
+    super('fase', `guardado en diálogo: ${motivo}${detalle ? ` (${detalle})` : ''}`)
+    this.name = 'GuardadoDialogoBloqueadoError'
+    this.motivo = motivo
+  }
+}
+
+/**
+ * «GUARDAR» DE UN MODAL AUTORIZADO POR ENTRADA (explorador; hoy solo Occident Hogar, modal «Datos de la situación», que
+ * guarda la dirección del riesgo y NO emite). El ÚNICO camino para pulsar un botón de la categoría «guardar» FUERA de la
+ * pantalla de resultado. Exige, en este orden y sin atajos:
+ *   1. el guard limpio y TODAS las ventanas de red cerradas (emisión, avance, guardado); como mucho `MAX_GUARDADOS_DIALOGO`;
+ *   2. ningún campo de cuenta bancaria en pantalla (frontera de emisión);
+ *   3. que el módulo lo autorice sobre el INVENTARIO (`esGuardadoEnDialogoAutorizado`: entrada con la regla, texto y título
+ *      del diálogo EXACTOS, nada de emisión/prohibida) y que `bloqueoAvance` no tenga otro motivo;
+ *   4. EXACTAMENTE un control vivo, visible, con el texto del inventario, DENTRO de un diálogo cuyo título VIVO casa con la
+ *      regla; y en TODOS los marcos, exactamente UN candidato así (ni 0 ni 2);
+ *   5. `comprobarBoton` SIN permisos (ni «Aceptar» ni Archivar/store) y la lista única sin emisión ni prohibida.
+ * NO abre ninguna ventana de red: el guard sigue abortando cualquier navegación/POST con forma de emisión. Pulsa UNA vez y
+ * espera a que el control desaparezca (el modal se cierra). Un diálogo del navegador (confirm/alert) → se descarta y cae.
+ */
+export async function pulsarGuardadoDialogoAutorizado(
+  page: Page,
+  guard: GuardEmision,
+  boton: Locator,
+  aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario },
+): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new GuardadoDialogoBloqueadoError('ventana_abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const n = [...usados].filter((u) => u.startsWith('dialogo:')).length
+  if (n >= MAX_GUARDADOS_DIALOGO) throw new GuardadoDialogoBloqueadoError('tope', `${n} pulsaciones`)
+  await exigirSinCuentaBancaria(page)
+  if (!esGuardadoEnDialogoAutorizado(aut.entrada, aut.el) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
+    throw new GuardadoDialogoBloqueadoError('no_autorizado')
+  }
+  if ((await boton.count()) !== 1) throw new GuardadoDialogoBloqueadoError('no_unico')
+  if (!(await boton.isVisible())) throw new GuardadoDialogoBloqueadoError('no_visible')
+  const desc = await descripcion(boton)
+  const plano = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
+  if (plano(desc[0]) !== plano(aut.el.texto)) throw new GuardadoDialogoBloqueadoError('no_es_el_del_inventario')
+  const titulo = await boton.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO)
+  if (titulo === null) throw new GuardadoDialogoBloqueadoError('fuera_de_dialogo')
+  if (!casaGuardadoEnDialogo(aut.entrada, desc[0], titulo)) throw new GuardadoDialogoBloqueadoError('titulo_no_casa')
+  if (typeof desc[1] === 'string' && desc[1].trim() !== '' && !casaGuardadoEnDialogo(aut.entrada, desc[1], titulo)) throw new GuardadoDialogoBloqueadoError('no_es_el_del_inventario', 'aria-label')
+  // Candidatos en TODOS los marcos: controles visibles dentro de un diálogo, con texto y título que casan con la regla.
+  let candidatos = 0
+  for (const f of marcosVivos(page)) {
+    const l = f.locator(`:is(${SELECTOR_DIALOGO}) :is(${SELECTOR_PULSABLES_DIALOGO})`)
+    const total = await l.count().catch(() => 0)
+    for (let i = 0; i < total; i++) {
+      const c = l.nth(i)
+      if (!(await c.isVisible().catch(() => false))) continue
+      const texto = await c.evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '').catch(() => null)
+      const t = await c.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO).catch(() => null)
+      if (casaGuardadoEnDialogo(aut.entrada, texto, t)) candidatos++
+    }
+  }
+  if (candidatos !== 1) throw new GuardadoDialogoBloqueadoError('candidatos', String(candidatos))
+  // Sin permisos: «Aceptar», Archivar/store, emitir, contract, validar_aceptar… siguen bloqueados en TODA la descripción viva.
+  comprobarBoton(desc)
+  const cat = clasificarAccionPortal(desc)
+  if (cat.emision || cat.prohibida) throw new GuardadoDialogoBloqueadoError('emision', cat.emision ?? cat.prohibida ?? '')
+  usados.add(`dialogo:${n + 1}`)
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  const hasta = Date.now() + 10_000
+  try {
+    await boton.click()
+    for (;;) {
+      guard.comprobar()
+      if (dialogo) throw new GuardadoDialogoBloqueadoError('dialogo_del_portal', dialogo)
+      if ((await boton.count().catch(() => 0)) === 0 || !(await boton.isVisible().catch(() => false))) return
+      if (Date.now() >= hasta) return
+      await page.waitForTimeout(250)
+    }
+  } finally {
+    page.off('dialog', alDialogo)
   }
 }

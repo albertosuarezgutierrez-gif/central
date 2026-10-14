@@ -5,7 +5,7 @@ import type { Frame, Locator, Page } from 'playwright'
 import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
-import type { SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -65,6 +65,12 @@ export type ContextoPortal = ContextoTarificacion & {
    * del navegador que el trabajo (el guard de red está instalado en él).
    */
   confirmarVehiculoMapfre?: (pagina: Page, matricula: string) => Promise<void>
+  /**
+   * Mapfre NSEI (14/10/2026): «Continuar» del stepper desde el paso `paso` por `pulsarContinuarMapfre` de guard.ts (lista
+   * cerrada 1 → 2 → 3; el del paso 3 calcula las primas: PERMITIDO por Alberto). Una vez por paso y en orden. Misma regla de
+   * contexto que `confirmarVehiculoMapfre`.
+   */
+  continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
 }
 
 /**

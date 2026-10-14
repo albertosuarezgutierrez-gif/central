@@ -381,8 +381,12 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   const out: string[] = []
   // 1. El bucle solo actúa así: pulsar por el guard (marcar/avanzar), el avance autorizado por su función guardada, rellenar
   //    con el valor de `resolverDato` y elegir por valor exacto. Nada de goto, teclado ni marcar fuera del guard.
-  const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
-  if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado|k\.pulsarGuardadoDialogo)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
+  if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$|^k\.pulsarGuardadoDialogo\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  // 1b. «Guardar» de modal (Alberto, 14/10/2026): una sola llamada, y SOLO bajo la autorización del módulo para ESA entrada.
+  const dialogo = [...explorador.matchAll(/k\.pulsarGuardadoDialogo\(/g)].length
+  if (dialogo > 1) out.push('pulsarGuardadoDialogo: más de una llamada')
+  if (dialogo === 1 && !/\} else if \(esGuardadoEnDialogoAutorizado\(k\.entrada, hit\.el\)\) \{\n(?:[^\n]*\n){0,4}?\s*await k\.pulsarGuardadoDialogo\(loc, hit\.el, hit\.marco\)/.test(explorador)) out.push('pulsarGuardadoDialogo fuera de su rama autorizada (esGuardadoEnDialogoAutorizado)')
   // `escrito` = `valorParaControl(d.valor, hit.el)` y nada más; se escribe UNA vez con `fill` y, si el portal lo vació (datepicker,
   // 14/10/2026), se reteclea UNA vez en `fijarValor` con ESE mismo valor (`pressSequentially`, sin Enter ni Tab).
   const fills = [...explorador.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
@@ -396,8 +400,9 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
   // 3. Revalidación contra el inventario propio ANTES de actuar.
   const iVal = explorador.indexOf('validarRespuestaExplorador(r.respuesta, { inventario: inv')
-  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación.
-  const iAct = explorador.indexOf('const lote = v.respuesta.acciones')
+  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación, que ORDENA
+  // (`ordenarLote`, 8d0676f9) las acciones YA validadas: solo las reordena, nunca añade ni cambia ninguna.
+  const iAct = explorador.search(/const lote = (?:ordenarLote\()?v\.respuesta\.acciones/)
   if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'(?:, '[a-z_]+')?\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
   // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
   const iBucle = explorador.indexOf('for (;;) {')
@@ -419,8 +424,25 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
     if ((fn.match(/\.click\(/g) ?? []).length !== 1) out.push('pulsarExploracionAutorizada: un solo clic')
     if (!/\} finally \{\s*page\.off\('dialog', alDialogo\)\s*guard\.avance\.cerrar\(\)\s*\}/.test(fn)) out.push('pulsarExploracionAutorizada: la ventana se cierra SIEMPRE (finally)')
   }
-  // 6. Solo el explorador llama a la función guardada.
-  for (const [rel, src] of Object.entries(otros)) if (/pulsarExploracionAutorizada\(/.test(src)) out.push(`${rel} llama a pulsarExploracionAutorizada`)
+  // 5b. La puerta del «Guardar» de modal: autorización del módulo por ENTRADA + diálogo y título VIVOS + un solo candidato +
+  //     comprobarBoton SIN permisos, todo ANTES del único clic; sin ventana de red y con el manejador de diálogos retirado.
+  const fd = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarGuardadoDialogoAutorizado'))
+  if (!fd) out.push('falta pulsarGuardadoDialogoAutorizado en guard.ts')
+  else {
+    const clic = fd.indexOf('.click(')
+    for (const p of ['guard.comprobar()', 'guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()', 'MAX_GUARDADOS_DIALOGO', 'exigirSinCuentaBancaria(page)', 'esGuardadoEnDialogoAutorizado(aut.entrada, aut.el)', 'bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null', 'boton.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO)', 'casaGuardadoEnDialogo(aut.entrada, desc[0], titulo)', 'candidatos !== 1', 'comprobarBoton(desc)\n', 'cat.emision || cat.prohibida']) {
+      const i = fd.indexOf(p)
+      if (i < 0 || clic < 0 || i > clic) out.push(`pulsarGuardadoDialogoAutorizado: «${p.trim()}» tiene que ir ANTES del clic`)
+    }
+    if ((fd.match(/\.click\(/g) ?? []).length !== 1) out.push('pulsarGuardadoDialogoAutorizado: un solo clic')
+    if (/ABRIR_|abrir\(|permitirAceptar|permitirGuardarPresupuesto/.test(fd)) out.push('pulsarGuardadoDialogoAutorizado: no abre ventanas de red ni permisos del guard')
+    if (!/\} finally \{\s*page\.off\('dialog', alDialogo\)\s*\}/.test(fd)) out.push('pulsarGuardadoDialogoAutorizado: el manejador de diálogos se retira SIEMPRE (finally)')
+  }
+  // 6. Solo el explorador llama a las funciones guardadas.
+  for (const [rel, src] of Object.entries(otros)) {
+    if (/pulsarExploracionAutorizada\(/.test(src)) out.push(`${rel} llama a pulsarExploracionAutorizada`)
+    if (/pulsarGuardadoDialogoAutorizado\(/.test(src)) out.push(`${rel} llama a pulsarGuardadoDialogoAutorizado`)
+  }
   return out
 }
 
@@ -449,6 +471,23 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
   assert.notEqual(sinAut, guard)
   assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
   assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
+  // Cepos del «Guardar» de modal (14/10/2026): cada brazo, en ROJO.
+  const cambia = (src: string, de: string, a: string) => {
+    const r = src.replace(de, a)
+    assert.notEqual(r, src, `el cepo no cambió nada: «${de}»`)
+    return r
+  }
+  const malosDialogo: [string, string, string][] = [
+    ['puerta sin autorización por entrada', explorador, cambia(guard, 'esGuardadoEnDialogoAutorizado(aut.entrada, aut.el) ||', '')],
+    ['puerta sin título vivo', explorador, cambia(guard, 'if (!casaGuardadoEnDialogo(aut.entrada, desc[0], titulo))', 'if (false)')],
+    ['puerta sin candidato único', explorador, cambia(guard, 'if (candidatos !== 1)', 'if (false)')],
+    ['puerta sin comprobarBoton', explorador, ((m) => guard.slice(0, guard.indexOf(m)) + cambia(guard.slice(guard.indexOf(m)), '  comprobarBoton(desc)\n', ''))('export async function pulsarGuardadoDialogoAutorizado')],
+    ['puerta que abre la red', explorador, cambia(guard, '  usados.add(`dialogo:${n + 1}`)', '  ABRIR_GUARDADO.get(guard)?.(origen)\n  usados.add(`dialogo:${n + 1}`)')],
+    ['bucle sin la rama autorizada', cambia(explorador, '} else if (esGuardadoEnDialogoAutorizado(k.entrada, hit.el)) {', '} else if (true) {'), guard],
+    ['bucle con otro botón', cambia(explorador, 'await k.pulsarGuardadoDialogo(loc, hit.el, hit.marco)', 'await k.pulsarGuardadoDialogo(page.locator("#x"), hit.el, hit.marco)'), guard],
+  ]
+  for (const [nombre, e, g] of malosDialogo) assert.notDeepEqual(infraccionesExplorador(e, g, otros), [], nombre)
+  assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarGuardadoDialogoAutorizado(page, guard, b, a)' }), [], 'otro fichero llama a la puerta del modal')
 })
 
 test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en guard.ts y la emisión intacta', () => {
@@ -489,4 +528,58 @@ test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en g
   assert.match(lista, /id === EXCEPCION_PROYECTO_AMPLIADO\.id/)
   const expl = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/explorador.ts'), 'utf8')
   assert.match(expl, /fronteraEmisionPorCampos\(campos\)/)
+})
+
+// ─── Mapfre NSEI (Alberto, 14/10/2026) ───────────────────────────────────────
+
+test('MAPFRE · la PUERTA es la fila companias_integracion: el worker registra siempre y asegura no encola/reclama sin ella', () => {
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.ok(!/TARIFICADOR_MAPFRE_ACTIVO|mapfreActivo|process\.env/.test(idx), 'el registro de adaptadores no lee interruptores del entorno para Mapfre')
+  assert.match(idx, /^adaptadores\.registrar\(mapfreAuto\)$/m)
+  assert.match(idx, /^adaptadores\.registrar\(mapfreMoto\)$/m)
+  const t = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador.ts'), 'utf8'))
+  const encolar = t.slice(t.indexOf('export async function encolarTrabajo'), t.indexOf('export async function reclamarSiguiente'))
+  const puerta = encolar.indexOf('if (!integ || !integ.activo || !puedeAutomatizar(integ.modo))')
+  assert.ok(puerta > -1 && puerta < encolar.indexOf('insert into seguros.tarificacion_trabajos'), 'encolarTrabajo: sin fila activa rpa_autorizada no se inserta')
+  const reclamar = t.slice(t.indexOf('export async function reclamarSiguiente'), t.indexOf('export type DepsLanzador'))
+  assert.match(reclamar, /where correduria_id = \$\{correduriaId\}::uuid and compania = \$\{clave\} and activo and modo = 'rpa_autorizada'/, 'el cupo sale SOLO de filas activas rpa_autorizada')
+  assert.match(reclamar, /join seguros\.companias_integracion ci[\s\S]*?and ci\.activo and ci\.modo = 'rpa_autorizada'[\s\S]*?set estado = 'en_curso'|set estado = 'en_curso'[\s\S]*?join seguros\.companias_integracion ci[\s\S]*?and ci\.activo and ci\.modo = 'rpa_autorizada'/, 'solo se pone en_curso un trabajo con fila activa rpa_autorizada')
+  // `en_curso` (lo único que el worker recibe) solo lo pone reclamarSiguiente.
+  const todos = ficheros(join(RAIZ, 'apps/asegura/lib')).concat(ficheros(join(RAIZ, 'apps/asegura/app')))
+    .filter((f) => !f.endsWith('.test.ts'))
+    .filter((f) => /tarificacion_trabajos/.test(readFileSync(f, 'utf8')) && /estado\s*=\s*'en_curso'\s*,/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(todos.map((f) => relative(RAIZ, f)), ['apps/asegura/lib/tarificador.ts'])
+  const mod = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/modo-integracion.ts'), 'utf8')
+  assert.match(mod, /export function puedeAutomatizar\(modo: unknown\): boolean \{\s*return modo === 'rpa_autorizada'\s*\}/)
+})
+
+test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→2→3 y todas las comprobaciones ANTES del único clic', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const bloque = guard.match(/export const PASOS_CONTINUAR_MAPFRE = Object\.freeze\(\{([\s\S]*?)\n\}\)\n/)
+  assert.ok(bloque, 'falta PASOS_CONTINUAR_MAPFRE (Object.freeze) en guard.ts')
+  assert.deepEqual([...bloque![1].matchAll(/^ {2}(\w+): Object\.freeze\(/gm)].map((m) => m[1]), ['datosBasicos', 'objetoAsegurado', 'figuras'])
+  assert.ok(!/contrataci|proyecto|emisi/i.test(bloque![1]), 'ningún «Continuar» desde Coberturas/Proyectos ni hacia Contratación')
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarContinuarMapfre'))
+  assert.ok(fn, 'falta pulsarContinuarMapfre en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)', 'usados.has(clave)', 'regla.previos.some(', 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'CONTINUAR'", 'comprobarBoton(desc)', 'usados.add(clave)']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarContinuarMapfre: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(!/permitirAceptar|ABRIR_(VENTANA|AVANCE|GUARDADO)/.test(fn!), 'sin «Aceptar» permitido y sin abrir ventanas de red')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  // El adaptador de Mapfre llega a «Continuar» solo por la función guardada del contexto.
+  const mapfre = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'))
+  assert.ok(!/ctx\.pulsar\(|continuar['"]?\s*\)?\s*\.click|Continuar/.test(mapfre.replace(/'[^'\n]*'|`[^`\n]*`/g, '')), 'mapfre/auto.ts no nombra «Continuar» ni pulsa')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /continuarMapfre: async \(pagina, paso\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await pulsarContinuarMapfre\(pagina, guard, paso\)\s*\}/)
+})
+
+test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactado en mensajes/URL/HTML y sin captura', () => {
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /const secretosRiesgo = secretosDelRiesgo\(trabajo\.riesgo\)/)
+  assert.match(runner, /const secretos = \[\.\.\.secretosDelEntorno\(env\), \.\.\.secretosRiesgo\]/)
+  assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
+  const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
+  assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
 })

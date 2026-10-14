@@ -63,6 +63,10 @@
       "schedule": "23 8,11,14 * * 1-5"
     },
     {
+      "path": "/api/cron/presentacion-app",
+      "schedule": "47 8 * * 1-5"
+    },
+    {
       "path": "/api/cron/tarificador-cola",
       "schedule": "*/5 * * * *"
     }
