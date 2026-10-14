@@ -92,3 +92,13 @@ test('guardarAtasco cierra el atasco esperando anterior del mismo trabajo antes 
   assert.match(l, /capturaDentroDeTope\(/)
   assert.match(src, /cabeCapturaEnRespuesta\(usado, b64\.length\)/)
 })
+
+test('sqlSinPausa: los fragmentos SQL vienen de @prisma/client (el del `prisma` de ./tenant), no del cliente generado de asegura', () => {
+  // Un Prisma.sql de otro cliente generado NO es instancia del Sql de @prisma/client: el runtime lo manda como parámetro ($6)
+  // y la cola del tarificador entera falla con P2010 «syntax error at or near "$6"».
+  const src = leer('lib/tarificador-robustez.ts')
+  assert.match(src, /import \{ Prisma \} from '@prisma\/client'/, 'Prisma de @prisma/client')
+  assert.doesNotMatch(src, /from '\.\/generated\/asegura-client'/, 'tarificador-robustez interpola en el prisma de ./tenant: nada del cliente generado')
+  const sp = tramo(src, 'export async function sqlSinPausa', '\n}\n')
+  assert.match(sp, /return Prisma\.sql`/)
+})

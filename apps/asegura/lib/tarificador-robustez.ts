@@ -26,7 +26,7 @@ import {
   type AtascoWorker,
   type CandidatoAtascoVisible,
 } from '@central/module-tarificacion'
-import { Prisma } from './generated/asegura-client'
+import { Prisma } from '@prisma/client' // el MISMO cliente que el `prisma` de ./tenant: un Prisma.sql de otro cliente generado se envía como parámetro (P2010 en $6)
 import { prisma } from './tenant'
 import { hayAtascos, hayConfianzaAprendido, hayPausas } from './esquema-bd'
 import { purgarRiesgoTrabajos } from './tarificador-purga'
