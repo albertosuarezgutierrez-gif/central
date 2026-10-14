@@ -167,26 +167,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 329 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 330 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 319 | 44.878 | 37.469.658 | 0 | 0 |
-| `otro` | 315 | 10.746 | 26.714.127 | 15.995.119 | 0 |
-| `lectura-directa` | 276 | 7.457 | 23.874.238 | 0 | 0 |
-| `mcp:github` | 281 | 6.275 | 5.043.121 | 53.382.610 | 94 |
-| `escritura` | 206 | 4.299 | 62.685.206 | 0 | 0 |
-| `sql` | 201 | 4.272 | 2.138.817 | 2.351.230 | 18 |
+| `bash` | 320 | 45.340 | 37.834.978 | 0 | 0 |
+| `otro` | 315 | 10.793 | 26.768.118 | 16.160.374 | 0 |
+| `lectura-directa` | 277 | 7.507 | 23.973.908 | 0 | 0 |
+| `mcp:github` | 281 | 6.287 | 5.046.476 | 53.394.456 | 94 |
+| `escritura` | 206 | 4.341 | 63.372.970 | 0 | 0 |
+| `sql` | 201 | 4.295 | 2.164.607 | 2.351.230 | 18 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 44 | 1.194 | 1.232.765 | 0 | 72 |
 | `mcp:Booking-com` | 36 | 1.004 | 4.179.478 | 0 | 0 |
 | `mcp:Vercel` | 68 | 714 | 962.003 | 204.477 | 23 |
-| `agente:general-purpose` | 96 | 560 | 344.071 | 10.597.005 | 0 |
+| `agente:general-purpose` | 97 | 567 | 349.724 | 10.885.518 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 8 | 402 | 485.107 | 0 | 0 |
 | `mcp:Google_Drive` | 22 | 357 | 406.955 | 0 | 37 |
 | `mcp:Supabase` | 120 | 355 | 49.537 | 3.415 | 6 |
-| `mcp:claude-code-remote` | 35 | 322 | 24.704 | 20.519 | 0 |
-| `agente:agente-architect` | 60 | 236 | 167.532 | 6.527.062 | 0 |
+| `mcp:claude-code-remote` | 35 | 327 | 24.946 | 20.519 | 0 |
+| `agente:agente-architect` | 61 | 242 | 171.822 | 6.608.857 | 0 |
 | `mcp:Google-Drive` | 22 | 132 | 120.018 | 0 | 2 |
 | `agente:agente-mecanico` | 43 | 107 | 69.019 | 6.948.509 | 0 |
 | `agente:rastreador-codigo` | 46 | 79 | 24.197 | 653.355 | 0 |
