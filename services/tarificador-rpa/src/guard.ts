@@ -816,6 +816,147 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   }
 }
 
+// ─────────── Mapfre NSEI · diálogos de la búsqueda del tomador (Alberto, 14/10/2026) ───────────
+
+const SEL_DIALOGO_TOMADOR_MAPFRE = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
+/** Avisos informativos cuyo cierre está AUTORIZADO: texto EXACTO (sin tildes, mayúsculas, sin punto final). Se amplía uno a uno. */
+export const AVISOS_TOMADOR_MAPFRE = Object.freeze([
+  'NO EXISTE NINGUN REGISTRO PARA ESA CONDICION DE BUSQUEDA',
+  'NO SE HA ENCONTRADO',
+  'NO SE HAN ENCONTRADO',
+  'SIN RESULTADOS',
+] as const)
+/** Selector (solo lectura, para CONTAR) de las filas/controles de elección del diálogo de personas del tomador. Nunca se pulsa desde fuera. */
+export const SEL_FILAS_DIALOGO_PERSONAS = 'table tbody tr, mat-row, mat-list-option, mat-radio-button, [role="radio"], input[type="radio"]'
+const FILAS_TOMADOR = 'table tbody tr, mat-row, mat-list-option'
+const normalizarDocumento = (t: string | null | undefined) => (t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^0-9A-Za-z]/g, '').toUpperCase()
+
+/**
+ * ELEGIR PERSONA en el diálogo de selección del tomador. Regla FIJA, sin IA: la fila cuyo NIF normalizado (alguna celda,
+ * igualdad EXACTA) es el del riesgo. 0 coincidencias → `ninguna`; más de una → `varias`; sin un control (radio) único en la
+ * fila → `sin_control`: en los tres casos NO se pulsa nada. El NIF nunca sale de aquí. Exige un diálogo visible, una vez por
+ * trabajo, `comprobarBoton` en el control y en el «Aceptar» (solo ese texto exacto, si existe); el diálogo debe cerrarse.
+ */
+export async function elegirTomadorMapfre(page: Page, guard: GuardEmision, nifRiesgo: string): Promise<'elegido' | 'ninguna' | 'varias' | 'sin_control'> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'selección de tomador con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('mapfre:eleccion_tomador')) throw new EmisionBloqueadaError('fase', 'la selección de tomador de Mapfre ya se usó en este trabajo')
+  const nif = normalizarDocumento(nifRiesgo)
+  if (nif === '') throw new ErrorTarificador('datos', 'mapfre: falta el NIF/CIF del tomador')
+  await exigirSinCuentaBancaria(page)
+  const dialogos = page.locator(SEL_DIALOGO_TOMADOR_MAPFRE).locator('visible=true')
+  if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un diálogo de selección de tomador visible')
+  const dialogo = dialogos.first()
+  const filas = dialogo.locator(FILAS_TOMADOR)
+  const n = await filas.count()
+  const coinciden: number[] = []
+  for (let i = 0; i < n; i++) {
+    const celdas = await filas.nth(i).locator('td, mat-cell, [role="cell"], [role="gridcell"]').evaluateAll((els) => els.map((e) => e.textContent ?? ''))
+    if (celdas.some((c) => normalizarDocumento(c) === nif)) coinciden.push(i)
+  }
+  if (coinciden.length === 0) return 'ninguna'
+  if (coinciden.length > 1) return 'varias'
+  const fila = filas.nth(coinciden[0])
+  let radio: Locator | null = null
+  for (const sel of SELECTORES_RADIO_FILA) {
+    const l = fila.locator(sel)
+    if ((await l.count()) === 1) {
+      radio = l
+      break
+    }
+  }
+  if (!radio) return 'sin_control'
+  // Sin `value` ni texto/aria-label/title: pueden llevar el NIF o el nombre de la persona y un EmisionBloqueadaError copiaría el texto.
+  // Solo atributos técnicos (id, name, manejadores de clic): bastan para bloquear una acción de emisión.
+  const descRadio = await radio.evaluate((el) => {
+    const h = el as HTMLElement & { name?: unknown }
+    return [h.id || null, typeof h.name === 'string' ? h.name : null, h.getAttribute('onclick'), h.getAttribute('ng-click'), h.getAttribute('data-ng-click')]
+  })
+  comprobarBoton(descRadio)
+  const aceptar = dialogo.locator('button, [role="button"], input[type="button"], input[type="submit"]').filter({ hasText: /^\s*Aceptar\s*$/i }).locator('visible=true')
+  const nAceptar = await aceptar.count()
+  if (nAceptar > 1) throw new ErrorTarificador('portal', 'mapfre: la selección de tomador tiene más de un «Aceptar» visible')
+  usados.add('mapfre:eleccion_tomador')
+  AVANCES_USADOS.set(guard, usados)
+  await radio.click()
+  guard.comprobar()
+  if (nAceptar === 1) {
+    const fin = Date.now() + ESPERA_HABILITADO_MAPFRE_MS
+    while (!(await aceptar.isEnabled().catch(() => false))) {
+      if (Date.now() >= fin) throw new ErrorTarificador('portal', 'mapfre: «Aceptar» de la selección de tomador no se habilitó al elegir la fila')
+      await page.waitForTimeout(150)
+    }
+    await exigirSinCuentaBancaria(page)
+    const desc = await descripcion(aceptar)
+    if (sinTildesMayus(desc[0]) !== 'ACEPTAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+    comprobarBoton(desc, { permitirAceptar: true })
+    await clicSinDialogoNativo(page, guard, aceptar, 'selección de tomador')
+  }
+  await esperarCierreDialogoTomador(page, guard)
+  return 'elegido'
+}
+
+/**
+ * CERRAR el aviso informativo «no existe ningún registro» del tomador: SOLO si el texto del diálogo (sin sus botones) es uno
+ * de `AVISOS_TOMADOR_MAPFRE`, no tiene filas y tiene EXACTAMENTE un botón «Aceptar»/«Cerrar» (texto exacto, `comprobarBoton`
+ * con «Aceptar» permitido). Una vez por trabajo. Cualquier otro texto → `portal`, sin pulsar.
+ */
+export async function cerrarAvisoTomadorMapfre(page: Page, guard: GuardEmision): Promise<'sin_registro'> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'aviso del tomador con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('mapfre:aviso_tomador')) throw new EmisionBloqueadaError('fase', 'el aviso del tomador de Mapfre ya se cerró en este trabajo')
+  const dialogos = page.locator(SEL_DIALOGO_TOMADOR_MAPFRE).locator('visible=true')
+  if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un aviso del tomador visible')
+  const dialogo = dialogos.first()
+  if ((await dialogo.locator(FILAS_TOMADOR).count()) > 0) throw new ErrorTarificador('portal', 'mapfre: el diálogo del tomador trae filas, no es un aviso')
+  const botones = dialogo.locator('button, [role="button"], input[type="button"], input[type="submit"]').locator('visible=true')
+  const textosBoton = await botones.evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText ?? e.textContent ?? '').trim()))
+  let texto = await dialogo.evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '')
+  for (const t of textosBoton) if (t) texto = texto.replace(t, ' ')
+  const plano = sinTildesMayus(texto).replace(/[.\s]+$/, '')
+  if (!AVISOS_TOMADOR_MAPFRE.some((a) => a === plano)) throw new ErrorTarificador('portal', 'mapfre: el aviso del tomador no es uno de los textos validados (no se cierra)')
+  const cierre = botones.filter({ hasText: /^\s*(Aceptar|Cerrar)\s*$/i })
+  if ((await cierre.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: el aviso del tomador no tiene exactamente un botón «Aceptar»/«Cerrar»')
+  const desc = await descripcion(cierre)
+  if (!['ACEPTAR', 'CERRAR'].includes(sinTildesMayus(desc[0]))) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc, { permitirAceptar: true })
+  usados.add('mapfre:aviso_tomador')
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, cierre, 'aviso del tomador')
+  await esperarCierreDialogoTomador(page, guard)
+  return 'sin_registro'
+}
+
+/** Clic con los diálogos NATIVOS del navegador descartados: si el portal abre uno, el trabajo cae (el robot no confirma). */
+async function clicSinDialogoNativo(page: Page, guard: GuardEmision, boton: Locator, que: string): Promise<void> {
+  let nativo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    nativo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await boton.click()
+    await page.waitForTimeout(100)
+    guard.comprobar()
+    if (nativo) throw new EmisionBloqueadaError('fase', `${que}: el portal abrió un diálogo («${nativo}») y el robot no confirma`)
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+}
+
+async function esperarCierreDialogoTomador(page: Page, guard: GuardEmision): Promise<void> {
+  const hasta = Date.now() + ESPERA_CIERRE_DIALOGO_MAPFRE_MS
+  for (;;) {
+    guard.comprobar()
+    if ((await page.locator(SEL_DIALOGO_TOMADOR_MAPFRE).locator('visible=true').count()) === 0) return
+    if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: el diálogo del tomador no se cerró')
+    await page.waitForTimeout(200)
+  }
+}
+
 // ─────────── Mapfre NSEI · «Continuar» del stepper (Alberto, 14/10/2026) ───────────
 
 /**

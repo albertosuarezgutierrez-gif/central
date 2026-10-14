@@ -91,13 +91,16 @@ export function esAccionPermitida(clave: string): boolean {
  * ¿Tiene forma de OPCIÓN de una lista (la etiqueta de un radio, una `mat-option`/`[role=option]`, un `li` de autocompletado)?
  * Nunca un botón, enlace o campo. Con texto visible corto. PURA (vale para `Candidato` y `DescripcionElemento`).
  */
-export function esElementoOpcion(e: { tag: string; role: string | null; texto: string | null; paraCheckbox?: boolean }): boolean {
+export function esElementoOpcion(e: { tag: string; role: string | null; texto: string | null; paraCheckbox?: boolean; celdaBuscador?: boolean }): boolean {
   // Un `label` de una CASILLA (su `for` apunta a un checkbox, o envuelve uno) no es una opción de lista: marcarla cambia un dato suelto.
   if (e.paraCheckbox === true) return false
   const tag = e.tag.toLowerCase()
   const role = (e.role ?? '').toLowerCase()
   const texto = (e.texto ?? '').trim()
   if (!texto || texto.length > 120) return false
+  // CELDA del buscador de poblaciones de Allianz (`td` con `receivedDataLocationFinder`, texto «CP- NOMBRE»): el ÚNICO `td` que es
+  // una opción. Cualquier otro `td` con `onclick` (Archivar, Emitir…) NO lo es. Es una excepción de FORMA, sin texto libre.
+  if (tag === 'td') return e.celdaBuscador === true && /^\d{5}\s*-\s*\S/.test(texto)
   if (tag === 'button' || tag === 'a' || tag === 'input' || tag === 'select' || tag === 'textarea' || role === 'button') return false
   return tag === 'label' || tag === 'mat-option' || tag === 'li' || /option/.test(tag) || role === 'option'
 }
@@ -188,6 +191,8 @@ export type DescripcionElemento = {
   editableContenido: boolean
   /** Solo `label`: su `for` apunta a un checkbox o envuelve uno (no es una opción de lista). Opcional. */
   paraCheckbox?: boolean
+  /** Solo `td`: su `onclick` llama a `receivedDataLocationFinder` (celda del buscador de poblaciones de Allianz). Opcional. */
+  celdaBuscador?: boolean
   /** Manejador AngularJS (`ng-click`/`data-ng-click`): cuenta como un onclick. Opcional (descripciones antiguas). */
   ngClick?: string | null
   /** `mattooltip` (Angular Material). Opcional: cuenta para el bloqueo y, en la lupa, como etiqueta. */
@@ -323,6 +328,8 @@ export type Candidato = {
   marco: string | null
   /** Solo `label`: su `for` apunta a un checkbox o envuelve uno. Solo local (`sinSelector` lo quita: no viaja). */
   paraCheckbox?: boolean
+  /** Solo `td` del buscador de poblaciones (`receivedDataLocationFinder`). Solo local, como `paraCheckbox`. */
+  celdaBuscador?: boolean
 }
 /** Candidato con lo que el worker se guarda para volver a encontrarlo (el selector no sale). */
 export type CandidatoLocal = Candidato & { selector: string }
@@ -361,12 +368,13 @@ export function proyectarCandidato(raw: Record<string, unknown>, tipo: TipoClave
     etiqueta: limpiarTextoAviso(recorta(raw.etiqueta, 120), redactar, 120),
     marco: recorta(raw.marco, 120),
     ...(raw.paraCheckbox === true ? { paraCheckbox: true } : {}),
+    ...(raw.celdaBuscador === true ? { celdaBuscador: true } : {}),
     selector,
   }
 }
 
 export function sinSelector(c: CandidatoLocal): Candidato {
-  const { selector: _s, paraCheckbox: _p, ...resto } = c
+  const { selector: _s, paraCheckbox: _p, celdaBuscador: _c, ...resto } = c
   return resto
 }
 
@@ -495,6 +503,7 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
               valorBoton: esAccion && esBoton ? h.getAttribute('value') : null,
               etiqueta: etiquetaDe(el),
               paraCheckbox: tag === 'label' && esDeCasilla(h),
+              celdaBuscador: tag === 'td' && /receivedDataLocationFinder/.test(h.getAttribute('onclick') ?? ''),
               selector,
             })
           }
@@ -561,6 +570,7 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
         deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
         editableContenido: h.isContentEditable === true,
         paraCheckbox: tag === 'label' && labelDeCasilla(h),
+        celdaBuscador: tag === 'td' && /receivedDataLocationFinder/.test(h.getAttribute('onclick') ?? ''),
       }
 
       // `label` cuyo `for` apunta a un checkbox (o que envuelve uno): una casilla, no una opción de lista.

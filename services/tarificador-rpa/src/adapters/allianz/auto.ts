@@ -35,11 +35,13 @@
 
 import type { Frame, Locator, Page } from 'playwright'
 import {
+  clavePoblacion,
   comprobarBoton,
   AVISO_VERSION_POR_SIMILITUD,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
   esOpcionVacia,
   fechaIsoDesdeTexto,
+  leerCeldaPoblacion,
   importeEs,
   mensajeEleccionPoblacion,
   mensajeEleccionVersion,
@@ -59,6 +61,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { conRespaldoIA, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { ErrorAvanceSinLlegar, exigirCampoNoBancario } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
@@ -79,9 +82,12 @@ export const MOTO_ACTIVO = true
 export class ErrorMapaIncompleto extends ErrorTarificador {
   /** SOLO true en dos huecos: la entrada a Turismos y el buscador de poblaciones de moto. El resto NO captura. */
   readonly pideInventarioDom: boolean
-  constructor(que: string, pideInventarioDom = false) {
+  /** true = el hueco es un caso de DATOS/negocio o de configuración (no una pantalla sin reconocer): error definitivo, sin atasco de pantalla. */
+  readonly sinAtasco: boolean
+  constructor(que: string, pideInventarioDom = false, sinAtasco = false) {
     super('portal', `allianz/auto: mapa incompleto: faltan ${que}`)
     this.pideInventarioDom = pideInventarioDom
+    this.sinAtasco = sinAtasco
     this.name = 'ErrorMapaIncompleto'
   }
 }
@@ -320,7 +326,7 @@ export async function avanzarPestanaGuardada(_page: Page, ctx: ContextoPortal, d
         : 'el avance guardado por fase de Datos básicos a Tarificar (td#rate, manejador de avance con confirmación)',
     )
   }
-  if (typeof ctx?.avanzarPestanaAutorizada !== 'function') throw new ErrorMapaIncompleto('el avance autorizado de pestaña en el contexto del worker')
+  if (typeof ctx?.avanzarPestanaAutorizada !== 'function') throw new ErrorMapaIncompleto('el avance autorizado de pestaña en el contexto del worker', false, true)
   try {
     return await ctx.avanzarPestanaAutorizada(destino === 'datosBasicos' ? 'td#datosBasicos' : 'td#rate')
   } catch (e) {
@@ -540,6 +546,67 @@ const leerCeldasPoblacion = (raiz: Pick<Frame, 'locator'>) =>
 const valorPoblacion = (raiz: Pick<Frame, 'locator'>) =>
   raiz.locator(SEL_RIESGO_MOTO.poblacion).first().inputValue({ timeout: 1_000 }).catch(() => '')
 
+/** Petición de la capa común para el buscador de poblaciones (acción `elegir_opcion`: solo ofrece celdas «CP- NOMBRE»). */
+const PETICION_POBLACION: PeticionResolver = {
+  clave: 'elegir_opcion_poblacion',
+  tipo: 'accion',
+  descripcion:
+    'Celda «CP- POBLACIÓN» del buscador de poblaciones de Allianz Moto (resultado de la lupa del código postal) que corresponde a la población del riesgo. Solo elige una población de la lista; NUNCA emitir, contratar, grabar ni pagar.',
+}
+
+/** Contexto del buscador: `pulsar` (guard, `comprobarBoton`) y el formador de la capa común (opcional: sin él, el hueco de siempre). */
+export type CtxPoblacion = Pick<ContextoPortal, 'pulsar'> & Partial<Pick<ContextoPortal, 'formador'>>
+
+/**
+ * CAPA COMÚN del buscador (fijo → aprendido → IA `elegir_opcion` → ATASCO). La regla fija (celdas «CP- NOMBRE» + `resolverPoblacion`)
+ * ya NO pudo (o no tuvo efecto): `hueco` es su error. Lo que devuelva lo aprendido o la IA solo se pulsa si, ANTES de pulsar,
+ * su texto es «CP- NOMBRE» del CP del riesgo Y es la población del riesgo (elección de la bandeja o nombre exacto normalizado);
+ * si no, atasco y hueco (nunca se elige «la parecida»). Se pulsa por `ctx.pulsar` y solo se aprende
+ * si tras pulsar `#_destown` quedó relleno. Sin candidatos que mostrar, el atasco no puede prepararse (queda el hueco con
+ * inventario de estructura).
+ */
+async function poblacionPorCapaComun(
+  raiz: Pick<Frame, 'locator'>,
+  codigoPostal: string,
+  page: Page,
+  ctx: CtxPoblacion,
+  eleccion: Pick<FormularioAuto, 'poblacion' | 'eleccionPoblacion'>,
+  hueco: string,
+  timeoutMs: number,
+  sinIA = false,
+): Promise<void> {
+  // Fijo real (no un stub): UNA sola celda del buscador visible ahora (p. ej. pintada tras el plazo de la regla principal).
+  const fijo = async (): Promise<Locator> => {
+    const celdas = raiz.locator(SEL_CELDA_POBLACION)
+    if ((await celdas.count()) !== 1) throw new ErrorMapaIncompleto(hueco, true)
+    return celdas
+  }
+  const atascar = async (): Promise<never> => {
+    await registrarAtasco(page, ctx.formador, PETICION_POBLACION).catch(() => undefined)
+    throw new ErrorMapaIncompleto(hueco, true)
+  }
+  // La regla fija ya dictaminó que NINGUNA celda es la población del riesgo: la IA no puede «adivinar» otra → atasco directo.
+  if (sinIA) return atascar()
+  const r = await conRespaldoIA(page, ctx.formador, fijo, PETICION_POBLACION) // sin resolver: atasco registrado y error ORIGINAL
+  const texto = await r.locator.evaluate((el) => (el.textContent ?? '').replace(/\s+/g, ' ').trim()).catch(() => null)
+  const celda = texto ? leerCeldaPoblacion(texto) : null
+  if (!texto || !celda || celda.cp !== codigoPostal.trim()) return atascar()
+  const eleg = (eleccion.eleccionPoblacion ?? '').replace(/\s+/g, ' ').trim()
+  const nombre = clavePoblacion(eleccion.poblacion ?? '')
+  const esLaDelRiesgo = eleg !== '' ? eleg === texto : nombre !== '' && clavePoblacion(celda.nombre) === nombre
+  if (!esLaDelRiesgo) return atascar()
+  await ctx.pulsar(r.locator)
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    if ((await valorPoblacion(raiz)).trim() !== '') {
+      await r.confirmar().catch(() => undefined)
+      return
+    }
+    if (Date.now() >= fin) return atascar()
+    await page.waitForTimeout(300)
+  }
+}
+
 /**
  * CP → buscador de poblaciones: se teclea el CP y se pulsa la LUPA con `ctx.pulsar` (no Enter: el Enter de un campo de un
  * formulario legado puede enviarlo). Después:
@@ -547,20 +614,26 @@ const valorPoblacion = (raiz: Pick<Frame, 'locator'>) =>
  *   · aparecen celdas `receivedDataLocationFinder` («CP- NOMBRE»): una → se pulsa; varias → `resolverPoblacion` (la
  *     `eleccionPoblacion` de la bandeja si está en la lista; si no, la `poblacion` del riesgo si casa con UNA, salvo
  *     mayúsculas/tildes/espacios) y se pulsa con `ctx.pulsar`; sin elección posible → `ErrorEleccionPoblacion` (persona);
- *   · tras pulsar, `#_destown` tiene que quedar relleno; si no, hueco declarado con inventario de estructura.
- * Ni celdas ni población a tiempo → hueco declarado con inventario. La población del cliente no sale en ningún mensaje.
+ *   · tras pulsar, `#_destown` tiene que quedar relleno.
+ * Todo lo demás (no aparece el buscador, ni celdas ni población a tiempo, celdas sin la forma «CP- NOMBRE», la celda no rellena)
+ * va por la CAPA COMÚN (`poblacionPorCapaComun`: aprendido → IA → atasco), nunca a un error mudo. La población del cliente no
+ * sale en ningún mensaje.
  */
 export async function buscarPoblacion(
   raiz: Pick<Frame, 'locator'>,
   codigoPostal: string,
-  page: Pick<Page, 'waitForTimeout'>,
-  ctx: Pick<ContextoPortal, 'pulsar'>,
+  page: Page,
+  ctx: CtxPoblacion,
   timeoutMs = 10_000,
   eleccion: Pick<FormularioAuto, 'poblacion' | 'eleccionPoblacion'> = {},
 ): Promise<void> {
+  const capaComun = (hueco: string, sinIA = false) => poblacionPorCapaComun(raiz, codigoPostal, page, ctx, eleccion, hueco, timeoutMs, sinIA)
   const cp = raiz.locator(SEL_RIESGO_MOTO.codigoPostal).first()
   const lupa = raiz.locator(SEL_RIESGO_MOTO.buscarPoblacion).first()
-  if ((await cp.count()) === 0 || (await lupa.count()) === 0) throw new ErrorTarificador('portal', 'allianz/moto: no aparece el buscador de poblaciones')
+  if ((await cp.count()) === 0 || (await lupa.count()) === 0) {
+    await registrarAtasco(page, ctx.formador, PETICION_POBLACION).catch(() => undefined)
+    throw new ErrorTarificador('portal', 'allianz/moto: no aparece el buscador de poblaciones')
+  }
   await comprobarCampo(cp)
   await cp.fill(codigoPostal)
   await ctx.pulsar(lupa)
@@ -575,21 +648,24 @@ export async function buscarPoblacion(
       textos = await leerCeldasPoblacion(raiz)
       break
     }
-    if (Date.now() >= fin) throw new ErrorMapaIncompleto('la pantalla del buscador de poblaciones (el CP no dejó la población rellena ni celdas de resultado)', true)
+    if (Date.now() >= fin) return capaComun('la pantalla del buscador de poblaciones (el CP no dejó la población rellena ni celdas de resultado)')
     await page.waitForTimeout(300)
   }
   const opciones = opcionesPoblacionDesdeCeldas(textos)
-  if (opciones.length === 0) throw new ErrorMapaIncompleto('el formato de las celdas del buscador de poblaciones (no son «CP- NOMBRE»)', true)
+  if (opciones.length === 0) return capaComun('el formato de las celdas del buscador de poblaciones (no son «CP- NOMBRE»)', true)
   const r = resolverPoblacion(opciones, eleccion)
   if (r.tipo === 'ambigua') throw new ErrorEleccionPoblacion(r.opciones)
-  if (r.tipo === 'ninguna') throw new ErrorMapaIncompleto('las celdas del buscador de poblaciones', true)
+  if (r.tipo === 'ninguna') return capaComun('las celdas del buscador de poblaciones', true)
   const indice = textos.findIndex((t) => t === r.opcion.codigo)
-  if (indice < 0) throw new ErrorTarificador('portal', 'allianz/moto: la celda de la población elegida ya no está en el buscador')
+  if (indice < 0) return capaComun('la celda de la población elegida (ya no está en el buscador)')
   await ctx.pulsar(raiz.locator(SEL_CELDA_POBLACION).nth(indice))
   const finPulsar = Date.now() + timeoutMs
   for (;;) {
     if ((await valorPoblacion(raiz)).trim() !== '') return
-    if (Date.now() >= finPulsar) throw new ErrorMapaIncompleto('el efecto de la celda del buscador de poblaciones (tras pulsarla, la población no quedó rellena)', true)
+    if (Date.now() >= finPulsar) {
+      await registrarAtasco(page, ctx.formador, PETICION_POBLACION).catch(() => undefined)
+      throw new ErrorMapaIncompleto('el efecto de la celda del buscador de poblaciones (tras pulsarla, la población no quedó rellena)', true)
+    }
     await page.waitForTimeout(300)
   }
 }
@@ -597,11 +673,11 @@ export async function buscarPoblacion(
 /** ¿Tomador = conductor = propietario? `false` pide el NIF del otro (`#idNifDriver_doc`/`#idNifOwner_doc`): sin mapa → hueco. */
 export function comprobarTitularesMoto(f: Pick<FormularioAuto, 'tomadorEsConductor' | 'tomadorEsPropietario'>): void {
   if (f.tomadorEsConductor === false || f.tomadorEsPropietario === false) {
-    throw new ErrorMapaIncompleto('el NIF del conductor/propietario distinto del tomador (campos idNifDriver_doc/idNifOwner_doc, sin mapa de qué exige el portal)')
+    throw new ErrorMapaIncompleto('el NIF del conductor/propietario distinto del tomador (campos idNifDriver_doc/idNifOwner_doc, sin mapa de qué exige el portal)', false, true)
   }
 }
 
-export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'pulsar'>): Promise<void> {
+export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Page, ctx: CtxPoblacion): Promise<void> {
   comprobarTitularesMoto(f)
   await buscarPoblacion(raiz, f.codigoPostal, page, ctx, undefined, { poblacion: f.poblacion ?? null, eleccionPoblacion: f.eleccionPoblacion ?? null })
   for (const [sel, dato] of [[SEL_RIESGO_MOTO.tomadorEsConductor, f.tomadorEsConductor], [SEL_RIESGO_MOTO.tomadorEsPropietario, f.tomadorEsPropietario]] as const) {
@@ -634,7 +710,7 @@ export function planDatosBasicosMoto(f: FormularioAuto): OperacionCampo[] {
   if (f.conductor.sexo === null) throw new ErrorTarificador('datos', 'allianz/moto: falta el sexo del conductor (el portal asumiría «Hombre»)')
   if (f.aniosAseguradoAnterior === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la antigüedad en la compañía anterior (el portal asumiría 0 años)')
   if (f.siniestrosUltimos5Anios === null) throw new ErrorTarificador('datos', 'allianz/moto: faltan los siniestros de los últimos años (el portal asumiría ninguno)')
-  if (f.siniestrosUltimos5Anios > 0) throw new ErrorMapaIncompleto('la traducción de siniestros > 0 a «años sin siniestros» y «nº de siniestros en el último año» de Antecedentes')
+  if (f.siniestrosUltimos5Anios > 0) throw new ErrorMapaIncompleto('la traducción de siniestros > 0 a «años sin siniestros» y «nº de siniestros en el último año» de Antecedentes', false, true)
   const anios = f.aniosAseguradoAnterior
   const plan: OperacionCampo[] = [
     { sel: SEL_DATOS_MOTO.uso, tipo: 'select', valor: USO_PARTICULAR },
@@ -795,15 +871,37 @@ export async function marcoFormularioTurismos(page: Page, timeoutMs = MS_ESPERA_
   return marco
 }
 
+/** Petición del atasco de cualquier pantalla de Moto sin mapa (la lista que ve Alberto en Telegram son las opciones visibles). */
+const PETICION_PANTALLA_MOTO: PeticionResolver = {
+  clave: 'elegir_opcion_pantalla_moto',
+  tipo: 'accion',
+  descripcion: 'Pantalla de Allianz Moto sin mapa (el robot no la reconoce). Solo muestra las opciones visibles; NUNCA emitir, contratar, grabar ni pagar.',
+}
+
+/**
+ * Regla del servicio: el bot de Moto nunca muere en silencio. Un `ErrorMapaIncompleto` que ninguna capa común convirtió ya en
+ * atasco (titulares distintos, siniestros > 0, avance guardado, hueco de entrada…) prepara aquí el atasco (Telegram) con las
+ * opciones visibles; el error es el ORIGINAL. Sin opciones visibles no hay candidatos que numerar: queda el hueco con inventario.
+ */
+async function tarificarMotoConAtasco(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
+  try {
+    return await tarificarMoto(page, form, ctx)
+  } catch (e) {
+    // Datos/negocio (titulares distintos, siniestros > 0, avance sin configurar) → error definitivo; el atasco es SOLO para pantalla no reconocida.
+    if (e instanceof ErrorMapaIncompleto && !e.sinAtasco && !ctx.formador?.atasco) await registrarAtasco(page, ctx.formador, PETICION_PANTALLA_MOTO).catch(() => undefined)
+    throw e
+  }
+}
+
 function crearAdaptador(ramo: 'auto' | 'moto') {
   return {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    version: '0.3.0',
+    version: '0.4.0',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
-      if (ramo === 'moto') return tarificarMoto(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
+      if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
       if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
       await ctx.trasLogin()
       await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Turismos', selectorTarjeta: TARJETA_AUTOS.turismos })

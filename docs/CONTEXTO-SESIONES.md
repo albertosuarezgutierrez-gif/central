@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/10/2026, noche)** — Tarificador · 4 arreglos en un PR (rama `ccr-4127d080-vgywbl`). Prueba real Mapfre auto 0.7.1
+(trabajo 50cc150d) → atasco: el «espere» transitorio tras el NIF se tomaba por diálogo. **Mapfre 0.7.2**: clasifica diálogo
+(espere / lista → fila con NIF exacto / aviso «no existe» → Aceptar validado en guard / otro → atasco; fallo del guard → atasco).
+**Allianz moto 0.4.0**: poblaciones por capa común (fijo→aprendido→IA→atasco). **Comunidades 0.2.1**: espera ≤45 s de la prima,
+importe español, error con texto visible redactado (sin PII). **bot_version** también en exploraciones. Sin migración.
+Relanzar sin UI: reintentar el MISMO trabajo (estado→pendiente, el cron `tarificador-cola` lo recoge; nunca INSERT copiado).
+Pendiente: prueba real de las 4 piezas; Occident hogar (SSO a Microsoft no completa); Mapfre moto sin probar nunca.
+
 **(14/10/2026)** — Tarificador · Mapfre SIN LUPA (#4710 MERGEADO; regla de Alberto: al teclear NIF Mapfre busca solo; si no existe se crea en el
 mismo formulario). Bot 0.7.1: «nuevo» solo con aviso «NO EXISTE NINGÚN REGISTRO»; sin aviso → indeterminado → atasco; nunca pisa autorrelleno;
 fecha nacimiento verificada tras blur. Asegura inyecta nombre/apellidos/nacimiento al ENTREGAR (nunca en `riesgo`); 422 `falta_datos_tomador`

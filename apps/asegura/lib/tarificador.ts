@@ -424,7 +424,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
       // La cabecera DEBE estar cerrada (el cierre guarda el mapa): si no, no es un `ok` sino un error con motivo claro.
       const cab = await tx.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${t.id}::uuid`
       if (!exploradoValido(cab[0]?.cerrada)) {
-        const { estado } = await marcarFallo(tx, t.id, t.intentos, { tipo: 'portal', mensaje: 'exploracion_sin_cierre: el worker informó «explorado» pero la cabecera no está cerrada (el mapa no se guardó)', url: null }, null)
+        const { estado } = await marcarFallo(tx, t.id, t.intentos, { tipo: 'portal', mensaje: 'exploracion_sin_cierre: el worker informó «explorado» pero la cabecera no está cerrada (el mapa no se guardó)', url: null }, null, conBot ? r.botVersion : null, conBot)
         return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: null } }
       }
       // PRESUPUESTO GUARDADO (14/10/2026): su PDF va a `seguros.documentos` como el de una tarificación (mismo `guardarAdjunto`)
@@ -446,6 +446,9 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         set estado = 'ok', lease_hasta = null, error = null, terminado_at = now(), updated_at = now(),
             evidencia_documento_id = coalesce(${pdfDoc}::uuid, evidencia_documento_id)
         where id = ${t.id}::uuid and estado = 'en_curso'`
+      // La versión va en un UPDATE aparte: el esquema opcional (`bot_version`) puede no estar aplicado. Antes la rama
+      // «explorado» no la escribía y toda exploración ok salía con `bot_version` vacío (14/10/2026).
+      if (conBot) await tx.$executeRaw`update seguros.tarificacion_trabajos set bot_version = coalesce(${r.botVersion}, bot_version) where id = ${t.id}::uuid`
       // PURGA (13/10/2026): cerrado → fuera los datos personales del riesgo, en el MISMO commit.
       await purgarRiesgoTrabajos(tx, [t.id])
       return { res: { estado: 'registrado' as const, estadoTrabajo: 'ok' }, traza: { t, captura: null } }

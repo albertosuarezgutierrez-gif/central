@@ -476,3 +476,23 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   assert.match(w, /aplicarDatosTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaTomadorFicha\(ficha, decryptField\)\)/)
   assert.ok(w.indexOf('aplicarDatosTomador(') < w.indexOf('const base = {'), 'se inyecta antes de armar la respuesta')
 })
+
+// bot_version nunca vacío (14/10/2026): las exploraciones ok de Allianz hogar salían sin versión porque la rama «explorado»
+// de registrarResultado no la escribía; y un worker sin versión dejaba NULL silencioso.
+test('bot_version: la versión semver del worker llega en «explorado»; sin ella queda null («no se sabe»)', () => {
+  const ok = leerResultadoWorker({ trabajoId: JOB, resultado: 'explorado', motivoFin: 'resultado', botVersion: '0.3.1' })
+  assert.ok(ok.ok && ok.r.botVersion === '0.3.1')
+  const sin = leerResultadoWorker({ trabajoId: JOB, resultado: 'explorado', motivoFin: 'resultado' })
+  assert.ok(sin.ok && sin.r.botVersion === null)
+})
+
+test('bot_version: TODA rama de registrarResultado que cierra el trabajo escribe la versión (explorado, ok, error, sin_cierre)', () => {
+  const src = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  const ini = src.indexOf('export async function registrarResultado')
+  const cuerpo = src.slice(ini, src.indexOf('\nexport ', ini + 10))
+  const rama = cuerpo.slice(cuerpo.indexOf("if (r.tipo === 'explorado') {"), cuerpo.indexOf('const docs: string[]'))
+  assert.match(rama, /bot_version = coalesce\(\$\{r\.botVersion\}/, 'la rama explorado debe escribir bot_version')
+  assert.match(rama, /exploracion_sin_cierre[^\n]*r\.botVersion/, 'el fallo exploracion_sin_cierre debe pasar la versión')
+  assert.match(cuerpo, /marcarFallo\(tx, t\.id, t\.intentos, r\.error, evidencia, conBot \? r\.botVersion/)
+  assert.match(cuerpo, /set estado = 'ok', tarificacion_id[^`]*bot_version = coalesce\(\$\{r\.botVersion\}/)
+})
