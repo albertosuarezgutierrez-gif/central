@@ -119,6 +119,23 @@ export {
   type ValidacionFormularioComercio,
 } from './formulario-comercio.ts'
 
+// Formulario canónico de Hogar (14/10/2026): contrato del ramo 'hogar' (primer bot: Allianz ePAC, apagado).
+export {
+  REGIMENES_VIVIENDA,
+  TIPOS_VIVIENDA,
+  USOS_VIVIENDA,
+  fechaDdMmAaaaDeIso,
+  validarFormularioHogar,
+  type DatosHogar,
+  type FormularioHogar,
+  type InmuebleHogar,
+  type RegimenVivienda,
+  type TipoVivienda,
+  type TomadorHogar,
+  type UsoVivienda,
+  type ValidacionFormularioHogar,
+} from './formulario-hogar.ts'
+
 // Tomador canónico (08/10/2026): bloque reutilizable por los formularios.
 export {
   TIPOS_TOMADOR,
