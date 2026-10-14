@@ -22,7 +22,7 @@ import type { Frame, Locator, Page } from 'playwright'
 import { MAX_CANDIDATOS_ATASCO, limpiarTextoAviso, pareceEmision, type AtascoWorker, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
 import { ErrorTarificador } from './errores.ts'
 import { rutaMarco } from './evidencia.ts'
-import { ENLACES_ENTRADA_AUTORIZADOS } from './guard.ts'
+import { ENLACES_ENTRADA_AUTORIZADOS, esControlBuscarTomador, esIconoBusqueda } from './guard.ts'
 
 // ─── REGLA (14/10/2026, Alberto): todo bot con IA detrás y aprendizaje ─────────
 // Este fichero es la CAPA COMÚN de respaldo de TODOS los adaptadores de tarificación (docs/TARIFICADOR-RPA.md, «Regla: todo
@@ -52,6 +52,10 @@ export const ACCIONES_PERMITIDAS = {
   // «Continuar»/«Siguiente» ENTRE PANTALLAS (pieza 4, 14/10/2026): se pulsa SIEMPRE por el guard (`ctx.pulsar`) y por
   // `pulsarContinuarSeguro` (continuar.ts). Nunca «Continuar a pago», «Grabar y continuar»…: el texto casa ENTERO.
   continuar: ['continuar', 'siguiente'],
+  // LUPA que LANZA LA BÚSQUEDA del tomador por NIF/CIF (Mapfre NSEI paso 1, 14/10/2026: «sin IA vamos a tardar mucho»). Solo
+  // busca. MISMA lista que `TEXTOS_BUSCAR_TOMADOR` de guard.ts; solo se pulsa por `pulsarBuscarTomadorMapfre` (guard.ts). Un
+  // icono sin texto: ver `validarAccion` (texto visible → aria-label/title/mattooltip → icono de lupa).
+  buscar_tomador: ['buscar', 'search', 'lupa', 'buscar tomador', 'buscar por nif', 'buscar nif'],
 } as const satisfies Record<string, readonly string[]>
 
 /**
@@ -160,6 +164,12 @@ export type DescripcionElemento = {
   editableContenido: boolean
   /** Manejador AngularJS (`ng-click`/`data-ng-click`): cuenta como un onclick. Opcional (descripciones antiguas). */
   ngClick?: string | null
+  /** `mattooltip` (Angular Material). Opcional: cuenta para el bloqueo y, en la lupa, como etiqueta. */
+  tooltip?: string | null
+  /** Icono del control (ligadura de `mat-icon`, `fonticon`/`svgicon`, clases): solo para la lupa (`esIconoBusqueda`). */
+  icono?: string | null
+  /** Texto visible SIN la ligadura de los `mat-icon` («search»). Ausente = `texto`. */
+  textoSinIcono?: string | null
 }
 
 export type Validacion = { ok: true } | { ok: false; motivo: string }
@@ -201,8 +211,14 @@ export function validarAccion(d: DescripcionElemento, clave: string, textoEspera
   const bloqueo = bloqueoPalabras([
     ['texto', d.texto], ['value', d.valorBoton], ['title', d.title], ['aria-label', d.ariaLabel], ['id', d.id],
     ['name', d.name], ['href', d.href], ['onclick', d.onclick], ['onchange', d.onchange], ['formaction', d.formaction], ['ng-click', d.ngClick ?? null],
+    ['mattooltip', d.tooltip ?? null],
   ])
   if (bloqueo) return bloqueo
+  // LUPA: manda el texto VISIBLE; sin él, las etiquetas accesibles (todas de la lista); sin ellas, el icono (guard.ts).
+  if (clave === 'buscar_tomador') {
+    const esLupa = esControlBuscarTomador({ textoSinIcono: d.textoSinIcono !== undefined ? d.textoSinIcono : d.texto, ariaLabel: d.ariaLabel, title: d.title, tooltip: d.tooltip ?? null, icono: d.icono ?? null })
+    return esLupa ? { ok: true } : { ok: false, motivo: 'no es una lupa de búsqueda (texto, etiqueta o icono)' }
+  }
   const objetivo = textoEsperado ? [normalizarTexto(textoEsperado)] : permitidos
   const visibles = [d.texto, d.valorBoton, d.title, d.ariaLabel].map(normalizarTexto).filter(Boolean)
   if (!visibles.some((v) => objetivo.includes(v))) return { ok: false, motivo: `su texto («${visibles[0] ?? ''}») no es el de «${clave}»` }
@@ -305,7 +321,10 @@ export function proyectarCandidato(raw: Record<string, unknown>, tipo: TipoClave
   const type = recorta(raw.type, 20)?.toLowerCase() ?? null
   if (tag === 'input' && type === 'password') return null
   const esBotonInput = tag === 'input' && type !== null && (TIPOS_INPUT_BOTON as readonly string[]).includes(type)
-  const textoAccion = tipo === 'accion' ? recorta(raw.texto, 80) ?? (esBotonInput ? recorta(raw.valorBoton, 80) : null) : null
+  // Sin texto visible (botón de solo icono): su nombre accesible y, si tampoco lo tiene, «search» si el icono es una lupa.
+  const textoAccion = tipo === 'accion'
+    ? recorta(raw.texto, 80) ?? (esBotonInput ? recorta(raw.valorBoton, 80) : null) ?? recorta(raw.accesible, 80) ?? (esIconoBusqueda(recorta(raw.icono, 200)) ? 'search' : null)
+    : null
   return {
     tag,
     id: recorta(raw.id, 80),
@@ -325,7 +344,8 @@ export function sinSelector(c: CandidatoLocal): Candidato {
   return resto
 }
 
-export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button'
+/** Incluye el `mat-icon` SUELTO (Angular enlaza su `(click)` sin atributo: una lupa puede ser solo el icono); el de dentro de un botón/enlace no (sería el mismo control). */
+export const SELECTOR_ACCIONES = 'a, button, input[type=button], input[type=submit], input[type=image], [onclick], [ng-click], [data-ng-click], [role=button], [role=tab], [role=menuitem], nx-button, mat-icon:not(a mat-icon):not(button mat-icon):not([role=button] mat-icon)'
 export const SELECTOR_CAMPOS = 'input:not([type=hidden]):not([type=password]):not([type=radio]), select, textarea, nx-dropdown, nx-datefield, [role=combobox], [role=textbox], [role=spinbutton], [contenteditable=true]'
 export const MAX_CANDIDATOS = 400
 
@@ -425,6 +445,13 @@ export async function extraerCandidatos(page: Page, tipo: TipoClave, redactar: (
               // Un [ng-click] que no es <a>/<button>/rol (fila, tarjeta…) puede envolver nombres: texto CORTO (80). Luego pasa por
               // el redactor (`limpiarTextoAviso`) en `proyectarCandidato`, como todos.
               texto: esAccion && tag !== 'input' ? (h.innerText || h.textContent || '').slice(0, h.matches('a, button, [role]') ? 200 : 80) : null,
+              // Control de SOLO icono (sin texto): su nombre accesible, para la IA y para que pueda salir en un atasco.
+              accesible: esAccion ? h.getAttribute('aria-label') || h.getAttribute('title') || h.getAttribute('mattooltip') : null,
+              icono: esAccion
+                ? Array.from(h.matches('mat-icon, i[class], svg') ? [h] : h.querySelectorAll('mat-icon, [data-mat-icon-name], [fonticon], [svgicon], i[class], svg'))
+                  .map((i) => [i.tagName === 'MAT-ICON' ? i.textContent : '', i.getAttribute('data-mat-icon-name'), i.getAttribute('fonticon'), i.getAttribute('svgicon'), i.getAttribute('class')].filter(Boolean).join(' '))
+                  .join(' ').slice(0, 200)
+                : null,
               valorBoton: esAccion && esBoton ? h.getAttribute('value') : null,
               etiqueta: etiquetaDe(el),
               selector,
@@ -486,11 +513,30 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
         onchange: h.getAttribute('onchange'),
         formaction: h.getAttribute('formaction'),
         ngClick: h.getAttribute('ng-click') ?? h.getAttribute('data-ng-click'),
+        tooltip: h.getAttribute('mattooltip'),
+        icono: iconoDe(h),
+        textoSinIcono: tag === 'input' || tag === 'textarea' || tag === 'select' ? null : textoSinIconos(h),
         etiquetaFila: etiquetaFila(h),
         deshabilitado: h.disabled === true || h.getAttribute('aria-disabled') === 'true',
         editableContenido: h.isContentEditable === true,
       }
 
+      // Icono del control (él mismo o sus descendientes): ligadura de mat-icon, fonticon/svgicon/data-mat-icon-name y clases.
+      function iconoDe(x: HTMLElement): string | null {
+        const sel = 'mat-icon, [data-mat-icon-name], [fonticon], [svgicon], i[class], svg'
+        const l = x.matches(sel) ? [x] : Array.from(x.querySelectorAll(sel))
+        const t = l
+          .map((i) => [i.tagName === 'MAT-ICON' ? i.textContent : '', i.getAttribute('data-mat-icon-name'), i.getAttribute('fonticon'), i.getAttribute('svgicon'), i.getAttribute('class')].filter(Boolean).join(' '))
+          .join(' ').replace(/\s+/g, ' ').trim().slice(0, 200)
+        return t || null
+      }
+      // Texto del control SIN la ligadura de sus mat-icon («search»): lo que una persona lee.
+      function textoSinIconos(x: HTMLElement): string {
+        if (x.tagName === 'MAT-ICON') return ''
+        const c = x.cloneNode(true) as HTMLElement
+        c.querySelectorAll('mat-icon').forEach((m) => m.remove())
+        return (c.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 200)
+      }
       // Texto visible de un nodo SIN lo de dentro de controles (las opciones de un select no son etiqueta).
       function textoSinControles(n: Element): string {
         const w = document.createTreeWalker(n, 4 /* TEXT */)

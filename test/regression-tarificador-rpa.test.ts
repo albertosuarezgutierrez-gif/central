@@ -263,7 +263,7 @@ test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formaliz
   // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular» + la navegación de menús que autorizó Alberto
   //    (14/10/2026, respaldo IA); el enlace de entrada NO está en la tabla (va por la lista de guard.ts y `pulsarEnlaceEntrada`).
   const claves = [...tabla![1].matchAll(/^\s*(\w+)\s*:/gm)].map((m) => m[1])
-  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar'], 'ACCIONES_PERMITIDAS: solo «calcular» y la navegación autorizada')
+  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador'], 'ACCIONES_PERMITIDAS: solo «calcular», la navegación autorizada y la lupa del tomador')
   assert.match(src, /export function validarAccionEntrada[\s\S]*?textosEntradaDe\(compania\)\.includes\(esperado\)[\s\S]*?normalizarTexto\(d\.texto\) !== esperado/, 'el enlace de entrada: solo textos de guard.ts y texto visible exacto')
   const vc = src.slice(src.indexOf('export function validarCampo'), src.indexOf('export function validarResolucion'))
   assert.match(vc, /bloqueoPalabras\(\[\['id', d\.id\], \['name', d\.name\], \['title', d\.title\], \['aria-label', d\.ariaLabel\], \['onclick', d\.onclick\], \['onchange', d\.onchange\]\]\)/, 'validarCampo tiene que bloquear palabras de emisión en id/name/title/aria-label/onclick/onchange')
@@ -665,6 +665,24 @@ test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→
   assert.match(runner, /elegirMatSelect: [^\n]*\n\s*if \(select\.page\(\)\.context\(\) !== context\)/, 'mat-select comprueba la pestaña del trabajo')
 })
 
+test('MAPFRE · la LUPA del tomador solo por pulsarBuscarTomadorMapfre: comprobaciones ANTES del único clic, sin ventana de red', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarBuscarTomadorMapfre'))
+  assert.ok(fn, 'falta pulsarBuscarTomadorMapfre en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'usados.has(clave)', "usados.has('mapfre:continuar:datosBasicos')", 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'DATOS BASICOS'", 'SEL_DATOS_BASICOS_MAPFRE', 'comprobarBoton(await descripcion(boton, true))', 'esControlBuscarTomador(ctl)', 'usados.add(clave)']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarBuscarTomadorMapfre: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(!/permitirAceptar|ABRIR_(VENTANA|AVANCE|GUARDADO)/.test(fn!), 'sin «Aceptar» permitido y sin abrir ventanas de red')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /buscarTomadorMapfre: async \(pagina, boton\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await ctx\.pausaAccion\(\)\s*await pulsarBuscarTomadorMapfre\(pagina, guard, boton\)\s*\}/)
+  const mapfre = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'))
+  assert.match(mapfre, /await ctx\.buscarTomadorMapfre\(nsei, r\.locator\)/, 'la lupa del adaptador solo por la puerta del guard')
+  assert.match(mapfre, /conRespaldoIA\(nsei, ctx\.formador, \(\) => lupaFijaTomador\(campo\)/, 'la lupa se localiza por la capa común')
+})
+
 test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactado en mensajes/URL/HTML y sin captura', () => {
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
   assert.match(runner, /const secretosRiesgo = secretosDelRiesgo\(trabajo\.riesgo\)/)
@@ -672,4 +690,14 @@ test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactad
   assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
   const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
   assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
+})
+
+test('la clave `buscar_tomador` (lupa del tomador) solo existe en Mapfre auto (+ formador.ts y guard.ts, donde se define), en ningún otro adaptador', () => {
+  const infractores = ficheros(join(SRV, 'src/adapters'))
+    .filter((f) => !f.endsWith(join('adapters', 'mapfre', 'auto.ts')))
+    .filter((f) => /buscar_tomador/.test(readFileSync(f, 'utf8')))
+    .map((f) => relative(RAIZ, f))
+  assert.deepEqual(infractores, [], 'buscar_tomador fuera de mapfre/auto.ts')
+  assert.match(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'), /buscar_tomador/, 'el guardián ve la clave donde debe estar')
+  for (const f of ['src/formador.ts', 'src/guard.ts']) assert.match(readFileSync(join(SRV, f), 'utf8'), /buscar_tomador/, f)
 })

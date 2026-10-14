@@ -114,3 +114,33 @@ test('Mapfre: la entrada resuelve sus tres pulsaciones con respaldo (pestaña, o
   assert.match(menus, /clave: ACCION_ENLACE_ENTRADA/)
   assert.match(menus, /await ctx\.pulsarEnlaceEntrada\(enlace\)/, 'el enlace de entrada (fijo o IA) solo por la excepción exacta del guard')
 })
+
+/**
+ * Funciones-STUB de hueco: una función de un adaptador cuyo cuerpo es SOLO `throw new ErrorMapa…(…)` (o devuelve una promesa
+ * rechazada con él). Así murió el trabajo d7987f90 (lupa de Mapfre, 14/10/2026) sin preguntar a la IA ni atascarse. Un control
+ * sin DOM grabado se localiza por la capa común (fijo → aprendido → IA → atasco), nunca con un stub.
+ */
+export function stubsDeHueco(fuente: string): string[] {
+  const sf = ts.createSourceFile('x.ts', fuente, ts.ScriptTarget.Latest, true)
+  const out: string[] = []
+  const esNuevoHueco = (e: ts.Expression | undefined) => !!e && ts.isNewExpression(e) && ts.isIdentifier(e.expression) && /^ErrorMapa/.test(e.expression.text)
+  // `throw new ErrorMapa…` o `return Promise.reject(new ErrorMapa…)`
+  const esRechazo = (e: ts.Expression | undefined) => !!e && ts.isCallExpression(e) && e.expression.getText(sf) === 'Promise.reject' && esNuevoHueco(e.arguments[0])
+  const esHueco = (s: ts.Statement) => (ts.isThrowStatement(s) && esNuevoHueco(s.expression)) || (ts.isReturnStatement(s) && esRechazo(s.expression))
+  const visitar = (n: ts.Node): void => {
+    if ((ts.isFunctionDeclaration(n) || ts.isArrowFunction(n) || ts.isFunctionExpression(n) || ts.isMethodDeclaration(n)) && n.body && ts.isBlock(n.body)) {
+      const st = n.body.statements
+      if (st.length === 1 && esHueco(st[0]!)) out.push((n as ts.FunctionDeclaration).name?.getText(sf) ?? '(anónima)')
+    }
+    ts.forEachChild(n, visitar)
+  }
+  visitar(sf)
+  return out
+}
+
+test('ningún adaptador registrado tiene una función-stub que solo lanza un hueco de mapa (va por la capa común)', () => {
+  for (const f of new Set(registrados().values())) assert.deepEqual(stubsDeHueco(leer(f)), [], `${f}: stub de hueco sin respaldo IA/atasco`)
+  assert.deepEqual(stubsDeHueco('export async function lupa(_p: unknown): Promise<void> {\n  throw new ErrorMapaIncompleto(\'x\', true)\n}'), ['lupa'])
+  assert.deepEqual(stubsDeHueco('function g() { return Promise.reject(new ErrorMapaIncompleto(\'x\')) }'), ['g'], 'Promise.reject también')
+  assert.deepEqual(stubsDeHueco('function f(a: number) { if (a) throw new ErrorMapaIncompleto(\'x\'); return 1 }'), [], 'un throw condicional no es stub')
+})
