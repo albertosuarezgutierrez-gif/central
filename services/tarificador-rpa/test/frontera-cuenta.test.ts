@@ -17,6 +17,17 @@ const PAGINAS: Record<string, string> = {
   '/con-iban': '<label for="c">Número de cuenta</label><input id="c" name="c"><button id="b" onclick="window.pulsado=1">Siguiente</button>',
   '/con-iban-oculto': '<input type="hidden" name="iban"><label for="cp">Código postal</label><input id="cp" name="cp"><button id="b" onclick="window.pulsado=1">Siguiente</button>',
   '/con-iban-y-enlace': '<input name="ibanTomador" placeholder="IBAN"><a id="e" href="/nada">Tarificación y Emisión Rápida</a>',
+  // Regresión Allianz/Occident: <label> que ENVUELVE el select; su texto incluye las opciones («Domiciliación»).
+  '/label-envuelve-select': '<label>Forma de pago <select name="fp"><option>Anual</option><option>Domiciliación</option></select></label><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  '/label-sin-cuenta': '<label>El inmueble no cuenta con alarma <input type="checkbox" name="alarma"></label><label for="of">Oficina de la entidad mediadora</label><input id="of" name="of"><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  // Controles NO nativos (Angular Material / ARIA / contenteditable): solo atributos, nunca su texto.
+  '/combobox-iban': '<div role="combobox" aria-label="IBAN" tabindex="0">ES</div><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  '/textbox-cuenta': '<div role="textbox" aria-label="Número de cuenta" tabindex="0"></div><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  '/editable-ccc': '<div contenteditable="true" title="CCC" style="min-height:10px"></div><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  '/mat-select-dom': '<mat-select formcontrolname="domiciliacionBancaria" style="display:block;min-height:10px"></mat-select><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  '/combobox-cp': '<div role="combobox" aria-label="Código postal" tabindex="0">41001</div><button id="b" onclick="window.pulsado=1">Siguiente</button>',
+  // Segunda barrera del bucle: un control de cuenta que NO es campo (botón ARIA) — detectarParada no lo mira; la IA lo pide.
+  '/boton-domiciliacion': '<h2>Datos del recibo</h2><div id="dom" role="button" tabindex="0" onclick="window.pulsado=1">Domiciliación bancaria</div>',
 }
 
 let servidor: Server
@@ -115,7 +126,7 @@ test('bucle IA: pantalla con cuenta bancaria → para cerca_de_emision/frontera_
   try {
     let preguntas = 0
     const k: ContextoBucle = {
-      trabajoId: '00000000-0000-4000-8000-000000000003', compania: 'mapfre', ramo: 'hogar', entrada: 'mapfre:nueva_produccion:auto',
+      trabajoId: '00000000-0000-4000-8000-000000000003', compania: 'mapfre', ramo: 'auto', entrada: 'mapfre:nueva_produccion:auto',
       conDatosReales: false, riesgo: {}, env: {}, guard,
       pulsar: (b) => pulsar(b, guard),
       pulsarAutorizado: async () => { throw new Error('no') },
@@ -127,6 +138,88 @@ test('bucle IA: pantalla con cuenta bancaria → para cerca_de_emision/frontera_
     assert.equal(fin.motivo, 'cerca_de_emision')
     assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
     assert.equal(preguntas, 0)
+  } finally {
+    await context.close()
+  }
+})
+
+async function pulsado(page: import('playwright').Page): Promise<number> {
+  return page.evaluate(() => (window as unknown as { pulsado?: number }).pulsado ?? 0)
+}
+
+test('regresión Allianz/Occident: <label> que envuelve un select con la opción «Domiciliación» NO es frontera: pulsa', async () => {
+  const { context, guard, page } = await abrir('/label-envuelve-select')
+  try {
+    await pulsar(page.locator('#b'), guard)
+    assert.equal(await pulsado(page), 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('regresión: «no cuenta con alarma» y «Oficina de la entidad mediadora» NO son frontera: pulsa', async () => {
+  const { context, guard, page } = await abrir('/label-sin-cuenta')
+  try {
+    await pulsar(page.locator('#b'), guard)
+    assert.equal(await pulsado(page), 1)
+  } finally {
+    await context.close()
+  }
+})
+
+for (const [ruta, que] of [
+  ['/combobox-iban', '[role=combobox] aria-label IBAN'],
+  ['/textbox-cuenta', '[role=textbox] «Número de cuenta»'],
+  ['/editable-ccc', '[contenteditable] title CCC'],
+  ['/mat-select-dom', 'mat-select formcontrolname domiciliacionBancaria'],
+] as const) {
+  test(`control NO nativo de cuenta (${que}): ErrorFronteraEmision y NO pulsa`, async () => {
+    const { context, guard, page } = await abrir(ruta)
+    try {
+      await assert.rejects(() => pulsar(page.locator('#b'), guard), ErrorFronteraEmision)
+      assert.equal(await pulsado(page), 0)
+    } finally {
+      await context.close()
+    }
+  })
+}
+
+test('control NO nativo sin cuenta ([role=combobox] «Código postal»): pulsa', async () => {
+  const { context, guard, page } = await abrir('/combobox-cp')
+  try {
+    await pulsar(page.locator('#b'), guard)
+    assert.equal(await pulsado(page), 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('bucle IA, SEGUNDA barrera: la IA pide avanzar sobre un control de cuenta que detectarParada no mira → para sin pulsar', async () => {
+  const { context, guard, page } = await abrir('/boton-domiciliacion')
+  try {
+    let preguntas = 0
+    let pulsaciones = 0
+    const lineas: string[] = []
+    const k: ContextoBucle = {
+      trabajoId: '00000000-0000-4000-8000-000000000004', compania: 'mapfre', ramo: 'auto', entrada: 'mapfre:nueva_produccion:auto',
+      conDatosReales: false, riesgo: {}, env: {}, guard,
+      pulsar: async () => { pulsaciones++ },
+      pulsarAutorizado: async () => { throw new Error('no') },
+      pausaAccion: async () => undefined,
+      pedirPaso: async (c): Promise<RespuestaPaso> => {
+        preguntas++
+        const ref = c.inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'dom')?.ref
+        return { estado: 'ok', leaseHasta: null, respuesta: { version: 1, pantalla: { nombre: 'P', tipo: 'formulario' }, acciones: [{ accion: 'avanzar', ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }], mapeo: [], motivo: null } }
+      },
+      log: (m, d) => { lineas.push(JSON.stringify({ m, ...(d ?? {}) })) },
+    }
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
+    assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
+    assert.equal(preguntas, 1) // la primera barrera (detectarParada) no paró: preguntó a asegura
+    assert.equal(pulsaciones, 0)
+    assert.equal(await pulsado(page), 0)
+    assert.ok(lineas.some((l) => l.includes('Domiciliación bancaria')), lineas.join('\n'))
   } finally {
     await context.close()
   }

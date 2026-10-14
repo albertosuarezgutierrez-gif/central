@@ -26,6 +26,11 @@ const HOME = `<!doctype html><html><body>
       <a id="tr" href="/nsei" target="_blank">Tarificación y Emisión Rápida</a></div>
   </div>
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
+/** El texto exacto en un SPAN dentro de un <a> SIN href (sin rol «link») cuyo onclick emite: el guard tiene que ver el <a>. */
+const HOME_SPAN_EMITIR = HOME.replace(
+  '<a id="tr" href="/nsei" target="_blank">Tarificación y Emisión Rápida</a>',
+  '<a id="tr" onclick="emitirPoliza()"><span>Tarificación y Emisión Rápida</span></a><script>function emitirPoliza(){window.emitido=1}</script>',
+)
 const NSEI = '<!doctype html><html><body><app-datos-basicos><label for="f1">Fecha Condiciones</label><input id="f1" name="f1"><label for="f2">Fecha de mecanización</label><input id="f2" name="f2"><button id="sig" type="button">Siguiente</button></app-datos-basicos></body></html>'
 /** Etiquetas de menú SINTÉTICAS para probar la excepción del guard una a una (cada una en su enlace con id). */
 const MENU = (textos: string[]) => `<!doctype html><html><body>${textos.map((t, i) => `<a id="e${i}" href="/nada">${t}</a>`).join('')}</body></html>`
@@ -51,6 +56,7 @@ before(async () => {
       return void res.end(ruta === '/nsei' ? NSEI : SIN_NSEI)
     }
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+    if (ruta === '/span-trampa') return void res.end(HOME_SPAN_EMITIR)
     res.end(HOME.replace('href="/nsei"', `href="${ruta === '/vacio' ? '/nsei-vacio' : '/nsei'}"`))
   })
   await new Promise<void>((r) => servidor.listen(0, '127.0.0.1', r))
@@ -161,6 +167,16 @@ test('el mismo enlace por el `pulsar` genérico (el del bucle IA y del resto de 
   const { context, page, ctxGuard } = await abrir('/')
   try {
     await assert.rejects(() => abrirTarificacionRapidaAuto(page, { ...ctxGuard, pulsarEnlaceEntrada: ctxGuard.pulsar }), /guard_emision/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('el texto del enlace en un span dentro de un <a> que emite: el guard mira el <a> (onclick) y NO pulsa', async () => {
+  const { context, page, ctxGuard } = await abrir('/span-trampa')
+  try {
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctxGuard, { menuMs: 2_000 }), /guard_emision/)
+    assert.equal(await page.evaluate(() => (window as unknown as { emitido?: number }).emitido ?? 0), 0)
   } finally {
     await context.close()
   }

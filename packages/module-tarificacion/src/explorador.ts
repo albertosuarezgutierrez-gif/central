@@ -724,14 +724,17 @@ export type Parada = { motivo: 'otp' | 'captcha' | 'cerca_de_emision'; senal: st
  * cuenta bancaria en pantalla = el portal ya está en la fase de emisión → el bot PARA sin pulsar nada más y NUNCA lo
  * rellena ni lo elige. Se mira sobre la descripción del control (name, id, formcontrolname, etiqueta, placeholder,
  * aria-label, title) sin tildes y en minúsculas. «domicilio» (dirección) NO casa; «domiciliación» sí.
+ * Falsos positivos cerrados (14/10/2026, regresión Allianz/Occident): «no cuenta con alarma» (el «nº» exige º/°/«o.»),
+ * «Oficina de la entidad mediadora» (entre entidad y oficina solo separadores, ≤20) y «accc» (`ccc` como palabra; el
+ * camelCase y `_` se separan antes: `numCCC`, `num_ccc` siguen casando).
  */
-export const RE_CAMPO_CUENTA_BANCARIA = /iban|\bbic\b|swift|ccc|cuenta[\s_.-]*(?:bancaria|corriente)|cuenta[\s_.-]*cliente|(?:numero|num|nro|n[oº])[\s_.º-]*(?:de[\s_-]*)?cuenta|^cuenta$|domiciliacion|domiciliar|entidad[^]*oficina|oficina[^]*entidad|digito[\s_-]*de[\s_-]*control/
+export const RE_CAMPO_CUENTA_BANCARIA = /iban|\bbic\b|swift|\bccc\b|cuenta[\s_.-]*(?:bancaria|corriente)|cuenta[\s_.-]*cliente|(?:numero|num|nro)[\s_.º-]*(?:de[\s_-]*)?cuenta|\bn\.?\s*(?:[º°]|o\.)\s*(?:de\s*)?cuenta\b|^cuenta$|domiciliacion|domiciliar|entidad[^a-z]{0,20}oficina|oficina[^a-z]{0,20}entidad|digito[\s_-]*de[\s_-]*control/
 /** Motivo legible de la frontera (va al log y al error del flujo determinista, con la etiqueta del campo). */
 export const MOTIVO_FRONTERA_CUENTA = 'frontera de emisión: el portal pide cuenta bancaria'
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 /** La primera descripción de un control que casa con {@link RE_CAMPO_CUENTA_BANCARIA} (tal cual, recortada), o `null`. Pura. */
 export function senalCuentaBancaria(descripciones: readonly (string | null | undefined)[]): string | null {
-  for (const d of descripciones) if (typeof d === 'string' && d !== '' && RE_CAMPO_CUENTA_BANCARIA.test(sinTildes(d))) return d.replace(/\s+/g, ' ').trim().slice(0, 80)
+  for (const d of descripciones) if (typeof d === 'string' && d !== '' && RE_CAMPO_CUENTA_BANCARIA.test(sinTildes(d.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ')))) return d.replace(/\s+/g, ' ').trim().slice(0, 80)
   return null
 }
 
@@ -742,6 +745,14 @@ const RE_CAPTCHA = /captcha|no soy un robot|i'?m not a robot|verifica que eres h
 const RE_TITULO_EMISION = /\brevision\b|forma de pago|domiciliacion|\biban\b|cuenta bancaria|\bfirma\b|firmar|\bemitir\b|emision|contrat|formaliz|\bgrabar\b|archivar|datos (?:de|para) (?:la )?emision|resumen de (?:la )?contratacion|pago con tarjeta/
 /** Campos que solo existen en una pantalla de emisión/pago (por etiqueta/name/id). */
 const RE_CAMPO_EMISION = /\biban\b|cuenta bancaria|numero de cuenta|\bccc\b|tarjeta de credito|\bcvv\b|\bcvc\b|caducidad de la tarjeta|firma digital|firma manuscrita/
+
+/** Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El
+ *  inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaBancaria`) en cada pulsación. */
+function esControlFrontera(el: ElementoInventario): boolean {
+  if (el.tag === 'input' || el.tag === 'select' || el.tag === 'textarea' || el.tag === 'mat-select') return true
+  const rol = (el.role ?? '').toLowerCase()
+  return rol === 'combobox' || rol === 'textbox'
+}
 
 /**
  * ¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL
@@ -760,7 +771,7 @@ export function detectarParada(inv: InventarioDom): Parada | null {
     for (const el of m.elementos) {
       const desc = descripcionesElemento(el).map(plano)
       textos.push(...desc)
-      if (el.tag === 'input' || el.tag === 'select' || el.tag === 'textarea') {
+      if (esControlFrontera(el)) {
         campos.push(...desc)
         // Antes que nada: la frontera de emisión (cuenta bancaria) manda sobre CAPTCHA/OTP y títulos.
         const cuenta = senalCuentaBancaria(descripcionesElemento(el))

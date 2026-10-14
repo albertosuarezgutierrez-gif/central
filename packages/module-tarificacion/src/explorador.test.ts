@@ -678,6 +678,29 @@ describe('frontera de emisión: cuenta bancaria', () => {
       expect(senalCuentaBancaria([t])).toBeNull()
     })
   }
+  // Falsos positivos que pararían Allianz/Occident (revisión 14/10/2026): uno por test.
+  for (const t of ['El inmueble no cuenta con alarma', 'Oficina de la entidad mediadora', 'accc', 'Forma de pago', 'Entidad aseguradora anterior']) {
+    it(`regresión: no casa con «${t}»`, () => {
+      expect(senalCuentaBancaria([t])).toBeNull()
+    })
+  }
+  for (const t of ['IBAN', 'Número de cuenta', 'Nº de cuenta', 'N.º cuenta', 'no. de cuenta', 'CCC', 'num_ccc', 'numCCC', 'Entidad - Oficina - DC', 'Entidad/Oficina', 'Dígito de control', 'Domiciliación bancaria']) {
+    it(`sigue casando con «${t}»`, () => {
+      expect(senalCuentaBancaria([t])).not.toBeNull()
+    })
+  }
+  for (const [que, el] of [
+    ['[role=combobox] aria-label IBAN', { tag: 'div', role: 'combobox', ariaLabel: 'IBAN' }],
+    ['[role=textbox] «Número de cuenta»', { tag: 'div', role: 'textbox', ariaLabel: 'Número de cuenta' }],
+    ['mat-select formcontrolname cuentaBancaria', { tag: 'mat-select', formControlName: 'cuentaBancaria' }],
+  ] as const) {
+    it(`control NO nativo de cuenta para con frontera_cuenta_bancaria: ${que}`, () => {
+      expect(detectarParada(inventario({ elementos: [el] }))?.detalle).toBe('frontera_cuenta_bancaria')
+    })
+  }
+  it('un botón ARIA «Domiciliación bancaria» NO es campo: detectarParada no lo mira (lo caza la segunda barrera del bucle)', () => {
+    expect(detectarParada(inventario({ elementos: [{ tag: 'div', role: 'button', texto: 'Domiciliación bancaria' }] }))).toBeNull()
+  })
   it('frontera_cuenta_bancaria está en la lista cerrada de detalles', () => {
     expect(DETALLES_FIN_EXPLORACION).toContain('frontera_cuenta_bancaria')
   })

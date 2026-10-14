@@ -44,6 +44,72 @@
 - **Organización:** una conversación de Claude por compañía/bot, abierta cuando el bot anterior esté estable.
   Orden previsto: Allianz Hogar primero, luego Mapfre…
 
+### Bitácora común de errores (todas las compañías)
+
+> **Se escribe UNA fila por cada fallo de cualquier bot (Allianz, Mapfre, Occident y los que vengan); la más reciente va ARRIBA.**
+> **Antes de dar de alta o arreglar un bot se lee esta tabla ENTERA.** Las lecciones de Allianz están resumidas en filas
+> (sin el texto largo): el detalle sigue en [Allianz (ePAC)](#allianz-epac) y en `MANUAL-NUEVO-BOT.md` §5.
+
+| Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
+|---|---|---|---|---|---|
+| 14/10/2026 | Mapfre | Enlace de menú «Tarificación y Emisión …» bloqueado por el guard de emisión | «Emisión» como sustantivo de menú casa `PATRON_EMISION` (falso positivo) | Lista cerrada de etiquetas EXACTAS, solo en la fase de ENTRADA (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`). Nunca relajar `PATRON_EMISION`; nunca desde el bucle IA | `services/tarificador-rpa/test/frontera-cuenta.test.ts` (importa `pulsarEnlaceEntradaAutorizado`) |
+| 14/10/2026 | Mapfre | El producto abre PESTAÑA NUEVA y el bucle se quedaba en la pestaña de origen | `entrar()` devolvía la página de partida | `entrar()` devuelve la `Page` de la pestaña nueva y el bucle sigue en ella (`entrarYExplorar`); las páginas de la entrada no cuentan. `EXPLORADOR_VERSION` 0.1.3 | Sin cepo específico de pestaña nueva |
+| 14/10/2026 | Mapfre | Diálogo nativo de autenticación HTTP al abrir el tarificador | Chromium pide usuario y contraseña en la pestaña nueva | Se CANCELA: el contexto va SIN `httpCredentials` (Chromium responde 401). No meter credenciales en el bot | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
+| 14/10/2026 | Común | El bot podía avanzar hasta un campo de cuenta bancaria | La cuenta bancaria no estaba fijada como frontera de emisión | Cuenta bancaria = FRONTERA: el bot NUNCA escribe ni elige; si aparece, PARA sin pulsar (`ErrorFronteraEmision`, `exigirSinCuentaBancaria`, `exigirCampoNoBancario`; explorador: `frontera_cuenta_bancaria`) | `services/tarificador-rpa/test/frontera-cuenta.test.ts` |
+| 14/10/2026 | Común | Firmar, pagar y domiciliar no estaban en el guard | Verbos de emisión fuera de `PATRON_EMISION` | Añadidos a `PATRON_EMISION` (`guard-emision.ts`, commit df35eb7) | Cubiertos por `services/tarificador-rpa/test/occident-guarda.test.ts` (lista los verbos); falta cepo del patrón común |
+| 14/10/2026 | Común | Falsos positivos de la frontera: «no cuenta con alarma» (el «nº» casaba), «Oficina de la entidad mediadora», «accc»; un label que incluye opciones de un select | Regex sin acotar; se miraba texto ajeno al label | Regex acotado (`RE_CAMPO_CUENTA_BANCARIA`: «nº» exige º/°/«o.»; entidad…oficina ≤ 20 separadores; `ccc` como palabra). Se usa el texto propio del label, no el de sus opciones. Cambio en el árbol, pendiente de commit | `packages/module-tarificacion/src/explorador.test.ts` (regresión de `RE_CAMPO_CUENTA_BANCARIA`) |
+| 14/10/2026 | Común | La frontera no veía controles Angular no nativos (`mat-select`, `role=combobox`) | Solo miraba `input`, `select` y `textarea` | `SELECTOR_CONTROLES_FRONTERA` añade `[role=combobox]`, `[role=textbox]`, `[contenteditable=true]` y `mat-select` | Sin cepo específico del selector (`frontera-cuenta.test.ts` cubre la frontera, no el selector) |
+| previa | Allianz | Iframe tardío: se inventariaba la carcasa | El formulario carga en `iframe#appArea` con retraso | Esperar el marco hasta 30 s (`esperarMarcoApp`) antes de inventariar | — |
+| previa | Allianz | «Allianz HOGAR» ≠ «Hogar»: timeout al elegir la tesela | Casar por «contiene» | Etiqueta EXACTA (`etiquetaProducto`); Hogar y Negocio Plus se entran desde Particulares | — |
+| previa | Allianz | `selectOption` no funciona con el desplegable | `nx-dropdown` de Angular, no `<select>` | Abrir, leer la lista y elegir por valor exacto; si no está, `opcion_no_aplicada` | — |
+| previa | Allianz | Refs viejos tras rellenar el CP (la pantalla se repinta) | El autocompletado repinta el formulario | Cortar el lote tras rellenar (`CLAVES_AUTOCOMPLETADO`, `cortarLoteTrasRellenar`) y reinventariar | — |
+| previa | Allianz | Varias poblaciones para un CP | La IA elegía población | `resolverPoblacion` con elección explícita o `ErrorEleccionPoblacion`; la IA no elige | — |
+| previa | Allianz | Varias versiones de vehículo: elección incorrecta | Elección por parecido | Parar con la lista completa; la IA solo elige con confianza `alta` y código EXACTO, o persona/memoria (`eleccion-lista.ts`, `eleccion-memoria.ts`) | — |
+| previa | Allianz | Motivo de parada de la IA rechazado por la validación | Motivo demasiado largo | `MOTIVOS_PARAR` es la fuente única; motivo ≤ 200 caracteres (`recortarMotivo`) | — |
+| previa | Allianz | Año y m² inventados o sobrescritos | Dato no explícito | Catastro SOLO si es inequívoco; si no, el riesgo no se encola. Uso y régimen explícitos, sin valor por defecto | — |
+| previa | Allianz | Avance mal identificado: «Aceptar» de otra pantalla puede EMITIR | «Calcular» y «Aceptar» son `div` con `onclick` | Identificar por id, texto, `onclick` y formulario de origen EXACTOS | — |
+| previa | Allianz | Un POST nuevo no lo vio la grabación | La grabación no registra la red | Ventana de red que aborta los no-GET fuera de la lista; si sale un POST nuevo, el trabajo muere hasta verlo | — |
+| previa | Allianz | Precio «Anual» distinto del portal | «Anual» = primer recibo prorrateado; «Sucesivos» = prima anual | Verificar el precio contra el portal con una cotización conocida antes de confiar en el lector | — |
+
+## Capa por ramo (etiquetas de cada compañía)
+
+> **Al dar de alta un bot de un ramo ya conocido, se parte de esta tabla y solo se añaden las etiquetas de la compañía nueva.**
+> Claves = `CATALOGO_EXPLORACION` (`packages/module-tarificacion/src/explorador.ts`). Las celdas salen solo de lo documentado o del
+> código; **vacía = no consta** (no se inventa ni se copia de otra compañía).
+
+### Auto
+
+| Clave canónica | Allianz | Mapfre (NSEI) |
+|---|---|---|
+| `efecto.fecha` | — | «Fecha Condiciones» (paso 1, datos básicos) |
+| `tomador.nif` | — | `codigoDocumento` (datos básicos, NIF/CIF con lupa) |
+| `vehiculo.matricula` | — | `matricula` (`app-datos-vehiculo`) |
+| `vehiculo.codigo_postal` | — | `cpCirculacion` (CP de circulación) |
+| `vehiculo.marca` / `vehiculo.modelo` | — | Sin separar: una sola «denominación comercial» (buscador `txtPredictivo`) |
+| `vehiculo.cilindrada_cc` | — | Columna «cc» del diálogo «Selección de vehículo» |
+| `conductor.fecha_nacimiento` | — | `fechaNacimiento` (`app-conductor-habitual`) |
+| `conductor.fecha_carne` | — | `fechaExpedicion` (`app-conductor-habitual`) |
+| `historial.siniestros_5_anios` | — | «Siniestros RC 5 últimos años» (`siniestros`) |
+| `historial.anios_asegurado` | — | `tiempoAntComp`: lo calcula el portal, llega DESHABILITADO; nunca se escribe |
+
+Fuera del catálogo a propósito (`DATOS_AUTO`): uso, ámbito de circulación y clase de permiso (`mat-select`; Mapfre: `uso`, `ambitoCirculacion`, `codigoTipoLicencia`) y compañía anterior (`companiaAnterior`).
+
+### Hogar
+
+| Clave canónica | Allianz | Mapfre (NSEI) |
+|---|---|---|
+| `efecto.fecha` | — | — |
+| `tomador.fecha_nacimiento` | Pantalla 1 típica de Hogar; etiqueta de Allianz sin documentar | — |
+| `tomador.nif` | «Tipo de documento» (`nx-dropdown`) + nº de documento | — |
+| `contacto.email` / `contacto.telefono` | — | — |
+| `inmueble.codigo_postal` | CP de la pantalla 1 (dispara el autocompletado) | — |
+| `inmueble.provincia` / `inmueble.municipio` | Autocompletadas tras el CP; población no es texto libre | — |
+| `inmueble.tipo_via` / `inmueble.nombre_via` | Vía autocompletada | — |
+| `inmueble.numero` / `inmueble.planta` | «Número» y «planta/puerta» de la pantalla 1 (etiqueta exacta sin documentar) | — |
+| `inmueble.superficie_m2` / `inmueble.anio_construccion` | Obligatorios; sin autocompletar antes de avanzar; Catastro solo si es inequívoco | — |
+| `hogar.uso` / `hogar.regimen` | Explícitos (habitual, secundaria, alquiler, turístico / propietario, inquilino); sin valor por defecto | — |
+| `hogar.tipo_vivienda` / `hogar.capital_continente` / `hogar.capital_contenido` | — | — |
+
 ## Allianz (ePAC)
 
 - **Entrada:** Venta → «Nueva Alta» abre un modal con acordeones plegados: **Autos, Particulares, Empresas,

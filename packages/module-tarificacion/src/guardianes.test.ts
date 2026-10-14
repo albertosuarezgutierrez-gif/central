@@ -42,6 +42,19 @@ describe('guard de emisión · verbos firmar/pagar/domiciliar (14/10/2026)', () 
   })
 })
 
+describe('guard de emisión · textos ENTEROS de botón: pago, firma, domiciliación (14/10/2026)', () => {
+  it.each(['Pago', 'Ir al pago', 'Confirmar pago', 'Firma', 'Firmar', 'Domiciliación', 'Domiciliación bancaria', '  PAGO  ', 'Ir al pago >'])('bloquea el botón «%s»', (d) => {
+    expect(() => comprobarBoton([d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+  })
+  it.each(['Forma de pago', 'Fraccionamiento de pago', 'Confirmar', 'Guardar', 'Descargar PDF', 'Calcular', 'Continuar', 'Firmante', 'Domicilio'])('deja pasar el botón «%s»', (d) => {
+    expect(() => comprobarBoton([d])).not.toThrow()
+  })
+  it('anclado: NO entra en el patrón general (que también mira URLs): «/pago» o «pago=1» no se bloquean por esto', () => {
+    expect(pareceEmision('Pago')).toBe(false)
+    expect(() => comprobarUrl('https://portal.example/pago?paso=1')).not.toThrow()
+  })
+})
+
 describe('guard de emisión · Allianz RC PYME (07/10/2026)', () => {
   it.each(['menu3', 'menu4', 'menu5', 'MENU5', 'btnAccept', 'btnFracciona', 'Pago fraccionado', 'Proyecto ampliado', 'Datos emisión', 'Archivar', 'emision_ipid()'])(
     'bloquea «%s»',

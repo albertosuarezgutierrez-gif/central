@@ -200,20 +200,31 @@ export class ErrorFronteraEmision extends EmisionBloqueadaError {
   }
 }
 
+/**
+ * Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (Angular Material, combobox/textbox ARIA,
+ * contenteditable). Los `input[type=hidden]` se descartan aparte. Del no nativo solo atributos (nunca su texto: es el valor).
+ */
+export const SELECTOR_CONTROLES_FRONTERA = 'input, select, textarea, [role=combobox], [role=textbox], [contenteditable=true], mat-select'
+
 /** Descripción de los controles de formulario VISIBLES de cada marco (atributos y etiqueta; nunca el valor). Solo lectura. */
 async function descripcionesControles(page: Page): Promise<string[][]> {
   const out: string[][] = []
   for (const f of marcosVivos(page)) {
     // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
     const d = await f
-      .evaluate(() =>
-        Array.from(document.querySelectorAll('input:not([type=hidden]), select, textarea'))
+      .evaluate((SEL_CONTROLES) =>
+        Array.from(document.querySelectorAll(SEL_CONTROLES))
+          .filter((n) => !(n.tagName === 'INPUT' && (n as HTMLInputElement).type === 'hidden'))
           .filter((n) => (n as HTMLElement).getClientRects().length > 0)
           .map((n) => {
             const e = n as HTMLInputElement
-            const etq = e.labels && e.labels.length > 0 ? (e.labels[0] as HTMLElement).innerText : null
+            // Texto PROPIO de la etiqueta: sin los controles que envuelve (las opciones de un select no son etiqueta:
+            // «Forma de pago ▸ Domiciliación» pararía cada pulsación de Allianz/Occident).
+            const lab = e.labels && e.labels.length > 0 ? (e.labels[0].cloneNode(true) as HTMLElement) : null
+            if (lab) lab.querySelectorAll(SEL_CONTROLES).forEach((x) => x.remove())
+            const etq = lab ? (lab.textContent ?? '').replace(/\s+/g, ' ').trim() || null : null
             return [etq, e.getAttribute('name'), e.id || null, e.getAttribute('formcontrolname'), e.getAttribute('aria-label'), e.getAttribute('placeholder'), e.getAttribute('title')].filter((x): x is string => typeof x === 'string' && x !== '')
-          }),
+          }), SELECTOR_CONTROLES_FRONTERA,
       )
       .catch(() => [] as string[][])
     out.push(...d)
@@ -231,11 +242,13 @@ export async function exigirSinCuentaBancaria(page: Page): Promise<void> {
 
 /** Antes de ESCRIBIR o ELEGIR en un campo: si es de cuenta bancaria, `ErrorFronteraEmision` (nunca se rellena). */
 export async function exigirCampoNoBancario(campo: Locator): Promise<void> {
-  const d = await campo.evaluate((n) => {
+  const d = await campo.evaluate((n, SEL_CONTROLES) => {
     const e = n as HTMLInputElement
-    const etq = e.labels && e.labels.length > 0 ? (e.labels[0] as HTMLElement).innerText : null
+    const lab = e.labels && e.labels.length > 0 ? (e.labels[0].cloneNode(true) as HTMLElement) : null
+    if (lab) lab.querySelectorAll(SEL_CONTROLES).forEach((x) => x.remove())
+    const etq = lab ? (lab.textContent ?? '').replace(/\s+/g, ' ').trim() || null : null
     return [etq, e.getAttribute('name'), e.id || null, e.getAttribute('formcontrolname'), e.getAttribute('aria-label'), e.getAttribute('placeholder'), e.getAttribute('title')]
-  })
+  }, SELECTOR_CONTROLES_FRONTERA)
   const s = senalCuentaBancaria(d)
   if (s !== null) throw new ErrorFronteraEmision(s)
 }

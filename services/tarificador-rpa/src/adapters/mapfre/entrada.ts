@@ -38,9 +38,14 @@ export function etiquetaExacta(t: string): RegExp {
   return new RegExp(`^\\s*${palabras.join('\\s+')}\\s*$`, 'i')
 }
 
-async function localizar(page: Page, rol: 'tab' | 'link' | 'button', texto: string, que: string, espera = ESPERA_MENU_MS): Promise<Locator> {
+async function localizar(page: Page, rol: 'tab' | 'link' | 'button', texto: string, que: string, espera = ESPERA_MENU_MS, deEntrada = false): Promise<Locator> {
   const exacto = etiquetaExacta(texto)
-  const l = page.getByRole(rol, { name: exacto }).or(page.getByText(exacto)).filter({ visible: true }).first()
+  // El ENLACE DE ENTRADA (excepción del guard): por texto se sube al control pulsable (<a>/<button>/role link|button) más
+  // cercano, para que el guard revise SU href/onclick; nunca un span suelto dentro de un <a> que no se mira.
+  const porTexto = deEntrada
+    ? page.getByText(exacto).locator('xpath=ancestor-or-self::*[self::a or self::button or @role="link" or @role="button"][1]')
+    : page.getByText(exacto)
+  const l = page.getByRole(rol, { name: exacto }).or(porTexto).filter({ visible: true }).first()
   try {
     await l.waitFor({ state: 'visible', timeout: espera })
   } catch {
@@ -63,7 +68,7 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
   const tarjeta = await localizar(page, 'link', TARJETA_TURISMOS_Y_MOTOS, 'tarjeta', menuMs)
   await ctx.pulsar(tarjeta)
   await ctx.pausa()
-  const enlace = await localizar(page, 'link', ENLACE_TARIFICACION_RAPIDA, 'enlace', menuMs)
+  const enlace = await localizar(page, 'link', ENLACE_TARIFICACION_RAPIDA, 'enlace', menuMs, true)
 
   // El listener va ANTES del clic: la pestaña se abre durante él.
   const nueva = page.context().waitForEvent('page', { timeout: menuMs })
