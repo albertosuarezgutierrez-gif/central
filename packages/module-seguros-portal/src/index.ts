@@ -706,3 +706,5 @@ export type {
   PreferenciasAvisosGuardadas,
   ResultadoCambioPreferencias,
 } from './preferencias-avisos.ts'
+// Evolución de la prima (14/10/2026): detalle al que lleva el push de subida de prima.
+export { baseDeUnidad, evolucionDePrima, porcentajeDeSubida, type EvolucionPrima, type FilaPrimaObservada } from './evolucion-prima.ts'

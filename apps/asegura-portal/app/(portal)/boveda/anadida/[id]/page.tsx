@@ -6,6 +6,7 @@ import { accesoADeclarada } from '@/lib/declarada-ajena'
 import { prisma } from '@/lib/db'
 import { DECLARADA_NO_ELIMINADA } from '@/lib/declaradas-eliminadas'
 import { eur } from '@/lib/dinero'
+import { evolucionDePrimaDePoliza } from '@/lib/evolucion-prima'
 import { clavePedida, estadoCaptacion, PREFIJO_CAPTACION } from '@/lib/captacion-declarada'
 import { entradaDesdeFila, hayClaveIA, huellaRevision } from '@/lib/revision-poliza'
 import { leerRevisionDeSesion } from '@/lib/revision-poliza-bd'
@@ -14,6 +15,7 @@ import { getIdentidad } from '@/lib/session'
 
 import { BienDeclarada, IconoRamo, RAMO } from '../../PolizaVista'
 import { CaptacionDeclarada } from '../../CaptacionDeclarada'
+import { EvolucionPrima } from '../../EvolucionPrima'
 import { EditarPoliza } from '../../EditarPoliza'
 import { EliminarPoliza } from '../../EliminarPoliza'
 import { RevisarPoliza } from './RevisarPoliza'
@@ -104,6 +106,9 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
   const revisionDisponible = hayClaveIA(process.env) || Array.isArray(revisionCache)
   const revisionPedida = captacion === 'ya_pedida' || marcasCaptacion.some((m) => m.clave === clavePedida(p.id))
 
+  // «Evolución de la prima»: solo las PROPIAS (el cron observa solo las aportadas de cada identidad).
+  const evolucionPrima = await evolucionDePrimaDePoliza('aportada', p.id, acceso.propia)
+
   const ramo = p.ramo ? (RAMO[p.ramo] ?? p.ramo) : null
   const objeto =
     p.datosRamo && typeof p.datosRamo === 'object' && !Array.isArray(p.datosRamo)
@@ -144,6 +149,12 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
       </p>
 
       {captacion !== 'oculta' && <CaptacionDeclarada polizaId={p.id} estado={captacion} />}
+
+      <EvolucionPrima
+        evolucion={evolucionPrima}
+        hrefRevisar={null}
+        textoSinEnlace={captacion !== 'oculta' ? 'Puedes pedirlo en la tarjeta de más arriba.' : 'Escríbenos o llámanos y la revisamos.'}
+      />
 
       {acceso.propia && revisionCache !== null && (
         <RevisarPoliza

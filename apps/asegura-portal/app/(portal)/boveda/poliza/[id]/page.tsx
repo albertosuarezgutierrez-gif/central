@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation'
 import { esRamoInmueble } from '@central/module-seguros-portal'
 import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
+import { evolucionDePrimaDePoliza } from '@/lib/evolucion-prima'
+import { puedeOfrecerMejorarPrecio } from '@/lib/vencimientos'
 import { vigenciaRiesgo } from '@/lib/datos-poliza-cima'
 import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
@@ -13,6 +15,7 @@ import { personasDePoliza } from '@/lib/personas-poliza'
 import { seguimientosDePartes } from '@/lib/parte-seguimiento'
 import { getIdentidad } from '@/lib/session'
 
+import { EvolucionPrima } from '../../EvolucionPrima'
 import { SeguimientoDeParte } from '../../SeguimientoParte'
 import { PersonasDeTuPoliza, TercerosDeTusSiniestros } from '../../PersonasPoliza'
 import {
@@ -71,9 +74,14 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   let deOtro: string | null = null
   /** Papeles de esta identidad en la póliza, si la ve por FIGURAR en ella. `null` = no es el caso. */
   let figuraComo: string[] | null = null
+  /** Nivel de la ficha PROPIA donde está la póliza; `null` = no es propia. */
+  let nivelPropio: string | null = null
   for (const t of cartera.propias) {
     const encontrada = t.polizas.find((p) => p.id === id)
-    if (encontrada) poliza = encontrada
+    if (encontrada) {
+      poliza = encontrada
+      nivelPropio = t.nivel
+    }
   }
   if (!poliza) {
     for (const t of cartera.autorizadas) {
@@ -112,6 +120,11 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   // póliza es de esta identidad (tomador propio o figura en ella). Sin puente o sin dato → `null` y se calla.
   // Una póliza vista por AUTORIZACIÓN no pide nada: sus personas no son de quien mira.
   const personas = deOtro && figuraComo === null ? null : await personasDePoliza(identidad.id, p.id)
+  // «Evolución de la prima»: solo de las PROPIAS (el cron observa solo esas) y sin `figuraTitular`.
+  // La identidad sale de la cookie dentro de la lectura; el id de la URL ya se ha buscado arriba.
+  const propia = nivelPropio !== null && p.figuraTitular === undefined
+  const evolucionPrima = await evolucionDePrimaDePoliza('cartera', p.id, propia)
+  const hrefRevisarPrecio = propia && nivelPropio !== null && puedeOfrecerMejorarPrecio(p, nivelPropio, null) ? `/boveda/mejorar/${p.id}` : null
   const seguimientos = seguimientosDePartes(partesPoliza, cartera)
   const partesConEstado = partesPoliza.flatMap((x) => {
     const seg = seguimientos.get(x.id) ?? null
@@ -304,6 +317,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
 
         <Coberturas p={p} />
       </section>
+
+      <EvolucionPrima evolucion={evolucionPrima} hrefRevisar={hrefRevisarPrecio} textoSinEnlace="Escríbenos o llámanos y la revisamos." />
 
       {/* La documentación ORIGINAL de la compañía (el PDF de la póliza). `null` = no es tuya o tu nivel
           no la ve: no se pinta. `[]` = aún no nos la ha entregado, y se dice. */}
