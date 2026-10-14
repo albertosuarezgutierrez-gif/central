@@ -312,3 +312,12 @@ test('sin el ítem «Análisis de necesidades» → ErrorMapaIncompleto (no se a
     await context.close()
   }
 })
+
+test('la contraseña de Occident solo se escribe en https://ssoaut.gco.global', async () => {
+  const { puedeEscribirContrasena } = await import('../src/adapters/occident/mapa.ts')
+  assert.equal(puedeEscribirContrasena('https://ssoaut.gco.global/my.policy'), true)
+  assert.equal(puedeEscribirContrasena('http://ssoaut.gco.global/my.policy'), false)
+  assert.equal(puedeEscribirContrasena('https://ssoaut.gco.global.evil.com/'), false)
+  assert.equal(puedeEscribirContrasena('https://portaloccident.gco.global/'), false)
+  assert.equal(puedeEscribirContrasena('no es url'), false)
+})

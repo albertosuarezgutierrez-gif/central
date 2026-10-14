@@ -66,6 +66,16 @@ export function urlFormularioTomador(ramoGco: string = RAMO_GCO_COMUNIDADES): st
 }
 
 /** ¿La URL es una página del SSO (sin sesión / sesión caducada)? */
+/** La contraseña solo se escribe en el SSO real: https y host exacto (nunca tras una redirección a otro host). */
+export function puedeEscribirContrasena(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' && u.hostname === HOST_SSO
+  } catch {
+    return false
+  }
+}
+
 export function esUrlSso(url: string): boolean {
   try {
     return new URL(url).hostname === HOST_SSO

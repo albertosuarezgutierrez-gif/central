@@ -43,6 +43,7 @@ import {
   comprobarSrcIframeHogar,
   esEstrellaFavorito,
   esUrlSso,
+  puedeEscribirContrasena,
   etiquetaExactaOccident,
   huecoHogar,
   urlEntradaPortal,
@@ -181,6 +182,7 @@ export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
     } catch {
       throw huecoHogar(FALTA_CONTRASENA_HOGAR)
     }
+    if (!puedeEscribirContrasena(page.url())) throw new ErrorTarificador('portal', 'occident/hogar: la contraseña solo se escribe en https://ssoaut.gco.global')
     await clave.fill(ctx.credenciales.contrasena)
     await ctx.pausa()
     await pulsarSeguro(ctx, page.locator(SEL_HIPOTESIS_SSO_ENVIAR).filter({ visible: true }).first())
