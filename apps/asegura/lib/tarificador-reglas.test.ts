@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  bloqueaDuplicado, claveEncolar, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  avisoTraza, bloqueaDuplicado, claveEncolar, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -227,4 +227,62 @@ test('registrarResultado: una exploración no devuelve ofertas, solo ella termin
   assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
   assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
   assert.match(f, /const modo = f \? modoParaWorker\(f\.modo, modosWorker\) : null/)
+})
+
+// ─── Traza: nunca muda (14/10/2026) y compatible con la imagen Fly ya desplegada ───
+const JOB_T = '11111111-1111-4111-8111-111111111111'
+
+test('avisoTraza: prefijo fijo, id y motivo; quita URLs y recorta', () => {
+  const m = avisoTraza(JOB_T, new Error('fallo en postgresql://u:secreto@host/db y ' + 'x'.repeat(500)))
+  assert.ok(m.startsWith(`[tarificador-traza] trabajo ${JOB_T}: `))
+  assert.doesNotMatch(m, /secreto|postgresql/)
+  assert.ok(m.length < 400)
+})
+
+test('compat hacia atrás: traza actual (5 claves), sin traza y con traza vacía se leen igual', () => {
+  const base = { trabajoId: JOB_T, resultado: 'error', error: { tipo: 'portal', mensaje: 'x' } }
+  const pasos = [
+    { paso: 'login', inicio: '2026-10-14T10:00:00.000Z', duracionMs: 900, ok: true, errorCodigo: null },
+    { paso: 'formulario', inicio: '2026-10-14T10:00:01.000Z', duracionMs: 5000, ok: false, errorCodigo: 'portal' },
+  ]
+  const a = leerResultadoWorker({ ...base, pasos, botVersion: '0.2.0' })
+  assert.ok(a.ok)
+  if (a.ok) assert.deepEqual([a.r.pasos.length, a.r.botVersion, a.r.trazaRechazada], [2, '0.2.0', undefined])
+  for (const cuerpo of [base, { ...base, pasos: [] }, { ...base, pasos: null }]) {
+    const b = leerResultadoWorker(cuerpo)
+    assert.ok(b.ok)
+    if (b.ok) assert.deepEqual([b.r.pasos, b.r.trazaRechazada], [[], undefined])
+  }
+  // Traza mala: el resultado se acepta igual, sin pasos, con el motivo (clave, no valor).
+  const c = leerResultadoWorker({ ...base, pasos: [{ ...pasos[0], dni: '12345678Z' }] })
+  assert.ok(c.ok)
+  if (c.ok) {
+    assert.deepEqual(c.r.pasos, [])
+    assert.match(c.r.trazaRechazada!.join(' '), /dni/)
+    assert.doesNotMatch(c.r.trazaRechazada!.join(' '), /12345678Z/)
+  }
+})
+
+test('🪤 la traza rechazada o no guardada NO es muda: console.error con [tarificador-traza] y sin romper el resultado', () => {
+  const ruta = readFileSync(join(APP, 'app/api/tarificador/resultado/route.ts'), 'utf8')
+  assert.match(ruta, /console\.error\(avisoTraza\(l\.r\.trabajoId/)
+  const f = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  const cuerpo = f.slice(f.indexOf('export async function registrarResultado'), f.indexOf('async function guardarTarificacionRpa'))
+  const tras = cuerpo.slice(cuerpo.indexOf('if (interno.traza) {'))
+  assert.match(tras, /catch \(e\) \{[\s\S]*console\.error\(avisoTraza\(/)
+  assert.doesNotMatch(tras, /console\.warn/)
+  assert.match(tras, /el worker no mandó ningún paso/)
+  assert.match(tras, /no existe: no se guarda la traza/)
+  assert.doesNotMatch(tras, /throw /)
+})
+
+test('los nombres de paso y códigos que genera el worker real (crearTraza) pasan validarTraza', async () => {
+  const { crearTraza } = await import('@central/module-tarificacion')
+  const t = crearTraza((e) => (e instanceof Error ? 'portal' : 'desconocido'))
+  for (const n of ['login', 'navegacion', 'formulario', 'tarificar', 'lectura_primas'] as const) await t.paso(n, async () => 1)
+  await t.paso('tarificar', async () => { throw new Error('x') }).catch(() => undefined)
+  t.anotar('formulario', Date.now() - 100, { e: new Error('y') })
+  const v = leerResultadoWorker({ trabajoId: JOB_T, resultado: 'error', error: { tipo: 'portal', mensaje: 'x' }, pasos: t.pasos() })
+  assert.ok(v.ok)
+  if (v.ok) assert.deepEqual([v.r.trazaRechazada, v.r.pasos.length], [undefined, 7])
 })

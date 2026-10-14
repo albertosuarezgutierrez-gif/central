@@ -163,6 +163,12 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
     let error: unknown = null
     let tope: ReturnType<typeof setTimeout> | undefined
+    // Traza (14/10/2026): los adaptadores de Moto/Auto/Mapfre no llaman a `ctx.paso`; sin esto su traza salía VACÍA y
+    // `tarificacion_trabajo_pasos` no recibía ni una fila. Si el adaptador no dejó ningún paso, se anota UNO grueso con el
+    // resultado del intento entero (`formulario`, sin detalle: solo nombre, duración y código de error).
+    const pasosAntes = k.traza.pasos().length
+    const inicioIntento = Date.now()
+    const cubrirTraza = (e?: { e: unknown }) => { if (k.traza.pasos().length === pasosAntes) k.traza.anotar('formulario', inicioIntento, e) }
     try {
       resultado = await Promise.race([
         k.tarificar(page, ctx),
@@ -176,6 +182,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     } finally {
       clearTimeout(tope)
     }
+    cubrirTraza(resultado && !error ? undefined : { e: error })
 
     if (resultado && !error) {
       // Sesión buena: se guarda EN MEMORIA (sin `path`: nunca a disco) para el siguiente trabajo de este proceso.

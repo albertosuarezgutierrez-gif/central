@@ -83,6 +83,8 @@ export type Traza = {
   paso: <T>(nombre: NombrePasoTraza, fn: () => Promise<T>) => Promise<T>
   /** Copia de los pasos registrados hasta ahora (orden de ejecución). */
   pasos: () => PasoTraza[]
+  /** Anota a posteriori un paso ya ocurrido (`inicioMs` = Date.now() de su arranque); `error` presente = falló. Para adaptadores que no instrumentan `paso`. */
+  anotar: (nombre: NombrePasoTraza, inicioMs: number, error?: { e: unknown }) => void
 }
 
 /**
@@ -92,29 +94,30 @@ export type Traza = {
  */
 export function crearTraza(codigoDe: (e: unknown) => string, ahora: () => number = Date.now): Traza {
   const lista: PasoTraza[] = []
+  const anotar = (nombre: NombrePasoTraza, t0: number, ok: boolean, e?: unknown) => {
+    if (lista.length >= MAX_PASOS_TRAZA) return
+    let codigo: CodigoErrorTraza | null = null
+    if (!ok) {
+      let c = 'desconocido'
+      try { c = codigoDe(e) } catch { /* el clasificador no debe romper la traza */ }
+      codigo = esCodigoErrorTraza(c) ? c : 'desconocido'
+    }
+    lista.push({ paso: nombre, inicio: new Date(t0).toISOString(), duracionMs: Math.min(Math.max(0, Math.round(ahora() - t0)), MAX_DURACION_MS), ok, errorCodigo: codigo })
+  }
   return {
     async paso(nombre, fn) {
       const t0 = ahora()
-      const registrar = (ok: boolean, e?: unknown) => {
-        if (lista.length >= MAX_PASOS_TRAZA) return
-        let codigo: CodigoErrorTraza | null = null
-        if (!ok) {
-          let c = 'desconocido'
-          try { c = codigoDe(e) } catch { /* el clasificador no debe romper la traza */ }
-          codigo = esCodigoErrorTraza(c) ? c : 'desconocido'
-        }
-        lista.push({ paso: nombre, inicio: new Date(t0).toISOString(), duracionMs: Math.min(Math.max(0, Math.round(ahora() - t0)), MAX_DURACION_MS), ok, errorCodigo: codigo })
-      }
       try {
         const r = await fn()
-        registrar(true)
+        anotar(nombre, t0, true)
         return r
       } catch (e) {
-        registrar(false, e)
+        anotar(nombre, t0, false, e)
         throw e
       }
     },
     pasos: () => lista.map((p) => ({ ...p })),
+    anotar: (nombre, inicioMs, error) => (error ? anotar(nombre, inicioMs, false, error.e) : anotar(nombre, inicioMs, true)),
   }
 }
 

@@ -33,6 +33,7 @@ import { purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga
 import {
   ESTADOS_DUPLICADO,
   LEASE_MS,
+  avisoTraza,
   bloqueaDuplicado,
   claveEncolar,
   configFly,
@@ -414,12 +415,19 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     const aprender = memoriaTrasExito(interno.traza.t)
     if (aprender) await guardarMemoriaVersion(aprender.k, { codigo: aprender.codigo, etiqueta: aprender.etiqueta, origen: 'ia' })
   }
-  if (interno.traza && (await hayPasos())) {
-    try {
-      await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
-    } catch (e) {
-      // Sin datos personales: solo el id del trabajo y el mensaje del error.
-      console.warn('[tarificador] no se pudo guardar la traza del trabajo', interno.traza.t.id, e instanceof Error ? e.message : String(e))
+  if (interno.traza) {
+    if (!(await hayPasos())) {
+      console.error(avisoTraza(interno.traza.t.id, 'la tabla tarificacion_trabajo_pasos no existe: no se guarda la traza (¿SQL de 08/10/2026 sin aplicar?)'))
+    } else if (r.pasos.length === 0) {
+      // Sin pasos y sin rechazo (ese ya se avisó en la ruta): el adaptador no instrumenta ctx.paso, o el worker es anterior a la traza.
+      if (!r.trazaRechazada && r.tipo !== 'explorado' && (interno.traza.t as { modo?: string | null }).modo !== 'exploracion') console.error(avisoTraza(interno.traza.t.id, 'el worker no mandó ningún paso (adaptador sin ctx.paso o imagen antigua)'))
+    } else {
+      try {
+        await guardarPasos(prisma, interno.traza.t, r.pasos, interno.traza.captura)
+      } catch (e) {
+        // Sin datos personales: solo el id del trabajo y el mensaje del error (`avisoTraza` quita URLs y recorta).
+        console.error(avisoTraza(interno.traza.t.id, `no se pudo guardar la traza (${r.pasos.length} pasos): ${e instanceof Error ? e.message : String(e)}`))
+      }
     }
   }
   return interno.res

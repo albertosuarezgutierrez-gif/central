@@ -377,6 +377,29 @@ export function pasoDelError(error: unknown): { paso: string; mensaje: string } 
   return { paso, mensaje: norm || '(sin mensaje)' }
 }
 
+export type TrabajoTasa = { compania: string; ramo: string; modo: string; estado: string }
+export type TasaGrupo = { compania: string; ramo: string; modo: string; total: number; ok: number; error: number; cancelado: number; tasa_ok: number | null }
+
+/**
+ * tasa_ok por compañía/ramo/modo (14/10/2026). PURA. `error` = `error_definitivo` + `requiere_humano` (los mismos FALLIDOS
+ * del panel); `cancelado` se cuenta aparte y queda FUERA de la tasa; pendientes/en curso/reintentables cuentan en `total`
+ * pero no en la tasa (aún no tienen desenlace). tasa_ok = ok / (ok + error) en [0,1]; sin ok ni error → `null`, nunca 0.
+ */
+export function tasaOkPorGrupo(trabajos: TrabajoTasa[]): TasaGrupo[] {
+  const m = new Map<string, TasaGrupo>()
+  for (const t of trabajos) {
+    const k = JSON.stringify([t.compania, t.ramo, t.modo])
+    let g = m.get(k)
+    if (!g) m.set(k, (g = { compania: t.compania, ramo: t.ramo, modo: t.modo, total: 0, ok: 0, error: 0, cancelado: 0, tasa_ok: null }))
+    g.total++
+    if (t.estado === 'ok') g.ok++
+    else if (FALLIDOS.has(t.estado)) g.error++
+    else if (t.estado === 'cancelado') g.cancelado++
+  }
+  for (const g of m.values()) g.tasa_ok = g.ok + g.error > 0 ? g.ok / (g.ok + g.error) : null
+  return [...m.values()].sort((a, b) => a.compania.localeCompare(b.compania) || a.ramo.localeCompare(b.ramo) || a.modo.localeCompare(b.modo))
+}
+
 export function calcularMetricas(trabajos: TrabajoMetrica[], ahora: Date): {
   d7: MetricasPeriodo
   d30: MetricasPeriodo
