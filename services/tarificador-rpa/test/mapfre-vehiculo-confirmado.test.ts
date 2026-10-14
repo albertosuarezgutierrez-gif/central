@@ -7,10 +7,10 @@ import { after, before, test } from 'node:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { EmisionBloqueadaError, type VehiculoConfirmado } from '@central/module-tarificacion'
+import { AVISO_VERSION_POR_SIMILITUD, EmisionBloqueadaError, type VehiculoConfirmado } from '@central/module-tarificacion'
 import { confirmarVehiculoMapfre, instalarGuardEmision, type GuardEmision } from '../src/guard.ts'
 import { consultarVehiculoPorMatricula, ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
-import { eleccionVersionEfectiva } from '../src/adapters/allianz/auto.ts'
+import { eleccionVersionConOrigen, eleccionVersionEfectiva, ofertasDesdePrimas } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 
 const MATRICULA = '0000BBB'
@@ -193,12 +193,25 @@ test('consultarVehiculoPorMatricula: la matrícula del portal no es la del riesg
 
 // ── Allianz: versión por el vehículo confirmado ──
 
-test('Allianz · la elección explícita manda; si no, la del vehículo confirmado solo si casa UNA; si no, null (flujo de siempre)', () => {
+test('Allianz · la elección explícita manda; si no, la versión más PRÓXIMA al vehículo confirmado (por similitud, con traza); fuera de tolerancia → null', () => {
   const vc: VehiculoConfirmado = { origen: 'mapfre', denominacion: 'MARCA PRUEBA MODELO X', cv: 110, cc: null, puertas: null, fechaInicio: null }
   const versiones = [{ etiqueta: '', codigo: null }, { etiqueta: 'MODELO X 90 CV', codigo: 'V1' }, { etiqueta: 'MODELO X 110 CV', codigo: 'V2' }]
   assert.deepEqual(eleccionVersionEfectiva({ versiones }, { eleccionVersion: null, vehiculoConfirmado: vc }), { codigo: 'V2', etiqueta: 'MODELO X 110 CV' })
   assert.deepEqual(eleccionVersionEfectiva({ versiones }, { eleccionVersion: { codigo: 'V1' }, vehiculoConfirmado: vc }), { codigo: 'V1' })
-  assert.equal(eleccionVersionEfectiva({ versiones: [...versiones, { etiqueta: 'MODELO X 110 CV AUT', codigo: 'V3' }] }, { vehiculoConfirmado: vc }), null)
-  assert.equal(eleccionVersionEfectiva({ versiones: [...versiones, { etiqueta: 'MODELO X ACABADO', codigo: 'V4' }] }, { vehiculoConfirmado: vc }), null)
+  assert.deepEqual(eleccionVersionConOrigen({ versiones }, { eleccionVersion: { codigo: 'V1' }, vehiculoConfirmado: vc }), { eleccion: { codigo: 'V1' }, porSimilitud: false })
+  assert.equal(eleccionVersionConOrigen({ versiones }, { vehiculoConfirmado: vc }).porSimilitud, true)
+  // dos casi iguales: gana la más próxima (antes → null)
+  assert.deepEqual(eleccionVersionEfectiva({ versiones: [...versiones, { etiqueta: 'MODELO X 112 CV AUT', codigo: 'V3' }] }, { vehiculoConfirmado: vc }), { codigo: 'V2', etiqueta: 'MODELO X 110 CV' })
+  assert.deepEqual(eleccionVersionEfectiva({ versiones: [versiones[1]!, { etiqueta: 'MODELO X 105 CV', codigo: 'V5' }] }, { vehiculoConfirmado: vc }), { codigo: 'V5', etiqueta: 'MODELO X 105 CV' })
+  // sin CV/CC legibles o fuera de tolerancia → no elige
+  assert.equal(eleccionVersionEfectiva({ versiones: [{ etiqueta: 'MODELO X ACABADO', codigo: 'V4' }] }, { vehiculoConfirmado: vc }), null)
+  assert.equal(eleccionVersionEfectiva({ versiones: [versiones[1]!] }, { vehiculoConfirmado: vc }), null)
   assert.equal(eleccionVersionEfectiva({ versiones }, {}), null)
+})
+
+test('Allianz · la traza «por similitud» llega a los avisos de la oferta y NO aparece en una elección explícita', () => {
+  const primas = [{ modalidad: 'TR', nombre: 'Todo riesgo', primerReciboEur: 100, sucesivosEur: 100 }]
+  const veh = { marca: 'M', modelo: 'X', version: 'V', combustible: null, potenciaCv: null, fechaMatriculacion: null, codigoCatalogo: null }
+  assert.ok(ofertasDesdePrimas(primas, 'Moto', { ...veh, versionPorSimilitud: true })[0]!.avisos.includes(AVISO_VERSION_POR_SIMILITUD))
+  assert.ok(!ofertasDesdePrimas(primas, 'Moto', veh)[0]!.avisos.includes(AVISO_VERSION_POR_SIMILITUD))
 })

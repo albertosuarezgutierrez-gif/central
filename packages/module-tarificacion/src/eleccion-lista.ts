@@ -7,7 +7,7 @@
 //    una función pura con LISTA BLANCA de campos (`contextoEleccionVersion`): un campo nuevo no se cuela solo.
 //  · El `codigo` que devuelve TIENE que ser uno de la lista (comparación exacta en código). Fuera de la lista, nulo,
 //    respuesta ilegible o IA que falla → `baja`. Solo `alta` con un código de la lista se puede aplicar.
-//  · Nunca «la más parecida»: si dos opciones encajan igual, `baja` y decide una persona.
+//  · Nunca «la más parecida» (la IA/memoria): si dos opciones encajan igual, `baja` y decide una persona. (La similitud con Mapfre es otra vía: vehiculo-confirmado.ts.)
 
 import type { CandidatoVersion } from './vehiculo.ts'
 import type { FormularioAuto } from './formulario-auto.ts'
