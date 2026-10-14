@@ -130,13 +130,15 @@ export function enmascararDigitos(t: string): string {
 }
 
 /** Resumen de una línea, SIN datos personales: sin query strings y con los dígitos enmascarados. Puro (testeado). */
-export function resumenDiagnosticoPagina(d: DatosDiagnosticoPagina): string {
-  const frames = d.iframes.slice(0, 5).map(urlSinQuery)
-  const texto = enmascararDigitos(d.textoBody.replace(/\s+/g, ' ').trim()).slice(0, 200)
+export function resumenDiagnosticoPagina(d: DatosDiagnosticoPagina, secretos: Array<string | undefined> = []): string {
+  // Orden: PRIMERO se redacta el literal de usuario/clave sobre el texto crudo y DESPUÉS se enmascaran los dígitos.
+  const limpio = (t: string) => enmascararDigitos(ocultarSecretos(t, secretos))
+  const frames = d.iframes.slice(0, 5).map((f) => limpio(urlSinQuery(f)))
+  const texto = limpio(d.textoBody.replace(/\s+/g, ' ').trim()).slice(0, 200)
   return [
     `http ${d.estadoHttp ?? 'sin respuesta'}`,
-    `url ${urlSinQuery(d.url) || '(vacía)'}`,
-    `título «${enmascararDigitos(d.titulo.replace(/\s+/g, ' ').trim()).slice(0, 80)}»`,
+    `url ${limpio(urlSinQuery(d.url)) || '(vacía)'}`,
+    `título «${limpio(d.titulo.replace(/\s+/g, ' ').trim()).slice(0, 80)}»`,
     `iframes ${d.iframes.length}${frames.length ? ` [${frames.join(', ')}]` : ''}`,
     `password visible ${d.hayPassword ? 'sí (¿login?)' : 'no'}`,
     `texto «${texto}»`,
@@ -144,7 +146,7 @@ export function resumenDiagnosticoPagina(d: DatosDiagnosticoPagina): string {
 }
 
 /** Recoge y resume el estado de una página; nunca lanza (un fallo de captura se dice, no tapa el error original). */
-async function diagnosticoDePagina(page: Page, estadoHttp: number | null): Promise<string> {
+async function diagnosticoDePagina(page: Page, estadoHttp: number | null, secretos: Array<string | undefined> = []): Promise<string> {
   try {
     const dom = await page.evaluate(() => ({
       titulo: document.title ?? '',
@@ -152,7 +154,7 @@ async function diagnosticoDePagina(page: Page, estadoHttp: number | null): Promi
       textoBody: ((document.body && document.body.innerText) || '').slice(0, 600),
     }))
     const hayPassword = await page.locator('input[type=password]').filter({ visible: true }).count().catch(() => 0)
-    return resumenDiagnosticoPagina({ estadoHttp, url: page.url(), ...dom, hayPassword: hayPassword > 0 })
+    return resumenDiagnosticoPagina({ estadoHttp, url: page.url(), ...dom, hayPassword: hayPassword > 0 }, secretos)
   } catch {
     return `diagnóstico no disponible (http ${estadoHttp ?? 'sin respuesta'}; url ${urlSinQuery(page.url())})`
   }
@@ -326,7 +328,7 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
     return { page: nueva }
   } catch (e) {
     // Diagnóstico ANTES de cerrar la pestaña (qué había en pantalla), sin datos personales.
-    const diag = nueva ? await diagnosticoDePagina(nueva, estadoHttp) : 'sin pestaña'
+    const diag = nueva ? await diagnosticoDePagina(nueva, estadoHttp, secretos) : 'sin pestaña'
     await nueva?.close().catch(() => undefined)
     if (e instanceof Error && /guard_emision/.test(e.message)) throw e
     const red = /net::|Navigation|goto/i.test(String((e as Error).message).split('\n')[0])

@@ -503,7 +503,7 @@ test('resumenDiagnosticoPagina: quita query strings (url e iframes, también la 
     textoBody: 'Bienvenido 12345678Z, póliza 987654 teléfono 600 111 222',
   })
   assert.ok(r.includes('http 401'))
-  assert.ok(r.includes('https://wmediadores.mapfre.com/evt21/#/login'))
+  assert.ok(r.includes('https://wmediadores.mapfre.com/evt##/#/login'))
   assert.ok(r.includes('https://x.mapfre.com/frame/a') && r.includes('iframes 2'))
   assert.ok(!/SECRETO|ABC999|token=|sid=|nif=/.test(r), r)
   assert.ok(!/\d/.test(r.slice(r.indexOf('título'), r.indexOf('; iframes')) + r.slice(r.indexOf('texto'))), r)
@@ -544,7 +544,7 @@ test('login antiguo rechazado: error claro con diagnóstico y SIN credenciales (
         const m = (e as Error).message
         assert.ok(e instanceof ErrorMapaIncompleto)
         assert.match(m, /login antiguo NSEI rechazado\/no superado/)
-        assert.match(m, /pantalla: http \d+; url http:\/\/127\.0\.0\.1:#+\/loginexternopi\/docs\/html\/loginFormPage\.html|pantalla: http 200; url http:\/\/127\.0\.0\.1:\d+\/loginexternopi/)
+        assert.match(m, /pantalla: http \d+; url http:\/\/[#.]+:#+\/loginexternopi\/docs\/html\/loginFormPage\.html/)
         assert.match(m, /password visible sí/)
         assert.ok(!m.includes(USUARIO_FICTICIO) && !m.includes(CLAVE_FICTICIA) && !/page=|modo=/.test(m), m)
         return true
@@ -601,4 +601,19 @@ test('credenciales vacías: error sin rellenar ni pulsar', async () => {
   } finally {
     await context.close()
   }
+})
+
+test('diagnóstico: usuario con dígitos en el texto de la página no sale ni entero ni parcial (se redacta ANTES de enmascarar)', () => {
+  const r = resumenDiagnosticoPagina(
+    { estadoHttp: 200, url: 'https://wmediadores.mapfre.com/a', titulo: 'Hola USR_FICT_4711', iframes: [], hayPassword: true, textoBody: 'Usuario USR_FICT_4711 no válido' },
+    ['USR_FICT_4711'],
+  )
+  assert.ok(!/USR_FICT|4711|FICT_#/.test(r), r)
+  assert.ok(r.includes('«oculto»'), r)
+})
+
+test('diagnóstico: token numérico en el fragmento/ruta de la URL y de los iframes sale enmascarado', () => {
+  const r = resumenDiagnosticoPagina({ estadoHttp: 200, url: 'https://wmediadores.mapfre.com/app/#/sesion/998877665', titulo: '', iframes: ['https://x.mapfre.com/f/554433'], hayPassword: false, textoBody: '' })
+  assert.ok(!/\d{2,}/.test(r.replace(/http 200/, '')), r)
+  assert.ok(r.includes('/app/#/sesion/#########') && r.includes('/f/######'), r)
 })
