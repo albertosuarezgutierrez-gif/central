@@ -4,7 +4,7 @@ import { describe, test, before, after } from 'node:test'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser } from 'playwright'
-import { borradorMapaDesdeAria, renderizarBorradorTs, claveCamel } from '../src/aprendizaje/borrador-mapa.ts'
+import { borradorMapaDesdeAria, renderizarBorradorTs, claveCamel } from '../scripts/lib/borrador-mapa.ts'
 import { redactarAriaSnapshot, MARCA_VALOR } from '../src/aria-snapshot.ts'
 
 const SNAPSHOT = `- generic [active] [ref=e1]:

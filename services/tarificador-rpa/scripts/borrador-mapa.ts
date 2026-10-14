@@ -8,7 +8,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
 import { separarAria, redactarAriaSnapshot } from '../src/aria-snapshot.ts'
-import { borradorMapaDesdeAria, renderizarBorradorTs } from '../src/aprendizaje/borrador-mapa.ts'
+import { borradorMapaDesdeAria, renderizarBorradorTs } from './lib/borrador-mapa.ts'
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,

@@ -85,7 +85,7 @@ npm run borrador-mapa -- <evidencia.html|snapshot.txt> --compania allianz --ramo
 Sale un `CAMPOS_<PANTALLA>` con localizadores `getByRole(..., { exact: true })` encadenados por `frameLocator`, los desplegables con sus
 opciones, los diálogos (listas de poblaciones) y los mensajes de error. Los `// TODO` marcan lo ambiguo (nombres duplicados, controles
 sin nombre, radios sin grupo). NO se registra solo: revísalo a mano, pruébalo con `scripts/probar-formulario.ts` y métela en un PR.
-Código: `src/aprendizaje/borrador-mapa.ts`.
+Código: `scripts/lib/borrador-mapa.ts` (fuera de `src/`: no viaja en la imagen del worker y el guardián prohíbe nombrar radios en `src/`).
 
 ## 5. Lecciones aprendidas con Allianz (técnicas, sin datos)
 - **Iframe tardío:** el formulario carga en `iframe#appArea` y tarda; espera hasta 30 s al marco (`esperarMarcoApp`) antes de inventariar, o inventarias la carcasa.
