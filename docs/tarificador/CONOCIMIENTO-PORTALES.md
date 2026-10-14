@@ -167,7 +167,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso, ámbito de circulación y 
   (normalizado: espacios y mayúsculas), «Tarificación y Emisión Rápida», «Tarificación y Emisión (General)», «… (Otros
   Acuerdos)», «… (Acuerdos)» y «Tarificación y Emisión» (`pulsarEnlaceEntradaAutorizado`, cada una una vez). Con sufijo,
   prefijo u otra redacción, desde el bucle IA u otra compañía: bloqueado. La URL de la pestaña nueva sigue pasando por el
-  guard de red: si llevara «emision», se aborta (fail-closed; verlo en el primer intento real).
+  guard de red: si llevara «emision», se aborta (fail-closed). Comprobado por Alberto (14/10/2026): la pestaña abre en
+  `/evt21_nsei_fe-web/#/evt21_nsei_fe-web/accesosguiados?…` (sin «emision»; parámetros de sesión no se guardan).
 - **Catálogo auto (14/10/2026):** `CATALOGO_EXPLORACION.auto` (explorador.ts) con claves de `FormularioAuto` (efecto, tomador, matrícula, CP, marca/modelo/cc, conductor nacimiento/carné, siniestros 5 años, años asegurado). Fuera por no tener origen en `FormularioAuto`: uso, ámbito, clase de permiso, compañía anterior (nombre) y NIF del conductor. Guard: `firmar/pagar/domiciliar` añadidos a `PATRON_EMISION`.
 - **Tecnología:** SPA Angular Material **sin iframes**; todo el DOM es legible. Los `mat-input-N` NO se usan
   (son contadores de Angular Material); los selectores van por `name`/`formcontrolname` con ámbito de componente.
