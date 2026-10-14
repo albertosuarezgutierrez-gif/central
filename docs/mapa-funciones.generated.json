@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T06:43:04Z",
-  "sha": "d3c5c16b1e1d60221e56f7741e7635f6a434ee97",
+  "generadoEn": "2026-10-14T07:38:14Z",
+  "sha": "37209678890691fd5ed749963e5207cf88f1f926",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3369,7 +3369,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 53,
+          "linea": 55,
           "resumen": "La ficha de una póliza que ha AÑADIDO el cliente. Nace el 05/09/2026 de *«mis seguros y mis pólizas es lo mismo»*: al fundir la pestaña «Mis pólizas» dentro de «Mis seguros», estas pólizas pasan a ser"
         }
       ],
@@ -3377,7 +3377,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "2cc48d932291"
+      "hash": "e4c6c4311691"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/anadida/[id]/RevisarPoliza.tsx",
@@ -3838,6 +3838,27 @@
       ],
       "rutaApi": null,
       "hash": "192fe40b5560"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/EvolucionPrima.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EvolucionPrima"
+      ],
+      "funciones": [
+        {
+          "nombre": "EvolucionPrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ evolucion, hrefRevisar, textoSinEnlace }: { evolucion: Evolucion | null; hrefRevisar: string | null; textoSinEnlace?: string | null }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Bloque «Evolución de la prima» de una ficha. Servidor, sin estado. `evolucion === null` = no se pinta nada (sin observaciones no hay nada que decir). Importes `null` → «—», jamás «0,00€». La acción NO"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9dc348b0c94a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/FilaDeclarada.tsx",
@@ -4674,7 +4695,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 61,
+          "linea": 64,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -4683,13 +4704,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 419,
+          "linea": 434,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46b7d55deff4"
+      "hash": "e5fb814da7a5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -5004,7 +5025,7 @@
           "params": "{ companiasEnPortada, textoCompanias }: { companiasEnPortada: number; textoCompanias?: string }",
           "retorno": null,
           "linea": 241,
-          "resumen": "Art. 19 de la Ley 16/2018 y el «asesoramiento sobre la base de un análisis objetivo» del RDL 3/2020. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 **ni el nombre ni la clave DGSFP se teclea"
+          "resumen": "Art. 173 del RDL 3/2020 (información general previa del mediador) y el «asesoramiento sobre la base de un análisis objetivo» del mismo texto. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 *"
         },
         {
           "nombre": "Salidas",
@@ -5026,7 +5047,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eda07d6dec2d"
+      "hash": "6b5099a67d56"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/DatosParaContratar.tsx",
@@ -5580,7 +5601,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6aaf2cf34cc2"
+      "hash": "2e1d0703fbd7"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/FlotaEmpresa.tsx",
@@ -5954,7 +5975,7 @@
           "params": "req: Request, tipo: 'whatsapp' | 'email', destino: string, valorHash: string, codigoId: string | null, irA: string",
           "retorno": null,
           "linea": 119,
-          "resumen": "Lo común a los dos canjes (código o enlace directo), ya validados: identidad, acreditación del art. 19 LDS, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión. `codigoId` = el có"
+          "resumen": "Lo común a los dos canjes (código o enlace directo), ya validados: identidad, acreditación del art. 173 RDL 3/2020, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión. `codigoId`"
         }
       ],
       "tablas": [
@@ -5962,7 +5983,7 @@
         "zod"
       ],
       "rutaApi": "/api/acceso/verificar",
-      "hash": "1ad5aa0114c2"
+      "hash": "807b75487258"
     },
     {
       "ruta": "apps/asegura-portal/app/api/anulacion/route.ts",
@@ -7902,7 +7923,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3de980aed1be"
+      "hash": "dda64adcb23c"
     },
     {
       "ruta": "apps/asegura-portal/app/hoja/[token]/page.tsx",
@@ -8370,7 +8391,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "260bd2500d8c"
+      "hash": "5d5eda3cb6cd"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/mediador/page.tsx",
@@ -8386,12 +8407,12 @@
           "params": "",
           "retorno": null,
           "linea": 27,
-          "resumen": "Información precontractual del mediador (art. 19 Ley 16/2018 / RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible antes de que el cliente entregue ningún dato, así que esta página vive fuera de "
+          "resumen": "Información precontractual del mediador (art. 173 RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible antes de que el cliente entregue ningún dato, así que esta página vive fuera de la sesión: si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6da87baa8f4"
+      "hash": "1d707ac672dc"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/privacidad/page.tsx",
@@ -8412,7 +8433,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3d51d430ea7f"
+      "hash": "78654b57227d"
     },
     {
       "ruta": "apps/asegura-portal/app/manifest.ts",
@@ -8492,12 +8513,12 @@
           "params": "",
           "retorno": null,
           "linea": 17,
-          "resumen": "Pie legal del portal. Va en el layout raíz, así que sale en TODAS las pantallas, incluida la de entrada. No es decoración ni un pie de cortesía: el art. 19 de la Ley 16/2018 obliga a que el cliente pu"
+          "resumen": "Pie legal del portal. Va en el layout raíz, así que sale en TODAS las pantallas, incluida la de entrada. No es decoración ni un pie de cortesía: el art. 173 del RDL 3/2020 obliga a que el cliente pued"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "edf3cf6915f0"
+      "hash": "2fb4baebb475"
     },
     {
       "ruta": "apps/asegura-portal/app/presupuesto/[token]/CodigoWhatsapp.tsx",
@@ -11375,6 +11396,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "57af5f91130f"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/evolucion-prima.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "«Evolución de la prima» de una póliza (14/10/2026): lo que hay detrás del push de «subida de prima». 🔒 Aislamiento por CÓDIGO. La identidad sale de la COOKIE (`getIdentidad`), nunca de un parámetro, y va dentro del `where` junto con el origen y el id. El id de la póliza NO consulta por sí solo: qui",
+      "exporta": [
+        "evolucionDePrimaDePoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "NUM",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: { toString(): string } | null",
+          "retorno": "number | null",
+          "linea": 16
+        },
+        {
+          "nombre": "evolucionDePrimaDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "origen: 'cartera' | 'aportada', polizaId: string, propia: boolean,",
+          "retorno": "Promise<EvolucionPrima | null>",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c9a499c4c838"
     },
     {
       "ruta": "apps/asegura-portal/lib/extraer-poliza.ts",
@@ -15991,7 +16041,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c14909129a2f"
+      "hash": "87e3b0c97fcf"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -16012,7 +16062,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "62b3be2eccaa"
+      "hash": "4e20d7c5981b"
     },
     {
       "ruta": "apps/asegura-web/app/legal/cookies/page.tsx",
@@ -16038,7 +16088,7 @@
     {
       "ruta": "apps/asegura-web/app/legal/informacion-mediador/page.tsx",
       "ambito": "apps/asegura-web",
-      "resumen": "Información precontractual del mediador (art. 19 de la Ley 16/2018 de Distribución de Seguros, RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible ANTES de que el cliente entregue ningún dato, así que esta página no depende de nada que pueda fallar: sin sesión, sin base de datos y sin cliente. ",
+      "resumen": "Información precontractual del mediador (art. 173 del RDL 3/2020, de distribución de seguros y reaseguros privados). Es OBLIGATORIA y tiene que estar disponible ANTES de que el cliente entregue ningún dato, así que esta página no depende de nada que pueda fallar: sin sesión, sin base de datos y sin ",
       "exporta": [
         "InformacionMediador"
       ],
@@ -16054,7 +16104,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9da203f5a89f"
+      "hash": "cd1a5cf2414e"
     },
     {
       "ruta": "apps/asegura-web/app/legal/privacidad/page.tsx",
@@ -16075,7 +16125,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a06139eda816"
+      "hash": "2aefe6de3e57"
     },
     {
       "ruta": "apps/asegura-web/app/opengraph-image.tsx",
@@ -16162,7 +16212,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8d0cb0d0f9c"
+      "hash": "8796094e6197"
     },
     {
       "ruta": "apps/asegura-web/app/robots.ts",
@@ -16608,7 +16658,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "385c049eeb3c"
+      "hash": "025ed819e292"
     },
     {
       "ruta": "apps/asegura-web/components/PanelDemo.tsx",
@@ -103181,7 +103231,7 @@
           "params": "{ p, ramo, deshabilitado, onGuardar }: { p: PresupuestoEnLista; ramo: string | null; deshabilitado: boolean onGuardar: (texto: string, respuestas: Record<string, string>) => void }",
           "retorno": null,
           "linea": 167,
-          "resumen": "Exigencias y necesidades del cliente (IDD, art. 20 Ley 16/2018). Sin ellas asegura no deja avisarle. Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de texto de s"
+          "resumen": "Exigencias y necesidades del cliente (IDD, art. 175.1 del RDL 3/2020). Sin ellas asegura no deja avisarle. Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de text"
         },
         {
           "nombre": "CoberturasOpciones",
@@ -103197,7 +103247,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b27ba556ea63"
+      "hash": "059acf1672c8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones-hogar.ts",
@@ -132492,7 +132542,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "183972b2b928"
+      "hash": "57297724ba46"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-asistente-telegram.ts",
@@ -188127,7 +188177,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40f0f6825916"
+      "hash": "d735c1d7b71a"
     },
     {
       "ruta": "packages/module-seguros-portal/src/contacto-propio.ts",
@@ -188486,6 +188536,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "03ca411c8ff7"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/evolucion-prima.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "«Evolución de la prima» (14/10/2026): el detalle al que lleva el push de «subida de prima». Lógica PURA sobre lo que guarda `portal_prima_observada` (lo escribe `observarPrima`). Tres estados, sin inventar nada: · `null` → no hay observación de esta póliza (o no hay subida pendiente): no se pinta na",
+      "exporta": [
+        "baseDeUnidad",
+        "porcentajeDeSubida",
+        "evolucionDePrima"
+      ],
+      "funciones": [
+        {
+          "nombre": "positivo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "number | null",
+          "linea": 35
+        },
+        {
+          "nombre": "baseDeUnidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "unidad: string",
+          "retorno": "EvolucionPrima['base']",
+          "linea": 38,
+          "resumen": "Qué clase de importe es, por el prefijo de `unidad` (`cartera-bruta-anual|…` / `declarada-anual|…`)."
+        },
+        {
+          "nombre": "porcentajeDeSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: number | null, actual: number | null",
+          "retorno": "number | null",
+          "linea": 45,
+          "resumen": "% entre dos importes, 2 decimales. `null` si el origen no es un importe positivo."
+        },
+        {
+          "nombre": "evolucionDePrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaPrimaObservada | null",
+          "retorno": "EvolucionPrima | null",
+          "linea": 53,
+          "resumen": "`null` = nada que pintar (sin fila, o fila sin subida pendiente)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "788a59965323"
     },
     {
       "ruta": "packages/module-seguros-portal/src/figuras-en-polizas.ts",
@@ -191502,7 +191602,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "996b0385b39e"
+      "hash": "91059f28bab3"
     },
     {
       "ruta": "packages/module-seguros/src/actividad-aviso.ts",
@@ -197045,7 +197145,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe9ec97367de"
+      "hash": "fb86d7aedf1b"
     },
     {
       "ruta": "packages/module-seguros/src/fecha-pintable.ts",
@@ -200087,7 +200187,7 @@
     {
       "ruta": "packages/module-seguros/src/mediador.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al cliente final: información precontractual del art. 19 de la Ley 16/2018 de Distribución de Seguros (LDS), pies de página legales y políticas. Vive en `@central/module-seguros` y no en una app porque los DOS lados de la cor",
+      "resumen": "Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al cliente final: información precontractual del art. 173 del Real Decreto-ley 3/2020 (distribución de seguros), pies de página legales y políticas. Vive en `@central/module-seguros` y no en una app porque los DOS lados de la",
       "exporta": [
         "lineaIdentificacion",
         "remitenteCorreo",
@@ -200102,7 +200202,7 @@
           "params": "",
           "retorno": "string",
           "linea": 265,
-          "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 19 exige que el cliente vea SIEMPRE, no solo si entra en una página aparte."
+          "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 173 RDL 3/2020 exige que el cliente vea SIEMPRE, no solo si entra en una págin"
         },
         {
           "nombre": "remitenteCorreo",
@@ -200133,7 +200233,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07fdb3504910"
+      "hash": "ad3ac75dafd3"
     },
     {
       "ruta": "packages/module-seguros/src/mensaje-presupuesto.ts",
@@ -200310,7 +200410,7 @@
     {
       "ruta": "packages/module-seguros/src/necesidades-idd.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "Cuestionario de exigencias y necesidades (IDD, art. 20 Ley 16/2018 → hoy RDL 3/2020). Antes era un texto libre que escribía el corredor. Con preguntas cerradas por ramo: - todos los presupuestos preguntan lo mismo (prueba uniforme ante la DGSFP), y - nada se olvida (quién conduce, lunas, régimen de ",
+      "resumen": "Cuestionario de exigencias y necesidades (IDD, art. 175.1 RDL 3/2020). Antes era un texto libre que escribía el corredor. Con preguntas cerradas por ramo: - todos los presupuestos preguntan lo mismo (prueba uniforme ante la DGSFP), y - nada se olvida (quién conduce, lunas, régimen de la vivienda…). ",
       "exporta": [
         "grupoNecesidades",
         "preguntasNecesidades",
@@ -200366,7 +200466,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c5a90fd0e5c"
+      "hash": "9b0195811fbd"
     },
     {
       "ruta": "packages/module-seguros/src/nombre-de-pila.ts",
@@ -213168,7 +213268,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4653,
-    "funciones": 16898
+    "archivos": 4656,
+    "funciones": 16905
   }
 }
