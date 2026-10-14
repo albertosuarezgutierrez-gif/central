@@ -494,9 +494,19 @@ export const CAUSAS_INCIDENCIA_EJECUCION = [
   'valor_no_aplicado',
   /** `rellenar`: el nodo se repintó y tras re-inventariar no se encontró por su identidad (se para con ese detalle). */
   'nodo_no_relocalizado',
+  /**
+   * La acción NO se ejecutó porque el worker CORTÓ el lote (repintado tras un autocompletado o cambio de estructura) antes
+   * de llegar a ella (14/10/2026, exploración 8d0676f9: año y m² se descartaban EN SILENCIO tras el CP y la vía).
+   */
+  'lote_cortado',
 ] as const
 export type CausaIncidenciaEjecucion = (typeof CAUSAS_INCIDENCIA_EJECUCION)[number]
-export type IncidenciaEjecucion = { accion: 'rellenar'; ref: string; dato: string; causa: CausaIncidenciaEjecucion }
+/** Acciones que pueden quedar sin ejecutar por un corte de lote (las que señalan una ref; `parar`/`terminar` van solas). */
+export const ACCIONES_INCIDENCIA_SIN_DATO = ['elegir', 'marcar', 'avanzar'] as const
+export type IncidenciaEjecucion =
+  | { accion: 'rellenar'; ref: string; dato: string; causa: CausaIncidenciaEjecucion }
+  /** Solo `lote_cortado`. Sin `dato` ni opción: nada que se parezca a un valor. */
+  | { accion: (typeof ACCIONES_INCIDENCIA_SIN_DATO)[number]; ref: string; causa: 'lote_cortado' }
 export const MAX_INCIDENCIAS_EJECUCION = 15
 /** Prefijo de los `errores` de un paso que vienen de la EJECUCIÓN (no del validador): no marcan el paso como «rechazado». */
 export const PREFIJO_ERROR_EJECUCION = 'ejecucion:'
@@ -512,10 +522,17 @@ export function leerIncidenciasEjecucion(v: unknown): IncidenciaEjecucion[] {
     if (typeof x !== 'object' || x === null || Array.isArray(x)) continue
     const o = x as Record<string, unknown>
     const causa = CAUSAS_INCIDENCIA_EJECUCION.find((c) => c === o.causa)
-    if (o.accion !== 'rellenar' || !causa) continue
+    if (!causa) continue
     if (typeof o.ref !== 'string' || !RE_REF_INCIDENCIA.test(o.ref)) continue
-    if (typeof o.dato !== 'string' || !RE_DATO_INCIDENCIA.test(o.dato)) continue
-    out.push({ accion: 'rellenar', ref: o.ref, dato: o.dato, causa })
+    if (o.accion === 'rellenar') {
+      if (typeof o.dato !== 'string' || !RE_DATO_INCIDENCIA.test(o.dato)) continue
+      out.push({ accion: 'rellenar', ref: o.ref, dato: o.dato, causa })
+      continue
+    }
+    // elegir/marcar/avanzar: SOLO por un lote cortado, y sin nada más (ni dato ni opción, aunque vinieran).
+    const accion = ACCIONES_INCIDENCIA_SIN_DATO.find((a) => a === o.accion)
+    if (!accion || causa !== 'lote_cortado') continue
+    out.push({ accion, ref: o.ref, causa })
   }
   return out
 }
@@ -529,9 +546,10 @@ export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[]
   const porRef = inventario ? indiceRefs(inventario) : new Map<string, { el: ElementoInventario }>()
   return incidencias.slice(0, MAX_INCIDENCIAS_EJECUCION).map((i) => {
     const el = porRef.get(i.ref)?.el
-    const etq = el ? textoEtiqueta(el).slice(0, 60) : ''
+    const etq = el ? (textoEtiqueta(el) || (el.texto ?? '').replace(/\s+/g, ' ').trim()).slice(0, 60) : ''
     const conEtq = etq && !pareceDatoPersonalInventario(etq) ? ` «${etq}»` : ''
-    return `${PREFIJO_ERROR_EJECUCION} ${i.accion} ${i.ref}${conEtq} (${i.dato}): ${i.causa}`
+    const dato = i.accion === 'rellenar' ? ` (${i.dato})` : ''
+    return `${PREFIJO_ERROR_EJECUCION} ${i.accion} ${i.ref}${conEtq}${dato}: ${i.causa}`
   })
 }
 
@@ -540,6 +558,51 @@ export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[]
  * la provincia…): tras rellenarlas el worker corta el lote y vuelve a inventariar (la pantalla ya no es la que vio la IA).
  */
 export const CLAVES_AUTOCOMPLETADO: ReadonlySet<string> = new Set(['inmueble.codigo_postal', 'inmueble.provincia', 'inmueble.municipio'])
+
+/** Roles ARIA de un control que despliega sugerencias (NDBX/Angular Material: `role=combobox` en el input). */
+const ROLES_AUTOCOMPLETADO = new Set(['combobox', 'searchbox'])
+
+/**
+ * ¿Este `rellenar` puede REPINTAR la sección? Su clave dispara autocompletado (`CLAVES_AUTOCOMPLETADO`) o el control es un
+ * autocompletado (`role=combobox/searchbox`, `aria-autocomplete`/datalist → `autocompletar`). Pura.
+ */
+export function rellenarRepinta(dato: string, el: ElementoInventario | undefined): boolean {
+  if (CLAVES_AUTOCOMPLETADO.has(dato)) return true
+  if (!el) return true // sin el elemento no se sabe: lo conservador es tratarlo como el que repinta (va después)
+  return el.autocompletar === true || ROLES_AUTOCOMPLETADO.has((el.role ?? '').toLowerCase())
+}
+
+/**
+ * ORDEN del lote (14/10/2026, exploración 8d0676f9 de Allianz Hogar: el CP y la vía repintaban la sección, el worker
+ * cortaba el lote y año y m², que iban DETRÁS, no se escribían nunca). Estable dentro de cada grupo:
+ *   0. `rellenar` de campos SIMPLES (sin autocompletado);
+ *   1. lo que puede repintar: `rellenar` de autocompletados (CP, provincia, municipio, combobox…), `elegir` y `marcar`
+ *      (un select/radio puede cambiar la sección);
+ *   2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos).
+ * No añade, quita ni cambia acciones: solo las reordena. Pura.
+ */
+export function ordenarLote<A extends Accion>(acciones: readonly A[], inventario: InventarioDom): A[] {
+  const refs = indiceRefs(inventario)
+  const grupo = (a: A): number => {
+    if (a.accion === 'rellenar') return rellenarRepinta(a.dato, refs.get(a.ref)?.el) ? 1 : 0
+    if (a.accion === 'elegir' || a.accion === 'marcar') return 1
+    return 2
+  }
+  return acciones.map((a, i) => ({ a, g: grupo(a), i })).sort((x, y) => x.g - y.g || x.i - y.i).map((x) => x.a)
+}
+
+/**
+ * Las acciones de un lote CORTADO que no se llegaron a ejecutar → incidencias `lote_cortado` (ref + clave; nunca el valor
+ * ni la opción). `parar`/`terminar` no se reportan (van solos: nunca quedan detrás de un corte). Pura.
+ */
+export function incidenciasLoteCortado(pendientes: readonly Accion[]): IncidenciaEjecucion[] {
+  const out: IncidenciaEjecucion[] = []
+  for (const a of pendientes) {
+    if (a.accion === 'rellenar') out.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'lote_cortado' })
+    else if (a.accion === 'elegir' || a.accion === 'marcar' || a.accion === 'avanzar') out.push({ accion: a.accion, ref: a.ref, causa: 'lote_cortado' })
+  }
+  return out
+}
 
 /** La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}. */
 export function lineaMotivosPararParaIA(): string {

@@ -12,6 +12,7 @@ import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarif
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
 import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
+import { esperarEstable, vigilarRed } from '../src/estabilidad.ts'
 import {
   bucleExploracion,
   cierreCorrecto,
@@ -151,7 +152,7 @@ let peticiones: Peticion[] = []
 let inicio = RIESGO
 let trasPaso2 = DATOS_BASICOS('Datos básicos')
 /** Rutas extra por test (guardado del presupuesto): cuerpo y cabeceras. */
-let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string> }> = {}
+let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string>; retardoMs?: number }> = {}
 
 let browser: Browser
 before(async () => {
@@ -163,8 +164,12 @@ before(async () => {
       peticiones.push({ metodo: req.method ?? 'GET', ruta, cuerpo })
       const extra = rutasExtra[ruta]
       if (extra) {
-        res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
-        res.end(extra.cuerpo)
+        const responder = () => {
+          res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
+          res.end(extra.cuerpo)
+        }
+        if (extra.retardoMs) setTimeout(responder, extra.retardoMs)
+        else responder()
         return
       }
       const html = ruta === '/' ? inicio : ruta === '/paso2' ? trasPaso2 : ruta === '/tarificar' ? RESULTADO : PAGINA('<h1>404</h1>')
@@ -1016,6 +1021,194 @@ test('🪤 frontera de cuenta bancaria sobre el control RELOCALIZADO (revisión 
     assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
     assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
     assert.equal(await page.inputValue('#superficie'), '', 'no se escribió nada')
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Orden del lote, lote cortado y pantalla quieta (14/10/2026, exploración 8d0676f9 de Allianz Hogar) ──────────────
+
+/** CP que autocompleta (repinta al perder el foco) y una VÍA con role=combobox; el año, campo simple, va DETRÁS en el lote. */
+const CP_VIA_ANIO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="cp">Código postal</label><input id="cp" name="cp" type="text">
+    <span id="pob"></span>
+    <label for="via">Nombre de la vía</label><input id="via" name="via" type="text" role="combobox" aria-autocomplete="list">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="number">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>document.getElementById('cp').addEventListener('change', () => { document.getElementById('pob').innerHTML = '<label for="poblacion">Población</label><input id="poblacion" name="poblacion" type="text">' })</script>`)
+
+test('🪤 ORDEN del lote (8d0676f9 paso 1): CP, vía y año → el año (simple) se escribe ANTES de que el CP repinte y corte', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: ref(inv, 'via'), dato: 'inmueble.nombre_via' },
+        { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]),
+    { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(await page.inputValue('#anio'), '1990', 'el año se escribió en el lote 1')
+    assert.equal(await page.inputValue('#cp'), '41001')
+    assert.equal(await page.inputValue('#via'), '', 'la vía (combobox) iba detrás del CP: lote cortado antes de llegar')
+    const anio = enviados[1].inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'anio')!
+    assert.equal(anio.conValor, true, 'el 2.º inventario ve el año relleno')
+    assert.ok(/"exploracion_paso".*rellenar m\d+e\d+=inmueble.anio_construccion.*inmueble.codigo_postal.*inmueble.nombre_via/.test(lineas.join('\n')), 'el log refleja el orden aplicado')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 LOTE CORTADO: lo que quedaba sin ejecutar viaja como incidencia `lote_cortado` en el siguiente paso (ref + clave; sin valor)', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refs = { via: '', siguiente: '' }
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n > 1) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      refs = { via: ref(inv, 'via'), siguiente: ref(inv, 'siguiente') }
+      return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: refs.via, dato: 'inmueble.nombre_via' },
+        { accion: 'avanzar', ref: refs.siguiente, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(enviados[0].incidencias, undefined)
+    assert.deepEqual(enviados[1].incidencias, [
+      { accion: 'rellenar', ref: refs.via, dato: 'inmueble.nombre_via', causa: 'lote_cortado' },
+      { accion: 'avanzar', ref: refs.siguiente, causa: 'lote_cortado' },
+    ])
+    assert.ok(!JSON.stringify(enviados[1].incidencias).includes('PRUEBA'), 'sin el valor de la vía')
+    assert.ok(!peticiones.some((p) => p.ruta === '/tarificar'), 'el avance cortado no se pulsó')
+  } finally {
+    await context.close()
+  }
+})
+
+test('lote NO cortado (sin repintado): ninguna incidencia `lote_cortado`', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]))
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(enviados[1].incidencias, undefined)
+    assert.equal(await page.inputValue('#superficie'), '90')
+  } finally {
+    await context.close()
+  }
+})
+
+/**
+ * Validación ASÍNCRONA de la dirección (como Allianz tras el número de la vía): al perder el foco sale un fetch lento y, a
+ * su vuelta, Angular RE-CREA año y superficie con ids NUEVOS (el contador de NDBX avanza). Una sola vez.
+ */
+const VALIDA_Y_REPINTA = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="numero">Número</label><input id="numero" name="numero" type="text">
+    <div id="seccion">
+      <label for="anio-38">Año de construcción</label><input id="anio-38" name="anio" type="number">
+      <label for="sup-45">Superficie de la vivienda</label><input id="sup-45" name="superficie">
+    </div>
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>
+    let hecho = false
+    document.getElementById('numero').addEventListener('change', () => {
+      if (hecho) return; hecho = true
+      fetch('/validar', { method: 'POST' }).then(() => {
+        document.getElementById('seccion').innerHTML = '<label for="anio-62">Año de construcción</label><input id="anio-62" name="anio" type="number">'
+          + '<label for="sup-69">Superficie de la vivienda</label><input id="sup-69" name="superficie">'
+      })
+    })
+  </script>`)
+
+test('🪤 PANTALLA QUIETA (8d0676f9 paso 3): la validación de la vía repinta con ids nuevos; se inventaría DESPUÉS y año y m² se escriben', async () => {
+  inicio = VALIDA_Y_REPINTA
+  rutasExtra = { '/validar': { tipo: 'application/json', cuerpo: '{}', retardoMs: 900 } }
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, async (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' }])
+      if (n === 2) {
+        const ids = inv.marcos.flatMap((m) => m.elementos).map((e) => e.id)
+        const anio = ids.find((x) => x?.startsWith('anio-'))!
+        const sup = ids.find((x) => x?.startsWith('sup-'))!
+        await new Promise((r) => setTimeout(r, 1_200)) // lo que tarda la IA en contestar
+        return respuesta([
+          { accion: 'rellenar', ref: ref(inv, anio), dato: 'inmueble.anio_construccion' },
+          { accion: 'rellenar', ref: ref(inv, sup), dato: 'inmueble.superficie_m2' },
+        ])
+      }
+      return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.detalle, undefined, `sin nodo_no_relocalizado: ${JSON.stringify(fin)}`)
+    assert.ok(tiene(enviados[1].inventario, 'anio-62'), 'el 2.º inventario se tomó tras el repintado')
+    assert.equal(await page.inputValue('#anio-62'), '1990')
+    assert.equal(await page.inputValue('#sup-69'), '90')
+    assert.equal(enviados[2].incidencias, undefined)
+  } finally {
+    rutasExtra = {}
+    await context.close()
+  }
+})
+
+const MUTA_SIN_PARAR = PAGINA(`<h2>Reloj</h2><div id="r"></div><script>setInterval(() => { document.getElementById('r').innerHTML = '<span>' + Date.now() + '</span>' }, 100)</script>`)
+
+test('esperarEstable: espera a la red en vuelo (vista ANTES de llamar, con el vigía) y al DOM; un DOM que no se calla agota el tope', async () => {
+  inicio = VALIDA_Y_REPINTA
+  rutasExtra = { '/validar': { tipo: 'application/json', cuerpo: '{}', retardoMs: 700 } }
+  const { context, page } = await nuevaPagina()
+  try {
+    const vigia = vigilarRed(page)
+    const salio = page.waitForRequest((r) => r.url().endsWith('/validar'))
+    await page.fill('#numero', '1')
+    await page.locator('#numero').blur()
+    await salio
+    // El fetch ya salió: con el vigía del bucle se espera a su vuelta y al repintado.
+    assert.equal(await esperarEstable(page, { quietoMs: 300, topeMs: 5_000 }, vigia), 'estable')
+    assert.equal(await page.locator('#anio-62').count(), 1, 'devolvió con la sección ya repintada')
+    vigia.soltar()
+
+    await page.goto(`${base}/`)
+    await page.setContent(MUTA_SIN_PARAR)
+    const t0 = Date.now()
+    assert.equal(await esperarEstable(page, { quietoMs: 300, topeMs: 1_200 }), 'tope')
+    const t = Date.now() - t0
+    assert.ok(t >= 1_100 && t < 4_000, `respeta el tope (${t} ms)`)
+  } finally {
+    rutasExtra = {}
+    await context.close()
+  }
+})
+
+test('inventario: `autocompletar` (aria-autocomplete o datalist) solo como booleano; un input normal no lo lleva', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page } = await nuevaPagina()
+  try {
+    const c = (await capturarInventarioExploracion(page))!
+    const els = c.inventario.marcos.flatMap((m) => m.elementos)
+    assert.equal(els.find((e) => e.id === 'via')!.autocompletar, true)
+    assert.equal(els.find((e) => e.id === 'via')!.role, 'combobox')
+    assert.equal(els.find((e) => e.id === 'anio')!.autocompletar, undefined)
+    assert.equal(els.find((e) => e.id === 'cp')!.autocompletar, undefined)
+    await c.liberar()
   } finally {
     await context.close()
   }

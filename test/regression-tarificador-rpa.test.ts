@@ -396,8 +396,9 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
   // 3. Revalidación contra el inventario propio ANTES de actuar.
   const iVal = explorador.indexOf('validarRespuestaExplorador(r.respuesta, { inventario: inv')
-  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación.
-  const iAct = explorador.indexOf('const lote = v.respuesta.acciones')
+  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación, que ORDENA
+  // (`ordenarLote`, 8d0676f9) las acciones YA validadas: solo las reordena, nunca añade ni cambia ninguna.
+  const iAct = explorador.search(/const lote = (?:ordenarLote\()?v\.respuesta\.acciones/)
   if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'(?:, '[a-z_]+')?\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
   // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
   const iBucle = explorador.indexOf('for (;;) {')

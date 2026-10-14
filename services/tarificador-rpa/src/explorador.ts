@@ -36,9 +36,11 @@ import {
   esEntradaExploracion,
   huellaPantalla,
   huellaRelleno,
+  incidenciasLoteCortado,
   indiceRefs,
   nombresCredencial,
   normalizarRedNoGet,
+  ordenarLote,
   relocalizarElemento,
   redactarHtml,
   resolverDato,
@@ -63,6 +65,7 @@ import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores
 import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
+import { ESTABILIDAD_POR_DEFECTO, esperarEstable, vigilarRed, type OpcionesEstabilidad, type VigiaRed } from './estabilidad.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
@@ -73,7 +76,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.2.2'
+export const EXPLORADOR_VERSION = '0.2.3'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -328,6 +331,8 @@ export type ContextoBucle = {
   paginasDeEntrada?: readonly Page[]
   /** Espera del PDF tras cada guardado (por defecto `TOPE_PDF_GUARDADO_MS`). */
   topePdfMs?: number
+  /** Pantalla QUIETA (sin red en vuelo ni DOM cambiando) antes de inventariar y de tocar nada (`esperarEstable`). */
+  estabilidad?: OpcionesEstabilidad
 }
 
 class Parar extends Error {
@@ -360,6 +365,13 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   let repintadosSeguidos = 0
   /** Guardado del presupuesto: se rellena al pulsar un guardar_presupuesto (y habilita el 2.º y el `terminar` sin importes). */
   const presupuesto: PresupuestoWorker = { guardado: false, referencia: null, pdf: null, pdfIntentado: false }
+  const estabilidad = k.estabilidad ?? ESTABILIDAD_POR_DEFECTO
+  /** La red se vigila durante TODO el bucle: así cuenta la validación que salió al quitar el foco de un `rellenar`. */
+  const vigia = vigilarRed(page)
+  /** Espera a pantalla quieta; si se agota el tope se sigue (y queda en el log local, sin valores). */
+  const asentar = async (donde: string) => {
+    if ((await esperarEstable(page, estabilidad, vigia)) === 'tope') k.log('exploracion_espera', { n: pasos, donde, estado: 'tope' })
+  }
   /** Incidencias del lote en curso: salen con el SIGUIENTE paso (o con el cierre). */
   let incidencias: IncidenciaEjecucion[] = []
   const fin = (motivo: FinBucle['motivo'], error: FinBucle['error'] = null, detalle?: DetalleFinExploracion): FinBucle => ({
@@ -377,6 +389,9 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       // Una ventana nueva (popup) abierta DURANTE el bucle no se sigue en v1: hueco. Las de la entrada no cuentan.
       if (page.context().pages().some((p) => !deEntrada.has(p))) throw new Parar('sin_salida')
       await captura?.liberar()
+      // Pantalla QUIETA antes de inventariar (14/10/2026, 8d0676f9: tras rellenar el número de la vía, la validación
+      // asíncrona repintó la sección DESPUÉS de inventariar y el nodo del año quedó obsoleto).
+      await asentar('inventario')
       captura = await capturarInventarioExploracion(page)
       if (!captura) throw new Error('no se pudo leer el inventario de la pantalla')
       const inv = captura.inventario
@@ -414,16 +429,25 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         throw p?.accion === 'parar' ? new Parar(p.motivo) : new Parar('ambiguo', 'paso_no_ok')
       }
       const refs = indiceRefs(inv)
+      // ORDEN (14/10/2026, 8d0676f9): primero los campos simples, luego lo que repinta (autocompletados, elegir, marcar) y
+      // al final el avance: así año y m² se escriben ANTES de que el CP o la vía repinten y corten el lote.
+      const lote = ordenarLote(v.respuesta.acciones, inv)
       k.log('exploracion_paso', {
         n: pasos,
         pantalla: v.respuesta.pantalla.tipo,
-        acciones: v.respuesta.acciones.map((a) => (a.accion === 'rellenar' ? `rellenar ${a.ref}=${a.dato}` : 'ref' in a ? `${a.accion} ${a.ref}` : a.accion)),
+        acciones: lote.map((a) => (a.accion === 'rellenar' ? `rellenar ${a.ref}=${a.dato}` : 'ref' in a ? `${a.accion} ${a.ref}` : a.accion)),
       })
 
       const antes = { huella, elementos: nElementos(inv) }
       /** Acciones de ESTE lote que ya tocaron el portal: con alguna hecha, un nodo que ya no está = repintado, no ambigüedad. */
       let hechas = 0
-      const lote = v.respuesta.acciones
+      /** Corta el lote: las acciones que quedan SIN ejecutar viajan como incidencias `lote_cortado` (ref + clave; sin valor). */
+      const cortarLote = (desde: number, causa: string) => {
+        const pendientes = incidenciasLoteCortado(lote.slice(desde))
+        incidencias.push(...pendientes)
+        trasRepintado = true
+        k.log('exploracion_lote_cortado', { n: pasos, causa, hechas, pendientes: pendientes.length })
+      }
       lote: for (let i = 0; i < lote.length; i++) {
         const a = lote[i]
         if (a.accion === 'parar') throw new Parar(a.motivo)
@@ -441,12 +465,14 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria')
         }
         exigirSinCuenta(hit.el)
+        // Antes del PRIMER rellenar del lote: pantalla quieta (un repintado a medias dejaría el nodo a punto de caducar).
+        if (i === 0 && a.accion === 'rellenar') await asentar('primer_rellenar')
         let loc = await localizar(nodo, hit.el)
         // `rellenar` como PRIMERA acción con el nodo repintado (14/10/2026, Allianz Hogar: Angular re-renderiza el formulario
         // entre el inventario y el lote): se re-inventaría UNA vez y se busca el MISMO control por su identidad.
         if (!loc && hechas === 0 && a.accion === 'rellenar') {
           // Solo en la MISMA pantalla que se validó (`huella` de este paso): si cambió, no se relocaliza (fail-closed).
-          const re = await relocalizar(page, hit.el, hit.marco, huella, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
+          const re = await relocalizar(page, hit.el, hit.marco, huella, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS, estabilidad, vigia)
           k.log('exploracion_relocalizacion', { n: pasos, ref: a.ref, estado: re ? 'ok' : 'no_encontrado' })
           if (re) {
             ({ loc, hit } = re)
@@ -467,8 +493,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           // la pantalla nueva. Sin nada hecho, el nodo cambió sin que lo tocásemos: anti-TOCTOU, se para.
           if (hechas > 0) {
             acciones--
-            trasRepintado = true
-            k.log('exploracion_lote_cortado', { n: pasos, causa: 'nodo_no_localizado', hechas })
+            cortarLote(i, 'nodo_no_localizado')
             break lote
           }
           throw new Parar('ambiguo', 'nodo_no_localizado')
@@ -565,8 +590,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
           await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
         }
         if (cortar) {
-          trasRepintado = true
-          k.log('exploracion_lote_cortado', { n: pasos, causa: 'repintado_tras_rellenar', hechas })
+          cortarLote(i + 1, 'repintado_tras_rellenar')
           break lote
         }
       }
@@ -579,6 +603,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
     const f = finDeError(k.guard.violacion() ?? e)
     return fin(f.motivo, f.error, f.detalle)
   } finally {
+    vigia.soltar()
     await captura?.liberar()
   }
 }
@@ -621,9 +646,10 @@ async function fijarValor(loc: Locator, valor: string): Promise<'ok' | 'reintent
  * Tras un repintado: espera a que el portal se asiente, RE-INVENTARÍA una vez y busca el mismo control por su identidad
  * (`relocalizarElemento`, pura) SOLO si la pantalla nueva tiene la huella validada del paso. Devuelve su Locator y su entrada del inventario NUEVO, o `null`. Nunca lanza; libera la captura.
  */
-async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInventario, huellaValidada: string, esperaMs: number): Promise<{ loc: Locator; hit: { el: ElementoInventario; marco: MarcoInventario } } | null> {
+async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInventario, huellaValidada: string, esperaMs: number, estabilidad: OpcionesEstabilidad, vigia: VigiaRed): Promise<{ loc: Locator; hit: { el: ElementoInventario; marco: MarcoInventario } } | null> {
   await dormir(esperaMs)
-  await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
+  // `networkidle` no sirve en una SPA (resuelve al instante tras la carga): se espera a la pantalla QUIETA de verdad.
+  await esperarEstable(page, estabilidad, vigia)
   const nueva = await capturarInventarioExploracion(page).catch(() => null)
   if (!nueva) return null
   try {
