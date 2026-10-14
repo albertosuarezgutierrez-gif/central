@@ -73,6 +73,7 @@ BEGIN
     SELECT 1 FROM seguros.poliza_recibos o
      WHERE o.correduria_id = NEW.correduria_id
        AND o.codigo_entidad_dgs = NEW.codigo_entidad_dgs
+       AND o.id IS DISTINCT FROM NEW.id
        AND o.id_recibo IS DISTINCT FROM NEW.id_recibo
        AND regexp_replace(ltrim(o.id_recibo, '0'), '-[A-Z]$', '') = norm
   ) THEN
@@ -129,6 +130,7 @@ BEGIN
     SELECT 1 FROM seguros.poliza_recibos o
      WHERE o.correduria_id = NEW.correduria_id
        AND o.codigo_entidad_dgs = NEW.codigo_entidad_dgs
+       AND o.id IS DISTINCT FROM NEW.id
        AND o.id_recibo IS DISTINCT FROM NEW.id_recibo
        AND regexp_replace(ltrim(o.id_recibo, '0'), '-[A-Z]$', '') = norm
   ) THEN
