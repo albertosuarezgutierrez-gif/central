@@ -21,6 +21,7 @@ import {
 } from '@/lib/tarificador-probar'
 import { leerEncoladoBot } from '@/lib/tarificador-moto-formulario'
 import { adaptadorDeRamo, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
+import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 
 /** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
 export const HuecoBotsContext = createContext<HTMLElement | null>(null)
@@ -40,8 +41,10 @@ async function pedirJson(url: string, init?: RequestInit): Promise<{ status: num
   try {
     const r = await fetch(url, { cache: 'no-store', ...init })
     return { status: r.status, json: await r.json().catch(() => null) }
-  } catch {
-    return { status: 502, json: null }
+  } catch (e) {
+    const f = describirFalloRed(e)
+    console.error('[PrecioBots] la petición a plataforma falló', { motivo: f.motivo, nombre: f.nombre, causa: f.causa })
+    return { status: 502, json: { estado: 'error', motivo: f.motivo } }
   }
 }
 

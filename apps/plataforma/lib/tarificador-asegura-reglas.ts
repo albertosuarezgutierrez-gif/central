@@ -7,6 +7,21 @@ import { MAX_POBLACION, tieneCaracteresProhibidos } from '@central/module-tarifi
 export const COMPANIA_BOT = 'allianz'
 
 /**
+ * Por qué falló la llamada a asegura (13/10/2026: el `catch` tragaba la causa y todo era «red»). `AbortError`/`TimeoutError`
+ * (el `AbortSignal.timeout` del fetch) → `timeout`; cualquier otro → `red`. `causa` = SOLO nombres/códigos (`e.name`,
+ * `e.cause.code|name`), nunca el mensaje (puede llevar URL o datos). PURA.
+ */
+export function describirFalloRed(e: unknown): { motivo: 'timeout' | 'red'; nombre: string; causa: string | null } {
+  const nombre = e instanceof Error || (typeof e === 'object' && e !== null && 'name' in e) ? String((e as { name?: unknown }).name ?? 'Error').slice(0, 60) : typeof e
+  const c = (e as { cause?: unknown } | null)?.cause
+  const code = typeof c === 'object' && c !== null ? (c as { code?: unknown }).code : null
+  const crudo = typeof code === 'string' ? code : typeof c === 'object' && c !== null ? (c as { name?: unknown }).name : null
+  const causa = typeof crudo === 'string' && /^[A-Za-z0-9_.-]{1,60}$/.test(crudo) ? crudo : null
+  const causaTimeout = causa === 'TimeoutError' || causa === 'AbortError'
+  return { motivo: nombre === 'AbortError' || nombre === 'TimeoutError' || causaTimeout ? 'timeout' : 'red', nombre, causa }
+}
+
+/**
  * Los selects de ePAC «Comunidades 2020» viajan como texto LIBRE (el adaptador intenta etiqueta y luego
  * `value`; si no casa, error `datos`). No hay catálogo cerrado: estas son las etiquetas ya vistas en el
  * portal (TODO(valores admitidos) en `module-tarificacion`). El formulario las sugiere y deja escribir otra.

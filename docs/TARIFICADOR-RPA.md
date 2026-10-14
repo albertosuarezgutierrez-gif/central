@@ -51,7 +51,7 @@ Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de accio
   columna de fallos en `tarificador_conocimiento`); **corte por compañía/ramo tras 3 fallos seguidos** con aviso Telegram; estado
   «atascado» + Telegram y pantalla «Bots atascados» con captura y elementos numerados: Alberto elige/escribe, queda aprendido y se
   reanuda re-ejecutando el camino aprendido (checkpoint, sin máquina esperando). Allianz Moto a la capa común. Respaldo para
-  «Continuar» de Mapfre, la lupa del tomador y los `mat-select` (hoy en guard.ts / sin DOM: necesitan su propia puerta).
+  «Continuar» de Mapfre y los `mat-select` (hoy en guard.ts / sin DOM: necesitan su propia puerta).
 - **F2 hecha (14/10/2026, sin desplegar)** — reglas puras `packages/module-tarificacion/src/robustez.ts`, BD
   `apps/asegura/lib/tarificador-robustez.ts`, SQL `apps/asegura/prisma/sql/2026-10-14e_tarificador_robustez_f2.sql` (aplicar ANTES):
   · **Aprendido con confianza**: `fallos` seguidos + `consolidado_at` + `descartado_at` en `tarificador_conocimiento`. Consolida a los
@@ -76,18 +76,19 @@ Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de accio
     de opciones (`sugerirOpcion`, solo un índice) → `ErrorOpcionSinResolver` que pide inventario). Runner: `ctx.continuar` y
     `ctx.elegirMatSelect`; Mapfre: `continuarMapfre` con respaldo y mapeo explícito `MAPEO_MAPFRE_AUTO` (textos candidatos).
     **Abierto**: `FormularioAuto` aún no trae uso/ámbito/clase de permiso/compañía anterior (siguen pendientes → paran en el paso 2
-    con inventario hasta ampliar validador + plataforma), el interruptor «¿compañía anterior?», la lupa del NIF y «Generar
+    con inventario hasta ampliar validador + plataforma), el interruptor «¿compañía anterior?» y «Generar
     Proyecto»; el atasco F2 de un mat-select sin resolver no es elegible por Telegram (las opciones no tienen selector).
-  · **Lupa del NIF hecha (14/10/2026, Mapfre auto 0.6.0)** — tras el trabajo d7987f90 (murió en «mapa incompleto: faltan la lupa…» sin
-    IA ni atasco): acción `buscar_tomador` en `ACCIONES_PERMITIDAS` (= `TEXTOS_BUSCAR_TOMADOR` de guard.ts, test de igualdad); se
-    localiza por la capa común (fijo = único botón del `mat-form-field` del NIF validado como lupa → aprendido → IA → ATASCO F2) y
-    se pulsa SOLO por `pulsarBuscarTomadorMapfre` (paso activo «Datos básicos», dentro de `app-datos-basicos`, una vez y antes del
-    «Continuar» del paso 1, `comprobarBoton` + `mattooltip`, sin ventana de red). Icono sin texto (RIESGO aceptado): manda el texto
-    visible ENTERO; sin él, aria-label/title/mattooltip (todos de la lista); sin ellos, icono de lupa. «Buscar y contratar»/«Emitir»
-    con lupa → fuera. Lo resuelto se aprende solo si el «Continuar» llega a «Objeto asegurado». Tras la lupa: «no existe ningún
-    registro» → `datos`; un DIÁLOGO (selección de persona) → hueco con inventario SIN atasco (no hay puerta para elegir fila: abierto).
-    Capa común: `mat-icon` suelto es candidato de acción y un botón de solo icono viaja con su nombre accesible o «search»;
-    guardián `stubsDeHueco` (regla-respaldo-ia.test.ts): ningún adaptador con una función que solo lanza `ErrorMapa…`.
+  · **Tomador de Mapfre auto: SIN LUPA (14/10/2026, 0.7.0)** — regla (Alberto, operador real del portal): «sin lupa; autobúsqueda al
+    teclear NIF; si no existe se crea en el propio formulario». Se retiró la acción `buscar_tomador` (y `pulsarBuscarTomadorMapfre`,
+    `esControlBuscarTomador`, `ctx.buscarTomadorMapfre`): el bot teclea el NIF, sale del campo (`blur`) y espera la reacción de Mapfre
+    (`esperarReaccionTomador`, ≤8 s, solo lectura). EXISTE (algún campo Nombre/Apellido/Fecha de Nacimiento autorrellenado y quieto) →
+    no se teclea ni sobrescribe nada. NO EXISTE (campos presentes y vacíos, con el aviso «NO EXISTE NINGUN REGISTRO PARA ESA CONDICION DE
+    BUSQUEDA» o agotada la espera) → es lo NORMAL para un lead: se rellenan los campos del alta con `FormularioAuto.tomador`
+    (`input[name=nombre|primerApellido|segundoApellido|fechaNacimiento]`, fecha dd/mm/aaaa; jurídica: razón social) por la capa común
+    (fijo → aprendido → IA → atasco) y se comprueba que no queda ningún `mat-error` «Campo obligatorio» (si queda: hueco con inventario).
+    No hay botón de alta en el DOM real. Sin nombre/apellido/nacimiento en la ficha → `datos` explícito; diálogo de selección o campos
+    que no aparecen → `ErrorMapaIncompleto` con inventario. Guardián: `test/regression-tarificador-rpa.test.ts` (ni rastro de la lupa
+    ni de un clic en auto.ts). Guardián `stubsDeHueco` (regla-respaldo-ia.test.ts): ningún adaptador con una función que solo lanza `ErrorMapa…`.
   · **Pendiente de la F2**: Allianz Moto a la capa común; diálogo de selección de tomador de Mapfre (si aparece en real).
 - **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
   clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).

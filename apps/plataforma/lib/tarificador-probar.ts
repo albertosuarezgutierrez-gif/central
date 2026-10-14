@@ -36,7 +36,7 @@ export function mensajeDeFallo(status: number, json: unknown): string {
   const o = obj(json)
   if (status === 503 && (o?.estado === 'sin_configurar')) return 'La conexión con asegura no está configurada.'
   if (status === 503 && o?.estado === 'apagado') return 'El tarificador está apagado (TARIFICADOR_RPA_ACTIVO).'
-  if (status === 502) return 'No se ha podido contactar con asegura.'
+  if (status === 502) return o?.motivo === 'timeout' ? 'No se pudo completar: asegura no respondió a tiempo.' : 'No se pudo completar: no se pudo conectar con asegura.'
   return `No se pudo comprobar (HTTP ${status}).`
 }
 

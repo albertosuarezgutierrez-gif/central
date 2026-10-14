@@ -231,7 +231,6 @@ const ctxFalso = (registro: string[] = []) => ({
   pulsarEnlaceEntrada: async () => { registro.push('entrada') },
   confirmarVehiculoMapfre: async () => { registro.push('vehiculo') },
   continuarMapfre: async (_p: Page, paso: string) => { registro.push(`continuar:${paso}`) },
-  buscarTomadorMapfre: async () => { registro.push('lupa') },
 }) as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
 
 test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de navegar; otro ramo → datos', async () => {
@@ -246,13 +245,83 @@ test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de nav
   await assert.rejects(() => mapfreAuto.tarificar(pagina, { ...conNif, ramo: 'comunidades' } as unknown as FormularioAuto, ctxFalso()), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
 })
 
-test('paso 1: con NIF y campo mapeado, la LUPA es hueco con inventario y el NIF NO se teclea (ni sale en el error)', async () => {
-  await page.setContent('<body><app-datos-basicos><input name="codigoDocumento"><mat-icon>search</mat-icon></app-datos-basicos></body>')
+// ── Paso 1 SIN LUPA (14/10/2026): Mapfre busca sola al salir del campo del NIF. Fixtures SINTÉTICAS; todo dato es un placeholder. ──
+const AVISO_SIN_REGISTRO = 'NO EXISTE NINGUN REGISTRO PARA ESA CONDICION DE BUSQUEDA'
+const TOMADOR_HTML = (o: { alAbandonar?: string; campos?: boolean; lupa?: boolean } = {}) => `<body><app-datos-basicos>
+  <input name="codigoDocumento" onblur="${o.alAbandonar ?? ''}">
+  ${o.lupa === false ? '' : '<button id="lupa" aria-label="Buscar" onclick="window.__lupa=(window.__lupa||0)+1"><mat-icon>search</mat-icon></button>'}
+  ${o.campos === false ? '' : '<input name="nombre"><input name="primerApellido"><input name="segundoApellido"><input name="fechaNacimiento">'}
+  <mat-error id="err"></mat-error><span id="res"></span>
+</app-datos-basicos></body>`
+const AUTORRELLENO = `setTimeout(()=>{for(const [n,v] of [['nombre','NOMBRE AUTO'],['primerApellido','APELLIDO AUTO'],['fechaNacimiento','01/01/1990']])document.querySelector('[name='+n+']').value=v},80)`
+const SIN_REGISTRO = `setTimeout(()=>{document.getElementById('res').textContent='${AVISO_SIN_REGISTRO}'},80)`
+const lupaPulsada = () => page.evaluate(() => (window as unknown as { __lupa?: number }).__lupa ?? 0)
+const valor = (n: string) => page.locator(`app-datos-basicos input[name="${n}"]`).inputValue()
+const conTomador = { ...conNif, tomador: { tipo: 'fisica', nombre: 'NOMBRE FICHA', apellido1: 'APELLIDO1 FICHA', apellido2: 'APELLIDO2 FICHA', documentoIdentidad: NIF, fechaNacimiento: '1985-03-07', razonSocial: null, codigoPostal: null, poblacion: null, direccion: null, telefono: null, email: null } } as FormularioAuto
+
+test('paso 1 SIN LUPA: tomador que EXISTE (Mapfre autorrellena al salir del campo) → no se teclea ni sobrescribe nada y se continúa', async () => {
+  await page.setContent(TOMADOR_HTML({ alAbandonar: AUTORRELLENO }))
   const r: string[] = []
-  await assert.rejects(() => pasoDatosBasicos(page, conNif, ctxFalso(r)), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /lupa/.test(e.message) && !e.message.includes(NIF))
-  assert.equal(await page.locator(SEL_TOMADOR.documento).inputValue(), '', 'el NIF no queda en la pantalla')
-  assert.deepEqual(r, [], 'no se pulsa ni se continúa')
-  // Sin NIF → datos; sin campo → hueco con inventario.
+  await pasoDatosBasicos(page, conTomador, ctxFalso(r), 3_000)
+  assert.equal(await page.locator(SEL_TOMADOR.documento).inputValue(), NIF)
+  assert.equal(await valor('nombre'), 'NOMBRE AUTO', 'lo autorrellenado por Mapfre no se toca')
+  assert.equal(await valor('primerApellido'), 'APELLIDO AUTO')
+  assert.equal(await valor('segundoApellido'), '', 'ni se añade lo que Mapfre no puso')
+  assert.equal(await valor('fechaNacimiento'), '01/01/1990')
+  assert.equal(await lupaPulsada(), 0, 'la lupa NO se pulsa')
+  assert.deepEqual(r, ['continuar:datosBasicos'])
+})
+
+test('paso 1 SIN LUPA: tomador NUEVO (aviso «no existe ningún registro» + campos vacíos) → se da de alta con la ficha y se continúa; NO es error', async () => {
+  await page.setContent(TOMADOR_HTML({ alAbandonar: SIN_REGISTRO }))
+  const r: string[] = []
+  await pasoDatosBasicos(page, conTomador, ctxFalso(r), 3_000)
+  assert.equal(await valor('nombre'), 'NOMBRE FICHA')
+  assert.equal(await valor('primerApellido'), 'APELLIDO1 FICHA')
+  assert.equal(await valor('segundoApellido'), 'APELLIDO2 FICHA')
+  assert.equal(await valor('fechaNacimiento'), '07/03/1985', 'dd/mm/aaaa')
+  assert.equal(await lupaPulsada(), 0)
+  assert.deepEqual(r, ['continuar:datosBasicos'])
+})
+
+test('paso 1 SIN LUPA: sin aviso pero con campos vacíos tras la espera → también tomador nuevo; sin segundo apellido en la ficha, no se teclea', async () => {
+  await page.setContent(TOMADOR_HTML())
+  const r: string[] = []
+  const sin2 = { ...conTomador, tomador: { ...conTomador.tomador!, apellido2: null } } as FormularioAuto
+  await pasoDatosBasicos(page, sin2, ctxFalso(r), 700)
+  assert.equal(await valor('segundoApellido'), '')
+  assert.equal(await valor('fechaNacimiento'), '07/03/1985')
+  assert.deepEqual(r, ['continuar:datosBasicos'])
+})
+
+test('paso 1 SIN LUPA: tomador nuevo y tras el alta queda un «Campo obligatorio» → hueco con inventario, SIN «Continuar»', async () => {
+  await page.setContent(TOMADOR_HTML({ alAbandonar: SIN_REGISTRO }))
+  await page.evaluate(() => { document.getElementById('err')!.textContent = 'Campo obligatorio' })
+  const r: string[] = []
+  await assert.rejects(() => pasoDatosBasicos(page, conTomador, ctxFalso(r), 3_000), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /Campo obligatorio/.test(e.message) && !e.message.includes(NIF))
+  assert.deepEqual(r, [])
+})
+
+test('paso 1 SIN LUPA: tomador nuevo sin nombre/apellido/nacimiento en la ficha → `datos` explícito (nada tecleado salvo el NIF, sin «Continuar»)', async () => {
+  await page.setContent(TOMADOR_HTML({ alAbandonar: SIN_REGISTRO }))
+  const r: string[] = []
+  await assert.rejects(() => pasoDatosBasicos(page, conNif, ctxFalso(r), 3_000), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /no trae/.test(e.message) && !e.message.includes(NIF))
+  assert.equal(await valor('nombre'), '')
+  assert.deepEqual(r, [])
+})
+
+test('paso 1 SIN LUPA: Mapfre no muestra los campos del tomador, o abre un diálogo de selección → hueco con inventario, sin teclear ni elegir', async () => {
+  await page.setContent(TOMADOR_HTML({ campos: false, alAbandonar: SIN_REGISTRO }))
+  const r: string[] = []
+  await assert.rejects(() => pasoDatosBasicos(page, conTomador, ctxFalso(r), 600), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /reacción de Mapfre/.test(e.message))
+  await page.setContent(TOMADOR_HTML({ alAbandonar: "document.body.insertAdjacentHTML('beforeend','<mat-dialog-container><button id=p1 onclick=window.__elegido=1>PERSONA 1</button></mat-dialog-container>')" }))
+  await assert.rejects(() => pasoDatosBasicos(page, conTomador, ctxFalso(r), 3_000), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /diálogo/.test(e.message))
+  assert.equal(await page.evaluate(() => (window as unknown as { __elegido?: number }).__elegido ?? 0), 0)
+  assert.deepEqual(r, [])
+})
+
+test('paso 1: sin NIF → datos; sin campo NIF → hueco con inventario', async () => {
+  await page.setContent(TOMADOR_HTML())
   await assert.rejects(() => pasoDatosBasicos(page, form, ctxFalso()), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
   await page.setContent('<body><app-datos-basicos></app-datos-basicos></body>')
   await assert.rejects(() => pasoDatosBasicos(page, conNif, ctxFalso()), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /campo NIF/.test(e.message))
