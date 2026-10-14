@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T05:32:07Z",
-  "sha": "4a314e870554e77809a55f778fb229540ba98bfc",
+  "generadoEn": "2026-10-14T06:00:04Z",
+  "sha": "924130cc96984cc121bca317c1e317e4f12fb1f7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3392,13 +3392,13 @@
           "exportada": true,
           "params": "{ polizaId, disponible, inicial, pedidaInicial, }: { polizaId: string /** Hay IA configurada (o ya hay revisión cacheada). */ disponible: boolean inicial: Punto[] | null pedidaInicial: boolean }",
           "retorno": null,
-          "linea": 15,
+          "linea": 16,
           "resumen": "«Revisar mi póliza» en la ficha de una póliza APORTADA (13/10/2026). El servidor decide si se enseña y si ya hay una revisión cacheada; aquí solo se pinta y se pulsa. NO se lanza sola: cuesta una llam"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "10d03d52a6b1"
+      "hash": "a2277df96ffa"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/AnadirPoliza.tsx",
@@ -14644,7 +14644,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 54
+          "linea": 43
         },
         {
           "nombre": "datosSimples",
@@ -14652,7 +14652,7 @@
           "exportada": false,
           "params": "d: EntradaRevision['datosRamo']",
           "retorno": "Array<[string, string | number | boolean]>",
-          "linea": 74,
+          "linea": 63,
           "resumen": "Solo claves de la lista blanca, con valor simple y no vacío, ordenadas (la huella no puede depender del orden)."
         },
         {
@@ -14661,7 +14661,7 @@
           "exportada": true,
           "params": "e: EntradaRevision",
           "retorno": "boolean",
-          "linea": 86,
+          "linea": 75,
           "resumen": "¿Hay algo con lo que revisar? Sin coberturas ni datos del ramo, la IA solo inventaría."
         },
         {
@@ -14670,7 +14670,7 @@
           "exportada": true,
           "params": "e: EntradaRevision",
           "retorno": "string",
-          "linea": 91,
+          "linea": 80,
           "resumen": "SHA-256 estable de lo que se le da al modelo: si no cambia, no se vuelve a llamar."
         },
         {
@@ -14679,7 +14679,7 @@
           "exportada": true,
           "params": "e: EntradaRevision",
           "retorno": "string",
-          "linea": 118,
+          "linea": 107,
           "resumen": "El mensaje de usuario para el modelo: datos legibles, sin identificadores personales."
         },
         {
@@ -14688,7 +14688,7 @@
           "exportada": false,
           "params": "t: string, max: number",
           "retorno": "string",
-          "linea": 140
+          "linea": 129
         },
         {
           "nombre": "normalizarPuntos",
@@ -14696,7 +14696,7 @@
           "exportada": true,
           "params": "salida: string",
           "retorno": "Punto[] | null",
-          "linea": 149,
+          "linea": 138,
           "resumen": "Lo que contestó el modelo → puntos limpios. `null` = ilegible (error, NO «sin puntos»); `[]` = el modelo dijo que no hay nada. Se descarta cualquier punto con frases prohibidas (se prefiere callar a a"
         },
         {
@@ -14705,7 +14705,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 181
+          "linea": 170
         },
         {
           "nombre": "decidirRevision",
@@ -14713,7 +14713,7 @@
           "exportada": true,
           "params": "d: { hayIa: boolean tieneMaterial: boolean hayCache: boolean usadasHoy: number }",
           "retorno": "DecisionRevision",
-          "linea": 196,
+          "linea": 185,
           "resumen": "luego sin clave, sin material, tope diario y, solo entonces, se llama a la IA."
         },
         {
@@ -14722,7 +14722,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Punto[] | null",
-          "linea": 210,
+          "linea": 199,
           "resumen": "Lo guardado (jsonb) → puntos, o `null` si no tiene la forma. Defensivo: viene de la BD."
         },
         {
@@ -14731,13 +14731,13 @@
           "exportada": true,
           "params": "p: { ramo: string | null compania: string | null primaAnual: unknown periodicidadPago: string | null fechaVencimiento: Date | null coberturas: unknown datosRamo: unknown }",
           "retorno": "EntradaRevision",
-          "linea": 222,
+          "linea": 211,
           "resumen": "La fila de `portal_poliza_declarada` (solo lo que la revisión lee) → la entrada. Número ya convertido (Decimal → number)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e3bae5e953a"
+      "hash": "9aa406043f1e"
     },
     {
       "ruta": "apps/asegura-portal/lib/session.ts",
