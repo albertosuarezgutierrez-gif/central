@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  aplicarNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  aplicarNifTomador, riesgoParaEncolar, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -274,15 +274,60 @@ test('NIF Mapfre: otra compañía no lee la ficha y QUITA un documentoTomador qu
   assert.deepEqual(aplicarNifTomador('allianz', 'comunidades', { ramo: 'comunidades' }, noLeer), { ok: true, riesgo: { ramo: 'comunidades' } })
 })
 
-test('NIF Mapfre: encolarTrabajo lo aplica tras comprobar el cliente de ESTA correduría y ANTES de deduplicar e insertar', () => {
+// 🔒 14/10/2026 (seguridad): el NIF descifrado NO se persiste en `tarificacion_trabajos.riesgo`; solo viaja al worker.
+
+test('NIF Mapfre · ENCOLAR: el riesgo que se guarda NUNCA lleva el documento (ni el de la ficha ni uno que viniera)', () => {
+  const leido = { n: 0 }
+  const ok = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => { leido.n++; return { estado: 'ok', documento: NIF } })
+  assert.ok(ok.ok)
+  assert.equal(leido.n, 1, 'se comprueba la ficha')
+  assert.deepEqual(ok.ok && ok.riesgo, RIESGO_MOTO)
+  assert.ok(!JSON.stringify(ok).includes('00000000'), 'el riesgo persistido no contiene el documento')
+  // Un `documentoTomador` que venga en la entrada tampoco se guarda (es el campo que pone asegura al entregar).
+  const trae = riesgoParaEncolar('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }, () => ({ estado: 'ok', documento: NIF }))
+  assert.ok(trae.ok && !JSON.stringify(trae.riesgo).includes('0000000T'))
+  assert.deepEqual(riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(riesgoSinNifTomador({ a: 1, documentoTomador: NIF }), { a: 1 })
+  assert.equal(riesgoSinNifTomador(null), null)
+})
+
+test('NIF Mapfre · ENCOLAR: ficha sin NIF / no válido / ilegible → rechazo (422/422/503) sin documento en el motivo', () => {
+  for (const [estado, status] of [['sin_nif', 422], ['no_valido', 422], ['ilegible', 503]] as const) {
+    const r = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado }))
+    assert.ok(!r.ok && r.status === status && /nif_tomador/.test(r.motivo), estado)
+  }
+  assert.equal(tipoFalloNifTomador(422), 'datos')
+  assert.equal(tipoFalloNifTomador(503), 'infra', 'ilegible = «no se sabe»: fallo de infraestructura, no de la ficha')
+})
+
+test('NIF Mapfre · ENTREGA al worker: el riesgo GUARDADO + la ficha → el worker SÍ recibe el NIF (solo Mapfre auto/moto)', () => {
+  const guardado = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }))
+  assert.ok(guardado.ok)
+  const alWorker = aplicarNifTomador('mapfre', 'moto', guardado.ok && guardado.riesgo, () => ({ estado: 'ok', documento: NIF }))
+  assert.deepEqual(alWorker.ok && alWorker.riesgo, { ...RIESGO_MOTO, documentoTomador: NIF })
+  // Otras compañías / ramos: ni se lee la ficha ni reciben documento.
+  assert.deepEqual(aplicarNifTomador('allianz', 'moto', RIESGO_MOTO, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(aplicarNifTomador('mapfre', 'comunidades', { ramo: 'comunidades' }, noLeer), { ok: true, riesgo: { ramo: 'comunidades' } })
+})
+
+test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cliente) y trabajoParaWorker lo inyecta sin escribirlo', () => {
   const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
   const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
   const cliente = fn.indexOf("'cliente_no_encontrado'")
-  const aplica = fn.indexOf('aplicarNifTomador(')
-  const json = fn.indexOf('const riesgoJson = JSON.stringify(conNif.riesgo)')
-  assert.ok(cliente > -1 && aplica > cliente && json > aplica, 'cliente comprobado → NIF aplicado → riesgo serializado')
+  const comprueba = fn.indexOf('riesgoParaEncolar(')
+  const json = fn.indexOf('const riesgoJson = JSON.stringify(guardar.riesgo)')
+  assert.ok(cliente > -1 && comprueba > cliente && json > comprueba, 'cliente comprobado → NIF comprobado → riesgo SIN NIF serializado')
   assert.ok(fn.search(/insert into \w+\.tarificacion_trabajos/) > json)
-  assert.ok(!/JSON\.stringify\(e\.riesgo\)/.test(fn), 'nada encola el riesgo sin pasar por el NIF')
-  assert.match(fn, /select dni from \w+\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{e\.correduriaId\}::uuid/)
-  assert.ok(fn.indexOf('return { estado: \'rechazado\', status: conNif.status, motivo: conNif.motivo }') > aplica, 'sin NIF no se encola')
+  assert.ok(!/JSON\.stringify\(e\.riesgo\)/.test(fn), 'nada encola el riesgo sin pasar por riesgoParaEncolar')
+  assert.ok(!fn.includes('aplicarNifTomador('), 'encolar NO inyecta el NIF (eso es al entregar)')
+  assert.match(fn, /leerDniFicha\(e\.correduriaId, clienteId\)/)
+  assert.match(src, /select dni from \w+\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid/)
+  assert.ok(fn.indexOf("return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }") > comprueba, 'sin NIF no se encola')
+  // Entrega: se inyecta en la respuesta (no en exploración) y la función no escribe el riesgo en BD.
+  const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
+  assert.match(w, /if \(modo !== 'exploracion' && necesitaNifTomador\(f\.compania, f\.ramo, riesgo\)\)/)
+  assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
+  assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
+  assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo/g, '')), 'el riesgo solo se toca para la respuesta')
 })

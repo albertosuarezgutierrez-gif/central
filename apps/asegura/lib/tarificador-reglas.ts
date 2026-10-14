@@ -35,7 +35,11 @@ export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEn
 // ─── NIF del tomador para Mapfre (14/10/2026, decisión de Alberto) ──────────
 // Mapfre NSEI busca al tomador por NIF en el paso 1. Lo rellena ASEGURA en el servidor desde la ficha del cliente
 // (descifrada aquí), solo en trabajos de Mapfre y solo si el riesgo no lo trae. El DNI entero NUNCA cruza a plataforma:
-// ni en la respuesta del encolado ni en un motivo de rechazo; y NO está en la lista blanca de la purga (se borra al cerrar).
+// ni en la respuesta del encolado ni en un motivo de rechazo.
+// 🔒 14/10/2026 (revisión de seguridad): el NIF descifrado NO se GUARDA en `tarificacion_trabajos.riesgo` (la cartera lo
+// guarda cifrado; aquí quedaría en claro bajo un rol BYPASSRLS hasta la purga). Al ENCOLAR solo se COMPRUEBA que la ficha
+// lo tiene legible y válido y se guarda el riesgo sin él (`riesgoParaEncolar`); se descifra e inyecta al ENTREGAR el
+// trabajo `en_curso` al worker (`trabajoParaWorker` → `aplicarNifTomador`), solo en la respuesta, nunca escrito en BD.
 
 /** Compañías cuyo bot busca al tomador por NIF (hoy solo Mapfre). */
 export const COMPANIAS_CON_NIF_TOMADOR = ['mapfre'] as const
@@ -96,6 +100,32 @@ export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknow
   if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'nif_tomador_ilegible: el NIF de la ficha del cliente no se puede descifrar (clave de la cartera); no se encola' }
   if (l.estado === 'no_valido') return { ok: false, status: 422, motivo: 'nif_tomador_no_valido: el NIF/CIF de la ficha del cliente no es válido; corrígelo en la ficha (Mapfre busca al tomador por NIF)' }
   return { ok: false, status: 422, motivo: 'falta_nif_tomador: la ficha del cliente no tiene NIF/CIF y Mapfre busca al tomador por NIF; complétalo en la ficha' }
+}
+
+/**
+ * El riesgo que se GUARDA en la cola: nunca con `documentoTomador` (es el campo que pone asegura desde la ficha, y se
+ * inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA.
+ */
+export function riesgoSinNifTomador<T>(riesgo: T): T {
+  if (!esObj(riesgo) || !('documentoTomador' in riesgo)) return riesgo
+  const { documentoTomador: _fuera, ...resto } = riesgo
+  return resto as T
+}
+
+/**
+ * Al ENCOLAR: el riesgo que se GUARDA, tras comprobar que la ficha permitirá al worker recibir el NIF. Misma regla y
+ * mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSinNifTomador` (el documento
+ * descifrado jamás vuelve de aquí ni se persiste). PURA.
+ */
+export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string } {
+  const guardado = riesgoSinNifTomador(riesgo)
+  const r = aplicarNifTomador(compania, ramo, guardado, leer)
+  return r.ok ? { ok: true, riesgo: guardado } : r
+}
+
+/** Al ENTREGAR: un NIF que ya no se puede poner es fallo `datos` (la ficha) o `infra` si es ilegible (la clave: «no se sabe»). */
+export function tipoFalloNifTomador(status: 422 | 503): 'datos' | 'infra' {
+  return status === 503 ? 'infra' : 'datos'
 }
 
 /** Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed). */

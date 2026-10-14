@@ -1,10 +1,10 @@
 -- Tarificador RPA · Mapfre MOTO (wmediadores · NSEI, mismo flujo «Turismos y Motos» que el coche) (14/10/2026).
--- La fila nace APAGADA (`activo = false`): sin ella activa `encolarTrabajo` rechaza el ramo (409, fail-closed). El adaptador
--- `mapfreMoto` solo existe en la máquina con el fly secret TARIFICADOR_MAPFRE_ACTIVO=1 (apagado por defecto).
+-- La fila nace APAGADA (`activo = false`): sin ella activa `encolarTrabajo` rechaza el ramo (409, fail-closed). La puerta
+-- de Mapfre es ESTA fila (no hay interruptor en la máquina).
 -- Para la PRUEBA REAL (autorizada por Alberto el 14/10/2026), a mano y solo durante la prueba:
 --   update seguros.companias_integracion set activo = true where compania = 'mapfre' and ramo = 'moto';
--- y al acabar, salvo que funcione de punta a punta hasta precio:
---   update seguros.companias_integracion set activo = false where compania = 'mapfre';
+-- y al acabar, salvo que funcione de punta a punta hasta precio (solo ESTE ramo; no apaga otros ramos de Mapfre):
+--   update seguros.companias_integracion set activo = false where compania = 'mapfre' and ramo = 'moto';
 -- Idempotente. No toca ninguna otra fila. Nada de esto emite. Credencial: fly secrets CRED_MAPFRE_WMEDIADORES_USER / _PASS.
 -- Se deshace con: DELETE FROM seguros.companias_integracion WHERE compania = 'mapfre' AND ramo = 'moto';
 DO $seed$
