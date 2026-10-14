@@ -57,6 +57,8 @@ export type LeadCompetencia = {
   respondioAntes: boolean
   /** Tuvo alguna póliza con nosotros (cualquier época): abre el correo por LSSI 21.2. */
   fueCliente: boolean
+  /** Fecha (YYYY-MM-DD) de la tarea de seguimiento pendiente más próxima; `null` = no hay. Permite enseñar el plan «mover su llamada» al corregir el vencimiento. */
+  proximaLlamada: string | null
   canal: CanalLead
   puntuacion: number
   siguientePaso: PasoLead
@@ -294,6 +296,7 @@ export async function leadsCompetencia(
       otrasOportunidades: otras,
       respondioAntes: f.respondio,
       fueCliente: f.fueCliente,
+      proximaLlamada: f.proximaTarea?.fechaLimite ?? null,
       canal,
       puntuacion: puntuarLead({
         tieneTelefono: telefono !== null,

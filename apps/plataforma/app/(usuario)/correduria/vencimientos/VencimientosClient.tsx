@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { CalendarClock, Phone, Search, TriangleAlert } from 'lucide-react'
 import { textoPasoLead } from '@central/module-seguros'
@@ -14,6 +14,7 @@ import {
   diasSinRespuesta,
   leadCoincide,
   rotuloCanal,
+  rotuloRamo,
   tramoLead,
   whatsappDeLead,
   type LeadVencimiento,
@@ -24,6 +25,8 @@ import {
 } from '@/lib/seguimiento-asegura'
 import Renovaciones, { type RespVencimientos } from '../Renovaciones'
 import { Ico } from '../iconos'
+import EditarVencimiento from '../cliente/[id]/EditarVencimiento'
+import { textoPorQueSale } from '@/lib/correduria/por-que-sale'
 import RespuestaLead from './RespuestaLead'
 import WhatsappLead from './WhatsappLead'
 
@@ -48,17 +51,22 @@ export default function VencimientosClient() {
   const [clientes, setClientes] = useState<RespVencimientos | null>(null)
   const [leads, setLeads] = useState<LeadsVencimientos | null>(null)
 
+  // Sin poner `leads` a null: recargar tras corregir un vencimiento no desmonta la lista.
+  const cargarLeads = useCallback(() => {
+    fetch('/api/correduria/leads-competencia?dias=90')
+      .then(r => (r.ok ? r.json() : { estado: 'error', motivo: `HTTP ${r.status}` }))
+      .then(setLeads)
+      .catch(() => setLeads({ estado: 'error', motivo: 'red' }))
+  }, [])
+
   useEffect(() => {
     setCarril(carrilDeUrl())
     fetch('/api/correduria/vencimientos?dias=90')
       .then(r => (r.ok ? r.json() : { estado: 'error' }))
       .then(setClientes)
       .catch(() => setClientes({ estado: 'error' } as RespVencimientos))
-    fetch('/api/correduria/leads-competencia?dias=90')
-      .then(r => (r.ok ? r.json() : { estado: 'error', motivo: `HTTP ${r.status}` }))
-      .then(setLeads)
-      .catch(() => setLeads({ estado: 'error', motivo: 'red' }))
-  }, [])
+    cargarLeads()
+  }, [cargarLeads])
 
   function elegir(c: Carril) {
     setCarril(c)
@@ -101,12 +109,12 @@ export default function VencimientosClient() {
         ))}
       </div>
 
-      {carril === 'clientes' ? <Renovaciones datos={clientes} filtro="todas" /> : <CarrilLeads datos={leads} />}
+      {carril === 'clientes' ? <Renovaciones datos={clientes} filtro="todas" /> : <CarrilLeads datos={leads} onRecargar={cargarLeads} />}
     </div>
   )
 }
 
-function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
+function CarrilLeads({ datos, onRecargar }: { datos: LeadsVencimientos | null; onRecargar: () => void }) {
   const [ventana, setVentana] = useState<VentanaLead | null>(null)
   const [tramo, setTramo] = useState<TramoLead>('por_enviar')
   const [mostrar, setMostrar] = useState(POR_PAGINA)
@@ -219,7 +227,7 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
           {filtrados.slice(0, mostrar).map(l => (
-            <FilaLead key={l.oportunidadId} l={l} onWhatsapp={() => trasWhatsapp(l.oportunidadId)} onRespuesta={r => trasRespuesta(l.oportunidadId, r)} />
+            <FilaLead key={l.oportunidadId} l={l} onWhatsapp={() => trasWhatsapp(l.oportunidadId)} onRespuesta={r => trasRespuesta(l.oportunidadId, r)} onRecargar={onRecargar} />
           ))}
         </ul>
       )}
@@ -266,7 +274,7 @@ function tonoCanal(l: LeadVencimiento): Tono {
   return 'info'
 }
 
-function FilaLead({ l, onWhatsapp, onRespuesta }: { l: LeadVencimiento; onWhatsapp: () => void; onRespuesta: (r: RespuestaWhatsappUI) => void }) {
+function FilaLead({ l, onWhatsapp, onRespuesta, onRecargar }: { l: LeadVencimiento; onWhatsapp: () => void; onRespuesta: (r: RespuestaWhatsappUI) => void; onRecargar: () => void }) {
   const paso = l.canal ? textoPasoLead(l.paso, l.canal, whatsappDeLead(l) !== null) : l.paso.motivo
   const puedeLlamar = l.telefono !== null && l.canal !== 'solo_correo' && l.canal !== 'sin_canal_permitido'
   const tramo = tramoLead(l)
@@ -305,6 +313,14 @@ function FilaLead({ l, onWhatsapp, onRespuesta }: { l: LeadVencimiento; onWhatsa
         )}
         <WhatsappLead lead={l} onRegistrado={onWhatsapp} />
         <Link href={`/correduria/oportunidad/${l.oportunidadId}`} style={btnStyle('secundario')}>Abrir</Link>
+      </div>
+      <div style={{ flexBasis: '100%', minWidth: 0, display: 'grid', gap: 6 }}>
+        <span style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
+          <b>Por qué sale:</b> {textoPorQueSale({ ramo: l.ramo === null ? null : rotuloRamo(l.ramo), aseguradora: l.aseguradora, vencimientoEstimado: l.vencimientoEstimado, dias: l.dias })}
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+          <EditarVencimiento oportunidadId={l.oportunidadId} vence={l.vencimientoEstimado} proximaLlamada={l.proximaLlamada} onGuardado={onRecargar} />
+        </div>
       </div>
       {tramo !== 'por_enviar' && <RespuestaLead oportunidadId={l.oportunidadId} onHecho={onRespuesta} />}
     </li>
