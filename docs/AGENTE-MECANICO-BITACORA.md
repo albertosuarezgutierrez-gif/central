@@ -68,3 +68,4 @@
 | 11/10/2026 | solo docs: CONTEXTO-SESIONES (entrada SQL figuras multi aplicado + «→ aplicado 11/10» en entrada 10/10), esta bitácora | agente-mecanico | ok |
 | 13/10/2026 | explorador: transiciones del mapa validadas en servidor (`tarificador-exploraciones*.ts`, helper `transicionPermitida` + WHERE por estado leído) | agente-mecanico | ok |
 | 14/10/2026 | solo docs: bitácora común de errores y capa por ramo en CONOCIMIENTO-PORTALES.md, regla en MANUAL-NUEVO-BOT.md (§4 y §6) | agente-mecanico | ok (sin tsc: no se tocó código) |
+| 14/10/2026 | solo docs: subsección «Flujo NSEI Auto (tarificación rápida)» en la capa Mapfre de CONOCIMIENTO-PORTALES.md (sin datos personales) | agente-mecanico | ok (sin tsc: no se tocó código) |

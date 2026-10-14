@@ -194,8 +194,42 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso, ámbito de circulación y 
   RGPD «Sí»; «Contratar» y todo «Aceptar» siguen bloqueados. «Calcular» pasa.
 - **Huecos (el adaptador no pulsa nada todavía):**
   - Login y entrada: hechos y conectados al explorador (pestaña nueva + excepción exacta del guard).
-  - Avance «Continuar» entre pasos; elegir fila y confirmar el diálogo de vehículo.
+  - Elegir fila y confirmar el diálogo de vehículo: RESUELTO (radio por fila + «Aceptar», deshabilitado hasta elegir; ver
+    «Flujo NSEI Auto»). Avance «Continuar» entre pasos: descrito en esa subsección, sin automatizar.
   - `mat-select` (uso, ámbito, clase de permiso, compañía anterior): no se grabaron abiertos. Significado de uso,
     ámbito y clase de permiso: PENDIENTE — preguntar a Alberto.
-  - Búsqueda del tomador/conductor por NIF (lupa).
+  - Búsqueda del tomador por NIF (lupa): RESUELTO a nivel de flujo (autocompleta Nombre y Apellidos; ver «Flujo NSEI Auto»).
+    Sin automatizar.
   - Botón de guardar y descarga de PDF: PENDIENTE — preguntar a Alberto.
+
+### Flujo NSEI Auto (tarificación rápida) — visto por Alberto 14/10/2026
+
+> Solo lo que Alberto enseñó en pantalla. Sin datos de clientes ni códigos.
+
+- **Menú «Nueva producción»:** despliega los ramos Agropecuaria, Automóviles, Empresas, Patrimoniales, Salud y Vida.
+- **Stepper de 6 pasos:** 1. Datos básicos · 2. Objeto asegurado · 3. Figuras · 4. Coberturas · 5. Proyectos · 6. Contratación.
+  **«Contratación» (6) es la frontera de emisión: el bot NUNCA entra en el paso 6.** «Proyectos» (5) es donde se guarda
+  el presupuesto (botón exacto: PENDIENTE).
+- **Paso 1 · Datos básicos:**
+  - Bloque «Tomador»: «Introduzca NIF/NIE/CIF *» con lupa (al buscar autocompleta Nombre y Apellidos) y «Fecha de Nacimiento *».
+  - Bloque «Información General»: «Compañía *» y «Agente *» vienen preseleccionados; «Acuerdo» en SIN ACUERDO por defecto;
+    «Tipo de comisión» deshabilitado; «Fecha de efecto *» por defecto hoy; «Fecha de vencimiento», «Fecha Condiciones» y
+    «Fecha de mecanización» deshabilitadas; «Duración» en ANUAL PRORROGABLE.
+  - Pie: «Salir», «Volver», «Controles técnicos», «Continuar».
+- **Paso 2 · Objeto asegurado:** se introduce la matrícula → diálogo «Selección de vehículo» con tabla (Matrícula, Nº Bastidor,
+  Denominación comercial, CV/KW, CC, Nº Puertas, Fecha Inicio) y un radio por fila. Si las filas son casi iguales, se elige
+  la primera y se pulsa «Aceptar» (deshabilitado hasta elegir fila). Otros botones del diálogo: «Cancelar» y «No es el
+  vehículo.». Fuera del diálogo: «Buscador de vehículos», «Vehículo NO catalogado», «Resumen vehículo». Después se pide
+  código postal y «Continuar».
+- **Paso 3 · Figuras:** pestañas «Tomador» y «Conductores Ocasionales»; casillas «Actúa como Conductor Habitual» y «Tomador y
+  propietario son la misma persona» (ambas marcadas por defecto); acordeones «Datos Básicos», «Dirección Habitual» y
+  «Permiso Conducir» con «Clase *» (desplegable) y «Valido desde *» (la fecha es la del carné). Cabecera resumen con Acuerdo,
+  Tomador, Matrícula y O. Asegurado, y las secciones «Información general» y «Obs. y Cláusulas».
+- **Flujo resumido (Alberto):** NIF → matrícula → elegir versión → CP → Continuar → fecha de nacimiento y fecha de carné →
+  Continuar → precio.
+- **Resuelto por esta vista:** cómo se elige el vehículo (radio por fila + «Aceptar») y la búsqueda del tomador por NIF (lupa).
+- **PENDIENTE (Alberto):**
+  - Valor habitual de «Clase» del permiso de conducir.
+  - Qué se elige en «Coberturas».
+  - Botón exacto de guardar en «Proyectos».
+  - Cómo sale el PDF.
