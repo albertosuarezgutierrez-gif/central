@@ -97,8 +97,10 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await ctx.exigirSinCaptcha()
     },
   }),
-  // Mapfre wmediadores (14/10/2026): SOLO login; la ruta de menús hasta Auto aún no se conoce, así que no tiene entrada en
-  // ENTRADAS_EXPLORACION y `entrar` no navega más allá del login.
+  // Mapfre wmediadores (14/10/2026): SOLO login. La ruta hasta Auto existe (`mapfre:nueva_produccion:auto` +
+  // `adapters/mapfre/entrada.ts#abrirTarificacionRapidaAuto`) pero abre una PESTAÑA NUEVA y este núcleo exige seguir en la
+  // `page` original (el bucle usa una `const page` y para con `sin_salida` si hay >1 pestaña): sin conectar hasta que
+  // `entrar` pueda devolver la página donde continuar (ver informe). El contexto NO lleva `httpCredentials` (a propósito).
   mapfre: Object.freeze({
     credencial: 'MAPFRE_WMEDIADORES',
     entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {

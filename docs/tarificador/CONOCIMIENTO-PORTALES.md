@@ -56,8 +56,17 @@
 > (sección «Mapfre Auto · NSEI»). Fuente: una grabación de 19 pantallas del 13/10/2026. Adaptador SIN registrar,
 > `MAPFRE_AUTO_ACTIVO=false`, fila de integración `mapfre/auto` apagada (`2026-10-14_tarificador_mapfre_auto.sql`).
 
-- **Entrada:** PENDIENTE — preguntar a Alberto. URL de login, 2FA y ruta de menús (wmediadores → Auto → Nueva Alta)
-  no constan: la grabación empieza ya dentro de NSEI (`/evt21_nsei_fe-web/`).
+- **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
+  (usuario + contraseña; **no pide SMS**). Después: pestaña «Nueva producción» → bloque «Automóviles» → tarjeta «Turismos y
+  Motos» → enlace «Tarificación y Emisión Rápida», que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
+  `adapters/mapfre/entrada.ts` (clave `mapfre:nueva_produccion:auto`, sin avances autorizados).
+- **Diálogo HTTP:** en la pestaña nueva Chromium pinta el diálogo nativo de auth («wmediadores.mapfre.com necesita un nombre de
+  usuario y una contraseña»). Alberto lo **cancela**; detrás ya está el formulario (`app-datos-basicos`: «Fecha Condiciones»,
+  «Fecha de mecanización»). El bot lo cancela dejando el contexto SIN `httpCredentials` (Chromium responde 401). Cepo en
+  `test/mapfre-entrada.test.ts`.
+- 🚨 **Trampas de la entrada:** (1) el guard de emisión bloquea hoy el texto «Tarificación y Emisión Rápida» (casa `emisi`):
+  hace falta una excepción exacta y guardada; (2) el explorador debe poder continuar en la pestaña nueva (hoy usa la `page`
+  original y para con `sin_salida` si hay más de una). Sin ambas, la entrada no está conectada en `PORTALES_EXPLORACION`.
 - **Tecnología:** SPA Angular Material **sin iframes**; todo el DOM es legible. Los `mat-input-N` NO se usan
   (son contadores de Angular Material); los selectores van por `name`/`formcontrolname` con ámbito de componente.
 - **Stepper de 6 pasos** (todos los componentes viven a la vez en el DOM; manda el paso activo):
@@ -80,7 +89,7 @@
   proyectos»; no los bloquea `guard-emision.ts`). Sigue prohibido emitir/contratar/formalizar/grabar póliza, pago y
   RGPD «Sí»; «Contratar» y todo «Aceptar» siguen bloqueados. «Calcular» pasa.
 - **Huecos (el adaptador no pulsa nada todavía):**
-  - Login y entrada al portal; 2FA: PENDIENTE — preguntar a Alberto.
+  - Login y entrada: hechos (ver «Entrada»); falta conectarlos al explorador (pestaña nueva + guard).
   - Avance «Continuar» entre pasos; elegir fila y confirmar el diálogo de vehículo.
   - `mat-select` (uso, ámbito, clase de permiso, compañía anterior): no se grabaron abiertos. Significado de uso,
     ámbito y clase de permiso: PENDIENTE — preguntar a Alberto.

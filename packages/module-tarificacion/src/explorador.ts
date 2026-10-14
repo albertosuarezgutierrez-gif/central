@@ -69,6 +69,12 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'allianz', ramo: 'comunidades', producto: 'comunidades', pestana: 'Particulares', productoMenu: 'Comunidades',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
   }),
+  // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
+  // Emisión Rápida» (abre pestaña nueva) van fijos en el código de Mapfre. Sin avances autorizados: solo se lee.
+  'mapfre:nueva_produccion:auto': Object.freeze({
+    compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
+    avancesAutorizados: Object.freeze([]),
+  }),
 })
 
 export function esEntradaExploracion(v: unknown): v is keyof typeof ENTRADAS_EXPLORACION {
