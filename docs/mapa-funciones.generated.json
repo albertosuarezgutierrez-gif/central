@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T15:23:56Z",
-  "sha": "1075228697e4b6207c25f0ce340e53a5dedee9c6",
+  "generadoEn": "2026-10-14T18:13:18Z",
+  "sha": "d5d7c037be0df5d7e08ff18d6ac84162cb1089a2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -96542,7 +96542,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 157,
+          "linea": 158,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -96551,7 +96551,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 171,
+          "linea": 172,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -96560,7 +96560,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, matriculaInicial = '', etiquetaCliente, faltanInicial, garajes, civiles, zonasCarnet, tiposCarnet, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, c",
           "retorno": null,
-          "linea": 209
+          "linea": 210
         },
         {
           "nombre": "BloquePersona",
@@ -96568,7 +96568,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 2115,
+          "linea": 2116,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -96577,7 +96577,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 2187,
+          "linea": 2188,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -96586,7 +96586,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 2192
+          "linea": 2193
         },
         {
           "nombre": "PapelDelTomador",
@@ -96594,7 +96594,7 @@
           "exportada": false,
           "params": "{ rol, oportunidadId, aqui = false }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional' oportunidadId: string /** Embebido en la propia oportunidad: «Intervinientes» está arriba, en esta misma página (sin enlace). */ aqui?",
           "retorno": null,
-          "linea": 2201,
+          "linea": 2202,
           "resumen": "Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se"
         },
         {
@@ -96603,7 +96603,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 2227
+          "linea": 2228
         },
         {
           "nombre": "IrA",
@@ -96611,7 +96611,7 @@
           "exportada": false,
           "params": "{ ancla, alternativa, children }: { ancla: string; alternativa?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 2247,
+          "linea": 2248,
           "resumen": "Enlace que lleva (scroll) a un bloque de la página. En plataforma el scroller es `LayoutShell`: `scrollIntoView` vale."
         },
         {
@@ -96620,7 +96620,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, notaFalta = false, vacio = 'falta', ancla }: { etiqueta: string valor: string | null nota?: string /** La nota es un error (p. ej. compra anterior a la matriculación): se pinta en rojo. */ notaFalta?: boolean /** Va",
           "retorno": null,
-          "linea": 2266,
+          "linea": 2267,
           "resumen": "Un dato que se edita ARRIBA: aquí solo se lee. Vacío = aviso rojo, nunca un valor inventado."
         },
         {
@@ -96629,7 +96629,7 @@
           "exportada": false,
           "params": "{ grupos, completa }: { grupos: GrupoVerificacion[]; completa: boolean }",
           "retorno": null,
-          "linea": 2291
+          "linea": 2292
         },
         {
           "nombre": "Contador",
@@ -96637,7 +96637,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 2327
+          "linea": 2328
         },
         {
           "nombre": "Precios",
@@ -96645,7 +96645,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId, actual, familiaAllianz }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. ",
           "retorno": null,
-          "linea": 2346
+          "linea": 2347
         },
         {
           "nombre": "PreciosVarianteAuto",
@@ -96653,7 +96653,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 2463,
+          "linea": 2464,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (10/10/2026, oportunidad de AUTO; hermano de `PreciosVarianteMoto`): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con e"
         }
       ],
@@ -96663,7 +96663,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "df5c942a5169"
+      "hash": "3029909f79f2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/datos-cotizador.ts",
@@ -98281,7 +98281,7 @@
           "exportada": false,
           "params": "url: string, init?: RequestInit",
           "retorno": "Promise<",
-          "linea": 32
+          "linea": 39
         },
         {
           "nombre": "sinBots",
@@ -98289,7 +98289,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": null,
-          "linea": 44
+          "linea": 51
         },
         {
           "nombre": "PrecioBots",
@@ -98297,7 +98297,7 @@
           "exportada": true,
           "params": "{ ramo, clienteId, oportunidadId, formulario, inicialesExtra }: { ramo: string clienteId: string oportunidadId: string | null /** Lo que el cotizador del ramo ya sabe (lo entiende el adaptador del ramo). */ formulario: unknown /** Valores i",
           "retorno": null,
-          "linea": 51
+          "linea": 58
         },
         {
           "nombre": "BloqueBots",
@@ -98305,7 +98305,7 @@
           "exportada": false,
           "params": "{ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra }: { ramo: string adaptador: NonNullable<ReturnType<typeof adaptadorDeRamo>> clienteId: string oportunidadId: string | null formulario: unknown inicialesExtra?: Record<",
           "retorno": null,
-          "linea": 68
+          "linea": 84
         },
         {
           "nombre": "FilaBot",
@@ -98313,7 +98313,7 @@
           "exportada": false,
           "params": "{ integracion, clienteId, oportunidadId, formulario, ramo }: { integracion: IntegracionVista clienteId: string oportunidadId: string | null formulario: ResultadoAdaptadorBot ramo: string }",
           "retorno": null,
-          "linea": 135
+          "linea": 151
         }
       ],
       "tablas": [
@@ -98321,7 +98321,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "562e03b0973d"
+      "hash": "a34d90220e2f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PresupuestosAvant2.tsx",
@@ -101767,6 +101767,26 @@
       "hash": "c8eb3de957ce"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/BotsAutoRiesgo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "BotsAutoRiesgo"
+      ],
+      "funciones": [
+        {
+          "nombre": "BotsAutoRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ riesgo }: { riesgo: Riesgo }",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7cc905797931"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/cargar-variante.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Servidor: lee el riesgo cuando una pantalla de pedir precio se abre como VARIANTE (`?oportunidad=<id>[&tarificacion=<id>]`) y pinta su franja «Variante del riesgo». Si el riesgo no se puede leer NO se cotiza a ciegas: cotizar gasta 0,50€ y, sin el riesgo, las figuras (propietario, conductor) se perd",
@@ -103722,12 +103742,12 @@
           "exportada": true,
           "params": "{ inicial, hoy }: { inicial: Riesgo; hoy: string }",
           "retorno": null,
-          "linea": 35
+          "linea": 37
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e14be394fbcf"
+      "hash": "788950f93688"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -166120,6 +166140,66 @@
       "hash": "122faf3c7c58"
     },
     {
+      "ruta": "apps/plataforma/lib/tarificador-auto-riesgo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Bots (gratis)» de COCHE desde el RIESGO (14/10/2026). PURO: sin red ni envs, importable desde 'use client' y desde tests. Dos usos, UNA sola lógica (antes vivía a mano en `AutoNuevo.tsx`): · `armarFormularioBotsAuto`: de las piezas ya resueltas (las del formulario de Avant2 o las del riesgo) al `Fo",
+      "exporta": [
+        "armarFormularioBotsAuto",
+        "matriculaDeRiesgo",
+        "tomadorDeRiesgoBots",
+        "formularioBotsAutoDeRiesgo"
+      ],
+      "funciones": [
+        {
+          "nombre": "armarFormularioBotsAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: PiezasBotsAuto",
+          "retorno": "EntradaBotAuto",
+          "linea": 40,
+          "resumen": "Piezas → entrada del adaptador de coche. PURA."
+        },
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null | undefined",
+          "retorno": "string",
+          "linea": 79
+        },
+        {
+          "nombre": "matriculaDeRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'datosVehiculo'>",
+          "retorno": "string",
+          "linea": 82,
+          "resumen": "Matrícula normalizada como la pinta «Datos del vehículo»; sin ella, la de la oportunidad."
+        },
+        {
+          "nombre": "tomadorDeRiesgoBots",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'figuras'>",
+          "retorno": "string",
+          "linea": 87,
+          "resumen": "Id de la ficha del tomador del riesgo (la figura `tomador`; sin ella, el cliente de la oportunidad)."
+        },
+        {
+          "nombre": "formularioBotsAutoDeRiesgo",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RiesgoParaBotsAuto",
+          "retorno": "EntradaBotAuto",
+          "linea": 92,
+          "resumen": "Riesgo de la oportunidad de coche → formulario que entiende el adaptador de auto (sin Avant2). PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9a0c180246ad"
+    },
+    {
       "ruta": "apps/plataforma/lib/tarificador-bandeja.ts",
       "ambito": "apps/plataforma",
       "resumen": "Bandeja «Necesita tu atención» del tarificador RPA (08/10/2026) — lo PURO: lectura defensiva de las respuestas de `/api/correduria/tarificador/bandeja` y de la traza, y rótulos. Sin red ni envs: importable desde 'use client'. 🚨 La regla de qué se puede reintentar/cancelar la decide ASEGURA (`puedeR",
@@ -216936,7 +217016,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4696,
-    "funciones": 17248
+    "archivos": 4698,
+    "funciones": 17254
   }
 }
