@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { huellaPantalla, sanearInventarioDom, type InventarioDom } from '@central/module-tarificacion'
-import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, esBucle, planDeMemoriaUsable, type DepsPaso, type EstadoPaso } from './tarificador-explorador-paso.ts'
+import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, erroresPasoAnterior, esBucle, planDeMemoriaUsable, type DepsPaso, type EstadoPaso, type PasoARegistrar } from './tarificador-explorador-paso.ts'
 
 const inventario = sanearInventarioDom({
   marcos: [{
@@ -32,6 +32,7 @@ function dobles(o: { ocupado?: boolean; iaEnVuelo?: boolean; durante?: (st: Esta
   const traza: string[] = []
   let dentro = false
   const costes: number[] = []
+  const registrados: PasoARegistrar[] = []
   const d: DepsPaso<'bd'> = {
     conLock: async (fn) => {
       if (o.ocupado) throw new PasoOcupado()
@@ -49,6 +50,7 @@ function dobles(o: { ocupado?: boolean; iaEnVuelo?: boolean; durante?: (st: Esta
     reservarIA: async () => { st.iaEnVuelo = true; traza.push('reserva') },
     liberarIA: async () => { st.iaEnVuelo = false; traza.push('libera') },
     registrar: async (_bd, p) => {
+      registrados.push(p)
       st.pasos.push({ huella: p.huella, respuesta: p.respuesta, origen: p.origen, llamadaIA: p.origen === 'ia', costeEur: p.costeEur, acciones: 0 })
       st.iaEnVuelo = false
       costes.push(p.costeEur)
@@ -66,7 +68,7 @@ function dobles(o: { ocupado?: boolean; iaEnVuelo?: boolean; durante?: (st: Esta
     ahora: () => new Date('2026-10-13T10:01:00Z'),
     env: {},
   }
-  return { d, st, traza, costes }
+  return { d, st, traza, costes, registrados }
 }
 
 test('paso con IA: la IA corre FUERA de la transacción (tx1 reserva y suelta; tx2 registra)', async () => {
@@ -260,4 +262,20 @@ test('guardado del presupuesto: tras un guardar_presupuesto YA registrado, la pa
     // Sin guardado previo (sin precio visto) el validador lo rechaza → parar.
     assert.equal(a.accion, previo ? 'avanzar' : 'parar', `previo=${previo}`)
   }
+})
+
+test('🪤 incidencias del worker (14/10/2026): van a los errores del paso ANTERIOR con la etiqueta de SU inventario; nunca un valor', async () => {
+  const inc = [{ accion: 'rellenar' as const, ref: 'm0e0', dato: 'inmueble.superficie_m2', causa: 'valor_no_aplicado' as const }]
+  // Sin pasos previos (o sin incidencias): no se anota nada.
+  assert.equal(erroresPasoAnterior([], inc), undefined)
+  const previo = { huella: 'h', respuesta: null, origen: 'ia' as const, llamadaIA: true, costeEur: 0, acciones: 1, inventario }
+  assert.equal(erroresPasoAnterior([previo], []), undefined)
+  assert.deepEqual(erroresPasoAnterior([previo], inc), ['ejecucion: rellenar m0e0 «Superficie» (inmueble.superficie_m2): valor_no_aplicado'])
+  // Por el paso entero: la tx2 de IA lleva `erroresPasoAnterior` al registrar (el último paso guardado es el previo).
+  const { d, st, registrados } = dobles()
+  st.pasos.push(previo)
+  const r = await ejecutarPaso({ ...entrada, incidencias: inc }, d)
+  assert.equal(r.tipo, 'ok')
+  assert.deepEqual(registrados[0].erroresPasoAnterior, ['ejecucion: rellenar m0e0 «Superficie» (inmueble.superficie_m2): valor_no_aplicado'])
+  assert.equal(registrados[0].errores, null, 'el paso NUEVO no se marca como rechazado')
 })
