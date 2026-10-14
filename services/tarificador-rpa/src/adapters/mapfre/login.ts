@@ -108,14 +108,8 @@ export async function login(page: Page, ctx: CtxLoginMapfre, urlLogin: string = 
   await ctx.pausa()
   await password.fill(ctx.credenciales.contrasena)
   await ctx.pausa()
-  // Angular: «Entrar» sigue deshabilitado hasta que ve valor en ambos campos. Si `fill` no bastó, se despachan input/change/blur.
-  if (!(await habilitado(entrar))) {
-    for (const c of [usuario, password]) {
-      await c.evaluate((el) => {
-        for (const ev of ['input', 'change', 'blur']) el.dispatchEvent(new Event(ev, { bubbles: true }))
-      }).catch(() => undefined)
-    }
-  }
+  // Angular: «Entrar» sigue deshabilitado hasta que ve valor en ambos campos; `fill` ya emite los eventos nativos.
+  // Nada de eventos sintéticos (lo prohíbe el guardián «puerta de atrás»): si no se habilita, se para.
   if (!(await esperarHabilitado(entrar))) {
     throw new ErrorMapaIncompleto('que el botón «Entrar» de wmediadores se habilite al rellenar usuario y contraseña (sigue deshabilitado; no se pulsa)')
   }
