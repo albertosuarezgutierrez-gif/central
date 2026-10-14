@@ -1,26 +1,28 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-import { DIAS_ANTELACION_OPCIONES, UMBRALES_SUBIDA_PRIMA, type DiasAntelacion, type UmbralSubidaPrima } from '@central/module-seguros-portal'
+import { DIAS_ANTELACION_OPCIONES, UMBRALES_SUBIDA_PRIMA, type CanalAviso, type DiasAntelacion, type UmbralSubidaPrima } from '@central/module-seguros-portal'
 
 /**
  * Antelación, «no molestar» (13/10/2026) y umbral de subida de precio (fase B). Valen para todos los
  * dispositivos de la persona.
  *
- * TODO fase B: el selector de CANAL (móvil / correo / ambos) está OCULTO a propósito. Hoy «Solo por
- * correo» dejaría a la persona sin recibos, siniestros ni recordatorios por NINGÚN canal (solo existen
- * como push) y el correo de vencimiento de `apps/asegura` no lee la preferencia. La columna `canal`, el
- * helper (`motivoSinPush`) y los crons ya lo respetan; con NULL se comporta como push, igual que antes.
- * Se enseña cuando exista el envío por correo de estos avisos. Cepo:
- * `test/regression-portal-configuracion-avisos.test.ts`.
+ * Selector de CANAL (fase B): solo `ambos` (por defecto) y `movil`. «Solo por correo» NO se ofrece a
+ * propósito: recibos, siniestros, póliza nueva, subida de prima y recordatorios solo existen como
+ * notificación, y «solo correo» dejaría a la persona sin ningún canal. La API del portal también lo
+ * rechaza. Si en la BD ya hubiera `correo`, se dice y se pide elegir una de las dos (no se pinta como
+ * si fuera «ambos»). Cepo: `test/regression-portal-configuracion-avisos.test.ts`.
  *
  * 🚨 Cada frase de esta pantalla es una afirmación sobre el código:
+ *  · «Solo en el móvil»: el correo solo se omite si la notificación de ese ciclo salió; si no llega, se
+ *    manda igualmente por correo.
  *  · La antelación solo mueve el aviso de vencimiento por notificación (no el correo ni la campana).
  *  · «No molestar»: si la franja tapa la hora a la que salen los avisos, la notificación no llega ese
  *    día (se reintenta el siguiente); en la campana se siguen viendo.
  * Si no se puede leer lo guardado, se dice y no se pintan valores por defecto como si fueran suyos.
  */
 interface Config {
+  canal: CanalAviso
   diasAntelacion: DiasAntelacion
   noMolestar: { desde: string; hasta: string } | null
   umbralSubidaPrima: UmbralSubidaPrima
@@ -37,7 +39,7 @@ export function AjustesAvisos() {
   useEffect(() => {
     void fetch('/api/configuracion/avisos')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: Config) => setConfig({ diasAntelacion: d.diasAntelacion, noMolestar: d.noMolestar, umbralSubidaPrima: d.umbralSubidaPrima }))
+      .then((d: Config) => setConfig({ canal: d.canal, diasAntelacion: d.diasAntelacion, noMolestar: d.noMolestar, umbralSubidaPrima: d.umbralSubidaPrima }))
       .catch(() => setConfig('error'))
   }, [])
 
@@ -66,6 +68,29 @@ export function AjustesAvisos() {
 
   return (
     <div className="config-ajustes">
+      <label className="config-campo">
+        <span>Cómo quiero recibir los avisos</span>
+        <select
+          value={config.canal === 'movil' || config.canal === 'ambos' ? config.canal : ''}
+          disabled={estado === 'guardando'}
+          onChange={(e) => void guardar({ canal: e.target.value as CanalAviso })}
+        >
+          {config.canal !== 'movil' && config.canal !== 'ambos' && (
+            <option value="" disabled>
+              Elige una opción
+            </option>
+          )}
+          <option value="ambos">En el móvil y por correo</option>
+          <option value="movil">Solo en el móvil</option>
+        </select>
+      </label>
+      {config.canal !== 'movil' && config.canal !== 'ambos' && (
+        <p className="campana-prefs-error">Ahora mismo no tienes elegida una de estas dos opciones. Elige una para que sepamos cómo avisarte.</p>
+      )}
+      {config.canal === 'movil' && (
+        <p className="suave config-nota">Si el aviso no te llega al móvil, te lo mandamos igualmente por correo.</p>
+      )}
+
       <label className="config-campo">
         <span>Avisarme del vencimiento con</span>
         <select
