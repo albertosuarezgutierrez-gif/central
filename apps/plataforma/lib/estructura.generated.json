@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T05:32:07Z",
+  "generadoEn": "2026-10-14T06:32:06Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -803,7 +803,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-web": {
         "estado": "no",
@@ -3775,7 +3775,7 @@
       },
       "asegura-portal": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-web": {
         "presente": false,
@@ -4340,6 +4340,7 @@
       "/api/presupuesto/whatsapp",
       "/api/push/desuscribir",
       "/api/push/preferencias",
+      "/api/push/prueba",
       "/api/push/suscribir",
       "/api/recordatorios",
       "/api/recordatorios/[id]",
@@ -6895,7 +6896,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1695,
+    "apis": 1696,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
