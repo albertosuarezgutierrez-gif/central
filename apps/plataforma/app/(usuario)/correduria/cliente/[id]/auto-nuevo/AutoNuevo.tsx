@@ -67,6 +67,7 @@ import type { DocumentoResumen } from '@central/module-seguros'
 import PanelDatosCliente from '../PanelDatosCliente'
 import PrecioBots from '../PrecioBots'
 import { datoDePersonaBot } from '@/lib/tarificador-moto-formulario'
+import { armarFormularioBotsAuto } from '@/lib/tarificador-auto-riesgo'
 
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -2017,13 +2018,13 @@ export default function AutoNuevo({
         ramo="auto"
         clienteId={clienteId}
         oportunidadId={variante?.oportunidadId ?? null}
-        formulario={{
+        formulario={armarFormularioBotsAuto({
           matricula,
           marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
           modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
           version: embebido ? datosRiesgo?.version ?? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,
           // CP de circulación del riesgo; sin él, el del cliente (lo lee el servidor de la ficha).
-          codigoPostal: /^\d{5}$/.test(datosRiesgo?.cpCirculacion ?? '') ? datosRiesgo!.cpCirculacion : 'ficha',
+          cpCirculacion: datosRiesgo?.cpCirculacion,
           fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
           fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
           sexo: correcciones.sexo ?? null,
@@ -2037,7 +2038,7 @@ export default function AutoNuevo({
           siniestrosUltimos5,
           // Compañía anterior que el corredor ya indicó (nombre del catálogo o texto libre); vacío = no consta.
           companiaAnterior: (companias?.find((c) => c.codigoDgs === companiaActualCodigo)?.nombreComun ?? companiaActualLibre).trim() || null,
-        }}
+        })}
       />
 
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>

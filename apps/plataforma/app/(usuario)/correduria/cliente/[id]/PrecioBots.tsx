@@ -25,6 +25,13 @@ import { adaptadorDeRamo, type ResultadoAdaptadorBot } from '@/lib/tarificador-b
 /** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
 export const HuecoBotsContext = createContext<HTMLElement | null>(null)
 
+/**
+ * Anfitrión de la ficha de la oportunidad (14/10/2026): el bloque «Bots (gratis)» tiene entrada PROPIA (`BotsAutoRiesgo`, con el
+ * formulario sacado del riesgo, sin Avant2). Cuando el cotizador Avant2 también monta el suyo (que lee lo tecleado en su
+ * formulario), este se REGISTRA como ocupado y el propio se aparta: nunca dos bloques de bots a la vez.
+ */
+export const AnfitrionBotsContext = createContext<{ ocupado: boolean; ocupar: (b: boolean) => void } | null>(null)
+
 const TONO: Record<'curso' | 'ok' | 'aviso' | 'error', string> = {
   curso: 'var(--muted)', ok: 'var(--positive)', aviso: 'var(--warning)', error: 'var(--negative)',
 }
@@ -58,7 +65,16 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
   inicialesExtra?: Record<string, string>
 }) {
   const hueco = useContext(HuecoBotsContext)
+  const anfitrion = useContext(AnfitrionBotsContext)
   const adaptador = adaptadorDeRamo(ramo)
+  const ocupar = anfitrion?.ocupar
+  // Montado por el cotizador (hay hueco) dentro de una ficha con entrada propia: avisa de que ya hay un bloque pintado.
+  const registrado = !!hueco && !!adaptador && !!ocupar
+  useEffect(() => {
+    if (!registrado || !ocupar) return
+    ocupar(true)
+    return () => ocupar(false)
+  }, [registrado, ocupar])
   const bloque = adaptador
     ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} />
     : sinBots('Sin bots para este ramo todavía.')
