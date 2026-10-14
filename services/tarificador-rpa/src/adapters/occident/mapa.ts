@@ -32,20 +32,20 @@ export const SEL = {
 /** Error tipado del hueco: falta una grabación. `portal` = definitivo (no se reintenta). */
 export class ErrorMapaIncompleto extends ErrorTarificador {
   readonly falta: string
-  constructor(falta: string) {
-    super('portal', `occident/comunidades: mapa incompleto: falta ${falta}`)
+  constructor(falta: string, adaptador: string = 'occident/comunidades') {
+    super('portal', `${adaptador}: mapa incompleto: falta ${falta}`)
     this.name = 'ErrorMapaIncompleto'
     this.falta = falta
   }
 }
 
-export function mapaIncompleto(falta: string): ErrorMapaIncompleto {
-  return new ErrorMapaIncompleto(falta)
+export function mapaIncompleto(falta: string, adaptador?: string): ErrorMapaIncompleto {
+  return new ErrorMapaIncompleto(falta, adaptador)
 }
 
 /** Selector pendiente → error de mapa incompleto en vez de adivinar. */
-export function selObligatorio(sel: string | null, falta: string): string {
-  if (!sel) throw mapaIncompleto(falta)
+export function selObligatorio(sel: string | null, falta: string, adaptador?: string): string {
+  if (!sel) throw mapaIncompleto(falta, adaptador)
   return sel
 }
 
@@ -66,6 +66,16 @@ export function urlFormularioTomador(ramoGco: string = RAMO_GCO_COMUNIDADES): st
 }
 
 /** ¿La URL es una página del SSO (sin sesión / sesión caducada)? */
+/** La contraseña solo se escribe en el SSO real: https y host exacto (nunca tras una redirección a otro host). */
+export function puedeEscribirContrasena(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' && u.hostname === HOST_SSO
+  } catch {
+    return false
+  }
+}
+
 export function esUrlSso(url: string): boolean {
   try {
     return new URL(url).hostname === HOST_SSO
@@ -126,3 +136,103 @@ export const CAMPOS_OCCIDENT: readonly CampoMapeado[] = [
   { canonico: 'siniestrosUltimos3Anios', uso: 'probable', etiquetaPortal: null, nota: '' },
   { canonico: 'companiaActual', uso: 'dudoso', etiquetaPortal: null, nota: '' },
 ]
+
+// ─────────── HOGAR (capturas de Alberto, 14/10/2026) ───────────
+// Visto: menú superior del portal «Productos» › «Análisis de necesidades» › «Hogar» › «Tarificación» (submenús en
+// cascada, cada ítem con una estrella de favorito al lado: NO se pulsa). «Tarificación» NAVEGA DENTRO del portal a
+// `RUTA_TARIFICACION_HOGAR` (NO abre pestaña nueva: corrección del 14/10). El formulario va casi seguro en
+// `iframe.site-layout-content-iframe` de catalanaaplicaciones, como Comunidades (HIPÓTESIS hasta ver el DOM): si el iframe
+// no aparece → hueco; si su `src` cae fuera de la lista blanca de `guarda.ts` → error tipado (no se amplía la lista).
+
+/** Ruta SPA vista en la captura (Productos › Análisis de necesidades › Hogar › Tarificación). */
+export const RUTA_TARIFICACION_HOGAR = '/productos/multirriesgos/hogar/tarificacion'
+/** ramoGco del iframe de hogar: DESCONOCIDO (no se ha visto su `src`). `null` = hueco; se lee del `src` real si aparece. */
+export const RAMO_GCO_HOGAR: string | null = null
+/** Ruta de menú VISTA, en orden. Etiquetas EXACTAS del portal (el casado ignora mayúsculas/espacios, nunca «contiene»). */
+export const RUTA_MENU_HOGAR = ['Productos', 'Análisis de necesidades', 'Hogar', 'Tarificación'] as const
+/** Ítem cuyo submenú contiene «Hogar» (otros submenús también lo traen): «Hogar» se busca SOLO dentro de este. */
+export const MENU_PADRE_HOGAR = 'Análisis de necesidades'
+
+/** Hueco del formulario (lo que haya tras el modal de situación y el paso 2 salvo lo visto). */
+export const FALTA_FORMULARIO_HOGAR = 'formulario hogar: falta grabación'
+export const FALTA_CONTRASENA_HOGAR = 'el paso de contraseña del SSO (solo se grabó el paso del usuario)'
+export const ADAPTADOR_HOGAR = 'occident/hogar'
+
+/**
+ * SSO paso 2 — HIPÓTESIS (sin captura; no se inventan ids): el campo de contraseña visible y el submit del MISMO formulario.
+ * Se usa solo en Hogar; Comunidades sigue con el hueco (`SEL.ssoContrasena = null`).
+ */
+export const SEL_HIPOTESIS_SSO_CONTRASENA = 'input[type="password"]'
+export const SEL_HIPOTESIS_SSO_ENVIAR = 'form:has(input[type="password"]) :is(button[type="submit"], input[type="submit"])'
+
+export function huecoHogar(falta: string): ErrorMapaIncompleto {
+  return mapaIncompleto(falta, ADAPTADOR_HOGAR)
+}
+
+/** `^\s*texto\s*$` insensible a mayúsculas y a espacios entre palabras; nunca «contiene». Las tildes cuentan. */
+export function etiquetaExactaOccident(t: string): RegExp {
+  const palabras = t.trim().split(/\s+/).map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  return new RegExp(`^\\s*${palabras.join('\\s+')}\\s*$`, 'i')
+}
+
+/** ¿El descriptor (aria-label, title, id, clase, data-testid…) es el de la ESTRELLA de favorito? Nunca se pulsa. */
+export function esEstrellaFavorito(descriptor: readonly (string | null | undefined)[]): boolean {
+  return descriptor.some((d) => typeof d === 'string' && /favorit|estrella|star(?!t)|bookmark/i.test(d.normalize('NFD').replace(/[\u0300-\u036f]/g, '')))
+}
+
+/**
+ * Tras pulsar «Tarificación»: la URL del portal tiene que ser el host del portal (https, lista blanca, sin patrón de
+ * emisión) y la ruta de hogar. Otra cosa → `ErrorTarificador('portal')` (el SSO = sesión no heredada).
+ */
+export function comprobarDestinoHogar(url: string): URL {
+  const u = comprobarUrlOccident(url)
+  if (u.hostname === HOST_SSO) throw new ErrorTarificador('portal', 'occident/hogar: el portal mandó al SSO (sesión no heredada)')
+  if (u.hostname !== HOST_PORTAL || u.pathname.replace(/\/+$/, '') !== RUTA_TARIFICACION_HOGAR) {
+    throw new ErrorTarificador('portal', `occident/hogar: «Tarificación» no llevó a la ruta de hogar (${u.hostname}${u.pathname})`)
+  }
+  return u
+}
+
+/**
+ * `src` del iframe del formulario (relativo o absoluto): host en la lista blanca y sin emisión. Fuera → error tipado;
+ * el iframe NO se toca. El host de hogar NO está visto: no se añade a ciegas, se comprueba contra lo que ya hay.
+ */
+export function comprobarSrcIframeHogar(src: string | null | undefined, base: string): URL {
+  let u: URL
+  try {
+    u = new URL(src ?? '', base)
+  } catch {
+    throw new ErrorTarificador('portal', 'occident/hogar: el iframe del formulario no tiene un src válido')
+  }
+  return comprobarUrlOccident(u.toString())
+}
+
+// ─────────── formulario de hogar VISTO (etiquetas exactas de la captura) ───────────
+
+export const ETIQUETAS_HOGAR = Object.freeze({
+  persona: 'Persona:',
+  personaFisica: 'Física',
+  personaJuridica: 'Jurídica',
+  tipoDocumento: 'NIF (DNI, CIF, NIE)',
+  documento: 'Nº documento tomador:',
+  fechaNacimiento: 'Fecha de nacimiento:',
+  codigoPostalTomador: 'Código postal:',
+  tipoVivienda: 'Tipo de vivienda:',
+  fechaEfecto: 'Fecha de efecto:',
+  codigoAgente: 'Código del agente:',
+  // Modal «Datos de la situación».
+  busquedaDireccion: 'Dirección',
+  codigoPostalSituacion: 'Código postal:*',
+  nombreVia: 'Nombre de la vía:*',
+  numero: 'Número:',
+  planta: 'Planta:',
+  puerta: 'Puerta:',
+})
+/** Secciones vistas del paso 1 «Datos del riesgo». */
+export const SECCIONES_HOGAR = ['Datos del mediador', 'Datos del tomador', 'Tipología', 'Situación', 'Datos de contratación'] as const
+/** Marca del paso 2: si no aparece tras avanzar, se para. */
+export const TITULO_PASO2_HOGAR = 'Opciones de cotización'
+/** Las 4 tarjetas de producto del paso 2 (nombre EXACTO) con su prima anual. */
+export const PRODUCTOS_HOGAR = ['HOGAR ESTÁNDAR', 'HOGAR CONFORT', 'HOGAR ÓPTIMA', 'PERSONALIZADA'] as const
+/** Botones del paso 2 que NO se pulsan: «Recalcular», «Modificar», el disquete de guardar, los checkboxes de coberturas. */
+export const BOTON_IMPRIMIR_HOGAR = 'Imprimir'

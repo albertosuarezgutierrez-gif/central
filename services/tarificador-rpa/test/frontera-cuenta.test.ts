@@ -132,6 +132,7 @@ test('bucle IA: pantalla con cuenta bancaria → para cerca_de_emision/frontera_
       pulsar: (b) => pulsar(b, guard),
       pulsarAutorizado: async () => { throw new Error('no') },
       pulsarGuardado: async () => { throw new Error('no') },
+      pulsarGuardadoDialogo: async () => { throw new Error('no') },
       pausaAccion: async () => undefined,
       pedirPaso: async (): Promise<RespuestaPaso> => { preguntas++; throw new Error('no se debía preguntar') },
       log: () => undefined,
@@ -211,6 +212,7 @@ async function avanzarSobre(ruta: string) {
       pulsar: async () => { pulsaciones++ },
       pulsarAutorizado: async () => { throw new Error('no') },
       pulsarGuardado: async () => { throw new Error('no') },
+      pulsarGuardadoDialogo: async () => { throw new Error('no') },
       pausaAccion: async () => undefined,
       pedirPaso: async (c): Promise<RespuestaPaso> => {
         preguntas++

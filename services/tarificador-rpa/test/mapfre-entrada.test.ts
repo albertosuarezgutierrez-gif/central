@@ -352,6 +352,7 @@ function ctxBucle(guard: Awaited<ReturnType<typeof instalarGuardEmision>>, visto
     pulsar: (b) => pulsar(b, guard),
     pulsarAutorizado: async () => { throw new Error('sin avances autorizados en Mapfre') },
     pulsarGuardado: async () => { throw new Error('sin guardado en esta prueba') },
+    pulsarGuardadoDialogo: async () => { throw new Error('sin guardado en esta prueba') },
     pausaAccion: async () => undefined,
     pedirPaso: async (c): Promise<RespuestaPaso> => {
       vistos.push(c.inventario.marcos.flatMap((m) => m.elementos.map((e) => e.etiqueta ?? e.texto ?? '')).join('|'))
