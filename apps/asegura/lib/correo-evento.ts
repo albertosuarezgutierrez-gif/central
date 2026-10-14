@@ -537,6 +537,28 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
 }
 
 /** La tarea del plan pasa las MISMAS reglas que una tarea a mano (`validarTarea`). */
+export type DecisionReevaluacion =
+  | { resuelve: true; polizaId: string; clienteId: string; motivo: string | null; resumen: string }
+  | { resuelve: false }
+
+/**
+ * Reevaluación (14/10/2026): una emisión que quedó `sin_resolver` («aún no llegada por CIMA») pasa a
+ * `duplicado_cima` cuando CIMA ya trae la póliza. Reutiliza `planItem` (la MISMA regla que el POST): solo
+ * resuelve si el plan sale `duplicado_cima` Y la resolución es una única póliza en vigor. Sin póliza,
+ * dos o no en vigor → se queda como estaba. `hoy` = aaaa-mm-dd (día en que CIMA se ve con la póliza).
+ */
+export function decidirReevaluacionEmision(
+  item: ItemEvento, compania: string, resolucion: ResolucionEvento, hoy: string,
+): DecisionReevaluacion {
+  if (item.tipo !== 'emision') return { resuelve: false }
+  const plan = planItem(item, compania, { resolucion, siniestro: null, expediente: null, tareaAbierta: false, fechaCorreo: null, hoy })
+  if (plan.estado !== 'duplicado_cima' || resolucion.estado !== 'en_vigor') return { resuelve: false }
+  return {
+    resuelve: true, polizaId: resolucion.poliza.id, clienteId: resolucion.poliza.clienteId,
+    motivo: null, resumen: `CIMA ya la trae (${fechaEs(hoy)})`,
+  }
+}
+
 export function tareaValida(t: TareaPlan, hoy: Date): { ok: true } | { ok: false; motivo: string } {
   const v = validarTarea(t, hoy)
   return v.ok ? { ok: true } : { ok: false, motivo: v.motivo }

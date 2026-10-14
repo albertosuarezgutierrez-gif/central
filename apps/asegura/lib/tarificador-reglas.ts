@@ -276,6 +276,21 @@ export function leerMetaWorker(e: Record<string, unknown>): MetaWorker {
   return v.ok ? { pasos: v.pasos, botVersion } : { pasos: [], botVersion, trazaRechazada: v.errores.slice(0, 5) }
 }
 
+/**
+ * Aviso de log de la traza (14/10/2026). La traza es accesoria y su fallo NO rompe el resultado, pero tampoco puede ser mudo:
+ * `tarificacion_trabajo_pasos` estuvo vacía semanas sin una línea de log útil. Prefijo fijo para filtrar en los logs de
+ * Vercel. Solo id del trabajo y el motivo (nombre de la clave/paso, nunca un valor); el motivo se recorta y se le quita
+ * cualquier URL (una de BD llevaría credenciales).
+ */
+export const PREFIJO_TRAZA = '[tarificador-traza]'
+export function avisoTraza(trabajoId: string, motivo: unknown): string {
+  const m = (motivo instanceof Error ? motivo.message : typeof motivo === 'string' ? motivo : String(motivo))
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
+    .replace(/\s+/g, ' ')
+    .slice(0, 300)
+  return `${PREFIJO_TRAZA} trabajo ${trabajoId}: ${m}`
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const obj = (v: unknown): Record<string, unknown> | null =>
   typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null

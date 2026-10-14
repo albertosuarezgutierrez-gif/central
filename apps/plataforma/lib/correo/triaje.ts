@@ -23,7 +23,7 @@ import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
 import { MOTIVO_POLIZA_ANULADA, esCorreoDevolucion, eventoNecesitaAdjuntos, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
-import { registrarDevolucionesAsegura, registrarEventoCorreoAsegura } from '@/lib/correduria-puerto'
+import { registrarDevolucionesAsegura, registrarEventoCorreoAsegura, reevaluarEventosCorreoAsegura } from '@/lib/correduria-puerto'
 import { eventoConfirmado, leerResultadosEvento, textoAvisoEvento } from './evento-aviso'
 import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
@@ -312,6 +312,16 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
     `.catch(() => {})
     await sesion.cerrar()
+  }
+  // Emisiones «aún no llegadas por CIMA» que CIMA ya trae: pasan a duplicado_cima. Solo en vivo; un fallo no rompe el triaje.
+  if (!DRY_RUN()) {
+    try {
+      const r = await reevaluarEventosCorreoAsegura()
+      if (r) console.log(`[triaje] emisiones reevaluadas: ${r.revisadas} revisadas, ${r.resueltas} resueltas`)
+      else console.error('[triaje] reevaluar emisiones: sin respuesta de asegura')
+    } catch (e) {
+      console.error('[triaje] reevaluar emisiones falló:', e)
+    }
   }
   return stats
 }

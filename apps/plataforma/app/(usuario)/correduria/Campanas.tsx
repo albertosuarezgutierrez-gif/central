@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { Mail, Users, Layers, GitCompare } from 'lucide-react'
 import { Badge, btnStyle } from '@/components/ui'
 import { fechaEs } from '@/lib/ficha-asegura'
 import Bloque from './Bloque'
@@ -34,18 +35,18 @@ function Tarjetas({ e }: { e: EmbudoCampana }) {
   const pasos = pasosEmbudo(e)
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+      <div className="corr-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         {pasos.map((p) => (
-          <div key={p.clave} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, minWidth: 0 }}>
+          <div key={p.clave} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', minWidth: 0 }}>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>{p.etiqueta}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{textoNumero(p.valor)}</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{textoNumero(p.valor)}</div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
               {p.pctPrevio === null && p.clave === 'enviados' ? 'punto de partida' : `${textoPorcentaje(p.pctPrevio)} del paso anterior`}
             </div>
           </div>
         ))}
       </div>
-      <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+      <p style={{ margin: '10px 0 0', fontSize: 11, color: 'var(--muted)' }}>
         No salieron: {textoNumero(e.fallidos)} · Rebotes: {textoNumero(e.rebotados)} · Bajas: {textoNumero(e.bajas)}.
         Un «—» es que no hay datos suficientes para afirmarlo, no que sea cero.
       </p>
@@ -128,44 +129,47 @@ export default function Campanas() {
     </button>
   )
 
+  const ok = lectura?.estado === 'ok' ? lectura : null
+  const pMuted = { fontSize: 13, color: 'var(--muted)', margin: 0 } as const
+
   return (
-    <Bloque titulo="Campaña «presentación app»" accion={accion} primero
-      sub="Correo de presentación de la app a los clientes en vigor. Solo lectura: el envío lo hace el cron de asegura.">
-      {lectura === null && <p style={{ color: 'var(--muted)', fontSize: 13 }}>Leyendo la campaña…</p>}
+    <>
+      <Bloque titulo="Campaña «presentación app»" Icono={Mail} accion={accion} primero
+        sub="Correo de presentación de la app a los clientes en vigor. Solo lectura: el envío lo hace el cron de asegura.">
+        {lectura === null && <p style={pMuted}>Leyendo la campaña…</p>}
 
-      {lectura !== null && lectura.estado !== 'ok' && (
-        <Badge tono="aviso">No se pudo leer la campaña: {motivoTexto(lectura)}</Badge>
-      )}
-      {lectura?.estado === 'ok' && fallo && (
-        <p style={{ fontSize: 12, color: 'var(--negative)' }}>La última actualización falló ({motivoTexto(fallo)}). Se muestra lo anterior.</p>
-      )}
+        {lectura !== null && lectura.estado !== 'ok' && (
+          <Bloque titulo="No se pudo leer la campaña" tono="aviso" destacado>
+            <p style={pMuted}>{motivoTexto(lectura)} <strong>No lo leas como «sin envíos»</strong>: desde aquí no se ha podido mirar.</p>
+          </Bloque>
+        )}
+        {ok && fallo && (
+          <p role="alert" style={{ ...pMuted, color: 'var(--negative)', marginBottom: 10 }}>La última actualización falló ({motivoTexto(fallo)}). Se muestra lo anterior.</p>
+        )}
+        {ok && <Tarjetas e={ok.total} />}
+      </Bloque>
 
-      {lectura?.estado === 'ok' && (
-        <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 18 }}>
-          <Tarjetas e={lectura.total} />
-
-          <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Variante A frente a B</h3>
-            {lectura.porVariante.length === 0
-              ? <p style={{ fontSize: 13, color: 'var(--muted)' }}>Sin variantes con envíos todavía.</p>
+      {ok && (
+        <>
+          <Bloque titulo="Variante A frente a B" Icono={GitCompare}>
+            {ok.porVariante.length === 0
+              ? <p style={pMuted}>Sin variantes con envíos todavía.</p>
               : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 10 }}>
-                  {lectura.porVariante.map((g) => <FilaResumen key={g.grupo} g={g} />)}
+                  {ok.porVariante.map((g) => <FilaResumen key={g.grupo} g={g} />)}
                 </div>}
-          </div>
+          </Bloque>
 
-          <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Por lote</h3>
-            {lectura.porLote.length === 0
-              ? <p style={{ fontSize: 13, color: 'var(--muted)' }}>Aún no ha salido ningún lote.</p>
+          <Bloque titulo="Por lote" Icono={Layers}>
+            {ok.porLote.length === 0
+              ? <p style={pMuted}>Aún no ha salido ningún lote.</p>
               : <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 10 }}>
-                  {lectura.porLote.map((g) => <FilaResumen key={g.grupo} g={g} />)}
+                  {ok.porLote.map((g) => <FilaResumen key={g.grupo} g={g} />)}
                 </div>}
-          </div>
+          </Bloque>
 
-          <div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 14 }}>Por persona ({personas.length} más recientes)</h3>
+          <Bloque titulo={`Por persona (${personas.length} más recientes)`} Icono={Users}>
             {personas.length === 0
-              ? <p style={{ fontSize: 13, color: 'var(--muted)' }}>Sin personas todavía.</p>
+              ? <p style={pMuted}>Sin personas todavía.</p>
               : <div style={{ display: 'grid', gridTemplateColumns: COLS, gap: 8 }}>
                   {personas.slice(0, visibles).map((p) => <Persona key={`${p.clienteId}-${p.lote}`} p={p} />)}
                   {visibles < personas.length && (
@@ -174,9 +178,9 @@ export default function Campanas() {
                     </button>
                   )}
                 </div>}
-          </div>
-        </div>
+          </Bloque>
+        </>
       )}
-    </Bloque>
+    </>
   )
 }

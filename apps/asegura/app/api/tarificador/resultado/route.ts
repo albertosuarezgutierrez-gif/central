@@ -1,7 +1,7 @@
 import { NextResponse, after } from 'next/server'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { registrarResultado } from '@/lib/tarificador'
-import { leerResultadoWorker } from '@/lib/tarificador-reglas'
+import { avisoTraza, leerResultadoWorker } from '@/lib/tarificador-reglas'
 import { eleccionIaActiva } from '@/lib/tarificador-eleccion-reglas'
 import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   const l = leerResultadoWorker(body)
   if (!l.ok) return NextResponse.json({ estado: 'error', errores: l.errores }, { status: 400 })
   // Traza descartada por traer claves no permitidas: se avisa (sin valores) y el resultado se guarda igual.
-  if (l.r.trazaRechazada) console.warn('[tarificador] traza descartada', l.r.trabajoId, l.r.trazaRechazada.join(' | '))
+  if (l.r.trazaRechazada) console.error(avisoTraza(l.r.trabajoId, `traza RECHAZADA entera (no se guarda ningún paso): ${l.r.trazaRechazada.join(' | ')}`))
   try {
     const r = await registrarResultado(l.r)
     if (r.estado === 'no_encontrado') return NextResponse.json(r, { status: 404 })

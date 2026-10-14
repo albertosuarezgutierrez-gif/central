@@ -20,6 +20,8 @@ import {
   leerIncidenciasEjecucion,
   leerPresupuestoMapa,
   normalizarRedNoGet,
+  redactarAriaSnapshot, neutralizarAngulos,
+  cortarEnLimiteDeLinea,
   sanearInventarioDom,
   validarMapa,
   type DetalleFinExploracion,
@@ -138,8 +140,35 @@ export type PeticionPaso = {
   trabajoId: string; inventario: InventarioDom; avancesFallidos: number
   /** Lo que el lote ANTERIOR no pudo aplicar en el portal (14/10/2026): van a los `errores` de ESE paso. Tolerante. */
   incidencias: IncidenciaEjecucion[]
+  /** Vista aria del worker (15/10/2026, opcional): CRUDA (solo acotada): la ruta la sanea con `sanearVistaAria` y los valores del trabajo; ausente = como siempre. */
+  vistaAria?: string
   /** `login` = fase de LOGIN ASISTIDO (14/10/2026): otro prompt, otro validador, sin memoria. Sin la clave = la normal. */
   fase: 'normal' | 'login'
+}
+
+/** Tope de la vista aria que acepta el servidor (caracteres). */
+export const MAX_VISTA_ARIA = 40 * 1024
+
+/**
+ * Vista aria opcional del worker → texto seguro para el prompt, o `undefined`. NO se fía de que llegue redactada: valores
+ * de campos fuera, datos personales y valores conocidos del cliente fuera, tope de tamaño y sin poder cerrar su etiqueta.
+ * Cualquier cosa que no sea texto no vacío se ignora (nunca un 400).
+ */
+export function sanearVistaAria(v: unknown, valoresSensibles: readonly string[] = []): string | undefined {
+  if (typeof v !== 'string' || v.trim() === '') return undefined
+  const vals = valoresSensibles.map((x) => neutralizarAngulos(x)).filter((x) => x.length >= 3)
+  // Una pasada = neutralizar `<`/`>` (la redacción lo hace primero) → redactar → tapar valores conocidos del trabajo.
+  const pasada = (t: string): string => {
+    let r = redactarAriaSnapshot(t)
+    for (const x of vals) r = r.split(x).join('[DATO]')
+    return r
+  }
+  // Acotar en un LÍMITE DE LÍNEA y redactar DESPUÉS (un corte en seco podía partir un DNI/teléfono y esquivar los patrones);
+  // tras recortar el resultado vuelve a pasar por la redacción (idempotente) y se acota otra vez, ya sobre texto redactado.
+  let t = pasada(cortarEnLimiteDeLinea(v, MAX_VISTA_ARIA))
+  t = pasada(cortarEnLimiteDeLinea(t, MAX_VISTA_ARIA))
+  t = cortarEnLimiteDeLinea(t, MAX_VISTA_ARIA)
+  return t.trim() === '' ? undefined : t
 }
 
 /**
@@ -160,8 +189,10 @@ export function leerPeticionPaso(body: unknown): { ok: true; p: PeticionPaso } |
   // ESTRICTO (al revés que las incidencias): una fase desconocida no se interpreta como la normal.
   if (b.fase !== undefined && b.fase !== 'login') errores.push('fase fuera de lista')
   if (errores.length) return { ok: false, errores }
+  // Solo valida tipo/tamaño: el saneado ÚNICO y completo (con los valores sensibles del trabajo) es el de la ruta `paso`.
+  const vistaAria = typeof b.vistaAria === 'string' && b.vistaAria.trim() !== '' ? cortarEnLimiteDeLinea(b.vistaAria, MAX_VISTA_ARIA * 2) : undefined
   // Opcional y TOLERANTE (como `detalleFin`): lo mal formado se descarta, nunca tumba el paso.
-  return { ok: true, p: { trabajoId: trabajoId!, inventario: inventario!, avancesFallidos: af as number, incidencias: leerIncidenciasEjecucion(b.incidencias), fase: b.fase === 'login' ? 'login' : 'normal' } }
+  return { ok: true, p: { trabajoId: trabajoId!, inventario: inventario!, avancesFallidos: af as number, incidencias: leerIncidenciasEjecucion(b.incidencias), ...(vistaAria ? { vistaAria } : {}), fase: b.fase === 'login' ? 'login' : 'normal' } }
 }
 
 export type PeticionEncolarExploracion = { entrada: string; trabajoOrigenId: string | null; oportunidadId: string | null }
@@ -329,6 +360,8 @@ export type EntradaPrompt = {
   entrada: string; ramo: string; inventario: InventarioDom; historial: string[]; conDatosReales: boolean; avancesFallidos: number
   /** Con datos reales: el riesgo del trabajo, SOLO para marcar claves sin valor y enseñar uso/régimen (`catalogoParaIA`). */
   riesgo?: unknown
+  /** Vista aria (solo lectura) ya saneada por `sanearVistaAria`. Sin ella el prompt es byte a byte el de siempre. */
+  vistaAria?: string
 }
 
 /**
@@ -348,6 +381,7 @@ export function promptExplorador(e: EntradaPrompt): string {
     e.historial.length ? `PASOS ANTERIORES:\n${e.historial.join('\n')}` : 'PASOS ANTERIORES: ninguno (primera pantalla tras la entrada).',
     e.avancesFallidos > 0 ? `AVISO: el último avance no cambió de pantalla (${e.avancesFallidos} vez/veces). Revisa campos obligatorios o para.` : '',
     `<inventario>\n${JSON.stringify(e.inventario)}\n</inventario>`,
+    e.vistaAria ? `Árbol de accesibilidad (solo lectura; actúa SIEMPRE con los refs rN del inventario, nunca con los eN/fNeN de este árbol):\n<arbol_accesibilidad>\n${e.vistaAria}\n</arbol_accesibilidad>` : '',
   ]
   return partes.filter(Boolean).join('\n\n')
 }

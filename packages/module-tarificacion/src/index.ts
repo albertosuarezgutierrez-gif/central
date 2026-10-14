@@ -58,6 +58,7 @@ export {
   type ClasificacionAccion,
 } from './acciones-portal.ts'
 export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
+export { redactarAriaSnapshot, neutralizarAngulos, cortarEnLimiteDeLinea, MARCA_VALOR_ARIA } from './aria-redaccion.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
 export { importeEs, importePuntoDecimal } from './importes.ts'
@@ -476,6 +477,13 @@ export {
   erroresDeIncidencias,
   type CausaIncidenciaEjecucion,
   type IncidenciaEjecucion,
+  MOTIVOS_NO_LOCALIZADO,
+  VISIBILIDADES_NO_VISIBLE,
+  MOTIVOS_CORTE_LOTE,
+  type MotivoNoLocalizado,
+  type VisibilidadNoVisible,
+  type MotivoCorteLote,
+  type DiagnosticoIncidencia,
   CLAVES_AUTOCOMPLETADO,
   ACCIONES_INCIDENCIA_SIN_DATO,
   rellenarRepinta,

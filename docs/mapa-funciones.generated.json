@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T11:07:34Z",
-  "sha": "d918e08d184544775840b42dae71286c118b0182",
+  "generadoEn": "2026-10-14T12:42:37Z",
+  "sha": "1f505a0bad5f8f48e86acd5313be58350365ae5c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -20437,6 +20437,15 @@
       "hash": "e5819fa8aa81"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/correo/evento/reevaluar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/evento/reevaluar",
+      "hash": "7d12b88dfc60"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/correo/evento/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -22111,7 +22120,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/encolar",
-      "hash": "7f59b46b4aa7"
+      "hash": "37ee42ba7987"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/exploracion/route.ts",
@@ -23111,7 +23120,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/tarificador/explorador/cierre",
-      "hash": "1cac0119fbcc"
+      "hash": "14ee3c4f8ff2"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/explorador/paso/route.ts",
@@ -23126,13 +23135,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 51,
+          "linea": 55,
           "resumen": "el rastro es `tarificador_exploracion_pasos`."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/tarificador/explorador/paso",
-      "hash": "ba3cd47a6c2c"
+      "hash": "9268297c3a9f"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/formador/cierre/route.ts",
@@ -23258,7 +23267,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/tarificador/resultado",
-      "hash": "dd4373896cd1"
+      "hash": "3651249f63ee"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/sesion/[compania]/route.ts",
@@ -35779,6 +35788,7 @@
         "registrarEventoCorreo",
         "eventosCorreoRecientes",
         "marcarEventoRevisado",
+        "reevaluarEmisionesSinResolver",
         "eventosCorreoSinResolver"
       ],
       "funciones": [
@@ -35788,7 +35798,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 60
+          "linea": 61
         },
         {
           "nombre": "numeroDe",
@@ -35796,7 +35806,7 @@
           "exportada": false,
           "params": "i: ItemEvento",
           "retorno": "string | null",
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "polizasCandidatas",
@@ -35804,7 +35814,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string",
           "retorno": "Promise<(PolizaCandidata &",
-          "linea": 68
+          "linea": 69
         },
         {
           "nombre": "siniestroPorNumero",
@@ -35812,7 +35822,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, compania: string, codigoDgs: string, numero: string, numeroPolizaCorreo: string | null,",
           "retorno": "Promise<EleccionSiniestro>",
-          "linea": 87,
+          "linea": 88,
           "resumen": "El siniestro con ese nº: la consulta acota por «contiene»; compañía y póliza las decide `elegirSiniestro` (puro, con test)."
         },
         {
@@ -35821,7 +35831,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, polizaId: string",
           "retorno": "Promise<ExpedienteAbierto | null>",
-          "linea": 110
+          "linea": 111
         },
         {
           "nombre": "hayTareaAbierta",
@@ -35829,7 +35839,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, claveTarea: string",
           "retorno": "Promise<boolean>",
-          "linea": 119
+          "linea": 120
         },
         {
           "nombre": "notaYaAnotada",
@@ -35837,7 +35847,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, filaId: string, claveTarea: string, campo: string, fecha: string | null,",
           "retorno": "Promise<boolean>",
-          "linea": 132,
+          "linea": 133,
           "resumen": "¿Ya se anotó ESTE aviso? Fila `aplicado` de la misma clave de tarea (póliza/recibo) con la misma fecha de la compañía. El resumen diario de Occident («próximos a la anulación») repite el mismo recibo "
         },
         {
@@ -35846,7 +35856,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, clienteId: string, polizaId: string | null, tipo: 'gestion' | 'siniestro', texto: string",
           "retorno": "Promise<void>",
-          "linea": 143
+          "linea": 144
         },
         {
           "nombre": "crearTareaCorreo",
@@ -35854,7 +35864,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, clienteId: string, polizaId: string, t: NonNullable<Plan['tarea']>,",
           "retorno": "Promise<string>",
-          "linea": 150,
+          "linea": 151,
           "resumen": "La tarea: colgada de la oportunidad abierta de la póliza si la hay (dos listas sobre el mismo cliente se pisan); si no, suelta."
         },
         {
@@ -35863,7 +35873,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, entrada: EntradaEvento, item: ItemEvento, candidatas: Awaited<ReturnType<typeof polizasCandidatas>>, fechaCorreo: string | null, hoy: string,",
           "retorno": "Promise<ResultadoItemCorreo>",
-          "linea": 178
+          "linea": 179
         },
         {
           "nombre": "registrarEventoCorreo",
@@ -35871,7 +35881,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: EntradaEvento, fechaCorreo: string | null, hoy: string = hoyMadrid(),",
           "retorno": "Promise<ResultadoEventoCorreo>",
-          "linea": 299,
+          "linea": 301,
           "resumen": "Aplica un evento de correo ya validado. `fechaCorreo` (aaaa-mm-dd) solo se usa en los textos. `sin_migracion` = falta `2026-10-14_correo_evento_entrante.sql`: no se ha escrito NADA."
         },
         {
@@ -35880,7 +35890,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias = 30",
           "retorno": "Promise<",
-          "linea": 340,
+          "linea": 352,
           "resumen": "Los eventos de los últimos `dias` días, los sin resolver primero. `null` en `filas` nunca: si falla, lanza."
         },
         {
@@ -35889,8 +35899,17 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, revisado: boolean",
           "retorno": "Promise<boolean>",
-          "linea": 363,
+          "linea": 375,
           "resumen": "Pone (`true`) o quita (`false`) la marca de «mirado». Solo la fila de ESA correduría: `false` = no existe o es de otra (la ruta responde 404). Quitarla deja la fila otra vez en la cola de avisos."
+        },
+        {
+          "nombre": "reevaluarEmisionesSinResolver",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, hoy: string = hoyMadrid(),",
+          "retorno": "Promise<",
+          "linea": 392,
+          "resumen": "Reevaluación de emisiones (14/10/2026): las filas `emision` `sin_resolver` sin mirar de los últimos 60 días se vuelven a resolver contra la cartera; si CIMA ya trae la póliza en vigor pasan a `duplica"
         },
         {
           "nombre": "eventosCorreoSinResolver",
@@ -35898,7 +35917,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 372,
+          "linea": 428,
           "resumen": "Para la cola de avisos: los sin resolver (o a medias) de los últimos 30 días que nadie ha marcado como mirados."
         }
       ],
@@ -35908,10 +35927,11 @@
         "correo_evento_entrante",
         "gestiones",
         "historial_interno",
+        "lleva",
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "47c0fb945919"
+      "hash": "866e6b88b30a"
     },
     {
       "ruta": "apps/asegura/lib/correo-evento.ts",
@@ -35927,8 +35947,11 @@
         "fechaCorreoMadrid",
         "campoFechaDedupe",
         "venceTarea",
+        "importeDeItem",
+        "esCheckTipoEventoCorreo",
         "claveTareaDe",
         "planItem",
+        "decidirReevaluacionEmision",
         "tareaValida",
         "validarMarcaRevisado"
       ],
@@ -35939,7 +35962,7 @@
           "exportada": true,
           "params": "c: string",
           "retorno": "string",
-          "linea": 45
+          "linea": 48
         },
         {
           "nombre": "obj",
@@ -35947,7 +35970,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 81
+          "linea": 90
         },
         {
           "nombre": "id",
@@ -35955,7 +35978,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 84
+          "linea": 93
         },
         {
           "nombre": "dia",
@@ -35963,7 +35986,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 87
+          "linea": 96
         },
         {
           "nombre": "periodo",
@@ -35971,7 +35994,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 92
+          "linea": 101
         },
         {
           "nombre": "libre",
@@ -35979,7 +36002,7 @@
           "exportada": false,
           "params": "v: unknown, max = 300",
           "retorno": "string | null",
-          "linea": 95
+          "linea": 104
         },
         {
           "nombre": "importe",
@@ -35987,7 +36010,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 101
+          "linea": 110
         },
         {
           "nombre": "validarEntradaEvento",
@@ -35995,7 +36018,7 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "",
-          "linea": 109,
+          "linea": 118,
           "resumen": "Valida el cuerpo de `POST /api/operador/correo/evento`: `{ mensajeId, compania?, evento }`. No se fía de la forma: un trozo que no se entiende se CUENTA en `ilegibles` (se dice), nunca se inventa."
         },
         {
@@ -36004,7 +36027,7 @@
           "exportada": true,
           "params": "n: string | null | undefined",
           "retorno": "string | null",
-          "linea": 191,
+          "linea": 212,
           "resumen": "Sin espacios, puntos, guiones ni barras, en mayúsculas y SIN ceros a la izquierda (Mapfre los pone, CIMA no siempre)."
         },
         {
@@ -36013,7 +36036,7 @@
           "exportada": false,
           "params": "p: Pick<PolizaCandidata, 'codigoDgs' | 'aseguradora'>, compania: string, codigoDgs: string",
           "retorno": "boolean",
-          "linea": 197
+          "linea": 218
         },
         {
           "nombre": "resolverPolizaEvento",
@@ -36021,7 +36044,7 @@
           "exportada": true,
           "params": "numeroPoliza: string | null, compania: string, codigoDgs: string, candidatas: readonly PolizaCandidata[],",
           "retorno": "ResolucionEvento",
-          "linea": 208,
+          "linea": 229,
           "resumen": "La póliza del evento por nº + compañía, entre las de la cartera VIVA (origen CIMA). En vigor → se escribe; viva pero no en vigor → cada tipo decide (casi siempre «CIMA ya lo sabe»); nada o más de una "
         },
         {
@@ -36030,7 +36053,7 @@
           "exportada": true,
           "params": "filas: readonly SiniestroCandidato[], numero: string, compania: string, codigoDgs: string, numeroPolizaCorreo: string | null,",
           "retorno": "EleccionSiniestro",
-          "linea": 246,
+          "linea": 267,
           "resumen": "El siniestro de la cartera al que se refiere el correo. Un nº de siniestro solo es único DENTRO de una compañía: sin código DGS en el siniestro, la compañía se mira en SU póliza (sin póliza, no casa)."
         },
         {
@@ -36039,7 +36062,7 @@
           "exportada": true,
           "params": "filas: readonly SiniestroCandidato[], tope: number, numero: string, compania: string, codigoDgs: string, numeroPolizaCorreo: string | null,",
           "retorno": "EleccionSiniestro",
-          "linea": 271,
+          "linea": 292,
           "resumen": "Como `elegirSiniestro`, pero sobre una lectura acotada: la consulta pide `tope + 1` filas; si llegan más de `tope` el LIMIT pudo dejar fuera el bueno, así que NO se elige ninguno (`poliza_distinta` → "
         },
         {
@@ -36048,7 +36071,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 283,
+          "linea": 304,
           "resumen": "Fecha (aaaa-mm-dd) en Europe/Madrid de la `fechaCorreo` recibida. Un ISO con hora ('2026-10-14T22:30:00.000Z') se pasa a Madrid (a las 00:30 de Madrid ya es el día siguiente); una fecha sola se respet"
         },
         {
@@ -36057,7 +36080,7 @@
           "exportada": true,
           "params": "tipo: TipoEventoCorreo",
           "retorno": "'fechaLimite' | 'fechaEfecto' | 'periodoHasta' | null",
-          "linea": 296,
+          "linea": 317,
           "resumen": "La fecha del aviso que distingue «la compañía repite lo mismo» de «dice algo nuevo» (para no anotar cada día el mismo resumen de Occident, que llega con otro Message-ID). `null` = el tipo no se dedupl"
         },
         {
@@ -36066,7 +36089,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 342
+          "linea": 363
         },
         {
           "nombre": "sumarDias",
@@ -36074,7 +36097,7 @@
           "exportada": false,
           "params": "iso: string, n: number",
           "retorno": "string",
-          "linea": 344
+          "linea": 365
         },
         {
           "nombre": "venceTarea",
@@ -36082,7 +36105,7 @@
           "exportada": true,
           "params": "fecha: string | null, hoy: string, porDefecto: number",
           "retorno": "string",
-          "linea": 351,
+          "linea": 372,
           "resumen": "Nunca en el pasado: un aviso que llega tarde vence HOY."
         },
         {
@@ -36091,7 +36114,7 @@
           "exportada": false,
           "params": "resumen: string",
           "retorno": "Plan",
-          "linea": 362
+          "linea": 383
         },
         {
           "nombre": "sinResolver",
@@ -36099,7 +36122,25 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "Plan",
-          "linea": 366
+          "linea": 387
+        },
+        {
+          "nombre": "importeDeItem",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: ItemEvento",
+          "retorno": "number | null",
+          "linea": 395,
+          "resumen": "Importe que se guarda en la fila (columna `importe`): el del recibo en riesgo o la prima de la póliza nueva."
+        },
+        {
+          "nombre": "esCheckTipoEventoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: unknown",
+          "retorno": "boolean",
+          "linea": 405,
+          "resumen": "¿El insert chocó con el CHECK de `tipo` (un tipo nuevo, como `emision`, antes de aplicar su SQL)? Es «falta la migración» (503 `sin_migracion`), no un fallo del servidor. El nombre es el que Postgres "
         },
         {
           "nombre": "claveTareaDe",
@@ -36107,7 +36148,7 @@
           "exportada": true,
           "params": "item: ItemEvento, polizaId: string",
           "retorno": "string",
-          "linea": 371,
+          "linea": 413,
           "resumen": "Clave de «una tarea por póliza/recibo» (pre-anulación e impago del MISMO recibo comparten tarea)."
         },
         {
@@ -36116,7 +36157,16 @@
           "exportada": true,
           "params": "item: ItemEvento, compania: string, ctx: ContextoItem",
           "retorno": "Plan",
-          "linea": 376
+          "linea": 418
+        },
+        {
+          "nombre": "decidirReevaluacionEmision",
+          "kind": "function",
+          "exportada": true,
+          "params": "item: ItemEvento, compania: string, resolucion: ResolucionEvento, hoy: string,",
+          "retorno": "DecisionReevaluacion",
+          "linea": 550,
+          "resumen": "Reevaluación (14/10/2026): una emisión que quedó `sin_resolver` («aún no llegada por CIMA») pasa a `duplicado_cima` cuando CIMA ya trae la póliza. Reutiliza `planItem` (la MISMA regla que el POST): so"
         },
         {
           "nombre": "tareaValida",
@@ -36124,8 +36174,7 @@
           "exportada": true,
           "params": "t: TareaPlan, hoy: Date",
           "retorno": "",
-          "linea": 484,
-          "resumen": "La tarea del plan pasa las MISMAS reglas que una tarea a mano (`validarTarea`)."
+          "linea": 562
         },
         {
           "nombre": "validarMarcaRevisado",
@@ -36133,13 +36182,13 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "",
-          "linea": 494,
+          "linea": 572,
           "resumen": "Cuerpo de `PATCH /api/operador/correo/evento`: `{ id: uuid, revisado: boolean }`. Nada se coacciona."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8abf3880f73d"
+      "hash": "ffade18d8222"
     },
     {
       "ruta": "apps/asegura/lib/correo-eventos.ts",
@@ -47154,7 +47203,7 @@
           "exportada": true,
           "params": "pasos: EstadoPaso['pasos'], incidencias: readonly IncidenciaEjecucion[] | undefined",
           "retorno": "string[] | undefined",
-          "linea": 70,
+          "linea": 79,
           "resumen": "Las incidencias que trae el worker → `errores` del ÚLTIMO paso guardado (el que pidió esas acciones), con la etiqueta de SU inventario guardado (redactado). Sin incidencias o sin pasos → `undefined` ("
         },
         {
@@ -47163,7 +47212,7 @@
           "exportada": true,
           "params": "plan: RespuestaExplorador, conDatosReales: boolean",
           "retorno": "boolean",
-          "linea": 115,
+          "linea": 131,
           "resumen": "Con datos REALES un plan de MEMORIA con `elegir`/`marcar` no se reutiliza: repetiría la opción de OTRA exploración (uso «habitual», régimen «propietario»…) y el uso/régimen decide la tarifa. Lo que sí"
         },
         {
@@ -47172,7 +47221,7 @@
           "exportada": true,
           "params": "st: EstadoPaso, ahora: Date",
           "retorno": "",
-          "linea": 124,
+          "linea": 140,
           "resumen": "Consumo para los topes: llamadas y € de la CABECERA (cuentan las descartadas); acciones y pasos de las filas."
         },
         {
@@ -47181,7 +47230,7 @@
           "exportada": true,
           "params": "pasos: EstadoPaso['pasos'], inventario: InventarioDom, huella: string, avancesFallidos: number",
           "retorno": "boolean",
-          "linea": 140,
+          "linea": 156,
           "resumen": "¿Bucle? Misma huella estructural Y mismo relleno (refs con valor) que los pasos anteriores (14/10/2026: Allianz Hogar paró por FALSO bucle a la 3.ª huella igual mientras cada lote rellenaba más campos"
         },
         {
@@ -47190,7 +47239,7 @@
           "exportada": true,
           "params": "e: EntradaPaso, d: DepsPaso<B>",
           "retorno": "Promise<SalidaPaso>",
-          "linea": 148,
+          "linea": 164,
           "resumen": "Un paso del explorador. Lanza `PasoOcupado` (→ 409) si el lock o la IA están tomados."
         },
         {
@@ -47199,7 +47248,16 @@
           "exportada": false,
           "params": "d: DepsPaso<B>, e: EntradaPaso, decision: { nAntes: number }, x: { huella: string; inventario: InventarioDom; ctx: ContextoValidacion; coste: number; texto: string | null; fallo: string | null },",
           "retorno": "Promise<SalidaPaso>",
-          "linea": 216
+          "linea": 244
+        },
+        {
+          "nombre": "contrasenaPedida",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: unknown",
+          "retorno": "boolean",
+          "linea": 278,
+          "resumen": "¿La respuesta (guardada o nueva) pide escribir la contraseña?"
         },
         {
           "nombre": "ejecutarCierre",
@@ -47207,13 +47265,13 @@
           "exportada": true,
           "params": "d: DepsCierre<B>",
           "retorno": "Promise<SalidaCierre>",
-          "linea": 256,
+          "linea": 296,
           "resumen": "El cierre toma el MISMO try-lock que `paso` y respeta la IA reservada: nunca corre a la vez que un paso en vuelo (un paso que registrara después del mapa quedaría fuera de él). Ocupado → `PasoOcupado`"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2eef8ebecaf0"
+      "hash": "e492540db9e9"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador-reglas.ts",
@@ -47230,10 +47288,13 @@
         "estadoFalloExploracion",
         "cierraCabeceraTrasFallo",
         "exploradoValido",
+        "sanearVistaAria",
         "leerPeticionPaso",
         "leerPeticionEncolarExploracion",
         "huecoDeDetalleFin",
         "leerPeticionCierre",
+        "faseLoginPermitida",
+        "promptLoginExplorador",
         "historialCorto",
         "promptExplorador",
         "consumoDe",
@@ -47246,7 +47307,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 46,
+          "linea": 51,
           "resumen": "Interruptor: `1` EXACTO. Cualquier otra cosa = apagado (fail-closed)."
         },
         {
@@ -47255,7 +47316,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string | null",
-          "linea": 53,
+          "linea": 58,
           "resumen": "Modelo de la exploración. Sin env → el por defecto; env con algo que no es un slug → `null` (no se llama a la IA)."
         },
         {
@@ -47264,7 +47325,7 @@
           "exportada": true,
           "params": "cabecera: string | null",
           "retorno": "string[]",
-          "linea": 63,
+          "linea": 68,
           "resumen": "Modos declarados por el worker. Sin cabecera (imagen anterior a la fase B) = solo `tarificar` y `emision`."
         },
         {
@@ -47273,7 +47334,7 @@
           "exportada": true,
           "params": "modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "'tarificar' | 'emision' | 'exploracion' | null",
-          "linea": 73,
+          "linea": 78,
           "resumen": "Qué `modo` se le sirve al worker por `/api/tarificador/trabajo/[id]`. Un modo que el worker no conoce NO se sirve (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tari"
         },
         {
@@ -47282,7 +47343,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string[]",
-          "linea": 85,
+          "linea": 90,
           "resumen": "Modos que el lanzador puede RECLAMAR de la cola. `exploracion` solo con el interruptor encendido (y Alberto lo enciende cuando `TARIFICADOR_FLY_IMAGE` ya es una imagen con el explorador): así una expl"
         },
         {
@@ -47291,7 +47352,7 @@
           "exportada": true,
           "params": "iniciadoAt: Date | null, primerPasoAt: Date | null",
           "retorno": "Date | null",
-          "linea": 96,
+          "linea": 101,
           "resumen": "Inicio ACUMULADO de la exploración: el más antiguo entre el reclamo actual (`iniciado_at`) y el primer paso guardado (un reintento tras un fallo de infra NO pone el reloj a cero). `null` = aún no cons"
         },
         {
@@ -47300,7 +47361,7 @@
           "exportada": true,
           "params": "p: { ahora: Date; inicio: Date | null; leaseMs: number; maxMs: number }",
           "retorno": "Date",
-          "linea": 105,
+          "linea": 110,
           "resumen": "Lease RENOVADO en cada paso de exploración (el de 6 min no basta si cada paso va a la IA): ahora + `leaseMs`, pero NUNCA más allá del tope de tiempo acumulado + margen de cierre. Si el tope ya pasó, d"
         },
         {
@@ -47309,7 +47370,7 @@
           "exportada": true,
           "params": "estadoPolitica: E, cabeceraCerrada: boolean",
           "retorno": "E | 'error_definitivo'",
-          "linea": 117,
+          "linea": 122,
           "resumen": "Estado del trabajo de EXPLORACIÓN tras un fallo (13/10/2026). Un `error_reintentable` con la cabecera YA cerrada (el worker cierra antes de reportar) no se reintenta: el reintento recibiría 404 de `tr"
         },
         {
@@ -47318,7 +47379,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 122,
+          "linea": 127,
           "resumen": "Un fallo que NO se reintenta deja la cabecera cerrada (la pantalla no la muestra «abierta» para siempre)."
         },
         {
@@ -47327,7 +47388,7 @@
           "exportada": true,
           "params": "cabeceraCerrada: boolean | null | undefined",
           "retorno": "boolean",
-          "linea": 127,
+          "linea": 132,
           "resumen": "Un `explorado` solo vale si la cabecera está cerrada (el mapa guardado); sin cabecera = no cerrada."
         },
         {
@@ -47336,7 +47397,16 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 132
+          "linea": 137
+        },
+        {
+          "nombre": "sanearVistaAria",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown, valoresSensibles: readonly string[] = []",
+          "retorno": "string | undefined",
+          "linea": 157,
+          "resumen": "Vista aria opcional del worker → texto seguro para el prompt, o `undefined`. NO se fía de que llegue redactada: valores de campos fuera, datos personales y valores conocidos del cliente fuera, tope de"
         },
         {
           "nombre": "leerPeticionPaso",
@@ -47344,7 +47414,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 144,
+          "linea": 178,
           "resumen": "Cuerpo de `POST /api/tarificador/explorador/paso`: `{ trabajoId, inventario, avancesFallidos? }`. El inventario se RE-SANEA aquí (defensa en profundidad) conservando las refs del worker. Sin elementos"
         },
         {
@@ -47353,7 +47423,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 168,
+          "linea": 206,
           "resumen": "Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? | oportunidadId? }`. La entrada tiene que ser de la lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Las dos a"
         },
         {
@@ -47362,7 +47432,7 @@
           "exportada": true,
           "params": "motivoFin: MotivoFin, detalle: DetalleFinExploracion | null",
           "retorno": "string | null",
-          "linea": 207,
+          "linea": 245,
           "resumen": "El hueco que deja en el mapa el DETALLE de la parada del worker (14/10/2026): qué comprobación cortó, sin valores. `null` si no hay detalle. No hay columna propia: va a `mapa.huecos`, que es lo que se"
         },
         {
@@ -47371,8 +47441,26 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 212,
+          "linea": 250,
           "resumen": "Cuerpo de `POST /api/tarificador/explorador/cierre`. La red va SOLO como origen + ruta (se re-normaliza aquí)."
+        },
+        {
+          "nombre": "faseLoginPermitida",
+          "kind": "function",
+          "exportada": true,
+          "params": "fase: 'normal' | 'login', entrada: string",
+          "retorno": "boolean",
+          "linea": 311,
+          "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
+        },
+        {
+          "nombre": "promptLoginExplorador",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
+          "retorno": "string",
+          "linea": 333,
+          "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
           "nombre": "historialCorto",
@@ -47380,7 +47468,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 265,
+          "linea": 344,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -47389,7 +47477,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 290,
+          "linea": 371,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -47398,7 +47486,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 319,
+          "linea": 401,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -47407,13 +47495,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 333,
+          "linea": 415,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c0fafdf90b83"
+      "hash": "c1c153f1c7b3"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -48859,6 +48947,7 @@
         "esCambioRelevante",
         "detectarCambiosTarifa",
         "pasoDelError",
+        "tasaOkPorGrupo",
         "calcularMetricas"
       ],
       "funciones": [
@@ -49070,17 +49159,26 @@
           "resumen": "Paso del fallo: el que nombra el acompañante («…en el paso «login»…») o, si no, el tipo de error."
         },
         {
+          "nombre": "tasaOkPorGrupo",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: TrabajoTasa[]",
+          "retorno": "TasaGrupo[]",
+          "linea": 388,
+          "resumen": "tasa_ok por compañía/ramo/modo (14/10/2026). PURA. `error` = `error_definitivo` + `requiere_humano` (los mismos FALLIDOS del panel); `cancelado` se cuenta aparte y queda FUERA de la tasa; pendientes/e"
+        },
+        {
           "nombre": "calcularMetricas",
           "kind": "function",
           "exportada": true,
           "params": "trabajos: TrabajoMetrica[], ahora: Date",
           "retorno": "",
-          "linea": 380
+          "linea": 403
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "12fdfa3c1299"
+      "hash": "2ddaf0d22abf"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-ops.ts",
@@ -49098,7 +49196,7 @@
           "exportada": true,
           "params": "ahora: Date = new Date()",
           "retorno": "string",
-          "linea": 45
+          "linea": 47
         },
         {
           "nombre": "numeroONull",
@@ -49106,7 +49204,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": "number | null",
-          "linea": 91
+          "linea": 93
         },
         {
           "nombre": "leerRenovaciones",
@@ -49114,7 +49212,7 @@
           "exportada": false,
           "params": "correduriaId: string, ahora: Date",
           "retorno": "Promise<RenovacionInterna[]>",
-          "linea": 97
+          "linea": 99
         },
         {
           "nombre": "sinRiesgo",
@@ -49122,7 +49220,7 @@
           "exportada": false,
           "params": "{ riesgo: _r, ...r }: RenovacionInterna",
           "retorno": "Renovacion",
-          "linea": 158
+          "linea": 160
         },
         {
           "nombre": "contarPorEstado",
@@ -49130,7 +49228,7 @@
           "exportada": false,
           "params": "lista: { estado: EstadoRenovacion }[]",
           "retorno": "Record<EstadoRenovacion, number>",
-          "linea": 160
+          "linea": 162
         },
         {
           "nombre": "contarRenovacionesBot",
@@ -49138,7 +49236,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 166
+          "linea": 168
         },
         {
           "nombre": "ejecutarRenovacionesTarificador",
@@ -49146,7 +49244,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env, ahora = new Date()",
           "retorno": "Promise<ResumenRenovaciones>",
-          "linea": 193,
+          "linea": 195,
           "resumen": "Pasada del cron de renovaciones. APAGADO salvo `TARIFICADOR_RENOVACIONES_ACTIVO=1`; con el RPA apagado solo cuenta. Encendido: barre la cola (relanza lo pendiente) y encola COMO MUCHO una renovación p"
         },
         {
@@ -49155,7 +49253,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<IntervencionesResumen>",
-          "linea": 242,
+          "linea": 246,
           "resumen": "La tabla de intervenciones puede no existir aún (SQL del formador sin aplicar): se dice, no se pinta 0."
         },
         {
@@ -49164,7 +49262,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<IaDia[] | null>",
-          "linea": 267,
+          "linea": 271,
           "resumen": "Gasto de IA de asegura por día (Madrid) desde la pasarela. `null` = no se pudo leer (tabla ausente o sin permiso): no es 0."
         },
         {
@@ -49173,7 +49271,7 @@
           "exportada": true,
           "params": "correduriaId: string, env: Record<string, string | undefined> = process.env, ahora = new Date()",
           "retorno": "Promise<PanelTarificador>",
-          "linea": 280
+          "linea": 284
         }
       ],
       "tablas": [
@@ -49183,7 +49281,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "aa8f9c713da5"
+      "hash": "375f98099b7a"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-purga.ts",
@@ -49242,6 +49340,7 @@
         "configFly",
         "peticionMaquina",
         "leerMetaWorker",
+        "avisoTraza",
         "leerResultadoWorker"
       ],
       "funciones": [
@@ -49259,7 +49358,7 @@
           "exportada": true,
           "params": "guardado: string | null | undefined, descifrar: (v: string) => string",
           "retorno": "LecturaNifFicha",
-          "linea": 54,
+          "linea": 56,
           "resumen": "NIF de la ficha → lectura. `v1:` se descifra con `descifrar` (la clave de la cartera); si lanza → `ilegible` (nunca «no hay»). En claro (legado) → tal cual. Tiene que ser DNI/NIE/CIF válido (letra de "
         },
         {
@@ -49268,7 +49367,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 69
+          "linea": 71
         },
         {
           "nombre": "necesitaNifTomador",
@@ -49276,7 +49375,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown",
           "retorno": "boolean",
-          "linea": 72,
+          "linea": 74,
           "resumen": "¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre + auto/moto + el riesgo no trae documento. PURA."
         },
         {
@@ -49285,7 +49384,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, leer: () => LecturaNifFicha",
           "retorno": "NifTomadorAplicado",
-          "linea": 89,
+          "linea": 91,
           "resumen": "· Mapfre sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar. Ningún motivo lleva el documento."
         },
         {
@@ -49294,7 +49393,7 @@
           "exportada": true,
           "params": "riesgo: T",
           "retorno": "T",
-          "linea": 109,
+          "linea": 111,
           "resumen": "El riesgo que se GUARDA en la cola: nunca con `documentoTomador` (es el campo que pone asegura desde la ficha, y se inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA."
         },
         {
@@ -49303,7 +49402,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha",
           "retorno": "",
-          "linea": 120,
+          "linea": 122,
           "resumen": "Al ENCOLAR: el riesgo que se GUARDA, tras comprobar que la ficha permitirá al worker recibir el NIF. Misma regla y mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSi"
         },
         {
@@ -49312,7 +49411,7 @@
           "exportada": true,
           "params": "status: 422 | 503",
           "retorno": "'datos' | 'infra'",
-          "linea": 127,
+          "linea": 129,
           "resumen": "Al ENTREGAR: un NIF que ya no se puede poner es fallo `datos` (la ficha) o `infra` si es ilegible (la clave: «no se sabe»)."
         },
         {
@@ -49321,7 +49420,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 132,
+          "linea": 134,
           "resumen": "Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed)."
         },
         {
@@ -49330,7 +49429,7 @@
           "exportada": true,
           "params": "leaseHasta: Date | null, ahora: Date",
           "retorno": "boolean",
-          "linea": 148,
+          "linea": 150,
           "resumen": "¿El lease de un trabajo `en_curso` ya venció? `null` (no debería existir: CHECK `trabajo_en_curso_con_lease`) = «no se sabe» → NO vencido: el estado conservador es seguir contándolo como ocupado antes"
         },
         {
@@ -49339,7 +49438,7 @@
           "exportada": true,
           "params": "filas: readonly T[], ahora: Date",
           "retorno": "",
-          "linea": 154,
+          "linea": 156,
           "resumen": "Reparte los `en_curso` de una compañía: los vivos ocupan hueco; los vencidos se dan por fallo de infra."
         },
         {
@@ -49348,7 +49447,7 @@
           "exportada": true,
           "params": "max: number | null, vivos: number",
           "retorno": "number",
-          "linea": 162,
+          "linea": 164,
           "resumen": "Huecos libres bajo `max_concurrencia`. Sin integración autorizada (`null`) o con un tope raro → 0 (fail-closed)."
         },
         {
@@ -49357,7 +49456,7 @@
           "exportada": true,
           "params": "p: { correduriaId: string; clienteId: string; compania: string; ramo: string }",
           "retorno": "string",
-          "linea": 172,
+          "linea": 174,
           "resumen": "Clave de deduplicación al ENCOLAR: un mismo cliente no pide dos veces el mismo riesgo a la misma compañía y ramo. El riesgo NO va en la clave (se compara en SQL como `jsonb`, que ya es igualdad semánt"
         },
         {
@@ -49366,7 +49465,7 @@
           "exportada": true,
           "params": "f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null }, ahora: Date, maxIntentos: number,",
           "retorno": "boolean",
-          "linea": 185,
+          "linea": 187,
           "resumen": "¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope"
         },
         {
@@ -49375,7 +49474,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "",
-          "linea": 204
+          "linea": 206
         },
         {
           "nombre": "peticionMaquina",
@@ -49383,7 +49482,7 @@
           "exportada": true,
           "params": "cfg: ConfigFly, jobId: string",
           "retorno": "",
-          "linea": 219,
+          "linea": 221,
           "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni credencia"
         },
         {
@@ -49392,8 +49491,16 @@
           "exportada": true,
           "params": "e: Record<string, unknown>",
           "retorno": "MetaWorker",
-          "linea": 271,
+          "linea": 273,
           "resumen": "Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas (p. ej. un dato personal) se descarta ENTERA y el resultado del trabajo se guarda igua"
+        },
+        {
+          "nombre": "avisoTraza",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajoId: string, motivo: unknown",
+          "retorno": "string",
+          "linea": 286
         },
         {
           "nombre": "obj",
@@ -49401,7 +49508,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 278
+          "linea": 295
         },
         {
           "nombre": "base64",
@@ -49409,7 +49516,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max: number",
           "retorno": "Buffer | null",
-          "linea": 281
+          "linea": 298
         },
         {
           "nombre": "esPdf",
@@ -49417,7 +49524,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 293
+          "linea": 310
         },
         {
           "nombre": "esPng",
@@ -49425,7 +49532,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 294
+          "linea": 311
         },
         {
           "nombre": "leerResultadoWorker",
@@ -49433,12 +49540,12 @@
           "exportada": true,
           "params": "entrada: unknown",
           "retorno": "",
-          "linea": 296
+          "linea": 313
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a273f23ffb2d"
+      "hash": "f4f140892b76"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
@@ -49701,7 +49808,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 59
+          "linea": 60
         },
         {
           "nombre": "encolarTrabajo",
@@ -49709,7 +49816,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 87
+          "linea": 88
         },
         {
           "nombre": "leerDniFicha",
@@ -49717,7 +49824,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 159,
+          "linea": 160,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
@@ -49726,7 +49833,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 185,
+          "linea": 186,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -49735,7 +49842,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 237
+          "linea": 238
         },
         {
           "nombre": "lanzarPendientes",
@@ -49743,7 +49850,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 242,
+          "linea": 243,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -49752,7 +49859,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 266
+          "linea": 267
         },
         {
           "nombre": "destruirMaquina",
@@ -49760,7 +49867,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 280,
+          "linea": 281,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -49769,7 +49876,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 306,
+          "linea": 307,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -49778,7 +49885,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 361
+          "linea": 362
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -49786,7 +49893,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 465,
+          "linea": 473,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -49795,7 +49902,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 469
+          "linea": 477
         },
         {
           "nombre": "guardarAdjunto",
@@ -49803,7 +49910,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 519
+          "linea": 527
         },
         {
           "nombre": "guardarPasos",
@@ -49811,7 +49918,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 541,
+          "linea": 549,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -49820,7 +49927,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null = null, conBotVersion ",
           "retorno": "Promise<",
-          "linea": 560,
+          "linea": 568,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -49829,7 +49936,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 659,
+          "linea": 667,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -49839,7 +49946,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "313d93e9ecdd"
+      "hash": "e3db7ec6a5db"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -95828,7 +95935,7 @@
           "exportada": false,
           "params": "r: Exclude<RespuestaCampana, { estado: 'ok' }>",
           "retorno": "string",
-          "linea": 19
+          "linea": 20
         },
         {
           "nombre": "fecha",
@@ -95836,7 +95943,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "Tarjetas",
@@ -95844,7 +95951,7 @@
           "exportada": false,
           "params": "{ e }: { e: EmbudoCampana }",
           "retorno": null,
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "FilaResumen",
@@ -95852,7 +95959,7 @@
           "exportada": false,
           "params": "{ g }: { g: GrupoEmbudo }",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "Persona",
@@ -95860,7 +95967,7 @@
           "exportada": false,
           "params": "{ p }: { p: PersonaCampana }",
           "retorno": null,
-          "linea": 74
+          "linea": 75
         },
         {
           "nombre": "Campanas",
@@ -95868,12 +95975,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 98
+          "linea": 99
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46eb6699bd1b"
+      "hash": "9fc8c316a14f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CartasMediador.tsx",
@@ -96097,7 +96204,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 155,
+          "linea": 157,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -96106,7 +96213,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 169,
+          "linea": 171,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -96115,7 +96222,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, matriculaInicial = '', etiquetaCliente, faltanInicial, garajes, civiles, zonasCarnet, tiposCarnet, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, c",
           "retorno": null,
-          "linea": 207
+          "linea": 209
         },
         {
           "nombre": "BloquePersona",
@@ -96123,7 +96230,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 2084,
+          "linea": 2113,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -96132,7 +96239,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 2156,
+          "linea": 2185,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -96141,7 +96248,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 2161
+          "linea": 2190
         },
         {
           "nombre": "PapelDelTomador",
@@ -96149,7 +96256,7 @@
           "exportada": false,
           "params": "{ rol, oportunidadId, aqui = false }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional' oportunidadId: string /** Embebido en la propia oportunidad: «Intervinientes» está arriba, en esta misma página (sin enlace). */ aqui?",
           "retorno": null,
-          "linea": 2170,
+          "linea": 2199,
           "resumen": "Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se"
         },
         {
@@ -96158,7 +96265,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 2196
+          "linea": 2225
         },
         {
           "nombre": "IrA",
@@ -96166,7 +96273,7 @@
           "exportada": false,
           "params": "{ ancla, alternativa, children }: { ancla: string; alternativa?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 2216,
+          "linea": 2245,
           "resumen": "Enlace que lleva (scroll) a un bloque de la página. En plataforma el scroller es `LayoutShell`: `scrollIntoView` vale."
         },
         {
@@ -96175,7 +96282,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, notaFalta = false, vacio = 'falta', ancla }: { etiqueta: string valor: string | null nota?: string /** La nota es un error (p. ej. compra anterior a la matriculación): se pinta en rojo. */ notaFalta?: boolean /** Va",
           "retorno": null,
-          "linea": 2235,
+          "linea": 2264,
           "resumen": "Un dato que se edita ARRIBA: aquí solo se lee. Vacío = aviso rojo, nunca un valor inventado."
         },
         {
@@ -96184,7 +96291,7 @@
           "exportada": false,
           "params": "{ grupos, completa }: { grupos: GrupoVerificacion[]; completa: boolean }",
           "retorno": null,
-          "linea": 2260
+          "linea": 2289
         },
         {
           "nombre": "Contador",
@@ -96192,7 +96299,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 2296
+          "linea": 2325
         },
         {
           "nombre": "Precios",
@@ -96200,7 +96307,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId, actual, familiaAllianz }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. ",
           "retorno": null,
-          "linea": 2315
+          "linea": 2344
         },
         {
           "nombre": "PreciosVarianteAuto",
@@ -96208,7 +96315,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 2432,
+          "linea": 2461,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (10/10/2026, oportunidad de AUTO; hermano de `PreciosVarianteMoto`): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con e"
         }
       ],
@@ -96218,7 +96325,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "f4580537a726"
+      "hash": "d2e391f00309"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/datos-cotizador.ts",
@@ -97207,16 +97314,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, otroVehiculo = null, var",
           "retorno": null,
-          "linea": 143
-        },
-        {
-          "nombre": "datoDePersona",
-          "kind": "function",
-          "exportada": false,
-          "params": "campo: string, faltan: Reparo[] | null, correcciones: Record<string, string>",
-          "retorno": "string | null",
-          "linea": 1476,
-          "resumen": "Un dato personal del conductor para el bot: lo tecleado arriba, o `'ficha'` si la precalificación no lo da por faltante (la ficha lo tiene y el servidor lo lee), o `null` si falta y no se ha tecleado."
+          "linea": 144
         },
         {
           "nombre": "hoyLocal",
@@ -97224,7 +97322,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1483,
+          "linea": 1478,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -97233,7 +97331,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 1488
+          "linea": 1483
         },
         {
           "nombre": "Campo",
@@ -97241,7 +97339,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1493
+          "linea": 1488
         },
         {
           "nombre": "Contador",
@@ -97249,7 +97347,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 1507
+          "linea": 1502
         },
         {
           "nombre": "Precios",
@@ -97257,7 +97355,7 @@
           "exportada": false,
           "params": "{ r, simulacion, emitible = false, sustituye = true, clienteId, actual = null, }: { /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy, anualizado. `null` = sin comparación. */ actual?: ReturnType<typeof primaActualParaLista> r: ",
           "retorno": null,
-          "linea": 1526
+          "linea": 1521
         },
         {
           "nombre": "PreciosVarianteMoto",
@@ -97265,7 +97363,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 1647,
+          "linea": 1642,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (07/10/2026, oportunidad de MOTO): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con el MISMO panel de emisión que tras "
         }
       ],
@@ -97274,7 +97372,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ee93a0b437e7"
+      "hash": "b2f73e9ab761"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/datos-cotizador.ts",
@@ -99249,7 +99347,7 @@
           "exportada": false,
           "params": "{ id, titulo, Icono, primero = false }: { id: BloqueMas titulo: string Icono: typeof Antenna primero?: boolean }",
           "retorno": null,
-          "linea": 682
+          "linea": 686
         },
         {
           "nombre": "CarteraResumen",
@@ -99257,7 +99355,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 708
+          "linea": 712
         },
         {
           "nombre": "btnMini",
@@ -99265,7 +99363,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 825,
+          "linea": 829,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -99274,12 +99372,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 843
+          "linea": 847
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c50a15db695c"
+      "hash": "1e7df9222c6c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -101106,7 +101204,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "37ce7cf740c9"
+      "hash": "25fe73504d6c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/MesaClient.tsx",
@@ -105632,7 +105730,7 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "",
-          "linea": 120,
+          "linea": 126,
           "resumen": "Un `?s=` desconocido no deja la pantalla en blanco: cae a «Gestión» (sin `?s=` se va a «Mi mesa»: `iniciaEnLaMesa`). Los nombres de las pestañas antiguas abren «Más» y dicen a qué bloque bajar."
         },
         {
@@ -105641,7 +105739,7 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "boolean",
-          "linea": 132,
+          "linea": 138,
           "resumen": "¿Entra alguien a `/correduria` sin decir adónde? Entonces va a «Mi mesa». Con `?s=` (cualquier valor) se queda donde lo pide: un aviso o un marcador viejo no se desvían."
         },
         {
@@ -105650,7 +105748,7 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "Seccion",
-          "linea": 137
+          "linea": 143
         },
         {
           "nombre": "esAccionable",
@@ -105658,7 +105756,7 @@
           "exportada": true,
           "params": "urgencia: string",
           "retorno": "boolean",
-          "linea": 170
+          "linea": 176
         },
         {
           "nombre": "contarAccionables",
@@ -105666,7 +105764,7 @@
           "exportada": true,
           "params": "polizas: readonly { urgencia: string }[] | null | undefined,",
           "retorno": "number | null",
-          "linea": 181,
+          "linea": 187,
           "resumen": "Cuántas renovaciones son trabajo de hoy. `null` entra y sale: si el puerto no ha contestado no se sabe cuántas hay, y decir 0 sería afirmar «no vence nada», que es justo la mentira que la regla «dato "
         },
         {
@@ -105675,7 +105773,7 @@
           "exportada": true,
           "params": "partes: readonly (number | null | undefined)[],",
           "retorno": "Contador | null",
-          "linea": 206,
+          "linea": 212,
           "resumen": "Agrega los contadores de las colas que viven en una sección. Tres desenlaces, no dos, y la diferencia es la que decide si Alberto abre la pestaña o no: - todas las colas legibles → `{ n, parcial:false"
         },
         {
@@ -105684,7 +105782,7 @@
           "exportada": true,
           "params": "partes: readonly (Contador | null | undefined)[],",
           "retorno": "Contador | null | undefined",
-          "linea": 234,
+          "linea": 240,
           "resumen": "si algo sí, el total pasa a ser un SUELO (`parcial`). Todo `undefined` → `undefined`: la pestaña no pinta nada todavía."
         },
         {
@@ -105693,7 +105791,7 @@
           "exportada": true,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 272,
+          "linea": 278,
           "resumen": "Cómo se DICE cuántas pólizas vigentes arrastran un vencimiento anterior a la ventana de renovación (más de una anualidad: 8 filas de 2013-2019 medidas el 20/09/2026). No son trabajo de hoy —por eso no"
         },
         {
@@ -105702,13 +105800,13 @@
           "exportada": true,
           "params": "truncado: boolean | null | undefined, que: string,",
           "retorno": "string | null",
-          "linea": 313,
+          "linea": 319,
           "resumen": "Lo que la pantalla dice cuando una lista del puerto de asegura viene con TECHO. Tres estados, tres frases distintas, y una de ellas es el silencio: `true` → la criba tocó su techo: lo que se ve abajo "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9a7cfe6c6d4c"
+      "hash": "ef42af3439f8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Secciones.tsx",
@@ -105723,7 +105821,7 @@
           "exportada": true,
           "params": "{ activa, contadores, onCambiar }: { activa: Seccion | PestanaPropia contadores: ContadoresSeccion onCambiar: (s: Seccion) => void }",
           "retorno": null,
-          "linea": 51,
+          "linea": 52,
           "resumen": "`activa` es una sección de `CorreduriaClient` o una pantalla propia de la barra (`'mesa'` en `/correduria/mesa`, `'prospeccion'` en `/correduria/vencimientos`): el enlace activo se subraya igual que u"
         },
         {
@@ -105732,12 +105830,12 @@
           "exportada": false,
           "params": "{ contador, tono, title }: { contador: Contador | null tono?: 'aviso' | 'malo' title?: string }",
           "retorno": null,
-          "linea": 132
+          "linea": 133
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1b8a2bb3d0b7"
+      "hash": "208e53968ac7"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/SeguroAnteriorImputado.tsx",
@@ -117225,13 +117323,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 30,
+          "linea": 33,
           "resumen": "POST /api/correduria/tarificador/encolar { clienteId, oportunidadId?, riesgo } — pide «Precio Allianz (bot)» de una comunidad; con `ramo: 'moto'` el `riesgo` es el FormularioAuto de una moto (13/10/20"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/correduria/tarificador/encolar",
-      "hash": "fd6149e519df"
+      "hash": "59c6b7125106"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/tarificador/exploraciones/[id]/route.ts",
@@ -135582,6 +135680,7 @@
         "interpretarImpagados",
         "registrarDevolucionesAsegura",
         "registrarEventoCorreoAsegura",
+        "reevaluarEventosCorreoAsegura",
         "resolverDevolucionAsegura",
         "bajaPorDevolucionAsegura",
         "descartarRetencionAsegura",
@@ -135759,12 +135858,21 @@
           "resumen": "`POST /api/operador/correo/evento` — un aviso de compañía ya leído (`leerCorreoEventoAseguradora`): siniestro, pre-anulación, impago, anulación o suplemento (14/10/2026). Mismos tres desenlaces que la"
         },
         {
+          "nombre": "reevaluarEventosCorreoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 521,
+          "resumen": "`POST /api/operador/correo/evento/reevaluar` — tras el triaje: las emisiones «sin resolver» que CIMA ya trae pasan a `duplicado_cima` (14/10/2026). Nunca lanza: `null` = no se pudo (config, red, 4xx/5"
+        },
+        {
           "nombre": "resolverDevolucionAsegura",
           "kind": "function",
           "exportada": true,
           "params": "reciboId: string, actor: string",
           "retorno": "Promise<ResolucionDevolucion>",
-          "linea": 520,
+          "linea": 535,
           "resumen": "`PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor."
         },
         {
@@ -135773,7 +135881,7 @@
           "exportada": true,
           "params": "reciboId: string, motivo: string, nota: string | null, actor: string",
           "retorno": "Promise<BajaDevolucion>",
-          "linea": 549,
+          "linea": 564,
           "resumen": "`PATCH /api/operador/recibos/devolucion {accion:'baja'}` — «el cliente se va». El actor lo pone el servidor. `sin_respuesta` (red o 5xx) NO es «no se hizo»: la transacción pudo terminar."
         },
         {
@@ -135782,7 +135890,7 @@
           "exportada": true,
           "params": "polizaId: string, actor: string, motivo: string | null, dias?: number,",
           "retorno": "Promise<DescarteRetencion>",
-          "linea": 584,
+          "linea": 599,
           "resumen": "`POST /api/operador/retencion/descartar` — quita una póliza de \"Hay que llamar\" `dias` días (el puerto acota 1-30, por defecto 10). **NO la marca como resuelta**: si al caducar el plazo el recibo sigu"
         },
         {
@@ -135791,7 +135899,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "Promise<Busqueda>",
-          "linea": 601
+          "linea": 616
         },
         {
           "nombre": "interpretarLineas",
@@ -135799,7 +135907,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LineasCodeoscopic",
-          "linea": 628,
+          "linea": 643,
           "resumen": "Puro. `hogar` degrada a `desconocido` ante cualquier forma rara: afirmar «hogar disponible» o «ausente» sobre un JSON que no se entiende sería lo mismo que inventarlo."
         },
         {
@@ -135808,7 +135916,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "HogarCodeoscopic",
-          "linea": 640
+          "linea": 655
         },
         {
           "nombre": "lineasCodeoscopic",
@@ -135816,7 +135924,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LineasCodeoscopic>",
-          "linea": 655
+          "linea": 670
         },
         {
           "nombre": "interpretarDiagnosticoProyecto",
@@ -135824,7 +135932,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DiagnosticoProyecto",
-          "linea": 680
+          "linea": 695
         },
         {
           "nombre": "diagnosticoProyectoCodeoscopic",
@@ -135832,7 +135940,7 @@
           "exportada": true,
           "params": "projectId: string",
           "retorno": "Promise<DiagnosticoProyecto>",
-          "linea": 691
+          "linea": 706
         },
         {
           "nombre": "proyectosAvant2Cliente",
@@ -135840,7 +135948,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<",
-          "linea": 708,
+          "linea": 723,
           "resumen": "Lo que contesta asegura, TAL CUAL, con su status: la pantalla distingue «no hay proyectos» (`ok` con lista vacía) de «no se ha podido mirar» (cualquier otra cosa). Gratis: solo lecturas. Hasta 11 lect"
         },
         {
@@ -135849,7 +135957,7 @@
           "exportada": true,
           "params": "clienteId: string, projectId: string, solicitadoPor: string",
           "retorno": "Promise<",
-          "linea": 718,
+          "linea": 733,
           "resumen": "Trae un proyecto de la web de Avant2 como tarificación. No vuelve a tarificar (0€)."
         },
         {
@@ -135858,7 +135966,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CompaniasCodeoscopic",
-          "linea": 744,
+          "linea": 759,
           "resumen": "Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se entiende sería afirmar una ausencia sin haberla medido."
         },
         {
@@ -135867,7 +135975,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CompaniaBuscada",
-          "linea": 756
+          "linea": 771
         },
         {
           "nombre": "companiasCodeoscopic",
@@ -135875,7 +135983,7 @@
           "exportada": true,
           "params": "buscar: string",
           "retorno": "Promise<CompaniasCodeoscopic>",
-          "linea": 774
+          "linea": 789
         },
         {
           "nombre": "impagadosAsegura",
@@ -135883,7 +135991,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Impagados>",
-          "linea": 784
+          "linea": 799
         },
         {
           "nombre": "interpretarConfirmacionDireccion",
@@ -135891,7 +135999,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ConfirmacionDireccion",
-          "linea": 816
+          "linea": 831
         },
         {
           "nombre": "confirmarDireccionAsegura",
@@ -135899,7 +136007,7 @@
           "exportada": true,
           "params": "direccion: string, codigoPostal: string, municipio: string,",
           "retorno": "Promise<ConfirmacionDireccion>",
-          "linea": 834
+          "linea": 849
         },
         {
           "nombre": "leerRelacionadaPuerto",
@@ -135907,7 +136015,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 879
+          "linea": 894
         },
         {
           "nombre": "interpretarSustituciones",
@@ -135915,7 +136023,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Sustituciones",
-          "linea": 887
+          "linea": 902
         },
         {
           "nombre": "sustitucionesAsegura",
@@ -135923,7 +136031,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Sustituciones>",
-          "linea": 928
+          "linea": 943
         },
         {
           "nombre": "interpretarDuplicados",
@@ -135931,7 +136039,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DuplicadosVivosPuerto",
-          "linea": 948
+          "linea": 963
         },
         {
           "nombre": "leerPolizaRevision",
@@ -135939,7 +136047,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "PolizaRevision | null",
-          "linea": 1006
+          "linea": 1021
         },
         {
           "nombre": "interpretarRevision",
@@ -135947,7 +136055,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "BandejaRevision",
-          "linea": 1020
+          "linea": 1035
         },
         {
           "nombre": "revisionAsegura",
@@ -135955,7 +136063,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<BandejaRevision>",
-          "linea": 1045
+          "linea": 1060
         },
         {
           "nombre": "resolverRevisionAsegura",
@@ -135963,7 +136071,7 @@
           "exportada": true,
           "params": "casoId: string, decision: DecisionRevision, nota?: string",
           "retorno": "Promise<ResolucionBandejaPolizas>",
-          "linea": 1061
+          "linea": 1076
         },
         {
           "nombre": "interpretarRetenidas",
@@ -135971,7 +136079,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "Retenidas",
-          "linea": 1104
+          "linea": 1119
         },
         {
           "nombre": "retenidasAsegura",
@@ -135979,7 +136087,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Retenidas>",
-          "linea": 1160,
+          "linea": 1175,
           "resumen": "Revisa en Avant2 las emisiones retenidas. POST sin cuerpo (lee Avant2, no tarifica)."
         },
         {
@@ -135988,7 +136096,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 1176,
+          "linea": 1191,
           "resumen": "Descubrimiento AUTOMÁTICO de emisiones de Avant2 (03/10/2026). Solo lee el vendor (gratis); asegura registra lo que puede demostrar y deja el resto en revisión. La lectura de la respuesta es PURA y vi"
         },
         {
@@ -135997,7 +136105,7 @@
           "exportada": true,
           "params": "limite = 50, desde = 0",
           "retorno": "Promise<ColaRevision>",
-          "linea": 1185,
+          "linea": 1200,
           "resumen": "Cola de REVISIÓN del descubrimiento (03/10/2026): las emisiones de Avant2 que no se pudieron registrar solas. La lectura de la respuesta es PURA (`lib/correduria/emisiones-revision.ts`); un fallo es `"
         },
         {
@@ -136006,7 +136114,7 @@
           "exportada": true,
           "params": "id: string, nota: string | null",
           "retorno": "Promise<ResolucionRevision>",
-          "linea": 1196,
+          "linea": 1211,
           "resumen": "«Marcar revisada»: idempotente en asegura (`resuelta`/`ya_resuelta`). El actor viaja en `x-actor`."
         },
         {
@@ -136015,7 +136123,7 @@
           "exportada": true,
           "params": "q: { projectId: string; clienteId: string; oportunidadId?: string | null },",
           "retorno": "Promise<",
-          "linea": 1207,
+          "linea": 1222,
           "resumen": "Vista previa (GET, gratis) de registrar en la intranet una emisión hecha en la web de Avant2."
         },
         {
@@ -136024,7 +136132,7 @@
           "exportada": true,
           "params": "b: { projectId: string; clienteId: string; oportunidadId?: string | null; actor: string },",
           "retorno": "Promise<",
-          "linea": 1221,
+          "linea": 1236,
           "resumen": "Registra la emisión externa. `actor` lo pone el servidor con la sesión."
         },
         {
@@ -136033,7 +136141,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LecturaOportunidadesAviso>",
-          "linea": 1235,
+          "linea": 1250,
           "resumen": "── Oportunidades a 45 días (regla única, 29/09/2026) ──────────────────────"
         },
         {
@@ -136042,7 +136150,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "EstadoPortalCliente | null",
-          "linea": 1302,
+          "linea": 1317,
           "resumen": "🚨 Un valor que no reconocemos es `null` («no comprobado»), no un estado por defecto. Un asegura más nuevo que esta pantalla mandaría una etiqueta que aquí no existe, y elegir la optimista diría que e"
         },
         {
@@ -136051,7 +136159,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean | null",
-          "linea": 1380,
+          "linea": 1395,
           "resumen": "Tri-estado de verdad: un campo ausente es `null` («no se informó»), no `false`. Con `=== true` a secas, un puerto que no manda el campo diría que TODOS están sin email."
         },
         {
@@ -136060,7 +136168,7 @@
           "exportada": true,
           "params": "email: boolean | null, telefono: boolean | null, canalEnPoliza: number | null, contactoDeOtros: number | null, contactoDeAllegados: number | null,",
           "retorno": "EstadoCanal",
-          "linea": 1392,
+          "linea": 1407,
           "resumen": "El estado se DERIVA de dónde hay contacto; no se cree el que venga en el JSON. Si falta cualquiera de las cuatro medidas, el resultado es `no_comprobado`. 🚨 Ojo al último bloque: sin saber lo de la p"
         },
         {
@@ -136069,7 +136177,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaContacto[]",
-          "linea": 1417,
+          "linea": 1432,
           "resumen": "Las fichas nombradas. Una entrada sin id o con el nombre cifrado (`v1:`) se descarta: sigue contada en `contactoDeOtros`, pero no se inventa un nombre."
         },
         {
@@ -136078,7 +136186,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaAllegado[]",
-          "linea": 1433,
+          "linea": 1448,
           "resumen": "Ídem, conservando el parentesco. Sin parentesco legible se descarta: sigue contado en `contactoDeAllegados`, pero no se dice «llama a X» a secas."
         },
         {
@@ -136087,7 +136195,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "SinCanal",
-          "linea": 1448
+          "linea": 1463
         },
         {
           "nombre": "sinCanalAsegura",
@@ -136095,7 +136203,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SinCanal>",
-          "linea": 1518
+          "linea": 1533
         },
         {
           "nombre": "interpretarCalidad",
@@ -136103,7 +136211,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CalidadDato",
-          "linea": 1536
+          "linea": 1551
         },
         {
           "nombre": "calidadAsegura",
@@ -136111,7 +136219,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CalidadDato>",
-          "linea": 1578
+          "linea": 1593
         },
         {
           "nombre": "planBackfillDni",
@@ -136119,7 +136227,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillDni>",
-          "linea": 1641
+          "linea": 1656
         },
         {
           "nombre": "interpretarPlanBackfill",
@@ -136127,7 +136235,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillDni",
-          "linea": 1652,
+          "linea": 1667,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -136136,7 +136244,7 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1700,
+          "linea": 1715,
           "resumen": "Lanza la escritura. `limite` la parte en tandas: descifrar y hashear 32.000 fichas ya consume parte de los 300 s del endpoint de asegura, así que una pasada sin tope puede no llegar. Se vuelve a pulsa"
         },
         {
@@ -136145,7 +136253,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EscrituraBackfillDni",
-          "linea": 1728,
+          "linea": 1743,
           "resumen": "Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades del email); se suman a `escritos`/`restantes` pa"
         },
         {
@@ -136154,7 +136262,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<PlanBackfillContacto>",
-          "linea": 1783
+          "linea": 1798
         },
         {
           "nombre": "interpretarPlanBackfillContacto",
@@ -136162,7 +136270,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "PlanBackfillContacto",
-          "linea": 1794,
+          "linea": 1809,
           "resumen": "Puro: separado para poder probarlo sin red."
         },
         {
@@ -136171,13 +136279,13 @@
           "exportada": true,
           "params": "limite?: number",
           "retorno": "Promise<EscrituraBackfillDni>",
-          "linea": 1832,
+          "linea": 1847,
           "resumen": "Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9a7ee3b581e0"
+      "hash": "e56de663e566"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-tarificacion-tg.ts",
@@ -137626,7 +137734,8 @@
         "pideMirar",
         "ordenarCorreos",
         "conRevisado",
-        "interpretarCorreosCompania"
+        "interpretarCorreosCompania",
+        "textoElementoCorreo"
       ],
       "funciones": [
         {
@@ -137688,11 +137797,20 @@
           "params": "status: number, json: unknown",
           "retorno": "LecturaCorreosCompania",
           "linea": 80
+        },
+        {
+          "nombre": "textoElementoCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: Pick<CorreoCompania, 'tipo' | 'clave' | 'numeroPoliza'>",
+          "retorno": "string",
+          "linea": 104,
+          "resumen": "El elemento de la fila, en una línea: «Siniestro 43000001 · póliza X», «Póliza nueva emitida: X» o «Póliza X»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e2e32d067c1"
+      "hash": "1aa1ad892a5c"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/cuadre.ts",
@@ -140755,7 +140873,7 @@
     {
       "ruta": "apps/plataforma/lib/correo/evento-aviso.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Aviso de Telegram para un correo de COMPAÑÍA que no es una devolución (14/10/2026). PURO. El triaje lee el correo (`leerCorreoEventoAseguradora`: siniestro, pre-anulación, impago, anulación, suplemento), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este aviso dice QUÉ SE HIZ",
+      "resumen": "Aviso de Telegram para un correo de COMPAÑÍA que no es una devolución (14/10/2026). PURO. El triaje lee el correo (`leerCorreoEventoAseguradora`: siniestro, pre-anulación, impago, anulación, suplemento, emisión), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este aviso dice Q",
       "exporta": [
         "leerResultadosEvento",
         "eventoConfirmado",
@@ -140810,7 +140928,7 @@
           "exportada": false,
           "params": "e: EventoAseguradora",
           "retorno": "string",
-          "linea": 91
+          "linea": 98
         },
         {
           "nombre": "lineaResultado",
@@ -140818,7 +140936,7 @@
           "exportada": false,
           "params": "r: ResultadoPuertoEvento, urlFicha: (id: string) => string",
           "retorno": "string",
-          "linea": 99
+          "linea": 107
         },
         {
           "nombre": "textoAvisoEvento",
@@ -140826,13 +140944,13 @@
           "exportada": true,
           "params": "evento: EventoAseguradora, asunto: string, resultados: ResultadoPuertoEvento[] | null, urlFicha: (clienteId: string) => string, fallo: { estado: 'rechazado' | 'sin_respuesta'; motivo: string } | null = null,",
           "retorno": "string",
-          "linea": 113,
+          "linea": 121,
           "resumen": "`resultados === null` = el puerto no contestó (o falta config/migración): se avisa con lo leído y se dice que la cartera NO lo sabe."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "02c9d0936ec7"
+      "hash": "b12c8eaf114a"
     },
     {
       "ruta": "apps/plataforma/lib/correo/huespedes.ts",
@@ -141001,13 +141119,13 @@
           "exportada": true,
           "params": "from: string, subject: string",
           "retorno": "KeywordMatch | null",
-          "linea": 112,
+          "linea": 115,
           "resumen": "Clasifica un correo por reglas deterministas de alta precisión. Devuelve null si ninguna aplica (entonces decide la IA). NUNCA usa 'seguridad-sospechosa' ni 'personal-importante': esos exigen el juici"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a595bbe541a1"
+      "hash": "d2bc9d4af8aa"
     },
     {
       "ruta": "apps/plataforma/lib/correo/num-confirmacion.ts",
@@ -141390,7 +141508,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 320,
+          "linea": 330,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -141399,7 +141517,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 360,
+          "linea": 370,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -141408,7 +141526,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string | null>",
-          "linea": 383,
+          "linea": 393,
           "resumen": "Solo el texto de los PDF del correo (para el lector de eventos, que separa cuerpo y adjuntos). `null` = no hay o no se leen."
         },
         {
@@ -141417,7 +141535,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo, textoPdf: string | null",
           "retorno": "string",
-          "linea": 394,
+          "linea": 404,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -141427,7 +141545,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "daaa257af8ce"
+      "hash": "4339219f750d"
     },
     {
       "ruta": "apps/plataforma/lib/correos-cliente.ts",
@@ -165117,7 +165235,7 @@
       "exporta": [
         "puerto",
         "encolarTarificacionComunidad",
-        "encolarTarificacionMoto",
+        "encolarTarificacionVehiculo",
         "leerUltimoRiesgoTarificador",
         "leerPanelTarificador",
         "leerPresupuestosOportunidad",
@@ -165159,13 +165277,13 @@
           "resumen": "Encola una cotización de COMUNIDAD en Allianz (solo precio; nunca emite). 202 `{trabajoId}`."
         },
         {
-          "nombre": "encolarTarificacionMoto",
+          "nombre": "encolarTarificacionVehiculo",
           "kind": "function",
           "exportada": true,
-          "params": "clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT",
+          "params": "ramo: 'moto' | 'auto', clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT",
           "retorno": "Promise<Reenvio>",
           "linea": 45,
-          "resumen": "Encola una cotización de MOTO en el bot de una compañía (13/10/2026; solo precio). `formulario` = FormularioAuto con `ramo: 'moto'` y `seleccionVehiculo` (marca/modelo/clase); asegura lo valida con el"
+          "resumen": "solo precio). `formulario` = FormularioAuto del ramo (moto con `seleccionVehiculo` marca/modelo/clase); asegura lo valida con el validador del ramo y exige la fila `companias_integracion` activa y `rp"
         },
         {
           "nombre": "leerUltimoRiesgoTarificador",
@@ -165286,7 +165404,39 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ff31213649e6"
+      "hash": "f64de9bf0e97"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-auto-formulario.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Bots (gratis)» del cotizador de COCHE (14/10/2026) — lo PURO: del formulario del cotizador de auto al `FormularioAuto` (`ramo: 'auto'`) que valida asegura. Mismo patrón que moto (`tarificador-moto-formulario.ts`): lo de la ficha (CP del cliente, nacimiento, carné B) lo pone el servidor; el NIF del ",
+      "exporta": [
+        "garajeNocheDeCodigo",
+        "formularioBotAuto"
+      ],
+      "funciones": [
+        {
+          "nombre": "garajeNocheDeCodigo",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string | null | undefined",
+          "retorno": "boolean | null",
+          "linea": 48,
+          "resumen": "Código de garaje → `garajeNoche` del formulario. Calle / vía pública → `false`; garaje individual, comunitario o «Garaje» → `true`; vacío o un código que no se ha visto → `null` (no se traduce a ojo: "
+        },
+        {
+          "nombre": "formularioBotAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaBotAuto, hoy: Date = new Date()",
+          "retorno": "FormularioBotMoto",
+          "linea": 61,
+          "resumen": "Formulario del cotizador de coche → `riesgo` de auto para asegura, o QUÉ falta (en castellano, sin valores). Lo de la ficha va en `completarDesdeFicha` (lo pone el servidor; si la ficha tampoco lo tie"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c7f1719717a2"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-bandeja.ts",
@@ -165405,7 +165555,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "AdaptadorBot | null",
-          "linea": 40,
+          "linea": 53,
           "resumen": "Adaptador del ramo, o `null` si ese ramo aún no tiene bots (ramo ausente, desconocido o de otro tipo → `null`)."
         },
         {
@@ -165414,13 +165564,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string[]",
-          "linea": 45,
+          "linea": 58,
           "resumen": "Ramos con adaptador (para saber qué anfitrión monta el bloque)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5ee3c149f308"
+      "hash": "aaa52f035a08"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-emision-asegura.ts",
@@ -166295,22 +166445,44 @@
       "ambito": "apps/plataforma",
       "resumen": "«Precio por bot (gratis)» del cotizador de moto (13/10/2026) — lo PURO: del formulario del cotizador al `FormularioAuto` que valida asegura. Sin red ni envs: importable desde 'use client' y desde la ruta. El mismo formulario vale para cualquier compañía con bot en el ramo moto (la compañía solo viaj",
       "exporta": [
+        "datoDePersonaBot",
+        "historialBot",
         "claseMotoPorCilindrada",
         "cilindradaDeTexto",
         "formularioBotMoto",
         "completarRiesgoMotoDesdeFicha",
+        "completarRiesgoAutoDesdeFicha",
+        "completarRiesgoVehiculoDesdeFicha",
         "mensajeFaltanDeFicha",
         "claveDeCompania",
         "leerEncoladoBot"
       ],
       "funciones": [
         {
+          "nombre": "datoDePersonaBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "campo: string, faltan: readonly { campo: string }[] | null, correcciones: Record<string, string>",
+          "retorno": "DatoPersona",
+          "linea": 25,
+          "resumen": "Un dato personal del cotizador (moto o coche) para el bot: lo tecleado en «corrige aquí» manda; si no, `'ficha'` salvo que la precalificación diga que la ficha NO lo tiene (`null` = falta). Precalific"
+        },
+        {
           "nombre": "entero",
           "kind": "arrow",
           "exportada": false,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 47
+          "linea": 58
+        },
+        {
+          "nombre": "historialBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: HistorialBotEntrada",
+          "retorno": "",
+          "linea": 68,
+          "resumen": "Historial que viaja al bot (moto y coche, el MISMO criterio): solo lo que el corredor ha declarado. Sin seguro actual no se sabe (`null`), no «0 años»; un texto que no es un entero → `null`. 5 o más a"
         },
         {
           "nombre": "claseMotoPorCilindrada",
@@ -166318,7 +166490,7 @@
           "exportada": true,
           "params": "cc: number | null",
           "retorno": "1 | 2 | 3 | 4 | null",
-          "linea": 50,
+          "linea": 77,
           "resumen": "Clase de Allianz Moto por cilindrada (tramos del portal). `null` = ≤50 cc (ciclomotor) o sin dato."
         },
         {
@@ -166327,7 +166499,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 56,
+          "linea": 83,
           "resumen": "«1.000» / «1000» / «125 cc» → 1000 / 1000 / 125. Lo que no es un número entero inequívoco → `null`."
         },
         {
@@ -166336,7 +166508,7 @@
           "exportada": true,
           "params": "e: EntradaBotMoto, hoy: Date = new Date()",
           "retorno": "FormularioBotMoto",
-          "linea": 67,
+          "linea": 94,
           "resumen": "Formulario del cotizador → `riesgo` de moto para asegura. Si falta algo obligatorio devuelve QUÉ falta (en castellano, sin valores); el botón se deshabilita con esa lista. Lo de la ficha (CP, nacimien"
         },
         {
@@ -166345,7 +166517,16 @@
           "exportada": false,
           "params": "s: string | null | undefined",
           "retorno": "s is string",
-          "linea": 151
+          "linea": 169
+        },
+        {
+          "nombre": "carneDelRamo",
+          "kind": "function",
+          "exportada": false,
+          "params": "ramo: RamoVehiculoBot, tipo: string",
+          "retorno": "boolean",
+          "linea": 175,
+          "resumen": "¿Este tipo de carné de la ficha vale para el ramo? Moto: A, A1, A2. Coche: B (mismo criterio que `carnetBDeFicha` de asegura)."
         },
         {
           "nombre": "completarRiesgoMotoDesdeFicha",
@@ -166353,16 +166534,33 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 158,
-          "resumen": "Rellena `codigoPostal`, `conductor.fechaNacimiento` y `conductor.fechaCarne` del riesgo con la ficha, SOLO los pedidos en `pedidos` y nunca pisando un valor que ya traiga. Carné de moto: el más antigu"
+          "linea": 186,
+          "resumen": "coche: B); si no hay, el que traen sus pólizas. Nada se inventa: lo que la ficha no tiene va en `faltan` (el servidor corta sin gastar). El NIF del tomador NO va aquí: lo inyecta asegura al entregar e"
+        },
+        {
+          "nombre": "completarRiesgoAutoDesdeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
+          "retorno": "",
+          "linea": 195,
+          "resumen": "Lo mismo para el COCHE (14/10/2026): carné B."
+        },
+        {
+          "nombre": "completarRiesgoVehiculoDesdeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoVehiculoBot, riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
+          "retorno": "",
+          "linea": 203
         },
         {
           "nombre": "mensajeFaltanDeFicha",
           "kind": "function",
           "exportada": true,
-          "params": "faltan: readonly CampoDeFicha[]",
+          "params": "faltan: readonly CampoDeFicha[], ramo: RamoVehiculoBot = 'moto'",
           "retorno": "string",
-          "linea": 193
+          "linea": 239
         },
         {
           "nombre": "claveDeCompania",
@@ -166370,7 +166568,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 198,
+          "linea": 245,
           "resumen": "`compania` de la petición → clave limpia, o `null` si no tiene forma de clave (minúsculas, dígitos, `_`/`-`)."
         },
         {
@@ -166379,13 +166577,13 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EncoladoBot",
-          "linea": 212,
+          "linea": 259,
           "resumen": "Respuesta de `POST /api/correduria/tarificador/encolar` → trabajo o texto para la persona. Los `errores` de asegura son de forma y no llevan el valor (el validador nunca lo repite), así que se pueden "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "47f985b25763"
+      "hash": "92656cd07951"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-panel.ts",
@@ -198532,7 +198730,7 @@
     {
       "ruta": "packages/module-seguros/src/evento-correo-aseguradora.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "packages/module-seguros/src/evento-correo-aseguradora.ts Lee los correos de las compañías que NO son recibos devueltos (eso es `devolucion-correo.ts`) y los convierte en EVENTOS de la correduría: siniestro, pre-anulación/impago, anulación, suplemento. PURO. Por qué existe (14/10/2026): el triaje gua",
+      "resumen": "packages/module-seguros/src/evento-correo-aseguradora.ts Lee los correos de las compañías que NO son recibos devueltos (eso es `devolucion-correo.ts`) y los convierte en EVENTOS de la correduría: siniestro, pre-anulación/impago, anulación, suplemento y emisión (póliza nueva). PURO. Por qué existe (1",
       "exporta": [
         "sinDatosSensibles",
         "contieneIban",
@@ -198546,7 +198744,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 106,
+          "linea": 127,
           "resumen": "Quita IBAN, CCC y NIF/NIE/CIF de un texto libre."
         },
         {
@@ -198555,7 +198753,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 111,
+          "linea": 132,
           "resumen": "¿Hay un IBAN en el texto? (para los guardianes)."
         },
         {
@@ -198564,7 +198762,7 @@
           "exportada": false,
           "params": "s: string | null | undefined, max = 200",
           "retorno": "string | null",
-          "linea": 115
+          "linea": 136
         },
         {
           "nombre": "iso",
@@ -198572,7 +198770,7 @@
           "exportada": false,
           "params": "d: number, m: number, a: number",
           "retorno": "string | null",
-          "linea": 121
+          "linea": 142
         },
         {
           "nombre": "isoDeFecha",
@@ -198580,7 +198778,7 @@
           "exportada": false,
           "params": "s: string | undefined | null",
           "retorno": "string | null",
-          "linea": 127,
+          "linea": 148,
           "resumen": "`15.09.2026`, `15/09/2026`, `15-09-2026`, `10/10/26`."
         },
         {
@@ -198589,7 +198787,7 @@
           "exportada": false,
           "params": "s: string | undefined",
           "retorno": "number | null",
-          "linea": 134
+          "linea": 155
         },
         {
           "nombre": "finDeMes",
@@ -198597,7 +198795,7 @@
           "exportada": false,
           "params": "isoFecha: string",
           "retorno": "string",
-          "linea": 141
+          "linea": 162
         },
         {
           "nombre": "sumarDias",
@@ -198605,7 +198803,7 @@
           "exportada": false,
           "params": "isoFecha: string, dias: number",
           "retorno": "string | null",
-          "linea": 147
+          "linea": 168
         },
         {
           "nombre": "dominio",
@@ -198613,7 +198811,7 @@
           "exportada": false,
           "params": "remitente: string",
           "retorno": "string",
-          "linea": 152
+          "linea": 173
         },
         {
           "nombre": "esDe",
@@ -198621,7 +198819,7 @@
           "exportada": false,
           "params": "remitente: string, base: string",
           "retorno": "boolean",
-          "linea": 153
+          "linea": 174
         },
         {
           "nombre": "plano",
@@ -198629,7 +198827,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 157
+          "linea": 178
         },
         {
           "nombre": "lineas",
@@ -198637,7 +198835,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string[]",
-          "linea": 158
+          "linea": 179
         },
         {
           "nombre": "celdas",
@@ -198645,7 +198843,7 @@
           "exportada": false,
           "params": "l: string",
           "retorno": "string[]",
-          "linea": 159
+          "linea": 180
         },
         {
           "nombre": "base",
@@ -198653,7 +198851,7 @@
           "exportada": false,
           "params": "compania: CompaniaEvento",
           "retorno": "Base",
-          "linea": 161
+          "linea": 182
         },
         {
           "nombre": "subtipoDeAcciones",
@@ -198661,7 +198859,7 @@
           "exportada": false,
           "params": "acciones: string[]",
           "retorno": "SubtipoSiniestro",
-          "linea": 172
+          "linea": 193
         },
         {
           "nombre": "leerOccidentSiniestroDetalle",
@@ -198669,7 +198867,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSiniestro | null",
-          "linea": 178
+          "linea": 199
         },
         {
           "nombre": "seccionResumen",
@@ -198677,7 +198875,7 @@
           "exportada": false,
           "params": "p: string",
           "retorno": "SeccionResumen | null",
-          "linea": 231
+          "linea": 252
         },
         {
           "nombre": "siniestroDeResumen",
@@ -198685,7 +198883,7 @@
           "exportada": false,
           "params": "seccion: 'apertura' | 'cierre', numero: string, poliza: string, fecha: string, subtipoTexto: string | null",
           "retorno": "SiniestroLeido",
-          "linea": 238
+          "linea": 259
         },
         {
           "nombre": "leerOccidentSiniestroResumen",
@@ -198693,7 +198891,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSiniestro | null",
-          "linea": 250
+          "linea": 271
         },
         {
           "nombre": "accionTramitador",
@@ -198701,7 +198899,7 @@
           "exportada": false,
           "params": "nota: string",
           "retorno": "AccionTramitador",
-          "linea": 314
+          "linea": 335
         },
         {
           "nombre": "leerOccidentTramitador",
@@ -198709,7 +198907,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSiniestro | null",
-          "linea": 323
+          "linea": 344
         },
         {
           "nombre": "leerOccidentPreAnulacion",
@@ -198717,7 +198915,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoPreAnulacion | null",
-          "linea": 348
+          "linea": 369
         },
         {
           "nombre": "mesAnio",
@@ -198725,7 +198923,7 @@
           "exportada": false,
           "params": "m: string, a: string",
           "retorno": "string | null",
-          "linea": 366,
+          "linea": 387,
           "resumen": "── Occident · suplemento de regularización de RC ──────────────────────────────────────────────── · clientes@ «<tomador>, Regularización responsabilidad civil»: Ref. póliza de Responsabilidad Civil nº"
         },
         {
@@ -198734,7 +198932,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoSuplemento | null",
-          "linea": 371
+          "linea": 392
         },
         {
           "nombre": "leerRealePreAnulacion",
@@ -198742,7 +198940,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoPreAnulacion | null",
-          "linea": 406
+          "linea": 427
         },
         {
           "nombre": "leerMapfreDelegacion",
@@ -198750,7 +198948,7 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoImpago | null",
-          "linea": 425,
+          "linea": 446,
           "resumen": "── Mapfre · «DELEGACIÓN RECIBO Nº 8800000001 PÓLIZA MAPFRE» ───────────────────────────────────── Agotadas las gestiones para el cobro de la póliza 0008400000001 con recibo número 8800000001 e importe"
         },
         {
@@ -198759,8 +198957,33 @@
           "exportada": false,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoAnulacion | null",
-          "linea": 447,
+          "linea": 468,
           "resumen": "── Allianz · «OSN-CCC: Comunicación Anulación Póliza P-03100000000000» ─────────────────────────── TOMADOR: … PÓLIZA : 031000000 . … En respuesta a su petición, le informamos que hemos procedido a la "
+        },
+        {
+          "nombre": "productoEmision",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: string",
+          "retorno": "string | null",
+          "linea": 495,
+          "resumen": "El producto de la 2.ª fila, sin matrícula, bonus ni «Produccion». Con cualquier resto dudoso (4+ cifras seguidas), `null`."
+        },
+        {
+          "nombre": "esAsuntoEmisionAllianz",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "asunto: string",
+          "retorno": "boolean",
+          "linea": 505
+        },
+        {
+          "nombre": "leerAllianzEmision",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: CorreoEventoAseguradora",
+          "retorno": "EventoEmision | null",
+          "linea": 507
         },
         {
           "nombre": "limpiarEvento",
@@ -198768,7 +198991,7 @@
           "exportada": false,
           "params": "e: E",
           "retorno": "E",
-          "linea": 467
+          "linea": 542
         },
         {
           "nombre": "eventoNecesitaAdjuntos",
@@ -198776,8 +198999,8 @@
           "exportada": true,
           "params": "c: { remitente: string; asunto: string }",
           "retorno": "boolean",
-          "linea": 482,
-          "resumen": "¿Este correo es de un formato cuyo lector mira el texto de los ADJUNTOS? Solo las listas de pre-anulación (Occident, Reale) pueden traer la tabla adjunta. El triaje lo pregunta ANTES de leer ningún PD"
+          "linea": 557,
+          "resumen": "¿Este correo es de un formato cuyo lector mira el texto de los ADJUNTOS? Las listas de pre-anulación (Occident, Reale) pueden traer la tabla adjunta, y la «Rel. Emisión Producción» de Allianz la trae "
         },
         {
           "nombre": "leerCorreoEventoAseguradora",
@@ -198785,13 +199008,13 @@
           "exportada": true,
           "params": "c: CorreoEventoAseguradora",
           "retorno": "EventoAseguradora | null",
-          "linea": 492,
+          "linea": 568,
           "resumen": "`null` = no es un correo de compañía que se sepa leer con certeza (comercial, campaña, conversación con la sucursal, recibo devuelto —ese va por `leerCorreoDevolucion`—…)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "68dfcfbf45ff"
+      "hash": "a51f441ce882"
     },
     {
       "ruta": "packages/module-seguros/src/expedientes.ts",
@@ -210092,6 +210315,56 @@
       "hash": "4b0730a810c2"
     },
     {
+      "ruta": "packages/module-tarificacion/src/aria-redaccion.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Redacción del árbol de accesibilidad (`ariaSnapshot`) del tarificador (14/10/2026). PURA y COMPARTIDA: el worker la aplica al capturar y el servidor la re-aplica a lo que recibe (no se fía del worker). Fuente única. PRIVACIDAD: el snapshot lleva VALORES de campos (`- textbox \"NIF\" [ref=e4]: 12345678",
+      "exporta": [
+        "neutralizarAngulos",
+        "redactarAriaSnapshot",
+        "cortarEnLimiteDeLinea"
+      ],
+      "funciones": [
+        {
+          "nombre": "neutralizarAngulos",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 36,
+          "resumen": "Neutraliza TODO `<` y `>` (→ `‹` `›`): el YAML del aria no los necesita y así el texto del portal (no confiable) no puede abrir ni cerrar etiquetas del prompt (`</arbol_accesibilidad >`, mayúsculas, a"
+        },
+        {
+          "nombre": "sangria",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "l: string",
+          "retorno": "number",
+          "linea": 40
+        },
+        {
+          "nombre": "redactarAriaSnapshot",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 46,
+          "resumen": "Redacta el texto de `ariaSnapshot`. Conserva roles, nombres accesibles, refs y estructura. Fail-closed: una línea de campo que no se sabe interpretar pierde todo lo que sigue al rol. Idempotente."
+        },
+        {
+          "nombre": "cortarEnLimiteDeLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, max: number",
+          "retorno": "string",
+          "linea": 87,
+          "resumen": "Corta `texto` a ≤ `max` caracteres en un LÍMITE DE LÍNEA (si no hay, en el último espacio; si tampoco, en seco). Para acotar ANTES de redactar sin partir un DNI/teléfono/fecha por la mitad: lo que que"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7e7c6ee099cb"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/bandeja.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Bandeja «Necesita tu atención» del tarificador RPA (08/10/2026): qué trabajos esperan a una persona y qué se puede hacer con ellos. PURO. La máquina de estados (`estados.ts`) NO se toca: ahí `requiere_humano` solo pasa a `cancelado` y un `error_definitivo` es terminal para el ORQUESTADOR. Aquí es un",
@@ -210824,6 +211097,186 @@
       "hash": "b14ed2beeedc"
     },
     {
+      "ruta": "packages/module-tarificacion/src/explorador-login.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "LOGIN ASISTIDO del explorador IA (14/10/2026) — núcleo PURO. Primer uso: SSO de Occident (`ssoaut.gco.global`), cuya 2.ª pantalla tiene DOS variantes sin DOM grabado (elegir un usuario de una lista + contraseña, o usuario + contraseña). Reglas (Alberto + revisión, 14/10/2026; nada de esto se relaja ",
+      "exporta": [
+        "catalogoLoginParaIA",
+        "loginAsistidoDe",
+        "esUrlSsoLoginAsistido",
+        "marcarUsuarioEnTexto",
+        "contieneUsuario",
+        "marcarCredencialesInventario",
+        "inventarioSinCredenciales",
+        "validarRespuestaLogin",
+        "respuestaPararLogin",
+        "esRespuestaLogin",
+        "resumenLoginParaMapa"
+      ],
+      "funciones": [
+        {
+          "nombre": "catalogoLoginParaIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "",
+          "linea": 48,
+          "resumen": "Lo que la IA ve del «catálogo» de la fase de login: dos claves y qué son. Sin valores, nunca."
+        },
+        {
+          "nombre": "loginAsistidoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: string",
+          "retorno": "Readonly<",
+          "linea": 56,
+          "resumen": "El login asistido de la compañía de esta entrada, o `null` (entrada desconocida o compañía sin login asistido)."
+        },
+        {
+          "nombre": "esUrlSsoLoginAsistido",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, url: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 63,
+          "resumen": "¿La URL es el SSO de esa compañía? https y host EXACTO (ni subdominios, ni otro puerto, ni credenciales en la URL)."
+        },
+        {
+          "nombre": "escapar",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 75
+        },
+        {
+          "nombre": "marcarUsuarioEnTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, usuario: string",
+          "retorno": "string",
+          "linea": 80,
+          "resumen": "El texto con cada aparición DELIMITADA del usuario (sin mayúsculas) sustituida por la clave. Pura."
+        },
+        {
+          "nombre": "contieneUsuario",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, usuario: string",
+          "retorno": "boolean",
+          "linea": 87,
+          "resumen": "¿Queda el usuario (delimitado) en el texto?"
+        },
+        {
+          "nombre": "marcarCredencialesInventario",
+          "kind": "function",
+          "exportada": true,
+          "params": "inv: InventarioDom, cred: { usuario: string; contrasena: string }",
+          "retorno": "InventarioDom",
+          "linea": 98,
+          "resumen": "El inventario que SALE en la fase de login: el usuario marcado con su clave (texto de elementos, opciones, títulos y marcos) y CUALQUIER texto que contenga la contraseña, fuera (`redactarValoresInvent"
+        },
+        {
+          "nombre": "inventarioSinCredenciales",
+          "kind": "function",
+          "exportada": true,
+          "params": "inv: unknown, cred: { usuario: string; contrasena: string }",
+          "retorno": "boolean",
+          "linea": 121,
+          "resumen": "Última red antes de mandar nada: ni la contraseña (literal, ni escapada en JSON) ni el usuario DELIMITADO pueden aparecer en lo serializado. `false` = no se envía. Pura."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 168
+        },
+        {
+          "nombre": "limpio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null | undefined",
+          "retorno": null,
+          "linea": 169
+        },
+        {
+          "nombre": "tipoDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "el: ElementoInventario",
+          "retorno": null,
+          "linea": 170
+        },
+        {
+          "nombre": "muestraUsuario",
+          "kind": "function",
+          "exportada": false,
+          "params": "el: ElementoInventario",
+          "retorno": "boolean",
+          "linea": 176,
+          "resumen": "¿El elemento enseña la clave del usuario (y solo como token delimitado)?"
+        },
+        {
+          "nombre": "esFilaUsuario",
+          "kind": "function",
+          "exportada": false,
+          "params": "el: ElementoInventario",
+          "retorno": "boolean",
+          "linea": 186,
+          "resumen": "Fila de usuario que se puede PULSAR sin enviar el formulario: un radio, un <button type=\"button\">, un enlace, celda, etiqueta o elemento con rol. NUNCA un submit (un <button> sin type o `type=submit` "
+        },
+        {
+          "nombre": "esSubmit",
+          "kind": "function",
+          "exportada": false,
+          "params": "el: ElementoInventario",
+          "retorno": "boolean",
+          "linea": 193
+        },
+        {
+          "nombre": "validarRespuestaLogin",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown, ctx: { inventario: InventarioDom; entrada: string }",
+          "retorno": "ValidacionLogin",
+          "linea": 203,
+          "resumen": "Valida la respuesta de la IA para UNA pantalla de login de `entrada`. Fail-closed: entrada sin login asistido, marco fuera del SSO, clave que no es de credencial, contraseña fuera de un password, avan"
+        },
+        {
+          "nombre": "respuestaPararLogin",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: MotivoParar, detalle: string | null = null",
+          "retorno": "RespuestaLogin",
+          "linea": 306,
+          "resumen": "`parar` de la fase de login (con la marca de fase, para que en BD se distinga de una pantalla del portal)."
+        },
+        {
+          "nombre": "esRespuestaLogin",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 311,
+          "resumen": "¿Es (en BD) la respuesta de un paso de la fase de login?"
+        },
+        {
+          "nombre": "resumenLoginParaMapa",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number, inv: InventarioDom, maxElementos = 25",
+          "retorno": "string",
+          "linea": 319,
+          "resumen": "EVIDENCIA para el mapa (el HTML de una exploración no se guarda como documento): los elementos de una pantalla de login, SIN valores (el inventario no los lleva; el usuario ya va marcado). Una línea p"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9d451ac5c2e4"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/explorador.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "EXPLORADOR IA del tarificador RPA (13/10/2026) — el núcleo PURO. Diseño: plan del explorador (docs/TARIFICADOR-RPA.md, sección «Explorador IA»). Sin BD, sin red, sin Playwright: lo consumen apps/asegura (ruta del worker que pregunta a la IA y guarda el mapa) y services/tarificador-rpa (que REVALIDA ",
@@ -211006,13 +211459,31 @@
           "resumen": "- UN solo candidato. Si no, `null` (no se adivina). Devuelve la ref nueva. Pura."
         },
         {
+          "nombre": "leerDiagnostico",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: Record<string, unknown>",
+          "retorno": "DiagnosticoIncidencia",
+          "linea": 578,
+          "resumen": "El diagnóstico de una incidencia, SOLO con valores de las listas cerradas (lo demás se ignora, sin tumbar la incidencia)."
+        },
+        {
           "nombre": "leerIncidenciasEjecucion",
           "kind": "function",
           "exportada": true,
           "params": "v: unknown",
           "retorno": "IncidenciaEjecucion[]",
-          "linea": 545,
+          "linea": 590,
           "resumen": "Lo que manda el worker, TOLERANTE: lo mal formado se descarta (nunca tumba el paso ni el cierre). Máx. 15. Pura."
+        },
+        {
+          "nombre": "causaConDiagnostico",
+          "kind": "function",
+          "exportada": false,
+          "params": "i: IncidenciaEjecucion",
+          "retorno": "string",
+          "linea": 613,
+          "resumen": "`lote_cortado` → `lote_cortado_por_<corte>`; y el motivo de no localizar entre corchetes (`[no_visible:sin_alto]`). Pura."
         },
         {
           "nombre": "erroresDeIncidencias",
@@ -211020,7 +211491,7 @@
           "exportada": true,
           "params": "incidencias: readonly IncidenciaEjecucion[], inventario: InventarioDom | null | undefined",
           "retorno": "string[]",
-          "linea": 572,
+          "linea": 624,
           "resumen": "Las incidencias como `errores` del paso: `ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion): valor_no_aplicado`. La etiqueta sale del INVENTARIO GUARDADO de ese paso (redact"
         },
         {
@@ -211029,7 +211500,7 @@
           "exportada": true,
           "params": "dato: string, el: ElementoInventario | undefined",
           "retorno": "boolean",
-          "linea": 596,
+          "linea": 648,
           "resumen": "¿Este `rellenar` puede REPINTAR la sección? Su clave dispara autocompletado (`CLAVES_AUTOCOMPLETADO`) o el control es un autocompletado (`role=combobox/searchbox`, `aria-autocomplete`/datalist → `auto"
         },
         {
@@ -211038,16 +211509,16 @@
           "exportada": true,
           "params": "acciones: readonly A[], inventario: InventarioDom",
           "retorno": "A[]",
-          "linea": 611,
+          "linea": 663,
           "resumen": "2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos). No añade, quita ni cambia acciones: solo las reordena. Pura."
         },
         {
           "nombre": "incidenciasLoteCortado",
           "kind": "function",
           "exportada": true,
-          "params": "pendientes: readonly Accion[]",
+          "params": "pendientes: readonly Accion[], corte?: MotivoCorteLote, /** Por qué no se localizó la PRIMERA pendiente (la que destapó el corte por `repintado`). */ primera?: Pick<DiagnosticoIncidencia, 'motivo' | 'visibilidad'>,",
           "retorno": "IncidenciaEjecucion[]",
-          "linea": 625,
+          "linea": 677,
           "resumen": "Las acciones de un lote CORTADO que no se llegaron a ejecutar → incidencias `lote_cortado` (ref + clave; nunca el valor ni la opción). `parar`/`terminar` no se reportan (van solos: nunca quedan detrás"
         },
         {
@@ -211056,7 +211527,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 635,
+          "linea": 693,
           "resumen": "La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}."
         },
         {
@@ -211065,7 +211536,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 639
+          "linea": 697
         },
         {
           "nombre": "normalizarMotivoParar",
@@ -211073,7 +211544,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MotivoParar | null",
-          "linea": 646,
+          "linea": 704,
           "resumen": "El motivo de `parar` que manda la IA, a su código. Admite mayúsculas, espacios/guiones por «_» y un código seguido de una explicación («dato_sensible_requerido: piden NIF», «ambiguo (…)»). Una frase l"
         },
         {
@@ -211082,7 +211553,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 653,
+          "linea": 711,
           "resumen": "Para el error del validador: el motivo rechazado SOLO si es un código corto sin cifras (nunca un texto con datos)."
         },
         {
@@ -211091,7 +211562,7 @@
           "exportada": true,
           "params": "t: string | null",
           "retorno": "string | null",
-          "linea": 694,
+          "linea": 752,
           "resumen": "Recorta el `motivo` libre a {@link MAX_MOTIVO} caracteres con «…» (no invalida la respuesta)."
         },
         {
@@ -211100,7 +211571,7 @@
           "exportada": true,
           "params": "respuestas: readonly (RespuestaExplorador | null | undefined)[]",
           "retorno": "boolean",
-          "linea": 719,
+          "linea": 777,
           "resumen": "¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}."
         },
         {
@@ -211109,7 +211580,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 725
+          "linea": 783
         },
         {
           "nombre": "plano",
@@ -211117,7 +211588,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 726
+          "linea": 784
         },
         {
           "nombre": "primerObjetoJsonExplorador",
@@ -211125,7 +211596,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 729,
+          "linea": 787,
           "resumen": "Primer objeto JSON balanceado del texto (la IA a veces añade prosa o ```json). `null` si no hay."
         },
         {
@@ -211134,7 +211605,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Map<string,",
-          "linea": 757,
+          "linea": 815,
           "resumen": "Índice ref → {elemento, marco} del inventario."
         },
         {
@@ -211143,7 +211614,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "string[]",
-          "linea": 768,
+          "linea": 826,
           "resumen": "Todo lo que describe a un elemento (para el guard de emisión y el de consentimientos)."
         },
         {
@@ -211152,7 +211623,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 772
+          "linea": 830
         },
         {
           "nombre": "esAvanzable",
@@ -211160,7 +211631,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 777
+          "linea": 835
         },
         {
           "nombre": "esAceptarDivAutorizado",
@@ -211168,7 +211639,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 790,
+          "linea": 848,
           "resumen": "El «Aceptar» de Datos básicos del servlet de Allianz no es un button: es `<div id=\"aceptar\" onclick=\"btnAceptar();\">` (DOM real de Comunidades, 06/10/2026). El extractor del worker lo recoge SOLO con "
         },
         {
@@ -211177,7 +211648,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 799,
+          "linea": 857,
           "resumen": "¿Este avance es un «Aceptar» autorizado para ESTA entrada en ESTA pantalla? Además del texto exacto exige el título de la pantalla (marco del botón) y que no haya ningún título de tarificación/emisión"
         },
         {
@@ -211186,7 +211657,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 812,
+          "linea": 870,
           "resumen": "Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final."
         },
         {
@@ -211195,7 +211666,7 @@
           "exportada": true,
           "params": "entrada: string",
           "retorno": "readonly GuardadoEnDialogo[]",
-          "linea": 815,
+          "linea": 873,
           "resumen": "Reglas de «Guardar» en modal de la entrada (lista vacía si no tiene)."
         },
         {
@@ -211204,7 +211675,7 @@
           "exportada": true,
           "params": "entrada: string, texto: string | null | undefined, dialogo: string | null | undefined",
           "retorno": "boolean",
-          "linea": 824,
+          "linea": 882,
           "resumen": "¿Casan texto del botón y título del diálogo con una regla `GuardadoEnDialogo` de la entrada? Pura y compartida con el worker, que la aplica a lo que lee VIVO del DOM. Textos planos; vacíos o recortado"
         },
         {
@@ -211213,7 +211684,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 837,
+          "linea": 895,
           "resumen": "¿Es este elemento del INVENTARIO un «Guardar» de modal autorizado para ESTA entrada? Exige: botón/pestaña pulsable, texto y título de diálogo exactos de una regla, aria-label (si lo hay) igual de exac"
         },
         {
@@ -211222,7 +211693,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "string | null",
-          "linea": 849,
+          "linea": 907,
           "resumen": "`null` = el botón se puede pulsar en exploración; si no, por qué no."
         },
         {
@@ -211231,7 +211702,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, p: PantallaGuardado",
           "retorno": "string | null",
-          "linea": 891,
+          "linea": 949,
           "resumen": "4. pantalla de RESULTADO con importes a la vista (o, tras un guardado previo en esta exploración, la pantalla que sigue). El worker lo repite sobre el control VIVO (`pulsarGuardadoPresupuesto`) antes "
         },
         {
@@ -211240,7 +211711,7 @@
           "exportada": true,
           "params": "entrada: unknown, ctx: ContextoValidacion",
           "retorno": "ValidacionRespuesta",
-          "linea": 911,
+          "linea": 969,
           "resumen": "Valida la respuesta de la IA contra la lista blanca, el catálogo y el inventario de ESA pantalla. Fail-closed: cualquier clave desconocida, texto libre donde no toca, acción fuera de lista o ref inexi"
         },
         {
@@ -211249,7 +211720,7 @@
           "exportada": true,
           "params": "motivo: MotivoParar, detalle: string | null = null",
           "retorno": "RespuestaExplorador",
-          "linea": 1066,
+          "linea": 1126,
           "resumen": "La respuesta que se manda al worker cuando algo no cuadra: parar, nunca improvisar."
         },
         {
@@ -211258,7 +211729,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 1085,
+          "linea": 1145,
           "resumen": "Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaB"
         },
         {
@@ -211267,7 +211738,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Parada | null",
-          "linea": 1095,
+          "linea": 1155,
           "resumen": "¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL de los marcos (un iframe de reCAPTCHA). No es la única barrera: el guard de emisión"
         },
         {
@@ -211276,7 +211747,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 1134,
+          "linea": 1194,
           "resumen": "Dos FNV-1a de 32 bits con semillas distintas → hex de 16 (sin BigInt ni node:crypto: el index llega al navegador y asegura compila con target ES2017). Es una HUELLA para reconocer pantallas, no un has"
         },
         {
@@ -211285,7 +211756,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 1150,
+          "linea": 1210,
           "resumen": "Huella ESTRUCTURAL de la pantalla: ruta de cada marco + identificadores estables de sus controles (id, name, formControlName, tipo), ordenados. No entran textos variables ni valores: dos visitas a la "
         },
         {
@@ -211294,7 +211765,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string | null",
-          "linea": 1167,
+          "linea": 1227,
           "resumen": "Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro"
         },
         {
@@ -211303,7 +211774,7 @@
           "exportada": true,
           "params": "huellas: readonly string[], actual: string, avancesFallidos: number, rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },",
           "retorno": "boolean",
-          "linea": 1195,
+          "linea": 1255,
           "resumen": "`huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRel"
         },
         {
@@ -211312,7 +211783,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "TopesExplorador",
-          "linea": 1225
+          "linea": 1285
         },
         {
           "nombre": "comprobarTopes",
@@ -211320,7 +211791,7 @@
           "exportada": true,
           "params": "c: ConsumoExplorador, t: TopesExplorador, costeSiguienteMax: number",
           "retorno": "MotivoTope | null",
-          "linea": 1250,
+          "linea": 1310,
           "resumen": "¿Se puede dar UN paso más con IA? `costeSiguienteMax` = el PEOR caso de la próxima llamada (`costeMaximoLlamada`): se para ANTES de pasarse, no después. `null` = adelante."
         },
         {
@@ -211329,7 +211800,7 @@
           "exportada": false,
           "params": "modelo: string",
           "retorno": null,
-          "linea": 1268
+          "linea": 1328
         },
         {
           "nombre": "redondeo6",
@@ -211337,7 +211808,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 1269
+          "linea": 1329
         },
         {
           "nombre": "costeMaximoLlamada",
@@ -211345,7 +211816,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, maxTokensSalida: number",
           "retorno": "number",
-          "linea": 1272,
+          "linea": 1332,
           "resumen": "Peor caso de una llamada: ~3 caracteres por token de entrada y TODOS los tokens de salida permitidos."
         },
         {
@@ -211354,7 +211825,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, caracteresSalida: number",
           "retorno": "number",
-          "linea": 1278,
+          "linea": 1338,
           "resumen": "Estimación tras la llamada (~3 caracteres por token, a la alta)."
         },
         {
@@ -211363,7 +211834,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoMapa | null",
-          "linea": 1321,
+          "linea": 1381,
           "resumen": "Valida un {@link PresupuestoMapa} que llega por el cable. `null` si no tiene la forma (o la referencia parece un dato personal)."
         },
         {
@@ -211372,7 +211843,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "SelectorMapa | null",
-          "linea": 1355,
+          "linea": 1415,
           "resumen": "El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto."
         },
         {
@@ -211381,7 +211852,7 @@
           "exportada": false,
           "params": "el: ElementoInventario, s: SelectorMapa",
           "retorno": "boolean",
-          "linea": 1364
+          "linea": 1424
         },
         {
           "nombre": "rutaMarco",
@@ -211389,7 +211860,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": null,
-          "linea": 1373,
+          "linea": 1433,
           "resumen": "Ruta del marco (sin origen): la misma pantalla puede servirse desde otro host del mismo portal."
         },
         {
@@ -211398,7 +211869,7 @@
           "exportada": true,
           "params": "meta: MetaMapa, pasos: readonly PasoExploracion[]",
           "retorno": "MapaExploracion",
-          "linea": 1395,
+          "linea": 1455,
           "resumen": "Construye el MAPA a partir de los pasos validados (el último paso de cada huella manda). Determinista: mismo input, mismo mapa. Lo que no tiene selector estable o no se mapeó a una clave del catálogo "
         },
         {
@@ -211407,7 +211878,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 1463,
+          "linea": 1523,
           "resumen": "Origen + ruta de una petición de red (sin query, fragmento ni credenciales). `null` si no es una URL http(s)."
         },
         {
@@ -211416,7 +211887,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MapaExploracion | null",
-          "linea": 1476,
+          "linea": 1536,
           "resumen": "Valida un mapa leído de BD o de un fichero (estricto: versión 1, forma exacta). `null` si no es un mapa v1 válido. No re-deriva nada: solo comprueba forma y límites."
         },
         {
@@ -211425,13 +211896,13 @@
           "exportada": true,
           "params": "pantalla: PantallaMapaExploracion, inv: InventarioDom",
           "retorno": "RespuestaExplorador | null",
-          "linea": 1511,
+          "linea": 1571,
           "resumen": "MEMORIA: si la pantalla ya está en un mapa, el plan sale del mapa SIN IA. Cada campo y el avance tienen que encontrarse UNA sola vez en el inventario actual (si no, `null` y se pregunta a la IA). La r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2a939f87e83b"
+      "hash": "419e7212457d"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas-catalogo.ts",
@@ -213572,7 +214043,7 @@
           "exportada": true,
           "params": "codigoDe: (e: unknown) => string, ahora: () => number = Date.now",
           "retorno": "Traza",
-          "linea": 93,
+          "linea": 95,
           "resumen": "Registrador de pasos para el worker. `codigoDe` convierte un error en uno de los códigos permitidos (el worker pasa su `clasificar`); lo que devuelva fuera de la lista cae a `desconocido`. El mensaje "
         },
         {
@@ -213581,12 +214052,12 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is string",
-          "linea": 123
+          "linea": 127
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a2910e8e39b1"
+      "hash": "78a12978862a"
     },
     {
       "ruta": "packages/module-tarificacion/src/vehiculo-confirmado.ts",
@@ -215618,7 +216089,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4682,
-    "funciones": 17126
+    "archivos": 4686,
+    "funciones": 17171
   }
 }

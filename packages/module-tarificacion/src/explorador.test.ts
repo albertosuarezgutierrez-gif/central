@@ -46,6 +46,9 @@ import {
   ordenarLote,
   rellenarRepinta,
   incidenciasLoteCortado,
+  CAUSAS_INCIDENCIA_EJECUCION,
+  MOTIVOS_NO_LOCALIZADO,
+  MOTIVOS_CORTE_LOTE,
   type Accion,
   type InventarioDom,
   type RespuestaExplorador,
@@ -1107,6 +1110,54 @@ describe('orden del lote y lote cortado (14/10/2026, exploración 8d0676f9: año
     expect(leerIncidenciasEjecucion([...ok, { accion: 'elegir', ref: 'm1e8', causa: 'valor_no_aplicado' }, { accion: 'parar', ref: 'm1e1', causa: 'lote_cortado' }])).toEqual(ok)
     // Lo que viniera de más (dato u opción en un elegir) no se copia.
     expect(leerIncidenciasEjecucion([{ accion: 'elegir', ref: 'm1e8', causa: 'lote_cortado', dato: 'x.y', opcion: { valor: 'H' } }])).toEqual([{ accion: 'elegir', ref: 'm1e8', causa: 'lote_cortado' }])
+  })
+
+  it('incidenciasLoteCortado con DIAGNÓSTICO: el corte en todas; el motivo de no localizar, solo en la primera', () => {
+    const inc = incidenciasLoteCortado([rellenar('nx-input-38', 'inmueble.anio_construccion'), avanzar], 'repintado', { motivo: 'no_visible', visibilidad: 'sin_alto' })
+    expect(inc).toEqual([
+      { accion: 'rellenar', ref: r('nx-input-38'), dato: 'inmueble.anio_construccion', causa: 'lote_cortado', corte: 'repintado', motivo: 'no_visible', visibilidad: 'sin_alto' },
+      { accion: 'avanzar', ref: r('siguiente'), causa: 'lote_cortado', corte: 'repintado' },
+    ])
+    // Sin diagnóstico: la forma de siempre.
+    expect(incidenciasLoteCortado([avanzar])).toEqual([{ accion: 'avanzar', ref: r('siguiente'), causa: 'lote_cortado' }])
+  })
+
+  it('leerIncidenciasEjecucion: diagnóstico SOLO de las listas cerradas (lo demás se ignora sin tumbar la incidencia)', () => {
+    const base = { accion: 'rellenar', ref: 'm1e39', dato: 'inmueble.anio_construccion' }
+    expect(leerIncidenciasEjecucion([
+      { ...base, causa: 'lote_cortado', corte: 'repintado', motivo: 'no_visible', visibilidad: 'sin_alto' },
+      { ...base, causa: 'control_no_visible', motivo: 'no_visible', visibilidad: 'oculto' },
+      { ...base, causa: 'nodo_no_relocalizado', motivo: 'no_coincide_id' },
+    ])).toEqual([
+      { ...base, causa: 'lote_cortado', corte: 'repintado', motivo: 'no_visible', visibilidad: 'sin_alto' },
+      { ...base, causa: 'control_no_visible', motivo: 'no_visible', visibilidad: 'oculto' },
+      { ...base, causa: 'nodo_no_relocalizado', motivo: 'no_coincide_id' },
+    ])
+    // Fuera de lista, un valor colado, corte sin lote_cortado o visibilidad sin no_visible: no se copian.
+    expect(leerIncidenciasEjecucion([
+      { ...base, causa: 'nodo_no_relocalizado', motivo: 'no_coincide_id=ng-1975', corte: 'repintado', visibilidad: 'sin_alto' },
+      { ...base, causa: 'lote_cortado', corte: 'Año 1975', motivo: 'desconectado', visibilidad: 'oculto' },
+    ])).toEqual([
+      { ...base, causa: 'nodo_no_relocalizado' },
+      { ...base, causa: 'lote_cortado', motivo: 'desconectado' },
+    ])
+    expect(CAUSAS_INCIDENCIA_EJECUCION).toContain('control_no_visible')
+    expect([...MOTIVOS_NO_LOCALIZADO].sort()).toEqual(['desconectado', 'error_evaluate', 'no_coincide_id', 'no_coincide_name', 'no_coincide_tag', 'no_coincide_texto', 'no_coincide_type', 'no_unico', 'no_visible'])
+    expect([...MOTIVOS_CORTE_LOTE].sort()).toEqual(['autocompletar', 'huella', 'n_elementos', 'repintado'])
+  })
+
+  it('erroresDeIncidencias: «lote_cortado_por_<corte>» y el motivo entre corchetes; sin diagnóstico, como siempre', () => {
+    expect(erroresDeIncidencias([
+      { accion: 'rellenar', ref: r('nx-input-38'), dato: 'inmueble.anio_construccion', causa: 'lote_cortado', corte: 'repintado', motivo: 'no_visible', visibilidad: 'sin_alto' },
+      { accion: 'avanzar', ref: r('siguiente'), causa: 'lote_cortado', corte: 'autocompletar' },
+      { accion: 'rellenar', ref: r('nx-input-38'), dato: 'inmueble.anio_construccion', causa: 'control_no_visible', motivo: 'no_visible', visibilidad: 'oculto' },
+      { accion: 'rellenar', ref: r('nx-input-38'), dato: 'inmueble.anio_construccion', causa: 'nodo_no_relocalizado', motivo: 'desconectado' },
+    ], inv)).toEqual([
+      `ejecucion: rellenar ${r('nx-input-38')} «Año de construcción» (inmueble.anio_construccion): lote_cortado_por_repintado [no_visible:sin_alto]`,
+      `ejecucion: avanzar ${r('siguiente')} «Siguiente»: lote_cortado_por_autocompletar`,
+      `ejecucion: rellenar ${r('nx-input-38')} «Año de construcción» (inmueble.anio_construccion): control_no_visible [no_visible:oculto]`,
+      `ejecucion: rellenar ${r('nx-input-38')} «Año de construcción» (inmueble.anio_construccion): nodo_no_relocalizado [desconectado]`,
+    ])
   })
 
   it('erroresDeIncidencias: lote_cortado con etiqueta (o texto del botón) y sin clave en las que no la tienen', () => {
