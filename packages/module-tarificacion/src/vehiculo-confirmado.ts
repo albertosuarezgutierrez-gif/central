@@ -9,8 +9,11 @@
 // 🚨 SIN matrícula ni bastidor: este objeto se CONSERVA en la purga del riesgo (lista blanca, purga-riesgo.ts). Una clave
 //    que no sea de las seis se rechaza (no se descarta en silencio) y la denominación no puede tener forma de dato personal.
 // Tres estados: `null` = «no consta» (nunca 0). Puertas 0 es un DATO (Mapfre pinta 0 en las motos); CC 0 también (eléctrico).
-// Elección de versión: SOLO si exactamente UNA candidata casa y todas las demás quedan DESCARTADAS por un dato que
-// contradice; una candidata «sin datos» no se descarta (no se sabe) y deja la elección sin decidir. Nunca «la más parecida».
+// Elección de versión (Alberto, 14/10/2026): Mapfre saca el vehículo EXACTO; en Allianz y los demás bots NO hace falta
+// coincidencia exacta: se elige la versión «prácticamente la misma» (CV ±10 %, CC ±5 %; entre versiones casi iguales no hay
+// diferencia relevante para el precio). Se puntúa por cercanía y gana la mejor dentro de tolerancia; empate → la primera.
+// Fuera de tolerancia o sin CV/CC legibles → no elige (flujo de siempre: memoria / IA / persona). Una elección explícita
+// de persona o IA siempre manda sobre esta (lo decide el llamante).
 
 import { pareceDatoPersonalEnDescripcion } from './formulario-auto.ts'
 import { esOpcionVacia, fechaIsoDesdeTexto, type CandidatoVersion, type EleccionVersion } from './vehiculo.ts'
@@ -116,34 +119,59 @@ export type DatosVersionCatalogo = { cv: number | null; cc: number | null; puert
 export type CandidataConDatos = CandidatoVersion & { datos: DatosVersionCatalogo }
 
 export type ResolucionPorVehiculoConfirmado =
-  | { tipo: 'unica'; eleccion: EleccionVersion }
-  | { tipo: 'sin_decidir'; motivo: 'sin_vehiculo' | 'sin_candidatas' | 'ninguna_casa' | 'varias_casan' | 'sin_datos' }
+  /** `porSimilitud: true` = la versión se eligió «por similitud con Mapfre» (traza; sin datos personales). */
+  | { tipo: 'unica'; porSimilitud: true; eleccion: EleccionVersion }
+  | { tipo: 'sin_decidir'; motivo: 'sin_vehiculo' | 'sin_candidatas' | 'fuera_de_tolerancia' | 'sin_datos' }
 
-const ATRIBUTOS = ['cv', 'cc', 'puertas', 'fechaInicio'] as const
+/** Tolerancia relativa respecto al valor de Mapfre: CV ±10 %, CC ±5 %. */
+export const TOLERANCIA_CV = 0.1
+export const TOLERANCIA_CC = 0.05
+/** Texto de traza de una versión elegida por similitud (aviso del resultado). */
+export const AVISO_VERSION_POR_SIMILITUD = 'Versión elegida por similitud con el vehículo confirmado en Mapfre (CV ±10 %, CC ±5 %), no por coincidencia exacta.'
 
-/**
- * ¿Casa una candidata con el vehículo confirmado? Se comparan SOLO los atributos que tienen los dos (igualdad exacta: sin
- * tolerancia, nada de «parecido»). `descartada` = algún atributo comparado difiere. `suficiente` = se comparó al menos CV o CC
- * (puertas o fecha solas no identifican una versión).
- */
-function cotejar(vc: VehiculoConfirmado, d: DatosVersionCatalogo): { descartada: boolean; suficiente: boolean } {
-  let descartada = false
-  const comparados = new Set<string>()
-  for (const a of ATRIBUTOS) {
-    const x = vc[a]
-    const y = d[a]
-    if (x === null || y === null || y === undefined) continue
-    comparados.add(a)
-    if (x !== y) descartada = true
-  }
-  return { descartada, suficiente: comparados.has('cv') || comparados.has('cc') }
+const EPS = 1e-9
+
+/** Distancia relativa normalizada por su tolerancia (0 = igual; ≤1 = dentro); `null` = fuera de tolerancia. */
+function distanciaRelativa(base: number, otro: number, tol: number): number | null {
+  if (base === 0) return otro === 0 ? 0 : null
+  const d = Math.abs(otro - base) / base
+  return d <= tol + EPS ? d / tol : null
+}
+
+/** Palabras de la denominación de Mapfre presentes en la etiqueta (desempate). */
+function palabrasEnComun(denominacion: string, etiqueta: string): number {
+  const trocear = (t: string) => t.toUpperCase().split(/[^A-Z0-9ÁÉÍÓÚÜÑ]+/).filter((w) => w.length >= 2)
+  const e = new Set(trocear(etiqueta))
+  return [...new Set(trocear(denominacion))].filter((w) => e.has(w)).length
 }
 
 /**
- * Elige la versión de catálogo de otra compañía por el vehículo confirmado. `unica` SOLO si exactamente una candidata casa
- * (sin contradicción y con CV o CC comparados) y TODAS las demás quedan descartadas por un dato que contradice. Si alguna
- * otra no se puede descartar por falta de datos → `sin_datos`; si casan varias → `varias_casan`; si ninguna → `ninguna_casa`.
- * En todos esos casos el llamante sigue con su flujo de siempre (memoria / IA / persona). Opciones vacías y duplicadas fuera.
+ * Puntúa una candidata frente al vehículo de Mapfre. `null` = no elegible: sin ningún CV/CC comparable (no se sabe), fuera de
+ * tolerancia en alguno, o con puertas que contradicen (ambas lo traen y difieren). `distancia` = media de las distancias
+ * normalizadas de CV y CC comparados (0 = exacta).
+ */
+function puntuar(vc: VehiculoConfirmado, d: DatosVersionCatalogo): { distancia: number } | { motivo: 'sin_datos' | 'fuera_de_tolerancia' } {
+  const partes: number[] = []
+  let fuera = false
+  for (const [a, tol] of [['cv', TOLERANCIA_CV], ['cc', TOLERANCIA_CC]] as const) {
+    const x = vc[a]
+    const y = d[a]
+    if (x === null || y === null || y === undefined) continue
+    const r = distanciaRelativa(x, y, tol)
+    if (r === null) fuera = true
+    else partes.push(r)
+  }
+  if (!fuera && partes.length === 0) return { motivo: 'sin_datos' }
+  if (vc.puertas !== null && d.puertas !== null && d.puertas !== undefined && vc.puertas !== d.puertas) fuera = true
+  if (fuera) return { motivo: 'fuera_de_tolerancia' }
+  return { distancia: partes.reduce((a, b) => a + b, 0) / partes.length }
+}
+
+/**
+ * Elige la versión de catálogo de otra compañía por SIMILITUD con el vehículo confirmado: la de menor distancia (CV y CC con
+ * tolerancia relativa) dentro de tolerancia; empate → más palabras de la denominación en la etiqueta; empate → la primera de
+ * la lista. Sin vehículo / sin candidatas / sin CV o CC legibles (`sin_datos`) / ninguna en tolerancia (`fuera_de_tolerancia`)
+ * → `sin_decidir` y el llamante sigue con su flujo de siempre (memoria / IA / persona). Opciones vacías y duplicadas fuera.
  */
 export function eleccionPorVehiculoConfirmado(vc: VehiculoConfirmado | null | undefined, candidatas: readonly CandidataConDatos[]): ResolucionPorVehiculoConfirmado {
   if (!vc) return { tipo: 'sin_decidir', motivo: 'sin_vehiculo' }
@@ -157,19 +185,22 @@ export function eleccionPorVehiculoConfirmado(vc: VehiculoConfirmado | null | un
     return true
   })
   if (limpias.length === 0) return { tipo: 'sin_decidir', motivo: 'sin_candidatas' }
-  const casan: CandidataConDatos[] = []
-  let dudosas = 0
+  let mejor: { c: CandidataConDatos; distancia: number; palabras: number } | null = null
+  let hayFuera = false
   for (const c of limpias) {
-    const r = cotejar(vc, c.datos)
-    if (r.descartada) continue
-    if (r.suficiente) casan.push(c)
-    else dudosas++
+    const r = puntuar(vc, c.datos)
+    if ('motivo' in r) {
+      if (r.motivo === 'fuera_de_tolerancia') hayFuera = true
+      continue
+    }
+    const palabras = palabrasEnComun(vc.denominacion, c.etiqueta)
+    if (!mejor || r.distancia < mejor.distancia - EPS || (Math.abs(r.distancia - mejor.distancia) <= EPS && palabras > mejor.palabras)) {
+      mejor = { c, distancia: r.distancia, palabras }
+    }
   }
-  if (casan.length > 1) return { tipo: 'sin_decidir', motivo: 'varias_casan' }
-  if (dudosas > 0) return { tipo: 'sin_decidir', motivo: 'sin_datos' }
-  if (casan.length === 0) return { tipo: 'sin_decidir', motivo: 'ninguna_casa' }
-  const elegida = casan[0]!
-  return { tipo: 'unica', eleccion: elegida.codigo ? { codigo: elegida.codigo, etiqueta: espacios(elegida.etiqueta) } : { codigo: null, etiqueta: espacios(elegida.etiqueta) } }
+  if (!mejor) return { tipo: 'sin_decidir', motivo: hayFuera ? 'fuera_de_tolerancia' : 'sin_datos' }
+  const e = mejor.c
+  return { tipo: 'unica', porSimilitud: true, eleccion: e.codigo ? { codigo: e.codigo, etiqueta: espacios(e.etiqueta) } : { codigo: null, etiqueta: espacios(e.etiqueta) } }
 }
 
 /**
@@ -196,7 +227,7 @@ export function datosDesdeEtiquetaVersion(etiqueta: string): DatosVersionCatalog
 
 /**
  * Atajo para los portales cuyas versiones son solo etiqueta + código (Allianz): los datos salen de la etiqueta. Devuelve la
- * elección (código y etiqueta de la candidata) o `null` = sin decidir (sigue el flujo de siempre).
+ * elección POR SIMILITUD (código y etiqueta de la candidata) o `null` = sin decidir (sigue el flujo de siempre).
  */
 export function eleccionPorVehiculoConfirmadoDeEtiquetas(vc: VehiculoConfirmado | null | undefined, versiones: readonly CandidatoVersion[]): EleccionVersion | null {
   const r = eleccionPorVehiculoConfirmado(vc, versiones.map((v) => ({ ...v, datos: datosDesdeEtiquetaVersion(v.etiqueta ?? '') })))

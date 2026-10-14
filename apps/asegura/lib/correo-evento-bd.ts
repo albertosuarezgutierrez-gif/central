@@ -24,7 +24,8 @@ import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import {
-  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestroAcotado, TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento,
+  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestroAcotado, esCheckTipoEventoCorreo, importeDeItem,
+  TOPE_SINIESTROS_CANDIDATOS, decidirReevaluacionEmision, planItem, resolverPolizaEvento,
   tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
@@ -216,7 +217,8 @@ async function procesarItem(
     const resolucion = resolverPolizaEvento(numeroPoliza, entrada.compania, entrada.codigoDgs, candidatas)
     const poliza = resolucion.estado === 'sin_resolver' ? null : (resolucion.poliza as (typeof candidatas)[number])
     const expediente = item.tipo === 'anulacion' && poliza && resolucion.estado === 'en_vigor' ? await expedienteAbierto(db, correduriaId, poliza.id) : null
-    const claveProvisional = poliza && item.tipo !== 'siniestro' ? claveTareaDe(item, poliza.id) : null
+    // Una emisión nunca crea tarea ni nota: no lleva clave de tarea.
+    const claveProvisional = poliza && item.tipo !== 'siniestro' && item.tipo !== 'emision' ? claveTareaDe(item, poliza.id) : null
     const tareaAbierta = claveProvisional ? await hayTareaAbierta(db, correduriaId, claveProvisional) : false
 
     const plan = planItem(item, entrada.compania, { resolucion, siniestro, siniestroPolizaDistinta, expediente, tareaAbierta, fechaCorreo, hoy })
@@ -278,7 +280,7 @@ async function procesarItem(
       update correo_evento_entrante set estado = ${estado}, motivo = ${motivo}, resumen = ${resumen.slice(0, 300)},
              clave_tarea = ${claveGuardada}, poliza_id = ${polizaId}::uuid, cliente_id = ${clienteId}::uuid,
              siniestro_id = ${siniestroId}::uuid, gestion_id = ${gestionId}::uuid, fecha_limite = ${fechaLimite}::date,
-             importe = ${item.tipo === 'pre_anulacion' || item.tipo === 'impago' ? item.importe : null}::numeric, updated_at = now()
+             importe = ${importeDeItem(item)}::numeric, updated_at = now()
       where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)
     const cliente = polizaId ? candidatas.find((p) => p.id === polizaId)?.cliente ?? null : null
     return salida({ estado, resumen, motivo, clienteId, polizaId, siniestroId, fechaLimite }, false, cliente)
@@ -309,7 +311,17 @@ export async function registrarEventoCorreo(
   const candidatas = await polizasCandidatas(db, correduriaId)
   const resultados: ResultadoItemCorreo[] = []
   // En serie: dos filas del mismo correo pueden ser del mismo recibo/póliza y la segunda debe ver la tarea de la primera.
-  for (const item of entrada.items) resultados.push(await procesarItem(db, correduriaId, entrada, item, candidatas, fechaCorreo, hoy))
+  try {
+    for (const item of entrada.items) resultados.push(await procesarItem(db, correduriaId, entrada, item, candidatas, fechaCorreo, hoy))
+  } catch (e) {
+    // Un tipo nuevo cuyo SQL no se ha aplicado (`emision` → 2026-10-14d_correo_evento_emision.sql): el CHECK de
+    // `tipo` rechaza la RESERVA, que es la primera escritura. Todos los elementos de un correo son del mismo
+    // tipo, así que cae el primero y no se ha escrito nada: 503 `sin_migracion`, no 500.
+    if (resultados.length === 0 && esCheckTipoEventoCorreo(e)) {
+      return { ok: false, estado: 'sin_migracion', motivo: `falta aplicar 2026-10-14d_correo_evento_emision.sql (tipo «${entrada.tipo}»): no se ha escrito nada` }
+    }
+    throw e
+  }
   return { ok: true, resultados }
 }
 
@@ -330,6 +342,8 @@ export type EventoCorreoFila = {
   cliente: string | null
   fechaLimite: string | null
   importe: number | null
+  /** `true` = alguien lo marcó como mirado (`revisado_at` no nulo). */
+  revisado: boolean
 }
 
 const TECHO_LISTA = 300
@@ -341,7 +355,8 @@ export async function eventosCorreoRecientes(correduriaId: string, dias = 30): P
     select e.id::text as id, to_char(e.created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD"T"HH24:MI') as creado,
            e.tipo, e.subtipo, e.clave, e.compania, e.numero_poliza as "numeroPoliza", e.estado, e.motivo, e.resumen,
            e.cliente_id::text as "clienteId", nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
-           to_char(e.fecha_limite, 'YYYY-MM-DD') as "fechaLimite", e.importe::text as importe
+           to_char(e.fecha_limite, 'YYYY-MM-DD') as "fechaLimite", e.importe::text as importe,
+           (e.revisado_at is not null) as revisado
     from correo_evento_entrante e
     left join clientes c on c.id = e.cliente_id and c.correduria_id = e.correduria_id
     where e.correduria_id = ${correduriaId}::uuid and e.created_at >= now() - make_interval(days => ${d}::int)
@@ -351,6 +366,62 @@ export async function eventosCorreoRecientes(correduriaId: string, dias = 30): P
     filas: filas.slice(0, TECHO_LISTA).map((f) => ({ ...f, importe: f.importe === null ? null : Number(f.importe) })),
     truncado: filas.length > TECHO_LISTA,
   }
+}
+
+/**
+ * Pone (`true`) o quita (`false`) la marca de «mirado». Solo la fila de ESA correduría: `false` = no existe
+ * o es de otra (la ruta responde 404). Quitarla deja la fila otra vez en la cola de avisos.
+ */
+export async function marcarEventoRevisado(correduriaId: string, id: string, revisado: boolean): Promise<boolean> {
+  const n = await prismaAsegura().$executeRaw(Prisma.sql`
+    update correo_evento_entrante
+    set revisado_at = ${revisado ? Prisma.sql`now()` : Prisma.sql`null`}, updated_at = now()
+    where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+  return n > 0
+}
+
+const VENTANA_REEVALUACION_DIAS = 60
+const TOPE_REEVALUACION = 200
+
+/**
+ * Reevaluación de emisiones (14/10/2026): las filas `emision` `sin_resolver` sin mirar de los últimos 60 días se
+ * vuelven a resolver contra la cartera; si CIMA ya trae la póliza en vigor pasan a `duplicado_cima`. Nunca crea
+ * pólizas, notas ni tareas. El UPDATE lleva `estado = 'sin_resolver' and revisado_at is null` en el WHERE: idempotente y a prueba de
+ * dos pasadas a la vez. `sin_migracion` (falta la tabla) → ceros.
+ */
+export async function reevaluarEmisionesSinResolver(
+  correduriaId: string, hoy: string = hoyMadrid(),
+): Promise<{ revisadas: number; resueltas: number }> {
+  const db = prismaAsegura()
+  let filas: { id: string; compania: string; codigoDgs: string; detalle: unknown }[]
+  try {
+    filas = await db.$queryRaw(Prisma.sql`
+      select id::text as id, compania, codigo_entidad_dgs as "codigoDgs", detalle
+      from correo_evento_entrante
+      where correduria_id = ${correduriaId}::uuid and tipo = 'emision' and estado = 'sin_resolver' and revisado_at is null
+        and created_at > now() - make_interval(days => ${VENTANA_REEVALUACION_DIAS}::int)
+      order by created_at desc
+      limit ${TOPE_REEVALUACION}`)
+  } catch (e) {
+    if (esTablaInexistente(e)) return { revisadas: 0, resueltas: 0 }
+    throw e
+  }
+  if (filas.length === 0) return { revisadas: 0, resueltas: 0 }
+  const candidatas = await polizasCandidatas(db, correduriaId)
+  let resueltas = 0
+  for (const f of filas) {
+    const item = f.detalle as ItemEvento | null
+    if (!item || item.tipo !== 'emision') continue
+    const resolucion = resolverPolizaEvento(item.numeroPoliza, f.compania, f.codigoDgs, candidatas)
+    const d = decidirReevaluacionEmision(item, f.compania, resolucion, hoy)
+    if (!d.resuelve) continue
+    const n = await db.$executeRaw(Prisma.sql`
+      update correo_evento_entrante set estado = 'duplicado_cima', poliza_id = ${d.polizaId}::uuid, cliente_id = ${d.clienteId}::uuid,
+             motivo = ${d.motivo}, resumen = ${d.resumen}, updated_at = now()
+      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver' and revisado_at is null`)
+    if (n > 0) resueltas++
+  }
+  return { revisadas: filas.length, resueltas }
 }
 
 /** Para la cola de avisos: los sin resolver (o a medias) de los últimos 30 días que nadie ha marcado como mirados. */

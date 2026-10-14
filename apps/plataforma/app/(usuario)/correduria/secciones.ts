@@ -58,9 +58,14 @@
  * exactamente lo que impide que esta pantalla repita aquel fallo.
  */
 
-export type Seccion = 'gestion' | 'clientes' | 'cartera' | 'comisiones' | 'mas'
+/**
+ * `campanas` (14/10/2026): sección de primer nivel y no un bloque de «Más». Estaba como tercer bloque de
+ * «Más», que es la ÚLTIMA pestaña de una barra con scroll lateral: en un móvil quedaba fuera de pantalla y
+ * Alberto no la encontraba. Va junto a las secciones de trabajo, antes de «Gestión».
+ */
+export type Seccion = 'gestion' | 'clientes' | 'cartera' | 'comisiones' | 'campanas' | 'mas'
 
-export const SECCIONES: readonly Seccion[] = ['clientes', 'cartera', 'comisiones', 'gestion', 'mas']
+export const SECCIONES: readonly Seccion[] = ['clientes', 'cartera', 'comisiones', 'campanas', 'gestion', 'mas']
 
 /**
  * ─── «Hoy» se unificó en «Mi mesa» + «Gestión» (13/10/2026, Alberto) ────────
@@ -79,12 +84,13 @@ export type ItemBarra =
   | { tipo: 'enlace'; clave: 'mesa' | 'prospeccion'; href: string; label: string }
   | { tipo: 'seccion'; clave: Seccion }
 
-/** El orden EXACTO de la barra: Mi mesa · Clientes · Cartera · Comisiones · Gestión · Prospección · Más. */
+/** El orden EXACTO de la barra: Mi mesa · Clientes · Cartera · Comisiones · Campañas · Gestión · Prospección · Más. */
 export const BARRA_CORREDURIA: readonly ItemBarra[] = [
   { tipo: 'enlace', clave: 'mesa', href: '/correduria/mesa', label: 'Mi mesa' },
   { tipo: 'seccion', clave: 'clientes' },
   { tipo: 'seccion', clave: 'cartera' },
   { tipo: 'seccion', clave: 'comisiones' },
+  { tipo: 'seccion', clave: 'campanas' },
   { tipo: 'seccion', clave: 'gestion' },
   { tipo: 'enlace', clave: 'prospeccion', href: '/correduria/vencimientos', label: 'Prospección' },
   { tipo: 'seccion', clave: 'mas' },

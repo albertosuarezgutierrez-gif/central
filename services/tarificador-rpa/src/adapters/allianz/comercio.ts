@@ -20,8 +20,7 @@ import { importeEs } from '@central/module-tarificacion'
 import type { FormularioComercio, Tomador } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { abrirNuevaAlta } from './entrada.ts'
-import { login, marcoCon, sesionSirve } from './comunidades.ts'
+import { abrirNuevaAlta, login, marcoCon, sesionSirve } from './intranet/index.ts'
 
 /** Flag de registro: apagado por defecto. Nada lo enciende en producción. */
 export const COMERCIO_ACTIVO = false

@@ -5,7 +5,7 @@
 //
 // Versión: si el portal ofrece VARIAS versiones candidatas y no hay una elección explícita (código de catálogo o
 // etiqueta EXACTA que una persona eligió en la bandeja), el resultado es `ambigua` con las opciones → el robot para con
-// `requiere_humano` (prefijo PREFIJO_ELECCION_VERSION). Nunca se elige «la más parecida».
+// `requiere_humano` (prefijo PREFIJO_ELECCION_VERSION). Nunca se elige «la más parecida», salvo la elección por similitud con el vehículo confirmado de Mapfre (vehiculo-confirmado.ts).
 //
 // 🚨 La matrícula es dato personal (identifica al titular): `Vehiculo` NO la guarda. Solo vive en el formulario de
 // entrada del robot y nunca se escribe en logs, trazas ni mensajes de error.
@@ -26,6 +26,8 @@ export type Vehiculo = {
   fechaMatriculacion: string | null
   /** Código del vehículo en el catálogo de la compañía (p. ej. el hidden `mobileCode` de Allianz). */
   codigoCatalogo: string | null
+  /** `true` = la versión se eligió «por similitud con Mapfre» (vehículo confirmado), no por elección explícita ni única. */
+  versionPorSimilitud?: true
 }
 
 /** Una opción de versión que ofrece el portal tras la consulta. */

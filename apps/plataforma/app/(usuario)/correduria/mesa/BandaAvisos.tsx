@@ -34,6 +34,12 @@ export default function BandaAvisos() {
   }, [])
 
   useEffect(() => { void cargar() }, [cargar])
+  // La bandeja de correos de compañía avisa al marcar/deshacer «mirado»: la cola de la banda cambia.
+  useEffect(() => {
+    const alCambiar = () => { void cargar() }
+    window.addEventListener('correduria:avisos-cambiaron', alCambiar)
+    return () => window.removeEventListener('correduria:avisos-cambiaron', alCambiar)
+  }, [cargar])
 
   if (banda === null) {
     return cargando ? <p aria-live="polite" style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Comprobando avisos…</p> : null

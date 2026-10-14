@@ -521,15 +521,70 @@ export const CAUSAS_INCIDENCIA_EJECUCION = [
   'valor_no_aplicado',
   /** `rellenar`: el nodo se repintó y tras re-inventariar no se encontró por su identidad (se para con ese detalle). */
   'nodo_no_relocalizado',
+  /**
+   * La acción NO se ejecutó porque el worker CORTÓ el lote (repintado tras un autocompletado o cambio de estructura) antes
+   * de llegar a ella (14/10/2026, exploración 8d0676f9: año y m² se descartaban EN SILENCIO tras el CP y la vía).
+   */
+  'lote_cortado',
+  /**
+   * `rellenar` cuyo control ES el inventariado (conectado, misma identidad) pero que Playwright no ve ni tras traerlo a la
+   * vista: no se escribe (nunca en un control oculto) y el lote SIGUE (14/10/2026, b921b476: no era un repintado).
+   */
+  'control_no_visible',
 ] as const
 export type CausaIncidenciaEjecucion = (typeof CAUSAS_INCIDENCIA_EJECUCION)[number]
-export type IncidenciaEjecucion = { accion: 'rellenar'; ref: string; dato: string; causa: CausaIncidenciaEjecucion }
+/**
+ * POR QUÉ el worker no pudo localizar el nodo inventariado (14/10/2026, exploración b921b476: año y m² fallaban sin decir
+ * por qué). Lista CERRADA; solo el nombre del atributo que no casa, nunca su valor.
+ */
+export const MOTIVOS_NO_LOCALIZADO = [
+  'desconectado',
+  'no_coincide_tag',
+  'no_coincide_id',
+  'no_coincide_name',
+  'no_coincide_type',
+  'no_coincide_texto',
+  'no_visible',
+  'error_evaluate',
+  /** La marca temporal no señala UN solo nodo del marco. */
+  'no_unico',
+] as const
+export type MotivoNoLocalizado = (typeof MOTIVOS_NO_LOCALIZADO)[number]
+/** Detalle de `no_visible` (solo la forma de la caja/estilo, nunca valores): ancho 0, alto 0, ambos, u oculto por estilo/ancestro. */
+export const VISIBILIDADES_NO_VISIBLE = ['sin_ancho', 'sin_alto', 'sin_caja', 'oculto'] as const
+export type VisibilidadNoVisible = (typeof VISIBILIDADES_NO_VISIBLE)[number]
+/**
+ * POR QUÉ se cortó un lote: `repintado` (un nodo pendiente dejó de ser el inventariado tras tocar otro), `huella` o
+ * `n_elementos` (la estructura cambió al escribir) y `autocompletar` (clave que dispara autocompletado). Lista CERRADA.
+ */
+export const MOTIVOS_CORTE_LOTE = ['repintado', 'huella', 'n_elementos', 'autocompletar'] as const
+export type MotivoCorteLote = (typeof MOTIVOS_CORTE_LOTE)[number]
+/** Diagnóstico opcional de una incidencia: por qué no se localizó el nodo y por qué se cortó el lote. Nunca valores. */
+export type DiagnosticoIncidencia = { motivo?: MotivoNoLocalizado; visibilidad?: VisibilidadNoVisible; corte?: MotivoCorteLote }
+/** Acciones que pueden quedar sin ejecutar por un corte de lote (las que señalan una ref; `parar`/`terminar` van solas). */
+export const ACCIONES_INCIDENCIA_SIN_DATO = ['elegir', 'marcar', 'avanzar'] as const
+export type IncidenciaEjecucion =
+  | ({ accion: 'rellenar'; ref: string; dato: string; causa: CausaIncidenciaEjecucion } & DiagnosticoIncidencia)
+  /** Solo `lote_cortado`. Sin `dato` ni opción: nada que se parezca a un valor. */
+  | ({ accion: (typeof ACCIONES_INCIDENCIA_SIN_DATO)[number]; ref: string; causa: 'lote_cortado' } & DiagnosticoIncidencia)
 export const MAX_INCIDENCIAS_EJECUCION = 15
 /** Prefijo de los `errores` de un paso que vienen de la EJECUCIÓN (no del validador): no marcan el paso como «rechazado». */
 export const PREFIJO_ERROR_EJECUCION = 'ejecucion:'
 
 const RE_REF_INCIDENCIA = /^m\d{1,3}e\d{1,5}$/
 const RE_DATO_INCIDENCIA = /^[a-z][a-z0-9_]{0,29}\.[a-z0-9_]{1,40}$/
+
+/** El diagnóstico de una incidencia, SOLO con valores de las listas cerradas (lo demás se ignora, sin tumbar la incidencia). */
+function leerDiagnostico(o: Record<string, unknown>): DiagnosticoIncidencia {
+  const d: DiagnosticoIncidencia = {}
+  const motivo = MOTIVOS_NO_LOCALIZADO.find((m) => m === o.motivo)
+  if (motivo) d.motivo = motivo
+  const vis = VISIBILIDADES_NO_VISIBLE.find((m) => m === o.visibilidad)
+  if (vis && motivo === 'no_visible') d.visibilidad = vis
+  const corte = MOTIVOS_CORTE_LOTE.find((m) => m === o.corte)
+  if (corte && o.causa === 'lote_cortado') d.corte = corte
+  return d
+}
 
 /** Lo que manda el worker, TOLERANTE: lo mal formado se descarta (nunca tumba el paso ni el cierre). Máx. 15. Pura. */
 export function leerIncidenciasEjecucion(v: unknown): IncidenciaEjecucion[] {
@@ -539,12 +594,26 @@ export function leerIncidenciasEjecucion(v: unknown): IncidenciaEjecucion[] {
     if (typeof x !== 'object' || x === null || Array.isArray(x)) continue
     const o = x as Record<string, unknown>
     const causa = CAUSAS_INCIDENCIA_EJECUCION.find((c) => c === o.causa)
-    if (o.accion !== 'rellenar' || !causa) continue
+    if (!causa) continue
     if (typeof o.ref !== 'string' || !RE_REF_INCIDENCIA.test(o.ref)) continue
-    if (typeof o.dato !== 'string' || !RE_DATO_INCIDENCIA.test(o.dato)) continue
-    out.push({ accion: 'rellenar', ref: o.ref, dato: o.dato, causa })
+    if (o.accion === 'rellenar') {
+      if (typeof o.dato !== 'string' || !RE_DATO_INCIDENCIA.test(o.dato)) continue
+      out.push({ accion: 'rellenar', ref: o.ref, dato: o.dato, causa, ...leerDiagnostico(o) })
+      continue
+    }
+    // elegir/marcar/avanzar: SOLO por un lote cortado, y sin nada más (ni dato ni opción, aunque vinieran).
+    const accion = ACCIONES_INCIDENCIA_SIN_DATO.find((a) => a === o.accion)
+    if (!accion || causa !== 'lote_cortado') continue
+    out.push({ accion, ref: o.ref, causa, ...leerDiagnostico(o) })
   }
   return out
+}
+
+/** `lote_cortado` → `lote_cortado_por_<corte>`; y el motivo de no localizar entre corchetes (`[no_visible:sin_alto]`). Pura. */
+function causaConDiagnostico(i: IncidenciaEjecucion): string {
+  const causa = i.causa === 'lote_cortado' && i.corte ? `lote_cortado_por_${i.corte}` : i.causa
+  if (!i.motivo) return causa
+  return `${causa} [${i.motivo}${i.motivo === 'no_visible' && i.visibilidad ? `:${i.visibilidad}` : ''}]`
 }
 
 /**
@@ -556,9 +625,10 @@ export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[]
   const porRef = inventario ? indiceRefs(inventario) : new Map<string, { el: ElementoInventario }>()
   return incidencias.slice(0, MAX_INCIDENCIAS_EJECUCION).map((i) => {
     const el = porRef.get(i.ref)?.el
-    const etq = el ? textoEtiqueta(el).slice(0, 60) : ''
+    const etq = el ? (textoEtiqueta(el) || (el.texto ?? '').replace(/\s+/g, ' ').trim()).slice(0, 60) : ''
     const conEtq = etq && !pareceDatoPersonalInventario(etq) ? ` «${etq}»` : ''
-    return `${PREFIJO_ERROR_EJECUCION} ${i.accion} ${i.ref}${conEtq} (${i.dato}): ${i.causa}`
+    const dato = i.accion === 'rellenar' ? ` (${i.dato})` : ''
+    return `${PREFIJO_ERROR_EJECUCION} ${i.accion} ${i.ref}${conEtq}${dato}: ${causaConDiagnostico(i)}`
   })
 }
 
@@ -567,6 +637,57 @@ export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[]
  * la provincia…): tras rellenarlas el worker corta el lote y vuelve a inventariar (la pantalla ya no es la que vio la IA).
  */
 export const CLAVES_AUTOCOMPLETADO: ReadonlySet<string> = new Set(['inmueble.codigo_postal', 'inmueble.provincia', 'inmueble.municipio'])
+
+/** Roles ARIA de un control que despliega sugerencias (NDBX/Angular Material: `role=combobox` en el input). */
+const ROLES_AUTOCOMPLETADO = new Set(['combobox', 'searchbox'])
+
+/**
+ * ¿Este `rellenar` puede REPINTAR la sección? Su clave dispara autocompletado (`CLAVES_AUTOCOMPLETADO`) o el control es un
+ * autocompletado (`role=combobox/searchbox`, `aria-autocomplete`/datalist → `autocompletar`). Pura.
+ */
+export function rellenarRepinta(dato: string, el: ElementoInventario | undefined): boolean {
+  if (CLAVES_AUTOCOMPLETADO.has(dato)) return true
+  if (!el) return true // sin el elemento no se sabe: lo conservador es tratarlo como el que repinta (va después)
+  return el.autocompletar === true || ROLES_AUTOCOMPLETADO.has((el.role ?? '').toLowerCase())
+}
+
+/**
+ * ORDEN del lote (14/10/2026, exploración 8d0676f9 de Allianz Hogar: el CP y la vía repintaban la sección, el worker
+ * cortaba el lote y año y m², que iban DETRÁS, no se escribían nunca). Estable dentro de cada grupo:
+ *   0. todo lo demás EN EL ORDEN DE LA IA: rellenar simples, `elegir` y `marcar` (revisión: un campo puede depender de un
+ *      select o de un radio anterior, así que no se adelanta nada respecto a ellos);
+ *   1. los `rellenar` que REPINTAN (claves de autocompletado, combobox, `autocompletar`), en su orden relativo;
+ *   2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos).
+ * No añade, quita ni cambia acciones: solo las reordena. Pura.
+ */
+export function ordenarLote<A extends Accion>(acciones: readonly A[], inventario: InventarioDom): A[] {
+  const refs = indiceRefs(inventario)
+  const grupo = (a: A): number => {
+    if (a.accion === 'rellenar') return rellenarRepinta(a.dato, refs.get(a.ref)?.el) ? 1 : 0
+    if (a.accion === 'elegir' || a.accion === 'marcar') return 0
+    return 2
+  }
+  return acciones.map((a, i) => ({ a, g: grupo(a), i })).sort((x, y) => x.g - y.g || x.i - y.i).map((x) => x.a)
+}
+
+/**
+ * Las acciones de un lote CORTADO que no se llegaron a ejecutar → incidencias `lote_cortado` (ref + clave; nunca el valor
+ * ni la opción). `parar`/`terminar` no se reportan (van solos: nunca quedan detrás de un corte). Pura.
+ */
+export function incidenciasLoteCortado(
+  pendientes: readonly Accion[],
+  corte?: MotivoCorteLote,
+  /** Por qué no se localizó la PRIMERA pendiente (la que destapó el corte por `repintado`). */
+  primera?: Pick<DiagnosticoIncidencia, 'motivo' | 'visibilidad'>,
+): IncidenciaEjecucion[] {
+  const out: IncidenciaEjecucion[] = []
+  for (const a of pendientes) {
+    const diag: DiagnosticoIncidencia = { ...(corte ? { corte } : {}), ...(out.length === 0 && primera?.motivo ? { motivo: primera.motivo, ...(primera.motivo === 'no_visible' && primera.visibilidad ? { visibilidad: primera.visibilidad } : {}) } : {}) }
+    if (a.accion === 'rellenar') out.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'lote_cortado', ...diag })
+    else if (a.accion === 'elegir' || a.accion === 'marcar' || a.accion === 'avanzar') out.push({ accion: a.accion, ref: a.ref, causa: 'lote_cortado', ...diag })
+  }
+  return out
+}
 
 /** La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}. */
 export function lineaMotivosPararParaIA(): string {
@@ -933,6 +1054,8 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
       }
       if (tipo === 'rellenar') {
         if (!esControlTexto(el)) return void errores.push(`${donde}: rellenar solo en input de texto/número/fecha o textarea`)
+        // Las claves de CREDENCIAL solo existen en la fase de login (`validarRespuestaLogin`): aquí, nunca (aunque un catálogo las trajera).
+        if (typeof a.dato === 'string' && a.dato.startsWith('credencial.')) return void errores.push(`${donde}: las claves de credencial solo valen en la fase de login`)
         if (typeof a.dato !== 'string' || !claves.has(a.dato)) return void errores.push(`${donde}: dato fuera del catálogo`)
         acciones.push({ accion: 'rellenar', ref, dato: a.dato })
       } else if (tipo === 'elegir') {

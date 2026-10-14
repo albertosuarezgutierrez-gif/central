@@ -34,6 +34,13 @@ describe('guard de emisión · verbos firmar/pagar/domiciliar (14/10/2026)', () 
   it('bloquea cada verbo por separado (arm pagar)', () => {
     expect(pareceEmision('pagar')).toBe(true)
   })
+  it.each(['Grabar póliza', 'btnGrabarPoliza', 'GRABAR POLIZA', 'grabar_poliza'])('bloquea «%s» (grabar póliza, 14/10/2026)', (d) => {
+    expect(pareceEmision(d, { permitirAceptar: true })).toBe(true)
+    expect(() => comprobarBoton([d], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+  })
+  it('deja pasar «Grabación» (no es el verbo)', () => {
+    expect(pareceEmision('Grabación de datos', { permitirAceptar: true })).toBe(false)
+  })
   it('bloquea cada verbo por separado (arm domiciliar)', () => {
     expect(pareceEmision('domiciliar')).toBe(true)
   })
@@ -293,7 +300,14 @@ describe('entorno del worker', () => {
 
   it('la máquina solo recibe JOB_ID y la URL (sin secretos)', () => {
     const env = envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://api.grupoasegura.es/ruta?x=1' })
-    expect(Object.keys(env).sort()).toEqual([...ENV_MAQUINA_PERMITIDAS].sort())
+    // Sin vista del explorador: solo JOB_ID + URL (la vista es opcional y va en la lista blanca).
+    expect(Object.keys(env).sort()).toEqual(['JOB_ID', 'TARIFICADOR_API_URL'])
+    const conVista = envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://api.grupoasegura.es', vistaExplorador: 'ambas' })
+    expect(Object.keys(conVista).sort()).toEqual([...ENV_MAQUINA_PERMITIDAS].sort())
+    for (const v of ['dom', 'aria', 'ambas']) expect(envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://a.es', vistaExplorador: v }).TARIFICADOR_EXPLORADOR_VISTA).toBe(v)
+    for (const v of [undefined, null, '', 'ARIA', ' aria', 'todo', 'ambas ']) {
+      expect(Object.keys(envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'https://a.es', vistaExplorador: v as string }))).not.toContain('TARIFICADOR_EXPLORADOR_VISTA')
+    }
     expect(env.TARIFICADOR_API_URL).toBe('https://api.grupoasegura.es')
     expect(() => envDeMaquina({ jobId: 'no-uuid', apiUrl: 'https://a.es' })).toThrow()
     expect(() => envDeMaquina({ jobId: '11111111-1111-4111-8111-111111111111', apiUrl: 'http://a.es' })).toThrow(/https/)

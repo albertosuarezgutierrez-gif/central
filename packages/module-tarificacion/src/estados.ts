@@ -4,6 +4,7 @@
 //       │            ├──────► error_reintentable ──► pendiente (UNA vez, solo infra)
 //       │            ├──────► error_definitivo
 //       │            ├──────► requiere_humano (CAPTCHA, etc.: nunca se evita)
+//       │            ├──────► atascado ──► pendiente (Alberto eligió) │ error_definitivo (caducó) │ cancelado
 //       └──► cancelado ◄──────┘ (desde cualquier no terminal)
 //
 // 🚨 Un portal de compañía no es una API: cada intento es un login más con NUESTRA credencial.
@@ -24,6 +25,10 @@ export const ESTADOS_TRABAJO = [
   'pendiente_autorizacion_emision',
   'autorizado_emision',
   'emitido',
+  // ATASCO (F2 del plan de robustez, 14/10/2026, atasco.ts): ni el selector fijo, ni lo aprendido, ni la IA resolvieron un
+  // paso. El trabajo espera la ELECCIÓN de Alberto (Telegram o «Bots atascados»), sin máquina viva: al responder vuelve a
+  // `pendiente` y el worker repite el camino aprendido. Sin respuesta en X horas → `error_definitivo`. NO terminal.
+  'atascado',
 ] as const
 
 export type EstadoTrabajo = (typeof ESTADOS_TRABAJO)[number]
@@ -32,7 +37,7 @@ export const ESTADOS_TERMINALES: readonly EstadoTrabajo[] = ['ok', 'error_defini
 
 const TRANSICIONES: Record<EstadoTrabajo, readonly EstadoTrabajo[]> = {
   pendiente: ['en_curso', 'cancelado'],
-  en_curso: ['ok', 'error_reintentable', 'error_definitivo', 'requiere_humano', 'cancelado', 'pendiente_autorizacion_emision', 'emitido'],
+  en_curso: ['ok', 'error_reintentable', 'error_definitivo', 'requiere_humano', 'cancelado', 'pendiente_autorizacion_emision', 'emitido', 'atascado'],
   error_reintentable: ['pendiente', 'error_definitivo', 'cancelado'],
   ok: [],
   error_definitivo: [],
@@ -44,6 +49,8 @@ const TRANSICIONES: Record<EstadoTrabajo, readonly EstadoTrabajo[]> = {
   // La reanudación (relogin, pantalla previa, canje, UN clic) NO es un reintento: vuelve a en_curso.
   autorizado_emision: ['en_curso', 'cancelado'],
   emitido: [],
+  // Responder = el MISMO trabajo vuelve a la cola (intentos a 0: decisión humana). Caducar = error_definitivo. Descartar = cancelado.
+  atascado: ['pendiente', 'error_definitivo', 'cancelado'],
 }
 
 export function esEstadoTrabajo(v: unknown): v is EstadoTrabajo {

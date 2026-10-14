@@ -19,8 +19,10 @@ import {
   MAX_OPCIONES_POBLACION_CABLE,
   MAX_OPCIONES_VERSION_CABLE,
   nombresCredencial,
+  crearRedactor,
   redactarHtml,
   secretosDelEntorno,
+  secretosDelRiesgo,
   crearTraza,
   type Traza,
   variablesProhibidas,
@@ -28,14 +30,18 @@ import {
   type OfertaNormalizada,
   type PdfRef,
   type InventarioDom,
+  type AtascoWorker,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
+import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
-import { capturarInventarioDom } from './inventario-dom.ts'
-import { confirmarVehiculoMapfre, elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
+import { confirmarVehiculoMapfre, elegirOpcion, pulsarBuscarTomadorMapfre, pulsarContinuarMapfre, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
+import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
+import { elegirOpcionMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
@@ -65,7 +71,7 @@ const azar = (min: number, max: number) => min + Math.random() * (max - min)
 type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null }
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] }
-  | { ok: false; c: Clasificacion; evidencia: Evidencia }
+  | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
 
 /**
  * De dónde sale y a dónde vuelve la sesión del navegador en un intento.
@@ -112,6 +118,9 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     acceptDownloads: true,
     ...(previa ? { storageState: previa as BrowserContextOptions['storageState'] } : {}),
   })
+  const ti = crearTrazaIntento(k.traza)
+  // ATASCO (F2): el checkpoint es de ESTE intento (un reintento empieza de cero).
+  if (k.formador) k.formador.atasco = null
   let logueado = false
   let ultimo5xx: number | null = null
   try {
@@ -133,6 +142,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       sesionManual: k.sesion.manual,
       trasLogin: async () => {
         logueado = true
+        ti.marcarLogin()
         log('tras_login')
         // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
         await exigirSinVerificacion(page, k.compania)
@@ -154,15 +164,36 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo no es de este trabajo')
         await confirmarVehiculoMapfre(pagina, guard, matricula)
       },
+      continuarMapfre: async (pagina, paso) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
+        await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))
+      },
+      buscarTomadorMapfre: async (pagina, boton) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de la lupa no es de este trabajo')
+        await ctx.pausaAccion()
+        await pulsarBuscarTomadorMapfre(pagina, guard, boton)
+      },
+      continuar: async (pagina, o) => {
+        const destino = pagina ?? page
+        if (destino.context() !== context) throw new ErrorTarificador('portal', 'continuar: la pestaña no es de este trabajo')
+        await pulsarContinuarSeguro(destino, { pulsar: ctx.pulsar, formador: k.formador, ...o })
+      },
+      elegirMatSelect: (select, valores, o) => {
+        if (select.page().context() !== context) throw new ErrorTarificador('portal', 'mat-select: la pestaña no es de este trabajo')
+        return elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar })
+      },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
-      paso: k.traza.paso,
+      paso: ti.paso,
     }
 
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
     let error: unknown = null
     let tope: ReturnType<typeof setTimeout> | undefined
+    // Traza (14/10/2026): los adaptadores de Moto/Auto/Mapfre no llaman a `ctx.paso`; sin esto su traza salía VACÍA. Si el
+    // adaptador no deja ningún paso, se anotan `login` (hasta `ctx.trasLogin`) + `formulario` (el resto) con el código FINAL
+    // del intento (traza-intento.ts). Tras el timeout el adaptador sigue en segundo plano: su `ctx.paso` tardío ya no anota.
     try {
       resultado = await Promise.race([
         k.tarificar(page, ctx),
@@ -175,9 +206,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       error = guard.violacion() ?? e
     } finally {
       clearTimeout(tope)
+      ti.cerrar()
     }
 
     if (resultado && !error) {
+      ti.cubrir({ ok: true })
       // Sesión buena: se guarda EN MEMORIA (sin `path`: nunca a disco) para el siguiente trabajo de este proceso.
       const estado = await context.storageState().catch(() => null)
       if (estado) await k.sesion.alExito(estado).catch(() => log('sesion_no_guardada'))
@@ -199,12 +232,21 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (rechazada) error = new ErrorVerificacionHumana(k.compania, textoAvisoSesionManual(k.compania))
     await k.sesion.alFallo(rechazada).catch(() => log('sesion_no_borrada'))
     const c = clasificarIntento(error, { logueado, loginVisible, ultimo5xx })
-    const { captura, html } = await capturarEvidencia(page)
-    // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos, incluidos los de otro origen
-    // (solo lectura, saneado y ≤60 KB; inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
-    const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(page) : null
-    return { ok: false, c, evidencia: { url: page.url(), captura, html, inventarioDom } }
+    ti.cubrir({ ok: false, codigo: c.tipo }) // el MISMO código que el runner reporta para el intento
+    // Mapfre abre el formulario en una PESTAÑA NUEVA (14/10/2026): la evidencia sale de la pestaña abierta MÁS RECIENTE
+    // (con una sola pestaña, la de siempre).
+    const abiertas = context.pages().filter((p) => !p.isClosed())
+    const actual = abiertas.at(-1) ?? page
+    const { captura, html } = await capturarEvidencia(actual)
+    // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos de TODAS las pestañas (la más
+    // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
+    // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
+    const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(marcosDePestanas(abiertas, page)) : null
+    // ATASCO (F2): solo un hueco del PORTAL no transitorio con checkpoint (nadie resolvió el paso). Lo decide asegura.
+    const atasco = c.tipo === 'portal' && !c.transitorio ? (k.formador?.atasco ?? null) : null
+    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom }, atasco }
   } catch (e) {
+    ti.cubrir({ ok: false, codigo: 'desconocido' })
     await k.sesion.alFallo(false).catch(() => undefined)
     throw e
   } finally {
@@ -250,6 +292,11 @@ async function main(): Promise<number> {
   // de tarificación, sin formador ni reintento. asegura solo lo sirve a una imagen que declara el modo (api.ts).
   if (trabajo.modo === 'exploracion') return ejecutarExploracion({ cfg, trabajo, env, log, redactar })
 
+  // Documento del tomador (Mapfre: lo pone asegura desde la ficha, 14/10/2026): SECRETO DEL TRABAJO. Fuera de mensajes,
+  // URL y HTML de evidencia, y sin captura de pantalla (una imagen no se redacta). Nunca se loguea.
+  const secretosRiesgo = secretosDelRiesgo(trabajo.riesgo)
+  const redactarTrabajo = secretosRiesgo.length ? crearRedactor([...secretosDelEntorno(env), ...secretosRiesgo]) : redactar
+
   const fallo = (tipo: 'datos' | 'credenciales', mensaje: string) =>
     enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje, url: null } })
 
@@ -279,7 +326,7 @@ async function main(): Promise<number> {
     if (carga.estado === 'error') {
       // Almacén caído ≠ «no hay sesión»: infraestructura (el orquestador lo reintenta), no un aviso a Alberto.
       const c = clasificar(carga.e)
-      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: redactar(c.mensaje).slice(0, 2000), url: null } })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: redactarTrabajo(c.mensaje).slice(0, 2000), url: null } })
       return 1
     }
     if (carga.estado === 'falta') {
@@ -325,7 +372,7 @@ async function main(): Promise<number> {
   // Formador con IA: lo enciende asegura (`TARIFICADOR_FORMADOR_ACTIVO`); si no responde, apagado.
   const formador = await prepararFormador({
     trabajoId: trabajo.id, compania: trabajo.compania, ramo: trabajo.ramo, apiUrl: cfg.apiUrl, secreto: cfg.secreto,
-    redactar, log: (m, d) => log(m, d),
+    redactar: redactarTrabajo, log: (m, d) => log(m, d),
   })
 
   // Hasta cuándo acepta asegura el resultado (lease − margen): los dos intentos y la espera caben ahí o no hay reintento.
@@ -361,7 +408,7 @@ async function main(): Promise<number> {
         }
       }
       const nota = primerFallo
-        ? `2.º intento (el 1.º falló por ${MOTIVO[primerFallo.transitorio!]}: ${redactar(primerFallo.mensaje).slice(0, 200)})`
+        ? `2.º intento (el 1.º falló por ${MOTIVO[primerFallo.transitorio!]}: ${redactarTrabajo(primerFallo.mensaje).slice(0, 200)})`
         : null
 
       await cerrarFormador(formador, r.ok ? 'ok' : 'error')
@@ -373,7 +420,7 @@ async function main(): Promise<number> {
       }
 
       const { c, evidencia } = r
-      const secretos = secretosDelEntorno(env)
+      const secretos = [...secretosDelEntorno(env), ...secretosRiesgo]
       const htmlRedactado = evidencia.html ? redactarHtml(evidencia.html, secretos) : null
       const mensaje = (nota ? `[${nota}] ` : '') + c.mensaje
       const cuerpo: CuerpoResultado = {
@@ -381,16 +428,18 @@ async function main(): Promise<number> {
         resultado: 'error',
         error: {
           tipo: c.tipo,
-          mensaje: redactar(mensaje).slice(0, 2000),
-          url: redactar(evidencia.url).slice(0, 500),
+          mensaje: redactarTrabajo(mensaje).slice(0, 2000),
+          url: redactarTrabajo(evidencia.url).slice(0, 500),
           // Lista COMPLETA de versiones (solo catálogo), sin pasar por el redactor: asegura la valida y la usa por código.
           ...(c.opcionesVersion ? { opcionesVersion: c.opcionesVersion.slice(0, MAX_OPCIONES_VERSION_CABLE) } : {}),
           // Lista de poblaciones del CP (nombres de localidad; `codigo` = texto exacto de la celda). Asegura la valida.
           ...(c.opcionesPoblacion ? { opcionesPoblacion: c.opcionesPoblacion.slice(0, MAX_OPCIONES_POBLACION_CABLE) } : {}),
           // Estructura de la pantalla (ya saneada, sin valores de campos): NO pasa por el log, solo su cuenta.
           ...(evidencia.inventarioDom ? { inventarioDom: evidencia.inventarioDom } : {}),
+          // Checkpoint del ATASCO (F2): candidatos ya redactados y numerados; asegura los re-sanea y decide si se atasca.
+          ...(r.atasco ? { atasco: r.atasco } : {}),
         },
-        ...(evidencia.captura && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
+        ...(evidencia.captura && secretosRiesgo.length === 0 && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
         ...meta(),
       }
@@ -403,8 +452,9 @@ async function main(): Promise<number> {
         tipo: c.tipo,
         transitorio: c.transitorio,
         intentos: primerFallo ? 2 : 1,
-        mensaje: redactar(c.mensaje).slice(0, 300),
+        mensaje: redactarTrabajo(c.mensaje).slice(0, 300),
         ...(evidencia.inventarioDom ? { inventarioElementos: evidencia.inventarioDom.totalElementos, inventarioMarcos: evidencia.inventarioDom.marcos.length } : {}),
+        ...(r.atasco ? { atasco: r.atasco.clave, atascoCandidatos: r.atasco.candidatos.length } : {}),
       })
       return 1
     } catch (e) {
@@ -413,8 +463,8 @@ async function main(): Promise<number> {
       const c = clasificar(e)
       const tipo = c.tipo === 'portal' ? 'infra' : c.tipo
       await cerrarFormador(formador, 'error')
-      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje: redactar(c.mensaje).slice(0, 2000), url: null }, ...meta() })
-      log('fallo_navegador', { mensaje: redactar(c.mensaje).slice(0, 300) })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo, mensaje: redactarTrabajo(c.mensaje).slice(0, 2000), url: null }, ...meta() })
+      log('fallo_navegador', { mensaje: redactarTrabajo(c.mensaje).slice(0, 300) })
       return 1
     } finally {
       await (browser as Browser | null)?.close().catch(() => undefined)

@@ -15,9 +15,16 @@ import {
   selectorYaUsado,
   sinSelector,
   validarAccion,
+  validarAccionEntrada,
   validarCampo,
+  validarResolucion,
+  quedaPresupuestoIA,
+  PRESUPUESTO_RESPALDO,
+  ACCION_ENLACE_ENTRADA,
+  conRespaldoIA,
   type DescripcionElemento,
 } from '../src/formador.ts'
+import { ErrorTarificador } from '../src/errores.ts'
 
 const base: DescripcionElemento = {
   coincidencias: 1, visible: true, tag: 'button', type: null, role: null, texto: 'Calcular', valorBoton: null, title: null, ariaLabel: null,
@@ -111,9 +118,11 @@ test('selectorYaUsado: un elemento no vale para dos claves en el mismo trabajo',
   assert.equal(selectorYaUsado(m, 'ano_construccion', '#m2', 'appArea').ok, false)
 })
 
-test('ACCIONES_PERMITIDAS: SOLO «calcular» (ampliarla es decisión de Alberto)', () => {
-  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular'])
+test('ACCIONES_PERMITIDAS: «calcular» + navegación de menús + lupa del tomador autorizadas por Alberto (14/10/2026), nada más', () => {
+  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.calcular], ['calcular', 'calcular prima', 'recalcular'])
+  assert.deepEqual([...ACCIONES_PERMITIDAS.pestana_nueva_produccion], ['nueva produccion'])
+  assert.deepEqual([...ACCIONES_PERMITIDAS.menu_automoviles], ['automoviles'])
   for (const otra of ['nueva_alta', 'pestana_proyecto', 'pestana_tarificar', 'desplegar_menu']) assert.equal(validarAccion(d({ texto: 'Calcular' }), otra).ok, false, otra)
 })
 
@@ -181,4 +190,70 @@ test('resolverConFormador: apagado o acción fuera de la lista → null sin toca
   assert.equal(await resolverConFormador(page, undefined, { clave: 'calcular', tipo: 'accion', descripcion: '' }), null)
   const ctx = await prepararFormador({ ...baseCtx, fetchImpl: respuesta({ formadorActivo: true, conocimiento: [], acompanamiento: { activo: false } }) })
   assert.equal(await resolverConFormador(page, ctx, { clave: 'emitir', tipo: 'accion', descripcion: '' }), null)
+})
+
+// ─── Respaldo IA (14/10/2026): enlace de entrada, navegación, presupuesto y capa común ───
+
+const RAPIDA = 'Tarificación y Emisión Rápida'
+
+test('enlace de entrada: SOLO el texto exacto de guard.ts para ESA compañía; la etiqueta se exime y nada más', () => {
+  const ok = d({ tag: 'div', texto: RAPIDA, ngClick: 'abrirAplicacion(enlace)' })
+  assert.deepEqual(validarAccionEntrada(ok, 'mapfre', RAPIDA), { ok: true })
+  assert.deepEqual(validarResolucion({ tipo: 'accion', clave: ACCION_ENLACE_ENTRADA, textoEsperado: RAPIDA }, ok, 'mapfre'), { ok: true })
+  // Otra compañía (sin lista), otro texto, o texto con algo más → no.
+  assert.equal(validarAccionEntrada(ok, 'allianz', RAPIDA).ok, false)
+  assert.equal(validarAccionEntrada(ok, 'mapfre', 'Emitir póliza').ok, false)
+  assert.equal(validarAccionEntrada(d({ tag: 'div', texto: `${RAPIDA} y emitir` }), 'mapfre', RAPIDA).ok, false)
+  // Emisión escondida en el manejador (ng-click/onclick/href/id) → no, aunque el texto sea el exacto.
+  for (const o of [{ ngClick: 'emitirPoliza()' }, { onclick: 'contratar()' }, { href: '/poliza/emitir' }, { id: 'btnFirmar' }]) {
+    assert.equal(validarAccionEntrada(d({ tag: 'div', texto: RAPIDA, ...o }), 'mapfre', RAPIDA).ok, false, JSON.stringify(o))
+  }
+  // Sin la vía de entrada, la acción normal sigue bloqueando la etiqueta (casa con el patrón de emisión).
+  assert.equal(validarAccion(ok, 'calcular', RAPIDA).ok, false)
+  assert.equal(validarResolucion({ tipo: 'accion', clave: ACCION_ENLACE_ENTRADA, textoEsperado: RAPIDA }, ok).ok, false, 'sin compañía no hay entrada')
+})
+
+test('navegación del respaldo: «Nueva producción»/«Automóviles» exactos; un ng-click de emisión los bloquea', () => {
+  assert.deepEqual(validarAccion(d({ tag: 'a', texto: 'Nueva producción' }), 'pestana_nueva_produccion'), { ok: true })
+  assert.deepEqual(validarAccion(d({ tag: 'a', texto: 'Automóviles' }), 'menu_automoviles'), { ok: true })
+  assert.equal(validarAccion(d({ tag: 'a', texto: 'Automóviles flotas' }), 'menu_automoviles').ok, false)
+  assert.equal(validarAccion(d({ tag: 'div', texto: 'Automóviles', ngClick: 'contratarSeguro()' }), 'menu_automoviles').ok, false)
+})
+
+test('PLAN B: presupuesto de IA por trabajo (consultas y tiempo)', () => {
+  assert.equal(quedaPresupuestoIA(undefined), true)
+  assert.equal(quedaPresupuestoIA({ consultas: PRESUPUESTO_RESPALDO.consultas - 1, ms: 0 }), true)
+  assert.equal(quedaPresupuestoIA({ consultas: PRESUPUESTO_RESPALDO.consultas, ms: 0 }), false)
+  assert.equal(quedaPresupuestoIA({ consultas: 0, ms: PRESUPUESTO_RESPALDO.msIA }), false)
+})
+
+test('resolverConFormador sin presupuesto: no llama a la IA (ni a asegura) y devuelve null', async () => {
+  let llamadas = 0
+  const fetchImpl = (async () => { llamadas++; return new Response('{}') }) as unknown as typeof fetch
+  const ctx = await prepararFormador({ ...baseCtx, fetchImpl: respuesta({ formadorActivo: true, conocimiento: [], acompanamiento: { activo: false } }) })
+  ctx.fetchImpl = fetchImpl
+  ctx.usoIA = { consultas: PRESUPUESTO_RESPALDO.consultas, ms: 0 }
+  assert.equal(await resolverConFormador({ frames: () => [] } as unknown as Page, ctx, { clave: 'calcular', tipo: 'accion', descripcion: '' }), null)
+  assert.equal(llamadas, 0)
+})
+
+test('conRespaldoIA: el fijo manda; solo un hueco de selector (portal) consulta el respaldo; sin respaldo, el error ORIGINAL', async () => {
+  const page = {} as Page
+  const fijo = { marca: 'fijo' } as never
+  const r = await conRespaldoIA(page, undefined, async () => fijo, { clave: 'calcular', tipo: 'accion', descripcion: '' })
+  assert.equal(r.locator, fijo)
+  assert.equal(r.origen, 'fijo')
+  const hueco = new ErrorTarificador('portal', 'no aparece')
+  await assert.rejects(() => conRespaldoIA(page, undefined, async () => { throw hueco }, { clave: 'calcular', tipo: 'accion', descripcion: '' }), (e) => e === hueco)
+  // Datos/credenciales/emisión no son huecos: ni se consulta.
+  const datos = new ErrorTarificador('datos', 'falta el CP')
+  await assert.rejects(() => conRespaldoIA(page, undefined, async () => { throw datos }, { clave: 'calcular', tipo: 'accion', descripcion: '' }), (e) => e === datos)
+})
+
+test('candidato [ng-click] de una fila: texto CORTO (≤80) y por el redactor (sin el NIF ni lo que pasa de 80)', () => {
+  const largo = `Cliente 12345678Z ${'Nombre Apellido '.repeat(12)}FINAL`
+  const c = proyectarCandidato({ tag: 'tr', texto: largo, selector: 'xpath=/html/body/table/tr[1]', marco: 'principal' }, 'accion', (t) => t)!
+  assert.ok((c.texto ?? '').length <= 80, c.texto ?? '')
+  assert.ok(!(c.texto ?? '').includes('12345678Z'))
+  assert.ok(!(c.texto ?? '').includes('FINAL'))
 })

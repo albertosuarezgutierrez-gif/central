@@ -8,7 +8,7 @@
 // 🚨 Tres estados: `null` = «no consta», nunca 0/false. 0 siniestros es un DATO. La matrícula es dato personal: solo
 // vive aquí y en el campo del portal; nunca en logs, trazas ni mensajes.
 import { esMatriculaEspanola, normalizarMatricula, type EleccionVersion } from './vehiculo.ts'
-import { validarTomador, type Tomador } from './tomador.ts'
+import { esCif, esDniNie, normalizarDocumento, validarTomador, type Tomador } from './tomador.ts'
 import { tieneCaracteresProhibidos } from './poblacion.ts'
 import { validarVehiculoConfirmado, type VehiculoConfirmado } from './vehiculo-confirmado.ts'
 
@@ -16,6 +16,24 @@ export const RAMOS_VEHICULO = ['auto', 'moto'] as const
 export type RamoVehiculo = (typeof RAMOS_VEHICULO)[number]
 export const SEXOS_CONDUCTOR = ['hombre', 'mujer'] as const
 export type SexoConductor = (typeof SEXOS_CONDUCTOR)[number]
+
+/**
+ * Datos que el bot de Mapfre NSEI pide en `mat-select` del paso 2 (14/10/2026). Claves CERRADAS = las de `MAPEO_MAPFRE_AUTO`
+ * del servicio RPA (uso → `particular`; ámbito → `espana`; clase del permiso → `b`, `a`, `a1`, `a2`). Una clave nueva se añade
+ * AQUÍ y allí a la vez.
+ */
+export const USOS_VEHICULO = ['particular'] as const
+export type UsoVehiculo = (typeof USOS_VEHICULO)[number]
+export const AMBITOS_CIRCULACION = ['espana'] as const
+export type AmbitoCirculacion = (typeof AMBITOS_CIRCULACION)[number]
+export const CLASES_PERMISO = ['b', 'a', 'a1', 'a2'] as const
+export type ClasePermiso = (typeof CLASES_PERMISO)[number]
+/** Por defecto en AUTO (turismo; un encolado antiguo sin ellos sigue valiendo). En moto NO hay defecto: no consta. */
+export const USO_VEHICULO_POR_DEFECTO: UsoVehiculo = 'particular'
+export const AMBITO_CIRCULACION_POR_DEFECTO: AmbitoCirculacion = 'espana'
+export const CLASE_PERMISO_POR_DEFECTO: ClasePermiso = 'b'
+/** Máximo de `companiaAnterior` (el adaptador la ignora por encima de 80). */
+export const MAX_COMPANIA_ANTERIOR = 80
 
 export type ConductorHabitual = {
   /** ISO AAAA-MM-DD. */
@@ -63,6 +81,54 @@ export type FormularioAuto = {
    * versión (solo si casa exactamente una). Ausente = no consta.
    */
   vehiculoConfirmado?: VehiculoConfirmado | null
+  /**
+   * DNI/NIE/CIF del TOMADOR para buscarlo en el portal (Mapfre NSEI paso 1, lupa del NIF; 14/10/2026). Normalizado
+   * (mayúsculas, sin separadores). Lo RELLENA ASEGURA en el servidor desde la ficha del cliente (descifrada), solo en
+   * trabajos de Mapfre y solo si el riesgo no trae ya `tomador.documentoIdentidad`. Dato personal: nunca en logs,
+   * mensajes, IA ni resultado; NO está en la lista blanca de la purga (se borra al cerrar el trabajo). Ausente = no consta.
+   */
+  documentoTomador?: string | null
+  /** Uso del vehículo (`USOS_VEHICULO`). En auto, por defecto `particular`; en moto, ausente = no consta. */
+  usoVehiculo?: UsoVehiculo | null
+  /** Ámbito de circulación (`AMBITOS_CIRCULACION`). En auto, por defecto `espana`. */
+  ambitoCirculacion?: AmbitoCirculacion | null
+  /** Clase del permiso del conductor (`CLASES_PERMISO`). En auto, por defecto `b`. */
+  clasePermiso?: ClasePermiso | null
+  /** Nombre de la compañía anterior (texto corto, ≤80). Ausente = no consta (el bot la deja como hueco, nunca la inventa). */
+  companiaAnterior?: string | null
+}
+
+/**
+ * Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque
+ * `tomador`. `null` = no consta. PURO; nunca se loguea.
+ */
+export function documentoTomadorDe(f: Pick<FormularioAuto, 'documentoTomador' | 'tomador'> | null | undefined): string | null {
+  const d = f?.documentoTomador ?? f?.tomador?.documentoIdentidad ?? null
+  return typeof d === 'string' && d.trim() !== '' ? d : null
+}
+
+/**
+ * Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio
+ * antes de la letra de control): el worker las trata como SECRETOS del trabajo (redactor de mensajes y de HTML). PURO.
+ * Riesgo crudo (sin validar): lee `documentoTomador` y `tomador.documentoIdentidad` si son texto.
+ */
+export function secretosDelRiesgo(riesgo: unknown): string[] {
+  if (typeof riesgo !== 'object' || riesgo === null || Array.isArray(riesgo)) return []
+  const r = riesgo as Record<string, unknown>
+  const t = typeof r.tomador === 'object' && r.tomador !== null && !Array.isArray(r.tomador) ? (r.tomador as Record<string, unknown>) : null
+  const out = new Set<string>()
+  for (const v of [r.documentoTomador, t?.documentoIdentidad]) {
+    if (typeof v !== 'string') continue
+    const d = normalizarDocumento(v)
+    if (d.length < 4) continue
+    out.add(d)
+    const cuerpo = d.slice(0, -1)
+    const control = d.slice(-1)
+    out.add(`${cuerpo}-${control}`)
+    out.add(`${cuerpo} ${control}`)
+    if (/^[XYZ]/.test(d)) out.add(`${d[0]}-${d.slice(1, -1)}-${control}`)
+  }
+  return [...out].sort((a, b) => b.length - a.length)
 }
 
 /** Máximos de `poblacion` y `eleccionPoblacion`. */
@@ -258,6 +324,28 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else errores.push(...vc.errores)
   }
 
+  // Documento del tomador para la búsqueda del portal (opcional; lo rellena asegura). Nunca se repite el valor en el error.
+  let documentoTomador: string | null = null
+  if (!vacio(e.documentoTomador)) {
+    const d = typeof e.documentoTomador === 'string' ? normalizarDocumento(e.documentoTomador.trim()) : ''
+    if (d !== '' && (esDniNie(d) || esCif(d))) documentoTomador = d
+    else errores.push('documentoTomador: no es un DNI/NIE/CIF válido')
+  }
+
+  // Mat-select de Mapfre (opcionales con defecto en auto). Valor fuera de la lista cerrada = error (nunca se repite el valor).
+  const cerrado = <T extends string>(v: unknown, campo: string, lista: readonly T[], porDefecto: T | null): T | null => {
+    if (vacio(v)) return porDefecto
+    const k = typeof v === 'string' ? v.trim().toLowerCase() : ''
+    if ((lista as readonly string[]).includes(k)) return k as T
+    errores.push(`${campo}: tiene que ser uno de ${lista.join(', ')} (o no venir)`)
+    return null
+  }
+  const defectoAuto = ramo === 'auto'
+  const usoVehiculo = cerrado(e.usoVehiculo, 'usoVehiculo', USOS_VEHICULO, defectoAuto ? USO_VEHICULO_POR_DEFECTO : null)
+  const ambitoCirculacion = cerrado(e.ambitoCirculacion, 'ambitoCirculacion', AMBITOS_CIRCULACION, defectoAuto ? AMBITO_CIRCULACION_POR_DEFECTO : null)
+  const clasePermiso = cerrado(e.clasePermiso, 'clasePermiso', CLASES_PERMISO, defectoAuto ? CLASE_PERMISO_POR_DEFECTO : null)
+  const companiaAnterior = textoOpcional(e.companiaAnterior, 'companiaAnterior', MAX_COMPANIA_ANTERIOR)
+
   // Moto (fail-closed): Allianz tiene productos distintos «Moto» y «Ciclomotor» (≤50 cc). Solo se tarifica Moto.
   if (ramo === 'moto') {
     const cc = seleccionVehiculo?.cilindradaCc ?? null
@@ -284,6 +372,11 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(poblacion !== null ? { poblacion } : {}),
       ...(eleccionPoblacion !== null ? { eleccionPoblacion } : {}),
       ...(vehiculoConfirmado !== null ? { vehiculoConfirmado } : {}),
+      ...(documentoTomador !== null ? { documentoTomador } : {}),
+      ...(usoVehiculo !== null ? { usoVehiculo } : {}),
+      ...(ambitoCirculacion !== null ? { ambitoCirculacion } : {}),
+      ...(clasePermiso !== null ? { clasePermiso } : {}),
+      ...(companiaAnterior !== null ? { companiaAnterior } : {}),
     },
   }
 }

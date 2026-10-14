@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  bloqueaDuplicado, claveEncolar, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  avisoTraza, aplicarNifTomador, riesgoParaEncolar, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -33,6 +33,17 @@ test('la máquina es efímera, en cdg, 2 CPU compartidas / 2 GB, y SOLO recibe J
   assert.deepEqual(Object.keys(b.config.env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'])
   // Ni la cartera, ni el canal que gasta, ni el Bearer del worker, ni el token de Fly en la config.
   assert.ok(!/DATABASE_URL|CODEOSCOPIC|TARIFICADOR_WORKER_SECRET|CRED_|fo1_tokendeprueba/.test(JSON.stringify(b)))
+})
+
+test('la máquina recibe TARIFICADOR_EXPLORADOR_VISTA solo con dom|aria|ambas exactos', () => {
+  for (const v of ['dom', 'aria', 'ambas']) {
+    assert.equal(JSON.parse(peticionMaquina(CFG, JOB, v).init.body).config.env.TARIFICADOR_EXPLORADOR_VISTA, v)
+  }
+  for (const v of [undefined, null, '', 'ARIA', ' aria', 'todo']) {
+    const env = JSON.parse(peticionMaquina(CFG, JOB, v).init.body).config.env
+    assert.deepEqual(Object.keys(env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'], String(v))
+  }
+  assert.deepEqual(Object.keys(JSON.parse(peticionMaquina(CFG, JOB).init.body).config.env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'])
 })
 
 test('resultado ok: valida ofertas y exige que el PDF sea un PDF', () => {
@@ -112,7 +123,20 @@ test('encolar: moto con FormularioAuto válido pasa (con seleccionVehiculo); inv
   assert.equal(validarEntradaRamo('moto', { ...MOTO, ramo: 'auto' }).ok, false, 'un formulario de auto no es un trabajo moto')
   assert.equal(validarEntradaRamo('moto', { ramo: 'comunidades' }).ok, false)
   assert.equal(validarEntradaRamo('comunidades', MOTO).ok, false, 'comunidades sigue con su validador')
-  for (const r of ['auto', 'hogar', undefined, 'MOTO']) assert.equal(validarEntradaRamo(r, MOTO).ok, false, String(r))
+  for (const r of ['hogar', undefined, 'MOTO', 'AUTO']) assert.equal(validarEntradaRamo(r, MOTO).ok, false, String(r))
+  assert.equal(validarEntradaRamo('auto', MOTO).ok, false, 'un formulario de moto no es un trabajo auto')
+})
+
+test('encolar: auto (coche, Mapfre NSEI, 14/10/2026) con FormularioAuto de auto pasa; el mismo validador y su ramo', () => {
+  const COCHE = { ...MOTO, ramo: 'auto', seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA' } }
+  const ok = validarEntradaRamo('auto', COCHE)
+  assert.equal(ok.ok, true)
+  if (ok.ok) assert.equal(ok.entrada.ramo, 'auto')
+  assert.equal(validarEntradaRamo('auto', { ...COCHE, matricula: 'x' }).ok, false)
+  assert.equal(validarEntradaRamo('moto', COCHE).ok, false, 'un formulario de coche no es un trabajo moto')
+  const sinHistorial = validarEntradaRamo('auto', { ...COCHE, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null, garajeNoche: null })
+  assert.equal(sinHistorial.ok, true, 'null = no consta: el validador no lo convierte en 0 (lo decide el bot)')
+  if (sinHistorial.ok && sinHistorial.entrada.ramo === 'auto') assert.equal(sinHistorial.entrada.riesgo.siniestrosUltimos5Anios, null)
 })
 
 // ─── Cola: lease, huecos y duplicados (13/10/2026) ───────────────────────────
@@ -166,6 +190,8 @@ test('duplicado: pendiente sí; en_curso solo con lease vivo; reintentable bajo 
   assert.equal(f('error_reintentable', { intentos: 2 }), false)
   for (const e of ['ok', 'error_definitivo', 'requiere_humano', 'cancelado']) assert.equal(f(e), false, e)
   assert.equal(f('pendiente', { modo: 'emision' }), false)
+  // ATASCO (F2): espera a Alberto y volverá a la cola: pedir lo mismo es duplicado.
+  assert.equal(f('atascado'), true)
 })
 
 test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo y la cola tiene cron propio', () => {
@@ -227,4 +253,165 @@ test('registrarResultado: una exploración no devuelve ofertas, solo ella termin
   assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
   assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
   assert.match(f, /const modo = f \? modoParaWorker\(f\.modo, modosWorker\) : null/)
+})
+
+// ─── Traza: nunca muda (14/10/2026) y compatible con la imagen Fly ya desplegada ───
+const JOB_T = '11111111-1111-4111-8111-111111111111'
+
+test('avisoTraza: prefijo fijo, id y motivo; quita URLs y recorta', () => {
+  const m = avisoTraza(JOB_T, new Error('fallo en postgresql://u:secreto@host/db y ' + 'x'.repeat(500)))
+  assert.ok(m.startsWith(`[tarificador-traza] trabajo ${JOB_T}: `))
+  assert.doesNotMatch(m, /secreto|postgresql/)
+  assert.ok(m.length < 400)
+})
+
+test('compat hacia atrás: traza actual (5 claves), sin traza y con traza vacía se leen igual', () => {
+  const base = { trabajoId: JOB_T, resultado: 'error', error: { tipo: 'portal', mensaje: 'x' } }
+  const pasos = [
+    { paso: 'login', inicio: '2026-10-14T10:00:00.000Z', duracionMs: 900, ok: true, errorCodigo: null },
+    { paso: 'formulario', inicio: '2026-10-14T10:00:01.000Z', duracionMs: 5000, ok: false, errorCodigo: 'portal' },
+  ]
+  const a = leerResultadoWorker({ ...base, pasos, botVersion: '0.2.0' })
+  assert.ok(a.ok)
+  if (a.ok) assert.deepEqual([a.r.pasos.length, a.r.botVersion, a.r.trazaRechazada], [2, '0.2.0', undefined])
+  for (const cuerpo of [base, { ...base, pasos: [] }, { ...base, pasos: null }]) {
+    const b = leerResultadoWorker(cuerpo)
+    assert.ok(b.ok)
+    if (b.ok) assert.deepEqual([b.r.pasos, b.r.trazaRechazada], [[], undefined])
+  }
+  // Traza mala: el resultado se acepta igual, sin pasos, con el motivo (clave, no valor).
+  const c = leerResultadoWorker({ ...base, pasos: [{ ...pasos[0], dni: '12345678Z' }] })
+  assert.ok(c.ok)
+  if (c.ok) {
+    assert.deepEqual(c.r.pasos, [])
+    assert.match(c.r.trazaRechazada!.join(' '), /dni/)
+    assert.doesNotMatch(c.r.trazaRechazada!.join(' '), /12345678Z/)
+  }
+})
+
+test('🪤 la traza rechazada o no guardada NO es muda: console.error con [tarificador-traza] y sin romper el resultado', () => {
+  const ruta = readFileSync(join(APP, 'app/api/tarificador/resultado/route.ts'), 'utf8')
+  assert.match(ruta, /console\.error\(avisoTraza\(l\.r\.trabajoId/)
+  const f = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  const cuerpo = f.slice(f.indexOf('export async function registrarResultado'), f.indexOf('async function guardarTarificacionRpa'))
+  const tras = cuerpo.slice(cuerpo.indexOf('if (interno.traza) {'))
+  assert.match(tras, /catch \(e\) \{[\s\S]*console\.error\(avisoTraza\(/)
+  assert.doesNotMatch(tras, /console\.warn/)
+  assert.match(tras, /el worker no mandó ningún paso/)
+  assert.match(tras, /no existe: no se guarda la traza/)
+  assert.doesNotMatch(tras, /throw /)
+})
+
+test('los nombres de paso y códigos que genera el worker real (crearTraza) pasan validarTraza', async () => {
+  const { crearTraza } = await import('@central/module-tarificacion')
+  const t = crearTraza((e) => (e instanceof Error ? 'portal' : 'desconocido'))
+  for (const n of ['login', 'navegacion', 'formulario', 'tarificar', 'lectura_primas'] as const) await t.paso(n, async () => 1)
+  await t.paso('tarificar', async () => { throw new Error('x') }).catch(() => undefined)
+  t.anotar('formulario', Date.now() - 100, { e: new Error('y') })
+  const v = leerResultadoWorker({ trabajoId: JOB_T, resultado: 'error', error: { tipo: 'portal', mensaje: 'x' }, pasos: t.pasos() })
+  assert.ok(v.ok)
+  if (v.ok) assert.deepEqual([v.r.trazaRechazada, v.r.pasos.length], [undefined, 7])
+})
+
+// ─── NIF del tomador para Mapfre (14/10/2026) ────────────────────────────────
+
+const NIF = '00000000T'
+const RIESGO_MOTO = { ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003' }
+const noLeer = () => { throw new Error('no debería leer la ficha') }
+
+test('NIF Mapfre: solo Mapfre + auto/moto + riesgo sin documento lo necesita', () => {
+  assert.equal(necesitaNifTomador('mapfre', 'moto', RIESGO_MOTO), true)
+  assert.equal(necesitaNifTomador(' MAPFRE ', 'auto', RIESGO_MOTO), true)
+  assert.equal(necesitaNifTomador('allianz', 'moto', RIESGO_MOTO), false)
+  assert.equal(necesitaNifTomador('mapfre', 'comunidades', {}), false)
+  assert.equal(necesitaNifTomador('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }), false)
+  assert.equal(necesitaNifTomador('mapfre', 'moto', { ...RIESGO_MOTO, tomador: { documentoIdentidad: NIF } }), false)
+})
+
+test('NIF Mapfre: lectura de la ficha en tres estados (sin NIF ≠ ilegible) y valida la letra', () => {
+  const desc = (v: string) => v.slice(3)
+  assert.deepEqual(lecturaNifFicha(null, desc), { estado: 'sin_nif' })
+  assert.deepEqual(lecturaNifFicha('  ', desc), { estado: 'sin_nif' })
+  assert.deepEqual(lecturaNifFicha(`v1:${NIF}`, desc), { estado: 'ok', documento: NIF })
+  assert.deepEqual(lecturaNifFicha('00000000-t', desc), { estado: 'ok', documento: NIF }, 'legado en claro, normalizado')
+  assert.deepEqual(lecturaNifFicha('v1:xx', () => { throw new Error('clave') }), { estado: 'ilegible' })
+  assert.deepEqual(lecturaNifFicha('v1:00000000A', desc), { estado: 'no_valido' })
+})
+
+test('NIF Mapfre: se añade al riesgo desde la ficha; sin NIF/ilegible/no válido → rechazo SIN el documento en el motivo', () => {
+  const ok = aplicarNifTomador('mapfre', 'moto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }))
+  assert.ok(ok.ok)
+  assert.deepEqual(ok.ok && ok.riesgo, { ...RIESGO_MOTO, documentoTomador: NIF })
+  // Si el riesgo ya lo trae, no se lee la ficha ni se toca.
+  const trae = { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }
+  assert.deepEqual(aplicarNifTomador('mapfre', 'moto', trae, noLeer), { ok: true, riesgo: trae })
+  for (const [estado, status] of [['sin_nif', 422], ['no_valido', 422], ['ilegible', 503]] as const) {
+    const r = aplicarNifTomador('mapfre', 'moto', RIESGO_MOTO, () => ({ estado }))
+    assert.equal(r.ok, false, estado)
+    assert.ok(!r.ok && r.status === status && /nif_tomador/.test(r.motivo), estado)
+    assert.ok(!JSON.stringify(r).includes('00000000'), 'el motivo no lleva documento')
+  }
+})
+
+test('NIF Mapfre: otra compañía no lee la ficha y QUITA un documentoTomador que no va a usar', () => {
+  assert.deepEqual(aplicarNifTomador('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(aplicarNifTomador('allianz', 'comunidades', { ramo: 'comunidades' }, noLeer), { ok: true, riesgo: { ramo: 'comunidades' } })
+})
+
+// 🔒 14/10/2026 (seguridad): el NIF descifrado NO se persiste en `tarificacion_trabajos.riesgo`; solo viaja al worker.
+
+test('NIF Mapfre · ENCOLAR: el riesgo que se guarda NUNCA lleva el documento (ni el de la ficha ni uno que viniera)', () => {
+  const leido = { n: 0 }
+  const ok = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => { leido.n++; return { estado: 'ok', documento: NIF } })
+  assert.ok(ok.ok)
+  assert.equal(leido.n, 1, 'se comprueba la ficha')
+  assert.deepEqual(ok.ok && ok.riesgo, RIESGO_MOTO)
+  assert.ok(!JSON.stringify(ok).includes('00000000'), 'el riesgo persistido no contiene el documento')
+  // Un `documentoTomador` que venga en la entrada tampoco se guarda (es el campo que pone asegura al entregar).
+  const trae = riesgoParaEncolar('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }, () => ({ estado: 'ok', documento: NIF }))
+  assert.ok(trae.ok && !JSON.stringify(trae.riesgo).includes('0000000T'))
+  assert.deepEqual(riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(riesgoSinNifTomador({ a: 1, documentoTomador: NIF }), { a: 1 })
+  assert.equal(riesgoSinNifTomador(null), null)
+})
+
+test('NIF Mapfre · ENCOLAR: ficha sin NIF / no válido / ilegible → rechazo (422/422/503) sin documento en el motivo', () => {
+  for (const [estado, status] of [['sin_nif', 422], ['no_valido', 422], ['ilegible', 503]] as const) {
+    const r = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado }))
+    assert.ok(!r.ok && r.status === status && /nif_tomador/.test(r.motivo), estado)
+  }
+  assert.equal(tipoFalloNifTomador(422), 'datos')
+  assert.equal(tipoFalloNifTomador(503), 'infra', 'ilegible = «no se sabe»: fallo de infraestructura, no de la ficha')
+})
+
+test('NIF Mapfre · ENTREGA al worker: el riesgo GUARDADO + la ficha → el worker SÍ recibe el NIF (solo Mapfre auto/moto)', () => {
+  const guardado = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }))
+  assert.ok(guardado.ok)
+  const alWorker = aplicarNifTomador('mapfre', 'moto', guardado.ok && guardado.riesgo, () => ({ estado: 'ok', documento: NIF }))
+  assert.deepEqual(alWorker.ok && alWorker.riesgo, { ...RIESGO_MOTO, documentoTomador: NIF })
+  // Otras compañías / ramos: ni se lee la ficha ni reciben documento.
+  assert.deepEqual(aplicarNifTomador('allianz', 'moto', RIESGO_MOTO, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(aplicarNifTomador('mapfre', 'comunidades', { ramo: 'comunidades' }, noLeer), { ok: true, riesgo: { ramo: 'comunidades' } })
+})
+
+test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cliente) y trabajoParaWorker lo inyecta sin escribirlo', () => {
+  const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
+  const cliente = fn.indexOf("'cliente_no_encontrado'")
+  const comprueba = fn.indexOf('riesgoParaEncolar(')
+  const json = fn.indexOf('const riesgoJson = JSON.stringify(guardar.riesgo)')
+  assert.ok(cliente > -1 && comprueba > cliente && json > comprueba, 'cliente comprobado → NIF comprobado → riesgo SIN NIF serializado')
+  assert.ok(fn.search(/insert into \w+\.tarificacion_trabajos/) > json)
+  assert.ok(!/JSON\.stringify\(e\.riesgo\)/.test(fn), 'nada encola el riesgo sin pasar por riesgoParaEncolar')
+  assert.ok(!fn.includes('aplicarNifTomador('), 'encolar NO inyecta el NIF (eso es al entregar)')
+  assert.match(fn, /leerDniFicha\(e\.correduriaId, clienteId\)/)
+  assert.match(src, /select dni from \w+\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid/)
+  assert.ok(fn.indexOf("return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }") > comprueba, 'sin NIF no se encola')
+  // Entrega: se inyecta en la respuesta (no en exploración) y la función no escribe el riesgo en BD.
+  const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
+  assert.match(w, /if \(modo !== 'exploracion' && necesitaNifTomador\(f\.compania, f\.ramo, riesgo\)\)/)
+  assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
+  assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
+  assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo/g, '')), 'el riesgo solo se toca para la respuesta')
 })

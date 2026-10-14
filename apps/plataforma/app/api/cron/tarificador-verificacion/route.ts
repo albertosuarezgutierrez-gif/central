@@ -13,6 +13,7 @@ import { avisoPermitido, avisoEnviado } from '@/lib/telegram/avisos'
 import { componerAvisoVerificacion, leerVerificacionesAsegura, marcarVerificacionesAvisadas } from '@/lib/tarificador-verificacion-asegura'
 import { tgSendButtons, tgSendPhoto } from '@central/core-telegram'
 import { botonesEmision, componerAvisoEmision, leerAvisosEmision, marcarAvisosEmision } from '@/lib/tarificador-emision-asegura'
+import { botonesAtasco, botonesPausa, componerAvisoAtasco, componerAvisoPausa, leerAtascosAsegura, marcarAtascosAvisados } from '@/lib/tarificador-atascos-asegura'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -51,15 +52,55 @@ async function avisarEmisiones(): Promise<Record<string, unknown>> {
   return { estado: 'ok', pendientes: lectura.pendientes.length, avisados: avisados.length, sinEnviar: sinEnviar.length, ilegibles: lectura.ilegibles, marcados }
 }
 
+/**
+ * F2 del plan de robustez (14/10/2026): BOTS ATASCADOS (captura + elementos numerados + un botón por número, `atq_*`) y
+ * PAUSAS por compañía/ramo (`tpa_r`). Catalogados y silenciables (si se silencian, el atasco caduca y la pausa sigue: los dos
+ * se ven en /correduria/tarificador). Solo se marca en asegura lo que salió. Sin datos personales en el texto.
+ * ⚠️ Ids LITERALES en las llamadas: `lib/telegram/catalogo.test.ts` lee el fuente.
+ */
+async function avisarAtascos(): Promise<Record<string, unknown>> {
+  const l = await leerAtascosAsegura(true)
+  if (l.estado === 'sin_configurar' || l.estado === 'sin_esquema') return { estado: l.estado }
+  if (l.estado === 'error') {
+    console.error('[tarificador-atascos] no se pudo leer los avisos:', l.causa)
+    return { estado: 'sin_datos', causa: l.causa }
+  }
+  const atascos: string[] = []
+  const pausas: string[] = []
+  const sinEnviar: string[] = []
+  if (l.atascos.length && (await avisoPermitido('correduria.tarificador-atasco'))) {
+    for (const a of l.atascos) {
+      // La captura primero (si la hay; solo al chat de Alberto); los botones, en su propio mensaje.
+      if (a.capturaBase64) await tgSendPhoto({ data: Buffer.from(a.capturaBase64, 'base64'), nombre: 'bot-atascado.png' }, '🧩 Pantalla donde se ha atascado el bot').catch(() => null)
+      const salio = (await tgSendButtons(componerAvisoAtasco(a), botonesAtasco(a)).catch(() => null)) !== null
+      if (!salio) { sinEnviar.push(a.id); continue }
+      await avisoEnviado('correduria.tarificador-atasco')
+      atascos.push(a.id)
+    }
+  }
+  if (l.pausas.length && (await avisoPermitido('correduria.tarificador-pausa'))) {
+    for (const p of l.pausas) {
+      const salio = (await tgSendButtons(componerAvisoPausa(p), botonesPausa(p)).catch(() => null)) !== null
+      if (!salio) { sinEnviar.push(p.id); continue }
+      await avisoEnviado('correduria.tarificador-pausa')
+      pausas.push(p.id)
+    }
+  }
+  const marcados = await marcarAtascosAvisados({ atascos, pausas }).catch(() => false)
+  if (!marcados) console.error('[tarificador-atascos] avisados pero sin marcar en asegura (puede repetirse):', [...atascos, ...pausas])
+  return { estado: 'ok', atascos: l.atascos.length, pausas: l.pausas.length, avisados: atascos.length + pausas.length, sinEnviar: sinEnviar.length, ilegibles: l.ilegibles, marcados }
+}
+
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const emision = await avisarEmisiones().catch((e: unknown) => ({ estado: 'error', causa: e instanceof Error ? e.message : String(e) }))
+  const robustez = await avisarAtascos().catch((e: unknown) => ({ estado: 'error', causa: e instanceof Error ? e.message : String(e) }))
 
   const lectura = await leerVerificacionesAsegura()
   if (lectura.estado !== 'ok') {
     const causa = lectura.estado === 'sin_configurar' ? 'puerto sin configurar (ASEGURA_OPERADOR_SECRET)' : lectura.causa
     console.error('[tarificador-verificacion] no se pudo leer los trabajos parados:', causa)
-    return NextResponse.json({ ok: false, estado: 'sin_datos', causa, emision })
+    return NextResponse.json({ ok: false, estado: 'sin_datos', causa, emision, robustez })
   }
 
   // ⚠️ Id LITERAL en las dos llamadas: `lib/telegram/catalogo.test.ts` lee el fuente.
@@ -87,5 +128,6 @@ export async function GET(req: NextRequest) {
     ilegibles: lectura.ilegibles,
     silenciado: !permitido,
     emision,
+    robustez,
   })
 }

@@ -340,6 +340,8 @@ export function vistaTrabajo(t: TrabajoBot, compania = 'Allianz'): Vista {
       : { tono: 'error', titulo: 'El bot terminó pero no devolvió ninguna oferta', detalle: null }
     case 'requiere_humano': return { tono: 'error', titulo: `${compania} pide verificación humana`, detalle: t.error?.mensaje || null }
     case 'cancelado': return { tono: 'error', titulo: 'Cancelado', detalle: null }
+    // F2 (14/10/2026): no encuentra un elemento; espera a que Alberto elija (Telegram o /correduria/tarificador).
+    case 'atascado': return { tono: 'error', titulo: `El bot se ha atascado en ${compania}`, detalle: 'Elige el elemento en Telegram o en Tarificador → Bots atascados; luego repite el presupuesto solo.' }
     case 'error_definitivo': return { tono: 'error', titulo: 'El bot no ha podido sacar el precio', detalle: t.error ? `${t.error.tipo}${t.error.mensaje ? `: ${t.error.mensaje}` : ''}` : null }
     default: return { tono: 'error', titulo: `Estado desconocido (${t.estado})`, detalle: null }
   }

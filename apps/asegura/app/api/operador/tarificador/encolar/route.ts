@@ -19,7 +19,8 @@ const uuidONull = (v: unknown): string | null | false =>
  * portal de la compañía) para un ramo que Codeoscopic no cubre. Body:
  * `{ oportunidadId?, clienteId?, polizaId?, compania, ramo: 'comunidades', riesgo: RiesgoComunidad }` o, desde el
  * 13/10/2026, `ramo: 'moto'` con `riesgo: FormularioAuto` (incluida `seleccionVehiculo`: marca/modelo/clase; Allianz Moto no
- * busca por matrícula). Hace falta además la fila `allianz/moto` de `companias_integracion` ACTIVA (nace apagada).
+ * busca por matrícula) y, desde el 14/10/2026, `ramo: 'auto'` (coche; Mapfre NSEI) con el mismo `FormularioAuto`. Hace falta
+ * además la fila `<compania>/<ramo>` de `companias_integracion` ACTIVA y `rpa_autorizada` (nace apagada).
  *
  * Cerrojos: Bearer de operador · `TARIFICADOR_RPA_ACTIVO=1` · fila de `companias_integracion` con
  * `rpa_autorizada` (fail-closed) · riesgo validado. TARIFICAR ≠ EMITIR: nada de esto emite ni gasta

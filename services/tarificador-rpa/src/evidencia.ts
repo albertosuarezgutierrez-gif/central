@@ -7,6 +7,7 @@
 // para volver a montar los marcos con `srcdoc`). El conjunto sale por `redactarHtml` en el runner.
 
 import type { Frame, Page } from 'playwright'
+import { capturarAriaRedactado, separarAria, seccionAria } from './aria-snapshot.ts'
 
 const MARCA = '<!-- tarificador:marco ruta="'
 const FIN_MARCA = '" -->'
@@ -49,6 +50,7 @@ export async function htmlConMarcos(page: Page, maxBytes: number): Promise<strin
 
 /** Deshace `htmlConMarcos`: la página y cada marco con su ruta. Un HTML sin marcas → sin marcos. */
 export function separarMarcos(html: string): { principal: string; marcos: { ruta: string[]; html: string }[] } {
+  html = separarAria(html).html // la sección del árbol de accesibilidad (al final) no es de ningún marco
   const partes = html.split(MARCA)
   const marcos = partes.slice(1).map((p) => {
     const fin = p.indexOf(FIN_MARCA)
@@ -67,8 +69,15 @@ export type EvidenciaFallo = { url: string; captura: Buffer | null; html: string
  */
 export async function capturarEvidencia(page: Page, maxBytesHtml = 2 * 1024 * 1024): Promise<EvidenciaFallo> {
   const url = (() => { try { return page.url() } catch { return '' } })()
-  const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
-  // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`.
-  const html = await htmlConMarcos(page, maxBytesHtml).catch(() => null)
+  // Pantallazo y árbol de accesibilidad EN PARALELO (cada uno ya acota su tiempo; ninguno lanza); luego el HTML con el
+  // presupuesto que deja la sección. Árbol: redactado, ≤200 KB, 5 s; extra: si falla, no hay.
+  const [captura, aria] = await Promise.all([
+    page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null),
+    capturarAriaRedactado(page).catch(() => null),
+  ])
+  const seccion = aria ? seccionAria(aria) : ''
+  // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`. La sección cabe DENTRO del tope.
+  const principal = await htmlConMarcos(page, Math.max(0, maxBytesHtml - Buffer.byteLength(seccion))).catch(() => null)
+  const html = principal === null ? (seccion ? seccion : null) : principal + seccion
   return { url, captura, html }
 }

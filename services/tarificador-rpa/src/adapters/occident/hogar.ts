@@ -166,16 +166,70 @@ export async function marcoDelFormulario(page: Page, esperaMs: number): Promise<
 
 /** Login SSO en dos pasos. El paso 2 usa selectores HIPÓTESIS genéricos (contraseña visible + submit del mismo formulario). */
 export type CtxLoginHogar = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'>
-export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
+/**
+ * Paso 1 del SSO (GRABADO): portal → SSO → «Nombre de usuario» + «Iniciar sesión». Devuelve si se quedó en el SSO (la 2.ª
+ * pantalla, sin grabar: la resuelve `login` con la hipótesis o el explorador con el login asistido). Reutilizado por ambos.
+ */
+export async function loginPaso1(page: Page, ctx: CtxLoginHogar, plazos: { carreraMs?: number; usuarioMs?: number; asentamientoMs?: number } = {}): Promise<boolean> {
   const url = urlEntradaPortal('/')
   const r = await page.goto(url, { waitUntil: 'domcontentloaded' })
   if ((r?.status() ?? 0) >= 500) throw new ErrorTarificador('portal', `occident/hogar: el portal respondió ${r?.status()}`, { transitorio: true })
   await ctx.exigirSinCaptcha()
-  if (esUrlSso(page.url())) {
-    await page.locator(SEL.ssoUsuario).fill(ctx.credenciales.usuario)
-    await ctx.pausa()
-    await pulsarSeguro(ctx, page.locator(SEL.ssoEnviarUsuario))
-    await ctx.exigirSinCaptcha()
+  // El portal redirige al SSO DESPUÉS del `goto` (302 en cadena / JS): carrera entre «la URL pasa al host SSO» y «se ve la
+  // cabecera del portal» (sesión abierta). Mirar `page.url()` justo después del goto daba un falso «ya hay sesión».
+  const carreraMs = plazos.carreraMs ?? 20_000
+  const sso = page.waitForURL((u) => esUrlSso(u.toString()), { timeout: carreraMs, waitUntil: 'commit' }).then(() => 'sso' as const)
+  const cabecera = cabeceraPortalVisible(page, carreraMs).then((v) => (v ? ('cabecera' as const) : Promise.reject(new Error('sin cabecera'))))
+  const primero = await Promise.any([sso, cabecera]).catch(() => null)
+  // La cabecera (`header.MuiAppBar-root`, genérica de MUI) puede verse un instante en la página de entrada del portal ANTES de
+  // que el JS redirija al SSO: se da un plazo de asentamiento; si en él la URL pasa al SSO, se sigue por la rama SSO.
+  if (primero === 'cabecera') {
+    const cambiaASso = await page.waitForURL((u) => esUrlSso(u.toString()), { timeout: plazos.asentamientoMs ?? 3_000, waitUntil: 'commit' }).then(() => true, () => false)
+    if (!cambiaASso) return false
+  }
+  // Sin SSO ni cabecera: página desconocida. NO transitorio (no se reintenta el login con credenciales).
+  if (primero === null) throw new ErrorTarificador('portal', `occident/hogar: el portal no llegó ni al SSO ni a la cabecera en ${Math.round(carreraMs / 1000)} s`)
+  // La página del SSO aún no se ha comprobado.
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined)
+  await ctx.exigirSinCaptcha()
+  // Dos variantes del SSO: (a) pide el usuario; (b) usuario preseleccionado (solo contraseña u otra pantalla). En (b) no se
+  // rellena nada: la 2.ª fase la resuelve el login asistido (explorador) o `login()` (hipótesis).
+  const campo = page.locator(SEL.ssoUsuario)
+  const hayUsuario = await campo.waitFor({ state: 'visible', timeout: plazos.usuarioMs ?? 10_000 }).then(() => true, () => false)
+  // Sin campo de usuario: si se ve la cabecera es un rebote SSO→portal con la sesión viva; si no, 2.ª fase del SSO.
+  if (!hayUsuario) return !(await cabeceraPortalVisible(page, 3_000))
+  await campo.fill(ctx.credenciales.usuario)
+  await ctx.pausa()
+  await pulsarSeguro(ctx, page.locator(SEL.ssoEnviarUsuario))
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined)
+  await ctx.exigirSinCaptcha()
+  return true
+}
+
+/** ¿Se ve la cabecera del portal (sesión abierta) en `ms`? Solo lee. */
+export async function cabeceraPortalVisible(page: Page, ms: number): Promise<boolean> {
+  return page.locator(SEL.portalCabecera).first().waitFor({ state: 'visible', timeout: ms }).then(() => true, () => false)
+}
+
+/**
+ * Tras un `loginPaso1` en false: carrera de `ms` entre «la URL pasa al SSO» y «cabecera visible». Si gana la cabecera se
+ * recomprueba a los ~2 s (puede ser fugaz y acabar en el SSO). `'sso'` | `'portal'` | `null` (ninguna). Solo lee.
+ */
+export async function esperarPortalOSso(page: Page, ms: number): Promise<'sso' | 'portal' | null> {
+  if (esUrlSso(page.url())) return 'sso'
+  const sso = page.waitForURL((u) => esUrlSso(u.toString()), { timeout: ms, waitUntil: 'commit' }).then(() => 'sso' as const)
+  const cabecera = cabeceraPortalVisible(page, ms).then((v) => (v ? ('portal' as const) : Promise.reject(new Error('sin cabecera'))))
+  const primero = await Promise.any([sso, cabecera]).catch(() => null)
+  if (primero !== 'portal') return primero
+  await page.waitForTimeout(2_000)
+  if (esUrlSso(page.url())) return 'sso'
+  return (await cabeceraPortalVisible(page, 1_000)) ? 'portal' : null
+}
+
+export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
+  let enSso = await loginPaso1(page, ctx)
+  if (!enSso && (await esperarPortalOSso(page, 25_000)) === 'sso') enSso = true
+  if (enSso) {
     const clave = page.locator(SEL_HIPOTESIS_SSO_CONTRASENA).filter({ visible: true }).first()
     try {
       await clave.waitFor({ state: 'visible', timeout: 15_000 })

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T06:43:04Z",
+  "generadoEn": "2026-10-14T14:32:31Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,11 +2203,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 241
+        "evidencias": 247
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 139
+        "evidencias": 144
       },
       "asegura-web": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 186
+        "evidencias": 188
       },
       "rrhh": {
         "estado": "no",
@@ -2257,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 57
+        "evidencias": 58
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2311,11 +2311,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 39
+        "evidencias": 40
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 111
+        "evidencias": 114
       },
       "asegura-web": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 47
+        "evidencias": 49
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -4047,6 +4047,7 @@
       "/api/cron/felicitaciones",
       "/api/cron/google-contactos",
       "/api/cron/polizas-pdf",
+      "/api/cron/presentacion-app",
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
       "/api/cron/tarificador-cola",
@@ -4070,6 +4071,7 @@
       "/api/operador/calidad",
       "/api/operador/cambios-cuenta",
       "/api/operador/cambios-cuenta/iban",
+      "/api/operador/campana/presentacion-app",
       "/api/operador/carta-mediador",
       "/api/operador/cartera",
       "/api/operador/cima-sincro",
@@ -4131,6 +4133,8 @@
       "/api/operador/companias/contacto/[id]",
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
+      "/api/operador/correo/evento",
+      "/api/operador/correo/evento/reevaluar",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
@@ -4212,6 +4216,8 @@
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
       "/api/operador/tareas-hoy",
+      "/api/operador/tarificador/atascos",
+      "/api/operador/tarificador/atascos/[id]",
       "/api/operador/tarificador/avisos-verificacion",
       "/api/operador/tarificador/bandeja",
       "/api/operador/tarificador/bandeja/[id]",
@@ -4234,6 +4240,7 @@
       "/api/operador/tarificador/oportunidad",
       "/api/operador/tarificador/oportunidad/[id]/propuesta",
       "/api/operador/tarificador/panel",
+      "/api/operador/tarificador/pausas/[id]",
       "/api/operador/tarificador/probar",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
@@ -4261,6 +4268,7 @@
       "/api/portal/presupuesto",
       "/api/portal/solicitud-datos",
       "/api/portal/solicitud-datos/documento",
+      "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
       "/api/tarificador/emision/canje",
       "/api/tarificador/emision/resultado",
@@ -4287,6 +4295,7 @@
       "/api/autorizaciones/[id]",
       "/api/avisos",
       "/api/avisos/leido",
+      "/api/campana/visita",
       "/api/catastro",
       "/api/catastro/sugerir",
       "/api/configuracion/avisos",
@@ -5176,6 +5185,7 @@
       "/api/correduria/calidad",
       "/api/correduria/cambios-cuenta",
       "/api/correduria/cambios-cuenta/iban",
+      "/api/correduria/campana-presentacion",
       "/api/correduria/carta-mediador",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
@@ -5207,6 +5217,7 @@
       "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
       "/api/correduria/contador",
+      "/api/correduria/correos-compania",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/direccion-confirmar",
@@ -5269,6 +5280,8 @@
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
       "/api/correduria/tareas-hoy",
+      "/api/correduria/tarificador/atascos",
+      "/api/correduria/tarificador/atascos/[id]",
       "/api/correduria/tarificador/bandeja",
       "/api/correduria/tarificador/bandeja/[id]",
       "/api/correduria/tarificador/coberturas",
@@ -5286,6 +5299,7 @@
       "/api/correduria/tarificador/oportunidad",
       "/api/correduria/tarificador/oportunidad/[id]/propuesta",
       "/api/correduria/tarificador/panel",
+      "/api/correduria/tarificador/pausas/[id]",
       "/api/correduria/tarificador/probar",
       "/api/correduria/tarificador/trabajo/[id]",
       "/api/correduria/tarificador/trabajo/[id]/pdf/[indice]",
@@ -5764,6 +5778,7 @@
       "seguros.bot_eval_scores",
       "seguros.bot_turn_traces",
       "seguros.cambio_cuenta_solicitud",
+      "seguros.campana_envio",
       "seguros.carta_mediador",
       "seguros.cartera_foto",
       "seguros.channel_inbound_messages",
@@ -5797,6 +5812,7 @@
       "seguros.corredurias",
       "seguros.correo_envio",
       "seguros.correo_evento",
+      "seguros.correo_evento_entrante",
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
@@ -5833,6 +5849,7 @@
       "seguros.poliza_merge_log",
       "seguros.poliza_recibos",
       "seguros.polizas",
+      "seguros.portal_alta_origen",
       "seguros.portal_aviso_enviado",
       "seguros.portal_enlace_directo",
       "seguros.portal_poliza_cambio",
@@ -5862,6 +5879,7 @@
       "seguros.tarificacion_trabajos",
       "seguros.tarificaciones",
       "seguros.tarificador_acompanamiento",
+      "seguros.tarificador_atascos",
       "seguros.tarificador_coberturas_presupuesto",
       "seguros.tarificador_conocimiento",
       "seguros.tarificador_elecciones",
@@ -5871,6 +5889,7 @@
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
       "seguros.tarificador_intervenciones",
+      "seguros.tarificador_pausas",
       "seguros.tarificador_sesiones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
@@ -6896,7 +6915,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1696,
+    "apis": 1710,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

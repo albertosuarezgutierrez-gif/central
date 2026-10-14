@@ -259,10 +259,12 @@ test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formaliz
   // 4. El formador no actúa (devuelve el locator) y valida antes de devolver.
   assert.match(src, /pareceEmision\(/, 'validarAccion tiene que pasar por pareceEmision()')
   assert.match(src, /BLOQUEO_FORMADOR\.find\(/, 'validarAccion tiene que mirar la lista de bloqueo')
-  assert.match(src, /const v = validarResolucion\(p, d\)/, 'resolverConFormador tiene que validar antes de devolver')
-  // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular»; el campo pasa por bloqueo + etiqueta + sin casillas.
+  assert.match(src, /const v = validarResolucion\(p, d, ctx\.compania\)/, 'resolverConFormador tiene que validar antes de devolver')
+  // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular» + la navegación de menús que autorizó Alberto
+  //    (14/10/2026, respaldo IA); el enlace de entrada NO está en la tabla (va por la lista de guard.ts y `pulsarEnlaceEntrada`).
   const claves = [...tabla![1].matchAll(/^\s*(\w+)\s*:/gm)].map((m) => m[1])
-  assert.deepEqual(claves, ['calcular'], 'ACCIONES_PERMITIDAS solo puede tener «calcular»')
+  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador'], 'ACCIONES_PERMITIDAS: solo «calcular», la navegación autorizada y la lupa del tomador')
+  assert.match(src, /export function validarAccionEntrada[\s\S]*?textosEntradaDe\(compania\)\.includes\(esperado\)[\s\S]*?normalizarTexto\(d\.texto\) !== esperado/, 'el enlace de entrada: solo textos de guard.ts y texto visible exacto')
   const vc = src.slice(src.indexOf('export function validarCampo'), src.indexOf('export function validarResolucion'))
   assert.match(vc, /bloqueoPalabras\(\[\['id', d\.id\], \['name', d\.name\], \['title', d\.title\], \['aria-label', d\.ariaLabel\], \['onclick', d\.onclick\], \['onchange', d\.onchange\]\]\)/, 'validarCampo tiene que bloquear palabras de emisión en id/name/title/aria-label/onclick/onchange')
   assert.match(vc, /type === 'checkbox' \|\| \(role !== '' && !ROLES_EDITABLES\.includes\(role\)\)/, 'validarCampo no admite casillas (ni roles que no sean de edición)')
@@ -400,8 +402,9 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
   // 3. Revalidación contra el inventario propio ANTES de actuar.
   const iVal = explorador.indexOf('validarRespuestaExplorador(r.respuesta, { inventario: inv')
-  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación.
-  const iAct = explorador.indexOf('const lote = v.respuesta.acciones')
+  // El lote se recorre por índice (14/10/2026: se puede CORTAR tras un repintado): el ancla es su asignación, que ORDENA
+  // (`ordenarLote`, 8d0676f9) las acciones YA validadas: solo las reordena, nunca añade ni cambia ninguna.
+  const iAct = explorador.search(/const lote = (?:ordenarLote\()?v\.respuesta\.acciones/)
   if (iVal < 0 || iAct < 0 || iVal > iAct || !/if \(!v\.ok\) throw new Parar\('ambiguo'(?:, '[a-z_]+')?\)/.test(explorador)) out.push('el lote no se revalida contra el inventario propio antes de actuar')
   // 4. Paradas humanas (CAPTCHA, SMS/OTP) ANTES de cada inventario.
   const iBucle = explorador.indexOf('for (;;) {')
@@ -527,4 +530,174 @@ test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en g
   assert.match(lista, /id === EXCEPCION_PROYECTO_AMPLIADO\.id/)
   const expl = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/explorador.ts'), 'utf8')
   assert.match(expl, /fronteraEmisionPorCampos\(campos\)/)
+})
+
+/** Infracciones del LOGIN ASISTIDO (14/10/2026). Exportada en el test para verla FALLAR. */
+function infraccionesLoginAsistido(login: string, explorador: string, otros: Record<string, string>): string[] {
+  const out: string[] = []
+  // 1. Un solo `fill`, con el valor LOCAL de la clave validada, y justo antes la comprobación de host del SSO.
+  const fills = [...login.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
+  if (fills.length !== 1 || fills[0] !== 'valorCredencial(a.dato, k.credenciales), { timeout: 10_000 }') out.push(`fill inesperado: ${fills.join(' | ')}`)
+  const iFill = login.indexOf('.fill(valorCredencial(')
+  const previo = login.slice(Math.max(0, iFill - 400), iFill)
+  if (!/if \(!enSso\(\)\) throw/.test(previo)) out.push('el fill no va precedido de la comprobación de host del SSO')
+  if (!/a\.dato === CLAVE_CONTRASENA && tipo !== 'password'/.test(login.slice(0, iFill))) out.push('la contraseña no exige un campo password VIVO')
+  // 2. El valor no va a ningún otro sitio: `valorCredencial(` solo en su definición y en el fill; `.contrasena` solo dentro.
+  if ((login.match(/valorCredencial\(/g) ?? []).length !== 2) out.push('valorCredencial se usa fuera del fill')
+  if ((login.match(/\.contrasena\b/g) ?? []).length !== 1) out.push('la contraseña se nombra fuera de valorCredencial')
+  if (/\.goto\(|\.press\(|\.type\(|keyboard|\.check\(|setChecked|\.tap\(|pressSequentially/.test(login)) out.push('el login asistido navega, teclea o marca fuera del guard')
+  // 3. Lo que sale: marcado + última red ANTES de pedir el paso; revalidación ANTES de actuar; OTP/CAPTCHA ANTES del inventario.
+  const iPedir = login.indexOf('k.pedirPaso(')
+  for (const p of ['marcarCredencialesInventario(captura.inventario, k.credenciales)', 'inventarioSinCredenciales(inv, k.credenciales)']) {
+    const i = login.indexOf(p)
+    if (i < 0 || i > iPedir) out.push(`«${p}» tiene que ir ANTES de pedir el paso`)
+  }
+  const iVal = login.indexOf('validarRespuestaLogin(r.respuesta, { inventario: inv, entrada: k.entrada })')
+  const iEje = login.indexOf('await ejecutar(')
+  if (iVal < 0 || iEje < 0 || iVal > iEje || !/if \(!v\.ok\) throw/.test(login)) out.push('el lote del login no se revalida contra el inventario propio antes de actuar')
+  const iInv = login.indexOf('capturarInventarioExploracion(page)')
+  for (const p of ['await k.exigirSinCaptcha()', 'await exigirSinVerificacion(page, la.compania)', 'esUrlSsoLoginAsistido(la.compania, page.url())']) {
+    const i = login.indexOf(p)
+    if (i < 0 || i > iInv) out.push(`falta «${p}» antes del inventario`)
+  }
+  // 4. Avance: ventana de red del login abierta SOLO alrededor de la pulsación (y cerrada siempre).
+  if (!/abrirVentanaLogin\(k\.guard, origen\)\n\s*try \{\n\s*await k\.pulsar\(loc\)[\s\S]*?\} finally \{\n\s*cerrarVentanaLogin\(k\.guard\)/.test(login)) out.push('el avance del login no va con la ventana de red abierta y cerrada en finally')
+  // 5. El explorador solo le da el login asistido a las compañías de la lista cerrada; nadie más abre la ventana.
+  if (!/\.\.\.\(loginAsistidoDe\(exp\.entrada\) \? \{ loginAsistido:/.test(explorador)) out.push('el login asistido no está atado a loginAsistidoDe(entrada)')
+  for (const [rel, src] of Object.entries(otros)) if (/abrirVentanaLogin\(/.test(src)) out.push(`${rel} abre la ventana de red del login`)
+  return out
+}
+
+test('LOGIN ASISTIDO (14/10/2026): la IA solo da claves; el valor va SOLO al campo del SSO; revalida y para en OTP', () => {
+  const login = sinComentarios(readFileSync(join(SRV, 'src/login-asistido.ts'), 'utf8'))
+  const explorador = sinComentarios(readFileSync(join(SRV, 'src/explorador.ts'), 'utf8'))
+  const otros = Object.fromEntries(ficheros(join(SRV, 'src')).filter((f) => !/\/src\/(login-asistido|guard)\.ts$/.test(f)).map((f) => [relative(RAIZ, f), sinComentarios(readFileSync(f, 'utf8'))]))
+  assert.deepEqual(infraccionesLoginAsistido(login, explorador, otros), [])
+  // Cepo del cepo: cada brazo, en ROJO.
+  const cambia = (src: string, de: string, a: string) => {
+    const r = src.replace(de, a)
+    assert.notEqual(r, src, `el cepo no cambió nada: «${de}»`)
+    return r
+  }
+  const malos: [string, string, string?][] = [
+    ['fill con otro valor', cambia(login, 'loc.fill(valorCredencial(a.dato, k.credenciales), {', "loc.fill('x', {")],
+    ['sin host antes del fill', cambia(login, "if (!enSso()) throw new ErrorTarificador('portal', 'login asistido: el campo no está en el SSO: no se escribe')", '')],
+    ['contraseña sin password vivo', cambia(login, "a.dato === CLAVE_CONTRASENA && tipo !== 'password'", 'false')],
+    ['valor al log', cambia(login, "k.log('login_asistido_paso', { n,", "k.log('login_asistido_paso', { v: valorCredencial(CLAVE_CONTRASENA, k.credenciales), n,")],
+    ['contraseña nombrada fuera', login + '\nconst x = k.credenciales.contrasena'],
+    ['sin marcar el inventario', cambia(login, 'marcarCredencialesInventario(captura.inventario, k.credenciales)', 'captura.inventario')],
+    ['sin última red', cambia(login, 'inventarioSinCredenciales(inv, k.credenciales)', 'true')],
+    ['sin revalidar', cambia(login, 'validarRespuestaLogin(r.respuesta, { inventario: inv, entrada: k.entrada })', 'r.respuesta as never')],
+    ['sin OTP', cambia(login, 'await exigirSinVerificacion(page, la.compania)', '')],
+    ['navega', login + "\nawait page.goto('https://x')"],
+    ['sin ventana de red', cambia(login, 'abrirVentanaLogin(k.guard, origen)\n', '')],
+    ['explorador sin puerta por entrada', login, cambia(explorador, '...(loginAsistidoDe(exp.entrada) ? { loginAsistido:', '...(true ? { loginAsistido:')],
+  ]
+  for (const [nombre, l, e] of malos) assert.notDeepEqual(infraccionesLoginAsistido(l, e ?? explorador, otros), [], nombre)
+  assert.notDeepEqual(infraccionesLoginAsistido(login, explorador, { 'x.ts': 'abrirVentanaLogin(guard, o)' }), [], 'otro fichero abre la ventana')
+})
+
+// ─── Mapfre NSEI (Alberto, 14/10/2026) ───────────────────────────────────────
+
+test('MAPFRE · la PUERTA es la fila companias_integracion: el worker registra siempre y asegura no encola/reclama sin ella', () => {
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.ok(!/TARIFICADOR_MAPFRE_ACTIVO|mapfreActivo|process\.env/.test(idx), 'el registro de adaptadores no lee interruptores del entorno para Mapfre')
+  assert.match(idx, /^adaptadores\.registrar\(mapfreAuto\)$/m)
+  assert.match(idx, /^adaptadores\.registrar\(mapfreMoto\)$/m)
+  const t = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador.ts'), 'utf8'))
+  const encolar = t.slice(t.indexOf('export async function encolarTrabajo'), t.indexOf('export async function reclamarSiguiente'))
+  const puerta = encolar.indexOf('if (!integ || !integ.activo || !puedeAutomatizar(integ.modo))')
+  assert.ok(puerta > -1 && puerta < encolar.indexOf('insert into seguros.tarificacion_trabajos'), 'encolarTrabajo: sin fila activa rpa_autorizada no se inserta')
+  const reclamar = t.slice(t.indexOf('export async function reclamarSiguiente'), t.indexOf('export type DepsLanzador'))
+  assert.match(reclamar, /where correduria_id = \$\{correduriaId\}::uuid and compania = \$\{clave\} and activo and modo = 'rpa_autorizada'/, 'el cupo sale SOLO de filas activas rpa_autorizada')
+  assert.match(reclamar, /join seguros\.companias_integracion ci[\s\S]*?and ci\.activo and ci\.modo = 'rpa_autorizada'[\s\S]*?set estado = 'en_curso'|set estado = 'en_curso'[\s\S]*?join seguros\.companias_integracion ci[\s\S]*?and ci\.activo and ci\.modo = 'rpa_autorizada'/, 'solo se pone en_curso un trabajo con fila activa rpa_autorizada')
+  // `en_curso` (lo único que el worker recibe) solo lo pone reclamarSiguiente.
+  const todos = ficheros(join(RAIZ, 'apps/asegura/lib')).concat(ficheros(join(RAIZ, 'apps/asegura/app')))
+    .filter((f) => !f.endsWith('.test.ts'))
+    .filter((f) => /tarificacion_trabajos/.test(readFileSync(f, 'utf8')) && /estado\s*=\s*'en_curso'\s*,/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(todos.map((f) => relative(RAIZ, f)), ['apps/asegura/lib/tarificador.ts'])
+  const mod = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/modo-integracion.ts'), 'utf8')
+  assert.match(mod, /export function puedeAutomatizar\(modo: unknown\): boolean \{\s*return modo === 'rpa_autorizada'\s*\}/)
+})
+
+test('MAPFRE AUTO (coche, 14/10/2026) · se encola desde la ficha como moto: asegura y plataforma aceptan el ramo, y la puerta sigue siendo la fila', () => {
+  const reglas = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador-reglas.ts'), 'utf8'))
+  assert.match(reglas, /export const RAMOS_TARIFICABLES_RPA = \['comunidades', 'moto', 'auto'\] as const/)
+  assert.match(reglas, /if \(ramo === 'moto' \|\| ramo === 'auto'\) \{\s*const v = validarFormularioAuto\(riesgo\)[\s\S]*?v\.formulario\.ramo !== ramo/, 'auto/moto: mismo validador y el formulario tiene que ser del ramo del trabajo')
+  const t = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador.ts'), 'utf8'))
+  assert.match(t, /ramo: 'comunidades' \| 'moto' \| 'auto'/)
+  const ruta = sinComentarios(readFileSync(join(RAIZ, 'apps/plataforma/app/api/correduria/tarificador/encolar/route.ts'), 'utf8'))
+  assert.match(ruta, /b\.ramo !== 'comunidades' && b\.ramo !== 'moto' && b\.ramo !== 'auto'/)
+  assert.match(ruta, /i\.compania === c && i\.ramo === ramo/, 'la compañía solo si (compañía, ramo) está entre las integraciones activas')
+  const bots = sinComentarios(readFileSync(join(RAIZ, 'apps/plataforma/lib/tarificador-bots-ramos.ts'), 'utf8'))
+  assert.match(bots, /const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = \{ moto: adaptadorMoto, auto: adaptadorAuto \}/)
+})
+
+test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→2→3 y todas las comprobaciones ANTES del único clic', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const bloque = guard.match(/export const PASOS_CONTINUAR_MAPFRE = Object\.freeze\(\{([\s\S]*?)\n\}\)\n/)
+  assert.ok(bloque, 'falta PASOS_CONTINUAR_MAPFRE (Object.freeze) en guard.ts')
+  assert.deepEqual([...bloque![1].matchAll(/^ {2}(\w+): Object\.freeze\(/gm)].map((m) => m[1]), ['datosBasicos', 'objetoAsegurado', 'figuras'])
+  assert.ok(!/contrataci|proyecto|emisi/i.test(bloque![1]), 'ningún «Continuar» desde Coberturas/Proyectos ni hacia Contratación')
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarContinuarMapfre'))
+  assert.ok(fn, 'falta pulsarContinuarMapfre en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)', 'usados.has(clave)', 'regla.previos.some(', 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'CONTINUAR'", 'comprobarBoton(desc)', 'usados.add(clave)']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarContinuarMapfre: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(!/permitirAceptar|ABRIR_(VENTANA|AVANCE|GUARDADO)/.test(fn!), 'sin «Aceptar» permitido y sin abrir ventanas de red')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  // El adaptador de Mapfre llega a «Continuar» solo por la función guardada del contexto.
+  const mapfre = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'))
+  assert.ok(!/ctx\.pulsar\(|continuar['"]?\s*\)?\s*\.click|Continuar/.test(mapfre.replace(/'[^'\n]*'|`[^`\n]*`/g, '')), 'mapfre/auto.ts no nombra «Continuar» ni pulsa')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /continuarMapfre: async \(pagina, paso\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await pulsarContinuarMapfre\(pagina, guard, paso, \(p\) => localizarContinuarConRespaldo\(p, k\.formador\)\)\s*\}/)
+  // Pieza 4 (14/10/2026): los helpers COMUNES («Continuar» y mat-select) pulsan SOLO por el `pulsar` que reciben (= guard).
+  for (const f of ['src/continuar.ts', 'src/mat-select.ts']) {
+    const src = sinComentarios(readFileSync(join(SRV, f), 'utf8'))
+    assert.ok(!/\.(?:click|dblclick|tap|press|check|setChecked|fill)\s*\(/.test(src), `${f}: nada de click()/press() directos`)
+    assert.match(src, /\bo\.pulsar\(/, `${f}: pulsa por el pulsar guardado`)
+  }
+  // CADA helper recibe `pulsar: ctx.pulsar` (no basta una aparición): continuar Y mat-select, cada uno en su propia entrada.
+  assert.match(runner, /pulsarContinuarSeguro\(destino, \{[^}]*pulsar: ctx\.pulsar/, 'el runner pasa ctx.pulsar a continuar')
+  assert.match(runner, /elegirOpcionMatSelect\(select, valores, \{[^}]*pulsar: ctx\.pulsar/, 'el runner pasa ctx.pulsar a mat-select')
+  assert.match(runner, /elegirMatSelect: [^\n]*\n\s*if \(select\.page\(\)\.context\(\) !== context\)/, 'mat-select comprueba la pestaña del trabajo')
+})
+
+test('MAPFRE · la LUPA del tomador solo por pulsarBuscarTomadorMapfre: comprobaciones ANTES del único clic, sin ventana de red', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarBuscarTomadorMapfre'))
+  assert.ok(fn, 'falta pulsarBuscarTomadorMapfre en guard.ts')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'usados.has(clave)', "usados.has('mapfre:continuar:datosBasicos')", 'exigirSinCuentaBancaria(page)', 'pasoActivoMapfre(page)', "'DATOS BASICOS'", 'SEL_DATOS_BASICOS_MAPFRE', 'comprobarBoton(await descripcion(boton, true))', 'esControlBuscarTomador(ctl)', 'usados.add(clave)']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < clic, `pulsarBuscarTomadorMapfre: «${paso}» tiene que ir ANTES del clic`)
+  }
+  assert.ok(!/permitirAceptar|ABRIR_(VENTANA|AVANCE|GUARDADO)/.test(fn!), 'sin «Aceptar» permitido y sin abrir ventanas de red')
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /buscarTomadorMapfre: async \(pagina, boton\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await ctx\.pausaAccion\(\)\s*await pulsarBuscarTomadorMapfre\(pagina, guard, boton\)\s*\}/)
+  const mapfre = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'))
+  assert.match(mapfre, /await ctx\.buscarTomadorMapfre\(nsei, r\.locator\)/, 'la lupa del adaptador solo por la puerta del guard')
+  assert.match(mapfre, /conRespaldoIA\(nsei, ctx\.formador, \(\) => lupaFijaTomador\(campo\)/, 'la lupa se localiza por la capa común')
+})
+
+test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactado en mensajes/URL/HTML y sin captura', () => {
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  assert.match(runner, /const secretosRiesgo = secretosDelRiesgo\(trabajo\.riesgo\)/)
+  assert.match(runner, /const secretos = \[\.\.\.secretosDelEntorno\(env\), \.\.\.secretosRiesgo\]/)
+  assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
+  const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
+  assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
+})
+
+test('la clave `buscar_tomador` (lupa del tomador) solo existe en Mapfre auto (+ formador.ts y guard.ts, donde se define), en ningún otro adaptador', () => {
+  const infractores = ficheros(join(SRV, 'src/adapters'))
+    .filter((f) => !f.endsWith(join('adapters', 'mapfre', 'auto.ts')))
+    .filter((f) => /buscar_tomador/.test(readFileSync(f, 'utf8')))
+    .map((f) => relative(RAIZ, f))
+  assert.deepEqual(infractores, [], 'buscar_tomador fuera de mapfre/auto.ts')
+  assert.match(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'), /buscar_tomador/, 'el guardián ve la clave donde debe estar')
+  for (const f of ['src/formador.ts', 'src/guard.ts']) assert.match(readFileSync(join(SRV, f), 'utf8'), /buscar_tomador/, f)
 })

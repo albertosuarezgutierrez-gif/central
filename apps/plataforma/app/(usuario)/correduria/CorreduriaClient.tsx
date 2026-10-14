@@ -32,6 +32,7 @@ import DiferenciasCima from './DiferenciasCima'
 import Quejas from './Quejas'
 import Bloque from './Bloque'
 import Redes from './Redes'
+import Campanas from './Campanas'
 import Blog from './Blog'
 import Renovaciones, { type RespVencimientos } from './Renovaciones'
 import ListaCartera from './ListaCartera'
@@ -578,6 +579,13 @@ export default function CorreduriaClient() {
           )}
         </Bloque>
         </>)}
+      </div>
+
+      {/* ══ CAMPAÑAS ═════════════════════════════════════════════════════════
+          Seguimiento de la campaña de correo (solo lectura). Sección propia desde el 14/10/2026: como bloque
+          de «Más» (última pestaña, fuera de pantalla en móvil) nadie la encontraba. */}
+      <div role="tabpanel" aria-label="Campañas" className="corr-panel" style={panel('campanas')}>
+        {montada('campanas') && <Campanas />}
       </div>
 
       {/* ══ MÁS ═══════════════════════════════════════════════════════════════

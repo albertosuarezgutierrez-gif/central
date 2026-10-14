@@ -3,12 +3,13 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { MAX_INTENTOS, destinoSeguro, estadoCodigo, estadoEnlace, hashTokenEnlace, necesitaRegistro, normalizarIp, normalizarUserAgent, tokenEnlaceValido } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
-import { VERSION_TEXTOS_LEGALES } from '@central/module-seguros'
+import { COOKIE_REF_CAMPANA, VERSION_TEXTOS_LEGALES, refDeCabeceraCookie } from '@central/module-seguros'
 import { prisma } from '@/lib/db'
 import { avisarPrimerAcceso } from '@/lib/aviso-acceso'
 import { COOKIE_NAME, COOKIE_OPTS, crearSesion, hashCanal, hashCodigo } from '@/lib/auth'
 import { getIp, rateLimit } from '@/lib/rate-limit'
 import { vincularIdentidad } from '@/lib/vinculo'
+import { registrarAltaPorCampana } from '@/lib/presentacion-app'
 
 /** Verificaciones por IP cada 15 min. Holgado para una familia tras un mismo router. */
 const MAX_VERIFICAR_POR_IP = 30
@@ -205,6 +206,11 @@ async function abrirSesion(req: Request, tipo: 'whatsapp' | 'email', destino: st
   // pueda decirlo («hay varias fichas», «no se ha podido comprobar»).
   const vinculo = await vincularIdentidad(identidadId, destino, tipo)
 
+  // Origen del alta: si esta identidad es NUEVA (no había canal) y el navegador llegó con el `?r=` de un
+  // correo de campaña, se anota de qué envío vino (`lib/presentacion-app.ts`). No lanza ni bloquea.
+  const refCampana = refDeCabeceraCookie(req.headers.get('cookie'))
+  if (refCampana !== null && !canalExistente) await registrarAltaPorCampana(identidadId, refCampana)
+
   // El aviso va AQUÍ y no después de responder: en serverless, lo que se lanza
   // sin esperar después de devolver la respuesta puede morir con la función. Se
   // espera, y `avisarPrimerAcceso` no lanza nunca — un fallo del aviso no puede
@@ -231,5 +237,7 @@ async function abrirSesion(req: Request, tipo: 'whatsapp' | 'email', destino: st
   const token = await crearSesion(identidadId)
   const res = NextResponse.json({ ok: true, vinculo: vinculo.estado, irA })
   res.cookies.set(COOKIE_NAME, token, COOKIE_OPTS)
+  // La cookie del `?r=` ya hizo su trabajo (o no aplica: identidad que ya existía).
+  if (refCampana !== null) res.cookies.delete(COOKIE_REF_CAMPANA)
   return res
 }

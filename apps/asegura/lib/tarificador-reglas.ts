@@ -6,30 +6,128 @@
 
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import {
-  envDeMaquina, esTipoError, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
+  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type AtascoWorker, type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
-/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto). */
-export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto'; riesgo: FormularioAuto }
+/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
+export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto' | 'auto'; riesgo: FormularioAuto }
 export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
 /** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
-export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto'] as const
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto'] as const
 
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
   if (ramo === 'comunidades') {
     const v = validarRiesgoComunidad(riesgo)
     return v.ok ? { ok: true, entrada: { ramo, riesgo: v.riesgo } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
   }
-  if (ramo === 'moto') {
+  // Vehículo (moto 13/10/2026; auto/coche 14/10/2026, Mapfre NSEI): el MISMO validador, y el formulario tiene que ser del
+  // ramo del trabajo (un formulario de coche no es un trabajo de moto ni al revés: el worker lo repite en `prepararTrabajo`).
+  if (ramo === 'moto' || ramo === 'auto') {
     const v = validarFormularioAuto(riesgo)
     if (!v.ok) return { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
-    if (v.formulario.ramo !== 'moto') return { ok: false, mensaje: 'riesgo inválido', errores: ['ramo: el formulario de un trabajo moto tiene que ser de moto'] }
+    if (v.formulario.ramo !== ramo) return { ok: false, mensaje: 'riesgo inválido', errores: [`ramo: el formulario de un trabajo ${ramo} tiene que ser de ${ramo}`] }
     return { ok: true, entrada: { ramo, riesgo: v.formulario } }
   }
-  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades o moto)' }
+  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades, moto o auto)' }
+}
+
+// ─── NIF del tomador para Mapfre (14/10/2026, decisión de Alberto) ──────────
+// Mapfre NSEI busca al tomador por NIF en el paso 1. Lo rellena ASEGURA en el servidor desde la ficha del cliente
+// (descifrada aquí), solo en trabajos de Mapfre y solo si el riesgo no lo trae. El DNI entero NUNCA cruza a plataforma:
+// ni en la respuesta del encolado ni en un motivo de rechazo.
+// 🔒 14/10/2026 (revisión de seguridad): el NIF descifrado NO se GUARDA en `tarificacion_trabajos.riesgo` (la cartera lo
+// guarda cifrado; aquí quedaría en claro bajo un rol BYPASSRLS hasta la purga). Al ENCOLAR solo se COMPRUEBA que la ficha
+// lo tiene legible y válido y se guarda el riesgo sin él (`riesgoParaEncolar`); se descifra e inyecta al ENTREGAR el
+// trabajo `en_curso` al worker (`trabajoParaWorker` → `aplicarNifTomador`), solo en la respuesta, nunca escrito en BD.
+
+/** Compañías cuyo bot busca al tomador por NIF (hoy solo Mapfre). */
+export const COMPANIAS_CON_NIF_TOMADOR = ['mapfre'] as const
+
+/** Lectura del NIF de la ficha: `sin_nif` = la ficha no lo tiene; `ilegible` = cifrado que no abre (no se ha podido mirar). */
+export type LecturaNifFicha = { estado: 'ok'; documento: string } | { estado: 'sin_nif' } | { estado: 'ilegible' } | { estado: 'no_valido' }
+
+/**
+ * NIF de la ficha → lectura. `v1:` se descifra con `descifrar` (la clave de la cartera); si lanza → `ilegible` (nunca
+ * «no hay»). En claro (legado) → tal cual. Tiene que ser DNI/NIE/CIF válido (letra de control incluida). PURA.
+ */
+export function lecturaNifFicha(guardado: string | null | undefined, descifrar: (v: string) => string): LecturaNifFicha {
+  if (typeof guardado !== 'string' || guardado.trim() === '') return { estado: 'sin_nif' }
+  let claro: string
+  if (guardado.startsWith('v1:')) {
+    try {
+      claro = descifrar(guardado)
+    } catch {
+      return { estado: 'ilegible' }
+    }
+  } else claro = guardado
+  if (typeof claro !== 'string' || claro.trim() === '') return { estado: 'sin_nif' }
+  const d = normalizarDocumento(claro.trim())
+  return esDniNie(d) || esCif(d) ? { estado: 'ok', documento: d } : { estado: 'no_valido' }
+}
+
+const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** ¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre + auto/moto + el riesgo no trae documento. PURA. */
+export function necesitaNifTomador(compania: string, ramo: string, riesgo: unknown): boolean {
+  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (ramo !== 'auto' && ramo !== 'moto') return false
+  if (!esObj(riesgo)) return true
+  const doc = (v: unknown) => typeof v === 'string' && v.trim() !== ''
+  return !doc(riesgo.documentoTomador) && !(esObj(riesgo.tomador) && doc(riesgo.tomador.documentoIdentidad))
+}
+
+export type NifTomadorAplicado = { ok: true; riesgo: unknown } | { ok: false; status: 422 | 503; motivo: string }
+
+/**
+ * Aplica la regla al riesgo que se va a encolar. PURA (la lectura de la ficha la trae quien llama, solo si hace falta):
+ *   · compañía que no busca por NIF → el riesgo SIN `documentoTomador` (no se guarda un dato personal que nadie usa);
+ *   · Mapfre y el riesgo ya trae documento → tal cual;
+ *   · Mapfre sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar.
+ * Ningún motivo lleva el documento.
+ */
+export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaNifFicha): NifTomadorAplicado {
+  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) {
+    if (esObj(riesgo) && 'documentoTomador' in riesgo) {
+      const { documentoTomador: _fuera, ...resto } = riesgo
+      return { ok: true, riesgo: resto }
+    }
+    return { ok: true, riesgo }
+  }
+  if (!necesitaNifTomador(compania, ramo, riesgo)) return { ok: true, riesgo }
+  const l = leer()
+  if (l.estado === 'ok') return { ok: true, riesgo: { ...(esObj(riesgo) ? riesgo : {}), documentoTomador: l.documento } }
+  if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'nif_tomador_ilegible: el NIF de la ficha del cliente no se puede descifrar (clave de la cartera); no se encola' }
+  if (l.estado === 'no_valido') return { ok: false, status: 422, motivo: 'nif_tomador_no_valido: el NIF/CIF de la ficha del cliente no es válido; corrígelo en la ficha (Mapfre busca al tomador por NIF)' }
+  return { ok: false, status: 422, motivo: 'falta_nif_tomador: la ficha del cliente no tiene NIF/CIF y Mapfre busca al tomador por NIF; complétalo en la ficha' }
+}
+
+/**
+ * El riesgo que se GUARDA en la cola: nunca con `documentoTomador` (es el campo que pone asegura desde la ficha, y se
+ * inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA.
+ */
+export function riesgoSinNifTomador<T>(riesgo: T): T {
+  if (!esObj(riesgo) || !('documentoTomador' in riesgo)) return riesgo
+  const { documentoTomador: _fuera, ...resto } = riesgo
+  return resto as T
+}
+
+/**
+ * Al ENCOLAR: el riesgo que se GUARDA, tras comprobar que la ficha permitirá al worker recibir el NIF. Misma regla y
+ * mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSinNifTomador` (el documento
+ * descifrado jamás vuelve de aquí ni se persiste). PURA.
+ */
+export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string } {
+  const guardado = riesgoSinNifTomador(riesgo)
+  const r = aplicarNifTomador(compania, ramo, guardado, leer)
+  return r.ok ? { ok: true, riesgo: guardado } : r
+}
+
+/** Al ENTREGAR: un NIF que ya no se puede poner es fallo `datos` (la ficha) o `infra` si es ilegible (la clave: «no se sabe»). */
+export function tipoFalloNifTomador(status: 422 | 503): 'datos' | 'infra' {
+  return status === 503 ? 'infra' : 'datos'
 }
 
 /** Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed). */
@@ -78,7 +176,7 @@ export function claveEncolar(p: { correduriaId: string; clienteId: string; compa
 }
 
 /** Estados en los que un trabajo previo cuenta como «ese mismo encargo sigue vivo» y el nuevo es duplicado. */
-export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable'] as const
+export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable', 'atascado'] as const
 
 /**
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
@@ -95,6 +193,8 @@ export function bloqueaDuplicado(
   if (f.estado === 'pendiente') return true
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
+  // ATASCO (F2): espera la elección de Alberto y volverá a la cola: pedir lo mismo otra vez sería el mismo encargo dos veces.
+  if (f.estado === 'atascado') return true
   return false
 }
 
@@ -117,11 +217,11 @@ export function configFly(env: Record<string, string | undefined>): { ok: true; 
 
 /**
  * La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista
- * blanca de `envDeMaquina` (JOB_ID + URL): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
+ * blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que recibe el llamador del env del servidor): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni
  * credenciales de portal (esas son fly secrets de la app del worker).
  */
-export function peticionMaquina(cfg: ConfigFly, jobId: string): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
-  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl })
+export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?: string | null): { url: string; init: { method: 'POST'; headers: Record<string, string>; body: string } } {
+  const env = envDeMaquina({ jobId, apiUrl: cfg.apiUrl, vistaExplorador })
   const body = {
     name: `tarificar-${jobId.slice(0, 8)}`,
     region: REGION_FLY,
@@ -154,7 +254,9 @@ export type ResultadoWorker =
        *  `error` jsonb del trabajo y es la lista contra la que se valida cualquier elección (IA o bandeja). */
       /** `inventarioDom` (13/10/2026): ESTRUCTURA de la pantalla de un hueco de mapa (`ErrorMapaIncompleto`), saneada otra
        *  vez aquí (sin valores de campos, sin datos personales, ≤60 KB); se guarda en el `error` jsonb. Nunca se loguea. */
-      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom }
+      /** `atasco` (F2, 14/10/2026): checkpoint de un paso que nadie resolvió, re-saneado (`leerAtascoWorker`). Accesorio:
+       *  inválido → se descarta y el trabajo falla como antes. NO va al `error` jsonb: vive en `tarificador_atascos`. */
+      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; atasco?: AtascoWorker }
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
@@ -176,6 +278,21 @@ export function leerMetaWorker(e: Record<string, unknown>): MetaWorker {
   const v = validarTraza(e.pasos)
   const botVersion = esVersionBot(e.botVersion) ? e.botVersion : null
   return v.ok ? { pasos: v.pasos, botVersion } : { pasos: [], botVersion, trazaRechazada: v.errores.slice(0, 5) }
+}
+
+/**
+ * Aviso de log de la traza (14/10/2026). La traza es accesoria y su fallo NO rompe el resultado, pero tampoco puede ser mudo:
+ * `tarificacion_trabajo_pasos` estuvo vacía semanas sin una línea de log útil. Prefijo fijo para filtrar en los logs de
+ * Vercel. Solo id del trabajo y el motivo (nombre de la clave/paso, nunca un valor); el motivo se recorta y se le quita
+ * cualquier URL (una de BD llevaría credenciales).
+ */
+export const PREFIJO_TRAZA = '[tarificador-traza]'
+export function avisoTraza(trabajoId: string, motivo: unknown): string {
+  const m = (motivo instanceof Error ? motivo.message : typeof motivo === 'string' ? motivo : String(motivo))
+    .replace(/[a-z][a-z0-9+.-]*:\/\/\S+/gi, '<url>')
+    .replace(/\s+/g, ' ')
+    .slice(0, 300)
+  return `${PREFIJO_TRAZA} trabajo ${trabajoId}: ${m}`
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -241,10 +358,12 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const opcionesPoblacion = err?.tipo === 'captcha' ? validarOpcionesPoblacion(err.opcionesPoblacion) : null
     // Accesorio también: se RE-SANEA (lista blanca + filtro de datos personales + tope de bytes); sin forma → se descarta.
     const inventarioDom = err?.inventarioDom !== undefined ? sanearInventarioDom(err.inventarioDom) : null
+    // Checkpoint de ATASCO (F2): solo en un hueco del portal; accesorio (inválido → se descarta).
+    const atasco = err?.tipo === 'portal' && err.atasco !== undefined ? leerAtascoWorker(err.atasco) : null
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}) }, captura, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(atasco ? { atasco } : {}) }, captura, html, ...leerMetaWorker(e) },
     }
   }
 

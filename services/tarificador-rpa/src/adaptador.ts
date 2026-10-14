@@ -5,7 +5,8 @@ import type { Frame, Locator, Page } from 'playwright'
 import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
-import type { SelectorAvancePestana } from './guard.ts'
+import type { OpcionesMatSelect } from './mat-select.ts'
+import type { PasoContinuarMapfre, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -65,6 +66,29 @@ export type ContextoPortal = ContextoTarificacion & {
    * del navegador que el trabajo (el guard de red está instalado en él).
    */
   confirmarVehiculoMapfre?: (pagina: Page, matricula: string) => Promise<void>
+  /**
+   * Mapfre NSEI (14/10/2026): «Continuar» del stepper desde el paso `paso` por `pulsarContinuarMapfre` de guard.ts (lista
+   * cerrada 1 → 2 → 3; el del paso 3 calcula las primas: PERMITIDO por Alberto). Una vez por paso y en orden. Misma regla de
+   * contexto que `confirmarVehiculoMapfre`.
+   */
+  continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
+  /**
+   * Mapfre NSEI (14/10/2026, v0.6.0): pulsa la LUPA que busca al tomador por NIF/CIF en «Datos básicos» por
+   * `pulsarBuscarTomadorMapfre` de guard.ts (paso activo, ámbito `app-datos-basicos`, una vez, `comprobarBoton` y que sea una
+   * lupa). El adaptador la LOCALIZA por la capa común (fijo → aprendido → IA → atasco) y no la pulsa él. Misma regla de contexto.
+   */
+  buscarTomadorMapfre?: (pagina: Page, boton: Locator) => Promise<void>
+  /**
+   * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
+   * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para
+   * cualquier bot; Mapfre NSEI usa `continuarMapfre` (stepper cerrado), que ya lleva el mismo respaldo.
+   */
+  continuar?: (pagina?: Page, opciones?: { desde?: string; llegado?: (p: Page) => Promise<boolean>; esperaMs?: number }) => Promise<void>
+  /**
+   * Elige una opción en un `mat-select` (Angular Material) / `role=combobox` (pieza 4; mat-select.ts): lee el overlay, coincidencia
+   * clara con `valores` (textos del portal), si no la IA, si no `ErrorOpcionSinResolver`. Todo por el guard.
+   */
+  elegirMatSelect?: (select: Locator, valores: string | readonly string[], opciones: Pick<OpcionesMatSelect, 'etiqueta' | 'clave'>) => Promise<{ texto: string; origen: 'coincidencia' | 'ia' }>
 }
 
 /**

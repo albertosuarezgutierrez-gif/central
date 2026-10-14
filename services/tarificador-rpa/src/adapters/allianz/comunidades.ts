@@ -25,24 +25,10 @@ import type { CoberturaOferta, DesglosePrima, FranquiciaOferta, ModalidadPortal,
 import type { AdaptadorPortal, ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { esperarPdf } from '../../descarga-pdf.ts'
-import { abrirNuevaAlta, textoExacto } from './entrada.ts'
+import { abrirNuevaAlta, textoExacto, login, sesionSirve, marcoCon, fechaEs, type Raiz } from './intranet/index.ts'
+// Re-export por compatibilidad (mapfre/auto.ts y otros importan de aquí); importa de ./intranet/.
+export { login, sesionSirve, marcoCon, fechaEs, type Raiz }
 import { acompanar, claveCampo, resolverConFormador, type PasoAcompanado, type ResolucionFormador } from '../../formador.ts'
-
-/**
- * Selectores del LOGIN y de la ruta de menú. `null` = PENDIENTE DE CAPTURAS: el adaptador falla en
- * ese paso con `portal` (error_definitivo, no se reintenta) en vez de adivinar.
- * El formulario en sí NO usa selectores: va por etiqueta (ver `campoPorEtiqueta`).
- */
-const SEL = {
-  // URL pública de entrada de ePAC (dada por Alberto, 05/10/2026; no es secreta).
-  urlLogin: 'https://www.e-pacallianz.com/ngx-azs-epac/public/home' as string | null,
-}
-
-function sel(clave: keyof typeof SEL): string {
-  const s = SEL[clave]
-  if (!s) throw new ErrorTarificador('portal', `allianz/comunidades: selector «${clave}» pendiente de capturas`)
-  return s
-}
 
 /** Etiqueta visible del formulario que confirma que estamos en la pantalla correcta. */
 const TITULO_FORMULARIO = 'Comunidades 2020'
@@ -54,36 +40,6 @@ const TITULO_FORMULARIO = 'Comunidades 2020'
 // `<iframe id="appArea" name="appArea">` (un `<form target="appArea">` la manda al servlet de
 // tarificación). Buscar «Fecha Inicio» en `page` esperaba 30 s y fallaba. Todo lo del formulario se
 // busca en el MARCO que lo contiene, entre TODOS los marcos de la página (puede haber marcos anidados).
-
-/** Lo que el adaptador necesita de una raíz de búsqueda: vale `Page` o `Frame`. */
-export type Raiz = Pick<Frame, 'locator' | 'getByText'>
-
-/** Marco preferente donde ePAC carga la aplicación. Solo orienta el orden de búsqueda. */
-const NOMBRE_MARCO_APP = 'appArea'
-
-/**
- * Primer marco (los hijos antes que la carcasa; `appArea` el primero) en el que `sonda` encuentra al
- * menos un elemento. Sondea hasta `timeoutMs`; si no aparece en ninguno → `ErrorTarificador('portal')`.
- */
-export async function marcoCon(page: Page, sonda: (r: Raiz) => Locator, que: string, timeoutMs = 30_000): Promise<Frame> {
-  const fin = Date.now() + timeoutMs
-  for (;;) {
-    const marcos = page.frames().slice().sort((a, b) => peso(b, page) - peso(a, page))
-    for (const f of marcos) {
-      if (f.isDetached()) continue
-      if ((await sonda(f).count().catch(() => 0)) > 0) return f
-    }
-    if (Date.now() >= fin) {
-      throw new ErrorTarificador('portal', `allianz/comunidades: «${que}» no aparece en ningún marco de la página (${marcos.length} marcos)`)
-    }
-    await page.waitForTimeout(500)
-  }
-}
-
-function peso(f: Frame, page: Page): number {
-  if (f === page.mainFrame()) return 0
-  return f.name() === NOMBRE_MARCO_APP ? 2 : 1
-}
 
 /** Marco del formulario «Comunidades 2020» (el que tiene la etiqueta «Fecha Inicio»). */
 export function marcoFormulario(page: Page, timeoutMs = 30_000): Promise<Frame> {
@@ -265,14 +221,6 @@ export function filaPorEtiqueta(raiz: Raiz, etiqueta: string, grupo: string | nu
   const g = literalXPath(normalizarEtiqueta(grupo))
   return raiz.locator(`xpath=(//tr[td[${textoNormalizadoXPath('string(.)')}=${g}]]/following::tr[${celda}])[1]`)
 }
-
-/** «2026-10-05» → «05/10/2026» (formato de los campos de fecha de ePAC). */
-export function fechaEs(iso: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
-  if (!m) throw new ErrorTarificador('datos', `allianz/comunidades: fecha «${iso}» no es AAAA-MM-DD`)
-  return `${m[3]}/${m[2]}/${m[1]}`
-}
-
 /**
  * Fecha tal como la guarda ePAC → ISO. DOM real (06/10/2026): `value="01102027"` (ddmmaaaa sin separadores); en
  * pantalla puede salir «01/10/2027». Mismo separador en los dos huecos o ninguno; fecha imposible → `null`.
@@ -464,56 +412,8 @@ async function marcar(raiz: Raiz, e: Entorno, etiqueta: string, valor: boolean):
 
 // ───────────────────────── login y navegación ─────────────────────────
 
-/** Abre la entrada de ePAC. Un 5xx del portal es pasajero: `portal` TRANSITORIO (el runner reintenta una vez). */
-async function abrirEntrada(page: Page): Promise<void> {
-  const r = await page.goto(sel('urlLogin'))
-  const st = r?.status() ?? 0
-  if (st >= 500) throw new ErrorTarificador('portal', `allianz/comunidades: ePAC respondió ${st} en la entrada`, { transitorio: true })
-}
-
-/**
- * Sesión reutilizada (src/sesion.ts): con las cookies de un trabajo anterior (en memoria, TTL 10 min) se abre la
- * entrada y, si aparece la cabecera logueada, NO se hace login. Si no aparece, `false`: login normal.
- */
-export async function sesionSirve(page: Page, ctx: Pick<ContextoPortal, 'exigirSinCaptcha' | 'log'>): Promise<boolean> {
-  await abrirEntrada(page)
-  await ctx.exigirSinCaptcha()
-  const ok = await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 10_000 }).then(() => true, () => false)
-  ctx.log(ok ? 'sesión reutilizada: sin login' : 'sesión guardada no válida: login normal')
-  return ok
-}
-
-export async function login(page: Page, ctx: Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'>): Promise<void> {
-  await abrirEntrada(page)
-  await ctx.exigirSinCaptcha()
-  // Login por etiqueta/rol (captura del 05/10/2026). Tracing apagado: lo vigila el guardián de la raíz.
-  const usuario = page.getByLabel('Usuario', { exact: true })
-  await usuario.fill(ctx.credenciales.usuario)
-  await ctx.pausa()
-  // Por la etiqueta salen DOS inputs (06/10/2026, strict mode violation): el campo es el
-  // input[type=password] VISIBLE. exact: «Contraseña sensible a mayúsculas…» no es la etiqueta.
-  await page
-    .getByLabel('Contraseña', { exact: true })
-    .and(page.locator('input[type="password"]'))
-    .filter({ visible: true })
-    .first()
-    .fill(ctx.credenciales.contrasena)
-  await ctx.pausa()
-  // NUNCA «Recuperación de contraseña» (el guard la bloquea).
-  await ctx.pulsar(page.getByRole('button', { name: 'INICIAR SESIÓN' }))
-  await ctx.exigirSinCaptcha()
-  // Logueado = aparece «Mediador principal» en la cabecera. Si no aparece, no se reintenta el login
-  // (repetir un login rechazado es como se bloquea una cuenta).
-  try {
-    await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 25_000 })
-  } catch {
-    throw new ErrorTarificador('credenciales', 'allianz/comunidades: no se llegó a la cabecera de ePAC tras el login (credenciales rechazadas o portal distinto)')
-  }
-  ctx.log('login ok')
-}
-
 async function abrirComunidades(page: Page, ctx: ContextoPortal): Promise<void> {
-  // Ruta dada por Alberto: «Nueva Alta» → modal → «Particulares» → «Comunidades» (paso común: entrada.ts).
+  // Ruta dada por Alberto: «Nueva Alta» → modal → «Particulares» → «Comunidades» (paso común: intranet/entrada.ts).
   await abrirNuevaAlta(page, ctx, { pestana: 'Particulares', producto: 'Comunidades' })
   await page.getByText(textoExacto(TITULO_FORMULARIO)).first().waitFor()
   await ctx.exigirSinCaptcha()
@@ -653,6 +553,13 @@ async function poblacionRellena(raiz: Raiz): Promise<boolean> {
   return v.trim() !== ''
 }
 
+/**
+ * NO se unifica con `buscarPoblacion` de auto.ts (moto) a propósito (14/10/2026): comparten la idea (CP → lupa → esperar población)
+ * pero difieren en selectores (`#codigoPostal`/`#poblacion` vs `#_cpostalCode`/`#_destown`), en cómo detectan la lista (aquí
+ * diferencia de DOM contra una marca previa, SUPOSICIÓN sin captura; allí celdas `receivedDataLocationFinder`), en la regla de
+ * elección (`elegirLocalidad` solo por municipio vs `resolverPoblacion` con `eleccionPoblacion`), en los tiempos (33×300 ms vs 10 s
+ * con relectura) y en el error (`datos` vs `ErrorEleccionPoblacion`/`ErrorMapaIncompleto`). comercio.ts solo escribe el CP en un campo (sin lupa).
+ */
 /**
  * Rellena `#codigoPostal`, pulsa la lupa (`ctx.pulsar`, nunca Enter: hay un input submit) y espera a que
  * `#poblacion` tenga valor (~10 s). Si en su lugar aparece una lista de localidades, elige la del municipio.

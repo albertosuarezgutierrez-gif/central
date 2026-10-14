@@ -12,12 +12,16 @@ import { EmisionBloqueadaError, MAX_GUARDADOS_DIALOGO, type InventarioDom } from
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
 import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, GuardadoDialogoBloqueadoError, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
+import { esperarEstable, vigilarRed } from '../src/estabilidad.ts'
 import {
   bucleExploracion,
   cierreCorrecto,
   cuerpoTrasCierre,
   coincideConInventario,
   cortarLoteTrasRellenar,
+  motivoCorteTrasRellenar,
+  motivoNoCoincide,
+  visibilidadDeCaja,
   EXPLORADOR_VERSION,
   finDeError,
   motivoSinDato,
@@ -151,7 +155,7 @@ let peticiones: Peticion[] = []
 let inicio = RIESGO
 let trasPaso2 = DATOS_BASICOS('Datos básicos')
 /** Rutas extra por test (guardado del presupuesto): cuerpo y cabeceras. */
-let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string> }> = {}
+let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string>; retardoMs?: number }> = {}
 
 let browser: Browser
 before(async () => {
@@ -163,8 +167,12 @@ before(async () => {
       peticiones.push({ metodo: req.method ?? 'GET', ruta, cuerpo })
       const extra = rutasExtra[ruta]
       if (extra) {
-        res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
-        res.end(extra.cuerpo)
+        const responder = () => {
+          res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
+          res.end(extra.cuerpo)
+        }
+        if (extra.retardoMs) setTimeout(responder, extra.retardoMs)
+        else responder()
         return
       }
       const html = ruta === '/' ? inicio : ruta === '/paso2' ? trasPaso2 : ruta === '/tarificar' ? RESULTADO : PAGINA('<h1>404</h1>')
@@ -375,7 +383,11 @@ test('el nodo DESAPARECE tras el primer rellenar (repintado): corta el lote y re
     const post = peticiones.find((p) => p.ruta === '/tarificar')!
     assert.match(post.cuerpo, /superficie=90/)
     assert.match(post.cuerpo, /anio=1990/)
-    assert.ok(lineas.some((l) => /exploracion_lote_cortado/.test(l) && /nodo_no_localizado/.test(l)))
+    assert.ok(lineas.some((l) => /exploracion_lote_cortado/.test(l) && /"corte":"repintado"/.test(l) && /"motivo":"desconectado"/.test(l)), 'el corte dice POR QUÉ')
+    assert.deepEqual(enviados[1].incidencias, [
+      { accion: 'rellenar', ref: ref(enviados[0].inventario, 'anio'), dato: 'inmueble.anio_construccion', causa: 'lote_cortado', corte: 'repintado', motivo: 'desconectado' },
+      { accion: 'avanzar', ref: ref(enviados[0].inventario, 'siguiente'), causa: 'lote_cortado', corte: 'repintado' },
+    ])
   } finally {
     await context.close()
   }
@@ -402,6 +414,7 @@ test('rellenar que cambia la ESTRUCTURA (aparece un control): corta el lote aunq
     assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
     assert.ok(tiene(enviados[1].inventario, 'extra'), 'el 2.º paso ve el control nuevo')
     assert.equal(fin.acciones, 3, 'tras el corte, «anio» no se rellenó en el lote 1')
+    assert.match(String((enviados[1].incidencias as { corte?: string }[] | undefined)?.[0]?.corte), /^(huella|n_elementos)$/, 'el corte dice POR QUÉ')
   } finally {
     await context.close()
   }
@@ -661,6 +674,37 @@ test('coincideConInventario: tag, id, name, type y texto (con recorte) tienen qu
   assert.equal(coincideConInventario({ ...vivo, tag: 'a' }, el), false)
   assert.equal(coincideConInventario(null, el), false)
   assert.equal(coincideConInventario({ ...vivo, texto: 'Un texto muy largo que sigue' }, { tag: 'button', texto: 'Un texto muy…' }), true)
+})
+
+test('motivoNoCoincide: QUÉ atributo no casa (solo su nombre); null = es él', () => {
+  const el = { tag: 'input', id: 'ng-0t467d4g-nx-input-38', type: 'number', formControlName: 'yearOfConstruction' }
+  const vivo = { tag: 'input', id: 'ng-0t467d4g-nx-input-38', name: null, type: 'number', texto: '' }
+  assert.equal(motivoNoCoincide(vivo, el), null, 'el año de b921b476 casa: no era la identidad')
+  assert.equal(motivoNoCoincide(null, el), 'desconectado')
+  assert.equal(motivoNoCoincide({ ...vivo, tag: 'select' }, el), 'no_coincide_tag')
+  assert.equal(motivoNoCoincide({ ...vivo, id: 'ng-0t467d4g-nx-input-62' }, el), 'no_coincide_id')
+  assert.equal(motivoNoCoincide({ ...vivo, name: 'anio' }, { ...el, name: 'otro' }), 'no_coincide_name')
+  assert.equal(motivoNoCoincide({ ...vivo, type: 'text' }, el), 'no_coincide_type')
+  assert.equal(motivoNoCoincide({ ...vivo, texto: 'Contratar' }, { tag: 'input', texto: 'Siguiente' }), 'no_coincide_texto')
+  // Nunca lleva el valor del atributo que no casa.
+  assert.ok(!String(motivoNoCoincide({ ...vivo, id: 'ng-secreto-99' }, el)).includes('secreto'))
+})
+
+test('visibilidadDeCaja: oculto por estilo/ancestro, o caja sin ancho/alto/ambos', () => {
+  assert.equal(visibilidadDeCaja({ ancho: 0, alto: 0, estiloVisible: false }), 'oculto')
+  assert.equal(visibilidadDeCaja({ ancho: 0, alto: 0, estiloVisible: true }), 'sin_caja')
+  assert.equal(visibilidadDeCaja({ ancho: 0, alto: 15, estiloVisible: true }), 'sin_ancho')
+  assert.equal(visibilidadDeCaja({ ancho: 177, alto: 0, estiloVisible: true }), 'sin_alto')
+  assert.equal(visibilidadDeCaja({ ancho: 177, alto: 21, estiloVisible: true }), 'oculto')
+})
+
+test('motivoCorteTrasRellenar: autocompletar, huella o nº de elementos; null = no se corta', () => {
+  const a = { huella: 'h1', elementos: 5 }
+  assert.equal(motivoCorteTrasRellenar('inmueble.codigo_postal', a, a), 'autocompletar')
+  assert.equal(motivoCorteTrasRellenar('inmueble.superficie_m2', a, { huella: 'h2', elementos: 5 }), 'huella')
+  assert.equal(motivoCorteTrasRellenar('inmueble.superficie_m2', a, { huella: 'h1', elementos: 6 }), 'n_elementos')
+  assert.equal(motivoCorteTrasRellenar('inmueble.superficie_m2', a, a), null)
+  assert.equal(motivoCorteTrasRellenar('inmueble.superficie_m2', a, null), null)
 })
 
 test('motivoSinDato, valorParaControl y finDeError', () => {
@@ -1104,7 +1148,7 @@ test('🪤 repintado que CAMBIA el control (otra etiqueta): no se adivina; para 
     const fin = await bucleExploracion(page, k)
     assert.equal(fin.motivo, 'ambiguo')
     assert.equal(fin.detalle, 'nodo_no_relocalizado')
-    assert.deepEqual(fin.incidencias, [{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion', causa: 'nodo_no_relocalizado' }])
+    assert.deepEqual(fin.incidencias, [{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion', causa: 'nodo_no_relocalizado', motivo: 'desconectado' }])
     assert.equal(await page.inputValue('#anio'), '', 'no se escribió nada')
   } finally {
     await context.close()
@@ -1146,6 +1190,315 @@ test('🪤 frontera de cuenta bancaria sobre el control RELOCALIZADO (revisión 
     assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
     assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
     assert.equal(await page.inputValue('#superficie'), '', 'no se escribió nada')
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Orden del lote, lote cortado y pantalla quieta (14/10/2026, exploración 8d0676f9 de Allianz Hogar) ──────────────
+
+/** CP que autocompleta (repinta al perder el foco) y una VÍA con role=combobox; el año, campo simple, va DETRÁS en el lote. */
+const CP_VIA_ANIO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="cp">Código postal</label><input id="cp" name="cp" type="text">
+    <span id="pob"></span>
+    <label for="via">Nombre de la vía</label><input id="via" name="via" type="text" role="combobox" aria-autocomplete="list">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="number">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>document.getElementById('cp').addEventListener('change', () => { document.getElementById('pob').innerHTML = '<label for="poblacion">Población</label><input id="poblacion" name="poblacion" type="text">' })</script>`)
+
+test('🪤 ORDEN del lote (8d0676f9 paso 1): CP, vía y año → el año (simple) se escribe ANTES de que el CP repinte y corte', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: ref(inv, 'via'), dato: 'inmueble.nombre_via' },
+        { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]),
+    { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(await page.inputValue('#anio'), '1990', 'el año se escribió en el lote 1')
+    assert.equal(await page.inputValue('#cp'), '41001')
+    assert.equal(await page.inputValue('#via'), '', 'la vía (combobox) iba detrás del CP: lote cortado antes de llegar')
+    const anio = enviados[1].inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'anio')!
+    assert.equal(anio.conValor, true, 'el 2.º inventario ve el año relleno')
+    assert.ok(/"exploracion_paso".*rellenar m\d+e\d+=inmueble.anio_construccion.*inmueble.codigo_postal.*inmueble.nombre_via/.test(lineas.join('\n')), 'el log refleja el orden aplicado')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 LOTE CORTADO: lo que quedaba sin ejecutar viaja como incidencia `lote_cortado` en el siguiente paso (ref + clave; sin valor)', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refs = { via: '', siguiente: '' }
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n > 1) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      refs = { via: ref(inv, 'via'), siguiente: ref(inv, 'siguiente') }
+      return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: refs.via, dato: 'inmueble.nombre_via' },
+        { accion: 'avanzar', ref: refs.siguiente, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(enviados[0].incidencias, undefined)
+    assert.deepEqual(enviados[1].incidencias, [
+      { accion: 'rellenar', ref: refs.via, dato: 'inmueble.nombre_via', causa: 'lote_cortado', corte: 'autocompletar' },
+      { accion: 'avanzar', ref: refs.siguiente, causa: 'lote_cortado', corte: 'autocompletar' },
+    ])
+    assert.ok(!JSON.stringify(enviados[1].incidencias).includes('PRUEBA'), 'sin el valor de la vía')
+    assert.ok(!peticiones.some((p) => p.ruta === '/tarificar'), 'el avance cortado no se pulsó')
+  } finally {
+    await context.close()
+  }
+})
+
+test('lote NO cortado (sin repintado): ninguna incidencia `lote_cortado`', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]))
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(enviados[1].incidencias, undefined)
+    assert.equal(await page.inputValue('#superficie'), '90')
+  } finally {
+    await context.close()
+  }
+})
+
+/**
+ * Validación ASÍNCRONA de la dirección (como Allianz tras el número de la vía): al perder el foco sale un fetch lento y, a
+ * su vuelta, Angular RE-CREA año y superficie con ids NUEVOS (el contador de NDBX avanza). Una sola vez.
+ */
+const VALIDA_Y_REPINTA = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="numero">Número</label><input id="numero" name="numero" type="text">
+    <div id="seccion">
+      <label for="anio-38">Año de construcción</label><input id="anio-38" name="anio" type="number">
+      <label for="sup-45">Superficie de la vivienda</label><input id="sup-45" name="superficie">
+    </div>
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>
+    let hecho = false
+    document.getElementById('numero').addEventListener('change', () => {
+      if (hecho) return; hecho = true
+      fetch('/validar', { method: 'POST' }).then(() => {
+        document.getElementById('seccion').innerHTML = '<label for="anio-62">Año de construcción</label><input id="anio-62" name="anio" type="number">'
+          + '<label for="sup-69">Superficie de la vivienda</label><input id="sup-69" name="superficie">'
+      })
+    })
+  </script>`)
+
+test('🪤 PANTALLA QUIETA (8d0676f9 paso 3): la validación de la vía repinta con ids nuevos; se inventaría DESPUÉS y año y m² se escriben', async () => {
+  inicio = VALIDA_Y_REPINTA
+  rutasExtra = { '/validar': { tipo: 'application/json', cuerpo: '{}', retardoMs: 900 } }
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, async (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' }])
+      if (n === 2) {
+        const ids = inv.marcos.flatMap((m) => m.elementos).map((e) => e.id)
+        const anio = ids.find((x) => x?.startsWith('anio-'))!
+        const sup = ids.find((x) => x?.startsWith('sup-'))!
+        await new Promise((r) => setTimeout(r, 1_200)) // lo que tarda la IA en contestar
+        return respuesta([
+          { accion: 'rellenar', ref: ref(inv, anio), dato: 'inmueble.anio_construccion' },
+          { accion: 'rellenar', ref: ref(inv, sup), dato: 'inmueble.superficie_m2' },
+        ])
+      }
+      return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.detalle, undefined, `sin nodo_no_relocalizado: ${JSON.stringify(fin)}`)
+    assert.ok(tiene(enviados[1].inventario, 'anio-62'), 'el 2.º inventario se tomó tras el repintado')
+    assert.equal(await page.inputValue('#anio-62'), '1990')
+    assert.equal(await page.inputValue('#sup-69'), '90')
+    assert.equal(enviados[2].incidencias, undefined)
+  } finally {
+    rutasExtra = {}
+    await context.close()
+  }
+})
+
+const MUTA_SIN_PARAR = PAGINA(`<h2>Reloj</h2><div id="r"></div><script>setInterval(() => { document.getElementById('r').innerHTML = '<span>' + Date.now() + '</span>' }, 100)</script>`)
+
+test('esperarEstable: espera a la red en vuelo (vista ANTES de llamar, con el vigía) y al DOM; un DOM que no se calla agota el tope', async () => {
+  inicio = VALIDA_Y_REPINTA
+  rutasExtra = { '/validar': { tipo: 'application/json', cuerpo: '{}', retardoMs: 700 } }
+  const { context, page } = await nuevaPagina()
+  try {
+    const vigia = vigilarRed(page)
+    const salio = page.waitForRequest((r) => r.url().endsWith('/validar'))
+    await page.fill('#numero', '1')
+    await page.locator('#numero').blur()
+    await salio
+    // El fetch ya salió: con el vigía del bucle se espera a su vuelta y al repintado.
+    assert.equal(await esperarEstable(page, { quietoMs: 300, topeMs: 5_000 }, vigia), 'estable')
+    assert.equal(await page.locator('#anio-62').count(), 1, 'devolvió con la sección ya repintada')
+    vigia.soltar()
+
+    await page.goto(`${base}/`)
+    await page.setContent(MUTA_SIN_PARAR)
+    const t0 = Date.now()
+    assert.equal(await esperarEstable(page, { quietoMs: 300, topeMs: 1_200 }), 'tope')
+    const t = Date.now() - t0
+    assert.ok(t >= 1_100 && t < 4_000, `respeta el tope (${t} ms)`)
+  } finally {
+    rutasExtra = {}
+    await context.close()
+  }
+})
+
+test('inventario: `autocompletar` (aria-autocomplete o datalist) solo como booleano; un input normal no lo lleva', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page } = await nuevaPagina()
+  try {
+    const c = (await capturarInventarioExploracion(page))!
+    const els = c.inventario.marcos.flatMap((m) => m.elementos)
+    assert.equal(els.find((e) => e.id === 'via')!.autocompletar, true)
+    assert.equal(els.find((e) => e.id === 'via')!.role, 'combobox')
+    assert.equal(els.find((e) => e.id === 'anio')!.autocompletar, undefined)
+    assert.equal(els.find((e) => e.id === 'cp')!.autocompletar, undefined)
+    await c.liberar()
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Año y m² que Playwright no veía (14/10/2026, exploración b921b476 de Allianz Hogar). Valores FICTICIOS. ─────────
+
+/**
+ * Imita NDBX: inputs dentro de `nx-formfield`, ids `ng-…-nx-input-NN`, solo formControlName (sin name) y año type=number.
+ * Año y superficie están MUY abajo y se pintan PEREZOSOS: el input mide 0 de alto hasta que su formfield entra en la vista
+ * (IntersectionObserver). El inventario los ve (tienen ancho y etiqueta); `isVisible()` de Playwright no, hasta traerlos.
+ * «Año de reforma» está dentro de un bloque `display:none` (oculto DE VERDAD): nunca se escribe.
+ */
+const NDBX_PEREZOSO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <nx-formfield style="display:block"><label for="numero">Número</label><input id="numero" formcontrolname="streetNumber" type="text"></nx-formfield>
+    <div style="height:3000px"></div>
+    <div id="scroller" style="height:300px;overflow:auto">
+      <div style="height:1200px"></div>
+      <nx-formfield class="perezoso" style="display:block"><label for="ng-0t467d4g-nx-input-38">Año de construcción</label><input id="ng-0t467d4g-nx-input-38" formcontrolname="yearOfConstruction" type="number" required style="height:0;padding:0;border:0"></nx-formfield>
+      <div style="display:none"><nx-formfield style="display:block"><label for="ng-0t467d4g-nx-input-40">Año de reforma</label><input id="ng-0t467d4g-nx-input-40" formcontrolname="yearOfRefurbishment" type="number"></nx-formfield></div>
+      <nx-formfield class="perezoso" style="display:block"><label for="ng-0t467d4g-nx-input-45">Superficie de la vivienda</label><input id="ng-0t467d4g-nx-input-45" formcontrolname="surfaceAreaLiving" required style="height:0;padding:0;border:0"></nx-formfield>
+    </div>
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>
+    const io = new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { const i = e.target.querySelector('input'); i.style.height = ''; i.style.padding = ''; i.style.border = '' } })
+    document.querySelectorAll('.perezoso').forEach((f) => io.observe(f))
+  </script>`)
+const ANIO_NDBX = 'ng-0t467d4g-nx-input-38'
+const SUP_NDBX = 'ng-0t467d4g-nx-input-45'
+const REFORMA_NDBX = 'ng-0t467d4g-nx-input-40'
+
+test('🪤 b921b476: año y m² fuera de la vista (NDBX perezoso) se traen a la vista y se escriben EN EL MISMO lote, sin cortarlo', async () => {
+  inicio = NDBX_PEREZOSO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' },
+        { accion: 'rellenar', ref: ref(inv, ANIO_NDBX), dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: ref(inv, SUP_NDBX), dato: 'inmueble.superficie_m2' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]),
+    { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(fin.detalle, undefined, `sin nodo_no_relocalizado: ${JSON.stringify(fin)}`)
+    assert.equal(await page.inputValue(`[id="${ANIO_NDBX}"]`), '1990')
+    assert.equal(await page.inputValue(`[id="${SUP_NDBX}"]`), '90')
+    assert.equal(enviados[1].incidencias, undefined, 'ni lote_cortado ni control_no_visible')
+    assert.ok(!/exploracion_lote_cortado/.test(lineas.join('\n')), 'el lote no se cortó')
+  } finally {
+    await context.close()
+  }
+})
+
+test('control oculto DE VERDAD (ancestro display:none): no se escribe, viaja `control_no_visible [no_visible:oculto]` y el lote SIGUE', async () => {
+  inicio = NDBX_PEREZOSO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refReforma = ''
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n > 1) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      refReforma = ref(inv, REFORMA_NDBX)
+      return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' },
+        { accion: 'rellenar', ref: refReforma, dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: ref(inv, SUP_NDBX), dato: 'inmueble.superficie_m2' },
+      ])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(await page.inputValue(`[id="${REFORMA_NDBX}"]`), '', 'el control oculto NO se toca')
+    assert.equal(await page.inputValue(`[id="${ANIO_NDBX}"]`), '', 'ni se escribe en OTRO año (identidad intacta)')
+    assert.equal(await page.inputValue(`[id="${SUP_NDBX}"]`), '90', 'el resto del lote se ejecutó')
+    assert.deepEqual(enviados[1].incidencias, [{ accion: 'rellenar', ref: refReforma, dato: 'inmueble.anio_construccion', causa: 'control_no_visible', motivo: 'no_visible', visibilidad: 'oculto' }])
+  } finally {
+    await context.close()
+  }
+})
+
+test('control oculto como PRIMERA acción: no se re-localiza (no es un repintado) ni se para; incidencia y sigue', async () => {
+  inicio = NDBX_PEREZOSO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, REFORMA_NDBX), dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]),
+    { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.detalle, undefined, JSON.stringify(fin))
+    assert.ok(!/exploracion_relocalizacion/.test(lineas.join('\n')))
+    assert.equal((enviados[1].incidencias as { causa: string }[])[0].causa, 'control_no_visible')
+    assert.notEqual(await page.inputValue('#numero'), '')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 traerlo a la vista NO relaja la identidad: si al pintarse cambia de id, no se escribe (lote_cortado_por_repintado [no_coincide_id])', async () => {
+  // Variante: al entrar en la vista, el portal le cambia el id al año (otro control). El worker vuelve a comprobar el nodo.
+  inicio = NDBX_PEREZOSO.replace("i.style.height = ''", "i.style.height = ''; if (i.id.endsWith('-38')) i.id = 'ng-0t467d4g-nx-input-62'")
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refAnio = ''
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n > 1) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      refAnio = ref(inv, ANIO_NDBX)
+      return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' },
+        { accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion' },
+      ])
+    }, { esperaRepintadoMs: 50 })
+    await bucleExploracion(page, k)
+    assert.equal(await page.inputValue('#ng-0t467d4g-nx-input-62'), '', 'el control con OTRO id no se escribe')
+    assert.deepEqual(enviados[1].incidencias, [{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion', causa: 'lote_cortado', corte: 'repintado', motivo: 'no_coincide_id' }])
   } finally {
     await context.close()
   }

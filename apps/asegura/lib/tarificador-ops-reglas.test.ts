@@ -287,3 +287,27 @@ test('panel de operador: Bearer de operador y nunca el riesgo hacia fuera', () =
   const ops = readFileSync(join(APP, 'lib/tarificador-ops.ts'), 'utf8')
   assert.match(ops, /lista: renov\.slice\(0, 100\)\.map\(sinRiesgo\)/)
 })
+
+test('tasaOkPorGrupo: ok/(ok+error) por compañía·ramo·modo; cancelados y en cola fuera; sin desenlace → null, nunca 0', async () => {
+  const { tasaOkPorGrupo } = await import('./tarificador-ops-reglas.ts')
+  const t = (compania: string, ramo: string, modo: string, estado: string) => ({ compania, ramo, modo, estado })
+  const r = tasaOkPorGrupo([
+    t('allianz', 'moto', 'tarificar', 'error_definitivo'),
+    t('allianz', 'moto', 'tarificar', 'error_definitivo'),
+    t('allianz', 'moto', 'tarificar', 'ok'),
+    t('allianz', 'moto', 'tarificar', 'requiere_humano'),
+    t('allianz', 'moto', 'tarificar', 'cancelado'),
+    t('allianz', 'moto', 'tarificar', 'pendiente'),
+    t('allianz', 'comunidades', 'tarificar', 'ok'),
+    t('allianz', 'comunidades', 'emision', 'cancelado'),
+    t('mapfre', 'auto', 'tarificar', 'en_curso'),
+  ])
+  const g = (c: string, ra: string, m: string) => r.find((x) => x.compania === c && x.ramo === ra && x.modo === m)!
+  assert.deepEqual(g('allianz', 'moto', 'tarificar'), { compania: 'allianz', ramo: 'moto', modo: 'tarificar', total: 6, ok: 1, error: 3, cancelado: 1, tasa_ok: 0.25 })
+  assert.equal(g('allianz', 'comunidades', 'tarificar').tasa_ok, 1)
+  // Solo cancelados: no hay desenlace → null (no 0 %).
+  assert.equal(g('allianz', 'comunidades', 'emision').tasa_ok, null)
+  assert.equal(g('mapfre', 'auto', 'tarificar').tasa_ok, null)
+  assert.equal(r.length, 4)
+  assert.deepEqual(tasaOkPorGrupo([]), [])
+})

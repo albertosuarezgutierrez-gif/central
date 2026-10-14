@@ -58,6 +58,7 @@ export {
   type ClasificacionAccion,
 } from './acciones-portal.ts'
 export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
+export { redactarAriaSnapshot, neutralizarAngulos, cortarEnLimiteDeLinea, MARCA_VALOR_ARIA } from './aria-redaccion.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
 export { importeEs, importePuntoDecimal } from './importes.ts'
@@ -312,6 +313,18 @@ export {
   MAX_POBLACION,
   MAX_ELECCION_POBLACION,
   pareceDatoPersonalEnDescripcion,
+  documentoTomadorDe,
+  secretosDelRiesgo,
+  USOS_VEHICULO,
+  AMBITOS_CIRCULACION,
+  CLASES_PERMISO,
+  USO_VEHICULO_POR_DEFECTO,
+  AMBITO_CIRCULACION_POR_DEFECTO,
+  CLASE_PERMISO_POR_DEFECTO,
+  MAX_COMPANIA_ANTERIOR,
+  type UsoVehiculo,
+  type AmbitoCirculacion,
+  type ClasePermiso,
   type RamoVehiculo,
   type SexoConductor,
   type ConductorHabitual,
@@ -327,6 +340,9 @@ export {
   validarVehiculoConfirmado,
   vehiculoConfirmadoDesdeMapfre,
   eleccionPorVehiculoConfirmado,
+  TOLERANCIA_CV,
+  TOLERANCIA_CC,
+  AVISO_VERSION_POR_SIMILITUD,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
   datosDesdeEtiquetaVersion,
   type OrigenVehiculoConfirmado,
@@ -471,7 +487,18 @@ export {
   erroresDeIncidencias,
   type CausaIncidenciaEjecucion,
   type IncidenciaEjecucion,
+  MOTIVOS_NO_LOCALIZADO,
+  VISIBILIDADES_NO_VISIBLE,
+  MOTIVOS_CORTE_LOTE,
+  type MotivoNoLocalizado,
+  type VisibilidadNoVisible,
+  type MotivoCorteLote,
+  type DiagnosticoIncidencia,
   CLAVES_AUTOCOMPLETADO,
+  ACCIONES_INCIDENCIA_SIN_DATO,
+  rellenarRepinta,
+  ordenarLote,
+  incidenciasLoteCortado,
   lineaMotivosPararParaIA,
   normalizarMotivoParar,
   EFECTOS_AVANCE,
@@ -548,6 +575,32 @@ export {
   type MetaMapa,
 } from './explorador.ts'
 
+// Login ASISTIDO del explorador (14/10/2026): fase propia, solo compañías de `LOGIN_ASISTIDO` y solo en su SSO; la IA solo ve
+// las claves `credencial.*` (nunca valores).
+export {
+  LOGIN_ASISTIDO,
+  MAX_PANTALLAS_LOGIN,
+  MAX_ACCIONES_LOGIN,
+  CLAVE_USUARIO,
+  CLAVE_CONTRASENA,
+  CLAVES_CREDENCIAL,
+  catalogoLoginParaIA,
+  loginAsistidoDe,
+  esUrlSsoLoginAsistido,
+  marcarUsuarioEnTexto,
+  contieneUsuario,
+  marcarCredencialesInventario,
+  inventarioSinCredenciales,
+  validarRespuestaLogin,
+  respuestaPararLogin,
+  esRespuestaLogin,
+  resumenLoginParaMapa,
+  type ClaveCredencial,
+  type AccionLogin,
+  type RespuestaLogin,
+  type ValidacionLogin,
+} from './explorador-login.ts'
+
 // Purga de los datos personales del riesgo al cerrar un trabajo (13/10/2026): lista BLANCA por ramo.
 export {
   ESTADOS_PURGA_RIESGO,
@@ -587,3 +640,32 @@ export {
   type FaltaRiesgoOportunidad,
   type ResultadoRiesgoOportunidad,
 } from './riesgo-oportunidad.ts'
+export {
+  UMBRAL_CONSOLIDAR_APRENDIDO,
+  UMBRAL_DESCARTAR_APRENDIDO,
+  estadoAprendido,
+  trasExitoAprendido,
+  trasFalloAprendido,
+  UMBRAL_CORTE_BOT,
+  TIPOS_ERROR_CORTE,
+  debeCortarBot,
+  MAX_CANDIDATOS_ATASCO,
+  MAX_RONDAS_ATASCO,
+  HORAS_ATASCO_POR_DEFECTO,
+  atascoActivo,
+  horasAtasco,
+  leerAtascoWorker,
+  candidatosVisibles,
+  candidatoAtascoBloqueado,
+  elegirCandidatoAtasco,
+  atascoCaducado,
+  decidirAtasco,
+  cabeCapturaEnRespuesta,
+  MAX_BYTES_CAPTURAS_RESPUESTA,
+  type EstadoAprendido,
+  type CierreTrabajo,
+  type CandidatoAtasco,
+  type CandidatoAtascoVisible,
+  type TipoAtasco,
+  type AtascoWorker,
+} from './robustez.ts'

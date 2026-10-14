@@ -12,6 +12,13 @@ import {
   leerPeticionRevisar,
   leerPeticionSugerir,
   maxLlamadasIA,
+  modeloFormador,
+  escaleraModelos,
+  maxEurIA,
+  quedaPresupuestoEur,
+  tarifaModelo,
+  cabeLlamadaEur,
+  costeMaximoLlamadaFormador,
   parsearRespuestaRevisar,
   parsearRespuestaSugerir,
   primerObjetoJson,
@@ -152,4 +159,56 @@ test('rutas: las del worker usan el secreto del worker y el kill-switch; la de o
   assert.match(op, /operadorAutorizado\(req\)/)
   assert.match(op, /correduriaUnica\(\)/)
   assert.ok(!/export\s+(async\s+)?function\s+(POST|PATCH|PUT|DELETE)/.test(op), 'la intranet solo LEE')
+})
+
+test('respaldo IA (14/10/2026): modelo potente por env con slug válido, basura → null (sin 2º escalón), sin env → por defecto', () => {
+  assert.equal(modeloFormador({}), 'anthropic/claude-sonnet-4.5')
+  assert.equal(modeloFormador({ TARIFICADOR_FORMADOR_MODELO: 'anthropic/claude-sonnet-4.5' }), 'anthropic/claude-sonnet-4.5')
+  assert.equal(modeloFormador({ TARIFICADOR_FORMADOR_MODELO: 'rm -rf /' }), null)
+})
+
+test('respaldo IA: el enlace de entrada explica que «Emisión» es nombre de menú; otra acción no lleva esa línea', () => {
+  const pe = leerPeticionSugerir({ trabajoId: T, compania: 'mapfre', ramo: 'auto', clave: 'enlace_entrada', tipo: 'accion', descripcion: 'enlace de la tarjeta', estructura: [{ tag: 'div', clases: 'card-link', texto: 'Tarificación y Emisión Rápida' }] })
+  assert.ok(pe.ok)
+  if (pe.ok) assert.match(promptSugerir(pe.p), /NOMBRE de un menú/)
+  const pc = leerPeticionSugerir({ trabajoId: T, compania: 'allianz', ramo: 'comunidades', clave: 'calcular', tipo: 'accion', descripcion: 'botón', estructura: CAND })
+  assert.ok(pc.ok)
+  if (pc.ok) assert.doesNotMatch(promptSugerir(pc.p), /NOMBRE de un menú/)
+})
+
+test('IA escalonada: barato primero, potente después; env inválido → solo el barato', () => {
+  assert.deepEqual(escaleraModelos({}), [undefined, 'anthropic/claude-sonnet-4.5'])
+  assert.deepEqual(escaleraModelos({ TARIFICADOR_FORMADOR_MODELO: 'no vale' }), [undefined])
+})
+
+test('tope de coste por trabajo: 0,50 € por defecto, rango 0,01..5', () => {
+  assert.equal(maxEurIA({}), 0.5)
+  assert.equal(maxEurIA({ TARIFICADOR_FORMADOR_MAX_EUR: '1,2' }), 1.2)
+  assert.equal(maxEurIA({ TARIFICADOR_FORMADOR_MAX_EUR: '50' }), 0.5)
+  assert.equal(quedaPresupuestoEur(0.49, 0.5), true)
+  assert.equal(quedaPresupuestoEur(0.5, 0.5), false)
+  assert.equal(quedaPresupuestoEur(Number.NaN, 0.5), false)
+})
+
+test('coste por MODELO: el potente se tarifa como tal; un slug desconocido, como el más caro (conservador)', () => {
+  const flash = costeEstimado(4000, 400)
+  const sonnet = costeEstimado(4000, 400, 'anthropic/claude-sonnet-4.5')
+  assert.ok(sonnet > flash * 5, `${sonnet} vs ${flash}`)
+  assert.deepEqual(tarifaModelo('raro/modelo-x'), tarifaModelo('anthropic/claude-sonnet-4.5'))
+  assert.deepEqual(tarifaModelo(undefined), { entrada: 0.3, salida: 1.2 })
+})
+
+test('presupuesto ANTES de cada escalón: lo gastado + lo máximo de ESTA llamada tiene que caber', () => {
+  const max = 0.5
+  const potente = costeMaximoLlamadaFormador(40_000, 'anthropic/claude-sonnet-4.5')
+  assert.equal(cabeLlamadaEur(0, potente, max), true)
+  assert.equal(cabeLlamadaEur(max - potente / 2, potente, max), false, 'no cabe aunque lo gastado esté por debajo del tope')
+  assert.equal(cabeLlamadaEur(Number.NaN, potente, max), false)
+})
+
+test('la ruta sugerir recomprueba el presupuesto dentro del bucle de escalones, con el modelo de cada uno', () => {
+  const src = readFileSync(new URL('../app/api/tarificador/formador/sugerir/route.ts', import.meta.url), 'utf8')
+  const bucle = src.slice(src.indexOf('for (const [n, modelo] of escalera.entries())'), src.indexOf('let r: { texto: string; coste: number }'))
+  assert.match(bucle, /await cabe\(costeMaximoLlamadaFormador\(SYSTEM_SUGERIR\.length \+ prompt\.length, modelo\)\)/)
+  assert.match(readFileSync(new URL('./tarificador-formador-ia.ts', import.meta.url), 'utf8'), /costeEstimado\(system\.length \+ prompt\.length, texto\.length, modelo\)/)
 })

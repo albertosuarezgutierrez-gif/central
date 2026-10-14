@@ -7,15 +7,17 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import {
-  avanzarPasoGuardado,
   ErrorMapaIncompleto,
+  exigirPasoCompleto,
   importeDePrimaTotal,
   indiceFilaVehiculo,
   leerFilasDialogoVehiculo,
   leerPrimasMapfre,
   leerResumenVehiculo,
-  MAPFRE_AUTO_ACTIVO,
   mapfreAuto,
+  pasoDatosBasicos,
+  planDelPaso,
+  precioDesdeObjetoAsegurado,
   ofertasDesdePrimasMapfre,
   PANTALLAS_GRABACION,
   planObjetoYFiguras,
@@ -25,6 +27,7 @@ import {
   SEL_CONDUCTOR,
   SEL_HISTORIAL,
   SEL_OBJETO,
+  SEL_TOMADOR,
   TOTAL_PANTALLAS_GRABACION,
 } from '../src/adapters/mapfre/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
@@ -96,9 +99,14 @@ after(async () => {
   await browser?.close()
 })
 
-test('Mapfre auto está APAGADO y NO está registrado', () => {
-  assert.equal(MAPFRE_AUTO_ACTIVO, false)
-  assert.equal(adaptadores.obtener('mapfre', 'auto'), null)
+test('Mapfre está REGISTRADO siempre (coche y moto) y el registro no lee ningún interruptor del entorno', () => {
+  // 14/10/2026 (Alberto): el worker de Fly no recibe secretos nuevos; la puerta es la fila companias_integracion (asegura).
+  assert.equal(adaptadores.obtener('mapfre', 'auto'), mapfreAuto)
+  assert.equal(adaptadores.obtener('mapfre', 'moto')?.ramo, 'moto')
+  const idx = readFileSync(join(import.meta.dirname, '../src/adapters/index.ts'), 'utf8')
+  assert.ok(!/TARIFICADOR_MAPFRE_ACTIVO|mapfreActivo/.test(idx), 'sin interruptor de máquina para Mapfre')
+  assert.match(idx, /^adaptadores\.registrar\(mapfreAuto\)$/m)
+  assert.match(idx, /^adaptadores\.registrar\(mapfreMoto\)$/m)
 })
 
 test('el mapa de pantallas cubre 1..19 sin huecos ni solapes', () => {
@@ -214,14 +222,64 @@ test('campo ausente → error portal con la etiqueta, sin valores', async () => 
   await assert.rejects(() => rellenarCamposTexto(page, planObjetoYFiguras(form)), (e: Error) => /matrícula/.test(e.message) && !e.message.includes('0000BBB'))
 })
 
-test('los avances siguen siendo HUECOS con inventario; tarificar sin las funciones guardadas para antes de navegar', async () => {
-  await assert.rejects(() => avanzarPasoGuardado('figuras'), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom === true)
+const NIF = '00000000T'
+const conNif: FormularioAuto = { ...form, documentoTomador: NIF }
+const ctxFalso = (registro: string[] = []) => ({
+  pulsar: async () => { registro.push('pulsar') },
+  pausa: async () => {},
+  log: () => {},
+  pulsarEnlaceEntrada: async () => { registro.push('entrada') },
+  confirmarVehiculoMapfre: async () => { registro.push('vehiculo') },
+  continuarMapfre: async (_p: Page, paso: string) => { registro.push(`continuar:${paso}`) },
+  buscarTomadorMapfre: async () => { registro.push('lupa') },
+}) as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
+
+test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de navegar; otro ramo → datos', async () => {
   let navego = false
   const pagina = { goto: async () => { navego = true; return null } } as unknown as Page
-  const ctx = { pulsar: async () => {}, pausa: async () => {}, log: () => {} } as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
-  await assert.rejects(() => mapfreAuto.tarificar(pagina, form, ctx), ErrorMapaIncompleto)
+  const sinGuardadas = { pulsar: async () => {}, pausa: async () => {}, log: () => {} } as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
+  await assert.rejects(() => mapfreAuto.tarificar(pagina, conNif, sinGuardadas), ErrorMapaIncompleto)
+  const sinContinuar = { ...ctxFalso(), continuarMapfre: undefined } as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
+  await assert.rejects(() => mapfreAuto.tarificar(pagina, conNif, sinContinuar), ErrorMapaIncompleto)
+  await assert.rejects(() => mapfreAuto.tarificar(pagina, form, ctxFalso()), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /NIF/.test(e.message))
   assert.equal(navego, false)
-  await assert.rejects(() => mapfreAuto.tarificar(pagina, { ...form, ramo: 'comunidades' } as unknown as FormularioAuto, ctx), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  await assert.rejects(() => mapfreAuto.tarificar(pagina, { ...conNif, ramo: 'comunidades' } as unknown as FormularioAuto, ctxFalso()), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+})
+
+test('paso 1: con NIF y campo mapeado, la LUPA es hueco con inventario y el NIF NO se teclea (ni sale en el error)', async () => {
+  await page.setContent('<body><app-datos-basicos><input name="codigoDocumento"><mat-icon>search</mat-icon></app-datos-basicos></body>')
+  const r: string[] = []
+  await assert.rejects(() => pasoDatosBasicos(page, conNif, ctxFalso(r)), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /lupa/.test(e.message) && !e.message.includes(NIF))
+  assert.equal(await page.locator(SEL_TOMADOR.documento).inputValue(), '', 'el NIF no queda en la pantalla')
+  assert.deepEqual(r, [], 'no se pulsa ni se continúa')
+  // Sin NIF → datos; sin campo → hueco con inventario.
+  await assert.rejects(() => pasoDatosBasicos(page, form, ctxFalso()), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  await page.setContent('<body><app-datos-basicos></app-datos-basicos></body>')
+  await assert.rejects(() => pasoDatosBasicos(page, conNif, ctxFalso()), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /campo NIF/.test(e.message))
+})
+
+test('paso 1: un campo NIF con manejador de emisión para ANTES (comprobarCampo)', async () => {
+  await page.setContent('<body><app-datos-basicos><input name="codigoDocumento" onchange="emitirPoliza()"></app-datos-basicos></body>')
+  await assert.rejects(() => pasoDatosBasicos(page, conNif, ctxFalso()), EmisionBloqueadaError)
+})
+
+test('del paso 2 al precio: escribe el CP y PARA antes de «Continuar» si quedan mat-select sin mapear (nada supuesto)', async () => {
+  await page.setContent(CAMPOS())
+  const r: string[] = []
+  const veh = { origen: 'mapfre', denominacion: 'MARCA PRUEBA', cv: null, cc: null, puertas: null, fechaInicio: null } as unknown as Parameters<typeof precioDesdeObjetoAsegurado>[2]
+  await assert.rejects(() => precioDesdeObjetoAsegurado(page, conNif, veh, ctxFalso(r)), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /uso del vehículo/.test(e.message))
+  assert.equal(await page.locator(SEL_OBJETO.cpCirculacion).inputValue(), '00001')
+  assert.equal(await page.locator(SEL_OBJETO.matricula).inputValue(), '', 'la matrícula no se vuelve a teclear (ya la tecleó la consulta del vehículo)')
+  assert.deepEqual(r, [], 'sin «Continuar» con controles pendientes')
+  await assert.rejects(() => precioDesdeObjetoAsegurado(page, { ...conNif, ramo: 'moto' }, veh, ctxFalso()), (e) => e instanceof ErrorMapaIncompleto && /MOTO/.test(e.message))
+})
+
+test('planDelPaso / exigirPasoCompleto: cada operación es de su paso; un paso con pendientes no se completa', () => {
+  const plan = planObjetoYFiguras(form)
+  assert.deepEqual(planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]).escribibles.map((o) => o.sel), [SEL_OBJETO.cpCirculacion])
+  assert.deepEqual(planDelPaso(plan, 'figuras').escribibles.map((o) => o.sel), [SEL_CONDUCTOR.fechaNacimiento, SEL_CONDUCTOR.fechaCarne, SEL_HISTORIAL.siniestrosRc5])
+  assert.throws(() => exigirPasoCompleto(plan, 'figuras'), (e) => e instanceof ErrorMapaIncompleto && /clase del permiso/.test(e.message))
+  assert.doesNotThrow(() => exigirPasoCompleto({ escribibles: plan.escribibles, pendientes: [] }, 'figuras'))
 })
 
 test('el guard rechaza los botones peligrosos de NSEI y el adaptador no pulsa nada', () => {
@@ -232,4 +290,45 @@ test('el guard rechaza los botones peligrosos de NSEI y el adaptador no pulsa na
     .join('\n')
   assert.ok(!/\.click\s*\(|pulsar\s*\(|\.check\s*\(|setChecked|dispatchEvent|keyboard|\.press\s*\(/.test(src), 'el adaptador de Mapfre no pulsa, marca ni teclea teclas')
   assert.ok(!/aceptar|emitir|archivar|formalizar|has-text|text=/i.test(src), 'ningún selector por texto ni verbo de acción peligrosa en el código')
+})
+
+// ───────────── mat-select: mapeo explícito + capa común (pieza 4, 14/10/2026) ─────────────
+import { MAPEO_MAPFRE_AUTO, rellenarMatSelects, textosMapfreDe } from '../src/adapters/mapfre/auto.ts'
+
+test('MAPEO_MAPFRE_AUTO: datos explícitos y congelados; sin valor o sin mapeo → null (no se supone nada)', () => {
+  assert.deepEqual(textosMapfreDe('uso', 'Particular'), ['Particular', 'Privado'])
+  assert.deepEqual(textosMapfreDe('ambito', 'espana'), ['España', 'Nacional'])
+  assert.deepEqual(textosMapfreDe('clasePermiso', 'B'), ['B'])
+  for (const v of [null, undefined, '', 'taxi', '__proto__', 'toString']) assert.equal(textosMapfreDe('uso', v), null, String(v))
+  assert.ok(Object.isFrozen(MAPEO_MAPFRE_AUTO) && Object.isFrozen(MAPEO_MAPFRE_AUTO.uso.particular))
+})
+
+test('planObjetoYFiguras: con los valores del formulario los mat-select pasan a escribibles (con sus textos de Mapfre); sin ellos, pendientes como antes', () => {
+  const sin = planObjetoYFiguras(form)
+  assert.deepEqual(sin.pendientes.map((o) => o.etiqueta).slice(0, 3), ['uso del vehículo', 'ámbito de circulación', 'clase del permiso'])
+  const con = planObjetoYFiguras({ ...form, usoVehiculo: 'particular', ambitoCirculacion: 'espana', clasePermiso: 'b', companiaAnterior: 'Aseguradora Ficticia' } as FormularioAuto)
+  const selects = con.escribibles.filter((o) => o.tipo === 'mat-select')
+  assert.deepEqual(selects.map((o) => [o.etiqueta, o.opciones]), [
+    ['uso del vehículo', ['Particular', 'Privado']],
+    ['ámbito de circulación', ['España', 'Nacional']],
+    ['clase del permiso', ['B']],
+    ['compañía anterior', ['Aseguradora Ficticia']],
+  ])
+  assert.deepEqual(con.pendientes.map((o) => o.etiqueta), ['¿tiene compañía anterior?'], 'el interruptor sigue sin DOM: pendiente')
+  // Un valor sin mapeo NO se inventa: sigue pendiente.
+  const raro = planObjetoYFiguras({ ...form, usoVehiculo: 'taxi' } as unknown as FormularioAuto)
+  assert.ok(raro.pendientes.some((o) => o.etiqueta === 'uso del vehículo'))
+})
+
+test('rellenarMatSelects: cada mat-select del plan por ctx.elegirMatSelect con sus textos; sin la función o sin desplegable → hueco con inventario', async () => {
+  const plan = planDelPaso(planObjetoYFiguras({ ...form, usoVehiculo: 'particular', ambitoCirculacion: 'espana', clasePermiso: 'b' } as FormularioAuto), 'objetoAsegurado')
+  await page.setContent(`<body><app-datos-vehiculo><mat-select formcontrolname="uso">x</mat-select><mat-select formcontrolname="ambitoCirculacion">y</mat-select></app-datos-vehiculo></body>`)
+  const vistos: unknown[] = []
+  const hechos = await rellenarMatSelects(page, plan, { elegirMatSelect: async (_s, valores, o) => { vistos.push([o.etiqueta, valores]); return { texto: 'x', origen: 'coincidencia' as const } } })
+  assert.deepEqual(hechos, ['uso del vehículo', 'ámbito de circulación'])
+  assert.deepEqual(vistos, [['uso del vehículo', ['Particular', 'Privado']], ['ámbito de circulación', ['España', 'Nacional']]])
+  await assert.rejects(() => rellenarMatSelects(page, plan, {}), (e) => e instanceof ErrorMapaIncompleto)
+  await page.setContent('<body></body>')
+  await assert.rejects(() => rellenarMatSelects(page, plan, { elegirMatSelect: async () => ({ texto: '', origen: 'ia' as const }) }), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom)
+  assert.deepEqual(await rellenarMatSelects(page, { escribibles: [], pendientes: [] }, {}), [])
 })
