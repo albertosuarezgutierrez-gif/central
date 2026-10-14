@@ -3,6 +3,7 @@ import { verificarWebhookResend, interpretarEventoResend } from '@/lib/recaptaci
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { Prisma } from '@/lib/generated/asegura-client'
 import { aplicarBajaPorRebote } from '@/lib/cartera-recaptacion'
+import { aplicarBajaCampanaPorRebote } from '@/lib/presentacion-app'
 import { interpretarEventoCorreo, registrarEventoCorreo } from '@/lib/correo-seguimiento'
 
 export const dynamic = 'force-dynamic'
@@ -65,6 +66,14 @@ export async function POST(req: Request) {
       const baja = await aplicarBajaPorRebote(evento.resendMessageId, evento.estado)
       if (baja.estado === 'error') {
         console.error('[webhooks/resend] no se pudo aplicar la baja automática:', baja.motivo)
+      }
+      // El mismo rebote/queja puede ser de un correo de CAMPAÑA (`campana_envio`), no de recaptación:
+      // cada función solo encuentra los suyos y la otra contesta `no_encontrado`. No lanza.
+      if (baja.estado === 'no_encontrado') {
+        const bajaCampana = await aplicarBajaCampanaPorRebote(evento.resendMessageId, evento.estado)
+        if (bajaCampana.estado === 'error') {
+          console.error('[webhooks/resend] no se pudo aplicar la baja automática de campaña:', bajaCampana.motivo)
+        }
       }
     }
     return fin()
