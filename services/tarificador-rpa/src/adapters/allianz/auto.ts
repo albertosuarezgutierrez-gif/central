@@ -59,8 +59,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { ErrorAvanceSinLlegar, exigirCampoNoBancario } from '../../guard.ts'
-import { abrirNuevaAlta, TARJETA_AUTOS } from './entrada.ts'
-import { fechaEs, login, marcoCon, sesionSirve } from './comunidades.ts'
+import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
 /** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
 export const AUTO_ACTIVO = false
