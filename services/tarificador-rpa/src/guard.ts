@@ -1143,3 +1143,90 @@ export async function pulsarGuardadoDialogoAutorizado(
     page.off('dialog', alDialogo)
   }
 }
+
+// ─────────── OPCIONES DEL RIESGO de Allianz HOGAR (adaptador de tarificación, 14/10/2026) ───────────
+
+/**
+ * Etiquetas EXACTAS de los radios de la pantalla 1 «Vivienda» de Allianz HOGAR (exploraciones IA del 13-14/10/2026): madera,
+ * tipo de vivienda, régimen y uso. Son DATOS DEL RIESGO, no modalidades ni avances: marcarlos no tarifica, no guarda ni emite.
+ * LISTA CERRADA: una etiqueta fuera de aquí no se marca nunca. La de planta baja llegó recortada en el inventario («…del sue…»)
+ * y se completa con «suelo»: si en real no casa EXACTA, el robot para (hueco), no elige «la más parecida».
+ */
+export const OPCIONES_RIESGO_HOGAR_ALLIANZ: readonly string[] = Object.freeze([
+  'Sin madera', 'Con madera',
+  'Piso en alto', 'Unifamiliar Adosada / Pareada', 'Planta Baja o piso con ventanas a menos de 3 metros del suelo', 'Ático', 'Unifamiliar Independiente',
+  'Propietario', 'Inquilino',
+  'Habitual', 'Alquiler', 'Secundaria', 'Turístico o vacacional',
+])
+/** Origen y ruta de la app Angular de Allianz HOGAR en el iframe `appArea` (vistos en las exploraciones). */
+export const ORIGEN_APP_HOGAR_ALLIANZ = 'https://cloud.e-pacallianz.com'
+const RE_RUTA_APP_HOGAR_ALLIANZ = /^\/ngx-allianzhogar\d*\//
+
+/** Sin mayúsculas, tildes ni espacios sobrantes. Pura. */
+function planoOpcion(t: string | null | undefined): string {
+  return (t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/**
+ * ¿La etiqueta leída es EXACTAMENTE la esperada? Solo tolera mayúsculas/tildes/espacios y la etiqueta DUPLICADA de los toggles
+ * de ePAC («Propietario Propietario»: icono + texto). Nunca «contiene». Pura.
+ */
+export function etiquetaOpcionHogarCasa(leida: string | null | undefined, esperada: string): boolean {
+  const l = planoOpcion(leida)
+  const e = planoOpcion(esperada)
+  return l !== '' && (l === e || l === `${e} ${e}`)
+}
+
+/** ¿Es `url` la app de Allianz HOGAR? Origen EXACTO + ruta `/ngx-allianzhogar…/`. Pura. */
+export function esAppHogarAllianz(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.origin === ORIGEN_APP_HOGAR_ALLIANZ && RE_RUTA_APP_HOGAR_ALLIANZ.test(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+/** Resultado de marcar una opción del riesgo. `no_unica`/`no_quedo` son HUECOS de mapa (el adaptador para con inventario). */
+export type ResultadoOpcionHogar = { estado: 'ya_marcada' | 'marcada' } | { estado: 'no_unica'; coincidencias: number } | { estado: 'no_quedo' }
+
+/**
+ * Marca UNA opción del riesgo de Allianz HOGAR (el ÚNICO camino del adaptador para tocar un radio). Exige, en orden:
+ *   1. guard limpio y TODAS las ventanas de red cerradas; la etiqueta en `OPCIONES_RIESGO_HOGAR_ALLIANZ` (lista cerrada);
+ *   2. el marco vivo y de la app de Hogar (`esAppHogarAllianz`); ningún campo de cuenta bancaria en pantalla;
+ *   3. EXACTAMENTE un radio del marco cuya etiqueta casa EXACTA (si ya está marcado, no se pulsa nada);
+ *   4. su `<label for>` único; `comprobarBoton` sobre el control y sobre la etiqueta (sin permisos: nada de Aceptar,
+ *      Archivar, emitir…) ANTES del único clic; después, que quede marcado.
+ * No abre ventanas de red: cualquier navegación/POST con forma de emisión sigue abortando.
+ */
+export async function marcarOpcionRiesgoHogarAllianz(marco: Frame, guard: GuardEmision, etiqueta: string): Promise<ResultadoOpcionHogar> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'opción del riesgo de hogar con una ventana de red abierta')
+  if (!OPCIONES_RIESGO_HOGAR_ALLIANZ.includes(etiqueta)) throw new EmisionBloqueadaError('boton', `opción del riesgo de hogar fuera de la lista cerrada: «${etiqueta.slice(0, 80)}»`)
+  if (marco.isDetached() || !esAppHogarAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción del riesgo de hogar fuera de la app de Allianz HOGAR')
+  await exigirSinCuentaBancaria(marco.page())
+  const todos = await marco.locator('input[type=radio]').evaluateAll((els) =>
+    els.map((el) => {
+      const h = el as HTMLInputElement
+      return { id: h.id || null, etiqueta: h.labels && h.labels.length ? Array.from(h.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '' }
+    }),
+  )
+  const hits = todos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, etiqueta))
+  if (hits.length !== 1 || !hits[0].id) return { estado: 'no_unica', coincidencias: hits.length }
+  const id = hits[0].id.replace(/["\\]/g, '')
+  const control = marco.locator(`input[type=radio][id="${id}"]`)
+  if ((await control.count()) !== 1) return { estado: 'no_unica', coincidencias: await control.count() }
+  if (await control.isChecked()) return { estado: 'ya_marcada' }
+  const label = marco.locator(`label[for="${id}"]`)
+  if ((await label.count()) !== 1) return { estado: 'no_unica', coincidencias: await label.count() }
+  const descControl = await control.evaluate((el) => {
+    const h = el as HTMLInputElement
+    return [h.id || null, h.name || null, h.getAttribute('onclick'), h.getAttribute('onchange'), h.getAttribute('aria-label'), h.getAttribute('formaction')]
+  })
+  comprobarBoton(descControl)
+  const desc = await descripcion(label)
+  comprobarBoton(desc)
+  await label.click()
+  guard.comprobar()
+  return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}

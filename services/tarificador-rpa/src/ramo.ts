@@ -1,12 +1,14 @@
 // Runner tipado por ramo (13/10/2026). El registro guarda adaptadores de CUALQUIER ramo; este módulo (puro, sin
 // Playwright ni red) los estrecha por su `ramo` declarado y valida el riesgo del trabajo con el validador DE ESE RAMO:
-//   · comunidades → `validarRiesgoComunidad`  · auto / moto → `validarFormularioAuto`.
+//   · comunidades → `validarRiesgoComunidad`  · auto / moto → `validarFormularioAuto`  · hogar → `validarFormularioHogar`.
 // Sin casts: el `switch` sobre `adaptador.ramo` estrecha la unión discriminada. Un ramo sin validador es un error de
 // compilación (exhaustividad), no un trabajo que se cuela con otra forma de riesgo.
 import {
   validarFormularioAuto,
+  validarFormularioHogar,
   validarRiesgoComunidad,
   type FormularioAuto,
+  type FormularioHogar,
   type ResultadoAdaptador,
   type RiesgoComunidad,
   type TarificadorAdapter,
@@ -19,8 +21,10 @@ type ExtrasAdaptador = Pick<AdaptadorPortal, 'credencial' | 'version' | 'sesion'
 
 export type AdaptadorComunidades = AdaptadorPortal
 export type AdaptadorVehiculo = TarificadorAdapter<Page, FormularioAuto, ContextoPortal> & ExtrasAdaptador & { readonly ramo: 'auto' | 'moto' }
+/** Hogar (14/10/2026): riesgo `FormularioHogar`. Primer adaptador: Allianz ePAC, tras `ALLIANZ_HOGAR_ACTIVO` (apagado). */
+export type AdaptadorHogar = TarificadorAdapter<Page, FormularioHogar, ContextoPortal> & ExtrasAdaptador & { readonly ramo: 'hogar' }
 /** Lo que guarda el registro del worker. */
-export type AdaptadorRegistrado = AdaptadorComunidades | AdaptadorVehiculo
+export type AdaptadorRegistrado = AdaptadorComunidades | AdaptadorVehiculo | AdaptadorHogar
 
 export type TrabajoPreparado =
   | {
@@ -46,6 +50,11 @@ export function prepararTrabajo(adaptador: AdaptadorRegistrado, crudo: unknown, 
       if (!v.ok) return { ok: false, errores: v.errores }
       // El adaptador de un ramo solo acepta formularios de ese ramo (el de Allianz lo repite en su `tarificar`).
       if (v.formulario.ramo !== adaptador.ramo) return { ok: false, errores: [`el formulario es de ${v.formulario.ramo} y el adaptador de ${adaptador.ramo}`] }
+      return { ok: true, comunidad: null, tarificar: (page, ctx) => adaptador.tarificar(page, v.formulario, ctx) }
+    }
+    case 'hogar': {
+      const v = validarFormularioHogar(crudo, hoy)
+      if (!v.ok) return { ok: false, errores: v.errores }
       return { ok: true, comunidad: null, tarificar: (page, ctx) => adaptador.tarificar(page, v.formulario, ctx) }
     }
   }

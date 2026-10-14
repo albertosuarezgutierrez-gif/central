@@ -79,6 +79,7 @@
 
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
+| 14/10/2026 | Allianz | Hogar: las exploraciones no pasan de la pantalla 1; «Año de construcción»/«Superficie» siguen inválidos (`nodo_no_relocalizado`) | Angular repinta el formulario tras el autocompletado de CP/vía; refs viejos | Adaptador de tarificación por `formcontrolname` (sin refs), año/m² los ÚLTIMOS, comprobación de valor y de inválidos; radios del riesgo solo por `marcarOpcionRiesgoHogarAllianz` (guard.ts, lista cerrada) porque el portal trae opciones marcadas de serie | `services/tarificador-rpa/test/allianz-hogar.test.ts` |
 | 14/10/2026 | Mapfre | Tercera exploración real: login OK y llega a la página «Automóviles», pero no halla «Tarificación y Emisión Rápida» (0 coincidencias visibles) | La página no expone el enlace en el DOM principal (probable iframe o elemento no estándar) | URL directa del formulario NSEI como entrada principal (pestaña nueva, vale si aparece `app-datos-basicos`; el 401 no cuenta) con respaldo por menús; error con los dos motivos | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (4 casos de URL directa + `URL_NSEI_AUTO` vs `PATRON_EMISION`) |
 | 14/10/2026 | Mapfre | Segunda exploración real: login OK, llega a la página «Automóviles» (título y «Turismos y Motos» encontrados) pero falla: no halla el enlace «Tarificación y Emisión Rápida» en la tarjeta | El acotado a la tarjeta (`tarjetaDe`) no casa con el DOM real (desconocido); y el HTML del fallo no queda guardado: asegura descarta captura/HTML de las exploraciones (`lib/tarificador.ts`, «una exploración no guarda captura ni HTML») | Tarjeta (3 s) → si no, texto EXACTO en TODA la página, subiendo al control pulsable, y solo con EXACTAMENTE 1 coincidencia visible (0 o ≥2 → `ErrorMapaIncompleto` con el nº y los candidatos sin datos personales en el mensaje). Regla común: un acotado por contenedor lleva fallback a texto exacto único, nunca a «el primero» | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
 | 14/10/2026 | Mapfre | Primera exploración real: login OK, pero la entrada falló con mapa incompleto (la URL seguía en `#/`) | Se asumió que «Turismos y Motos» era pulsable y no se pulsaba la opción «Automóviles» del desplegable de «Nueva producción» | Ruta real: pestaña → opción «Automóviles» (se pulsa) → página con tarjetas → enlace «Tarificación y Emisión Rápida» dentro de la tarjeta «Turismos y Motos» (que no se pulsa). Lección: los menús desplegables se confirman con captura antes de mapear | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (fixture con menú + página y enlaces homónimos) |
@@ -136,7 +137,7 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 | Clave canónica | Allianz | Mapfre (NSEI) |
 |---|---|---|
 | `efecto.fecha` | — | — |
-| `tomador.fecha_nacimiento` | Pantalla 1 típica de Hogar; etiqueta de Allianz sin documentar | — |
+| `tomador.fecha_nacimiento` | «Fecha de nacimiento» (`dateOfBirth`, pantalla 1) | — |
 | `tomador.nif` | «Tipo de documento» (`nx-dropdown`) + nº de documento | — |
 | `contacto.email` / `contacto.telefono` | — | — |
 | `inmueble.codigo_postal` | CP de la pantalla 1 (dispara el autocompletado) | — |
@@ -161,6 +162,18 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   - El botón «Siguiente» (`NextPageFromRisk`) está deshabilitado hasta rellenar los datos obligatorios.
   - «Tipo de documento» es un `nx-dropdown` de Angular, NO un `<select>`.
   - Población y vía se autocompletan; no son campos de texto libre.
+- **Hogar, lo visto en las 6 exploraciones IA (13-14/10/2026; ninguna pasó de la pantalla 1):** el iframe `appArea` carga una app
+  Angular de OTRO origen, `https://cloud.e-pacallianz.com/ngx-allianzhogar2053/` (no el servlet de Comunidades/Moto). Asistente
+  `nx-multi-step-item`: Vivienda · Valoración de bienes · Precio · Datos · Revisión · Pago · Confirmación. Pantalla 1 («¿Quién es
+  el tomador?» + «Datos de la vivienda») por `formcontrolname`: `idType`, `idNumber`, `dateOfBirth`, `postalCode`, `province`
+  (deshab.), `town`, `streetType` (deshab.), `streetName`, `streetNumber`, `block`, `stair`, `floor`, `flat`, `extraAddress`,
+  botón «Comprobar», `yearOfConstruction`, `yearOfRefurbishment`, `surfaceAreaLiving`. Radios: «Sin/Con madera»; tipo («Piso en
+  alto», «Unifamiliar Adosada / Pareada», «Planta Baja o piso con ventanas a menos de 3 metros del suelo», «Ático», «Unifamiliar
+  Independiente», trastero, parking, caravana); régimen (toggle «Propietario»/«Inquilino», etiqueta duplicada); uso («Habitual»,
+  «Alquiler», «En venta y/o deshabitada», «Secundaria», «Turístico o vacacional»). Hogar NO tiene «Datos básicos» ni su «Aceptar».
+  - **Ojo:** el portal trae marcados de serie «Sin madera», «Piso en alto», «Propietario» y «Habitual»: el bot los fija SIEMPRE
+    al valor del riesgo. Año y m² quedaban inválidos tras el autocompletado (repintado): el bot los rellena los últimos.
+  - Adaptador de tarificación: `services/tarificador-rpa/src/adapters/allianz/hogar.ts` (apagado; estado en `docs/TARIFICADOR-RPA.md`).
 - Hechos de DOM de Comunidades (Calcular, Aceptar, fechas, primer recibo): `docs/TARIFICADOR-RPA.md`, sección
   «Hechos del DOM — Allianz ePAC Comunidades».
 

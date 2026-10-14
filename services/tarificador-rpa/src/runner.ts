@@ -36,7 +36,7 @@ import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Confi
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { capturarEvidencia } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
@@ -161,6 +161,12 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         await pulsarContinuarMapfre(pagina, guard, paso)
       },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
+      marcarOpcionHogar: async (marco, etiqueta) => {
+        // Solo un marco de ESTA página (la del guard de red del trabajo).
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/hogar: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return marcarOpcionRiesgoHogarAllianz(marco, guard, etiqueta)
+      },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
       paso: k.traza.paso,

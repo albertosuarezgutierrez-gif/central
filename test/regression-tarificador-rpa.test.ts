@@ -376,6 +376,18 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(!/validarRiesgoComunidad/.test(runner), 'el runner ya no valida con el de Comunidades a pelo')
 })
 
+test('Allianz HOGAR (14/10/2026): flag propio APAGADO, registro solo bajo el flag, hogar validado con su formulario y sin puertas de avance/guardado', () => {
+  const hogar = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/hogar.ts'), 'utf8'))
+  assert.match(hogar, /^export const ALLIANZ_HOGAR_ACTIVO = false$/m, 'Allianz Hogar nace APAGADO (lo enciende Alberto)')
+  // Solo `ctx.pulsar`: ni el avance autorizado (Aceptar), ni guardar/emitir, ni la pestaña de Moto.
+  assert.ok(!/pulsarExploracionAutorizada|avanzarPestanaAutorizada|avanzarATarificar|pulsarGuardado|pulsarEmision|abrirProyecto/.test(hogar), 'Hogar no usa puertas de avance/guardado/emisión')
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.match(idx, /^if \(ALLIANZ_HOGAR_ACTIVO\) adaptadores\.registrar\(allianzHogar\)$/m, 'allianzHogar se registra SOLO con `if (ALLIANZ_HOGAR_ACTIVO)`')
+  assert.equal((idx.match(/allianzHogar/g) ?? []).length, 2, 'allianzHogar: un import y un registro condicionado')
+  const ramo = sinComentarios(readFileSync(join(SRV, 'src/ramo.ts'), 'utf8'))
+  assert.match(ramo, /case 'hogar':[\s\S]*?validarFormularioHogar\(crudo, hoy\)/, 'hogar se valida con validarFormularioHogar')
+})
+
 /** Infracciones del EXPLORADOR IA del worker (fase B, 13/10/2026). Exportada en el test para verla FALLAR. */
 function infraccionesExplorador(explorador: string, guard: string, otros: Record<string, string>): string[] {
   const out: string[] = []

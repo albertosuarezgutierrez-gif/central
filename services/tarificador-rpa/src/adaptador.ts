@@ -5,7 +5,7 @@ import type { Frame, Locator, Page } from 'playwright'
 import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
-import type { PasoContinuarMapfre, SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, ResultadoOpcionHogar, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -71,6 +71,12 @@ export type ContextoPortal = ContextoTarificacion & {
    * contexto que `confirmarVehiculoMapfre`.
    */
   continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
+  /**
+   * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
+   * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,
+   * `comprobarBoton` antes del clic). `no_unica`/`no_quedo` = hueco de mapa: el adaptador para con inventario.
+   */
+  marcarOpcionHogar?: (marco: Frame, etiqueta: string) => Promise<ResultadoOpcionHogar>
 }
 
 /**
