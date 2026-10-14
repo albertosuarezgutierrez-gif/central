@@ -112,7 +112,16 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
         if (!ins.length) { stats.duplicados++; continue }
         filaId = ins[0].id
 
-        const c = await clasificar(correo)
+        const clasificado = await clasificar(correo)
+        // 🚨 Un aviso de DEVOLUCIÓN que una regla de `correo_reglas` manda a `correduria` vuelve a
+        // `correduria-recibo` (14/10/2026). La regla manual `@occidentinforma.com → correduria` corre
+        // ANTES que la de recibos de keywords.ts, así que «Recibos devueltos de banco» de Occident
+        // caía al digest sin pasar nunca por el lector ni por la cartera. El lector decide por
+        // remitente + asunto (devuelve null a todo lo demás), así que no secuestra otros correos.
+        const c = clasificado.categoria === 'correduria'
+          && leerCorreoDevolucion({ remitente: correo.from, asunto: correo.subject, texto: correo.texto ?? correo.extracto, fecha: correo.fecha.toISOString() }) !== null
+          ? { ...clasificado, categoria: 'correduria-recibo', via: 'regla' as const }
+          : clasificado
         const ruta = rutaDe(c.categoria)
         let accion = 'ninguna'
 

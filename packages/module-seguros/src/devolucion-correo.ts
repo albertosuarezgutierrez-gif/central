@@ -150,36 +150,66 @@ function leerReale(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
 // ── Occident ─────────────────────────────────────────────────────────────────
 // | Nº Póliza | Nº Recibo | Producto | Total bruto | Nº devolución | Motivo devolución | Titular de la
 //   cuenta | Datos bancarios | Fecha envío / devolución | Situación |
+// El triaje NO ve las barras: el correo es solo HTML y `mailparser` lo pasa a texto con UNA CELDA POR
+// LÍNEA (medido con el correo real del 13/10/2026). Las barras son de la conversión de Gmail. Se leen
+// los dos formatos; una fila con forma de fila que no cuadra se cuenta como ilegible.
+const POLIZA_OCCIDENT = /^[A-Z0-9]{6,}$/i
+const RECIBO_OCCIDENT = /^\d{6,}$/
+
 function leerOccident(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
   const deOccident = ['occidentinforma.com', 'occident.com', 'catalanaoccidente.com'].some((d) => esDe(c.remitente, d))
   if (!deOccident || !/recibos?\s+devueltos?/i.test(c.asunto)) return null
   const out: LecturaCorreoDevolucion = { compania: 'occident', codigoDgs: CODIGO.occident, devoluciones: [], incidencias: [], ilegibles: 0 }
-  for (const bruta of lineas(c.texto)) {
-    const celdas = (bruta.includes('|') ? bruta.split('|') : bruta.split('\t')).map((x) => x.trim())
-    const vivas = celdas[0] === '' ? celdas.slice(1) : celdas
-    if (vivas.length < 2 || !/^[A-Z0-9]{6,}$/i.test(vivas[0] ?? '') || !/^\d{6,}$/.test(vivas[1] ?? '')) continue
-    if (/^n[ºo°]/i.test(vivas[0])) continue
-    // poliza, recibo, producto, total, nº devolución, motivo, titular, iban, fechas, situación.
-    // Exactamente esas columnas: con celdas corridas el «motivo» podría ser el titular o el IBAN.
-    const celdasTabla = vivas[vivas.length - 1] === '' ? vivas.slice(0, -1) : vivas
+  let filasVistas = 0
+  // poliza, recibo, producto, total, nº devolución, motivo, titular, iban, fechas, situación.
+  // Exactamente esas columnas: con celdas corridas el «motivo» podría ser el titular o el IBAN.
+  const fila = (celdasTabla: string[]): void => {
+    filasVistas++
     const fechas = (celdasTabla[8] ?? '').match(/\d{2}[./-]\d{2}[./-]\d{4}/g) ?? []
     // Envío Y devolución, las dos: con una sola no se sabe cuál es, y el plazo sale de ahí.
     const fechaDevolucion = fechas.length === 2 ? isoDeFechaEs(fechas[1]) : null
-    if (celdasTabla.length !== 10 || fechaDevolucion === null) { out.ilegibles++; continue }
+    if (celdasTabla.length !== 10 || fechaDevolucion === null) { out.ilegibles++; return }
     // Una fila ya recobrada o anulada no es una devolución pendiente.
-    if (/cobrad|pagad|anulad|regulariz/i.test(celdasTabla[9] ?? '')) continue
+    if (/cobrad|pagad|anulad|regulariz/i.test(celdasTabla[9] ?? '')) return
     const motivo = motivoLimpio(celdasTabla[5])
     out.devoluciones.push({
       codigoDgs: CODIGO.occident,
-      numeroPoliza: vivas[0],
-      idRecibo: vivas[1],
-      importe: importeEs(vivas[3]),
+      numeroPoliza: celdasTabla[0],
+      idRecibo: celdasTabla[1],
+      importe: importeEs(celdasTabla[3]),
       fechaEfecto: isoDeFechaEs(fechas[0]),
       fechaDevolucion,
       motivo,
       tipoMotivo: clasificarMotivoDevolucion(motivo),
     })
   }
+  const ls = lineas(c.texto)
+  // 1) Tabla en una línea por fila (celdas con `|` o tabulador).
+  for (const bruta of ls) {
+    if (!bruta.includes('|') && !bruta.includes('\t')) continue
+    const celdas = (bruta.includes('|') ? bruta.split('|') : bruta.split('\t')).map((x) => x.trim())
+    const vivas = celdas[0] === '' ? celdas.slice(1) : celdas
+    if (vivas.length < 2 || !POLIZA_OCCIDENT.test(vivas[0] ?? '') || !RECIBO_OCCIDENT.test(vivas[1] ?? '')) continue
+    if (/^n[ºo°]/i.test(vivas[0])) continue
+    fila(vivas[vivas.length - 1] === '' ? vivas.slice(0, -1) : vivas)
+  }
+  // 2) Una celda por línea (lo que llega por IMAP). Solo si no había tabla en línea: si no, la misma
+  //    fila se contaría dos veces. La fila arranca en póliza + recibo + producto + «NN,NN Eur»; con una
+  //    celda de menos las diez siguientes no cuadran (las fechas no caen en su sitio) → ilegible.
+  if (filasVistas === 0) {
+    const celdas = ls.map((x) => x.trim()).filter((x) => x !== '')
+    for (let i = 0; i + 1 < celdas.length; i++) {
+      if (!POLIZA_OCCIDENT.test(celdas[i]) || !RECIBO_OCCIDENT.test(celdas[i + 1])) continue
+      if (importeEs(celdas[i + 3]) === null) continue
+      const tramo = celdas.slice(i, i + 10)
+      // La situación es texto: si en su sitio hay un nº, la fila venía corta y se ha comido la siguiente.
+      if (tramo.length === 10 && /^\d+$/.test(tramo[9])) tramo.pop()
+      fila(tramo)
+      i += tramo.length === 10 ? 9 : 1
+    }
+  }
+  // Un aviso de devueltos trae al menos una fila: sin ninguna, es que no se ha sabido leer.
+  if (filasVistas === 0) out.ilegibles++
   return out
 }
 

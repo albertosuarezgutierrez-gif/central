@@ -114,6 +114,57 @@ test('Occident: fila ya recobrada fuera; columnas corridas o una sola fecha = il
   assert.equal(con(corrida)?.devoluciones[0].motivo, null)
 })
 
+// Occident tal y como lo ve el TRIAJE (14/10/2026): el correo es solo HTML y `mailparser` lo pasa a texto
+// con UNA CELDA POR LÍNEA (sin `|` ni tabuladores). El fixture de arriba salió de Gmail (tabla con barras)
+// y por eso pasaba en verde mientras en producción no se leía ninguna fila. Mismo formato que el correo
+// real del 13/10/2026 (salida de `simpleParser`), con pólizas, recibos, titular e IBAN cambiados.
+const OCCIDENT_TRIAJE = {
+  ...OCCIDENT,
+  asunto: 'Recibos devueltos de banco 13-10-2026',
+  fecha: '2026-10-13T19:52:02Z',
+  texto: [
+    'Con la intención de mejorar nuestro servicio, le comunicamos que los siguientes',
+    'recibos domiciliados han sido devueltos, y se ha procedido según el caso.',
+    '',
+    'Nº', 'Póliza', 'Nº Recibo', 'Producto', 'Total bruto', 'Nº', 'devolución', 'Motivo devolución',
+    'Titular de la cuenta', 'Datos bancarios', 'Fecha envío /  devolución', 'Situación',
+    '500000001', '400000002', 'R.C. PRIVADA', '73,39 Eur', '1ª', 'Cuenta cancelada', 'Persona Prueba',
+    'ES0000000000000000000000', '06.10.2026 13.10.2026', 'Pendiente',
+    'GPAFS0000003', '400000003', 'AUTOS INDIVIDUAL', '1.573,69 Eur', '2ª', 'Operación autorizada no conforme',
+    'Otra Persona', 'ES0000000000000000000001', '01.10.2026 13.10.2026', 'Pendiente',
+    'Por favor, no responda directamente a este correo.',
+  ].join('\n'),
+}
+
+test('Occident como lo ve el triaje (una celda por línea): lee cada fila sin sacar titular ni IBAN', () => {
+  const l = leerCorreoDevolucion(OCCIDENT_TRIAJE)
+  assert.ok(l)
+  assert.equal(l.ilegibles, 0)
+  assert.deepEqual(l.devoluciones[0], {
+    codigoDgs: 'C0468', numeroPoliza: '500000001', idRecibo: '400000002', importe: 73.39,
+    fechaEfecto: '2026-10-06', fechaDevolucion: '2026-10-13', motivo: 'Cuenta cancelada', tipoMotivo: 'cuenta',
+  })
+  assert.equal(l.devoluciones[1].idRecibo, '400000003')
+  assert.equal(l.devoluciones[1].importe, 1573.69)
+  assert.equal(l.devoluciones[1].tipoMotivo, 'cliente_rechaza')
+  assert.equal(l.devoluciones.length, 2)
+  assert.doesNotMatch(JSON.stringify(l), /ES0000|Persona Prueba|Otra Persona/)
+})
+
+test('🪤 Occident una celda por línea: una fila con una celda de menos se CUENTA como ilegible', () => {
+  const sinNumDevolucion = OCCIDENT_TRIAJE.texto.replace('1.573,69 Eur\n2ª\n', '1.573,69 Eur\n')
+  const l = leerCorreoDevolucion({ ...OCCIDENT_TRIAJE, texto: sinNumDevolucion })
+  assert.equal(l?.devoluciones.length, 1)
+  assert.equal(l?.ilegibles, 1)
+})
+
+test('🪤 un aviso de devueltos de Occident del que no sale NINGUNA fila no es «sin devoluciones»', () => {
+  const l = leerCorreoDevolucion({ ...OCCIDENT_TRIAJE, texto: 'Con la intención de mejorar nuestro servicio, le comunicamos que los siguientes recibos' })
+  assert.ok(l)
+  assert.equal(l.devoluciones.length, 0)
+  assert.equal(l.ilegibles, 1)
+})
+
 // Allianz: el texto que saca el triaje del PDF adjunto (filas, celdas separadas por tabulador), copiado
 // de las cartas reales del 17/06/2026 y del 04/08/2026 con pólizas, recibos, nombres y cuenta cambiados.
 const ALLIANZ_DEVUELTOS = {
