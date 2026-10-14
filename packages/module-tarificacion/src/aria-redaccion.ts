@@ -29,6 +29,14 @@ const FECHAS = [
   /\b(?:19|20)\d{2}[/.-]\d{1,2}[/.-]\d{1,2}\b/g, // aaaa-mm-dd
 ]
 
+/**
+ * Neutraliza TODO `<` y `>` (→ `‹` `›`): el YAML del aria no los necesita y así el texto del portal (no confiable) no puede
+ * abrir ni cerrar etiquetas del prompt (`</arbol_accesibilidad >`, mayúsculas, anidadas…). Idempotente.
+ */
+export function neutralizarAngulos(texto: string): string {
+  return texto.replace(/</g, '‹').replace(/>/g, '›')
+}
+
 const sangria = (l: string): number => l.length - l.trimStart().length
 
 /**
@@ -36,7 +44,7 @@ const sangria = (l: string): number => l.length - l.trimStart().length
  * que no se sabe interpretar pierde todo lo que sigue al rol. Idempotente.
  */
 export function redactarAriaSnapshot(texto: string): string {
-  const lineas = String(texto).split('\n')
+  const lineas = neutralizarAngulos(String(texto)).split('\n')
   const out: string[] = []
   let sangriaCampo = -1 // sangría de un campo con valor en bloque (`|`/`>`): se descartan sus líneas de continuación
   for (const l of lineas) {
