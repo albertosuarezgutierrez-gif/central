@@ -170,13 +170,30 @@ export type CtxLoginHogar = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pul
  * Paso 1 del SSO (GRABADO): portal → SSO → «Nombre de usuario» + «Iniciar sesión». Devuelve si se quedó en el SSO (la 2.ª
  * pantalla, sin grabar: la resuelve `login` con la hipótesis o el explorador con el login asistido). Reutilizado por ambos.
  */
-export async function loginPaso1(page: Page, ctx: CtxLoginHogar): Promise<boolean> {
+export async function loginPaso1(page: Page, ctx: CtxLoginHogar, plazos: { carreraMs?: number; usuarioMs?: number } = {}): Promise<boolean> {
   const url = urlEntradaPortal('/')
   const r = await page.goto(url, { waitUntil: 'domcontentloaded' })
   if ((r?.status() ?? 0) >= 500) throw new ErrorTarificador('portal', `occident/hogar: el portal respondió ${r?.status()}`, { transitorio: true })
   await ctx.exigirSinCaptcha()
-  if (!esUrlSso(page.url())) return false
-  await page.locator(SEL.ssoUsuario).fill(ctx.credenciales.usuario)
+  // El portal redirige al SSO DESPUÉS del `goto` (302 en cadena / JS): carrera entre «la URL pasa al host SSO» y «se ve la
+  // cabecera del portal» (sesión abierta). Mirar `page.url()` justo después del goto daba un falso «ya hay sesión».
+  const carreraMs = plazos.carreraMs ?? 20_000
+  const sso = page.waitForURL((u) => esUrlSso(u.toString()), { timeout: carreraMs, waitUntil: 'commit' }).then(() => 'sso' as const)
+  const cabecera = cabeceraPortalVisible(page, carreraMs).then((v) => (v ? ('cabecera' as const) : Promise.reject(new Error('sin cabecera'))))
+  const primero = await Promise.any([sso, cabecera]).catch(() => null)
+  if (primero === 'cabecera') return false
+  // Sin SSO ni cabecera: página desconocida. NO transitorio (no se reintenta el login con credenciales).
+  if (primero === null) throw new ErrorTarificador('portal', `occident/hogar: el portal no llegó ni al SSO ni a la cabecera en ${Math.round(carreraMs / 1000)} s`)
+  // La página del SSO aún no se ha comprobado.
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined)
+  await ctx.exigirSinCaptcha()
+  // Dos variantes del SSO: (a) pide el usuario; (b) usuario preseleccionado (solo contraseña u otra pantalla). En (b) no se
+  // rellena nada: la 2.ª fase la resuelve el login asistido (explorador) o `login()` (hipótesis).
+  const campo = page.locator(SEL.ssoUsuario)
+  const hayUsuario = await campo.waitFor({ state: 'visible', timeout: plazos.usuarioMs ?? 10_000 }).then(() => true, () => false)
+  // Sin campo de usuario: si se ve la cabecera es un rebote SSO→portal con la sesión viva; si no, 2.ª fase del SSO.
+  if (!hayUsuario) return !(await cabeceraPortalVisible(page, 3_000))
+  await campo.fill(ctx.credenciales.usuario)
   await ctx.pausa()
   await pulsarSeguro(ctx, page.locator(SEL.ssoEnviarUsuario))
   await page.waitForLoadState('domcontentloaded').catch(() => undefined)
