@@ -48,15 +48,39 @@ export async function localizarContinuarConRespaldo(
 ): Promise<{ locator: Locator; origen: 'fijo' | 'conocimiento' | 'ia'; confirmar: () => Promise<void> }> {
   const r = await conRespaldoIA(page, formador, () => localizarContinuar(page), { clave: 'continuar', tipo: 'accion', descripcion })
   await exigirFueraDeDialogo(r.locator)
+  await exigirTextoVisibleContinuar(r.locator)
   return r
+}
+
+/**
+ * Sea cual sea el ORIGEN (fijo, aprendido o IA), lo que el usuario VE en el botón (innerText, o `value` si es un input) tiene que
+ * ser «Continuar»/«Siguiente»: un `aria-label`/`title` no basta (`<button aria-label="Siguiente">Confirmar</button>` no se pulsa).
+ */
+async function exigirTextoVisibleContinuar(boton: Locator): Promise<void> {
+  const visible = await boton
+    .evaluate((el) => {
+      const h = el as HTMLElement
+      const esInput = h.tagName === 'INPUT'
+      return esInput ? ((h as HTMLInputElement).value ?? '') : (h.innerText || '')
+    })
+    .catch(() => '')
+  if (!esTextoContinuar(visible)) throw new ErrorTarificador('portal', 'continuar: el texto visible del botón no es «Continuar»/«Siguiente» (no se pulsa)')
 }
 
 /** Huella barata de la pantalla: URL + título + texto visible. Cambia al navegar y al cambiar de paso en una SPA. */
 export async function huellaPantalla(page: Page): Promise<string> {
+  return (await huellaOpcional(page)) ?? 'navegando'
+}
+
+/** Como `huellaPantalla`, pero `null` si no se pudo leer (navegación en curso): NO cuenta como «la pantalla cambió». */
+async function huellaOpcional(page: Page): Promise<string | null> {
   return page
     .evaluate(() => `${location.href}\u0000${document.title}\u0000${(document.body?.innerText ?? '').replace(/\s+/g, ' ').trim()}`)
-    .catch(() => `navegando:${Date.now()}`)
+    .catch(() => null)
 }
+
+/** Tope duro de la espera de cambio de pantalla, pida lo que pida el llamador. */
+export const ESPERA_CAMBIO_MAX_MS = 120_000
 
 export type OpcionesContinuar = {
   /** `ctx.pulsar`: el ÚNICO modo de pulsar (guard de emisión). Nunca `locator.click()`. */
@@ -80,7 +104,7 @@ export type OpcionesContinuar = {
 export async function pulsarContinuarSeguro(page: Page, o: OpcionesContinuar): Promise<{ origen: 'fijo' | 'conocimiento' | 'ia' }> {
   const donde = o.desde ? ` desde «${o.desde}»` : ''
   const r = await localizarContinuarConRespaldo(page, o.formador)
-  const antes = await huellaPantalla(page)
+  const antes = await huellaOpcional(page)
   let dialogoNativo: string | null = null
   const alDialogo = (d: Dialog) => {
     dialogoNativo ??= d.type()
@@ -89,10 +113,17 @@ export async function pulsarContinuarSeguro(page: Page, o: OpcionesContinuar): P
   page.on('dialog', alDialogo)
   try {
     await o.pulsar(r.locator)
-    const hasta = Date.now() + (o.esperaMs ?? ESPERA_CAMBIO_MS)
+    const hasta = Date.now() + Math.min(Math.max(o.esperaMs ?? ESPERA_CAMBIO_MS, 1_000), ESPERA_CAMBIO_MAX_MS)
     for (;;) {
       if (dialogoNativo) throw new ErrorTarificador('portal', `continuar${donde}: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
-      const avanzo = o.llegado ? await o.llegado(page).catch(() => false) : (await huellaPantalla(page)) !== antes
+      let avanzo: boolean
+      if (o.llegado) avanzo = await o.llegado(page).catch(() => false)
+      else {
+        const ahora = await huellaOpcional(page)
+        // Sin lectura (navegando) no hay información: se espera a `load` en vez de darlo por avanzado.
+        if (ahora === null) await page.waitForLoadState('load', { timeout: 2_000 }).catch(() => undefined)
+        avanzo = ahora !== null && (antes === null || ahora !== antes)
+      }
       if (avanzo) break
       if (Date.now() >= hasta) throw new ErrorTarificador('portal', `continuar${donde}: tras pulsarlo la pantalla no cambió (¿un campo obligatorio sin rellenar o un aviso?)`)
       await page.waitForTimeout(250)

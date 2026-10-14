@@ -162,3 +162,18 @@ test('sin formador (o sin respuesta): el error original, sin colgarse', async ()
   assert.equal(llamadas.sugerir, 1)
   assert.equal(await clics(page), 0)
 })
+
+test('texto visible: un botón con aria-label «Siguiente» pero texto «Revisar» NO se pulsa (ni aprendido ni IA)', async () => {
+  const { page, guard } = await preparar(PANTALLA(`<button id="falso" aria-label="Siguiente" onclick="sigue()">Revisar</button>`))
+  const llamadas = { n: 0 }
+  const fetchImpl = (async (url: string) => {
+    if (String(url).endsWith('/sugerir')) {
+      llamadas.n++
+      return new Response(JSON.stringify({ indice: 0 }))
+    }
+    return new Response(JSON.stringify({ formadorActivo: true, conocimiento: [], acompanamiento: { activo: false } }))
+  }) as unknown as typeof fetch
+  const formador = await prepararFormador({ trabajoId: '00000000-0000-4000-8000-000000000000', compania: 'mapfre', ramo: 'auto', apiUrl: 'https://x', secreto: 'x'.repeat(20), redactar: (t) => t, log: () => undefined, fetchImpl })
+  await assert.rejects(() => pulsarContinuarSeguro(page, { pulsar: (b) => pulsar(b, guard), formador, esperaMs: 1_500 }), (e) => e instanceof ErrorTarificador && /texto visible/.test(e.message))
+  assert.equal(await clics(page), 0, 'no se pulsó')
+})

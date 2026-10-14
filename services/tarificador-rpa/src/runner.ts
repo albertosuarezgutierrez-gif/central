@@ -173,8 +173,10 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (destino.context() !== context) throw new ErrorTarificador('portal', 'continuar: la pestaña no es de este trabajo')
         await pulsarContinuarSeguro(destino, { pulsar: ctx.pulsar, formador: k.formador, ...o })
       },
-      elegirMatSelect: (select, valores, o) =>
-        elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar }),
+      elegirMatSelect: (select, valores, o) => {
+        if (select.page().context() !== context) throw new ErrorTarificador('portal', 'mat-select: la pestaña no es de este trabajo')
+        return elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar })
+      },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,

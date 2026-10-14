@@ -27,11 +27,12 @@ test('lista de ramos con bots fijada: moto y auto (coche, Mapfre NSEI, 14/10/202
   assert.deepEqual(ramosConBots().sort(), ['auto', 'moto'])
 })
 
-test('auto → adaptador sin campos extra; sin historial ni matrícula faltan datos y lo dice sin valores', () => {
+test('auto → adaptador con 3 desplegables (uso, ámbito, clase del permiso; defecto de coche); sin historial ni matrícula faltan datos y lo dice sin valores', () => {
   const a = adaptadorDeRamo('auto')
   assert.ok(a)
   assert.equal(a.ramo, 'auto')
-  assert.deepEqual(a.campos, [])
+  assert.deepEqual(a.campos.map((c) => [c.clave, c.porDefecto]), [['usoVehiculo', 'particular'], ['ambitoCirculacion', 'espana'], ['clasePermiso', 'b']])
+  assert.ok(a.campos.every((c) => c.opciones?.some((o) => o.valor === c.porDefecto)), 'el defecto es una de las opciones')
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: 'ficha', fechaNacimiento: 'ficha', fechaCarne: 'ficha',
     sexo: null, garaje: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: false,

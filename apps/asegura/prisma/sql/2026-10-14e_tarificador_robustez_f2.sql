@@ -11,7 +11,7 @@
 --      captura). Alberto elige un número (Telegram o «Bots atascados»); se aprende como `humano` y el MISMO trabajo vuelve a
 --      `pendiente`. Sin respuesta en `caduca_at` → `error_definitivo`.
 --
--- ⚠️ NO APLICADA. Aplicar ANTES de desplegar asegura con la F2. El código comprueba cada pieza (`esquema-bd.ts`:
+-- ✅ APLICADA en producción el 14/10/2026 (migración `tarificador_robustez_f2`). El código comprueba cada pieza (`esquema-bd.ts`:
 --    `hayConfianzaAprendido`, `hayPausas`, `hayAtascos`) y sin ella se comporta como antes; pero el CHECK de estado tiene que
 --    admitir `atascado` antes de encender `TARIFICADOR_ATASCO_ACTIVO=1`.
 --

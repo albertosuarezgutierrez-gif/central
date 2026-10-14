@@ -315,7 +315,7 @@ test('planObjetoYFiguras: con los valores del formulario los mat-select pasan a 
   ])
   assert.deepEqual(con.pendientes.map((o) => o.etiqueta), ['¿tiene compañía anterior?'], 'el interruptor sigue sin DOM: pendiente')
   // Un valor sin mapeo NO se inventa: sigue pendiente.
-  const raro = planObjetoYFiguras({ ...form, usoVehiculo: 'taxi' } as FormularioAuto)
+  const raro = planObjetoYFiguras({ ...form, usoVehiculo: 'taxi' } as unknown as FormularioAuto)
   assert.ok(raro.pendientes.some((o) => o.etiqueta === 'uso del vehículo'))
 })
 

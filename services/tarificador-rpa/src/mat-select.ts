@@ -113,7 +113,9 @@ export async function elegirOpcionMatSelect(select: Locator, valores: string | r
   else {
     const i = await sugerirOpcion(o.formador, {
       clave: o.clave ?? slug(o.etiqueta),
-      descripcion: `Lista desplegable «${o.etiqueta}»: elige la OPCIÓN que corresponde al valor que el formulario de tarificación tiene en ese campo (coincidencia ${motivo === 'ambigua' ? 'ambigua entre varias' : 'ninguna clara'}). Las candidatas son las opciones de la lista.`,
+      // El valor buscado (textos de catálogo del mapeo del adaptador, nunca datos personales) VA PRIMERO: `descripcion` se recorta a
+      // 300 y el servidor la mete tal cual en el prompt. Sin él la IA elegiría a ciegas.
+      descripcion: `Valor buscado: ${buscados.slice(0, 3).map((b) => `«${b.replace(/\s+/g, ' ').trim().slice(0, 60)}»`).join(' | ')}. Lista desplegable «${o.etiqueta.slice(0, 60)}»: elige la OPCIÓN que corresponde a ese valor (coincidencia ${motivo === 'ambigua' ? 'ambigua' : 'no clara'}).`,
       opciones: textos,
     }).catch(() => null)
     if (i !== null && opcionPermitida(textos[i])) {
@@ -126,12 +128,19 @@ export async function elegirOpcionMatSelect(select: Locator, valores: string | r
     throw new ErrorOpcionSinResolver(`sin opción clara para «${o.etiqueta}» (${motivo === 'ambigua' ? 'varias coinciden' : 'ninguna coincide'} y la IA no resolvió)`, textos)
   }
   const texto = textos[elegida]!
-  await o.pulsar(filas.nth(elegida))
+  // La fila se verifica JUSTO antes de pulsar: si el panel se re-renderizó y `nth(i)` ya es otra opción, no se pulsa.
+  const fila = filas.nth(elegida)
+  const filaAhora = (await fila.innerText({ timeout: 2_000 }).catch(() => '')).replace(/\s+/g, ' ').trim()
+  if (filaAhora !== texto) {
+    await cerrar()
+    throw new ErrorOpcionSinResolver(`la lista de «${o.etiqueta}» cambió mientras se leía (la opción elegida ya no está en su sitio)`, textos)
+  }
+  await o.pulsar(fila)
   // Comprobación: el desplegable enseña lo elegido (valor del control, no el panel).
   const hasta = Date.now() + 3_000
   for (;;) {
     const visto = normalizarTexto(await select.innerText().catch(() => ''))
-    if (visto.includes(normalizarTexto(texto))) break
+    if (visto === normalizarTexto(texto)) break
     if (Date.now() >= hasta) throw new ErrorTarificador('portal', `mat-select: el portal no dejó fijada la opción de «${o.etiqueta}»`)
     await page.waitForTimeout(100)
   }

@@ -100,14 +100,14 @@ test('sin coincidencia y sin formador: ErrorOpcionSinResolver (portal, pide inve
   assert.equal(await abierto(page), 0, 'el panel se cerró (clic en el telón, sin teclado)')
 })
 
-async function formadorConIA(elegir: (opciones: (string | null)[]) => number | null, llamadas: { sugerir: number; estructuras: (string | null)[][] }): Promise<ContextoFormador> {
+async function formadorConIA(elegir: (opciones: (string | null)[], descripcion: string) => number | null, llamadas: { sugerir: number; estructuras: (string | null)[][] }): Promise<ContextoFormador> {
   const fetchImpl = (async (url: string, init?: RequestInit) => {
     if (String(url).endsWith('/sugerir')) {
       llamadas.sugerir++
-      const cuerpo = JSON.parse(String(init?.body)) as { estructura: { etiqueta: string | null }[] }
+      const cuerpo = JSON.parse(String(init?.body)) as { descripcion: string; estructura: { etiqueta: string | null }[] }
       const ops = cuerpo.estructura.map((c) => c.etiqueta)
       llamadas.estructuras.push(ops)
-      return new Response(JSON.stringify({ indice: elegir(ops) }))
+      return new Response(JSON.stringify({ indice: elegir(ops, cuerpo.descripcion) }))
     }
     return new Response(JSON.stringify({ formadorActivo: true, conocimiento: [], acompanamiento: { activo: false } }))
   }) as unknown as typeof fetch
@@ -116,7 +116,7 @@ async function formadorConIA(elegir: (opciones: (string | null)[]) => number | n
 
 test('sin coincidencia clara: el FORMADOR recibe la lista de opciones como candidatos y su índice se aplica', async () => {
   const llamadas = { sugerir: 0, estructuras: [] as (string | null)[][] }
-  const formador = await formadorConIA((ops) => ops.indexOf('Uso privado'), llamadas)
+  const formador = await formadorConIA((ops, descripcion) => (/Valor buscado: «Particular»/.test(descripcion) ? ops.indexOf('Uso privado') : null), llamadas)
   const { page, guard } = await preparar(MAT(['Alquiler con conductor', 'Uso privado', 'Profesional']))
   const r = await elegirOpcionMatSelect(page.locator('#uso'), ['Particular'], { pulsar: (b) => pulsar(b, guard), formador, etiqueta: 'uso del vehículo' })
   assert.deepEqual(r, { texto: 'Uso privado', origen: 'ia' })

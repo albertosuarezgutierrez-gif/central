@@ -659,7 +659,10 @@ test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→
     assert.ok(!/\.(?:click|dblclick|tap|press|check|setChecked|fill)\s*\(/.test(src), `${f}: nada de click()/press() directos`)
     assert.match(src, /\bo\.pulsar\(/, `${f}: pulsa por el pulsar guardado`)
   }
-  assert.match(runner, /pulsar: ctx\.pulsar/, 'el runner les pasa ctx.pulsar (guard)')
+  // CADA helper recibe `pulsar: ctx.pulsar` (no basta una aparición): continuar Y mat-select, cada uno en su propia entrada.
+  assert.match(runner, /pulsarContinuarSeguro\(destino, \{[^}]*pulsar: ctx\.pulsar/, 'el runner pasa ctx.pulsar a continuar')
+  assert.match(runner, /elegirOpcionMatSelect\(select, valores, \{[^}]*pulsar: ctx\.pulsar/, 'el runner pasa ctx.pulsar a mat-select')
+  assert.match(runner, /elegirMatSelect: [^\n]*\n\s*if \(select\.page\(\)\.context\(\) !== context\)/, 'mat-select comprueba la pestaña del trabajo')
 })
 
 test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactado en mensajes/URL/HTML y sin captura', () => {
