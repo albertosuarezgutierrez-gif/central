@@ -21,6 +21,8 @@ export type PeticionResend = {
     text: string
     html: string
     tags: { name: string; value: string }[]
+    /** Cabeceras extra del correo (p. ej. `List-Unsubscribe`). Solo si se piden. */
+    headers?: Record<string, string>
   }
 }
 
@@ -31,6 +33,9 @@ export function construirPeticionResend(d: {
   asunto: string
   texto: string
   html: string
+  /** Tag `categoria` de Resend. Por defecto `recaptacion` (el flujo para el que nació). */
+  categoria?: string
+  cabeceras?: Record<string, string>
 }): PeticionResend {
   return {
     url: 'https://api.resend.com/emails',
@@ -44,7 +49,8 @@ export function construirPeticionResend(d: {
       // La categoría, no datos personales: sirve para filtrar en el dashboard
       // de Resend y para que el webhook (si algún día distingue por tag) sepa
       // de qué flujo viene.
-      tags: [{ name: 'categoria', value: 'recaptacion' }],
+      tags: [{ name: 'categoria', value: d.categoria ?? 'recaptacion' }],
+      ...(d.cabeceras ? { headers: d.cabeceras } : {}),
     },
   }
 }
@@ -61,12 +67,12 @@ export type ResultadoEnvioResend =
  * mismo helper sería más confuso que tener dos caminos claros.
  */
 export async function enviarEmailResend(
-  d: { from: string; to: string; asunto: string; texto: string; html: string },
+  d: { from: string; to: string; asunto: string; texto: string; html: string; categoria?: string; cabeceras?: Record<string, string> },
   fetchImpl: typeof fetch = fetch,
 ): Promise<ResultadoEnvioResend> {
   const apiKey = process.env.RESEND_API_KEY?.trim()
   if (!apiKey) return { ok: false, motivo: 'sin_api_key' }
-  const peticion = construirPeticionResend({ apiKey, from: d.from, to: d.to, asunto: d.asunto, texto: d.texto, html: d.html })
+  const peticion = construirPeticionResend({ apiKey, ...d })
   try {
     const res = await fetchImpl(peticion.url, {
       method: 'POST',
