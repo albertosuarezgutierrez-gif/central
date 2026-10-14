@@ -148,6 +148,36 @@ const DATOS_COMUNIDADES: readonly DatoCatalogo[] = [
   D({ clave: 'comunidad.capital_continente', descripcion: 'Capital de continente en euros', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '1500000', rutaRiesgo: 'comunidad.capitalContinente' }),
 ]
 
+/** CV → kW (1 CV = 0,73549875 kW). La columna «CV/KW» del diálogo «Selección de vehículo» de Mapfre trae CV. */
+export function cvAKw(cv: number | null): number | null {
+  return cv === null || !Number.isFinite(cv) ? null : cv * 0.73549875
+}
+
+/**
+ * Clase MÍNIMA de permiso que exige el vehículo en Auto (Alberto/DGT, 14/10/2026, todas las compañías). La clase a declarar es la
+ * que TIENE el conductor (dato real); esto solo dice qué exige el vehículo. turismo → B; moto ≤50 cc → B (ciclomotor);
+ * moto ≤125 cc y ≤11 kW → B si lleva ≥3 años con B, si no A1; moto ≤35 kW → A2; más → A.
+ * `null` siempre que falte un dato necesario para decidir (nunca adivinar).
+ */
+export function claseMinimaPermiso({ esMoto, cilindradaCc, potenciaKw, antiguedadBAnios }: {
+  esMoto: boolean | null
+  cilindradaCc: number | null
+  potenciaKw: number | null
+  antiguedadBAnios: number | null
+}): 'B' | 'A1' | 'A2' | 'A' | null {
+  const num = (n: number | null): n is number => n !== null && Number.isFinite(n)
+  if (esMoto === null) return null
+  if (!esMoto) return 'B'
+  if (!num(cilindradaCc)) return null
+  if (cilindradaCc <= 50) return 'B'
+  if (!num(potenciaKw)) return null
+  if (cilindradaCc <= 125 && potenciaKw <= 11) {
+    if (!num(antiguedadBAnios)) return null
+    return antiguedadBAnios >= 3 ? 'B' : 'A1'
+  }
+  return potenciaKw <= 35 ? 'A2' : 'A'
+}
+
 /**
  * Riesgo de AUTO (Mapfre NSEI, 14/10/2026): rutas = `FormularioAuto` (formulario-auto.ts). Sin valor sintético lo que puede
  * ser de una persona real (NIF, matrícula) o que la IA no puede inventar sin falsear la tarifa (marca, modelo, siniestros).
@@ -163,8 +193,9 @@ const DATOS_AUTO: readonly DatoCatalogo[] = [
   D({ clave: 'vehiculo.cilindrada_cc', descripcion: 'Cilindrada en cc', tipo: 'numero', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.cilindradaCc' }),
   D({ clave: 'conductor.fecha_nacimiento', descripcion: 'Fecha de nacimiento del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/1980', rutaRiesgo: 'conductor.fechaNacimiento' }),
   D({ clave: 'conductor.fecha_carne', descripcion: 'Fecha del carné de conducir del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/2000', rutaRiesgo: 'conductor.fechaCarne' }),
-  // Valor fijo de NEGOCIO (Alberto, 14/10/2026): turismos = siempre «B». Sin `rutaRiesgo` → también con datos reales sale este valor.
-  D({ clave: 'conductor.clase_permiso', descripcion: 'Clase del permiso de conducir (turismo: siempre B)', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'B' }),
+  // Regla de NEGOCIO (Alberto, 14/10/2026), ver `claseMinimaPermiso`. Sin `rutaRiesgo` → también con datos reales sale este valor
+  // (por defecto turismo = «B»; la clase real del conductor manda; si el vehículo elegido en «Selección de vehículo» exige más, se para).
+  D({ clave: 'conductor.clase_permiso', descripcion: 'Clase del permiso que TIENE el conductor (dato real); si no consta y el vehículo exige más que B, PARAR (no inventar). Mínimo según DGT: B turismo/ciclomotor/≤125 cc y ≤11 kW con B ≥3 años; A1 ≤125 cc; A2 ≤35 kW; A sin límite', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'B' }),
   D({ clave: 'historial.siniestros_5_anios', descripcion: 'Siniestros con culpa (RC) en los últimos 5 años', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '0', rutaRiesgo: 'siniestrosUltimos5Anios' }),
   D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
 ]
