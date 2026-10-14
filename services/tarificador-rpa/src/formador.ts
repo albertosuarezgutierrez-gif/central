@@ -49,6 +49,9 @@ export const ACCIONES_PERMITIDAS = {
   // NAVEGACIÓN de menús (Alberto, 14/10/2026: «el botón con IA para no quedarse parado»). Textos EXACTOS de wmediadores.
   pestana_nueva_produccion: ['nueva produccion'],
   menu_automoviles: ['automoviles'],
+  // «Continuar»/«Siguiente» ENTRE PANTALLAS (pieza 4, 14/10/2026): se pulsa SIEMPRE por el guard (`ctx.pulsar`) y por
+  // `pulsarContinuarSeguro` (continuar.ts). Nunca «Continuar a pago», «Grabar y continuar»…: el texto casa ENTERO.
+  continuar: ['continuar', 'siguiente'],
 } as const satisfies Record<string, readonly string[]>
 
 /**
@@ -832,6 +835,56 @@ export async function campoConRespaldo(
   avanzaPaso(r.formador)
   r.formador?.log(`respaldo: campo «${r.etiqueta}» resuelto por ${res.origen}`)
   return { campo: res.locator, origen: res.origen, confirmar: res.confirmar }
+}
+
+/**
+ * OPCIÓN de una lista desplegable (mat-select…) con respaldo de IA: `opciones` son los textos que ya leyó el helper del
+ * overlay (catálogo del portal, nunca datos del cliente). La IA solo devuelve un ÍNDICE; aquí se valida que sea de la lista y
+ * que la opción no lleve palabras de emisión/pago. Misma contabilidad que `resolverConFormador` (presupuesto del trabajo,
+ * topes de asegura). `null` = sin formador, sin presupuesto, sin respuesta o respuesta inválida. NO pulsa nada.
+ */
+export async function sugerirOpcion(ctx: ContextoFormador | undefined, p: { clave: string; descripcion: string; opciones: readonly string[] }): Promise<number | null> {
+  if (!ctx?.activo || !CLAVE_ATASCO.test(p.clave) || !p.opciones.length) return null
+  if (!quedaPresupuestoIA(ctx.usoIA)) {
+    ctx.log('formador_sin_presupuesto', { clave: p.clave })
+    return null
+  }
+  const elegibles = p.opciones.map((t, i) => ({ t, i })).filter(({ t }) => opcionPermitida(t))
+  if (!elegibles.length) return null
+  ctx.usoIA ??= { consultas: 0, ms: 0 }
+  ctx.usoIA.consultas++
+  const t0 = Date.now()
+  const r = await llamar<{ indice?: number | null; motivo?: string }>(ctx, 'sugerir', {
+    metodo: 'POST',
+    timeoutMs: TIMEOUT_IA_MS,
+    cuerpo: {
+      trabajoId: ctx.trabajoId,
+      compania: ctx.compania,
+      ramo: ctx.ramo,
+      clave: p.clave,
+      tipo: 'campo',
+      descripcion: limpiarTextoAviso(p.descripcion, ctx.redactar, 300) ?? '',
+      estructura: elegibles.map(({ t }): Candidato => ({ tag: 'mat-option', id: null, name: null, type: null, role: 'option', clases: null, texto: null, etiqueta: limpiarTextoAviso(t, ctx.redactar, 120), marco: null })),
+    },
+  })
+  ctx.usoIA.ms += Date.now() - t0
+  const i = r?.indice
+  if (typeof i !== 'number' || !Number.isInteger(i) || i < 0 || i >= elegibles.length) {
+    ctx.log('formador_sin_sugerencia', { clave: p.clave, motivo: r?.motivo ?? 'sin_respuesta' })
+    return null
+  }
+  ctx.log('formador_sugerencia_valida', { clave: p.clave })
+  return elegibles[i]!.i
+}
+
+/** ¿Puede una OPCIÓN de lista ser la elegida? Sin patrón de emisión ni palabras de `BLOQUEO_FORMADOR`. PURA. */
+export function opcionPermitida(texto: string | null | undefined): boolean {
+  if (typeof texto !== 'string' || normalizarTexto(texto) === '') return false
+  if (pareceEmision(texto)) return false
+  const n = normalizarTexto(texto)
+  // Por PALABRA entera (el patrón del guard, arriba, ya es el conservador por subcadena).
+  const palabras = new Set(n.split(' '))
+  return !BLOQUEO_FORMADOR.some((b) => palabras.has(b))
 }
 
 // ─── ATASCO (F2): checkpoint para que elija Alberto ──────────────────────────

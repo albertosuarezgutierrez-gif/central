@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { formularioBotAuto, garajeNocheDeCodigo, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { claveCerrada, formularioBotAuto, garajeNocheDeCodigo, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 import { completarRiesgoAutoDesdeFicha, datoDePersonaBot, historialBot, mensajeFaltanDeFicha, type FichaParaBot } from './tarificador-moto-formulario.ts'
 
 const HOY = new Date('2026-10-14T10:00:00Z')
@@ -37,7 +37,7 @@ test('completo: riesgo de AUTO con la forma de FormularioAuto (matrícula, CP de
   assert.equal(r.riesgo.siniestrosUltimos5Anios, 0) // 8 años sin siniestros ⇒ 0 en los últimos 5 (deducción)
   assert.equal(r.riesgo.garajeNoche, null) // garaje sin dato → no consta
   // Lo que FormularioAuto no tiene (matriculación, km) no viaja: no hay claves inventadas.
-  assert.deepEqual(Object.keys(r.riesgo).sort(), ['aniosAseguradoAnterior', 'codigoPostal', 'conductor', 'garajeNoche', 'matricula', 'ramo', 'seleccionVehiculo', 'siniestrosUltimos5Anios', 'tomadorEsConductor', 'tomadorEsPropietario'])
+  assert.deepEqual(Object.keys(r.riesgo).sort(), ['ambitoCirculacion', 'aniosAseguradoAnterior', 'clasePermiso', 'codigoPostal', 'conductor', 'garajeNoche', 'matricula', 'ramo', 'seleccionVehiculo', 'siniestrosUltimos5Anios', 'tomadorEsConductor', 'tomadorEsPropietario', 'usoVehiculo'])
 })
 
 test('garaje: calle/vía pública → false; garajes → true; vacío o código no visto → null (no se traduce a ojo)', () => {
@@ -126,4 +126,20 @@ test('cotizador de coche monta «Bots (gratis)» con ramo auto; garaje solo si e
   assert.match(r, /b\.ramo !== 'moto' && b\.ramo !== 'auto'/)
   assert.match(r, /completarRiesgoVehiculoDesdeFicha\(vehiculo, /)
   assert.match(r, /encolarTarificacionVehiculo\(vehiculo, /)
+})
+
+test('uso, ámbito, clase del permiso y compañía anterior (Mapfre, 14/10/2026): defectos de coche, valores cerrados, sin inventar', () => {
+  const d = ok(entrada())
+  assert.deepEqual([d.riesgo.usoVehiculo, d.riesgo.ambitoCirculacion, d.riesgo.clasePermiso], ['particular', 'espana', 'b'])
+  assert.equal('companiaAnterior' in d.riesgo, false, 'sin nombre no viaja compañía anterior')
+  const x = ok(entrada({ usoVehiculo: 'Particular', ambitoCirculacion: ' espana ', clasePermiso: 'A2', companiaAnterior: '  Compañía   Ejemplo ' }))
+  assert.deepEqual([x.riesgo.usoVehiculo, x.riesgo.ambitoCirculacion, x.riesgo.clasePermiso, x.riesgo.companiaAnterior], ['particular', 'espana', 'a2', 'Compañía Ejemplo'])
+  assert.equal(ok(entrada({ usoVehiculo: '', clasePermiso: null })).riesgo.clasePermiso, 'b')
+  assert.equal('companiaAnterior' in ok(entrada({ companiaAnterior: 'x'.repeat(81) })).riesgo, false)
+  const mal = faltan(entrada({ usoVehiculo: 'taxi-zzz', clasePermiso: 'Z9zzz' }))
+  assert.match(mal, /Uso del vehículo/)
+  assert.match(mal, /Clase del permiso/)
+  assert.doesNotMatch(mal, /zzz/, 'el valor no se repite')
+  assert.equal(claveCerrada('', ['b'], 'b'), 'b')
+  assert.equal(claveCerrada('c', ['b'], 'b'), undefined)
 })

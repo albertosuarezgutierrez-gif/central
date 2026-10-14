@@ -2035,6 +2035,8 @@ export default function AutoNuevo({
           aniosAsegurado,
           aniosSinSiniestros,
           siniestrosUltimos5,
+          // Compañía anterior que el corredor ya indicó (nombre del catálogo o texto libre); vacío = no consta.
+          companiaAnterior: (companias?.find((c) => c.codigoDgs === companiaActualCodigo)?.nombreComun ?? companiaActualLibre).trim() || null,
         }}
       />
 

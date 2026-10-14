@@ -17,6 +17,24 @@ export type RamoVehiculo = (typeof RAMOS_VEHICULO)[number]
 export const SEXOS_CONDUCTOR = ['hombre', 'mujer'] as const
 export type SexoConductor = (typeof SEXOS_CONDUCTOR)[number]
 
+/**
+ * Datos que el bot de Mapfre NSEI pide en `mat-select` del paso 2 (14/10/2026). Claves CERRADAS = las de `MAPEO_MAPFRE_AUTO`
+ * del servicio RPA (uso → `particular`; ámbito → `espana`; clase del permiso → `b`, `a`, `a1`, `a2`). Una clave nueva se añade
+ * AQUÍ y allí a la vez.
+ */
+export const USOS_VEHICULO = ['particular'] as const
+export type UsoVehiculo = (typeof USOS_VEHICULO)[number]
+export const AMBITOS_CIRCULACION = ['espana'] as const
+export type AmbitoCirculacion = (typeof AMBITOS_CIRCULACION)[number]
+export const CLASES_PERMISO = ['b', 'a', 'a1', 'a2'] as const
+export type ClasePermiso = (typeof CLASES_PERMISO)[number]
+/** Por defecto en AUTO (turismo; un encolado antiguo sin ellos sigue valiendo). En moto NO hay defecto: no consta. */
+export const USO_VEHICULO_POR_DEFECTO: UsoVehiculo = 'particular'
+export const AMBITO_CIRCULACION_POR_DEFECTO: AmbitoCirculacion = 'espana'
+export const CLASE_PERMISO_POR_DEFECTO: ClasePermiso = 'b'
+/** Máximo de `companiaAnterior` (el adaptador la ignora por encima de 80). */
+export const MAX_COMPANIA_ANTERIOR = 80
+
 export type ConductorHabitual = {
   /** ISO AAAA-MM-DD. */
   fechaNacimiento: string
@@ -70,6 +88,14 @@ export type FormularioAuto = {
    * mensajes, IA ni resultado; NO está en la lista blanca de la purga (se borra al cerrar el trabajo). Ausente = no consta.
    */
   documentoTomador?: string | null
+  /** Uso del vehículo (`USOS_VEHICULO`). En auto, por defecto `particular`; en moto, ausente = no consta. */
+  usoVehiculo?: UsoVehiculo | null
+  /** Ámbito de circulación (`AMBITOS_CIRCULACION`). En auto, por defecto `espana`. */
+  ambitoCirculacion?: AmbitoCirculacion | null
+  /** Clase del permiso del conductor (`CLASES_PERMISO`). En auto, por defecto `b`. */
+  clasePermiso?: ClasePermiso | null
+  /** Nombre de la compañía anterior (texto corto, ≤80). Ausente = no consta (el bot la deja como hueco, nunca la inventa). */
+  companiaAnterior?: string | null
 }
 
 /**
@@ -306,6 +332,20 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else errores.push('documentoTomador: no es un DNI/NIE/CIF válido')
   }
 
+  // Mat-select de Mapfre (opcionales con defecto en auto). Valor fuera de la lista cerrada = error (nunca se repite el valor).
+  const cerrado = <T extends string>(v: unknown, campo: string, lista: readonly T[], porDefecto: T | null): T | null => {
+    if (vacio(v)) return porDefecto
+    const k = typeof v === 'string' ? v.trim().toLowerCase() : ''
+    if ((lista as readonly string[]).includes(k)) return k as T
+    errores.push(`${campo}: tiene que ser uno de ${lista.join(', ')} (o no venir)`)
+    return null
+  }
+  const defectoAuto = ramo === 'auto'
+  const usoVehiculo = cerrado(e.usoVehiculo, 'usoVehiculo', USOS_VEHICULO, defectoAuto ? USO_VEHICULO_POR_DEFECTO : null)
+  const ambitoCirculacion = cerrado(e.ambitoCirculacion, 'ambitoCirculacion', AMBITOS_CIRCULACION, defectoAuto ? AMBITO_CIRCULACION_POR_DEFECTO : null)
+  const clasePermiso = cerrado(e.clasePermiso, 'clasePermiso', CLASES_PERMISO, defectoAuto ? CLASE_PERMISO_POR_DEFECTO : null)
+  const companiaAnterior = textoOpcional(e.companiaAnterior, 'companiaAnterior', MAX_COMPANIA_ANTERIOR)
+
   // Moto (fail-closed): Allianz tiene productos distintos «Moto» y «Ciclomotor» (≤50 cc). Solo se tarifica Moto.
   if (ramo === 'moto') {
     const cc = seleccionVehiculo?.cilindradaCc ?? null
@@ -333,6 +373,10 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(eleccionPoblacion !== null ? { eleccionPoblacion } : {}),
       ...(vehiculoConfirmado !== null ? { vehiculoConfirmado } : {}),
       ...(documentoTomador !== null ? { documentoTomador } : {}),
+      ...(usoVehiculo !== null ? { usoVehiculo } : {}),
+      ...(ambitoCirculacion !== null ? { ambitoCirculacion } : {}),
+      ...(clasePermiso !== null ? { clasePermiso } : {}),
+      ...(companiaAnterior !== null ? { companiaAnterior } : {}),
     },
   }
 }

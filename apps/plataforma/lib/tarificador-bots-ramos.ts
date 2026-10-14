@@ -6,10 +6,15 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
 import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
-import { formularioBotAuto, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
-export type CampoExtraBot = { clave: string; etiqueta: string; ayuda?: string; placeholder?: string }
+export type CampoExtraBot = {
+  clave: string; etiqueta: string; ayuda?: string; placeholder?: string
+  /** Con `opciones` el campo es un desplegable (valor cerrado) y `porDefecto` es lo que muestra mientras no se toque. */
+  opciones?: readonly { valor: string; etiqueta: string }[]
+  porDefecto?: string
+}
 
 export type ResultadoAdaptadorBot =
   | { ok: true; riesgo: Record<string, unknown>; completarDesdeFicha: CampoDeFicha[] }
@@ -40,9 +45,14 @@ export type FormularioBotsAuto = EntradaBotAuto
 
 const adaptadorAuto: AdaptadorBot = {
   ramo: 'auto',
-  campos: [],
-  construir: (formulario) => {
-    const r = formularioBotAuto(formulario as FormularioBotsAuto)
+  // Mat-select del paso 2 de Mapfre (14/10/2026): el corredor puede cambiarlos antes de pedir precio. Defecto de coche.
+  campos: [
+    { clave: 'usoVehiculo', etiqueta: 'Uso del vehículo', opciones: OPCIONES_USO_VEHICULO, porDefecto: 'particular' },
+    { clave: 'ambitoCirculacion', etiqueta: 'Ámbito de circulación', opciones: OPCIONES_AMBITO_CIRCULACION, porDefecto: 'espana' },
+    { clave: 'clasePermiso', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
+  ],
+  construir: (formulario, extra) => {
+    const r = formularioBotAuto({ ...(formulario as FormularioBotsAuto), usoVehiculo: extra.usoVehiculo, ambitoCirculacion: extra.ambitoCirculacion, clasePermiso: extra.clasePermiso })
     return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
   },
 }

@@ -69,8 +69,16 @@ Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de accio
     (consolidado) y el MISMO trabajo vuelve a `pendiente` (intentos 0): el worker repite el camino y lo aprendido lo resuelve por la
     MISMA validación (en un campo humano solo se relaja el contraste de etiqueta; una acción, nunca). Sin respuesta en
     `TARIFICADOR_ATASCO_HORAS` (24) → `error_definitivo` en el barrido. Descartar = `cancelado`.
-  · **Pendiente de la F2**: respaldo de «Continuar» de Mapfre, lupa del NIF y `mat-select` (son puertas propias de guard.ts, fuera de
-    la tabla cerrada: necesitan decisión y revisión de seguridad), y Allianz Moto a la capa común.
+  · **Pieza 4 hecha (14/10/2026, sin desplegar)** — helpers COMUNES para todos los bots: `src/continuar.ts` (`pulsarContinuarSeguro`:
+    botón de texto ENTERO «Continuar»/«Siguiente» → aprendido → IA, SIEMPRE por `ctx.pulsar` = guard, fuera de diálogos, espera el
+    cambio de pantalla y si no llega error tipado; nueva fila `continuar` en `ACCIONES_PERMITIDAS`) y `src/mat-select.ts`
+    (`elegirOpcionMatSelect`: abre el panel, lee `mat-option`/`role=option` del overlay, coincidencia normalizada → IA con la lista
+    de opciones (`sugerirOpcion`, solo un índice) → `ErrorOpcionSinResolver` que pide inventario). Runner: `ctx.continuar` y
+    `ctx.elegirMatSelect`; Mapfre: `continuarMapfre` con respaldo y mapeo explícito `MAPEO_MAPFRE_AUTO` (textos candidatos).
+    **Abierto**: `FormularioAuto` aún no trae uso/ámbito/clase de permiso/compañía anterior (siguen pendientes → paran en el paso 2
+    con inventario hasta ampliar validador + plataforma), el interruptor «¿compañía anterior?», la lupa del NIF y «Generar
+    Proyecto»; el atasco F2 de un mat-select sin resolver no es elegible por Telegram (las opciones no tienen selector).
+  · **Pendiente de la F2**: lupa del NIF (puerta propia de guard.ts: decisión y revisión de seguridad) y Allianz Moto a la capa común.
 - **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
   clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).
 - **Futuro**: las mismas capas para otras tareas (siniestros…) con su lista blanca por tarea.

@@ -9,7 +9,10 @@
 //
 // Lo que NO viaja a propósito (el `FormularioAuto` no tiene sitio y Mapfre NSEI no lo pide en la grabación del 13/10/2026):
 // fecha de matriculación (NSEI la autorrellena al confirmar el vehículo por matrícula) y km anuales.
-import { esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto } from '@central/module-tarificacion'
+import {
+  AMBITOS_CIRCULACION, AMBITO_CIRCULACION_POR_DEFECTO, CLASES_PERMISO, CLASE_PERMISO_POR_DEFECTO, MAX_COMPANIA_ANTERIOR, USOS_VEHICULO, USO_VEHICULO_POR_DEFECTO,
+  esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto,
+} from '@central/module-tarificacion'
 import { historialBot, type CampoDeFicha, type DatoPersona, type FormularioBotMoto } from './tarificador-moto-formulario.ts'
 
 export type EntradaBotAuto = {
@@ -34,6 +37,30 @@ export type EntradaBotAuto = {
   aniosAsegurado: string
   aniosSinSiniestros: string
   siniestrosUltimos5: string
+  /**
+   * Mat-select del paso 2 de Mapfre (14/10/2026). Claves cerradas de `module-tarificacion` (uso `particular`; ámbito `espana`;
+   * permiso `b`/`a`/`a1`/`a2`). Ausente o vacío = el defecto de coche (particular / espana / b): la ficha del vehículo y la del
+   * riesgo NO guardan uso, ámbito ni clase del permiso, así que no hay de dónde leerlos (no se inventa nada personal).
+   */
+  usoVehiculo?: string | null
+  ambitoCirculacion?: string | null
+  clasePermiso?: string | null
+  /** Nombre de la compañía anterior tal como lo ve el corredor (catálogo o texto libre). Vacío = no consta (el bot lo deja como hueco). */
+  companiaAnterior?: string | null
+}
+
+/** Opciones de los selectores de la pantalla (etiqueta para la persona, clave para el bot). */
+export const OPCIONES_USO_VEHICULO: readonly { valor: string; etiqueta: string }[] = [{ valor: 'particular', etiqueta: 'Particular' }]
+export const OPCIONES_AMBITO_CIRCULACION: readonly { valor: string; etiqueta: string }[] = [{ valor: 'espana', etiqueta: 'España' }]
+export const OPCIONES_CLASE_PERMISO: readonly { valor: string; etiqueta: string }[] = [
+  { valor: 'b', etiqueta: 'B · turismos' }, { valor: 'a', etiqueta: 'A · motos' }, { valor: 'a1', etiqueta: 'A1 · motos hasta 125 cc' }, { valor: 'a2', etiqueta: 'A2 · motos hasta 35 kW' },
+]
+
+/** Valor del selector → clave cerrada (o el defecto si viene vacío). `undefined` = valor que no está en la lista. PURA. */
+export function claveCerrada(v: string | null | undefined, lista: readonly string[], porDefecto: string): string | undefined {
+  const k = typeof v === 'string' ? v.trim().toLowerCase() : ''
+  if (k === '') return porDefecto
+  return lista.includes(k) ? k : undefined
 }
 
 /** Garajes del catálogo que son «duerme en garaje» (los vistos en asegura `datos-cotizados.ts`). */
@@ -88,6 +115,16 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
     if (siniestrosUltimos5Anios === null) faltan.push('Siniestros con culpa en los últimos 5 años')
   }
 
+  const usoVehiculo = claveCerrada(e.usoVehiculo, USOS_VEHICULO, USO_VEHICULO_POR_DEFECTO)
+  const ambitoCirculacion = claveCerrada(e.ambitoCirculacion, AMBITOS_CIRCULACION, AMBITO_CIRCULACION_POR_DEFECTO)
+  const clasePermiso = claveCerrada(e.clasePermiso, CLASES_PERMISO, CLASE_PERMISO_POR_DEFECTO)
+  if (usoVehiculo === undefined) faltan.push('Uso del vehículo: valor no válido')
+  if (ambitoCirculacion === undefined) faltan.push('Ámbito de circulación: valor no válido')
+  if (clasePermiso === undefined) faltan.push('Clase del permiso: valor no válido')
+  // La compañía anterior solo tiene sentido con seguro actual; sin nombre (o demasiado largo) no viaja (no consta).
+  const companiaTxt = e.tieneSeguroActual ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
+  const companiaAnterior = companiaTxt !== '' && companiaTxt.length <= MAX_COMPANIA_ANTERIOR ? companiaTxt : null
+
   if (faltan.length) return { ok: false, faltan }
 
   const marca = e.marca?.trim() ?? ''
@@ -109,6 +146,10 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
     aniosAseguradoAnterior,
     siniestrosUltimos5Anios,
     garajeNoche: garajeNocheDeCodigo(e.garaje),
+    usoVehiculo,
+    ambitoCirculacion,
+    clasePermiso,
+    ...(companiaAnterior !== null ? { companiaAnterior } : {}),
     // Marca/modelo solo si están los dos (nombres de catálogo; ayudan a otros bots a elegir versión). Sin ellos, ausente.
     ...(marca !== '' && modelo !== '' ? { seleccionVehiculo: { marca, modelo, ...(descripcionOk ? { descripcion: version } : {}) } } : {}),
   }

@@ -263,7 +263,7 @@ test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formaliz
   // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular» + la navegación de menús que autorizó Alberto
   //    (14/10/2026, respaldo IA); el enlace de entrada NO está en la tabla (va por la lista de guard.ts y `pulsarEnlaceEntrada`).
   const claves = [...tabla![1].matchAll(/^\s*(\w+)\s*:/gm)].map((m) => m[1])
-  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles'], 'ACCIONES_PERMITIDAS: solo «calcular» y la navegación autorizada')
+  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar'], 'ACCIONES_PERMITIDAS: solo «calcular» y la navegación autorizada')
   assert.match(src, /export function validarAccionEntrada[\s\S]*?textosEntradaDe\(compania\)\.includes\(esperado\)[\s\S]*?normalizarTexto\(d\.texto\) !== esperado/, 'el enlace de entrada: solo textos de guard.ts y texto visible exacto')
   const vc = src.slice(src.indexOf('export function validarCampo'), src.indexOf('export function validarResolucion'))
   assert.match(vc, /bloqueoPalabras\(\[\['id', d\.id\], \['name', d\.name\], \['title', d\.title\], \['aria-label', d\.ariaLabel\], \['onclick', d\.onclick\], \['onchange', d\.onchange\]\]\)/, 'validarCampo tiene que bloquear palabras de emisión en id/name/title/aria-label/onclick/onchange')
@@ -652,7 +652,17 @@ test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→
   const mapfre = sinComentarios(readFileSync(join(SRV, 'src/adapters/mapfre/auto.ts'), 'utf8'))
   assert.ok(!/ctx\.pulsar\(|continuar['"]?\s*\)?\s*\.click|Continuar/.test(mapfre.replace(/'[^'\n]*'|`[^`\n]*`/g, '')), 'mapfre/auto.ts no nombra «Continuar» ni pulsa')
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
-  assert.match(runner, /continuarMapfre: async \(pagina, paso\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await pulsarContinuarMapfre\(pagina, guard, paso\)\s*\}/)
+  assert.match(runner, /continuarMapfre: async \(pagina, paso\) => \{\s*if \(pagina\.context\(\) !== context\)[^\n]*\n\s*await pulsarContinuarMapfre\(pagina, guard, paso, \(p\) => localizarContinuarConRespaldo\(p, k\.formador\)\)\s*\}/)
+  // Pieza 4 (14/10/2026): los helpers COMUNES («Continuar» y mat-select) pulsan SOLO por el `pulsar` que reciben (= guard).
+  for (const f of ['src/continuar.ts', 'src/mat-select.ts']) {
+    const src = sinComentarios(readFileSync(join(SRV, f), 'utf8'))
+    assert.ok(!/\.(?:click|dblclick|tap|press|check|setChecked|fill)\s*\(/.test(src), `${f}: nada de click()/press() directos`)
+    assert.match(src, /\bo\.pulsar\(/, `${f}: pulsa por el pulsar guardado`)
+  }
+  // CADA helper recibe `pulsar: ctx.pulsar` (no basta una aparición): continuar Y mat-select, cada uno en su propia entrada.
+  assert.match(runner, /pulsarContinuarSeguro\(destino, \{[^}]*pulsar: ctx\.pulsar/, 'el runner pasa ctx.pulsar a continuar')
+  assert.match(runner, /elegirOpcionMatSelect\(select, valores, \{[^}]*pulsar: ctx\.pulsar/, 'el runner pasa ctx.pulsar a mat-select')
+  assert.match(runner, /elegirMatSelect: [^\n]*\n\s*if \(select\.page\(\)\.context\(\) !== context\)/, 'mat-select comprueba la pestaña del trabajo')
 })
 
 test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactado en mensajes/URL/HTML y sin captura', () => {
