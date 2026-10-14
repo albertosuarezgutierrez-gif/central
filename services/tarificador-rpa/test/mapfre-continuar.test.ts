@@ -154,3 +154,36 @@ test('con un diálogo abierto o un campo de cuenta bancaria visible → no se pu
   await assert.rejects(() => pulsarContinuarMapfre(b.page, b.guard, 'datosBasicos'), ErrorFronteraEmision)
   assert.equal(await clics(b.page), 0)
 })
+
+// ───────────── RESPALDO de la capa común (pieza 4, 14/10/2026) ─────────────
+const SALTA = `window.__clics=(window.__clics||0)+1;const h=[...document.querySelectorAll('mat-step-header')];const i=h.findIndex((x)=>x.getAttribute('aria-selected')==='true');h[i].setAttribute('aria-selected','false');h[i+1].setAttribute('aria-selected','true')`
+
+test('respaldo: sin botón exacto (un div con onclick) usa la localización aprendida/IA y SOLO confirma tras llegar al destino', async () => {
+  const { page, guard } = await preparar(STEPPER(0, { boton: `<div id="c2" onclick="${SALTA}">Continuar</div>` }))
+  // Sin respaldo, el hueco de siempre (y sin pulsar).
+  await assert.rejects(() => pulsarContinuarMapfre(page, guard, 'datosBasicos'), (e) => e instanceof ErrorMapaGuardMapfre && pideInventarioDom(e))
+  assert.equal(await clics(page), 0)
+  let confirmado = 0
+  const conRespaldo = await preparar(STEPPER(0, { boton: `<div id="c2" onclick="${SALTA}">Continuar</div>` }))
+  await pulsarContinuarMapfre(conRespaldo.page, conRespaldo.guard, 'datosBasicos', async (p) => ({ locator: p.locator('#c2'), confirmar: async () => { confirmado++ } }))
+  assert.match((await activo(conRespaldo.page)) ?? '', /Objeto asegurado/)
+  assert.equal(confirmado, 1)
+})
+
+test('respaldo: lo que devuelve pasa por las MISMAS comprobaciones (texto, guard, orden) y no se confirma si falla', async () => {
+  for (const [caso, boton] of Object.entries({
+    contratar: `<div id="c2" onclick="${SALTA}">Contratar</div>`,
+    manejador: `<div id="c2" onclick="${SALTA};emitirPoliza()">Continuar</div>`,
+    id: `<div id="btnEmitir" onclick="${SALTA}">Continuar</div>`,
+  })) {
+    const { page, guard } = await preparar(STEPPER(0, { boton }))
+    let confirmado = 0
+    await assert.rejects(() => pulsarContinuarMapfre(page, guard, 'datosBasicos', async (p) => ({ locator: p.locator('mat-horizontal-stepper ~ .pie div'), confirmar: async () => { confirmado++ } })), EmisionBloqueadaError, caso)
+    assert.equal(await clics(page), 0, caso)
+    assert.equal(confirmado, 0, caso)
+  }
+  // El respaldo que no resuelve (null / lanza): el hueco original, sin pulsar.
+  const { page, guard } = await preparar(STEPPER(0, { boton: `<div onclick="${SALTA}">Continuar</div>` }))
+  await assert.rejects(() => pulsarContinuarMapfre(page, guard, 'datosBasicos', async () => { throw new Error('sin IA') }), (e) => e instanceof ErrorMapaGuardMapfre)
+  assert.equal(await clics(page), 0)
+})

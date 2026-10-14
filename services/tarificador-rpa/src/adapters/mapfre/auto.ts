@@ -383,7 +383,30 @@ export async function leerResumenVehiculo(raiz: Pick<Frame, 'locator'>): Promise
 // ───────────────────────── plan de campos (puro) ─────────────────────────
 
 /** Cómo se escribe un campo. Solo `texto` se sabe hacer sin pulsar nada; el resto necesita un clic (hueco). */
-export type OperacionNsei = { sel: string; etiqueta: string; tipo: 'texto' | 'mat-select' | 'interruptor' | 'casilla'; valor: string | boolean; paso: IdPasoNsei }
+export type OperacionNsei = { sel: string; etiqueta: string; tipo: 'texto' | 'mat-select' | 'interruptor' | 'casilla'; valor: string | boolean; paso: IdPasoNsei; /** mat-select: textos de Mapfre aceptables, en orden de preferencia (`MAPEO_MAPFRE_AUTO`). */ opciones?: readonly string[] }
+
+// ───────────────────────── mapeo valor del formulario → texto de Mapfre (datos explícitos) ─────────────────────────
+/**
+ * Lo que el formulario de auto (`FormularioAuto`; validador en module-tarificacion y `tarificador-auto-formulario` en plataforma)
+ * AÚN NO trae y NSEI pide en `mat-select`: uso, ámbito de circulación, clase del permiso y compañía anterior. Hasta que el
+ * formulario los lleve, ninguno se supone (el paso para con inventario, como antes); en cuanto un valor llega (campo opcional
+ * en el formulario ampliado) se traduce con ESTA tabla. Los textos de Mapfre son CANDIDATOS (la grabación no los tiene abiertos,
+ * pieza 4, 14/10/2026): el helper elige por coincidencia clara y, si no, IA o hueco con la lista de opciones. NUNCA el primero.
+ */
+export type DatosMatSelectMapfre = { usoVehiculo?: string | null; ambitoCirculacion?: string | null; clasePermiso?: string | null; companiaAnterior?: string | null }
+
+export const MAPEO_MAPFRE_AUTO = Object.freeze({
+  uso: Object.freeze({ particular: Object.freeze(['Particular', 'Privado']) }) as Readonly<Record<string, readonly string[]>>,
+  ambito: Object.freeze({ espana: Object.freeze(['España', 'Nacional']) }) as Readonly<Record<string, readonly string[]>>,
+  /** Clases de permiso de coche/moto: el texto de Mapfre es la propia clase («B» en la grabación). */
+  clasePermiso: Object.freeze({ b: Object.freeze(['B']), a: Object.freeze(['A']), a1: Object.freeze(['A1']), a2: Object.freeze(['A2']) }) as Readonly<Record<string, readonly string[]>>,
+})
+
+/** Valor canónico del formulario → textos de Mapfre. `null` = sin valor o sin mapeo (queda pendiente: no se supone). PURA. */
+export function textosMapfreDe(campo: keyof typeof MAPEO_MAPFRE_AUTO, valor: string | null | undefined): readonly string[] | null {
+  const k = typeof valor === 'string' ? valor.trim().toLowerCase() : ''
+  return k !== '' && Object.hasOwn(MAPEO_MAPFRE_AUTO[campo], k) ? MAPEO_MAPFRE_AUTO[campo][k]! : null
+}
 
 const CP = /^\d{5}$/
 
@@ -409,13 +432,21 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
     { sel: SEL_CONDUCTOR.fechaCarne, etiqueta: 'fecha del carné', tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne), paso: 'figuras' },
     { sel: SEL_HISTORIAL.siniestrosRc5, etiqueta: 'siniestros RC 5 años', tipo: 'texto', valor: String(f.siniestrosUltimos5Anios), paso: 'figuras' },
   ]
-  const pendientes: OperacionNsei[] = [
-    { sel: SEL_OBJETO.uso, etiqueta: 'uso del vehículo', tipo: 'mat-select', valor: '', paso: 'objetoAsegurado' },
-    { sel: SEL_OBJETO.ambitoCirculacion, etiqueta: 'ámbito de circulación', tipo: 'mat-select', valor: '', paso: 'objetoAsegurado' },
-    { sel: SEL_CONDUCTOR.claseCarne, etiqueta: 'clase del permiso', tipo: 'mat-select', valor: '', paso: 'figuras' },
-  ]
+  const extra = f as FormularioAuto & DatosMatSelectMapfre
+  const pendientes: OperacionNsei[] = []
+  // mat-select: con el valor del formulario mapeado van a `escribibles` (los rellena `rellenarMatSelects`); sin él, pendiente.
+  const selectDe = (sel: string, etiqueta: string, paso: IdPasoNsei, textos: readonly string[] | null) => {
+    if (textos) escribibles.push({ sel, etiqueta, tipo: 'mat-select', valor: textos[0]!, paso, opciones: textos })
+    else pendientes.push({ sel, etiqueta, tipo: 'mat-select', valor: '', paso })
+  }
+  selectDe(SEL_OBJETO.uso, 'uso del vehículo', 'objetoAsegurado', textosMapfreDe('uso', extra.usoVehiculo))
+  selectDe(SEL_OBJETO.ambitoCirculacion, 'ámbito de circulación', 'objetoAsegurado', textosMapfreDe('ambito', extra.ambitoCirculacion))
+  selectDe(SEL_CONDUCTOR.claseCarne, 'clase del permiso', 'figuras', textosMapfreDe('clasePermiso', extra.clasePermiso))
   pendientes.push({ sel: SEL_HISTORIAL.tieneCompaniaAnterior, etiqueta: '¿tiene compañía anterior?', tipo: 'interruptor', valor: f.aniosAseguradoAnterior > 0, paso: 'figuras' })
-  if (f.aniosAseguradoAnterior > 0) pendientes.push({ sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: '', paso: 'figuras' })
+  if (f.aniosAseguradoAnterior > 0) {
+    const nombre = typeof extra.companiaAnterior === 'string' ? extra.companiaAnterior.trim() : ''
+    selectDe(SEL_HISTORIAL.companiaAnterior, 'compañía anterior', 'figuras', nombre !== '' && nombre.length <= 80 ? [nombre] : null)
+  }
   return { escribibles, pendientes }
 }
 
@@ -436,6 +467,24 @@ export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: Pl
     await r.confirmar().catch(() => undefined)
   }
   return plan.pendientes.map((p) => p.etiqueta)
+}
+
+/**
+ * Rellena los `mat-select` del plan que ya tienen valor mapeado (`escribibles` de tipo `mat-select`), por la capa común
+ * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
+ * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
+ */
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'>): Promise<string[]> {
+  const hechos: string[] = []
+  for (const op of plan.escribibles) {
+    if (op.tipo !== 'mat-select') continue
+    if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
+    const sel = raiz.locator(op.sel).first()
+    if ((await sel.count().catch(() => 0)) === 0) throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)`, true)
+    await ctx.elegirMatSelect(sel, op.opciones ?? [String(op.valor)], { etiqueta: op.etiqueta })
+    hechos.push(op.etiqueta)
+  }
+  return hechos
 }
 
 // ───────────────────────── avance entre pasos y flujo ─────────────────────────
@@ -493,14 +542,16 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
  * «Continuar», `exigirPasoCompleto`: hoy uso/ámbito (paso 2) y clase de permiso / compañía anterior (paso 3) son mat-select
  * sin DOM grabado abierto → para con inventario en el paso 2, sin precio supuesto.
  */
-export async function precioDesdeObjetoAsegurado(nsei: Page, f: FormularioAuto, vehiculo: VehiculoConfirmado, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador'>): Promise<ResultadoAdaptador> {
+export async function precioDesdeObjetoAsegurado(nsei: Page, f: FormularioAuto, vehiculo: VehiculoConfirmado, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect'>): Promise<ResultadoAdaptador> {
   if (f.ramo === 'moto') throw new ErrorMapaIncompleto('el plan de campos de MOTO en NSEI (clase de permiso y figuras sin grabación de moto)', true)
   const plan = planObjetoYFiguras(f)
   const respaldo: RespaldoCampos = { page: nsei, formador: ctx.formador }
   await rellenarCamposTexto(nsei, planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]), respaldo)
+  await rellenarMatSelects(nsei, planDelPaso(plan, 'objetoAsegurado'), ctx)
   exigirPasoCompleto(plan, 'objetoAsegurado')
   await continuar(nsei, ctx, 'objetoAsegurado')
   await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras'), respaldo)
+  await rellenarMatSelects(nsei, planDelPaso(plan, 'figuras'), ctx)
   exigirPasoCompleto(plan, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await leerPrimasMapfre(nsei)
@@ -516,7 +567,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.4.0',
+  version: '0.5.0',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

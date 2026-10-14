@@ -862,7 +862,17 @@ export async function pasoActivoMapfre(page: Page): Promise<string | null> {
  *      emisión; no llega a tiempo → hueco con inventario (¿un obligatorio sin rellenar?).
  * No abre ninguna ventana de red: lo que el clic pida que case con el patrón de emisión se aborta (fail-closed).
  */
-export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, paso: PasoContinuarMapfre): Promise<void> {
+export async function pulsarContinuarMapfre(
+  page: Page,
+  guard: GuardEmision,
+  paso: PasoContinuarMapfre,
+  /**
+   * RESPALDO (pieza 4): si NO hay exactamente un botón «Continuar» exacto, el runner pasa la localización de la capa común
+   * (aprendido → IA; continuar.ts). Lo que devuelva pasa por las MISMAS comprobaciones de abajo (fuera de diálogos, texto
+   * «Continuar»/«Siguiente», `comprobarBoton`, paso activo, destino); `confirmar` se llama solo tras llegar al destino.
+   */
+  respaldo?: (page: Page) => Promise<{ locator: Locator; confirmar: () => Promise<void> }>,
+): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Continuar» de Mapfre con una ventana de red abierta')
   if (typeof paso !== 'string' || !Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)) throw new EmisionBloqueadaError('boton', `«Continuar» de Mapfre no autorizado desde «${String(paso).slice(0, 40)}»`)
@@ -878,11 +888,20 @@ export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, pas
   if (activo.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: el paso activo es «Contratación»')
   if (!activo.includes(sinTildesMayus(regla.origen))) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el paso activo no es «${regla.origen}»`)
   const botones = page.locator('button, [role="button"]').filter({ hasText: /^\s*Continuar\s*$/i }).locator('visible=true')
-  if ((await botones.count()) !== 1) throw new ErrorMapaGuardMapfre(`el botón «Continuar» del paso «${regla.origen}» (no hay exactamente uno visible)`)
-  const boton = botones.first()
+  let boton: Locator
+  let confirmarRespaldo: (() => Promise<void>) | null = null
+  if ((await botones.count()) === 1) boton = botones.first()
+  else {
+    const hueco = new ErrorMapaGuardMapfre(`el botón «Continuar» del paso «${regla.origen}» (no hay exactamente uno visible)`)
+    if (!respaldo) throw hueco
+    const r = await respaldo(page).catch(() => null)
+    if (!r) throw hueco
+    boton = r.locator
+    confirmarRespaldo = r.confirmar
+  }
   if (await boton.evaluate((el) => el.closest('mat-dialog-container, [role="dialog"], app-matricula-dialog') !== null)) throw new EmisionBloqueadaError('boton', '«Continuar» de Mapfre dentro de un diálogo')
   const desc = await descripcion(boton)
-  if (sinTildesMayus(desc[0]) !== 'CONTINUAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  if (!['CONTINUAR', 'SIGUIENTE'].includes(sinTildesMayus(desc[0]))) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
   comprobarBoton(desc)
   usados.add(clave)
   AVANCES_USADOS.set(guard, usados)
@@ -901,7 +920,10 @@ export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, pas
       if (dialogoNativo) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
       const ahora = await pasoActivoMapfre(page)
       if (ahora?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: tras «Continuar» el paso activo es «Contratación»')
-      if (ahora?.includes(destino)) return
+      if (ahora?.includes(destino)) {
+        await confirmarRespaldo?.().catch(() => undefined)
+        return
+      }
       if (Date.now() >= hasta) throw new ErrorMapaGuardMapfre(`la llegada a «${regla.destino}» tras «Continuar» desde «${regla.origen}» (¿un campo obligatorio sin rellenar o un control sin mapear?)`)
       await page.waitForTimeout(250)
     }

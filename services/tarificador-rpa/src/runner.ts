@@ -40,6 +40,8 @@ import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, 
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
+import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
+import { elegirOpcionMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
@@ -164,8 +166,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       },
       continuarMapfre: async (pagina, paso) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
-        await pulsarContinuarMapfre(pagina, guard, paso)
+        await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))
       },
+      continuar: async (pagina, o) => {
+        const destino = pagina ?? page
+        if (destino.context() !== context) throw new ErrorTarificador('portal', 'continuar: la pestaña no es de este trabajo')
+        await pulsarContinuarSeguro(destino, { pulsar: ctx.pulsar, formador: k.formador, ...o })
+      },
+      elegirMatSelect: (select, valores, o) =>
+        elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar }),
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,

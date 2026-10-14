@@ -5,6 +5,7 @@ import type { Frame, Locator, Page } from 'playwright'
 import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/module-tarificacion'
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
+import type { OpcionesMatSelect } from './mat-select.ts'
 import type { PasoContinuarMapfre, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
@@ -71,6 +72,17 @@ export type ContextoPortal = ContextoTarificacion & {
    * contexto que `confirmarVehiculoMapfre`.
    */
   continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
+  /**
+   * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
+   * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para
+   * cualquier bot; Mapfre NSEI usa `continuarMapfre` (stepper cerrado), que ya lleva el mismo respaldo.
+   */
+  continuar?: (pagina?: Page, opciones?: { desde?: string; llegado?: (p: Page) => Promise<boolean>; esperaMs?: number }) => Promise<void>
+  /**
+   * Elige una opción en un `mat-select` (Angular Material) / `role=combobox` (pieza 4; mat-select.ts): lee el overlay, coincidencia
+   * clara con `valores` (textos del portal), si no la IA, si no `ErrorOpcionSinResolver`. Todo por el guard.
+   */
+  elegirMatSelect?: (select: Locator, valores: string | readonly string[], opciones: Pick<OpcionesMatSelect, 'etiqueta' | 'clave'>) => Promise<{ texto: string; origen: 'coincidencia' | 'ia' }>
 }
 
 /**
