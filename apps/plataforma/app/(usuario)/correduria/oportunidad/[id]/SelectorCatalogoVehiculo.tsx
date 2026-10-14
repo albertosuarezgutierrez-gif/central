@@ -34,7 +34,8 @@ export default function SelectorCatalogoVehiculo({ ramo, datos, deshabilitado, o
   ramo: RamoCatalogo
   datos: DatosVehiculoRiesgo
   deshabilitado: boolean
-  onElegida: (s: SeleccionVersion) => void
+  /** `null` = la selección anterior ya no vale (cambió marca, modelo o combustible). */
+  onElegida: (s: SeleccionVersion | null) => void
 }) {
   const tipos = tiposCatalogo(ramo)
   const plan = planPrecargaVehiculo(datos, false)
@@ -130,24 +131,27 @@ export default function SelectorCatalogoVehiculo({ ramo, datos, deshabilitado, o
 
   function alElegirMarca(id: string) {
     peticionVersiones.current++
+    onElegida(null)
     setMarcaId(id); setModeloId(''); setCodigoVehiculo(''); setModelos([]); setVersiones([])
     if (id) void cargarModelos(id)
   }
   function alElegirModelo(id: string) {
     peticionVersiones.current++
+    onElegida(null)
     setModeloId(id); setCodigoVehiculo(''); setVersiones([])
     if (id && motorId) void cargarVersiones(marcaId, id, motorId)
   }
   function alElegirMotor(id: string) {
     peticionVersiones.current++
+    onElegida(null)
     setMotorId(id); setCodigoVehiculo(''); setVersiones([])
     if (id && modeloId) void cargarVersiones(marcaId, modeloId, id)
   }
   function alElegirVersion(id: string) {
     setCodigoVehiculo(id)
-    if (!id) return
+    if (!id) { onElegida(null); return }
     const s = seleccionDeVersion({ marcas, modelos, versiones, marcaId, modeloId, motorId, codigoVehiculo: id })
-    if (s) onElegida(s)
+    onElegida(s)
   }
 
   const fuera = deshabilitado

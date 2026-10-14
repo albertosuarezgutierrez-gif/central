@@ -99,7 +99,8 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
   const ramoCat = ramoCatalogo(op.ramo)
 
   // Elegir versión del catálogo: los 7 campos JUNTOS (si no, asegura borra los ids). Gratis; no pide precio.
-  function elegirVersion(s: SeleccionVersion) {
+  function elegirVersion(s: SeleccionVersion | null) {
+    if (!s) return
     setEligiendo(false)
     void guardar(payloadVersion(s), false)
   }
@@ -119,12 +120,19 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
     onCambio(confirmar ? 'Datos del vehículo confirmados.' : 'Datos del vehículo guardados. Quedan sin confirmar hasta que los confirmes.')
   }
 
+  function volverAlCatalogo() {
+    const tecleado = form.marca !== (d?.marca ?? '') || form.modelo !== (d?.modelo ?? '') || form.version !== (d?.version ?? '')
+    if (tecleado && !window.confirm('Se descartará lo que has escrito a mano de marca, modelo y versión. ¿Volver al catálogo?')) return
+    setForm((f) => ({ ...f, marca: d?.marca ?? '', modelo: d?.modelo ?? '', version: d?.version ?? '' }))
+    setManual(false)
+  }
+
   function enviarEdicion(e: React.FormEvent) {
     e.preventDefault()
     // Solo lo que DIFIERE del estado inicial: no se copia el texto de fallback («vehiculo») a `marca`, no se
     // pisan escrituras concurrentes de campos que aquí no se tocaron, y editar marca/modelo/versión a mano hace
     // que asegura suelte el código del catálogo (un precio de otro coche no se queda pegado). Vacío = borrar.
-    const cambios = cambiosEdicion(d as unknown as Record<string, unknown>, form, { manual: manual || !ramoCat, seleccion })
+    const cambios = cambiosEdicion(d as unknown as Record<string, unknown>, form, { manual: manual || !ramoCat, seleccion, tipoPorDefecto: tipoVehiculoDeRamo(op.ramo) })
     if (Object.keys(cambios).length === 0) { setEditando(false); return }
     void guardar(cambios, false)
   }
@@ -198,7 +206,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" disabled={bloqueado} onClick={() => { setForm(aForm(d, tipoVehiculoDeRamo(op.ramo))); setSeleccion(null); setManual(false); setErrorForm(null); setNotaMatricula(null); setEditando(true) }}
+            <button type="button" disabled={bloqueado} onClick={() => { setForm(aForm(d)); setSeleccion(null); setManual(false); setErrorForm(null); setNotaMatricula(null); setEditando(true) }}
               style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               Editar
             </button>
@@ -237,14 +245,14 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
               <label style={etiquetaCss}>Marca<input value={form.marca} onChange={set('marca')} maxLength={60} style={campo} /></label>
               <label style={etiquetaCss}>Modelo<input value={form.modelo} onChange={set('modelo')} maxLength={80} style={campo} /></label>
               <label style={etiquetaCss}>Versión<input value={form.version} onChange={set('version')} maxLength={120} style={campo} /></label>
-              {ramoCat && <div><button type="button" disabled={bloqueado} onClick={() => setManual(false)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Volver al catálogo</button></div>}
+              {ramoCat && <div><button type="button" disabled={bloqueado} onClick={volverAlCatalogo} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Volver al catálogo</button></div>}
             </div>
           )}
           <div style={REJILLA}>
             <label style={etiquetaCss}>
               Tipo de vehículo
               <select value={form.tipoVehiculo} onChange={set('tipoVehiculo')} style={campo}>
-                <option value="">Sin dato</option>
+                <option value="">{tipoVehiculoDeRamo(op.ramo) ? `Sin dato (se deduce: ${capital(tipoVehiculoDeRamo(op.ramo))})` : 'Sin dato'}</option>
                 {TIPOS_VEHICULO.map((t) => <option key={t} value={t}>{capital(t)}</option>)}
               </select>
             </label>

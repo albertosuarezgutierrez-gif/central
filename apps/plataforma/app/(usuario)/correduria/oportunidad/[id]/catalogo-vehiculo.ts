@@ -106,10 +106,13 @@ export function tipoVehiculoDeRamo(ramo: string): 'coche' | 'moto' | '' {
 export function cambiosEdicion(
   inicial: Record<string, unknown> | null,
   form: Record<string, string>,
-  e: { manual: boolean; seleccion: SeleccionVersion | null },
+  e: { manual: boolean; seleccion: SeleccionVersion | null; tipoPorDefecto?: string },
 ): Record<string, unknown> {
   if (e.manual) return soloLoQueCambia(inicial, form)
   const { marca: _m, modelo: _mo, version: _v, ...resto } = form
   const cambios = soloLoQueCambia(inicial, resto)
-  return e.seleccion ? { ...cambios, ...payloadVersion(e.seleccion) } : cambios
+  if (!e.seleccion) return cambios
+  // El tipo deducido del ramo solo se guarda al elegir una versión del catálogo (que ya es de ese ramo) y si no hay tipo: nunca por abrir y guardar.
+  const tipo = !inicial?.tipoVehiculo && !resto.tipoVehiculo && e.tipoPorDefecto ? { tipoVehiculo: e.tipoPorDefecto } : {}
+  return { ...cambios, ...tipo, ...payloadVersion(e.seleccion) }
 }

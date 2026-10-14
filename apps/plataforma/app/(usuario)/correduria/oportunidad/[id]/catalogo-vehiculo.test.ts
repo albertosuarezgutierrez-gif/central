@@ -55,11 +55,12 @@ test('tipo de vehículo se deduce del ramo', () => {
   assert.equal(tipoVehiculoDeRamo('hogar'), '')
 })
 
-test('cambiosEdicion: catálogo = 7 campos juntos y marca/modelo/versión sin tocar no cuentan; manual = comparación normal', () => {
+test('cambiosEdicion: abrir y guardar NO inventa tipo; con versión del catálogo sí lo deduce; manual = comparación normal', () => {
   const ini = { marca: 'Seat', modelo: 'Ibiza', version: null, kmAnuales: null, tipoVehiculo: null }
-  const form = { marca: 'Seat', modelo: 'Ibiza', version: '', kmAnuales: '', tipoVehiculo: 'coche' }
-  assert.deepEqual(cambiosEdicion(ini, form, { manual: false, seleccion: null }), { tipoVehiculo: 'coche' })
+  const form = { marca: 'Seat', modelo: 'Ibiza', version: '', kmAnuales: '', tipoVehiculo: '' }
+  assert.deepEqual(cambiosEdicion(ini, form, { manual: false, seleccion: null, tipoPorDefecto: 'coche' }), {})
   const sel = { marca: 'Yamaha', modelo: 'MT-07', version: '689 ABS', codigoVehiculo: 'v1', marcaId: 'm1', modeloId: 'mo1', motorId: 'Gasoline' }
-  assert.deepEqual(cambiosEdicion(ini, form, { manual: false, seleccion: sel }), { tipoVehiculo: 'coche', ...payloadVersion(sel) })
-  assert.deepEqual(cambiosEdicion(ini, { ...form, version: 'GTI' }, { manual: true, seleccion: null }), { version: 'GTI', tipoVehiculo: 'coche' })
+  assert.deepEqual(cambiosEdicion(ini, form, { manual: false, seleccion: sel, tipoPorDefecto: 'coche' }), { tipoVehiculo: 'coche', ...payloadVersion(sel) })
+  assert.deepEqual(cambiosEdicion(ini, { ...form, tipoVehiculo: 'furgoneta' }, { manual: false, seleccion: sel, tipoPorDefecto: 'coche' }), { tipoVehiculo: 'furgoneta', ...payloadVersion(sel) })
+  assert.deepEqual(cambiosEdicion(ini, { ...form, version: 'GTI' }, { manual: true, seleccion: null, tipoPorDefecto: 'coche' }), { version: 'GTI' })
 })
