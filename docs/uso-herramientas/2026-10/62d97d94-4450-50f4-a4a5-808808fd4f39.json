@@ -1,0 +1,54 @@
+{
+ "sesion": "62d97d94-4450-50f4-a4a5-808808fd4f39",
+ "inicio": "2026-10-14T19:14:47.968Z",
+ "fin": "2026-10-14T19:15:29.880Z",
+ "llamadas": 7,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 1629,
+   "chars_out": 437,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "SubagentHandback": 1
+   }
+  },
+  "mcp:OpenSEO": {
+   "llamadas": 3,
+   "chars_in": 397,
+   "chars_out": 5696,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__OpenSEO__get_google_analytics_traffic_acquisition": 1,
+    "mcp__OpenSEO__get_search_console_performance": 2
+   }
+  },
+  "sql": {
+   "llamadas": 1,
+   "chars_in": 192,
+   "chars_out": 1801,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2776,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
