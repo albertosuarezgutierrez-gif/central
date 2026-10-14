@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-14 · facturas-correo** · hizo: Vía B sana; 0 candidatos nuevos por archivar (IONOS ya lo registró el cron); barrido 4.0 → 3 `sin_revisar` de octubre sin cargo (Sique Brilla 1.128,48 sin transferencia aún; Supabase 25 USD sin cargo; Anthropic 180 € vs cargos de 170 € el 01 y 02/10, no casa), sin auto-confirmar; dudas: Anthropic 180 vs 170; fallos: —; PRs/commits: —
+
 - **2026-10-14 · psd2-health-check** · hizo: frescura PSD2 → OK, último mov 2026-10-14 (hace 0 días), mov_30d 40 vs prev 43, psd2_sin_fecha 0; canal 200, latido enviado; dudas: —; fallos: —; PRs/commits: —
 
 - **2026-10-13 · trading-analista** · hizo: pasada completa 20:15 UTC (tras cierre): NAV 34.079,70€→/saldo, cartera real (VWCE+CVX)→/cartera, trades DAYS_7 vacíos + latido ok; 24 símbolos (70-80 velas, verificadas por nivel contra `precio_ref` de ayer) → /analizar sin aperturas (MSFT excede concentración, PLTR ya abierta, APP bajo SMA50) y /puntuar 0 cerradas; Telegram enviado; dudas: contraste 2ª fuente `sinJuzgar` en los 24 (su último cierre es 12/10, desfasado 1 día); fallos: `canal-aviso.sh` no admite payload >128 KB (payload 176 KB), usé copia local que lee el cuerpo de fichero (ya anotado por el entrenador el 11/10: hace falta `@fichero`); /api/internal/alerta pide `text`, no `mensaje`; PRs/commits: —
