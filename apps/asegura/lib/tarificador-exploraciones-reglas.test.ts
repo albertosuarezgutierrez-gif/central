@@ -66,3 +66,13 @@ test('transicionPermitida: solo las transiciones que ofrece la UI', () => {
   // mismo estado nunca
   assert.equal(transicionPermitida('borrador', 'borrador'), false)
 })
+
+test('resumirPaso: los errores de EJECUCIÓN del worker no marcan el paso como «rechazado»; salen en `incidencias`', () => {
+  const ej = 'ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion): valor_no_aplicado'
+  const r = resumirPaso({ n: 3, huella: 'd'.repeat(16), respuesta: resp, origen: 'ia', costeEur: 0, errores: [ej] })
+  assert.equal(r.rechazada, false)
+  assert.deepEqual(r.incidencias, [ej])
+  const ambos = resumirPaso({ n: 3, huella: 'd'.repeat(16), respuesta: resp, origen: 'ia', costeEur: 0, errores: ['acciones[0]: ref desconocida', ej] })
+  assert.equal(ambos.rechazada, true)
+  assert.deepEqual(ambos.incidencias, [ej])
+})

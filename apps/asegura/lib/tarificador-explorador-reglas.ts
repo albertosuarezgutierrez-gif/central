@@ -13,11 +13,13 @@ import {
   lineaMotivosPararParaIA,
   lineaAccionesPortalParaIA,
   esEntradaExploracion,
+  leerIncidenciasEjecucion,
   leerPresupuestoMapa,
   normalizarRedNoGet,
   sanearInventarioDom,
   validarMapa,
   type DetalleFinExploracion,
+  type IncidenciaEjecucion,
   type InventarioDom,
   type MapaExploracion,
   type PantallaMapaExploracion,
@@ -128,7 +130,11 @@ export function exploradoValido(cabeceraCerrada: boolean | null | undefined): bo
 const RE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const obj = (v: unknown): Record<string, unknown> | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
 
-export type PeticionPaso = { trabajoId: string; inventario: InventarioDom; avancesFallidos: number }
+export type PeticionPaso = {
+  trabajoId: string; inventario: InventarioDom; avancesFallidos: number
+  /** Lo que el lote ANTERIOR no pudo aplicar en el portal (14/10/2026): van a los `errores` de ESE paso. Tolerante. */
+  incidencias: IncidenciaEjecucion[]
+}
 
 /**
  * Cuerpo de `POST /api/tarificador/explorador/paso`: `{ trabajoId, inventario, avancesFallidos? }`. El inventario se
@@ -146,7 +152,8 @@ export function leerPeticionPaso(body: unknown): { ok: true; p: PeticionPaso } |
   const af = b.avancesFallidos === undefined ? 0 : b.avancesFallidos
   if (typeof af !== 'number' || !Number.isInteger(af) || af < 0 || af > 10) errores.push('avancesFallidos tiene que ser un entero 0-10')
   if (errores.length) return { ok: false, errores }
-  return { ok: true, p: { trabajoId: trabajoId!, inventario: inventario!, avancesFallidos: af as number } }
+  // Opcional y TOLERANTE (como `detalleFin`): lo mal formado se descarta, nunca tumba el paso.
+  return { ok: true, p: { trabajoId: trabajoId!, inventario: inventario!, avancesFallidos: af as number, incidencias: leerIncidenciasEjecucion(b.incidencias) } }
 }
 
 export type PeticionEncolarExploracion = { entrada: string; trabajoOrigenId: string | null; oportunidadId: string | null }
@@ -188,6 +195,8 @@ export type PeticionCierre = {
   efectosEnPortal: MapaExploracion['efectosEnPortal']
   /** Guardado del presupuesto (14/10/2026). `null` = el worker no lo informó (imagen anterior): el mapa no lo lleva. */
   presupuesto: PresupuestoMapa | null
+  /** Incidencias de ejecución del ÚLTIMO lote (14/10/2026): van a los `errores` del último paso. Tolerante. */
+  incidencias: IncidenciaEjecucion[]
 }
 
 /**
@@ -218,7 +227,7 @@ export function leerPeticionCierre(body: unknown): { ok: true; p: PeticionCierre
   const redNoGet = [...new Set((red as unknown[]).map(normalizarRedNoGet).filter((x): x is string => x !== null))].slice(0, 50)
   // Opcional y TOLERANTE: un código fuera de la lista cerrada (worker más nuevo) se ignora; nunca tumba el cierre.
   const detalleFin = DETALLES_FIN_EXPLORACION.find((d) => d === b.detalleFin) ?? null
-  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])], presupuesto } }
+  return { ok: true, p: { trabajoId: trabajoId!, motivoFin: motivoFin!, detalleFin, redNoGet, efectosEnPortal: [...new Set(ef as MapaExploracion['efectosEnPortal'])], presupuesto, incidencias: leerIncidenciasEjecucion(b.incidencias) } }
 }
 
 // ─── Prompt ──────────────────────────────────────────────────────────────────

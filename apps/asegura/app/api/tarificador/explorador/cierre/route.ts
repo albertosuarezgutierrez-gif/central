@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
-import { construirMapa, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
+import { construirMapa, erroresDeIncidencias, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
-import { PasoOcupado, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
+import { PasoOcupado, anotarErroresUltimoPaso, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
 import { ejecutarCierre } from '@/lib/tarificador-explorador-paso'
 import { huecoDeDetalleFin, leerPeticionCierre } from '@/lib/tarificador-explorador-reglas'
 
@@ -47,6 +47,8 @@ export async function POST(req: Request) {
           if (respuesta?.acciones.some((a) => a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto')) enCurso = true
           return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta } : null
         }).filter((x) => x !== null)
+        // Lo que el ÚLTIMO lote no pudo aplicar (14/10/2026): a los `errores` de ese paso, con la etiqueta de SU inventario.
+        if (p.incidencias.length && pasos.length) await anotarErroresUltimoPaso(e, erroresDeIncidencias(p.incidencias, pasos[pasos.length - 1].inventario), bd)
         const c = await costeYModelo(e, bd)
         const mapa = construirMapa(
           {

@@ -34,6 +34,11 @@ import {
   validarMapa,
   validarRespuestaExplorador,
   bloqueoGuardadoPresupuesto,
+  normalizarEnteroPortal,
+  relocalizarElemento,
+  leerIncidenciasEjecucion,
+  erroresDeIncidencias,
+  PREFIJO_ERROR_EJECUCION,
   type InventarioDom,
   type RespuestaExplorador,
 } from './index.ts'
@@ -816,5 +821,132 @@ describe('guardado de presupuesto: botones compuestos (emisión + guardar) nunca
     const inv = resultado('Guardar y firmar')
     const el = inv.marcos[0].elementos.find((e) => e.id === 'btnCompuesto')!
     expect(bloqueoGuardadoPresupuesto(el, { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false })).toBe('boton_de_emision')
+  })
+})
+
+// ─── Año y m² que no se quedaban en Allianz Hogar (14/10/2026). Valores FICTICIOS. ───────────────────────────────────
+
+describe('año y m² como entero para un input numérico', () => {
+  const base = { ramo: 'hogar', env: {}, hoy: new Date('2026-10-14T10:00:00Z'), conDatosReales: true }
+  const con = (inmueble: Record<string, unknown>) => ({ ...base, riesgo: { tomador: { nif: '00000000T' }, inmueble } })
+
+  it('normalizarEnteroPortal: año entero de 4 cifras; m² redondeado; sin unidades ni separadores', () => {
+    expect(normalizarEnteroPortal('inmueble.anio_construccion', '1975')).toBe('1975')
+    expect(normalizarEnteroPortal('inmueble.anio_construccion', '1975.0')).toBe('1975')
+    expect(normalizarEnteroPortal('inmueble.anio_construccion', ' 1.975 ')).toBe('1975')
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '85.5')).toBe('86')
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '85,50')).toBe('86')
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '85,4')).toBe('85')
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '90 m2')).toBe('90')
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '90m²')).toBe('90')
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '1.234,5')).toBe('1235')
+  })
+
+  it('normalizarEnteroPortal: lo que no es un número válido o se sale del rango → null; otra clave → undefined', () => {
+    expect(normalizarEnteroPortal('inmueble.anio_construccion', '1975.5')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.anio_construccion', '75')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.anio_construccion', 'mil novecientos')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '0,3')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '-80')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '8,5,1')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.superficie_m2', '')).toBeNull()
+    expect(normalizarEnteroPortal('inmueble.numero', '12 bis')).toBeUndefined()
+  })
+
+  it('resolverDato: el valor del riesgo sale entero; uno inválido no sale (dato_no_disponible)', () => {
+    expect(resolverDato('inmueble.superficie_m2', con({ superficieM2: 85.5, anioConstruccion: 1975 }))).toEqual({ ok: true, valor: '86' })
+    expect(resolverDato('inmueble.anio_construccion', con({ superficieM2: 85.5, anioConstruccion: 1975 }))).toEqual({ ok: true, valor: '1975' })
+    expect(resolverDato('inmueble.superficie_m2', con({ superficieM2: '85,50 m2' }))).toEqual({ ok: true, valor: '86' })
+    expect(resolverDato('inmueble.anio_construccion', con({ anioConstruccion: 'hace mucho' }))).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    // Sintético: el valor de prueba ya es entero y sigue igual.
+    expect(resolverDato('inmueble.anio_construccion', { ...base, conDatosReales: false, riesgo: {} })).toEqual({ ok: true, valor: '1990' })
+  })
+})
+
+describe('re-localización de una ref tras un repintado', () => {
+  const URL = 'https://portal.ejemplo/form'
+  const anio = { ref: 'm1e39', tag: 'input', type: 'number', id: 'anio', formControlName: 'anioConstruccion', etiqueta: 'Año de construcción' }
+  const sup = { ref: 'm1e41', tag: 'input', name: 'superficie', etiqueta: 'Superficie de la vivienda' }
+  const inv = (elementos: Record<string, unknown>[], url = URL): InventarioDom =>
+    ({ marcos: [{ url, nombre: null, elementos }], totalElementos: elementos.length }) as unknown as InventarioDom
+  const h = (x: InventarioDom) => huellaPantalla(x)
+
+  it('mismo control repintado (ref nueva, misma pantalla) → su ref nueva', () => {
+    const nuevo = inv([{ ...sup, ref: 'm1e50' }, { ...anio, ref: 'm1e48' }])
+    expect(relocalizarElemento(anio, URL, nuevo, h(nuevo))).toBe('m1e48')
+    expect(relocalizarElemento(sup, URL, nuevo, h(nuevo))).toBe('m1e50')
+  })
+
+  it('otra pantalla (huella distinta de la validada) → null aunque el control case', () => {
+    const nuevo = inv([{ ...anio, ref: 'm1e48' }])
+    expect(relocalizarElemento(anio, URL, nuevo, h(inv([{ ...anio }, { ...sup }])))).toBeNull()
+  })
+
+  it('🪤 FormArray: si solo queda el HERMANO (conductor1 en vez de conductor0) no casa: nunca el dato de otra persona', () => {
+    const c0 = { ref: 'm1e5', tag: 'input', id: 'conductor0-fNac', formControlName: 'fNac', etiqueta: 'Fecha de nacimiento' }
+    const soloHermano = inv([{ ...c0, ref: 'm1e9', id: 'conductor1-fNac' }])
+    expect(relocalizarElemento(c0, URL, soloHermano, h(soloHermano))).toBeNull()
+    const ambos = inv([{ ...c0, ref: 'm1e8' }, { ...c0, ref: 'm1e9', id: 'conductor1-fNac' }])
+    expect(relocalizarElemento(c0, URL, ambos, h(ambos))).toBe('m1e8')
+  })
+
+  it('🪤 id autogenerado (`mat-input-N`) sin name/formControlName ni etiqueta: no basta; y un id que solo casa sin cifras, tampoco', () => {
+    const mat = { ref: 'm1e3', tag: 'input', id: 'mat-input-3' }
+    const igual = inv([{ ...mat, ref: 'm1e7' }])
+    expect(relocalizarElemento(mat, URL, igual, h(igual))).toBeNull()
+    const otroN = inv([{ ...anio, ref: 'm1e48', id: 'mat-input-4' }])
+    expect(relocalizarElemento({ ...anio, id: 'mat-input-3' }, URL, otroN, h(otroN))).toBeNull()
+  })
+
+  it('otra etiqueta, otro type, otro marco, dos candidatos o sin identidad → null (no se adivina)', () => {
+    const casos = [
+      inv([{ ...anio, ref: 'm1e48', etiqueta: 'Año de reforma' }]),
+      inv([{ ...anio, ref: 'm1e48', type: 'text' }]),
+      inv([{ ...anio, ref: 'm1e48' }], 'https://portal.ejemplo/otro'),
+    ]
+    for (const c of casos) expect(relocalizarElemento(anio, URL, c, h(c))).toBeNull()
+    const dos = inv([{ ...sup, ref: 'm1e48' }, { ...sup, ref: 'm1e49' }])
+    expect(relocalizarElemento(sup, URL, dos, h(dos))).toBeNull()
+    const sinId = inv([{ tag: 'input', ref: 'm1e1' }])
+    expect(relocalizarElemento({ tag: 'input' }, URL, sinId, h(sinId))).toBeNull()
+  })
+})
+
+describe('incidencias de ejecución del worker → errores del paso', () => {
+  const inventario = {
+    marcos: [{ url: 'https://portal.ejemplo/form', nombre: null, elementos: [
+      { ref: 'm1e39', tag: 'input', type: 'number', etiqueta: 'Año de construcción' },
+      { ref: 'm1e41', tag: 'input', etiqueta: 'Superficie de la vivienda' },
+      { ref: 'm1e7', tag: 'input', etiqueta: '00000000T' },
+    ] }],
+    totalElementos: 3,
+  } as unknown as InventarioDom
+
+  it('leerIncidenciasEjecucion: solo la forma cerrada (accion, ref, dato, causa); lo demás se descarta', () => {
+    const ok = { accion: 'rellenar', ref: 'm1e39', dato: 'inmueble.anio_construccion', causa: 'valor_no_aplicado' }
+    expect(leerIncidenciasEjecucion([ok, { ...ok, causa: 'otra' }, { ...ok, ref: 'x' }, { ...ok, dato: 'Año 1975' }, { ...ok, accion: 'avanzar' }, null, 'texto'])).toEqual([ok])
+    expect(leerIncidenciasEjecucion(undefined)).toEqual([])
+    expect(leerIncidenciasEjecucion(Array.from({ length: 40 }, () => ok))).toHaveLength(15)
+  })
+
+  it('erroresDeIncidencias: ref + etiqueta del inventario guardado + clave + causa; nunca un valor ni una etiqueta con forma de dato personal', () => {
+    const e = erroresDeIncidencias([
+      { accion: 'rellenar', ref: 'm1e39', dato: 'inmueble.anio_construccion', causa: 'valor_no_aplicado' },
+      { accion: 'rellenar', ref: 'm1e41', dato: 'inmueble.superficie_m2', causa: 'nodo_no_relocalizado' },
+      { accion: 'rellenar', ref: 'm1e7', dato: 'tomador.nif', causa: 'valor_no_aplicado' },
+      { accion: 'rellenar', ref: 'm1e99', dato: 'inmueble.numero', causa: 'valor_no_aplicado' },
+    ], inventario)
+    expect(e).toEqual([
+      'ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion): valor_no_aplicado',
+      'ejecucion: rellenar m1e41 «Superficie de la vivienda» (inmueble.superficie_m2): nodo_no_relocalizado',
+      'ejecucion: rellenar m1e7 (tomador.nif): valor_no_aplicado',
+      'ejecucion: rellenar m1e99 (inmueble.numero): valor_no_aplicado',
+    ])
+    expect(e.every((x) => x.startsWith(PREFIJO_ERROR_EJECUCION))).toBe(true)
+    expect(erroresDeIncidencias([{ accion: 'rellenar', ref: 'm1e39', dato: 'inmueble.anio_construccion', causa: 'valor_no_aplicado' }], null)).toEqual(['ejecucion: rellenar m1e39 (inmueble.anio_construccion): valor_no_aplicado'])
+  })
+
+  it('el detalle de fin «nodo_no_relocalizado» está en la lista cerrada', () => {
+    expect(DETALLES_FIN_EXPLORACION).toContain('nodo_no_relocalizado')
   })
 })
