@@ -17,6 +17,17 @@ export type CampoDeFicha = (typeof CAMPOS_DE_FICHA)[number]
  */
 export type DatoPersona = string | 'ficha' | null
 
+/**
+ * Un dato personal del cotizador (moto o coche) para el bot: lo tecleado en «corrige aquí» manda; si no, `'ficha'` salvo que
+ * la precalificación diga que la ficha NO lo tiene (`null` = falta). Precalificación ilegible (`faltan === null`) → `'ficha'`:
+ * el servidor lee la ficha y corta sin gastar si tampoco está. PURA.
+ */
+export function datoDePersonaBot(campo: string, faltan: readonly { campo: string }[] | null, correcciones: Record<string, string>): DatoPersona {
+  const tecleado = (correcciones[campo] ?? '').trim()
+  if (tecleado !== '') return tecleado
+  return faltan === null || !faltan.some((f) => f.campo === campo) ? 'ficha' : null
+}
+
 export type EntradaBotMoto = {
   matricula: string
   marca: string | null
@@ -45,6 +56,22 @@ export type FormularioBotMoto =
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 const entero = (s: string): number | null => (/^\d{1,4}$/.test(s.trim()) ? Number(s.trim()) : null)
+
+/** Lo del historial que el cotizador (moto o coche) le da al bot: «¿tiene seguro ahora?» y los años/siniestros tecleados. */
+export type HistorialBotEntrada = { tieneSeguroActual: boolean; aniosAsegurado: string; aniosSinSiniestros: string; siniestrosUltimos5: string }
+
+/**
+ * Historial que viaja al bot (moto y coche, el MISMO criterio): solo lo que el corredor ha declarado. Sin seguro actual no se
+ * sabe (`null`), no «0 años»; un texto que no es un entero → `null`. 5 o más años sin siniestros ⇒ 0 siniestros en los
+ * últimos 5 (deducción, no suposición); si no, solo el dato declarado. PURA.
+ */
+export function historialBot(e: HistorialBotEntrada): { aniosAseguradoAnterior: number | null; siniestrosUltimos5Anios: number | null } {
+  if (!e.tieneSeguroActual) return { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null }
+  let siniestrosUltimos5Anios = entero(e.siniestrosUltimos5)
+  const sinSin = entero(e.aniosSinSiniestros)
+  if (siniestrosUltimos5Anios === null && sinSin !== null && sinSin >= 5) siniestrosUltimos5Anios = 0
+  return { aniosAseguradoAnterior: entero(e.aniosAsegurado), siniestrosUltimos5Anios }
+}
 
 /** Clase de Allianz Moto por cilindrada (tramos del portal). `null` = ≤50 cc (ciclomotor) o sin dato. */
 export function claseMotoPorCilindrada(cc: number | null): 1 | 2 | 3 | 4 | null {
@@ -96,16 +123,7 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
 
   if (faltan.length) return { ok: false, faltan }
 
-  // Historial: solo lo que el corredor ha declarado. Sin seguro actual no se sabe (null), no «0 años».
-  let aniosAseguradoAnterior: number | null = null
-  let siniestrosUltimos5Anios: number | null = null
-  if (e.tieneSeguroActual) {
-    aniosAseguradoAnterior = entero(e.aniosAsegurado)
-    siniestrosUltimos5Anios = entero(e.siniestrosUltimos5)
-    // 5 o más años sin siniestros ⇒ ninguno en los últimos 5 (deducción, no suposición); si no, solo el dato declarado.
-    const sinSin = entero(e.aniosSinSiniestros)
-    if (siniestrosUltimos5Anios === null && sinSin !== null && sinSin >= 5) siniestrosUltimos5Anios = 0
-  }
+  const { aniosAseguradoAnterior, siniestrosUltimos5Anios } = historialBot(e)
 
   const version = e.version?.replace(/\s+/g, ' ').trim() ?? ''
   const descripcionOk = version !== '' && version.length <= 200 && !pareceDatoPersonalEnDescripcion(version)
@@ -150,12 +168,40 @@ export type FichaParaBot = {
 
 const esIso = (s: string | null | undefined): s is string => typeof s === 'string' && ISO.test(s)
 
+/** Ramos de vehículo con bot cuyo riesgo se completa con la ficha. */
+export type RamoVehiculoBot = 'moto' | 'auto'
+
+/** ¿Este tipo de carné de la ficha vale para el ramo? Moto: A, A1, A2. Coche: B (mismo criterio que `carnetBDeFicha` de asegura). */
+function carneDelRamo(ramo: RamoVehiculoBot, tipo: string): boolean {
+  const t = tipo.toUpperCase().replace(/\s/g, '')
+  return ramo === 'moto' ? /^A\d?$/.test(t) : t === 'B'
+}
+
 /**
  * Rellena `codigoPostal`, `conductor.fechaNacimiento` y `conductor.fechaCarne` del riesgo con la ficha, SOLO los pedidos en
- * `pedidos` y nunca pisando un valor que ya traiga. Carné de moto: el más antiguo de tipo A (A, A1, A2) de la ficha; si no hay,
- * el que traen sus pólizas. Nada se inventa: lo que la ficha no tiene va en `faltan` (el servidor corta sin gastar).
+ * `pedidos` y nunca pisando un valor que ya traiga. Carné: el más antiguo de la ficha del tipo del ramo (moto: A, A1, A2;
+ * coche: B); si no hay, el que traen sus pólizas. Nada se inventa: lo que la ficha no tiene va en `faltan` (el servidor
+ * corta sin gastar). El NIF del tomador NO va aquí: lo inyecta asegura al entregar el trabajo (`aplicarNifTomador`).
  */
 export function completarRiesgoMotoDesdeFicha(
+  riesgo: Record<string, unknown>,
+  ficha: FichaParaBot | null,
+  pedidos: readonly CampoDeFicha[],
+): { riesgo: Record<string, unknown>; faltan: CampoDeFicha[] } {
+  return completarRiesgoVehiculoDesdeFicha('moto', riesgo, ficha, pedidos)
+}
+
+/** Lo mismo para el COCHE (14/10/2026): carné B. */
+export function completarRiesgoAutoDesdeFicha(
+  riesgo: Record<string, unknown>,
+  ficha: FichaParaBot | null,
+  pedidos: readonly CampoDeFicha[],
+): { riesgo: Record<string, unknown>; faltan: CampoDeFicha[] } {
+  return completarRiesgoVehiculoDesdeFicha('auto', riesgo, ficha, pedidos)
+}
+
+export function completarRiesgoVehiculoDesdeFicha(
+  ramo: RamoVehiculoBot,
   riesgo: Record<string, unknown>,
   ficha: FichaParaBot | null,
   pedidos: readonly CampoDeFicha[],
@@ -177,8 +223,8 @@ export function completarRiesgoMotoDesdeFicha(
       else faltan.push(campo)
     } else {
       if (typeof conductor.fechaCarne === 'string' && conductor.fechaCarne) continue
-      const deMoto = (ficha?.carnets ?? []).filter((c) => /^A\d?$/.test(c.tipo) && esIso(c.fechaExpedicion)).map((c) => c.fechaExpedicion as string).sort()[0]
-      const f = deMoto ?? (esIso(ficha?.dePolizas?.fechaCarnet) ? ficha?.dePolizas?.fechaCarnet : undefined)
+      const delRamo = (ficha?.carnets ?? []).filter((c) => carneDelRamo(ramo, c.tipo) && esIso(c.fechaExpedicion)).map((c) => c.fechaExpedicion as string).sort()[0]
+      const f = delRamo ?? (esIso(ficha?.dePolizas?.fechaCarnet) ? ficha?.dePolizas?.fechaCarnet : undefined)
       if (f) conductor.fechaCarne = f
       else faltan.push(campo)
     }
@@ -190,8 +236,9 @@ export function completarRiesgoMotoDesdeFicha(
 const ROTULO_FICHA: Record<CampoDeFicha, string> = {
   codigoPostal: 'el código postal', fechaNacimiento: 'la fecha de nacimiento', fechaCarne: 'la fecha del carné de moto',
 }
-export function mensajeFaltanDeFicha(faltan: readonly CampoDeFicha[]): string {
-  return `La ficha del cliente no tiene ${faltan.map((c) => ROTULO_FICHA[c]).join(', ')}. Complétalo en la ficha (o teclea el dato) y vuelve a pedir el precio.`
+export function mensajeFaltanDeFicha(faltan: readonly CampoDeFicha[], ramo: RamoVehiculoBot = 'moto'): string {
+  const rotulo = (c: CampoDeFicha) => (c === 'fechaCarne' && ramo === 'auto' ? 'la fecha del carné B (coche)' : ROTULO_FICHA[c])
+  return `La ficha del cliente no tiene ${faltan.map(rotulo).join(', ')}. Complétalo en la ficha (o teclea el dato) y vuelve a pedir el precio.`
 }
 
 /** `compania` de la petición → clave limpia, o `null` si no tiene forma de clave (minúsculas, dígitos, `_`/`-`). */
