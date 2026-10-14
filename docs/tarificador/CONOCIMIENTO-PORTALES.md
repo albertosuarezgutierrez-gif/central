@@ -73,6 +73,7 @@
 
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
+| 14/10/2026 | Mapfre | Primera exploración real: login OK, pero la entrada falló con mapa incompleto (la URL seguía en `#/`) | Se asumió que «Turismos y Motos» era pulsable y no se pulsaba la opción «Automóviles» del desplegable de «Nueva producción» | Ruta real: pestaña → opción «Automóviles» (se pulsa) → página con tarjetas → enlace «Tarificación y Emisión Rápida» dentro de la tarjeta «Turismos y Motos» (que no se pulsa). Lección: los menús desplegables se confirman con captura antes de mapear | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (fixture con menú + página y enlaces homónimos) |
 | 14/10/2026 | Mapfre | Enlace de menú «Tarificación y Emisión …» bloqueado por el guard de emisión | «Emisión» como sustantivo de menú casa `PATRON_EMISION` (falso positivo) | Lista cerrada de etiquetas EXACTAS, solo en la fase de ENTRADA (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`). Nunca relajar `PATRON_EMISION`; nunca desde el bucle IA | `services/tarificador-rpa/test/frontera-cuenta.test.ts` (importa `pulsarEnlaceEntradaAutorizado`) |
 | 14/10/2026 | Mapfre | El producto abre PESTAÑA NUEVA y el bucle se quedaba en la pestaña de origen | `entrar()` devolvía la página de partida | `entrar()` devuelve la `Page` de la pestaña nueva y el bucle sigue en ella (`entrarYExplorar`); las páginas de la entrada no cuentan. `EXPLORADOR_VERSION` 0.1.3 (0.2.1 al fusionar con el guardado de presupuesto de main, que iba en 0.2.0) | Sin cepo específico de pestaña nueva |
 | 14/10/2026 | Mapfre | Diálogo nativo de autenticación HTTP al abrir el tarificador | Chromium pide usuario y contraseña en la pestaña nueva | Se CANCELA: el contexto va SIN `httpCredentials` (Chromium responde 401). No meter credenciales en el bot | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
@@ -163,8 +164,10 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 
 - **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
   (usuario + contraseña; **no pide SMS**). Pantalla: bloque «Acceso», «Código de usuario (NUUMA)» y «Contraseña:»; el botón «Entrar»
-  está **deshabilitado** hasta rellenar ambos (Angular: el bot espera a que se habilite o falla con `ErrorMapaIncompleto`); «Cambiar contraseña» jamás se pulsa. Después: pestaña «Nueva producción» → bloque «Automóviles» → tarjeta «Turismos y
-  Motos» → enlace «Tarificación y Emisión Rápida», que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
+  está **deshabilitado** hasta rellenar ambos (Angular: el bot espera a que se habilite o falla con `ErrorMapaIncompleto`); «Cambiar contraseña» jamás se pulsa. Después: pestaña «Nueva producción» (despliega un MENÚ) → PULSAR la opción «Automóviles» del
+  desplegable → página «Automóviles» con tarjetas; «Turismos y Motos» es solo el TÍTULO de una tarjeta (no es enlace, no se pulsa) y
+  bajo ella están los enlaces «Tarificación y Emisión Rápida», «(General)» y «(Otros Acuerdos)» (otras tarjetas traen enlaces parecidos)
+  → enlace «Tarificación y Emisión Rápida» acotado a esa tarjeta, que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
   `adapters/mapfre/entrada.ts` (clave `mapfre:nueva_produccion:auto`, sin avances autorizados). Conectada al explorador
   (`PORTALES_EXPLORACION.mapfre.entrar` devuelve la pestaña nueva y el bucle sigue en ella; v0.1.3).
 - **Diálogo HTTP:** en la pestaña nueva Chromium pinta el diálogo nativo de auth («wmediadores.mapfre.com necesita un nombre de
