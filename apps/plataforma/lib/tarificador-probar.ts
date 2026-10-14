@@ -10,7 +10,8 @@ import { eur } from './dinero.ts'
 export const SONDEO_MS = 4_000
 export const SONDEO_TOPE_MS = 6 * 60_000
 
-const ESTADOS_FINALES = ['ok', 'error_definitivo', 'requiere_humano', 'cancelado', 'emitido'] as const
+// `atascado` (F2, 14/10/2026) no es terminal para asegura, pero espera a Alberto (horas): aquí se deja de sondear.
+const ESTADOS_FINALES = ['ok', 'error_definitivo', 'requiere_humano', 'cancelado', 'emitido', 'atascado'] as const
 
 export type IntegracionVista = { compania: string; ramo: string; clave: string }
 export type VersionVista = { codigo: string; etiqueta: string }
@@ -152,6 +153,7 @@ const ROTULO_ESTADO: Record<string, string> = {
   emitido: 'Emitido',
   pendiente_autorizacion_emision: 'Esperando autorización de emisión',
   autorizado_emision: 'Autorizado: esperando al bot',
+  atascado: 'Atascado: elige el elemento (Telegram o Tarificador → Bots atascados)',
 }
 
 /** Texto del estado (para personas). Un estado que no conocemos se muestra tal cual, sin inventar. */
@@ -163,7 +165,7 @@ export type TonoEstado = 'curso' | 'ok' | 'aviso' | 'error'
 
 export function tonoEstado(estado: string): TonoEstado {
   if (estado === 'ok' || estado === 'emitido') return 'ok'
-  if (estado === 'requiere_humano' || estado === 'cancelado') return 'aviso'
+  if (estado === 'requiere_humano' || estado === 'cancelado' || estado === 'atascado') return 'aviso'
   if (estado === 'error_definitivo') return 'error'
   return 'curso'
 }

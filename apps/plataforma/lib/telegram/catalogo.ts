@@ -697,6 +697,18 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 10 minutos, y solo cuando algún trabajo se ha parado así',
   },
   {
+    id: 'correduria.tarificador-atasco', categoria: 'correduria',
+    titulo: 'Bot de presupuestos atascado: elige el elemento',
+    que: 'El bot no encuentra un campo o un botón en el portal de una compañía y ni lo aprendido ni la IA lo resuelven. Te llega la captura de la pantalla y los elementos numerados: pulsas el número, queda aprendido y el bot repite el presupuesto (solo precio; nunca contrata). Solo compañía, ramo y textos del portal sin datos personales. ⚠️ Si lo silencias, el atasco caduca a las 24 h y el presupuesto se pierde (sigue visible en /correduria/tarificador mientras espera).',
+    cuando: 'Cada 10 minutos, solo cuando un bot se atasca (un aviso por atasco)',
+  },
+  {
+    id: 'correduria.tarificador-pausa', categoria: 'correduria',
+    titulo: 'Bot de presupuestos en pausa tras varios fallos',
+    que: 'Tras 3 presupuestos seguidos en error del bot para una compañía y un ramo, el bot deja de pedir precios ahí (para no insistir con nuestra credencial en un portal que ha cambiado). Botón «Reanudar» para volver a encenderlo cuando lo hayas mirado. Solo compañía, ramo y el motivo.',
+    cuando: 'Cada 10 minutos, solo cuando se pausa una compañía/ramo (un aviso por pausa)',
+  },
+  {
     id: 'correduria.tope-avant2', categoria: 'correduria',
     titulo: 'Gasto de Avant2 (tarificar): aviso a 60 € y bloqueo a 70 €',
     que: 'Lo gastado en el mes en Avant2 (cada tarificación, ReRate, límites de hogar o envío cuenta 0,50€). Un aviso al cruzar 60€ y, al llegar al tope (70€, o el ampliado), el BLOQUEO con el botón «Autorizar +30€». ⚠️ Si lo silencias, el botón de desbloqueo no te llega y no se puede tarificar hasta reactivarlo.',

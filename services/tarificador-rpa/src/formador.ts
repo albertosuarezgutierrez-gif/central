@@ -19,7 +19,7 @@
 // `cerrarFormador()` antes de mandar el resultado.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { limpiarTextoAviso, pareceEmision, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
+import { MAX_CANDIDATOS_ATASCO, limpiarTextoAviso, pareceEmision, type AtascoWorker, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
 import { ErrorTarificador } from './errores.ts'
 import { rutaMarco } from './evidencia.ts'
 import { ENLACES_ENTRADA_AUTORIZADOS } from './guard.ts'
@@ -211,7 +211,7 @@ export function validarAccion(d: DescripcionElemento, clave: string, textoEspera
  * control editable único y visible, sin casillas (listas blancas de type/tag/role), sin palabras de emisión en sus
  * atributos y con la etiqueta de su fila contrastada con la pedida (`contrastarEtiqueta`).
  */
-export function validarCampo(d: DescripcionElemento, etiqueta: string | null | undefined): Validacion {
+export function validarCampo(d: DescripcionElemento, etiqueta: string | null | undefined, opciones: { humano?: boolean } = {}): Validacion {
   const u = exigirUnicoVisible(d)
   if (u) return u
   const tag = d.tag.toLowerCase()
@@ -229,6 +229,9 @@ export function validarCampo(d: DescripcionElemento, etiqueta: string | null | u
       ? (TIPOS_INPUT_EDITABLES as readonly string[]).includes(type)
       : TAGS_EDITABLES.includes(tag) || ROLES_EDITABLES.includes(role) || d.editableContenido
   if (!editable) return { ok: false, motivo: tag === 'input' ? `<input type=${type}> no es un campo editable` : `<${tag}> no es un campo editable` }
+  // ELEGIDO POR ALBERTO (F2, atasco): lo señaló una persona viendo la captura; el contraste de etiqueta (que protege de una
+  // IA que alucina) no se exige. Todo lo demás de arriba (único, visible, editable, sin casillas ni palabras bloqueadas), sí.
+  if (opciones.humano === true) return { ok: true }
   return contrastarEtiqueta(etiqueta, d.etiquetaFila)
 }
 
@@ -257,9 +260,10 @@ export function validarAccionEntrada(d: DescripcionElemento, compania: string, t
   return { ok: true }
 }
 
-export function validarResolucion(p: Pick<PeticionResolver, 'tipo' | 'clave' | 'textoEsperado' | 'etiqueta'>, d: DescripcionElemento, compania = ''): Validacion {
+/** `humano` (F2): solo relaja el contraste de etiqueta de un CAMPO elegido por Alberto; una acción sigue la tabla cerrada igual. */
+export function validarResolucion(p: Pick<PeticionResolver, 'tipo' | 'clave' | 'textoEsperado' | 'etiqueta'>, d: DescripcionElemento, compania = '', opciones: { humano?: boolean } = {}): Validacion {
   if (p.tipo === 'accion' && p.clave === ACCION_ENLACE_ENTRADA) return validarAccionEntrada(d, compania, p.textoEsperado)
-  return p.tipo === 'accion' ? validarAccion(d, p.clave, p.textoEsperado) : validarCampo(d, p.etiqueta)
+  return p.tipo === 'accion' ? validarAccion(d, p.clave, p.textoEsperado) : validarCampo(d, p.etiqueta, opciones)
 }
 
 // ─── Candidatos (estructura compacta, SIN valores) ───────────────────────────
@@ -532,7 +536,11 @@ export async function describirElemento(l: Locator, total: number): Promise<Desc
 
 // ─── Contexto y llamadas a asegura ───────────────────────────────────────────
 
-export type EntradaConocimiento = { clave: string; tipo: TipoClave; selector: string; marco: string | null; origen: string; confirmaciones: number }
+/** `consolidado` (F2): ≥3 éxitos o elegido por Alberto. Ausente (asegura anterior) = no consta → provisional. */
+export type EntradaConocimiento = { clave: string; tipo: TipoClave; selector: string; marco: string | null; origen: string; confirmaciones: number; consolidado?: boolean }
+
+/** Uso de una entrada APRENDIDA en este trabajo (F2): para avisar a asegura de lo que falló al cerrar. */
+export type UsoAprendido = { clave: string; tipo: TipoClave; selector: string; marco: string | null; confirmado: boolean; rechazado: boolean }
 
 export type ContextoFormador = {
   trabajoId: string
@@ -552,6 +560,10 @@ export type ContextoFormador = {
   fetchImpl?: typeof fetch
   /** PLAN B: consumo del respaldo IA en ESTE trabajo (se crea al primer uso). Ver `PRESUPUESTO_RESPALDO`. */
   usoIA?: { consultas: number; ms: number }
+  /** F2: lo aprendido que se probó en este trabajo (clave+selector+marco → uso). */
+  usosAprendido?: Map<string, UsoAprendido>
+  /** F2: el ÚLTIMO paso que nadie resolvió (checkpoint del atasco). Se borra en cuanto otro paso avanza. */
+  atasco?: AtascoWorker | null
 }
 
 /**
@@ -639,17 +651,46 @@ export function selectorYaUsado(resueltos: Map<string, string>, clave: string, s
   return previa !== undefined && previa !== clave ? { ok: false, motivo: `ese elemento ya se resolvió para «${previa}» en este trabajo` } : { ok: true }
 }
 
-async function validarSelector(page: Page, ctx: ContextoFormador, p: PeticionResolver, selector: string, marco: string | null): Promise<{ locator: Locator } | { motivo: string }> {
+async function validarSelector(page: Page, ctx: ContextoFormador, p: PeticionResolver, selector: string, marco: string | null, humano = false): Promise<{ locator: Locator } | { motivo: string; yaUsado?: true }> {
   const usado = selectorYaUsado(ctx.resueltos, p.clave, selector, marco)
-  if (!usado.ok) return { motivo: usado.motivo }
+  if (!usado.ok) return { motivo: usado.motivo, yaUsado: true }
   const { locator, total } = await localizar(page, selector, marco)
   if (!locator) return { motivo: 'no resuelve a ningún elemento' }
   const d = await describirElemento(locator, total)
   if (!d) return { motivo: 'no se pudo describir el elemento' }
   const v = validarResolucion(p, d, ctx.compania)
-  if (!v.ok) return { motivo: v.motivo }
+  // Elegido por Alberto (origen `humano`): solo un CAMPO puede pasar sin el contraste de etiqueta; el resto de reglas, iguales.
+  const final = !v.ok && humano && p.tipo === 'campo' ? validarResolucion(p, d, ctx.compania, { humano: true }) : v
+  if (!final.ok) return { motivo: final.motivo }
   ctx.resueltos.set(claveSelector(selector, marco), p.clave)
   return { locator: locator.first() }
+}
+
+const claveUso = (clave: string, selector: string, marco: string | null) => `${clave}\u0000${marco ?? '*'}\u0000${selector}`
+
+/** Anota el uso de una entrada aprendida (F2). `rechazado` = no resolvió o no validó. */
+function anotarUso(ctx: ContextoFormador, c: Pick<EntradaConocimiento, 'clave' | 'tipo' | 'selector' | 'marco'>, cambio: Partial<Pick<UsoAprendido, 'confirmado' | 'rechazado'>>): void {
+  ctx.usosAprendido ??= new Map()
+  const k = claveUso(c.clave, c.selector, c.marco)
+  const previo = ctx.usosAprendido.get(k) ?? { clave: c.clave, tipo: c.tipo, selector: c.selector, marco: c.marco, confirmado: false, rechazado: false }
+  ctx.usosAprendido.set(k, { ...previo, ...cambio })
+}
+
+/** Orden de lo aprendido: consolidado primero, luego más confirmado. Puro. */
+export function ordenarAprendido<T extends Pick<EntradaConocimiento, 'consolidado' | 'confirmaciones'>>(l: readonly T[]): T[] {
+  return [...l].sort((a, b) => Number(b.consolidado === true) - Number(a.consolidado === true) || b.confirmaciones - a.confirmaciones)
+}
+
+/**
+ * Lo aprendido que FALLÓ en este trabajo (F2), para que asegura le sume un fallo (2 seguidos = descartado). Falla lo que no
+ * resolvió o no validó y nunca llegó a confirmarse, y, si el trabajo acabó en error, lo usado sin confirmar. Puro.
+ */
+export function aprendidoFallido(usos: ReadonlyMap<string, UsoAprendido> | undefined, resultado: 'ok' | 'error'): Pick<UsoAprendido, 'clave' | 'tipo' | 'selector' | 'marco'>[] {
+  if (!usos) return []
+  return [...usos.values()]
+    .filter((u) => !u.confirmado && (u.rechazado || resultado === 'error'))
+    .slice(0, 50)
+    .map(({ clave, tipo, selector, marco }) => ({ clave, tipo, selector, marco }))
 }
 
 /**
@@ -662,7 +703,8 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
     ctx.log('formador_accion_no_permitida', { clave: p.clave })
     return null
   }
-  const confirmarCon = (selector: string, marco: string | null, origen: 'ia' | 'codigo') => async () => {
+  const confirmarCon = (selector: string, marco: string | null, origen: 'ia' | 'codigo' | 'humano') => async () => {
+    anotarUso(ctx, { clave: p.clave, tipo: p.tipo, selector, marco }, { confirmado: true })
     await llamar(ctx, 'confirmar', {
       metodo: 'POST',
       timeoutMs: TIMEOUT_CORTO_MS,
@@ -670,14 +712,19 @@ export async function resolverConFormador(page: Page, ctx: ContextoFormador | un
     })
   }
 
-  // 1º Lo aprendido (más confirmado primero).
-  const previos = ctx.conocimiento.filter((c) => c.clave === p.clave && c.tipo === p.tipo).sort((a, b) => b.confirmaciones - a.confirmaciones)
+  // 1º Lo aprendido (consolidado primero, luego más confirmado). Lo elegido por Alberto (`humano`) pasa la misma validación.
+  const previos = ordenarAprendido(ctx.conocimiento.filter((c) => c.clave === p.clave && c.tipo === p.tipo))
   for (const c of previos) {
-    const v = await validarSelector(page, ctx, p, c.selector, c.marco)
-    if (!('locator' in v)) ctx.log('formador_conocimiento_rechazado', { clave: p.clave, motivo: v.motivo })
+    const v = await validarSelector(page, ctx, p, c.selector, c.marco, c.origen === 'humano')
+    if (!('locator' in v)) {
+      ctx.log('formador_conocimiento_rechazado', { clave: p.clave, motivo: v.motivo })
+      if (!v.yaUsado) anotarUso(ctx, c, { rechazado: true })
+    }
     if ('locator' in v) {
       ctx.log('formador_conocimiento', { clave: p.clave })
-      return { locator: v.locator, selector: c.selector, marco: c.marco, origen: 'conocimiento', confirmar: confirmarCon(c.selector, c.marco, c.origen === 'ia' ? 'ia' : 'codigo') }
+      anotarUso(ctx, c, {})
+      const origen = c.origen === 'ia' ? 'ia' : c.origen === 'humano' ? 'humano' : 'codigo'
+      return { locator: v.locator, selector: c.selector, marco: c.marco, origen: 'conocimiento', confirmar: confirmarCon(c.selector, c.marco, origen) }
     }
   }
 
@@ -740,11 +787,16 @@ export async function conRespaldoIA(
   p: PeticionResolver,
 ): Promise<{ locator: Locator; origen: 'fijo' | 'conocimiento' | 'ia'; confirmar: () => Promise<void> }> {
   try {
-    return { locator: await fijo(), origen: 'fijo', confirmar: async () => undefined }
+    const locator = await fijo()
+    avanzaPaso(formador)
+    return { locator, origen: 'fijo', confirmar: async () => undefined }
   } catch (e) {
     if (!esHuecoDeSelector(e)) throw e
     const r = await resolverConFormador(page, formador, p).catch(() => null)
+    // PLAN B (F2): nadie lo resolvió → checkpoint de ATASCO (candidatos numerados) para que elija Alberto; el error, el ORIGINAL.
+    if (!r) await registrarAtasco(page, formador, p).catch(() => undefined)
     if (!r) throw e
+    avanzaPaso(formador)
     formador?.log(`respaldo: «${p.clave}» resuelto por ${r.origen}`)
     return { locator: r.locator, origen: r.origen, confirmar: r.confirmar }
   }
@@ -761,17 +813,89 @@ export async function campoConRespaldo(
   r: { page: Page | null; formador: ContextoFormador | undefined; etiqueta: string; descripcion?: string },
 ): Promise<{ campo: Locator; origen: 'fijo' | 'conocimiento' | 'ia'; confirmar: () => Promise<void> } | null> {
   const fijo = raiz.locator(sel).first()
-  if ((await fijo.count().catch(() => 0)) > 0) return { campo: fijo, origen: 'fijo', confirmar: async () => undefined }
+  if ((await fijo.count().catch(() => 0)) > 0) {
+    avanzaPaso(r.formador)
+    return { campo: fijo, origen: 'fijo', confirmar: async () => undefined }
+  }
   if (!r.page) return null
-  const res = await resolverConFormador(r.page, r.formador, {
+  const peticion: PeticionResolver = {
     clave: claveCampo(r.etiqueta),
     tipo: 'campo',
     descripcion: r.descripcion ?? `Campo editable del formulario «${r.etiqueta}»`,
     etiqueta: r.etiqueta,
-  }).catch(() => null)
-  if (!res) return null
+  }
+  const res = await resolverConFormador(r.page, r.formador, { ...peticion }).catch(() => null)
+  if (!res) {
+    await registrarAtasco(r.page, r.formador, peticion).catch(() => undefined)
+    return null
+  }
+  avanzaPaso(r.formador)
   r.formador?.log(`respaldo: campo «${r.etiqueta}» resuelto por ${res.origen}`)
   return { campo: res.locator, origen: res.origen, confirmar: res.confirmar }
+}
+
+// ─── ATASCO (F2): checkpoint para que elija Alberto ──────────────────────────
+
+/** Un paso posterior avanzó: el atasco anotado antes ya no es el que va a parar el trabajo. */
+function avanzaPaso(ctx: ContextoFormador | undefined): void {
+  if (ctx?.atasco) ctx.atasco = null
+}
+
+const CLAVE_ATASCO = /^[a-z0-9_]{1,60}$/
+
+/**
+ * ¿Puede este candidato ser la respuesta de Alberto a este paso? PURO. Lo mismo que exigirá `validarResolucion` al repetir
+ * el camino (sin lo que solo se sabe con el DOM vivo: unicidad, visibilidad, etiqueta de la fila): una ACCIÓN, solo con un
+ * texto de su fila de la tabla cerrada; un CAMPO, solo un control editable sin casillas. Nunca palabras de emisión/pago.
+ */
+export function candidatoElegibleAtasco(c: Candidato, p: Pick<PeticionResolver, 'clave' | 'tipo' | 'textoEsperado'>): boolean {
+  const tag = c.tag.toLowerCase()
+  const type = (c.type ?? '').toLowerCase()
+  const role = (c.role ?? '').toLowerCase()
+  if (bloqueoPalabras([['texto', c.texto], ['id', c.id], ['name', c.name]])) return false
+  if (p.tipo === 'accion') {
+    if (!esAccionPermitida(p.clave)) return false
+    if (tag === 'select' || tag === 'textarea' || (tag === 'input' && !(TIPOS_INPUT_BOTON as readonly string[]).includes(type))) return false
+    const permitidos: readonly string[] = p.textoEsperado ? [normalizarTexto(p.textoEsperado)] : ACCIONES_PERMITIDAS[p.clave]
+    return permitidos.includes(normalizarTexto(c.texto))
+  }
+  if (tag === 'a' || tag === 'button' || tag === 'nx-button' || type === 'checkbox') return false
+  if (role !== '' && !ROLES_EDITABLES.includes(role)) return false
+  return tag === 'input' ? (TIPOS_INPUT_EDITABLES as readonly string[]).includes(type) : TAGS_EDITABLES.includes(tag) || ROLES_EDITABLES.includes(role)
+}
+
+/** Los candidatos de un atasco, con los de etiqueta más parecida a la pedida primero (orden estable). Puro. */
+export function ordenarParaAtasco<T extends Candidato>(l: readonly T[], etiqueta: string | null | undefined): T[] {
+  const buscadas = palabrasEtiqueta(etiqueta)
+  if (!buscadas.length) return [...l]
+  const puntos = (c: T) => { const f = new Set(palabrasEtiqueta(c.etiqueta)); return buscadas.filter((w) => f.has(w)).length }
+  return l.map((c, i) => ({ c, i, s: puntos(c) })).sort((a, b) => b.s - a.s || a.i - b.i).map((x) => x.c)
+}
+
+/**
+ * Prepara el checkpoint del ATASCO cuando ni el fijo, ni lo aprendido, ni la IA resolvieron `p`: los candidatos ELEGIBLES de
+ * la pantalla (redactados, numerados 1..N, tope `MAX_CANDIDATOS_ATASCO`) quedan en `ctx.atasco`; el runner los manda con el
+ * error y asegura deja el trabajo `atascado`. Sin formador, sin clave de slug, con el enlace de entrada (su puerta es otra) o
+ * sin ningún candidato elegible → nada (el trabajo falla como antes). NO pulsa ni escribe.
+ */
+export async function registrarAtasco(page: Page | null, ctx: ContextoFormador | undefined, p: PeticionResolver): Promise<void> {
+  if (!ctx?.activo || !page || !CLAVE_ATASCO.test(p.clave)) return
+  if (p.tipo === 'accion' && !esAccionPermitida(p.clave)) return
+  const todos = await extraerCandidatos(page, p.tipo, ctx.redactar)
+  const elegibles = ordenarParaAtasco(todos.filter((c) => candidatoElegibleAtasco(c, p)), p.etiqueta).slice(0, MAX_CANDIDATOS_ATASCO)
+  if (!elegibles.length) {
+    ctx.log('atasco_sin_candidatos', { clave: p.clave })
+    return
+  }
+  ctx.atasco = {
+    clave: p.clave,
+    tipo: p.tipo,
+    descripcion: limpiarTextoAviso(p.descripcion, ctx.redactar, 300) ?? p.clave,
+    etiqueta: p.tipo === 'campo' ? limpiarTextoAviso(p.etiqueta ?? null, ctx.redactar, 120) : null,
+    textoEsperado: p.tipo === 'accion' ? (p.textoEsperado ?? null) : null,
+    candidatos: elegibles.map((c, i) => ({ n: i + 1, tag: c.tag, id: c.id, name: c.name, type: c.type, role: c.role, texto: c.texto, etiqueta: c.etiqueta, marco: c.marco, selector: c.selector })),
+  }
+  ctx.log('atasco_preparado', { clave: p.clave, candidatos: elegibles.length })
 }
 
 // ─── Modo acompañado ─────────────────────────────────────────────────────────
@@ -868,5 +992,7 @@ export async function acompanar(
 /** Para el contador del modo acompañado. Lo llama el runner ANTES de mandar el resultado. Nunca lanza. */
 export async function cerrarFormador(ctx: ContextoFormador | undefined, resultado: 'ok' | 'error'): Promise<void> {
   if (!ctx?.activo) return
-  await llamar(ctx, 'cierre', { metodo: 'POST', timeoutMs: TIMEOUT_CORTO_MS, cuerpo: { trabajoId: ctx.trabajoId, resultado } })
+  // F2: lo aprendido que falló en este trabajo (asegura le suma un fallo; un asegura anterior ignora el campo).
+  const fallidos = aprendidoFallido(ctx.usosAprendido, resultado)
+  await llamar(ctx, 'cierre', { metodo: 'POST', timeoutMs: TIMEOUT_CORTO_MS, cuerpo: { trabajoId: ctx.trabajoId, resultado, ...(fallidos.length ? { aprendidoFallido: fallidos } : {}) } })
 }

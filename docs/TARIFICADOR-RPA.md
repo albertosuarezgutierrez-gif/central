@@ -52,6 +52,25 @@ Fallback cuando `campoPorEtiqueta`/Calcular no resuelven (lista cerrada de accio
   «atascado» + Telegram y pantalla «Bots atascados» con captura y elementos numerados: Alberto elige/escribe, queda aprendido y se
   reanuda re-ejecutando el camino aprendido (checkpoint, sin máquina esperando). Allianz Moto a la capa común. Respaldo para
   «Continuar» de Mapfre, la lupa del tomador y los `mat-select` (hoy en guard.ts / sin DOM: necesitan su propia puerta).
+- **F2 hecha (14/10/2026, sin desplegar)** — reglas puras `packages/module-tarificacion/src/robustez.ts`, BD
+  `apps/asegura/lib/tarificador-robustez.ts`, SQL `apps/asegura/prisma/sql/2026-10-14e_tarificador_robustez_f2.sql` (aplicar ANTES):
+  · **Aprendido con confianza**: `fallos` seguidos + `consolidado_at` + `descartado_at` en `tarificador_conocimiento`. Consolida a los
+    3 éxitos (o al momento si es `humano`), se descarta a los 2 fallos seguidos (no resolvió/no validó, o usado y el trabajo cayó sin
+    confirmarlo: el worker lo manda en `aprendidoFallido` del cierre). Lo descartado no se sirve; un éxito lo rehabilita.
+  · **Corte por compañía/ramo** (`tarificador_pausas`): 3 trabajos seguidos en `error_definitivo` por portal/infra (desde la última
+    reanudación) → pausa: ni se encola (409 `bot_pausado`) ni se reclama. Telegram `correduria.tarificador-pausa` con «▶️ Reanudar»
+    (`tpa_r`) y botón en /correduria/tarificador. `companias_integracion` no se toca.
+  · **Atasco** (estado `atascado`, `tarificador_atascos`): si fijo + aprendido + IA no resuelven un paso de `conRespaldoIA` /
+    `campoConRespaldo`, el worker manda en `error.atasco` los candidatos ELEGIBLES (acción: solo texto de su fila de
+    `ACCIONES_PERMITIDAS`; campo: solo editable sin casillas; nunca palabras de emisión/pago), redactados y numerados (≤20). asegura
+    (con `TARIFICADOR_ATASCO_ACTIVO=1`, ≤3 rondas por trabajo) deja el trabajo `atascado` SIN purgar el riesgo; Telegram
+    `correduria.tarificador-atasco` con la captura (si el worker la hizo) + botones numerados (`atq_e`/`atq_x`, solo
+    `from.id = TELEGRAM_CHAT_ID`), y pantalla «Bots atascados» en /correduria/tarificador. Elegir = se aprende como `humano`
+    (consolidado) y el MISMO trabajo vuelve a `pendiente` (intentos 0): el worker repite el camino y lo aprendido lo resuelve por la
+    MISMA validación (en un campo humano solo se relaja el contraste de etiqueta; una acción, nunca). Sin respuesta en
+    `TARIFICADOR_ATASCO_HORAS` (24) → `error_definitivo` en el barrido. Descartar = `cancelado`.
+  · **Pendiente de la F2**: respaldo de «Continuar» de Mapfre, lupa del NIF y `mat-select` (son puertas propias de guard.ts, fuera de
+    la tabla cerrada: necesitan decisión y revisión de seguridad), y Allianz Moto a la capa común.
 - **F3**: canario diario 07:00 por bot hasta antes de calcular (datos de prueba, sin generar proyecto) con huella de las pantallas
   clave y aviso si cambian; panel de salud (éxito, % IA, % humano, coste IA).
 - **Futuro**: las mismas capas para otras tareas (siniestros…) con su lista blanca por tarea.

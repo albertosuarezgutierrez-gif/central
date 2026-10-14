@@ -209,12 +209,24 @@ export function leerPeticionConfirmar(body: unknown): { ok: true; p: PeticionCon
   return { ok: true, p: { ...c, clave, tipo: tipo!, selector, marco, origen: origen! } }
 }
 
-export function leerPeticionCierre(body: unknown): { ok: true; p: { trabajoId: string; resultado: 'ok' | 'error' } } | { ok: false; errores: string[] } {
+/** F2: lo aprendido que falló en el trabajo (máx. 50). Accesorio: una entrada mal formada se descarta sola, no tumba el cierre. */
+export type AprendidoFallido = { clave: string; tipo: TipoClave; selector: string }
+export const MAX_APRENDIDO_FALLIDO = 50
+
+export function leerPeticionCierre(body: unknown): { ok: true; p: { trabajoId: string; resultado: 'ok' | 'error'; aprendidoFallido: AprendidoFallido[] } } | { ok: false; errores: string[] } {
   const o = obj(body)
   const trabajoId = typeof o?.trabajoId === 'string' ? o.trabajoId.trim() : ''
   const resultado = o?.resultado === 'ok' || o?.resultado === 'error' ? o.resultado : null
   const errores = [...(UUID.test(trabajoId) ? [] : ['trabajoId no es un uuid']), ...(resultado ? [] : ["resultado: 'ok' | 'error'"])]
-  return errores.length ? { ok: false, errores } : { ok: true, p: { trabajoId, resultado: resultado! } }
+  const aprendidoFallido: AprendidoFallido[] = []
+  for (const x of Array.isArray(o?.aprendidoFallido) ? o.aprendidoFallido.slice(0, MAX_APRENDIDO_FALLIDO) : []) {
+    const e = obj(x)
+    const clave = typeof e?.clave === 'string' ? e.clave.trim() : ''
+    const tipo = e?.tipo === 'campo' || e?.tipo === 'accion' ? e.tipo : null
+    const selector = typeof e?.selector === 'string' ? e.selector.trim() : ''
+    if (CLAVE.test(clave) && tipo && selector && selector.length <= 2000) aprendidoFallido.push({ clave, tipo, selector })
+  }
+  return errores.length ? { ok: false, errores } : { ok: true, p: { trabajoId, resultado: resultado!, aprendidoFallido } }
 }
 
 /** Con intervención = la IA tuvo que señalar algo o hubo un aviso bloqueante en el trabajo. */

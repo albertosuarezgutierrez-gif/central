@@ -22,3 +22,8 @@ export const hayEmision = () => esquema.existeTabla('tarificacion_emision_autori
 export const hayIpidHuella = () => esquema.existeColumna('presupuesto', 'ipid_huella')
 // Explorador IA (SQL 2026-10-13_tarificador_explorador): sin él, `/api/tarificador/explorador/*` responde 503.
 export const hayExplorador = () => esquema.existeTabla('tarificador_exploracion_pasos')
+// F2 del plan de robustez (SQL 2026-10-14e_tarificador_robustez_f2): sin él, lo aprendido sigue sin confianza, no hay corte
+// por compañía/ramo y un atasco cae a `error_definitivo` como antes.
+export const hayConfianzaAprendido = () => esquema.existeColumna('tarificador_conocimiento', 'descartado_at')
+export const hayPausas = () => esquema.existeTabla('tarificador_pausas')
+export const hayAtascos = () => esquema.existeTabla('tarificador_atascos')

@@ -190,6 +190,8 @@ test('duplicado: pendiente sí; en_curso solo con lease vivo; reintentable bajo 
   assert.equal(f('error_reintentable', { intentos: 2 }), false)
   for (const e of ['ok', 'error_definitivo', 'requiere_humano', 'cancelado']) assert.equal(f(e), false, e)
   assert.equal(f('pendiente', { modo: 'emision' }), false)
+  // ATASCO (F2): espera a Alberto y volverá a la cola: pedir lo mismo es duplicado.
+  assert.equal(f('atascado'), true)
 })
 
 test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo y la cola tiene cron propio', () => {
