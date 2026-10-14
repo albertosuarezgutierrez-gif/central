@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(14/10/2026)** — Tarificador RPA · arranque bot **Mapfre Auto** (rama `claude/mapfre-tarificador-bot-9t5zpf`). SQL `2026-10-14_tarificador_mapfre_auto.sql` (fila mapfre/auto, `activo=false`, credencial `MAPFRE_WMEDIADORES`) **sin aplicar**; capa Mapfre en `CONOCIMIENTO-PORTALES.md`.
+Pendiente de Alberto: URL de login wmediadores, ¿SMS/2FA?, ruta de menús hasta Auto, si «Continuar» paso 3 solo tarifica, botón guardar/PDF, uso/ámbito/permiso, secrets Fly `CRED_MAPFRE_WMEDIADORES_USER/_PASS`. Alberto autorizó tocar las listas compartidas del explorador para añadir Mapfre.
+
 **(13/10/2026)** — Tarificador RPA · conocimiento de portales guardado en `docs/tarificador/CONOCIMIENTO-PORTALES.md` (capa común + Allianz ePAC; enlazado desde `apps/asegura/CLAUDE.md` y el README del worker).
 Mergeados: #4585 (Hogar por la tesela «Allianz HOGAR» + evidencia en fallos de entrada), #4587 (Comercio entra por Particulares → «Allianz Negocio Plus»), #4589 (motivo recortado y espera al iframe `appArea`), #4594 (motivos de parada tipados desde una sola lista).
 En curso (`claude/explorador-oportunidad`): exploración con datos reales anclada a una oportunidad; uso y régimen de Hogar obligatorios, sin valor por defecto; nunca mezclar valores de prueba con reales.
