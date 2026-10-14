@@ -20,10 +20,11 @@ import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { pareceContactoPersonal } from './contacto-sugerido'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
-import { MOTIVO_POLIZA_ANULADA, leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { MOTIVO_POLIZA_ANULADA, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
-import { registrarDevolucionesAsegura } from '@/lib/correduria-puerto'
+import { registrarDevolucionesAsegura, registrarEventoCorreoAsegura } from '@/lib/correduria-puerto'
+import { leerResultadosEvento, textoAvisoEvento } from './evento-aviso'
 import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
@@ -181,6 +182,9 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           // dentro, así que se manda tal cual en vez del resumen genérico — y sobre todo dice que
           // NO se contesta desde Smoobu (para Agoda el hilo no llega al huésped) y da el enlace de YCS.
           let devolucion: LecturaCorreoDevolucion | null = null
+          let evento: EventoAseguradora | null = null
+          // `true` = asegura confirmó lo que hizo con el aviso de compañía: la nota genérica de abajo sobra.
+          let eventoAplicado = false
           const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
             // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
             // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
@@ -208,6 +212,23 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const texto = textoAvisoDevolucion(devolucion, resultados, (id) => urlFichaCliente(id), fallo)
             const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
             if (enviado !== null) stats.avisados++
+          } else if ((c.categoria === 'correduria' || c.categoria === 'correduria-recibo')
+            && (evento = leerCorreoEventoAseguradora({
+              remitente: correo.from, asunto: correo.subject, cuerpoTexto: correo.texto ?? correo.extracto,
+              textoAdjuntos: await textoDePdfs(correo), fecha: correo.fecha.toISOString(),
+            })) !== null) {
+            // Aviso de COMPAÑÍA que no es una devolución (14/10/2026): siniestro, pre-anulación, impago,
+            // anulación o suplemento — venga la categoría por regla de `correo_reglas`, keyword o IA. asegura
+            // lo aplica a la cartera (o lo deja «sin resolver» para la bandeja de Mi mesa) y el aviso dice
+            // QUÉ se hizo. Un fallo del puerto no rompe la pasada: el aviso sale con lo leído y lo declara.
+            const res = await registrarEventoCorreoAsegura(evento, correo.messageId, correo.fecha.toISOString().slice(0, 10))
+              .catch(() => ({ estado: 'sin_respuesta' as const, motivo: 'no se pudo llegar a asegura' }))
+            const resultados = res.estado === 'ok' ? leerResultadosEvento(res.json) : null
+            if (res.estado !== 'ok') console.error('[triaje] evento de compañía no registrado:', res.motivo)
+            eventoAplicado = resultados !== null && resultados.length > 0
+            const texto = textoAvisoEvento(evento, correo.subject, resultados, (id) => urlFichaCliente(id), res.estado === 'ok' ? null : res)
+            const enviado = await tgAviso('correo.correduria-evento', texto).catch(() => null)
+            if (enviado !== null) stats.avisados++
           } else if (ruta.aviso === 'inmediato') {
             // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
             // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa
@@ -230,8 +251,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           // resuelve ninguna —o no se pudo ni preguntar—, no pasa nada: el aviso/digest de
           // siempre sigue siendo la única señal, exactamente como hasta hoy.
           if (ruta.enrutarCorreduria) {
+            // Si el aviso de compañía ya quedó aplicado arriba (nota/tarea/siniestro en su ficha), la nota
+            // genérica sería un duplicado. Si asegura no lo confirmó, se deja como red.
             const textoParaResolver = `${correo.subject}\n${correo.extracto ?? ''}`.slice(0, 4000)
-            const resueltos = await resolverCorreoAseguradora(textoParaResolver).catch(() => undefined)
+            const resueltos = eventoAplicado ? undefined : await resolverCorreoAseguradora(textoParaResolver).catch(() => undefined)
             if (resueltos) {
               for (const r of resueltos) {
                 const nota = `Correo de aseguradora (${etiquetaBonita(c.categoria)}) de ${correo.fromRaw}: ${correo.subject}`.slice(0, 2000)
@@ -346,6 +369,13 @@ export async function resumenSemanal(): Promise<{ total: number }> {
   ].join('\n')
   await tgAviso('correo.resumen-semanal', msg)
   return { total: triados }
+}
+
+/** Solo el texto de los PDF del correo (para el lector de eventos, que separa cuerpo y adjuntos). `null` = no hay o no se leen. */
+async function textoDePdfs(correo: CorreoNuevo): Promise<string | null> {
+  if (!correo.pdfs?.length) return null
+  const textos = (await Promise.all(correo.pdfs.map((b) => textoPdfPorFilas(b).catch(() => null)))).filter((t): t is string => !!t)
+  return textos.length > 0 ? textos.join('\n') : null
 }
 
 /**

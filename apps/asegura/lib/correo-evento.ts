@@ -1,0 +1,404 @@
+// apps/asegura/lib/correo-evento.ts
+//
+// Despacho de los EVENTOS que el triaje de correo de plataforma lee en los avisos de las compañías
+// (`leerCorreoEventoAseguradora` de `@central/module-seguros`, 14/10/2026). PURO (sin BD ni red,
+// `node --test`): aquí se valida lo que llega por el puerto, se resuelve la póliza entre candidatas YA
+// leídas y se DECIDE qué se escribe. La escritura vive en `correo-evento-bd.ts`.
+//
+// Reglas:
+// - Solo se escribe sobre la cartera EN VIGOR (`esCarteraEnVigor`). Póliza que no casa (o casa con dos)
+//   → `sin_resolver`: no se toca la cartera y el evento queda para la bandeja «Correos de compañía».
+// - Un siniestro que ya vino por CIMA no se duplica ni se le cambia el estado (lo fija la compañía):
+//   solo una nota de seguimiento en la ficha (`duplicado_cima`).
+// - Pre-anulación / impago → nota + UNA tarea por póliza y recibo con vencimiento = la fecha límite de
+//   la compañía (nunca en el pasado: si el aviso llega tarde, vence hoy).
+// - Anulación → NUNCA se crea un expediente de /anulaciones solo: ese expediente modela una baja que
+//   PIDE el cliente (firma → comunicar → confirmar) y abrirlo por un correo lo dejaría pidiendo una
+//   firma que no existe, y en la cola de «comunicar a la compañía» algo que la compañía ya hizo. Se
+//   deja nota + tarea «confirmar anulación» (si hay expediente abierto, la tarea dice cuál).
+// - Suplemento → nota + tarea de revisar.
+// - Sin IBAN ni NIF: el lector ya los quita; aquí se vuelve a pasar `sinDatosSensibles` por todo texto
+//   libre que entra por el puerto (segunda red: el puerto no se fía de quien llama).
+
+import { esCarteraEnVigor, esCarteraViva, sinDatosSensibles, validarTarea } from '@central/module-seguros'
+import { eur } from './dinero.ts'
+
+export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento'] as const
+export type TipoEventoCorreo = (typeof TIPOS_EVENTO_CORREO)[number]
+
+/** Desenlace guardado por fila. `procesando` = reservada y sin desenlace confirmado (se mira a mano). */
+export const ESTADOS_EVENTO_CORREO = ['aplicado', 'duplicado_cima', 'sin_resolver', 'procesando'] as const
+export type EstadoEventoCorreo = (typeof ESTADOS_EVENTO_CORREO)[number]
+
+/** Prefijo de las tareas que nacen de un aviso de compañía (y origen de las sueltas). */
+export const PREFIJO_TAREA_CORREO = '[Aviso de compañía]'
+export const ORIGEN_TAREA_CORREO = 'central:correo-compania'
+export const ACTOR_CORREO = 'triaje-correo'
+
+const COMPANIAS: Record<string, { codigo: string; nombre: string; claves: string[] }> = {
+  occident: { codigo: 'C0468', nombre: 'Occident', claves: ['occident', 'catalana'] },
+  reale: { codigo: 'C0613', nombre: 'Reale', claves: ['reale'] },
+  mapfre: { codigo: 'C0058', nombre: 'Mapfre', claves: ['mapfre'] },
+  allianz: { codigo: 'C0109', nombre: 'Allianz', claves: ['allianz'] },
+}
+
+export function nombreCompania(c: string): string {
+  return COMPANIAS[c]?.nombre ?? c
+}
+
+// ── Entrada ──────────────────────────────────────────────────────────────────
+
+export type ItemEvento =
+  | {
+      tipo: 'siniestro'; clave: string; subtipo: 'apertura' | 'actualizacion' | 'cierre'
+      numeroSiniestro: string; numeroPoliza: string | null; ramo: string | null
+      fechaOcurrencia: string | null; fechaAccion: string | null; accion: string | null
+    }
+  | {
+      tipo: 'pre_anulacion' | 'impago'; clave: string
+      numeroPoliza: string; idRecibo: string | null; importe: number | null; fechaLimite: string | null
+    }
+  | { tipo: 'anulacion'; clave: string; numeroPoliza: string | null; fechaEfecto: string | null; motivo: string | null }
+  | {
+      tipo: 'suplemento'; clave: string
+      numeroPoliza: string; descripcion: string | null; periodoDesde: string | null; periodoHasta: string | null
+    }
+
+export type EntradaEvento = {
+  mensajeId: string
+  compania: string
+  codigoDgs: string
+  tipo: TipoEventoCorreo
+  /** Trozos del correo que el lector no supo leer (se dicen, no se callan). */
+  ilegibles: number
+  items: ItemEvento[]
+}
+
+const ISO_DIA = /^\d{4}-\d{2}-\d{2}$/
+const ISO_MES = /^\d{4}-\d{2}$/
+const ID = /^[A-Z0-9][A-Z0-9.\-/]{2,40}$/i
+
+function obj(v: unknown): Record<string, unknown> | null {
+  return v !== null && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+}
+function id(v: unknown): string | null {
+  return typeof v === 'string' && ID.test(v.trim()) ? v.trim() : null
+}
+function dia(v: unknown): string | null {
+  if (typeof v !== 'string' || !ISO_DIA.test(v)) return null
+  const d = new Date(`${v}T00:00:00Z`)
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== v ? null : v
+}
+function periodo(v: unknown): string | null {
+  return dia(v) ?? (typeof v === 'string' && ISO_MES.test(v) ? v : null)
+}
+function libre(v: unknown, max = 300): string | null {
+  if (typeof v !== 'string') return null
+  const t = sinDatosSensibles(v.replace(/\s+/g, ' ').trim())
+  if (t === '') return null
+  return t.length > max ? `${t.slice(0, max - 1).trimEnd()}…` : t
+}
+function importe(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 1_000_000 ? Math.round(v * 100) / 100 : null
+}
+
+/**
+ * Valida el cuerpo de `POST /api/operador/correo/evento`: `{ mensajeId, compania?, evento }`. No se fía
+ * de la forma: un trozo que no se entiende se CUENTA en `ilegibles` (se dice), nunca se inventa.
+ */
+export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEvento } | { ok: false; motivo: string } {
+  const o = obj(b)
+  if (!o) return { ok: false, motivo: 'cuerpo JSON no válido' }
+  const mensajeId = typeof o.mensajeId === 'string' ? o.mensajeId.trim() : ''
+  if (mensajeId === '' || mensajeId.length > 300) return { ok: false, motivo: 'falta mensajeId (Message-ID del correo)' }
+  const e = obj(o.evento)
+  if (!e) return { ok: false, motivo: 'falta evento' }
+  const compania = typeof e.compania === 'string' ? e.compania : ''
+  const cia = COMPANIAS[compania]
+  if (!cia) return { ok: false, motivo: 'compañía desconocida' }
+  if (typeof o.compania === 'string' && o.compania !== compania) return { ok: false, motivo: 'la compañía del cuerpo no es la del evento' }
+  // El código DGS sale de la compañía, no de quien llama: con uno ajeno se resolverían pólizas de otra.
+  if (e.codigoDgs !== cia.codigo) return { ok: false, motivo: 'el código DGS no es el de la compañía' }
+  const tipo = TIPOS_EVENTO_CORREO.find((t) => t === e.tipo)
+  if (!tipo) return { ok: false, motivo: 'tipo de evento desconocido' }
+  let ilegibles = typeof e.ilegibles === 'number' && Number.isInteger(e.ilegibles) && e.ilegibles >= 0 ? Math.min(e.ilegibles, 999) : 0
+  const items: ItemEvento[] = []
+  const vistos = new Set<string>()
+  const meter = (i: ItemEvento | null) => {
+    if (!i) { ilegibles++; return }
+    if (vistos.has(i.clave)) return // la misma fila dos veces en un correo: una vez
+    vistos.add(i.clave)
+    items.push(i)
+  }
+
+  if (tipo === 'siniestro') {
+    const lista = Array.isArray(e.siniestros) ? e.siniestros.slice(0, 200) : null
+    if (!lista) return { ok: false, motivo: 'faltan los siniestros' }
+    for (const s of lista.map(obj)) {
+      const numero = id(s?.numeroSiniestro)
+      const subtipo = s?.subtipo === 'apertura' || s?.subtipo === 'actualizacion' || s?.subtipo === 'cierre' ? s.subtipo : null
+      meter(numero && subtipo ? {
+        tipo, clave: numero, subtipo, numeroSiniestro: numero, numeroPoliza: id(s?.numeroPoliza), ramo: libre(s?.ramo, 60),
+        fechaOcurrencia: dia(s?.fechaOcurrencia), fechaAccion: dia(s?.fechaAccion), accion: libre(s?.accion),
+      } : null)
+    }
+  } else if (tipo === 'pre_anulacion' || tipo === 'impago') {
+    const lista = Array.isArray(e.recibos) ? e.recibos.slice(0, 200) : null
+    if (!lista) return { ok: false, motivo: 'faltan los recibos' }
+    for (const r of lista.map(obj)) {
+      const poliza = id(r?.numeroPoliza)
+      const recibo = r?.idRecibo === null ? null : id(r?.idRecibo)
+      if (r?.idRecibo !== null && r?.idRecibo !== undefined && recibo === null) { ilegibles++; continue }
+      meter(poliza ? {
+        tipo, clave: recibo ? `${poliza}/${recibo}` : poliza, numeroPoliza: poliza, idRecibo: recibo,
+        importe: importe(r?.importe), fechaLimite: dia(r?.fechaLimite),
+      } : null)
+    }
+  } else if (tipo === 'anulacion') {
+    const poliza = id(e.numeroPoliza)
+    meter({ tipo, clave: poliza ?? 'sin-poliza', numeroPoliza: poliza, fechaEfecto: dia(e.fechaEfecto), motivo: libre(e.motivo, 120) })
+  } else {
+    const poliza = id(e.numeroPoliza)
+    meter(poliza ? {
+      tipo, clave: poliza, numeroPoliza: poliza, descripcion: libre(e.descripcion),
+      periodoDesde: periodo(e.periodoDesde), periodoHasta: periodo(e.periodoHasta),
+    } : null)
+  }
+  return { ok: true, entrada: { mensajeId, compania, codigoDgs: cia.codigo, tipo, ilegibles, items } }
+}
+
+// ── Resolver la póliza ───────────────────────────────────────────────────────
+
+/** Una póliza de la cartera con lo justo para decidir. */
+export type PolizaCandidata = {
+  id: string
+  clienteId: string
+  numeroPoliza: string | null
+  codigoDgs: string | null
+  aseguradora: string | null
+  importRef: string | null
+  eiacXmlHash: string | null
+  estado: string | null
+  sustituidaAt: Date | string | null
+}
+
+export type ResolucionEvento =
+  | { estado: 'en_vigor'; poliza: PolizaCandidata }
+  | { estado: 'no_en_vigor'; poliza: PolizaCandidata }
+  | { estado: 'sin_resolver'; motivo: 'sin_numero' | 'no_encontrada' | 'ambigua' }
+
+/** Sin espacios, puntos, guiones ni barras, en mayúsculas y SIN ceros a la izquierda (Mapfre los pone, CIMA no siempre). */
+export function claveNumero(n: string | null | undefined): string | null {
+  if (!n) return null
+  const t = n.replace(/[\s.\-/]/g, '').toUpperCase().replace(/^0+/, '')
+  return t === '' ? null : t
+}
+
+function esDeLaCompania(p: PolizaCandidata, compania: string, codigoDgs: string): boolean {
+  if (p.codigoDgs) return p.codigoDgs === codigoDgs
+  const nombre = (p.aseguradora ?? '').toLowerCase()
+  return nombre !== '' && (COMPANIAS[compania]?.claves ?? []).some((c) => nombre.includes(c))
+}
+
+/**
+ * La póliza del evento por nº + compañía, entre las de la cartera VIVA (origen CIMA). En vigor → se
+ * escribe; viva pero no en vigor → cada tipo decide (casi siempre «CIMA ya lo sabe»); nada o más de
+ * una distinta → `sin_resolver` (nunca se elige una al azar).
+ */
+export function resolverPolizaEvento(
+  numeroPoliza: string | null, compania: string, codigoDgs: string, candidatas: readonly PolizaCandidata[],
+): ResolucionEvento {
+  const buscada = claveNumero(numeroPoliza)
+  if (!buscada) return { estado: 'sin_resolver', motivo: 'sin_numero' }
+  const casan = candidatas.filter((p) => esCarteraViva(p) && claveNumero(p.numeroPoliza) === buscada && esDeLaCompania(p, compania, codigoDgs))
+  const enVigor = casan.filter((p) => esCarteraEnVigor(p))
+  if (enVigor.length === 1) return { estado: 'en_vigor', poliza: enVigor[0] }
+  if (enVigor.length > 1) return { estado: 'sin_resolver', motivo: 'ambigua' }
+  if (casan.length === 1) return { estado: 'no_en_vigor', poliza: casan[0] }
+  return { estado: 'sin_resolver', motivo: casan.length > 1 ? 'ambigua' : 'no_encontrada' }
+}
+
+// ── Decidir ──────────────────────────────────────────────────────────────────
+
+export type SiniestroExistente = { id: string; origen: string; clienteId: string; polizaId: string }
+export type ExpedienteAbierto = { id: string; estado: string; fechaEfecto: string | null }
+
+export type ContextoItem = {
+  resolucion: ResolucionEvento
+  /** El siniestro con ese nº ya en la cartera (CIMA o nuestro). Solo para `siniestro`. */
+  siniestro: SiniestroExistente | null
+  /** Expediente de /anulaciones abierto en esa póliza. Solo para `anulacion`. */
+  expediente: ExpedienteAbierto | null
+  /** Ya hay una tarea abierta de un aviso de compañía para esa póliza/recibo. */
+  tareaAbierta: boolean
+  /** Fecha del correo (aaaa-mm-dd) o null. */
+  fechaCorreo: string | null
+  /** Hoy en Madrid (aaaa-mm-dd). */
+  hoy: string
+}
+
+export type TareaPlan = { tipo: 'llamada' | 'tarea'; prioridad: 'alta' | 'media'; observaciones: string; fechaLimite: string }
+
+export type Plan = {
+  estado: Exclude<EstadoEventoCorreo, 'procesando'>
+  /** Por qué no se aplicó (sin_resolver) o qué se sabía ya (duplicado_cima). */
+  motivo: string | null
+  /** Línea para `historial_interno` del cliente. `null` = no se anota nada. */
+  nota: string | null
+  /** Tipo de la línea del historial. */
+  tipoNota: 'gestion' | 'siniestro'
+  /** Abrir un siniestro nuestro (origen gestionado_correduria). */
+  abrirSiniestro: { tipo: 'otro'; fechaHora: string; descripcion: string; referencia: string } | null
+  /** Si al abrir resulta que CIMA ya lo tenía (409 duplicado): esta nota en su lugar. */
+  notaSiDuplicado: string | null
+  tarea: TareaPlan | null
+  /** Llave de «una tarea por póliza/recibo». */
+  claveTarea: string | null
+  siniestroId: string | null
+  /** Lo que se hizo, en corto, para el aviso y la bandeja. */
+  resumen: string
+}
+
+const fechaEs = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+
+function sumarDias(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Nunca en el pasado: un aviso que llega tarde vence HOY. */
+export function venceTarea(fecha: string | null, hoy: string, porDefecto: number): string {
+  if (fecha && fecha >= hoy) return fecha
+  return fecha ? hoy : sumarDias(hoy, porDefecto)
+}
+
+const MOTIVO_RESOLUCION: Record<'sin_numero' | 'no_encontrada' | 'ambigua', string> = {
+  sin_numero: 'el correo no trae nº de póliza',
+  no_encontrada: 'ninguna póliza viva de esa compañía con ese nº',
+  ambigua: 'más de una póliza casa con ese nº: no se elige una',
+}
+
+function base(resumen: string): Plan {
+  return { estado: 'aplicado', motivo: null, nota: null, tipoNota: 'gestion', abrirSiniestro: null, notaSiDuplicado: null, tarea: null, claveTarea: null, siniestroId: null, resumen }
+}
+
+function sinResolver(motivo: string): Plan {
+  return { ...base(`póliza no encontrada → bandeja (${motivo})`), estado: 'sin_resolver', motivo }
+}
+
+/** Clave de «una tarea por póliza/recibo» (pre-anulación e impago del MISMO recibo comparten tarea). */
+export function claveTareaDe(item: ItemEvento, polizaId: string): string {
+  if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') return `recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
+  return `${item.tipo}:${polizaId}`
+}
+
+export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem): Plan {
+  const cia = nombreCompania(compania)
+  const delCorreo = ctx.fechaCorreo ? ` (correo del ${fechaEs(ctx.fechaCorreo)})` : ''
+
+  if (item.tipo === 'siniestro') {
+    const que = item.subtipo === 'apertura' ? 'apertura' : item.subtipo === 'cierre' ? 'cierre' : 'actualización'
+    const detalle = `${que}${item.accion ? `: ${item.accion}` : ''}`
+    if (ctx.siniestro) {
+      const nota = `Siniestro ${item.numeroSiniestro} — ${cia} avisa por correo${delCorreo}: ${detalle}`
+      const deCima = ctx.siniestro.origen === 'cima'
+      return {
+        ...base(deCima ? `siniestro ${item.numeroSiniestro} ya en CIMA: nota de seguimiento en la ficha` : `nota en el siniestro ${item.numeroSiniestro} de la ficha`),
+        estado: deCima ? 'duplicado_cima' : 'aplicado',
+        motivo: deCima ? 'el siniestro ya vino por CIMA: su estado lo fija la compañía' : null,
+        nota, tipoNota: 'siniestro', siniestroId: ctx.siniestro.id,
+      }
+    }
+    const r = ctx.resolucion
+    if (r.estado === 'sin_resolver') {
+      return sinResolver(r.motivo === 'sin_numero' ? 'el siniestro no está en la cartera y el correo no trae nº de póliza' : MOTIVO_RESOLUCION[r.motivo])
+    }
+    if (r.estado === 'no_en_vigor') return sinResolver('la póliza no está en vigor según CIMA')
+    if (item.subtipo !== 'cierre' && item.fechaOcurrencia) {
+      const descripcion = `Comunicado por ${cia} por correo (siniestro ${item.numeroSiniestro}${item.ramo ? `, ${item.ramo}` : ''}): ${detalle}`.slice(0, 4000)
+      return {
+        ...base(`siniestro ${item.numeroSiniestro} abierto en la ficha`),
+        // Mediodía UTC: el día de ocurrencia no se corre de fecha en ninguna zona horaria.
+        abrirSiniestro: { tipo: 'otro', fechaHora: `${item.fechaOcurrencia}T12:00:00.000Z`, descripcion, referencia: item.numeroSiniestro },
+        notaSiDuplicado: `Siniestro ${item.numeroSiniestro} — ${cia} avisa por correo${delCorreo}: ${detalle}`,
+        tipoNota: 'siniestro',
+      }
+    }
+    // Un cierre (o un aviso sin fecha del hecho) de un siniestro que no tenemos: no se abre uno para
+    // cerrarlo; queda escrito en la ficha.
+    return {
+      ...base(`nota en la ficha: siniestro ${item.numeroSiniestro} (${que}) que no constaba en la cartera`),
+      nota: `Siniestro ${item.numeroSiniestro} — ${cia} avisa por correo${delCorreo}: ${detalle}. No constaba en la cartera${item.subtipo === 'cierre' ? '' : ' (sin fecha del hecho: no se abre solo)'}.`,
+      tipoNota: 'siniestro',
+    }
+  }
+
+  if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') {
+    const r = ctx.resolucion
+    if (r.estado === 'sin_resolver') return sinResolver(MOTIVO_RESOLUCION[r.motivo])
+    const recibo = item.idRecibo ? `recibo ${item.idRecibo}` : 'recibo sin nº'
+    if (r.estado === 'no_en_vigor') {
+      return { ...base('CIMA ya da la póliza por no vigente: no se crea tarea'), estado: 'duplicado_cima', motivo: 'la póliza ya no está en vigor según CIMA' }
+    }
+    const imp = item.importe !== null ? ` de ${eur(item.importe)}` : ''
+    const plazo = item.fechaLimite ? `anulará el ${fechaEs(item.fechaLimite)}` : 'anulará (no da fecha)'
+    const nota = item.tipo === 'pre_anulacion'
+      ? `${cia} avisa por correo${delCorreo}: ${recibo}${imp} sin cobrar; ${plazo} si no se paga.`
+      : `${cia} DELEGA el cobro del ${recibo}${imp} en la correduría${delCorreo}${item.fechaLimite ? `; plazo hasta el ${fechaEs(item.fechaLimite)}` : ''}.`
+    if (ctx.tareaAbierta) return { ...base('ya había tarea abierta de ese recibo: solo nota'), nota }
+    const fecha = venceTarea(item.fechaLimite, ctx.hoy, 0)
+    return {
+      ...base(`tarea creada, vence ${fechaEs(fecha)}`),
+      nota,
+      tarea: {
+        tipo: 'llamada', prioridad: 'alta', fechaLimite: fecha,
+        observaciones: `${PREFIJO_TAREA_CORREO} ${item.tipo === 'pre_anulacion' ? 'Pre-anulación' : 'Impago delegado'} ${cia}: ${recibo}${imp}. Llamar al cliente para que pague antes de que se anule${item.fechaLimite ? ` (${fechaEs(item.fechaLimite)})` : ''}.`,
+      },
+      claveTarea: claveTareaDe(item, r.poliza.id),
+    }
+  }
+
+  if (item.tipo === 'anulacion') {
+    const r = ctx.resolucion
+    if (r.estado === 'sin_resolver') return sinResolver(MOTIVO_RESOLUCION[r.motivo])
+    if (r.estado === 'no_en_vigor') {
+      return { ...base('CIMA ya la trae no vigente: no se hace nada'), estado: 'duplicado_cima', motivo: 'la póliza ya no está en vigor según CIMA' }
+    }
+    const efecto = item.fechaEfecto ? ` con efecto ${fechaEs(item.fechaEfecto)}` : ''
+    const nota = `${cia} comunica por correo${delCorreo} la ANULACIÓN de la póliza${efecto}${item.motivo ? ` (${item.motivo})` : ''}.`
+    if (ctx.tareaAbierta) return { ...base('ya había tarea de confirmar la anulación: solo nota'), nota }
+    const exp = ctx.expediente
+    const observaciones = exp
+      ? `${PREFIJO_TAREA_CORREO} ${cia} confirma la anulación${efecto}. Hay un expediente abierto en /anulaciones (${exp.estado}): compruébalo y márcalo confirmado.`
+      : `${PREFIJO_TAREA_CORREO} ${cia} comunica la anulación${efecto} y no hay expediente en /anulaciones. Confirmar en el portal de la compañía quién la pidió y por qué; si el cliente se va, tratarlo como baja.`
+    const fecha = venceTarea(null, ctx.hoy, 2)
+    return {
+      ...base(`tarea «confirmar anulación» creada, vence ${fechaEs(fecha)}${exp ? ' (hay expediente abierto)' : ''}`),
+      nota,
+      tarea: { tipo: 'tarea', prioridad: 'alta', fechaLimite: fecha, observaciones },
+      claveTarea: claveTareaDe(item, r.poliza.id),
+    }
+  }
+
+  if (item.tipo !== 'suplemento') return sinResolver('tipo de aviso desconocido')
+  const r = ctx.resolucion
+  if (r.estado === 'sin_resolver') return sinResolver(MOTIVO_RESOLUCION[r.motivo])
+  if (r.estado === 'no_en_vigor') return sinResolver('la póliza no está en vigor según CIMA')
+  const per = item.periodoDesde || item.periodoHasta ? ` (periodo ${item.periodoDesde ?? '?'} a ${item.periodoHasta ?? '?'})` : ''
+  const nota = `${cia} por correo${delCorreo}: suplemento${item.descripcion ? ` — ${item.descripcion}` : ''}${per}.`
+  if (ctx.tareaAbierta) return { ...base('ya había tarea de revisar ese suplemento: solo nota'), nota }
+  const fecha = venceTarea(null, ctx.hoy, 7)
+  return {
+    ...base(`tarea «revisar suplemento» creada, vence ${fechaEs(fecha)}`),
+    nota,
+    tarea: { tipo: 'tarea', prioridad: 'media', fechaLimite: fecha, observaciones: `${PREFIJO_TAREA_CORREO} Revisar suplemento ${cia}${item.descripcion ? `: ${item.descripcion}` : ''}${per}.` },
+    claveTarea: claveTareaDe(item, r.poliza.id),
+  }
+}
+
+/** La tarea del plan pasa las MISMAS reglas que una tarea a mano (`validarTarea`). */
+export function tareaValida(t: TareaPlan, hoy: Date): { ok: true } | { ok: false; motivo: string } {
+  const v = validarTarea(t, hoy)
+  return v.ok ? { ok: true } : { ok: false, motivo: v.motivo }
+}

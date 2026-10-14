@@ -15,6 +15,7 @@ import Secciones from '../Secciones'
 import AccionesContacto from '../AccionesContacto'
 import BuscadorCartera from '../BuscadorCartera'
 import BandaAvisos from './BandaAvisos'
+import CorreosCompania from './CorreosCompania'
 import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
 
 const PAGINA = 50
@@ -128,6 +129,8 @@ export default function MesaClient() {
               {/* Lo que no es expediente va antes de «Aparcadas» (que es lo único que va plegado). */}
               {b === 'aparcadas' && <TareasSueltas lectura={mesa.sueltas} truncado={mesa.sueltasTruncado} hoy={hoy} onCambio={cargar} />}
               {b === 'aparcadas' && <PerdidasPorRevisar lectura={mesa.perdidas} conExpediente={mesa.perdidasConExpediente} onCambio={cargar} />}
+              {/* Avisos de compañías leídos del correo: su propia lectura (no espera ni depende de los expedientes). */}
+              {b === 'aparcadas' && <CorreosCompania />}
               <Bloque bloque={b} filas={mesa.bloques[b]} hoy={hoy} onCambio={cargar} />
             </Fragment>
           ))}
