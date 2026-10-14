@@ -6,7 +6,7 @@
 
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import {
-  envDeMaquina, esTipoError, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  claveCompania, envDeMaquina, esCif, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
   type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
@@ -30,6 +30,72 @@ export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEn
     return { ok: true, entrada: { ramo, riesgo: v.formulario } }
   }
   return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades o moto)' }
+}
+
+// ─── NIF del tomador para Mapfre (14/10/2026, decisión de Alberto) ──────────
+// Mapfre NSEI busca al tomador por NIF en el paso 1. Lo rellena ASEGURA en el servidor desde la ficha del cliente
+// (descifrada aquí), solo en trabajos de Mapfre y solo si el riesgo no lo trae. El DNI entero NUNCA cruza a plataforma:
+// ni en la respuesta del encolado ni en un motivo de rechazo; y NO está en la lista blanca de la purga (se borra al cerrar).
+
+/** Compañías cuyo bot busca al tomador por NIF (hoy solo Mapfre). */
+export const COMPANIAS_CON_NIF_TOMADOR = ['mapfre'] as const
+
+/** Lectura del NIF de la ficha: `sin_nif` = la ficha no lo tiene; `ilegible` = cifrado que no abre (no se ha podido mirar). */
+export type LecturaNifFicha = { estado: 'ok'; documento: string } | { estado: 'sin_nif' } | { estado: 'ilegible' } | { estado: 'no_valido' }
+
+/**
+ * NIF de la ficha → lectura. `v1:` se descifra con `descifrar` (la clave de la cartera); si lanza → `ilegible` (nunca
+ * «no hay»). En claro (legado) → tal cual. Tiene que ser DNI/NIE/CIF válido (letra de control incluida). PURA.
+ */
+export function lecturaNifFicha(guardado: string | null | undefined, descifrar: (v: string) => string): LecturaNifFicha {
+  if (typeof guardado !== 'string' || guardado.trim() === '') return { estado: 'sin_nif' }
+  let claro: string
+  if (guardado.startsWith('v1:')) {
+    try {
+      claro = descifrar(guardado)
+    } catch {
+      return { estado: 'ilegible' }
+    }
+  } else claro = guardado
+  if (typeof claro !== 'string' || claro.trim() === '') return { estado: 'sin_nif' }
+  const d = normalizarDocumento(claro.trim())
+  return esDniNie(d) || esCif(d) ? { estado: 'ok', documento: d } : { estado: 'no_valido' }
+}
+
+const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+/** ¿Este trabajo necesita que asegura ponga el NIF del tomador? Mapfre + auto/moto + el riesgo no trae documento. PURA. */
+export function necesitaNifTomador(compania: string, ramo: string, riesgo: unknown): boolean {
+  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (ramo !== 'auto' && ramo !== 'moto') return false
+  if (!esObj(riesgo)) return true
+  const doc = (v: unknown) => typeof v === 'string' && v.trim() !== ''
+  return !doc(riesgo.documentoTomador) && !(esObj(riesgo.tomador) && doc(riesgo.tomador.documentoIdentidad))
+}
+
+export type NifTomadorAplicado = { ok: true; riesgo: unknown } | { ok: false; status: 422 | 503; motivo: string }
+
+/**
+ * Aplica la regla al riesgo que se va a encolar. PURA (la lectura de la ficha la trae quien llama, solo si hace falta):
+ *   · compañía que no busca por NIF → el riesgo SIN `documentoTomador` (no se guarda un dato personal que nadie usa);
+ *   · Mapfre y el riesgo ya trae documento → tal cual;
+ *   · Mapfre sin documento → el de la ficha; sin NIF / ilegible / no válido → rechazo claro SIN encolar.
+ * Ningún motivo lleva el documento.
+ */
+export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaNifFicha): NifTomadorAplicado {
+  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) {
+    if (esObj(riesgo) && 'documentoTomador' in riesgo) {
+      const { documentoTomador: _fuera, ...resto } = riesgo
+      return { ok: true, riesgo: resto }
+    }
+    return { ok: true, riesgo }
+  }
+  if (!necesitaNifTomador(compania, ramo, riesgo)) return { ok: true, riesgo }
+  const l = leer()
+  if (l.estado === 'ok') return { ok: true, riesgo: { ...(esObj(riesgo) ? riesgo : {}), documentoTomador: l.documento } }
+  if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'nif_tomador_ilegible: el NIF de la ficha del cliente no se puede descifrar (clave de la cartera); no se encola' }
+  if (l.estado === 'no_valido') return { ok: false, status: 422, motivo: 'nif_tomador_no_valido: el NIF/CIF de la ficha del cliente no es válido; corrígelo en la ficha (Mapfre busca al tomador por NIF)' }
+  return { ok: false, status: 422, motivo: 'falta_nif_tomador: la ficha del cliente no tiene NIF/CIF y Mapfre busca al tomador por NIF; complétalo en la ficha' }
 }
 
 /** Interruptor general. APAGADO salvo `TARIFICADOR_RPA_ACTIVO=1` exacto (fail-closed). */

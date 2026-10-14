@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  bloqueaDuplicado, claveEncolar, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  aplicarNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -227,4 +227,62 @@ test('registrarResultado: una exploración no devuelve ofertas, solo ella termin
   assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
   assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
   assert.match(f, /const modo = f \? modoParaWorker\(f\.modo, modosWorker\) : null/)
+})
+
+// ─── NIF del tomador para Mapfre (14/10/2026) ────────────────────────────────
+
+const NIF = '00000000T'
+const RIESGO_MOTO = { ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003' }
+const noLeer = () => { throw new Error('no debería leer la ficha') }
+
+test('NIF Mapfre: solo Mapfre + auto/moto + riesgo sin documento lo necesita', () => {
+  assert.equal(necesitaNifTomador('mapfre', 'moto', RIESGO_MOTO), true)
+  assert.equal(necesitaNifTomador(' MAPFRE ', 'auto', RIESGO_MOTO), true)
+  assert.equal(necesitaNifTomador('allianz', 'moto', RIESGO_MOTO), false)
+  assert.equal(necesitaNifTomador('mapfre', 'comunidades', {}), false)
+  assert.equal(necesitaNifTomador('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }), false)
+  assert.equal(necesitaNifTomador('mapfre', 'moto', { ...RIESGO_MOTO, tomador: { documentoIdentidad: NIF } }), false)
+})
+
+test('NIF Mapfre: lectura de la ficha en tres estados (sin NIF ≠ ilegible) y valida la letra', () => {
+  const desc = (v: string) => v.slice(3)
+  assert.deepEqual(lecturaNifFicha(null, desc), { estado: 'sin_nif' })
+  assert.deepEqual(lecturaNifFicha('  ', desc), { estado: 'sin_nif' })
+  assert.deepEqual(lecturaNifFicha(`v1:${NIF}`, desc), { estado: 'ok', documento: NIF })
+  assert.deepEqual(lecturaNifFicha('00000000-t', desc), { estado: 'ok', documento: NIF }, 'legado en claro, normalizado')
+  assert.deepEqual(lecturaNifFicha('v1:xx', () => { throw new Error('clave') }), { estado: 'ilegible' })
+  assert.deepEqual(lecturaNifFicha('v1:00000000A', desc), { estado: 'no_valido' })
+})
+
+test('NIF Mapfre: se añade al riesgo desde la ficha; sin NIF/ilegible/no válido → rechazo SIN el documento en el motivo', () => {
+  const ok = aplicarNifTomador('mapfre', 'moto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }))
+  assert.ok(ok.ok)
+  assert.deepEqual(ok.ok && ok.riesgo, { ...RIESGO_MOTO, documentoTomador: NIF })
+  // Si el riesgo ya lo trae, no se lee la ficha ni se toca.
+  const trae = { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }
+  assert.deepEqual(aplicarNifTomador('mapfre', 'moto', trae, noLeer), { ok: true, riesgo: trae })
+  for (const [estado, status] of [['sin_nif', 422], ['no_valido', 422], ['ilegible', 503]] as const) {
+    const r = aplicarNifTomador('mapfre', 'moto', RIESGO_MOTO, () => ({ estado }))
+    assert.equal(r.ok, false, estado)
+    assert.ok(!r.ok && r.status === status && /nif_tomador/.test(r.motivo), estado)
+    assert.ok(!JSON.stringify(r).includes('00000000'), 'el motivo no lleva documento')
+  }
+})
+
+test('NIF Mapfre: otra compañía no lee la ficha y QUITA un documentoTomador que no va a usar', () => {
+  assert.deepEqual(aplicarNifTomador('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(aplicarNifTomador('allianz', 'comunidades', { ramo: 'comunidades' }, noLeer), { ok: true, riesgo: { ramo: 'comunidades' } })
+})
+
+test('NIF Mapfre: encolarTrabajo lo aplica tras comprobar el cliente de ESTA correduría y ANTES de deduplicar e insertar', () => {
+  const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
+  const cliente = fn.indexOf("'cliente_no_encontrado'")
+  const aplica = fn.indexOf('aplicarNifTomador(')
+  const json = fn.indexOf('const riesgoJson = JSON.stringify(conNif.riesgo)')
+  assert.ok(cliente > -1 && aplica > cliente && json > aplica, 'cliente comprobado → NIF aplicado → riesgo serializado')
+  assert.ok(fn.search(/insert into \w+\.tarificacion_trabajos/) > json)
+  assert.ok(!/JSON\.stringify\(e\.riesgo\)/.test(fn), 'nada encola el riesgo sin pasar por el NIF')
+  assert.match(fn, /select dni from \w+\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{e\.correduriaId\}::uuid/)
+  assert.ok(fn.indexOf('return { estado: \'rechazado\', status: conNif.status, motivo: conNif.motivo }') > aplica, 'sin NIF no se encola')
 })

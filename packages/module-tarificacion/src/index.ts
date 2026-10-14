@@ -312,6 +312,8 @@ export {
   MAX_POBLACION,
   MAX_ELECCION_POBLACION,
   pareceDatoPersonalEnDescripcion,
+  documentoTomadorDe,
+  secretosDelRiesgo,
   type RamoVehiculo,
   type SexoConductor,
   type ConductorHabitual,

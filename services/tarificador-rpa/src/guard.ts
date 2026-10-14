@@ -748,6 +748,104 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   }
 }
 
+// ─────────── Mapfre NSEI · «Continuar» del stepper (Alberto, 14/10/2026) ───────────
+
+/**
+ * «Continuar» AUTORIZADO de Mapfre NSEI, por paso de ORIGEN. Lista CERRADA: el pie del stepper avanza 1 → 2 → 3 → 4.
+ * El del paso 3 («Figuras») lanza «Verificando controles técnicos» + «Calculando las primas» y lleva a PRECIO: PERMITIDO
+ * por decisión de Alberto (14/10/2026). No hay «Continuar» autorizado desde Coberturas (4), Proyectos (5) ni hacia
+ * Contratación (6): emitir/contratar/formalizar/grabar siguen bloqueados por `comprobarBoton` y por la red.
+ * `previos`: lo que tiene que haber pasado ANTES en este trabajo (orden del flujo; el vehículo confirmado antes del paso 2).
+ */
+export const PASOS_CONTINUAR_MAPFRE = Object.freeze({
+  datosBasicos: Object.freeze({ origen: 'Datos básicos', destino: 'Objeto asegurado', previos: Object.freeze([] as string[]), esperaMs: 20_000 }),
+  objetoAsegurado: Object.freeze({ origen: 'Objeto asegurado', destino: 'Figuras', previos: Object.freeze(['mapfre:continuar:datosBasicos', 'mapfre:seleccion_vehiculo']), esperaMs: 20_000 }),
+  figuras: Object.freeze({ origen: 'Figuras', destino: 'Coberturas', previos: Object.freeze(['mapfre:continuar:objetoAsegurado']), esperaMs: 90_000 }),
+})
+export type PasoContinuarMapfre = keyof typeof PASOS_CONTINUAR_MAPFRE
+
+/** Cabecera del paso ACTIVO del stepper de Angular Material (`mat-step-header`, role=tab, `aria-selected`). */
+export const SEL_PASO_ACTIVO_MAPFRE = 'mat-step-header[aria-selected="true"]'
+const SEL_DIALOGO_ABIERTO_MAPFRE = 'mat-dialog-container, [role="dialog"], app-matricula-dialog'
+
+/** Hueco de mapa detectado por el guard (stepper o botón no reconocibles): para SIN pulsar y pide el inventario de estructura. */
+export class ErrorMapaGuardMapfre extends ErrorTarificador {
+  readonly pideInventarioDom = true
+  constructor(que: string) {
+    super('portal', `mapfre: mapa incompleto: faltan ${que}`)
+    this.name = 'ErrorMapaGuardMapfre'
+  }
+}
+
+/** Texto de la cabecera del paso activo de NSEI (sin tildes, mayúsculas), o `null` si no hay EXACTAMENTE una visible. */
+export async function pasoActivoMapfre(page: Page): Promise<string | null> {
+  const h = page.locator(SEL_PASO_ACTIVO_MAPFRE).locator('visible=true')
+  if ((await h.count().catch(() => 0)) !== 1) return null
+  const t = await h.first().textContent({ timeout: 1_000 }).catch(() => null)
+  return t === null ? null : sinTildesMayus(t)
+}
+
+/**
+ * El ÚNICO camino para pulsar «Continuar» en Mapfre NSEI. Exige, en este orden y sin atajos:
+ *   1. guard limpio, todas las ventanas de red cerradas, `paso` de la lista cerrada, una vez por paso y trabajo, y lo
+ *      `previos` ya hecho en este trabajo (orden 1 → 2 → 3; el vehículo confirmado antes de salir del paso 2);
+ *   2. sin campo de cuenta bancaria visible y sin diálogo abierto;
+ *   3. el paso ACTIVO del stepper (exactamente una cabecera seleccionada) es el de ORIGEN; si no se reconoce → hueco con
+ *      inventario (sin pulsar);
+ *   4. EXACTAMENTE un botón visible de texto exacto «Continuar», fuera de diálogos, que pase `comprobarBoton` (sin
+ *      «Aceptar» permitido);
+ *   5. tras el clic, llega al paso DESTINO; un diálogo nativo se descarta y el trabajo cae; «Contratación» → bloqueo de
+ *      emisión; no llega a tiempo → hueco con inventario (¿un obligatorio sin rellenar?).
+ * No abre ninguna ventana de red: lo que el clic pida que case con el patrón de emisión se aborta (fail-closed).
+ */
+export async function pulsarContinuarMapfre(page: Page, guard: GuardEmision, paso: PasoContinuarMapfre): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Continuar» de Mapfre con una ventana de red abierta')
+  if (typeof paso !== 'string' || !Object.hasOwn(PASOS_CONTINUAR_MAPFRE, paso)) throw new EmisionBloqueadaError('boton', `«Continuar» de Mapfre no autorizado desde «${String(paso).slice(0, 40)}»`)
+  const regla = PASOS_CONTINUAR_MAPFRE[paso]
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = `mapfre:continuar:${paso}`
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre desde «${regla.origen}» ya se usó en este trabajo`)
+  if (regla.previos.some((x) => !usados.has(x))) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre desde «${regla.origen}» fuera de orden`)
+  await exigirSinCuentaBancaria(page)
+  if ((await page.locator(SEL_DIALOGO_ABIERTO_MAPFRE).locator('visible=true').count()) > 0) throw new ErrorTarificador('portal', `mapfre: «Continuar» desde «${regla.origen}» con un diálogo abierto`)
+  const activo = await pasoActivoMapfre(page)
+  if (activo === null) throw new ErrorMapaGuardMapfre(`el paso activo del stepper de NSEI (no hay exactamente una cabecera «${SEL_PASO_ACTIVO_MAPFRE}» visible)`)
+  if (activo.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: el paso activo es «Contratación»')
+  if (!activo.includes(sinTildesMayus(regla.origen))) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el paso activo no es «${regla.origen}»`)
+  const botones = page.locator('button, [role="button"]').filter({ hasText: /^\s*Continuar\s*$/i }).locator('visible=true')
+  if ((await botones.count()) !== 1) throw new ErrorMapaGuardMapfre(`el botón «Continuar» del paso «${regla.origen}» (no hay exactamente uno visible)`)
+  const boton = botones.first()
+  if (await boton.evaluate((el) => el.closest('mat-dialog-container, [role="dialog"], app-matricula-dialog') !== null)) throw new EmisionBloqueadaError('boton', '«Continuar» de Mapfre dentro de un diálogo')
+  const desc = await descripcion(boton)
+  if (sinTildesMayus(desc[0]) !== 'CONTINUAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  let dialogoNativo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogoNativo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await boton.click()
+    const destino = sinTildesMayus(regla.destino)
+    const hasta = Date.now() + regla.esperaMs
+    for (;;) {
+      guard.comprobar()
+      if (dialogoNativo) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
+      const ahora = await pasoActivoMapfre(page)
+      if (ahora?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: tras «Continuar» el paso activo es «Contratación»')
+      if (ahora?.includes(destino)) return
+      if (Date.now() >= hasta) throw new ErrorMapaGuardMapfre(`la llegada a «${regla.destino}» tras «Continuar» desde «${regla.origen}» (¿un campo obligatorio sin rellenar o un control sin mapear?)`)
+      await page.waitForTimeout(250)
+    }
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+}
+
 /**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
  * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard

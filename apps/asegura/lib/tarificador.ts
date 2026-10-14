@@ -23,6 +23,7 @@ import {
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
+import { decryptField } from '@central/module-seguros-pii'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
@@ -39,6 +40,9 @@ import {
   huecosLibres,
   peticionMaquina,
   repartirEnCurso,
+  aplicarNifTomador,
+  lecturaNifFicha,
+  necesitaNifTomador,
   rpaActivo,
   type ConfigFly,
   type ResultadoWorker,
@@ -109,11 +113,21 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
     if (!pol[0]) return { estado: 'rechazado', status: 404, motivo: 'poliza_no_encontrada' }
   }
 
+  // NIF del tomador para Mapfre (14/10/2026): lo pone ASEGURA desde la ficha (descifrada aquí, de ESTA correduría), solo
+  // si el riesgo no lo trae. Sin NIF / ilegible / no válido → rechazo SIN encolar. El documento no sale en ningún motivo
+  // ni en la respuesta, y la purga lo borra al cerrar (no está en la lista blanca).
+  const fichaNif = necesitaNifTomador(e.compania, e.ramo, e.riesgo)
+    ? await prisma.$queryRaw<{ dni: string | null }[]>`
+        select dni from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid`
+    : []
+  const conNif = aplicarNifTomador(e.compania, e.ramo, e.riesgo, () => lecturaNifFicha(fichaNif[0]?.dni ?? null, decryptField))
+  if (!conNif.ok) return { estado: 'rechazado', status: conNif.status, motivo: conNif.motivo }
+
   // Sin duplicados (13/10/2026): mismo cliente + compañía + ramo + riesgo (igualdad `jsonb`) con un trabajo aún vivo →
   // se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
   // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
   const compania = claveCompania(e.compania)
-  const riesgoJson = JSON.stringify(e.riesgo)
+  const riesgoJson = JSON.stringify(conNif.riesgo)
   const cid = clienteId
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
