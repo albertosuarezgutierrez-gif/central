@@ -14,9 +14,16 @@ export type CandidatoPresentacion = {
   nombre: string | null
   /** Correo ya descifrado. `null` = no se pudo descifrar (≠ «no tiene»): no se manda. */
   email: string | null
+  /**
+   * Índice ciego del correo (`clientes.email_lookup_hash`). `null` = la ficha no lo tiene: sin él no se
+   * puede saber si la MISMA persona está en otra ficha dada de baja, cliente en vigor o ya escrita otro
+   * día (la SQL y el índice único de `campana_envio` deduplican por él) → no se manda. Ausente (`undefined`)
+   * = quien llama no lo aporta (tests de forma).
+   */
+  emailHash?: string | null
 }
 
-export type MotivoDescarte = 'ilegible' | 'invalido' | 'dominio_muerto' | 'duplicado'
+export type MotivoDescarte = 'ilegible' | 'sin_indice' | 'invalido' | 'dominio_muerto' | 'duplicado'
 
 export type SeleccionPresentacion = {
   elegidos: (CandidatoPresentacion & { email: string })[]
@@ -88,7 +95,7 @@ export function seleccionarDestinatariosPresentacion(
   candidatos: readonly CandidatoPresentacion[],
   tope: number,
 ): SeleccionPresentacion {
-  const descartes: Record<MotivoDescarte, number> = { ilegible: 0, invalido: 0, dominio_muerto: 0, duplicado: 0 }
+  const descartes: Record<MotivoDescarte, number> = { ilegible: 0, sin_indice: 0, invalido: 0, dominio_muerto: 0, duplicado: 0 }
   const vistos = new Set<string>()
   const elegidos: SeleccionPresentacion['elegidos'] = []
   let fueraPorTope = 0
@@ -99,6 +106,7 @@ export function seleccionarDestinatariosPresentacion(
   )
   for (const c of ordenados) {
     if (c.email === null) { descartes.ilegible++; continue }
+    if (c.emailHash === null) { descartes.sin_indice++; continue }
     if (!emailSintacticoValido(c.email)) { descartes.invalido++; continue }
     if (dominioMuerto(c.email)) { descartes.dominio_muerto++; continue }
     const clave = normalizarEmail(c.email)

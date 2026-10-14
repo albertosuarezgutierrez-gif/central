@@ -36,7 +36,7 @@ test('selección: dedup por correo (normalizado), ilegible ≠ sin correo, y el 
   ], 2)
   // Buzones personales primero (gmail, yahoo, outlook), en el orden de llegada.
   assert.deepEqual(r.elegidos.map((e) => [e.clienteId, e.email]), [['1', 'ana@gmail.com'], ['6', 'eva@yahoo.es']])
-  assert.deepEqual(r.descartes, { ilegible: 1, invalido: 1, dominio_muerto: 1, duplicado: 1 })
+  assert.deepEqual(r.descartes, { ilegible: 1, sin_indice: 0, invalido: 1, dominio_muerto: 1, duplicado: 1 })
   assert.equal(r.fueraPorTope, 1)
 })
 
@@ -70,4 +70,13 @@ test('tope diario: defecto 50, nunca «sin tope», techo 500', () => {
   assert.equal(topeDiarioPresentacion({ ASEGURA_PRESENTACION_APP_TOPE_DIARIO: '0' }), TOPE_DIARIO_POR_DEFECTO)
   assert.equal(topeDiarioPresentacion({ ASEGURA_PRESENTACION_APP_TOPE_DIARIO: '80' }), 80)
   assert.equal(topeDiarioPresentacion({ ASEGURA_PRESENTACION_APP_TOPE_DIARIO: '5000' }), TOPE_DIARIO_MAXIMO)
+})
+
+test('selección: ficha SIN índice ciego del correo → no se manda (no se puede deduplicar ni ver bajas de la misma persona)', () => {
+  const r = seleccionarDestinatariosPresentacion([
+    { clienteId: '1', nombre: 'A', email: 'ana@gmail.com', emailHash: null },
+    { clienteId: '2', nombre: 'B', email: 'bea@gmail.com', emailHash: 'h-bea' },
+  ], 10)
+  assert.deepEqual(r.elegidos.map((e) => e.clienteId), ['2'])
+  assert.equal(r.descartes.sin_indice, 1)
 })

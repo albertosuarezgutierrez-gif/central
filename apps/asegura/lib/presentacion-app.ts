@@ -186,12 +186,21 @@ export async function pasadaPresentacionApp(correduriaId: string, opts: { forzar
     const ref = generarRef()
     // Por turno contando lo ya enviado hoy: dos pasadas el mismo día siguen alternando.
     const variante = varianteDeTurno(yaHoy + i, variantes)
-    // Reserva: si otra pasada ya la cogió (o el mismo correo en otra ficha), no se manda.
-    const reservada = await db.$executeRaw(Prisma.sql`
-      insert into campana_envio (id, correduria_id, cliente_id, campana, email_lookup_hash, ref_hash, lote, lote_fecha, variante, estado, creado_por)
-      values (${envioId}::uuid, ${correduriaId}::uuid, ${d.clienteId}::uuid, ${CAMPANA_PRESENTACION_APP},
-              ${hashPorCliente.get(d.clienteId) ?? null}, ${hashRef(ref)}, ${lote}::int, ${loteFecha}::date, ${variante}, 'reservado', ${ACTOR_CRON_PRESENTACION})
-      on conflict do nothing`)
+    // Reserva: si otra pasada ya la cogió (o el mismo correo en otra ficha), no se manda. El TOPE DIARIO se
+    // re-comprueba DENTRO de la reserva, serializada por un candado de transacción: dos pasadas a la vez
+    // (doble disparo del cron, reintento de Vercel, ensayo + cron) leen el mismo `yaHoy` al empezar, y sin
+    // esto cada una mandaría su cupo entero.
+    const reservada = await db.$transaction(async (tx) => {
+      await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`campana_envio:${CAMPANA_PRESENTACION_APP}`}))`)
+      return tx.$executeRaw(Prisma.sql`
+        insert into campana_envio (id, correduria_id, cliente_id, campana, email_lookup_hash, ref_hash, lote, lote_fecha, variante, estado, creado_por)
+        select ${envioId}::uuid, ${correduriaId}::uuid, ${d.clienteId}::uuid, ${CAMPANA_PRESENTACION_APP},
+               ${hashPorCliente.get(d.clienteId) ?? null}, ${hashRef(ref)}, ${lote}::int, ${loteFecha}::date, ${variante}, 'reservado', ${ACTOR_CRON_PRESENTACION}
+        where (select count(*) from campana_envio k
+               where k.correduria_id = ${correduriaId}::uuid and k.campana = ${CAMPANA_PRESENTACION_APP}
+                 and k.lote_fecha = ${loteFecha}::date) < ${topeDiario}::int
+        on conflict do nothing`)
+    })
     if (reservada !== 1) continue
 
     const bajaUrl = urlBajaCampana(baseUrl, envioId)
