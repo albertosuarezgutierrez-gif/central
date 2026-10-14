@@ -121,8 +121,8 @@ test('selectorYaUsado: un elemento no vale para dos claves en el mismo trabajo',
   assert.equal(selectorYaUsado(m, 'ano_construccion', '#m2', 'appArea').ok, false)
 })
 
-test('ACCIONES_PERMITIDAS: «calcular» + navegación de menús + lupa del tomador autorizadas por Alberto (14/10/2026), nada más', () => {
-  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador', 'elegir_opcion'])
+test('ACCIONES_PERMITIDAS: «calcular» + navegación de menús autorizadas por Alberto (14/10/2026), nada más', () => {
+  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'elegir_opcion'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.calcular], ['calcular', 'calcular prima', 'recalcular'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.pestana_nueva_produccion], ['nueva produccion'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.menu_automoviles], ['automoviles'])

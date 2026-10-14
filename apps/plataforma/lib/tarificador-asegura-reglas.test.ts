@@ -243,3 +243,29 @@ test('encolar de plataforma: rellena la población desde la ficha solo en moto y
   assert.match(src, /f\?\.estado === 'ok'/, 'solo se usa la ficha si se leyó bien')
   assert.doesNotMatch(src, /console\./, 'sin logs (el valor es del domicilio del cliente)')
 })
+
+// ─── Fallo de red hacia asegura: distinguir timeout de red, sin mensajes (13/10/2026) ───
+
+import { describirFalloRed } from './tarificador-asegura-reglas.ts'
+
+test('describirFalloRed: AbortError/TimeoutError → timeout; el resto → red; la causa son solo códigos', () => {
+  assert.equal(describirFalloRed(new DOMException('x', 'TimeoutError')).motivo, 'timeout')
+  assert.equal(describirFalloRed(new DOMException('x', 'AbortError')).motivo, 'timeout')
+  assert.equal(describirFalloRed(AbortSignal.abort().reason).motivo, 'timeout')
+  const red = Object.assign(new TypeError('fetch failed https://secreto.test/?nif=00000000T'), { cause: { code: 'ECONNREFUSED', message: 'nif 00000000T' } })
+  const d = describirFalloRed(red)
+  assert.deepEqual(d, { motivo: 'red', nombre: 'TypeError', causa: 'ECONNREFUSED' })
+  assert.ok(!JSON.stringify(d).includes('00000000T'), 'sin mensajes (pueden llevar datos)')
+  assert.equal(describirFalloRed(Object.assign(new TypeError('fetch failed'), { cause: new DOMException('t', 'TimeoutError') })).motivo, 'timeout', 'timeout envuelto en cause')
+  assert.equal(describirFalloRed('raro').motivo, 'red')
+  assert.equal(describirFalloRed(null).motivo, 'red')
+})
+
+test('puerto() ya no traga el fallo (console.error con la causa) y PrecioBots devuelve el `motivo` timeout|red sin logs', () => {
+  const asegura = readFileSync(join(APP, 'lib/tarificador-asegura.ts'), 'utf8')
+  assert.match(asegura, /catch \(e\) \{[\s\S]*describirFalloRed\(e\)[\s\S]*console\.error\([\s\S]*motivo: f\.motivo \}/)
+  const bots = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx'), 'utf8')
+  // PrecioBots es del NAVEGADOR: sin console.* (guardián de tarificador-moto-formulario.test.ts); el motivo sí viaja.
+  assert.match(bots, /catch \(e\) \{[\s\S]*motivo: describirFalloRed\(e\)\.motivo \}/)
+  assert.doesNotMatch(bots, /console\./)
+})

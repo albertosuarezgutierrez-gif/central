@@ -3,7 +3,7 @@
 // (`cabecerasPuerto`: Bearer + x-actor). El secreto NO sale de aquí: el navegador habla con las rutas
 // `/api/correduria/tarificador/*` de plataforma, que exigen la sesión.
 import { cabecerasPuerto } from './puerto-actor.ts'
-import { COMPANIA_BOT } from './tarificador-asegura-reglas.ts'
+import { COMPANIA_BOT, describirFalloRed } from './tarificador-asegura-reglas.ts'
 
 type Reenvio = { status: number; json: unknown }
 
@@ -22,8 +22,11 @@ export async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): 
       signal: AbortSignal.timeout(topeMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
-  } catch {
-    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  } catch (e) {
+    const f = describirFalloRed(e)
+    // Solo la ruta sin query ni ids (ni datos personales) y la causa técnica: sin esto el fallo era mudo.
+    console.error('[tarificador-asegura] la llamada a asegura falló', { ruta: ruta.split('?')[0]!.split('/')[0], motivo: f.motivo, nombre: f.nombre, causa: f.causa })
+    return { status: 502, json: { estado: 'error', motivo: f.motivo } }
   }
 }
 

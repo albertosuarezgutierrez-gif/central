@@ -21,6 +21,7 @@ import {
 } from '@/lib/tarificador-probar'
 import { leerEncoladoBot } from '@/lib/tarificador-moto-formulario'
 import { adaptadorDeRamo, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
+import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 
 /** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
 export const HuecoBotsContext = createContext<HTMLElement | null>(null)
@@ -40,8 +41,9 @@ async function pedirJson(url: string, init?: RequestInit): Promise<{ status: num
   try {
     const r = await fetch(url, { cache: 'no-store', ...init })
     return { status: r.status, json: await r.json().catch(() => null) }
-  } catch {
-    return { status: 502, json: null }
+  } catch (e) {
+    // Sin logs en el navegador (guardián del bloque): el motivo (timeout|red) viaja al mensaje de la fila.
+    return { status: 502, json: { estado: 'error', motivo: describirFalloRed(e).motivo } }
   }
 }
 
@@ -55,7 +57,7 @@ const sinBots = (texto: string) => (
   </div>
 )
 
-export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra }: {
+export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: {
   ramo: string
   clienteId: string
   oportunidadId: string | null
@@ -63,6 +65,8 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
   formulario: unknown
   /** Valores iniciales de los campos extra del adaptador (p. ej. `{ cilindrada: '125' }`). */
   inicialesExtra?: Record<string, string>
+  /** Compañía → aviso de por qué su bot no puede encolar con esta ficha (p. ej. Mapfre sin nombre del tomador). */
+  bloqueosPorCompania?: Record<string, string>
 }) {
   const hueco = useContext(HuecoBotsContext)
   const anfitrion = useContext(AnfitrionBotsContext)
@@ -76,18 +80,19 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
     return () => ocupar(false)
   }, [registrado, ocupar])
   const bloque = adaptador
-    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} />
+    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} bloqueosPorCompania={bloqueosPorCompania} />
     : sinBots('Sin bots para este ramo todavía.')
   return hueco ? createPortal(bloque, hueco) : bloque
 }
 
-function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra }: {
+function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: {
   ramo: string
   adaptador: NonNullable<ReturnType<typeof adaptadorDeRamo>>
   clienteId: string
   oportunidadId: string | null
   formulario: unknown
   inicialesExtra?: Record<string, string>
+  bloqueosPorCompania?: Record<string, string>
 }) {
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
   const [extra, setExtra] = useState<Record<string, string>>(() => ({ ...inicialesExtra }))
@@ -140,16 +145,22 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
         </p>
       )}
       <div style={{ display: 'grid', gap: 12, marginTop: lista.length ? 12 : 0 }}>
-        {lista.map((i) => (
-          <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId} formulario={resultado} />
-        ))}
+        {lista.map((i) => {
+          const bloqueo = bloqueosPorCompania?.[i.compania] ?? null
+          return (
+            <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId}
+              formulario={bloqueo && resultado.ok ? { ok: false, faltan: [bloqueo] } : resultado} aviso={bloqueo} />
+          )
+        })}
       </div>
     </div>
   )
 }
 
-function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo }: {
+function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, aviso }: {
   integracion: IntegracionVista
+  /** Por qué ESTA compañía no puede encolar con la ficha actual (se pinta bajo su botón). */
+  aviso?: string | null
   clienteId: string
   oportunidadId: string | null
   formulario: ResultadoAdaptadorBot
@@ -224,6 +235,7 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo }: {
         style={{ ...btnStyle('secundario'), minHeight: 44, width: '100%', maxWidth: 420, opacity: !formulario.ok || ocupado ? 0.6 : 1 }}>
         <Bot size={16} aria-hidden /> {ocupado ? 'Encolando…' : `Precio ${nombre} (bot) — gratis`}
       </button>
+      {aviso && <span role="status" style={{ fontSize: 13, color: 'var(--warning)', overflowWrap: 'anywhere' }}>{aviso}</span>}
       {error && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)', overflowWrap: 'anywhere' }}>{error}</span>}
       {seg && (
         <div aria-live="polite" style={{ display: 'grid', gap: 6, minWidth: 0 }}>

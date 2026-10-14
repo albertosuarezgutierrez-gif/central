@@ -84,12 +84,6 @@ export type ContextoPortal = ContextoTarificacion & {
    */
   marcarOpcionHogarResuelta?: (marco: Frame, etiqueta: Locator) => Promise<ResultadoOpcionHogar>
   /**
-   * Mapfre NSEI (14/10/2026, v0.6.0): pulsa la LUPA que busca al tomador por NIF/CIF en «Datos básicos» por
-   * `pulsarBuscarTomadorMapfre` de guard.ts (paso activo, ámbito `app-datos-basicos`, una vez, `comprobarBoton` y que sea una
-   * lupa). El adaptador la LOCALIZA por la capa común (fijo → aprendido → IA → atasco) y no la pulsa él. Misma regla de contexto.
-   */
-  buscarTomadorMapfre?: (pagina: Page, boton: Locator) => Promise<void>
-  /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para
    * cualquier bot; Mapfre NSEI usa `continuarMapfre` (stepper cerrado), que ya lleva el mismo respaldo.

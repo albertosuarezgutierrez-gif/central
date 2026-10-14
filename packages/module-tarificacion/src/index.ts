@@ -346,6 +346,7 @@ export {
   type SexoConductor,
   type ConductorHabitual,
   type FormularioAuto,
+  type DatosTomadorFicha,
   type SeleccionVehiculo,
   type ValidacionFormularioAuto,
 } from './formulario-auto.ts'

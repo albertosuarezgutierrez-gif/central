@@ -531,7 +531,7 @@ test('candidatos: la etiqueta de una CASILLA (for → checkbox o envolviéndola)
     assert.equal(d1?.paraCheckbox, true)
     assert.equal(d2?.paraCheckbox, false)
     assert.equal((await describirElemento(marco.locator('#envuelve'), 1))?.paraCheckbox, true, 'label que envuelve un checkbox')
-    // Sin `elegir_opcion` (Mapfre: continuar, buscar_tomador, navegación…) la lista de candidatos es la de siempre: ni label ni mat-option.
+    // Sin `elegir_opcion` (Mapfre: continuar, navegación…) la lista de candidatos es la de siempre: ni label ni mat-option.
     const sin = await extraerCandidatos(page, 'accion', (t) => t)
     assert.ok(!sin.some((c) => c.tag === 'label' || c.tag === 'mat-option'), sin.map((c) => c.tag).join(','))
     assert.ok(sin.some((c) => c.tag === 'button'))

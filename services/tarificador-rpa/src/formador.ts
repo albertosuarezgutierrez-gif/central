@@ -22,7 +22,7 @@ import type { Frame, Locator, Page } from 'playwright'
 import { MAX_CANDIDATOS_ATASCO, limpiarTextoAviso, pareceEmision, type AtascoWorker, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
 import { ErrorTarificador } from './errores.ts'
 import { rutaMarco } from './evidencia.ts'
-import { ENLACES_ENTRADA_AUTORIZADOS, esControlBuscarTomador, esIconoBusqueda } from './guard.ts'
+import { ENLACES_ENTRADA_AUTORIZADOS } from './guard.ts'
 
 // ─── REGLA (14/10/2026, Alberto): todo bot con IA detrás y aprendizaje ─────────
 // Este fichero es la CAPA COMÚN de respaldo de TODOS los adaptadores de tarificación (docs/TARIFICADOR-RPA.md, «Regla: todo
@@ -52,10 +52,6 @@ export const ACCIONES_PERMITIDAS = {
   // «Continuar»/«Siguiente» ENTRE PANTALLAS (pieza 4, 14/10/2026): se pulsa SIEMPRE por el guard (`ctx.pulsar`) y por
   // `pulsarContinuarSeguro` (continuar.ts). Nunca «Continuar a pago», «Grabar y continuar»…: el texto casa ENTERO.
   continuar: ['continuar', 'siguiente'],
-  // LUPA que LANZA LA BÚSQUEDA del tomador por NIF/CIF (Mapfre NSEI paso 1, 14/10/2026: «sin IA vamos a tardar mucho»). Solo
-  // busca. MISMA lista que `TEXTOS_BUSCAR_TOMADOR` de guard.ts; solo se pulsa por `pulsarBuscarTomadorMapfre` (guard.ts). Un
-  // icono sin texto: ver `validarAccion` (texto visible → aria-label/title/mattooltip → icono de lupa).
-  buscar_tomador: ['buscar', 'search', 'lupa', 'buscar tomador', 'buscar por nif', 'buscar nif'],
   // ELEGIR UNA OPCIÓN visible de una lista cerrada por el propio portal (etiqueta de un radio, opción de un autocompletado: madera,
   // tipo de vivienda, régimen, uso, población, vía…). GENÉRICA (Alberto, 14/10/2026): no lleva textos porque son datos del riesgo que
   // lee el portal; lo que la acota es la FORMA del elemento (`esElementoOpcion`: label/option/radio, nunca un botón ni un campo), la
@@ -196,7 +192,7 @@ export type DescripcionElemento = {
   ngClick?: string | null
   /** `mattooltip` (Angular Material). Opcional: cuenta para el bloqueo y, en la lupa, como etiqueta. */
   tooltip?: string | null
-  /** Icono del control (ligadura de `mat-icon`, `fonticon`/`svgicon`, clases): solo para la lupa (`esIconoBusqueda`). */
+  /** Icono del control (ligadura de `mat-icon`, `fonticon`/`svgicon`, clases): informativo. */
   icono?: string | null
   /** Texto visible SIN la ligadura de los `mat-icon` («search»). Ausente = `texto`. */
   textoSinIcono?: string | null
@@ -246,11 +242,6 @@ export function validarAccion(d: DescripcionElemento, clave: string, textoEspera
   ])
   if (bloqueo) return bloqueo
   if (base === 'elegir_opcion') return esElementoOpcion(d) ? { ok: true } : { ok: false, motivo: 'no tiene forma de opción de una lista (label/option con texto)' }
-  // LUPA: manda el texto VISIBLE; sin él, las etiquetas accesibles (todas de la lista); sin ellas, el icono (guard.ts).
-  if (clave === 'buscar_tomador') {
-    const esLupa = esControlBuscarTomador({ textoSinIcono: d.textoSinIcono !== undefined ? d.textoSinIcono : d.texto, ariaLabel: d.ariaLabel, title: d.title, tooltip: d.tooltip ?? null, icono: d.icono ?? null })
-    return esLupa ? { ok: true } : { ok: false, motivo: 'no es una lupa de búsqueda (texto, etiqueta o icono)' }
-  }
   const objetivo = textoEsperado ? [normalizarTexto(textoEsperado)] : permitidos
   const visibles = [d.texto, d.valorBoton, d.title, d.ariaLabel].map(normalizarTexto).filter(Boolean)
   if (!visibles.some((v) => objetivo.includes(v))) return { ok: false, motivo: `su texto («${visibles[0] ?? ''}») no es el de «${clave}»` }
@@ -355,9 +346,9 @@ export function proyectarCandidato(raw: Record<string, unknown>, tipo: TipoClave
   const type = recorta(raw.type, 20)?.toLowerCase() ?? null
   if (tag === 'input' && type === 'password') return null
   const esBotonInput = tag === 'input' && type !== null && (TIPOS_INPUT_BOTON as readonly string[]).includes(type)
-  // Sin texto visible (botón de solo icono): su nombre accesible y, si tampoco lo tiene, «search» si el icono es una lupa.
+  // Sin texto visible (botón de solo icono): su nombre accesible .
   const textoAccion = tipo === 'accion'
-    ? recorta(raw.texto, 80) ?? (esBotonInput ? recorta(raw.valorBoton, 80) : null) ?? recorta(raw.accesible, 80) ?? (esIconoBusqueda(recorta(raw.icono, 200)) ? 'search' : null)
+    ? recorta(raw.texto, 80) ?? (esBotonInput ? recorta(raw.valorBoton, 80) : null) ?? recorta(raw.accesible, 80)
     : null
   return {
     tag,

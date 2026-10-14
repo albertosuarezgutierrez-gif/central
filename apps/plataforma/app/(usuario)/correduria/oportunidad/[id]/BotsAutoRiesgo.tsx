@@ -9,14 +9,20 @@
 // Si el cotizador Avant2 monta su propio bloque (lee lo tecleado en su formulario), este se aparta: uno solo por pantalla.
 import { useContext, useMemo } from 'react'
 import type { Riesgo } from '@/lib/riesgo-asegura'
-import { formularioBotsAutoDeRiesgo, tomadorDeRiesgoBots } from '@/lib/tarificador-auto-riesgo'
+import { avisoFichaTomadorParaAlta, COMPANIAS_ALTA_TOMADOR, faltanFichaTomadorParaAlta, formularioBotsAutoDeRiesgo, tomadorDeRiesgoBots } from '@/lib/tarificador-auto-riesgo'
 import PrecioBots, { AnfitrionBotsContext } from '../../cliente/[id]/PrecioBots'
 
 export default function BotsAutoRiesgo({ riesgo }: { riesgo: Riesgo }) {
   const anfitrion = useContext(AnfitrionBotsContext)
   const formulario = useMemo(() => formularioBotsAutoDeRiesgo(riesgo), [riesgo])
+  // Mapfre da de ALTA al tomador nuevo con nombre, apellidos y nacimiento de la ficha: si le faltan, su botón no encola
+  // (asegura lo repite al encolar: 422 `falta_datos_tomador`, sin gastar máquina).
+  const bloqueos = useMemo(() => {
+    const aviso = avisoFichaTomadorParaAlta(faltanFichaTomadorParaAlta(riesgo))
+    return aviso ? Object.fromEntries(COMPANIAS_ALTA_TOMADOR.map((c) => [c, aviso])) : undefined
+  }, [riesgo])
   if (anfitrion?.ocupado) return null
   return (
-    <PrecioBots ramo="auto" clienteId={tomadorDeRiesgoBots(riesgo)} oportunidadId={riesgo.oportunidad.id} formulario={formulario} />
+    <PrecioBots ramo="auto" clienteId={tomadorDeRiesgoBots(riesgo)} oportunidadId={riesgo.oportunidad.id} formulario={formulario} bloqueosPorCompania={bloqueos} />
   )
 }

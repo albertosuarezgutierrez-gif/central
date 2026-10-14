@@ -38,7 +38,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { confirmarVehiculoMapfre, elegirOpcion, pulsarBuscarTomadorMapfre, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -167,11 +167,6 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       continuarMapfre: async (pagina, paso) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
         await pulsarContinuarMapfre(pagina, guard, paso, (p) => localizarContinuarConRespaldo(p, k.formador))
-      },
-      buscarTomadorMapfre: async (pagina, boton) => {
-        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña de la lupa no es de este trabajo')
-        await ctx.pausaAccion()
-        await pulsarBuscarTomadorMapfre(pagina, guard, boton)
       },
       continuar: async (pagina, o) => {
         const destino = pagina ?? page

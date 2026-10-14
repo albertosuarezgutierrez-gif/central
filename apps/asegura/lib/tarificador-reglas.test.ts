@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  avisoTraza, aplicarNifTomador, riesgoParaEncolar, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  avisoTraza, aplicarNifTomador, aplicarDatosTomador, fechaIsoDeFicha, lecturaTomadorFicha, necesitaDatosTomador, riesgoParaEncolar, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -318,6 +318,9 @@ test('los nombres de paso y códigos que genera el worker real (crearTraza) pasa
 const NIF = '00000000T'
 const RIESGO_MOTO = { ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003' }
 const noLeer = () => { throw new Error('no debería leer la ficha') }
+// Datos del tomador de la ficha (alta en Mapfre). Placeholders, no datos reales.
+const DATOS_TOMADOR = { tipo: 'fisica', nombre: 'NOMBRE PRUEBA', apellido1: 'APELLIDOUNO', apellido2: 'APELLIDODOS', fechaNacimiento: '1980-01-02' } as const
+const datosOk = () => ({ estado: 'ok' as const, datos: DATOS_TOMADOR })
 
 test('NIF Mapfre: solo Mapfre + auto/moto + riesgo sin documento lo necesita', () => {
   assert.equal(necesitaNifTomador('mapfre', 'moto', RIESGO_MOTO), true)
@@ -362,22 +365,22 @@ test('NIF Mapfre: otra compañía no lee la ficha y QUITA un documentoTomador qu
 
 test('NIF Mapfre · ENCOLAR: el riesgo que se guarda NUNCA lleva el documento (ni el de la ficha ni uno que viniera)', () => {
   const leido = { n: 0 }
-  const ok = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => { leido.n++; return { estado: 'ok', documento: NIF } })
+  const ok = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => { leido.n++; return { estado: 'ok', documento: NIF } }, datosOk)
   assert.ok(ok.ok)
   assert.equal(leido.n, 1, 'se comprueba la ficha')
   assert.deepEqual(ok.ok && ok.riesgo, RIESGO_MOTO)
   assert.ok(!JSON.stringify(ok).includes('00000000'), 'el riesgo persistido no contiene el documento')
   // Un `documentoTomador` que venga en la entrada tampoco se guarda (es el campo que pone asegura al entregar).
-  const trae = riesgoParaEncolar('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }, () => ({ estado: 'ok', documento: NIF }))
+  const trae = riesgoParaEncolar('mapfre', 'moto', { ...RIESGO_MOTO, documentoTomador: 'X0000000T' }, () => ({ estado: 'ok', documento: NIF }), datosOk)
   assert.ok(trae.ok && !JSON.stringify(trae.riesgo).includes('0000000T'))
-  assert.deepEqual(riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+  assert.deepEqual(riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, documentoTomador: NIF }, noLeer, noLeer), { ok: true, riesgo: RIESGO_MOTO })
   assert.deepEqual(riesgoSinNifTomador({ a: 1, documentoTomador: NIF }), { a: 1 })
   assert.equal(riesgoSinNifTomador(null), null)
 })
 
 test('NIF Mapfre · ENCOLAR: ficha sin NIF / no válido / ilegible → rechazo (422/422/503) sin documento en el motivo', () => {
   for (const [estado, status] of [['sin_nif', 422], ['no_valido', 422], ['ilegible', 503]] as const) {
-    const r = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado }))
+    const r = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado }), noLeer)
     assert.ok(!r.ok && r.status === status && /nif_tomador/.test(r.motivo), estado)
   }
   assert.equal(tipoFalloNifTomador(422), 'datos')
@@ -385,7 +388,7 @@ test('NIF Mapfre · ENCOLAR: ficha sin NIF / no válido / ilegible → rechazo (
 })
 
 test('NIF Mapfre · ENTREGA al worker: el riesgo GUARDADO + la ficha → el worker SÍ recibe el NIF (solo Mapfre auto/moto)', () => {
-  const guardado = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }))
+  const guardado = riesgoParaEncolar('mapfre', 'moto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }), datosOk)
   assert.ok(guardado.ok)
   const alWorker = aplicarNifTomador('mapfre', 'moto', guardado.ok && guardado.riesgo, () => ({ estado: 'ok', documento: NIF }))
   assert.deepEqual(alWorker.ok && alWorker.riesgo, { ...RIESGO_MOTO, documentoTomador: NIF })
@@ -413,5 +416,63 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo/g, '')), 'el riesgo solo se toca para la respuesta')
+})
+
+// ─── Datos del tomador para el alta en Mapfre (revisión PR #4710): como el NIF, comprobados al encolar e inyectados al entregar ───
+// Placeholders: ningún dato real.
+const desc = (v: string) => v.slice(3)
+const FILA = { dni: `v1:${NIF}`, nombre: 'NOMBRE PRUEBA', apellidos: 'APELLIDOUNO APELLIDODOS', fechaNacimiento: 'v1:02/01/1980', tipoPersona: 'fisica' }
+
+test('Datos tomador: lectura de la ficha (descifra, parte apellidos, normaliza la fecha); falta ≠ ilegible; valor de cajón = falta', () => {
+  assert.deepEqual(lecturaTomadorFicha(FILA, desc), { estado: 'ok', datos: { tipo: 'fisica', nombre: 'NOMBRE PRUEBA', apellido1: 'APELLIDOUNO', apellido2: 'APELLIDODOS', fechaNacimiento: '1980-01-02' } })
+  const r = lecturaTomadorFicha({ ...FILA, nombre: 'lead', apellidos: '', fechaNacimiento: null }, desc)
+  assert.deepEqual(r, { estado: 'incompleta', faltan: ['el nombre', 'el primer apellido', 'la fecha de nacimiento'] })
+  assert.deepEqual(lecturaTomadorFicha({ ...FILA, fechaNacimiento: 'v1:01/02/03' }, desc), { estado: 'incompleta', faltan: ['una fecha de nacimiento válida'] }, 'no se adivina el orden')
+  assert.deepEqual(lecturaTomadorFicha(FILA, () => { throw new Error('clave') }), { estado: 'ilegible' })
+  assert.deepEqual(lecturaTomadorFicha(null, desc), { estado: 'incompleta', faltan: ['la ficha'] })
+  // Empresa: por tipo de persona, o sin tipo y con CIF. Razón social = nombre + apellidos (como la guarda la cartera).
+  assert.deepEqual(lecturaTomadorFicha({ ...FILA, tipoPersona: 'juridica', nombre: 'EMPRESA PRUEBA', apellidos: 'SL' }, desc), { estado: 'ok', datos: { tipo: 'juridica', razonSocial: 'EMPRESA PRUEBA SL' } })
+  assert.deepEqual(lecturaTomadorFicha({ ...FILA, tipoPersona: null, dni: 'B00000000', nombre: '', apellidos: '' }, desc), { estado: 'incompleta', faltan: ['la razón social'] })
+  assert.equal(fechaIsoDeFicha('1980-01-02'), '1980-01-02')
+  assert.equal(fechaIsoDeFicha('31/02/1980'), null)
+})
+
+test('Datos tomador · ENCOLAR: faltan → 422 `falta_datos_tomador` «falta X en la ficha» sin valores; ilegible → 503; el riesgo guardado nunca los lleva', () => {
+  const ok = riesgoParaEncolar('mapfre', 'auto', { ...RIESGO_MOTO, ramo: 'auto', datosTomador: DATOS_TOMADOR }, () => ({ estado: 'ok', documento: NIF }), datosOk)
+  assert.ok(ok.ok)
+  assert.ok(!JSON.stringify(ok).includes('APELLIDOUNO') && !JSON.stringify(ok).includes('1980'), 'nada de la ficha en lo que se guarda')
+  const falta = riesgoParaEncolar('mapfre', 'auto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }), () => ({ estado: 'incompleta', faltan: ['el nombre', 'la fecha de nacimiento'] }))
+  assert.deepEqual(falta.ok ? null : [falta.status, falta.motivo.split(':')[0]], [422, 'falta_datos_tomador'])
+  assert.match(!falta.ok ? falta.motivo : '', /falta el nombre y la fecha de nacimiento en la ficha/)
+  const ileg = riesgoParaEncolar('mapfre', 'auto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }), () => ({ estado: 'ilegible' }))
+  assert.ok(!ileg.ok && ileg.status === 503 && /^datos_tomador_ilegibles/.test(ileg.motivo))
+  // Sin NIF manda el motivo del NIF (no se lee lo demás).
+  const sinNif = riesgoParaEncolar('mapfre', 'auto', RIESGO_MOTO, () => ({ estado: 'sin_nif' }), noLeer)
+  assert.ok(!sinNif.ok && /^falta_nif_tomador/.test(sinNif.motivo))
+  // Otra compañía o riesgo con su bloque `tomador`: ni se lee la ficha.
+  assert.equal(necesitaDatosTomador('allianz', 'auto', RIESGO_MOTO), false)
+  assert.equal(necesitaDatosTomador('mapfre', 'auto', { ...RIESGO_MOTO, tomador: { documentoIdentidad: NIF } }), false)
+  assert.equal(necesitaDatosTomador('mapfre', 'comunidades', {}), false)
+  assert.deepEqual(aplicarDatosTomador('allianz', 'auto', { ...RIESGO_MOTO, datosTomador: DATOS_TOMADOR }, noLeer), { ok: true, riesgo: RIESGO_MOTO })
+})
+
+test('Datos tomador · ENTREGA: el riesgo GUARDADO + la ficha → el worker recibe `datosTomador` (solo Mapfre auto/moto)', () => {
+  const guardado = riesgoParaEncolar('mapfre', 'auto', RIESGO_MOTO, () => ({ estado: 'ok', documento: NIF }), datosOk)
+  assert.ok(guardado.ok)
+  const r = aplicarDatosTomador('mapfre', 'auto', guardado.ok && guardado.riesgo, datosOk)
+  assert.deepEqual(r.ok && r.riesgo, { ...RIESGO_MOTO, datosTomador: DATOS_TOMADOR })
+})
+
+test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoParaWorker los inyecta sin escribirlos', () => {
+  const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
+  assert.match(fn, /leerTomadorFicha\(e\.correduriaId, clienteId\)/)
+  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, e\.riesgo, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\)\)/)
+  assert.ok(!fn.includes('aplicarDatosTomador('), 'encolar NO inyecta (eso es al entregar)')
+  assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid`\n  const f = filas\[0\]/)
+  const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
+  assert.match(w, /if \(modo !== 'exploracion' && necesitaDatosTomador\(f\.compania, f\.ramo, riesgo\)\)/)
+  assert.match(w, /aplicarDatosTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaTomadorFicha\(ficha, decryptField\)\)/)
+  assert.ok(w.indexOf('aplicarDatosTomador(') < w.indexOf('const base = {'), 'se inyecta antes de armar la respuesta')
 })

@@ -82,3 +82,10 @@ test('resumen: ok con ofertas, ok SIN ofertas (aviso), parada con motivo y elecc
   const curso = resumenTrabajo({ estado: 'en_curso', error: null, motivo: null, opcionesVersion: null, ofertas: [] })
   assert.equal(curso.final, false); assert.equal(curso.tono, 'curso')
 })
+
+test('mensajeDeFallo 502: «no respondió a tiempo» (timeout) vs «no se pudo conectar» (red o sin motivo)', async () => {
+  const { mensajeDeFallo } = await import('./tarificador-probar.ts')
+  assert.match(mensajeDeFallo(502, { estado: 'error', motivo: 'timeout' }), /asegura no respondió a tiempo/)
+  assert.match(mensajeDeFallo(502, { estado: 'error', motivo: 'red' }), /no se pudo conectar con asegura/)
+  assert.match(mensajeDeFallo(502, null), /no se pudo conectar con asegura/)
+})
