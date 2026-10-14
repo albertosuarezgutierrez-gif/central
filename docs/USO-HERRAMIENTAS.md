@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 320 | 45.357 | 37.871.642 | 0 | 0 |
-| `otro` | 315 | 10.806 | 26.783.511 | 16.160.374 | 0 |
-| `lectura-directa` | 277 | 7.508 | 23.985.181 | 0 | 0 |
-| `mcp:github` | 281 | 6.293 | 5.051.294 | 53.394.456 | 94 |
-| `escritura` | 206 | 4.341 | 63.372.970 | 0 | 0 |
-| `sql` | 201 | 4.301 | 2.166.340 | 2.351.230 | 18 |
+| `bash` | 320 | 45.500 | 38.035.646 | 0 | 0 |
+| `otro` | 315 | 10.836 | 26.820.536 | 16.160.374 | 0 |
+| `lectura-directa` | 277 | 7.521 | 24.061.933 | 0 | 0 |
+| `mcp:github` | 281 | 6.305 | 5.061.209 | 53.394.456 | 94 |
+| `escritura` | 206 | 4.348 | 63.414.002 | 0 | 0 |
+| `sql` | 201 | 4.306 | 2.167.993 | 2.351.230 | 18 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Gmail` | 44 | 1.196 | 1.233.422 | 0 | 72 |
+| `mcp:Gmail` | 44 | 1.203 | 1.244.443 | 0 | 72 |
 | `mcp:Booking-com` | 36 | 1.004 | 4.179.478 | 0 | 0 |
-| `mcp:Vercel` | 68 | 714 | 962.003 | 204.477 | 23 |
+| `mcp:Vercel` | 69 | 722 | 965.493 | 204.477 | 24 |
 | `agente:general-purpose` | 97 | 568 | 350.386 | 10.890.877 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 8 | 402 | 485.107 | 0 | 0 |
-| `mcp:Google_Drive` | 22 | 357 | 406.955 | 0 | 37 |
-| `mcp:Supabase` | 120 | 356 | 49.541 | 3.415 | 6 |
-| `mcp:claude-code-remote` | 35 | 328 | 24.978 | 20.519 | 0 |
-| `agente:agente-architect` | 61 | 243 | 172.399 | 6.620.575 | 0 |
+| `mcp:Google_Drive` | 22 | 365 | 409.953 | 0 | 40 |
+| `mcp:Supabase` | 120 | 357 | 49.545 | 3.415 | 6 |
+| `mcp:claude-code-remote` | 35 | 333 | 25.220 | 20.519 | 0 |
+| `agente:agente-architect` | 61 | 246 | 175.182 | 6.678.621 | 0 |
 | `mcp:Google-Drive` | 22 | 132 | 120.018 | 0 | 2 |
-| `agente:agente-mecanico` | 43 | 107 | 69.019 | 6.948.509 | 0 |
+| `agente:agente-mecanico` | 44 | 108 | 69.314 | 6.950.693 | 0 |
 | `agente:rastreador-codigo` | 46 | 79 | 24.197 | 653.355 | 0 |
 | `agente:Explore` | 35 | 77 | 37.799 | 2.133.390 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
