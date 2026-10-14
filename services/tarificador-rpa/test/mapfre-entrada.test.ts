@@ -1,6 +1,8 @@
 // Entrada de Mapfre Auto (14/10/2026): menús → enlace que abre PESTAÑA NUEVA → formulario NSEI. Portal SINTÉTICO en
 // 127.0.0.1, sin datos personales. La pestaña nueva responde 401 + WWW-Authenticate (el diálogo HTTP del portal real):
 // sin `httpCredentials` en el contexto Chromium lo cancela y se queda el cuerpo (el formulario).
+import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
+import type { Locator } from 'playwright'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -64,8 +66,10 @@ const LOGIN_ANTIGUO = `<!doctype html><html><head><title>Login 2026</title></hea
       const q = new URLSearchParams(location.search)
       const u = document.getElementById('u').value, p = document.getElementById('p').value
       if (q.get('modo') === 'ok' && u === '${USUARIO_FICTICIO}' && p === '${CLAVE_FICTICIA}') location.href = q.get('page')
+      else if (q.get('modo') === 'bloq') document.getElementById('msg').textContent = 'Su usuario ha sido bloqueado por demasiados intentos'
       else document.getElementById('msg').textContent = 'Credenciales incorrectas para ' + u + ' / ' + p
     }
+    if (new URLSearchParams(location.search).get('modo') === 'captcha') document.body.insertAdjacentHTML('beforeend', '<div class="g-recaptcha"></div>')
   </script></body></html>`
 
 // ─── DOM REAL de wmediadores (HTML del fallo a5f06f70, 14/10/2026, sin datos personales) ───
@@ -102,8 +106,8 @@ before(async () => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
       return void res.end('<!doctype html><html><body>ok</body></html>')
     }
-    if (ruta === '/nsei-login-ok' || ruta === '/nsei-login-mal') { // la URL directa redirige al login antiguo
-      res.writeHead(302, { Location: `/loginexternopi/docs/html/loginFormPage.html?page=%2Fnsei-dest&modo=${ruta.endsWith('ok') ? 'ok' : 'mal'}` })
+    if (ruta === '/nsei-login-ok' || ruta === '/nsei-login-mal' || ruta === '/nsei-login-bloq' || ruta === '/nsei-login-captcha') { // la URL directa redirige al login antiguo
+      res.writeHead(302, { Location: `/loginexternopi/docs/html/loginFormPage.html?page=%2Fnsei-dest&modo=${ruta.split('-').pop() === 'ok' ? 'ok' : ruta.split('-').pop() === 'mal' ? 'mal' : ruta.split('-').pop()}` })
       return void res.end()
     }
     if (ruta === '/loginexternopi/docs/html/loginFormPage.html') {
@@ -742,4 +746,32 @@ test('diagnóstico: token numérico en el fragmento/ruta de la URL y de los ifra
   const r = resumenDiagnosticoPagina({ estadoHttp: 200, url: 'https://wmediadores.mapfre.com/app/#/sesion/998877665', titulo: '', iframes: ['https://x.mapfre.com/f/554433'], hayPassword: false, textoBody: '' })
   assert.ok(!/\d{2,}/.test(r.replace(/http 200/, '')), r)
   assert.ok(r.includes('/app/#/sesion/#########') && r.includes('/f/######'), r)
+})
+
+test('login antiguo: aviso de bloqueo tras «entrar» → error definitivo (captcha/requiere persona), UN solo envío, sin fallback a menús', async () => {
+  const { context, page, ctx } = await abrir('/')
+  try {
+    let envios = 0
+    const ctxC = { ...ctx, credenciales: CREDS, pulsar: async (b: Locator) => { envios++; return ctx.pulsar(b) } }
+    await assert.rejects(
+      () => abrirNuevo(page, ctxC, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-bloq`, menuMs: 1_000, formularioMs: 3_000 }),
+      (e) => e instanceof ErrorVerificacionHumana && !(e instanceof ErrorMapaIncompleto) && !(e as Error).message.includes(CLAVE_FICTICIA),
+    )
+    assert.equal(envios, 1, 'un login rechazado no se reintenta')
+  } finally {
+    await context.close()
+  }
+})
+
+test('login antiguo: CAPTCHA presente → error captcha ANTES de escribir usuario/clave', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await assert.rejects(
+      () => abrirNuevo(page, { ...ctx, credenciales: CREDS }, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-captcha`, menuMs: 1_000, formularioMs: 3_000 }),
+      (e) => e instanceof ErrorTarificador && e.tipo === 'captcha',
+    )
+    assert.deepEqual(pulsados, [])
+  } finally {
+    await context.close()
+  }
 })

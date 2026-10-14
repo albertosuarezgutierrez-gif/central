@@ -34,6 +34,8 @@
 import type { Frame, Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ACCION_ENLACE_ENTRADA, conRespaldoIA, type PeticionResolver } from '../../formador.ts'
+import { ErrorTarificador, ErrorVerificacionHumana } from '../../errores.ts'
+import { hayCaptcha } from '../../captcha.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
 
 export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
@@ -293,6 +295,16 @@ export function esWmediadores(p: Page, hosts: string[] = HOSTS_LOGIN): boolean {
 
 class LoginAntiguoNoSuperado extends Error {}
 
+/** Aviso de cuenta bloqueada/suspendida: si sale, NO se sigue (cada intento más agrava el bloqueo). */
+const PATRON_BLOQUEO = /bloquead|suspendid|demasiados intentos|intentos fallidos|cuenta (ha sido )?(desactivada|inhabilitada)|usuario (revocado|inhabilitado)/i
+
+/** Reto CAPTCHA o aviso de bloqueo en el login antiguo → se PARA con error definitivo (requiere persona), sin fallback a menús. */
+async function pararSiRetoOBloqueo(p: Page): Promise<void> {
+  if (await hayCaptcha(p)) throw new ErrorTarificador('captcha', 'el login antiguo de Mapfre presenta un CAPTCHA: requiere una persona')
+  const texto = await p.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
+  if (PATRON_BLOQUEO.test(texto)) throw new ErrorVerificacionHumana('mapfre', 'el login antiguo de Mapfre avisa de cuenta/usuario bloqueado: no se reintenta, requiere una persona')
+}
+
 /** Quita de un texto cualquier aparición literal de usuario o contraseña (red de seguridad: nunca en mensajes). */
 export function ocultarSecretos(texto: string, secretos: Array<string | undefined>): string {
   let t = texto
@@ -326,6 +338,7 @@ async function esperarFormularioOLogin(p: Page, ms: number, hosts: string[]): Pr
 async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number, hosts: string[]): Promise<void> {
   if (!esWmediadores(p, hosts)) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (host inesperado)`)
   if (!ctx.credenciales?.usuario || !ctx.credenciales?.contrasena) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (sin credenciales en el contexto)`)
+  await pararSiRetoOBloqueo(p) // antes de escribir nada
   const password = p.locator('input[type=password]').filter({ visible: true }).first()
   const usuario = p
     .getByLabel(ETIQ_CODIGO_USUARIO)
@@ -354,10 +367,12 @@ async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, 
   const fin = Date.now() + Math.min(formularioMs, ESPERA_LOGIN_MS)
   while (Date.now() < fin) {
     if (await hayFormulario(p)) return
+    await pararSiRetoOBloqueo(p)
     if (!PATRON_LOGIN_ANTIGUO.test(p.url()) && !(await enLoginAntiguo(p, hosts))) break // salió del login
     await p.waitForTimeout(200).catch(() => undefined)
   }
   if (await hayFormulario(p)) return
+  await pararSiRetoOBloqueo(p)
   if (await enLoginAntiguo(p, hosts)) throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
   // Salió del login pero no a NSEI: se vuelve a la URL directa (ya con sesión).
   await p.goto(url, { waitUntil: 'commit', timeout: formularioMs })
@@ -389,6 +404,7 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
     const diag = nueva ? await diagnosticoDePagina(nueva, estadoHttp, secretos) : 'sin pestaña'
     await nueva?.close().catch(() => undefined)
     if (e instanceof Error && /guard_emision/.test(e.message)) throw e
+    if (e instanceof ErrorVerificacionHumana || (e instanceof ErrorTarificador && e.tipo === 'captcha')) throw e // reto/bloqueo: no se cae a menús
     const red = /net::|Navigation|goto/i.test(String((e as Error).message).split('\n')[0])
     const msg = ocultarSecretos(e instanceof Error ? e.message : String(e), secretos)
     const que = e instanceof LoginAntiguoNoSuperado ? e.message : !red && !msg.startsWith('no apareció') ? `${MOTIVO_LOGIN_ANTIGUO} (error: ${msg.split('\n')[0].slice(0, 160)})` : red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s`
