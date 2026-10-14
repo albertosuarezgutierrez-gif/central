@@ -602,9 +602,9 @@ export function rellenarRepinta(dato: string, el: ElementoInventario | undefined
 /**
  * ORDEN del lote (14/10/2026, exploración 8d0676f9 de Allianz Hogar: el CP y la vía repintaban la sección, el worker
  * cortaba el lote y año y m², que iban DETRÁS, no se escribían nunca). Estable dentro de cada grupo:
- *   0. `rellenar` de campos SIMPLES (sin autocompletado);
- *   1. lo que puede repintar: `rellenar` de autocompletados (CP, provincia, municipio, combobox…), `elegir` y `marcar`
- *      (un select/radio puede cambiar la sección);
+ *   0. todo lo demás EN EL ORDEN DE LA IA: rellenar simples, `elegir` y `marcar` (revisión: un campo puede depender de un
+ *      select o de un radio anterior, así que no se adelanta nada respecto a ellos);
+ *   1. los `rellenar` que REPINTAN (claves de autocompletado, combobox, `autocompletar`), en su orden relativo;
  *   2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos).
  * No añade, quita ni cambia acciones: solo las reordena. Pura.
  */
@@ -612,7 +612,7 @@ export function ordenarLote<A extends Accion>(acciones: readonly A[], inventario
   const refs = indiceRefs(inventario)
   const grupo = (a: A): number => {
     if (a.accion === 'rellenar') return rellenarRepinta(a.dato, refs.get(a.ref)?.el) ? 1 : 0
-    if (a.accion === 'elegir' || a.accion === 'marcar') return 1
+    if (a.accion === 'elegir' || a.accion === 'marcar') return 0
     return 2
   }
   return acciones.map((a, i) => ({ a, g: grupo(a), i })).sort((x, y) => x.g - y.g || x.i - y.i).map((x) => x.a)

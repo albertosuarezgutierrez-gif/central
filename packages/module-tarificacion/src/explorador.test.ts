@@ -1069,12 +1069,15 @@ describe('orden del lote y lote cortado (14/10/2026, exploración 8d0676f9: año
     expect(ordenarLote(lote, inv).map((a) => (a as { dato: string }).dato)).toEqual(['inmueble.anio_construccion', 'inmueble.superficie_m2', 'inmueble.nombre_via', 'inmueble.numero'])
   })
 
-  it('elegir y marcar van tras los rellenar simples; avanzar siempre el último; nada se pierde ni se inventa', () => {
+  it('elegir y marcar CONSERVAN su orden respecto a los rellenar simples (un campo puede depender de ellos); solo el que repinta pasa al final, antes de avanzar', () => {
     const elegir: Accion = { accion: 'elegir', ref: r('uso'), opcion: { valor: 'H' } }
     const marcar: Accion = { accion: 'marcar', ref: r('prop') }
     const lote = [elegir, rellenar('nx-input-9', 'inmueble.codigo_postal'), marcar, rellenar('nx-input-38', 'inmueble.anio_construccion'), avanzar]
     const o = ordenarLote(lote, inv)
-    expect(o).toEqual([lote[3], elegir, lote[1], marcar, avanzar])
+    expect(o).toEqual([elegir, marcar, lote[3], lote[1], avanzar])
+    // Un rellenar simple que la IA puso DETRÁS de un elegir/marcar sigue detrás.
+    const dep = [rellenar('nx-input-45', 'inmueble.superficie_m2'), marcar, rellenar('nx-input-38', 'inmueble.anio_construccion'), elegir]
+    expect(ordenarLote(dep, inv)).toEqual(dep)
     expect(o).toHaveLength(lote.length)
     expect(lote[0]).toBe(elegir) // no muta la entrada
   })

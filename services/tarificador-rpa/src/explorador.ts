@@ -449,8 +449,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         throw p?.accion === 'parar' ? new Parar(p.motivo) : new Parar('ambiguo', 'paso_no_ok')
       }
       const refs = indiceRefs(inv)
-      // ORDEN (14/10/2026, 8d0676f9): primero los campos simples, luego lo que repinta (autocompletados, elegir, marcar) y
-      // al final el avance: así año y m² se escriben ANTES de que el CP o la vía repinten y corten el lote.
+      // ORDEN (14/10/2026, 8d0676f9): todo en el orden de la IA salvo los rellenar que REPINTAN (CP, combobox…), que pasan
+      // al final, antes del avance: así año y m² se escriben ANTES de que el CP o la vía repinten y corten el lote.
       const lote = ordenarLote(v.respuesta.acciones, inv)
       k.log('exploracion_paso', {
         n: pasos,
@@ -684,6 +684,9 @@ async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInven
     if (!hit || !nodo) return null
     const loc = await localizar(nodo, hit.el)
     return loc ? { loc, hit } : null
+  } catch {
+    // Revisión: «nunca lanza» de verdad. Un fallo aquí = no se relocaliza (fail-closed: el bucle para «nodo_no_relocalizado»).
+    return null
   } finally {
     await nueva.liberar()
   }
