@@ -38,7 +38,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { confirmarVehiculoMapfre, elegirOpcion, pulsarBuscarTomadorMapfre, pulsarContinuarMapfre, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { confirmarVehiculoMapfre, elegirOpcion, pulsarBuscarTomadorMapfre, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -183,6 +183,17 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         return elegirOpcionMatSelect(select, valores, { ...o, formador: k.formador, pulsar: ctx.pulsar })
       },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
+      marcarOpcionHogar: async (marco, etiqueta) => {
+        // Solo un marco de ESTA página (la del guard de red del trabajo).
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/hogar: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return marcarOpcionRiesgoHogarAllianz(marco, guard, etiqueta)
+      },
+      marcarOpcionHogarResuelta: async (marco, etiqueta) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/hogar: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return marcarOpcionResueltaHogarAllianz(marco, guard, etiqueta)
+      },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
       paso: ti.paso,

@@ -263,7 +263,7 @@ test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formaliz
   // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular» + la navegación de menús que autorizó Alberto
   //    (14/10/2026, respaldo IA); el enlace de entrada NO está en la tabla (va por la lista de guard.ts y `pulsarEnlaceEntrada`).
   const claves = [...tabla![1].matchAll(/^\s*(\w+)\s*:/gm)].map((m) => m[1])
-  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador'], 'ACCIONES_PERMITIDAS: solo «calcular», la navegación autorizada y la lupa del tomador')
+  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador', 'elegir_opcion'], 'ACCIONES_PERMITIDAS: solo «calcular», la navegación autorizada, la lupa del tomador y elegir una opción visible')
   assert.match(src, /export function validarAccionEntrada[\s\S]*?textosEntradaDe\(compania\)\.includes\(esperado\)[\s\S]*?normalizarTexto\(d\.texto\) !== esperado/, 'el enlace de entrada: solo textos de guard.ts y texto visible exacto')
   const vc = src.slice(src.indexOf('export function validarCampo'), src.indexOf('export function validarResolucion'))
   assert.match(vc, /bloqueoPalabras\(\[\['id', d\.id\], \['name', d\.name\], \['title', d\.title\], \['aria-label', d\.ariaLabel\], \['onclick', d\.onclick\], \['onchange', d\.onchange\]\]\)/, 'validarCampo tiene que bloquear palabras de emisión en id/name/title/aria-label/onclick/onchange')
@@ -376,6 +376,18 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.match(ramo, /case 'auto':\s*case 'moto':[\s\S]*?validarFormularioAuto\(crudo, hoy\)/, 'auto/moto se validan con validarFormularioAuto')
   assert.match(runner, /prepararTrabajo\(adaptador, trabajo\.riesgo\)/, 'el runner valida con el validador del ramo (prepararTrabajo)')
   assert.ok(!/validarRiesgoComunidad/.test(runner), 'el runner ya no valida con el de Comunidades a pelo')
+})
+
+test('Allianz HOGAR (14/10/2026): flag propio APAGADO, registro solo bajo el flag, hogar validado con su formulario y sin puertas de avance/guardado', () => {
+  const hogar = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/hogar.ts'), 'utf8'))
+  assert.match(hogar, /^export const ALLIANZ_HOGAR_ACTIVO = false$/m, 'Allianz Hogar nace APAGADO (lo enciende Alberto)')
+  // Solo `ctx.pulsar`: ni el avance autorizado (Aceptar), ni guardar/emitir, ni la pestaña de Moto.
+  assert.ok(!/pulsarExploracionAutorizada|avanzarPestanaAutorizada|avanzarATarificar|pulsarGuardado|pulsarEmision|abrirProyecto/.test(hogar), 'Hogar no usa puertas de avance/guardado/emisión')
+  const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
+  assert.match(idx, /^if \(ALLIANZ_HOGAR_ACTIVO\) adaptadores\.registrar\(allianzHogar\)$/m, 'allianzHogar se registra SOLO con `if (ALLIANZ_HOGAR_ACTIVO)`')
+  assert.equal((idx.match(/allianzHogar/g) ?? []).length, 2, 'allianzHogar: un import y un registro condicionado')
+  const ramo = sinComentarios(readFileSync(join(SRV, 'src/ramo.ts'), 'utf8'))
+  assert.match(ramo, /case 'hogar':[\s\S]*?validarFormularioHogar\(crudo, hoy\)/, 'hogar se valida con validarFormularioHogar')
 })
 
 /** Infracciones del EXPLORADOR IA del worker (fase B, 13/10/2026). Exportada en el test para verla FALLAR. */

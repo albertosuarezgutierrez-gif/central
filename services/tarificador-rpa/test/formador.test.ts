@@ -22,6 +22,9 @@ import {
   PRESUPUESTO_RESPALDO,
   ACCION_ENLACE_ENTRADA,
   conRespaldoIA,
+  baseAccion,
+  candidatoElegibleAtasco,
+  esElementoOpcion,
   type DescripcionElemento,
 } from '../src/formador.ts'
 import { ErrorTarificador } from '../src/errores.ts'
@@ -119,7 +122,7 @@ test('selectorYaUsado: un elemento no vale para dos claves en el mismo trabajo',
 })
 
 test('ACCIONES_PERMITIDAS: «calcular» + navegación de menús + lupa del tomador autorizadas por Alberto (14/10/2026), nada más', () => {
-  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador'])
+  assert.deepEqual(Object.keys(ACCIONES_PERMITIDAS), ['calcular', 'pestana_nueva_produccion', 'menu_automoviles', 'continuar', 'buscar_tomador', 'elegir_opcion'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.calcular], ['calcular', 'calcular prima', 'recalcular'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.pestana_nueva_produccion], ['nueva produccion'])
   assert.deepEqual([...ACCIONES_PERMITIDAS.menu_automoviles], ['automoviles'])
@@ -144,6 +147,7 @@ test('proyección de candidatos: nunca un value, ni un password, ni texto de un 
   assert.equal(campo.texto, null)
   assert.equal(campo.tag, 'input')
   assert.ok(!('selector' in sinSelector(campo)))
+  assert.ok(!("paraCheckbox" in sinSelector({ ...campo, paraCheckbox: true })), "paraCheckbox es local: no viaja")
   assert.equal(proyectarCandidato({ tag: 'input', type: 'password', selector: '#p' }, 'campo'), null)
   const boton = proyectarCandidato({ tag: 'input', type: 'submit', valorBoton: 'Calcular', value: 'x', selector: '#c' }, 'accion')!
   assert.equal(boton.texto, 'Calcular')
@@ -256,4 +260,36 @@ test('candidato [ng-click] de una fila: texto CORTO (≤80) y por el redactor (s
   assert.ok((c.texto ?? '').length <= 80, c.texto ?? '')
   assert.ok(!(c.texto ?? '').includes('12345678Z'))
   assert.ok(!(c.texto ?? '').includes('FINAL'))
+})
+
+test('elegir_opcion: genérica, sin textos; solo elementos con FORMA de opción, sin palabras de emisión; la clave admite sufijo', () => {
+  assert.equal(baseAccion('elegir_opcion_habitual'), 'elegir_opcion')
+  assert.equal(baseAccion('elegir_opcion'), 'elegir_opcion')
+  assert.equal(baseAccion('elegir_opcion_'), null)
+  assert.equal(baseAccion('elegir_opcionX'), null)
+  assert.equal(baseAccion('emitir'), null)
+  const label = d({ tag: 'label', texto: 'Habitual' })
+  assert.equal(validarAccion(label, 'elegir_opcion_uso').ok, true)
+  assert.equal(validarAccion(d({ tag: 'mat-option', texto: 'SEVILLA' }), 'elegir_opcion_poblacion').ok, true)
+  assert.equal(validarAccion(d({ tag: 'div', role: 'option', texto: 'CALLE' }), 'elegir_opcion_via').ok, true)
+  // Un botón, un enlace o un campo NO son opciones aunque el texto sea inocente.
+  for (const o of [{ tag: 'button' }, { tag: 'a' }, { tag: 'input', type: 'text' }, { tag: 'select' }, { tag: 'div', role: 'button' }]) assert.equal(validarAccion(d({ ...o, texto: 'Habitual' }), 'elegir_opcion_uso').ok, false, JSON.stringify(o))
+  // Palabras de emisión/pago: bloqueadas por texto, id, onclick…
+  assert.equal(validarAccion(d({ tag: 'label', texto: 'Emitir póliza' }), 'elegir_opcion_uso').ok, false)
+  assert.equal(validarAccion(d({ tag: 'label', texto: 'Habitual', onclick: 'contratar()' }), 'elegir_opcion_uso').ok, false)
+  assert.equal(validarAccion(d({ tag: 'label', texto: 'Pagar ahora' }), 'elegir_opcion').ok, false)
+  // Unicidad y visibilidad como cualquier acción.
+  assert.equal(validarAccion({ ...label, coincidencias: 2 }, 'elegir_opcion_uso').ok, false)
+  assert.equal(validarAccion({ ...label, visible: false }, 'elegir_opcion_uso').ok, false)
+  assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: '' }), false)
+  assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: 'x'.repeat(121) }), false)
+  // La etiqueta de una CASILLA (for → checkbox / envolviéndola) no es una opción de lista.
+  assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: 'Acepto', paraCheckbox: true }), false)
+  assert.equal(esElementoOpcion({ tag: 'label', role: null, texto: 'Habitual', paraCheckbox: false }), true)
+  assert.equal(validarAccion(d({ tag: 'label', texto: 'Acepto', paraCheckbox: true }), 'elegir_opcion_uso').ok, false)
+  assert.equal(candidatoElegibleAtasco({ tag: 'label', id: null, name: null, type: null, role: null, clases: null, texto: 'Acepto', etiqueta: null, marco: null, paraCheckbox: true }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), false)
+  // Atasco: solo candidatos con forma de opción.
+  assert.equal(candidatoElegibleAtasco({ tag: 'label', id: null, name: null, type: null, role: null, clases: null, texto: 'Habitual', etiqueta: null, marco: null }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), true)
+  assert.equal(candidatoElegibleAtasco({ tag: 'button', id: null, name: null, type: null, role: null, clases: null, texto: 'Habitual', etiqueta: null, marco: null }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), false)
+  assert.equal(candidatoElegibleAtasco({ tag: 'label', id: null, name: null, type: null, role: null, clases: null, texto: 'Emitir', etiqueta: null, marco: null }, { clave: 'elegir_opcion_uso', tipo: 'accion' }), false)
 })
