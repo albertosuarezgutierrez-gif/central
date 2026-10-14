@@ -13,6 +13,7 @@ import {
   lineaMotivosPararParaIA,
   lineaAccionesPortalParaIA,
   esEntradaExploracion,
+  guardadosEnDialogoDe,
   leerPresupuestoMapa,
   normalizarRedNoGet,
   sanearInventarioDom,
@@ -284,6 +285,9 @@ export function promptExplorador(e: EntradaPrompt): string {
       ? 'La exploración va ligada a una petición real: las claves del catálogo tienen valor (incluido tomador.nif) SALVO las marcadas sinValor; el robot lo pone. Nunca hay valores de prueba.'
       : 'Exploración con datos de PRUEBA: tomador.nif NO tiene valor. Si un campo obligatorio pide NIF/DNI → parar dato_sensible_requerido.',
     `CATÁLOGO (claves que puedes usar en rellenar y mapeo):\n${JSON.stringify(catalogoParaIA(e.ramo, e.conDatosReales ? { riesgo: e.riesgo ?? null } : undefined))}`,
+    guardadosEnDialogoDe(e.entrada).length
+      ? 'EXCEPCIÓN DE ESTA ENTRADA: el botón «Guardar» del modal «Datos de la situación» (solo guarda la dirección del riesgo) SÍ se pulsa, con avanzar efectoEsperado "siguiente_pantalla". Cualquier otro guardar sigue la regla general.'
+      : '',
     e.historial.length ? `PASOS ANTERIORES:\n${e.historial.join('\n')}` : 'PASOS ANTERIORES: ninguno (primera pantalla tras la entrada).',
     e.avancesFallidos > 0 ? `AVISO: el último avance no cambió de pantalla (${e.avancesFallidos} vez/veces). Revisa campos obligatorios o para.` : '',
     `<inventario>\n${JSON.stringify(e.inventario)}\n</inventario>`,

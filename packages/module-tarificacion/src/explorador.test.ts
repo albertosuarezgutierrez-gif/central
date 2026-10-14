@@ -34,6 +34,10 @@ import {
   validarMapa,
   validarRespuestaExplorador,
   bloqueoGuardadoPresupuesto,
+  bloqueoAvance,
+  esGuardadoEnDialogoAutorizado,
+  casaGuardadoEnDialogo,
+  ENTRADAS_EXPLORACION,
   type InventarioDom,
   type RespuestaExplorador,
 } from './index.ts'
@@ -816,5 +820,67 @@ describe('guardado de presupuesto: botones compuestos (emisión + guardar) nunca
     const inv = resultado('Guardar y firmar')
     const el = inv.marcos[0].elementos.find((e) => e.id === 'btnCompuesto')!
     expect(bloqueoGuardadoPresupuesto(el, { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false })).toBe('boton_de_emision')
+  })
+})
+
+describe('«Guardar» del modal «Datos de la situación» (Occident Hogar, Alberto 14/10/2026)', () => {
+  const OCC = 'occident:productos:hogar'
+  const conModal = (elementos: unknown[]) => sanearInventarioDom({ marcos: [{ url: 'https://occ.example.test/tarificacion', nombre: 'app', titulos: [{ texto: 'Tarificación', tag: 'h1' }], elementos }] }, undefined, { refs: true })!
+  const inv = conModal([
+    { tag: 'input', id: 'cpSit', type: 'text', etiqueta: 'Código postal:*', dialogo: 'Datos de la situación' },
+    { tag: 'button', id: 'btnSit', texto: 'Guardar', dialogo: 'Datos de la situación' },
+    { tag: 'button', id: 'btnFuera', texto: 'Guardar' },
+    { tag: 'button', id: 'btnOtro', texto: 'Guardar', dialogo: 'Datos del tomador' },
+    { tag: 'button', id: 'btnEmite', texto: 'Guardar y emitir', dialogo: 'Datos de la situación' },
+    { tag: 'button', id: 'btnAria', texto: 'Guardar', ariaLabel: 'Guardar y contratar', dialogo: 'Datos de la situación' },
+    { tag: 'button', id: 'btnStore', texto: 'Guardar', onclick: "sendActionEvent('store')", dialogo: 'Datos de la situación' },
+    { tag: 'button', id: 'btnLargo', texto: 'Guardar', dialogo: 'Datos de la situación y del contrato de seguro con firma' },
+  ])
+  const el = (id: string) => inv.marcos[0].elementos.find((e) => e.id === id)!
+  const avanzar = (id: string, entrada = OCC) => validarRespuestaExplorador(
+    { version: 1, pantalla: { nombre: 'Tarificación', tipo: 'formulario' }, acciones: [{ accion: 'avanzar', ref: ref(inv, id), efectoEsperado: 'abrir_seccion', confianza: 'alta' }], mapeo: [], motivo: null },
+    { inventario: inv, ramo: 'hogar', entrada, datosReales: null },
+  )
+
+  it('el inventario conserva el título del diálogo (saneado) y lo redacta como cualquier texto', () => {
+    expect(el('btnSit').dialogo).toBe('Datos de la situación')
+    expect(el('btnFuera').dialogo).toBeUndefined()
+    expect(redactarValoresInventario(inv, ['situación']).marcos[0].elementos.find((e) => e.id === 'btnSit')!.dialogo).toBeUndefined()
+  })
+
+  it('autoriza SOLO el «Guardar» dentro de «Datos de la situación» en la entrada de Occident', () => {
+    expect(esGuardadoEnDialogoAutorizado(OCC, el('btnSit'))).toBe(true)
+    expect(bloqueoAvance(OCC, el('btnSit'), inv.marcos[0])).toBeNull()
+    expect(avanzar('btnSit').ok).toBe(true)
+  })
+
+  it.each([
+    ['btnFuera', 'fuera del modal'],
+    ['btnOtro', 'modal con otro título'],
+    ['btnEmite', '«Guardar y emitir»'],
+    ['btnAria', 'aria-label con contratar'],
+    ['btnStore', 'onclick store (Archivar)'],
+    ['btnLargo', 'título recortado por el saneado'],
+  ])('NO autoriza %s (%s)', (id) => {
+    expect(esGuardadoEnDialogoAutorizado(OCC, el(id))).toBe(false)
+    expect(bloqueoAvance(OCC, el(id), inv.marcos[0])).not.toBeNull()
+    expect(avanzar(id).ok).toBe(false)
+  })
+
+  it('en Allianz Hogar (u otra entrada) el mismo «Guardar» del modal sigue bloqueado', () => {
+    for (const e of Object.keys(ENTRADAS_EXPLORACION).filter((k) => k !== OCC)) {
+      expect(esGuardadoEnDialogoAutorizado(e, el('btnSit'))).toBe(false)
+      expect(bloqueoAvance(e, el('btnSit'), inv.marcos[0])).toBe('guardar_solo_en_resultado')
+      expect(avanzar('btnSit', e).ok).toBe(false)
+    }
+    expect(Object.entries(ENTRADAS_EXPLORACION).filter(([, v]) => (v.guardadosEnDialogo ?? []).length > 0).map(([k]) => k)).toEqual([OCC])
+  })
+
+  it('casaGuardadoEnDialogo: texto y título EXACTOS (tildes y mayúsculas aparte)', () => {
+    expect(casaGuardadoEnDialogo(OCC, ' GUARDAR ', 'DATOS DE LA SITUACION')).toBe(true)
+    expect(casaGuardadoEnDialogo(OCC, 'Guardar', 'Datos de la situación (2)')).toBe(false)
+    expect(casaGuardadoEnDialogo(OCC, 'Guardar cambios', 'Datos de la situación')).toBe(false)
+    expect(casaGuardadoEnDialogo(OCC, 'Guardar', null)).toBe(false)
+    expect(casaGuardadoEnDialogo(OCC, 'Guardar', 'Datos de la situaci…')).toBe(false)
   })
 })
