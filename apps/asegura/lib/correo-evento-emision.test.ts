@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  MOTIVO_EMISION_NO_LLEGADA, TIPOS_EVENTO_CORREO, esCheckTipoEventoCorreo, importeDeItem, planItem, resolverPolizaEvento, validarEntradaEvento,
+  MOTIVO_EMISION_NO_LLEGADA, decidirReevaluacionEmision, TIPOS_EVENTO_CORREO, esCheckTipoEventoCorreo, importeDeItem, planItem, resolverPolizaEvento, validarEntradaEvento,
   type ContextoItem, type ItemEvento, type PolizaCandidata,
 } from './correo-evento.ts'
 
@@ -103,4 +103,31 @@ test('la migración de emisión existe, es aditiva y su lista de tipos = TIPOS_E
   assert.ok(lista, 'la migración no redefine el CHECK de tipo')
   const tipos = [...lista.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort()
   assert.deepEqual(tipos, [...TIPOS_EVENTO_CORREO].sort())
+})
+
+// Reevaluación (14/10/2026): una emisión sin_resolver pasa a duplicado_cima cuando CIMA ya trae la póliza.
+const reeval = (candidatas: PolizaCandidata[]) =>
+  decidirReevaluacionEmision(ITEM, 'allianz', resolverPolizaEvento(ITEM.numeroPoliza, 'allianz', 'C0109', candidatas), HOY)
+
+test('reevaluación: única póliza en vigor → resuelve, con póliza, cliente y resumen con fecha', () => {
+  const d = reeval([ALLIANZ()])
+  assert.deepEqual(d, { resuelve: true, polizaId: 'p1', clienteId: 'c1', motivo: null, resumen: 'CIMA ya la trae (14/10/2026)' })
+})
+
+test('reevaluación: no encontrada, dos pólizas o no en vigor → se queda', () => {
+  assert.equal(reeval([]).resuelve, false)
+  assert.equal(reeval([ALLIANZ(), ALLIANZ({ id: 'p2', clienteId: 'c2' })]).resuelve, false)
+  assert.equal(reeval([ALLIANZ({ estado: 'anulada' })]).resuelve, false)
+})
+
+test('reevaluación: solo emisiones', () => {
+  const otro = { tipo: 'impago', clave: 'x', numeroPoliza: '061000001' } as unknown as ItemEvento
+  assert.equal(decidirReevaluacionEmision(otro, 'allianz', { estado: 'en_vigor', poliza: ALLIANZ() }, HOY).resuelve, false)
+})
+
+test('reevaluación: el UPDATE lleva la guarda estado = sin_resolver y el puerto no crea nada', () => {
+  const bd = readFileSync(join(import.meta.dirname, 'correo-evento-bd.ts'), 'utf8')
+  const fn = bd.slice(bd.indexOf('export async function reevaluarEmisionesSinResolver'))
+  assert.match(fn, /where id = \$\{f\.id\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado = 'sin_resolver'/)
+  assert.doesNotMatch(fn, /insert into|crearTarea|anotar\(/)
 })

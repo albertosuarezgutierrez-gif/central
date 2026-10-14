@@ -25,7 +25,7 @@ import { crearTarea } from './oportunidad-seguimiento'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import {
   ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestroAcotado, esCheckTipoEventoCorreo, importeDeItem,
-  TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento,
+  TOPE_SINIESTROS_CANDIDATOS, decidirReevaluacionEmision, planItem, resolverPolizaEvento,
   tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
@@ -378,6 +378,50 @@ export async function marcarEventoRevisado(correduriaId: string, id: string, rev
     set revisado_at = ${revisado ? Prisma.sql`now()` : Prisma.sql`null`}, updated_at = now()
     where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
   return n > 0
+}
+
+const VENTANA_REEVALUACION_DIAS = 60
+const TOPE_REEVALUACION = 200
+
+/**
+ * Reevaluación de emisiones (14/10/2026): las filas `emision` `sin_resolver` sin mirar de los últimos 60 días se
+ * vuelven a resolver contra la cartera; si CIMA ya trae la póliza en vigor pasan a `duplicado_cima`. Nunca crea
+ * pólizas, notas ni tareas. El UPDATE lleva `estado = 'sin_resolver'` en el WHERE: idempotente y a prueba de
+ * dos pasadas a la vez. `sin_migracion` (falta la tabla) → ceros.
+ */
+export async function reevaluarEmisionesSinResolver(
+  correduriaId: string, hoy: string = hoyMadrid(),
+): Promise<{ revisadas: number; resueltas: number }> {
+  const db = prismaAsegura()
+  let filas: { id: string; compania: string; codigoDgs: string; detalle: unknown }[]
+  try {
+    filas = await db.$queryRaw(Prisma.sql`
+      select id::text as id, compania, codigo_entidad_dgs as "codigoDgs", detalle
+      from correo_evento_entrante
+      where correduria_id = ${correduriaId}::uuid and tipo = 'emision' and estado = 'sin_resolver' and revisado_at is null
+        and created_at > now() - make_interval(days => ${VENTANA_REEVALUACION_DIAS}::int)
+      order by created_at desc
+      limit ${TOPE_REEVALUACION}`)
+  } catch (e) {
+    if (esTablaInexistente(e)) return { revisadas: 0, resueltas: 0 }
+    throw e
+  }
+  if (filas.length === 0) return { revisadas: 0, resueltas: 0 }
+  const candidatas = await polizasCandidatas(db, correduriaId)
+  let resueltas = 0
+  for (const f of filas) {
+    const item = f.detalle as ItemEvento | null
+    if (!item || item.tipo !== 'emision') continue
+    const resolucion = resolverPolizaEvento(item.numeroPoliza, f.compania, f.codigoDgs, candidatas)
+    const d = decidirReevaluacionEmision(item, f.compania, resolucion, hoy)
+    if (!d.resuelve) continue
+    const n = await db.$executeRaw(Prisma.sql`
+      update correo_evento_entrante set estado = 'duplicado_cima', poliza_id = ${d.polizaId}::uuid, cliente_id = ${d.clienteId}::uuid,
+             motivo = ${d.motivo}, resumen = ${d.resumen}, updated_at = now()
+      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver'`)
+    if (n > 0) resueltas++
+  }
+  return { revisadas: filas.length, resueltas }
 }
 
 /** Para la cola de avisos: los sin resolver (o a medias) de los últimos 30 días que nadie ha marcado como mirados. */

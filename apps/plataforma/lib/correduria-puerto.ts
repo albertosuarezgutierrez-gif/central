@@ -514,6 +514,21 @@ export async function registrarEventoCorreoAsegura(evento: unknown, mensajeId: s
   }
 }
 
+/**
+ * `POST /api/operador/correo/evento/reevaluar` — tras el triaje: las emisiones «sin resolver» que CIMA ya trae
+ * pasan a `duplicado_cima` (14/10/2026). Nunca lanza: `null` = no se pudo (config, red, 4xx/5xx).
+ */
+export async function reevaluarEventosCorreoAsegura(): Promise<{ revisadas: number; resueltas: number } | null> {
+  try {
+    const r = await pedirPost('/api/operador/correo/evento/reevaluar', {})
+    if (r === null || r.status !== 200) return null
+    const j = (r.json ?? {}) as Record<string, unknown>
+    return typeof j.revisadas === 'number' && typeof j.resueltas === 'number' ? { revisadas: j.revisadas, resueltas: j.resueltas } : null
+  } catch {
+    return null
+  }
+}
+
 export type ResolucionDevolucion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }
 
 /** `PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor. */
