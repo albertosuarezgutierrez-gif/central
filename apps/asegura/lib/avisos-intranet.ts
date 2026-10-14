@@ -40,7 +40,7 @@
  * en la pasada siguiente.
  */
 import {
-  estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
+  estadoPeticion, entraEnVentana, DIAS_ANTELACION_MAX, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
   CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso, type FilaPolizaNueva,
   DIAS_AVISO_POLIZA_MODIFICADA, polizasModificadasParaAviso, type FilaCambioPoliza,
   DIAS_AVISO_PARTE, partesParaAviso, type ParteFilaAviso,
@@ -51,7 +51,8 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
-import { avisosActivos, esSoloContar } from './avisos-vencimiento'
+import { avisosActivos, esSoloContar, leerCanalesDeFichas } from './avisos-vencimiento'
+import { decidirAvisoVencimiento, diasEfectivosDeFicha, type OrigenAviso } from './avisos-vencimiento-canal'
 import { descifrar } from './avisos-vencimiento-reglas'
 import { descifrarCampo } from './cartera-edicion'
 import {
@@ -93,6 +94,16 @@ export type ResumenAvisosIntranet = {
   soloContar: boolean
   /** La pasada del detector de cambios de póliza, que corre antes (`poliza-cambios-detector.ts`). */
   cambiosPoliza: ResumenCambiosPoliza
+  /**
+   * Avisos de VENCIMIENTO ligados a una `portal_obligacion` (la obligación y su recordatorio de 2 días;
+   * NUNCA el vencimiento derivado de la póliza, que no tiene push detrás) que se quitan del correo
+   * porque su push ya salió en este ciclo a una persona de la ficha y todas las de la ficha eligieron
+   * «solo en el móvil» (`decidirAvisoVencimiento`, la misma regla que el cron de vencimientos). No se
+   * sellan: si cambia de opinión, salen en la pasada siguiente.
+   */
+  omitidosSoloMovil: number
+  /** `false` = no se pudieron leer las preferencias del portal y se ha mandado como antes (fail-open). */
+  preferenciasLeidas: boolean
 }
 
 function nombreDe(c: { nombre: string | null; apellidos: string | null } | null | undefined): string | null {
@@ -110,9 +121,14 @@ function nombreDe(c: { nombre: string | null; apellidos: string | null } | null 
  * deliberado: «hoy no tocaba nadie» y «no he podido mirar» no pueden dar la
  * misma respuesta.
  */
-export async function reunirPendientes(correduriaId: string, hoy: Date): Promise<{ pendientes: Pendiente[]; identidadesServidas: Set<string> }> {
+export async function reunirPendientes(
+  correduriaId: string,
+  hoy: Date,
+): Promise<{ pendientes: Pendiente[]; identidadesServidas: Set<string>; omitidosSoloMovil: number; preferenciasLeidas: boolean }> {
   const db = prismaAsegura()
-  const limiteVentana = new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA)
+  // Hasta la MAYOR antelación elegible (30 días): la ventana de cada ficha se aplica al final, con la
+  // misma lectura de preferencias que «solo en el móvil» (`diasEfectivosDeFicha`, 14/10/2026).
+  const limiteVentana = new Date(hoy.getTime() + DIAS_ANTELACION_MAX * MS_DIA)
 
   // 🚨 `caduca_en` NULL = NO caduca (todas las concedidas desde el 25/09/2026).
   // Un `caducaEn: { gt: hoy }` a secas las dejaría FUERA en silencio —en SQL,
@@ -181,7 +197,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
         avisadaAt: null,
         fechaAccionable: { gte: new Date(hoy.getTime() - MS_DIA), lte: limiteVentana },
       },
-      select: { id: true, identidadId: true, titulo: true, fechaAccionable: true, fechaEvento: true, polizaId: true, repiteCadaMeses: true },
+      select: { id: true, identidadId: true, tipo: true, titulo: true, fechaAccionable: true, fechaEvento: true, polizaId: true, repiteCadaMeses: true, avisadaPushAt: true },
     }),
   ])
 
@@ -288,6 +304,12 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   const fichaPorId = new Map(fichas.map((f) => [f.id, f]))
 
   const por = new Map<string, Pendiente>()
+  // Los avisos de VENCIMIENTO ligados a una `portal_obligacion`, por ficha (id del aviso → su origen):
+  // los únicos que puede callar «solo en el móvil» (14/10/2026). El vencimiento DERIVADO de la póliza
+  // no se marca nunca: no tiene push detrás. Se filtran al final, con UNA lectura de preferencias.
+  const vencimientosDe = new Map<string, Map<string, OrigenAviso>>()
+  const marcarVencimiento = (clienteId: string, id: string, origen: OrigenAviso) =>
+    vencimientosDe.set(clienteId, (vencimientosDe.get(clienteId) ?? new Map()).set(id, origen))
   const dame = (clienteId: string): Pendiente => {
     const ya = por.get(clienteId)
     if (ya) return ya
@@ -367,6 +389,10 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     if (!clienteId || !fichaPorId.has(clienteId)) continue
     if (o.polizaId && pvSellado.has(`${clienteId}|obligacion_en_ventana:${idVencimientoDerivado(o.polizaId, o.fechaEvento)}`)) continue
     if (o.polizaId === null) identidadesServidas.add(o.identidadId)
+    // Vencimiento = con póliza y no recordatorio propio: el MISMO criterio que el cron de vencimientos.
+    if (o.polizaId && !(TIPOS_RECORDATORIO_PROPIO as readonly string[]).includes(String(o.tipo))) {
+      marcarVencimiento(clienteId, o.id, { tipo: 'obligacion', identidadId: o.identidadId, avisadaPushAt: o.avisadaPushAt, fechaAccionable: o.fechaAccionable })
+    }
     dame(clienteId).obligaciones.push({ id: o.id, titulo: o.titulo, fechaAccionable: o.fechaAccionable, repiteCadaMeses: o.repiteCadaMeses })
   }
 
@@ -453,7 +479,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR,
       // Sustituida por otra (cambio de compañía emitido): no se renueva, no se avisa.
       sustituidaAt: null,
-      fechaVencimiento: { gte: hoy, lte: new Date(hoy.getTime() + (DIAS_VENTANA_AVISO + 31) * MS_DIA) },
+      fechaVencimiento: { gte: hoy, lte: new Date(hoy.getTime() + (DIAS_ANTELACION_MAX + 31) * MS_DIA) },
     },
     select: { id: true, clienteId: true, tipo: true, aseguradora: true, fechaVencimiento: true },
   })
@@ -474,7 +500,8 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   for (const v of vencen) {
     if (!v.fechaVencimiento || conObligacion.has(`${v.id}|${dia(v.fechaVencimiento)}`) || !fichaPorId.has(v.clienteId)) continue
     const accionable = fechaAccionable(v.fechaVencimiento)
-    if (!entraEnVentana({ fechaAccionable: accionable, hoy })) continue
+    // Criba ancha; la ventana de SU ficha se aplica al final (sin identidades en el portal → 7).
+    if (!entraEnVentana({ fechaAccionable: accionable, hoy, dias: DIAS_ANTELACION_MAX })) continue
     dame(v.clienteId).obligaciones.push({
       id: idVencimientoDerivado(v.id, v.fechaVencimiento),
       titulo: `Renovación de tu seguro con ${v.aseguradora}`,
@@ -497,10 +524,11 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
         tipo: 'poliza',
         fechaAccionable: { gte: new Date(hoy.getTime() - MS_DIA), lte: hastaRecordatorio },
       },
-      select: { id: true, polizaId: true, titulo: true, fechaAccionable: true, avisadaAt: true },
+      select: { id: true, identidadId: true, polizaId: true, titulo: true, fechaAccionable: true, avisadaAt: true, avisadaPushAt: true },
     }),
   ])
-  type Candidata = { clienteId: string; baseId: string; titulo: string; accionable: Date; avisadoEn: Date }
+  // `origen`: de qué sale el recordatorio, para «solo en el móvil» (el derivado no tiene push detrás).
+  type Candidata = { clienteId: string; baseId: string; titulo: string; accionable: Date; avisadoEn: Date; origen: OrigenAviso }
   const candidatas: Candidata[] = []
   const polizasAvisadas =
     yaAvisadas.length === 0
@@ -515,7 +543,10 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     const clienteId = o.polizaId ? tomadorDe.get(o.polizaId) : undefined
     if (!clienteId || !o.avisadaAt) continue
     conObligacionAvisada.add(o.polizaId!)
-    candidatas.push({ clienteId, baseId: o.id, titulo: o.titulo, accionable: o.fechaAccionable, avisadoEn: o.avisadaAt })
+    candidatas.push({
+      clienteId, baseId: o.id, titulo: o.titulo, accionable: o.fechaAccionable, avisadoEn: o.avisadaAt,
+      origen: { tipo: 'obligacion', identidadId: o.identidadId, avisadaPushAt: o.avisadaPushAt, fechaAccionable: o.fechaAccionable },
+    })
   }
   // `obligacion_en_ventana:pv:<polizaId>:<YYYY-MM-DD>` → el vencimiento que ya se avisó.
   const pvPorPoliza = new Map<string, { clienteId: string; dia: string; enviadoEn: Date }>()
@@ -537,6 +568,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       candidatas.push({
         clienteId: v.clienteId, baseId: idVencimientoDerivado(v.id, v.fechaVencimiento),
         titulo: `Renovación de tu seguro con ${v.aseguradora}`, accionable: fechaAccionable(v.fechaVencimiento), avisadoEn: pv.enviadoEn,
+        origen: { tipo: 'derivado' },
       })
     }
   }
@@ -552,6 +584,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     const ultimoDe = new Map(accesos.map((a) => [a.clienteId, a.ultimo]))
     for (const c of aRecordar) {
       if (!debeRecordarVencimiento({ fechaAccionable: c.accionable, avisadoEn: c.avisadoEn, ultimoAcceso: ultimoDe.get(c.clienteId) ?? null, hoy })) continue
+      marcarVencimiento(c.clienteId, `${c.baseId}:recordatorio`, c.origen)
       dame(c.clienteId).obligaciones.push({ id: `${c.baseId}:recordatorio`, titulo: c.titulo, fechaAccionable: c.accionable, repiteCadaMeses: null })
     }
   }
@@ -628,7 +661,36 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     if (lista.length > 0) dame(clienteId).partes = lista
   }
 
-  return { pendientes: [...por.values()], identidadesServidas }
+  // «Configuración → Avisos» del portal (14/10/2026): cada aviso de vencimiento ligado a una obligación
+  // se decide con `decidirAvisoVencimiento` (push ya salido a una persona de la ficha y todas «solo
+  // móvil»); los callados salen del correo (el resto sigue). Sin sello: no llegan a `avisosNuevos`.
+  // Solo LEE. Si no se puede leer, se manda como antes y se dice.
+  // La MISMA lectura da la antelación de cada ficha (14/10/2026): max(7, la mayor de sus identidades).
+  const fichasConVencimientos = new Set([...vencimientosDe.keys(), ...[...por.values()].filter((p) => p.obligaciones.length > 0).map((p) => p.clienteId)])
+  const canales = await leerCanalesDeFichas(db, [...fichasConVencimientos], 'avisos-intranet')
+  if (canales === null) console.error('[asegura/avisos-intranet] preferencias del portal NO leídas: se manda como antes (fail-open, 7 días de antelación)')
+  for (const p of por.values()) {
+    const dias = diasEfectivosDeFicha(canales, p.clienteId)
+    // `avisosDe()` vuelve a mirar la ventana: tiene que ser la MISMA, o el digest callaría lo de 15/30 días.
+    p.diasAntelacion = dias
+    const fuera = new Set(p.obligaciones.filter((o) => !entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy, dias })).map((o) => o.id))
+    if (fuera.size === 0) continue
+    p.obligaciones = p.obligaciones.filter((o) => !fuera.has(o.id))
+    const marcados = vencimientosDe.get(p.clienteId)
+    if (marcados) for (const id of fuera) marcados.delete(id)
+  }
+  let omitidosSoloMovil = 0
+  for (const [clienteId, avisos] of vencimientosDe) {
+    const p = por.get(clienteId)
+    if (!p) continue
+    const callados = new Set([...avisos].filter(([, origen]) => !decidirAvisoVencimiento({ origen, fichaId: clienteId, canales }).enviar).map(([id]) => id))
+    if (callados.size === 0) continue
+    p.obligaciones = p.obligaciones.filter((o) => !callados.has(o.id))
+    omitidosSoloMovil += callados.size
+    console.info(`[asegura/avisos-intranet] ${callados.size} aviso(s) de vencimiento de la ficha ${clienteId} omitidos: solo_movil`)
+  }
+
+  return { pendientes: [...por.values()], identidadesServidas, omitidosSoloMovil, preferenciasLeidas: canales !== null }
 }
 
 /**
@@ -766,7 +828,7 @@ export async function avisarIntranet(
   const db = prismaAsegura()
   // Antes de reunir: así el cambio que se detecta hoy sale en el correo de hoy. No lanza.
   const cambiosPoliza = await detectarCambiosPolizas(correduriaId)
-  const { pendientes, identidadesServidas } = await reunirPendientes(correduriaId, hoy)
+  const { pendientes, identidadesServidas, omitidosSoloMovil, preferenciasLeidas } = await reunirPendientes(correduriaId, hoy)
 
   const resumen: ResumenAvisosIntranet = {
     clientes: 0,
@@ -779,6 +841,8 @@ export async function avisarIntranet(
     sinFicha: 0,
     soloContar,
     cambiosPoliza,
+    omitidosSoloMovil,
+    preferenciasLeidas,
   }
 
   // Los recordatorios propios que no llegaron a ningún `Pendiente` porque su

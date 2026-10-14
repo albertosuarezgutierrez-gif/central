@@ -23,6 +23,10 @@ export async function GET() {
 export async function POST(req: Request) {
   const cuerpo = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!cuerpo || typeof cuerpo !== 'object') return NextResponse.json({ error: 'cuerpo_invalido' }, { status: 400 })
+  // «Solo por correo» no se ofrece en el portal: recibos, siniestros, recordatorios… solo existen como
+  // notificación y la persona se quedaría sin ningún canal. La validación del módulo lo sigue admitiendo
+  // (la columna y los crons lo entienden); esta ruta es la que lo corta.
+  if (cuerpo.canal === 'correo') return NextResponse.json({ error: 'canal_no_disponible' }, { status: 400 })
   const v = validarCambioPreferencias({
     canal: cuerpo.canal,
     diasAntelacion: cuerpo.diasAntelacion,

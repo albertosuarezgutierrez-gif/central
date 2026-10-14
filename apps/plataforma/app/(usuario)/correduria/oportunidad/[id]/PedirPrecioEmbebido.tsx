@@ -13,6 +13,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { btnStyle, cardStyle } from '@/components/ui'
+import { adaptadorDeRamo } from '@/lib/tarificador-bots-ramos'
+import PrecioBots, { HuecoBotsContext } from '../../cliente/[id]/PrecioBots'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 import { bloqueObjetoDeRamo, firmaRiesgo, motivoBloqueoCotizador } from './cotizador-embebido'
 
@@ -65,6 +67,10 @@ export default function PedirPrecioEmbebido<A extends { estado: 'ok'; riesgo: Ri
   const firmaActual = firmaRiesgo(riesgo)
   const [carga, setCarga] = useState<Carga<A>>({ estado: 'cargando' })
   const [cotizando, setCotizando] = useState(false)
+  // Hueco ENCIMA de Avant2 donde se pinta el bloque «Bots (gratis)» aunque lo monte el cotizador del ramo (que tiene el formulario).
+  const [huecoBots, setHuecoBots] = useState<HTMLElement | null>(null)
+  const ramo = riesgo.oportunidad.ramo
+  const ramoConAdaptador = adaptadorDeRamo(ramo) !== null
   const peticion = useRef(0)
   const montajes = useRef(0)
 
@@ -128,7 +134,17 @@ export default function PedirPrecioEmbebido<A extends { estado: 'ok'; riesgo: Ri
           </div>
         </div>
       )}
-      {carga.estado === 'ok' && montar({ apertura: carga.apertura, n: carga.n, bloqueo, onCotizando: alCotizar, onCotizado })}
+      {/* Motores, en este orden: Bots (gratis) y debajo Avant2 (0,50€). Un solo bloque de bots por pantalla. */}
+      <div ref={setHuecoBots} style={{ minWidth: 0 }} />
+      {!ramoConAdaptador && <PrecioBots ramo={ramo} clienteId={riesgo.oportunidad.clienteId} oportunidadId={oportunidadId} formulario={null} />}
+      {carga.estado === 'ok' && (
+        <>
+          <h3 style={{ margin: '6px 0 0', fontSize: 15 }}>Avant2 — 0,50€ por petición</h3>
+          <HuecoBotsContext.Provider value={huecoBots}>
+            {montar({ apertura: carga.apertura, n: carga.n, bloqueo, onCotizando: alCotizar, onCotizado })}
+          </HuecoBotsContext.Provider>
+        </>
+      )}
     </div>
   )
 }

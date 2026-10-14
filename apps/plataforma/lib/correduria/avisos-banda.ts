@@ -16,7 +16,7 @@ export type BandaAvisos =
 const NIVELES: readonly NivelAviso[] = ['urgente', 'no_comprobado', 'aviso']
 const TIPOS: readonly string[] = [
   'partes', 'supresiones', 'quejas', 'cambios_cuenta', 'recibos_lcs', 'aprobaciones', 'bajas_pue', 'anulaciones',
-  'recibos_sin_confirmar', 'ingesta', 'puerto',
+  'recibos_sin_confirmar', 'correos_compania_sin_resolver', 'ingesta', 'puerto',
 ]
 
 function objeto(v: unknown): Record<string, unknown> | null {

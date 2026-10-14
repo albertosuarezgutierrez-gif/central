@@ -119,7 +119,7 @@ export function prepararAccion(tipo: TipoAccion, args: Record<string, unknown>, 
       return { ok: true, accion: { tipo, cuerpo: { clienteId: args.clienteId }, lineas: ['🔑 Mandarle por correo el enlace al portal del cliente (sus seguros, recibos y partes).'] } }
     case 'presupuesto': {
       // `tarificacionId` y `resumen` los pone el SERVIDOR tras leer la tarificación guardada; la IA solo
-      // aporta las necesidades (IDD, art. 20 Ley 16/2018: sin ellas asegura no deja avisar).
+      // aporta las necesidades (IDD, art. 175.1 del RDL 3/2020: sin ellas asegura no deja avisar).
       const tarificacionId = texto(args.tarificacionId, 64)
       if (!tarificacionId) return { ok: false, motivo: 'no hay tarificación guardada que rescatar' }
       const nec = texto(args.necesidades, 1000)

@@ -60,18 +60,21 @@ function cuerpoOpsDeDeclaradas(): string {
   return FUENTE.slice(i, j)
 }
 
-test('el upsert de la obligación «poliza» de una declarada NO toca avisadaAt', () => {
+test('el upsert de la obligación «poliza» de una declarada NO escribe los sellos a mano: solo sellosAReiniciar', () => {
   // `avisadaAt` es el sello del envío y esta función corre en CADA carga de la
-  // bóveda. Ponerlo en el `update` de la RENOVACIÓN —aunque sea a `null`— haría
-  // que cada visita volviera a mandar el mismo correo: a diferencia del recibo
-  // (ver el test de abajo), esta fecha no avanza sola en cada sincronización.
+  // bóveda. Ponerlo en el `update` de la RENOVACIÓN SIN CONDICIÓN —aunque sea a
+  // `null`— haría que cada visita volviera a mandar el mismo correo.
+  // 🚨 Desde el 14/10/2026 los sellos de un ciclo ANTERIOR sí se sueltan (si no,
+  // tras renovar ni correo ni push), pero SOLO por `sellosAReiniciar`, que
+  // conserva los de este ciclo.
   const cuerpo = cuerpoOpsDeDeclaradas()
-  const iPoliza = cuerpo.indexOf("tipo: 'poliza'")
-  const iRecibo = cuerpo.indexOf("tipo: 'recibo'")
+  const iPoliza = cuerpo.indexOf("identidadId_polizaDeclaradaId_tipo: { identidadId, polizaDeclaradaId: p.id, tipo: 'poliza' }")
+  const iRecibo = cuerpo.indexOf("identidadId_polizaDeclaradaId_tipo: { identidadId, polizaDeclaradaId: p.id, tipo: 'recibo' }")
   assert.notEqual(iPoliza, -1, 'ya no se genera la obligación de tipo poliza')
   assert.notEqual(iRecibo, -1, 'ya no se genera la obligación de tipo recibo: revisa este guardián')
   const bloque = sinComentarios(cuerpo.slice(iPoliza, iRecibo))
-  assert.ok(!/avisadaAt/.test(bloque), 'el upsert de «poliza» escribe avisadaAt: el aviso de renovación se reenviaría en cada visita a la bóveda')
+  assert.ok(!/avisadaAt|avisadaPushAt/.test(bloque), 'el upsert de «poliza» escribe un sello a mano: el aviso de renovación se reenviaría en cada visita a la bóveda')
+  assert.match(bloque, /\.\.\.sellosAReiniciar\(polizasPrevias\.get\(p\.id\), accionable\)/, 'el upsert de «poliza» ya no suelta los sellos del ciclo anterior: tras renovar, ni correo ni push')
 })
 
 test('el upsert de «recibo» SOLO resetea avisadaAt cuando el cobro cambia de ciclo, nunca sin condición', () => {
@@ -86,8 +89,8 @@ test('el upsert de «recibo» SOLO resetea avisadaAt cuando el cobro cambia de c
   const bloque = sinComentarios(cuerpo.slice(iRecibo))
   assert.match(
     bloque,
-    /esCicloNuevo\s*\?\s*\{\s*avisadaAt:\s*null\s*\}\s*:\s*\{\}/,
-    'el reseteo de avisadaAt en el recibo ya no está condicionado al cambio de ciclo (o ha desaparecido)',
+    /esCicloNuevo\s*\?\s*\{\s*avisadaAt:\s*null,\s*avisadaPushAt:\s*null\s*\}\s*:\s*\{\}/,
+    'el reseteo de los DOS sellos (correo y push) del recibo ya no está condicionado al cambio de ciclo (o falta uno)',
   )
 })
 

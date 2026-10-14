@@ -11,11 +11,11 @@ import {
 export const metadata: Metadata = {
   title: 'Información del mediador — Grupo ASegura',
   description:
-    'Información precontractual del mediador de seguros exigida por el artículo 19 de la Ley 16/2018 de Distribución de Seguros.',
+    'Información precontractual del mediador de seguros exigida por el artículo 173 del Real Decreto-ley 3/2020, de distribución de seguros.',
 }
 
 /**
- * Información precontractual del mediador (art. 19 Ley 16/2018 / RDL 3/2020).
+ * Información precontractual del mediador (art. 173 RDL 3/2020).
  *
  * Es OBLIGATORIA y tiene que estar disponible antes de que el cliente entregue
  * ningún dato, así que esta página vive fuera de la sesión: sin cookie, sin
@@ -29,7 +29,7 @@ export default function InfoMediador() {
 
   return (
     <>
-      <p className="legal-antetitulo">Información precontractual · Art. 19 Ley 16/2018</p>
+      <p className="legal-antetitulo">Información precontractual · Art. 173 RDL 3/2020</p>
       <h1>Información del mediador</h1>
       <p className="legal-entradilla">
         {marca} es el nombre comercial bajo el que ejerce {identidad.nombre}. Esta página recoge la

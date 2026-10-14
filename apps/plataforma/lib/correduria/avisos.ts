@@ -21,6 +21,7 @@ export const COLAS_AVISO = [
   'bajas_pue',
   'anulaciones',
   'recibos_sin_confirmar',
+  'correos_compania_sin_resolver',
 ] as const
 export type ColaAviso = (typeof COLAS_AVISO)[number]
 export type TipoAviso = ColaAviso | 'ingesta' | 'puerto'
@@ -55,6 +56,8 @@ export const HREF_AVISO: Record<TipoAviso, string> = {
   bajas_pue: '/correduria?s=gestion',
   anulaciones: '/correduria?s=gestion',
   recibos_sin_confirmar: '/correduria?s=gestion',
+  // La bandeja vive en Mi mesa (no en Gestión): es lo único de la banda que se trabaja en la propia mesa.
+  correos_compania_sin_resolver: '/correduria/mesa#correos-compania',
   ingesta: '/correduria?s=ingesta',
   puerto: '/correduria?s=gestion',
 }
@@ -69,6 +72,7 @@ const ROTULO: Record<ColaAviso, [string, string, string]> = {
   aprobaciones: ['correo que espera tu OK', 'correos que esperan tu OK', 'los correos que esperan tu OK'],
   bajas_pue: ['baja de Allianz firmada sin tramitar en el PUE', 'bajas de Allianz firmadas sin tramitar en el PUE', 'las bajas de Allianz'],
   anulaciones: ['anulación con el plazo encima', 'anulaciones con el plazo encima', 'las anulaciones en curso'],
+  correos_compania_sin_resolver: ['aviso de compañía por correo sin resolver (no se ha escrito en la cartera)', 'avisos de compañías por correo sin resolver (no se ha escrito en la cartera)', 'los avisos de compañías por correo'],
   recibos_sin_confirmar: ['recibo vencido sin confirmar el cobro (míralo en el portal de la compañía)', 'recibos vencidos sin confirmar el cobro (míralos en el portal de la compañía)', 'los recibos vencidos'],
 }
 

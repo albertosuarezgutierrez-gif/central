@@ -70,6 +70,12 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'allianz', ramo: 'comunidades', producto: 'comunidades', pestana: 'Particulares', productoMenu: 'Comunidades',
     avancesAutorizados: Object.freeze([ACEPTAR_DATOS_BASICOS]),
   }),
+  // Mapfre Auto (14/10/2026): «Nueva producción» → «Turismos y Motos». El bloque «Automóviles» y el enlace «Tarificación y
+  // Emisión Rápida» (abre pestaña nueva) van fijos en el código de Mapfre. Sin avances autorizados: solo se lee.
+  'mapfre:nueva_produccion:auto': Object.freeze({
+    compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
+    avancesAutorizados: Object.freeze([]),
+  }),
 })
 
 export function esEntradaExploracion(v: unknown): v is keyof typeof ENTRADAS_EXPLORACION {
@@ -142,9 +148,34 @@ const DATOS_COMUNIDADES: readonly DatoCatalogo[] = [
   D({ clave: 'comunidad.capital_continente', descripcion: 'Capital de continente en euros', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '1500000', rutaRiesgo: 'comunidad.capitalContinente' }),
 ]
 
+/**
+ * Riesgo de AUTO (Mapfre NSEI, 14/10/2026): rutas = `FormularioAuto` (formulario-auto.ts). Sin valor sintético lo que puede
+ * ser de una persona real (NIF, matrícula) o que la IA no puede inventar sin falsear la tarifa (marca, modelo, siniestros).
+ * FUERA a propósito (sin origen claro en FormularioAuto): uso del vehículo, ámbito de circulación,
+ * compañía anterior (nombre) y NIF del conductor (si es otra persona que el tomador no consta). Nada de cuenta bancaria.
+ */
+const DATOS_AUTO: readonly DatoCatalogo[] = [
+  D({ clave: 'tomador.nif', descripcion: 'NIF/NIE/CIF del tomador', tipo: 'texto', personal: true, fuente: 'riesgo', rutaRiesgo: 'tomador.documentoIdentidad' }),
+  D({ clave: 'vehiculo.matricula', descripcion: 'Matrícula del vehículo', tipo: 'texto', personal: true, fuente: 'riesgo', rutaRiesgo: 'matricula' }),
+  D({ clave: 'vehiculo.codigo_postal', descripcion: 'Código postal de circulación/pernocta', tipo: 'texto', personal: false, fuente: 'sintetico', sintetico: '41001', rutaRiesgo: 'codigoPostal' }),
+  D({ clave: 'vehiculo.marca', descripcion: 'Marca del vehículo', tipo: 'texto', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.marca' }),
+  D({ clave: 'vehiculo.modelo', descripcion: 'Modelo del vehículo', tipo: 'texto', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.modelo' }),
+  D({ clave: 'vehiculo.cilindrada_cc', descripcion: 'Cilindrada en cc', tipo: 'numero', personal: false, fuente: 'riesgo', rutaRiesgo: 'seleccionVehiculo.cilindradaCc' }),
+  D({ clave: 'conductor.fecha_nacimiento', descripcion: 'Fecha de nacimiento del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/1980', rutaRiesgo: 'conductor.fechaNacimiento' }),
+  D({ clave: 'conductor.fecha_carne', descripcion: 'Fecha del carné de conducir del conductor habitual (dd/mm/aaaa)', tipo: 'fecha', personal: true, fuente: 'sintetico', sintetico: '15/01/2000', rutaRiesgo: 'conductor.fechaCarne' }),
+  // Valor fijo de NEGOCIO (Alberto, 14/10/2026): turismos = siempre «B». Sin `rutaRiesgo` → también con datos reales sale este valor.
+  D({ clave: 'conductor.clase_permiso', descripcion: 'Clase del permiso de conducir (turismo: siempre B)', tipo: 'opcion', personal: false, fuente: 'sintetico', sintetico: 'B' }),
+  D({ clave: 'historial.siniestros_5_anios', descripcion: 'Siniestros con culpa (RC) en los últimos 5 años', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '0', rutaRiesgo: 'siniestrosUltimos5Anios' }),
+  D({ clave: 'historial.anios_asegurado', descripcion: 'Años asegurado en la compañía anterior', tipo: 'numero', personal: false, fuente: 'sintetico', sintetico: '5', rutaRiesgo: 'aniosAseguradoAnterior' }),
+]
+
+/** Fecha de efecto y contacto: los comunes. En auto, el NIF y la fecha de nacimiento del tomador salen del formulario de auto (arriba y comunes). */
+const DATOS_COMUNES_AUTO: readonly DatoCatalogo[] = DATOS_COMUNES.filter((d) => d.clave !== 'tomador.nif' && d.clave !== 'tomador.nombre_completo')
+
 export const CATALOGO_EXPLORACION: Readonly<Record<string, readonly DatoCatalogo[]>> = Object.freeze({
   hogar: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_HOGAR]),
   comunidades: Object.freeze([...DATOS_COMUNES, ...DATOS_INMUEBLE, ...DATOS_COMUNIDADES]),
+  auto: Object.freeze([...DATOS_COMUNES_AUTO, ...DATOS_AUTO]),
 })
 
 export function catalogoDe(ramo: string): readonly DatoCatalogo[] {
@@ -237,6 +268,15 @@ const RE_TELEFONO = /^\+?\d[\d\s]{7,15}$/
  * IA, ni a asegura, ni al log. Fail-closed: sin valor seguro → motivo de parada.
  */
 export function resolverDato(clave: string, ctx: ContextoDatos): DatoResuelto {
+  const r = resolverDatoCrudo(clave, ctx)
+  if (!r.ok) return r
+  const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
+  // El riesgo de auto guarda las fechas en ISO (AAAA-MM-DD); el portal las pide dd/mm/aaaa.
+  const iso = d?.tipo === 'fecha' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.valor) : null
+  return iso ? { ok: true, valor: `${iso[3]}/${iso[2]}/${iso[1]}` } : r
+}
+
+function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
   const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
   if (!d) return { ok: false, motivo: 'clave_desconocida' }
   if (d.fuente === 'entorno') {
@@ -333,6 +373,8 @@ export const DETALLES_FIN_EXPLORACION = [
   'clave_desconocida',
   /** Demasiados lotes seguidos cortados por repintado de la pantalla (sin completar ninguno). */
   'repintados_seguidos',
+  /** FRONTERA DE EMISIÓN: apareció un campo de cuenta bancaria (IBAN, CCC, BIC…). Fin correcto, no fallo (14/10/2026). */
+  'frontera_cuenta_bancaria',
   /** Al GUARDAR el presupuesto el portal abrió un diálogo (confirm/alert): el robot no confirma; se para. */
   'guardado_con_dialogo',
 ] as const
@@ -746,7 +788,26 @@ export function respuestaParar(motivo: MotivoParar, detalle: string | null = nul
 
 // ─── Paradas: OTP/SMS, CAPTCHA, emisión ──────────────────────────────────────
 
-export type Parada = { motivo: 'otp' | 'captcha' | 'cerca_de_emision'; senal: string }
+export type Parada = { motivo: 'otp' | 'captcha' | 'cerca_de_emision'; senal: string; detalle?: DetalleFinExploracion }
+
+/**
+ * FRONTERA DE EMISIÓN (Alberto, 14/10/2026, TODAS las compañías): sin número de cuenta no se puede emitir. Un control de
+ * cuenta bancaria en pantalla = el portal ya está en la fase de emisión → el bot PARA sin pulsar nada más y NUNCA lo
+ * rellena ni lo elige. Se mira sobre la descripción del control (name, id, formcontrolname, etiqueta, placeholder,
+ * aria-label, title) sin tildes y en minúsculas. «domicilio» (dirección) NO casa; «domiciliación» sí.
+ * Falsos positivos cerrados (14/10/2026, regresión Allianz/Occident): «no cuenta con alarma» (el «nº» exige º/°/«o.»),
+ * «Oficina de la entidad mediadora» (entre entidad y oficina solo separadores, ≤20) y «accc» (`ccc` como palabra; el
+ * camelCase y `_` se separan antes: `numCCC`, `num_ccc` siguen casando).
+ */
+export const RE_CAMPO_CUENTA_BANCARIA = /iban|\bbic\b|swift|\bccc\b|cuenta[\s_.-]*(?:bancaria|corriente)|cuenta[\s_.-]*cliente|(?:numero|num|nro)[\s_.º-]*(?:de[\s_-]*)?cuenta|\bn\.?\s*(?:[º°]|o\.)\s*(?:de\s*)?cuenta\b|^cuenta$|domiciliacion|domiciliar|entidad[^a-z]{0,20}oficina|oficina[^a-z]{0,20}entidad|digito[\s_-]*de[\s_-]*control/
+/** Motivo legible de la frontera (va al log y al error del flujo determinista, con la etiqueta del campo). */
+export const MOTIVO_FRONTERA_CUENTA = 'frontera de emisión: el portal pide cuenta bancaria'
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+/** La primera descripción de un control que casa con {@link RE_CAMPO_CUENTA_BANCARIA} (tal cual, recortada), o `null`. Pura. */
+export function senalCuentaBancaria(descripciones: readonly (string | null | undefined)[]): string | null {
+  for (const d of descripciones) if (typeof d === 'string' && d !== '' && RE_CAMPO_CUENTA_BANCARIA.test(sinTildes(d.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ')))) return d.replace(/\s+/g, ' ').trim().slice(0, 80)
+  return null
+}
 
 const RE_OTP = /\botp\b|\bsms\b|codigo (?:de )?(?:verificacion|seguridad|confirmacion|acceso)|clave de un solo uso|one.?time|doble factor|segundo factor|\b2fa\b|autenticacion reforzada|verificacion en dos pasos/
 const RE_CAPTCHA = /captcha|no soy un robot|i'?m not a robot|verifica que eres humano|desafio de seguridad/
@@ -756,6 +817,14 @@ const RE_TITULO_EMISION = /\brevision\b|forma de pago|domiciliacion|\biban\b|cue
 /** Campos de pago/firma que solo existen en emisión (por etiqueta/name/id). Los BANCARIOS (IBAN, cuenta, SWIFT…) viven en
  *  `CAMPOS_BANCARIOS` (acciones-portal.ts, fuente única) y se miran con `fronteraEmisionPorCampos`. */
 const RE_CAMPO_EMISION = /tarjeta de credito|\bcvv\b|\bcvc\b|caducidad de la tarjeta|firma digital|firma manuscrita/
+
+/** Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El
+ *  inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaBancaria`) en cada pulsación. */
+function esControlFrontera(el: ElementoInventario): boolean {
+  if (el.tag === 'input' || el.tag === 'select' || el.tag === 'textarea' || el.tag === 'mat-select') return true
+  const rol = (el.role ?? '').toLowerCase()
+  return rol === 'combobox' || rol === 'textbox'
+}
 
 /**
  * ¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL
@@ -774,7 +843,12 @@ export function detectarParada(inv: InventarioDom): Parada | null {
     for (const el of m.elementos) {
       const desc = descripcionesElemento(el).map(plano)
       textos.push(...desc)
-      if (el.tag === 'input' || el.tag === 'select' || el.tag === 'textarea') campos.push(...desc)
+      if (esControlFrontera(el)) {
+        campos.push(...desc)
+        // Antes que nada: la frontera de emisión (cuenta bancaria) manda sobre CAPTCHA/OTP y títulos.
+        const cuenta = senalCuentaBancaria(descripcionesElemento(el))
+        if (cuenta !== null) return { motivo: 'cerca_de_emision', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)`.slice(0, 120), detalle: 'frontera_cuenta_bancaria' }
+      }
     }
   }
   const todos = [...titulos, ...textos]
@@ -823,15 +897,60 @@ export function huellaPantalla(inv: InventarioDom): string {
   return huellaTexto(partes.sort().join('\n'))
 }
 
+/**
+ * Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el
+ * valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro de la pantalla (cada lote rellena más
+ * campos). `null` = no se sabe (ningún control trae `conValor`: inventario de un worker antiguo).
+ */
+export function huellaRelleno(inv: InventarioDom): string | null {
+  let conDato = false
+  const refs: string[] = []
+  for (const m of inv.marcos) {
+    for (const e of m.elementos) {
+      if (typeof e.conValor !== 'boolean' || !e.ref) continue
+      conDato = true
+      if (e.conValor) refs.push(e.ref)
+    }
+  }
+  return conDato ? huellaTexto(refs.sort().join(';')) : null
+}
+
 export const MAX_HUELLA_REPETIDA = 3
 export const MAX_AVANCES_FALLIDOS = 2
+/**
+ * Techo de la misma pantalla seguida AUNQUE el relleno cambie (14/10/2026): un relleno que oscila (el portal borra lo que
+ * se escribe) no puede sostener el bucle hasta los topes de €/pasos.
+ */
+export const MAX_HUELLA_REPETIDA_CON_PROGRESO = 8
 
-/** `huellas` = las de los pasos ANTERIORES, en orden. Bucle = la actual sería la 3.ª seguida igual, o 2 avances sin efecto. */
-export function detectarBucle(huellas: readonly string[], actual: string, avancesFallidos: number): boolean {
+/**
+ * `huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la
+ * misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRelleno`). Sin `rellenos`, o con un relleno
+ * `null` (no se sabe), cuenta como «sin cambio» (lo conservador: parar). Además, {@link MAX_HUELLA_REPETIDA_CON_PROGRESO}
+ * pantallas seguidas con la misma huella son bucle aunque el relleno cambie (14/10/2026: Allianz Hogar paró por FALSO
+ * bucle mientras cada paso rellenaba más campos).
+ */
+export function detectarBucle(
+  huellas: readonly string[],
+  actual: string,
+  avancesFallidos: number,
+  rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },
+): boolean {
   if (avancesFallidos >= MAX_AVANCES_FALLIDOS) return true
+  const mismoRelleno = (i: number): boolean => {
+    if (!rellenos || rellenos.actual === null) return true
+    const r = rellenos.anteriores[i]
+    return r === null || r === undefined || r === rellenos.actual
+  }
   let seguidas = 1
-  for (let i = huellas.length - 1; i >= 0 && huellas[i] === actual; i--) seguidas++
-  return seguidas >= MAX_HUELLA_REPETIDA
+  let sinProgreso = 1
+  let progresoCortado = false
+  for (let i = huellas.length - 1; i >= 0 && huellas[i] === actual; i--) {
+    seguidas++
+    if (!progresoCortado && mismoRelleno(i)) sinProgreso++
+    else progresoCortado = true
+  }
+  return sinProgreso >= MAX_HUELLA_REPETIDA || seguidas >= MAX_HUELLA_REPETIDA_CON_PROGRESO
 }
 
 // ─── Topes ───────────────────────────────────────────────────────────────────

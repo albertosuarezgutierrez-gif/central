@@ -30,6 +30,12 @@ test('encolado: 202 con trabajoId; duplicado muestra el existente; rechazos con 
   assert.ok(!modo.ok && /habilitados/.test(modo.mensaje))
   assert.equal(leerEncolado(202, { estado: 'encolado' }).ok, false) // sin id no hay nada que sondear
   assert.equal(leerEncolado(202, { trabajoId: 'no-uuid' }).ok, false)
+  const purgado = leerEncolado(409, { estado: 'rechazado', motivo: 'origen_purgado' })
+  assert.ok(!purgado.ok && /se borraron sus datos personales/.test(purgado.mensaje) && /Nueva oportunidad/.test(purgado.mensaje))
+  const desconocido = leerEncolado(409, { motivo: 'algo_nuevo', mensaje: 'Texto claro de asegura' })
+  assert.deepEqual(desconocido, { ok: false, mensaje: 'Texto claro de asegura' })
+  const sinTexto = leerEncolado(409, { motivo: 'algo_nuevo', mensaje: 42 })
+  assert.ok(!sinTexto.ok && /HTTP 409/.test(sinTexto.mensaje))
   const apagado = leerEncolado(503, { estado: 'apagado' })
   assert.ok(!apagado.ok && /apagado/.test(apagado.mensaje))
 })

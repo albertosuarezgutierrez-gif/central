@@ -181,12 +181,19 @@ test('ruta de encolar: la compañía solo vale si está entre las integraciones 
   assert.doesNotMatch(f, /console\./)
 })
 
-test('bloque «Precio por bot»: sin emisión, un botón por integración de moto, doble clic guardado', () => {
-  const f = leer('app', '(usuario)', 'correduria', 'cliente', '[id]', 'moto-nuevo', 'PrecioPorBot.tsx')
-  assert.match(f, /i\.ramo === 'moto'/)
+test('bloque «Bots (gratis)»: sin emisión, un botón por integración del ramo, doble clic guardado, un solo montaje por pantalla', () => {
+  const f = leer('app', '(usuario)', 'correduria', 'cliente', '[id]', 'PrecioBots.tsx')
+  assert.match(f, /i\.ramo === ramo/)
   assert.match(f, /enVuelo\.current/)
   assert.match(f, /disabled=\{!formulario\.ok \|\| ocupado\}/)
+  assert.match(f, /\/correduria\/tarificador/) // la elección de versión apunta a la bandeja «Necesita tu atención»
+  assert.doesNotMatch(f, /Probar tarificación/)
   assert.doesNotMatch(f, /emitir|emision|console\./i)
   const c = leer('app', '(usuario)', 'correduria', 'cliente', '[id]', 'moto-nuevo', 'CotizadorMoto.tsx')
-  assert.match(c, /<PrecioPorBot/)
+  assert.match(c, /<PrecioBots/)
+  assert.doesNotMatch(c, /PrecioPorBot/)
+  const e = leer('app', '(usuario)', 'correduria', 'oportunidad', '[id]', 'PedirPrecioEmbebido.tsx')
+  assert.match(e, /HuecoBotsContext\.Provider/)
+  assert.match(e, /Avant2 — 0,50€ por petición/)
+  assert.match(e, /!ramoConAdaptador && <PrecioBots/) // la carcasa solo monta el suyo si el cotizador del ramo no lo hace
 })

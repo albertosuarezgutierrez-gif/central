@@ -16,7 +16,7 @@ import {
 } from './mediador.ts'
 
 // Estos tests no comprueban «que compile»: comprueban que no se pueda borrar en
-// silencio un apartado que la Ley 16/2018 obliga a enseñar. Un pie de página al
+// silencio un apartado que el RDL 3/2020 obliga a enseñar. Un pie de página al
 // que le falta la clave DGSFP tiene exactamente el mismo aspecto que uno completo.
 
 test('la clave DGSFP y el NIF salen en la linea de identificacion', () => {
@@ -26,7 +26,7 @@ test('la clave DGSFP y el NIF salen en la linea de identificacion', () => {
   assert.ok(linea.includes(MEDIADOR.identidad.nombre), 'falta el nombre del mediador')
 })
 
-test('estan los cuatro apartados del art. 19 LDS y ninguno vacio', () => {
+test('estan los cuatro apartados del art. 173 RDL 3/2020 y ninguno vacio', () => {
   const ids = PUNTOS_PRECONTRACTUALES.map((p) => p.id)
   for (const obligatorio of ['identidad', 'independencia', 'remuneracion', 'reclamaciones']) {
     assert.ok(ids.includes(obligatorio as (typeof ids)[number]), `falta el apartado ${obligatorio}`)
@@ -60,7 +60,7 @@ test('todos los canales de reclamacion son alcanzables', () => {
 })
 
 test('la no exclusividad menciona el umbral del 10 % en las dos direcciones', () => {
-  // El art. 19.1.b pide declarar las participaciones en AMBOS sentidos. Decir
+  // El art. 173 RDL 3/2020 pide declarar las participaciones en AMBOS sentidos. Decir
   // solo una mitad es una declaración incompleta que parece completa.
   assert.equal(NO_EXCLUSIVIDAD.split('10 %').length - 1, 2, 'el umbral tiene que declararse en los dos sentidos')
   assert.ok(/participación directa o indirecta/i.test(NO_EXCLUSIVIDAD), 'falta la participación DEL mediador')

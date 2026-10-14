@@ -9,12 +9,14 @@
 //  4. Los dos crons de push leen las preferencias (antelación, canal, «no molestar»).
 //  5. Las listas del SQL son las del módulo (un CHECK más corto revienta el guardado en producción).
 //  6. La campana ya no lleva el interruptor: enlaza a Configuración.
+//  7. La antelación elegida llega TAMBIÉN al correo de vencimiento, al digest y a la campana, por el
+//     helper (`diasEfectivosDeFicha` → `diasVentanaVencimiento`: max(7, la mayor), 14/10/2026).
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { CANALES_AVISO, DIAS_ANTELACION_OPCIONES } from '../packages/module-seguros-portal/src/preferencias-avisos.ts'
+import { CANALES_AVISO, DIAS_ANTELACION_OPCIONES, diasVentanaVencimiento } from '../packages/module-seguros-portal/src/preferencias-avisos.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const APP = 'apps/asegura-portal'
@@ -99,6 +101,32 @@ test('🚨 avisos-push: la antelación elegida decide la ventana y la criba lleg
   assert.match(c, /debeAvisarPush\([^)]*\}, hoy, p\.diasAntelacion\)/)
 })
 
+test('🚨 la regla de la antelación del correo: max(7, la mayor elegida); sin leer, 7', () => {
+  assert.equal(diasVentanaVencimiento([15, 30]), 30)
+  assert.equal(diasVentanaVencimiento([3]), 7, 'el correo nunca baja de 7')
+  assert.equal(diasVentanaVencimiento(null), 7)
+})
+
+test('🚨 el correo de vencimiento usa la antelación de la ficha (vía el helper), no los 7 fijos', () => {
+  const canal = sinComentarios(leer('apps/asegura/lib/avisos-vencimiento-canal.ts'))
+  assert.match(canal, /export function diasEfectivosDeFicha\([\s\S]*?diasVentanaVencimiento\(/, 'el helper no delega en la regla del módulo')
+  const venc = sinComentarios(leer('apps/asegura/lib/avisos-vencimiento.ts'))
+  assert.match(venc, /entraEnVentana\(\{[^}]*dias: diasEfectivosDeFicha\(canalesDeFicha, /, 'el correo no aplica la antelación de la ficha')
+  assert.doesNotMatch(venc, /lte: new Date\(hoy\.getTime\(\) \+ DIAS_VENTANA_AVISO \* MS_DIA\)/, 'la criba del correo sigue fija en 7 días')
+})
+
+test('🚨 el digest de la intranet y la campana usan la antelación (vía el helper)', () => {
+  const intra = sinComentarios(leer('apps/asegura/lib/avisos-intranet.ts'))
+  assert.match(intra, /diasEfectivosDeFicha\(canales, p\.clienteId\)/, 'el digest no aplica la antelación de la ficha')
+  const reglas = sinComentarios(leer('apps/asegura/lib/avisos-intranet-reglas.ts'))
+  assert.match(reglas, /diasAntelacion: p\.diasAntelacion/, 'el digest no pasa la antelación a avisosDe()')
+  const catalogo = sinComentarios(leer('packages/module-seguros-portal/src/avisos.ts'))
+  assert.match(catalogo, /diasVentanaVencimiento\(x\.diasAntelacion/, 'avisosDe() ignora la antelación')
+  const ruta = sinComentarios(leer(`${APP}/app/api/avisos/route.ts`))
+  assert.match(ruta, /diasAntelacionDeIdentidad\(identidad\.id\)/, 'la campana no lee la antelación de SU identidad')
+  assert.match(ruta, /diasAntelacion: antelacion\.status === 'fulfilled' \? antelacion\.value : null/)
+})
+
 test('avisos-cima: «solo por correo» sella como silenciado; «no molestar» ni envía ni sella', () => {
   const c = sinComentarios(leer(`${APP}/app/api/cron/avisos-cima/route.ts`))
   assert.match(c, /motivo === 'canal_correo' \? new Set<string>\(TIPOS_AVISO_CIMA\)/)
@@ -129,11 +157,43 @@ test('la campana ya no lleva el interruptor de push: enlaza a Configuración', (
   assert.match(pagina, /id="avisos"/)
 })
 
-test('🚨 TODO fase B: el selector de canal NO se enseña mientras no exista el envío por correo', () => {
-  // «Solo por correo» dejaría a la persona sin recibos, siniestros ni recordatorios por ningún canal.
-  // La columna y la lógica de los crons se quedan (NULL = push); lo que no puede existir es el control.
-  const ui = sinComentarios(leer(`${APP}/app/(portal)/configuracion/AjustesAvisos.tsx`))
-  assert.doesNotMatch(ui, /guardar\(\{\s*canal/, 'la pantalla vuelve a guardar el canal')
-  assert.doesNotMatch(ui, /Solo por correo|name="canal-avisos"/, 'la pantalla vuelve a ofrecer el canal')
-  assert.match(leer(`${APP}/app/(portal)/configuracion/AjustesAvisos.tsx`), /TODO fase B/)
+// Fase B: el selector de canal ofrece SOLO `ambos` y `movil`. «Solo por correo» dejaría a la persona sin
+// recibos, siniestros ni recordatorios por ningún canal (solo existen como push).
+const UI_AVISOS = `${APP}/app/(portal)/configuracion/AjustesAvisos.tsx`
+const opcionesDelCanal = () => {
+  const ui = sinComentarios(leer(UI_AVISOS))
+  const i = ui.indexOf('Cómo quiero recibir los avisos')
+  assert.ok(i !== -1, 'no encuentro el selector de canal')
+  return ui.slice(i, ui.indexOf('</label>', i))
+}
+
+test('🚨 fase B: el selector de canal guarda el canal elegido', () => {
+  assert.match(sinComentarios(leer(UI_AVISOS)), /guardar\(\{\s*canal/)
+})
+
+test('🚨 fase B: el selector de canal ofrece «ambos» (En el móvil y por correo)', () => {
+  assert.match(opcionesDelCanal(), /<option value="ambos">En el móvil y por correo<\/option>/)
+})
+
+test('🚨 fase B: el selector de canal ofrece «movil» (Solo en el móvil)', () => {
+  assert.match(opcionesDelCanal(), /<option value="movil">Solo en el móvil<\/option>/)
+})
+
+test('🚨 fase B: la pantalla NO ofrece «correo» como canal', () => {
+  const sel = opcionesDelCanal()
+  assert.doesNotMatch(sel, /value="correo"/, 'el selector ofrece «correo»')
+  assert.doesNotMatch(sel, /Solo por correo/, 'el selector dice «Solo por correo»')
+  assert.doesNotMatch(sinComentarios(leer(UI_AVISOS)), /Solo por correo|CANALES_AVISO|guardar\(\{\s*canal:\s*'correo'/)
+})
+
+test('🚨 fase B: la nota de «Solo en el móvil» avisa de que, si no llega, se manda por correo', () => {
+  assert.match(sinComentarios(leer(UI_AVISOS)), /Si el aviso no te llega al móvil, te lo mandamos igualmente por correo\./)
+})
+
+test('🚨 fase B: la ruta del portal rechaza canal «correo» con 400', () => {
+  const r = sinComentarios(leer(`${APP}/app/api/configuracion/avisos/route.ts`))
+  const i = r.indexOf("cuerpo.canal === 'correo'")
+  assert.ok(i !== -1, 'la ruta no corta «correo»')
+  assert.match(r.slice(i, i + 120), /status: 400/)
+  assert.ok(i < r.indexOf('validarCambioPreferencias('), 'el corte tiene que ir antes de validar/guardar')
 })

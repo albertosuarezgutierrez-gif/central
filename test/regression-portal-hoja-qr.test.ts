@@ -216,7 +216,7 @@ test('la pantalla AVISA de que el papel sale sin datos', () => {
 
 test('el papel sigue llevando la identificación del mediador', () => {
   // Lo único que NO se quita del papel: no es un dato del cliente, es la
-  // identificación de la correduría (art. 19 de la Ley 16/2018) y es lo que
+  // identificación de la correduría (art. 173 del RDL 3/2020) y es lo que
   // hace que la tarjeta parezca de una firma regulada. Sale de `MEDIADOR`,
   // nunca tecleada: dos copias de la clave DGSFP es una copia de más.
   const src = leer(PAGINA)

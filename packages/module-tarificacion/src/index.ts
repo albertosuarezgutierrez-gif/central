@@ -34,7 +34,7 @@ export {
   type EstadoTrabajo,
   type TipoError,
 } from './estados.ts'
-export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
+export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, esTextoBotonProhibido, type OpcionesGuard } from './guard-emision.ts'
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
@@ -460,10 +460,15 @@ export {
   validarRespuestaExplorador,
   respuestaParar,
   detectarParada,
+  RE_CAMPO_CUENTA_BANCARIA,
+  MOTIVO_FRONTERA_CUENTA,
+  senalCuentaBancaria,
   huellaTexto,
   huellaPantalla,
   MAX_HUELLA_REPETIDA,
   MAX_AVANCES_FALLIDOS,
+  MAX_HUELLA_REPETIDA_CON_PROGRESO,
+  huellaRelleno,
   detectarBucle,
   TOPES_EXPLORADOR,
   topesExplorador,
@@ -531,6 +536,8 @@ export {
   riesgoExploracionDeOportunidad,
   inmuebleUnicoCatastro,
   normPlantaPuerta,
+  normPlantaCatastro,
+  normPuertaCatastro,
   faltanDatosCatastro,
   completarInmuebleConCatastro,
   type InmuebleCatastroMin,

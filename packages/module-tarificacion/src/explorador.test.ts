@@ -14,7 +14,13 @@ import {
   costeMaximoLlamada,
   detectarBucle,
   detectarParada,
+  CATALOGO_EXPLORACION,
+  DETALLES_FIN_EXPLORACION,
+  RE_CAMPO_CUENTA_BANCARIA,
+  senalCuentaBancaria,
   huellaPantalla,
+  huellaRelleno,
+  MAX_HUELLA_REPETIDA_CON_PROGRESO,
   normalizarRedNoGet,
   planDesdeMapa,
   resolverDato,
@@ -161,6 +167,54 @@ describe('catálogo y resolución de datos', () => {
     expect(raro.find((d) => d.clave === 'hogar.uso')!.valor).toBeUndefined()
     expect(JSON.stringify(c)).not.toContain('00000000T')
     expect(JSON.stringify(c)).not.toContain('Ficticio')
+  })
+
+  describe('catálogo de AUTO (Mapfre NSEI)', () => {
+    const auto = { ramo: 'auto', riesgo: {}, env: {}, hoy: new Date('2026-10-14T10:00:00Z') }
+    const claves = () => catalogoParaIA('auto').map((d) => d.clave)
+
+    it('tiene catálogo y las claves del formulario de auto', () => {
+      for (const k of ['efecto.fecha', 'tomador.nif', 'tomador.fecha_nacimiento', 'vehiculo.matricula', 'vehiculo.codigo_postal', 'conductor.fecha_nacimiento', 'conductor.fecha_carne', 'historial.siniestros_5_anios', 'historial.anios_asegurado']) {
+        expect(claves(), k).toContain(k)
+      }
+    })
+    it('claves únicas', () => {
+      expect(new Set(claves()).size).toBe(claves().length)
+    })
+    it('la IA no ve valores de lo personal (NIF, matrícula, fechas del conductor)', () => {
+      const c = catalogoParaIA('auto')
+      for (const k of ['tomador.nif', 'vehiculo.matricula', 'conductor.fecha_nacimiento', 'conductor.fecha_carne']) {
+        expect(c.find((d) => d.clave === k), k).toEqual({ clave: k, descripcion: expect.any(String), tipo: expect.any(String) })
+      }
+    })
+    it('sin petición real: NIF y matrícula PARAN (sin valor sintético)', () => {
+      expect(resolverDato('tomador.nif', { ...auto, conDatosReales: false })).toEqual({ ok: false, motivo: 'dato_sensible_requerido' })
+      expect(resolverDato('vehiculo.matricula', { ...auto, conDatosReales: false })).toEqual({ ok: false, motivo: 'dato_sensible_requerido' })
+    })
+    it('con petición real: sale del FormularioAuto, la fecha ISO pasa a dd/mm/aaaa y lo ausente PARA', () => {
+      const riesgo = { matricula: '0000BBB', codigoPostal: '41001', conductor: { fechaNacimiento: '1985-03-07', fechaCarne: '2004-05-09' }, tomador: { documentoIdentidad: '00000000T' }, siniestrosUltimos5Anios: 0 }
+      const real = { ...auto, conDatosReales: true, riesgo }
+      expect(resolverDato('vehiculo.matricula', real)).toEqual({ ok: true, valor: '0000BBB' })
+      expect(resolverDato('tomador.nif', real)).toEqual({ ok: true, valor: '00000000T' })
+      expect(resolverDato('conductor.fecha_nacimiento', real)).toEqual({ ok: true, valor: '07/03/1985' })
+      expect(resolverDato('conductor.fecha_carne', real)).toEqual({ ok: true, valor: '09/05/2004' })
+      expect(resolverDato('historial.siniestros_5_anios', real)).toEqual({ ok: true, valor: '0' })
+      expect(resolverDato('historial.anios_asegurado', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+      expect(resolverDato('vehiculo.marca', real)).toEqual({ ok: false, motivo: 'dato_no_disponible' })
+    })
+    it('los valores del riesgo de auto se quitan del inventario (NIF del tomador y fecha del carné)', () => {
+      const v = valoresSensiblesExploracion({ conDatosReales: true, env: {}, riesgo: { tomador: { documentoIdentidad: '00000000T' }, conductor: { fechaCarne: '2004-05-09' } } })!
+      expect(v).toContain('00000000T')
+      expect(v).toContain('09/05/2004')
+    })
+    it('no hay uso, ámbito ni compañía anterior inventados', () => {
+      expect(claves().filter((k) => /uso|ambito|compania/.test(k))).toEqual([])
+    })
+    it('clase del permiso: «B» fijo (decisión de negocio), con y sin datos reales, y la IA ve la pista', () => {
+      expect(resolverDato('conductor.clase_permiso', { ...auto, conDatosReales: false })).toEqual({ ok: true, valor: 'B' })
+      expect(resolverDato('conductor.clase_permiso', { ...auto, conDatosReales: true })).toEqual({ ok: true, valor: 'B' })
+      expect(catalogoParaIA('auto').find((d) => d.clave === 'conductor.clase_permiso')).toMatchObject({ pista: 'B' })
+    })
   })
 
   it('contacto solo de entorno; sin entorno o mal formado → para', () => {
@@ -503,6 +557,31 @@ describe('paradas, bucle y topes', () => {
     expect(detectarBucle([], 'x', 2)).toBe(true)
   })
 
+  it('🪤 bucle (14/10/2026): misma huella con MÁS campos rellenos NO es bucle; misma huella y mismo relleno, sí', () => {
+    const inv = (conValor: boolean[]) => inventario({ elementos: conValor.map((c, i) => ({ tag: 'input', id: `campo${i}`, conValor: c })) })
+    const h = huellaPantalla(inv([false, false, false]))
+    // La huella estructural no ve el relleno (es lo que provocó el falso bucle de Allianz Hogar).
+    expect(huellaPantalla(inv([true, true, false]))).toBe(h)
+    const r0 = huellaRelleno(inv([false, false, false]))
+    const r1 = huellaRelleno(inv([true, false, false]))
+    const r2 = huellaRelleno(inv([true, true, false]))
+    expect(r0).not.toBe(r1)
+    expect(r1).not.toBe(r2)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r0, r1], actual: r2 })).toBe(false)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r2, r2], actual: r2 })).toBe(true)
+    // El progreso solo cuenta si es RECIENTE: tras él, dos pantallas más sin cambio → bucle.
+    expect(detectarBucle([h, h, h], h, 0, { anteriores: [r0, r2, r2], actual: r2 })).toBe(true)
+    // Relleno desconocido (worker antiguo) = sin cambio: lo conservador.
+    expect(huellaRelleno(inventario({ elementos: [{ tag: 'input', id: 'a' }] }))).toBeNull()
+    expect(detectarBucle([h, h], h, 0, { anteriores: [null, r1], actual: r2 })).toBe(false)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r2, null], actual: r2 })).toBe(true)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r0, r1], actual: null })).toBe(true)
+    // Techo: un relleno que oscila no sostiene el bucle para siempre.
+    const osc = Array.from({ length: MAX_HUELLA_REPETIDA_CON_PROGRESO - 1 }, (_, i) => (i % 2 ? r1 : r2))
+    expect(detectarBucle(osc.map(() => h), h, 0, { anteriores: osc, actual: r1 === osc.at(-1) ? r2 : r1 })).toBe(true)
+    expect(detectarBucle(osc.slice(1).map(() => h), h, 0, { anteriores: osc.slice(1), actual: r1 === osc.at(-1) ? r2 : r1 })).toBe(false)
+  })
+
   it('topes: el entorno solo los BAJA; el coste se mira ANTES de la llamada', () => {
     expect(topesExplorador({ TARIFICADOR_EXPLORADOR_MAX_EUR: '50', TARIFICADOR_EXPLORADOR_MAX_LLAMADAS: '5' })).toMatchObject({ maxEur: 2, maxLlamadas: 5 })
     expect(topesExplorador({ TARIFICADOR_EXPLORADOR_MAX_EUR: 'x' }).maxEur).toBe(2)
@@ -599,6 +678,72 @@ describe('redacción de los valores del cliente (exploración con datos reales)'
     expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: null, env })).toBeNull()
     expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: 'x', env })).toBeNull()
     expect(valoresSensiblesExploracion({ conDatosReales: false, riesgo, env })).toEqual(['buzon@example.test', '+34 699 000 000', '699000000'])
+  })
+})
+
+// FRONTERA DE EMISIÓN (Alberto, 14/10/2026, todas las compañías): un campo de cuenta bancaria en pantalla = fase de emisión.
+describe('frontera de emisión: cuenta bancaria', () => {
+  const campo = (c: Record<string, unknown>) => inventario({ elementos: [{ tag: 'input', type: 'text', ...c }] })
+  for (const [que, c] of [
+    ['name iban', { name: 'ibanTomador' }],
+    ['id CCC', { id: 'numCCC' }],
+    ['formcontrolname cuentaBancaria', { formControlName: 'cuentaBancaria' }],
+    ['etiqueta «Número de cuenta»', { etiqueta: 'Número de cuenta' }],
+    ['placeholder «ES00 0000…» con etiqueta IBAN', { placeholder: 'IBAN' }],
+    ['etiqueta «Domiciliación bancaria»', { etiqueta: 'Domiciliación bancaria' }],
+    ['etiqueta «BIC/SWIFT»', { etiqueta: 'BIC/SWIFT' }],
+    ['etiqueta «Entidad - Oficina - DC»', { etiqueta: 'Entidad - Oficina - DC' }],
+  ] as const) {
+    it(`para con detalle frontera_cuenta_bancaria: ${que}`, () => {
+      const p = detectarParada(campo(c))
+      expect(p?.motivo).toBe('cerca_de_emision')
+      expect(p?.detalle).toBe('frontera_cuenta_bancaria')
+    })
+  }
+  it('el motivo es legible e incluye la etiqueta del campo', () => {
+    expect(detectarParada(campo({ etiqueta: 'Número de cuenta' }))?.senal).toBe('frontera de emisión: el portal pide cuenta bancaria («Número de cuenta»)')
+  })
+  it('manda sobre un título de emisión (el detalle es el de la cuenta)', () => {
+    expect(detectarParada(inventario({ titulos: ['Datos de emisión'], elementos: [{ tag: 'input', etiqueta: 'IBAN' }] }))?.detalle).toBe('frontera_cuenta_bancaria')
+  })
+  for (const t of ['Domicilio', 'Tener en cuenta', 'Bicicleta', 'Código postal', 'Fecha de efecto']) {
+    it(`no casa con «${t}»`, () => {
+      expect(senalCuentaBancaria([t])).toBeNull()
+    })
+  }
+  // Falsos positivos que pararían Allianz/Occident (revisión 14/10/2026): uno por test.
+  for (const t of ['El inmueble no cuenta con alarma', 'Oficina de la entidad mediadora', 'accc', 'Forma de pago', 'Entidad aseguradora anterior']) {
+    it(`regresión: no casa con «${t}»`, () => {
+      expect(senalCuentaBancaria([t])).toBeNull()
+    })
+  }
+  for (const t of ['IBAN', 'Número de cuenta', 'Nº de cuenta', 'N.º cuenta', 'no. de cuenta', 'CCC', 'num_ccc', 'numCCC', 'Entidad - Oficina - DC', 'Entidad/Oficina', 'Dígito de control', 'Domiciliación bancaria']) {
+    it(`sigue casando con «${t}»`, () => {
+      expect(senalCuentaBancaria([t])).not.toBeNull()
+    })
+  }
+  for (const [que, el] of [
+    ['[role=combobox] aria-label IBAN', { tag: 'div', role: 'combobox', ariaLabel: 'IBAN' }],
+    ['[role=textbox] «Número de cuenta»', { tag: 'div', role: 'textbox', ariaLabel: 'Número de cuenta' }],
+    ['mat-select formcontrolname cuentaBancaria', { tag: 'mat-select', formControlName: 'cuentaBancaria' }],
+  ] as const) {
+    it(`control NO nativo de cuenta para con frontera_cuenta_bancaria: ${que}`, () => {
+      expect(detectarParada(inventario({ elementos: [el] }))?.detalle).toBe('frontera_cuenta_bancaria')
+    })
+  }
+  it('un botón ARIA «Domiciliación bancaria» NO es campo: detectarParada no lo mira (lo caza la segunda barrera del bucle)', () => {
+    expect(detectarParada(inventario({ elementos: [{ tag: 'div', role: 'button', texto: 'Domiciliación bancaria' }] }))).toBeNull()
+  })
+  it('frontera_cuenta_bancaria está en la lista cerrada de detalles', () => {
+    expect(DETALLES_FIN_EXPLORACION).toContain('frontera_cuenta_bancaria')
+  })
+  it('el catálogo que el worker inyecta NO tiene ninguna clave de cuenta bancaria', () => {
+    for (const [ramo, datos] of Object.entries(CATALOGO_EXPLORACION)) {
+      for (const d of datos) {
+        expect(RE_CAMPO_CUENTA_BANCARIA.test(`${d.clave} ${d.descripcion}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()), `${ramo}: ${d.clave}`).toBe(false)
+        expect(/iban|cuenta|ccc|bic|swift|domicilia|banc/i.test(d.clave), `${ramo}: ${d.clave}`).toBe(false)
+      }
+    }
   })
 })
 

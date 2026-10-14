@@ -50,7 +50,7 @@
 ## 4. Bucle de trabajo
 1. **Explorar.** Sintética para llegar hasta la pantalla que pide NIF; con datos reales solo anclada a oportunidad real (`encolarExploracion`, `apps/asegura/lib/tarificador-explorador.ts`). Topes duros: 30 llamadas IA, 80 acciones, 40 pasos, 15 min, 2 € (el env solo los baja). Envs: `TARIFICADOR_EXPLORADOR_ACTIVO=1`, `TARIFICADOR_EXPLORADOR_MODELO`, contacto `TARIFICADOR_EXPLORADOR_EMAIL/_TELEFONO` (de Alberto, solo env).
 2. **Leer** en plataforma (`/correduria/tarificador/exploraciones`) o por el puerto: mapa, `huecos`, `motivoFin`, `detalleFin` (códigos cerrados de `DETALLES_FIN_EXPLORACION`). Sin pegar datos de clientes en el chat.
-3. **Arreglar** el worker/adaptador/catálogo (agentes ejecutan; tests puros primero). Sube `EXPLORADOR_VERSION` si tocas la navegación.
+3. **Arreglar** el worker/adaptador/catálogo (agentes ejecutan; tests puros primero). Sube `EXPLORADOR_VERSION` si tocas la navegación. **Cada fallo arreglado deja fila en la Bitácora común de errores (`CONOCIMIENTO-PORTALES.md`).** Y antes de arreglar o dar de alta un bot, se lee esa tabla entera.
 4. **Reconstruir la imagen:** workflow `.github/workflows/tarificador-rpa-imagen.yml` (`workflow_dispatch`, input `etiqueta`; minúsculas, números, `. _ -`). Referencia en el resumen del run: `registry.fly.io/asegura-tarificador:<etiqueta>`. Pide OK de Alberto antes de lanzarlo desde una rama.
 5. **Actualizar `TARIFICADOR_FLY_IMAGE`** en Vercel, proyecto `central-asegura`.
 6. **Redeploy de asegura** (las envs solo se leen en un deploy nuevo; orden: asegura antes que plataforma si hay contrato nuevo).
@@ -70,6 +70,9 @@
 - **Botones que no son botones:** Calcular/Aceptar son `div` con `onclick`; los avances se identifican por id, texto, `onclick` y formulario de origen exactos, y el «Aceptar» de otra pantalla puede EMITIR.
 - **La grabación no registra la red:** los avances autorizados se vigilan con ventana de red (aborta no-GET fuera de la lista); si sale un POST nuevo, el trabajo muere y se añade tras verlo.
 - **Precio:** ePAC mostraba «Anual» = primer recibo prorrateado y «Sucesivos» = prima anual real; verifica siempre el precio contra el portal con una cotización conocida antes de confiar en el lector.
+- **Entrada que abre PESTAÑA NUEVA:** `PortalExploracion.entrar` devuelve esa `Page` y el bucle sigue en ella; las páginas de la entrada no cuentan, una abierta durante el bucle sigue siendo `sin_salida` (`entrarYExplorar`).
+- **«Emisión» como sustantivo de menú:** nunca relajar `PATRON_EMISION`; excepción por TEXTO EXACTO, por compañía y solo en la entrada (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`).
+- **Frontera de emisión = campo de cuenta bancaria** (todas las compañías): nunca se rellena; si aparece, el bot PARA sin pulsar nada (`ErrorFronteraEmision`; en el explorador, fin correcto `frontera_cuenta_bancaria`).
 - **SPA sin iframes (Mapfre NSEI, Angular Material):** selectores por `name`/`formcontrolname` con ámbito de componente; los `mat-input-N` son contadores, no se usan.
 
 ## 6. Checklist «bot listo»
@@ -82,6 +85,7 @@
 - [ ] Flag del adaptador y fila de `companias_integracion` apagados por defecto; Alberto los enciende.
 - [ ] Imagen reconstruida, `TARIFICADOR_FLY_IMAGE` actualizada, asegura redeplegada.
 - [ ] Docs al día: `CONOCIMIENTO-PORTALES.md`, `TARIFICADOR-RPA.md`, este manual si hay lección nueva.
+- [ ] Cada fallo arreglado deja fila en la Bitácora común de errores (`CONOCIMIENTO-PORTALES.md`).
 - [ ] Entrada nueva ARRIBA en `docs/CONTEXTO-SESIONES.md` (≤ 8 líneas, fecha dd/mm/aaaa).
 
 ## 7. Plantilla del PROMPT inicial (Alberto la pega en la conversación nueva)

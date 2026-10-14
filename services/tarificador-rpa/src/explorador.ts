@@ -28,10 +28,14 @@ import {
   ENTRADAS_EXPLORACION,
   extraerReferenciaPresupuesto,
   detectarBucle,
+  descripcionesElemento,
   detectarParada,
+  MOTIVO_FRONTERA_CUENTA,
+  senalCuentaBancaria,
   esAvanceAutorizado,
   esEntradaExploracion,
   huellaPantalla,
+  huellaRelleno,
   indiceRefs,
   nombresCredencial,
   normalizarRedNoGet,
@@ -54,18 +58,20 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type CuerpoResultadoPresupuesto, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, GuardadoConDialogoError, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, type GuardEmision } from './guard.ts'
 import { esperarPdf } from './descarga-pdf.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
+import { login as loginMapfre } from './adapters/mapfre/login.ts'
+import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.2.0'
+export const EXPLORADOR_VERSION = '0.2.1'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -87,12 +93,16 @@ const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 
 // ─── Portales: login y entrada, por CÓDIGO (la IA arranca después) ────────────
 
-export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'>
+export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
+  /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
+  pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+}
 
 export type PortalExploracion = {
   /** Clave de los fly secrets `CRED_<clave>_USER/_PASS`. */
   credencial: string
-  entrar: (page: Page, ctx: CtxEntrada, e: EntradaExploracion) => Promise<void>
+  /** Devuelve la página donde sigue la exploración si la entrada abrió una PESTAÑA NUEVA; sin valor = la misma `page`. */
+  entrar: (page: Page, ctx: CtxEntrada, e: EntradaExploracion) => Promise<Page | void>
 }
 
 /** Lista CERRADA de portales con entrada de exploración. Otra compañía = sin portal = no se abre el navegador. */
@@ -107,6 +117,23 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await esperarMarcoApp(page)
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
+    },
+  }),
+  // Mapfre wmediadores (14/10/2026): login → menús → «Tarificación y Emisión Rápida», que abre una PESTAÑA NUEVA con el
+  // formulario NSEI; `entrar` la DEVUELVE y el bucle sigue en ella (la original queda abierta y no cuenta como ventana
+  // nueva). El contexto NO lleva `httpCredentials` (a propósito: el diálogo de auth básica se cancela con 401).
+  mapfre: Object.freeze({
+    credencial: 'MAPFRE_WMEDIADORES',
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion): Promise<Page> => {
+      await loginMapfre(page, ctx)
+      await exigirSinVerificacion(page, 'mapfre')
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await ctx.exigirSinCaptcha()
+      const nsei = await abrirTarificacionRapidaAuto(page, ctx)
+      await exigirSinVerificacion(nsei, 'mapfre')
+      await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await exigirSinCaptcha(nsei)
+      return nsei
     },
   }),
 })
@@ -176,7 +203,23 @@ const nElementos = (inv: InventarioExploracion['inventario']) => inv.marcos.redu
 
 /** Un dato que no se puede poner → por qué se para (fail-closed: nunca se inventa). */
 export function motivoSinDato(m: MotivoSinDato): MotivoParar {
-  return m === 'clave_desconocida' ? 'ambiguo' : 'dato_sensible_requerido'
+  // `dato_no_disponible` (14/10/2026): falta un dato del riesgo (año, m²…), no es un dato SENSIBLE; decirlo así despistaba.
+  return m === 'clave_desconocida' ? 'ambiguo' : m === 'dato_no_disponible' ? 'dato_no_disponible' : 'dato_sensible_requerido'
+}
+
+/**
+ * ¿El control quedó con el valor escrito? (14/10/2026: un datepicker Angular puede vaciar o reformatear lo que `fill` puso.)
+ * Tolera el reformateo del portal: espacios, «€», separadores de fecha/miles/decimales («15/01/1980» ↔ «15-01-1980»,
+ * «120000» ↔ «120.000,00»). Vacío o distinto → `false`. Pura; los valores nunca salen de aquí.
+ */
+export function valorAplicado(escrito: string, leido: string): boolean {
+  const n = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/€/g, '')
+  const a = n(escrito)
+  const b = n(leido)
+  if (b === '') return a === ''
+  if (a === b) return true
+  const sinSep = (s: string) => s.replace(/,0+$/, '').replace(/[.,/-]/g, '')
+  return sinSep(a) === sinSep(b)
 }
 
 /**
@@ -219,8 +262,10 @@ export function valorParaControl(valor: string, el: ElementoInventario): string 
 }
 
 /** Del error que cortó la exploración a su motivo de fin. Nunca lanza. */
-export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null } {
+export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null; detalle?: DetalleFinExploracion } {
   if (e instanceof ErrorVerificacionHumana) return { motivo: 'otp', error: null }
+  // Frontera de emisión (cuenta bancaria en pantalla): fin CORRECTO de la exploración, no un fallo del guard.
+  if (e instanceof ErrorFronteraEmision) return { motivo: 'cerca_de_emision', error: null, detalle: 'frontera_cuenta_bancaria' }
   if (e instanceof EmisionBloqueadaError) return { motivo: 'guard_emision', error: { tipo: 'emision', mensaje: e.message } }
   if (e instanceof ErrorTarificador && e.tipo === 'captcha') return { motivo: 'captcha', error: null }
   const c = clasificar(e)
@@ -274,6 +319,8 @@ export type ContextoBucle = {
   hoy?: () => Date
   /** Espera tras rellenar un campo que autocompleta, antes de reinventariar (por defecto `ESPERA_REPINTADO_MS`). */
   esperaRepintadoMs?: number
+  /** Páginas que ya existían al terminar la ENTRADA (por defecto, solo `page`): cualquier otra = ventana nueva → `sin_salida`. */
+  paginasDeEntrada?: readonly Page[]
   /** Espera del PDF tras cada guardado (por defecto `TOPE_PDF_GUARDADO_MS`). */
   topePdfMs?: number
 }
@@ -295,6 +342,9 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   const red = new Set<string>()
   const efectos = new Set<EfectoPortal>()
   const huellas: string[] = []
+  const deEntrada = new Set<Page>(k.paginasDeEntrada ?? [page])
+  /** Huella de RELLENO de cada pantalla de `huellas` (alineadas): misma huella con más campos rellenos no es bucle. */
+  const rellenos: (string | null)[] = []
   let pasos = 0
   let acciones = 0
   let avancesFallidos = 0
@@ -316,14 +366,18 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       k.guard.comprobar()
       await exigirSinCaptcha(page)
       await exigirSinVerificacion(page, k.compania)
-      // Una ventana nueva (popup) no se sigue en v1: hueco.
-      if (page.context().pages().length > 1) throw new Parar('sin_salida')
+      // Una ventana nueva (popup) abierta DURANTE el bucle no se sigue en v1: hueco. Las de la entrada no cuentan.
+      if (page.context().pages().some((p) => !deEntrada.has(p))) throw new Parar('sin_salida')
       await captura?.liberar()
       captura = await capturarInventarioExploracion(page)
       if (!captura) throw new Error('no se pudo leer el inventario de la pantalla')
       const inv = captura.inventario
       const parada = detectarParada(inv)
-      if (parada) throw new Parar(parada.motivo)
+      if (parada) {
+        // La señal (p. ej. la ETIQUETA del campo de cuenta bancaria; nunca un valor) va al log local; al cierre, el código.
+        if (parada.detalle) k.log('exploracion_parada', { motivo: parada.motivo, detalle: parada.detalle, senal: parada.senal })
+        throw new Parar(parada.motivo, parada.detalle)
+      }
       const huella = huellaPantalla(inv)
       if (huellaAntesDeAvanzar !== null) avancesFallidos = huella === huellaAntesDeAvanzar ? avancesFallidos + 1 : 0
       huellaAntesDeAvanzar = null
@@ -333,8 +387,10 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         if (++repintadosSeguidos > MAX_REPINTADOS_SEGUIDOS) throw new Parar('bucle', 'repintados_seguidos')
       } else {
         repintadosSeguidos = 0
-        if (detectarBucle(huellas, huella, avancesFallidos)) throw new Parar('bucle')
+        const relleno = huellaRelleno(inv)
+        if (detectarBucle(huellas, huella, avancesFallidos, { anteriores: rellenos, actual: relleno })) throw new Parar('bucle')
         huellas.push(huella)
+        rellenos.push(relleno)
       }
       trasRepintado = false
 
@@ -367,6 +423,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         const hit = refs.get(a.ref)
         const nodo = captura.nodos.get(a.ref)
         if (!hit || !nodo) throw new Parar('ambiguo', 'ref_fuera_de_captura')
+        // Frontera de emisión: un campo de cuenta bancaria NUNCA se rellena, elige ni marca (segunda barrera tras detectarParada).
+        const cuenta = senalCuentaBancaria(descripcionesElemento(hit.el))
+        if (cuenta !== null) {
+          k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)` })
+          throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria')
+        }
         const loc = await localizar(nodo, hit.el)
         if (!loc) {
           // Lo ya hecho en este lote pudo repintar la pantalla (autocompletado): se corta aquí y se reinventaría; la IA ve
@@ -393,7 +455,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             }
             await k.pausaAccion()
             // 🔑 El valor no se loguea ni sale del proceso: va directo al campo.
-            await loc.fill(valorParaControl(d.valor, hit.el), { timeout: 10_000 })
+            const escrito = valorParaControl(d.valor, hit.el)
+            await loc.fill(escrito, { timeout: 10_000 })
             hechas++
             const quedan = i < lote.length - 1
             if (CLAVES_AUTOCOMPLETADO.has(a.dato)) {
@@ -403,12 +466,16 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
               await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
               await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
               cortar = quedan
-            } else if (quedan) {
-              // ¿Cambió la estructura al escribir? Solo importa si quedan acciones (si no, el bucle reinventaría igualmente).
-              const sonda = await capturarInventarioExploracion(page).catch(() => null)
-              const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
-              await sonda?.liberar()
-              cortar = cortarLoteTrasRellenar(a.dato, antes, despues)
+            } else {
+              const fijado = await fijarValor(loc, escrito)
+              if (fijado !== 'ok') k.log('exploracion_valor', { n: pasos, ref: a.ref, estado: fijado })
+              if (quedan) {
+                // ¿Cambió la estructura al escribir? Solo importa si quedan acciones (si no, el bucle reinventaría igualmente).
+                const sonda = await capturarInventarioExploracion(page).catch(() => null)
+                const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
+                await sonda?.liberar()
+                cortar = cortarLoteTrasRellenar(a.dato, antes, despues)
+              }
             }
           } else if (a.accion === 'elegir') {
             await k.pausaAccion()
@@ -476,7 +543,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
     if (e instanceof GuardadoConDialogoError && !k.guard.violacion()) return fin('ambiguo', null, 'guardado_con_dialogo')
     // Una violación del guard en segundo plano manda sobre el error con el que se cortó.
     const f = finDeError(k.guard.violacion() ?? e)
-    return fin(f.motivo, f.error)
+    return fin(f.motivo, f.error, f.detalle)
   } finally {
     await captura?.liberar()
   }
@@ -491,6 +558,29 @@ async function referenciaVisible(page: Page): Promise<string | null> {
     if (r) return r
   }
   return null
+}
+
+/**
+ * Tras el `fill` de un campo SIN autocompletado (14/10/2026): se le quita el foco (sin clic ni Enter) y se RELEE. Si el
+ * portal lo dejó vacío o distinto (datepicker Angular), UN reintento tecleando carácter a carácter (`pressSequentially`,
+ * solo el valor: nunca Enter ni Tab). Nunca lanza; el valor no sale de aquí (ni al log). `desconocido` = el nodo ya no se
+ * puede leer (repintado): lo verá el siguiente inventario (`conValor`/`invalido`).
+ */
+async function fijarValor(loc: Locator, valor: string): Promise<'ok' | 'reintentado' | 'no_aplicado' | 'desconocido'> {
+  const leer = () => loc.inputValue({ timeout: 5_000 }).catch(() => null)
+  await loc.blur({ timeout: 5_000 }).catch(() => undefined)
+  const v1 = await leer()
+  if (v1 === null) return 'desconocido'
+  if (valorAplicado(valor, v1)) return 'ok'
+  try {
+    await loc.clear({ timeout: 5_000 })
+    await loc.pressSequentially(valor, { delay: 60, timeout: 15_000 })
+    await loc.blur({ timeout: 5_000 }).catch(() => undefined)
+  } catch {
+    return 'no_aplicado'
+  }
+  const v2 = await leer()
+  return v2 !== null && valorAplicado(valor, v2) ? 'reintentado' : 'no_aplicado'
 }
 
 /**
@@ -524,7 +614,43 @@ export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string)
   const f = finDeError(e)
   // La evidencia es un extra: si sanearla fallara, el fin conserva su motivo/error en vez de caer al catch genérico.
   const evidencia = await capturarEvidencia(page).then((ev) => sanearEvidencia(ev, redactar, secretosDelEntorno(env))).catch(() => undefined)
-  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(evidencia ? { evidencia } : {}) }
+  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(f.detalle ? { detalle: f.detalle } : {}), ...(evidencia ? { evidencia } : {}) }
+}
+
+/**
+ * La ENTRADA cerrada y el bucle, sobre la página donde terminó la entrada (la que `entrar` devuelve si abrió una pestaña
+ * nueva; si no, la misma `page`). Cierra la fase de entrada del guard antes del primer paso. Nunca lanza: un fallo de la
+ * entrada sale por `finDeEntrada` con la evidencia de esa página.
+ */
+export async function entrarYExplorar(
+  page: Page,
+  portal: PortalExploracion,
+  ctx: CtxEntrada,
+  e: EntradaExploracion,
+  d: {
+    guard: GuardEmision
+    redactar: (t: string) => string
+    env: Record<string, string | undefined>
+    alEntrar?: () => void
+    contextoBucle: (pagina: Page) => ContextoBucle
+  },
+): Promise<FinBucle> {
+  let pagina = page
+  try {
+    const devuelta = await portal.entrar(page, ctx, e)
+    if (devuelta && devuelta !== page) {
+      pagina = devuelta
+      pagina.setDefaultTimeout(TOPE_PASO_MS)
+      pagina.setDefaultNavigationTimeout(TOPE_PASO_MS)
+      pagina.on('dialog', (dlg) => { dlg.dismiss().catch(() => {}) })
+    }
+    cerrarFaseEntrada(d.guard)
+    d.alEntrar?.()
+    return await bucleExploracion(pagina, { ...d.contextoBucle(pagina), paginasDeEntrada: pagina === page ? [page] : [page, pagina] })
+  } catch (err) {
+    // Fallo de la ENTRADA cerrada (login, menús, producto): antes del primer paso. Con la evidencia del flujo real.
+    return finDeEntrada(d.guard.violacion() ?? err, pagina, d.redactar, d.env)
+  }
 }
 
 export type EntradaEjecucion = {
@@ -618,31 +744,31 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
         await pulsar(boton, guard)
       },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
+      pulsarEnlaceEntrada: async (boton) => {
+        await dormir(azar(300, 1_200))
+        await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania)
+      },
     }
-    try {
-      await portal.entrar(page, ctxEntrada, entrada)
-      log('exploracion_entrada_ok', { entrada: exp.entrada })
-      finExp = await bucleExploracion(page, {
+    finExp = await entrarYExplorar(page, portal, ctxEntrada, entrada, {
+      guard, redactar, env,
+      alEntrar: () => log('exploracion_entrada_ok', { entrada: exp.entrada }),
+      contextoBucle: (pagina) => ({
         trabajoId: trabajo.id, compania: trabajo.compania, ramo: trabajo.ramo, entrada: exp.entrada, conDatosReales: exp.conDatosReales,
         riesgo: trabajo.riesgo, env, guard,
         pulsar: ctxEntrada.pulsar,
         pulsarAutorizado: async (boton, el, marco) => {
           await dormir(azar(300, 1_200))
-          await pulsarExploracionAutorizada(page, guard, boton, { entrada: exp.entrada, el, marco })
+          await pulsarExploracionAutorizada(pagina, guard, boton, { entrada: exp.entrada, el, marco })
         },
         pulsarGuardado: async (boton, el, pantalla, trasClic) => {
           await dormir(azar(300, 1_200))
-          await pulsarGuardadoPresupuesto(page, guard, boton, { el, pantalla }, trasClic)
+          await pulsarGuardadoPresupuesto(pagina, guard, boton, { el, pantalla }, trasClic)
         },
         pausaAccion: () => dormir(azar(300, 1_200)),
         pedirPaso: (cuerpo) => pedirPaso(cfg, cuerpo),
         log,
-      })
-    } catch (e) {
-      // Fallo de la ENTRADA cerrada (login, «Nueva Alta», producto): antes del primer paso. Con la evidencia del flujo
-      // real (URL, captura y HTML con marcos, redactados) para ver la pantalla en la que se quedó.
-      finExp = await finDeEntrada(guard.violacion() ?? e, page, redactar, env)
-    }
+      }),
+    })
   } catch (e) {
     const c = clasificar(e)
     finExp = { motivo: 'error_portal', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: c.mensaje }, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0 }

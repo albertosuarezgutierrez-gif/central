@@ -44,8 +44,8 @@ export type DatosAceptacion = {
    */
   vistoAntes: { opciones: number; companias: number; informacionMediador: string; versionTextos: string }
   /**
-   * Las exigencias y necesidades que el corredor anotó a partir de lo que contó el cliente (art. 20
-   * Ley 16/2018). `null` = no constan por escrito, y el documento lo dice en vez de callarlo.
+   * Las exigencias y necesidades que el corredor anotó a partir de lo que contó el cliente (art. 175.1
+   * RDL 3/2020). `null` = no constan por escrito, y el documento lo dice en vez de callarlo.
    */
   necesidades: string | null
   /** La ficha IPID de la opción elegida que el portal enseñaba. `null` = no había ninguna. */

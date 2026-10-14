@@ -52,6 +52,8 @@ export type ElementoInventario = {
   opcionesTotal?: number
   /** ¿El control tiene ya ALGÚN valor? Solo el booleano: el valor nunca sale del navegador. */
   conValor?: boolean
+  /** ¿El portal marca el control como INVÁLIDO (aria-invalid, `ng-invalid`, error NDBX)? Solo el booleano (14/10/2026). */
+  invalido?: true
 }
 
 /** Un importe visible de la pantalla (`m<marco>p<índice crudo>`): SOLO el número en euros, nunca el texto. */
@@ -218,6 +220,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (eo.requerido === true) el.requerido = true
       if (eo.deshabilitado === true) el.deshabilitado = true
       if (typeof eo.conValor === 'boolean' && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.conValor = eo.conValor
+      if (eo.invalido === true && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.invalido = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
         && [eo.id, eo.name, eo.ariaLabel].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) {
@@ -391,7 +394,7 @@ export function redactarValoresInventario(inv: InventarioDom, valores: readonly 
 const CLAVES_RIESGO_SENSIBLES = new Set([
   'nombre', 'nombrecompleto', 'apellido', 'apellido1', 'apellido2', 'apellidos', 'razonsocial',
   'direccion', 'domicilio', 'via', 'nombrevia', 'calle', 'codigopostal', 'cp', 'poblacion', 'municipio', 'localidad',
-  'fechanacimiento', 'matricula', 'nif', 'dni', 'nie', 'documento', 'email', 'correo', 'telefono', 'movil',
+  'fechanacimiento', 'fechacarne', 'matricula', 'nif', 'documentoidentidad', 'dni', 'nie', 'documento', 'email', 'correo', 'telefono', 'movil',
 ])
 
 /**

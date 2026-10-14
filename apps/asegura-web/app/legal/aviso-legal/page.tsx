@@ -300,7 +300,7 @@ export default function AvisoLegal() {
           <p style={parrafo}>
             Este aviso y el uso del sitio se rigen por la legislación española, en particular por la
             Ley 34/2002 de servicios de la sociedad de la información y por la normativa de
-            distribución de seguros (Ley 16/2018 y Real Decreto-ley 3/2020).
+            distribución de seguros (Real Decreto-ley 3/2020).
           </p>
           <p style={parrafoUltimo}>
             Si eres consumidor, son competentes los juzgados y tribunales de tu domicilio, y ninguna

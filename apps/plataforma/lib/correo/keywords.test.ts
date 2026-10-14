@@ -69,3 +69,54 @@ test('sin señal clara → null (decide la IA)', () => {
   assert.equal(clasificarPorKeyword('gabriel@cortijoeltoril.com', 'Consulta general'), null)
   assert.equal(clasificarPorKeyword('', ''), null)
 })
+
+// ── Avisos operativos de compañía y Codeoscopic (14/10/2026) ───────────────
+test('aviso legítimo de info.mapfre.com → correduria (recibo si el asunto es de recibo)', () => {
+  assert.equal(clasificarPorKeyword('avisosrecibos@info.mapfre.com', 'Aviso de recibo pendiente')?.categoria, 'correduria-recibo')
+  assert.equal(clasificarPorKeyword('avisosrecibos@info.mapfre.com', 'Información de su póliza')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('enviodocumentacionpoliza@info.mapfre.com', 'Su documentación')?.categoria, 'correduria')
+})
+
+test('publicidad mapfretecuidamos → ruido', () => {
+  assert.equal(clasificarPorKeyword('mapfretecuidamos@info.mapfre.com', 'Cuida tu salud este otoño')?.categoria, 'ruido')
+})
+
+test('avisos operativos por asunto (MAO, ticket, fichero, desbloqueo) → correduria', () => {
+  assert.equal(clasificarPorKeyword('soporte@mapfre.com', 'Cierre de MAO desktop')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('soporte@occident.com', 'Ticket Cerrado 12345')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('ficheros@reale.es', 'Movimientos a Fichero')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('mediador@allianz.es', 'Solicitud de desbloqueo de póliza')?.categoria, 'correduria')
+})
+
+test('Codeoscopic: operativo → correduria, newsletter → ruido', () => {
+  assert.equal(clasificarPorKeyword('soporte@codeoscopic.com', 'Incidencia resuelta en su ERP')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('newsletter@codeoscopic.com', 'Novedades')?.categoria, 'ruido')
+  assert.equal(clasificarPorKeyword('equipo@codeoscopic.com', 'Webinar: nueva versión')?.categoria, 'ruido')
+})
+
+test('Codeoscopic: sus FACTURAS no son correduría operativa → decide la IA (como antes de la regla)', () => {
+  assert.equal(clasificarPorKeyword('facturacion@codeoscopic.com', 'Su factura de octubre'), null)
+  assert.equal(clasificarPorKeyword('facturas@codeoscopic.com', 'Documento 2026-123'), null)
+  assert.equal(clasificarPorKeyword('soporte@codeoscopic.com', 'Factura 2026-123 disponible'), null)
+  // «invoice» sigue la regla genérica de asunto de siempre (contabilidad), nunca correduría.
+  assert.notEqual(clasificarPorKeyword('billing@codeoscopic.com', 'Your invoice is ready')?.categoria, 'correduria')
+})
+
+test('nuevas aseguradoras: recibo devuelto → correduria-recibo', () => {
+  for (const d of ['helvetia.es', 'santalucia.es', 'pelayo.com', 'segurcaixaadeslas.es', 'fiatc.es', 'mapfre.es']) {
+    assert.equal(clasificarPorKeyword(`mediadores@${d}`, 'Recibos devueltos de banco')?.categoria, 'correduria-recibo', d)
+  }
+})
+
+test('🚨 venta directa / salud NO son aseguradora de la correduría: pueden ser pólizas PERSONALES de Alberto', () => {
+  // Un «recibo devuelto» de Sanitas o Línea Directa puede ser el seguro de Alberto, no de un cliente:
+  // no se manda a correduría ni a la cartera; decide la IA.
+  for (const d of ['sanitas.es', 'dkv.es', 'asisa.es', 'verti.es', 'lineadirecta.es', 'mutua.es', 'mutuamadrilena.es']) {
+    assert.equal(clasificarPorKeyword(`clientes@${d}`, 'Recibos devueltos de banco'), null, d)
+    assert.equal(clasificarPorKeyword(`avisos@${d}`, 'Siniestro 123456: documentación'), null, d)
+  }
+})
+
+test('comunicado comercial de compañía NO se vuelve operativo', () => {
+  assert.equal(clasificarPorKeyword('ccorredor@mapfre.com', 'Campaña de otoño para mediadores')?.categoria ?? null, null)
+})

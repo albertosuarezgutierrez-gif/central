@@ -23,6 +23,46 @@ export function fechaAccionable(fechaEvento: Date): Date {
 }
 
 /**
+ * Cuánto antes de la fecha accionable puede haber salido, como mucho, un aviso de ESTE ciclo: la mayor
+ * antelación elegible en «Configuración» (`DIAS_ANTELACION_MAX` = 30, en `preferencias-avisos.ts`) + 1
+ * de margen. Literal y no importado para no cerrar un ciclo de imports; un test vigila que coincidan.
+ */
+export const DIAS_VIGENCIA_SELLO = 31
+
+/**
+ * ¿Este sello (`avisadaAt`/`avisadaPushAt`) es de ESTE ciclo de la obligación? (14/10/2026). Un sello
+ * anterior a `fechaAccionable − DIAS_VIGENCIA_SELLO` es del vencimiento del año pasado: no prueba que se
+ * haya avisado de este. `null` = no hay sello.
+ */
+export function selloDeEsteCiclo(sello: Date | null, fechaAccionableActual: Date): boolean {
+  if (sello === null) return false
+  return sello.getTime() >= diaUtc(fechaAccionableActual).getTime() - DIAS_VIGENCIA_SELLO * MS_DIA
+}
+
+/**
+ * Los sellos que hay que SOLTAR al re-sincronizar una obligación de cartera (14/10/2026).
+ *
+ * 🚨 Una obligación de cartera es UNA fila por (identidad, póliza, tipo) que se reutiliza año tras año:
+ * al renovar, el upsert le cambia las fechas. Si los sellos del año pasado siguen puestos, ningún cron
+ * vuelve a avisar: el año 2 el preaviso del art. 22 LCS no sale por NINGÚN canal, y nada falla.
+ *
+ * Criterio por ANTIGÜEDAD del sello y no por «cambió la fecha»: así también se cura sola una fila cuya
+ * fecha ya se renovó antes de este arreglo (la sincronización siguiente no ve cambio, pero el sello es
+ * viejo). Un sello de este ciclo se conserva: reabrirlo repetiría un aviso ya mandado.
+ * Fila nueva (`previa` ausente) → `{}`.
+ */
+export function sellosAReiniciar(
+  previa: { avisadaAt: Date | null; avisadaPushAt: Date | null } | undefined,
+  fechaAccionableNueva: Date,
+): { avisadaAt?: null; avisadaPushAt?: null } {
+  if (!previa) return {}
+  const out: { avisadaAt?: null; avisadaPushAt?: null } = {}
+  if (previa.avisadaAt !== null && !selloDeEsteCiclo(previa.avisadaAt, fechaAccionableNueva)) out.avisadaAt = null
+  if (previa.avisadaPushAt !== null && !selloDeEsteCiclo(previa.avisadaPushAt, fechaAccionableNueva)) out.avisadaPushAt = null
+  return out
+}
+
+/**
  * El id del vencimiento que el correo de la intranet DERIVA de la póliza cuando el cliente no tiene
  * obligación en el portal (nunca ha abierto su bóveda: 27/09/2026). Es la clave con la que se sella
  * (`obligacion_en_ventana:<esto>`), y el cron de vencimientos la mira antes de mandar la suya: si el
@@ -43,8 +83,8 @@ export const DIAS_VENTANA_AVISO = 7
 
 /**
  * `dias` (13/10/2026): la antelación que la persona eligió para SUS avisos push en «Configuración»
- * (`diasAntelacionEfectivos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre: el correo de
- * `apps/asegura` y la campana no lo pasan y no cambian.
+ * (`resolverPreferenciasAvisos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre. El correo de
+ * `apps/asegura`, el digest y la campana pasan `diasVentanaVencimiento()` (nunca menos de 7; 14/10/2026).
  */
 export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date; dias?: number }): boolean {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
@@ -74,8 +114,11 @@ export function debeRecordarVencimiento(x: {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
   if (faltan < 0 || faltan > DIAS_RECORDATORIO_VENCIMIENTO) return false
   if (x.hoy.getTime() - x.avisadoEn.getTime() < DIAS_MIN_ENTRE_AVISOS * MS_DIA) return false
-  // Entró después del primer aviso: lo ha visto. No se le insiste.
-  return x.ultimoAcceso === null || x.ultimoAcceso.getTime() < x.avisadoEn.getTime()
+  // Una visita solo calla el recordatorio si es posterior al primer aviso Y cae en los últimos
+  // DIAS_VENTANA_AVISO días: con avisos a 30 días, una visita del día 25 no puede dejar sin aviso los últimos 29.
+  if (x.ultimoAcceso === null) return true
+  const desde = Math.max(x.avisadoEn.getTime(), diaUtc(x.fechaAccionable).getTime() - DIAS_VENTANA_AVISO * MS_DIA)
+  return x.ultimoAcceso.getTime() < desde
 }
 
 /**

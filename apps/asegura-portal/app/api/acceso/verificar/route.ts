@@ -112,7 +112,7 @@ export async function POST(req: Request) {
 
 /**
  * Lo común a los dos canjes (código o enlace directo), ya validados: identidad, acreditación del
- * art. 19 LDS, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión.
+ * art. 173 RDL 3/2020, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión.
  * `codigoId` = el código a gastar en la misma transacción (`null` si se entró por enlace, que ya
  * quedó gastado antes).
  */
@@ -128,7 +128,7 @@ async function abrirSesion(req: Request, tipo: 'whatsapp' | 'email', destino: st
       })
     ).id
 
-  // Acreditación del art. 19 LDS. La pantalla de entrada dice, encima del botón,
+  // Acreditación del art. 173 RDL 3/2020. La pantalla de entrada dice, encima del botón,
   // que al entrar se da por leída la información del mediador y aceptadas las
   // condiciones, con los tres enlaces al lado: por eso esta fila afirma algo que
   // de verdad ocurrió. Si alguien quita esa línea de la UI, esta escritura pasa

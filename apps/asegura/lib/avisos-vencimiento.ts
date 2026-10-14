@@ -12,7 +12,8 @@
  *
  * Cuatro reglas que no se negocian:
  *   1. La ventana y la fecha accionable las decide `@central/module-seguros-portal`
- *      (`entraEnVentana`, `DIAS_VENTANA_AVISO`). Aquí NO se hace aritmética de
+ *      (`entraEnVentana`, `DIAS_VENTANA_AVISO`, y la antelación de la ficha con
+ *      `diasVentanaVencimiento`). Aquí NO se hace aritmética de
  *      fechas de negocio: duplicarla es cómo se acaba avisando el día equivocado.
  *   2. **Modo cuenta por defecto.** Sin `ASEGURA_AVISOS_ACTIVOS === '1'` NO sale
  *      ni un correo: se cuenta y se informa. Un cron de avisos no se estrena a
@@ -49,8 +50,11 @@ import {
   type IntervinienteFicha,
   type ReciboVigencia,
 } from '@central/module-seguros'
-import { DIAS_VENTANA_AVISO, entraEnVentana, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
+import { DIAS_ANTELACION_MAX, DIAS_VENTANA_AVISO, entraEnVentana, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
+import { ORIGEN_VINCULO_CORREDOR } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { registrarErrorCartera } from './error-cartera'
+import { canalesPorFicha, decidirAvisoVencimiento, diasEfectivosDeFicha, type CanalesDeFichas } from './avisos-vencimiento-canal.ts'
 import {
   LIMITE_OBLIGACIONES,
   MARGEN_CANDIDATA_MS,
@@ -83,6 +87,8 @@ export type ResumenAvisos = {
    * La criba SQL tocó su techo (`LIMITE_OBLIGACIONES`): puede haber MÁS
    * obligaciones que avisar hoy y esta pasada no las ha visto. NO es «hay
    * exactamente 500»: es un «no lo sé» que antes viajaba como si fuera el total.
+   * La criba mira 30 días (la mayor antelación) en orden ascendente: lo no visto
+   * es siempre lo más lejano, y vuelve en pasadas siguientes al acercarse.
    */
   truncado: boolean
   /**
@@ -91,6 +97,17 @@ export type ResumenAvisos = {
    * dicen: un `enviados` corto sin esto se lee como «hoy tocaban pocas».
    */
   pendientes: number
+  /**
+   * Candidatas que NO se mandan porque su push ya salió a una persona de la ficha y todas las de la
+   * ficha eligieron «solo en el móvil» (`decidirAvisoVencimiento`). No se sellan: si cambia de opinión dentro de la
+   * ventana, el correo sale en la pasada siguiente (y sin `avisada_at` tampoco hay recordatorio).
+   */
+  omitidosSoloMovil: number
+  /**
+   * `false` = no se pudieron leer los vínculos/preferencias del portal y se ha mandado como antes de
+   * existir la preferencia (fail-open; antelación de 7 días). `true` cuando se leyeron o no hizo falta mirar.
+   */
+  preferenciasLeidas: boolean
 }
 
 /**
@@ -239,6 +256,39 @@ async function leerAllegadosDeTomador(
 }
 
 /**
+ * Las identidades vinculadas a estas fichas y el canal y la antelación que eligió cada una en el portal
+ * (14/10/2026), para `decidirAvisoVencimiento()` y `diasEfectivosDeFicha()` (UNA lectura para las dos). La usan también los correos de vencimiento de `avisos-intranet.ts`.
+ * Solo LEE. Sin el vínculo temporal del CORREDOR (apunta a la ficha que Alberto tuviera abierta, no
+ * es una persona de esa ficha). Lápidas: no hace falta mirarlas, `fusionar_clientes()` re-apunta los
+ * vínculos a la superviviente (ver la cabecera de `avisos-vencimiento-canal.ts`).
+ * `null` = la lectura falló (fail-open en quien llama, y se dice).
+ */
+export async function leerCanalesDeFichas(
+  db: ReturnType<typeof prismaAsegura>,
+  fichaIds: string[],
+  contexto = 'avisos-vencimiento',
+): Promise<CanalesDeFichas> {
+  if (fichaIds.length === 0) return new Map()
+  try {
+    const vinculos = await db.portalVinculo.findMany({
+      where: { clienteId: { in: fichaIds }, origen: { not: ORIGEN_VINCULO_CORREDOR } },
+      select: { identidadId: true, clienteId: true },
+    })
+    const identidadIds = [...new Set(vinculos.map((v) => v.identidadId))]
+    const prefs = identidadIds.length
+      ? await db.portalPreferenciasAvisos.findMany({
+          where: { identidadId: { in: identidadIds } },
+          select: { identidadId: true, canal: true, diasAntelacion: true },
+        })
+      : []
+    return canalesPorFicha({ vinculos, prefsDe: new Map(prefs.map((p) => [p.identidadId, { canal: p.canal, diasAntelacion: p.diasAntelacion }])) })
+  } catch (e) {
+    registrarErrorCartera(`${contexto}/preferencias-portal`, e)
+    return null
+  }
+}
+
+/**
  * Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el
  * proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin
  * remitente—, para que el endpoint responda 503 en vez de un `enviados: 0` que
@@ -259,7 +309,11 @@ export async function ejecutarAvisosVencimiento(opts: {
   const db = prismaAsegura()
 
   // El rango en SQL es una CRIBA (para no traerse decenas de miles de filas);
-  // quien decide de verdad es `entraEnVentana` del módulo puro, más abajo.
+  // quien decide de verdad es `entraEnVentana` del módulo puro, más abajo, con
+  // los días de CADA ficha (`diasEfectivosDeFicha`, 14/10/2026). La criba llega
+  // hasta la mayor antelación elegible (30) y va en orden ASCENDENTE de fecha:
+  // si toca el techo, lo que se queda fuera es lo MÁS lejano, nunca un aviso de
+  // 7 días mientras quepa uno de 30 (el mismo patrón que `avisos-push`).
   const filas = await db.portalObligacion.findMany({
     where: {
       avisadaAt: null,
@@ -280,15 +334,17 @@ export async function ejecutarAvisosVencimiento(opts: {
       // deriva un tipo NUEVO de la cartera, lo correcto es que se avise (el
       // comportamiento de hoy) y no que enmudezca sin que nadie se entere.
       tipo: { notIn: [...TIPOS_RECORDATORIO_PROPIO] },
-      fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
+      fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_ANTELACION_MAX * MS_DIA) },
     },
-    orderBy: { fechaAccionable: 'asc' },
+    orderBy: [{ fechaAccionable: 'asc' }, { id: 'asc' }],
     take: LIMITE_OBLIGACIONES,
   })
   // El techo se DECLARA. Antes se recortaba en silencio y el resumen presentaba
   // el recorte como el total de lo que tocaba avisar hoy.
   const truncado = cribaTruncada(filas.length)
-  const enVentana = filas.filter((f) => entraEnVentana({ fechaAccionable: f.fechaAccionable, hoy }))
+  // Primera puerta, la ANCHA (la mayor antelación posible); la de cada ficha va después de leer sus
+  // preferencias.
+  const enCriba = filas.filter((f) => entraEnVentana({ fechaAccionable: f.fechaAccionable, hoy, dias: DIAS_ANTELACION_MAX }))
 
   // Las pólizas de las obligaciones, EN VIVO y solo las de CIMA (`import_ref IS
   // NULL`). Una obligación cuya póliza es del volcado —o ya no está— no es
@@ -300,7 +356,7 @@ export async function ejecutarAvisosVencimiento(opts: {
   // canceladas y 5 tienen vencimiento futuro. Sin este filtro, una póliza
   // cancelada DESPUÉS de derivarse su obligación mandaría un correo diciéndole
   // a alguien que decida sobre un seguro que ya no tiene.
-  const polizaIds = [...new Set(enVentana.map((f) => f.polizaId).filter((id): id is string => id !== null))]
+  const polizaIds = [...new Set(enCriba.map((f) => f.polizaId).filter((id): id is string => id !== null))]
   const polizas = polizaIds.length
     ? await db.poliza.findMany({
         where: {
@@ -341,15 +397,27 @@ export async function ejecutarAvisosVencimiento(opts: {
     : []
   const porId = new Map(polizas.map((p) => [p.id, p]))
 
-  // Candidata = en ventana Y no encadenada a una póliza del volcado. Una
-  // obligación SIN póliza (declarada por el usuario) sí es candidata: toca
-  // avisar y sencillamente no hay por dónde — eso se cuenta como `sinCanal`,
-  // que es la verdad, y no se esconde restándola del total.
-  const candidatas = enVentana.filter((f) => f.polizaId === null || porId.has(f.polizaId))
+  // «Configuración → Avisos» del portal (14/10/2026): UNA lectura para toda la pasada (canal y
+  // antelación). También en el ensayo, para que el recuento diga cuántos saldrían de verdad.
+  const canalesDeFicha = await leerCanalesDeFichas(db, [...new Set(polizas.map((p) => p.cliente.id))])
+
+  // Candidata = en la ventana de SU ficha Y no encadenada a una póliza del
+  // volcado. Una obligación SIN póliza (declarada por el usuario) sí es
+  // candidata, con los 7 de siempre: toca avisar y sencillamente no hay por
+  // dónde — eso se cuenta como `sinCanal`, que es la verdad, y no se esconde
+  // restándola del total.
+  const candidatas = enCriba.filter((f) => {
+    if (f.polizaId === null) return entraEnVentana({ fechaAccionable: f.fechaAccionable, hoy, dias: DIAS_VENTANA_AVISO })
+    const p = porId.get(f.polizaId)
+    return p !== undefined && entraEnVentana({ fechaAccionable: f.fechaAccionable, hoy, dias: diasEfectivosDeFicha(canalesDeFicha, p.cliente.id) })
+  })
 
   const resumen: ResumenAvisos = {
     candidatas: candidatas.length, enviados: 0, enviadosATercero: 0, sinCanal: 0, fallidos: 0,
-    soloContar, truncado, pendientes: 0,
+    soloContar, truncado, pendientes: 0, omitidosSoloMovil: 0, preferenciasLeidas: canalesDeFicha !== null,
+  }
+  if (canalesDeFicha === null) {
+    console.error('[avisos] preferencias del portal NO leídas: se manda como antes (fail-open) y con 7 días de antelación')
   }
   if (candidatas.length === 0) return resumen
 
@@ -398,6 +466,20 @@ export async function ejecutarAvisosVencimiento(opts: {
       const ya = await db.portalAvisoEnviado.findFirst({ where: { clienteId: poliza.cliente.id, clave }, select: { id: true } })
       if (ya) {
         await db.portalObligacion.update({ where: { id: o.id }, data: { avisadaAt: new Date() } })
+        continue
+      }
+    }
+    // 🚨 Antes de resolver destinatario: «solo en el móvil» calla también el correo a la persona de
+    // referencia, que es el mismo aviso sobre la misma póliza. Sin sello (ver `omitidosSoloMovil`).
+    if (poliza) {
+      const decision = decidirAvisoVencimiento({
+        origen: { tipo: 'obligacion', identidadId: o.identidadId, avisadaPushAt: o.avisadaPushAt, fechaAccionable: o.fechaAccionable },
+        fichaId: poliza.cliente.id,
+        canales: canalesDeFicha,
+      })
+      if (!decision.enviar) {
+        resumen.omitidosSoloMovil += 1
+        console.info(`[avisos] obligación ${o.id} omitida: ${decision.motivo}`)
         continue
       }
     }

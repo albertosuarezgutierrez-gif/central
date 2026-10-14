@@ -6,7 +6,7 @@ import { lineaIdentificacion } from '@central/module-seguros'
  * Pie legal del portal. Va en el layout raíz, así que sale en TODAS las
  * pantallas, incluida la de entrada.
  *
- * No es decoración ni un pie de cortesía: el art. 19 de la Ley 16/2018 obliga a
+ * No es decoración ni un pie de cortesía: el art. 173 del RDL 3/2020 obliga a
  * que el cliente pueda identificar al mediador y saber dónde reclamar antes de
  * darle un dato, y la única pantalla que ve alguien que aún no ha entrado es
  * justamente la que pide el correo. Por eso la línea de identificación está

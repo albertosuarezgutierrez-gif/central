@@ -1,5 +1,5 @@
-// Información precontractual del mediador (art. 19 de la Ley 16/2018 de
-// Distribución de Seguros, RDL 3/2020).
+// Información precontractual del mediador (art. 173 del RDL 3/2020, de
+// distribución de seguros y reaseguros privados).
 //
 // Es OBLIGATORIA y tiene que estar disponible ANTES de que el cliente entregue
 // ningún dato, así que esta página no depende de nada que pueda fallar: sin
@@ -31,7 +31,7 @@ import { url } from '@/lib/sitio'
 export const metadata: Metadata = {
   title: 'Información del mediador',
   description:
-    'Información precontractual del mediador (art. 19 de la Ley 16/2018): identidad, registro DGSFP, independencia, remuneración y reclamaciones.',
+    'Información precontractual del mediador (art. 173 del RDL 3/2020): identidad, registro DGSFP, independencia, remuneración y reclamaciones.',
   alternates: { canonical: url('/legal/informacion-mediador') },
   robots: { index: true, follow: true },
 }
@@ -158,7 +158,7 @@ export default function InformacionMediador() {
     <div style={main}>
       <div style={contenedor}>
         <header>
-          <p style={antetitulo}>Información precontractual · Art. 19 Ley 16/2018</p>
+          <p style={antetitulo}>Información precontractual · Art. 173 RDL 3/2020</p>
           <h1 style={h1}>Información del mediador</h1>
           <p style={entradilla}>
             {marca} es el nombre comercial bajo el que ejerce {identidad.nombre}. Esta página recoge

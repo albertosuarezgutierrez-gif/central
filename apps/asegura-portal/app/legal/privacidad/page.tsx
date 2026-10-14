@@ -76,7 +76,7 @@ export default function Privacidad() {
           Cuando entras dejamos además <strong>constancia de que se te informó</strong>: la fecha, la
           versión exacta de estos textos legales, tu dirección IP y tu navegador. Es la prueba de que
           la información del mediador estaba delante antes de que operaras, y la ley pone esa carga
-          de la prueba de nuestro lado (art. 19 de la Ley 16/2018). No la usamos para perfilarte ni
+          de la prueba de nuestro lado (art. 173 del RDL 3/2020). No la usamos para perfilarte ni
           para medir tu navegación: se guarda una fila por cada versión de texto, no por cada visita.
         </p>
 
@@ -206,7 +206,7 @@ export default function Privacidad() {
               </tr>
               <tr>
                 <td>Dejar constancia de que se te informó al entrar</td>
-                <td>Obligación legal (art. 6.1.c RGPD y art. 19 Ley 16/2018)</td>
+                <td>Obligación legal (art. 6.1.c RGPD y art. 173 RDL 3/2020)</td>
               </tr>
               <tr>
                 <td>Atender tus derechos y tus reclamaciones</td>

@@ -69,7 +69,22 @@ test('la pantalla avisa de que se guardan IP y navegador', () => {
 test('la política de privacidad declara ese registro y su base legal', () => {
   const src = leer(PRIVACIDAD)
   assert.match(src, /constancia de que se te informó/i, 'la política no menciona el registro')
-  assert.match(src, /art\. 19 de la Ley 16\/2018/, 'falta la base legal del registro')
+  assert.match(src, /art\. 173 del RDL 3\/2020/, 'falta la base legal del registro (RDL 3/2020, no la inexistente «Ley 16/2018»)')
+})
+
+test('ningún texto legal del portal cita la «Ley 16/2018» (fue un proyecto de ley, nunca se promulgó)', () => {
+  // La norma vigente de distribución de seguros es el RDL 3/2020 (libro I, título II); el art. 173 es la
+  // información general previa del mediador. `lds_art19` es solo el identificador persistido en BD.
+  for (const p of [
+    'apps/asegura-portal/app/legal/mediador/page.tsx',
+    'apps/asegura-portal/app/legal/privacidad/page.tsx',
+    'apps/asegura-portal/app/PieLegal.tsx',
+    'apps/asegura-portal/app/(portal)/configuracion/page.tsx',
+    'packages/module-seguros/src/mediador.ts',
+    'packages/module-seguros/src/export-rgpd.ts',
+  ]) {
+    assert.ok(!/16\/2018/.test(leer(p)), `${p} cita la «Ley 16/2018», que no existe: es el RDL 3/2020`)
+  }
 })
 
 test('el canje del código NO registra «avisos» ni «comercial»: entrar no es consentir', () => {
