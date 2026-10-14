@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T11:07:34Z",
+  "generadoEn": "2026-10-14T11:58:56Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 16
+        "evidencias": 17
       },
       "rrhh": {
         "estado": "no",
@@ -4134,6 +4134,7 @@
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
       "/api/operador/correo/evento",
+      "/api/operador/correo/evento/reevaluar",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
@@ -6906,7 +6907,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1703,
+    "apis": 1704,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
