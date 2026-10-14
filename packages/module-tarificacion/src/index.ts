@@ -35,6 +35,19 @@ export {
   type TipoError,
 } from './estados.ts'
 export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloqueadaError, pareceEmision, parametrosParecenEmision, decodificarUrlTolerante, comprobarUrl, comprobarBoton, type OpcionesGuard } from './guard-emision.ts'
+export {
+  ACCIONES_PORTAL,
+  PATRONES_GUARDADO_GUARD,
+  clasificarAccionPortal,
+  nombresAccionesPortal,
+  lineaAccionesPortalParaIA,
+  extraerReferenciaPresupuesto,
+  referenciaPresupuestoValida,
+  RE_REFERENCIA_PRESUPUESTO,
+  type AccionPortal,
+  type CategoriaAccionPortal,
+  type ClasificacionAccion,
+} from './acciones-portal.ts'
 export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
@@ -433,6 +446,11 @@ export {
   esAceptarDivAutorizado,
   esAvanceAutorizado,
   bloqueoAvance,
+  bloqueoGuardadoPresupuesto,
+  presupuestoEnCursoDe,
+  leerPresupuestoMapa,
+  type PantallaGuardado,
+  type PresupuestoMapa,
   validarRespuestaExplorador,
   respuestaParar,
   detectarParada,

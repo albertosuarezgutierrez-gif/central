@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { construirMapa, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador } from '@central/module-tarificacion'
+import { construirMapa, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
 import { PasoOcupado, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
@@ -13,7 +13,7 @@ class MapaInvalido extends Error {}
 
 /**
  * `POST /api/tarificador/explorador/cierre` — fin de la exploración. Bearer `TARIFICADOR_WORKER_SECRET`. Cuerpo
- * `{ trabajoId, motivoFin, detalleFin?, redNoGet?, efectosEnPortal? }` (`detalleFin`: código cerrado de qué cortó → `mapa.huecos`). asegura CONSTRUYE el mapa a partir de SUS pasos guardados
+ * `{ trabajoId, motivoFin, detalleFin?, redNoGet?, efectosEnPortal?, presupuesto? }` (`presupuesto`: guardado, referencia y PDF → `mapa.presupuesto`) (`detalleFin`: código cerrado de qué cortó → `mapa.huecos`). asegura CONSTRUYE el mapa a partir de SUS pasos guardados
  * (re-saneados y re-validados): el worker no escribe el mapa, solo aporta la red (origen + ruta) y los efectos vistos.
  * Toma el MISMO try-lock por exploración que `paso` y respeta la IA reservada (`ejecutarCierre`): nunca corre a la vez que
  * un paso en vuelo → 409 `paso_en_curso` (el worker reintenta). 200 `{ estado:'ok', pantallas, huecos, coste }` · 409 si ya
@@ -37,16 +37,22 @@ export async function POST(req: Request) {
       conLock: (fn) => conLockExploracion(e, fn),
       leer: (bd) => leerEstadoPaso(e, bd),
       cerrar: async (bd) => {
+        // `presupuestoEnCurso` se va calculando EN ORDEN (como en el paso): un 2.º guardar_presupuesto (Descargar) o un
+        // `terminar` sin importes solo valen tras un guardado validado ANTERIOR.
+        let enCurso = false
         const pasos = (await pasosDe(e.exploracionId, bd)).map((x) => {
           const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
-          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada, datosReales }) : null
-          return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta: v?.ok ? v.respuesta : null } : null
+          const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada, datosReales, presupuestoEnCurso: enCurso }) : null
+          const respuesta: RespuestaExplorador | null = v?.ok ? v.respuesta : null
+          if (respuesta?.acciones.some((a) => a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto')) enCurso = true
+          return inv ? { huella: huellaPantalla(inv), inventario: inv, respuesta } : null
         }).filter((x) => x !== null)
         const c = await costeYModelo(e, bd)
         const mapa = construirMapa(
           {
             entrada: e.entrada, compania: e.compania, producto: e.producto, modelo: c.modelo, fecha: new Date().toISOString().slice(0, 10),
             efectosEnPortal: p.efectosEnPortal, redNoGet: p.redNoGet, coste: { llamadas: c.llamadas, eurEstimado: c.eur }, motivoFin: p.motivoFin,
+            presupuesto: p.presupuesto,
           },
           pasos,
         )
