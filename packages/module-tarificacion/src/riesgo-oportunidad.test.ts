@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completarInmuebleConCatastro, etiquetaIdHogar, faltanDatosCatastro, fechaDdMmAaaa, inmuebleUnicoCatastro, normPlantaPuerta, riesgoExploracionDeOportunidad } from './riesgo-oportunidad.ts'
+import { completarInmuebleConCatastro, etiquetaIdHogar, faltanDatosCatastro, fechaDdMmAaaa, inmuebleUnicoCatastro, normPlantaCatastro, normPlantaPuerta, normPuertaCatastro, riesgoExploracionDeOportunidad } from './riesgo-oportunidad.ts'
 import { catalogoParaIA, resolverDato } from './explorador.ts'
 
 // Valores SINTÉTICOS obvios: ninguna persona ni dirección real.
@@ -116,6 +116,55 @@ describe('inmuebleUnicoCatastro (año/m² del Catastro: solo si es inequívoco)'
     expect(inmuebleUnicoCatastro(portal, { planta: '7', puerta: 'Z' })).toEqual({ estado: 'ninguno' })
     expect(inmuebleUnicoCatastro(portal, { planta: '1', puerta: 'A', codigoPostal: '99999' })).toEqual({ estado: 'ninguno' })
     expect(inmuebleUnicoCatastro([], { planta: '1' })).toEqual({ estado: 'ninguno' })
+  })
+  // 🪤 14/10/2026: un piso con planta «1» y puerta «Izquierda» dio `ninguno` contra el Catastro («01» + «IZ»).
+  describe('planta/puerta como las codifica el Catastro', () => {
+    const edificio = [
+      inm('0001AA', '00', 'IZ'), inm('0002AA', '00', 'DR'), inm('0003AA', '01', 'IZ'), inm('0004AA', '01', 'DR'),
+      inm('0005AA', '02', 'IZ'), inm('0006AA', '02', 'DR'), inm('0007AA', 'AT', 'A'), inm('0008AA', '-1', '01'),
+    ]
+    it('«1» + «Izquierda» → UNO (01/IZ); con «1º», «primero», «01» y «Izq», «I», «IZQ» igual', () => {
+      const uno = { estado: 'unico', refCompleta: '0000000XX0000X0003AA' }
+      for (const planta of ['1', '1º', 'primero', 'Primera', '01', 1]) {
+        for (const puerta of ['Izquierda', 'izq', 'I', 'IZQ', 'Izda', 'iz']) {
+          expect(inmuebleUnicoCatastro(edificio, { planta, puerta }), `${planta}/${puerta}`).toEqual(uno)
+        }
+      }
+    })
+    it('«Derecha»/«Dcha»/«D» ↔ DR; bajo/«0» ↔ 00; ático ↔ AT', () => {
+      for (const puerta of ['Derecha', 'dcha', 'D', 'DR', 'Dcho']) {
+        expect(inmuebleUnicoCatastro(edificio, { planta: '2', puerta }), puerta).toEqual({ estado: 'unico', refCompleta: '0000000XX0000X0006AA' })
+      }
+      for (const planta of ['Bajo', 'bajo', '0', 'BJ', 'PB']) {
+        expect(inmuebleUnicoCatastro(edificio, { planta, puerta: 'Izquierda' }), planta).toEqual({ estado: 'unico', refCompleta: '0000000XX0000X0001AA' })
+      }
+      expect(inmuebleUnicoCatastro(edificio, { planta: 'Ático', puerta: 'A' })).toEqual({ estado: 'unico', refCompleta: '0000000XX0000X0007AA' })
+      expect(inmuebleUnicoCatastro(edificio, { planta: 'Ático' })).toEqual({ estado: 'unico', refCompleta: '0000000XX0000X0007AA' })
+    })
+    it('el sótano («-1») no se confunde con la primera', () => {
+      expect(normPlantaCatastro('-1')).toBe('-1')
+      expect(inmuebleUnicoCatastro(edificio, { planta: '1', puerta: '1' })).toEqual({ estado: 'ninguno' })
+    })
+    it('varios y ninguno siguen igual: solo planta con dos puertas → varios; puerta que no existe → ninguno', () => {
+      expect(inmuebleUnicoCatastro(edificio, { planta: '1' })).toEqual({ estado: 'varios' })
+      expect(inmuebleUnicoCatastro(edificio, { planta: '1', puerta: 'B' })).toEqual({ estado: 'ninguno' })
+      expect(inmuebleUnicoCatastro(edificio, { planta: '3', puerta: 'Izquierda' })).toEqual({ estado: 'ninguno' })
+      // «D» letra y «DR» en el mismo portal: los dos casan → varios, nunca uno a dedo.
+      expect(inmuebleUnicoCatastro([inm('0011AA', '01', 'D'), inm('0012AA', '01', 'DR')], { planta: '1', puerta: 'Derecha' })).toEqual({ estado: 'varios' })
+    })
+    it('normalizadores', () => {
+      expect(normPlantaCatastro('1º')).toBe('1')
+      expect(normPlantaCatastro('Séptimo')).toBe('7')
+      expect(normPlantaCatastro('00')).toBe('0')
+      expect(normPlantaCatastro('ático')).toBe('AT')
+      expect(normPlantaCatastro('')).toBe(null)
+      expect(normPuertaCatastro('Izquierda')).toBe('IZ')
+      expect(normPuertaCatastro('DCHA.')).toBe('DR')
+      expect(normPuertaCatastro('Centro')).toBe('CT')
+      expect(normPuertaCatastro('b')).toBe('B')
+      expect(normPuertaCatastro('07')).toBe('7')
+      expect(normPuertaCatastro(null)).toBe(null)
+    })
   })
   it('normPlantaPuerta', () => {
     expect(normPlantaPuerta('01')).toBe('1')

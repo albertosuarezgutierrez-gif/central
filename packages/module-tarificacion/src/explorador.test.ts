@@ -15,6 +15,8 @@ import {
   detectarBucle,
   detectarParada,
   huellaPantalla,
+  huellaRelleno,
+  MAX_HUELLA_REPETIDA_CON_PROGRESO,
   normalizarRedNoGet,
   planDesdeMapa,
   resolverDato,
@@ -500,6 +502,31 @@ describe('paradas, bucle y topes', () => {
     expect(detectarBucle(['a', 'b', 'b'], 'b', 0)).toBe(true)
     expect(detectarBucle(['b', 'a', 'b'], 'b', 0)).toBe(false)
     expect(detectarBucle([], 'x', 2)).toBe(true)
+  })
+
+  it('🪤 bucle (14/10/2026): misma huella con MÁS campos rellenos NO es bucle; misma huella y mismo relleno, sí', () => {
+    const inv = (conValor: boolean[]) => inventario({ elementos: conValor.map((c, i) => ({ tag: 'input', id: `campo${i}`, conValor: c })) })
+    const h = huellaPantalla(inv([false, false, false]))
+    // La huella estructural no ve el relleno (es lo que provocó el falso bucle de Allianz Hogar).
+    expect(huellaPantalla(inv([true, true, false]))).toBe(h)
+    const r0 = huellaRelleno(inv([false, false, false]))
+    const r1 = huellaRelleno(inv([true, false, false]))
+    const r2 = huellaRelleno(inv([true, true, false]))
+    expect(r0).not.toBe(r1)
+    expect(r1).not.toBe(r2)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r0, r1], actual: r2 })).toBe(false)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r2, r2], actual: r2 })).toBe(true)
+    // El progreso solo cuenta si es RECIENTE: tras él, dos pantallas más sin cambio → bucle.
+    expect(detectarBucle([h, h, h], h, 0, { anteriores: [r0, r2, r2], actual: r2 })).toBe(true)
+    // Relleno desconocido (worker antiguo) = sin cambio: lo conservador.
+    expect(huellaRelleno(inventario({ elementos: [{ tag: 'input', id: 'a' }] }))).toBeNull()
+    expect(detectarBucle([h, h], h, 0, { anteriores: [null, r1], actual: r2 })).toBe(false)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r2, null], actual: r2 })).toBe(true)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r0, r1], actual: null })).toBe(true)
+    // Techo: un relleno que oscila no sostiene el bucle para siempre.
+    const osc = Array.from({ length: MAX_HUELLA_REPETIDA_CON_PROGRESO - 1 }, (_, i) => (i % 2 ? r1 : r2))
+    expect(detectarBucle(osc.map(() => h), h, 0, { anteriores: osc, actual: r1 === osc.at(-1) ? r2 : r1 })).toBe(true)
+    expect(detectarBucle(osc.slice(1).map(() => h), h, 0, { anteriores: osc.slice(1), actual: r1 === osc.at(-1) ? r2 : r1 })).toBe(false)
   })
 
   it('topes: el entorno solo los BAJA; el coste se mira ANTES de la llamada', () => {

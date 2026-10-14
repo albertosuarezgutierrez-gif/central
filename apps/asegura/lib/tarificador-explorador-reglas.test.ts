@@ -332,3 +332,23 @@ test('prompt: botón de avance deshabilitado → rellenar sin avanzar, no parar 
   assert.match(SYSTEM_EXPLORADOR, /deshabilitado porque faltan campos, manda SOLO los rellenar/)
   assert.match(SYSTEM_EXPLORADOR, /EXACTAMENTE uno de estos códigos, sin más texto/)
 })
+
+test('🪤 campos INVÁLIDOS (14/10/2026): el inventario los marca (solo el booleano, solo en controles), viajan a la IA y el prompt manda rellenarlos antes de avanzar', () => {
+  const inv = sanearInventarioDom({
+    marcos: [{
+      url: 'https://portal.example.test/alta', titulos: [{ texto: 'Datos', tag: 'h2' }],
+      elementos: [
+        { tag: 'input', id: 'anio', type: 'text', conValor: false, requerido: true, invalido: true },
+        { tag: 'input', id: 'm2', type: 'text', conValor: true, invalido: false },
+        { tag: 'button', id: 'sig', texto: 'Siguiente', invalido: true },
+      ],
+    }],
+  }, undefined, { refs: true })!
+  const els = inv.marcos[0].elementos
+  assert.equal(els[0].invalido, true)
+  assert.equal(els[1].invalido, undefined)
+  assert.equal(els[2].invalido, undefined, 'un botón no es un campo')
+  const prompt = promptExplorador({ entrada: 'allianz:particulares:hogar', ramo: 'hogar', inventario: inv, historial: [], conDatosReales: false, avancesFallidos: 0 })
+  assert.match(prompt, /"invalido":true/)
+  assert.match(SYSTEM_EXPLORADOR, /"invalido"[^\n]*requerido[^\n]*NO avances/)
+})

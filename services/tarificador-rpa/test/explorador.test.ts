@@ -24,6 +24,7 @@ import {
   accionSinDato,
   problemaTrabajoExploracion,
   resultadoDeFin,
+  valorAplicado,
   valorParaControl,
   type ContextoBucle,
 } from '../src/explorador.ts'
@@ -95,6 +96,31 @@ const CP_AUTOCOMPLETA = PAGINA(`
     <button id="siguiente" type="submit">Siguiente</button>
   </form>
   <script>document.getElementById('cp').addEventListener('change', () => { document.getElementById('pob').innerHTML = '<label for="poblacion">Población</label><select id="poblacion" name="poblacion"><option value="">--</option><option value="P1">Pueblo</option></select>' })</script>`)
+
+/** Datepicker «Angular»: lo que llega de golpe (`fill`, sin teclas) se BORRA al perder el foco; tecleado, se queda. */
+const DATEPICKER = PAGINA(`
+  <h2>Datos de la póliza</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="efecto">Fecha de efecto</label><input id="efecto" name="efecto" type="text">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>
+    const f = document.getElementById('efecto'); let teclas = 0
+    f.addEventListener('keydown', () => { teclas++ })
+    f.addEventListener('focus', () => { teclas = 0 })
+    f.addEventListener('blur', () => { if (teclas === 0) f.value = '' })
+  </script>`)
+
+/** Varios campos en la MISMA pantalla, con estado inválido (aria-invalid, ng-invalid, contenedor NDBX con error). */
+const VARIOS_CAMPOS = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="superficie">Superficie construida</label><input id="superficie" name="superficie" type="text" aria-invalid="true">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="text" class="ng-untouched ng-invalid">
+    <nx-formfield class="nx-formfield has-error"><label for="planta">Planta</label><input id="planta" name="planta" type="text"></nx-formfield>
+    <label for="capital">Capital</label><input id="capital" name="capital" type="text" class="ng-valid">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>`)
 
 const OTP = PAGINA(`<h1>Verificación</h1><label for="c">Código</label><input id="c" autocomplete="one-time-code">`)
 
@@ -378,6 +404,60 @@ test('rellenar el CÓDIGO POSTAL: quita el foco, deja autocompletar y reinventar
   }
 })
 
+test('🪤 datepicker que vacía lo escrito con `fill`: blur, relectura y UN reintento tecleando; el valor llega al portal y no al log', async () => {
+  inicio = DATEPICKER
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, lineas } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'efecto'), dato: 'efecto.fecha' },
+        { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'calcular', confianza: 'alta' },
+      ])
+      : respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado'),
+    { hoy: () => new Date('2026-10-14T10:00:00Z') })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.match(peticiones.find((p) => p.ruta === '/tarificar')!.cuerpo, /efecto=15%2F10%2F2026/)
+    const log = lineas.join('\n')
+    assert.match(log, /"exploracion_valor".*"estado":"reintentado"/)
+    assert.ok(!/15\/10\/2026|15%2F10/.test(log), 'el log no lleva el valor')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 misma pantalla con MÁS campos rellenos en cada paso (sin avanzar): NO es bucle; y el inventario marca los inválidos', async () => {
+  inicio = VARIOS_CAMPOS
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const claves: [string, string][] = [['superficie', 'inmueble.superficie_m2'], ['anio', 'inmueble.anio_construccion'], ['planta', 'inmueble.planta']]
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n <= 3) return respuesta([{ accion: 'rellenar', ref: ref(inv, claves[n - 1][0]), dato: claves[n - 1][1] }])
+      if (n === 4) return respuesta([{ accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'calcular', confianza: 'alta' }])
+      return respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado')
+    })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    assert.equal(fin.pasos, 5)
+    const el = (id: string) => enviados[0].inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === id)!
+    assert.equal(el('superficie').invalido, true)
+    assert.equal(el('anio').invalido, true)
+    assert.equal(el('planta').invalido, true)
+    assert.equal(el('capital').invalido, undefined)
+  } finally {
+    await context.close()
+  }
+})
+
+test('valorAplicado: tolera el reformateo del portal; vacío o distinto, no', () => {
+  assert.equal(valorAplicado('15/10/2026', '15/10/2026'), true)
+  assert.equal(valorAplicado('15/10/2026', '15-10-2026'), true)
+  assert.equal(valorAplicado('120000', '120.000,00 €'), true)
+  assert.equal(valorAplicado('15/10/2026', ''), false)
+  assert.equal(valorAplicado('15/10/2026', '10/15/2026'), false)
+  assert.equal(valorAplicado('90', '9'), false)
+})
+
 test('cortarLoteTrasRellenar: claves de autocompletado o cambio de huella/nº de elementos', () => {
   const a = { huella: 'h1', elementos: 5 }
   assert.equal(cortarLoteTrasRellenar('inmueble.codigo_postal', a, a), true)
@@ -556,7 +636,8 @@ test('coincideConInventario: tag, id, name, type y texto (con recorte) tienen qu
 test('motivoSinDato, valorParaControl y finDeError', () => {
   assert.equal(motivoSinDato('clave_desconocida'), 'ambiguo')
   assert.equal(motivoSinDato('dato_sensible_requerido'), 'dato_sensible_requerido')
-  assert.equal(motivoSinDato('dato_no_disponible'), 'dato_sensible_requerido')
+  // 14/10/2026: falta un dato del riesgo (año, m²…) ≠ dato SENSIBLE.
+  assert.equal(motivoSinDato('dato_no_disponible'), 'dato_no_disponible')
   assert.equal(valorParaControl('15/01/1980', { tag: 'input', type: 'date' }), '1980-01-15')
   assert.equal(valorParaControl('15/01/1980', { tag: 'input', type: 'text' }), '15/01/1980')
   assert.equal(finDeError(new ErrorVerificacionHumana('allianz')).motivo, 'otp')
@@ -603,8 +684,8 @@ test('problemaTrabajoExploracion: entrada cerrada que case con compañía y ramo
 
 test('accionSinDato: con datos reales, una clave ausente solo se salta si el portal ya rellenó el campo; si no, para', () => {
   assert.equal(accionSinDato('dato_no_disponible', true, true), 'saltar')
-  assert.equal(accionSinDato('dato_no_disponible', true, false), 'dato_sensible_requerido')
-  assert.equal(accionSinDato('dato_no_disponible', false, true), 'dato_sensible_requerido')
+  assert.equal(accionSinDato('dato_no_disponible', true, false), 'dato_no_disponible')
+  assert.equal(accionSinDato('dato_no_disponible', false, true), 'dato_no_disponible')
   assert.equal(accionSinDato('dato_sensible_requerido', true, true), 'dato_sensible_requerido')
   assert.equal(accionSinDato('clave_desconocida', true, true), 'ambiguo')
 })
