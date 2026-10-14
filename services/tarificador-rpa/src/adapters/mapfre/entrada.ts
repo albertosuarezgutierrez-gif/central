@@ -8,15 +8,19 @@
 //    Chromium responde al desafío con 401 = cancelar, y la página se queda como está. Con credenciales las enviaría al
 //    servidor: nunca. No hay API para comprobarlo desde la página; lo vigila un test sobre `explorador.ts`.
 //
-// Pulsar SOLO con `ctx.pulsar()` (guard de emisión). «Tarificación y Emisión Rápida» es NAVEGACIÓN (entra al formulario);
-// el guard sigue bloqueando emitir/contratar. Textos EXACTOS (sin distinguir mayúsculas; el DOM puede pintarlas por CSS).
+// Pulsar SOLO con `ctx.pulsar()` (guard de emisión). «Tarificación y Emisión Rápida» es NAVEGACIÓN (entra al formulario) y
+// casa con `emisi`: se pulsa por `ctx.pulsarEnlaceEntrada` (excepción EXACTA del guard, solo en la entrada de Mapfre); el
+// guard sigue bloqueando emitir/contratar. Textos EXACTOS (sin distinguir mayúsculas; el DOM puede pintarlas por CSS).
 // TODO(captura): sin DOM real de los menús; se localizan por texto visible. Fail-closed: no aparece → ErrorMapaIncompleto.
 
 import type { Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
 
-export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'>
+export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
+  /** El enlace «…Emisión…» de menú: SOLO por la excepción exacta del guard (`pulsarEnlaceEntradaAutorizado`). */
+  pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+}
 
 export const PESTANA_NUEVA_PRODUCCION = 'Nueva producción'
 export const BLOQUE_AUTOMOVILES = 'Automóviles'
@@ -64,7 +68,7 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
   // El listener va ANTES del clic: la pestaña se abre durante él.
   const nueva = page.context().waitForEvent('page', { timeout: menuMs })
   nueva.catch(() => undefined)
-  await ctx.pulsar(enlace)
+  await ctx.pulsarEnlaceEntrada(enlace)
   let destino: Page
   try {
     destino = await nueva

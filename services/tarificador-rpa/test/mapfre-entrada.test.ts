@@ -9,7 +9,9 @@ import type { AddressInfo } from 'node:net'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser } from 'playwright'
 import { ENTRADAS_EXPLORACION } from '@central/module-tarificacion'
-import { instalarGuardEmision, pulsar } from '../src/guard.ts'
+import { cerrarFaseEntrada, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, ENLACES_ENTRADA_AUTORIZADOS } from '../src/guard.ts'
+import { entrarYExplorar, resultadoDeFin, type ContextoBucle, type CtxEntrada, type PortalExploracion } from '../src/explorador.ts'
+import type { RespuestaPaso } from '../src/api.ts'
 import { abrirTarificacionRapidaAuto, etiquetaExacta } from '../src/adapters/mapfre/entrada.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 
@@ -24,7 +26,9 @@ const HOME = `<!doctype html><html><body>
       <a id="tr" href="/nsei" target="_blank">Tarificación y Emisión Rápida</a></div>
   </div>
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
-const NSEI = '<!doctype html><html><body><app-datos-basicos><label>Fecha Condiciones</label><input name="f1"><label>Fecha de mecanización</label><input name="f2"></app-datos-basicos></body></html>'
+const NSEI = '<!doctype html><html><body><app-datos-basicos><label for="f1">Fecha Condiciones</label><input id="f1" name="f1"><label for="f2">Fecha de mecanización</label><input id="f2" name="f2"><button id="sig" type="button">Siguiente</button></app-datos-basicos></body></html>'
+/** Etiquetas de menú SINTÉTICAS para probar la excepción del guard una a una (cada una en su enlace con id). */
+const MENU = (textos: string[]) => `<!doctype html><html><body>${textos.map((t, i) => `<a id="e${i}" href="/nada">${t}</a>`).join('')}</body></html>`
 const SIN_NSEI = '<!doctype html><html><body><p>Cargando…</p></body></html>'
 
 let servidor: Server
@@ -33,6 +37,14 @@ let browser: Browser
 before(async () => {
   servidor = createServer((req, res) => {
     const ruta = (req.url ?? '/').split('?')[0]
+    if (ruta === '/menu') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      return void res.end(MENU(JSON.parse(Buffer.from((req.url ?? '').split('?b=')[1] ?? '', 'base64url').toString('utf8') || '[]')))
+    }
+    if (ruta === '/nada') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+      return void res.end('<!doctype html><html><body>ok</body></html>')
+    }
     if (ruta === '/nsei' || ruta === '/nsei-vacio') {
       // Desafío de auth básica con el formulario ya en el cuerpo (como el portal real tras cancelar el diálogo).
       res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8', 'WWW-Authenticate': 'Basic realm="sintetico"' })
@@ -66,9 +78,14 @@ async function abrir(ruta: string) {
   page.setDefaultTimeout(2_000)
   await page.goto(`${base}${ruta}`)
   const pulsados: string[] = []
-  // `pulsar` de prueba SIN guard: el guard real hoy bloquea el enlace «…Emisión Rápida» (ver el último test del fichero).
-  const ctx = { pulsar: async (b: Parameters<typeof pulsar>[0]) => { pulsados.push(((await b.textContent()) ?? '').trim()); await b.click() }, pausa: async () => undefined }
-  const ctxGuard = { pulsar: (b: Parameters<typeof pulsar>[0]) => pulsar(b, guard), pausa: async () => undefined }
+  // `pulsar` de prueba SIN guard (registra qué se pulsa); `ctxGuard` es el real: guard genérico + excepción exacta de Mapfre.
+  const sinGuard = async (b: Parameters<typeof pulsar>[0]) => { pulsados.push(((await b.textContent()) ?? '').trim()); await b.click() }
+  const ctx = { pulsar: sinGuard, pulsarEnlaceEntrada: sinGuard, pausa: async () => undefined }
+  const ctxGuard = {
+    pulsar: (b: Parameters<typeof pulsar>[0]) => pulsar(b, guard),
+    pulsarEnlaceEntrada: (b: Parameters<typeof pulsar>[0]) => pulsarEnlaceEntradaAutorizado(b, guard, 'mapfre'),
+    pausa: async () => undefined,
+  }
   return { context, page, guard, ctx, ctxGuard, pulsados }
 }
 
@@ -129,11 +146,133 @@ test('el contexto del explorador NO lleva httpCredentials (el diálogo HTTP se c
   }
 })
 
-test('PENDIENTE DE DECISIÓN: el guard de emisión bloquea hoy «Tarificación y Emisión Rápida» (casa `emisi`)', async () => {
+test('el guard REAL deja entrar por «Tarificación y Emisión Rápida» en la entrada de Mapfre (pestaña nueva, sin violación)', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/')
+  try {
+    const nueva = await abrirTarificacionRapidaAuto(page, ctxGuard)
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+test('el mismo enlace por el `pulsar` genérico (el del bucle IA y del resto de portales) sigue BLOQUEADO', async () => {
   const { context, page, ctxGuard } = await abrir('/')
   try {
-    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctxGuard), /guard_emision/)
-    // Cuando exista una excepción exacta y guardada para ese enlace, este test debe invertirse (entra a la pestaña nueva).
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, { ...ctxGuard, pulsarEnlaceEntrada: ctxGuard.pulsar }), /guard_emision/)
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Excepción EXACTA del guard (lista cerrada de etiquetas de menú de Mapfre) ─────────────────────────────
+
+/** Pulsa por la excepción el enlace con ese texto; devuelve el error (o null si pasó). */
+async function probarEnlace(texto: string, opciones: { compania?: string; tras?: (g: Awaited<ReturnType<typeof instalarGuardEmision>>) => void; generico?: boolean } = {}) {
+  const context = await browser.newContext()
+  try {
+    const guard = await instalarGuardEmision(context)
+    const page = await context.newPage()
+    page.setDefaultTimeout(2_000)
+    // El texto va en base64url: «Emisión» en la URL lo abortaría el guard de red (como debe).
+    await page.goto(`${base}/menu?b=${Buffer.from(JSON.stringify([texto])).toString('base64url')}`)
+    opciones.tras?.(guard)
+    const l = page.locator('#e0')
+    try {
+      if (opciones.generico) await pulsar(l, guard)
+      else await pulsarEnlaceEntradaAutorizado(l, guard, opciones.compania ?? 'mapfre')
+      return null
+    } catch (e) {
+      return e as Error
+    }
+  } finally {
+    await context.close()
+  }
+}
+
+for (const t of ENLACES_ENTRADA_AUTORIZADOS.mapfre) {
+  test(`(a) «${t}» exacto pasa en la entrada de Mapfre`, async () => {
+    assert.equal(await probarEnlace(t), null)
+  })
+}
+test('(a) normalización: mayúsculas (CSS) y espacios de más pasan', async () => {
+  assert.equal(await probarEnlace('  TARIFICACIÓN   y emisión rápida '), null)
+})
+test('(a) «Tarificación y emisión» (minúscula) pasa', async () => {
+  assert.equal(await probarEnlace('Tarificación y emisión'), null)
+})
+for (const t of ['Emisión Rápida', 'Emitir', 'Tarificación y Emisión Rápida Pro', 'Ir a Tarificación y Emisión Rápida', 'Tarificación y Emisión (General) y emitir', 'Contratar']) {
+  test(`(b) «${t}» NO pasa por la excepción`, async () => {
+    assert.match(String(await probarEnlace(t)), /guard_emision/)
+  })
+}
+test('(b) el motivo de bloqueo lleva el TEXTO EXACTO del elemento y llega así al resultado de plataforma', async () => {
+  const e = await probarEnlace('Tarificación y Emisión Rápida Pro')
+  const cuerpo = resultadoDeFin('t', 'mapfre', { motivo: 'guard_emision', error: { tipo: 'emision', mensaje: e!.message }, evidencia: undefined }, (x) => x)!
+  assert.ok(cuerpo.resultado === 'error' && cuerpo.error.mensaje.includes('«Tarificación y Emisión Rápida Pro»'), JSON.stringify(cuerpo))
+})
+test('(c) el texto exacto desde el bucle IA (pulsar genérico) NO pasa', async () => {
+  assert.match(String(await probarEnlace('Tarificación y Emisión Rápida', { generico: true })), /guard_emision/)
+})
+test('(c) el texto exacto con la fase de entrada ya cerrada (bucle empezado) NO pasa', async () => {
+  assert.match(String(await probarEnlace('Tarificación y Emisión Rápida', { tras: cerrarFaseEntrada })), /fuera de la fase de entrada/)
+})
+test('(c) el texto exacto desde otro portal (allianz) NO pasa', async () => {
+  assert.match(String(await probarEnlace('Tarificación y Emisión Rápida', { compania: 'allianz' })), /no autorizado para allianz/)
+})
+
+// ─── Pestaña nueva: el bucle sigue en la página que devuelve `entrar` ─────────────────────────────
+
+function ctxBucle(guard: Awaited<ReturnType<typeof instalarGuardEmision>>, vistos: string[], guion: (n: number, pagina: import('playwright').Page, inv: { marcos: { elementos: { id?: string; ref?: string }[] }[] }) => Promise<unknown>) {
+  return (pagina: import('playwright').Page): ContextoBucle => ({
+    trabajoId: '00000000-0000-4000-8000-000000000002', // ramo 'hogar': el de auto aún NO tiene catálogo de exploración (todo lote sería no válido); aquí solo importa la página.
+    compania: 'mapfre', ramo: 'hogar', entrada: 'mapfre:nueva_produccion:auto',
+    conDatosReales: false, riesgo: {}, env: {}, guard,
+    pulsar: (b) => pulsar(b, guard),
+    pulsarAutorizado: async () => { throw new Error('sin avances autorizados en Mapfre') },
+    pausaAccion: async () => undefined,
+    pedirPaso: async (c): Promise<RespuestaPaso> => {
+      vistos.push(c.inventario.marcos.flatMap((m) => m.elementos.map((e) => e.etiqueta ?? e.texto ?? '')).join('|'))
+      return { estado: 'ok', respuesta: await guion(vistos.length, pagina, c.inventario), leaseHasta: null }
+    },
+    log: () => undefined,
+  })
+}
+const portalFalso: PortalExploracion = { credencial: 'X', entrar: (page, ctx) => abrirTarificacionRapidaAuto(page, ctx) }
+const resp = (acciones: unknown[]) => ({ version: 1, pantalla: { nombre: 'P', tipo: 'formulario' }, acciones, mapeo: [], motivo: null })
+
+test('pestaña nueva: el bucle inventaría la página DEVUELTA por `entrar` (NSEI) y la original no cuenta como ventana nueva', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/')
+  try {
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portalFalso, ctxGuard as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:nueva_produccion:auto'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async () => resp([{ accion: 'parar', motivo: 'dato_no_disponible' }])),
+    })
+    assert.equal(fin.motivo, 'dato_no_disponible', JSON.stringify(fin))
+    assert.equal(vistos.length, 1)
+    assert.match(vistos[0], /Fecha Condiciones/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('pestaña nueva: una ventana abierta DURANTE el bucle sigue parando con sin_salida', async () => {
+  const { context, page, ctxGuard, guard } = await abrir('/')
+  try {
+    const vistos: string[] = []
+    const fin = await entrarYExplorar(page, portalFalso, ctxGuard as unknown as CtxEntrada, ENTRADAS_EXPLORACION['mapfre:nueva_produccion:auto'], {
+      guard, redactar: (t) => t, env: {},
+      contextoBucle: ctxBucle(guard, vistos, async (n, pagina, inv) => {
+        if (n > 1) return resp([{ accion: 'parar', motivo: 'dato_no_disponible' }])
+        await pagina.context().newPage() // ventana nueva DURANTE el bucle
+        const sig = inv.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'sig')!
+        return resp([{ accion: 'avanzar', ref: sig.ref, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }])
+      }),
+    })
+    assert.equal(fin.motivo, 'sin_salida', JSON.stringify(fin))
+    assert.equal(vistos.length, 1)
   } finally {
     await context.close()
   }

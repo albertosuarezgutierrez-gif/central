@@ -338,6 +338,8 @@ export const DETALLES_FIN_EXPLORACION = [
   'clave_desconocida',
   /** Demasiados lotes seguidos cortados por repintado de la pantalla (sin completar ninguno). */
   'repintados_seguidos',
+  /** FRONTERA DE EMISIÓN: apareció un campo de cuenta bancaria (IBAN, CCC, BIC…). Fin correcto, no fallo (14/10/2026). */
+  'frontera_cuenta_bancaria',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
 
@@ -683,7 +685,23 @@ export function respuestaParar(motivo: MotivoParar, detalle: string | null = nul
 
 // ─── Paradas: OTP/SMS, CAPTCHA, emisión ──────────────────────────────────────
 
-export type Parada = { motivo: 'otp' | 'captcha' | 'cerca_de_emision'; senal: string }
+export type Parada = { motivo: 'otp' | 'captcha' | 'cerca_de_emision'; senal: string; detalle?: DetalleFinExploracion }
+
+/**
+ * FRONTERA DE EMISIÓN (Alberto, 14/10/2026, TODAS las compañías): sin número de cuenta no se puede emitir. Un control de
+ * cuenta bancaria en pantalla = el portal ya está en la fase de emisión → el bot PARA sin pulsar nada más y NUNCA lo
+ * rellena ni lo elige. Se mira sobre la descripción del control (name, id, formcontrolname, etiqueta, placeholder,
+ * aria-label, title) sin tildes y en minúsculas. «domicilio» (dirección) NO casa; «domiciliación» sí.
+ */
+export const RE_CAMPO_CUENTA_BANCARIA = /iban|\bbic\b|swift|ccc|cuenta[\s_.-]*(?:bancaria|corriente)|cuenta[\s_.-]*cliente|(?:numero|num|nro|n[oº])[\s_.º-]*(?:de[\s_-]*)?cuenta|^cuenta$|domiciliacion|domiciliar|entidad[^]*oficina|oficina[^]*entidad|digito[\s_-]*de[\s_-]*control/
+/** Motivo legible de la frontera (va al log y al error del flujo determinista, con la etiqueta del campo). */
+export const MOTIVO_FRONTERA_CUENTA = 'frontera de emisión: el portal pide cuenta bancaria'
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+/** La primera descripción de un control que casa con {@link RE_CAMPO_CUENTA_BANCARIA} (tal cual, recortada), o `null`. Pura. */
+export function senalCuentaBancaria(descripciones: readonly (string | null | undefined)[]): string | null {
+  for (const d of descripciones) if (typeof d === 'string' && d !== '' && RE_CAMPO_CUENTA_BANCARIA.test(sinTildes(d))) return d.replace(/\s+/g, ' ').trim().slice(0, 80)
+  return null
+}
 
 const RE_OTP = /\botp\b|\bsms\b|codigo (?:de )?(?:verificacion|seguridad|confirmacion|acceso)|clave de un solo uso|one.?time|doble factor|segundo factor|\b2fa\b|autenticacion reforzada|verificacion en dos pasos/
 const RE_CAPTCHA = /captcha|no soy un robot|i'?m not a robot|verifica que eres humano|desafio de seguridad/
@@ -710,7 +728,12 @@ export function detectarParada(inv: InventarioDom): Parada | null {
     for (const el of m.elementos) {
       const desc = descripcionesElemento(el).map(plano)
       textos.push(...desc)
-      if (el.tag === 'input' || el.tag === 'select' || el.tag === 'textarea') campos.push(...desc)
+      if (el.tag === 'input' || el.tag === 'select' || el.tag === 'textarea') {
+        campos.push(...desc)
+        // Antes que nada: la frontera de emisión (cuenta bancaria) manda sobre CAPTCHA/OTP y títulos.
+        const cuenta = senalCuentaBancaria(descripcionesElemento(el))
+        if (cuenta !== null) return { motivo: 'cerca_de_emision', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)`.slice(0, 120), detalle: 'frontera_cuenta_bancaria' }
+      }
     }
   }
   const todos = [...titulos, ...textos]

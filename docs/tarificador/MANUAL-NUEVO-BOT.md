@@ -68,6 +68,9 @@
 - **Botones que no son botones:** Calcular/Aceptar son `div` con `onclick`; los avances se identifican por id, texto, `onclick` y formulario de origen exactos, y el «Aceptar» de otra pantalla puede EMITIR.
 - **La grabación no registra la red:** los avances autorizados se vigilan con ventana de red (aborta no-GET fuera de la lista); si sale un POST nuevo, el trabajo muere y se añade tras verlo.
 - **Precio:** ePAC mostraba «Anual» = primer recibo prorrateado y «Sucesivos» = prima anual real; verifica siempre el precio contra el portal con una cotización conocida antes de confiar en el lector.
+- **Entrada que abre PESTAÑA NUEVA:** `PortalExploracion.entrar` devuelve esa `Page` y el bucle sigue en ella; las páginas de la entrada no cuentan, una abierta durante el bucle sigue siendo `sin_salida` (`entrarYExplorar`).
+- **«Emisión» como sustantivo de menú:** nunca relajar `PATRON_EMISION`; excepción por TEXTO EXACTO, por compañía y solo en la entrada (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`).
+- **Frontera de emisión = campo de cuenta bancaria** (todas las compañías): nunca se rellena; si aparece, el bot PARA sin pulsar nada (`ErrorFronteraEmision`; en el explorador, fin correcto `frontera_cuenta_bancaria`).
 - **SPA sin iframes (Mapfre NSEI, Angular Material):** selectores por `name`/`formcontrolname` con ámbito de componente; los `mat-input-N` son contadores, no se usan.
 
 ## 6. Checklist «bot listo»

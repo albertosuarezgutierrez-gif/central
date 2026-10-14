@@ -16,7 +16,9 @@ import {
   comprobarBoton,
   esAvanceAutorizado,
   esBotonDeListaBlanca,
+  MOTIVO_FRONTERA_CUENTA,
   parametrosParecenEmision,
+  senalCuentaBancaria,
   pareceEmision,
   redactarDatosPersonales,
   usarPermisoEmision,
@@ -183,9 +185,65 @@ function cuerpoDe(req: Request): string | null {
   }
 }
 
+/**
+ * FRONTERA DE EMISIÓN (Alberto, 14/10/2026, TODAS las compañías): sin número de cuenta no se emite. Un control de cuenta
+ * bancaria visible = el portal ya está en la fase de emisión: se PARA sin pulsar nada más. Hereda de
+ * `EmisionBloqueadaError` (el flujo determinista lo trata como bloqueo de emisión); el explorador lo cierra como
+ * `cerca_de_emision` / `frontera_cuenta_bancaria` (fin correcto, no fallo). El mensaje lleva la etiqueta del CAMPO, nunca su valor.
+ */
+export class ErrorFronteraEmision extends EmisionBloqueadaError {
+  readonly etiqueta: string
+  constructor(etiqueta: string) {
+    super('fase', `${MOTIVO_FRONTERA_CUENTA} («${etiqueta}»)`)
+    this.name = 'ErrorFronteraEmision'
+    this.etiqueta = etiqueta
+  }
+}
+
+/** Descripción de los controles de formulario VISIBLES de cada marco (atributos y etiqueta; nunca el valor). Solo lectura. */
+async function descripcionesControles(page: Page): Promise<string[][]> {
+  const out: string[][] = []
+  for (const f of marcosVivos(page)) {
+    // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+    const d = await f
+      .evaluate(() =>
+        Array.from(document.querySelectorAll('input:not([type=hidden]), select, textarea'))
+          .filter((n) => (n as HTMLElement).getClientRects().length > 0)
+          .map((n) => {
+            const e = n as HTMLInputElement
+            const etq = e.labels && e.labels.length > 0 ? (e.labels[0] as HTMLElement).innerText : null
+            return [etq, e.getAttribute('name'), e.id || null, e.getAttribute('formcontrolname'), e.getAttribute('aria-label'), e.getAttribute('placeholder'), e.getAttribute('title')].filter((x): x is string => typeof x === 'string' && x !== '')
+          }),
+      )
+      .catch(() => [] as string[][])
+    out.push(...d)
+  }
+  return out
+}
+
+/** Lanza `ErrorFronteraEmision` si la página muestra algún control de cuenta bancaria. */
+export async function exigirSinCuentaBancaria(page: Page): Promise<void> {
+  for (const d of await descripcionesControles(page)) {
+    const s = senalCuentaBancaria(d)
+    if (s !== null) throw new ErrorFronteraEmision(s)
+  }
+}
+
+/** Antes de ESCRIBIR o ELEGIR en un campo: si es de cuenta bancaria, `ErrorFronteraEmision` (nunca se rellena). */
+export async function exigirCampoNoBancario(campo: Locator): Promise<void> {
+  const d = await campo.evaluate((n) => {
+    const e = n as HTMLInputElement
+    const etq = e.labels && e.labels.length > 0 ? (e.labels[0] as HTMLElement).innerText : null
+    return [etq, e.getAttribute('name'), e.id || null, e.getAttribute('formcontrolname'), e.getAttribute('aria-label'), e.getAttribute('placeholder'), e.getAttribute('title')]
+  })
+  const s = senalCuentaBancaria(d)
+  if (s !== null) throw new ErrorFronteraEmision(s)
+}
+
 /** El ÚNICO modo de pulsar algo en un portal. Lanza `EmisionBloqueadaError` antes de pulsar. */
 export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void> {
   guard.comprobar()
+  await exigirSinCuentaBancaria(boton.page())
   const desc = await boton.evaluate((el) => {
     const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
     return [
@@ -474,6 +532,65 @@ async function accionFormulario(f: Frame): Promise<string | null> {
 }
 
 /**
+ * ENLACE DE ENTRADA AUTORIZADO (Mapfre wmediadores, OK de Alberto 14/10/2026). «Tarificación y Emisión Rápida» es la
+ * NAVEGACIÓN al formulario de tarificación de Auto (abre una pestaña nueva), pero casa con `emisi`. Excepción EXACTA y
+ * CERRADA, por compañía: solo pasa el elemento cuyo texto visible normalizado (espacios colapsados, sin distinguir
+ * mayúsculas) es IGUAL a una etiqueta de esta lista; con sufijo, prefijo u otra redacción → bloqueado. El regex general NO se toca:
+ * id, href, onclick, title… que no sean exactamente ese texto siguen pasando por `comprobarBoton`, y la red (navegación
+ * de la pestaña nueva incluida) sigue con el guard de siempre.
+ */
+export const ENLACES_ENTRADA_AUTORIZADOS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  // Etiquetas de MENÚ de Mapfre donde «Emisión» es sustantivo (decisión de Alberto, 14/10/2026). Lista exacta, no regex.
+  mapfre: Object.freeze([
+    'Tarificación y Emisión Rápida',
+    'Tarificación y Emisión (General)',
+    'Tarificación y Emisión (Otros Acuerdos)',
+    'Tarificación y Emisión (Acuerdos)',
+    'Tarificación y Emisión',
+  ]),
+})
+
+const textoEntrada = (t: string | null | undefined) => (t ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('es')
+
+/** Guards cuya fase de ENTRADA ya terminó (el bucle IA empezó): el enlace de entrada deja de existir para ellos. */
+const ENTRADA_CERRADA = new WeakSet<GuardEmision>()
+
+/** Cierra la fase de entrada de este trabajo: a partir de aquí `pulsarEnlaceEntradaAutorizado` siempre rechaza. */
+export function cerrarFaseEntrada(guard: GuardEmision): void {
+  ENTRADA_CERRADA.add(guard)
+}
+
+/**
+ * El ÚNICO camino para pulsar el enlace de entrada autorizado de `compania` (ver `ENLACES_ENTRADA_AUTORIZADOS`). Exige, en
+ * este orden: guard limpio y ventana de emisión cerrada; fase de entrada abierta (`cerrarFaseEntrada` no llamado); compañía
+ * en la lista; EXACTAMENTE un control, con el texto visible normalizado igual a una etiqueta autorizada; cada etiqueta una vez
+ * por trabajo; y
+ * `comprobarBoton` sobre el resto de su descripción. Solo entonces pulsa UNA vez. No lo recibe el bucle IA.
+ */
+export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'enlace de entrada con la ventana de emisión abierta')
+  if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'enlace de entrada fuera de la fase de entrada')
+  await exigirSinCuentaBancaria(boton.page())
+  if (typeof compania !== 'string' || !Object.hasOwn(ENLACES_ENTRADA_AUTORIZADOS, compania)) {
+    throw new EmisionBloqueadaError('boton', `enlace de entrada no autorizado para ${String(compania).slice(0, 40)}`)
+  }
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'enlace de entrada: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  const autorizado = textoEntrada(desc[0])
+  // El mensaje lleva el TEXTO EXACTO del elemento rechazado (llega a plataforma redactado): se desbloquea uno a uno.
+  if (!ENLACES_ENTRADA_AUTORIZADOS[compania].some((t) => textoEntrada(t) === autorizado)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const clave = `entrada:${autorizado}`
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `el enlace de entrada «${String(desc[0] ?? '').trim()}» ya se usó en este trabajo`)
+  comprobarBoton(desc.filter((d) => textoEntrada(d) !== autorizado))
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await boton.click()
+  guard.comprobar()
+}
+
+/**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
  * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard
  * de siempre bloquea por «aceptar». Exige, en este orden y sin atajos:
@@ -497,6 +614,7 @@ export async function pulsarExploracionAutorizada(
   if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'avance de exploración con la ventana de emisión abierta')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
+  await exigirSinCuentaBancaria(page)
   if (!esAvanceAutorizado(aut.entrada, aut.el, aut.marco) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
     throw new EmisionBloqueadaError('boton', 'avance de exploración no autorizado para esta entrada y esta pantalla')
   }

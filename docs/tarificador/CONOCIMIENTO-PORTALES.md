@@ -29,6 +29,17 @@
   - Datos reales SOLO anclados a una tarificación u oportunidad real del mismo cliente.
   - Nunca mezclar datos reales con valores de prueba.
   - Nada de emitir sin OK de Alberto (TARIFICAR ≠ EMITIR).
+  - **Frontera de emisión = cuenta bancaria (Alberto, 14/10/2026).** Flujo de todas las compañías: presupuesto (el bot
+    lo hace entero, lo guarda y baja el PDF) → al aceptarlo el portal pasa a emisión, que pide fecha de efecto + **número
+    de cuenta** + confirmar datos → Emitir. Sin cuenta no se emite: el bot NUNCA escribe ni elige en un campo de cuenta
+    (IBAN, CCC, entidad/oficina/DC, «número de cuenta», domiciliación, BIC/SWIFT), y si uno APARECE en pantalla PARA sin
+    pulsar nada más: «frontera de emisión: el portal pide cuenta bancaria («etiqueta»)». En el explorador es fin correcto
+    (`cerca_de_emision` + detalle `frontera_cuenta_bancaria`). Código: `RE_CAMPO_CUENTA_BANCARIA` / `senalCuentaBancaria`
+    (módulo) y `ErrorFronteraEmision`, `exigirSinCuentaBancaria` (en `pulsar()`), `exigirCampoNoBancario` (en
+    `comprobarCampo`) de `guard.ts`.
+  - **«Emisión» como sustantivo de menú:** excepciones EXACTAS y por compañía en `ENLACES_ENTRADA_AUTORIZADOS` (`guard.ts`),
+    solo en la fase de ENTRADA (nunca en el bucle IA). Un bloqueo del guard lleva el texto exacto del elemento en el
+    mensaje: se desbloquea uno a uno, con OK de Alberto.
   - A la compañía no se la contacta.
 - **Organización:** una conversación de Claude por compañía/bot, abierta cuando el bot anterior esté estable.
   Orden previsto: Allianz Hogar primero, luego Mapfre…
@@ -59,14 +70,19 @@
 - **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
   (usuario + contraseña; **no pide SMS**). Después: pestaña «Nueva producción» → bloque «Automóviles» → tarjeta «Turismos y
   Motos» → enlace «Tarificación y Emisión Rápida», que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
-  `adapters/mapfre/entrada.ts` (clave `mapfre:nueva_produccion:auto`, sin avances autorizados).
+  `adapters/mapfre/entrada.ts` (clave `mapfre:nueva_produccion:auto`, sin avances autorizados). Conectada al explorador
+  (`PORTALES_EXPLORACION.mapfre.entrar` devuelve la pestaña nueva y el bucle sigue en ella; v0.1.3).
 - **Diálogo HTTP:** en la pestaña nueva Chromium pinta el diálogo nativo de auth («wmediadores.mapfre.com necesita un nombre de
   usuario y una contraseña»). Alberto lo **cancela**; detrás ya está el formulario (`app-datos-basicos`: «Fecha Condiciones»,
   «Fecha de mecanización»). El bot lo cancela dejando el contexto SIN `httpCredentials` (Chromium responde 401). Cepo en
   `test/mapfre-entrada.test.ts`.
-- 🚨 **Trampas de la entrada:** (1) el guard de emisión bloquea hoy el texto «Tarificación y Emisión Rápida» (casa `emisi`):
-  hace falta una excepción exacta y guardada; (2) el explorador debe poder continuar en la pestaña nueva (hoy usa la `page`
-  original y para con `sin_salida` si hay más de una). Sin ambas, la entrada no está conectada en `PORTALES_EXPLORACION`.
+- **Excepción del guard (OK de Alberto, 14/10/2026):** en la ENTRADA de Mapfre se pueden pulsar, por texto visible EXACTO
+  (normalizado: espacios y mayúsculas), «Tarificación y Emisión Rápida», «Tarificación y Emisión (General)», «… (Otros
+  Acuerdos)», «… (Acuerdos)» y «Tarificación y Emisión» (`pulsarEnlaceEntradaAutorizado`, cada una una vez). Con sufijo,
+  prefijo u otra redacción, desde el bucle IA u otra compañía: bloqueado. La URL de la pestaña nueva sigue pasando por el
+  guard de red: si llevara «emision», se aborta (fail-closed; verlo en el primer intento real).
+- 🚨 **Hueco:** el ramo `auto` aún NO tiene catálogo de exploración (`CATALOGO_EXPLORACION` solo hogar/comunidades): el
+  bucle IA en NSEI rechazará todo lote (`ambiguo` / `lote_no_valido`) hasta que se añada.
 - **Tecnología:** SPA Angular Material **sin iframes**; todo el DOM es legible. Los `mat-input-N` NO se usan
   (son contadores de Angular Material); los selectores van por `name`/`formcontrolname` con ámbito de componente.
 - **Stepper de 6 pasos** (todos los componentes viven a la vez en el DOM; manda el paso activo):
@@ -89,7 +105,7 @@
   proyectos»; no los bloquea `guard-emision.ts`). Sigue prohibido emitir/contratar/formalizar/grabar póliza, pago y
   RGPD «Sí»; «Contratar» y todo «Aceptar» siguen bloqueados. «Calcular» pasa.
 - **Huecos (el adaptador no pulsa nada todavía):**
-  - Login y entrada: hechos (ver «Entrada»); falta conectarlos al explorador (pestaña nueva + guard).
+  - Login y entrada: hechos y conectados al explorador (pestaña nueva + excepción exacta del guard).
   - Avance «Continuar» entre pasos; elegir fila y confirmar el diálogo de vehículo.
   - `mat-select` (uso, ámbito, clase de permiso, compañía anterior): no se grabaron abiertos. Significado de uso,
     ámbito y clase de permiso: PENDIENTE — preguntar a Alberto.

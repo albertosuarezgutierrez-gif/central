@@ -22,7 +22,10 @@ import {
   EmisionBloqueadaError,
   ENTRADAS_EXPLORACION,
   detectarBucle,
+  descripcionesElemento,
   detectarParada,
+  MOTIVO_FRONTERA_CUENTA,
+  senalCuentaBancaria,
   esAvanceAutorizado,
   esEntradaExploracion,
   huellaPantalla,
@@ -46,18 +49,19 @@ import {
 import { cerrarExploracion, enviarResultado, pedirPaso, type Config, type CuerpoResultado, type RespuestaPaso, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, clasificar } from './errores.ts'
-import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, type GuardEmision } from './guard.ts'
+import { cerrarFaseEntrada, ErrorFronteraEmision, instalarGuardEmision, pulsar, pulsarEnlaceEntradaAutorizado, pulsarExploracionAutorizada, type GuardEmision } from './guard.ts'
 import { capturarInventarioExploracion, type InventarioExploracion } from './inventario-dom.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
+import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.1.2'
+export const EXPLORADOR_VERSION = '0.1.3'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -75,12 +79,16 @@ const MAX_BYTES_HTML = 2 * 1024 * 1024
 
 // ─── Portales: login y entrada, por CÓDIGO (la IA arranca después) ────────────
 
-export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'>
+export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
+  /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
+  pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+}
 
 export type PortalExploracion = {
   /** Clave de los fly secrets `CRED_<clave>_USER/_PASS`. */
   credencial: string
-  entrar: (page: Page, ctx: CtxEntrada, e: EntradaExploracion) => Promise<void>
+  /** Devuelve la página donde sigue la exploración si la entrada abrió una PESTAÑA NUEVA; sin valor = la misma `page`. */
+  entrar: (page: Page, ctx: CtxEntrada, e: EntradaExploracion) => Promise<Page | void>
 }
 
 /** Lista CERRADA de portales con entrada de exploración. Otra compañía = sin portal = no se abre el navegador. */
@@ -97,17 +105,21 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await ctx.exigirSinCaptcha()
     },
   }),
-  // Mapfre wmediadores (14/10/2026): SOLO login. La ruta hasta Auto existe (`mapfre:nueva_produccion:auto` +
-  // `adapters/mapfre/entrada.ts#abrirTarificacionRapidaAuto`) pero abre una PESTAÑA NUEVA y este núcleo exige seguir en la
-  // `page` original (el bucle usa una `const page` y para con `sin_salida` si hay >1 pestaña): sin conectar hasta que
-  // `entrar` pueda devolver la página donde continuar (ver informe). El contexto NO lleva `httpCredentials` (a propósito).
+  // Mapfre wmediadores (14/10/2026): login → menús → «Tarificación y Emisión Rápida», que abre una PESTAÑA NUEVA con el
+  // formulario NSEI; `entrar` la DEVUELVE y el bucle sigue en ella (la original queda abierta y no cuenta como ventana
+  // nueva). El contexto NO lleva `httpCredentials` (a propósito: el diálogo de auth básica se cancela con 401).
   mapfre: Object.freeze({
     credencial: 'MAPFRE_WMEDIADORES',
-    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion): Promise<Page> => {
       await loginMapfre(page, ctx)
       await exigirSinVerificacion(page, 'mapfre')
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
+      const nsei = await abrirTarificacionRapidaAuto(page, ctx)
+      await exigirSinVerificacion(nsei, 'mapfre')
+      await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await exigirSinCaptcha(nsei)
+      return nsei
     },
   }),
 })
@@ -203,8 +215,10 @@ export function valorParaControl(valor: string, el: ElementoInventario): string 
 }
 
 /** Del error que cortó la exploración a su motivo de fin. Nunca lanza. */
-export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null } {
+export function finDeError(e: unknown): { motivo: MotivoFinExploracion; error: { tipo: TipoError; mensaje: string } | null; detalle?: DetalleFinExploracion } {
   if (e instanceof ErrorVerificacionHumana) return { motivo: 'otp', error: null }
+  // Frontera de emisión (cuenta bancaria en pantalla): fin CORRECTO de la exploración, no un fallo del guard.
+  if (e instanceof ErrorFronteraEmision) return { motivo: 'cerca_de_emision', error: null, detalle: 'frontera_cuenta_bancaria' }
   if (e instanceof EmisionBloqueadaError) return { motivo: 'guard_emision', error: { tipo: 'emision', mensaje: e.message } }
   if (e instanceof ErrorTarificador && e.tipo === 'captcha') return { motivo: 'captcha', error: null }
   const c = clasificar(e)
@@ -254,6 +268,8 @@ export type ContextoBucle = {
   hoy?: () => Date
   /** Espera tras rellenar un campo que autocompleta, antes de reinventariar (por defecto `ESPERA_REPINTADO_MS`). */
   esperaRepintadoMs?: number
+  /** Páginas que ya existían al terminar la ENTRADA (por defecto, solo `page`): cualquier otra = ventana nueva → `sin_salida`. */
+  paginasDeEntrada?: readonly Page[]
 }
 
 class Parar extends Error {
@@ -273,6 +289,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   const red = new Set<string>()
   const efectos = new Set<EfectoPortal>()
   const huellas: string[] = []
+  const deEntrada = new Set<Page>(k.paginasDeEntrada ?? [page])
   let pasos = 0
   let acciones = 0
   let avancesFallidos = 0
@@ -291,14 +308,18 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       k.guard.comprobar()
       await exigirSinCaptcha(page)
       await exigirSinVerificacion(page, k.compania)
-      // Una ventana nueva (popup) no se sigue en v1: hueco.
-      if (page.context().pages().length > 1) throw new Parar('sin_salida')
+      // Una ventana nueva (popup) abierta DURANTE el bucle no se sigue en v1: hueco. Las de la entrada no cuentan.
+      if (page.context().pages().some((p) => !deEntrada.has(p))) throw new Parar('sin_salida')
       await captura?.liberar()
       captura = await capturarInventarioExploracion(page)
       if (!captura) throw new Error('no se pudo leer el inventario de la pantalla')
       const inv = captura.inventario
       const parada = detectarParada(inv)
-      if (parada) throw new Parar(parada.motivo)
+      if (parada) {
+        // La señal (p. ej. la ETIQUETA del campo de cuenta bancaria; nunca un valor) va al log local; al cierre, el código.
+        if (parada.detalle) k.log('exploracion_parada', { motivo: parada.motivo, detalle: parada.detalle, senal: parada.senal })
+        throw new Parar(parada.motivo, parada.detalle)
+      }
       const huella = huellaPantalla(inv)
       if (huellaAntesDeAvanzar !== null) avancesFallidos = huella === huellaAntesDeAvanzar ? avancesFallidos + 1 : 0
       huellaAntesDeAvanzar = null
@@ -342,6 +363,12 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         const hit = refs.get(a.ref)
         const nodo = captura.nodos.get(a.ref)
         if (!hit || !nodo) throw new Parar('ambiguo', 'ref_fuera_de_captura')
+        // Frontera de emisión: un campo de cuenta bancaria NUNCA se rellena, elige ni marca (segunda barrera tras detectarParada).
+        const cuenta = senalCuentaBancaria(descripcionesElemento(hit.el))
+        if (cuenta !== null) {
+          k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)` })
+          throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria')
+        }
         const loc = await localizar(nodo, hit.el)
         if (!loc) {
           // Lo ya hecho en este lote pudo repintar la pantalla (autocompletado): se corta aquí y se reinventaría; la IA ve
@@ -429,7 +456,7 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
     if (e instanceof Parar) return fin(e.motivo, null, e.detalle)
     // Una violación del guard en segundo plano manda sobre el error con el que se cortó.
     const f = finDeError(k.guard.violacion() ?? e)
-    return fin(f.motivo, f.error)
+    return fin(f.motivo, f.error, f.detalle)
   } finally {
     await captura?.liberar()
   }
@@ -466,7 +493,43 @@ export async function finDeEntrada(e: unknown, page: Page, redactar: (t: string)
   const f = finDeError(e)
   // La evidencia es un extra: si sanearla fallara, el fin conserva su motivo/error en vez de caer al catch genérico.
   const evidencia = await capturarEvidencia(page).then((ev) => sanearEvidencia(ev, redactar, secretosDelEntorno(env))).catch(() => undefined)
-  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(evidencia ? { evidencia } : {}) }
+  return { motivo: f.motivo, error: f.error, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0, ...(f.detalle ? { detalle: f.detalle } : {}), ...(evidencia ? { evidencia } : {}) }
+}
+
+/**
+ * La ENTRADA cerrada y el bucle, sobre la página donde terminó la entrada (la que `entrar` devuelve si abrió una pestaña
+ * nueva; si no, la misma `page`). Cierra la fase de entrada del guard antes del primer paso. Nunca lanza: un fallo de la
+ * entrada sale por `finDeEntrada` con la evidencia de esa página.
+ */
+export async function entrarYExplorar(
+  page: Page,
+  portal: PortalExploracion,
+  ctx: CtxEntrada,
+  e: EntradaExploracion,
+  d: {
+    guard: GuardEmision
+    redactar: (t: string) => string
+    env: Record<string, string | undefined>
+    alEntrar?: () => void
+    contextoBucle: (pagina: Page) => ContextoBucle
+  },
+): Promise<FinBucle> {
+  let pagina = page
+  try {
+    const devuelta = await portal.entrar(page, ctx, e)
+    if (devuelta && devuelta !== page) {
+      pagina = devuelta
+      pagina.setDefaultTimeout(TOPE_PASO_MS)
+      pagina.setDefaultNavigationTimeout(TOPE_PASO_MS)
+      pagina.on('dialog', (dlg) => { dlg.dismiss().catch(() => {}) })
+    }
+    cerrarFaseEntrada(d.guard)
+    d.alEntrar?.()
+    return await bucleExploracion(pagina, { ...d.contextoBucle(pagina), paginasDeEntrada: pagina === page ? [page] : [page, pagina] })
+  } catch (err) {
+    // Fallo de la ENTRADA cerrada (login, menús, producto): antes del primer paso. Con la evidencia del flujo real.
+    return finDeEntrada(d.guard.violacion() ?? err, pagina, d.redactar, d.env)
+  }
 }
 
 export type EntradaEjecucion = {
@@ -559,27 +622,27 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
         await pulsar(boton, guard)
       },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
+      pulsarEnlaceEntrada: async (boton) => {
+        await dormir(azar(300, 1_200))
+        await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania)
+      },
     }
-    try {
-      await portal.entrar(page, ctxEntrada, entrada)
-      log('exploracion_entrada_ok', { entrada: exp.entrada })
-      finExp = await bucleExploracion(page, {
+    finExp = await entrarYExplorar(page, portal, ctxEntrada, entrada, {
+      guard, redactar, env,
+      alEntrar: () => log('exploracion_entrada_ok', { entrada: exp.entrada }),
+      contextoBucle: (pagina) => ({
         trabajoId: trabajo.id, compania: trabajo.compania, ramo: trabajo.ramo, entrada: exp.entrada, conDatosReales: exp.conDatosReales,
         riesgo: trabajo.riesgo, env, guard,
         pulsar: ctxEntrada.pulsar,
         pulsarAutorizado: async (boton, el, marco) => {
           await dormir(azar(300, 1_200))
-          await pulsarExploracionAutorizada(page, guard, boton, { entrada: exp.entrada, el, marco })
+          await pulsarExploracionAutorizada(pagina, guard, boton, { entrada: exp.entrada, el, marco })
         },
         pausaAccion: () => dormir(azar(300, 1_200)),
         pedirPaso: (cuerpo) => pedirPaso(cfg, cuerpo),
         log,
-      })
-    } catch (e) {
-      // Fallo de la ENTRADA cerrada (login, «Nueva Alta», producto): antes del primer paso. Con la evidencia del flujo
-      // real (URL, captura y HTML con marcos, redactados) para ver la pantalla en la que se quedó.
-      finExp = await finDeEntrada(guard.violacion() ?? e, page, redactar, env)
-    }
+      }),
+    })
   } catch (e) {
     const c = clasificar(e)
     finExp = { motivo: 'error_portal', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: c.mensaje }, redNoGet: [], efectos: ['ninguno_visto'], pasos: 0, acciones: 0 }

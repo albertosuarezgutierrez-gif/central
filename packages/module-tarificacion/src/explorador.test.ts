@@ -14,6 +14,10 @@ import {
   costeMaximoLlamada,
   detectarBucle,
   detectarParada,
+  CATALOGO_EXPLORACION,
+  DETALLES_FIN_EXPLORACION,
+  RE_CAMPO_CUENTA_BANCARIA,
+  senalCuentaBancaria,
   huellaPantalla,
   normalizarRedNoGet,
   planDesdeMapa,
@@ -598,5 +602,48 @@ describe('redacción de los valores del cliente (exploración con datos reales)'
     expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: null, env })).toBeNull()
     expect(valoresSensiblesExploracion({ conDatosReales: true, riesgo: 'x', env })).toBeNull()
     expect(valoresSensiblesExploracion({ conDatosReales: false, riesgo, env })).toEqual(['buzon@example.test', '+34 699 000 000', '699000000'])
+  })
+})
+
+// FRONTERA DE EMISIÓN (Alberto, 14/10/2026, todas las compañías): un campo de cuenta bancaria en pantalla = fase de emisión.
+describe('frontera de emisión: cuenta bancaria', () => {
+  const campo = (c: Record<string, unknown>) => inventario({ elementos: [{ tag: 'input', type: 'text', ...c }] })
+  for (const [que, c] of [
+    ['name iban', { name: 'ibanTomador' }],
+    ['id CCC', { id: 'numCCC' }],
+    ['formcontrolname cuentaBancaria', { formControlName: 'cuentaBancaria' }],
+    ['etiqueta «Número de cuenta»', { etiqueta: 'Número de cuenta' }],
+    ['placeholder «ES00 0000…» con etiqueta IBAN', { placeholder: 'IBAN' }],
+    ['etiqueta «Domiciliación bancaria»', { etiqueta: 'Domiciliación bancaria' }],
+    ['etiqueta «BIC/SWIFT»', { etiqueta: 'BIC/SWIFT' }],
+    ['etiqueta «Entidad - Oficina - DC»', { etiqueta: 'Entidad - Oficina - DC' }],
+  ] as const) {
+    it(`para con detalle frontera_cuenta_bancaria: ${que}`, () => {
+      const p = detectarParada(campo(c))
+      expect(p?.motivo).toBe('cerca_de_emision')
+      expect(p?.detalle).toBe('frontera_cuenta_bancaria')
+    })
+  }
+  it('el motivo es legible e incluye la etiqueta del campo', () => {
+    expect(detectarParada(campo({ etiqueta: 'Número de cuenta' }))?.senal).toBe('frontera de emisión: el portal pide cuenta bancaria («Número de cuenta»)')
+  })
+  it('manda sobre un título de emisión (el detalle es el de la cuenta)', () => {
+    expect(detectarParada(inventario({ titulos: ['Datos de emisión'], elementos: [{ tag: 'input', etiqueta: 'IBAN' }] }))?.detalle).toBe('frontera_cuenta_bancaria')
+  })
+  for (const t of ['Domicilio', 'Tener en cuenta', 'Bicicleta', 'Código postal', 'Fecha de efecto']) {
+    it(`no casa con «${t}»`, () => {
+      expect(senalCuentaBancaria([t])).toBeNull()
+    })
+  }
+  it('frontera_cuenta_bancaria está en la lista cerrada de detalles', () => {
+    expect(DETALLES_FIN_EXPLORACION).toContain('frontera_cuenta_bancaria')
+  })
+  it('el catálogo que el worker inyecta NO tiene ninguna clave de cuenta bancaria', () => {
+    for (const [ramo, datos] of Object.entries(CATALOGO_EXPLORACION)) {
+      for (const d of datos) {
+        expect(RE_CAMPO_CUENTA_BANCARIA.test(`${d.clave} ${d.descripcion}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()), `${ramo}: ${d.clave}`).toBe(false)
+        expect(/iban|cuenta|ccc|bic|swift|domicilia|banc/i.test(d.clave), `${ramo}: ${d.clave}`).toBe(false)
+      }
+    }
   })
 })
