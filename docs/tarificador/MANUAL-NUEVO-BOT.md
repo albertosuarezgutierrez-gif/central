@@ -72,6 +72,21 @@ Estado: **Mapfre Auto (NSEI)** adopta el patrón (`https://wmediadores.mapfre.co
 7. **Relanzar desde plataforma.** Solo Alberto puede pulsar «Lanzar» (exige el secreto de operador); tú no lo lanzas. Una exploración viva por compañía: si hay una viva, no encoles otra.
 8. Repetir hasta que el mapa llegue a precio; entonces «Aprobar mapa» (Alberto) y adaptador real.
 
+## Borrador de mapa desde la evidencia de un fallo
+
+Cada fallo guarda en su HTML de evidencia la sección `<!-- tarificador:aria … -->` (árbol de accesibilidad redactado, sin valores).
+Con ella se genera en segundos un BORRADOR de mapa TypeScript de esa pantalla (determinista, sin IA, offline, fuera del worker):
+
+```
+cd services/tarificador-rpa
+npm run borrador-mapa -- <evidencia.html|snapshot.txt> --compania allianz --ramo comunidades --pantalla datos-riesgo [--salida borrador.ts]
+```
+
+Sale un `CAMPOS_<PANTALLA>` con localizadores `getByRole(..., { exact: true })` encadenados por `frameLocator`, los desplegables con sus
+opciones, los diálogos (listas de poblaciones) y los mensajes de error. Los `// TODO` marcan lo ambiguo (nombres duplicados, controles
+sin nombre, radios sin grupo). NO se registra solo: revísalo a mano, pruébalo con `scripts/probar-formulario.ts` y métela en un PR.
+Código: `src/aprendizaje/borrador-mapa.ts`.
+
 ## 5. Lecciones aprendidas con Allianz (técnicas, sin datos)
 - **Iframe tardío:** el formulario carga en `iframe#appArea` y tarda; espera hasta 30 s al marco (`esperarMarcoApp`) antes de inventariar, o inventarias la carcasa.
 - **Teselas y acordeones:** «Nueva Alta» muestra acordeones plegados (hay que desplegar la sección) con teselas por etiqueta EXACTA. «Allianz HOGAR» ≠ «Hogar» (causó un timeout); Hogar y Negocio Plus están en Particulares, no en Autos.

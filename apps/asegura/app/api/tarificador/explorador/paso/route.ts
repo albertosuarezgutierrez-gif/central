@@ -24,6 +24,7 @@ import {
   TIMEOUT_IA_EXPLORADOR_MS,
   exploradorActivo,
   leerPeticionPaso,
+  sanearVistaAria,
   modeloExplorador,
 } from '@/lib/tarificador-explorador-reglas'
 
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
 
     let inicio: Date | null = null
     const out = await ejecutarPaso<Bd>(
-      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias },
+      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, vistaAria: sanearVistaAria(p.vistaAria, valores) },
       {
         conLock: (fn) => conLockExploracion(e, fn),
         leer: async (bd) => {

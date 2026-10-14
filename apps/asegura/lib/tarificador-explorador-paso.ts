@@ -105,6 +105,8 @@ export type EntradaPaso = {
   riesgo?: unknown
   /** Lo que el lote ANTERIOR no pudo aplicar (worker, 14/10/2026). */
   incidencias?: IncidenciaEjecucion[]
+  /** Vista aria ya saneada (opcional). */
+  vistaAria?: string
 }
 
 /**
@@ -178,7 +180,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
       const v = validarRespuestaExplorador(plan, ctx)
       if (v.ok) return guardar(v.respuesta, 'mapa')
     }
-    const prompt = promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo })
+    const prompt = promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo, ...(e.vistaAria ? { vistaAria: e.vistaAria } : {}) })
     const caracteres = SYSTEM_EXPLORADOR.length + prompt.length
     const peor = costeMaximoLlamada(e.modelo, caracteres, MAX_TOKENS_SALIDA_EXPLORADOR)
     const tope1 = comprobarTopes(consumo, topes, peor)

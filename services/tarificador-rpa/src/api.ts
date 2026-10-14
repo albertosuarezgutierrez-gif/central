@@ -205,7 +205,7 @@ export type RespuestaPaso =
  */
 export async function pedirPaso(
   c: Config,
-  cuerpo: { trabajoId: string; inventario: InventarioDom; avancesFallidos: number; incidencias?: IncidenciaEjecucion[] },
+  cuerpo: { trabajoId: string; inventario: InventarioDom; avancesFallidos: number; incidencias?: IncidenciaEjecucion[]; vistaAria?: string },
   esperar: (ms: number) => Promise<void> = dormir,
   esperaMs = 5_000,
 ): Promise<RespuestaPaso> {
