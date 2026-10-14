@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T14:32:31Z",
+  "generadoEn": "2026-10-14T20:18:36Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 188
+        "evidencias": 190
       },
       "rrhh": {
         "estado": "no",
@@ -4215,6 +4215,7 @@
       "/api/operador/solicitud-datos/lead-web",
       "/api/operador/supresiones",
       "/api/operador/sustituciones",
+      "/api/operador/tareas",
       "/api/operador/tareas-hoy",
       "/api/operador/tarificador/atascos",
       "/api/operador/tarificador/atascos/[id]",
@@ -5279,6 +5280,7 @@
       "/api/correduria/solicitud-datos",
       "/api/correduria/supresiones",
       "/api/correduria/sustituciones",
+      "/api/correduria/tareas",
       "/api/correduria/tareas-hoy",
       "/api/correduria/tarificador/atascos",
       "/api/correduria/tarificador/atascos/[id]",
@@ -6915,7 +6917,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1710,
+    "apis": 1712,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
