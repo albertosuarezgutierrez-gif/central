@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T06:43:04Z",
-  "sha": "d3c5c16b1e1d60221e56f7741e7635f6a434ee97",
+  "generadoEn": "2026-10-14T07:54:43Z",
+  "sha": "615ef0f585ba0c6342e56daf4d9b0821b316f2a1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3369,7 +3369,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 53,
+          "linea": 55,
           "resumen": "La ficha de una póliza que ha AÑADIDO el cliente. Nace el 05/09/2026 de *«mis seguros y mis pólizas es lo mismo»*: al fundir la pestaña «Mis pólizas» dentro de «Mis seguros», estas pólizas pasan a ser"
         }
       ],
@@ -3377,7 +3377,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "2cc48d932291"
+      "hash": "e4c6c4311691"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/anadida/[id]/RevisarPoliza.tsx",
@@ -3838,6 +3838,27 @@
       ],
       "rutaApi": null,
       "hash": "192fe40b5560"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/boveda/EvolucionPrima.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "EvolucionPrima"
+      ],
+      "funciones": [
+        {
+          "nombre": "EvolucionPrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ evolucion, hrefRevisar, textoSinEnlace }: { evolucion: Evolucion | null; hrefRevisar: string | null; textoSinEnlace?: string | null }",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "Bloque «Evolución de la prima» de una ficha. Servidor, sin estado. `evolucion === null` = no se pinta nada (sin observaciones no hay nada que decir). Importes `null` → «—», jamás «0,00€». La acción NO"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "9dc348b0c94a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/FilaDeclarada.tsx",
@@ -4674,7 +4695,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 61,
+          "linea": 64,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -4683,13 +4704,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 419,
+          "linea": 434,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46b7d55deff4"
+      "hash": "e5fb814da7a5"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -5004,7 +5025,7 @@
           "params": "{ companiasEnPortada, textoCompanias }: { companiasEnPortada: number; textoCompanias?: string }",
           "retorno": null,
           "linea": 241,
-          "resumen": "Art. 19 de la Ley 16/2018 y el «asesoramiento sobre la base de un análisis objetivo» del RDL 3/2020. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 **ni el nombre ni la clave DGSFP se teclea"
+          "resumen": "Art. 173 del RDL 3/2020 (información general previa del mediador) y el «asesoramiento sobre la base de un análisis objetivo» del mismo texto. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 *"
         },
         {
           "nombre": "Salidas",
@@ -5026,7 +5047,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eda07d6dec2d"
+      "hash": "6b5099a67d56"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/DatosParaContratar.tsx",
@@ -5580,7 +5601,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6aaf2cf34cc2"
+      "hash": "2e1d0703fbd7"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/flota/FlotaEmpresa.tsx",
@@ -5954,7 +5975,7 @@
           "params": "req: Request, tipo: 'whatsapp' | 'email', destino: string, valorHash: string, codigoId: string | null, irA: string",
           "retorno": null,
           "linea": 119,
-          "resumen": "Lo común a los dos canjes (código o enlace directo), ya validados: identidad, acreditación del art. 19 LDS, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión. `codigoId` = el có"
+          "resumen": "Lo común a los dos canjes (código o enlace directo), ya validados: identidad, acreditación del art. 173 RDL 3/2020, rastro del acceso, vínculo con la ficha, aviso de primer acceso y sesión. `codigoId`"
         }
       ],
       "tablas": [
@@ -5962,7 +5983,7 @@
         "zod"
       ],
       "rutaApi": "/api/acceso/verificar",
-      "hash": "1ad5aa0114c2"
+      "hash": "807b75487258"
     },
     {
       "ruta": "apps/asegura-portal/app/api/anulacion/route.ts",
@@ -7902,7 +7923,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3de980aed1be"
+      "hash": "dda64adcb23c"
     },
     {
       "ruta": "apps/asegura-portal/app/hoja/[token]/page.tsx",
@@ -8370,7 +8391,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "260bd2500d8c"
+      "hash": "5d5eda3cb6cd"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/mediador/page.tsx",
@@ -8386,12 +8407,12 @@
           "params": "",
           "retorno": null,
           "linea": 27,
-          "resumen": "Información precontractual del mediador (art. 19 Ley 16/2018 / RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible antes de que el cliente entregue ningún dato, así que esta página vive fuera de "
+          "resumen": "Información precontractual del mediador (art. 173 RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible antes de que el cliente entregue ningún dato, así que esta página vive fuera de la sesión: si"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6da87baa8f4"
+      "hash": "1d707ac672dc"
     },
     {
       "ruta": "apps/asegura-portal/app/legal/privacidad/page.tsx",
@@ -8412,7 +8433,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3d51d430ea7f"
+      "hash": "78654b57227d"
     },
     {
       "ruta": "apps/asegura-portal/app/manifest.ts",
@@ -8492,12 +8513,12 @@
           "params": "",
           "retorno": null,
           "linea": 17,
-          "resumen": "Pie legal del portal. Va en el layout raíz, así que sale en TODAS las pantallas, incluida la de entrada. No es decoración ni un pie de cortesía: el art. 19 de la Ley 16/2018 obliga a que el cliente pu"
+          "resumen": "Pie legal del portal. Va en el layout raíz, así que sale en TODAS las pantallas, incluida la de entrada. No es decoración ni un pie de cortesía: el art. 173 del RDL 3/2020 obliga a que el cliente pued"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "edf3cf6915f0"
+      "hash": "2fb4baebb475"
     },
     {
       "ruta": "apps/asegura-portal/app/presupuesto/[token]/CodigoWhatsapp.tsx",
@@ -11375,6 +11396,35 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "57af5f91130f"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/evolucion-prima.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "«Evolución de la prima» de una póliza (14/10/2026): lo que hay detrás del push de «subida de prima». 🔒 Aislamiento por CÓDIGO. La identidad sale de la COOKIE (`getIdentidad`), nunca de un parámetro, y va dentro del `where` junto con el origen y el id. El id de la póliza NO consulta por sí solo: qui",
+      "exporta": [
+        "evolucionDePrimaDePoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "NUM",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "x: { toString(): string } | null",
+          "retorno": "number | null",
+          "linea": 16
+        },
+        {
+          "nombre": "evolucionDePrimaDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "origen: 'cartera' | 'aportada', polizaId: string, propia: boolean,",
+          "retorno": "Promise<EvolucionPrima | null>",
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c9a499c4c838"
     },
     {
       "ruta": "apps/asegura-portal/lib/extraer-poliza.ts",
@@ -15991,7 +16041,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c14909129a2f"
+      "hash": "87e3b0c97fcf"
     },
     {
       "ruta": "apps/asegura-web/app/legal/aviso-legal/page.tsx",
@@ -16012,7 +16062,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "62b3be2eccaa"
+      "hash": "4e20d7c5981b"
     },
     {
       "ruta": "apps/asegura-web/app/legal/cookies/page.tsx",
@@ -16038,7 +16088,7 @@
     {
       "ruta": "apps/asegura-web/app/legal/informacion-mediador/page.tsx",
       "ambito": "apps/asegura-web",
-      "resumen": "Información precontractual del mediador (art. 19 de la Ley 16/2018 de Distribución de Seguros, RDL 3/2020). Es OBLIGATORIA y tiene que estar disponible ANTES de que el cliente entregue ningún dato, así que esta página no depende de nada que pueda fallar: sin sesión, sin base de datos y sin cliente. ",
+      "resumen": "Información precontractual del mediador (art. 173 del RDL 3/2020, de distribución de seguros y reaseguros privados). Es OBLIGATORIA y tiene que estar disponible ANTES de que el cliente entregue ningún dato, así que esta página no depende de nada que pueda fallar: sin sesión, sin base de datos y sin ",
       "exporta": [
         "InformacionMediador"
       ],
@@ -16054,7 +16104,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9da203f5a89f"
+      "hash": "cd1a5cf2414e"
     },
     {
       "ruta": "apps/asegura-web/app/legal/privacidad/page.tsx",
@@ -16075,7 +16125,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a06139eda816"
+      "hash": "2aefe6de3e57"
     },
     {
       "ruta": "apps/asegura-web/app/opengraph-image.tsx",
@@ -16162,7 +16212,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d8d0cb0d0f9c"
+      "hash": "8796094e6197"
     },
     {
       "ruta": "apps/asegura-web/app/robots.ts",
@@ -16608,7 +16658,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "385c049eeb3c"
+      "hash": "025ed819e292"
     },
     {
       "ruta": "apps/asegura-web/components/PanelDemo.tsx",
@@ -103181,7 +103231,7 @@
           "params": "{ p, ramo, deshabilitado, onGuardar }: { p: PresupuestoEnLista; ramo: string | null; deshabilitado: boolean onGuardar: (texto: string, respuestas: Record<string, string>) => void }",
           "retorno": null,
           "linea": 167,
-          "resumen": "Exigencias y necesidades del cliente (IDD, art. 20 Ley 16/2018). Sin ellas asegura no deja avisarle. Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de texto de s"
+          "resumen": "Exigencias y necesidades del cliente (IDD, art. 175.1 del RDL 3/2020). Sin ellas asegura no deja avisarle. Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de text"
         },
         {
           "nombre": "CoberturasOpciones",
@@ -103197,7 +103247,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b27ba556ea63"
+      "hash": "059acf1672c8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/acciones-hogar.ts",
@@ -132492,7 +132542,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "183972b2b928"
+      "hash": "57297724ba46"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-asistente-telegram.ts",
@@ -164353,7 +164403,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is (typeof OPCIONES_NUEVA)[number]['entrada']",
-          "linea": 183,
+          "linea": 184,
           "resumen": "¿La entrada es de la lista cerrada? (la ruta de plataforma no reenvía otra cosa)."
         },
         {
@@ -164362,13 +164412,13 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ResultadoEncolar",
-          "linea": 194,
+          "linea": 195,
           "resumen": "Lee la respuesta de encolar. 503 `apagado` (RPA o explorador) → «Explorador apagado» con el interruptor que dice asegura. 202 → encolada (y si la máquina arrancó ya o queda en cola). Lo demás, con `me"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c682a48fe39"
+      "hash": "6b5438b24ec5"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-fichas-asegura.ts",
@@ -188127,7 +188177,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "40f0f6825916"
+      "hash": "d735c1d7b71a"
     },
     {
       "ruta": "packages/module-seguros-portal/src/contacto-propio.ts",
@@ -188486,6 +188536,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "03ca411c8ff7"
+    },
+    {
+      "ruta": "packages/module-seguros-portal/src/evolucion-prima.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "«Evolución de la prima» (14/10/2026): el detalle al que lleva el push de «subida de prima». Lógica PURA sobre lo que guarda `portal_prima_observada` (lo escribe `observarPrima`). Tres estados, sin inventar nada: · `null` → no hay observación de esta póliza (o no hay subida pendiente): no se pinta na",
+      "exporta": [
+        "baseDeUnidad",
+        "porcentajeDeSubida",
+        "evolucionDePrima"
+      ],
+      "funciones": [
+        {
+          "nombre": "positivo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": "number | null",
+          "linea": 35
+        },
+        {
+          "nombre": "baseDeUnidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "unidad: string",
+          "retorno": "EvolucionPrima['base']",
+          "linea": 38,
+          "resumen": "Qué clase de importe es, por el prefijo de `unidad` (`cartera-bruta-anual|…` / `declarada-anual|…`)."
+        },
+        {
+          "nombre": "porcentajeDeSubida",
+          "kind": "function",
+          "exportada": true,
+          "params": "anterior: number | null, actual: number | null",
+          "retorno": "number | null",
+          "linea": 45,
+          "resumen": "% entre dos importes, 2 decimales. `null` si el origen no es un importe positivo."
+        },
+        {
+          "nombre": "evolucionDePrima",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: FilaPrimaObservada | null",
+          "retorno": "EvolucionPrima | null",
+          "linea": 53,
+          "resumen": "`null` = nada que pintar (sin fila, o fila sin subida pendiente)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "788a59965323"
     },
     {
       "ruta": "packages/module-seguros-portal/src/figuras-en-polizas.ts",
@@ -191502,7 +191602,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "996b0385b39e"
+      "hash": "91059f28bab3"
     },
     {
       "ruta": "packages/module-seguros/src/actividad-aviso.ts",
@@ -197045,7 +197145,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe9ec97367de"
+      "hash": "fb86d7aedf1b"
     },
     {
       "ruta": "packages/module-seguros/src/fecha-pintable.ts",
@@ -200087,7 +200187,7 @@
     {
       "ruta": "packages/module-seguros/src/mediador.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al cliente final: información precontractual del art. 19 de la Ley 16/2018 de Distribución de Seguros (LDS), pies de página legales y políticas. Vive en `@central/module-seguros` y no en una app porque los DOS lados de la cor",
+      "resumen": "Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al cliente final: información precontractual del art. 173 del Real Decreto-ley 3/2020 (distribución de seguros), pies de página legales y políticas. Vive en `@central/module-seguros` y no en una app porque los DOS lados de la",
       "exporta": [
         "lineaIdentificacion",
         "remitenteCorreo",
@@ -200102,7 +200202,7 @@
           "params": "",
           "retorno": "string",
           "linea": 265,
-          "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 19 exige que el cliente vea SIEMPRE, no solo si entra en una página aparte."
+          "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 173 RDL 3/2020 exige que el cliente vea SIEMPRE, no solo si entra en una págin"
         },
         {
           "nombre": "remitenteCorreo",
@@ -200133,7 +200233,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "07fdb3504910"
+      "hash": "ad3ac75dafd3"
     },
     {
       "ruta": "packages/module-seguros/src/mensaje-presupuesto.ts",
@@ -200310,7 +200410,7 @@
     {
       "ruta": "packages/module-seguros/src/necesidades-idd.ts",
       "ambito": "packages/module-seguros",
-      "resumen": "Cuestionario de exigencias y necesidades (IDD, art. 20 Ley 16/2018 → hoy RDL 3/2020). Antes era un texto libre que escribía el corredor. Con preguntas cerradas por ramo: - todos los presupuestos preguntan lo mismo (prueba uniforme ante la DGSFP), y - nada se olvida (quién conduce, lunas, régimen de ",
+      "resumen": "Cuestionario de exigencias y necesidades (IDD, art. 175.1 RDL 3/2020). Antes era un texto libre que escribía el corredor. Con preguntas cerradas por ramo: - todos los presupuestos preguntan lo mismo (prueba uniforme ante la DGSFP), y - nada se olvida (quién conduce, lunas, régimen de la vivienda…). ",
       "exporta": [
         "grupoNecesidades",
         "preguntasNecesidades",
@@ -200366,7 +200466,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0c5a90fd0e5c"
+      "hash": "9b0195811fbd"
     },
     {
       "ruta": "packages/module-seguros/src/nombre-de-pila.ts",
@@ -208677,6 +208777,7 @@
         "bloqueoGuardadoPresupuesto",
         "validarRespuestaExplorador",
         "respuestaParar",
+        "senalCuentaBancaria",
         "detectarParada",
         "huellaTexto",
         "huellaPantalla",
@@ -208701,7 +208802,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is keyof typeof ENTRADAS_EXPLORACION",
-          "linea": 75
+          "linea": 81
         },
         {
           "nombre": "D",
@@ -208709,7 +208810,7 @@
           "exportada": false,
           "params": "d: DatoCatalogo",
           "retorno": "DatoCatalogo",
-          "linea": 102
+          "linea": 108
         },
         {
           "nombre": "catalogoDe",
@@ -208717,7 +208818,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "readonly DatoCatalogo[]",
-          "linea": 150
+          "linea": 181
         },
         {
           "nombre": "catalogoParaIA",
@@ -208725,7 +208826,7 @@
           "exportada": true,
           "params": "ramo: string, real?: { riesgo: unknown },",
           "retorno": "",
-          "linea": 158,
+          "linea": 189,
           "resumen": "Lo que la IA ve del catálogo: clave, descripción y tipo. La `pista` (el valor de prueba) SOLO de lo no personal; de un dato personal la IA no ve nada más que su clave."
         },
         {
@@ -208734,7 +208835,7 @@
           "exportada": true,
           "params": "clave: string, riesgo: unknown",
           "retorno": "",
-          "linea": 195,
+          "linea": 226,
           "resumen": "El valor REAL que la IA puede ver de una clave: id + significado, SOLO si la clave es de {@link CLAVES_VALOR_VISIBLE_IA}, no personal, con valor en el riesgo y ese id en el mapa cerrado. `null` = la I"
         },
         {
@@ -208743,7 +208844,7 @@
           "exportada": false,
           "params": "raiz: unknown, ruta: string",
           "retorno": "string | null",
-          "linea": 220
+          "linea": 251
         },
         {
           "nombre": "ddmmaaaa",
@@ -208751,7 +208852,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 231
+          "linea": 262
         },
         {
           "nombre": "resolverDato",
@@ -208759,8 +208860,16 @@
           "exportada": true,
           "params": "clave: string, ctx: ContextoDatos",
           "retorno": "DatoResuelto",
-          "linea": 239,
+          "linea": 270,
           "resumen": "El VALOR de una clave del catálogo. Solo lo llama el WORKER (justo antes de escribir en el portal): el valor no va a la IA, ni a asegura, ni al log. Fail-closed: sin valor seguro → motivo de parada."
+        },
+        {
+          "nombre": "resolverDatoCrudo",
+          "kind": "function",
+          "exportada": false,
+          "params": "clave: string, ctx: ContextoDatos",
+          "retorno": "DatoResuelto",
+          "linea": 279
         },
         {
           "nombre": "valoresSensiblesExploracion",
@@ -208768,7 +208877,7 @@
           "exportada": true,
           "params": "ctx: { conDatosReales: boolean; riesgo: unknown; env: Record<string, string | undefined> }",
           "retorno": "string[] | null",
-          "linea": 270,
+          "linea": 310,
           "resumen": "Valores que hay que QUITAR del inventario antes de mandarlo a la IA o guardarlo (`redactarValoresInventario`): el contacto de entorno siempre y, con datos reales, los del riesgo del trabajo. `null` = "
         },
         {
@@ -208777,7 +208886,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 348,
+          "linea": 390,
           "resumen": "La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}."
         },
         {
@@ -208786,7 +208895,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 352
+          "linea": 394
         },
         {
           "nombre": "normalizarMotivoParar",
@@ -208794,7 +208903,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MotivoParar | null",
-          "linea": 359,
+          "linea": 401,
           "resumen": "El motivo de `parar` que manda la IA, a su código. Admite mayúsculas, espacios/guiones por «_» y un código seguido de una explicación («dato_sensible_requerido: piden NIF», «ambiguo (…)»). Una frase l"
         },
         {
@@ -208803,7 +208912,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 366,
+          "linea": 408,
           "resumen": "Para el error del validador: el motivo rechazado SOLO si es un código corto sin cifras (nunca un texto con datos)."
         },
         {
@@ -208812,7 +208921,7 @@
           "exportada": true,
           "params": "t: string | null",
           "retorno": "string | null",
-          "linea": 407,
+          "linea": 449,
           "resumen": "Recorta el `motivo` libre a {@link MAX_MOTIVO} caracteres con «…» (no invalida la respuesta)."
         },
         {
@@ -208821,7 +208930,7 @@
           "exportada": true,
           "params": "respuestas: readonly (RespuestaExplorador | null | undefined)[]",
           "retorno": "boolean",
-          "linea": 432,
+          "linea": 474,
           "resumen": "¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}."
         },
         {
@@ -208830,7 +208939,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 438
+          "linea": 480
         },
         {
           "nombre": "plano",
@@ -208838,7 +208947,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 439
+          "linea": 481
         },
         {
           "nombre": "primerObjetoJsonExplorador",
@@ -208846,7 +208955,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 442,
+          "linea": 484,
           "resumen": "Primer objeto JSON balanceado del texto (la IA a veces añade prosa o ```json). `null` si no hay."
         },
         {
@@ -208855,7 +208964,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Map<string,",
-          "linea": 470,
+          "linea": 512,
           "resumen": "Índice ref → {elemento, marco} del inventario."
         },
         {
@@ -208864,7 +208973,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "string[]",
-          "linea": 481,
+          "linea": 523,
           "resumen": "Todo lo que describe a un elemento (para el guard de emisión y el de consentimientos)."
         },
         {
@@ -208873,7 +208982,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 485
+          "linea": 527
         },
         {
           "nombre": "esAvanzable",
@@ -208881,7 +208990,7 @@
           "exportada": false,
           "params": "el: ElementoInventario",
           "retorno": "boolean",
-          "linea": 490
+          "linea": 532
         },
         {
           "nombre": "esAceptarDivAutorizado",
@@ -208889,7 +208998,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 503,
+          "linea": 545,
           "resumen": "El «Aceptar» de Datos básicos del servlet de Allianz no es un button: es `<div id=\"aceptar\" onclick=\"btnAceptar();\">` (DOM real de Comunidades, 06/10/2026). El extractor del worker lo recoge SOLO con "
         },
         {
@@ -208898,7 +209007,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "boolean",
-          "linea": 512,
+          "linea": 554,
           "resumen": "¿Este avance es un «Aceptar» autorizado para ESTA entrada en ESTA pantalla? Además del texto exacto exige el título de la pantalla (marco del botón) y que no haya ningún título de tarificación/emisión"
         },
         {
@@ -208907,7 +209016,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 525,
+          "linea": 567,
           "resumen": "Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final."
         },
         {
@@ -208916,7 +209025,7 @@
           "exportada": true,
           "params": "entrada: string, el: ElementoInventario, marco: MarcoInventario",
           "retorno": "string | null",
-          "linea": 528,
+          "linea": 570,
           "resumen": "`null` = el botón se puede pulsar en exploración; si no, por qué no."
         },
         {
@@ -208925,7 +209034,7 @@
           "exportada": true,
           "params": "el: ElementoInventario, p: PantallaGuardado",
           "retorno": "string | null",
-          "linea": 567,
+          "linea": 609,
           "resumen": "4. pantalla de RESULTADO con importes a la vista (o, tras un guardado previo en esta exploración, la pantalla que sigue). El worker lo repite sobre el control VIVO (`pulsarGuardadoPresupuesto`) antes "
         },
         {
@@ -208934,7 +209043,7 @@
           "exportada": true,
           "params": "entrada: unknown, ctx: ContextoValidacion",
           "retorno": "ValidacionRespuesta",
-          "linea": 586,
+          "linea": 628,
           "resumen": "Valida la respuesta de la IA contra la lista blanca, el catálogo y el inventario de ESA pantalla. Fail-closed: cualquier clave desconocida, texto libre donde no toca, acción fuera de lista o ref inexi"
         },
         {
@@ -208943,8 +209052,34 @@
           "exportada": true,
           "params": "motivo: MotivoParar, detalle: string | null = null",
           "retorno": "RespuestaExplorador",
-          "linea": 741,
+          "linea": 783,
           "resumen": "La respuesta que se manda al worker cuando algo no cuadra: parar, nunca improvisar."
+        },
+        {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 803
+        },
+        {
+          "nombre": "senalCuentaBancaria",
+          "kind": "function",
+          "exportada": true,
+          "params": "descripciones: readonly (string | null | undefined)[]",
+          "retorno": "string | null",
+          "linea": 805,
+          "resumen": "La primera descripción de un control que casa con {@link RE_CAMPO_CUENTA_BANCARIA} (tal cual, recortada), o `null`. Pura."
+        },
+        {
+          "nombre": "esControlFrontera",
+          "kind": "function",
+          "exportada": false,
+          "params": "el: ElementoInventario",
+          "retorno": "boolean",
+          "linea": 820,
+          "resumen": "Controles que la frontera de cuenta bancaria mira: nativos y NO nativos (mat-select, combobox/textbox ARIA). El inventario no trae `contenteditable`: ese lo caza el guard del worker (`exigirSinCuentaB"
         },
         {
           "nombre": "detectarParada",
@@ -208952,7 +209087,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "Parada | null",
-          "linea": 761,
+          "linea": 830,
           "resumen": "¿Hay que PARAR antes de hacer nada en esta pantalla? `null` = no. Mira títulos, textos y nombres de campos, y la URL de los marcos (un iframe de reCAPTCHA). No es la única barrera: el guard de emisión"
         },
         {
@@ -208961,7 +209096,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 793,
+          "linea": 867,
           "resumen": "Dos FNV-1a de 32 bits con semillas distintas → hex de 16 (sin BigInt ni node:crypto: el index llega al navegador y asegura compila con target ES2017). Es una HUELLA para reconocer pantallas, no un has"
         },
         {
@@ -208970,7 +209105,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 809,
+          "linea": 883,
           "resumen": "Huella ESTRUCTURAL de la pantalla: ruta de cada marco + identificadores estables de sus controles (id, name, formControlName, tipo), ordenados. No entran textos variables ni valores: dos visitas a la "
         },
         {
@@ -208979,7 +209114,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string | null",
-          "linea": 826,
+          "linea": 900,
           "resumen": "Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro"
         },
         {
@@ -208988,7 +209123,7 @@
           "exportada": true,
           "params": "huellas: readonly string[], actual: string, avancesFallidos: number, rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },",
           "retorno": "boolean",
-          "linea": 854,
+          "linea": 928,
           "resumen": "`huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRel"
         },
         {
@@ -208997,7 +209132,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "TopesExplorador",
-          "linea": 884
+          "linea": 958
         },
         {
           "nombre": "comprobarTopes",
@@ -209005,7 +209140,7 @@
           "exportada": true,
           "params": "c: ConsumoExplorador, t: TopesExplorador, costeSiguienteMax: number",
           "retorno": "MotivoTope | null",
-          "linea": 909,
+          "linea": 983,
           "resumen": "¿Se puede dar UN paso más con IA? `costeSiguienteMax` = el PEOR caso de la próxima llamada (`costeMaximoLlamada`): se para ANTES de pasarse, no después. `null` = adelante."
         },
         {
@@ -209014,7 +209149,7 @@
           "exportada": false,
           "params": "modelo: string",
           "retorno": null,
-          "linea": 927
+          "linea": 1001
         },
         {
           "nombre": "redondeo6",
@@ -209022,7 +209157,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 928
+          "linea": 1002
         },
         {
           "nombre": "costeMaximoLlamada",
@@ -209030,7 +209165,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, maxTokensSalida: number",
           "retorno": "number",
-          "linea": 931,
+          "linea": 1005,
           "resumen": "Peor caso de una llamada: ~3 caracteres por token de entrada y TODOS los tokens de salida permitidos."
         },
         {
@@ -209039,7 +209174,7 @@
           "exportada": true,
           "params": "modelo: string, caracteresEntrada: number, caracteresSalida: number",
           "retorno": "number",
-          "linea": 937,
+          "linea": 1011,
           "resumen": "Estimación tras la llamada (~3 caracteres por token, a la alta)."
         },
         {
@@ -209048,7 +209183,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoMapa | null",
-          "linea": 980,
+          "linea": 1054,
           "resumen": "Valida un {@link PresupuestoMapa} que llega por el cable. `null` si no tiene la forma (o la referencia parece un dato personal)."
         },
         {
@@ -209057,7 +209192,7 @@
           "exportada": true,
           "params": "el: ElementoInventario",
           "retorno": "SelectorMapa | null",
-          "linea": 1014,
+          "linea": 1088,
           "resumen": "El selector estable de un elemento: id (no autogenerado) > name > formControlName > etiqueta exacta > texto exacto."
         },
         {
@@ -209066,7 +209201,7 @@
           "exportada": false,
           "params": "el: ElementoInventario, s: SelectorMapa",
           "retorno": "boolean",
-          "linea": 1023
+          "linea": 1097
         },
         {
           "nombre": "rutaMarco",
@@ -209074,7 +209209,7 @@
           "exportada": true,
           "params": "url: string",
           "retorno": null,
-          "linea": 1032,
+          "linea": 1106,
           "resumen": "Ruta del marco (sin origen): la misma pantalla puede servirse desde otro host del mismo portal."
         },
         {
@@ -209083,7 +209218,7 @@
           "exportada": true,
           "params": "meta: MetaMapa, pasos: readonly PasoExploracion[]",
           "retorno": "MapaExploracion",
-          "linea": 1054,
+          "linea": 1128,
           "resumen": "Construye el MAPA a partir de los pasos validados (el último paso de cada huella manda). Determinista: mismo input, mismo mapa. Lo que no tiene selector estable o no se mapeó a una clave del catálogo "
         },
         {
@@ -209092,7 +209227,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 1122,
+          "linea": 1196,
           "resumen": "Origen + ruta de una petición de red (sin query, fragmento ni credenciales). `null` si no es una URL http(s)."
         },
         {
@@ -209101,7 +209236,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "MapaExploracion | null",
-          "linea": 1135,
+          "linea": 1209,
           "resumen": "Valida un mapa leído de BD o de un fichero (estricto: versión 1, forma exacta). `null` si no es un mapa v1 válido. No re-deriva nada: solo comprueba forma y límites."
         },
         {
@@ -209110,13 +209245,13 @@
           "exportada": true,
           "params": "pantalla: PantallaMapaExploracion, inv: InventarioDom",
           "retorno": "RespuestaExplorador | null",
-          "linea": 1170,
+          "linea": 1244,
           "resumen": "MEMORIA: si la pantalla ya está en un mapa, el plan sale del mapa SIN IA. Cada campo y el avance tienen que encontrarse UNA sola vez en el inventario actual (si no, `null` y se pregunta a la IA). La r"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8559268a9f40"
+      "hash": "1bb0dfe4517a"
     },
     {
       "ruta": "packages/module-tarificacion/src/fichas-catalogo.ts",
@@ -210165,7 +210300,8 @@
         "pareceEmision",
         "parametrosParecenEmision",
         "comprobarUrl",
-        "comprobarBoton"
+        "comprobarBoton",
+        "esTextoBotonProhibido"
       ],
       "funciones": [
         {
@@ -210174,7 +210310,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 90,
+          "linea": 94,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
         },
         {
@@ -210183,7 +210319,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 97,
+          "linea": 101,
           "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
@@ -210192,7 +210328,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 107
+          "linea": 111
         },
         {
           "nombre": "parametrosParecenEmision",
@@ -210200,7 +210336,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 136,
+          "linea": 140,
           "resumen": "· el VALOR de cada parámetro con clave de acción (`action`, `accion`, `event`, `operation`, `cmd`…): `store`, `contract` o cualquier cosa que case con `pareceEmision`. El resto del cuerpo (datos del r"
         },
         {
@@ -210209,7 +210345,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 151,
+          "linea": 155,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -210218,13 +210354,21 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 160,
+          "linea": 164,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
+        },
+        {
+          "nombre": "esTextoBotonProhibido",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 176
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "43782c86d844"
+      "hash": "30786646e633"
     },
     {
       "ruta": "packages/module-tarificacion/src/importes.ts",
@@ -210382,7 +210526,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fa450c9c01e3"
+      "hash": "229ed6e0eda3"
     },
     {
       "ruta": "packages/module-tarificacion/src/modo-integracion.ts",
@@ -213168,7 +213312,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4653,
-    "funciones": 16898
+    "archivos": 4656,
+    "funciones": 16910
   }
 }
