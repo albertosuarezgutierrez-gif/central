@@ -57,6 +57,8 @@ export type LeadVencimiento = {
   respondioAntes: boolean
   /** `null` = asegura todavía no lo manda (versión anterior): el canal no se puede afirmar. */
   fueCliente: boolean | null
+  /** Fecha de su tarea de seguimiento pendiente; `null` = no hay (o asegura aún no lo manda). */
+  proximaLlamada: string | null
   canal: CanalLead | null
   puntuacion: number
   paso: { accion: AccionPaso; motivo: string; dentroDeDias: number }
@@ -131,6 +133,7 @@ export function interpretarLead(v: unknown): LeadVencimiento | null {
     ultimoContactoEn: texto(o.ultimoContactoEn),
     respondioAntes: o.respondioAntes === true,
     fueCliente: typeof o.fueCliente === 'boolean' ? o.fueCliente : null,
+    proximaLlamada: /^\d{4}-\d{2}-\d{2}$/.test(texto(o.proximaLlamada) ?? '') ? texto(o.proximaLlamada) : null,
     canal: uno(CANALES, o.canal),
     puntuacion,
     paso: { accion, motivo: texto(p.motivo) ?? '', dentroDeDias },
