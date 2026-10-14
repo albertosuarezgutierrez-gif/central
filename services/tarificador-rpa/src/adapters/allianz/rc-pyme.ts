@@ -6,7 +6,8 @@
 //
 // SEGURIDAD: el robot NUNCA emite. Aquí no hay selectores ni lógica para Archivar, Proyecto ampliado, Datos
 // emisión, Aceptar (#btnAccept → emision_ipid) ni Pago fraccionado (td#menu3/4/5, #btnFracciona): los bloquea
-// `guard-emision.ts` (module-tarificacion) y solo se pulsa con `ctx.pulsar()`. Sin credenciales en el código.
+// `guard-emision.ts` (module-tarificacion; Archivar y Proyecto ampliado solo los abre el explorador en resultado) y solo se
+// pulsa con `ctx.pulsar()`. Sin credenciales en el código.
 
 import type { Locator, Page } from 'playwright'
 import { importeEs } from '@central/module-tarificacion'

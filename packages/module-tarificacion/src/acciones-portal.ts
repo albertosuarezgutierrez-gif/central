@@ -7,7 +7,7 @@
 // en services/tarificador-rpa/src/guard.ts, que vuelve a clasificar el control VIVO):
 //   · `emision`: PROHIBIDA siempre en exploración (la emisión solo va por la puerta autorizada con el token de Alberto).
 //   · `prohibida`: no es emisión, pero el robot tampoco la pulsa (no se sabe qué hace, o saca de la sesión).
-//     «Proyecto ampliado» está AQUÍ: no hay certeza de que solo enseñe/descargue (ePAC lo pone junto a Archivar/Emitir).
+//     (Ya no hay ninguna de serie: «Proyecto ampliado» pasó a `guardar_presupuesto` el 14/10/2026, por Alberto.)
 //   · `guardar_presupuesto`: PERMITIDA solo como `avanzar` con `efectoEsperado: 'guardar_presupuesto'`, en una pantalla de
 //     RESULTADO (con importes a la vista, o tras haber guardado ya en esta exploración). Fuera de ahí, prohibida.
 // Si una descripción casa con emisión Y con guardar (p. ej. «Guardar y emitir»), MANDA emisión (fail-closed).
@@ -41,20 +41,23 @@ export const ACCIONES_PORTAL: readonly AccionPortal[] = Object.freeze([
   A('emision', 'Anular / Baja', /anul|\bbaja\b/),
   A('emision', 'Validar y aceptar (ePAC)', /validar[\s_+-]*aceptar|btn[\s_+-]*accept|idbtn[\s_+-]*aceptar/),
   // ── PROHIBIDA (no emite, pero no se pulsa) ──
-  A('prohibida', 'Proyecto ampliado', /proyecto[\s_+-]*ampliado/),
   A('prohibida', 'Enviar', /enviar|\bsubmit[\s_-]*(order|policy)/),
   A('prohibida', 'Salir / Cerrar sesión', /\bsalir\b|cerrar[\s_+-]*sesion|desconect|logout|log[\s_-]*off/),
   // ── GUARDAR PRESUPUESTO (permitido solo en resultado y con `efectoEsperado: 'guardar_presupuesto'`) ──
   A('guardar_presupuesto', 'Grabar', /grab(ar|acion)/),
   A('guardar_presupuesto', 'Guardar (presupuesto / proyecto)', /guardar|\bsave\b/),
   A('guardar_presupuesto', 'Archivar', /archivar|^\s*store\s*$|send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?\s*store/),
+  // Alberto (14/10/2026): «Proyecto ampliado» es el proyecto que hay que descargarse. Mismas condiciones que Guardar/Descargar.
+  A('guardar_presupuesto', 'Proyecto ampliado', /proyecto[\s_+-]*ampliado/),
   A('guardar_presupuesto', 'Descargar', /descarg|download/),
   A('guardar_presupuesto', 'Imprimir', /imprim|\bprint\b/),
   A('guardar_presupuesto', 'Generar PDF', /generar[\s_+-]*pdf|\bpdf\b/),
 ])
 
 /**
- * Entradas de `TEXTOS_BLOQUEADOS_ALTA` (guard-emision.ts) que son ARCHIVAR del ePAC (td#store, `sendActionEvent('store')`).
+ * Entradas de `TEXTOS_BLOQUEADOS_ALTA` (guard-emision.ts) que son GUARDAR del ePAC: ARCHIVAR (td#store,
+ * `sendActionEvent('store')`) y «PROYECTO AMPLIADO» (texto y pestaña td#menu4; una combinación con «emitir» la sigue
+ * bloqueando `PATRON_EMISION`, y td#menu3/menu5 siguen bloqueadas).
  * Siguen bloqueadas en todo `pulsar()` y en la red; solo `permitirGuardarPresupuesto` las deja pasar (y solo lo pide la
  * puerta del guardado de presupuesto del worker). `contract` / `validar_aceptar` / emitir siguen bloqueados también ahí.
  */
@@ -62,9 +65,28 @@ export const PATRONES_GUARDADO_GUARD: readonly RegExp[] = Object.freeze([
   /archivar/i,
   /^\s*store\s*$/i,
   /send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?\s*store/i,
+  /proyecto[\s_+-]*ampliado/i,
+  /^\s*menu4\s*$/i,
 ])
 
 const plano = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+
+/**
+ * EXCEPCIÓN ESTRECHA de Allianz ePAC (Alberto, 14/10/2026): el `td#EMISION_PROJ` «Proyecto Ampliado» lleva «emisi» en el id y
+ * `PATRON_EMISION` lo bloquearía. Único sitio de la excepción. Se aplica SOLO si a la vez: id IGUAL (===, nunca patrón ni
+ * prefijo) a `id` y texto visible, normalizado, IGUAL a `texto` (ninguna otra palabra). Entonces, y solo entonces, esa
+ * descripción-id se quita de lo que se mira; texto, aria, onclick, name, href… se siguen mirando enteros. Quien la usa
+ * (`bloqueoGuardadoPresupuesto` y `pulsarGuardadoPresupuesto`) además exige resultado + importes + efecto guardar + tope.
+ */
+export const EXCEPCION_PROYECTO_AMPLIADO = Object.freeze({ id: 'EMISION_PROJ', texto: 'proyecto ampliado' })
+
+/** Quita de `descripciones` el id de la excepción (una vez) si el control la cumple; si no, las devuelve tal cual. Pura. */
+export function descripcionesSinExcepcionProyecto<T extends string | null | undefined>(descripciones: readonly T[], id: string | null | undefined, texto: string | null | undefined): T[] {
+  const cumple = id === EXCEPCION_PROYECTO_AMPLIADO.id && typeof texto === 'string' && plano(texto) === EXCEPCION_PROYECTO_AMPLIADO.texto
+  if (!cumple) return [...descripciones]
+  const i = descripciones.findIndex((d) => d === EXCEPCION_PROYECTO_AMPLIADO.id)
+  return i < 0 ? [...descripciones] : descripciones.filter((_, j) => j !== i)
+}
 
 export type ClasificacionAccion = { emision: string | null; prohibida: string | null; guardar: string | null }
 
@@ -99,6 +121,45 @@ export function lineaAccionesPortalParaIA(): { emision: string; prohibidas: stri
     prohibidas: nombresAccionesPortal('prohibida').join(', '),
     guardar: nombresAccionesPortal('guardar_presupuesto').join(', '),
   }
+}
+
+// ─── Frontera de emisión POR CAMPOS (14/10/2026) ─────────────────────────────
+// La compañía pide la cuenta bancaria (y normalmente la fecha de efecto) solo para EMITIR, tras la aceptación del cliente.
+// Un campo bancario en pantalla = frontera: el explorador para con `cerca_de_emision` (`detectarParada`, explorador.ts, que
+// usan el paso de asegura y el worker ANTES de llamar a la IA: la IA nunca recibe ni rellena ese campo). La fecha de efecto
+// SOLA no para (también aparece al tarificar); cuenta solo junto a un campo bancario en la misma pantalla.
+// Patrones sobre texto PLANO; sin `\b` en IBAN/SWIFT/BIC a propósito: ids tipo `txtIBAN` / `swift_bic` no tienen frontera.
+
+export type CampoBancario = { readonly nombre: string; readonly patron: RegExp }
+
+export const CAMPOS_BANCARIOS: readonly CampoBancario[] = Object.freeze([
+  Object.freeze({ nombre: 'IBAN', patron: /iban/ }),
+  Object.freeze({ nombre: 'Cuenta bancaria', patron: /cuenta[\s_.-]*(?:bancaria|corriente)|\bccc\b/ }),
+  Object.freeze({ nombre: 'Número de cuenta', patron: /(?:numero|num|nro|n[ºo°]?)[\s_.-]*(?:de[\s_.-]*)?cuenta/ }),
+  Object.freeze({ nombre: 'Domiciliación', patron: /domiciliacion|domiciliar/ }),
+  Object.freeze({ nombre: 'Titular de la cuenta', patron: /titular[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?cuenta/ }),
+  Object.freeze({ nombre: 'Entidad bancaria', patron: /entidad[\s_.-]*(?:bancaria|financiera)/ }),
+  Object.freeze({ nombre: 'SWIFT / BIC', patron: /swift|(?:^|[^a-z])bic(?![a-z])/ }),
+])
+
+export const PATRON_FECHA_EFECTO = /fecha[\s_.-]*(?:de[\s_.-]*)?efecto|efecto[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?(?:poliza|fecha)/
+
+export type FronteraCampos = { frontera: boolean; campoBancario: string | null; fechaEfecto: boolean }
+
+/**
+ * Descripciones (etiqueta, name, id, placeholder, aria…) de los CAMPOS de una pantalla → ¿hay frontera de emisión?
+ * `frontera` ⇔ hay un campo bancario. La fecha de efecto se informa pero por sí sola NO es frontera. Pura.
+ */
+export function fronteraEmisionPorCampos(camposDesc: readonly (string | null | undefined)[]): FronteraCampos {
+  const out: FronteraCampos = { frontera: false, campoBancario: null, fechaEfecto: false }
+  for (const d of camposDesc) {
+    if (typeof d !== 'string' || d === '') continue
+    const t = plano(d)
+    if (out.campoBancario === null) out.campoBancario = CAMPOS_BANCARIOS.find((c) => c.patron.test(t))?.nombre ?? null
+    if (!out.fechaEfecto && PATRON_FECHA_EFECTO.test(t)) out.fechaEfecto = true
+  }
+  out.frontera = out.campoBancario !== null
+  return out
 }
 
 // ─── Referencia del presupuesto ──────────────────────────────────────────────

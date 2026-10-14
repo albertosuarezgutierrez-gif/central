@@ -731,7 +731,7 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await rellenarDatosBasicosMoto(datos, form)
   await lanzarSiHayErrores(datos)
   await ctx.pausa()
-  // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión.
+  // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión (el adaptador no guarda: eso es del explorador).
   const tarifa = await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
   await lanzarSiHayErrores(tarifa)
   const primas = await leerPrimasTarificar(tarifa)

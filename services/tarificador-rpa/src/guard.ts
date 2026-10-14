@@ -15,6 +15,7 @@ import {
   bloqueoAvance,
   bloqueoGuardadoPresupuesto,
   clasificarAccionPortal,
+  descripcionesSinExcepcionProyecto,
   comprobarBoton,
   esAvanceAutorizado,
   esBotonDeListaBlanca,
@@ -125,8 +126,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // del avance vigente (origen + ruta exactos, sin query). Cualquier otra (GET incluida) se mira como siempre: con
       // «aceptar» bloqueado. store/contract/validar_aceptar/emitir/contratar… abortan siempre, también en la lista.
       const enLista = av !== null && destinoAvancePermitido(url, av.endpoints)
-      // Guardado de presupuesto: SOLO Archivar (`store`) se abre, y SOLO hacia el origen del marco del botón. «Aceptar»,
-      // emitir, contract, validar_aceptar, ampliado… siguen abortando (`permitirGuardarPresupuesto` no los toca).
+      // Guardado de presupuesto: SOLO Archivar (`store`) y Proyecto ampliado se abren, y SOLO hacia el origen del marco del botón. «Aceptar»,
+      // emitir, contract, validar_aceptar… siguen abortando (`permitirGuardarPresupuesto` no los toca).
       const gv = guardadoVigente()
       const enGuardado = gv !== null && origenDe(url) === gv.origen
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado }
@@ -610,7 +611,7 @@ export class GuardadoConDialogoError extends Error {
  *   2. que el módulo lo autorice sobre el INVENTARIO (`bloqueoGuardadoPresupuesto`: categoría guardar, NADA de emisión ni
  *      prohibida, pantalla de RESULTADO con importes o tras un guardado previo);
  *   3. EXACTAMENTE un control vivo, con el texto del inventario, que pase `comprobarBoton` con SOLO Archivar abierto
- *      (`permitirGuardarPresupuesto`: emitir, contract, validar_aceptar, «Aceptar», ampliado, fraccionado… siguen bloqueados)
+ *      (`permitirGuardarPresupuesto`: emitir, contract, validar_aceptar, «Aceptar», fraccionado… siguen bloqueados)
  *      y que, VIVO, siga clasificando como guardar y no como emisión/prohibida (todo: texto, title, value, href, onclick…);
  * Solo entonces abre la ventana de red (Archivar permitido SOLO hacia el origen del marco del botón; todo no-GET a otro
  * origen se aborta), pulsa UNA vez, espera a `trasClic` (el PDF) y cierra la ventana SIEMPRE. Un diálogo → no se acepta y
@@ -631,9 +632,11 @@ export async function pulsarGuardadoPresupuesto(
   const motivo = bloqueoGuardadoPresupuesto(aut.el, aut.pantalla)
   if (motivo) throw new EmisionBloqueadaError('boton', `guardado de presupuesto no autorizado: ${motivo}`)
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: no hay exactamente un control')
-  const desc = await descripcion(boton)
+  const descViva = await descripcion(boton)
   const plano = (t: string | null) => (t ?? '').replace(/\s+/g, ' ').trim()
-  if (plano(desc[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: el control vivo no es el del inventario')
+  if (plano(descViva[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: el control vivo no es el del inventario')
+  // Excepción estrecha de «Proyecto ampliado» (id EMISION_PROJ exacto + texto exacto), sobre el control VIVO (índices: 0 texto, 4 id).
+  const desc = descripcionesSinExcepcionProyecto(descViva, descViva[4], descViva[0])
   comprobarBoton(desc, { permitirGuardarPresupuesto: true })
   const cat = clasificarAccionPortal(desc)
   if (cat.emision || cat.prohibida || !cat.guardar) throw new EmisionBloqueadaError('boton', `guardado de presupuesto: el control vivo no es de guardar (${cat.emision ?? cat.prohibida ?? 'otro'})`)

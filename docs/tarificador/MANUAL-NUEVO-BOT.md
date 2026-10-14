@@ -20,6 +20,8 @@
 
 ## 2. Reglas duras (no negociables)
 - **TARIFICAR ≠ EMITIR.** Nunca se emite sin OK de Alberto por Telegram + aceptación del cliente (`docs/TARIFICADOR-EMISION-DISENO.md`). Guardián: `test/regression-tarificador-rpa.test.ts`; guard en `services/tarificador-rpa/src/guard.ts` y `packages/module-tarificacion/src/guard-emision.ts`. Pulsar solo con `ctx.pulsar()`; jamás `.click()` directo.
+- **Frontera de emisión por campos:** una pantalla con campo de IBAN / cuenta bancaria / número de cuenta / domiciliación / titular de la cuenta / entidad bancaria / SWIFT-BIC es emisión: el explorador para (`cerca_de_emision`) sin dárselo a la IA (`CAMPOS_BANCARIOS` en `acciones-portal.ts`). La fecha de efecto sola NO para; sí junto a un campo bancario. En un portal nuevo, revisa que sus etiquetas de cuenta casen.
+- **«Proyecto ampliado» es GUARDAR** (descargar el proyecto), no prohibido: solo en resultado con importes y `efectoEsperado: guardar_presupuesto`, dentro del tope de guardados; combinado con «emitir» sigue bloqueado.
 - **El bot hace todo lo demás:** rellenar, tarificar, **GUARDAR el presupuesto/proyecto con su referencia y descargar el PDF** una vez visto el precio. Generar proyecto está permitido (Alberto, 13/10/2026); Emitir/Contratar/Formalizar/Grabar póliza/Pago/Firma/IBAN no.
 - **No automatizar SMS/OTP ni CAPTCHA:** `requiere_humano` + aviso (modo `sesion: 'manual'` si el portal pide SMS: `src/boveda-sesion.ts`).
 - **Nada de datos personales** en código, tests, fixtures, docs, logs, commits ni chat. Credenciales solo como fly secrets; en docs, solo el nombre de variable.

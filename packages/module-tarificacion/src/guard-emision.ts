@@ -16,8 +16,8 @@ export const PATRON_EMISION = /emit|emisi|contrat|formaliz|suplement|anul|baja/i
 
 // Textos de Allianz ePAC (capturas del 05/10/2026) que el bot NUNCA debe pulsar, sea cual sea la fase:
 // el radio «ELIJA UNA OPCIÓN» (por texto; la elección legítima va por la máquina de fases), «RECUPERACIÓN
-// DE CONTRASEÑA» (toca las credenciales), y las pestañas «Archivar» y «Proyecto Ampliado» (más «Emitir»,
-// que ya casa con PATRON_EMISION). Se comparan sin tildes y tolerando separadores.
+// DE CONTRASEÑA» (toca las credenciales), y las pestañas «Archivar» y «Proyecto Ampliado» (guardar: solo con
+// `permitirGuardarPresupuesto`; más «Emitir», que ya casa con PATRON_EMISION). Se comparan sin tildes y tolerando separadores.
 // «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): es la NAVEGACIÓN para cotizar.
 // «Archivar» (texto, td#store, `sendActionEvent('store')`) viene de `PATRONES_GUARDADO_GUARD` (acciones-portal.ts, lista
 // única del 14/10/2026): sigue BLOQUEADO aquí; solo `permitirGuardarPresupuesto` lo deja pasar (ver `pareceEmision`).
@@ -25,11 +25,11 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
   ...PATRONES_GUARDADO_GUARD,
-  /proyecto[\s_+-]*ampliado/i,
-  // Allianz «RC PYME» (app 1430, 07/10/2026): pestañas td#menu3 Archivar · menu4 Proyecto ampliado · menu5 Datos
+  // (`proyecto ampliado` y td#menu4 → `PATRONES_GUARDADO_GUARD`, arriba: pasan solo con `permitirGuardarPresupuesto`.)
+  // Allianz «RC PYME» (app 1430, 07/10/2026): pestañas td#menu3 Archivar · menu4 Proyecto ampliado (guardar) · menu5 Datos
   // emisión (id EXACTO: las descripciones se miran una a una), div#btnAccept «Aceptar» (llama a emision_ipid) y
   // div#btnFracciona «Pago fraccionado». «Datos emisión» ya casa con PATRON_EMISION (`emisi`).
-  /^\s*menu[345]\s*$/i,
+  /^\s*menu[35]\s*$/i,
   /btn[\s_+-]*accept/i,
   /btn[\s_+-]*fracciona/i,
   /pago[\s_+-]*fraccionado/i,

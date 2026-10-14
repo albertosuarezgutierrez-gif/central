@@ -49,6 +49,6 @@ fly secrets set --app asegura-tarificador --stage \
 - Puente con PR #4305 (filtro `canal='codeoscopic'` en `lib/presupuesto.ts`).
 
 ## 9. Reglas de oro
-- El bot **NUNCA** pulsa Aceptar en Tarificar, Emitir, Archivar, Proyecto Ampliado.
+- El bot **NUNCA** pulsa Aceptar en Tarificar, Emitir. Archivar y Proyecto Ampliado solo como guardar presupuesto en resultado (Proyecto Ampliado: id `EMISION_PROJ` y texto exactos).
 - Credenciales **SOLO en fly secrets**. Base de datos: ni en env ni en código.
 - Si falta una credencial en fly, el trabajo acaba con error `credenciales` (no `error_definitivo`).

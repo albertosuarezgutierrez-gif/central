@@ -38,6 +38,12 @@ export { PATRON_EMISION, PATRON_ACEPTAR, TEXTOS_BLOQUEADOS_ALTA, EmisionBloquead
 export {
   ACCIONES_PORTAL,
   PATRONES_GUARDADO_GUARD,
+  CAMPOS_BANCARIOS,
+  EXCEPCION_PROYECTO_AMPLIADO,
+  descripcionesSinExcepcionProyecto,
+  PATRON_FECHA_EFECTO,
+  fronteraEmisionPorCampos,
+  type FronteraCampos,
   clasificarAccionPortal,
   nombresAccionesPortal,
   lineaAccionesPortalParaIA,
