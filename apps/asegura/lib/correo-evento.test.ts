@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  PREFIJO_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, elegirSiniestroAcotado, fechaCorreoMadrid, TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento, tareaValida, validarEntradaEvento, venceTarea,
+  PREFIJO_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, elegirSiniestroAcotado, fechaCorreoMadrid, TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento, tareaValida, validarEntradaEvento, validarMarcaRevisado, venceTarea,
   type ContextoItem, type ItemEvento, type PolizaCandidata,
 } from './correo-evento.ts'
 
@@ -349,4 +349,17 @@ test('elegirSiniestroAcotado: más candidatos que el tope → no se elige ningun
   assert.equal(elegirSiniestroAcotado(pocas, TOPE_SINIESTROS_CANDIDATOS, '123', 'Occident', 'C0468', null).estado, 'casa')
   const muchas = Array.from({ length: TOPE_SINIESTROS_CANDIDATOS + 1 }, (_, i) => fila(i))
   assert.equal(elegirSiniestroAcotado(muchas, TOPE_SINIESTROS_CANDIDATOS, '123', 'Occident', 'C0468', null).estado, 'poliza_distinta')
+})
+
+test('validarMarcaRevisado: uuid + booleano estricto, nada se coacciona', () => {
+  const id = '0b6c1f7e-3a52-4d7e-9f0a-1c2d3e4f5a6b'
+  assert.deepEqual(validarMarcaRevisado({ id, revisado: true }), { ok: true, id, revisado: true })
+  assert.deepEqual(validarMarcaRevisado({ id, revisado: false }), { ok: true, id, revisado: false })
+  assert.equal(validarMarcaRevisado({ id: 'no-es-uuid', revisado: true }).ok, false)
+  assert.equal(validarMarcaRevisado({ id: `${id}; drop`, revisado: true }).ok, false)
+  assert.equal(validarMarcaRevisado({ id, revisado: 'true' }).ok, false)
+  assert.equal(validarMarcaRevisado({ id, revisado: 1 }).ok, false)
+  assert.equal(validarMarcaRevisado({ id }).ok, false)
+  assert.equal(validarMarcaRevisado(null).ok, false)
+  assert.equal(validarMarcaRevisado([id]).ok, false)
 })

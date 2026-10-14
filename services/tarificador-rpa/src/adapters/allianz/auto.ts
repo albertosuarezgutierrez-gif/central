@@ -36,6 +36,7 @@
 import type { Frame, Locator, Page } from 'playwright'
 import {
   comprobarBoton,
+  AVISO_VERSION_POR_SIMILITUD,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
   esOpcionVacia,
   fechaIsoDesdeTexto,
@@ -231,15 +232,21 @@ export async function consultarMatricula(raiz: Pick<Frame, 'locator'>, matricula
 }
 
 /**
- * Elección de versión que se usa (14/10/2026). La de una PERSONA o la IA/memoria (`eleccionVersion`) manda; si no hay, la del
- * VEHÍCULO CONFIRMADO por Mapfre (`vehiculoConfirmado`: CV/CC/puertas leídos de la etiqueta de cada versión) SOLO si casa
- * exactamente una y las demás quedan descartadas; si no, `null` y sigue el flujo de siempre (requiere_humano → memoria/IA/
- * persona). Pura. Nunca «la más parecida».
+ * Elección de versión que se usa (14/10/2026). La de una PERSONA o la IA/memoria (`eleccionVersion`) manda siempre; si no hay,
+ * la del VEHÍCULO CONFIRMADO por Mapfre (`vehiculoConfirmado`) POR SIMILITUD: Mapfre saca el vehículo exacto y aquí no hace falta
+ * coincidencia exacta, basta la versión «prácticamente la misma» (CV ±10 %, CC ±5 % leídos de la etiqueta; gana la más próxima,
+ * empate → la primera). Si ninguna entra en tolerancia o la lista no trae CV/CC legibles → `null` y sigue el flujo de siempre
+ * (requiere_humano → memoria/IA/persona). Pura. `porSimilitud` deja la traza de que no fue una elección explícita.
  */
-export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): EleccionVersion | null {
+export function eleccionVersionConOrigen(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): { eleccion: EleccionVersion | null; porSimilitud: boolean } {
   const explicita = form.eleccionVersion ?? null
-  if (explicita && (explicita.codigo?.trim() || explicita.etiqueta?.trim())) return explicita
-  return eleccionPorVehiculoConfirmadoDeEtiquetas(form.vehiculoConfirmado ?? null, lectura.versiones)
+  if (explicita && (explicita.codigo?.trim() || explicita.etiqueta?.trim())) return { eleccion: explicita, porSimilitud: false }
+  const porSimilitud = eleccionPorVehiculoConfirmadoDeEtiquetas(form.vehiculoConfirmado ?? null, lectura.versiones)
+  return { eleccion: porSimilitud, porSimilitud: porSimilitud !== null }
+}
+
+export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): EleccionVersion | null {
+  return eleccionVersionConOrigen(lectura, form).eleccion
 }
 
 /**
@@ -250,7 +257,8 @@ export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 've
  * portal no tiene puesta.
  */
 export async function resolverVehiculo(raiz: Pick<Frame, 'locator'>, lectura: LecturaVehiculoPortal, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): Promise<Vehiculo> {
-  const r = vehiculoDesdeLectura(lectura, eleccionVersionEfectiva(lectura, form))
+  const { eleccion, porSimilitud } = eleccionVersionConOrigen(lectura, form)
+  const r = vehiculoDesdeLectura(lectura, eleccion)
   if (r.tipo === 'ambigua') throw new ErrorEleccionVersion(r.opciones)
   if (r.tipo === 'incompleto') throw new ErrorTarificador('datos', `allianz/auto: el portal no da ${r.faltan.join(', ')} del vehículo`)
   const codigo = r.opcion.codigo
@@ -262,7 +270,7 @@ export async function resolverVehiculo(raiz: Pick<Frame, 'locator'>, lectura: Le
     await select.selectOption(codigo)
   }
   if ((await select.inputValue()) !== codigo) throw new ErrorTarificador('portal', 'allianz/auto: el portal no dejó fijada la versión resuelta')
-  return r.vehiculo
+  return porSimilitud ? { ...r.vehiculo, versionPorSimilitud: true } : r.vehiculo
 }
 
 // ───────────────────────── Datos básicos (conductor) ─────────────────────────
@@ -391,6 +399,7 @@ export function ofertasDesdePrimas(primas: readonly PrimaModalidad[], producto: 
     avisos: [
       'Importe del primer recibo anual (recibo bancario) de la tabla «PRECIOS MODALIDADES»; sin desglose neta/impuestos.',
       ...(vehiculo ? [`Vehículo según el catálogo de Allianz: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.version}.`] : []),
+      ...(vehiculo?.versionPorSimilitud ? [AVISO_VERSION_POR_SIMILITUD] : []),
     ],
   }))
 }

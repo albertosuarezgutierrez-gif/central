@@ -217,3 +217,13 @@ describe('purga del riesgo · plantillas: un riesgo YA purgado no se reutiliza',
     expect(riesgoYaPurgado({ estado: 'requiere_humano', ramo: 'moto', riesgo: purgado })).toBe(false)
   })
 })
+
+describe('documentoTomador (Mapfre, 14/10/2026): lo pone asegura y se BORRA al cerrar', () => {
+  it('no está en la lista blanca: la purga lo quita en moto y en auto', () => {
+    for (const ramo of ['moto', 'auto']) {
+      const r = riesgoSinDatosPersonales({ ramo, codigoPostal: '41003', documentoTomador: '00000000T' }, ramo)
+      expect(r).toEqual({ ramo, codigoPostal: '41003' })
+      expect(JSON.stringify(r)).not.toContain('00000000T')
+    }
+  })
+})

@@ -28,6 +28,8 @@ export type CorreoCompania = {
   fechaLimite: string | null
   /** `null` = el correo no lo traía (nunca 0). */
   importe: number | null
+  /** `true` = alguien lo marcó como mirado. Ausente (asegura antiguo) = `false`: no se ha mirado. */
+  revisado: boolean
 }
 
 export type LecturaCorreosCompania =
@@ -49,13 +51,30 @@ function fila(v: unknown): CorreoCompania | null {
     subtipo: txt(o.subtipo), numeroPoliza: txt(o.numeroPoliza), motivo: txt(o.motivo), resumen: txt(o.resumen),
     clienteId: txt(o.clienteId), cliente: txt(o.cliente),
     fechaLimite: fl && /^\d{4}-\d{2}-\d{2}$/.test(fl) ? fl : null,
+    revisado: o.revisado === true,
     importe: typeof o.importe === 'number' && Number.isFinite(o.importe) ? o.importe : null,
   }
 }
 
-/** ¿Pide que alguien lo mire? Sin resolver, o a medias (sin desenlace confirmado). */
-export function pideMirar(e: Pick<CorreoCompania, 'estado'>): boolean {
+/** ¿Admite la marca «mirado»? Sin resolver, o a medias (sin desenlace confirmado), mirado o no. */
+export function admiteMarca(e: Pick<CorreoCompania, 'estado'>): boolean {
   return e.estado === 'sin_resolver' || e.estado === 'procesando'
+}
+
+/** ¿Pide que alguien lo mire AHORA? Admite la marca y nadie la ha puesto. */
+export function pideMirar(e: Pick<CorreoCompania, 'estado'> & { revisado?: boolean }): boolean {
+  return admiteMarca(e) && e.revisado !== true
+}
+
+/** Orden de la bandeja: los que piden mirar primero, los mirados al final; dentro, lo más reciente arriba. */
+export function ordenarCorreos(filas: CorreoCompania[]): CorreoCompania[] {
+  const rango = (e: CorreoCompania) => (pideMirar(e) ? 0 : admiteMarca(e) ? 2 : 1)
+  return [...filas].sort((a, b) => rango(a) - rango(b) || b.creado.localeCompare(a.creado))
+}
+
+/** Aplica en local el resultado de marcar/deshacer, sin recargar la lista. Id desconocido = sin cambios. */
+export function conRevisado(filas: CorreoCompania[], id: string, revisado: boolean): CorreoCompania[] {
+  return ordenarCorreos(filas.map((f) => (f.id === id && admiteMarca(f) ? { ...f, revisado } : f)))
 }
 
 export function interpretarCorreosCompania(status: number, json: unknown): LecturaCorreosCompania {
@@ -73,9 +92,7 @@ export function interpretarCorreosCompania(status: number, json: unknown): Lectu
     if (f) filas.push(f)
     else descartadas++
   }
-  // Los que piden mirar primero; dentro, lo más reciente arriba.
-  filas.sort((a, b) => Number(pideMirar(b)) - Number(pideMirar(a)) || b.creado.localeCompare(a.creado))
-  return { estado: 'ok', filas, truncado: o.truncado === true, descartadas }
+  return { estado: 'ok', filas: ordenarCorreos(filas), truncado: o.truncado === true, descartadas }
 }
 
 export const ROTULO_TIPO_CORREO: Record<string, string> = {

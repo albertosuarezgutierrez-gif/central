@@ -1,5 +1,6 @@
-// Mapfre wmediadores · NSEI «Nueva Alta» AUTO (turismo) — MAPA DE PANTALLAS, APAGADO (13/10/2026).
-// NO está registrado en `adapters/index.ts`: nada de producción lo ejecuta (MAPFRE_AUTO_ACTIVO = false).
+// Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// Registrado SIEMPRE en `adapters/index.ts` (14/10/2026: el worker de Fly no recibe secretos nuevos). La PUERTA es la fila
+// `seguros.companias_integracion` mapfre/<ramo> activa y `rpa_autorizada`: sin ella asegura no encola, no reclama ni lanza.
 // Ver docs/TARIFICADOR-RPA.md y docs/TARIFICADOR-MATRIZ.md (fila Mapfre).
 //
 // Fuente: UNA grabación del marcador del 13/10/2026 (19 pantallas, 0 marcos sin leer: la app NSEI es una SPA Angular
@@ -15,21 +16,23 @@
 // VEHÍCULO CONFIRMADO (14/10/2026, Alberto: «usa el bot de Mapfre que ya tiene esa información»): por MATRÍCULA, el diálogo
 // «Selección de vehículo» da el vehículo exacto (denominación, CV, CC, puertas, fecha de inicio) de coche y moto (mismo NSEI).
 // `consultarVehiculoPorMatricula` teclea la matrícula, lee la fila (sin matrícula ni bastidor) y la confirma SOLO por
-// `ctx.confirmarVehiculoMapfre` (función guardada de guard.ts: una sola fila y con la matrícula del riesgo, comparada dentro
-// del guard). Devuelve `VehiculoConfirmado` (module-tarificacion), que alimentará a los demás bots (fase siguiente).
-// Lo que depende de pantallas NO mapeadas (lupa del NIF y «Continuar» del paso 1, «Continuar» del paso 2, mat-select, precio)
+// `ctx.confirmarVehiculoMapfre` (función guardada de guard.ts: la PRIMERA fila, y solo si su matrícula es la del riesgo,
+// comparada dentro del guard). Devuelve `VehiculoConfirmado` (module-tarificacion), que alimentará a los demás bots (fase siguiente).
+// NIF del tomador (paso 1): lo pone ASEGURA desde la ficha (`documentoTomador`); campo mapeado, LUPA sin DOM grabado.
+// «Continuar» 1 → 2 → 3 por `ctx.continuarMapfre` (guard.ts). Lo que depende de pantallas NO mapeadas (lupa, mat-select)
 // es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura en la primera prueba real.
 //
 // 🚨 SEGURIDAD. Este fichero NO pulsa nada (ni `.click`, ni `ctx.pulsar`): solo lee y rellena campos de texto, siempre
-// tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts` y el del diálogo de vehículo por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Generar
+// tras `comprobarCampo`. Los clics de la entrada van por `entrada.ts`; el del diálogo de vehículo y «Continuar», por guard.ts. No hay selectores para: «Contratar» (uno por producto, en la tarjeta de prima), el paso 6, «Generar
 // Proyecto» / «Ir a generar proyecto» (crean un nº de proyecto REAL en Mapfre y generan documentación), el «Aceptar» de
 // documentos, el «Aceptar Obs. y Cláusulas», el «Aceptar» de descuentos/verificación, ni la casilla de la cláusula de
 // declaración. «Continuar» del paso 3 NO es un avance neutro: lanza «Verificando controles técnicos» + «Calculando las
-// primas» (es lo que lleva a precio). Pulsarlo es DECISIÓN PENDIENTE de Alberto (ver `avanzarPasoGuardado`).
+// primas» (es lo que lleva a precio): PERMITIDO por Alberto (14/10/2026), solo por `pulsarContinuarMapfre` desde «Figuras».
 // Datos personales: la matrícula, los NIF, las fechas y el IBAN solo se escriben en su campo; nunca en logs ni mensajes.
 
 import type { Frame, Locator, Page } from 'playwright'
 import {
+  documentoTomadorDe,
   importeEs,
   normalizarMatricula,
   resolverVersion,
@@ -44,14 +47,10 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { ErrorSeleccionVehiculoMapfre } from '../../guard.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/comunidades.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
-
-/** Flag de registro: apagado por defecto. Nada lo enciende en producción. */
-export const MAPFRE_AUTO_ACTIVO = false
 
 /**
  * Hueco declarado: falta un dato de la grabación. NO transitorio → `error_definitivo`, no se reintenta. Con
@@ -297,8 +296,8 @@ const ESPERA_DIALOGO_VEHICULO_MS = 15_000
 /**
  * Paso 2 · VEHÍCULO CONFIRMADO por matrícula (coche y moto). Con el paso «Objeto asegurado» activo en `nsei` (la pestaña de
  * NSEI): teclea la matrícula (`comprobarCampo` + `fill`), espera el diálogo «Selección de vehículo», lee sus filas (sin
- * matrícula ni bastidor) y, con EXACTAMENTE una, la confirma por `ctx.confirmarVehiculoMapfre` (guard.ts compara allí la
- * matrícula de la fila con la del riesgo). 0 filas → `datos`; varias → `requiere_humano`. Devuelve el vehículo SIN matrícula.
+ * matrícula ni bastidor) y confirma la PRIMERA por `ctx.confirmarVehiculoMapfre` (guard.ts compara allí la matrícula de esa
+ * fila con la del riesgo; no casa → `datos`). 0 filas → `datos`; varias → la primera (Alberto, 14/10/2026). Devuelve el vehículo SIN matrícula.
  * Ningún mensaje lleva la matrícula. No aparece el campo o el diálogo → `ErrorMapaIncompleto` con inventario.
  */
 export async function consultarVehiculoPorMatricula(
@@ -320,7 +319,7 @@ export async function consultarVehiculoPorMatricula(
   }
   const filas = await leerFilasDialogoVehiculo(nsei)
   if (filas.length === 0) throw new ErrorTarificador('datos', 'mapfre/auto: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  if (filas.length > 1) throw new ErrorSeleccionVehiculoMapfre(filas.length)
+  // Varias filas → la PRIMERA (Alberto, 14/10/2026); el guard confirma esa misma fila y exige su matrícula = la del riesgo.
   const vehiculo = vehiculoConfirmadoDesdeMapfre(filas[0]!)
   if (!vehiculo) throw new ErrorTarificador('portal', 'mapfre/auto: la fila de «Selección de vehículo» no trae denominación comercial legible')
   await ctx.confirmarVehiculoMapfre(nsei, matricula)
@@ -372,7 +371,7 @@ export async function leerResumenVehiculo(raiz: Pick<Frame, 'locator'>): Promise
 // ───────────────────────── plan de campos (puro) ─────────────────────────
 
 /** Cómo se escribe un campo. Solo `texto` se sabe hacer sin pulsar nada; el resto necesita un clic (hueco). */
-export type OperacionNsei = { sel: string; etiqueta: string; tipo: 'texto' | 'mat-select' | 'interruptor' | 'casilla'; valor: string | boolean }
+export type OperacionNsei = { sel: string; etiqueta: string; tipo: 'texto' | 'mat-select' | 'interruptor' | 'casilla'; valor: string | boolean; paso: IdPasoNsei }
 
 const CP = /^\d{5}$/
 
@@ -392,19 +391,19 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
   if (f.siniestrosUltimos5Anios === null) throw new ErrorTarificador('datos', 'mapfre/auto: faltan los siniestros RC de los últimos 5 años (el portal no admite «sin dato»)')
   if (f.aniosAseguradoAnterior === null) throw new ErrorTarificador('datos', 'mapfre/auto: faltan los años asegurado en la compañía anterior (el portal pregunta si tiene compañía anterior: no se asume)')
   const escribibles: OperacionNsei[] = [
-    { sel: SEL_OBJETO.matricula, etiqueta: 'matrícula', tipo: 'texto', valor: f.matricula },
-    { sel: SEL_OBJETO.cpCirculacion, etiqueta: 'CP de circulación', tipo: 'texto', valor: f.codigoPostal },
-    { sel: SEL_CONDUCTOR.fechaNacimiento, etiqueta: 'fecha de nacimiento del conductor', tipo: 'texto', valor: fechaEs(f.conductor.fechaNacimiento) },
-    { sel: SEL_CONDUCTOR.fechaCarne, etiqueta: 'fecha del carné', tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne) },
-    { sel: SEL_HISTORIAL.siniestrosRc5, etiqueta: 'siniestros RC 5 años', tipo: 'texto', valor: String(f.siniestrosUltimos5Anios) },
+    { sel: SEL_OBJETO.matricula, etiqueta: 'matrícula', tipo: 'texto', valor: f.matricula, paso: 'objetoAsegurado' },
+    { sel: SEL_OBJETO.cpCirculacion, etiqueta: 'CP de circulación', tipo: 'texto', valor: f.codigoPostal, paso: 'objetoAsegurado' },
+    { sel: SEL_CONDUCTOR.fechaNacimiento, etiqueta: 'fecha de nacimiento del conductor', tipo: 'texto', valor: fechaEs(f.conductor.fechaNacimiento), paso: 'figuras' },
+    { sel: SEL_CONDUCTOR.fechaCarne, etiqueta: 'fecha del carné', tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne), paso: 'figuras' },
+    { sel: SEL_HISTORIAL.siniestrosRc5, etiqueta: 'siniestros RC 5 años', tipo: 'texto', valor: String(f.siniestrosUltimos5Anios), paso: 'figuras' },
   ]
   const pendientes: OperacionNsei[] = [
-    { sel: SEL_OBJETO.uso, etiqueta: 'uso del vehículo', tipo: 'mat-select', valor: '' },
-    { sel: SEL_OBJETO.ambitoCirculacion, etiqueta: 'ámbito de circulación', tipo: 'mat-select', valor: '' },
-    { sel: SEL_CONDUCTOR.claseCarne, etiqueta: 'clase del permiso', tipo: 'mat-select', valor: '' },
+    { sel: SEL_OBJETO.uso, etiqueta: 'uso del vehículo', tipo: 'mat-select', valor: '', paso: 'objetoAsegurado' },
+    { sel: SEL_OBJETO.ambitoCirculacion, etiqueta: 'ámbito de circulación', tipo: 'mat-select', valor: '', paso: 'objetoAsegurado' },
+    { sel: SEL_CONDUCTOR.claseCarne, etiqueta: 'clase del permiso', tipo: 'mat-select', valor: '', paso: 'figuras' },
   ]
-  pendientes.push({ sel: SEL_HISTORIAL.tieneCompaniaAnterior, etiqueta: '¿tiene compañía anterior?', tipo: 'interruptor', valor: f.aniosAseguradoAnterior > 0 })
-  if (f.aniosAseguradoAnterior > 0) pendientes.push({ sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: '' })
+  pendientes.push({ sel: SEL_HISTORIAL.tieneCompaniaAnterior, etiqueta: '¿tiene compañía anterior?', tipo: 'interruptor', valor: f.aniosAseguradoAnterior > 0, paso: 'figuras' })
+  if (f.aniosAseguradoAnterior > 0) pendientes.push({ sel: SEL_HISTORIAL.companiaAnterior, etiqueta: 'compañía anterior', tipo: 'mat-select', valor: '', paso: 'figuras' })
   return { escribibles, pendientes }
 }
 
@@ -425,54 +424,98 @@ export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: Pl
   return plan.pendientes.map((p) => p.etiqueta)
 }
 
-// ───────────────────────── avance entre pasos y flujo (huecos) ─────────────────────────
+// ───────────────────────── avance entre pasos y flujo ─────────────────────────
+// «Continuar» del stepper solo por `ctx.continuarMapfre` (guard.ts, `pulsarContinuarMapfre`): lista cerrada 1 → 2 → 3, una
+// vez por paso y en orden. El del paso 3 calcula las primas: PERMITIDO por Alberto (14/10/2026). Nada pasa de Coberturas.
 
-/**
- * HUECO / DECISIÓN PENDIENTE. «Continuar» (pie del stepper) avanza de paso. Del paso 1 al 2 y del 2 al 3 es neutro, pero el
- * del paso 3 al 4 lanza «Verificando controles técnicos» y «Calculando las primas» (grabación p13 → p14) y es lo que lleva a
- * precio. Nada de eso se pulsa hasta que Alberto decida (a) si «Continuar» del paso 3 es aceptable como «tarificar» y (b) cómo
- * se pulsa sin que lo rechace el guard (el botón no casa con el patrón de emisión, pero el adaptador no pulsa nada por sí mismo).
- */
-export async function avanzarPasoGuardado(desde: IdPasoNsei): Promise<never> {
-  throw new ErrorMapaIncompleto(`el avance guardado «Continuar» desde el paso «${desde}» de NSEI (sin DOM grabado del botón; el del paso 3 calcula las primas: decisión de Alberto), los mat-select (uso, ámbito, clase de permiso, compañía anterior) y la pantalla de precio`, true)
+/** Operaciones del plan que pertenecen a un paso (sin las que ya se hicieron por otra vía, p. ej. la matrícula). PURA. */
+export function planDelPaso(plan: PlanNsei, paso: IdPasoNsei, excluir: readonly string[] = []): PlanNsei {
+  const del = (o: OperacionNsei) => o.paso === paso && !excluir.includes(o.sel)
+  return { escribibles: plan.escribibles.filter(del), pendientes: plan.pendientes.filter(del) }
 }
 
 /**
- * HUECO · Paso 1 «Datos básicos»: el tomador se busca por NIF con una LUPA (clic sin DOM grabado) y se avanza con
- * «Continuar» (tampoco grabado). Para ANTES de escribir nada (no se teclea un NIF para quedarse a medias) y pide el
- * inventario de estructura de la pantalla para mapearla en la primera prueba real.
+ * Antes de cada «Continuar»: si el paso deja algún control que el robot no sabe rellenar (mat-select, interruptor, sin
+ * DOM grabado), PARA con inventario. No se avanza con el valor por defecto del portal: un precio con un dato supuesto
+ * no es el del cliente. PURA (lanza).
  */
-export async function pasoDatosBasicos(_nsei: Page, _f: FormularioAuto): Promise<void> {
-  throw new ErrorMapaIncompleto('el paso 1 «Datos básicos»: la lupa de búsqueda del tomador por NIF/CIF y «Continuar» al paso 2 (sin DOM grabado de esos controles)', true)
+export function exigirPasoCompleto(plan: PlanNsei, paso: IdPasoNsei): void {
+  const p = planDelPaso(plan, paso).pendientes
+  if (p.length) throw new ErrorMapaIncompleto(`en el paso «${PASOS_NSEI.find((x) => x.id === paso)!.nombre}» los controles sin mapear: ${p.map((o) => o.etiqueta).join(', ')} (mat-select/interruptor sin DOM grabado abierto)`, true)
+}
+
+const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'>, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras') => {
+  if (!ctx.continuarMapfre) throw new ErrorMapaIncompleto('la función guardada «Continuar» de Mapfre en el contexto del runner')
+  return ctx.continuarMapfre(nsei, paso)
 }
 
 /**
- * HUECO · del paso 2 al precio: CP de circulación, uso y ámbito (mat-select), «Continuar», Figuras, «Continuar» (calcula las
- * primas) y lectura de primas (`leerPrimasMapfre`, hecha). Cuando exista devolverá `{ ofertas, vehiculoConfirmado }`.
+ * HUECO · la LUPA que busca al tomador por NIF/CIF en el paso 1. Sin DOM grabado del control (la grabación empieza con el
+ * tomador ya cargado; Alberto la describió, sin selector). Para ANTES de teclear el NIF: tecleado y sin buscar, quedaría en
+ * la pantalla de la evidencia. Pide el inventario de estructura (que ya recoge `mat-icon`) para mapearla en la 1.ª prueba.
  */
-async function precioDesdeObjetoAsegurado(_nsei: Page, _f: FormularioAuto, _vehiculo: VehiculoConfirmado): Promise<ResultadoAdaptador> {
-  return avanzarPasoGuardado('objetoAsegurado')
+export async function buscarTomadorPorNif(_nsei: Page, _campo: Locator): Promise<void> {
+  throw new ErrorMapaIncompleto('la lupa de búsqueda del tomador por NIF/CIF del paso 1 «Datos básicos» (sin DOM grabado; el campo NIF sí está mapeado)', true)
 }
 
 /**
- * Adaptador SIN registrar (`MAPFRE_AUTO_ACTIVO = false`). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 [HUECO] →
- * vehículo confirmado por matrícula → «Continuar» del paso 2 [HUECO] → … precio. Hoy para en el paso 1 con inventario.
+ * Paso 1 «Datos básicos»: NIF/CIF del tomador → lupa → «Continuar» (guardado). El NIF lo pone asegura desde la ficha del
+ * cliente (`documentoTomador`) o viene en `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a
+ * su campo: nunca a logs, mensajes ni resultado.
+ */
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre'>): Promise<void> {
+  if (documentoTomadorDe(f) === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
+  const campo = nsei.locator(SEL_TOMADOR.documento).first()
+  if ((await campo.count()) === 0) throw new ErrorMapaIncompleto('el campo NIF/CIF del tomador del paso 1 «Datos básicos» (no aparece)', true)
+  await comprobarCampo(campo)
+  await buscarTomadorPorNif(nsei, campo)
+  await continuar(nsei, ctx, 'datosBasicos')
+}
+
+/**
+ * Del paso 2 (vehículo ya confirmado) al PRECIO: CP de circulación → «Continuar» → fechas del conductor y siniestros →
+ * «Continuar» del paso 3 (calcula las primas; Alberto, 14/10/2026) → lectura de las tarjetas de precio. Antes de cada
+ * «Continuar», `exigirPasoCompleto`: hoy uso/ámbito (paso 2) y clase de permiso / compañía anterior (paso 3) son mat-select
+ * sin DOM grabado abierto → para con inventario en el paso 2, sin precio supuesto.
+ */
+export async function precioDesdeObjetoAsegurado(nsei: Page, f: FormularioAuto, vehiculo: VehiculoConfirmado, ctx: Pick<ContextoPortal, 'continuarMapfre'>): Promise<ResultadoAdaptador> {
+  if (f.ramo === 'moto') throw new ErrorMapaIncompleto('el plan de campos de MOTO en NSEI (clase de permiso y figuras sin grabación de moto)', true)
+  const plan = planObjetoYFiguras(f)
+  await rellenarCamposTexto(nsei, planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]))
+  exigirPasoCompleto(plan, 'objetoAsegurado')
+  await continuar(nsei, ctx, 'objetoAsegurado')
+  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras'))
+  exigirPasoCompleto(plan, 'figuras')
+  await continuar(nsei, ctx, 'figuras')
+  const primas = await leerPrimasMapfre(nsei)
+  return { ofertas: ofertasDesdePrimasMapfre(primas, null), vehiculoConfirmado: vehiculo }
+}
+
+/**
+ * Adaptador de Mapfre (registrado SIEMPRE; la puerta es la fila `companias_integracion`). Coche y moto comparten NSEI
+ * («Turismos y Motos»). Flujo: login → entrada (pestaña nueva de NSEI) → paso 1 (NIF; lupa = HUECO) → vehículo confirmado
+ * por matrícula → CP → «Continuar» → figuras → «Continuar» (precio). Hoy para en la lupa del paso 1 con inventario.
  */
 export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.2.0',
+  version: '0.3.0',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
-    if (!pulsarEnlaceEntrada || !ctx.confirmarVehiculoMapfre) throw new ErrorMapaIncompleto('las funciones guardadas de la entrada y del vehículo en el contexto del runner')
+    if (!pulsarEnlaceEntrada || !ctx.confirmarVehiculoMapfre || !ctx.continuarMapfre) throw new ErrorMapaIncompleto('las funciones guardadas de la entrada, del vehículo y de «Continuar» en el contexto del runner')
+    // Sin NIF del tomador no se abre el portal (asegura lo pone; si falta, es un dato, no un hueco).
+    if (documentoTomadorDe(form) === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
     await login(page, ctx)
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada })
-    await pasoDatosBasicos(nsei, form)
+    await pasoDatosBasicos(nsei, form, ctx)
     const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx)
     ctx.log('vehiculo confirmado')
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado)
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx)
   },
 } as const
+
+/** MOTO: el mismo flujo NSEI que el coche (misma entrada «Turismos y Motos»), registrado con su propio ramo. */
+export const mapfreMoto = { ...mapfreAuto, ramo: 'moto' } as const
