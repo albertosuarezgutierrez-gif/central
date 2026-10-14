@@ -553,6 +553,19 @@ test('MAPFRE · la PUERTA es la fila companias_integracion: el worker registra s
   assert.match(mod, /export function puedeAutomatizar\(modo: unknown\): boolean \{\s*return modo === 'rpa_autorizada'\s*\}/)
 })
 
+test('MAPFRE AUTO (coche, 14/10/2026) · se encola desde la ficha como moto: asegura y plataforma aceptan el ramo, y la puerta sigue siendo la fila', () => {
+  const reglas = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador-reglas.ts'), 'utf8'))
+  assert.match(reglas, /export const RAMOS_TARIFICABLES_RPA = \['comunidades', 'moto', 'auto'\] as const/)
+  assert.match(reglas, /if \(ramo === 'moto' \|\| ramo === 'auto'\) \{\s*const v = validarFormularioAuto\(riesgo\)[\s\S]*?v\.formulario\.ramo !== ramo/, 'auto/moto: mismo validador y el formulario tiene que ser del ramo del trabajo')
+  const t = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador.ts'), 'utf8'))
+  assert.match(t, /ramo: 'comunidades' \| 'moto' \| 'auto'/)
+  const ruta = sinComentarios(readFileSync(join(RAIZ, 'apps/plataforma/app/api/correduria/tarificador/encolar/route.ts'), 'utf8'))
+  assert.match(ruta, /b\.ramo !== 'comunidades' && b\.ramo !== 'moto' && b\.ramo !== 'auto'/)
+  assert.match(ruta, /i\.compania === c && i\.ramo === ramo/, 'la compañía solo si (compañía, ramo) está entre las integraciones activas')
+  const bots = sinComentarios(readFileSync(join(RAIZ, 'apps/plataforma/lib/tarificador-bots-ramos.ts'), 'utf8'))
+  assert.match(bots, /const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = \{ moto: adaptadorMoto, auto: adaptadorAuto \}/)
+})
+
 test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→2→3 y todas las comprobaciones ANTES del único clic', () => {
   const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
   const bloque = guard.match(/export const PASOS_CONTINUAR_MAPFRE = Object\.freeze\(\{([\s\S]*?)\n\}\)\n/)

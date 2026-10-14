@@ -17,13 +17,16 @@
 //   firma que no existe, y en la cola de «comunicar a la compañía» algo que la compañía ya hizo. Se
 //   deja nota + tarea «confirmar anulación» (si hay expediente abierto, la tarea dice cuál).
 // - Suplemento → nota + tarea de revisar.
+// - Emisión (póliza nueva, Allianz «Rel. Emisión Producción») → NUNCA se crea la póliza desde el correo: la
+//   fuente es CIMA. Si CIMA ya la trae en vigor → `duplicado_cima` (nada que hacer); si no → `sin_resolver`
+//   con «póliza nueva aún no llegada por CIMA», para que Alberto la vea en la bandeja. Sin notas ni tareas.
 // - Sin IBAN ni NIF: el lector ya los quita; aquí se vuelve a pasar `sinDatosSensibles` por todo texto
 //   libre que entra por el puerto (segunda red: el puerto no se fía de quien llama).
 
 import { esCarteraEnVigor, esCarteraViva, sinDatosSensibles, validarTarea } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
-export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento'] as const
+export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento', 'emision'] as const
 export type TipoEventoCorreo = (typeof TIPOS_EVENTO_CORREO)[number]
 
 /** Desenlace guardado por fila. `procesando` = reservada y sin desenlace confirmado (se mira a mano). */
@@ -62,6 +65,12 @@ export type ItemEvento =
   | {
       tipo: 'suplemento'; clave: string
       numeroPoliza: string; descripcion: string | null; periodoDesde: string | null; periodoHasta: string | null
+    }
+  | {
+      tipo: 'emision'; clave: string
+      numeroPoliza: string; idRecibo: string | null; producto: string | null; fechaEfecto: string | null
+      /** Total del primer recibo. `null` = no se leyó (no es 0€). */
+      prima: number | null
     }
 
 export type EntradaEvento = {
@@ -157,6 +166,18 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
   } else if (tipo === 'anulacion') {
     const poliza = id(e.numeroPoliza)
     meter({ tipo, clave: poliza ?? 'sin-poliza', numeroPoliza: poliza, fechaEfecto: dia(e.fechaEfecto), motivo: libre(e.motivo, 120) })
+  } else if (tipo === 'emision') {
+    const lista = Array.isArray(e.polizas) ? e.polizas.slice(0, 200) : null
+    if (!lista) return { ok: false, motivo: 'faltan las pólizas emitidas' }
+    for (const p of lista.map(obj)) {
+      const poliza = id(p?.numeroPoliza)
+      const recibo = p?.idRecibo === null || p?.idRecibo === undefined ? null : id(p.idRecibo)
+      if (p?.idRecibo !== null && p?.idRecibo !== undefined && recibo === null) { ilegibles++; continue }
+      meter(poliza ? {
+        tipo, clave: poliza, numeroPoliza: poliza, idRecibo: recibo, producto: libre(p?.producto, 60),
+        fechaEfecto: dia(p?.fechaEfecto), prima: importe(p?.prima),
+      } : null)
+    }
   } else {
     const poliza = id(e.numeroPoliza)
     meter(poliza ? {
@@ -367,6 +388,27 @@ function sinResolver(motivo: string): Plan {
   return { ...base(`póliza no encontrada → bandeja (${motivo})`), estado: 'sin_resolver', motivo }
 }
 
+/** Motivo de una emisión que CIMA aún no trae (la bandeja y el aviso lo pintan tal cual). */
+export const MOTIVO_EMISION_NO_LLEGADA = 'póliza nueva aún no llegada por CIMA'
+
+/** Importe que se guarda en la fila (columna `importe`): el del recibo en riesgo o la prima de la póliza nueva. */
+export function importeDeItem(item: ItemEvento): number | null {
+  if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') return item.importe
+  if (item.tipo === 'emision') return item.prima
+  return null
+}
+
+/**
+ * ¿El insert chocó con el CHECK de `tipo` (un tipo nuevo, como `emision`, antes de aplicar su SQL)? Es «falta la
+ * migración» (503 `sin_migracion`), no un fallo del servidor. El nombre es el que Postgres pone al CHECK en línea.
+ */
+export function esCheckTipoEventoCorreo(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e)
+  const meta = (e as { meta?: { code?: unknown; message?: unknown } } | null)?.meta
+  const texto = `${msg} ${typeof meta?.message === 'string' ? meta.message : ''}`
+  return /correo_evento_entrante_tipo_check/.test(texto) && (meta?.code === '23514' || /violates check constraint|23514/i.test(texto))
+}
+
 /** Clave de «una tarea por póliza/recibo» (pre-anulación e impago del MISMO recibo comparten tarea). */
 export function claveTareaDe(item: ItemEvento, polizaId: string): string {
   if (item.tipo === 'pre_anulacion' || item.tipo === 'impago') return `recibo:${polizaId}:${claveNumero(item.idRecibo) ?? '-'}`
@@ -462,6 +504,20 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
       tarea: { tipo: 'tarea', prioridad: 'alta', fechaLimite: fecha, observaciones },
       claveTarea: claveTareaDe(item, r.poliza.id),
     }
+  }
+
+  if (item.tipo === 'emision') {
+    // Nunca se crea la póliza ni se escribe en la ficha: CIMA es la fuente. Solo se dice si ya la trae.
+    const r = ctx.resolucion
+    const que = `póliza nueva ${item.numeroPoliza}${item.producto ? ` (${item.producto})` : ''}`
+    if (r.estado === 'en_vigor') {
+      return { ...base(`${que} ya en CIMA: nada que hacer`), estado: 'duplicado_cima', motivo: 'CIMA ya trae la póliza en vigor' }
+    }
+    if (r.estado === 'no_en_vigor') {
+      return { ...base(`${que}: CIMA tiene ese nº pero no en vigor → bandeja`), estado: 'sin_resolver', motivo: 'CIMA tiene ese nº pero no en vigor: compruébalo en el portal de la compañía' }
+    }
+    if (r.motivo === 'ambigua') return { ...base(`${que}: casa con más de una póliza → bandeja`), estado: 'sin_resolver', motivo: MOTIVO_RESOLUCION.ambigua }
+    return { ...base(`${que} emitida, aún no llegada por CIMA → bandeja`), estado: 'sin_resolver', motivo: MOTIVO_EMISION_NO_LLEGADA }
   }
 
   if (item.tipo !== 'suplemento') return sinResolver('tipo de aviso desconocido')

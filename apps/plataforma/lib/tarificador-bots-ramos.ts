@@ -6,6 +6,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
 import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
+import { formularioBotAuto, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
 export type CampoExtraBot = { clave: string; etiqueta: string; ayuda?: string; placeholder?: string }
@@ -34,7 +35,19 @@ const adaptadorMoto: AdaptadorBot = {
   },
 }
 
-const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = { moto: adaptadorMoto }
+/** Lo que el cotizador de coche le da al bloque (14/10/2026): todo; no hay campos extra (Mapfre confirma el coche por matrícula). */
+export type FormularioBotsAuto = EntradaBotAuto
+
+const adaptadorAuto: AdaptadorBot = {
+  ramo: 'auto',
+  campos: [],
+  construir: (formulario) => {
+    const r = formularioBotAuto(formulario as FormularioBotsAuto)
+    return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
+  },
+}
+
+const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = { moto: adaptadorMoto, auto: adaptadorAuto }
 
 /** Adaptador del ramo, o `null` si ese ramo aún no tiene bots (ramo ausente, desconocido o de otro tipo → `null`). */
 export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot | null {

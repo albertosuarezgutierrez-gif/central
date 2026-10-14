@@ -1,7 +1,7 @@
 // Aviso de Telegram para un correo de COMPAÑÍA que no es una devolución (14/10/2026). PURO.
 //
 // El triaje lee el correo (`leerCorreoEventoAseguradora`: siniestro, pre-anulación, impago, anulación,
-// suplemento), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este aviso dice
+// suplemento, emisión), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este aviso dice
 // QUÉ SE HIZO con cada elemento: «siniestro 43000001 abierto en la ficha», «tarea creada, vence
 // 15/10/2026», «póliza no encontrada → bandeja». Si el puerto no contestó, el aviso sale igual con lo
 // leído del correo y lo dice (nunca se da por hecho lo que no consta).
@@ -85,6 +85,13 @@ function leidos(e: EventoAseguradora): Leido[] {
       linea: `Póliza ${e.numeroPoliza ? esc(e.numeroPoliza) : '(sin nº)'}${e.fechaEfecto ? ` · efecto ${fechaEs(e.fechaEfecto)}` : ''}${e.motivo ? ` · ${esc(e.motivo)}` : ''}`,
     }]
   }
+  if (e.tipo === 'emision') {
+    // Póliza NUEVA: asegura no la crea (CIMA es la fuente); solo dice si CIMA ya la trae.
+    return e.polizas.map((p) => ({
+      clave: p.numeroPoliza,
+      linea: `Póliza nueva emitida: ${esc(p.numeroPoliza)}${p.producto ? ` · ${esc(p.producto)}` : ''}${p.fechaEfecto ? ` · efecto ${fechaEs(p.fechaEfecto)}` : ''}${p.prima !== null ? ` · ${eur(p.prima)}` : ''}`,
+    }))
+  }
   return [{ clave: e.numeroPoliza, linea: `Póliza ${esc(e.numeroPoliza)}${e.descripcion ? ` · ${esc(e.descripcion.slice(0, 120))}` : ''}` }]
 }
 
@@ -93,6 +100,7 @@ function titulo(e: EventoAseguradora): string {
   if (e.tipo === 'pre_anulacion') return e.recibos.length === 1 ? 'Recibo a punto de ANULARSE' : `${e.recibos.length} recibos a punto de ANULARSE`
   if (e.tipo === 'impago') return 'Impago: la compañía DELEGA el cobro'
   if (e.tipo === 'anulacion') return 'Póliza ANULADA por la compañía'
+  if (e.tipo === 'emision') return e.polizas.length === 1 ? 'Póliza nueva emitida' : `${e.polizas.length} pólizas nuevas emitidas`
   return 'Suplemento'
 }
 

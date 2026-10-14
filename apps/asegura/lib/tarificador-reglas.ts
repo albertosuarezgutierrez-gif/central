@@ -10,26 +10,28 @@ import {
   type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
-/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto). */
-export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto'; riesgo: FormularioAuto }
+/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
+export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto' | 'auto'; riesgo: FormularioAuto }
 export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
 /** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
-export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto'] as const
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto'] as const
 
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
   if (ramo === 'comunidades') {
     const v = validarRiesgoComunidad(riesgo)
     return v.ok ? { ok: true, entrada: { ramo, riesgo: v.riesgo } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
   }
-  if (ramo === 'moto') {
+  // Vehículo (moto 13/10/2026; auto/coche 14/10/2026, Mapfre NSEI): el MISMO validador, y el formulario tiene que ser del
+  // ramo del trabajo (un formulario de coche no es un trabajo de moto ni al revés: el worker lo repite en `prepararTrabajo`).
+  if (ramo === 'moto' || ramo === 'auto') {
     const v = validarFormularioAuto(riesgo)
     if (!v.ok) return { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
-    if (v.formulario.ramo !== 'moto') return { ok: false, mensaje: 'riesgo inválido', errores: ['ramo: el formulario de un trabajo moto tiene que ser de moto'] }
+    if (v.formulario.ramo !== ramo) return { ok: false, mensaje: 'riesgo inválido', errores: [`ramo: el formulario de un trabajo ${ramo} tiene que ser de ${ramo}`] }
     return { ok: true, entrada: { ramo, riesgo: v.formulario } }
   }
-  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades o moto)' }
+  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades, moto o auto)' }
 }
 
 // ─── NIF del tomador para Mapfre (14/10/2026, decisión de Alberto) ──────────

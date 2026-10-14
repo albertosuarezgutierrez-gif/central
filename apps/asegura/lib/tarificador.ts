@@ -74,8 +74,8 @@ export type EntradaEncolar = {
   clienteId: string | null
   polizaId: string | null
   compania: string
-  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
-  ramo: 'comunidades' | 'moto'
+  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto y (14/10/2026) Auto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
+  ramo: 'comunidades' | 'moto' | 'auto'
   riesgo: RiesgoComunidad | FormularioAuto
   solicitadoPor: string
 }

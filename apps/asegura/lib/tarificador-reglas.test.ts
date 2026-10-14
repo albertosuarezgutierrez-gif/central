@@ -112,7 +112,20 @@ test('encolar: moto con FormularioAuto válido pasa (con seleccionVehiculo); inv
   assert.equal(validarEntradaRamo('moto', { ...MOTO, ramo: 'auto' }).ok, false, 'un formulario de auto no es un trabajo moto')
   assert.equal(validarEntradaRamo('moto', { ramo: 'comunidades' }).ok, false)
   assert.equal(validarEntradaRamo('comunidades', MOTO).ok, false, 'comunidades sigue con su validador')
-  for (const r of ['auto', 'hogar', undefined, 'MOTO']) assert.equal(validarEntradaRamo(r, MOTO).ok, false, String(r))
+  for (const r of ['hogar', undefined, 'MOTO', 'AUTO']) assert.equal(validarEntradaRamo(r, MOTO).ok, false, String(r))
+  assert.equal(validarEntradaRamo('auto', MOTO).ok, false, 'un formulario de moto no es un trabajo auto')
+})
+
+test('encolar: auto (coche, Mapfre NSEI, 14/10/2026) con FormularioAuto de auto pasa; el mismo validador y su ramo', () => {
+  const COCHE = { ...MOTO, ramo: 'auto', seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA' } }
+  const ok = validarEntradaRamo('auto', COCHE)
+  assert.equal(ok.ok, true)
+  if (ok.ok) assert.equal(ok.entrada.ramo, 'auto')
+  assert.equal(validarEntradaRamo('auto', { ...COCHE, matricula: 'x' }).ok, false)
+  assert.equal(validarEntradaRamo('moto', COCHE).ok, false, 'un formulario de coche no es un trabajo moto')
+  const sinHistorial = validarEntradaRamo('auto', { ...COCHE, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null, garajeNoche: null })
+  assert.equal(sinHistorial.ok, true, 'null = no consta: el validador no lo convierte en 0 (lo decide el bot)')
+  if (sinHistorial.ok && sinHistorial.entrada.ramo === 'auto') assert.equal(sinHistorial.entrada.riesgo.siniestrosUltimos5Anios, null)
 })
 
 // ─── Cola: lease, huecos y duplicados (13/10/2026) ───────────────────────────

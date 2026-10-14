@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
-  admiteMarca, conRevisado, interpretarCorreosCompania, pideMirar, ROTULO_COMPANIA, ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO,
+  admiteMarca, conRevisado, interpretarCorreosCompania, pideMirar, ROTULO_COMPANIA, ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO, textoElementoCorreo,
   type LecturaCorreosCompania,
 } from '@/lib/correduria/correos-compania'
 
@@ -136,10 +136,7 @@ export default function CorreosCompania() {
               {e.clienteId
                 ? <Link href={`/correduria/cliente/${e.clienteId}`} style={{ fontWeight: 700, color: 'var(--primary)', overflowWrap: 'anywhere' }}>{e.cliente ?? 'Cliente sin nombre'}</Link>
                 : <span style={{ color: 'var(--muted)' }}>Sin cliente</span>}
-              <span style={{ overflowWrap: 'anywhere' }}>
-                {e.tipo === 'siniestro' ? `Siniestro ${e.clave}` : `Póliza ${e.numeroPoliza ?? e.clave}`}
-                {e.numeroPoliza && e.tipo === 'siniestro' ? ` · póliza ${e.numeroPoliza}` : ''}
-              </span>
+              <span style={{ overflowWrap: 'anywhere' }}>{textoElementoCorreo(e)}</span>
               {e.importe !== null && <span>{eur(e.importe)}</span>}
               {e.fechaLimite && <span style={{ fontWeight: 600 }}>vence {fechaEs(e.fechaLimite)}</span>}
             </div>
