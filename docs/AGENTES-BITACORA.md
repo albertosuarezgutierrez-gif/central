@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-14 · trading-analista** · hizo: pasada completa 20:15 UTC (NAV 33.845,85€→saldo, cartera, operaciones 0 nuevas, latido, /analizar y /puntuar con 24/24 símbolos, Telegram enviado); dudas: contraste de 2ª fuente devolvió el cierre del 13/10 (24 desfasados, sin contrastar); fallos: ninguno HTTP; canal-aviso.sh no admite payloads >128 KB (analizar pesa ~335 KB, se usó copia con @fichero en scratchpad); PRs/commits: ninguno aparte de esta entrada
 - **2026-10-14 · facturas-correo** · hizo: Vía B sana; 0 candidatos nuevos por archivar (IONOS ya lo registró el cron); barrido 4.0 → 3 `sin_revisar` de octubre sin cargo (Sique Brilla 1.128,48 sin transferencia aún; Supabase 25 USD sin cargo; Anthropic 180 € vs cargos de 170 € el 01 y 02/10, no casa), sin auto-confirmar; dudas: Anthropic 180 vs 170; fallos: —; PRs/commits: —
 
 - **2026-10-14 · psd2-health-check** · hizo: frescura PSD2 → OK, último mov 2026-10-14 (hace 0 días), mov_30d 40 vs prev 43, psd2_sin_fecha 0; canal 200, latido enviado; dudas: —; fallos: —; PRs/commits: —
