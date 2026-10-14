@@ -114,8 +114,11 @@ export function debeRecordarVencimiento(x: {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
   if (faltan < 0 || faltan > DIAS_RECORDATORIO_VENCIMIENTO) return false
   if (x.hoy.getTime() - x.avisadoEn.getTime() < DIAS_MIN_ENTRE_AVISOS * MS_DIA) return false
-  // Entró después del primer aviso: lo ha visto. No se le insiste.
-  return x.ultimoAcceso === null || x.ultimoAcceso.getTime() < x.avisadoEn.getTime()
+  // Una visita solo calla el recordatorio si es posterior al primer aviso Y cae en los últimos
+  // DIAS_VENTANA_AVISO días: con avisos a 30 días, una visita del día 25 no puede dejar sin aviso los últimos 29.
+  if (x.ultimoAcceso === null) return true
+  const desde = Math.max(x.avisadoEn.getTime(), diaUtc(x.fechaAccionable).getTime() - DIAS_VENTANA_AVISO * MS_DIA)
+  return x.ultimoAcceso.getTime() < desde
 }
 
 /**
