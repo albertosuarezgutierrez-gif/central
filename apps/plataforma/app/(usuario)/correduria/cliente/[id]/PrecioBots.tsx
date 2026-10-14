@@ -76,10 +76,14 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
   const [extra, setExtra] = useState<Record<string, string>>(() => ({ ...inicialesExtra }))
 
+  // Solo la última petición escribe: una respuesta tardía de otro ramo no pisa la lista.
+  const peticion = useRef(0)
   const cargar = useCallback(async () => {
+    const yo = ++peticion.current
     setInteg({ estado: 'cargando' })
     const r = await pedirJson('/api/correduria/tarificador/integraciones')
     const l = leerIntegraciones(r.status, r.json)
+    if (yo !== peticion.current) return
     setInteg(l.ok ? { estado: 'ok', lista: l.integraciones.filter((i) => i.ramo === ramo) } : { estado: 'error', mensaje: l.mensaje })
   }, [ramo])
   useEffect(() => { void cargar() }, [cargar])
