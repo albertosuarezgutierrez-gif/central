@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T13:32:22Z",
-  "sha": "a61de0e62ec1def5e0ca8e5dcefb947bf6a445fa",
+  "generadoEn": "2026-10-14T13:59:47Z",
+  "sha": "deea6730592bfb8c6d5fb0f9cb0491ac52c978ed",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47294,6 +47294,7 @@
         "huecoDeDetalleFin",
         "leerPeticionCierre",
         "faseLoginPermitida",
+        "inventarioParaPrompt",
         "promptLoginExplorador",
         "historialCorto",
         "promptExplorador",
@@ -47454,12 +47455,21 @@
           "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
         },
         {
+          "nombre": "inventarioParaPrompt",
+          "kind": "function",
+          "exportada": true,
+          "params": "inv: InventarioDom",
+          "retorno": "string",
+          "linea": 337,
+          "resumen": "El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo "
+        },
+        {
           "nombre": "promptLoginExplorador",
           "kind": "function",
           "exportada": true,
           "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
           "retorno": "string",
-          "linea": 333,
+          "linea": 342,
           "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
@@ -47468,7 +47478,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 344,
+          "linea": 353,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -47477,7 +47487,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 371,
+          "linea": 380,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -47486,7 +47496,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 401,
+          "linea": 410,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -47495,13 +47505,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 415,
+          "linea": 424,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c1c153f1c7b3"
+      "hash": "b14b34631fa2"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -49559,10 +49569,10 @@
           "nombre": "peticionMaquina",
           "kind": "function",
           "exportada": true,
-          "params": "cfg: ConfigFly, jobId: string",
+          "params": "cfg: ConfigFly, jobId: string, vistaExplorador?: string | null",
           "retorno": "",
           "linea": 221,
-          "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL): ni DATABASE_URL, ni CODEOSCOPIC_*, ni el Bearer, ni credencia"
+          "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que re"
         },
         {
           "nombre": "leerMetaWorker",
@@ -49624,7 +49634,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f4f140892b76"
+      "hash": "b8e74a05c3ff"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
@@ -50025,7 +50035,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "e3db7ec6a5db"
+      "hash": "0b0bae37f697"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -211097,9 +211107,9 @@
           "nombre": "envDeMaquina",
           "kind": "function",
           "exportada": true,
-          "params": "entrada: { jobId: string; apiUrl: string }",
-          "retorno": "Record<(typeof ENV_MAQUINA_PERMITIDAS)[number], string>",
-          "linea": 36,
+          "params": "entrada: { jobId: string; apiUrl: string; vistaExplorador?: string | null }",
+          "retorno": "Record<'JOB_ID' | 'TARIFICADOR_API_URL', string> &",
+          "linea": 39,
           "resumen": "El `env` de la máquina efímera. Solo el id del trabajo y a dónde preguntar. El Bearer del worker y las credenciales de portal son fly secrets de la app `asegura-tarificador`: no viajan en la config de"
         },
         {
@@ -211108,13 +211118,13 @@
           "exportada": true,
           "params": "clave: string",
           "retorno": "",
-          "linea": 53,
+          "linea": 58,
           "resumen": "Nombre de las variables de credencial de un portal: `CRED_ALLIANZ_EPAC_USER` / `_PASS`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "93c1ce51afc0"
+      "hash": "b2ce2c0faf97"
     },
     {
       "ruta": "packages/module-tarificacion/src/estados.ts",
@@ -216169,6 +216179,6 @@
   ],
   "resumen": {
     "archivos": 4686,
-    "funciones": 17179
+    "funciones": 17180
   }
 }
