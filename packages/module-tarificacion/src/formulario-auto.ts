@@ -44,6 +44,11 @@ export type ConductorHabitual = {
   sexo: SexoConductor | null
 }
 
+/** Datos del tomador sacados de su ficha (ver `FormularioAuto.datosTomador`). Fecha ISO AAAA-MM-DD. */
+export type DatosTomadorFicha =
+  | { tipo: 'fisica'; nombre: string; apellido1: string; apellido2: string | null; fechaNacimiento: string }
+  | { tipo: 'juridica'; razonSocial: string }
+
 export type FormularioAuto = {
   ramo: RamoVehiculo
   /** Normalizada (sin espacios ni guiones). */
@@ -82,12 +87,20 @@ export type FormularioAuto = {
    */
   vehiculoConfirmado?: VehiculoConfirmado | null
   /**
-   * DNI/NIE/CIF del TOMADOR para buscarlo en el portal (Mapfre NSEI paso 1, lupa del NIF; 14/10/2026). Normalizado
+   * DNI/NIE/CIF del TOMADOR para buscarlo en el portal (Mapfre NSEI paso 1: se teclea y el portal busca solo al salir del
+   * campo; 14/10/2026). Normalizado
    * (mayúsculas, sin separadores). Lo RELLENA ASEGURA en el servidor desde la ficha del cliente (descifrada), solo en
    * trabajos de Mapfre y solo si el riesgo no trae ya `tomador.documentoIdentidad`. Dato personal: nunca en logs,
    * mensajes, IA ni resultado; NO está en la lista blanca de la purga (se borra al cerrar el trabajo). Ausente = no consta.
    */
   documentoTomador?: string | null
+  /**
+   * Nombre, apellidos y fecha de nacimiento del TOMADOR (o su razón social si es empresa) para DARLO DE ALTA en el portal
+   * cuando la compañía no lo conoce (Mapfre NSEI paso 1, 14/10/2026). Mismo régimen que `documentoTomador`: lo pone ASEGURA
+   * desde la ficha (descifrada) SOLO al ENTREGAR el trabajo al worker, nunca se guarda en `tarificacion_trabajos.riesgo`,
+   * es SECRETO del trabajo (`secretosDelRiesgo`) y no sale en logs, mensajes, IA ni resultado. Ausente = no consta.
+   */
+  datosTomador?: DatosTomadorFicha | null
   /** Uso del vehículo (`USOS_VEHICULO`). En auto, por defecto `particular`; en moto, ausente = no consta. */
   usoVehiculo?: UsoVehiculo | null
   /** Ámbito de circulación (`AMBITOS_CIRCULACION`). En auto, por defecto `espana`. */
@@ -109,13 +122,17 @@ export function documentoTomadorDe(f: Pick<FormularioAuto, 'documentoTomador' | 
 
 /**
  * Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio
- * antes de la letra de control): el worker las trata como SECRETOS del trabajo (redactor de mensajes y de HTML). PURO.
- * Riesgo crudo (sin validar): lee `documentoTomador` y `tomador.documentoIdentidad` si son texto.
+ * antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y la FECHA DE NACIMIENTO del tomador (los de
+ * `datosTomador`, que pone asegura al entregar, y los del bloque `tomador`): el worker los trata como SECRETOS del trabajo
+ * (redactor de mensajes y de HTML; con secretos no hay captura). PURO. Riesgo crudo (sin validar): solo lee lo que es texto.
+ * Límite del redactor: un valor de menos de 4 caracteres no se redacta (`MIN_LONGITUD` de redactar.ts).
  */
 export function secretosDelRiesgo(riesgo: unknown): string[] {
   if (typeof riesgo !== 'object' || riesgo === null || Array.isArray(riesgo)) return []
   const r = riesgo as Record<string, unknown>
-  const t = typeof r.tomador === 'object' && r.tomador !== null && !Array.isArray(r.tomador) ? (r.tomador as Record<string, unknown>) : null
+  const obj = (v: unknown) => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
+  const t = obj(r.tomador)
+  const dt = obj(r.datosTomador)
   const out = new Set<string>()
   for (const v of [r.documentoTomador, t?.documentoIdentidad]) {
     if (typeof v !== 'string') continue
@@ -127,6 +144,21 @@ export function secretosDelRiesgo(riesgo: unknown): string[] {
     out.add(`${cuerpo}-${control}`)
     out.add(`${cuerpo} ${control}`)
     if (/^[XYZ]/.test(d)) out.add(`${d[0]}-${d.slice(1, -1)}-${control}`)
+  }
+  const texto = (v: unknown) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '')
+  for (const b of [t, dt]) {
+    if (!b) continue
+    const partes = [b.nombre, b.apellido1, b.apellido2, b.razonSocial].map(texto).filter((x) => x !== '')
+    // Cada parte, el nombre completo y los apellidos juntos; tal cual y en MAYÚSCULAS (los portales los pintan así).
+    const nombreCompleto = [b.nombre, b.apellido1, b.apellido2].map(texto).filter((x) => x !== '').join(' ')
+    const apellidos = [b.apellido1, b.apellido2].map(texto).filter((x) => x !== '').join(' ')
+    for (const x of [...partes, nombreCompleto, apellidos]) {
+      if (x.length < 4) continue
+      out.add(x)
+      out.add(x.toUpperCase())
+    }
+    const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto(b.fechaNacimiento))
+    if (f) for (const x of [`${f[1]}-${f[2]}-${f[3]}`, `${f[3]}/${f[2]}/${f[1]}`, `${f[3]}-${f[2]}-${f[1]}`, `${f[3]}.${f[2]}.${f[1]}`]) out.add(x)
   }
   return [...out].sort((a, b) => b.length - a.length)
 }
@@ -332,6 +364,34 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     else errores.push('documentoTomador: no es un DNI/NIE/CIF válido')
   }
 
+  // Datos del tomador para el ALTA en el portal (opcional; los pone asegura al entregar). Nunca se repite el valor en el error.
+  let datosTomador: DatosTomadorFicha | null = null
+  if (!vacio(e.datosTomador)) {
+    const d = typeof e.datosTomador === 'object' && e.datosTomador !== null && !Array.isArray(e.datosTomador) ? (e.datosTomador as Record<string, unknown>) : null
+    const t = (v: unknown, max: number): string | null | false => {
+      if (vacio(v)) return null
+      if (typeof v !== 'string' || tieneCaracteresProhibidos(v)) return false
+      const x = v.replace(/\s+/g, ' ').trim()
+      return x.length <= max ? x : false
+    }
+    if (d?.tipo === 'juridica') {
+      const razon = t(d.razonSocial, 200)
+      if (typeof razon === 'string') datosTomador = { tipo: 'juridica', razonSocial: razon }
+      else errores.push('datosTomador.razonSocial: obligatoria en persona jurídica (texto ≤200)')
+    } else if (d?.tipo === 'fisica') {
+      const nombre = t(d.nombre, 100)
+      const apellido1 = t(d.apellido1, 100)
+      const apellido2 = t(d.apellido2, 100)
+      const fn = typeof d.fechaNacimiento === 'string' ? d.fechaNacimiento.trim() : ''
+      const fnOk = /^\d{4}-\d{2}-\d{2}$/.test(fn) && !Number.isNaN(Date.parse(`${fn}T00:00:00Z`)) && new Date(`${fn}T00:00:00Z`).toISOString().slice(0, 10) === fn
+      if (typeof nombre !== 'string') errores.push('datosTomador.nombre: obligatorio (texto ≤100)')
+      if (typeof apellido1 !== 'string') errores.push('datosTomador.apellido1: obligatorio (texto ≤100)')
+      if (apellido2 === false) errores.push('datosTomador.apellido2: texto ≤100 (o no venir)')
+      if (!fnOk) errores.push('datosTomador.fechaNacimiento: obligatoria, AAAA-MM-DD')
+      if (typeof nombre === 'string' && typeof apellido1 === 'string' && apellido2 !== false && fnOk) datosTomador = { tipo: 'fisica', nombre, apellido1, apellido2, fechaNacimiento: fn }
+    } else errores.push('datosTomador.tipo: tiene que ser fisica o juridica')
+  }
+
   // Mat-select de Mapfre (opcionales con defecto en auto). Valor fuera de la lista cerrada = error (nunca se repite el valor).
   const cerrado = <T extends string>(v: unknown, campo: string, lista: readonly T[], porDefecto: T | null): T | null => {
     if (vacio(v)) return porDefecto
@@ -373,6 +433,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(eleccionPoblacion !== null ? { eleccionPoblacion } : {}),
       ...(vehiculoConfirmado !== null ? { vehiculoConfirmado } : {}),
       ...(documentoTomador !== null ? { documentoTomador } : {}),
+      ...(datosTomador !== null ? { datosTomador } : {}),
       ...(usoVehiculo !== null ? { usoVehiculo } : {}),
       ...(ambitoCirculacion !== null ? { ambitoCirculacion } : {}),
       ...(clasePermiso !== null ? { clasePermiso } : {}),

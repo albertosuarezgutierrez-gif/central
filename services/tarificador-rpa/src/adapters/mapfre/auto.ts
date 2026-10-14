@@ -39,6 +39,7 @@ import {
   resolverVersion,
   vehiculoConfirmadoDesdeMapfre,
   type CandidatoVersion,
+  type DatosTomadorFicha,
   type EleccionVersion,
   type FormularioAuto,
   type OfertaNormalizada,
@@ -50,7 +51,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/intranet/index.ts'
-import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
+import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
 
@@ -436,8 +437,8 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
   const escribibles: OperacionNsei[] = [
     { sel: SEL_OBJETO.matricula, etiqueta: 'matrícula', tipo: 'texto', valor: f.matricula, paso: 'objetoAsegurado' },
     { sel: SEL_OBJETO.cpCirculacion, etiqueta: 'CP de circulación', tipo: 'texto', valor: f.codigoPostal, paso: 'objetoAsegurado' },
-    { sel: SEL_CONDUCTOR.fechaNacimiento, etiqueta: 'fecha de nacimiento del conductor', tipo: 'texto', valor: fechaEs(f.conductor.fechaNacimiento), paso: 'figuras' },
-    { sel: SEL_CONDUCTOR.fechaCarne, etiqueta: 'fecha del carné', tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne), paso: 'figuras' },
+    { sel: SEL_CONDUCTOR.fechaNacimiento, etiqueta: 'fecha de nacimiento del conductor', tipo: 'texto', valor: fechaEs(f.conductor.fechaNacimiento, 'mapfre/auto: la fecha de nacimiento del conductor'), paso: 'figuras' },
+    { sel: SEL_CONDUCTOR.fechaCarne, etiqueta: 'fecha del carné', tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne, 'mapfre/auto: la fecha del carné'), paso: 'figuras' },
     { sel: SEL_HISTORIAL.siniestrosRc5, etiqueta: 'siniestros RC 5 años', tipo: 'texto', valor: String(f.siniestrosUltimos5Anios), paso: 'figuras' },
   ]
   const extra = f as FormularioAuto & DatosMatSelectMapfre
@@ -522,13 +523,16 @@ const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'>, pas
 
 // ───────────────────────── paso 1: tomador por NIF SIN LUPA (14/10/2026) ─────────────────────────
 // Regla de Alberto (operador real del portal): NO se pulsa la lupa. Al teclear el NIF/CIF y salir del campo, Mapfre BUSCA SOLA:
-//   · el cliente EXISTE → autorrellena Nombre / Apellidos / Fecha de Nacimiento y el robot NO teclea ni sobrescribe nada ahí;
+//   · el cliente EXISTE → autorrellena Nombre / Apellidos / Fecha de Nacimiento (o la Razón social de una empresa) y el robot
+//     NO teclea ni sobrescribe nada ahí;
 //   · NO existe (lead nuevo = caso NORMAL) → avisa «NO EXISTE NINGUN REGISTRO PARA ESA CONDICION DE BUSQUEDA» y deja esos campos
 //     vacíos y editables en el MISMO formulario (DOM real: `input[name=nombre|primerApellido|segundoApellido|fechaNacimiento]`;
 //     «Fecha de Nacimiento *» obligatoria, dd/mm/aaaa; no hay botón de alta). Entonces se rellenan con los datos de la ficha
-//     (`FormularioAuto.tomador`) por la capa común (fijo → aprendido → IA → atasco) y se comprueba que no queda ningún
-//     «Campo obligatorio». Lo que no case → ErrorMapaIncompleto con inventario (atasco), nunca error mudo ni `datos`.
-// Existe / no existe se decide por el ESTADO de los campos tras salir del campo + espera, no por el texto del aviso solo.
+//     (`FormularioAuto.tomador`, o `datosTomador` que pone asegura al entregar) campo a campo, SOLO si el campo sigue vacío.
+// «Nuevo» se decide SOLO por el aviso «no existe ningún registro» (con los campos presentes y vacíos). Agotada la espera sin
+// aviso ni autorrelleno → `indeterminado` (estado conservador: atasco, nunca se supone que no existe). Todo hueco de este paso
+// (diálogo, indeterminado, autorrelleno tardío, fecha que el portal no deja igual, «Campo obligatorio» pendiente) pasa por
+// `registrarAtasco` (Telegram, como el resto) y lanza `ErrorMapaIncompleto` con inventario. Ningún mensaje lleva valores.
 
 const ESPERA_REACCION_TOMADOR_MS = 8_000
 const SEL_DIALOGO_NSEI = 'mat-dialog-container, [role="dialog"], [role="alertdialog"], app-matricula-dialog'
@@ -541,26 +545,32 @@ export type ReaccionTomador = 'existe' | 'nuevo' | 'dialogo' | 'indeterminado'
 const plano = (t: string | null) => (t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
 const textoPagina = (nsei: Page) => nsei.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
 
-/** Cuántos de los campos de datos del tomador existen y cuántos traen valor (solo recuentos; nunca el valor). */
-async function estadoCamposTomador(nsei: Page): Promise<{ presentes: number; rellenos: number }> {
-  return nsei.evaluate((sels) => {
+/**
+ * Estado de los campos del tomador (solo recuentos; nunca el valor): `presentes` = cuántos de Nombre / Primer Apellido / Fecha
+ * de Nacimiento hay (persona física); `razonSocial` = si está el de la razón social (empresa); `rellenos` = cuántos de TODOS
+ * ellos (razón social incluida: un autorrelleno de empresa es «existe» y no se pisa) traen valor.
+ */
+async function estadoCamposTomador(nsei: Page): Promise<{ presentes: number; razonSocial: boolean; rellenos: number }> {
+  return nsei.evaluate(([fisica, razon]) => {
     let presentes = 0
     let rellenos = 0
-    for (const s of sels) {
+    for (const s of fisica) {
       const el = document.querySelector(s) as HTMLInputElement | null
       if (!el) continue
       presentes++
       if ((el.value ?? '').trim() !== '') rellenos++
     }
-    return { presentes, rellenos }
-  }, [SEL_TOMADOR.nombre, SEL_TOMADOR.primerApellido, SEL_TOMADOR.fechaNacimiento]).catch(() => ({ presentes: 0, rellenos: 0 }))
+    const r = document.querySelector(razon) as HTMLInputElement | null
+    if (r && (r.value ?? '').trim() !== '') rellenos++
+    return { presentes, razonSocial: !!r, rellenos }
+  }, [[SEL_TOMADOR.nombre, SEL_TOMADOR.primerApellido, SEL_TOMADOR.fechaNacimiento], SEL_TOMADOR.razonSocial] as const).catch(() => ({ presentes: 0, razonSocial: false, rellenos: 0 }))
 }
 
 /**
  * Tras salir del campo del NIF: espera la reacción de Mapfre SIN pulsar nada. Un diálogo visible → `dialogo` (selección de
  * persona: no se elige a ciegas); algún campo del tomador con valor y QUIETO entre dos lecturas → `existe` (autorrelleno);
- * campos presentes y vacíos con el aviso «no existe ningún registro» (o agotada la espera) → `nuevo`; si los campos ni
- * aparecen → `indeterminado`. Solo lectura.
+ * campos de alta presentes y vacíos CON el aviso «no existe ningún registro» → `nuevo`. Cualquier otra cosa al agotar la
+ * espera (sin aviso ni autorrelleno, o sin campos) → `indeterminado`. Solo lectura.
  */
 export async function esperarReaccionTomador(nsei: Page, ms = ESPERA_REACCION_TOMADOR_MS): Promise<ReaccionTomador> {
   const hasta = Date.now() + ms
@@ -573,16 +583,23 @@ export async function esperarReaccionTomador(nsei: Page, ms = ESPERA_REACCION_TO
       previo = e.rellenos
     } else {
       previo = null
-      if (e.presentes >= 3 && RE_SIN_REGISTRO.test(plano(await textoPagina(nsei)))) return 'nuevo'
+      if ((e.presentes >= 3 || e.razonSocial) && RE_SIN_REGISTRO.test(plano(await textoPagina(nsei)))) return 'nuevo'
     }
-    if (Date.now() >= hasta) return e.rellenos > 0 ? 'existe' : e.presentes >= 3 ? 'nuevo' : 'indeterminado'
+    if (Date.now() >= hasta) return e.rellenos > 0 ? 'existe' : 'indeterminado'
     await nsei.waitForTimeout(250)
   }
 }
 
+/** Datos del tomador: el bloque `tomador` del riesgo si viene; si no, `datosTomador` (de la ficha, lo pone asegura). PURA. */
+function tomadorParaAlta(f: FormularioAuto): DatosTomadorFicha | { tipo: 'fisica'; nombre: string | null; apellido1: string | null; apellido2: string | null; fechaNacimiento: string | null } | { tipo: 'juridica'; razonSocial: string | null } | null {
+  const t = f.tomador
+  if (t) return t.tipo === 'juridica' ? { tipo: 'juridica', razonSocial: t.razonSocial } : { tipo: 'fisica', nombre: t.nombre, apellido1: t.apellido1, apellido2: t.apellido2, fechaNacimiento: t.fechaNacimiento }
+  return f.datosTomador ?? null
+}
+
 /** Datos de la ficha para el alta del tomador nuevo. PURA. Persona jurídica: razón social; física: nombre, apellidos, nacimiento. */
 export function planAltaTomador(f: FormularioAuto): PlanNsei {
-  const t = f.tomador
+  const t = tomadorParaAlta(f)
   const falta = (q: string) => new ErrorTarificador('datos', `mapfre/auto: el tomador no existe en Mapfre y hay que darlo de alta, pero la ficha no trae ${q}`)
   const limpio = (v: string | null | undefined) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null)
   const escribibles: OperacionNsei[] = []
@@ -603,12 +620,40 @@ export function planAltaTomador(f: FormularioAuto): PlanNsei {
   op(SEL_TOMADOR.primerApellido, 'Primer Apellido', ap1)
   const ap2 = limpio(t?.apellido2)
   if (ap2) op(SEL_TOMADOR.segundoApellido, 'Segundo Apellido', ap2)
-  op(SEL_TOMADOR.fechaNacimiento, 'Fecha de Nacimiento', fechaEs(nac))
+  op(SEL_TOMADOR.fechaNacimiento, 'Fecha de Nacimiento', fechaEs(nac, 'mapfre/auto: la fecha de nacimiento del tomador'))
   return { escribibles, pendientes: [] }
 }
 
-/** Tras rellenar el alta: ningún «Campo obligatorio» visible en «Datos básicos». Si queda alguno → hueco con inventario. */
-async function exigirSinCamposObligatorios(nsei: Page): Promise<void> {
+/**
+ * Lo que dejó el portal en un campo de fecha frente a lo pedido (ambos dd/mm/aaaa; admite d/m sin cero). `invertida` = el
+ * portal cambió día y mes (máscara en formato mm/dd). Nunca devuelve ni registra los valores. PURA.
+ */
+export function compararFechaEs(leida: string, esperada: string): 'ok' | 'invertida' | 'distinta' {
+  const p = (s: string) => {
+    const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s.trim())
+    return m ? { d: Number(m[1]), m: Number(m[2]), a: m[3] } : null
+  }
+  const l = p(leida)
+  const e = p(esperada)
+  if (!l || !e) return 'distinta'
+  if (l.a === e.a && l.d === e.d && l.m === e.m) return 'ok'
+  if (l.a === e.a && e.d !== e.m && l.d === e.m && l.m === e.d) return 'invertida'
+  return 'distinta'
+}
+
+/** Hueco del paso 1: checkpoint de ATASCO (Telegram) y `ErrorMapaIncompleto` con inventario. Sin valores en ningún texto. */
+async function huecoTomador(nsei: Page, ctx: Pick<ContextoPortal, 'formador'>, etiqueta: string, que: string): Promise<never> {
+  await registrarAtasco(nsei, ctx.formador, {
+    clave: claveCampo(`tomador ${etiqueta}`),
+    tipo: 'campo',
+    etiqueta,
+    descripcion: `Paso 1 «Datos básicos» de Mapfre NSEI, tomador: ${que}. Revisar a mano: el robot no pulsa nada en este paso (ni la lupa).`,
+  }).catch(() => undefined)
+  throw new ErrorMapaIncompleto(que, true)
+}
+
+/** Tras rellenar (o tras el autorrelleno): ningún «Campo obligatorio» visible en «Datos básicos». Si queda alguno → hueco. */
+async function exigirSinCamposObligatorios(nsei: Page, ctx: Pick<ContextoPortal, 'formador'>, cuando: string): Promise<void> {
   const errores = nsei.locator(`${SEL_TOMADOR.ambito} mat-error`).locator('visible=true')
   await nsei.waitForTimeout(300)
   for (let i = 0; i < 4; i++) {
@@ -616,25 +661,51 @@ async function exigirSinCamposObligatorios(nsei: Page): Promise<void> {
     if (!textos.some((x) => RE_CAMPO_OBLIGATORIO.test(plano(x)))) return
     await nsei.waitForTimeout(250)
   }
-  throw new ErrorMapaIncompleto('el alta del tomador nuevo: tras rellenarla en «Datos básicos» queda algún «Campo obligatorio» sin cubrir', true)
+  // La ETIQUETA del primer campo con el error (texto del formulario, nunca su valor), para el atasco.
+  const etiqueta = await errores.first().evaluate((el) => {
+    const f = el.closest('mat-form-field')
+    return (f?.querySelector('mat-label, label')?.textContent ?? '').replace(/[*\s]+/g, ' ').trim().slice(0, 80)
+  }).catch(() => '')
+  await huecoTomador(nsei, ctx, etiqueta || 'campo obligatorio', `${cuando} queda algún «Campo obligatorio» sin cubrir en «Datos básicos»`)
 }
 
 /**
- * Alta del tomador NUEVO en el propio formulario (solo si Mapfre no lo conoce): rellena por la capa común los campos que
- * trae la ficha y comprueba que no queda ningún «Campo obligatorio». No pulsa nada (el «Continuar» es del llamante).
+ * Alta del tomador NUEVO en el propio formulario (solo si Mapfre avisó de que no lo conoce): campo a campo, por la capa
+ * común (`campoConRespaldo`) y `comprobarCampo`; ANTES de cada `fill` el campo tiene que seguir VACÍO (si Mapfre lo rellenó
+ * tarde, no se toca: hueco). La fecha se verifica DESPUÉS de salir del campo (la máscara puede reescribirla: inversión
+ * día/mes → hueco). Al final, ningún «Campo obligatorio». No pulsa nada (el «Continuar» es del llamante).
  */
 export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'formador'>): Promise<void> {
   const plan = planAltaTomador(f)
-  await rellenarCamposTexto(nsei, plan, { page: nsei, formador: ctx.formador })
-  for (const o of plan.escribibles) await nsei.locator(o.sel).first().blur().catch(() => undefined)
-  await exigirSinCamposObligatorios(nsei)
+  for (const op of plan.escribibles) {
+    const r = await campoConRespaldo(nsei, op.sel, { page: nsei, formador: ctx.formador, etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del TOMADOR (alta) en el paso 1 «Datos básicos» de Mapfre NSEI` })
+    if (!r) throw new ErrorMapaIncompleto(`el campo «${op.etiqueta}» del alta del tomador (${op.sel}; no aparece)`, true)
+    const campo: Locator = r.campo
+    await comprobarCampo(campo)
+    // Mapfre puede autorrellenar DESPUÉS de la espera: lo que ya tiene valor no se sobrescribe nunca.
+    if ((await campo.inputValue()).trim() !== '') await huecoTomador(nsei, ctx, op.etiqueta, `Mapfre rellenó «${op.etiqueta}» después de avisar de que el tomador no existe (señales contradictorias): no se sobrescribe`)
+    const valor = String(op.valor)
+    await campo.fill(valor)
+    await campo.blur().catch(() => undefined)
+    const leido = await campo.inputValue()
+    if (op.sel === SEL_TOMADOR.fechaNacimiento) {
+      const c = compararFechaEs(leido, valor)
+      if (c === 'invertida') await huecoTomador(nsei, ctx, op.etiqueta, `el portal dejó «${op.etiqueta}» con el día y el mes cambiados (máscara mm/dd): no se continúa con una fecha falsa`)
+      if (c === 'distinta') await huecoTomador(nsei, ctx, op.etiqueta, `el portal no dejó «${op.etiqueta}» como se tecleó (dd/mm/aaaa)`)
+    } else if (leido.trim().toUpperCase() !== valor.trim().toUpperCase()) {
+      throw new ErrorTarificador('portal', `mapfre/auto: el portal no dejó fijado el campo «${op.etiqueta}» del tomador`)
+    }
+    await r.confirmar().catch(() => undefined)
+  }
+  await exigirSinCamposObligatorios(nsei, ctx, 'tras rellenar el alta del tomador nuevo')
 }
 
 /**
  * Paso 1 «Datos básicos»: NIF/CIF del tomador (SIN lupa: Mapfre busca sola al salir del campo) → reacción → «Continuar»
- * (guardado). Existe → no se toca nada del tomador; no existe → se da de alta en el propio formulario con los datos de la
- * ficha. El NIF lo pone asegura (`documentoTomador`) o viene en `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada.
- * El NIF solo va a su campo: nunca a logs, mensajes ni resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
+ * (guardado). Existe → no se toca nada del tomador (pero sin «Campo obligatorio» pendiente); no existe → se da de alta en
+ * el propio formulario con los datos de la ficha. El NIF lo pone asegura (`documentoTomador`) o viene en
+ * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
+ * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
 export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador'>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
   const nif = documentoTomadorDe(f)
@@ -648,9 +719,10 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   // Salir del campo dispara la búsqueda automática de Mapfre. NO se pulsa la lupa.
   await campo.blur()
   const reaccion = await esperarReaccionTomador(nsei, esperaMs)
-  if (reaccion === 'dialogo') throw new ErrorMapaIncompleto('el diálogo que abre la búsqueda del tomador (sin DOM grabado; el robot no elige persona a ciegas)', true)
-  if (reaccion === 'indeterminado') throw new ErrorMapaIncompleto('la reacción de Mapfre al NIF/CIF del tomador (ni autorrelleno ni formulario de alta con Nombre / Apellido / Fecha de Nacimiento)', true)
+  if (reaccion === 'dialogo') await huecoTomador(nsei, ctx, 'NIF/CIF', 'el diálogo que abre la búsqueda del tomador (sin DOM grabado; el robot no elige persona a ciegas)')
+  if (reaccion === 'indeterminado') await huecoTomador(nsei, ctx, 'NIF/CIF', 'la reacción de Mapfre al NIF/CIF del tomador (ni autorrelleno ni aviso de «no existe ningún registro» en la espera)')
   if (reaccion === 'nuevo') await altaTomadorNuevo(nsei, f, ctx)
+  else await exigirSinCamposObligatorios(nsei, ctx, 'con el tomador autorrellenado por Mapfre')
   await continuar(nsei, ctx, 'datosBasicos')
   await r.confirmar().catch(() => undefined)
 }
@@ -686,7 +758,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.7.0',
+  version: '0.7.1',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

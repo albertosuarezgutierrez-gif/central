@@ -44,7 +44,11 @@ import {
   peticionMaquina,
   repartirEnCurso,
   aplicarNifTomador,
+  aplicarDatosTomador,
   lecturaNifFicha,
+  lecturaTomadorFicha,
+  necesitaDatosTomador,
+  type FilaTomadorFicha,
   necesitaNifTomador,
   riesgoParaEncolar,
   riesgoSinNifTomador,
@@ -128,7 +132,10 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   // que se guarda es el riesgo SIN documento (el NIF en claro no se persiste): se descifra e inyecta al ENTREGAR el trabajo
   // al worker (`trabajoParaWorker`). El documento no sale en ningún motivo ni en la respuesta.
   const dniFicha = necesitaNifTomador(e.compania, e.ramo, riesgoSinNifTomador(e.riesgo)) ? await leerDniFicha(e.correduriaId, clienteId) : null
-  const guardar = riesgoParaEncolar(e.compania, e.ramo, e.riesgo, () => lecturaNifFicha(dniFicha, decryptField))
+  // Nombre, apellidos y nacimiento del tomador (alta en Mapfre si no lo conoce): misma regla, comprobados aquí y SOLO
+  // inyectados al entregar. Si faltan → 422 `falta_datos_tomador` («falta X en la ficha») sin encolar ni gastar máquina.
+  const fichaTomador = necesitaDatosTomador(e.compania, e.ramo, riesgoSinNifTomador(e.riesgo)) ? await leerTomadorFicha(e.correduriaId, clienteId) : null
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, e.riesgo, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
   // Sin duplicados (13/10/2026): mismo cliente + compañía + ramo + riesgo (igualdad `jsonb`) con un trabajo aún vivo →
@@ -160,6 +167,18 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
       returning id::text as id`
     return { estado: 'encolado' as const, trabajoId: filas[0].id, duplicado: false }
   }, { timeout: 15000, maxWait: 10000 })
+}
+
+/**
+ * Nombre, apellidos, nacimiento y tipo de persona de la ficha TAL CUAL están en BD (lo cifrado, cifrado), de ESTA
+ * correduría. Los abre `lecturaTomadorFicha`. `null` = no hay ficha de esta correduría con ese id.
+ */
+async function leerTomadorFicha(correduriaId: string, clienteId: string): Promise<FilaTomadorFicha | null> {
+  const filas = await prisma.$queryRaw<{ dni: string | null; nombre: string | null; apellidos: string | null; fecha_nacimiento: string | null; tipo_persona: string | null }[]>`
+    select dni, nombre, apellidos, fecha_nacimiento, tipo_persona::text as tipo_persona
+    from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+  const f = filas[0]
+  return f ? { dni: f.dni, nombre: f.nombre, apellidos: f.apellidos, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona } : null
 }
 
 /** DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`. */
@@ -336,6 +355,16 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
       return null
     }
     riesgo = conNif.riesgo
+  }
+  // Nombre, apellidos y nacimiento del tomador (alta en Mapfre): igual que el NIF, solo en la respuesta, nunca en BD.
+  if (modo !== 'exploracion' && necesitaDatosTomador(f.compania, f.ramo, riesgo)) {
+    const ficha = f.cliente_id ? await leerTomadorFicha(f.correduria_id, f.cliente_id) : null
+    const conDatos = aplicarDatosTomador(f.compania, f.ramo, riesgo, () => lecturaTomadorFicha(ficha, decryptField))
+    if (!conDatos.ok) {
+      await prisma.$transaction((tx) => marcarFallo(tx, f.id, f.intentos, { tipo: tipoFalloNifTomador(conDatos.status), mensaje: conDatos.motivo, url: null }, null))
+      return null
+    }
+    riesgo = conDatos.riesgo
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base

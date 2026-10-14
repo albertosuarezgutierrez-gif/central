@@ -121,3 +121,30 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto): EntradaBotAut
     companiaAnterior: null,
   })
 }
+
+/** Compañías cuyo bot DA DE ALTA al tomador nuevo con su nombre, apellidos y nacimiento (Mapfre NSEI, 14/10/2026). */
+export const COMPANIAS_ALTA_TOMADOR = ['mapfre'] as const
+
+/**
+ * Lo que a la FICHA del tomador le falta para que Mapfre pueda darlo de alta si no lo conoce (nombre, primer apellido y
+ * fecha de nacimiento; en empresa, la razón social), en castellano y sin valores. `null` = no se pudo leer la ficha (no se
+ * afirma que falte: lo comprueba asegura al encolar y, si falta, responde 422 `falta_datos_tomador` sin gastar máquina). PURA.
+ */
+export function faltanFichaTomadorParaAlta(r: Pick<RiesgoParaBotsAuto, 'figuras'>): string[] | null {
+  const t = r.figuras.find((f) => f.rol === 'tomador') ?? null
+  if (!t || t.faltan == null) return null
+  const k = new Set(t.faltan)
+  if (t.empresa) return k.has('nombre') ? ['la razón social'] : []
+  const out: string[] = []
+  if (k.has('nombre')) out.push('el nombre')
+  if (k.has('apellido1')) out.push('el primer apellido')
+  if (k.has('fechaNacimiento') || k.has('fechaNacimiento_invalida')) out.push('la fecha de nacimiento')
+  return out
+}
+
+/** «Falta el nombre y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). PURA. */
+export function avisoFichaTomadorParaAlta(faltan: readonly string[] | null): string | null {
+  if (!faltan || faltan.length === 0) return null
+  const lista = faltan.length === 1 ? faltan[0] : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`
+  return `Falta ${lista} en la ficha del tomador: Mapfre lo da de alta con esos datos si no lo conoce. Complétalo en la ficha.`
+}

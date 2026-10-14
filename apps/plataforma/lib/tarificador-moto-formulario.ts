@@ -268,6 +268,12 @@ export function leerEncoladoBot(status: number, json: unknown): EncoladoBot {
     const motivo = typeof o.motivo === 'string' ? ` (${o.motivo})` : ''
     return { ok: false, mensaje: typeof o.mensaje === 'string' ? o.mensaje : `Esa compañía no está autorizada para el bot${motivo}` }
   }
-  if (status === 422 || status === 404) return { ok: false, mensaje: typeof o.mensaje === 'string' ? o.mensaje : `No se pudo encolar (HTTP ${status}).` }
+  if (status === 422 || status === 404) {
+    if (typeof o.mensaje === 'string') return { ok: false, mensaje: o.mensaje }
+    // asegura rechaza con `motivo` «codigo: explicación» (p. ej. `falta_datos_tomador: falta el nombre en la ficha…`):
+    // se enseña la explicación (nunca lleva valores).
+    const m = typeof o.motivo === 'string' ? /^[a-z_]+: ([\s\S]+)$/.exec(o.motivo.trim()) : null
+    return { ok: false, mensaje: m ? `No se encoló: ${m[1]}` : `No se pudo encolar (HTTP ${status}).` }
+  }
   return leerEncolado(status, json)
 }

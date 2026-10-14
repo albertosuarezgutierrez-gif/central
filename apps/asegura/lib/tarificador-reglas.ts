@@ -5,9 +5,10 @@
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
+import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
   claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type AtascoWorker, type CandidatoVersion, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
+  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
 /** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
@@ -109,8 +110,9 @@ export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknow
  * inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA.
  */
 export function riesgoSinNifTomador<T>(riesgo: T): T {
-  if (!esObj(riesgo) || !('documentoTomador' in riesgo)) return riesgo
-  const { documentoTomador: _fuera, ...resto } = riesgo
+  if (!esObj(riesgo) || !('documentoTomador' in riesgo || 'datosTomador' in riesgo)) return riesgo
+  // También `datosTomador` (nombre, apellidos, nacimiento: mismo régimen que el NIF, se inyectan al entregar).
+  const { documentoTomador: _fuera, datosTomador: _fuera2, ...resto } = riesgo
   return resto as T
 }
 
@@ -119,10 +121,111 @@ export function riesgoSinNifTomador<T>(riesgo: T): T {
  * mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSinNifTomador` (el documento
  * descifrado jamás vuelve de aquí ni se persiste). PURA.
  */
-export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string } {
+export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string } {
   const guardado = riesgoSinNifTomador(riesgo)
   const r = aplicarNifTomador(compania, ramo, guardado, leer)
-  return r.ok ? { ok: true, riesgo: guardado } : r
+  if (!r.ok) return r
+  // Nombre / apellidos / nacimiento (alta del tomador nuevo en Mapfre): se COMPRUEBAN aquí y se inyectan al entregar.
+  const d = aplicarDatosTomador(compania, ramo, guardado, leerDatos)
+  return d.ok ? { ok: true, riesgo: guardado } : d
+}
+
+// ─── Datos del tomador para el ALTA en Mapfre (14/10/2026, revisión del PR #4710) ──────────
+// Mapfre NSEI, si el NIF no está en su base, da de alta al tomador en el propio formulario con nombre, apellidos y fecha
+// de nacimiento (o razón social). Mismo régimen que el NIF: se COMPRUEBAN al encolar (sin máquina si faltan) y se
+// descifran e inyectan como `datosTomador` SOLO al entregar el trabajo; nunca se guardan en `riesgo`.
+
+/** Fila de la ficha tal cual está en BD (lo que se cifra, cifrado). */
+export type FilaTomadorFicha = { dni: string | null; nombre: string | null; apellidos: string | null; fechaNacimiento: string | null; tipoPersona: string | null }
+
+/** `incompleta` = la ficha se leyó y le falta algo (nombres de campo, nunca valores); `ilegible` = no se pudo mirar. */
+export type LecturaDatosTomador =
+  | { estado: 'ok'; datos: DatosTomadorFicha }
+  | { estado: 'incompleta'; faltan: string[] }
+  | { estado: 'ilegible' }
+
+/** «2026-10-05» o «05/10/2026» → ISO real; cualquier otra cosa → `null` (no se adivina un orden). PURA. */
+export function fechaIsoDeFicha(v: string): string | null {
+  const t = v.trim()
+  let a: string, m: string, d: string
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t)
+  const es = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t)
+  if (iso) [a, m, d] = [iso[1], iso[2], iso[3]]
+  else if (es) [a, m, d] = [es[3], es[2], es[1]]
+  else return null
+  const f = new Date(Date.UTC(Number(a), Number(m) - 1, Number(d)))
+  return f.getUTCFullYear() === Number(a) && f.getUTCMonth() === Number(m) - 1 && f.getUTCDate() === Number(d) ? `${a}-${m}-${d}` : null
+}
+
+/**
+ * Ficha → datos del tomador para el alta. PURA. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza → `ilegible`
+ * (nunca «falta»). Empresa = `tipo_persona = juridica`, o sin tipo y con CIF: razón social = nombre + apellidos (así la
+ * guarda la cartera). Persona: nombre, primer apellido (de `apellidos`, `partirApellidos`) y nacimiento obligatorios.
+ */
+export function lecturaTomadorFicha(fila: FilaTomadorFicha | null, descifrar: (v: string) => string): LecturaDatosTomador {
+  if (!fila) return { estado: 'incompleta', faltan: ['la ficha'] }
+  const abrir = (v: string | null): string | null => {
+    if (typeof v !== 'string' || v.trim() === '') return null
+    const claro = v.startsWith('v1:') ? descifrar(v) : v
+    return typeof claro === 'string' && claro.trim() !== '' ? claro.replace(/\s+/g, ' ').trim() : null
+  }
+  let nombre: string | null, apellidos: string | null, nac: string | null, dni: string | null
+  try {
+    nombre = abrir(fila.nombre)
+    apellidos = abrir(fila.apellidos)
+    nac = abrir(fila.fechaNacimiento)
+    dni = abrir(fila.dni)
+  } catch {
+    return { estado: 'ilegible' }
+  }
+  // Un valor de cajón («lead», «cliente», «-») es «no consta», nunca un nombre.
+  nombre = nombreUtil(nombre)
+  apellidos = nombreUtil(apellidos)
+  const empresa = fila.tipoPersona === 'juridica' || (fila.tipoPersona == null && dni !== null && esCif(normalizarDocumento(dni)))
+  if (empresa) {
+    const razon = [nombre, apellidos].filter(Boolean).join(' ').trim()
+    return razon ? { estado: 'ok', datos: { tipo: 'juridica', razonSocial: razon } } : { estado: 'incompleta', faltan: ['la razón social'] }
+  }
+  const { primero, segundo } = partirApellidos(apellidos)
+  const fecha = nac === null ? null : fechaIsoDeFicha(nac)
+  const faltan: string[] = []
+  if (!nombre) faltan.push('el nombre')
+  if (!primero) faltan.push('el primer apellido')
+  if (nac === null) faltan.push('la fecha de nacimiento')
+  else if (fecha === null) faltan.push('una fecha de nacimiento válida')
+  if (faltan.length || !nombre || !primero || !fecha) return { estado: 'incompleta', faltan }
+  return { estado: 'ok', datos: { tipo: 'fisica', nombre, apellido1: primero, apellido2: segundo, fechaNacimiento: fecha } }
+}
+
+/** ¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`. PURA. */
+export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown): boolean {
+  if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (ramo !== 'auto' && ramo !== 'moto') return false
+  return !(esObj(riesgo) && esObj(riesgo.tomador))
+}
+
+/** Texto «el nombre, el primer apellido y la fecha de nacimiento». PURA. */
+function enumerar(l: readonly string[]): string {
+  return l.length <= 1 ? (l[0] ?? '') : `${l.slice(0, -1).join(', ')} y ${l[l.length - 1]}`
+}
+
+/**
+ * Como `aplicarNifTomador` para nombre, apellidos y nacimiento (`datosTomador`). PURA. Otra compañía → el riesgo SIN
+ * `datosTomador`; Mapfre auto/moto sin bloque `tomador` → los de la ficha, o rechazo 422 `falta_datos_tomador` («falta X en
+ * la ficha»), o 503 `datos_tomador_ilegibles`. Ningún motivo lleva valores.
+ */
+export function aplicarDatosTomador(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaDatosTomador): NifTomadorAplicado {
+  if (!necesitaDatosTomador(compania, ramo, riesgo)) {
+    if (esObj(riesgo) && 'datosTomador' in riesgo && !(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) {
+      const { datosTomador: _fuera, ...resto } = riesgo
+      return { ok: true, riesgo: resto }
+    }
+    return { ok: true, riesgo }
+  }
+  const l = leer()
+  if (l.estado === 'ok') return { ok: true, riesgo: { ...(esObj(riesgo) ? riesgo : {}), datosTomador: l.datos } }
+  if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'datos_tomador_ilegibles: los datos de la ficha del cliente no se pueden descifrar (clave de la cartera); no se encola' }
+  return { ok: false, status: 422, motivo: `falta_datos_tomador: falta ${enumerar(l.faltan)} en la ficha del cliente (Mapfre da de alta al tomador nuevo con ellos); complétalo en la ficha` }
 }
 
 /** Al ENTREGAR: un NIF que ya no se puede poner es fallo `datos` (la ficha) o `infra` si es ilegible (la clave: «no se sabe»). */

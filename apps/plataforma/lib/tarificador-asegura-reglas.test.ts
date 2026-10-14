@@ -261,9 +261,11 @@ test('describirFalloRed: AbortError/TimeoutError → timeout; el resto → red; 
   assert.equal(describirFalloRed(null).motivo, 'red')
 })
 
-test('puerto() y PrecioBots ya no tragan el fallo: console.error con la causa y `motivo` timeout|red', () => {
+test('puerto() ya no traga el fallo (console.error con la causa) y PrecioBots devuelve el `motivo` timeout|red sin logs', () => {
   const asegura = readFileSync(join(APP, 'lib/tarificador-asegura.ts'), 'utf8')
   assert.match(asegura, /catch \(e\) \{[\s\S]*describirFalloRed\(e\)[\s\S]*console\.error\([\s\S]*motivo: f\.motivo \}/)
   const bots = readFileSync(join(APP, 'app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx'), 'utf8')
-  assert.match(bots, /catch \(e\) \{[\s\S]*describirFalloRed\(e\)[\s\S]*console\.error\([\s\S]*motivo: f\.motivo \}/)
+  // PrecioBots es del NAVEGADOR: sin console.* (guardián de tarificador-moto-formulario.test.ts); el motivo sí viaja.
+  assert.match(bots, /catch \(e\) \{[\s\S]*motivo: describirFalloRed\(e\)\.motivo \}/)
+  assert.doesNotMatch(bots, /console\./)
 })

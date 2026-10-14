@@ -98,3 +98,31 @@ describe('mat-select de Mapfre: uso, ámbito, clase del permiso y compañía ant
     }
   })
 })
+
+describe('datosTomador (alta del tomador en Mapfre; lo pone asegura al entregar, 14/10/2026)', () => {
+  const dt = { tipo: 'fisica', nombre: 'NOMBRE PRUEBA', apellido1: 'APELLIDOUNO', apellido2: 'APELLIDODOS', fechaNacimiento: '1980-01-02' }
+  it('opcional; si viene válido pasa al formulario; empresa con razón social', () => {
+    const r = validarFormularioAuto({ ...base, datosTomador: dt }, hoy)
+    expect(r.ok && r.formulario.datosTomador).toEqual(dt)
+    const e = validarFormularioAuto({ ...base, datosTomador: { tipo: 'juridica', razonSocial: 'EMPRESA PRUEBA SL' } }, hoy)
+    expect(e.ok && e.formulario.datosTomador).toEqual({ tipo: 'juridica', razonSocial: 'EMPRESA PRUEBA SL' })
+    const sin = validarFormularioAuto(base, hoy)
+    expect(sin.ok && 'datosTomador' in sin.formulario).toBe(false)
+  })
+  it('incompleto o fecha no real → error por CAMPO, sin repetir valores', () => {
+    const r = validarFormularioAuto({ ...base, datosTomador: { ...dt, nombre: '', fechaNacimiento: '1980-02-31' } }, hoy)
+    expect(r.ok).toBe(false)
+    const t = errs(r as ReturnType<typeof con>)
+    expect(t).toMatch(/datosTomador\.nombre/)
+    expect(t).toMatch(/datosTomador\.fechaNacimiento/)
+    expect(t).not.toContain('1980')
+    expect(t).not.toContain('APELLIDOUNO')
+  })
+  it('secretosDelRiesgo: nombre, apellidos (sueltos, juntos y en mayúsculas), razón social y la fecha en sus formatos', async () => {
+    const { secretosDelRiesgo } = await import('./index.ts')
+    const s = secretosDelRiesgo({ documentoTomador: '00000000T', datosTomador: { ...dt, nombre: 'Nombre Prueba' } })
+    expect(s).toEqual(expect.arrayContaining(['00000000T', 'Nombre Prueba', 'NOMBRE PRUEBA', 'APELLIDOUNO', 'APELLIDODOS', 'APELLIDOUNO APELLIDODOS', 'NOMBRE PRUEBA APELLIDOUNO APELLIDODOS', '1980-01-02', '02/01/1980', '02-01-1980']))
+    expect(secretosDelRiesgo({ datosTomador: { tipo: 'juridica', razonSocial: 'EMPRESA PRUEBA SL' } })).toEqual(expect.arrayContaining(['EMPRESA PRUEBA SL']))
+    expect(secretosDelRiesgo({ tomador: { documentoIdentidad: 'X0000000T', nombre: 'OTRO NOMBRE', fechaNacimiento: '1970-03-04' } })).toEqual(expect.arrayContaining(['OTRO NOMBRE', '04/03/1970']))
+  })
+})

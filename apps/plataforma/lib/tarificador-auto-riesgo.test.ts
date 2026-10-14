@@ -103,3 +103,33 @@ test('armarFormularioBotsAuto: el CP del formulario de Avant2 sigue la misma reg
   assert.equal(armarFormularioBotsAuto({ ...base, cpCirculacion: '28001' }).codigoPostal, '28001')
   assert.equal(armarFormularioBotsAuto({ ...base, cpCirculacion: '' }).codigoPostal, 'ficha')
 })
+
+// ─── Mapfre: alta del tomador nuevo con los datos de la ficha (revisión PR #4710) ───
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { avisoFichaTomadorParaAlta, faltanFichaTomadorParaAlta } from './tarificador-auto-riesgo.ts'
+import { leerEncoladoBot } from './tarificador-moto-formulario.ts'
+
+test('Mapfre: a la ficha del tomador le faltan nombre / primer apellido / nacimiento → aviso «falta X en la ficha»; null = no se sabe (no se afirma)', () => {
+  const con = (f: { empresa?: boolean; faltan: string[] | null }) => faltanFichaTomadorParaAlta(riesgo({ figuras: [{ rol: 'tomador', clienteId: 'c1', empresa: f.empresa ?? false, faltan: f.faltan }] }))
+  assert.deepEqual(con({ faltan: [] }), [])
+  assert.deepEqual(con({ faltan: ['nombre', 'apellido1', 'fechaNacimiento_invalida', 'telefono', 'sexo'] }), ['el nombre', 'el primer apellido', 'la fecha de nacimiento'])
+  assert.deepEqual(con({ empresa: true, faltan: ['nombre'] }), ['la razón social'])
+  assert.equal(con({ faltan: null }), null)
+  assert.equal(avisoFichaTomadorParaAlta(null), null)
+  assert.equal(avisoFichaTomadorParaAlta([]), null)
+  assert.match(avisoFichaTomadorParaAlta(['el nombre', 'la fecha de nacimiento'])!, /^Falta el nombre y la fecha de nacimiento en la ficha del tomador/)
+})
+
+test('Mapfre: el bloque de la oportunidad bloquea SOLO el botón de Mapfre con el aviso; el 422 de asegura se enseña con su explicación', () => {
+  const b = readFileSync(join(import.meta.dirname, '..', 'app', '(usuario)', 'correduria', 'oportunidad', '[id]', 'BotsAutoRiesgo.tsx'), 'utf8')
+  assert.match(b, /avisoFichaTomadorParaAlta\(faltanFichaTomadorParaAlta\(riesgo\)\)/)
+  assert.match(b, /bloqueosPorCompania=\{bloqueos\}/)
+  const p = readFileSync(join(import.meta.dirname, '..', 'app', '(usuario)', 'correduria', 'cliente', '[id]', 'PrecioBots.tsx'), 'utf8')
+  assert.match(p, /const bloqueo = bloqueosPorCompania\?\.\[i\.compania\] \?\? null/)
+  assert.match(p, /formulario=\{bloqueo && resultado\.ok \? \{ ok: false, faltan: \[bloqueo\] \} : resultado\}/)
+  const r = leerEncoladoBot(422, { estado: 'rechazado', motivo: 'falta_datos_tomador: falta el nombre en la ficha del cliente (Mapfre da de alta al tomador nuevo con ellos); complétalo en la ficha' })
+  assert.ok(!r.ok && /^No se encoló: falta el nombre en la ficha/.test(r.mensaje))
+  const s = leerEncoladoBot(422, null)
+  assert.ok(!s.ok && /HTTP 422/.test(s.mensaje))
+})
