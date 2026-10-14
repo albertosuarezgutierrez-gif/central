@@ -16,6 +16,7 @@ import {
   MAX_RONDAS_ATASCO,
   UMBRAL_CORTE_BOT,
   atascoActivo,
+  cabeCapturaEnRespuesta,
   candidatosVisibles,
   debeCortarBot,
   decidirAtasco,
@@ -56,6 +57,13 @@ export async function atascoParaFallo(db: Db, f: { trabajoId: string; estado: st
 /** Guarda el checkpoint (la fila del trabajo ya está `atascado` en esta misma transacción). */
 export async function guardarAtasco(db: Db, t: { id: string; correduriaId: string; compania: string; ramo: string }, a: AtascoWorker, capturaId: string | null): Promise<void> {
   const horas = horasAtasco(process.env)
+  // Un atasco ESPERANDO anterior del mismo trabajo (p. ej. reintento desde la bandeja) se cierra ANTES: sus candidatos son
+  // viejos y su id no debe poder aplicarse (responderAtasco ve estado <> 'esperando' → sin_cambios/conflicto). La fila queda
+  // de rastro y cuenta como ronda previa.
+  await db.$executeRaw`
+    update seguros.tarificador_atascos
+       set estado = 'descartado', respondido_at = now(), respondido_por = 'sistema:sustituido'
+     where trabajo_id = ${t.id}::uuid and estado = 'esperando'`
   await db.$executeRaw`
     insert into seguros.tarificador_atascos
       (correduria_id, trabajo_id, compania, ramo, clave, tipo, descripcion, etiqueta, texto_esperado, candidatos, captura_documento_id, caduca_at)
@@ -107,6 +115,14 @@ async function capturaDe(correduriaId: string, documentoId: string | null): Prom
   return Buffer.from(f.contenido).toString('base64')
 }
 
+/** Captura del atasco si cabe en el tope TOTAL de la respuesta (si no, `null`: el aviso sale sin foto). */
+async function capturaDentroDeTope(correduriaId: string, documentoId: string | null, usado: number, suma: (n: number) => void): Promise<string | null> {
+  const b64 = await capturaDe(correduriaId, documentoId)
+  if (b64 === null || !cabeCapturaEnRespuesta(usado, b64.length)) return null
+  suma(b64.length)
+  return b64
+}
+
 /**
  * Atascos ESPERANDO de la correduría (el trabajo sigue `atascado`). `pendientesAviso` = solo los que aún no se avisaron;
  * `id` = uno concreto; `conCaptura` añade la imagen (avisos y detalle). Filas ilegibles se cuentan, no desaparecen.
@@ -129,6 +145,7 @@ export async function listarAtascos(correduriaId: string, o: { pendientesAviso?:
     limit 50`
   const atascos: AtascoVisible[] = []
   let ilegibles = 0
+  let bytesCapturas = 0
   for (const f of filas) {
     const a = atascoDeFila(f)
     if (!a) { ilegibles++; continue }
@@ -137,7 +154,7 @@ export async function listarAtascos(correduriaId: string, o: { pendientesAviso?:
       descripcion: a.descripcion, etiqueta: a.etiqueta, textoEsperado: a.textoEsperado, candidatos: candidatosVisibles(a),
       ronda: Number(f.ronda), maxRondas: MAX_RONDAS_ATASCO, creadoEn: f.created_at.toISOString(), caducaEn: f.caduca_at.toISOString(),
       avisadoEn: f.avisado_at?.toISOString() ?? null, hayCaptura: f.captura_documento_id !== null,
-      ...(o.conCaptura ? { capturaBase64: await capturaDe(correduriaId, f.captura_documento_id) } : {}),
+      ...(o.conCaptura ? { capturaBase64: await capturaDentroDeTope(correduriaId, f.captura_documento_id, bytesCapturas, (n) => { bytesCapturas += n }) } : {}),
     })
   }
   return { estado: 'ok', atascos, ilegibles }

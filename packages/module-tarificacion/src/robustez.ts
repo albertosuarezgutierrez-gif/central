@@ -216,3 +216,15 @@ export function decidirAtasco(f: { activo: boolean; modo: string | null; tipoErr
   if (f.rondasPrevias >= MAX_RONDAS_ATASCO) return { atascar: false, motivo: `ya se atascó ${f.rondasPrevias} veces: la elección no está funcionando` }
   return { atascar: true }
 }
+
+/** Tope TOTAL de bytes de capturas (base64) por respuesta del puerto: el cuerpo de Vercel ronda 4,5 MB. */
+export const MAX_BYTES_CAPTURAS_RESPUESTA = 3 * 1024 * 1024
+
+/**
+ * ¿Cabe una captura de `bytes` en la respuesta si ya van `usado` bytes de capturas? Pura. Lo que no cabe sale SIN captura
+ * (`null`): el aviso llega igual, sin foto, en vez de reventar la respuesta y dejar sin avisar a todos.
+ */
+export function cabeCapturaEnRespuesta(usado: number, bytes: number, tope = MAX_BYTES_CAPTURAS_RESPUESTA): boolean {
+  if (!Number.isFinite(usado) || !Number.isFinite(bytes) || bytes < 0 || usado < 0) return false
+  return usado + bytes <= tope
+}

@@ -650,6 +650,8 @@ export {
   elegirCandidatoAtasco,
   atascoCaducado,
   decidirAtasco,
+  cabeCapturaEnRespuesta,
+  MAX_BYTES_CAPTURAS_RESPUESTA,
   type EstadoAprendido,
   type CierreTrabajo,
   type CandidatoAtasco,

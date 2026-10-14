@@ -79,3 +79,13 @@ test('aprendido: lo descartado no se sirve y un éxito pone los fallos a cero', 
   const fallo = tramo(src, 'export async function registrarFallosConocimiento', '\n}\n')
   assert.match(fallo, /fallos \+ 1 >= \$\{UMBRAL_DESCARTAR_APRENDIDO\}::int then now\(\)/)
 })
+
+test('guardarAtasco cierra el atasco esperando anterior del mismo trabajo antes de insertar; listarAtascos acota las capturas', () => {
+  const src = leer('lib/tarificador-robustez.ts')
+  const g = tramo(src, 'export async function guardarAtasco', 'function atascoDeFila')
+  assert.match(g, /update \w+\.tarificador_atascos[\s\S]*?set estado = 'descartado'[\s\S]*?where trabajo_id = \$\{t\.id\}::uuid and estado = 'esperando'/, 'el atasco viejo sigue esperando')
+  assert.ok(g.indexOf("set estado = 'descartado'") < g.indexOf('insert into'), 'cerrar ANTES de insertar')
+  const l = tramo(src, 'export async function listarAtascos', '/** Marca como avisados')
+  assert.match(l, /capturaDentroDeTope\(/)
+  assert.match(src, /cabeCapturaEnRespuesta\(usado, b64\.length\)/)
+})

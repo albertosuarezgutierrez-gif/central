@@ -6,6 +6,8 @@ import {
   UMBRAL_CONSOLIDAR_APRENDIDO,
   UMBRAL_DESCARTAR_APRENDIDO,
   atascoActivo,
+  cabeCapturaEnRespuesta,
+  MAX_BYTES_CAPTURAS_RESPUESTA,
   atascoCaducado,
   candidatosVisibles,
   debeCortarBot,
@@ -131,5 +133,26 @@ describe('estado atascado en la máquina', () => {
   it('no es terminal y NO purga el riesgo (hace falta entero para repetir el camino)', () => {
     expect(ESTADOS_TERMINALES).not.toContain('atascado')
     expect(ESTADOS_PURGA_RIESGO as readonly string[]).not.toContain('atascado')
+  })
+})
+
+describe('tope total de capturas por respuesta', () => {
+  it('acumula: las que caben llevan foto y las que exceden salen sin ella', () => {
+    const MB = 1024 * 1024
+    let usado = 0
+    const llevan: boolean[] = []
+    for (const b of [MB, MB, MB, MB, 10]) {
+      const cabe = cabeCapturaEnRespuesta(usado, b)
+      llevan.push(cabe)
+      if (cabe) usado += b
+    }
+    expect(llevan).toEqual([true, true, true, false, false])
+    expect(usado).toBeLessThanOrEqual(MAX_BYTES_CAPTURAS_RESPUESTA)
+  })
+  it('justo en el tope cabe; un byte más, no; valores raros, no', () => {
+    expect(cabeCapturaEnRespuesta(MAX_BYTES_CAPTURAS_RESPUESTA - 5, 5)).toBe(true)
+    expect(cabeCapturaEnRespuesta(MAX_BYTES_CAPTURAS_RESPUESTA - 5, 6)).toBe(false)
+    expect(cabeCapturaEnRespuesta(0, Number.NaN)).toBe(false)
+    expect(cabeCapturaEnRespuesta(0, -1)).toBe(false)
   })
 })
