@@ -427,6 +427,8 @@ export {
   CLAVES_VALOR_VISIBLE_IA,
   valorVisibleIA,
   resolverDato,
+  claseMinimaPermiso,
+  cvAKw,
   ACCIONES_EXPLORADOR,
   MOTIVOS_PARAR,
   DESCRIPCION_MOTIVOS_PARAR,

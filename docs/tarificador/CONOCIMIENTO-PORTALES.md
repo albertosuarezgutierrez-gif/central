@@ -112,12 +112,14 @@
 | `conductor.fecha_carne` | — | `fechaExpedicion` (`app-conductor-habitual`) |
 | `historial.siniestros_5_anios` | — | «Siniestros RC 5 últimos años» (`siniestros`) |
 | `historial.anios_asegurado` | — | `tiempoAntComp`: lo calcula el portal, llega DESHABILITADO; nunca se escribe |
-| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): valor fijo «B» |
+| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): la que TIENE el conductor (dato real); si no consta y el vehículo exige más que B, el bot PARA. Mínimo DGT (`claseMinimaPermiso`): turismo/ciclomotor ≤50 cc «B»; ≤125 cc y ≤11 kW «B» con B ≥3 años (si no «A1»); ≤35 kW «A2»; más «A». Sintético por defecto «B» |
 
 Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (`mat-select`; Mapfre: `uso`, `ambitoCirculacion`) y compañía anterior (`companiaAnterior`).
 
 **Decisiones de Alberto (14/10/2026) para Auto, válidas para TODAS las compañías:**
-- «Clase» del permiso de conducir = siempre **«B»** en turismos (`conductor.clase_permiso`, valor fijo de negocio; sale también con datos reales).
+- «Clase» del permiso (`conductor.clase_permiso`): se declara la que TIENE el conductor; el vehículo fija el mínimo (`claseMinimaPermiso`, pura, DGT): turismo → **B**; ciclomotor ≤50 cc → **B**; moto ≤125 cc y ≤11 kW → **B** con ≥3 años de B, **A1** con menos; ≤35 kW → **A2**; más → **A**. Si falta un dato (cc, kW, antigüedad) devuelve null y no se adivina; si la clase del conductor no consta y el vehículo exige más que B, se para.
+- La columna «CV/KW» del diálogo «Selección de vehículo» de Mapfre se llama así pero el valor son **CV** (confirmado por Alberto): `cvAKw()` (1 CV = 0,73549875 kW) antes de `claseMinimaPermiso`, que recibe kW.
+- Coche y moto se tarifican en el MISMO tarificador (Mapfre: NSEI).
 - Paso «Coberturas»: se dejan las coberturas **POR DEFECTO**; el bot no cambia nada ahí, solo avanza.
 
 ### Hogar
@@ -224,7 +226,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 - **Paso 2 · Objeto asegurado:** se introduce la matrícula → diálogo «Selección de vehículo» con tabla (Matrícula, Nº Bastidor,
   Denominación comercial, CV/KW, CC, Nº Puertas, Fecha Inicio) y un radio por fila. Si las filas son casi iguales, se elige
   la primera y se pulsa «Aceptar» (deshabilitado hasta elegir fila). Otros botones del diálogo: «Cancelar» y «No es el
-  vehículo.». Fuera del diálogo: «Buscador de vehículos», «Vehículo NO catalogado», «Resumen vehículo». Después se pide
+  vehículo.» (el bot NUNCA pulsa «Cancelar», «No es el vehículo.» ni «Vehiculo NO catalogado»; si ninguna fila casa con la
+  matrícula, para). Una moto trae 0 en Nº Puertas. Fuera del diálogo: «Buscador de vehículos», «Vehículo NO catalogado», «Resumen vehículo». Después se pide
   código postal y «Continuar».
 - **Paso 3 · Figuras:** pestañas «Tomador» y «Conductores Ocasionales»; casillas «Actúa como Conductor Habitual» y «Tomador y
   propietario son la misma persona» (ambas marcadas por defecto); acordeones «Datos Básicos», «Dirección Habitual» y
