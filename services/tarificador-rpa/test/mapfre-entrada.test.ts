@@ -525,7 +525,7 @@ const CREDS = { usuario: USUARIO_FICTICIO, contrasena: CLAVE_FICTICIA }
 test('login antiguo: rellena, pulsa «entrar» (con el guard real) y llega al formulario NSEI', async () => {
   const { context, page, ctxGuard, guard } = await abrir('/')
   try {
-    const nueva = await abrirNuevo(page, { ...ctxGuard, credenciales: CREDS }, { urlDirecta: `${base}/nsei-login-ok`, menuMs: 1_000, formularioMs: 5_000 })
+    const nueva = await abrirNuevo(page, { ...ctxGuard, credenciales: CREDS }, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-ok`, menuMs: 1_000, formularioMs: 5_000 })
     assert.match(nueva.url(), /\/nsei-dest$/)
     assert.equal(await nueva.locator('app-datos-basicos').count(), 1)
     assert.equal(guard.violacion(), null)
@@ -539,7 +539,7 @@ test('login antiguo rechazado: error claro con diagnóstico y SIN credenciales (
   try {
     await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
     await assert.rejects(
-      () => abrirNuevo(page, { ...ctx, credenciales: CREDS }, { urlDirecta: `${base}/nsei-login-mal`, menuMs: 1_000, formularioMs: 2_000 }),
+      () => abrirNuevo(page, { ...ctx, credenciales: CREDS }, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-mal`, menuMs: 1_000, formularioMs: 2_000 }),
       (e) => {
         const m = (e as Error).message
         assert.ok(e instanceof ErrorMapaIncompleto)
@@ -558,4 +558,47 @@ test('login antiguo rechazado: error claro con diagnóstico y SIN credenciales (
 test('ocultarSecretos: quita usuario y clave aunque la pantalla los repita', () => {
   const t = ocultarSecretos('Credenciales incorrectas para USUARIO_FICTICIO / CLAVE_FICTICIA', [USUARIO_FICTICIO, CLAVE_FICTICIA, undefined])
   assert.ok(!t.includes('FICTICI'), t)
+})
+
+test('login antiguo en OTRO host: no se rellena ni se pulsa nada y sale el error', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
+    // hostsLogin por defecto = wmediadores.mapfre.com; el fixture vive en 127.0.0.1.
+    await assert.rejects(
+      () => abrirNuevo(page, { ...ctx, credenciales: CREDS }, { urlDirecta: `${base}/nsei-login-ok`, menuMs: 1_000, formularioMs: 1_500 }),
+      (e) => e instanceof ErrorMapaIncompleto && /URL directa/.test((e as Error).message) && !(e as Error).message.includes(CLAVE_FICTICIA),
+    )
+    assert.deepEqual(pulsados, [])
+  } finally {
+    await context.close()
+  }
+})
+
+test('excepción «bloqueado» que contiene la clave: el mensaje sale sin ella', async () => {
+  const { context, page, ctx } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
+    const ctxMalo = { ...ctx, credenciales: CREDS, pulsar: async () => { throw new Error(`bloqueado: ${USUARIO_FICTICIO}/${CLAVE_FICTICIA}`) } }
+    await assert.rejects(
+      () => abrirNuevo(page, ctxMalo, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-ok`, menuMs: 1_000, formularioMs: 2_000 }),
+      (e) => { const m = (e as Error).message; assert.ok(m.includes('«oculto»') && !m.includes('FICTICI'), m); return true },
+    )
+  } finally {
+    await context.close()
+  }
+})
+
+test('credenciales vacías: error sin rellenar ni pulsar', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
+    await assert.rejects(
+      () => abrirNuevo(page, { ...ctx, credenciales: { usuario: USUARIO_FICTICIO, contrasena: '' } }, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-ok`, menuMs: 1_000, formularioMs: 2_000 }),
+      (e) => /login antiguo NSEI rechazado\/no superado \(sin credenciales/.test((e as Error).message),
+    )
+    assert.deepEqual(pulsados, [])
+  } finally {
+    await context.close()
+  }
 })

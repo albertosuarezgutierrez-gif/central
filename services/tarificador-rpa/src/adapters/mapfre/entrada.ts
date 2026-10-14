@@ -194,11 +194,11 @@ async function enlaceDeEntrada(page: Page, tituloPagina: Locator, menuMs: number
  * Home de wmediadores (ya con sesión) → pestaña nueva con el formulario NSEI. Devuelve la PESTAÑA NUEVA: la exploración
  * debe continuar en ella (la original queda abierta). Sin `ctx.pulsar` fuera de la pestaña y la opción «Automóviles».
  */
-export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number; urlDirecta?: string | null } = {}): Promise<Page> {
+export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number; urlDirecta?: string | null; hostsLogin?: string[] } = {}): Promise<Page> {
   const url = esperas.urlDirecta === undefined ? URL_NSEI_AUTO : esperas.urlDirecta
   let motivoDirecta = 'desactivada'
   if (url) {
-    const directa = await abrirPorUrlDirecta(page, ctx, url, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
+    const directa = await abrirPorUrlDirecta(page, ctx, url, esperas.formularioMs ?? ESPERA_FORMULARIO_MS, esperas.hostsLogin ?? HOSTS_LOGIN)
     if (directa.page) return directa.page
     motivoDirecta = directa.motivo
   }
@@ -219,6 +219,18 @@ const BOTON_ENTRAR_ANTIGUO = /^\s*entrar\s*$/i
 const ESPERA_LOGIN_MS = 15_000
 const MOTIVO_LOGIN_ANTIGUO = 'login antiguo NSEI rechazado/no superado'
 
+/** Único host al que se le entregan credenciales (los tests pasan el del portal sintético por `hostsLogin`). */
+const HOSTS_LOGIN = ['wmediadores.mapfre.com']
+
+/** La página está en wmediadores (hostname EXACTO): nunca se escribe usuario/clave en otro dominio. */
+export function esWmediadores(p: Page, hosts: string[] = HOSTS_LOGIN): boolean {
+  try {
+    return hosts.includes(new URL(p.url()).hostname)
+  } catch {
+    return false
+  }
+}
+
 class LoginAntiguoNoSuperado extends Error {}
 
 /** Quita de un texto cualquier aparición literal de usuario o contraseña (red de seguridad: nunca en mensajes). */
@@ -228,7 +240,8 @@ export function ocultarSecretos(texto: string, secretos: Array<string | undefine
   return t
 }
 
-async function enLoginAntiguo(p: Page): Promise<boolean> {
+async function enLoginAntiguo(p: Page, hosts: string[]): Promise<boolean> {
+  if (!esWmediadores(p, hosts)) return false // un login en otro host NO cuenta
   if (PATRON_LOGIN_ANTIGUO.test(p.url())) return true
   if ((await p.locator('input[type=password]').filter({ visible: true }).count().catch(() => 0)) === 0) return false
   return (await p.getByText(ETIQ_CODIGO_USUARIO).filter({ visible: true }).count().catch(() => 0)) > 0
@@ -239,19 +252,20 @@ async function hayFormulario(p: Page): Promise<boolean> {
 }
 
 /** Espera a que salga el formulario o aparezca el login antiguo (lo primero que ocurra). */
-async function esperarFormularioOLogin(p: Page, ms: number): Promise<'form' | 'login' | 'nada'> {
+async function esperarFormularioOLogin(p: Page, ms: number, hosts: string[]): Promise<'form' | 'login' | 'nada'> {
   const fin = Date.now() + ms
   for (;;) {
     if (await hayFormulario(p)) return 'form'
-    if (await enLoginAntiguo(p)) return 'login'
+    if (await enLoginAntiguo(p, hosts)) return 'login'
     if (Date.now() >= fin) return 'nada'
     await p.waitForTimeout(200).catch(() => undefined)
   }
 }
 
 /** Rellena y pulsa «entrar» UNA vez (un login rechazado no se reintenta: así se bloquea una cuenta). */
-async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number): Promise<void> {
-  if (!ctx.credenciales) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (sin credenciales en el contexto)`)
+async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number, hosts: string[]): Promise<void> {
+  if (!esWmediadores(p, hosts)) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (host inesperado)`)
+  if (!ctx.credenciales?.usuario || !ctx.credenciales?.contrasena) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (sin credenciales en el contexto)`)
   const password = p.locator('input[type=password]').filter({ visible: true }).first()
   const usuario = p
     .getByLabel(ETIQ_CODIGO_USUARIO)
@@ -267,31 +281,34 @@ async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, 
   try {
     await usuario.fill(ctx.credenciales.usuario, { timeout: 5_000 })
     await ctx.pausa()
+    if (!esWmediadores(p, hosts)) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (host inesperado)`)
     await password.fill(ctx.credenciales.contrasena, { timeout: 5_000 })
     await ctx.pausa()
     await ctx.pulsar(entrar)
   } catch (e) {
-    if (e instanceof Error && /guard_emision|bloquead/i.test(e.message)) throw e
-    throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (no se pudo rellenar o pulsar «entrar»)`)
+    if (e instanceof Error && /guard_emision/.test(e.message)) throw e
+    if (e instanceof LoginAntiguoNoSuperado) throw e
+    // Cualquier otro error (incluidos los «bloquead…») sale SIN usuario ni clave.
+    throw new Error(ocultarSecretos(e instanceof Error ? e.message : String(e), [ctx.credenciales.usuario, ctx.credenciales.contrasena]))
   }
   const fin = Date.now() + Math.min(formularioMs, ESPERA_LOGIN_MS)
   while (Date.now() < fin) {
     if (await hayFormulario(p)) return
-    if (!PATRON_LOGIN_ANTIGUO.test(p.url()) && !(await enLoginAntiguo(p))) break // salió del login
+    if (!PATRON_LOGIN_ANTIGUO.test(p.url()) && !(await enLoginAntiguo(p, hosts))) break // salió del login
     await p.waitForTimeout(200).catch(() => undefined)
   }
   if (await hayFormulario(p)) return
-  if (await enLoginAntiguo(p)) throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
+  if (await enLoginAntiguo(p, hosts)) throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
   // Salió del login pero no a NSEI: se vuelve a la URL directa (ya con sesión).
   await p.goto(url, { waitUntil: 'commit', timeout: formularioMs })
-  const r = await esperarFormularioOLogin(p, formularioMs)
+  const r = await esperarFormularioOLogin(p, formularioMs, hosts)
   if (r === 'login') throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
   if (r !== 'form') throw new Error(`no apareció ${SEL_FORMULARIO_NSEI}`)
 }
 
 /** Pestaña nueva del mismo contexto → `URL_NSEI_AUTO`; vale SOLO si aparece `app-datos-basicos` (el estado HTTP no cuenta).
  *  Si Mapfre redirige al login antiguo, se supera UNA vez con las credenciales del contexto. */
-async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number): Promise<{ page: Page; motivo?: undefined } | { page: null; motivo: string }> {
+async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number, hosts: string[]): Promise<{ page: Page; motivo?: undefined } | { page: null; motivo: string }> {
   let nueva: Page | null = null
   let estadoHttp: number | null = null
   const secretos = [ctx.credenciales?.usuario, ctx.credenciales?.contrasena]
@@ -300,9 +317,9 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
     // Un 401/4xx NO lanza (solo cuenta el DOM); un fallo de red sí y se cae a menús sin esperar el plazo entero.
     const resp = await nueva.goto(url, { waitUntil: 'commit', timeout: formularioMs })
     estadoHttp = resp?.status() ?? null
-    let estado = await esperarFormularioOLogin(nueva, formularioMs)
+    let estado = await esperarFormularioOLogin(nueva, formularioMs, hosts)
     if (estado === 'login') {
-      await superarLoginAntiguo(nueva, ctx, url, formularioMs)
+      await superarLoginAntiguo(nueva, ctx, url, formularioMs, hosts)
       estado = 'form'
     }
     if (estado !== 'form') throw new Error(`no apareció ${SEL_FORMULARIO_NSEI}`)
@@ -313,7 +330,8 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
     await nueva?.close().catch(() => undefined)
     if (e instanceof Error && /guard_emision/.test(e.message)) throw e
     const red = /net::|Navigation|goto/i.test(String((e as Error).message).split('\n')[0])
-    const que = e instanceof LoginAntiguoNoSuperado ? e.message : red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s`
+    const msg = ocultarSecretos(e instanceof Error ? e.message : String(e), secretos)
+    const que = e instanceof LoginAntiguoNoSuperado ? e.message : !red && !msg.startsWith('no apareció') ? `${MOTIVO_LOGIN_ANTIGUO} (error: ${msg.split('\n')[0].slice(0, 160)})` : red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s`
     return { page: null, motivo: ocultarSecretos(`${que}; pantalla: ${diag}`, secretos) }
   }
 }
