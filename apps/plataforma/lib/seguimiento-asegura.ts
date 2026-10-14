@@ -722,6 +722,15 @@ export function cuerpoTareaSuelta(b: Record<string, unknown>, actor: string): Re
 export function tareaSueltaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/tarea', { method: 'PATCH', body: JSON.stringify(body) })
 }
+/** Tareas de una póliza o de un cliente (+ las de sus pólizas): se interpretan con `interpretarTareasVinculadas`. */
+export function tareasVinculadasAsegura(donde: { polizaId: string } | { clienteId: string }): Promise<Reenvio> {
+  const q = 'polizaId' in donde ? `polizaId=${encodeURIComponent(donde.polizaId)}` : `clienteId=${encodeURIComponent(donde.clienteId)}`
+  return llamar(`/api/operador/tareas?${q}`, { method: 'GET' })
+}
+/** Alta de una tarea suelta colgada de una póliza y/o un cliente (el actor lo pone la ruta). */
+export function crearTareaVinculadaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/tareas', { method: 'POST', body: JSON.stringify(body) })
+}
 export function registrarLlamadaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/llamada', { method: 'POST', body: JSON.stringify(body) })
 }

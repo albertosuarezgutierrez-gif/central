@@ -7,7 +7,7 @@
  */
 
 export type TabFicha =
-  | 'resumen' | 'oportunidades' | 'pendiente' | 'polizas' | 'contactos' | 'documentos' | 'correos' | 'notas' | 'historial'
+  | 'resumen' | 'oportunidades' | 'pendiente' | 'tareas' | 'polizas' | 'contactos' | 'documentos' | 'correos' | 'notas' | 'historial'
 
 /**
  * Desde el 24/09/2026 no son pestañas sino ACCESOS directos (Alberto: «tiene que ser todo
@@ -15,7 +15,7 @@ export type TabFicha =
  * carga su sección debajo.
  */
 export const TABS_FICHA: readonly TabFicha[] = [
-  'resumen', 'oportunidades', 'pendiente', 'polizas', 'contactos', 'documentos', 'correos', 'notas', 'historial',
+  'resumen', 'oportunidades', 'pendiente', 'tareas', 'polizas', 'contactos', 'documentos', 'correos', 'notas', 'historial',
 ]
 
 /**
@@ -48,6 +48,8 @@ export type DatosAccesos = {
   oportunidadesAbiertas: number | null
   /** `siguienteAccion`: `accion` (con urgencia), `nada` o `sin_comprobar`. */
   pendiente: { estado: 'accion'; urgente: boolean } | { estado: 'nada' } | { estado: 'sin_comprobar' }
+  /** Tareas (del cliente y de sus pólizas): texto ya hecho por `detalleTareas`; `null` = no se pudieron leer. */
+  tareas?: DetalleAcceso | null
   /** Seguros en vigor (no todas las filas de la ficha). */
   polizas: number
   telefonos: number | null
@@ -91,6 +93,7 @@ export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, Detal
   }
   if (d.pendiente.estado === 'accion') r.pendiente = d.pendiente.urgente ? { texto: 'urgente', tono: 'malo' } : { texto: 'hay algo que hacer', tono: 'aviso' }
   else if (d.pendiente.estado === 'nada') r.pendiente = { texto: 'al día' }
+  if (d.tareas) r.tareas = d.tareas
   // Solo los SEGUROS (cartera en vigor): las filas del volcado son oportunidades, no pólizas.
   r.polizas = { texto: d.polizas === 0 ? 'ninguna en vigor' : `${d.polizas} en vigor` }
 

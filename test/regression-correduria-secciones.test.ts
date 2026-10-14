@@ -61,8 +61,8 @@ test('la ficha de póliza son ACCESOS: coberturas, recibos y siniestros se despl
   // y ya dentro de cada uno la información». Si alguien vuelve a apilar los bloques, la póliza
   // vuelve a ser una columna de quince tarjetas.
   const src = leer('poliza/[id]/page.tsx')
-  assert.match(src, /<PanelAccesos inicial=\{v \?\? null\} accesos=\{accesosPoliza\(p, cancelada\)\} \/>/)
-  for (const id of ['coberturas', 'recibos', 'siniestros', 'documentos', 'gestion']) {
+  assert.match(src, /<PanelAccesos inicial=\{v \?\? null\} accesos=\{accesosPoliza\(p, cancelada, tareas\)\} \/>/)
+  for (const id of ['coberturas', 'recibos', 'siniestros', 'documentos', 'gestion', 'tareas']) {
     assert.match(src, new RegExp(`id: '${id}'`), `falta el acceso «${id}»`)
   }
   // Los bloques viven DENTRO de su acceso, no sueltos en la página.

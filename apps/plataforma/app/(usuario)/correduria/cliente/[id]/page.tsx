@@ -21,7 +21,9 @@ import PresupuestosAvant2 from './PresupuestosAvant2'
 import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 import { Pagina } from '@/components/ui'
-import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
+import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, tareasVinculadasAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
+import TareasVinculadas from '../../TareasVinculadas'
+import { detalleTareas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
 import { contarOportunidades, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
 
 export const dynamic = 'force-dynamic'
@@ -56,11 +58,15 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   // Las oportunidades van en paralelo con la ficha: deciden el cubo «oportunidad» y el
   // contador de su acceso. Un fallo se DECLARA (`null`), no se lee como «no tiene».
-  const [r, ops] = await Promise.all([
+  const [r, ops, tareas] = await Promise.all([
     fichaAsegura(id),
     oportunidadesClienteAsegura(id)
       .then(x => interpretarOportunidadesCliente(x.status, x.json))
       .catch(() => ({ estado: 'error' as const, motivo: 'red' })),
+    // Tareas del cliente + las de sus pólizas (contador de la baldosa y la lista de su pestaña).
+    tareasVinculadasAsegura({ clienteId: id })
+      .then(x => interpretarTareasVinculadas(x.status, x.json))
+      .catch((): LecturaTareasVinculadas => ({ estado: 'error', motivo: 'red' })),
   ])
 
   if (r.estado !== 'ok') return <Pagina ancho="tabla"><NoSePudo estado={r} /></Pagina>
@@ -151,6 +157,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         detalles={detallesAccesos({
           conNosotros: reparto.conNosotros.length,
           oportunidadesAbiertas: nOportunidades,
+          tareas: detalleTareas(tareas),
           pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
           polizas: seguros.length,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
@@ -180,6 +187,18 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       )}
 
       {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
+
+      {/* Tareas del cliente y de sus pólizas (14/10/2026): la misma tabla de tareas de Mi mesa. */}
+      {tab === 'tareas' && (
+        <Tarjeta titulo="Tareas">
+          <TareasVinculadas
+            clienteId={ficha.id}
+            polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
+            inicial={tareas}
+            hoy={hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })}
+          />
+        </Tarjeta>
+      )}
 
       {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
       {tab === 'polizas' && (

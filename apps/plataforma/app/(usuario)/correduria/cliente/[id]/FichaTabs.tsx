@@ -1,4 +1,4 @@
-import { Shield, Briefcase, Bell, ClipboardList, Users, Paperclip, Mail, FileText, Clock } from 'lucide-react'
+import { Shield, Briefcase, Bell, ListChecks, ClipboardList, Users, Paperclip, Mail, FileText, Clock } from 'lucide-react'
 import { TiraAccesos, type Acceso } from '../../Accesos'
 import { TABS_FICHA, type DetalleAcceso, type TabFicha } from './tabs'
 import { Ico } from '../../iconos'
@@ -22,6 +22,7 @@ const ACCESOS: Record<TabFicha, { icono: React.ReactNode; titulo: string }> = {
   resumen: { icono: <Ico i={Shield} />, titulo: 'Sus seguros' },
   oportunidades: { icono: <Ico i={Briefcase} />, titulo: 'Oportunidades' },
   pendiente: { icono: <Ico i={Bell} />, titulo: 'Pendiente' },
+  tareas: { icono: <Ico i={ListChecks} />, titulo: 'Tareas' },
   polizas: { icono: <Ico i={ClipboardList} />, titulo: 'Todas las pólizas' },
   contactos: { icono: <Ico i={Users} />, titulo: 'Contactos' },
   documentos: { icono: <Ico i={Paperclip} />, titulo: 'Documentos' },
