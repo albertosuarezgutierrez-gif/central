@@ -15,8 +15,11 @@ import {
   bloqueoAvance,
   bloqueoGuardadoPresupuesto,
   clasificarAccionPortal,
+  descripcionesSinExcepcionProyecto,
   comprobarBoton,
   esAvanceAutorizado,
+  esMatriculaEspanola,
+  normalizarMatricula,
   esBotonDeListaBlanca,
   MOTIVO_FRONTERA_CUENTA,
   parametrosParecenEmision,
@@ -127,8 +130,8 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // del avance vigente (origen + ruta exactos, sin query). Cualquier otra (GET incluida) se mira como siempre: con
       // «aceptar» bloqueado. store/contract/validar_aceptar/emitir/contratar… abortan siempre, también en la lista.
       const enLista = av !== null && destinoAvancePermitido(url, av.endpoints)
-      // Guardado de presupuesto: SOLO Archivar (`store`) se abre, y SOLO hacia el origen del marco del botón. «Aceptar»,
-      // emitir, contract, validar_aceptar, ampliado… siguen abortando (`permitirGuardarPresupuesto` no los toca).
+      // Guardado de presupuesto: SOLO Archivar (`store`) y Proyecto ampliado se abren, y SOLO hacia el origen del marco del botón. «Aceptar»,
+      // emitir, contract, validar_aceptar… siguen abortando (`permitirGuardarPresupuesto` no los toca).
       const gv = guardadoVigente()
       const enGuardado = gv !== null && origenDe(url) === gv.origen
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado }
@@ -640,6 +643,122 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
   guard.comprobar()
 }
 
+// ─────────── Mapfre NSEI · diálogo «Selección de vehículo» (Alberto, 14/10/2026) ───────────
+
+/** El diálogo de Mapfre tras teclear la matrícula (grabación 13/10/2026). Solo lo nombra este fichero para PULSAR. */
+export const SEL_DIALOGO_VEHICULO_MAPFRE = 'app-matricula-dialog'
+/** Columna «Matrícula» (posición 1; la 0 es la del radio). Se lee AQUÍ y solo para compararla: nunca sale de esta función. */
+const COLUMNA_MATRICULA_MAPFRE = 1
+/** Control de elección de la fila: el primer selector con EXACTAMENTE un control en la fila (Angular Material o nativo). */
+const SELECTORES_RADIO_FILA = ['mat-radio-button', 'input[type="radio"]', '[role="radio"]'] as const
+const ESPERA_HABILITADO_MAPFRE_MS = 5_000
+const ESPERA_CIERRE_DIALOGO_MAPFRE_MS = 10_000
+
+/**
+ * Para y pide una persona (`requiere_humano`; en el cable `captcha`, como la elección de versión): el diálogo trae VARIAS
+ * filas y el bot solo confirma con una. El mensaje lleva el nº de filas, nunca matrículas ni bastidores.
+ */
+export class ErrorSeleccionVehiculoMapfre extends ErrorTarificador {
+  readonly filas: number
+  constructor(filas: number) {
+    super('captcha', `mapfre: «Selección de vehículo» trae ${filas} vehículos para la matrícula; el bot solo confirma si hay exactamente uno: elige una persona en el portal`)
+    this.name = 'ErrorSeleccionVehiculoMapfre'
+    this.filas = filas
+  }
+}
+
+const sinTildesMayus = (t: string | null | undefined) => (t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
+
+/**
+ * CONFIRMAR EL VEHÍCULO en el diálogo «Selección de vehículo» de Mapfre NSEI. El ÚNICO camino para marcar la fila y pulsar
+ * su «Aceptar» (el adaptador no los nombra). Exige, en este orden y sin atajos:
+ *   1. guard limpio, todas las ventanas de red cerradas, sin campo de cuenta bancaria y una sola vez por trabajo;
+ *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`; más de una → `ErrorSeleccionVehiculoMapfre` (requiere_humano);
+ *   3. la MATRÍCULA de esa única fila igual (normalizada) a la del riesgo. La comparación se hace aquí y la matrícula NO
+ *      sale: ni a logs, ni a mensajes de error, ni a la IA, ni al resultado (el radio se describe sin su `value`);
+ *   4. EXACTAMENTE un control de elección en la fila, que pase `comprobarBoton`; se marca;
+ *   5. EXACTAMENTE un «Aceptar» visible DENTRO del diálogo, texto exacto, que se habilite y pase `comprobarBoton` con
+ *      «Aceptar» permitido (emitir, contratar, «No es el vehículo», «Vehículo NO catalogado», `validar_aceptar`… siguen
+ *      bloqueados); un diálogo nativo del navegador se descarta y el trabajo cae;
+ *   6. que el diálogo se cierre. No abre ninguna ventana de red: si el «Aceptar» pidiera algo que casa con el patrón de
+ *      emisión, la red lo aborta (fail-closed) y se revisa con la primera prueba real.
+ */
+export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, matriculaRiesgo: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'selección de vehículo con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('mapfre:seleccion_vehiculo')) throw new EmisionBloqueadaError('fase', 'la selección de vehículo de Mapfre ya se usó en este trabajo')
+  if (typeof matriculaRiesgo !== 'string' || !esMatriculaEspanola(matriculaRiesgo)) throw new ErrorTarificador('datos', 'mapfre: la matrícula del riesgo no tiene formato de matrícula española')
+  await exigirSinCuentaBancaria(page)
+  const dialogos = page.locator(SEL_DIALOGO_VEHICULO_MAPFRE).locator('visible=true')
+  if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un diálogo «Selección de vehículo» visible')
+  const dialogo = dialogos.first()
+  const filas = dialogo.locator('table tbody tr')
+  const n = await filas.count()
+  if (n === 0) throw new ErrorTarificador('datos', 'mapfre: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
+  if (n > 1) throw new ErrorSeleccionVehiculoMapfre(n)
+  // Si hay cabecera, la columna tiene que llamarse «Matrícula» (si el portal reordena, se para en vez de comparar otra cosa).
+  const cabecera = await dialogo.locator('table thead th').evaluateAll((els) => els.map((e) => e.textContent ?? ''))
+  if (cabecera.length > 0 && sinTildesMayus(cabecera[COLUMNA_MATRICULA_MAPFRE]) !== 'MATRICULA') {
+    throw new ErrorTarificador('portal', 'mapfre: las columnas de «Selección de vehículo» no son las grabadas (no se compara la matrícula)')
+  }
+  const fila = filas.first()
+  const enFila = await fila.locator('td').nth(COLUMNA_MATRICULA_MAPFRE).textContent({ timeout: 1_000 }).catch(() => null)
+  if (enFila === null) throw new ErrorTarificador('portal', 'mapfre: no se pudo leer la columna «Matrícula» de «Selección de vehículo»')
+  if (normalizarMatricula(enFila.trim()) !== normalizarMatricula(matriculaRiesgo)) {
+    throw new ErrorTarificador('datos', 'mapfre: el único vehículo de «Selección de vehículo» no tiene la matrícula del riesgo')
+  }
+  let radio: Locator | null = null
+  for (const sel of SELECTORES_RADIO_FILA) {
+    const l = fila.locator(sel)
+    if ((await l.count()) === 1) {
+      radio = l
+      break
+    }
+  }
+  if (!radio) throw new ErrorTarificador('portal', 'mapfre: la fila de «Selección de vehículo» no tiene exactamente un control para elegirla')
+  // Sin `value`: el de un radio puede llevar la matrícula o el bastidor, y un EmisionBloqueadaError copiaría el texto.
+  const descRadio = await radio.evaluate((el) => {
+    const h = el as HTMLElement & { name?: unknown }
+    return [h.innerText ?? h.textContent ?? '', h.getAttribute('aria-label'), h.getAttribute('title'), h.id || null, typeof h.name === 'string' ? h.name : null, h.getAttribute('onclick')]
+  })
+  comprobarBoton(descRadio)
+  const aceptar = dialogo.locator('button, [role="button"], input[type="button"], input[type="submit"]').filter({ hasText: /^\s*Aceptar\s*$/i }).locator('visible=true')
+  if ((await aceptar.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: «Selección de vehículo» no tiene exactamente un «Aceptar» visible')
+  usados.add('mapfre:seleccion_vehiculo')
+  AVANCES_USADOS.set(guard, usados)
+  await radio.click()
+  guard.comprobar()
+  const fin = Date.now() + ESPERA_HABILITADO_MAPFRE_MS
+  while (!(await aceptar.isEnabled().catch(() => false))) {
+    if (Date.now() >= fin) throw new ErrorTarificador('portal', 'mapfre: «Aceptar» de «Selección de vehículo» no se habilitó al elegir la fila')
+    await page.waitForTimeout(150)
+  }
+  await exigirSinCuentaBancaria(page)
+  const desc = await descripcion(aceptar)
+  if (sinTildesMayus(desc[0]) !== 'ACEPTAR') throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc, { permitirAceptar: true })
+  let dialogoNativo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogoNativo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  try {
+    await aceptar.click()
+    const hasta = Date.now() + ESPERA_CIERRE_DIALOGO_MAPFRE_MS
+    for (;;) {
+      guard.comprobar()
+      if (dialogoNativo) throw new EmisionBloqueadaError('fase', `selección de vehículo: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
+      if ((await page.locator(SEL_DIALOGO_VEHICULO_MAPFRE).locator('visible=true').count()) === 0) return
+      if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: «Selección de vehículo» no se cerró tras confirmar')
+      await page.waitForTimeout(200)
+    }
+  } finally {
+    page.off('dialog', alDialogo)
+  }
+}
+
 /**
  * AVANCE AUTORIZADO DEL EXPLORADOR IA (Alberto, 13/10/2026: «Aceptar» de Datos básicos → Tarificar, SOLO en exploración;
  * puede quedar un proyecto en ePAC, nunca una póliza). El ÚNICO camino del explorador para pulsar un control que el guard
@@ -741,7 +860,7 @@ export class GuardadoConDialogoError extends Error {
  *   2. que el módulo lo autorice sobre el INVENTARIO (`bloqueoGuardadoPresupuesto`: categoría guardar, NADA de emisión ni
  *      prohibida, pantalla de RESULTADO con importes o tras un guardado previo);
  *   3. EXACTAMENTE un control vivo, con el texto del inventario, que pase `comprobarBoton` con SOLO Archivar abierto
- *      (`permitirGuardarPresupuesto`: emitir, contract, validar_aceptar, «Aceptar», ampliado, fraccionado… siguen bloqueados)
+ *      (`permitirGuardarPresupuesto`: emitir, contract, validar_aceptar, «Aceptar», fraccionado… siguen bloqueados)
  *      y que, VIVO, siga clasificando como guardar y no como emisión/prohibida (todo: texto, title, value, href, onclick…);
  * Solo entonces abre la ventana de red (Archivar permitido SOLO hacia el origen del marco del botón; todo no-GET a otro
  * origen se aborta), pulsa UNA vez, espera a `trasClic` (el PDF) y cierra la ventana SIEMPRE. Un diálogo → no se acepta y
@@ -764,9 +883,11 @@ export async function pulsarGuardadoPresupuesto(
   const motivo = bloqueoGuardadoPresupuesto(aut.el, aut.pantalla)
   if (motivo) throw new EmisionBloqueadaError('boton', `guardado de presupuesto no autorizado: ${motivo}`)
   if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: no hay exactamente un control')
-  const desc = await descripcion(boton)
+  const descViva = await descripcion(boton)
   const plano = (t: string | null) => (t ?? '').replace(/\s+/g, ' ').trim()
-  if (plano(desc[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: el control vivo no es el del inventario')
+  if (plano(descViva[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: el control vivo no es el del inventario')
+  // Excepción estrecha de «Proyecto ampliado» (id EMISION_PROJ exacto + texto exacto), sobre el control VIVO (índices: 0 texto, 4 id).
+  const desc = descripcionesSinExcepcionProyecto(descViva, descViva[4], descViva[0])
   comprobarBoton(desc, { permitirGuardarPresupuesto: true })
   const cat = clasificarAccionPortal(desc)
   if (cat.emision || cat.prohibida || !cat.guardar) throw new EmisionBloqueadaError('boton', `guardado de presupuesto: el control vivo no es de guardar (${cat.emision ?? cat.prohibida ?? 'otro'})`)

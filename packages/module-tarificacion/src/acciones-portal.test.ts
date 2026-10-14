@@ -3,6 +3,14 @@
 import { describe, it, expect } from 'vitest'
 import {
   ACCIONES_PORTAL,
+  CAMPOS_BANCARIOS,
+  detectarParada,
+  bloqueoGuardadoPresupuesto,
+  descripcionesSinExcepcionProyecto,
+  EXCEPCION_PROYECTO_AMPLIADO,
+  fronteraEmisionPorCampos,
+  RE_CAMPO_CUENTA_BANCARIA,
+  senalCuentaBancaria,
   PATRONES_GUARDADO_GUARD,
   TEXTOS_BLOQUEADOS_ALTA,
   clasificarAccionPortal,
@@ -52,6 +60,7 @@ function pantalla(conPrecio: boolean, titulo = 'Tarificación'): InventarioDom {
             { tag: 'button', id: 'btnConfirmar', texto: 'Confirmar contratación' },
             { tag: 'button', id: 'btnFracciona', texto: 'Pago fraccionado' },
             { tag: 'button', id: 'btnAmpliado', texto: 'Proyecto ampliado' },
+            { tag: 'button', id: 'btnAmpliadoEmitir', texto: 'Proyecto ampliado y emitir' },
             { tag: 'button', id: 'guardarOk', texto: 'Guardar', onclick: 'btnAceptar()' },
             { tag: 'button', id: 'btnSiguiente', texto: 'Siguiente' },
           ],
@@ -76,10 +85,13 @@ const ctx = (inv: InventarioDom, presupuestoEnCurso = false) => ({ inventario: i
 describe('lista única de acciones de portal', () => {
   it('tres categorías; emisión y guardar con lo que pidió Alberto', () => {
     expect(nombresAccionesPortal('emision')).toEqual(expect.arrayContaining(['Emitir', 'Contratar', 'Formalizar', 'Firmar', 'Pagar / Pago', 'Tramitar póliza', 'Confirmar contratación', 'Domiciliar', 'Pago fraccionado']))
-    expect(nombresAccionesPortal('guardar_presupuesto')).toEqual(['Grabar', 'Guardar (presupuesto / proyecto)', 'Archivar', 'Descargar', 'Imprimir', 'Generar PDF'])
-    // «Proyecto ampliado»: sin certeza de qué hace → prohibido (no es guardar).
-    expect(nombresAccionesPortal('prohibida')).toContain('Proyecto ampliado')
-    expect(clasificarAccionPortal(['Proyecto ampliado']).guardar).toBeNull()
+    expect(nombresAccionesPortal('guardar_presupuesto')).toEqual(['Grabar', 'Guardar (presupuesto / proyecto)', 'Archivar', 'Proyecto ampliado', 'Descargar', 'Imprimir', 'Generar PDF'])
+    // «Proyecto ampliado» (Alberto, 14/10/2026): es el proyecto que hay que descargarse → GUARDAR, no prohibida.
+    expect(nombresAccionesPortal('prohibida')).not.toContain('Proyecto ampliado')
+    expect(clasificarAccionPortal(['Proyecto ampliado']).guardar).toBe('Proyecto ampliado')
+    expect(clasificarAccionPortal(['Proyecto ampliado']).prohibida).toBeNull()
+    // Compuesto con emisión: MANDA emisión.
+    expect(clasificarAccionPortal(['Proyecto ampliado y emitir']).emision).not.toBeNull()
     expect(ACCIONES_PORTAL.every((a) => Object.isFrozen(a))).toBe(true)
   })
 
@@ -88,7 +100,7 @@ describe('lista única de acciones de portal', () => {
     (t) => expect(clasificarAccionPortal([t]).emision).not.toBeNull(),
   )
 
-  it.each(['Grabar', 'Guardar', 'Guardar presupuesto', 'Guardar proyecto', 'Archivar', 'Descargar', 'Imprimir', 'Generar PDF', 'store', "sendActionEvent('store')"])(
+  it.each(['Grabar', 'Guardar', 'Guardar presupuesto', 'Guardar proyecto', 'Archivar', 'Descargar', 'Imprimir', 'Generar PDF', 'Proyecto ampliado', 'store', "sendActionEvent('store')"])(
     '«%s» es GUARDAR PRESUPUESTO y no emisión',
     (t) => {
       const c = clasificarAccionPortal([t])
@@ -101,21 +113,22 @@ describe('lista única de acciones de portal', () => {
     const l = lineaAccionesPortalParaIA()
     expect(l.emision).toContain('Tramitar póliza')
     expect(l.guardar).toContain('Archivar')
-    expect(l.prohibidas).toContain('Proyecto ampliado')
+    expect(l.guardar).toContain('Proyecto ampliado')
+    expect(l.prohibidas).not.toContain('Proyecto ampliado')
   })
 })
 
 describe('guard: permitirGuardarPresupuesto abre SOLO Archivar', () => {
   it('sin la opción, Archivar / store siguen bloqueados (como siempre)', () => {
-    for (const t of ['Archivar', 'store', "sendActionEvent('store')"]) expect(pareceEmision(t)).toBe(true)
+    for (const t of ['Archivar', 'store', "sendActionEvent('store')", 'Proyecto ampliado', 'menu4']) expect(pareceEmision(t)).toBe(true)
     expect(parametrosParecenEmision('action=store')).toBe(true)
     expect(() => comprobarBoton(['Archivar'], { permitirAceptar: true })).toThrow()
   })
   it('con la opción, Archivar pasa; emitir, contract, validar_aceptar, aceptar, ampliado y fraccionado NO', () => {
     const op = { permitirGuardarPresupuesto: true }
-    for (const t of ['Archivar', 'store', "sendActionEvent('store')"]) expect(pareceEmision(t, op)).toBe(false)
+    for (const t of ['Archivar', 'store', "sendActionEvent('store')", 'Proyecto ampliado', 'menu4']) expect(pareceEmision(t, op), t).toBe(false)
     expect(parametrosParecenEmision('action=store', op)).toBe(false)
-    for (const t of ['Emitir', 'contract', 'validar_aceptar()', 'Aceptar', 'Proyecto ampliado', 'Pago fraccionado', 'menu4', 'btnAccept', 'Datos emisión'])
+    for (const t of ['Emitir', 'contract', 'validar_aceptar()', 'Aceptar', 'Proyecto ampliado y emitir', 'Emitir proyecto ampliado', 'Pago fraccionado', 'menu3', 'menu5', 'btnAccept', 'Datos emisión'])
       expect(pareceEmision(t, op), t).toBe(true)
     expect(parametrosParecenEmision('action=contract', op)).toBe(true)
     expect(parametrosParecenEmision("x=sendActionEvent('contract')", op)).toBe(true)
@@ -129,7 +142,7 @@ describe('validador: GUARDAR presupuesto solo en resultado; EMITIR nunca', () =>
   // CEPO (a): Guardar en pantalla FORMULARIO sin precio → rechazado.
   it('(a) Guardar/Grabar/Archivar en formulario SIN precio → rechazado', () => {
     const inv = pantalla(false, 'Datos del riesgo')
-    for (const id of ['btnGuardar', 'btnGrabar', 'store']) {
+    for (const id of ['btnGuardar', 'btnGrabar', 'store', 'btnAmpliado']) {
       const v = validarRespuestaExplorador(resp(inv, id, 'formulario'), ctx(inv))
       expect(v.ok, id).toBe(false)
     }
@@ -145,9 +158,9 @@ describe('validador: GUARDAR presupuesto solo en resultado; EMITIR nunca', () =>
   })
 
   // CEPO (b): Guardar en pantalla RESULTADO (con importes) → aceptado.
-  it('(b) Guardar / Grabar / Archivar / Descargar PDF en RESULTADO con precio → aceptado', () => {
+  it('(b) Guardar / Grabar / Archivar / Descargar PDF / Proyecto ampliado en RESULTADO con precio → aceptado', () => {
     const inv = pantalla(true)
-    for (const id of ['btnGuardar', 'btnGrabar', 'store', 'btnPdf']) {
+    for (const id of ['btnGuardar', 'btnGrabar', 'store', 'btnPdf', 'btnAmpliado']) {
       const v = validarRespuestaExplorador(resp(inv, id, 'resultado'), ctx(inv))
       expect(v.ok, `${id}: ${v.ok ? '' : v.errores.join(' | ')}`).toBe(true)
     }
@@ -155,9 +168,9 @@ describe('validador: GUARDAR presupuesto solo en resultado; EMITIR nunca', () =>
 
   it('guardar SIN efecto guardar_presupuesto (como navegación) → rechazado, también en resultado', () => {
     const inv = pantalla(true)
-    for (const efecto of ['siguiente_pantalla', 'ver_resultado', 'calcular']) {
-      const v = validarRespuestaExplorador(resp(inv, 'btnGuardar', 'resultado', efecto), ctx(inv))
-      expect(v.ok, efecto).toBe(false)
+    for (const efecto of ['siguiente_pantalla', 'ver_resultado', 'calcular']) for (const id of ['btnGuardar', 'btnAmpliado']) {
+      const v = validarRespuestaExplorador(resp(inv, id, 'resultado', efecto), ctx(inv))
+      expect(v.ok, `${id} / ${efecto}`).toBe(false)
     }
   })
 
@@ -169,7 +182,7 @@ describe('validador: GUARDAR presupuesto solo en resultado; EMITIR nunca', () =>
   // CEPO (c): Emitir/Contratar en resultado → rechazado SIEMPRE (con cualquier efecto, y aunque ya se guardara).
   it('(c) Emitir / Contratar / firmar / pagar… en RESULTADO → rechazado con cualquier efecto', () => {
     const inv = pantalla(true)
-    const ids = ['btnEmitir', 'btnContratar', 'contract', 'btnGuardarEmitir', 'btnFirmar', 'btnPagar', 'btnDomiciliar', 'btnTramitar', 'btnConfirmar', 'btnFracciona', 'btnAmpliado', 'guardarOk']
+    const ids = ['btnEmitir', 'btnContratar', 'contract', 'btnGuardarEmitir', 'btnFirmar', 'btnPagar', 'btnDomiciliar', 'btnTramitar', 'btnConfirmar', 'btnFracciona', 'btnAmpliadoEmitir', 'guardarOk']
     for (const id of ids) for (const efecto of ['guardar_presupuesto', 'siguiente_pantalla', 'ver_resultado']) for (const previo of [false, true]) {
       const v = validarRespuestaExplorador(resp(inv, id, 'resultado', efecto), ctx(inv, previo))
       expect(v.ok, `${id} / ${efecto} / previo=${previo}`).toBe(false)
@@ -238,5 +251,136 @@ describe('referencia del presupuesto', () => {
 
   it.each(['Prima total 347,55 €', 'Referencia: pendiente', 'Presupuesto guardado correctamente', '', 'Referencia: 12345678Z', 'Nº de presupuesto: 612345678'])('«%s» → null (no se vio)', (t) => {
     expect(extraerReferenciaPresupuesto(t)).toBeNull()
+  })
+})
+
+describe('frontera de emisión por campos: IBAN / cuenta bancaria (14/10/2026)', () => {
+  const pantallaCampos = (elementos: object[]) => sanearInventarioDom({ marcos: [{ url: 'https://portal.example.test/epac/datos', titulos: [{ texto: 'Datos', tag: 'h2' }], importes: [], elementos }] }, undefined, { refs: true })!
+
+  it.each([
+    [{ tag: 'input', type: 'text', etiqueta: 'IBAN', placeholder: 'ES00 0000 0000 0000 0000 0000' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', id: 'txtIBAN' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', name: 'cuenta_bancaria' }, 'Cuenta bancaria'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Número de cuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Nº cuenta' }, 'Número de cuenta'],
+    [{ tag: 'select', etiqueta: 'Domiciliación del recibo' }, 'Domiciliación'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Titular de la cuenta' }, 'Titular de la cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Entidad bancaria' }, 'Entidad bancaria'],
+    [{ tag: 'input', type: 'text', name: 'swift_bic' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', placeholder: 'BIC' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Código SWIFT' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', id: 'swiftCode' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Swift' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', name: 'SWIFT' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', id: 'codigo_iban' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', id: 'ibanCuenta' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', etiqueta: 'iban' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', id: 'txtNumCuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Nro. de cuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'N.º de cuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Domiciliar recibos' }, 'Domiciliación'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Datos bancarios' }, 'Datos bancarios'],
+    [{ tag: 'input', type: 'text', id: 'datos_bancarios' }, 'Datos bancarios'],
+  ])('campo %j → para con cerca_de_emision', (el, nombre) => {
+    const p = detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Superficie (m²)' }, el]))
+    expect(p?.motivo).toBe('cerca_de_emision')
+    expect(p?.senal).toContain(nombre)
+  })
+
+  it('con acentos y mayúsculas: «DOMICILIACIÓN», «Número DE Cuenta»', () => {
+    for (const t of ['DOMICILIACIÓN', 'Número DE Cuenta', 'Titular de la CUENTA']) {
+      expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: t }]))?.motivo, t).toBe('cerca_de_emision')
+    }
+  })
+
+  it('NEGATIVO: la fecha de efecto SOLA no para (también sale al tarificar); tampoco un campo normal', () => {
+    expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Fecha de efecto' }]))).toBeNull()
+    expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', id: 'fechaEfecto' }, { tag: 'input', type: 'text', etiqueta: 'Superficie' }]))).toBeNull()
+    expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Cuenta atrás' }, { tag: 'input', type: 'text', etiqueta: 'Bicicletas' }]))).toBeNull()
+  })
+
+  it.each([
+    'Asistencia domiciliaria', 'Tenga en cuenta', 'Con cuenta propia', 'Ibáñez', 'Ibanez', 'Apellido: IBÁÑEZ',
+    'Entidad financiera', 'Vehículo financiado por entidad financiera', 'Suzuki Swift', 'No tiene cuenta',
+  ])('NEGATIVO falso positivo «%s» no para', (t) => {
+    expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: t }]))).toBeNull()
+    expect(fronteraEmisionPorCampos([t]).frontera).toBe(false)
+  })
+
+  it('fecha de efecto JUNTO a un campo bancario: para y lo dice', () => {
+    const p = detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Fecha de efecto' }, { tag: 'input', type: 'text', etiqueta: 'IBAN' }]))
+    expect(p?.motivo).toBe('cerca_de_emision')
+    expect(p?.senal).toContain('fecha de efecto')
+  })
+
+  it('fronteraEmisionPorCampos es pura: fecha sola = sin frontera; banco = frontera; lista congelada', () => {
+    expect(fronteraEmisionPorCampos(['Fecha de efecto'])).toEqual({ frontera: false, campoBancario: null, etiqueta: null, fechaEfecto: true })
+    expect(fronteraEmisionPorCampos(['fecha efecto', 'iban'])).toEqual({ frontera: true, campoBancario: 'IBAN', etiqueta: 'iban', fechaEfecto: true })
+    expect(fronteraEmisionPorCampos([null, undefined, ''])).toEqual({ frontera: false, campoBancario: null, etiqueta: null, fechaEfecto: false })
+    expect(CAMPOS_BANCARIOS.every((c) => Object.isFrozen(c))).toBe(true)
+  })
+
+  // Fusión con #4617 (Mapfre): UNA fuente. La cobertura de su frontera vive en CAMPOS_BANCARIOS (un brazo por caso).
+  it.each([
+    ['CCC', 'Cuenta bancaria'], ['num_ccc', 'Cuenta bancaria'], ['numCCC', 'Cuenta bancaria'], ['Cuenta', 'Cuenta bancaria'],
+    ['cuentaCliente', 'Cuenta bancaria'], ['no. de cuenta', 'Número de cuenta'], ['Nº de cuenta', 'Número de cuenta'],
+    ['N.º cuenta', 'Número de cuenta'], ['Entidad - Oficina - DC', 'Entidad / oficina / DC'], ['Entidad/Oficina', 'Entidad / oficina / DC'],
+    ['Dígito de control', 'Entidad / oficina / DC'], ['domiciliacionBancaria', 'Domiciliación'], ['domiciliarRecibos', 'Domiciliación'],
+    ['cuentaBancaria', 'Cuenta bancaria'], ['ibanTomador', 'IBAN'],
+  ])('cobertura Mapfre: «%s» → %s', (t, nombre) => {
+    expect(fronteraEmisionPorCampos([t]).campoBancario).toBe(nombre)
+    expect(senalCuentaBancaria([t])).toBe(t)
+  })
+
+  it.each(['Asistencia domiciliaria', 'Servicio domiciliario', 'Ibáñez', 'Suzuki Swift', 'El inmueble no cuenta con alarma', 'Oficina de la entidad mediadora', 'accc'])(
+    'NEGATIVO también en la API del worker (senalCuentaBancaria): «%s»', (t) => {
+      expect(senalCuentaBancaria([t])).toBeNull()
+    })
+
+  it('RE_CAMPO_CUENTA_BANCARIA es DERIVADO de CAMPOS_BANCARIOS (no una segunda lista)', () => {
+    for (const c of CAMPOS_BANCARIOS) expect(RE_CAMPO_CUENTA_BANCARIA.source).toContain(c.patron.source)
+  })
+
+  it('título «Datos bancarios» (sin campos) también para', () => {
+    const inv = sanearInventarioDom({ marcos: [{ url: 'https://portal.example.test/x', titulos: [{ texto: 'Datos bancarios', tag: 'h2' }], importes: [], elementos: [] }] }, undefined, { refs: true })!
+    expect(detectarParada(inv)?.motivo).toBe('cerca_de_emision')
+  })
+
+  it('la IA no recibe el campo: el valor ficticio de un IBAN no llega a ningún sitio porque se para antes (paso de asegura/worker)', () => {
+    // El inventario con IBAN ficticio dispara la parada ANTES del prompt: detectarParada es lo primero que mira el paso.
+    const inv = pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'IBAN', valor: 'ES00 0000 0000 0000 0000 0000' }])
+    expect(detectarParada(inv)?.motivo).toBe('cerca_de_emision')
+  })
+})
+
+describe('excepción estrecha Allianz: td#EMISION_PROJ «Proyecto ampliado» (14/10/2026)', () => {
+  const RES = { tipoPantalla: 'resultado' as const, hayImportes: true, presupuestoEnCurso: false }
+  const el = (id: string, texto: string) => ({ tag: 'td', id, texto })
+
+  it('id EMISION_PROJ + texto «Proyecto ampliado» en resultado con importes → permitido', () => {
+    expect(bloqueoGuardadoPresupuesto(el('EMISION_PROJ', 'Proyecto ampliado'), RES)).toBeNull()
+    expect(bloqueoGuardadoPresupuesto(el('EMISION_PROJ', '  PROYECTO   Ampliado '), RES)).toBeNull()
+  })
+  it('el mismo botón fuera de resultado, sin importes o en formulario → bloqueado', () => {
+    expect(bloqueoGuardadoPresupuesto(el('EMISION_PROJ', 'Proyecto ampliado'), { ...RES, tipoPantalla: 'formulario' })).toBe('guardar_fuera_de_resultado')
+    expect(bloqueoGuardadoPresupuesto(el('EMISION_PROJ', 'Proyecto ampliado'), { ...RES, hayImportes: false })).toBe('guardar_sin_precio')
+  })
+  it('otro id con «emisi» (EMISION_PROJ2, EMISION_POLIZA, emision_proj, prefijo) → bloqueado', () => {
+    for (const id of ['EMISION_PROJ2', 'EMISION_POLIZA', 'emision_proj', 'XEMISION_PROJ', 'EMISION_PROJ ']) {
+      expect(bloqueoGuardadoPresupuesto(el(id, 'Proyecto ampliado'), RES), id).toBe('boton_de_emision')
+    }
+  })
+  it('EMISION_PROJ con texto «Emitir» u otra palabra de emisión → bloqueado', () => {
+    for (const t of ['Emitir', 'Proyecto ampliado y emitir', 'Proyecto ampliado emisión', 'Proyecto', 'Proyecto ampliado PDF']) {
+      expect(bloqueoGuardadoPresupuesto(el('EMISION_PROJ', t), RES), t).not.toBeNull()
+    }
+  })
+  it('un onclick de emisión en el mismo control sigue bloqueando', () => {
+    expect(bloqueoGuardadoPresupuesto({ tag: 'td', id: 'EMISION_PROJ', texto: 'Proyecto ampliado', onclick: 'validar_aceptar()' }, RES)).toBe('boton_de_emision')
+  })
+  it('sin la excepción (navegación o validador de avance) el id sigue siendo emisión', () => {
+    expect(pareceEmision('EMISION_PROJ', { permitirGuardarPresupuesto: true })).toBe(true)
+    expect(descripcionesSinExcepcionProyecto(['Proyecto ampliado', 'EMISION_PROJ'], 'EMISION_PROJ2', 'Proyecto ampliado')).toContain('EMISION_PROJ')
+    expect(Object.isFrozen(EXCEPCION_PROYECTO_AMPLIADO)).toBe(true)
   })
 })

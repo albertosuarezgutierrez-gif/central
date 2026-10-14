@@ -36,6 +36,7 @@
 import type { Frame, Locator, Page } from 'playwright'
 import {
   comprobarBoton,
+  eleccionPorVehiculoConfirmadoDeEtiquetas,
   esOpcionVacia,
   fechaIsoDesdeTexto,
   importeEs,
@@ -46,6 +47,7 @@ import {
   resolverPoblacion,
   vehiculoDesdeLectura,
   type CandidatoVersion,
+  type EleccionVersion,
   type FormularioAuto,
   type LecturaVehiculoPortal,
   type OfertaNormalizada,
@@ -230,14 +232,26 @@ export async function consultarMatricula(raiz: Pick<Frame, 'locator'>, matricula
 }
 
 /**
+ * Elección de versión que se usa (14/10/2026). La de una PERSONA o la IA/memoria (`eleccionVersion`) manda; si no hay, la del
+ * VEHÍCULO CONFIRMADO por Mapfre (`vehiculoConfirmado`: CV/CC/puertas leídos de la etiqueta de cada versión) SOLO si casa
+ * exactamente una y las demás quedan descartadas; si no, `null` y sigue el flujo de siempre (requiere_humano → memoria/IA/
+ * persona). Pura. Nunca «la más parecida».
+ */
+export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): EleccionVersion | null {
+  const explicita = form.eleccionVersion ?? null
+  if (explicita && (explicita.codigo?.trim() || explicita.etiqueta?.trim())) return explicita
+  return eleccionPorVehiculoConfirmadoDeEtiquetas(form.vehiculoConfirmado ?? null, lectura.versiones)
+}
+
+/**
  * Lectura → vehículo canónico, o para. Varias versiones sin elección → `ErrorEleccionVersion` (requiere_humano);
  * sin marca/modelo/versión → error `datos`. La versión resuelta se deja FIJADA en el `<select>` nativo por el código
  * de SU opción (nunca por el hidden `mobileCode`, que refleja lo que el portal tenía antes, ni por parecido); después se
  * RELEE el desplegable y, si no tiene ese código, se aborta (`portal`): el resultado nunca anuncia una versión que el
  * portal no tiene puesta.
  */
-export async function resolverVehiculo(raiz: Pick<Frame, 'locator'>, lectura: LecturaVehiculoPortal, form: Pick<FormularioAuto, 'eleccionVersion'>): Promise<Vehiculo> {
-  const r = vehiculoDesdeLectura(lectura, form.eleccionVersion ?? null)
+export async function resolverVehiculo(raiz: Pick<Frame, 'locator'>, lectura: LecturaVehiculoPortal, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): Promise<Vehiculo> {
+  const r = vehiculoDesdeLectura(lectura, eleccionVersionEfectiva(lectura, form))
   if (r.tipo === 'ambigua') throw new ErrorEleccionVersion(r.opciones)
   if (r.tipo === 'incompleto') throw new ErrorTarificador('datos', `allianz/auto: el portal no da ${r.faltan.join(', ')} del vehículo`)
   const codigo = r.opcion.codigo
@@ -733,7 +747,7 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await rellenarDatosBasicosMoto(datos, form)
   await lanzarSiHayErrores(datos)
   await ctx.pausa()
-  // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión.
+  // Tarificar: SOLO se abre la pestaña y se leen primas. Nada del pie, ni Archivar/Emitir/Proyecto Ampliado/Datos emisión (el adaptador no guarda: eso es del explorador).
   const tarifa = await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
   await lanzarSiHayErrores(tarifa)
   const primas = await leerPrimasTarificar(tarifa)

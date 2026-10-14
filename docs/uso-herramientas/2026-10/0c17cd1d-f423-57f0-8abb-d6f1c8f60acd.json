@@ -1,8 +1,8 @@
 {
  "sesion": "0c17cd1d-f423-57f0-8abb-d6f1c8f60acd",
  "inicio": "2026-10-05T16:42:58.813Z",
- "fin": "2026-10-13T20:04:42.429Z",
- "llamadas": 5457,
+ "fin": "2026-10-14T07:48:33.234Z",
+ "llamadas": 5535,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -16,58 +16,58 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 401,
-   "chars_in": 47858,
-   "chars_out": 3220432,
+   "llamadas": 408,
+   "chars_in": 48519,
+   "chars_out": 3281153,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 212,
+    "Read": 219,
     "Grep": 172,
     "Glob": 17
    }
   },
   "bash": {
-   "llamadas": 3129,
-   "chars_in": 2647258,
-   "chars_out": 12364279,
+   "llamadas": 3166,
+   "chars_in": 2669710,
+   "chars_out": 12514833,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3129
+    "Bash": 3166
    }
   },
   "otro": {
-   "llamadas": 792,
-   "chars_in": 381463,
-   "chars_out": 5816265,
+   "llamadas": 809,
+   "chars_in": 381879,
+   "chars_out": 5943865,
    "errores": 0,
    "archivos_citados": 38,
    "chars_citados": 1524935,
    "tools": {
     "SubagentHandback": 123,
-    "ToolSearch": 138,
-    "ReadNotifications": 470,
+    "ToolSearch": 143,
+    "ReadNotifications": 481,
     "SendMessage": 25,
     "SendUserFile": 1,
     "AskUserQuestion": 1,
     "Monitor": 31,
     "WebSearch": 1,
-    "Skill": 1,
+    "Skill": 2,
     "TaskStop": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 107,
-   "chars_in": 250801,
-   "chars_out": 264758,
+   "llamadas": 108,
+   "chars_in": 254227,
+   "chars_out": 268379,
    "errores": 0,
-   "archivos_citados": 163,
-   "chars_citados": 8708482,
+   "archivos_citados": 166,
+   "chars_citados": 8734459,
    "tools": {
-    "Agent": 107
+    "Agent": 108
    }
   },
   "agente:lector-correo": {
@@ -98,15 +98,15 @@
    }
   },
   "sql": {
-   "llamadas": 251,
-   "chars_in": 130162,
-   "chars_out": 711805,
+   "llamadas": 254,
+   "chars_in": 131014,
+   "chars_out": 713757,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 15,
-    "mcp__Supabase__execute_sql": 236
+    "mcp__Supabase__execute_sql": 239
    }
   },
   "mcp:Supabase": {
@@ -134,22 +134,22 @@
    }
   },
   "mcp:github": {
-   "llamadas": 289,
-   "chars_in": 103727,
-   "chars_out": 516932,
+   "llamadas": 295,
+   "chars_in": 105779,
+   "chars_out": 521386,
    "errores": 2,
-   "archivos_citados": 8,
-   "chars_citados": 1084431,
+   "archivos_citados": 9,
+   "chars_citados": 2094106,
    "tools": {
-    "mcp__github__list_pull_requests": 3,
-    "mcp__github__create_pull_request": 44,
+    "mcp__github__list_pull_requests": 4,
+    "mcp__github__create_pull_request": 46,
     "mcp__github__get_job_logs": 14,
     "mcp__github__add_issue_comment": 7,
-    "mcp__github__pull_request_read": 71,
+    "mcp__github__pull_request_read": 72,
     "mcp__github__update_pull_request": 40,
     "mcp__github__add_reply_to_pull_request_comment": 17,
     "mcp__github__resolve_review_thread": 5,
-    "mcp__github__merge_pull_request": 43,
+    "mcp__github__merge_pull_request": 45,
     "mcp__github__actions_list": 22,
     "mcp__github__actions_run_trigger": 23
    }
@@ -166,14 +166,14 @@
    }
   },
   "escritura": {
-   "llamadas": 254,
-   "chars_in": 1333260,
-   "chars_out": 7814366,
+   "llamadas": 257,
+   "chars_in": 1368459,
+   "chars_out": 7885861,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 179,
+    "Write": 182,
     "Edit": 75
    }
   },
@@ -189,15 +189,15 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 105,
-   "chars_in": 16476,
-   "chars_out": 32851,
+   "llamadas": 109,
+   "chars_in": 16768,
+   "chars_out": 33581,
    "errores": 0,
    "archivos_citados": 6,
    "chars_citados": 82074,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 45,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 41,
+    "mcp__claude-code-remote__subscribe_pr_activity": 47,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 43,
     "mcp__claude-code-remote__create_trigger": 1,
     "mcp__claude-code-remote__get_trigger": 1,
     "mcp__claude-code-remote__send_later": 11,

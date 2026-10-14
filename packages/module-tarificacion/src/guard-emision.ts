@@ -20,8 +20,8 @@ export const PATRON_EMISION = new RegExp(`emit|emisi|contrat|formaliz|suplement|
 
 // Textos de Allianz ePAC (capturas del 05/10/2026) que el bot NUNCA debe pulsar, sea cual sea la fase:
 // el radio «ELIJA UNA OPCIÓN» (por texto; la elección legítima va por la máquina de fases), «RECUPERACIÓN
-// DE CONTRASEÑA» (toca las credenciales), y las pestañas «Archivar» y «Proyecto Ampliado» (más «Emitir»,
-// que ya casa con PATRON_EMISION). Se comparan sin tildes y tolerando separadores.
+// DE CONTRASEÑA» (toca las credenciales), y las pestañas «Archivar» y «Proyecto Ampliado» (guardar: solo con
+// `permitirGuardarPresupuesto`; más «Emitir», que ya casa con PATRON_EMISION). Se comparan sin tildes y tolerando separadores.
 // «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): es la NAVEGACIÓN para cotizar.
 // «Archivar» (texto, td#store, `sendActionEvent('store')`) viene de `PATRONES_GUARDADO_GUARD` (acciones-portal.ts, lista
 // única del 14/10/2026): sigue BLOQUEADO aquí; solo `permitirGuardarPresupuesto` lo deja pasar (ver `pareceEmision`).
@@ -29,11 +29,11 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
   ...PATRONES_GUARDADO_GUARD,
-  /proyecto[\s_+-]*ampliado/i,
-  // Allianz «RC PYME» (app 1430, 07/10/2026): pestañas td#menu3 Archivar · menu4 Proyecto ampliado · menu5 Datos
+  // (`proyecto ampliado` y td#menu4 → `PATRONES_GUARDADO_GUARD`, arriba: pasan solo con `permitirGuardarPresupuesto`.)
+  // Allianz «RC PYME» (app 1430, 07/10/2026): pestañas td#menu3 Archivar · menu4 Proyecto ampliado (guardar) · menu5 Datos
   // emisión (id EXACTO: las descripciones se miran una a una), div#btnAccept «Aceptar» (llama a emision_ipid) y
   // div#btnFracciona «Pago fraccionado». «Datos emisión» ya casa con PATRON_EMISION (`emisi`).
-  /^\s*menu[345]\s*$/i,
+  /^\s*menu[35]\s*$/i,
   /btn[\s_+-]*accept/i,
   /btn[\s_+-]*fracciona/i,
   /pago[\s_+-]*fraccionado/i,
@@ -56,6 +56,11 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // guardianes.test.ts («contract en URL»).
   /contract/i,
   /validar[\s_+-]*aceptar/i,
+  // Mapfre NSEI, diálogo «Selección de vehículo» (14/10/2026): el bot NUNCA dice que el vehículo no es el suyo ni lo da de
+  // alta fuera de catálogo; si la fila no casa, PARA. Bloqueados en todo `pulsar()` y también en la función guardada
+  // del diálogo (guard.ts), aunque esta permita «Aceptar».
+  /no[\s_+-]*es[\s_+-]*el[\s_+-]*vehiculo/i,
+  /vehiculo[\s_+-]*no[\s_+-]*catalogado/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza
@@ -67,7 +72,8 @@ export type OpcionesGuard = {
   permitirAceptar?: boolean
   /**
    * GUARDAR PRESUPUESTO (14/10/2026): deja pasar SOLO las entradas de Archivar (`PATRONES_GUARDADO_GUARD`) y la acción `store`
-   * en parámetros. `PATRON_EMISION`, `contract`, `validar_aceptar`, «Proyecto ampliado», pago fraccionado… siguen bloqueados.
+   * en parámetros. `PATRON_EMISION`, `contract`, `validar_aceptar`, pago fraccionado… siguen bloqueados. «Proyecto ampliado» es GUARDAR (como Archivar);
+   su único id con «emisi» (`td#EMISION_PROJ`) pasa por la excepción estrecha `EXCEPCION_PROYECTO_AMPLIADO` (acciones-portal.ts).
    * Solo lo pide `pulsarGuardadoPresupuesto` (worker) y la red durante SU ventana.
    */
   permitirGuardarPresupuesto?: boolean

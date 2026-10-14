@@ -8,7 +8,6 @@ import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
 import {
   avanzarPasoGuardado,
-  elegirFilaDialogo,
   ErrorMapaIncompleto,
   importeDePrimaTotal,
   indiceFilaVehiculo,
@@ -215,10 +214,14 @@ test('campo ausente → error portal con la etiqueta, sin valores', async () => 
   await assert.rejects(() => rellenarCamposTexto(page, planObjetoYFiguras(form)), (e: Error) => /matrícula/.test(e.message) && !e.message.includes('0000BBB'))
 })
 
-test('los avances, la elección de fila y el login siguen siendo HUECOS (nada se pulsa)', async () => {
-  await assert.rejects(() => avanzarPasoGuardado('figuras'), ErrorMapaIncompleto)
-  await assert.rejects(() => elegirFilaDialogo(page, 0), ErrorMapaIncompleto)
-  await assert.rejects(() => mapfreAuto.tarificar(), ErrorMapaIncompleto)
+test('los avances siguen siendo HUECOS con inventario; tarificar sin las funciones guardadas para antes de navegar', async () => {
+  await assert.rejects(() => avanzarPasoGuardado('figuras'), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom === true)
+  let navego = false
+  const pagina = { goto: async () => { navego = true; return null } } as unknown as Page
+  const ctx = { pulsar: async () => {}, pausa: async () => {}, log: () => {} } as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
+  await assert.rejects(() => mapfreAuto.tarificar(pagina, form, ctx), ErrorMapaIncompleto)
+  assert.equal(navego, false)
+  await assert.rejects(() => mapfreAuto.tarificar(pagina, { ...form, ramo: 'comunidades' } as unknown as FormularioAuto, ctx), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
 })
 
 test('el guard rechaza los botones peligrosos de NSEI y el adaptador no pulsa nada', () => {

@@ -46,12 +46,18 @@
     explorador, el validador y el guard del worker. Tres categorías:
     - **Emisión — prohibida siempre:** Emitir, Contratar, Formalizar, Firmar, Pagar/Pago, Pago fraccionado, Tramitar póliza,
       Confirmar contratación, Domiciliar, Suplemento, Anular/Baja, `validar_aceptar`/`btnAccept`.
-    - **Prohibida (no emite, pero no se pulsa):** **Proyecto ampliado** (no hay certeza de que solo enseñe/descargue: ePAC lo
-      pone junto a Archivar/Emitir; se abrirá cuando Alberto confirme qué hace), Enviar, Salir/Cerrar sesión.
+    - **Prohibida (no emite, pero no se pulsa):** Enviar, Salir/Cerrar sesión.
     - **Guardar presupuesto — permitida SOLO en la pantalla de resultado (con el precio a la vista) y con
       `efectoEsperado: 'guardar_presupuesto'`:** Grabar, Guardar (presupuesto/proyecto), Archivar (ePAC `td#store`,
-      `action=store`), Descargar, Imprimir, Generar PDF. Fuera de ahí (formulario, sin precio, como navegación), prohibida.
+      `action=store`), **Proyecto ampliado** (Alberto, 14/10/2026: «es el proyecto que hay que descargarse»; mismas condiciones que
+      Descargar y cuenta en el tope de `pulsarGuardadoPresupuesto`; «Proyecto ampliado y emitir» sigue siendo emisión; excepción estrecha Allianz: id EXACTO `EMISION_PROJ` (igualdad, no patrón) + texto visible exactamente «proyecto ampliado», constante `EXCEPCION_PROYECTO_AMPLIADO`; cualquier otro id con «emisi» sigue bloqueado), Descargar, Imprimir, Generar PDF. Fuera de ahí (formulario, sin precio, como navegación), prohibida.
       Un botón que mezcle guardar con emitir/contratar/pagar («Guardar y emitir») cae como emisión.
+  - **Frontera de emisión por campos (14/10/2026):** la compañía pide la cuenta bancaria solo para emitir, tras la aceptación
+    del cliente. Si el inventario de una pantalla tiene un campo de IBAN, cuenta bancaria, número de cuenta, domiciliación,
+    titular de la cuenta, entidad bancaria o SWIFT/BIC (etiqueta, name, id o placeholder; sin mayúsculas ni acentos), el
+    explorador PARA con `cerca_de_emision` antes de llamar a la IA: nunca recibe ni rellena ese campo. Lista en
+    `CAMPOS_BANCARIOS` (acciones-portal.ts), aplicada en `detectarParada`. La **fecha de efecto** NO para por sí sola (sale
+    también al tarificar); solo cuenta si coincide en la pantalla con un campo bancario.
   - Flujo al ver el precio: guardar → (pantalla siguiente) descargar/imprimir el PDF si hay botón → terminar. El robot lee la
     **referencia** del presupuesto del texto de la pantalla (solo con etiqueta «Referencia / Nº de presupuesto / proyecto…»;
     nada con forma de NIF, teléfono o IBAN; nunca al log) y escucha el **PDF** desde antes del clic (descarga, ventana nueva o
@@ -73,6 +79,7 @@
 
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
+| 14/10/2026 | Mapfre | Primera exploración real: login OK, pero la entrada falló con mapa incompleto (la URL seguía en `#/`) | Se asumió que «Turismos y Motos» era pulsable y no se pulsaba la opción «Automóviles» del desplegable de «Nueva producción» | Ruta real: pestaña → opción «Automóviles» (se pulsa) → página con tarjetas → enlace «Tarificación y Emisión Rápida» dentro de la tarjeta «Turismos y Motos» (que no se pulsa). Lección: los menús desplegables se confirman con captura antes de mapear | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (fixture con menú + página y enlaces homónimos) |
 | 14/10/2026 | Mapfre | Enlace de menú «Tarificación y Emisión …» bloqueado por el guard de emisión | «Emisión» como sustantivo de menú casa `PATRON_EMISION` (falso positivo) | Lista cerrada de etiquetas EXACTAS, solo en la fase de ENTRADA (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`). Nunca relajar `PATRON_EMISION`; nunca desde el bucle IA | `services/tarificador-rpa/test/frontera-cuenta.test.ts` (importa `pulsarEnlaceEntradaAutorizado`) |
 | 14/10/2026 | Mapfre | El producto abre PESTAÑA NUEVA y el bucle se quedaba en la pestaña de origen | `entrar()` devolvía la página de partida | `entrar()` devuelve la `Page` de la pestaña nueva y el bucle sigue en ella (`entrarYExplorar`); las páginas de la entrada no cuentan. `EXPLORADOR_VERSION` 0.1.3 (0.2.1 al fusionar con el guardado de presupuesto de main, que iba en 0.2.0) | Sin cepo específico de pestaña nueva |
 | 14/10/2026 | Mapfre | Diálogo nativo de autenticación HTTP al abrir el tarificador | Chromium pide usuario y contraseña en la pestaña nueva | Se CANCELA: el contexto va SIN `httpCredentials` (Chromium responde 401). No meter credenciales en el bot | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
@@ -112,12 +119,14 @@
 | `conductor.fecha_carne` | — | `fechaExpedicion` (`app-conductor-habitual`) |
 | `historial.siniestros_5_anios` | — | «Siniestros RC 5 últimos años» (`siniestros`) |
 | `historial.anios_asegurado` | — | `tiempoAntComp`: lo calcula el portal, llega DESHABILITADO; nunca se escribe |
-| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): valor fijo «B» |
+| `conductor.clase_permiso` | — | «Clase *» (acordeón «Permiso Conducir», paso 3 Figuras; `codigoTipoLicencia`): la que TIENE el conductor (dato real); si no consta y el vehículo exige más que B, el bot PARA. Mínimo DGT (`claseMinimaPermiso`): turismo/ciclomotor ≤50 cc «B»; ≤125 cc y ≤11 kW «B» con B ≥3 años (si no «A1»); ≤35 kW «A2»; más «A». Sintético por defecto «B» |
 
 Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (`mat-select`; Mapfre: `uso`, `ambitoCirculacion`) y compañía anterior (`companiaAnterior`).
 
 **Decisiones de Alberto (14/10/2026) para Auto, válidas para TODAS las compañías:**
-- «Clase» del permiso de conducir = siempre **«B»** en turismos (`conductor.clase_permiso`, valor fijo de negocio; sale también con datos reales).
+- «Clase» del permiso (`conductor.clase_permiso`): se declara la que TIENE el conductor; el vehículo fija el mínimo (`claseMinimaPermiso`, pura, DGT): turismo → **B**; ciclomotor ≤50 cc → **B**; moto ≤125 cc y ≤11 kW → **B** con ≥3 años de B, **A1** con menos; ≤35 kW → **A2**; más → **A**. Si falta un dato (cc, kW, antigüedad) devuelve null y no se adivina; si la clase del conductor no consta y el vehículo exige más que B, se para.
+- La columna «CV/KW» del diálogo «Selección de vehículo» de Mapfre se llama así pero el valor son **CV** (confirmado por Alberto): `cvAKw()` (1 CV = 0,73549875 kW) antes de `claseMinimaPermiso`, que recibe kW.
+- Coche y moto se tarifican en el MISMO tarificador (Mapfre: NSEI).
 - Paso «Coberturas»: se dejan las coberturas **POR DEFECTO**; el bot no cambia nada ahí, solo avanza.
 
 ### Hogar
@@ -161,8 +170,10 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 
 - **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
   (usuario + contraseña; **no pide SMS**). Pantalla: bloque «Acceso», «Código de usuario (NUUMA)» y «Contraseña:»; el botón «Entrar»
-  está **deshabilitado** hasta rellenar ambos (Angular: el bot espera a que se habilite o falla con `ErrorMapaIncompleto`); «Cambiar contraseña» jamás se pulsa. Después: pestaña «Nueva producción» → bloque «Automóviles» → tarjeta «Turismos y
-  Motos» → enlace «Tarificación y Emisión Rápida», que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
+  está **deshabilitado** hasta rellenar ambos (Angular: el bot espera a que se habilite o falla con `ErrorMapaIncompleto`); «Cambiar contraseña» jamás se pulsa. Después: pestaña «Nueva producción» (despliega un MENÚ) → PULSAR la opción «Automóviles» del
+  desplegable → página «Automóviles» con tarjetas; «Turismos y Motos» es solo el TÍTULO de una tarjeta (no es enlace, no se pulsa) y
+  bajo ella están los enlaces «Tarificación y Emisión Rápida», «(General)» y «(Otros Acuerdos)» (otras tarjetas traen enlaces parecidos)
+  → enlace «Tarificación y Emisión Rápida» acotado a esa tarjeta, que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
   `adapters/mapfre/entrada.ts` (clave `mapfre:nueva_produccion:auto`, sin avances autorizados). Conectada al explorador
   (`PORTALES_EXPLORACION.mapfre.entrar` devuelve la pestaña nueva y el bucle sigue en ella; v0.1.3).
 - **Diálogo HTTP:** en la pestaña nueva Chromium pinta el diálogo nativo de auth («wmediadores.mapfre.com necesita un nombre de
@@ -224,7 +235,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 - **Paso 2 · Objeto asegurado:** se introduce la matrícula → diálogo «Selección de vehículo» con tabla (Matrícula, Nº Bastidor,
   Denominación comercial, CV/KW, CC, Nº Puertas, Fecha Inicio) y un radio por fila. Si las filas son casi iguales, se elige
   la primera y se pulsa «Aceptar» (deshabilitado hasta elegir fila). Otros botones del diálogo: «Cancelar» y «No es el
-  vehículo.». Fuera del diálogo: «Buscador de vehículos», «Vehículo NO catalogado», «Resumen vehículo». Después se pide
+  vehículo.» (el bot NUNCA pulsa «Cancelar», «No es el vehículo.» ni «Vehiculo NO catalogado»; si ninguna fila casa con la
+  matrícula, para). Una moto trae 0 en Nº Puertas. Fuera del diálogo: «Buscador de vehículos», «Vehículo NO catalogado», «Resumen vehículo». Después se pide
   código postal y «Continuar».
 - **Paso 3 · Figuras:** pestañas «Tomador» y «Conductores Ocasionales»; casillas «Actúa como Conductor Habitual» y «Tomador y
   propietario son la misma persona» (ambas marcadas por defecto); acordeones «Datos Básicos», «Dirección Habitual» y
