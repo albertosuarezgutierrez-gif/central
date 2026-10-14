@@ -94,8 +94,11 @@ const DOMINIOS: { categoria: string; dominios: string[] }[] = [
 
 // Prefijo del remitente (parte local) → categoría, para dominios compartidos (allianz.es sirve
 // tanto marketing como a mediadores; solo 'mediadores@' es correduría).
-const REMITENTE: { categoria: string; empieza: string[] }[] = [
+const REMITENTE: { categoria: string; empieza: string[]; soloAseguradoras?: boolean }[] = [
   { categoria: 'correduria', empieza: ['mediadores@', 'comunicacion.mediadores@'] },
+  // Singular (14/10/2026): «Rel. Emisión Producción» de mediador@allianz.es. Solo desde dominios de
+  // ASEGURADORAS: el buzón singular no se da por correduría en cualquier otro dominio.
+  { categoria: 'correduria', empieza: ['mediador@'], soloAseguradoras: true },
 ]
 
 // Marcadores INEQUÍVOCOS en el asunto (frases transaccionales), como red de seguridad si el dominio
@@ -134,7 +137,8 @@ export function clasificarPorKeyword(from: string, subject: string): KeywordMatc
       if (dominios.some(d => enDominio(dom, d))) return { categoria, motivo: `dominio ${dom}` }
     }
   }
-  for (const { categoria, empieza } of REMITENTE) {
+  for (const { categoria, empieza, soloAseguradoras } of REMITENTE) {
+    if (soloAseguradoras && !(dom && ASEGURADORAS.some(d => enDominio(dom, d)))) continue
     if (empieza.some(p => f.startsWith(p))) return { categoria, motivo: `remitente ${f}` }
   }
   const s = subject || ''
