@@ -4,6 +4,8 @@
 > solo nombres de pantalla y claves de catálogo. Estado vivo, DOM detallado y plan: `docs/TARIFICADOR-RPA.md`.
 > Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 14/10/2026.
 
+> **Crear el bot de una compañía nueva: lee primero `docs/tarificador/MANUAL-NUEVO-BOT.md`.**
+
 ## Capa común (todas las compañías)
 
 - **Navegación:** casi todas las compañías tienen el menú **Venta → «Nueva Alta»**, que lista TODOS los

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-13T20:48:25Z",
+  "generadoEn": "2026-10-14T05:32:07Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -371,7 +371,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 7
       },
       "asegura-web": {
         "estado": "no",
@@ -965,7 +965,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 16
       },
       "asegura-web": {
         "estado": "no",
@@ -2207,7 +2207,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 132
+        "evidencias": 139
       },
       "asegura-web": {
         "estado": "usado",
@@ -2315,7 +2315,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 106
+        "evidencias": 111
       },
       "asegura-web": {
         "estado": "usado",
@@ -3666,8 +3666,8 @@
         "evidencias": 0
       },
       "asegura-portal": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "asegura-web": {
         "presente": false,
@@ -4298,12 +4298,17 @@
       "/api/datos",
       "/api/datos/documento",
       "/api/documento/dni",
+      "/api/documentos/archivar",
+      "/api/documentos/escanear",
       "/api/flota/jefe",
       "/api/flota/vehiculo",
       "/api/hojas",
       "/api/hojas/[id]",
+      "/api/huecos-proteccion",
       "/api/invitaciones",
       "/api/invitaciones/[id]",
+      "/api/invitaciones/familia",
+      "/api/invitaciones/familia/usar",
       "/api/invitaciones/responder",
       "/api/ipid/[id]",
       "/api/mejorar-precio",
@@ -4325,6 +4330,7 @@
       "/api/polizas/[id]/gestion",
       "/api/polizas/[id]/reintentar",
       "/api/polizas/[id]/restaurar",
+      "/api/polizas/[id]/revision",
       "/api/presupuesto/actividad",
       "/api/presupuesto/carta",
       "/api/presupuesto/datos",
@@ -5885,6 +5891,8 @@
       "seguros.portal_hoja_qr_poliza",
       "seguros.portal_identidad",
       "seguros.portal_invitacion",
+      "seguros.portal_invitacion_enlace",
+      "seguros.portal_invitacion_enlace_uso",
       "seguros.portal_mensaje",
       "seguros.portal_obligacion",
       "seguros.portal_parte_siniestro",
@@ -5892,7 +5900,9 @@
       "seguros.portal_poliza_declarada",
       "seguros.portal_poliza_declarada_historial",
       "seguros.portal_preferencias_avisos",
+      "seguros.portal_prima_observada",
       "seguros.portal_push_suscripcion",
+      "seguros.portal_revision_poliza",
       "seguros.portal_supresion",
       "seguros.portal_vinculo",
       "seguros.portal_vista_corredor"
@@ -6801,6 +6811,7 @@
         "capacidad": "escaner-ocr",
         "label": "Escáner / OCR",
         "tiene": [
+          "asegura-portal",
           "ia-rest",
           "ialimp"
         ],
@@ -6808,7 +6819,6 @@
           "almacen",
           "alquiler",
           "asegura",
-          "asegura-portal",
           "asegura-web",
           "housesevillana",
           "mariscos",
@@ -6885,7 +6895,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1689,
+    "apis": 1695,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
