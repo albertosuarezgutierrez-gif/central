@@ -1,8 +1,8 @@
 {
  "sesion": "fd9eea63-f8ed-5911-9cca-dfa79365d10a",
  "inicio": "2026-10-14T08:46:34.025Z",
- "fin": "2026-10-14T09:20:52.451Z",
- "llamadas": 173,
+ "fin": "2026-10-14T09:53:45.511Z",
+ "llamadas": 316,
  "categorias": {
   "lectura-directa": {
    "llamadas": 62,
@@ -18,17 +18,19 @@
    }
   },
   "otro": {
-   "llamadas": 25,
-   "chars_in": 29864,
-   "chars_out": 97707,
+   "llamadas": 51,
+   "chars_in": 40602,
+   "chars_out": 270505,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 2,
+   "chars_citados": 178894,
    "tools": {
-    "SubagentHandback": 5,
-    "ToolSearch": 8,
+    "SubagentHandback": 8,
+    "ToolSearch": 12,
     "SendMessage": 6,
-    "ReadNotifications": 6
+    "ReadNotifications": 19,
+    "TaskCreate": 5,
+    "TaskUpdate": 1
    }
   },
   "agente:rastreador-codigo": {
@@ -43,20 +45,20 @@
    }
   },
   "bash": {
-   "llamadas": 57,
-   "chars_in": 76236,
-   "chars_out": 217074,
+   "llamadas": 163,
+   "chars_in": 150676,
+   "chars_out": 746390,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 57
+    "Bash": 163
    }
   },
   "mcp:github": {
-   "llamadas": 8,
-   "chars_in": 3050,
-   "chars_out": 87108,
+   "llamadas": 17,
+   "chars_in": 6870,
+   "chars_out": 127348,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -64,7 +66,10 @@
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 1,
     "mcp__github__get_job_logs": 4,
-    "mcp__github__actions_list": 2
+    "mcp__github__actions_list": 3,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__add_reply_to_pull_request_comment": 1
    }
   },
   "agente:general-purpose": {
@@ -121,6 +126,17 @@
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 2,
+   "chars_in": 5561,
+   "chars_out": 5980,
+   "errores": 0,
+   "archivos_citados": 5,
+   "chars_citados": 241261,
+   "tools": {
+    "Agent": 2
    }
   }
  }
