@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T18:13:18Z",
-  "sha": "d5d7c037be0df5d7e08ff18d6ac84162cb1089a2",
+  "generadoEn": "2026-10-14T19:01:48Z",
+  "sha": "2fdd4553d18c81475cfa7e64ace8a394c2c7ef18",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -213292,6 +213292,94 @@
       "hash": "a3cc69cd9b84"
     },
     {
+      "ruta": "packages/module-tarificacion/src/formulario-hogar.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "Formulario CANÓNICO de HOGAR (14/10/2026). PURO: ni BD, ni red, ni Playwright. Lo que un robot necesita para TARIFICAR una vivienda en un portal de compañía. Primera compañía: Allianz ePAC «Allianz HOGAR» (app Angular `ngx-allianzhogar…` en el iframe `appArea`; pantalla 1 «¿Quién es el tomador?» + «",
+      "exporta": [
+        "fechaDdMmAaaaDeIso",
+        "validarFormularioHogar"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 80
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 82
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], max: number, obligatorio: boolean",
+          "retorno": "string | null",
+          "linea": 84
+        },
+        {
+          "nombre": "enLista",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, lista: readonly T[], campo: string, errores: string[]",
+          "retorno": "T | null",
+          "linea": 99
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[], min: number, max: number, obligatorio: boolean",
+          "retorno": "number | null",
+          "linea": 106
+        },
+        {
+          "nombre": "importe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, campo: string, errores: string[]",
+          "retorno": "number | null",
+          "linea": 116
+        },
+        {
+          "nombre": "fechaIsoReal",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "boolean",
+          "linea": 123
+        },
+        {
+          "nombre": "fechaDdMmAaaaDeIso",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string",
+          "retorno": "string | null",
+          "linea": 131,
+          "resumen": "AAAA-MM-DD → dd/mm/aaaa (como lo escriben los portales). Otra forma → `null` (no se adivina)."
+        },
+        {
+          "nombre": "validarFormularioHogar",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: unknown, hoy: Date = new Date()",
+          "retorno": "ValidacionFormularioHogar",
+          "linea": 139,
+          "resumen": "Riesgo crudo (de asegura) → `FormularioHogar`, todo o nada. Los errores nombran el CAMPO, nunca el valor (son datos personales en el caso del tomador). `hoy` fija la edad del tomador y el año máximo d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3e739f919c56"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Formulario CANÓNICO de RC general / de actividad (08/10/2026). PURO: ni BD, ni red. Datos de riesgo comunes a cualquier compañía. Todavía no hay ninguna registrada (la primera: Occident, pendiente de grabar su portal): este ramo existe solo a nivel canónico y NO está en `RamoRpa`. Importes en EUROS ",
@@ -217016,7 +217104,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4698,
-    "funciones": 17254
+    "archivos": 4699,
+    "funciones": 17263
   }
 }
