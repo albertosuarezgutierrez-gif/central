@@ -24,7 +24,8 @@ import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import {
-  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestroAcotado, TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento,
+  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestroAcotado, esCheckTipoEventoCorreo, importeDeItem,
+  TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento,
   tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
@@ -216,7 +217,8 @@ async function procesarItem(
     const resolucion = resolverPolizaEvento(numeroPoliza, entrada.compania, entrada.codigoDgs, candidatas)
     const poliza = resolucion.estado === 'sin_resolver' ? null : (resolucion.poliza as (typeof candidatas)[number])
     const expediente = item.tipo === 'anulacion' && poliza && resolucion.estado === 'en_vigor' ? await expedienteAbierto(db, correduriaId, poliza.id) : null
-    const claveProvisional = poliza && item.tipo !== 'siniestro' ? claveTareaDe(item, poliza.id) : null
+    // Una emisión nunca crea tarea ni nota: no lleva clave de tarea.
+    const claveProvisional = poliza && item.tipo !== 'siniestro' && item.tipo !== 'emision' ? claveTareaDe(item, poliza.id) : null
     const tareaAbierta = claveProvisional ? await hayTareaAbierta(db, correduriaId, claveProvisional) : false
 
     const plan = planItem(item, entrada.compania, { resolucion, siniestro, siniestroPolizaDistinta, expediente, tareaAbierta, fechaCorreo, hoy })
@@ -278,7 +280,7 @@ async function procesarItem(
       update correo_evento_entrante set estado = ${estado}, motivo = ${motivo}, resumen = ${resumen.slice(0, 300)},
              clave_tarea = ${claveGuardada}, poliza_id = ${polizaId}::uuid, cliente_id = ${clienteId}::uuid,
              siniestro_id = ${siniestroId}::uuid, gestion_id = ${gestionId}::uuid, fecha_limite = ${fechaLimite}::date,
-             importe = ${item.tipo === 'pre_anulacion' || item.tipo === 'impago' ? item.importe : null}::numeric, updated_at = now()
+             importe = ${importeDeItem(item)}::numeric, updated_at = now()
       where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)
     const cliente = polizaId ? candidatas.find((p) => p.id === polizaId)?.cliente ?? null : null
     return salida({ estado, resumen, motivo, clienteId, polizaId, siniestroId, fechaLimite }, false, cliente)
@@ -309,7 +311,17 @@ export async function registrarEventoCorreo(
   const candidatas = await polizasCandidatas(db, correduriaId)
   const resultados: ResultadoItemCorreo[] = []
   // En serie: dos filas del mismo correo pueden ser del mismo recibo/póliza y la segunda debe ver la tarea de la primera.
-  for (const item of entrada.items) resultados.push(await procesarItem(db, correduriaId, entrada, item, candidatas, fechaCorreo, hoy))
+  try {
+    for (const item of entrada.items) resultados.push(await procesarItem(db, correduriaId, entrada, item, candidatas, fechaCorreo, hoy))
+  } catch (e) {
+    // Un tipo nuevo cuyo SQL no se ha aplicado (`emision` → 2026-10-14d_correo_evento_emision.sql): el CHECK de
+    // `tipo` rechaza la RESERVA, que es la primera escritura. Todos los elementos de un correo son del mismo
+    // tipo, así que cae el primero y no se ha escrito nada: 503 `sin_migracion`, no 500.
+    if (resultados.length === 0 && esCheckTipoEventoCorreo(e)) {
+      return { ok: false, estado: 'sin_migracion', motivo: `falta aplicar 2026-10-14d_correo_evento_emision.sql (tipo «${entrada.tipo}»): no se ha escrito nada` }
+    }
+    throw e
+  }
   return { ok: true, resultados }
 }
 

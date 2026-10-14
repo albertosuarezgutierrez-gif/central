@@ -1,7 +1,8 @@
 // packages/module-seguros/src/evento-correo-aseguradora.ts
 //
 // Lee los correos de las compañías que NO son recibos devueltos (eso es `devolucion-correo.ts`) y los
-// convierte en EVENTOS de la correduría: siniestro, pre-anulación/impago, anulación, suplemento. PURO.
+// convierte en EVENTOS de la correduría: siniestro, pre-anulación/impago, anulación, suplemento y
+// emisión (póliza nueva). PURO.
 //
 // Por qué existe (14/10/2026): el triaje guardaba estos correos como una nota de texto. Un «Siniestro
 // Diversos 4300…» o un «Resumen de recibos próximos a la anulación» llevan un nº de siniestro, una
@@ -15,9 +16,11 @@
 //   cuerpo. Se empareja por nº de póliza/siniestro/recibo + compañía, y eso basta. Todo texto libre
 //   que sale (acción, descripción) pasa por `sinDatosSensibles`.
 // - Solo están los formatos vistos en correos REALES (últimos 90 días a 14/10/2026). Fuera a propósito,
-//   por no tener con qué leerlos sin inventar: Allianz «Rel. Emisión Producción» (la lista va en un PDF
-//   que no se ha visto en texto), Mapfre «Welcome Pack Digital» (no trae nº de póliza), Reale «Recibos
-//   Pendientes» (la tabla va en un .xls) y Reale «Impago de recibo» (va al cliente y no trae datos).
+//   por no tener con qué leerlos sin inventar: Mapfre «Welcome Pack Digital» (ni en el cuerpo ni en
+//   adjunto trae nº de póliza: solo enlaces opacos que piden el NIF; revisado de nuevo el 14/10/2026 con el
+//   único que ha llegado), Reale «Recibos Pendientes» (la tabla va en un .xls) y Reale «Impago de recibo»
+//   (va al cliente y no trae datos). Allianz «Rel. Emisión Producción» SÍ se lee desde el 14/10/2026: su
+//   PDF es texto (no escaneado) y `pdf-filas` lo deja en filas legibles (ver `leerAllianzEmision`).
 // - 🚨 Las tablas HTML llegan al triaje CELDA POR LÍNEA y sin `|` (IMAP + `mailparser`, ver `tabla-correo.ts`);
 //   las barras son de la vista de Gmail. Todo lector de tabla acepta los dos formatos y tiene su fixture
 //   en celda-por-línea (`evento-correo-aseguradora-celdas.test.ts`).
@@ -94,7 +97,25 @@ export type EventoSuplemento = Base & {
   periodoHasta: string | null
 }
 
-export type EventoAseguradora = EventoSiniestro | EventoPreAnulacion | EventoImpago | EventoAnulacion | EventoSuplemento
+/** Una póliza NUEVA que la compañía dice haber emitido (Allianz «Rel. Emisión Producción»). */
+export type PolizaEmitidaCorreo = {
+  numeroPoliza: string
+  /** Nº del primer recibo TAL CUAL; `null` = no lo trae. */
+  idRecibo: string | null
+  /** Producto/modalidad como lo escribe la compañía («Allianz Moto V.03», «Terceros»), sin matrícula ni bonus. `null` = no se ha sabido sacar limpio. */
+  producto: string | null
+  /** `YYYY-MM-DD`: «F.Vto.» del primer recibo, que en una póliza nueva es su toma de efecto. */
+  fechaEfecto: string | null
+  /** Total del primer recibo (lo que paga el cliente), en €. `null` = no se ha leído (no es 0€). */
+  prima: number | null
+}
+/**
+ * La compañía comunica pólizas NUEVAS. No crea nada en la cartera: la fuente es CIMA. Sirve para saber si CIMA
+ * ya la trae (y si no, que Alberto lo vea en la bandeja).
+ */
+export type EventoEmision = Base & { tipo: 'emision'; polizas: PolizaEmitidaCorreo[] }
+
+export type EventoAseguradora = EventoSiniestro | EventoPreAnulacion | EventoImpago | EventoAnulacion | EventoSuplemento | EventoEmision
 
 // ── utilidades ───────────────────────────────────────────────────────────────
 
@@ -458,12 +479,66 @@ function leerAllianzAnulacion(c: CorreoEventoAseguradora): EventoAnulacion | nul
   }
 }
 
+// ── Allianz · «Rel. Emisión Producción» (pólizas nuevas, lista en un PDF adjunto) ───────────────────
+// El correo no trae nada: la lista va en el PDF `ADXP_<aammdd>_….pdf`. Por `pdf-filas` (tabulador = cambio de
+// celda) cada documento son TRES filas (visto en 4 PDF reales, 18/09-09/10/2026, uno por día):
+//   [Póliza\t]Póliza: 061000001  Recibo: 900000001  F.Vto.: 29-09-2026  Anual Comisión\t12,33 P.Neta\t102,72
+//   Allianz Moto V.03  0000-BBB     Bonus: 3  Produccion\tIRPF\t1,85 Imptos.+Recgos.\t10,61
+//   APELLIDO, NOMBRE\tLiquidar\t102,85 T.Recibo\t113,33        ← el tomador: NO sale
+// El primer «Póliza» (tipo de documento) a veces falta; la segunda fila es «Terceros      Produccion» en los
+// de auto a terceros. Solo se leen las filas de «Produccion» (negocio nuevo): un documento de otro origen
+// (cartera, suplemento…) no se ha visto y se CUENTA como ilegible, no se toma por póliza nueva.
+const FILA_EMISION_ALLIANZ = /P[oó]liza:\s*(\d{6,})\s+Recibo:\s*(\d{6,})\s+F\.\s*Vto\.?:\s*(\d{2}-\d{2}-\d{4})/i
+const MATRICULA = /\b(?:C\s?-?\s?)?\d{4}\s?-?\s?[B-DF-HJ-NP-TV-Z]{3}\b|\b[A-Z]{1,2}\s?-?\s?\d{4}\s?-?\s?[A-Z]{0,2}\b/g
+
+/** El producto de la 2.ª fila, sin matrícula, bonus ni «Produccion». Con cualquier resto dudoso (4+ cifras seguidas), `null`. */
+function productoEmision(fila: string): string | null {
+  const celda = (fila.split('\t')[0] ?? '')
+    .replace(/\bproducci[oó]n\b/gi, ' ')
+    .replace(/\bbonus\s*:?\s*-?\d+\b/gi, ' ')
+    .replace(MATRICULA, ' ')
+    .replace(/\s+/g, ' ').trim()
+  if (celda === '' || /\d{4,}/.test(celda) || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,+/-]{2,60}$/.test(celda)) return null
+  return celda
+}
+
+const esAsuntoEmisionAllianz = (asunto: string): boolean => /^\s*rel\.?\s*emisi[oó]n\s+producci[oó]n\b/i.test(asunto)
+
+function leerAllianzEmision(c: CorreoEventoAseguradora): EventoEmision | null {
+  if (!esDe(c.remitente, 'allianz.es') || !esAsuntoEmisionAllianz(c.asunto)) return null
+  const out: EventoEmision = { ...base('allianz'), tipo: 'emision', polizas: [] }
+  const ls = lineas(c.textoAdjuntos ?? '')
+  // Sin la cabecera del listado no se ha leído el PDF (no venía o no salió su texto): NO es «ninguna póliza».
+  if (!ls.some((l) => /emisi[oó]n\s+del\s+d[ií]a/i.test(l))) { out.ilegibles++; return out }
+  for (let i = 0; i < ls.length; i++) {
+    // `Póliza:` con dos puntos: el «Pólizas\t1» de los totales no es una fila.
+    if (!/P[oó]liza:/i.test(ls[i])) continue
+    const m = FILA_EMISION_ALLIANZ.exec(ls[i].replace(/\t/g, ' '))
+    if (!m) { out.ilegibles++; continue }
+    // Las dos filas que siguen son de ESTE documento (hasta el siguiente «Póliza:»).
+    const siguientes: string[] = []
+    for (let j = i + 1; j < ls.length && j <= i + 2 && !/P[oó]liza:/i.test(ls[j]); j++) siguientes.push(ls[j])
+    const origen = siguientes[0] ?? ''
+    if (!/\bproducci[oó]n\b/i.test(origen)) { out.ilegibles++; continue }
+    const total = siguientes.map((l) => /T\.\s*Recibo\s+([\d.,]+)/i.exec(l.replace(/\t/g, ' '))?.[1]).find(Boolean)
+    out.polizas.push({
+      numeroPoliza: m[1],
+      idRecibo: m[2],
+      producto: productoEmision(origen),
+      fechaEfecto: isoDeFecha(m[3]),
+      prima: importeEs(total),
+    })
+  }
+  if (out.polizas.length === 0 && out.ilegibles === 0) out.ilegibles++
+  return out
+}
+
 /**
  * Segunda red: los campos de TEXTO LIBRE de un evento nunca llevan IBAN ni NIF, aunque un formato nuevo
  * los colara. Los identificadores (póliza, recibo, siniestro) no se tocan: ya salen de una regex estricta
  * y «limpiarlos» podría romper una póliza con forma de CIF.
  */
-const CAMPOS_LIBRES = new Set(['accion', 'descripcion', 'motivo', 'ramo'])
+const CAMPOS_LIBRES = new Set(['accion', 'descripcion', 'motivo', 'ramo', 'producto'])
 function limpiarEvento<E extends EventoAseguradora>(e: E): E {
   const limpia = (v: unknown, clave = ''): unknown => {
     if (typeof v === 'string') return CAMPOS_LIBRES.has(clave) ? sinDatosSensibles(v) : v
@@ -475,13 +550,14 @@ function limpiarEvento<E extends EventoAseguradora>(e: E): E {
 }
 
 /**
- * ¿Este correo es de un formato cuyo lector mira el texto de los ADJUNTOS? Solo las listas de pre-anulación
- * (Occident, Reale) pueden traer la tabla adjunta. El triaje lo pregunta ANTES de leer ningún PDF: para el
+ * ¿Este correo es de un formato cuyo lector mira el texto de los ADJUNTOS? Las listas de pre-anulación
+ * (Occident, Reale) pueden traer la tabla adjunta, y la «Rel. Emisión Producción» de Allianz la trae SIEMPRE. El triaje lo pregunta ANTES de leer ningún PDF: para el
  * resto no hace falta abrirlos. Decide solo por remitente + asunto (no hace falta el cuerpo).
  */
 export function eventoNecesitaAdjuntos(c: { remitente: string; asunto: string }): boolean {
   if (/^\s*(fwd?|rv|re)\s*:/i.test(c.asunto)) return false
   if (esDe(c.remitente, 'occidentinforma.com') && /recibos\s+pr[oó]ximos\s+a\s+la\s+anulaci[oó]n/i.test(c.asunto)) return true
+  if (esDe(c.remitente, 'allianz.es') && esAsuntoEmisionAllianz(c.asunto)) return true
   return esDe(c.remitente, 'reale.es') && /pre-?\s*anulaciones\s+autom/i.test(c.asunto)
 }
 
@@ -500,6 +576,7 @@ export function leerCorreoEventoAseguradora(c: CorreoEventoAseguradora): EventoA
     leerOccidentSuplemento(c) ??
     leerRealePreAnulacion(c) ??
     leerMapfreDelegacion(c) ??
-    leerAllianzAnulacion(c)
+    leerAllianzAnulacion(c) ??
+    leerAllianzEmision(c)
   return e ? limpiarEvento(e) : null
 }

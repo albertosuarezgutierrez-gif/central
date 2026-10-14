@@ -65,3 +65,13 @@ test('conRevisado: marca y deshace en local; solo filas que admiten marca', () =
   assert.equal(conRevisado(r.filas, 'b', true).find((x) => x.id === 'b')?.revisado, false)
   assert.deepEqual(conRevisado(r.filas, 'zz', true), r.filas)
 })
+
+test('emisión: la bandeja la rotula «Póliza nueva» y pinta «Póliza nueva emitida: …»', async () => {
+  const { ROTULO_TIPO_CORREO, textoElementoCorreo } = await import('./correos-compania.ts')
+  assert.equal(ROTULO_TIPO_CORREO.emision, 'Póliza nueva')
+  assert.equal(textoElementoCorreo({ tipo: 'emision', clave: '061000001', numeroPoliza: '061000001' }), 'Póliza nueva emitida: 061000001')
+  assert.equal(textoElementoCorreo({ tipo: 'siniestro', clave: '43000001', numeroPoliza: '806000001' }), 'Siniestro 43000001 · póliza 806000001')
+  assert.equal(textoElementoCorreo({ tipo: 'suplemento', clave: 'BIDS000001', numeroPoliza: null }), 'Póliza BIDS000001')
+  const src = readFileSync(join(import.meta.dirname, '..', '..', 'app', '(usuario)', 'correduria', 'mesa', 'CorreosCompania.tsx'), 'utf8')
+  assert.match(src, /textoElementoCorreo\(e\)/)
+})
