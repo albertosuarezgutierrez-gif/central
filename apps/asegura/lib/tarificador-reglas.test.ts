@@ -35,6 +35,17 @@ test('la máquina es efímera, en cdg, 2 CPU compartidas / 2 GB, y SOLO recibe J
   assert.ok(!/DATABASE_URL|CODEOSCOPIC|TARIFICADOR_WORKER_SECRET|CRED_|fo1_tokendeprueba/.test(JSON.stringify(b)))
 })
 
+test('la máquina recibe TARIFICADOR_EXPLORADOR_VISTA solo con dom|aria|ambas exactos', () => {
+  for (const v of ['dom', 'aria', 'ambas']) {
+    assert.equal(JSON.parse(peticionMaquina(CFG, JOB, v).init.body).config.env.TARIFICADOR_EXPLORADOR_VISTA, v)
+  }
+  for (const v of [undefined, null, '', 'ARIA', ' aria', 'todo']) {
+    const env = JSON.parse(peticionMaquina(CFG, JOB, v).init.body).config.env
+    assert.deepEqual(Object.keys(env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'], String(v))
+  }
+  assert.deepEqual(Object.keys(JSON.parse(peticionMaquina(CFG, JOB).init.body).config.env).sort(), ['JOB_ID', 'TARIFICADOR_API_URL'])
+})
+
 test('resultado ok: valida ofertas y exige que el PDF sea un PDF', () => {
   const pdf = Buffer.from('%PDF-1.7 hola').toString('base64')
   const ok = leerResultadoWorker({

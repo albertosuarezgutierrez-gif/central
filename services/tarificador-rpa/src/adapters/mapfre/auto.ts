@@ -48,7 +48,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
-import { fechaEs } from '../allianz/comunidades.ts'
+import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
