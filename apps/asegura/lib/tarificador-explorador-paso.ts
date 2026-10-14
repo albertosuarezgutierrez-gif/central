@@ -18,7 +18,12 @@ import {
   planDesdeMapa,
   presupuestoEnCursoDe,
   erroresDeIncidencias,
+  esRespuestaLogin,
+  MAX_PANTALLAS_LOGIN,
   respuestaParar,
+  respuestaPararLogin,
+  validarRespuestaLogin,
+  type RespuestaLogin,
   topesExplorador,
   validarRespuestaExplorador,
   type ContextoValidacion,
@@ -28,8 +33,11 @@ import {
 } from '@central/module-tarificacion'
 import {
   MAX_TOKENS_SALIDA_EXPLORADOR,
+  MAX_TOKENS_SALIDA_LOGIN,
   SYSTEM_EXPLORADOR,
+  SYSTEM_EXPLORADOR_LOGIN,
   historialCorto,
+  promptLoginExplorador,
   pantallaDeMemoria,
   promptExplorador,
   type PasoGuardado,
@@ -58,7 +66,8 @@ export type EstadoPaso = {
 }
 
 export type PasoARegistrar = {
-  respuesta: RespuestaExplorador; origen: 'ia' | 'mapa' | 'regla'; errores: string[] | null; costeEur: number; modelo: string | null
+  /** `RespuestaLogin` (fase de login asistido): lleva `fase: 'login'` y nunca entra en el mapa (el cierre la re-valida como normal y cae). */
+  respuesta: RespuestaExplorador | RespuestaLogin; origen: 'ia' | 'mapa' | 'regla'; errores: string[] | null; costeEur: number; modelo: string | null
   /** Errores de EJECUCIÓN del lote anterior (14/10/2026): se AÑADEN a los `errores` del último paso guardado, no a este. */
   erroresPasoAnterior?: string[]
 }
@@ -105,6 +114,11 @@ export type EntradaPaso = {
   riesgo?: unknown
   /** Lo que el lote ANTERIOR no pudo aplicar (worker, 14/10/2026). */
   incidencias?: IncidenciaEjecucion[]
+  /**
+   * `login` = fase de LOGIN ASISTIDO (14/10/2026): prompt y validador propios (`validarRespuestaLogin`: solo claves
+   * `credencial.*`), SIN memoria, y como mucho `MAX_PANTALLAS_LOGIN` pasos de login. La ruta ya comprobó la entrada.
+   */
+  fase?: 'normal' | 'login'
 }
 
 /**
@@ -117,7 +131,7 @@ export function planDeMemoriaUsable(plan: RespuestaExplorador, conDatosReales: b
 }
 
 export type SalidaPaso =
-  | { tipo: 'ok'; respuesta: RespuestaExplorador; origen: 'ia' | 'mapa' | 'regla'; huella: string; leaseHasta: string | null }
+  | { tipo: 'ok'; respuesta: RespuestaExplorador | RespuestaLogin; origen: 'ia' | 'mapa' | 'regla'; huella: string; leaseHasta: string | null }
   | { tipo: 'conflicto'; motivo: 'exploracion_cerrada' | 'estado_cambiado' }
 
 /** Consumo para los topes: llamadas y € de la CABECERA (cuentan las descartadas); acciones y pasos de las filas. */
@@ -153,6 +167,10 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
   // tx2 solo registra si nada cambió (mismo nº de pasos), así que vale para las dos.
   const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null, presupuestoEnCurso: false }
   const topes = topesExplorador(d.env)
+  const login = e.fase === 'login'
+  const parar = login ? respuestaPararLogin : respuestaParar
+  const system = login ? SYSTEM_EXPLORADOR_LOGIN : SYSTEM_EXPLORADOR
+  const maxTokens = login ? MAX_TOKENS_SALIDA_LOGIN : MAX_TOKENS_SALIDA_EXPLORADOR
 
   type Decision = { tipo: 'hecho'; salida: SalidaPaso } | { tipo: 'ia'; prompt: string; caracteres: number; peor: number; nAntes: number }
   // ── tx1: decidir sin IA, o reservarla ──
@@ -162,27 +180,35 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     if (st.iaEnVuelo) throw new PasoOcupado()
     ctx.presupuestoEnCurso = presupuestoEnCursoDe(st.pasos.map((p) => p.respuesta))
     const consumo = consumoPaso(st, d.ahora())
-    const guardar = async (respuesta: RespuestaExplorador, origen: 'mapa' | 'regla'): Promise<Decision> => {
+    const guardar = async (respuesta: RespuestaExplorador | RespuestaLogin, origen: 'mapa' | 'regla'): Promise<Decision> => {
       const leaseHasta = await d.registrar(bd, { huella, inventario, respuesta, origen, errores: null, costeEur: 0, modelo: null, erroresPasoAnterior: erroresPasoAnterior(st.pasos, e.incidencias) })
       return { tipo: 'hecho', salida: { tipo: 'ok', respuesta, origen, huella, leaseHasta } }
     }
     const parada = detectarParada(inventario)
-    if (parada) return guardar(respuestaParar(parada.motivo, `parada determinista: ${parada.senal}`), 'regla')
-    if (esBucle(st.pasos, inventario, huella, e.avancesFallidos)) return guardar(respuestaParar('sin_salida', 'bucle: misma pantalla o avances sin efecto'), 'regla')
+    if (parada) return guardar(parar(parada.motivo, `parada determinista: ${parada.senal}`), 'regla')
+    if (esBucle(st.pasos, inventario, huella, e.avancesFallidos)) return guardar(parar('sin_salida', 'bucle: misma pantalla o avances sin efecto'), 'regla')
     const tope0 = comprobarTopes(consumo, topes, 0)
-    if (tope0) return guardar(respuestaParar('sin_salida', tope0), 'regla')
-    // MEMORIA: lo ya mapeado no vuelve a costar IA.
-    const pantalla = pantallaDeMemoria(await d.mapas(), huella)
-    const plan = pantalla ? planDesdeMapa(pantalla, inventario) : null
-    if (plan && planDeMemoriaUsable(plan, e.conDatosReales)) {
-      const v = validarRespuestaExplorador(plan, ctx)
-      if (v.ok) return guardar(v.respuesta, 'mapa')
+    if (tope0) return guardar(parar('sin_salida', tope0), 'regla')
+    const pasosLogin = st.pasos.filter((x) => esRespuestaLogin(x.respuesta)).length
+    if (login) {
+      // Tope PROPIO de la fase de login (el worker también lo cuenta): ni memoria ni más pantallas que las previstas.
+      if (pasosLogin >= MAX_PANTALLAS_LOGIN) return guardar(parar('sin_salida', `login asistido: ${MAX_PANTALLAS_LOGIN} pantallas sin llegar al portal`), 'regla')
+    } else {
+      // MEMORIA: lo ya mapeado no vuelve a costar IA.
+      const pantalla = pantallaDeMemoria(await d.mapas(), huella)
+      const plan = pantalla ? planDesdeMapa(pantalla, inventario) : null
+      if (plan && planDeMemoriaUsable(plan, e.conDatosReales)) {
+        const v = validarRespuestaExplorador(plan, ctx)
+        if (v.ok) return guardar(v.respuesta, 'mapa')
+      }
     }
-    const prompt = promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo })
-    const caracteres = SYSTEM_EXPLORADOR.length + prompt.length
-    const peor = costeMaximoLlamada(e.modelo, caracteres, MAX_TOKENS_SALIDA_EXPLORADOR)
+    const prompt = login
+      ? promptLoginExplorador({ entrada: e.entrada, inventario, historial: historialCorto(st.pasos.filter((x) => esRespuestaLogin(x.respuesta))), avancesFallidos: e.avancesFallidos, pantallasLogin: pasosLogin })
+      : promptExplorador({ entrada: e.entrada, ramo: e.ramo, inventario, historial: historialCorto(st.pasos), conDatosReales: e.conDatosReales, avancesFallidos: e.avancesFallidos, riesgo: e.riesgo })
+    const caracteres = system.length + prompt.length
+    const peor = costeMaximoLlamada(e.modelo, caracteres, maxTokens)
     const tope1 = comprobarTopes(consumo, topes, peor)
-    if (tope1) return guardar(respuestaParar('sin_salida', tope1), 'regla')
+    if (tope1) return guardar(parar('sin_salida', tope1), 'regla')
     await d.reservarIA(bd)
     return { tipo: 'ia', prompt, caracteres, peor, nAntes: st.pasos.length }
   })
@@ -228,16 +254,28 @@ async function tx2<B>(
       return { tipo: 'conflicto', motivo: st.cerrada ? 'exploracion_cerrada' : 'estado_cambiado' }
     }
     const base = { huella, inventario, origen: 'ia' as const, modelo: e.modelo, costeEur: coste, erroresPasoAnterior: erroresPasoAnterior(st.pasos, e.incidencias) }
+    const login = e.fase === 'login'
+    const parar = login ? respuestaPararLogin : respuestaParar
     if (texto === null) {
-      const respuesta = respuestaParar('ambiguo', 'la IA no respondió')
+      const respuesta = parar('ambiguo', 'la IA no respondió')
       const leaseHasta = await d.registrar(bd, { ...base, respuesta, errores: [`ia_no_disponible: ${fallo}`] })
       return { tipo: 'ok', respuesta, origen: 'ia', huella, leaseHasta }
     }
-    const v = validarRespuestaExplorador(texto, ctx)
-    const respuesta = v.ok ? v.respuesta : respuestaParar('ambiguo', 'respuesta de la IA rechazada por el validador')
-    const leaseHasta = await d.registrar(bd, { ...base, respuesta, errores: v.ok ? null : v.errores })
+    const v = login ? validarRespuestaLogin(texto, { inventario, entrada: e.entrada }) : validarRespuestaExplorador(texto, ctx)
+    // La CONTRASEÑA, una vez por exploración y para siempre (los pasos sobreviven a un reintento del trabajo tras una caída
+    // de infra; el tope del worker es solo en memoria): un segundo `rellenar credencial.contrasena` → parar (bloqueo de cuenta).
+    const segundaContrasena = login && v.ok && contrasenaPedida(v.respuesta) && st.pasos.some((x) => esRespuestaLogin(x.respuesta) && contrasenaPedida(x.respuesta))
+    const respuesta = segundaContrasena ? parar('ambiguo', 'login asistido: la contraseña ya se pidió en esta exploración (no se reenvía)')
+      : v.ok ? v.respuesta : parar('ambiguo', 'respuesta de la IA rechazada por el validador')
+    const leaseHasta = await d.registrar(bd, { ...base, respuesta, errores: segundaContrasena ? ['login_contrasena_repetida'] : v.ok ? null : v.errores })
     return { tipo: 'ok', respuesta, origen: 'ia', huella, leaseHasta }
   })
+}
+
+/** ¿La respuesta (guardada o nueva) pide escribir la contraseña? */
+function contrasenaPedida(r: unknown): boolean {
+  const acc = (r as { acciones?: unknown } | null)?.acciones
+  return Array.isArray(acc) && acc.some((a) => (a as { accion?: unknown; dato?: unknown })?.accion === 'rellenar' && (a as { dato?: unknown }).dato === 'credencial.contrasena')
 }
 
 export type DepsCierre<B> = {

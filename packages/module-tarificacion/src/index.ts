@@ -557,6 +557,32 @@ export {
   type MetaMapa,
 } from './explorador.ts'
 
+// Login ASISTIDO del explorador (14/10/2026): fase propia, solo compañías de `LOGIN_ASISTIDO` y solo en su SSO; la IA solo ve
+// las claves `credencial.*` (nunca valores).
+export {
+  LOGIN_ASISTIDO,
+  MAX_PANTALLAS_LOGIN,
+  MAX_ACCIONES_LOGIN,
+  CLAVE_USUARIO,
+  CLAVE_CONTRASENA,
+  CLAVES_CREDENCIAL,
+  catalogoLoginParaIA,
+  loginAsistidoDe,
+  esUrlSsoLoginAsistido,
+  marcarUsuarioEnTexto,
+  contieneUsuario,
+  marcarCredencialesInventario,
+  inventarioSinCredenciales,
+  validarRespuestaLogin,
+  respuestaPararLogin,
+  esRespuestaLogin,
+  resumenLoginParaMapa,
+  type ClaveCredencial,
+  type AccionLogin,
+  type RespuestaLogin,
+  type ValidacionLogin,
+} from './explorador-login.ts'
+
 // Purga de los datos personales del riesgo al cerrar un trabajo (13/10/2026): lista BLANCA por ramo.
 export {
   ESTADOS_PURGA_RIESGO,

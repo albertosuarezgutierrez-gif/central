@@ -398,3 +398,39 @@ test('🪤 cableado: paso y cierre pasan las incidencias a los errores del ÚLTI
   assert.match(bd, /if \(p\.erroresPasoAnterior\?\.length\) await anotarErroresUltimoPaso/)
   assert.match(bd, /p\.n = \(select max\(n\)[^`]*correduria_id/)
 })
+
+// ─── LOGIN ASISTIDO (14/10/2026) ─────────────────────────────────────────────
+test('🪤 login asistido: fase solo «login» (estricta), solo para Occident; el prompt de login solo da CLAVES y para en OTP', async () => {
+  const r = await import('./tarificador-explorador-reglas.ts')
+  const inv = { marcos: [{ url: 'https://ssoaut.gco.global/my.policy', elementos: [{ tag: 'input', id: 'password', type: 'password', value: 'x-no-sale-x' }] }] }
+  const ok = r.leerPeticionPaso({ trabajoId: UUID, inventario: inv, fase: 'login' })
+  assert.ok(ok.ok && ok.p.fase === 'login')
+  assert.doesNotMatch(JSON.stringify(ok.ok ? ok.p.inventario : null), /x-no-sale-x|"value"/)
+  const normal = r.leerPeticionPaso({ trabajoId: UUID, inventario: inv })
+  assert.ok(normal.ok && normal.p.fase === 'normal')
+  assert.equal(r.leerPeticionPaso({ trabajoId: UUID, inventario: inv, fase: 'otra' }).ok, false, 'una fase desconocida no se lee como la normal')
+  assert.equal(r.faseLoginPermitida('login', 'occident:productos:hogar'), true)
+  for (const e of ['allianz:particulares:hogar', 'allianz:particulares:comunidades', 'mapfre:nueva_produccion:auto', 'inventada']) assert.equal(r.faseLoginPermitida('login', e), false, e)
+  assert.equal(r.faseLoginPermitida('normal', 'allianz:particulares:hogar'), true)
+  const p = r.promptLoginExplorador({ entrada: 'occident:productos:hogar', inventario: ok.ok ? ok.p.inventario : (null as never), historial: [], avancesFallidos: 0, pantallasLogin: 0 })
+  assert.match(p, /credencial\.usuario/)
+  assert.match(p, /credencial\.contrasena/)
+  assert.match(p, /<inventario>[\s\S]*<\/inventario>/)
+  assert.match(r.SYSTEM_EXPLORADOR_LOGIN, /NUNCA ves ni escribes un usuario o una contraseña/)
+  assert.match(r.SYSTEM_EXPLORADOR_LOGIN, /parar otp/)
+  assert.match(r.SYSTEM_EXPLORADOR_LOGIN, /SOLO en un input de tipo password/)
+  // La fase normal no se entera: su prompt no nombra las claves de credencial.
+  assert.doesNotMatch(SYSTEM_EXPLORADOR, /credencial\./)
+  assert.doesNotMatch(promptExplorador({ entrada: 'occident:productos:hogar', ramo: 'hogar', inventario: ok.ok ? ok.p.inventario : (null as never), historial: [], conDatosReales: false, avancesFallidos: 0 }), /credencial\./)
+  // Ruta: la puerta por entrada va ANTES de la IA (y del lock).
+  const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'paso', 'route.ts'), 'utf8')
+  const puerta = f.indexOf('faseLoginPermitida(p.fase, e.entrada)')
+  assert.ok(puerta > 0 && puerta < f.indexOf('conLockExploracion(e, fn)'), 'la fase de login se autoriza por entrada antes de todo')
+})
+
+test('🪤 cierre: los pasos de login no son pantallas del mapa, pero su estructura (sin valores) va a los huecos', () => {
+  const f = readFileSync(path.join(aqui, '..', 'app', 'api', 'tarificador', 'explorador', 'cierre', 'route.ts'), 'utf8')
+  assert.match(f, /esRespuestaLogin\(x\.respuesta\)/)
+  assert.match(f, /resumenLoginParaMapa\(x\.n, inv\)/)
+  assert.match(f, /mapa\.huecos\.push\(\.\.\.huecosLogin\)/)
+})
