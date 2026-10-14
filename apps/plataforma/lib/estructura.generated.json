@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T06:43:04Z",
+  "generadoEn": "2026-10-14T08:39:17Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2203,11 +2203,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 241
+        "evidencias": 244
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 139
+        "evidencias": 142
       },
       "asegura-web": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 186
+        "evidencias": 188
       },
       "rrhh": {
         "estado": "no",
@@ -2311,11 +2311,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 39
+        "evidencias": 40
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 111
+        "evidencias": 114
       },
       "asegura-web": {
         "estado": "usado",
@@ -4131,6 +4131,7 @@
       "/api/operador/companias/contacto/[id]",
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
+      "/api/operador/correo/evento",
       "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
@@ -5207,6 +5208,7 @@
       "/api/correduria/companias/telefono",
       "/api/correduria/contactos-movil",
       "/api/correduria/contador",
+      "/api/correduria/correos-compania",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
       "/api/correduria/direccion-confirmar",
@@ -5797,6 +5799,7 @@
       "seguros.corredurias",
       "seguros.correo_envio",
       "seguros.correo_evento",
+      "seguros.correo_evento_entrante",
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
@@ -6896,7 +6899,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1696,
+    "apis": 1698,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
