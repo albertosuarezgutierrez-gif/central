@@ -2102,8 +2102,8 @@ h1 em {
 .marca-palabra-grande { height: 32px; max-width: 100%; }
 
 /* ── Pie legal ────────────────────────────────────────────────────────────
- * Sale en TODAS las pantallas, la de entrada incluida: el art. 19 de la Ley
- * 16/2018 pide que el cliente identifique al mediador antes de darle un dato, y
+ * Sale en TODAS las pantallas, la de entrada incluida: el art. 173 del
+ * RDL 3/2020 pide que el cliente identifique al mediador antes de darle un dato, y
  * la única pantalla que ve quien aún no ha entrado es la que le pide el correo.
  * Los enlaces van a 44 px de alto pulsable — se leen desde el móvil, que es
  * desde donde entra casi todo el mundo. */
@@ -2305,7 +2305,7 @@ h1 em {
    dos dedos de scroll del número al que se refiere. */
 .canal-via-horario { flex-basis: 100%; font-size: 12px; color: var(--muted); }
 
-/* Nota legal de la pantalla de entrada (art. 19 LDS). Pequeña pero legible:
+/* Nota legal de la pantalla de entrada (art. 173 RDL 3/2020). Pequeña pero legible:
    un texto que nadie puede leer no informa a nadie, y esta línea es lo que
    sostiene la acreditación que se guarda en `portal_consentimiento`. */
 .nota-legal {
@@ -2924,7 +2924,7 @@ h1 em {
      El armazón NO va al papel: la barra se llevaba 64 px CON EL INTERRUPTOR
      DE TEMA impreso, y el pie legal 131 px con cuatro enlaces muertos —
      entre los dos, ~195 px y una segunda página. La identificación del
-     mediador que pide el art. 19 se da EN PANTALLA, antes de que nadie
+     mediador que pide el art. 173 RDL 3/2020 se da EN PANTALLA, antes de que nadie
      escriba su correo; en el papel la pone el masthead con su clave DGSFP,
      así que no se pierde. */
   body:has(> .hoja) {
@@ -2986,7 +2986,7 @@ h1 em {
    * el modo de fallo barato.
    *
    * La ficha de mediador SÍ se queda: no es un dato del cliente, es la
-   * identificación de la correduría (art. 19), y es lo que hace que el papel
+   * identificación de la correduría (art. 173 RDL 3/2020), y es lo que hace que el papel
    * parezca de una firma regulada y no una pegatina. */
   .hoja > * {
     display: none !important;

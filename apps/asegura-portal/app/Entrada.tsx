@@ -236,8 +236,8 @@ export function Entrada() {
           {/* Esta línea NO es adorno legal: es lo que hace verdadera la fila
               `lds_art19` que el canje escribe en `portal_consentimiento`. Si se
               quita, el registro pasa a acreditar algo que no ocurrió. Va DEBAJO
-              del botón y antes de irse de la pantalla, que es donde el art. 19
-              LDS pide que esté: antes de operar, no después. */}
+              del botón y antes de irse de la pantalla, que es donde el art. 173
+              RDL 3/2020 pide que esté: antes de operar, no después. */}
           <p className="nota-legal">
             Al entrar das por leída la{' '}
             <a href="/legal/mediador" target="_blank" rel="noreferrer noopener">
