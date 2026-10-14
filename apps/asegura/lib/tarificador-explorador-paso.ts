@@ -14,7 +14,9 @@ import {
   detectarBucle,
   detectarParada,
   huellaPantalla,
+  huellaRelleno,
   planDesdeMapa,
+  presupuestoEnCursoDe,
   respuestaParar,
   topesExplorador,
   validarRespuestaExplorador,
@@ -41,7 +43,8 @@ export class PasoOcupado extends Error {
 
 /** Lo que se lee de la exploración DENTRO del lock. */
 export type EstadoPaso = {
-  pasos: PasoGuardado[]
+  /** `inventario` (ya redactado, el guardado): de él sale la huella de RELLENO para no confundir progreso con bucle. */
+  pasos: (PasoGuardado & { inventario?: InventarioDom })[]
   cerrada: boolean
   /** Hay una llamada de IA reservada y no caducada (`ia_en_vuelo_hasta > now()`). */
   iaEnVuelo: boolean
@@ -112,12 +115,26 @@ export function consumoPaso(st: EstadoPaso, ahora: Date): { llamadas: number; ac
   }
 }
 
+/**
+ * ¿Bucle? Misma huella estructural Y mismo relleno (refs con valor) que los pasos anteriores (14/10/2026: Allianz Hogar
+ * paró por FALSO bucle a la 3.ª huella igual mientras cada lote rellenaba más campos). Paso guardado sin inventario o sin
+ * `conValor` → relleno desconocido = «sin cambio» (lo conservador). Pura.
+ */
+export function esBucle(pasos: EstadoPaso['pasos'], inventario: InventarioDom, huella: string, avancesFallidos: number): boolean {
+  return detectarBucle(pasos.map((x) => x.huella), huella, avancesFallidos, {
+    anteriores: pasos.map((x) => (x.inventario ? huellaRelleno(x.inventario) : null)),
+    actual: huellaRelleno(inventario),
+  })
+}
+
 /** Un paso del explorador. Lanza `PasoOcupado` (→ 409) si el lock o la IA están tomados. */
 export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<SalidaPaso> {
   const inventario = e.inventario
   const huella = huellaPantalla(inventario)
   // Con datos reales, el riesgo entra en la validación: elegir/marcar solo sobre uso/régimen/tipo con valor conocido.
-  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null }
+  // `presupuestoEnCurso` (guardado del presupuesto, 14/10/2026) sale de los pasos YA guardados: se fija dentro del lock (tx1) y
+  // tx2 solo registra si nada cambió (mismo nº de pasos), así que vale para las dos.
+  const ctx: ContextoValidacion = { inventario, ramo: e.ramo, entrada: e.entrada, datosReales: e.conDatosReales ? { riesgo: e.riesgo ?? null } : null, presupuestoEnCurso: false }
   const topes = topesExplorador(d.env)
 
   type Decision = { tipo: 'hecho'; salida: SalidaPaso } | { tipo: 'ia'; prompt: string; caracteres: number; peor: number; nAntes: number }
@@ -126,6 +143,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     const st = await d.leer(bd)
     if (st.cerrada) return { tipo: 'hecho', salida: { tipo: 'conflicto', motivo: 'exploracion_cerrada' } }
     if (st.iaEnVuelo) throw new PasoOcupado()
+    ctx.presupuestoEnCurso = presupuestoEnCursoDe(st.pasos.map((p) => p.respuesta))
     const consumo = consumoPaso(st, d.ahora())
     const guardar = async (respuesta: RespuestaExplorador, origen: 'mapa' | 'regla'): Promise<Decision> => {
       const leaseHasta = await d.registrar(bd, { huella, inventario, respuesta, origen, errores: null, costeEur: 0, modelo: null })
@@ -133,7 +151,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     }
     const parada = detectarParada(inventario)
     if (parada) return guardar(respuestaParar(parada.motivo, `parada determinista: ${parada.senal}`), 'regla')
-    if (detectarBucle(st.pasos.map((x) => x.huella), huella, e.avancesFallidos)) return guardar(respuestaParar('sin_salida', 'bucle: misma pantalla o avances sin efecto'), 'regla')
+    if (esBucle(st.pasos, inventario, huella, e.avancesFallidos)) return guardar(respuestaParar('sin_salida', 'bucle: misma pantalla o avances sin efecto'), 'regla')
     const tope0 = comprobarTopes(consumo, topes, 0)
     if (tope0) return guardar(respuestaParar('sin_salida', tope0), 'regla')
     // MEMORIA: lo ya mapeado no vuelve a costar IA.

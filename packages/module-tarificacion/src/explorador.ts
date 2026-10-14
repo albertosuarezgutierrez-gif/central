@@ -16,6 +16,7 @@
 // en el portal: solo claves del catálogo y valores de opciones que YA están en el inventario.
 
 import { pareceEmision } from './guard-emision.ts'
+import { clasificarAccionPortal, referenciaPresupuestoValida } from './acciones-portal.ts'
 import {
   MAX_TITULOS_MARCO,
   pareceDatoPersonalInventario,
@@ -372,6 +373,8 @@ export const DETALLES_FIN_EXPLORACION = [
   'repintados_seguidos',
   /** FRONTERA DE EMISIÓN: apareció un campo de cuenta bancaria (IBAN, CCC, BIC…). Fin correcto, no fallo (14/10/2026). */
   'frontera_cuenta_bancaria',
+  /** Al GUARDAR el presupuesto el portal abrió un diálogo (confirm/alert): el robot no confirma; se para. */
+  'guardado_con_dialogo',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
 
@@ -406,7 +409,12 @@ function motivoRechazadoParaLog(v: unknown): string {
   return /^[a-z_ ]{1,40}$/.test(t) && !pareceDatoPersonalInventario(t) ? `«${t}»` : `(texto libre de ${v.length} car.)`
 }
 
-export const EFECTOS_AVANCE = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado'] as const
+/**
+ * `guardar_presupuesto` (14/10/2026): SOLO para un botón de la categoría «guardar presupuesto» de la lista única
+ * (acciones-portal.ts: Grabar, Guardar, Archivar, Descargar, Imprimir, Generar PDF) y SOLO en pantalla de resultado
+ * (`bloqueoGuardadoPresupuesto`). Ningún otro efecto puede pulsar esos botones.
+ */
+export const EFECTOS_AVANCE = ['siguiente_pantalla', 'calcular', 'abrir_seccion', 'ver_resultado', 'guardar_presupuesto'] as const
 export const CONFIANZAS = ['alta', 'media', 'baja'] as const
 export const TIPOS_PANTALLA = ['formulario', 'seleccion_producto', 'resultado', 'otro'] as const
 export type Confianza = (typeof CONFIANZAS)[number]
@@ -416,6 +424,7 @@ export type Accion =
   | { accion: 'elegir'; ref: string; opcion: { valor: string } }
   | { accion: 'marcar'; ref: string }
   | { accion: 'avanzar'; ref: string; efectoEsperado: (typeof EFECTOS_AVANCE)[number]; confianza: 'alta' | 'media' }
+  /** `refsPrecio` vacío SOLO tras guardar el presupuesto, en una pantalla que ya no enseña importes. */
   | { accion: 'terminar'; refsPrecio: string[] }
   | { accion: 'parar'; motivo: MotivoParar }
 
@@ -451,6 +460,17 @@ export type ContextoValidacion = {
    * (`valorVisibleIA`): lo demás lo decidiría la IA sin dato junto a un NIF real.
    */
   datosReales: { riesgo: unknown } | null
+  /**
+   * `true` si en un paso ANTERIOR de esta exploración ya se pulsó un `guardar_presupuesto` (el precio se vio allí): habilita
+   * un segundo guardar_presupuesto (Descargar/Imprimir) y `terminar` sin importes en la pantalla posterior al guardado.
+   * Por defecto `false` (lo calcula `presupuestoEnCursoDe` sobre los pasos validados anteriores).
+   */
+  presupuestoEnCurso?: boolean
+}
+
+/** ¿Algún paso anterior (validado) pulsó un `guardar_presupuesto`? Para {@link ContextoValidacion.presupuestoEnCurso}. */
+export function presupuestoEnCursoDe(respuestas: readonly (RespuestaExplorador | null | undefined)[]): boolean {
+  return respuestas.some((r) => !!r && r.acciones.some((a) => a.accion === 'avanzar' && a.efectoEsperado === 'guardar_presupuesto'))
 }
 
 export type ValidacionRespuesta = { ok: true; respuesta: RespuestaExplorador } | { ok: false; errores: string[] }
@@ -551,12 +571,50 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   // Un onclick recortado puede esconder la llamada de emisión en la parte que no llegó.
   if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
   const desc = descripcionesElemento(el)
-  // Emisión dura (emitir, contratar, formalizar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…): siempre.
-  if (desc.some((d) => pareceEmision(d, { permitirAceptar: true }))) return 'boton_de_emision'
+  const cat = clasificarAccionPortal(desc)
+  // Emisión dura (patrón del guard: emitir, contratar, archivar, proyecto ampliado, pago fraccionado, validar_aceptar…; y la
+  // categoría EMISIÓN de la lista única: firmar, pagar, tramitar, confirmar, domiciliar…): siempre.
+  if (desc.some((d) => pareceEmision(d, { permitirAceptar: true })) || cat.emision) return 'boton_de_emision'
   // «Aceptar» (y lo que solo cae por él): solo el autorizado.
   if (desc.some((d) => pareceEmision(d)) && !esAvanceAutorizado(entrada, el, marco)) return 'aceptar_no_autorizado'
-  // Nada de «grabar», «guardar», «firmar», «pagar», «confirmar»: no tarifican y pueden comprometer algo.
-  if (desc.some((d) => /grabar|guardar|firm[ae]|pagar|confirmar|enviar|imprimir|descargar|salir|cerrar sesion|desconect/.test(plano(d)))) return 'boton_prohibido'
+  // Lista única, categoría PROHIBIDA (enviar, salir, proyecto ampliado…).
+  if (cat.prohibida) return 'boton_prohibido'
+  // GUARDAR PRESUPUESTO (grabar, guardar, imprimir, descargar…): nunca como navegación; solo con `efectoEsperado:
+  // 'guardar_presupuesto'` en resultado (`bloqueoGuardadoPresupuesto`).
+  if (cat.guardar) return 'guardar_solo_en_resultado'
+  return null
+}
+
+export type PantallaGuardado = {
+  /** `pantalla.tipo` de la respuesta que lo pide. */
+  tipoPantalla: RespuestaExplorador['pantalla']['tipo']
+  /** El inventario de ESTA pantalla tiene importes (precio a la vista). */
+  hayImportes: boolean
+  /** Ya se guardó antes en esta exploración (`presupuestoEnCursoDe`). */
+  presupuestoEnCurso: boolean
+}
+
+/**
+ * GUARDAR PRESUPUESTO (Alberto, 13-14/10/2026). `null` = el botón se puede pulsar con `efectoEsperado: 'guardar_presupuesto'`;
+ * si no, por qué no. Exige, sin atajos:
+ *   1. descripción visible entera y onclick no recortado (como `bloqueoAvance`);
+ *   2. NADA de emisión: el patrón del guard con «Aceptar» bloqueado y solo Archivar abierto (`permitirGuardarPresupuesto`),
+ *      y ninguna acción de las categorías EMISIÓN o PROHIBIDA de la lista única (un «Guardar y emitir» cae);
+ *   3. que sea de la categoría GUARDAR PRESUPUESTO;
+ *   4. pantalla de RESULTADO con importes a la vista (o, tras un guardado previo en esta exploración, la pantalla que sigue).
+ * El worker lo repite sobre el control VIVO (`pulsarGuardadoPresupuesto`) antes de pulsar.
+ */
+export function bloqueoGuardadoPresupuesto(el: ElementoInventario, p: PantallaGuardado): string | null {
+  if (![el.texto, el.ariaLabel].some((d) => typeof d === 'string' && d.trim() !== '' && !truncado(d))) return 'sin_descripcion_completa'
+  if (typeof el.onclick === 'string' && truncado(el.onclick)) return 'onclick_truncado'
+  const desc = descripcionesElemento(el)
+  if (desc.some((d) => pareceEmision(d, { permitirGuardarPresupuesto: true }))) return 'boton_de_emision'
+  const cat = clasificarAccionPortal(desc)
+  if (cat.emision) return 'boton_de_emision'
+  if (cat.prohibida) return 'boton_prohibido'
+  if (!cat.guardar) return 'no_es_guardar_presupuesto'
+  if (p.tipoPantalla !== 'resultado') return 'guardar_fuera_de_resultado'
+  if (!p.hayImportes && !p.presupuestoEnCurso) return 'guardar_sin_precio'
   return null
 }
 
@@ -629,7 +687,14 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         return
       }
       if (tipo === 'terminar') {
-        if (importes.size === 0) return void errores.push(`${donde}: terminar sin importes en la pantalla`)
+        if (importes.size === 0) {
+          // Tras GUARDAR el presupuesto la pantalla puede no enseñar ya el precio: terminar sin refs, solo entonces.
+          if (ctx.presupuestoEnCurso === true && Array.isArray(a.refsPrecio) && a.refsPrecio.length === 0) {
+            acciones.push({ accion: 'terminar', refsPrecio: [] })
+            return
+          }
+          return void errores.push(`${donde}: terminar sin importes en la pantalla`)
+        }
         const rp = Array.isArray(a.refsPrecio) ? a.refsPrecio : null
         if (!rp || rp.length === 0 || rp.length > 10 || !rp.every((x) => typeof x === 'string' && importes.has(x))) return void errores.push(`${donde}: refsPrecio tiene que señalar importes del inventario`)
         acciones.push({ accion: 'terminar', refsPrecio: [...new Set(rp as string[])] })
@@ -664,7 +729,9 @@ export function validarRespuestaExplorador(entrada: unknown, ctx: ContextoValida
         const efecto = EFECTOS_AVANCE.find((x) => x === a.efectoEsperado)
         if (!efecto) return void errores.push(`${donde}: efectoEsperado fuera de lista`)
         if (a.confianza !== 'alta' && a.confianza !== 'media') return void errores.push(`${donde}: avanzar exige confianza alta o media`)
-        const bloqueo = bloqueoAvance(ctx.entrada, el, marco)
+        const bloqueo = efecto === 'guardar_presupuesto'
+          ? bloqueoGuardadoPresupuesto(el, { tipoPantalla: pantalla.tipo, hayImportes: importes.size > 0, presupuestoEnCurso: ctx.presupuestoEnCurso === true })
+          : bloqueoAvance(ctx.entrada, el, marco)
         if (bloqueo) return void errores.push(`${donde}: ${bloqueo}`)
         acciones.push({ accion: 'avanzar', ref, efectoEsperado: efecto, confianza: a.confianza })
       }
@@ -823,15 +890,60 @@ export function huellaPantalla(inv: InventarioDom): string {
   return huellaTexto(partes.sort().join('\n'))
 }
 
+/**
+ * Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el
+ * valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro de la pantalla (cada lote rellena más
+ * campos). `null` = no se sabe (ningún control trae `conValor`: inventario de un worker antiguo).
+ */
+export function huellaRelleno(inv: InventarioDom): string | null {
+  let conDato = false
+  const refs: string[] = []
+  for (const m of inv.marcos) {
+    for (const e of m.elementos) {
+      if (typeof e.conValor !== 'boolean' || !e.ref) continue
+      conDato = true
+      if (e.conValor) refs.push(e.ref)
+    }
+  }
+  return conDato ? huellaTexto(refs.sort().join(';')) : null
+}
+
 export const MAX_HUELLA_REPETIDA = 3
 export const MAX_AVANCES_FALLIDOS = 2
+/**
+ * Techo de la misma pantalla seguida AUNQUE el relleno cambie (14/10/2026): un relleno que oscila (el portal borra lo que
+ * se escribe) no puede sostener el bucle hasta los topes de €/pasos.
+ */
+export const MAX_HUELLA_REPETIDA_CON_PROGRESO = 8
 
-/** `huellas` = las de los pasos ANTERIORES, en orden. Bucle = la actual sería la 3.ª seguida igual, o 2 avances sin efecto. */
-export function detectarBucle(huellas: readonly string[], actual: string, avancesFallidos: number): boolean {
+/**
+ * `huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la
+ * misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRelleno`). Sin `rellenos`, o con un relleno
+ * `null` (no se sabe), cuenta como «sin cambio» (lo conservador: parar). Además, {@link MAX_HUELLA_REPETIDA_CON_PROGRESO}
+ * pantallas seguidas con la misma huella son bucle aunque el relleno cambie (14/10/2026: Allianz Hogar paró por FALSO
+ * bucle mientras cada paso rellenaba más campos).
+ */
+export function detectarBucle(
+  huellas: readonly string[],
+  actual: string,
+  avancesFallidos: number,
+  rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },
+): boolean {
   if (avancesFallidos >= MAX_AVANCES_FALLIDOS) return true
+  const mismoRelleno = (i: number): boolean => {
+    if (!rellenos || rellenos.actual === null) return true
+    const r = rellenos.anteriores[i]
+    return r === null || r === undefined || r === rellenos.actual
+  }
   let seguidas = 1
-  for (let i = huellas.length - 1; i >= 0 && huellas[i] === actual; i--) seguidas++
-  return seguidas >= MAX_HUELLA_REPETIDA
+  let sinProgreso = 1
+  let progresoCortado = false
+  for (let i = huellas.length - 1; i >= 0 && huellas[i] === actual; i--) {
+    seguidas++
+    if (!progresoCortado && mismoRelleno(i)) sinProgreso++
+    else progresoCortado = true
+  }
+  return sinProgreso >= MAX_HUELLA_REPETIDA || seguidas >= MAX_HUELLA_REPETIDA_CON_PROGRESO
 }
 
 // ─── Topes ───────────────────────────────────────────────────────────────────
@@ -922,12 +1034,31 @@ export type PantallaMapaExploracion = {
   titulo: string | null
   tipo: RespuestaExplorador['pantalla']['tipo']
   campos: CampoMapaExploracion[]
-  avance: { selector: SelectorMapa; marco: string; efecto: (typeof EFECTOS_AVANCE)[number]; tipo: 'navegacion' | 'aceptar_autorizado' } | null
+  avance: { selector: SelectorMapa; marco: string; efecto: (typeof EFECTOS_AVANCE)[number]; tipo: 'navegacion' | 'aceptar_autorizado' | 'guardar_presupuesto' } | null
   /** Etiquetas de los importes de la pantalla de resultado. */
   importes: string[]
 }
 
-export const EFECTOS_EN_PORTAL = ['posible_proyecto_guardado', 'ninguno_visto'] as const
+export const EFECTOS_EN_PORTAL = ['posible_proyecto_guardado', 'presupuesto_guardado', 'ninguno_visto'] as const
+
+/**
+ * Lo que dejó el GUARDADO del presupuesto (14/10/2026). Tres estados, nunca «no hay» por no haberlo mirado:
+ * `guardado` = se pulsó un guardar_presupuesto; `referencia` = la que enseñó el portal (`null` = no se vio); `pdf` = `true`
+ * descargado · `false` intentado y no llegó · `null` no se intentó (sin guardado).
+ */
+export type PresupuestoMapa = { guardado: boolean; referencia: string | null; pdf: boolean | null }
+
+/** Valida un {@link PresupuestoMapa} que llega por el cable. `null` si no tiene la forma (o la referencia parece un dato personal). */
+export function leerPresupuestoMapa(v: unknown): PresupuestoMapa | null {
+  const o = obj(v)
+  if (!o || Object.keys(o).some((k) => !['guardado', 'referencia', 'pdf'].includes(k))) return null
+  if (typeof o.guardado !== 'boolean') return null
+  if (!(o.pdf === null || typeof o.pdf === 'boolean')) return null
+  if (!(o.referencia === null || referenciaPresupuestoValida(o.referencia))) return null
+  // Sin guardado no hay ni referencia ni PDF de guardado.
+  if (!o.guardado && (o.referencia !== null || o.pdf !== null)) return null
+  return { guardado: o.guardado, referencia: o.referencia as string | null, pdf: o.pdf as boolean | null }
+}
 
 export type MapaExploracion = {
   version: 1
@@ -944,6 +1075,8 @@ export type MapaExploracion = {
   redNoGet: string[]
   coste: { llamadas: number; eurEstimado: number }
   motivoFin: string | null
+  /** Solo si el worker lo informó en el cierre (mapas anteriores al 14/10/2026 no lo llevan). */
+  presupuesto?: PresupuestoMapa
 }
 
 const RE_ID_GENERADO = /^(?:mat-|cdk-|ng-|ui-id-|react-|ember|j_id|__)|\d{3,}|[0-9a-f]{8}-[0-9a-f]{4}/i
@@ -983,6 +1116,7 @@ export type MetaMapa = {
   redNoGet: string[]
   coste: MapaExploracion['coste']
   motivoFin: string | null
+  presupuesto?: PresupuestoMapa | null
 }
 
 /**
@@ -1012,7 +1146,8 @@ export function construirMapa(meta: MetaMapa, pasos: readonly PasoExploracion[])
     for (const a of r.acciones) {
       if (a.accion === 'parar') continue
       if (a.accion === 'terminar') {
-        resultado = { alcanzado: true, huella: h }
+        // `terminar` sin refs (tras guardar, sin importes a la vista) no mueve el resultado ya alcanzado.
+        if (a.refsPrecio.length > 0 || !resultado.alcanzado) resultado = { alcanzado: true, huella: h }
         for (const ref of a.refsPrecio) {
           const imp = p.inventario.marcos.flatMap((m) => m.importes ?? []).find((i) => i.ref === ref)
           importes.push(imp?.etiqueta ?? ref)
@@ -1028,7 +1163,10 @@ export function construirMapa(meta: MetaMapa, pasos: readonly PasoExploracion[])
         continue
       }
       if (a.accion === 'avanzar') {
-        avance = { selector: sel, marco: rutaMarco(hit.marco.url), efecto: a.efectoEsperado, tipo: pareceEmision(descripcionesElemento(hit.el).join(' ')) ? 'aceptar_autorizado' : 'navegacion' }
+        const tipo = a.efectoEsperado === 'guardar_presupuesto' ? 'guardar_presupuesto' as const : pareceEmision(descripcionesElemento(hit.el).join(' ')) ? 'aceptar_autorizado' as const : 'navegacion' as const
+        avance = { selector: sel, marco: rutaMarco(hit.marco.url), efecto: a.efectoEsperado, tipo }
+        // Se guardó el presupuesto en esta pantalla: aquí estaba el precio.
+        if (tipo === 'guardar_presupuesto' && !resultado.alcanzado) resultado = { alcanzado: true, huella: h }
         continue
       }
       const m = confianzaDe.get(a.ref)
@@ -1048,6 +1186,7 @@ export function construirMapa(meta: MetaMapa, pasos: readonly PasoExploracion[])
     version: 1, entrada: meta.entrada, compania: meta.compania, producto: meta.producto, modelo: meta.modelo, fecha: meta.fecha,
     pantallas, resultado, huecos, efectosEnPortal: meta.efectosEnPortal, redNoGet: meta.redNoGet.slice(0, 50), coste: meta.coste,
     motivoFin: meta.motivoFin,
+    ...(meta.presupuesto ? { presupuesto: meta.presupuesto } : {}),
   }
 }
 
@@ -1084,11 +1223,14 @@ export function validarMapa(v: unknown): MapaExploracion | null {
     }
     if (p.avance !== null) {
       const a = obj(p.avance)
-      if (!a || !selOk(a.selector) || typeof a.marco !== 'string' || !EFECTOS_AVANCE.includes(a.efecto as never) || !['navegacion', 'aceptar_autorizado'].includes(a.tipo as string)) return null
+      if (!a || !selOk(a.selector) || typeof a.marco !== 'string' || !EFECTOS_AVANCE.includes(a.efecto as never) || !['navegacion', 'aceptar_autorizado', 'guardar_presupuesto'].includes(a.tipo as string)) return null
+      // Un avance de guardado solo con su efecto, y al revés.
+      if ((a.tipo === 'guardar_presupuesto') !== (a.efecto === 'guardar_presupuesto')) return null
     }
   }
   if (!m.efectosEnPortal.every((e) => EFECTOS_EN_PORTAL.includes(e as never))) return null
   if (!m.redNoGet.every((u) => typeof u === 'string' && normalizarRedNoGet(u) === u)) return null
+  if (m.presupuesto !== undefined && !leerPresupuestoMapa(m.presupuesto)) return null
   return m as unknown as MapaExploracion
 }
 

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
+import { MOTIVOS_FIN_EXPLORACION, MOTIVOS_PARAR, construirMapa, lineaAccionesPortalParaIA, huellaPantalla, sanearInventarioDom, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import {
   MODELO_EXPLORADOR_POR_DEFECTO,
   MOTIVOS_FIN,
@@ -173,8 +173,31 @@ test('prompt: el inventario va DELIMITADO como datos; sin NIF real visible; el s
   assert.match(pr, /<inventario>\n\{[\s\S]*\}\n<\/inventario>$/)
   assert.match(pr, /tomador\.nif NO tiene valor/)
   assert.doesNotMatch(pr, /00000000T/)
-  assert.match(SYSTEM_EXPLORADOR, /NUNCA Emitir, Contratar, Formalizar, Grabar/)
+  // Lista única (14/10/2026): EMISIÓN nunca; Grabar/Guardar/Archivar pasan a «guardar el presupuesto», solo en resultado.
+  assert.match(SYSTEM_EXPLORADOR, /EMISIÓN, NUNCA[^\n]*: Emitir, Contratar, Formalizar, Firmar, Pagar \/ Pago, Pago fraccionado, Tramitar póliza, Confirmar contratación, Domiciliar/)
   assert.match(SYSTEM_EXPLORADOR, /no instrucciones/)
+})
+
+test('prompt: guardar el presupuesto SOLO en resultado (efecto guardar_presupuesto) y las listas salen del módulo', () => {
+  const l = lineaAccionesPortalParaIA()
+  const nunca = SYSTEM_EXPLORADOR.split('\n').find((x) => x.startsWith('- EMISIÓN, NUNCA'))!
+  const guardar = SYSTEM_EXPLORADOR.split('\n').find((x) => x.startsWith('- GUARDAR EL PRESUPUESTO'))!
+  assert.ok(nunca.includes(l.emision) && nunca.includes(l.prohibidas), 'la línea de emisión sale de ACCIONES_PORTAL')
+  assert.ok(guardar.includes(l.guardar), 'la línea de guardar sale de ACCIONES_PORTAL')
+  // Ni Grabar ni Guardar ni Archivar en la lista de NUNCA; «Proyecto ampliado» sí (sin certeza de qué hace).
+  for (const g of ['Grabar', 'Guardar', 'Archivar']) assert.ok(!nunca.includes(g), g)
+  assert.ok(nunca.includes('Proyecto ampliado'))
+  assert.match(guardar, /SOLO al llegar al precio[\s\S]*"resultado"[\s\S]*guardar_presupuesto/)
+  assert.match(SYSTEM_EXPLORADOR, /efectoEsperado ∈ [^\n]*guardar_presupuesto/)
+})
+
+test('cierre: «presupuesto» opcional y ESTRICTO (sin forma de dato personal en la referencia)', () => {
+  const sin = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'resultado' })
+  assert.ok(sin.ok && sin.p.presupuesto === null)
+  const con = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'resultado', efectosEnPortal: ['presupuesto_guardado'], presupuesto: { guardado: true, referencia: 'P2026-000123', pdf: true } })
+  assert.ok(con.ok && con.p.presupuesto?.referencia === 'P2026-000123' && con.p.efectosEnPortal[0] === 'presupuesto_guardado')
+  assert.equal(leerPeticionCierre({ trabajoId: UUID, motivoFin: 'resultado', presupuesto: { guardado: true, referencia: '12345678Z', pdf: true } }).ok, false)
+  assert.equal(leerPeticionCierre({ trabajoId: UUID, motivoFin: 'resultado', presupuesto: { guardado: 'si' } }).ok, false)
 })
 
 test('prompt: pide el motivo en UNA frase de ≤200 caracteres (13/10/2026: un motivo largo tiró el paso 1 de Hogar)', () => {
@@ -331,4 +354,24 @@ test('motivo_fin: una sola lista; incluye todos los de parar (ambiguo incluido) 
 test('prompt: botón de avance deshabilitado → rellenar sin avanzar, no parar (exploración 313a04d1: SIGUIENTE deshabilitado)', () => {
   assert.match(SYSTEM_EXPLORADOR, /deshabilitado porque faltan campos, manda SOLO los rellenar/)
   assert.match(SYSTEM_EXPLORADOR, /EXACTAMENTE uno de estos códigos, sin más texto/)
+})
+
+test('🪤 campos INVÁLIDOS (14/10/2026): el inventario los marca (solo el booleano, solo en controles), viajan a la IA y el prompt manda rellenarlos antes de avanzar', () => {
+  const inv = sanearInventarioDom({
+    marcos: [{
+      url: 'https://portal.example.test/alta', titulos: [{ texto: 'Datos', tag: 'h2' }],
+      elementos: [
+        { tag: 'input', id: 'anio', type: 'text', conValor: false, requerido: true, invalido: true },
+        { tag: 'input', id: 'm2', type: 'text', conValor: true, invalido: false },
+        { tag: 'button', id: 'sig', texto: 'Siguiente', invalido: true },
+      ],
+    }],
+  }, undefined, { refs: true })!
+  const els = inv.marcos[0].elementos
+  assert.equal(els[0].invalido, true)
+  assert.equal(els[1].invalido, undefined)
+  assert.equal(els[2].invalido, undefined, 'un botón no es un campo')
+  const prompt = promptExplorador({ entrada: 'allianz:particulares:hogar', ramo: 'hogar', inventario: inv, historial: [], conDatosReales: false, avancesFallidos: 0 })
+  assert.match(prompt, /"invalido":true/)
+  assert.match(SYSTEM_EXPLORADOR, /"invalido"[^\n]*requerido[^\n]*NO avances/)
 })

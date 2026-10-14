@@ -2,7 +2,7 @@
 
 > Qué sabemos de cada portal de compañía y cómo se trabaja con él. Sin datos personales ni valores reales:
 > solo nombres de pantalla y claves de catálogo. Estado vivo, DOM detallado y plan: `docs/TARIFICADOR-RPA.md`.
-> Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 13/10/2026.
+> Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 14/10/2026.
 
 > **Crear el bot de una compañía nueva: lee primero `docs/tarificador/MANUAL-NUEVO-BOT.md`.**
 
@@ -40,6 +40,27 @@
   - **«Emisión» como sustantivo de menú:** excepciones EXACTAS y por compañía en `ENLACES_ENTRADA_AUTORIZADOS` (`guard.ts`),
     solo en la fase de ENTRADA (nunca en el bucle IA). Un bloqueo del guard lleva el texto exacto del elemento en el
     mensaje: se desbloquea uno a uno, con OK de Alberto.
+- **Guardar el presupuesto SÍ; emitir NO (Alberto, 13-14/10/2026: «el bot tiene que hacer absolutamente todo, menos la
+  emisión […] el presupuesto hay que guardarlo; lo guardas con la referencia y ahí te descarga el presupuesto»).**
+  - Lista ÚNICA en `packages/module-tarificacion/src/acciones-portal.ts` (`ACCIONES_PORTAL`): de ella salen el prompt del
+    explorador, el validador y el guard del worker. Tres categorías:
+    - **Emisión — prohibida siempre:** Emitir, Contratar, Formalizar, Firmar, Pagar/Pago, Pago fraccionado, Tramitar póliza,
+      Confirmar contratación, Domiciliar, Suplemento, Anular/Baja, `validar_aceptar`/`btnAccept`.
+    - **Prohibida (no emite, pero no se pulsa):** **Proyecto ampliado** (no hay certeza de que solo enseñe/descargue: ePAC lo
+      pone junto a Archivar/Emitir; se abrirá cuando Alberto confirme qué hace), Enviar, Salir/Cerrar sesión.
+    - **Guardar presupuesto — permitida SOLO en la pantalla de resultado (con el precio a la vista) y con
+      `efectoEsperado: 'guardar_presupuesto'`:** Grabar, Guardar (presupuesto/proyecto), Archivar (ePAC `td#store`,
+      `action=store`), Descargar, Imprimir, Generar PDF. Fuera de ahí (formulario, sin precio, como navegación), prohibida.
+      Un botón que mezcle guardar con emitir/contratar/pagar («Guardar y emitir») cae como emisión.
+  - Flujo al ver el precio: guardar → (pantalla siguiente) descargar/imprimir el PDF si hay botón → terminar. El robot lee la
+    **referencia** del presupuesto del texto de la pantalla (solo con etiqueta «Referencia / Nº de presupuesto / proyecto…»;
+    nada con forma de NIF, teléfono o IBAN; nunca al log) y escucha el **PDF** desde antes del clic (descarga, ventana nueva o
+    respuesta PDF). Ambos van al mapa (`mapa.presupuesto`: guardado, referencia, pdf) y al resultado del trabajo; el PDF se
+    guarda en `seguros.documentos` y en `evidencia_documento_id` del trabajo **solo si la exploración va ligada a un
+    cliente/póliza** (una exploración sintética no tiene de qué colgarlo).
+  - En el worker, el guardado va SOLO por `pulsarGuardadoPresupuesto` (guard.ts): re-clasifica el control vivo, abre
+    únicamente Archivar en la red y solo hacia el origen del marco; `contract`/emitir/«Aceptar» siguen abortando. Como
+    mucho 3 pulsaciones por trabajo. Si el portal pide confirmar con un diálogo, el robot no confirma y para.
   - A la compañía no se la contacta.
 - **Organización:** una conversación de Claude por compañía/bot, abierta cuando el bot anterior esté estable.
   Orden previsto: Allianz Hogar primero, luego Mapfre…
@@ -53,7 +74,7 @@
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
 | 14/10/2026 | Mapfre | Enlace de menú «Tarificación y Emisión …» bloqueado por el guard de emisión | «Emisión» como sustantivo de menú casa `PATRON_EMISION` (falso positivo) | Lista cerrada de etiquetas EXACTAS, solo en la fase de ENTRADA (`ENLACES_ENTRADA_AUTORIZADOS`, `pulsarEnlaceEntradaAutorizado`). Nunca relajar `PATRON_EMISION`; nunca desde el bucle IA | `services/tarificador-rpa/test/frontera-cuenta.test.ts` (importa `pulsarEnlaceEntradaAutorizado`) |
-| 14/10/2026 | Mapfre | El producto abre PESTAÑA NUEVA y el bucle se quedaba en la pestaña de origen | `entrar()` devolvía la página de partida | `entrar()` devuelve la `Page` de la pestaña nueva y el bucle sigue en ella (`entrarYExplorar`); las páginas de la entrada no cuentan. `EXPLORADOR_VERSION` 0.1.3 | Sin cepo específico de pestaña nueva |
+| 14/10/2026 | Mapfre | El producto abre PESTAÑA NUEVA y el bucle se quedaba en la pestaña de origen | `entrar()` devolvía la página de partida | `entrar()` devuelve la `Page` de la pestaña nueva y el bucle sigue en ella (`entrarYExplorar`); las páginas de la entrada no cuentan. `EXPLORADOR_VERSION` 0.1.3 (0.2.1 al fusionar con el guardado de presupuesto de main, que iba en 0.2.0) | Sin cepo específico de pestaña nueva |
 | 14/10/2026 | Mapfre | Diálogo nativo de autenticación HTTP al abrir el tarificador | Chromium pide usuario y contraseña en la pestaña nueva | Se CANCELA: el contexto va SIN `httpCredentials` (Chromium responde 401). No meter credenciales en el bot | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
 | 14/10/2026 | Común | El bot podía avanzar hasta un campo de cuenta bancaria | La cuenta bancaria no estaba fijada como frontera de emisión | Cuenta bancaria = FRONTERA: el bot NUNCA escribe ni elige; si aparece, PARA sin pulsar (`ErrorFronteraEmision`, `exigirSinCuentaBancaria`, `exigirCampoNoBancario`; explorador: `frontera_cuenta_bancaria`) | `services/tarificador-rpa/test/frontera-cuenta.test.ts` |
 | 14/10/2026 | Común | Firmar, pagar y domiciliar no estaban en el guard | Verbos de emisión fuera de `PATRON_EMISION` | Añadidos a `PATRON_EMISION` (`guard-emision.ts`, commit df35eb7) | Cubiertos por `services/tarificador-rpa/test/occident-guarda.test.ts` (lista los verbos); falta cepo del patrón común |

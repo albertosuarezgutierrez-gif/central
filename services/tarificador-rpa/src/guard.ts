@@ -13,6 +13,8 @@ import {
   EmisionBloqueadaError,
   MaquinaFases,
   bloqueoAvance,
+  bloqueoGuardadoPresupuesto,
+  clasificarAccionPortal,
   comprobarBoton,
   esAvanceAutorizado,
   esBotonDeListaBlanca,
@@ -27,6 +29,7 @@ import {
   type PestanaActiva,
   type ElementoInventario,
   type MarcoInventario,
+  type PantallaGuardado,
 } from '@central/module-tarificacion'
 
 /**
@@ -52,6 +55,8 @@ export type GuardEmision = {
   ventana: VentanaRed
   /** Ventana de red del AVANCE DE PESTAÑA autorizado (Moto, 13/10/2026). Solo la abre `pulsarAvancePestanaAutorizado`. */
   avance: VentanaRed
+  /** Ventana de red del GUARDADO DE PRESUPUESTO (14/10/2026). Solo la abre `pulsarGuardadoPresupuesto`. */
+  guardado: VentanaRed
 }
 
 /**
@@ -109,6 +114,9 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   // Ventana del avance de pestaña autorizado: hasta cuándo y a qué destinos (no GET) se puede ir. `null` = cerrada.
   let avance: { hasta: number; endpoints: readonly string[] } | null = null
   const avanceVigente = () => (avance && Date.now() < avance.hasta ? avance : null)
+  // Ventana del guardado de presupuesto: hasta cuándo y desde qué ORIGEN (el del marco del botón). `null` = cerrada.
+  let guardado: { hasta: number; origen: string } | null = null
+  const guardadoVigente = () => (guardado && Date.now() < guardado.hasta ? guardado : null)
   await context.route('**/*', async (route) => {
     const req = route.request()
     const url = req.url()
@@ -119,10 +127,14 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       // del avance vigente (origen + ruta exactos, sin query). Cualquier otra (GET incluida) se mira como siempre: con
       // «aceptar» bloqueado. store/contract/validar_aceptar/emitir/contratar… abortan siempre, también en la lista.
       const enLista = av !== null && destinoAvancePermitido(url, av.endpoints)
-      const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista }
+      // Guardado de presupuesto: SOLO Archivar (`store`) se abre, y SOLO hacia el origen del marco del botón. «Aceptar»,
+      // emitir, contract, validar_aceptar, ampliado… siguen abortando (`permitirGuardarPresupuesto` no los toca).
+      const gv = guardadoVigente()
+      const enGuardado = gv !== null && origenDe(url) === gv.origen
+      const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado }
       const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
-      if ((porUrl || porCuerpo) && Date.now() < ventanaHasta && av === null) {
+      if ((porUrl || porCuerpo) && Date.now() < ventanaHasta && av === null && gv === null) {
         // Consecuencia del ÚNICO clic autorizado (ventana abierta por pulsarEmisionAutorizada): pasa.
         await route.continue()
         return
@@ -130,6 +142,12 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        await route.abort('blockedbyclient')
+        return
+      }
+      if (gv && noGet && !enGuardado) {
+        // Un POST/PUT/… a otro origen mientras se guarda: fuera (al mensaje solo el origen).
+        violacion ??= new EmisionBloqueadaError('fase', `guardado de presupuesto: ${req.method()} a otro origen: ${origenDe(url) ?? '(url ilegible)'}`)
         await route.abort('blockedbyclient')
         return
       }
@@ -158,6 +176,10 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       abierta: () => avanceVigente() !== null,
       cerrar: () => { avance = null },
     },
+    guardado: {
+      abierta: () => guardadoVigente() !== null,
+      cerrar: () => { guardado = null },
+    },
     violacion: () => violacion,
     comprobar() {
       if (violacion) throw violacion
@@ -165,8 +187,22 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   }
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
+  ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
   return g
 }
+
+/** Origen (`https://host:puerto`) de una URL http(s), o `null`. */
+function origenDe(url: string): string | null {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.origin : null
+  } catch {
+    return null
+  }
+}
+
+/** Solo `pulsarGuardadoPresupuesto` (este fichero) puede abrir la ventana del guardado. */
+const ABRIR_GUARDADO = new WeakMap<GuardEmision, (origen: string) => void>()
 
 /** Solo `pulsarAvancePestanaAutorizado` (este fichero) puede abrir la ventana del avance. */
 const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[]) => void>()
@@ -411,6 +447,7 @@ export async function pulsarProyecto(page: Page, boton: Locator, guard: GuardEmi
  */
 export async function pulsarEmisionAutorizada(page: Page, guard: GuardEmision, permiso: PermisoEmision, vinculo: { trabajoId: string; hashDatos: string }): Promise<void> {
   guard.comprobar()
+  if (guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'emisión con la ventana de guardado abierta')
   if (!permiso || typeof permiso !== 'object' || !esBotonDeListaBlanca(permiso.boton)) throw new EmisionBloqueadaError('fase', 'emisión sin permiso válido')
   guard.fases.autorizarEmision(await pestanaActiva(page))
   const { id, texto } = permiso.boton
@@ -449,7 +486,7 @@ export async function pulsarEmisionAutorizada(page: Page, guard: GuardEmision, p
  */
 export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmision, selector: SelectorAvancePestana): Promise<Frame> {
   guard.comprobar()
-  if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'avance de pestaña con la ventana de emisión abierta')
+  if (guard.ventana.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'avance de pestaña con la ventana de emisión o de guardado abierta')
   if (typeof selector !== 'string' || !Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)) {
     throw new EmisionBloqueadaError('boton', `avance de pestaña no autorizado: ${String(selector).slice(0, 60)}`)
   }
@@ -582,7 +619,7 @@ export function cerrarFaseEntrada(guard: GuardEmision): void {
  */
 export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: GuardEmision, compania: string): Promise<void> {
   guard.comprobar()
-  if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'enlace de entrada con la ventana de emisión abierta')
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'enlace de entrada con la ventana de emisión, de avance o de guardado abierta')
   if (ENTRADA_CERRADA.has(guard)) throw new EmisionBloqueadaError('fase', 'enlace de entrada fuera de la fase de entrada')
   await exigirSinCuentaBancaria(boton.page())
   if (typeof compania !== 'string' || !Object.hasOwn(ENLACES_ENTRADA_AUTORIZADOS, compania)) {
@@ -624,7 +661,7 @@ export async function pulsarExploracionAutorizada(
   aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario },
 ): Promise<void> {
   guard.comprobar()
-  if (guard.ventana.abierta()) throw new EmisionBloqueadaError('fase', 'avance de exploración con la ventana de emisión abierta')
+  if (guard.ventana.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'avance de exploración con la ventana de emisión o de guardado abierta')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('exploracion')) throw new EmisionBloqueadaError('fase', 'el avance autorizado de exploración ya se usó en este trabajo')
   await exigirSinCuentaBancaria(page)
@@ -677,5 +714,82 @@ export async function pulsarExploracionAutorizada(
   } finally {
     page.off('dialog', alDialogo)
     guard.avance.cerrar()
+  }
+}
+
+// ─────────── GUARDAR PRESUPUESTO (explorador, Alberto 13-14/10/2026) ───────────
+
+/** Tope de la ventana de red del guardado: el clic + lo que el portal tarde en guardar y dar el PDF. */
+export const VENTANA_RED_GUARDADO_MS = 25_000
+/** Pulsaciones de guardado por trabajo: guardar + descargar/imprimir (con margen). */
+export const MAX_GUARDADOS_PRESUPUESTO = 3
+
+/** El portal abrió un diálogo (confirm/alert) al guardar: el robot NO confirma. El explorador para (`guardado_con_dialogo`). */
+export class GuardadoConDialogoError extends Error {
+  readonly tipoDialogo: string
+  constructor(tipo: string) {
+    super(`guardado de presupuesto: el portal abrió un diálogo («${tipo}») y el robot no confirma`)
+    this.name = 'GuardadoConDialogoError'
+    this.tipoDialogo = tipo
+  }
+}
+
+/**
+ * GUARDADO DE PRESUPUESTO AUTORIZADO (explorador). El ÚNICO camino para pulsar Grabar/Guardar/Archivar/Descargar/Imprimir/
+ * Generar PDF (categoría «guardar presupuesto» de la lista única, acciones-portal.ts). Exige, en este orden y sin atajos:
+ *   1. el guard limpio y las ventanas de EMISIÓN y de AVANCE cerradas; como mucho `MAX_GUARDADOS_PRESUPUESTO` por trabajo;
+ *   2. que el módulo lo autorice sobre el INVENTARIO (`bloqueoGuardadoPresupuesto`: categoría guardar, NADA de emisión ni
+ *      prohibida, pantalla de RESULTADO con importes o tras un guardado previo);
+ *   3. EXACTAMENTE un control vivo, con el texto del inventario, que pase `comprobarBoton` con SOLO Archivar abierto
+ *      (`permitirGuardarPresupuesto`: emitir, contract, validar_aceptar, «Aceptar», ampliado, fraccionado… siguen bloqueados)
+ *      y que, VIVO, siga clasificando como guardar y no como emisión/prohibida (todo: texto, title, value, href, onclick…);
+ * Solo entonces abre la ventana de red (Archivar permitido SOLO hacia el origen del marco del botón; todo no-GET a otro
+ * origen se aborta), pulsa UNA vez, espera a `trasClic` (el PDF) y cierra la ventana SIEMPRE. Un diálogo → no se acepta y
+ * lanza `GuardadoConDialogoError`. Cualquier otro fallo de las comprobaciones → `EmisionBloqueadaError` SIN pulsar.
+ */
+export async function pulsarGuardadoPresupuesto(
+  page: Page,
+  guard: GuardEmision,
+  boton: Locator,
+  aut: { el: ElementoInventario; pantalla: PantallaGuardado },
+  trasClic: () => Promise<void> = async () => undefined,
+): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta()) throw new EmisionBloqueadaError('fase', 'guardado de presupuesto con otra ventana de red abierta')
+  // Frontera de emisión (14/10/2026): con un campo de cuenta bancaria en pantalla no se pulsa nada, tampoco guardar.
+  await exigirSinCuentaBancaria(page)
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const n = [...usados].filter((u) => u.startsWith('guardado:')).length
+  if (n >= MAX_GUARDADOS_PRESUPUESTO) throw new EmisionBloqueadaError('fase', `guardado de presupuesto: ya se pulsó ${n} veces en este trabajo`)
+  const motivo = bloqueoGuardadoPresupuesto(aut.el, aut.pantalla)
+  if (motivo) throw new EmisionBloqueadaError('boton', `guardado de presupuesto no autorizado: ${motivo}`)
+  if ((await boton.count()) !== 1) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: no hay exactamente un control')
+  const desc = await descripcion(boton)
+  const plano = (t: string | null) => (t ?? '').replace(/\s+/g, ' ').trim()
+  if (plano(desc[0]) !== plano(aut.el.texto ?? null)) throw new EmisionBloqueadaError('boton', 'guardado de presupuesto: el control vivo no es el del inventario')
+  comprobarBoton(desc, { permitirGuardarPresupuesto: true })
+  const cat = clasificarAccionPortal(desc)
+  if (cat.emision || cat.prohibida || !cat.guardar) throw new EmisionBloqueadaError('boton', `guardado de presupuesto: el control vivo no es de guardar (${cat.emision ?? cat.prohibida ?? 'otro'})`)
+  const origen = await boton.evaluate((el) => el.ownerDocument.location.origin).catch(() => null)
+  if (!origen || !/^https?:\/\//.test(origen)) throw new EmisionBloqueadaError('fase', 'guardado de presupuesto: sin origen http(s) conocido')
+  const abrir = ABRIR_GUARDADO.get(guard)
+  if (!abrir) throw new EmisionBloqueadaError('fase', 'guard sin ventana de guardado')
+  usados.add(`guardado:${n + 1}`)
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  abrir(origen)
+  try {
+    await boton.click()
+    await trasClic()
+    guard.comprobar()
+    if (dialogo) throw new GuardadoConDialogoError(dialogo)
+  } finally {
+    page.off('dialog', alDialogo)
+    guard.guardado.cerrar()
   }
 }

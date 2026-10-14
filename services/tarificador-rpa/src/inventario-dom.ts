@@ -80,6 +80,12 @@ function extractor(explora: boolean): string {
     if (EXPLORA && (tag === 'input' || tag === 'select' || tag === 'textarea')) {
       // Solo el booleano: el valor no sale de la página. Casillas/opciones: marcadas; su valor por defecto es «on».
       e.conValor = el.checked === true || (type !== 'checkbox' && String(el.value || '') !== '' && !(tag === 'input' && el.value === 'on' && type !== 'text'));
+      // Estado INVÁLIDO (14/10/2026), solo el booleano: aria-invalid, clase «*-invalid» (Angular ng-invalid, is-invalid…)
+      // o el contenedor NDBX/nx del campo marcado con error.
+      const caja = el.closest ? el.closest('nx-formfield,.nx-formfield') : null;
+      e.invalido = el.getAttribute('aria-invalid') === 'true'
+        || /(^|\\s)[\\w-]*-invalid(\\s|$)/.test(String(el.getAttribute('class') || ''))
+        || !!(caja && /(^|\\s)[\\w-]*(has-error|invalid)[\\w-]*(\\s|$)/.test(String(caja.getAttribute('class') || '')));
     }
     out.push(e);
     nodos.push(el);

@@ -113,7 +113,10 @@ export type CuerpoResultado =
   | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & MetaTraza)
   | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom }; capturaBase64?: string; html?: string } & MetaTraza)
   /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
-  | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string } & MetaTraza)
+  | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string; presupuesto?: CuerpoResultadoPresupuesto } & MetaTraza)
+
+/** Presupuesto guardado por el explorador (14/10/2026): referencia del portal (`null` = no se vio) y su PDF si llegó. */
+export type CuerpoResultadoPresupuesto = { referencia: string | null; pdf: { nombre: string; base64: string } | null }
 
 /** Hasta 3 intentos ante red caída o 5xx (un 409 = ya registrado o lease vencido: no se insiste). */
 export async function enviarResultado(c: Config, cuerpo: CuerpoResultado): Promise<number> {
@@ -231,7 +234,15 @@ export async function pedirPaso(
 }
 
 /** `detalleFin` (opcional, 14/10/2026): código de `DETALLES_FIN_EXPLORACION`; un asegura anterior lo ignora. */
-export type CuerpoCierre = { trabajoId: string; motivoFin: string; detalleFin?: string; redNoGet: string[]; efectosEnPortal: string[] }
+export type CuerpoCierre = {
+  trabajoId: string
+  motivoFin: string
+  detalleFin?: string
+  redNoGet: string[]
+  efectosEnPortal: string[]
+  /** Guardado del presupuesto (14/10/2026) → `mapa.presupuesto`. */
+  presupuesto?: { guardado: boolean; referencia: string | null; pdf: boolean | null }
+}
 
 /** `POST /api/tarificador/explorador/cierre`: hasta 3 intentos ante red caída, 5xx o 409 «paso en curso». */
 export async function cerrarExploracion(c: Config, cuerpo: CuerpoCierre, esperar: (ms: number) => Promise<void> = dormir): Promise<number> {

@@ -193,6 +193,29 @@ test('resultado «explorado» (13/10/2026): solo con un motivo de fin de la list
   assert.ok(r.ok && r.r.tipo === 'explorado' && r.r.motivoFin === 'resultado' && r.r.botVersion === '0.1.0')
   assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'cualquier cosa' }).ok, false)
   assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado' }).ok, false)
+  // Sin presupuesto (imagen anterior o sin guardado): `null`.
+  assert.ok(r.ok && r.r.tipo === 'explorado' && r.r.presupuesto === null)
+})
+
+test('resultado «explorado» con PRESUPUESTO guardado (14/10/2026): un PDF de verdad y referencia sin forma de dato personal', () => {
+  const id = '00000000-0000-4000-8000-000000000009'
+  const pdf = Buffer.from('%PDF-1.4 presupuesto de prueba').toString('base64')
+  const r = leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'resultado', presupuesto: { referencia: 'P2026-000123', pdf: { nombre: 'presupuesto-allianz.pdf', base64: pdf } } })
+  assert.ok(r.ok && r.r.tipo === 'explorado' && r.r.presupuesto?.referencia === 'P2026-000123' && r.r.presupuesto.pdf?.contenido.subarray(0, 5).toString() === '%PDF-')
+  const soloRef = leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'resultado', presupuesto: { referencia: null, pdf: null } })
+  assert.ok(soloRef.ok && soloRef.r.tipo === 'explorado' && soloRef.r.presupuesto?.pdf === null)
+  for (const malo of [
+    { referencia: '12345678Z' },
+    { referencia: 'P1234', pdf: { base64: Buffer.from('<html>').toString('base64') } },
+    { referencia: 'P1234', extra: 1 },
+    'P1234',
+  ]) assert.equal(leerResultadoWorker({ trabajoId: id, resultado: 'explorado', motivoFin: 'resultado', presupuesto: malo }).ok, false, JSON.stringify(malo))
+})
+
+test('registrarResultado: el PDF del presupuesto explorado va a documentos (solo con cliente/póliza) y a evidencia_documento_id', () => {
+  const f = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  assert.match(f, /r\.presupuesto\?\.pdf && \(t\.cliente_id \|\| t\.poliza_id\)\s*\? await guardarAdjunto\(/)
+  assert.match(f, /evidencia_documento_id = coalesce\(\$\{pdfDoc\}::uuid, evidencia_documento_id\)/)
 })
 
 test('registrarResultado: una exploración no devuelve ofertas, solo ella termina «explorado» y sus fallos no guardan captura', () => {

@@ -3,8 +3,8 @@
 // respeta el mismo lock y la IA en vuelo). Fixtures sintéticas, sin datos personales.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { sanearInventarioDom, type InventarioDom } from '@central/module-tarificacion'
-import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, planDeMemoriaUsable, type DepsPaso, type EstadoPaso } from './tarificador-explorador-paso.ts'
+import { huellaPantalla, sanearInventarioDom, type InventarioDom } from '@central/module-tarificacion'
+import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, esBucle, planDeMemoriaUsable, type DepsPaso, type EstadoPaso } from './tarificador-explorador-paso.ts'
 
 const inventario = sanearInventarioDom({
   marcos: [{
@@ -201,4 +201,63 @@ test('memoria con datos reales: un plan con elegir/marcar NO se reutiliza (repet
   assert.equal(planDeMemoriaUsable(plan([marcar]), true), false)
   assert.equal(planDeMemoriaUsable(plan([rellenar]), true), true)
   assert.equal(planDeMemoriaUsable(plan([rellenar, elegir]), false), true)
+})
+
+// 14/10/2026: la exploración real de Allianz Hogar terminó `sin_salida` por FALSO bucle (misma huella, pero cada lote
+// rellenaba más campos). El servidor solo declara bucle si además NO cambia el conjunto de refs con valor.
+const conRelleno = (relleno: boolean[]) => sanearInventarioDom({
+  marcos: [{
+    url: 'https://portal.example.test/alta', titulos: [{ texto: 'Datos del riesgo', tag: 'h2' }],
+    elementos: [
+      ...relleno.map((c, i) => ({ tag: 'input', id: `campo${i}`, type: 'text', etiqueta: `Campo ${i}`, conValor: c })),
+      { tag: 'button', id: 'sig', texto: 'Siguiente' },
+    ],
+  }],
+}, undefined, { refs: true }) as InventarioDom
+
+test('🪤 bucle: misma huella con MÁS campos rellenos → no es bucle (sigue a la IA); mismo relleno → sin_salida por regla', async () => {
+  const inv0 = conRelleno([false, false, false])
+  const inv1 = conRelleno([true, false, false])
+  const inv2 = conRelleno([true, true, false])
+  const huella = huellaPantalla(inv0)
+  assert.equal(huellaPantalla(inv2), huella)
+  const previo = (inv: InventarioDom) => ({ huella, inventario: inv, respuesta: null, origen: 'ia' as const, llamadaIA: true, costeEur: 0, acciones: 3 })
+
+  assert.equal(esBucle([previo(inv0), previo(inv1)], inv2, huella, 0), false)
+  assert.equal(esBucle([previo(inv2), previo(inv2)], inv2, huella, 0), true)
+  // Paso guardado sin inventario (anterior al cambio): relleno desconocido = sin cambio → bucle, como antes.
+  const { inventario: _i, ...sinInv } = previo(inv0)
+  assert.equal(esBucle([sinInv, sinInv], inv2, huella, 0), true)
+
+  // De punta a punta con los dobles: dos pasos previos con menos relleno → la IA responde, no la regla.
+  const progreso = dobles()
+  progreso.st.pasos.push(previo(inv0), previo(inv1))
+  const r1 = await ejecutarPaso({ ...entrada, inventario: inv2 }, progreso.d)
+  assert.ok(r1.tipo === 'ok' && r1.origen === 'ia')
+
+  const atasco = dobles()
+  atasco.st.pasos.push(previo(inv2), previo(inv2))
+  const r2 = await ejecutarPaso({ ...entrada, inventario: inv2 }, atasco.d)
+  assert.ok(r2.tipo === 'ok' && r2.origen === 'regla')
+  assert.ok(r2.tipo === 'ok' && r2.respuesta.acciones[0].accion === 'parar' && r2.respuesta.acciones[0].motivo === 'sin_salida')
+  assert.ok(!atasco.traza.includes('ia'))
+})
+
+test('guardado del presupuesto: tras un guardar_presupuesto YA registrado, la pantalla siguiente sin importes admite Descargar y terminar []', async () => {
+  const trasGuardar = sanearInventarioDom({
+    marcos: [{ url: 'https://portal.example.test/archivado', titulos: [{ texto: 'Proyecto archivado', tag: 'h2' }], elementos: [{ tag: 'button', id: 'pdf', texto: 'Descargar PDF' }] }],
+  }, undefined, { refs: true }) as InventarioDom
+  const descargar = JSON.stringify({ version: 1, pantalla: { nombre: 'Archivado', tipo: 'resultado' }, acciones: [{ accion: 'avanzar', ref: 'm0e0', efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }], mapeo: [], motivo: null })
+  const guardado = { version: 1 as const, pantalla: { nombre: 'Precio', tipo: 'resultado' as const }, acciones: [{ accion: 'avanzar' as const, ref: 'm0e9', efectoEsperado: 'guardar_presupuesto' as const, confianza: 'alta' as const }], mapeo: [], motivo: null }
+  for (const previo of [true, false]) {
+    const { d, st } = dobles()
+    d.ia = async () => descargar
+    if (previo) st.pasos.push({ huella: '0000000000000000', respuesta: guardado, origen: 'ia', llamadaIA: true, costeEur: 0, acciones: 1 })
+    const r = await ejecutarPaso({ ...entrada, inventario: trasGuardar }, d)
+    assert.equal(r.tipo, 'ok')
+    if (r.tipo !== 'ok') continue
+    const a = r.respuesta.acciones[0]
+    // Sin guardado previo (sin precio visto) el validador lo rechaza → parar.
+    assert.equal(a.accion, previo ? 'avanzar' : 'parar', `previo=${previo}`)
+  }
 })

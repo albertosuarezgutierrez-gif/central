@@ -114,3 +114,13 @@ test('siglaViaOportunidad: palabra, sigla o id atestiguado del vendor; si no, el
   assert.equal(siglaViaOportunidad({ tipoViaId: '123', direccion: 'Plaza Inventada 1' }), 'PZ')
   assert.equal(siglaViaOportunidad({ tipoViaId: 'Boulevard' }), null)
 })
+
+test('🪤 planta «1» + puerta «Izquierda» casa con el «01»/«IZ» del Catastro (14/10/2026 daba `ninguno`)', async () => {
+  const { deps, llamadas } = simulado(
+    [inm('0001AA', '01', 'IZ'), inm('0002AA', '01', 'DR'), inm('0003AA', '02', 'IZ')],
+    { [ref('0001AA')]: { anioConstruccion: 1975, metrosCuadrados: 85 } },
+  )
+  const r = await completarRiesgoConCatastro(riesgoBase(), { ...vivienda, planta: '1', puertaVivienda: 'Izquierda' }, deps)
+  assert.equal(r.estado, 'completado')
+  assert.deepEqual(llamadas.porReferencia, [ref('0001AA')])
+})

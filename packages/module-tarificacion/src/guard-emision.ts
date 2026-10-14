@@ -10,6 +10,8 @@
 // El patrón pedido (/emit|contrat|formaliz|suplement|anul|baja/i) NO casa con «emisión»/«emision»
 // (no contiene «emit»): visto en rojo el 05/10/2026. Se añade `emisi` (una «remisión» también lo
 // dispara: falso positivo aceptado).
+import { PATRONES_GUARDADO_GUARD } from './acciones-portal.ts'
+
 // Verbos de botón que Alberto prohíbe sin su OK (14/10/2026): firmar, pagar, domiciliar. SOLO como palabra completa
 // (sin `\b`: `btn_pagar` y `btnPagar` cuentan; «confirmar» se salva con `(?<!con)`) para no tocar etiquetas de formulario: «Forma de pago»,
 // «Fraccionamiento de pago», «Domicilio», «Confirmar».
@@ -21,10 +23,12 @@ export const PATRON_EMISION = new RegExp(`emit|emisi|contrat|formaliz|suplement|
 // DE CONTRASEÑA» (toca las credenciales), y las pestañas «Archivar» y «Proyecto Ampliado» (más «Emitir»,
 // que ya casa con PATRON_EMISION). Se comparan sin tildes y tolerando separadores.
 // «NUEVA ALTA» NO está aquí a propósito (Alberto, 05/10/2026): es la NAVEGACIÓN para cotizar.
+// «Archivar» (texto, td#store, `sendActionEvent('store')`) viene de `PATRONES_GUARDADO_GUARD` (acciones-portal.ts, lista
+// única del 14/10/2026): sigue BLOQUEADO aquí; solo `permitirGuardarPresupuesto` lo deja pasar (ver `pareceEmision`).
 export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   /elij[ae][\s_+-]*una[\s_+-]*opcion/i,
   /recuperacion[\s_+-]*de[\s_+-]*contrasena/i,
-  /archivar/i,
+  ...PATRONES_GUARDADO_GUARD,
   /proyecto[\s_+-]*ampliado/i,
   // Allianz «RC PYME» (app 1430, 07/10/2026): pestañas td#menu3 Archivar · menu4 Proyecto ampliado · menu5 Datos
   // emisión (id EXACTO: las descripciones se miran una a una), div#btnAccept «Aceptar» (llama a emision_ipid) y
@@ -42,8 +46,8 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // pestaña Tarificar (div#o_N, onclick validar_aceptar()) también contrata. Bloqueados por id/handler aunque se
   // permita «Aceptar»: «contract» (inglés) NO casa con `contrat`. «Datos básicos», «Riesgo municipio», «Tarificar»
   // (td#rate) e «IPID» (documentoIPID) son navegación/lectura y pasan.
-  /^\s*(store|contract)\s*$/i,
-  /send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?store/i,
+  // (td#store y `sendActionEvent('store')` → `PATRONES_GUARDADO_GUARD`, arriba.)
+  /^\s*contract\s*$/i,
   // `contract` suelto se aplica también a URL de navegación y POST. Cotejado (10/10/2026) con las URL de las grabaciones
   // de Allianz (auto, moto, comercio, comunidades: `/drpc82/main/control.do`, `/drrg01|drrg21/SEAServlet?action=start…`,
   // `/ngx-azs-epac/private/home|application`): ninguna lo contiene → sin falso positivo conocido. NO se acota: acotarlo
@@ -59,7 +63,15 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
 // lo permite, con `permitirAceptar`. «Aceptar cookies» también cae: falso positivo aceptado (fail-closed).
 export const PATRON_ACEPTAR = /aceptar/i
 
-export type OpcionesGuard = { permitirAceptar?: boolean }
+export type OpcionesGuard = {
+  permitirAceptar?: boolean
+  /**
+   * GUARDAR PRESUPUESTO (14/10/2026): deja pasar SOLO las entradas de Archivar (`PATRONES_GUARDADO_GUARD`) y la acción `store`
+   * en parámetros. `PATRON_EMISION`, `contract`, `validar_aceptar`, «Proyecto ampliado», pago fraccionado… siguen bloqueados.
+   * Solo lo pide `pulsarGuardadoPresupuesto` (worker) y la red durante SU ventana.
+   */
+  permitirGuardarPresupuesto?: boolean
+}
 
 // Sin «parameter properties» (`constructor(readonly x)`): `node --test` solo QUITA tipos y no las admite.
 export class EmisionBloqueadaError extends Error {
@@ -101,7 +113,9 @@ export function pareceEmision(texto: string | null | undefined, opciones: Opcion
   let t = plano(texto)
   // Las URL pueden venir codificadas (`%C3%A9mitir`, `contrat%61r`): se decodifica si se puede.
   t = plano(decodificarUrlTolerante(t))
-  if (PATRON_EMISION.test(t) || TEXTOS_BLOQUEADOS_ALTA.some((r) => r.test(t))) return true
+  if (PATRON_EMISION.test(t)) return true
+  const bloqueos = opciones.permitirGuardarPresupuesto ? TEXTOS_BLOQUEADOS_ALTA.filter((r) => !PATRONES_GUARDADO_GUARD.includes(r)) : TEXTOS_BLOQUEADOS_ALTA
+  if (bloqueos.some((r) => r.test(t))) return true
   return !opciones.permitirAceptar && PATRON_ACEPTAR.test(t)
 }
 
@@ -126,11 +140,13 @@ const PAR_CLAVE_VALOR = /["']?([A-Za-z_][\w.-]{0,63})["']?\s*[:=]\s*["']?([^&?#=
 export function parametrosParecenEmision(cuerpo: string | null | undefined, opciones: OpcionesGuard = {}): boolean {
   if (typeof cuerpo !== 'string' || cuerpo === '') return false
   const t = plano(decodificarUrlTolerante(cuerpo.replace(/\+/g, ' ')))
-  if (/send[\s_+-]*action[\s_+-]*event\s*\(\s*['"]?\s*(store|contract)/i.test(t) || /validar[\s_+-]*aceptar/i.test(t)) return true
+  // `store` (Archivar) solo pasa con `permitirGuardarPresupuesto`; `contract` nunca.
+  const accionesDuras = opciones.permitirGuardarPresupuesto ? 'contract' : 'store|contract'
+  if (new RegExp(`send[\\s_+-]*action[\\s_+-]*event\\s*\\(\\s*['"]?\\s*(${accionesDuras})`, 'i').test(t) || /validar[\s_+-]*aceptar/i.test(t)) return true
   for (const m of t.matchAll(PAR_CLAVE_VALOR)) {
     if (!CLAVE_ACCION.test(m[1])) continue
     const v = m[2].trim()
-    if (/^(store|contract)$/i.test(v) || pareceEmision(v, opciones)) return true
+    if (new RegExp(`^(${accionesDuras})$`, 'i').test(v) || pareceEmision(v, opciones)) return true
   }
   return false
 }

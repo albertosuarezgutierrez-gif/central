@@ -28,6 +28,7 @@ const PAGINAS: Record<string, string> = {
   '/combobox-cp': '<div role="combobox" aria-label="Código postal" tabindex="0">41001</div><button id="b" onclick="window.pulsado=1">Siguiente</button>',
   // Segunda barrera del bucle: un control de cuenta que NO es campo (botón ARIA) — detectarParada no lo mira; la IA lo pide.
   '/boton-domiciliacion': '<h2>Datos del recibo</h2><div id="dom" role="button" tabindex="0" onclick="window.pulsado=1">Domiciliación bancaria</div>',
+  '/boton-cuenta': '<h2>Datos del recibo</h2><div id="dom" role="button" tabindex="0" onclick="window.pulsado=1">Número de cuenta</div>',
 }
 
 let servidor: Server
@@ -130,6 +131,7 @@ test('bucle IA: pantalla con cuenta bancaria → para cerca_de_emision/frontera_
       conDatosReales: false, riesgo: {}, env: {}, guard,
       pulsar: (b) => pulsar(b, guard),
       pulsarAutorizado: async () => { throw new Error('no') },
+      pulsarGuardado: async () => { throw new Error('no') },
       pausaAccion: async () => undefined,
       pedirPaso: async (): Promise<RespuestaPaso> => { preguntas++; throw new Error('no se debía preguntar') },
       log: () => undefined,
@@ -194,8 +196,11 @@ test('control NO nativo sin cuenta ([role=combobox] «Código postal»): pulsa',
   }
 })
 
-test('bucle IA, SEGUNDA barrera: la IA pide avanzar sobre un control de cuenta que detectarParada no mira → para sin pulsar', async () => {
-  const { context, guard, page } = await abrir('/boton-domiciliacion')
+// Al fusionar con main (14/10/2026): «Domiciliación bancaria» como BOTÓN ya lo rechaza antes el validador del módulo
+// (ACCIONES_PORTAL, categoría emisión) → `lote_no_valido`. La SEGUNDA barrera del bucle se prueba con un botón que el
+// validador no clasifica pero que la frontera sí reconoce («Número de cuenta»).
+async function avanzarSobre(ruta: string) {
+  const { context, guard, page } = await abrir(ruta)
   try {
     let preguntas = 0
     let pulsaciones = 0
@@ -205,6 +210,7 @@ test('bucle IA, SEGUNDA barrera: la IA pide avanzar sobre un control de cuenta q
       conDatosReales: false, riesgo: {}, env: {}, guard,
       pulsar: async () => { pulsaciones++ },
       pulsarAutorizado: async () => { throw new Error('no') },
+      pulsarGuardado: async () => { throw new Error('no') },
       pausaAccion: async () => undefined,
       pedirPaso: async (c): Promise<RespuestaPaso> => {
         preguntas++
@@ -214,15 +220,29 @@ test('bucle IA, SEGUNDA barrera: la IA pide avanzar sobre un control de cuenta q
       log: (m, d) => { lineas.push(JSON.stringify({ m, ...(d ?? {}) })) },
     }
     const fin = await bucleExploracion(page, k)
-    assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
-    assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
-    assert.equal(preguntas, 1) // la primera barrera (detectarParada) no paró: preguntó a asegura
-    assert.equal(pulsaciones, 0)
-    assert.equal(await pulsado(page), 0)
-    assert.ok(lineas.some((l) => l.includes('Domiciliación bancaria')), lineas.join('\n'))
+    return { fin, preguntas, pulsaciones, lineas, pulsadoDom: await pulsado(page) }
   } finally {
     await context.close()
   }
+}
+
+test('bucle IA, SEGUNDA barrera: la IA pide avanzar sobre un control de cuenta que detectarParada no mira → para sin pulsar', async () => {
+  const { fin, preguntas, pulsaciones, lineas, pulsadoDom } = await avanzarSobre('/boton-cuenta')
+  assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
+  assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
+  assert.equal(preguntas, 1) // la primera barrera (detectarParada) no paró: preguntó a asegura
+  assert.equal(pulsaciones, 0)
+  assert.equal(pulsadoDom, 0)
+  assert.ok(lineas.some((l) => l.includes('Número de cuenta')), lineas.join('\n'))
+})
+
+test('bucle IA: avanzar sobre el BOTÓN «Domiciliación bancaria» lo rechaza ya el validador (emisión) → para sin pulsar', async () => {
+  const { fin, preguntas, pulsaciones, pulsadoDom } = await avanzarSobre('/boton-domiciliacion')
+  assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+  assert.equal(fin.detalle, 'lote_no_valido')
+  assert.equal(preguntas, 1)
+  assert.equal(pulsaciones, 0)
+  assert.equal(pulsadoDom, 0)
 })
 
 test('finDeError: la frontera es un fin CORRECTO (explorado), no un fallo del guard', () => {

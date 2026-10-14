@@ -350,9 +350,9 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.match(fn!, /if \(Date\.now\(\) >= hasta\)/)
   assert.ok(!/\.accept\(/.test(fn!) && /d\.dismiss\(\)/.test(fn!), 'los diálogos del portal se descartan, nunca se aceptan')
   // 3. El guard de red: capa (a) patrón de emisión en query y cuerpo; capa (b) destinos no GET en lista blanca.
-  assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n\s*const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
+  assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n[\s\S]{0,400}?const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista, permitirGuardarPresupuesto: enGuardado \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
   assert.match(guard, /if \(av && noGet && !enLista\)/, 'capa (b): todo no-GET fuera de la lista blanca se aborta')
-  assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null\)/, 'la ventana de emisión no vale con el avance abierto')
+  assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null && gv === null\)/, 'la ventana de emisión no vale con el avance ni con el guardado abiertos')
   // 4. Solo el runner la enchufa y solo auto.ts la usa, con los dos selectores literales; Moto con flag PROPIO y apagado.
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
   assert.match(runner, /avanzarPestanaAutorizada: \(selector\) => pulsarAvancePestanaAutorizado\(page, guard, selector\)/)
@@ -383,8 +383,14 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   //    con el valor de `resolverDato` y elegir por valor exacto. Nada de goto, teclado ni marcar fuera del guard.
   const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
   if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  // `escrito` = `valorParaControl(d.valor, hit.el)` y nada más; se escribe UNA vez con `fill` y, si el portal lo vació (datepicker,
+  // 14/10/2026), se reteclea UNA vez en `fijarValor` con ESE mismo valor (`pressSequentially`, sin Enter ni Tab).
   const fills = [...explorador.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
-  if (fills.length !== 1 || !/^valorParaControl\(d\.valor, hit\.el\), \{ timeout: 10_000 \}$/.test(fills[0])) out.push(`fill inesperado: ${fills.join(' | ')}`)
+  if (fills.length !== 1 || !/^escrito, \{ timeout: 10_000 \}$/.test(fills[0]) || !/const escrito = valorParaControl\(d\.valor, hit\.el\)\n/.test(explorador)) out.push(`fill inesperado: ${fills.join(' | ')}`)
+  const tecleos = [...explorador.matchAll(/\.pressSequentially\(([^\n]*)\)/g)].map((m) => m[1])
+  const fijar = [...explorador.matchAll(/\bfijarValor\(([^)]*)\)/g)].map((m) => m[1])
+  if (tecleos.length > 1 || tecleos.some((t) => !/^valor, \{ delay: \d+, timeout: [\d_]+ \}$/.test(t))) out.push(`tecleo inesperado: ${tecleos.join(' | ')}`)
+  if (tecleos.length && (!/async function fijarValor\(loc: Locator, valor: string\)/.test(explorador) || fijar.some((f) => !/^loc, escrito$|^loc: Locator, valor: string$/.test(f)))) out.push(`fijarValor con otro valor: ${fijar.join(' | ')}`)
   if (/\.goto\(|\.press\(|\.type\(|keyboard|\.check\(|setChecked|\.tap\(/.test(explorador)) out.push('el explorador navega, teclea o marca fuera del guard')
   // 2. El valor del dato no va al log ni a asegura: `d.valor` aparece SOLO en el fill.
   if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
@@ -432,6 +438,8 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
     ['sin revalidar', explorador.replace("if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')", '')],
     ['sin OTP', explorador.replace('await exigirSinVerificacion(page, k.compania)', '')],
     ['navega', explorador + "\nawait page.goto('https://x')"],
+    ['teclea otra cosa', explorador.replace('loc.pressSequentially(valor, {', "loc.pressSequentially('\\n', {")],
+    ['retecleo con otro valor', explorador.replace('await fijarValor(loc, escrito)', 'await fijarValor(loc, d.valor)')],
   ]
   for (const [nombre, src] of malos) {
     assert.notEqual(src, explorador, `el cepo «${nombre}» no cambió nada`)
@@ -441,4 +449,37 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
   assert.notEqual(sinAut, guard)
   assert.notDeepEqual(infraccionesExplorador(explorador, sinAut, otros), [], 'guard sin autorización')
   assert.notDeepEqual(infraccionesExplorador(explorador, guard, { 'x.ts': 'await pulsarExploracionAutorizada(page, guard, b, a)' }), [], 'otro fichero la llama')
+})
+
+test('GUARDAR PRESUPUESTO (Alberto 14/10/2026): lista única, puerta propia en guard.ts y la emisión intacta', () => {
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarGuardadoPresupuesto'))
+  assert.ok(fn, 'falta pulsarGuardadoPresupuesto en guard.ts')
+  const abrir = fn!.indexOf('abrir(origen)')
+  const clic = fn!.indexOf('.click(')
+  for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'MAX_GUARDADOS_PRESUPUESTO', 'bloqueoGuardadoPresupuesto(aut.el, aut.pantalla)', 'comprobarBoton(desc, { permitirGuardarPresupuesto: true })', 'clasificarAccionPortal(desc)', 'cat.emision || cat.prohibida || !cat.guardar']) {
+    const i = fn!.indexOf(paso)
+    assert.ok(i > -1 && i < abrir && abrir < clic, `pulsarGuardadoPresupuesto: «${paso}» tiene que ir ANTES de abrir la ventana y pulsar`)
+  }
+  assert.equal((fn!.match(/\.click\(/g) ?? []).length, 1, 'un solo clic')
+  assert.ok(!/permitirAceptar: true/.test(fn!), 'el guardado NUNCA abre «Aceptar»')
+  assert.match(fn!, /\} finally \{\s*page\.off\('dialog', alDialogo\)\s*guard\.guardado\.cerrar\(\)\s*\}/, 'la ventana del guardado se cierra SIEMPRE (finally)')
+  // Red: durante el guardado, no-GET a otro origen se aborta; el cuerpo se sigue mirando (contract/emitir abortan).
+  assert.match(guard, /if \(gv && noGet && !enGuardado\)/)
+  assert.match(guard, /const porCuerpo = !porUrl && noGet && parametrosParecenEmision\(cuerpoDe\(req\), op\)/)
+  // Solo el explorador la usa.
+  const usos = ficheros(join(SRV, 'src')).filter((f) => !f.endsWith('/src/guard.ts') && /pulsarGuardadoPresupuesto\(/.test(sinComentarios(readFileSync(f, 'utf8'))))
+  assert.deepEqual(usos.map((f) => relative(RAIZ, f)), ['services/tarificador-rpa/src/explorador.ts'])
+  // El guard del módulo: Archivar sigue en TEXTOS_BLOQUEADOS_ALTA (solo se abre con la opción) y PATRON_EMISION intacto.
+  const g = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/guard-emision.ts'), 'utf8')
+  // Tras fusionar con la frontera (14/10/2026): las mismas alternativas de siempre + los verbos prohibidos (firmar/pagar/domiciliar).
+  assert.match(g, /export const PATRON_EMISION = new RegExp\(`emit\|emisi\|contrat\|formaliz\|suplement\|anul\|baja\|\$\{VERBOS_PROHIBIDOS\}`, 'i'\)/)
+  assert.match(g, /\.\.\.PATRONES_GUARDADO_GUARD,/)
+  assert.match(g, /const accionesDuras = opciones\.permitirGuardarPresupuesto \? 'contract' : 'store\|contract'/)
+  // La lista única: emisión con todo lo que pidió Alberto; Proyecto ampliado NO es guardar.
+  const lista = readFileSync(join(RAIZ, 'packages/module-tarificacion/src/acciones-portal.ts'), 'utf8')
+  for (const n of ['Emitir', 'Contratar', 'Formalizar', 'Firmar', 'Pagar / Pago', 'Pago fraccionado', 'Tramitar póliza', 'Confirmar contratación', 'Domiciliar']) {
+    assert.match(lista, new RegExp(`A\\('emision', '${n.replace(/[/]/g, '\\/')}'`), `«${n}» tiene que estar en EMISIÓN`)
+  }
+  assert.match(lista, /A\('prohibida', 'Proyecto ampliado'/)
 })

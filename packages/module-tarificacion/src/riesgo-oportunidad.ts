@@ -173,6 +173,50 @@ export function normPlantaPuerta(v: unknown): string | null {
   return /^\d+$/.test(t) ? String(Number.parseInt(t, 10)) : t
 }
 
+const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+
+const ORDINALES_PLANTA: Readonly<Record<string, string>> = Object.freeze({
+  PRIMERO: '1', PRIMERA: '1', PRIMER: '1', SEGUNDO: '2', SEGUNDA: '2', TERCERO: '3', TERCERA: '3', TERCER: '3',
+  CUARTO: '4', CUARTA: '4', QUINTO: '5', QUINTA: '5', SEXTO: '6', SEXTA: '6', SEPTIMO: '7', SEPTIMA: '7',
+  OCTAVO: '8', OCTAVA: '8', NOVENO: '9', NOVENA: '9', DECIMO: '10', DECIMA: '10',
+})
+
+/**
+ * PLANTA como la codifica el Catastro (`<pt>` de `Consulta_DNPLOC`: «01», «00», «-1», «AT»…), 14/10/2026: «1»/«1º»/
+ * «primero»/«01» → `1`; «bajo»/«0»/«00»/«BJ»/«PB» → `0`; «ático»/«AT» → `AT`; «-1» (sótano) → `-1` (nunca `1`, que lo
+ * confundiría con la primera). Otra cosa: en mayúsculas sin signos. Pura.
+ */
+export function normPlantaCatastro(v: unknown): string | null {
+  if (typeof v !== 'string' && typeof v !== 'number') return null
+  const t = sinTildes(String(v).toUpperCase()).replace(/[ºª°.\s]/g, '')
+  if (t === '') return null
+  const neg = /^-(\d+)$/.exec(t)
+  if (neg) return Number.parseInt(neg[1], 10) === 0 ? '0' : `-${Number.parseInt(neg[1], 10)}`
+  const s = t.replace(/-/g, '')
+  if (/^(BAJO|BAJA|BJ|BJO|PB|PLANTABAJA)$/.test(s)) return '0'
+  if (/^(ATICO|AT|ATC)$/.test(s)) return 'AT'
+  if (Object.hasOwn(ORDINALES_PLANTA, s)) return ORDINALES_PLANTA[s]
+  // «1», «01», «1O»/«1A» (º/ª escritos como letra), «1ER»/«1RO».
+  const n = /^(\d{1,3})(?:O|A|ER|RO|DO|TO)?$/.exec(s)
+  return n ? String(Number.parseInt(n[1], 10)) : s
+}
+
+/**
+ * PUERTA como la codifica el Catastro (`<pu>`: «IZ», «DR», «A», «01»…), 14/10/2026: «Izquierda»/«Izq»/«Izda»/«I»/«IZ» →
+ * `IZ`; «Derecha»/«Dcha»/«Dr»/«D» → `DR`; «Centro»/«Ctro»/«CT» → `CT`; letras («A», «B») tal cual; números sin ceros a la
+ * izquierda. Pura. (Una «D» puede ser la letra D: se normalizan los DOS lados igual, así que casa igual; si hubiera «D»
+ * y «DR» en el mismo portal salen los dos → `varios`, nunca uno a dedo.)
+ */
+export function normPuertaCatastro(v: unknown): string | null {
+  if (typeof v !== 'string' && typeof v !== 'number') return null
+  const t = sinTildes(String(v).toUpperCase()).replace(/[ºª°.\s-]/g, '')
+  if (t === '') return null
+  if (/^(IZQUIERDA|IZQUIERDO|IZQDA|IZQDO|IZDA|IZDO|IZQ|IZ|I)$/.test(t)) return 'IZ'
+  if (/^(DERECHA|DERECHO|DCHA|DCHO|DRCHA|DRCHO|DRA|DCH|DER|DR|D)$/.test(t)) return 'DR'
+  if (/^(CENTRO|CTRO|CT)$/.test(t)) return 'CT'
+  return /^\d+$/.test(t) ? String(Number.parseInt(t, 10)) : t
+}
+
 const normCp = (v: unknown): string | null => {
   const t = typeof v === 'string' || typeof v === 'number' ? String(v).trim() : ''
   return /^\d{4,5}$/.test(t) ? t.padStart(5, '0') : null
@@ -184,15 +228,16 @@ const normCp = (v: unknown): string | null => {
  * tienen) descarta. Uno → `unico`; más → `varios`; cero → `ninguno`. Pura.
  */
 export function inmuebleUnicoCatastro(inmuebles: readonly InmuebleCatastroMin[], q: { planta?: unknown; puerta?: unknown; codigoPostal?: unknown }): EleccionInmueble {
-  const planta = normPlantaPuerta(q.planta)
-  const puerta = normPlantaPuerta(q.puerta)
+  // Planta y puerta normalizadas COMO EL CATASTRO (14/10/2026: «1» + «Izquierda» daba `ninguno` contra «01» + «IZ»).
+  const planta = normPlantaCatastro(q.planta)
+  const puerta = normPuertaCatastro(q.puerta)
   const cp = normCp(q.codigoPostal)
   const casan = inmuebles.filter((i) => {
     if (!/^[0-9A-Z]{20}$/.test(i.refCompleta)) return false
     const icp = normCp(i.codigoPostal)
     if (cp && icp && cp !== icp) return false
-    if (planta !== null && normPlantaPuerta(i.planta) !== planta) return false
-    if (puerta !== null && normPlantaPuerta(i.puerta) !== puerta) return false
+    if (planta !== null && normPlantaCatastro(i.planta) !== planta) return false
+    if (puerta !== null && normPuertaCatastro(i.puerta) !== puerta) return false
     return true
   })
   if (casan.length === 0) return { estado: 'ninguno' }

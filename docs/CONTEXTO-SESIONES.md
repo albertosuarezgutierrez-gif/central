@@ -14,7 +14,10 @@
 >
 **(14/10/2026)** — Tarificador RPA · arranque bot **Mapfre Auto** (rama `claude/mapfre-tarificador-bot-9t5zpf`). SQL `2026-10-14_tarificador_mapfre_auto.sql` (fila mapfre/auto, `activo=false`, credencial `MAPFRE_WMEDIADORES`) **sin aplicar**; capa Mapfre en `CONOCIMIENTO-PORTALES.md`.
 Pendiente de Alberto: URL de login wmediadores, ¿SMS/2FA?, ruta de menús hasta Auto, si «Continuar» paso 3 solo tarifica, botón guardar/PDF, uso/ámbito/permiso, secrets Fly `CRED_MAPFRE_WMEDIADORES_USER/_PASS`. Alberto autorizó tocar las listas compartidas del explorador para añadir Mapfre.
-
+**(14/10/2026)** — Portal cliente · fase B mergeada (#4601) + arreglo de build (#4611). Avisos de aportadas, subida de prima y autorizados (umbral configurable), revisión IA de póliza (solo OpenRouter, sin datos identificativos) y «seguros que no nos constan», resumen anual, parte con ubicación, escáner de documentos, enlace para invitar a la familia (10 usos). Privacidad a `2026-10-v1` (todos re-aceptan).
+SQL aplicado el 14/10 en wswbehlcuxqxyinousql (OK de Alberto): `avisos_fase_b`, `parte_fotos_escaner`, `invitar_familia`, `revision_huecos`; RLS off, grants y REVOKE crm_seguros verificados.
+🚨 Lección: tsc/tests no ven `node:crypto` en un `'use client'`; solo `next build`. Cepo `apps/asegura-portal/lib/cliente-sin-servidor.test.ts`. Antes de mergear UI nueva del portal, `next build` local.
+Pendiente: Alberto activa push en su móvil (0 suscripciones); citas «Ley 16/2018» del portal (probable error); pantalla detalle de subida de prima; correo de vencimiento que respete canal/antelación; ficha duplicada María del Pilar (`94fa2f31`).
 **(13/10/2026)** — Tarificador RPA · conocimiento de portales guardado en `docs/tarificador/CONOCIMIENTO-PORTALES.md` (capa común + Allianz ePAC; enlazado desde `apps/asegura/CLAUDE.md` y el README del worker).
 Mergeados: #4585 (Hogar por la tesela «Allianz HOGAR» + evidencia en fallos de entrada), #4587 (Comercio entra por Particulares → «Allianz Negocio Plus»), #4589 (motivo recortado y espera al iframe `appArea`), #4594 (motivos de parada tipados desde una sola lista).
 En curso (`claude/explorador-oportunidad`): exploración con datos reales anclada a una oportunidad; uso y régimen de Hogar obligatorios, sin valor por defecto; nunca mezclar valores de prueba con reales.

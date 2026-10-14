@@ -19,6 +19,8 @@ import {
   RE_CAMPO_CUENTA_BANCARIA,
   senalCuentaBancaria,
   huellaPantalla,
+  huellaRelleno,
+  MAX_HUELLA_REPETIDA_CON_PROGRESO,
   normalizarRedNoGet,
   planDesdeMapa,
   resolverDato,
@@ -29,6 +31,7 @@ import {
   TOPES_EXPLORADOR,
   validarMapa,
   validarRespuestaExplorador,
+  bloqueoGuardadoPresupuesto,
   type InventarioDom,
   type RespuestaExplorador,
 } from './index.ts'
@@ -549,6 +552,31 @@ describe('paradas, bucle y topes', () => {
     expect(detectarBucle([], 'x', 2)).toBe(true)
   })
 
+  it('🪤 bucle (14/10/2026): misma huella con MÁS campos rellenos NO es bucle; misma huella y mismo relleno, sí', () => {
+    const inv = (conValor: boolean[]) => inventario({ elementos: conValor.map((c, i) => ({ tag: 'input', id: `campo${i}`, conValor: c })) })
+    const h = huellaPantalla(inv([false, false, false]))
+    // La huella estructural no ve el relleno (es lo que provocó el falso bucle de Allianz Hogar).
+    expect(huellaPantalla(inv([true, true, false]))).toBe(h)
+    const r0 = huellaRelleno(inv([false, false, false]))
+    const r1 = huellaRelleno(inv([true, false, false]))
+    const r2 = huellaRelleno(inv([true, true, false]))
+    expect(r0).not.toBe(r1)
+    expect(r1).not.toBe(r2)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r0, r1], actual: r2 })).toBe(false)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r2, r2], actual: r2 })).toBe(true)
+    // El progreso solo cuenta si es RECIENTE: tras él, dos pantallas más sin cambio → bucle.
+    expect(detectarBucle([h, h, h], h, 0, { anteriores: [r0, r2, r2], actual: r2 })).toBe(true)
+    // Relleno desconocido (worker antiguo) = sin cambio: lo conservador.
+    expect(huellaRelleno(inventario({ elementos: [{ tag: 'input', id: 'a' }] }))).toBeNull()
+    expect(detectarBucle([h, h], h, 0, { anteriores: [null, r1], actual: r2 })).toBe(false)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r2, null], actual: r2 })).toBe(true)
+    expect(detectarBucle([h, h], h, 0, { anteriores: [r0, r1], actual: null })).toBe(true)
+    // Techo: un relleno que oscila no sostiene el bucle para siempre.
+    const osc = Array.from({ length: MAX_HUELLA_REPETIDA_CON_PROGRESO - 1 }, (_, i) => (i % 2 ? r1 : r2))
+    expect(detectarBucle(osc.map(() => h), h, 0, { anteriores: osc, actual: r1 === osc.at(-1) ? r2 : r1 })).toBe(true)
+    expect(detectarBucle(osc.slice(1).map(() => h), h, 0, { anteriores: osc.slice(1), actual: r1 === osc.at(-1) ? r2 : r1 })).toBe(false)
+  })
+
   it('topes: el entorno solo los BAJA; el coste se mira ANTES de la llamada', () => {
     expect(topesExplorador({ TARIFICADOR_EXPLORADOR_MAX_EUR: '50', TARIFICADOR_EXPLORADOR_MAX_LLAMADAS: '5' })).toMatchObject({ maxEur: 2, maxLlamadas: 5 })
     expect(topesExplorador({ TARIFICADOR_EXPLORADOR_MAX_EUR: 'x' }).maxEur).toBe(2)
@@ -711,5 +739,42 @@ describe('frontera de emisión: cuenta bancaria', () => {
         expect(/iban|cuenta|ccc|bic|swift|domicilia|banc/i.test(d.clave), `${ramo}: ${d.clave}`).toBe(false)
       }
     }
+  })
+})
+
+describe('guardado de presupuesto: botones compuestos (emisión + guardar) nunca pasan', () => {
+  // Pantalla de RESULTADO con importes: el único caso en el que «guardar» podría pulsarse.
+  const resultado = (texto: string) =>
+    inventario({
+      titulos: ['Resultado de tarificación'],
+      importes: [{ texto: '347,55 €', etiqueta: 'Prima total' }],
+      elementos: [{ tag: 'button', id: 'btnCompuesto', texto }],
+    })
+  const avanzarGuardar = (inv: InventarioDom) => ({
+    version: 1,
+    pantalla: { nombre: 'Resultado', tipo: 'resultado' },
+    acciones: [{ accion: 'avanzar', ref: ref(inv, 'btnCompuesto'), efectoEsperado: 'guardar_presupuesto', confianza: 'alta' }],
+    mapeo: [],
+    motivo: null,
+  })
+
+  it.each(['Guardar y firmar', 'Guardar y pagar', 'Grabar y contratar', 'Archivar y domiciliar'])(
+    'avanzar guardar_presupuesto sobre «%s» en resultado con importes → rechazado',
+    (texto) => {
+      const inv = resultado(texto)
+      const v = validarRespuestaExplorador(avanzarGuardar(inv), ctx(inv))
+      expect(v.ok).toBe(false)
+    },
+  )
+
+  it('control: «Guardar presupuesto» en la misma pantalla sí se acepta (el cepo no es un bloqueo general)', () => {
+    const inv = resultado('Guardar presupuesto')
+    expect(validarRespuestaExplorador(avanzarGuardar(inv), ctx(inv)).ok).toBe(true)
+  })
+
+  it('bloqueoGuardadoPresupuesto: el motivo de un compuesto con emisión es de emisión', () => {
+    const inv = resultado('Guardar y firmar')
+    const el = inv.marcos[0].elementos.find((e) => e.id === 'btnCompuesto')!
+    expect(bloqueoGuardadoPresupuesto(el, { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false })).toBe('boton_de_emision')
   })
 })
