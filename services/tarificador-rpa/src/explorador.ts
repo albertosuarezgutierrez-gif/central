@@ -32,6 +32,7 @@ import {
   esAvanceAutorizado,
   esEntradaExploracion,
   huellaPantalla,
+  huellaRelleno,
   indiceRefs,
   nombresCredencial,
   normalizarRedNoGet,
@@ -176,7 +177,23 @@ const nElementos = (inv: InventarioExploracion['inventario']) => inv.marcos.redu
 
 /** Un dato que no se puede poner → por qué se para (fail-closed: nunca se inventa). */
 export function motivoSinDato(m: MotivoSinDato): MotivoParar {
-  return m === 'clave_desconocida' ? 'ambiguo' : 'dato_sensible_requerido'
+  // `dato_no_disponible` (14/10/2026): falta un dato del riesgo (año, m²…), no es un dato SENSIBLE; decirlo así despistaba.
+  return m === 'clave_desconocida' ? 'ambiguo' : m === 'dato_no_disponible' ? 'dato_no_disponible' : 'dato_sensible_requerido'
+}
+
+/**
+ * ¿El control quedó con el valor escrito? (14/10/2026: un datepicker Angular puede vaciar o reformatear lo que `fill` puso.)
+ * Tolera el reformateo del portal: espacios, «€», separadores de fecha/miles/decimales («15/01/1980» ↔ «15-01-1980»,
+ * «120000» ↔ «120.000,00»). Vacío o distinto → `false`. Pura; los valores nunca salen de aquí.
+ */
+export function valorAplicado(escrito: string, leido: string): boolean {
+  const n = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/€/g, '')
+  const a = n(escrito)
+  const b = n(leido)
+  if (b === '') return a === ''
+  if (a === b) return true
+  const sinSep = (s: string) => s.replace(/,0+$/, '').replace(/[.,/-]/g, '')
+  return sinSep(a) === sinSep(b)
 }
 
 /**
@@ -295,6 +312,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
   const red = new Set<string>()
   const efectos = new Set<EfectoPortal>()
   const huellas: string[] = []
+  /** Huella de RELLENO de cada pantalla de `huellas` (alineadas): misma huella con más campos rellenos no es bucle. */
+  const rellenos: (string | null)[] = []
   let pasos = 0
   let acciones = 0
   let avancesFallidos = 0
@@ -333,8 +352,10 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         if (++repintadosSeguidos > MAX_REPINTADOS_SEGUIDOS) throw new Parar('bucle', 'repintados_seguidos')
       } else {
         repintadosSeguidos = 0
-        if (detectarBucle(huellas, huella, avancesFallidos)) throw new Parar('bucle')
+        const relleno = huellaRelleno(inv)
+        if (detectarBucle(huellas, huella, avancesFallidos, { anteriores: rellenos, actual: relleno })) throw new Parar('bucle')
         huellas.push(huella)
+        rellenos.push(relleno)
       }
       trasRepintado = false
 
@@ -393,7 +414,8 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
             }
             await k.pausaAccion()
             // 🔑 El valor no se loguea ni sale del proceso: va directo al campo.
-            await loc.fill(valorParaControl(d.valor, hit.el), { timeout: 10_000 })
+            const escrito = valorParaControl(d.valor, hit.el)
+            await loc.fill(escrito, { timeout: 10_000 })
             hechas++
             const quedan = i < lote.length - 1
             if (CLAVES_AUTOCOMPLETADO.has(a.dato)) {
@@ -403,12 +425,16 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
               await dormir(k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
               await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
               cortar = quedan
-            } else if (quedan) {
-              // ¿Cambió la estructura al escribir? Solo importa si quedan acciones (si no, el bucle reinventaría igualmente).
-              const sonda = await capturarInventarioExploracion(page).catch(() => null)
-              const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
-              await sonda?.liberar()
-              cortar = cortarLoteTrasRellenar(a.dato, antes, despues)
+            } else {
+              const fijado = await fijarValor(loc, escrito)
+              if (fijado !== 'ok') k.log('exploracion_valor', { n: pasos, ref: a.ref, estado: fijado })
+              if (quedan) {
+                // ¿Cambió la estructura al escribir? Solo importa si quedan acciones (si no, el bucle reinventaría igualmente).
+                const sonda = await capturarInventarioExploracion(page).catch(() => null)
+                const despues = sonda ? { huella: huellaPantalla(sonda.inventario), elementos: nElementos(sonda.inventario) } : null
+                await sonda?.liberar()
+                cortar = cortarLoteTrasRellenar(a.dato, antes, despues)
+              }
             }
           } else if (a.accion === 'elegir') {
             await k.pausaAccion()
@@ -491,6 +517,29 @@ async function referenciaVisible(page: Page): Promise<string | null> {
     if (r) return r
   }
   return null
+}
+
+/**
+ * Tras el `fill` de un campo SIN autocompletado (14/10/2026): se le quita el foco (sin clic ni Enter) y se RELEE. Si el
+ * portal lo dejó vacío o distinto (datepicker Angular), UN reintento tecleando carácter a carácter (`pressSequentially`,
+ * solo el valor: nunca Enter ni Tab). Nunca lanza; el valor no sale de aquí (ni al log). `desconocido` = el nodo ya no se
+ * puede leer (repintado): lo verá el siguiente inventario (`conValor`/`invalido`).
+ */
+async function fijarValor(loc: Locator, valor: string): Promise<'ok' | 'reintentado' | 'no_aplicado' | 'desconocido'> {
+  const leer = () => loc.inputValue({ timeout: 5_000 }).catch(() => null)
+  await loc.blur({ timeout: 5_000 }).catch(() => undefined)
+  const v1 = await leer()
+  if (v1 === null) return 'desconocido'
+  if (valorAplicado(valor, v1)) return 'ok'
+  try {
+    await loc.clear({ timeout: 5_000 })
+    await loc.pressSequentially(valor, { delay: 60, timeout: 15_000 })
+    await loc.blur({ timeout: 5_000 }).catch(() => undefined)
+  } catch {
+    return 'no_aplicado'
+  }
+  const v2 = await leer()
+  return v2 !== null && valorAplicado(valor, v2) ? 'reintentado' : 'no_aplicado'
 }
 
 /**

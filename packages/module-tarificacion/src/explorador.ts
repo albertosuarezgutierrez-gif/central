@@ -818,15 +818,60 @@ export function huellaPantalla(inv: InventarioDom): string {
   return huellaTexto(partes.sort().join('\n'))
 }
 
+/**
+ * Huella del RELLENO de la pantalla (14/10/2026): qué controles (por `ref`) tienen ya algún valor (`conValor`), nunca el
+ * valor. Con la misma huella estructural, que cambie = la exploración AVANZA dentro de la pantalla (cada lote rellena más
+ * campos). `null` = no se sabe (ningún control trae `conValor`: inventario de un worker antiguo).
+ */
+export function huellaRelleno(inv: InventarioDom): string | null {
+  let conDato = false
+  const refs: string[] = []
+  for (const m of inv.marcos) {
+    for (const e of m.elementos) {
+      if (typeof e.conValor !== 'boolean' || !e.ref) continue
+      conDato = true
+      if (e.conValor) refs.push(e.ref)
+    }
+  }
+  return conDato ? huellaTexto(refs.sort().join(';')) : null
+}
+
 export const MAX_HUELLA_REPETIDA = 3
 export const MAX_AVANCES_FALLIDOS = 2
+/**
+ * Techo de la misma pantalla seguida AUNQUE el relleno cambie (14/10/2026): un relleno que oscila (el portal borra lo que
+ * se escribe) no puede sostener el bucle hasta los topes de €/pasos.
+ */
+export const MAX_HUELLA_REPETIDA_CON_PROGRESO = 8
 
-/** `huellas` = las de los pasos ANTERIORES, en orden. Bucle = la actual sería la 3.ª seguida igual, o 2 avances sin efecto. */
-export function detectarBucle(huellas: readonly string[], actual: string, avancesFallidos: number): boolean {
+/**
+ * `huellas` = las de los pasos ANTERIORES, en orden. Bucle = 2 avances sin efecto, o la actual sería la 3.ª seguida con la
+ * misma huella Y el mismo relleno (`rellenos`, alineado con `huellas`; `huellaRelleno`). Sin `rellenos`, o con un relleno
+ * `null` (no se sabe), cuenta como «sin cambio» (lo conservador: parar). Además, {@link MAX_HUELLA_REPETIDA_CON_PROGRESO}
+ * pantallas seguidas con la misma huella son bucle aunque el relleno cambie (14/10/2026: Allianz Hogar paró por FALSO
+ * bucle mientras cada paso rellenaba más campos).
+ */
+export function detectarBucle(
+  huellas: readonly string[],
+  actual: string,
+  avancesFallidos: number,
+  rellenos?: { anteriores: readonly (string | null)[]; actual: string | null },
+): boolean {
   if (avancesFallidos >= MAX_AVANCES_FALLIDOS) return true
+  const mismoRelleno = (i: number): boolean => {
+    if (!rellenos || rellenos.actual === null) return true
+    const r = rellenos.anteriores[i]
+    return r === null || r === undefined || r === rellenos.actual
+  }
   let seguidas = 1
-  for (let i = huellas.length - 1; i >= 0 && huellas[i] === actual; i--) seguidas++
-  return seguidas >= MAX_HUELLA_REPETIDA
+  let sinProgreso = 1
+  let progresoCortado = false
+  for (let i = huellas.length - 1; i >= 0 && huellas[i] === actual; i--) {
+    seguidas++
+    if (!progresoCortado && mismoRelleno(i)) sinProgreso++
+    else progresoCortado = true
+  }
+  return sinProgreso >= MAX_HUELLA_REPETIDA || seguidas >= MAX_HUELLA_REPETIDA_CON_PROGRESO
 }
 
 // ─── Topes ───────────────────────────────────────────────────────────────────

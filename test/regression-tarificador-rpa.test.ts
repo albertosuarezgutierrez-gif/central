@@ -383,8 +383,14 @@ function infraccionesExplorador(explorador: string, guard: string, otros: Record
   //    con el valor de `resolverDato` y elegir por valor exacto. Nada de goto, teclado ni marcar fuera del guard.
   const pulsaciones = [...explorador.matchAll(/\b(k\.pulsar|k\.pulsarAutorizado)\(([^)]*)\)/g)].map((m) => `${m[1]}(${m[2]})`)
   if (pulsaciones.some((p) => !/^k\.pulsar\(loc\)$|^k\.pulsarAutorizado\(loc, hit\.el, hit\.marco\)$/.test(p))) out.push(`pulsación inesperada: ${pulsaciones.join(' | ')}`)
+  // `escrito` = `valorParaControl(d.valor, hit.el)` y nada más; se escribe UNA vez con `fill` y, si el portal lo vació (datepicker,
+  // 14/10/2026), se reteclea UNA vez en `fijarValor` con ESE mismo valor (`pressSequentially`, sin Enter ni Tab).
   const fills = [...explorador.matchAll(/\.fill\(([^\n]*)\)/g)].map((m) => m[1])
-  if (fills.length !== 1 || !/^valorParaControl\(d\.valor, hit\.el\), \{ timeout: 10_000 \}$/.test(fills[0])) out.push(`fill inesperado: ${fills.join(' | ')}`)
+  if (fills.length !== 1 || !/^escrito, \{ timeout: 10_000 \}$/.test(fills[0]) || !/const escrito = valorParaControl\(d\.valor, hit\.el\)\n/.test(explorador)) out.push(`fill inesperado: ${fills.join(' | ')}`)
+  const tecleos = [...explorador.matchAll(/\.pressSequentially\(([^\n]*)\)/g)].map((m) => m[1])
+  const fijar = [...explorador.matchAll(/\bfijarValor\(([^)]*)\)/g)].map((m) => m[1])
+  if (tecleos.length > 1 || tecleos.some((t) => !/^valor, \{ delay: \d+, timeout: [\d_]+ \}$/.test(t))) out.push(`tecleo inesperado: ${tecleos.join(' | ')}`)
+  if (tecleos.length && (!/async function fijarValor\(loc: Locator, valor: string\)/.test(explorador) || fijar.some((f) => !/^loc, escrito$|^loc: Locator, valor: string$/.test(f)))) out.push(`fijarValor con otro valor: ${fijar.join(' | ')}`)
   if (/\.goto\(|\.press\(|\.type\(|keyboard|\.check\(|setChecked|\.tap\(/.test(explorador)) out.push('el explorador navega, teclea o marca fuera del guard')
   // 2. El valor del dato no va al log ni a asegura: `d.valor` aparece SOLO en el fill.
   if ((explorador.match(/d\.valor/g) ?? []).length !== 1) out.push('d.valor se usa fuera del fill (¿log? ¿cable?)')
@@ -432,6 +438,8 @@ test('EXPLORADOR IA (worker): solo actúa por el guard, revalida, para en OTP/CA
     ['sin revalidar', explorador.replace("if (!v.ok) throw new Parar('ambiguo', 'lote_no_valido')", '')],
     ['sin OTP', explorador.replace('await exigirSinVerificacion(page, k.compania)', '')],
     ['navega', explorador + "\nawait page.goto('https://x')"],
+    ['teclea otra cosa', explorador.replace('loc.pressSequentially(valor, {', "loc.pressSequentially('\\n', {")],
+    ['retecleo con otro valor', explorador.replace('await fijarValor(loc, escrito)', 'await fijarValor(loc, d.valor)')],
   ]
   for (const [nombre, src] of malos) {
     assert.notEqual(src, explorador, `el cepo «${nombre}» no cambió nada`)
