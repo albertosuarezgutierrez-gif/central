@@ -43,6 +43,10 @@ import {
   leerIncidenciasEjecucion,
   erroresDeIncidencias,
   PREFIJO_ERROR_EJECUCION,
+  ordenarLote,
+  rellenarRepinta,
+  incidenciasLoteCortado,
+  type Accion,
   type InventarioDom,
   type RespuestaExplorador,
 } from './index.ts'
@@ -1014,5 +1018,104 @@ describe('incidencias de ejecución del worker → errores del paso', () => {
 
   it('el detalle de fin «nodo_no_relocalizado» está en la lista cerrada', () => {
     expect(DETALLES_FIN_EXPLORACION).toContain('nodo_no_relocalizado')
+  })
+})
+
+describe('orden del lote y lote cortado (14/10/2026, exploración 8d0676f9: año y m² nunca se escribían)', () => {
+  // Forma de la pantalla real de Allianz Hogar (solo estructura: etiquetas, roles y formControlName; ningún valor).
+  const inv = inventario({
+    elementos: [
+      { tag: 'input', type: 'text', id: 'nx-input-4', formControlName: 'idNumber', etiqueta: 'Número de documento' },
+      { tag: 'input', id: 'nx-input-159', formControlName: 'dateOfBirth', etiqueta: 'Fecha de nacimiento' },
+      { tag: 'input', type: 'text', id: 'nx-input-9', formControlName: 'postalCode', etiqueta: 'Código postal' },
+      { tag: 'input', type: 'text', id: 'nx-input-18', role: 'combobox', formControlName: 'streetName', etiqueta: 'Nombre de la vía' },
+      { tag: 'input', type: 'number', id: 'nx-input-21', role: 'combobox', formControlName: 'streetNumber', etiqueta: 'Número' },
+      { tag: 'input', type: 'number', id: 'nx-input-38', formControlName: 'yearOfConstruction', etiqueta: 'Año de construcción' },
+      { tag: 'input', id: 'nx-input-45', formControlName: 'surfaceAreaLiving', etiqueta: 'Superficie de la vivienda' },
+      { tag: 'input', type: 'text', id: 'pob', etiqueta: 'Población', autocompletar: true },
+      { tag: 'select', id: 'uso', etiqueta: 'Uso', opciones: [{ valor: 'H', texto: 'Habitual' }] },
+      { tag: 'input', type: 'radio', id: 'prop', name: 'regimen', etiqueta: 'Propietario' },
+      { tag: 'button', id: 'siguiente', texto: 'Siguiente' },
+    ],
+  })
+  const r = (id: string) => inv.marcos[0].elementos.find((e) => e.id === id)!.ref!
+  const rellenar = (id: string, dato: string): Accion => ({ accion: 'rellenar', ref: r(id), dato })
+  const avanzar: Accion = { accion: 'avanzar', ref: r('siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' }
+
+  it('el sanitizador conserva `autocompletar` solo como booleano true y solo en input/textarea', () => {
+    expect(inv.marcos[0].elementos.find((e) => e.id === 'pob')!.autocompletar).toBe(true)
+    const otro = inventario({ elementos: [{ tag: 'input', id: 'a', autocompletar: 'si' }, { tag: 'button', id: 'b', texto: 'x', autocompletar: true }] })
+    expect(otro.marcos[0].elementos.every((e) => e.autocompletar === undefined)).toBe(true)
+  })
+
+  it('rellenarRepinta: claves de autocompletado, role=combobox/searchbox y `autocompletar`; un campo simple, no', () => {
+    const el = (id: string) => inv.marcos[0].elementos.find((e) => e.id === id)
+    expect(rellenarRepinta('inmueble.codigo_postal', el('nx-input-9'))).toBe(true)
+    expect(rellenarRepinta('inmueble.nombre_via', el('nx-input-18'))).toBe(true)
+    expect(rellenarRepinta('inmueble.numero', el('nx-input-21'))).toBe(true)
+    expect(rellenarRepinta('inmueble.nombre_via', el('pob')), 'aria-autocomplete/datalist').toBe(true)
+    expect(rellenarRepinta('inmueble.anio_construccion', el('nx-input-38'))).toBe(false)
+    expect(rellenarRepinta('inmueble.superficie_m2', el('nx-input-45'))).toBe(false)
+    expect(rellenarRepinta('inmueble.superficie_m2', undefined), 'sin elemento: lo conservador').toBe(true)
+  })
+
+  it('paso 1 real: documento, fecha, CP, año, m² → año y m² ANTES del CP (que repinta)', () => {
+    const lote = [rellenar('nx-input-4', 'tomador.nif'), rellenar('nx-input-159', 'tomador.fecha_nacimiento'), rellenar('nx-input-9', 'inmueble.codigo_postal'), rellenar('nx-input-38', 'inmueble.anio_construccion'), rellenar('nx-input-45', 'inmueble.superficie_m2')]
+    expect(ordenarLote(lote, inv).map((a) => (a as { dato: string }).dato)).toEqual(['tomador.nif', 'tomador.fecha_nacimiento', 'inmueble.anio_construccion', 'inmueble.superficie_m2', 'inmueble.codigo_postal'])
+  })
+
+  it('paso 2 real: vía y número (combobox) DESPUÉS de año y m², en su orden relativo', () => {
+    const lote = [rellenar('nx-input-18', 'inmueble.nombre_via'), rellenar('nx-input-21', 'inmueble.numero'), rellenar('nx-input-38', 'inmueble.anio_construccion'), rellenar('nx-input-45', 'inmueble.superficie_m2')]
+    expect(ordenarLote(lote, inv).map((a) => (a as { dato: string }).dato)).toEqual(['inmueble.anio_construccion', 'inmueble.superficie_m2', 'inmueble.nombre_via', 'inmueble.numero'])
+  })
+
+  it('elegir y marcar CONSERVAN su orden respecto a los rellenar simples (un campo puede depender de ellos); solo el que repinta pasa al final, antes de avanzar', () => {
+    const elegir: Accion = { accion: 'elegir', ref: r('uso'), opcion: { valor: 'H' } }
+    const marcar: Accion = { accion: 'marcar', ref: r('prop') }
+    const lote = [elegir, rellenar('nx-input-9', 'inmueble.codigo_postal'), marcar, rellenar('nx-input-38', 'inmueble.anio_construccion'), avanzar]
+    const o = ordenarLote(lote, inv)
+    expect(o).toEqual([elegir, marcar, lote[3], lote[1], avanzar])
+    // Un rellenar simple que la IA puso DETRÁS de un elegir/marcar sigue detrás.
+    const dep = [rellenar('nx-input-45', 'inmueble.superficie_m2'), marcar, rellenar('nx-input-38', 'inmueble.anio_construccion'), elegir]
+    expect(ordenarLote(dep, inv)).toEqual(dep)
+    expect(o).toHaveLength(lote.length)
+    expect(lote[0]).toBe(elegir) // no muta la entrada
+  })
+
+  it('un lote ya ordenado, o con parar/terminar solos, queda igual', () => {
+    const lote = [rellenar('nx-input-38', 'inmueble.anio_construccion'), rellenar('nx-input-9', 'inmueble.codigo_postal'), avanzar]
+    expect(ordenarLote(lote, inv)).toEqual(lote)
+    expect(ordenarLote([{ accion: 'parar', motivo: 'ambiguo' }], inv)).toEqual([{ accion: 'parar', motivo: 'ambiguo' }])
+  })
+
+  it('incidenciasLoteCortado: ref + clave (rellenar) o solo ref (elegir/marcar/avanzar); nunca opción ni valor', () => {
+    const inc = incidenciasLoteCortado([rellenar('nx-input-38', 'inmueble.anio_construccion'), { accion: 'elegir', ref: r('uso'), opcion: { valor: 'H' } }, avanzar])
+    expect(inc).toEqual([
+      { accion: 'rellenar', ref: r('nx-input-38'), dato: 'inmueble.anio_construccion', causa: 'lote_cortado' },
+      { accion: 'elegir', ref: r('uso'), causa: 'lote_cortado' },
+      { accion: 'avanzar', ref: r('siguiente'), causa: 'lote_cortado' },
+    ])
+    expect(JSON.stringify(inc)).not.toContain('"H"')
+    expect(incidenciasLoteCortado([{ accion: 'parar', motivo: 'ambiguo' }])).toEqual([])
+  })
+
+  it('leerIncidenciasEjecucion: lote_cortado en elegir/marcar/avanzar sin dato; esas acciones con otra causa, fuera', () => {
+    const ok = [
+      { accion: 'rellenar', ref: 'm1e39', dato: 'inmueble.anio_construccion', causa: 'lote_cortado' },
+      { accion: 'avanzar', ref: 'm1e60', causa: 'lote_cortado' },
+    ]
+    expect(leerIncidenciasEjecucion([...ok, { accion: 'elegir', ref: 'm1e8', causa: 'valor_no_aplicado' }, { accion: 'parar', ref: 'm1e1', causa: 'lote_cortado' }])).toEqual(ok)
+    // Lo que viniera de más (dato u opción en un elegir) no se copia.
+    expect(leerIncidenciasEjecucion([{ accion: 'elegir', ref: 'm1e8', causa: 'lote_cortado', dato: 'x.y', opcion: { valor: 'H' } }])).toEqual([{ accion: 'elegir', ref: 'm1e8', causa: 'lote_cortado' }])
+  })
+
+  it('erroresDeIncidencias: lote_cortado con etiqueta (o texto del botón) y sin clave en las que no la tienen', () => {
+    expect(erroresDeIncidencias([
+      { accion: 'rellenar', ref: r('nx-input-38'), dato: 'inmueble.anio_construccion', causa: 'lote_cortado' },
+      { accion: 'avanzar', ref: r('siguiente'), causa: 'lote_cortado' },
+    ], inv)).toEqual([
+      `ejecucion: rellenar ${r('nx-input-38')} «Año de construcción» (inmueble.anio_construccion): lote_cortado`,
+      `ejecucion: avanzar ${r('siguiente')} «Siguiente»: lote_cortado`,
+    ])
   })
 })
