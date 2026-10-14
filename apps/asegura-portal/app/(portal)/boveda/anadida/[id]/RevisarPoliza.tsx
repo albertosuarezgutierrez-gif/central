@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
 
-import { TEXTO_REVISION, type Punto } from '@/lib/revision-poliza'
+import { TEXTO_REVISION } from '@/lib/revision-poliza-texto'
+import type { Punto } from '@/lib/revision-poliza'
 
 /**
  * «Revisar mi póliza» en la ficha de una póliza APORTADA (13/10/2026). El servidor decide si se enseña y
