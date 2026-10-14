@@ -22,6 +22,8 @@ import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
+import BotsAutoRiesgo from './BotsAutoRiesgo'
+import { AnfitrionBotsContext } from '../../cliente/[id]/PrecioBots'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
 import { avisoSinAvant2 } from '@/lib/correduria/registro-ramos'
@@ -46,6 +48,9 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
   const [editandoObjeto, setEditandoObjeto] = useState(false)
   const [editandoFiguras, setEditandoFiguras] = useState(false)
   const [cotizandoEmbebido, setCotizandoEmbebido] = useState(false)
+  // «Bots (gratis)» de coche: entrada propia (`BotsAutoRiesgo`); si el cotizador Avant2 monta el suyo, el propio se aparta.
+  const [botsEnCotizador, setBotsEnCotizador] = useState(false)
+  const anfitrionBots = useMemo(() => ({ ocupado: botsEnCotizador, ocupar: setBotsEnCotizador }), [botsEnCotizador])
   // La variante recién pedida: «Presupuestos de este riesgo» la abre con sus precios para emitir sin salir.
   const [abrirPrecios, setAbrirPrecios] = useState<string | null>(null)
   const alEditarObjeto = useCallback((b: boolean) => setEditandoObjeto(b), [])
@@ -179,6 +184,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
           secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}
+      <AnfitrionBotsContext.Provider value={anfitrionBots}>
       <section id="pedir-precio" aria-labelledby="pedir-precio-titulo" style={{ ...cardStyle, display: 'grid', gap: 8, minWidth: 0 }}>
         <div id="pedir-precio-titulo" style={{ fontSize: 14, fontWeight: 600 }}>Pedir precio</div>
         {acciones.principal ? (
@@ -221,6 +227,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                 </div>
               )}
             </div>
+            {/* Bots RPA (gratis) con entrada propia: no dependen de Avant2 (ni de su precalificación) ni de abrir el cotizador. */}
+            {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
             {CotizadorEmbebido && cotizadorAbierto && (
               <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <CotizadorEmbebido
@@ -266,6 +274,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                 Ir a pedir presupuestos →
               </a>
             </div>
+            {/* Sin acción principal (p. ej. sin Avant2) el coche sigue teniendo sus bots con entrada propia. */}
+            {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
           </>
         ) : (
           <>
@@ -278,6 +288,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           </>
         )}
       </section>
+      </AnfitrionBotsContext.Provider>
 
       {/* UNA parrilla por oportunidad (13/10/2026): Avant2 frente al bot, por compañía. Solo compara; los precios con su
           «Emitir», PDF y traza siguen en «Presupuestos de compañías» y en «Presupuestos de este riesgo» (P1…Pn). */}
