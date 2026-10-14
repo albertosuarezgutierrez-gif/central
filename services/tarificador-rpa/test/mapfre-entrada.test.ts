@@ -166,11 +166,44 @@ test('sin la tarjeta «Turismos y Motos» → ErrorMapaIncompleto (no se pulsa e
   }
 })
 
-test('sin el enlace «Tarificación y Emisión Rápida» en la tarjeta → ErrorMapaIncompleto (Patinetes tiene uno igual y NO se usa)', async () => {
+test('sin el enlace «Tarificación y Emisión Rápida» en ninguna parte → ErrorMapaIncompleto (0 coincidencias)', async () => {
   const { context, page, ctx, pulsados } = await abrir('/')
   try {
-    await page.evaluate(() => { document.getElementById('tr')?.remove() })
-    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Tarificación y Emisión Rápida/.test((e as Error).message))
+    await page.evaluate(() => { document.getElementById('tr')?.remove(); document.querySelector('#patinetes a')?.remove() })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Tarificación y Emisión Rápida/.test((e as Error).message) && /ninguna coincidencia/.test((e as Error).message))
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
+  } finally {
+    await context.close()
+  }
+})
+
+/** Quita los contenedores de tarjeta reconocibles (div → span): título y enlaces quedan sueltos, como un DOM que `tarjetaDe` no casa. */
+const SIN_TARJETAS = () => {
+  document.querySelectorAll('.tarjeta').forEach((d) => {
+    const s = document.createElement('span')
+    s.innerHTML = d.innerHTML
+    d.replaceWith(s)
+  })
+}
+
+test('DOM sin tarjeta reconocible y enlace exacto ÚNICO en la página → lo pulsa', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelector('#patinetes a')?.remove() }) // sin el homónimo de Patinetes
+    await page.evaluate(SIN_TARJETAS)
+    const nueva = await abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 })
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión Rápida'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('DOM sin tarjeta reconocible y DOS enlaces exactos → para (no se adivina)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(SIN_TARJETAS)
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /2 coincidencias/.test((e as Error).message))
     assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
   } finally {
     await context.close()
