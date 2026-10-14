@@ -52,6 +52,7 @@ import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
+import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
@@ -92,6 +93,17 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await abrirNuevaAlta(page, ctx, { pestana: e.pestana as PestanaEntradaAllianz, producto: e.productoMenu })
       // El formulario vive en el iframe `appArea`: sin esperarlo, el paso 1 inventariaba la carcasa con el modal abierto.
       await esperarMarcoApp(page)
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await ctx.exigirSinCaptcha()
+    },
+  }),
+  // Mapfre wmediadores (14/10/2026): SOLO login; la ruta de menús hasta Auto aún no se conoce, así que no tiene entrada en
+  // ENTRADAS_EXPLORACION y `entrar` no navega más allá del login.
+  mapfre: Object.freeze({
+    credencial: 'MAPFRE_WMEDIADORES',
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
+      await loginMapfre(page, ctx)
+      await exigirSinVerificacion(page, 'mapfre')
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await ctx.exigirSinCaptcha()
     },
