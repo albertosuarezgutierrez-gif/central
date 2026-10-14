@@ -37,16 +37,16 @@ export function encolarTarificacionComunidad(clienteId: string, oportunidadId: s
 }
 
 /**
- * Encola una cotización de MOTO en el bot de una compañía (13/10/2026; solo precio). `formulario` = FormularioAuto con
- * `ramo: 'moto'` y `seleccionVehiculo` (marca/modelo/clase); asegura lo valida con el validador del ramo y comprueba que la
- * compañía tenga `companias_integracion` activa y `rpa_autorizada`. `compania` por defecto Allianz. Lo usa el bloque
- * «Precio por bot (gratis)» del cotizador de moto vía `POST /api/correduria/tarificador/encolar`.
+ * Encola una cotización de VEHÍCULO en el bot de una compañía (moto 13/10/2026; coche `ramo: 'auto'` 14/10/2026, Mapfre NSEI;
+ * solo precio). `formulario` = FormularioAuto del ramo (moto con `seleccionVehiculo` marca/modelo/clase); asegura lo valida con
+ * el validador del ramo y exige la fila `companias_integracion` activa y `rpa_autorizada` de (compañía, ramo). `compania` por
+ * defecto Allianz. Lo usa el bloque «Bots (gratis)» de los cotizadores vía `POST /api/correduria/tarificador/encolar`.
  */
-export function encolarTarificacionMoto(clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT): Promise<Reenvio> {
+export function encolarTarificacionVehiculo(ramo: 'moto' | 'auto', clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT): Promise<Reenvio> {
   return puerto('encolar', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ clienteId, oportunidadId, compania, ramo: 'moto', riesgo: formulario }),
+    body: JSON.stringify({ clienteId, oportunidadId, compania, ramo, riesgo: formulario }),
   })
 }
 

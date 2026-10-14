@@ -71,6 +71,7 @@ import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
 import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
 import PrecioBots from '../PrecioBots'
+import { datoDePersonaBot } from '@/lib/tarificador-moto-formulario'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -1385,8 +1386,8 @@ export default function CotizadorMoto({
             // Lo que el navegador no tiene (CP del cliente, nacimiento, carné) lo lee el servidor de la ficha; si la
             // precalificación dice que FALTA en la ficha, solo vale lo tecleado arriba.
             codigoPostal: /^\d{5}$/.test(datosRiesgo?.cpCirculacion ?? '') ? datosRiesgo!.cpCirculacion : 'ficha',
-            fechaNacimiento: datoDePersona('fechaNacimiento', faltanInicial, correcciones),
-            fechaCarne: datoDePersona('fechaCarnet', faltanInicial, correcciones),
+            fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
+            fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
             sexo: correcciones.sexo ?? null,
             conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual,
             propietarioEnOtraFicha: !!figs.propietario,
@@ -1473,12 +1474,6 @@ export default function CotizadorMoto({
  * (la ficha lo tiene y el servidor lo lee), o `null` si falta y no se ha tecleado. Sin precalificación (`faltan === null`) se
  * deja a la ficha: el servidor corta, sin gastar, si tampoco está allí.
  */
-function datoDePersona(campo: string, faltan: Reparo[] | null, correcciones: Record<string, string>): string | null {
-  const tecleado = (correcciones[campo] ?? '').trim()
-  if (tecleado !== '') return tecleado
-  return faltan === null || !faltan.some((f) => f.campo === campo) ? 'ficha' : null
-}
-
 /** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
 function hoyLocal(): string {
   const d = new Date()

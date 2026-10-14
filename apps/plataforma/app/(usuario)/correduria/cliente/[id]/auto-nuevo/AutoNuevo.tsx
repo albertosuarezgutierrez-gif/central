@@ -65,6 +65,8 @@ import type { ContactoFicha } from '@/lib/ficha-asegura'
 import { textoFaltaEnFicha, type IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import type { DocumentoResumen } from '@central/module-seguros'
 import PanelDatosCliente from '../PanelDatosCliente'
+import PrecioBots from '../PrecioBots'
+import { datoDePersonaBot } from '@/lib/tarificador-moto-formulario'
 
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -2008,6 +2010,33 @@ export default function AutoNuevo({
         onPack={setPack}
       />
       )}
+
+      {/* «Bots (gratis)» (14/10/2026, mismo patrón que moto): los mismos datos, al tarificador RPA de cada compañía con bot de
+          coche (hoy Mapfre NSEI). Lo que el bot exige y no consta se ENSEÑA como falta y no se encola. */}
+      <PrecioBots
+        ramo="auto"
+        clienteId={clienteId}
+        oportunidadId={variante?.oportunidadId ?? null}
+        formulario={{
+          matricula,
+          marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
+          modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
+          version: embebido ? datosRiesgo?.version ?? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,
+          // CP de circulación del riesgo; sin él, el del cliente (lo lee el servidor de la ficha).
+          codigoPostal: /^\d{5}$/.test(datosRiesgo?.cpCirculacion ?? '') ? datosRiesgo!.cpCirculacion : 'ficha',
+          fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
+          fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
+          sexo: correcciones.sexo ?? null,
+          // El garaje por defecto de la pantalla es un SUPUESTO: solo viaja el del riesgo o el elegido por el corredor.
+          garaje: garajeElegido.current ? garaje || null : null,
+          conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual || conductorDistintoEf,
+          propietarioEnOtraFicha: !!figs.propietario || propietarioDistintoEf,
+          tieneSeguroActual,
+          aniosAsegurado,
+          aniosSinSiniestros,
+          siniestrosUltimos5,
+        }}
+      />
 
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
