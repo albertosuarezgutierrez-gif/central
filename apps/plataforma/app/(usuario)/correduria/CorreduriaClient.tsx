@@ -4,7 +4,7 @@ import ContactosMovil from './ContactosMovil'
 import AvisoGoogleContactos from './AvisoGoogleContactos'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity, ClipboardCheck, Mail } from 'lucide-react'
+import { Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity, ClipboardCheck } from 'lucide-react'
 import { Pagina, Badge, btnStyle } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
@@ -581,6 +581,13 @@ export default function CorreduriaClient() {
         </>)}
       </div>
 
+      {/* ══ CAMPAÑAS ═════════════════════════════════════════════════════════
+          Seguimiento de la campaña de correo (solo lectura). Sección propia desde el 14/10/2026: como bloque
+          de «Más» (última pestaña, fuera de pantalla en móvil) nadie la encontraba. */}
+      <div role="tabpanel" aria-label="Campañas" className="corr-panel" style={panel('campanas')}>
+        {montada('campanas') && <Campanas />}
+      </div>
+
       {/* ══ MÁS ═══════════════════════════════════════════════════════════════
           Lo que no se trabaja a diario, en cuatro bloques con ancla (ver
           `BLOQUES_MAS`): la ingesta de CIMA (lo que urge ya sube a «Gestión» como
@@ -595,9 +602,6 @@ export default function CorreduriaClient() {
 
         <SubMas id="emisiones" Icono={ClipboardCheck} titulo="Emisiones a revisar" />
         <EmisionesRevision onContador={setNEmisiones} primero />
-
-        <SubMas id="campanas" Icono={Mail} titulo="Campañas de correo" />
-        {montada('mas') && <Campanas />}
 
         <SubMas id="redes" Icono={Megaphone} titulo="Redes y blog" />
         <Blog onContador={setNBlog} />
