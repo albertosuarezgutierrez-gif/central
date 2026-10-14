@@ -71,10 +71,32 @@ export const MOTIVO_POLIZA_ANULADA = 'Póliza anulada por impago'
 
 const CODIGO = { reale: 'C0613', occident: 'C0468', mapfre: 'C0058', allianz: 'C0109' } as const
 
-/** Quita ceros a la izquierda: Mapfre escribe `8808116169` y CIMA `08808116169`. */
+/**
+ * Nº de recibo para EMPAREJAR (la única regla; en SQL, `regexp_replace(ltrim(x, '0'), '-[A-Z]$', '')`,
+ * la misma de `recibo_devolucion.id_recibo_norm` y de los triggers, migración 2026-10-14b):
+ * · sin ceros a la izquierda: Mapfre escribe `8808116169` y CIMA `08808116169`;
+ * · sin el sufijo `-<LETRA>` final: CIMA guarda los de Occident (C0468) como `400000001-K` y su correo
+ *   de devolución dice `400000001` (14/10/2026). Quitarlo puede juntar dos recibos distintos
+ *   (`…-A`/`…-B`): el emparejado lo trata como AMBIGUO (`elegirReciboEmparejado`), nunca elige uno.
+ */
 export function normalizarIdRecibo(id: string): string {
-  const t = id.trim().replace(/\s+/g, '')
+  const t = id.trim().replace(/\s+/g, '').replace(/-[A-Z]$/, '')
   return t.replace(/^0+(?=\d)/, '')
+}
+
+/** Regex del sufijo de Occident, para que el SQL use EXACTAMENTE la misma regla (`regexp_replace`). */
+export const SUFIJO_ID_RECIBO_SQL = '-[A-Z]$'
+
+/**
+ * ¿Con qué recibo de la cartera casa un aviso? `filas` = los recibos de ESA compañía y correduría cuyo nº
+ * normalizado coincide, el más reciente primero. Dos `idRecibo` DISTINTOS (p. ej. `…-A` y `…-B` de
+ * Occident) = `ambiguo`: no se elige uno, decide una persona. La misma fila repetida no es ambigüedad.
+ */
+export function elegirReciboEmparejado<T extends { idRecibo: string }>(filas: readonly T[]):
+  { estado: 'ninguno' } | { estado: 'unico'; fila: T } | { estado: 'ambiguo' } {
+  if (filas.length === 0) return { estado: 'ninguno' }
+  if (new Set(filas.map((f) => f.idRecibo)).size > 1) return { estado: 'ambiguo' }
+  return { estado: 'unico', fila: filas[0] }
 }
 
 export function clasificarMotivoDevolucion(motivo: string | null | undefined): TipoMotivoDevolucion | null {
