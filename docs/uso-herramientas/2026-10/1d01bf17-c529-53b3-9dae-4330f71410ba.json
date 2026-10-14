@@ -1,8 +1,8 @@
 {
  "sesion": "1d01bf17-c529-53b3-9dae-4330f71410ba",
  "inicio": "2026-10-14T09:59:40.987Z",
- "fin": "2026-10-14T11:03:05.591Z",
- "llamadas": 275,
+ "fin": "2026-10-14T11:40:47.464Z",
+ "llamadas": 398,
  "categorias": {
   "agente:rastreador-codigo": {
    "llamadas": 1,
@@ -43,41 +43,42 @@
    }
   },
   "bash": {
-   "llamadas": 160,
-   "chars_in": 151381,
-   "chars_out": 676153,
+   "llamadas": 262,
+   "chars_in": 219869,
+   "chars_out": 1142063,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 160
+    "Bash": 262
    }
   },
   "otro": {
-   "llamadas": 47,
-   "chars_in": 46544,
-   "chars_out": 212224,
+   "llamadas": 64,
+   "chars_in": 54537,
+   "chars_out": 338137,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 1,
+   "chars_citados": 24965,
    "tools": {
-    "SubagentHandback": 9,
-    "ToolSearch": 7,
+    "SubagentHandback": 11,
+    "ToolSearch": 8,
     "WebFetch": 6,
     "SendMessage": 3,
-    "ReadNotifications": 19,
-    "Monitor": 3
+    "ReadNotifications": 26,
+    "Monitor": 9,
+    "Skill": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 8,
-   "chars_in": 31188,
-   "chars_out": 32956,
+   "llamadas": 9,
+   "chars_in": 35726,
+   "chars_out": 37715,
    "errores": 0,
-   "archivos_citados": 18,
-   "chars_citados": 1392926,
+   "archivos_citados": 20,
+   "chars_citados": 1469501,
    "tools": {
-    "Agent": 8
+    "Agent": 9
    }
   },
   "mcp:Supabase": {
@@ -103,29 +104,30 @@
    }
   },
   "escritura": {
-   "llamadas": 3,
-   "chars_in": 7309,
-   "chars_out": 55430,
+   "llamadas": 4,
+   "chars_in": 7639,
+   "chars_out": 95054,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 2,
+    "Edit": 3,
     "Write": 1
    }
   },
   "mcp:github": {
-   "llamadas": 8,
-   "chars_in": 2610,
-   "chars_out": 32162,
+   "llamadas": 10,
+   "chars_in": 5727,
+   "chars_out": 63349,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__create_pull_request": 1,
     "mcp__github__pull_request_read": 5,
-    "mcp__github__get_job_logs": 1,
-    "mcp__github__list_pull_requests": 1
+    "mcp__github__get_job_logs": 2,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__update_pull_request": 1
    }
   }
  }
