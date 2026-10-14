@@ -1,18 +1,29 @@
 'use client'
 
-// «Precio por bot (gratis)» del cotizador de moto (13/10/2026). Junto al flujo de Avant2 (Codeoscopic, 0,50€), pide precio a
-// los bots Playwright del tarificador RPA con los MISMOS datos del formulario: lista las compañías con bot ACTIVO en moto
-// (`/api/correduria/tarificador/integraciones`) y pinta un botón por compañía; cada fila encola y sigue su trabajo. Una compañía
-// nueva con bot de moto aparece sola, sin tocar esta pantalla. Solo PRECIO: no emite ni contrata. Sin cargo de Codeoscopic.
+// «Bots (gratis)» (14/10/2026; nació en `moto-nuevo/PrecioPorBot.tsx` el 13/10/2026): bloque ÚNICO, igual para todos los ramos,
+// que pide precio a los bots Playwright del tarificador RPA con los MISMOS datos del formulario del ramo. Lista las compañías
+// con bot ACTIVO en ese ramo (`/api/correduria/tarificador/integraciones`) y pinta un botón por compañía; cada fila encola y
+// sigue su trabajo. Una compañía nueva con bot aparece sola. Qué datos valen para cada ramo lo decide su ADAPTADOR
+// (`lib/tarificador-bots-ramos.ts`); sin adaptador o sin integraciones, una línea discreta y ningún botón muerto.
+// Solo PRECIO: no emite ni contrata. Sin cargo de Codeoscopic (el flujo de pago es «Avant2 — 0,50€»).
 // Patrón de lista + seguimiento de `ProbarTarificacion.tsx` (mismas lecturas defensivas de `lib/tarificador-probar.ts`).
-import { useCallback, useEffect, useRef, useState } from 'react'
+//
+// Anfitrión: la carcasa `PedirPrecioEmbebido` publica un hueco (`HuecoBotsContext`) ENCIMA de la sección Avant2 y el bloque se
+// pinta ahí con un portal aunque lo monte el cotizador del ramo (que es quien tiene el formulario). Sin hueco (pantalla
+// completa del cotizador) se pinta en línea. Un solo bloque por pantalla.
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Bot } from 'lucide-react'
 import { btnStyle, cardStyle, CardHeader } from '@/components/ui'
 import {
   SONDEO_MS, SONDEO_TOPE_MS, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloCompania,
   type IntegracionVista, type TrabajoVista,
 } from '@/lib/tarificador-probar'
-import { formularioBotMoto, leerEncoladoBot, type EntradaBotMoto } from '@/lib/tarificador-moto-formulario'
+import { leerEncoladoBot } from '@/lib/tarificador-moto-formulario'
+import { adaptadorDeRamo, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
+
+/** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
+export const HuecoBotsContext = createContext<HTMLElement | null>(null)
 
 const TONO: Record<'curso' | 'ok' | 'aviso' | 'error', string> = {
   curso: 'var(--muted)', ok: 'var(--positive)', aviso: 'var(--warning)', error: 'var(--negative)',
@@ -30,39 +41,68 @@ async function pedirJson(url: string, init?: RequestInit): Promise<{ status: num
 type Integraciones = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'ok'; lista: IntegracionVista[] }
 type Seguimiento = { trabajoId: string; duplicado: boolean; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
 
-export default function PrecioPorBot({ clienteId, oportunidadId, entrada, cilindradaInicial }: {
+const sinBots = (texto: string) => (
+  <div style={cardStyle}>
+    <CardHeader title="Bots (gratis)" />
+    <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{texto}</p>
+  </div>
+)
+
+export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra }: {
+  ramo: string
   clienteId: string
   oportunidadId: string | null
-  /** Lo que el cotizador ya sabe, sin la cilindrada (que el cotizador de Avant2 no pide y se completa aquí). */
-  entrada: Omit<EntradaBotMoto, 'cilindrada'>
-  cilindradaInicial: number | null
+  /** Lo que el cotizador del ramo ya sabe (lo entiende el adaptador del ramo). */
+  formulario: unknown
+  /** Valores iniciales de los campos extra del adaptador (p. ej. `{ cilindrada: '125' }`). */
+  inicialesExtra?: Record<string, string>
+}) {
+  const hueco = useContext(HuecoBotsContext)
+  const adaptador = adaptadorDeRamo(ramo)
+  const bloque = adaptador
+    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} />
+    : sinBots('Sin bots para este ramo todavía.')
+  return hueco ? createPortal(bloque, hueco) : bloque
+}
+
+function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra }: {
+  ramo: string
+  adaptador: NonNullable<ReturnType<typeof adaptadorDeRamo>>
+  clienteId: string
+  oportunidadId: string | null
+  formulario: unknown
+  inicialesExtra?: Record<string, string>
 }) {
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
-  const [cilindrada, setCilindrada] = useState(cilindradaInicial !== null ? String(cilindradaInicial) : '')
+  const [extra, setExtra] = useState<Record<string, string>>(() => ({ ...inicialesExtra }))
 
   const cargar = useCallback(async () => {
     setInteg({ estado: 'cargando' })
     const r = await pedirJson('/api/correduria/tarificador/integraciones')
     const l = leerIntegraciones(r.status, r.json)
-    setInteg(l.ok ? { estado: 'ok', lista: l.integraciones.filter((i) => i.ramo === 'moto') } : { estado: 'error', mensaje: l.mensaje })
-  }, [])
+    setInteg(l.ok ? { estado: 'ok', lista: l.integraciones.filter((i) => i.ramo === ramo) } : { estado: 'error', mensaje: l.mensaje })
+  }, [ramo])
   useEffect(() => { void cargar() }, [cargar])
 
-  const formulario = formularioBotMoto({ ...entrada, cilindrada })
   const lista = integ.estado === 'ok' ? integ.lista : []
+  // Revisado y sin ninguna compañía: línea discreta, ni campos ni botones.
+  if (integ.estado === 'ok' && lista.length === 0) return sinBots('Sin bots para este ramo todavía.')
 
+  const resultado = adaptador.construir(formulario, extra)
   return (
     <div style={cardStyle}>
-      <CardHeader title="Precio por bot (gratis)" sub="Pide precio al portal de la compañía con los datos de este formulario. No cuesta 0,50€, tarda un par de minutos y solo da precio: no emite." />
-      <label style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260 }}>
-        <span>Cilindrada (cc) <span style={{ color: 'var(--muted)' }}>— el bot separa Moto y Ciclomotor</span></span>
-        <input inputMode="numeric" value={cilindrada} onChange={(e) => setCilindrada(e.target.value)} placeholder="p. ej. 125"
-          style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
-      </label>
-      {!formulario.ok && (
+      <CardHeader title="Bots (gratis)" sub="Pide precio al portal de la compañía con los datos de este formulario. No cuesta 0,50€, tarda un par de minutos y solo da precio: no emite." />
+      {adaptador.campos.map((c) => (
+        <label key={c.clave} style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260 }}>
+          <span>{c.etiqueta}{c.ayuda && <span style={{ color: 'var(--muted)' }}> — {c.ayuda}</span>}</span>
+          <input inputMode="numeric" value={extra[c.clave] ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} placeholder={c.placeholder}
+            style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
+        </label>
+      ))}
+      {!resultado.ok && (
         <div role="status" style={{ fontSize: 13, color: 'var(--warning)', marginTop: 10 }}>
           <strong>Para pedir precio por bot falta:</strong>
-          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{formulario.faltan.map((f) => <li key={f} style={{ overflowWrap: 'anywhere' }}>{f}</li>)}</ul>
+          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{resultado.faltan.map((f) => <li key={f} style={{ overflowWrap: 'anywhere' }}>{f}</li>)}</ul>
         </div>
       )}
       {integ.estado === 'cargando' && <p style={{ fontSize: 13, color: 'var(--muted)', margin: '10px 0 0' }}>Cargando las compañías con bot…</p>}
@@ -72,23 +112,21 @@ export default function PrecioPorBot({ clienteId, oportunidadId, entrada, cilind
           <button type="button" onClick={() => void cargar()} style={{ ...btnStyle('secundario'), minHeight: 44 }}>Reintentar</button>
         </p>
       )}
-      {integ.estado === 'ok' && lista.length === 0 && (
-        <p style={{ fontSize: 13, color: 'var(--muted)', margin: '10px 0 0' }}>Ninguna compañía tiene hoy el bot de moto activo (revisado).</p>
-      )}
       <div style={{ display: 'grid', gap: 12, marginTop: lista.length ? 12 : 0 }}>
         {lista.map((i) => (
-          <FilaBot key={i.clave} integracion={i} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} />
+          <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId} formulario={resultado} />
         ))}
       </div>
     </div>
   )
 }
 
-function FilaBot({ integracion, clienteId, oportunidadId, formulario }: {
+function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo }: {
   integracion: IntegracionVista
   clienteId: string
   oportunidadId: string | null
-  formulario: ReturnType<typeof formularioBotMoto>
+  formulario: ResultadoAdaptadorBot
+  ramo: string
 }) {
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -137,7 +175,7 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario }: {
       const r = await pedirJson('/api/correduria/tarificador/encolar', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          clienteId, oportunidadId, ramo: 'moto', compania: integracion.compania, riesgo: formulario.riesgo,
+          clienteId, oportunidadId, ramo, compania: integracion.compania, riesgo: formulario.riesgo,
           ...(formulario.completarDesdeFicha.length ? { completarDesdeFicha: formulario.completarDesdeFicha } : {}),
         }),
       })
@@ -155,7 +193,7 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario }: {
   return (
     <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
       <button type="button" onClick={() => void pedir()} disabled={!formulario.ok || ocupado}
-        title={formulario.ok ? `Encola una tarificación de moto en el bot de ${nombre} (solo precio: no emite).` : 'Faltan datos: míralos arriba.'}
+        title={formulario.ok ? `Encola una tarificación de ${ramo} en el bot de ${nombre} (solo precio: no emite).` : 'Faltan datos: míralos arriba.'}
         style={{ ...btnStyle('secundario'), minHeight: 44, width: '100%', maxWidth: 420, opacity: !formulario.ok || ocupado ? 0.6 : 1 }}>
         <Bot size={16} aria-hidden /> {ocupado ? 'Encolando…' : `Precio ${nombre} (bot) — gratis`}
       </button>
@@ -179,7 +217,7 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario }: {
               ))}
             </span>
           )}
-          {res?.pideVersion && <span style={{ fontSize: 13, color: 'var(--warning)' }}>El bot necesita que elijas la versión de la moto: hazlo desde «Probar tarificación» de la ficha o la bandeja del tarificador.</span>}
+          {res?.pideVersion && <span style={{ fontSize: 13, color: 'var(--warning)' }}>El bot necesita que elijas la versión del vehículo: hazlo en la bandeja «Necesita tu atención» del <a href="/correduria/tarificador" style={{ color: 'inherit', textDecoration: 'underline', display: 'inline-block', minHeight: 24 }}>tarificador</a>.</span>}
           {seg.aviso && <span role="alert" style={{ fontSize: 12, color: 'var(--warning)' }}>{seg.aviso} Sigo intentándolo…</span>}
           {seg.agotado && !res?.final && (
             <span role="alert" style={{ fontSize: 12, color: 'var(--warning)' }}>
