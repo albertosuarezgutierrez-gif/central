@@ -654,28 +654,17 @@ const SELECTORES_RADIO_FILA = ['mat-radio-button', 'input[type="radio"]', '[role
 const ESPERA_HABILITADO_MAPFRE_MS = 5_000
 const ESPERA_CIERRE_DIALOGO_MAPFRE_MS = 10_000
 
-/**
- * Para y pide una persona (`requiere_humano`; en el cable `captcha`, como la elección de versión): el diálogo trae VARIAS
- * filas y el bot solo confirma con una. El mensaje lleva el nº de filas, nunca matrículas ni bastidores.
- */
-export class ErrorSeleccionVehiculoMapfre extends ErrorTarificador {
-  readonly filas: number
-  constructor(filas: number) {
-    super('captcha', `mapfre: «Selección de vehículo» trae ${filas} vehículos para la matrícula; el bot solo confirma si hay exactamente uno: elige una persona en el portal`)
-    this.name = 'ErrorSeleccionVehiculoMapfre'
-    this.filas = filas
-  }
-}
-
 const sinTildesMayus = (t: string | null | undefined) => (t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
 
 /**
  * CONFIRMAR EL VEHÍCULO en el diálogo «Selección de vehículo» de Mapfre NSEI. El ÚNICO camino para marcar la fila y pulsar
  * su «Aceptar» (el adaptador no los nombra). Exige, en este orden y sin atajos:
  *   1. guard limpio, todas las ventanas de red cerradas, sin campo de cuenta bancaria y una sola vez por trabajo;
- *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`; más de una → `ErrorSeleccionVehiculoMapfre` (requiere_humano);
- *   3. la MATRÍCULA de esa única fila igual (normalizada) a la del riesgo. La comparación se hace aquí y la matrícula NO
- *      sale: ni a logs, ni a mensajes de error, ni a la IA, ni al resultado (el radio se describe sin su `value`);
+ *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`. Con VARIAS filas se toma la PRIMERA (decisión de Alberto,
+ *      14/10/2026: antes era requiere_humano); las demás no se miran ni se marcan;
+ *   3. la MATRÍCULA de la PRIMERA fila igual (normalizada) a la del riesgo; si no casa → `datos` (nunca se prueba otra
+ *      fila). La comparación se hace aquí y la matrícula NO sale: ni a logs, ni a mensajes de error, ni a la IA, ni al
+ *      resultado (el radio se describe sin su `value`);
  *   4. EXACTAMENTE un control de elección en la fila, que pase `comprobarBoton`; se marca;
  *   5. EXACTAMENTE un «Aceptar» visible DENTRO del diálogo, texto exacto, que se habilite y pase `comprobarBoton` con
  *      «Aceptar» permitido (emitir, contratar, «No es el vehículo», «Vehículo NO catalogado», `validar_aceptar`… siguen
@@ -696,7 +685,7 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   const filas = dialogo.locator('table tbody tr')
   const n = await filas.count()
   if (n === 0) throw new ErrorTarificador('datos', 'mapfre: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  if (n > 1) throw new ErrorSeleccionVehiculoMapfre(n)
+  // Varias filas → la PRIMERA (Alberto, 14/10/2026). Solo se compara y se marca esa; nunca se busca otra que case.
   // Si hay cabecera, la columna tiene que llamarse «Matrícula» (si el portal reordena, se para en vez de comparar otra cosa).
   const cabecera = await dialogo.locator('table thead th').evaluateAll((els) => els.map((e) => e.textContent ?? ''))
   if (cabecera.length > 0 && sinTildesMayus(cabecera[COLUMNA_MATRICULA_MAPFRE]) !== 'MATRICULA') {
@@ -706,7 +695,7 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   const enFila = await fila.locator('td').nth(COLUMNA_MATRICULA_MAPFRE).textContent({ timeout: 1_000 }).catch(() => null)
   if (enFila === null) throw new ErrorTarificador('portal', 'mapfre: no se pudo leer la columna «Matrícula» de «Selección de vehículo»')
   if (normalizarMatricula(enFila.trim()) !== normalizarMatricula(matriculaRiesgo)) {
-    throw new ErrorTarificador('datos', 'mapfre: el único vehículo de «Selección de vehículo» no tiene la matrícula del riesgo')
+    throw new ErrorTarificador('datos', 'mapfre: el primer vehículo de «Selección de vehículo» no tiene la matrícula del riesgo')
   }
   let radio: Locator | null = null
   for (const sel of SELECTORES_RADIO_FILA) {

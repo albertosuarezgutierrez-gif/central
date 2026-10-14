@@ -8,7 +8,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { EmisionBloqueadaError, type VehiculoConfirmado } from '@central/module-tarificacion'
-import { confirmarVehiculoMapfre, ErrorSeleccionVehiculoMapfre, instalarGuardEmision, type GuardEmision } from '../src/guard.ts'
+import { confirmarVehiculoMapfre, instalarGuardEmision, type GuardEmision } from '../src/guard.ts'
 import { consultarVehiculoPorMatricula, ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 import { eleccionVersionEfectiva } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
@@ -78,10 +78,26 @@ test('una fila con OTRA matrícula → para (`datos`), no marca ni pulsa, y el e
   await context.close()
 })
 
-test('varias filas (aunque todas tengan la matrícula) → requiere_humano, nada se pulsa', async () => {
+/** Qué radio quedó marcado (índice de fila) o -1. */
+const radioMarcado = (page: Page) => page.evaluate(() => Array.from(document.querySelectorAll('input[type=radio]')).findIndex((r) => (r as HTMLInputElement).checked))
+
+test('varias filas → elige la PRIMERA (Alberto, 14/10/2026) y la confirma si su matrícula es la del riesgo', async () => {
   const { context, page, guard } = await preparar(DIALOGO([{ matricula: MATRICULA, denominacion: 'VERSION A' }, { matricula: MATRICULA, denominacion: 'VERSION B' }]))
-  await assert.rejects(() => confirmarVehiculoMapfre(page, guard, MATRICULA), (e) => e instanceof ErrorSeleccionVehiculoMapfre && e.tipo === 'captcha' && e.filas === 2 && sinMatricula(e))
-  assert.equal(await marcada(page), false)
+  // Sin cerrar el diálogo, para ver qué fila quedó marcada: el «Aceptar» del fixture lo quita; se mira antes con un espía.
+  await page.evaluate(() => {
+    const ok = document.getElementById('ok')!
+    ok.addEventListener('click', () => { (window as unknown as Record<string, unknown>).__fila = Array.from(document.querySelectorAll('input[type=radio]')).findIndex((r) => (r as HTMLInputElement).checked) }, { capture: true })
+  })
+  await confirmarVehiculoMapfre(page, guard, MATRICULA)
+  assert.equal(await page.evaluate(() => (window as unknown as Record<string, unknown>).__fila), 0)
+  assert.deepEqual(await marcas(page), { aceptado: 1, noEs: null, cancelar: null, noCatalogado: null })
+  await context.close()
+})
+
+test('varias filas y la PRIMERA tiene otra matrícula → `datos`, sin marcar ninguna (aunque la segunda case)', async () => {
+  const { context, page, guard } = await preparar(DIALOGO([{ matricula: OTRA, denominacion: 'VERSION A' }, { matricula: MATRICULA, denominacion: 'VERSION B' }]))
+  await assert.rejects(() => confirmarVehiculoMapfre(page, guard, MATRICULA), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && sinMatricula(e))
+  assert.equal(await radioMarcado(page), -1)
   assert.equal((await marcas(page)).aceptado, null)
   await context.close()
 })
@@ -151,11 +167,11 @@ test('consultarVehiculoPorMatricula: moto (0 puertas) también', async () => {
   await context.close()
 })
 
-test('consultarVehiculoPorMatricula: varias filas → requiere_humano SIN llamar al guard; sin diálogo → hueco con inventario', async () => {
-  const a = await preparar(PASO2([{ matricula: MATRICULA, denominacion: 'A' }, { matricula: MATRICULA, denominacion: 'B' }]))
-  let llamado = false
-  await assert.rejects(() => consultarVehiculoPorMatricula(a.page, MATRICULA, { confirmarVehiculoMapfre: async () => { llamado = true } }), ErrorSeleccionVehiculoMapfre)
-  assert.equal(llamado, false)
+test('consultarVehiculoPorMatricula: varias filas → el vehículo de la PRIMERA, confirmado por el guard; sin diálogo → hueco con inventario', async () => {
+  const a = await preparar(PASO2([{ matricula: MATRICULA, denominacion: 'MARCA MOTO PRIMERA', cv: '95', cc: '798', puertas: '0', fecha: '15/06/2020' }, { matricula: MATRICULA, denominacion: 'MARCA MOTO SEGUNDA' }]))
+  const v = await consultarVehiculoPorMatricula(a.page, MATRICULA, { confirmarVehiculoMapfre: (p, m) => confirmarVehiculoMapfre(p, a.guard, m) })
+  assert.equal(v.denominacion, 'MARCA MOTO PRIMERA')
+  assert.equal((await marcas(a.page)).aceptado, 1)
   await a.context.close()
   const b = await preparar('<app-datos-vehiculo><input name="matricula"></app-datos-vehiculo>')
   await assert.rejects(

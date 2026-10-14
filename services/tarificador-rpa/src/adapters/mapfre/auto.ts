@@ -15,8 +15,8 @@
 // VEHÍCULO CONFIRMADO (14/10/2026, Alberto: «usa el bot de Mapfre que ya tiene esa información»): por MATRÍCULA, el diálogo
 // «Selección de vehículo» da el vehículo exacto (denominación, CV, CC, puertas, fecha de inicio) de coche y moto (mismo NSEI).
 // `consultarVehiculoPorMatricula` teclea la matrícula, lee la fila (sin matrícula ni bastidor) y la confirma SOLO por
-// `ctx.confirmarVehiculoMapfre` (función guardada de guard.ts: una sola fila y con la matrícula del riesgo, comparada dentro
-// del guard). Devuelve `VehiculoConfirmado` (module-tarificacion), que alimentará a los demás bots (fase siguiente).
+// `ctx.confirmarVehiculoMapfre` (función guardada de guard.ts: la PRIMERA fila, y solo si su matrícula es la del riesgo,
+// comparada dentro del guard). Devuelve `VehiculoConfirmado` (module-tarificacion), que alimentará a los demás bots (fase siguiente).
 // Lo que depende de pantallas NO mapeadas (lupa del NIF y «Continuar» del paso 1, «Continuar» del paso 2, mat-select, precio)
 // es `ErrorMapaIncompleto` con `pideInventarioDom` = el runner adjunta el inventario de estructura en la primera prueba real.
 //
@@ -44,7 +44,6 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { ErrorSeleccionVehiculoMapfre } from '../../guard.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { fechaEs } from '../allianz/comunidades.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
@@ -297,8 +296,8 @@ const ESPERA_DIALOGO_VEHICULO_MS = 15_000
 /**
  * Paso 2 · VEHÍCULO CONFIRMADO por matrícula (coche y moto). Con el paso «Objeto asegurado» activo en `nsei` (la pestaña de
  * NSEI): teclea la matrícula (`comprobarCampo` + `fill`), espera el diálogo «Selección de vehículo», lee sus filas (sin
- * matrícula ni bastidor) y, con EXACTAMENTE una, la confirma por `ctx.confirmarVehiculoMapfre` (guard.ts compara allí la
- * matrícula de la fila con la del riesgo). 0 filas → `datos`; varias → `requiere_humano`. Devuelve el vehículo SIN matrícula.
+ * matrícula ni bastidor) y confirma la PRIMERA por `ctx.confirmarVehiculoMapfre` (guard.ts compara allí la matrícula de esa
+ * fila con la del riesgo; no casa → `datos`). 0 filas → `datos`; varias → la primera (Alberto, 14/10/2026). Devuelve el vehículo SIN matrícula.
  * Ningún mensaje lleva la matrícula. No aparece el campo o el diálogo → `ErrorMapaIncompleto` con inventario.
  */
 export async function consultarVehiculoPorMatricula(
@@ -320,7 +319,7 @@ export async function consultarVehiculoPorMatricula(
   }
   const filas = await leerFilasDialogoVehiculo(nsei)
   if (filas.length === 0) throw new ErrorTarificador('datos', 'mapfre/auto: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  if (filas.length > 1) throw new ErrorSeleccionVehiculoMapfre(filas.length)
+  // Varias filas → la PRIMERA (Alberto, 14/10/2026); el guard confirma esa misma fila y exige su matrícula = la del riesgo.
   const vehiculo = vehiculoConfirmadoDesdeMapfre(filas[0]!)
   if (!vehiculo) throw new ErrorTarificador('portal', 'mapfre/auto: la fila de «Selección de vehículo» no trae denominación comercial legible')
   await ctx.confirmarVehiculoMapfre(nsei, matricula)
