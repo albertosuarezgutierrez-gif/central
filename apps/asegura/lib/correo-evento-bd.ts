@@ -386,7 +386,7 @@ const TOPE_REEVALUACION = 200
 /**
  * Reevaluación de emisiones (14/10/2026): las filas `emision` `sin_resolver` sin mirar de los últimos 60 días se
  * vuelven a resolver contra la cartera; si CIMA ya trae la póliza en vigor pasan a `duplicado_cima`. Nunca crea
- * pólizas, notas ni tareas. El UPDATE lleva `estado = 'sin_resolver'` en el WHERE: idempotente y a prueba de
+ * pólizas, notas ni tareas. El UPDATE lleva `estado = 'sin_resolver' and revisado_at is null` en el WHERE: idempotente y a prueba de
  * dos pasadas a la vez. `sin_migracion` (falta la tabla) → ceros.
  */
 export async function reevaluarEmisionesSinResolver(
@@ -418,7 +418,7 @@ export async function reevaluarEmisionesSinResolver(
     const n = await db.$executeRaw(Prisma.sql`
       update correo_evento_entrante set estado = 'duplicado_cima', poliza_id = ${d.polizaId}::uuid, cliente_id = ${d.clienteId}::uuid,
              motivo = ${d.motivo}, resumen = ${d.resumen}, updated_at = now()
-      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver'`)
+      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver' and revisado_at is null`)
     if (n > 0) resueltas++
   }
   return { revisadas: filas.length, resueltas }

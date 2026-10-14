@@ -128,6 +128,6 @@ test('reevaluación: solo emisiones', () => {
 test('reevaluación: el UPDATE lleva la guarda estado = sin_resolver y el puerto no crea nada', () => {
   const bd = readFileSync(join(import.meta.dirname, 'correo-evento-bd.ts'), 'utf8')
   const fn = bd.slice(bd.indexOf('export async function reevaluarEmisionesSinResolver'))
-  assert.match(fn, /where id = \$\{f\.id\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado = 'sin_resolver'/)
+  assert.match(fn, /where id = \$\{f\.id\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado = 'sin_resolver' and revisado_at is null/)
   assert.doesNotMatch(fn, /insert into|crearTarea|anotar\(/)
 })
