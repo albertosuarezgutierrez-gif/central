@@ -73,6 +73,7 @@ export type LecturaEncolado = { ok: true; trabajoId: string; duplicado: boolean 
 const MOTIVOS_RECHAZO: Record<string, string> = {
   sin_riesgo_previo: 'Este cliente no tiene aún un riesgo tarificado en esa compañía y ramo: pide primero el presupuesto desde una oportunidad.',
   riesgo_previo_invalido: 'El último riesgo guardado ya no es válido (p. ej. fechas pasadas): pide el presupuesto de nuevo desde una oportunidad.',
+  origen_purgado: 'El último trabajo ya se cerró y se borraron sus datos personales: pide el precio desde el cotizador (Nueva oportunidad → ramo).',
 }
 
 /** Respuesta de «probar»: 202 encolado, o `duplicado: true` con el id del trabajo existente (se muestra ese). */
@@ -89,6 +90,7 @@ export function leerEncolado(status: number, json: unknown): LecturaEncolado {
   const motivo = str(o?.motivo)
   if (motivo && MOTIVOS_RECHAZO[motivo]) return { ok: false, mensaje: MOTIVOS_RECHAZO[motivo] }
   if (motivo?.startsWith('modo_no_automatizable')) return { ok: false, mensaje: 'Esa compañía y ramo no están habilitados para el bot.' }
+  if (typeof o?.mensaje === 'string' && o.mensaje.trim()) return { ok: false, mensaje: o.mensaje }
   return { ok: false, mensaje: mensajeDeFallo(status, json) }
 }
 

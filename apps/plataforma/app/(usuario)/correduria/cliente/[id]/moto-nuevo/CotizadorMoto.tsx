@@ -70,7 +70,7 @@ import { describirCandidata, type SeguroAnteriorImputado } from '@/lib/correduri
 import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
 import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
-import PrecioPorBot from './PrecioPorBot'
+import PrecioBots from '../PrecioBots'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -1370,13 +1370,14 @@ export default function CotizadorMoto({
         />
       )}
 
-      {/* «Precio por bot (gratis)» (13/10/2026): los mismos datos, al tarificador RPA de cada compañía con bot de moto. */}
+      {/* «Bots (gratis)» (14/10/2026): los mismos datos, al tarificador RPA de cada compañía con bot de moto. */}
       {poliza === null && (
-        <PrecioPorBot
+        <PrecioBots
+          ramo="moto"
           clienteId={clienteId}
           oportunidadId={variante?.oportunidadId ?? null}
-          cilindradaInicial={datosRiesgo?.cilindradaCc ?? null}
-          entrada={{
+          inicialesExtra={{ cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '' }}
+          formulario={{
             matricula,
             marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
             modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
