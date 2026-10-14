@@ -166,16 +166,31 @@ export async function marcoDelFormulario(page: Page, esperaMs: number): Promise<
 
 /** Login SSO en dos pasos. El paso 2 usa selectores HIPÓTESIS genéricos (contraseña visible + submit del mismo formulario). */
 export type CtxLoginHogar = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'>
-export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
+/**
+ * Paso 1 del SSO (GRABADO): portal → SSO → «Nombre de usuario» + «Iniciar sesión». Devuelve si se quedó en el SSO (la 2.ª
+ * pantalla, sin grabar: la resuelve `login` con la hipótesis o el explorador con el login asistido). Reutilizado por ambos.
+ */
+export async function loginPaso1(page: Page, ctx: CtxLoginHogar): Promise<boolean> {
   const url = urlEntradaPortal('/')
   const r = await page.goto(url, { waitUntil: 'domcontentloaded' })
   if ((r?.status() ?? 0) >= 500) throw new ErrorTarificador('portal', `occident/hogar: el portal respondió ${r?.status()}`, { transitorio: true })
   await ctx.exigirSinCaptcha()
-  if (esUrlSso(page.url())) {
-    await page.locator(SEL.ssoUsuario).fill(ctx.credenciales.usuario)
-    await ctx.pausa()
-    await pulsarSeguro(ctx, page.locator(SEL.ssoEnviarUsuario))
-    await ctx.exigirSinCaptcha()
+  if (!esUrlSso(page.url())) return false
+  await page.locator(SEL.ssoUsuario).fill(ctx.credenciales.usuario)
+  await ctx.pausa()
+  await pulsarSeguro(ctx, page.locator(SEL.ssoEnviarUsuario))
+  await page.waitForLoadState('domcontentloaded').catch(() => undefined)
+  await ctx.exigirSinCaptcha()
+  return true
+}
+
+/** ¿Se ve la cabecera del portal (sesión abierta) en `ms`? Solo lee. */
+export async function cabeceraPortalVisible(page: Page, ms: number): Promise<boolean> {
+  return page.locator(SEL.portalCabecera).first().waitFor({ state: 'visible', timeout: ms }).then(() => true, () => false)
+}
+
+export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
+  if (await loginPaso1(page, ctx)) {
     const clave = page.locator(SEL_HIPOTESIS_SSO_CONTRASENA).filter({ visible: true }).first()
     try {
       await clave.waitFor({ state: 'visible', timeout: 15_000 })
