@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T14:32:31Z",
-  "sha": "4704b88b2aaf825128451620d548199b963db0ef",
+  "generadoEn": "2026-10-14T14:54:28Z",
+  "sha": "72bab5cf120b4114e53be255b74f7ca7f47568c2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49883,7 +49883,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "f90363d5fc9f"
+      "hash": "81345c328def"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
