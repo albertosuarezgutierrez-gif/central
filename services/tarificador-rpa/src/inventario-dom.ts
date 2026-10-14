@@ -90,6 +90,9 @@ function extractor(explora: boolean): string {
       e.invalido = el.getAttribute('aria-invalid') === 'true'
         || /(^|\\s)[\\w-]*-invalid(\\s|$)/.test(String(el.getAttribute('class') || ''))
         || !!(caja && /(^|\\s)[\\w-]*(has-error|invalid)[\\w-]*(\\s|$)/.test(String(caja.getAttribute('class') || '')));
+      // ¿AUTOCOMPLETA? (14/10/2026) aria-autocomplete list/both/inline o un datalist (atributo list): su rellenar puede repintar.
+      const ac = String(el.getAttribute('aria-autocomplete') || '').toLowerCase();
+      if (tag !== 'select' && (ac === 'list' || ac === 'both' || ac === 'inline' || el.hasAttribute('list'))) e.autocompletar = true;
     }
     if (EXPLORA) {
       const dlg = tituloDialogo(el, SEL_DIALOGO);

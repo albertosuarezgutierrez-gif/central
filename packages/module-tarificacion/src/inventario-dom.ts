@@ -54,6 +54,9 @@ export type ElementoInventario = {
   conValor?: boolean
   /** ¿El portal marca el control como INVÁLIDO (aria-invalid, `ng-invalid`, error NDBX)? Solo el booleano (14/10/2026). */
   invalido?: true
+  /** ¿El control AUTOCOMPLETA (aria-autocomplete list/both/inline o `list` de datalist)? Solo el booleano (14/10/2026): su
+   *  `rellenar` puede repintar la sección, y el worker lo deja para el final del lote (`ordenarLote`). */
+  autocompletar?: true
   /**
    * Título accesible del DIÁLOGO/MODAL que contiene al control (14/10/2026; el más cercano: `SELECTOR_DIALOGO` de guard.ts),
    * saneado. Solo si el crudo lo trae. Sirve para el «Guardar» de un modal autorizado por entrada (`guardadosEnDialogo`).
@@ -227,6 +230,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (eo.deshabilitado === true) el.deshabilitado = true
       if (typeof eo.conValor === 'boolean' && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.conValor = eo.conValor
       if (eo.invalido === true && (tag === 'input' || tag === 'select' || tag === 'textarea')) el.invalido = true
+      if (eo.autocompletar === true && (tag === 'input' || tag === 'textarea')) el.autocompletar = true
       // Elemento que MUESTRA el usuario/mediador (cabecera: id/name/aria «usuario», «mediador», «perfil»…): su texto fuera.
       if (el.texto !== undefined && tag !== 'input' && tag !== 'select' && tag !== 'textarea'
         && [eo.id, eo.name, eo.ariaLabel].some((x) => typeof x === 'string' && PATRON_ELEMENTO_USUARIO.test(x))) {

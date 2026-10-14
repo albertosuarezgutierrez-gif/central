@@ -57,6 +57,24 @@ export function Entrada() {
     window.history.replaceState(null, '', window.location.pathname)
   }, [])
 
+  // El `?r=` del correo de campaña («presentación de la app», `lib/presentacion-app.ts`): solo ATRIBUYE
+  // (visita y, si se registra, el origen del alta). No canjea nada, no abre sesión ni precarga datos:
+  // por eso es un efecto APARTE del que lee el enlace de acceso (ese no puede llamar al servidor). Un
+  // POST, para que el GET de los escáneres de correo no cuente como visita; un fallo no cambia la entrada.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const r = q.get('r')
+    if (!r) return
+    void fetch('/api/campana/visita', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ r }),
+    }).catch(() => undefined)
+    q.delete('r')
+    const resto = q.toString()
+    window.history.replaceState(null, '', window.location.pathname + (resto ? `?${resto}` : '') + window.location.hash)
+  }, [])
+
   // Mientras una petición va, el botón no se puede volver a pulsar: un doble toque
   // mandaría dos códigos (y el primero dejaría de valer) o gastaría dos intentos.
   const [enviando, setEnviando] = useState(false)

@@ -1483,3 +1483,13 @@ export {
   type CompaniaEvento, type CorreoEventoAseguradora, type EventoAseguradora, type EventoSiniestro, type EventoPreAnulacion,
   type EventoImpago, type EventoAnulacion, type EventoSuplemento, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
 } from './evento-correo-aseguradora.ts'
+
+// Campaña «presentación de la app» a leads antiguos (14/10/2026). El token `?r=` (node:crypto) va
+// aparte, por la subruta `@central/module-seguros/presentacion-app-ref`.
+export {
+  ASUNTO_PRESENTACION_APP, CAMPANA_PRESENTACION_APP, COOKIE_REF_CAMPANA, DIAS_COOKIE_REF, PARAMETRO_REF,
+  LETRAS_VARIANTE, VARIANTES_PRESENTACION,
+  cabecerasBaja, correoPresentacionApp, embudoCampana, embudoPorGrupo, enlacePresentacion, esRefValido,
+  esVariantePresentacion, etapaPersona, pieLegalPresentacion, refDeCabeceraCookie, varianteDeTurno, variantesActivas,
+  type CorreoPresentacion, type EmbudoCampana, type EtapaPersona, type FilaEmbudo, type VariantePresentacion,
+} from './presentacion-app.ts'
