@@ -45,6 +45,13 @@ test('recibo que aún no está en la cartera: queda anotado, sin enlace inventad
   assert.doesNotMatch(t, /href=/)
 })
 
+test('nº ambiguo (dos recibos distintos): se dice que no se marcó ninguno, sin enlace ni llamada', () => {
+  const t = textoAvisoDevolucion(lectura, [{ ...ok, estado: 'ambiguo', clienteId: null, cliente: null, tarea: 'no_aplica' }], url)
+  assert.match(t, /DOS recibos distintos/)
+  assert.doesNotMatch(t, /href=|Llamada creada/)
+  assert.equal(leerResultadosPuerto({ resultados: [{ ...ok, estado: 'ambiguo' }] })?.[0].estado, 'ambiguo')
+})
+
 test('filas ilegibles e incidencias se declaran', () => {
   const t = textoAvisoDevolucion({ ...lectura, ilegibles: 2, incidencias: [{ idRecibo: '8800000001' }] }, [ok], url)
   assert.match(t, /2 fila\(s\)/)

@@ -184,9 +184,9 @@ test('prompt: guardar el presupuesto SOLO en resultado (efecto guardar_presupues
   const guardar = SYSTEM_EXPLORADOR.split('\n').find((x) => x.startsWith('- GUARDAR EL PRESUPUESTO'))!
   assert.ok(nunca.includes(l.emision) && nunca.includes(l.prohibidas), 'la línea de emisión sale de ACCIONES_PORTAL')
   assert.ok(guardar.includes(l.guardar), 'la línea de guardar sale de ACCIONES_PORTAL')
-  // Ni Grabar ni Guardar ni Archivar en la lista de NUNCA; «Proyecto ampliado» sí (sin certeza de qué hace).
-  for (const g of ['Grabar', 'Guardar', 'Archivar']) assert.ok(!nunca.includes(g), g)
-  assert.ok(nunca.includes('Proyecto ampliado'))
+  // Ni Grabar ni Guardar ni Archivar en la lista de NUNCA; «Proyecto ampliado» tampoco (Alberto, 14/10/2026: es el proyecto que hay que descargarse → GUARDAR).
+  for (const g of ['Grabar', 'Guardar', 'Archivar', 'Proyecto ampliado']) assert.ok(!nunca.includes(g), g)
+  assert.ok(guardar.includes('Proyecto ampliado'))
   assert.match(guardar, /SOLO al llegar al precio[\s\S]*"resultado"[\s\S]*guardar_presupuesto/)
   assert.match(SYSTEM_EXPLORADOR, /efectoEsperado ∈ [^\n]*guardar_presupuesto/)
 })

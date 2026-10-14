@@ -15,7 +15,7 @@ import { eur } from '../dinero.ts'
 
 export type ResultadoPuertoDevolucion = {
   idRecibo: string
-  estado: 'registrada' | 'ya_registrada' | 'sin_recibo' | 'ya_en_cima' | 'ya_resuelta'
+  estado: 'registrada' | 'ya_registrada' | 'sin_recibo' | 'ya_en_cima' | 'ya_resuelta' | 'ambiguo'
   clienteId: string | null
   cliente: string | null
   ramo: string | null
@@ -50,7 +50,7 @@ export function leerResultadosPuerto(json: unknown): ResultadoPuertoDevolucion[]
     if (typeof x !== 'object' || x === null) return []
     const o = x as Record<string, unknown>
     const estado = o.estado === 'registrada' || o.estado === 'ya_registrada' || o.estado === 'sin_recibo'
-      || o.estado === 'ya_en_cima' || o.estado === 'ya_resuelta' ? o.estado : null
+      || o.estado === 'ya_en_cima' || o.estado === 'ya_resuelta' || o.estado === 'ambiguo' ? o.estado : null
     const idRecibo = txt(o.idRecibo)
     if (!estado || !idRecibo) return []
     const tarea = o.tarea === 'abierta' || o.tarea === 'ya_habia' ? o.tarea : 'no_aplica'
@@ -99,6 +99,10 @@ export function textoAvisoDevolucion(
     if (!r) { lineas.push('  ⚠️ asegura no devolvió esta fila: míralo en el correo.'); continue }
     if (r.estado === 'ya_resuelta') {
       lineas.push('  ✅ CIMA ya trae un movimiento posterior (cobro o anulación): el aviso llegó tarde, no se marca.')
+      continue
+    }
+    if (r.estado === 'ambiguo') {
+      lineas.push('  ⚠️ Ese nº casa con DOS recibos distintos de la compañía: no se ha marcado ninguno. Míralo a mano.')
       continue
     }
     if (r.estado === 'sin_recibo') {

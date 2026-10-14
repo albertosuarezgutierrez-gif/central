@@ -35,9 +35,13 @@ export const CLAVES_RIESGO_COMUNIDAD = [
   'companiaActual',
 ] as const
 
-/** Auto/moto: vehículo de catálogo, CP/población y las elecciones de versión/población. Fuera: matrícula, conductor, tomador… */
+/**
+ * Auto/moto: vehículo de catálogo, CP/población, las elecciones de versión/población y el vehículo CONFIRMADO por Mapfre
+ * (14/10/2026: denominación, CV, CC, puertas, fecha de inicio; SIN matrícula ni bastidor). Fuera: matrícula, conductor, tomador…
+ */
 export const CLAVES_RIESGO_VEHICULO = [
   'ramo', 'codigoPostal', 'poblacion', 'eleccionPoblacion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa',
+  'vehiculoConfirmado',
 ] as const
 
 /** Ramo sin lista propia (p. ej. una exploración de Hogar): solo el ramo. */
@@ -49,6 +53,8 @@ export const SUBCLAVES_RIESGO: Readonly<Record<string, readonly string[]>> = Obj
   seleccionVehiculo: Object.freeze(['marca', 'modelo', 'clase', 'cilindradaCc', 'descripcion']),
   eleccionVersion: Object.freeze(['codigo', 'etiqueta']),
   eleccionVersionIa: Object.freeze(['origen', 'clave']),
+  // Sub-claves EXPLÍCITAS (no se importa `CLAVES_VEHICULO_CONFIRMADO`: una clave nueva allí no se conserva sola aquí).
+  vehiculoConfirmado: Object.freeze(['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio']),
 })
 
 export function clavesConservadas(ramo: unknown): readonly string[] {

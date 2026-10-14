@@ -16,14 +16,23 @@ import { abrirTarificacionRapidaAuto, etiquetaExacta } from '../src/adapters/map
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 
 const HOME = `<!doctype html><html><body>
-  <nav><a role="tab" onclick="mostrar('np')">Consulta</a><a role="tab" onclick="mostrar('np')">Nueva producción</a></nav>
-  <div id="np" hidden>
-    <div class="bloque"><h3>Automóviles</h3>
-      <a id="otra" onclick="mostrar('enl')">Turismos y Motos Clásicos</a>
-      <a id="tm" onclick="mostrar('enl')">Turismos y Motos</a></div>
-    <div id="enl" hidden>
-      <a href="/otro" target="_blank">Tarificación y Emisión Rápida Pro</a>
-      <a id="tr" href="/nsei" target="_blank">Tarificación y Emisión Rápida</a></div>
+  <nav><a role="tab" onclick="mostrar('np')">Inicio</a><a role="tab" onclick="mostrar('menu')">Nueva producción</a></nav>
+  <ul id="menu" hidden>
+    <li><a role="menuitem" onclick="mostrar('pag')">Agropecuaria</a></li>
+    <li><a role="menuitem" id="auto" onclick="mostrar('pag')">Automóviles</a></li>
+    <li><a role="menuitem" onclick="mostrar('pag')">Empresas</a></li>
+    <li><a role="menuitem" onclick="mostrar('pag')">Vida</a></li></ul>
+  <div id="pag" hidden>
+    <h1>Automóviles</h1>
+    <div class="tarjeta" id="patinetes"><h3>Patinetes</h3>
+      <a href="/otro-patinetes" target="_blank">Tarificación y Emisión Rápida</a></div>
+    <div class="tarjeta" id="camiones"><h3>Camiones, Autobuses y vehículos Industriales</h3>
+      <a href="/otro-camiones" target="_blank">Tarificación y Emisión</a></div>
+    <div class="tarjeta" id="turismos"><h3 id="tm" onclick="window.tmPulsado=1">Turismos y Motos</h3>
+      <a href="/otro-general" target="_blank">Tarificación y Emisión (General)</a>
+      <a id="tr" href="/nsei" target="_blank">Tarificación y Emisión Rápida</a>
+      <a href="/otro-acuerdos" target="_blank">Tarificación y Emisión (Otros Acuerdos)</a></div>
+    <div class="tarjeta"><h3>Flotas</h3><a href="/otro-flotas" target="_blank">Tarificación y Emisión Rápida Pro</a></div>
   </div>
   <script>function mostrar(id){document.getElementById(id).hidden=false}</script></body></html>`
 /** El texto exacto en un SPAN dentro de un <a> SIN href (sin rol «link») cuyo onclick emite: el guard tiene que ver el <a>. */
@@ -105,7 +114,10 @@ test('menús → pestaña nueva → formulario NSEI detectado (y el 401 de auth 
     assert.equal(await nueva.locator('app-datos-basicos').count(), 1)
     assert.ok(await nueva.getByText('Fecha Condiciones').isVisible())
     // Solo los textos exactos, en orden; ni los señuelos que los contienen.
-    assert.deepEqual(pulsados, ['Nueva producción', 'Turismos y Motos', 'Tarificación y Emisión Rápida'])
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión Rápida'])
+    // El enlace pulsado es el de la tarjeta «Turismos y Motos» (no el homónimo de Patinetes, que va antes en el DOM).
+    assert.ok(!pulsados.includes('Turismos y Motos'))
+    assert.equal(await page.evaluate(() => (window as unknown as { tmPulsado?: number }).tmPulsado ?? 0), 0, 'el título de la tarjeta no se pulsa')
     assert.equal(guard.violacion(), null)
   } finally {
     await context.close()
@@ -126,7 +138,83 @@ test('sin el menú «Nueva producción» → ErrorMapaIncompleto (no se adivina)
   const { context, page, ctx } = await abrir('/')
   try {
     await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
-    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), ErrorMapaIncompleto)
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Nueva producción/.test((e as Error).message))
+  } finally {
+    await context.close()
+  }
+})
+
+test('sin la opción «Automóviles» en el desplegable → ErrorMapaIncompleto y no se pulsa nada más', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.getElementById('auto')?.remove() })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Automóviles/.test((e as Error).message))
+    assert.deepEqual(pulsados, ['Nueva producción'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('sin la tarjeta «Turismos y Motos» → ErrorMapaIncompleto (no se pulsa el enlace homónimo de otra tarjeta)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.getElementById('tm')?.remove() })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Turismos y Motos/.test((e as Error).message))
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('sin el enlace «Tarificación y Emisión Rápida» en ninguna parte → ErrorMapaIncompleto (0 coincidencias)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.getElementById('tr')?.remove(); document.querySelector('#patinetes a')?.remove() })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /Tarificación y Emisión Rápida/.test((e as Error).message) && /ninguna coincidencia/.test((e as Error).message))
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
+  } finally {
+    await context.close()
+  }
+})
+
+/** Quita los contenedores de tarjeta reconocibles (div → span): título y enlaces quedan sueltos, como un DOM que `tarjetaDe` no casa. */
+const SIN_TARJETAS = () => {
+  document.querySelectorAll('.tarjeta').forEach((d) => {
+    const s = document.createElement('span')
+    s.innerHTML = d.innerHTML
+    d.replaceWith(s)
+  })
+}
+
+test('DOM sin tarjeta reconocible y enlace exacto ÚNICO en la página → lo pulsa', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelector('#patinetes a')?.remove() }) // sin el homónimo de Patinetes
+    await page.evaluate(SIN_TARJETAS)
+    const nueva = await abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 })
+    assert.match(nueva.url(), /\/nsei$/)
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles', 'Tarificación y Emisión Rápida'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('DOM sin tarjeta reconocible y DOS enlaces exactos → para (no se adivina)', async () => {
+  const { context, page, ctx, pulsados } = await abrir('/')
+  try {
+    await page.evaluate(SIN_TARJETAS)
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /2 coincidencias/.test((e as Error).message))
+    assert.deepEqual(pulsados, ['Nueva producción', 'Automóviles'])
+  } finally {
+    await context.close()
+  }
+})
+
+test('sin el título de la página «Automóviles» → ErrorMapaIncompleto', async () => {
+  const { context, page, ctx } = await abrir('/')
+  try {
+    await page.evaluate(() => { document.querySelector('h1')?.remove() })
+    await assert.rejects(() => abrirTarificacionRapidaAuto(page, ctx, { menuMs: 1_000 }), (e) => e instanceof ErrorMapaIncompleto && /título/.test((e as Error).message))
   } finally {
     await context.close()
   }

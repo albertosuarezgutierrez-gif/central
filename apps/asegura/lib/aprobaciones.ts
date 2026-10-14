@@ -18,6 +18,7 @@ import {
 import { createHash } from 'node:crypto'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { NORM_R_ID_RECIBO } from './id-recibo-sql'
 import { anotarCambio } from './auditoria'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
 import { pdfDocumentoFirmado } from './documento-firmado-pdf'
@@ -44,7 +45,7 @@ export async function proponerReciboDevuelto(tx: Tx, correduriaId: string, recib
            to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vencimiento,
            -- La compañía avisó por correo con un motivo de CUENTA (IBAN o titular): se le pide revisarla.
            exists (select 1 from recibo_devolucion d where d.correduria_id = r.correduria_id
-                     and d.codigo_entidad_dgs = r.codigo_entidad_dgs and d.id_recibo_norm = ltrim(r.id_recibo, '0')
+                     and d.codigo_entidad_dgs = r.codigo_entidad_dgs and d.id_recibo_norm = ${NORM_R_ID_RECIBO}
                      and d.resuelta_at is null and d.tipo_motivo = 'cuenta') as "motivoCuenta"
     from poliza_recibos r join polizas p on p.id = r.poliza_id
     where r.id = ${reciboId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`

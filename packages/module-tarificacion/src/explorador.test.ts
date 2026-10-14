@@ -24,6 +24,8 @@ import {
   normalizarRedNoGet,
   planDesdeMapa,
   resolverDato,
+  claseMinimaPermiso,
+  cvAKw,
   redactarValoresInventario,
   sanearInventarioDom,
   topesExplorador,
@@ -210,10 +212,43 @@ describe('catálogo y resolución de datos', () => {
     it('no hay uso, ámbito ni compañía anterior inventados', () => {
       expect(claves().filter((k) => /uso|ambito|compania/.test(k))).toEqual([])
     })
-    it('clase del permiso: «B» fijo (decisión de negocio), con y sin datos reales, y la IA ve la pista', () => {
+    it('cvAKw: 1 CV = 0,73549875 kW; null → null', () => {
+      expect(cvAKw(100)).toBeCloseTo(73.549875, 6)
+      expect(cvAKw(15)).toBeCloseTo(11.03, 2)
+      expect(cvAKw(null)).toBeNull()
+    })
+    describe('claseMinimaPermiso (DGT)', () => {
+      const m = (cilindradaCc: number | null, potenciaKw: number | null, antiguedadBAnios: number | null = null) =>
+        claseMinimaPermiso({ esMoto: true, cilindradaCc, potenciaKw, antiguedadBAnios })
+      it('turismo → B; esMoto null → null', () => {
+        expect(claseMinimaPermiso({ esMoto: false, cilindradaCc: null, potenciaKw: null, antiguedadBAnios: null })).toBe('B')
+        expect(claseMinimaPermiso({ esMoto: null, cilindradaCc: 50, potenciaKw: 3, antiguedadBAnios: 9 })).toBeNull()
+      })
+      it('ciclomotor: 50 cc → B, 51 cc ya no', () => {
+        expect(m(50, null)).toBe('B')
+        expect(m(51, 4, 5)).toBe('B')
+        expect(m(51, 4, 1)).toBe('A1')
+        expect(m(51, null)).toBeNull()
+      })
+      it('≤125 cc y ≤11 kW: B con ≥3 años, A1 con menos, null sin antigüedad; fronteras 125/126 cc y 11/11,01 kW', () => {
+        expect(m(125, 11, 3)).toBe('B')
+        expect(m(125, 11, 2)).toBe('A1')
+        expect(m(125, 11, null)).toBeNull()
+        expect(m(126, 11, 3)).toBe('A2')
+        expect(m(125, 11.01, 3)).toBe('A2')
+      })
+      it('A2 hasta 35 kW y A por encima; fronteras 35/35,01 kW; sin cc o sin kW → null', () => {
+        expect(m(400, 35)).toBe('A2')
+        expect(m(400, 35.01)).toBe('A')
+        expect(m(1000, 100)).toBe('A')
+        expect(m(null, 20)).toBeNull()
+        expect(m(400, null)).toBeNull()
+      })
+    })
+    it('clase del permiso: «B» por defecto sintético (turismo), con y sin datos reales, y la IA ve la pista y la regla', () => {
       expect(resolverDato('conductor.clase_permiso', { ...auto, conDatosReales: false })).toEqual({ ok: true, valor: 'B' })
       expect(resolverDato('conductor.clase_permiso', { ...auto, conDatosReales: true })).toEqual({ ok: true, valor: 'B' })
-      expect(catalogoParaIA('auto').find((d) => d.clave === 'conductor.clase_permiso')).toMatchObject({ pista: 'B' })
+      expect(catalogoParaIA('auto').find((d) => d.clave === 'conductor.clase_permiso')).toMatchObject({ pista: 'B', descripcion: expect.stringContaining('125 cc') })
     })
   })
 
@@ -701,7 +736,7 @@ describe('frontera de emisión: cuenta bancaria', () => {
     })
   }
   it('el motivo es legible e incluye la etiqueta del campo', () => {
-    expect(detectarParada(campo({ etiqueta: 'Número de cuenta' }))?.senal).toBe('frontera de emisión: el portal pide cuenta bancaria («Número de cuenta»)')
+    expect(detectarParada(campo({ etiqueta: 'Número de cuenta' }))?.senal).toBe('frontera de emisión: el portal pide cuenta bancaria — Número de cuenta («Número de cuenta»)')
   })
   it('manda sobre un título de emisión (el detalle es el de la cuenta)', () => {
     expect(detectarParada(inventario({ titulos: ['Datos de emisión'], elementos: [{ tag: 'input', etiqueta: 'IBAN' }] }))?.detalle).toBe('frontera_cuenta_bancaria')
