@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { construirMapa, erroresDeIncidencias, huellaPantalla, sanearInventarioDom, validarMapa, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
+import { construirMapa, erroresDeIncidencias, esRespuestaLogin, huellaPantalla, resumenLoginParaMapa, sanearInventarioDom, validarMapa, validarRespuestaExplorador, type RespuestaExplorador } from '@central/module-tarificacion'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { hayExplorador } from '@/lib/esquema-bd'
 import { PasoOcupado, anotarErroresUltimoPaso, conLockExploracion, costeYModelo, exploracionViva, guardarMapa, leerEstadoPaso, pasosDe, riesgoDeExploracion, type Bd } from '@/lib/tarificador-explorador'
@@ -40,7 +40,14 @@ export async function POST(req: Request) {
         // `presupuestoEnCurso` se va calculando EN ORDEN (como en el paso): un 2.º guardar_presupuesto (Descargar) o un
         // `terminar` sin importes solo valen tras un guardado validado ANTERIOR.
         let enCurso = false
-        const pasos = (await pasosDe(e.exploracionId, bd)).map((x) => {
+        const leidos = await pasosDe(e.exploracionId, bd)
+        // LOGIN ASISTIDO (14/10/2026): sus pasos NO son pantallas del mapa (el validador normal los rechaza), pero su
+        // estructura (sin valores) va a `huecos`: es la evidencia del SSO (una exploración no guarda el HTML como documento).
+        const huecosLogin = leidos.filter((x) => esRespuestaLogin(x.respuesta)).map((x) => {
+          const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
+          return inv ? resumenLoginParaMapa(x.n, inv) : `login asistido, pantalla ${x.n}: inventario ilegible`
+        })
+        const pasos = leidos.map((x) => {
           const inv = sanearInventarioDom(x.inventario, undefined, { refs: true })
           const v = inv && x.respuesta ? validarRespuestaExplorador(x.respuesta, { inventario: inv, ramo: e.ramo, entrada: e.entrada, datosReales, presupuestoEnCurso: enCurso }) : null
           const respuesta: RespuestaExplorador | null = v?.ok ? v.respuesta : null
@@ -60,6 +67,7 @@ export async function POST(req: Request) {
         )
         const hueco = huecoDeDetalleFin(p.motivoFin, p.detalleFin)
         if (hueco) mapa.huecos.push(hueco)
+        mapa.huecos.push(...huecosLogin)
         if (!validarMapa(mapa)) throw new MapaInvalido('mapa_invalido')
         resumen = { pantallas: mapa.pantallas.length, huecos: mapa.huecos.length, resultado: mapa.resultado.alcanzado, coste: mapa.coste }
         return guardarMapa(e, mapa, p.motivoFin, bd)

@@ -3,7 +3,7 @@
 // respeta el mismo lock y la IA en vuelo). Fixtures sintéticas, sin datos personales.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { huellaPantalla, sanearInventarioDom, type InventarioDom } from '@central/module-tarificacion'
+import { huellaPantalla, sanearInventarioDom, type InventarioDom, type RespuestaExplorador } from '@central/module-tarificacion'
 import { PasoOcupado, consumoPaso, ejecutarCierre, ejecutarPaso, erroresPasoAnterior, esBucle, planDeMemoriaUsable, type DepsPaso, type EstadoPaso, type PasoARegistrar } from './tarificador-explorador-paso.ts'
 
 const inventario = sanearInventarioDom({
@@ -51,7 +51,8 @@ function dobles(o: { ocupado?: boolean; iaEnVuelo?: boolean; durante?: (st: Esta
     liberarIA: async () => { st.iaEnVuelo = false; traza.push('libera') },
     registrar: async (_bd, p) => {
       registrados.push(p)
-      st.pasos.push({ huella: p.huella, respuesta: p.respuesta, origen: p.origen, llamadaIA: p.origen === 'ia', costeEur: p.costeEur, acciones: 0 })
+      // Como `pasosDe` (BD): la fila de un paso de login también se lee con el tipo de la normal (lleva `fase` y el validador normal la rechaza).
+      st.pasos.push({ huella: p.huella, respuesta: p.respuesta as RespuestaExplorador, origen: p.origen, llamadaIA: p.origen === 'ia', costeEur: p.costeEur, acciones: 0 })
       st.iaEnVuelo = false
       costes.push(p.costeEur)
       traza.push(`registra:${p.origen}`)
@@ -278,4 +279,75 @@ test('🪤 incidencias del worker (14/10/2026): van a los errores del paso ANTER
   assert.equal(r.tipo, 'ok')
   assert.deepEqual(registrados[0].erroresPasoAnterior, ['ejecucion: rellenar m0e0 «Superficie» (inmueble.superficie_m2): valor_no_aplicado'])
   assert.equal(registrados[0].errores, null, 'el paso NUEVO no se marca como rechazado')
+})
+
+// ─── LOGIN ASISTIDO (14/10/2026) ─────────────────────────────────────────────
+const invSso = sanearInventarioDom({
+  marcos: [{
+    url: 'https://ssoaut.gco.global/my.policy',
+    elementos: [
+      { tag: 'input', id: 'usernamegco', type: 'text', etiqueta: 'Nombre de usuario' },
+      { tag: 'input', id: 'password', type: 'password', etiqueta: 'Contraseña' },
+      { tag: 'button', id: 'SubmitCreds', type: 'submit', texto: 'Iniciar sesión' },
+    ],
+  }],
+}, undefined, { refs: true }) as InventarioDom
+const LOGIN_IA = JSON.stringify({
+  version: 1, fase: 'login', pantalla: { nombre: 'Acceso', tipo: 'formulario' },
+  acciones: [
+    { accion: 'rellenar', ref: 'm0e0', dato: 'credencial.usuario' },
+    { accion: 'rellenar', ref: 'm0e1', dato: 'credencial.contrasena' },
+    { accion: 'avanzar', ref: 'm0e2', efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+  ],
+  mapeo: [], motivo: null,
+})
+const entradaLogin = { ...entrada, inventario: invSso, entrada: 'occident:productos:hogar', fase: 'login' as const }
+
+test('🪤 fase de login: validador de login (claves credencial.*), SIN memoria; la misma respuesta en fase normal se rechaza', async () => {
+  const a = dobles()
+  let memoria = 0
+  a.d.mapas = async () => { memoria++; return [] }
+  let prompt = ''
+  a.d.ia = async (p) => { prompt = p; return LOGIN_IA }
+  const r = await ejecutarPaso(entradaLogin, a.d)
+  assert.ok(r.tipo === 'ok' && r.respuesta.acciones.length === 3 && 'fase' in r.respuesta && r.respuesta.fase === 'login')
+  assert.equal(memoria, 0, 'la fase de login no consulta la memoria del mapa')
+  assert.match(prompt, /FASE DE LOGIN/)
+  // Fase normal con la MISMA respuesta (y la misma entrada): credencial.* no existe → parar ambiguo.
+  const b = dobles()
+  b.d.ia = async () => LOGIN_IA
+  const n = await ejecutarPaso({ ...entradaLogin, fase: 'normal' }, b.d)
+  assert.ok(n.tipo === 'ok' && n.respuesta.acciones[0].accion === 'parar')
+  assert.ok(b.registrados[0].errores?.length)
+  // Login con una clave de ramo (o un valor en vez de la clave) → parar, nunca se reenvía al worker.
+  for (const malo of ['tomador.nif', 'secreto-literal']) {
+    const c = dobles()
+    c.d.ia = async () => LOGIN_IA.replace('credencial.usuario', malo)
+    const m = await ejecutarPaso(entradaLogin, c.d)
+    assert.ok(m.tipo === 'ok' && m.respuesta.acciones[0].accion === 'parar', malo)
+  }
+})
+
+test('🪤 fase de login: como mucho MAX_PANTALLAS_LOGIN pasos de login (regla, sin IA); la parada lleva la marca de fase', async () => {
+  const a = dobles()
+  for (let i = 0; i < 4; i++) a.st.pasos.push({ huella: `${i}`.padStart(16, '0'), respuesta: { fase: 'login', acciones: [] } as unknown as RespuestaExplorador, origen: 'ia', llamadaIA: true, costeEur: 0, acciones: 0 })
+  const r = await ejecutarPaso(entradaLogin, a.d)
+  assert.ok(r.tipo === 'ok' && r.origen === 'regla' && r.respuesta.acciones[0].accion === 'parar' && 'fase' in r.respuesta)
+  assert.ok(!a.traza.includes('ia'))
+})
+
+test('🪤 fase de login (revisión): la CONTRASEÑA una sola vez por exploración, también tras un reintento del trabajo', async () => {
+  // Un paso de login YA guardado que pidió la contraseña (p. ej. el intento anterior murió por infra tras enviarla).
+  const a = dobles()
+  a.st.pasos.push({ huella: '1'.padStart(16, '0'), respuesta: JSON.parse(LOGIN_IA) as RespuestaExplorador, origen: 'ia', llamadaIA: true, costeEur: 0, acciones: 3 })
+  a.d.ia = async () => LOGIN_IA
+  const r = await ejecutarPaso(entradaLogin, a.d)
+  assert.ok(r.tipo === 'ok' && r.respuesta.acciones[0].accion === 'parar', 'segunda contraseña → parar')
+  assert.deepEqual(a.registrados[0].errores, ['login_contrasena_repetida'])
+  // Sin contraseña previa (p. ej. solo se eligió el usuario) → pasa.
+  const b = dobles()
+  b.st.pasos.push({ huella: '1'.padStart(16, '0'), respuesta: { fase: 'login', pantalla: { nombre: null, tipo: 'otro' }, acciones: [{ accion: 'avanzar', ref: 'm0e2' }] } as unknown as RespuestaExplorador, origen: 'ia', llamadaIA: true, costeEur: 0, acciones: 1 })
+  b.d.ia = async () => LOGIN_IA
+  const s = await ejecutarPaso(entradaLogin, b.d)
+  assert.ok(s.tipo === 'ok' && s.respuesta.acciones.length === 3)
 })

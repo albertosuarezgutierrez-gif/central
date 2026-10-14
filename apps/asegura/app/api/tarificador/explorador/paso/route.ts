@@ -20,9 +20,12 @@ import {
 import { ejecutarPaso } from '@/lib/tarificador-explorador-paso'
 import {
   MAX_TOKENS_SALIDA_EXPLORADOR,
+  MAX_TOKENS_SALIDA_LOGIN,
   SYSTEM_EXPLORADOR,
+  SYSTEM_EXPLORADOR_LOGIN,
   TIMEOUT_IA_EXPLORADOR_MS,
   exploradorActivo,
+  faseLoginPermitida,
   leerPeticionPaso,
   modeloExplorador,
 } from '@/lib/tarificador-explorador-reglas'
@@ -61,6 +64,8 @@ export async function POST(req: Request) {
     const e = await exploracionViva(p.trabajoId)
     if (!e) return NextResponse.json({ estado: 'no_disponible', motivo: 'exploracion_no_en_curso' }, { status: 404 })
     if (e.cerrada) return NextResponse.json({ estado: 'conflicto', motivo: 'exploracion_cerrada' }, { status: 409 })
+    // LOGIN ASISTIDO (14/10/2026): solo para las compañías de la lista cerrada del módulo (hoy Occident). Otra → 400 + parar.
+    if (!faseLoginPermitida(p.fase, e.entrada)) return NextResponse.json({ estado: 'error', motivo: 'fase_login_no_permitida', respuesta: respuestaParar('ambiguo', 'login asistido no autorizado para esta entrada') }, { status: 400 })
 
     // PII: nada del inventario llega a la IA ni a la BD sin quitar antes los valores del cliente que se conocen.
     const riesgo = e.conDatosReales ? await riesgoDeExploracion(e).catch(() => null) : null
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
 
     let inicio: Date | null = null
     const out = await ejecutarPaso<Bd>(
-      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias },
+      { inventario, avancesFallidos: p.avancesFallidos, ramo: e.ramo, entrada: e.entrada, conDatosReales: e.conDatosReales, modelo, riesgo, incidencias: p.incidencias, fase: p.fase },
       {
         conLock: (fn) => conLockExploracion(e, fn),
         leer: async (bd) => {
@@ -87,7 +92,8 @@ export async function POST(req: Request) {
         rescate: (coste) => rescatarIA(e, coste),
         mapas: () => mapasMemoria(e),
         ia: (prompt) => iaTexto(prompt, {
-          system: SYSTEM_EXPLORADOR, maxTokens: MAX_TOKENS_SALIDA_EXPLORADOR, timeoutMs: TIMEOUT_IA_EXPLORADOR_MS, privado: true,
+          system: p.fase === 'login' ? SYSTEM_EXPLORADOR_LOGIN : SYSTEM_EXPLORADOR,
+          maxTokens: p.fase === 'login' ? MAX_TOKENS_SALIDA_LOGIN : MAX_TOKENS_SALIDA_EXPLORADOR, timeoutMs: TIMEOUT_IA_EXPLORADOR_MS, privado: true,
           modeloOpenRouter: modelo, cliente: `explorador:${e.trabajoId}`, cacheSystem: true,
         }),
         ahora: () => new Date(),

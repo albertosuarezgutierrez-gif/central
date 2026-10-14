@@ -38,6 +38,7 @@ import {
   esAvanceAutorizado,
   esGuardadoEnDialogoAutorizado,
   esEntradaExploracion,
+  loginAsistidoDe,
   huellaPantalla,
   huellaRelleno,
   incidenciasLoteCortado,
@@ -76,12 +77,13 @@ import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './a
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
-import { abrirTarificacionHogar, login as loginOccident } from './adapters/occident/hogar.ts'
+import { abrirTarificacionHogar, cabeceraPortalVisible, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
+import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
 /** Versión del explorador del worker (va en `bot_version`). Súbela al tocar su navegación. */
-export const EXPLORADOR_VERSION = '0.2.3'
+export const EXPLORADOR_VERSION = '0.3.0'
 
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
@@ -106,6 +108,11 @@ const MAX_BYTES_PDF_PRESUPUESTO = 9 * 1024 * 1024
 export type CtxEntrada = Pick<ContextoPortal, 'credenciales' | 'pausa' | 'pulsar' | 'exigirSinCaptcha' | 'log'> & {
   /** Enlace de menú autorizado de la compañía del trabajo (`pulsarEnlaceEntradaAutorizado`); solo en la ENTRADA. */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /**
+   * LOGIN ASISTIDO (14/10/2026): SOLO si la compañía de la entrada está en `LOGIN_ASISTIDO` (hoy Occident). Lo que la fase
+   * necesita además del contexto: la entrada, el guard (ventana de red del login) y el paso de login hacia asegura.
+   */
+  loginAsistido?: Pick<CtxLoginAsistido, 'entrada' | 'guard' | 'pedirPaso' | 'log'>
 }
 
 export type PortalExploracion = {
@@ -147,12 +154,23 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
     },
   }),
   // Occident (14/10/2026): SSO → menú «Productos › Análisis de necesidades › Hogar › Tarificación» → ruta SPA de hogar, con el
-  // formulario en un iframe (el inventario ya recorre los marcos, como el `appArea` de Allianz). Mismo login y entrada que
-  // `occident/hogar.ts`; hosts = lista blanca de `occident/guarda.ts` (sin ampliar). La misma `page` (sin pestaña nueva).
+  // formulario en un iframe (el inventario ya recorre los marcos, como el `appArea` de Allianz). Paso 1 del SSO grabado
+  // (`occident/hogar.ts`); la 2.ª pantalla (dos variantes sin DOM) la resuelve el LOGIN ASISTIDO (`login-asistido.ts`: la IA
+  // solo ve claves, nunca credenciales). Hosts = lista blanca de `occident/guarda.ts` (sin ampliar). La misma `page`.
   occident: Object.freeze({
     credencial: 'OCCIDENT_PORTAL',
     entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
-      await loginOccident(page, ctx)
+      if (await loginPaso1Occident(page, ctx)) {
+        if (!ctx.loginAsistido) throw new ErrorTarificador('portal', 'occident: la 2.ª pantalla del SSO solo se resuelve con el login asistido')
+        await loginAsistido(page, {
+          ...ctx.loginAsistido, credenciales: ctx.credenciales, pausa: ctx.pausa, exigirSinCaptcha: ctx.exigirSinCaptcha,
+          pulsar: (boton) => pulsarSeguroOccident(ctx, boton),
+          enPortal: (ms) => cabeceraPortalVisible(page, ms),
+        })
+      } else if (!(await cabeceraPortalVisible(page, 25_000))) {
+        throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
+      }
+      ctx.log('login ok')
       await exigirSinVerificacion(page, 'occident')
       await abrirTarificacionHogar(page, ctx)
       await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
@@ -857,6 +875,8 @@ export async function ejecutarExploracion(p: EntradaEjecucion): Promise<number> 
         await dormir(azar(300, 1_200))
         await pulsarEnlaceEntradaAutorizado(boton, guard, trabajo.compania)
       },
+      // Login asistido SOLO para las compañías de la lista cerrada del módulo (asegura lo vuelve a comprobar por la entrada).
+      ...(loginAsistidoDe(exp.entrada) ? { loginAsistido: { entrada: exp.entrada, guard, log, pedirPaso: (c) => pedirPaso(cfg, { trabajoId: trabajo.id, ...c, fase: 'login' }) } } : {}),
     }
     finExp = await entrarYExplorar(page, portal, ctxEntrada, entrada, {
       guard, redactar, env,

@@ -123,6 +123,24 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   // Ventana del guardado de presupuesto: hasta cuándo y desde qué ORIGEN (el del marco del botón). `null` = cerrada.
   let guardado: { hasta: number; origen: string } | null = null
   const guardadoVigente = () => (guardado && Date.now() < guardado.hasta ? guardado : null)
+  // Ventana del LOGIN ASISTIDO (14/10/2026): mientras está abierta, lo que no es GET SOLO puede ir al origen del SSO.
+  let login: { hasta: number; origen: string } | null = null
+  const loginVigente = () => (login && Date.now() < login.hasta ? login : null)
+  let rechazoLogin: string | null = null
+  // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
+  // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
+  context.on('request', (req) => {
+    const lg = loginVigente()
+    if (!lg || !req.isNavigationRequest()) return
+    let principal = false
+    try {
+      principal = req.frame().parentFrame() === null
+    } catch {
+      principal = false
+    }
+    // Solo una navegación GET (la redirección al portal): un POST/307 a otro origen sigue en la ventana y se aborta.
+    if (principal && req.method() === 'GET' && origenDe(req.url()) !== lg.origen) login = null
+  })
   await context.route('**/*', async (route) => {
     const req = route.request()
     const url = req.url()
@@ -148,6 +166,14 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       if (porUrl || porCuerpo) {
         // El cuerpo NO va al mensaje (lleva datos del formulario): solo la URL y que fue por el cuerpo.
         violacion ??= new EmisionBloqueadaError('url', porCuerpo ? `${url} [acción en el cuerpo de la petición]` : url)
+        await route.abort('blockedbyclient')
+        return
+      }
+      const lg = loginVigente()
+      if (lg && noGet && origenDe(url) !== lg.origen) {
+        // Login asistido: un POST/PUT/… a otro origen mientras se envía el formulario del SSO. Se aborta y se anota (solo el
+        // origen); quien abrió la ventana lo convierte en error del login. No es una violación de EMISIÓN.
+        rechazoLogin ??= origenDe(url) ?? '(url ilegible)'
         await route.abort('blockedbyclient')
         return
       }
@@ -194,7 +220,41 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
   ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
+  VENTANA_LOGIN.set(g, {
+    abrir: (origen) => { login = { hasta: Date.now() + VENTANA_RED_LOGIN_MS, origen }; rechazoLogin = null },
+    cerrar: () => { login = null },
+    abierta: () => loginVigente() !== null,
+    rechazo: () => rechazoLogin,
+  })
   return g
+}
+
+/** Tope de la ventana de red del LOGIN ASISTIDO: un envío del formulario del SSO y su carga. */
+export const VENTANA_RED_LOGIN_MS = 30_000
+type VentanaLogin = { abrir(origen: string): void; cerrar(): void; abierta(): boolean; rechazo(): string | null }
+const VENTANA_LOGIN = new WeakMap<GuardEmision, VentanaLogin>()
+
+/**
+ * LOGIN ASISTIDO (14/10/2026): abre la ventana de red del envío del formulario del SSO. Mientras está abierta, toda petición
+ * que no sea GET a un origen distinto de `origen` se ABORTA (y queda en `rechazoVentanaLogin`). Solo un origen https sin ruta.
+ * No relaja NADA del guard de emisión (patrones en URL y cuerpo siguen abortando antes).
+ */
+export function abrirVentanaLogin(guard: GuardEmision, origen: string): void {
+  const v = VENTANA_LOGIN.get(guard)
+  if (!v) throw new EmisionBloqueadaError('fase', 'guard sin ventana de login')
+  if (!/^https:\/\/[a-z0-9.-]+$/.test(origen)) throw new EmisionBloqueadaError('fase', 'ventana de login: origen no válido')
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'ventana de login con otra ventana de red abierta')
+  v.abrir(origen)
+}
+export function cerrarVentanaLogin(guard: GuardEmision): void {
+  VENTANA_LOGIN.get(guard)?.cerrar()
+}
+export function ventanaLoginAbierta(guard: GuardEmision): boolean {
+  return VENTANA_LOGIN.get(guard)?.abierta() === true
+}
+/** Origen al que el SSO intentó enviar algo (no GET) fuera de su origen durante la última ventana; `null` = nada. */
+export function rechazoVentanaLogin(guard: GuardEmision): string | null {
+  return VENTANA_LOGIN.get(guard)?.rechazo() ?? null
 }
 
 /** Origen (`https://host:puerto`) de una URL http(s), o `null`. */
