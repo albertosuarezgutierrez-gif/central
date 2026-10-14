@@ -25,7 +25,7 @@ test('DatosVehiculo no vuelve a pedir `garajes` a pelo para moto: el tipo sale d
 test('elegir versión guarda los 7 campos juntos y el selector pide el catálogo con sufijo -moto', () => {
   const src = leer(DIR + 'DatosVehiculo.tsx')
   assert.match(src, /void guardar\(payloadVersion\(s\), false\)/)
-  assert.match(src, /soloLoQueCambia\(d as unknown as Record<string, unknown>, form\)/)
+  assert.match(src, /cambiosEdicion\(d as unknown as Record<string, unknown>, form,/)
   const sel = leer(DIR + 'SelectorCatalogoVehiculo.tsx')
   assert.equal((sel.match(/<SelectorBuscable\b/g) ?? []).length, 4)
   assert.match(sel, /planPrecargaVehiculo\(datos, false\)/)

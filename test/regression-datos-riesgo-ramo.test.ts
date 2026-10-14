@@ -84,7 +84,7 @@ test('🪤 el modal «Editar datos»: monta el panel único y cerrar con cambios
 
 test('🪤 «Datos del vehículo»: solo se manda lo que difiere del estado inicial, nunca el formulario entero', () => {
   const d = activas(leer(join(CORR, 'oportunidad/[id]/DatosVehiculo.tsx')))
-  assert.match(d, /soloLoQueCambia\(d as unknown as Record<string, unknown>, form\)/)
+  assert.match(d, /cambiosEdicion\(d as unknown as Record<string, unknown>, form,/)
   assert.doesNotMatch(d, /guardar\(\{ \.\.\.form \}/, 'copiar el fallback «vehiculo» a marca o pisar escrituras concurrentes')
   const r = activas(leer(join(CORR, 'oportunidad/[id]/DatosRiesgo.tsx')))
   assert.match(r, /soloLoQueCambia\(datos, deForm\(spec, form\)\)/, 'los bloques nuevos, igual')

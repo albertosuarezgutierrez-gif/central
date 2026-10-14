@@ -11,14 +11,14 @@
 
 import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
-import { ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, soloLoQueCambia, type DatosVehiculoRiesgo } from '@central/module-seguros'
+import { ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada, normalizarMatricula } from '@central/module-seguros/matricula'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
 import type { Riesgo } from '@/lib/riesgo-asegura'
 import SelectorCatalogoVehiculo from './SelectorCatalogoVehiculo'
-import { payloadVersion, ramoCatalogo, tipoGaraje, type SeleccionVersion } from './catalogo-vehiculo'
+import { cambiosEdicion, payloadVersion, ramoCatalogo, tipoGaraje, tipoVehiculoDeRamo, type SeleccionVersion } from './catalogo-vehiculo'
 
 const campo: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44,
@@ -29,11 +29,11 @@ const REJILLA: React.CSSProperties = { display: 'grid', gap: 10, gridTemplateCol
 
 type Form = { matricula: string; marca: string; modelo: string; version: string; fechaMatriculacion: string; fechaCompra: string; kmAnuales: string; garaje: string; tipoVehiculo: string; cilindradaCc: string }
 
-const aForm = (d: DatosVehiculoRiesgo | null): Form => ({
+const aForm = (d: DatosVehiculoRiesgo | null, tipoPorDefecto = ''): Form => ({
   matricula: d?.matricula ?? '', marca: d?.marca ?? '', modelo: d?.modelo ?? '', version: d?.version ?? '',
   fechaMatriculacion: d?.fechaMatriculacion ?? '', fechaCompra: d?.fechaCompra ?? '',
   kmAnuales: d?.kmAnuales != null ? String(d.kmAnuales) : '', garaje: d?.garaje ?? '',
-  tipoVehiculo: d?.tipoVehiculo ?? '', cilindradaCc: d?.cilindradaCc != null ? String(d.cilindradaCc) : '',
+  tipoVehiculo: d?.tipoVehiculo ?? tipoPorDefecto, cilindradaCc: d?.cilindradaCc != null ? String(d.cilindradaCc) : '',
 })
 
 const conMiles = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
@@ -61,6 +61,9 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
   const [buscando, setBuscando] = useState(false)
   const [notaMatricula, setNotaMatricula] = useState<string | null>(null)
   const [eligiendo, setEligiendo] = useState(false)
+  // Edición: marca → modelo → versión del catálogo (gratis) por defecto; «a mano» solo como salida si el catálogo falla.
+  const [manual, setManual] = useState(false)
+  const [seleccion, setSeleccion] = useState<SeleccionVersion | null>(null)
   const aMedias = editando || eligiendo || enviando
   useEffect(() => { onEditando?.(aMedias) }, [aMedias, onEditando])
 
@@ -121,7 +124,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
     // Solo lo que DIFIERE del estado inicial: no se copia el texto de fallback («vehiculo») a `marca`, no se
     // pisan escrituras concurrentes de campos que aquí no se tocaron, y editar marca/modelo/versión a mano hace
     // que asegura suelte el código del catálogo (un precio de otro coche no se queda pegado). Vacío = borrar.
-    const cambios = soloLoQueCambia(d as unknown as Record<string, unknown>, form)
+    const cambios = cambiosEdicion(d as unknown as Record<string, unknown>, form, { manual: manual || !ramoCat, seleccion })
     if (Object.keys(cambios).length === 0) { setEditando(false); return }
     void guardar(cambios, false)
   }
@@ -195,7 +198,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" disabled={bloqueado} onClick={() => { setForm(aForm(d)); setErrorForm(null); setNotaMatricula(null); setEditando(true) }}
+            <button type="button" disabled={bloqueado} onClick={() => { setForm(aForm(d, tipoVehiculoDeRamo(op.ramo))); setSeleccion(null); setManual(false); setErrorForm(null); setNotaMatricula(null); setEditando(true) }}
               style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               Editar
             </button>
@@ -220,10 +223,24 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
             </div>
           </div>
           {notaMatricula && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{notaMatricula}</div>}
+          {ramoCat && !manual ? (
+            <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Marca, modelo y versión del catálogo (gratis)</div>
+              <SelectorCatalogoVehiculo ramo={ramoCat} datos={d} deshabilitado={bloqueado} onElegida={setSeleccion} />
+              <div style={{ fontSize: 12, color: seleccion ? 'var(--positive, inherit)' : 'var(--muted)' }}>
+                {seleccion ? `Elegida: ${seleccion.marca} ${seleccion.modelo} · ${seleccion.version}. Se guarda al pulsar «Guardar».` : d.codigoVehiculo ? `Versión actual: ${[d.marca, d.modelo, d.version].filter(Boolean).join(' ')}. Déjala así o elige otra.` : 'Elige marca, modelo, combustible y versión; es lo que necesita el precio.'}
+              </div>
+              <div><button type="button" disabled={bloqueado} onClick={() => { setSeleccion(null); setManual(true) }} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>El catálogo no lo tiene: escribirlo a mano</button></div>
+            </div>
+          ) : (
+            <div style={REJILLA}>
+              <label style={etiquetaCss}>Marca<input value={form.marca} onChange={set('marca')} maxLength={60} style={campo} /></label>
+              <label style={etiquetaCss}>Modelo<input value={form.modelo} onChange={set('modelo')} maxLength={80} style={campo} /></label>
+              <label style={etiquetaCss}>Versión<input value={form.version} onChange={set('version')} maxLength={120} style={campo} /></label>
+              {ramoCat && <div><button type="button" disabled={bloqueado} onClick={() => setManual(false)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Volver al catálogo</button></div>}
+            </div>
+          )}
           <div style={REJILLA}>
-            <label style={etiquetaCss}>Marca<input value={form.marca} onChange={set('marca')} maxLength={60} style={campo} /></label>
-            <label style={etiquetaCss}>Modelo<input value={form.modelo} onChange={set('modelo')} maxLength={80} style={campo} /></label>
-            <label style={etiquetaCss}>Versión<input value={form.version} onChange={set('version')} maxLength={120} style={campo} /></label>
             <label style={etiquetaCss}>
               Tipo de vehículo
               <select value={form.tipoVehiculo} onChange={set('tipoVehiculo')} style={campo}>
@@ -246,7 +263,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
             </label>
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-            Un campo vacío se guarda como «sin dato». Si cambias marca, modelo o versión a mano, se olvida la versión del catálogo ya elegida y habrá que elegirla otra vez. La versión exacta del catálogo (necesaria para el precio) se elige con «Elegir versión del catálogo», sin editar a mano.
+            Un campo vacío se guarda como «sin dato». Marca, modelo y versión se eligen del catálogo; si los escribes a mano se olvida la versión del catálogo ya elegida y el precio no se podrá pedir hasta elegirla. El tipo de vehículo se deduce del ramo.
             {garajes === null && ' No se ha podido leer el catálogo de garajes ahora.'}
           </div>
           {errorForm && <div role="alert" style={{ fontSize: 13, color: 'var(--negative)' }}>{errorForm}</div>}
