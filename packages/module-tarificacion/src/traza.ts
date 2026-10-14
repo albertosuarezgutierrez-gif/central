@@ -83,8 +83,8 @@ export type Traza = {
   paso: <T>(nombre: NombrePasoTraza, fn: () => Promise<T>) => Promise<T>
   /** Copia de los pasos registrados hasta ahora (orden de ejecución). */
   pasos: () => PasoTraza[]
-  /** Anota a posteriori un paso ya ocurrido (`inicioMs` = Date.now() de su arranque); `error` presente = falló. Para adaptadores que no instrumentan `paso`. */
-  anotar: (nombre: NombrePasoTraza, inicioMs: number, error?: { e: unknown }) => void
+  /** Anota a posteriori un paso ya ocurrido (`inicioMs` = Date.now() de su arranque); `error` presente = falló. Para adaptadores que no instrumentan `paso`. `error.codigo` fija el código final (si el runner ya reclasificó); `finMs` = fin real (por defecto, ahora). */
+  anotar: (nombre: NombrePasoTraza, inicioMs: number, error?: { e: unknown; codigo?: string }, finMs?: number) => void
 }
 
 /**
@@ -94,15 +94,16 @@ export type Traza = {
  */
 export function crearTraza(codigoDe: (e: unknown) => string, ahora: () => number = Date.now): Traza {
   const lista: PasoTraza[] = []
-  const anotar = (nombre: NombrePasoTraza, t0: number, ok: boolean, e?: unknown) => {
+  const anotar = (nombre: NombrePasoTraza, t0: number, ok: boolean, e?: unknown, fijo?: string, fin?: number) => {
     if (lista.length >= MAX_PASOS_TRAZA) return
     let codigo: CodigoErrorTraza | null = null
     if (!ok) {
       let c = 'desconocido'
-      try { c = codigoDe(e) } catch { /* el clasificador no debe romper la traza */ }
+      if (fijo !== undefined) c = fijo
+      else try { c = codigoDe(e) } catch { /* el clasificador no debe romper la traza */ }
       codigo = esCodigoErrorTraza(c) ? c : 'desconocido'
     }
-    lista.push({ paso: nombre, inicio: new Date(t0).toISOString(), duracionMs: Math.min(Math.max(0, Math.round(ahora() - t0)), MAX_DURACION_MS), ok, errorCodigo: codigo })
+    lista.push({ paso: nombre, inicio: new Date(t0).toISOString(), duracionMs: Math.min(Math.max(0, Math.round((fin ?? ahora()) - t0)), MAX_DURACION_MS), ok, errorCodigo: codigo })
   }
   return {
     async paso(nombre, fn) {
@@ -117,7 +118,7 @@ export function crearTraza(codigoDe: (e: unknown) => string, ahora: () => number
       }
     },
     pasos: () => lista.map((p) => ({ ...p })),
-    anotar: (nombre, inicioMs, error) => (error ? anotar(nombre, inicioMs, false, error.e) : anotar(nombre, inicioMs, true)),
+    anotar: (nombre, inicioMs, error, finMs) => (error ? anotar(nombre, inicioMs, false, error.e, error.codigo, finMs) : anotar(nombre, inicioMs, true, undefined, undefined, finMs)),
   }
 }
 

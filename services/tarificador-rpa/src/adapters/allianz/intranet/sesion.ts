@@ -18,7 +18,7 @@ const SEL = {
 
 function sel(clave: keyof typeof SEL): string {
   const s = SEL[clave]
-  if (!s) throw new ErrorTarificador('portal', `allianz/comunidades: selector «${clave}» pendiente de capturas`)
+  if (!s) throw new ErrorTarificador('portal', `allianz/intranet: selector «${clave}» pendiente de capturas`)
   return s
 }
 
@@ -26,7 +26,7 @@ function sel(clave: keyof typeof SEL): string {
 async function abrirEntrada(page: Page): Promise<void> {
   const r = await page.goto(sel('urlLogin'))
   const st = r?.status() ?? 0
-  if (st >= 500) throw new ErrorTarificador('portal', `allianz/comunidades: ePAC respondió ${st} en la entrada`, { transitorio: true })
+  if (st >= 500) throw new ErrorTarificador('portal', `allianz/intranet: ePAC respondió ${st} en la entrada`, { transitorio: true })
 }
 
 /**
@@ -65,7 +65,7 @@ export async function login(page: Page, ctx: Pick<ContextoPortal, 'credenciales'
   try {
     await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 25_000 })
   } catch {
-    throw new ErrorTarificador('credenciales', 'allianz/comunidades: no se llegó a la cabecera de ePAC tras el login (credenciales rechazadas o portal distinto)')
+    throw new ErrorTarificador('credenciales', 'allianz/intranet: no se llegó a la cabecera de ePAC tras el login (credenciales rechazadas o portal distinto)')
   }
   ctx.log('login ok')
 }

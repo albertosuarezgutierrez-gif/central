@@ -55,7 +55,7 @@ describe('redactarAriaSnapshot', () => {
   test('conserva roles, nombres, refs, atributos y estructura', () => {
     for (const t of ['- heading "ePAC · Cotizador Comunidades" [level=1] [ref=e2]', '- iframe [ref=e3]:', '- text: Nombre del tomador',
       '- button "Calcular" [ref=f1e17]', '- checkbox "Acepto" [checked] [ref=f1e16]', '- dialog "Poblaciones" [ref=f1e19]:', '- row "41003 SEVILLA" [ref=f1e20]',
-      '- option "Sevilla" [selected]', '- link "Ver ficha" [ref=f1e18] [cursor=pointer]:', '- /url: /ficha']) assert.ok(r.includes(t), `falta «${t}»`)
+      '- option «valor» [selected]', '- option "Cádiz"', '- link "Ver ficha" [ref=f1e18] [cursor=pointer]:', '- /url: /ficha']) assert.ok(r.includes(t), `falta «${t}»`)
     assert.equal(r.split('\n').length, SNAPSHOT.split('\n').length)
   })
   test('un campo sin valor sigue sin valor (vacío ≠ tapado)', () => {
@@ -76,6 +76,24 @@ describe('redactarAriaSnapshot', () => {
   test('idempotente', () => assert.equal(redactarAriaSnapshot(r), r))
   test('los refs no se confunden con cifras sensibles', () => {
     assert.ok(redactarAriaSnapshot('- button "X" [ref=f12e345]').includes('[ref=f12e345]'))
+  })
+})
+
+describe('opciones elegidas y recorte previo (privacidad)', () => {
+  test('option/radio/treeitem/listitem elegidos pierden el NOMBRE; los no elegidos y el checkbox conservan el suyo', () => {
+    const t = redactarAriaSnapshot('- option "Sevilla" [selected] [ref=e1]\n- option "Cádiz" [ref=e2]\n- radio "Mujer" [checked]\n- radio "Hombre"\n- treeitem "Tomador Pepa" [selected]\n- listitem "Pepa Pérez" [selected]: texto privado\n- checkbox "Acepto" [checked]')
+    for (const x of ['Sevilla', 'Mujer', 'Pepa', 'privado']) assert.ok(!t.includes(x), `se ha colado «${x}»:\n${t}`)
+    for (const x of ['- option «valor» [selected] [ref=e1]', '- option "Cádiz" [ref=e2]', '- radio «valor» [checked]', '- radio "Hombre"', '- checkbox "Acepto" [checked]']) assert.ok(t.includes(x), `falta «${x}»`)
+    assert.equal(redactarAriaSnapshot(t), t)
+  })
+  test('capturarAriaRedactado: el recorte final va en límite de línea y no deja trozos de dato', async () => {
+    const page = { ariaSnapshot: async () => '- text: Titular 12345678Z fin\n'.repeat(200) } as never
+    const t = (await capturarAriaRedactado(page, { maxBytes: 305 }))!
+    // 305 − 14 (marca) = 291 = 9 líneas de 30 + 21: el tope CAE EN MITAD DEL DNI. Recortando antes de redactar quedaba «12345».
+    assert.ok(Buffer.byteLength(t) <= 305)
+    assert.ok(!t.includes('12345'), t)
+    assert.ok(t.endsWith(MARCA_RECORTE))
+    assert.ok(t.split('\n').slice(0, -1).every((l) => l.startsWith('- text:') && l.endsWith('fin')))
   })
 })
 
@@ -179,5 +197,25 @@ describe('integración con Chromium real', () => {
     assert.ok(a && Buffer.byteLength(a) <= 10_000 && a.endsWith(MARCA_RECORTE))
     assert.ok(MAX_BYTES_ARIA === 200 * 1024)
     await context.close()
+  })
+})
+
+describe('capturarEvidencia: pantallazo y árbol aria en paralelo', () => {
+  test('ambos arrancan antes de que acabe ninguno', async () => {
+    const orden: string[] = []
+    let suelta!: () => void
+    const puerta = new Promise<void>((r) => { suelta = r })
+    const page = {
+      url: () => 'https://x.test/',
+      screenshot: async () => { orden.push('shot-ini'); await puerta; orden.push('shot-fin'); return Buffer.from('png') },
+      ariaSnapshot: async () => { orden.push('aria-ini'); await puerta; orden.push('aria-fin'); return '- button "Ok" [ref=e1]' },
+      frames: () => [], mainFrame: () => ({ url: () => '' }), content: async () => '<p>x</p>',
+    } as never
+    const p = capturarEvidencia(page)
+    await new Promise((r) => setTimeout(r, 20))
+    assert.deepEqual(orden.slice(0, 2).sort(), ['aria-ini', 'shot-ini']) // en serie, aria no habría arrancado
+    suelta()
+    const ev = await p
+    assert.ok(ev.captura)
   })
 })

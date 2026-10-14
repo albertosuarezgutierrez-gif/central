@@ -51,7 +51,7 @@ describe('borradorMapaDesdeAria', () => {
   test('localizadores con rol, nombre exacto y frameLocator del marco', () => {
     assert.equal(por('nifCif').localizador, `page.frameLocator('iframe[name="appArea"]').getByRole('textbox', { name: 'NIF / CIF', exact: true })`)
     assert.equal(por('provincia').rol, 'combobox')
-    assert.deepEqual(por('provincia').opciones, ['Sevilla', 'Cádiz'])
+    assert.deepEqual(por('provincia').opciones, ['Cádiz']) // la elegida (Sevilla) llega redactada y no cuenta como opción
     assert.equal(por('nifCif').requerido, true)
     assert.equal(por('botonCalcular').deshabilitado, true)
     assert.equal(por('nDeViviendas').rol, 'spinbutton')
@@ -94,7 +94,11 @@ describe('borradorMapaDesdeAria', () => {
   test('radios: agrupados por radiogroup; los sueltos, aviso de «sin grupo»', () => {
     assert.equal(por('radioContado').grupo, 'Forma de pago')
     assert.ok(por('radioAnual').avisos.some((v) => v.includes('sin grupo')))
-    assert.equal(por('radioAnual').grupo, por('radioSemestral').grupo)
+    // «Semestral» estaba marcado: llega como `radio «valor» [checked]` (sin nombre) y sigue siendo un radio del mismo grupo.
+    const marcado = b.controles.find((c) => c.tipo === 'radio' && c.nombre === null)!
+    assert.ok(marcado)
+    assert.equal(por('radioAnual').grupo, marcado.grupo)
+    assert.ok(!ts.includes('Semestral'))
   })
   test('claveCamel', () => {
     assert.equal(claveCamel('Código postal'), 'codigoPostal')

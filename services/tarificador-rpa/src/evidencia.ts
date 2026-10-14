@@ -69,9 +69,12 @@ export type EvidenciaFallo = { url: string; captura: Buffer | null; html: string
  */
 export async function capturarEvidencia(page: Page, maxBytesHtml = 2 * 1024 * 1024): Promise<EvidenciaFallo> {
   const url = (() => { try { return page.url() } catch { return '' } })()
-  const captura = await page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null)
-  // Árbol de accesibilidad completo (redactado, ≤200 KB, 5 s): el fallo trae la pantalla entera. Extra: si falla, no hay.
-  const aria = await capturarAriaRedactado(page).catch(() => null)
+  // Pantallazo y árbol de accesibilidad EN PARALELO (cada uno ya acota su tiempo; ninguno lanza); luego el HTML con el
+  // presupuesto que deja la sección. Árbol: redactado, ≤200 KB, 5 s; extra: si falla, no hay.
+  const [captura, aria] = await Promise.all([
+    page.screenshot({ type: 'png', fullPage: false, timeout: 10_000 }).catch(() => null),
+    capturarAriaRedactado(page).catch(() => null),
+  ])
   const seccion = aria ? seccionAria(aria) : ''
   // Con el HTML de los marcos: el formulario de ePAC vive en el iframe `appArea`. La sección cabe DENTRO del tope.
   const principal = await htmlConMarcos(page, Math.max(0, maxBytesHtml - Buffer.byteLength(seccion))).catch(() => null)

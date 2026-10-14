@@ -58,6 +58,7 @@ export {
   type ClasificacionAccion,
 } from './acciones-portal.ts'
 export { MaquinaFases, type FaseTarificacion, type PestanaActiva } from './fases.ts'
+export { redactarAriaSnapshot, cortarEnLimiteDeLinea, MARCA_VALOR_ARIA } from './aria-redaccion.ts'
 export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redactarHtml, crearRedactor } from './redactar.ts'
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
 export { importeEs, importePuntoDecimal } from './importes.ts'

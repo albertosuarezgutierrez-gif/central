@@ -46,7 +46,7 @@ interface Nodo { rol: string; nombre: string | null; attrs: string[]; texto: str
 
 const ROL_CAMPO = new Set(['textbox', 'combobox', 'spinbutton', 'searchbox', 'slider'])
 const ROL_VALOR = ROL_CAMPO
-const RE_LINEA = /^(\s*)-\s+([A-Za-z][\w-]*)((?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'))?)((?:\s*\[[^\]]*\])*)\s*(?::(.*))?$/
+const RE_LINEA = /^(\s*)-\s+([A-Za-z][\w-]*)((?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^']|'')*'|«valor»))?)((?:\s*\[[^\]]*\])*)\s*(?::(.*))?$/
 const RE_MENSAJE = /obligatori|\berror|inv[aá]lid|incorrect|requerid|no\s+(?:es\s+)?v[aá]lid|debe\s+(?:introducir|indicar|seleccionar)/i
 const MAX_TEXTO = 200
 const MAX_OPCIONES = 40
@@ -54,7 +54,7 @@ const MAX_ENLACES = 40
 
 function nombreDe(crudo: string): string | null {
   const t = crudo.trim()
-  if (!t) return null
+  if (!t || t === '«valor»') return null // «valor» = nombre de una opción ELEGIDA, ya redactado: no es un nombre
   const r = t[0] === '"' ? t.slice(1, -1).replace(/\\(.)/g, '$1') : t.slice(1, -1).replace(/''/g, "'")
   return r.trim() === '' ? null : r
 }

@@ -23,7 +23,7 @@ export async function marcoCon(page: Page, sonda: (r: Raiz) => Locator, que: str
       if ((await sonda(f).count().catch(() => 0)) > 0) return f
     }
     if (Date.now() >= fin) {
-      throw new ErrorTarificador('portal', `allianz/comunidades: «${que}» no aparece en ningún marco de la página (${marcos.length} marcos)`)
+      throw new ErrorTarificador('portal', `allianz/intranet: «${que}» no aparece en ningún marco de la página (${marcos.length} marcos)`)
     }
     await page.waitForTimeout(500)
   }

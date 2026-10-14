@@ -447,3 +447,34 @@ test('sanearVistaAria: no se fía del worker (valores, datos personales, valores
   assert.doesNotMatch(s, /<\/arbol_accesibilidad>/)
   assert.ok(sanearVistaAria('x'.repeat(MAX_VISTA_ARIA * 2))!.length <= MAX_VISTA_ARIA)
 })
+
+test('sanearVistaAria: el corte por tamaño va en límite de línea y la redacción DESPUÉS (un DNI en el corte no escapa)', () => {
+  const dni = '12345678Z'
+  const relleno = '- text: x\n'.repeat(Math.floor((MAX_VISTA_ARIA - 100) / 10))
+  // El DNI EMPIEZA 5 caracteres antes del tope: un corte en seco dejaba «12345» (sin letra) fuera de los patrones.
+  const cab = '- text: Titular'
+  const pad = ' '.repeat(MAX_VISTA_ARIA - 5 - relleno.length - cab.length)
+  const s = sanearVistaAria(`${relleno}${cab}${pad}${dni} fin\n- button "X" [ref=e1]`)!
+  assert.ok(s.length <= MAX_VISTA_ARIA)
+  assert.doesNotMatch(s, /12345/)
+  assert.doesNotMatch(s, /12345678Z/)
+})
+
+test('sanearVistaAria: nombre accesible con «:» conserva nombre y [ref]; sin valor no inventa «valor»; con valor lo tapa', () => {
+  const s = sanearVistaAria('- textbox "Hora: inicio" [ref=e7]\n- textbox "Hora: fin" [ref=e8]: 10:30\n- textbox "Obs" [ref=e9]:')!
+  assert.match(s, /^- textbox "Hora: inicio" \[ref=e7\]$/m)
+  assert.match(s, /^- textbox "Hora: fin" \[ref=e8\]: «valor»$/m)
+  assert.match(s, /^- textbox "Obs" \[ref=e9\]:$/m)
+  assert.doesNotMatch(s, /10:30/)
+})
+
+test('sanearVistaAria: las opciones ELEGIDAS pierden el nombre; las no elegidas (catálogo) se conservan', () => {
+  const s = sanearVistaAria('- combobox "Provincia" [ref=e1]:\n  - option "Sevilla" [selected]\n  - option "Cádiz"\n- radio "Mujer" [checked] [ref=e2]\n- radio "Hombre" [ref=e3]\n- checkbox "Acepto" [checked] [ref=e4]')!
+  assert.doesNotMatch(s, /Sevilla|Mujer/)
+  assert.match(s, /- option «valor» \[selected\]/)
+  assert.match(s, /- radio «valor» \[checked\] \[ref=e2\]/)
+  assert.match(s, /- option "Cádiz"/)
+  assert.match(s, /- radio "Hombre" \[ref=e3\]/)
+  assert.match(s, /- checkbox "Acepto" \[checked\] \[ref=e4\]/)
+  assert.equal(sanearVistaAria(s), s) // idempotente
+})

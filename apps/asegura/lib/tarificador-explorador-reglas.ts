@@ -17,7 +17,8 @@ import {
   leerIncidenciasEjecucion,
   leerPresupuestoMapa,
   normalizarRedNoGet,
-  redactarDatosPersonales,
+  redactarAriaSnapshot,
+  cortarEnLimiteDeLinea,
   sanearInventarioDom,
   validarMapa,
   type DetalleFinExploracion,
@@ -142,7 +143,6 @@ export type PeticionPaso = {
 
 /** Tope de la vista aria que acepta el servidor (caracteres). */
 export const MAX_VISTA_ARIA = 40 * 1024
-const RE_CAMPO_ARIA = /^(\s*-\s+(?:textbox|combobox|spinbutton|searchbox|slider)\b[^\n:]*?)(?:\s*:.*)?$/gm
 
 /**
  * Vista aria opcional del worker → texto seguro para el prompt, o `undefined`. NO se fía de que llegue redactada: valores
@@ -151,11 +151,12 @@ const RE_CAMPO_ARIA = /^(\s*-\s+(?:textbox|combobox|spinbutton|searchbox|slider)
  */
 export function sanearVistaAria(v: unknown, valoresSensibles: readonly string[] = []): string | undefined {
   if (typeof v !== 'string' || v.trim() === '') return undefined
-  let t = v.slice(0, MAX_VISTA_ARIA)
-  t = t.replace(RE_CAMPO_ARIA, (m, cab: string) => (m === cab ? m : `${cab}: «valor»`))
-  t = redactarDatosPersonales(t)
+  // Acotar en un LÍMITE DE LÍNEA y redactar DESPUÉS (un corte en seco podía partir un DNI/teléfono y esquivar los patrones).
+  // Misma redacción que el worker (compartida): valores de campos, opciones elegidas, patrones sensibles, fechas y URLs.
+  let t = redactarAriaSnapshot(cortarEnLimiteDeLinea(v, MAX_VISTA_ARIA))
   for (const x of valoresSensibles) if (x && x.length >= 3) t = t.split(x).join('[DATO]')
   t = t.replace(/<\/?arbol_accesibilidad>/gi, '')
+  t = cortarEnLimiteDeLinea(t, MAX_VISTA_ARIA) // la redacción puede alargar algo: tope final (sobre texto ya redactado)
   return t.trim() === '' ? undefined : t
 }
 

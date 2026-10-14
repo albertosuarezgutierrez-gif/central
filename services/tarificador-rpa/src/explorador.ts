@@ -73,8 +73,7 @@ import { modoVistaExplorador, vistaDelPaso } from './aprendizaje/vista-aria.ts'
 import { ESTABILIDAD_POR_DEFECTO, esperarEstable, vigilarRed, type OpcionesEstabilidad, type VigiaRed } from './estabilidad.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
-import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './adapters/allianz/entrada.ts'
-import { login as loginEpac } from './adapters/allianz/comunidades.ts'
+import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import { abrirTarificacionHogar, login as loginOccident } from './adapters/occident/hogar.ts'
@@ -440,8 +439,9 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
       trasRepintado = false
 
       // Vista aria opcional (TARIFICADOR_EXPLORADOR_VISTA; defecto `dom` = nada cambia). Mide tamaños dom vs aria, sin datos.
-      const vista = await vistaDelPaso(page, modoVista, JSON.stringify(inv).length)
-      k.log('exploracion_vista', { n: pasos + 1, ...vista.metrica })
+      // En modo `dom` (el de siempre) ni se serializa el inventario para medirlo ni se loguea nada: coste cero.
+      const vista = modoVista === 'dom' ? { metrica: null, vistaAria: undefined } : await vistaDelPaso(page, modoVista, JSON.stringify(inv).length)
+      if (vista.metrica) k.log('exploracion_vista', { n: pasos + 1, ...vista.metrica })
       const r = await k.pedirPaso({ trabajoId: k.trabajoId, inventario: inv, avancesFallidos, ...(incidencias.length ? { incidencias } : {}), ...(vista.vistaAria ? { vistaAria: vista.vistaAria } : {}) })
       incidencias = []
       pasos++

@@ -143,16 +143,14 @@ describe('Chromium real', () => {
     return { k, enviados, lineas }
   }
 
-  test('bucle con el defecto: la petición NO lleva vistaAria y es la de siempre; la métrica dice dom', async () => {
+  test('bucle con el defecto: la petición NO lleva vistaAria y es la de siempre; en dom no se loguea métrica', async () => {
     const { context, page, guard } = await nueva()
     try {
       const { k, enviados, lineas } = contexto(page, guard, {})
       await bucleExploracion(page, k)
       assert.equal(enviados.length, 1)
       assert.deepEqual(Object.keys(enviados[0]).sort(), ['avancesFallidos', 'inventario', 'trabajoId'])
-      const m = lineas.find((l) => l.m === 'exploracion_vista')!.d!
-      assert.equal(m.modo, 'dom')
-      assert.equal(m.ariaChars, 0)
+      assert.equal(lineas.find((l) => l.m === 'exploracion_vista'), undefined) // dom: ni medir ni loguear
     } finally { await context.close() }
   })
 
@@ -183,4 +181,12 @@ describe('Chromium real', () => {
       assert.equal(m.efectivo, 'dom')
     } finally { await context.close() }
   })
+})
+
+test('modo `dom`: no se serializa el inventario para medir ni se loguea exploracion_vista (solo con otro modo)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const f = readFileSync(new URL('../src/explorador.ts', import.meta.url), 'utf8')
+  assert.match(f, /modoVista === 'dom' \? \{ metrica: null, vistaAria: undefined \} : await vistaDelPaso\(page, modoVista, JSON\.stringify\(inv\)\.length\)/)
+  assert.match(f, /if \(vista\.metrica\) k\.log\('exploracion_vista'/)
+  assert.equal((f.match(/k\.log\('exploracion_vista'/g) ?? []).length, 1) // solo el condicionado
 })
