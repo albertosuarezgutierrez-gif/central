@@ -30,6 +30,7 @@ import {
   HOGAR_ACTIVO,
   SECCIONES_DESCUENTO_PERMITIDAS,
   abrirTarificacionHogar,
+  loginPaso1,
   elegirMaximoDescuento,
   esDescuentoAbc,
   motivoNoPulsarHogar,
@@ -320,4 +321,70 @@ test('la contraseña de Occident solo se escribe en https://ssoaut.gco.global', 
   assert.equal(puedeEscribirContrasena('https://ssoaut.gco.global.evil.com/'), false)
   assert.equal(puedeEscribirContrasena('https://portaloccident.gco.global/'), false)
   assert.equal(puedeEscribirContrasena('no es url'), false)
+})
+
+// ───────────── loginPaso1: redirección tardía al SSO y variantes del SSO ─────────────
+
+async function abrirLogin(portalHtml: string, ssoHtml: string) {
+  const context = await browser.newContext()
+  await context.route('https://**/*', (r) => {
+    const u = new URL(r.request().url())
+    const html = u.hostname === HOST_PORTAL ? portalHtml : ssoHtml
+    return r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html })
+  })
+  const page = await context.newPage()
+  page.setDefaultTimeout(2_000)
+  const pulsados: string[] = []
+  const ctx = {
+    credenciales: { usuario: 'usuario-prueba', contrasena: 'x' },
+    pausa: async () => undefined,
+    exigirSinCaptcha: async () => undefined,
+    log: () => undefined,
+    pulsar: async (b: Parameters<typeof pulsar>[0]) => { pulsados.push('pulsado'); void b },
+  }
+  return { context, page, ctx, pulsados }
+}
+const SSO_CON_USUARIO = '<!doctype html><html><body><input id="usernamegco"><button id="SubmitCreds">Iniciar sesión</button></body></html>'
+const SSO_SIN_USUARIO = '<!doctype html><html><body><p>Usuario preseleccionado</p><input type="password"></body></html>'
+
+test('loginPaso1: redirección TARDÍA al SSO (tras el goto) → true y rellena el usuario', async () => {
+  const portal = `<!doctype html><html><body><script>setTimeout(function(){location.href='https://ssoaut.gco.global/my.policy?apm=5'},800)</script></body></html>`
+  const { context, page, ctx, pulsados } = await abrirLogin(portal, SSO_CON_USUARIO)
+  try {
+    assert.equal(await loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 1_500 }), true)
+    assert.equal(await page.locator(SEL.ssoUsuario).inputValue(), 'usuario-prueba')
+    assert.equal(pulsados.length, 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('loginPaso1: cabecera del portal visible (sesión abierta) → false', async () => {
+  const { context, page, ctx } = await abrirLogin(PORTAL, SSO_CON_USUARIO)
+  try {
+    assert.equal(await loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 500 }), false)
+  } finally {
+    await context.close()
+  }
+})
+
+test('loginPaso1: SSO sin campo de usuario (preseleccionado) → true sin rellenar ni pulsar', async () => {
+  const portal = `<!doctype html><html><body><script>location.href='https://ssoaut.gco.global/my.policy?apm=5'</script></body></html>`
+  const { context, page, ctx, pulsados } = await abrirLogin(portal, SSO_SIN_USUARIO)
+  try {
+    assert.equal(await loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 500 }), true)
+    assert.equal(pulsados.length, 0)
+    assert.equal(await page.locator('input[type="password"]').inputValue(), '', 'no se escribe nada')
+  } finally {
+    await context.close()
+  }
+})
+
+test('loginPaso1: ni SSO ni cabecera → error de portal TRANSITORIO con mensaje claro', async () => {
+  const { context, page, ctx } = await abrirLogin('<!doctype html><html><body>vacío</body></html>', SSO_CON_USUARIO)
+  try {
+    await assert.rejects(() => loginPaso1(page, ctx as never, { carreraMs: 700 }), (e) => e instanceof ErrorTarificador && e.tipo === 'portal' && e.transitorio === true && /ni al SSO ni a la cabecera/.test(e.message))
+  } finally {
+    await context.close()
+  }
 })

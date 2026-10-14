@@ -81,6 +81,7 @@ import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntrad
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
 import { abrirTarificacionHogar, cabeceraPortalVisible, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
+import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
 import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
@@ -163,15 +164,20 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
   occident: Object.freeze({
     credencial: 'OCCIDENT_PORTAL',
     entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
-      if (await loginPaso1Occident(page, ctx)) {
+      const resolverSso = async () => {
         if (!ctx.loginAsistido) throw new ErrorTarificador('portal', 'occident: la 2.ª pantalla del SSO solo se resuelve con el login asistido')
         await loginAsistido(page, {
           ...ctx.loginAsistido, credenciales: ctx.credenciales, pausa: ctx.pausa, exigirSinCaptcha: ctx.exigirSinCaptcha,
           pulsar: (boton) => pulsarSeguroOccident(ctx, boton),
           enPortal: (ms) => cabeceraPortalVisible(page, ms),
         })
+      }
+      if (await loginPaso1Occident(page, ctx)) {
+        await resolverSso()
       } else if (!(await cabeceraPortalVisible(page, 25_000))) {
-        throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
+        // Redirección tardía al SSO: si la URL ya está en el SSO, lo resuelve el login asistido; si no, no hay portal.
+        if (esUrlSsoOccident(page.url())) await resolverSso()
+        else throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
       }
       ctx.log('login ok')
       await exigirSinVerificacion(page, 'occident')
