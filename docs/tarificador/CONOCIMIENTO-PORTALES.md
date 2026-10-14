@@ -155,7 +155,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso, ámbito de circulación y 
 > `MAPFRE_AUTO_ACTIVO=false`, fila de integración `mapfre/auto` apagada (`2026-10-14_tarificador_mapfre_auto.sql`).
 
 - **Entrada (confirmada por Alberto, 14/10/2026):** login en `https://wmediadores.mapfre.com/PortalMediadores_fe-web/#/login`
-  (usuario + contraseña; **no pide SMS**). Después: pestaña «Nueva producción» → bloque «Automóviles» → tarjeta «Turismos y
+  (usuario + contraseña; **no pide SMS**). Pantalla: bloque «Acceso», «Código de usuario (NUUMA)» y «Contraseña:»; el botón «Entrar»
+  está **deshabilitado** hasta rellenar ambos (Angular: el bot espera a que se habilite o falla con `ErrorMapaIncompleto`); «Cambiar contraseña» jamás se pulsa. Después: pestaña «Nueva producción» → bloque «Automóviles» → tarjeta «Turismos y
   Motos» → enlace «Tarificación y Emisión Rápida», que **abre una PESTAÑA NUEVA** con el formulario NSEI. Código:
   `adapters/mapfre/entrada.ts` (clave `mapfre:nueva_produccion:auto`, sin avances autorizados). Conectada al explorador
   (`PORTALES_EXPLORACION.mapfre.entrar` devuelve la pestaña nueva y el bucle sigue en ella; v0.1.3).

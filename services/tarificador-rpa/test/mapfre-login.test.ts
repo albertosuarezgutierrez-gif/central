@@ -10,7 +10,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { instalarGuardEmision, pulsar, type GuardEmision } from '../src/guard.ts'
 import { exigirSinCaptcha } from '../src/captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
-import { login } from '../src/adapters/mapfre/login.ts'
+import { login, BOTON_ENTRAR, TEXTO_PROHIBIDO } from '../src/adapters/mapfre/login.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 import { PORTALES_EXPLORACION } from '../src/explorador.ts'
 
@@ -35,6 +35,20 @@ setTimeout(function () {
 }, 300);
 </script></body></html>`
 
+/** Pantalla REAL sintetizada: «Acceso», etiquetas, «Entrar» deshabilitado hasta rellenar ambos, «Cambiar contraseña». */
+const REAL = (habilita: boolean) => `<!doctype html><html><head><meta charset="utf-8"></head><body><div id="app"></div><script>
+setTimeout(function () {
+  document.getElementById('app').innerHTML = '<h2>Acceso</h2><form id="f"><label>Código de usuario (NUUMA)</label><input type="text" id="u">'
+    + '<label>Contraseña:</label><input type="password" id="p"><a href="#" id="cc">Cambiar contraseña</a>'
+    + '<button type="button" id="ok" disabled>Entrar</button></form>';
+  var u = document.getElementById('u'), p = document.getElementById('p'), ok = document.getElementById('ok');
+  window.__cc = 0; document.getElementById('cc').onclick = function () { window.__cc++; };
+  function chk() { ok.disabled = !(${habilita} && u.value && p.value); }
+  u.addEventListener('input', chk); p.addEventListener('input', chk);
+  ok.onclick = function () { document.getElementById('app').innerHTML = '<h1>Bienvenido</h1>'; };
+}, 300);
+</script></body></html>`
+
 const SIN_CAMPOS = '<!doctype html><html><body><p>Mantenimiento</p></body></html>'
 
 let servidor: Server
@@ -44,7 +58,7 @@ before(async () => {
   servidor = createServer((req, res) => {
     const ruta = (req.url ?? '/').split('?')[0]!.slice(1)
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    res.end(ruta === 'vacio' ? SIN_CAMPOS : LOGIN(ruta))
+    res.end(ruta === 'vacio' ? SIN_CAMPOS : ruta === 'real' ? REAL(true) : ruta === 'real-nunca' ? REAL(false) : LOGIN(ruta))
   })
   await new Promise<void>((r) => servidor.listen(0, '127.0.0.1', r))
   base = `http://127.0.0.1:${(servidor.address() as AddressInfo).port}`
@@ -141,6 +155,46 @@ test('credenciales rechazadas → ErrorTarificador(credenciales), un solo intent
   } finally {
     await context.close()
   }
+})
+
+test('pantalla real: etiquetas, «Entrar» se habilita al rellenar ambos, entra y «Cambiar contraseña» no se toca', async () => {
+  const { context, page, ctx } = await abrir()
+  const pulsados: string[] = []
+  const pul = ctx.pulsar
+  ctx.pulsar = async (b) => { pulsados.push((await b.innerText()).trim()); await pul(b) }
+  try {
+    await login(page, ctx, `${base}/real`)
+    assert.match(await page.locator('body').innerText(), /Bienvenido/)
+    assert.deepEqual(pulsados, ['Entrar'])
+    assert.equal(await page.evaluate(() => (window as unknown as { __cc: number }).__cc), 0)
+  } finally {
+    await context.close()
+  }
+})
+
+test('«Entrar» que nunca se habilita → ErrorMapaIncompleto y no se pulsa nada', { timeout: 30_000 }, async () => {
+  const { context, page, ctx } = await abrir()
+  let pulsaciones = 0
+  const pul = ctx.pulsar
+  ctx.pulsar = async (b) => { pulsaciones++; await pul(b) }
+  try {
+    await assert.rejects(
+      () => login(page, ctx, `${base}/real-nunca`),
+      (e: unknown) => e instanceof ErrorMapaIncompleto && /Entrar/.test((e as Error).message),
+    )
+    assert.equal(pulsaciones, 0)
+  } finally {
+    await context.close()
+  }
+})
+
+test('«Cambiar contraseña» nunca puede ser el objetivo', () => {
+  for (const t of ['Cambiar contraseña', 'Cambiar la contraseña', '¿Olvidó su contraseña?']) {
+    assert.equal(BOTON_ENTRAR.test(t), false, t)
+    assert.equal(TEXTO_PROHIBIDO.test(t), true, t)
+  }
+  assert.equal(BOTON_ENTRAR.test('Entrar'), true)
+  assert.equal(TEXTO_PROHIBIDO.test('Entrar'), false)
 })
 
 test('PORTALES_EXPLORACION registra mapfre con la credencial MAPFRE_WMEDIADORES', () => {
