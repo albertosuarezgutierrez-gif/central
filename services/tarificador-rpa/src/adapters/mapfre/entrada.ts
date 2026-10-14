@@ -34,11 +34,16 @@
 import type { Frame, Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ACCION_ENLACE_ENTRADA, conRespaldoIA, type PeticionResolver } from '../../formador.ts'
+import { ErrorTarificador, ErrorVerificacionHumana } from '../../errores.ts'
+import { hayCaptcha } from '../../captcha.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
 
 export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
   /** El enlace «…Emisión…» de menú: SOLO por la excepción exacta del guard (`pulsarEnlaceEntradaAutorizado`). */
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
+  /** Las MISMAS credenciales del login (`ctx.credenciales`): solo para el login antiguo (`/loginexternopi/`) que a veces
+   *  se interpone ante la URL directa del NSEI. Jamás van a un mensaje de error ni al log. */
+  credenciales?: { usuario: string; contrasena: string }
   /**
    * RESPALDO IA (14/10/2026): el formador del trabajo (`ctx.formador` del runner; el explorador no lo pasa). Solo se usa si
    * el selector FIJO falla con `ErrorMapaIncompleto`: 1º lo aprendido, 2º la IA señala un candidato; formador.ts lo valida
@@ -132,6 +137,62 @@ export function pulsablesExactos(raiz: Page | Frame, texto: string, dentro?: Loc
     .filter({ visible: true })
 }
 
+/** Datos crudos de una página para el diagnóstico (se recogen en el navegador; el resumen los depura). */
+export type DatosDiagnosticoPagina = {
+  estadoHttp: number | null
+  url: string
+  titulo: string
+  iframes: string[]
+  hayPassword: boolean
+  textoBody: string
+}
+
+/** origen + path + hash SIN query string (ni la del hash de una SPA); si no es una URL válida, se corta en `?`. */
+export function urlSinQuery(u: string): string {
+  try {
+    const x = new URL(u)
+    return `${x.origin === 'null' ? `${x.protocol}` : x.origin}${x.pathname}${x.hash.replace(/\?.*$/, '')}`
+  } catch {
+    return u.replace(/[?].*$/, '').slice(0, 120)
+  }
+}
+
+/** Dígitos → «#» (no filtrar NIF, códigos, matrículas, teléfonos). */
+export function enmascararDigitos(t: string): string {
+  return t.replace(/\d/g, '#')
+}
+
+/** Resumen de una línea, SIN datos personales: sin query strings y con los dígitos enmascarados. Puro (testeado). */
+export function resumenDiagnosticoPagina(d: DatosDiagnosticoPagina, secretos: Array<string | undefined> = []): string {
+  // Orden: PRIMERO se redacta el literal de usuario/clave sobre el texto crudo y DESPUÉS se enmascaran los dígitos.
+  const limpio = (t: string) => enmascararDigitos(ocultarSecretos(t, secretos))
+  const frames = d.iframes.slice(0, 5).map((f) => limpio(urlSinQuery(f)))
+  const texto = limpio(d.textoBody.replace(/\s+/g, ' ').trim()).slice(0, 200)
+  return [
+    `http ${d.estadoHttp ?? 'sin respuesta'}`,
+    `url ${limpio(urlSinQuery(d.url)) || '(vacía)'}`,
+    `título «${limpio(d.titulo.replace(/\s+/g, ' ').trim()).slice(0, 80)}»`,
+    `iframes ${d.iframes.length}${frames.length ? ` [${frames.join(', ')}]` : ''}`,
+    `password visible ${d.hayPassword ? 'sí (¿login?)' : 'no'}`,
+    `texto «${texto}»`,
+  ].join('; ')
+}
+
+/** Recoge y resume el estado de una página; nunca lanza (un fallo de captura se dice, no tapa el error original). */
+async function diagnosticoDePagina(page: Page, estadoHttp: number | null, secretos: Array<string | undefined> = []): Promise<string> {
+  try {
+    const dom = await page.evaluate(() => ({
+      titulo: document.title ?? '',
+      iframes: Array.from(document.querySelectorAll('iframe')).map((f) => f.getAttribute('src') ?? ''),
+      textoBody: ((document.body && document.body.innerText) || '').slice(0, 600),
+    }))
+    const hayPassword = await page.locator('input[type=password]').filter({ visible: true }).count().catch(() => 0)
+    return resumenDiagnosticoPagina({ estadoHttp, url: page.url(), ...dom, hayPassword: hayPassword > 0 }, secretos)
+  } catch {
+    return `diagnóstico no disponible (http ${estadoHttp ?? 'sin respuesta'}; url ${urlSinQuery(page.url())})`
+  }
+}
+
 /** Marcos vivos de la página, el principal primero (el inventario y la búsqueda del enlace recorren TODOS). */
 function marcosVivos(page: Page): Frame[] {
   return page.frames().filter((f) => !f.isDetached())
@@ -181,7 +242,7 @@ async function enlaceDeEntrada(page: Page, menuMs: number): Promise<Locator> {
   const todos = await enTodosLosMarcos(page, (f) => pulsablesExactos(f, ENLACE_TARIFICACION_RAPIDA), menuMs)
   if (todos.length === 1) return todos[0]!
   const detalle = todos.length === 0 ? 'ninguna coincidencia exacta visible' : `${todos.length} coincidencias exactas visibles, ambiguo`
-  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en todos los marcos: ${detalle}${await describirCandidatos(page)}) de wmediadores`, true)
+  throw new ErrorMapaIncompleto(`el elemento de menú «${ENLACE_TARIFICACION_RAPIDA}» (${que}; en todos los marcos: ${detalle}${await describirCandidatos(page)}; pantalla: ${await diagnosticoDePagina(page, null)}) de wmediadores`, true)
 }
 
 /** Selector FIJO → capa común `conRespaldoIA` (aprendido → IA, validado en formador.ts). Guarda el `confirmar` para el final. */
@@ -195,11 +256,11 @@ async function conRespaldo(page: Page, ctx: CtxEntradaMapfre, fijo: () => Promis
  * Home de wmediadores (ya con sesión) → pestaña nueva con el formulario NSEI. Devuelve la PESTAÑA NUEVA: la exploración
  * debe continuar en ella (la original queda abierta). Sin `ctx.pulsar` fuera de la pestaña y la opción «Automóviles».
  */
-export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number; urlDirecta?: string | null } = {}): Promise<Page> {
+export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number; urlDirecta?: string | null; hostsLogin?: string[] } = {}): Promise<Page> {
   const url = esperas.urlDirecta === undefined ? URL_NSEI_AUTO : esperas.urlDirecta
   let motivoDirecta = 'desactivada'
   if (url) {
-    const directa = await abrirPorUrlDirecta(page, url, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
+    const directa = await abrirPorUrlDirecta(page, ctx, url, esperas.formularioMs ?? ESPERA_FORMULARIO_MS, esperas.hostsLogin ?? HOSTS_LOGIN)
     if (directa.page) return directa.page
     motivoDirecta = directa.motivo
   }
@@ -212,19 +273,142 @@ export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMap
   }
 }
 
-/** Pestaña nueva del mismo contexto → `URL_NSEI_AUTO`; vale SOLO si aparece `app-datos-basicos` (el estado HTTP no cuenta). */
-async function abrirPorUrlDirecta(page: Page, url: string, formularioMs: number): Promise<{ page: Page; motivo?: undefined } | { page: null; motivo: string }> {
+/** Login ANTIGUO que Mapfre antepone a la URL directa (`/loginexternopi/docs/html/loginFormPage.html?page=…`). */
+const PATRON_LOGIN_ANTIGUO = /\/loginexternopi\//i
+const ETIQ_CODIGO_USUARIO = /c[oó]digo\s+(de\s+)?usuario/i
+const ETIQ_CONTRASENA = /^\s*contrase[ñn]a\s*:?\s*$/i
+const BOTON_ENTRAR_ANTIGUO = /^\s*entrar\s*$/i
+const ESPERA_LOGIN_MS = 15_000
+const MOTIVO_LOGIN_ANTIGUO = 'login antiguo NSEI rechazado/no superado'
+
+/** Único host al que se le entregan credenciales (los tests pasan el del portal sintético por `hostsLogin`). */
+const HOSTS_LOGIN = ['wmediadores.mapfre.com']
+
+/** La página está en wmediadores (hostname EXACTO): nunca se escribe usuario/clave en otro dominio. */
+export function esWmediadores(p: Page, hosts: string[] = HOSTS_LOGIN): boolean {
+  try {
+    return hosts.includes(new URL(p.url()).hostname)
+  } catch {
+    return false
+  }
+}
+
+class LoginAntiguoNoSuperado extends Error {}
+
+/** Aviso de cuenta bloqueada/suspendida: si sale, NO se sigue (cada intento más agrava el bloqueo). */
+const PATRON_BLOQUEO = /bloquead|suspendid|demasiados intentos|intentos fallidos|cuenta (ha sido )?(desactivada|inhabilitada)|usuario (revocado|inhabilitado)/i
+
+/** Reto CAPTCHA o aviso de bloqueo en el login antiguo → se PARA con error definitivo (requiere persona), sin fallback a menús. */
+async function pararSiRetoOBloqueo(p: Page): Promise<void> {
+  if (await hayCaptcha(p)) throw new ErrorTarificador('captcha', 'el login antiguo de Mapfre presenta un CAPTCHA: requiere una persona')
+  const texto = await p.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
+  if (PATRON_BLOQUEO.test(texto)) throw new ErrorVerificacionHumana('mapfre', 'el login antiguo de Mapfre avisa de cuenta/usuario bloqueado: no se reintenta, requiere una persona')
+}
+
+/** Quita de un texto cualquier aparición literal de usuario o contraseña (red de seguridad: nunca en mensajes). */
+export function ocultarSecretos(texto: string, secretos: Array<string | undefined>): string {
+  let t = texto
+  for (const x of secretos) if (x && x.length >= 1) t = t.split(x).join('«oculto»')
+  return t
+}
+
+async function enLoginAntiguo(p: Page, hosts: string[]): Promise<boolean> {
+  if (!esWmediadores(p, hosts)) return false // un login en otro host NO cuenta
+  if (PATRON_LOGIN_ANTIGUO.test(p.url())) return true
+  if ((await p.locator('input[type=password]').filter({ visible: true }).count().catch(() => 0)) === 0) return false
+  return (await p.getByText(ETIQ_CODIGO_USUARIO).filter({ visible: true }).count().catch(() => 0)) > 0
+}
+
+async function hayFormulario(p: Page): Promise<boolean> {
+  return (await p.locator(SEL_FORMULARIO_NSEI).count().catch(() => 0)) > 0
+}
+
+/** Espera a que salga el formulario o aparezca el login antiguo (lo primero que ocurra). */
+async function esperarFormularioOLogin(p: Page, ms: number, hosts: string[]): Promise<'form' | 'login' | 'nada'> {
+  const fin = Date.now() + ms
+  for (;;) {
+    if (await hayFormulario(p)) return 'form'
+    if (await enLoginAntiguo(p, hosts)) return 'login'
+    if (Date.now() >= fin) return 'nada'
+    await p.waitForTimeout(200).catch(() => undefined)
+  }
+}
+
+/** Rellena y pulsa «entrar» UNA vez (un login rechazado no se reintenta: así se bloquea una cuenta). */
+async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number, hosts: string[]): Promise<void> {
+  if (!esWmediadores(p, hosts)) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (host inesperado)`)
+  if (!ctx.credenciales?.usuario || !ctx.credenciales?.contrasena) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (sin credenciales en el contexto)`)
+  await pararSiRetoOBloqueo(p) // antes de escribir nada
+  const password = p.locator('input[type=password]').filter({ visible: true }).first()
+  const usuario = p
+    .getByLabel(ETIQ_CODIGO_USUARIO)
+    .or(p.locator('xpath=(//input[@type="password"])[1]/preceding::input[not(@type) or @type="text"]').last())
+    .filter({ visible: true })
+    .first()
+  const entrar = p
+    .getByRole('button', { name: BOTON_ENTRAR_ANTIGUO })
+    .or(p.getByRole('link', { name: BOTON_ENTRAR_ANTIGUO }))
+    .or(p.getByText(BOTON_ENTRAR_ANTIGUO))
+    .filter({ visible: true })
+    .first()
+  try {
+    await usuario.fill(ctx.credenciales.usuario, { timeout: 5_000 })
+    await ctx.pausa()
+    if (!esWmediadores(p, hosts)) throw new LoginAntiguoNoSuperado(`${MOTIVO_LOGIN_ANTIGUO} (host inesperado)`)
+    await password.fill(ctx.credenciales.contrasena, { timeout: 5_000 })
+    await ctx.pausa()
+    await ctx.pulsar(entrar)
+  } catch (e) {
+    if (e instanceof Error && /guard_emision/.test(e.message)) throw e
+    if (e instanceof LoginAntiguoNoSuperado) throw e
+    // Cualquier otro error (incluidos los «bloquead…») sale SIN usuario ni clave.
+    throw new Error(ocultarSecretos(e instanceof Error ? e.message : String(e), [ctx.credenciales.usuario, ctx.credenciales.contrasena]))
+  }
+  const fin = Date.now() + Math.min(formularioMs, ESPERA_LOGIN_MS)
+  while (Date.now() < fin) {
+    if (await hayFormulario(p)) return
+    await pararSiRetoOBloqueo(p)
+    if (!PATRON_LOGIN_ANTIGUO.test(p.url()) && !(await enLoginAntiguo(p, hosts))) break // salió del login
+    await p.waitForTimeout(200).catch(() => undefined)
+  }
+  if (await hayFormulario(p)) return
+  await pararSiRetoOBloqueo(p)
+  if (await enLoginAntiguo(p, hosts)) throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
+  // Salió del login pero no a NSEI: se vuelve a la URL directa (ya con sesión).
+  await p.goto(url, { waitUntil: 'commit', timeout: formularioMs })
+  const r = await esperarFormularioOLogin(p, formularioMs, hosts)
+  if (r === 'login') throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
+  if (r !== 'form') throw new Error(`no apareció ${SEL_FORMULARIO_NSEI}`)
+}
+
+/** Pestaña nueva del mismo contexto → `URL_NSEI_AUTO`; vale SOLO si aparece `app-datos-basicos` (el estado HTTP no cuenta).
+ *  Si Mapfre redirige al login antiguo, se supera UNA vez con las credenciales del contexto. */
+async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string, formularioMs: number, hosts: string[]): Promise<{ page: Page; motivo?: undefined } | { page: null; motivo: string }> {
   let nueva: Page | null = null
+  let estadoHttp: number | null = null
+  const secretos = [ctx.credenciales?.usuario, ctx.credenciales?.contrasena]
   try {
     nueva = await page.context().newPage()
     // Un 401/4xx NO lanza (solo cuenta el DOM); un fallo de red sí y se cae a menús sin esperar el plazo entero.
-    await nueva.goto(url, { waitUntil: 'commit', timeout: formularioMs })
-    await nueva.locator(SEL_FORMULARIO_NSEI).first().waitFor({ state: 'attached', timeout: formularioMs })
+    const resp = await nueva.goto(url, { waitUntil: 'commit', timeout: formularioMs })
+    estadoHttp = resp?.status() ?? null
+    let estado = await esperarFormularioOLogin(nueva, formularioMs, hosts)
+    if (estado === 'login') {
+      await superarLoginAntiguo(nueva, ctx, url, formularioMs, hosts)
+      estado = 'form'
+    }
+    if (estado !== 'form') throw new Error(`no apareció ${SEL_FORMULARIO_NSEI}`)
     return { page: nueva }
   } catch (e) {
+    // Diagnóstico ANTES de cerrar la pestaña (qué había en pantalla), sin datos personales.
+    const diag = nueva ? await diagnosticoDePagina(nueva, estadoHttp, secretos) : 'sin pestaña'
     await nueva?.close().catch(() => undefined)
+    if (e instanceof Error && /guard_emision/.test(e.message)) throw e
+    if (e instanceof ErrorVerificacionHumana || (e instanceof ErrorTarificador && e.tipo === 'captcha')) throw e // reto/bloqueo: no se cae a menús
     const red = /net::|Navigation|goto/i.test(String((e as Error).message).split('\n')[0])
-    return { page: null, motivo: red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s` }
+    const msg = ocultarSecretos(e instanceof Error ? e.message : String(e), secretos)
+    const que = e instanceof LoginAntiguoNoSuperado ? e.message : !red && !msg.startsWith('no apareció') ? `${MOTIVO_LOGIN_ANTIGUO} (error: ${msg.split('\n')[0].slice(0, 160)})` : red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s`
+    return { page: null, motivo: ocultarSecretos(`${que}; pantalla: ${diag}`, secretos) }
   }
 }
 
