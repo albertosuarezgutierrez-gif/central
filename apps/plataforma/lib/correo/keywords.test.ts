@@ -69,3 +69,37 @@ test('sin señal clara → null (decide la IA)', () => {
   assert.equal(clasificarPorKeyword('gabriel@cortijoeltoril.com', 'Consulta general'), null)
   assert.equal(clasificarPorKeyword('', ''), null)
 })
+
+// ── Avisos operativos de compañía y Codeoscopic (14/10/2026) ───────────────
+test('aviso legítimo de info.mapfre.com → correduria (recibo si el asunto es de recibo)', () => {
+  assert.equal(clasificarPorKeyword('avisosrecibos@info.mapfre.com', 'Aviso de recibo pendiente')?.categoria, 'correduria-recibo')
+  assert.equal(clasificarPorKeyword('avisosrecibos@info.mapfre.com', 'Información de su póliza')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('enviodocumentacionpoliza@info.mapfre.com', 'Su documentación')?.categoria, 'correduria')
+})
+
+test('publicidad mapfretecuidamos → ruido', () => {
+  assert.equal(clasificarPorKeyword('mapfretecuidamos@info.mapfre.com', 'Cuida tu salud este otoño')?.categoria, 'ruido')
+})
+
+test('avisos operativos por asunto (MAO, ticket, fichero, desbloqueo) → correduria', () => {
+  assert.equal(clasificarPorKeyword('soporte@mapfre.com', 'Cierre de MAO desktop')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('soporte@occident.com', 'Ticket Cerrado 12345')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('ficheros@reale.es', 'Movimientos a Fichero')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('mediador@allianz.es', 'Solicitud de desbloqueo de póliza')?.categoria, 'correduria')
+})
+
+test('Codeoscopic: operativo → correduria, newsletter → ruido', () => {
+  assert.equal(clasificarPorKeyword('soporte@codeoscopic.com', 'Incidencia resuelta en su ERP')?.categoria, 'correduria')
+  assert.equal(clasificarPorKeyword('newsletter@codeoscopic.com', 'Novedades')?.categoria, 'ruido')
+  assert.equal(clasificarPorKeyword('equipo@codeoscopic.com', 'Webinar: nueva versión')?.categoria, 'ruido')
+})
+
+test('nuevas aseguradoras: recibo devuelto → correduria-recibo', () => {
+  for (const d of ['helvetia.es', 'mutua.es', 'santalucia.es', 'dkv.es', 'pelayo.com', 'asisa.es', 'sanitas.es', 'segurcaixaadeslas.es', 'fiatc.es', 'verti.es', 'lineadirecta.es']) {
+    assert.equal(clasificarPorKeyword(`mediadores@${d}`, 'Recibos devueltos de banco')?.categoria, 'correduria-recibo', d)
+  }
+})
+
+test('comunicado comercial de compañía NO se vuelve operativo', () => {
+  assert.equal(clasificarPorKeyword('ccorredor@mapfre.com', 'Campaña de otoño para mediadores')?.categoria ?? null, null)
+})

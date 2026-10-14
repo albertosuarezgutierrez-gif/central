@@ -35,6 +35,9 @@ export const ASEGURADORAS = [
   'occidentinforma.com', 'comunicacionesoccident.com', 'newsoccident.com', 'occident.com',
   'mapfre.com', 'allianz.es', 'reale.es', 'generali.com', 'tugenerali.es', 'fidelidade.pt',
   'zurich.es', 'axa.es', 'catalanaoccidente.com', 'libertyseguros.es', 'plusultra.es', 'caser.es',
+  // Añadidas 14/10/2026 (dominios corporativos de sobra conocidos; ante la duda de un dominio, fuera).
+  'mapfre.es', 'helvetia.es', 'mutua.es', 'mutuamadrilena.es', 'santalucia.es', 'dkv.es', 'pelayo.com',
+  'asisa.es', 'sanitas.es', 'segurcaixaadeslas.es', 'fiatc.es', 'verti.es', 'lineadirecta.es',
 ]
 // Solo lo que habla de un recibo que no ha entrado. `anulad|anulacion` cubre «pólizas anuladas
 // por impago» y «recibos próximos a la anulación», que es el aviso que llega ANTES de que caiga
@@ -45,6 +48,33 @@ function esReciboAseguradora(from: string, subject: string): boolean {
   const dom = dominioDe(from)
   if (!dom || !ASEGURADORAS.some(d => enDominio(dom, d))) return false
   return ASUNTO_RECIBO.test(sinTildes(subject || ''))
+}
+
+// ── Avisos OPERATIVOS de compañía y de Codeoscopic (proveedor del ERP de la correduría) ──────────
+// Medido a 90 días: `avisosrecibos@info.mapfre.com` caía en seguridad-sospechosa, y «Cierre de MAO
+// desktop», «Ticket Cerrado», «Movimientos a Fichero» (Reale) o «desbloqueo de póliza» (Allianz)
+// acababan en ruido/dudoso. Aquí corre ANTES que la IA (clasificador.ts: correo_reglas → OTP →
+// keyword → IA), así que gana a seguridad-sospechosa. Se exige remitente de compañía Y señal
+// operativa (prefijo del buzón o asunto): el comunicado comercial masivo NO entra (sigue a la IA/digest).
+const PUBLICIDAD_COMPANIA = /mapfretecuidamos/
+const BUZON_OPERATIVO = ['avisosrecibos@', 'enviodocumentacionpoliza@']
+const ASUNTO_OPERATIVO_COMPANIA =
+  /\bticket\b|\bmao\b|movimientos? a fichero|desbloqueo|\bsiniestros?\b|\bincidencia|documentacion (de |de la )?poliza|\bpoliza\b.*\b(emitida|anulada|suspendida)/i
+const CODEOSCOPIC = 'codeoscopic.com'
+const CODEOSCOPIC_NEWSLETTER_BUZON = ['newsletter', 'news@', 'marketing', 'comunicacion', 'hola@', 'info@']
+const CODEOSCOPIC_NEWSLETTER_ASUNTO = /newsletter|boletin|webinar|\bseminario|novedades del mes|\bevento\b/i
+
+function operativoCompania(f: string, dom: string, subject: string): boolean {
+  if (!dom || !ASEGURADORAS.some(d => enDominio(dom, d))) return false
+  if (PUBLICIDAD_COMPANIA.test(f)) return false
+  if (BUZON_OPERATIVO.some(p => f.startsWith(p))) return true
+  return ASUNTO_OPERATIVO_COMPANIA.test(sinTildes(subject || ''))
+}
+
+function categoriaCodeoscopic(f: string, subject: string): string {
+  const news = CODEOSCOPIC_NEWSLETTER_BUZON.some(p => f.startsWith(p)) ||
+    CODEOSCOPIC_NEWSLETTER_ASUNTO.test(sinTildes(subject || ''))
+  return news ? 'ruido' : 'correduria'
 }
 
 // Dominio del remitente → categoría (procesadores de pago, plataformas de reserva, aseguradoras,
@@ -81,6 +111,17 @@ export function clasificarPorKeyword(from: string, subject: string): KeywordMatc
   // llegaría en el digest de la noche.
   if (esReciboAseguradora(f, subject)) {
     return { categoria: 'correduria-recibo', motivo: `recibo de aseguradora (${dom})` }
+  }
+  // Publicidad de compañía (mapfretecuidamos) → ruido, antes de la regla operativa de su dominio.
+  if (dom && ASEGURADORAS.some(d => enDominio(dom, d)) && PUBLICIDAD_COMPANIA.test(f)) {
+    return { categoria: 'ruido', motivo: `publicidad de compañía (${dom})` }
+  }
+  if (dom && enDominio(dom, CODEOSCOPIC)) {
+    const categoria = categoriaCodeoscopic(f, subject)
+    return { categoria, motivo: `Codeoscopic (${categoria === 'ruido' ? 'newsletter' : 'operativo'})` }
+  }
+  if (operativoCompania(f, dom, subject)) {
+    return { categoria: 'correduria', motivo: `aviso operativo de compañía (${dom})` }
   }
   if (dom) {
     for (const { categoria, dominios } of DOMINIOS) {
