@@ -174,10 +174,10 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       }
       if (await loginPaso1Occident(page, ctx)) {
         await resolverSso()
+      } else if (esUrlSsoOccident(page.url())) {
+        await resolverSso()
       } else if (!(await cabeceraPortalVisible(page, 25_000))) {
-        // Redirección tardía al SSO: si la URL ya está en el SSO, lo resuelve el login asistido; si no, no hay portal.
-        if (esUrlSsoOccident(page.url())) await resolverSso()
-        else throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
+        throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
       }
       ctx.log('login ok')
       await exigirSinVerificacion(page, 'occident')

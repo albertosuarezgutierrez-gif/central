@@ -325,7 +325,7 @@ test('la contraseña de Occident solo se escribe en https://ssoaut.gco.global', 
 
 // ───────────── loginPaso1: redirección tardía al SSO y variantes del SSO ─────────────
 
-async function abrirLogin(portalHtml: string, ssoHtml: string) {
+async function abrirLogin(portalHtml: string, ssoHtml: string, captcha = false) {
   const context = await browser.newContext()
   await context.route('https://**/*', (r) => {
     const u = new URL(r.request().url())
@@ -338,7 +338,7 @@ async function abrirLogin(portalHtml: string, ssoHtml: string) {
   const ctx = {
     credenciales: { usuario: 'usuario-prueba', contrasena: 'x' },
     pausa: async () => undefined,
-    exigirSinCaptcha: async () => undefined,
+    exigirSinCaptcha: async () => { if (captcha && page.url().includes('ssoaut')) throw new ErrorTarificador('captcha', 'CAPTCHA') },
     log: () => undefined,
     pulsar: async (b: Parameters<typeof pulsar>[0]) => { pulsados.push('pulsado'); void b },
   }
@@ -380,10 +380,42 @@ test('loginPaso1: SSO sin campo de usuario (preseleccionado) → true sin rellen
   }
 })
 
-test('loginPaso1: ni SSO ni cabecera → error de portal TRANSITORIO con mensaje claro', async () => {
+test('loginPaso1: ni SSO ni cabecera → error de portal NO transitorio con mensaje claro', async () => {
   const { context, page, ctx } = await abrirLogin('<!doctype html><html><body>vacío</body></html>', SSO_CON_USUARIO)
   try {
-    await assert.rejects(() => loginPaso1(page, ctx as never, { carreraMs: 700 }), (e) => e instanceof ErrorTarificador && e.tipo === 'portal' && e.transitorio === true && /ni al SSO ni a la cabecera/.test(e.message))
+    await assert.rejects(() => loginPaso1(page, ctx as never, { carreraMs: 700 }), (e) => e instanceof ErrorTarificador && e.tipo === 'portal' && e.transitorio === false && /ni al SSO ni a la cabecera/.test(e.message))
+  } finally {
+    await context.close()
+  }
+})
+
+const IR_SSO = `<!doctype html><html><body><script>location.href='https://ssoaut.gco.global/my.policy?apm=5'</script></body></html>`
+
+test('loginPaso1: SSO lento (el campo de usuario aparece a ~1,5 s) → rellena', async () => {
+  const sso = '<!doctype html><html><body><script>setTimeout(function(){document.body.innerHTML=\'<input id="usernamegco"><button id="SubmitCreds">Ok</button>\'},1500)</script></body></html>'
+  const { context, page, ctx, pulsados } = await abrirLogin(IR_SSO, sso)
+  try {
+    assert.equal(await loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 5_000 }), true)
+    assert.equal(await page.locator(SEL.ssoUsuario).inputValue(), 'usuario-prueba')
+    assert.equal(pulsados.length, 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('loginPaso1: SSO sin campo de usuario pero con cabecera del portal (rebote con sesión viva) → false', async () => {
+  const { context, page, ctx } = await abrirLogin(IR_SSO, '<!doctype html><html><body><header class="MuiAppBar-root">x</header></body></html>')
+  try {
+    assert.equal(await loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 500 }), false)
+  } finally {
+    await context.close()
+  }
+})
+
+test('loginPaso1: captcha en el SSO tras la redirección → error de captcha', async () => {
+  const { context, page, ctx } = await abrirLogin(IR_SSO, SSO_CON_USUARIO, true)
+  try {
+    await assert.rejects(() => loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 500 }), (e) => e instanceof ErrorTarificador && e.tipo === 'captcha')
   } finally {
     await context.close()
   }
