@@ -1,0 +1,101 @@
+{
+ "sesion": "b122a387-7c78-557e-9ddc-02104e4f4102",
+ "inicio": "2026-10-14T09:36:54.765Z",
+ "fin": "2026-10-14T09:38:40.972Z",
+ "llamadas": 27,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 4686,
+   "chars_out": 613,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "SubagentHandback": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 279,
+   "chars_out": 3397,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 2
+   }
+  },
+  "bash": {
+   "llamadas": 7,
+   "chars_in": 1879,
+   "chars_out": 22214,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 7
+   }
+  },
+  "mcp:Resend": {
+   "llamadas": 6,
+   "chars_in": 1039,
+   "chars_out": 15282,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Resend__list-webhooks": 1,
+    "mcp__Resend__list-domains": 1,
+    "mcp__Resend__list-broadcasts": 1,
+    "mcp__Resend__get-email-metrics": 3
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 75,
+   "chars_out": 1787,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__list_tables": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 3336,
+   "chars_out": 12180,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  },
+  "mcp:posthog": {
+   "llamadas": 1,
+   "chars_in": 456,
+   "chars_out": 583,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__posthog__exec": 1
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1994,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
