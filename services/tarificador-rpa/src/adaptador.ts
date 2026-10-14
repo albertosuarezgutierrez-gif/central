@@ -53,6 +53,18 @@ export type ContextoPortal = ContextoTarificacion & {
    * vez, por `pulsarEmisionAutorizada` de guard.ts (fase + DOM + permiso). El adaptador no nombra el botón.
    */
   pulsarEmision?: (permiso: PermisoEmision, vinculo: { trabajoId: string; hashDatos: string }) => Promise<void>
+  /**
+   * Enlace de MENÚ autorizado de la compañía del trabajo (Mapfre «Tarificación y Emisión Rápida», 14/10/2026), por
+   * `pulsarEnlaceEntradaAutorizado` de guard.ts (texto EXACTO de una lista cerrada, una vez por etiqueta).
+   */
+  pulsarEnlaceEntrada?: (boton: Locator) => Promise<void>
+  /**
+   * Mapfre NSEI (14/10/2026): confirma el vehículo del diálogo «Selección de vehículo» por `confirmarVehiculoMapfre` de
+   * guard.ts (una sola fila y con la matrícula del riesgo; la comparación se hace dentro del guard). El adaptador no
+   * nombra los controles del diálogo. `pagina`: la pestaña de NSEI (la abre la entrada); tiene que ser del MISMO contexto
+   * del navegador que el trabajo (el guard de red está instalado en él).
+   */
+  confirmarVehiculoMapfre?: (pagina: Page, matricula: string) => Promise<void>
 }
 
 /**

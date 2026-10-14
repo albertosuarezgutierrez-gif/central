@@ -10,6 +10,7 @@
 import { esMatriculaEspanola, normalizarMatricula, type EleccionVersion } from './vehiculo.ts'
 import { validarTomador, type Tomador } from './tomador.ts'
 import { tieneCaracteresProhibidos } from './poblacion.ts'
+import { validarVehiculoConfirmado, type VehiculoConfirmado } from './vehiculo-confirmado.ts'
 
 export const RAMOS_VEHICULO = ['auto', 'moto'] as const
 export type RamoVehiculo = (typeof RAMOS_VEHICULO)[number]
@@ -56,6 +57,12 @@ export type FormularioAuto = {
    */
   poblacion?: string | null
   eleccionPoblacion?: string | null
+  /**
+   * Vehículo de catálogo CONFIRMADO por matrícula en Mapfre (14/10/2026, `vehiculo-confirmado.ts`): denominación, CV, CC,
+   * puertas y fecha de inicio. SIN matrícula ni bastidor (se conserva en la purga). Lo usan los demás bots para elegir
+   * versión (solo si casa exactamente una). Ausente = no consta.
+   */
+  vehiculoConfirmado?: VehiculoConfirmado | null
 }
 
 /** Máximos de `poblacion` y `eleccionPoblacion`. */
@@ -243,6 +250,14 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   const poblacion = textoOpcional(e.poblacion, 'poblacion', MAX_POBLACION)
   const eleccionPoblacion = textoOpcional(e.eleccionPoblacion, 'eleccionPoblacion', MAX_ELECCION_POBLACION)
 
+  // Vehículo confirmado por Mapfre (opcional). Nunca se repite el valor en el error.
+  let vehiculoConfirmado: VehiculoConfirmado | null = null
+  if (e.vehiculoConfirmado !== undefined && e.vehiculoConfirmado !== null) {
+    const vc = validarVehiculoConfirmado(e.vehiculoConfirmado)
+    if (vc.ok) vehiculoConfirmado = vc.valor
+    else errores.push(...vc.errores)
+  }
+
   // Moto (fail-closed): Allianz tiene productos distintos «Moto» y «Ciclomotor» (≤50 cc). Solo se tarifica Moto.
   if (ramo === 'moto') {
     const cc = seleccionVehiculo?.cilindradaCc ?? null
@@ -268,6 +283,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     formulario: { ramo, matricula, codigoPostal, conductor, tomadorEsConductor, tomadorEsPropietario, aniosAseguradoAnterior, siniestrosUltimos5Anios, garajeNoche, tomador, eleccionVersion, seleccionVehiculo,
       ...(poblacion !== null ? { poblacion } : {}),
       ...(eleccionPoblacion !== null ? { eleccionPoblacion } : {}),
+      ...(vehiculoConfirmado !== null ? { vehiculoConfirmado } : {}),
     },
   }
 }

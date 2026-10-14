@@ -34,7 +34,7 @@ import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Confi
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom } from './inventario-dom.ts'
-import { elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarProyecto } from './guard.ts'
+import { confirmarVehiculoMapfre, elegirOpcion, instalarGuardEmision, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { capturarEvidencia } from './evidencia.ts'
 import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
@@ -148,6 +148,12 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       elegirOpcion: (m) => elegirOpcion(page, guard, m),
       avanzarATarificar: () => pulsarAvance(page, guard),
       avanzarPestanaAutorizada: (selector) => pulsarAvancePestanaAutorizado(page, guard, selector),
+      pulsarEnlaceEntrada: (boton) => pulsarEnlaceEntradaAutorizado(boton, guard, k.compania),
+      confirmarVehiculoMapfre: async (pagina, matricula) => {
+        // La pestaña de NSEI la abre la entrada; solo vale una página de ESTE contexto (el que tiene el guard de red).
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo no es de este trabajo')
+        await confirmarVehiculoMapfre(pagina, guard, matricula)
+      },
       abrirProyecto: (pestana) => pulsarProyecto(page, pestana, guard),
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
