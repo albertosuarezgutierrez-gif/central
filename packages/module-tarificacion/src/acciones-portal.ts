@@ -128,18 +128,21 @@ export function lineaAccionesPortalParaIA(): { emision: string; prohibidas: stri
 // Un campo bancario en pantalla = frontera: el explorador para con `cerca_de_emision` (`detectarParada`, explorador.ts, que
 // usan el paso de asegura y el worker ANTES de llamar a la IA: la IA nunca recibe ni rellena ese campo). La fecha de efecto
 // SOLA no para (también aparece al tarificar); cuenta solo junto a un campo bancario en la misma pantalla.
-// Patrones sobre texto PLANO; sin `\b` en IBAN/SWIFT/BIC a propósito: ids tipo `txtIBAN` / `swift_bic` no tienen frontera.
+// Patrones sobre texto PLANO (minúsculas, sin tildes: `txtIBAN` → `txtiban`, no hay frontera de camelCase), así que IBAN/BIC/«num cuenta»
+// NO llevan `\b` delante. Falsos positivos que pararían el tarificar de Hogar/Auto y se excluyen: «Ibáñez», «Asistencia domiciliaria»,
+// «Tenga en cuenta», «Suzuki Swift», «vehículo financiado» (entidad financiera). Ver los negativos en acciones-portal.test.ts.
 
 export type CampoBancario = { readonly nombre: string; readonly patron: RegExp }
 
 export const CAMPOS_BANCARIOS: readonly CampoBancario[] = Object.freeze([
-  Object.freeze({ nombre: 'IBAN', patron: /iban/ }),
+  Object.freeze({ nombre: 'IBAN', patron: /iban(?!ez)/ }),
   Object.freeze({ nombre: 'Cuenta bancaria', patron: /cuenta[\s_.-]*(?:bancaria|corriente)|\bccc\b/ }),
-  Object.freeze({ nombre: 'Número de cuenta', patron: /(?:numero|num|nro|n[ºo°]?)[\s_.-]*(?:de[\s_.-]*)?cuenta/ }),
-  Object.freeze({ nombre: 'Domiciliación', patron: /domiciliacion|domiciliar/ }),
+  Object.freeze({ nombre: 'Número de cuenta', patron: /(?:num(?:ero)?|nro|\bn\.?[º°])\.?[\s_.-]*(?:de[\s_.-]*)?cuenta/ }),
+  Object.freeze({ nombre: 'Domiciliación', patron: /domiciliacion|domiciliar\b/ }),
   Object.freeze({ nombre: 'Titular de la cuenta', patron: /titular[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?cuenta/ }),
-  Object.freeze({ nombre: 'Entidad bancaria', patron: /entidad[\s_.-]*(?:bancaria|financiera)/ }),
-  Object.freeze({ nombre: 'SWIFT / BIC', patron: /swift|(?:^|[^a-z])bic(?![a-z])/ }),
+  Object.freeze({ nombre: 'Entidad bancaria', patron: /entidad[\s_.-]*bancaria/ }),
+  Object.freeze({ nombre: 'SWIFT / BIC', patron: /swift[\s_.-]*(?:bic|code|codigo)|(?:code|codigo)[\s_.-]*swift|(?:^|[^a-z])bic(?![a-z])/ }),
+  Object.freeze({ nombre: 'Datos bancarios', patron: /datos[\s_.-]*bancari/ }),
 ])
 
 export const PATRON_FECHA_EFECTO = /fecha[\s_.-]*(?:de[\s_.-]*)?efecto|efecto[\s_.-]*(?:de[\s_.-]*)?(?:la[\s_.-]*)?(?:poliza|fecha)/

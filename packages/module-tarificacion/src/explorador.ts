@@ -538,7 +538,7 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   if (desc.some((d) => pareceEmision(d, { permitirAceptar: true, permitirGuardarPresupuesto: true })) || cat.emision) return 'boton_de_emision'
   // «Aceptar» (y lo que solo cae por él): solo el autorizado.
   if (desc.some((d) => pareceEmision(d)) && !esAvanceAutorizado(entrada, el, marco)) return 'aceptar_no_autorizado'
-  // Lista única, categoría PROHIBIDA (enviar, salir, proyecto ampliado…).
+  // Lista única, categoría PROHIBIDA (enviar, salir…). «Proyecto ampliado» ya NO está aquí: es GUARDAR (excepción estrecha EMISION_PROJ).
   if (cat.prohibida) return 'boton_prohibido'
   // GUARDAR PRESUPUESTO (grabar, guardar, imprimir, descargar…): nunca como navegación; solo con `efectoEsperado:
   // 'guardar_presupuesto'` en resultado (`bloqueoGuardadoPresupuesto`).

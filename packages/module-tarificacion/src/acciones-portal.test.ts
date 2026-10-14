@@ -266,6 +266,17 @@ describe('frontera de emisión por campos: IBAN / cuenta bancaria (14/10/2026)',
     [{ tag: 'input', type: 'text', etiqueta: 'Entidad bancaria' }, 'Entidad bancaria'],
     [{ tag: 'input', type: 'text', name: 'swift_bic' }, 'SWIFT / BIC'],
     [{ tag: 'input', type: 'text', placeholder: 'BIC' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Código SWIFT' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', id: 'swiftCode' }, 'SWIFT / BIC'],
+    [{ tag: 'input', type: 'text', id: 'codigo_iban' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', id: 'ibanCuenta' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', etiqueta: 'iban' }, 'IBAN'],
+    [{ tag: 'input', type: 'text', id: 'txtNumCuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Nro. de cuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'N.º de cuenta' }, 'Número de cuenta'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Domiciliar recibos' }, 'Domiciliación'],
+    [{ tag: 'input', type: 'text', etiqueta: 'Datos bancarios' }, 'Datos bancarios'],
+    [{ tag: 'input', type: 'text', id: 'datos_bancarios' }, 'Datos bancarios'],
   ])('campo %j → para con cerca_de_emision', (el, nombre) => {
     const p = detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Superficie (m²)' }, el]))
     expect(p?.motivo).toBe('cerca_de_emision')
@@ -282,6 +293,14 @@ describe('frontera de emisión por campos: IBAN / cuenta bancaria (14/10/2026)',
     expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Fecha de efecto' }]))).toBeNull()
     expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', id: 'fechaEfecto' }, { tag: 'input', type: 'text', etiqueta: 'Superficie' }]))).toBeNull()
     expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: 'Cuenta atrás' }, { tag: 'input', type: 'text', etiqueta: 'Bicicletas' }]))).toBeNull()
+  })
+
+  it.each([
+    'Asistencia domiciliaria', 'Tenga en cuenta', 'Con cuenta propia', 'Ibáñez', 'Ibanez', 'Apellido: IBÁÑEZ',
+    'Entidad financiera', 'Vehículo financiado por entidad financiera', 'Suzuki Swift', 'Swift', 'No tiene cuenta',
+  ])('NEGATIVO falso positivo «%s» no para', (t) => {
+    expect(detectarParada(pantallaCampos([{ tag: 'input', type: 'text', etiqueta: t }]))).toBeNull()
+    expect(fronteraEmisionPorCampos([t]).frontera).toBe(false)
   })
 
   it('fecha de efecto JUNTO a un campo bancario: para y lo dice', () => {

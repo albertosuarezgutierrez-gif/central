@@ -63,7 +63,8 @@ export type OpcionesGuard = {
   permitirAceptar?: boolean
   /**
    * GUARDAR PRESUPUESTO (14/10/2026): deja pasar SOLO las entradas de Archivar (`PATRONES_GUARDADO_GUARD`) y la acción `store`
-   * en parámetros. `PATRON_EMISION`, `contract`, `validar_aceptar`, «Proyecto ampliado», pago fraccionado… siguen bloqueados.
+   * en parámetros. `PATRON_EMISION`, `contract`, `validar_aceptar`, pago fraccionado… siguen bloqueados. «Proyecto ampliado» es GUARDAR (como Archivar);
+   su único id con «emisi» (`td#EMISION_PROJ`) pasa por la excepción estrecha `EXCEPCION_PROYECTO_AMPLIADO` (acciones-portal.ts).
    * Solo lo pide `pulsarGuardadoPresupuesto` (worker) y la red durante SU ventana.
    */
   permitirGuardarPresupuesto?: boolean
