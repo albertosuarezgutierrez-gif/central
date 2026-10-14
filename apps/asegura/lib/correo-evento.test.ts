@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  PREFIJO_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, planItem, resolverPolizaEvento, tareaValida, validarEntradaEvento, venceTarea,
+  PREFIJO_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, elegirSiniestroAcotado, fechaCorreoMadrid, TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento, tareaValida, validarEntradaEvento, venceTarea,
   type ContextoItem, type ItemEvento, type PolizaCandidata,
 } from './correo-evento.ts'
 
@@ -315,7 +315,7 @@ test('el SQL crudo no prefija el schema (lo vigila el guardián de aislamiento)'
 })
 
 test('la BD resuelve el siniestro con elegirSiniestro (compañía + póliza), no con un «contains» suelto', () => {
-  assert.match(BD, /elegirSiniestro\(/)
+  assert.match(BD, /elegirSiniestro(Acotado)?\(/)
   assert.match(BD, /siniestroPolizaDistinta/)
 })
 
@@ -327,4 +327,26 @@ test('la BD no repite la nota si ya hay fila aplicada con la misma clave de tare
   assert.match(BD, /is not distinct from \$\{fecha\}/)
   // La primera fila guarda su clave de tarea aunque no cree tarea (solo nota): si no, la siguiente no la ve.
   assert.match(BD, /clave_tarea = \$\{claveGuardada\}/)
+})
+
+// ── Fecha del correo en Madrid y límite de candidatos (14/10/2026) ─────────────
+
+test('fechaCorreoMadrid: un correo de las 00:30 de Madrid cae en el día de Madrid, no en el UTC anterior', () => {
+  assert.equal(fechaCorreoMadrid('2026-10-13T22:30:00.000Z'), '2026-10-14') // 00:30 CEST del 14
+  assert.equal(fechaCorreoMadrid('2026-01-13T23:30:00.000Z'), '2026-01-14') // 00:30 CET del 14
+  assert.equal(fechaCorreoMadrid('2026-10-14T10:00:00.000Z'), '2026-10-14')
+  assert.equal(fechaCorreoMadrid('2026-10-13'), '2026-10-13') // fecha sola: se respeta
+  assert.equal(fechaCorreoMadrid('basura'), null)
+  assert.equal(fechaCorreoMadrid(null), null)
+})
+
+test('elegirSiniestroAcotado: más candidatos que el tope → no se elige ninguno (nunca uno al azar)', () => {
+  const fila = (i: number) => ({
+    id: `s${i}`, origen: 'cima', clienteId: 'c', polizaId: 'p', idSiniestroEntidad: '123', referencia: null, codigoEntidadDgs: 'C0468',
+    poliza: { numeroPoliza: 'X', codigoDgs: 'C0468', aseguradora: 'Occident' },
+  })
+  const pocas = Array.from({ length: TOPE_SINIESTROS_CANDIDATOS }, (_, i) => fila(i))
+  assert.equal(elegirSiniestroAcotado(pocas, TOPE_SINIESTROS_CANDIDATOS, '123', 'Occident', 'C0468', null).estado, 'casa')
+  const muchas = Array.from({ length: TOPE_SINIESTROS_CANDIDATOS + 1 }, (_, i) => fila(i))
+  assert.equal(elegirSiniestroAcotado(muchas, TOPE_SINIESTROS_CANDIDATOS, '123', 'Occident', 'C0468', null).estado, 'poliza_distinta')
 })

@@ -4,7 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { auditado } from '@/lib/auditoria'
-import { validarEntradaEvento } from '@/lib/correo-evento'
+import { fechaCorreoMadrid, validarEntradaEvento } from '@/lib/correo-evento'
 import { eventosCorreoRecientes, registrarEventoCorreo } from '@/lib/correo-evento-bd'
 import { esTablaInexistente } from '@/lib/correo-avisos-intranet'
 
@@ -36,7 +36,7 @@ export const POST = auditado(async (req: Request) => {
     const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
     const v = validarEntradaEvento(b)
     if (!v.ok) return NextResponse.json({ estado: 'invalido', motivo: v.motivo }, { status: 422 })
-    const fechaCorreo = typeof b?.fechaCorreo === 'string' && /^\d{4}-\d{2}-\d{2}/.test(b.fechaCorreo) ? b.fechaCorreo.slice(0, 10) : null
+    const fechaCorreo = fechaCorreoMadrid(b?.fechaCorreo)
     const r = await registrarEventoCorreo(correduria.id, v.entrada, fechaCorreo)
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: 503 })
     return NextResponse.json({ estado: 'ok', ilegibles: v.entrada.ilegibles, resultados: r.resultados })

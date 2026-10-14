@@ -228,7 +228,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // anulación o suplemento — venga la categoría por regla de `correo_reglas`, keyword o IA. asegura
             // lo aplica a la cartera (o lo deja «sin resolver» para la bandeja de Mi mesa) y el aviso dice
             // QUÉ se hizo. Un fallo del puerto no rompe la pasada: el aviso sale con lo leído y lo declara.
-            const res = await registrarEventoCorreoAsegura(evento, correo.messageId, correo.fecha.toISOString().slice(0, 10))
+            const res = await registrarEventoCorreoAsegura(evento, correo.messageId, correo.fecha.toISOString())
               .catch(() => ({ estado: 'sin_respuesta' as const, motivo: 'no se pudo llegar a asegura' }))
             const resultados = res.estado === 'ok' ? leerResultadosEvento(res.json) : null
             if (res.estado !== 'ok') console.error('[triaje] evento de compañía no registrado:', res.motivo)

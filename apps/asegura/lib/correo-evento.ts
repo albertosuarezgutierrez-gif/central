@@ -261,6 +261,34 @@ export function elegirSiniestro(
   return deLaCompania.length > 0 ? { estado: 'poliza_distinta' } : { estado: 'ninguno' }
 }
 
+/** Tope de candidatos que lee la consulta de siniestro por nº; con más, no se adivina (ver `elegirSiniestroAcotado`). */
+export const TOPE_SINIESTROS_CANDIDATOS = 50
+
+/**
+ * Como `elegirSiniestro`, pero sobre una lectura acotada: la consulta pide `tope + 1` filas; si llegan más de `tope`
+ * el LIMIT pudo dejar fuera el bueno, así que NO se elige ninguno (`poliza_distinta` → `sin_resolver`), nunca uno al azar.
+ */
+export function elegirSiniestroAcotado(
+  filas: readonly SiniestroCandidato[], tope: number, numero: string, compania: string, codigoDgs: string, numeroPolizaCorreo: string | null,
+): EleccionSiniestro {
+  if (!claveNumero(numero)) return { estado: 'ninguno' }
+  if (filas.length > tope) return { estado: 'poliza_distinta' }
+  return elegirSiniestro(filas, numero, compania, codigoDgs, numeroPolizaCorreo)
+}
+
+/**
+ * Fecha (aaaa-mm-dd) en Europe/Madrid de la `fechaCorreo` recibida. Un ISO con hora ('2026-10-14T22:30:00.000Z') se
+ * pasa a Madrid (a las 00:30 de Madrid ya es el día siguiente); una fecha sola se respeta. Otra cosa → null.
+ */
+export function fechaCorreoMadrid(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(v)) return null
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+}
+
 /**
  * La fecha del aviso que distingue «la compañía repite lo mismo» de «dice algo nuevo» (para no anotar cada
  * día el mismo resumen de Occident, que llega con otro Message-ID). `null` = el tipo no se deduplica así.

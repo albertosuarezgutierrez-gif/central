@@ -24,7 +24,7 @@ import { abrirSiniestro } from './cartera-siniestros'
 import { crearTarea } from './oportunidad-seguimiento'
 import { esTablaInexistente } from './correo-avisos-intranet'
 import {
-  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestro, planItem, resolverPolizaEvento,
+  ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, claveNumero, claveTareaDe, elegirSiniestroAcotado, TOPE_SINIESTROS_CANDIDATOS, planItem, resolverPolizaEvento,
   tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
@@ -98,13 +98,13 @@ async function siniestroPorNumero(
       id: true, origen: true, clienteId: true, polizaId: true, idSiniestroEntidad: true, referencia: true, codigoEntidadDgs: true,
       poliza: { select: { numeroPoliza: true, codigoEntidadDgs: true, aseguradora: true } },
     },
-    take: 20,
+    take: TOPE_SINIESTROS_CANDIDATOS + 1,
   })
-  return elegirSiniestro(filas.map((s) => ({
+  return elegirSiniestroAcotado(filas.map((s) => ({
     id: s.id, origen: String(s.origen), clienteId: s.clienteId, polizaId: s.polizaId,
     idSiniestroEntidad: s.idSiniestroEntidad, referencia: s.referencia, codigoEntidadDgs: s.codigoEntidadDgs,
     poliza: s.poliza ? { numeroPoliza: s.poliza.numeroPoliza, codigoDgs: s.poliza.codigoEntidadDgs, aseguradora: s.poliza.aseguradora } : null,
-  })), numero, compania, codigoDgs, numeroPolizaCorreo)
+  })), TOPE_SINIESTROS_CANDIDATOS, numero, compania, codigoDgs, numeroPolizaCorreo)
 }
 
 async function expedienteAbierto(db: Db, correduriaId: string, polizaId: string): Promise<ExpedienteAbierto | null> {
