@@ -2,7 +2,7 @@
 // sale hacia plataforma (resumen de pasos SIN inventario, solo claves del catálogo) y el cambio de estado del mapa.
 // La parte con BD está en `tarificador-exploraciones.ts`; rutas en app/api/operador/tarificador/exploraciones*.
 
-import type { RespuestaExplorador } from '@central/module-tarificacion'
+import { PREFIJO_ERROR_EJECUCION, type RespuestaExplorador } from '@central/module-tarificacion'
 
 export const ESTADOS_MAPA = ['borrador', 'revisado', 'descartado'] as const
 export type EstadoMapa = (typeof ESTADOS_MAPA)[number]
@@ -27,6 +27,8 @@ export type PasoResumen = {
   acciones: AccionResumen[]
   /** La respuesta de la IA se rechazó y el paso lo resolvió una regla. */
   rechazada: boolean
+  /** Acciones de ESTE paso que el portal no dejó aplicar (worker, 14/10/2026): `ejecucion: rellenar m1e39 «…» (clave): causa`. */
+  incidencias: string[]
   motivo: string | null
 }
 
@@ -52,6 +54,7 @@ export function resumirPaso(p: {
     acciones.push({ accion: tipo, ref, dato, detalle: typeof det === 'string' && RE_ETIQUETA.test(det) ? det : null })
   }
   const pantalla = (typeof r.pantalla === 'object' && r.pantalla !== null ? r.pantalla : null) as { nombre?: unknown; tipo?: unknown } | null
+  const errores = Array.isArray(p.errores) ? p.errores.map((x) => (typeof x === 'string' ? x : '(no texto)')) : []
   return {
     n: p.n,
     huella: p.huella,
@@ -60,7 +63,9 @@ export function resumirPaso(p: {
     origen: p.origen === 'ia' || p.origen === 'mapa' ? p.origen : 'regla',
     costeEur: Number.isFinite(p.costeEur) ? p.costeEur : 0,
     acciones,
-    rechazada: Array.isArray(p.errores) && p.errores.length > 0,
+    // Los errores de EJECUCIÓN (worker) no son un rechazo del validador: van aparte.
+    rechazada: errores.some((x) => !x.startsWith(PREFIJO_ERROR_EJECUCION)),
+    incidencias: errores.filter((x) => x.startsWith(PREFIJO_ERROR_EJECUCION)).map((x) => x.slice(0, 200)).slice(0, 20),
     motivo: recorta(r.motivo, 200),
   }
 }

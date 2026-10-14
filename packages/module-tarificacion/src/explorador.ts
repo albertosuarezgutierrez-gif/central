@@ -273,7 +273,42 @@ export function resolverDato(clave: string, ctx: ContextoDatos): DatoResuelto {
   const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
   // El riesgo de auto guarda las fechas en ISO (AAAA-MM-DD); el portal las pide dd/mm/aaaa.
   const iso = d?.tipo === 'fecha' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.valor) : null
-  return iso ? { ok: true, valor: `${iso[3]}/${iso[2]}/${iso[1]}` } : r
+  if (iso) return { ok: true, valor: `${iso[3]}/${iso[2]}/${iso[1]}` }
+  // Año y m² como ENTERO sin unidades (14/10/2026): un `<input type=number>` no admite «85,5» ni «90 m2».
+  const entero = normalizarEnteroPortal(clave, r.valor)
+  if (entero === undefined) return r
+  return entero === null ? { ok: false, motivo: 'dato_no_disponible' } : { ok: true, valor: entero }
+}
+
+/**
+ * Claves del catálogo que el portal pide como número ENTERO, con su rango. `exacto` = tiene que ser entero (un año con
+ * decimales es un dato corrupto, no se redondea); `redondear` = se redondea al entero más próximo (m² del Catastro «85,50»).
+ */
+export const ENTEROS_PORTAL: Readonly<Record<string, { min: number; max: number; modo: 'exacto' | 'redondear' }>> = Object.freeze({
+  'inmueble.anio_construccion': { min: 1500, max: 2100, modo: 'exacto' },
+  'inmueble.superficie_m2': { min: 1, max: 100_000, modo: 'redondear' },
+})
+
+/**
+ * El valor de una clave de {@link ENTEROS_PORTAL} como lo acepta un `<input type=number>` (14/10/2026, Allianz Hogar: año y
+ * m² quedaban vacíos e inválidos): solo dígitos, sin unidades («m2», «m²», «metros»), sin separador de miles y sin
+ * decimales. Acepta «1975», «1975.0», «1.975», «85,50», «85.5», « 90 m2 ». `undefined` = la clave no es de las enteras
+ * (el valor va tal cual); `null` = no es un número válido o se sale del rango (→ `dato_no_disponible`: nunca se inventa). Pura.
+ */
+export function normalizarEnteroPortal(clave: string, valor: string): string | null | undefined {
+  if (!Object.hasOwn(ENTEROS_PORTAL, clave)) return undefined
+  const regla = ENTEROS_PORTAL[clave]
+  let t = valor.trim().toLowerCase().replace(/\s*(m2|m²|mts?2?|metros(\s+cuadrados)?)\.?$/, '').replace(/\s+/g, '')
+  if (!/^\d[\d.,]*$/.test(t)) return null
+  if (t.includes('.') && t.includes(',')) t = t.replace(/\./g, '').replace(',', '.') // «1.234,5»: punto de miles, coma decimal
+  else if (t.includes(',')) t = t.replace(',', '.') // coma decimal (dos comas → no casa abajo → null)
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '') // «1.975», «100.000»: miles a la española
+  if (!/^\d+(\.\d+)?$/.test(t)) return null
+  const n = Number(t)
+  if (!Number.isFinite(n)) return null
+  if (regla.modo === 'exacto' && !Number.isInteger(n)) return null
+  const e = Math.round(n)
+  return e >= regla.min && e <= regla.max ? String(e) : null
 }
 
 function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
@@ -377,8 +412,93 @@ export const DETALLES_FIN_EXPLORACION = [
   'frontera_cuenta_bancaria',
   /** Al GUARDAR el presupuesto el portal abrió un diálogo (confirm/alert): el robot no confirma; se para. */
   'guardado_con_dialogo',
+  /**
+   * `rellenar` cuyo nodo ya no era el inventariado (repintado del portal) y que, tras RE-INVENTARIAR una vez, tampoco se
+   * encontró por su identidad (`relocalizarElemento`: mismo marco, tag, type, id/name/formControlName y etiqueta). 14/10/2026.
+   */
+  'nodo_no_relocalizado',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
+
+const sinCifras = (s: string | undefined) => (s ?? '').replace(/\d+/g, '#')
+const textoEtiqueta = (el: ElementoInventario) => (el.etiqueta ?? el.ariaLabel ?? el.placeholder ?? '').replace(/\s+/g, ' ').trim()
+
+/**
+ * Re-localización tras un REPINTADO (14/10/2026: Allianz Hogar re-renderiza el formulario tras el autocompletado y la ref
+ * de «Año de construcción» dejaba de casar). Busca en el inventario NUEVO el elemento que es EL MISMO control que `el`:
+ * mismo marco (URL), mismo tag y type, mismos name/formControlName (si `el` los tiene), mismo id salvo cifras
+ * autogeneradas, y la misma etiqueta (label/aria-label/placeholder). Exige al menos un identificador fuerte (id, name,
+ * formControlName o etiqueta) y UN solo candidato: dos o ninguno → `null` (no se adivina). Devuelve la ref nueva. Pura.
+ */
+export function relocalizarElemento(el: ElementoInventario, marcoUrl: string, inv: InventarioDom): string | null {
+  const etq = textoEtiqueta(el)
+  if (!el.id && !el.name && !el.formControlName && !etq) return null
+  const tipo = (el.type ?? '').toLowerCase()
+  const candidatos: string[] = []
+  for (const m of inv.marcos) {
+    if (m.url !== marcoUrl) continue
+    for (const x of m.elementos) {
+      if (!x.ref || x.tag !== el.tag || (x.type ?? '').toLowerCase() !== tipo) continue
+      if ((x.name ?? '') !== (el.name ?? '') || (x.formControlName ?? '') !== (el.formControlName ?? '')) continue
+      if (sinCifras(x.id) !== sinCifras(el.id)) continue
+      if (textoEtiqueta(x) !== etq) continue
+      candidatos.push(x.ref)
+    }
+  }
+  return candidatos.length === 1 ? candidatos[0] : null
+}
+
+/**
+ * INCIDENCIAS de ejecución del worker (14/10/2026): una acción VALIDADA que el portal no dejó aplicar. Antes solo iban al log
+ * local del worker y el paso quedaba con `errores: null` (Allianz Hogar: año y m² vacíos tras tres `rellenar` sin traza).
+ * Viajan en el siguiente `paso` (o en el `cierre`) y asegura las anota en los `errores` del paso que las pidió, con la ref y
+ * la ETIQUETA de su inventario guardado (ya redactado). 🔑 NUNCA el valor. Lista CERRADA de causas.
+ */
+export const CAUSAS_INCIDENCIA_EJECUCION = [
+  /** `rellenar`: tras `fill` + blur + relectura y UN reintento tecleando, el control sigue vacío o con otro valor. */
+  'valor_no_aplicado',
+  /** `rellenar`: el nodo se repintó y tras re-inventariar no se encontró por su identidad (se para con ese detalle). */
+  'nodo_no_relocalizado',
+] as const
+export type CausaIncidenciaEjecucion = (typeof CAUSAS_INCIDENCIA_EJECUCION)[number]
+export type IncidenciaEjecucion = { accion: 'rellenar'; ref: string; dato: string; causa: CausaIncidenciaEjecucion }
+export const MAX_INCIDENCIAS_EJECUCION = 15
+/** Prefijo de los `errores` de un paso que vienen de la EJECUCIÓN (no del validador): no marcan el paso como «rechazado». */
+export const PREFIJO_ERROR_EJECUCION = 'ejecucion:'
+
+const RE_REF_INCIDENCIA = /^m\d{1,3}e\d{1,5}$/
+const RE_DATO_INCIDENCIA = /^[a-z][a-z0-9_]{0,29}\.[a-z0-9_]{1,40}$/
+
+/** Lo que manda el worker, TOLERANTE: lo mal formado se descarta (nunca tumba el paso ni el cierre). Máx. 15. Pura. */
+export function leerIncidenciasEjecucion(v: unknown): IncidenciaEjecucion[] {
+  if (!Array.isArray(v)) return []
+  const out: IncidenciaEjecucion[] = []
+  for (const x of v.slice(0, MAX_INCIDENCIAS_EJECUCION)) {
+    if (typeof x !== 'object' || x === null || Array.isArray(x)) continue
+    const o = x as Record<string, unknown>
+    const causa = CAUSAS_INCIDENCIA_EJECUCION.find((c) => c === o.causa)
+    if (o.accion !== 'rellenar' || !causa) continue
+    if (typeof o.ref !== 'string' || !RE_REF_INCIDENCIA.test(o.ref)) continue
+    if (typeof o.dato !== 'string' || !RE_DATO_INCIDENCIA.test(o.dato)) continue
+    out.push({ accion: 'rellenar', ref: o.ref, dato: o.dato, causa })
+  }
+  return out
+}
+
+/**
+ * Las incidencias como `errores` del paso: `ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion):
+ * valor_no_aplicado`. La etiqueta sale del INVENTARIO GUARDADO de ese paso (redactado), nunca del worker; si no está, o
+ * parece un dato personal, va sin etiqueta. Pura.
+ */
+export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[], inventario: InventarioDom | null | undefined): string[] {
+  const porRef = inventario ? indiceRefs(inventario) : new Map<string, { el: ElementoInventario }>()
+  return incidencias.slice(0, MAX_INCIDENCIAS_EJECUCION).map((i) => {
+    const el = porRef.get(i.ref)?.el
+    const etq = el ? textoEtiqueta(el).slice(0, 60) : ''
+    const conEtq = etq && !pareceDatoPersonalInventario(etq) ? ` «${etq}»` : ''
+    return `${PREFIJO_ERROR_EJECUCION} ${i.accion} ${i.ref}${conEtq} (${i.dato}): ${i.causa}`
+  })
+}
 
 /**
  * Claves del catálogo cuyo `rellenar` suele disparar AUTOCOMPLETADO en el portal (población/vía tras el CP, municipios tras

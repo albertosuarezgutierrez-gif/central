@@ -375,3 +375,26 @@ test('🪤 campos INVÁLIDOS (14/10/2026): el inventario los marca (solo el bool
   assert.match(prompt, /"invalido":true/)
   assert.match(SYSTEM_EXPLORADOR, /"invalido"[^\n]*requerido[^\n]*NO avances/)
 })
+
+test('🪤 incidencias de ejecución (14/10/2026): opcionales y TOLERANTES en paso y cierre; lo mal formado se descarta, nunca tumba', () => {
+  const inc = { accion: 'rellenar', ref: 'm0e0', dato: 'inmueble.superficie_m2', causa: 'valor_no_aplicado' }
+  const paso = leerPeticionPaso({ trabajoId: UUID, inventario: crudo, incidencias: [inc, { ...inc, causa: 'valor 1975' }, { ...inc, dato: '00000000T' }] })
+  assert.ok(paso.ok)
+  if (paso.ok) assert.deepEqual(paso.p.incidencias, [inc])
+  const sinInc = leerPeticionPaso({ trabajoId: UUID, inventario: crudo })
+  assert.ok(sinInc.ok && sinInc.p.incidencias.length === 0)
+  const basura = leerPeticionPaso({ trabajoId: UUID, inventario: crudo, incidencias: 'texto libre' })
+  assert.ok(basura.ok && basura.p.incidencias.length === 0)
+  const cierre = leerPeticionCierre({ trabajoId: UUID, motivoFin: 'ambiguo', detalleFin: 'nodo_no_relocalizado', incidencias: [{ ...inc, causa: 'nodo_no_relocalizado' }] })
+  assert.ok(cierre.ok && cierre.p.detalleFin === 'nodo_no_relocalizado' && cierre.p.incidencias.length === 1)
+})
+
+test('🪤 cableado: paso y cierre pasan las incidencias a los errores del ÚLTIMO paso (registrarPaso / anotarErroresUltimoPaso)', () => {
+  const lee = (r: string) => readFileSync(path.join(aqui, '..', r), 'utf8')
+  assert.match(lee('app/api/tarificador/explorador/paso/route.ts'), /incidencias: p\.incidencias/)
+  const cierre = lee('app/api/tarificador/explorador/cierre/route.ts')
+  assert.match(cierre, /anotarErroresUltimoPaso\(e, erroresDeIncidencias\(p\.incidencias/)
+  const bd = lee('lib/tarificador-explorador.ts')
+  assert.match(bd, /if \(p\.erroresPasoAnterior\?\.length\) await anotarErroresUltimoPaso/)
+  assert.match(bd, /p\.n = \(select max\(n\)[^`]*correduria_id/)
+})

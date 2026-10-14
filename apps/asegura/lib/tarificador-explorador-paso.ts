@@ -17,10 +17,12 @@ import {
   huellaRelleno,
   planDesdeMapa,
   presupuestoEnCursoDe,
+  erroresDeIncidencias,
   respuestaParar,
   topesExplorador,
   validarRespuestaExplorador,
   type ContextoValidacion,
+  type IncidenciaEjecucion,
   type InventarioDom,
   type RespuestaExplorador,
 } from '@central/module-tarificacion'
@@ -55,7 +57,20 @@ export type EstadoPaso = {
   eurCabecera: number
 }
 
-export type PasoARegistrar = { respuesta: RespuestaExplorador; origen: 'ia' | 'mapa' | 'regla'; errores: string[] | null; costeEur: number; modelo: string | null }
+export type PasoARegistrar = {
+  respuesta: RespuestaExplorador; origen: 'ia' | 'mapa' | 'regla'; errores: string[] | null; costeEur: number; modelo: string | null
+  /** Errores de EJECUCIÓN del lote anterior (14/10/2026): se AÑADEN a los `errores` del último paso guardado, no a este. */
+  erroresPasoAnterior?: string[]
+}
+
+/**
+ * Las incidencias que trae el worker → `errores` del ÚLTIMO paso guardado (el que pidió esas acciones), con la etiqueta de
+ * SU inventario guardado (redactado). Sin incidencias o sin pasos → `undefined` (no se toca nada). Pura.
+ */
+export function erroresPasoAnterior(pasos: EstadoPaso['pasos'], incidencias: readonly IncidenciaEjecucion[] | undefined): string[] | undefined {
+  if (!incidencias?.length || pasos.length === 0) return undefined
+  return erroresDeIncidencias(incidencias, pasos[pasos.length - 1].inventario)
+}
 
 export type DepsPaso<B> = {
   /** Transacción CORTA con `pg_try_advisory_xact_lock` por exploración; ocupado → lanza `PasoOcupado`. */
@@ -88,6 +103,8 @@ export type EntradaPaso = {
   modelo: string
   /** Con datos reales: el riesgo del trabajo (solo para el catálogo del prompt: claves sin valor, uso/régimen). */
   riesgo?: unknown
+  /** Lo que el lote ANTERIOR no pudo aplicar (worker, 14/10/2026). */
+  incidencias?: IncidenciaEjecucion[]
 }
 
 /**
@@ -146,7 +163,7 @@ export async function ejecutarPaso<B>(e: EntradaPaso, d: DepsPaso<B>): Promise<S
     ctx.presupuestoEnCurso = presupuestoEnCursoDe(st.pasos.map((p) => p.respuesta))
     const consumo = consumoPaso(st, d.ahora())
     const guardar = async (respuesta: RespuestaExplorador, origen: 'mapa' | 'regla'): Promise<Decision> => {
-      const leaseHasta = await d.registrar(bd, { huella, inventario, respuesta, origen, errores: null, costeEur: 0, modelo: null })
+      const leaseHasta = await d.registrar(bd, { huella, inventario, respuesta, origen, errores: null, costeEur: 0, modelo: null, erroresPasoAnterior: erroresPasoAnterior(st.pasos, e.incidencias) })
       return { tipo: 'hecho', salida: { tipo: 'ok', respuesta, origen, huella, leaseHasta } }
     }
     const parada = detectarParada(inventario)
@@ -210,7 +227,7 @@ async function tx2<B>(
       await d.liberarIA(bd)
       return { tipo: 'conflicto', motivo: st.cerrada ? 'exploracion_cerrada' : 'estado_cambiado' }
     }
-    const base = { huella, inventario, origen: 'ia' as const, modelo: e.modelo, costeEur: coste }
+    const base = { huella, inventario, origen: 'ia' as const, modelo: e.modelo, costeEur: coste, erroresPasoAnterior: erroresPasoAnterior(st.pasos, e.incidencias) }
     if (texto === null) {
       const respuesta = respuestaParar('ambiguo', 'la IA no respondió')
       const leaseHasta = await d.registrar(bd, { ...base, respuesta, errores: [`ia_no_disponible: ${fallo}`] })

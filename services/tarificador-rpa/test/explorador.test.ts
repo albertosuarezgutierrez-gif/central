@@ -123,6 +123,24 @@ const VARIOS_CAMPOS = PAGINA(`
     <button id="siguiente" type="submit">Siguiente</button>
   </form>`)
 
+/** Allianz Hogar (14/10/2026): año como `<input type=number>` y superficie como input SIN type. */
+const NUMERICO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label id="lanio" for="anio">Año de construcción</label><input id="anio" name="anio" type="number">
+    <label for="superficie">Superficie de la vivienda</label><input id="superficie" name="superficie">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>`)
+
+/** Un control que el portal VACÍA siempre al perder el foco (ni `fill` ni tecleado se quedan). */
+const NO_SE_QUEDA = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="superficie">Superficie de la vivienda</label><input id="superficie" name="superficie">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>const s = document.getElementById('superficie'); s.addEventListener('blur', () => { s.value = '' })</script>`)
+
 const OTP = PAGINA(`<h1>Verificación</h1><label for="c">Código</label><input id="c" autocomplete="one-time-code">`)
 
 type Peticion = { metodo: string; ruta: string; cuerpo: string }
@@ -192,7 +210,7 @@ const respuesta = (acciones: unknown[], tipo = 'formulario') => ({ version: 1, p
 type Guion = (inv: InventarioDom, n: number, page: Page) => unknown | Promise<unknown>
 
 function contexto(page: Page, guard: GuardEmision, guion: Guion, extra: Partial<ContextoBucle> = {}) {
-  const enviados: { inventario: InventarioDom; avancesFallidos: number }[] = []
+  const enviados: { inventario: InventarioDom; avancesFallidos: number; incidencias?: unknown }[] = []
   const lineas: string[] = []
   const k: ContextoBucle = {
     trabajoId: '00000000-0000-4000-8000-000000000001', compania: 'allianz', ramo: 'hogar', entrada: 'allianz:particulares:hogar',
@@ -203,7 +221,7 @@ function contexto(page: Page, guard: GuardEmision, guion: Guion, extra: Partial<
     topePdfMs: 3_000,
     pausaAccion: async () => undefined,
     pedirPaso: async (c): Promise<RespuestaPaso> => {
-      enviados.push({ inventario: c.inventario, avancesFallidos: c.avancesFallidos })
+      enviados.push({ inventario: c.inventario, avancesFallidos: c.avancesFallidos, ...(c.incidencias ? { incidencias: c.incidencias } : {}) })
       return { estado: 'ok', respuesta: await guion(c.inventario, enviados.length, page), leaseHasta: null }
     },
     log: (m, d) => { lineas.push(JSON.stringify({ m, ...(d ?? {}) })) },
@@ -900,4 +918,86 @@ test('presupuestoParaCierre: tres estados del PDF (null = no se intentó); sin g
   // Sin guardado no viaja presupuesto en el resultado.
   const r = resultadoDeFin('00000000-0000-4000-8000-000000000001', 'allianz', { motivo: 'resultado', error: null }, (t) => t)
   assert.ok(r?.resultado === 'explorado' && !('presupuesto' in r))
+})
+
+// ─── Año y m² que no se quedaban en Allianz Hogar (14/10/2026). Valores FICTICIOS. ───────────────────────────────────
+
+/** Riesgo ficticio de una exploración con datos reales: año y m² como los deja el Catastro (m² con decimales). */
+const RIESGO_REAL = { tomador: { nif: '00000000T' }, inmueble: { anioConstruccion: 1975, superficieM2: 85.5 } }
+/** Angular re-renderiza el formulario: cada input se sustituye por un clon (mismo id/name/label, nodo nuevo). */
+const repintarInputs = (p: Page) => p.evaluate(() => { for (const id of ['anio', 'superficie']) { const e = document.getElementById(id)!; e.replaceWith(e.cloneNode(true)) } })
+
+test('🪤 repintado ANTES del lote: la 1.ª acción (rellenar año, input type=number) se re-localiza y se escribe entero; m² redondeado', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, lineas } = contexto(page, guard, async (inv, n, p) => {
+      if (n === 1) {
+        await repintarInputs(p)
+        return respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+          { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'calcular', confianza: 'alta' },
+        ])
+      }
+      if (n === 2) return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+        { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'calcular', confianza: 'alta' },
+      ])
+      return respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado')
+    }, { conDatosReales: true, riesgo: RIESGO_REAL, esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    const post = peticiones.find((x) => x.ruta === '/tarificar')!.cuerpo
+    assert.match(post, /anio=1975/)
+    assert.match(post, /superficie=86(&|$)/, 'm² entero (85,5 → 86), sin decimales para el input')
+    const log = lineas.join('\n')
+    assert.match(log, /"exploracion_relocalizacion".*"estado":"ok"/)
+    assert.ok(!/1975|85\.5/.test(log), 'el log no lleva valores')
+    assert.equal(fin.incidencias, undefined)
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 repintado que CAMBIA el control (otra etiqueta): no se adivina; para «nodo_no_relocalizado» con la incidencia (sin valor)', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refAnio = ''
+    const { k } = contexto(page, guard, async (inv, _n, p) => {
+      refAnio = ref(inv, 'anio')
+      await p.evaluate(() => { document.getElementById('lanio')!.textContent = 'Año de reforma' })
+      await repintarInputs(p)
+      return respuesta([{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion' }])
+    }, { conDatosReales: true, riesgo: RIESGO_REAL, esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(fin.detalle, 'nodo_no_relocalizado')
+    assert.deepEqual(fin.incidencias, [{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion', causa: 'nodo_no_relocalizado' }])
+    assert.equal(await page.inputValue('#anio'), '', 'no se escribió nada')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 valor que el portal no deja (ni con el reintento tecleando): viaja como incidencia en el SIGUIENTE paso, sin el valor', async () => {
+  inicio = NO_SE_QUEDA
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refSup = ''
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => {
+      refSup = ref(inv, 'superficie')
+      return n === 1 ? respuesta([{ accion: 'rellenar', ref: refSup, dato: 'inmueble.superficie_m2' }]) : respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }, { conDatosReales: true, riesgo: RIESGO_REAL })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(enviados[0].incidencias, undefined)
+    assert.deepEqual(enviados[1].incidencias, [{ accion: 'rellenar', ref: refSup, dato: 'inmueble.superficie_m2', causa: 'valor_no_aplicado' }])
+    assert.equal(fin.incidencias, undefined, 'ya se contó en el paso: no se repite en el cierre')
+    assert.ok(!JSON.stringify(enviados[1].incidencias).includes('86'))
+    assert.match(lineas.join('\n'), /"exploracion_valor".*"estado":"no_aplicado"/)
+  } finally {
+    await context.close()
+  }
 })
