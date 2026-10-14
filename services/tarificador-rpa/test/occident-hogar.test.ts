@@ -31,6 +31,7 @@ import {
   SECCIONES_DESCUENTO_PERMITIDAS,
   abrirTarificacionHogar,
   loginPaso1,
+  esperarPortalOSso,
   elegirMaximoDescuento,
   esDescuentoAbc,
   motivoNoPulsarHogar,
@@ -418,5 +419,43 @@ test('loginPaso1: captcha en el SSO tras la redirección → error de captcha', 
     await assert.rejects(() => loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 500 }), (e) => e instanceof ErrorTarificador && e.tipo === 'captcha')
   } finally {
     await context.close()
+  }
+})
+
+// Cabecera FUGAZ en la página de entrada del portal (`header.MuiAppBar-root` es genérica de MUI) y luego redirección JS al SSO.
+const PORTAL_CABECERA_FUGAZ = `<!doctype html><html><body><header class="MuiAppBar-root">x</header><script>setTimeout(function(){location.href='https://ssoaut.gco.global/my.policy?apm=5'},500)</script></body></html>`
+
+test('loginPaso1: cabecera fugaz y luego redirección al SSO → true y rellena el usuario', async () => {
+  const { context, page, ctx, pulsados } = await abrirLogin(PORTAL_CABECERA_FUGAZ, SSO_CON_USUARIO)
+  try {
+    assert.equal(await loginPaso1(page, ctx as never, { carreraMs: 5_000, usuarioMs: 1_500 }), true)
+    assert.equal(await page.locator(SEL.ssoUsuario).inputValue(), 'usuario-prueba')
+    assert.equal(pulsados.length, 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('esperarPortalOSso: cabecera fugaz que acaba en el SSO → «sso»; cabecera estable → «portal»; nada → null', async () => {
+  const a = await abrirLogin(PORTAL_CABECERA_FUGAZ, SSO_SIN_USUARIO)
+  try {
+    await a.page.goto('https://portaloccident.gco.global/', { waitUntil: 'domcontentloaded' })
+    assert.equal(await esperarPortalOSso(a.page, 5_000), 'sso')
+  } finally {
+    await a.context.close()
+  }
+  const b = await abrirLogin(PORTAL, SSO_SIN_USUARIO)
+  try {
+    await b.page.goto('https://portaloccident.gco.global/', { waitUntil: 'domcontentloaded' })
+    assert.equal(await esperarPortalOSso(b.page, 5_000), 'portal')
+  } finally {
+    await b.context.close()
+  }
+  const c = await abrirLogin('<!doctype html><html><body>nada</body></html>', SSO_SIN_USUARIO)
+  try {
+    await c.page.goto('https://portaloccident.gco.global/', { waitUntil: 'domcontentloaded' })
+    assert.equal(await esperarPortalOSso(c.page, 700), null)
+  } finally {
+    await c.context.close()
   }
 })

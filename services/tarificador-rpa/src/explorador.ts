@@ -80,7 +80,7 @@ import { capturarEvidencia, type EvidenciaFallo } from './evidencia.ts'
 import { abrirNuevaAlta, esperarMarcoApp, login as loginEpac, type PestanaEntradaAllianz } from './adapters/allianz/intranet/index.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
-import { abrirTarificacionHogar, cabeceraPortalVisible, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
+import { abrirTarificacionHogar, cabeceraPortalVisible, esperarPortalOSso as esperarPortalOSsoOccident, loginPaso1 as loginPaso1Occident, pulsarSeguro as pulsarSeguroOccident } from './adapters/occident/hogar.ts'
 import { esUrlSso as esUrlSsoOccident } from './adapters/occident/mapa.ts'
 import { loginAsistido, type CtxLoginAsistido } from './login-asistido.ts'
 import type { ContextoPortal } from './adaptador.ts'
@@ -176,8 +176,11 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
         await resolverSso()
       } else if (esUrlSsoOccident(page.url())) {
         await resolverSso()
-      } else if (!(await cabeceraPortalVisible(page, 25_000))) {
-        throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
+      } else {
+        // Carrera SSO/cabecera (la cabecera puede ser fugaz y acabar en el SSO); gana el SSO → login asistido.
+        const donde = await esperarPortalOSsoOccident(page, 25_000)
+        if (donde === 'sso') await resolverSso()
+        else if (donde === null) throw new ErrorTarificador('credenciales', 'occident: no se llegó al portal (sin SSO ni cabecera)')
       }
       ctx.log('login ok')
       await exigirSinVerificacion(page, 'occident')
