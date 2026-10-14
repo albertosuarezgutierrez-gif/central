@@ -11,13 +11,15 @@
  *  · Los dos crons de push del portal (`avisos-push`, `avisos-cima`) leen el canal, la antelación y
  *    la franja.
  *  · El CORREO de vencimiento lo manda `apps/asegura`: solo se omite si el push de ese ciclo salió; si
- *    no, se manda igualmente. La pantalla del portal ofrece `ambos` y `movil` (no `correo`, que dejaría
+ *    no, se manda igualmente. Su antelación (y la del digest y la campana) es `diasVentanaVencimiento()`:
+ *    la mayor de la ficha, nunca menos de 7 (14/10/2026). La pantalla del portal ofrece `ambos` y `movil` (no `correo`, que dejaría
  *    sin canal a los avisos que solo existen como push; la ruta del portal lo rechaza).
  */
 
 // Umbral de subida de precio (fase B, 13/10/2026): la regla vive en `avisos-ampliados.ts`; aquí solo
 // se resuelve el `null` (= no configurado → 10%).
 import { UMBRAL_SUBIDA_POR_DEFECTO, esUmbralSubidaPrima, type UmbralSubidaPrima } from './avisos-ampliados.ts'
+import { DIAS_VENTANA_AVISO } from './obligacion.ts'
 
 export const CANALES_AVISO = ['movil', 'correo', 'ambos'] as const
 export type CanalAviso = (typeof CANALES_AVISO)[number]
@@ -31,6 +33,20 @@ export const DIAS_ANTELACION_MAX: DiasAntelacion = 30
 
 /** Lo de antes de esta pantalla (= `DIAS_VENTANA_AVISO`): un `null` vale esto. */
 export const DIAS_ANTELACION_POR_DEFECTO: DiasAntelacion = 7
+
+/**
+ * Ventana del CORREO de vencimiento, del digest de la intranet y de la campana (14/10/2026): la mayor
+ * antelación elegida entre `antelaciones` (las identidades del portal vinculadas a la ficha, o la de la
+ * propia identidad en la campana), y NUNCA menos de `DIAS_VENTANA_AVISO` (7). El push sí baja a 3; el
+ * correo no acorta el preaviso de siempre ni pierde el recordatorio de 2 días (`DIAS_MIN_ENTRE_AVISOS`).
+ *  · `null` = las preferencias NO se pudieron leer → 7, lo de antes de «Configuración» (quien llama lo dice).
+ *  · `[]` (ficha sin identidades) o valores `null`/no reconocidos → 7: «no configurado», no «no quiere».
+ */
+export function diasVentanaVencimiento(antelaciones: readonly (number | null)[] | null): number {
+  let dias = DIAS_VENTANA_AVISO
+  for (const d of antelaciones ?? []) if (esDiasAntelacion(d) && d > dias) dias = d
+  return dias
+}
 
 /** «Ahora no» en la bienvenida de avisos: no se vuelve a preguntar hasta pasados estos días. */
 export const DIAS_POSPONER_BIENVENIDA = 14

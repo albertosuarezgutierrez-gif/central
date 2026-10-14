@@ -83,8 +83,8 @@ export const DIAS_VENTANA_AVISO = 7
 
 /**
  * `dias` (13/10/2026): la antelación que la persona eligió para SUS avisos push en «Configuración»
- * (`diasAntelacionEfectivos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre: el correo de
- * `apps/asegura` y la campana no lo pasan y no cambian.
+ * (`resolverPreferenciasAvisos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre. El correo de
+ * `apps/asegura`, el digest y la campana pasan `diasVentanaVencimiento()` (nunca menos de 7; 14/10/2026).
  */
 export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date; dias?: number }): boolean {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)

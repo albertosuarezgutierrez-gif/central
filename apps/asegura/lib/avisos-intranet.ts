@@ -40,7 +40,7 @@
  * en la pasada siguiente.
  */
 import {
-  estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
+  estadoPeticion, entraEnVentana, DIAS_ANTELACION_MAX, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
   CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso, type FilaPolizaNueva,
   DIAS_AVISO_POLIZA_MODIFICADA, polizasModificadasParaAviso, type FilaCambioPoliza,
   DIAS_AVISO_PARTE, partesParaAviso, type ParteFilaAviso,
@@ -52,7 +52,7 @@ import { Prisma } from './generated/asegura-client'
 import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { avisosActivos, esSoloContar, leerCanalesDeFichas } from './avisos-vencimiento'
-import { decidirAvisoVencimiento, type OrigenAviso } from './avisos-vencimiento-canal'
+import { decidirAvisoVencimiento, diasEfectivosDeFicha, type OrigenAviso } from './avisos-vencimiento-canal'
 import { descifrar } from './avisos-vencimiento-reglas'
 import { descifrarCampo } from './cartera-edicion'
 import {
@@ -126,7 +126,9 @@ export async function reunirPendientes(
   hoy: Date,
 ): Promise<{ pendientes: Pendiente[]; identidadesServidas: Set<string>; omitidosSoloMovil: number; preferenciasLeidas: boolean }> {
   const db = prismaAsegura()
-  const limiteVentana = new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA)
+  // Hasta la MAYOR antelación elegible (30 días): la ventana de cada ficha se aplica al final, con la
+  // misma lectura de preferencias que «solo en el móvil» (`diasEfectivosDeFicha`, 14/10/2026).
+  const limiteVentana = new Date(hoy.getTime() + DIAS_ANTELACION_MAX * MS_DIA)
 
   // 🚨 `caduca_en` NULL = NO caduca (todas las concedidas desde el 25/09/2026).
   // Un `caducaEn: { gt: hoy }` a secas las dejaría FUERA en silencio —en SQL,
@@ -477,7 +479,7 @@ export async function reunirPendientes(
       correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR,
       // Sustituida por otra (cambio de compañía emitido): no se renueva, no se avisa.
       sustituidaAt: null,
-      fechaVencimiento: { gte: hoy, lte: new Date(hoy.getTime() + (DIAS_VENTANA_AVISO + 31) * MS_DIA) },
+      fechaVencimiento: { gte: hoy, lte: new Date(hoy.getTime() + (DIAS_ANTELACION_MAX + 31) * MS_DIA) },
     },
     select: { id: true, clienteId: true, tipo: true, aseguradora: true, fechaVencimiento: true },
   })
@@ -498,7 +500,8 @@ export async function reunirPendientes(
   for (const v of vencen) {
     if (!v.fechaVencimiento || conObligacion.has(`${v.id}|${dia(v.fechaVencimiento)}`) || !fichaPorId.has(v.clienteId)) continue
     const accionable = fechaAccionable(v.fechaVencimiento)
-    if (!entraEnVentana({ fechaAccionable: accionable, hoy })) continue
+    // Criba ancha; la ventana de SU ficha se aplica al final (sin identidades en el portal → 7).
+    if (!entraEnVentana({ fechaAccionable: accionable, hoy, dias: DIAS_ANTELACION_MAX })) continue
     dame(v.clienteId).obligaciones.push({
       id: idVencimientoDerivado(v.id, v.fechaVencimiento),
       titulo: `Renovación de tu seguro con ${v.aseguradora}`,
@@ -662,8 +665,20 @@ export async function reunirPendientes(
   // se decide con `decidirAvisoVencimiento` (push ya salido a una persona de la ficha y todas «solo
   // móvil»); los callados salen del correo (el resto sigue). Sin sello: no llegan a `avisosNuevos`.
   // Solo LEE. Si no se puede leer, se manda como antes y se dice.
-  const canales = await leerCanalesDeFichas(db, [...vencimientosDe.keys()], 'avisos-intranet')
-  if (canales === null) console.error('[asegura/avisos-intranet] preferencias del portal NO leídas: se manda como antes (fail-open)')
+  // La MISMA lectura da la antelación de cada ficha (14/10/2026): max(7, la mayor de sus identidades).
+  const fichasConVencimientos = new Set([...vencimientosDe.keys(), ...[...por.values()].filter((p) => p.obligaciones.length > 0).map((p) => p.clienteId)])
+  const canales = await leerCanalesDeFichas(db, [...fichasConVencimientos], 'avisos-intranet')
+  if (canales === null) console.error('[asegura/avisos-intranet] preferencias del portal NO leídas: se manda como antes (fail-open, 7 días de antelación)')
+  for (const p of por.values()) {
+    const dias = diasEfectivosDeFicha(canales, p.clienteId)
+    // `avisosDe()` vuelve a mirar la ventana: tiene que ser la MISMA, o el digest callaría lo de 15/30 días.
+    p.diasAntelacion = dias
+    const fuera = new Set(p.obligaciones.filter((o) => !entraEnVentana({ fechaAccionable: o.fechaAccionable, hoy, dias })).map((o) => o.id))
+    if (fuera.size === 0) continue
+    p.obligaciones = p.obligaciones.filter((o) => !fuera.has(o.id))
+    const marcados = vencimientosDe.get(p.clienteId)
+    if (marcados) for (const id of fuera) marcados.delete(id)
+  }
   let omitidosSoloMovil = 0
   for (const [clienteId, avisos] of vencimientosDe) {
     const p = por.get(clienteId)

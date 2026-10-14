@@ -54,6 +54,17 @@ test('una autorización que YO di y no han aceptado es el aviso espejo, y sin no
   assert.equal(r.avisos[1]!.href, HREF_POR_TIPO.autorizacion_sin_aceptar)
 })
 
+test('🚨 campana: la antelación de la identidad amplía la ventana; nunca baja de 7; sin leer → 7', () => {
+  const obligaciones = [obl({ id: 'a12', fechaAccionable: dias(12) }), obl({ id: 'a7', fechaAccionable: dias(7) }), obl({ id: 'a16', fechaAccionable: dias(16) })]
+  const ids = (diasAntelacion: number | null | undefined) =>
+    avisosDe({ autorizaciones: vacias, obligaciones, peticiones: [], datos: [], carnets: [], diasAntelacion, hoy: HOY }).avisos.map((a) => a.id)
+  assert.deepEqual(ids(15), ['a12', 'a7'], '15 elegidos: entra la de 12 días')
+  assert.deepEqual(ids(30), ['a12', 'a7', 'a16'])
+  assert.deepEqual(ids(3), ['a7'], '3 elegidos: la campana sigue en 7')
+  assert.deepEqual(ids(null), ['a7'], 'no leída: los 7 de siempre')
+  assert.deepEqual(ids(undefined), ['a7'])
+})
+
 test('las obligaciones entran solo en la VENTANA del módulo (0..7 días antes de la fecha accionable)', () => {
   const obligaciones = [
     obl({ id: 'hoy', fechaAccionable: dias(0) }),

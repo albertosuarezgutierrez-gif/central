@@ -70,6 +70,11 @@ export type Pendiente = {
   polizasModificadas?: PolizaModificadaParaAviso[]
   /** Partes del portal abiertos o descartados hace poco (`partesParaAviso`). */
   partes?: ParteParaAviso[]
+  /**
+   * Antelación de los vencimientos de ESTA ficha (`diasEfectivosDeFicha`: max(7, la mayor de sus
+   * identidades del portal), 14/10/2026). Ausente = 7, lo de siempre.
+   */
+  diasAntelacion?: number
 }
 
 /**
@@ -97,6 +102,7 @@ export function avisosNuevos(
     polizasNuevas: p.polizasNuevas ?? [],
     polizasModificadas: p.polizasModificadas ?? [],
     partes: p.partes ?? [],
+    diasAntelacion: p.diasAntelacion ?? null,
     hoy,
   })
   if (fuentesIlegibles.length > 0) return null

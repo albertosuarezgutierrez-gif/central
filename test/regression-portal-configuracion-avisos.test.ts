@@ -9,12 +9,14 @@
 //  4. Los dos crons de push leen las preferencias (antelación, canal, «no molestar»).
 //  5. Las listas del SQL son las del módulo (un CHECK más corto revienta el guardado en producción).
 //  6. La campana ya no lleva el interruptor: enlaza a Configuración.
+//  7. La antelación elegida llega TAMBIÉN al correo de vencimiento, al digest y a la campana, por el
+//     helper (`diasEfectivosDeFicha` → `diasVentanaVencimiento`: max(7, la mayor), 14/10/2026).
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
-import { CANALES_AVISO, DIAS_ANTELACION_OPCIONES } from '../packages/module-seguros-portal/src/preferencias-avisos.ts'
+import { CANALES_AVISO, DIAS_ANTELACION_OPCIONES, diasVentanaVencimiento } from '../packages/module-seguros-portal/src/preferencias-avisos.ts'
 
 const ROOT = join(import.meta.dirname, '..')
 const APP = 'apps/asegura-portal'
@@ -97,6 +99,32 @@ test('🚨 avisos-push: la antelación elegida decide la ventana y la criba lleg
   assert.match(c, /DIAS_ANTELACION_MAX \* MS_DIA/)
   assert.doesNotMatch(c, /DIAS_VENTANA_AVISO/, 'la criba sigue fija en 7 días')
   assert.match(c, /debeAvisarPush\([^)]*\}, hoy, p\.diasAntelacion\)/)
+})
+
+test('🚨 la regla de la antelación del correo: max(7, la mayor elegida); sin leer, 7', () => {
+  assert.equal(diasVentanaVencimiento([15, 30]), 30)
+  assert.equal(diasVentanaVencimiento([3]), 7, 'el correo nunca baja de 7')
+  assert.equal(diasVentanaVencimiento(null), 7)
+})
+
+test('🚨 el correo de vencimiento usa la antelación de la ficha (vía el helper), no los 7 fijos', () => {
+  const canal = sinComentarios(leer('apps/asegura/lib/avisos-vencimiento-canal.ts'))
+  assert.match(canal, /export function diasEfectivosDeFicha\([\s\S]*?diasVentanaVencimiento\(/, 'el helper no delega en la regla del módulo')
+  const venc = sinComentarios(leer('apps/asegura/lib/avisos-vencimiento.ts'))
+  assert.match(venc, /entraEnVentana\(\{[^}]*dias: diasEfectivosDeFicha\(canalesDeFicha, /, 'el correo no aplica la antelación de la ficha')
+  assert.doesNotMatch(venc, /lte: new Date\(hoy\.getTime\(\) \+ DIAS_VENTANA_AVISO \* MS_DIA\)/, 'la criba del correo sigue fija en 7 días')
+})
+
+test('🚨 el digest de la intranet y la campana usan la antelación (vía el helper)', () => {
+  const intra = sinComentarios(leer('apps/asegura/lib/avisos-intranet.ts'))
+  assert.match(intra, /diasEfectivosDeFicha\(canales, p\.clienteId\)/, 'el digest no aplica la antelación de la ficha')
+  const reglas = sinComentarios(leer('apps/asegura/lib/avisos-intranet-reglas.ts'))
+  assert.match(reglas, /diasAntelacion: p\.diasAntelacion/, 'el digest no pasa la antelación a avisosDe()')
+  const catalogo = sinComentarios(leer('packages/module-seguros-portal/src/avisos.ts'))
+  assert.match(catalogo, /diasVentanaVencimiento\(x\.diasAntelacion/, 'avisosDe() ignora la antelación')
+  const ruta = sinComentarios(leer(`${APP}/app/api/avisos/route.ts`))
+  assert.match(ruta, /diasAntelacionDeIdentidad\(identidad\.id\)/, 'la campana no lee la antelación de SU identidad')
+  assert.match(ruta, /diasAntelacion: antelacion\.status === 'fulfilled' \? antelacion\.value : null/)
 })
 
 test('avisos-cima: «solo por correo» sella como silenciado; «no molestar» ni envía ni sella', () => {
