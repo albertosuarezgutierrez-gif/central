@@ -167,8 +167,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 ## Mapfre (wmediadores · NSEI) — Auto
 
 > Solo lo que consta en `services/tarificador-rpa/src/adapters/mapfre/auto.ts` y `docs/TARIFICADOR-RPA.md`
-> (sección «Mapfre Auto · NSEI»). Fuente: una grabación de 19 pantallas del 13/10/2026. Adaptador SIN registrar,
-> `MAPFRE_AUTO_ACTIVO=false`, fila de integración `mapfre/auto` apagada (`2026-10-14_tarificador_mapfre_auto.sql`).
+> (sección «Mapfre Auto · NSEI»). Fuente: una grabación de 19 pantallas del 13/10/2026. Adaptador registrado SIEMPRE
+> (14/10/2026); la puerta es la fila de integración `mapfre/<ramo>` (apagada: `2026-10-14_tarificador_mapfre_auto.sql`, `…14b…moto.sql`).
 
 - **Entrada PRINCIPAL = URL directa (14/10/2026, 3ª exploración):** ya logueado, el bot abre en una pestaña nueva del mismo contexto
   `https://wmediadores.mapfre.com/evt21_nsei_fe-web/#/evt21_nsei_fe-web/autos/oferta` (`URL_NSEI_AUTO` en `entrada.ts`; misma sesión,
@@ -211,7 +211,8 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   «Selección de vehículo» (sin matrícula ni bastidor) y del «Resumen vehículo». Cómo partir la denominación para el
   `Vehiculo` canónico: PENDIENTE — preguntar a Alberto.
 - **«Continuar» del paso 3** no es un avance neutro: lanza «Verificando controles técnicos» + «Calculando las primas»
-  (es lo que lleva a precio). Si cuenta como «tarificar»: decisión pendiente de Alberto.
+  (es lo que lleva a precio). **PERMITIDO (Alberto, 14/10/2026)**, solo por `pulsarContinuarMapfre` (guard.ts): lista
+  cerrada 1 → 2 → 3, en orden, una vez por paso. El NIF del tomador lo pone asegura desde la ficha (`documentoTomador`).
 - **Guard:** «Generar Proyecto» / «Ir a generar proyecto» PERMITIDOS (Alberto 13/10/2026: «el bot SÍ puede hacer
   proyectos»; no los bloquea `guard-emision.ts`). Sigue prohibido emitir/contratar/formalizar/grabar póliza, pago y
   RGPD «Sí»; «Contratar» y todo «Aceptar» siguen bloqueados. «Calcular» pasa.
