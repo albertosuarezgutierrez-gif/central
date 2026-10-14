@@ -19,6 +19,7 @@ export const COLAS_AVISO = [
   'bajas_pue',
   'anulaciones',
   'recibos_sin_confirmar',
+  'correos_compania_sin_resolver',
 ] as const
 export type ColaAviso = (typeof COLAS_AVISO)[number]
 

@@ -262,3 +262,19 @@ test('recordatorio de vencimiento: a ≤2 días, ≥2 días tras el primero y so
   assert.equal(debeRecordarVencimiento({ ...base, ultimoAcceso: new Date('2026-10-06T10:00:00Z') }), false)
   assert.equal(debeRecordarVencimiento({ ...base, ultimoAcceso: new Date('2026-09-01T10:00:00Z') }), true)
 })
+
+test('recordatorio: la visita solo calla si cae en los últimos DIAS_VENTANA_AVISO días (aviso a 30 días)', async () => {
+  const { debeRecordarVencimiento } = await import('./obligacion.ts')
+  const hoy = new Date('2026-10-10T08:15:00Z')
+  const fechaAccionable = new Date('2026-10-12T00:00:00Z') // faltan 2 días
+  const c = (avisadoEn: string, ultimoAcceso: string | null) =>
+    debeRecordarVencimiento({ fechaAccionable, hoy, avisadoEn: new Date(avisadoEn), ultimoAcceso: ultimoAcceso && new Date(ultimoAcceso) })
+  // Avisado a 28 días, visita a 10 días: antes de la ventana de 7 → SÍ recuerda (el bug).
+  assert.equal(c('2026-09-14T08:15:00Z', '2026-10-02T10:00:00Z'), true)
+  // Avisado a 7 días, visita a 4 días → NO (comportamiento previo).
+  assert.equal(c('2026-10-05T08:15:00Z', '2026-10-08T10:00:00Z'), false)
+  // Avisado a 30 días, visita a 5 días → NO.
+  assert.equal(c('2026-09-12T08:15:00Z', '2026-10-07T10:00:00Z'), false)
+  // Sin visita → SÍ.
+  assert.equal(c('2026-09-14T08:15:00Z', null), true)
+})

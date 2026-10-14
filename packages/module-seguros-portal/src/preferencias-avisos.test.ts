@@ -7,6 +7,7 @@ import {
   DIAS_ANTELACION_MAX,
   DIAS_ANTELACION_OPCIONES,
   DIAS_ANTELACION_POR_DEFECTO,
+  diasVentanaVencimiento,
   enNoMolestar,
   minutoEnMadrid,
   motivoSinPush,
@@ -73,6 +74,17 @@ test('la antelación elegida mueve la ventana del push; sin ella, los 7 de siemp
   assert.equal(debeAvisarPush({ fechaAccionable: a(31), avisadaPushAt: null }, hoy, 30), false)
   assert.equal(debeAvisarPush({ fechaAccionable: a(3), avisadaPushAt: hoy }, hoy, 30), false, 'ya avisada: nunca dos veces')
   assert.equal(DIAS_ANTELACION_MAX, Math.max(...DIAS_ANTELACION_OPCIONES), 'la criba SQL del cron llega a la mayor opción')
+})
+
+test('🚨 ventana del CORREO: max(7, la mayor antelación); nunca menos de 7; sin leer → 7', () => {
+  assert.equal(diasVentanaVencimiento(null), DIAS_VENTANA_AVISO, 'preferencias no leídas: lo de siempre')
+  assert.equal(diasVentanaVencimiento([]), 7, 'ficha sin identidades del portal')
+  assert.equal(diasVentanaVencimiento([null]), 7, 'sin configurar = 7, no «no quiere»')
+  assert.equal(diasVentanaVencimiento([3]), 7, '3 elegidos: el correo no acorta el preaviso de 7')
+  assert.equal(diasVentanaVencimiento([15]), 15)
+  assert.equal(diasVentanaVencimiento([15, 30]), 30, 'varias identidades: la mayor')
+  assert.equal(diasVentanaVencimiento([30, null, 3]), 30)
+  assert.equal(diasVentanaVencimiento([45]), 7, 'un valor que no está en las opciones no vale (CHECK ampliado en BD y no aquí)')
 })
 
 test('validar: solo pasa lo que existe; la franja exige dos horas distintas', () => {

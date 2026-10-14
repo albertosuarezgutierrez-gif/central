@@ -83,8 +83,8 @@ export const DIAS_VENTANA_AVISO = 7
 
 /**
  * `dias` (13/10/2026): la antelación que la persona eligió para SUS avisos push en «Configuración»
- * (`diasAntelacionEfectivos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre: el correo de
- * `apps/asegura` y la campana no lo pasan y no cambian.
+ * (`resolverPreferenciasAvisos()` de `preferencias-avisos.ts`). Sin él, los 7 de siempre. El correo de
+ * `apps/asegura`, el digest y la campana pasan `diasVentanaVencimiento()` (nunca menos de 7; 14/10/2026).
  */
 export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date; dias?: number }): boolean {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
@@ -114,8 +114,11 @@ export function debeRecordarVencimiento(x: {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
   if (faltan < 0 || faltan > DIAS_RECORDATORIO_VENCIMIENTO) return false
   if (x.hoy.getTime() - x.avisadoEn.getTime() < DIAS_MIN_ENTRE_AVISOS * MS_DIA) return false
-  // Entró después del primer aviso: lo ha visto. No se le insiste.
-  return x.ultimoAcceso === null || x.ultimoAcceso.getTime() < x.avisadoEn.getTime()
+  // Una visita solo calla el recordatorio si es posterior al primer aviso Y cae en los últimos
+  // DIAS_VENTANA_AVISO días: con avisos a 30 días, una visita del día 25 no puede dejar sin aviso los últimos 29.
+  if (x.ultimoAcceso === null) return true
+  const desde = Math.max(x.avisadoEn.getTime(), diaUtc(x.fechaAccionable).getTime() - DIAS_VENTANA_AVISO * MS_DIA)
+  return x.ultimoAcceso.getTime() < desde
 }
 
 /**

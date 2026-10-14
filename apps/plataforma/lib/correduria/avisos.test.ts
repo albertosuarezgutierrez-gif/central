@@ -71,6 +71,14 @@ test('las colas de plataforma y las de asegura son LAS MISMAS (una nueva en un l
 
 test('cada aviso lleva a una pestaña que existe (los enlaces no caen en una sección inventada ni en el «hoy» viejo)', () => {
   for (const [tipo, href] of Object.entries(HREF_AVISO)) {
+    // Única excepción: la bandeja de correos de compañía vive EN Mi mesa (su ancla tiene que existir).
+    if (tipo === 'correos_compania_sin_resolver') {
+      assert.equal(href, '/correduria/mesa#correos-compania')
+      const bandeja = readFileSync(join(import.meta.dirname, '../../app/(usuario)/correduria/mesa/CorreosCompania.tsx'), 'utf8')
+      assert.match(bandeja, /id="correos-compania"/)
+      assert.match(readFileSync(join(import.meta.dirname, '../../app/(usuario)/correduria/mesa/MesaClient.tsx'), 'utf8'), /<CorreosCompania \/>/)
+      continue
+    }
     const m = /^\/correduria\?s=([a-z_]+)$/.exec(href)
     assert.ok(m, `${tipo}: ${href}`)
     assert.notEqual(m[1], 'hoy', `${tipo} sigue enlazando a la sección vieja «hoy»`)

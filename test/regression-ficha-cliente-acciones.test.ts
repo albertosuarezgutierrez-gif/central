@@ -55,3 +55,16 @@ test('abrir una oportunidad tiene UNA sola puerta: el menú de la cabecera', () 
   const seguros = readFileSync(join(DIR, 'SegurosCliente.tsx'), 'utf8')
   assert.doesNotMatch(seguros, /Presupuestar auto|urlAutoNuevo/, 'los seguros del cliente no repiten «Presupuestar auto»')
 })
+
+// Fase 1 (14/10/2026): «hay demasiados botones». La fila de acciones son DOS (menú + Subir póliza); «Pedir presupuesto»
+// (bots) vive DENTRO del menú y «Probar tarificación» en un <details> plegado «⋯ Más».
+test('la cabecera: bots dentro del menú, sin duplicar ramo; Probar tarificación plegada fuera de las acciones', () => {
+  const menu = acciones.slice(acciones.indexOf('<details'), acciones.indexOf('</details>'))
+  assert.match(menu, /<PedirPresupuestoBot clienteId=\{clienteId\} \/>/, 'los bots salen como entradas del menú')
+  assert.match(menu, /ramosConOfertas\(RAMOS_PRESUPUESTO\)\.filter\(r => !ramosConBot\(\)\.includes\(r\.valor\)\)/, 'sin duplicar los ramos «· bots»')
+  assert.equal((fuente.match(/<PedirPresupuestoBot/g) ?? []).length, 1, 'ni botón suelto ni segunda montura')
+  assert.doesNotMatch(acciones, /ProbarTarificacion/, 'Probar tarificación no está en la fila de acciones')
+  const mas = fuente.slice(fuente.lastIndexOf('<details className="plegable-dato">'))
+  assert.match(mas, /⋯ Más[\s\S]*<ProbarTarificacion clienteId=\{ficha\.id\} \/>/, 'plegada en «⋯ Más»')
+  assert.doesNotMatch(mas.split('<ProbarTarificacion')[0], /\sopen[\s>=]/, 'plegada por defecto')
+})

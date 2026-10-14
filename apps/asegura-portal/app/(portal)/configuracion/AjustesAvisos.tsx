@@ -16,7 +16,8 @@ import { DIAS_ANTELACION_OPCIONES, UMBRALES_SUBIDA_PRIMA, type CanalAviso, type 
  * 🚨 Cada frase de esta pantalla es una afirmación sobre el código:
  *  · «Solo en el móvil»: el correo solo se omite si la notificación de ese ciclo salió; si no llega, se
  *    manda igualmente por correo.
- *  · La antelación solo mueve el aviso de vencimiento por notificación (no el correo ni la campana).
+ *  · La antelación mueve el aviso de vencimiento por notificación, el correo y la campana (14/10/2026). El
+ *    correo y la campana nunca bajan de 7 días (`diasVentanaVencimiento`); la notificación sí baja a 3.
  *  · «No molestar»: si la franja tapa la hora a la que salen los avisos, la notificación no llega ese
  *    día (se reintenta el siguiente); en la campana se siguen viendo.
  * Si no se puede leer lo guardado, se dice y no se pintan valores por defecto como si fueran suyos.
@@ -107,7 +108,8 @@ export function AjustesAvisos() {
       </label>
       <p className="suave config-nota">
         Cuenta hacia atrás desde el último día en que puedes decidir si renuevas (30 días antes del vencimiento).
-        Cambia el aviso por notificación. También vale para las pólizas de las personas que te han dado acceso.
+        Se aplica al aviso en el móvil y al correo; por correo, como mínimo te avisamos con 7 días. En el móvil
+        también vale para las pólizas de las personas que te han dado acceso.
       </p>
 
       <label className="config-campo">

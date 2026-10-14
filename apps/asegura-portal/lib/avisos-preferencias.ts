@@ -92,6 +92,16 @@ export async function configuracionAvisosDeSesion(): Promise<ConfiguracionAvisos
   }
 }
 
+/**
+ * La antelación guardada de ESTA identidad (la de la cookie, la pasa la campana), tal cual: `null` = sin
+ * fila o sin configurar. La campana la pasa por `diasVentanaVencimiento()` (nunca menos de 7). Si la
+ * lectura falla, LANZA: quien llama decide (la campana se queda con los 7 de siempre y lo registra).
+ */
+export async function diasAntelacionDeIdentidad(identidadId: string): Promise<number | null> {
+  const fila = await prisma.portalPreferenciasAvisos.findUnique({ where: { identidadId }, select: { diasAntelacion: true } })
+  return fila?.diasAntelacion ?? null
+}
+
 /** Guarda lo ya validado por `validarCambioPreferencias`. Solo la fila de la identidad de la cookie. */
 export async function guardarConfiguracionAvisosDeSesion(datos: Partial<PreferenciasAvisosGuardadas>): Promise<boolean> {
   const identidad = await getIdentidad()

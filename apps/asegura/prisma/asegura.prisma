@@ -1248,13 +1248,15 @@ model PortalVinculo {
   @@map("portal_vinculo")
 }
 
-/// «Configuración → Avisos» del portal (14/10/2026). AQUÍ SOLO SE LEE `canal`, para que el correo de
-/// vencimiento respete «solo en el móvil» (`lib/avisos-vencimiento-canal.ts`). Lo escribe el portal; su
-/// DDL y el resto de columnas están en `apps/asegura-portal` (`prisma/sql/2026-10-13_configuracion_avisos.sql`).
+/// «Configuración → Avisos» del portal (14/10/2026). AQUÍ SOLO SE LEEN `canal` y `dias_antelacion`, para
+/// que el correo de vencimiento respete «solo en el móvil» y la antelación elegida (nunca menos de 7:
+/// `lib/avisos-vencimiento-canal.ts`). Lo escribe el portal; su DDL y el resto de columnas están en
+/// `apps/asegura-portal` (`prisma/sql/2026-10-13_configuracion_avisos.sql`).
 /// 🚨 `null` = «no lo ha configurado», nunca «no quiere».
 model PortalPreferenciasAvisos {
-  identidadId String  @id @map("identidad_id") @db.Uuid
-  canal       String?
+  identidadId    String  @id @map("identidad_id") @db.Uuid
+  canal          String?
+  diasAntelacion Int?    @map("dias_antelacion") @db.SmallInt
 
   @@map("portal_preferencias_avisos")
 }
@@ -1833,4 +1835,38 @@ model OportunidadOferta {
 
   @@index([correduriaId, oportunidadId, createdAt], map: "oportunidad_oferta_por_oportunidad")
   @@map("oportunidad_oferta")
+}
+
+/// Avisos de compañías leídos del correo por el triaje de plataforma (14/10/2026,
+/// `prisma/sql/2026-10-14_correo_evento_entrante.sql`): UNA fila por correo + tipo + elemento, con lo que
+/// se hizo (`aplicado` · `duplicado_cima` · `sin_resolver` · `procesando`). Idempotencia por la llave única.
+/// Sin IBAN/NIF/nombres. Se lee y escribe por SQL crudo en `lib/correo-evento-bd.ts`.
+model CorreoEventoEntrante {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  mensajeId        String    @map("mensaje_id")
+  tipo             String
+  subtipo          String?
+  clave            String
+  compania         String
+  codigoEntidadDgs String    @map("codigo_entidad_dgs") @db.VarChar(16)
+  numeroPoliza     String?   @map("numero_poliza")
+  estado           String    @default("procesando")
+  motivo           String?
+  resumen          String?
+  claveTarea       String?   @map("clave_tarea")
+  polizaId         String?   @map("poliza_id") @db.Uuid
+  clienteId        String?   @map("cliente_id") @db.Uuid
+  siniestroId      String?   @map("siniestro_id") @db.Uuid
+  gestionId        String?   @map("gestion_id") @db.Uuid
+  fechaLimite      DateTime? @map("fecha_limite") @db.Date
+  importe          Decimal?  @db.Decimal(12, 2)
+  detalle          Json?
+  revisadoAt       DateTime? @map("revisado_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([correduriaId, mensajeId, tipo, clave], map: "correo_evento_entrante_unico")
+  @@index([correduriaId, createdAt(sort: Desc)], map: "correo_evento_entrante_reciente")
+  @@map("correo_evento_entrante")
 }

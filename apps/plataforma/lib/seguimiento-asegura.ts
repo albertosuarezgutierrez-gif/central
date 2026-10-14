@@ -812,6 +812,10 @@ export function expedientesAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/expedientes', { method: 'GET' })
 }
 /** Banda de avisos de «Mi mesa» (13/10/2026): se compone con `componerAvisos` de `lib/correduria/avisos.ts`. */
+/** Bandeja «Correos de compañía» de Mi mesa: avisos de compañías leídos del correo (14/10/2026). */
+export function correosCompaniaAsegura(dias = 30): Promise<Reenvio> {
+  return llamar(`/api/operador/correo/evento?dias=${dias}`, { method: 'GET' })
+}
 export function avisosAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/avisos', { method: 'GET' }, 20_000)
 }
