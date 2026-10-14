@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, ResultadoOpcionHogar, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -72,6 +72,17 @@ export type ContextoPortal = ContextoTarificacion & {
    * contexto que `confirmarVehiculoMapfre`.
    */
   continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
+  /**
+   * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
+   * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,
+   * `comprobarBoton` antes del clic). `no_unica`/`no_quedo` = hueco de mapa: el adaptador para con inventario.
+   */
+  marcarOpcionHogar?: (marco: Frame, etiqueta: string) => Promise<ResultadoOpcionHogar>
+  /**
+   * Allianz HOGAR: marca el radio de una ETIQUETA ya resuelta por la capa común (aprendido → IA → elección humana en un atasco) cuando
+   * la etiqueta exacta no casó, por `marcarOpcionResueltaHogarAllianz` (guard.ts: `<label for>` único del marco + radio único).
+   */
+  marcarOpcionHogarResuelta?: (marco: Frame, etiqueta: Locator) => Promise<ResultadoOpcionHogar>
   /**
    * Mapfre NSEI (14/10/2026, v0.6.0): pulsa la LUPA que busca al tomador por NIF/CIF en «Datos básicos» por
    * `pulsarBuscarTomadorMapfre` de guard.ts (paso activo, ámbito `app-datos-basicos`, una vez, `comprobarBoton` y que sea una

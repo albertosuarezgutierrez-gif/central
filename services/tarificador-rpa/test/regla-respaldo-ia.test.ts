@@ -144,3 +144,10 @@ test('ningún adaptador registrado tiene una función-stub que solo lanza un hue
   assert.deepEqual(stubsDeHueco('function g() { return Promise.reject(new ErrorMapaIncompleto(\'x\')) }'), ['g'], 'Promise.reject también')
   assert.deepEqual(stubsDeHueco('function f(a: number) { if (a) throw new ErrorMapaIncompleto(\'x\'); return 1 }'), [], 'un throw condicional no es stub')
 })
+
+test('Allianz Hogar (apagado, aún sin registrar) ya resuelve campos y SIGUIENTE por la capa común y sin stubs de hueco', () => {
+  const src = leer('adapters/allianz/hogar.ts')
+  assert.ok(usaCapa(src), 'hogar.ts debe pasar por conRespaldoIA/campoConRespaldo')
+  assert.deepEqual(stubsDeHueco(src), [])
+  assert.ok(!PULSA_DIRECTO.some((x) => llamadas(src).metodos.has(x)), 'hogar.ts no pulsa por su cuenta')
+})
