@@ -359,21 +359,8 @@ export async function exigirCampoNoBancario(campo: Locator): Promise<void> {
 export async function pulsar(boton: Locator, guard: GuardEmision): Promise<void> {
   guard.comprobar()
   await exigirSinCuentaBancaria(boton.page())
-  const desc = await boton.evaluate((el) => {
-    const h = el as HTMLElement & { value?: unknown; href?: unknown; name?: unknown }
-    return [
-      h.innerText ?? h.textContent ?? '',
-      h.getAttribute('aria-label'),
-      h.getAttribute('title'),
-      typeof h.value === 'string' ? h.value : null,
-      h.id || null,
-      typeof h.name === 'string' ? h.name : null,
-      typeof h.href === 'string' ? h.href : h.getAttribute('href'),
-      h.getAttribute('onclick'),
-      h.getAttribute('formaction'),
-    ]
-  })
-  comprobarBoton(desc)
+  // La MISMA descripción que el resto de puertas: control + ng-click + manejadores de sus ancestros cercanos.
+  comprobarBoton(await descripcion(boton))
   await boton.click()
   guard.comprobar()
 }
@@ -441,6 +428,20 @@ async function descripcion(boton: Locator): Promise<(string | null)[]> {
       typeof h.href === 'string' ? h.href : h.getAttribute('href'),
       h.getAttribute('onclick'),
       h.getAttribute('formaction'),
+      // AngularJS (14/10/2026, wmediadores: las tarjetas son `div[ng-click]`): su manejador cuenta como un onclick.
+      h.getAttribute('ng-click'),
+      h.getAttribute('data-ng-click'),
+      // ANCESTROS cercanos (revisión 14/10/2026): un clic BURBUJEA; el manejador del padre (onclick/ng-click) o el href del
+      // <a> que envuelve al control también se ejecutan. Hasta 3 niveles (atravesando el host de un shadow DOM).
+      ...(() => {
+        const out: (string | null)[] = []
+        let p: Element | null = h.parentElement ?? ((h.getRootNode() as ShadowRoot).host ?? null)
+        for (let i = 0; p && i < 3; i++) {
+          out.push(p.getAttribute('onclick'), p.getAttribute('ng-click'), p.getAttribute('data-ng-click'), p.tagName === 'A' ? p.getAttribute('href') : null)
+          p = p.parentElement ?? ((p.getRootNode() as ShadowRoot).host ?? null)
+        }
+        return out
+      })(),
     ]
   })
 }

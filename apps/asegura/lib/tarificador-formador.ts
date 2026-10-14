@@ -7,7 +7,7 @@
 
 import { acompanamientoInicial, siguienteAcompanamiento, type EstadoAcompanamiento } from '@central/module-tarificacion'
 import { prisma } from './tenant'
-import { eventoCierre, quedanLlamadas, type Paso, type TipoClave } from './tarificador-formador-reglas'
+import { cabeLlamadaEur, eventoCierre, quedaPresupuestoEur, quedanLlamadas, type Paso, type TipoClave } from './tarificador-formador-reglas'
 
 export type TrabajoVivo = { id: string; correduriaId: string; compania: string; ramo: string }
 
@@ -30,8 +30,15 @@ export async function llamadasIAUsadas(trabajoId: string, bd: Bd = prisma): Prom
   return Number(filas[0]?.n ?? 0)
 }
 
-/** La IA corta a 20 s (`preguntarIA`); la transacción que la envuelve, con margen. */
-const TIMEOUT_TX_LLAMADA_MS = 40_000
+/** Coste estimado acumulado de la IA del formador en el trabajo (para el tope de € por trabajo). */
+export async function costeIAUsado(trabajoId: string, bd: Bd = prisma): Promise<number> {
+  const filas = await bd.$queryRaw<{ eur: unknown }[]>`
+    select coalesce(sum(coste_estimado), 0) as eur from seguros.tarificador_intervenciones where trabajo_id = ${trabajoId}::uuid and llamada_ia`
+  return Number(filas[0]?.eur ?? 0)
+}
+
+/** La IA corta a 20 s (`preguntarIA`; la escalera, 2 × 15 s); la transacción que la envuelve, con margen. */
+const TIMEOUT_TX_LLAMADA_MS = 50_000
 
 /**
  * Tope de llamadas a la IA por trabajo, ATÓMICO: comprobación + llamada + registro dentro de UNA transacción
@@ -43,13 +50,21 @@ const TIMEOUT_TX_LLAMADA_MS = 40_000
 export async function conLlamadaIA<T>(
   t: TrabajoVivo,
   max: number,
-  llamar: (registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>) => Promise<T>,
+  llamar: (
+    registrar: (i: Omit<Parameters<typeof registrarIntervencion>[0], 'trabajo'>) => Promise<void>,
+    /** ANTES de cada llamada extra (escalón): ¿quedan llamadas y cabe `maximoEur` en el tope de € del trabajo? (misma tx) */
+    cabe: (maximoEur: number) => Promise<boolean>,
+  ) => Promise<T>,
+  maxEur = Number.POSITIVE_INFINITY,
 ): Promise<{ tope: true } | { tope: false; valor: T }> {
   return prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`tarificador_formador:${t.id}`}, 0))`
       if (!quedanLlamadas(await llamadasIAUsadas(t.id, tx), max)) return { tope: true as const }
-      const valor = await llamar((i) => registrarIntervencion({ ...i, trabajo: t }, tx))
+      if (Number.isFinite(maxEur) && !quedaPresupuestoEur(await costeIAUsado(t.id, tx), maxEur)) return { tope: true as const }
+      const cabe = async (maximoEur: number) =>
+        quedanLlamadas(await llamadasIAUsadas(t.id, tx), max) && (!Number.isFinite(maxEur) || cabeLlamadaEur(await costeIAUsado(t.id, tx), maximoEur, maxEur))
+      const valor = await llamar((i) => registrarIntervencion({ ...i, trabajo: t }, tx), cabe)
       return { tope: false as const, valor }
     },
     { timeout: TIMEOUT_TX_LLAMADA_MS, maxWait: 10_000 },

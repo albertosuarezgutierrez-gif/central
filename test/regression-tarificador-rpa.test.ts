@@ -259,10 +259,12 @@ test('formador con IA: solo la lista de bloqueo nombra emitir/contratar/formaliz
   // 4. El formador no actúa (devuelve el locator) y valida antes de devolver.
   assert.match(src, /pareceEmision\(/, 'validarAccion tiene que pasar por pareceEmision()')
   assert.match(src, /BLOQUEO_FORMADOR\.find\(/, 'validarAccion tiene que mirar la lista de bloqueo')
-  assert.match(src, /const v = validarResolucion\(p, d\)/, 'resolverConFormador tiene que validar antes de devolver')
-  // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular»; el campo pasa por bloqueo + etiqueta + sin casillas.
+  assert.match(src, /const v = validarResolucion\(p, d, ctx\.compania\)/, 'resolverConFormador tiene que validar antes de devolver')
+  // 5. (revisión de seguridad 06/10/2026) La tabla solo tiene «calcular» + la navegación de menús que autorizó Alberto
+  //    (14/10/2026, respaldo IA); el enlace de entrada NO está en la tabla (va por la lista de guard.ts y `pulsarEnlaceEntrada`).
   const claves = [...tabla![1].matchAll(/^\s*(\w+)\s*:/gm)].map((m) => m[1])
-  assert.deepEqual(claves, ['calcular'], 'ACCIONES_PERMITIDAS solo puede tener «calcular»')
+  assert.deepEqual(claves, ['calcular', 'pestana_nueva_produccion', 'menu_automoviles'], 'ACCIONES_PERMITIDAS: solo «calcular» y la navegación autorizada')
+  assert.match(src, /export function validarAccionEntrada[\s\S]*?textosEntradaDe\(compania\)\.includes\(esperado\)[\s\S]*?normalizarTexto\(d\.texto\) !== esperado/, 'el enlace de entrada: solo textos de guard.ts y texto visible exacto')
   const vc = src.slice(src.indexOf('export function validarCampo'), src.indexOf('export function validarResolucion'))
   assert.match(vc, /bloqueoPalabras\(\[\['id', d\.id\], \['name', d\.name\], \['title', d\.title\], \['aria-label', d\.ariaLabel\], \['onclick', d\.onclick\], \['onchange', d\.onchange\]\]\)/, 'validarCampo tiene que bloquear palabras de emisión en id/name/title/aria-label/onclick/onchange')
   assert.match(vc, /type === 'checkbox' \|\| \(role !== '' && !ROLES_EDITABLES\.includes\(role\)\)/, 'validarCampo no admite casillas (ni roles que no sean de edición)')
