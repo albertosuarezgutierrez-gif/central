@@ -76,6 +76,14 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
     compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
     avancesAutorizados: Object.freeze([]),
   }),
+  // Occident Hogar (14/10/2026): «Productos» › «Análisis de necesidades» › «Hogar» › «Tarificación» (menú fijo en el código de
+  // Occident, `occident/hogar.ts`); navega a /productos/multirriesgos/hogar/tarificacion y el formulario va en un iframe. Sin
+  // avances autorizados: ningún botón visto necesita el permiso de «Aceptar» (el «Guardar» del modal de situación cae en la
+  // categoría «guardar» y solo se pulsa con `efectoEsperado: 'guardar_presupuesto'`).
+  'occident:productos:hogar': Object.freeze({
+    compania: 'occident', ramo: 'hogar', producto: 'hogar', pestana: 'Productos', productoMenu: 'Hogar',
+    avancesAutorizados: Object.freeze([]),
+  }),
 })
 
 export function esEntradaExploracion(v: unknown): v is keyof typeof ENTRADAS_EXPLORACION {

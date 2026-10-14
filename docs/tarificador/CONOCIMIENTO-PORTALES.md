@@ -238,3 +238,11 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   - ~~Qué se elige en «Coberturas».~~ **RESUELTO (14/10/2026):** coberturas por defecto; el bot solo avanza.
   - Botón exacto de guardar en «Proyectos».
   - Cómo sale el PDF.
+
+## Descuentos comerciales (regla de Alberto, 14/10/2026)
+
+**Descuentos comerciales: siempre al máximo; nunca los que se pagan con comisión** (Occident: «Descuentos ABC» / «Ajuste contra
+comisión», que rebaja la comisión de la correduría: no se toca, ni lápiz ni papelera). Occident Hogar, paso 2 «Proyecto»: caja
+«Ajustes comerciales» → «Modificar» (no el de «Datos principales del riesgo») → secciones «Descuentos cliente» y «Descuentos por
+perfil/actividad» (lápiz → máximo disponible); la papelera nunca. Código: `elegirMaximoDescuento` en `occident/hogar.ts`.
+Selector desplegado y guardado de los ajustes: sin ver. «Imprimir» (cabecera) guarda el proyecto y descarga el PDF.

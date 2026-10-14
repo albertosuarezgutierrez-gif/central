@@ -67,6 +67,7 @@ import { abrirNuevaAlta, esperarMarcoApp, type PestanaEntradaAllianz } from './a
 import { login as loginEpac } from './adapters/allianz/comunidades.ts'
 import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { abrirTarificacionRapidaAuto } from './adapters/mapfre/entrada.ts'
+import { abrirTarificacionHogar, login as loginOccident } from './adapters/occident/hogar.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import type { Log } from './log.ts'
 
@@ -134,6 +135,19 @@ export const PORTALES_EXPLORACION: Readonly<Record<string, PortalExploracion>> =
       await nsei.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
       await exigirSinCaptcha(nsei)
       return nsei
+    },
+  }),
+  // Occident (14/10/2026): SSO → menú «Productos › Análisis de necesidades › Hogar › Tarificación» → ruta SPA de hogar, con el
+  // formulario en un iframe (el inventario ya recorre los marcos, como el `appArea` de Allianz). Mismo login y entrada que
+  // `occident/hogar.ts`; hosts = lista blanca de `occident/guarda.ts` (sin ampliar). La misma `page` (sin pestaña nueva).
+  occident: Object.freeze({
+    credencial: 'OCCIDENT_PORTAL',
+    entrar: async (page: Page, ctx: CtxEntrada, _e: EntradaExploracion) => {
+      await loginOccident(page, ctx)
+      await exigirSinVerificacion(page, 'occident')
+      await abrirTarificacionHogar(page, ctx)
+      await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+      await ctx.exigirSinCaptcha()
     },
   }),
 })
