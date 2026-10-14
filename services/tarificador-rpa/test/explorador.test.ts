@@ -8,10 +8,11 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
-import { EmisionBloqueadaError, type InventarioDom } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, MAX_GUARDADOS_DIALOGO, type InventarioDom } from '@central/module-tarificacion'
 import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
-import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoPresupuesto, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
+import { instalarGuardEmision, pulsar, pulsarExploracionAutorizada, pulsarGuardadoDialogoAutorizado, pulsarGuardadoPresupuesto, GuardadoDialogoBloqueadoError, MAX_GUARDADOS_PRESUPUESTO, type GuardEmision } from '../src/guard.ts'
 import { capturarInventarioDom, capturarInventarioExploracion } from '../src/inventario-dom.ts'
+import { esperarEstable, vigilarRed } from '../src/estabilidad.ts'
 import {
   bucleExploracion,
   cierreCorrecto,
@@ -123,6 +124,24 @@ const VARIOS_CAMPOS = PAGINA(`
     <button id="siguiente" type="submit">Siguiente</button>
   </form>`)
 
+/** Allianz Hogar (14/10/2026): año como `<input type=number>` y superficie como input SIN type. */
+const NUMERICO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label id="lanio" for="anio">Año de construcción</label><input id="anio" name="anio" type="number">
+    <label for="superficie">Superficie de la vivienda</label><input id="superficie" name="superficie">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>`)
+
+/** Un control que el portal VACÍA siempre al perder el foco (ni `fill` ni tecleado se quedan). */
+const NO_SE_QUEDA = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="superficie">Superficie de la vivienda</label><input id="superficie" name="superficie">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>const s = document.getElementById('superficie'); s.addEventListener('blur', () => { s.value = '' })</script>`)
+
 const OTP = PAGINA(`<h1>Verificación</h1><label for="c">Código</label><input id="c" autocomplete="one-time-code">`)
 
 type Peticion = { metodo: string; ruta: string; cuerpo: string }
@@ -133,7 +152,7 @@ let peticiones: Peticion[] = []
 let inicio = RIESGO
 let trasPaso2 = DATOS_BASICOS('Datos básicos')
 /** Rutas extra por test (guardado del presupuesto): cuerpo y cabeceras. */
-let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string> }> = {}
+let rutasExtra: Record<string, { tipo: string; cuerpo: string | Buffer; cabeceras?: Record<string, string>; retardoMs?: number }> = {}
 
 let browser: Browser
 before(async () => {
@@ -145,8 +164,12 @@ before(async () => {
       peticiones.push({ metodo: req.method ?? 'GET', ruta, cuerpo })
       const extra = rutasExtra[ruta]
       if (extra) {
-        res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
-        res.end(extra.cuerpo)
+        const responder = () => {
+          res.writeHead(200, { 'Content-Type': extra.tipo, ...(extra.cabeceras ?? {}) })
+          res.end(extra.cuerpo)
+        }
+        if (extra.retardoMs) setTimeout(responder, extra.retardoMs)
+        else responder()
         return
       }
       const html = ruta === '/' ? inicio : ruta === '/paso2' ? trasPaso2 : ruta === '/tarificar' ? RESULTADO : PAGINA('<h1>404</h1>')
@@ -192,7 +215,7 @@ const respuesta = (acciones: unknown[], tipo = 'formulario') => ({ version: 1, p
 type Guion = (inv: InventarioDom, n: number, page: Page) => unknown | Promise<unknown>
 
 function contexto(page: Page, guard: GuardEmision, guion: Guion, extra: Partial<ContextoBucle> = {}) {
-  const enviados: { inventario: InventarioDom; avancesFallidos: number }[] = []
+  const enviados: { inventario: InventarioDom; avancesFallidos: number; incidencias?: unknown }[] = []
   const lineas: string[] = []
   const k: ContextoBucle = {
     trabajoId: '00000000-0000-4000-8000-000000000001', compania: 'allianz', ramo: 'hogar', entrada: 'allianz:particulares:hogar',
@@ -200,10 +223,11 @@ function contexto(page: Page, guard: GuardEmision, guion: Guion, extra: Partial<
     pulsar: (b) => pulsar(b, guard),
     pulsarAutorizado: (b, el, marco) => pulsarExploracionAutorizada(page, guard, b, { entrada: 'allianz:particulares:hogar', el, marco }),
     pulsarGuardado: (b, el, pantalla, trasClic) => pulsarGuardadoPresupuesto(page, guard, b, { el, pantalla }, trasClic),
+    pulsarGuardadoDialogo: (b, el, marco) => pulsarGuardadoDialogoAutorizado(page, guard, b, { entrada: extra.entrada ?? 'allianz:particulares:hogar', el, marco }),
     topePdfMs: 3_000,
     pausaAccion: async () => undefined,
     pedirPaso: async (c): Promise<RespuestaPaso> => {
-      enviados.push({ inventario: c.inventario, avancesFallidos: c.avancesFallidos })
+      enviados.push({ inventario: c.inventario, avancesFallidos: c.avancesFallidos, ...(c.incidencias ? { incidencias: c.incidencias } : {}) })
       return { estado: 'ok', respuesta: await guion(c.inventario, enviados.length, page), leaseHasta: null }
     },
     log: (m, d) => { lineas.push(JSON.stringify({ m, ...(d ?? {}) })) },
@@ -900,4 +924,422 @@ test('presupuestoParaCierre: tres estados del PDF (null = no se intentó); sin g
   // Sin guardado no viaja presupuesto en el resultado.
   const r = resultadoDeFin('00000000-0000-4000-8000-000000000001', 'allianz', { motivo: 'resultado', error: null }, (t) => t)
   assert.ok(r?.resultado === 'explorado' && !('presupuesto' in r))
+})
+
+// ─── «Guardar» del modal «Datos de la situación» (Occident Hogar, Alberto 14/10/2026) ────────────────────────────────
+
+const OCC = 'occident:productos:hogar'
+/** Modal de Occident inventado: un «Guardar» DENTRO (cierra el modal) y otro FUERA, en el formulario de detrás. */
+const MODAL_SITUACION = (titulo = 'Datos de la situación', botonModal = 'Guardar', extraModal = '') => PAGINA(`
+  <h1>Tarificación</h1>
+  <form id="fOcc" method="post" action="/guardar-fuera">
+    <button id="btnFuera" type="button" onclick="window.pulsadoFuera = true">Guardar</button>
+  </form>
+  <div id="modalSit" role="dialog" aria-modal="true" aria-labelledby="tSit">
+    <h3 id="tSit">${titulo}</h3>
+    <label for="cpSit">Código postal:*</label><input id="cpSit" name="cpSit" type="text">
+    <button id="btnSit" type="button" onclick="cerrarSit()">${botonModal}</button>
+    ${extraModal}
+  </div>
+  <script>function cerrarSit() { window.guardadoSit = (window.guardadoSit || 0) + 1; document.getElementById('modalSit').style.display = 'none' }</script>`)
+const pulsados = (page: Page) => page.evaluate(() => ({ dentro: (window as unknown as { guardadoSit?: number }).guardadoSit ?? 0, fuera: (window as unknown as { pulsadoFuera?: boolean }).pulsadoFuera ?? false }))
+const occ = { compania: 'occident', ramo: 'hogar', entrada: OCC }
+const avanzarSobre = (id: string): Guion => (inv, n) => n === 1
+  ? respuesta([{ accion: 'avanzar', ref: ref(inv, id), efectoEsperado: 'abrir_seccion', confianza: 'alta' }])
+  : respuesta([{ accion: 'parar', motivo: 'sin_salida' }])
+
+test('MODAL OCCIDENT: «Guardar» dentro de «Datos de la situación» se pulsa UNA vez por su puerta, sin red de emisión', async () => {
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION())
+  try {
+    const { k, enviados } = contexto(page, guard, avanzarSobre('btnSit'), occ)
+    assert.equal(enviados.length, 0)
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'sin_salida', JSON.stringify(fin))
+    assert.deepEqual(await pulsados(page), { dentro: 1, fuera: false })
+    assert.ok(fin.efectos.includes('posible_proyecto_guardado'))
+    assert.equal(enviados[0].inventario.marcos[0].elementos.find((e) => e.id === 'btnSit')?.dialogo, 'Datos de la situación')
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Año y m² que no se quedaban en Allianz Hogar (14/10/2026). Valores FICTICIOS. ───────────────────────────────────
+
+/** Riesgo ficticio de una exploración con datos reales: año y m² como los deja el Catastro (m² con decimales). */
+const RIESGO_REAL = { tomador: { nif: '00000000T' }, inmueble: { anioConstruccion: 1975, superficieM2: 85.5 } }
+/** Angular re-renderiza el formulario: cada input se sustituye por un clon (mismo id/name/label, nodo nuevo). */
+const repintarInputs = (p: Page) => p.evaluate(() => { for (const id of ['anio', 'superficie']) { const e = document.getElementById(id)!; e.replaceWith(e.cloneNode(true)) } })
+
+test('🪤 repintado ANTES del lote: la 1.ª acción (rellenar año, input type=number) se re-localiza y se escribe entero; m² redondeado', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, lineas } = contexto(page, guard, async (inv, n, p) => {
+      if (n === 1) {
+        await repintarInputs(p)
+        return respuesta([
+          { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+          { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+          { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'calcular', confianza: 'alta' },
+        ])
+      }
+      if (n === 2) return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+        { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'calcular', confianza: 'alta' },
+      ])
+      return respuesta([{ accion: 'terminar', refsPrecio: [inv.marcos.flatMap((m) => m.importes ?? [])[0].ref] }], 'resultado')
+    }, { conDatosReales: true, riesgo: RIESGO_REAL, esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'resultado', JSON.stringify(fin))
+    const post = peticiones.find((x) => x.ruta === '/tarificar')!.cuerpo
+    assert.match(post, /anio=1975/)
+    assert.match(post, /superficie=86(&|$)/, 'm² entero (85,5 → 86), sin decimales para el input')
+    const log = lineas.join('\n')
+    assert.match(log, /"exploracion_relocalizacion".*"estado":"ok"/)
+    assert.ok(!/1975|85\.5/.test(log), 'el log no lleva valores')
+    assert.equal(fin.incidencias, undefined)
+  } finally {
+    await context.close()
+  }
+})
+
+for (const [nombre, html, id, entrada] of [
+  ['«Guardar» FUERA del modal', MODAL_SITUACION(), 'btnFuera', OCC],
+  ['modal con OTRO título', MODAL_SITUACION('Datos del tomador'), 'btnSit', OCC],
+  ['«Guardar y emitir» dentro del modal', MODAL_SITUACION('Datos de la situación', 'Guardar y emitir'), 'btnSit', OCC],
+  ['entrada Allianz Hogar', MODAL_SITUACION(), 'btnSit', 'allianz:particulares:hogar'],
+] as const) {
+  test(`MODAL OCCIDENT: ${nombre} → rechazado al revalidar, sin pulsar`, async () => {
+    const { context, page, guard } = await paginaEn(html)
+    try {
+      const { k } = contexto(page, guard, avanzarSobre(id), { ...occ, entrada })
+      const fin = await bucleExploracion(page, k)
+      assert.equal(fin.motivo, 'ambiguo')
+      assert.equal(fin.detalle, 'lote_no_valido')
+      assert.deepEqual(await pulsados(page), { dentro: 0, fuera: false })
+    } finally {
+      await context.close()
+    }
+  })
+}
+
+/** Lo que el inventario dice de un id (para llamar a la puerta directamente, como haría un bucle con el DOM cambiado). */
+async function deInventario(page: Page, id: string) {
+  const cap = await capturarInventarioExploracion(page)
+  const marco = cap!.inventario.marcos.find((m) => m.elementos.some((e) => e.id === id))!
+  await cap!.liberar()
+  return { el: marco.elementos.find((e) => e.id === id)!, marco }
+}
+const motivoDe = (m: string) => (e: unknown) => e instanceof GuardadoDialogoBloqueadoError && e.motivo === m
+
+test('MODAL OCCIDENT (puerta directa): DOS candidatos «Guardar» en «Datos de la situación» → no pulsa', async () => {
+  const otro = `<button id="btnSit2" type="button" onclick="window.guardadoSit = 99">Guardar</button>`
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION('Datos de la situación', 'Guardar', otro))
+  try {
+    const { el, marco } = await deInventario(page, 'btnSit')
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco }), motivoDe('candidatos'))
+    assert.deepEqual(await pulsados(page), { dentro: 0, fuera: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('MODAL OCCIDENT (puerta directa): el título VIVO cambió tras el inventario, o el control vivo está fuera del modal → no pulsa', async () => {
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION())
+  try {
+    const { el, marco } = await deInventario(page, 'btnSit')
+    // Inventario que dice «dentro del modal» para el botón de FUERA (anti-TOCTOU / inventario falseado).
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnFuera'), { entrada: OCC, el, marco }), motivoDe('fuera_de_dialogo'))
+    await page.evaluate(() => { document.getElementById('tSit')!.textContent = 'Datos de la póliza' })
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco }), motivoDe('titulo_no_casa'))
+    // Otra entrada con el mismo elemento: no autorizado.
+    await page.evaluate(() => { document.getElementById('tSit')!.textContent = 'Datos de la situación' })
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: 'allianz:particulares:hogar', el, marco }), motivoDe('no_autorizado'))
+    assert.deepEqual(await pulsados(page), { dentro: 0, fuera: false })
+    // Y con todo en orden, pasa.
+    await pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco })
+    assert.deepEqual(await pulsados(page), { dentro: 1, fuera: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('MODAL OCCIDENT (puerta directa): como mucho MAX_GUARDADOS_DIALOGO pulsaciones por trabajo', async () => {
+  const { context, page, guard } = await paginaEn(MODAL_SITUACION())
+  try {
+    const { el, marco } = await deInventario(page, 'btnSit')
+    const reabrir = () => page.evaluate(() => { document.getElementById('modalSit')!.style.display = '' })
+    for (let i = 0; i < MAX_GUARDADOS_DIALOGO; i++) {
+      await pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco })
+      await reabrir()
+    }
+    await assert.rejects(pulsarGuardadoDialogoAutorizado(page, guard, page.locator('#btnSit'), { entrada: OCC, el, marco }), motivoDe('tope'))
+    assert.deepEqual(await pulsados(page), { dentro: MAX_GUARDADOS_DIALOGO, fuera: false })
+  } finally {
+    await context.close()
+  }
+})
+
+test('MODAL OCCIDENT: la red sigue cerrada — si ese «Guardar» manda action=store/contract, se aborta y el trabajo cae', async () => {
+  const html = MODAL_SITUACION().replace("function cerrarSit() {", "function cerrarSit() { fetch('/ctl-sit', { method: 'POST', body: 'action=store' }).catch(() => {});")
+  const { context, page, guard } = await paginaEn(html)
+  try {
+    const { k } = contexto(page, guard, avanzarSobre('btnSit'), occ)
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'guard_emision', JSON.stringify(fin))
+    assert.ok(guard.violacion() instanceof EmisionBloqueadaError)
+    assert.ok(!peticiones.some((p) => p.ruta === '/ctl-sit'), 'el POST no salió')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 repintado que CAMBIA el control (otra etiqueta): no se adivina; para «nodo_no_relocalizado» con la incidencia (sin valor)', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refAnio = ''
+    const { k } = contexto(page, guard, async (inv, _n, p) => {
+      refAnio = ref(inv, 'anio')
+      await p.evaluate(() => { document.getElementById('lanio')!.textContent = 'Año de reforma' })
+      await repintarInputs(p)
+      return respuesta([{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion' }])
+    }, { conDatosReales: true, riesgo: RIESGO_REAL, esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(fin.detalle, 'nodo_no_relocalizado')
+    assert.deepEqual(fin.incidencias, [{ accion: 'rellenar', ref: refAnio, dato: 'inmueble.anio_construccion', causa: 'nodo_no_relocalizado' }])
+    assert.equal(await page.inputValue('#anio'), '', 'no se escribió nada')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 valor que el portal no deja (ni con el reintento tecleando): viaja como incidencia en el SIGUIENTE paso, sin el valor', async () => {
+  inicio = NO_SE_QUEDA
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refSup = ''
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => {
+      refSup = ref(inv, 'superficie')
+      return n === 1 ? respuesta([{ accion: 'rellenar', ref: refSup, dato: 'inmueble.superficie_m2' }]) : respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }, { conDatosReales: true, riesgo: RIESGO_REAL })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(enviados[0].incidencias, undefined)
+    assert.deepEqual(enviados[1].incidencias, [{ accion: 'rellenar', ref: refSup, dato: 'inmueble.superficie_m2', causa: 'valor_no_aplicado' }])
+    assert.equal(fin.incidencias, undefined, 'ya se contó en el paso: no se repite en el cierre')
+    assert.ok(!JSON.stringify(enviados[1].incidencias).includes('86'))
+    assert.match(lineas.join('\n'), /"exploracion_valor".*"estado":"no_aplicado"/)
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 frontera de cuenta bancaria sobre el control RELOCALIZADO (revisión PR #4648): el clon trae «IBAN» → para sin escribir', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k } = contexto(page, guard, async (inv, _n, p) => {
+      const r = ref(inv, 'superficie')
+      // Repintado: mismo id/name/etiqueta (misma huella), pero el control nuevo se presenta como IBAN.
+      await p.evaluate(() => { const e = document.getElementById('superficie')!; const c = e.cloneNode(true) as HTMLInputElement; c.placeholder = 'IBAN'; e.replaceWith(c) })
+      return respuesta([{ accion: 'rellenar', ref: r, dato: 'inmueble.superficie_m2' }])
+    }, { conDatosReales: true, riesgo: RIESGO_REAL, esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
+    assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
+    assert.equal(await page.inputValue('#superficie'), '', 'no se escribió nada')
+  } finally {
+    await context.close()
+  }
+})
+
+// ─── Orden del lote, lote cortado y pantalla quieta (14/10/2026, exploración 8d0676f9 de Allianz Hogar) ──────────────
+
+/** CP que autocompleta (repinta al perder el foco) y una VÍA con role=combobox; el año, campo simple, va DETRÁS en el lote. */
+const CP_VIA_ANIO = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="cp">Código postal</label><input id="cp" name="cp" type="text">
+    <span id="pob"></span>
+    <label for="via">Nombre de la vía</label><input id="via" name="via" type="text" role="combobox" aria-autocomplete="list">
+    <label for="anio">Año de construcción</label><input id="anio" name="anio" type="number">
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>document.getElementById('cp').addEventListener('change', () => { document.getElementById('pob').innerHTML = '<label for="poblacion">Población</label><input id="poblacion" name="poblacion" type="text">' })</script>`)
+
+test('🪤 ORDEN del lote (8d0676f9 paso 1): CP, vía y año → el año (simple) se escribe ANTES de que el CP repinte y corte', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados, lineas } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: ref(inv, 'via'), dato: 'inmueble.nombre_via' },
+        { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'avanzar', ref: ref(inv, 'siguiente'), efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]),
+    { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(await page.inputValue('#anio'), '1990', 'el año se escribió en el lote 1')
+    assert.equal(await page.inputValue('#cp'), '41001')
+    assert.equal(await page.inputValue('#via'), '', 'la vía (combobox) iba detrás del CP: lote cortado antes de llegar')
+    const anio = enviados[1].inventario.marcos.flatMap((m) => m.elementos).find((e) => e.id === 'anio')!
+    assert.equal(anio.conValor, true, 'el 2.º inventario ve el año relleno')
+    assert.ok(/"exploracion_paso".*rellenar m\d+e\d+=inmueble.anio_construccion.*inmueble.codigo_postal.*inmueble.nombre_via/.test(lineas.join('\n')), 'el log refleja el orden aplicado')
+  } finally {
+    await context.close()
+  }
+})
+
+test('🪤 LOTE CORTADO: lo que quedaba sin ejecutar viaja como incidencia `lote_cortado` en el siguiente paso (ref + clave; sin valor)', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    let refs = { via: '', siguiente: '' }
+    const { k, enviados } = contexto(page, guard, (inv, n) => {
+      if (n > 1) return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+      refs = { via: ref(inv, 'via'), siguiente: ref(inv, 'siguiente') }
+      return respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'cp'), dato: 'inmueble.codigo_postal' },
+        { accion: 'rellenar', ref: refs.via, dato: 'inmueble.nombre_via' },
+        { accion: 'avanzar', ref: refs.siguiente, efectoEsperado: 'siguiente_pantalla', confianza: 'alta' },
+      ])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo', JSON.stringify(fin))
+    assert.equal(enviados[0].incidencias, undefined)
+    assert.deepEqual(enviados[1].incidencias, [
+      { accion: 'rellenar', ref: refs.via, dato: 'inmueble.nombre_via', causa: 'lote_cortado' },
+      { accion: 'avanzar', ref: refs.siguiente, causa: 'lote_cortado' },
+    ])
+    assert.ok(!JSON.stringify(enviados[1].incidencias).includes('PRUEBA'), 'sin el valor de la vía')
+    assert.ok(!peticiones.some((p) => p.ruta === '/tarificar'), 'el avance cortado no se pulsó')
+  } finally {
+    await context.close()
+  }
+})
+
+test('lote NO cortado (sin repintado): ninguna incidencia `lote_cortado`', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, (inv, n) => n === 1
+      ? respuesta([
+        { accion: 'rellenar', ref: ref(inv, 'anio'), dato: 'inmueble.anio_construccion' },
+        { accion: 'rellenar', ref: ref(inv, 'superficie'), dato: 'inmueble.superficie_m2' },
+      ])
+      : respuesta([{ accion: 'parar', motivo: 'ambiguo' }]))
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'ambiguo')
+    assert.equal(enviados[1].incidencias, undefined)
+    assert.equal(await page.inputValue('#superficie'), '90')
+  } finally {
+    await context.close()
+  }
+})
+
+/**
+ * Validación ASÍNCRONA de la dirección (como Allianz tras el número de la vía): al perder el foco sale un fetch lento y, a
+ * su vuelta, Angular RE-CREA año y superficie con ids NUEVOS (el contador de NDBX avanza). Una sola vez.
+ */
+const VALIDA_Y_REPINTA = PAGINA(`
+  <h2>Datos del tomador y vivienda</h2>
+  <form id="f1" method="post" action="/tarificar">
+    <label for="numero">Número</label><input id="numero" name="numero" type="text">
+    <div id="seccion">
+      <label for="anio-38">Año de construcción</label><input id="anio-38" name="anio" type="number">
+      <label for="sup-45">Superficie de la vivienda</label><input id="sup-45" name="superficie">
+    </div>
+    <button id="siguiente" type="submit">Siguiente</button>
+  </form>
+  <script>
+    let hecho = false
+    document.getElementById('numero').addEventListener('change', () => {
+      if (hecho) return; hecho = true
+      fetch('/validar', { method: 'POST' }).then(() => {
+        document.getElementById('seccion').innerHTML = '<label for="anio-62">Año de construcción</label><input id="anio-62" name="anio" type="number">'
+          + '<label for="sup-69">Superficie de la vivienda</label><input id="sup-69" name="superficie">'
+      })
+    })
+  </script>`)
+
+test('🪤 PANTALLA QUIETA (8d0676f9 paso 3): la validación de la vía repinta con ids nuevos; se inventaría DESPUÉS y año y m² se escriben', async () => {
+  inicio = VALIDA_Y_REPINTA
+  rutasExtra = { '/validar': { tipo: 'application/json', cuerpo: '{}', retardoMs: 900 } }
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k, enviados } = contexto(page, guard, async (inv, n) => {
+      if (n === 1) return respuesta([{ accion: 'rellenar', ref: ref(inv, 'numero'), dato: 'inmueble.numero' }])
+      if (n === 2) {
+        const ids = inv.marcos.flatMap((m) => m.elementos).map((e) => e.id)
+        const anio = ids.find((x) => x?.startsWith('anio-'))!
+        const sup = ids.find((x) => x?.startsWith('sup-'))!
+        await new Promise((r) => setTimeout(r, 1_200)) // lo que tarda la IA en contestar
+        return respuesta([
+          { accion: 'rellenar', ref: ref(inv, anio), dato: 'inmueble.anio_construccion' },
+          { accion: 'rellenar', ref: ref(inv, sup), dato: 'inmueble.superficie_m2' },
+        ])
+      }
+      return respuesta([{ accion: 'parar', motivo: 'ambiguo' }])
+    }, { esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.detalle, undefined, `sin nodo_no_relocalizado: ${JSON.stringify(fin)}`)
+    assert.ok(tiene(enviados[1].inventario, 'anio-62'), 'el 2.º inventario se tomó tras el repintado')
+    assert.equal(await page.inputValue('#anio-62'), '1990')
+    assert.equal(await page.inputValue('#sup-69'), '90')
+    assert.equal(enviados[2].incidencias, undefined)
+  } finally {
+    rutasExtra = {}
+    await context.close()
+  }
+})
+
+const MUTA_SIN_PARAR = PAGINA(`<h2>Reloj</h2><div id="r"></div><script>setInterval(() => { document.getElementById('r').innerHTML = '<span>' + Date.now() + '</span>' }, 100)</script>`)
+
+test('esperarEstable: espera a la red en vuelo (vista ANTES de llamar, con el vigía) y al DOM; un DOM que no se calla agota el tope', async () => {
+  inicio = VALIDA_Y_REPINTA
+  rutasExtra = { '/validar': { tipo: 'application/json', cuerpo: '{}', retardoMs: 700 } }
+  const { context, page } = await nuevaPagina()
+  try {
+    const vigia = vigilarRed(page)
+    const salio = page.waitForRequest((r) => r.url().endsWith('/validar'))
+    await page.fill('#numero', '1')
+    await page.locator('#numero').blur()
+    await salio
+    // El fetch ya salió: con el vigía del bucle se espera a su vuelta y al repintado.
+    assert.equal(await esperarEstable(page, { quietoMs: 300, topeMs: 5_000 }, vigia), 'estable')
+    assert.equal(await page.locator('#anio-62').count(), 1, 'devolvió con la sección ya repintada')
+    vigia.soltar()
+
+    await page.goto(`${base}/`)
+    await page.setContent(MUTA_SIN_PARAR)
+    const t0 = Date.now()
+    assert.equal(await esperarEstable(page, { quietoMs: 300, topeMs: 1_200 }), 'tope')
+    const t = Date.now() - t0
+    assert.ok(t >= 1_100 && t < 4_000, `respeta el tope (${t} ms)`)
+  } finally {
+    rutasExtra = {}
+    await context.close()
+  }
+})
+
+test('inventario: `autocompletar` (aria-autocomplete o datalist) solo como booleano; un input normal no lo lleva', async () => {
+  inicio = CP_VIA_ANIO
+  const { context, page } = await nuevaPagina()
+  try {
+    const c = (await capturarInventarioExploracion(page))!
+    const els = c.inventario.marcos.flatMap((m) => m.elementos)
+    assert.equal(els.find((e) => e.id === 'via')!.autocompletar, true)
+    assert.equal(els.find((e) => e.id === 'via')!.role, 'combobox')
+    assert.equal(els.find((e) => e.id === 'anio')!.autocompletar, undefined)
+    assert.equal(els.find((e) => e.id === 'cp')!.autocompletar, undefined)
+    await c.liberar()
+  } finally {
+    await context.close()
+  }
 })

@@ -9,7 +9,7 @@
 
 import { sanearInventarioDom, MAX_BYTES_INVENTARIO_DOM, MAX_MARCOS_INVENTARIO, type InventarioDom } from '@central/module-tarificacion'
 import type { ElementHandle, Frame, JSHandle, Page } from 'playwright'
-import { SELECTOR_AVANCE_SERVLET } from './guard.ts'
+import { SELECTOR_AVANCE_SERVLET, SELECTOR_DIALOGO, tituloDialogoVivo } from './guard.ts'
 
 /**
  * Extractor que corre EN EL MARCO. Va como TEXTO (no como función) a propósito: tsx envuelve las funciones con nombre
@@ -33,6 +33,10 @@ function extractor(explora: boolean): string {
   // Solo estructura y texto visible del control; nunca valores. Los controles de elección de fila NO (guardián: solo guard.ts).
   const SEL = 'input,select,textarea,button,a,[role=button],[role=link],[role=tab],[role=menuitem],[role=option],[role=combobox],[role=checkbox],mat-icon,td[onclick],label' + (EXPLORA ? ',' + SEL_SERVLET : '');
   const esDivServlet = (el) => EXPLORA && el.matches(SEL_SERVLET);
+  // EXPLORACIÓN: título del DIÁLOGO/modal más cercano (la MISMA función y el MISMO selector que la comprobación viva de
+  // guard.ts, \`pulsarGuardadoDialogoAutorizado\`). Solo se lee.
+  const SEL_DIALOGO = ${JSON.stringify(SELECTOR_DIALOGO)};
+  const tituloDialogo = (${tituloDialogoVivo.toString()});
   const CON_TEXTO = { button: 1, a: 1, td: 1, label: 1, 'mat-icon': 1 };
   const ROLES_CON_TEXTO = { button: 1, tab: 1, link: 1, menuitem: 1, option: 1 };
   const corta = (s, n) => (s == null ? null : (String(s).replace(/\\s+/g, ' ').trim().slice(0, n) || null));
@@ -88,6 +92,13 @@ function extractor(explora: boolean): string {
       e.invalido = el.getAttribute('aria-invalid') === 'true'
         || /(^|\\s)[\\w-]*-invalid(\\s|$)/.test(String(el.getAttribute('class') || ''))
         || !!(caja && /(^|\\s)[\\w-]*(has-error|invalid)[\\w-]*(\\s|$)/.test(String(caja.getAttribute('class') || '')));
+      // ¿AUTOCOMPLETA? (14/10/2026) aria-autocomplete list/both/inline o un datalist (atributo list): su rellenar puede repintar.
+      const ac = String(el.getAttribute('aria-autocomplete') || '').toLowerCase();
+      if (tag !== 'select' && (ac === 'list' || ac === 'both' || ac === 'inline' || el.hasAttribute('list'))) e.autocompletar = true;
+    }
+    if (EXPLORA) {
+      const dlg = tituloDialogo(el, SEL_DIALOGO);
+      if (dlg) e.dialogo = dlg;
     }
     out.push(e);
     nodos.push(el);

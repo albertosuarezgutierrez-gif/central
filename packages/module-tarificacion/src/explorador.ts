@@ -38,6 +38,21 @@ export type AvanceAutorizado = {
   nuncaConTitulo: RegExp
 }
 
+/**
+ * «Guardar» de un MODAL concreto que NO emite (guarda un dato del formulario, p. ej. la dirección del riesgo). Separado de
+ * `AvanceAutorizado` a propósito: nunca abre «Aceptar» ni la ventana de red; solo levanta `guardar_solo_en_resultado` para
+ * ESE botón en ESE diálogo. Ambos patrones van sobre texto PLANO (sin tildes, minúsculas) y anclados (texto EXACTO).
+ */
+export type GuardadoEnDialogo = {
+  /** Texto EXACTO del botón (y de su aria-label, si lo tiene). */
+  texto: RegExp
+  /** Título accesible EXACTO del diálogo que lo contiene (`ElementoInventario.dialogo`; el worker lo repite VIVO). */
+  dialogo: RegExp
+}
+
+/** Tope de pulsaciones de `GuardadoEnDialogo` por trabajo (abrir/cerrar el modal un par de veces, con margen). */
+export const MAX_GUARDADOS_DIALOGO = 3
+
 export type EntradaExploracion = {
   compania: string
   ramo: string
@@ -46,6 +61,8 @@ export type EntradaExploracion = {
   pestana: string
   productoMenu: string
   avancesAutorizados: readonly AvanceAutorizado[]
+  /** «Guardar» de un modal concreto (ver {@link GuardadoEnDialogo}). Sin la clave = ninguno. */
+  guardadosEnDialogo?: readonly GuardadoEnDialogo[]
 }
 
 /**
@@ -75,6 +92,16 @@ export const ENTRADAS_EXPLORACION: Readonly<Record<string, EntradaExploracion>> 
   'mapfre:nueva_produccion:auto': Object.freeze({
     compania: 'mapfre', ramo: 'auto', producto: 'auto', pestana: 'Nueva producción', productoMenu: 'Turismos y Motos',
     avancesAutorizados: Object.freeze([]),
+  }),
+  // Occident Hogar (14/10/2026): «Productos» › «Análisis de necesidades» › «Hogar» › «Tarificación» (menú fijo en el código de
+  // Occident, `occident/hogar.ts`); navega a /productos/multirriesgos/hogar/tarificacion y el formulario va en un iframe. Sin
+  // avances autorizados: ningún botón visto necesita el permiso de «Aceptar». El «Guardar» del modal «Datos de la situación»
+  // (solo guarda la dirección del riesgo, no emite) lo autorizó Alberto el 14/10/2026: SOLO ese texto exacto dentro de un
+  // diálogo con ese título exacto; el worker lo repite vivo en `pulsarGuardadoDialogoAutorizado` (guard.ts).
+  'occident:productos:hogar': Object.freeze({
+    compania: 'occident', ramo: 'hogar', producto: 'hogar', pestana: 'Productos', productoMenu: 'Hogar',
+    avancesAutorizados: Object.freeze([]),
+    guardadosEnDialogo: Object.freeze([Object.freeze({ texto: /^guardar$/, dialogo: /^datos de la situacion$/ })]),
   }),
 })
 
@@ -304,7 +331,42 @@ export function resolverDato(clave: string, ctx: ContextoDatos): DatoResuelto {
   const d = catalogoDe(ctx.ramo).find((x) => x.clave === clave)
   // El riesgo de auto guarda las fechas en ISO (AAAA-MM-DD); el portal las pide dd/mm/aaaa.
   const iso = d?.tipo === 'fecha' ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.valor) : null
-  return iso ? { ok: true, valor: `${iso[3]}/${iso[2]}/${iso[1]}` } : r
+  if (iso) return { ok: true, valor: `${iso[3]}/${iso[2]}/${iso[1]}` }
+  // Año y m² como ENTERO sin unidades (14/10/2026): un `<input type=number>` no admite «85,5» ni «90 m2».
+  const entero = normalizarEnteroPortal(clave, r.valor)
+  if (entero === undefined) return r
+  return entero === null ? { ok: false, motivo: 'dato_no_disponible' } : { ok: true, valor: entero }
+}
+
+/**
+ * Claves del catálogo que el portal pide como número ENTERO, con su rango. `exacto` = tiene que ser entero (un año con
+ * decimales es un dato corrupto, no se redondea); `redondear` = se redondea al entero más próximo (m² del Catastro «85,50»).
+ */
+export const ENTEROS_PORTAL: Readonly<Record<string, { min: number; max: number; modo: 'exacto' | 'redondear' }>> = Object.freeze({
+  'inmueble.anio_construccion': { min: 1500, max: 2100, modo: 'exacto' },
+  'inmueble.superficie_m2': { min: 1, max: 100_000, modo: 'redondear' },
+})
+
+/**
+ * El valor de una clave de {@link ENTEROS_PORTAL} como lo acepta un `<input type=number>` (14/10/2026, Allianz Hogar: año y
+ * m² quedaban vacíos e inválidos): solo dígitos, sin unidades («m2», «m²», «metros»), sin separador de miles y sin
+ * decimales. Acepta «1975», «1975.0», «1.975», «85,50», «85.5», « 90 m2 ». `undefined` = la clave no es de las enteras
+ * (el valor va tal cual); `null` = no es un número válido o se sale del rango (→ `dato_no_disponible`: nunca se inventa). Pura.
+ */
+export function normalizarEnteroPortal(clave: string, valor: string): string | null | undefined {
+  if (!Object.hasOwn(ENTEROS_PORTAL, clave)) return undefined
+  const regla = ENTEROS_PORTAL[clave]
+  let t = valor.trim().toLowerCase().replace(/\s*(m2|m²|mts?2?|metros(\s+cuadrados)?)\.?$/, '').replace(/\s+/g, '')
+  if (!/^\d[\d.,]*$/.test(t)) return null
+  if (t.includes('.') && t.includes(',')) t = t.replace(/\./g, '').replace(',', '.') // «1.234,5»: punto de miles, coma decimal
+  else if (t.includes(',')) t = t.replace(',', '.') // coma decimal (dos comas → no casa abajo → null)
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '') // «1.975», «100.000»: miles a la española
+  if (!/^\d+(\.\d+)?$/.test(t)) return null
+  const n = Number(t)
+  if (!Number.isFinite(n)) return null
+  if (regla.modo === 'exacto' && !Number.isInteger(n)) return null
+  const e = Math.round(n)
+  return e >= regla.min && e <= regla.max ? String(e) : null
 }
 
 function resolverDatoCrudo(clave: string, ctx: ContextoDatos): DatoResuelto {
@@ -408,14 +470,166 @@ export const DETALLES_FIN_EXPLORACION = [
   'frontera_cuenta_bancaria',
   /** Al GUARDAR el presupuesto el portal abrió un diálogo (confirm/alert): el robot no confirma; se para. */
   'guardado_con_dialogo',
+  /**
+   * `rellenar` cuyo nodo ya no era el inventariado (repintado del portal) y que, tras RE-INVENTARIAR una vez, tampoco se
+   * encontró por su identidad (`relocalizarElemento`: misma huella de pantalla, marco, tag, type, id exacto, name/formControlName y etiqueta). 14/10/2026.
+   */
+  'nodo_no_relocalizado',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
+
+const textoEtiqueta = (el: ElementoInventario) => (el.etiqueta ?? el.ariaLabel ?? el.placeholder ?? '').replace(/\s+/g, ' ').trim()
+
+/**
+ * Re-localización tras un REPINTADO (14/10/2026: Allianz Hogar re-renderiza el formulario tras el autocompletado y la ref
+ * de «Año de construcción» dejaba de casar). Busca en el inventario NUEVO el elemento que es EL MISMO control que `el`.
+ * FAIL-CLOSED (revisión PR #4648: un hermano de FormArray —`conductor0-fNac`/`conductor1-fNac`, mismo formControlName—
+ * recibiría el dato real de OTRA persona):
+ *  - solo en la MISMA pantalla: `huellaPantalla(inv)` igual a la huella VALIDADA del paso (`huellaValidada`);
+ *  - identidad mínima: name o formControlName Y etiqueta (label/aria-label/placeholder) no vacía; un id solo no basta;
+ *  - mismo marco (URL), tag, type, name, formControlName y etiqueta IDÉNTICOS, y el id EXACTO (sin normalizar cifras: un
+ *    id que solo casara quitando cifras no casa);
+ *  - UN solo candidato. Si no, `null` (no se adivina). Devuelve la ref nueva. Pura.
+ */
+export function relocalizarElemento(el: ElementoInventario, marcoUrl: string, inv: InventarioDom, huellaValidada: string): string | null {
+  if (huellaPantalla(inv) !== huellaValidada) return null
+  const etq = textoEtiqueta(el)
+  if ((!el.name && !el.formControlName) || !etq) return null
+  const tipo = (el.type ?? '').toLowerCase()
+  const candidatos: string[] = []
+  for (const m of inv.marcos) {
+    if (m.url !== marcoUrl) continue
+    for (const x of m.elementos) {
+      if (!x.ref || x.tag !== el.tag || (x.type ?? '').toLowerCase() !== tipo) continue
+      if ((x.name ?? '') !== (el.name ?? '') || (x.formControlName ?? '') !== (el.formControlName ?? '')) continue
+      if ((x.id ?? '') !== (el.id ?? '')) continue
+      if (textoEtiqueta(x) !== etq) continue
+      candidatos.push(x.ref)
+    }
+  }
+  return candidatos.length === 1 ? candidatos[0] : null
+}
+
+/**
+ * INCIDENCIAS de ejecución del worker (14/10/2026): una acción VALIDADA que el portal no dejó aplicar. Antes solo iban al log
+ * local del worker y el paso quedaba con `errores: null` (Allianz Hogar: año y m² vacíos tras tres `rellenar` sin traza).
+ * Viajan en el siguiente `paso` (o en el `cierre`) y asegura las anota en los `errores` del paso que las pidió, con la ref y
+ * la ETIQUETA de su inventario guardado (ya redactado). 🔑 NUNCA el valor. Lista CERRADA de causas.
+ */
+export const CAUSAS_INCIDENCIA_EJECUCION = [
+  /** `rellenar`: tras `fill` + blur + relectura y UN reintento tecleando, el control sigue vacío o con otro valor. */
+  'valor_no_aplicado',
+  /** `rellenar`: el nodo se repintó y tras re-inventariar no se encontró por su identidad (se para con ese detalle). */
+  'nodo_no_relocalizado',
+  /**
+   * La acción NO se ejecutó porque el worker CORTÓ el lote (repintado tras un autocompletado o cambio de estructura) antes
+   * de llegar a ella (14/10/2026, exploración 8d0676f9: año y m² se descartaban EN SILENCIO tras el CP y la vía).
+   */
+  'lote_cortado',
+] as const
+export type CausaIncidenciaEjecucion = (typeof CAUSAS_INCIDENCIA_EJECUCION)[number]
+/** Acciones que pueden quedar sin ejecutar por un corte de lote (las que señalan una ref; `parar`/`terminar` van solas). */
+export const ACCIONES_INCIDENCIA_SIN_DATO = ['elegir', 'marcar', 'avanzar'] as const
+export type IncidenciaEjecucion =
+  | { accion: 'rellenar'; ref: string; dato: string; causa: CausaIncidenciaEjecucion }
+  /** Solo `lote_cortado`. Sin `dato` ni opción: nada que se parezca a un valor. */
+  | { accion: (typeof ACCIONES_INCIDENCIA_SIN_DATO)[number]; ref: string; causa: 'lote_cortado' }
+export const MAX_INCIDENCIAS_EJECUCION = 15
+/** Prefijo de los `errores` de un paso que vienen de la EJECUCIÓN (no del validador): no marcan el paso como «rechazado». */
+export const PREFIJO_ERROR_EJECUCION = 'ejecucion:'
+
+const RE_REF_INCIDENCIA = /^m\d{1,3}e\d{1,5}$/
+const RE_DATO_INCIDENCIA = /^[a-z][a-z0-9_]{0,29}\.[a-z0-9_]{1,40}$/
+
+/** Lo que manda el worker, TOLERANTE: lo mal formado se descarta (nunca tumba el paso ni el cierre). Máx. 15. Pura. */
+export function leerIncidenciasEjecucion(v: unknown): IncidenciaEjecucion[] {
+  if (!Array.isArray(v)) return []
+  const out: IncidenciaEjecucion[] = []
+  for (const x of v.slice(0, MAX_INCIDENCIAS_EJECUCION)) {
+    if (typeof x !== 'object' || x === null || Array.isArray(x)) continue
+    const o = x as Record<string, unknown>
+    const causa = CAUSAS_INCIDENCIA_EJECUCION.find((c) => c === o.causa)
+    if (!causa) continue
+    if (typeof o.ref !== 'string' || !RE_REF_INCIDENCIA.test(o.ref)) continue
+    if (o.accion === 'rellenar') {
+      if (typeof o.dato !== 'string' || !RE_DATO_INCIDENCIA.test(o.dato)) continue
+      out.push({ accion: 'rellenar', ref: o.ref, dato: o.dato, causa })
+      continue
+    }
+    // elegir/marcar/avanzar: SOLO por un lote cortado, y sin nada más (ni dato ni opción, aunque vinieran).
+    const accion = ACCIONES_INCIDENCIA_SIN_DATO.find((a) => a === o.accion)
+    if (!accion || causa !== 'lote_cortado') continue
+    out.push({ accion, ref: o.ref, causa })
+  }
+  return out
+}
+
+/**
+ * Las incidencias como `errores` del paso: `ejecucion: rellenar m1e39 «Año de construcción» (inmueble.anio_construccion):
+ * valor_no_aplicado`. La etiqueta sale del INVENTARIO GUARDADO de ese paso (redactado), nunca del worker; si no está, o
+ * parece un dato personal, va sin etiqueta. Pura.
+ */
+export function erroresDeIncidencias(incidencias: readonly IncidenciaEjecucion[], inventario: InventarioDom | null | undefined): string[] {
+  const porRef = inventario ? indiceRefs(inventario) : new Map<string, { el: ElementoInventario }>()
+  return incidencias.slice(0, MAX_INCIDENCIAS_EJECUCION).map((i) => {
+    const el = porRef.get(i.ref)?.el
+    const etq = el ? (textoEtiqueta(el) || (el.texto ?? '').replace(/\s+/g, ' ').trim()).slice(0, 60) : ''
+    const conEtq = etq && !pareceDatoPersonalInventario(etq) ? ` «${etq}»` : ''
+    const dato = i.accion === 'rellenar' ? ` (${i.dato})` : ''
+    return `${PREFIJO_ERROR_EJECUCION} ${i.accion} ${i.ref}${conEtq}${dato}: ${i.causa}`
+  })
+}
 
 /**
  * Claves del catálogo cuyo `rellenar` suele disparar AUTOCOMPLETADO en el portal (población/vía tras el CP, municipios tras
  * la provincia…): tras rellenarlas el worker corta el lote y vuelve a inventariar (la pantalla ya no es la que vio la IA).
  */
 export const CLAVES_AUTOCOMPLETADO: ReadonlySet<string> = new Set(['inmueble.codigo_postal', 'inmueble.provincia', 'inmueble.municipio'])
+
+/** Roles ARIA de un control que despliega sugerencias (NDBX/Angular Material: `role=combobox` en el input). */
+const ROLES_AUTOCOMPLETADO = new Set(['combobox', 'searchbox'])
+
+/**
+ * ¿Este `rellenar` puede REPINTAR la sección? Su clave dispara autocompletado (`CLAVES_AUTOCOMPLETADO`) o el control es un
+ * autocompletado (`role=combobox/searchbox`, `aria-autocomplete`/datalist → `autocompletar`). Pura.
+ */
+export function rellenarRepinta(dato: string, el: ElementoInventario | undefined): boolean {
+  if (CLAVES_AUTOCOMPLETADO.has(dato)) return true
+  if (!el) return true // sin el elemento no se sabe: lo conservador es tratarlo como el que repinta (va después)
+  return el.autocompletar === true || ROLES_AUTOCOMPLETADO.has((el.role ?? '').toLowerCase())
+}
+
+/**
+ * ORDEN del lote (14/10/2026, exploración 8d0676f9 de Allianz Hogar: el CP y la vía repintaban la sección, el worker
+ * cortaba el lote y año y m², que iban DETRÁS, no se escribían nunca). Estable dentro de cada grupo:
+ *   0. todo lo demás EN EL ORDEN DE LA IA: rellenar simples, `elegir` y `marcar` (revisión: un campo puede depender de un
+ *      select o de un radio anterior, así que no se adelanta nada respecto a ellos);
+ *   1. los `rellenar` que REPINTAN (claves de autocompletado, combobox, `autocompletar`), en su orden relativo;
+ *   2. `avanzar` (el validador ya lo exige el último), `terminar` y `parar` (van solos).
+ * No añade, quita ni cambia acciones: solo las reordena. Pura.
+ */
+export function ordenarLote<A extends Accion>(acciones: readonly A[], inventario: InventarioDom): A[] {
+  const refs = indiceRefs(inventario)
+  const grupo = (a: A): number => {
+    if (a.accion === 'rellenar') return rellenarRepinta(a.dato, refs.get(a.ref)?.el) ? 1 : 0
+    if (a.accion === 'elegir' || a.accion === 'marcar') return 0
+    return 2
+  }
+  return acciones.map((a, i) => ({ a, g: grupo(a), i })).sort((x, y) => x.g - y.g || x.i - y.i).map((x) => x.a)
+}
+
+/**
+ * Las acciones de un lote CORTADO que no se llegaron a ejecutar → incidencias `lote_cortado` (ref + clave; nunca el valor
+ * ni la opción). `parar`/`terminar` no se reportan (van solos: nunca quedan detrás de un corte). Pura.
+ */
+export function incidenciasLoteCortado(pendientes: readonly Accion[]): IncidenciaEjecucion[] {
+  const out: IncidenciaEjecucion[] = []
+  for (const a of pendientes) {
+    if (a.accion === 'rellenar') out.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'lote_cortado' })
+    else if (a.accion === 'elegir' || a.accion === 'marcar' || a.accion === 'avanzar') out.push({ accion: a.accion, ref: a.ref, causa: 'lote_cortado' })
+  }
+  return out
+}
 
 /** La línea del prompt con los motivos de `parar`, generada de {@link MOTIVOS_PARAR}. */
 export function lineaMotivosPararParaIA(): string {
@@ -597,6 +811,40 @@ export function esAvanceAutorizado(entrada: string, el: ElementoInventario, marc
 /** Texto que el saneado recortó (acaba en «…»): no se sabe qué decía el final. */
 const truncado = (s: string) => s.endsWith('…')
 
+/** Reglas de «Guardar» en modal de la entrada (lista vacía si no tiene). */
+export function guardadosEnDialogoDe(entrada: string): readonly GuardadoEnDialogo[] {
+  const e = esEntradaExploracion(entrada) ? ENTRADAS_EXPLORACION[entrada] : null
+  return e?.guardadosEnDialogo ?? []
+}
+
+/**
+ * ¿Casan texto del botón y título del diálogo con una regla `GuardadoEnDialogo` de la entrada? Pura y compartida con el
+ * worker, que la aplica a lo que lee VIVO del DOM. Textos planos; vacíos o recortados (`…`) → no.
+ */
+export function casaGuardadoEnDialogo(entrada: string, texto: string | null | undefined, dialogo: string | null | undefined): boolean {
+  if (typeof texto !== 'string' || typeof dialogo !== 'string' || truncado(texto) || truncado(dialogo)) return false
+  const t = plano(texto)
+  const d = plano(dialogo)
+  if (!t || !d) return false
+  return guardadosEnDialogoDe(entrada).some((r) => r.texto.test(t) && r.dialogo.test(d))
+}
+
+/**
+ * ¿Es este elemento del INVENTARIO un «Guardar» de modal autorizado para ESTA entrada? Exige: botón/pestaña pulsable, texto
+ * y título de diálogo exactos de una regla, aria-label (si lo hay) igual de exacto, onclick no recortado y NADA de emisión
+ * ni de acción prohibida en ninguna descripción (un «Guardar y emitir» no casa ni por texto ni por la lista única).
+ */
+export function esGuardadoEnDialogoAutorizado(entrada: string, el: ElementoInventario): boolean {
+  if (!esAvanzable(el)) return false
+  if (!casaGuardadoEnDialogo(entrada, el.texto, el.dialogo)) return false
+  if (typeof el.ariaLabel === 'string' && el.ariaLabel.trim() !== '' && !casaGuardadoEnDialogo(entrada, el.ariaLabel, el.dialogo)) return false
+  if (typeof el.onclick === 'string' && truncado(el.onclick)) return false
+  const desc = descripcionesElemento(el)
+  if (desc.some((d) => pareceEmision(d))) return false
+  const cat = clasificarAccionPortal(desc)
+  return !cat.emision && !cat.prohibida
+}
+
 /** `null` = el botón se puede pulsar en exploración; si no, por qué no. */
 export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: MarcoInventario): string | null {
   // Hace falta saber QUÉ es el botón: al menos una descripción visible (texto o aria) entera, no recortada por el saneado.
@@ -615,7 +863,9 @@ export function bloqueoAvance(entrada: string, el: ElementoInventario, marco: Ma
   if (cat.prohibida) return 'boton_prohibido'
   // GUARDAR PRESUPUESTO (grabar, guardar, imprimir, descargar…): nunca como navegación; solo con `efectoEsperado:
   // 'guardar_presupuesto'` en resultado (`bloqueoGuardadoPresupuesto`).
-  if (cat.guardar) return 'guardar_solo_en_resultado'
+  // Excepción ESTRECHA (Alberto, 14/10/2026): el «Guardar» de un modal autorizado para ESTA entrada (texto y título del
+  // diálogo exactos). El worker lo pulsa SOLO por `pulsarGuardadoDialogoAutorizado`, que lo repite vivo.
+  if (cat.guardar) return esGuardadoEnDialogoAutorizado(entrada, el) ? null : 'guardar_solo_en_resultado'
   return null
 }
 

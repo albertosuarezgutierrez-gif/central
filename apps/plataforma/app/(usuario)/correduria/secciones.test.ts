@@ -50,7 +50,7 @@ test('la salud de la ingesta de CIMA tiene sección propia en esta pantalla', ()
 test('las pestañas antiguas (actividad, datos, ingesta, redes) abren «Más» y bajan a su bloque', () => {
   // Un enlace guardado, un Telegram viejo o un botón de «Hoy» con `?s=datos`
   // no puede caer en «Hoy» sin decir nada: el trabajo que buscaba se perdería.
-  for (const b of ['actividad', 'datos', 'ingesta', 'redes'] as const) {
+  for (const b of ['actividad', 'campanas', 'datos', 'ingesta', 'redes'] as const) {
     assert.deepEqual(destinoDeParametro(b), { seccion: 'mas', bloque: b })
   }
   assert.deepEqual(destinoDeParametro(['redes', 'gestion']), { seccion: 'mas', bloque: 'redes' })

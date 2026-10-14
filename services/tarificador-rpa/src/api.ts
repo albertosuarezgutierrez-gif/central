@@ -1,6 +1,6 @@
 // Cliente HTTP del worker hacia apps/asegura. El ÚNICO canal del worker con la casa: sin BD.
 
-import type { CandidatoVersion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, TipoError } from '@central/module-tarificacion'
+import type { CandidatoVersion, IncidenciaEjecucion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, TipoError } from '@central/module-tarificacion'
 
 export type Config = { jobId: string; apiUrl: string; secreto: string }
 
@@ -205,7 +205,7 @@ export type RespuestaPaso =
  */
 export async function pedirPaso(
   c: Config,
-  cuerpo: { trabajoId: string; inventario: InventarioDom; avancesFallidos: number },
+  cuerpo: { trabajoId: string; inventario: InventarioDom; avancesFallidos: number; incidencias?: IncidenciaEjecucion[] },
   esperar: (ms: number) => Promise<void> = dormir,
   esperaMs = 5_000,
 ): Promise<RespuestaPaso> {
@@ -238,6 +238,8 @@ export type CuerpoCierre = {
   trabajoId: string
   motivoFin: string
   detalleFin?: string
+  /** Incidencias de ejecución del último lote (14/10/2026): asegura las anota en los `errores` del último paso. */
+  incidencias?: IncidenciaEjecucion[]
   redNoGet: string[]
   efectosEnPortal: string[]
   /** Guardado del presupuesto (14/10/2026) → `mapa.presupuesto`. */

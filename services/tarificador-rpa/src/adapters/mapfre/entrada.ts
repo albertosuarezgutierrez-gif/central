@@ -1,4 +1,10 @@
-// Mapfre wmediadores — ENTRADA a Auto por menús (14/10/2026; ruta confirmada por Alberto con capturas, sin datos personales):
+// Mapfre wmediadores — ENTRADA a Auto. Estrategia PRINCIPAL (14/10/2026, 3ª exploración): URL DIRECTA del formulario NSEI
+// (`URL_NSEI_AUTO`, misma sesión y dominio; la página «Automóviles» no expone el enlace en el DOM principal). Se abre en una
+// PESTAÑA NUEVA del mismo contexto (si falla se cierra y la original queda intacta para el respaldo por menús; un `goto` fallido
+// en la misma pestaña dejaría la página de error de Chromium). Un 401/4xx del `goto` NO es fallo: solo cuenta que aparezca
+// `app-datos-basicos`. La navegación por URL no es un clic (sin `ctx.pulsar`). RESPALDO: la ruta por menús de abajo.
+//
+// Ruta por menús (14/10/2026; ruta confirmada por Alberto con capturas, sin datos personales):
 //   pestaña «Nueva producción» (despliega un MENÚ: Agropecuaria, Automóviles, Empresas, Patrimoniales, Salud, Vida)
 //   → PULSAR la opción «Automóviles» del desplegable → carga la PÁGINA «Automóviles» con tarjetas
 //   → tarjeta «Turismos y Motos» (es solo un TÍTULO: NO es enlace y NO se pulsa) con los enlaces «Tarificación y Emisión
@@ -31,6 +37,8 @@ export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
   pulsarEnlaceEntrada: (boton: Locator) => Promise<void>
 }
 
+/** Formulario NSEI de Auto (dato público dentro de la sesión, sin datos personales). No debe casar con `PATRON_EMISION` (test). */
+export const URL_NSEI_AUTO = 'https://wmediadores.mapfre.com/evt21_nsei_fe-web/#/evt21_nsei_fe-web/autos/oferta'
 export const PESTANA_NUEVA_PRODUCCION = 'Nueva producción'
 export const OPCION_AUTOMOVILES = 'Automóviles'
 /** Título de la tarjeta (NO se pulsa): solo se comprueba que existe y acota la búsqueda del enlace. */
@@ -130,7 +138,40 @@ async function enlaceDeEntrada(page: Page, tituloPagina: Locator, menuMs: number
  * Home de wmediadores (ya con sesión) → pestaña nueva con el formulario NSEI. Devuelve la PESTAÑA NUEVA: la exploración
  * debe continuar en ella (la original queda abierta). Sin `ctx.pulsar` fuera de la pestaña y la opción «Automóviles».
  */
-export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number } = {}): Promise<Page> {
+export async function abrirTarificacionRapidaAuto(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number; urlDirecta?: string | null } = {}): Promise<Page> {
+  const url = esperas.urlDirecta === undefined ? URL_NSEI_AUTO : esperas.urlDirecta
+  let motivoDirecta = 'desactivada'
+  if (url) {
+    const directa = await abrirPorUrlDirecta(page, url, esperas.formularioMs ?? ESPERA_FORMULARIO_MS)
+    if (directa.page) return directa.page
+    motivoDirecta = directa.motivo
+  }
+  try {
+    return await abrirPorMenus(page, ctx, esperas)
+  } catch (e) {
+    if (!(e instanceof ErrorMapaIncompleto)) throw e
+    const err = new ErrorMapaIncompleto(`${e.message.replace(/^mapfre\/auto: mapa incompleto: faltan /, '')} (además la URL directa del formulario NSEI falló: ${motivoDirecta})`, e.pideInventarioDom)
+    throw err
+  }
+}
+
+/** Pestaña nueva del mismo contexto → `URL_NSEI_AUTO`; vale SOLO si aparece `app-datos-basicos` (el estado HTTP no cuenta). */
+async function abrirPorUrlDirecta(page: Page, url: string, formularioMs: number): Promise<{ page: Page; motivo?: undefined } | { page: null; motivo: string }> {
+  let nueva: Page | null = null
+  try {
+    nueva = await page.context().newPage()
+    // Un 401/4xx NO lanza (solo cuenta el DOM); un fallo de red sí y se cae a menús sin esperar el plazo entero.
+    await nueva.goto(url, { waitUntil: 'commit', timeout: formularioMs })
+    await nueva.locator(SEL_FORMULARIO_NSEI).first().waitFor({ state: 'attached', timeout: formularioMs })
+    return { page: nueva }
+  } catch (e) {
+    await nueva?.close().catch(() => undefined)
+    const red = /net::|Navigation|goto/i.test(String((e as Error).message).split('\n')[0])
+    return { page: null, motivo: red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s` }
+  }
+}
+
+async function abrirPorMenus(page: Page, ctx: CtxEntradaMapfre, esperas: { menuMs?: number; formularioMs?: number }): Promise<Page> {
   const menuMs = esperas.menuMs ?? ESPERA_MENU_MS
   const pestana = await localizar(page, ['tab'], PESTANA_NUEVA_PRODUCCION, 'pestaña', menuMs)
   await ctx.pulsar(pestana)

@@ -14,7 +14,10 @@ import {
   MaquinaFases,
   bloqueoAvance,
   bloqueoGuardadoPresupuesto,
+  casaGuardadoEnDialogo,
   clasificarAccionPortal,
+  esGuardadoEnDialogoAutorizado,
+  MAX_GUARDADOS_DIALOGO,
   descripcionesSinExcepcionProyecto,
   comprobarBoton,
   esAvanceAutorizado,
@@ -999,5 +1002,144 @@ export async function pulsarGuardadoPresupuesto(
   } finally {
     page.off('dialog', alDialogo)
     guard.guardado.cerrar()
+  }
+}
+
+// ─────────── «GUARDAR» DE UN MODAL AUTORIZADO (explorador, Alberto 14/10/2026) ───────────
+
+/**
+ * Contenedores de DIÁLOGO/MODAL. El MÁS CERCANO al control (`closest`) es el que da el título; lo usan igual el inventario de
+ * exploración (`inventario-dom.ts`, solo LEER) y `pulsarGuardadoDialogoAutorizado` (VIVO). Ampliarlo no abre nada por sí
+ * solo: el título del diálogo tiene que ser EXACTAMENTE el de la regla de la entrada.
+ */
+export const SELECTOR_DIALOGO = 'dialog,[role=dialog],[aria-modal=true],mat-dialog-container,.modal-dialog,.modal'
+/** Controles pulsables que se cuentan como CANDIDATOS dentro de un diálogo (los del inventario que tienen texto). */
+const SELECTOR_PULSABLES_DIALOGO = 'button,a[role=button],[role=button],[role=tab],td[onclick]'
+
+/**
+ * Título accesible del diálogo más cercano que contiene a `el` (aria-labelledby → aria-label → primer encabezado del
+ * diálogo), o `null` si no está en ninguno o no tiene título. Corre EN LA PÁGINA: sin funciones con nombre dentro (tsx les
+ * mete `__name`) ni variables de fuera (el selector va por argumento). El inventario la incrusta por su `toString()`.
+ */
+export const tituloDialogoVivo = (el: Element, sel: string): string | null => {
+  const c = el.closest(sel) as HTMLElement | null
+  if (!c) return null
+  let t: string | null = null
+  const ids = (c.getAttribute('aria-labelledby') || '').split(/\s+/).filter((x) => x !== '')
+  if (ids.length > 0) {
+    t = ids.map((id) => {
+      const x = c.ownerDocument.getElementById(id) as HTMLElement | null
+      return x ? (x.innerText || x.textContent || '') : ''
+    }).join(' ')
+  }
+  if (!t || !t.trim()) t = c.getAttribute('aria-label')
+  if (!t || !t.trim()) {
+    const h = c.querySelector('h1,h2,h3,h4,h5,h6,[role=heading],.modal-title,[mat-dialog-title],.mat-dialog-title,.mat-mdc-dialog-title') as HTMLElement | null
+    t = h ? (h.innerText || h.textContent || '') : null
+  }
+  if (!t) return null
+  const limpio = String(t).replace(/\s+/g, ' ').trim().slice(0, 200)
+  return limpio || null
+}
+
+/** Por qué no se pulsó un «Guardar» de modal (sin pulsar: fail-closed; el explorador lo cierra como `guard_emision`). */
+export type MotivoGuardadoDialogo =
+  | 'ventana_abierta'
+  | 'tope'
+  | 'no_autorizado'
+  | 'no_unico'
+  | 'no_visible'
+  | 'no_es_el_del_inventario'
+  | 'fuera_de_dialogo'
+  | 'titulo_no_casa'
+  | 'candidatos'
+  | 'emision'
+  | 'dialogo_del_portal'
+
+export class GuardadoDialogoBloqueadoError extends EmisionBloqueadaError {
+  readonly motivo: MotivoGuardadoDialogo
+  constructor(motivo: MotivoGuardadoDialogo, detalle = '') {
+    super('fase', `guardado en diálogo: ${motivo}${detalle ? ` (${detalle})` : ''}`)
+    this.name = 'GuardadoDialogoBloqueadoError'
+    this.motivo = motivo
+  }
+}
+
+/**
+ * «GUARDAR» DE UN MODAL AUTORIZADO POR ENTRADA (explorador; hoy solo Occident Hogar, modal «Datos de la situación», que
+ * guarda la dirección del riesgo y NO emite). El ÚNICO camino para pulsar un botón de la categoría «guardar» FUERA de la
+ * pantalla de resultado. Exige, en este orden y sin atajos:
+ *   1. el guard limpio y TODAS las ventanas de red cerradas (emisión, avance, guardado); como mucho `MAX_GUARDADOS_DIALOGO`;
+ *   2. ningún campo de cuenta bancaria en pantalla (frontera de emisión);
+ *   3. que el módulo lo autorice sobre el INVENTARIO (`esGuardadoEnDialogoAutorizado`: entrada con la regla, texto y título
+ *      del diálogo EXACTOS, nada de emisión/prohibida) y que `bloqueoAvance` no tenga otro motivo;
+ *   4. EXACTAMENTE un control vivo, visible, con el texto del inventario, DENTRO de un diálogo cuyo título VIVO casa con la
+ *      regla; y en TODOS los marcos, exactamente UN candidato así (ni 0 ni 2);
+ *   5. `comprobarBoton` SIN permisos (ni «Aceptar» ni Archivar/store) y la lista única sin emisión ni prohibida.
+ * NO abre ninguna ventana de red: el guard sigue abortando cualquier navegación/POST con forma de emisión. Pulsa UNA vez y
+ * espera a que el control desaparezca (el modal se cierra). Un diálogo del navegador (confirm/alert) → se descarta y cae.
+ */
+export async function pulsarGuardadoDialogoAutorizado(
+  page: Page,
+  guard: GuardEmision,
+  boton: Locator,
+  aut: { entrada: string; el: ElementoInventario; marco: MarcoInventario },
+): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new GuardadoDialogoBloqueadoError('ventana_abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  const n = [...usados].filter((u) => u.startsWith('dialogo:')).length
+  if (n >= MAX_GUARDADOS_DIALOGO) throw new GuardadoDialogoBloqueadoError('tope', `${n} pulsaciones`)
+  await exigirSinCuentaBancaria(page)
+  if (!esGuardadoEnDialogoAutorizado(aut.entrada, aut.el) || bloqueoAvance(aut.entrada, aut.el, aut.marco) !== null) {
+    throw new GuardadoDialogoBloqueadoError('no_autorizado')
+  }
+  if ((await boton.count()) !== 1) throw new GuardadoDialogoBloqueadoError('no_unico')
+  if (!(await boton.isVisible())) throw new GuardadoDialogoBloqueadoError('no_visible')
+  const desc = await descripcion(boton)
+  const plano = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
+  if (plano(desc[0]) !== plano(aut.el.texto)) throw new GuardadoDialogoBloqueadoError('no_es_el_del_inventario')
+  const titulo = await boton.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO)
+  if (titulo === null) throw new GuardadoDialogoBloqueadoError('fuera_de_dialogo')
+  if (!casaGuardadoEnDialogo(aut.entrada, desc[0], titulo)) throw new GuardadoDialogoBloqueadoError('titulo_no_casa')
+  if (typeof desc[1] === 'string' && desc[1].trim() !== '' && !casaGuardadoEnDialogo(aut.entrada, desc[1], titulo)) throw new GuardadoDialogoBloqueadoError('no_es_el_del_inventario', 'aria-label')
+  // Candidatos en TODOS los marcos: controles visibles dentro de un diálogo, con texto y título que casan con la regla.
+  let candidatos = 0
+  for (const f of marcosVivos(page)) {
+    const l = f.locator(`:is(${SELECTOR_DIALOGO}) :is(${SELECTOR_PULSABLES_DIALOGO})`)
+    const total = await l.count().catch(() => 0)
+    for (let i = 0; i < total; i++) {
+      const c = l.nth(i)
+      if (!(await c.isVisible().catch(() => false))) continue
+      const texto = await c.evaluate((e) => (e as HTMLElement).innerText ?? e.textContent ?? '').catch(() => null)
+      const t = await c.evaluate(tituloDialogoVivo, SELECTOR_DIALOGO).catch(() => null)
+      if (casaGuardadoEnDialogo(aut.entrada, texto, t)) candidatos++
+    }
+  }
+  if (candidatos !== 1) throw new GuardadoDialogoBloqueadoError('candidatos', String(candidatos))
+  // Sin permisos: «Aceptar», Archivar/store, emitir, contract, validar_aceptar… siguen bloqueados en TODA la descripción viva.
+  comprobarBoton(desc)
+  const cat = clasificarAccionPortal(desc)
+  if (cat.emision || cat.prohibida) throw new GuardadoDialogoBloqueadoError('emision', cat.emision ?? cat.prohibida ?? '')
+  usados.add(`dialogo:${n + 1}`)
+  AVANCES_USADOS.set(guard, usados)
+  let dialogo: string | null = null
+  const alDialogo = (d: Dialog) => {
+    dialogo ??= d.type()
+    d.dismiss().catch(() => {})
+  }
+  page.on('dialog', alDialogo)
+  const hasta = Date.now() + 10_000
+  try {
+    await boton.click()
+    for (;;) {
+      guard.comprobar()
+      if (dialogo) throw new GuardadoDialogoBloqueadoError('dialogo_del_portal', dialogo)
+      if ((await boton.count().catch(() => 0)) === 0 || !(await boton.isVisible().catch(() => false))) return
+      if (Date.now() >= hasta) return
+      await page.waitForTimeout(250)
+    }
+  } finally {
+    page.off('dialog', alDialogo)
   }
 }
