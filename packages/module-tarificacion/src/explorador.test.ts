@@ -865,23 +865,50 @@ describe('año y m² como entero para un input numérico', () => {
 
 describe('re-localización de una ref tras un repintado', () => {
   const URL = 'https://portal.ejemplo/form'
-  const anio = { ref: 'm1e39', tag: 'input', type: 'number', id: 'mat-input-12', formControlName: 'anioConstruccion', etiqueta: 'Año de construcción' }
-  const sup = { ref: 'm1e41', tag: 'input', id: 'mat-input-13', formControlName: 'superficie', etiqueta: 'Superficie de la vivienda' }
+  const anio = { ref: 'm1e39', tag: 'input', type: 'number', id: 'anio', formControlName: 'anioConstruccion', etiqueta: 'Año de construcción' }
+  const sup = { ref: 'm1e41', tag: 'input', name: 'superficie', etiqueta: 'Superficie de la vivienda' }
   const inv = (elementos: Record<string, unknown>[], url = URL): InventarioDom =>
     ({ marcos: [{ url, nombre: null, elementos }], totalElementos: elementos.length }) as unknown as InventarioDom
+  const h = (x: InventarioDom) => huellaPantalla(x)
 
-  it('mismo control repintado (ref e id autogenerado nuevos) → su ref nueva', () => {
-    const nuevo = inv([{ ...sup, ref: 'm1e50', id: 'mat-input-21' }, { ...anio, ref: 'm1e48', id: 'mat-input-20' }])
-    expect(relocalizarElemento(anio, URL, nuevo)).toBe('m1e48')
-    expect(relocalizarElemento(sup, URL, nuevo)).toBe('m1e50')
+  it('mismo control repintado (ref nueva, misma pantalla) → su ref nueva', () => {
+    const nuevo = inv([{ ...sup, ref: 'm1e50' }, { ...anio, ref: 'm1e48' }])
+    expect(relocalizarElemento(anio, URL, nuevo, h(nuevo))).toBe('m1e48')
+    expect(relocalizarElemento(sup, URL, nuevo, h(nuevo))).toBe('m1e50')
+  })
+
+  it('otra pantalla (huella distinta de la validada) → null aunque el control case', () => {
+    const nuevo = inv([{ ...anio, ref: 'm1e48' }])
+    expect(relocalizarElemento(anio, URL, nuevo, h(inv([{ ...anio }, { ...sup }])))).toBeNull()
+  })
+
+  it('🪤 FormArray: si solo queda el HERMANO (conductor1 en vez de conductor0) no casa: nunca el dato de otra persona', () => {
+    const c0 = { ref: 'm1e5', tag: 'input', id: 'conductor0-fNac', formControlName: 'fNac', etiqueta: 'Fecha de nacimiento' }
+    const soloHermano = inv([{ ...c0, ref: 'm1e9', id: 'conductor1-fNac' }])
+    expect(relocalizarElemento(c0, URL, soloHermano, h(soloHermano))).toBeNull()
+    const ambos = inv([{ ...c0, ref: 'm1e8' }, { ...c0, ref: 'm1e9', id: 'conductor1-fNac' }])
+    expect(relocalizarElemento(c0, URL, ambos, h(ambos))).toBe('m1e8')
+  })
+
+  it('🪤 id autogenerado (`mat-input-N`) sin name/formControlName ni etiqueta: no basta; y un id que solo casa sin cifras, tampoco', () => {
+    const mat = { ref: 'm1e3', tag: 'input', id: 'mat-input-3' }
+    const igual = inv([{ ...mat, ref: 'm1e7' }])
+    expect(relocalizarElemento(mat, URL, igual, h(igual))).toBeNull()
+    const otroN = inv([{ ...anio, ref: 'm1e48', id: 'mat-input-4' }])
+    expect(relocalizarElemento({ ...anio, id: 'mat-input-3' }, URL, otroN, h(otroN))).toBeNull()
   })
 
   it('otra etiqueta, otro type, otro marco, dos candidatos o sin identidad → null (no se adivina)', () => {
-    expect(relocalizarElemento(anio, URL, inv([{ ...anio, ref: 'm1e48', etiqueta: 'Año de reforma' }]))).toBeNull()
-    expect(relocalizarElemento(anio, URL, inv([{ ...anio, ref: 'm1e48', type: 'text' }]))).toBeNull()
-    expect(relocalizarElemento(anio, URL, inv([{ ...anio, ref: 'm1e48' }], 'https://portal.ejemplo/otro'))).toBeNull()
-    expect(relocalizarElemento(anio, URL, inv([{ ...anio, ref: 'm1e48' }, { ...anio, ref: 'm1e49' }]))).toBeNull()
-    expect(relocalizarElemento({ tag: 'input' }, URL, inv([{ tag: 'input', ref: 'm1e1' }]))).toBeNull()
+    const casos = [
+      inv([{ ...anio, ref: 'm1e48', etiqueta: 'Año de reforma' }]),
+      inv([{ ...anio, ref: 'm1e48', type: 'text' }]),
+      inv([{ ...anio, ref: 'm1e48' }], 'https://portal.ejemplo/otro'),
+    ]
+    for (const c of casos) expect(relocalizarElemento(anio, URL, c, h(c))).toBeNull()
+    const dos = inv([{ ...sup, ref: 'm1e48' }, { ...sup, ref: 'm1e49' }])
+    expect(relocalizarElemento(sup, URL, dos, h(dos))).toBeNull()
+    const sinId = inv([{ tag: 'input', ref: 'm1e1' }])
+    expect(relocalizarElemento({ tag: 'input' }, URL, sinId, h(sinId))).toBeNull()
   })
 })
 

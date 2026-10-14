@@ -445,25 +445,29 @@ export const DETALLES_FIN_EXPLORACION = [
   'guardado_con_dialogo',
   /**
    * `rellenar` cuyo nodo ya no era el inventariado (repintado del portal) y que, tras RE-INVENTARIAR una vez, tampoco se
-   * encontró por su identidad (`relocalizarElemento`: mismo marco, tag, type, id/name/formControlName y etiqueta). 14/10/2026.
+   * encontró por su identidad (`relocalizarElemento`: misma huella de pantalla, marco, tag, type, id exacto, name/formControlName y etiqueta). 14/10/2026.
    */
   'nodo_no_relocalizado',
 ] as const
 export type DetalleFinExploracion = (typeof DETALLES_FIN_EXPLORACION)[number]
 
-const sinCifras = (s: string | undefined) => (s ?? '').replace(/\d+/g, '#')
 const textoEtiqueta = (el: ElementoInventario) => (el.etiqueta ?? el.ariaLabel ?? el.placeholder ?? '').replace(/\s+/g, ' ').trim()
 
 /**
  * Re-localización tras un REPINTADO (14/10/2026: Allianz Hogar re-renderiza el formulario tras el autocompletado y la ref
- * de «Año de construcción» dejaba de casar). Busca en el inventario NUEVO el elemento que es EL MISMO control que `el`:
- * mismo marco (URL), mismo tag y type, mismos name/formControlName (si `el` los tiene), mismo id salvo cifras
- * autogeneradas, y la misma etiqueta (label/aria-label/placeholder). Exige al menos un identificador fuerte (id, name,
- * formControlName o etiqueta) y UN solo candidato: dos o ninguno → `null` (no se adivina). Devuelve la ref nueva. Pura.
+ * de «Año de construcción» dejaba de casar). Busca en el inventario NUEVO el elemento que es EL MISMO control que `el`.
+ * FAIL-CLOSED (revisión PR #4648: un hermano de FormArray —`conductor0-fNac`/`conductor1-fNac`, mismo formControlName—
+ * recibiría el dato real de OTRA persona):
+ *  - solo en la MISMA pantalla: `huellaPantalla(inv)` igual a la huella VALIDADA del paso (`huellaValidada`);
+ *  - identidad mínima: name o formControlName Y etiqueta (label/aria-label/placeholder) no vacía; un id solo no basta;
+ *  - mismo marco (URL), tag, type, name, formControlName y etiqueta IDÉNTICOS, y el id EXACTO (sin normalizar cifras: un
+ *    id que solo casara quitando cifras no casa);
+ *  - UN solo candidato. Si no, `null` (no se adivina). Devuelve la ref nueva. Pura.
  */
-export function relocalizarElemento(el: ElementoInventario, marcoUrl: string, inv: InventarioDom): string | null {
+export function relocalizarElemento(el: ElementoInventario, marcoUrl: string, inv: InventarioDom, huellaValidada: string): string | null {
+  if (huellaPantalla(inv) !== huellaValidada) return null
   const etq = textoEtiqueta(el)
-  if (!el.id && !el.name && !el.formControlName && !etq) return null
+  if ((!el.name && !el.formControlName) || !etq) return null
   const tipo = (el.type ?? '').toLowerCase()
   const candidatos: string[] = []
   for (const m of inv.marcos) {
@@ -471,7 +475,7 @@ export function relocalizarElemento(el: ElementoInventario, marcoUrl: string, in
     for (const x of m.elementos) {
       if (!x.ref || x.tag !== el.tag || (x.type ?? '').toLowerCase() !== tipo) continue
       if ((x.name ?? '') !== (el.name ?? '') || (x.formControlName ?? '') !== (el.formControlName ?? '')) continue
-      if (sinCifras(x.id) !== sinCifras(el.id)) continue
+      if ((x.id ?? '') !== (el.id ?? '')) continue
       if (textoEtiqueta(x) !== etq) continue
       candidatos.push(x.ref)
     }

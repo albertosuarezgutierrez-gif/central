@@ -1001,3 +1001,22 @@ test('🪤 valor que el portal no deja (ni con el reintento tecleando): viaja co
     await context.close()
   }
 })
+
+test('🪤 frontera de cuenta bancaria sobre el control RELOCALIZADO (revisión PR #4648): el clon trae «IBAN» → para sin escribir', async () => {
+  inicio = NUMERICO
+  const { context, page, guard } = await nuevaPagina()
+  try {
+    const { k } = contexto(page, guard, async (inv, _n, p) => {
+      const r = ref(inv, 'superficie')
+      // Repintado: mismo id/name/etiqueta (misma huella), pero el control nuevo se presenta como IBAN.
+      await p.evaluate(() => { const e = document.getElementById('superficie')!; const c = e.cloneNode(true) as HTMLInputElement; c.placeholder = 'IBAN'; e.replaceWith(c) })
+      return respuesta([{ accion: 'rellenar', ref: r, dato: 'inmueble.superficie_m2' }])
+    }, { conDatosReales: true, riesgo: RIESGO_REAL, esperaRepintadoMs: 50 })
+    const fin = await bucleExploracion(page, k)
+    assert.equal(fin.motivo, 'cerca_de_emision', JSON.stringify(fin))
+    assert.equal(fin.detalle, 'frontera_cuenta_bancaria')
+    assert.equal(await page.inputValue('#superficie'), '', 'no se escribió nada')
+  } finally {
+    await context.close()
+  }
+})

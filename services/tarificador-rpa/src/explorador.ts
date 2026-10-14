@@ -433,19 +433,31 @@ export async function bucleExploracion(page: Page, k: ContextoBucle): Promise<Fi
         const nodo = captura.nodos.get(a.ref)
         if (!hit || !nodo) throw new Parar('ambiguo', 'ref_fuera_de_captura')
         // Frontera de emisión: un campo de cuenta bancaria NUNCA se rellena, elige ni marca (segunda barrera tras detectarParada).
-        const cuenta = senalCuentaBancaria(descripcionesElemento(hit.el))
-        if (cuenta !== null) {
+        const exigirSinCuenta = (el: ElementoInventario) => {
+          // Descripciones COMPLETAS (texto, aria-label, etiqueta, id, name, onclick, placeholder, formControlName).
+          const cuenta = senalCuentaBancaria(descripcionesElemento(el))
+          if (cuenta === null) return
           k.log('exploracion_parada', { motivo: 'cerca_de_emision', detalle: 'frontera_cuenta_bancaria', senal: `${MOTIVO_FRONTERA_CUENTA} («${cuenta}»)` })
           throw new Parar('cerca_de_emision', 'frontera_cuenta_bancaria')
         }
+        exigirSinCuenta(hit.el)
         let loc = await localizar(nodo, hit.el)
         // `rellenar` como PRIMERA acción con el nodo repintado (14/10/2026, Allianz Hogar: Angular re-renderiza el formulario
         // entre el inventario y el lote): se re-inventaría UNA vez y se busca el MISMO control por su identidad.
         if (!loc && hechas === 0 && a.accion === 'rellenar') {
-          const re = await relocalizar(page, hit.el, hit.marco, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
+          // Solo en la MISMA pantalla que se validó (`huella` de este paso): si cambió, no se relocaliza (fail-closed).
+          const re = await relocalizar(page, hit.el, hit.marco, huella, k.esperaRepintadoMs ?? ESPERA_REPINTADO_MS)
           k.log('exploracion_relocalizacion', { n: pasos, ref: a.ref, estado: re ? 'ok' : 'no_encontrado' })
-          if (re) ({ loc, hit } = re)
-          else {
+          if (re) {
+            ({ loc, hit } = re)
+            // La frontera se repite sobre el control RELOCALIZADO antes de escribir (revisión PR #4648).
+            try {
+              exigirSinCuenta(hit.el)
+            } catch (err) {
+              await loc.evaluate((n, at) => n.removeAttribute(at), ATRIBUTO_MARCA).catch(() => undefined)
+              throw err
+            }
+          } else {
             incidencias.push({ accion: 'rellenar', ref: a.ref, dato: a.dato, causa: 'nodo_no_relocalizado' })
             throw new Parar('ambiguo', 'nodo_no_relocalizado')
           }
@@ -607,15 +619,15 @@ async function fijarValor(loc: Locator, valor: string): Promise<'ok' | 'reintent
 
 /**
  * Tras un repintado: espera a que el portal se asiente, RE-INVENTARÍA una vez y busca el mismo control por su identidad
- * (`relocalizarElemento`, pura). Devuelve su Locator y su entrada del inventario NUEVO, o `null`. Nunca lanza; libera la captura.
+ * (`relocalizarElemento`, pura) SOLO si la pantalla nueva tiene la huella validada del paso. Devuelve su Locator y su entrada del inventario NUEVO, o `null`. Nunca lanza; libera la captura.
  */
-async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInventario, esperaMs: number): Promise<{ loc: Locator; hit: { el: ElementoInventario; marco: MarcoInventario } } | null> {
+async function relocalizar(page: Page, el: ElementoInventario, marco: MarcoInventario, huellaValidada: string, esperaMs: number): Promise<{ loc: Locator; hit: { el: ElementoInventario; marco: MarcoInventario } } | null> {
   await dormir(esperaMs)
   await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => undefined)
   const nueva = await capturarInventarioExploracion(page).catch(() => null)
   if (!nueva) return null
   try {
-    const ref = relocalizarElemento(el, marco.url, nueva.inventario)
+    const ref = relocalizarElemento(el, marco.url, nueva.inventario, huellaValidada)
     const hit = ref ? indiceRefs(nueva.inventario).get(ref) : undefined
     const nodo = ref ? nueva.nodos.get(ref) : undefined
     if (!hit || !nodo) return null
