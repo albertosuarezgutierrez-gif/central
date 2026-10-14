@@ -84,6 +84,7 @@ export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: L
               <button key={n} type="button" disabled={ocupada !== null} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} onClick={() => void actuar(t.tareaId, { accion: 'posponer', dias: n })}>Posponer {n} días</button>
             ))}
             {t.clienteId && <Link href={`/correduria/cliente/${t.clienteId}`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Abrir la ficha</Link>}
+            {t.polizaId && <Link href={`/correduria/poliza/${t.polizaId}?v=tareas`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Abrir la póliza</Link>}
           </div>
           {fallo?.id === t.tareaId && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{fallo.texto}</p>}
         </article>

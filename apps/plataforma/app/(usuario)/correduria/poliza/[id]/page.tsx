@@ -33,6 +33,9 @@ import { conteoPlural, etiquetaClaseRecibo, rotuloClave, textoFechaSituacion, TI
 import Plegable from './Plegable'
 import MasDatosCima from './MasDatosCima'
 import { PanelAccesos, type Acceso } from '../../Accesos'
+import TareasVinculadas from '../../TareasVinculadas'
+import { tareasVinculadasAsegura } from '@/lib/seguimiento-asegura'
+import { detalleTareas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,7 +51,13 @@ export default async function PolizaPage({ params, searchParams }: {
 }) {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   const v = Array.isArray(sp.v) ? sp.v[0] : sp.v
-  const r = await polizaAsegura(id)
+  // Las tareas van en paralelo con la póliza: un fallo se DECLARA en su baldosa, no tumba la ficha.
+  const [r, tareas] = await Promise.all([
+    polizaAsegura(id),
+    tareasVinculadasAsegura({ polizaId: id })
+      .then(x => interpretarTareasVinculadas(x.status, x.json))
+      .catch((): LecturaTareasVinculadas => ({ estado: 'error', motivo: 'red' })),
+  ])
   if (r.estado !== 'ok') return <Pagina ancho="tabla"><NoSePudo estado={r} /></Pagina>
   const p = r.poliza
   const cancelada = p.estado === 'cancelada'
@@ -138,14 +147,15 @@ export default async function PolizaPage({ params, searchParams }: {
         {datoRiesgo && <Dato label={datoRiesgo.label} valor={datoRiesgo.valor} nota={datoRiesgo.nota} />}
       </div>
 
-      <PanelAccesos inicial={v ?? null} accesos={accesosPoliza(p, cancelada)} />
+      <PanelAccesos inicial={v ?? null} accesos={accesosPoliza(p, cancelada, tareas)} />
       </div>
     </Pagina>
   )
 }
 
 /** Las baldosas de la póliza, cada una con su dato y su contenido. `null` en el dato = no se pinta: no es «0». */
-function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: React.ReactNode })[] {
+function accesosPoliza(p: Poliza, cancelada: boolean, tareas: LecturaTareasVinculadas): (Acceso & { contenido: React.ReactNode })[] {
+  const detTareas = detalleTareas(tareas)
   const retarificar = p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null
   const r = p.recibos
   // `null` = no se pudieron leer: ni el total ni los abiertos se cuentan a ciegas.
@@ -294,6 +304,17 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
             </p>
           )}
           <CartaMediadorPoliza polizaId={p.id} />
+        </Tarjeta>
+      ),
+    },
+    {
+      // Tareas de la póliza (14/10/2026): la misma tabla de tareas de Mi mesa, colgada de esta póliza y su tomador.
+      id: 'tareas', icono: '✅', titulo: 'Tareas',
+      detalle: detTareas?.texto ?? null,
+      tono: detTareas?.tono,
+      contenido: (
+        <Tarjeta titulo="Tareas de la póliza">
+          <TareasVinculadas polizaId={p.id} inicial={tareas} hoy={new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })} />
         </Tarjeta>
       ),
     },
