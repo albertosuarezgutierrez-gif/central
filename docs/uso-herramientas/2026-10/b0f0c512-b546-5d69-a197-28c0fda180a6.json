@@ -1,0 +1,21 @@
+{
+ "sesion": "b0f0c512-b546-5d69-a197-28c0fda180a6",
+ "inicio": "2026-10-14T09:02:01.930Z",
+ "fin": "2026-10-14T09:02:24.042Z",
+ "llamadas": 9,
+ "categorias": {
+  "otro": {
+   "llamadas": 9,
+   "chars_in": 1182,
+   "chars_out": 18183,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2,
+    "WebSearch": 6,
+    "PushNotification": 1
+   }
+  }
+ }
+}
