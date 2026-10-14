@@ -689,6 +689,7 @@ export {
   DIAS_ANTELACION_POR_DEFECTO,
   DIAS_POSPONER_BIENVENIDA,
   ZONA_HORARIA_AVISOS,
+  diasVentanaVencimiento,
   enNoMolestar,
   esCanalAviso,
   esDiasAntelacion,

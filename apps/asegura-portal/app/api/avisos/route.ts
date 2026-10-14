@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
 import { avisosLeidosDeIdentidad } from '@/lib/avisos-leidos'
+import { diasAntelacionDeIdentidad } from '@/lib/avisos-preferencias'
 import { anulacionesPendientes, polizasConBajaEnMarcha } from '@/lib/anulacion-firma'
 import { carnetsDeIdentidad } from '@/lib/carnets'
 import { felicitacionesDeIdentidad } from '@/lib/felicitaciones'
@@ -41,7 +42,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas, leidos, antelacion] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -62,6 +63,9 @@ export async function GET() {
     polizasModificadasDeIdentidad(identidad.id),
     // Los ya pulsados. Si no se leen, se enseñan todos: repetir uno leído es mejor que esconder uno que no.
     avisosLeidosDeIdentidad(identidad.id),
+    // La antelación que eligió en «Configuración» (14/10/2026): los vencimientos entran en la campana con
+    // max(7, la suya). Si no se lee, los 7 de siempre (no se esconde nada que antes se veía).
+    diasAntelacionDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -77,6 +81,7 @@ export async function GET() {
   if (partes.status === 'rejected') console.error('[avisos] partes ilegibles', partes.reason)
   if (polizasModificadas.status === 'rejected') console.error('[avisos] cambios de póliza ilegibles', polizasModificadas.reason)
   if (leidos.status === 'rejected') console.error('[avisos] avisos leídos ilegibles', leidos.reason)
+  if (antelacion.status === 'rejected') console.error('[avisos] antelación ilegible: se usan 7 días', antelacion.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -99,6 +104,7 @@ export async function GET() {
     partes: partes.status === 'fulfilled' ? partes.value : null,
     polizasModificadas: polizasModificadas.status === 'fulfilled' ? polizasModificadas.value : null,
     leidos: leidos.status === 'fulfilled' ? leidos.value : null,
+    diasAntelacion: antelacion.status === 'fulfilled' ? antelacion.value : null,
     hoy: new Date(),
   })
 

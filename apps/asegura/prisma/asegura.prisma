@@ -1248,13 +1248,15 @@ model PortalVinculo {
   @@map("portal_vinculo")
 }
 
-/// «Configuración → Avisos» del portal (14/10/2026). AQUÍ SOLO SE LEE `canal`, para que el correo de
-/// vencimiento respete «solo en el móvil» (`lib/avisos-vencimiento-canal.ts`). Lo escribe el portal; su
-/// DDL y el resto de columnas están en `apps/asegura-portal` (`prisma/sql/2026-10-13_configuracion_avisos.sql`).
+/// «Configuración → Avisos» del portal (14/10/2026). AQUÍ SOLO SE LEEN `canal` y `dias_antelacion`, para
+/// que el correo de vencimiento respete «solo en el móvil» y la antelación elegida (nunca menos de 7:
+/// `lib/avisos-vencimiento-canal.ts`). Lo escribe el portal; su DDL y el resto de columnas están en
+/// `apps/asegura-portal` (`prisma/sql/2026-10-13_configuracion_avisos.sql`).
 /// 🚨 `null` = «no lo ha configurado», nunca «no quiere».
 model PortalPreferenciasAvisos {
-  identidadId String  @id @map("identidad_id") @db.Uuid
-  canal       String?
+  identidadId    String  @id @map("identidad_id") @db.Uuid
+  canal          String?
+  diasAntelacion Int?    @map("dias_antelacion") @db.SmallInt
 
   @@map("portal_preferencias_avisos")
 }
