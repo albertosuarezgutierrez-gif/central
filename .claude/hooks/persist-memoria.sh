@@ -41,8 +41,42 @@ copiar_uso() {
   cp -r "$USO_STAGING"/. "$USO"/ 2>/dev/null
 }
 
+# --- ¿La rama actual ya está fusionada en main? Entonces NO se commitea ni empuja a ella:
+# mover la punta tras el merge quita el «Delete branch» de GitHub y deja commits huérfanos
+# (caso ccf49acad tras #4741). Sin red/gh: devuelve 1 (no fusionada) = comportamiento de siempre.
+rama_fusionada() {
+  local rama; rama="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  case "$rama" in ""|HEAD|main|master) return 1 ;; esac
+  local t=""; command -v timeout >/dev/null 2>&1 && t="timeout 20"
+  $t git fetch -q origin main 2>/dev/null
+  # 1) Merge normal: la punta ya es ancestro de origin/main. Solo si la rama se llegó a empujar
+  #    (origin/<rama> existe): una rama nueva sin empujar también es ancestro de main.
+  if git rev-parse -q --verify "refs/remotes/origin/$rama" >/dev/null 2>&1 \
+     && git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+    return 0
+  fi
+  # 2) Squash merge: PR cerrado y fusionado de esta rama, sin PR abierto, con todo su trabajo en HEAD.
+  command -v gh >/dev/null 2>&1 || return 1
+  local filas; filas="$($t gh api "repos/{owner}/{repo}/pulls?head={owner}:$rama&state=all&per_page=30" \
+    --jq '.[] | "\(.state) \(.merged_at // "-") \(.head.sha)"' 2>/dev/null)" || return 1
+  [ -n "$filas" ] || return 1
+  printf '%s\n' "$filas" | grep -q '^open ' && return 1
+  local est fus sha fusionada=1
+  while read -r est fus sha; do
+    [ "$fus" != "-" ] || continue
+    if ! git cat-file -e "$sha" 2>/dev/null || git merge-base --is-ancestor "$sha" HEAD 2>/dev/null; then
+      fusionada=0
+    fi
+  done <<< "$filas"
+  return $fusionada
+}
+
 # --- Persist: commitea+pushea la memoria si cambió (y el uso, con cadencia). ---
 persist_memoria() {
+  if rama_fusionada; then
+    echo "persist-memoria: la rama ya está fusionada; no se commitea ni empuja la memoria (evita mover la punta tras el merge)." >&2
+    return 0
+  fi
   if [ -n "$(git status --porcelain -- "$DOC" 2>/dev/null)" ] || uso_vencido; then
     copiar_uso
   fi
