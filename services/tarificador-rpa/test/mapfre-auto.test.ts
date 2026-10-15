@@ -34,6 +34,7 @@ import {
 import { adaptadores } from '../src/adapters/index.ts'
 import { ErrorEleccionVersion } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
+import { ErrorOpcionSinResolver } from '../src/mat-select.ts'
 import { comprobarBoton, EmisionBloqueadaError, type FormularioAuto } from '@central/module-tarificacion'
 
 const form: FormularioAuto = {
@@ -349,8 +350,9 @@ test('paso 1: un campo NIF con manejador de emisión para ANTES (comprobarCampo)
 })
 
 test('del paso 2 al precio: escribe el CP y PARA antes de «Continuar» si quedan mat-select sin mapear (nada supuesto)', async () => {
-  // v0.8.1: el «uso» SOLO cuenta como pendiente si la pantalla lo pinta (aquí sí: mat-select presente y sin valor en el riesgo).
-  await page.setContent(CAMPOS().replace('</app-datos-vehiculo>', '<mat-select formcontrolname="uso"></mat-select></app-datos-vehiculo>'))
+  // v0.8.1: el «uso» SOLO cuenta como pendiente si la pantalla lo pinta (aquí sí: mat-select VISIBLE —v0.8.2: con contenido; uno
+  // vacío mide 0×0 y no es visible— y sin valor en el riesgo).
+  await page.setContent(CAMPOS().replace('</app-datos-vehiculo>', '<mat-select formcontrolname="uso">Uso</mat-select></app-datos-vehiculo>'))
   const r: string[] = []
   const veh = { origen: 'mapfre', denominacion: 'MARCA PRUEBA', cv: null, cc: null, puertas: null, fechaInicio: null } as unknown as Parameters<typeof precioDesdeObjetoAsegurado>[2]
   await assert.rejects(() => precioDesdeObjetoAsegurado(page, conNif, veh, ctxFalso(r)), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /uso del vehículo/.test(e.message))
@@ -402,6 +404,27 @@ test('v0.8.1 (revisión): uso/ámbito ausentes solo se saltan con valor nulo o d
   assert.deepEqual(vistos, ['uso del vehículo', 'ámbito de circulación'])
   // Y la espera por omisión es la de ~2,5 s.
   assert.equal(ESPERA_OPCIONAL_MS, 2_500)
+})
+
+test('v0.8.2 (trabajo real con uso null): uso/ámbito en el DOM pero OCULTOS (0 visibles) = ausentes → se saltan sin abrir el desplegable', async () => {
+  // El riesgo trae uso = null; el validador pone el defecto «particular» (`USO_VEHICULO_POR_DEFECTO`) → escribible OPCIONAL.
+  // La pantalla `app-datos-vehiculo` tiene los mat-select en el DOM pero sin pintar: `count()` > 0 y 0 visibles. Antes se
+  // abría la capa común («no aparece (o hay 0 visibles)») → atasco «ninguna opción clara» con las etiquetas de la pantalla.
+  const oculto = '<body><app-datos-vehiculo><input name="matricula"><div style="display:none"><mat-select formcontrolname="uso">x</mat-select><mat-select formcontrolname="ambitoCirculacion">y</mat-select></div></app-datos-vehiculo></body>'
+  const noAbrir = { elegirMatSelect: async (_s: unknown, _v: unknown, o: { etiqueta: string }) => { throw new ErrorOpcionSinResolver(`el desplegable «${o.etiqueta}» no aparece (o hay 0 visibles)`) } }
+  for (const ex of [{ usoVehiculo: null, ambitoCirculacion: null }, { usoVehiculo: 'particular', ambitoCirculacion: 'espana' }]) {
+    await page.setContent(oculto)
+    const plan = planDelPaso(planObjetoYFiguras({ ...form, ...ex, clasePermiso: 'b' } as FormularioAuto), 'objetoAsegurado')
+    assert.deepEqual(await rellenarMatSelects(page, plan, noAbrir as never, undefined, 300), [], JSON.stringify(ex))
+    assert.deepEqual((await sinOpcionalesAusentes(page, plan, 300)).pendientes, [], JSON.stringify(ex))
+  }
+  // Regla dura intacta: con un valor NO por defecto, el desplegable oculto NO se salta (pendiente no opcional → para).
+  await page.setContent(oculto)
+  const alquiler = planDelPaso(planObjetoYFiguras({ ...form, usoVehiculo: 'alquiler', ambitoCirculacion: 'internacional' } as unknown as FormularioAuto), 'objetoAsegurado')
+  assert.throws(() => exigirPasoCompleto(alquiler, 'objetoAsegurado'), (e) => e instanceof ErrorMapaIncompleto && /uso del vehículo/.test(e.message))
+  // Y un escribible NO opcional oculto → atasco + hueco por «no aparece» (no por la capa común).
+  const noOpc = { escribibles: [{ ...planObjetoYFiguras({ ...form, usoVehiculo: 'particular' } as FormularioAuto).escribibles.find((o) => o.etiqueta === 'uso del vehículo')!, opcional: false }], pendientes: [] }
+  await assert.rejects(() => rellenarMatSelects(page, noOpc, noAbrir as never, undefined, 300), (e) => e instanceof ErrorMapaIncompleto && /uso del vehículo/.test(e.message))
 })
 
 test('planDelPaso / exigirPasoCompleto: cada operación es de su paso; un paso con pendientes no se completa', () => {

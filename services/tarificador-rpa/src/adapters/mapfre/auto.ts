@@ -42,6 +42,9 @@
 //   aceptó («Resumen vehículo» a la vista), pero paró pidiendo el mat-select «uso», que ese flujo NO pinta (ni «ámbito»; la
 //   grabación tampoco los toca antes de «Continuar»). Uso y ámbito pasan a OPCIONALES: si no aparecen, se sigue; un mat-select
 //   obligatorio (clase de permiso, compañía anterior) que no aparece → atasco + hueco.
+// v0.8.2 (15/10/2026, trabajo real con uso null) · `app-datos-vehiculo` deja los mat-select de uso/ámbito en el DOM SIN pintar:
+//   la espera contaba `count()` (ocultos incluidos), el opcional «aparecía» y la capa común paraba con «0 visibles» → atasco.
+//   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
 
@@ -572,11 +575,15 @@ const CP = /^\d{5}$/
 /** Espera activa antes de dar por ausente un desplegable opcional (uso/ámbito): el flujo los pinta a veces con retraso. */
 export const ESPERA_OPCIONAL_MS = 2_500
 
-/** ¿Aparece `sel` dentro de `ms`? Sondeo cada 250 ms (espera activa); `ms` 0 = una sola mirada. Solo lectura. */
+/**
+ * ¿Aparece `sel` VISIBLE dentro de `ms`? Sondeo cada 250 ms (espera activa); `ms` 0 = una sola mirada. Solo lectura.
+ * v0.8.2: cuenta solo los VISIBLES (como la capa común `elegirOpcionMatSelect`). NSEI deja los mat-select de uso/ámbito en el
+ * DOM sin pintar: con `count()` a secas el opcional «aparecía», se abría la capa común («0 visibles») y acababa en atasco.
+ */
 async function apareceEn(raiz: Pick<Frame, 'locator'>, sel: string, ms: number): Promise<boolean> {
   const fin = Date.now() + ms
   for (;;) {
-    if ((await raiz.locator(sel).count().catch(() => 0)) > 0) return true
+    if ((await raiz.locator(sel).locator('visible=true').count().catch(() => 0)) > 0) return true
     if (Date.now() >= fin) return false
     await new Promise((r) => setTimeout(r, Math.min(250, Math.max(1, fin - Date.now()))))
   }
@@ -1168,7 +1175,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.1',
+  version: '0.8.2',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
