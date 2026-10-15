@@ -1586,19 +1586,49 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
 }
 
-// ─────────── OPCIONES de Allianz AUTOS Turismos (app Angular `ngx-motor-azs`, 15/10/2026) ───────────
+// ─────────── OPCIONES de Allianz AUTOS Turismos (app Angular `ngx-motor-azs`, 15/10/2026; v0.6.1 del bot) ───────────
 
 /**
- * Etiquetas EXACTAS que el robot marca en «Datos del vehículo» de Turismos (inventario del 15/10/2026). LISTA CERRADA y mínima:
- * «Sí» de «¿Conoces la matrícula del vehículo?». Es un dato de consulta (activa el campo Matrícula): no tarifica, no guarda ni emite.
- * Las demás opciones del paso (compra, uso, garaje) no se marcan hasta tener mapeo de los datos del formulario.
+ * Opción marcable de «Datos del vehículo» de Turismos. `clave` = lo que el adaptador pide (por `ctx.marcarOpcionTurismos`); la
+ * puerta la traduce aquí a su ANCLA: `pregunta` (nombre accesible del grupo o etiqueta inmediatamente anterior; `null` = el inventario
+ * no da la pregunta) + `grupo`, el conjunto EXACTO y COMPLETO de opciones del grupo (las del inventario saneado del 15/10/2026). Un
+ * grupo con otras opciones (de más o de menos) no es el de la clave → hueco, nunca «el parecido».
  */
-export const OPCIONES_TURISMOS_ALLIANZ: readonly string[] = Object.freeze(['Sí'])
-/** Origen y ruta de la app Angular de Allianz AUTOS Turismos en el iframe `appArea`. */
+export type OpcionTurismosAllianz = { readonly clave: string; readonly pregunta: string | null; readonly opcion: string; readonly grupo: readonly string[] }
+
+const opcionTurismos = (clave: string, pregunta: string | null, opcion: string, grupo: readonly string[]): OpcionTurismosAllianz =>
+  Object.freeze({ clave, pregunta, opcion, grupo: Object.freeze([...grupo]) })
+
+const GRUPO_SI_NO = ['Sí', 'No']
+const GRUPO_GARAJE = ['En la calle', 'En un garaje colectivo', 'En un garaje individual']
+const GRUPO_TIPO_TOMADOR = ['Individual', 'Empresa']
+
+/**
+ * LISTA CERRADA de lo que el robot marca en «Datos del vehículo» de Turismos (v0.6.1). Solo opciones con un dato INEQUÍVOCO del
+ * riesgo: consultar por matrícula; garaje «En la calle» (`garajeNoche === false`; con garaje, colectivo/individual no consta);
+ * tomador Individual/Empresa. Compra, uso y segundo conductor NO están: el formulario no tiene dato para elegirlas (no consta ≠ «No»).
+ */
+export const OPCIONES_TURISMOS_ALLIANZ: readonly OpcionTurismosAllianz[] = Object.freeze([
+  opcionTurismos('conoce_matricula:si', '¿Conoces la matrícula del vehículo?', 'Sí', GRUPO_SI_NO),
+  opcionTurismos('garaje:calle', null, 'En la calle', GRUPO_GARAJE),
+  opcionTurismos('tomador:individual', null, 'Individual', GRUPO_TIPO_TOMADOR),
+  opcionTurismos('tomador:empresa', null, 'Empresa', GRUPO_TIPO_TOMADOR),
+])
 export const PASO_TURISMOS_ALLIANZ = 'Datos del vehículo'
 export const GRUPO_TURISMOS_ALLIANZ = '¿Conoces la matrícula del vehículo?'
+/** Origen y ruta de la app Angular de Allianz AUTOS Turismos en el iframe `appArea`. */
 export const ORIGEN_APP_TURISMOS_ALLIANZ = 'https://cloud.e-pacallianz.com'
 const RE_RUTA_APP_TURISMOS_ALLIANZ = /^\/ngx-motor-azs\//
+
+/**
+ * Zona de trabajo de Turismos DENTRO del marco del motor (v0.6.1, prueba real del 15/10/2026: «Matrícula» casaba 2 veces porque la
+ * CABECERA de ePac —desplegable de colaborador y buscador «Buscar Aquí...»— también cuenta). El contenedor `#appArea` si el marco lo
+ * trae; si no (el marco ES el iframe `appArea`), su `body`. Toda búsqueda por etiqueta/rol del adaptador y las opciones de esta
+ * puerta se hacen aquí dentro.
+ */
+export const SEL_ZONA_APP_TURISMOS = '#appArea:not(iframe):not(frame), body:not(:has(#appArea:not(iframe):not(frame)))'
+/** Y además fuera de cualquier cabecera (por si el contenedor no existe y la cabecera vive en el mismo documento). */
+export const SEL_FUERA_CABECERA_TURISMOS = ':not(header *):not(nx-header *):not([role=banner] *)'
 
 /** ¿Es `url` la app de Turismos? Origen EXACTO + ruta `/ngx-motor-azs/`. Pura. */
 export function esAppTurismosAllianz(url: string): boolean {
@@ -1611,35 +1641,73 @@ export function esAppTurismosAllianz(url: string): boolean {
 }
 
 /**
- * Marca UNA opción de «Datos del vehículo» de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
- * Mismas exigencias que `marcarOpcionRiesgoHogarAllianz`: guard limpio y sin ventanas de red abiertas; etiqueta en la lista
- * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; EXACTAMENTE un control cuya etiqueta casa EXACTA
- * (si ya está marcado no se pulsa nada); `comprobarBoton` sobre control y etiqueta ANTES del único clic; después, que quede marcado.
+ * ¿Las opciones LEÍDAS de un grupo son EXACTAMENTE las esperadas (mismo número, cada una casa con una distinta; tolera la etiqueta
+ * duplicada de los toggles «Individual Individual»)? Pura.
  */
-export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmision, etiqueta: string): Promise<ResultadoOpcionHogar> {
+export function grupoOpcionesTurismosCasa(leidas: readonly string[], esperadas: readonly string[]): boolean {
+  if (leidas.length !== esperadas.length) return false
+  const libres = [...esperadas]
+  for (const l of leidas) {
+    const i = libres.findIndex((e) => etiquetaOpcionHogarCasa(l, e))
+    if (i < 0) return false
+    libres.splice(i, 1)
+  }
+  return true
+}
+
+/**
+ * Marca UNA opción de «Datos del vehículo» de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
+ * Mismas exigencias que `marcarOpcionRiesgoHogarAllianz`: guard limpio y sin ventanas de red abiertas; `clave` en la lista
+ * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; pestaña seleccionada «Datos del vehículo» (todo eso, bloqueo);
+ * dentro de la zona `appArea` y fuera de la cabecera, EXACTAMENTE un control cuya etiqueta casa EXACTA, de un grupo con la
+ * pregunta de la clave (si la tiene) y con el conjunto COMPLETO de opciones de la clave (si ya está marcado no se pulsa nada);
+ * `comprobarBoton` sobre control y etiqueta ANTES del único clic; después, que quede marcado. Grupo no encontrado o ambiguo →
+ * `no_unica` (hueco), nunca un bloqueo.
+ */
+export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmision, clave: string): Promise<ResultadoOpcionHogar> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'opción de Turismos con una ventana de red abierta')
-  if (!OPCIONES_TURISMOS_ALLIANZ.includes(etiqueta)) throw new EmisionBloqueadaError('boton', `opción de Turismos fuera de la lista cerrada: «${etiqueta.slice(0, 80)}»`)
+  const op = OPCIONES_TURISMOS_ALLIANZ.find((o) => o.clave === clave)
+  if (!op) throw new EmisionBloqueadaError('boton', `opción de Turismos fuera de la lista cerrada: «${clave.slice(0, 80)}»`)
   if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera de la app de Allianz AUTOS')
   await exigirSinCuentaBancaria(marco.page())
-  // Anclaje (revisión 15/10/2026): pestaña seleccionada = «Datos del vehículo» y la opción es de SU grupo (radiogroup/fieldset
-  // con nombre accesible o legend «¿Conoces la matrícula del vehículo?»). Otro grupo u otro paso → bloqueo.
+  // Anclaje (revisión 15/10/2026): pestaña seleccionada = «Datos del vehículo» y la opción es de SU grupo. Otro grupo u otro paso → bloqueo.
   const pestanas = marco.getByRole('tab', { selected: true })
   const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
   if (activa !== PASO_TURISMOS_ALLIANZ) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera del paso «Datos del vehículo»')
-  const todos = await marco.locator('input[type=radio]').evaluateAll((els) =>
-    els.map((el) => {
-      const h = el as HTMLInputElement
-      // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
-      const g = h.closest('[role=radiogroup],fieldset')
-      const ids = (g?.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean)
-      const leg = g?.querySelector('legend') as HTMLElement | null | undefined
-      const grupo = [g?.getAttribute('aria-label') ?? '', ...ids.map((i) => { const n = document.getElementById(i); return n ? n.innerText || n.textContent || '' : '' }), leg ? leg.innerText || leg.textContent || '' : ''].join(' ')
-      return { id: h.id || null, grupo, etiqueta: h.labels && h.labels.length ? Array.from(h.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '' }
-    }),
-  )
-  const hits = todos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, etiqueta) && planoOpcion(r.grupo) === planoOpcion(GRUPO_TURISMOS_ALLIANZ))
-  if (hits.length === 0 && todos.some((r) => etiquetaOpcionHogarCasa(r.etiqueta, etiqueta))) throw new EmisionBloqueadaError('boton', 'opción de Turismos fuera del grupo «¿Conoces la matrícula del vehículo?»')
+  const todos = await marco
+    .locator(SEL_ZONA_APP_TURISMOS)
+    .locator('input[type=radio]')
+    .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const h = el as HTMLInputElement
+        // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+        const g = h.closest('[role=radiogroup],fieldset,nx-radio-toggle,nx-radio-group')
+        const ids = (g?.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean)
+        const leg = g?.querySelector('legend') as HTMLElement | null | undefined
+        let grupo = [g?.getAttribute('aria-label') ?? '', ...ids.map((i) => { const n = document.getElementById(i); return n ? n.innerText || n.textContent || '' : '' }), leg ? leg.innerText || leg.textContent || '' : ''].join(' ')
+        // Sin nombre accesible: la etiqueta INMEDIATAMENTE anterior al grupo (`<label>`/`nx-label`), y nada más lejos.
+        const prev = g?.previousElementSibling as HTMLElement | null | undefined
+        if (grupo.trim() === '' && prev && /^(LABEL|NX-LABEL)$/.test(prev.tagName)) grupo = prev.innerText || prev.textContent || ''
+        // Hermanos: los del mismo `name`; sin `name`, los del contenedor de grupo más cercano; sin ninguno de los dos, solo él (no casará).
+        const hermanas = (h.name
+          ? Array.from(document.querySelectorAll('input[type=radio]')).filter((x) => (x as HTMLInputElement).name === h.name)
+          : g
+            ? Array.from(g.querySelectorAll('input[type=radio]'))
+            : [h]) as HTMLInputElement[]
+        return {
+          id: h.id || null,
+          grupo,
+          etiqueta: h.labels && h.labels.length ? Array.from(h.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '',
+          hermanas: hermanas.map((x) => (x.labels && x.labels.length ? Array.from(x.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '')),
+        }
+      }),
+    )
+  const deSuPregunta = (r: { grupo: string }) => op.pregunta === null || planoOpcion(r.grupo) === planoOpcion(op.pregunta)
+  const hits = todos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, op.opcion) && deSuPregunta(r) && grupoOpcionesTurismosCasa(r.hermanas, op.grupo))
+  // Sin su grupo (pregunta u opciones distintas a las del inventario) o con varios candidatos → `no_unica` (hueco de mapa, sin pulsar).
+  // `EmisionBloqueadaError` queda para lo prohibido de verdad (clave fuera de la lista, otra app, otro paso, ventana de red abierta).
   if (hits.length !== 1 || !hits[0].id) return { estado: 'no_unica', coincidencias: hits.length }
   const id = hits[0].id.replace(/["\\]/g, '')
   const control = marco.locator(`input[type=radio][id="${id}"]`)
