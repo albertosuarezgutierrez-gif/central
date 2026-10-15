@@ -777,8 +777,8 @@ async function validarSelector(page: Page, ctx: ContextoFormador, p: PeticionRes
 
 const claveUso = (clave: string, selector: string, marco: string | null) => `${clave}\u0000${marco ?? '*'}\u0000${selector}`
 
-/** Anota el uso de una entrada aprendida (F2). `rechazado` = no resolvió o no validó. */
-function anotarUso(ctx: ContextoFormador, c: Pick<EntradaConocimiento, 'clave' | 'tipo' | 'selector' | 'marco'>, cambio: Partial<Pick<UsoAprendido, 'confirmado' | 'rechazado'>>): void {
+/** Anota el uso de una entrada aprendida (F2). `rechazado` = no resolvió o no validó. También lo usa localizar.ts (pistas). */
+export function anotarUso(ctx: ContextoFormador, c: Pick<EntradaConocimiento, 'clave' | 'tipo' | 'selector' | 'marco'>, cambio: Partial<Pick<UsoAprendido, 'confirmado' | 'rechazado'>>): void {
   ctx.usosAprendido ??= new Map()
   const k = claveUso(c.clave, c.selector, c.marco)
   const previo = ctx.usosAprendido.get(k) ?? { clave: c.clave, tipo: c.tipo, selector: c.selector, marco: c.marco, confirmado: false, rechazado: false }
@@ -800,6 +800,17 @@ export function aprendidoFallido(usos: ReadonlyMap<string, UsoAprendido> | undef
     .filter((u) => !u.confirmado && (u.rechazado || resultado === 'error'))
     .slice(0, 50)
     .map(({ clave, tipo, selector, marco }) => ({ clave, tipo, selector, marco }))
+}
+
+/** Confirma a asegura una entrada aprendida que funcionó en este trabajo (suma una confirmación). Sin formador, nada. */
+export async function confirmarAprendido(ctx: ContextoFormador | undefined, e: { clave: string; tipo: TipoClave; selector: string; marco: string | null; origen: 'ia' | 'codigo' | 'humano' }): Promise<void> {
+  if (!ctx?.activo) return
+  anotarUso(ctx, e, { confirmado: true })
+  await llamar(ctx, 'confirmar', {
+    metodo: 'POST',
+    timeoutMs: TIMEOUT_CORTO_MS,
+    cuerpo: { trabajoId: ctx.trabajoId, compania: ctx.compania, ramo: ctx.ramo, ...e },
+  })
 }
 
 /**

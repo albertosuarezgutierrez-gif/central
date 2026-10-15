@@ -8,7 +8,7 @@
 // Fail-closed: kill-switch `TARIFICADOR_FORMADOR_ACTIVO === '1'`; tope de llamadas a la IA por trabajo;
 // una respuesta de la IA que no se entiende, con confianza baja o fuera de rango → `null`.
 
-import { coherenciaPrecio, redactarDatosPersonales, limpiarTextoAviso, type EventoAcompanamiento, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
+import { coherenciaPrecio, esClavePista, redactarDatosPersonales, limpiarTextoAviso, validarPista, type EventoAcompanamiento, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
 
 export function formadorActivo(env: Record<string, string | undefined>): boolean {
   return env.TARIFICADOR_FORMADOR_ACTIVO === '1'
@@ -202,6 +202,11 @@ export function leerPeticionConfirmar(body: unknown): { ok: true; p: PeticionCon
   if (!tipo) errores.push("tipo: 'campo' | 'accion'")
   const selector = typeof o.selector === 'string' ? o.selector.trim() : ''
   if (!selector || selector.length > 2000) errores.push('selector vacío o > 2000')
+  // PISTA del localizador (15/10/2026): solo un selector estable de la gramática cerrada y nunca bancario/de pago.
+  if (selector && esClavePista(clave)) {
+    const v = validarPista(selector)
+    if (!v.ok) errores.push(`pista no válida: ${v.motivo}`)
+  }
   const marco = o.marco === null || o.marco === undefined ? null : cad(o.marco, 300)
   const origen = o.origen === 'ia' || o.origen === 'codigo' || o.origen === 'humano' ? o.origen : null
   if (!origen) errores.push("origen: 'ia' | 'codigo' | 'humano'")
