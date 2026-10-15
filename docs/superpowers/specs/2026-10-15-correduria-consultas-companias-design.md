@@ -27,6 +27,9 @@ respuestas. Botón **«Consultar a compañías»** en TODOS los ramos.
 | 9 | **Datos mínimos por ramo antes de redactar**: regla pura en `@central/module-seguros` con test. RC: actividad, CNAE, facturación, plantilla, siniestralidad 3 años, límite deseado. Resto de ramos: reutiliza los `faltan` que ya calcula `datos-riesgo-ramo.ts` (`packages/module-seguros/src/`), expuestos como `datosRiesgo.faltan` en `apps/asegura/lib/oportunidad-riesgo.ts:166,401`. Si falta algo, el panel **avisa y deja enviar igualmente** (aviso, no bloqueo) | Una consulta incompleta se contesta con preguntas y gasta la ronda; pero Alberto decide |
 | 10 | **Fecha límite de respuesta** en el correo: propuesta = vencimiento de la póliza actual − 15 días (editable), guardada en `consulta_compania.responder_antes`. El seguimiento (§4.3) la usa | Las compañías necesitan margen antes de la renovación |
 | 7 | Respuesta con PDF → se guarda en la petición y avisa Telegram; **«convertir en oferta»** a mano | Sin extracción IA automática (no inventar primas) |
+| 11 | **Estados `pide_info` y `rechazada` (Alberto, 15/10/2026).** `pide_info`: la compañía contestó pero pide datos; Telegram con lo que pide; el seguimiento NO se para hasta precio o rechazo. `rechazada`: la compañía no cotiza. Fase 2: la clasificación de la respuesta (`respondida` · `pide_info` · `rechazada`) la propone el triaje; Alberto la corrige en el cuadro | La compañía que pide datos sigue en juego; no se da por cerrada ni se olvida |
+| 12 | **Cierre de ronda (Alberto, 15/10/2026).** Al marcar ganadora una compañía en la oportunidad, se redacta un borrador «gracias, esta vez no» para las demás consultas `enviada`; Alberto lo aprueba (nada sale solo). Estado `descartada`. Fase 3 | Cerrar la ronda sin dejar compañías colgadas, con revisión humana |
+| 13 | **Cuestionario propio por compañía+ramo (Alberto, 15/10/2026).** Documento guardado en el directorio de compañías; al seleccionar la compañía en el panel se propone adjuntarlo. Fase 3 | Reutilizar el cuestionario que cada compañía exige, sin rehacerlo por consulta |
 
 ## 3. Datos
 
@@ -46,18 +49,30 @@ respuestas. Botón **«Consultar a compañías»** en TODOS los ramos.
 | Columna | Notas |
 |---|---|
 | `id`, `correduria_id` | Todo se filtra por `correduria_id` |
-| `oportunidad_id` | FK a `seguros.oportunidades` |
+| `oportunidad_id` | FK a `seguros.oportunidades` (consulta normal; en `tipo='paquete'` queda NULL y las oportunidades van en `consulta_compania_oportunidad`) |
+| `tipo` | `normal` · `paquete` (fase 4). `cliente_id` FK al cliente, rellenado en `paquete` |
 | `compania_codigo_dgs` | FK a `companias_dgs` |
 | `destinatarios` | Lista de `contacto_id` (jsonb o `uuid[]`). **≥1 y todos de `compania_codigo_dgs`**: regla pura en `@central/module-seguros` con test, aplicada también en el puerto |
 | `asunto`, `cuerpo` | Editables mientras `estado='borrador'`. El cuerpo guarda los marcadores `{{NOMBRE_TOMADOR}}`/`{{DOC_TOMADOR}}`, nunca el DNI en claro; se sustituyen en el servidor de asegura al enviar |
 | `identidad_incluida` | `boolean`. Si el correo enviado lleva nombre y DNI/NIE/CIF del tomador (casilla del panel, por defecto marcada). Trazabilidad RGPD |
 | `codigo_ref` | Único, formato `ASG-XXXX`, va en el asunto como `[ASG-XXXX]` |
 | `gmail_message_id`, `gmail_thread_id` | Se guardan al enviar (Message-ID RFC y X-GM-THRID) |
-| `estado` | enum `borrador · aprobada · enviada · respondida · sin_respuesta · cancelada` |
+| `estado` | enum **completo** creado en la migración de fase 1 (para no migrar después): `borrador · enviada · respondida · pide_info · rechazada · sin_respuesta · descartada · cancelada`. `pide_info` = contestó pidiendo datos (el seguimiento sigue); `rechazada` = no cotiza; `descartada` = cierre de ronda (decisión 12) |
 | `enviada_at`, `respondida_at`, `recordatorio_avisado_at` | Timestamptz, NULL = no ha ocurrido |
 | `adjuntos` | jsonb: referencias a documentos de la ficha/oportunidad elegidos (incluida póliza/oferta de competencia). Lo realmente enviado queda en historial |
 | `competencia_incluida` | `boolean`. Si el borrador incluye la referencia de competencia (casilla del panel) |
 | `responder_antes` | `date`, NULL = sin fecha. Propuesta: vencimiento de la póliza actual − 15 días; editable. Si no hay vencimiento conocido, NULL (no se inventa) |
+
+### 3.2 bis Cuestionario por compañía+ramo (fase 3)
+
+Documento guardado en el directorio de compañías (ubicación exacta por confirmar al empezar la fase 3), indexado
+por compañía+ramo. Al seleccionar la compañía en el panel (§5) se propone adjuntarlo; no se adjunta solo.
+
+### 3.2 ter `seguros.consulta_compania_oportunidad` (fase 4, solo `tipo='paquete'`)
+
+`consulta_id`, `oportunidad_id`, `tarificacion_id` (la fila de `seguros.tarificaciones` de ESA compañía), `prima_base`
+(precio de esa tarificación), `prima_objetivo` (`prima_base` menos el % pedido; NULL si falta precio),
+`prima_pactada` (NULL hasta que la compañía acepta). Clave `(consulta_id, oportunidad_id)`.
 
 ### 3.3 `seguros.consulta_compania_mensaje` (nueva, entrantes)
 
@@ -88,7 +103,7 @@ respuestas. Botón **«Consultar a compañías»** en TODOS los ramos.
 4. **Asegura** sustituye los marcadores con el dato descifrado (solo si `identidad_incluida`; si no, los
    quita y el cuerpo se envía sin ellos) justo antes de enviar y manda por SMTP de Gmail
    (`hola@grupoasegura.es`), con `[ASG-XXXX]` en el asunto; guarda `gmail_message_id`/`gmail_thread_id` y pasa
-   a `enviada` **solo si el SMTP aceptó** (si falla, sigue `aprobada` y se avisa; nunca se marca enviada a
+   a `enviada` **solo si el SMTP aceptó** (si falla, sigue `borrador` y se avisa; nunca se marca enviada a
    ciegas). Anota en el historial «se envió identidad de <cliente> a <compañía>» si la hubo.
 
 ### 4.2 Casado de respuestas (fase 2, en el triaje `apps/plataforma/lib/correo/triaje.ts`)
@@ -100,8 +115,10 @@ Orden estricto; el primero que case gana:
 3. **Remitente** = email de un destinatario con **UNA sola** consulta abierta (`enviada`).
 4. Si es ambiguo o no casa → bandeja **«sin asignar»**. **Nunca adivinar.**
 
-Al casar: fila en `consulta_compania_mensaje`, `estado='respondida'`, `respondida_at`, adjuntos a storage y aviso
-por Telegram (`core-telegram`). Encaje con `CorreoEventoEntrante` (`asegura.prisma`): la consulta no se
+Al casar: fila en `consulta_compania_mensaje`, adjuntos a storage y aviso por Telegram (`core-telegram`). El triaje
+propone el estado: `respondida` (trae precio/oferta), `pide_info` (pide datos; Telegram con lo que pide) o
+`rechazada` (no cotiza). Alberto corrige el estado en el cuadro si el triaje se equivoca. `respondida_at` se
+anota en `respondida` y `pide_info`. Encaje con `CorreoEventoEntrante` (`asegura.prisma`): la consulta no se
 confunde con los eventos de compañías ya clasificados (alta de póliza, recibos…); el casado de consultas va
 **antes** de la clasificación general y, si casa, el correo no entra por el camino de eventos.
 
@@ -113,6 +130,8 @@ plataforma manda Telegram y marca solo si salió**. Se registra en `apps/platafo
 - **3 días laborables** sin respuesta (o, si `responder_antes` cae antes de ese plazo, **ese día**: el recordatorio se adelanta) → Telegram con **borrador de recordatorio** para aprobar
   (`recordatorio_avisado_at` solo si el Telegram salió). Nada se reenvía solo.
 - **7 días laborables** → `estado='sin_respuesta'` (con entrada en el historial).
+- **`pide_info`** no para el seguimiento: el recordatorio/`sin_respuesta` siguen activos hasta que llegue precio
+  (`respondida`) o rechazo (`rechazada`).
 - Calendario laborable: reutilizar el helper de días hábiles que ya use el cron de presupuestos; si no hay
   uno puro con test, crearlo.
 
@@ -120,6 +139,31 @@ plataforma manda Telegram y marca solo si salió**. Se registra en `apps/platafo
 
 Con PDF de respuesta adjunto, el botón **«convertir en oferta»** crea una `OportunidadOferta`
 (`asegura.prisma`) con los datos que teclee Alberto y el PDF enganchado. La app no extrae cifras.
+
+### 4.6 Paquete multipóliza (fase 4)
+
+- **Caso:** cliente con ≥2 oportunidades abiertas (p. ej. 2 coches + 1 moto). Alberto elige UNA compañía y su
+  comercial y pide un descuento adicional (10-15 %, editable) sobre los precios que esa compañía ya dio para cada
+  riesgo, como promoción por vinculación. Un correo resumen por compañía, con borrador a aprobar (decisión 3).
+- **Botón** «Pedir oferta por paquete» en la ficha de cliente y en cada oportunidad; visible solo con ≥2
+  oportunidades abiertas que tengan precio de esa compañía.
+- **Precios:** SOLO de `seguros.tarificaciones` enlazadas (compañía+categoría+modalidad, `idPrecio`; reglas 9/21 de
+  `correduria-crm`). NUNCA se re-tarifica (0,50 €/consulta). Riesgo sin precio de esa compañía → se lista «sin precio»
+  y NO entra en el total.
+- **Siniestralidad:** derivada de los siniestros reales del cliente; sin dato → «no consta», nunca «buena» por
+  defecto (null ≠ 0).
+- **IA:** redacta el resumen con lista blanca (riesgos, primas, total, % pedido, prima objetivo, siniestralidad);
+  identidad por marcadores `{{NOMBRE_TOMADOR}}`/`{{DOC_TOMADOR}}`, como en fase 1.
+- **Si la compañía acepta:** se anota `prima_pactada` por riesgo. La EMISIÓN con descuento NO es automática: la
+  compañía debe cargar la bonificación en su tarificador (regla 6: emisión con spec + OK); queda como tarea manual
+  en la oportunidad.
+- **Seguimiento, estados y cierre de ronda:** los mismos que una consulta normal (§4.3, §4.5).
+
+### 4.5 Cierre de ronda (fase 3)
+
+Al marcar una compañía ganadora en la oportunidad, asegura redacta un borrador «gracias, esta vez no» para cada
+otra consulta en `enviada`. Alberto lo aprueba o lo descarta uno a uno: nada sale solo. Las consultas cerradas
+así pasan a `descartada` con entrada en el historial.
 
 ## 5. UI en la oportunidad
 
@@ -131,6 +175,7 @@ Con PDF de respuesta adjunto, el botón **«convertir en oferta»** crea una `Op
 - **«+ Añadir contacto»** dentro de la tarjeta: alta inline en `compania_contactos` por el puerto de asegura
   (`/api/operador/*`, con `correduriaId` y entrada en historial).
 - **Aviso de datos mínimos** del ramo (§2.9) sobre las tarjetas: avisa, no bloquea.
+- **Cuestionario (fase 3):** al marcar una compañía, si tiene cuestionario para el ramo, se propone adjuntarlo (no automático).
 - **Pie:** casilla «Incluir identidad del cliente» (marcada por defecto, ver §4.1) + casilla **«Incluir referencia de competencia»** (solo si hay `poliza_competencia`) + campo **«Responder antes de»** (propuesta vencimiento − 15 días, editable) + «N compañías · M personas» + **«Redactar borradores»** (un borrador por compañía marcada; las
   personas de una compañía van juntas en Para).
 - En el borrador, selector de adjuntos entre los documentos de la ficha/oportunidad; al elegir uno de competencia, aviso fijo «Este documento puede llevar IBAN, DNI de otros intervinientes o datos de salud: revísalo antes de enviar». No hay botón «reenviar oferta de otra compañía».
@@ -139,7 +184,8 @@ Con PDF de respuesta adjunto, el botón **«convertir en oferta»** crea una `Op
   montada sobre este panel.
 
 **Cuadro en la oportunidad** tras enviar: compañía · destinatarios · enviado · respondido · oferta · días de
-espera. Fila fija **«Competencia»** (si hay `poliza_competencia`) como referencia de precio. Estado con color y texto. A ≥320 px en cards. Borradores pendientes arriba; «sin asignar» como
+espera. Fila fija **«Competencia»** (si hay `poliza_competencia`) como referencia de precio. Estado con color y texto (incluidos `pide_info`, `rechazada`, `descartada`); Alberto corrige aquí el estado
+propuesto por el triaje y marca la **ganadora** (dispara el cierre de ronda, §4.5, fase 3). A ≥320 px en cards. Borradores pendientes arriba; «sin asignar» como
 bandeja aparte con acción «asignar a esta consulta».
 
 ## 6. Privacidad y cepos
@@ -168,9 +214,10 @@ bandeja aparte con acción «asignar a esta consulta».
 
 | Fase | Contenido |
 |---|---|
-| **1** | SQL + modelos (`consulta_compania` con `identidad_incluida`, `ramos` en contactos), borrador IA con marcadores, casilla «Incluir identidad del cliente», casilla de competencia + adjuntos con aviso (`competencia_incluida`, `adjuntos` en historial), regla de datos mínimos por ramo con aviso, fecha límite `responder_antes` en el correo, sustitución y envío por Gmail SMTP **desde asegura** (`GMAIL_USER`/`GMAIL_APP_PASSWORD` en `central-asegura`), cuadro, historial |
-| **2** | Casado de respuestas en el triaje, `consulta_compania_mensaje`, adjuntos entrantes a storage, Telegram, bandeja «sin asignar» |
-| **3** | Cron de seguimiento (3 y 7 días laborables; recordatorio adelantado si `responder_antes` es antes de los 3), recordatorio como borrador, «convertir en oferta» |
+| **1** | SQL + modelos (`consulta_compania` con `identidad_incluida` y el enum de estados completo, `ramos` en contactos), borrador IA con marcadores, casilla «Incluir identidad del cliente», casilla de competencia + adjuntos con aviso (`competencia_incluida`, `adjuntos` en historial), regla de datos mínimos por ramo con aviso, fecha límite `responder_antes` en el correo, sustitución y envío por Gmail SMTP **desde asegura** (`GMAIL_USER`/`GMAIL_APP_PASSWORD` en `central-asegura`), cuadro, historial |
+| **2** | Casado de respuestas en el triaje, clasificación propuesta (`respondida`/`pide_info`/`rechazada`, corregible en el cuadro), `consulta_compania_mensaje`, adjuntos entrantes a storage, Telegram, bandeja «sin asignar» |
+| **3** | Cron de seguimiento (3 y 7 días laborables; recordatorio adelantado si `responder_antes` es antes de los 3), recordatorio como borrador, «convertir en oferta», cierre de ronda (`descartada`, §4.5), cuestionario por compañía+ramo (§3.2 bis) |
+| **4** | Paquete multipóliza (§4.6): `tipo='paquete'`, tabla `consulta_compania_oportunidad` (§3.2 ter), botón en ficha de cliente y oportunidad, precios solo de `tarificaciones`, siniestralidad sin «buena» por defecto, `prima_pactada`; emisión manual |
 
 Cada fase corre `prisma generate` + `tsc` de asegura y plataforma por UN agente al final (un cliente Prisma
 para todo el monorepo) y añade la matriz/guardianes que toquen.
@@ -195,3 +242,6 @@ para todo el monorepo) y añade la matriz/guardianes que toquen.
 
 Extracción IA de ofertas desde PDF, envío masivo con CCO, envío automático de recordatorios, consultas a
 clientes, y cualquier cambio en `apps/asegura-web` o el portal del cliente.
+
+**Futuro / post-lanzamiento (solo anotado, sin diseñar, Alberto 15/10/2026):** ficha de rendimiento por
+compañía y contacto (tiempo medio de respuesta, % de respuesta, % que mejora la competencia).
