@@ -4,11 +4,14 @@ import { Fragment, useCallback, useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Badge, TablaScroll, btnStyle, cardStyle } from '@/components/ui'
 import {
+  ETIQUETA_MADUREZ,
   interpretarEstadisticas,
+  textoCoste,
   textoDuracion,
   textoPorcentaje,
   type FilaBot,
   type LecturaEstadisticas,
+  type ParejaBot,
   type VentanaBot,
 } from '@/lib/tarificador-estadisticas-asegura'
 
@@ -40,6 +43,26 @@ function Atascos({ v }: { v: VentanaBot }) {
     <ul style={{ margin: 0, paddingLeft: 16 }}>
       {v.topAtascos.map((a) => <li key={a.clave} style={{ overflowWrap: 'anywhere' }}>{a.clave} ({a.n})</li>)}
     </ul>
+  )
+}
+
+function TarjetaPareja({ p }: { p: ParejaBot }) {
+  const m = ETIQUETA_MADUREZ[p.madurez]
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gap: 6, minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        <strong style={{ overflowWrap: 'anywhere' }}>{p.compania} · {p.ramo}</strong>
+        <Badge tono={m.tono} title={m.ayuda}>{m.texto}</Badge>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>7 días: {p.ok7d} con precio · {p.fallos7d} fallos de portal</div>
+      <div style={{ fontSize: 13 }}>
+        <span title="Estimado: duración media × tarifa de Fly (constante conservadora, no la factura)">Coste medio por trabajo (estimado): <strong>{textoCoste(p.costeMedioEur)}</strong></span>
+      </div>
+      <div style={{ fontSize: 13 }}>
+        Total 30 días (estimado): <strong>{textoCoste(p.costeTotal30dEur)}</strong>
+        {p.sinMedir30d > 0 && <span style={{ color: 'var(--muted)' }}> · {p.sinMedir30d} de {p.trabajos30d} trabajos sin duración medible</span>}
+      </div>
+    </div>
   )
 }
 
@@ -95,6 +118,15 @@ export default function EstadoBots() {
       {lectura?.estado === 'ok' && lectura.ilegibles > 0 && <p style={aviso}>Hay {lectura.ilegibles} fila(s) que no se han podido leer.</p>}
       {!lectura && <p style={{ margin: 0, color: 'var(--muted)' }}>Cargando…</p>}
       {lectura?.estado === 'ok' && filas.length === 0 && <p style={{ margin: 0, color: 'var(--muted)' }}>Ningún trabajo del bot en los últimos 30 días.</p>}
+
+      {lectura?.estado === 'ok' && lectura.parejasIlegibles && (
+        <p style={aviso}>Asegura aún no devuelve la madurez ni el coste (despliegue pendiente): no se muestran, no es que estén a cero.</p>
+      )}
+      {lectura?.estado === 'ok' && lectura.parejas.length > 0 && (
+        <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))' }}>
+          {lectura.parejas.map((p) => <TarjetaPareja key={`${p.compania}|${p.ramo}`} p={p} />)}
+        </div>
+      )}
 
       {filas.length > 0 && (
         <TablaScroll>

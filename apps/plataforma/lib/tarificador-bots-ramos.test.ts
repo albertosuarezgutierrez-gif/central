@@ -103,3 +103,14 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
   const r2 = a.construir({ ...F, sexo: 'hombre' }, { cilindrada: '125' })
   assert.ok(r2.ok && (r2.riesgo.conductor as { sexo: string }).sexo === 'hombre')
 })
+
+test('moto · desplegable de sexo en su valor inicial («») no pisa el sexo del formulario', () => {
+  const a = adaptadorDeRamo('moto')!
+  const F = {
+    matricula: '1234BCD', marca: 'Honda', modelo: 'PCX', version: null, codigoPostal: '41003', fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01',
+    sexo: 'hombre', conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
+    aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0',
+  }
+  const r = a.construir(F, { cilindrada: '125', sexo: '' })
+  assert.ok(r.ok && (r.riesgo.conductor as { sexo: string }).sexo === 'hombre')
+})

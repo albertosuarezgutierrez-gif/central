@@ -1,7 +1,7 @@
 // Estadísticas de los bots del tarificador (15/10/2026): lectura del puerto y textos. `node --test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarEstadisticas, textoDuracion, textoPorcentaje } from './tarificador-estadisticas-asegura.ts'
+import { ETIQUETA_MADUREZ, interpretarEstadisticas, textoCoste, textoDuracion, textoPorcentaje } from './tarificador-estadisticas-asegura.ts'
 
 const ventana = { total: 10, ok: 6, atascado: 1, requiereHumano: 1, errorDefinitivo: 2, pctOk: 60, pctProblema: 40, tiempoMedioSeg: 95, topAtascos: [{ clave: 'iban', n: 3 }] }
 
@@ -43,4 +43,27 @@ test('textos legibles', () => {
   assert.equal(textoDuracion(95), '1 min 35 s')
   assert.equal(textoDuracion(120), '2 min')
   assert.equal(textoDuracion(7500), '2 h 5 min')
+})
+
+test('parejas: madurez y coste se leen; ausente ≠ vacío; null sigue siendo null; fila rara contada', () => {
+  const p = { compania: 'allianz', ramo: 'auto', madurez: 'estable', ok7d: 4, fallos7d: 0, trabajos30d: 10, sinMedir30d: 6, segMedioPorTrabajo: 120, costeMedioEur: 0.0004, costeTotal30dEur: 0.0016 }
+  const r = interpretarEstadisticas(200, { estado: 'ok', filas: [], parejas: [p, { ...p, ramo: 'moto', madurez: 'sin_precio', segMedioPorTrabajo: null, costeMedioEur: null, costeTotal30dEur: null }, { ...p, madurez: 'rara' }] })
+  if (r.estado !== 'ok') throw new Error('ok')
+  assert.equal(r.parejas.length, 2)
+  assert.equal(r.ilegibles, 1)
+  assert.equal(r.parejasIlegibles, false)
+  assert.equal(r.parejas[0]!.madurez, 'estable')
+  assert.equal(r.parejas[1]!.costeMedioEur, null)
+  const sin = interpretarEstadisticas(200, { estado: 'ok', filas: [] })
+  if (sin.estado !== 'ok') throw new Error('ok')
+  assert.equal(sin.parejasIlegibles, true, 'asegura sin la versión nueva no se confunde con «sin parejas»')
+})
+
+test('coste en formato español con eur(); sub-céntimo no se pinta como 0,00€', () => {
+  assert.equal(textoCoste(null), 'sin datos')
+  assert.equal(textoCoste(2.5), '2,50€')
+  assert.equal(textoCoste(1234.5), '1.234,50€')
+  assert.equal(textoCoste(0.0004), '<0,01€')
+  assert.equal(textoCoste(0), '0,00€')
+  assert.equal(ETIQUETA_MADUREZ.estable.tono, 'positivo')
 })

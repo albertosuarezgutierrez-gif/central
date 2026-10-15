@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { proyectarEstadisticas, type FilaAgregada, type FilaClave } from './tarificador-estadisticas-reglas.ts'
+import { calcularMadurez, costeDeSegundos, COSTE_FLY_EUR_POR_MINUTO, proyectarEstadisticas, proyectarParejas, type FilaAgregada, type FilaClave, type FilaPareja } from './tarificador-estadisticas-reglas.ts'
 
 const agg = (x: Partial<FilaAgregada> = {}): FilaAgregada => ({
   dias: 30, compania: 'allianz', ramo: 'comunidades', bot_version: '0.2.0',
@@ -59,4 +59,42 @@ test('cepo de fuente: el SQL filtra por correduría, solo tarificar, y no toca r
   assert.match(src, /a\.correduria_id = \$\{correduriaId\}::uuid/)
   assert.match(src, /= 'tarificar'/)
   assert.ok(!/t\.riesgo|t\.error\b/.test(src.replace(/\/\/.*$/gm, '')), 'el SQL no lee riesgo ni error')
+})
+
+test('madurez: estable con >=3 ok y 0 fallos en 7 días; en pruebas con algún precio; sin precio si nunca', () => {
+  assert.equal(calcularMadurez({ ok7d: 3, fallos7d: 0, okSiempre: 3 }), 'estable')
+  assert.equal(calcularMadurez({ ok7d: 2, fallos7d: 0, okSiempre: 9 }), 'en_pruebas')
+  assert.equal(calcularMadurez({ ok7d: 10, fallos7d: 1, okSiempre: 10 }), 'en_pruebas', 'un solo fallo de portal quita lo estable')
+  assert.equal(calcularMadurez({ ok7d: 0, fallos7d: 0, okSiempre: 1 }), 'en_pruebas', 'precio antiguo, fuera de los 7 días')
+  assert.equal(calcularMadurez({ ok7d: 0, fallos7d: 5, okSiempre: 0 }), 'sin_precio')
+})
+
+const par = (x: Partial<FilaPareja> = {}): FilaPareja => ({
+  compania: 'allianz', ramo: 'auto', ok_7d: 4, fallos_7d: 0, ok_siempre: 8, trabajos_30d: 10, medidos_30d: 4, seg_total_30d: 480, ...x,
+})
+
+test('coste estimado: media por trabajo medido y total de 30 días; sin medibles es null, no 0', () => {
+  const [p] = proyectarParejas([par()])
+  assert.equal(p!.madurez, 'estable')
+  assert.equal(p!.segMedioPorTrabajo, 120)
+  assert.equal(p!.sinMedir30d, 6)
+  assert.equal(p!.costeMedioEur, costeDeSegundos(120))
+  assert.equal(p!.costeTotal30dEur, costeDeSegundos(480))
+  assert.ok(Math.abs(costeDeSegundos(60) - COSTE_FLY_EUR_POR_MINUTO) < 1e-12)
+  const [q] = proyectarParejas([par({ medidos_30d: 0, seg_total_30d: 0 })])
+  assert.equal(q!.costeMedioEur, null)
+  assert.equal(q!.costeTotal30dEur, null)
+  assert.equal(q!.segMedioPorTrabajo, null)
+})
+
+test('parejas: números de pg (bigint/string) y orden por volumen', () => {
+  const r = proyectarParejas([par({ compania: 'b', trabajos_30d: '2' as never, medidos_30d: '1' as never }), par({ compania: 'a', ok_7d: BigInt(5) as never })])
+  assert.deepEqual(r.map((x) => x.compania), ['a', 'b'])
+  assert.equal(r[0]!.ok7d, 5)
+})
+
+test('cepo de fuente: el SQL de parejas filtra por correduría y tarificar, e histórico sin ventana en ok_siempre', () => {
+  const src = readFileSync(join(import.meta.dirname, 'tarificador-estadisticas.ts'), 'utf8')
+  assert.match(src, /count\(\*\) filter \(where t\.estado = 'ok'\)\)::int as ok_siempre/)
+  assert.ok((src.match(/t\.correduria_id = \$\{correduriaId\}::uuid/g) ?? []).length >= 2)
 })

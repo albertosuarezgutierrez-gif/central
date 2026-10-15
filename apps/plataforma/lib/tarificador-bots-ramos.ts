@@ -48,7 +48,8 @@ const adaptadorMoto: AdaptadorBot = {
   ],
   construir: (formulario, extra) => {
     const f = formulario as FormularioBotsMoto
-    const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined ? f.sexo : null
+    // El desplegable arranca en '' («Elegir…»): vacío = no tocado, así que manda el del formulario.
+    const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined || extra.sexo === '' ? f.sexo : null
     const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '' })
     return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
   },

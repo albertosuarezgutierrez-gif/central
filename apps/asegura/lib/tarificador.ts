@@ -38,6 +38,7 @@ import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausaViva
 import {
   ESTADOS_DUPLICADO,
   LEASE_MS,
+  VENTANA_OK_DUPLICADO_MS,
   avisoTraza,
   bloqueaDuplicado,
   claveEncolar,
@@ -140,26 +141,31 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   const guardar = riesgoParaEncolar(e.compania, e.ramo, e.riesgo, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
-  // Sin duplicados (13/10/2026): mismo cliente + compañía + ramo + riesgo (igualdad `jsonb`) con un trabajo aún vivo →
-  // se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
+  // Sin duplicados (13/10/2026; `ok` con precio <10 min, 15/10/2026): mismo cliente (ficha) + compañía + ramo + oportunidad/póliza + riesgo
+  // (igualdad `jsonb`) con un trabajo aún vivo, o terminado con precio hace menos de 10 min → se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
   // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
   const compania = claveCompania(e.compania)
   const riesgoJson = JSON.stringify(guardar.riesgo)
+  // Un `ok` ya purgó su riesgo a la lista blanca (salvo origen de emisión): se compara con ambas formas.
+  const riesgoPurgadoJson = JSON.stringify(riesgoSinDatosPersonales(guardar.riesgo, e.ramo))
   const cid = clienteId
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
-    const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date }[]>`
-      select t.id::text as id, t.estado, t.lease_hasta, t.intentos, to_jsonb(t)->>'modo' as modo, now() as ahora
+    const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date; terminado_at: Date | null; con_precio: boolean }[]>`
+      select t.id::text as id, t.estado, t.lease_hasta, t.intentos, to_jsonb(t)->>'modo' as modo, now() as ahora, t.terminado_at,
+             (t.tarificacion_id is not null and exists (
+               select 1 from seguros.tarificacion_precios p where p.tarificacion_id = t.tarificacion_id and p.prima_eur is not null)) as con_precio
       from seguros.tarificacion_trabajos t
       where t.correduria_id = ${e.correduriaId}::uuid and t.cliente_id = ${cid}::uuid
         and t.compania = ${compania} and t.ramo = ${e.ramo}
         and t.estado = any(${[...ESTADOS_DUPLICADO]}::text[])
-        and t.riesgo = ${riesgoJson}::jsonb
+        and (t.riesgo = ${riesgoJson}::jsonb or t.riesgo = ${riesgoPurgadoJson}::jsonb)
+        and (t.estado <> 'ok' or t.terminado_at > now() - ${VENTANA_OK_DUPLICADO_MS / 1000}::int * interval '1 second')
         and t.oportunidad_id is not distinct from ${e.oportunidadId ?? null}::uuid
         and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
         and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
       order by t.created_at`
-    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo }, p.ahora, MAX_INTENTOS))
+    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio }, p.ahora, MAX_INTENTOS))
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
     const filas = await tx.$queryRaw<{ id: string }[]>`
       insert into seguros.tarificacion_trabajos
