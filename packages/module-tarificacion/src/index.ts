@@ -101,6 +101,20 @@ export {
   type SolicitudPreparada,
 } from './capacidades.ts'
 
+// Datos OBLIGATORIOS para llegar a precio por compañía × ramo (15/10/2026): la única fuente para el encolado, el worker,
+// la ficha/oportunidad y el cuestionario.
+export {
+  faltanParaTarificar,
+  mensajeFaltan,
+  obligatoriosPara,
+  obligatoriosDeRamo,
+  capacidadesConObligatorios,
+  valorEnRuta,
+  type CampoObligatorio,
+  type Faltante,
+  type OrigenObligatorio,
+} from './obligatorios.ts'
+
 // Formulario canónico de RC general / de actividad (08/10/2026): ramo sin compañía registrada todavía.
 export {
   AMBITOS_TERRITORIALES_RC,
@@ -686,6 +700,8 @@ export {
   UMBRAL_CORTE_BOT,
   TIPOS_ERROR_CORTE,
   debeCortarBot,
+  credencialesRechazadas,
+  motivoCorte,
   MAX_CANDIDATOS_ATASCO,
   MAX_RONDAS_ATASCO,
   HORAS_ATASCO_POR_DEFECTO,

@@ -16,6 +16,7 @@ import {
   estadoAprendido,
   horasAtasco,
   leerAtascoWorker,
+  motivoCorte,
   puedeTransitar,
   trasExitoAprendido,
   trasFalloAprendido,
@@ -55,9 +56,26 @@ describe('corte por compañía/ramo', () => {
   it('un ok entre medias rompe la racha', () => {
     expect(debeCortarBot([f('portal'), { estado: 'ok', tipoError: null }, f('portal'), f('portal')])).toBe(false)
   })
-  it('datos/credenciales/captcha o tipo desconocido (null) NO son fallo del bot: no cortan', () => {
+  it('datos/captcha o tipo desconocido (null) NO son fallo del bot: no cortan', () => {
     expect(debeCortarBot([f('portal'), f('datos'), f('portal')])).toBe(false)
     expect(debeCortarBot([f('portal'), f(null), f('portal')])).toBe(false)
+    expect(debeCortarBot([f('captcha'), f('captcha'), f('captcha')])).toBe(false)
+  })
+  it('UN solo error_definitivo de credenciales corta (repetir el login puede bloquear el usuario de las personas)', () => {
+    expect(debeCortarBot([f('credenciales')])).toBe(true)
+    expect(debeCortarBot([f('credenciales'), { estado: 'ok', tipoError: null }])).toBe(true)
+  })
+  it('credenciales ya superadas por un ok posterior (el más reciente) no cortan; solo cuenta el último cierre', () => {
+    expect(debeCortarBot([{ estado: 'ok', tipoError: null }, f('credenciales')])).toBe(false)
+    expect(debeCortarBot([f('datos'), f('credenciales')])).toBe(false)
+  })
+  it('motivoCorte: credenciales con el fly secret a actualizar, sin usuario ni contraseña; bot genérico; nada', () => {
+    const m = motivoCorte([f('credenciales')], { compania: 'mapfre', ramo: 'hogar' })!
+    expect(m).toContain('rechaza la contraseña')
+    expect(m).toContain('CRED_')
+    expect(m).toContain('quita la pausa')
+    expect(motivoCorte([f('portal'), f('infra'), f('portal')], { compania: 'mapfre', ramo: 'hogar' })).toContain('error del bot')
+    expect(motivoCorte([f('portal')], { compania: 'mapfre', ramo: 'hogar' })).toBeNull()
   })
 })
 

@@ -9,7 +9,8 @@ import type { AddressInfo } from 'node:net'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import { instalarGuardEmision, pulsar, type GuardEmision } from '../src/guard.ts'
 import { exigirSinCaptcha } from '../src/captcha.ts'
-import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
+import { ErrorTarificador, ErrorVerificacionHumana, clasificarIntento } from '../src/errores.ts'
+import { ErrorCredenciales } from '../src/credenciales.ts'
 import { login, BOTON_ENTRAR, TEXTO_PROHIBIDO } from '../src/adapters/mapfre/login.ts'
 import { ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
 import { PORTALES_EXPLORACION } from '../src/explorador.ts'
@@ -30,6 +31,8 @@ setTimeout(function () {
     document.getElementById('app').innerHTML = d === 'dentro' ? '<h1>Bienvenido</h1>'
       : d === 'sms' ? '<p>Te hemos enviado un código de verificación</p><input type="text" name="otp">'
       : d === 'captcha' ? '<div class="g-recaptcha"></div>'
+      : d === 'bloqueo' ? '<form><input type="password" name="p"><p>Su usuario ha sido bloqueado por demasiados intentos</p></form>'
+      : d === 'caducada' ? '<form><input type="password" name="p"><p>Su contraseña ha caducado. Debe cambiar su contraseña para continuar</p></form>'
       : '<form><input type="password" name="p"><p>Datos incorrectos</p></form>';
   };
 }, 300);
@@ -156,6 +159,28 @@ test('credenciales rechazadas → ErrorTarificador(credenciales), un solo intent
     await context.close()
   }
 })
+
+for (const [ruta, motivo] of [['rechazo', 'rechazadas'], ['bloqueo', 'bloqueada'], ['caducada', 'caducada']] as const) {
+  test(`login rechazado (${motivo}) → ErrorCredenciales(${motivo}), NO reintentable, un solo envío, sin usuario ni clave en el mensaje`, { timeout: 60_000 }, async () => {
+    const { context, page, ctx } = await abrir()
+    let pulsaciones = 0
+    const pul = ctx.pulsar
+    ctx.pulsar = async (b) => { pulsaciones++; await pul(b) }
+    try {
+      await assert.rejects(
+        () => login(page, ctx, `${base}/${ruta}`),
+        (e: unknown) => {
+          if (!(e instanceof ErrorCredenciales) || e.tipo !== 'credenciales' || e.motivo !== motivo) return false
+          assert.equal(clasificarIntento(e, { logueado: true, loginVisible: true, ultimo5xx: 503 }).transitorio, null)
+          return !e.message.includes(USUARIO) && !e.message.includes(CLAVE)
+        },
+      )
+      assert.equal(pulsaciones, 1)
+    } finally {
+      await context.close()
+    }
+  })
+}
 
 test('pantalla real: etiquetas, «Entrar» se habilita al rellenar ambos, entra y «Cambiar contraseña» no se toca', async () => {
   const { context, page, ctx } = await abrir()

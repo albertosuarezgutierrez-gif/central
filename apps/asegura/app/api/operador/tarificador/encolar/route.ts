@@ -42,7 +42,7 @@ export const POST = auditado(async (req: Request) => {
   }
   const compania = typeof body.compania === 'string' ? body.compania.trim() : ''
   if (!compania) return NextResponse.json({ estado: 'error', mensaje: 'falta compania' }, { status: 400 })
-  const valida = validarEntradaRamo(body.ramo, body.riesgo)
+  const valida = validarEntradaRamo(body.ramo, body.riesgo, compania)
   if (!valida.ok) return NextResponse.json({ estado: 'error', mensaje: valida.mensaje, ...(valida.errores ? { errores: valida.errores } : {}) }, { status: 400 })
   const entrada = valida.entrada
 

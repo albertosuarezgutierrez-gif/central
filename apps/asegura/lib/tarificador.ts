@@ -33,7 +33,7 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
-import { purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
+import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import {
   ESTADOS_DUPLICADO,
@@ -285,6 +285,7 @@ export async function lanzarPendientes(correduriaId: string, compania: string, d
       await prisma.$executeRaw`
         update seguros.tarificacion_trabajos set fly_machine_id = ${res.machineId}, updated_at = now()
         where id = ${t.id}::uuid and estado = 'en_curso'`
+      console.info(`[tarificador] máquina lanzada: trabajo ${t.id} imagen ${c.cfg.imagen}`) // vuelta atrás: ver MANUAL-NUEVO-BOT.md
       r.lanzados.push(t.id)
     } else {
       await marcarFallo(prisma, t.id, t.intentos, { tipo: 'infra', mensaje: `fly: ${res.motivo}`, url: null }, null)
@@ -724,6 +725,8 @@ export type ResumenBarrido = {
   riesgosPurgados?: number
   /** Trabajos cerrados a los que se les quitó el recorrido/inventario por caducidad (`DIAS_RETENCION_RECORRIDO`). */
   recorridosCaducados?: number
+  /** Documentos de evidencia de fallo (captura/HTML) borrados por caducidad (`DIAS_RETENCION_EVIDENCIA`, 15 días). */
+  evidenciasPurgadas?: number
   /** F2: atascos sin respuesta que pasaron a `error_definitivo`. */
   atascosCaducados?: number
   lanzar: Record<string, ResumenLanzar>
@@ -790,6 +793,11 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
   // El recorrido y el inventario de pantalla de un trabajo cerrado se guardan `DIAS_RETENCION_RECORRIDO` días (diagnóstico).
   r.recorridosCaducados = await purgarRecorridosCaducados(prisma, correduriaId).catch((e: unknown) => {
     console.error('[tarificador] caducidad del recorrido', e instanceof Error ? e.message.slice(0, 200) : e)
+    return 0
+  })
+  // La EVIDENCIA de fallo (captura/HTML con datos personales) de un trabajo terminado vive `DIAS_RETENCION_EVIDENCIA` días (15).
+  r.evidenciasPurgadas = await purgarEvidenciaCaducada(prisma, correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] purga de evidencia', e instanceof Error ? e.message.slice(0, 200) : e)
     return 0
   })
 

@@ -12,6 +12,7 @@
 import type { DireccionRiesgo, RamoRpa, RiesgoComunidad } from './tipos.ts'
 import { validarRiesgoComunidad } from './riesgo.ts'
 import { claveCompania } from './registro.ts'
+import { faltanParaTarificar, mensajeFaltan } from './obligatorios.ts'
 
 // ─── Formulario canónico de COMUNIDADES (independiente de compañía) ────────
 
@@ -287,5 +288,9 @@ export function prepararSolicitud(
   if (propios.length) return { ok: false, compania: clave, errores: propios.map((m) => `${cap.nombre} · ${m}`) }
   const v = validarRiesgoComunidad(cap.mapear(f.formulario, x.extras), hoy)
   if (!v.ok) return { ok: false, compania: clave, errores: v.errores.map((m) => `${cap.nombre} · ${m}`) }
+  // La misma fuente que el encolado y el worker (obligatorios.ts). Sin declaración (`null`) aquí no se afirma nada más: lo
+  // de arriba ya exigió forma y extras, y el encolado (`riesgoParaEncolar`) es fail-closed con un bot sin declaración.
+  const faltan = faltanParaTarificar(clave, cap.ramo, v.riesgo)
+  if (faltan && faltan.length) return { ok: false, compania: clave, errores: [`${cap.nombre} · ${mensajeFaltan(faltan)}`] }
   return { ok: true, compania: clave, ramo: cap.ramo, riesgo: v.riesgo }
 }

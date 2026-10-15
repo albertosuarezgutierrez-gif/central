@@ -12,6 +12,7 @@
 import type { Locator, Page } from 'playwright'
 import { ErrorTarificador } from '../../errores.ts'
 import { exigirSinVerificacion } from '../../verificacion.ts'
+import { exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
 
@@ -121,8 +122,10 @@ export async function login(page: Page, ctx: CtxLoginMapfre, urlLogin: string = 
     await ctx.exigirSinCaptcha()
     await exigirSinVerificacion(page, 'mapfre')
     if (!(await visible(campoPassword(page)))) break
+    // Mensaje del portal (rechazo / bloqueo / caducada): se para YA, sin esperar el plazo y sin tocar nada más.
+    await exigirSinRechazoCredenciales(page, 'mapfre')
     if (Date.now() >= fin) {
-      throw new ErrorTarificador('credenciales', 'mapfre/login: el formulario de acceso sigue visible tras enviar (credenciales rechazadas o portal distinto)')
+      throw new ErrorTarificador('portal', 'mapfre/login: el formulario sigue visible tras enviar (sin mensaje de rechazo en pantalla)') // sin texto afirmativo no es `credenciales`
     }
     await page.waitForTimeout(500)
   }
@@ -130,5 +133,6 @@ export async function login(page: Page, ctx: CtxLoginMapfre, urlLogin: string = 
   await page.waitForTimeout(1_000)
   await exigirSinVerificacion(page, 'mapfre')
   await ctx.exigirSinCaptcha()
+  await exigirSinRechazoCredenciales(page, 'mapfre', { soloInutilizable: true }) // «contraseña caducada» tras entrar
   ctx.log('login ok')
 }
