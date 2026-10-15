@@ -1870,3 +1870,98 @@ model CorreoEventoEntrante {
   @@index([correduriaId, createdAt(sort: Desc)], map: "correo_evento_entrante_reciente")
   @@map("correo_evento_entrante")
 }
+
+// ─── Consultas a compañías por correo (15/10/2026, fase 1) ──────────────────
+// SQL en prisma/sql/2026-10-15_seguros_consulta_compania.sql. Spec:
+// docs/superpowers/specs/2026-10-15-correduria-consultas-companias-design.md.
+// Se leen y escriben por SQL crudo en `lib/consulta-compania-bd.ts` (siempre filtrando por `correduria_id`); los
+// modelos documentan la forma. `compania_contactos.ramos` (tipo_seguro[] NULL = sin clasificar) NO se declara en
+// `CompaniaContacto`: Prisma no admite listas NULL y el directorio de compañías no debe caerse sin el SQL.
+
+enum ConsultaCompaniaEstado {
+  borrador
+  enviada
+  respondida
+  pide_info
+  rechazada
+  sin_respuesta
+  descartada
+  cancelada
+
+  @@map("consulta_compania_estado")
+}
+
+enum ConsultaCompaniaTipo {
+  consulta
+  paquete
+
+  @@map("consulta_compania_tipo")
+}
+
+/// Una consulta a UNA compañía. `cuerpo` lleva los marcadores {{NOMBRE_TOMADOR}}/{{DOC_TOMADOR}}, nunca el DNI.
+/// `identidadIncluida` = el correo enviado lleva nombre y documento (RGPD). Fechas NULL = no ha ocurrido.
+model ConsultaCompania {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId          String                 @map("correduria_id") @db.Uuid
+  clienteId             String                 @map("cliente_id") @db.Uuid
+  tipo                  ConsultaCompaniaTipo   @default(consulta)
+  companiaCodigoDgs     String                 @map("compania_codigo_dgs") @db.VarChar(16)
+  destinatarios         String[]               @db.Uuid
+  asunto                String
+  cuerpo                String
+  estado                ConsultaCompaniaEstado @default(borrador)
+  codigoRef             String                 @unique(map: "consulta_compania_codigo_ref_uq") @map("codigo_ref")
+  gmailMessageId        String?                @map("gmail_message_id")
+  gmailThreadId         String?                @map("gmail_thread_id")
+  identidadIncluida     Boolean                @map("identidad_incluida")
+  competenciaIncluida   Boolean                @default(false) @map("competencia_incluida")
+  responderAntes        DateTime?              @map("responder_antes") @db.Date
+  adjuntos              Json                   @default("[]")
+  enviadaAt             DateTime?              @map("enviada_at") @db.Timestamptz(6)
+  respondidaAt          DateTime?              @map("respondida_at") @db.Timestamptz(6)
+  recordatorioAvisadoAt DateTime?              @map("recordatorio_avisado_at") @db.Timestamptz(6)
+  creadoPor             String                 @map("creado_por")
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime               @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  oportunidades ConsultaCompaniaOportunidad[]
+  mensajes      ConsultaCompaniaMensaje[]
+
+  @@index([correduriaId, clienteId, createdAt(sort: Desc)], map: "consulta_compania_cliente_idx")
+  @@map("consulta_compania")
+}
+
+/// Oportunidades de una consulta: fase 1, una; `paquete` (fase 4), varias del MISMO cliente. Primas NULL = no se sabe.
+model ConsultaCompaniaOportunidad {
+  consultaId     String   @map("consulta_id") @db.Uuid
+  oportunidadId  String   @map("oportunidad_id") @db.Uuid
+  tarificacionId String?  @map("tarificacion_id") @db.Uuid
+  primaBase      Decimal? @map("prima_base") @db.Decimal(12, 2)
+  primaObjetivo  Decimal? @map("prima_objetivo") @db.Decimal(12, 2)
+  primaPactada   Decimal? @map("prima_pactada") @db.Decimal(12, 2)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  consulta ConsultaCompania @relation(fields: [consultaId], references: [id])
+
+  @@id([consultaId, oportunidadId])
+  @@index([oportunidadId], map: "consulta_compania_oportunidad_op_idx")
+  @@map("consulta_compania_oportunidad")
+}
+
+/// Respuesta entrante (fase 2, triaje). `messageId` único = idempotencia.
+model ConsultaCompaniaMensaje {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  consultaId   String    @map("consulta_id") @db.Uuid
+  messageId    String    @unique(map: "consulta_compania_mensaje_message_id_uq") @map("message_id")
+  de           String?
+  fecha        DateTime? @db.Timestamptz(6)
+  resumen      String?
+  adjuntos     Json      @default("[]")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  consulta ConsultaCompania @relation(fields: [consultaId], references: [id])
+
+  @@index([consultaId, createdAt], map: "consulta_compania_mensaje_consulta_idx")
+  @@map("consulta_compania_mensaje")
+}
