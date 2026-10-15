@@ -15,7 +15,7 @@ export async function pendientesVerificacion(correduriaId: string): Promise<Avis
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = 'requiere_humano'
       -- Sin EXPLORACIONES (13/10/2026): se miran en su pantalla; el aviso de «verifica y reintenta» no aplica.
-      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
       and coalesce(terminado_at, updated_at) > now() - make_interval(days => ${VENTANA_DIAS}::int)
       and (error ->> 'avisadoHumanoEn') is null
       and (error ->> 'mensaje') like '%requiere_verificacion_humana:%'

@@ -30,14 +30,14 @@ export type ExploracionTrabajo = { entrada: string; conDatosReales: boolean }
 /** `leaseHasta` (ISO): hasta cuándo asegura acepta el resultado; el runner no reintenta si no cabe. */
 export type Trabajo = {
   id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta?: string
-  modo?: 'tarificar' | 'emision' | 'exploracion'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
+  modo?: 'tarificar' | 'emision' | 'exploracion' | 'humo'; emision?: EmisionTrabajo; exploracion?: ExploracionTrabajo
 }
 
 /**
  * Modos que ESTA imagen sabe ejecutar. Viajan en la cabecera `X-Tarificador-Modos` al pedir el trabajo: asegura solo
  * sirve un trabajo de exploración a un worker que lo declara (una imagen vieja lo trataría como `tarificar`).
  */
-export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion'] as const
+export const MODOS_SOPORTADOS = ['tarificar', 'emision', 'exploracion', 'humo'] as const
 export const CABECERA_MODOS = 'X-Tarificador-Modos'
 
 const ESPERAS_PEDIR_MS = [2_000, 4_000, 8_000]
@@ -114,6 +114,8 @@ export type CuerpoResultado =
   | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }; capturaBase64?: string; html?: string } & MetaTraza)
   /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
   | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string; presupuesto?: CuerpoResultadoPresupuesto } & MetaTraza)
+  /** Prueba nocturna de humo superada (15/10/2026, src/humo.ts): login y pantalla de inicio alcanzados. Un fallo va como `error`. */
+  | ({ trabajoId: string; resultado: 'humo'; omitido?: string } & MetaTraza)
 
 /** Presupuesto guardado por el explorador (14/10/2026): referencia del portal (`null` = no se vio) y su PDF si llegó. */
 export type CuerpoResultadoPresupuesto = { referencia: string | null; pdf: { nombre: string; base64: string } | null }

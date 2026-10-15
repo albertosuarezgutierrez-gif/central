@@ -16,10 +16,10 @@ test('marcarFallo: el atasco solo en tarificar, sin el checkpoint en el error js
   const mf = tramo(src, 'async function marcarFallo(', '// ─── Barrido')
   assert.match(mf, /const \{ atasco: atascoCable, \.\.\.errorSinAtasco \} = error\s+error = errorSinAtasco/, 'el checkpoint (con selectores) no puede acabar en el error jsonb')
   assert.ok(mf.indexOf('error = errorSinAtasco') < mf.indexOf('const err = JSON.stringify'), 'se quita el atasco ANTES de serializar el error')
-  assert.match(mf, /const atasco = !deEmision && !deExploracion\s+\? await atascoParaFallo\(/, 'emisión y exploración nunca se atascan')
+  assert.match(mf, /const atasco = !deEmision && !deExploracion && !deHumo\s+\? await atascoParaFallo\(/, 'emisión, exploración y humo nunca se atascan')
   assert.match(mf, /terminado_at = case when \$\{abierto\} then null else now\(\) end/, 'un atascado no se da por terminado')
   assert.match(mf, /if \(tocada && atasco\)[\s\S]*?guardarAtasco\(db,/, 'el checkpoint se guarda SOLO si el UPDATE tocó la fila')
-  assert.match(mf, /if \(tocada && estado === 'error_definitivo' && !deEmision && !deExploracion\) await evaluarCorte\(db, id\)/, 'el corte se evalúa tras cada error_definitivo de tarificar')
+  assert.match(mf, /if \(tocada && estado === 'error_definitivo' && !deEmision && !deExploracion && !deHumo\) await evaluarCorte\(db, id\)/, 'el corte de tarificar se evalúa tras cada error_definitivo de tarificar (no del humo)')
 })
 
 test('cola: no se encola ni se reclama una pareja en pausa; el barrido caduca los atascos', () => {

@@ -320,7 +320,7 @@ export const VENTANA_OK_DUPLICADO_MS = 10 * 60_000
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
  * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
  * devolverá a `pendiente`: sería el mismo encargo dos veces). Lo terminado, cancelado o pendiente de una persona, no.
- * Un trabajo de EMISIÓN o de EXPLORACIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
+ * Un trabajo de EMISIÓN, de EXPLORACIÓN o de HUMO (prueba nocturna, 15/10/2026) nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
  * `ok` (15/10/2026): solo si salió CON PRECIO (`conPrecio`) y terminó hace menos de `VENTANA_OK_DUPLICADO_MS`; sin hora de
  * fin legible, en el futuro o sin dato de precio → NO bloquea (se vuelve a tarificar antes que servir un resultado dudoso).
  */
@@ -329,7 +329,7 @@ export function bloqueaDuplicado(
   ahora: Date,
   maxIntentos: number,
 ): boolean {
-  if (f.modo === 'emision' || f.modo === 'exploracion') return false
+  if (f.modo === 'emision' || f.modo === 'exploracion' || f.modo === 'humo') return false
   if (f.estado === 'pendiente') return true
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
@@ -412,6 +412,8 @@ export type ResultadoWorker =
    * el presupuesto (14/10/2026), su PDF (como mucho uno) y la referencia del portal (`null` = no se vio).
    */
   | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin; presupuesto: PresupuestoExplorado | null } & MetaWorker)
+  /** Prueba nocturna de humo superada (15/10/2026): login y pantalla de inicio alcanzados. Sin ofertas, sin tarificación. Un fallo va como `error`. */
+  | ({ tipo: 'humo'; trabajoId: string; omitido: string | null } & MetaWorker)
 
 /** El presupuesto GUARDADO por el explorador: PDF descargado (o `null`) y referencia (o `null`). */
 export type PresupuestoExplorado = { referencia: string | null; pdf: { nombre: string; contenido: Buffer } | null }
@@ -543,5 +545,11 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     return { ok: true, r: { tipo: 'explorado', trabajoId, motivoFin, presupuesto, ...leerMetaWorker(e) } }
   }
 
-  return { ok: false, errores: ['resultado tiene que ser «ok», «error» o «explorado»'] }
+  if (e.resultado === 'humo') {
+    // `omitido`: el worker no tiene adaptador activo de esa compañía (ni éxito ni fallo). Texto corto, sin saltos de línea.
+    const omitido = typeof e.omitido === 'string' && e.omitido.trim() ? e.omitido.replace(/\s+/g, ' ').trim().slice(0, 200) : null
+    return { ok: true, r: { tipo: 'humo', trabajoId, omitido, ...leerMetaWorker(e) } }
+  }
+
+  return { ok: false, errores: ['resultado tiene que ser «ok», «error», «explorado» o «humo»'] }
 }

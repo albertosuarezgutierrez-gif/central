@@ -23,7 +23,7 @@ export async function listarBandeja(correduriaId: string, limite: number, desde:
            coalesce(terminado_at, updated_at) as fecha
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = any(${estados}::text[])
-      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
     order by coalesce(terminado_at, updated_at) desc, id
     limit ${limite}::int offset ${desde}::int`
     : await prisma.$queryRaw<FilaBandeja[]>`
@@ -31,13 +31,13 @@ export async function listarBandeja(correduriaId: string, limite: number, desde:
            coalesce(terminado_at, updated_at) as fecha
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = any(${estados}::text[])
-      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
     order by coalesce(terminado_at, updated_at) desc, id
     limit ${limite}::int offset ${desde}::int`
   const t = await prisma.$queryRaw<{ n: number }[]>`
     select count(*)::int as n from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = any(${estados}::text[])
-      and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'`
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')`
   const total = t[0]?.n ?? 0
   return { total, items: filas.map(proyectarItemBandeja), hayMas: desde + filas.length < total }
 }

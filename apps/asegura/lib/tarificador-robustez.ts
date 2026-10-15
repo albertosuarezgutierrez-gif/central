@@ -33,6 +33,7 @@ import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { decidirRelanzar } from './tarificador-relanzar-reglas'
 import { purgarRiesgoTrabajos } from './tarificador-purga'
+import { MENSAJE_HUMO_OMITIDO_CREDENCIALES, motivoPausaHumo } from './tarificador-humo-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 type Db = Pick<Tx, '$queryRaw' | '$executeRaw'>
@@ -391,6 +392,39 @@ export async function caducarAtascos(correduriaId: string): Promise<number> {
 }
 
 // ─── CORTE por compañía/ramo ─────────────────────────────────────────────────
+
+/**
+ * PRUEBA DE HUMO (15/10/2026) con la contraseña rechazada: abre la pausa de TODAS las parejas activas de esa compañía (la
+ * credencial es de la compañía: repetir el login desde otra pareja es como se bloquea una cuenta) y cancela los humos aún
+ * `pendiente` de la compañía (no se repite el login esta noche). Misma pausa que `evaluarCorte` (una viva por pareja; la
+ * reanuda Alberto). Sin el SQL de la F2 → 0. Devuelve cuántas pausas abrió.
+ */
+export async function pausarTrasHumo(db: Db, trabajoId: string): Promise<number> {
+  if (!(await hayPausas())) return 0
+  const t = await db.$queryRaw<{ correduria_id: string; compania: string; ramo: string }[]>`
+    select correduria_id::text as correduria_id, compania, ramo
+    from seguros.tarificacion_trabajos w where w.id = ${trabajoId}::uuid and to_jsonb(w)->>'modo' = 'humo'`
+  const f = t[0]
+  if (!f) return 0
+  const activas = await db.$queryRaw<{ ramo: string }[]>`
+    select ramo from seguros.companias_integracion
+    where correduria_id = ${f.correduria_id}::uuid and compania = ${f.compania} and activo and modo = 'rpa_autorizada'`
+  let n = 0
+  for (const ramo of new Set([f.ramo, ...activas.map((a) => a.ramo)])) {
+    n += await db.$executeRaw`
+      insert into seguros.tarificador_pausas (correduria_id, compania, ramo, motivo, trabajos)
+      values (${f.correduria_id}::uuid, ${f.compania}, ${ramo}, ${motivoPausaHumo(f.compania, ramo)}, ${[trabajoId]}::uuid[])
+      on conflict (correduria_id, compania, ramo) where reanudada_at is null do nothing`
+  }
+  await db.$executeRaw`
+    update seguros.tarificacion_trabajos w
+    set estado = 'cancelado', terminado_at = now(), updated_at = now(), lease_hasta = null,
+        error = jsonb_build_object('tipo', 'datos', 'mensaje', ${MENSAJE_HUMO_OMITIDO_CREDENCIALES}::text)
+    where w.correduria_id = ${f.correduria_id}::uuid and w.compania = ${f.compania} and w.estado = 'pendiente'
+      and to_jsonb(w)->>'modo' = 'humo' and w.id <> ${trabajoId}::uuid`
+  if (n > 0) console.error(`[tarificador-corte] pausa abierta por la prueba de humo: ${f.compania}`)
+  return n
+}
 
 /** ¿Hay una pausa viva para la pareja? (Sin el SQL de la F2 → `false`: comportamiento anterior.) */
 export async function pausaViva(db: Db, correduriaId: string, compania: string, ramo: string): Promise<boolean> {

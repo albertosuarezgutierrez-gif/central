@@ -1,5 +1,5 @@
 // Estadísticas de los bots del tarificador RPA (15/10/2026): SQL agregado de solo lectura. Reglas puras en
-// ./tarificador-estadisticas-reglas.ts. Por `correduria_id`; solo trabajos de TARIFICAR (ni emisión ni exploración).
+// ./tarificador-estadisticas-reglas.ts. Por `correduria_id`; solo trabajos de TARIFICAR (ni emisión, ni exploración, ni la PRUEBA NOCTURNA DE HUMO: ni éxito ni fallo de tarificación).
 // 🔒 Solo salen contadores, medias y claves de atasco: ni riesgo, ni error crudo, ni datos personales.
 import { prisma } from './tenant'
 import { hayAtascos } from './esquema-bd'

@@ -69,6 +69,22 @@
     {
       "path": "/api/cron/tarificador-cola",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/tarificador-humo",
+      "schedule": "15 1 * * *"
+    },
+    {
+      "path": "/api/cron/tarificador-humo",
+      "schedule": "15 2 * * *"
+    },
+    {
+      "path": "/api/cron/tarificador-humo-informe",
+      "schedule": "15 2 * * *"
+    },
+    {
+      "path": "/api/cron/tarificador-humo-informe",
+      "schedule": "15 3 * * *"
     }
   ]
 }

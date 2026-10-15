@@ -412,7 +412,7 @@ async function marcar(raiz: Raiz, e: Entorno, etiqueta: string, valor: boolean):
 
 // ───────────────────────── login y navegación ─────────────────────────
 
-async function abrirComunidades(page: Page, ctx: ContextoPortal): Promise<void> {
+export async function abrirComunidades(page: Page, ctx: ContextoPortal): Promise<void> {
   // Ruta dada por Alberto: «Nueva Alta» → modal → «Particulares» → «Comunidades» (paso común: intranet/entrada.ts).
   await abrirNuevaAlta(page, ctx, { pestana: 'Particulares', producto: 'Comunidades' })
   await page.getByText(textoExacto(TITULO_FORMULARIO)).first().waitFor()

@@ -99,14 +99,14 @@ for (const status of [404, 503]) {
 
 // ─── Explorador IA (13/10/2026) ──────────────────────────────────────────────
 
-test('pedirTrabajo declara los modos de ESTA imagen (asegura solo sirve una exploración a quien la declara)', async () => {
+test('pedirTrabajo declara los modos de ESTA imagen (asegura solo sirve una exploración o un humo a quien lo declara)', async () => {
   let cabecera: string | null = null
   globalThis.fetch = (async (_u: unknown, init?: RequestInit) => {
     cabecera = new Headers(init?.headers).get(CABECERA_MODOS)
     return new Response(JSON.stringify({ trabajo }), { status: 200 })
   }) as typeof fetch
   await pedirTrabajo(cfg, esperar)
-  assert.equal(cabecera, 'tarificar,emision,exploracion')
+  assert.equal(cabecera, 'tarificar,emision,exploracion,humo')
 })
 
 test('pedirPaso: 200 = ok; 404 = perdido; 409 se reintenta UNA vez; red caída = parar (sin reintento ciego)', async () => {
