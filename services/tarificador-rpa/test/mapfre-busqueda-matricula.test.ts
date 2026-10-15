@@ -75,8 +75,8 @@ const formador = (): ContextoFormador => ({
   conocimiento: [], resueltos: new Map(), redactar: (t) => t, log: () => undefined,
 })
 
-test('Mapfre auto/moto 0.8.3 (CP de circulación: salir del campo y esperar a que se asiente; «Continuar» sin llegada nombra los mat-error)', () => {
-  assert.equal(mapfreAuto.version, '0.8.3')
+test('Mapfre auto/moto 0.8.4 (siniestros deshabilitado: con 0 no se toca, con >0 atasco; red de atasco para el timeout de un control)', () => {
+  assert.equal(mapfreAuto.version, '0.8.4')
 })
 
 test('búsqueda por matrícula: se lanza AL SALIR DEL CAMPO (blur) y no se pulsa ningún botón (ni info, ni lupa del buscador, ni NO catalogado)', async () => {

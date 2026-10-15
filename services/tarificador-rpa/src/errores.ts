@@ -63,6 +63,26 @@ export function pideInventarioDom(e: unknown): boolean {
   return e instanceof ErrorTarificador && (e as ErrorTarificador & { pideInventarioDom?: unknown }).pideInventarioDom === true
 }
 
+/** Acciones de Playwright sobre un control del formulario (no navegación ni esperas sueltas). */
+const TIMEOUT_CONTROL = /^(?:locator|page|frame|elementHandle)\.(fill|click|dblclick|selectOption|check|uncheck|setChecked|type|press|pressSequentially|tap|clear|selectText|setInputFiles): Timeout \d+ms exceeded/
+/** Primer «waiting for locator('…')» / «getByX(…)» del call log de Playwright (nunca la línea de la acción: lleva el VALOR). */
+const LOCATOR_DEL_LOG = /waiting for ((?:locator|getBy[A-Za-z]+)\(.*?\)(?:\.(?:first|last|nth)\(\d*\))*)\s*$/m
+
+/**
+ * v0.8.4 (trabajo real 39c8016e) · ¿El error es un TimeoutError de Playwright al ACTUAR sobre un control mapeado (fill/click/
+ * selectOption…: control deshabilitado, oculto o cambiado)? Devuelve la acción y el selector (≤160 car.), NUNCA el valor (la
+ * línea `- fill("…")` del call log no se lee). Un `ErrorTarificador` del adaptador no cuenta (ya trae su propio hueco). PURA.
+ */
+export function timeoutDeControl(e: unknown): { accion: string; selector: string | null } | null {
+  if (!(e instanceof Error) || e instanceof ErrorTarificador) return null
+  // El call log de Playwright viene con códigos de color ANSI: fuera antes de leerlo.
+  const texto = e.message.replace(/\u001b\[[0-9;]*m/g, '')
+  const m = TIMEOUT_CONTROL.exec(texto)
+  if (!m) return null
+  const sel = LOCATOR_DEL_LOG.exec(texto)?.[1] ?? null
+  return { accion: m[1]!, selector: sel ? sel.slice(0, 160) : null }
+}
+
 export function clasificar(e: unknown): { tipo: TipoError; mensaje: string } {
   if (e instanceof EmisionBloqueadaError) return { tipo: 'emision', mensaje: e.message }
   if (e instanceof ErrorTarificador) return { tipo: e.tipo, mensaje: e.message }
