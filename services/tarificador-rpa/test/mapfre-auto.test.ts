@@ -26,6 +26,7 @@ import {
   resumenDesdePares,
   SEL_CONDUCTOR,
   SEL_HISTORIAL,
+  SEL_LICENCIA,
   SEL_OBJETO,
   SEL_TOMADOR,
   TOTAL_PANTALLAS_GRABACION,
@@ -40,7 +41,7 @@ const form: FormularioAuto = {
   matricula: '0000BBB',
   codigoPostal: '00001',
   conductor: { fechaNacimiento: '1980-02-03', fechaCarne: '2005-06-07', sexo: null },
-  tomadorEsConductor: null,
+  tomadorEsConductor: true,
   tomadorEsPropietario: null,
   aniosAseguradoAnterior: 3,
   siniestrosUltimos5Anios: 0,
@@ -48,6 +49,7 @@ const form: FormularioAuto = {
   tomador: null,
   eleccionVersion: null,
   seleccionVehiculo: null,
+  companiaAnterior: 'ASEGURADORA FICTICIA',
 }
 
 const TARJETA = (producto: string, periodicidad: string, prima: string, aviso: boolean) => `<prima-producto>
@@ -75,7 +77,8 @@ const RESUMEN = `<body><app-datos-vehiculo><mat-expansion-panel-header><mat-pane
 // Campos con los names reales; `siniestros` también existe en otro componente (descuentos) y NO debe tocarse.
 const CAMPOS = (extra = '') => `<body>
 <app-datos-vehiculo><input name="matricula" formcontrolname="matricula"><input name="cpCirculacion" formcontrolname="codPostal"></app-datos-vehiculo>
-<app-conductor-habitual><input name="fechaNacimiento"><input name="fechaExpedicion"><input name="codigoDocumento"></app-conductor-habitual>
+<app-conductor-habitual><input name="fechaNacimiento"><input name="codigoDocumento"></app-conductor-habitual>
+<datos-licencia><input name="fechaExpedicion"></datos-licencia>
 <app-historial-siniestralidad><input formcontrolname="siniestros" ${extra}><input formcontrolname="tiempoAntComp" disabled></app-historial-siniestralidad>
 <app-info-descuentos><input name="siniestros" formcontrolname="siniestros"></app-info-descuentos>
 </body>`
@@ -188,11 +191,13 @@ test('planObjetoYFiguras: escribe solo lo conocido y deja el resto como pendient
   assert.deepEqual(plan.escribibles.map((o) => [o.sel, o.valor]), [
     [SEL_OBJETO.matricula, '0000BBB'],
     [SEL_OBJETO.cpCirculacion, '00001'],
-    [SEL_CONDUCTOR.fechaNacimiento, '03/02/1980'],
-    [SEL_CONDUCTOR.fechaCarne, '07/06/2005'],
+    [SEL_LICENCIA.fechaCarne, '07/06/2005'],
     [SEL_HISTORIAL.siniestrosRc5, '0'],
+    [SEL_HISTORIAL.companiaAnterior, 'ASEGURADORA FICTICIA'],
   ])
-  assert.ok(plan.pendientes.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior), 'con años asegurado > 0 hay compañía anterior pendiente')
+  assert.ok(!plan.escribibles.some((o) => o.sel === SEL_CONDUCTOR.fechaNacimiento), 'v0.8.0: la fecha de nacimiento es la del tomador (paso 1); en Figuras no se teclea')
+  assert.deepEqual(plan.pendientes.map((o) => o.etiqueta), ['uso del vehículo', 'ámbito de circulación', 'clase del permiso'], 'sin valor en el formulario: pendientes (no se suponen)')
+  assert.throws(() => planObjetoYFiguras({ ...form, companiaAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
   assert.ok(!plan.escribibles.some((o) => o.sel === SEL_HISTORIAL.aniosCompaniaAnterior), 'el campo deshabilitado nunca se escribe')
   assert.throws(() => planObjetoYFiguras({ ...form, siniestrosUltimos5Anios: null }), /siniestros/)
   assert.throws(() => planObjetoYFiguras({ ...form, aniosAseguradoAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
@@ -205,7 +210,8 @@ test('rellenarCamposTexto escribe con ámbito (no toca el homónimo de otro comp
   const pendientes = await rellenarCamposTexto(page, planObjetoYFiguras(form))
   assert.ok(pendientes.includes('uso del vehículo'))
   assert.equal(await page.locator(SEL_OBJETO.matricula).inputValue(), '0000BBB')
-  assert.equal(await page.locator(SEL_CONDUCTOR.fechaCarne).inputValue(), '07/06/2005')
+  assert.equal(await page.locator(SEL_LICENCIA.fechaCarne).inputValue(), '07/06/2005')
+  assert.equal(await page.locator(SEL_CONDUCTOR.fechaNacimiento).inputValue(), '', 'el conductor habitual (grabación 13/10) ya no se teclea')
   assert.equal(await page.locator(SEL_HISTORIAL.siniestrosRc5).inputValue(), '0')
   assert.equal(await page.locator('app-info-descuentos input').inputValue(), '', 'el campo homónimo de descuentos queda intacto')
   assert.equal(await page.locator(SEL_HISTORIAL.aniosCompaniaAnterior).inputValue(), '')
@@ -231,6 +237,7 @@ const ctxFalso = (registro: string[] = []) => ({
   pulsarEnlaceEntrada: async () => { registro.push('entrada') },
   confirmarVehiculoMapfre: async () => { registro.push('vehiculo') },
   continuarMapfre: async (_p: Page, paso: string) => { registro.push(`continuar:${paso}`) },
+  cerrarClubMapfre: async () => { registro.push('club'); return 'cerrado' },
 }) as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
 
 test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de navegar; otro ramo → datos', async () => {
@@ -355,7 +362,7 @@ test('del paso 2 al precio: escribe el CP y PARA antes de «Continuar» si queda
 test('planDelPaso / exigirPasoCompleto: cada operación es de su paso; un paso con pendientes no se completa', () => {
   const plan = planObjetoYFiguras(form)
   assert.deepEqual(planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]).escribibles.map((o) => o.sel), [SEL_OBJETO.cpCirculacion])
-  assert.deepEqual(planDelPaso(plan, 'figuras').escribibles.map((o) => o.sel), [SEL_CONDUCTOR.fechaNacimiento, SEL_CONDUCTOR.fechaCarne, SEL_HISTORIAL.siniestrosRc5])
+  assert.deepEqual(planDelPaso(plan, 'figuras').escribibles.map((o) => o.sel), [SEL_LICENCIA.fechaCarne, SEL_HISTORIAL.siniestrosRc5, SEL_HISTORIAL.companiaAnterior])
   assert.throws(() => exigirPasoCompleto(plan, 'figuras'), (e) => e instanceof ErrorMapaIncompleto && /clase del permiso/.test(e.message))
   assert.doesNotThrow(() => exigirPasoCompleto({ escribibles: plan.escribibles, pendientes: [] }, 'figuras'))
 })
@@ -392,7 +399,7 @@ test('planObjetoYFiguras: con los valores del formulario los mat-select pasan a 
     ['clase del permiso', ['B']],
     ['compañía anterior', ['Aseguradora Ficticia']],
   ])
-  assert.deepEqual(con.pendientes.map((o) => o.etiqueta), ['¿tiene compañía anterior?'], 'el interruptor sigue sin DOM: pendiente')
+  assert.deepEqual(con.pendientes.map((o) => o.etiqueta), [], 'v0.8.0: el interruptor no se pulsa; se comprueba en pantalla (`historialAnterior`)')
   // Un valor sin mapeo NO se inventa: sigue pendiente.
   const raro = planObjetoYFiguras({ ...form, usoVehiculo: 'taxi' } as unknown as FormularioAuto)
   assert.ok(raro.pendientes.some((o) => o.etiqueta === 'uso del vehículo'))

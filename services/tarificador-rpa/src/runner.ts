@@ -41,7 +41,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { cerrarAvisoTomadorMapfre, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { cerrarAvisoTomadorMapfre, cerrarClubMapfre, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -179,10 +179,14 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       avanzarATarificar: () => pulsarAvance(page, guard),
       avanzarPestanaAutorizada: (selector) => pulsarAvancePestanaAutorizado(page, guard, selector),
       pulsarEnlaceEntrada: (boton) => pulsarEnlaceEntradaAutorizado(boton, guard, k.compania),
-      confirmarVehiculoMapfre: async (pagina, matricula) => {
+      confirmarVehiculoMapfre: async (pagina, matricula, indice, denominacion) => {
         // La pestaña de NSEI la abre la entrada; solo vale una página de ESTE contexto (el que tiene el guard de red).
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo no es de este trabajo')
-        await confirmarVehiculoMapfre(pagina, guard, matricula)
+        await confirmarVehiculoMapfre(pagina, guard, matricula, indice, denominacion)
+      },
+      cerrarClubMapfre: async (pagina) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo «Club MAPFRE» no es de este trabajo')
+        return cerrarClubMapfre(pagina, guard)
       },
       elegirTomadorMapfre: async (pagina, nif) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo del tomador no es de este trabajo')

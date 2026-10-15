@@ -44,7 +44,8 @@ export function coincidenciaOpcion(opciones: readonly string[], buscados: readon
     if (iguales.length === 1) return { indice: iguales[0]!.i }
     if (iguales.length > 1) return { indice: null, motivo: 'ambigua' }
   }
-  const palabras = (s: string) => ` ${s} `
+  // Signos fuera (15/10/2026, compañías de Mapfre: «AXA SEGUROS GENERALES, S.A. …»): la coma no rompe la palabra entera.
+  const palabras = (s: string) => ` ${s.replace(/[^a-z0-9ñ]+/g, ' ').trim()} `
   for (const b of bus) {
     const contiene = ops.filter((o) => palabras(o.n).includes(palabras(b)) || palabras(b).includes(palabras(o.n)))
     if (contiene.length === 1) return { indice: contiene[0]!.i }

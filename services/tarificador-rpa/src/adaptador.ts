@@ -65,7 +65,7 @@ export type ContextoPortal = ContextoTarificacion & {
    * nombra los controles del diálogo. `pagina`: la pestaña de NSEI (la abre la entrada); tiene que ser del MISMO contexto
    * del navegador que el trabajo (el guard de red está instalado en él).
    */
-  confirmarVehiculoMapfre?: (pagina: Page, matricula: string) => Promise<void>
+  confirmarVehiculoMapfre?: (pagina: Page, matricula: string, indice?: number, denominacion?: string) => Promise<void>
   /**
    * Mapfre NSEI (14/10/2026): «Continuar» del stepper desde el paso `paso` por `pulsarContinuarMapfre` de guard.ts (lista
    * cerrada 1 → 2 → 3; el del paso 3 calcula las primas: PERMITIDO por Alberto). Una vez por paso y en orden. Misma regla de
@@ -80,6 +80,11 @@ export type ContextoPortal = ContextoTarificacion & {
   elegirTomadorMapfre?: (pagina: Page, nif: string) => Promise<'elegido' | 'ninguna' | 'varias' | 'sin_control'>
   /** Mapfre NSEI: cierra el aviso «no existe ningún registro» (texto validado en guard.ts; un solo Aceptar/Cerrar). */
   cerrarAvisoTomadorMapfre?: (pagina: Page) => Promise<'sin_registro'>
+  /**
+   * Mapfre NSEI (grabación 15/10/2026): cierra el diálogo «Club MAPFRE» que sale tras calcular las primas, por su botón de la
+   * IZQUIERDA (texto validado en guard.ts, `cerrarClubMapfre`). Una vez y solo tras el «Continuar» desde Figuras.
+   */
+  cerrarClubMapfre?: (pagina: Page) => Promise<'cerrado'>
   /**
    * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
    * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,
