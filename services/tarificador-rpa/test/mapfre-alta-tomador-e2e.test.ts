@@ -34,7 +34,9 @@ const riesgoOportunidad = {
 
 /** Lo que llega a asegura desde plataforma (el navegador + la ruta `encolar`, que completa el nacimiento desde la ficha). */
 function riesgoDePlataforma(): unknown {
-  const f = formularioBotAuto(formularioBotsAutoDeRiesgo(riesgoOportunidad), new Date('2026-10-14T00:00:00Z'))
+  // El riesgo declara 5 años asegurado con seguro actual: la compañía anterior la escribe el corredor en el formulario de bots
+  // (`formularioBotsAutoDeRiesgo` la deja null) y Mapfre la exige al encolar (#4729). Nombre ficticio.
+  const f = formularioBotAuto({ ...formularioBotsAutoDeRiesgo(riesgoOportunidad), companiaAnterior: 'ASEGURADORA FICTICIA' }, new Date('2026-10-14T00:00:00Z'))
   assert.ok(f.ok, f.ok ? '' : f.faltan.join('; '))
   const ficha = { identidad: { fechaNacimiento: '1980-01-02' }, contacto: { codigoPostal: '41003' }, carnets: [], dePolizas: null } as unknown
   const c = completarRiesgoVehiculoDesdeFicha('auto', f.riesgo, ficha, f.completarDesdeFicha)

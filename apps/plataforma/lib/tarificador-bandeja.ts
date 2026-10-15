@@ -119,6 +119,7 @@ const ROTULO_CODIGO: Record<string, string> = {
   datos: 'datos del riesgo',
   captcha: 'pide una persona (captcha o código)',
   emision: 'paso de emisión bloqueado',
+  eleccion: 'hay que elegir (versión del vehículo o población)',
   tope_tiempo: 'se agotó el tiempo',
   desconocido: 'motivo desconocido',
 }

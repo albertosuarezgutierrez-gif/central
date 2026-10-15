@@ -6,7 +6,7 @@ import { hayBotVersion, hayPasos } from './esquema-bd'
 import { claveMemoriaDeRiesgo } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
 import { purgarRiesgoTrabajos } from './tarificador-purga'
-import { eleccionContraLista, eleccionPoblacionContraLista, proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type EleccionBandeja, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
+import { eleccionContraLista, eleccionPoblacionContraLista, mismaEleccion, proyectarItemBandeja, proyectarPaso, tipoDeError, yaEnElDestino, type EleccionBandeja, type FilaBandeja, type FilaPaso, type ItemBandeja, type PasoLectura } from './tarificador-bandeja-reglas'
 
 export type ListaBandeja = { total: number; items: ItemBandeja[]; hayMas: boolean }
 
@@ -75,8 +75,9 @@ export async function aplicarAccionBandeja(
   let aprender: { compania: string; ramo: string; clave: string; codigo: string; etiqueta: string } | null = null
   const res = await prisma.$transaction(async (tx) => {
     // `modo` por to_jsonb: sin el SQL de emisión (2026-10-10) la columna no existe y sale null (= tarificar).
-    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; ramo: string; riesgo: unknown; modo: string | null; eleccion_codigo: string | null; eleccion_poblacion: string | null }[]>`
+    const filas = await tx.$queryRaw<{ estado: string; error: unknown; compania: string; ramo: string; riesgo: unknown; modo: string | null; eleccion_codigo: string | null; eleccion_etiqueta: string | null; eleccion_poblacion: string | null }[]>`
       select t.estado, t.error, t.compania, t.ramo, t.riesgo, to_jsonb(t)->>'modo' as modo, t.riesgo->'eleccionVersion'->>'codigo' as eleccion_codigo,
+             t.riesgo->'eleccionVersion'->>'etiqueta' as eleccion_etiqueta,
              t.riesgo->>'eleccionPoblacion' as eleccion_poblacion
       from seguros.tarificacion_trabajos t
       where t.id = ${id}::uuid and t.correduria_id = ${correduriaId}::uuid for update`
@@ -84,7 +85,7 @@ export async function aplicarAccionBandeja(
     if (!f) return { estado: 'no_encontrado' as const }
     if (yaEnElDestino(accion, f.estado)) {
       // Doble clic con la MISMA versión: sin cambios. Con otra versión sobre un trabajo ya en marcha: no se pisa.
-      if (eleccion && f.eleccion_codigo !== eleccion.codigo) return { estado: 'conflicto' as const, motivo: 'el trabajo ya está en marcha con otra versión', estadoTrabajo: f.estado }
+      if (eleccion && !mismaEleccion(eleccion, f.eleccion_codigo, f.eleccion_etiqueta)) return { estado: 'conflicto' as const, motivo: 'el trabajo ya está en marcha con otra versión', estadoTrabajo: f.estado }
       if (eleccionPoblacion && f.eleccion_poblacion !== eleccionPoblacion) return { estado: 'conflicto' as const, motivo: 'el trabajo ya está en marcha con otra población', estadoTrabajo: f.estado }
       return { estado: 'sin_cambios' as const, estadoTrabajo: f.estado }
     }
@@ -110,8 +111,9 @@ export async function aplicarAccionBandeja(
             estado = 'pendiente', intentos = 0, lease_hasta = null, fly_machine_id = null, error = null,
             iniciado_at = null, terminado_at = null, updated_at = now()
         where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+      // La memoria va por CÓDIGO: una elección sin código (por etiqueta, p. ej. Mapfre) no se recuerda.
       const clave = claveMemoriaDeRiesgo(f.riesgo)
-      if (clave) aprender = { compania: f.compania, ramo: f.ramo, clave, codigo: v.eleccion.codigo, etiqueta: v.eleccion.etiqueta }
+      if (clave && v.eleccion.codigo !== null) aprender = { compania: f.compania, ramo: f.ramo, clave, codigo: v.eleccion.codigo, etiqueta: v.eleccion.etiqueta }
     } else if (accion === 'reintentar') {
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos

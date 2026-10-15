@@ -89,3 +89,15 @@ test('mensajeDeFallo 502: «no respondió a tiempo» (timeout) vs «no se pudo c
   assert.match(mensajeDeFallo(502, { estado: 'error', motivo: 'red' }), /no se pudo conectar con asegura/)
   assert.match(mensajeDeFallo(502, null), /no se pudo conectar con asegura/)
 })
+
+test('versiones SIN código (Mapfre, 15/10/2026): se leen y piden versión; una opción sin etiqueta o con código basura se descarta', () => {
+  const l = leerTrabajo(200, {
+    estado: 'requiere_humano', error: { tipo: 'eleccion', mensaje: 'x' }, motivo: 'Hay que elegir la versión del vehículo',
+    opcionesVersion: [{ codigo: null, etiqueta: 'Marca Prueba 2.9 Gl · 163 CV' }, { etiqueta: 'Marca Prueba 2.9 Gls · 163 CV' }, { codigo: null }, { codigo: 7, etiqueta: 'rara' }],
+    ofertas: [], pdfs: [],
+  })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  assert.deepEqual(l.trabajo.opcionesVersion, [{ codigo: null, etiqueta: 'Marca Prueba 2.9 Gl · 163 CV' }, { codigo: null, etiqueta: 'Marca Prueba 2.9 Gls · 163 CV' }])
+  assert.equal(resumenTrabajo(l.trabajo).pideVersion, true)
+})

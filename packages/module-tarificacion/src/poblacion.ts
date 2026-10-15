@@ -6,7 +6,7 @@
 // elige en la bandeja (`eleccionPoblacion` = texto EXACTO de la celda). La IA NO elige poblaciones: no hay base para adivinar.
 // Nombres de localidad: no son datos personales, pero la `poblacion` del cliente no se escribe en logs.
 
-/** Prefijo del mensaje de «hay que elegir la población» (viaja como `captcha` → `requiere_humano`). */
+/** Prefijo del mensaje de «hay que elegir la población» (viaja como `eleccion` —antes `captcha`— → `requiere_humano`). */
 export const PREFIJO_ELECCION_POBLACION = 'requiere_eleccion_poblacion:'
 /** Opciones que se nombran en el mensaje (la lista completa viaja en `error.opcionesPoblacion`). */
 export const MAX_OPCIONES_POBLACION = 12
