@@ -291,9 +291,10 @@ const ESPERADO: Record<string, { resueltos: unknown; correcciones: unknown; bots
   },
   D: {
     resueltos: { garaje: 'CommunalParking', garajeEsSupuesto: true, vehiculoRiesgo: { kmAnuales: 10000, garaje: null } },
-    correcciones: { kmAnuales: 10000, aseguradoAntes: true, companiaAnteriorCodigo: 'C0072', polizaAnterior: '88777', matriculaAnterior: '9999XYZ', aniosAsegurado: 3, aniosEnCompania: 3, aniosSinSiniestros: 3, siniestrosUltimos5: 0, bonusOrigen: 'documento', aniosAseguradoOrigen: 'documento' },
-    // Ojo (comportamiento de HOY, no se cambia aquí): 3 años sin siniestros declarados y «0 siniestros en 5 años» supuestos.
-    bots: { garaje: null, tieneSeguroActual: true, aniosAsegurado: '3', aniosSinSiniestros: '3', siniestrosUltimos5: '0', companiaAnterior: 'Generali' },
+    // 15/10/2026 (Alberto): 3 años sin siniestros y los siniestros en 5 años SIN DATO → ya no viaja un «0» supuesto (antes
+    // `siniestrosUltimos5: 0`). El pago queda apagado hasta que se declare arriba.
+    correcciones: { kmAnuales: 10000, aseguradoAntes: true, companiaAnteriorCodigo: 'C0072', polizaAnterior: '88777', matriculaAnterior: '9999XYZ', aniosAsegurado: 3, aniosEnCompania: 3, aniosSinSiniestros: 3, bonusOrigen: 'documento', aniosAseguradoOrigen: 'documento' },
+    bots: { garaje: null, tieneSeguroActual: true, aniosAsegurado: '3', aniosSinSiniestros: '3', siniestrosUltimos5: '', companiaAnterior: 'Generali' },
   },
   E: {
     resueltos: { garaje: 'Street', garajeEsSupuesto: true, kmAnualesSupuestos: 10000, vehiculoRiesgo: { kmAnuales: null, garaje: 'Street' } },
@@ -318,6 +319,9 @@ const ESPERADO: Record<string, { resueltos: unknown; correcciones: unknown; bots
 for (const c of CASOS) {
   test(`equivalencia · ${c.nombre}: el estado inicial y lo que viaja son IDÉNTICOS a los de antes`, () => {
     const viejo = inicialAntiguo(c)
+    // ÚNICO cambio intencionado (15/10/2026, Alberto): con menos de 5 años sin siniestros y los siniestros en 5 años sin
+    // dato, ya NO se supone «0»: el campo nace vacío, la verificación lo marca ✗ y no viaja nada hasta rellenarlo (caso D).
+    if (c.nombre.startsWith('D ·')) viejo.formulario = { ...viejo.formulario, siniestrosUltimos5: '' }
     const nuevo = inicialNuevo(c)
     const nuevoSinViajan = { formulario: nuevo.formulario, garajeDelRiesgo: nuevo.garajeDelRiesgo, garajeSinCasar: nuevo.garajeSinCasar, kmDelRiesgo: nuevo.kmDelRiesgo, companiaNoReconocida: nuevo.companiaNoReconocida, tieneSeguroSinDato: nuevo.tieneSeguroSinDato }
     assert.deepEqual(nuevoSinViajan, viejo, 'estado inicial del cotizador')
@@ -415,4 +419,47 @@ test('fuente: AutoNuevo nace de `valoresQueViajan` + `formularioInicial` y sigue
   assert.match(an, /garaje: garajeParaBot\(\{ garajeRiesgo: datosRiesgo\?\.garaje, actual: garaje, elegido: garajeElegido\.current, resueltoDelRiesgo: garajeDelRiesgo \}\)/)
   assert.match(an, /const garajeElegido = useRef\(garajeDelRiesgo !== null\)/)
   assert.match(an, /const kmDelRiesgo = viajan\.km\.origen === 'riesgo'/)
+})
+
+// ── Supuestos con los que se PIDE el precio (15/10/2026) ─────────────────────────────────────────────────────────────
+test('supuestosAlPedir: los supuestos que siguen sin tocar se declaran; lo que el corredor cambia o el riesgo trae, no', async () => {
+  const { supuestosAlPedir } = await import('./supuestos-auto.ts')
+  const b = v(1) // sin garaje, km, compra ni historial (de calle)
+  const ini = formularioInicial(b)
+  const tal = {
+    garaje: ini.garaje, garajeElegido: false, kmSupuesto: KM_AUTO_POR_DEFECTO, fechaCompra: ini.fechaCompra,
+    tieneSeguroActual: ini.tieneSeguroActual, aniosAsegurado: ini.aniosAsegurado, aniosEnCompania: ini.aniosEnCompania,
+    aniosSinSiniestros: ini.aniosSinSiniestros, siniestrosUltimos5: ini.siniestrosUltimos5, tipoCarnet: '', zonaCarnet: '',
+  }
+  const s = supuestosAlPedir(b, tal)
+  assert.deepEqual(s.map((x) => x.campo), ['garaje', 'km', 'fechaCompra', 'tieneSeguro', 'tipoCarnet', 'zonaCarnet'], 'sin seguro en vigor los años no viajan: no son supuesto')
+  assert.equal(s.find((x) => x.campo === 'km')?.texto, 'Km al año: 10.000 km (por defecto)')
+  assert.equal(s.find((x) => x.campo === 'fechaCompra')?.texto, 'Fecha de compra: la de matriculación (10/03/2020)')
+  assert.equal(s.find((x) => x.campo === 'garaje')?.texto, 'Garaje: Garaje comunitario')
+  // El corredor elige garaje, declara km y fecha y el carné: ya no son supuestos.
+  assert.deepEqual(supuestosAlPedir(b, { ...tal, garajeElegido: true, kmSupuesto: null, fechaCompra: '2021-01-01', tipoCarnet: 'B', zonaCarnet: 'ES' }).map((x) => x.campo), ['tieneSeguro'])
+  // Con seguro en vigor y los años en el máximo supuesto, se declaran; si se cambian, no.
+  const conSeguro = { ...tal, tieneSeguroActual: true, aniosAsegurado: String(b.aniosAsegurado.valor), aniosEnCompania: String(b.aniosEnCompania.valor), aniosSinSiniestros: String(b.aniosSinSiniestros.valor) }
+  assert.ok(supuestosAlPedir(b, conSeguro).some((x) => x.campo === 'aniosEnCompania'))
+  assert.ok(!supuestosAlPedir(b, { ...conSeguro, aniosEnCompania: '2' }).some((x) => x.campo === 'aniosEnCompania'))
+  // Riesgo completo (caso A) con carné elegido: se pide SIN supuestos.
+  const a = v(0)
+  const ia = formularioInicial(a)
+  assert.deepEqual(supuestosAlPedir(a, {
+    garaje: ia.garaje, garajeElegido: true, kmSupuesto: null, fechaCompra: ia.fechaCompra, tieneSeguroActual: ia.tieneSeguroActual,
+    aniosAsegurado: ia.aniosAsegurado, aniosEnCompania: ia.aniosEnCompania, aniosSinSiniestros: ia.aniosSinSiniestros,
+    siniestrosUltimos5: ia.siniestrosUltimos5, tipoCarnet: 'B', zonaCarnet: 'ES',
+  }), [])
+})
+
+test('siniestros en 5 años: con menos de 5 años sin siniestros y sin dato, NO se supone 0 (sin dato, no viaja)', () => {
+  const d = v(CASOS.findIndex((c) => c.nombre.startsWith('D ·')))
+  assert.equal(d.aniosSinSiniestros.valor, 3)
+  assert.deepEqual([d.siniestrosUltimos5.valor, d.siniestrosUltimos5.origen], [null, 'sin_dato'])
+  assert.match(d.siniestrosUltimos5.nota ?? '', /Sin dato no se puede declarar 0/)
+  assert.equal(formularioInicial(d).siniestrosUltimos5, '')
+  // Con 5 o más años sin siniestros sigue el supuesto de siempre (ninguno): ahí no hace falta.
+  const b = v(1)
+  assert.ok((b.aniosSinSiniestros.valor ?? 0) >= 5)
+  assert.equal(b.siniestrosUltimos5.valor, 0)
 })

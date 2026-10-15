@@ -230,10 +230,51 @@ export function fotoAsegurados(figuras: unknown): FotoAsegurados {
  * PURA. Lo que se guarda en `tarificaciones.figuras`: la foto de figuras y, si consta, la de asegurados (clave
  * `asegurados`). `null` = no consta ninguna. Solo uuids: un id que no lo es invalida la lista entera (no se recorta).
  */
-export function fotoVarianteJson(figuras: Record<string, string | null> | null | undefined, asegurados: readonly string[] | null | undefined): string | null {
+export function fotoVarianteJson(
+  figuras: Record<string, string | null> | null | undefined,
+  asegurados: readonly string[] | null | undefined,
+  supuestos?: readonly SupuestoVariante[] | null,
+): string | null {
   const lista = Array.isArray(asegurados) && asegurados.every((x) => typeof x === 'string' && UUID.test(x)) ? [...asegurados] : null
-  if (!figuras && lista === null) return null
-  return JSON.stringify({ ...(figuras ?? {}), ...(lista !== null ? { asegurados: lista } : {}) })
+  const sup = supuestos === undefined || supuestos === null ? null : limpiarSupuestosVariante(supuestos)
+  if (!figuras && lista === null && sup === null) return null
+  return JSON.stringify({ ...(figuras ?? {}), ...(lista !== null ? { asegurados: lista } : {}), ...(sup !== null ? { supuestos: sup } : {}) })
+}
+
+// ─── Supuestos con los que se pidió el precio (15/10/2026) ──────────────────
+//
+// Qué campos viajaron como SUPUESTO (nadie los dijo: km por defecto, compra = matriculación, garaje por defecto, años
+// en la compañía topados…) al pedir ESTE precio. Lo declara la pantalla que cotiza (la única que sabe qué era supuesto:
+// `supuestosAlPedir` de plataforma) y se guarda en `tarificaciones.figuras`, clave `supuestos`, sin migración (como
+// `asegurados`). Tres estados: `null` = no consta (tarificación anterior, o una puerta que no lo declara) ≠ `[]` = se
+// pidió sin supuestos ≠ la lista.
+
+export type SupuestoVariante = { campo: string; texto: string }
+const MAX_SUPUESTOS = 20
+const MAX_TEXTO_SUPUESTO = 200
+
+/** PURA. Sanea lo que llega por el puerto: solo `{campo, texto}` de texto no vacío, con tope. No es lista → `null`. */
+export function limpiarSupuestosVariante(v: unknown): SupuestoVariante[] | null {
+  if (!Array.isArray(v)) return null
+  const out: SupuestoVariante[] = []
+  const vistos = new Set<string>()
+  for (const x of v) {
+    const o = obj(x)
+    const campo = typeof o?.campo === 'string' ? o.campo.trim().slice(0, 60) : ''
+    const texto = typeof o?.texto === 'string' ? o.texto.replace(/\s+/g, ' ').trim().slice(0, MAX_TEXTO_SUPUESTO) : ''
+    if (campo === '' || texto === '' || vistos.has(campo)) continue
+    vistos.add(campo)
+    out.push({ campo, texto })
+    if (out.length >= MAX_SUPUESTOS) break
+  }
+  return out
+}
+
+/** PURA. Lee los supuestos de `tarificaciones.figuras`. Sin la clave (o con forma rara) = `null`, no consta. */
+export function supuestosDeFoto(figuras: unknown): SupuestoVariante[] | null {
+  const o = obj(figuras)
+  if (!o || !Array.isArray(o.supuestos)) return null
+  return limpiarSupuestosVariante(o.supuestos)
 }
 
 /** Un asegurado tal como viajó: identidad (ficha, DNI) para emparejar; lo demás, lo que se enseña. El DNI NUNCA sale. */

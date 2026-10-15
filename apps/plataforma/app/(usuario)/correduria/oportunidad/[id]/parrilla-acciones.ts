@@ -53,5 +53,6 @@ export async function leerAvant2DeOportunidad(entrada: { oportunidadId: string }
     caducada: g.caducada,
     simulado: v.simulado,
     precios: g.precios.map(aPrecio),
+    supuestos: v.supuestos,
   }
 }

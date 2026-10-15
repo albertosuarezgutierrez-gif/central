@@ -10,6 +10,7 @@ import { cardStyle } from '@/components/ui'
 import AutoNuevo from '../../cliente/[id]/auto-nuevo/AutoNuevo'
 import { abrirCotizadorAutoDeOportunidad, type AperturaCotizadorAuto } from '../../cliente/[id]/auto-nuevo/acciones'
 import PedirPrecioEmbebido, { type MontajeEmbebido, type PropsPedirPrecioEmbebido } from './PedirPrecioEmbebido'
+import { estadoOcasional } from './figuras-form'
 
 type AperturaOk = Extract<AperturaCotizadorAuto, { estado: 'ok' }>
 
@@ -64,6 +65,8 @@ function Montaje({ apertura, n, bloqueo, onCotizando, onCotizado }: MontajeEmbeb
         datosRiesgo={riesgo.datosVehiculo}
         // Años asegurado / en la compañía declarados arriba («Historial y bonificaciones»): mandan en la cotización.
         historialRiesgo={riesgo.historial?.historialDeclarado ?? null}
+        // ¿Conduce alguien más? Sin preguntar = ✗ en la verificación y pago apagado (art. 10 LCS).
+        ocasionalRiesgo={estadoOcasional(riesgo)}
         anterior={datos.anterior}
         anteriorAmbiguo={datos.anteriorAmbiguo}
         otroVehiculo={datos.otroVehiculo}

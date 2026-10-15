@@ -154,6 +154,8 @@ const anios = (n: number) => `${n} ${n === 1 ? 'año' : 'años'}`
 /** La frase única de un supuesto: «Sin dato · se cotizará con X (supuesto)». */
 export const notaSupuesto = (x: string) => `Sin dato · se cotizará con ${x} (supuesto)`
 export const NOTA_LEIDO = 'lo leído de su póliza actual'
+/** Siniestros en 5 años sin dato con menos de 5 años sin siniestros: no se supone 0 (15/10/2026). */
+export const NOTA_SINIESTROS5_SIN_DATO = '¿Cuántos siniestros en los últimos 5 años? Sin dato no se puede declarar 0'
 
 /** El aviso de un garaje del riesgo que no está en la lista de la compañía (15/10/2026: nunca se cambia por el defecto). */
 export function avisoGarajeSinCasar(etiqueta: string): string {
@@ -293,6 +295,10 @@ export function valoresQueViajan(
     ? { valor: s5Valor, origen: 'riesgo', nota: null }
     : (sa?.siniestrosUltimos5 ?? null) !== null
       ? { valor: s5Valor, origen: 'leido', nota: NOTA_LEIDO }
+      // 15/10/2026 (Alberto): con menos de 5 años sin siniestros, «0 siniestros en 5 años» ya NO se supone: nadie lo ha
+      // dicho y declararlo es afirmar un historial limpio. Sin dato, no viaja nada y la verificación lo marca ✗.
+      : sinSiniestrosValor < 5
+        ? { valor: null, origen: 'sin_dato', nota: NOTA_SINIESTROS5_SIN_DATO }
       : s5Valor !== null
         ? { valor: s5Valor, origen: 'supuesto', nota: notaSupuesto(s5Valor === 0 ? 'ninguno' : String(s5Valor)) }
         : { valor: null, origen: 'sin_dato', nota: 'Sin dato · solo hace falta con menos de 5 años sin siniestros; si la compañía lo exige, lo dirá sin cobrar' }
@@ -357,4 +363,61 @@ export function formularioInicial(v: ValoresQueViajan): FormularioInicialAuto {
     aniosSinSiniestros: txt(v.aniosSinSiniestros.valor),
     siniestrosUltimos5: txt(v.siniestrosUltimos5.valor),
   }
+}
+
+// ── Supuestos con los que se PIDE el precio (15/10/2026) ─────────────────────────────────────────────────────────────
+// Lo que la pantalla declara al cotizar (`resueltos.supuestosPantalla`): asegura lo guarda con la tarificación y la
+// parrilla y «Presupuestos de este riesgo» marcan ese precio «Precio con supuestos» con esta lista en el tooltip.
+
+export type SupuestoAlPedir = { campo: string; texto: string }
+
+/** «Sin dato · se cotizará con X (supuesto)» → «X». Otra forma, tal cual. */
+function loSupuesto(nota: string | null): string {
+  if (!nota) return 'supuesto'
+  const m = /se cotizará con (.*) \(supuesto\)$/.exec(nota)
+  return m ? m[1] : nota
+}
+
+const ETIQUETA_SUPUESTO: Record<string, string> = {
+  garaje: 'Garaje', km: 'Km al año', fechaCompra: 'Fecha de compra', tieneSeguro: 'Seguro actual',
+  aniosAsegurado: 'Años asegurado', aniosEnCompania: 'Años en la compañía', aniosSinSiniestros: 'Años sin siniestros',
+  siniestrosUltimos5: 'Siniestros en 5 años', tipoCarnet: 'Tipo de carné', zonaCarnet: 'Carné expedido en',
+}
+
+/**
+ * PURA. Qué campos viajan como SUPUESTO en ESTA petición: los de origen `supuesto` en `valoresQueViajan` que siguen
+ * con el valor supuesto (si el corredor lo cambió aquí, ya es dato), más el carné en blanco (viaja B / España). Los años
+ * solo cuentan con seguro en vigor (sin él no viajan). `[]` = se pide sin supuestos.
+ */
+export function supuestosAlPedir(v: ValoresQueViajan, a: {
+  garaje: string
+  /** El corredor eligió el garaje a mano (deja de ser el defecto). */
+  garajeElegido: boolean
+  /** `kmParaCotizar(...).supuesto`: los km por defecto sin tocar. `null` = declarados. */
+  kmSupuesto: number | null
+  /** '' = sigue a la matriculación (no se manda nada). */
+  fechaCompra: string
+  tieneSeguroActual: boolean
+  aniosAsegurado: string
+  aniosEnCompania: string
+  aniosSinSiniestros: string
+  siniestrosUltimos5: string
+  tipoCarnet: string
+  zonaCarnet: string
+}): SupuestoAlPedir[] {
+  const out: SupuestoAlPedir[] = []
+  const poner = (campo: string, x: string) => out.push({ campo, texto: `${ETIQUETA_SUPUESTO[campo] ?? campo}: ${x}` })
+  if (v.garaje.origen === 'supuesto' && !a.garajeElegido && a.garaje !== '' && a.garaje === v.garaje.valor) poner('garaje', loSupuesto(v.garaje.nota))
+  if (a.kmSupuesto !== null) poner('km', `${conMiles(a.kmSupuesto)} km (por defecto)`)
+  if (a.fechaCompra === '') poner('fechaCompra', v.fechaCompra.origen === 'supuesto' ? loSupuesto(v.fechaCompra.nota) : 'la de matriculación')
+  if (!a.tieneSeguroActual && v.tieneSeguro.origen === 'supuesto') poner('tieneSeguro', 'sin seguro en vigor («de calle»)')
+  if (a.tieneSeguroActual) {
+    for (const c of ['aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros', 'siniestrosUltimos5'] as const) {
+      const x = v[c]
+      if (x.origen === 'supuesto' && x.valor !== null && a[c].trim() === String(x.valor)) poner(c, loSupuesto(x.nota))
+    }
+  }
+  if (a.tipoCarnet === '') poner('tipoCarnet', 'B (no se ha preguntado)')
+  if (a.zonaCarnet === '') poner('zonaCarnet', 'España (no se ha preguntado)')
+  return out
 }

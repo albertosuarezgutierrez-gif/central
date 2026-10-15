@@ -94,7 +94,11 @@ export type LadoAvant2 =
   | { estado: 'sin_leer'; motivo: string }
   /** No hay ninguna tarificación de Avant2 para esta oportunidad. */
   | { estado: 'ninguna' }
-  | { estado: 'ok'; referencia: string | null; creadaEn: string | null; caducada: boolean; simulado: boolean; precios: PrecioAvant2[] }
+  | {
+      estado: 'ok'; referencia: string | null; creadaEn: string | null; caducada: boolean; simulado: boolean; precios: PrecioAvant2[]
+      /** Qué viajó como SUPUESTO al pedir esta tarificación (15/10/2026). `null` = no consta; `[]` = sin supuestos. */
+      supuestos?: { campo: string; texto: string }[] | null
+    }
 
 /** Una oferta del bot ya en ANUAL (`vistaPrecio(o).total`). */
 export type OfertaBotParrilla = {
@@ -349,4 +353,18 @@ export function rotuloVeredicto(v: Veredicto): string {
     case 'sin_leer': return 'Sin leer'
     case 'sin_precios': return 'Sin precios'
   }
+}
+
+// ─── «Precio con supuestos» (15/10/2026) ─────────────────────────────────────
+
+/**
+ * PURA. La marca de un precio según los supuestos con que se pidió su tarificación. `null` = nada que marcar (se pidió
+ * sin supuestos). Una tarificación que no los registró (anterior al 15/10/2026) NO es «sin supuestos»: «no consta».
+ */
+export function marcaSupuestos(s: readonly { texto: string }[] | null | undefined): { etiqueta: string; detalle: string[]; tono: 'aviso' | 'neutral' } | null {
+  if (s === null || s === undefined) {
+    return { etiqueta: 'Supuestos: no consta', detalle: ['Esta tarificación no registró con qué supuestos se pidió (anterior al 15/10/2026, o pedida por otra vía).'], tono: 'neutral' }
+  }
+  if (s.length === 0) return null
+  return { etiqueta: 'Precio con supuestos', detalle: s.map((x) => x.texto), tono: 'aviso' }
 }

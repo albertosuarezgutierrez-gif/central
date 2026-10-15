@@ -268,3 +268,49 @@ test('«Años en esta compañía» sin dato arriba: se dice SUPUESTO de los año
   assert.match(fuente, /'anios-compania': viajan\.aniosEnCompania\.nota,/)
   assert.match(readFileSync(new URL('../moto-nuevo/CotizadorMoto.tsx', dir), 'utf8'), /etiqueta="Años en esta compañía"[\s\S]{0,200}notaAniosEnCompania\(/)
 })
+
+// ── Conductor ocasional en tres estados (15/10/2026) ─────────────────────────────────────────────────────────────────
+test('ocasional SIN PREGUNTAR: ✗ «¿Conduce alguien más el coche?» (art. 10 LCS), lleva a Intervinientes y apaga el pago', () => {
+  const g = gruposVerificacion(entrada({ ocasional: 'sin_preguntar' }))
+  const i = item(g, 'ocasional-sin-preguntar')
+  assert.equal(i?.estado, 'falta')
+  assert.match(i?.texto ?? '', /¿Conduce alguien más el coche\?/)
+  assert.match(i?.texto ?? '', /art\. 10 LCS/)
+  assert.equal(i?.ancla, 'interviniente-conductor_ocasional')
+  assert.equal(i?.arriba, true)
+  assert.equal(verificacionCompleta(g), false)
+})
+
+test('ocasional confirmado «ninguno»: ✓ y no bloquea; con ficha o sin el dato (pantalla completa), sin ítem propio', () => {
+  const n = gruposVerificacion(entrada({ ocasional: 'ninguno' }))
+  assert.equal(item(n, 'ocasional-ninguno')?.estado, 'ok')
+  assert.equal(verificacionCompleta(n), true)
+  for (const o of ['si', 'no_aplica', undefined]) {
+    const g = gruposVerificacion(entrada({ ocasional: o }))
+    assert.equal(item(g, 'ocasional-sin-preguntar'), undefined, String(o))
+    assert.equal(verificacionCompleta(g), true, String(o))
+  }
+})
+
+test('moto comparte la verificación pero no tiene ocasional: «sin preguntar» no le pone ✗', () => {
+  const g = gruposVerificacion(entrada({ ramo: 'moto', ocasional: 'sin_preguntar' }))
+  assert.equal(item(g, 'ocasional-sin-preguntar'), undefined)
+  assert.equal(verificacionCompleta(g), true)
+})
+
+test('cepo de fuente: el embebido pasa el estado del ocasional del RIESGO a la verificación', () => {
+  assert.match(fuente, /ocasional: ocasionalRiesgo,/, 'AutoNuevo debe pasar `ocasional` a gruposVerificacion')
+  assert.match(op('PedirPrecioAuto.tsx'), /ocasionalRiesgo=\{estadoOcasional\(riesgo\)\}/, 'PedirPrecioAuto debe pasar el estado del ocasional')
+})
+
+test('siniestros en 5 años sin dato con < 5 años sin siniestros: ✗ «Sin dato no se puede declarar 0» y apaga el pago', () => {
+  const g = gruposVerificacion(entrada({ historial: { ...entrada().historial, siniestros5SinDato: true, siniestros5Pendiente: true } }))
+  const s5 = g.flatMap((x) => x.items).filter((i) => i.clave === 'siniestros-5')
+  assert.equal(s5.length, 1, 'un solo ítem: el ✗ manda sobre el aviso')
+  assert.equal(s5[0]!.estado, 'falta')
+  assert.match(s5[0]!.texto, /¿Cuántos siniestros en los últimos 5 años\? Sin dato no se puede declarar 0/)
+  assert.equal(verificacionCompleta(g), false)
+  // Cepo de fuente: el cotizador bloquea con el dato vacío aunque los años sin siniestros igualen a los asegurados.
+  assert.match(fuente, /const siniestros5SinDato = aniosSinSiniestros\.trim\(\) !== '' && Number\(aniosSinSiniestros\) < 5 && siniestrosUltimos5\.trim\(\) === ''/)
+  assert.match(fuente, /\|\| siniestros5SinDato\n/)
+})

@@ -46,7 +46,7 @@ import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo
 import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajeParaBot, garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
-import { formularioInicial, tieneSeguroSinDato, valoresQueViajan } from '@/lib/correduria/supuestos-auto'
+import { formularioInicial, supuestosAlPedir, tieneSeguroSinDato, valoresQueViajan } from '@/lib/correduria/supuestos-auto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import {
@@ -242,7 +242,13 @@ export default function AutoNuevo({
   carteraAllianz = null,
   fichaTomador = null,
   historialRiesgo = null,
+  ocasionalRiesgo,
 }: {
+  /**
+   * Embebido (15/10/2026): el conductor ocasional del RIESGO en tres estados (`estadoOcasional`). `sin_preguntar` pone
+   * un ✗ en la verificación y apaga el pago. Lo que viaja no cambia (sin ficha, sin `secondaryDriver`).
+   */
+  ocasionalRiesgo?: 'si' | 'ninguno' | 'sin_preguntar' | 'no_aplica'
   /**
    * Modo OPORTUNIDAD (10/10/2026): coche y figuras del riesgo, sin catálogo, borrador ni formularios de figuras; solo
    * las condiciones de la cotización. `datosRiesgo` y `variante` son entonces OBLIGATORIOS (los lee la carcasa).
@@ -1081,8 +1087,10 @@ export default function AutoNuevo({
   const compraInvalida = fechaCompra !== '' && matriculacion !== '' && fechaCompra < matriculacion
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
+  const siniestros5SinDato = aniosSinSiniestros.trim() !== '' && Number(aniosSinSiniestros) < 5 && siniestrosUltimos5.trim() === ''
   const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
-    || (Number(aniosSinSiniestros) < 5 && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '')
+    // 15/10/2026 (Alberto): con menos de 5 años sin siniestros, los siniestros en 5 años son OBLIGATORIOS (ya no se supone 0).
+    || siniestros5SinDato
   const faltaHistorial =
     tieneSeguroActual &&
     (!companiaActualElegida ||
@@ -1136,6 +1144,7 @@ export default function AutoNuevo({
         figuraRepetida,
         ocasionalDuplicado,
         personaLibreIncompleta: faltaPropietario || faltaConductor || faltaOcasional,
+        ocasional: ocasionalRiesgo,
         vehiculo: { faltaVersion, faltaMatriculacion, faltaGaraje, garajeSinCasar, kmInvalido, compraInvalida },
         historial: {
           tieneSeguro: tieneSeguroActual,
@@ -1144,7 +1153,8 @@ export default function AutoNuevo({
           faltaAniosAsegurado: aniosAsegurado.trim() === '',
           faltaAniosCompania: aniosEnCompania.trim() === '',
           faltaAniosSinSiniestros: aniosSinSiniestros.trim() === '',
-          siniestros5Pendiente: Number(aniosSinSiniestros) < 5 && aniosSinSiniestros.trim() !== '' && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '',
+          siniestros5Pendiente: false,
+          siniestros5SinDato,
           companiaSuperaAsegurado: aniosEnCompania.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosEnCompania) > Number(aniosAsegurado),
           sinSiniestrosSuperaAsegurado: aniosSinSiniestros.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosSinSiniestros) > Number(aniosAsegurado),
           companiaNoReconocida: viajan.compania.noReconocida,
@@ -1248,6 +1258,11 @@ export default function AutoNuevo({
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
         ...(km.supuesto !== null ? { kmAnualesSupuestos: km.supuesto } : {}),
+        // Qué viaja como SUPUESTO (15/10/2026): asegura lo guarda con la tarificación («Precio con supuestos»).
+        supuestosPantalla: supuestosAlPedir(viajan, {
+          garaje, garajeElegido: garajeElegido.current, kmSupuesto: km.supuesto, fechaCompra: compraInvalida ? '' : fechaCompra,
+          tieneSeguroActual, aniosAsegurado, aniosEnCompania, aniosSinSiniestros, siniestrosUltimos5, tipoCarnet, zonaCarnet,
+        }),
         // Lo que se ha usado, para anotarlo en el riesgo (`info_riesgo.datosVehiculo`): asegura ignora esta
         // clave al cotizar. Km y garaje solo si son un dato declarado (no el supuesto de la pantalla), y sin
         // nombres ni ids si el coche viene de una variante guardada (la cascada de aquí no lo describe).

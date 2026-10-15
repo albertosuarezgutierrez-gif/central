@@ -1236,6 +1236,7 @@ export {
   ROLES_FIGURA, ROLES_FIGURA_UNICOS, ROLES_FIGURA_MULTIPLES, MAX_ASEGURADOS_PERSONAS, ETIQUETA_ROL, rolesDelRamo, cardinalidadesDelRamo, maxDelRol,
   esRolFigura, esRolFiguraUnico, esRolMultiple, ramoPideCpDelTomador, faltaCodigoPostal, limpiarFiguras, diferenciasVariante, resumenDiferencias,
   diferenciasAsegurados, fotoAsegurados, fotoVarianteJson, textoDiferencia, leerDiferencia, type FotoAsegurados, type AseguradoPeticion,
+  limpiarSupuestosVariante, supuestosDeFoto, type SupuestoVariante,
   type RolFigura, type RolFiguraUnico, type RolFiguraMultiple, type CardinalidadRol, type FigurasVariante, type Diferencia,
 } from './variantes-riesgo.ts'
 export {
@@ -1276,6 +1277,7 @@ export {
   leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, tipoVehiculoDeTexto, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'
 export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, TipoVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'
+export { CLAVE_OCASIONAL_INFO, confirmacionSinOcasionalDe, valorSinOcasional, type ConfirmacionSinOcasional, type EstadoOcasional } from './conductor-ocasional.ts'
 export { SIN_IDS_CATALOGO, datosVehiculoDeDocumento } from './datos-vehiculo-documento.ts'
 export type { IdsCatalogoVehiculo, VehiculoLeido } from './datos-vehiculo-documento.ts'
 

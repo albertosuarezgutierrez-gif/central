@@ -26,7 +26,7 @@
 // Con `prisma_seguros` en BYPASSRLS, olvidarlo no da error: mezcla la cartera
 // de dos corredurías. Lo vigila test/regression-asegura-aislamiento.test.ts.
 
-import { fotoVarianteJson } from '@central/module-seguros'
+import { fotoVarianteJson, type SupuestoVariante } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
 import type { Cotizacion } from './respuesta.ts'
 import { sobreOpciones } from './coberturas.ts'
@@ -69,6 +69,12 @@ export type ContextoCotizacion = {
    * Se guarda dentro de `tarificaciones.figuras` (clave `asegurados`), sin migración.
    */
   asegurados?: string[] | null
+  /**
+   * Qué campos viajaron como SUPUESTO al pedir este precio (15/10/2026), tal como los declara la pantalla que cotiza
+   * (`supuestosAlPedir` de plataforma). Se guarda dentro de `tarificaciones.figuras` (clave `supuestos`), sin migración.
+   * Ausente/null = no consta (no se escribe la clave); `[]` = se pidió sin supuestos.
+   */
+  supuestos?: SupuestoVariante[] | null
   /** Etiqueta libre del corredor («a nombre del padre»). */
   nota?: string | null
 }
@@ -281,7 +287,7 @@ export async function guardarCotizacion(
         ${r.uso},
         ${r.ocupacion},
         ${e.solicitadoPor},
-        ${fotoVarianteJson(e.contexto.figuras, e.contexto.asegurados)}::jsonb,
+        ${fotoVarianteJson(e.contexto.figuras, e.contexto.asegurados, e.contexto.supuestos)}::jsonb,
         ${e.contexto.nota ?? null},
         ${fallosJson}::jsonb
       )

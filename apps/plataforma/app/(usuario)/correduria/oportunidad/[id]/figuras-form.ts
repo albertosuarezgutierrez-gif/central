@@ -110,6 +110,28 @@ export function nombreSinFicha(rol: RolFigura): string {
   return rol === 'conductor_ocasional' ? 'Ninguno' : 'El mismo que el tomador'
 }
 
+/**
+ * El conductor OCASIONAL en tres estados (15/10/2026). Un hueco en el papel NO es «no hay ocasional»: es «no se ha
+ * preguntado» hasta que alguien confirma «no conduce nadie más» (`info_riesgo.conductorOcasional`). Con ficha en el
+ * papel, `si` (la confirmación vieja no cuenta). `no_aplica` = el ramo no tiene ocasional (moto, hogar…).
+ * Lo que VIAJA no cambia: sin ficha no hay `secondaryDriver`, se haya confirmado o no.
+ */
+export type EstadoOcasionalRiesgo = 'si' | 'ninguno' | 'sin_preguntar' | 'no_aplica'
+export function estadoOcasional(r: {
+  roles: readonly RolFigura[]
+  figuras: readonly { rol: RolFigura }[]
+  conductorOcasional: { ningunoConfirmadoAt: string | null } | null
+}): EstadoOcasionalRiesgo {
+  if (!r.roles.includes('conductor_ocasional')) return 'no_aplica'
+  if (r.figuras.some((f) => f.rol === 'conductor_ocasional')) return 'si'
+  return r.conductorOcasional?.ningunoConfirmadoAt ? 'ninguno' : 'sin_preguntar'
+}
+
+/** Lo que pinta la tarjeta del ocasional SIN ficha según su estado. */
+export function nombreOcasionalSinFicha(e: EstadoOcasionalRiesgo): string {
+  return e === 'ninguno' ? 'Ninguno (confirmado)' : 'Sin preguntar'
+}
+
 /** Las fichas de un papel múltiple, una por `clienteId` (identidad), en el orden en que llegan. */
 export function personasDelRol<F extends { rol: RolFigura; clienteId: string }>(figuras: readonly F[], rol: RolFigura): F[] {
   const vistos = new Set<string>()

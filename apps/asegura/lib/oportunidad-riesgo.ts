@@ -52,6 +52,11 @@ import {
   rolesDelRamo,
   historialDeclaradoDe,
   seguroAnteriorDe,
+  supuestosDeFoto,
+  CLAVE_OCASIONAL_INFO,
+  confirmacionSinOcasionalDe,
+  valorSinOcasional,
+  type SupuestoVariante,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
   type DatosVehiculoRiesgo,
@@ -105,6 +110,11 @@ export type VarianteRiesgo = {
   } | null
   /** Lo que cambió respecto a la variante ANTERIOR. `null` = no se puede comparar; `[]` en la primera. */
   cambios: Diferencia[] | null
+  /**
+   * Qué viajó como SUPUESTO al pedir este precio (15/10/2026, `tarificaciones.figuras.supuestos`). `null` = no consta
+   * (anterior al 15/10/2026 o una puerta que no lo declara); `[]` = se pidió sin supuestos.
+   */
+  supuestos: SupuestoVariante[] | null
 }
 
 export type Riesgo = {
@@ -164,6 +174,12 @@ export type Riesgo = {
     historialDeclarado: HistorialDeclaradoRiesgo
     carnet: { fecha: string | null; conductor: RolFigura | null; legible: boolean } | null
   }
+  /**
+   * El conductor OCASIONAL (15/10/2026): `null` = el ramo no tiene ese papel. Dentro, `ningunoConfirmadoAt` = cuándo se
+   * confirmó que no conduce nadie más (`info_riesgo.conductorOcasional`); `null` = sin confirmar. Con ficha en el papel
+   * manda la ficha (la confirmación vieja no cuenta).
+   */
+  conductorOcasional: { ningunoConfirmadoAt: string | null } | null
 }
 
 const nombreDe = (n: string | null, a: string | null) => `${n ?? ''} ${a ?? ''}`.trim() || 'Sin nombre'
@@ -283,6 +299,7 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
         }
       : null,
     cambios: i === 0 ? [] : diferenciasVariante(vars[i - 1].peticion, v.peticion, { antes: vars[i - 1].figuras, despues: v.figuras }),
+    supuestos: supuestosDeFoto(v.figuras),
   }))
   // La más reciente primero: es la que se está trabajando.
   variantes.reverse()
@@ -380,6 +397,9 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
     faltanVehiculo: datosVehiculo ? faltanDatosVehiculo(datosVehiculo) : null,
     datosRiesgo: { clave: bloque.clave, datos: bloque.datos, faltan: bloque.faltan, dePoliza: bloque.dePoliza, tarifica: ramoTarificable(op.tipo) },
     historial,
+    conductorOcasional: rolesDelRamo(op.tipo).includes('conductor_ocasional')
+      ? { ningunoConfirmadoAt: confirmacionSinOcasionalDe(info)?.confirmadoAt ?? null }
+      : null,
   }
 }
 
@@ -568,8 +588,57 @@ export async function quitarFigura(
     await prisma.$executeRaw`
       insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
       values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, 'figura_quitada', ${JSON.stringify({ rol: e.rol })}::jsonb, ${e.actor})`
+    // Quitar al ocasional NO es «no hay ocasional»: vuelve a «sin preguntar» (una confirmación de antes de asignarlo
+    // ya no vale). 15/10/2026.
+    if (e.rol === 'conductor_ocasional') {
+      await prisma.$executeRaw`
+        update seguros.oportunidades set info_riesgo = info_riesgo - ${CLAVE_OCASIONAL_INFO}::text
+        where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and (info_riesgo -> ${CLAVE_OCASIONAL_INFO}::text) is not null`
+    }
   }
   return { ok: true }
+}
+
+/**
+ * «No conduce nadie más» (15/10/2026): confirma (o deshace) que el riesgo NO tiene conductor ocasional. Se guarda en
+ * `info_riesgo.conductorOcasional` (jsonb del riesgo: sin migración). Con una ficha en el papel no se confirma (409):
+ * primero se quita. No cambia lo que viaja: sin ficha nunca hay `secondaryDriver`.
+ */
+export async function confirmarSinOcasional(
+  correduriaId: string,
+  e: { oportunidadId: string; confirmado: unknown; actor: string; ahora?: string },
+): Promise<ResultadoFigura> {
+  if (!UUID.test(e.oportunidadId)) return { ok: false, status: 400, motivo: 'id no válido' }
+  if (typeof e.confirmado !== 'boolean') return { ok: false, status: 422, motivo: 'falta «confirmado» (sí o no)' }
+  const confirmado = e.confirmado
+  return prisma.$transaction(async (tx) => {
+    const [op] = await tx.$queryRaw<Array<{ tipo: string; hay: boolean }>>`
+      select o.tipo::text as tipo,
+             exists (select 1 from seguros.oportunidad_figura f
+                     where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'conductor_ocasional') as hay
+      from seguros.oportunidades o
+      where o.id = ${e.oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid
+      for update of o`
+    if (!op) return { ok: false as const, status: 404, motivo: 'la oportunidad no es de esta correduría' }
+    if (!rolesDelRamo(op.tipo).includes('conductor_ocasional')) return { ok: false as const, status: 422, motivo: `en ${op.tipo} no hay conductor ocasional` }
+    if (confirmado && op.hay) return { ok: false as const, status: 409, motivo: 'el riesgo ya tiene un conductor ocasional: quítalo primero' }
+    if (confirmado) {
+      const valor = JSON.stringify(valorSinOcasional(e.ahora ?? new Date().toISOString(), e.actor))
+      await tx.$executeRaw`
+        update seguros.oportunidades
+        set info_riesgo = jsonb_set(coalesce(info_riesgo, '{}'::jsonb), array[${CLAVE_OCASIONAL_INFO}::text], ${valor}::jsonb, true)
+        where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+    } else {
+      await tx.$executeRaw`
+        update seguros.oportunidades set info_riesgo = info_riesgo - ${CLAVE_OCASIONAL_INFO}::text
+        where id = ${e.oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid and (info_riesgo -> ${CLAVE_OCASIONAL_INFO}::text) is not null`
+    }
+    await tx.$executeRaw`
+      insert into seguros.oportunidad_historial (correduria_id, oportunidad_id, accion, detalle, actor)
+      values (${correduriaId}::uuid, ${e.oportunidadId}::uuid, ${confirmado ? 'ocasional_ninguno_confirmado' : 'ocasional_ninguno_deshecho'},
+              ${JSON.stringify({ rol: 'conductor_ocasional' })}::jsonb, ${e.actor})`
+    return { ok: true as const }
+  })
 }
 
 /**

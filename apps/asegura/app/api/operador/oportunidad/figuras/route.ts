@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { asignarFigura, nuevaPersonaEnRiesgo, quitarFigura } from '@/lib/oportunidad-riesgo'
+import { asignarFigura, confirmarSinOcasional, nuevaPersonaEnRiesgo, quitarFigura } from '@/lib/oportunidad-riesgo'
 import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
@@ -13,7 +13,9 @@ export const dynamic = 'force-dynamic'
  *   POST { accion:'asignar', oportunidadId, rol, clienteId, actor }   → pone a esa ficha en el rol
  *   POST { accion:'nueva', oportunidadId, rol, tipoRelacion, persona:{nombre,apellidos,dni,fechaNacimiento,telefono,email?,sexo?,estadoCivil?,fechaCarnet?,tipoCarnet?}, actor }
  *        → alta (lead) + vínculo con el cliente + asignada, sin salir de la oportunidad
- *   DELETE { oportunidadId, rol, actor } → el rol vuelve a ser el del tomador
+ *   DELETE { oportunidadId, rol, actor } → el rol vuelve a ser el del tomador (el ocasional, a «sin preguntar»)
+ *   POST { accion:'sin_ocasional', oportunidadId, rol:'conductor_ocasional', confirmado: true|false, actor }
+ *        → confirma (o deshace) «no conduce nadie más» (15/10/2026, `info_riesgo.conductorOcasional`; 409 si hay ficha)
  * Asegurados (rol `asegurado`, VARIAS fichas por riesgo, 10/10/2026):
  *   POST asignar → AÑADE esa ficha (la misma no se duplica; 409 si el ramo ya está lleno)
  *   POST nueva   → alta LIGERA {nombre, apellidos?, fechaNacimiento, sexo, dni?} (sin DNI: siempre ficha nueva)
@@ -32,6 +34,11 @@ export const POST = auditado(async (req: Request) => {
     if (b.accion === 'asignar') {
       const clienteId = typeof b.clienteId === 'string' ? b.clienteId.trim() : ''
       const r = await asignarFigura(correduria.id, { oportunidadId, rol: b.rol, clienteId, actor })
+      return r.ok ? NextResponse.json({ estado: 'ok' }) : NextResponse.json({ estado: r.estado ?? 'error', motivo: r.motivo }, { status: r.status })
+    }
+    if (b.accion === 'sin_ocasional') {
+      if (b.rol !== 'conductor_ocasional') return NextResponse.json({ estado: 'error', motivo: 'solo el conductor ocasional se confirma como «ninguno»' }, { status: 422 })
+      const r = await confirmarSinOcasional(correduria.id, { oportunidadId, confirmado: b.confirmado, actor })
       return r.ok ? NextResponse.json({ estado: 'ok' }) : NextResponse.json({ estado: r.estado ?? 'error', motivo: r.motivo }, { status: r.status })
     }
     if (b.accion === 'nueva') {

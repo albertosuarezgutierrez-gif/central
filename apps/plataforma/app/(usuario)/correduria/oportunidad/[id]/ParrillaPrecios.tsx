@@ -15,6 +15,7 @@ import { eur } from '@/lib/dinero'
 import { vistaPrecio } from '@/lib/tarificador-asegura-reglas'
 import type { TrabajoCompania } from '@/lib/presupuestos-companias'
 import { leerAvant2DeOportunidad } from './parrilla-acciones'
+import MarcaSupuestos from './MarcaSupuestos'
 import {
   UMBRAL_CUADRA_PCT, construirParrilla, rotuloVeredicto, textoPct,
   type CeldaAvant2, type CeldaBot, type LadoAvant2, type LadoBot, type TrabajoBotParrilla, type Veredicto,
@@ -60,7 +61,7 @@ function Detalle({ producto, modalidad, franquiciaEur, opciones }: { producto: s
   )
 }
 
-function CeldaA({ c }: { c: CeldaAvant2 }) {
+function CeldaA({ c, supuestos }: { c: CeldaAvant2; supuestos: readonly { texto: string }[] | null | undefined }) {
   switch (c.estado) {
     case 'precio':
       return (
@@ -68,6 +69,7 @@ function CeldaA({ c }: { c: CeldaAvant2 }) {
           <strong>{eur(c.prima)}</strong>
           {c.meses !== null && c.meses !== 12 && <div style={MUTED}>{c.meses} meses</div>}
           <Detalle {...c} />
+          <MarcaSupuestos supuestos={supuestos} />
         </>
       )
     case 'sin_precio': return <span style={MUTED}>Salió sin importe</span>
@@ -182,7 +184,7 @@ export default function ParrillaPrecios({ oportunidadId, claveVariantes, bot }: 
                     {f.nombre}
                     {f.codigoDgs === null && <div style={{ ...MUTED, color: 'var(--warning)', fontWeight: 400 }}>Sin código DGS: no se cruza</div>}
                   </td>
-                  <td data-label="Avant2" style={{ padding: '8px' }}><CeldaA c={f.avant2} /></td>
+                  <td data-label="Avant2" style={{ padding: '8px' }}><CeldaA c={f.avant2} supuestos={avant2.estado === 'ok' ? avant2.supuestos : undefined} /></td>
                   <td data-label="Bot" style={{ padding: '8px' }}><CeldaB c={f.bot} /></td>
                   <td data-label="Diferencia" style={{ padding: '8px' }}><Diferencia v={f.veredicto} /></td>
                   <td data-label="¿Cuadra?" style={{ padding: '8px' }}><Badge tono={tonoVeredicto(f.veredicto)}>{rotuloVeredicto(f.veredicto)}</Badge></td>

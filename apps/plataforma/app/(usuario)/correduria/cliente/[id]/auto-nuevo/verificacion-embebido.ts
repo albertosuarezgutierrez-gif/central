@@ -64,6 +64,12 @@ export type EntradaVerificacion = {
   personaLibreIncompleta: boolean
   /** Moto: el riesgo trae un conductor ocasional que la compañía no admite en moto (no se declara). Aviso, no bloquea. */
   ocasionalIgnorado?: boolean
+  /**
+   * 15/10/2026: el conductor ocasional del RIESGO en tres estados (`estadoOcasional` de `figuras-form.ts`). `sin_preguntar`
+   * = nadie ha dicho si conduce alguien más → ✗ (bloquea el pago: no preguntarlo es reticencia, art. 10 LCS). `ninguno`
+   * = confirmado que no → ✓. `si`/`no_aplica`/ausente (moto, pantalla completa) = sin ítem propio.
+   */
+  ocasional?: 'si' | 'ninguno' | 'sin_preguntar' | 'no_aplica'
   vehiculo: {
     faltaVersion: boolean; faltaMatriculacion: boolean; faltaGaraje: boolean; kmInvalido: boolean; compraInvalida: boolean
     /** El riesgo trae un garaje que no casa con el catálogo (`garajeInicial().sinCasar`): su etiqueta. Se dice en el ✗. */
@@ -80,6 +86,11 @@ export type EntradaVerificacion = {
     faltaAniosSinSiniestros: boolean
     /** Recomendado (no bloquea: la compañía lo pide gratis si hace falta). */
     siniestros5Pendiente: boolean
+    /**
+     * Auto (15/10/2026, Alberto): menos de 5 años sin siniestros y «siniestros en los últimos 5 años» sin dato → ✗ (ya no
+     * se supone 0). Manda sobre `siniestros5Pendiente`.
+     */
+    siniestros5SinDato?: boolean
     /** Incoherente: el vendor exige en la compañía / sin siniestros ≤ años asegurado (su 400 se paga). */
     companiaSuperaAsegurado?: boolean
     sinSiniestrosSuperaAsegurado?: boolean
@@ -150,6 +161,11 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
   if (e.figuraRepetida) figuras.push({ clave: 'figura-repetida', texto: 'La misma persona es conductor habitual y ocasional', estado: 'falta', nota: 'quita el ocasional en «Intervinientes»', ancla: ANCLA.intervinientes, arriba: true })
   if (e.ocasionalDuplicado) figuras.push({ clave: 'ocasional-duplicado', texto: 'El conductor ocasional tiene el mismo DNI que el habitual', estado: 'falta', ancla: ANCLA.intervinientes, arriba: true })
   if (e.personaLibreIncompleta) figuras.push({ clave: 'persona-libre', texto: 'Faltan datos de un propietario o conductor distinto del tomador', estado: 'falta', ancla: ANCLA.intervinientes, arriba: true })
+  if (e.ramo !== 'moto' && e.ocasional === 'sin_preguntar') {
+    figuras.push({ clave: 'ocasional-sin-preguntar', texto: '¿Conduce alguien más el coche? (art. 10 LCS: no declararlo es reticencia)', estado: 'falta', nota: 'asigna al conductor ocasional o pulsa «No conduce nadie más» en «Intervinientes»', ancla: anclaInterviniente('conductor_ocasional'), alternativa: ANCLA.intervinientes, arriba: true })
+  } else if (e.ramo !== 'moto' && e.ocasional === 'ninguno') {
+    figuras.push({ clave: 'ocasional-ninguno', texto: 'Conductor ocasional: ninguno (confirmado)', estado: 'ok' })
+  }
   if (e.ocasionalIgnorado) figuras.push({ clave: 'ocasional-ignorado', texto: 'El riesgo tiene un conductor ocasional', estado: 'aviso', nota: 'en moto la compañía no lo admite: esta cotización no lo declara', ancla: ANCLA.intervinientes, arriba: true })
 
   const v = e.vehiculo
@@ -188,7 +204,8 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
     )
     if (h.companiaSuperaAsegurado) historial.push({ clave: 'compania-supera', texto: 'Años en la compañía: no pueden ser más que los años asegurado', estado: 'falta', ...arriba })
     if (h.sinSiniestrosSuperaAsegurado) historial.push({ clave: 'sin-siniestros-supera', texto: 'Años sin siniestros: no pueden ser más que los años asegurado', estado: 'falta', ...arriba })
-    if (h.siniestros5Pendiente) historial.push({ clave: 'siniestros-5', texto: 'Siniestros en los últimos 5 años', estado: 'aviso', nota: 'recomendado: si la compañía lo exige lo dirá sin cobrar', ...arriba })
+    if (h.siniestros5SinDato) historial.push({ clave: 'siniestros-5', texto: '¿Cuántos siniestros en los últimos 5 años? Sin dato no se puede declarar 0', estado: 'falta', nota: 'con menos de 5 años sin siniestros hay que declararlo arriba («Historial y bonificaciones»)', ...arriba })
+    else if (h.siniestros5Pendiente) historial.push({ clave: 'siniestros-5', texto: 'Siniestros en los últimos 5 años', estado: 'aviso', nota: 'recomendado: si la compañía lo exige lo dirá sin cobrar', ...arriba })
   }
   for (const r of h.reparos) historial.push({ clave: `reparo-${r.campo}`, texto: r.campo, estado: 'aviso', nota: r.motivo, ancla: ANCLA.seguroAqui })
 

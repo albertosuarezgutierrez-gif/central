@@ -151,3 +151,13 @@ test('decesos (13/10/2026): Avant2 sí, sin bot → filas «solo Avant2»; sin c
   assert.equal(nada.vacia, false)
   assert.deepEqual(nada.filas, [])
 })
+
+test('marcaSupuestos: con supuestos se marca con la lista; sin ninguno, nada; sin registro, «no consta» (nunca «sin supuestos»)', async () => {
+  const { marcaSupuestos } = await import('./parrilla-precios.ts')
+  const m = marcaSupuestos([{ texto: 'Km al año: 10.000 km (por defecto)' }, { texto: 'Fecha de compra: la de matriculación' }])
+  assert.equal(m?.etiqueta, 'Precio con supuestos')
+  assert.deepEqual(m?.detalle, ['Km al año: 10.000 km (por defecto)', 'Fecha de compra: la de matriculación'])
+  assert.equal(marcaSupuestos([]), null)
+  assert.equal(marcaSupuestos(null)?.etiqueta, 'Supuestos: no consta')
+  assert.equal(marcaSupuestos(undefined)?.etiqueta, 'Supuestos: no consta')
+})
