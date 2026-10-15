@@ -120,14 +120,15 @@ const CLUB = (izquierda = 'No, gracias') => `<mat-dialog-container><app-club-map
 const TARJETA = (producto: string, prima: string) => `<prima-producto><section><mat-select><span class="mat-select-value-text">${producto}</span></mat-select><mat-select><span class="mat-select-value-text">ANUAL</span></mat-select></section><section><div class="caja-primas"><p><strong>${prima}</strong></p></div></section></prima-producto>`
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
-const NSEI = (o: { filas?: Array<[string, string]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null } = {}) => `<!doctype html><body>
+const NSEI = (o: { filas?: Array<[string, string]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean } = {}) => `<!doctype html><body>
 <style>mat-select{display:inline-block;min-width:80px;min-height:14px;border:1px solid #999}</style>
 <mat-horizontal-stepper>${PASOS.map((p, i) => `<mat-step-header role="tab" aria-selected="${i === 0}">${i + 1} ${p}</mat-step-header>`).join('')}</mat-horizontal-stepper>
 <template id="tplVeh">${DIALOGO_VEHICULO(o.filas ?? [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6']])}</template>
 <app-datos-vehiculo><input name="matricula" onblur="setTimeout(()=>document.getElementById('ov').appendChild(document.getElementById('tplVeh').content.cloneNode(true)),50)">
-<input name="cpCirculacion" formcontrolname="codPostal">
-<mat-select formcontrolname="uso" onclick="abrir(this,['Particular','Alquiler sin conductor'])"><span class="v"></span></mat-select>
-<mat-select formcontrolname="ambitoCirculacion" onclick="abrir(this,['España','Unión Europea'])"><span class="v"></span></mat-select></app-datos-vehiculo>
+<mat-form-field id="ffMatric"><label class="mat-form-field-label"><mat-label>1ª Matriculación</mat-label><span class="mat-placeholder-required">*</span></label><input name="dateMatriculacion" formcontrolname="dateMatriculacion" value="01/01/2020"></mat-form-field>
+<mat-form-field id="ffCp"><label class="mat-form-field-label"><mat-label>CP. De Circulación</mat-label><span class="mat-placeholder-required">*</span></label><input name="cpCirculacion" formcontrolname="codPostal" onblur="validarCp(this)"></mat-form-field>
+<mat-select formcontrolname="uso" ${o.sinUsoAmbito ? 'style="display:none"' : ''} onclick="abrir(this,['Particular','Alquiler sin conductor'])"><span class="v"></span></mat-select>
+<mat-select formcontrolname="ambitoCirculacion" ${o.sinUsoAmbito ? 'style="display:none"' : ''} onclick="abrir(this,['España','Unión Europea'])"><span class="v"></span></mat-select></app-datos-vehiculo>
 <app-figuras><div role="tabpanel" aria-label="Tomador">
 <datos-licencia><form><div><mat-form-field><mat-label>Tipo de permiso</mat-label><mat-select name="codigoTipoLicencia" onclick="abrir(this,['A','A2','B','C'])"><span class="v"></span></mat-select></mat-form-field>
 <mat-form-field><mat-label>Valido desde</mat-label><input id="fechaCarne"></mat-form-field></div></form></datos-licencia>
@@ -141,7 +142,12 @@ const NSEI = (o: { filas?: Array<[string, string]>; polizaObligatoria?: boolean;
 <div class="cdk-overlay-container" id="ov"></div>
 <script>
 function abrir(sel, opciones){const ov=document.getElementById('ov');const panel=document.createElement('div');panel.className='cdk-overlay-pane';for(const t of opciones){const m=document.createElement('mat-option');m.setAttribute('role','option');m.textContent=t;m.style.display='block';m.onclick=()=>{sel.querySelector('.v').textContent=t;panel.remove()};panel.appendChild(m)}ov.appendChild(panel)}
-function continuar(){window.__continuar=(window.__continuar||0)+1;const h=[...document.querySelectorAll('mat-step-header')];const i=h.findIndex(x=>x.getAttribute('aria-selected')==='true');h[i].setAttribute('aria-selected','false');h[i+1].setAttribute('aria-selected','true');
+// CP de circulación con validación ASÍNCRONA al salir del campo (como NSEI: el control queda «ng-pending» un rato).
+function validarCp(el){if(!${!!o.cpAsincrono})return;el.classList.add('ng-pending');setTimeout(()=>{el.classList.remove('ng-pending');window.__cpValido=el.value},600)}
+function marcarError(ff){if(!ff.querySelector('mat-error'))ff.insertAdjacentHTML('beforeend','<mat-error>Campo obligatorio</mat-error>')}
+function continuar(){window.__continuar=(window.__continuar||0)+1;const h=[...document.querySelectorAll('mat-step-header')];const i=h.findIndex(x=>x.getAttribute('aria-selected')==='true');
+ if(i===1){let ok=true;if(${!!o.cpAsincrono}&&!window.__cpValido){marcarError(document.getElementById('ffCp'));ok=false}if(${JSON.stringify(o.errorEn ?? null)}==='matriculacion'){marcarError(document.getElementById('ffMatric'));ok=false}if(!ok)return}
+ h[i].setAttribute('aria-selected','false');h[i+1].setAttribute('aria-selected','true');
  if(PASO_COBERTURAS(i+1)){${o.club === null ? 'calcular()' : `setTimeout(()=>document.getElementById('ov').insertAdjacentHTML('beforeend', ${JSON.stringify(CLUB(o.club ?? undefined))}),80)`}}}
 function PASO_COBERTURAS(i){return i===3}
 function cerrarClub(){document.querySelector('mat-dialog-container').remove();calcular()}
@@ -331,6 +337,31 @@ test('E2E fixture: matrícula → fila por regla → CP/uso/ámbito → licencia
   assert.equal(await marca(page, '__generar'), null, 'no pulsa «Ir a generar»')
   assert.equal(await marca(page, '__proyecto'), null, 'no pulsa «Generar Proyecto»')
   assert.match((await page.locator('mat-step-header[aria-selected="true"]').textContent()) ?? '', /Coberturas/)
+  await context.close()
+})
+
+test('v0.8.3 (trabajo real 39c8016e): CP de circulación con validación ASÍNCRONA al salir del campo → el bot sale del campo y ESPERA a que se asiente antes de «Continuar»; llega a Figuras y a precio', async () => {
+  const { context, page, guard } = await preparar(NSEI({ cpAsincrono: true }))
+  const ctx = ctxReal(page, guard)
+  await ctx.continuarMapfre!(page, 'datosBasicos')
+  const veh = await consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form)
+  const r = await precioDesdeObjetoAsegurado(page, form, veh, ctx, 8_000)
+  assert.equal(r.ofertas.length, 2)
+  assert.equal(await marca(page, '__cpValido'), '00001', 'Mapfre validó el CP (blur + espera) antes de «Continuar»')
+  assert.equal(await page.locator('#ffCp mat-error').count(), 0, 'sin error en el CP')
+  assert.equal(await marca(page, '__continuar'), 3)
+  await context.close()
+})
+
+test('v0.8.3: si tras «Continuar» desde «Objeto asegurado» no se llega a Figuras y hay `mat-error` visibles, el hueco NOMBRA los campos (etiquetas, sin valores)', async () => {
+  const { context, page, guard } = await preparar(NSEI({ errorEn: 'matriculacion', sinUsoAmbito: true }))
+  const ctx = ctxReal(page, guard)
+  await ctx.continuarMapfre!(page, 'datosBasicos')
+  const veh = await consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form)
+  await assert.rejects(
+    () => precioDesdeObjetoAsegurado(page, form, veh, ctx, 8_000),
+    (e: Error) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /Figuras/.test(e.message) && /«1ª Matriculación»/.test(e.message) && !/CP\. De Circulaci/.test(e.message) && !e.message.includes('00001') && !e.message.includes(MATRICULA),
+  )
   await context.close()
 })
 

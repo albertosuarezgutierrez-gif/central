@@ -47,6 +47,11 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.3 (15/10/2026, trabajo real 39c8016e) · tras «Continuar» desde «Objeto asegurado» NO llegaba a «Figuras». La grabación
+//   rellena el CP de circulación y SALE del campo (Tab) antes de «Continuar»; el bot lo escribía y pulsaba «Continuar» con el
+//   foco aún dentro: NSEI valida el CP al salir (asíncrono) y el clic llegaba con el control sin asentar. Ahora cada campo de
+//   texto: escribir → relectura → SALIR del campo (`blur`) → esperar a que se asiente (sin `ng-pending` ni spinner). Y si un
+//   «Continuar» no llega a su destino, el hueco NOMBRA los campos con `mat-error` visible (solo etiquetas, redactadas).
 
 import type { Frame, Locator, Page } from 'playwright'
 import {
@@ -672,9 +677,61 @@ export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: Pl
     await comprobarCampo(campo)
     await campo.fill(String(op.valor))
     if ((await campo.inputValue()) !== String(op.valor)) throw new ErrorTarificador('portal', `mapfre/auto: el portal no dejó fijado el campo «${op.etiqueta}»`)
+    // v0.8.3: como la grabación (Tab tras el CP), SALIR del campo y esperar a que NSEI lo valide (asíncrono) antes de seguir.
+    await campo.blur().catch(() => undefined)
+    await esperarCampoAsentado(raiz, campo)
+    if ((await campo.inputValue().catch(() => '')).trim() === '') throw new ErrorTarificador('portal', `mapfre/auto: el portal vació el campo «${op.etiqueta}» al salir de él`)
     await r.confirmar().catch(() => undefined)
   }
   return plan.pendientes.map((p) => p.etiqueta)
+}
+
+/** Espera máxima a que un campo recién escrito se asiente (validación asíncrona de NSEI al salir del campo). */
+export const ESPERA_ASENTAR_MS = 5_000
+const SEL_OCUPADO_NSEI = 'mat-progress-spinner, mat-spinner, mat-progress-bar'
+
+/**
+ * v0.8.3 · Tras SALIR de un campo (blur), espera a que NSEI lo dé por asentado: el control sin `ng-pending` (validador
+ * asíncrono de Angular) y ningún spinner visible, en dos lecturas seguidas. Agotada la espera NO lanza: «Continuar» lo
+ * comprueba el guard y, si no se llega, el hueco nombra los `mat-error` visibles. Solo lectura.
+ */
+export async function esperarCampoAsentado(raiz: Pick<Frame, 'locator'>, campo: Locator, ms: number = ESPERA_ASENTAR_MS): Promise<boolean> {
+  const fin = Date.now() + ms
+  let quietas = 0
+  for (;;) {
+    const pendiente = await campo.evaluate((el) => el.classList.contains('ng-pending') || el.closest('.ng-pending') !== null).catch(() => false)
+    const ocupado = (await raiz.locator(SEL_OCUPADO_NSEI).locator('visible=true').count().catch(() => 0)) > 0
+    quietas = pendiente || ocupado ? 0 : quietas + 1
+    if (quietas >= 2) return true
+    if (Date.now() >= fin) return false
+    await new Promise((r) => setTimeout(r, 150))
+  }
+}
+
+/**
+ * v0.8.3 · Etiquetas de los campos con `mat-error` VISIBLE (sin el «*», redactadas; nunca el valor ni el texto del error), en
+ * orden y sin repetir. Para que un «Continuar» que no llega a su destino diga QUÉ campo rechaza el portal. Solo lectura.
+ */
+export async function camposConErrorVisibles(raiz: Pick<Frame, 'locator'>): Promise<string[]> {
+  const etiquetas = await raiz
+    .locator('mat-error')
+    .locator('visible=true')
+    .evaluateAll((els) =>
+      els.map((e) => {
+        const ff = e.closest('mat-form-field')
+        const l = ff?.querySelector('mat-label') ?? ff?.querySelector('label')
+        const ctl = ff?.querySelector('input, textarea, mat-select')
+        const t = (l?.textContent ?? '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim()
+        return t !== '' ? t : (ctl?.getAttribute('formcontrolname') ?? ctl?.getAttribute('name') ?? '')
+      }),
+    )
+    .catch(() => [] as string[])
+  const vistas = new Set<string>()
+  for (const t of etiquetas) {
+    const limpia = redactarDatosPersonales(t).slice(0, 60).trim()
+    if (limpia !== '') vistas.add(limpia)
+  }
+  return [...vistas]
 }
 
 /**
@@ -762,9 +819,17 @@ export async function sinOpcionalesAusentes(raiz: Pick<Frame, 'locator'>, plan: 
   return { escribibles: plan.escribibles, pendientes }
 }
 
-const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'>, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras') => {
+const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'> & { formador?: ContextoFormador }, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras') => {
   if (!ctx.continuarMapfre) throw new ErrorMapaIncompleto('la función guardada «Continuar» de Mapfre en el contexto del runner')
-  return ctx.continuarMapfre(nsei, paso)
+  // v0.8.3: si no se llega al destino y el portal marca campos con `mat-error`, el hueco los NOMBRA (etiquetas, sin valores).
+  return ctx.continuarMapfre(nsei, paso).catch(async (e: unknown) => {
+    if (!(e instanceof ErrorTarificador) || !/la llegada a «/.test(e.message)) throw e
+    const conError = await camposConErrorVisibles(nsei)
+    if (conError.length === 0) throw e
+    const nombre = PASOS_NSEI.find((x) => x.id === paso)!.nombre
+    const lista = conError.map((t) => `«${t}»`).join(', ')
+    return huecoPaso(nsei, ctx.formador, conError[0]!, nombre, `${e.message.replace(/^mapfre: mapa incompleto: faltan /, '')}: el portal marca con error ${lista}`)
+  })
 }
 
 // ───────────────────────── paso 1: tomador por NIF SIN LUPA (14/10/2026) ─────────────────────────
@@ -1175,7 +1240,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.2',
+  version: '0.8.3',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
