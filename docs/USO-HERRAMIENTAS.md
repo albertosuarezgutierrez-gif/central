@@ -167,27 +167,27 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 336 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 337 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 326 | 47.575 | 40.062.200 | 0 | 0 |
-| `otro` | 322 | 11.337 | 27.549.598 | 17.023.439 | 0 |
-| `lectura-directa` | 280 | 7.780 | 24.474.285 | 0 | 0 |
-| `mcp:github` | 285 | 6.500 | 5.172.730 | 53.952.097 | 95 |
-| `sql` | 206 | 4.491 | 2.247.758 | 2.351.230 | 18 |
-| `escritura` | 210 | 4.477 | 65.107.449 | 0 | 0 |
+| `bash` | 327 | 47.755 | 40.179.959 | 0 | 0 |
+| `otro` | 323 | 11.359 | 27.586.152 | 17.031.567 | 0 |
+| `lectura-directa` | 281 | 7.794 | 24.527.476 | 0 | 0 |
+| `mcp:github` | 286 | 6.518 | 5.178.721 | 53.952.097 | 95 |
+| `sql` | 207 | 4.539 | 2.271.798 | 2.351.230 | 18 |
+| `escritura` | 210 | 4.496 | 65.200.635 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Gmail` | 44 | 1.203 | 1.244.443 | 0 | 72 |
+| `mcp:Gmail` | 45 | 1.208 | 1.258.683 | 0 | 72 |
 | `mcp:Booking-com` | 37 | 1.031 | 4.275.322 | 0 | 0 |
-| `mcp:Vercel` | 71 | 798 | 996.094 | 204.477 | 27 |
-| `agente:general-purpose` | 99 | 636 | 389.687 | 12.393.698 | 0 |
+| `mcp:Vercel` | 71 | 802 | 998.403 | 204.477 | 27 |
+| `agente:general-purpose` | 99 | 644 | 393.754 | 12.418.223 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
-| `mcp:claude-code-remote` | 38 | 385 | 41.960 | 20.519 | 0 |
+| `mcp:claude-code-remote` | 38 | 387 | 42.079 | 20.519 | 0 |
 | `mcp:Google_Drive` | 22 | 365 | 409.953 | 0 | 40 |
 | `mcp:Supabase` | 123 | 362 | 50.192 | 3.415 | 7 |
-| `agente:agente-architect` | 62 | 261 | 183.881 | 6.853.440 | 0 |
-| `mcp:Google-Drive` | 22 | 132 | 120.018 | 0 | 2 |
+| `agente:agente-architect` | 62 | 262 | 184.295 | 6.853.440 | 0 |
+| `mcp:Google-Drive` | 23 | 139 | 126.471 | 0 | 2 |
 | `agente:agente-mecanico` | 44 | 109 | 69.822 | 6.955.079 | 0 |
 | `agente:rastreador-codigo` | 49 | 83 | 25.522 | 1.175.266 | 0 |
 | `agente:Explore` | 35 | 77 | 37.799 | 2.133.390 | 0 |
