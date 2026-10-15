@@ -260,7 +260,7 @@ test('registrarResultado: una exploración no devuelve ofertas, solo ella termin
   const f = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
   assert.match(f, /if \(deExploracion && r\.tipo === 'ok'\) return \{ res: \{ estado: 'conflicto'/)
   assert.match(f, /if \(!deExploracion && r\.tipo === 'explorado'\) return \{ res: \{ estado: 'conflicto'/)
-  assert.match(f, /const evidencia = deExploracion \? null : \{ trabajo: t, captura: r\.captura, html: r\.html \}/)
+  assert.match(f, /const evidencia = deExploracion \|\| deHumo \? null : \{ trabajo: t, captura: r\.captura, html: r\.html \}/)
   // La cola filtra por modo (la exploración solo con su interruptor) y el worker declara lo que sabe hacer.
   assert.match(f, /and coalesce\(to_jsonb\(w\)->>'modo', 'tarificar'\) = any\(\$\{\[\.\.\.modos\]\}::text\[\]\)/)
   assert.match(f, /reclamarSiguiente\(correduriaId, compania, modosReclamables\(deps\.env\)\)/)
@@ -431,7 +431,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.ok(fn.indexOf("return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }") > comprueba, 'sin NIF no se encola')
   // Entrega: se inyecta en la respuesta (no en exploración) y la función no escribe el riesgo en BD.
   const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
-  assert.match(w, /if \(modo !== 'exploracion' && necesitaNifTomador\(f\.compania, f\.ramo, riesgo\)\)/)
+  assert.match(w, /if \(modo !== 'exploracion' && modo !== 'humo' && necesitaNifTomador\(f\.compania, f\.ramo, riesgo\)\)/)
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
@@ -491,7 +491,7 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   assert.ok(!fn.includes('aplicarDatosTomador('), 'encolar NO inyecta (eso es al entregar)')
   assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid`\n  const f = filas\[0\]/)
   const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
-  assert.match(w, /if \(modo !== 'exploracion' && necesitaDatosTomador\(f\.compania, f\.ramo, riesgo\)\)/)
+  assert.match(w, /if \(modo !== 'exploracion' && modo !== 'humo' && necesitaDatosTomador\(f\.compania, f\.ramo, riesgo\)\)/)
   assert.match(w, /aplicarDatosTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaTomadorFicha\(ficha, decryptField\)\)/)
   assert.ok(w.indexOf('aplicarDatosTomador(') < w.indexOf('const base = {'), 'se inyecta antes de armar la respuesta')
 })

@@ -172,6 +172,7 @@ test('cableado · todo UPDATE que pone un estado de cierre está en un sitio vig
   // Si alguien añade otro `set estado = 'cancelado'|'ok'|'error_definitivo'|'emitido'`, este número cambia y obliga a
   // añadirlo a CIERRES (y a purgar allí).
   const cuenta = (f: string) => (leer(f).match(/set estado = '(ok|cancelado|error_definitivo|emitido)'/g) ?? []).length
+  // El `ok`/`cancelado` de la prueba de humo (15/10/2026) va en un UPDATE con `case` (riesgo VACÍO: nada que purgar) y no suma.
   assert.equal(cuenta('lib/tarificador.ts'), 4)
   assert.equal(cuenta('lib/tarificador-bandeja.ts'), 1)
   assert.equal(cuenta('lib/tarificador-emision.ts'), 3)

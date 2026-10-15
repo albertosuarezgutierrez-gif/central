@@ -100,7 +100,7 @@ export function ramoDelIframe(src: string | null | undefined, base: string): str
 }
 
 /** Portal → ruta de Comunidades → URL del iframe → se abre en el propio contexto (la sesión SSO se comparte por cookies). */
-async function abrirFormulario(page: Page, ctx: ContextoPortal): Promise<void> {
+export async function abrirFormulario(page: Page, ctx: ContextoPortal): Promise<void> {
   await irA(page, urlEntradaPortal())
   await ctx.exigirSinCaptcha()
   const marco = page.locator(SEL.iframeFormulario).first()

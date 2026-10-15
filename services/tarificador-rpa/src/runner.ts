@@ -57,6 +57,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
 import { ejecutarEmision } from './emision.ts'
 import { ejecutarExploracion } from './explorador.ts'
+import { ejecutarHumo } from './humo.ts'
 import { crearCapturadorRecorrido, type CapturadorRecorrido } from './recorrido.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
@@ -358,6 +359,10 @@ async function main(): Promise<number> {
   // EXPLORADOR IA (13/10/2026, src/explorador.ts): otro flujo (login + entrada cerrada + bucle con asegura), sin adaptador
   // de tarificación, sin formador ni reintento. asegura solo lo sirve a una imagen que declara el modo (api.ts).
   if (trabajo.modo === 'exploracion') return ejecutarExploracion({ cfg, trabajo, env, log, redactar })
+
+  // PRUEBA DE HUMO nocturna (15/10/2026, src/humo.ts): login + pantalla de inicio del tarificador, sin riesgo ni datos de nadie.
+  // Otro flujo: sin adaptador de tarificación (usa sus login y entradas), sin formador ni reintento. Un trabajo de humo nunca se tarifica.
+  if (trabajo.modo === 'humo') return ejecutarHumo({ cfg, trabajo, env, log, redactar })
 
   // Documento del tomador (Mapfre: lo pone asegura desde la ficha, 14/10/2026): SECRETO DEL TRABAJO. Fuera de mensajes,
   // URL y HTML de evidencia, y sin captura de pantalla (una imagen no se redacta). Nunca se loguea.

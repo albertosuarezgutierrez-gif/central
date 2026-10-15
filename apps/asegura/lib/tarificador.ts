@@ -34,7 +34,8 @@ import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
-import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausaViva, sqlSinPausa } from './tarificador-robustez'
+import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
+import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
 import {
   ESTADOS_DUPLICADO,
   LEASE_MS,
@@ -163,7 +164,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and (t.estado <> 'ok' or t.terminado_at > now() - ${VENTANA_OK_DUPLICADO_MS / 1000}::int * interval '1 second')
         and t.oportunidad_id is not distinct from ${e.oportunidadId ?? null}::uuid
         and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
-        and coalesce(to_jsonb(t)->>'modo', 'tarificar') <> 'exploracion'
+        and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
       order by t.created_at`
     const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio }, p.ahora, MAX_INTENTOS))
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
@@ -330,7 +331,7 @@ async function destruirMaquina(cfg: ConfigFly, machineId: string, f: typeof fetc
 // ─── Lo que ve el worker ─────────────────────────────────────────────────────
 
 export type TrabajoParaWorker = {
-  id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string; modo: 'tarificar' | 'emision' | 'exploracion'
+  id: string; compania: string; ramo: string; riesgo: unknown; leaseHasta: string; modo: 'tarificar' | 'emision' | 'exploracion' | 'humo'
   /** Solo en `modo = 'exploracion'`: la entrada cerrada y si va ligada a una petición real (la verdad: `cliente_id`). */
   exploracion?: { entrada: string; conDatosReales: boolean }
 }
@@ -356,7 +357,7 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   // NIF del tomador (Mapfre auto/moto, 14/10/2026): se descifra AQUÍ, solo para la respuesta (canal del worker, con su
   // Bearer); nunca se escribe en BD. Si la ficha ya no lo permite (borrado, ilegible, no válido) el trabajo FALLA con el
   // motivo (sin documento) y no se sirve: el worker sale sin entrar en el portal.
-  if (modo !== 'exploracion' && necesitaNifTomador(f.compania, f.ramo, riesgo)) {
+  if (modo !== 'exploracion' && modo !== 'humo' && necesitaNifTomador(f.compania, f.ramo, riesgo)) {
     const dni = f.cliente_id ? await leerDniFicha(f.correduria_id, f.cliente_id) : null
     const conNif = aplicarNifTomador(f.compania, f.ramo, riesgo, () => lecturaNifFicha(dni, decryptField))
     if (!conNif.ok) {
@@ -366,7 +367,7 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     riesgo = conNif.riesgo
   }
   // Nombre, apellidos y nacimiento del tomador (alta en Mapfre): igual que el NIF, solo en la respuesta, nunca en BD.
-  if (modo !== 'exploracion' && necesitaDatosTomador(f.compania, f.ramo, riesgo)) {
+  if (modo !== 'exploracion' && modo !== 'humo' && necesitaDatosTomador(f.compania, f.ramo, riesgo)) {
     const ficha = f.cliente_id ? await leerTomadorFicha(f.correduria_id, f.cliente_id) : null
     const conDatos = aplicarDatosTomador(f.compania, f.ramo, riesgo, () => lecturaTomadorFicha(ficha, decryptField))
     if (!conDatos.ok) {
@@ -424,10 +425,30 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     // EXPLORACIÓN (13/10/2026): termina `explorado` (el mapa ya está en su cabecera) o con error; nunca con ofertas. Y al
     // revés: solo una exploración puede terminar `explorado`.
     const deExploracion = t.modo === 'exploracion'
+    // PRUEBA DE HUMO (15/10/2026): termina `humo` (pasó) o con error (falló); nunca con ofertas. Y solo ella termina `humo`.
+    const deHumo = t.modo === 'humo'
+    if (deHumo && r.tipo !== 'humo' && r.tipo !== 'error') return { res: { estado: 'conflicto' as const, motivo: 'trabajo de humo: solo termina «humo» o con error' }, traza: null }
+    if (!deHumo && r.tipo === 'humo') return { res: { estado: 'conflicto' as const, motivo: 'solo una prueba de humo termina «humo»' }, traza: null }
     if (deExploracion && r.tipo === 'ok') return { res: { estado: 'conflicto' as const, motivo: 'trabajo de exploración: no devuelve ofertas' }, traza: null }
     if (!deExploracion && r.tipo === 'explorado') return { res: { estado: 'conflicto' as const, motivo: 'solo una exploración termina «explorado»' }, traza: null }
     // Un resultado tardío (el barrido ya dio el lease por vencido) NO pisa lo decidido.
     if (t.estado !== 'en_curso') return { res: { estado: 'conflicto' as const, motivo: `trabajo en estado ${t.estado}` }, traza: null }
+
+    if (r.tipo === 'humo') {
+      // Sin tarificación, sin evidencia, sin riesgo que purgar (va vacío): solo el desenlace. La traza no se guarda (no es una tarificación).
+      // Omitido (sin adaptador activo de esa compañía en la imagen): `cancelado`, ni éxito ni fallo; el informe no lo cuenta.
+      // `error.humo` guarda qué ramo se probó y qué ramos tienen bot en la imagen (el informe avisa de «integración activa sin bot»).
+      const humo = r.ramosConBot ? { humo: { ramoProbado: r.ramoProbado, conBot: r.ramosConBot } } : {}
+      const omitido = r.omitido ? JSON.stringify({ tipo: 'datos', mensaje: `${PREFIJO_HUMO_NO_SOPORTADO}: ${r.omitido}`, ...humo }) : null
+      const errorOk = !omitido && r.ramosConBot ? JSON.stringify(humo) : null
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set estado = case when ${omitido}::text is null then 'ok' else 'cancelado' end, lease_hasta = null,
+            error = coalesce(${omitido}::jsonb, ${errorOk}::jsonb), terminado_at = now(), updated_at = now()
+        where id = ${t.id}::uuid and estado = 'en_curso'`
+      if (conBot) await tx.$executeRaw`update seguros.tarificacion_trabajos set bot_version = coalesce(${r.botVersion}, bot_version) where id = ${t.id}::uuid`
+      return { res: { estado: 'registrado' as const, estadoTrabajo: omitido ? 'cancelado' : 'ok' }, traza: null }
+    }
 
     if (r.tipo === 'explorado') {
       // La cabecera DEBE estar cerrada (el cierre guarda el mapa): si no, no es un `ok` sino un error con motivo claro.
@@ -465,7 +486,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
 
     if (r.tipo === 'error') {
       // Una exploración no guarda captura ni HTML como documento (puede no tener cliente y no hacen falta para el mapa).
-      const evidencia = deExploracion ? null : { trabajo: t, captura: r.captura, html: r.html }
+      const evidencia = deExploracion || deHumo ? null : { trabajo: t, captura: r.captura, html: r.html }
       // Defensa en profundidad: el recorrido se vuelve a sanear con los valores del riesgo de ESTE trabajo (ya leído arriba).
       if (r.error.recorrido) {
         const { recorrido: _crudo, ...resto } = r.error
@@ -473,7 +494,7 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
         r.error = limpio && limpio.capturas.length > 0 ? { ...resto, recorrido: limpio } : resto
       }
       const { estado } = await marcarFallo(tx, t.id, t.intentos, r.error, evidencia, conBot ? r.botVersion : null, conBot)
-      return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
+      return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: deHumo ? null : { t, captura: r.captura ? 'con_captura' as const : null } }
     }
 
     const docs: string[] = []
@@ -648,6 +669,8 @@ async function marcarFallo(
     error = { ...error, tipo: 'emision', mensaje: `${prefijo}[emisión, ${error.tipo}] ${error.mensaje}`.slice(0, 2000) }
   }
   const deExploracion = modoFila[0]?.modo === 'exploracion'
+  // PRUEBA DE HUMO (15/10/2026): nunca se reintenta (otro login con nuestra credencial no aporta nada); sin atasco ni corte de tarificar.
+  const deHumo = modoFila[0]?.modo === 'humo'
   let estado = deEmision ? estadoTrasErrorEmision() : estadoTrasError(error.tipo, intentos)
   if (deExploracion) {
     const cab = await db.$queryRaw<{ cerrada: boolean }[]>`select (cerrada_at is not null) as cerrada from seguros.tarificador_exploraciones where trabajo_id = ${id}::uuid`
@@ -655,9 +678,10 @@ async function marcarFallo(
   }
   // ATASCO (F2): un hueco del portal con checkpoint, en un trabajo de tarificar, con el interruptor y bajo el tope de rondas →
   // `atascado` (espera la elección de Alberto) en vez de `error_definitivo`. El checkpoint NO va al `error` jsonb.
+  if (deHumo) estado = estadoTrasFalloHumo()
   const { atasco: atascoCable, ...errorSinAtasco } = error
   error = errorSinAtasco
-  const atasco = !deEmision && !deExploracion
+  const atasco = !deEmision && !deExploracion && !deHumo
     ? await atascoParaFallo(db, { trabajoId: id, estado, modo: modoFila[0]?.modo ?? null, tipoError: error.tipo, atasco: atascoCable })
     : null
   if (atasco) estado = 'atascado'
@@ -715,7 +739,9 @@ async function marcarFallo(
   // `atascado` conservan el riesgo para el reintento (lo decide `planPurgaRiesgo`).
   if (tocada) await purgarRiesgoTrabajos(db, [id])
   // CORTE (F2): tras un `error_definitivo` de tarificar, ¿lleva la pareja N fallos seguidos del bot? → pausa (una viva).
-  if (tocada && estado === 'error_definitivo' && !deEmision && !deExploracion) await evaluarCorte(db, id)
+  if (tocada && estado === 'error_definitivo' && !deEmision && !deExploracion && !deHumo) await evaluarCorte(db, id)
+  // HUMO con la contraseña rechazada: pausa de la compañía (como un trabajo de tarificar) y no se repite el login esta noche.
+  if (tocada && deHumo && humoPideParar(error.tipo)) await pausarTrasHumo(db, id)
   return { estado, tocada }
 }
 
