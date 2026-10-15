@@ -1585,3 +1585,74 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
   guard.comprobar()
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
 }
+
+// ─────────── OPCIONES de Allianz AUTOS Turismos (app Angular `ngx-motor-azs`, 15/10/2026) ───────────
+
+/**
+ * Etiquetas EXACTAS que el robot marca en «Datos del vehículo» de Turismos (inventario del 15/10/2026). LISTA CERRADA y mínima:
+ * «Sí» de «¿Conoces la matrícula del vehículo?». Es un dato de consulta (activa el campo Matrícula): no tarifica, no guarda ni emite.
+ * Las demás opciones del paso (compra, uso, garaje) no se marcan hasta tener mapeo de los datos del formulario.
+ */
+export const OPCIONES_TURISMOS_ALLIANZ: readonly string[] = Object.freeze(['Sí'])
+/** Origen y ruta de la app Angular de Allianz AUTOS Turismos en el iframe `appArea`. */
+export const PASO_TURISMOS_ALLIANZ = 'Datos del vehículo'
+export const GRUPO_TURISMOS_ALLIANZ = '¿Conoces la matrícula del vehículo?'
+export const ORIGEN_APP_TURISMOS_ALLIANZ = 'https://cloud.e-pacallianz.com'
+const RE_RUTA_APP_TURISMOS_ALLIANZ = /^\/ngx-motor-azs\//
+
+/** ¿Es `url` la app de Turismos? Origen EXACTO + ruta `/ngx-motor-azs/`. Pura. */
+export function esAppTurismosAllianz(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.origin === ORIGEN_APP_TURISMOS_ALLIANZ && RE_RUTA_APP_TURISMOS_ALLIANZ.test(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Marca UNA opción de «Datos del vehículo» de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
+ * Mismas exigencias que `marcarOpcionRiesgoHogarAllianz`: guard limpio y sin ventanas de red abiertas; etiqueta en la lista
+ * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; EXACTAMENTE un control cuya etiqueta casa EXACTA
+ * (si ya está marcado no se pulsa nada); `comprobarBoton` sobre control y etiqueta ANTES del único clic; después, que quede marcado.
+ */
+export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmision, etiqueta: string): Promise<ResultadoOpcionHogar> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'opción de Turismos con una ventana de red abierta')
+  if (!OPCIONES_TURISMOS_ALLIANZ.includes(etiqueta)) throw new EmisionBloqueadaError('boton', `opción de Turismos fuera de la lista cerrada: «${etiqueta.slice(0, 80)}»`)
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  // Anclaje (revisión 15/10/2026): pestaña seleccionada = «Datos del vehículo» y la opción es de SU grupo (radiogroup/fieldset
+  // con nombre accesible o legend «¿Conoces la matrícula del vehículo?»). Otro grupo u otro paso → bloqueo.
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_TURISMOS_ALLIANZ) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera del paso «Datos del vehículo»')
+  const todos = await marco.locator('input[type=radio]').evaluateAll((els) =>
+    els.map((el) => {
+      const h = el as HTMLInputElement
+      // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+      const g = h.closest('[role=radiogroup],fieldset')
+      const ids = (g?.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean)
+      const leg = g?.querySelector('legend') as HTMLElement | null | undefined
+      const grupo = [g?.getAttribute('aria-label') ?? '', ...ids.map((i) => { const n = document.getElementById(i); return n ? n.innerText || n.textContent || '' : '' }), leg ? leg.innerText || leg.textContent || '' : ''].join(' ')
+      return { id: h.id || null, grupo, etiqueta: h.labels && h.labels.length ? Array.from(h.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '' }
+    }),
+  )
+  const hits = todos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, etiqueta) && planoOpcion(r.grupo) === planoOpcion(GRUPO_TURISMOS_ALLIANZ))
+  if (hits.length === 0 && todos.some((r) => etiquetaOpcionHogarCasa(r.etiqueta, etiqueta))) throw new EmisionBloqueadaError('boton', 'opción de Turismos fuera del grupo «¿Conoces la matrícula del vehículo?»')
+  if (hits.length !== 1 || !hits[0].id) return { estado: 'no_unica', coincidencias: hits.length }
+  const id = hits[0].id.replace(/["\\]/g, '')
+  const control = marco.locator(`input[type=radio][id="${id}"]`)
+  if ((await control.count()) !== 1) return { estado: 'no_unica', coincidencias: await control.count() }
+  if (await control.isChecked()) return { estado: 'ya_marcada' }
+  const label = marco.locator(`label[for="${id}"]`)
+  if ((await label.count()) !== 1) return { estado: 'no_unica', coincidencias: await label.count() }
+  comprobarBoton(await control.evaluate((el) => {
+    const h = el as HTMLInputElement
+    return [h.id || null, h.name || null, h.getAttribute('onclick'), h.getAttribute('onchange'), h.getAttribute('aria-label'), h.getAttribute('formaction')]
+  }))
+  comprobarBoton(await descripcion(label))
+  await label.click()
+  guard.comprobar()
+  return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}
