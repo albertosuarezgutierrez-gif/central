@@ -263,10 +263,10 @@ test('«Años en esta compañía» sin dato arriba: se dice SUPUESTO de los año
   assert.match(n, /años asegurado/)
   assert.doesNotMatch(n, /leído de su póliza/)
   assert.equal(notaAniosEnCompania('arriba'), undefined)
-  // Moto la usa para ese campo (no la nota genérica de «lo leído»); auto, desde el 15/10/2026, la nota de la fuente única
-  // (`valoresQueViajan`: «Sin dato · se cotizará con N años, los años asegurado como mucho 10 (supuesto)») en la verificación.
+  // Auto y moto (15/10/2026): la nota de la fuente única (`valoresQueViajan`: «Sin dato · se cotizará con N años, los años
+  // asegurado como mucho 10 (supuesto)») en la verificación.
   assert.match(fuente, /'anios-compania': viajan\.aniosEnCompania\.nota,/)
-  assert.match(readFileSync(new URL('../moto-nuevo/CotizadorMoto.tsx', dir), 'utf8'), /etiqueta="Años en esta compañía"[\s\S]{0,200}notaAniosEnCompania\(/)
+  assert.match(readFileSync(new URL('../moto-nuevo/CotizadorMoto.tsx', dir), 'utf8'), /'anios-compania': viajan\.aniosEnCompania\.nota,/)
 })
 
 // ── Conductor ocasional en tres estados (15/10/2026) ─────────────────────────────────────────────────────────────────

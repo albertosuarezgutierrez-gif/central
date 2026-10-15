@@ -248,14 +248,15 @@ export default function HistorialRiesgo({ riesgo, hoy }: { riesgo: Riesgo; hoy: 
       .catch(() => setCatalogo({ estado: 'error', mensaje: 'sin conexión' }))
   }, [necesitaLista, catalogo, op.ramo])
   const lista = catalogo?.estado === 'ok' ? catalogo.opciones : null
-  // Coche (15/10/2026): cada fila SIN DATO dice con qué se cotizará («Sin dato · se cotizará con X (supuesto)»), con la
+  // Coche y moto (15/10/2026): cada fila SIN DATO dice con qué se cotizará («Sin dato · se cotizará con X (supuesto)»), con la
   // MISMA fuente que arranca el cotizador (`valoresQueViajan`). Lo leído = la póliza actual de la oportunidad, si consta.
-  const viajan = op.ramo === 'auto' && riesgo.historial
+  const viajan = (op.ramo === 'auto' || op.ramo === 'moto') && riesgo.historial
     ? valoresQueViajan(
         { datosVehiculo: riesgo.datosVehiculo, historialDeclarado: hd },
         { garajes: [], companias: null },
         { anterior: op.aseguradora !== null || sa !== null ? { oportunidadId: op.id, etiqueta: null, aseguradora: op.aseguradora, numeroPoliza: sa?.numeroPoliza ?? null, seguroAnterior: sa, prima: op.prima } : null },
         'embebido',
+        op.ramo,
       )
     : null
   const r = filasHistorial(riesgo.historial, {

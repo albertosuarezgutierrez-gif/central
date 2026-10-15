@@ -38,16 +38,17 @@ import { ConIcono } from '../../../iconos'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
-import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
+import type { AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { garajeInicial, garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
+import { garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
+import { formularioInicial, supuestosAlPedir, tieneSeguroSinDato, valoresQueViajan } from '@/lib/correduria/supuestos-auto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
+import { KM_ANUALES_SUPUESTOS, exigeSiniestrosUltimos5, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 import { textoFaltan } from '@/lib/riesgo-asegura'
-import { ANCLA, avisoGarajeSinCasar, gruposVerificacion, historialConTopes, notaAniosEnCompania, notaOrigen, seguroActualEmbebido, verificacionCompleta } from '../auto-nuevo/verificacion-embebido'
-import { IrA, ResumenCampo, Verificacion } from '../auto-nuevo/piezas-embebido'
+import { avisoGarajeSinCasar, gruposVerificacion, verificacionCompleta } from '../auto-nuevo/verificacion-embebido'
+import { Verificacion } from '../auto-nuevo/piezas-embebido'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
@@ -257,14 +258,23 @@ export default function CotizadorMoto({
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   // Por defecto en GARAJE, nunca en la calle, como en auto (Alberto, 29/09/2026; sustituye a «vía
   // pública»): es un dato de EMISIÓN, no de precio — viaja como supuesto y se confirma al emitir.
-  const [kmAnuales, setKmAnuales] = useState(datosRiesgo?.kmAnuales != null ? String(datosRiesgo.kmAnuales) : '')
-  // Del riesgo, resuelto contra el catálogo (`garajeInicial`, como auto, 15/10/2026): si el riesgo trae garaje y no casa
-  // con certeza, VACÍO y se pregunta — nunca el defecto. El defecto, solo sin garaje en el riesgo.
-  const inicioGaraje = garajeInicial(datosRiesgo?.garaje, garajes)
-  const garajeDelRiesgo = inicioGaraje.delRiesgo ? inicioGaraje.id : null
-  const garajeSinCasar = inicioGaraje.sinCasar
-  const riesgoTraeGaraje = (datosRiesgo?.garaje ?? '').trim() !== ''
-  const [garaje, setGaraje] = useState(() => inicioGaraje.id)
+  // 15/10/2026 (como coche): garaje, km, compra y seguro/historial nacen de la FUENTE ÚNICA (`valoresQueViajan`, `ramo:
+  // 'moto'`), la misma con la que pintan «Datos del vehículo», «Historial y bonificaciones» y la verificación. Lo que viaja
+  // a Avant2 y a los bots no cambia (`lib/correduria/supuestos-moto.test.ts`).
+  // Garaje: el del riesgo resuelto contra el catálogo; si el riesgo trae garaje y no casa con certeza, VACÍO y se pregunta
+  // — nunca el defecto. El defecto, solo sin garaje en el riesgo. Km: sin dato, vacío (asegura supone la media).
+  const viajan = valoresQueViajan(
+    { datosVehiculo: datosRiesgo, historialDeclarado: embebido ? historialRiesgo : null },
+    { garajes, companias },
+    { anterior },
+    embebido ? 'embebido' : 'completo',
+    'moto',
+  )
+  const ini = formularioInicial(viajan)
+  const [kmAnuales, setKmAnuales] = useState(ini.kmAnuales)
+  const garajeDelRiesgo = viajan.garaje.origen === 'riesgo' ? viajan.garaje.valor : null
+  const garajeSinCasar = viajan.garaje.sinCasar
+  const [garaje, setGaraje] = useState(() => ini.garaje)
   // ¿Lo ha elegido el corredor? El garaje de arriba es un defecto, no una elección: la moto
   // guardada puede traer su garaje, y sin esto retomar caía en silencio al defecto (29/09/2026).
   const garajeElegido = useRef(garajeDelRiesgo !== null)
@@ -410,45 +420,21 @@ export default function CotizadorMoto({
   // Precargado del seguro que tiene hoy (29/09/2026): lo leído de su póliza al abrir la oportunidad.
   // Solo lo que el documento DICE; lo que no, se queda vacío y se pide como siempre.
   const sa = anterior?.seguroAnterior ?? null
-  // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el
-  // bonus real contrastando el nº de póliza con SINCO. Lo leído de su póliza manda sobre el máximo.
-  // Embebido (13/10/2026): lo declarado ARRIBA manda, y lo que no viene de arriba se topa a los años asegurado
-  // (`historialConTopes`: Avant2 rechaza en la compañía / sin siniestros > asegurado, y ese 400 se paga).
-  const historialLeido = historialDeclarado(sa)
-  const historialEmb = embebido ? historialConTopes(historialLeido, historialRiesgo) : null
-  const historial = historialEmb ?? historialLeido
-  // Lo de siempre (lo leído de su póliza); en embebido, lo DECLARADO arriba manda (`seguroActualEmbebido`), con la
-  // compañía traducida al código del catálogo de compañías de MOTO de Codeoscopic (`companias`).
-  const seguroLeido = {
-    tiene: anterior !== null,
-    companiaCodigo: anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '',
-    companiaLibre: companias === null ? sa?.codigoDgs ?? '' : '',
-    poliza: anterior?.numeroPoliza?.trim() ?? '',
-    aniosSinSiniestros: historial.aniosSinSiniestros,
-    siniestrosUltimos5: historial.siniestrosUltimos5,
-  }
-  const seguroArriba = embebido
-    ? seguroActualEmbebido({
-        arriba: historialRiesgo,
-        leido: seguroLeido,
-        conCatalogo: companias !== null,
-        codigoDe: (t) => {
-          const c = t.trim().toUpperCase()
-          return companias ? codigoCompania(companias, { codigoDgs: /^[CM]\d{4}$/.test(c) ? c : null, nombre: t }) : null
-        },
-      })
-    : null
-  const [tieneSeguroActual, setTieneSeguroActual] = useState(seguroArriba?.tieneSeguroActual ?? seguroLeido.tiene)
-  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(seguroArriba?.companiaCodigo ?? seguroLeido.companiaCodigo)
-  const [companiaActualLibre, setCompaniaActualLibre] = useState(seguroArriba?.companiaLibre ?? seguroLeido.companiaLibre)
-  const [polizaActualDigitos, setPolizaActualDigitos] = useState(seguroArriba?.polizaDigitos ?? seguroLeido.poliza)
+  // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el bonus real contrastando el nº
+  // de póliza con SINCO. Lo leído de su póliza manda sobre el máximo. Embebido (13/10/2026): lo declarado ARRIBA manda
+  // (compañía traducida al catálogo de compañías de MOTO), y lo que no viene de arriba se topa a los años asegurado (Avant2
+  // rechaza en la compañía / sin siniestros > asegurado, y ese 400 se paga). Todo eso vive en `valoresQueViajan`.
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(ini.tieneSeguroActual)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState(ini.companiaActualCodigo)
+  const [companiaActualLibre, setCompaniaActualLibre] = useState(ini.companiaActualLibre)
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState(ini.polizaActualDigitos)
   const [matriculaAnterior, setMatriculaAnterior] = useState('')
   // Vehículo NUEVO (03/10/2026): qué póliza suya se declara como seguro anterior si no se teclea a mano.
   const [eleccionAnterior, setEleccionAnterior] = useState(() => seguroImputado?.elegida?.id ?? '')
-  const [aniosAsegurado, setAniosAsegurado] = useState(String(historial.aniosAsegurado))
-  const [aniosEnCompania, setAniosEnCompania] = useState(String(historial.aniosEnCompania))
-  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(seguroArriba?.aniosSinSiniestros ?? String(historial.aniosSinSiniestros))
-  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(seguroArriba?.siniestrosUltimos5 ?? (historial.siniestrosUltimos5 === null ? '' : String(historial.siniestrosUltimos5)))
+  const [aniosAsegurado, setAniosAsegurado] = useState(ini.aniosAsegurado)
+  const [aniosEnCompania, setAniosEnCompania] = useState(ini.aniosEnCompania)
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState(ini.aniosSinSiniestros)
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState(ini.siniestrosUltimos5)
 
   useEffect(() => {
     void catalogo('tipo=experiencia-moto')
@@ -534,8 +520,9 @@ export default function CotizadorMoto({
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
   // Embebido (13/10/2026): la fecha de compra es la de «Datos del vehículo» (Avant2 `purchaseDate`; sin ella va la de
-  // matriculación). Una moto no se compra antes de matricularse: el vendor no lo comprueba, aquí es gratis.
-  const fechaCompra = embebido ? datosRiesgo?.fechaCompra ?? '' : ''
+  // matriculación). En la pantalla completa no hay campo: '' (la fuente única ya no la toma del riesgo en ese modo).
+  // Una moto no se compra antes de matricularse: el vendor no lo comprueba, aquí es gratis.
+  const fechaCompra = ini.fechaCompra
   const compraInvalida = fechaCompra !== '' && matriculacion !== '' && fechaCompra < matriculacion
   const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula, hoyLocal())
 
@@ -598,8 +585,13 @@ export default function CotizadorMoto({
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
   // En modo póliza la tarjeta del toggle no se pinta, así que se queda en false.
+  // ✗ de siniestros en 5 años EXACTAMENTE cuando asegura los exige (15/10/2026, como coche: `exigeSiniestrosUltimos5`, la
+  // regla única de module-seguros que también usa `peticion-moto.ts`). Sin dato ya no se supone 0.
+  const numOVacio = (t: string) => (t.trim() === '' ? null : Number(t))
+  const siniestros5SinDato = exigeSiniestrosUltimos5({ aseguradoAntes: tieneSeguroActual, aniosAsegurado: numOVacio(aniosAsegurado), aniosSinSiniestros: numOVacio(aniosSinSiniestros) })
+    && siniestrosUltimos5.trim() === ''
   const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
-    || (Number(aniosSinSiniestros) < 5 && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '')
+    || siniestros5SinDato
   const faltaHistorial =
     tieneSeguroActual &&
     (!companiaActualElegida ||
@@ -607,6 +599,7 @@ export default function CotizadorMoto({
       aniosAsegurado.trim() === '' ||
       aniosEnCompania.trim() === '' ||
       aniosSinSiniestros.trim() === '')
+    || siniestros5SinDato
 
   // Una figura en otra ficha sin estado civil, o con un hueco de su ficha sin teclear, no cotiza.
   const faltaFigura = ROLES_MOTO.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null, variante?.empresas[rol] ?? false))
@@ -671,14 +664,28 @@ export default function CotizadorMoto({
           faltaAniosAsegurado: aniosAsegurado.trim() === '',
           faltaAniosCompania: aniosEnCompania.trim() === '',
           faltaAniosSinSiniestros: aniosSinSiniestros.trim() === '',
-          siniestros5Pendiente: Number(aniosSinSiniestros) < 5 && aniosSinSiniestros.trim() !== '' && aniosSinSiniestros !== aniosAsegurado && siniestrosUltimos5.trim() === '',
+          siniestros5Pendiente: false,
+          siniestros5SinDato,
           companiaSuperaAsegurado: aniosEnCompania.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosEnCompania) > Number(aniosAsegurado),
           sinSiniestrosSuperaAsegurado: aniosSinSiniestros.trim() !== '' && aniosAsegurado.trim() !== '' && Number(aniosSinSiniestros) > Number(aniosAsegurado),
-          companiaNoReconocida: seguroArriba?.companiaNoReconocida ?? null,
-          tieneSeguroSinDato: seguroArriba?.tieneSeguroSinDato ?? false,
+          companiaNoReconocida: viajan.compania.noReconocida,
+          tieneSeguroSinDato: tieneSeguroSinDato(viajan),
           reparos: reparos.historial,
         },
         faltaAlgo,
+        // Con qué se cotiza cada dato y de dónde sale (la misma nota que pintan los bloques de arriba). En embebido estos
+        // campos no se editan aquí: la nota sigue siendo cierta al pulsar.
+        detalle: {
+          garaje: viajan.garaje.nota,
+          km: viajan.km.nota,
+          compra: viajan.fechaCompra.nota,
+          compania: viajan.compania.nota,
+          poliza: viajan.poliza.nota,
+          'anios-asegurado': viajan.aniosAsegurado.nota,
+          'anios-compania': viajan.aniosEnCompania.nota,
+          'anios-sin-siniestros': viajan.aniosSinSiniestros.nota,
+          'siniestros-5': viajan.siniestrosUltimos5.nota,
+        },
       })
     : []
   const verificacionOk = verificacionCompleta(verificacion)
@@ -776,6 +783,12 @@ export default function CotizadorMoto({
         matricula: matricula.trim().toUpperCase(),
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
+        // Qué viaja como SUPUESTO (15/10/2026, como coche): asegura lo guarda con la tarificación («Precio con supuestos»).
+        supuestosPantalla: supuestosAlPedir(viajan, {
+          garaje, garajeElegido: garajeElegido.current, kmSupuesto: kmLeidos === null ? KM_ANUALES_SUPUESTOS : null,
+          fechaCompra: compraInvalida ? '' : fechaCompra, tieneSeguroActual, aniosAsegurado, aniosEnCompania, aniosSinSiniestros,
+          siniestrosUltimos5, experienciaConduccion,
+        }),
         // Lo que se ha usado, para anotarlo en el riesgo (`info_riesgo.datosVehiculo`): asegura ignora esta
         // clave al cotizar. Los km solo si se han escrito; el garaje solo si se ha elegido (el defecto no es
         // un dato del cliente); sin nombres ni ids si el vehículo viene de una variante guardada.
@@ -849,6 +862,22 @@ export default function CotizadorMoto({
     }
   }
 
+  // La matrícula de la póliza anterior es de ESTA cotización (moto recién comprada): se pide en los dos modos.
+  const campoMatriculaAnterior = (
+    <Campo
+      etiqueta="Matrícula de esa póliza"
+      falta={false}
+      ayuda="Solo si la póliza anterior era de OTRO vehículo (moto recién comprada). La compañía busca el historial por esta matrícula: con la de la moto nueva no lo encuentra y no aplica la bonificación. Vacío = la misma matrícula."
+    >
+      <input
+        value={matriculaAnterior}
+        onChange={(e) => setMatriculaAnterior(e.target.value)}
+        placeholder={matricula.trim() ? `La misma (${matricula.trim().toUpperCase()})` : 'La misma'}
+        style={input}
+      />
+    </Campo>
+  )
+
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       {variante && (
@@ -864,33 +893,12 @@ export default function CotizadorMoto({
 
       <div style={cardStyle}>
         <CardHeader
-          title={embebido ? '1 · Condiciones de la moto' : '1 · La moto'}
-          sub={embebido ? 'Lo que viene de «Datos del vehículo» se ve aquí en resumen y se cambia allí («Editar arriba»). Aquí, solo lo de esta cotización.' : 'Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis.'}
+          title={embebido ? '1 · Condiciones de esta cotización' : '1 · La moto'}
+          sub={embebido ? 'Solo lo que es de esta cotización. La moto, las personas y el historial se ven y se editan arriba, una sola vez; la verificación de abajo dice con qué se cotiza cada dato.' : 'Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis.'}
         />
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
-        {embebido && (
-          <div style={{ display: 'grid', gap: 4, marginBottom: 10, fontSize: 13, minWidth: 0, overflowWrap: 'anywhere' }}>
-            <span>
-              <strong>Moto:</strong>{' '}
-              {[datosRiesgo?.marca, datosRiesgo?.modelo, datosRiesgo?.version].filter(Boolean).join(' · ') || <span style={{ color: 'var(--muted)' }}>sin dato</span>}
-              {codigoVehiculo ? ` (código ${codigoVehiculo})` : ''}
-              {' · '}<strong>Matrícula:</strong> {matricula.trim() !== '' ? matricula.trim().toUpperCase() : <span style={{ color: 'var(--muted)' }}>sin matricular</span>}
-              {' · '}<strong>Matriculación:</strong> {matriculacion ? fechaCorta(matriculacion) : <span style={{ color: 'var(--muted)' }}>sin dato</span>}
-            </span>
-            {faltaVersion && (
-              <span style={{ color: 'var(--negative)' }}>
-                Falta elegir la versión del catálogo (marca, modelo, combustible y versión): hazlo en «Datos del vehículo».{' '}
-                <IrA ancla={ANCLA.version} alternativa={ANCLA.vehiculo}>Elegir versión arriba</IrA>
-              </span>
-            )}
-            {faltaMatriculacion && (
-              <span style={{ color: 'var(--negative)' }}>
-                Falta la fecha de matriculación (o la prevista, si aún no está matriculada): ponla en «Datos del vehículo».{' '}
-                <IrA ancla={ANCLA.vehiculo}>Editar arriba</IrA>
-              </span>
-            )}
-          </div>
-        )}
+        {/* Embebido (15/10/2026): la moto (versión, matrícula, matriculación) es la de «Datos del vehículo» y no se repite aquí;
+            si falta algo, la verificación de abajo lo marca y lleva allí. */}
         {!embebido && usarPrevio && previo && (
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
             <span>
@@ -992,32 +1000,9 @@ export default function CotizadorMoto({
           <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
             <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
-          {embebido ? (<>
-          {/* Embebido (13/10/2026): garaje, km y compra se editan en «Datos del vehículo»; aquí, solo resumen. El estado
-              es el mismo precargado del riesgo, así que lo que viaja al pedir precio no cambia. */}
-          <ResumenCampo
-            etiqueta="¿Dónde duerme?"
-            valor={garaje ? garajes.find((g) => g.id === garaje)?.nombre ?? garaje : null}
-            nota={!garaje && garajeSinCasar ? avisoGarajeSinCasar(garajeSinCasar) : garaje && !riesgoTraeGaraje && !garajeElegido.current ? 'por defecto: viaja como supuesto' : undefined}
-            notaFalta={!garaje && garajeSinCasar !== null}
-            ancla={ANCLA.vehiculo}
-          />
-          <ResumenCampo
-            etiqueta="Kilómetros al año"
-            valor={kmLeidos !== null ? `${kmLeidos.toLocaleString('es-ES')} km` : kmInvalido ? kmAnuales : null}
-            nota={kmInvalido ? 'no se entiende como kilometraje' : kmLeidos === null ? `sin dato arriba: se supone la media (${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')} km) y viaja como supuesto` : undefined}
-            notaFalta={kmInvalido}
-            vacio="aviso"
-            ancla={ANCLA.vehiculo}
-          />
-          <ResumenCampo
-            etiqueta="Fecha de compra"
-            valor={fechaCompra ? fechaCorta(fechaCompra) : matriculacion ? fechaCorta(matriculacion) : null}
-            nota={compraInvalida ? 'no puede ser anterior a la matriculación' : !fechaCompra && matriculacion ? 'la de matriculación' : undefined}
-            notaFalta={compraInvalida}
-            ancla={ANCLA.vehiculo}
-          />
-          </>) : (<>
+          {/* Embebido (15/10/2026): garaje, km y compra se ven y se editan en «Datos del vehículo» («Sin dato · se cotizará con X
+              (supuesto)»), una sola vez; aquí no se repiten. El estado es el mismo precargado del riesgo: lo que viaja no cambia. */}
+          {!embebido && (<>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda={faltaGaraje && garajeSinCasar ? avisoGarajeSinCasar(garajeSinCasar) : 'Lo elige el corredor; viaja marcado como supuesto.'}>
             <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>
               <option value="">Elige garaje</option>
@@ -1147,9 +1132,9 @@ export default function CotizadorMoto({
       {(Object.keys(figs).length > 0 || ocasionalIgnorado) && (
         <div style={cardStyle}>
           <CardHeader
-            title="2b · Propietario y conductor del riesgo"
+            title={embebido ? '2b · Condiciones de cada interviniente' : '2b · Propietario y conductor del riesgo'}
             sub={embebido
-              ? 'Son los de «Intervinientes». Aquí solo se pide su estado civil y, si falta, la fecha del carné de quien conduce; lo demás se completa en su ficha.'
+              ? 'Las personas son las de «Intervinientes» (arriba) y no se repiten. Aquí solo lo de esta cotización: estado civil y, si falta, la fecha del carné de quien conduce.'
               : 'Los papeles que el riesgo pone en otra ficha salen de esa ficha: aquí solo se pide su estado civil y lo que falte. Los que no, los ocupa el tomador.'}
           />
           {ROLES_MOTO.filter((rol) => figs[rol]).map((rol, i) => (
@@ -1174,26 +1159,32 @@ export default function CotizadorMoto({
         />
         <p style={{ fontSize: 13, margin: 0 }}>{poliza.anterior}</p>
       </div>
+      ) : embebido ? (
+        // Embebido (15/10/2026, como coche): si tiene seguro, su compañía, su nº de póliza, los años y los siniestros se
+        // declaran UNA vez, arriba («Historial y bonificaciones»), y la verificación dice con qué se cotiza cada uno. Aquí
+        // solo lo que es de esta cotización.
+        <div id="cotizador-seguro-actual" style={cardStyle}>
+          <CardHeader
+            title="2c · Seguro en vigor"
+            sub={tieneSeguroActual
+              ? 'Compañía, nº de póliza y años: arriba, en «Historial y bonificaciones». Aquí solo si la póliza era de otra moto.'
+              : 'Sin seguro en vigor declarado arriba: se cotiza «de calle» y el precio sale estimado. Si lo tiene, decláralo en «Historial y bonificaciones».'}
+          />
+          {tieneSeguroActual && (
+            <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
+              {campoMatriculaAnterior}
+            </div>
+          )}
+          {!tieneSeguroActual && seguroImputado && (
+            <PanelSeguroImputado s={seguroImputado} valor={eleccionAnterior} onCambio={setEleccionAnterior} />
+          )}
+        </div>
       ) : (
       <div id="cotizador-seguro-actual" style={cardStyle}>
         <CardHeader
-          title={embebido ? '2c · Seguro en vigor' : '2c · ¿Tiene seguro EN VIGOR ahora mismo?'}
+          title="2c · ¿Tiene seguro EN VIGOR ahora mismo?"
           sub="Sin esto la compañía cotiza «de calle»: no puede hacer el control de antecedentes y el precio NO es confirmable como real. Pregúntalo sobre todo en presupuestos importantes."
         />
-        {/* Embebido (13/10/2026): «tiene seguro», compañía, nº de póliza, años y siniestros se declaran ARRIBA
-            («Historial y bonificaciones»): aquí solo resumen. Las compañías consultan SINCO con la compañía + nº de
-            póliza (Codeoscopic manda los 5 últimos). */}
-        {embebido && seguroArriba ? (
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))' }}>
-            <ResumenCampo
-              etiqueta="¿Tiene seguro ahora?"
-              valor={seguroArriba.tieneSeguroSinDato ? null : tieneSeguroActual ? 'Sí, en vigor' : 'No'}
-              nota={seguroArriba.tieneSeguroSinDato ? 'sin dato arriba: se cotiza «de calle» (precio estimado)' : notaOrigen(seguroArriba.origen.tiene)}
-              vacio="aviso"
-              ancla={ANCLA.historial}
-            />
-          </div>
-        ) : (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 600 }}>
           <input
             type="checkbox"
@@ -1203,8 +1194,7 @@ export default function CotizadorMoto({
           />
           Sí, tiene un seguro de moto en vigor ahora mismo
         </label>
-        )}
-        {anterior && !embebido && (
+        {anterior && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>
             Precargado de su póliza actual (oportunidad{anterior.etiqueta ? ` ${anterior.etiqueta}` : ''}): revísalo.
             {anterior.aseguradora && !companiaActualElegida ? ` La compañía leída es «${anterior.aseguradora}»: elígela en la lista.` : ''}
@@ -1222,29 +1212,6 @@ export default function CotizadorMoto({
 
         {tieneSeguroActual && (
           <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
-            {embebido && seguroArriba ? (
-              <>
-                <ResumenCampo
-                  etiqueta="Compañía actual"
-                  valor={companiaActualElegida ? (companias?.find((c) => c.codigoDgs === companiaActualCodigo)?.nombreComun ?? companiaActualElegida) : null}
-                  nota={seguroArriba.companiaNoReconocida
-                    ? `«${seguroArriba.companiaNoReconocida}» no está en la lista de compañías de moto de Codeoscopic: elígela de la lista arriba («Historial y bonificaciones»)`
-                    : notaOrigen(seguroArriba.origen.compania)}
-                  notaFalta={seguroArriba.companiaNoReconocida !== null}
-                  ancla={ANCLA.historial}
-                />
-                <ResumenCampo
-                  etiqueta="Nº de póliza (van los 5 últimos)"
-                  valor={polizaActualDigitos.trim() !== '' ? polizaActualDigitos : null}
-                  nota={digitosPolizaSospechosos(polizaActualDigitos)
-                    ? 'Parece relleno (varios ceros seguidos): la compañía puede no encontrar el historial en SINCO y el precio quedarse en estimado.'
-                    : notaOrigen(seguroArriba.origen.poliza)}
-                  notaFalta={digitosPolizaSospechosos(polizaActualDigitos)}
-                  ancla={ANCLA.historial}
-                />
-              </>
-            ) : (
-            <>
             <Campo etiqueta="Compañía actual" falta={!companiaActualElegida}>
               {companias === null ? (
                 <input
@@ -1278,54 +1245,10 @@ export default function CotizadorMoto({
                 </p>
               )}
             </Campo>
-            </>
-            )}
-            <Campo
-              etiqueta="Matrícula de esa póliza"
-                falta={false}
-              ayuda="Solo si la póliza anterior era de OTRO vehículo (moto recién comprada). La compañía busca el historial por esta matrícula: con la de la moto nueva no lo encuentra y no aplica la bonificación. Vacío = la misma matrícula."
-            >
-              <input
-                value={matriculaAnterior}
-                onChange={(e) => setMatriculaAnterior(e.target.value)}
-                placeholder={matricula.trim() ? `La misma (${matricula.trim().toUpperCase()})` : 'La misma'}
-                style={input}
-              />
-            </Campo>
+            {campoMatriculaAnterior}
           </div>
         )}
-        {tieneSeguroActual && embebido && (
-          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
-            {/* Todo el historial se edita arriba («Historial y bonificaciones», 13/10/2026). Sin dato arriba, va lo de
-                siempre (lo leído o el máximo, topado a los años asegurado; la compañía lo contrasta con SINCO) y se dice. */}
-            <ResumenCampo
-              etiqueta="Años asegurado sin interrupción"
-              valor={aniosAsegurado.trim() !== '' ? aniosAsegurado : null}
-              nota={notaOrigen(historialEmb?.origenAsegurado ?? 'leido')}
-              ancla={ANCLA.historial}
-            />
-            <ResumenCampo
-              etiqueta="Años en esta compañía"
-              valor={aniosEnCompania.trim() !== '' ? aniosEnCompania : null}
-              nota={notaAniosEnCompania(historialEmb?.origenEnCompania ?? 'leido')}
-              ancla={ANCLA.historial}
-            />
-            <ResumenCampo
-              etiqueta="Años sin siniestros"
-              valor={aniosSinSiniestros.trim() !== '' ? aniosSinSiniestros : null}
-              nota={seguroArriba ? notaOrigen(seguroArriba.origen.sinSiniestros) : undefined}
-              ancla={ANCLA.historial}
-            />
-            <ResumenCampo
-              etiqueta="Siniestros en los últimos 5 años"
-              valor={siniestrosUltimos5.trim() !== '' ? siniestrosUltimos5 : Number(aniosSinSiniestros) >= 5 ? 'no aplica (5 años o más sin siniestros)' : null}
-              nota={seguroArriba && siniestrosUltimos5.trim() !== '' ? notaOrigen(seguroArriba.origen.siniestros5) : 'solo hace falta con menos de 5 años sin siniestros; si la compañía lo exige, lo dirá sin cobrar'}
-              vacio="aviso"
-              ancla={ANCLA.historial}
-            />
-          </div>
-        )}
-        {tieneSeguroActual && !embebido && (
+        {tieneSeguroActual && (
           <details open={faltaAnios || undefined} style={{ marginTop: 10, fontSize: 13 }}>
             <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>
               Historial declarado: {aniosAsegurado || '—'} años asegurado · {aniosEnCompania || '—'} en la compañía · {aniosSinSiniestros || '—'} sin siniestros
