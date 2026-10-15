@@ -20,7 +20,7 @@
 
 import type { Frame, Locator, Page } from 'playwright'
 import { MAX_CANDIDATOS_ATASCO, limpiarTextoAviso, pareceEmision, type AtascoWorker, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
-import { ErrorTarificador } from './errores.ts'
+import { ErrorTarificador, pideInventarioDom } from './errores.ts'
 import { rutaMarco } from './evidencia.ts'
 import { ENLACES_ENTRADA_AUTORIZADOS } from './guard.ts'
 
@@ -1057,6 +1057,27 @@ export async function registrarAtasco(page: Page | null, ctx: ContextoFormador |
     candidatos: elegibles.map((c, i) => ({ n: i + 1, tag: c.tag, id: c.id, name: c.name, type: c.type, role: c.role, texto: c.texto, etiqueta: c.etiqueta, marco: c.marco, selector: c.selector })),
   }
   ctx.log('atasco_preparado', { clave: p.clave, candidatos: elegibles.length })
+}
+
+/** Clave del atasco de RESPALDO de la capa común para un hueco de mapa que llegó sin checkpoint propio. */
+export const CLAVE_ATASCO_HUECO_MAPA = 'hueco_mapa'
+
+/**
+ * RED de la capa común (15/10/2026, regla «un trabajo real nunca muere sin atasco»): un hueco de mapa (`pideInventarioDom`:
+ * pantalla o paso desconocido) que el adaptador lanzó SIN pasar por fijo→aprendido→IA→atasco deja aquí su checkpoint, con
+ * los candidatos de la pantalla donde se paró. Así acaba `atascado` + Telegram y no `error_definitivo` mudo (trabajo
+ * 50cc150d: Mapfre paró en la búsqueda por matrícula sin checkpoint). Si el adaptador ya dejó el suyo, manda el suyo. El
+ * texto es el mensaje del error (los de hueco no llevan valores) y además pasa por el redactor. NO pulsa ni escribe.
+ */
+export async function atascoDeRespaldoHueco(page: Page | null, ctx: ContextoFormador | undefined, error: unknown): Promise<void> {
+  if (!ctx?.activo || ctx.atasco || !pideInventarioDom(error)) return
+  const mensaje = error instanceof Error ? error.message : 'hueco de mapa'
+  await registrarAtasco(page, ctx, {
+    clave: CLAVE_ATASCO_HUECO_MAPA,
+    tipo: 'campo',
+    etiqueta: null,
+    descripcion: `Pantalla o paso sin mapa: ${mensaje}`,
+  }).catch(() => undefined)
 }
 
 // ─── Modo acompañado ─────────────────────────────────────────────────────────

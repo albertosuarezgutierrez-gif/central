@@ -56,15 +56,38 @@ export async function purgarRiesgoTrabajos(db: DbPurga, ids: readonly (string | 
     const plan = planPurgaRiesgo({ ...f, origenLiberado })
     if (f.modo === 'emision' && f.origen_id && (ESTADOS_PURGA_RIESGO as readonly string[]).includes(f.estado)) origenes.push(f.origen_id)
     if (!plan.purgar) continue
+    // El inventario de pantalla (jsonb «error») cae con el riesgo: se sanea SIN los valores del riesgo y puede llevar nombres.
+    // El recorrido se CONSERVA (15/10/2026): solo él se re-sanea con los valores del riesgo antes de guardarse y es el
+    // diagnóstico de un `error_definitivo` (el trabajo 50cc150d quedó sin él). Caduca a los `DIAS_RETENCION_RECORRIDO`
+    // en el barrido (`purgarRecorridosCaducados`).
     n += await db.$executeRaw`
       update seguros.tarificacion_trabajos set riesgo = ${JSON.stringify(plan.riesgo)}::jsonb,
-        -- El recorrido y el inventario de pantalla (capturas de portal) viven en el jsonb «error»: caen con el riesgo.
-        error = case when jsonb_typeof(error) = 'object' then error - 'recorrido' - 'inventarioDom' else error end
+        error = case when jsonb_typeof(error) = 'object' then error - 'inventarioDom' else error end
       where id = ${f.id}::uuid and estado = ${f.estado}`
   }
   // El origen se mira UNA vez (un origen es de tarificar: no tiene a su vez origen).
   if (conOrigen && origenes.length) n += await purgarRiesgoTrabajos(db, origenes, false)
   return n
+}
+
+/** Días que un trabajo CERRADO conserva `error.recorrido` (diagnóstico del fallo). */
+export const DIAS_RETENCION_RECORRIDO = 30
+
+/**
+ * Barrido: quita `recorrido` (y `inventarioDom`, por si quedara alguno) del jsonb `error` de los trabajos cerrados hace más de `dias` (por tandas).
+ * Un trabajo abierto (`atascado`, `error_reintentable`, `requiere_humano`…) los conserva siempre. Devuelve cuántos tocó.
+ */
+export async function purgarRecorridosCaducados(db: DbPurga, correduriaId: string, dias = DIAS_RETENCION_RECORRIDO, limite = 500): Promise<number> {
+  return db.$executeRaw`
+    update seguros.tarificacion_trabajos t
+       set error = t.error - 'recorrido' - 'inventarioDom'
+     where t.id in (
+       select x.id from seguros.tarificacion_trabajos x
+        where x.correduria_id = ${correduriaId}::uuid
+          and x.estado = any(${[...ESTADOS_PURGA_RIESGO]}::text[])
+          and x.terminado_at < now() - ${dias}::int * interval '1 day'
+          and jsonb_typeof(x.error) = 'object' and (x.error->'recorrido' is not null or x.error->'inventarioDom' is not null)
+        limit ${limite}::int)`
 }
 
 /**

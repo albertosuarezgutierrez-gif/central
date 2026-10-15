@@ -46,7 +46,7 @@ import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
-import { cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
+import { atascoDeRespaldoHueco, cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { textoAvisoSesionManual } from './aviso.ts'
@@ -287,6 +287,9 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
     // inventario-dom.ts). Nunca para el envío del resultado: si falla, `null`.
     const inventarioDom = pideInventarioDom(error) ? await capturarInventarioDom(marcosDePestanas(abiertas, page)) : null
+    // RED de la capa común (15/10/2026): un hueco de mapa sin checkpoint propio deja el suyo (candidatos de la pantalla donde
+    // se paró): un trabajo real nunca muere `error_definitivo` sin pasar por el atasco.
+    if (c.tipo === 'portal' && !c.transitorio) await atascoDeRespaldoHueco(actual, k.formador, error)
     // ATASCO (F2): solo un hueco del PORTAL no transitorio con checkpoint (nadie resolvió el paso). Lo decide asegura.
     const atasco = c.tipo === 'portal' && !c.transitorio ? (k.formador?.atasco ?? null) : null
     return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom }, atasco }
