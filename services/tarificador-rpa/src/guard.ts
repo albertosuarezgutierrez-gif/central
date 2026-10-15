@@ -1602,17 +1602,29 @@ const opcionTurismos = (clave: string, pregunta: string | null, opcion: string, 
 const GRUPO_SI_NO = ['Sí', 'No']
 const GRUPO_GARAJE = ['En la calle', 'En un garaje colectivo', 'En un garaje individual']
 const GRUPO_TIPO_TOMADOR = ['Individual', 'Empresa']
+const GRUPO_COMPRA = ['Sí, lo he comprado nuevo', 'No, ya lo tenía y quiero cambiar de seguro', 'Sí, lo he comprado de 2ª mano a un particular', 'Sí, lo he comprado de 2ª mano a un concesionario']
+const GRUPO_USO = ['Ocasional (fines de semana, vacaciones, etc)', 'A diario y fines de semana', 'Actividad laboral']
 
 /**
- * LISTA CERRADA de lo que el robot marca en «Datos del vehículo» de Turismos (v0.6.1). Solo opciones con un dato INEQUÍVOCO del
- * riesgo: consultar por matrícula; garaje «En la calle» (`garajeNoche === false`; con garaje, colectivo/individual no consta);
- * tomador Individual/Empresa. Compra, uso y segundo conductor NO están: el formulario no tiene dato para elegirlas (no consta ≠ «No»).
+ * LISTA CERRADA de lo que el robot marca en «Datos del vehículo» de Turismos. v0.6.1: consultar por matrícula; garaje «En la calle»;
+ * tomador Individual/Empresa. v0.6.2 (15/10/2026, decisión de Alberto: valores «no determinantes» DECLARADOS junto al precio,
+ * `supuestosAuto` de module-tarificacion): compra (nuevo / ya lo tenía; la 2ª mano NO: ningún dato la pide), uso, garaje colectivo/individual y segundo
+ * conductor «No». Todas son preguntas de TARIFICACIÓN del primer paso (ninguna emite, guarda ni paga). El segundo conductor «Sí» NO
+ * está: abriría los datos de otra persona, sin mapa. Mismo anclaje que el resto (grupo con el conjunto EXACTO de opciones).
  */
 export const OPCIONES_TURISMOS_ALLIANZ: readonly OpcionTurismosAllianz[] = Object.freeze([
   opcionTurismos('conoce_matricula:si', '¿Conoces la matrícula del vehículo?', 'Sí', GRUPO_SI_NO),
   opcionTurismos('garaje:calle', null, 'En la calle', GRUPO_GARAJE),
+  opcionTurismos('garaje:colectivo', null, 'En un garaje colectivo', GRUPO_GARAJE),
+  opcionTurismos('garaje:individual', null, 'En un garaje individual', GRUPO_GARAJE),
   opcionTurismos('tomador:individual', null, 'Individual', GRUPO_TIPO_TOMADOR),
   opcionTurismos('tomador:empresa', null, 'Empresa', GRUPO_TIPO_TOMADOR),
+  opcionTurismos('compra:nuevo', null, 'Sí, lo he comprado nuevo', GRUPO_COMPRA),
+  opcionTurismos('compra:ya_lo_tenia', null, 'No, ya lo tenía y quiero cambiar de seguro', GRUPO_COMPRA),
+  opcionTurismos('uso:ocasional', null, 'Ocasional (fines de semana, vacaciones, etc)', GRUPO_USO),
+  opcionTurismos('uso:diario', null, 'A diario y fines de semana', GRUPO_USO),
+  opcionTurismos('uso:laboral', null, 'Actividad laboral', GRUPO_USO),
+  opcionTurismos('segundo_conductor:no', 'Segundo conductor', 'No', GRUPO_SI_NO),
 ])
 export const PASO_TURISMOS_ALLIANZ = 'Datos del vehículo'
 export const GRUPO_TURISMOS_ALLIANZ = '¿Conoces la matrícula del vehículo?'

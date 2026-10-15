@@ -33,6 +33,8 @@ import { decidirBlogPr } from '@/lib/correduria/blog-pr'
 import { ACCION_BOTON_TOPE, ampliarTopeAvant2 } from '@/lib/correduria/tope-avant2'
 import { PREFIJO_EMISION, autorizarEnAsegura, decidirBotonEmision, lineaTrasPulsar } from '@/lib/tarificador-emision-asegura'
 import { PREFIJO_ATASCO, PREFIJO_PAUSA, aplicarBotonAtasco, decidirBotonAtasco, lineaTrasAtasco } from '@/lib/tarificador-atascos-asegura'
+import { PREFIJO_BOTS_TG, decidirBotonBots } from '@/lib/correduria-bots-tg'
+import { resolverBotonBots } from '@/lib/correduria-bots-telegram'
 import { requireSecret } from '@central/core-identity'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
@@ -835,6 +837,28 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       after(async () => {
         const r = await aplicarBotonAtasco(d).catch(() => ({ status: 502, json: { motivo: 'red' } }))
         const linea = lineaTrasAtasco(d, r)
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── BOTS DEL TARIFICADOR pedidos por TEXTO (tbot_ok / tbot_no, 15/10/2026) ───────────────────
+    // Confirma una propuesta guardada en `correduria_bots_propuesta` (lanzar un precio por bot o elegir un candidato de un
+    // atasco). El botón solo lleva el uuid: lo que se hace sale de la BD y se revalida. Solo la PERSONA autorizada
+    // (from.id = TELEGRAM_CHAT_ID). Se contesta YA y el trabajo va en after(). Un solo uso (UPDATE condicionado).
+    if (prefix === PREFIJO_BOTS_TG) {
+      const d = decidirBotonBots(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.accion === 'ok' ? '⏳ Un momento…' : 'Descartando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const linea = await resolverBotonBots(d).catch(() => '⚠️ <i>No sé si se ha hecho (fallo interno): míralo en /correduria/tarificador antes de repetir.</i>')
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
       })

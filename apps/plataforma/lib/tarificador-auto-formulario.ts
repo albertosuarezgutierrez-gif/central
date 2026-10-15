@@ -14,7 +14,7 @@ import {
   esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto,
 } from '@central/module-tarificacion'
 import { historialBot, type CampoDeFicha, type DatoPersona, type FormularioBotMoto } from './tarificador-moto-formulario.ts'
-import { duermeEnGaraje } from '@central/module-seguros/garajes'
+import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
 
 export type EntradaBotAuto = {
   matricula: string
@@ -48,6 +48,14 @@ export type EntradaBotAuto = {
   clasePermiso?: string | null
   /** Nombre de la compañía anterior tal como lo ve el corredor (catálogo o texto libre). Vacío = no consta (el bot lo deja como hueco). */
   companiaAnterior?: string | null
+  /**
+   * 15/10/2026 — lo que Allianz Turismos SUPONE si no viene (y lo declara junto al precio): 1ª matriculación del vehículo (ISO),
+   * vencimiento de la póliza actual (ISO) y si hay conductor ocasional (`true` ficha · `false` confirmado que no · `null` sin
+   * preguntar). Ausente o sin forma válida = no viaja (el bot supone y lo dice). Nunca bloquea el botón.
+   */
+  fechaMatriculacion?: string | null
+  fechaVencimiento?: string | null
+  conductorOcasional?: boolean | null
 }
 
 /** Opciones de los selectores de la pantalla (etiqueta para la persona, clave para el bot). */
@@ -71,6 +79,15 @@ export function claveCerrada(v: string | null | undefined, lista: readonly strin
  */
 export function garajeNocheDeCodigo(codigo: string | null | undefined): boolean | null {
   return duermeEnGaraje(codigo)
+}
+
+/**
+ * Código de garaje → `tipoGaraje` del formulario (15/10/2026): calle · colectivo (comunitario) · individual. «Garaje» a secas,
+ * vacío o un código no visto → `null` (el bot supone «colectivo» y lo DECLARA; aquí no se traduce a ojo). Misma tabla única.
+ */
+export function tipoGarajeDeCodigo(codigo: string | null | undefined): 'calle' | 'colectivo' | 'individual' | null {
+  const clase = GARAJES_CONOCIDOS[typeof codigo === 'string' ? codigo.trim() : '']?.clase
+  return clase === 'calle' ? 'calle' : clase === 'comunitario' ? 'colectivo' : clase === 'individual' ? 'individual' : null
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
@@ -118,6 +135,14 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
   // La compañía anterior solo tiene sentido con seguro actual; sin nombre (o demasiado largo) no viaja (no consta).
   const companiaTxt = e.tieneSeguroActual ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
   const companiaAnterior = companiaTxt !== '' && companiaTxt.length <= MAX_COMPANIA_ANTERIOR ? companiaTxt : null
+  // Supuestos de Allianz Turismos: solo viajan si tienen forma válida (si no, el bot supone y lo declara; nunca bloquea).
+  const isoValida = (v: string | null | undefined): string | null => {
+    const t = typeof v === 'string' ? v.trim().slice(0, 10) : ''
+    return ISO.test(t) && new Date(`${t}T00:00:00Z`).toISOString().slice(0, 10) === t ? t : null
+  }
+  const fechaMatriculacion = isoValida(e.fechaMatriculacion)
+  const fechaVencimiento = isoValida(e.fechaVencimiento)
+  const tipoGaraje = tipoGarajeDeCodigo(e.garaje)
 
   if (faltan.length) return { ok: false, faltan }
 
@@ -144,6 +169,10 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
     ambitoCirculacion,
     clasePermiso,
     ...(companiaAnterior !== null ? { companiaAnterior } : {}),
+    ...(fechaMatriculacion !== null && fechaMatriculacion <= hoy.toISOString().slice(0, 10) ? { fechaMatriculacion } : {}),
+    ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
+    ...(tipoGaraje !== null ? { tipoGaraje } : {}),
+    ...(typeof e.conductorOcasional === 'boolean' ? { conductorOcasional: e.conductorOcasional } : {}),
     // Marca/modelo solo si están los dos (nombres de catálogo; ayudan a otros bots a elegir versión). Sin ellos, ausente.
     ...(marca !== '' && modelo !== '' ? { seleccionVehiculo: { marca, modelo, ...(descripcionOk ? { descripcion: version } : {}) } } : {}),
   }

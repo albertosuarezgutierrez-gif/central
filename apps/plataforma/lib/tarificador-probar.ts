@@ -16,7 +16,11 @@ const ESTADOS_FINALES = ['ok', 'error_definitivo', 'requiere_humano', 'cancelado
 export type IntegracionVista = { compania: string; ramo: string; clave: string }
 /** `codigo` null (15/10/2026): portal sin código de catálogo (Mapfre); se elige por la etiqueta exacta de la opción. */
 export type VersionVista = { codigo: string | null; etiqueta: string }
-export type OfertaVista = { compania: string; producto: string; primaAnual: number; primaNeta: number | null; impuestos: number | null; primaSucesivos: number | null; pdfIndice: number | null }
+/**
+ * `supuestos` (15/10/2026): lo que el bot SUPUSO para dar ese precio («Precio con supuestos: uso diario, garaje colectivo…»), tal
+ * como lo deja pasar asegura. `null` = no supuso nada (o una versión de asegura que aún no lo manda).
+ */
+export type OfertaVista = { compania: string; producto: string; primaAnual: number; primaNeta: number | null; impuestos: number | null; primaSucesivos: number | null; pdfIndice: number | null; supuestos: string | null }
 export type TrabajoVista = {
   estado: string
   error: { tipo: string; mensaje: string } | null
@@ -124,6 +128,7 @@ export function leerTrabajo(status: number, json: unknown): LecturaTrabajo {
         compania: str(f.compania) ?? '', producto: str(f.producto) ?? '', primaAnual: prima,
         primaNeta: num(f.primaNeta), impuestos: num(f.impuestos), primaSucesivos: num(f.primaTotalSucesivos),
         pdfIndice: typeof f.pdfIndice === 'number' && Number.isInteger(f.pdfIndice) ? f.pdfIndice : null,
+        supuestos: str(f.supuestos)?.slice(0, 300) ?? null,
       })
     }
   }
@@ -189,6 +194,8 @@ export function textoOferta(o: OfertaVista): string {
  */
 export function resumenTrabajo(t: TrabajoVista): {
   titulo: string; tono: TonoEstado; final: boolean; motivo: string | null; ofertas: string[]; pideVersion: boolean
+  /** Supuestos con los que se dio el precio (sin repetir: suelen ser los mismos en todas las modalidades). */
+  supuestos: string[]
 } {
   const final = esEstadoFinal(t.estado)
   const sinOfertas = t.estado === 'ok' && t.ofertas.length === 0
@@ -200,5 +207,6 @@ export function resumenTrabajo(t: TrabajoVista): {
     motivo: t.estado === 'ok' && !sinOfertas ? null : motivo,
     ofertas: t.ofertas.map(textoOferta),
     pideVersion: t.estado === 'requiere_humano' && t.opcionesVersion !== null,
+    supuestos: [...new Set(t.ofertas.map((o) => o.supuestos).filter((x): x is string => x !== null))],
   }
 }

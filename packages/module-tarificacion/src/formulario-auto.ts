@@ -33,6 +33,16 @@ export type ClasePermiso = (typeof CLASES_PERMISO)[number]
 export const USO_VEHICULO_POR_DEFECTO: UsoVehiculo = 'particular'
 export const AMBITO_CIRCULACION_POR_DEFECTO: AmbitoCirculacion = 'espana'
 export const CLASE_PERMISO_POR_DEFECTO: ClasePermiso = 'b'
+/**
+ * Datos que pide Allianz Turismos y el formulario puede no traer (15/10/2026). Si no vienen, el bot usa un valor SUPUESTO
+ * y lo declara junto al precio (`supuestos-auto.ts`); nunca son obligatorios. Claves CERRADAS.
+ *   · `usoFrecuencia`: ocasional (fines de semana, vacaciones) · diario (a diario y fines de semana) · laboral (actividad laboral).
+ *   · `tipoGaraje`: dónde duerme (calle · garaje colectivo/comunitario · garaje individual).
+ */
+export const USOS_FRECUENCIA = ['ocasional', 'diario', 'laboral'] as const
+export type UsoFrecuencia = (typeof USOS_FRECUENCIA)[number]
+export const TIPOS_GARAJE = ['calle', 'colectivo', 'individual'] as const
+export type TipoGaraje = (typeof TIPOS_GARAJE)[number]
 /** Máximo de `companiaAnterior` (el adaptador la ignora por encima de 80). */
 export const MAX_COMPANIA_ANTERIOR = 80
 
@@ -127,6 +137,17 @@ export type FormularioAuto = {
   clasePermiso?: ClasePermiso | null
   /** Nombre de la compañía anterior (texto corto, ≤80). Ausente = no consta (el bot la deja como hueco, nunca la inventa). */
   companiaAnterior?: string | null
+  // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
+  /** 1ª matriculación (ISO, no futura), de `datosVehiculo.fechaMatriculacion`. Decide compra nuevo / 2ª mano. Ausente = no consta. */
+  fechaMatriculacion?: string | null
+  /** Vencimiento de la póliza ACTUAL (ISO): la fecha de efecto si es futura. Ausente = no consta. */
+  fechaVencimiento?: string | null
+  /** Tipo de garaje (`TIPOS_GARAJE`), del código de garaje del riesgo. Ausente = no consta. */
+  tipoGaraje?: TipoGaraje | null
+  /** ¿Hay conductor ocasional (segundo conductor)? `true` = ficha en el papel; `false` = confirmado que no; ausente = sin preguntar. */
+  conductorOcasional?: boolean | null
+  /** Uso del vehículo (`USOS_FRECUENCIA`). Ausente = no consta. */
+  usoFrecuencia?: UsoFrecuencia | null
 }
 
 /**
@@ -423,6 +444,13 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   const ambitoCirculacion = cerrado(e.ambitoCirculacion, 'ambitoCirculacion', AMBITOS_CIRCULACION, defectoAuto ? AMBITO_CIRCULACION_POR_DEFECTO : null)
   const clasePermiso = cerrado(e.clasePermiso, 'clasePermiso', CLASES_PERMISO, defectoAuto ? CLASE_PERMISO_POR_DEFECTO : null)
   const companiaAnterior = textoOpcional(e.companiaAnterior, 'companiaAnterior', MAX_COMPANIA_ANTERIOR)
+  // Supuestos de Allianz Turismos (opcionales, sin defecto: lo que no viene lo SUPONE el bot y lo declara).
+  const fechaMatriculacion = fechaIso(e.fechaMatriculacion, 'fechaMatriculacion', errores)
+  if (fechaMatriculacion !== null && fechaMatriculacion > hoy.toISOString().slice(0, 10)) errores.push('fechaMatriculacion: no puede ser futura')
+  const fechaVencimiento = fechaIso(e.fechaVencimiento, 'fechaVencimiento', errores)
+  const tipoGaraje = cerrado(e.tipoGaraje, 'tipoGaraje', TIPOS_GARAJE, null)
+  const usoFrecuencia = cerrado(e.usoFrecuencia, 'usoFrecuencia', USOS_FRECUENCIA, null)
+  const conductorOcasional = booleano(e.conductorOcasional, 'conductorOcasional', errores)
 
   // Moto (fail-closed): Allianz tiene productos distintos «Moto» y «Ciclomotor» (≤50 cc). Solo se tarifica Moto.
   if (ramo === 'moto') {
@@ -456,6 +484,11 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(ambitoCirculacion !== null ? { ambitoCirculacion } : {}),
       ...(clasePermiso !== null ? { clasePermiso } : {}),
       ...(companiaAnterior !== null ? { companiaAnterior } : {}),
+      ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
+      ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
+      ...(tipoGaraje !== null ? { tipoGaraje } : {}),
+      ...(usoFrecuencia !== null ? { usoFrecuencia } : {}),
+      ...(conductorOcasional !== null ? { conductorOcasional } : {}),
     },
   }
 }

@@ -1,3 +1,7 @@
+// v0.6.2 (15/10/2026, decisión de Alberto): compra, uso, fecha de efecto, garaje colectivo/individual y segundo conductor ya NO son
+// huecos: si el riesgo no los trae, el bot usa un valor «no determinante» (`supuestosAuto` de module-tarificacion) y lo DECLARA
+// («Precio con supuestos: …» en el error y en cada oferta). Mismo cuidado que 0.6.1: opciones solo por la puerta de guard.ts (lista
+// cerrada, grupo exacto), opción no encontrada → hueco. Siguen siendo hueco: antecedentes (valores sin mapa), colaborador y dirección.
 // v0.6.1 (15/10/2026): búsquedas por etiqueta acotadas a la zona `appArea` (la cabecera de ePac ya no cuenta) y resto del paso
 // «Datos del vehículo» con los datos inequívocos del riesgo (garaje en la calle, tipo de tomador, documento, CP y localidad del
 // tomador, fechas del conductor); lo demás, huecos, y con huecos no se pulsa «SIGUIENTE». IBAN/BIC NUNCA (frontera de guard.ts).
@@ -47,6 +51,7 @@ import {
   esCif,
   esDniNie,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
+  etiquetasSupuestos,
   esOpcionVacia,
   fechaIsoDesdeTexto,
   leerCeldaPoblacion,
@@ -57,6 +62,8 @@ import {
   redactarDatosPersonales,
   resolverPoblacion,
   resolverVersion,
+  supuestosAuto,
+  textoSupuestos,
   vehiculoDesdeLectura,
   type CandidatoVersion,
   type EleccionVersion,
@@ -66,6 +73,7 @@ import {
   type OpcionPoblacion,
   type ResultadoAdaptador,
   type SeleccionVehiculo,
+  type SupuestosAuto,
   type Vehiculo,
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
@@ -397,7 +405,7 @@ export async function leerPrimasTarificar(raiz: Pick<Frame, 'locator'>): Promise
 }
 
 /** Primas → ofertas normalizadas (una por modalidad). */
-export function ofertasDesdePrimas(primas: readonly PrimaModalidad[], producto: string, vehiculo: Vehiculo | null): OfertaNormalizada[] {
+export function ofertasDesdePrimas(primas: readonly PrimaModalidad[], producto: string, vehiculo: Vehiculo | null, supuestos: string | null = null): OfertaNormalizada[] {
   return primas.map((p) => ({
     compania: 'allianz',
     producto: `${producto} · ${p.nombre}`,
@@ -415,6 +423,8 @@ export function ofertasDesdePrimas(primas: readonly PrimaModalidad[], producto: 
       'Importe del primer recibo anual (recibo bancario) de la tabla «PRECIOS MODALIDADES»; sin desglose neta/impuestos.',
       ...(vehiculo ? [`Vehículo según el catálogo de Allianz: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.version}.`] : []),
       ...(vehiculo?.versionPorSimilitud ? [AVISO_VERSION_POR_SIMILITUD] : []),
+      // v0.6.2: lo que el bot SUPUSO (Turismos), junto al precio. Asegura lo deja pasar a plataforma (`supuestosDeAvisos`).
+      ...(supuestos ? [supuestos] : []),
     ],
   }))
 }
@@ -901,6 +911,7 @@ export const ETIQUETAS_TURISMOS = {
   localidad: 'Localidad',
   nacimientoConductor: 'Fecha de nacimiento del conductor',
   carnetConductor: 'Fecha de expedición de carnet',
+  fechaEfecto: '¿Cuándo quieres que comience tu seguro?',
 } as const
 
 /** Claves de la lista cerrada de opciones de `guard.ts` (`OPCIONES_TURISMOS_ALLIANZ`): el adaptador solo pide CLAVES. */
@@ -908,6 +919,12 @@ export const CLAVE_CONOCE_MATRICULA = 'conoce_matricula:si'
 export const CLAVE_GARAJE_CALLE = 'garaje:calle'
 export const CLAVE_TOMADOR_INDIVIDUAL = 'tomador:individual'
 export const CLAVE_TOMADOR_EMPRESA = 'tomador:empresa'
+/** v0.6.2: claves de los supuestos (misma lista cerrada de guard.ts). */
+export const CLAVE_COMPRA_NUEVO = 'compra:nuevo'
+export const CLAVE_COMPRA_YA_LO_TENIA = 'compra:ya_lo_tenia'
+export const CLAVE_SEGUNDO_CONDUCTOR_NO = 'segundo_conductor:no'
+export const claveUsoTurismos = (uso: 'ocasional' | 'diario' | 'laboral') => `uso:${uso}`
+export const claveGarajeTurismos = (g: 'calle' | 'colectivo' | 'individual') => `garaje:${g}`
 
 /** Zona de trabajo del marco: el contenedor `appArea` (o el `body` si el marco ES el iframe `appArea`). */
 export const zonaTurismos = (marco: Pick<Frame, 'locator'>): Locator => marco.locator(SEL_ZONA_APP_TURISMOS)
@@ -1019,16 +1036,8 @@ export async function rellenarDatosVehiculoTurismos(page: Page, marco: Frame, fo
 
 // ── Turismos · resto del paso «Datos del vehículo» (v0.6.1): garaje, tomador, conductor ──
 
-/** Lo que el riesgo de auto NO trae (o no traduce sin inventar) para este paso: hueco SIEMPRE, nunca un valor de cajón. */
-export const HUECOS_FIJOS_TURISMOS: readonly string[] = Object.freeze([
-  'la compra del vehículo (nuevo / 2ª mano / ya lo tenía): el riesgo de auto no tiene ese dato',
-  'el uso (Ocasional / A diario y fines de semana / Actividad laboral): «particular» del riesgo no se corresponde con ninguna',
-  'la fecha de efecto («¿Cuándo quieres que comience tu seguro?»): el riesgo de auto no la trae',
-  'el nivel de antecedentes: sin correspondencia con los años asegurado/siniestros del riesgo',
-  'el colaborador: no es un dato del riesgo',
-  'la dirección (provincia, población, tipo de vía, nombre, número…): el riesgo no la trae desglosada',
-  'el segundo conductor (Sí/No): el riesgo de auto no lo pregunta (no consta ≠ «No»)',
-])
+/** Lo que el riesgo de auto NO trae y no se supone (v0.6.2): hueco SIEMPRE, nunca un valor de cajón. */
+export const HUECOS_FIJOS_TURISMOS: readonly string[] = Object.freeze(['el colaborador: no es un dato del riesgo'])
 
 export type OperacionTurismos =
   | { tipo: 'opcion'; clave: string; que: string }
@@ -1044,15 +1053,25 @@ export function tipoTomadorTurismos(f: Pick<FormularioAuto, 'tomador' | 'datosTo
   return vistos.every((t) => t === vistos[0]) ? vistos[0] : null
 }
 
+/** Supuestos que DECLARA Allianz Turismos (v0.6.2): los de `supuestosAuto`, tal cual. Puro. */
+export function etiquetasSupuestosTurismos(s: SupuestosAuto): string[] {
+  return etiquetasSupuestos(s)
+}
+
 /**
- * Plan del resto del paso, en el orden de la pantalla. PURO. Solo datos INEQUÍVOCOS del riesgo; lo demás, `huecos` (sin valores:
- * los mensajes nunca llevan datos personales). IBAN/BIC y cualquier campo de pago NO están en el plan (frontera bancaria).
+ * Plan del resto del paso, en el orden de la pantalla. PURO. Datos del riesgo y, donde Alberto lo decidió (v0.6.2), el valor
+ * SUPUESTO de `supuestosAuto`, declarado en `supuestos` («Precio con supuestos: …», `null` = ninguno). Lo demás, `huecos` (sin
+ * valores: los mensajes nunca llevan datos personales). IBAN/BIC y cualquier campo de pago NO están en el plan (frontera bancaria).
  */
-export function planDatosTurismos(f: FormularioAuto): { operaciones: OperacionTurismos[]; huecos: string[] } {
+export function planDatosTurismos(f: FormularioAuto, hoy: Date = new Date()): { operaciones: OperacionTurismos[]; huecos: string[]; supuestos: string | null } {
+  const sup = supuestosAuto(f, hoy)
   const operaciones: OperacionTurismos[] = []
   const huecos: string[] = [...HUECOS_FIJOS_TURISMOS]
-  if (f.garajeNoche === false) operaciones.push({ tipo: 'opcion', clave: CLAVE_GARAJE_CALLE, que: 'el garaje «En la calle»' })
-  else huecos.push(f.garajeNoche === true ? 'el garaje (duerme en garaje, pero colectivo o individual no consta)' : 'el garaje (no consta)')
+  // Compra (nuevo / ya lo tenía; la 2ª mano nunca se supone), uso y garaje: dato o supuesto, siempre por la puerta de opciones.
+  if (sup.compra.valor === 'nuevo') operaciones.push({ tipo: 'opcion', clave: CLAVE_COMPRA_NUEVO, que: 'la compra «nuevo»' })
+  else operaciones.push({ tipo: 'opcion', clave: CLAVE_COMPRA_YA_LO_TENIA, que: 'la compra «ya lo tenía»' })
+  if (sup.uso.valor) operaciones.push({ tipo: 'opcion', clave: claveUsoTurismos(sup.uso.valor), que: `el uso «${sup.uso.valor}»` })
+  if (sup.garaje.valor) operaciones.push({ tipo: 'opcion', clave: claveGarajeTurismos(sup.garaje.valor), que: `el garaje «${sup.garaje.valor}»` })
   const tipo = tipoTomadorTurismos(f)
   if (tipo === null) huecos.push('el tipo de tomador Individual/Empresa (no consta o el riesgo se contradice)')
   else operaciones.push({ tipo: 'opcion', clave: tipo === 'juridica' ? CLAVE_TOMADOR_EMPRESA : CLAVE_TOMADOR_INDIVIDUAL, que: `el tomador «${tipo === 'juridica' ? 'Empresa' : 'Individual'}»` })
@@ -1074,7 +1093,18 @@ export function planDatosTurismos(f: FormularioAuto): { operaciones: OperacionTu
     { tipo: 'texto', etiqueta: ETIQUETAS_TURISMOS.nacimientoConductor, valor: fechaEs(f.conductor.fechaNacimiento, 'allianz/auto: la fecha de nacimiento del conductor'), fecha: true },
     { tipo: 'texto', etiqueta: ETIQUETAS_TURISMOS.carnetConductor, valor: fechaEs(f.conductor.fechaCarne, 'allianz/auto: la fecha del carné del conductor'), fecha: true },
   )
-  return { operaciones, huecos }
+  // Segundo conductor: «No» (dato o supuesto). «Sí» abre los datos de otra persona, sin mapa → hueco (no se pulsa).
+  if (sup.segundoConductor.valor === false) operaciones.push({ tipo: 'opcion', clave: CLAVE_SEGUNDO_CONDUCTOR_NO, que: 'el segundo conductor «No»' })
+  else huecos.push('el segundo conductor «Sí» (el riesgo trae conductor ocasional: sus datos no tienen mapa)')
+  if (sup.fechaEfecto.valor) operaciones.push({ tipo: 'texto', etiqueta: ETIQUETAS_TURISMOS.fechaEfecto, valor: fechaEs(sup.fechaEfecto.valor, 'allianz/auto: la fecha de efecto'), fecha: true })
+  // Antecedentes: el supuesto se calcula (y se declara), pero los valores del desplegable del portal no están mapeados → hueco.
+  huecos.push('el nivel de antecedentes (los valores del portal no están mapeados: no se elige a ojo)')
+  huecos.push(
+    sup.direccion.valor === 'consta'
+      ? 'la dirección desglosada (provincia, población, tipo de vía, nombre, número…): el riesgo la trae en una sola línea y no se trocea a ojo'
+      : 'la dirección (provincia, población, tipo de vía, nombre, número…): el riesgo no la trae',
+  )
+  return { operaciones, huecos, supuestos: textoSupuestos(etiquetasSupuestosTurismos(sup)) }
 }
 
 /** ¿El control es un campo de TEXTO editable (no un desplegable/combobox, que solo se tocaría por una puerta de guard.ts)? */
@@ -1110,8 +1140,8 @@ const soloCifras = (s: string) => s.replace(/\D/g, '')
  * (`ctx.marcarOpcionTurismos`, lista cerrada de guard.ts). Lo que no aparece, aparece repetido, no es un campo de texto o no
  * queda puesto → hueco (no para aquí: se juntan y viajan en el `ErrorMapaIncompleto` final). Devuelve TODOS los huecos del paso.
  */
-export async function rellenarDatosRiesgoTurismos(page: Page, marco: Frame, form: FormularioAuto, ctx: CtxTurismos): Promise<string[]> {
-  const { operaciones, huecos } = planDatosTurismos(form)
+export async function rellenarDatosRiesgoTurismos(page: Page, marco: Frame, form: FormularioAuto, ctx: CtxTurismos, hoy: Date = new Date()): Promise<string[]> {
+  const { operaciones, huecos } = planDatosTurismos(form, hoy)
   const marcar = ctx?.marcarOpcionTurismos
   if (typeof marcar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
   const esperar = async (etiqueta: string): Promise<Locator | string> => {
@@ -1156,8 +1186,17 @@ export async function rellenarDatosRiesgoTurismos(page: Page, marco: Frame, form
  * o sin efecto → el mismo hueco, indicando cuál fue. Solo se pulsa con la pestaña «Datos del vehículo» seleccionada y SIN
  * `huecos` en el paso: con alguno, `ErrorMapaIncompleto` (lista + inventario) ANTES de pulsar (no se guarda nada con valores por defecto).
  */
-export async function avanzarDesdeDatosVehiculo(page: Page, marco: Frame, ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>, esperaMs = 15_000, huecos: readonly string[] = []): Promise<never> {
-  const conHuecos = (m: string) => (huecos.length > 0 ? `${m}; huecos de «${PASO_VEHICULO}»: ${huecos.join(' · ')}` : m)
+export async function avanzarDesdeDatosVehiculo(
+  page: Page,
+  marco: Frame,
+  ctx: Pick<ContextoPortal, 'pulsar' | 'pausaAccion'>,
+  esperaMs = 15_000,
+  huecos: readonly string[] = [],
+  supuestos: string | null = null,
+): Promise<never> {
+  // v0.6.2: lo SUPUESTO viaja también en el error (queda registrado en el trabajo aunque no se llegue al precio).
+  const conSupuestos = (m: string) => (supuestos ? `${m}; ${supuestos}` : m)
+  const conHuecos = (m: string) => conSupuestos(huecos.length > 0 ? `${m}; huecos de «${PASO_VEHICULO}»: ${huecos.join(' · ')}` : m)
   // Con CUALQUIER hueco no se pulsa «SIGUIENTE»: Allianz guardaría el paso con sus valores por defecto.
   if (huecos.length > 0) throw new ErrorMapaIncompleto(conHuecos(`los datos de «${PASO_VEHICULO}» antes de «${BOTON_SIGUIENTE_TURISMOS}» (no se pulsa con huecos)`), true)
   const boton = botonTurismos(marco, BOTON_SIGUIENTE_TURISMOS)
@@ -1206,8 +1245,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.1',
+    // Moto no cambia en la 0.6.1 ni en la 0.6.2 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.2',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
@@ -1218,11 +1257,13 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
       const marco = await marcoFormularioTurismos(page)
       const huecos = await rellenarDatosVehiculoTurismos(page, marco, form, ctx)
       await ctx.pausa()
-      // v0.6.1: resto del paso con los datos inequívocos del riesgo; lo demás, huecos que viajan en el error final.
-      huecos.push(...(await rellenarDatosRiesgoTurismos(page, marco, form, ctx)))
+      // v0.6.1: resto del paso con los datos del riesgo; v0.6.2: y los SUPUESTOS declarados. Lo demás, huecos del error final.
+      const hoy = new Date()
+      const { supuestos } = planDatosTurismos(form, hoy)
+      huecos.push(...(await rellenarDatosRiesgoTurismos(page, marco, form, ctx, hoy)))
       await ctx.pausa()
-      // «SIGUIENTE» (guard) y la pantalla que sigue → hueco con inventario. Cuando haya mapa: leerPrimas → ofertasDesdePrimas.
-      return avanzarDesdeDatosVehiculo(page, marco, ctx, undefined, huecos)
+      // «SIGUIENTE» (guard) y la pantalla que sigue → hueco con inventario. Cuando haya mapa: leerPrimas → ofertasDesdePrimas(…, supuestos).
+      return avanzarDesdeDatosVehiculo(page, marco, ctx, undefined, huecos, supuestos)
     },
   } as const
 }

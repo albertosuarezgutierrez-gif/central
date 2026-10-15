@@ -12,6 +12,7 @@
 import { createHash, createHmac } from 'node:crypto'
 import { RAMOS_OPORTUNIDAD, TIPOS_RELACION } from '@central/module-seguros'
 import { PATRON_REFERENCIA_TEXTO } from './correduria-emision-referencia-tg.ts'
+import { esParaBots } from './correduria-bots-tg.ts'
 
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ export function clasificarDestino(texto: string): Destino {
   if (!t) return 'contable'
   if (PREFIJO.test(t)) return 'correduria'
   if (PROPIAS.test(t)) return 'correduria'
+  // Bots del tarificador (15/10/2026): «el campo atascado es la matrícula» no lleva ninguna palabra propia.
+  if (esParaBots(t)) return 'correduria'
   // La referencia propia de un presupuesto (`AS-26-0005`) solo existe en la correduría.
   if (PATRON_REFERENCIA_TEXTO.test(t)) return 'correduria'
   // Un gasto propio («factura del seguro del coche, precio 320€») sigue siendo del contable.

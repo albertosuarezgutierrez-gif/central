@@ -58,13 +58,13 @@ test('estados: en marcha vs finales; estado desconocido se enseña tal cual y no
 test('primas: formato español y «—» para lo que no consta (nunca 0,00€)', () => {
   assert.equal(textoPrima(2162.49), '2.162,49€')
   assert.equal(textoPrima(null), '—')
-  assert.equal(textoOferta({ compania: 'allianz', producto: 'Moto', primaAnual: 2162.49, primaNeta: 2000, impuestos: 162.49, primaSucesivos: null, pdfIndice: 0 }),
+  assert.equal(textoOferta({ compania: 'allianz', producto: 'Moto', primaAnual: 2162.49, primaNeta: 2000, impuestos: 162.49, primaSucesivos: null, pdfIndice: 0, supuestos: null }),
     'Allianz · Moto — 2.162,49€/año (neta 2.000,00€ · impuestos 162,49€)')
-  assert.equal(textoOferta({ compania: '', producto: '', primaAnual: 10, primaNeta: null, impuestos: null, primaSucesivos: null, pdfIndice: null }), 'Oferta — 10,00€/año')
+  assert.equal(textoOferta({ compania: '', producto: '', primaAnual: 10, primaNeta: null, impuestos: null, primaSucesivos: null, pdfIndice: null, supuestos: null }), 'Oferta — 10,00€/año')
 })
 
 test('resumen: ok con ofertas, ok SIN ofertas (aviso), parada con motivo y elección de versión', () => {
-  const ok = resumenTrabajo({ estado: 'ok', error: null, motivo: null, opcionesVersion: null, ofertas: [{ ...OFERTA, primaAnual: 312.4, primaNeta: null, impuestos: null, primaSucesivos: null, pdfIndice: null, compania: 'allianz' }] })
+  const ok = resumenTrabajo({ estado: 'ok', error: null, motivo: null, opcionesVersion: null, ofertas: [{ ...OFERTA, primaAnual: 312.4, primaNeta: null, impuestos: null, primaSucesivos: null, pdfIndice: null, supuestos: null, compania: 'allianz' }] })
   assert.equal(ok.titulo, 'Tarificado'); assert.equal(ok.tono, 'ok'); assert.equal(ok.final, true); assert.equal(ok.motivo, null)
   assert.deepEqual(ok.ofertas, ['Allianz · Moto — 312,40€/año'])
 
@@ -81,6 +81,25 @@ test('resumen: ok con ofertas, ok SIN ofertas (aviso), parada con motivo y elecc
 
   const curso = resumenTrabajo({ estado: 'en_curso', error: null, motivo: null, opcionesVersion: null, ofertas: [] })
   assert.equal(curso.final, false); assert.equal(curso.tono, 'curso')
+})
+
+test('supuestos del bot (15/10/2026): se leen de cada oferta y el resumen los da una vez, junto al precio', () => {
+  const SUP = 'Precio con supuestos: uso diario, garaje colectivo, sin 2º conductor.'
+  const l = leerTrabajo(200, { estado: 'ok', ofertas: [{ ...OFERTA, supuestos: SUP }, { ...OFERTA, producto: 'Turismos · Otra', supuestos: SUP }, { ...OFERTA, supuestos: 7 }] })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  assert.deepEqual(l.trabajo.ofertas.map((o) => o.supuestos), [SUP, SUP, null])
+  const r = resumenTrabajo(l.trabajo)
+  assert.deepEqual(r.supuestos, [SUP], 'sin repetir')
+  // Una versión de asegura que aún no lo manda: nada que enseñar (no se inventa «sin supuestos»).
+  const viejo = leerTrabajo(200, { estado: 'ok', ofertas: [OFERTA] })
+  assert.ok(viejo.ok && resumenTrabajo(viejo.trabajo).supuestos.length === 0)
+})
+
+test('PrecioBots enseña los supuestos JUNTO al precio (cepo de fuente)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx', import.meta.url), 'utf8')
+  assert.match(src, /res\.supuestos\.map\(/)
 })
 
 test('mensajeDeFallo 502: «no respondió a tiempo» (timeout) vs «no se pudo conectar» (red o sin motivo)', async () => {
