@@ -21,9 +21,11 @@ import {
   RIESGO_HUMO,
   VENTANA_INFORME_HUMO_HORAS,
   humoActivo,
+  motivoNadaProbado,
   parejasParaHumo,
   resumirHumo,
   textoAvisoHumo,
+  textoNadaProbado,
   type FilaHumo,
   type OmitidaHumo,
   type ParejaActiva,
@@ -90,46 +92,96 @@ export async function encolarHumo(correduriaId: string, env: Record<string, stri
 }
 
 export type ResumenInformeHumo = {
-  estado: 'omitido' | 'ok' | 'telegram_no_enviado'
-  omitido?: 'humo_apagado' | 'sin_esquema_humo'
+  estado: 'omitido' | 'ok' | 'ya_informado' | 'telegram_no_enviado'
+  omitido?: 'humo_apagado'
   total?: number
   ok?: number
   fallan?: number
+  sinBot?: number
   avisado?: boolean
   /** Humos que seguían `pendiente` y se cerraron como fallo (nadie los lanzó). */
   cerrados?: number
+  /** Si no se probó nada: por qué. */
+  nadaProbado?: string
 }
 
-type FilaBd = { compania: string; ramo: string; estado: string; tipo: string | null; mensaje: string | null }
+type FilaBd = { compania: string; ramo: string; estado: string; tipo: string | null; mensaje: string | null; con_bot: unknown }
 
 /** Lo que sale por Telegram: inyectable para los tests; en producción, `tgSend` (devuelve el id del mensaje o `null`). */
 export type EnviarTelegram = (texto: string) => Promise<number | null>
 
+const conBotValido = (v: unknown): string[] | null => (Array.isArray(v) && v.every((x) => typeof x === 'string') ? (v as string[]) : null)
+
 /**
- * Informe de la noche. Cierra como fallo los humos aún `pendiente` (la máquina no llegó a lanzarse: que no queden apilados para
- * mañana), lee los de las últimas `VENTANA_INFORME_HUMO_HORAS` y, si falla alguna compañía, manda UN aviso. Todo bien → nada.
- * Con el interruptor apagado no lee ni avisa.
+ * Informe de la noche. Cierra como fallo los humos aún `pendiente`, lee los de las últimas `VENTANA_INFORME_HUMO_HORAS` y manda UN
+ * aviso si: falla alguna compañía, hay integraciones activas sin bot en la imagen, o NO SE PROBÓ NINGUNA (el silencio no vale como
+ * «todo bien»). Todo bien → nada. Con el interruptor apagado no lee ni avisa. IDEMPOTENTE: el día (de Madrid) se marca en
+ * `tarificador_humo_informes` ANTES de enviar; si el cron se repite no sale un segundo Telegram (si el envío falla, se desmarca).
  */
 export async function informarHumo(correduriaId: string, env: Record<string, string | undefined> = process.env, enviar: EnviarTelegram = (t) => tgSend(t)): Promise<ResumenInformeHumo> {
   if (!humoActivo(env)) return { estado: 'omitido', omitido: 'humo_apagado' }
-  if (!(await hayHumo())) return { estado: 'omitido', omitido: 'sin_esquema_humo' }
+  const esquemaHumo = await hayHumo()
+  const rpa = rpaActivo(env)
 
-  const cerrados = await prisma.$executeRaw`
-    update seguros.tarificacion_trabajos t
-    set estado = 'cancelado', terminado_at = now(), updated_at = now(),
-        error = jsonb_build_object('tipo', 'infra', 'mensaje', 'no se lanzó la máquina de la prueba esta noche')
-    where t.correduria_id = ${correduriaId}::uuid and to_jsonb(t)->>'modo' = ${MODO_HUMO} and t.estado = 'pendiente'
-      and t.created_at < now() - interval '30 minutes' and t.created_at > now() - make_interval(hours => ${VENTANA_INFORME_HUMO_HORAS}::int)`
-  const filas = await prisma.$queryRaw<FilaBd[]>`
-    select t.compania, t.ramo, t.estado, t.error->>'tipo' as tipo, t.error->>'mensaje' as mensaje
-    from seguros.tarificacion_trabajos t
-    where t.correduria_id = ${correduriaId}::uuid and to_jsonb(t)->>'modo' = ${MODO_HUMO}
-      and t.created_at > now() - make_interval(hours => ${VENTANA_INFORME_HUMO_HORAS}::int)
-    order by t.created_at desc`
-  const resumen: ResumenHumo = resumirHumo(filas.map((f): FilaHumo => ({ compania: f.compania, ramo: f.ramo, estado: f.estado, tipoError: f.tipo, mensaje: f.mensaje })))
-  const base = { total: resumen.total, ok: resumen.ok, fallan: resumen.fallos.length, cerrados }
-  const texto = textoAvisoHumo(resumen)
+  let resumen: ResumenHumo = { total: 0, ok: 0, fallos: [], sinBot: [], omitidos: 0 }
+  let cerrados = 0
+  let filasN = 0
+  let companiasActivas = 0
+  let companiasPausadas = 0
+  if (esquemaHumo) {
+    cerrados = await prisma.$executeRaw`
+      update seguros.tarificacion_trabajos t
+      set estado = 'cancelado', terminado_at = now(), updated_at = now(),
+          error = jsonb_build_object('tipo', 'infra', 'mensaje', 'no se lanzó la máquina de la prueba esta noche')
+      where t.correduria_id = ${correduriaId}::uuid and to_jsonb(t)->>'modo' = ${MODO_HUMO} and t.estado = 'pendiente'
+        and t.created_at < now() - interval '30 minutes' and t.created_at > now() - make_interval(hours => ${VENTANA_INFORME_HUMO_HORAS}::int)`
+    const filas = await prisma.$queryRaw<FilaBd[]>`
+      select t.compania, t.ramo, t.estado, t.error->>'tipo' as tipo, t.error->>'mensaje' as mensaje, t.error->'humo'->'conBot' as con_bot
+      from seguros.tarificacion_trabajos t
+      where t.correduria_id = ${correduriaId}::uuid and to_jsonb(t)->>'modo' = ${MODO_HUMO}
+        and t.created_at > now() - make_interval(hours => ${VENTANA_INFORME_HUMO_HORAS}::int)
+      order by t.created_at desc`
+    const activas = await prisma.$queryRaw<{ compania: string; ramo: string }[]>`
+      select compania, ramo from seguros.companias_integracion
+      where correduria_id = ${correduriaId}::uuid and activo and modo = 'rpa_autorizada' order by compania, ramo`
+    filasN = filas.length
+    const companias = [...new Set(activas.map((a) => a.compania))]
+    companiasActivas = companias.length
+    for (const c of companias) {
+      let pausada = false
+      for (const a of activas.filter((x) => x.compania === c)) pausada = pausada || (await pausaViva(prisma, correduriaId, a.compania, a.ramo))
+      if (pausada) companiasPausadas++
+    }
+    resumen = resumirHumo(filas.map((f): FilaHumo => ({ compania: f.compania, ramo: f.ramo, estado: f.estado, tipoError: f.tipo, mensaje: f.mensaje, conBot: conBotValido(f.con_bot) })), activas)
+  }
+
+  const base = { total: resumen.total, ok: resumen.ok, fallan: resumen.fallos.length, sinBot: resumen.sinBot.length, cerrados }
+  let texto: string | null
+  let nadaProbado: string | undefined
+  if (resumen.total === 0) {
+    nadaProbado = motivoNadaProbado({ rpaActivo: rpa, esquemaHumo, companiasActivas, companiasPausadas, filas: filasN, omitidos: resumen.omitidos })
+    texto = textoNadaProbado(nadaProbado, resumen)
+  } else {
+    texto = textoAvisoHumo(resumen)
+  }
   if (!texto) return { estado: 'ok', ...base, avisado: false }
+
+  // IDEMPOTENCIA: el día de Madrid se marca antes de enviar. Sin el SQL no hay dónde marcar (solo el aviso de «falta el SQL»).
+  let marcado = false
+  if (esquemaHumo) {
+    const n = await prisma.$executeRaw`
+      insert into seguros.tarificador_humo_informes (correduria_id, dia)
+      values (${correduriaId}::uuid, (now() at time zone 'Europe/Madrid')::date)
+      on conflict (correduria_id, dia) do nothing`
+    if (n === 0) return { estado: 'ya_informado', ...base, avisado: false, ...(nadaProbado ? { nadaProbado } : {}) }
+    marcado = true
+  }
   const id = await enviar(texto).catch(() => null)
-  return { estado: id === null ? 'telegram_no_enviado' : 'ok', ...base, avisado: id !== null }
+  if (id === null && marcado) {
+    // No salió: se desmarca para que el siguiente intento del cron lo reenvíe.
+    await prisma.$executeRaw`
+      delete from seguros.tarificador_humo_informes
+      where correduria_id = ${correduriaId}::uuid and dia = (now() at time zone 'Europe/Madrid')::date`
+  }
+  return { estado: id === null ? 'telegram_no_enviado' : 'ok', ...base, avisado: id !== null, ...(nadaProbado ? { nadaProbado } : {}) }
 }

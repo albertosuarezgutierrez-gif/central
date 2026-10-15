@@ -413,7 +413,7 @@ export type ResultadoWorker =
    */
   | ({ tipo: 'explorado'; trabajoId: string; motivoFin: MotivoFin; presupuesto: PresupuestoExplorado | null } & MetaWorker)
   /** Prueba nocturna de humo superada (15/10/2026): login y pantalla de inicio alcanzados. Sin ofertas, sin tarificación. Un fallo va como `error`. */
-  | ({ tipo: 'humo'; trabajoId: string; omitido: string | null } & MetaWorker)
+  | ({ tipo: 'humo'; trabajoId: string; omitido: string | null; ramoProbado: string | null; ramosConBot: string[] | null } & MetaWorker)
 
 /** El presupuesto GUARDADO por el explorador: PDF descargado (o `null`) y referencia (o `null`). */
 export type PresupuestoExplorado = { referencia: string | null; pdf: { nombre: string; contenido: Buffer } | null }
@@ -548,7 +548,11 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
   if (e.resultado === 'humo') {
     // `omitido`: el worker no tiene adaptador activo de esa compañía (ni éxito ni fallo). Texto corto, sin saltos de línea.
     const omitido = typeof e.omitido === 'string' && e.omitido.trim() ? e.omitido.replace(/\s+/g, ' ').trim().slice(0, 200) : null
-    return { ok: true, r: { tipo: 'humo', trabajoId, omitido, ...leerMetaWorker(e) } }
+    // Ramos con bot activo en la imagen (accesorio: sin forma válida → null, el informe no calcula «sin bot» de esa compañía).
+    const RAMO = /^[a-z0-9_]{1,30}$/
+    const conBot = Array.isArray(e.ramosConBot) && e.ramosConBot.length <= 20 && e.ramosConBot.every((x) => typeof x === 'string' && RAMO.test(x)) ? (e.ramosConBot as string[]) : null
+    const ramoProbado = typeof e.ramoProbado === 'string' && RAMO.test(e.ramoProbado) ? e.ramoProbado : null
+    return { ok: true, r: { tipo: 'humo', trabajoId, omitido, ramoProbado, ramosConBot: conBot, ...leerMetaWorker(e) } }
   }
 
   return { ok: false, errores: ['resultado tiene que ser «ok», «error», «explorado» o «humo»'] }

@@ -19,8 +19,9 @@
 --      póliza, ni oportunidad, ni trabajo origen, ni presupuesto, ni prima de emisión.
 --   3. Un humo acaba `ok` sin tarificación (como una exploración).
 --   4. Un humo VIVO por correduría y compañía (no se apilan si una noche no llega a lanzarse).
+--   5. El riesgo de un humo es `{}` (CHECK) y `tarificador_humo_informes` marca el informe ya enviado de cada día (idempotencia).
 --
--- Sin datos personales: riesgo `{}`. Se deshace con: DROP INDEX seguros.idx_trabajo_humo_vivo; DROP CONSTRAINT trabajo_humo_sin_anclas;
+-- Sin datos personales: riesgo `{}`. Se deshace con: DROP TABLE seguros.tarificador_humo_informes; DROP INDEX seguros.idx_trabajo_humo_vivo; DROP CONSTRAINT trabajo_humo_riesgo_vacio; DROP CONSTRAINT trabajo_humo_sin_anclas;
 -- y restaurar los CHECK `tarificacion_trabajos_modo_valido` (sin 'humo'), `trabajo_cliente_salvo_exploracion` (solo exploración) y
 -- `trabajo_ok_con_tarificacion` (solo exploración), con ningún trabajo `humo` en la tabla (DELETE ... WHERE modo = 'humo').
 
@@ -45,6 +46,11 @@ ALTER TABLE seguros.tarificacion_trabajos ADD CONSTRAINT trabajo_humo_sin_anclas
   CHECK (modo <> 'humo' OR (cliente_id IS NULL AND poliza_id IS NULL AND oportunidad_id IS NULL AND trabajo_origen_id IS NULL
                             AND presupuesto_id IS NULL AND opcion_id IS NULL AND emision_prima_cents IS NULL));
 
+-- El riesgo de un humo va VACÍO: la BD lo garantiza (nunca datos de nadie en un trabajo de humo).
+ALTER TABLE seguros.tarificacion_trabajos DROP CONSTRAINT IF EXISTS trabajo_humo_riesgo_vacio;
+ALTER TABLE seguros.tarificacion_trabajos ADD CONSTRAINT trabajo_humo_riesgo_vacio
+  CHECK (modo <> 'humo' OR riesgo = '{}'::jsonb);
+
 -- 3. Un humo (como una exploración) termina `ok` sin tarificación.
 ALTER TABLE seguros.tarificacion_trabajos DROP CONSTRAINT IF EXISTS trabajo_ok_con_tarificacion;
 ALTER TABLE seguros.tarificacion_trabajos ADD CONSTRAINT trabajo_ok_con_tarificacion
@@ -53,6 +59,16 @@ ALTER TABLE seguros.tarificacion_trabajos ADD CONSTRAINT trabajo_ok_con_tarifica
 -- 4. Un humo vivo por COMPAÑÍA (un solo login por credencial y noche).
 CREATE UNIQUE INDEX IF NOT EXISTS idx_trabajo_humo_vivo ON seguros.tarificacion_trabajos (correduria_id, compania)
   WHERE modo = 'humo' AND estado IN ('pendiente', 'en_curso', 'error_reintentable');
+
+-- 5. Informe idempotente: una fila por correduría y día (de Madrid) ya informado. El cron del informe la inserta ANTES de enviar
+--    el Telegram; si se repite, el insert no inserta nada y no sale un segundo aviso (si el envío falla, se borra la fila).
+CREATE TABLE IF NOT EXISTS seguros.tarificador_humo_informes (
+  correduria_id uuid NOT NULL REFERENCES seguros.corredurias (id),
+  dia           date NOT NULL,
+  enviado_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (correduria_id, dia)
+);
+GRANT SELECT, INSERT, DELETE ON seguros.tarificador_humo_informes TO prisma_seguros;
 
 COMMIT;
 

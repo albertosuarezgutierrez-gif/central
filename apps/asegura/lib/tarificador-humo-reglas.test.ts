@@ -17,6 +17,8 @@ import {
   humoActivo,
   humoPideParar,
   motivoCorto,
+  motivoNadaProbado,
+  textoNadaProbado,
   motivoPausaHumo,
   parejasParaHumo,
   resumirHumo,
@@ -80,15 +82,55 @@ test('compañía con CUALQUIER pareja pausada o con un humo vivo: no se lanza (l
   assert.deepEqual(r.omitidas, [{ compania: 'allianz', ramo: 'auto', motivo: 'pausada' }, { compania: 'mapfre', ramo: 'auto', motivo: 'humo_vivo' }])
 })
 
-test('el humo omitido por el worker (sin adaptador activo) no cuenta ni avisa; el resultado «humo» lleva `omitido`', () => {
-  const omit = f('occident', 'hogar', 'cancelado', 'datos', `${PREFIJO_HUMO_NO_SOPORTADO}: occident no tiene adaptador activo en esta imagen`)
-  const r = resumirHumo([omit, f('allianz', 'auto', 'ok')])
-  assert.deepEqual({ total: r.total, ok: r.ok, fallos: r.fallos.length }, { total: 1, ok: 1, fallos: 0 })
-  assert.equal(textoAvisoHumo(resumirHumo([omit])), null)
-  const l = leerResultadoWorker({ trabajoId: '11111111-1111-4111-8111-111111111111', resultado: 'humo', omitido: ' sin\nadaptador ' })
-  assert.ok(l.ok && l.r.tipo === 'humo' && l.r.omitido === 'sin adaptador')
-  const ok = leerResultadoWorker({ trabajoId: '11111111-1111-4111-8111-111111111111', resultado: 'humo' })
-  assert.ok(ok.ok && ok.r.tipo === 'humo' && ok.r.omitido === null)
+test('«integración activa sin bot»: el omitido NO cuenta como probado pero se menciona; los ramos activos sin bot se listan', () => {
+  const omit: FilaHumo = { ...f('occident', 'hogar', 'cancelado', 'datos', `${PREFIJO_HUMO_NO_SOPORTADO}: occident no tiene bot activo en esta imagen`), conBot: [] }
+  const ok: FilaHumo = { ...f('allianz', 'auto', 'ok'), conBot: ['auto', 'comunidades'] }
+  const activas = [{ compania: 'allianz', ramo: 'auto' }, { compania: 'allianz', ramo: 'hogar' }, { compania: 'occident', ramo: 'hogar' }, { compania: 'occident', ramo: 'comunidades' }]
+  const r = resumirHumo([omit, ok], activas)
+  assert.deepEqual({ total: r.total, ok: r.ok, fallos: r.fallos.length, omitidos: r.omitidos }, { total: 1, ok: 1, fallos: 0, omitidos: 1 })
+  assert.deepEqual(r.sinBot, [{ compania: 'occident', ramos: ['comunidades', 'hogar'] }, { compania: 'allianz', ramos: ['hogar'] }])
+  const t = textoAvisoHumo(r)!
+  assert.match(t, /sin fallos, con avisos/)
+  assert.match(t, /• <b>Occident<\/b> \(comunidades, hogar\): integración activa sin bot/)
+  assert.match(t, /• <b>Allianz<\/b> \(hogar\): integración activa sin bot/)
+  // Sin integraciones sin bot ni fallos, no se avisa.
+  assert.equal(textoAvisoHumo(resumirHumo([ok], [{ compania: 'allianz', ramo: 'auto' }])), null)
+  const l = leerResultadoWorker({ trabajoId: '11111111-1111-4111-8111-111111111111', resultado: 'humo', omitido: ' sin\nbot ', ramosConBot: [], ramoProbado: 'auto' })
+  assert.ok(l.ok && l.r.tipo === 'humo' && l.r.omitido === 'sin bot' && l.r.ramosConBot?.length === 0 && l.r.ramoProbado === 'auto')
+  const ok2 = leerResultadoWorker({ trabajoId: '11111111-1111-4111-8111-111111111111', resultado: 'humo', ramosConBot: ['auto'] })
+  assert.ok(ok2.ok && ok2.r.tipo === 'humo' && ok2.r.omitido === null && ok2.r.ramosConBot?.[0] === 'auto')
+  const malo = leerResultadoWorker({ trabajoId: '11111111-1111-4111-8111-111111111111', resultado: 'humo', ramosConBot: ['<b>x'] })
+  assert.ok(malo.ok && malo.r.tipo === 'humo' && malo.r.ramosConBot === null)
+})
+
+const CTX = { rpaActivo: true, esquemaHumo: true, companiasActivas: 2, companiasPausadas: 0, filas: 2, omitidos: 0 }
+
+test('el silencio no vale como «todo bien»: 0 probadas → aviso corto con el motivo, sea cual sea la causa', () => {
+  assert.match(motivoNadaProbado({ ...CTX, rpaActivo: false }), /RPA está apagado/)
+  assert.match(motivoNadaProbado({ ...CTX, esquemaHumo: false }), /SQL del humo/)
+  assert.match(motivoNadaProbado({ ...CTX, companiasActivas: 0, filas: 0 }), /no hay integraciones activas/)
+  assert.match(motivoNadaProbado({ ...CTX, filas: 0, companiasPausadas: 2 }), /todas las compañías están en pausa/)
+  assert.match(motivoNadaProbado({ ...CTX, filas: 0 }), /no se encoló ninguna prueba/)
+  assert.match(motivoNadaProbado({ ...CTX, omitidos: 2 }), /ninguna compañía activa tiene bot/)
+  assert.match(motivoNadaProbado(CTX), /no dieron resultado/)
+  assert.equal(textoNadaProbado('el RPA está apagado'), '🌙 <b>Prueba nocturna</b>: no se probó nada (el RPA está apagado)')
+  assert.match(textoNadaProbado('x <y>'), /\(x &lt;y&gt;\)/, 'el motivo va escapado')
+  const sinProbar = resumirHumo([], [])
+  assert.equal(sinProbar.total, 0)
+})
+
+test('informe: sin probar → aviso aunque no haya fallos; idempotente (marca el día ANTES de enviar y desmarca si falla); SQL con CHECK y tabla', () => {
+  const h = leer('lib/tarificador-humo.ts')
+  assert.match(h, /if \(resumen\.total === 0\) \{\s+nadaProbado = motivoNadaProbado\(/)
+  const marca = h.indexOf('insert into seguros.tarificador_humo_informes')
+  const envio = h.indexOf('await enviar(texto)')
+  assert.ok(marca > 0 && envio > marca, 'el día se marca ANTES de enviar')
+  assert.match(h, /on conflict \(correduria_id, dia\) do nothing/)
+  assert.match(h, /if \(n === 0\) return \{ estado: 'ya_informado'/)
+  assert.match(h, /if \(id === null && marcado\)[\s\S]{0,200}delete from seguros\.tarificador_humo_informes/)
+  const sql = leer('prisma/sql/2026-10-15d_tarificador_humo.sql')
+  assert.match(sql, /CHECK \(modo <> 'humo' OR riesgo = '\{\}'::jsonb\)/)
+  assert.match(sql, /CREATE TABLE IF NOT EXISTS seguros\.tarificador_humo_informes \([\s\S]*PRIMARY KEY \(correduria_id, dia\)/)
 })
 
 test('el riesgo del humo está vacío y congelado; un fallo de humo no se reintenta; solo «credenciales» abre pausa', () => {

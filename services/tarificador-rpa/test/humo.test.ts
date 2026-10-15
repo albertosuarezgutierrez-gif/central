@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { MODOS_SOPORTADOS } from '../src/api.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { HUMO_COMPANIAS_SOPORTADAS, HUMO_VERSION, PRUEBAS_HUMO, claveHumo, decidirHumo, mensajeFalloHumo, pruebaDeHumo } from '../src/humo.ts'
+import { HUMO_COMPANIAS_SOPORTADAS, HUMO_VERSION, PRUEBAS_HUMO, claveHumo, decidirHumo, mensajeFalloHumo, pruebaDeHumo, ramosConBotDe } from '../src/humo.ts'
 
 const SRC = readFileSync(join(import.meta.dirname, '../src/humo.ts'), 'utf8')
 const CODIGO = SRC.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
@@ -23,14 +23,24 @@ test('pruebaDeHumo: las parejas conocidas la tienen y lo desconocido (incluidas 
   assert.equal(pruebaDeHumo('allianz', 'toString'), null)
 })
 
-test('decidirHumo: compañía o pareja sin adaptador activo se OMITE (no es fallo); adaptador sin prueba es error', () => {
-  const p = pruebaDeHumo('allianz', 'auto')
-  const sop = new Set(['allianz'])
-  assert.deepEqual(decidirHumo('allianz', 'auto', sop, true, p), { accion: 'probar' })
-  assert.equal(decidirHumo('occident', 'hogar', sop, false, null).accion, 'omitir')
-  assert.equal(decidirHumo('occident', 'hogar', sop, true, pruebaDeHumo('occident', 'hogar')).accion, 'omitir', 'compañía fuera de la constante')
-  assert.equal(decidirHumo('allianz', 'hogar', sop, false, pruebaDeHumo('allianz', 'hogar')).accion, 'omitir', 'pareja sin adaptador (flag apagado)')
-  assert.equal(decidirHumo('allianz', 'auto', sop, true, null).accion, 'error')
+const REG = ['allianz::auto', 'allianz::comunidades', 'mapfre::moto', 'mapfre::auto']
+
+test('ramosConBotDe: solo ramos con adaptador registrado Y prueba, en orden estable', () => {
+  assert.deepEqual(ramosConBotDe('Allianz', REG), ['auto', 'comunidades'])
+  assert.deepEqual(ramosConBotDe('mapfre', REG), ['auto', 'moto'])
+  assert.deepEqual(ramosConBotDe('occident', [...REG, 'occident::hogar']), [], 'registrado pero sin prueba: no cuenta')
+  assert.deepEqual(ramosConBotDe('zurich', REG), [])
+})
+
+test('decidirHumo: el WORKER elige el ramo (el pedido si tiene bot activo; si no, el primero); sin bot activo se OMITE', () => {
+  const sop = new Set(['allianz', 'mapfre'])
+  assert.deepEqual(decidirHumo('mapfre', 'moto', REG, sop), { accion: 'probar', ramo: 'moto', ramosConBot: ['auto', 'moto'] })
+  const sinBotPedido = decidirHumo('allianz', 'hogar', REG, sop)
+  assert.deepEqual(sinBotPedido, { accion: 'probar', ramo: 'auto', ramosConBot: ['auto', 'comunidades'] }, 'allianz/hogar no tiene bot: prueba otro ramo y lo dice')
+  const occ = decidirHumo('occident', 'hogar', REG, sop)
+  assert.equal(occ.accion, 'omitir')
+  assert.deepEqual(occ.ramosConBot, [])
+  assert.equal(decidirHumo('allianz', 'auto', REG, new Set(['mapfre'])).accion, 'omitir', 'compañía fuera de la constante')
 })
 
 test('HUMO_COMPANIAS_SOPORTADAS sale de los adaptadores registrados (no incluye occident, que no está registrado)', () => {
@@ -56,11 +66,11 @@ test('todo adaptador registrado en la imagen tiene su prueba, con SU credencial'
   }
 })
 
-test('cada prueba declara credencial, login y entrada', () => {
+test('cada prueba declara credencial, login y menú', () => {
   for (const [k, p] of Object.entries(PRUEBAS_HUMO)) {
     assert.match(p.credencial, /^[A-Z0-9_]+$/, k)
     assert.equal(typeof p.login, 'function', k)
-    assert.equal(typeof p.entrada, 'function', k)
+    assert.equal(typeof p.menu, 'function', k)
   }
 })
 
@@ -76,7 +86,13 @@ test('humo.ts: solo login y entrada. Nada de rellenar, avanzar, proyecto, guarda
   assert.ok(!/\.(click|dblclick|tap|fill|type|press|check|setChecked|selectOption|dispatchEvent|evaluate)\s*\(/.test(CODIGO), 'actúa sobre la página directamente')
   // Los clics, solo por los guardas: ctx.pulsar = pulsar(boton, guard) y el enlace de entrada exacto.
   assert.match(CODIGO, /pulsar: async \(boton\) => \{\s*await ctx\.pausaAccion\(\)\s*await pulsar\(boton, guard\)\s*\}/)
-  assert.match(CODIGO, /pulsarEnlaceEntrada: \(boton\) => pulsarEnlaceEntradaAutorizado\(boton, guard, trabajo\.compania\)/)
+  assert.ok(!/pulsarEnlaceEntrada|abrirNuevaAlta|abrirTarificacion|abrirComunidades|abrirFormulario/.test(CODIGO), 'la entrada no se abre ni se pulsa: solo se comprueba que el menú es visible')
+  // El menú se comprueba VISIBLE, nunca pulsado: ninguna prueba recibe `ctx.pulsar` en su función de menú.
+  const menus = CODIGO.match(/async function menu\w+\([^)]*\)/g) ?? []
+  assert.equal(menus.length, 2)
+  for (const m of menus) assert.ok(!/ctx/.test(m), `${m}: el menú no recibe el contexto (no puede pulsar)`)
+  assert.equal((CODIGO.match(/waitFor\(\{ state: 'visible'/g) ?? []).length, 1)
+  assert.match(CODIGO, /localizar\(page, \['tab'\], PESTANA_NUEVA_PRODUCCION/)
   // Lo que un adaptador usaría para tarificar está PROHIBIDO en este contexto.
   for (const n of ['adjuntarPdf', 'elegirOpcion', 'avanzarATarificar', 'abrirProyecto']) assert.match(CODIGO, new RegExp(`${n}: prohibido\\('${n}'\\)`), `${n} tiene que lanzar`)
   // Sin riesgo: no lee ni valida datos de cliente; sin sesión previa; sin tracing; sin disco.

@@ -115,7 +115,7 @@ export type CuerpoResultado =
   /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
   | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string; presupuesto?: CuerpoResultadoPresupuesto } & MetaTraza)
   /** Prueba nocturna de humo superada (15/10/2026, src/humo.ts): login y pantalla de inicio alcanzados. Un fallo va como `error`. */
-  | ({ trabajoId: string; resultado: 'humo'; omitido?: string } & MetaTraza)
+  | ({ trabajoId: string; resultado: 'humo'; omitido?: string; ramoProbado?: string; ramosConBot?: string[] } & MetaTraza)
 
 /** Presupuesto guardado por el explorador (14/10/2026): referencia del portal (`null` = no se vio) y su PDF si llegó. */
 export type CuerpoResultadoPresupuesto = { referencia: string | null; pdf: { nombre: string; base64: string } | null }

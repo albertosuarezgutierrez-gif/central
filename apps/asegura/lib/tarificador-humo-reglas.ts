@@ -84,9 +84,18 @@ export function motivoPausaHumo(compania: string, ramo: string): string {
 
 // ─── Informe ─────────────────────────────────────────────────────────────────
 
-export type FilaHumo = { compania: string; ramo: string; estado: string; tipoError: string | null; mensaje: string | null }
+export type FilaHumo = {
+  compania: string; ramo: string; estado: string; tipoError: string | null; mensaje: string | null
+  /** Ramos con bot activo en la imagen que el worker declaró al responder (ok u omitido). `null` = no consta (fallo, o worker antiguo). */
+  conBot?: readonly string[] | null
+}
 export type FalloHumo = { compania: string; ramo: string; motivo: string; omitida: boolean }
-export type ResumenHumo = { total: number; ok: number; fallos: FalloHumo[] }
+/** «Integración activa sin bot»: ramos activos en `companias_integracion` que la imagen del worker no tiene. */
+export type SinBotHumo = { compania: string; ramos: string[] }
+export type ResumenHumo = {
+  /** Compañías PROBADAS (pasaron o fallaron). Un omitido por falta de bot no cuenta. */
+  total: number; ok: number; fallos: FalloHumo[]; sinBot: SinBotHumo[]; omitidos: number
+}
 
 const MAX_MOTIVO = 110
 
@@ -99,21 +108,29 @@ export function motivoCorto(tipoError: string | null | undefined, mensaje: strin
 }
 
 /**
- * Filas de humo de la noche (más recientes primero) → qué pasó. Por pareja cuenta la más reciente. `ok` = pasó. Un humo que no
- * terminó (pendiente/en curso: la máquina no llegó a lanzarse) cuenta como fallo: nadie ha mirado ese portal. Un humo OMITIDO por el worker (compañía sin adaptador activo) no cuenta ni avisa. Un humo omitido
- * por credenciales de otra pareja de la misma compañía solo se lista si esa compañía no tiene ya otro fallo.
+ * Filas de humo de la noche (más recientes primero) + las parejas ACTIVAS en la BD → qué pasó. Por pareja cuenta la más reciente.
+ * `ok` = pasó. Un humo que no terminó (pendiente/en curso) cuenta como fallo: nadie ha mirado ese portal. Un humo OMITIDO por el
+ * worker (sin bot activo) no cuenta como probado. «Sin bot»: de cada compañía que el worker contestó (ok u omitido) con su lista de
+ * ramos con bot, los ramos ACTIVOS en la BD que no están en esa lista. Un humo omitido por credenciales de otra pareja solo se
+ * lista si esa compañía no tiene ya otro fallo.
  */
-export function resumirHumo(filas: readonly FilaHumo[]): ResumenHumo {
+export function resumirHumo(filas: readonly FilaHumo[], activas: readonly { compania: string; ramo: string }[] = []): ResumenHumo {
   const vistas = new Set<string>()
   const fallos: FalloHumo[] = []
+  const conBotDe = new Map<string, readonly string[]>()
   let ok = 0
   let total = 0
+  let omitidos = 0
   for (const f of filas) {
     const k = `${f.compania}/${f.ramo}`
     if (vistas.has(k)) continue
     vistas.add(k)
-    // OMITIDO por el worker (sin adaptador activo): no cuenta ni avisa.
-    if (f.estado === 'cancelado' && (f.mensaje ?? '').startsWith(PREFIJO_HUMO_NO_SOPORTADO)) continue
+    if (f.conBot && !conBotDe.has(f.compania)) conBotDe.set(f.compania, f.conBot)
+    // OMITIDO por el worker (sin bot activo): no se probó nada de esa compañía.
+    if (f.estado === 'cancelado' && (f.mensaje ?? '').startsWith(PREFIJO_HUMO_NO_SOPORTADO)) {
+      omitidos++
+      continue
+    }
     total++
     if (f.estado === 'ok') {
       ok++
@@ -127,14 +144,21 @@ export function resumirHumo(filas: readonly FilaHumo[]): ResumenHumo {
     fallos.push({ compania: f.compania, ramo: f.ramo, motivo, omitida })
   }
   const conFalloPropio = new Set(fallos.filter((x) => !x.omitida).map((x) => x.compania))
-  return { total, ok, fallos: fallos.filter((x) => !x.omitida || !conFalloPropio.has(x.compania)) }
+  const sinBot: SinBotHumo[] = []
+  for (const [compania, conBot] of conBotDe) {
+    const ramos = [...new Set(activas.filter((a) => a.compania === compania && !conBot.includes(a.ramo)).map((a) => a.ramo))].sort()
+    if (ramos.length) sinBot.push({ compania, ramos })
+  }
+  return { total, ok, fallos: fallos.filter((x) => !x.omitida || !conFalloPropio.has(x.compania)), sinBot, omitidos }
 }
 
 const nombre = (c: string) => (c ? c.charAt(0).toUpperCase() + c.slice(1) : c)
 
-/** Texto del ÚNICO aviso a Alberto (HTML de `tgSend`, todo escapado). `null` si no falla nada: entonces no se avisa. PURO. */
+const lineasSinBot = (r: ResumenHumo) => r.sinBot.map((x) => `• <b>${escapeHtml(nombre(x.compania))}</b> (${escapeHtml(x.ramos.join(', '))}): integración activa sin bot`)
+
+/** Texto del ÚNICO aviso a Alberto (HTML de `tgSend`, todo escapado). `null` si no falla nada ni hay integraciones sin bot. PURO. */
 export function textoAvisoHumo(r: ResumenHumo): string | null {
-  if (r.fallos.length === 0) return null
+  if (r.fallos.length === 0 && r.sinBot.length === 0) return null
   // Una línea por compañía y motivo, con sus ramos.
   const grupos = new Map<string, { compania: string; motivo: string; ramos: string[] }>()
   for (const f of r.fallos) {
@@ -143,13 +167,47 @@ export function textoAvisoHumo(r: ResumenHumo): string | null {
     g.ramos.push(f.ramo)
     grupos.set(k, g)
   }
-  const lineas = [...grupos.values()].map((g) => `• <b>${escapeHtml(nombre(g.compania))}</b> (${escapeHtml([...new Set(g.ramos)].sort().join(', '))}): ${escapeHtml(g.motivo)}`)
+  const lineas = [
+    ...[...grupos.values()].map((g) => `• <b>${escapeHtml(nombre(g.compania))}</b> (${escapeHtml([...new Set(g.ramos)].sort().join(', '))}): ${escapeHtml(g.motivo)}`),
+    ...lineasSinBot(r),
+  ]
   const visibles = lineas.slice(0, MAX_LINEAS_AVISO_HUMO)
   const resto = lineas.length - visibles.length
   return [
-    `🌙 <b>Prueba nocturna de los bots</b>: fallan ${r.fallos.length} de ${r.total}`,
+    r.fallos.length ? `🌙 <b>Prueba nocturna de los bots</b>: fallan ${r.fallos.length} de ${r.total}` : '🌙 <b>Prueba nocturna de los bots</b>: sin fallos, con avisos',
     ...visibles,
     ...(resto > 0 ? [`… y ${resto} más`] : []),
-    'Un portal ha cambiado el acceso o el menú. Revisa el bot antes de que lo use un comercial.',
+    ...(r.fallos.length ? ['Un portal ha cambiado el acceso o el menú. Revisa el bot antes de que lo use un comercial.'] : []),
   ].join('\n')
+}
+
+// ─── Silencio ≠ «todo bien» ──────────────────────────────────────────────────
+
+export type ContextoNadaProbado = {
+  rpaActivo: boolean
+  esquemaHumo: boolean
+  /** Compañías con integración activa y `rpa_autorizada`. */
+  companiasActivas: number
+  /** De ellas, las que tienen alguna pareja en pausa. */
+  companiasPausadas: number
+  /** Trabajos de humo de la noche (cualquier estado). */
+  filas: number
+  /** De ellos, omitidos por falta de bot. */
+  omitidos: number
+}
+
+/** Por qué una noche termina con 0 compañías probadas. PURO; el primer motivo que casa. */
+export function motivoNadaProbado(c: ContextoNadaProbado): string {
+  if (!c.rpaActivo) return 'el RPA está apagado (TARIFICADOR_RPA_ACTIVO)'
+  if (!c.esquemaHumo) return 'falta aplicar el SQL del humo'
+  if (c.companiasActivas === 0) return 'no hay integraciones activas'
+  if (c.filas === 0 && c.companiasPausadas >= c.companiasActivas) return 'todas las compañías están en pausa'
+  if (c.filas === 0) return 'no se encoló ninguna prueba: ¿falló el cron de las 03:15?'
+  if (c.omitidos >= c.filas) return 'ninguna compañía activa tiene bot en la imagen'
+  return 'las pruebas no dieron resultado'
+}
+
+/** Aviso corto cuando no se probó NINGUNA compañía (más, si procede, las integraciones activas sin bot). PURO. */
+export function textoNadaProbado(motivo: string, r?: ResumenHumo): string {
+  return [`🌙 <b>Prueba nocturna</b>: no se probó nada (${escapeHtml(motivo)})`, ...(r ? lineasSinBot(r).slice(0, MAX_LINEAS_AVISO_HUMO) : [])].join('\n')
 }

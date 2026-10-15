@@ -437,11 +437,14 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (r.tipo === 'humo') {
       // Sin tarificación, sin evidencia, sin riesgo que purgar (va vacío): solo el desenlace. La traza no se guarda (no es una tarificación).
       // Omitido (sin adaptador activo de esa compañía en la imagen): `cancelado`, ni éxito ni fallo; el informe no lo cuenta.
-      const omitido = r.omitido ? JSON.stringify({ tipo: 'datos', mensaje: `${PREFIJO_HUMO_NO_SOPORTADO}: ${r.omitido}` }) : null
+      // `error.humo` guarda qué ramo se probó y qué ramos tienen bot en la imagen (el informe avisa de «integración activa sin bot»).
+      const humo = r.ramosConBot ? { humo: { ramoProbado: r.ramoProbado, conBot: r.ramosConBot } } : {}
+      const omitido = r.omitido ? JSON.stringify({ tipo: 'datos', mensaje: `${PREFIJO_HUMO_NO_SOPORTADO}: ${r.omitido}`, ...humo }) : null
+      const errorOk = !omitido && r.ramosConBot ? JSON.stringify(humo) : null
       await tx.$executeRaw`
         update seguros.tarificacion_trabajos
         set estado = case when ${omitido}::text is null then 'ok' else 'cancelado' end, lease_hasta = null,
-            error = ${omitido}::jsonb, terminado_at = now(), updated_at = now()
+            error = coalesce(${omitido}::jsonb, ${errorOk}::jsonb), terminado_at = now(), updated_at = now()
         where id = ${t.id}::uuid and estado = 'en_curso'`
       if (conBot) await tx.$executeRaw`update seguros.tarificacion_trabajos set bot_version = coalesce(${r.botVersion}, bot_version) where id = ${t.id}::uuid`
       return { res: { estado: 'registrado' as const, estadoTrabajo: omitido ? 'cancelado' : 'ok' }, traza: null }
