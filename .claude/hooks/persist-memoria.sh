@@ -41,8 +41,38 @@ copiar_uso() {
   cp -r "$USO_STAGING"/. "$USO"/ 2>/dev/null
 }
 
+# --- ¿La rama actual ya está fusionada? Entonces NO se commitea ni empuja a ella: mover la punta
+# tras el merge quita el «Delete branch» de GitHub y deja commits huérfanos (caso ccf49acad tras #4741).
+# «Fusionada» = existe un PR de esta rama con merged_at, NO hay ningún PR abierto de la rama, y HEAD es
+# EXACTAMENTE el head.sha de un PR fusionado (la sesión no ha hecho nada después del merge). Sin heurística
+# de git: una rama nueva desde main o reutilizada tras un merge NO se confunde con una fusionada.
+# Sin gh/red/error: devuelve 1 (no fusionada) = comportamiento de siempre.
+rama_fusionada() {
+  local rama; rama="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  case "$rama" in ""|HEAD|main|master) return 1 ;; esac
+  command -v gh >/dev/null 2>&1 || return 1
+  export GIT_TERMINAL_PROMPT=0
+  local t=""; command -v timeout >/dev/null 2>&1 && t="timeout 10"
+  local filas; filas="$($t gh api "repos/{owner}/{repo}/pulls?head={owner}:$rama&state=all&per_page=30" \
+    --jq '.[] | "\(.state) \(.merged_at // "-") \(.head.sha)"' 2>/dev/null)" || return 1
+  [ -n "$filas" ] || return 1
+  printf '%s\n' "$filas" | grep -q '^open ' && return 1
+  local actual; actual="$(git rev-parse HEAD 2>/dev/null)"
+  [ -n "$actual" ] || return 1
+  local est fus sha
+  while read -r est fus sha; do
+    [ "$fus" != "-" ] || continue
+    [ "$sha" = "$actual" ] && return 0
+  done <<< "$filas"
+  return 1
+}
+
 # --- Persist: commitea+pushea la memoria si cambió (y el uso, con cadencia). ---
 persist_memoria() {
+  if rama_fusionada; then
+    echo "persist-memoria: la rama ya está fusionada; no se commitea ni empuja la memoria (evita mover la punta tras el merge)." >&2
+    return 0
+  fi
   if [ -n "$(git status --porcelain -- "$DOC" 2>/dev/null)" ] || uso_vencido; then
     copiar_uso
   fi
