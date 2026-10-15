@@ -350,12 +350,14 @@ export async function caducarAtascos(correduriaId: string): Promise<number> {
   let n = 0
   for (const h of huerfanos) {
     const tocado = await prisma.$transaction(async (tx) => {
+      // READ COMMITTED: si se re-atasca en paralelo, el NOT EXISTS va con la foto vieja; updated_at sí se re-chequea.
       const t = await tx.$executeRaw`
         update seguros.tarificacion_trabajos
         set estado = 'error_definitivo', lease_hasta = null, terminado_at = now(), updated_at = now(),
             error = coalesce(error, '{}'::jsonb) || jsonb_build_object('tipo', coalesce(error->>'tipo', 'portal'), 'mensaje', ${MENSAJE_ATASCO_HUERFANO}::text, 'atasco', 'huerfano')
         where id = ${h.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'atascado'
-          and not exists (select 1 from seguros.tarificador_atascos a where a.trabajo_id = ${h.id}::uuid and a.estado = 'esperando')`
+          and not exists (select 1 from seguros.tarificador_atascos a where a.trabajo_id = ${h.id}::uuid and a.estado = 'esperando')
+          and updated_at < now() - interval '2 minutes'`
       if (t > 0) {
         await purgarRiesgoTrabajos(tx, [h.id])
         await evaluarCorte(tx, h.id)
