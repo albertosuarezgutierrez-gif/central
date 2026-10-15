@@ -26,6 +26,7 @@ import {
   resumenDesdePares,
   SEL_CONDUCTOR,
   SEL_HISTORIAL,
+  SEL_LICENCIA,
   SEL_OBJETO,
   SEL_TOMADOR,
   TOTAL_PANTALLAS_GRABACION,
@@ -40,7 +41,7 @@ const form: FormularioAuto = {
   matricula: '0000BBB',
   codigoPostal: '00001',
   conductor: { fechaNacimiento: '1980-02-03', fechaCarne: '2005-06-07', sexo: null },
-  tomadorEsConductor: null,
+  tomadorEsConductor: true,
   tomadorEsPropietario: null,
   aniosAseguradoAnterior: 3,
   siniestrosUltimos5Anios: 0,
@@ -48,6 +49,7 @@ const form: FormularioAuto = {
   tomador: null,
   eleccionVersion: null,
   seleccionVehiculo: null,
+  companiaAnterior: 'ASEGURADORA FICTICIA',
 }
 
 const TARJETA = (producto: string, periodicidad: string, prima: string, aviso: boolean) => `<prima-producto>
@@ -75,7 +77,8 @@ const RESUMEN = `<body><app-datos-vehiculo><mat-expansion-panel-header><mat-pane
 // Campos con los names reales; `siniestros` también existe en otro componente (descuentos) y NO debe tocarse.
 const CAMPOS = (extra = '') => `<body>
 <app-datos-vehiculo><input name="matricula" formcontrolname="matricula"><input name="cpCirculacion" formcontrolname="codPostal"></app-datos-vehiculo>
-<app-conductor-habitual><input name="fechaNacimiento"><input name="fechaExpedicion"><input name="codigoDocumento"></app-conductor-habitual>
+<app-conductor-habitual><input name="fechaNacimiento"><input name="codigoDocumento"></app-conductor-habitual>
+<datos-licencia><input name="fechaExpedicion"></datos-licencia>
 <app-historial-siniestralidad><input formcontrolname="siniestros" ${extra}><input formcontrolname="tiempoAntComp" disabled></app-historial-siniestralidad>
 <app-info-descuentos><input name="siniestros" formcontrolname="siniestros"></app-info-descuentos>
 </body>`
@@ -188,11 +191,13 @@ test('planObjetoYFiguras: escribe solo lo conocido y deja el resto como pendient
   assert.deepEqual(plan.escribibles.map((o) => [o.sel, o.valor]), [
     [SEL_OBJETO.matricula, '0000BBB'],
     [SEL_OBJETO.cpCirculacion, '00001'],
-    [SEL_CONDUCTOR.fechaNacimiento, '03/02/1980'],
-    [SEL_CONDUCTOR.fechaCarne, '07/06/2005'],
+    [SEL_LICENCIA.fechaCarne, '07/06/2005'],
     [SEL_HISTORIAL.siniestrosRc5, '0'],
+    [SEL_HISTORIAL.companiaAnterior, 'ASEGURADORA FICTICIA'],
   ])
-  assert.ok(plan.pendientes.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior), 'con años asegurado > 0 hay compañía anterior pendiente')
+  assert.ok(!plan.escribibles.some((o) => o.sel === SEL_CONDUCTOR.fechaNacimiento), 'v0.8.0: la fecha de nacimiento es la del tomador (paso 1); en Figuras no se teclea')
+  assert.deepEqual(plan.pendientes.map((o) => o.etiqueta), ['uso del vehículo', 'ámbito de circulación', 'clase del permiso'], 'sin valor en el formulario: pendientes (no se suponen)')
+  assert.throws(() => planObjetoYFiguras({ ...form, companiaAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
   assert.ok(!plan.escribibles.some((o) => o.sel === SEL_HISTORIAL.aniosCompaniaAnterior), 'el campo deshabilitado nunca se escribe')
   assert.throws(() => planObjetoYFiguras({ ...form, siniestrosUltimos5Anios: null }), /siniestros/)
   assert.throws(() => planObjetoYFiguras({ ...form, aniosAseguradoAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
@@ -205,7 +210,8 @@ test('rellenarCamposTexto escribe con ámbito (no toca el homónimo de otro comp
   const pendientes = await rellenarCamposTexto(page, planObjetoYFiguras(form))
   assert.ok(pendientes.includes('uso del vehículo'))
   assert.equal(await page.locator(SEL_OBJETO.matricula).inputValue(), '0000BBB')
-  assert.equal(await page.locator(SEL_CONDUCTOR.fechaCarne).inputValue(), '07/06/2005')
+  assert.equal(await page.locator(SEL_LICENCIA.fechaCarne).inputValue(), '07/06/2005')
+  assert.equal(await page.locator(SEL_CONDUCTOR.fechaNacimiento).inputValue(), '', 'el conductor habitual (grabación 13/10) ya no se teclea')
   assert.equal(await page.locator(SEL_HISTORIAL.siniestrosRc5).inputValue(), '0')
   assert.equal(await page.locator('app-info-descuentos input').inputValue(), '', 'el campo homónimo de descuentos queda intacto')
   assert.equal(await page.locator(SEL_HISTORIAL.aniosCompaniaAnterior).inputValue(), '')
@@ -231,6 +237,7 @@ const ctxFalso = (registro: string[] = []) => ({
   pulsarEnlaceEntrada: async () => { registro.push('entrada') },
   confirmarVehiculoMapfre: async () => { registro.push('vehiculo') },
   continuarMapfre: async (_p: Page, paso: string) => { registro.push(`continuar:${paso}`) },
+  cerrarClubMapfre: async () => { registro.push('club'); return 'cerrado' },
 }) as unknown as Parameters<typeof mapfreAuto.tarificar>[2]
 
 test('tarificar: sin funciones guardadas o sin NIF del tomador para ANTES de navegar; otro ramo → datos', async () => {
@@ -342,7 +349,8 @@ test('paso 1: un campo NIF con manejador de emisión para ANTES (comprobarCampo)
 })
 
 test('del paso 2 al precio: escribe el CP y PARA antes de «Continuar» si quedan mat-select sin mapear (nada supuesto)', async () => {
-  await page.setContent(CAMPOS())
+  // v0.8.1: el «uso» SOLO cuenta como pendiente si la pantalla lo pinta (aquí sí: mat-select presente y sin valor en el riesgo).
+  await page.setContent(CAMPOS().replace('</app-datos-vehiculo>', '<mat-select formcontrolname="uso"></mat-select></app-datos-vehiculo>'))
   const r: string[] = []
   const veh = { origen: 'mapfre', denominacion: 'MARCA PRUEBA', cv: null, cc: null, puertas: null, fechaInicio: null } as unknown as Parameters<typeof precioDesdeObjetoAsegurado>[2]
   await assert.rejects(() => precioDesdeObjetoAsegurado(page, conNif, veh, ctxFalso(r)), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /uso del vehículo/.test(e.message))
@@ -352,10 +360,54 @@ test('del paso 2 al precio: escribe el CP y PARA antes de «Continuar» si queda
   await assert.rejects(() => precioDesdeObjetoAsegurado(page, { ...conNif, ramo: 'moto' }, veh, ctxFalso()), (e) => e instanceof ErrorMapaIncompleto && /MOTO/.test(e.message))
 })
 
+test('v0.8.1 (trabajo real 39c8016e): sin mat-select «uso» ni «ámbito» en la pantalla, el paso 2 NO para: CP → «Continuar» y sigue a Figuras', async () => {
+  await page.setContent(CAMPOS())
+  const r: string[] = []
+  const veh = { origen: 'mapfre', denominacion: 'MARCA PRUEBA', cv: null, cc: null, puertas: null, fechaInicio: null } as unknown as Parameters<typeof precioDesdeObjetoAsegurado>[2]
+  // Se para MÁS ADELANTE (Figuras: el contexto falso no trae la función de mat-select), nunca por el «uso».
+  await assert.rejects(() => precioDesdeObjetoAsegurado(page, { ...conNif, usoVehiculo: 'particular', ambitoCirculacion: 'espana' } as FormularioAuto, veh, ctxFalso(r)), (e) => e instanceof ErrorMapaIncompleto && !/uso del vehículo|ámbito/.test(e.message))
+  assert.equal(await page.locator(SEL_OBJETO.cpCirculacion).inputValue(), '00001')
+  assert.deepEqual(r, ['continuar:objetoAsegurado'], 'el paso 2 se completa sin uso/ámbito')
+})
+
+test('v0.8.1 (revisión): uso/ámbito ausentes solo se saltan con valor nulo o defecto; otro valor → atasco + hueco; aparecer tarde se rellena', async () => {
+  const sinPantalla = '<body><button>Continuar</button></body>'
+  const ctx = { elegirMatSelect: async () => ({ texto: 'x', origen: 'coincidencia' as const }) }
+  // (a) ausente + defecto/nulo → sigue.
+  await page.setContent(sinPantalla)
+  for (const ex of [{}, { usoVehiculo: 'particular', ambitoCirculacion: 'espana' }]) {
+    const plan = planDelPaso(planObjetoYFiguras({ ...form, ...ex, clasePermiso: 'b' } as FormularioAuto), 'objetoAsegurado')
+    assert.deepEqual(await rellenarMatSelects(page, plan, ctx, undefined, 300), [])
+    assert.deepEqual((await sinOpcionalesAusentes(page, plan, 300)).pendientes, [])
+  }
+  // (b) ausente + NO defecto → atasco + hueco (no se tarifica con el valor implícito de Mapfre).
+  const alquiler = planDelPaso(planObjetoYFiguras({ ...form, usoVehiculo: 'alquiler', ambitoCirculacion: 'internacional' } as unknown as FormularioAuto), 'objetoAsegurado')
+  assert.ok(alquiler.pendientes.every((o) => !o.opcional))
+  // Sin mapeo → pendiente NO opcional: `sinOpcionalesAusentes` lo conserva aunque no aparezca y el paso para con inventario.
+  const tras = await sinOpcionalesAusentes(page, alquiler, 300)
+  assert.deepEqual(tras.pendientes.map((o) => o.etiqueta), ['uso del vehículo', 'ámbito de circulación'])
+  assert.throws(() => exigirPasoCompleto(tras, 'objetoAsegurado'), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /uso del vehículo/.test(e.message))
+  // Un escribible NO opcional ausente (camino de `rellenarMatSelects`) → atasco + hueco.
+  const noOpc = { escribibles: [{ ...planObjetoYFiguras({ ...form, usoVehiculo: 'particular' } as FormularioAuto).escribibles.find((o) => o.etiqueta === 'uso del vehículo')!, opcional: false }], pendientes: [] }
+  await assert.rejects(() => rellenarMatSelects(page, noOpc, ctx, undefined, 300), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /uso del vehículo/.test(e.message))
+  const profesional = planDelPaso(planObjetoYFiguras({ ...form, usoVehiculo: 'profesional' } as unknown as FormularioAuto), 'objetoAsegurado')
+  assert.ok(profesional.pendientes.some((o) => o.etiqueta === 'uso del vehículo' && !o.opcional))
+  // (c) aparece TARDE dentro de la espera → se rellena (espera activa, no count() instantáneo).
+  const plan = planDelPaso(planObjetoYFiguras({ ...form, usoVehiculo: 'particular', ambitoCirculacion: 'espana' } as FormularioAuto), 'objetoAsegurado')
+  await page.setContent(sinPantalla)
+  const vistos: string[] = []
+  setTimeout(() => { void page.evaluate(() => { document.body.insertAdjacentHTML('beforeend', '<app-datos-vehiculo><mat-select formcontrolname="uso">x</mat-select><mat-select formcontrolname="ambitoCirculacion">y</mat-select></app-datos-vehiculo>') }) }, 600)
+  const hechos = await rellenarMatSelects(page, plan, { elegirMatSelect: async (_s, _v, o) => { vistos.push(o.etiqueta); return { texto: 'x', origen: 'coincidencia' as const } } }, undefined, 3_000)
+  assert.deepEqual(hechos, ['uso del vehículo', 'ámbito de circulación'])
+  assert.deepEqual(vistos, ['uso del vehículo', 'ámbito de circulación'])
+  // Y la espera por omisión es la de ~2,5 s.
+  assert.equal(ESPERA_OPCIONAL_MS, 2_500)
+})
+
 test('planDelPaso / exigirPasoCompleto: cada operación es de su paso; un paso con pendientes no se completa', () => {
   const plan = planObjetoYFiguras(form)
   assert.deepEqual(planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]).escribibles.map((o) => o.sel), [SEL_OBJETO.cpCirculacion])
-  assert.deepEqual(planDelPaso(plan, 'figuras').escribibles.map((o) => o.sel), [SEL_CONDUCTOR.fechaNacimiento, SEL_CONDUCTOR.fechaCarne, SEL_HISTORIAL.siniestrosRc5])
+  assert.deepEqual(planDelPaso(plan, 'figuras').escribibles.map((o) => o.sel), [SEL_LICENCIA.fechaCarne, SEL_HISTORIAL.siniestrosRc5, SEL_HISTORIAL.companiaAnterior])
   assert.throws(() => exigirPasoCompleto(plan, 'figuras'), (e) => e instanceof ErrorMapaIncompleto && /clase del permiso/.test(e.message))
   assert.doesNotThrow(() => exigirPasoCompleto({ escribibles: plan.escribibles, pendientes: [] }, 'figuras'))
 })
@@ -371,7 +423,7 @@ test('el guard rechaza los botones peligrosos de NSEI y el adaptador no pulsa na
 })
 
 // ───────────── mat-select: mapeo explícito + capa común (pieza 4, 14/10/2026) ─────────────
-import { MAPEO_MAPFRE_AUTO, rellenarMatSelects, textosMapfreDe } from '../src/adapters/mapfre/auto.ts'
+import { ESPERA_OPCIONAL_MS, MAPEO_MAPFRE_AUTO, rellenarMatSelects, sinOpcionalesAusentes, textosMapfreDe } from '../src/adapters/mapfre/auto.ts'
 
 test('MAPEO_MAPFRE_AUTO: datos explícitos y congelados; sin valor o sin mapeo → null (no se supone nada)', () => {
   assert.deepEqual(textosMapfreDe('uso', 'Particular'), ['Particular', 'Privado'])
@@ -392,7 +444,7 @@ test('planObjetoYFiguras: con los valores del formulario los mat-select pasan a 
     ['clase del permiso', ['B']],
     ['compañía anterior', ['Aseguradora Ficticia']],
   ])
-  assert.deepEqual(con.pendientes.map((o) => o.etiqueta), ['¿tiene compañía anterior?'], 'el interruptor sigue sin DOM: pendiente')
+  assert.deepEqual(con.pendientes.map((o) => o.etiqueta), [], 'v0.8.0: el interruptor no se pulsa; se comprueba en pantalla (`historialAnterior`)')
   // Un valor sin mapeo NO se inventa: sigue pendiente.
   const raro = planObjetoYFiguras({ ...form, usoVehiculo: 'taxi' } as unknown as FormularioAuto)
   assert.ok(raro.pendientes.some((o) => o.etiqueta === 'uso del vehículo'))
@@ -407,8 +459,29 @@ test('rellenarMatSelects: cada mat-select del plan por ctx.elegirMatSelect con s
   assert.deepEqual(vistos, [['uso del vehículo', ['Particular', 'Privado']], ['ámbito de circulación', ['España', 'Nacional']]])
   await assert.rejects(() => rellenarMatSelects(page, plan, {}), (e) => e instanceof ErrorMapaIncompleto)
   await page.setContent('<body></body>')
-  await assert.rejects(() => rellenarMatSelects(page, plan, { elegirMatSelect: async () => ({ texto: '', origen: 'ia' as const }) }), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom)
+  // v0.8.1: uso y ámbito son OPCIONALES: si el flujo no los pinta, se sigue sin tocar nada (trabajo real 39c8016e).
+  assert.deepEqual(await rellenarMatSelects(page, plan, { elegirMatSelect: async () => { throw new Error('no debe abrirse') } }), [])
   assert.deepEqual(await rellenarMatSelects(page, { escribibles: [], pendientes: [] }, {}), [])
+})
+
+test('v0.8.1: un mat-select OBLIGATORIO que no aparece → atasco + hueco; uso/ámbito opcionales ausentes no paran el paso', async () => {
+  const completo = planObjetoYFiguras({ ...form, usoVehiculo: 'particular', ambitoCirculacion: 'espana', clasePermiso: 'b' } as FormularioAuto)
+  const clase = { escribibles: planDelPaso(completo, 'figuras').escribibles.filter((o) => o.sel === SEL_LICENCIA.clasePermiso), pendientes: [] }
+  await page.setContent('<body><button>Continuar</button></body>')
+  const registros: string[] = []
+  const formador = { trabajoId: 't', compania: 'mapfre', ramo: 'auto', apiUrl: 'http://127.0.0.1:9', secreto: 'x', activo: true, acompanado: false, conocimiento: [], resueltos: new Map(), redactar: (t: string) => t, log: (m: string) => { registros.push(m) }, atasco: null as unknown }
+  await assert.rejects(() => rellenarMatSelects(page, clase, { elegirMatSelect: async () => ({ texto: 'B', origen: 'coincidencia' as const }) }, { page, formador: formador as never }), (e) => e instanceof ErrorMapaIncompleto && e.pideInventarioDom && /clase del permiso/.test(e.message))
+  assert.ok(registros.includes('atasco_preparado') || registros.includes('atasco_sin_candidatos'), 'pasa por el checkpoint de atasco de la capa común')
+  // Pendientes: el uso/ámbito sin valor y AUSENTE no impide «Continuar»; PRESENTE sigue pendiente (para con inventario).
+  const sinValor = planDelPaso(planObjetoYFiguras(form), 'objetoAsegurado')
+  assert.ok(sinValor.pendientes.every((o) => o.opcional === true))
+  assert.deepEqual((await sinOpcionalesAusentes(page, sinValor)).pendientes, [])
+  await page.setContent('<body><app-datos-vehiculo><mat-select formcontrolname="uso">x</mat-select></app-datos-vehiculo></body>')
+  const conUso = await sinOpcionalesAusentes(page, sinValor)
+  assert.deepEqual(conUso.pendientes.map((o) => o.etiqueta), ['uso del vehículo'])
+  assert.throws(() => exigirPasoCompleto(conUso, 'objetoAsegurado'), (e) => e instanceof ErrorMapaIncompleto && /uso del vehículo/.test(e.message))
+  // La clase del permiso NO es opcional: sin valor sigue pendiente aunque no se vea.
+  assert.ok(planObjetoYFiguras(form).pendientes.some((o) => o.etiqueta === 'clase del permiso' && !o.opcional))
 })
 
 // ───────────── Revisión PR #4710 (14/10/2026): datos de la ficha, «nuevo» solo con aviso, nada se sobrescribe, atascos ─────────────

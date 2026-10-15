@@ -126,7 +126,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
               {c.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
             </select>
           ) : (
-            <input inputMode="numeric" value={extra[c.clave] ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} placeholder={c.placeholder}
+            <input inputMode={c.texto ? 'text' : 'numeric'} maxLength={c.maxLength} autoComplete="off" value={extra[c.clave] ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} placeholder={c.placeholder}
               style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
           )}
         </label>
@@ -146,7 +146,9 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
       )}
       <div style={{ display: 'grid', gap: 12, marginTop: lista.length ? 12 : 0 }}>
         {lista.map((i) => {
-          const bloqueo = bloqueosPorCompania?.[i.compania] ?? null
+          // Aviso fijo de la ficha (bloqueosPorCompania) o, si no hay, lo que falta SOLO para esa compañía (p. ej. Mapfre y la
+          // compañía anterior); en los dos casos el botón de esa compañía no encola.
+          const bloqueo = bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? adaptador.faltaPorCompania?.(formulario, extra, i.compania) ?? null : null)
           return (
             <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId}
               formulario={bloqueo && resultado.ok ? { ok: false, faltan: [bloqueo] } : resultado} aviso={bloqueo} />

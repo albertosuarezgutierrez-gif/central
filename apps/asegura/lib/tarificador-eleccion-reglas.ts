@@ -61,7 +61,7 @@ export function planEleccionVersion(f: FilaEleccion, hoy: Date = new Date()): Pl
   if (f.modo === 'exploracion') return { intentar: false, motivo: 'trabajo de exploración' }
   if (f.ramo !== 'moto' && f.ramo !== 'auto') return { intentar: false, motivo: `ramo ${f.ramo}` }
   const err = obj(f.error)
-  if (err?.tipo !== 'captcha') return { intentar: false, motivo: 'no es una elección de versión' }
+  if (err?.tipo !== 'eleccion' && err?.tipo !== 'captcha') return { intentar: false, motivo: 'no es una elección de versión' }
   const opciones = validarOpcionesVersion(err.opcionesVersion)
   if (!opciones) return { intentar: false, motivo: 'sin lista de versiones' }
   const rg = obj(f.riesgo)
@@ -134,7 +134,7 @@ function eleccionAutomatica(riesgo: unknown): { codigo: string; etiqueta: string
 export function memoriaAInvalidar(f: FilaEleccion): { k: ClaveMemoria; codigo: string } | null {
   if (f.estado !== 'requiere_humano') return null
   const err = obj(f.error)
-  if (err?.tipo !== 'captcha' || !validarOpcionesVersion(err.opcionesVersion)) return null
+  if ((err?.tipo !== 'eleccion' && err?.tipo !== 'captcha') || !validarOpcionesVersion(err.opcionesVersion)) return null
   const a = eleccionAutomatica(f.riesgo)
   if (!a || a.origen !== 'memoria') return null
   return { k: { correduriaId: f.correduria_id, compania: f.compania, ramo: f.ramo, clave: a.clave }, codigo: a.codigo }

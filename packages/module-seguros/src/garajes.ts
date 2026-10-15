@@ -19,6 +19,7 @@ export const GARAJES_CONOCIDOS: Readonly<Record<string, { etiqueta: string; clas
   IndividualGarage: { etiqueta: 'Garaje individual', clase: 'individual' },
   Street: { etiqueta: 'En la calle', clase: 'calle' },
   PublicRoad: { etiqueta: 'En la vía pública', clase: 'calle' },
+  NoGarage: { etiqueta: 'En la vía pública', clase: 'calle' },
 }
 
 const limpio = (v: string | null | undefined): string => (typeof v === 'string' ? v.trim() : '')
@@ -67,14 +68,17 @@ function claseDeOpcion(o: { id: string; nombre: string }): ClaseGaraje | null {
  * etiqueta (sin distinguir mayúsculas); y, si no, la equivalencia explícita: misma CLASE (p. ej. `PublicRoad` y `Street`
  * son las dos «calle») y UNA sola opción del catálogo de esa clase. «Garaje» a secas no se equipara a nada (no dice si es
  * individual o comunitario). `null` = no se resuelve: se pregunta, NUNCA se sustituye por el defecto.
+ * Un riesgo de calle (`PublicRoad`, `Street`, «vía pública») va PRIMERO a `NoGarage` si el catálogo lo tiene (equivalencia
+ * conocida de Codeoscopic, 15/10/2026); sin `NoGarage` en catálogo, sigue la lógica de abajo.
  */
 export function resolverGarajeEnCatalogo(guardado: string | null | undefined, catalogo: readonly { id: string; nombre: string }[]): string | null {
   const v = limpio(guardado)
   if (v === '') return null
   if (catalogo.some((o) => o.id === v)) return v
+  const clase = GARAJES_CONOCIDOS[v]?.clase ?? claseDeTexto(v)
+  if (clase === 'calle' && catalogo.some((o) => o.id === 'NoGarage')) return 'NoGarage'
   const porEtiqueta = catalogo.filter((o) => o.nombre.trim().toLowerCase() === v.toLowerCase())
   if (porEtiqueta.length === 1) return porEtiqueta[0]!.id
-  const clase = GARAJES_CONOCIDOS[v]?.clase ?? claseDeTexto(v)
   if (clase === null || clase === 'garaje') return null
   const mismas = catalogo.filter((o) => claseDeOpcion(o) === clase)
   return mismas.length === 1 ? mismas[0]!.id : null

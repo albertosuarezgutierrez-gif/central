@@ -2,6 +2,20 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { duermeEnGaraje, etiquetaGaraje, resolverGarajeEnCatalogo, rotuloGaraje } from './garajes.ts'
 
+test('NoGarage (Codeoscopic): «En la vía pública», duerme en calle', () => {
+  assert.equal(etiquetaGaraje('NoGarage'), 'En la vía pública')
+  assert.equal(rotuloGaraje('NoGarage'), 'En la vía pública')
+  assert.equal(duermeEnGaraje('NoGarage'), false)
+})
+
+test('riesgo de calle + catálogo con NoGarage → NoGarage (prioritario sobre Street)', () => {
+  const catConNoGarage = [...CAT, { id: 'NoGarage', nombre: 'En la vía pública' }]
+  assert.equal(resolverGarajeEnCatalogo('PublicRoad', catConNoGarage), 'NoGarage')
+  assert.equal(resolverGarajeEnCatalogo('Street', catConNoGarage), 'Street', 'mismo id gana')
+  assert.equal(resolverGarajeEnCatalogo('NoGarage', catConNoGarage), 'NoGarage')
+  assert.equal(resolverGarajeEnCatalogo('En la vía pública', catConNoGarage), 'NoGarage')
+})
+
 test('etiqueta y rótulo: en español; un código no visto se dice como código, nunca desnudo ni traducido', () => {
   assert.equal(etiquetaGaraje('PublicRoad'), 'En la vía pública')
   assert.equal(etiquetaGaraje('CommunalParking'), 'Garaje comunitario')

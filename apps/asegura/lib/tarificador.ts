@@ -665,7 +665,10 @@ async function marcarFallo(
     htmlId = await guardarAdjunto(db, evidencia.trabajo, { nombre: `fallo-${id.slice(0, 8)}.html`, mime: 'text/html', contenido: Buffer.from(evidencia.html, 'utf8'), notas: `HTML (redactado) del fallo del tarificador RPA (${error.tipo})` })
   }
   // `...error` lleva también los accesorios ya validados del cable (`opcionesVersion`, `inventarioDom`): van al jsonb.
-  const err = JSON.stringify({ ...error, html_documento_id: htmlId, en: new Date().toISOString() })
+  // Marca (15/10/2026): un `atascado` dice en su `error` que espera elección y con qué clave (solo la clave: el checkpoint, con
+  // sus selectores, vive en `tarificador_atascos`). La caducidad la pisa con 'caducado' y el barrido de huérfanos con 'huerfano'.
+  const marcaAtasco = atasco ? { atasco: 'esperando', atascoClave: atasco.clave } : {}
+  const err = JSON.stringify({ ...error, ...marcaAtasco, html_documento_id: htmlId, en: new Date().toISOString() })
   let filasTocadas: number
   if (conBotVersion) {
     filasTocadas = await db.$executeRaw`

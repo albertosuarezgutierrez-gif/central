@@ -16,6 +16,7 @@
 
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-10-15 · facturas-correo** · hizo: Vía B sana (copia 15/10); 1 candidato real (Vercel recibo 94,20 US$, 14/10) archivado en 10-Octubre-2026 + fila facturas_drive + Procesada; resto del correo = ruido/correduría no factura; backlog 4.0: 3 sin_revisar (SiQue oct 1.128,48€, Supabase 25 US$, Anthropic 180€) sin cargo aún en banco; dudas: Vercel sep 106,76 US$ ↔ cargo 16/09 −95,44€ (ratio 0,894 = ago) sin casar por ser divisa → para tu decisión; PDF-pendiente: 2 hilos Endesa Socorro (sep/ago), Extraccion-fallida: 4 Allianz/Giraldillo/acta; fallos: —; PRs/commits: —
 
 - **2026-10-14 · trading-analista** · hizo: pasada completa 20:15 UTC (NAV 33.845,85€→saldo, cartera, operaciones 0 nuevas, latido, /analizar y /puntuar con 24/24 símbolos, Telegram enviado); dudas: contraste de 2ª fuente devolvió el cierre del 13/10 (24 desfasados, sin contrastar); fallos: ninguno HTTP; canal-aviso.sh no admite payloads >128 KB (analizar pesa ~335 KB, se usó copia con @fichero en scratchpad); PRs/commits: ninguno aparte de esta entrada
 - **2026-10-14 · facturas-correo** · hizo: Vía B sana; 0 candidatos nuevos por archivar (IONOS ya lo registró el cron); barrido 4.0 → 3 `sin_revisar` de octubre sin cargo (Sique Brilla 1.128,48 sin transferencia aún; Supabase 25 USD sin cargo; Anthropic 180 € vs cargos de 170 € el 01 y 02/10, no casa), sin auto-confirmar; dudas: Anthropic 180 vs 170; fallos: —; PRs/commits: —
@@ -165,3 +166,6 @@ arriba).
 
 ## 12/10/2026 — sivra_mercado_booking
 24 ventanas de mercado (ene-feb 2027 eventos + 5/6/2027) = 235 comps booking_mcp; 4/4 escaparates propios medidos (House 2536€/4n, Busto Reform 358€/4n, Dúplex 288€/2n, Luxury Busto 296€/2n). 0 sin respuesta. Propio descartado: House Sevillana (5 ventanas). Tope max=24 dejó 516 ventanas fuera. Pico 19-22/02/2027 (aforo 12: 2,2-3,6k€/2n).
+
+## 15/10/2026 — sivra_mercado_booking
+23/24 ventanas de mercado (17-23 oct, 6 y 28-nov-2026, 22-ene-2027; aforos 2/4/5/12) = 227 comps booking_mcp; 1 sin respuesta (17-oct aforo 12, not_found). Escaparate propio 4/4 (Dúplex 4n 649,59€, Luxury Busto 2n 244,31€, House 2n 939€, Busto Reform 3n 244,76€). 3 anuncios propios (House Sevillana) descartados del corpus. Plan: 532 ventanas recortadas por tope.

@@ -213,7 +213,7 @@ test('buscador de poblaciones: una celda → la pulsa; varias + poblacion que ca
     await page.setContent(POBLACIONES(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
     await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, eleccion), (e: unknown) => {
       assert.ok(e instanceof ErrorEleccionPoblacion)
-      assert.equal(e.tipo, 'captcha')
+      assert.equal(e.tipo, 'eleccion', 'código propio: no es un captcha (15/10/2026)')
       assert.deepEqual(opcionesPoblacionDe(e), [{ codigo: '00001- VILLA ÁLAMO', etiqueta: 'VILLA ÁLAMO' }, { codigo: '00001- PUEBLO NUEVO', etiqueta: 'PUEBLO NUEVO' }])
       return true
     })
@@ -229,9 +229,9 @@ test('buscador de poblaciones: eleccionPoblacion de la bandeja manda; si la celd
   await page.setContent(POBLACIONES(['VILLA PRUEBA'], false))
   await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 600), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
   assert.equal(await page.evaluate(() => (window as unknown as { archivado?: number }).archivado), undefined, 'no pulsó Archivar')
-  // Viaja estructurada: el runner la clasifica como captcha (definitivo) con la lista.
+  // Viaja estructurada: el runner la clasifica como `eleccion` (definitivo → requiere_humano) con la lista.
   const c = clasificarIntento(new ErrorEleccionPoblacion([{ codigo: '00001- A', etiqueta: 'A' }, { codigo: '00001- B', etiqueta: 'B' }]), { logueado: true, loginVisible: false, ultimo5xx: null })
-  assert.equal(c.tipo, 'captcha')
+  assert.equal(c.tipo, 'eleccion')
   assert.equal(c.transitorio, null)
   assert.equal(c.opcionesPoblacion?.length, 2)
   assert.match(c.mensaje, /^requiere_eleccion_poblacion: /)

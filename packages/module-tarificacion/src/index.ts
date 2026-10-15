@@ -339,6 +339,8 @@ export {
   AMBITO_CIRCULACION_POR_DEFECTO,
   CLASE_PERMISO_POR_DEFECTO,
   MAX_COMPANIA_ANTERIOR,
+  COMPANIAS_PIDEN_COMPANIA_ANTERIOR,
+  faltaCompaniaAnterior,
   type UsoVehiculo,
   type AmbitoCirculacion,
   type ClasePermiso,

@@ -325,9 +325,13 @@ export async function relanzarTrabajo(correduriaId: string, trabajoId: string, a
 
 // ─── ATASCO: caducidad (barrido) ─────────────────────────────────────────────
 
+/** Motivo del trabajo `atascado` que se quedó sin atasco `esperando` (huérfano): nadie podía verlo ni elegir. */
+export const MENSAJE_ATASCO_HUERFANO = 'Atascado sin punto de espera: el robot paró pero no quedó ningún atasco que elegir (ni pantalla ni Telegram). El trabajo se cierra; vuelve a pedir el presupuesto desde la oportunidad.'
+
 /**
  * Atascos sin respuesta pasada su hora → el trabajo a `error_definitivo` (con el motivo), su riesgo purgado y el corte
- * evaluado. Un atasco cuyo trabajo ya no está `atascado` (lo movió otra vía) se cierra como `descartado`.
+ * evaluado. Un atasco cuyo trabajo ya no está `atascado` (lo movió otra vía) se cierra como `descartado`, y un trabajo
+ * `atascado` sin atasco `esperando` (huérfano) se cierra como error definitivo. Devuelve cuántos trabajos cerró.
  */
 export async function caducarAtascos(correduriaId: string): Promise<number> {
   if (!(await hayAtascos())) return 0
@@ -335,11 +339,37 @@ export async function caducarAtascos(correduriaId: string): Promise<number> {
     update seguros.tarificador_atascos a set estado = 'descartado'
     where a.correduria_id = ${correduriaId}::uuid and a.estado = 'esperando'
       and not exists (select 1 from seguros.tarificacion_trabajos t where t.id = a.trabajo_id and t.estado = 'atascado')`
+  // HUÉRFANOS (15/10/2026): un trabajo `atascado` sin NINGÚN atasco `esperando` (lo cerró otra vía, se perdió la fila…) no lo
+  // ve ni la pantalla «Bots atascados» ni Telegram y no caducaría nunca: se cierra como error definitivo con su motivo. Margen
+  // de 2 min (el atasco se guarda en la MISMA transacción que el estado; el margen es solo prudencia).
+  const huerfanos = await prisma.$queryRaw<{ id: string }[]>`
+    select t.id::text as id from seguros.tarificacion_trabajos t
+    where t.correduria_id = ${correduriaId}::uuid and t.estado = 'atascado' and t.updated_at < now() - interval '2 minutes'
+      and not exists (select 1 from seguros.tarificador_atascos a where a.trabajo_id = t.id and a.estado = 'esperando')
+    limit 100`
+  let n = 0
+  for (const h of huerfanos) {
+    const tocado = await prisma.$transaction(async (tx) => {
+      // READ COMMITTED: si se re-atasca en paralelo, el NOT EXISTS va con la foto vieja; updated_at sí se re-chequea.
+      const t = await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set estado = 'error_definitivo', lease_hasta = null, terminado_at = now(), updated_at = now(),
+            error = coalesce(error, '{}'::jsonb) || jsonb_build_object('tipo', coalesce(error->>'tipo', 'portal'), 'mensaje', ${MENSAJE_ATASCO_HUERFANO}::text, 'atasco', 'huerfano')
+        where id = ${h.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'atascado'
+          and not exists (select 1 from seguros.tarificador_atascos a where a.trabajo_id = ${h.id}::uuid and a.estado = 'esperando')
+          and updated_at < now() - interval '2 minutes'`
+      if (t > 0) {
+        await purgarRiesgoTrabajos(tx, [h.id])
+        await evaluarCorte(tx, h.id)
+      }
+      return t > 0
+    }, { timeout: 15000, maxWait: 10000 })
+    if (tocado) n++
+  }
   const vencidos = await prisma.$queryRaw<{ id: string; trabajo_id: string }[]>`
     select id::text as id, trabajo_id::text as trabajo_id from seguros.tarificador_atascos
     where correduria_id = ${correduriaId}::uuid and estado = 'esperando' and caduca_at <= now()
     limit 100`
-  let n = 0
   for (const v of vencidos) {
     const tocado = await prisma.$transaction(async (tx) => {
       const mensaje = `Atascado sin respuesta en ${horasAtasco(process.env)} h: nadie eligió el elemento y el trabajo se cierra. Vuelve a pedir el presupuesto desde la oportunidad.`

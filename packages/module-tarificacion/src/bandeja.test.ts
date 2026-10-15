@@ -51,6 +51,12 @@ describe('bandeja · motivo legible', () => {
     const m = motivoLegible({ tipo: 'captcha', mensaje: 'requiere_verificacion_humana: Generali pide un código SMS' })
     expect(m).toBe('Generali pide un código SMS')
   })
+  it('`eleccion` (15/10/2026): frase propia, no la del captcha; la bandeja sigue pudiendo reintentar desde requiere_humano', () => {
+    const m = motivoLegible({ tipo: 'eleccion', mensaje: 'x' })
+    expect(m).toContain('elegir')
+    expect(m).not.toContain('captcha')
+    expect(decidirAccionBandeja('reintentar', 'requiere_humano', 'eleccion', null).ok).toBe(true)
+  })
   it('sin error o con basura → texto neutro, nunca vacío ni undefined', () => {
     for (const e of [null, undefined, 'x', [], {}, { tipo: 'rarísimo' }]) expect(motivoLegible(e, 'requiere_humano').length).toBeGreaterThan(10)
     expect(motivoLegible(null, 'error_definitivo')).toContain('sin un motivo')

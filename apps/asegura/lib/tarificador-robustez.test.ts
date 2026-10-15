@@ -50,6 +50,18 @@ test('robustez (BD): la pausa sin el SQL no rompe la cola; responder re-encola e
   }
 })
 
+test('atascado HUÉRFANO (trabajo real 39c8016e, 15/10/2026): el barrido cierra el `atascado` sin atasco esperando y el error marca el atasco', () => {
+  const src = leer('lib/tarificador-robustez.ts')
+  const cad = tramo(src, 'export async function caducarAtascos', '// ─── CORTE por compañía/ramo')
+  assert.match(cad, /t\.estado = 'atascado'[^`]*and not exists \(select 1 from seguros\.tarificador_atascos a where a\.trabajo_id = t\.id and a\.estado = 'esperando'\)/, 'el barrido no busca trabajos atascados sin atasco esperando')
+  assert.match(cad, /set estado = 'error_definitivo'[^`]*'atasco', 'huerfano'[^`]*estado = 'atascado'\s+and not exists/, 'el huérfano no se cierra como error definitivo (con la re-comprobación bajo el UPDATE)')
+  assert.ok(cad.indexOf("'huerfano'") < cad.indexOf('const vencidos'), 'los huérfanos se cierran en el mismo barrido')
+  assert.match(cad, /purgarRiesgoTrabajos\(tx, \[h\.id\]\)\s+await evaluarCorte\(tx, h\.id\)/, 'el huérfano cerrado purga su riesgo y cuenta para el corte')
+  const mf = tramo(leer('lib/tarificador.ts'), 'async function marcarFallo(', '// ─── Barrido')
+  assert.match(mf, /const marcaAtasco = atasco \? \{ atasco: 'esperando', atascoClave: atasco\.clave \} : \{\}/, 'el error de un atascado no dice que espera elección')
+  assert.match(mf, /JSON\.stringify\(\{ \.\.\.error, \.\.\.marcaAtasco,/, 'la marca no llega al error jsonb')
+})
+
 test('rutas del puerto: escrituras auditadas y respuesta de Alberto validada', () => {
   for (const r of ['app/api/operador/tarificador/atascos/route.ts', 'app/api/operador/tarificador/atascos/[id]/route.ts', 'app/api/operador/tarificador/pausas/[id]/route.ts']) {
     assert.match(leer(r), /export const POST = auditado\(/, `${r}: POST sin auditado()`)

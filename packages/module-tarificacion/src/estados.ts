@@ -62,8 +62,13 @@ export function puedeTransitar(de: unknown, a: unknown): boolean {
   return TRANSICIONES[de].includes(a)
 }
 
-/** Tipos de fallo que el worker (o el orquestador) puede declarar. */
-export const TIPOS_ERROR = ['infra', 'portal', 'credenciales', 'datos', 'captcha', 'emision'] as const
+/**
+ * Tipos de fallo que el worker (o el orquestador) puede declarar. `eleccion` (15/10/2026): el portal ofrece VARIAS versiones
+ * del vehículo o poblaciones del CP y una persona tiene que elegir (lleva `opcionesVersion`/`opcionesPoblacion`). Antes viajaba
+ * como `captcha` (etiqueta engañosa en la traza). Un asegura ANTIGUO NO acepta `eleccion` (rechaza tipos que no conoce): ORDEN DE
+ * DESPLIEGUE = asegura ANTES que el worker. Un worker antiguo (que manda `captcha`) sigue valiendo con el asegura nuevo.
+ */
+export const TIPOS_ERROR = ['infra', 'portal', 'credenciales', 'datos', 'captcha', 'emision', 'eleccion'] as const
 export type TipoError = (typeof TIPOS_ERROR)[number]
 
 export function esTipoError(v: unknown): v is TipoError {
@@ -78,7 +83,7 @@ export const MAX_INTENTOS = 2
  * reclamarlo). Un tipo desconocido se trata como definitivo: no se reintenta lo que no se entiende.
  */
 export function estadoTrasError(tipo: unknown, intentos: number): EstadoTrabajo {
-  if (tipo === 'captcha') return 'requiere_humano'
+  if (tipo === 'captcha' || tipo === 'eleccion') return 'requiere_humano'
   if (tipo === 'infra') return puedeReintentar('error_reintentable', intentos) ? 'error_reintentable' : 'error_definitivo'
   return 'error_definitivo'
 }

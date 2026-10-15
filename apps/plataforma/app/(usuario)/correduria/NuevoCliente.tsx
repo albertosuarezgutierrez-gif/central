@@ -3,7 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Clock, TriangleAlert, XCircle } from 'lucide-react'
-import { coincidenciaBloquea, provinciaPorCp, revisarAlta } from '@central/module-seguros'
+import { coincidenciaBloquea, etiquetasIdentidad, normalizarDni, provinciaPorCp, revisarAlta, type TipoPersona } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { campoDesdeTermino, interpretarEscritura, textoMotivo, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
 import { RAMOS_PRESUPUESTO } from '@/lib/ficha-asegura'
@@ -22,6 +22,10 @@ import CiudadPorCp from './CiudadPorCp'
  * Un DNI que ya está en otra ficha NUNCA se fuerza (es la misma persona: se
  * enlaza). Teléfono o email repetidos sí pueden ser dos personas y se ofrece
  * «Crear igualmente».
+ *
+ * Particular / Empresa: solo cambia rótulos y oculta los apellidos. Quien manda
+ * es el documento — un CIF válido pone la ficha en «empresa» (y asegura guarda
+ * `tipo_persona = juridica` desde el propio CIF); un DNI/NIE, en «particular».
  */
 type Form = {
   nombre: string; apellidos: string; dni: string; fechaNacimiento: string
@@ -44,6 +48,11 @@ export default function NuevoCliente({ q }: { q?: string }) {
   // luego desde la ficha (menú «➕ Presupuestar»): no todo lead nace con un
   // ramo claro, y no se fuerza a elegir uno.
   const [ramo, setRamo] = useState<number | null>(null)
+  const [tipoElegido, setTipoElegido] = useState<TipoPersona>('fisica')
+  const docLeido = f.dni.trim() === '' ? null : normalizarDni(f.dni)
+  const tipo: TipoPersona = docLeido?.ok ? docLeido.valor.tipoPersona : tipoElegido
+  const empresa = tipo === 'juridica'
+  const rot = etiquetasIdentidad(tipo)
 
   function set<K extends keyof Form>(k: K, v: string) {
     setF((prev) => {
@@ -69,6 +78,8 @@ export default function NuevoCliente({ q }: { q?: string }) {
     try {
       const { tipoPersona: _tp, ...alta } = rev.alta
       void _tp
+      // Empresa: los apellidos no existen (el campo está oculto); que no viaje uno tecleado antes de cambiar.
+      if (empresa) alta.apellidos = ''
       const res = await fetch('/api/correduria/cliente', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -99,25 +110,32 @@ export default function NuevoCliente({ q }: { q?: string }) {
   return (
     <form onSubmit={(e) => { e.preventDefault(); void enviar() }} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
       <Grupo titulo="Quién es">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+          <RamoBtn etiqueta="Particular" activo={!empresa} onClick={() => setTipoElegido('fisica')} />
+          <RamoBtn etiqueta="Empresa" activo={empresa} onClick={() => setTipoElegido('juridica')} />
+          {docLeido?.ok && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Según el {empresa ? 'CIF' : 'DNI/NIE'} tecleado.</span>}
+        </div>
         <Fila>
-          <Campo label="Nombre *" mal={campoMal === 'nombre'}>
-            <input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} style={campo} autoFocus />
+          <Campo label={`${rot.nombre} *`} mal={campoMal === 'nombre'}>
+            <input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder={empresa ? 'Talleres Ejemplo SL' : undefined} style={campo} autoFocus />
           </Campo>
-          <Campo label="Apellidos" mal={campoMal === 'apellidos'}>
-            <input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={campo} />
-          </Campo>
+          {!empresa && (
+            <Campo label={rot.apellidos} mal={campoMal === 'apellidos'}>
+              <input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={campo} />
+            </Campo>
+          )}
         </Fila>
         <Fila>
-          <Campo label="DNI / NIE / CIF" mal={campoMal === 'dni'}>
-            <input value={f.dni} onChange={(e) => set('dni', e.target.value)} placeholder="12345678Z" style={campo} autoComplete="off" />
+          <Campo label={empresa ? 'CIF' : 'DNI / NIE'} mal={campoMal === 'dni'}>
+            <input value={f.dni} onChange={(e) => set('dni', e.target.value)} placeholder={empresa ? 'B12345678' : '12345678Z'} style={campo} autoComplete="off" />
           </Campo>
-          <Campo label="Fecha de nacimiento" mal={campoMal === 'fechaNacimiento'}>
+          <Campo label={rot.fecha} mal={campoMal === 'fechaNacimiento'}>
             <input type="date" value={f.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={campo} />
           </Campo>
         </Fila>
       </Grupo>
 
-      <Grupo titulo="Cómo localizarlo" nota="Hace falta DNI, teléfono o email: sin ninguno, la ficha no se podrá volver a encontrar.">
+      <Grupo titulo="Cómo localizarlo" nota={`Hace falta ${empresa ? 'CIF' : 'DNI'}, teléfono o email: sin ninguno, la ficha no se podrá volver a encontrar.`}>
         <Fila>
           <Campo label="Teléfono" mal={campoMal === 'telefono'}>
             <input type="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="600 000 000" style={campo} />
@@ -128,7 +146,7 @@ export default function NuevoCliente({ q }: { q?: string }) {
         </Fila>
       </Grupo>
 
-      <Grupo titulo="Dónde vive">
+      <Grupo titulo={empresa ? 'Domicilio social' : 'Dónde vive'}>
         <Campo label="Dirección" mal={campoMal === 'direccion'}>
           <DireccionConfirmable
             value={f.direccion}

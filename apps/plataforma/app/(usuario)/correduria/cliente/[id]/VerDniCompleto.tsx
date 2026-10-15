@@ -18,7 +18,8 @@ import { btnStyle } from '@/components/ui'
  * puerto de asegura, no aquí): quien mira el histórico ve que se pidió, cuándo
  * y quién estaba en sesión.
  */
-export default function VerDniCompleto({ clienteId }: { clienteId: string }) {
+export default function VerDniCompleto({ clienteId, juridica = false }: { clienteId: string; juridica?: boolean }) {
+  const doc = juridica ? 'CIF' : 'DNI'
   const [paso, setPaso] = useState<'cerrado' | 'pidiendo' | 'esperando_codigo' | 'revelado'>('cerrado')
   const [codigo, setCodigo] = useState('')
   const [dni, setDni] = useState<string | null>(null)
@@ -50,9 +51,9 @@ export default function VerDniCompleto({ clienteId }: { clienteId: string }) {
       if (!res.ok || j?.estado !== 'ok' || typeof j.dni !== 'string') {
         setError(
           j?.estado === 'invalido' ? 'Código incorrecto o caducado. Pide uno nuevo.'
-            : j?.estado === 'ilegible' ? 'El DNI está guardado pero cifrado con una clave que no abre.'
-              : j?.estado === 'sin_dni' ? 'No consta DNI en la ficha.'
-                : 'No se ha podido revelar el DNI.',
+            : j?.estado === 'ilegible' ? `El ${doc} está guardado pero cifrado con una clave que no abre.`
+              : j?.estado === 'sin_dni' ? `No consta ${doc} en la ficha.`
+                : `No se ha podido revelar el ${doc}.`,
         )
         return
       }
@@ -107,7 +108,7 @@ export default function VerDniCompleto({ clienteId }: { clienteId: string }) {
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <button type="button" onClick={pedirCodigo} disabled={paso === 'pidiendo'} style={{ ...btnStyle('sutil', 'sm'), color: 'var(--primary)' }} title="Pide un código de un solo uso a tu Telegram para ver el DNI completo">
+      <button type="button" onClick={pedirCodigo} disabled={paso === 'pidiendo'} style={{ ...btnStyle('sutil', 'sm'), color: 'var(--primary)' }} title={`Pide un código de un solo uso a tu Telegram para ver el ${doc} completo`}>
         {paso === 'pidiendo' ? 'Pidiendo código…' : 'Ver completo'}
       </button>
       {error && <span style={{ fontSize: 11, color: 'var(--negative)' }}>{error}</span>}

@@ -158,6 +158,13 @@ describe('guard · botones del diálogo «Selección de vehículo» de Mapfre', 
     expect(() => comprobarBoton([t], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
     expect(() => comprobarBoton([t])).toThrow(EmisionBloqueadaError)
   })
+  it.each(['Ir a generar', 'IR A GENERAR', 'Generar Proyecto', 'Generar proyecto', 'generarProyecto()', 'btn_ir_a_generar'])('Coberturas (grabación 15/10/2026): bloquea «%s» siempre, también con «Aceptar» permitido', (t) => {
+    expect(() => comprobarBoton([t], { permitirAceptar: true })).toThrow(EmisionBloqueadaError)
+    expect(() => comprobarBoton([t])).toThrow(EmisionBloqueadaError)
+  })
+  it('lo que el bot SÍ pulsa sigue pasando («Continuar», un mat-select de licencia)', () => {
+    for (const t of ['Continuar', 'Clase de permiso', 'Valido desde', 'Compañía anterior']) expect(() => comprobarBoton([t])).not.toThrow()
+  })
   it('«Aceptar» solo pasa con la opción de la función guardada', () => {
     expect(() => comprobarBoton(['Aceptar'])).toThrow(EmisionBloqueadaError)
     expect(() => comprobarBoton(['Aceptar'], { permitirAceptar: true })).not.toThrow()

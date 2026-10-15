@@ -94,14 +94,14 @@ export class ErrorMapaIncompleto extends ErrorTarificador {
 
 /**
  * El catálogo ofrece varias versiones y nadie ha elegido: para y pide una persona (`requiere_humano`; en el cable
- * viaja como `captcha`, igual que la verificación humana). El mensaje lleva SOLO nombres de catálogo.
+ * viaja como `eleccion` desde el 15/10/2026 —antes `captcha`, etiqueta engañosa en la traza—). El mensaje lleva SOLO nombres de catálogo.
  */
 export class ErrorEleccionVersion extends ErrorTarificador {
   readonly opciones: CandidatoVersion[]
   /** La lista COMPLETA viaja estructurada en `error.opcionesVersion` del resultado (`opcionesVersionDe` en errores.ts). */
   readonly opcionesVersion: CandidatoVersion[]
   constructor(opciones: CandidatoVersion[]) {
-    super('captcha', mensajeEleccionVersion(opciones))
+    super('eleccion', mensajeEleccionVersion(opciones))
     this.name = 'ErrorEleccionVersion'
     this.opciones = opciones
     this.opcionesVersion = opciones
@@ -110,13 +110,13 @@ export class ErrorEleccionVersion extends ErrorTarificador {
 
 /**
  * El CP tiene VARIAS poblaciones y ni la `poblacion` del riesgo casa con UNA ni hay `eleccionPoblacion` válida: para y pide
- * una persona (`requiere_humano`, en el cable `captcha`, como `ErrorEleccionVersion`). La lista viaja en
+ * una persona (`requiere_humano`, en el cable `eleccion`, como `ErrorEleccionVersion`). La lista viaja en
  * `error.opcionesPoblacion` (`opcionesPoblacionDe` en errores.ts): `codigo` = texto EXACTO de la celda del portal.
  */
 export class ErrorEleccionPoblacion extends ErrorTarificador {
   readonly opcionesPoblacion: OpcionPoblacion[]
   constructor(opciones: OpcionPoblacion[]) {
-    super('captcha', mensajeEleccionPoblacion(opciones))
+    super('eleccion', mensajeEleccionPoblacion(opciones))
     this.name = 'ErrorEleccionPoblacion'
     this.opcionesPoblacion = opciones
   }

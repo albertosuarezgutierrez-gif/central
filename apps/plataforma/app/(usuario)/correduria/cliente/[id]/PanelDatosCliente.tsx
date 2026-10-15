@@ -84,14 +84,14 @@ const filasDe = (carnets: CarnetFicha[]): FilaCarnet[] =>
 const filaSucia = (f: FilaCarnet) => f.id === null || f.quitar || f.tipo !== f.origTipo || f.fecha !== f.origFecha
 
 /** Qué le dice al usuario un resultado de escritura, en una frase. */
-function textoResultado(r: ResultadoEscritura): string {
+function textoResultado(r: ResultadoEscritura, juridica?: boolean): string {
   switch (r.estado) {
     case 'ok': return 'guardado'
     case 'conflicto': return `ese dato ya está en otra ficha${r.coincidencias.length > 0 ? ` (${r.coincidencias.map((c) => c.nombre).join(' · ')})` : ''}`
-    case 'invalido': return textoMotivo(r.motivo)
+    case 'invalido': return textoMotivo(r.motivo, juridica)
     case 'no_encontrado': return 'esa ficha ya no está en la cartera'
     case 'sin_configurar': return 'el puerto con asegura no está conectado'
-    default: return `${textoMotivo(r.motivo)}`
+    default: return `${textoMotivo(r.motivo, juridica)}`
   }
 }
 
@@ -250,7 +250,7 @@ export default function PanelDatosCliente({
       if (!rev.ok) {
         setCampoMal(rev.campo ?? null)
         if (rev.motivo === MOTIVO_CAMBIO_REQUERIDO) { setPedirMotivoMal(true); enfocarMotivo() }
-        return setAviso(`No se ha guardado nada: ${textoMotivo(rev.motivo)}`)
+        return setAviso(`No se ha guardado nada: ${textoMotivo(rev.motivo, juridica)}`)
       }
       // La misma regla que el servidor: con póliza, DNI/fecha solo con motivo.
       if (docSel && rev.tocaIdentidad) {
@@ -258,7 +258,7 @@ export default function PanelDatosCliente({
         if (!acr.ok) {
           setPedirMotivoMal(true)
           enfocarMotivo()
-          return setAviso(`No se ha guardado nada: ${textoMotivo(MOTIVO_CAMBIO_REQUERIDO)}`)
+          return setAviso(`No se ha guardado nada: ${textoMotivo(MOTIVO_CAMBIO_REQUERIDO, juridica)}`)
         }
       }
       nombreTramoFicha = hayIdent && hayLibre ? 'Identidad y dirección' : hayIdent ? 'Identidad' : 'Dirección'
@@ -279,7 +279,7 @@ export default function PanelDatosCliente({
         try {
           const { status, json } = await llamar('/api/correduria/cliente', 'PATCH', cuerpoFicha)
           const r = interpretarEscritura(status, json)
-          out.push({ nombre: nombreTramoFicha, ok: r.estado === 'ok', texto: textoResultado(r) })
+          out.push({ nombre: nombreTramoFicha, ok: r.estado === 'ok', texto: textoResultado(r, juridica) })
           if (r.estado === 'invalido') setCampoMal(r.campo)
           if (r.estado === 'ok') {
             if (hayIdent) { setInicialIdent({ ...fi, dni: '' }); setFi((p) => ({ ...p, dni: '' })); setMotivo('') }
@@ -374,7 +374,7 @@ export default function PanelDatosCliente({
                 <select value={conDocumento ? documentoId : ''} onChange={(e) => setDocumentoId(e.target.value)} style={campo}>
                   {acreditativos.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {etiquetaTipoDocumento(d.tipo)}{d.tipo === 'poliza' ? ' (su DNI es el de la ficha; acredita solo nombre y apellidos)' : ''} · {d.nombre ?? 'sin nombre'} · {etiquetaEstadoDocumento(d.estado)}
+                      {etiquetaTipoDocumento(d.tipo)}{d.tipo === 'poliza' ? juridica ? ' (su CIF es el de la ficha; acredita solo la razón social)' : ' (su DNI es el de la ficha; acredita solo nombre y apellidos)' : ''} · {d.nombre ?? 'sin nombre'} · {etiquetaEstadoDocumento(d.estado)}
                     </option>
                   ))}
                   <option value="">Ninguno: cambio sin documento, con motivo</option>
@@ -403,8 +403,9 @@ export default function PanelDatosCliente({
             </div>
             {!hayIdent && (
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-                Cambiar DNI, nombre o fecha de nacimiento pide un documento o un motivo; completar los apellidos
-                (p. ej. añadir el segundo) o poner el nombre a una ficha sin nombre, no.
+                {juridica
+                  ? 'Cambiar el CIF, la razón social o la fecha de constitución pide un documento o un motivo; poner la razón social a una ficha sin nombre, no.'
+                  : 'Cambiar DNI, nombre o fecha de nacimiento pide un documento o un motivo; completar los apellidos (p. ej. añadir el segundo) o poner el nombre a una ficha sin nombre, no.'}
               </div>
             )}
             {pideMotivo && (

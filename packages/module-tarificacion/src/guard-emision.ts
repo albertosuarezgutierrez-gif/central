@@ -61,6 +61,10 @@ export const TEXTOS_BLOQUEADOS_ALTA: readonly RegExp[] = [
   // del diálogo (guard.ts), aunque esta permita «Aceptar».
   /no[\s_+-]*es[\s_+-]*el[\s_+-]*vehiculo/i,
   /vehiculo[\s_+-]*no[\s_+-]*catalogado/i,
+  // Mapfre NSEI, paso «Coberturas» (grabación de Alberto del 15/10/2026): «Ir a generar» y «Generar Proyecto» crean un nº de
+  // proyecto REAL en Mapfre y su documentación. El bot TARIFICA: lee la prima en Coberturas y PARA. Bloqueados en todo `pulsar()`.
+  /ir[\s_+-]*a[\s_+-]*generar/i,
+  /generar[\s_+-]*proyecto/i,
 ]
 
 // «Aceptar» es CONTEXTUAL (ver fases.ts): en Datos Básicos solo avanza a «Tarificar»; en Tarificar avanza

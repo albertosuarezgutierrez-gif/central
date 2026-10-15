@@ -124,7 +124,7 @@ export function resolverTrabajoBandeja(
   id: string,
   accion: 'reintentar' | 'cancelar',
   /** Solo con reintentar: versión del vehículo elegida a mano; asegura la valida contra la lista guardada del trabajo. */
-  eleccionVersion: { codigo: string; etiqueta?: string | null } | null = null,
+  eleccionVersion: { codigo: string | null; etiqueta?: string | null } | null = null,
   /** Solo con reintentar: población del CP elegida a mano (texto de la lista del trabajo; la valida asegura). */
   eleccionPoblacion: string | null = null,
 ): Promise<Reenvio> {
