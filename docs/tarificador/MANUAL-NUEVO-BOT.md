@@ -93,6 +93,16 @@ opciones, los diálogos (listas de poblaciones) y los mensajes de error. Los `//
 sin nombre, radios sin grupo). NO se registra solo: revísalo a mano, pruébalo con `scripts/probar-formulario.ts` y métela en un PR.
 Código: `scripts/lib/borrador-mapa.ts` (fuera de `src/`: no viaja en la imagen del worker y el guardián prohíbe nombrar radios en `src/`).
 
+## Fixtures (lectura contra pantallas guardadas)
+
+Para que un cambio que rompa la lectura del precio o de las tarjetas se vea en CI sin entrar al portal. Ejemplo: `services/tarificador-rpa/test/mapfre-fixtures.test.ts` + `test/fixtures/mapfre-auto/`.
+
+1. Guarda en `test/fixtures/<compania>-<ramo>/` el fragmento MÍNIMO del DOM (`.html`, solo el componente de precio/tarjetas, con la misma estructura y selectores que usa el adaptador) o el texto de la tarjeta (`.txt`). Un fichero por situación: con precio, bloqueada, cargando.
+2. **Saneado obligatorio**: nada de NIF, nombres, fechas de nacimiento, teléfonos, matrículas, correos ni contraseñas. Valores ficticios evidentes (`0000XXX`, `Cliente Prueba`, importes inventados). Antes de acabar, `grep -rnE` de patrones de DNI, matrícula, teléfono, `@` y fechas sobre la carpeta.
+3. El test carga el HTML con `page.setContent` (Chromium de Playwright, como `mapfre-grabacion-precio.test.ts`; no hay jsdom) y llama a la función pública de lectura; las funciones puras reciben el texto del `.txt`.
+4. Cubre como mínimo: precio con miles y decimales, elemento bloqueado/sin precio, elemento aún cargando (no listo, lector fail-closed) y firma estable entre dos lecturas.
+5. Mira cada test fallar una vez (rompe la regex o la función, restaura). Si el portal cambia de verdad, actualiza el fixture a propósito, nunca para que pase.
+
 ## 5. Lecciones aprendidas con Allianz (técnicas, sin datos)
 - **Iframe tardío:** el formulario carga en `iframe#appArea` y tarda; espera hasta 30 s al marco (`esperarMarcoApp`) antes de inventariar, o inventarias la carcasa.
 - **Teselas y acordeones:** «Nueva Alta» muestra acordeones plegados (hay que desplegar la sección) con teselas por etiqueta EXACTA. «Allianz HOGAR» ≠ «Hogar» (causó un timeout); Hogar y Negocio Plus están en Particulares, no en Autos.
