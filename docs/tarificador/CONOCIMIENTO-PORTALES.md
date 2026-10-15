@@ -2,7 +2,7 @@
 
 > Qué sabemos de cada portal de compañía y cómo se trabaja con él. Sin datos personales ni valores reales:
 > solo nombres de pantalla y claves de catálogo. Estado vivo, DOM detallado y plan: `docs/TARIFICADOR-RPA.md`.
-> Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 14/10/2026.
+> Técnica del worker: `services/tarificador-rpa/README.md`. Revisado: 15/10/2026.
 
 > **Crear el bot de una compañía nueva: lee primero `docs/tarificador/MANUAL-NUEVO-BOT.md`.**
 
@@ -79,6 +79,12 @@
 
 | Fecha | Compañía | Síntoma | Causa | Regla común / qué cambió | Test o cepo |
 |---|---|---|---|---|---|
+| 15/10/2026 | Mapfre | Presencia de campos dada por buena con elementos ocultos (mat-select de uso/ámbito en el DOM) | Contar sobre el DOM, no sobre lo visible (bots 0.8.2→0.8.5) | Contar presencia solo con elementos VISIBLES (`locator('visible=true')`) | — |
+| 15/10/2026 | Mapfre | Campo de texto recién escrito que el portal vacía | Escritura sin esperar a que el campo se asiente (bots 0.8.2→0.8.5) | Tras escribir: blur + esperar sin `ng-pending` ni spinner; si el portal lo vacía, error `portal` | — |
+| 15/10/2026 | Mapfre | `fill` sobre «siniestros» cuando el campo viene DESHABILITADO | No consta (bots 0.8.2→0.8.5) | Esperar a que sea editable antes de cada `fill`. Con 0 siniestros se deja como está; con >0 → atasco | — |
+| 15/10/2026 | Mapfre | «Continuar» falla y el atasco no dice qué campo | No consta (bots 0.8.2→0.8.5) | Si «Continuar» falla, el atasco nombra los campos con `mat-error` | — |
+| 15/10/2026 | Mapfre | Lector de primas de «Coberturas» con formatos distintos; TODO RIESGO bloqueada | Prima con 0, 1 o 2 decimales; tarjeta con «Existen controles técnicos…» (primer precio real) | Lector admite 0-2 decimales; TODO RIESGO se omite si otra tarjeta tiene prima; firma de estabilidad solo con campos normalizados, nunca `textContent` crudo | — |
+| 15/10/2026 | Mapfre | Timeout de Playwright sobre un control tratado como error definitivo | No consta (bots 0.8.2→0.8.5) | Un timeout sobre un control abre atasco (`hueco_mapa`), no error definitivo | — |
 | 14/10/2026 | Allianz | Hogar: las exploraciones no pasan de la pantalla 1; «Año de construcción»/«Superficie» siguen inválidos (`nodo_no_relocalizado`) | Angular repinta el formulario tras el autocompletado de CP/vía; refs viejos | Adaptador de tarificación por `formcontrolname` (sin refs), año/m² los ÚLTIMOS, comprobación de valor y de inválidos; radios del riesgo solo por `marcarOpcionRiesgoHogarAllianz` (guard.ts, lista cerrada) porque el portal trae opciones marcadas de serie | `services/tarificador-rpa/test/allianz-hogar.test.ts` |
 | 14/10/2026 | Mapfre | Tercera exploración real: login OK y llega a la página «Automóviles», pero no halla «Tarificación y Emisión Rápida» (0 coincidencias visibles) | La página no expone el enlace en el DOM principal (probable iframe o elemento no estándar) | URL directa del formulario NSEI como entrada principal (pestaña nueva, vale si aparece `app-datos-basicos`; el 401 no cuenta) con respaldo por menús; error con los dos motivos | `services/tarificador-rpa/test/mapfre-entrada.test.ts` (4 casos de URL directa + `URL_NSEI_AUTO` vs `PATRON_EMISION`) |
 | 14/10/2026 | Mapfre | Segunda exploración real: login OK, llega a la página «Automóviles» (título y «Turismos y Motos» encontrados) pero falla: no halla el enlace «Tarificación y Emisión Rápida» en la tarjeta | El acotado a la tarjeta (`tarjetaDe`) no casa con el DOM real (desconocido); y el HTML del fallo no queda guardado: asegura descarta captura/HTML de las exploraciones (`lib/tarificador.ts`, «una exploración no guarda captura ni HTML») | Tarjeta (3 s) → si no, texto EXACTO en TODA la página, subiendo al control pulsable, y solo con EXACTAMENTE 1 coincidencia visible (0 o ≥2 → `ErrorMapaIncompleto` con el nº y los candidatos sin datos personales en el mensaje). Regla común: un acotado por contenedor lleva fallback a texto exacto único, nunca a «el primero» | `services/tarificador-rpa/test/mapfre-entrada.test.ts` |
@@ -101,6 +107,19 @@
 | previa | Allianz | Avance mal identificado: «Aceptar» de otra pantalla puede EMITIR | «Calcular» y «Aceptar» son `div` con `onclick` | Identificar por id, texto, `onclick` y formulario de origen EXACTOS | — |
 | previa | Allianz | Un POST nuevo no lo vio la grabación | La grabación no registra la red | Ventana de red que aborta los no-GET fuera de la lista; si sale un POST nuevo, el trabajo muere hasta verlo | — |
 | previa | Allianz | Precio «Anual» distinto del portal | «Anual» = primer recibo prorrateado; «Sucesivos» = prima anual | Verificar el precio contra el portal con una cotización conocida antes de confiar en el lector | — |
+
+### Receta corta: añadir un producto
+
+> Versión completa y pasos de verificación: `docs/tarificador/MANUAL-NUEVO-BOT.md`.
+
+1. Fila en `seguros.companias_integracion` (SQL idempotente en `apps/asegura/prisma/sql`, modelo
+   `2026-10-14_tarificador_mapfre_auto.sql`).
+2. Credenciales en fly secrets `CRED_<CLAVE>_USER` / `CRED_<CLAVE>_PASS`.
+3. Mapa: grabación del flujo hasta la pantalla de precio, o inventario de estructura del bot
+   (`services/tarificador-rpa/src/inventario-dom.ts`) cuando la grabación no lo ve (iframe de otro origen).
+4. Adaptador en `services/tarificador-rpa/src/adapters/<compañía>/` con flag de registro y tests (`npm test`).
+5. PR → imagen (workflow `.github/workflows/tarificador-rpa-imagen.yml`, input `etiqueta`) → env Vercel
+   `TARIFICADOR_FLY_IMAGE` (`central-asegura`, production) → redeploy → lanzar un trabajo real y vigilar hasta precio.
 
 ## Capa por ramo (etiquetas de cada compañía)
 
@@ -157,6 +176,19 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   «Allianz Mascotas».
 - **Hogar y Negocio Plus (comercio) se entran desde Particulares, NO desde Autos.** La tesela se elige por
   etiqueta exacta (`etiquetaProducto`), nunca por «contiene».
+- **Mapa de menú completo (capturas de Alberto, 15/10/2026):** Venta → «Nueva Alta» abre el popup «Nueva Alta» con acordeones:
+  - **Autos:** «AUTOS Turismos», «Vehículo Comercial», «Moto», «Flotas Autos», «Ciclomotor», «Movilidad Personal», «Furgonetas».
+    Cada tarjeta abre su formulario y tarifica.
+  - **Particulares:** las nueve teselas de arriba.
+  - **Empresas:** «Allianz Cyber Plus», «Flotas Diversos», «Allianz Negocio Plus», «Allianz Multiseguro Empresarial», «Mercancías»,
+    «Equipos Electrónicos», «Accidentes Convenio (Pyme y No Pyme)», «RC Pyme», «Allianz D&O Pyme», «Agroseguros»,
+    «Allianz Mercancías Pyme», «Accidentes Colectivos».
+  - **Vida y Salud:** sin detallar aún.
+  - «Allianz Negocio Plus» aparece en Particulares Y en Empresas: la etiqueta exacta no basta. Pendiente de confirmar con
+    Alberto por cuál de las dos entradas se tarifica el comercio (hoy el bot la entra desde Particulares).
+- **Producto nuevo de Allianz:** misma entrada (Nueva Alta → acordeón → tarjeta por texto EXACTO) más su formulario.
+- **Turismos (iframe de OTRO origen):** es una app Angular servida vía puente SSO. El grabador bookmarklet NO la lee;
+  Playwright sí. Para explorarla usar el inventario de estructura del bot (`src/inventario-dom.ts`), no pedir otra grabación.
 - **Iframe:** el formulario carga en el iframe `appArea`. Puede tardar; se espera hasta 30 s.
 - **Hogar, pantalla 1:**
   - El botón «Siguiente» (`NextPageFromRisk`) está deshabilitado hasta rellenar los datos obligatorios.
@@ -226,6 +258,11 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
 - **«Continuar» del paso 3** no es un avance neutro: lanza «Verificando controles técnicos» + «Calculando las primas»
   (es lo que lleva a precio). **PERMITIDO (Alberto, 14/10/2026)**, solo por `pulsarContinuarMapfre` (guard.ts): lista
   cerrada 1 → 2 → 3, en orden, una vez por paso. El NIF del tomador lo pone asegura desde la ficha (`documentoTomador`).
+- **Pantalla «Coberturas» (15/10/2026, primer precio real):** tarjetas «PRIMA TOTAL: x €» con 0, 1 o 2 decimales
+  (p. ej. «670,1 €»). TODO RIESGO puede salir bloqueada («Existen controles técnicos que impiden tarificar»): se omite
+  si otra tarjeta tiene prima. Los errores y atascos de estos bots están en la bitácora común (filas 15/10/2026, Mapfre).
+- **Elección de versión del catálogo (decisión 15/10/2026):** si hay varias versiones, el bot para con `requiere_humano`
+  y la lista de opciones; la elección queda en `riesgo.eleccionVersion` (por etiqueta en Mapfre). No se elige por parecido.
 - **Guard:** «Generar Proyecto» / «Ir a generar proyecto» PERMITIDOS (Alberto 13/10/2026: «el bot SÍ puede hacer
   proyectos»; no los bloquea `guard-emision.ts`). Sigue prohibido emitir/contratar/formalizar/grabar póliza, pago y
   RGPD «Sí»; «Contratar» y todo «Aceptar» siguen bloqueados. «Calcular» pasa.
@@ -271,6 +308,25 @@ Fuera del catálogo a propósito (`DATOS_AUTO`): uso y ámbito de circulación (
   - ~~Qué se elige en «Coberturas».~~ **RESUELTO (14/10/2026):** coberturas por defecto; el bot solo avanza.
   - Botón exacto de guardar en «Proyectos».
   - Cómo sale el PDF.
+
+## Generali (mediadores) — sin bot aún
+
+- **SMS de confirmación cada 30 días** en el acceso. Decisión de Alberto: el bot pide el código por Telegram
+  (solo a su chat, máx. 5 min, sin reenviar SMS, el código nunca se registra).
+- **«Equipo recordado»:** el bot conserva cifrado el equipo recordado (`services/tarificador-rpa/src/boveda-sesion.ts`).
+- Credenciales: `CRED_GENERALI_MEDIADORES_USER` / `CRED_GENERALI_MEDIADORES_PASS` (fly secrets).
+
+## Occident — aparcado
+
+- Aparcado: el acceso es SSO y, en auto, no interesa. Lo de Occident Hogar (descuentos) está en la sección de descuentos.
+
+## Prioridades de producto (Alberto, 15/10/2026)
+
+1. **Prioridad: que todos los bots den PRECIO.**
+2. Después, leer GARANTÍAS de la pantalla de coberturas (sin PDF ni «Generar Proyecto»).
+3. Textos cortos de garantías como catálogo fijo revisado (sin IA).
+4. IA solo para la nota personalizada, con el proveedor actual. Nunca IA gratuita extranjera (RGPD).
+5. Un 2.º bot monta el presupuesto como BORRADOR que envía una persona.
 
 ## Descuentos comerciales (regla de Alberto, 14/10/2026)
 
