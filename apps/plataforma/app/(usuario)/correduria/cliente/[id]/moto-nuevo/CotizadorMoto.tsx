@@ -1309,7 +1309,7 @@ export default function CotizadorMoto({
           ramo="moto"
           clienteId={clienteId}
           oportunidadId={variante?.oportunidadId ?? null}
-          inicialesExtra={{ cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '' }}
+          inicialesExtra={{ cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '', sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '' }}
           formulario={{
             matricula,
             marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,

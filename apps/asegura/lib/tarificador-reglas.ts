@@ -311,16 +311,21 @@ export function claveEncolar(p: { correduriaId: string; clienteId: string; compa
 }
 
 /** Estados en los que un trabajo previo cuenta como «ese mismo encargo sigue vivo» y el nuevo es duplicado. */
-export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable', 'atascado'] as const
+export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable', 'atascado', 'ok'] as const
+
+/** Ventana (15/10/2026) en la que un trabajo terminado `ok` CON PRECIO sigue contando como «ya tarificado»: segundo clic o dos comerciales. */
+export const VENTANA_OK_DUPLICADO_MS = 10 * 60_000
 
 /**
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
  * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
  * devolverá a `pendiente`: sería el mismo encargo dos veces). Lo terminado, cancelado o pendiente de una persona, no.
  * Un trabajo de EMISIÓN o de EXPLORACIÓN nunca cuenta (es otro encargo, aunque lleve el mismo riesgo).
+ * `ok` (15/10/2026): solo si salió CON PRECIO (`conPrecio`) y terminó hace menos de `VENTANA_OK_DUPLICADO_MS`; sin hora de
+ * fin legible, en el futuro o sin dato de precio → NO bloquea (se vuelve a tarificar antes que servir un resultado dudoso).
  */
 export function bloqueaDuplicado(
-  f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null },
+  f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null; terminadoAt?: Date | null; conPrecio?: boolean },
   ahora: Date,
   maxIntentos: number,
 ): boolean {
@@ -330,6 +335,11 @@ export function bloqueaDuplicado(
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
   // ATASCO (F2): espera la elección de Alberto y volverá a la cola: pedir lo mismo otra vez sería el mismo encargo dos veces.
   if (f.estado === 'atascado') return true
+  if (f.estado === 'ok') {
+    if (f.conPrecio !== true || !f.terminadoAt || Number.isNaN(f.terminadoAt.getTime())) return false
+    const edad = ahora.getTime() - f.terminadoAt.getTime()
+    return edad >= 0 && edad < VENTANA_OK_DUPLICADO_MS
+  }
   return false
 }
 

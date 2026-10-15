@@ -194,6 +194,17 @@ test('duplicado: pendiente sí; en_curso solo con lease vivo; reintentable bajo 
   assert.equal(f('atascado'), true)
 })
 
+test('duplicado 15/10: ok solo con precio y terminado hace menos de 10 min', () => {
+  const ok = (extra: Partial<{ terminadoAt: Date | null; conPrecio: boolean }>) =>
+    bloqueaDuplicado({ estado: 'ok', leaseHasta: null, intentos: 1, modo: null, terminadoAt: antes(9 * 60_000), conPrecio: true, ...extra }, AHORA, 2)
+  assert.equal(ok({}), true)
+  assert.equal(ok({ terminadoAt: antes(11 * 60_000) }), false, 'pasados 10 min se vuelve a tarificar')
+  assert.equal(ok({ conPrecio: false }), false, 'ok sin precio no se sirve')
+  assert.equal(ok({ terminadoAt: null }), false)
+  assert.equal(ok({ terminadoAt: despues(60_000) }), false, 'hora futura = dato dudoso')
+  assert.equal(bloqueaDuplicado({ estado: 'ok', leaseHasta: null, intentos: 1, modo: 'emision', terminadoAt: antes(60_000), conPrecio: true }, AHORA, 2), false)
+})
+
 test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo y la cola tiene cron propio', () => {
   const src = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
   const tramo = (desde: string, hasta: string) => src.slice(src.indexOf(desde), src.indexOf(hasta, src.indexOf(desde)))
@@ -204,6 +215,7 @@ test('cableado: reclamar descuenta los vencidos, encolar deduplica bajo cerrojo 
   const encolar = tramo('export async function encolarTrabajo', '// ─── Reclamar y lanzar')
   assert.match(encolar, /pg_advisory_xact_lock\(hashtext\(\$\{claveEncolar\(/, 'encolarTrabajo sin cerrojo por clave: dos peticiones simultáneas duplican')
   assert.match(encolar, /bloqueaDuplicado\(/, 'encolarTrabajo no deduplica')
+  assert.match(encolar, /terminadoAt: p\.terminado_at, conPrecio: p\.con_precio/, 'el dedupe no mira el ok con precio reciente')
   assert.match(encolar, /t\.oportunidad_id is not distinct from \$\{e\.oportunidadId \?\? null\}::uuid/, 'el dedupe ignora la oportunidad')
   assert.match(encolar, /t\.poliza_id is not distinct from \$\{polizaId \?\? null\}::uuid/, 'el dedupe ignora la póliza')
   assert.match(encolar, /\{ timeout: 15000, maxWait: 10000 \}/, 'encolarTrabajo sin timeout de transacción')

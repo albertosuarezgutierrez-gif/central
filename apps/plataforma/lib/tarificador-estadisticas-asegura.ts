@@ -2,6 +2,7 @@
 // (solo agregados por compañía × ramo × versión del bot) y lo deja listo para pintar. PURO y con test: `null` = «sin datos»
 // (nunca 0) y un fallo del puerto NO es «no hay trabajos».
 
+import { eur } from './dinero.ts'
 export type VentanaBot = {
   total: number
   ok: number
@@ -15,8 +16,23 @@ export type VentanaBot = {
 }
 export type FilaBot = { compania: string; ramo: string; botVersion: string | null; d7: VentanaBot | null; d30: VentanaBot | null }
 
+export type Madurez = 'estable' | 'en_pruebas' | 'sin_precio'
+/** Madurez y coste ESTIMADO (Fly) por compañía × ramo. `null` = sin datos (nunca 0). */
+export type ParejaBot = {
+  compania: string
+  ramo: string
+  madurez: Madurez
+  ok7d: number
+  fallos7d: number
+  trabajos30d: number
+  sinMedir30d: number
+  segMedioPorTrabajo: number | null
+  costeMedioEur: number | null
+  costeTotal30dEur: number | null
+}
+
 export type LecturaEstadisticas =
-  | { estado: 'ok'; filas: FilaBot[]; generadoEn: string | null; atascosDisponibles: boolean | null; ilegibles: number }
+  | { estado: 'ok'; filas: FilaBot[]; parejas: ParejaBot[]; parejasIlegibles: boolean; generadoEn: string | null; atascosDisponibles: boolean | null; ilegibles: number }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; causa: string }
 
@@ -59,7 +75,21 @@ export function interpretarEstadisticas(status: number, json: unknown): LecturaE
     if (!x || !compania || !ramo) { ilegibles++; continue }
     filas.push({ compania, ramo, botVersion: cadena(x.botVersion), d7: ventana(x.d7), d30: ventana(x.d30) })
   }
-  return { estado: 'ok', filas, generadoEn: cadena(o.generadoEn), atascosDisponibles: typeof o.atascosDisponibles === 'boolean' ? o.atascosDisponibles : null, ilegibles }
+  // `parejas` ausente (asegura sin desplegar esta versión) ≠ lista vacía: se avisa en vez de pintar «sin precio» a todos.
+  const parejasCrudas = Array.isArray(o.parejas) ? o.parejas : null
+  const parejas: ParejaBot[] = []
+  for (const p of parejasCrudas ?? []) {
+    const x = obj(p)
+    const compania = cadena(x?.compania), ramo = cadena(x?.ramo)
+    const madurez = x?.madurez === 'estable' || x?.madurez === 'en_pruebas' || x?.madurez === 'sin_precio' ? x.madurez : null
+    if (!x || !compania || !ramo || !madurez) { ilegibles++; continue }
+    parejas.push({
+      compania, ramo, madurez,
+      ok7d: entero(x.ok7d) ?? 0, fallos7d: entero(x.fallos7d) ?? 0, trabajos30d: entero(x.trabajos30d) ?? 0, sinMedir30d: entero(x.sinMedir30d) ?? 0,
+      segMedioPorTrabajo: decimal(x.segMedioPorTrabajo), costeMedioEur: decimal(x.costeMedioEur), costeTotal30dEur: decimal(x.costeTotal30dEur),
+    })
+  }
+  return { estado: 'ok', filas, parejas, parejasIlegibles: parejasCrudas === null, generadoEn: cadena(o.generadoEn), atascosDisponibles: typeof o.atascosDisponibles === 'boolean' ? o.atascosDisponibles : null, ilegibles }
 }
 
 /** «62,5 %»; null → «sin datos». */
@@ -76,4 +106,17 @@ export function textoDuracion(seg: number | null): string {
   if (m < 60) return s % 60 ? `${m} min ${s % 60} s` : `${m} min`
   const h = Math.floor(m / 60)
   return m % 60 ? `${h} h ${m % 60} min` : `${h} h`
+}
+
+export const ETIQUETA_MADUREZ: Record<Madurez, { texto: string; tono: 'positivo' | 'aviso' | 'negativo'; ayuda: string }> = {
+  estable: { texto: 'Estable', tono: 'positivo', ayuda: 'Al menos 3 trabajos con precio y 0 fallos de portal en los últimos 7 días' },
+  en_pruebas: { texto: 'En pruebas', tono: 'aviso', ayuda: 'Ya ha dado algún precio, pero no cumple lo de estable' },
+  sin_precio: { texto: 'Sin precio', tono: 'negativo', ayuda: 'Nunca ha dado un precio' },
+}
+
+/** Coste ESTIMADO en euros: «2,50€»; null → «sin datos»; un importe real por debajo del céntimo → «<0,01€» (nunca «0,00€»). */
+export function textoCoste(n: number | null): string {
+  if (n === null) return 'sin datos'
+  if (n > 0 && n < 0.005) return '<0,01€'
+  return eur(n)
 }

@@ -126,7 +126,7 @@ test('Mapfre: el bloque de la oportunidad bloquea SOLO el botón de Mapfre con e
   assert.match(b, /avisoFichaTomadorParaAlta\(faltanFichaTomadorParaAlta\(riesgo\)\)/)
   assert.match(b, /bloqueosPorCompania=\{bloqueos\}/)
   const p = readFileSync(join(import.meta.dirname, '..', 'app', '(usuario)', 'correduria', 'cliente', '[id]', 'PrecioBots.tsx'), 'utf8')
-  assert.match(p, /const bloqueo = bloqueosPorCompania\?\.\[i\.compania\] \?\? \(resultado\.ok \? adaptador\.faltaPorCompania\?\.\(formulario, extra, i\.compania\) \?\? null : null\)/)
+  assert.match(p, /const bloqueo = bloqueosPorCompania\?\.\[i\.compania\] \?\? \(resultado\.ok \? avisoDeChecklist\(check\) : null\)/)
   assert.match(p, /formulario=\{bloqueo && resultado\.ok \? \{ ok: false, faltan: \[bloqueo\] \} : resultado\}/)
   const r = leerEncoladoBot(422, { estado: 'rechazado', motivo: 'falta_datos_tomador: falta el nombre en la ficha del cliente (Mapfre da de alta al tomador nuevo con ellos); complétalo en la ficha' })
   assert.ok(!r.ok && /^No se encoló: falta el nombre en la ficha/.test(r.mensaje))
