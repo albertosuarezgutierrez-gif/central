@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T13:08:50Z",
-  "sha": "f3ea320fef42f83d6caa5e66a63c145e819a8c08",
+  "generadoEn": "2026-10-15T15:42:04Z",
+  "sha": "86c9cfcce52a944146007a1f85654536d824d1c7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22184,6 +22184,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/encolar",
       "hash": "37ee42ba7987"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/tarificador/estadisticas/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "`GET /api/operador/tarificador/estadisticas` — estadísticas de los bots (15/10/2026) de los últimos 7 y 30 días por compañía × ramo × versión del bot: trabajos, % con precio, % atascado/requiere_human"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/estadisticas",
+      "hash": "9a6be65d3df6"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/exploracion/route.ts",
@@ -47192,6 +47213,91 @@
       ],
       "rutaApi": null,
       "hash": "2f5ac373a458"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-estadisticas-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Estadísticas de los bots del tarificador RPA (15/10/2026) — la parte PURA: de las filas agregadas del SQL a lo que sale por el puerto. Solo AGREGADOS por compañía × ramo × versión del bot: ningún dato personal, ni columnas de riesgo, ni el error crudo. `null` = «sin datos» (nunca 0): un porcentaje s",
+      "exporta": [
+        "proyectarVentana",
+        "proyectarEstadisticas"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number",
+          "linea": 46
+        },
+        {
+          "nombre": "numONull",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 50
+        },
+        {
+          "nombre": "pct",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "parte: number, total: number",
+          "retorno": "number | null",
+          "linea": 55
+        },
+        {
+          "nombre": "clave3",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string, r: string, v: string | null",
+          "retorno": null,
+          "linea": 56
+        },
+        {
+          "nombre": "proyectarVentana",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: FilaAgregada, claves: FilaClave[]",
+          "retorno": "VentanaEstadistica",
+          "linea": 58
+        },
+        {
+          "nombre": "proyectarEstadisticas",
+          "kind": "function",
+          "exportada": true,
+          "params": "agregadas: FilaAgregada[], claves: FilaClave[]",
+          "retorno": "FilaEstadistica[]",
+          "linea": 82
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2ffbfbf8cdee"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-estadisticas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Estadísticas de los bots del tarificador RPA (15/10/2026): SQL agregado de solo lectura. Reglas puras en ./tarificador-estadisticas-reglas.ts. Por `correduria_id`; solo trabajos de TARIFICAR (ni emisión ni exploración). 🔒 Solo salen contadores, medias y claves de atasco: ni riesgo, ni error crudo, ",
+      "exporta": [
+        "leerEstadisticasTarificador"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerEstadisticasTarificador",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ahora = new Date()",
+          "retorno": "Promise<EstadisticasTarificador>",
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "1bcd0d198269"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-exploraciones-reglas.ts",
@@ -107052,6 +107158,71 @@
       "hash": "399606e1d4b1"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/estado/EstadoBots.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EstadoBots"
+      ],
+      "funciones": [
+        {
+          "nombre": "tonoOk",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "p: number | null",
+          "retorno": null,
+          "linea": 25
+        },
+        {
+          "nombre": "Chips",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ v }: { v: VentanaBot }",
+          "retorno": null,
+          "linea": 27
+        },
+        {
+          "nombre": "Atascos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ v }: { v: VentanaBot }",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "EstadoBots",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 46
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "82fc48a57f16"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/estado/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "EstadoBotsPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "EstadoBotsPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "ESTADO DE LOS BOTS del tarificador RPA (15/10/2026): por compañía × ramo × versión del bot, en los últimos 7 y 30 días, cuántos trabajos hubo, cuántos acabaron con precio, cuántos se atascaron o falla"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "71e08e08f840"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/exploraciones/Exploraciones.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -107393,7 +107564,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee73633a9857"
+      "hash": "1e9dc644eb44"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/tarificador/PanelTarificador.tsx",
@@ -118096,6 +118267,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/tarificador/encolar",
       "hash": "59c6b7125106"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/estadisticas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "GET /api/correduria/tarificador/estadisticas — estado de los bots (7/30 días por compañía × ramo × versión): trabajos, % con precio, % atascado/humano/error, tiempo medio y top de claves de atasco. So"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/estadisticas",
+      "hash": "0e8beb6419f1"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/tarificador/exploraciones/[id]/route.ts",
@@ -167257,6 +167449,88 @@
       "hash": "e0497b25f301"
     },
     {
+      "ruta": "apps/plataforma/lib/tarificador-estadisticas-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Estadísticas de los bots del tarificador (15/10/2026) — PLATAFORMA. Lee `/api/operador/tarificador/estadisticas` de asegura (solo agregados por compañía × ramo × versión del bot) y lo deja listo para pintar. PURO y con test: `null` = «sin datos» (nunca 0) y un fallo del puerto NO es «no hay trabajos",
+      "exporta": [
+        "interpretarEstadisticas",
+        "textoPorcentaje",
+        "textoDuracion"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 23
+        },
+        {
+          "nombre": "cadena",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 24
+        },
+        {
+          "nombre": "entero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 25
+        },
+        {
+          "nombre": "decimal",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 26
+        },
+        {
+          "nombre": "ventana",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "VentanaBot | null",
+          "linea": 28
+        },
+        {
+          "nombre": "interpretarEstadisticas",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaEstadisticas",
+          "linea": 48,
+          "resumen": "Una fila rara no desaparece sin más: se cuenta en `ilegibles`."
+        },
+        {
+          "nombre": "textoPorcentaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: number | null",
+          "retorno": "string",
+          "linea": 66,
+          "resumen": "«62,5 %»; null → «sin datos»."
+        },
+        {
+          "nombre": "textoDuracion",
+          "kind": "function",
+          "exportada": true,
+          "params": "seg: number | null",
+          "retorno": "string",
+          "linea": 71,
+          "resumen": "«45 s», «1 min 35 s», «2 h 5 min»; null → «sin datos»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5e9e22a1bf9e"
+    },
+    {
       "ruta": "apps/plataforma/lib/tarificador-exploraciones-asegura.ts",
       "ambito": "apps/plataforma",
       "resumen": "EXPLORADOR IA del tarificador — la RED (solo servidor, 13/10/2026). Mismo puente que el resto del tarificador (`puerto()` de tarificador-asegura.ts: ASEGURA_URL + Bearer + x-actor). El navegador habla con `/api/correduria/tarificador/exploraciones*`, que exigen la sesión de correduría.",
@@ -214148,7 +214422,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 80
+          "linea": 85
         },
         {
           "nombre": "vacio",
@@ -214156,7 +214430,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 82
+          "linea": 87
         },
         {
           "nombre": "texto",
@@ -214164,7 +214438,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max: number, obligatorio: boolean",
           "retorno": "string | null",
-          "linea": 84
+          "linea": 89
         },
         {
           "nombre": "enLista",
@@ -214172,7 +214446,7 @@
           "exportada": false,
           "params": "v: unknown, lista: readonly T[], campo: string, errores: string[]",
           "retorno": "T | null",
-          "linea": 99
+          "linea": 104
         },
         {
           "nombre": "entero",
@@ -214180,7 +214454,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number, obligatorio: boolean",
           "retorno": "number | null",
-          "linea": 106
+          "linea": 111
         },
         {
           "nombre": "importe",
@@ -214188,7 +214462,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "number | null",
-          "linea": 116
+          "linea": 121
         },
         {
           "nombre": "fechaIsoReal",
@@ -214196,7 +214470,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 123
+          "linea": 128
         },
         {
           "nombre": "fechaDdMmAaaaDeIso",
@@ -214204,7 +214478,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 131,
+          "linea": 136,
           "resumen": "AAAA-MM-DD → dd/mm/aaaa (como lo escriben los portales). Otra forma → `null` (no se adivina)."
         },
         {
@@ -214213,13 +214487,13 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioHogar",
-          "linea": 139,
+          "linea": 144,
           "resumen": "Riesgo crudo (de asegura) → `FormularioHogar`, todo o nada. Los errores nombran el CAMPO, nunca el valor (son datos personales en el caso del tomador). `hoy` fija la edad del tomador y el año máximo d"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e739f919c56"
+      "hash": "85026ddfc393"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
@@ -218052,7 +218326,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4712,
-    "funciones": 17345
+    "archivos": 4719,
+    "funciones": 17367
   }
 }
