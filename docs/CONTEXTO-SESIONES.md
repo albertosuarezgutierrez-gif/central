@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/10/2026)** — Tarificador · #4717 (Mapfre 0.7.2 diálogo tras NIF, Allianz moto poblaciones, comunidades prima) y
+#4719 (relanzar `atascado` por `POST /api/operador/tarificador/relanzar` + workflow `tarificador-relanzar.yml`, falta secreto
+GitHub `ASEGURA_OPERADOR_SECRET`; recorrido de pantallas en `error.recorrido`) MERGEADOS; imagen `v20261015-recorrido`.
+Prueba real Terracan: pasa login y tomador; para en matrícula (no hacía blur). Este PR: Mapfre 0.7.3 (blur + espera
+«Selección de vehículo»), «mapa incompleto» sin punto de control → atasco `hueco_mapa`, recorrido ya no se purga al cerrar
+(se borra a 30 días). Diagnóstico (Alberto): se programa a ciegas → pedir grabación Recorder de Chrome por compañía×ramo.
+Un `error_definitivo` purga el riesgo: no se puede relanzar, hay que lanzar desde la pantalla.
+
 **(14/10/2026, noche)** — Tarificador · 4 arreglos en un PR (rama `ccr-4127d080-vgywbl`). Prueba real Mapfre auto 0.7.1
 (trabajo 50cc150d) → atasco: el «espere» transitorio tras el NIF se tomaba por diálogo. **Mapfre 0.7.2**: clasifica diálogo
 (espere / lista → fila con NIF exacto / aviso «no existe» → Aceptar validado en guard / otro → atasco; fallo del guard → atasco).
