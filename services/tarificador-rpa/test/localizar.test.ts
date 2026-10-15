@@ -249,6 +249,13 @@ test('motivoDescarte: orden fijo de motivos', () => {
   assert.equal(motivoDescarte(D, { etiqueta: 'Matrícula *' }), null)
 })
 
+test('motivoDescarte: descripción de emisión y sección bancaria descartan el control', () => {
+  assert.equal(motivoDescarte({ ...D, ariaLabel: 'Contratar ahora' }), 'emision')
+  assert.equal(motivoDescarte({ ...D, title: 'Emitir poliza' }), 'emision')
+  assert.equal(motivoDescarte({ ...D, seccion: 'Datos bancarios' }), 'bancario_o_pago')
+  assert.equal(motivoDescarte({ ...D, seccion: 'Datos del vehículo' }), null)
+})
+
 // ─── Revisión de seguridad (15/10/2026) ──────────────────────────────────────
 
 test('con atasco propio, pideInventarioDom sigue siendo el del adaptador; sin formador, se pide (respaldo)', async () => {

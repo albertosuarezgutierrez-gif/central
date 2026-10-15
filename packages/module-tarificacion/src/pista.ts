@@ -138,6 +138,7 @@ export function validarPista(selector: unknown): ValidacionPista {
   const etiqueta = et[1]!
   if (normalizarEtiquetaPista(etiqueta) !== etiqueta) return { ok: false, motivo: 'etiqueta de la pista sin normalizar' }
   if (textoBancarioOPago(etiqueta)) return { ok: false, motivo: 'la pista apunta a un campo bancario o de pago' }
+  if (pareceEmision(etiqueta)) return { ok: false, motivo: 'la etiqueta de la pista lleva una palabra de emisión' }
   const s = s0.slice(0, et.index).trim()
   const partes = s.split(' >> ')
   if (partes.length > 2) return { ok: false, motivo: 'solo se admite un ámbito' }

@@ -25,6 +25,7 @@ import {
   redactarDatosPersonales,
   senalCuentaBancaria,
   textoBancarioOPago,
+  pareceEmision,
   validarPista,
   type AtascoWorker,
   type Pista,
@@ -106,7 +107,7 @@ export type DescripcionControl = {
   editableContenido?: boolean
 }
 
-export type MotivoDescarte = 'oculto' | 'deshabilitado' | 'cabecera_o_menu' | 'buscador' | 'bancario_o_pago' | 'etiqueta_distinta' | 'no_editable'
+export type MotivoDescarte = 'oculto' | 'deshabilitado' | 'cabecera_o_menu' | 'buscador' | 'bancario_o_pago' | 'emision' | 'etiqueta_distinta' | 'no_editable'
 
 /** Candidato que viaja en el error (y, con su pista, en el atasco). */
 export type CandidatoLocalizado = { n: number; tag: string; id: string | null; name: string | null; type: string | null; rol: string | null; etiqueta: string | null; pista: string | null }
@@ -128,7 +129,12 @@ export class ErrorMapaIncompleto extends ErrorTarificador {
 
 /** Las descripciones de un control que mira la frontera bancaria (las mismas que `exigirCampoNoBancario` de guard.ts). */
 export function descripcionesFrontera(d: DescripcionControl): string[] {
-  return [d.etiqueta, d.name, d.id, d.formcontrolname, d.ariaLabel, d.placeholder, d.title].filter((x): x is string => typeof x === 'string' && x !== '')
+  return [d.etiqueta, d.name, d.id, d.formcontrolname, d.ariaLabel, d.placeholder, d.title, d.seccion].filter((x): x is string => typeof x === 'string' && x !== '')
+}
+
+/** Lo que el propio control dice de sí (sin el título de su sección): sobre esto se mira la emisión. */
+function descripcionesVivas(d: DescripcionControl): string[] {
+  return descripcionesFrontera({ ...d, seccion: null })
 }
 
 /** ¿Es un control EDITABLE? `<input>` de tipo editable (no hidden/submit/button/casillas), `<select>`, `<textarea>`,
@@ -155,6 +161,7 @@ export function motivoDescarte(d: DescripcionControl, o: { etiqueta?: string | n
     if (tipoBuscador || textoBuscador) return 'buscador'
   }
   if (senalCuentaBancaria(descripcionesFrontera(d)) !== null || descripcionesFrontera(d).some((t) => textoBancarioOPago(t))) return 'bancario_o_pago'
+  if (descripcionesVivas(d).some((t) => pareceEmision(t))) return 'emision'
   if (o.soloEditables && !esControlEditable(d)) return 'no_editable'
   if (o.etiqueta && (d.etiqueta === null || normalizarTexto(d.etiqueta) !== normalizarTexto(o.etiqueta))) return 'etiqueta_distinta'
   if (o.etiquetaPista !== undefined && (!o.etiquetaPista || normalizarEtiquetaPista(d.etiqueta) !== o.etiquetaPista)) return 'etiqueta_distinta'

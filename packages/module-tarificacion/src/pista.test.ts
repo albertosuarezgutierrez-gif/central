@@ -53,6 +53,10 @@ describe('validarPista', () => {
     expect(validarPista('main >> input[name="matricula"]').ok).toBe(false)
     expect(validarPista(`input[name="matricula"]${E('Matrícula')}`).ok).toBe(false)
   })
+  it('una etiqueta con palabra de emisión no vale', () => {
+    expect(validarPista(`input[name="importe"]${E('emitir poliza')}`).ok).toBe(false)
+    expect(validarPista(`input[name="importe"]${E('contratar ahora')}`).ok).toBe(false)
+  })
   it('rechaza XPath y CSS libre', () => {
     expect(validarPista(`xpath=/html/body/input[1]${E()}`).ok).toBe(false)
     expect(validarPista(`main input.foo${E()}`).ok).toBe(false)
