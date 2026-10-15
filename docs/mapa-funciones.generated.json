@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T07:15:21Z",
-  "sha": "c26aa2cea8b2c70258c234e02a37d0f87d7d7c6c",
+  "generadoEn": "2026-10-15T08:15:37Z",
+  "sha": "d2dcb0c1a9a6a241699db5b03430d60b69191ea5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -214224,7 +214224,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 100,
+          "linea": 104,
           "resumen": "Quita tildes para que «Emisión» o «Formalización» no se escapen por un acento."
         },
         {
@@ -214233,7 +214233,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 107,
+          "linea": 111,
           "resumen": "Decodifica %-secuencias UTF-8 válidas UNA A UNA: una secuencia mal formada (`%E0%A4%A`) no apaga la decodificación del resto (fail-closed)."
         },
         {
@@ -214242,7 +214242,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 117
+          "linea": 121
         },
         {
           "nombre": "parametrosParecenEmision",
@@ -214250,7 +214250,7 @@
           "exportada": true,
           "params": "cuerpo: string | null | undefined, opciones: OpcionesGuard = {}",
           "retorno": "boolean",
-          "linea": 146,
+          "linea": 150,
           "resumen": "· el VALOR de cada parámetro con clave de acción (`action`, `accion`, `event`, `operation`, `cmd`…): `store`, `contract` o cualquier cosa que case con `pareceEmision`. El resto del cuerpo (datos del r"
         },
         {
@@ -214259,7 +214259,7 @@
           "exportada": true,
           "params": "url: string, opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 161,
+          "linea": 165,
           "resumen": "Lanza si la URL casa con el patrón."
         },
         {
@@ -214268,7 +214268,7 @@
           "exportada": true,
           "params": "descripciones: readonly (string | null | undefined)[], opciones: OpcionesGuard = {}",
           "retorno": "void",
-          "linea": 170,
+          "linea": 174,
           "resumen": "Lanza si el botón a pulsar casa con el patrón. Se mira TODO lo que lo describe (texto visible, `aria-label`, `title`, `value`, `id`, `name`, `href`): un botón con icono y `id=\"btnEmitir\"` también es e"
         },
         {
@@ -214277,12 +214277,12 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "boolean",
-          "linea": 182
+          "linea": 186
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d2bb89a9fa4e"
+      "hash": "525d4baa2541"
     },
     {
       "ruta": "packages/module-tarificacion/src/importes.ts",
