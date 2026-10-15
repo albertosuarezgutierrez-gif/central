@@ -96,6 +96,8 @@ export type ContextoPortal = ContextoTarificacion & {
    * la etiqueta exacta no casó, por `marcarOpcionResueltaHogarAllianz` (guard.ts: `<label for>` único del marco + radio único).
    */
   marcarOpcionHogarResuelta?: (marco: Frame, etiqueta: Locator) => Promise<ResultadoOpcionHogar>
+  /** Allianz AUTOS Turismos (15/10/2026): marca «Sí» de «¿Conoces la matrícula?» por `marcarOpcionTurismosAllianz` (guard.ts: lista cerrada, app `ngx-motor-azs`). */
+  marcarOpcionTurismos?: (marco: Frame, etiqueta: string) => Promise<ResultadoOpcionHogar>
   /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para
