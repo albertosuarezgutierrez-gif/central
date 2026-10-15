@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { adaptadorDeRamo, ramosConBots } from './tarificador-bots-ramos.ts'
+import { adaptadorDeRamo, checklistBot, ramosConBots } from './tarificador-bots-ramos.ts'
 
 test('ramo sin adaptador (o raro) → null', () => {
   for (const r of ['hogar', 'vida', 'salud', 'decesos', 'comunidades', 'AUTO', '', 'toString', '__proto__', null, undefined]) {
@@ -12,7 +12,7 @@ test('moto → adaptador con cilindrada editable; sin ella faltan datos y lo dic
   const a = adaptadorDeRamo('moto')
   assert.ok(a)
   assert.equal(a.ramo, 'moto')
-  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada'])
+  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo'])
   assert.ok(ramosConBots().includes('moto'))
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: null, fechaNacimiento: null, fechaCarne: null,
@@ -54,24 +54,52 @@ const AUTO_BASE = {
 
 test('auto · Mapfre: con años y sin compañía anterior falta (por compañía); otra compañía no lo pide', () => {
   const a = adaptadorDeRamo('auto')!
-  assert.ok(a.faltaPorCompania)
-  assert.match(a.faltaPorCompania!(AUTO_BASE, {}, 'mapfre') ?? '', /compañía anterior/)
-  assert.match(a.faltaPorCompania!(AUTO_BASE, { companiaAnterior: '   ' }, 'mapfre') ?? '', /compañía anterior/)
-  assert.equal(a.faltaPorCompania!(AUTO_BASE, {}, 'allianz'), null)
+  const m = checklistBot(a, AUTO_BASE, {}, 'mapfre')
+  assert.ok(m.estado === 'evaluado' && m.bloquea && /compañía anterior/.test(m.resumen))
+  const m2 = checklistBot(a, AUTO_BASE, { companiaAnterior: '   ' }, 'mapfre')
+  assert.ok(m2.estado === 'evaluado' && m2.bloquea && /compañía anterior/.test(m2.resumen))
+  const al = checklistBot(a, AUTO_BASE, {}, 'allianz')
+  assert.ok(al.estado === 'evaluado' && !al.bloquea)
 })
 
 test('auto · compañía anterior tecleada (o traída del formulario) quita la falta y viaja en el riesgo; tocar el campo vacío manda', () => {
   const a = adaptadorDeRamo('auto')!
-  assert.equal(a.faltaPorCompania!(AUTO_BASE, { companiaAnterior: 'Línea Directa' }, 'mapfre'), null)
-  assert.equal(a.faltaPorCompania!({ ...AUTO_BASE, companiaAnterior: 'Línea Directa' }, {}, 'mapfre'), null)
-  assert.match(a.faltaPorCompania!({ ...AUTO_BASE, companiaAnterior: 'Línea Directa' }, { companiaAnterior: '' }, 'mapfre') ?? '', /compañía anterior/)
+  const bloquea = (f: object, x: Record<string, string>) => { const c = checklistBot(a, f, x, 'mapfre'); return c.estado === 'evaluado' && c.bloquea }
+  assert.equal(bloquea(AUTO_BASE, { companiaAnterior: 'Línea Directa' }), false)
+  assert.equal(bloquea({ ...AUTO_BASE, companiaAnterior: 'Línea Directa' }, {}), false)
+  assert.equal(bloquea({ ...AUTO_BASE, companiaAnterior: 'Línea Directa' }, { companiaAnterior: '' }), true)
   const r = a.construir(AUTO_BASE, { companiaAnterior: ' Línea   Directa ' })
   assert.ok(r.ok && r.riesgo.companiaAnterior === 'Línea Directa')
 })
 
-test('auto · sin años (0) o sin seguro actual declarado no se afirma que falte la compañía anterior', () => {
+test('auto · sin años (0) no se afirma que falte la compañía anterior; sin seguro actual el formulario no está listo (no «todo ok»)', () => {
   const a = adaptadorDeRamo('auto')!
-  assert.equal(a.faltaPorCompania!({ ...AUTO_BASE, aniosAsegurado: '0' }, {}, 'mapfre'), null)
-  assert.equal(a.faltaPorCompania!({ ...AUTO_BASE, tieneSeguroActual: false }, {}, 'mapfre'), null)
-  assert.equal(a.faltaPorCompania!({ ...AUTO_BASE, aniosAsegurado: '' }, {}, 'mapfre'), null)
+  const c = checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '0' }, {}, 'mapfre')
+  assert.ok(c.estado === 'evaluado' && !c.filas.some((f) => f.clave === 'companiaAnterior'))
+  assert.equal(checklistBot(a, { ...AUTO_BASE, tieneSeguroActual: false }, {}, 'mapfre').estado, 'sin_formulario')
+  assert.equal(checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '' }, {}, 'mapfre').estado, 'sin_formulario')
+})
+
+test('compañía sin declaración → no_disponible, también con el formulario incompleto; nunca evaluado', () => {
+  const a = adaptadorDeRamo('auto')!
+  assert.equal(checklistBot(a, AUTO_BASE, {}, 'zurich').estado, 'no_disponible')
+  assert.equal(checklistBot(a, { ...AUTO_BASE, matricula: '' }, {}, 'zurich').estado, 'no_disponible')
+})
+
+test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloquea Allianz Moto; vacío no se inventa', () => {
+  const a = adaptadorDeRamo('moto')!
+  const F = {
+    matricula: '1234BCD', marca: 'Honda', modelo: 'PCX', version: null, codigoPostal: '41003', fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01',
+    sexo: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
+    aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0',
+  }
+  const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
+  assert.ok(sin.estado === 'evaluado' && sin.faltan.some((f) => f.clave === 'conductor.sexo'))
+  const con = checklistBot(a, F, { cilindrada: '125', sexo: 'mujer' }, 'allianz')
+  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+  const r = a.construir(F, { cilindrada: '125', sexo: 'mujer' })
+  assert.ok(r.ok && (r.riesgo.conductor as { sexo: string }).sexo === 'mujer')
+  // Sin tocar el desplegable manda el del formulario.
+  const r2 = a.construir({ ...F, sexo: 'hombre' }, { cilindrada: '125' })
+  assert.ok(r2.ok && (r2.riesgo.conductor as { sexo: string }).sexo === 'hombre')
 })

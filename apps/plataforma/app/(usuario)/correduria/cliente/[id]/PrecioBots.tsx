@@ -13,14 +13,15 @@
 // completa del cotizador) se pinta en línea. Un solo bloque por pantalla.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bot } from 'lucide-react'
+import { Bot, Check, X, UserRound } from 'lucide-react'
 import { btnStyle, cardStyle, CardHeader } from '@/components/ui'
 import {
   SONDEO_MS, SONDEO_TOPE_MS, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloCompania,
   type IntegracionVista, type TrabajoVista,
 } from '@/lib/tarificador-probar'
 import { leerEncoladoBot } from '@/lib/tarificador-moto-formulario'
-import { adaptadorDeRamo, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
+import { adaptadorDeRamo, checklistBot, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
+import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila } from '@/lib/tarificador-checklist'
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 
 /** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
@@ -146,12 +147,13 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
       )}
       <div style={{ display: 'grid', gap: 12, marginTop: lista.length ? 12 : 0 }}>
         {lista.map((i) => {
-          // Aviso fijo de la ficha (bloqueosPorCompania) o, si no hay, lo que falta SOLO para esa compañía (p. ej. Mapfre y la
-          // compañía anterior); en los dos casos el botón de esa compañía no encola.
-          const bloqueo = bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? adaptador.faltaPorCompania?.(formulario, extra, i.compania) ?? null : null)
+          // Aviso fijo de la ficha (bloqueosPorCompania) o, si no hay, lo que falta SOLO para esa compañía según su checklist de
+          // datos obligatorios (`faltanParaTarificar`); sin declaración = no disponible. En todos los casos el botón no encola.
+          const check = checklistBot(adaptador, formulario, extra, i.compania)
+          const bloqueo = bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? avisoDeChecklist(check) : null)
           return (
             <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId}
-              formulario={bloqueo && resultado.ok ? { ok: false, faltan: [bloqueo] } : resultado} aviso={bloqueo} />
+              formulario={bloqueo && resultado.ok ? { ok: false, faltan: [bloqueo] } : resultado} aviso={bloqueo} checklist={check} />
           )
         })}
       </div>
@@ -159,10 +161,12 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   )
 }
 
-function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, aviso }: {
+function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, aviso, checklist }: {
   integracion: IntegracionVista
   /** Por qué ESTA compañía no puede encolar con la ficha actual (se pinta bajo su botón). */
   aviso?: string | null
+  /** Datos que pide el bot de esta compañía: ✓ están, ✗ faltan, «de la ficha» no bloquea. */
+  checklist?: ChecklistCompania
   clienteId: string
   oportunidadId: string | null
   formulario: ResultadoAdaptadorBot
@@ -233,11 +237,12 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
   return (
     <div style={{ display: 'grid', gap: 8, minWidth: 0 }}>
       <button type="button" onClick={() => void pedir()} disabled={!formulario.ok || ocupado}
-        title={formulario.ok ? `Encola una tarificación de ${ramo} en el bot de ${nombre} (solo precio: no emite).` : 'Faltan datos: míralos arriba.'}
+        title={formulario.ok ? `Encola una tarificación de ${ramo} en el bot de ${nombre} (solo precio: no emite).` : aviso ?? 'Faltan datos: míralos arriba.'}
         style={{ ...btnStyle('secundario'), minHeight: 44, width: '100%', maxWidth: 420, opacity: !formulario.ok || ocupado ? 0.6 : 1 }}>
         <Bot size={16} aria-hidden /> {ocupado ? 'Encolando…' : `Precio ${nombre} (bot) — gratis`}
       </button>
       {aviso && <span role="status" style={{ fontSize: 13, color: 'var(--warning)', overflowWrap: 'anywhere' }}>{aviso}</span>}
+      {checklist?.estado === 'evaluado' && <ChecklistDatos check={checklist} nombre={nombre} />}
       {error && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)', overflowWrap: 'anywhere' }}>{error}</span>}
       {seg && (
         <div aria-live="polite" style={{ display: 'grid', gap: 6, minWidth: 0 }}>
@@ -268,5 +273,34 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
         </div>
       )}
     </div>
+  )
+}
+
+const MARCA: Record<EstadoFila, { color: string; icono: typeof Check; texto: string }> = {
+  ok: { color: 'var(--positive)', icono: Check, texto: 'listo' },
+  ficha: { color: 'var(--muted)', icono: UserRound, texto: 'se toma de la ficha' },
+  falta: { color: 'var(--negative)', icono: X, texto: 'falta' },
+}
+
+/** Desplegable con los datos que pide el bot de la compañía (≤ ~16 filas): ✓ listo · ✗ falta · «se toma de la ficha». */
+function ChecklistDatos({ check, nombre }: { check: Extract<ChecklistCompania, { estado: 'evaluado' }>; nombre: string }) {
+  return (
+    <details style={{ fontSize: 13, minWidth: 0 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', gap: 6, color: check.bloquea ? 'var(--negative)' : 'var(--muted)' }}>
+        Datos que pide {nombre}: {resumenFilas(check)}
+      </summary>
+      <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0, display: 'grid', gap: 4 }}>
+        {check.filas.map((f) => {
+          const m = MARCA[f.estado]
+          const Icono = m.icono
+          return (
+            <li key={f.clave} style={{ display: 'flex', gap: 6, alignItems: 'flex-start', overflowWrap: 'anywhere', color: m.color }}>
+              <Icono size={14} aria-hidden style={{ flex: 'none', marginTop: 2 }} />
+              <span><span style={{ color: 'var(--text)' }}>{f.etiqueta}</span> <span style={{ fontSize: 12 }}>({m.texto})</span></span>
+            </li>
+          )
+        })}
+      </ul>
+    </details>
   )
 }

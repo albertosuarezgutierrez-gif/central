@@ -10,6 +10,7 @@ import {
   SONDEO_MS, SONDEO_TOPE_MS, leerEncolado, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloIntegracion,
   type IntegracionVista, type TrabajoVista,
 } from '@/lib/tarificador-probar'
+import { datosQuePide, MOTIVO_SIN_DECLARACION } from '@/lib/tarificador-checklist'
 
 type Integraciones = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'ok'; lista: IntegracionVista[] }
 type Seguimiento = { trabajoId: string; duplicado: boolean; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
@@ -117,6 +118,8 @@ export default function ProbarTarificacion({ clienteId }: { clienteId: string })
   }
 
   const res = seg?.trabajo ? resumenTrabajo(seg.trabajo) : null
+  const integSel = integ.estado === 'ok' ? integ.lista.find((x) => x.clave === clave) : undefined
+  const pide = integSel ? datosQuePide(integSel.compania, integSel.ramo) : undefined
   const sinIntegraciones = integ.estado === 'ok' && integ.lista.length === 0
 
   return (
@@ -142,11 +145,21 @@ export default function ProbarTarificacion({ clienteId }: { clienteId: string })
                 style={{ minHeight: 44, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', padding: '0 8px', minWidth: 0, maxWidth: '100%' }}>
                 {integ.lista.map((i) => <option key={i.clave} value={i.clave}>{rotuloIntegracion(i)}</option>)}
               </select>
-              <button type="button" onClick={() => void probar()} disabled={ocupado || !clave} style={{ ...btnStyle('primario'), opacity: ocupado ? 0.6 : 1 }}>
+              <button type="button" onClick={() => void probar()} disabled={ocupado || !clave || pide === null} style={{ ...btnStyle('primario'), minHeight: 44, opacity: ocupado || pide === null ? 0.6 : 1 }}>
                 {ocupado ? 'Encolando…' : 'Tarificar'}
               </button>
             </div>
           )}
+          {pide && (
+            <details style={{ fontSize: 13, minWidth: 0 }}>
+              <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', color: 'var(--muted)' }}>Datos que pide este bot ({pide.length})</summary>
+              <ul style={{ margin: '4px 0 0', paddingLeft: 18, display: 'grid', gap: 2 }}>
+                {pide.map((e) => <li key={e} style={{ overflowWrap: 'anywhere' }}>{e}</li>)}
+              </ul>
+              <span style={{ color: 'var(--muted)' }}>Se toman del último riesgo tarificado y de la ficha; si falta alguno, asegura lo dice al encolar y no abre el portal.</span>
+            </details>
+          )}
+          {integ.estado === 'ok' && integSel && pide === null && <span role="status" style={{ fontSize: 13, color: 'var(--warning)' }}>{MOTIVO_SIN_DECLARACION}</span>}
           {error && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)', overflowWrap: 'anywhere' }}>{error}</span>}
           {seg && (
             <div aria-live="polite" style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>

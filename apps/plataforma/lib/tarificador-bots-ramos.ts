@@ -5,8 +5,9 @@
 // ramo todavía» y no pinta botones.
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
-import { faltaCompaniaAnterior, MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
-import { formularioBotMoto, historialBot, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
+import { MAX_COMPANIA_ANTERIOR, obligatoriosPara } from '@central/module-tarificacion'
+import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
+import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
 import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
@@ -30,21 +31,25 @@ export type AdaptadorBot = {
   campos: readonly CampoExtraBot[]
   /** Formulario del cotizador del ramo + campos extra → riesgo, o QUÉ falta. */
   construir: (formulario: unknown, extra: Record<string, string>) => ResultadoAdaptadorBot
-  /**
-   * Dato que falta SOLO para esa compañía (p. ej. Mapfre pide la compañía anterior), en castellano y sin valores; `null` =
-   * nada que decir (o no se sabe). Se enseña bajo el botón de esa compañía y lo deja sin encolar.
-   */
-  faltaPorCompania?: (formulario: unknown, extra: Record<string, string>, compania: string) => string | null
 }
 
 /** Lo que el cotizador de moto le da al bloque (todo de `EntradaBotMoto` salvo la cilindrada, que se completa aquí). */
 export type FormularioBotsMoto = Omit<EntradaBotMoto, 'cilindrada'>
 
+const OPCIONES_SEXO = [{ valor: '', etiqueta: 'Elegir…' }, { valor: 'hombre', etiqueta: 'Hombre' }, { valor: 'mujer', etiqueta: 'Mujer' }] as const
+
 const adaptadorMoto: AdaptadorBot = {
   ramo: 'moto',
-  campos: [{ clave: 'cilindrada', etiqueta: 'Cilindrada (cc)', ayuda: 'el bot separa Moto y Ciclomotor', placeholder: 'p. ej. 125' }],
+  campos: [
+    { clave: 'cilindrada', etiqueta: 'Cilindrada (cc)', ayuda: 'el bot separa Moto y Ciclomotor', placeholder: 'p. ej. 125' },
+    // Allianz Moto no tiene «sin dato» en sexo (obligatorio, 15/10/2026): se elige aquí si el cotizador no lo trae. Sin valor
+    // por defecto: no se inventa. Un valor elegido aquí manda sobre el del formulario.
+    { clave: 'sexo', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
+  ],
   construir: (formulario, extra) => {
-    const r = formularioBotMoto({ ...(formulario as FormularioBotsMoto), cilindrada: extra.cilindrada ?? '' })
+    const f = formulario as FormularioBotsMoto
+    const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined ? f.sexo : null
+    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '' })
     return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
   },
 }
@@ -66,12 +71,6 @@ const adaptadorAuto: AdaptadorBot = {
     const r = formularioBotAuto(entradaAuto(formulario, extra))
     return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
   },
-  faltaPorCompania: (formulario, extra, compania) => {
-    const e = entradaAuto(formulario, extra)
-    // Solo con seguro actual declarado cuentan los años (`historialBot` da `null` sin él: «no se sabe», otra regla lo dirá).
-    const falta = faltaCompaniaAnterior(compania, 'auto', historialBot(e).aniosAseguradoAnterior, e.companiaAnterior)
-    return falta ? `Falta ${falta}. Indícala en «Compañía anterior».` : null
-  },
 }
 
 /** Formulario del cotizador + campos extra → entrada del adaptador. Un campo extra TOCADO (aunque vacío) manda sobre el del riesgo. */
@@ -88,6 +87,18 @@ const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = { moto: adaptadorMot
 /** Adaptador del ramo, o `null` si ese ramo aún no tiene bots (ramo ausente, desconocido o de otro tipo → `null`). */
 export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot | null {
   return typeof ramo === 'string' && Object.hasOwn(ADAPTADORES, ramo) ? ADAPTADORES[ramo]! : null
+}
+
+/**
+ * Checklist de datos obligatorios de UNA compañía para este formulario (15/10/2026): reemplaza al antiguo `faltaPorCompania`.
+ * Construye el riesgo con el adaptador y lo pasa por `faltanParaTarificar` (la misma lista que valida asegura al encolar).
+ * Formulario aún incompleto → `sin_formulario` (los faltantes generales se listan aparte); compañía sin declaración →
+ * `no_disponible`, nunca «todo ok». PURA.
+ */
+export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string): ChecklistCompania {
+  const r = adaptador.construir(formulario, extra)
+  if (!r.ok) return obligatoriosPara(compania, adaptador.ramo) === null ? { estado: 'no_disponible', motivo: MOTIVO_SIN_DECLARACION } : { estado: 'sin_formulario' }
+  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha)
 }
 
 /** Ramos con adaptador (para saber qué anfitrión monta el bloque). */
