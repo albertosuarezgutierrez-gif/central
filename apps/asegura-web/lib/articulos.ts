@@ -479,6 +479,59 @@ export const ARTICULOS: readonly Articulo[] = [
       { pregunta: '¿El registro de actividad lo veo yo o solo lo ve el corredor?', respuesta: 'Lo ves tú. Es tu información y tú decides quién accede a ella. El corredor solo interviene si se lo pides.' },
     ],
   },
+  {
+    slug: 'cuanto-tarda-en-pagar-un-seguro-un-siniestro',
+    h1: 'Cuánto tarda el seguro en pagar un siniestro',
+    title: 'Cuánto tarda el seguro en pagar un siniestro',
+    description: 'El seguro debe pagar el importe mínimo en cuarenta días aunque la peritación siga abierta. Te explicamos los plazos reales y qué hacer si se retrasa.',
+    fecha: '2026-10-15',
+    resumen: 'Cuando el seguro acepta tu siniestro, debe pagarte el importe mínimo de lo que te debe en cuarenta días desde que lo declaraste, aunque la peritación no haya terminado. Si no lo hace, entra en mora y deberá intereses.',
+    consulta: 'cuánto tarda el seguro en pagar un siniestro',
+    base: ['lcs-18', 'lcs-20'],
+    ramos: ['hogar', 'comercio'],
+    secciones: [
+      {
+        titulo: 'El plazo legal: cuarenta días para el pago mínimo',
+        parrafos: [
+          'El artículo 18 de la Ley de Contrato de Seguro establece que el asegurador debe pagar el importe mínimo de lo que pueda deber dentro de los cuarenta días siguientes a la declaración del siniestro, aunque la peritación no haya terminado.',
+          'Esto significa que la compañía no puede esperar a tener todos los informes cerrados para empezar a pagar. Si está claro que te debe algo, aunque sea una parte, tiene que adelantarlo en ese plazo.',
+          'El contador empieza el día que declaras el siniestro, no cuando envías el último documento ni cuando termina la visita del perito. Desde ese momento, la aseguradora tiene cuarenta días para ingresar al menos lo que es evidente que te corresponde.',
+        ],
+      },
+      {
+        titulo: 'Qué pasa si el seguro no paga en plazo: la mora',
+        parrafos: [
+          'Si la compañía no paga en esos cuarenta días, entra en mora automáticamente. No hace falta que le reclames ni que le envíes un burofax para que empiece a contar.',
+          'Según el artículo 20 de la Ley de Contrato de Seguro, si el asegurador incurre en mora, la indemnización devenga el interés legal del dinero incrementado en un 50 %. Transcurridos dos años desde el siniestro, ese interés no puede ser inferior al 20 % anual.',
+          'Esos intereses se calculan sobre la cantidad que debería haberte pagado y no lo hizo. Es una penalización por el retraso, y se suma al importe de la indemnización.',
+          'La mora no depende de si la peritación está abierta o cerrada. Aunque sigan valorando daños, si pasaron cuarenta días y no te han pagado nada, ya están en mora por el importe mínimo que era evidente desde el principio.',
+        ],
+      },
+      {
+        titulo: 'Qué hacer mientras la peritación sigue abierta',
+        parrafos: [
+          'Es habitual que la peritación se alargue, sobre todo en siniestros complejos. Pero eso no justifica que no te paguen nada durante meses.',
+          'Si han pasado los cuarenta días y no has recibido ningún pago, reclama por escrito. Pide que te abonen el importe mínimo que ya está claro y que te expliquen por qué no lo han hecho.',
+          'Guarda toda la comunicación: correos, mensajes, llamadas registradas. Si al final tienes que reclamar los intereses de mora, necesitarás demostrar cuándo declaraste el siniestro y cuándo te pagaron.',
+          'Si la compañía no responde o sigue sin pagar, puedes acudir al servicio de atención al cliente de la aseguradora, y si no hay solución, al Defensor del Asegurado o a la vía judicial. Pero antes de llegar ahí, muchas veces basta con una reclamación clara y documentada.',
+        ],
+      },
+      {
+        titulo: 'Cuándo se considera cerrado el siniestro',
+        parrafos: [
+          'El siniestro se cierra cuando la compañía te paga la indemnización completa o cuando te notifica que no va a pagar más. Hasta ese momento, técnicamente sigue abierto.',
+          'Que esté abierto no significa que puedas esperar indefinidamente sin recibir nada. El pago mínimo a los cuarenta días es obligatorio, y el resto debe llegar en cuanto la peritación avance lo suficiente.',
+          'Si la aseguradora necesita más tiempo para valorar daños ocultos o secuelas, debe ir pagando a cuenta. No puede retener todo hasta el final sin justificación.',
+          'En la práctica, los plazos reales varían según el tipo de siniestro. Un cristal roto puede pagarse en una semana; un incendio con daños estructurales puede llevar meses. Pero en todos los casos, el límite de los cuarenta días para el pago mínimo es el mismo.',
+        ],
+      },
+    ],
+    faq: [
+      { pregunta: '¿Pueden pagarme en especie en vez de en dinero?', respuesta: 'Sí, si tu póliza lo prevé y tú lo aceptas. Muchas aseguradoras ofrecen reparación directa en talleres o con profesionales concertados. Pero si prefieres el dinero, tienes derecho a pedirlo. El plazo de cuarenta días sigue aplicando: deben ofrecerte la solución en ese tiempo.' },
+      { pregunta: '¿Qué hago si me pagan menos de lo que creo que me corresponde?', respuesta: 'Primero, pide el informe pericial completo y revisa cómo han calculado la indemnización. Si no estás de acuerdo, puedes solicitar una segunda peritación o reclamar formalmente. Eso es distinto del retraso en el pago: aquí se trata de la cantidad, no del plazo.' },
+      { pregunta: '¿Los cuarenta días cuentan en días naturales o hábiles?', respuesta: 'La ley habla de días, sin especificar. En la práctica se interpretan como días naturales, es decir, se cuentan todos, incluidos festivos y fines de semana. El plazo empieza el día que declaras el siniestro.' },
+    ],
+  },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
   // 26/09/2026 — OpenSEO: «registro de seguros de vida» 260/mes (KD 9), «cómo
