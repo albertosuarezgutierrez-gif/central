@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T13:08:50Z",
-  "sha": "f3ea320fef42f83d6caa5e66a63c145e819a8c08",
+  "generadoEn": "2026-10-15T15:26:45Z",
+  "sha": "e6098c8f9b8671cb20c464d676e3107c7c7dd0b0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -214148,7 +214148,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 80
+          "linea": 85
         },
         {
           "nombre": "vacio",
@@ -214156,7 +214156,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 82
+          "linea": 87
         },
         {
           "nombre": "texto",
@@ -214164,7 +214164,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max: number, obligatorio: boolean",
           "retorno": "string | null",
-          "linea": 84
+          "linea": 89
         },
         {
           "nombre": "enLista",
@@ -214172,7 +214172,7 @@
           "exportada": false,
           "params": "v: unknown, lista: readonly T[], campo: string, errores: string[]",
           "retorno": "T | null",
-          "linea": 99
+          "linea": 104
         },
         {
           "nombre": "entero",
@@ -214180,7 +214180,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number, obligatorio: boolean",
           "retorno": "number | null",
-          "linea": 106
+          "linea": 111
         },
         {
           "nombre": "importe",
@@ -214188,7 +214188,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "number | null",
-          "linea": 116
+          "linea": 121
         },
         {
           "nombre": "fechaIsoReal",
@@ -214196,7 +214196,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "boolean",
-          "linea": 123
+          "linea": 128
         },
         {
           "nombre": "fechaDdMmAaaaDeIso",
@@ -214204,7 +214204,7 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string | null",
-          "linea": 131,
+          "linea": 136,
           "resumen": "AAAA-MM-DD → dd/mm/aaaa (como lo escriben los portales). Otra forma → `null` (no se adivina)."
         },
         {
@@ -214213,13 +214213,13 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioHogar",
-          "linea": 139,
+          "linea": 144,
           "resumen": "Riesgo crudo (de asegura) → `FormularioHogar`, todo o nada. Los errores nombran el CAMPO, nunca el valor (son datos personales en el caso del tomador). `hoy` fija la edad del tomador y el año máximo d"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e739f919c56"
+      "hash": "85026ddfc393"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-rc.ts",
