@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-14T20:18:36Z",
+  "generadoEn": "2026-10-15T06:07:10Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4243,6 +4243,7 @@
       "/api/operador/tarificador/panel",
       "/api/operador/tarificador/pausas/[id]",
       "/api/operador/tarificador/probar",
+      "/api/operador/tarificador/relanzar",
       "/api/operador/tarificador/trabajo/[id]",
       "/api/operador/tarificador/trabajo/[id]/pdf/[indice]",
       "/api/operador/tarificador/trabajo/[id]/traza",
@@ -6917,7 +6918,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1712,
+    "apis": 1713,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
