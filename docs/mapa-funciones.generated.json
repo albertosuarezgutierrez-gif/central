@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T18:10:37Z",
-  "sha": "f70664d7c904b465728c0056e66dbe87a047ca54",
+  "generadoEn": "2026-10-15T19:19:01Z",
+  "sha": "177ccb6fa0cb1ea3c180f8cafe83ca7265d132be",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -48473,7 +48473,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 216
+          "linea": 221
         },
         {
           "nombre": "eventoCierre",
@@ -48481,7 +48481,7 @@
           "exportada": true,
           "params": "resultado: 'ok' | 'error', conIntervencion: boolean",
           "retorno": "EventoAcompanamiento",
-          "linea": 233,
+          "linea": 238,
           "resumen": "Con intervención = la IA tuvo que señalar algo o hubo un aviso bloqueante en el trabajo."
         },
         {
@@ -48490,7 +48490,7 @@
           "exportada": false,
           "params": "c: Candidato, i: number",
           "retorno": "string",
-          "linea": 240
+          "linea": 245
         },
         {
           "nombre": "promptSugerir",
@@ -48498,7 +48498,7 @@
           "exportada": true,
           "params": "p: PeticionSugerir",
           "retorno": "string",
-          "linea": 258
+          "linea": 263
         },
         {
           "nombre": "promptRevisar",
@@ -48506,7 +48506,7 @@
           "exportada": true,
           "params": "p: PeticionRevisar",
           "retorno": "string",
-          "linea": 276
+          "linea": 281
         },
         {
           "nombre": "primerObjetoJson",
@@ -48514,7 +48514,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Record<string, unknown> | null",
-          "linea": 288,
+          "linea": 293,
           "resumen": "Primer objeto JSON balanceado del texto (la IA a veces añade prosa o ```json)."
         },
         {
@@ -48523,7 +48523,7 @@
           "exportada": true,
           "params": "texto: string, nCandidatos: number",
           "retorno": "Sugerencia | null",
-          "linea": 317
+          "linea": 322
         },
         {
           "nombre": "parsearRespuestaRevisar",
@@ -48531,7 +48531,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Revision | null",
-          "linea": 331,
+          "linea": 336,
           "resumen": "`null` si no se entiende. Un `bloqueante` que no es exactamente `true` NO bloquea (no se para un trabajo por ruido)."
         },
         {
@@ -48540,7 +48540,7 @@
           "exportada": true,
           "params": "p: PeticionRevisar",
           "retorno": "IncidenciaPrecio[]",
-          "linea": 349,
+          "linea": 354,
           "resumen": "Coherencia DETERMINISTA del paso `resultado` (no depende de la IA ni de que esté encendida)."
         },
         {
@@ -48549,7 +48549,7 @@
           "exportada": true,
           "params": "modelo?: string",
           "retorno": "",
-          "linea": 368
+          "linea": 373
         },
         {
           "nombre": "costeEstimado",
@@ -48557,7 +48557,7 @@
           "exportada": true,
           "params": "caracteresEntrada: number, caracteresSalida: number, modelo?: string",
           "retorno": "number",
-          "linea": 377,
+          "linea": 382,
           "resumen": "~4 caracteres por token, con la tarifa del `modelo` (sin él, la del por defecto). Redondeado a 6 decimales (numeric(10,6))."
         },
         {
@@ -48566,7 +48566,7 @@
           "exportada": true,
           "params": "caracteresEntrada: number, modelo?: string",
           "retorno": "number",
-          "linea": 388,
+          "linea": 393,
           "resumen": "Coste MÁXIMO de una llamada antes de hacerla: entrada real + salida al tope de tokens, con la tarifa del modelo."
         },
         {
@@ -48575,13 +48575,13 @@
           "exportada": true,
           "params": "usado: number, maximoLlamada: number, max: number",
           "retorno": "boolean",
-          "linea": 393,
+          "linea": 398,
           "resumen": "¿Cabe la llamada siguiente en el tope de € del trabajo (lo gastado + lo máximo que puede costar esta)? Pura."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f3ff7c017f2b"
+      "hash": "702fdf6d4388"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-formador.ts",
@@ -50484,7 +50484,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "Promise<number>",
-          "linea": 276,
+          "linea": 277,
           "resumen": "Relanzamientos de la compañía en las últimas 24 h, contados en `auditoria` (solo llamadas que salieron bien)."
         },
         {
@@ -50493,7 +50493,7 @@
           "exportada": true,
           "params": "correduriaId: string, trabajoId: string, actor: string",
           "retorno": "Promise<ResultadoRelanzar>",
-          "linea": 292,
+          "linea": 293,
           "resumen": "Devuelve a `pendiente` un trabajo `atascado` de TARIFICAR (no `requiere_humano`: captcha/OTP mandarían otro SMS) con su MISMO riesgo (intentos 0, lease/fly/error/ fechas a null), tras descartar sus at"
         },
         {
@@ -50502,7 +50502,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 337,
+          "linea": 338,
           "resumen": "Atascos sin respuesta pasada su hora → el trabajo a `error_definitivo` (con el motivo), su riesgo purgado y el corte evaluado. Un atasco cuyo trabajo ya no está `atascado` (lo movió otra vía) se cierr"
         },
         {
@@ -50511,7 +50511,7 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string",
           "retorno": "Promise<number>",
-          "linea": 402,
+          "linea": 403,
           "resumen": "PRUEBA DE HUMO (15/10/2026) con la contraseña rechazada: abre la pausa de TODAS las parejas activas de esa compañía (la credencial es de la compañía: repetir el login desde otra pareja es como se bloq"
         },
         {
@@ -50520,7 +50520,7 @@
           "exportada": true,
           "params": "db: Db, correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<boolean>",
-          "linea": 430,
+          "linea": 431,
           "resumen": "¿Hay una pausa viva para la pareja? (Sin el SQL de la F2 → `false`: comportamiento anterior.)"
         },
         {
@@ -50529,7 +50529,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Prisma.Sql>",
-          "linea": 442,
+          "linea": 443,
           "resumen": "Condición para el `where` de `reclamarSiguiente` (alias `w` de `tarificacion_trabajos`): sin pausa viva de su pareja. Sin el SQL de la F2 → vacía (la tabla no existe y nombrarla rompería la consulta d"
         },
         {
@@ -50538,7 +50538,7 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string",
           "retorno": "Promise<boolean>",
-          "linea": 453,
+          "linea": 454,
           "resumen": "Tras un `error_definitivo` de un trabajo de TARIFICAR: si los `UMBRAL_CORTE_BOT` últimos cerrados de su pareja (desde la última reanudación) son fallos del bot, o el último es de `credenciales` (basta"
         },
         {
@@ -50547,7 +50547,7 @@
           "exportada": true,
           "params": "correduriaId: string, o: { pendientesAviso?: boolean } = {}",
           "retorno": "Promise<",
-          "linea": 483,
+          "linea": 484,
           "resumen": "Pausas VIVAS de la correduría (con cuántos trabajos esperan detrás). `pendientesAviso` = solo las no avisadas."
         },
         {
@@ -50556,7 +50556,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<number>",
-          "linea": 500
+          "linea": 501
         },
         {
           "nombre": "reanudarPausa",
@@ -50564,7 +50564,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, actor: string",
           "retorno": "Promise<",
-          "linea": 508,
+          "linea": 509,
           "resumen": "Reanuda (solo Alberto, por el puerto). Idempotente: una ya reanudada → `sin_cambios`."
         }
       ],
@@ -50574,7 +50574,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "d7198d9b9ea3"
+      "hash": "ad193cf51982"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
@@ -215899,6 +215899,122 @@
       "hash": "a2bf73398a48"
     },
     {
+      "ruta": "packages/module-tarificacion/src/pista.ts",
+      "ambito": "packages/module-tarificacion",
+      "resumen": "PISTAS APRENDIDAS del localizador común (15/10/2026). Reglas PURAS que comparten el worker (services/tarificador-rpa/src/ localizar.ts, al USAR la pista) y asegura (lib/tarificador-robustez.ts y el confirmar del formador, al GUARDARLA). Una pista es un selector ESTABLE del control que Alberto eligió",
+      "exporta": [
+        "clavePista",
+        "esClavePista",
+        "esIdDinamico",
+        "textoBancarioOPago",
+        "normalizarEtiquetaPista",
+        "ambitoCerrado",
+        "validarPista",
+        "pistaDeDescripcion"
+      ],
+      "funciones": [
+        {
+          "nombre": "slug",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string, max: number",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "clavePista",
+          "kind": "function",
+          "exportada": true,
+          "params": "paso: string, etiqueta: string",
+          "retorno": "string",
+          "linea": 49,
+          "resumen": "Clave de la pista: `_l_<paso>__<etiqueta>` en slug (`^[a-z0-9_]{1,60}$`, la que exige el CHECK de la tabla). Pura."
+        },
+        {
+          "nombre": "esClavePista",
+          "kind": "function",
+          "exportada": true,
+          "params": "clave: string",
+          "retorno": "boolean",
+          "linea": 55
+        },
+        {
+          "nombre": "esIdDinamico",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 64,
+          "resumen": "¿Parece un identificador GENERADO (cambia entre cargas)? `mat-input-12`, `nx-input-3`, `cdk-overlay-0`, `ng-tns-c12-3`, `downshift-0-input`, `radix-:r1:`, `:r1:`, `input12`, `ember123`, `j_idt45`, `__"
+        },
+        {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 88
+        },
+        {
+          "nombre": "separado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 90,
+          "resumen": "camelCase, cifras y separadores → palabras sueltas en minúscula sin tildes. Pura."
+        },
+        {
+          "nombre": "textoBancarioOPago",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 94,
+          "resumen": "¿El texto de un control (atributo, nombre accesible…) es un dato BANCARIO de verdad (cuenta, IBAN, tarjeta, CVV…)? Pura. (La emisión la mira `validarPista` aparte.)"
+        },
+        {
+          "nombre": "normalizarEtiquetaPista",
+          "kind": "function",
+          "exportada": true,
+          "params": "t: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 105,
+          "resumen": "Etiqueta normalizada que guarda la pista: sin tildes, minúsculas, sin `* : > « » \"`, espacios colapsados y recortada. `null` si queda vacía. La misma en el worker al comparar. Pura."
+        },
+        {
+          "nombre": "ambitoCerrado",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: string",
+          "retorno": "boolean",
+          "linea": 122,
+          "resumen": "¿Es un ámbito de la gramática cerrada (sin mirar ids dinámicos ni palabras)? Pura."
+        },
+        {
+          "nombre": "validarPista",
+          "kind": "function",
+          "exportada": true,
+          "params": "selector: unknown",
+          "retorno": "ValidacionPista",
+          "linea": 131,
+          "resumen": "Lee y valida una pista (al GUARDAR en asegura y al USAR en el worker). Rechaza: forma fuera de la gramática, XPath, CSS libre, controles no editables, ids o valores dinámicos, datos personales, pista "
+        },
+        {
+          "nombre": "pistaDeDescripcion",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DescripcionPista, ambito: string | null",
+          "retorno": "string | null",
+          "linea": 195,
+          "resumen": "La pista ESTABLE de un control, o `null` si no tiene ninguna (y entonces no se ofrece en el atasco: no se podría aprender). Sin etiqueta legible → `null` (la pista se comprueba contra ella al usarla)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5b002935cf1f"
+    },
+    {
       "ruta": "packages/module-tarificacion/src/poblacion.ts",
       "ambito": "packages/module-tarificacion",
       "resumen": "Población de un CÓDIGO POSTAL con varias localidades (13/10/2026). PURO: ni BD, ni red. Algunos portales (Allianz ePAC Moto: «BUSCADOR DE POBLACIONES») enseñan, tras teclear el CP, una celda por población con el texto «CP- NOMBRE». Una sola → se pulsa. Varias → se casa EXACTA (salvo mayúsculas/tilde",
@@ -216586,6 +216702,7 @@
         "candidatoAtascoBloqueado",
         "leerAtascoWorker",
         "candidatosVisibles",
+        "candidatoAtascoBancario",
         "elegirCandidatoAtasco",
         "atascoCaducado",
         "decidirAtasco",
@@ -216598,7 +216715,7 @@
           "exportada": true,
           "params": "f: { consolidadoAt?: unknown; descartadoAt?: unknown }",
           "retorno": "EstadoAprendido",
-          "linea": 29,
+          "linea": 30,
           "resumen": "Estado de una fila de lo aprendido. `null`/ausente en las marcas = no ha pasado (nunca «0»)."
         },
         {
@@ -216607,7 +216724,7 @@
           "exportada": true,
           "params": "prev: { confirmaciones: number; consolidado: boolean }, origen: string",
           "retorno": "",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Tras un uso CONFIRMADO (el worker lo validó y tuvo efecto). `origen = 'humano'` (lo eligió Alberto) consolida al momento. Un éxito borra los fallos seguidos y rehabilita una fila descartada (el portal"
         },
         {
@@ -216616,7 +216733,7 @@
           "exportada": true,
           "params": "prev: { fallos: number }",
           "retorno": "",
-          "linea": 45,
+          "linea": 46,
           "resumen": "Tras un FALLO (no resolvió, no validó o se usó y el trabajo cayó sin confirmarlo). Vale también para lo consolidado."
         },
         {
@@ -216625,7 +216742,7 @@
           "exportada": true,
           "params": "ultimos: readonly CierreTrabajo[], umbral = UMBRAL_CORTE_BOT",
           "retorno": "boolean",
-          "linea": 63,
+          "linea": 64,
           "resumen": "¿Se corta la pareja (compañía, ramo)? `ultimos` = los trabajos CERRADOS (`ok` / `error_definitivo`) de la pareja, el más reciente primero, solo los posteriores a la última reanudación. Un tipo descono"
         },
         {
@@ -216634,7 +216751,7 @@
           "exportada": true,
           "params": "ultimos: readonly CierreTrabajo[]",
           "retorno": "boolean",
-          "linea": 73,
+          "linea": 74,
           "resumen": "UN solo cierre `error_definitivo` de tipo `credenciales` (el más reciente) basta para cortar: el usuario del portal es el mismo que usan las personas y repetir un login fallido puede bloquearlo. Un `o"
         },
         {
@@ -216643,7 +216760,7 @@
           "exportada": true,
           "params": "ultimos: readonly CierreTrabajo[], p: { compania: string; ramo: string }, umbral = UMBRAL_CORTE_BOT",
           "retorno": "string | null",
-          "linea": 79,
+          "linea": 80,
           "resumen": "Motivo legible de la pausa (sin usuario ni contraseña) o `null` si no toca cortar."
         },
         {
@@ -216652,7 +216769,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 95,
+          "linea": 96,
           "resumen": "Interruptor del orquestador: sin `TARIFICADOR_ATASCO_ACTIVO=1`, un atasco que llega se guarda como `error_definitivo` (como antes)."
         },
         {
@@ -216661,7 +216778,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "number",
-          "linea": 100,
+          "linea": 101,
           "resumen": "Horas que espera un atasco la respuesta de Alberto (`TARIFICADOR_ATASCO_HORAS`, 1..72; basura → 24)."
         },
         {
@@ -216670,7 +216787,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 139
+          "linea": 140
         },
         {
           "nombre": "cad",
@@ -216678,7 +216795,7 @@
           "exportada": false,
           "params": "v: unknown, max: number, pii = false",
           "retorno": "string | null",
-          "linea": 141
+          "linea": 142
         },
         {
           "nombre": "sinTildes",
@@ -216686,7 +216803,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 151
+          "linea": 152
         },
         {
           "nombre": "candidatoAtascoBloqueado",
@@ -216694,7 +216811,7 @@
           "exportada": true,
           "params": "c: Pick<CandidatoAtasco, 'texto' | 'id' | 'name'>",
           "retorno": "boolean",
-          "linea": 158,
+          "linea": 159,
           "resumen": "¿Un candidato lleva palabras de emisión/pago en su texto, id o name? Defensa en profundidad (el worker vuelve a validar con `validarResolucion`). La etiqueta de la fila no se mira, igual que en `valid"
         },
         {
@@ -216703,7 +216820,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "AtascoWorker | null",
-          "linea": 167,
+          "linea": 168,
           "resumen": "Lo que manda el worker en `error.atasco`, a LISTA BLANCA: claves conocidas, longitudes acotadas, textos redactados otra vez, sin candidatos bloqueados (se quitan y se renumera). Forma rara o sin candi"
         },
         {
@@ -216712,17 +216829,26 @@
           "exportada": true,
           "params": "a: Pick<AtascoWorker, 'candidatos'>",
           "retorno": "CandidatoAtascoVisible[]",
-          "linea": 211,
+          "linea": 216,
           "resumen": "Lo que ven Telegram y la pantalla: sin selector, sin `name` ni marco (técnicos)."
+        },
+        {
+          "nombre": "candidatoAtascoBancario",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: Pick<CandidatoAtasco, 'texto' | 'id' | 'name' | 'etiqueta' | 'selector'>",
+          "retorno": "boolean",
+          "linea": 225,
+          "resumen": "¿Un candidato es un dato BANCARIO de verdad (IBAN, cuenta, domiciliación, tarjeta, CVV…; no «recibo», «cobro» ni «forma de pago», que se tarifican)? Mira etiqueta, id, name, texto y selector (a difere"
         },
         {
           "nombre": "elegirCandidatoAtasco",
           "kind": "function",
           "exportada": true,
-          "params": "candidatos: readonly CandidatoAtasco[], n: unknown",
+          "params": "candidatos: readonly CandidatoAtasco[], n: unknown, clave?: string",
           "retorno": "",
-          "linea": 216,
-          "resumen": "El candidato número `n` de la lista guardada, o el motivo por el que no vale."
+          "linea": 235,
+          "resumen": "El candidato número `n` de la lista guardada, o el motivo por el que no vale. `clave` (15/10/2026): si es de una PISTA del localizador (`esClavePista`), el candidato no puede ser bancario y su selecto"
         },
         {
           "nombre": "atascoCaducado",
@@ -216730,7 +216856,7 @@
           "exportada": true,
           "params": "caducaAt: Date | null, ahora: Date",
           "retorno": "boolean",
-          "linea": 225,
+          "linea": 249,
           "resumen": "¿Llegó el atasco a su fin de espera? Con la hora de la BD."
         },
         {
@@ -216739,7 +216865,7 @@
           "exportada": true,
           "params": "f: { activo: boolean; modo: string | null; tipoError: string; rondasPrevias: number; atasco: AtascoWorker | null }",
           "retorno": "",
-          "linea": 230,
+          "linea": 254,
           "resumen": "Decisión al recibir un atasco: se guarda como `atascado` o cae a `error_definitivo` (con el motivo)."
         },
         {
@@ -216748,13 +216874,13 @@
           "exportada": true,
           "params": "usado: number, bytes: number, tope = MAX_BYTES_CAPTURAS_RESPUESTA",
           "retorno": "boolean",
-          "linea": 246,
+          "linea": 270,
           "resumen": "¿Cabe una captura de `bytes` en la respuesta si ya van `usado` bytes de capturas? Pura. Lo que no cabe sale SIN captura (`null`): el aviso llega igual, sin foto, en vez de reventar la respuesta y deja"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b69a65c2469d"
+      "hash": "8e3d6c47ee34"
     },
     {
       "ruta": "packages/module-tarificacion/src/tomador.ts",
@@ -218931,7 +219057,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4726,
-    "funciones": 17422
+    "archivos": 4727,
+    "funciones": 17434
   }
 }
