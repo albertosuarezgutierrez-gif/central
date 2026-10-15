@@ -9,6 +9,7 @@
 // vive aquí y en el campo del portal; nunca en logs, trazas ni mensajes.
 import { esMatriculaEspanola, normalizarMatricula, type EleccionVersion } from './vehiculo.ts'
 import { esCif, esDniNie, normalizarDocumento, validarTomador, type Tomador } from './tomador.ts'
+import { claveCompania } from './registro.ts'
 import { tieneCaracteresProhibidos } from './poblacion.ts'
 import { validarVehiculoConfirmado, type VehiculoConfirmado } from './vehiculo-confirmado.ts'
 
@@ -34,6 +35,23 @@ export const AMBITO_CIRCULACION_POR_DEFECTO: AmbitoCirculacion = 'espana'
 export const CLASE_PERMISO_POR_DEFECTO: ClasePermiso = 'b'
 /** Máximo de `companiaAnterior` (el adaptador la ignora por encima de 80). */
 export const MAX_COMPANIA_ANTERIOR = 80
+
+/** Compañías cuyo bot de auto pide el NOMBRE de la compañía anterior cuando hay años asegurado (Mapfre NSEI, «Figuras»). */
+export const COMPANIAS_PIDEN_COMPANIA_ANTERIOR: readonly string[] = ['mapfre']
+
+/**
+ * ¿Falta el nombre de la compañía anterior para ESTA compañía? PURA, compartida por la pantalla (plataforma) y asegura al
+ * encolar. `anios`: `null` = no se sabe (no se afirma nada: otra regla dirá que faltan los años); `0` = sin seguro anterior.
+ * Devuelve QUÉ falta (sin valores) o `null`. Un nombre de más de `MAX_COMPANIA_ANTERIOR` cuenta como falta (no viaja).
+ */
+export function faltaCompaniaAnterior(compania: string, ramo: string, anios: number | null | undefined, nombre: string | null | undefined): string | null {
+  if (ramo !== 'auto' || !COMPANIAS_PIDEN_COMPANIA_ANTERIOR.includes(claveCompania(compania))) return null
+  if (typeof anios !== 'number' || !(anios > 0)) return null
+  const n = typeof nombre === 'string' ? nombre.replace(/\s+/g, ' ').trim() : ''
+  if (n === '') return 'la compañía anterior (el riesgo dice que tuvo seguro anterior y Mapfre pide su nombre en «Figuras»)'
+  if (n.length > MAX_COMPANIA_ANTERIOR) return `la compañía anterior (el nombre pasa de ${MAX_COMPANIA_ANTERIOR} caracteres)`
+  return null
+}
 
 export type ConductorHabitual = {
   /** ISO AAAA-MM-DD. */

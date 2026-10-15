@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  avisoTraza, aplicarNifTomador, aplicarDatosTomador, fechaIsoDeFicha, lecturaTomadorFicha, necesitaDatosTomador, riesgoParaEncolar, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  avisoTraza, aplicarNifTomador, aplicarDatosTomador, fechaIsoDeFicha, lecturaTomadorFicha, necesitaDatosTomador, riesgoParaEncolar, faltaCompaniaAnteriorRiesgo, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -495,4 +495,23 @@ test('bot_version: TODA rama de registrarResultado que cierra el trabajo escribe
   assert.match(rama, /exploracion_sin_cierre[^\n]*r\.botVersion/, 'el fallo exploracion_sin_cierre debe pasar la versión')
   assert.match(cuerpo, /marcarFallo\(tx, t\.id, t\.intentos, r\.error, evidencia, conBot \? r\.botVersion/)
   assert.match(cuerpo, /set estado = 'ok', tarificacion_id[^`]*bot_version = coalesce\(\$\{r\.botVersion\}/)
+})
+
+// 🔒 15/10/2026: Mapfre auto con años asegurado > 0 pide el NOMBRE de la compañía anterior; se corta al encolar (422), sin máquina.
+const RIESGO_AUTO_CON_ANIOS = { ramo: 'auto', matricula: '0000BBB', codigoPostal: '41003', aniosAseguradoAnterior: 4 }
+
+test('compañía anterior · Mapfre auto con años y sin nombre: 422 falta_compania_anterior, sin leer la ficha', () => {
+  const r = riesgoParaEncolar('mapfre', 'auto', RIESGO_AUTO_CON_ANIOS, noLeer, noLeer)
+  assert.equal(r.ok, false)
+  assert.ok(!r.ok && r.status === 422 && /^falta_compania_anterior: falta la compañía anterior/.test(r.motivo))
+  assert.ok(!r.ok && !r.motivo.includes('0000BBB'), 'el motivo no lleva datos del riesgo')
+})
+
+test('compañía anterior · con nombre, sin años, otra compañía u otro ramo: no se corta por esto', () => {
+  assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'auto', { ...RIESGO_AUTO_CON_ANIOS, companiaAnterior: 'Línea Directa' }), null)
+  assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'auto', { ...RIESGO_AUTO_CON_ANIOS, aniosAseguradoAnterior: 0 }), null)
+  assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'auto', { ...RIESGO_AUTO_CON_ANIOS, aniosAseguradoAnterior: null }), null)
+  assert.equal(faltaCompaniaAnteriorRiesgo('allianz', 'auto', RIESGO_AUTO_CON_ANIOS), null)
+  assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'moto', RIESGO_AUTO_CON_ANIOS), null)
+  assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'auto', 'no es un objeto'), null)
 })

@@ -126,3 +126,20 @@ describe('datosTomador (alta del tomador en Mapfre; lo pone asegura al entregar,
     expect(secretosDelRiesgo({ tomador: { documentoIdentidad: 'X0000000T', nombre: 'OTRO NOMBRE', fechaNacimiento: '1970-03-04' } })).toEqual(expect.arrayContaining(['OTRO NOMBRE', '04/03/1970']))
   })
 })
+
+describe('faltaCompaniaAnterior (Mapfre auto pide el nombre con años > 0)', () => {
+  it('Mapfre auto con años y sin nombre → falta; con nombre, sin años o sin dato → nada', async () => {
+    const { faltaCompaniaAnterior } = await import('./index.ts')
+    expect(faltaCompaniaAnterior('mapfre', 'auto', 3, null)).toMatch(/compañía anterior/)
+    expect(faltaCompaniaAnterior(' Mapfre ', 'auto', 3, '   ')).toMatch(/compañía anterior/)
+    expect(faltaCompaniaAnterior('mapfre', 'auto', 3, 'Línea Directa')).toBeNull()
+    expect(faltaCompaniaAnterior('mapfre', 'auto', 0, null)).toBeNull()
+    expect(faltaCompaniaAnterior('mapfre', 'auto', null, null)).toBeNull()
+  })
+  it('otra compañía u otro ramo no lo piden; un nombre de más de 80 cuenta como falta', async () => {
+    const { faltaCompaniaAnterior } = await import('./index.ts')
+    expect(faltaCompaniaAnterior('allianz', 'auto', 3, null)).toBeNull()
+    expect(faltaCompaniaAnterior('mapfre', 'moto', 3, null)).toBeNull()
+    expect(faltaCompaniaAnterior('mapfre', 'auto', 3, 'x'.repeat(81))).toMatch(/80/)
+  })
+})

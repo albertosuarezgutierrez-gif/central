@@ -7,7 +7,7 @@
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
-  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
   type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
@@ -116,6 +116,14 @@ export function riesgoSinNifTomador<T>(riesgo: T): T {
   return resto as T
 }
 
+/** `faltaCompaniaAnterior` sobre un riesgo sin validar (lectura defensiva: `aniosAseguradoAnterior` y `companiaAnterior`). PURA. */
+export function faltaCompaniaAnteriorRiesgo(compania: string, ramo: string, riesgo: unknown): string | null {
+  if (!esObj(riesgo)) return null
+  const anios = typeof riesgo.aniosAseguradoAnterior === 'number' ? riesgo.aniosAseguradoAnterior : null
+  const nombre = typeof riesgo.companiaAnterior === 'string' ? riesgo.companiaAnterior : null
+  return faltaCompaniaAnterior(compania, ramo, anios, nombre)
+}
+
 /**
  * Al ENCOLAR: el riesgo que se GUARDA, tras comprobar que la ficha permitirá al worker recibir el NIF. Misma regla y
  * mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSinNifTomador` (el documento
@@ -123,6 +131,10 @@ export function riesgoSinNifTomador<T>(riesgo: T): T {
  */
 export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string } {
   const guardado = riesgoSinNifTomador(riesgo)
+  // Compañía anterior (Mapfre auto, 15/10/2026): con años asegurado > 0 el portal pide su NOMBRE en «Figuras». Se corta aquí,
+  // antes de gastar máquina, igual que `falta_datos_tomador`. El motivo dice QUÉ falta, nunca un valor.
+  const ca = faltaCompaniaAnteriorRiesgo(compania, ramo, guardado)
+  if (ca) return { ok: false, status: 422, motivo: `falta_compania_anterior: falta ${ca}; indícala en el formulario de bots` }
   const r = aplicarNifTomador(compania, ramo, guardado, leer)
   if (!r.ok) return r
   // Nombre / apellidos / nacimiento (alta del tomador nuevo en Mapfre): se COMPRUEBAN aquí y se inyectan al entregar.
