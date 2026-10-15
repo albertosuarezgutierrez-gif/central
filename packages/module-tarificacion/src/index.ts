@@ -450,6 +450,23 @@ export {
   type PermisoEmision,
   ipidConstaEnAceptacion,
 } from './emision.ts'
+// Recorrido del trabajo (15/10/2026): capturas ligeras de cada pantalla/paso/diálogo, sin datos personales, con topes de tamaño.
+export {
+  MAX_BYTES_CAPTURA_RECORRIDO,
+  MAX_BYTES_RECORRIDO,
+  MAX_CAPTURAS_RECORRIDO,
+  MOTIVOS_CAPTURA,
+  enmascararTextoRecorrido,
+  sanearCaptura,
+  sanearRecorrido,
+  firmaCaptura,
+  crearColectorRecorrido,
+  type MotivoCaptura,
+  type CapturaPaso,
+  type DialogoCaptura,
+  type Recorrido,
+  type ColectorRecorrido,
+} from './recorrido.ts'
 // Inventario de ESTRUCTURA de pantalla (13/10/2026): saneado puro del `error.inventarioDom` del worker (hueco de mapa).
 export {
   sanearInventarioDom,

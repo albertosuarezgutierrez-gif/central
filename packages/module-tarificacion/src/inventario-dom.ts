@@ -113,6 +113,28 @@ const sinG = (r: RegExp) => new RegExp(r.source, r.flags.replace('g', ''))
 const MEDIADOR = sinG(PATRON_MEDIADOR)
 const ULTIMO_ACCESO = sinG(PATRON_ULTIMO_ACCESO)
 
+/** Aprende los nombres de mediador («209-C/12/0000 - Nombre Apellidos») de una lista de textos, para quitarlos donde reaparezcan. */
+export function aprenderNombresMediador(textos: Iterable<unknown>, destino: Set<string> = new Set<string>()): Set<string> {
+  for (const v of textos) {
+    if (typeof v !== 'string') continue
+    for (const m of v.replace(/\s+/g, ' ').matchAll(PATRON_MEDIADOR)) {
+      const n = (m[2] ?? '').trim()
+      if (n.length >= 4) destino.add(n.toLowerCase())
+    }
+  }
+  return destino
+}
+
+/** ¿Es cabecera personal del portal (mediador, «Último acceso: fecha» o un nombre de mediador ya aprendido)? */
+export function esCabeceraPersonal(t: string, nombresMediador: ReadonlySet<string> = new Set<string>()): boolean {
+  if (MEDIADOR.test(t)) return true
+  const ua = ULTIMO_ACCESO.exec(t)
+  if (ua && /\d/.test(ua[2] ?? '')) return true
+  const bajo = t.toLowerCase()
+  for (const n of nombresMediador) if (bajo.includes(n)) return true
+  return false
+}
+
 export type InventarioDom = {
   version: 1
   marcos: MarcoInventario[]
@@ -151,13 +173,7 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
   // «Último acceso: <fecha>». El código no tiene forma de NIF ni de teléfono y el nombre es texto llano: se escapaban.
   // Primera pasada: se APRENDEN los nombres de mediador de cualquier texto del crudo, para quitarlos donde reaparezcan.
   const nombresMediador = new Set<string>()
-  const aprender = (v: unknown) => {
-    if (typeof v !== 'string') return
-    for (const m of v.replace(/\s+/g, ' ').matchAll(PATRON_MEDIADOR)) {
-      const n = (m[2] ?? '').trim()
-      if (n.length >= 4) nombresMediador.add(n.toLowerCase())
-    }
-  }
+  const aprender = (v: unknown) => { aprenderNombresMediador([v], nombresMediador) }
   for (const m of c.marcos.slice(0, MAX_MARCOS_INVENTARIO)) {
     const mo = obj(m)
     if (!mo) continue
@@ -168,20 +184,12 @@ export function sanearInventarioDom(crudo: unknown, maxBytes: number = MAX_BYTES
       if (eo) for (const k of ['texto', 'etiqueta', 'ariaLabel', 'placeholder', 'onclick', 'dialogo']) aprender(eo[k])
     }
   }
-  const esCabeceraPersonal = (t: string): boolean => {
-    if (MEDIADOR.test(t)) return true
-    const ua = ULTIMO_ACCESO.exec(t)
-    if (ua && /\d/.test(ua[2] ?? '')) return true
-    const bajo = t.toLowerCase()
-    for (const n of nombresMediador) if (bajo.includes(n)) return true
-    return false
-  }
   const texto = (v: unknown, max: number): string | undefined => {
     if (typeof v !== 'string' && typeof v !== 'number') return undefined
     const plano = String(v).replace(/\s+/g, ' ').trim()
     if (!plano) return undefined
     // Se mira el texto ENTERO (antes de truncar): un NIF partido por el corte no se escapa.
-    if (pareceDatoPersonalInventario(plano) || esCabeceraPersonal(plano)) {
+    if (pareceDatoPersonalInventario(plano) || esCabeceraPersonal(plano, nombresMediador)) {
       descartados++
       return undefined
     }

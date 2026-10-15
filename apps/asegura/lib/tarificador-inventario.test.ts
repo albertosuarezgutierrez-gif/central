@@ -37,3 +37,36 @@ test('inventario sin forma → se descarta sin rechazar el resultado; con tope d
   assert.ok(Buffer.byteLength(JSON.stringify(inv)) <= 60 * 1024)
   assert.ok(inv!.recortado && inv!.recortado.elementosDescartados > 0)
 })
+
+// Recorrido del trabajo (15/10/2026): capturas ligeras de cada pantalla/paso/diálogo. Se re-sanea al recibirlo.
+const captura = (extra: Record<string, unknown> = {}) => ({
+  n: 1, ms: 1200, motivo: 'dialogo', url: 'https://portal.example.test/nsei/alta?token=abc', titulo: 'Alta de tomador',
+  encabezados: ['Datos del tomador'], etiquetas: ['Nombre', 'NIF'], botones: ['Aceptar', 'Cancelar'], enlaces: [],
+  dialogos: [{ rol: 'dialog', id: 'dlgTomador', clase: 'mat-dialog-container', titulo: 'Tomador existente', botones: ['Aceptar'] }],
+  tablas: [3], campos: 2, ...extra,
+})
+
+test('el resultado de error conserva el recorrido saneado (sin query en la URL)', () => {
+  const l = leerResultadoWorker({ ...base, error: { ...base.error, recorrido: { version: 1, capturas: [captura()], descartadas: 0 } } })
+  assert.ok(l.ok && l.r.tipo === 'error')
+  const rec = l.ok && l.r.tipo === 'error' ? l.r.error.recorrido : undefined
+  assert.equal(rec?.capturas.length, 1)
+  assert.equal(rec?.capturas[0].url, 'https://portal.example.test/nsei/alta')
+  assert.equal(rec?.capturas[0].dialogos[0].id, 'dlgTomador')
+})
+
+test('recorrido: se re-sanea (NIF, correo, fecha, nombre tras «tomador») y se respeta el tope; sin forma se descarta', () => {
+  const sucio = captura({ etiquetas: ['Tomador: Pepa Pérez', 'Contacto pepa@correo.test', 'Nacido el 15/01/1980', 'NIF 12345678Z'], valor: 'Pepa', value: 'Pepa' })
+  const l = leerResultadoWorker({ ...base, error: { ...base.error, recorrido: { version: 1, capturas: [sucio] } } })
+  assert.ok(l.ok && l.r.tipo === 'error')
+  const s = JSON.stringify(l.ok && l.r.tipo === 'error' ? l.r.error.recorrido : null)
+  for (const dato of ['Pepa', 'pepa@', '15/01/1980', '12345678Z']) assert.ok(!s.includes(dato), dato)
+  const malo = leerResultadoWorker({ ...base, error: { ...base.error, recorrido: 'x' } })
+  assert.ok(malo.ok && malo.r.tipo === 'error' && malo.r.error.recorrido === undefined)
+  const muchas = Array.from({ length: 120 }, (_, i) => captura({ n: i + 1, botones: Array.from({ length: 30 }, (_, j) => `Botón largo número ${i}-${j} con texto`), etiquetas: Array.from({ length: 40 }, (_, j) => `Campo ${i}-${j} descripción`) }))
+  const g = leerResultadoWorker({ ...base, error: { ...base.error, recorrido: { version: 1, capturas: muchas } } })
+  const rec = g.ok && g.r.tipo === 'error' ? g.r.error.recorrido : undefined
+  assert.ok(rec && Buffer.byteLength(JSON.stringify(rec)) <= 60 * 1024)
+  assert.ok(rec!.capturas.every((c) => Buffer.byteLength(JSON.stringify(c)) <= 4 * 1024))
+  assert.ok(rec!.descartadas > 0)
+})

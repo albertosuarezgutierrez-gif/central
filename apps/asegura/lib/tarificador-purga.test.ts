@@ -249,3 +249,27 @@ const PLANTILLAS: [string, string, string, string | undefined, RegExp][] = [
 for (const [nombre, fichero, desde, hasta, re] of PLANTILLAS) {
   test(`CEPO plantillas · cableado: ${nombre} no reutiliza un riesgo purgado`, () => assert.match(trozo(fichero, desde, hasta), re))
 }
+
+// ─── 5 · El recorrido y el inventario de pantalla caen con el riesgo (16/10/2026) ──────────────────────────────
+test('CEPO purga: al purgar el riesgo, el UPDATE también quita error.recorrido y error.inventarioDom', async () => {
+  const sqls: string[] = []
+  const db = {
+    $queryRaw: async () => [fila('error_definitivo')],
+    $executeRaw: async (s: TemplateStringsArray) => { sqls.push(s.join('?')); return 1 },
+  } as unknown as DbPurga
+  assert.equal(await purgarRiesgoTrabajos(db, ['t1']), 1)
+  assert.equal(sqls.length, 1)
+  assert.match(sqls[0], /error = case when jsonb_typeof\(error\) = 'object' then error - 'recorrido' - 'inventarioDom' else error end/)
+})
+
+test('CEPO lectura: el panel del tarificador NO trae error.recorrido ni error.inventarioDom de 5000 filas', () => {
+  const t = trozo('lib/tarificador-ops.ts', 'export async function leerPanelTarificador', 'const metricas = calcularMetricas')
+  assert.match(t, /t\.error - 'recorrido' - 'inventarioDom'/)
+  assert.ok(!/terminado_at, error\n/.test(t), 'vuelve a seleccionar el jsonb error entero')
+})
+
+test('CEPO: al registrar un fallo, el recorrido se re-sanea con los valores del riesgo del trabajo ya leído', () => {
+  const t = trozo('lib/tarificador.ts', "if (r.tipo === 'error') {", 'const docs: string[]')
+  assert.match(t, /sanearRecorrido\(r\.error\.recorrido, undefined, valoresSensiblesDeRiesgo\(t\.riesgo\)\)/)
+  assert.ok(t.indexOf('sanearRecorrido') < t.indexOf('marcarFallo('), 'el re-saneado tiene que ir ANTES de guardar el fallo')
+})

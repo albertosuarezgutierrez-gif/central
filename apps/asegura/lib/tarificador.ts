@@ -17,6 +17,8 @@ import {
   franquiciaGeneral,
   puedeAutomatizar,
   riesgoSinDatosPersonales,
+  sanearRecorrido,
+  valoresSensiblesDeRiesgo,
   type OfertaNormalizada,
   type PasoTraza,
   type FormularioAuto,
@@ -457,6 +459,12 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
     if (r.tipo === 'error') {
       // Una exploración no guarda captura ni HTML como documento (puede no tener cliente y no hacen falta para el mapa).
       const evidencia = deExploracion ? null : { trabajo: t, captura: r.captura, html: r.html }
+      // Defensa en profundidad: el recorrido se vuelve a sanear con los valores del riesgo de ESTE trabajo (ya leído arriba).
+      if (r.error.recorrido) {
+        const { recorrido: _crudo, ...resto } = r.error
+        const limpio = sanearRecorrido(r.error.recorrido, undefined, valoresSensiblesDeRiesgo(t.riesgo))
+        r.error = limpio && limpio.capturas.length > 0 ? { ...resto, recorrido: limpio } : resto
+      }
       const { estado } = await marcarFallo(tx, t.id, t.intentos, r.error, evidencia, conBot ? r.botVersion : null, conBot)
       return { res: { estado: 'registrado' as const, estadoTrabajo: estado }, traza: { t, captura: r.captura ? 'con_captura' as const : null } }
     }

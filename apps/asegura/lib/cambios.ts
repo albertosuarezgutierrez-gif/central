@@ -50,6 +50,8 @@ export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'oportunidad.estado',
   'aprobacion.estado',
   'acuerdo.revisado_at',
+  // Relanzar un trabajo del tarificador (15/10/2026): el valor es la COMPAÑÍA; con él se cuenta el tope de 24 h.
+  'trabajo_tarificador.relanzado',
 ])
 
 /** Tope por fila: una escritura masiva no convierte la auditoría en un volcado. */

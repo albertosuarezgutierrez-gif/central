@@ -1,0 +1,97 @@
+# Relanza o prueba un trabajo del tarificador RPA SIN la pantalla de plataforma ni cookies de Alberto (15/10/2026):
+# GitHub → Actions → «Tarificador RPA · relanzar» → Run workflow. Solo manual (workflow_dispatch).
+#   · accion=relanzar → POST /api/operador/tarificador/relanzar { trabajoId }: el MISMO trabajo (atascado)
+#     vuelve a `pendiente` con su mismo riesgo. 409 si el estado no vale / hay un trabajo vivo de la compañía; 429 pasado el
+#     tope de 6 relanzamientos por compañía en 24 h.
+#   · accion=probar   → POST /api/operador/tarificador/probar { clienteId, compania, ramo }: copia el riesgo del último
+#     trabajo de ese cliente+compañía+ramo.
+# Secreto de repo REQUERIDO: ASEGURA_OPERADOR_SECRET (el Bearer del puerto de operador de asegura; ningún otro workflow
+# lo usaba antes). Secreto/variable OPCIONAL: ASEGURA_URL (por defecto https://central-asegura.vercel.app).
+# Nunca se imprime el secreto ni el riesgo: solo el estado HTTP y un JSON FILTRADO a claves sin datos personales.
+name: Tarificador RPA · relanzar
+
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: 'relanzar (trabajo existente) o probar (copia el riesgo del último trabajo del cliente)'
+        required: true
+        type: choice
+        options: [relanzar, probar]
+        default: relanzar
+      trabajo_id:
+        description: 'accion=relanzar: uuid del trabajo (atascado)'
+        required: false
+        default: ''
+      cliente_id:
+        description: 'accion=probar: uuid del cliente'
+        required: false
+        default: ''
+      compania:
+        description: 'accion=probar: compañía (minúsculas, ej. allianz)'
+        required: false
+        default: ''
+      ramo:
+        description: 'accion=probar: ramo (ej. hogar)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tarificador-relanzar
+  cancel-in-progress: false
+
+jobs:
+  relanzar:
+    name: Llamar al puerto de operador
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      ACCION: ${{ inputs.accion }}
+      TRABAJO_ID: ${{ inputs.trabajo_id }}
+      CLIENTE_ID: ${{ inputs.cliente_id }}
+      COMPANIA: ${{ inputs.compania }}
+      RAMO: ${{ inputs.ramo }}
+      ASEGURA_URL: ${{ secrets.ASEGURA_URL || vars.ASEGURA_URL || 'https://central-asegura.vercel.app' }}
+      ASEGURA_OPERADOR_SECRET: ${{ secrets.ASEGURA_OPERADOR_SECRET }}
+    steps:
+      # Las entradas llegan por `env` (nunca interpoladas en el script) y se validan ANTES de tocar el secreto.
+      - name: Validar entradas
+        run: |
+          set -euo pipefail
+          uuid='^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+          corto='^[a-z0-9_-]{1,40}$'
+          if [ -z "$ASEGURA_OPERADOR_SECRET" ]; then echo "::error::Falta el secreto de repo ASEGURA_OPERADOR_SECRET"; exit 1; fi
+          case "$ACCION" in
+            relanzar)
+              [[ "$TRABAJO_ID" =~ $uuid ]] || { echo "::error::trabajo_id no es un uuid"; exit 1; } ;;
+            probar)
+              [[ "$CLIENTE_ID" =~ $uuid ]] || { echo "::error::cliente_id no es un uuid"; exit 1; }
+              [[ "$COMPANIA" =~ $corto ]] || { echo "::error::compania no válida"; exit 1; }
+              [[ "$RAMO" =~ $corto ]] || { echo "::error::ramo no válido"; exit 1; } ;;
+            *) echo "::error::accion tiene que ser relanzar o probar"; exit 1 ;;
+          esac
+          case "$ASEGURA_URL" in https://*) ;; *) echo "::error::ASEGURA_URL tiene que ser https"; exit 1 ;; esac
+
+      - name: Llamar a asegura
+        run: |
+          set -uo pipefail
+          if [ "$ACCION" = "relanzar" ]; then
+            ruta="relanzar"
+            cuerpo=$(jq -cn --arg t "$TRABAJO_ID" '{trabajoId: $t}')
+          else
+            ruta="probar"
+            cuerpo=$(jq -cn --arg c "$CLIENTE_ID" --arg o "$COMPANIA" --arg r "$RAMO" '{clienteId: $c, compania: $o, ramo: $r}')
+          fi
+          url="${ASEGURA_URL%/}/api/operador/tarificador/${ruta}"
+          # El Bearer va por stdin (`--config -`): ni en la línea de órdenes ni en el log.
+          http=$(printf 'header = "Authorization: Bearer %s"\n' "$ASEGURA_OPERADOR_SECRET" | curl -sS --config - \
+            -o respuesta.json -w '%{http_code}' --max-time 60 -X POST "$url" \
+            -H 'content-type: application/json' -H 'x-actor: agente:claude-actions' --data "$cuerpo") || http="000"
+          echo "HTTP ${http} · accion=${ACCION}"
+          # Solo claves sin PII, con valores acotados; lo demás no se imprime.
+          jq -c 'if type == "object" then with_entries(select(.key | IN("estado","motivo","mensaje","trabajoId","atascosDescartados","lanzado","duplicado","detalle"))) | map_values(if type == "string" then .[0:300] else . end) else {estado: "respuesta_no_objeto"} end' respuesta.json 2>/dev/null || echo '{"estado":"respuesta_no_json"}'
+          rm -f respuesta.json
+          case "$http" in 2*) exit 0 ;; *) exit 1 ;; esac
