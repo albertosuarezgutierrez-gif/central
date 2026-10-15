@@ -224,12 +224,16 @@ export function textoFaltaEnFicha(campos: readonly string[]): string {
 }
 
 /** El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan. */
-export function textoMotivo(motivo: string): string {
+export function textoMotivo(motivo: string, juridica?: boolean): string {
   switch (motivo) {
     case 'documento_requerido':
-      return 'Para cambiar DNI, nombre, apellidos o fecha de nacimiento hace falta el DNI en la ficha (regla: se pide documentado).'
+      return juridica
+        ? 'Para cambiar CIF, razón social o fecha de constitución hace falta el CIF en la ficha (regla: se pide documentado).'
+        : 'Para cambiar DNI, nombre, apellidos o fecha de nacimiento hace falta el DNI en la ficha (regla: se pide documentado).'
     case 'documento_no_acredita':
-      return 'Ese documento no sirve: tiene que ser un DNI RECIBIDO de este mismo cliente, o una póliza suya cuyo DNI es el de la ficha (la póliza acredita solo nombre y apellidos: para DNI o fecha de nacimiento, escribe el motivo).'
+      return juridica
+        ? 'Ese documento no sirve: tiene que ser un CIF RECIBIDO de este mismo cliente, o una póliza suya cuyo CIF es el de la ficha (la póliza acredita solo la razón social: para CIF o fecha de constitución, escribe el motivo).'
+        : 'Ese documento no sirve: tiene que ser un DNI RECIBIDO de este mismo cliente, o una póliza suya cuyo DNI es el de la ficha (la póliza acredita solo nombre y apellidos: para DNI o fecha de nacimiento, escribe el motivo).'
     case 'motivo_requerido':
       return 'Sin documento, escribe el motivo del cambio (al menos 5 caracteres): queda en el historial con el antes y el después.'
     case 'secreto_rechazado':

@@ -583,10 +583,10 @@ function Identidad({ identidad, clienteId, dePolizas, juridica }: { identidad: I
         <span style={FILA} title="Está guardado pero cifrado con una clave que asegura no puede abrir"><Ico i={IdCard} />{juridica ? 'CIF cifrado' : 'DNI cifrado'}</span>
       ) : identidad.dniEnmascarado ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={FILA} title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
+          <span style={FILA} title={`El ${juridica ? 'CIF' : 'DNI'} completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso`}>
             <Ico i={IdCard} />{identidad.dniEnmascarado}
           </span>
-          <VerDniCompleto clienteId={clienteId} />
+          <VerDniCompleto clienteId={clienteId} juridica={juridica} />
         </span>
       ) : (
         <span style={{ ...FILA, color: 'var(--muted)' }} title={juridica ? 'No consta CIF en la ficha' : 'No consta DNI en la ficha'}><Ico i={IdCard} />{juridica ? 'sin CIF' : 'sin DNI'}</span>

@@ -99,7 +99,9 @@ export default function EditarFichaModal({ oportunidadId, clienteId, nombre, con
               />
             </div>
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-              El correo y otros teléfonos se corrigen en la ficha de la persona. El nombre, el DNI y la fecha de nacimiento exigen el DNI recibido o un motivo.
+              {ficha.juridica
+                ? 'El correo y otros teléfonos se corrigen en la ficha de la empresa. La razón social, el CIF y la fecha de constitución exigen el CIF recibido o un motivo.'
+                : 'El correo y otros teléfonos se corrigen en la ficha de la persona. El nombre, el DNI y la fecha de nacimiento exigen el DNI recibido o un motivo.'}
             </div>
           </>
         )}
