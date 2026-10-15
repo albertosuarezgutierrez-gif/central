@@ -599,6 +599,7 @@ export default function CotizadorMoto({
       aniosAsegurado.trim() === '' ||
       aniosEnCompania.trim() === '' ||
       aniosSinSiniestros.trim() === '')
+    || siniestros5SinDato
 
   // Una figura en otra ficha sin estado civil, o con un hueco de su ficha sin teclear, no cotiza.
   const faltaFigura = ROLES_MOTO.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null, variante?.empresas[rol] ?? false))
