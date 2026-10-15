@@ -1,5 +1,5 @@
 // Allianz ePAC AUTOS (turismo) y MOTO — EN CONSTRUCCIÓN (10/10/2026). NO está registrado en `adapters/index.ts`:
-// nada de producción lo ejecuta (AUTO_ACTIVO = false). Ver docs/TARIFICADOR-RPA.md «Allianz Autos/Moto».
+// solo explora (AUTO_ACTIVO = true desde 15/10/2026, sin mapa). Ver docs/TARIFICADOR-RPA.md «Allianz Autos/Moto».
 //
 // Fuente: grabaciones del marcador del 08/10 (Auto: home + modal «Nueva Alta»; el formulario quedó en un iframe que
 // el grabador NO pudo leer) y del 09/10 (Moto «Motos-online», iframe `appArea` legible: Riesgo municipio, Datos
@@ -65,8 +65,8 @@ import { conRespaldoIA, registrarAtasco, type PeticionResolver } from '../../for
 import { ErrorAvanceSinLlegar, exigirCampoNoBancario } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
-/** Flag de registro de TURISMOS: apagado (sin formulario grabado). Nada lo enciende en producción. */
-export const AUTO_ACTIVO = false
+/** Flag de registro de TURISMOS: ENCENDIDO el 15/10/2026 (Alberto) para EXPLORAR con riesgos reales; sin mapa reconoce el marco o cae en ErrorMapaIncompleto + inventario antes de escribir. */
+export const AUTO_ACTIVO = true
 /**
  * Flag de registro de MOTO (separado de Turismos). ENCENDIDO por Alberto el 13/10/2026 para la primera prueba real
  * (la fila `allianz/moto` de `companias_integracion` sigue siendo el interruptor de BD). `adapters/index.ts` registra
@@ -898,7 +898,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    version: '0.4.0',
+    version: '0.5.0',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

@@ -86,7 +86,7 @@ export function etiquetaExacta(t: string): RegExp {
 type Raiz = Page | Locator
 type Rol = 'tab' | 'link' | 'button' | 'menuitem'
 
-async function localizar(raiz: Raiz, roles: Rol[], texto: string, que: string, espera = ESPERA_MENU_MS, deEntrada = false): Promise<Locator> {
+export async function localizar(raiz: Raiz, roles: Rol[], texto: string, que: string, espera = ESPERA_MENU_MS, deEntrada = false): Promise<Locator> {
   const exacto = etiquetaExacta(texto)
   // El ENLACE DE ENTRADA (excepción del guard): por texto se sube al control pulsable (<a>/<button>/role link|button o
   // `ng-click`) más cercano, para que el guard revise SU href/onclick/ng-click; nunca un span suelto dentro de un <a>.
@@ -199,7 +199,7 @@ function marcosVivos(page: Page): Frame[] {
 }
 
 /** Coincidencias de `buscar` en TODOS los marcos, esperando hasta `ms` a que aparezca alguna. */
-async function enTodosLosMarcos(page: Page, buscar: (f: Frame) => Locator, ms: number): Promise<Locator[]> {
+export async function enTodosLosMarcos(page: Page, buscar: (f: Frame) => Locator, ms: number): Promise<Locator[]> {
   const fin = Date.now() + ms
   for (;;) {
     const hits: Locator[] = []

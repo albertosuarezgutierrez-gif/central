@@ -55,6 +55,11 @@ export type InmuebleHogar = {
   anioReforma: number | null
   /** Superficie construida de la vivienda en m². */
   superficieM2: number
+  /**
+   * Referencia catastral (14 = parcela, 20 = bien), en mayúsculas y sin espacios. Opcional: `undefined` = no consta (Mapfre
+   * Hogar la necesita; Allianz no). La consulta @central/core-catastro la resuelve ANTES de encolar; nunca la inventa el bot.
+   */
+  referenciaCatastral?: string
 }
 
 export type DatosHogar = {
@@ -191,9 +196,12 @@ export function validarFormularioHogar(entrada: unknown, hoy: Date = new Date())
     const anioConstruccion = entero(i.anioConstruccion, 'inmueble.anioConstruccion', errores, 1500, anioHoy, true)
     const anioReforma = entero(i.anioReforma, 'inmueble.anioReforma', errores, 1500, anioHoy, false)
     if (anioConstruccion !== null && anioReforma !== null && anioReforma < anioConstruccion) errores.push('inmueble.anioReforma: anterior al año de construcción')
+    const rcCruda = texto(i.referenciaCatastral, 'inmueble.referenciaCatastral', errores, 24, false)
+    const rc = rcCruda === null ? null : rcCruda.replace(/[\s-]/g, '').toUpperCase()
+    if (rc !== null && !/^[0-9A-Z]{14}(?:[0-9A-Z]{4}[A-Z]{2})?$/.test(rc)) errores.push('inmueble.referenciaCatastral: no es una referencia catastral (14 o 20 caracteres)')
     const superficieM2 = entero(i.superficieM2, 'inmueble.superficieM2', errores, 10, 100_000, true)
     if (errores.length === n0 && codigoPostal !== null && nombreVia !== null && numero !== null && anioConstruccion !== null && superficieM2 !== null) {
-      inmueble = { codigoPostal, municipio, nombreVia, numero, bloque, escalera, planta, puerta, anioConstruccion, anioReforma, superficieM2 }
+      inmueble = { codigoPostal, municipio, nombreVia, numero, bloque, escalera, planta, puerta, anioConstruccion, anioReforma, superficieM2, ...(rc !== null ? { referenciaCatastral: rc } : {}) }
     }
   }
 

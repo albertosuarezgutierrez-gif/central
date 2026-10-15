@@ -90,10 +90,10 @@ test('COMUNIDADES sigue igual: valida con validarRiesgoComunidad y expone la emi
   assert.equal(prepararTrabajo(a, { ...comunidadValida, m2Construidos: null }, HOY).ok, false)
 })
 
-test('el registro de la imagen: Moto entra SOLO con MOTO_ACTIVO (encendido el 13/10/2026 → está), Comunidades sí', async () => {
+test('el registro de la imagen: Moto y Turismos entran SOLO con su flag (Moto 13/10/2026, Turismos 15/10/2026 → están), Comunidades sí', async () => {
   const { adaptadores } = await import('../src/adapters/index.ts')
-  const { MOTO_ACTIVO } = await import('../src/adapters/allianz/auto.ts')
+  const { MOTO_ACTIVO, AUTO_ACTIVO } = await import('../src/adapters/allianz/auto.ts')
   assert.equal(adaptadores.claves().includes('allianz::comunidades'), true)
   assert.equal(adaptadores.claves().includes('allianz::moto'), MOTO_ACTIVO)
-  assert.equal(adaptadores.obtener('allianz', 'auto'), null, 'Turismos no se registra')
+  assert.equal(adaptadores.claves().includes('allianz::auto'), AUTO_ACTIVO, 'Turismos se registra SOLO con AUTO_ACTIVO')
 })

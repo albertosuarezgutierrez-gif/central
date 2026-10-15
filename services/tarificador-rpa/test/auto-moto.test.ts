@@ -136,8 +136,8 @@ const ctxPulsar = {
   },
 }
 
-test('Flags separados: Turismos apagado, Moto encendido (primera prueba real, Alberto 13/10/2026)', () => {
-  assert.equal(AUTO_ACTIVO, false)
+test('Flags separados: Turismos y Moto encendidos (Moto 13/10/2026, Turismos 15/10/2026 para explorar; Alberto)', () => {
+  assert.equal(AUTO_ACTIVO, true)
   assert.equal(MOTO_ACTIVO, true)
 })
 
@@ -435,5 +435,5 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.4.0')
+  assert.equal(allianzMoto.version, '0.5.0')
 })

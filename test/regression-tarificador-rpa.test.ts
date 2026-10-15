@@ -363,13 +363,14 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   const auto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
   assert.match(auto, /if \(ramo !== 'moto'\) \{\s*throw new ErrorMapaIncompleto\(/, 'Turismos sigue siendo hueco')
   assert.match(auto, /await ctx\.avanzarPestanaAutorizada\(destino === 'datosBasicos' \? 'td#datosBasicos' : 'td#rate'\)/)
-  assert.match(auto, /^export const AUTO_ACTIVO = false$/m)
+  assert.match(auto, /^export const AUTO_ACTIVO = true$/m) // encendido para explorar (15/10/2026); sigue sin mapa: ErrorMapaIncompleto antes de rellenar
   assert.match(auto, /^export const MOTO_ACTIVO = (true|false)$/m)
-  // Registro (runner tipado por ramo, 13/10/2026): Moto SOLO condicionada a su flag; Turismos nunca; sin casts dobles en el worker.
+  // Registro (runner tipado por ramo, 13/10/2026): Moto SOLO condicionada a su flag; Turismos SOLO con su flag (15/10/2026); sin casts dobles en el worker.
   const idx = sinComentarios(readFileSync(join(SRV, 'src/adapters/index.ts'), 'utf8'))
   assert.match(idx, /^if \(MOTO_ACTIVO\) adaptadores\.registrar\(allianzMoto\)$/m, 'allianzMoto se registra SOLO con `if (MOTO_ACTIVO)`')
   assert.equal((idx.match(/allianzMoto/g) ?? []).length, 2, 'allianzMoto: un import y un registro condicionado, ningún otro uso')
-  assert.ok(!/allianzAuto|AUTO_ACTIVO/.test(idx), 'Turismos (allianzAuto) no se registra')
+  assert.match(idx, /^if \(AUTO_ACTIVO\) adaptadores\.registrar\(allianzAuto\)$/m, 'allianzAuto se registra SOLO con `if (AUTO_ACTIVO)`')
+  assert.equal((idx.match(/allianzAuto/g) ?? []).length, 2, 'allianzAuto: un import y un registro condicionado, ningún otro uso')
   for (const f of ficheros(join(SRV, 'src'))) assert.ok(!/as unknown as/.test(sinComentarios(readFileSync(f, 'utf8'))), `${relative(RAIZ, f)}: sin casts dobles (as unknown as): el runner valida por ramo`)
   const ramo = sinComentarios(readFileSync(join(SRV, 'src/ramo.ts'), 'utf8'))
   assert.match(ramo, /case 'comunidades':[\s\S]*?validarRiesgoComunidad\(crudo\)/, 'comunidades se valida con validarRiesgoComunidad')

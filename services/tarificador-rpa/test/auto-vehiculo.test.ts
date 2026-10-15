@@ -23,6 +23,7 @@ import {
   resolverVehiculo,
 } from '../src/adapters/allianz/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
+import { TARJETA_AUTOS } from '../src/adapters/allianz/intranet/index.ts'
 import { instalarGuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { clasificar } from '../src/errores.ts'
@@ -80,9 +81,9 @@ after(async () => {
   await browser?.close()
 })
 
-test('Turismos inactivo y sin registrar; Moto registrado SOLO por su flag', () => {
-  assert.equal(AUTO_ACTIVO, false)
-  assert.equal(adaptadores.obtener(allianzAuto.compania, allianzAuto.ramo), null)
+test('Turismos registrado SOLO por su flag (encendido para explorar 15/10/2026); Moto igual', () => {
+  assert.equal(AUTO_ACTIVO, true)
+  assert.equal(adaptadores.obtener(allianzAuto.compania, allianzAuto.ramo) !== null, AUTO_ACTIVO)
   assert.equal(adaptadores.obtener(allianzMoto.compania, allianzMoto.ramo) !== null, MOTO_ACTIVO)
 })
 
@@ -219,4 +220,14 @@ test('leerPrimasTarificar lee la tabla (DOM sintético)', async () => {
 test('el avance a Tarificar es un hueco declarado (no se intenta pulsar nada)', async () => {
   const { avanzarATarificarAutos } = await import('../src/adapters/allianz/auto.ts')
   await assert.rejects(avanzarATarificarAutos(page, {} as never), (e) => e instanceof ErrorMapaIncompleto && clasificar(e).tipo === 'portal')
+})
+
+test('Tarjeta Turismos del modal Nueva Alta: casa SOLO con «AUTOS Turismos» (no Flotas Autos, Vehículo Comercial ni Furgonetas)', async () => {
+  const tarjeta = (icono: string, txt: string) => `<div class="box"><a href="#"><span class="nx-icon-epac fasttrack-icon--alz-icon-${icono}"></span><span>${txt}</span></a></div>`
+  await page.setContent(
+    `<div role="dialog">Nueva Alta ${tarjeta('coches', 'AUTOS<br>Turismos')}${tarjeta('comercial', 'Vehículo Comercial')}${tarjeta('moto', 'Moto')}${tarjeta('flotas', 'Flotas Autos')}${tarjeta('ciclomotor', 'Ciclomotor')}${tarjeta('movilidad', 'Movilidad Personal')}${tarjeta('furgoneta', 'Furgonetas')}</div>`,
+  )
+  const l = page.locator(TARJETA_AUTOS.turismos)
+  assert.equal(await l.count(), 1)
+  assert.match((await l.first().innerText()).replace(/\s+/g, ' ').trim(), /^AUTOS Turismos$/)
 })
