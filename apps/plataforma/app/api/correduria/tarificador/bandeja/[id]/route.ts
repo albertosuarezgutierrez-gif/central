@@ -25,16 +25,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ estado: 'error', mensaje: "accion tiene que ser 'reintentar' o 'cancelar'" }, { status: 400 })
   }
   // Versión elegida a mano (solo forma aquí; la lista y el estado los valida asegura bajo su `for update`).
-  let eleccionVersion: { codigo: string; etiqueta?: string | null } | null = null
+  // Sin código (portal sin código de catálogo, p. ej. Mapfre): `{ codigo: null, etiqueta }` con la etiqueta exacta de la opción.
+  let eleccionVersion: { codigo: string | null; etiqueta?: string | null } | null = null
   const ev = b?.eleccionVersion
   if (ev !== undefined && ev !== null) {
     const o = typeof ev === 'object' && !Array.isArray(ev) ? (ev as Record<string, unknown>) : null
     const etiqueta = o?.etiqueta
-    if (accion !== 'reintentar' || !o || typeof o.codigo !== 'string' || !o.codigo.trim() || o.codigo.length > 60
-      || (etiqueta !== undefined && etiqueta !== null && (typeof etiqueta !== 'string' || etiqueta.length > 200))) {
-      return NextResponse.json({ estado: 'error', mensaje: 'eleccionVersion: { codigo, etiqueta? } y solo con reintentar' }, { status: 400 })
+    const sinCodigo = o !== null && (o.codigo === null || o.codigo === undefined)
+    const codigoOk = o !== null && typeof o.codigo === 'string' && o.codigo.trim() !== '' && o.codigo.length <= 60
+    const etiquetaOk = etiqueta === undefined || etiqueta === null || (typeof etiqueta === 'string' && etiqueta.length <= 200)
+    const etiquetaLlena = typeof etiqueta === 'string' && etiqueta.trim() !== ''
+    if (accion !== 'reintentar' || !o || !etiquetaOk || !(codigoOk || (sinCodigo && etiquetaLlena))) {
+      return NextResponse.json({ estado: 'error', mensaje: 'eleccionVersion: { codigo, etiqueta? } (o { codigo: null, etiqueta }) y solo con reintentar' }, { status: 400 })
     }
-    eleccionVersion = { codigo: o.codigo.trim(), etiqueta: typeof etiqueta === 'string' ? etiqueta : null }
+    eleccionVersion = { codigo: codigoOk ? (o.codigo as string).trim() : null, etiqueta: typeof etiqueta === 'string' ? etiqueta : null }
   }
   // Población elegida a mano (solo forma; la lista la valida asegura).
   let eleccionPoblacion: string | null = null

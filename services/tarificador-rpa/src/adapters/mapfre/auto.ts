@@ -38,17 +38,23 @@
 //     de permiso y «Valido desde» (fecha del carné). La compañía anterior es un mat-select (capa común) y el «Nº de Póliza»
 //     anterior NO está en el riesgo: si el portal lo exige → `datos`; si no, se deja como está.
 //   · Tras «Continuar» desde Figuras sale el diálogo «Club MAPFRE»: se cierra por `ctx.cerrarClubMapfre` (botón izquierdo).
+// v0.8.1 (15/10/2026, trabajo real 39c8016e) · con la versión elegida por etiqueta (código null) el bot SÍ eligió la fila y
+//   aceptó («Resumen vehículo» a la vista), pero paró pidiendo el mat-select «uso», que ese flujo NO pinta (ni «ámbito»; la
+//   grabación tampoco los toca antes de «Continuar»). Uso y ámbito pasan a OPCIONALES: si no aparecen, se sigue; un mat-select
+//   obligatorio (clase de permiso, compañía anterior) que no aparece → atasco + hueco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
 
 import type { Frame, Locator, Page } from 'playwright'
 import {
+  AMBITO_CIRCULACION_POR_DEFECTO,
   documentoTomadorDe,
   EmisionBloqueadaError,
   importeEs,
   normalizarMatricula,
   redactarDatosPersonales,
   resolverVersion,
+  USO_VEHICULO_POR_DEFECTO,
   vehiculoConfirmadoDesdeMapfre,
   type CandidatoVersion,
   type DatosTomadorFicha,
@@ -526,6 +532,16 @@ export type OperacionNsei = {
   opciones?: readonly string[]
   /** Texto: si `sel` no aparece, se busca el campo por la ETIQUETA del portal dentro de `ambito` (antes de la capa común). */
   porEtiqueta?: { ambito: string; etiqueta: string }
+  /**
+   * v0.8.1 (trabajo real 39c8016e, 15/10/2026): el control NO sale en todos los flujos. Tras elegir el vehículo en «Selección
+   * de vehículo», NSEI NO pintó ni «uso» ni «ámbito de circulación» (la grabación tampoco los rellena antes de «Continuar»).
+   * Si no aparece en la pantalla, se SIGUE (no hay nada que rellenar ni dato que suponer). Si aparece, se rellena o, sin
+   * valor en el riesgo, queda pendiente como siempre. Un control NO opcional que no aparece → atasco + hueco.
+   * Solo es `opcional` si el riesgo no trae valor o trae el DEFECTO (particular / España): con otro valor (alquiler,
+   * profesional, internacional…) un desplegable ausente NO se salta (no se tarifica con el valor implícito de Mapfre).
+   * Aun así, solo se da por ausente tras una ESPERA ACTIVA (`ESPERA_OPCIONAL_MS`), nunca con un `count()` instantáneo.
+   */
+  opcional?: boolean
 }
 
 // ───────────────────────── mapeo valor del formulario → texto de Mapfre (datos explícitos) ─────────────────────────
@@ -552,6 +568,25 @@ export function textosMapfreDe(campo: keyof typeof MAPEO_MAPFRE_AUTO, valor: str
 }
 
 const CP = /^\d{5}$/
+
+/** Espera activa antes de dar por ausente un desplegable opcional (uso/ámbito): el flujo los pinta a veces con retraso. */
+export const ESPERA_OPCIONAL_MS = 2_500
+
+/** ¿Aparece `sel` dentro de `ms`? Sondeo cada 250 ms (espera activa); `ms` 0 = una sola mirada. Solo lectura. */
+async function apareceEn(raiz: Pick<Frame, 'locator'>, sel: string, ms: number): Promise<boolean> {
+  const fin = Date.now() + ms
+  for (;;) {
+    if ((await raiz.locator(sel).count().catch(() => 0)) > 0) return true
+    if (Date.now() >= fin) return false
+    await new Promise((r) => setTimeout(r, Math.min(250, Math.max(1, fin - Date.now()))))
+  }
+}
+
+/** Opcional solo si el riesgo no trae valor (o está vacío) o trae el defecto del formulario. PURA. */
+function esDefectoOVacio(valor: string | null | undefined, defecto: string): boolean {
+  const k = typeof valor === 'string' ? valor.trim().toLowerCase() : ''
+  return k === '' || k === defecto
+}
 
 /**
  * ¿El conductor habitual es el TOMADOR? La grabación del 15/10/2026 rellena la licencia en la pestaña «Tomador» de Figuras: el
@@ -601,12 +636,15 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
   ]
   const pendientes: OperacionNsei[] = []
   // mat-select: con el valor del formulario mapeado van a `escribibles` (los rellena `rellenarMatSelects`); sin él, pendiente.
-  const selectDe = (sel: string, etiqueta: string, paso: IdPasoNsei, textos: readonly string[] | null) => {
-    if (textos) escribibles.push({ sel, etiqueta, tipo: 'mat-select', valor: textos[0]!, paso, opciones: textos })
-    else pendientes.push({ sel, etiqueta, tipo: 'mat-select', valor: '', paso })
+  const selectDe = (sel: string, etiqueta: string, paso: IdPasoNsei, textos: readonly string[] | null, opcional = false) => {
+    const o = opcional ? { opcional: true } : {}
+    if (textos) escribibles.push({ sel, etiqueta, tipo: 'mat-select', valor: textos[0]!, paso, opciones: textos, ...o })
+    else pendientes.push({ sel, etiqueta, tipo: 'mat-select', valor: '', paso, ...o })
   }
-  selectDe(SEL_OBJETO.uso, 'uso del vehículo', 'objetoAsegurado', textosMapfreDe('uso', extra.usoVehiculo))
-  selectDe(SEL_OBJETO.ambitoCirculacion, 'ámbito de circulación', 'objetoAsegurado', textosMapfreDe('ambito', extra.ambitoCirculacion))
+  // Uso y ámbito: OPCIONALES (v0.8.1): solo se rellenan si el flujo los pinta (ver `OperacionNsei.opcional`).
+  // Opcional SOLO con valor nulo o igual al defecto; con otro valor, ausente = atasco + hueco.
+  selectDe(SEL_OBJETO.uso, 'uso del vehículo', 'objetoAsegurado', textosMapfreDe('uso', extra.usoVehiculo), esDefectoOVacio(extra.usoVehiculo, USO_VEHICULO_POR_DEFECTO))
+  selectDe(SEL_OBJETO.ambitoCirculacion, 'ámbito de circulación', 'objetoAsegurado', textosMapfreDe('ambito', extra.ambitoCirculacion), esDefectoOVacio(extra.ambitoCirculacion, AMBITO_CIRCULACION_POR_DEFECTO))
   selectDe(SEL_LICENCIA.clasePermiso, 'clase del permiso', 'figuras', textosMapfreDe('clasePermiso', extra.clasePermiso))
   if (f.aniosAseguradoAnterior > 0) selectDe(SEL_HISTORIAL.companiaAnterior, 'compañía anterior', 'figuras', [nombreAnterior])
   return { escribibles, pendientes }
@@ -657,13 +695,21 @@ async function campoPorEtiquetaPortal(raiz: Pick<Frame, 'locator'>, sel: string,
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
  */
-export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'>, respaldo: RespaldoCampos = SIN_RESPALDO): Promise<string[]> {
+export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, ctx: Pick<ContextoPortal, 'elegirMatSelect'>, respaldo: RespaldoCampos = SIN_RESPALDO, esperaOpcionalMs: number = ESPERA_OPCIONAL_MS): Promise<string[]> {
   const hechos: string[] = []
   for (const op of plan.escribibles) {
     if (op.tipo !== 'mat-select') continue
-    if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
     const sel = raiz.locator(op.sel).first()
-    if ((await sel.count().catch(() => 0)) === 0) throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)`, true)
+    if (!(await apareceEn(raiz, op.sel, op.opcional ? esperaOpcionalMs : 0))) {
+      // Opcional que este flujo no pinta (v0.8.1): se sigue sin tocar nada. Obligatorio que no aparece → ATASCO + hueco.
+      if (op.opcional) {
+        respaldo.formador?.log('mapfre_select_ausente', { etiqueta: op.etiqueta })
+        continue
+      }
+      await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Desplegable «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: no aparece en la pantalla` }).catch(() => undefined)
+      throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)`, true)
+    }
+    if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
     // Capa común: coincidencia clara por texto → IA solo entre las opciones visibles → si no, ATASCO (Telegram) + hueco.
     await ctx.elegirMatSelect(sel, op.opciones ?? [String(op.valor)], { etiqueta: op.etiqueta }).catch(async (e: unknown) => {
       if (e instanceof ErrorOpcionSinResolver) {
@@ -694,6 +740,19 @@ export function planDelPaso(plan: PlanNsei, paso: IdPasoNsei, excluir: readonly 
 export function exigirPasoCompleto(plan: PlanNsei, paso: IdPasoNsei): void {
   const p = planDelPaso(plan, paso).pendientes
   if (p.length) throw new ErrorMapaIncompleto(`en el paso «${PASOS_NSEI.find((x) => x.id === paso)!.nombre}» los controles sin mapear: ${p.map((o) => o.etiqueta).join(', ')} (mat-select/interruptor sin DOM grabado abierto)`, true)
+}
+
+/**
+ * Quita de `pendientes` los controles OPCIONALES que la pantalla no pinta tras la espera activa (v0.8.1): nada que rellenar ni suponer.
+ * Los que SÍ aparecen siguen pendientes (y `exigirPasoCompleto` para con inventario). Solo lectura.
+ */
+export async function sinOpcionalesAusentes(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<PlanNsei> {
+  const pendientes: OperacionNsei[] = []
+  for (const o of plan.pendientes) {
+    if (o.opcional && !(await apareceEn(raiz, o.sel, esperaMs))) continue
+    pendientes.push(o)
+  }
+  return { escribibles: plan.escribibles, pendientes }
 }
 
 const continuar = (nsei: Page, ctx: Pick<ContextoPortal, 'continuarMapfre'>, paso: 'datosBasicos' | 'objetoAsegurado' | 'figuras') => {
@@ -1086,7 +1145,7 @@ export async function precioDesdeObjetoAsegurado(
   const respaldo: RespaldoCampos = { page: nsei, formador: ctx.formador }
   await rellenarCamposTexto(nsei, planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]), respaldo)
   await rellenarMatSelects(nsei, planDelPaso(plan, 'objetoAsegurado'), ctx, respaldo)
-  exigirPasoCompleto(plan, 'objetoAsegurado')
+  exigirPasoCompleto(await sinOpcionalesAusentes(nsei, planDelPaso(plan, 'objetoAsegurado')), 'objetoAsegurado')
   await continuar(nsei, ctx, 'objetoAsegurado')
   // Orden de la grabación: licencia (clase y fecha) → compañía anterior → nº de póliza anterior.
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
@@ -1109,7 +1168,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.0',
+  version: '0.8.1',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

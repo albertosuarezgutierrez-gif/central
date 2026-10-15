@@ -125,10 +125,56 @@ test('bandeja: la elección a mano se valida contra la lista guardada del trabaj
   assert.equal(eleccionContraLista({ codigo: 'V003', etiqueta: null }, { tipo: 'captcha', mensaje: 'x' }).ok, false, 'sin lista guardada')
 })
 
+test('bandeja: las etiquetas se comparan SIN tildes (misma normalización que el bot) y la ambigüedad se rechaza igual', () => {
+  const lista = (...e: string[]) => ({ tipo: 'eleccion', mensaje: 'x', opcionesVersion: e.map((etiqueta) => ({ codigo: null, etiqueta })) })
+  assert.deepEqual(eleccionContraLista({ codigo: null, etiqueta: 'citroen c4 picasso' }, lista('CITROËN C4 PICASSO', 'OTRO')), { ok: true, eleccion: { codigo: null, etiqueta: 'CITROËN C4 PICASSO' } })
+  // «Peña» y «Pena» son la MISMA etiqueta para el bot (elegiría una al azar): ambigua → rechazada.
+  const r = eleccionContraLista({ codigo: null, etiqueta: 'Pena GT' }, lista('PEÑA GT', 'PENA GT'))
+  assert.ok(!r.ok && /repetida/.test(r.motivo))
+})
+
 test('bandeja: forma de eleccionVersion en el cuerpo', () => {
   assert.deepEqual(leerEleccionBandeja(undefined), { ok: true, eleccion: null })
   assert.deepEqual(leerEleccionBandeja({ codigo: ' V001 ' }), { ok: true, eleccion: { codigo: 'V001', etiqueta: null } })
   for (const malo of ['V001', [], { codigo: '' }, { codigo: 7 }, { codigo: 'x'.repeat(61) }, { codigo: 'V1', etiqueta: 3 }]) assert.equal(leerEleccionBandeja(malo).ok, false)
+})
+
+// ─── Opciones SIN código (Mapfre, 15/10/2026: «Selección de vehículo» solo da la denominación) ─────────────
+const SIN_CODIGO = [
+  { codigo: null, etiqueta: 'Marca Prueba Modelo 2.9 Gl · 163 CV · 2902 cc · 01/01/2004' },
+  { codigo: null, etiqueta: 'Marca Prueba Modelo 2.9 Gls · 163 CV · 2902 cc · 01/01/2004' },
+]
+const errorSinCodigo = { tipo: 'eleccion', mensaje: 'requiere_eleccion_version: …', opcionesVersion: SIN_CODIGO }
+
+test('bandeja (D): con opciones SIN código se elige por la ETIQUETA EXACTA de una opción; nunca por parecido ni contra una con código', () => {
+  assert.deepEqual(leerEleccionBandeja({ codigo: null, etiqueta: SIN_CODIGO[1].etiqueta }), { ok: true, eleccion: { codigo: null, etiqueta: SIN_CODIGO[1].etiqueta } })
+  assert.deepEqual(leerEleccionBandeja({ etiqueta: 'x' }), { ok: true, eleccion: { codigo: null, etiqueta: 'x' } })
+  for (const malo of [{ codigo: null }, { codigo: null, etiqueta: '  ' }, { codigo: null, etiqueta: 'x'.repeat(201) }]) assert.equal(leerEleccionBandeja(malo).ok, false, JSON.stringify(malo))
+  // Mayúsculas/espacios no cuentan; lo escrito es la etiqueta DE LA LISTA, con código null.
+  assert.deepEqual(eleccionContraLista({ codigo: null, etiqueta: '  marca prueba modelo 2.9 GLS ·  163 CV · 2902 cc · 01/01/2004 ' }, errorSinCodigo), { ok: true, eleccion: { codigo: null, etiqueta: SIN_CODIGO[1].etiqueta } })
+  assert.equal(eleccionContraLista({ codigo: null, etiqueta: 'Marca Prueba Modelo 2.9' }, errorSinCodigo).ok, false, 'un trozo no vale')
+  assert.equal(eleccionContraLista({ codigo: null, etiqueta: 'F 800 GS 85 CV' }, fila().error).ok, false, 'sin código no se elige una opción que SÍ tiene código')
+  const repetida = { ...errorSinCodigo, opcionesVersion: [SIN_CODIGO[0], { codigo: null, etiqueta: SIN_CODIGO[0].etiqueta.toUpperCase() }] }
+  assert.equal(eleccionContraLista({ codigo: null, etiqueta: SIN_CODIGO[0].etiqueta }, repetida).ok, false, 'dos opciones con la misma etiqueta: no se adivina')
+  // Un código no casa con una opción sin código.
+  assert.equal(eleccionContraLista({ codigo: 'V001', etiqueta: null }, errorSinCodigo).ok, false)
+  // El item de la bandeja expone las opciones sin código (la lista viaja con tipo `eleccion`).
+  const base = { id: JOB, compania: 'mapfre', ramo: 'auto', estado: 'requiere_humano', intentos: 1, oportunidad_id: null, bot_version: null, fecha: new Date(EN) }
+  assert.deepEqual(proyectarItemBandeja({ ...base, error: errorSinCodigo }).opcionesVersion, SIN_CODIGO)
+})
+
+test('cable (C): `eleccion` es el tipo propio de «hay que elegir» y trae su lista; `captcha` (workers antiguos) también', () => {
+  for (const tipo of ['eleccion', 'captcha']) {
+    const l = leerResultadoWorker({ trabajoId: JOB, resultado: 'error', error: { tipo, mensaje: 'requiere_eleccion_version: …', url: null, opcionesVersion: SIN_CODIGO } })
+    assert.ok(l.ok && l.r.tipo === 'error' && l.r.error.tipo === tipo)
+    assert.deepEqual(l.ok && l.r.tipo === 'error' ? l.r.error.opcionesVersion : null, SIN_CODIGO, tipo)
+  }
+  // Con otro tipo la lista no se acepta (no es una elección).
+  const p = leerResultadoWorker({ trabajoId: JOB, resultado: 'error', error: { tipo: 'portal', mensaje: 'x', url: null, opcionesVersion: SIN_CODIGO } })
+  assert.ok(p.ok && p.r.tipo === 'error' && p.r.error.opcionesVersion === undefined)
+  // La elección automática (IA/memoria) también reconoce el tipo nuevo.
+  const conEleccion = planEleccionVersion(fila({ error: { tipo: 'eleccion', mensaje: 'requiere_eleccion_version: x', url: null, opcionesVersion: OPCIONES, en: EN } }))
+  assert.ok(conEleccion.intentar || conEleccion.motivo !== 'no es una elección de versión')
 })
 
 test('bandeja: el item expone la lista de versiones (solo catálogo) y null si no la hay', () => {

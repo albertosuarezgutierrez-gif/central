@@ -14,7 +14,8 @@ export const SONDEO_TOPE_MS = 6 * 60_000
 const ESTADOS_FINALES = ['ok', 'error_definitivo', 'requiere_humano', 'cancelado', 'emitido', 'atascado'] as const
 
 export type IntegracionVista = { compania: string; ramo: string; clave: string }
-export type VersionVista = { codigo: string; etiqueta: string }
+/** `codigo` null (15/10/2026): portal sin código de catálogo (Mapfre); se elige por la etiqueta exacta de la opción. */
+export type VersionVista = { codigo: string | null; etiqueta: string }
 export type OfertaVista = { compania: string; producto: string; primaAnual: number; primaNeta: number | null; impuestos: number | null; primaSucesivos: number | null; pdfIndice: number | null }
 export type TrabajoVista = {
   estado: string
@@ -110,7 +111,7 @@ export function leerTrabajo(status: number, json: unknown): LecturaTrabajo {
     for (const raw of o.opcionesVersion) {
       const v = obj(raw)
       const codigo = str(v?.codigo), etiqueta = str(v?.etiqueta)
-      if (codigo && etiqueta) versiones.push({ codigo, etiqueta })
+      if (etiqueta && (codigo || v?.codigo === null || v?.codigo === undefined)) versiones.push({ codigo: codigo || null, etiqueta })
     }
   }
   const ofertas: OfertaVista[] = []

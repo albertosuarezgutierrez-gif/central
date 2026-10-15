@@ -3,6 +3,7 @@ import {
   ESTADOS_TRABAJO,
   MAX_INTENTOS,
   estadoTrasError,
+  esTipoError,
   puedeReintentar,
   puedeTransitar,
   validarRiesgoComunidad,
@@ -52,6 +53,11 @@ describe('política de reintento: UNO solo, solo infra', () => {
   it('captcha → requiere_humano, siempre', () => {
     expect(estadoTrasError('captcha', 1)).toBe('requiere_humano')
     expect(estadoTrasError('captcha', 2)).toBe('requiere_humano')
+  })
+  it('eleccion (versión/población que elige una persona, 15/10/2026) → requiere_humano, tipo propio y válido', () => {
+    expect(estadoTrasError('eleccion', 1)).toBe('requiere_humano')
+    expect(estadoTrasError('eleccion', 2)).toBe('requiere_humano')
+    expect(esTipoError('eleccion')).toBe(true)
   })
   it('puedeReintentar solo desde error_reintentable y bajo el tope', () => {
     expect(puedeReintentar('error_reintentable', 1)).toBe(true)

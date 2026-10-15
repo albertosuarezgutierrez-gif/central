@@ -78,34 +78,63 @@ export function opcionesVersionDelError(error: unknown): CandidatoVersion[] | nu
 
 // ─── Reintentar con la versión elegida a mano (13/10/2026) ───────────────────
 
-export type EleccionBandeja = { codigo: string; etiqueta: string | null }
+/**
+ * `codigo` null (15/10/2026): portales que NO dan código de catálogo (Mapfre: «Selección de vehículo» solo trae la
+ * denominación). Entonces se elige por la ETIQUETA EXACTA de una opción de la lista cuyo código también es null.
+ */
+export type EleccionBandeja = { codigo: string | null; etiqueta: string | null }
 
-/** Forma de `eleccionVersion` en el cuerpo: ausente → `null`; `{ codigo, etiqueta? }` → elección; otra cosa → error. */
+/**
+ * Forma de `eleccionVersion` en el cuerpo: ausente → `null`; `{ codigo, etiqueta? }` → elección por código; `{ codigo: null
+ * (o ausente), etiqueta }` → elección por etiqueta (solo contra opciones SIN código); otra cosa → error.
+ */
 export function leerEleccionBandeja(v: unknown): { ok: true; eleccion: EleccionBandeja | null } | { ok: false; mensaje: string } {
   if (v === undefined || v === null) return { ok: true, eleccion: null }
   if (typeof v !== 'object' || Array.isArray(v)) return { ok: false, mensaje: 'eleccionVersion tiene que ser { codigo, etiqueta? }' }
   const o = v as Record<string, unknown>
-  if (typeof o.codigo !== 'string' || !o.codigo.trim() || o.codigo.length > 60) return { ok: false, mensaje: 'eleccionVersion.codigo: obligatorio (código de la lista, máx. 60)' }
   if (o.etiqueta !== undefined && o.etiqueta !== null && (typeof o.etiqueta !== 'string' || o.etiqueta.length > 200)) {
     return { ok: false, mensaje: 'eleccionVersion.etiqueta: texto de máx. 200 (o no venga)' }
   }
   const etiqueta = typeof o.etiqueta === 'string' && o.etiqueta.trim() ? o.etiqueta : null
+  if (o.codigo === undefined || o.codigo === null) {
+    if (etiqueta === null) return { ok: false, mensaje: 'eleccionVersion: sin código hace falta la etiqueta exacta de la opción' }
+    return { ok: true, eleccion: { codigo: null, etiqueta } }
+  }
+  if (typeof o.codigo !== 'string' || !o.codigo.trim() || o.codigo.length > 60) return { ok: false, mensaje: 'eleccionVersion.codigo: código de la lista (máx. 60) o null con la etiqueta' }
   return { ok: true, eleccion: { codigo: o.codigo.trim(), etiqueta } }
 }
 
-const claveEtiqueta = (s: string) => s.replace(/\s+/g, ' ').trim().toLocaleUpperCase('es')
+/** Misma normalización que el bot (`normalizarTexto` del worker): NFD sin diacríticos + minúsculas + espacios colapsados. */
+export const claveEtiqueta = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
 /**
  * La elección TIENE que ser un código de la lista que guardó el fallo del trabajo. Si trae etiqueta, debe ser la de ese
  * código (salvo mayúsculas/espacios). Lo que se escribe en el riesgo es el código y la etiqueta DE LA LISTA.
+ * Sin código (15/10/2026): la etiqueta tiene que ser, salvo mayúsculas/espacios, la de UNA SOLA opción SIN código de la lista;
+ * se escribe `{ codigo: null, etiqueta: <la de la lista> }` (el bot elige la fila por esa etiqueta, regla fija).
  */
-export function eleccionContraLista(e: EleccionBandeja, error: unknown): { ok: true; eleccion: { codigo: string; etiqueta: string } } | { ok: false; motivo: string } {
+export function eleccionContraLista(e: EleccionBandeja, error: unknown): { ok: true; eleccion: { codigo: string | null; etiqueta: string } } | { ok: false; motivo: string } {
   const lista = opcionesVersionDelError(error)
   if (!lista) return { ok: false, motivo: 'el trabajo no guarda una lista de versiones: reintenta sin eleccionVersion' }
-  const casan = lista.filter((o) => o.codigo === e.codigo)
+  if (e.codigo === null) {
+    const k = claveEtiqueta(e.etiqueta ?? '')
+    const porEtiqueta = lista.filter((o) => (o.codigo === null || o.codigo === undefined) && claveEtiqueta(o.etiqueta) === k)
+    if (porEtiqueta.length !== 1) return { ok: false, motivo: porEtiqueta.length ? 'etiqueta repetida en la lista del trabajo' : 'eleccionVersion.etiqueta no es la de ninguna opción sin código de la lista del trabajo' }
+    return { ok: true, eleccion: { codigo: null, etiqueta: porEtiqueta[0].etiqueta } }
+  }
+  const casan = lista.filter((o) => o.codigo !== null && o.codigo === e.codigo)
   if (casan.length !== 1) return { ok: false, motivo: casan.length ? 'código repetido en la lista del trabajo' : 'eleccionVersion.codigo no está en la lista del trabajo' }
   if (e.etiqueta !== null && claveEtiqueta(e.etiqueta) !== claveEtiqueta(casan[0].etiqueta)) return { ok: false, motivo: 'eleccionVersion.etiqueta no es la de ese código' }
   return { ok: true, eleccion: { codigo: casan[0].codigo!, etiqueta: casan[0].etiqueta } }
+}
+
+/**
+ * Doble clic sobre un trabajo ya relanzado: ¿es la MISMA versión que ya lleva el riesgo? Con código, por código; sin código
+ * (elección por etiqueta), por etiqueta (salvo mayúsculas/espacios) y con el código guardado también vacío. Pura.
+ */
+export function mismaEleccion(e: EleccionBandeja, codigoGuardado: string | null, etiquetaGuardada: string | null): boolean {
+  if (e.codigo !== null) return codigoGuardado === e.codigo
+  return (codigoGuardado === null || codigoGuardado === '') && etiquetaGuardada !== null && e.etiqueta !== null && claveEtiqueta(etiquetaGuardada) === claveEtiqueta(e.etiqueta)
 }
 
 // ─── Reintentar con la población elegida a mano (13/10/2026) ─────────────────

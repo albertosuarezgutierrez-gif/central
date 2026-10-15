@@ -102,7 +102,8 @@ export default function ProbarTarificacion({ clienteId }: { clienteId: string })
 
   async function reintentarConVersion() {
     if (!seg?.trabajo?.opcionesVersion || !version || ocupado) return
-    const v = seg.trabajo.opcionesVersion.find((o) => o.codigo === version)
+    // El valor del desplegable es el ÍNDICE de la opción: hay portales sin código (Mapfre) y se elige por etiqueta.
+    const v = seg.trabajo.opcionesVersion[Number(version)]
     if (!v) return
     setOcupado(true); setError(null)
     const r = await pedirJson(`/api/correduria/tarificador/bandeja/${encodeURIComponent(seg.trabajoId)}`, {
@@ -171,7 +172,7 @@ export default function ProbarTarificacion({ clienteId }: { clienteId: string })
                   <select aria-label="Versión del vehículo" value={version} onChange={(e) => setVersion(e.target.value)} disabled={ocupado}
                     style={{ minHeight: 44, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', padding: '0 8px', minWidth: 0, maxWidth: '100%' }}>
                     <option value="">Elige la versión…</option>
-                    {seg.trabajo.opcionesVersion.map((o) => <option key={o.codigo} value={o.codigo}>{o.etiqueta}</option>)}
+                    {seg.trabajo.opcionesVersion.map((o, i) => <option key={`${i}-${o.codigo ?? ''}`} value={String(i)}>{o.etiqueta}</option>)}
                   </select>
                   <button type="button" onClick={() => void reintentarConVersion()} disabled={ocupado || !version} style={{ ...btnStyle('secundario'), opacity: ocupado || !version ? 0.6 : 1 }}>
                     Reintentar con esta versión

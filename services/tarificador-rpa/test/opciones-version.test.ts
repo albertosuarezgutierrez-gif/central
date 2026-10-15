@@ -11,7 +11,8 @@ const veinte = Array.from({ length: 20 }, (_, i) => ({ etiqueta: `F 800 versión
 
 test('ErrorEleccionVersion con 20 versiones → mensaje truncado y las 20 estructuradas en la clasificación', () => {
   const c = clasificarIntento(new ErrorEleccionVersion(veinte), nada)
-  assert.equal(c.tipo, 'captcha')
+  // Código propio (15/10/2026): una elección de versión NO es un captcha (la traza decía `captcha`). Sigue en requiere_humano.
+  assert.equal(c.tipo, 'eleccion')
   assert.equal(estadoTrasError(c.tipo, 1), 'requiere_humano')
   assert.equal(c.transitorio, null)
   assert.match(c.mensaje, new RegExp(`\\(\\+${20 - MAX_OPCIONES_VERSION} más\\)`))

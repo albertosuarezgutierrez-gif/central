@@ -61,6 +61,7 @@ const MOTIVO_POR_TIPO: Record<string, string> = {
   portal: 'El portal no se comportó como esperaba el bot (pantalla distinta o campo que no aparece).',
   infra: 'Fallo técnico (red o máquina) que persistió tras el reintento automático.',
   emision: 'El bot se detuvo a propósito antes de un paso de emisión. No se reintenta.',
+  eleccion: 'El portal ofrece varias opciones (versión del vehículo o población) y una persona tiene que elegir una.',
 }
 
 const PREFIJO_VERIFICACION = 'requiere_verificacion_humana:'

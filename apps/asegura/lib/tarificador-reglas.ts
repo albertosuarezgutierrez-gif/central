@@ -470,9 +470,11 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     if (html && Buffer.byteLength(html, 'utf8') > MAX_BYTES_HTML) errores.push('html supera el techo')
     const url = typeof err?.url === 'string' ? err.url.slice(0, 500) : null
     // Accesoria, como la traza: una lista inválida se DESCARTA (sin lista no hay elección por código) y el fallo se guarda igual.
-    const opcionesVersion = err?.tipo === 'captcha' ? validarOpcionesVersion(err.opcionesVersion) : null
+    // `eleccion` (15/10/2026) es el tipo propio; `captcha` sigue valiendo para los workers anteriores.
+    const pideEleccion = err?.tipo === 'eleccion' || err?.tipo === 'captcha'
+    const opcionesVersion = pideEleccion ? validarOpcionesVersion(err.opcionesVersion) : null
     // Poblaciones de un CP ambiguo (13/10/2026): accesoria igual que la de versiones (inválida → se descarta).
-    const opcionesPoblacion = err?.tipo === 'captcha' ? validarOpcionesPoblacion(err.opcionesPoblacion) : null
+    const opcionesPoblacion = pideEleccion ? validarOpcionesPoblacion(err.opcionesPoblacion) : null
     // Accesorio también: se RE-SANEA (lista blanca + filtro de datos personales + tope de bytes); sin forma → se descarta.
     const inventarioDom = err?.inventarioDom !== undefined ? sanearInventarioDom(err.inventarioDom) : null
     const recorrido = err?.recorrido !== undefined ? sanearRecorrido(err.recorrido) : null
