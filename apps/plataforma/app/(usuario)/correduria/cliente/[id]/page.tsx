@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { clasificarPolizaFicha, personasDePolizas, resumenFicha, siguienteAccion, type ClasePolizaFicha } from '@central/module-seguros'
+import { clasificarPolizaFicha, personaDeFicha, personasDePolizas, resumenFicha, siguienteAccion, type ClasePolizaFicha } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Historial from '../../Historial'
 import Siniestros from '../../Siniestros'
@@ -142,8 +142,8 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
 
       <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} />
 
-      {/* La misma persona en otra ficha (mismo DNI): se avisa y se ofrece fusionar eligiendo campo a campo. */}
-      <FichasDuplicadas clienteId={ficha.id} />
+      {/* La misma persona en otra ficha (mismo DNI/CIF): se avisa y se ofrece fusionar eligiendo campo a campo. */}
+      <FichasDuplicadas clienteId={ficha.id} juridica={personaDeFicha({ tipoPersona: ficha.identidad?.tipoPersona, dniEnmascarado: ficha.identidad?.dniEnmascarado, segmento: ficha.segmento }) === 'juridica'} />
 
       {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
           pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}

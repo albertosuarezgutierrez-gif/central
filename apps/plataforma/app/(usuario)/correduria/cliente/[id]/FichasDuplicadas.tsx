@@ -16,7 +16,8 @@ import { btnStyle } from '@/components/ui'
 type Ficha = { id: string; nombre: string; tipo: string; dniEnmascarado: string | null; dniIlegible?: boolean; polizas: number; polizasVivas: number; telefonos: number; emails: number }
 type Comparacion = { superviviente: Ficha; absorbida: Ficha; identidad: IdentidadFusion; campos: CampoFusion[] }
 
-export default function FichasDuplicadas({ clienteId }: { clienteId: string }) {
+export default function FichasDuplicadas({ clienteId, juridica = false }: { clienteId: string; juridica?: boolean }) {
+  const doc = juridica ? 'CIF' : 'DNI'
   const [candidatas, setCandidatas] = useState<Ficha[] | null | undefined>(undefined)
   const [abierta, setAbierta] = useState<string | null>(null)
 
@@ -39,13 +40,14 @@ export default function FichasDuplicadas({ clienteId }: { clienteId: string }) {
       {candidatas.map(c => (
         <div key={c.id} style={{ border: '1px solid var(--warning)', background: 'var(--warning-bg)', borderRadius: 12, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
           <div style={{ fontSize: 13 }}>
-            Hay <strong>otra ficha con el mismo DNI</strong>: {c.nombre} ({c.tipo} · {c.polizas} póliza{c.polizas === 1 ? '' : 's'}). Es la misma persona dos veces.
+            Hay <strong>otra ficha con el mismo {doc}</strong>: {c.nombre} ({c.tipo} · {c.polizas} póliza{c.polizas === 1 ? '' : 's'}). Es {juridica ? 'la misma empresa' : 'la misma persona'} dos veces.
           </div>
           {abierta === c.id
             ? (
               <Comparar
                 clienteId={clienteId}
                 otra={c}
+                juridica={juridica}
                 onCerrar={() => setAbierta(null)}
                 // Fusionada: esa tarjeta ya no existe (su ficha es una lápida).
                 onFusionada={() => { setAbierta(null); setCandidatas(prev => (prev ?? []).filter(x => x.id !== c.id)) }}
@@ -64,7 +66,8 @@ export default function FichasDuplicadas({ clienteId }: { clienteId: string }) {
   )
 }
 
-function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: string; otra: Ficha; onCerrar: () => void; onFusionada: () => void }) {
+function Comparar({ clienteId, otra, juridica, onCerrar, onFusionada }: { clienteId: string; otra: Ficha; juridica: boolean; onCerrar: () => void; onFusionada: () => void }) {
+  const doc = juridica ? 'CIF' : 'DNI'
   const router = useRouter()
   // Por defecto se queda la ficha con más pólizas vivas: es la que CIMA conoce.
   const [seQueda, setSeQueda] = useState<string>(clienteId)
@@ -176,7 +179,7 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
             <label key={id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, minHeight: 44 }}>
               <input type="radio" name={`quedar-${otra.id}`} checked={seQueda === id} onChange={() => { setElegidaPorDefecto(true); setSeQueda(id) }} />
               <span style={{ overflowWrap: 'anywhere' }}>
-                {f.nombre} {id === clienteId ? '(esta)' : ''} — {f.tipo} · {f.polizasVivas} viva{f.polizasVivas === 1 ? '' : 's'} de {f.polizas} · DNI {f.dniIlegible ? 'ilegible' : f.dniEnmascarado ?? 'sin DNI'}
+                {f.nombre} {id === clienteId ? '(esta)' : ''} — {f.tipo} · {f.polizasVivas} viva{f.polizasVivas === 1 ? '' : 's'} de {f.polizas} · {doc} {f.dniIlegible ? 'ilegible' : f.dniEnmascarado ?? `sin ${doc}`}
               </span>
             </label>
           )
@@ -184,19 +187,19 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
       </div>
 
       {cmp.identidad === 'dni_distinto' && (
-        <div style={{ fontSize: 13, color: 'var(--negative)' }}>Los DNI son distintos: son dos personas. No se pueden fusionar.</div>
+        <div style={{ fontSize: 13, color: 'var(--negative)' }}>{juridica ? 'Los CIF son distintos: son dos empresas.' : 'Los DNI son distintos: son dos personas.'} No se pueden fusionar.</div>
       )}
       {cmp.identidad === 'dni_sin_indice' && (
         <div style={{ fontSize: 13, color: 'var(--negative)' }}>
-          Las dos tienen DNI pero a alguna le falta el índice: no se puede comprobar que sea el mismo. Escribe el índice del DNI en Correduría → Mantenimiento y vuelve aquí.
+          Las dos tienen {doc} pero a alguna le falta el índice: no se puede comprobar que sea el mismo. Escribe el índice del {doc} en Correduría → Mantenimiento y vuelve aquí.
         </div>
       )}
       {cmp.identidad === 'sin_comprobar' && (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, minHeight: 44 }}>
           <input type="checkbox" checked={confirmo} onChange={e => setConfirmo(e.target.checked)} />
           {cmp.superviviente.dniIlegible || cmp.absorbida.dniIlegible
-            ? 'El DNI de una de las dos no se puede leer (se guardará cifrado en el registro de la fusión), así que no se puede comprobar. Confirmo que son la misma persona.'
-            : 'Una de las dos no tiene DNI, así que no se puede comprobar. Confirmo que son la misma persona.'}
+            ? `El ${doc} de una de las dos no se puede leer (se guardará cifrado en el registro de la fusión), así que no se puede comprobar. Confirmo que son ${juridica ? 'la misma empresa' : 'la misma persona'}.`
+            : `Una de las dos no tiene ${doc}, así que no se puede comprobar. Confirmo que son ${juridica ? 'la misma empresa' : 'la misma persona'}.`}
         </label>
       )}
 
