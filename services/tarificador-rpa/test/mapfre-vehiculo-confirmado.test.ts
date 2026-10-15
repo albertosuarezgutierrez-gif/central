@@ -10,7 +10,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from 'playwrig
 import { AVISO_VERSION_POR_SIMILITUD, EmisionBloqueadaError, type VehiculoConfirmado } from '@central/module-tarificacion'
 import { confirmarVehiculoMapfre, instalarGuardEmision, type GuardEmision } from '../src/guard.ts'
 import { consultarVehiculoPorMatricula, ErrorMapaIncompleto } from '../src/adapters/mapfre/auto.ts'
-import { eleccionVersionConOrigen, eleccionVersionEfectiva, ofertasDesdePrimas } from '../src/adapters/allianz/auto.ts'
+import { eleccionVersionConOrigen, eleccionVersionEfectiva, ErrorEleccionVersion as ErrorEleccionVersionAllianz, ofertasDesdePrimas } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 
 const MATRICULA = '0000BBB'
@@ -81,7 +81,7 @@ test('una fila con OTRA matrícula → para (`datos`), no marca ni pulsa, y el e
 /** Qué radio quedó marcado (índice de fila) o -1. */
 const radioMarcado = (page: Page) => page.evaluate(() => Array.from(document.querySelectorAll('input[type=radio]')).findIndex((r) => (r as HTMLInputElement).checked))
 
-test('varias filas → elige la PRIMERA (Alberto, 14/10/2026) y la confirma si su matrícula es la del riesgo', async () => {
+test('varias filas sin índice → la PRIMERA por defecto; con índice → ESA fila (la elige el adaptador por regla fija, v0.8.0)', async () => {
   const { context, page, guard } = await preparar(DIALOGO([{ matricula: MATRICULA, denominacion: 'VERSION A' }, { matricula: MATRICULA, denominacion: 'VERSION B' }]))
   // Sin cerrar el diálogo, para ver qué fila quedó marcada: el «Aceptar» del fixture lo quita; se mira antes con un espía.
   await page.evaluate(() => {
@@ -92,6 +92,14 @@ test('varias filas → elige la PRIMERA (Alberto, 14/10/2026) y la confirma si s
   assert.equal(await page.evaluate(() => (window as unknown as Record<string, unknown>).__fila), 0)
   assert.deepEqual(await marcas(page), { aceptado: 1, noEs: null, cancelar: null, noCatalogado: null })
   await context.close()
+  const b = await preparar(DIALOGO([{ matricula: OTRA, denominacion: 'VERSION A' }, { matricula: MATRICULA, denominacion: 'VERSION B' }]))
+  await b.page.evaluate(() => {
+    const ok = document.getElementById('ok')!
+    ok.addEventListener('click', () => { (window as unknown as Record<string, unknown>).__fila = Array.from(document.querySelectorAll('input[type=radio]')).findIndex((r) => (r as HTMLInputElement).checked) }, { capture: true })
+  })
+  await confirmarVehiculoMapfre(b.page, b.guard, MATRICULA, 1)
+  assert.equal(await b.page.evaluate(() => (window as unknown as Record<string, unknown>).__fila), 1)
+  await b.context.close()
 })
 
 test('varias filas y la PRIMERA tiene otra matrícula → `datos`, sin marcar ninguna (aunque la segunda case)', async () => {
@@ -167,12 +175,17 @@ test('consultarVehiculoPorMatricula: moto (0 puertas) también', async () => {
   await context.close()
 })
 
-test('consultarVehiculoPorMatricula: varias filas → el vehículo de la PRIMERA, confirmado por el guard; sin diálogo → hueco con inventario', async () => {
-  const a = await preparar(PASO2([{ matricula: MATRICULA, denominacion: 'MARCA MOTO PRIMERA', cv: '95', cc: '798', puertas: '0', fecha: '15/06/2020' }, { matricula: MATRICULA, denominacion: 'MARCA MOTO SEGUNDA' }]))
-  const v = await consultarVehiculoPorMatricula(a.page, MATRICULA, { confirmarVehiculoMapfre: (p, m) => confirmarVehiculoMapfre(p, a.guard, m) })
-  assert.equal(v.denominacion, 'MARCA MOTO PRIMERA')
+test('consultarVehiculoPorMatricula: varias filas → la ÚNICA que casa con el riesgo (v0.8.0), confirmada por el guard; sin regla → elección humana; sin diálogo → hueco', async () => {
+  const filas = [{ matricula: MATRICULA, denominacion: 'MARCA MOTO PRIMERA', cv: '95', cc: '798', puertas: '0', fecha: '15/06/2020' }, { matricula: MATRICULA, denominacion: 'MARCA MOTO SEGUNDA' }]
+  const a = await preparar(PASO2(filas))
+  const v = await consultarVehiculoPorMatricula(a.page, MATRICULA, { confirmarVehiculoMapfre: (p, m, i) => confirmarVehiculoMapfre(p, a.guard, m, i) }, undefined, undefined, { seleccionVehiculo: { marca: 'MARCA MOTO', modelo: 'SEGUNDA' } })
+  assert.equal(v.denominacion, 'MARCA MOTO SEGUNDA')
   assert.equal((await marcas(a.page)).aceptado, 1)
   await a.context.close()
+  const c = await preparar(PASO2(filas))
+  await assert.rejects(() => consultarVehiculoPorMatricula(c.page, MATRICULA, { confirmarVehiculoMapfre: (p, m, i) => confirmarVehiculoMapfre(p, c.guard, m, i) }), (e) => e instanceof ErrorEleccionVersionAllianz && sinMatricula(e))
+  assert.equal((await marcas(c.page)).aceptado, null, 'sin regla fija no se elige la primera a ciegas')
+  await c.context.close()
   const b = await preparar('<app-datos-vehiculo><input name="matricula"></app-datos-vehiculo>')
   await assert.rejects(
     () => consultarVehiculoPorMatricula(b.page, MATRICULA, { confirmarVehiculoMapfre: async () => {} }, 300),

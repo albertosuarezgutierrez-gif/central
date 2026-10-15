@@ -318,6 +318,12 @@ async function descripcionesControles(page: Page): Promise<string[][]> {
         Array.from(document.querySelectorAll(SEL_CONTROLES))
           .filter((n) => !(n.tagName === 'INPUT' && (n as HTMLInputElement).type === 'hidden'))
           .filter((n) => (n as HTMLElement).getClientRects().length > 0)
+          // Mapfre NSEI (prueba real 15/10/2026, trabajo f46682c2): los 6 pasos del stepper viven a la vez en el DOM y el IBAN de
+          // «Contratación» (paso NO activo) tiene caja pero `visibility: hidden` (calculado en el propio campo). No es un campo que el
+          // portal muestre: no cuenta. Se mira SOLO la visibilidad del campo (no `aria-expanded` del panel: un panel marcado inactivo
+          // con el campo visible SÍ bloquea, fail-closed).
+          // (A propósito NO se ignora `aria-hidden`: CDK lo pone en el fondo cuando abre un diálogo, y ese fondo sí se ve.)
+          .filter((n) => getComputedStyle(n).visibility === 'visible')
           .map((n) => {
             const e = n as HTMLInputElement
             // Texto PROPIO de la etiqueta: sin los controles que envuelve (las opciones de un select no son etiqueta:
@@ -717,6 +723,8 @@ export async function pulsarEnlaceEntradaAutorizado(boton: Locator, guard: Guard
 export const SEL_DIALOGO_VEHICULO_MAPFRE = 'app-matricula-dialog'
 /** Columna «Matrícula» (posición 1; la 0 es la del radio). Se lee AQUÍ y solo para compararla: nunca sale de esta función. */
 const COLUMNA_MATRICULA_MAPFRE = 1
+/** Columna «Denominación comercial» (catálogo, no dato personal): la celda que se pulsa si la fila no trae radio. */
+const COLUMNA_DENOMINACION_MAPFRE = 3
 /** Control de elección de la fila: el primer selector con EXACTAMENTE un control en la fila (Angular Material o nativo). */
 const SELECTORES_RADIO_FILA = ['mat-radio-button', 'input[type="radio"]', '[role="radio"]'] as const
 const ESPERA_HABILITADO_MAPFRE_MS = 5_000
@@ -728,9 +736,9 @@ const sinTildesMayus = (t: string | null | undefined) => (t ?? '').normalize('NF
  * CONFIRMAR EL VEHÍCULO en el diálogo «Selección de vehículo» de Mapfre NSEI. El ÚNICO camino para marcar la fila y pulsar
  * su «Aceptar» (el adaptador no los nombra). Exige, en este orden y sin atajos:
  *   1. guard limpio, todas las ventanas de red cerradas, sin campo de cuenta bancaria y una sola vez por trabajo;
- *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`. Con VARIAS filas se toma la PRIMERA (decisión de Alberto,
+ *   2. EXACTAMENTE un diálogo visible; 0 filas → `datos`. Se toma la fila `indice` (antes, la PRIMERA: decisión de Alberto,
  *      14/10/2026: antes era requiere_humano); las demás no se miran ni se marcan;
- *   3. la MATRÍCULA de la PRIMERA fila igual (normalizada) a la del riesgo; si no casa → `datos` (nunca se prueba otra
+ *   3. la MATRÍCULA de esa fila igual (normalizada) a la del riesgo; si no casa → `datos` (nunca se prueba otra
  *      fila). La comparación se hace aquí y la matrícula NO sale: ni a logs, ni a mensajes de error, ni a la IA, ni al
  *      resultado (el radio se describe sin su `value`);
  *   4. EXACTAMENTE un control de elección en la fila, que pase `comprobarBoton`; se marca;
@@ -739,13 +747,20 @@ const sinTildesMayus = (t: string | null | undefined) => (t ?? '').normalize('NF
  *      bloqueados); un diálogo nativo del navegador se descarta y el trabajo cae;
  *   6. que el diálogo se cierre. No abre ninguna ventana de red: si el «Aceptar» pidiera algo que casa con el patrón de
  *      emisión, la red lo aborta (fail-closed) y se revisa con la primera prueba real.
+ * `indice` (v0.8.0, grabación de Alberto del 15/10/2026): la fila que el ADAPTADOR eligió por regla fija (una sola fila, o la
+ * única que casa con los datos del riesgo; `indiceFilaVehiculoMapfre`). Por defecto la primera. Se compara la matrícula de
+ * ESA fila. Sin radio en la fila (la grabación pulsa la celda: la fila de la tabla CDK es la que se elige), se pulsa una celda
+ * de CATÁLOGO de esa fila (nunca la de matrícula ni la de bastidor) tras `comprobarBoton` sobre los atributos técnicos de la fila.
+ * `denominacion`: texto de catálogo (no personal) de la fila que el adaptador leyó; si llega, la fila `nth(indice)` tiene que
+ * tener esa misma denominación (normalizada) antes de marcarla: si la tabla se re-ordenó entre la lectura y el clic, no pulsa y lanza.
  */
-export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, matriculaRiesgo: string): Promise<void> {
+export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, matriculaRiesgo: string, indice = 0, denominacion?: string): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'selección de vehículo con una ventana de red abierta')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('mapfre:seleccion_vehiculo')) throw new EmisionBloqueadaError('fase', 'la selección de vehículo de Mapfre ya se usó en este trabajo')
   if (typeof matriculaRiesgo !== 'string' || !esMatriculaEspanola(matriculaRiesgo)) throw new ErrorTarificador('datos', 'mapfre: la matrícula del riesgo no tiene formato de matrícula española')
+  if (!Number.isInteger(indice) || indice < 0) throw new EmisionBloqueadaError('fase', 'selección de vehículo: índice de fila no válido')
   await exigirSinCuentaBancaria(page)
   const dialogos = page.locator(SEL_DIALOGO_VEHICULO_MAPFRE).locator('visible=true')
   if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un diálogo «Selección de vehículo» visible')
@@ -753,17 +768,24 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
   const filas = dialogo.locator('table tbody tr')
   const n = await filas.count()
   if (n === 0) throw new ErrorTarificador('datos', 'mapfre: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  // Varias filas → la PRIMERA (Alberto, 14/10/2026). Solo se compara y se marca esa; nunca se busca otra que case.
+  if (indice >= n) throw new ErrorTarificador('portal', 'mapfre: la fila elegida de «Selección de vehículo» ya no está en el diálogo')
+  // Solo se compara y se marca la fila ELEGIDA (`indice`); nunca se busca otra que case.
   // Si hay cabecera, la columna tiene que llamarse «Matrícula» (si el portal reordena, se para en vez de comparar otra cosa).
   const cabecera = await dialogo.locator('table thead th').evaluateAll((els) => els.map((e) => e.textContent ?? ''))
   if (cabecera.length > 0 && sinTildesMayus(cabecera[COLUMNA_MATRICULA_MAPFRE]) !== 'MATRICULA') {
     throw new ErrorTarificador('portal', 'mapfre: las columnas de «Selección de vehículo» no son las grabadas (no se compara la matrícula)')
   }
-  const fila = filas.first()
+  const fila = filas.nth(indice)
   const enFila = await fila.locator('td').nth(COLUMNA_MATRICULA_MAPFRE).textContent({ timeout: 1_000 }).catch(() => null)
   if (enFila === null) throw new ErrorTarificador('portal', 'mapfre: no se pudo leer la columna «Matrícula» de «Selección de vehículo»')
   if (normalizarMatricula(enFila.trim()) !== normalizarMatricula(matriculaRiesgo)) {
-    throw new ErrorTarificador('datos', 'mapfre: el primer vehículo de «Selección de vehículo» no tiene la matrícula del riesgo')
+    throw new ErrorTarificador('datos', 'mapfre: el vehículo elegido de «Selección de vehículo» no tiene la matrícula del riesgo')
+  }
+  if (denominacion !== undefined) {
+    const denFila = await fila.locator('td').nth(COLUMNA_DENOMINACION_MAPFRE).textContent({ timeout: 1_000 }).catch(() => null)
+    if (denFila === null || sinTildesMayus(denFila) !== sinTildesMayus(denominacion)) {
+      throw new ErrorTarificador('portal', 'mapfre: la fila elegida de «Selección de vehículo» ya no es la leída (la tabla cambió); no se marca')
+    }
   }
   let radio: Locator | null = null
   for (const sel of SELECTORES_RADIO_FILA) {
@@ -773,11 +795,19 @@ export async function confirmarVehiculoMapfre(page: Page, guard: GuardEmision, m
       break
     }
   }
-  if (!radio) throw new ErrorTarificador('portal', 'mapfre: la fila de «Selección de vehículo» no tiene exactamente un control para elegirla')
-  // Sin `value`: el de un radio puede llevar la matrícula o el bastidor, y un EmisionBloqueadaError copiaría el texto.
+  if (!radio) {
+    // Grabación 15/10/2026: la fila (tabla CDK) se elige pulsando una celda. Solo una celda de CATÁLOGO (denominación).
+    const celdas = await fila.locator('td').count()
+    if (celdas <= COLUMNA_DENOMINACION_MAPFRE) throw new ErrorTarificador('portal', 'mapfre: la fila de «Selección de vehículo» no tiene exactamente un control para elegirla')
+    radio = fila.locator('td').nth(COLUMNA_DENOMINACION_MAPFRE)
+  }
+  // Sin `value` ni textos (pueden llevar la matrícula o el bastidor, y un EmisionBloqueadaError copiaría el texto): solo
+  // atributos técnicos del control Y de la fila (sus manejadores de clic se ejecutan al burbujear).
   const descRadio = await radio.evaluate((el) => {
     const h = el as HTMLElement & { name?: unknown }
-    return [h.innerText ?? h.textContent ?? '', h.getAttribute('aria-label'), h.getAttribute('title'), h.id || null, typeof h.name === 'string' ? h.name : null, h.getAttribute('onclick')]
+    const tr = h.closest('tr')
+    return [h.tagName === 'TD' ? (h.innerText ?? h.textContent ?? '') : null, h.getAttribute('aria-label'), h.id || null, typeof h.name === 'string' ? h.name : null, h.getAttribute('onclick'), h.getAttribute('ng-click'),
+      tr?.getAttribute('onclick') ?? null, tr?.getAttribute('ng-click') ?? null, tr?.id || null]
   })
   comprobarBoton(descRadio)
   const aceptar = dialogo.locator('button, [role="button"], input[type="button"], input[type="submit"]').filter({ hasText: /^\s*Aceptar\s*$/i }).locator('visible=true')
@@ -969,7 +999,7 @@ async function esperarCierreDialogoTomador(page: Page, guard: GuardEmision): Pro
 export const PASOS_CONTINUAR_MAPFRE = Object.freeze({
   datosBasicos: Object.freeze({ origen: 'Datos básicos', destino: 'Objeto asegurado', previos: Object.freeze([] as string[]), esperaMs: 20_000 }),
   objetoAsegurado: Object.freeze({ origen: 'Objeto asegurado', destino: 'Figuras', previos: Object.freeze(['mapfre:continuar:datosBasicos', 'mapfre:seleccion_vehiculo']), esperaMs: 20_000 }),
-  figuras: Object.freeze({ origen: 'Figuras', destino: 'Coberturas', previos: Object.freeze(['mapfre:continuar:objetoAsegurado']), esperaMs: 90_000 }),
+  figuras: Object.freeze({ origen: 'Figuras', destino: 'Coberturas', previos: Object.freeze(['mapfre:continuar:objetoAsegurado']), esperaMs: 90_000, dialogoLlegada: 'app-club-mapfre' }),
 })
 export type PasoContinuarMapfre = keyof typeof PASOS_CONTINUAR_MAPFRE
 
@@ -1065,7 +1095,10 @@ export async function pulsarContinuarMapfre(
       if (dialogoNativo) throw new EmisionBloqueadaError('fase', `«Continuar» de Mapfre: el portal abrió un diálogo («${dialogoNativo}») y el robot no confirma`)
       const ahora = await pasoActivoMapfre(page)
       if (ahora?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: tras «Continuar» el paso activo es «Contratación»')
-      if (ahora?.includes(destino)) {
+      // Grabación 15/10/2026: tras «Continuar» desde Figuras, Mapfre abre ANTES el diálogo «Club MAPFRE» sobre Coberturas. Cuenta
+      // como llegada (no se pulsa nada aquí): lo cierra `cerrarClubMapfre` y el adaptador comprueba después que el paso es Coberturas.
+      const llegadaPorDialogo = 'dialogoLlegada' in regla ? regla.dialogoLlegada : null
+      if (ahora?.includes(destino) || (llegadaPorDialogo && (await page.locator(llegadaPorDialogo).locator('visible=true').count().catch(() => 0)) > 0)) {
         await confirmarRespaldo?.().catch(() => undefined)
         return
       }
@@ -1074,6 +1107,67 @@ export async function pulsarContinuarMapfre(
     }
   } finally {
     page.off('dialog', alDialogo)
+  }
+}
+
+// ─────────── Mapfre NSEI · diálogo «Club MAPFRE» tras calcular (grabación de Alberto, 15/10/2026) ───────────
+
+/** El diálogo que Mapfre abre sobre Coberturas tras «Continuar» desde Figuras. Solo lo nombra este fichero para PULSAR. */
+export const SEL_CLUB_MAPFRE = 'app-club-mapfre'
+/**
+ * Textos AUTORIZADOS del botón de la IZQUIERDA (no adherirse / cerrar), comparados ENTEROS sin tildes, mayúsculas ni signos.
+ * La grabación no trae el texto (solo `div.left button`): si el real es otro, el trabajo para con hueco (inventario y el texto
+ * redactado) y se añade aquí, uno a uno. Nunca un texto de adhesión, contratación, aceptación o salida.
+ */
+export const TEXTOS_CIERRE_CLUB_MAPFRE = Object.freeze([
+  'NO',
+  'NO GRACIAS',
+  'AHORA NO',
+  'CERRAR',
+  'CANCELAR',
+  'OMITIR',
+  'NO ME INTERESA',
+  'NO ADHERIR',
+  'NO ADHERIRSE',
+  'NO DESEO ADHERIRME',
+  'CONTINUAR SIN ADHERIRSE',
+] as const)
+const textoClub = (t: string | null | undefined) => sinTildesMayus(t).replace(/[.,;:!¡?¿]/g, ' ').replace(/\s+/g, ' ').trim()
+
+/**
+ * CERRAR el diálogo «Club MAPFRE» por su botón de la IZQUIERDA (no adherirse). Exige, en este orden y sin atajos: guard
+ * limpio y ventanas de red cerradas; una vez por trabajo y SOLO después del «Continuar» desde Figuras; sin cuenta bancaria;
+ * EXACTAMENTE un diálogo visible y EXACTAMENTE un botón visible en su bloque `div.left`; texto ENTERO en
+ * `TEXTOS_CIERRE_CLUB_MAPFRE` (si no, hueco con inventario, sin pulsar); `comprobarBoton` SIN «Aceptar» permitido. Un diálogo
+ * nativo se descarta y el trabajo cae. El diálogo tiene que cerrarse. El botón de la derecha (adherirse) no se toca jamás.
+ */
+export async function cerrarClubMapfre(page: Page, guard: GuardEmision): Promise<'cerrado'> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', '«Club MAPFRE» con una ventana de red abierta')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('mapfre:club')) throw new EmisionBloqueadaError('fase', 'el diálogo «Club MAPFRE» ya se cerró en este trabajo')
+  if (!usados.has('mapfre:continuar:figuras')) throw new EmisionBloqueadaError('fase', '«Club MAPFRE» fuera de orden (antes de calcular las primas)')
+  await exigirSinCuentaBancaria(page)
+  const dialogos = page.locator(SEL_CLUB_MAPFRE).locator('visible=true')
+  if ((await dialogos.count()) !== 1) throw new ErrorTarificador('portal', 'mapfre: no hay exactamente un diálogo «Club MAPFRE» visible')
+  const izquierda = dialogos.first().locator('div.left').locator('button, [role="button"]').locator('visible=true')
+  if ((await izquierda.count()) !== 1) throw new ErrorMapaGuardMapfre('el botón de la izquierda del diálogo «Club MAPFRE» (no hay exactamente uno visible)')
+  const boton = izquierda.first()
+  const desc = await descripcion(boton)
+  const texto = textoClub(desc[0])
+  if (!(TEXTOS_CIERRE_CLUB_MAPFRE as readonly string[]).includes(texto)) {
+    throw new ErrorMapaGuardMapfre(`el texto del botón izquierdo de «Club MAPFRE» («${redactarDatosPersonales(String(desc[0] ?? '').replace(/\s+/g, ' ').trim()).slice(0, 40)}», sin validar en guard.ts)`)
+  }
+  comprobarBoton(desc)
+  usados.add('mapfre:club')
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, boton, '«Club MAPFRE»')
+  const hasta = Date.now() + ESPERA_CIERRE_DIALOGO_MAPFRE_MS
+  for (;;) {
+    guard.comprobar()
+    if ((await page.locator(SEL_CLUB_MAPFRE).locator('visible=true').count()) === 0) return 'cerrado'
+    if (Date.now() >= hasta) throw new ErrorTarificador('portal', 'mapfre: el diálogo «Club MAPFRE» no se cerró')
+    await page.waitForTimeout(200)
   }
 }
 

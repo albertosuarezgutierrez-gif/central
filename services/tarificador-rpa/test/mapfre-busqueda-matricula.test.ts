@@ -75,8 +75,8 @@ const formador = (): ContextoFormador => ({
   conocimiento: [], resueltos: new Map(), redactar: (t) => t, log: () => undefined,
 })
 
-test('Mapfre auto/moto 0.7.3', () => {
-  assert.equal(mapfreAuto.version, '0.7.3')
+test('Mapfre auto/moto 0.8.0 (grabación completa del 15/10/2026: de la matrícula a la prima)', () => {
+  assert.equal(mapfreAuto.version, '0.8.0')
 })
 
 test('búsqueda por matrícula: se lanza AL SALIR DEL CAMPO (blur) y no se pulsa ningún botón (ni info, ni lupa del buscador, ni NO catalogado)', async () => {
