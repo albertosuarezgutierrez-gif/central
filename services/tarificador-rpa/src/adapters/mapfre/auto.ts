@@ -47,6 +47,9 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.5 (15/10/2026, trabajo real 815f6675) · en «Coberturas» con primas visibles moría por atasco: el lector exigía 2 decimales
+//   («670,1 €» no casaba) y que TODAS las tarjetas tuvieran prima (TODO RIESGO sale bloqueada por «controles técnicos»). Ahora 0-2
+//   decimales + miles, y una tarjeta bloqueada se omite si otra tiene prima. Sin ninguna prima → atasco como antes. Solo lectura.
 // v0.8.4 (15/10/2026, trabajo real 39c8016e) · ya en «Figuras», moría `error_definitivo` en `fill` sobre «siniestros RC 5 años»
 //   (input DESHABILITADO: la grabación no lo toca). Ningún `fill` sobre un campo no editable: con 0 siniestros se deja como lo
 //   pinta el portal; con >0 → atasco + hueco. Y la red de la capa común (formador.ts) atasca un TimeoutError sobre un control.
@@ -241,6 +244,8 @@ export type TarjetaProductoLeida = {
   textoPrima: string
   /** Hay icono de aviso de verificación del vehículo. */
   avisoVerificacion: boolean
+  /** Texto completo de la tarjeta (para reconocer «Existen controles técnicos que impiden tarificar…» y de respaldo de la prima). */
+  textoTarjeta?: string
 }
 
 export type PrimaProductoMapfre = { producto: string; periodicidad: 'anual'; primaTotalEur: number; requiereVerificacionVehiculo: boolean }
@@ -253,22 +258,45 @@ const limpiar = (s: string) => s.replace(/\s+/g, ' ').trim()
  */
 export function importeDePrimaTotal(texto: string | null | undefined): number | null {
   if (typeof texto !== 'string') return null
-  const m = /PRIMA\s+TOTAL\s*:\s*([\d.]+,\d{2})\s*€/i.exec(limpiar(texto))
+  // 0, 1 o 2 decimales y miles con punto opcional: «670,1 €», «392,02 €», «1.234 €», «1.234,56 €» (v0.8.5).
+  const m = /PRIMA\s+TOTAL\s*:\s*(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\s*€/i.exec(limpiar(texto))
   if (!m) return null
   const n = importeEs(m[1]!)
   return n !== null && n > 0 ? n : null
 }
 
+/** v0.8.5 · Prima de una tarjeta: la caja de prima y, si el selector no la encuentra, el texto entero de la tarjeta. */
+function primaDeTarjeta(t: TarjetaProductoLeida): number | null {
+  return importeDePrimaTotal(t.textoPrima) ?? importeDePrimaTotal(t.textoTarjeta)
+}
+
+/** v0.8.5 · Tarjeta SIN prima porque Mapfre la bloquea («Existen controles técnicos que impiden tarificar…»): no es un error. */
+export function tarjetaBloqueadaPorControles(t: TarjetaProductoLeida): boolean {
+  return primaDeTarjeta(t) === null && /controles\s+t[eé]cnicos|impiden\s+tarificar/i.test(limpiar(`${t.textoTarjeta ?? ''} ${t.textoPrima}`))
+}
+
+/** Firma de estabilidad de las tarjetas: solo los campos normalizados (no el textContent crudo, que puede variar entre lecturas). */
+export function firmaTarjetas(tarjetas: readonly TarjetaProductoLeida[]): string {
+  return JSON.stringify(tarjetas.map((t) => [limpiar(t.producto), limpiar(t.periodicidad), primaDeTarjeta(t), tarjetaBloqueadaPorControles(t), t.avisoVerificacion]))
+}
+
+/** v0.8.5 · ¿Todas las tarjetas están resueltas (con prima o bloqueadas) y AL MENOS UNA tiene prima? */
+export function tarjetasListasParaLeer(tarjetas: readonly TarjetaProductoLeida[]): boolean {
+  return tarjetas.some((t) => primaDeTarjeta(t) !== null) && tarjetas.every((t) => primaDeTarjeta(t) !== null || tarjetaBloqueadaPorControles(t))
+}
+
 /**
- * Tarjetas leídas → primas. Fail-closed: una tarjeta cuya prima no se lee es un error `portal` (no se omite en silencio, que
+ * Tarjetas leídas → primas. Las bloqueadas por controles técnicos se omiten (v0.8.5) si otra tiene prima. Fail-closed: una tarjeta cuya prima no se lee es un error `portal` (no se omite en silencio, que
  * dejaría un producto «inexistente»); ninguna tarjeta → error; periodicidad distinta de ANUAL → hueco (no se convierte).
  */
 export function primasDesdeTarjetas(tarjetas: readonly TarjetaProductoLeida[]): PrimaProductoMapfre[] {
   if (tarjetas.length === 0) throw new ErrorTarificador('portal', 'mapfre/auto: el paso Coberturas no trae ninguna tarjeta de producto')
-  return tarjetas.map((t) => {
+  const conPrima = tarjetas.filter((t) => !tarjetaBloqueadaPorControles(t))
+  if (conPrima.length === 0) throw new ErrorTarificador('portal', 'mapfre/auto: todos los productos de Coberturas están bloqueados por controles técnicos (sin prima)')
+  return conPrima.map((t) => {
     const producto = limpiar(t.producto)
     if (producto === '') throw new ErrorTarificador('portal', 'mapfre/auto: una tarjeta de producto no trae nombre')
-    const prima = importeDePrimaTotal(t.textoPrima)
+    const prima = primaDeTarjeta(t)
     if (prima === null) throw new ErrorTarificador('portal', `mapfre/auto: prima ilegible en el producto «${producto}»`)
     if (limpiar(t.periodicidad).toUpperCase() !== 'ANUAL') throw new ErrorMapaIncompleto(`la periodicidad «${limpiar(t.periodicidad)}» del producto «${producto}» (solo se ha visto ANUAL)`)
     return { producto, periodicidad: 'anual' as const, primaTotalEur: prima, requiereVerificacionVehiculo: t.avisoVerificacion }
@@ -291,6 +319,7 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
           periodicidad: textos[1] ?? '',
           textoPrima: e.querySelector(s.prima)?.textContent ?? '',
           avisoVerificacion: e.querySelector(s.avisoVerificacion) !== null,
+          textoTarjeta: e.textContent ?? '',
         }
       }),
     { desplegables: SEL_PRIMAS.desplegables, prima: SEL_PRIMAS.prima, avisoVerificacion: SEL_PRIMAS.avisoVerificacion },
@@ -1216,8 +1245,8 @@ export async function esperarPrimasMapfre(nsei: Page, ctx: Pick<ContextoPortal, 
     const ocupado = (await nsei.locator(SEL_DIALOGO_OCUPADO).locator('visible=true').count().catch(() => 0)) > 0
     if (!ocupado) {
       const tarjetas = await leerTarjetasPrima(nsei).catch(() => [] as TarjetaProductoLeida[])
-      const legibles = tarjetas.length > 0 && tarjetas.every((t) => importeDePrimaTotal(t.textoPrima) !== null)
-      const firma = legibles ? JSON.stringify(tarjetas) : null
+      const legibles = tarjetasListasParaLeer(tarjetas)
+      const firma = legibles ? firmaTarjetas(tarjetas) : null
       if (firma !== null && firma === previo) {
         const paso = await pasoActivoMapfre(nsei)
         if (paso?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: al leer las primas el paso activo es «Contratación»')
@@ -1278,7 +1307,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.4',
+  version: '0.8.5',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
