@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-14T20:18:36Z",
-  "sha": "9312f156b3399ab40d182d4afa13a86ba29e61ca",
+  "generadoEn": "2026-10-15T05:06:07Z",
+  "sha": "8bec1ff0c48b110ed701ec557c8f8860ea132185",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -50354,7 +50354,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 511,
+          "linea": 514,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -50363,7 +50363,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 515
+          "linea": 518
         },
         {
           "nombre": "guardarAdjunto",
@@ -50371,7 +50371,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 565
+          "linea": 568
         },
         {
           "nombre": "guardarPasos",
@@ -50379,7 +50379,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 587,
+          "linea": 590,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -50388,7 +50388,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null",
           "retorno": "Promise<",
-          "linea": 606,
+          "linea": 609,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -50397,17 +50397,18 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 725,
+          "linea": 728,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
       "tablas": [
+        "aparte",
         "node",
         "seguros",
         "toc"
       ],
       "rutaApi": null,
-      "hash": "51ba2011033d"
+      "hash": "568cba966d4b"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
