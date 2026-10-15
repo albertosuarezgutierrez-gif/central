@@ -26,18 +26,25 @@ const fuente = readFileSync(RUTA, 'utf8')
 
 // 29/09/2026: arranca encendido SOLO si hay una póliza suya leída (`anterior`); sin ella, apagado.
 // 13/10/2026: en EMBEBIDO manda lo declarado arriba («Historial y bonificaciones», `seguroActualEmbebido`); en la
-// pantalla completa `seguroArriba` es null y queda lo de siempre (`seguroLeido.tiene` = `anterior !== null`).
+// pantalla completa no hay «arriba» y queda lo de siempre (`seguroLeido.tiene` = `anterior !== null`).
+// 15/10/2026: ese cálculo vive en la FUENTE ÚNICA `lib/correduria/supuestos-auto.ts` (`valoresQueViajan`), con su test de
+// equivalencia; la pantalla nace de `formularioInicial`. Aquí se vigila que el cableado siga siendo ese.
+const HELPER = readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/correduria/supuestos-auto.ts'), 'utf8')
 test('el bloque de "seguro en vigor" existe y es OPT-IN (apagado salvo póliza leída)', () => {
-  assert.match(fuente, /tiene: anterior !== null,/)
-  assert.match(fuente, /const seguroArriba = embebido\s*\n?\s*\? seguroActualEmbebido\(/, 'fuera de embebido no hay «arriba»: null')
-  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(seguroArriba\?\.tieneSeguroActual \?\? seguroLeido\.tiene\)/)
+  assert.match(HELPER, /tiene: anterior !== null,/)
+  assert.match(HELPER, /const emb = modo === 'embebido'\s*\n?\s*\? seguroActualEmbebido\(/, 'fuera de embebido no hay «arriba»: null')
+  assert.match(HELPER, /const arriba = modo === 'embebido' \? riesgo\.historialDeclarado : null/)
+  assert.match(fuente, /historialDeclarado: embebido \? historialRiesgo : null/)
+  assert.match(fuente, /tieneSeguroActual, setTieneSeguroActual\] = useState\(ini\.tieneSeguroActual\)/)
+  assert.match(HELPER, /tieneSeguroActual: v\.tieneSeguro\.valor === true,/)
   assert.match(fuente, /anterior = null,/, 'sin póliza leída, `anterior` es null → apagado')
   assert.match(fuente, /Sí, tiene un seguro de auto en vigor ahora mismo/)
 })
 
 test('los años del historial nacen en el máximo (o lo leído), no vacíos', () => {
-  assert.match(fuente, /useState\(String\(historial\.aniosAsegurado\)\)/)
-  assert.match(fuente, /useState\(seguroArriba\?\.aniosSinSiniestros \?\? String\(historial\.aniosSinSiniestros\)\)/)
+  assert.match(HELPER, /const historial = historialConTopes\(historialDeclarado\(sa\), arriba\)/)
+  assert.match(fuente, /useState\(ini\.aniosAsegurado\)/)
+  assert.match(fuente, /useState\(ini\.aniosSinSiniestros\)/)
 })
 
 test('activarlo manda los CINCO campos que el vendor exige juntos, nunca aseguradoAntes suelto', () => {

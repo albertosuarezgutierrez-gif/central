@@ -62,17 +62,24 @@ test('los kilómetros nacen en 10.000, visibles y editables', () => {
   assert.match(readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/correduria/km-auto.ts'), 'utf8'), /export const KM_AUTO_POR_DEFECTO = 10000\b/)
   assert.match(fuente, /import \{ KM_AUTO_POR_DEFECTO,[^}]*\} from '@\/lib\/correduria\/km-auto'/)
   assert.doesNotMatch(fuente, /const KM_(ANUALES|AUTO)_POR_DEFECTO =/, 'ni una copia local de la constante')
-  // 30/09/2026: los km del riesgo mandan si los trae; si no, nacen en el defecto.
-  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(datosRiesgo\?\.kmAnuales != null \? String\(datosRiesgo\.kmAnuales\) : String\(KM_AUTO_POR_DEFECTO\)\)/)
+  // 30/09/2026: los km del riesgo mandan si los trae; si no, nacen en el defecto. 15/10/2026: la regla vive en la fuente
+  // única `valoresQueViajan` (lib/correduria/supuestos-auto.ts, con test de equivalencia) y la pantalla nace de ella.
+  const helper = readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/correduria/supuestos-auto.ts'), 'utf8')
+  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(ini\.kmAnuales\)/)
+  assert.match(helper, /const km: ValoresQueViajan\['km'\] = d\?\.kmAnuales != null\s*\n\s*\? \{ valor: d\.kmAnuales, origen: 'riesgo', nota: null \}\s*\n\s*: \{ valor: KM_AUTO_POR_DEFECTO, origen: 'supuesto'/)
+  assert.doesNotMatch(helper, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
   assert.doesNotMatch(fuente, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
 })
 
 test('el garaje nace en GARAJE, nunca en la calle (29/09/2026; antes «vía pública»)', () => {
   // 30/09/2026: el garaje del riesgo manda; si no, el defecto GARAJE. 15/10/2026: el del riesgo que no casa con el catálogo
   // NO se cambia por el defecto (queda vacío y se pregunta): la regla vive en `garajeInicial` (lib/supuestos-presupuesto).
-  assert.match(fuente, /const inicioGaraje = garajeInicial\(datosRiesgo\?\.garaje, garajes\)/)
-  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => inicioGaraje\.id\)/)
+  // 15/10/2026: la regla la aplica la fuente única `valoresQueViajan` (lib/correduria/supuestos-auto.ts) y la pantalla nace de ella.
+  const helper = readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/correduria/supuestos-auto.ts'), 'utf8')
+  assert.match(helper, /const g = garajeInicial\(d\?\.garaje, catalogos\.garajes\)/)
+  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => ini\.garaje\)/)
   assert.doesNotMatch(fuente, /garajePorDefecto\(/, 'la pantalla no aplica el defecto por su cuenta')
+  assert.doesNotMatch(helper, /garajePorDefecto\(/, 'ni la fuente única: el defecto solo lo decide `garajeInicial`')
   assert.doesNotMatch(fuente, /garajes\.find\(\(g\) => \/v\[ií\]a/, 'el defecto viejo no vuelve')  // El «soltero» por defecto es SOLO del asistente: aquí viajaría sin marca de supuesto y se emitiría sin aviso.
   assert.doesNotMatch(fuente, /estadoCivilPorDefecto/, 'la pantalla no pone estado civil por defecto')
 })
