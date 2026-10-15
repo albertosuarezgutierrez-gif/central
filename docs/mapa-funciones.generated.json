@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T08:47:44Z",
-  "sha": "c8a1b5d0e073f9472c3d4edac63c8705ff6a0c1d",
+  "generadoEn": "2026-10-15T09:10:35Z",
+  "sha": "9fadcf862c9391a357b4197b892fed17af83892b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -97152,7 +97152,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5ab5a52fbb6e"
+      "hash": "0720e605a2a4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -97562,7 +97562,7 @@
           "nombre": "FichasDuplicadas",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId }: { clienteId: string }",
+          "params": "{ clienteId, juridica = false }: { clienteId: string; juridica?: boolean }",
           "retorno": null,
           "linea": 19
         },
@@ -97570,14 +97570,14 @@
           "nombre": "Comparar",
           "kind": "function",
           "exportada": false,
-          "params": "{ clienteId, otra, onCerrar, onFusionada }: { clienteId: string; otra: Ficha; onCerrar: () => void; onFusionada: () => void }",
+          "params": "{ clienteId, otra, juridica, onCerrar, onFusionada }: { clienteId: string; otra: Ficha; juridica: boolean; onCerrar: () => void; onFusionada: () => void }",
           "retorno": null,
-          "linea": 67
+          "linea": 69
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c95202cbbc92"
+      "hash": "eb09b123d419"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/FichaTabs.tsx",
@@ -98193,7 +98193,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4734db21e941"
+      "hash": "8dbae9ba08e3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PanelDatosCliente.tsx",
@@ -98230,7 +98230,7 @@
           "nombre": "textoResultado",
           "kind": "function",
           "exportada": false,
-          "params": "r: ResultadoEscritura",
+          "params": "r: ResultadoEscritura, juridica?: boolean",
           "retorno": "string",
           "linea": 87,
           "resumen": "Qué le dice al usuario un resultado de escritura, en una frase."
@@ -98249,7 +98249,7 @@
           "exportada": false,
           "params": "{ valor, onChange, etiqueta }: { valor: string; onChange: (t: string) => void; etiqueta: string }",
           "retorno": null,
-          "linea": 568
+          "linea": 569
         }
       ],
       "tablas": [
@@ -98257,7 +98257,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "cf9a7818a43c"
+      "hash": "3e75414459f3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx",
@@ -99177,7 +99177,7 @@
           "nombre": "VerDniCompleto",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId }: { clienteId: string }",
+          "params": "{ clienteId, juridica = false }: { clienteId: string; juridica?: boolean }",
           "retorno": null,
           "linea": 21,
           "resumen": "«Ver DNI completo» — el ÚNICO camino para destapar el DNI entero de un cliente. El resto de la ficha lo enseña enmascarado a propósito (`*****678Z`, puerto de asegura); esto existe para el caso real d"
@@ -99185,7 +99185,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3a2aa36d9b23"
+      "hash": "54fdcb34f437"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/vida-nuevo/acciones.ts",
@@ -101874,7 +101874,7 @@
           "exportada": true,
           "params": "{ q }: { q?: string }",
           "retorno": null,
-          "linea": 33
+          "linea": 37
         },
         {
           "nombre": "Resultado",
@@ -101882,7 +101882,7 @@
           "exportada": false,
           "params": "{ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocupado: boolean; onForzar: () => void }",
           "retorno": null,
-          "linea": 179
+          "linea": 197
         },
         {
           "nombre": "RamoBtn",
@@ -101890,7 +101890,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onClick, title }: { etiqueta: string; activo: boolean; onClick: () => void; title?: string }",
           "retorno": null,
-          "linea": 218
+          "linea": 236
         },
         {
           "nombre": "Grupo",
@@ -101898,7 +101898,7 @@
           "exportada": false,
           "params": "{ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 236
+          "linea": 254
         },
         {
           "nombre": "Fila",
@@ -101906,7 +101906,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 246
+          "linea": 264
         },
         {
           "nombre": "Campo",
@@ -101914,12 +101914,12 @@
           "exportada": false,
           "params": "{ label, mal, children }: { label: string; mal?: boolean; children: React.ReactNode }",
           "retorno": null,
-          "linea": 250
+          "linea": 268
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8bcc70842791"
+      "hash": "159331d5a7bc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/acciones.ts",
@@ -102564,7 +102564,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "64d88f281b60"
+      "hash": "e959ad8df47c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/FaltaPorCompletar.tsx",
@@ -132272,7 +132272,7 @@
           "nombre": "textoMotivo",
           "kind": "function",
           "exportada": true,
-          "params": "motivo: string",
+          "params": "motivo: string, juridica?: boolean",
           "retorno": "string",
           "linea": 227,
           "resumen": "El motivo del puerto, en castellano de pantalla. Los que ya son frase se dejan."
@@ -132283,7 +132283,7 @@
           "exportada": true,
           "params": "q: string",
           "retorno": "CampoTermino",
-          "linea": 263
+          "linea": 267
         },
         {
           "nombre": "interpretarCuentaFicha",
@@ -132291,7 +132291,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "CuentaFichaLeida",
-          "linea": 282,
+          "linea": 286,
           "resumen": "GET: `mascara: null` sin `ilegible` = se ha mirado y no tiene cuenta; un fallo NUNCA es «sin cuenta». `invalida` (una cuenta vieja que no pasa el módulo 97) es opcional: una asegura anterior no la man"
         },
         {
@@ -132300,7 +132300,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ResultadoCuentaFicha",
-          "linea": 301,
+          "linea": 305,
           "resumen": "PUT: solo `ok` con máscara es «guardada»; lo que no se entiende es un error, nunca un éxito."
         },
         {
@@ -132309,7 +132309,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 320
+          "linea": 324
         },
         {
           "nombre": "cabeceras",
@@ -132317,7 +132317,7 @@
           "exportada": false,
           "params": "actor?: string",
           "retorno": "Promise<Record<string, string> | null>",
-          "linea": 324
+          "linea": 328
         },
         {
           "nombre": "llamar",
@@ -132325,7 +132325,7 @@
           "exportada": false,
           "params": "path: string, init: RequestInit, actor?: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 331
+          "linea": 335
         },
         {
           "nombre": "contactosAsegura",
@@ -132333,7 +132333,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 347
+          "linea": 351
         },
         {
           "nombre": "anadirContactoAsegura",
@@ -132341,7 +132341,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 351
+          "linea": 355
         },
         {
           "nombre": "cambiarContactoAsegura",
@@ -132349,7 +132349,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 355
+          "linea": 359
         },
         {
           "nombre": "borrarContactoAsegura",
@@ -132357,7 +132357,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 359
+          "linea": 363
         },
         {
           "nombre": "carnetAsegura",
@@ -132365,7 +132365,7 @@
           "exportada": true,
           "params": "method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 364,
+          "linea": 368,
           "resumen": "`/api/operador/cliente/carnets` — añadir (POST), corregir (PATCH) o quitar (DELETE) un carné."
         },
         {
@@ -132374,7 +132374,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>, actor?: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 372,
+          "linea": 376,
           "resumen": "`PATCH /api/operador/cliente` — edición. El `actor` del cuerpo lo pone la ruta (sesión); el de la cabecera sale de la sesión salvo que se pase (un agente sin sesión: `agente:<id>`)."
         },
         {
@@ -132383,7 +132383,7 @@
           "exportada": true,
           "params": "accion: 'solicitar' | 'confirmar' | 'baja', body: unknown",
           "retorno": "Promise<Reenvio>",
-          "linea": 377,
+          "linea": 381,
           "resumen": "`POST /api/operador/aviso-web?accion=` — el «avísame antes de que venza» de la web pública."
         },
         {
@@ -132392,7 +132392,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>, actor?: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 382,
+          "linea": 386,
           "resumen": "`POST /api/operador/cliente` — alta. `actor` como en `editarClienteAsegura` (agente sin sesión)."
         },
         {
@@ -132401,7 +132401,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 387,
+          "linea": 391,
           "resumen": "`DELETE /api/operador/cliente` — DESCARTA la ficha (borrado suave, reversible)."
         },
         {
@@ -132410,7 +132410,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 392,
+          "linea": 396,
           "resumen": "`POST /api/operador/cliente?restaurar` — deshace el descarte."
         },
         {
@@ -132419,7 +132419,7 @@
           "exportada": true,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<Reenvio>",
-          "linea": 402,
+          "linea": 406,
           "resumen": "`POST /api/operador/cliente/historial` — anota una fila de historial en una ficha que ya existe (`{ clienteId, tipo, texto, actor? }`). Lo usa el canal de leads web cuando el teléfono/email ya está en"
         },
         {
@@ -132428,7 +132428,7 @@
           "exportada": true,
           "params": "body: { id: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 412,
+          "linea": 416,
           "resumen": "este helper no sabe nada de esa comprobación, confía en que la ruta ya la hizo."
         },
         {
@@ -132437,7 +132437,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 417,
+          "linea": 421,
           "resumen": "`GET /api/operador/cliente/cuenta` — la cuenta de la ficha, enmascarada."
         },
         {
@@ -132446,13 +132446,13 @@
           "exportada": true,
           "params": "body: { id: string; iban: string; actor: string }",
           "retorno": "Promise<Reenvio>",
-          "linea": 422,
+          "linea": 426,
           "resumen": "`PUT /api/operador/cliente/cuenta` — pone la cuenta de la ficha. El `actor` lo pone la ruta (sesión)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b006c4b0f050"
+      "hash": "b609c2a93ac6"
     },
     {
       "ruta": "apps/plataforma/lib/codigo-postal-auto.ts",
