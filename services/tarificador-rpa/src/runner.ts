@@ -38,7 +38,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { confirmarVehiculoMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { cerrarAvisoTomadorMapfre, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -163,6 +163,14 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         // La pestaña de NSEI la abre la entrada; solo vale una página de ESTE contexto (el que tiene el guard de red).
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo no es de este trabajo')
         await confirmarVehiculoMapfre(pagina, guard, matricula)
+      },
+      elegirTomadorMapfre: async (pagina, nif) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del diálogo del tomador no es de este trabajo')
+        return elegirTomadorMapfre(pagina, guard, nif)
+      },
+      cerrarAvisoTomadorMapfre: async (pagina) => {
+        if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del aviso del tomador no es de este trabajo')
+        return cerrarAvisoTomadorMapfre(pagina, guard)
       },
       continuarMapfre: async (pagina, paso) => {
         if (pagina.context() !== context) throw new ErrorTarificador('portal', 'mapfre: la pestaña del stepper no es de este trabajo')
@@ -332,13 +340,13 @@ async function main(): Promise<number> {
     if (carga.estado === 'error') {
       // Almacén caído ≠ «no hay sesión»: infraestructura (el orquestador lo reintenta), no un aviso a Alberto.
       const c = clasificar(carga.e)
-      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: redactarTrabajo(c.mensaje).slice(0, 2000), url: null } })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: c.tipo === 'portal' ? 'infra' : c.tipo, mensaje: redactarTrabajo(c.mensaje).slice(0, 2000), url: null }, botVersion: adaptador.version })
       return 1
     }
     if (carga.estado === 'falta') {
       const e = new ErrorVerificacionHumana(trabajo.compania, textoAvisoSesionManual(trabajo.compania))
       log('requiere_verificacion_humana', { compania: trabajo.compania, sesion: carga.motivo })
-      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: e.tipo, mensaje: e.message, url: null } })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: e.tipo, mensaje: e.message, url: null }, botVersion: adaptador.version })
       return 1
     }
     const sesion = carga.sesion

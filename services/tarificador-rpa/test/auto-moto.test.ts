@@ -30,6 +30,7 @@ import {
   valorOpcionExacta,
 } from '../src/adapters/allianz/auto.ts'
 import { clasificarIntento, ErrorTarificador, opcionesPoblacionDe, pideInventarioDom } from '../src/errores.ts'
+import { esElementoOpcion, prepararFormador, type ContextoFormador } from '../src/formador.ts'
 import { comprobarBoton, EmisionBloqueadaError, type FormularioAuto } from '@central/module-tarificacion'
 
 const form: FormularioAuto = {
@@ -327,4 +328,112 @@ test('allianzMoto.tarificar para ANTES de abrir el portal si faltan datos que el
   for (const f of [sinSel, sinSexo]) {
     await assert.rejects(allianzMoto.tarificar({} as never, f, {} as never), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
   }
+})
+
+
+// ───────────── buscador de poblaciones por la CAPA COMÚN (fijo → aprendido → IA `elegir_opcion` → atasco) ─────────────
+// Resultados pintados como `li[role=option]` (NO como las celdas `td` que conoce la regla fija): el fijo no los ve, tras el plazo
+// entra la capa común. La IA solo señala un índice; el adaptador contrasta el texto «CP- NOMBRE» con el riesgo ANTES de pulsar.
+const LISTA = (nombres: string[]) => `<body><input id="_cpostalCode" type="tel"><input id="_destown" type="text">
+<img id="_cpostalCodeAjaxLocFinderImg" src="data:," onclick="sendRequestLocationFinder({'id':'_cpostalCode'});">
+<ul id="res"></ul>
+<table><tr><td id="store" onclick="window.archivado=1">Archivar</td></tr></table>
+<script>
+window.pulsadas = 0
+var sendRequestLocationFinder = () => setTimeout(() => {
+  const cp = document.getElementById('_cpostalCode').value;
+  ${JSON.stringify(nombres)}.forEach((n) => {
+    const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = cp + '- ' + n
+    li.onclick = () => { window.pulsadas++; document.getElementById('_destown').value = n }
+    document.getElementById('res').appendChild(li)
+  })
+}, 50)
+</script></body>`
+
+async function formadorMoto(elegir: (e: { texto: string | null }[]) => number | null, llamadas: string[], conocimiento: unknown[] = []): Promise<ContextoFormador> {
+  return prepararFormador({
+    trabajoId: '00000000-0000-4000-8000-000000000000', compania: 'allianz', ramo: 'moto', apiUrl: 'https://asegura.test', secreto: 'x'.repeat(20),
+    redactar: (t) => t, log: () => undefined,
+    fetchImpl: (async (url: string, init?: { body?: string }) => {
+      const ruta = String(url).split('/formador/')[1]!.split('?')[0]!
+      llamadas.push(ruta)
+      if (ruta === 'conocimiento') return new Response(JSON.stringify({ formadorActivo: true, conocimiento, acompanamiento: { activo: false } }))
+      if (ruta === 'sugerir') return new Response(JSON.stringify({ indice: elegir((JSON.parse(init!.body!) as { estructura: { texto: string | null }[] }).estructura) }))
+      return new Response('{}')
+    }) as unknown as typeof fetch,
+  })
+}
+
+test('esElementoOpcion: la celda del buscador (td con receivedDataLocationFinder y «CP- NOMBRE») es opción; cualquier otro td, no', () => {
+  assert.equal(esElementoOpcion({ tag: 'td', role: null, texto: '41003- SEVILLA', celdaBuscador: true }), true)
+  assert.equal(esElementoOpcion({ tag: 'td', role: null, texto: '41003- SEVILLA' }), false, 'td sin la marca del buscador')
+  assert.equal(esElementoOpcion({ tag: 'td', role: null, texto: 'Archivar', celdaBuscador: true }), false, 'sin forma «CP- NOMBRE»')
+  assert.equal(esElementoOpcion({ tag: 'td', role: null, texto: 'Emitir' }), false)
+})
+
+test('buscador por capa común: la IA señala la población del riesgo → se pulsa por ctx.pulsar, se rellena y se CONFIRMA lo aprendido', async () => {
+  await page.setContent(LISTA(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+  const llamadas: string[] = []
+  const formador = await formadorMoto((e) => e.findIndex((c) => c.texto === '00001- PUEBLO NUEVO'), llamadas)
+  await buscarPoblacion(page.mainFrame(), '00001', page, { ...ctxPulsar, formador }, 600, { poblacion: 'pueblo nuevo' })
+  assert.equal(await page.locator('#_destown').inputValue(), 'PUEBLO NUEVO')
+  assert.ok(llamadas.includes('sugerir'), 'preguntó a la IA')
+  assert.equal(llamadas.filter((l) => l === 'confirmar').length, 1)
+  assert.equal(await page.evaluate(() => (window as unknown as { archivado?: number }).archivado), undefined, 'no pulsó Archivar')
+})
+
+test('buscador por capa común: la IA señala OTRA población (o el riesgo no trae población) → NO se pulsa, atasco y no se aprende', async () => {
+  for (const eleccion of [{ poblacion: 'pueblo nuevo' }, {}]) {
+    await page.setContent(LISTA(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+    const llamadas: string[] = []
+    const formador = await formadorMoto((e) => e.findIndex((c) => c.texto === '00001- VILLA ÁLAMO'), llamadas)
+    await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, { ...ctxPulsar, formador }, 600, eleccion), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
+    assert.equal(await page.evaluate(() => (window as unknown as { pulsadas?: number }).pulsadas), 0, 'no pulsó ninguna opción')
+    assert.equal(llamadas.filter((l) => l === 'confirmar').length, 0)
+    assert.equal(formador.atasco?.clave, 'elegir_opcion_poblacion')
+    assert.equal(formador.atasco?.candidatos.length, 2, 'solo las dos opciones (nunca Archivar)')
+  }
+})
+
+test('buscador: celdas sin la forma «CP- NOMBRE» (la regla fija no halla ninguna población válida) → atasco directo, SIN consultar a la IA', async () => {
+  await page.setContent(POBLACIONES(['Texto sin forma']).replace("td.textContent = cp + '- ' + n", 'td.textContent = n'))
+  const llamadas: string[] = []
+  const formador = await formadorMoto(() => 0, llamadas)
+  await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, { ...ctxPulsar, formador }, 600), (e: unknown) => e instanceof ErrorMapaIncompleto && /formato de las celdas/.test((e as Error).message))
+  assert.ok(!llamadas.includes('sugerir'), 'no se pregunta a la IA')
+})
+
+test('buscador por capa común: la IA no resuelve → ATASCO con las opciones visibles (Telegram) y el hueco original', async () => {
+  await page.setContent(LISTA(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
+  const formador = await formadorMoto(() => null, [])
+  await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, { ...ctxPulsar, formador }, 600, { poblacion: 'pueblo nuevo' }), (e: unknown) => e instanceof ErrorMapaIncompleto && /buscador de poblaciones/.test((e as Error).message))
+  assert.equal(formador.atasco?.clave, 'elegir_opcion_poblacion')
+  assert.deepEqual(formador.atasco?.candidatos.map((c) => c.texto), ['00001- VILLA ÁLAMO', '00001- PUEBLO NUEVO'])
+})
+
+test('buscador: celda pulsada sin efecto, o buscador ausente → atasco preparado (no error mudo)', async () => {
+  await page.setContent(POBLACIONES(['VILLA PRUEBA'], false))
+  const f1 = await formadorMoto(() => null, [])
+  await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, { ...ctxPulsar, formador: f1 }, 600), ErrorMapaIncompleto)
+  assert.equal(f1.atasco?.clave, 'elegir_opcion_poblacion')
+  assert.deepEqual(f1.atasco?.candidatos.map((c) => c.texto), ['00001- VILLA PRUEBA'])
+  await page.setContent(LISTA(['VILLA ÁLAMO']).replace('id="_cpostalCodeAjaxLocFinderImg"', 'id="otra"'))
+  const f2 = await formadorMoto(() => null, [])
+  await page.evaluate(() => { const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = '00001- X'; document.getElementById('res')!.appendChild(li) })
+  await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, { ...ctxPulsar, formador: f2 }, 600), (e: unknown) => e instanceof ErrorTarificador && /no aparece el buscador/.test((e as Error).message))
+  assert.equal(f2.atasco?.clave, 'elegir_opcion_poblacion')
+})
+
+test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestros > 0) deja atasco con las opciones visibles; sin formador, el hueco intacto', async () => {
+  await page.setContent(LISTA(['VILLA ÁLAMO']))
+  await page.evaluate(() => { const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = 'Opcion visible'; document.body.appendChild(li) })
+  const formador = await formadorMoto(() => null, [])
+  const f = { ...form, siniestrosUltimos5Anios: 2 }
+  await assert.rejects(allianzMoto.tarificar(page, f, { formador } as never), ErrorMapaIncompleto)
+  assert.equal(formador.atasco, undefined, 'siniestros > 0 es un caso de DATOS: error definitivo, sin atasco de pantalla')
+  await assert.rejects(allianzMoto.tarificar(page, f, {} as never), ErrorMapaIncompleto)
+})
+
+test('versión del bot de Allianz Moto', () => {
+  assert.equal(allianzMoto.version, '0.4.0')
 })

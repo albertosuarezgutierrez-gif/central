@@ -1011,6 +1011,15 @@ export async function calcularVariantes(
   return { ofertas, avisos }
 }
 
+/** Importe de la tabla Tarificar: punto decimal (lo normal) o español con coma («1.234,56 €»). `null` si no se afirma. */
+export function importePrima(texto: string | null | undefined): number | null {
+  // Punto decimal (lo normal en esta tabla) o formato español SOLO si trae coma («1.234,56 €»): «1.234» sigue sin afirmarse.
+  const t = typeof texto === 'string' ? texto.replace(/\u00a0/g, ' ').trim() : ''
+  const pd = importePuntoDecimal(t)
+  if (pd !== null) return pd
+  return t.includes(',') ? importeEs(t) : null
+}
+
 /**
  * Pestaña «Tarificar»: tabla Anual / Sucesivos con Prima Neta, Impuestos y Prima Total. Aquí los importes
  * van con PUNTO decimal y sin miles (`importePuntoDecimal`, no `importeEs`). Lo que no se lee es `null`.
@@ -1020,16 +1029,20 @@ export async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; su
     const loc = filaPorEtiqueta(raiz, etiqueta)
     // Solo celdas HIJAS directas: cada importe va en una tabla anidada cuyos `td` no deben contarse.
     const textos = await loc.locator('xpath=./td').allInnerTexts().catch(() => [] as string[])
-    const importes = textos.slice(1).map((t) => importePuntoDecimal(t)).filter((n): n is number => n !== null)
+    const importes = textos.slice(1).map((t) => importePrima(t)).filter((n): n is number => n !== null)
     // Esperado: [anual, sucesivos]. Si no salen exactamente dos importes, no se afirma ninguno.
     if (importes.length === 2) return [importes[0], importes[1]]
     // Respaldo: `td#valor_*` dentro de `td#tablaTarificacion_modelData_{fila}_{0|1}`.
     const leerCol = async (col: number): Promise<number | null> => {
       const t = await loc.locator(`xpath=./td[starts-with(@id,'tablaTarificacion_modelData_') and substring(@id,string-length(@id)-1)='_${col}']//td[starts-with(@id,'valor_')]`).allInnerTexts().catch(() => [] as string[])
-      return t.length === 1 ? importePuntoDecimal(t[0]) : null
+      return t.length === 1 ? importePrima(t[0]) : null
     }
     const [a, s] = [await leerCol(0), await leerCol(1)]
-    return a !== null && s !== null ? [a, s] : [null, null]
+    if (a !== null && s !== null) return [a, s]
+    // Último respaldo: el texto de la fila entera (otro nodo / otra estructura). Solo si salen EXACTAMENTE dos importes.
+    const cuerpo = await loc.innerText({ timeout: 1_000 }).catch(() => '')
+    const sueltos = (cuerpo.replace(/\u00a0/g, ' ').match(/-?\d{1,3}(?:\.\d{3})*,\d{1,2}|-?\d+\.\d{1,2}(?!\d)|-?\d+,\d{1,2}/g) ?? []).map(importePrima).filter((n): n is number => n !== null)
+    return sueltos.length === 2 ? [sueltos[0], sueltos[1]] : [null, null]
   }
   const [netaA, netaS] = await fila('Prima Neta')
   const [impA, impS] = await fila('Impuestos')
@@ -1038,6 +1051,67 @@ export async function leerPrimas(raiz: Raiz): Promise<{ anual: DesglosePrima; su
     anual: { primaNetaEur: netaA, impuestosEur: impA, primaTotalEur: totA },
     sucesivos: { primaNetaEur: netaS, impuestosEur: impS, primaTotalEur: totS },
   }
+}
+
+/** Tope de espera a que la pestaña Tarificar pinte la «Prima Total» (el servlet rellena la tabla tras cargar la fila). */
+const TOPE_PRIMAS_MS = 45_000
+
+/**
+ * Texto visible de la pantalla SIN datos personales: solo líneas que hablan de primas, importes o avisos/errores del
+ * portal, con números largos y correos enmascarados, ≤300 caracteres. Puro.
+ */
+export function textoVisibleSeguro(crudo: string, max = 300): string {
+  const lineas = crudo.replace(/\u00a0/g, ' ').split(/\n+/).map((l) => l.trim()).filter(Boolean)
+  const utiles = lineas.filter((l) => /prima|importe|impuesto|recargo|error|aviso|atenci|no (se )?(ha|es|puede|existe)|incorrect|obligatori|tarifa|calcul/i.test(l))
+  return utiles.map(redactarLinea).join(' | ').replace(/\s+/g, ' ').slice(0, max)
+}
+
+/** Redacta DENTRO de una línea lo que parece dato personal: correo, fechas, NIF/NIE/CIF, teléfonos/números largos y nombre propio tras «tomador/asegurado/cliente/titular/nombre». */
+function redactarLinea(l: string): string {
+  return l
+    .replace(/[^\s@]+@[^\s@]+/g, '[correo]')
+    .replace(/\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{4}[/.-]\d{1,2}[/.-]\d{1,2}\b/g, '[…]')
+    .replace(/\b[XYZxyz]?\d{7,8}[A-Za-z]\b|\b[A-HJNPQRSUVWa-hjnpqrsuvw]\d{7}[0-9A-Ja-j]\b/g, '[…]')
+    .replace(/\d{7,}/g, '[nº]')
+    .replace(/\+?\d(?:[\s.-]?\d){7,}/g, '[…]')
+    .replace(/\b((?:[Tt]omador|TOMADOR|[Aa]segurado|ASEGURADO|[Cc]liente|CLIENTE|[Tt]itular|TITULAR|[Nn]ombre|NOMBRE)a?\b\s*[:=]?\s*)(?:[A-ZÁÉÍÓÚÑÜ][\p{L}'’-]*(?:\s+(?:(?:de|del|la|las|los|y)\s+)*[A-ZÁÉÍÓÚÑÜ][\p{L}'’-]*)*)/gu, '$1[…]')
+}
+
+/** Fallo de lectura de primas tras la espera: `pideInventarioDom` adjunta el inventario de estructura (solo lectura). */
+export class ErrorPrimaIlegible extends ErrorTarificador {
+  readonly pideInventarioDom = true
+  constructor(detalle: string) {
+    super('portal', `allianz/comunidades: la pestaña Tarificar no trajo «Prima Total» anual legible tras esperar ${TOPE_PRIMAS_MS / 1000} s. Texto visible: ${detalle || '(sin texto de primas ni avisos)'}`)
+    this.name = 'ErrorPrimaIlegible'
+  }
+}
+
+/**
+ * Espera a que alguna raíz (marco) tenga la fila «Prima Total» CON importe legible (no basta que la fila exista: el
+ * servlet la pinta antes de rellenarla). Sondea hasta `topeMs`; si no, `ErrorPrimaIlegible` con el texto visible saneado.
+ * Solo lectura.
+ */
+export async function esperarPrimas(
+  page: Pick<Page, 'frames' | 'waitForTimeout'>,
+  topeMs = TOPE_PRIMAS_MS,
+): Promise<{ marco: Frame; primas: { anual: DesglosePrima; sucesivos: DesglosePrima } }> {
+  const fin = Date.now() + topeMs
+  for (;;) {
+    for (const f of page.frames()) {
+      if (f.isDetached()) continue
+      if ((await filaPorEtiqueta(f, 'Prima Total').count().catch(() => 0)) === 0) continue
+      const primas = await leerPrimas(f).catch(() => null)
+      if (primas && primas.anual.primaTotalEur !== null) return { marco: f, primas }
+    }
+    if (Date.now() >= fin) break
+    await page.waitForTimeout(500)
+  }
+  const trozos: string[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    trozos.push(await f.locator('body').innerText({ timeout: 2_000 }).catch(() => ''))
+  }
+  throw new ErrorPrimaIlegible(textoVisibleSeguro(trozos.join('\n')))
 }
 
 /**
@@ -1122,7 +1196,7 @@ export const emisionComunidades = {
       await ctx.avanzarATarificar()
       await ctx.exigirSinCaptcha()
     })
-    const primas = await ctx.paso('lectura_primas', async () => leerPrimas(await marcoCon(page, (r) => filaPorEtiqueta(r, 'Prima Total'), 'Prima Total')))
+    const { primas } = await ctx.paso('lectura_primas', () => esperarPrimas(page))
     const total = primas.anual.primaTotalEur
     return { primaCents: total !== null && Number.isFinite(total) && total > 0 ? Math.round(total * 100) : null }
   },
@@ -1141,7 +1215,7 @@ export const allianzComunidades: AdaptadorPortal = {
   compania: 'allianz',
   ramo: 'comunidades',
   credencial: 'ALLIANZ_EPAC',
-  version: '0.2.0',
+  version: '0.2.1',
   emision: emisionComunidades,
   async tarificar(page, riesgo, ctx) {
     // UNA modalidad por trabajo (por defecto estándar). Querer las dos = DOS trabajos (dos pasadas):
@@ -1175,10 +1249,7 @@ export const allianzComunidades: AdaptadorPortal = {
       await ctx.exigirSinCaptcha()
     })
     // Tras el avance el servlet puede recargar o cambiar de marco: se busca el que trae «Prima Total».
-    const { tarificar, primas } = await ctx.paso('lectura_primas', async () => {
-      const marco = await marcoCon(page, (r) => filaPorEtiqueta(r, 'Prima Total'), 'Prima Total')
-      return { tarificar: marco, primas: await leerPrimas(marco) }
-    })
+    const { marco: tarificar, primas } = await ctx.paso('lectura_primas', () => esperarPrimas(page))
     await acompanarPaso(page, ctx, 'resultado', 'Pestaña Tarificar con Prima Neta, Impuestos y Prima Total (anual y sucesivos)', {
       valoresLeidos: { primaNetaEur: primas.anual.primaNetaEur, impuestosEur: primas.anual.impuestosEur, primaTotalEur: primas.anual.primaTotalEur },
       modalidadPedida: modalidad,

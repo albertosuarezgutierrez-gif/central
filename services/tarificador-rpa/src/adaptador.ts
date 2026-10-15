@@ -73,6 +73,14 @@ export type ContextoPortal = ContextoTarificacion & {
    */
   continuarMapfre?: (pagina: Page, paso: PasoContinuarMapfre) => Promise<void>
   /**
+   * Mapfre NSEI (14/10/2026): elige en el diálogo de selección de persona del tomador la ÚNICA fila cuyo NIF normalizado es
+   * el del riesgo (`elegirTomadorMapfre` de guard.ts; la comparación y el NIF no salen del guard). `ninguna`/`varias`/
+   * `sin_control` = nada pulsado: el adaptador registra atasco.
+   */
+  elegirTomadorMapfre?: (pagina: Page, nif: string) => Promise<'elegido' | 'ninguna' | 'varias' | 'sin_control'>
+  /** Mapfre NSEI: cierra el aviso «no existe ningún registro» (texto validado en guard.ts; un solo Aceptar/Cerrar). */
+  cerrarAvisoTomadorMapfre?: (pagina: Page) => Promise<'sin_registro'>
+  /**
    * Allianz HOGAR (14/10/2026): marca UNA opción del riesgo (madera, tipo de vivienda, régimen, uso) de la pantalla «Vivienda»
    * por `marcarOpcionRiesgoHogarAllianz` de guard.ts (lista cerrada de etiquetas EXACTAS, marco de la app de Hogar,
    * `comprobarBoton` antes del clic). `no_unica`/`no_quedo` = hueco de mapa: el adaptador para con inventario.

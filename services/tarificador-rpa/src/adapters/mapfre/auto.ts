@@ -34,6 +34,7 @@
 import type { Frame, Locator, Page } from 'playwright'
 import {
   documentoTomadorDe,
+  EmisionBloqueadaError,
   importeEs,
   normalizarMatricula,
   resolverVersion,
@@ -54,6 +55,7 @@ import { fechaEs } from '../allianz/intranet/index.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { abrirTarificacionRapidaAuto } from './entrada.ts'
 import { login } from './login.ts'
+import { SEL_FILAS_DIALOGO_PERSONAS } from '../../guard.ts'
 
 /**
  * Hueco declarado: falta un dato de la grabación. NO transitorio → `error_definitivo`, no se reintenta. Con
@@ -540,7 +542,9 @@ const SEL_DIALOGO_NSEI = 'mat-dialog-container, [role="dialog"], [role="alertdia
 const RE_SIN_REGISTRO = /NO EXISTE NINGUN REGISTRO|NO SE HA(N)? ENCONTRADO|SIN RESULTADOS/
 const RE_CAMPO_OBLIGATORIO = /CAMPO OBLIGATORIO|OBLIGATORI/
 
-export type ReaccionTomador = 'existe' | 'nuevo' | 'dialogo' | 'indeterminado'
+export type ReaccionTomador = 'existe' | 'nuevo' | 'dialogo' | 'lista' | 'aviso' | 'indeterminado'
+/** Clase de un diálogo visible durante la búsqueda del tomador. `cargando` = sin filas ni botones (el «espere» transitorio). */
+export type ClaseDialogoTomador = 'ninguno' | 'cargando' | 'lista' | 'aviso' | 'otro'
 
 const plano = (t: string | null) => (t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toUpperCase()
 const textoPagina = (nsei: Page) => nsei.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
@@ -567,16 +571,47 @@ async function estadoCamposTomador(nsei: Page): Promise<{ presentes: number; raz
 }
 
 /**
- * Tras salir del campo del NIF: espera la reacción de Mapfre SIN pulsar nada. Un diálogo visible → `dialogo` (selección de
- * persona: no se elige a ciegas); algún campo del tomador con valor y QUIETO entre dos lecturas → `existe` (autorrelleno);
- * campos de alta presentes y vacíos CON el aviso «no existe ningún registro» → `nuevo`. Cualquier otra cosa al agotar la
- * espera (sin aviso ni autorrelleno, o sin campos) → `indeterminado`. Solo lectura.
+ * Clase del diálogo visible durante la búsqueda del tomador (solo lectura; nunca devuelve su texto). Por estructura:
+ * filas/controles de elección → `lista` (selección de persona); texto «no existe ningún registro» → `aviso`; sin filas ni botones →
+ * `cargando` (el diálogo transitorio de «espere» de Mapfre, que se cierra solo); otra cosa → `otro`. Varios diálogos → `otro`.
+ */
+export async function clasificarDialogoTomador(nsei: Page): Promise<ClaseDialogoTomador> {
+  const d = nsei.locator(SEL_DIALOGO_NSEI).locator('visible=true')
+  const n = await d.count().catch(() => 0)
+  if (n === 0) return 'ninguno'
+  if (n > 1) return 'otro'
+  const l = await d.first().evaluate((el, selFilas) => ({
+    filas: el.querySelectorAll(selFilas).length,
+    botones: el.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]').length,
+    texto: (el as HTMLElement).innerText ?? el.textContent ?? '',
+  }), SEL_FILAS_DIALOGO_PERSONAS).catch(() => null)
+  if (!l) return 'ninguno' // se cerró mientras se leía
+  if (l.filas > 0) return 'lista'
+  if (RE_SIN_REGISTRO.test(plano(l.texto))) return 'aviso'
+  return l.botones === 0 ? 'cargando' : 'otro'
+}
+
+/**
+ * Tras salir del campo del NIF: espera la reacción de Mapfre SIN pulsar nada. Un diálogo visible se clasifica: `cargando`
+ * (el «espere» transitorio, 14/10/2026: se sigue esperando a que se cierre) · `lista` (selección de persona) · `aviso`
+ * («no existe ningún registro» con botón) · otro → `dialogo`. Sin diálogo: algún campo del tomador con valor y QUIETO entre
+ * dos lecturas → `existe` (autorrelleno); campos de alta presentes y vacíos CON el aviso «no existe ningún registro» →
+ * `nuevo`. Cualquier otra cosa al agotar la espera (sin aviso ni autorrelleno, o sin campos) → `indeterminado`; un diálogo
+ * `cargando` que sigue abierto al agotarla → `dialogo`. Solo lectura.
  */
 export async function esperarReaccionTomador(nsei: Page, ms = ESPERA_REACCION_TOMADOR_MS): Promise<ReaccionTomador> {
   const hasta = Date.now() + ms
   let previo: number | null = null
   for (;;) {
-    if ((await nsei.locator(SEL_DIALOGO_NSEI).locator('visible=true').count().catch(() => 0)) > 0) return 'dialogo'
+    const clase = await clasificarDialogoTomador(nsei)
+    if (clase === 'lista' || clase === 'aviso') return clase
+    if (clase === 'otro') return 'dialogo'
+    if (clase === 'cargando') {
+      previo = null
+      if (Date.now() >= hasta) return 'dialogo'
+      await nsei.waitForTimeout(250)
+      continue
+    }
     const e = await estadoCamposTomador(nsei)
     if (e.rellenos > 0) {
       if (previo === e.rellenos) return 'existe'
@@ -707,7 +742,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
  * `tomador.documentoIdentidad`; sin él → `datos` sin tocar nada. El NIF solo va a su campo: nunca a logs, mensajes ni
  * resultado. Lo resuelto por el respaldo se confirma tras llegar al paso 2.
  */
-export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador'>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
+export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirTomadorMapfre' | 'cerrarAvisoTomadorMapfre'>, esperaMs = ESPERA_REACCION_TOMADOR_MS): Promise<void> {
   const nif = documentoTomadorDe(f)
   if (nif === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
   const r = await campoConRespaldo(nsei, SEL_TOMADOR.documento, { page: nsei, formador: ctx.formador, etiqueta: 'NIF/CIF', descripcion: 'Campo del documento (NIF/CIF) del TOMADOR en el paso 1 «Datos básicos» de Mapfre NSEI (no el del conductor)' })
@@ -718,8 +753,34 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   if ((await campo.inputValue()).trim().toUpperCase() !== nif.trim().toUpperCase()) throw new ErrorTarificador('portal', 'mapfre/auto: el portal no dejó fijado el NIF/CIF del tomador')
   // Salir del campo dispara la búsqueda automática de Mapfre. NO se pulsa la lupa.
   await campo.blur()
-  const reaccion = await esperarReaccionTomador(nsei, esperaMs)
-  if (reaccion === 'dialogo') await huecoTomador(nsei, ctx, 'NIF/CIF', 'el diálogo que abre la búsqueda del tomador (sin DOM grabado; el robot no elige persona a ciegas)')
+  let reaccion = await esperarReaccionTomador(nsei, esperaMs)
+  if (reaccion === 'lista') {
+    // Lista de personas: SOLO la fila cuyo NIF (normalizado) es el del riesgo, y dentro del guard. 0 o >1 → atasco.
+    if (!ctx.elegirTomadorMapfre) await huecoTomador(nsei, ctx, 'NIF/CIF', 'el diálogo de selección de persona del tomador (contexto sin la función guardada que la elige)')
+    // Si la función guardada lanza (diálogo cambiado/cerrado, «Aceptar» sin habilitar…) → atasco, no error seco. La emisión bloqueada sube.
+    const r = await ctx.elegirTomadorMapfre!(nsei, nif).catch(async (e: unknown) => {
+      if (e instanceof EmisionBloqueadaError) throw e
+      return huecoTomador(nsei, ctx, 'NIF/CIF', 'el diálogo de selección de persona del tomador cambió o falló al elegir la fila (el robot no insiste)')
+    })
+    if (r !== 'elegido') {
+      const que = r === 'ninguna' ? 'ninguna fila con el NIF/CIF del riesgo' : r === 'varias' ? 'varias filas con el NIF/CIF del riesgo' : 'la fila con el NIF/CIF del riesgo no tiene un control para elegirla'
+      await huecoTomador(nsei, ctx, 'NIF/CIF', `el diálogo de selección de persona del tomador: ${que}; el robot no elige persona a ciegas`)
+    }
+    reaccion = await esperarReaccionTomador(nsei, esperaMs)
+    if (reaccion !== 'existe') await huecoTomador(nsei, ctx, 'NIF/CIF', 'tras elegir la persona del diálogo de selección Mapfre no autorrellenó el tomador')
+  }
+  if (reaccion === 'aviso') {
+    // Aviso «no existe ningún registro» con botón: cerrarlo (texto validado en guard.ts) y seguir por el alta del tomador nuevo.
+    if (!ctx.cerrarAvisoTomadorMapfre) await huecoTomador(nsei, ctx, 'NIF/CIF', 'el aviso del tomador (contexto sin la función guardada que lo cierra)')
+    await ctx.cerrarAvisoTomadorMapfre!(nsei).catch(async (e: unknown) => {
+      if (e instanceof EmisionBloqueadaError) throw e
+      return huecoTomador(nsei, ctx, 'NIF/CIF', 'el aviso del tomador no se pudo cerrar (texto no validado, botón no habilitado o diálogo cerrado)')
+    })
+    const e = await estadoCamposTomador(nsei)
+    if (!(e.presentes >= 3 || e.razonSocial) || e.rellenos > 0) await huecoTomador(nsei, ctx, 'NIF/CIF', 'tras cerrar el aviso de «no existe ningún registro» los campos del alta no están presentes y vacíos')
+    reaccion = 'nuevo'
+  }
+  if (reaccion === 'dialogo') await huecoTomador(nsei, ctx, 'NIF/CIF', 'el diálogo que abre la búsqueda del tomador no es una lista de personas ni el aviso «no existe ningún registro» (el robot no elige ni pulsa a ciegas)')
   if (reaccion === 'indeterminado') await huecoTomador(nsei, ctx, 'NIF/CIF', 'la reacción de Mapfre al NIF/CIF del tomador (ni autorrelleno ni aviso de «no existe ningún registro» en la espera)')
   if (reaccion === 'nuevo') await altaTomadorNuevo(nsei, f, ctx)
   else await exigirSinCamposObligatorios(nsei, ctx, 'con el tomador autorrellenado por Mapfre')
@@ -758,7 +819,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.7.1',
+  version: '0.7.2',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
