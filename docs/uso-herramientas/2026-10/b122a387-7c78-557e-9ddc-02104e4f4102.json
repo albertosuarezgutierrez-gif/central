@@ -1,19 +1,19 @@
 {
  "sesion": "b122a387-7c78-557e-9ddc-02104e4f4102",
  "inicio": "2026-10-14T09:36:54.765Z",
- "fin": "2026-10-15T11:06:15.218Z",
- "llamadas": 365,
+ "fin": "2026-10-15T11:14:12.811Z",
+ "llamadas": 382,
  "categorias": {
   "otro": {
-   "llamadas": 61,
-   "chars_in": 39544,
-   "chars_out": 236034,
+   "llamadas": 66,
+   "chars_in": 42753,
+   "chars_out": 236531,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 21,
-    "SubagentHandback": 13,
+    "ToolSearch": 23,
+    "SubagentHandback": 16,
     "SendMessage": 1,
     "ReadNotifications": 21,
     "Monitor": 4,
@@ -33,20 +33,20 @@
    }
   },
   "bash": {
-   "llamadas": 144,
-   "chars_in": 116825,
-   "chars_out": 681936,
+   "llamadas": 146,
+   "chars_in": 123546,
+   "chars_out": 683004,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 144
+    "Bash": 146
    }
   },
   "mcp:Resend": {
-   "llamadas": 15,
-   "chars_in": 2349,
-   "chars_out": 77718,
+   "llamadas": 22,
+   "chars_in": 13137,
+   "chars_out": 124785,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -55,8 +55,9 @@
     "mcp__Resend__list-domains": 3,
     "mcp__Resend__list-broadcasts": 1,
     "mcp__Resend__get-email-metrics": 3,
-    "mcp__Resend__list-emails": 3,
-    "mcp__Resend__get-email": 3
+    "mcp__Resend__list-emails": 4,
+    "mcp__Resend__get-email": 7,
+    "mcp__Resend__send-email": 2
    }
   },
   "mcp:Supabase": {
@@ -97,14 +98,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 10,
-   "chars_in": 16016,
-   "chars_out": 11184,
+   "llamadas": 12,
+   "chars_in": 18560,
+   "chars_out": 13274,
    "errores": 0,
    "archivos_citados": 6,
    "chars_citados": 113141,
    "tools": {
-    "Agent": 10
+    "Agent": 12
    }
   },
   "mcp:Vercel": {
@@ -187,6 +188,17 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__get_project_url": 1
+   }
+  },
+  "agente:verificador-esceptico": {
+   "llamadas": 1,
+   "chars_in": 847,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
    }
   }
  }
