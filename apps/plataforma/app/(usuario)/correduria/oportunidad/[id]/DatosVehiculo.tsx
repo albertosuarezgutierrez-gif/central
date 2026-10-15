@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, type DatosVehiculoRiesgo } from '@central/module-seguros'
 import { fechaMatriculacionEstimada, normalizarMatricula } from '@central/module-seguros/matricula'
+import { rotuloGaraje } from '@central/module-seguros/garajes'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import { fechaEs, llamarDatosRiesgo, motivoDe } from './piezas-riesgo'
@@ -78,7 +79,8 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
 
   if (d === null) return null // ramo sin vehículo, o asegura aún no lo manda: no se inventa un bloque vacío
   const bloqueado = enviando || ocupado
-  const nombreGaraje = (id: string | null) => (id === null ? null : garajes?.find((g) => g.id === id)?.nombre ?? id)
+  // El nombre del catálogo; si no lo trae, la etiqueta de la tabla ÚNICA (nunca el código crudo «PublicRoad», 15/10/2026).
+  const nombreGaraje = (id: string | null) => (id === null ? null : garajes?.find((g) => g.id === id)?.nombre ?? rotuloGaraje(id))
   const sinDato = <span style={{ color: 'var(--muted)', fontStyle: 'normal' }}>sin dato</span>
   const filas: Array<[string, React.ReactNode]> = [
     [ETIQUETA_CAMPO_VEHICULO.matricula, d.matricula ?? sinDato],
@@ -265,7 +267,7 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
               <select value={form.garaje} onChange={set('garaje')} style={campo}>
                 <option value="">Sin dato</option>
                 {/* Un garaje ya guardado que el catálogo no trae ahora se conserva como opción: no se pierde en silencio. */}
-                {form.garaje !== '' && !garajes?.some((g) => g.id === form.garaje) && <option value={form.garaje}>{form.garaje}</option>}
+                {form.garaje !== '' && !garajes?.some((g) => g.id === form.garaje) && <option value={form.garaje}>{rotuloGaraje(form.garaje)}</option>}
                 {(garajes ?? []).map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
               </select>
             </label>

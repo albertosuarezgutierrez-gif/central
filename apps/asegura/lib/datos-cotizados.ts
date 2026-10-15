@@ -17,6 +17,7 @@
 import { createHash } from 'node:crypto'
 
 import { eur } from './dinero.ts'
+import { rotuloGaraje } from '@central/module-seguros/garajes'
 
 export type FilaDato = { etiqueta: string; valor: string }
 export type GrupoDatos = { titulo: string; filas: FilaDato[] }
@@ -57,23 +58,12 @@ export function fechaEs(v: unknown): string | null {
 }
 
 /**
- * Los ids del catálogo de garajes de Codeoscopic que se han VISTO (ejemplos del esquema y la
- * petición real guardada). Uno que no está aquí se enseña tal cual con su código, sin traducirlo a
- * ojo: traducir mal un garaje es hacerle confirmar al cliente algo que no se mandó.
+ * El garaje en español: la tabla ÚNICA de `@central/module-seguros/garajes` (15/10/2026). Un código que no está en
+ * ella se enseña con su código, sin traducirlo a ojo: traducir mal un garaje es hacerle confirmar al cliente algo
+ * que no se mandó.
  */
-const GARAJES: Record<string, string> = {
-  CommunalParking: 'Garaje comunitario',
-  Garage: 'Garaje',
-  PrivateGarage: 'Garaje individual',
-  IndividualGarage: 'Garaje individual',
-  Street: 'En la calle',
-  PublicRoad: 'En la vía pública',
-}
-
 function garaje(v: unknown): string | null {
-  const g = id(v)
-  if (!g) return null
-  return GARAJES[g] ?? `«${g}» (código de la compañía)`
+  return rotuloGaraje(id(v))
 }
 
 type Persona = { nombre: string | null; dni: string | null; dniCrudo: string | null; nacimiento: string | null; carnet: string | null }

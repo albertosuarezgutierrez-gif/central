@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { readFileSync } from 'node:fs'
-import { gruposVerificacion, notaOrigen, rotuloVacioResumen, seguroActualEmbebido, verificacionCompleta, type GrupoVerificacion as Grupo } from './verificacion-embebido.ts'
+import { avisoGarajeSinCasar, gruposVerificacion, notaAniosEnCompania, notaOrigen, rotuloVacioResumen, seguroActualEmbebido, verificacionCompleta, type GrupoVerificacion as Grupo } from './verificacion-embebido.ts'
 
 const dir = new URL('.', import.meta.url)
 const fuente = readFileSync(new URL('./AutoNuevo.tsx', dir), 'utf8')
@@ -223,4 +223,29 @@ test('resumen coherente con la checklist: lo que ella trata como aviso se pinta 
   const rc = fuente.slice(fuente.indexOf('function ResumenCampo('), fuente.indexOf('function Verificacion('))
   assert.match(rc, /rotuloVacioResumen\(vacio\)/)
   assert.doesNotMatch(rc, /Falta — complétalo arriba/)
+})
+
+// 15/10/2026: el riesgo dice «En la vía pública» y el catálogo no la trae → ✗ que lo DICE, y el pago no se enciende.
+test('garaje del riesgo sin casar con el catálogo: ✗ con «El riesgo dice … elígelo» y verificación incompleta', () => {
+  const g = gruposVerificacion(entrada({ vehiculo: { faltaVersion: false, faltaMatriculacion: false, faltaGaraje: true, garajeSinCasar: 'En la vía pública', kmInvalido: false, compraInvalida: false }, faltaAlgo: true }))
+  const v = item(g, 'garaje')
+  assert.equal(v?.estado, 'falta')
+  assert.equal(v?.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elígelo')
+  assert.equal(verificacionCompleta(g), false)
+  // Elegido ya: ✓ y sin el aviso.
+  const ok = item(gruposVerificacion(entrada({ vehiculo: { faltaVersion: false, faltaMatriculacion: false, faltaGaraje: false, garajeSinCasar: 'En la vía pública', kmInvalido: false, compraInvalida: false } })), 'garaje')
+  assert.equal(ok?.estado, 'ok')
+  assert.equal(ok?.nota, undefined)
+  assert.equal(avisoGarajeSinCasar('X'), 'El riesgo dice «X» pero no está en la lista de la compañía: elígelo')
+})
+
+test('«Años en esta compañía» sin dato arriba: se dice SUPUESTO de los años asegurado, nunca «leído de su póliza»', () => {
+  const n = notaAniosEnCompania('leido') ?? ''
+  assert.match(n, /supuesto/)
+  assert.match(n, /años asegurado/)
+  assert.doesNotMatch(n, /leído de su póliza/)
+  assert.equal(notaAniosEnCompania('arriba'), undefined)
+  // Las dos pantallas la usan para ese campo (no la nota genérica de «lo leído»).
+  assert.match(fuente, /etiqueta="Años en esta compañía"[\s\S]{0,200}notaAniosEnCompania\(/)
+  assert.match(readFileSync(new URL('../moto-nuevo/CotizadorMoto.tsx', dir), 'utf8'), /etiqueta="Años en esta compañía"[\s\S]{0,200}notaAniosEnCompania\(/)
 })

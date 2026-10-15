@@ -62,6 +62,8 @@ export type EntradaVerificacion = {
   ocasionalIgnorado?: boolean
   vehiculo: {
     faltaVersion: boolean; faltaMatriculacion: boolean; faltaGaraje: boolean; kmInvalido: boolean; compraInvalida: boolean
+    /** El riesgo trae un garaje que no casa con el catálogo (`garajeInicial().sinCasar`): su etiqueta. Se dice en el ✗. */
+    garajeSinCasar?: string | null
     /** Moto: experiencia «viene de otra moto» sin el código Base7 de esa moto (`previousMotorcycle.code`, obligatorio). */
     faltaMotoAnterior?: boolean
   }
@@ -143,7 +145,7 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
   const vehiculo: ItemVerificacion[] = [
     { clave: 'version', texto: 'Versión del catálogo', estado: estado(v.faltaVersion), ancla: ANCLA.version, alternativa: ANCLA.vehiculo, arriba: true, nota: v.faltaVersion ? '«Elegir versión del catálogo» en «Datos del vehículo» (gratis)' : undefined },
     { clave: 'matriculacion', texto: 'Fecha de matriculación (o la prevista)', estado: estado(v.faltaMatriculacion), ancla: ANCLA.vehiculo, arriba: true },
-    { clave: 'garaje', texto: 'Dónde duerme (garaje)', estado: estado(v.faltaGaraje), ancla: ANCLA.vehiculo, arriba: true },
+    { clave: 'garaje', texto: 'Dónde duerme (garaje)', estado: estado(v.faltaGaraje), ancla: ANCLA.vehiculo, arriba: true, nota: v.faltaGaraje && v.garajeSinCasar ? avisoGarajeSinCasar(v.garajeSinCasar) : undefined },
     { clave: 'km', texto: 'Kilómetros al año', estado: estado(v.kmInvalido), ancla: ANCLA.vehiculo, arriba: true, nota: v.kmInvalido ? 'no se entiende como kilometraje' : undefined },
     { clave: 'compra', texto: 'Fecha de compra', estado: estado(v.compraInvalida), ancla: ANCLA.vehiculo, arriba: true, nota: v.compraInvalida ? 'no puede ser anterior a la matriculación' : undefined },
   ]
@@ -266,6 +268,19 @@ export function seguroActualEmbebido(e: {
       siniestros5: s5Arriba !== null ? 'arriba' : l.siniestrosUltimos5 !== null ? 'leido' : 'ninguno',
     },
   }
+}
+
+/** El aviso de un garaje del riesgo que no está en la lista de la compañía (15/10/2026: nunca se cambia por el defecto). */
+export function avisoGarajeSinCasar(etiqueta: string): string {
+  return `El riesgo dice «${etiqueta}» pero no está en la lista de la compañía: elígelo`
+}
+
+/**
+ * «Años en esta compañía» sin dato arriba (15/10/2026): NO se lee de su póliza; es un SUPUESTO derivado de los años
+ * asegurado (el máximo, 10, topado a los años asegurado). Decir «lo leído de su póliza» era falso.
+ */
+export function notaAniosEnCompania(o: OrigenDato): string | undefined {
+  return o === 'arriba' ? undefined : 'sin dato arriba: supuesto, los años asegurado (máximo 10); lo contrasta SINCO'
 }
 
 /** La nota pequeña del resumen según de dónde sale el dato (lo declarado nunca se rotula como leído, ni al revés). */

@@ -68,8 +68,11 @@ test('los kilómetros nacen en 10.000, visibles y editables', () => {
 })
 
 test('el garaje nace en GARAJE, nunca en la calle (29/09/2026; antes «vía pública»)', () => {
-  // 30/09/2026: el garaje del riesgo (si sigue en el catálogo) manda; si no, el defecto GARAJE.
-  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => garajeDelRiesgo \?\? garajePorDefecto\(garajes\)\?\.id \?\? ''\)/)
+  // 30/09/2026: el garaje del riesgo manda; si no, el defecto GARAJE. 15/10/2026: el del riesgo que no casa con el catálogo
+  // NO se cambia por el defecto (queda vacío y se pregunta): la regla vive en `garajeInicial` (lib/supuestos-presupuesto).
+  assert.match(fuente, /const inicioGaraje = garajeInicial\(datosRiesgo\?\.garaje, garajes\)/)
+  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => inicioGaraje\.id\)/)
+  assert.doesNotMatch(fuente, /garajePorDefecto\(/, 'la pantalla no aplica el defecto por su cuenta')
   assert.doesNotMatch(fuente, /garajes\.find\(\(g\) => \/v\[ií\]a/, 'el defecto viejo no vuelve')  // El «soltero» por defecto es SOLO del asistente: aquí viajaría sin marca de supuesto y se emitiría sin aviso.
   assert.doesNotMatch(fuente, /estadoCivilPorDefecto/, 'la pantalla no pone estado civil por defecto')
 })

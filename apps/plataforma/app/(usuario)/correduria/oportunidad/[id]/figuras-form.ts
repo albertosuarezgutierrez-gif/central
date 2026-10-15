@@ -102,6 +102,14 @@ export function repartirRoles(roles: readonly RolFigura[]): { unicos: RolFigura[
   return { unicos: roles.filter((r) => !esRolMultiple(r)), multiples: roles.filter((r) => esRolMultiple(r)) }
 }
 
+/**
+ * Lo que dice la tarjeta de un papel SIN ficha propia (15/10/2026). Propietario y conductor habitual son, por defecto, el
+ * tomador; el conductor OCASIONAL no: sin ficha no hay ninguno (decir «el mismo que el tomador» declaraba un ocasional).
+ */
+export function nombreSinFicha(rol: RolFigura): string {
+  return rol === 'conductor_ocasional' ? 'Ninguno' : 'El mismo que el tomador'
+}
+
 /** Las fichas de un papel múltiple, una por `clienteId` (identidad), en el orden en que llegan. */
 export function personasDelRol<F extends { rol: RolFigura; clienteId: string }>(figuras: readonly F[], rol: RolFigura): F[] {
   const vistos = new Set<string>()
