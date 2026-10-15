@@ -100,11 +100,33 @@ test('fuente: el botón de pago exige la verificación y el texto viejo solo que
   assert.match(fuente, /\{embebido && <Verificacion grupos=\{verificacion\} completa=\{verificacionOk\} \/>\}/)
 })
 
-test('fuente: en embebido, garaje / km / compra y años asegurado / en compañía son RESUMEN', () => {
-  for (const e of ['¿Dónde duerme?', 'Kilómetros al año', 'Fecha de compra', 'Años asegurado sin interrupción', 'Años en esta compañía',
-    '¿Tiene seguro ahora?', 'Compañía actual', 'Nº de póliza (van los 5 últimos)', 'Años sin siniestros', 'Siniestros en los últimos 5 años']) {
-    assert.ok(fuente.includes(`<ResumenCampo\n`) && new RegExp(`<ResumenCampo\\s+etiqueta="${e.replace(/[?()]/g, '\\$&')}"`).test(fuente), `falta el resumen de «${e}»`)
+// 15/10/2026: cada dato aparece UNA vez en la página. En embebido el cotizador ya NO repite en resumen lo de arriba
+// (vehículo, personas, historial): solo lo propio de la cotización + la verificación compacta (con «Editar arriba»).
+test('fuente: en embebido no se repite lo de arriba; los campos propios de la cotización siguen existiendo', () => {
+  assert.doesNotMatch(fuente, /<ResumenCampo\b/, 'ningún resumen de lo de arriba en el cotizador de coche')
+  assert.doesNotMatch(fuente, /function (IrA|ResumenCampo|Verificacion)\(/, 'sin copias locales: las de piezas-embebido')
+  assert.match(fuente, /import \{ Verificacion \} from '\.\/piezas-embebido'/)
+  assert.doesNotMatch(fuente, /1 · Condiciones del coche|Propietario y conductores/, 'las secciones duplicadas no vuelven')
+  // «1 · El vehículo» solo en la pantalla completa (sin oportunidad arriba sigue viéndose todo).
+  assert.match(fuente, /\{!embebido && \(\n\s*<div style=\{cardStyle\}>\n\s*<CardHeader\n\s*title="1 · El vehículo"/)
+  // Lo que solo existe aquí sigue existiendo (y en embebido, dentro de «Condiciones de esta cotización»).
+  for (const e of ['Fecha de efecto', 'Remolque ligero (< 750 kg)', 'Matrícula de esa póliza', 'Estado civil', 'Municipio', 'Carnet expedido en', 'Tipo de carnet']) {
+    assert.ok(fuente.includes(`etiqueta="${e}"`), `falta el campo «${e}»`)
   }
+  const emb = fuente.slice(fuente.indexOf('title="1 · Condiciones de esta cotización"'), fuente.indexOf('{/* Embebido (oportunidad): sin pack'))
+  assert.match(emb, /\{campoEfecto\}\s*\n\s*\{campoRemolque\}/)
+  assert.match(emb, /<div id="cotizador-tomador"/)
+  assert.match(emb, /<div key=\{rol\} id=\{anclaFiguraAqui\(rol\)\}>\s*\n\s*<BloqueFigura [\s\S]{0,300}soloCondiciones \/>/, 'estado civil y carné de las figuras de otras fichas')
+  assert.match(emb, /<div id="cotizador-seguro-actual" style=\{SUBSECCION\}>[\s\S]{0,900}\{campoMatriculaAnterior\}[\s\S]{0,300}<PanelSeguroImputado /)
+})
+
+test('verificación: dice con qué se cotiza cada dato (la nota de `valoresQueViajan`), sin tapar las notas propias', () => {
+  const g = gruposVerificacion(entrada({ detalle: { km: 'Sin dato · se cotizará con 10.000 km (supuesto)', garaje: 'X', 'anios-compania': 'Sin dato · se cotizará con 3 años (supuesto)' } }))
+  assert.equal(item(g, 'km')?.nota, 'Sin dato · se cotizará con 10.000 km (supuesto)')
+  assert.equal(item(g, 'anios-compania')?.nota, 'Sin dato · se cotizará con 3 años (supuesto)')
+  const sinCasar = gruposVerificacion(entrada({ vehiculo: { faltaVersion: false, faltaMatriculacion: false, faltaGaraje: true, garajeSinCasar: 'En la vía pública', kmInvalido: false, compraInvalida: false }, faltaAlgo: true, detalle: { garaje: 'otra cosa' } }))
+  assert.equal(item(sinCasar, 'garaje')?.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elige el equivalente. Si la lista no tiene opción de calle, avisa a Alberto en vez de declarar un garaje', 'la nota propia manda')
+  assert.match(fuente, /'anios-compania': viajan\.aniosEnCompania\.nota,/)
 })
 
 test('las anclas a las que lleva la verificación existen en la pantalla del riesgo', () => {
@@ -197,10 +219,10 @@ test('seguroActualEmbebido: compañía que no casa = código vacío (✗) y se n
   assert.deepEqual([sinLista.companiaCodigo, sinLista.companiaLibre, sinLista.companiaNoReconocida], ['', 'C0058', null])
 })
 
-test('fuente: el embebido toma el seguro actual de `seguroActualEmbebido` (lo de arriba), no de inputs propios', () => {
-  assert.match(fuente, /const seguroArriba = embebido\s+\? seguroActualEmbebido\(\{\s+arriba: historialRiesgo,/)
-  assert.match(fuente, /useState\(seguroArriba\?\.polizaDigitos \?\? seguroLeido\.poliza\)/)
-  assert.match(fuente, /companiaNoReconocida: seguroArriba\?\.companiaNoReconocida \?\? null/)
+test('fuente: el embebido toma el seguro actual de lo de arriba (`valoresQueViajan` → `seguroActualEmbebido`), no de inputs propios', () => {
+  assert.match(fuente, /historialDeclarado: embebido \? historialRiesgo : null/)
+  assert.match(fuente, /useState\(ini\.polizaActualDigitos\)/)
+  assert.match(fuente, /companiaNoReconocida: viajan\.compania\.noReconocida,/)
   assert.match(op('PedirPrecioAuto.tsx'), /historialRiesgo=\{riesgo\.historial\?\.historialDeclarado \?\? null\}/)
 })
 
@@ -212,15 +234,9 @@ test('resumen coherente con la checklist: lo que ella trata como aviso se pinta 
   assert.equal(item(sinDato, 'sin-seguro')?.estado, 'aviso')
   const s5 = gruposVerificacion(entrada({ historial: { ...entrada().historial, siniestros5Pendiente: true } }))
   assert.equal(item(s5, 'siniestros-5')?.estado, 'aviso')
-  // …y el resumen de esos dos campos se pinta como aviso (un `ResumenCampo` por etiqueta, hasta el cierre `/>`).
-  const bloque = (etiqueta: string) => {
-    const i = fuente.indexOf(`etiqueta="${etiqueta}"`)
-    assert.ok(i > 0, `falta el resumen «${etiqueta}»`)
-    return fuente.slice(i, fuente.indexOf('/>', i))
-  }
-  for (const e of ['¿Tiene seguro ahora?', 'Siniestros en los últimos 5 años']) assert.match(bloque(e), /vacio="aviso"/, `«${e}» vacío no es «Falta» rojo`)
-  // ResumenCampo usa el rótulo (no un «Falta» rojo fijo).
-  const rc = fuente.slice(fuente.indexOf('function ResumenCampo('), fuente.indexOf('function Verificacion('))
+  // ResumenCampo (el de `piezas-embebido`, que usa moto; auto ya no repite lo de arriba) usa el rótulo, no un «Falta» rojo fijo.
+  const piezas = readFileSync(new URL('./piezas-embebido.tsx', dir), 'utf8')
+  const rc = piezas.slice(piezas.indexOf('export function ResumenCampo('), piezas.indexOf('export function Verificacion('))
   assert.match(rc, /rotuloVacioResumen\(vacio\)/)
   assert.doesNotMatch(rc, /Falta — complétalo arriba/)
 })
@@ -247,7 +263,71 @@ test('«Años en esta compañía» sin dato arriba: se dice SUPUESTO de los año
   assert.match(n, /años asegurado/)
   assert.doesNotMatch(n, /leído de su póliza/)
   assert.equal(notaAniosEnCompania('arriba'), undefined)
-  // Las dos pantallas la usan para ese campo (no la nota genérica de «lo leído»).
-  assert.match(fuente, /etiqueta="Años en esta compañía"[\s\S]{0,200}notaAniosEnCompania\(/)
+  // Moto la usa para ese campo (no la nota genérica de «lo leído»); auto, desde el 15/10/2026, la nota de la fuente única
+  // (`valoresQueViajan`: «Sin dato · se cotizará con N años, los años asegurado como mucho 10 (supuesto)») en la verificación.
+  assert.match(fuente, /'anios-compania': viajan\.aniosEnCompania\.nota,/)
   assert.match(readFileSync(new URL('../moto-nuevo/CotizadorMoto.tsx', dir), 'utf8'), /etiqueta="Años en esta compañía"[\s\S]{0,200}notaAniosEnCompania\(/)
+})
+
+// ── Conductor ocasional en tres estados (15/10/2026) ─────────────────────────────────────────────────────────────────
+test('ocasional SIN PREGUNTAR: ✗ «¿Conduce alguien más el coche?» (art. 10 LCS), lleva a Intervinientes y apaga el pago', () => {
+  const g = gruposVerificacion(entrada({ ocasional: 'sin_preguntar' }))
+  const i = item(g, 'ocasional-sin-preguntar')
+  assert.equal(i?.estado, 'falta')
+  assert.match(i?.texto ?? '', /¿Conduce alguien más el coche\?/)
+  assert.match(i?.texto ?? '', /art\. 10 LCS/)
+  assert.equal(i?.ancla, 'interviniente-conductor_ocasional')
+  assert.equal(i?.arriba, true)
+  assert.equal(verificacionCompleta(g), false)
+})
+
+test('ocasional confirmado «ninguno»: ✓ y no bloquea; con ficha o sin el dato (pantalla completa), sin ítem propio', () => {
+  const n = gruposVerificacion(entrada({ ocasional: 'ninguno' }))
+  assert.equal(item(n, 'ocasional-ninguno')?.estado, 'ok')
+  assert.equal(verificacionCompleta(n), true)
+  for (const o of ['si', 'no_aplica', undefined]) {
+    const g = gruposVerificacion(entrada({ ocasional: o }))
+    assert.equal(item(g, 'ocasional-sin-preguntar'), undefined, String(o))
+    assert.equal(verificacionCompleta(g), true, String(o))
+  }
+})
+
+test('moto comparte la verificación pero no tiene ocasional: «sin preguntar» no le pone ✗', () => {
+  const g = gruposVerificacion(entrada({ ramo: 'moto', ocasional: 'sin_preguntar' }))
+  assert.equal(item(g, 'ocasional-sin-preguntar'), undefined)
+  assert.equal(verificacionCompleta(g), true)
+})
+
+test('cepo de fuente: el embebido pasa el estado del ocasional del RIESGO a la verificación', () => {
+  assert.match(fuente, /ocasional: ocasionalRiesgo,/, 'AutoNuevo debe pasar `ocasional` a gruposVerificacion')
+  assert.match(op('PedirPrecioAuto.tsx'), /ocasionalRiesgo=\{estadoOcasional\(riesgo\)\}/, 'PedirPrecioAuto debe pasar el estado del ocasional')
+})
+
+test('siniestros en 5 años sin dato cuando la compañía los exige: ✗ «Sin dato no se puede declarar 0» y apaga el pago', () => {
+  const g = gruposVerificacion(entrada({ historial: { ...entrada().historial, siniestros5SinDato: true, siniestros5Pendiente: true } }))
+  const s5 = g.flatMap((x) => x.items).filter((i) => i.clave === 'siniestros-5')
+  assert.equal(s5.length, 1, 'un solo ítem: el ✗ manda sobre el aviso')
+  assert.equal(s5[0]!.estado, 'falta')
+  assert.match(s5[0]!.texto, /¿Cuántos siniestros en los últimos 5 años\? Sin dato no se puede declarar 0/)
+  assert.equal(verificacionCompleta(g), false)
+  // Cepo de fuente: el ✗ sale EXACTAMENTE cuando asegura los exige (misma regla, `exigeSiniestrosUltimos5`): con «años sin
+  // siniestros = años asegurado» no se piden (asegura no los manda). Ver `siniestros-cinco-anios.test.ts` del módulo.
+  assert.match(fuente, /const siniestros5SinDato = exigeSiniestrosUltimos5\(\{ aseguradoAntes: tieneSeguroActual, aniosAsegurado: numOVacio\(aniosAsegurado\), aniosSinSiniestros: numOVacio\(aniosSinSiniestros\) \}\)\s*&& siniestrosUltimos5\.trim\(\) === ''/)
+  assert.match(fuente, /import \{ exigeSiniestrosUltimos5,[^}]*\} from '@central\/module-seguros'/)
+  assert.match(fuente, /\|\| siniestros5SinDato\n/)
+})
+
+test('pantalla COMPLETA con oportunidad: el ✗ del ocasional sin preguntar sale y apaga el pago (y la página lo pasa)', async () => {
+  const { verificacionOcasionalCompleta } = await import('./verificacion-embebido.ts')
+  const g = verificacionOcasionalCompleta('sin_preguntar')
+  assert.equal(g.length, 1)
+  assert.equal(g[0].items[0].clave, 'ocasional-sin-preguntar')
+  assert.equal(g[0].items[0].estado, 'falta')
+  for (const e of ['si', 'ninguno', 'no_aplica', undefined] as const) assert.deepEqual(verificacionOcasionalCompleta(e), [], String(e))
+  const auto = fuente
+  assert.match(auto, /const ocasionalSinPreguntar = ocasionalRiesgo === 'sin_preguntar'/)
+  assert.match(auto, /faltaAlgo =[\s\S]{0,400}\|\| ocasionalSinPreguntar\n/, 'apaga el botón también fuera del embebido')
+  assert.match(auto, /!embebido && verificacionOcasionalCompleta\(ocasionalRiesgo\)\.length > 0/)
+  const page = readFileSync(new URL('./page.tsx', dir), 'utf8')
+  assert.match(page, /ocasionalRiesgo=\{carga\.estado === 'ok' \? estadoOcasional\(carga\.riesgo\) : undefined\}/, 'con ?oportunidad= la página pasa el estado; sin ella, nada')
 })

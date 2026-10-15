@@ -16,7 +16,7 @@ import EditarFichaModal from './EditarFichaModal'
 import PedirDatosFigura from './PedirDatosFigura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
 import { ramoConEnlaceDatos } from './variante'
-import { cabeOtro, estadoBloqueMulti, nombreSinFicha, opcionesSinPoner, personasDelRol, repartirRoles } from './figuras-form'
+import { cabeOtro, estadoBloqueMulti, estadoOcasional, nombreOcasionalSinFicha, nombreSinFicha, opcionesSinPoner, personasDelRol, repartirRoles } from './figuras-form'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
@@ -84,8 +84,18 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
     setEnviando(false)
     if (!r.ok) { onError(`No se ha podido quitar a ${f.nombre}: ${motivoDe(r)}`); return }
     setAbierto(null)
-    onCambio(rol === 'tomador' ? `El tomador vuelve a ser ${op.clienteNombre}.` : `${ROTULO_ROL[rol]}: ${nombreSinFicha(rol) === 'Ninguno' ? 'ya no hay ninguno' : 'vuelve a ser el mismo que el tomador'}.`)
+    onCambio(rol === 'tomador' ? `El tomador vuelve a ser ${op.clienteNombre}.` : `${ROTULO_ROL[rol]}: ${rol === 'conductor_ocasional' ? 'quitado; queda «sin preguntar» hasta que se confirme si conduce alguien más' : 'vuelve a ser el mismo que el tomador'}.`)
   }
+
+  /** Conductor ocasional (15/10/2026): confirmar «no conduce nadie más», o deshacerlo (vuelve a «sin preguntar»). */
+  async function confirmarSinOcasional(confirmado: boolean) {
+    setEnviando(true)
+    const r = await llamarFiguras('POST', { accion: 'sin_ocasional', oportunidadId: op.id, rol: 'conductor_ocasional', confirmado })
+    setEnviando(false)
+    if (!r.ok) { onError(`No se ha podido ${confirmado ? 'confirmar que no hay conductor ocasional' : 'deshacer la confirmación'}: ${motivoDe(r)}`); return }
+    onCambio(confirmado ? 'Confirmado: no conduce nadie más (sin conductor ocasional).' : 'Conductor ocasional: vuelve a «sin preguntar».')
+  }
+  const ocasional = estadoOcasional(riesgo)
 
   /** Papel de varias personas: AÑADE la ficha (no sustituye a nadie). */
   async function anadir(rol: RolFigura, o: Opcion) {
@@ -127,7 +137,8 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
         {unicos.map((rol) => {
           const f = riesgo.figuras.find((x) => x.rol === rol) ?? null
           const esTomador = rol === 'tomador'
-          const nombre = f ? f.nombre : nombreSinFicha(rol)
+          const nombre = f ? f.nombre : rol === 'conductor_ocasional' ? nombreOcasionalSinFicha(ocasional) : nombreSinFicha(rol)
+          const ocasionalSinFicha = rol === 'conductor_ocasional' && !f
           // `vinculo` es el tipo de relación tal cual («Padre/Madre»): dice qué es esa persona DEL cliente.
           const vinculo = f
             ? f.porDefecto || f.clienteId === op.clienteId
@@ -145,6 +156,9 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
               <div style={{ fontWeight: 700, color: f ? 'var(--text)' : 'var(--muted)', overflowWrap: 'anywhere' }}>{nombre}</div>
               {vinculo && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{vinculo}</div>}
               {falta && <div><Badge tono={f?.faltan === null ? 'neutral' : 'aviso'}>{falta}</Badge></div>}
+              {ocasionalSinFicha && ocasional === 'sin_preguntar' && (
+                <div><Badge tono="aviso">¿Conduce alguien más el coche? No declararlo es reticencia (art. 10 LCS)</Badge></div>
+              )}
               {f && conEnlace && f.clienteId !== op.clienteId && primeraDe.get(f.clienteId) === rol && (() => {
                 const suyas = enlaces?.estado === 'ok' ? enlaces.solicitudes.filter((s) => s.personaId === f.clienteId) : []
                 // Se ofrece si le falta algo (o no se pudo leer su ficha), o si ya hay un enlace suyo que enseñar.
@@ -176,6 +190,16 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
                 {puedeQuitar && f && (
                   <button type="button" disabled={bloqueado} onClick={() => void quitar(rol, f)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
                     Quitar
+                  </button>
+                )}
+                {ocasionalSinFicha && ocasional === 'sin_preguntar' && (
+                  <button type="button" disabled={bloqueado} onClick={() => void confirmarSinOcasional(true)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--primary)' }}>
+                    No conduce nadie más
+                  </button>
+                )}
+                {ocasionalSinFicha && ocasional === 'ninguno' && (
+                  <button type="button" disabled={bloqueado} onClick={() => void confirmarSinOcasional(false)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+                    Deshacer
                   </button>
                 )}
               </div>

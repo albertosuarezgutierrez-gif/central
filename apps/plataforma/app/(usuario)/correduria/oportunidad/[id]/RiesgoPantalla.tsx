@@ -216,7 +216,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
                   <BtnLink href={acciones.principal.href} variante="primario">{acciones.principal.etiqueta}</BtnLink>
                 )}
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {CotizadorEmbebido ? (op.ramo === 'auto' ? 'Aquí solo se piden las condiciones (efecto, remolque, seguro actual…).' : esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
+                  {CotizadorEmbebido ? (op.ramo === 'auto' ? 'Aquí solo se piden las condiciones de esta cotización (efecto, remolque, estado civil, municipio, carnet…): el coche, las personas y el historial son los de arriba.' : esVehiculo ? 'Con los intervinientes y los datos de arriba; aquí solo se piden las condiciones (efecto, garaje, km, seguro actual…).' : 'Aquí solo se piden las condiciones (fecha de efecto…).') : acciones.principal.nota}
                 </span>
               </div>
               )}

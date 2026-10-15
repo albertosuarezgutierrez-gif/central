@@ -252,3 +252,19 @@ test('fuente: la compañía actual se ELIGE de la lista de Codeoscopic (select +
   assert.match(sinLista, /No se ha podido leer la lista de compañías de Codeoscopic/)
   assert.match(f, /pedirCatalogo\(\{ tipo: tipoCatalogoCompanias\(op\.ramo\) \}\)/, 'la lista es el catálogo gratis de Avant2 del ramo')
 })
+
+// 15/10/2026: una fila SIN DATO dice con qué se cotizará (la nota de la fuente única `valoresQueViajan`), pero sigue siendo
+// «sin dato»: el supuesto nunca se pinta como si fuera el dato. Una fila CON dato no se toca.
+test('historial: `cotizara` cambia solo la nota de las filas pendientes; el texto sigue «sin dato»', () => {
+  const r = filasHistorial(
+    { ...vacio, seguroAnterior: sa({ aniosSinSiniestros: 4 }) },
+    { compania: null, hoy: HOY, cotizara: { aniosAsegurado: 'Sin dato · se cotizará con 10 años (supuesto)', aniosSinSiniestros: 'no debería verse' } },
+  )
+  assert.equal(r.estado, 'ok')
+  const fs = r.estado === 'ok' ? r.filas : []
+  assert.equal(fila(fs, 'aniosAsegurado').texto, 'sin dato')
+  assert.equal(fila(fs, 'aniosAsegurado').nota, 'Sin dato · se cotizará con 10 años (supuesto)')
+  assert.equal(fila(fs, 'aniosSinSiniestros').estado, 'dato')
+  assert.equal(fila(fs, 'aniosSinSiniestros').nota, null, 'con dato, la nota de siempre')
+  assert.equal(fila(fs, 'aniosEnCompania').nota, 'se declara al pedir precio', 'sin `cotizara` para esa fila, la de siempre')
+})

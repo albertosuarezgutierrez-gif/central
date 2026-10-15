@@ -180,3 +180,21 @@ test('revisión 13/10/2026: la clave `asegurados` convive con los lectores de fi
   const f = (id: number) => ({ tomador: U(9), asegurados: [U(id)] })
   assert.deepEqual(diferenciasVariante(p(hijo('22222222J')), p(hijo('22222222J')), { antes: f(1), despues: f(2) })?.map((x) => x.tipo), ['baja', 'alta'])
 })
+
+test('supuestos de la variante: se guardan junto a las figuras y se leen en tres estados', async () => {
+  const { supuestosDeFoto, limpiarSupuestosVariante } = await import('./variantes-riesgo.ts')
+  const sup = [{ campo: 'km', texto: 'Km al año: 10.000 km' }, { campo: 'fechaCompra', texto: 'Compra: la de matriculación' }]
+  const j = JSON.parse(fotoVarianteJson({ tomador: U(9) }, undefined, sup)!)
+  assert.deepEqual(j, { tomador: U(9), supuestos: sup })
+  assert.deepEqual(supuestosDeFoto(j), sup)
+  assert.deepEqual(limpiarFiguras(j), { tomador: U(9) }, 'la clave supuestos no es un rol: limpiarFiguras la ignora')
+  // `[]` = se pidió sin supuestos (consta) ≠ sin la clave = no consta.
+  assert.deepEqual(supuestosDeFoto(JSON.parse(fotoVarianteJson(null, undefined, [])!)), [])
+  assert.equal(supuestosDeFoto({ tomador: U(9) }), null)
+  assert.equal(supuestosDeFoto(null), null)
+  assert.equal(fotoVarianteJson(null, undefined, null), null)
+  // Saneado: sin campo o sin texto fuera, sin duplicados, con tope.
+  assert.deepEqual(limpiarSupuestosVariante([{ campo: 'km', texto: ' a ' }, { campo: 'km', texto: 'b' }, { campo: '', texto: 'c' }, { texto: 'd' }, 'x']), [{ campo: 'km', texto: 'a' }])
+  assert.equal(limpiarSupuestosVariante('no'), null)
+  assert.equal(limpiarSupuestosVariante(Array.from({ length: 30 }, (_, i) => ({ campo: `c${i}`, texto: 't' })))!.length, 20)
+})

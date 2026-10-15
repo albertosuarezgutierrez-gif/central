@@ -5,6 +5,7 @@ import AutoNuevo from './AutoNuevo'
 import { datosCotizadorAuto } from './datos-cotizador'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { paramTexto } from '../../../oportunidad/[id]/variante'
+import { estadoOcasional } from '../../../oportunidad/[id]/figuras-form'
 
 export const dynamic = 'force-dynamic'
 
@@ -110,6 +111,7 @@ export default async function AutoNuevoPage({ params, searchParams }: { params: 
         companias={datos.companias}
         variante={variante}
         datosRiesgo={carga.estado === 'ok' ? carga.riesgo.datosVehiculo : null}
+        ocasionalRiesgo={carga.estado === 'ok' ? estadoOcasional(carga.riesgo) : undefined}
         anterior={datos.anterior}
         anteriorAmbiguo={datos.anteriorAmbiguo}
         otroVehiculo={datos.otroVehiculo}

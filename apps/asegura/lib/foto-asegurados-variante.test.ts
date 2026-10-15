@@ -14,7 +14,8 @@ test('salud/decesos y vida meten la foto de asegurados en el contexto de la vari
 })
 
 test('la foto se guarda en tarificaciones.figuras con el escritor puro (solo uuids, nunca DNI)', () => {
-  assert.match(cot, /\$\{fotoVarianteJson\(e\.contexto\.figuras, e\.contexto\.asegurados\)\}::jsonb/)
+  // 15/10/2026: con los supuestos de la pantalla (clave `supuestos`), por el mismo escritor puro.
+  assert.match(cot, /\$\{fotoVarianteJson\(e\.contexto\.figuras, e\.contexto\.asegurados, e\.contexto\.supuestos\)\}::jsonb/)
 })
 
 test('el historial y la comparación pasan la foto de cada variante al comparador', () => {

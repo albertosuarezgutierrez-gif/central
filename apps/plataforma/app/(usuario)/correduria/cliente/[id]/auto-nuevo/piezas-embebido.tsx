@@ -2,8 +2,8 @@
 
 // Piezas de pantalla del cotizador EMBEBIDO en la oportunidad (13/10/2026): el enlace «Editar arriba», el resumen de
 // solo lectura de lo que vive en los bloques de arriba y la «Verificación antes de pedir precio» (✓/✗/!). La lógica
-// pura está en `verificacion-embebido.ts`. Las usa `CotizadorMoto.tsx`; `AutoNuevo.tsx` aún lleva su copia local
-// (sus cepos de fuente leen `function ResumenCampo(` en su propio fichero): al migrarlo, mover esos cepos aquí.
+// pura está en `verificacion-embebido.ts`. Las usan `CotizadorMoto.tsx` y (15/10/2026) `AutoNuevo.tsx`, que ya no
+// lleva copia local: en auto embebido solo se usa `Verificacion` (el resumen de lo de arriba se quitó: no se repite).
 
 import { rotuloVacioResumen, type GrupoVerificacion, type NivelVacio } from './verificacion-embebido'
 

@@ -18,6 +18,7 @@ import { companiaDeLista, filasHistorial, filtrarCompanias, nombreCompaniaDeclar
 import { pedirCatalogo } from '../../cliente/[id]/auto-nuevo/acciones'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import type { Riesgo } from '@/lib/riesgo-asegura'
+import { notaCotizaraHistorial, valoresQueViajan } from '@/lib/correduria/supuestos-auto'
 
 const INPUT: React.CSSProperties = { minHeight: 44, minWidth: 0, width: '100%', boxSizing: 'border-box', borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 14, background: 'var(--surface)', color: 'var(--text)' }
 
@@ -247,9 +248,27 @@ export default function HistorialRiesgo({ riesgo, hoy }: { riesgo: Riesgo; hoy: 
       .catch(() => setCatalogo({ estado: 'error', mensaje: 'sin conexión' }))
   }, [necesitaLista, catalogo, op.ramo])
   const lista = catalogo?.estado === 'ok' ? catalogo.opciones : null
+  // Coche (15/10/2026): cada fila SIN DATO dice con qué se cotizará («Sin dato · se cotizará con X (supuesto)»), con la
+  // MISMA fuente que arranca el cotizador (`valoresQueViajan`). Lo leído = la póliza actual de la oportunidad, si consta.
+  const viajan = op.ramo === 'auto' && riesgo.historial
+    ? valoresQueViajan(
+        { datosVehiculo: riesgo.datosVehiculo, historialDeclarado: hd },
+        { garajes: [], companias: null },
+        { anterior: op.aseguradora !== null || sa !== null ? { oportunidadId: op.id, etiqueta: null, aseguradora: op.aseguradora, numeroPoliza: sa?.numeroPoliza ?? null, seguroAnterior: sa, prima: op.prima } : null },
+        'embebido',
+      )
+    : null
   const r = filasHistorial(riesgo.historial, {
     compania: op.aseguradoraActual === true ? op.aseguradora : null, hoy,
     nombreCompania: (v) => nombreCompaniaDeclarada(lista, v),
+    cotizara: viajan
+      ? {
+          aniosAsegurado: notaCotizaraHistorial(viajan, 'aniosAsegurado'),
+          aniosEnCompania: notaCotizaraHistorial(viajan, 'aniosEnCompania'),
+          aniosSinSiniestros: notaCotizaraHistorial(viajan, 'aniosSinSiniestros'),
+          siniestrosUltimos5: notaCotizaraHistorial(viajan, 'siniestrosUltimos5'),
+        }
+      : undefined,
   })
 
   return (

@@ -2,8 +2,12 @@
 // día, moto con `ramo: 'moto'`). La importan `AutoNuevo.tsx`, `../moto-nuevo/CotizadorMoto.tsx` y sus tests.
 // Moto (campos de Avant2, `apps/asegura/lib/codeoscopic/peticion-moto.ts`): SIN conductor ocasional ni remolque, CON
 // experiencia de conducción (y el código de la moto anterior si viene de otra moto).
-import { ultimosDigitosPoliza, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import type { RolExtra } from '../../../oportunidad/[id]/variante'
+import { avisoGarajeSinCasar, type OrigenDato } from '../../../../../../lib/correduria/supuestos-auto.ts'
+
+// 15/10/2026: el seguro actual del embebido, los topes del historial y el aviso del garaje sin casar viven ahora en la
+// fuente única `lib/correduria/supuestos-auto.ts` (lo que VIAJA al pedir precio). Se reexportan para moto y los tests.
+export { avisoGarajeSinCasar, historialConTopes, seguroActualEmbebido, type OrigenDato, type SeguroActualEmbebido } from '../../../../../../lib/correduria/supuestos-auto.ts'
 
 /** Ids de los bloques de la pantalla del riesgo (y de este cotizador) a los que llevan los enlaces. */
 export const ANCLA = {
@@ -31,6 +35,30 @@ export type ItemVerificacion = {
   arriba?: boolean
 }
 export type GrupoVerificacion = { titulo: string; items: ItemVerificacion[] }
+/**
+ * El ítem del conductor ocasional (15/10/2026). Lo usan el embebido (`gruposVerificacion`) y la pantalla COMPLETA con
+ * oportunidad (`verificacionOcasionalCompleta`): el ✗ es el mismo en los dos sitios, y asegura corta igual en el
+ * servidor (`corteOcasional` de `@central/module-seguros`). `undefined`/`no_aplica`/moto: sin ítem.
+ */
+export function itemOcasional(ramo: 'auto' | 'moto' | undefined, ocasional: EntradaVerificacion['ocasional']): ItemVerificacion | null {
+  if (ramo === 'moto') return null
+  if (ocasional === 'sin_preguntar') {
+    return { clave: 'ocasional-sin-preguntar', texto: '¿Conduce alguien más el coche? (art. 10 LCS: no declararlo es reticencia)', estado: 'falta', nota: 'asigna al conductor ocasional o pulsa «No conduce nadie más» en «Intervinientes»', ancla: anclaInterviniente('conductor_ocasional'), alternativa: ANCLA.intervinientes, arriba: true }
+  }
+  if (ocasional === 'ninguno') return { clave: 'ocasional-ninguno', texto: 'Conductor ocasional: ninguno (confirmado)', estado: 'ok' }
+  return null
+}
+
+/**
+ * Pantalla COMPLETA colgada de una oportunidad (`auto-nuevo?oportunidad=`): no tiene la verificación entera del
+ * embebido, pero el ✗ del ocasional sin preguntar sí sale (y apaga el botón). Sin oportunidad, `ocasional` no llega: [].
+ * Solo el ✗: un «ninguno (confirmado)» no necesita panel en esta pantalla.
+ */
+export function verificacionOcasionalCompleta(ocasional: EntradaVerificacion['ocasional']): GrupoVerificacion[] {
+  const i = itemOcasional('auto', ocasional)
+  return i && i.estado === 'falta' ? [{ titulo: 'Intervinientes del riesgo', items: [i] }] : []
+}
+
 export type EntradaVerificacion = {
   /** Sin él, auto (el de siempre). Moto cambia el rótulo del objeto y admite `faltaMotoAnterior` / `ocasionalIgnorado`. */
   ramo?: 'auto' | 'moto'
@@ -60,6 +88,12 @@ export type EntradaVerificacion = {
   personaLibreIncompleta: boolean
   /** Moto: el riesgo trae un conductor ocasional que la compañía no admite en moto (no se declara). Aviso, no bloquea. */
   ocasionalIgnorado?: boolean
+  /**
+   * 15/10/2026: el conductor ocasional del RIESGO en tres estados (`estadoOcasional` de `figuras-form.ts`). `sin_preguntar`
+   * = nadie ha dicho si conduce alguien más → ✗ (bloquea el pago: no preguntarlo es reticencia, art. 10 LCS). `ninguno`
+   * = confirmado que no → ✓. `si`/`no_aplica`/ausente (moto, pantalla completa) = sin ítem propio.
+   */
+  ocasional?: 'si' | 'ninguno' | 'sin_preguntar' | 'no_aplica'
   vehiculo: {
     faltaVersion: boolean; faltaMatriculacion: boolean; faltaGaraje: boolean; kmInvalido: boolean; compraInvalida: boolean
     /** El riesgo trae un garaje que no casa con el catálogo (`garajeInicial().sinCasar`): su etiqueta. Se dice en el ✗. */
@@ -76,6 +110,11 @@ export type EntradaVerificacion = {
     faltaAniosSinSiniestros: boolean
     /** Recomendado (no bloquea: la compañía lo pide gratis si hace falta). */
     siniestros5Pendiente: boolean
+    /**
+     * Auto (15/10/2026, Alberto): la compañía exige los siniestros en 5 años (`exigeSiniestrosUltimos5`: < 5 años limpio y
+     * distinto de los años asegurado) y están sin dato → ✗ (ya no se supone 0). Manda sobre `siniestros5Pendiente`.
+     */
+    siniestros5SinDato?: boolean
     /** Incoherente: el vendor exige en la compañía / sin siniestros ≤ años asegurado (su 400 se paga). */
     companiaSuperaAsegurado?: boolean
     sinSiniestrosSuperaAsegurado?: boolean
@@ -87,7 +126,14 @@ export type EntradaVerificacion = {
   }
   /** El `faltaAlgo` del cotizador: si dice que falta algo y ningún ítem lo recoge, se añade uno genérico (nunca un ✓ falso). */
   faltaAlgo: boolean
+  /**
+   * 15/10/2026: con QUÉ se cotiza cada dato del vehículo y del historial y de dónde sale (la `nota` de `valoresQueViajan`,
+   * p. ej. «Sin dato · se cotizará con 10.000 km (supuesto)»), por clave de ítem. Se pinta en el ítem que no lleve ya
+   * una nota propia. Sin él (moto), la verificación es la de siempre.
+   */
+  detalle?: Partial<Record<ClaveDetalle, string | null>>
 }
+export type ClaveDetalle = 'garaje' | 'km' | 'compra' | 'compania' | 'poliza' | 'anios-asegurado' | 'anios-compania' | 'anios-sin-siniestros' | 'siniestros-5'
 
 const ROTULO_ROL_VERIF: Record<RolExtra, string> = { propietario: 'propietario', conductor_habitual: 'conductor habitual', conductor_ocasional: 'conductor ocasional' }
 const estado = (falta: boolean): EstadoVerificacion => (falta ? 'falta' : 'ok')
@@ -139,6 +185,8 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
   if (e.figuraRepetida) figuras.push({ clave: 'figura-repetida', texto: 'La misma persona es conductor habitual y ocasional', estado: 'falta', nota: 'quita el ocasional en «Intervinientes»', ancla: ANCLA.intervinientes, arriba: true })
   if (e.ocasionalDuplicado) figuras.push({ clave: 'ocasional-duplicado', texto: 'El conductor ocasional tiene el mismo DNI que el habitual', estado: 'falta', ancla: ANCLA.intervinientes, arriba: true })
   if (e.personaLibreIncompleta) figuras.push({ clave: 'persona-libre', texto: 'Faltan datos de un propietario o conductor distinto del tomador', estado: 'falta', ancla: ANCLA.intervinientes, arriba: true })
+  const itemOc = itemOcasional(e.ramo, e.ocasional)
+  if (itemOc) figuras.push(itemOc)
   if (e.ocasionalIgnorado) figuras.push({ clave: 'ocasional-ignorado', texto: 'El riesgo tiene un conductor ocasional', estado: 'aviso', nota: 'en moto la compañía no lo admite: esta cotización no lo declara', ancla: ANCLA.intervinientes, arriba: true })
 
   const v = e.vehiculo
@@ -177,9 +225,15 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
     )
     if (h.companiaSuperaAsegurado) historial.push({ clave: 'compania-supera', texto: 'Años en la compañía: no pueden ser más que los años asegurado', estado: 'falta', ...arriba })
     if (h.sinSiniestrosSuperaAsegurado) historial.push({ clave: 'sin-siniestros-supera', texto: 'Años sin siniestros: no pueden ser más que los años asegurado', estado: 'falta', ...arriba })
-    if (h.siniestros5Pendiente) historial.push({ clave: 'siniestros-5', texto: 'Siniestros en los últimos 5 años', estado: 'aviso', nota: 'recomendado: si la compañía lo exige lo dirá sin cobrar', ...arriba })
+    if (h.siniestros5SinDato) historial.push({ clave: 'siniestros-5', texto: '¿Cuántos siniestros en los últimos 5 años? Sin dato no se puede declarar 0', estado: 'falta', nota: 'con menos de 5 años sin siniestros (y distintos de los años asegurado) la compañía lo exige: decláralo arriba («Historial y bonificaciones»)', ...arriba })
+    else if (h.siniestros5Pendiente) historial.push({ clave: 'siniestros-5', texto: 'Siniestros en los últimos 5 años', estado: 'aviso', nota: 'recomendado: si la compañía lo exige lo dirá sin cobrar', ...arriba })
   }
   for (const r of h.reparos) historial.push({ clave: `reparo-${r.campo}`, texto: r.campo, estado: 'aviso', nota: r.motivo, ancla: ANCLA.seguroAqui })
+
+  for (const i of [...vehiculo, ...historial]) {
+    const d = e.detalle?.[i.clave as ClaveDetalle]
+    if (!i.nota && d) i.nota = d
+  }
 
   const grupos: GrupoVerificacion[] = [
     { titulo: '1 · Figuras (tomador e intervinientes)', items: figuras },
@@ -195,84 +249,6 @@ export function gruposVerificacion(e: EntradaVerificacion): GrupoVerificacion[] 
 /** Todo en ✓ (los avisos no bloquean). Sin grupos (pantalla completa) no hay verificación que exigir. */
 export function verificacionCompleta(grupos: GrupoVerificacion[]): boolean {
   return grupos.every((g) => g.items.every((i) => i.estado !== 'falta'))
-}
-
-// ── El seguro actual que usa el cotizador embebido (13/10/2026) ───────────────────────────────────────────────────
-// Lo DECLARADO arriba («Historial y bonificaciones», `historialDeclarado`) manda; sin dato arriba, lo de siempre (lo
-// leído de su póliza o el máximo). Aquí no se teclea: se ve en resumen con «Editar arriba».
-
-export type OrigenDato = 'arriba' | 'leido' | 'ninguno'
-export type SeguroActualEmbebido = {
-  tieneSeguroActual: boolean
-  /** Arriba no dice si tiene seguro y no hay póliza leída: «no se sabe», no «no tiene». */
-  tieneSeguroSinDato: boolean
-  companiaCodigo: string
-  companiaLibre: string
-  /** Lo que se teclea arriba como compañía y no casa con la lista de Codeoscopic. */
-  companiaNoReconocida: string | null
-  /** Lo que viaja a Codeoscopic: los 5 últimos (`ultimosDigitosPoliza`). '' = falta. */
-  polizaDigitos: string
-  aniosSinSiniestros: string
-  siniestrosUltimos5: string
-  origen: { tiene: OrigenDato; compania: OrigenDato; poliza: OrigenDato; sinSiniestros: OrigenDato; siniestros5: OrigenDato }
-}
-
-/**
- * PURA. `leido` es lo de siempre (precarga de la póliza leída / el máximo); `codigoDe` traduce un texto de compañía a su
- * código DGS de la lista de Codeoscopic (`null` = no casa o no hay lista). `conCatalogo: false` = sin lista: la compañía va
- * en libre (código DGS) tal cual.
- */
-export function seguroActualEmbebido(e: {
-  arriba: Partial<HistorialDeclaradoRiesgo> | null
-  leido: { tiene: boolean; companiaCodigo: string; companiaLibre: string; poliza: string; aniosSinSiniestros: number; siniestrosUltimos5: number | null }
-  conCatalogo: boolean
-  codigoDe: (texto: string) => string | null
-}): SeguroActualEmbebido {
-  const a = e.arriba ?? {}
-  const l = e.leido
-  const tieneArriba = a.tieneSeguroActual ?? null
-  const companiaArriba = a.companiaActual ?? null
-  let companiaCodigo = l.companiaCodigo
-  let companiaLibre = l.companiaLibre
-  let companiaNoReconocida: string | null = null
-  if (companiaArriba !== null) {
-    if (e.conCatalogo) {
-      companiaCodigo = e.codigoDe(companiaArriba) ?? ''
-      companiaLibre = ''
-      if (companiaCodigo === '') companiaNoReconocida = companiaArriba
-    } else {
-      companiaCodigo = ''
-      companiaLibre = companiaArriba
-    }
-  }
-  const codigoParaPoliza = companiaCodigo || companiaLibre
-  const polizaArriba = a.numeroPoliza ?? null
-  const polizaFuente = polizaArriba ?? (l.poliza.trim() === '' ? null : l.poliza)
-  const sinArriba = a.aniosSinSiniestros ?? null
-  const s5Arriba = a.siniestrosUltimos5 ?? null
-  const s5 = s5Arriba ?? l.siniestrosUltimos5
-  return {
-    tieneSeguroActual: tieneArriba ?? l.tiene,
-    tieneSeguroSinDato: tieneArriba === null && !l.tiene,
-    companiaCodigo,
-    companiaLibre,
-    companiaNoReconocida,
-    polizaDigitos: polizaFuente === null ? '' : ultimosDigitosPoliza(polizaFuente, codigoParaPoliza) ?? '',
-    aniosSinSiniestros: String(sinArriba ?? l.aniosSinSiniestros),
-    siniestrosUltimos5: s5 === null ? '' : String(s5),
-    origen: {
-      tiene: tieneArriba !== null ? 'arriba' : l.tiene ? 'leido' : 'ninguno',
-      compania: companiaArriba !== null ? 'arriba' : l.companiaCodigo || l.companiaLibre ? 'leido' : 'ninguno',
-      poliza: polizaArriba !== null ? 'arriba' : polizaFuente !== null ? 'leido' : 'ninguno',
-      sinSiniestros: sinArriba !== null ? 'arriba' : 'leido',
-      siniestros5: s5Arriba !== null ? 'arriba' : l.siniestrosUltimos5 !== null ? 'leido' : 'ninguno',
-    },
-  }
-}
-
-/** El aviso de un garaje del riesgo que no está en la lista de la compañía (15/10/2026: nunca se cambia por el defecto). */
-export function avisoGarajeSinCasar(etiqueta: string): string {
-  return `El riesgo dice «${etiqueta}» pero no está en la lista de la compañía: elige el equivalente. Si la lista no tiene opción de calle, avisa a Alberto en vez de declarar un garaje`
 }
 
 /**
@@ -297,27 +273,4 @@ export function rotuloVacioResumen(n: NivelVacio): { texto: string; color: strin
   return n === 'aviso'
     ? { texto: 'Sin dato — complétalo arriba', color: 'var(--warning)' }
     : { texto: 'Falta — complétalo arriba', color: 'var(--negative)' }
-}
-
-/**
- * PURA (13/10/2026, moto; misma regla que el cálculo en línea de `AutoNuevo.tsx`): los años del historial que manda el
- * cotizador embebido. Lo DECLARADO arriba manda (asegurado / en la compañía); lo que no viene de arriba (lo leído de su
- * póliza o el máximo) se TOPA a los años asegurado: Avant2 exige en la compañía y sin siniestros ≤ asegurado y ese 400
- * se paga. Lo declarado arriba NO se topa: si es incoherente, la checklist lo marca ✗ y se corrige arriba.
- */
-export function historialConTopes<T extends { aniosAsegurado: number; aniosEnCompania: number; aniosSinSiniestros: number }>(
-  leido: T,
-  arriba: Partial<HistorialDeclaradoRiesgo> | null,
-): T & { origenAsegurado: OrigenDato; origenEnCompania: OrigenDato } {
-  const aseguradoArriba = arriba?.aniosAsegurado ?? null
-  const enCompaniaArriba = arriba?.aniosEnCompania ?? null
-  const asegurado = aseguradoArriba ?? leido.aniosAsegurado
-  return {
-    ...leido,
-    aniosAsegurado: asegurado,
-    aniosEnCompania: enCompaniaArriba ?? Math.min(leido.aniosEnCompania, asegurado),
-    aniosSinSiniestros: Math.min(leido.aniosSinSiniestros, asegurado),
-    origenAsegurado: aseguradoArriba !== null ? 'arriba' : 'leido',
-    origenEnCompania: enCompaniaArriba !== null ? 'arriba' : 'leido',
-  }
 }

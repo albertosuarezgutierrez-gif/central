@@ -13,7 +13,7 @@ const cuerpoDe = (nombre: string) => {
 }
 
 test('toda consulta del riesgo va acotada a la correduría (BYPASSRLS: un id ajeno daría los datos de otro)', () => {
-  for (const f of ['leerRiesgo', 'asignarFigura', 'quitarFigura', 'nuevaPersonaEnRiesgo', 'validarVariante']) {
+  for (const f of ['leerRiesgo', 'asignarFigura', 'quitarFigura', 'nuevaPersonaEnRiesgo', 'validarVariante', 'estadoOcasionalDeVariante']) {
     const c = cuerpoDe(f)
     const consultas = c.match(/from seguros\.\w+/g) ?? []
     assert.ok(consultas.length > 0, f)
@@ -40,6 +40,22 @@ test('cotizar una variante valida la oportunidad y las fichas ANTES de gastar', 
   assert.ok(c.indexOf('validarVariante(') < c.indexOf('personaDeFicha('), 'se valida antes de leer fichas')
   const ruta = readFileSync(new URL('../app/api/operador/codeoscopic/auto-nuevo/route.ts', import.meta.url), 'utf8')
   assert.ok(ruta.indexOf('prepararVariante(') < ruta.indexOf('await cotizar('), 'la variante se prepara antes del cargo')
+})
+
+test('auto colgado de una oportunidad: ocasional SIN PREGUNTAR corta GRATIS antes del vendor (todos los caminos)', () => {
+  const c = cuerpoDe('prepararVariante')
+  // Va después de saber que hay oportunidad (sin ella, cotizador suelto: no aplica) y antes de leer fichas y pagar.
+  const i = c.indexOf('estadoOcasionalDeVariante(correduriaId, oportunidadId, figuras)')
+  assert.ok(i > c.indexOf("if (oportunidadId === '') return { ok: true"), 'sin oportunidad no aplica: el corte va después')
+  assert.ok(i > 0 && i < c.indexOf('personaDeFicha('), 'el corte va antes de armar la petición')
+  assert.match(c, /if \(e\.ramo === 'auto'\) \{\s*const oc = await estadoOcasionalDeVariante/, 'solo en auto (moto no tiene ocasional)')
+  assert.match(c, /oc === null \? '[^']*no se ha pedido precio/, 'si no se puede leer, tampoco se paga (no se sabe ≠ no hay)')
+  assert.match(c, /corteOcasional\(oc\)[\s\S]{0,40}if \(corte\) return \{ ok: false, motivo: corte \}/)
+  // La regla es la del módulo (la misma que pinta la pantalla), no una copia.
+  const e = cuerpoDe('estadoOcasionalDeVariante')
+  assert.match(e, /return estadoOcasional\(\{/)
+  assert.match(e, /confirmacionSinOcasionalDe\(op\.info\)/)
+  assert.match(e, /catch \(err\) \{[\s\S]*return null/)
 })
 
 test('un DNI que ya existe solo reutiliza la ficha si el nombre casa', () => {

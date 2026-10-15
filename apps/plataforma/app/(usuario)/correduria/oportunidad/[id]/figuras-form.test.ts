@@ -60,3 +60,16 @@ test('nombreSinFicha: el ocasional sin ficha es «Ninguno»; propietario y habit
   assert.equal(nombreSinFicha('propietario'), 'El mismo que el tomador')
   assert.equal(nombreSinFicha('conductor_habitual'), 'El mismo que el tomador')
 })
+
+test('estadoOcasional: un hueco es «sin preguntar», nunca «no hay»; la ficha manda sobre una confirmación vieja', async () => {
+  const { estadoOcasional, nombreOcasionalSinFicha } = await import('./figuras-form.ts')
+  const roles = ['tomador', 'propietario', 'conductor_habitual', 'conductor_ocasional'] as const
+  const conf = { ningunoConfirmadoAt: '2026-10-15T10:00:00Z' }
+  assert.equal(estadoOcasional({ roles: [...roles], figuras: [], conductorOcasional: { ningunoConfirmadoAt: null } }), 'sin_preguntar')
+  assert.equal(estadoOcasional({ roles: [...roles], figuras: [], conductorOcasional: null }), 'sin_preguntar', 'asegura que no lo dice: conservador')
+  assert.equal(estadoOcasional({ roles: [...roles], figuras: [], conductorOcasional: conf }), 'ninguno')
+  assert.equal(estadoOcasional({ roles: [...roles], figuras: [{ rol: 'conductor_ocasional' }], conductorOcasional: conf }), 'si')
+  assert.equal(estadoOcasional({ roles: ['tomador', 'propietario', 'conductor_habitual'], figuras: [], conductorOcasional: null }), 'no_aplica')
+  assert.equal(nombreOcasionalSinFicha('ninguno'), 'Ninguno (confirmado)')
+  assert.equal(nombreOcasionalSinFicha('sin_preguntar'), 'Sin preguntar')
+})

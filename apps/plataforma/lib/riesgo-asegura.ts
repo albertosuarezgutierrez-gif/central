@@ -8,6 +8,7 @@ import {
   CAMPOS_VEHICULO, ETIQUETA_ROL, esClaveDatosRiesgo, esRolFigura, leerDatosCapital, leerDatosComercio, leerDatosRiesgoLibre, leerDatosVehiculo, leerDatosVivienda, historialDeclaradoDe, seguroAnteriorDe,
   type CampoVehiculo, type ClaveDatosRiesgo, type DatosCapitalRiesgo, type DatosComercioRiesgo, type DatosRiesgoLibre, type DatosVehiculoRiesgo, type DatosViviendaRiesgo,
   type RolFigura, type Diferencia, leerDiferencia, type SeguroAnterior, type HistorialDeclaradoRiesgo,
+  limpiarSupuestosVariante, type SupuestoVariante,
 } from '@central/module-seguros'
 
 export type FiguraRiesgo = {
@@ -43,6 +44,11 @@ export type VarianteRiesgo = {
     retiradoAt: string | null
   } | null
   cambios: Diferencia[] | null
+  /**
+   * Qué viajó como SUPUESTO al pedir este precio (15/10/2026). `null` = no consta (anterior, o asegura que aún no lo
+   * manda) ≠ `[]` = se pidió sin supuestos.
+   */
+  supuestos: SupuestoVariante[] | null
 }
 export type Riesgo = {
   oportunidad: {
@@ -91,6 +97,12 @@ export type Riesgo = {
    * y `carnet: null` = el ramo no usa carné.
    */
   historial: HistorialRiesgo | null
+  /**
+   * Conductor OCASIONAL (15/10/2026). `null` = el ramo no tiene ese papel, o una versión de asegura que aún no lo manda
+   * (entonces la pantalla trata el hueco como «sin preguntar»: nunca como «no hay»). `ningunoConfirmadoAt` = cuándo
+   * se confirmó que no conduce nadie más; `null` = sin confirmar.
+   */
+  conductorOcasional: { ningunoConfirmadoAt: string | null } | null
 }
 
 export type HistorialRiesgo = {
@@ -181,6 +193,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
           }
         : null,
       cambios: Array.isArray(x.cambios) ? x.cambios.flatMap((c): Diferencia[] => { const d = leerDiferencia(c); return d ? [d] : [] }) : null,
+      supuestos: limpiarSupuestosVariante(x.supuestos),
     }]
   })
   return {
@@ -204,6 +217,9 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       variantes,
       datosRiesgo: leerDatosRiesgoDeRamo(o.datosRiesgo),
       historial: leerHistorialRiesgo(o.historial),
+      conductorOcasional: o.conductorOcasional !== null && typeof o.conductorOcasional === 'object' && !Array.isArray(o.conductorOcasional)
+        ? { ningunoConfirmadoAt: txt(obj(o.conductorOcasional).ningunoConfirmadoAt) }
+        : null,
       datosVehiculo: leerDatosVehiculo(o.datosVehiculo),
       faltanVehiculo: Array.isArray(o.faltanVehiculo)
         ? o.faltanVehiculo.filter((c): c is CampoVehiculo => (CAMPOS_VEHICULO as readonly string[]).includes(c as string))

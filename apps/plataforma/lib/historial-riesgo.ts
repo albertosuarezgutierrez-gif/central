@@ -147,7 +147,17 @@ function filaCarnet(c: HistorialRiesgo['carnet'], hoy: string): FilaHistorial {
  * 13/10/2026: también se declaran aquí seguro actual sí/no, compañía, nº de póliza, años sin siniestros y siniestros en
  * 5 años (lo que las compañías consultan en SINCO). Lo declarado manda sobre lo leído y SIEMPRE se rotula «declarado aquí».
  */
-export function filasHistorial(h: HistorialRiesgo | null, opciones: { compania: string | null; hoy: string; nombreCompania?: (v: string) => string }): { estado: 'sin_leer' } | { estado: 'ok'; filas: FilaHistorial[] } {
+export function filasHistorial(h: HistorialRiesgo | null, opciones: {
+  compania: string | null
+  hoy: string
+  nombreCompania?: (v: string) => string
+  /**
+   * 15/10/2026: con QUÉ se cotizará cada fila SIN DATO (`notaCotizaraHistorial` de `lib/correduria/supuestos-auto.ts`,
+   * p. ej. «Sin dato · se cotizará con 10 años (supuesto)»). Sustituye la nota de la fila pendiente; el texto sigue
+   * siendo «sin dato» (nunca un número que parezca dato). Sin él, la nota de siempre.
+   */
+  cotizara?: Partial<Record<ClaveFila, string | null>>
+}): { estado: 'sin_leer' } | { estado: 'ok'; filas: FilaHistorial[] } {
   if (h === null) return { estado: 'sin_leer' }
   const sa = h.seguroAnterior
   const hd = h.historialDeclarado
@@ -159,7 +169,11 @@ export function filasHistorial(h: HistorialRiesgo | null, opciones: { compania: 
     filaSiniestros('siniestrosUltimos5', 'Siniestros en los últimos 5 años', sa?.siniestrosUltimos5, hd?.siniestrosUltimos5 ?? null),
     filaCarnet(h.carnet, opciones.hoy),
   ]
-  return { estado: 'ok', filas: filas.filter((f) => f.estado !== 'no_aplica') }
+  const conCotizara = filas.map((f) => {
+    const n = f.estado === 'pendiente' ? opciones.cotizara?.[f.clave] ?? null : null
+    return n ? { ...f, nota: n } : f
+  })
+  return { estado: 'ok', filas: conCotizara.filter((f) => f.estado !== 'no_aplica') }
 }
 
 // ── Compañía actual DECLARADA: selector con la lista de Codeoscopic (13/10/2026) ────────────────────────────────────

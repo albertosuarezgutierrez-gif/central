@@ -12,6 +12,7 @@ import { eur } from '@/lib/dinero'
 import { estadoPresupuestoVariante, ordenarParaComparar, type Riesgo, type VarianteRiesgo } from '@/lib/riesgo-asegura'
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import CompararVariantes from './CompararVariantes'
+import MarcaSupuestos from './MarcaSupuestos'
 import { PRECIOS_VARIANTE } from './cotizadores-embebidos'
 import { ramoCotizadorEmbebido } from './cotizador-embebido'
 import { fechaEs } from './piezas-riesgo'
@@ -149,6 +150,7 @@ function Fila({ v, primera, abrir, precios, otroTomador, comparable, marcada, on
         <Badge tono={estado === null ? 'neutral' : estado === 'Retirado' ? 'negativo' : estado === 'Emitido' || estado === 'Aceptado' ? 'positivo' : 'info'}>
           {estado ?? 'Sin preparar'}
         </Badge>
+        {v.nPrecios !== 0 && <MarcaSupuestos supuestos={v.supuestos} />}
         {otroTomador && (
           <span style={{ marginLeft: 'auto', color: 'var(--muted)' }}>Para repetirla, pon a {v.tomador.nombre ?? 'su tomador'} de tomador en Intervinientes.</span>
         )}

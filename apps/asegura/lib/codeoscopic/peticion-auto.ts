@@ -9,7 +9,7 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
-import { polizaAnteriorParaTarificar } from '@central/module-seguros'
+import { exigeSiniestrosUltimos5, polizaAnteriorParaTarificar } from '@central/module-seguros'
 import {
   construirEmpresa,
   construirPersona,
@@ -464,17 +464,12 @@ export function construirPeticionAuto(d: DatosAuto, opciones: Pick<OpcionesRevis
   return cuerpo
 }
 
-/** ¿El vendor exige el detalle de siniestros de los últimos 5 años? */
+/**
+ * ¿El vendor exige el detalle de siniestros de los últimos 5 años? La regla vive en `@central/module-seguros`
+ * (`exigeSiniestrosUltimos5`) porque la pantalla de plataforma pone su ✗ con ELLA: los dos lados dicen lo mismo.
+ */
 export function exigeDetalleDeSiniestros(d: Partial<DatosAuto>): boolean {
-  if (!d.aseguradoAntes) return false
-  if (!numero(d.aniosSinSiniestros)) return false
-  if (d.aniosSinSiniestros! >= 5) return false
-  // La excepción «tantos años limpio como asegurado» dice «nunca ha tenido un
-  // siniestro», y por eso el detalle sobra. Pero `0 === 0` NO dice eso: dice
-  // que no hay dato, y colarlo por esta puerta manda la declaración de novel
-  // sin que nada falle (ver el comentario de `aniosAsegurado` arriba).
-  if (d.aniosSinSiniestros === 0 && d.aniosAsegurado === 0) return true
-  return d.aniosSinSiniestros !== d.aniosAsegurado
+  return exigeSiniestrosUltimos5(d)
 }
 
 /** Mismo documento, normalizado (mayúsculas, sin espacios ni guiones). */

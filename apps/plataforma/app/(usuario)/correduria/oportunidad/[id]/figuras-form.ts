@@ -110,6 +110,18 @@ export function nombreSinFicha(rol: RolFigura): string {
   return rol === 'conductor_ocasional' ? 'Ninguno' : 'El mismo que el tomador'
 }
 
+/**
+ * El conductor OCASIONAL en tres estados (15/10/2026). La regla vive en `@central/module-seguros`
+ * (`conductor-ocasional.ts`) porque asegura la usa para CORTAR el precio en el servidor: una sola regla.
+ */
+export { estadoOcasional, type EstadoOcasionalRiesgo } from '@central/module-seguros'
+import type { EstadoOcasionalRiesgo } from '@central/module-seguros'
+
+/** Lo que pinta la tarjeta del ocasional SIN ficha según su estado. */
+export function nombreOcasionalSinFicha(e: EstadoOcasionalRiesgo): string {
+  return e === 'ninguno' ? 'Ninguno (confirmado)' : 'Sin preguntar'
+}
+
 /** Las fichas de un papel múltiple, una por `clienteId` (identidad), en el orden en que llegan. */
 export function personasDelRol<F extends { rol: RolFigura; clienteId: string }>(figuras: readonly F[], rol: RolFigura): F[] {
   const vistos = new Set<string>()
