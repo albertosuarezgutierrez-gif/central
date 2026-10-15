@@ -1,8 +1,8 @@
 {
  "sesion": "62d97d94-4450-50f4-a4a5-808808fd4f39",
  "inicio": "2026-10-14T19:14:47.968Z",
- "fin": "2026-10-14T19:15:29.880Z",
- "llamadas": 7,
+ "fin": "2026-10-14T19:19:26.693Z",
+ "llamadas": 15,
  "categorias": {
   "otro": {
    "llamadas": 2,
@@ -48,6 +48,17 @@
    "chars_citados": 0,
    "tools": {
     "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 8,
+   "chars_in": 2025,
+   "chars_out": 2995,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 8
    }
   }
  }
