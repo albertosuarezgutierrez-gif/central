@@ -12,7 +12,7 @@
 import type { Locator, Page } from 'playwright'
 import { ErrorTarificador } from '../../errores.ts'
 import { exigirSinVerificacion } from '../../verificacion.ts'
-import { ErrorCredenciales, exigirSinRechazoCredenciales } from '../../credenciales.ts'
+import { exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
 
@@ -125,7 +125,7 @@ export async function login(page: Page, ctx: CtxLoginMapfre, urlLogin: string = 
     // Mensaje del portal (rechazo / bloqueo / caducada): se para YA, sin esperar el plazo y sin tocar nada más.
     await exigirSinRechazoCredenciales(page, 'mapfre')
     if (Date.now() >= fin) {
-      throw new ErrorCredenciales('mapfre', 'rechazadas') // sigue en el login tras enviar: nunca se reintenta
+      throw new ErrorTarificador('portal', 'mapfre/login: el formulario sigue visible tras enviar (sin mensaje de rechazo en pantalla)') // sin texto afirmativo no es `credenciales`
     }
     await page.waitForTimeout(500)
   }

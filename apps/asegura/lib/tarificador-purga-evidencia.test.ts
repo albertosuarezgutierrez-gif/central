@@ -43,15 +43,31 @@ test('barrido: anula referencias y borra solo documentos de fallo, por tandas; s
   assert.equal(sqls.length, 1, 'sin candidatos solo lee')
   sqls.length = 0; vals.length = 0
   assert.equal(await purgarEvidenciaCaducada(mk([fila]), 'c1'), 2)
-  assert.equal(sqls.length, 4) // 0 = lectura; 1 captura_ref; 2 html; 3 delete
+  assert.equal(sqls.length, 4) // 0 = lectura; 1 delete; 2 captura_ref; 3 html
   assert.match(sqls[0], /t\.estado = any\(\?::text\[\]\)/)
   assert.match(sqls[0], /limit \?::int/)
-  assert.match(sqls[1], /set captura_ref = null/)
-  assert.match(sqls[2], /error - 'html_documento_id'/)
-  assert.match(sqls[3], /delete from seguros\.documentos/)
-  assert.match(sqls[3], /subido_por = 'agente'/)
-  assert.match(sqls[3], /nombre_fichero ~/)
-  assert.deepEqual([...(vals[3][0] as string[])].sort(), [A, B])
+  assert.match(sqls[1], /delete from seguros\.documentos/)
+  assert.match(sqls[1], /subido_por = 'agente'/)
+  assert.match(sqls[1], /nombre_fichero ~/)
+  assert.deepEqual([...(vals[1][0] as string[])].sort(), [A, B])
+  assert.match(sqls[2], /set captura_ref = null/)
+  assert.match(sqls[3], /error - 'html_documento_id'/)
+})
+
+test('si el borrado falla NO se anula ninguna referencia (el trabajo se vuelve a seleccionar)', async () => {
+  const sqls: string[] = []
+  const fila = { id: 't1', estado: 'error_definitivo', terminado_at: new Date('2026-09-01T00:00:00Z'), evidencia_id: A, evidencia_nombre: 'fallo-abcdef12.png', html_id: B, capturas: [], ahora: AHORA }
+  const db = {
+    $queryRaw: async () => [fila],
+    $executeRaw: async (s: TemplateStringsArray) => {
+      sqls.push(s.join('?'))
+      if (/delete from seguros\.documentos/.test(s.join('?'))) throw new Error('fallo de borrado')
+      return 1
+    },
+  } as unknown as DbPurga
+  await assert.rejects(purgarEvidenciaCaducada(db, 'c1'), /fallo de borrado/)
+  assert.equal(sqls.length, 1)
+  assert.ok(!sqls.some((q) => /set captura_ref = null|error - 'html_documento_id'/.test(q)))
 })
 
 test('cableado: el barrido llama a la purga de evidencia', () => {

@@ -173,13 +173,17 @@ export async function purgarEvidenciaCaducada(db: DbPurga, correduriaId: string,
     ids.forEach((i) => docs.add(i))
   }
   if (!trabajos.length) return 0
-  // Primero se anulan las referencias y luego se borra el documento; todo dentro de la tanda del barrido (cada UPDATE/DELETE
-  // es idempotente: si algo falla a medias, la siguiente pasada vuelve a seleccionar el trabajo).
-  await db.$executeRaw`update seguros.tarificacion_trabajo_pasos set captura_ref = null where trabajo_id = any(${trabajos}::uuid[]) and captura_ref is not null`
-  await db.$executeRaw`update seguros.tarificacion_trabajos set error = error - 'html_documento_id' where id = any(${trabajos}::uuid[]) and jsonb_typeof(error) = 'object' and error->>'html_documento_id' is not null`
-  if (!docs.size) return 0
-  return db.$executeRaw`
+  // Primero se BORRA el documento y después se anulan las referencias: si el borrado falla, las referencias siguen en pie y la
+  // siguiente pasada vuelve a seleccionar el trabajo; si fallan las anulaciones, quedan referencias colgando a un documento ya
+  // borrado, que la siguiente pasada limpia (cada sentencia es idempotente). Al revés, un borrado fallido dejaría el documento
+  // huérfano y sin referencia, y nunca más se seleccionaría.
+  const borrados = docs.size
+    ? await db.$executeRaw`
     delete from seguros.documentos
     where id = any(${[...docs]}::uuid[]) and correduria_id = ${correduriaId}::uuid
       and subido_por = 'agente' and nombre_fichero ~ '^fallo-[0-9a-f]{8}\\.(png|html)$'`
+    : 0
+  await db.$executeRaw`update seguros.tarificacion_trabajo_pasos set captura_ref = null where trabajo_id = any(${trabajos}::uuid[]) and captura_ref is not null`
+  await db.$executeRaw`update seguros.tarificacion_trabajos set error = error - 'html_documento_id' where id = any(${trabajos}::uuid[]) and jsonb_typeof(error) = 'object' and error->>'html_documento_id' is not null`
+  return borrados
 }

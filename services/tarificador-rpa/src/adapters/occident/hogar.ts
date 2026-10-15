@@ -23,7 +23,7 @@
 import type { Frame, Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
-import { ErrorCredenciales, exigirSinRechazoCredenciales } from '../../credenciales.ts'
+import { exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import { esperarPdf } from '../../descarga-pdf.ts'
 import { importeEs, type OfertaNormalizada } from '@central/module-tarificacion'
 import { comprobarDescriptorOccident } from './guarda.ts'
@@ -247,7 +247,7 @@ export async function login(page: Page, ctx: CtxLoginHogar): Promise<void> {
     await page.locator(SEL.portalCabecera).first().waitFor({ state: 'visible', timeout: 25_000 })
   } catch {
     await exigirSinRechazoCredenciales(page, 'occident')
-    throw new ErrorCredenciales('occident', 'rechazadas') // el SSO rechazó los datos o no hay cabecera: nunca se reintenta
+    throw new ErrorTarificador('portal', 'occident/hogar: no aparece la cabecera del portal tras el login (sin mensaje de rechazo en pantalla)') // sin texto afirmativo de rechazo no es `credenciales`: fallo normal
   }
   await exigirSinRechazoCredenciales(page, 'occident', { soloInutilizable: true })
   ctx.log('login ok')

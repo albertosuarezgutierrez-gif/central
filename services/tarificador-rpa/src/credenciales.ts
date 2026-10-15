@@ -13,11 +13,14 @@ import { nombreCompania } from './aviso.ts'
 export type MotivoCredenciales = 'rechazadas' | 'bloqueada' | 'caducada'
 
 // «Bloqueada» manda sobre «caducada» y esta sobre «rechazadas» (un bloqueo también dice «incorrecto» a veces).
+// Solo frases AFIRMATIVAS de estado («su usuario está bloqueado», «contraseña caducada»): nada de palabras sueltas, fechas de
+// caducidad, recordatorios («cambie su contraseña cada 90 días») ni avisos de otra cosa («acceso deshabilitado por mantenimiento»,
+// «recibos con cuenta bloqueada»). Un falso positivo aquí PAUSA la credencial de una correduría entera.
 const BLOQUEADA =
-  /(cuenta|usuario|acceso|credenciales?)\s+(ha\s+sido\s+|est[aá]\s+|se\s+ha\s+)?(bloquead|suspendid|deshabilitad|inhabilitad|desactivad|revocad)|(bloquead|suspendid|inhabilitad)[oa]s?\s+(por|tras)\s+(demasiados\s+)?intentos|demasiados\s+intentos|(n[uú]mero\s+m[aá]ximo|l[ií]mite)\s+de\s+intentos|intentos\s+(fallidos|permitidos)\s+(superad|excedid|agotad)|superado\s+(el\s+)?(n[uú]mero|l[ií]mite)\s+de\s+intentos/i
-// Nunca «cambiar contraseña» a secas: es un ENLACE fijo de la pantalla de acceso de Mapfre.
+  /(?:\bsu\s+)?(cuenta|usuario|acceso|credenciales?)\s+(ha\s+sido|est[aá]|se\s+ha)\s+(bloquead|suspendid|deshabilitad|inhabilitad|desactivad|revocad)|(?:^|[.!?:]\s+)(cuenta|usuario)\s+(bloquead|suspendid|inhabilitad)[oa]\s*(?:[.!]|$)|(bloquead|suspendid|inhabilitad)[oa]s?\s+(por|tras)\s+(demasiados\s+)?intentos|demasiados\s+intentos|(n[uú]mero\s+m[aá]ximo|l[ií]mite)\s+de\s+intentos|intentos\s+(fallidos|permitidos)\s+(superad|excedid|agotad)|superado\s+(el\s+)?(n[uú]mero|l[ií]mite)\s+de\s+intentos/im
+// Nunca «cambiar contraseña» a secas (enlace fijo de Mapfre) ni «debe cambiar … cada 90 días» (recordatorio) ni «caducidad de la contraseña» (una fecha).
 const CADUCADA =
-  /contrase[ñn]a\s+(ha\s+|est[aá]\s+)?(caducad|expirad|vencid)|(caducad|expirad|vencid)[oa]\s+(su\s+|la\s+)?contrase[ñn]a|(debe|tiene\s+que|es\s+necesario|necesita)\s+(cambiar|renovar|actualizar)\s+(su\s+|la\s+)?contrase[ñn]a|cambio\s+(de\s+contrase[ñn]a\s+)?obligatorio|(caducidad|expiraci[oó]n)\s+de\s+(la\s+)?contrase[ñn]a/i
+  /contrase[ñn]a\s+(ha\s+|est[aá]\s+)?(caducad|expirad|vencid)|(caducad|expirad|vencid)[oa]\s+(su\s+|la\s+)?contrase[ñn]a|(debe|tiene\s+que)\s+(cambiar|renovar)\s+(su\s+|la\s+)?contrase[ñn]a\s+(para|antes\s+de)\s+(continuar|acceder|entrar|seguir)|cambio\s+(de\s+contrase[ñn]a\s+)?obligatorio/i
 const RECHAZADAS =
   /(usuario|c[oó]digo\s+de\s+usuario|identificador)\s+(y\/o\s+|o\s+|y\s+)(la\s+)?contrase[ñn]a\s+(son\s+|es\s+)?(incorrect|inv[aá]lid|erron|no\s+v[aá]lid|no\s+es\s+correct)|contrase[ñn]a\s+(es\s+|son\s+)?(incorrect|inv[aá]lid|erron|no\s+v[aá]lid|no\s+es\s+correct|no\s+coincide)|(datos|credenciales|clave)\s+(de\s+acceso\s+)?(son\s+)?(incorrect|inv[aá]lid|erron|no\s+v[aá]lid)|(usuario|credenciales)\s+(o\s+contrase[ñn]a\s+)?(incorrect|inv[aá]lid|erron|no\s+v[aá]lid|desconocid)|(autenticaci[oó]n|identificaci[oó]n|acceso)\s+(fallid|incorrect|denegad|erron)|login\s+(failed|incorrect)|invalid\s+(user|credentials|password)|incorrect\s+(user|password)/i
 

@@ -5,7 +5,7 @@
 import type { Page } from 'playwright'
 import type { ContextoPortal } from '../../../adaptador.ts'
 import { ErrorTarificador } from '../../../errores.ts'
-import { ErrorCredenciales, exigirSinRechazoCredenciales } from '../../../credenciales.ts'
+import { exigirSinRechazoCredenciales } from '../../../credenciales.ts'
 
 /**
  * Selectores del LOGIN y de la ruta de menú. `null` = PENDIENTE DE CAPTURAS: el adaptador falla en
@@ -67,7 +67,7 @@ export async function login(page: Page, ctx: Pick<ContextoPortal, 'credenciales'
     await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 25_000 })
   } catch {
     await exigirSinRechazoCredenciales(page, 'allianz')
-    throw new ErrorCredenciales('allianz', 'rechazadas') // sin cabecera tras el login: nunca se reintenta
+    throw new ErrorTarificador('portal', 'allianz/sesion: no aparece «Mediador principal» tras el login (sin mensaje de rechazo en pantalla)') // sin texto afirmativo de rechazo no es `credenciales`: fallo normal
   }
   await exigirSinRechazoCredenciales(page, 'allianz', { soloInutilizable: true })
   ctx.log('login ok')
