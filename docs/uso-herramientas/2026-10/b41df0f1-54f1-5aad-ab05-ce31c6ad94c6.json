@@ -1,29 +1,29 @@
 {
  "sesion": "b41df0f1-54f1-5aad-ab05-ce31c6ad94c6",
  "inicio": "2026-10-15T09:15:43.765Z",
- "fin": "2026-10-15T09:23:07.200Z",
- "llamadas": 7,
+ "fin": "2026-10-15T09:58:56.152Z",
+ "llamadas": 13,
  "categorias": {
   "otro": {
-   "llamadas": 5,
-   "chars_in": 10,
-   "chars_out": 51061,
+   "llamadas": 8,
+   "chars_in": 16,
+   "chars_out": 85555,
    "errores": 0,
    "archivos_citados": 6,
    "chars_citados": 137734,
    "tools": {
-    "ReadNotifications": 5
+    "ReadNotifications": 8
    }
   },
   "bash": {
-   "llamadas": 2,
-   "chars_in": 1216,
-   "chars_out": 410,
+   "llamadas": 5,
+   "chars_in": 1982,
+   "chars_out": 806,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2
+    "Bash": 5
    }
   }
  }
