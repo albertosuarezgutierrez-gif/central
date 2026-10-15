@@ -66,7 +66,8 @@ test('los kilómetros nacen en 10.000, visibles y editables', () => {
   // única `valoresQueViajan` (lib/correduria/supuestos-auto.ts, con test de equivalencia) y la pantalla nace de ella.
   const helper = readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/lib/correduria/supuestos-auto.ts'), 'utf8')
   assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(ini\.kmAnuales\)/)
-  assert.match(helper, /const km: ValoresQueViajan\['km'\] = d\?\.kmAnuales != null\s*\n\s*\? \{ valor: d\.kmAnuales, origen: 'riesgo', nota: null \}\s*\n\s*: \{ valor: KM_AUTO_POR_DEFECTO, origen: 'supuesto'/)
+  // Moto (15/10/2026) tiene su rama propia (la media de asegura, campo vacío); la de coche sigue siendo los 10.000.
+  assert.match(helper, /const km: ValoresQueViajan\['km'\] = d\?\.kmAnuales != null\s*\n\s*\? \{ valor: d\.kmAnuales, origen: 'riesgo', nota: null \}\s*\n\s*: moto\s*\n\s*\? \{ valor: KM_ANUALES_SUPUESTOS, [^\n]*\n\s*: \{ valor: KM_AUTO_POR_DEFECTO, origen: 'supuesto'/)
   assert.doesNotMatch(helper, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
   assert.doesNotMatch(fuente, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
 })

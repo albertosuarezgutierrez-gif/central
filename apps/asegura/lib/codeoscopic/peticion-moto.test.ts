@@ -286,3 +286,13 @@ test('🪤 fecha de efecto de moto: ni pasada ni a más de 90 días (el mismo ce
   assert.equal(mal(hoy).length, 0)
   assert.equal(mal(sumarDias(hoy, 90)).length, 0)
 })
+
+test('moto usa la regla ÚNICA de siniestros en 5 años (como coche): excepción años limpios = asegurado, salvo 0 = 0', async () => {
+  const { exigeSiniestrosUltimos5 } = await import('@central/module-seguros')
+  for (const [asegurado, limpios] of [[6, 2], [3, 3], [0, 0], [18, 5], [4, 0]] as const) {
+    const d = { ...CON_HISTORIAL, aniosAsegurado: asegurado, aniosSinSiniestros: limpios, siniestrosUltimos5: null }
+    assert.equal(exigeDetalleDeSiniestrosMoto(d), exigeSiniestrosUltimos5(d), `${asegurado}/${limpios}`)
+    assert.equal(revisarDatosMoto(d).some((x) => x.campo === 'siniestrosUltimos5'), exigeSiniestrosUltimos5(d), `corte ${asegurado}/${limpios}`)
+  }
+  assert.equal(exigeDetalleDeSiniestrosMoto({ ...CON_HISTORIAL, aniosAsegurado: 0, aniosSinSiniestros: 0 }), true, '0 = 0 es «sin dato», no «nunca tuvo uno»')
+})

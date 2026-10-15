@@ -176,3 +176,14 @@ test('el CP del TOMADOR de auto/moto cuenta como dato que falta (la petición sa
   // Antes de la rama de empresa: una empresa tomadora de un coche también necesita su CP.
   assert.ok(f.indexOf("f.push('cp')") < f.indexOf("if (p.tipo === 'juridica')"), 'el CP se mira también para una empresa')
 })
+
+test('auto y moto guardan con la tarificación los supuestos que declara la pantalla (y solo en el contexto, antes del cargo)', () => {
+  for (const ramo of ['auto', 'moto']) {
+    const ruta = readFileSync(new URL(`../app/api/operador/codeoscopic/${ramo}-nuevo/route.ts`, import.meta.url), 'utf8')
+    const i = ruta.indexOf('limpiarSupuestosVariante(esObjeto(cuerpo.resueltos) ? cuerpo.resueltos.supuestosPantalla : undefined)')
+    assert.ok(i > 0, `${ramo}: lee resueltos.supuestosPantalla`)
+    // Sin la clave no se escribe nada («no consta»): solo con lista se pone en el contexto.
+    assert.match(ruta, /if \(supuestosPantalla !== null && p\.peticion\.contexto\) \{\s*p\.peticion\.contexto = \{ \.\.\.p\.peticion\.contexto, supuestos: supuestosPantalla \}/, ramo)
+    assert.ok(i < ruta.indexOf('await cotizar('), `${ramo}: antes de pagar (se guarda con la tarificación)`)
+  }
+})

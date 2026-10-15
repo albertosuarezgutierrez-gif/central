@@ -1,4 +1,4 @@
-// LO QUE VIAJA al pedir precio de COCHE (Avant2 y bots), campo a campo y con su ORIGEN (15/10/2026). PURO, sin E/S.
+// LO QUE VIAJA al pedir precio de COCHE y de MOTO (Avant2 y bots), campo a campo y con su ORIGEN (15/10/2026). PURO, sin E/S.
 //
 // Antes cada pantalla lo calculaba a su manera: el cotizador (`AutoNuevo.tsx`) arrancaba su estado con `garajeInicial`,
 // los 10.000 km, «compra = matriculación», `historialDeclarado` + topes en línea + `seguroActualEmbebido`; «Datos del
@@ -15,8 +15,14 @@
 //
 // 🚨 INVARIANTE: lo que viaja (cuerpo de la petición a Avant2 y formulario de los bots) es IDÉNTICO al de antes de este
 // fichero para el mismo riesgo. Lo vigila `supuestos-auto.test.ts` (copia congelada del cálculo viejo + valores fijos).
+//
+// MOTO (15/10/2026, `ramo: 'moto'`; `CotizadorMoto.tsx`): la misma fuente con las diferencias que la moto YA tenía, para que
+// lo que viaja no cambie (`supuestos-moto.test.ts`): km sin dato = campo vacío y asegura supone la media
+// (`KM_ANUALES_SUPUESTOS`, no los 10.000 de coche); en la pantalla completa no viaja fecha de compra (va la de
+// matriculación). Los siniestros en 5 años siguen la MISMA regla que coche (Alberto, 15/10/2026): con menos de 5 años sin
+// siniestros y sin dato, no se supone 0 (único cambio intencionado en lo que viaja; caso D del test).
 
-import { HISTORIAL_MAXIMO, ultimosDigitosPoliza, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo, type SeguroAnterior } from '@central/module-seguros'
+import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS, ultimosDigitosPoliza, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo, type SeguroAnterior } from '@central/module-seguros'
 import { garajeInicial } from '../supuestos-presupuesto.ts'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '../seguro-anterior.ts'
 import { KM_AUTO_POR_DEFECTO } from './km-auto.ts'
@@ -29,10 +35,14 @@ export type ValorQueViaja<T> = { valor: T | null; origen: OrigenValor; nota: str
 
 /** `embebido` = cotizador dentro de la oportunidad (manda lo declarado arriba); `completo` = la pantalla `auto-nuevo`. */
 export type ModoCotizador = 'embebido' | 'completo'
+/** El cotizador de vehículo: coche (`AutoNuevo.tsx`) o moto (`CotizadorMoto.tsx`). */
+export type RamoVehiculo = 'auto' | 'moto'
 
 export type ValoresQueViajan = {
+  ramo: RamoVehiculo
   /** `valor` = id del catálogo de garajes. `sinCasar` = etiqueta del garaje del riesgo que el catálogo no reconoce. */
   garaje: ValorQueViaja<string> & { sinCasar: string | null }
+  /** Moto sin km: `valor` = la media que supone asegura (`KM_ANUALES_SUPUESTOS`); el campo nace VACÍO y no se manda nada. */
   km: ValorQueViaja<number>
   /** `valor` = aaaa-mm-dd. Supuesto = la de matriculación (no se manda nada: el precalificador ya la usa). */
   fechaCompra: ValorQueViaja<string>
@@ -174,10 +184,12 @@ export function avisoGarajeSinCasar(etiqueta: string): string {
  */
 export function valoresQueViajan(
   riesgo: { datosVehiculo: DatosVehiculoRiesgo | null; historialDeclarado: Partial<HistorialDeclaradoRiesgo> | null },
-  catalogos: { garajes: readonly Opcion[]; companias: { codigoDgs: string; nombreComun: string }[] | null },
+  catalogos: { garajes: readonly Opcion[]; companias: { codigoDgs: string; nombreComun: string; nombreCima?: string | null }[] | null },
   leido: { anterior: AnteriorParaTarificar | null },
   modo: ModoCotizador,
+  ramo: RamoVehiculo = 'auto',
 ): ValoresQueViajan {
+  const moto = ramo === 'moto'
   const d = riesgo.datosVehiculo
   const anterior = leido.anterior
   const companias = catalogos.companias
@@ -200,13 +212,17 @@ export function valoresQueViajan(
               : riesgoTraeGaraje ? 'Sin dato' : 'Sin dato · la lista de la compañía no trae ningún garaje: elígelo',
           }
 
-  // ── Km: los del riesgo; si no, los 10.000 de partida como SUPUESTO (`kmParaCotizar` los manda marcados).
+  // ── Km: los del riesgo; si no, los 10.000 de partida como SUPUESTO (`kmParaCotizar` los manda marcados). Moto: el campo
+  // vacío y asegura supone la media (`KM_ANUALES_SUPUESTOS`), marcada como supuesto.
   const km: ValoresQueViajan['km'] = d?.kmAnuales != null
     ? { valor: d.kmAnuales, origen: 'riesgo', nota: null }
-    : { valor: KM_AUTO_POR_DEFECTO, origen: 'supuesto', nota: notaSupuesto(`${conMiles(KM_AUTO_POR_DEFECTO)} km`) }
+    : moto
+      ? { valor: KM_ANUALES_SUPUESTOS, origen: 'supuesto', nota: notaSupuesto(`${conMiles(KM_ANUALES_SUPUESTOS)} km, la media`) }
+      : { valor: KM_AUTO_POR_DEFECTO, origen: 'supuesto', nota: notaSupuesto(`${conMiles(KM_AUTO_POR_DEFECTO)} km`) }
 
-  // ── Fecha de compra: la del riesgo; si no, la de matriculación (no se manda: el precalificador ya la usa).
-  const compraRiesgo = d?.fechaCompra ?? null
+  // ── Fecha de compra: la del riesgo; si no, la de matriculación (no se manda: el precalificador ya la usa). Moto en la
+  // pantalla completa: la del riesgo NO viaja (no hay campo; va siempre la de matriculación).
+  const compraRiesgo = moto && modo === 'completo' ? null : d?.fechaCompra ?? null
   const matriculacion = d?.fechaMatriculacion ?? null
   const fechaCompra: ValoresQueViajan['fechaCompra'] = compraRiesgo !== null && compraRiesgo !== ''
     ? { valor: compraRiesgo, origen: 'riesgo', nota: null }
@@ -214,7 +230,8 @@ export function valoresQueViajan(
       ? { valor: matriculacion, origen: 'supuesto', nota: notaSupuesto(`la de matriculación (${fechaEs(matriculacion)})`) }
       : { valor: null, origen: 'sin_dato', nota: 'Sin dato · se cotizará con la de matriculación, que tampoco consta' }
 
-  // ── Historial: lo declarado arriba manda; si no, lo leído o el máximo, topado a los años asegurado.
+  // ── Historial: lo declarado arriba manda; si no, lo leído o el máximo, topado a los años asegurado. (Moto en la pantalla
+  // completa no topaba: da lo mismo, sin «arriba» los años asegurado son ≥ el máximo y los topes no muerden; lo fija el test.)
   const sa: SeguroAnterior | null = anterior?.seguroAnterior ?? null
   const historial = historialConTopes(historialDeclarado(sa), arriba)
   const seguroLeido = {
@@ -296,14 +313,14 @@ export function valoresQueViajan(
     : (sa?.siniestrosUltimos5 ?? null) !== null
       ? { valor: s5Valor, origen: 'leido', nota: NOTA_LEIDO }
       // 15/10/2026 (Alberto): con menos de 5 años sin siniestros, «0 siniestros en 5 años» ya NO se supone: nadie lo ha
-      // dicho y declararlo es afirmar un historial limpio. Sin dato, no viaja nada y la verificación lo marca ✗.
+      // dicho y declararlo es afirmar un historial limpio. Sin dato, no viaja nada y la verificación lo marca ✗. Coche y moto.
       : sinSiniestrosValor < 5
         ? { valor: null, origen: 'sin_dato', nota: NOTA_SINIESTROS5_SIN_DATO }
       : s5Valor !== null
         ? { valor: s5Valor, origen: 'supuesto', nota: notaSupuesto(s5Valor === 0 ? 'ninguno' : String(s5Valor)) }
         : { valor: null, origen: 'sin_dato', nota: 'Sin dato · solo hace falta con menos de 5 años sin siniestros; si la compañía lo exige, lo dirá sin cobrar' }
 
-  return { garaje, km, fechaCompra, tieneSeguro, compania, poliza, aniosAsegurado, aniosEnCompania, aniosSinSiniestros, siniestrosUltimos5 }
+  return { ramo, garaje, km, fechaCompra, tieneSeguro, compania, poliza, aniosAsegurado, aniosEnCompania, aniosSinSiniestros, siniestrosUltimos5 }
 }
 
 export type CampoHistorial = 'aniosAsegurado' | 'aniosEnCompania' | 'aniosSinSiniestros' | 'siniestrosUltimos5'
@@ -352,7 +369,8 @@ export function formularioInicial(v: ValoresQueViajan): FormularioInicialAuto {
   const txt = (n: number | null) => (n === null ? '' : String(n))
   return {
     garaje: v.garaje.valor ?? '',
-    kmAnuales: txt(v.km.valor),
+    // Moto: sin km del riesgo el campo nace vacío (asegura supone la media); coche: los 10.000 a la vista.
+    kmAnuales: v.ramo === 'moto' && v.km.origen === 'supuesto' ? '' : txt(v.km.valor),
     fechaCompra: v.fechaCompra.origen === 'riesgo' ? v.fechaCompra.valor ?? '' : '',
     tieneSeguroActual: v.tieneSeguro.valor === true,
     companiaActualCodigo: v.compania.codigo,
@@ -382,6 +400,7 @@ const ETIQUETA_SUPUESTO: Record<string, string> = {
   garaje: 'Garaje', km: 'Km al año', fechaCompra: 'Fecha de compra', tieneSeguro: 'Seguro actual',
   aniosAsegurado: 'Años asegurado', aniosEnCompania: 'Años en la compañía', aniosSinSiniestros: 'Años sin siniestros',
   siniestrosUltimos5: 'Siniestros en 5 años', tipoCarnet: 'Tipo de carné', zonaCarnet: 'Carné expedido en',
+  experienciaConduccion: 'Experiencia de conducción',
 }
 
 /**
@@ -402,13 +421,16 @@ export function supuestosAlPedir(v: ValoresQueViajan, a: {
   aniosEnCompania: string
   aniosSinSiniestros: string
   siniestrosUltimos5: string
-  tipoCarnet: string
-  zonaCarnet: string
+  /** Coche. Ausente (moto) = no aplica. */
+  tipoCarnet?: string
+  zonaCarnet?: string
+  /** Moto: '' = no se ha elegido (asegura supone «ya ha llevado esta moto»). Ausente (coche) = no aplica. */
+  experienciaConduccion?: string
 }): SupuestoAlPedir[] {
   const out: SupuestoAlPedir[] = []
   const poner = (campo: string, x: string) => out.push({ campo, texto: `${ETIQUETA_SUPUESTO[campo] ?? campo}: ${x}` })
   if (v.garaje.origen === 'supuesto' && !a.garajeElegido && a.garaje !== '' && a.garaje === v.garaje.valor) poner('garaje', loSupuesto(v.garaje.nota))
-  if (a.kmSupuesto !== null) poner('km', `${conMiles(a.kmSupuesto)} km (por defecto)`)
+  if (a.kmSupuesto !== null) poner('km', `${conMiles(a.kmSupuesto)} km (${v.ramo === 'moto' ? 'la media' : 'por defecto'})`)
   if (a.fechaCompra === '') poner('fechaCompra', v.fechaCompra.origen === 'supuesto' ? loSupuesto(v.fechaCompra.nota) : 'la de matriculación')
   if (!a.tieneSeguroActual && v.tieneSeguro.origen === 'supuesto') poner('tieneSeguro', 'sin seguro en vigor («de calle»)')
   if (a.tieneSeguroActual) {
@@ -419,5 +441,6 @@ export function supuestosAlPedir(v: ValoresQueViajan, a: {
   }
   if (a.tipoCarnet === '') poner('tipoCarnet', 'B (no se ha preguntado)')
   if (a.zonaCarnet === '') poner('zonaCarnet', 'España (no se ha preguntado)')
+  if (a.experienciaConduccion === '') poner('experienciaConduccion', 'ya ha llevado esta moto (no se ha preguntado)')
   return out
 }

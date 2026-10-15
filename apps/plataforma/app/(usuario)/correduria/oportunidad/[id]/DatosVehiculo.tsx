@@ -83,9 +83,11 @@ export default function DatosVehiculo({ riesgo, ocupado, onCambio, onError, onEd
   // El nombre del catálogo; si no lo trae, la etiqueta de la tabla ÚNICA (nunca el código crudo «PublicRoad», 15/10/2026).
   const nombreGaraje = (id: string | null) => (id === null ? null : garajes?.find((g) => g.id === id)?.nombre ?? rotuloGaraje(id))
   const sinDato = <span style={{ color: 'var(--muted)', fontStyle: 'normal' }}>sin dato</span>
-  // Coche (15/10/2026): lo que falta y se cotizará con un supuesto lo DICE aquí, una sola vez en la página: «Sin dato · se
-  // cotizará con X (supuesto)». Misma fuente que arranca el cotizador (`valoresQueViajan`). El garaje, solo con el catálogo leído.
-  const viajan = op.ramo === 'auto' ? valoresQueViajan({ datosVehiculo: d, historialDeclarado: null }, { garajes: garajes ?? [], companias: null }, { anterior: null }, 'embebido') : null
+  // Coche y moto (15/10/2026): lo que falta y se cotizará con un supuesto lo DICE aquí, una sola vez en la página: «Sin dato ·
+  // se cotizará con X (supuesto)». Misma fuente que arranca el cotizador (`valoresQueViajan`). El garaje, solo con el catálogo leído.
+  const viajan = op.ramo === 'auto' || op.ramo === 'moto'
+    ? valoresQueViajan({ datosVehiculo: d, historialDeclarado: null }, { garajes: garajes ?? [], companias: null }, { anterior: null }, 'embebido', op.ramo)
+    : null
   const conSupuesto = (dato: React.ReactNode, v: ValorQueViaja<unknown> | undefined): React.ReactNode =>
     !v || v.origen === 'riesgo' || v.nota === null ? dato : (
       <span style={{ display: 'grid', gap: 2 }}>

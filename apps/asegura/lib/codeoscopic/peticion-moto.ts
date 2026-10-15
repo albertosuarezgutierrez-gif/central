@@ -11,7 +11,7 @@
 // `POST /insurances` cuesta 0,50€ y NO es idempotente: cada regla que sabemos se
 // comprueba ANTES de gastar, no después.
 
-import { polizaAnteriorParaTarificar } from '@central/module-seguros'
+import { exigeSiniestrosUltimos5, polizaAnteriorParaTarificar } from '@central/module-seguros'
 import {
   construirEmpresa,
   construirPersona,
@@ -199,13 +199,8 @@ export function revisarDatosMoto(d: Partial<DatosMoto>, opciones: { vehiculoNuev
     for (const c of ['aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros'] as const) {
       if (!numero(d[c])) falta(c)
     }
-    if (
-      numero(d.aniosSinSiniestros) &&
-      d.aniosSinSiniestros! < 5 &&
-      d.aniosSinSiniestros !== d.aniosAsegurado &&
-      !numero(d.siniestrosUltimos5) &&
-      d.siniestrosUltimos5 !== 0
-    ) {
+    // 15/10/2026: la MISMA regla que coche y que la pantalla (`exigeSiniestrosUltimos5`, module-seguros): sin dato, corte gratis.
+    if (exigeDetalleDeSiniestrosMoto(d) && !numero(d.siniestrosUltimos5)) {
       r.push({
         campo: 'siniestrosUltimos5',
         motivo:
@@ -306,9 +301,11 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string, opciones: {
   return cuerpo
 }
 
-/** ¿El vendor exige el detalle de siniestros de los últimos 5 años? */
+/**
+ * ¿El vendor exige el detalle de siniestros de los últimos 5 años? 15/10/2026: delega en la regla ÚNICA de module-seguros
+ * (`exigeSiniestrosUltimos5`), la misma que coche y que el ✗ de la pantalla de plataforma; incluida la excepción «años sin
+ * siniestros = años asegurado» y su salvedad 0 = 0 (sin dato, no «nunca tuvo un siniestro»).
+ */
 export function exigeDetalleDeSiniestrosMoto(d: Partial<DatosMoto>): boolean {
-  if (!d.aseguradoAntes) return false
-  if (!numero(d.aniosSinSiniestros)) return false
-  return d.aniosSinSiniestros! < 5 && d.aniosSinSiniestros !== d.aniosAsegurado
+  return exigeSiniestrosUltimos5(d)
 }

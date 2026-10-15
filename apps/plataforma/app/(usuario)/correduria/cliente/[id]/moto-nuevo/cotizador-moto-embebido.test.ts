@@ -1,5 +1,6 @@
 // Cotizador de MOTO embebido en la oportunidad (13/10/2026, lo mismo que auto): historial declarado arriba → Avant2,
-// resúmenes de solo lectura de lo que está arriba, «Verificación antes de pedir precio» y relectura por `firmaRiesgo`.
+// «Verificación antes de pedir precio» y relectura por `firmaRiesgo`. 15/10/2026: lo de arriba ya NO se repite en resumen;
+// nace de la fuente única (`lib/correduria/supuestos-auto.ts`, `ramo: 'moto'`; equivalencia en `supuestos-moto.test.ts`).
 // Lógica pura en `../auto-nuevo/verificacion-embebido.ts`; el resto, cepos de fuente (lo que tsc no ve).
 
 import assert from 'node:assert/strict'
@@ -98,12 +99,12 @@ test('fuente: el bloque «Pedir precio» de moto pasa el historial declarado del
   assert.match(op('cotizador-embebido.ts'), /CLAVES_HISTORIAL_DECLARADO\.map\(\(k\) => \[k, hd\[k\] \?\? null\]\)/)
 })
 
-test('fuente: en embebido el seguro actual sale de `seguroActualEmbebido` (lo de arriba) con el catálogo de compañías de moto', () => {
-  assert.match(fuente, /const seguroArriba = embebido\s+\? seguroActualEmbebido\(\{\s+arriba: historialRiesgo,/)
-  assert.match(fuente, /const historialEmb = embebido \? historialConTopes\(historialLeido, historialRiesgo\) : null/)
-  assert.match(fuente, /useState\(seguroArriba\?\.polizaDigitos \?\? seguroLeido\.poliza\)/)
-  assert.match(fuente, /useState\(seguroArriba\?\.tieneSeguroActual \?\? seguroLeido\.tiene\)/)
-  assert.match(fuente, /companiaNoReconocida: seguroArriba\?\.companiaNoReconocida \?\? null/)
+test('fuente: en embebido el seguro actual sale de la fuente única (lo de arriba manda) con el catálogo de compañías de moto', () => {
+  assert.match(fuente, /valoresQueViajan\(\s*\{ datosVehiculo: datosRiesgo, historialDeclarado: embebido \? historialRiesgo : null \},\s*\{ garajes, companias \},/)
+  assert.match(fuente, /useState\(ini\.polizaActualDigitos\)/)
+  assert.match(fuente, /useState\(ini\.tieneSeguroActual\)/)
+  assert.match(fuente, /companiaNoReconocida: viajan\.compania\.noReconocida/)
+  assert.match(fuente, /tieneSeguroSinDato: tieneSeguroSinDato\(viajan\)/)
   // Lo que viaja a Avant2 es lo de esos estados: el paquete completo del historial (como exige `revisarDatosMoto`).
   for (const k of ['aseguradoAntes = true', 'companiaAnteriorCodigo = companiaActualElegida', 'polizaAnterior = polizaActualDigitos.trim()',
     'aniosAsegurado = Number(aniosAsegurado)', 'aniosEnCompania = Number(aniosEnCompania)', 'aniosSinSiniestros = Number(aniosSinSiniestros)']) {
@@ -131,20 +132,15 @@ test('fuente: el botón de pago exige la verificación; el texto viejo solo fuer
   assert.match(fuente, /ramo: 'moto',/)
 })
 
-test('fuente: en embebido garaje / km / compra y todo el historial son RESUMEN («Editar arriba»)', () => {
-  for (const e of ['¿Dónde duerme?', 'Kilómetros al año', 'Fecha de compra', '¿Tiene seguro ahora?', 'Compañía actual', 'Nº de póliza (van los 5 últimos)',
-    'Años asegurado sin interrupción', 'Años en esta compañía', 'Años sin siniestros', 'Siniestros en los últimos 5 años']) {
-    assert.ok(new RegExp(`<ResumenCampo\\s+etiqueta="${e.replace(/[?()]/g, '\\$&')}"`).test(fuente), `falta el resumen de «${e}»`)
+test('fuente: en embebido garaje / km / compra y el historial NO se repiten: la verificación dice con qué se cotiza cada uno', () => {
+  // 15/10/2026 (como coche): se ven y se editan una sola vez arriba («Datos del vehículo», «Historial y bonificaciones»).
+  assert.ok(!fuente.includes('<ResumenCampo'), 'sin resúmenes de lo de arriba')
+  for (const k of ['garaje: viajan.garaje.nota', 'km: viajan.km.nota', 'compra: viajan.fechaCompra.nota', 'compania: viajan.compania.nota', 'poliza: viajan.poliza.nota',
+    "'anios-asegurado': viajan.aniosAsegurado.nota", "'anios-sin-siniestros': viajan.aniosSinSiniestros.nota", "'siniestros-5': viajan.siniestrosUltimos5.nota"]) {
+    assert.ok(fuente.includes(k), k)
   }
-  // Lo que la checklist trata como aviso no se pinta como «Falta» rojo.
-  const bloque = (etiqueta: string) => {
-    const i = fuente.search(new RegExp(`<ResumenCampo\\s+etiqueta="${etiqueta.replace(/[?()]/g, '\\$&')}"`))
-    assert.ok(i > 0, `falta el resumen «${etiqueta}»`)
-    return fuente.slice(i, fuente.indexOf('/>', i))
-  }
-  for (const e of ['¿Tiene seguro ahora?', 'Siniestros en los últimos 5 años', 'Kilómetros al año']) assert.match(bloque(e), /vacio="aviso"/, e)
-  // La fecha de compra de arriba viaja (Avant2 `purchaseDate`), solo si es coherente.
-  assert.match(fuente, /const fechaCompra = embebido \? datosRiesgo\?\.fechaCompra \?\? '' : ''/)
+  // La fecha de compra de arriba viaja (Avant2 `purchaseDate`), solo si es coherente; en la pantalla completa, nunca.
+  assert.match(fuente, /const fechaCompra = ini\.fechaCompra/)
   assert.match(fuente, /\.\.\.\(fechaCompra !== '' && !compraInvalida \? \{ fechaCompra \} : \{\}\)/)
 })
 

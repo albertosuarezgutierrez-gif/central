@@ -8,6 +8,7 @@ import { auditado } from '@/lib/auditoria'
 import { correduriaUnica } from '@/lib/cartera'
 import { anotarVehiculoDeCotizacion, prepararVariante } from '@/lib/oportunidad-riesgo'
 import { anotarBonusTarificacion } from '@/lib/seguro-anterior-candidatas'
+import { limpiarSupuestosVariante } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -128,6 +129,13 @@ export const POST = auditado(async (req: Request) => {
 
   if (variante.v.contexto && p.peticion.contexto) {
     p.peticion.contexto = { ...p.peticion.contexto, ...variante.v.contexto }
+  }
+  // Qué viajó como SUPUESTO (15/10/2026, como auto): lo declara la pantalla (`resueltos.supuestosPantalla`) y se guarda con
+  // la tarificación para marcar «Precio con supuestos». Sin la clave, no se escribe nada: «no consta», nunca «sin supuestos».
+  // No viaja a Avant2: `prepararRetarificacionNuevaMoto` lee de `resueltos` solo sus claves.
+  const supuestosPantalla = limpiarSupuestosVariante(esObjeto(cuerpo.resueltos) ? cuerpo.resueltos.supuestosPantalla : undefined)
+  if (supuestosPantalla !== null && p.peticion.contexto) {
+    p.peticion.contexto = { ...p.peticion.contexto, supuestos: supuestosPantalla }
   }
 
   // ── La única línea que cuesta dinero, por el único embudo ────────────────
