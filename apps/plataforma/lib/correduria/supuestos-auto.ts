@@ -157,7 +157,7 @@ export const NOTA_LEIDO = 'lo leído de su póliza actual'
 
 /** El aviso de un garaje del riesgo que no está en la lista de la compañía (15/10/2026: nunca se cambia por el defecto). */
 export function avisoGarajeSinCasar(etiqueta: string): string {
-  return `El riesgo dice «${etiqueta}» pero no está en la lista de la compañía: elígelo`
+  return `El riesgo dice «${etiqueta}» pero no está en la lista de la compañía: elige el equivalente. Si la lista no tiene opción de calle, avisa a Alberto en vez de declarar un garaje`
 }
 
 // ── La fuente única ──────────────────────────────────────────────────────────────────────────────────────────────────

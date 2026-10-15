@@ -125,7 +125,7 @@ test('verificación: dice con qué se cotiza cada dato (la nota de `valoresQueVi
   assert.equal(item(g, 'km')?.nota, 'Sin dato · se cotizará con 10.000 km (supuesto)')
   assert.equal(item(g, 'anios-compania')?.nota, 'Sin dato · se cotizará con 3 años (supuesto)')
   const sinCasar = gruposVerificacion(entrada({ vehiculo: { faltaVersion: false, faltaMatriculacion: false, faltaGaraje: true, garajeSinCasar: 'En la vía pública', kmInvalido: false, compraInvalida: false }, faltaAlgo: true, detalle: { garaje: 'otra cosa' } }))
-  assert.equal(item(sinCasar, 'garaje')?.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elígelo', 'la nota propia manda')
+  assert.equal(item(sinCasar, 'garaje')?.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elige el equivalente. Si la lista no tiene opción de calle, avisa a Alberto en vez de declarar un garaje', 'la nota propia manda')
   assert.match(fuente, /'anios-compania': viajan\.aniosEnCompania\.nota,/)
 })
 
@@ -246,13 +246,15 @@ test('garaje del riesgo sin casar con el catálogo: ✗ con «El riesgo dice …
   const g = gruposVerificacion(entrada({ vehiculo: { faltaVersion: false, faltaMatriculacion: false, faltaGaraje: true, garajeSinCasar: 'En la vía pública', kmInvalido: false, compraInvalida: false }, faltaAlgo: true }))
   const v = item(g, 'garaje')
   assert.equal(v?.estado, 'falta')
-  assert.equal(v?.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elígelo')
+  assert.equal(v?.nota, avisoGarajeSinCasar('En la vía pública'))
+  assert.match(v?.nota ?? '', /El riesgo dice «En la vía pública» pero no está en la lista de la compañía/)
   assert.equal(verificacionCompleta(g), false)
   // Elegido ya: ✓ y sin el aviso.
   const ok = item(gruposVerificacion(entrada({ vehiculo: { faltaVersion: false, faltaMatriculacion: false, faltaGaraje: false, garajeSinCasar: 'En la vía pública', kmInvalido: false, compraInvalida: false } })), 'garaje')
   assert.equal(ok?.estado, 'ok')
   assert.equal(ok?.nota, undefined)
-  assert.equal(avisoGarajeSinCasar('X'), 'El riesgo dice «X» pero no está en la lista de la compañía: elígelo')
+  assert.match(avisoGarajeSinCasar('X'), /^El riesgo dice «X» pero no está en la lista de la compañía: elige el equivalente/)
+  assert.match(avisoGarajeSinCasar('X'), /no tiene opción de calle, avisa a Alberto en vez de declarar un garaje/)
 })
 
 test('«Años en esta compañía» sin dato arriba: se dice SUPUESTO de los años asegurado, nunca «leído de su póliza»', () => {

@@ -354,7 +354,7 @@ test('«no se sabe» nunca es un valor: sin dato = null; garaje que no casa = ri
   const c = v(2)
   assert.equal(c.garaje.origen, 'riesgo_no_reconocido')
   assert.equal(c.garaje.valor, null)
-  assert.equal(c.garaje.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elígelo')
+  assert.equal(c.garaje.nota, 'El riesgo dice «En la vía pública» pero no está en la lista de la compañía: elige el equivalente. Si la lista no tiene opción de calle, avisa a Alberto en vez de declarar un garaje')
   const g = v(6)
   assert.equal(g.garaje.origen, 'sin_dato')
   assert.equal(g.garaje.valor, null)

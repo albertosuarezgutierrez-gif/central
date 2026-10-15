@@ -45,7 +45,7 @@ import type { AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { garajeParaBot } from '@/lib/supuestos-presupuesto'
+import { garajeParaBot, garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
 import { formularioInicial, tieneSeguroSinDato, valoresQueViajan } from '@/lib/correduria/supuestos-auto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
@@ -893,8 +893,10 @@ export default function AutoNuevo({
         if (kmGuardados !== null) {
           setKmAnuales((k) => (retomada || k === String(KM_AUTO_POR_DEFECTO) ? String(kmGuardados) : k))
         }
-        // Sin retomar, la última tarificación no tapa un garaje del riesgo que no casa (podía ser el defecto de antes).
-        if (v.garaje && (retomada || (!garajeElegido.current && garajeSinCasar === null)) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
+        // Con garaje en el riesgo, ni retomando: solo si es el mismo que el del riesgo (las variantes de antes del 15/10/2026
+        // traen el comunitario por defecto guardado). `garajePrevioAplicable`.
+        const garajePrevio = garajePrevioAplicable({ previo: v.garaje, garajeRiesgo: datosRiesgo?.garaje, resueltoDelRiesgo: garajeDelRiesgo, retomada, elegido: garajeElegido.current, catalogo: garajes })
+        if (garajePrevio !== null) setGaraje(garajePrevio)
       })
       .catch(() => {})
     return () => { vivo = false }

@@ -1285,7 +1285,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (15/10/2026) Correduría · garaje del riesgo ya no se sustituye por el colectivo (rama claude/correduria-garaje-declaracion)
 - BUG de declaración: riesgo con garaje 'PublicRoad' (calle) → AutoNuevo/Moto lo descartaba (no está en /car/garage-types) y mandaba el colectivo a Avant2. Ahora: se resuelve contra el catálogo o queda sin elegir con ✗ en la verificación; el defecto solo si el riesgo no trae garaje.
 - Tabla única de garajes en `module-seguros/garajes.ts`; bot Mapfre desde el cotizador recibe el garaje del riesgo; DatosVehiculo en español; ocasional sin ficha = «Ninguno»; nota veraz de «años en la compañía».
-- Pendiente F2: reorganizar la oportunidad en bloques sin copias (Personas · Vehículo · Historial · Cotizar · Resultados) con helper único `valoresQueViajan`. Retomar `?tarificacion=` de una variante pedida con el bug aún trae el colectivo.
+- Pendiente F2: reorganizar la oportunidad en bloques sin copias (Personas · Vehículo · Historial · Cotizar · Resultados) con helper único `valoresQueViajan`. Cerrados también retomar variante, Telegram y pack coche+moto.
 
 ## (14/10/2026) Correduría · tareas vinculadas a póliza y cliente (rama feat/tareas-poliza)
 - Reutiliza `seguros.gestiones` (ya tenía `cliente_id`/`poliza_id`): SIN migración. Salen también en Mi mesa con enlace a la póliza.

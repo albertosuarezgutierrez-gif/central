@@ -14,7 +14,8 @@ import { formatoMatricula, normalizarMatricula } from '@central/module-seguros/m
 import type { Opcion, Reparo, RespuestaRetarificar, Supuesto } from './retarificar-asegura.ts'
 import { eur } from './dinero.ts'
 import { KM_AUTO_POR_DEFECTO, kmParaCotizar } from './correduria/km-auto.ts'
-import { garajePorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto.ts'
+import { garajeInicial, garajePorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto.ts'
+import { rotuloGaraje } from '@central/module-seguros/garajes'
 
 export type RamoTarif = 'auto' | 'moto'
 
@@ -83,17 +84,36 @@ export function filtrarCatalogo(catalogo: readonly Opcion[], filtro: string | nu
 }
 
 /**
- * Dónde duerme el vehículo. Si Alberto lo dice, se empareja. Si no, en GARAJE —igual que la pantalla
- * (Alberto, 29/09/2026: «por defecto NO duerme en la calle»; sustituye a «vía pública» del 25/09)— y se
- * DECLARA como supuesto, para que no parezca un dato de verdad: se confirma al emitir.
+ * Dónde duerme el vehículo. Si Alberto lo dice, se empareja. Si no y hay oportunidad, el DECLARADO en su riesgo
+ * (`garajeInicial`, 15/10/2026): si no casa con el catálogo, no se cotiza y se dice el hueco (`hueco`) — nunca el
+ * defecto. Sin garaje en el riesgo, en GARAJE —igual que la pantalla (Alberto, 29/09/2026: «por defecto NO duerme en la
+ * calle»; sustituye a «vía pública» del 25/09)— y se DECLARA como supuesto, para que no parezca un dato de verdad: se
+ * confirma al emitir.
  */
-export function elegirGaraje(texto: string | null | undefined, catalogo: readonly Opcion[]): { resultado: Emparejado; supuesto: string | null } {
-  if ((texto ?? '').trim()) return { resultado: emparejarOpcion(texto, catalogo), supuesto: null }
+export function elegirGaraje(
+  texto: string | null | undefined,
+  catalogo: readonly Opcion[],
+  garajeRiesgo?: string | null,
+): { resultado: Emparejado; supuesto: string | null; hueco: string | null } {
+  if ((texto ?? '').trim()) return { resultado: emparejarOpcion(texto, catalogo), supuesto: null, hueco: null }
+  if ((garajeRiesgo ?? '').trim()) {
+    const ini = garajeInicial(garajeRiesgo, catalogo)
+    const op = ini.id ? catalogo.find((o) => o.id === ini.id) : undefined
+    if (op) return { resultado: { estado: 'uno', opcion: op }, supuesto: null, hueco: null }
+    return {
+      resultado: { estado: 'ninguno' },
+      supuesto: null,
+      hueco: catalogo.length === 0
+        ? 'dónde duerme (garaje): el riesgo declara uno pero la lista de garajes de la compañía ha llegado vacía; inténtalo en un rato'
+        : `dónde duerme (garaje): el riesgo declara ${rotuloGaraje(garajeRiesgo) ?? 'un garaje'} y no está en la lista de la compañía; dime cuál de la lista equivale (si no hay opción de calle, no se declara un garaje: avisa a Alberto)`,
+    }
+  }
   const g = garajePorDefecto(catalogo)
-  if (!g) return { resultado: { estado: 'ninguno' }, supuesto: null }
+  if (!g) return { resultado: { estado: 'ninguno' }, supuesto: null, hueco: null }
   return {
     resultado: { estado: 'uno', opcion: g },
     supuesto: `no me has dicho dónde duerme: «${g.nombre}» por defecto (nunca la calle); ${SOLO_PARA_EL_PRECIO}`,
+    hueco: null,
   }
 }
 

@@ -53,3 +53,11 @@ test('resolver: sin certeza → null (NUNCA el defecto)', () => {
   assert.equal(resolverGarajeEnCatalogo('', CAT), null)
   assert.equal(resolverGarajeEnCatalogo('PublicRoad', []), null)
 })
+
+test('resolver: «privado» no equivale a «individual» (un comunitario también es privado)', () => {
+  // Ni el guardado como texto ni la opción del catálogo: sin certeza → null.
+  assert.equal(resolverGarajeEnCatalogo('Garaje privado', CAT), null)
+  assert.equal(resolverGarajeEnCatalogo('IndividualGarage', [{ id: 'X', nombre: 'Garaje privado' }, { id: 'Y', nombre: 'Garaje colectivo' }]), null)
+  // «private» por id visto sigue valiendo (PrivateGarage es «Garaje individual» en la tabla).
+  assert.equal(resolverGarajeEnCatalogo('IndividualGarage', [{ id: 'PrivateGarage', nombre: 'Garaje' }]), 'PrivateGarage')
+})
