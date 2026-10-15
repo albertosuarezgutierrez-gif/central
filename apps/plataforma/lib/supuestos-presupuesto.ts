@@ -1,11 +1,13 @@
 // Los datos que un PRESUPUESTO de coche o moto supone cuando nadie los ha dicho (29/09/2026, Alberto).
-// PURO y sin imports: el garaje lo usan el asistente de Telegram y las pantallas AutoNuevo/MotoNuevo
+// PURO (solo importa la tabla de garajes de `@central/module-seguros/garajes`, también pura): el garaje lo usan el asistente de Telegram y las pantallas AutoNuevo/MotoNuevo
 // (navegador), para que el mismo cliente salga al mismo precio pida donde lo pida. El estado civil por
 // defecto es SOLO del asistente: en la pantalla no viajaría marcado como supuesto y se emitiría sin aviso.
 //
 // La regla de fondo: estos datos NO se preguntan para dar precio, se CONFIRMAN al emitir. El presupuesto
 // sale con el supuesto DECLARADO (nunca como dato del cliente) y la emisión es donde se comprueba.
 // Si algún día hay tarificador propio, esta regla va con él (docs/CORREDURIA-INTRANET-IDEAS.md).
+
+import { resolverGarajeEnCatalogo, rotuloGaraje } from '@central/module-seguros/garajes'
 
 type Opcion = { id: string; nombre: string }
 
@@ -29,4 +31,82 @@ export function garajePorDefecto(catalogo: readonly Opcion[]): Opcion | null {
 /** Estado civil por defecto: soltero (Alberto, 29/09/2026). `null` = el catálogo no lo trae. */
 export function estadoCivilPorDefecto(catalogo: readonly Opcion[]): Opcion | null {
   return catalogo.find((c) => /solter|single/i.test(c.nombre) || /^single$/i.test(c.id)) ?? null
+}
+
+// ── El garaje del RIESGO manda sobre el defecto (15/10/2026, bug de declaración del riesgo) ─────────────────────────
+// El riesgo guardaba «PublicRoad» (calle); el catálogo vivo no traía ese id y la pantalla metía el comunitario por
+// defecto rotulado «por defecto»: se tarificaba un garaje que el cliente no había declarado. Ahora el defecto SOLO
+// aplica si el riesgo no tiene garaje; si lo tiene y no casa con certeza, el campo queda sin elegir y se pregunta.
+
+export type GarajeInicial = {
+  /** Lo que arranca en el selector ('' = sin elegir). */
+  id: string
+  /** El id sale del garaje guardado en el riesgo (resuelto contra el catálogo). */
+  delRiesgo: boolean
+  /** El riesgo trae un garaje que no casa con el catálogo: su etiqueta, para decirlo. `null` = no es el caso. */
+  sinCasar: string | null
+}
+
+/**
+ * PURA. Garaje con el que arranca el cotizador: el del riesgo resuelto contra el catálogo vivo; sin certeza, VACÍO (nunca
+ * el defecto); el defecto (comunitario) solo cuando el riesgo NO trae garaje. Con el catálogo vacío (no se pudo leer) no
+ * se afirma que «no está en la lista»: queda vacío y ya se avisa del fallo del catálogo.
+ */
+export function garajeInicial(garajeRiesgo: string | null | undefined, catalogo: readonly Opcion[]): GarajeInicial {
+  const guardado = typeof garajeRiesgo === 'string' ? garajeRiesgo.trim() : ''
+  if (guardado === '') return { id: garajePorDefecto(catalogo)?.id ?? '', delRiesgo: false, sinCasar: null }
+  const resuelto = resolverGarajeEnCatalogo(guardado, catalogo)
+  if (resuelto !== null) return { id: resuelto, delRiesgo: true, sinCasar: null }
+  return { id: '', delRiesgo: false, sinCasar: catalogo.length > 0 ? rotuloGaraje(guardado) : null }
+}
+
+/**
+ * PURA. El garaje que viaja a los bots (Mapfre…) desde el cotizador: lo que el corredor ELIGIÓ si es distinto de lo que
+ * vino del riesgo; si no, el código GUARDADO en el riesgo tal cual (el mismo mapeo que `tarificador-auto-riesgo.ts`:
+ * `garajeNocheDeCodigo`); sin riesgo ni elección, `null` (el defecto de la pantalla es un supuesto y no viaja).
+ */
+export function garajeParaBot(e: { garajeRiesgo: string | null | undefined; actual: string; elegido: boolean; resueltoDelRiesgo: string | null }): string | null {
+  const actual = e.actual.trim()
+  if (e.elegido && actual !== '' && actual !== e.resueltoDelRiesgo) return actual
+  const guardado = typeof e.garajeRiesgo === 'string' ? e.garajeRiesgo.trim() : ''
+  if (guardado !== '') return guardado
+  return e.elegido && actual !== '' ? actual : null
+}
+
+/**
+ * PURA. ¿Se aplica el garaje de una tarificación anterior (`?tarificacion=` retomada, o la última pedida)? 15/10/2026: las
+ * variantes cotizadas ANTES del arreglo traen el comunitario por defecto guardado, y retomarlas lo volvía a meter encima
+ * del garaje declarado en el riesgo. Regla: si el riesgo trae garaje, el guardado SOLO vale si es el mismo que el del riesgo
+ * resuelto (si no, manda `garajeInicial` y su aviso si no casa). Sin garaje en el riesgo, como antes: retomada manda; sin
+ * retomar, solo si el corredor no ha elegido. Siempre que siga en el catálogo. Devuelve el id a aplicar o `null`.
+ */
+export function garajePrevioAplicable(e: {
+  previo: string | null | undefined
+  garajeRiesgo: string | null | undefined
+  resueltoDelRiesgo: string | null
+  retomada: boolean
+  elegido: boolean
+  catalogo: readonly Opcion[]
+}): string | null {
+  const previo = typeof e.previo === 'string' ? e.previo.trim() : ''
+  if (previo === '' || !e.catalogo.some((g) => g.id === previo)) return null
+  const riesgo = typeof e.garajeRiesgo === 'string' ? e.garajeRiesgo.trim() : ''
+  if (riesgo !== '') return previo === e.resueltoDelRiesgo ? previo : null
+  return e.retomada || !e.elegido ? previo : null
+}
+
+/**
+ * PURA. Garaje del OTRO vehículo del pack (coche + moto): el de su riesgo resuelto contra SU catálogo (el de moto y el de
+ * coche son listas distintas); sin garaje en el riesgo, el defecto de siempre. Si el riesgo trae garaje y no casa, NO se
+ * tarifica (`ok: false` con el motivo): nunca se sustituye por el defecto. `catalogo: null` = no se pudo leer.
+ */
+export function garajeParaPack(garajeRiesgo: string | null | undefined, catalogo: readonly Opcion[] | null, vehiculo: string): { ok: true; id: string } | { ok: false; motivo: string } {
+  const sinCatalogo = { ok: false as const, motivo: `No se ha podido leer el catálogo de garajes del ${vehiculo} (0,00€).` }
+  if (catalogo === null || catalogo.length === 0) return sinCatalogo
+  const g = garajeInicial(garajeRiesgo, catalogo)
+  if (g.id !== '') return { ok: true, id: g.id }
+  if (g.sinCasar !== null) {
+    return { ok: false, motivo: `El riesgo del ${vehiculo} declara dónde duerme (${g.sinCasar}) y no está en la lista de la compañía: no se tarifica con otro garaje. Cotízalo desde su ficha eligiendo el equivalente (0,00€).` }
+  }
+  return { ok: false, motivo: `El catálogo de garajes del ${vehiculo} no trae ningún garaje reconocible para el supuesto de siempre (0,00€).` }
 }

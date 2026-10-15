@@ -39,7 +39,7 @@ import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '
 import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { garajeInicial, garajeParaBot, garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import {
@@ -72,7 +72,7 @@ import { armarFormularioBotsAuto } from '@/lib/tarificador-auto-riesgo'
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { ROLES_EXTRA, type RolExtra, type VarianteNueva } from '../../../oportunidad/[id]/variante'
-import { ANCLA, anclaFiguraAqui, anclaInterviniente, gruposVerificacion, notaOrigen, rotuloVacioResumen, seguroActualEmbebido, verificacionCompleta } from './verificacion-embebido'
+import { ANCLA, anclaFiguraAqui, anclaInterviniente, avisoGarajeSinCasar, gruposVerificacion, notaAniosEnCompania, notaOrigen, rotuloVacioResumen, seguroActualEmbebido, verificacionCompleta } from './verificacion-embebido'
 import type { GrupoVerificacion, NivelVacio } from './verificacion-embebido'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import {
@@ -341,9 +341,13 @@ export default function AutoNuevo({
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   // Por defecto en GARAJE, nunca en la calle (Alberto, 29/09/2026; sustituye a «vía pública» del
   // 25/09): es un dato de EMISIÓN, no de precio — viaja como supuesto y se confirma al emitir.
-  // Del riesgo, si trae uno que siga en el catálogo; si no, el defecto (que no es una elección).
-  const garajeDelRiesgo = datosRiesgo?.garaje && garajes.some((g) => g.id === datosRiesgo.garaje) ? datosRiesgo.garaje : null
-  const [garaje, setGaraje] = useState(() => garajeDelRiesgo ?? garajePorDefecto(garajes)?.id ?? '')
+  // Del riesgo, resuelto contra el catálogo (`garajeInicial`); si el riesgo trae garaje y no casa con certeza, VACÍO y se
+  // pregunta (15/10/2026: «PublicRoad» se cambiaba en silencio por el comunitario). El defecto, solo sin garaje en el riesgo.
+  const inicioGaraje = garajeInicial(datosRiesgo?.garaje, garajes)
+  const garajeDelRiesgo = inicioGaraje.delRiesgo ? inicioGaraje.id : null
+  const garajeSinCasar = inicioGaraje.sinCasar
+  const riesgoTraeGaraje = (datosRiesgo?.garaje ?? '').trim() !== ''
+  const [garaje, setGaraje] = useState(() => inicioGaraje.id)
   // El garaje por defecto no es una elección: el vehículo guardado de una variante puede traer
   // su garaje, y sin esto retomar caía en silencio al defecto (29/09/2026).
   const garajeElegido = useRef(garajeDelRiesgo !== null)
@@ -675,7 +679,8 @@ export default function AutoNuevo({
     // Lo que SÍ sale de un catálogo se restaura solo si sigue existiendo en
     // él: un id que ya no está dejaría un desplegable enseñando un valor que
     // el vendor rechazaría, que es peor que el hueco.
-    if (b.garaje && !garajeDelRiesgo && garajes.some((g) => g.id === b.garaje)) {
+    // Un garaje del riesgo (case o no con el catálogo) no lo pisa el borrador.
+    if (b.garaje && !riesgoTraeGaraje && garajes.some((g) => g.id === b.garaje)) {
       garajeElegido.current = true
       setGaraje(b.garaje)
     }
@@ -904,7 +909,10 @@ export default function AutoNuevo({
         if (kmGuardados !== null) {
           setKmAnuales((k) => (retomada || k === String(KM_AUTO_POR_DEFECTO) ? String(kmGuardados) : k))
         }
-        if (v.garaje && (retomada || !garajeElegido.current) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
+        // Con garaje en el riesgo, ni retomando: solo si es el mismo que el del riesgo (las variantes de antes del 15/10/2026
+        // traen el comunitario por defecto guardado). `garajePrevioAplicable`.
+        const garajePrevio = garajePrevioAplicable({ previo: v.garaje, garajeRiesgo: datosRiesgo?.garaje, resueltoDelRiesgo: garajeDelRiesgo, retomada, elegido: garajeElegido.current, catalogo: garajes })
+        if (garajePrevio !== null) setGaraje(garajePrevio)
       })
       .catch(() => {})
     return () => { vivo = false }
@@ -1144,7 +1152,7 @@ export default function AutoNuevo({
         figuraRepetida,
         ocasionalDuplicado,
         personaLibreIncompleta: faltaPropietario || faltaConductor || faltaOcasional,
-        vehiculo: { faltaVersion, faltaMatriculacion, faltaGaraje, kmInvalido, compraInvalida },
+        vehiculo: { faltaVersion, faltaMatriculacion, faltaGaraje, garajeSinCasar, kmInvalido, compraInvalida },
         historial: {
           tieneSeguro: tieneSeguroActual,
           faltaCompania: !companiaActualElegida,
@@ -1476,7 +1484,8 @@ export default function AutoNuevo({
           <ResumenCampo
             etiqueta="¿Dónde duerme?"
             valor={garaje ? garajes.find((g) => g.id === garaje)?.nombre ?? garaje : null}
-            nota={garaje && !garajeDelRiesgo ? 'por defecto: viaja como supuesto' : undefined}
+            nota={!garaje && garajeSinCasar ? avisoGarajeSinCasar(garajeSinCasar) : garaje && !riesgoTraeGaraje && !garajeElegido.current ? 'por defecto: viaja como supuesto' : undefined}
+            notaFalta={!garaje && garajeSinCasar !== null}
             ancla={ANCLA.vehiculo}
           />
           <ResumenCampo
@@ -1493,7 +1502,7 @@ export default function AutoNuevo({
             ancla={ANCLA.vehiculo}
           />
           </>) : (<>
-          <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
+          <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda={faltaGaraje && garajeSinCasar ? avisoGarajeSinCasar(garajeSinCasar) : 'Lo elige el corredor; viaja marcado como supuesto.'}>
             <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>
               <option value="">Elige garaje</option>
               {garajes.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
@@ -1938,7 +1947,7 @@ export default function AutoNuevo({
                 <ResumenCampo
                   etiqueta="Años en esta compañía"
                   valor={aniosEnCompania.trim() !== '' ? aniosEnCompania : null}
-                  nota={notaOrigen(aniosEnCompaniaArriba === null ? 'leido' : 'arriba')}
+                  nota={notaAniosEnCompania(aniosEnCompaniaArriba === null ? 'leido' : 'arriba')}
                   ancla={ANCLA.historial}
                 />
                 <ResumenCampo
@@ -2028,8 +2037,9 @@ export default function AutoNuevo({
           fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
           fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
           sexo: correcciones.sexo ?? null,
-          // El garaje por defecto de la pantalla es un SUPUESTO: solo viaja el del riesgo o el elegido por el corredor.
-          garaje: garajeElegido.current ? garaje || null : null,
+          // El garaje por defecto de la pantalla es un SUPUESTO: solo viaja el del riesgo (su código, como desde BotsAutoRiesgo,
+          // aunque no case con el catálogo de Avant2) o el elegido por el corredor (15/10/2026: antes iba null).
+          garaje: garajeParaBot({ garajeRiesgo: datosRiesgo?.garaje, actual: garaje, elegido: garajeElegido.current, resueltoDelRiesgo: garajeDelRiesgo }),
           conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual || conductorDistintoEf,
           propietarioEnOtraFicha: !!figs.propietario || propietarioDistintoEf,
           tieneSeguroActual,

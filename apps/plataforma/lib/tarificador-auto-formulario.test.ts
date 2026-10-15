@@ -121,7 +121,8 @@ const leer = (...r: string[]) => readFileSync(join(APP, ...r), 'utf8')
 test('cotizador de coche monta «Bots (gratis)» con ramo auto; garaje solo si es dato; la ruta acepta auto con su carné', () => {
   const c = leer('app', '(usuario)', 'correduria', 'cliente', '[id]', 'auto-nuevo', 'AutoNuevo.tsx')
   assert.match(c, /<PrecioBots\s+ramo="auto"/)
-  assert.match(c, /garaje: garajeElegido\.current \? garaje \|\| null : null/)
+  // 15/10/2026: el del riesgo viaja (antes iba null con el cotizador abierto); el defecto de la pantalla no (`garajeParaBot`).
+  assert.match(c, /garaje: garajeParaBot\(\{ garajeRiesgo: datosRiesgo\?\.garaje, actual: garaje, elegido: garajeElegido\.current, resueltoDelRiesgo: garajeDelRiesgo \}\)/)
   const r = leer('app', 'api', 'correduria', 'tarificador', 'encolar', 'route.ts')
   assert.match(r, /b\.ramo !== 'moto' && b\.ramo !== 'auto'/)
   assert.match(r, /completarRiesgoVehiculoDesdeFicha\(vehiculo, /)

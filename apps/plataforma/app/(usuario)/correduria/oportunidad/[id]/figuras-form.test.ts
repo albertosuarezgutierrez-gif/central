@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { PERSONA_VACIA, correccionesDeFiguras, figuraCompleta, figuraParaPuerto, modoPapel } from './figuras-form.ts'
+import { PERSONA_VACIA, correccionesDeFiguras, figuraCompleta, figuraParaPuerto, modoPapel, nombreSinFicha } from './figuras-form.ts'
 import { ROLES_EXTRA, type RolExtra } from './variante.ts'
 
 const ROLES_MOTO: readonly RolExtra[] = ['propietario', 'conductor_habitual']
@@ -53,4 +53,10 @@ test('modoPapel: con riesgo, un papel sin figura NO se teclea suelto (lo ocupa e
   // Sin riesgo (tarificación suelta) todo sigue como hoy.
   assert.equal(modoPapel('propietario', {}, false), 'libre')
   assert.equal(modoPapel('conductor_ocasional', {}, false), 'libre')
+})
+
+test('nombreSinFicha: el ocasional sin ficha es «Ninguno»; propietario y habitual siguen siendo el tomador', () => {
+  assert.equal(nombreSinFicha('conductor_ocasional'), 'Ninguno')
+  assert.equal(nombreSinFicha('propietario'), 'El mismo que el tomador')
+  assert.equal(nombreSinFicha('conductor_habitual'), 'El mismo que el tomador')
 })

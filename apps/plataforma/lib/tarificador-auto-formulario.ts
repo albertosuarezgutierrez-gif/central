@@ -14,6 +14,7 @@ import {
   esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto,
 } from '@central/module-tarificacion'
 import { historialBot, type CampoDeFicha, type DatoPersona, type FormularioBotMoto } from './tarificador-moto-formulario.ts'
+import { duermeEnGaraje } from '@central/module-seguros/garajes'
 
 export type EntradaBotAuto = {
   matricula: string
@@ -63,20 +64,13 @@ export function claveCerrada(v: string | null | undefined, lista: readonly strin
   return lista.includes(k) ? k : undefined
 }
 
-/** Garajes del catálogo que son «duerme en garaje» (los vistos en asegura `datos-cotizados.ts`). */
-const GARAJE_SI = new Set(['CommunalParking', 'Garage', 'PrivateGarage', 'IndividualGarage'])
-/** Garajes que son «duerme en la calle». */
-const GARAJE_NO = new Set(['PublicRoad', 'Street'])
-
 /**
  * Código de garaje → `garajeNoche` del formulario. Calle / vía pública → `false`; garaje individual, comunitario o «Garaje» →
  * `true`; vacío o un código que no se ha visto → `null` (no se traduce a ojo: un garaje mal traducido es un precio falso).
+ * La tabla es la ÚNICA del monorepo (`@central/module-seguros/garajes`, 15/10/2026).
  */
 export function garajeNocheDeCodigo(codigo: string | null | undefined): boolean | null {
-  const c = typeof codigo === 'string' ? codigo.trim() : ''
-  if (GARAJE_SI.has(c)) return true
-  if (GARAJE_NO.has(c)) return false
-  return null
+  return duermeEnGaraje(codigo)
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/

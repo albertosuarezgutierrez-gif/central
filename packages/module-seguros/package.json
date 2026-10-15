@@ -15,7 +15,8 @@
     "./google-contactos-simulacion": "./src/google-contactos-simulacion.ts",
     "./google-contactos-ordenar": "./src/google-contactos-ordenar.ts",
     "./telefono-e164": "./src/telefono-e164.ts",
-    "./presentacion-app-ref": "./src/presentacion-app-ref.ts"
+    "./presentacion-app-ref": "./src/presentacion-app-ref.ts",
+    "./garajes": "./src/garajes.ts"
   },
   "scripts": {
     "test": "node --test src/*.test.ts"

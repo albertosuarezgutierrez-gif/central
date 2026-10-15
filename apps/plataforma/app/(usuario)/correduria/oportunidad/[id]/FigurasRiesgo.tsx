@@ -16,7 +16,7 @@ import EditarFichaModal from './EditarFichaModal'
 import PedirDatosFigura from './PedirDatosFigura'
 import { llamarFiguras, motivoDe } from './piezas-riesgo'
 import { ramoConEnlaceDatos } from './variante'
-import { cabeOtro, estadoBloqueMulti, opcionesSinPoner, personasDelRol, repartirRoles } from './figuras-form'
+import { cabeOtro, estadoBloqueMulti, nombreSinFicha, opcionesSinPoner, personasDelRol, repartirRoles } from './figuras-form'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
@@ -84,7 +84,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
     setEnviando(false)
     if (!r.ok) { onError(`No se ha podido quitar a ${f.nombre}: ${motivoDe(r)}`); return }
     setAbierto(null)
-    onCambio(rol === 'tomador' ? `El tomador vuelve a ser ${op.clienteNombre}.` : `${ROTULO_ROL[rol]}: vuelve a ser el mismo que el tomador.`)
+    onCambio(rol === 'tomador' ? `El tomador vuelve a ser ${op.clienteNombre}.` : `${ROTULO_ROL[rol]}: ${nombreSinFicha(rol) === 'Ninguno' ? 'ya no hay ninguno' : 'vuelve a ser el mismo que el tomador'}.`)
   }
 
   /** Papel de varias personas: AÑADE la ficha (no sustituye a nadie). */
@@ -127,7 +127,7 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError, onEd
         {unicos.map((rol) => {
           const f = riesgo.figuras.find((x) => x.rol === rol) ?? null
           const esTomador = rol === 'tomador'
-          const nombre = f ? f.nombre : 'El mismo que el tomador'
+          const nombre = f ? f.nombre : nombreSinFicha(rol)
           // `vinculo` es el tipo de relación tal cual («Padre/Madre»): dice qué es esa persona DEL cliente.
           const vinculo = f
             ? f.porDefecto || f.clienteId === op.clienteId
