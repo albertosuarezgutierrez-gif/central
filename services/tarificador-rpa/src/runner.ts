@@ -50,6 +50,7 @@ import { atascoDeRespaldoHueco, cerrarFormador, prepararFormador, type ContextoF
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { textoAvisoSesionManual } from './aviso.ts'
+import { ErrorCredenciales, cortocircuito, exigirSinRechazoCredenciales, motivoCredenciales, motivoDeMensaje, textoAvisoCredenciales, textoVisiblePagina } from './credenciales.ts'
 import { caducidadMaximaMs, claveSesion } from './boveda-sesion.ts'
 import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
 import type { ContextoPortal } from './adaptador.ts'
@@ -166,6 +167,8 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         await capturar('login')
         // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
         await exigirSinVerificacion(page, k.compania)
+        // ¿Entró pero el portal dice cuenta bloqueada / contraseña caducada? Tampoco se sigue (ni se reintenta el login).
+        await exigirSinRechazoCredenciales(page, k.compania, { soloInutilizable: true })
       },
       adjuntarPdf: (nombre: string, contenido: Uint8Array): PdfRef => {
         pdfs.push({ nombre, base64: Buffer.from(contenido).toString('base64') })
@@ -272,6 +275,12 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // Una pantalla de código/SMS manda sobre cualquier otra clasificación (un timeout de selector, p. ej.): no se reintenta.
     if (clasificar(error).tipo === 'portal') {
       await exigirSinVerificacion(page, k.compania).catch((e: unknown) => { error = e })
+    }
+    // RED de credenciales (15/10/2026): fallo «del portal» con el formulario de acceso a la vista y un mensaje de rechazo /
+    // bloqueo / caducada → es de credenciales (NO reintentable; evita el reintento de «sesión caducada» con otro login).
+    if (!k.sesion.manual && loginVisible && clasificar(error).tipo === 'portal') {
+      const m = motivoCredenciales(await textoVisiblePagina(page))
+      if (m) error = new ErrorCredenciales(k.compania, m)
     }
     // Sesión manual que el portal rechaza (vuelta al login o pantalla de código): se borra y requiere_humano. El robot
     // nunca reintenta ni hace login aquí: eso pediría otro SMS.
@@ -411,6 +420,18 @@ async function main(): Promise<number> {
     }
   }
 
+  // CORTOCIRCUITO por credencial (15/10/2026): si esta credencial ya fue rechazada (en este proceso), NO se abre el portal:
+  // otro login fallido puede bloquear el usuario que usan las personas. Aviso con el fly secret a corregir.
+  if (!fuente.manual) {
+    const previo = cortocircuito.motivo(adaptador.credencial)
+    if (previo) {
+      const mensaje = textoAvisoCredenciales(trabajo.compania, previo, nombresCredencial(adaptador.credencial).contrasena)
+      log('credenciales_cortocircuito', { compania: trabajo.compania, motivo: previo })
+      await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'error', error: { tipo: 'credenciales', mensaje, url: null }, botVersion: adaptador.version })
+      return 1
+    }
+  }
+
   // EMISIÓN asistida (10/10/2026, src/emision.ts): otro flujo, con su propio navegador y sin formador ni reintento.
   // Sin la fase o con el interruptor de la máquina apagado, `ejecutarEmision` responde `no_emitida` sin abrir el portal.
   if (trabajo.modo === 'emision') {
@@ -474,7 +495,15 @@ async function main(): Promise<number> {
         return st >= 200 && st < 300 ? 0 : 1
       }
 
-      const { c, evidencia } = r
+      const { evidencia } = r
+      let c = r.c
+      if (c.tipo === 'credenciales' && !fuente.manual) {
+        // Aviso claro (solo nombres de variables, nunca valores) y cortocircuito para los siguientes trabajos de la credencial.
+        const motivo = motivoDeMensaje(c.mensaje)
+        cortocircuito.bloquear(adaptador.credencial, motivo)
+        if (!/fly secrets/.test(c.mensaje)) c = { ...c, mensaje: textoAvisoCredenciales(trabajo.compania, motivo, nombresCredencial(adaptador.credencial).contrasena) }
+        log('credenciales_rechazadas', { compania: trabajo.compania, motivo })
+      }
       const recorridoDelTrabajo: Recorrido = recorrido.recorrido()
       const secretos = [...secretosDelEntorno(env), ...secretosRiesgo]
       const htmlRedactado = evidencia.html ? redactarHtml(evidencia.html, secretos) : null

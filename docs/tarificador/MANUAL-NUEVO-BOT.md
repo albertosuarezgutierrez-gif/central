@@ -72,6 +72,12 @@ Estado: **Mapfre Auto (NSEI)** adopta el patrón (`https://wmediadores.mapfre.co
 7. **Relanzar desde plataforma.** Solo Alberto puede pulsar «Lanzar» (exige el secreto de operador); tú no lo lanzas. Una exploración viva por compañía: si hay una viva, no encoles otra.
 8. Repetir hasta que el mapa llegue a precio; entonces «Aprobar mapa» (Alberto) y adaptador real.
 
+## Vuelta atrás (imagen del worker)
+
+La imagen que lanza cada máquina Fly sale SOLO de `TARIFICADOR_FLY_IMAGE` (Vercel, proyecto `central-asegura`); el log de cada lanzamiento dice cuál usó (`[tarificador] máquina lanzada: … imagen <ref>`).
+- **Variable opcional `TARIFICADOR_FLY_IMAGE_ANTERIOR`** (Vercel, `central-asegura`; el código NO la lee, es la nota de a dónde volver): antes de cambiar `TARIFICADOR_FLY_IMAGE`, copia aquí el valor que tenía (`registry.fly.io/asegura-tarificador:<etiqueta>`). Las etiquetas no se borran del registro de Fly.
+- **Volver atrás en 1 paso:** pon el valor de `TARIFICADOR_FLY_IMAGE_ANTERIOR` en `TARIFICADOR_FLY_IMAGE` y haz Redeploy de asegura (las envs solo se leen en un deploy nuevo). Las máquinas ya vivas acaban solas; las nuevas arrancan con la imagen antigua. Si la antigua no conoce un modo nuevo (`X-Tarificador-Modos`), esos trabajos no se sirven hasta volver a subir.
+
 ## Borrador de mapa desde la evidencia de un fallo
 
 Cada fallo guarda en su HTML de evidencia la sección `<!-- tarificador:aria … -->` (árbol de accesibilidad redactado, sin valores).

@@ -5,6 +5,7 @@
 import type { Page } from 'playwright'
 import type { ContextoPortal } from '../../../adaptador.ts'
 import { ErrorTarificador } from '../../../errores.ts'
+import { ErrorCredenciales, exigirSinRechazoCredenciales } from '../../../credenciales.ts'
 
 /**
  * Selectores del LOGIN y de la ruta de menú. `null` = PENDIENTE DE CAPTURAS: el adaptador falla en
@@ -65,7 +66,9 @@ export async function login(page: Page, ctx: Pick<ContextoPortal, 'credenciales'
   try {
     await page.getByText('Mediador principal').first().waitFor({ state: 'visible', timeout: 25_000 })
   } catch {
-    throw new ErrorTarificador('credenciales', 'allianz/intranet: no se llegó a la cabecera de ePAC tras el login (credenciales rechazadas o portal distinto)')
+    await exigirSinRechazoCredenciales(page, 'allianz')
+    throw new ErrorCredenciales('allianz', 'rechazadas') // sin cabecera tras el login: nunca se reintenta
   }
+  await exigirSinRechazoCredenciales(page, 'allianz', { soloInutilizable: true })
   ctx.log('login ok')
 }

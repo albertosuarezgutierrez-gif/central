@@ -4,6 +4,8 @@
 // Sin casts: el `switch` sobre `adaptador.ramo` estrecha la unión discriminada. Un ramo sin validador es un error de
 // compilación (exhaustividad), no un trabajo que se cuela con otra forma de riesgo.
 import {
+  faltanParaTarificar,
+  mensajeFaltan,
   validarFormularioAuto,
   validarFormularioHogar,
   validarRiesgoComunidad,
@@ -36,8 +38,21 @@ export type TrabajoPreparado =
     }
   | { ok: false; errores: string[] }
 
-/** Valida el riesgo (crudo, de asegura) con el validador del ramo del adaptador y lo deja listo para tarificar. */
+/**
+ * Valida el riesgo (crudo, de asegura) con el validador del ramo del adaptador y lo deja listo para tarificar. Red FINAL
+ * (15/10/2026): tras la forma, los datos obligatorios del bot (`faltanParaTarificar`, la misma fuente que el encolado de
+ * asegura) sobre el riesgo YA con lo de la ficha; si falta algo, o el bot no declara qué necesita, no se abre el navegador.
+ */
 export function prepararTrabajo(adaptador: AdaptadorRegistrado, crudo: unknown, hoy: Date = new Date()): TrabajoPreparado {
+  const p = prepararForma(adaptador, crudo, hoy)
+  if (!p.ok) return p
+  const faltan = faltanParaTarificar(adaptador.compania, adaptador.ramo, crudo)
+  if (faltan === null) return { ok: false, errores: [`${adaptador.compania}/${adaptador.ramo} no declara qué datos necesita para tarificar (module-tarificacion obligatorios.ts)`] }
+  if (faltan.length) return { ok: false, errores: [mensajeFaltan(faltan)] }
+  return p
+}
+
+function prepararForma(adaptador: AdaptadorRegistrado, crudo: unknown, hoy: Date): TrabajoPreparado {
   switch (adaptador.ramo) {
     case 'comunidades': {
       const v = validarRiesgoComunidad(crudo)

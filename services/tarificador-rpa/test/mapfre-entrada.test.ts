@@ -1,7 +1,8 @@
 // Entrada de Mapfre Auto (14/10/2026): menús → enlace que abre PESTAÑA NUEVA → formulario NSEI. Portal SINTÉTICO en
 // 127.0.0.1, sin datos personales. La pestaña nueva responde 401 + WWW-Authenticate (el diálogo HTTP del portal real):
 // sin `httpCredentials` en el contexto Chromium lo cancela y se queda el cuerpo (el formulario).
-import { ErrorTarificador, ErrorVerificacionHumana } from '../src/errores.ts'
+import { ErrorTarificador } from '../src/errores.ts'
+import { ErrorCredenciales } from '../src/credenciales.ts'
 import type { Locator } from 'playwright'
 import assert from 'node:assert/strict'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
@@ -619,7 +620,7 @@ test('RESPALDO IA: el fijo no reconoce la tarjeta (2 enlaces exactos) → la IA 
   }
 })
 
-test('login antiguo rechazado: error claro con diagnóstico y SIN credenciales (ni usuario ni clave)', async () => {
+test('login antiguo rechazado («Credenciales incorrectas»): ErrorCredenciales(rechazadas) NO reintentable, sin caer a menús y SIN usuario ni clave', async () => {
   const { context, page, ctx } = await abrir('/')
   try {
     await page.evaluate(() => { document.querySelectorAll('[role=tab]').forEach((e) => { if (e.textContent === 'Nueva producción') e.remove() }) })
@@ -627,10 +628,7 @@ test('login antiguo rechazado: error claro con diagnóstico y SIN credenciales (
       () => abrirNuevo(page, { ...ctx, credenciales: CREDS }, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-mal`, menuMs: 1_000, formularioMs: 2_000 }),
       (e) => {
         const m = (e as Error).message
-        assert.ok(e instanceof ErrorMapaIncompleto)
-        assert.match(m, /login antiguo NSEI rechazado\/no superado/)
-        assert.match(m, /pantalla: http \d+; url http:\/\/[#.]+:#+\/loginexternopi\/docs\/html\/loginFormPage\.html/)
-        assert.match(m, /password visible sí/)
+        assert.ok(e instanceof ErrorCredenciales && e.motivo === 'rechazadas' && e.tipo === 'credenciales')
         assert.ok(!m.includes(USUARIO_FICTICIO) && !m.includes(CLAVE_FICTICIA) && !/page=|modo=/.test(m), m)
         return true
       },
@@ -748,14 +746,14 @@ test('diagnóstico: token numérico en el fragmento/ruta de la URL y de los ifra
   assert.ok(r.includes('/app/#/sesion/#########') && r.includes('/f/######'), r)
 })
 
-test('login antiguo: aviso de bloqueo tras «entrar» → error definitivo (captcha/requiere persona), UN solo envío, sin fallback a menús', async () => {
+test('login antiguo: aviso de bloqueo tras «entrar» → error de credenciales (bloqueada, no reintentable), UN solo envío, sin fallback a menús', async () => {
   const { context, page, ctx } = await abrir('/')
   try {
     let envios = 0
     const ctxC = { ...ctx, credenciales: CREDS, pulsar: async (b: Locator) => { envios++; return ctx.pulsar(b) } }
     await assert.rejects(
       () => abrirNuevo(page, ctxC, { hostsLogin: ['127.0.0.1'], urlDirecta: `${base}/nsei-login-bloq`, menuMs: 1_000, formularioMs: 3_000 }),
-      (e) => e instanceof ErrorVerificacionHumana && !(e instanceof ErrorMapaIncompleto) && !(e as Error).message.includes(CLAVE_FICTICIA),
+      (e) => e instanceof ErrorCredenciales && e.motivo === 'bloqueada' && e.tipo === 'credenciales' && !(e instanceof ErrorMapaIncompleto) && !(e as Error).message.includes(CLAVE_FICTICIA),
     )
     assert.equal(envios, 1, 'un login rechazado no se reintenta')
   } finally {

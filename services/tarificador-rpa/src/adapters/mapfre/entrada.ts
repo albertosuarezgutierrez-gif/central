@@ -36,6 +36,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ACCION_ENLACE_ENTRADA, conRespaldoIA, type PeticionResolver } from '../../formador.ts'
 import { ErrorTarificador, ErrorVerificacionHumana } from '../../errores.ts'
 import { hayCaptcha } from '../../captcha.ts'
+import { ErrorCredenciales, exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import { ErrorMapaIncompleto } from './auto.ts'
 
 export type CtxEntradaMapfre = Pick<ContextoPortal, 'pulsar' | 'pausa'> & {
@@ -302,7 +303,7 @@ const PATRON_BLOQUEO = /bloquead|suspendid|demasiados intentos|intentos fallidos
 async function pararSiRetoOBloqueo(p: Page): Promise<void> {
   if (await hayCaptcha(p)) throw new ErrorTarificador('captcha', 'el login antiguo de Mapfre presenta un CAPTCHA: requiere una persona')
   const texto = await p.locator('body').innerText({ timeout: 1_000 }).catch(() => '')
-  if (PATRON_BLOQUEO.test(texto)) throw new ErrorVerificacionHumana('mapfre', 'el login antiguo de Mapfre avisa de cuenta/usuario bloqueado: no se reintenta, requiere una persona')
+  if (PATRON_BLOQUEO.test(texto)) throw new ErrorCredenciales('mapfre', 'bloqueada') // no se reintenta: cada intento más agrava el bloqueo
 }
 
 /** Quita de un texto cualquier aparición literal de usuario o contraseña (red de seguridad: nunca en mensajes). */
@@ -373,7 +374,12 @@ async function superarLoginAntiguo(p: Page, ctx: CtxEntradaMapfre, url: string, 
   }
   if (await hayFormulario(p)) return
   await pararSiRetoOBloqueo(p)
-  if (await enLoginAntiguo(p, hosts)) throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
+  // Sigue en el login tras enviar: si el portal dice «incorrecto»/«caducada» es un rechazo de credenciales (NO reintentable,
+  // y no se cae a menús con la cuenta en ese estado).
+  if (await enLoginAntiguo(p, hosts)) {
+    await exigirSinRechazoCredenciales(p, 'mapfre')
+    throw new LoginAntiguoNoSuperado(MOTIVO_LOGIN_ANTIGUO)
+  }
   // Salió del login pero no a NSEI: se vuelve a la URL directa (ya con sesión).
   await p.goto(url, { waitUntil: 'commit', timeout: formularioMs })
   const r = await esperarFormularioOLogin(p, formularioMs, hosts)
@@ -404,7 +410,7 @@ async function abrirPorUrlDirecta(page: Page, ctx: CtxEntradaMapfre, url: string
     const diag = nueva ? await diagnosticoDePagina(nueva, estadoHttp, secretos) : 'sin pestaña'
     await nueva?.close().catch(() => undefined)
     if (e instanceof Error && /guard_emision/.test(e.message)) throw e
-    if (e instanceof ErrorVerificacionHumana || (e instanceof ErrorTarificador && e.tipo === 'captcha')) throw e // reto/bloqueo: no se cae a menús
+    if (e instanceof ErrorVerificacionHumana || (e instanceof ErrorTarificador && (e.tipo === 'captcha' || e.tipo === 'credenciales'))) throw e // reto/bloqueo/credenciales: no se cae a menús
     const red = /net::|Navigation|goto/i.test(String((e as Error).message).split('\n')[0])
     const msg = ocultarSecretos(e instanceof Error ? e.message : String(e), secretos)
     const que = e instanceof LoginAntiguoNoSuperado ? e.message : !red && !msg.startsWith('no apareció') ? `${MOTIVO_LOGIN_ANTIGUO} (error: ${msg.split('\n')[0].slice(0, 160)})` : red ? 'la navegación falló (red)' : `no apareció ${SEL_FORMULARIO_NSEI} en ${Math.round(formularioMs / 1000)} s`

@@ -316,7 +316,14 @@ test('los nombres de paso y códigos que genera el worker real (crearTraza) pasa
 // ─── NIF del tomador para Mapfre (14/10/2026) ────────────────────────────────
 
 const NIF = '00000000T'
-const RIESGO_MOTO = { ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003' }
+// Completo para llegar a precio (15/10/2026, `faltanParaTarificar`): estas pruebas miran el NIF/los datos de la ficha, no
+// lo que falta del riesgo (eso, en «Obligatorios para tarificar» más abajo).
+const RIESGO_MOTO = {
+  ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003',
+  conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
+  tomadorEsConductor: true, aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0,
+  seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
+}
 const noLeer = () => { throw new Error('no debería leer la ficha') }
 // Datos del tomador de la ficha (alta en Mapfre). Placeholders, no datos reales.
 const DATOS_TOMADOR = { tipo: 'fisica', nombre: 'NOMBRE PRUEBA', apellido1: 'APELLIDOUNO', apellido2: 'APELLIDODOS', fechaNacimiento: '1980-01-02' } as const
@@ -514,4 +521,46 @@ test('compañía anterior · con nombre, sin años, otra compañía u otro ramo:
   assert.equal(faltaCompaniaAnteriorRiesgo('allianz', 'auto', RIESGO_AUTO_CON_ANIOS), null)
   assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'moto', RIESGO_AUTO_CON_ANIOS), null)
   assert.equal(faltaCompaniaAnteriorRiesgo('mapfre', 'auto', 'no es un objeto'), null)
+})
+
+// ─── Obligatorios para tarificar (15/10/2026): fuente única `faltanParaTarificar` de module-tarificacion ─────────────
+
+test('Obligatorios · validarEntradaRamo con compañía: rechaza con la lista legible lo que el bot necesita (sin mirar la ficha)', () => {
+  const sinSiniestros = { ...MOTO, ramo: 'auto', seleccionVehiculo: undefined, siniestrosUltimos5Anios: null, companiaAnterior: 'COMPAÑÍA DE PRUEBA' }
+  const v = validarEntradaRamo('auto', sinSiniestros, 'mapfre')
+  assert.equal(v.ok, false)
+  if (!v.ok) {
+    assert.equal(v.mensaje, 'Falta: siniestros con culpa de los últimos 5 años.')
+    assert.deepEqual(v.faltan?.map((f) => f.clave), ['siniestrosUltimos5Anios'])
+  }
+  // Sin compañía: solo la forma (como antes). NIF y datos del tomador (ficha) no se miran aquí.
+  assert.equal(validarEntradaRamo('auto', sinSiniestros).ok, true)
+  assert.equal(validarEntradaRamo('auto', { ...sinSiniestros, siniestrosUltimos5Anios: 0 }, 'mapfre').ok, true)
+  // Allianz moto: sexo del conductor (el portal asumiría «Hombre»).
+  const sinSexo = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
+  assert.ok(!sinSexo.ok && sinSexo.mensaje === 'Falta: sexo del conductor.')
+  // Compañía sin declaración: aquí no se rechaza (lo hace riesgoParaEncolar).
+  assert.equal(validarEntradaRamo('moto', MOTO, 'generali').ok, true)
+})
+
+test('Obligatorios · riesgoParaEncolar: falta algo → 422 `faltan_datos` con la lista; sin declaración → fail-closed; sin valores en el motivo', () => {
+  const r = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, conductor: { ...RIESGO_MOTO.conductor, sexo: null }, aniosAseguradoAnterior: null }, noLeer, noLeer)
+  assert.ok(!r.ok && r.status === 422)
+  if (!r.ok) {
+    assert.equal(r.motivo, 'faltan_datos: Faltan: sexo del conductor, años asegurado en la compañía anterior.')
+    assert.deepEqual(r.faltan?.map((f) => f.clave), ['conductor.sexo', 'aniosAseguradoAnterior'])
+    assert.ok(!JSON.stringify(r).includes('0000BBB'))
+  }
+  const sinBot = riesgoParaEncolar('generali', 'moto', RIESGO_MOTO, noLeer, noLeer)
+  assert.ok(!sinBot.ok && sinBot.status === 422 && sinBot.motivo.startsWith('sin_obligatorios_declarados: generali/moto'))
+  // Mapfre: se evalúa con la ficha aplicada EN MEMORIA (NIF + datos) y lo guardado sigue SIN ellos.
+  const ok = riesgoParaEncolar('mapfre', 'auto', { ...RIESGO_MOTO, ramo: 'auto' }, () => ({ estado: 'ok', documento: NIF }), datosOk)
+  assert.ok(ok.ok)
+  assert.ok(ok.ok && !('documentoTomador' in (ok.riesgo as object)) && !('datosTomador' in (ok.riesgo as object)))
+  // «Tomador es conductor» sin dato: vale si la ficha dice que el tomador nació el día del conductor (regla del adaptador).
+  const sinTec = { ...RIESGO_MOTO, ramo: 'auto', tomadorEsConductor: null, conductor: { ...RIESGO_MOTO.conductor, fechaNacimiento: DATOS_TOMADOR.fechaNacimiento } }
+  assert.ok(riesgoParaEncolar('mapfre', 'auto', sinTec, () => ({ estado: 'ok', documento: NIF }), datosOk).ok)
+  const otraFecha = () => ({ estado: 'ok' as const, datos: { ...DATOS_TOMADOR, fechaNacimiento: '1970-05-05' } })
+  const r2 = riesgoParaEncolar('mapfre', 'auto', sinTec, () => ({ estado: 'ok', documento: NIF }), otraFecha)
+  assert.ok(!r2.ok && r2.motivo === 'faltan_datos: Falta: si el tomador es el conductor habitual.')
 })

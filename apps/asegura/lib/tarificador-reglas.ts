@@ -7,19 +7,32 @@
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
-  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
+  claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
 /** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
 export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto' | 'auto'; riesgo: FormularioAuto }
-export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[] }
+export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[]; faltan?: Faltante[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
 /** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
 export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto'] as const
 
-export function validarEntradaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
+/**
+ * Con `compania` (15/10/2026), además de la FORMA del ramo, lo que el bot de esa compañía necesita para llegar a precio
+ * (`faltanParaTarificar`, fuente única de module-tarificacion) SIN lo que asegura pone desde la ficha (eso lo comprueba
+ * `riesgoParaEncolar` con la ficha leída). Una compañía sin declaración no se rechaza AQUÍ: lo hace `riesgoParaEncolar`.
+ */
+export function validarEntradaRamo(ramo: unknown, riesgo: unknown, compania?: string): ValidacionEntradaRamo {
+  const v = validarFormaRamo(ramo, riesgo)
+  if (!v.ok || compania === undefined) return v
+  const faltan = faltanParaTarificar(compania, v.entrada.ramo, v.entrada.riesgo, { sinFicha: true })
+  if (faltan && faltan.length) return { ok: false, mensaje: mensajeFaltan(faltan), errores: faltan.map((f) => f.etiqueta), faltan }
+  return v
+}
+
+function validarFormaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo {
   if (ramo === 'comunidades') {
     const v = validarRiesgoComunidad(riesgo)
     return v.ok ? { ok: true, entrada: { ramo, riesgo: v.riesgo } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
@@ -129,7 +142,7 @@ export function faltaCompaniaAnteriorRiesgo(compania: string, ramo: string, ries
  * mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSinNifTomador` (el documento
  * descifrado jamás vuelve de aquí ni se persiste). PURA.
  */
-export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string } {
+export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string; faltan?: Faltante[] } {
   const guardado = riesgoSinNifTomador(riesgo)
   // Compañía anterior (Mapfre auto, 15/10/2026): con años asegurado > 0 el portal pide su NOMBRE en «Figuras». Se corta aquí,
   // antes de gastar máquina, igual que `falta_datos_tomador`. El motivo dice QUÉ falta, nunca un valor.
@@ -138,8 +151,15 @@ export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, 
   const r = aplicarNifTomador(compania, ramo, guardado, leer)
   if (!r.ok) return r
   // Nombre / apellidos / nacimiento (alta del tomador nuevo en Mapfre): se COMPRUEBAN aquí y se inyectan al entregar.
-  const d = aplicarDatosTomador(compania, ramo, guardado, leerDatos)
-  return d.ok ? { ok: true, riesgo: guardado } : d
+  const d = aplicarDatosTomador(compania, ramo, r.riesgo, leerDatos)
+  if (!d.ok) return d
+  // Datos obligatorios para llegar a precio (15/10/2026, fuente única `faltanParaTarificar`): se evalúan sobre el riesgo TAL
+  // COMO LO RECIBIRÁ EL WORKER (con NIF y datos de la ficha aplicados EN MEMORIA; `d.riesgo` no sale de aquí ni se guarda).
+  // Sin declaración para esa compañía/ramo → fail-closed (el worker también lo rechazaría, tras gastar máquina).
+  const faltan = faltanParaTarificar(compania, ramo, d.riesgo)
+  if (faltan === null) return { ok: false, status: 422, motivo: `sin_obligatorios_declarados: ${claveCompania(compania)}/${ramo} no declara qué datos necesita su bot para tarificar (module-tarificacion obligatorios.ts)` }
+  if (faltan.length) return { ok: false, status: 422, motivo: `faltan_datos: ${mensajeFaltan(faltan)}`, faltan }
+  return { ok: true, riesgo: guardado }
 }
 
 // ─── Datos del tomador para el ALTA en Mapfre (14/10/2026, revisión del PR #4710) ──────────

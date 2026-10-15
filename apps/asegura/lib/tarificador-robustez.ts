@@ -18,7 +18,7 @@ import {
   atascoActivo,
   cabeCapturaEnRespuesta,
   candidatosVisibles,
-  debeCortarBot,
+  motivoCorte,
   decidirAtasco,
   elegirCandidatoAtasco,
   horasAtasco,
@@ -414,7 +414,7 @@ export async function sqlSinPausa(): Promise<Prisma.Sql> {
 
 /**
  * Tras un `error_definitivo` de un trabajo de TARIFICAR: si los `UMBRAL_CORTE_BOT` últimos cerrados de su pareja (desde la
- * última reanudación) son fallos del bot, se abre una pausa (una sola viva por pareja). Misma transacción que el cierre.
+ * última reanudación) son fallos del bot, o el último es de `credenciales` (basta uno), se abre una pausa (una sola viva por pareja). Misma transacción que el cierre.
  */
 export async function evaluarCorte(db: Db, trabajoId: string): Promise<boolean> {
   if (!(await hayPausas())) return false
@@ -433,8 +433,8 @@ export async function evaluarCorte(db: Db, trabajoId: string): Promise<boolean> 
                                      where p.correduria_id = w.correduria_id and p.compania = w.compania and p.ramo = w.ramo), '-infinity'::timestamptz)
     order by w.terminado_at desc
     limit ${UMBRAL_CORTE_BOT}`
-  if (!debeCortarBot(ultimos.map((u) => ({ estado: u.estado, tipoError: u.tipo })))) return false
-  const motivo = `${UMBRAL_CORTE_BOT} trabajos seguidos de ${f.compania} (${f.ramo}) terminaron en error del bot (portal o infraestructura).`
+  const motivo = motivoCorte(ultimos.map((u) => ({ estado: u.estado, tipoError: u.tipo })), { compania: f.compania, ramo: f.ramo })
+  if (!motivo) return false
   const n = await db.$executeRaw`
     insert into seguros.tarificador_pausas (correduria_id, compania, ramo, motivo, trabajos)
     values (${f.correduria_id}::uuid, ${f.compania}, ${f.ramo}, ${motivo}, ${ultimos.map((u) => u.id)}::uuid[])

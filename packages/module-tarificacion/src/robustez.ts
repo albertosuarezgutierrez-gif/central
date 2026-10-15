@@ -61,8 +61,27 @@ export type CierreTrabajo = { estado: string; tipoError: string | null }
  * fallo del bot: ante la duda no se corta (cortar deja a la correduría sin precios).
  */
 export function debeCortarBot(ultimos: readonly CierreTrabajo[], umbral = UMBRAL_CORTE_BOT): boolean {
+  if (credencialesRechazadas(ultimos)) return true
   if (!Number.isInteger(umbral) || umbral < 1 || ultimos.length < umbral) return false
   return ultimos.slice(0, umbral).every((t) => t.estado === 'error_definitivo' && (TIPOS_ERROR_CORTE as readonly (string | null)[]).includes(t.tipoError))
+}
+
+/**
+ * UN solo cierre `error_definitivo` de tipo `credenciales` (el más reciente) basta para cortar: el usuario del portal es el
+ * mismo que usan las personas y repetir un login fallido puede bloquearlo. Un `ok` posterior la supera.
+ */
+export function credencialesRechazadas(ultimos: readonly CierreTrabajo[]): boolean {
+  const u = ultimos[0]
+  return !!u && u.estado === 'error_definitivo' && u.tipoError === 'credenciales'
+}
+
+/** Motivo legible de la pausa (sin usuario ni contraseña) o `null` si no toca cortar. */
+export function motivoCorte(ultimos: readonly CierreTrabajo[], p: { compania: string; ramo: string }, umbral = UMBRAL_CORTE_BOT): string | null {
+  if (credencialesRechazadas(ultimos)) {
+    return `${p.compania} (${p.ramo}): el portal rechaza la contraseña: actualiza CRED_…_PASS (el secreto de esa compañía) y quita la pausa.`
+  }
+  if (!debeCortarBot(ultimos, umbral)) return null
+  return `${umbral} trabajos seguidos de ${p.compania} (${p.ramo}) terminaron en error del bot (portal o infraestructura).`
 }
 
 // ─── 3. Atasco ───────────────────────────────────────────────────────────────

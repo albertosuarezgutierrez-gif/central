@@ -21,6 +21,7 @@ import {
   planPurgaRiesgo,
 } from '@central/module-tarificacion'
 import type { prisma } from './tenant'
+import { DIAS_RETENCION_EVIDENCIA, ESTADOS_PURGA_EVIDENCIA, idsEvidenciaAPurgar } from './tarificador-purga-evidencia-reglas.ts'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 export type DbPurga = Pick<Tx, '$queryRaw' | '$executeRaw'>
@@ -136,4 +137,49 @@ export async function purgarRiesgosCerrados(db: DbPurga, correduriaId: string, l
     order by t.updated_at desc
     limit ${limite}::int`
   return purgarRiesgoTrabajos(db, ids.map((f) => f.id))
+}
+
+/**
+ * Purga de la EVIDENCIA de fallo (capturas/HTML en `seguros.documentos`) de trabajos terminados hace más de
+ * `DIAS_RETENCION_EVIDENCIA` días: borra los documentos de fallo y anula las referencias (`evidencia_documento_id` por el
+ * ON DELETE SET NULL, `error.html_documento_id`, `tarificacion_trabajo_pasos.captura_ref`). Idempotente (un trabajo ya
+ * purgado no vuelve a salir), por tandas, y solo borra ficheros `fallo-*.png|html` del agente (nunca el PDF de una oferta).
+ * Devuelve cuántos documentos borró.
+ */
+export async function purgarEvidenciaCaducada(db: DbPurga, correduriaId: string, dias = DIAS_RETENCION_EVIDENCIA, limite = 100): Promise<number> {
+  const filas = await db.$queryRaw<{
+    id: string; estado: string; terminado_at: Date | null; evidencia_id: string | null; evidencia_nombre: string | null
+    html_id: string | null; capturas: (string | null)[] | null; ahora: Date
+  }[]>`
+    select t.id::text as id, t.estado, t.terminado_at, t.evidencia_documento_id::text as evidencia_id, d.nombre_fichero as evidencia_nombre,
+           case when jsonb_typeof(t.error) = 'object' then t.error->>'html_documento_id' end as html_id,
+           (select array_agg(p.captura_ref) from seguros.tarificacion_trabajo_pasos p where p.trabajo_id = t.id and p.captura_ref is not null) as capturas,
+           now() as ahora
+    from seguros.tarificacion_trabajos t
+    left join seguros.documentos d on d.id = t.evidencia_documento_id
+    where t.correduria_id = ${correduriaId}::uuid
+      and t.estado = any(${[...ESTADOS_PURGA_EVIDENCIA]}::text[])
+      and t.terminado_at < now() - ${dias}::int * interval '1 day'
+      and (d.nombre_fichero like 'fallo-%'
+           or (jsonb_typeof(t.error) = 'object' and t.error->>'html_documento_id' is not null)
+           or exists (select 1 from seguros.tarificacion_trabajo_pasos p where p.trabajo_id = t.id and p.captura_ref is not null))
+    order by t.terminado_at
+    limit ${limite}::int`
+  const trabajos: string[] = []
+  const docs = new Set<string>()
+  for (const f of filas) {
+    const ids = idsEvidenciaAPurgar({ estado: f.estado, terminadoAt: f.terminado_at, evidenciaId: f.evidencia_id, evidenciaNombre: f.evidencia_nombre, htmlId: f.html_id, capturasRef: f.capturas ?? [] }, new Date(f.ahora), dias)
+    trabajos.push(f.id)
+    ids.forEach((i) => docs.add(i))
+  }
+  if (!trabajos.length) return 0
+  // Primero se anulan las referencias y luego se borra el documento; todo dentro de la tanda del barrido (cada UPDATE/DELETE
+  // es idempotente: si algo falla a medias, la siguiente pasada vuelve a seleccionar el trabajo).
+  await db.$executeRaw`update seguros.tarificacion_trabajo_pasos set captura_ref = null where trabajo_id = any(${trabajos}::uuid[]) and captura_ref is not null`
+  await db.$executeRaw`update seguros.tarificacion_trabajos set error = error - 'html_documento_id' where id = any(${trabajos}::uuid[]) and jsonb_typeof(error) = 'object' and error->>'html_documento_id' is not null`
+  if (!docs.size) return 0
+  return db.$executeRaw`
+    delete from seguros.documentos
+    where id = any(${[...docs]}::uuid[]) and correduria_id = ${correduriaId}::uuid
+      and subido_por = 'agente' and nombre_fichero ~ '^fallo-[0-9a-f]{8}\\.(png|html)$'`
 }
