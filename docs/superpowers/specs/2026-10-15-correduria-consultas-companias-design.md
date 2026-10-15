@@ -188,8 +188,8 @@ para todo el monorepo) y añade la matriz/guardianes que toquen.
 6. Nombre y valores del enum de ramos de `compania_contactos` por confirmar al empezar la fase 1.
 7. **Misma credencial en dos proyectos Vercel** (`GMAIL_USER`/`GMAIL_APP_PASSWORD` en plataforma y en
    `central-asegura`): si se rota, se rota en ambos a la vez.
-8. **Pendiente para Alberto:** confirmar que la hoja de información/consentimiento al cliente cubre la cesión
-   de nombre y DNI/NIE/CIF a compañías para cotizar (base: medidas precontractuales a petición del cliente).
+8. ✅ **Resuelto (Alberto, 15/10/2026):** la autorización del cliente cubre la cesión
+   de nombre y DNI/NIE/CIF (y póliza de competencia) a compañías para cotizar; sin problema de protección de datos.
 
 ## 9. Fuera de alcance
 
