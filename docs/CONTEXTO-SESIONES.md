@@ -1291,9 +1291,16 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
 ## (15/10/2026) Hook de memoria: no empuja a una rama ya fusionada (rama claude/hook-memoria-rama-fusionada)
-- `persist-memoria.sh`: si la rama ya está en main (merge normal) o su PR está fusionado (squash, vía `gh` REST), no commitea ni empuja; aviso en stderr.
+- `persist-memoria.sh`: no commitea ni empuja si la rama tiene un PR fusionado, ninguno abierto y HEAD = punta fusionada (vía `gh` REST; sin gh → como antes).
 - Motivo: tras fusionar #4741 el hook empujó `ccf49acad` y GitHub quitó «Delete branch». Guardián: `test/regression-persist-memoria-rama-fusionada.test.ts` (visto en rojo).
 - #4741 desplegado en prod (plataforma/asegura READY, 0 errores). Pendiente Alberto: garaje PublicRoad→NoGarage de la oportunidad 9f3c6355 (BD denegada a la sesión; opcional).
+
+## (15/10/2026) Tarificador · Mapfre auto da PRECIO (0.8.2→0.8.5, PRs #4737 #4740 #4742 #4744)
+- Primer precio real Mapfre auto (trabajo 815f6675, bot 0.8.5): Terceros 392,02 € · Terceros ampliado 670,10 €; Todo riesgo lo bloquea el portal («controles técnicos») y se omite. Imagen `v20261015-mapfre085` en producción.
+- 0.8.5: primas con 0-2 decimales; tarjeta bloqueada se omite si otra tiene prima; firma de estabilidad sin textContent crudo.
+- Decisiones de Alberto: tras el precio, el bot lee GARANTÍAS de la pantalla (sin PDF ni «Generar Proyecto»); textos cortos de garantías = catálogo fijo revisado (sin IA), IA solo para la nota personalizada con proveedor actual (nada de IA china gratis: RGPD); un 2.º bot monta el presupuesto como BORRADOR, envío lo hace una persona.
+- Siguiente compañía: GENERALI auto (Occident aparcado). SMS cada 30 días → el bot pide el código por Telegram a Alberto (solo su chat, 5 min, sin registrar el código) y guarda el «equipo recordado» cifrado. Credenciales `CRED_GENERALI_MEDIADORES_USER/_PASS` (fly secrets, las pone Alberto). Prompt para la conversación nueva = plantilla §7 de docs/tarificador/MANUAL-NUEVO-BOT.md adaptada.
+- Pendiente: Mapfre moto, Allianz auto/moto/comunidades con imagen nueva; doble encolado del mismo riesgo; contraseña de Mapfre (Alberto la cambia al final → actualizar `CRED_MAPFRE_WMEDIADORES_PASS`).
 
 ## (15/10/2026) Correduría · moto con fuente única (rama claude/correduria-moto-fuente-unica)
 - CotizadorMoto usa valoresQueViajan(…, ramo); embebido sin copias; supuestos de moto se guardan en la tarificación. Equivalencia: lo que viaja no cambia salvo siniestros.

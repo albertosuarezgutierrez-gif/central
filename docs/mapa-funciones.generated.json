@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T11:23:56Z",
-  "sha": "59132a7dc9128c82a6bc1d2e7668d1645de1c5b4",
+  "generadoEn": "2026-10-15T13:08:50Z",
+  "sha": "f3ea320fef42f83d6caa5e66a63c145e819a8c08",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -19609,12 +19609,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 157
+          "linea": 165
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/moto-nuevo",
-      "hash": "74d2bc4ae041"
+      "hash": "12e7b1fd2704"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/oferta/route.ts",
@@ -33663,7 +33663,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 221
+          "linea": 216
         },
         {
           "nombre": "numero",
@@ -33671,7 +33671,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "boolean",
-          "linea": 224
+          "linea": 219
         },
         {
           "nombre": "construirPeticionMoto",
@@ -33679,7 +33679,7 @@
           "exportada": true,
           "params": "d: DatosMoto, lineaId: string, opciones: { vehiculoNuevo?: boolean } = {}",
           "retorno": "Record<string, unknown>",
-          "linea": 237,
+          "linea": 232,
           "resumen": "Construye el cuerpo `CreateInsuranceRequest_V1` de moto. `lineaId` viene SIEMPRE de `GET /insurance-lines` (`motoDisponible()`), nunca se escribe a mano: adivinar el id del ramo es un 400 pagado en va"
         },
         {
@@ -33688,13 +33688,13 @@
           "exportada": true,
           "params": "d: Partial<DatosMoto>",
           "retorno": "boolean",
-          "linea": 310,
-          "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años?"
+          "linea": 309,
+          "resumen": "¿El vendor exige el detalle de siniestros de los últimos 5 años? 15/10/2026: delega en la regla ÚNICA de module-seguros (`exigeSiniestrosUltimos5`), la misma que coche y que el ✗ de la pantalla de pla"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6eed4d79359d"
+      "hash": "be4f8d6eb8c0"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/peticion-salud.ts",
@@ -97873,7 +97873,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, otroVehiculo = null, var",
           "retorno": null,
-          "linea": 144
+          "linea": 145
         },
         {
           "nombre": "hoyLocal",
@@ -97881,7 +97881,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1487,
+          "linea": 1410,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -97890,7 +97890,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 1492
+          "linea": 1415
         },
         {
           "nombre": "Campo",
@@ -97898,7 +97898,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1497
+          "linea": 1420
         },
         {
           "nombre": "Contador",
@@ -97906,7 +97906,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 1511
+          "linea": 1434
         },
         {
           "nombre": "Precios",
@@ -97914,7 +97914,7 @@
           "exportada": false,
           "params": "{ r, simulacion, emitible = false, sustituye = true, clienteId, actual = null, }: { /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy, anualizado. `null` = sin comparación. */ actual?: ReturnType<typeof primaActualParaLista> r: ",
           "retorno": null,
-          "linea": 1530
+          "linea": 1453
         },
         {
           "nombre": "PreciosVarianteMoto",
@@ -97922,7 +97922,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 1651,
+          "linea": 1574,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (07/10/2026, oportunidad de MOTO): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con el MISMO panel de emisión que tras "
         }
       ],
@@ -97931,7 +97931,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "872fc5b9d04d"
+      "hash": "33dcd14680b4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/datos-cotizador.ts",
@@ -102519,7 +102519,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "aa93f4ed3564"
+      "hash": "2e83e1816881"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/duplicar-tomador.ts",
@@ -102822,7 +102822,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "71b9c225e415"
+      "hash": "4f31a6698ef4"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/HistorialVariantes.tsx",
@@ -141158,7 +141158,7 @@
     {
       "ruta": "apps/plataforma/lib/correduria/supuestos-auto.ts",
       "ambito": "apps/plataforma",
-      "resumen": "LO QUE VIAJA al pedir precio de COCHE (Avant2 y bots), campo a campo y con su ORIGEN (15/10/2026). PURO, sin E/S. Antes cada pantalla lo calculaba a su manera: el cotizador (`AutoNuevo.tsx`) arrancaba su estado con `garajeInicial`, los 10.000 km, «compra = matriculación», `historialDeclarado` + tope",
+      "resumen": "LO QUE VIAJA al pedir precio de COCHE y de MOTO (Avant2 y bots), campo a campo y con su ORIGEN (15/10/2026). PURO, sin E/S. Antes cada pantalla lo calculaba a su manera: el cotizador (`AutoNuevo.tsx`) arrancaba su estado con `garajeInicial`, los 10.000 km, «compra = matriculación», `historialDeclara",
       "exporta": [
         "seguroActualEmbebido",
         "historialConTopes",
@@ -141177,7 +141177,7 @@
           "exportada": true,
           "params": "e: { arriba: Partial<HistorialDeclaradoRiesgo> | null leido: { tiene: boolean; companiaCodigo: string; companiaLibre: string; poliza: string; aniosSinSiniestros: number; siniestrosUltimos5: number | null } conCatalogo: boolean codigoDe: (te",
           "retorno": "SeguroActualEmbebido",
-          "linea": 75,
+          "linea": 85,
           "resumen": "PURA. `leido` es lo de siempre (precarga de la póliza leída / el máximo); `codigoDe` traduce un texto de compañía a su código DGS de la lista de Codeoscopic (`null` = no casa o no hay lista). `conCata"
         },
         {
@@ -141186,7 +141186,7 @@
           "exportada": true,
           "params": "leido: T, arriba: Partial<HistorialDeclaradoRiesgo> | null,",
           "retorno": "T &",
-          "linea": 129,
+          "linea": 139,
           "resumen": "PURA (13/10/2026): los años del historial que manda el cotizador. Lo DECLARADO arriba manda (asegurado / en la compañía); lo que no viene de arriba (lo leído de su póliza o el máximo) se TOPA a los añ"
         },
         {
@@ -141195,7 +141195,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 148
+          "linea": 158
         },
         {
           "nombre": "fechaEs",
@@ -141203,7 +141203,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 149
+          "linea": 159
         },
         {
           "nombre": "anios",
@@ -141211,7 +141211,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 153
+          "linea": 163
         },
         {
           "nombre": "notaSupuesto",
@@ -141219,7 +141219,7 @@
           "exportada": true,
           "params": "x: string",
           "retorno": null,
-          "linea": 155,
+          "linea": 165,
           "resumen": "La frase única de un supuesto: «Sin dato · se cotizará con X (supuesto)»."
         },
         {
@@ -141228,16 +141228,16 @@
           "exportada": true,
           "params": "etiqueta: string",
           "retorno": "string",
-          "linea": 161,
+          "linea": 171,
           "resumen": "El aviso de un garaje del riesgo que no está en la lista de la compañía (15/10/2026: nunca se cambia por el defecto)."
         },
         {
           "nombre": "valoresQueViajan",
           "kind": "function",
           "exportada": true,
-          "params": "riesgo: { datosVehiculo: DatosVehiculoRiesgo | null; historialDeclarado: Partial<HistorialDeclaradoRiesgo> | null }, catalogos: { garajes: readonly Opcion[]; companias: { codigoDgs: string; nombreComun: string }[] | null }, leido: { anterio",
+          "params": "riesgo: { datosVehiculo: DatosVehiculoRiesgo | null; historialDeclarado: Partial<HistorialDeclaradoRiesgo> | null }, catalogos: { garajes: readonly Opcion[]; companias: { codigoDgs: string; nombreComun: string; nombreCima?: string | null }[",
           "retorno": "ValoresQueViajan",
-          "linea": 175,
+          "linea": 185,
           "resumen": "PURA. Qué viaja al pedir precio de coche y de dónde sale, campo a campo. - `riesgo.historialDeclarado`: lo declarado en «Historial y bonificaciones». Solo cuenta en modo `embebido` (la pantalla comple"
         },
         {
@@ -141246,7 +141246,7 @@
           "exportada": true,
           "params": "v: ValoresQueViajan, campo: CampoHistorial",
           "retorno": "string | null",
-          "linea": 315,
+          "linea": 332,
           "resumen": "PURA. La nota de una fila SIN DATO de «Historial y bonificaciones» (15/10/2026): con qué se cotizará. Los años solo viajan con seguro en vigor; sin él (declarado que no, o sin dato) se dice que no via"
         },
         {
@@ -141255,7 +141255,7 @@
           "exportada": true,
           "params": "v: ValoresQueViajan",
           "retorno": "boolean",
-          "linea": 331,
+          "linea": 348,
           "resumen": "Lo que el riesgo dice del seguro de hoy, para la verificación: arriba no dice si tiene seguro ni hay póliza leída."
         },
         {
@@ -141264,7 +141264,7 @@
           "exportada": true,
           "params": "v: ValoresQueViajan",
           "retorno": "FormularioInicialAuto",
-          "linea": 351,
+          "linea": 368,
           "resumen": "PURA. El estado con el que NACE el cotizador de coche (los textos de sus campos), sacado de `valoresQueViajan`."
         },
         {
@@ -141273,7 +141273,7 @@
           "exportada": false,
           "params": "nota: string | null",
           "retorno": "string",
-          "linea": 375,
+          "linea": 393,
           "resumen": "«Sin dato · se cotizará con X (supuesto)» → «X». Otra forma, tal cual."
         },
         {
@@ -141282,13 +141282,13 @@
           "exportada": true,
           "params": "v: ValoresQueViajan, a: { garaje: string /** El corredor eligió el garaje a mano (deja de ser el defecto). */ garajeElegido: boolean /** `kmParaCotizar(...).supuesto`: los km por defecto sin tocar. `null` = declarados. */ kmSupuesto: number",
           "retorno": "SupuestoAlPedir[]",
-          "linea": 392,
+          "linea": 411,
           "resumen": "PURA. Qué campos viajan como SUPUESTO en ESTA petición: los de origen `supuesto` en `valoresQueViajan` que siguen con el valor supuesto (si el corredor lo cambió aquí, ya es dato), más el carné en bla"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "45f0ff68c103"
+      "hash": "f8a5c52a4782"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sustituciones-aviso.ts",
