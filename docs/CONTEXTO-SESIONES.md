@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/10/2026)** — 📈 Seguimiento laboratorio (1.º registrado; sin entrada previa con la que comparar). Solo lectura. 3 cestas distintas (07-18≡07-20, 08-17.v1, 08-17.factores), cobertura 100% (8/8, 25/25, 10/10).
+Mediana vs SPY: 07-18 (86 d) −1,9% vs +4,9% (baten 3/8, DD −8,0% vs −3,1%); 08-17.v1 (56 d) −5,5% vs +0,8% (6/25); factores (56 d) −16,7% vs +0,8% (2/10). Ninguna bate. 🪜 Alcanzable: Tramo 1 (T2 pide 120 d y alpha>0).
+🚀 Cohetes 15/10: 29.055€ vs SPY 31.245€ (P/L −3,2%, alpha −7,3%). IBKR 33.846€ (14/10).
+⚠️ Datos anómalos en `trading_universo`: VRSN roic −155, BMNR earnings_yield 5,76, SNEX fcf_yield 1,43; 72 filas >14 d sin actualizar (una con fecha 1970). Veredicto: nada cambia hacia dinero real.
+
 **(15/10/2026)** — Tarificador · #4717 (Mapfre 0.7.2 diálogo tras NIF, Allianz moto poblaciones, comunidades prima) y
 #4719 (relanzar `atascado` por `POST /api/operador/tarificador/relanzar` + workflow `tarificador-relanzar.yml`, falta secreto
 GitHub `ASEGURA_OPERADOR_SECRET`; recorrido de pantallas en `error.recorrido`) MERGEADOS; imagen `v20261015-recorrido`.
