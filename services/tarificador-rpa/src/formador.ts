@@ -19,8 +19,8 @@
 // `cerrarFormador()` antes de mandar el resultado.
 
 import type { Frame, Locator, Page } from 'playwright'
-import { MAX_CANDIDATOS_ATASCO, limpiarTextoAviso, pareceEmision, type AtascoWorker, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
-import { ErrorTarificador, pideInventarioDom } from './errores.ts'
+import { MAX_CANDIDATOS_ATASCO, limpiarTextoAviso, pareceEmision, redactarDatosPersonales, type AtascoWorker, type IncidenciaPrecio, type ModalidadPortal, type ValoresLeidos } from '@central/module-tarificacion'
+import { ErrorTarificador, pideInventarioDom, timeoutDeControl } from './errores.ts'
 import { rutaMarco } from './evidencia.ts'
 import { ENLACES_ENTRADA_AUTORIZADOS } from './guard.ts'
 
@@ -1068,15 +1068,24 @@ export const CLAVE_ATASCO_HUECO_MAPA = 'hueco_mapa'
  * los candidatos de la pantalla donde se paró. Así acaba `atascado` + Telegram y no `error_definitivo` mudo (trabajo
  * 50cc150d: Mapfre paró en la búsqueda por matrícula sin checkpoint). Si el adaptador ya dejó el suyo, manda el suyo. El
  * texto es el mensaje del error (los de hueco no llevan valores) y además pasa por el redactor. NO pulsa ni escribe.
+ * Desde 15/10/2026 (Mapfre 0.8.4) cubre también el TimeoutError de Playwright sobre un control (`timeoutDeControl`).
  */
 export async function atascoDeRespaldoHueco(page: Page | null, ctx: ContextoFormador | undefined, error: unknown): Promise<void> {
-  if (!ctx?.activo || ctx.atasco || !pideInventarioDom(error)) return
+  if (!ctx?.activo || ctx.atasco) return
+  // v0.8.4 (trabajo real 39c8016e): un TimeoutError de Playwright al ACTUAR sobre un control mapeado (fill/click/selectOption
+  // que agota la espera: deshabilitado, oculto o cambiado) también es un hueco del paso. Solo acción + selector, nunca el valor.
+  const t0 = timeoutDeControl(error)
+  // El selector puede llevar texto del riesgo (hasText, name): se redacta antes de guardarlo.
+  const t = t0 ? { ...t0, selector: t0.selector ? redactarDatosPersonales(t0.selector) : null } : null
+  if (!t && !pideInventarioDom(error)) return
   const mensaje = error instanceof Error ? error.message : 'hueco de mapa'
   await registrarAtasco(page, ctx, {
     clave: CLAVE_ATASCO_HUECO_MAPA,
     tipo: 'campo',
-    etiqueta: null,
-    descripcion: `Pantalla o paso sin mapa: ${mensaje}`,
+    etiqueta: t?.selector ?? null,
+    descripcion: t
+      ? `Paso del formulario sin respuesta: «${t.accion}» sobre ${t.selector ?? 'un control mapeado'} agotó la espera (control deshabilitado, oculto o cambiado)`
+      : `Pantalla o paso sin mapa: ${mensaje}`,
   }).catch(() => undefined)
 }
 

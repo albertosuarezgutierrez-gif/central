@@ -47,6 +47,9 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.4 (15/10/2026, trabajo real 39c8016e) · ya en «Figuras», moría `error_definitivo` en `fill` sobre «siniestros RC 5 años»
+//   (input DESHABILITADO: la grabación no lo toca). Ningún `fill` sobre un campo no editable: con 0 siniestros se deja como lo
+//   pinta el portal; con >0 → atasco + hueco. Y la red de la capa común (formador.ts) atasca un TimeoutError sobre un control.
 // v0.8.3 (15/10/2026, trabajo real 39c8016e) · tras «Continuar» desde «Objeto asegurado» NO llegaba a «Figuras». La grabación
 //   rellena el CP de circulación y SALE del campo (Tab) antes de «Continuar»; el bot lo escribía y pulsaba «Continuar» con el
 //   foco aún dentro: NSEI valida el CP al salir (asíncrono) y el clic llegaba con el control sin asentar. Ahora cada campo de
@@ -459,6 +462,7 @@ export async function consultarVehiculoPorMatricula(
   if (!r) throw new ErrorMapaIncompleto('el campo de matrícula del paso «Objeto asegurado» (no aparece)', true)
   const campo = r.campo
   await comprobarCampo(campo)
+  if (!(await esperarEditable(campo))) await huecoVehiculo(nsei, respaldo.formador, 'el campo de matrícula del paso «Objeto asegurado» (está deshabilitado: no se escribe)')
   await campo.fill(matricula)
   if (normalizarMatricula(await campo.inputValue()) !== normalizarMatricula(matricula)) throw new ErrorTarificador('portal', 'mapfre/auto: el portal no dejó fijada la matrícula')
   await r.confirmar().catch(() => undefined)
@@ -550,6 +554,12 @@ export type OperacionNsei = {
    * Aun así, solo se da por ausente tras una ESPERA ACTIVA (`ESPERA_OPCIONAL_MS`), nunca con un `count()` instantáneo.
    */
   opcional?: boolean
+  /**
+   * v0.8.4 (trabajo real 39c8016e): si el portal pinta el campo DESHABILITADO, para ESTE valor es su estado natural: no se
+   * toca y se sigue. Hoy solo «siniestros RC 5 años» con 0 (la grabación del 15/10 no lo toca: el portal lo deja
+   * deshabilitado). Sin la marca, un campo deshabilitado → ATASCO + hueco (nunca un `fill` sobre él ni 30 s de espera).
+   */
+  intactoSiDeshabilitado?: boolean
 }
 
 // ───────────────────────── mapeo valor del formulario → texto de Mapfre (datos explícitos) ─────────────────────────
@@ -644,7 +654,7 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
     { sel: SEL_OBJETO.matricula, etiqueta: 'matrícula', tipo: 'texto', valor: f.matricula, paso: 'objetoAsegurado' },
     { sel: SEL_OBJETO.cpCirculacion, etiqueta: 'CP de circulación', tipo: 'texto', valor: f.codigoPostal, paso: 'objetoAsegurado' },
     { sel: SEL_LICENCIA.fechaCarne, etiqueta: 'fecha del carné (Valido desde)', tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne, 'mapfre/auto: la fecha del carné'), paso: 'figuras', porEtiqueta: { ambito: SEL_LICENCIA.ambito, etiqueta: SEL_LICENCIA.etiquetaFechaCarne } },
-    { sel: SEL_HISTORIAL.siniestrosRc5, etiqueta: 'siniestros RC 5 años', tipo: 'texto', valor: String(f.siniestrosUltimos5Anios), paso: 'figuras' },
+    { sel: SEL_HISTORIAL.siniestrosRc5, etiqueta: 'siniestros RC 5 años', tipo: 'texto', valor: String(f.siniestrosUltimos5Anios), paso: 'figuras', ...(f.siniestrosUltimos5Anios === 0 ? { intactoSiDeshabilitado: true } : {}) },
   ]
   const pendientes: OperacionNsei[] = []
   // mat-select: con el valor del formulario mapeado van a `escribibles` (los rellena `rellenarMatSelects`); sin él, pendiente.
@@ -667,14 +677,24 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
  * `fill` de Playwright lanza `input`, que es lo que escucha Angular Material (no hace falta `change` a mano). Devuelve las
  * etiquetas de lo que quedó sin escribir para que el llamante lo sepa (no se calla).
  */
-export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, respaldo: RespaldoCampos = SIN_RESPALDO): Promise<string[]> {
+export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: PlanNsei, respaldo: RespaldoCampos = SIN_RESPALDO, esperaEditableMs: number = ESPERA_EDITABLE_MS): Promise<string[]> {
   for (const op of plan.escribibles) {
     if (op.tipo !== 'texto') continue
+    const nombrePaso = PASOS_NSEI.find((x) => x.id === op.paso)!.nombre
     const porEtiqueta = op.porEtiqueta ? await campoPorEtiquetaPortal(raiz, op.sel, op.porEtiqueta) : null
-    const r = porEtiqueta ?? (await campoConRespaldo(raiz, op.sel, { ...respaldo, etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI` }))
+    const r = porEtiqueta ?? (await campoConRespaldo(raiz, op.sel, { ...respaldo, etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del paso «${nombrePaso}» de Mapfre NSEI` }))
     if (!r) throw new ErrorMapaIncompleto(`el campo «${op.etiqueta}» (${op.sel}; no aparece)`, true)
     const campo: Locator = r.campo
     await comprobarCampo(campo)
+    // v0.8.4: NUNCA `fill` sobre un campo deshabilitado/solo lectura (Playwright esperaría 30 s y moriría sin atasco).
+    if (!(await esperarEditable(campo, esperaEditableMs))) {
+      if (op.intactoSiDeshabilitado) {
+        respaldo.formador?.log('mapfre_campo_deshabilitado_intacto', { etiqueta: op.etiqueta })
+        continue
+      }
+      await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Campo «${op.etiqueta}» del paso «${nombrePaso}» de Mapfre NSEI: está DESHABILITADO y la grabación no muestra cómo habilitarlo. El robot no escribe ni supone nada aquí.` }).catch(() => undefined)
+      throw new ErrorMapaIncompleto(`el campo «${op.etiqueta}» está deshabilitado en el portal y el riesgo trae un valor (la grabación no muestra cómo habilitarlo)`, true)
+    }
     await campo.fill(String(op.valor))
     if ((await campo.inputValue()) !== String(op.valor)) throw new ErrorTarificador('portal', `mapfre/auto: el portal no dejó fijado el campo «${op.etiqueta}»`)
     // v0.8.3: como la grabación (Tab tras el CP), SALIR del campo y esperar a que NSEI lo valide (asíncrono) antes de seguir.
@@ -684,6 +704,19 @@ export async function rellenarCamposTexto(raiz: Pick<Frame, 'locator'>, plan: Pl
     await r.confirmar().catch(() => undefined)
   }
   return plan.pendientes.map((p) => p.etiqueta)
+}
+
+/** v0.8.4 · Espera máxima a que un campo pase a EDITABLE antes de escribir (Angular puede habilitarlo con un pequeño retraso). */
+export const ESPERA_EDITABLE_MS = 1_500
+
+/** v0.8.4 · ¿El campo es editable (habilitado y no solo lectura) dentro de `ms`? Sondeo corto; nunca lanza. Solo lectura. */
+export async function esperarEditable(campo: Locator, ms: number = ESPERA_EDITABLE_MS): Promise<boolean> {
+  const fin = Date.now() + ms
+  for (;;) {
+    if (await campo.isEditable({ timeout: 500 }).catch(() => false)) return true
+    if (Date.now() >= fin) return false
+    await new Promise((r) => setTimeout(r, 150))
+  }
 }
 
 /** Espera máxima a que un campo recién escrito se asiente (validación asíncrona de NSEI al salir del campo). */
@@ -1028,6 +1061,7 @@ export async function altaTomadorNuevo(nsei: Page, f: FormularioAuto, ctx: Pick<
     await comprobarCampo(campo)
     // Mapfre puede autorrellenar DESPUÉS de la espera: lo que ya tiene valor no se sobrescribe nunca.
     if ((await campo.inputValue()).trim() !== '') await huecoTomador(nsei, ctx, op.etiqueta, `Mapfre rellenó «${op.etiqueta}» después de avisar de que el tomador no existe (señales contradictorias): no se sobrescribe`)
+    if (!(await esperarEditable(campo))) await huecoTomador(nsei, ctx, op.etiqueta, `el campo «${op.etiqueta}» del alta del tomador está deshabilitado (no se escribe)`)
     const valor = String(op.valor)
     await campo.fill(valor)
     await campo.blur().catch(() => undefined)
@@ -1058,6 +1092,7 @@ export async function pasoDatosBasicos(nsei: Page, f: FormularioAuto, ctx: Pick<
   if (!r) throw new ErrorMapaIncompleto('el campo NIF/CIF del tomador del paso 1 «Datos básicos» (no aparece)', true)
   const campo = r.campo
   await comprobarCampo(campo)
+  if (!(await esperarEditable(campo))) await huecoTomador(nsei, ctx, 'NIF/CIF', 'el campo NIF/CIF del tomador del paso 1 «Datos básicos» está deshabilitado (no se escribe)')
   await campo.fill(nif)
   if ((await campo.inputValue()).trim().toUpperCase() !== nif.trim().toUpperCase()) throw new ErrorTarificador('portal', 'mapfre/auto: el portal no dejó fijado el NIF/CIF del tomador')
   // Salir del campo dispara la búsqueda automática de Mapfre. NO se pulsa la lupa.
@@ -1221,9 +1256,12 @@ export async function precioDesdeObjetoAsegurado(
   await continuar(nsei, ctx, 'objetoAsegurado')
   // Orden de la grabación: licencia (clase y fecha) → compañía anterior → nº de póliza anterior.
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras'), respaldo)
+  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
   await historialAnterior(nsei, f, ctx.formador)
+  // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
+  // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
+  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
   exigirPasoCompleto(plan, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
@@ -1240,7 +1278,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.3',
+  version: '0.8.4',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
