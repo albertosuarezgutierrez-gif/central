@@ -86,8 +86,10 @@ test('aprendido: lo descartado no se sirve y un éxito pone los fallos a cero', 
 test('guardarAtasco cierra el atasco esperando anterior del mismo trabajo antes de insertar; listarAtascos acota las capturas', () => {
   const src = leer('lib/tarificador-robustez.ts')
   const g = tramo(src, 'export async function guardarAtasco', 'function atascoDeFila')
-  assert.match(g, /update \w+\.tarificador_atascos[\s\S]*?set estado = 'descartado'[\s\S]*?where trabajo_id = \$\{t\.id\}::uuid and estado = 'esperando'/, 'el atasco viejo sigue esperando')
-  assert.ok(g.indexOf("set estado = 'descartado'") < g.indexOf('insert into'), 'cerrar ANTES de insertar')
+  assert.match(g, /descartarAtascosEsperando\(db, t\.id, 'sistema:sustituido'\)/, 'el atasco viejo sigue esperando')
+  assert.ok(g.indexOf('descartarAtascosEsperando(') < g.indexOf('insert into'), 'cerrar ANTES de insertar')
+  const h = tramo(src, 'export async function descartarAtascosEsperando', 'export async function guardarAtasco')
+  assert.match(h, /update \w+\.tarificador_atascos[\s\S]*?set estado = 'descartado'[\s\S]*?where trabajo_id = \$\{trabajoId\}::uuid and estado = 'esperando'/, 'el helper no cierra los esperando')
   const l = tramo(src, 'export async function listarAtascos', '/** Marca como avisados')
   assert.match(l, /capturaDentroDeTope\(/)
   assert.match(src, /cabeCapturaEnRespuesta\(usado, b64\.length\)/)

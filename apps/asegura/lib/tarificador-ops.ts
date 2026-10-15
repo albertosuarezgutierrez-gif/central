@@ -284,7 +284,9 @@ async function leerIaPorDia(): Promise<IaDia[] | null> {
 export async function leerPanelTarificador(correduriaId: string, env: Record<string, string | undefined> = process.env, ahora = new Date()): Promise<PanelTarificador> {
   const [metr, completados, intervenciones, renov, iaDias] = await Promise.all([
     prisma.$queryRaw<{ compania: string; ramo: string; modo: string; estado: string; created_at: Date; iniciado_at: Date | null; terminado_at: Date | null; error: unknown }[]>`
-      select compania, ramo, coalesce(to_jsonb(t)->>'modo', 'tarificar') as modo, estado, created_at, iniciado_at, terminado_at, error
+      select compania, ramo, coalesce(to_jsonb(t)->>'modo', 'tarificar') as modo, estado, created_at, iniciado_at, terminado_at,
+             -- El panel solo necesita el tipo/mensaje: el recorrido y el inventario (hasta ~60 KB × 5000 filas) se quedan en la BD.
+             case when jsonb_typeof(t.error) = 'object' then t.error - 'recorrido' - 'inventarioDom' else t.error end as error
       from seguros.tarificacion_trabajos t
       where t.correduria_id = ${correduriaId}::uuid and t.created_at > now() - interval '40 days'
         -- Métricas y coste POR TARIFICACIÓN: una exploración no es una tarificación (ni éxito ni fallo de una).

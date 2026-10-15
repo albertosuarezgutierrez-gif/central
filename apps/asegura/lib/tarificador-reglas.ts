@@ -7,8 +7,8 @@
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
-  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type RiesgoComunidad, type TipoError,
+  claveCompania, envDeMaquina, esCif, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
 /** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
@@ -357,9 +357,11 @@ export type ResultadoWorker =
        *  `error` jsonb del trabajo y es la lista contra la que se valida cualquier elección (IA o bandeja). */
       /** `inventarioDom` (13/10/2026): ESTRUCTURA de la pantalla de un hueco de mapa (`ErrorMapaIncompleto`), saneada otra
        *  vez aquí (sin valores de campos, sin datos personales, ≤60 KB); se guarda en el `error` jsonb. Nunca se loguea. */
+      /** `recorrido` (15/10/2026): capturas ligeras de TODAS las pantallas/pasos/diálogos del trabajo (sin valores ni datos personales,
+       *  ≤60 KB), re-saneadas aquí; se guarda en el `error` jsonb (sin migración). Accesorio: sin forma → se descarta. Nunca se loguea. */
       /** `atasco` (F2, 14/10/2026): checkpoint de un paso que nadie resolvió, re-saneado (`leerAtascoWorker`). Accesorio:
        *  inválido → se descarta y el trabajo falla como antes. NO va al `error` jsonb: vive en `tarificador_atascos`. */
-      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; atasco?: AtascoWorker }
+      error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }
       captura: Buffer | null
       html: string | null
     } & MetaWorker)
@@ -461,12 +463,13 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const opcionesPoblacion = err?.tipo === 'captcha' ? validarOpcionesPoblacion(err.opcionesPoblacion) : null
     // Accesorio también: se RE-SANEA (lista blanca + filtro de datos personales + tope de bytes); sin forma → se descarta.
     const inventarioDom = err?.inventarioDom !== undefined ? sanearInventarioDom(err.inventarioDom) : null
+    const recorrido = err?.recorrido !== undefined ? sanearRecorrido(err.recorrido) : null
     // Checkpoint de ATASCO (F2): solo en un hueco del portal; accesorio (inválido → se descarta).
     const atasco = err?.tipo === 'portal' && err.atasco !== undefined ? leerAtascoWorker(err.atasco) : null
     if (errores.length) return { ok: false, errores }
     return {
       ok: true,
-      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(atasco ? { atasco } : {}) }, captura, html, ...leerMetaWorker(e) },
+      r: { tipo: 'error', trabajoId, error: { tipo: err!.tipo as TipoError, mensaje: mensaje!, url, ...(opcionesVersion ? { opcionesVersion } : {}), ...(opcionesPoblacion ? { opcionesPoblacion } : {}), ...(inventarioDom ? { inventarioDom } : {}), ...(recorrido && recorrido.capturas.length > 0 ? { recorrido } : {}), ...(atasco ? { atasco } : {}) }, captura, html, ...leerMetaWorker(e) },
     }
   }
 

@@ -29,6 +29,9 @@ import {
 import { Prisma } from '@prisma/client' // el MISMO cliente que el `prisma` de ./tenant: un Prisma.sql de otro cliente generado se envía como parámetro (P2010 en $6)
 import { prisma } from './tenant'
 import { hayAtascos, hayConfianzaAprendido, hayPausas } from './esquema-bd'
+import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
+import { decidirRelanzar } from './tarificador-relanzar-reglas'
 import { purgarRiesgoTrabajos } from './tarificador-purga'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
@@ -54,16 +57,21 @@ export async function atascoParaFallo(db: Db, f: { trabajoId: string; estado: st
   return f.atasco
 }
 
+/** Cierra como `descartado` los atascos ESPERANDO de un trabajo (su id ya no puede aplicarse). Devuelve cuántos cerró. */
+export async function descartarAtascosEsperando(db: Db, trabajoId: string, quien: string): Promise<number> {
+  return db.$executeRaw`
+    update seguros.tarificador_atascos
+       set estado = 'descartado', respondido_at = now(), respondido_por = ${quien.slice(0, 200)}
+     where trabajo_id = ${trabajoId}::uuid and estado = 'esperando'`
+}
+
 /** Guarda el checkpoint (la fila del trabajo ya está `atascado` en esta misma transacción). */
 export async function guardarAtasco(db: Db, t: { id: string; correduriaId: string; compania: string; ramo: string }, a: AtascoWorker, capturaId: string | null): Promise<void> {
   const horas = horasAtasco(process.env)
   // Un atasco ESPERANDO anterior del mismo trabajo (p. ej. reintento desde la bandeja) se cierra ANTES: sus candidatos son
   // viejos y su id no debe poder aplicarse (responderAtasco ve estado <> 'esperando' → sin_cambios/conflicto). La fila queda
   // de rastro y cuenta como ronda previa.
-  await db.$executeRaw`
-    update seguros.tarificador_atascos
-       set estado = 'descartado', respondido_at = now(), respondido_por = 'sistema:sustituido'
-     where trabajo_id = ${t.id}::uuid and estado = 'esperando'`
+  await descartarAtascosEsperando(db, t.id, 'sistema:sustituido')
   await db.$executeRaw`
     insert into seguros.tarificador_atascos
       (correduria_id, trabajo_id, compania, ramo, clave, tipo, descripcion, etiqueta, texto_esperado, candidatos, captura_documento_id, caduca_at)
@@ -252,6 +260,66 @@ export async function responderAtasco(correduriaId: string, atascoId: string, r:
       set estado = 'pendiente', intentos = 0, lease_hasta = null, fly_machine_id = null, terminado_at = null, updated_at = now()
       where id = ${f.trabajo_id}::uuid and estado = 'atascado'`
     return { estado: 'respondido' as const, ...base }
+  }, { timeout: 15000, maxWait: 10000 })
+}
+
+// ─── RELANZAR (puerto de operador) ───────────────────────────────────────────
+
+export type ResultadoRelanzar =
+  | { estado: 'relanzado'; trabajoId: string; compania: string; ramo: string; atascosDescartados: number }
+  | { estado: 'conflicto'; status: 409 | 429; motivo: string }
+  | { estado: 'no_encontrado' }
+  | { estado: 'sin_esquema' }
+
+/** Relanzamientos de la compañía en las últimas 24 h, contados en `auditoria` (solo llamadas que salieron bien). */
+export async function contarRelanzamientos24h(compania: string): Promise<number> {
+  const f = await prismaAsegura().$queryRaw<{ n: number }[]>`
+    select count(*)::int as n from auditoria
+    where ruta = '/api/operador/tarificador/relanzar' and metodo = 'POST' and estado_http < 400
+      and created_at > now() - interval '24 hours'
+      and cambios @> jsonb_build_array(jsonb_build_object('entidad', 'trabajo_tarificador', 'campo', 'relanzado', 'despues', ${compania}::text))`
+  return f[0]?.n ?? 0
+}
+
+/**
+ * Devuelve a `pendiente` un trabajo `atascado` de TARIFICAR (no `requiere_humano`: captcha/OTP mandarían otro SMS) con su MISMO riesgo (intentos 0, lease/fly/error/
+ * fechas a null), tras descartar sus atascos esperando. Una transacción: `for update` del trabajo, cerrojo consultivo por
+ * compañía y `decidirRelanzar` (estado, pausa, un trabajo vivo por compañía, máx. N cada 24 h). El tope se cuenta en la tabla
+ * `auditoria` existente: cada relanzamiento deja ahí el cambio `trabajo_tarificador.relanzado` = compañía (lo escribe `auditado`
+ * de la ruta). Sin esa BD no se puede contar y, sin tope, no se relanza. No lanza la máquina: eso lo hace la ruta.
+ */
+export async function relanzarTrabajo(correduriaId: string, trabajoId: string, actor: string): Promise<ResultadoRelanzar> {
+  if (!aseguraConfigurada()) return { estado: 'sin_esquema' }
+  const previo = await prisma.$queryRaw<{ compania: string }[]>`
+    select compania from seguros.tarificacion_trabajos where id = ${trabajoId}::uuid and correduria_id = ${correduriaId}::uuid`
+  if (!previo[0]) return { estado: 'no_encontrado' }
+  const relanzamientos24h = await contarRelanzamientos24h(previo[0].compania)
+  const conAtascos = await hayAtascos()
+  const conPausas = await hayPausas()
+  const quien = actor.slice(0, 200)
+  return prisma.$transaction(async (tx) => {
+    const filas = await tx.$queryRaw<{ estado: string; compania: string; ramo: string; modo: string | null; tipo_error: string | null }[]>`
+      select t.estado, t.compania, t.ramo, to_jsonb(t)->>'modo' as modo, to_jsonb(t)->'error'->>'tipo' as tipo_error
+      from seguros.tarificacion_trabajos t
+      where t.id = ${trabajoId}::uuid and t.correduria_id = ${correduriaId}::uuid for update`
+    const f = filas[0]
+    if (!f) return { estado: 'no_encontrado' as const }
+    await tx.$executeRaw`select pg_advisory_xact_lock(hashtextextended(${`relanzar:${correduriaId}:${f.compania}`}, 0))`
+    const vivos = await tx.$queryRaw<{ n: number }[]>`
+      select count(*)::int as n from seguros.tarificacion_trabajos w
+      where w.correduria_id = ${correduriaId}::uuid and w.compania = ${f.compania} and w.id <> ${trabajoId}::uuid
+        and w.estado in ('pendiente', 'en_curso', 'error_reintentable', 'autorizado_emision')`
+    const pausada = conPausas ? await pausaViva(tx, correduriaId, f.compania, f.ramo) : false
+    const d = decidirRelanzar({ estado: f.estado, modo: f.modo, tipoError: f.tipo_error, vivosCompania: vivos[0]?.n ?? 0, relanzamientos24h, pausada })
+    if (!d.ok) return { estado: 'conflicto' as const, status: d.status, motivo: d.motivo }
+    const descartados = conAtascos ? await descartarAtascosEsperando(tx, trabajoId, quien) : 0
+    await tx.$executeRaw`
+      update seguros.tarificacion_trabajos
+      set estado = 'pendiente', intentos = 0, lease_hasta = null, fly_machine_id = null, error = null,
+          iniciado_at = null, terminado_at = null, updated_at = now()
+      where id = ${trabajoId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'atascado'`
+    anotarCambio({ entidad: 'trabajo_tarificador', id: trabajoId, campo: 'relanzado', despues: f.compania })
+    return { estado: 'relanzado' as const, trabajoId, compania: f.compania, ramo: f.ramo, atascosDescartados: descartados }
   }, { timeout: 15000, maxWait: 10000 })
 }
 

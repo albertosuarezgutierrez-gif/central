@@ -11,7 +11,8 @@ const reloj = (t0 = 1_000_000) => { let t = t0; return { ahora: () => t, avanza:
 
 test('el runner usa la traza del intento (cableado)', () => {
   const f = readFileSync(new URL('../src/runner.ts', import.meta.url), 'utf8')
-  assert.match(f, /paso: ti\.paso/)
+  // `ctx.paso` envuelve a `ti.paso` con las capturas del recorrido (15/10/2026): la traza sigue pasando por la del intento.
+  assert.match(f, /paso: async \(nombre, fn\) => \{[\s\S]{0,200}return await ti\.paso\(nombre, fn\)/)
   assert.match(f, /ti\.marcarLogin\(\)/)
   assert.match(f, /ti\.cubrir\(\{ ok: false, codigo: c\.tipo \}\)/)
   assert.match(f, /ti\.cerrar\(\)/)

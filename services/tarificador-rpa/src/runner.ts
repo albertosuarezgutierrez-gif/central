@@ -31,6 +31,9 @@ import {
   type PdfRef,
   type InventarioDom,
   type AtascoWorker,
+  type MotivoCaptura,
+  type Recorrido,
+  valoresSensiblesDeRiesgo,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
@@ -53,6 +56,7 @@ import type { ContextoPortal } from './adaptador.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
 import { ejecutarEmision } from './emision.ts'
 import { ejecutarExploracion } from './explorador.ts'
+import { crearCapturadorRecorrido, type CapturadorRecorrido } from './recorrido.ts'
 
 const TOPE_GLOBAL_MS = 4 * 60_000
 /** Techo absoluto del trabajo (dos intentos + espera), por si el lease no llega legible. */
@@ -103,6 +107,8 @@ type Comun = {
   credenciales: Credenciales
   formador: ContextoFormador | undefined
   traza: Traza
+  /** Recorrido del trabajo (15/10/2026): capturas ligeras de cada pantalla/paso/diálogo, de los dos intentos. */
+  recorrido: CapturadorRecorrido
   log: (m: string, d?: Record<string, unknown>) => void
 }
 
@@ -119,6 +125,19 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     ...(previa ? { storageState: previa as BrowserContextOptions['storageState'] } : {}),
   })
   const ti = crearTrazaIntento(k.traza)
+  // RECORRIDO (15/10/2026): binding + observador de diálogos en TODOS los marcos, ANTES de abrir ninguna página; una captura por
+  // cada carga de página (también las pestañas nuevas de Mapfre). Sin bloquear al adaptador: si ya hay una en vuelo, se omite.
+  await k.recorrido.instalar(context)
+  // Contador de capturas en vuelo (un boolean se pisaba: la primera en acabar apagaba la marca de la segunda).
+  let capturando = 0
+  let msCapturas = 0 // total de ms gastados en capturas de ESTE intento (se registra al cerrarlo)
+  const capturar = async (motivo: MotivoCaptura, paso?: string): Promise<void> => {
+    if (capturando > 0 && motivo === 'navegacion') return
+    capturando++
+    const t0 = Date.now()
+    try { await k.recorrido.capturar(context, motivo, paso) } finally { capturando--; msCapturas += Date.now() - t0 }
+  }
+  context.on('page', (p) => { p.on('domcontentloaded', () => { void capturar('navegacion') }) })
   // ATASCO (F2): el checkpoint es de ESTE intento (un reintento empieza de cero).
   if (k.formador) k.formador.atasco = null
   let logueado = false
@@ -144,6 +163,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         logueado = true
         ti.marcarLogin()
         log('tras_login')
+        await capturar('login')
         // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
         await exigirSinVerificacion(page, k.compania)
       },
@@ -180,6 +200,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         const destino = pagina ?? page
         if (destino.context() !== context) throw new ErrorTarificador('portal', 'continuar: la pestaña no es de este trabajo')
         await pulsarContinuarSeguro(destino, { pulsar: ctx.pulsar, formador: k.formador, ...o })
+        await capturar('avance')
       },
       elegirMatSelect: (select, valores, o) => {
         if (select.page().context() !== context) throw new ErrorTarificador('portal', 'mat-select: la pestaña no es de este trabajo')
@@ -199,7 +220,15 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
-      paso: ti.paso,
+      // Cada paso de la traza deja una captura al entrar y otra al salir (ok o fallo): el recorrido documenta la transición.
+      paso: async (nombre, fn) => {
+        await capturar('paso', nombre)
+        try {
+          return await ti.paso(nombre, fn)
+        } finally {
+          await capturar('paso_fin', nombre)
+        }
+      },
     }
 
     let resultado: { ofertas: OfertaNormalizada[] } | null = null
@@ -251,6 +280,8 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     // (con una sola pestaña, la de siempre).
     const abiertas = context.pages().filter((p) => !p.isClosed())
     const actual = abiertas.at(-1) ?? page
+    // Recorrido: la pantalla donde se paró (hueco de mapa → «pantalla_no_reconocida», con su diálogo si lo hay), antes de la evidencia.
+    await capturar(pideInventarioDom(error) ? 'pantalla_no_reconocida' : 'fallo')
     const { captura, html } = await capturarEvidencia(actual)
     // Hueco de mapa (`ErrorMapaIncompleto`): inventario de ESTRUCTURA de todos los marcos de TODAS las pestañas (la más
     // reciente primero, por el tope de tamaño), incluidos los de otro origen (solo lectura, saneado y ≤60 KB;
@@ -264,6 +295,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     await k.sesion.alFallo(false).catch(() => undefined)
     throw e
   } finally {
+    log('recorrido_ms_capturas', { ms: msCapturas })
     await context.close().catch(() => undefined)
   }
 }
@@ -402,7 +434,9 @@ async function main(): Promise<number> {
   // Traza del trabajo (pasos con tiempos y código de error, sin datos): acumula los dos intentos y viaja en el POST del resultado.
   const traza = crearTraza((e) => clasificar(e).tipo)
   const meta = () => ({ pasos: traza.pasos(), botVersion: adaptador.version })
-  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, log }
+  // Recorrido del trabajo (15/10/2026): mismo redactor que el resto de lo que sale + los valores del riesgo; tope ~60 KB.
+  const recorrido = crearCapturadorRecorrido({ redactar: redactarTrabajo, valores: valoresSensiblesDeRiesgo(trabajo.riesgo), log })
+  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, recorrido, log }
 
   // Un trabajo a la vez por proceso (hoy la máquina solo hace uno; si atiende varios, siguen en serie).
   return enSerie(async () => {
@@ -429,11 +463,12 @@ async function main(): Promise<number> {
       if (r.ok) {
         const ofertas = nota ? r.ofertas.map((o) => ({ ...o, avisos: [...o.avisos, `Cotizado al ${nota}`] })) : r.ofertas
         const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas, pdfs: r.pdfs, ...meta() })
-        log('resultado_ok_enviado', { status: st, ofertas: ofertas.length, intentos: primerFallo ? 2 : 1 })
+        log('resultado_ok_enviado', { status: st, ofertas: ofertas.length, intentos: primerFallo ? 2 : 1, recorridoCapturas: recorrido.recorrido().capturas.length, recorridoBytes: recorrido.colector.bytes() })
         return st >= 200 && st < 300 ? 0 : 1
       }
 
       const { c, evidencia } = r
+      const recorridoDelTrabajo: Recorrido = recorrido.recorrido()
       const secretos = [...secretosDelEntorno(env), ...secretosRiesgo]
       const htmlRedactado = evidencia.html ? redactarHtml(evidencia.html, secretos) : null
       const mensaje = (nota ? `[${nota}] ` : '') + c.mensaje
@@ -450,6 +485,9 @@ async function main(): Promise<number> {
           ...(c.opcionesPoblacion ? { opcionesPoblacion: c.opcionesPoblacion.slice(0, MAX_OPCIONES_POBLACION_CABLE) } : {}),
           // Estructura de la pantalla (ya saneada, sin valores de campos): NO pasa por el log, solo su cuenta.
           ...(evidencia.inventarioDom ? { inventarioDom: evidencia.inventarioDom } : {}),
+          // Recorrido del trabajo (15/10/2026): capturas ligeras de TODAS las pantallas/pasos/diálogos (sin valores ni datos
+          // personales, ≤60 KB). Va en el `error` jsonb existente: sin migración. Un `ok` no tiene dónde guardarlo (ver informe).
+          ...(recorridoDelTrabajo.capturas.length > 0 ? { recorrido: recorridoDelTrabajo } : {}),
           // Checkpoint del ATASCO (F2): candidatos ya redactados y numerados; asegura los re-sanea y decide si se atasca.
           ...(r.atasco ? { atasco: r.atasco } : {}),
         },
@@ -468,6 +506,7 @@ async function main(): Promise<number> {
         intentos: primerFallo ? 2 : 1,
         mensaje: redactarTrabajo(c.mensaje).slice(0, 300),
         ...(evidencia.inventarioDom ? { inventarioElementos: evidencia.inventarioDom.totalElementos, inventarioMarcos: evidencia.inventarioDom.marcos.length } : {}),
+        recorridoCapturas: recorridoDelTrabajo.capturas.length,
         ...(r.atasco ? { atasco: r.atasco.clave, atascoCandidatos: r.atasco.candidatos.length } : {}),
       })
       return 1

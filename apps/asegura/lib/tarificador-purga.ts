@@ -57,7 +57,9 @@ export async function purgarRiesgoTrabajos(db: DbPurga, ids: readonly (string | 
     if (f.modo === 'emision' && f.origen_id && (ESTADOS_PURGA_RIESGO as readonly string[]).includes(f.estado)) origenes.push(f.origen_id)
     if (!plan.purgar) continue
     n += await db.$executeRaw`
-      update seguros.tarificacion_trabajos set riesgo = ${JSON.stringify(plan.riesgo)}::jsonb
+      update seguros.tarificacion_trabajos set riesgo = ${JSON.stringify(plan.riesgo)}::jsonb,
+        -- El recorrido y el inventario de pantalla (capturas de portal) viven en el jsonb «error»: caen con el riesgo.
+        error = case when jsonb_typeof(error) = 'object' then error - 'recorrido' - 'inventarioDom' else error end
       where id = ${f.id}::uuid and estado = ${f.estado}`
   }
   // El origen se mira UNA vez (un origen es de tarificar: no tiene a su vez origen).
