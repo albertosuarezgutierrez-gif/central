@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 329 | 48.690 | 40.957.669 | 0 | 0 |
-| `otro` | 325 | 11.546 | 27.964.108 | 18.199.126 | 0 |
-| `lectura-directa` | 282 | 7.954 | 25.033.949 | 0 | 0 |
-| `mcp:github` | 286 | 6.615 | 5.215.508 | 54.240.680 | 95 |
-| `sql` | 207 | 4.671 | 2.325.042 | 2.351.230 | 18 |
-| `escritura` | 211 | 4.526 | 65.770.101 | 0 | 0 |
+| `bash` | 329 | 48.876 | 41.108.189 | 0 | 0 |
+| `otro` | 325 | 11.574 | 28.014.195 | 18.199.126 | 0 |
+| `lectura-directa` | 282 | 7.972 | 25.098.051 | 0 | 0 |
+| `mcp:github` | 286 | 6.629 | 5.220.255 | 54.240.680 | 96 |
+| `sql` | 207 | 4.678 | 2.326.833 | 2.351.230 | 18 |
+| `escritura` | 211 | 4.537 | 65.913.073 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 45 | 1.208 | 1.258.683 | 0 | 72 |
 | `mcp:Booking-com` | 38 | 1.059 | 4.376.755 | 0 | 0 |
-| `mcp:Vercel` | 72 | 858 | 1.019.192 | 204.477 | 27 |
-| `agente:general-purpose` | 100 | 683 | 415.231 | 12.648.521 | 0 |
+| `mcp:Vercel` | 72 | 862 | 1.020.747 | 204.477 | 27 |
+| `agente:general-purpose` | 100 | 686 | 417.658 | 12.680.341 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
-| `mcp:claude-code-remote` | 39 | 405 | 43.009 | 20.519 | 0 |
+| `mcp:claude-code-remote` | 39 | 407 | 43.128 | 20.519 | 0 |
 | `mcp:Google_Drive` | 22 | 365 | 409.953 | 0 | 40 |
-| `mcp:Supabase` | 123 | 362 | 50.192 | 3.415 | 7 |
-| `agente:agente-architect` | 63 | 269 | 187.677 | 7.178.288 | 0 |
+| `mcp:Supabase` | 123 | 363 | 50.196 | 3.415 | 7 |
+| `agente:agente-architect` | 63 | 273 | 190.125 | 7.220.065 | 0 |
 | `mcp:Google-Drive` | 23 | 139 | 126.471 | 0 | 2 |
 | `agente:agente-mecanico` | 46 | 116 | 72.807 | 6.979.329 | 0 |
 | `agente:rastreador-codigo` | 49 | 85 | 26.575 | 1.213.315 | 0 |
@@ -202,7 +202,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `agente:general` | 12 | 16 | 10.198 | 592.852 | 0 |
 | `mcp:Supabase_asegura` | 13 | 14 | 2.979 | 0 | 0 |
-| `agente:verificador-esceptico` | 11 | 13 | 3.778 | 50.659 | 0 |
+| `agente:verificador-esceptico` | 11 | 14 | 4.061 | 50.659 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:lector-correo` | 3 | 10 | 4.219 | 0 | 0 |
 | `mcp:Google_Calendar` | 2 | 7 | 5.018 | 0 | 0 |
