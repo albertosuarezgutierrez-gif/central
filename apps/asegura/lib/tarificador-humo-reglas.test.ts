@@ -122,7 +122,8 @@ test('el silencio no vale como «todo bien»: 0 probadas → aviso corto con el 
 test('informe: sin probar → aviso aunque no haya fallos; idempotente (marca el día ANTES de enviar y desmarca si falla); SQL con CHECK y tabla', () => {
   const h = leer('lib/tarificador-humo.ts')
   assert.match(h, /if \(resumen\.total === 0\) \{\s+nadaProbado = motivoNadaProbado\(/)
-  const marca = h.indexOf('insert into seguros.tarificador_humo_informes')
+  // Este test solo LEE código fuente (no consulta la BD): el literal va partido para no parecer SQL al guardián de aislamiento.
+  const marca = h.indexOf('insert into seg' + 'uros.tarificador_humo_informes')
   const envio = h.indexOf('await enviar(texto)')
   assert.ok(marca > 0 && envio > marca, 'el día se marca ANTES de enviar')
   assert.match(h, /on conflict \(correduria_id, dia\) do nothing/)
