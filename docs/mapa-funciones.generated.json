@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T06:07:10Z",
-  "sha": "10936fe60e71d6291022e2da903bb625d608a030",
+  "generadoEn": "2026-10-15T07:15:21Z",
+  "sha": "c26aa2cea8b2c70258c234e02a37d0f87d7d7c6c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -49541,6 +49541,7 @@
       "resumen": "Purga de los DATOS PERSONALES del riesgo de un trabajo del tarificador al cerrarse (13/10/2026). La decisión es PURA (`planPurgaRiesgo` de @central/module-tarificacion, lista BLANCA por ramo); aquí solo se lee la fila y se escribe el riesgo recortado. 🚨 Se llama DENTRO de la misma transacción que c",
       "exporta": [
         "purgarRiesgoTrabajos",
+        "purgarRecorridosCaducados",
         "purgarRiesgosCerrados"
       ],
       "funciones": [
@@ -49554,12 +49555,21 @@
           "resumen": "Recorta el riesgo de esos trabajos SI su estado actual lo pide. Si uno es una EMISIÓN ya cerrada, también se mira su ORIGEN (que se libera cuando su emisión se cierra). Devuelve cuántos se escribieron"
         },
         {
+          "nombre": "purgarRecorridosCaducados",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: DbPurga, correduriaId: string, dias = DIAS_RETENCION_RECORRIDO, limite = 500",
+          "retorno": "Promise<number>",
+          "linea": 80,
+          "resumen": "Barrido: quita `recorrido` (y `inventarioDom`, por si quedara alguno) del jsonb `error` de los trabajos cerrados hace más de `dias` (por tandas). Un trabajo abierto (`atascado`, `error_reintentable`, "
+        },
+        {
           "nombre": "purgarRiesgosCerrados",
           "kind": "function",
           "exportada": true,
           "params": "db: DbPurga, correduriaId: string, limite = 200",
           "retorno": "Promise<number>",
-          "linea": 76,
+          "linea": 99,
           "resumen": "RESPALDO del barrido: trabajos YA cerrados de la correduría cuyo riesgo aún tiene alguna clave fuera de la lista blanca (también dentro de dirección/vehículo/elecciones). Excluye el origen de emisión "
         }
       ],
@@ -49569,7 +49579,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "2b2b26bc7a24"
+      "hash": "b8f8d1ebce75"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-reglas.ts",
@@ -50458,7 +50468,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 736,
+          "linea": 738,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -50469,7 +50479,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "f6b10c91dabb"
+      "hash": "105aa254ed1c"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -217595,6 +217605,6 @@
   ],
   "resumen": {
     "archivos": 4707,
-    "funciones": 17304
+    "funciones": 17305
   }
 }
