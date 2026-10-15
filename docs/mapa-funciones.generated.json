@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-15T16:32:24Z",
-  "sha": "78e5569760f14e333b94aac0b09da606ec2820ed",
+  "generadoEn": "2026-10-15T18:10:37Z",
+  "sha": "f70664d7c904b465728c0056e66dbe87a047ca54",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -18346,6 +18346,48 @@
       "tablas": [],
       "rutaApi": "/api/cron/tarificador-cola",
       "hash": "2730356dfb48"
+    },
+    {
+      "ruta": "apps/asegura/app/api/cron/tarificador-humo-informe/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 18,
+          "resumen": "GET /api/cron/tarificador-humo-informe — resultado de la prueba nocturna de humo (15/10/2026), a las 04:15 de Madrid. Si alguna compañía ha fallado: UN solo aviso por Telegram a Alberto con la lista y"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/tarificador-humo-informe",
+      "hash": "ef6e394bb5b5"
+    },
+    {
+      "ruta": "apps/asegura/app/api/cron/tarificador-humo/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 22,
+          "resumen": "GET /api/cron/tarificador-humo — PRUEBA NOCTURNA DE HUMO de los bots tarificadores (15/10/2026): encola, a las 03:15 de Madrid, un trabajo `humo` por cada pareja (compañía, ramo) activa y `rpa_autoriz"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/tarificador-humo",
+      "hash": "3aae190f4d21"
     },
     {
       "ruta": "apps/asegura/app/api/cron/tarificador-renovaciones/route.ts",
@@ -46687,7 +46729,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "711be6973edc"
+      "hash": "3b92d749c497"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
@@ -47308,7 +47350,7 @@
     {
       "ruta": "apps/asegura/lib/tarificador-estadisticas.ts",
       "ambito": "apps/asegura",
-      "resumen": "Estadísticas de los bots del tarificador RPA (15/10/2026): SQL agregado de solo lectura. Reglas puras en ./tarificador-estadisticas-reglas.ts. Por `correduria_id`; solo trabajos de TARIFICAR (ni emisión ni exploración). 🔒 Solo salen contadores, medias y claves de atasco: ni riesgo, ni error crudo, ",
+      "resumen": "Estadísticas de los bots del tarificador RPA (15/10/2026): SQL agregado de solo lectura. Reglas puras en ./tarificador-estadisticas-reglas.ts. Por `correduria_id`; solo trabajos de TARIFICAR (ni emisión, ni exploración, ni la PRUEBA NOCTURNA DE HUMO: ni éxito ni fallo de tarificación). 🔒 Solo salen",
       "exporta": [
         "leerEstadisticasTarificador"
       ],
@@ -47326,7 +47368,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "bf7c99c46049"
+      "hash": "68bbd2005dd9"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-exploraciones-reglas.ts",
@@ -47628,7 +47670,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "boolean",
-          "linea": 51,
+          "linea": 52,
           "resumen": "Interruptor: `1` EXACTO. Cualquier otra cosa = apagado (fail-closed)."
         },
         {
@@ -47637,7 +47679,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string | null",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Modelo de la exploración. Sin env → el por defecto; env con algo que no es un slug → `null` (no se llama a la IA)."
         },
         {
@@ -47646,7 +47688,7 @@
           "exportada": true,
           "params": "cabecera: string | null",
           "retorno": "string[]",
-          "linea": 68,
+          "linea": 69,
           "resumen": "Modos declarados por el worker. Sin cabecera (imagen anterior a la fase B) = solo `tarificar` y `emision`."
         },
         {
@@ -47654,8 +47696,8 @@
           "kind": "function",
           "exportada": true,
           "params": "modo: string | null, modosWorker: readonly string[] = ['tarificar', 'emision']",
-          "retorno": "'tarificar' | 'emision' | 'exploracion' | null",
-          "linea": 78,
+          "retorno": "'tarificar' | 'emision' | 'exploracion' | 'humo' | null",
+          "linea": 79,
           "resumen": "Qué `modo` se le sirve al worker por `/api/tarificador/trabajo/[id]`. Un modo que el worker no conoce NO se sirve (`null`): una imagen anterior a la fase B trata todo lo que no es `emision` como `tari"
         },
         {
@@ -47664,7 +47706,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "string[]",
-          "linea": 90,
+          "linea": 93,
           "resumen": "Modos que el lanzador puede RECLAMAR de la cola. `exploracion` solo con el interruptor encendido (y Alberto lo enciende cuando `TARIFICADOR_FLY_IMAGE` ya es una imagen con el explorador): así una expl"
         },
         {
@@ -47673,7 +47715,7 @@
           "exportada": true,
           "params": "iniciadoAt: Date | null, primerPasoAt: Date | null",
           "retorno": "Date | null",
-          "linea": 101,
+          "linea": 105,
           "resumen": "Inicio ACUMULADO de la exploración: el más antiguo entre el reclamo actual (`iniciado_at`) y el primer paso guardado (un reintento tras un fallo de infra NO pone el reloj a cero). `null` = aún no cons"
         },
         {
@@ -47682,7 +47724,7 @@
           "exportada": true,
           "params": "p: { ahora: Date; inicio: Date | null; leaseMs: number; maxMs: number }",
           "retorno": "Date",
-          "linea": 110,
+          "linea": 114,
           "resumen": "Lease RENOVADO en cada paso de exploración (el de 6 min no basta si cada paso va a la IA): ahora + `leaseMs`, pero NUNCA más allá del tope de tiempo acumulado + margen de cierre. Si el tope ya pasó, d"
         },
         {
@@ -47691,7 +47733,7 @@
           "exportada": true,
           "params": "estadoPolitica: E, cabeceraCerrada: boolean",
           "retorno": "E | 'error_definitivo'",
-          "linea": 122,
+          "linea": 126,
           "resumen": "Estado del trabajo de EXPLORACIÓN tras un fallo (13/10/2026). Un `error_reintentable` con la cabecera YA cerrada (el worker cierra antes de reportar) no se reintenta: el reintento recibiría 404 de `tr"
         },
         {
@@ -47700,7 +47742,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 127,
+          "linea": 131,
           "resumen": "Un fallo que NO se reintenta deja la cabecera cerrada (la pantalla no la muestra «abierta» para siempre)."
         },
         {
@@ -47709,7 +47751,7 @@
           "exportada": true,
           "params": "cabeceraCerrada: boolean | null | undefined",
           "retorno": "boolean",
-          "linea": 132,
+          "linea": 136,
           "resumen": "Un `explorado` solo vale si la cabecera está cerrada (el mapa guardado); sin cabecera = no cerrada."
         },
         {
@@ -47718,7 +47760,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 137
+          "linea": 141
         },
         {
           "nombre": "sanearVistaAria",
@@ -47726,7 +47768,7 @@
           "exportada": true,
           "params": "v: unknown, valoresSensibles: readonly string[] = []",
           "retorno": "string | undefined",
-          "linea": 157,
+          "linea": 161,
           "resumen": "Vista aria opcional del worker → texto seguro para el prompt, o `undefined`. NO se fía de que llegue redactada: valores de campos fuera, datos personales y valores conocidos del cliente fuera, tope de"
         },
         {
@@ -47735,7 +47777,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 178,
+          "linea": 182,
           "resumen": "Cuerpo de `POST /api/tarificador/explorador/paso`: `{ trabajoId, inventario, avancesFallidos? }`. El inventario se RE-SANEA aquí (defensa en profundidad) conservando las refs del worker. Sin elementos"
         },
         {
@@ -47744,7 +47786,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 206,
+          "linea": 210,
           "resumen": "Cuerpo de `POST /api/operador/tarificador/exploracion`: `{ entrada, trabajoOrigenId? | oportunidadId? }`. La entrada tiene que ser de la lista CERRADA (`ENTRADAS_EXPLORACION`: nada de URLs). Las dos a"
         },
         {
@@ -47753,7 +47795,7 @@
           "exportada": true,
           "params": "motivoFin: MotivoFin, detalle: DetalleFinExploracion | null",
           "retorno": "string | null",
-          "linea": 245,
+          "linea": 249,
           "resumen": "El hueco que deja en el mapa el DETALLE de la parada del worker (14/10/2026): qué comprobación cortó, sin valores. `null` si no hay detalle. No hay columna propia: va a `mapa.huecos`, que es lo que se"
         },
         {
@@ -47762,7 +47804,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "",
-          "linea": 250,
+          "linea": 254,
           "resumen": "Cuerpo de `POST /api/tarificador/explorador/cierre`. La red va SOLO como origen + ruta (se re-normaliza aquí)."
         },
         {
@@ -47771,7 +47813,7 @@
           "exportada": true,
           "params": "fase: 'normal' | 'login', entrada: string",
           "retorno": "boolean",
-          "linea": 311,
+          "linea": 315,
           "resumen": "¿Se admite un paso de fase `login` para esta entrada? Solo si su compañía está en `LOGIN_ASISTIDO` (módulo; hoy Occident). La fase normal, siempre. Pura."
         },
         {
@@ -47780,7 +47822,7 @@
           "exportada": true,
           "params": "inv: InventarioDom",
           "retorno": "string",
-          "linea": 337,
+          "linea": 341,
           "resumen": "El inventario como JSON para el prompt, con `<` y `>` neutralizados (→ ‹ ›): el texto del portal (no confiable) no puede cerrar `</inventario>` ni abrir otra etiqueta del prompt. El JSON sigue siendo "
         },
         {
@@ -47789,7 +47831,7 @@
           "exportada": true,
           "params": "e: { entrada: string; inventario: InventarioDom; historial: string[]; avancesFallidos: number; pantallasLogin: number }",
           "retorno": "string",
-          "linea": 342,
+          "linea": 346,
           "resumen": "El mensaje de usuario de la fase de login: entrada, claves (sin valores), pasos anteriores y el inventario como DATOS."
         },
         {
@@ -47798,7 +47840,7 @@
           "exportada": true,
           "params": "pasos: readonly { respuesta: RespuestaExplorador | null }[]",
           "retorno": "string[]",
-          "linea": 353,
+          "linea": 357,
           "resumen": "Una línea por paso anterior: pantalla y acciones por CLAVE/ref (nunca valores)."
         },
         {
@@ -47807,7 +47849,7 @@
           "exportada": true,
           "params": "e: EntradaPrompt",
           "retorno": "string",
-          "linea": 380,
+          "linea": 384,
           "resumen": "El mensaje de usuario. El texto del portal va DELIMITADO como datos (`<inventario>`), en JSON: un intento de inyección desde el DOM se queda en una cadena dentro de un objeto. El catálogo va sin valor"
         },
         {
@@ -47816,7 +47858,7 @@
           "exportada": true,
           "params": "pasos: readonly PasoGuardado[], iniciadoAt: Date | null, ahora: Date",
           "retorno": "",
-          "linea": 410,
+          "linea": 414,
           "resumen": "Lo gastado hasta ahora por la exploración (para `comprobarTopes`). `iniciadoAt` null = ahora (0 ms)."
         },
         {
@@ -47825,13 +47867,13 @@
           "exportada": true,
           "params": "mapas: readonly { estado: string; mapa: unknown }[], huella: string",
           "retorno": "PantallaMapaExploracion | null",
-          "linea": 424,
+          "linea": 428,
           "resumen": "MEMORIA: la pantalla con esa huella en los mapas guardados (válidos) de la compañía/producto. Gana un mapa REVISADO por una persona; entre iguales, el primero de la lista (la consulta los trae del más"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b14b34631fa2"
+      "hash": "fc53fcb65969"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-explorador.ts",
@@ -49035,6 +49077,213 @@
       "hash": "61b691c4cd6a"
     },
     {
+      "ruta": "apps/asegura/lib/tarificador-humo-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "PRUEBA NOCTURNA DE HUMO del tarificador RPA (15/10/2026) — reglas PURAS. Detecta de madrugada que un portal ha cambiado el login o el menú, antes de que un comercial se encuentre el fallo. La parte con BD y Telegram está en `tarificador-humo.ts`; las rutas, en app/api/cron/tarificador-humo (03:15 Ma",
+      "exporta": [
+        "humoActivo",
+        "horaEnMadrid",
+        "esHoraDeEncolarHumo",
+        "esHoraDeInformarHumo",
+        "parejasParaHumo",
+        "estadoTrasFalloHumo",
+        "humoPideParar",
+        "motivoPausaHumo",
+        "motivoCorto",
+        "resumirHumo",
+        "textoAvisoHumo",
+        "motivoNadaProbado",
+        "textoNadaProbado"
+      ],
+      "funciones": [
+        {
+          "nombre": "humoActivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "boolean",
+          "linea": 30,
+          "resumen": "Interruptor propio (apagado por defecto): sin `TARIFICADOR_HUMO_ACTIVO=1` ni se encola ni se reclama un humo."
+        },
+        {
+          "nombre": "horaEnMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "number",
+          "linea": 35,
+          "resumen": "Hora (0-23) en Madrid. Vercel cron va en UTC: el verano y el invierno se resuelven con dos entradas y esta guarda."
+        },
+        {
+          "nombre": "esHoraDeEncolarHumo",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "boolean",
+          "linea": 40
+        },
+        {
+          "nombre": "esHoraDeInformarHumo",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "boolean",
+          "linea": 41
+        },
+        {
+          "nombre": "parejasParaHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly ParejaActiva[]",
+          "retorno": "",
+          "linea": 55,
+          "resumen": "De las integraciones ACTIVAS y `rpa_autorizada` (lo filtra la consulta, ordenadas por compañía y ramo: orden estable), UNA prueba por COMPAÑÍA: la primera pareja activa. Varios inicios de sesión por n"
+        },
+        {
+          "nombre": "estadoTrasFalloHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "'error_definitivo'",
+          "linea": 72,
+          "resumen": "Un humo que falla NO se reintenta (otro login con nuestra credencial no aporta nada): `error_definitivo` siempre."
+        },
+        {
+          "nombre": "humoPideParar",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipoError: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 77,
+          "resumen": "Un humo que halla las credenciales rechazadas abre la pausa de la pareja, como un trabajo de tarificar (basta uno)."
+        },
+        {
+          "nombre": "motivoPausaHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string",
+          "retorno": "string",
+          "linea": 81
+        },
+        {
+          "nombre": "motivoCorto",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipoError: string | null | undefined, mensaje: string | null | undefined",
+          "retorno": "string",
+          "linea": 103,
+          "resumen": "Motivo CORTO de un fallo: sin URLs ni notas del runner, una línea, ≤110. PURO."
+        },
+        {
+          "nombre": "resumirHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaHumo[], activas: readonly { compania: string; ramo: string }[] = []",
+          "retorno": "ResumenHumo",
+          "linea": 117,
+          "resumen": "Filas de humo de la noche (más recientes primero) + las parejas ACTIVAS en la BD → qué pasó. Por pareja cuenta la más reciente. `ok` = pasó. Un humo que no terminó (pendiente/en curso) cuenta como fal"
+        },
+        {
+          "nombre": "nombre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": null,
+          "linea": 155
+        },
+        {
+          "nombre": "lineasSinBot",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ResumenHumo",
+          "retorno": null,
+          "linea": 157
+        },
+        {
+          "nombre": "textoAvisoHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResumenHumo",
+          "retorno": "string | null",
+          "linea": 160,
+          "resumen": "Texto del ÚNICO aviso a Alberto (HTML de `tgSend`, todo escapado). `null` si no falla nada ni hay integraciones sin bot. PURO."
+        },
+        {
+          "nombre": "motivoNadaProbado",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContextoNadaProbado",
+          "retorno": "string",
+          "linea": 200,
+          "resumen": "Por qué una noche termina con 0 compañías probadas. PURO; el primer motivo que casa."
+        },
+        {
+          "nombre": "textoNadaProbado",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string, r?: ResumenHumo",
+          "retorno": "string",
+          "linea": 211,
+          "resumen": "Aviso corto cuando no se probó NINGUNA compañía (más, si procede, las integraciones activas sin bot). PURO."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dabdaa8413ea"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificador-humo.ts",
+      "ambito": "apps/asegura",
+      "resumen": "PRUEBA NOCTURNA DE HUMO del tarificador RPA — la parte con BD y Telegram (15/10/2026). Reglas puras en `tarificador-humo-reglas.ts`. Dos pasadas por cron (hora de Madrid): · 03:15 `encolarHumo`: un trabajo `modo = 'humo'` por cada COMPAÑÍA con integración ACTIVA y `rpa_autorizada` (la primera pareja",
+      "exporta": [
+        "hayHumo",
+        "encolarHumo",
+        "informarHumo"
+      ],
+      "funciones": [
+        {
+          "nombre": "hayHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<boolean>",
+          "linea": 37,
+          "resumen": "¿Admite la BD el modo `humo`? (el CHECK `tarificacion_trabajos_modo_valido` lo nombra). Sin el SQL → false: no se encola."
+        },
+        {
+          "nombre": "encolarHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, env: Record<string, string | undefined> = process.env",
+          "retorno": "Promise<ResumenEncolarHumo>",
+          "linea": 53
+        },
+        {
+          "nombre": "conBotValido",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string[] | null",
+          "linea": 113
+        },
+        {
+          "nombre": "informarHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, env: Record<string, string | undefined> = process.env, enviar: EnviarTelegram = (t) => tgSend(t)",
+          "retorno": "Promise<ResumenInformeHumo>",
+          "linea": 121,
+          "resumen": "Informe de la noche. Cierra como fallo los humos aún `pendiente`, lee los de las últimas `VENTANA_INFORME_HUMO_HORAS` y manda UN aviso si: falla alguna compañía, hay integraciones activas sin bot en l"
+        }
+      ],
+      "tablas": [
+        "pg_constraint",
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "db2abdb847be"
+    },
+    {
       "ruta": "apps/asegura/lib/tarificador-lectura-reglas.ts",
       "ambito": "apps/asegura",
       "resumen": "Lectura del tarificador RPA para plataforma (06/10/2026). PURO: sin BD ni red. 🛡️ Lo que sale hacia plataforma es una lista BLANCA: estado, fechas, error {tipo, mensaje} y las ofertas con sus primas. NUNCA la URL del portal, el HTML/captura del fallo (`html_documento_id`, `evidencia_documento_id`: ",
@@ -49700,7 +49949,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "2891a1f7ba7a"
+      "hash": "c1c1ce2b1d27"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-purga-evidencia-reglas.ts",
@@ -50049,7 +50298,7 @@
           "exportada": true,
           "params": "e: Record<string, unknown>",
           "retorno": "MetaWorker",
-          "linea": 424,
+          "linea": 426,
           "resumen": "Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas (p. ej. un dato personal) se descarta ENTERA y el resultado del trabajo se guarda igua"
         },
         {
@@ -50058,7 +50307,7 @@
           "exportada": true,
           "params": "trabajoId: string, motivo: unknown",
           "retorno": "string",
-          "linea": 437
+          "linea": 439
         },
         {
           "nombre": "obj",
@@ -50066,7 +50315,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 446
+          "linea": 448
         },
         {
           "nombre": "base64",
@@ -50074,7 +50323,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max: number",
           "retorno": "Buffer | null",
-          "linea": 449
+          "linea": 451
         },
         {
           "nombre": "esPdf",
@@ -50082,7 +50331,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 461
+          "linea": 463
         },
         {
           "nombre": "esPng",
@@ -50090,7 +50339,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 462
+          "linea": 464
         },
         {
           "nombre": "leerResultadoWorker",
@@ -50098,12 +50347,12 @@
           "exportada": true,
           "params": "entrada: unknown",
           "retorno": "",
-          "linea": 464
+          "linea": 466
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7e245aaad739"
+      "hash": "9cf40046ab80"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-relanzar-reglas.ts",
@@ -50140,6 +50389,7 @@
         "contarRelanzamientos24h",
         "relanzarTrabajo",
         "caducarAtascos",
+        "pausarTrasHumo",
         "pausaViva",
         "sqlSinPausa",
         "evaluarCorte",
@@ -50154,7 +50404,7 @@
           "exportada": true,
           "params": "db: Db, f: { trabajoId: string; estado: string; modo: string | null; tipoError: string; atasco: AtascoWorker | null | undefined }",
           "retorno": "Promise<AtascoWorker | null>",
-          "linea": 49,
+          "linea": 50,
           "resumen": "¿Este fallo se queda `atascado`? Lo llama `marcarFallo` (misma transacción) con el estado que tocaría por política. Sin el SQL de la F2, sin interruptor, de otro modo/tipo o pasado el tope de rondas →"
         },
         {
@@ -50163,7 +50413,7 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string, quien: string",
           "retorno": "Promise<number>",
-          "linea": 61,
+          "linea": 62,
           "resumen": "Cierra como `descartado` los atascos ESPERANDO de un trabajo (su id ya no puede aplicarse). Devuelve cuántos cerró."
         },
         {
@@ -50172,7 +50422,7 @@
           "exportada": true,
           "params": "db: Db, t: { id: string; correduriaId: string; compania: string; ramo: string }, a: AtascoWorker, capturaId: string | null",
           "retorno": "Promise<void>",
-          "linea": 69,
+          "linea": 70,
           "resumen": "Guarda el checkpoint (la fila del trabajo ya está `atascado` en esta misma transacción)."
         },
         {
@@ -50181,7 +50431,7 @@
           "exportada": false,
           "params": "f: { clave: string; tipo: string; descripcion: string; etiqueta: string | null; texto_esperado: string | null; candidatos: unknown }",
           "retorno": "AtascoWorker | null",
-          "linea": 84,
+          "linea": 85,
           "resumen": "El checkpoint guardado, re-leído por la MISMA lista blanca (una fila rara no se enseña ni se elige)."
         },
         {
@@ -50190,7 +50440,7 @@
           "exportada": false,
           "params": "correduriaId: string, documentoId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 117
+          "linea": 118
         },
         {
           "nombre": "capturaDentroDeTope",
@@ -50198,7 +50448,7 @@
           "exportada": false,
           "params": "correduriaId: string, documentoId: string | null, usado: number, suma: (n: number) => void",
           "retorno": "Promise<string | null>",
-          "linea": 127,
+          "linea": 128,
           "resumen": "Captura del atasco si cabe en el tope TOTAL de la respuesta (si no, `null`: el aviso sale sin foto)."
         },
         {
@@ -50207,7 +50457,7 @@
           "exportada": true,
           "params": "correduriaId: string, o: { pendientesAviso?: boolean; id?: string | null; conCaptura?: boolean } = {}",
           "retorno": "Promise<",
-          "linea": 138,
+          "linea": 139,
           "resumen": "`id` = uno concreto; `conCaptura` añade la imagen (avisos y detalle). Filas ilegibles se cuentan, no desaparecen."
         },
         {
@@ -50216,7 +50466,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<number>",
-          "linea": 172,
+          "linea": 173,
           "resumen": "Marca como avisados (idempotente). Solo lo que salió por Telegram."
         },
         {
@@ -50225,7 +50475,7 @@
           "exportada": true,
           "params": "correduriaId: string, atascoId: string, r: RespuestaAtasco, actor: string",
           "retorno": "Promise<ResultadoRespuestaAtasco>",
-          "linea": 194,
+          "linea": 195,
           "resumen": "Aplica la respuesta en UNA transacción con `for update` (atasco y trabajo). Elegir = el candidato N se APRENDE (`humano`, consolidado) y el MISMO trabajo vuelve a `pendiente` con los intentos a 0 (dec"
         },
         {
@@ -50234,7 +50484,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "Promise<number>",
-          "linea": 275,
+          "linea": 276,
           "resumen": "Relanzamientos de la compañía en las últimas 24 h, contados en `auditoria` (solo llamadas que salieron bien)."
         },
         {
@@ -50243,7 +50493,7 @@
           "exportada": true,
           "params": "correduriaId: string, trabajoId: string, actor: string",
           "retorno": "Promise<ResultadoRelanzar>",
-          "linea": 291,
+          "linea": 292,
           "resumen": "Devuelve a `pendiente` un trabajo `atascado` de TARIFICAR (no `requiere_humano`: captcha/OTP mandarían otro SMS) con su MISMO riesgo (intentos 0, lease/fly/error/ fechas a null), tras descartar sus at"
         },
         {
@@ -50252,8 +50502,17 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 336,
+          "linea": 337,
           "resumen": "Atascos sin respuesta pasada su hora → el trabajo a `error_definitivo` (con el motivo), su riesgo purgado y el corte evaluado. Un atasco cuyo trabajo ya no está `atascado` (lo movió otra vía) se cierr"
+        },
+        {
+          "nombre": "pausarTrasHumo",
+          "kind": "function",
+          "exportada": true,
+          "params": "db: Db, trabajoId: string",
+          "retorno": "Promise<number>",
+          "linea": 402,
+          "resumen": "PRUEBA DE HUMO (15/10/2026) con la contraseña rechazada: abre la pausa de TODAS las parejas activas de esa compañía (la credencial es de la compañía: repetir el login desde otra pareja es como se bloq"
         },
         {
           "nombre": "pausaViva",
@@ -50261,7 +50520,7 @@
           "exportada": true,
           "params": "db: Db, correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<boolean>",
-          "linea": 396,
+          "linea": 430,
           "resumen": "¿Hay una pausa viva para la pareja? (Sin el SQL de la F2 → `false`: comportamiento anterior.)"
         },
         {
@@ -50270,7 +50529,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Prisma.Sql>",
-          "linea": 408,
+          "linea": 442,
           "resumen": "Condición para el `where` de `reclamarSiguiente` (alias `w` de `tarificacion_trabajos`): sin pausa viva de su pareja. Sin el SQL de la F2 → vacía (la tabla no existe y nombrarla rompería la consulta d"
         },
         {
@@ -50279,7 +50538,7 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string",
           "retorno": "Promise<boolean>",
-          "linea": 419,
+          "linea": 453,
           "resumen": "Tras un `error_definitivo` de un trabajo de TARIFICAR: si los `UMBRAL_CORTE_BOT` últimos cerrados de su pareja (desde la última reanudación) son fallos del bot, o el último es de `credenciales` (basta"
         },
         {
@@ -50288,7 +50547,7 @@
           "exportada": true,
           "params": "correduriaId: string, o: { pendientesAviso?: boolean } = {}",
           "retorno": "Promise<",
-          "linea": 449,
+          "linea": 483,
           "resumen": "Pausas VIVAS de la correduría (con cuántos trabajos esperan detrás). `pendientesAviso` = solo las no avisadas."
         },
         {
@@ -50297,7 +50556,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<number>",
-          "linea": 466
+          "linea": 500
         },
         {
           "nombre": "reanudarPausa",
@@ -50305,7 +50564,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, actor: string",
           "retorno": "Promise<",
-          "linea": 474,
+          "linea": 508,
           "resumen": "Reanuda (solo Alberto, por el puerto). Idempotente: una ya reanudada → `sin_cambios`."
         }
       ],
@@ -50315,7 +50574,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "21404a7e354f"
+      "hash": "d7198d9b9ea3"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
@@ -50534,7 +50793,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "6dc0a01cea06"
+      "hash": "bf62b5b5cbbf"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-worker-auth.ts",
@@ -50578,7 +50837,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 69
+          "linea": 70
         },
         {
           "nombre": "encolarTrabajo",
@@ -50586,7 +50845,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 97
+          "linea": 98
         },
         {
           "nombre": "leerTomadorFicha",
@@ -50594,7 +50853,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaTomadorFicha | null>",
-          "linea": 184,
+          "linea": 185,
           "resumen": "Nombre, apellidos, nacimiento y tipo de persona de la ficha TAL CUAL están en BD (lo cifrado, cifrado), de ESTA correduría. Los abre `lecturaTomadorFicha`. `null` = no hay ficha de esta correduría con"
         },
         {
@@ -50603,7 +50862,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 193,
+          "linea": 194,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
@@ -50612,7 +50871,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 219,
+          "linea": 220,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -50621,7 +50880,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 274
+          "linea": 275
         },
         {
           "nombre": "lanzarPendientes",
@@ -50629,7 +50888,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 279,
+          "linea": 280,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -50638,7 +50897,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 304
+          "linea": 305
         },
         {
           "nombre": "destruirMaquina",
@@ -50646,7 +50905,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 318,
+          "linea": 319,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -50655,7 +50914,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 344,
+          "linea": 345,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -50664,7 +50923,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 409
+          "linea": 410
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -50672,7 +50931,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 529,
+          "linea": 550,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -50681,7 +50940,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 533
+          "linea": 554
         },
         {
           "nombre": "guardarAdjunto",
@@ -50689,7 +50948,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 583
+          "linea": 604
         },
         {
           "nombre": "guardarPasos",
@@ -50697,7 +50956,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 605,
+          "linea": 626,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -50706,7 +50965,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null",
           "retorno": "Promise<",
-          "linea": 624,
+          "linea": 645,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -50715,7 +50974,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 750,
+          "linea": 776,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -50726,7 +50985,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "883ae1753757"
+      "hash": "c6a7b8867612"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -218672,7 +218931,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4722,
-    "funciones": 17400
+    "archivos": 4726,
+    "funciones": 17422
   }
 }

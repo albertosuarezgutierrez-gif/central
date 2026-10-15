@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-15T16:32:24Z",
+  "generadoEn": "2026-10-15T18:10:37Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -961,7 +961,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4051,6 +4051,8 @@
       "/api/cron/revision-anual",
       "/api/cron/siniestros-vinculo",
       "/api/cron/tarificador-cola",
+      "/api/cron/tarificador-humo",
+      "/api/cron/tarificador-humo-informe",
       "/api/cron/tarificador-renovaciones",
       "/api/cron/whatsapp-analizar",
       "/api/cron/whatsapp-retencion",
@@ -5893,6 +5895,7 @@
       "seguros.tarificador_fichas",
       "seguros.tarificador_grabacion_pantallas",
       "seguros.tarificador_grabaciones",
+      "seguros.tarificador_humo_informes",
       "seguros.tarificador_intervenciones",
       "seguros.tarificador_pausas",
       "seguros.tarificador_sesiones",
@@ -6920,7 +6923,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1715,
+    "apis": 1717,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
