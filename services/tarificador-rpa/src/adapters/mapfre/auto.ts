@@ -313,12 +313,49 @@ export function indiceFilaVehiculo(filas: readonly FilaVehiculoDialogo[], elecci
 
 const ESPERA_DIALOGO_VEHICULO_MS = 15_000
 
+/** Cómo se abrió «Selección de vehículo»: ya estaba abierto al teclear, o al salir del campo (blur/focusout/change). */
+export type DisparoBusquedaMatricula = 'al_teclear' | 'salir_del_campo'
+
+async function dialogoVehiculoVisible(nsei: Page, ms: number): Promise<boolean> {
+  return nsei.locator(SEL_DIALOGO_VEHICULO.contenedor).first().waitFor({ state: 'visible', timeout: ms }).then(() => true, () => false)
+}
+
+/**
+ * Lanza la búsqueda por MATRÍCULA (DOM real de la prueba del 15/10/2026, v0.7.2): junto al campo `input[name=matricula]` NO
+ * hay lupa (el botón `matsuffix` de al lado es `button.infoButton` con el icono `info_outlined`; la lupa `search` es la del
+ * «Buscador de vehículos» predictivo `txtPredictivo`, OTRA búsqueda) y en la página no hay ningún `type=submit`. El campo
+ * quedó `mat-focused` + `ng-dirty` + `ng-untouched`: el robot tecleó y NUNCA salió de él. Como el NIF del tomador, Mapfre
+ * busca AL SALIR DEL CAMPO: `blur` (dispara blur/focusout/change). Ni Intro ni clics: este adaptador no teclea teclas ni
+ * pulsa (guardián de mapfre-auto.test.ts). Devuelve el disparo que abrió el diálogo, o `null` (el llamante lo convierte en
+ * atasco de la capa común).
+ */
+export async function lanzarBusquedaMatricula(nsei: Page, campo: Locator, esperaMs = ESPERA_DIALOGO_VEHICULO_MS): Promise<DisparoBusquedaMatricula | null> {
+  // Ya abierto (un portal que busca al teclear): no se toca nada más.
+  if (await dialogoVehiculoVisible(nsei, 300)) return 'al_teclear'
+  await campo.blur().catch(() => undefined)
+  return (await dialogoVehiculoVisible(nsei, esperaMs)) ? 'salir_del_campo' : null
+}
+
+/**
+ * Hueco del paso 2 (búsqueda por matrícula): checkpoint de ATASCO por la capa común (Telegram + elección de Alberto, como el
+ * tomador) y `ErrorMapaIncompleto` con inventario. Sin valores (ni la matrícula) en ningún texto.
+ */
+async function huecoVehiculo(nsei: Page, formador: ContextoFormador | undefined, que: string): Promise<never> {
+  await registrarAtasco(nsei, formador, {
+    clave: claveCampo('matricula busqueda vehiculo'),
+    tipo: 'campo',
+    etiqueta: 'Matrícula',
+    descripcion: `Paso 2 «Objeto asegurado» de Mapfre NSEI: ${que}. El robot salió del campo; no teclea Intro ni pulsa botones (ni la lupa) a ciegas.`,
+  }).catch(() => undefined)
+  throw new ErrorMapaIncompleto(que, true)
+}
+
 /**
  * Paso 2 · VEHÍCULO CONFIRMADO por matrícula (coche y moto). Con el paso «Objeto asegurado» activo en `nsei` (la pestaña de
- * NSEI): teclea la matrícula (`comprobarCampo` + `fill`), espera el diálogo «Selección de vehículo», lee sus filas (sin
+ * NSEI): teclea la matrícula (`comprobarCampo` + `fill`), LANZA la búsqueda (`lanzarBusquedaMatricula`: salir del campo), espera el diálogo «Selección de vehículo», lee sus filas (sin
  * matrícula ni bastidor) y confirma la PRIMERA por `ctx.confirmarVehiculoMapfre` (guard.ts compara allí la matrícula de esa
  * fila con la del riesgo; no casa → `datos`). 0 filas → `datos`; varias → la primera (Alberto, 14/10/2026). Devuelve el vehículo SIN matrícula.
- * Ningún mensaje lleva la matrícula. No aparece el campo o el diálogo → `ErrorMapaIncompleto` con inventario.
+ * Ningún mensaje lleva la matrícula. No aparece el campo o el diálogo → ATASCO (capa común) + `ErrorMapaIncompleto` con inventario.
  */
 export async function consultarVehiculoPorMatricula(
   nsei: Page,
@@ -335,11 +372,9 @@ export async function consultarVehiculoPorMatricula(
   await campo.fill(matricula)
   if (normalizarMatricula(await campo.inputValue()) !== normalizarMatricula(matricula)) throw new ErrorTarificador('portal', 'mapfre/auto: el portal no dejó fijada la matrícula')
   await r.confirmar().catch(() => undefined)
-  try {
-    await nsei.locator(SEL_DIALOGO_VEHICULO.contenedor).first().waitFor({ state: 'visible', timeout: esperaDialogoMs })
-  } catch {
-    throw new ErrorMapaIncompleto('cómo se lanza la búsqueda por matrícula (tras teclearla no aparece «Selección de vehículo»)', true)
-  }
+  const disparo = await lanzarBusquedaMatricula(nsei, campo, esperaDialogoMs)
+  if (!disparo) await huecoVehiculo(nsei, respaldo.formador, 'cómo se lanza la búsqueda por matrícula (tras teclearla y salir del campo no aparece «Selección de vehículo»)')
+  respaldo.formador?.log('mapfre_busqueda_matricula', { disparo })
   const filas = await leerFilasDialogoVehiculo(nsei)
   if (filas.length === 0) throw new ErrorTarificador('datos', 'mapfre/auto: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
   // Varias filas → la PRIMERA (Alberto, 14/10/2026); el guard confirma esa misma fila y exige su matrícula = la del riesgo.
@@ -819,7 +854,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.7.2',
+  version: '0.7.3',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

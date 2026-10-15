@@ -33,7 +33,7 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
-import { purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
+import { purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import {
   ESTADOS_DUPLICADO,
@@ -719,6 +719,8 @@ export type ResumenBarrido = {
   cancelados: number
   /** Respaldo de la purga del riesgo (13/10/2026): trabajos cerrados a los que aún les quedaba algún dato personal. */
   riesgosPurgados?: number
+  /** Trabajos cerrados a los que se les quitó el recorrido/inventario por caducidad (`DIAS_RETENCION_RECORRIDO`). */
+  recorridosCaducados?: number
   /** F2: atascos sin respuesta que pasaron a `error_definitivo`. */
   atascosCaducados?: number
   lanzar: Record<string, ResumenLanzar>
@@ -780,6 +782,11 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
   // Respaldo de la purga: lo cerrado por un camino que no la llamó (o antes de existir). Sin lanzar: el barrido sigue.
   r.riesgosPurgados = await purgarRiesgosCerrados(prisma, correduriaId).catch((e: unknown) => {
     console.error('[tarificador] respaldo de purga del riesgo', e instanceof Error ? e.message.slice(0, 200) : e)
+    return 0
+  })
+  // El recorrido y el inventario de pantalla de un trabajo cerrado se guardan `DIAS_RETENCION_RECORRIDO` días (diagnóstico).
+  r.recorridosCaducados = await purgarRecorridosCaducados(prisma, correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] caducidad del recorrido', e instanceof Error ? e.message.slice(0, 200) : e)
     return 0
   })
 

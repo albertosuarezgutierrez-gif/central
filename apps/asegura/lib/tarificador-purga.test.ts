@@ -7,7 +7,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { purgarRiesgoTrabajos, type DbPurga } from './tarificador-purga.ts'
+import { DIAS_RETENCION_RECORRIDO, purgarRecorridosCaducados, purgarRiesgoTrabajos, type DbPurga } from './tarificador-purga.ts'
 import { validarEntradaRamo } from './tarificador-reglas.ts'
 import { riesgoPrevioRenovacion } from './tarificador-ops-reglas.ts'
 import { primeroReutilizable } from './tarificador-lectura-reglas.ts'
@@ -250,8 +250,11 @@ for (const [nombre, fichero, desde, hasta, re] of PLANTILLAS) {
   test(`CEPO plantillas · cableado: ${nombre} no reutiliza un riesgo purgado`, () => assert.match(trozo(fichero, desde, hasta), re))
 }
 
-// ─── 5 · El recorrido y el inventario de pantalla caen con el riesgo (16/10/2026) ──────────────────────────────
-test('CEPO purga: al purgar el riesgo, el UPDATE también quita error.recorrido y error.inventarioDom', async () => {
+// ─── 5 · El recorrido SOBREVIVE al cierre (el inventario cae) y caduca en el barrido (15/10/2026) ─────
+// Regresión del trabajo 50cc150d (Mapfre 0.7.2): `error_definitivo` → la purga del riesgo, en el MISMO commit, quitaba
+// `error.recorrido` y `error.inventarioDom`, justo el diagnóstico del fallo. El recorrido es estructura ya saneada: se queda
+// `DIAS_RETENCION_RECORRIDO` días y luego lo quita el barrido. El inventario cae al cierre.
+test('CEPO purga: al cerrar, el UPDATE borra inventarioDom y CONSERVA recorrido', async () => {
   const sqls: string[] = []
   const db = {
     $queryRaw: async () => [fila('error_definitivo')],
@@ -259,7 +262,26 @@ test('CEPO purga: al purgar el riesgo, el UPDATE también quita error.recorrido 
   } as unknown as DbPurga
   assert.equal(await purgarRiesgoTrabajos(db, ['t1']), 1)
   assert.equal(sqls.length, 1)
-  assert.match(sqls[0], /error = case when jsonb_typeof\(error\) = 'object' then error - 'recorrido' - 'inventarioDom' else error end/)
+  assert.match(sqls[0], /set riesgo = \?::jsonb/)
+  assert.match(sqls[0], /error - 'inventarioDom'/, 'el cierre ya no borra inventarioDom (puede llevar nombres)')
+  assert.ok(!/'recorrido'/.test(sqls[0]), 'el cierre vuelve a borrar el recorrido (se pierde el diagnóstico del fallo)')
+})
+
+test('CEPO caducidad: el barrido quita recorrido e inventario SOLO de trabajos cerrados hace más de DIAS_RETENCION_RECORRIDO', async () => {
+  const llamadas: { sql: string; vals: unknown[] }[] = []
+  const db = {
+    $queryRaw: async () => [],
+    $executeRaw: async (s: TemplateStringsArray, ...vals: unknown[]) => { llamadas.push({ sql: s.join('?'), vals }); return 2 },
+  } as unknown as DbPurga
+  assert.equal(await purgarRecorridosCaducados(db, 'c1'), 2)
+  assert.equal(llamadas.length, 1)
+  const { sql, vals } = llamadas[0]
+  assert.match(sql, /set error = t\.error - 'recorrido' - 'inventarioDom'/)
+  assert.match(sql, /x\.estado = any\(\?::text\[\]\)/)
+  assert.match(sql, /x\.terminado_at < now\(\) - \?::int \* interval '1 day'/)
+  assert.ok(vals.includes(DIAS_RETENCION_RECORRIDO) && DIAS_RETENCION_RECORRIDO >= 7, 'la retención es la constante (y no menos de una semana)')
+  assert.ok(Array.isArray(vals[1]) && !(vals[1] as string[]).includes('atascado') && (vals[1] as string[]).includes('error_definitivo'), 'solo estados cerrados')
+  assert.match(trozo('lib/tarificador.ts', 'export async function barrerTarificadorRpa', 'const companias'), /purgarRecorridosCaducados\(prisma, correduriaId\)/)
 })
 
 test('CEPO lectura: el panel del tarificador NO trae error.recorrido ni error.inventarioDom de 5000 filas', () => {
