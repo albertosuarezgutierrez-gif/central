@@ -111,21 +111,11 @@ export function nombreSinFicha(rol: RolFigura): string {
 }
 
 /**
- * El conductor OCASIONAL en tres estados (15/10/2026). Un hueco en el papel NO es «no hay ocasional»: es «no se ha
- * preguntado» hasta que alguien confirma «no conduce nadie más» (`info_riesgo.conductorOcasional`). Con ficha en el
- * papel, `si` (la confirmación vieja no cuenta). `no_aplica` = el ramo no tiene ocasional (moto, hogar…).
- * Lo que VIAJA no cambia: sin ficha no hay `secondaryDriver`, se haya confirmado o no.
+ * El conductor OCASIONAL en tres estados (15/10/2026). La regla vive en `@central/module-seguros`
+ * (`conductor-ocasional.ts`) porque asegura la usa para CORTAR el precio en el servidor: una sola regla.
  */
-export type EstadoOcasionalRiesgo = 'si' | 'ninguno' | 'sin_preguntar' | 'no_aplica'
-export function estadoOcasional(r: {
-  roles: readonly RolFigura[]
-  figuras: readonly { rol: RolFigura }[]
-  conductorOcasional: { ningunoConfirmadoAt: string | null } | null
-}): EstadoOcasionalRiesgo {
-  if (!r.roles.includes('conductor_ocasional')) return 'no_aplica'
-  if (r.figuras.some((f) => f.rol === 'conductor_ocasional')) return 'si'
-  return r.conductorOcasional?.ningunoConfirmadoAt ? 'ninguno' : 'sin_preguntar'
-}
+export { estadoOcasional, type EstadoOcasionalRiesgo } from '@central/module-seguros'
+import type { EstadoOcasionalRiesgo } from '@central/module-seguros'
 
 /** Lo que pinta la tarjeta del ocasional SIN ficha según su estado. */
 export function nombreOcasionalSinFicha(e: EstadoOcasionalRiesgo): string {

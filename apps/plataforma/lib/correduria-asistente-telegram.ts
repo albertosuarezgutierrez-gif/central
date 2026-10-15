@@ -22,7 +22,7 @@ import { cotizarMotoNuevaAsegura, precalificarMotoNuevaAsegura } from '@/lib/mot
 import { cotizarHogarNuevoAsegura, precalificarHogarNuevoAsegura, type RespuestaPrecalificacionHogar } from '@/lib/hogar-nuevo-asegura'
 import { consultarHogar } from '@/lib/correduria-hogar'
 import { aplicarDatosHogar, faltanHogar, resueltosFinales, textoPropuestaHogar } from './correduria-hogar-tg'
-import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
+import { POLIZA_ESTADOS_VIGENTES, corteOcasional, estadoOcasional } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { estadoCivilPorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto'
 import {
@@ -1585,6 +1585,9 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     if (tomadorDelRiesgo(l.riesgo) !== clienteId) return { texto: 'NO SE PUEDE: esa oportunidad es de otro tomador. Usa el clienteId del tomador de esa oportunidad.', ok: true }
     if (l.riesgo.oportunidad.ramo !== ramo) return { texto: `NO SE PUEDE: esa oportunidad es de ${l.riesgo.oportunidad.ramo}, no de ${ramo}. Usa la oportunidad de ${ramo} (o ábrela).`, ok: true }
     garajeRiesgo = l.riesgo.datosVehiculo?.garaje ?? null
+    // Ocasional SIN PREGUNTAR (15/10/2026): hueco, no supuesto. asegura corta igual en el servidor; aquí se pregunta antes.
+    const corteOc = ramo === 'auto' ? corteOcasional(estadoOcasional(l.riesgo)) : null
+    if (corteOc) huecosFig.push(`conductor ocasional: ${corteOc}`)
     const v = varianteDeRiesgo(l.riesgo, clienteId, null)
     figuras = v.figuras
     for (const rol of Object.keys(figuras) as RolExtra[]) {

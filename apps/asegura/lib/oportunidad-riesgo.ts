@@ -56,6 +56,9 @@ import {
   CLAVE_OCASIONAL_INFO,
   confirmacionSinOcasionalDe,
   valorSinOcasional,
+  estadoOcasional,
+  corteOcasional,
+  type EstadoOcasionalRiesgo,
   type SupuestoVariante,
   type CampoVehiculo,
   type ClaveDatosRiesgo,
@@ -975,6 +978,36 @@ export type DatosVidaParaCotizar = { capital: number; profesion: string | null; 
  * Las figuras distintas del tomador se arman desde sus fichas, en auto y en moto (entrega 2, 29/09/2026:
  * en moto, propietario y conductor habitual; el carné del conductor es el de moto de su ficha).
  */
+/**
+ * El conductor ocasional del RIESGO en tres estados, leído en el servidor antes de pagar (15/10/2026). La regla es
+ * `estadoOcasional` de `@central/module-seguros` (la misma que pinta la pantalla). Una ficha de ocasional en el
+ * cuerpo también cuenta como «sí»: esa petición lo declara. `null` = no se pudo leer (y entonces NO se cotiza).
+ */
+export async function estadoOcasionalDeVariante(
+  correduriaId: string,
+  oportunidadId: string,
+  figurasCuerpo: FigurasVariante | null,
+): Promise<EstadoOcasionalRiesgo | null> {
+  try {
+    const [op] = await prisma.$queryRaw<Array<{ tipo: string; info: unknown; hay: boolean }>>`
+      select o.tipo::text as tipo, o.info_riesgo as info,
+             exists (select 1 from seguros.oportunidad_figura f
+                     where f.oportunidad_id = o.id and f.correduria_id = o.correduria_id and f.rol = 'conductor_ocasional') as hay
+      from seguros.oportunidades o
+      where o.id = ${oportunidadId}::uuid and o.correduria_id = ${correduriaId}::uuid`
+    if (!op) return null
+    const roles = rolesDelRamo(op.tipo)
+    return estadoOcasional({
+      roles,
+      figuras: op.hay || figurasCuerpo?.conductor_ocasional ? [{ rol: 'conductor_ocasional' }] : [],
+      conductorOcasional: roles.includes('conductor_ocasional') ? { ningunoConfirmadoAt: confirmacionSinOcasionalDe(op.info)?.confirmadoAt ?? null } : null,
+    })
+  } catch (err) {
+    console.error('[estadoOcasionalDeVariante]', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
 export async function prepararVariante(
   correduriaId: string,
   e: { tomadorId: string; ramo: 'auto' | 'moto' | 'hogar' | 'vida' | 'salud' | 'decesos'; cuerpo: Record<string, unknown>; correcciones: Record<string, unknown> | undefined },
@@ -1007,6 +1040,15 @@ export async function prepararVariante(
   // Moto no tiene conductor ocasional (el vendor no lo admite): declararlo sería perderlo en silencio.
   if (e.ramo === 'moto' && figuras?.conductor_ocasional) {
     return { ok: false, motivo: 'en moto no hay conductor ocasional: quítalo del riesgo o cotiza sin él' }
+  }
+
+  // Conductor ocasional SIN PREGUNTAR → no se paga (15/10/2026). Antes solo lo frenaba la verificación del bloque
+  // embebido; la pantalla completa, el pack y Telegram pagaban 0,50€ sin mirarlo. El corte vive AQUÍ, gratis y antes
+  // del vendor, para todos los caminos que cuelgan de una oportunidad (sin oportunidad, cotizador suelto: no aplica).
+  if (e.ramo === 'auto') {
+    const oc = await estadoOcasionalDeVariante(correduriaId, oportunidadId, figuras)
+    const corte = oc === null ? 'no se pudo comprobar el conductor ocasional del riesgo; no se ha pedido precio (0,00€)' : corteOcasional(oc)
+    if (corte) return { ok: false, motivo: corte }
   }
 
   let correcciones = e.correcciones

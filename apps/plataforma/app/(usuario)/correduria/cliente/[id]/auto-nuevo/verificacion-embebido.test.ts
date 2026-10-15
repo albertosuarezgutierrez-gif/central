@@ -303,14 +303,31 @@ test('cepo de fuente: el embebido pasa el estado del ocasional del RIESGO a la v
   assert.match(op('PedirPrecioAuto.tsx'), /ocasionalRiesgo=\{estadoOcasional\(riesgo\)\}/, 'PedirPrecioAuto debe pasar el estado del ocasional')
 })
 
-test('siniestros en 5 años sin dato con < 5 años sin siniestros: ✗ «Sin dato no se puede declarar 0» y apaga el pago', () => {
+test('siniestros en 5 años sin dato cuando la compañía los exige: ✗ «Sin dato no se puede declarar 0» y apaga el pago', () => {
   const g = gruposVerificacion(entrada({ historial: { ...entrada().historial, siniestros5SinDato: true, siniestros5Pendiente: true } }))
   const s5 = g.flatMap((x) => x.items).filter((i) => i.clave === 'siniestros-5')
   assert.equal(s5.length, 1, 'un solo ítem: el ✗ manda sobre el aviso')
   assert.equal(s5[0]!.estado, 'falta')
   assert.match(s5[0]!.texto, /¿Cuántos siniestros en los últimos 5 años\? Sin dato no se puede declarar 0/)
   assert.equal(verificacionCompleta(g), false)
-  // Cepo de fuente: el cotizador bloquea con el dato vacío aunque los años sin siniestros igualen a los asegurados.
-  assert.match(fuente, /const siniestros5SinDato = aniosSinSiniestros\.trim\(\) !== '' && Number\(aniosSinSiniestros\) < 5 && siniestrosUltimos5\.trim\(\) === ''/)
+  // Cepo de fuente: el ✗ sale EXACTAMENTE cuando asegura los exige (misma regla, `exigeSiniestrosUltimos5`): con «años sin
+  // siniestros = años asegurado» no se piden (asegura no los manda). Ver `siniestros-cinco-anios.test.ts` del módulo.
+  assert.match(fuente, /const siniestros5SinDato = exigeSiniestrosUltimos5\(\{ aseguradoAntes: tieneSeguroActual, aniosAsegurado: numOVacio\(aniosAsegurado\), aniosSinSiniestros: numOVacio\(aniosSinSiniestros\) \}\)\s*&& siniestrosUltimos5\.trim\(\) === ''/)
+  assert.match(fuente, /import \{ exigeSiniestrosUltimos5,[^}]*\} from '@central\/module-seguros'/)
   assert.match(fuente, /\|\| siniestros5SinDato\n/)
+})
+
+test('pantalla COMPLETA con oportunidad: el ✗ del ocasional sin preguntar sale y apaga el pago (y la página lo pasa)', async () => {
+  const { verificacionOcasionalCompleta } = await import('./verificacion-embebido.ts')
+  const g = verificacionOcasionalCompleta('sin_preguntar')
+  assert.equal(g.length, 1)
+  assert.equal(g[0].items[0].clave, 'ocasional-sin-preguntar')
+  assert.equal(g[0].items[0].estado, 'falta')
+  for (const e of ['si', 'ninguno', 'no_aplica', undefined] as const) assert.deepEqual(verificacionOcasionalCompleta(e), [], String(e))
+  const auto = fuente
+  assert.match(auto, /const ocasionalSinPreguntar = ocasionalRiesgo === 'sin_preguntar'/)
+  assert.match(auto, /faltaAlgo =[\s\S]{0,400}\|\| ocasionalSinPreguntar\n/, 'apaga el botón también fuera del embebido')
+  assert.match(auto, /!embebido && verificacionOcasionalCompleta\(ocasionalRiesgo\)\.length > 0/)
+  const page = readFileSync(new URL('./page.tsx', dir), 'utf8')
+  assert.match(page, /ocasionalRiesgo=\{carga\.estado === 'ok' \? estadoOcasional\(carga\.riesgo\) : undefined\}/, 'con ?oportunidad= la página pasa el estado; sin ella, nada')
 })

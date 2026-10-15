@@ -1277,7 +1277,7 @@ export {
   leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, tipoVehiculoDeTexto, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'
 export type { CambioVehiculo, CampoVehiculo, DatosVehiculoRiesgo, ErrorVehiculo, TipoVehiculo, ValidacionVehiculo } from './datos-vehiculo-riesgo.ts'
-export { CLAVE_OCASIONAL_INFO, confirmacionSinOcasionalDe, valorSinOcasional, type ConfirmacionSinOcasional, type EstadoOcasional } from './conductor-ocasional.ts'
+export { CLAVE_OCASIONAL_INFO, confirmacionSinOcasionalDe, valorSinOcasional, estadoOcasional, corteOcasional, MOTIVO_OCASIONAL_SIN_PREGUNTAR, type ConfirmacionSinOcasional, type EstadoOcasional, type EstadoOcasionalRiesgo } from './conductor-ocasional.ts'
 export { SIN_IDS_CATALOGO, datosVehiculoDeDocumento } from './datos-vehiculo-documento.ts'
 export type { IdsCatalogoVehiculo, VehiculoLeido } from './datos-vehiculo-documento.ts'
 
@@ -1495,3 +1495,4 @@ export {
   esVariantePresentacion, etapaPersona, pieLegalPresentacion, refDeCabeceraCookie, varianteDeTurno, variantesActivas,
   type CorreoPresentacion, type EmbudoCampana, type EtapaPersona, type FilaEmbudo, type VariantePresentacion,
 } from './presentacion-app.ts'
+export { exigeSiniestrosUltimos5 } from './siniestros-cinco-anios.ts'

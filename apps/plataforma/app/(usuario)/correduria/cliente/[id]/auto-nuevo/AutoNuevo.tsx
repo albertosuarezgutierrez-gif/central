@@ -42,7 +42,7 @@ import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import type { AnteriorParaTarificar } from '@/lib/seguro-anterior'
-import { kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
+import { exigeSiniestrosUltimos5, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
 import { KM_AUTO_POR_DEFECTO, kmDeclaradoDeGuardada, kmEsDeclarado, kmParaCotizar } from '@/lib/correduria/km-auto'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajeParaBot, garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
@@ -79,7 +79,7 @@ import { armarFormularioBotsAuto } from '@/lib/tarificador-auto-riesgo'
 import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { ROLES_EXTRA, type RolExtra, type VarianteNueva } from '../../../oportunidad/[id]/variante'
-import { anclaFiguraAqui, avisoGarajeSinCasar, gruposVerificacion, verificacionCompleta } from './verificacion-embebido'
+import { anclaFiguraAqui, avisoGarajeSinCasar, gruposVerificacion, verificacionCompleta, verificacionOcasionalCompleta } from './verificacion-embebido'
 import { Verificacion } from './piezas-embebido'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
 import {
@@ -245,8 +245,8 @@ export default function AutoNuevo({
   ocasionalRiesgo,
 }: {
   /**
-   * Embebido (15/10/2026): el conductor ocasional del RIESGO en tres estados (`estadoOcasional`). `sin_preguntar` pone
-   * un ✗ en la verificación y apaga el pago. Lo que viaja no cambia (sin ficha, sin `secondaryDriver`).
+   * Embebido y pantalla completa con `?oportunidad=` (15/10/2026): el conductor ocasional del RIESGO en tres estados
+   * (`estadoOcasional`). `sin_preguntar` pone un ✗ en la verificación y apaga el pago. Lo que viaja no cambia (sin ficha, sin `secondaryDriver`).
    */
   ocasionalRiesgo?: 'si' | 'ninguno' | 'sin_preguntar' | 'no_aplica'
   /**
@@ -1087,9 +1087,13 @@ export default function AutoNuevo({
   const compraInvalida = fechaCompra !== '' && matriculacion !== '' && fechaCompra < matriculacion
 
   const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
-  const siniestros5SinDato = aniosSinSiniestros.trim() !== '' && Number(aniosSinSiniestros) < 5 && siniestrosUltimos5.trim() === ''
+  // ✗ de siniestros en 5 años EXACTAMENTE cuando asegura los exige (`exigeSiniestrosUltimos5`, la misma regla que decide
+  // si viajan): con «años sin siniestros = años asegurado» no se exigen (nunca tuvo uno), y pedirlos era fricción.
+  const numOVacio = (t: string) => (t.trim() === '' ? null : Number(t))
+  const siniestros5SinDato = exigeSiniestrosUltimos5({ aseguradoAntes: tieneSeguroActual, aniosAsegurado: numOVacio(aniosAsegurado), aniosSinSiniestros: numOVacio(aniosSinSiniestros) })
+    && siniestrosUltimos5.trim() === ''
   const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
-    // 15/10/2026 (Alberto): con menos de 5 años sin siniestros, los siniestros en 5 años son OBLIGATORIOS (ya no se supone 0).
+    // 15/10/2026 (Alberto): cuando la compañía los exige, los siniestros en 5 años son OBLIGATORIOS (ya no se supone 0).
     || siniestros5SinDato
   const faltaHistorial =
     tieneSeguroActual &&
@@ -1099,12 +1103,16 @@ export default function AutoNuevo({
       aniosEnCompania.trim() === '' ||
       aniosSinSiniestros.trim() === '')
 
+  // Ocasional del RIESGO sin preguntar (15/10/2026): apaga el pago en las DOS pantallas (embebido y completa con
+  // `?oportunidad=`). asegura corta igual en el servidor (`corteOcasional`); esto es para no ofrecer el clic.
+  const ocasionalSinPreguntar = ocasionalRiesgo === 'sin_preguntar'
+
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
     aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor || faltaHistorial || kmInvalido || compraInvalida || faltaOcasional || ocasionalDuplicado ||
-    faltaFigura || figuraRepetida
+    faltaFigura || figuraRepetida || ocasionalSinPreguntar
   const puedePulsar = !cotizando && !faltaAlgo && bloqueo === null && (simulacion || consumoPermite)
 
   // ── «Verificación antes de pedir precio» (embebido, 13/10/2026) ──────────────
@@ -2028,6 +2036,16 @@ export default function AutoNuevo({
         <Contador consumo={consumo} simulacion={simulacion} />
 
         {embebido && <Verificacion grupos={verificacion} completa={verificacionOk} />}
+        {!embebido && verificacionOcasionalCompleta(ocasionalRiesgo).length > 0 && (
+          <>
+            <Verificacion grupos={verificacionOcasionalCompleta(ocasionalRiesgo)} completa={false} />
+            {variante && (
+              <Link href={`/correduria/oportunidad/${variante.oportunidadId}#intervinientes`} style={{ display: 'inline-block', fontSize: 13, color: 'var(--primary)', fontWeight: 600, marginTop: 6 }}>
+                Ir a «Intervinientes» del riesgo
+              </Link>
+            )}
+          </>
+        )}
         {bloqueo !== null && (
           <p role="status" style={{ color: 'var(--warning)', fontSize: 13, fontWeight: 600, margin: '8px 0 0' }}>{bloqueo}</p>
         )}

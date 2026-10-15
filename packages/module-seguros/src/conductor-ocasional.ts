@@ -9,6 +9,8 @@
 //   · `sin_preguntar` — ni ficha ni confirmación. NULL = «no se sabe», nunca «no hay».
 // Lo que VIAJA no cambia: sin ficha no hay `secondaryDriver`, se haya confirmado o no.
 
+import type { RolFigura } from './variantes-riesgo.ts'
+
 /** Clave de `seguros.oportunidades.info_riesgo` donde se guarda la confirmación. */
 export const CLAVE_OCASIONAL_INFO = 'conductorOcasional'
 
@@ -33,3 +35,36 @@ export function valorSinOcasional(ahora: string, actor: string): { ninguno: true
 }
 
 export type EstadoOcasional = 'si' | 'ninguno' | 'sin_preguntar'
+
+/**
+ * Con `no_aplica` = el ramo no tiene ocasional (moto, hogar…). Es el mismo estado que pinta la pantalla (plataforma,
+ * `figuras-form.ts` lo re-exporta) y el que corta en asegura antes de pagar: UNA regla para los dos lados.
+ */
+export type EstadoOcasionalRiesgo = EstadoOcasional | 'no_aplica'
+
+/**
+ * PURA. El ocasional del riesgo en tres estados (más `no_aplica`). Con ficha en el papel, `si` (una confirmación vieja
+ * no cuenta); sin ficha, `ninguno` solo si alguien CONFIRMÓ; si no, `sin_preguntar`. `conductorOcasional: null` (no
+ * se sabe) también es `sin_preguntar`: el estado conservador.
+ */
+export function estadoOcasional(r: {
+  roles: readonly RolFigura[]
+  figuras: readonly { rol: RolFigura }[]
+  conductorOcasional: { ningunoConfirmadoAt: string | null } | null
+}): EstadoOcasionalRiesgo {
+  if (!r.roles.includes('conductor_ocasional')) return 'no_aplica'
+  if (r.figuras.some((f) => f.rol === 'conductor_ocasional')) return 'si'
+  return r.conductorOcasional?.ningunoConfirmadoAt ? 'ninguno' : 'sin_preguntar'
+}
+
+/** El texto del corte (y del ✗ de la verificación): qué falta y dónde se arregla. */
+export const MOTIVO_OCASIONAL_SIN_PREGUNTAR =
+  '¿Conduce alguien más? El conductor ocasional está sin preguntar: añádelo o confirma «no conduce nadie más» en Intervinientes. No se ha pedido precio (0,00€).'
+
+/**
+ * PURA. ¿Se corta el precio por el ocasional? Solo `sin_preguntar` corta (15/10/2026: no preguntar por otro conductor
+ * es la reticencia típica, art. 10 LCS). Devuelve el motivo, o `null` si se puede pedir.
+ */
+export function corteOcasional(estado: EstadoOcasionalRiesgo): string | null {
+  return estado === 'sin_preguntar' ? MOTIVO_OCASIONAL_SIN_PREGUNTAR : null
+}

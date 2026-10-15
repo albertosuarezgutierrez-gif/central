@@ -380,3 +380,16 @@ test('km: sin cifra en coche van como SUPUESTO (resueltos.kmAnualesSupuestos), n
   assert.equal('kmAnualesSupuestos' in con.resueltos, false)
   assert.equal('kmAnualesSupuestos' in construirCuerpo({ ...BASE, ramo: 'moto', kmAnuales: null }).resueltos, false)
 })
+
+test('Telegram con oportunidad de COCHE: el ocasional sin preguntar es un hueco de «FALTAN DATOS» (lee el FUENTE)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { fileURLToPath } = await import('node:url')
+  const f = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  // Dentro del bloque que solo corre con `e.oportunidadId` (sin oportunidad, cotizador suelto: no aplica), solo en auto,
+  // con la regla del módulo, y entra en `huecosFig`, que alimenta FALTAN DATOS.
+  const i = f.indexOf('if (e.oportunidadId) {\n    const l = await riesgoAsegura(')
+  const j = f.indexOf('const [pre, garajes, civiles, marcas]', i)
+  assert.ok(i > 0 && j > i)
+  assert.match(f.slice(i, j), /const corteOc = ramo === 'auto' \? corteOcasional\(estadoOcasional\(l\.riesgo\)\) : null\s*if \(corteOc\) huecosFig\.push\(/)
+  assert.match(f, /const huecos = \[[^\]]*\.\.\.huecosFig\]/)
+})
