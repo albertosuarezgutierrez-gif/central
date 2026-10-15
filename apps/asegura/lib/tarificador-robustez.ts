@@ -232,7 +232,8 @@ export async function responderAtasco(correduriaId: string, atascoId: string, r:
 
     const a = atascoDeFila(f)
     if (!a) return { estado: 'conflicto' as const, motivo: 'el checkpoint guardado no es legible' }
-    const e = elegirCandidatoAtasco(a.candidatos, r.n)
+    // Con la clave de una PISTA del localizador (15/10/2026), el selector tiene que ser una pista estable y no bancaria (validarPista).
+    const e = elegirCandidatoAtasco(a.candidatos, r.n, a.clave)
     if (!e.ok) return { estado: 'conflicto' as const, motivo: e.motivo }
     // APRENDER: origen `humano` (consolidado al momento). El worker lo valida otra vez al repetir el camino.
     if (conConfianza) {

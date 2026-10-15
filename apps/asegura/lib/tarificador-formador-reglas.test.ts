@@ -212,3 +212,15 @@ test('la ruta sugerir recomprueba el presupuesto dentro del bucle de escalones, 
   assert.match(bucle, /await cabe\(costeMaximoLlamadaFormador\(SYSTEM_SUGERIR\.length \+ prompt\.length, modelo\)\)/)
   assert.match(readFileSync(new URL('./tarificador-formador-ia.ts', import.meta.url), 'utf8'), /costeEstimado\(system\.length \+ prompt\.length, texto\.length, modelo\)/)
 })
+
+test('confirmar (15/10/2026): con clave de PISTA del localizador, solo una pista estable y no bancaria', async () => {
+  const { leerPeticionConfirmar } = await import('./tarificador-formador-reglas.ts')
+  const base = { trabajoId: '00000000-0000-0000-0000-000000000000', compania: 'allianz', ramo: 'auto', tipo: 'campo', marco: null, origen: 'humano' }
+  assert.equal(leerPeticionConfirmar({ ...base, clave: '_l_p__matricula', selector: 'main >> input[name="matricula"] @etiqueta="matricula"' }).ok, true)
+  assert.equal(leerPeticionConfirmar({ ...base, clave: '_l_p__matricula', selector: 'main >> input[name="matricula"]' }).ok, false, 'sin la etiqueta con la que se aprendió')
+  assert.equal(leerPeticionConfirmar({ ...base, clave: '_l_p__matricula', selector: 'xpath=/html/body/input[1] @etiqueta="matricula"' }).ok, false)
+  assert.equal(leerPeticionConfirmar({ ...base, clave: '_l_p__cuenta', selector: 'main >> input[name="iban"] @etiqueta="cuenta"' }).ok, false)
+  // Una clave del formador (sin prefijo de pista) sigue como antes; «L. Conductor» → `l_conductor` NO es de pista.
+  assert.equal(leerPeticionConfirmar({ ...base, clave: 'matricula', selector: 'xpath=/html/body/input[1]' }).ok, true)
+  assert.equal(leerPeticionConfirmar({ ...base, clave: 'l_conductor', selector: 'xpath=/html/body/input[1]' }).ok, true)
+})

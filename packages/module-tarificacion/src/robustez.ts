@@ -17,6 +17,7 @@
 
 import { pareceEmision } from './guard-emision.ts'
 import { redactarDatosPersonales } from './formador.ts'
+import { esClavePista, textoBancarioOPago, validarPista } from './pista.ts'
 
 // ─── 1. Aprendido con confianza ──────────────────────────────────────────────
 
@@ -172,6 +173,7 @@ export function leerAtascoWorker(v: unknown): AtascoWorker | null {
   const descripcion = cad(o.descripcion, 300, true)
   if (!CLAVE.test(clave) || !tipo || !descripcion || !Array.isArray(o.candidatos)) return null
   if (o.candidatos.length === 0 || o.candidatos.length > MAX_CANDIDATOS_ATASCO) return null
+  const pista = esClavePista(clave)
   const candidatos: CandidatoAtasco[] = []
   for (const x of o.candidatos) {
     const c = obj(x)
@@ -193,6 +195,9 @@ export function leerAtascoWorker(v: unknown): AtascoWorker | null {
     }
     if (tag === 'input' && cand.type === 'password') continue
     if (candidatoAtascoBloqueado(cand)) continue
+    // Datos BANCARIOS de verdad (IBAN, cuenta, tarjeta, CVV…): solo en los atascos del LOCALIZADOR (clave de pista). Los del
+    // formador conservan su comportamiento previo (su worker ya filtra), para no dejar un atasco sin opciones → error mudo.
+    if (pista && candidatoAtascoBancario(cand)) continue
     candidatos.push(cand)
   }
   if (!candidatos.length) return null
@@ -212,12 +217,31 @@ export function candidatosVisibles(a: Pick<AtascoWorker, 'candidatos'>): Candida
   return a.candidatos.map(({ n, tag, id, type, role, texto, etiqueta }) => ({ n, tag, id, type, role, texto, etiqueta }))
 }
 
-/** El candidato número `n` de la lista guardada, o el motivo por el que no vale. */
-export function elegirCandidatoAtasco(candidatos: readonly CandidatoAtasco[], n: unknown): { ok: true; c: CandidatoAtasco } | { ok: false; motivo: string } {
+/**
+ * ¿Un candidato es un dato BANCARIO de verdad (IBAN, cuenta, domiciliación, tarjeta, CVV…; no «recibo», «cobro» ni «forma
+ * de pago», que se tarifican)? Mira etiqueta, id, name, texto y selector (a diferencia de `candidatoAtascoBloqueado`, aquí la
+ * etiqueta SÍ cuenta: un campo «IBAN» nunca se aprende). Solo se aplica a los atascos del localizador (clave de pista). Pura.
+ */
+export function candidatoAtascoBancario(c: Pick<CandidatoAtasco, 'texto' | 'id' | 'name' | 'etiqueta' | 'selector'>): boolean {
+  const delSelector = [...c.selector.matchAll(/="([^"]*)"/g)].map((m) => m[1] ?? null)
+  return [c.etiqueta, c.id, c.name, c.texto, ...delSelector].some((x) => textoBancarioOPago(x))
+}
+
+/**
+ * El candidato número `n` de la lista guardada, o el motivo por el que no vale. `clave` (15/10/2026): si es de una PISTA del
+ * localizador (`esClavePista`), el candidato no puede ser bancario y su selector tiene que ser una pista estable
+ * (`validarPista`): lo que se guarda es exactamente lo que el worker usará. Sin clave de pista, el comportamiento previo.
+ */
+export function elegirCandidatoAtasco(candidatos: readonly CandidatoAtasco[], n: unknown, clave?: string): { ok: true; c: CandidatoAtasco } | { ok: false; motivo: string } {
   if (typeof n !== 'number' || !Number.isInteger(n)) return { ok: false, motivo: 'el número elegido no es un entero' }
   const c = candidatos.find((x) => x.n === n)
   if (!c) return { ok: false, motivo: `no hay un elemento ${n} en la lista` }
   if (candidatoAtascoBloqueado(c)) return { ok: false, motivo: 'ese elemento no se puede usar (palabra de emisión o pago)' }
+  if (typeof clave === 'string' && esClavePista(clave)) {
+    if (candidatoAtascoBancario(c)) return { ok: false, motivo: 'ese elemento es un campo bancario o de pago: nunca se aprende' }
+    const v = validarPista(c.selector)
+    if (!v.ok) return { ok: false, motivo: `la pista de ese elemento no vale: ${v.motivo}` }
+  }
   return { ok: true, c }
 }
 

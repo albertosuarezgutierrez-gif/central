@@ -38,7 +38,7 @@ test('robustez (BD): la pausa sin el SQL no rompe la cola; responder re-encola e
   assert.match(sp, /if \(!\(await hayPausas\(\)\)\) return Prisma\.empty/, 'sin la tabla, la condición tiene que ser VACÍA (nombrarla rompería la cola)')
   const resp = tramo(src, 'export async function responderAtasco', '// ─── ATASCO: caducidad')
   assert.match(resp, /for update of a, t/, 'responder sin cerrojo de atasco y trabajo')
-  assert.match(resp, /elegirCandidatoAtasco\(a\.candidatos, r\.n\)/, 'el número se valida contra la lista guardada')
+  assert.match(resp, /elegirCandidatoAtasco\(a\.candidatos, r\.n, a\.clave\)/, 'el número se valida contra la lista guardada, y con la clave (pista del localizador: validarPista al guardar)')
   assert.match(resp, /'humano', 0, 0, now\(\)/, 'lo elegido se aprende como humano y consolidado')
   assert.match(resp, /set estado = 'pendiente', intentos = 0,[^`]*where id = \$\{f\.trabajo_id\}::uuid and estado = 'atascado'/, 'el MISMO trabajo vuelve a pendiente con intentos a 0')
   const lista = tramo(src, 'export async function listarAtascos', '/** Marca como avisados')
