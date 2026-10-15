@@ -1,19 +1,19 @@
 {
  "sesion": "b122a387-7c78-557e-9ddc-02104e4f4102",
  "inicio": "2026-10-14T09:36:54.765Z",
- "fin": "2026-10-15T09:07:03.069Z",
- "llamadas": 351,
+ "fin": "2026-10-15T11:06:15.218Z",
+ "llamadas": 365,
  "categorias": {
   "otro": {
-   "llamadas": 57,
-   "chars_in": 36830,
-   "chars_out": 235536,
+   "llamadas": 61,
+   "chars_in": 39544,
+   "chars_out": 236034,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 19,
-    "SubagentHandback": 11,
+    "ToolSearch": 21,
+    "SubagentHandback": 13,
     "SendMessage": 1,
     "ReadNotifications": 21,
     "Monitor": 4,
@@ -33,30 +33,30 @@
    }
   },
   "bash": {
-   "llamadas": 143,
-   "chars_in": 116731,
-   "chars_out": 677288,
+   "llamadas": 144,
+   "chars_in": 116825,
+   "chars_out": 681936,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 143
+    "Bash": 144
    }
   },
   "mcp:Resend": {
-   "llamadas": 11,
-   "chars_in": 1793,
-   "chars_out": 57742,
+   "llamadas": 15,
+   "chars_in": 2349,
+   "chars_out": 77718,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Resend__list-webhooks": 2,
-    "mcp__Resend__list-domains": 2,
+    "mcp__Resend__list-domains": 3,
     "mcp__Resend__list-broadcasts": 1,
     "mcp__Resend__get-email-metrics": 3,
-    "mcp__Resend__list-emails": 2,
-    "mcp__Resend__get-email": 1
+    "mcp__Resend__list-emails": 3,
+    "mcp__Resend__get-email": 3
    }
   },
   "mcp:Supabase": {
@@ -74,14 +74,14 @@
    }
   },
   "sql": {
-   "llamadas": 46,
-   "chars_in": 21468,
-   "chars_out": 60642,
+   "llamadas": 49,
+   "chars_in": 23047,
+   "chars_out": 65908,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 38,
+    "mcp__Supabase__execute_sql": 41,
     "mcp__Supabase_asegura__execute_sql": 8
    }
   },
@@ -97,14 +97,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 8,
-   "chars_in": 14055,
-   "chars_out": 10888,
+   "llamadas": 10,
+   "chars_in": 16016,
+   "chars_out": 11184,
    "errores": 0,
    "archivos_citados": 6,
    "chars_citados": 113141,
    "tools": {
-    "Agent": 8
+    "Agent": 10
    }
   },
   "mcp:Vercel": {
