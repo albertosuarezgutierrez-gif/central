@@ -3,7 +3,7 @@
 // Fixtures SINTÉTICOS: ningún dato personal.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { importeDePrimaTotal, primasDesdeTarjetas, tarjetasListasParaLeer, type TarjetaProductoLeida } from '../src/adapters/mapfre/auto.ts'
+import { firmaTarjetas, importeDePrimaTotal, primasDesdeTarjetas, tarjetasListasParaLeer, type TarjetaProductoLeida } from '../src/adapters/mapfre/auto.ts'
 
 const tarjeta = (producto: string, textoPrima: string, textoTarjeta = ''): TarjetaProductoLeida => ({
   producto, periodicidad: 'ANUAL', textoPrima, avisoVerificacion: false, textoTarjeta,
@@ -42,4 +42,13 @@ test('sin ninguna prima (todas bloqueadas) o con una tarjeta aún sin calcular: 
   const calculando = [tarjeta('TERCEROS', 'PRIMA TOTAL: 392,02 €'), tarjeta('TERCEROS AMPLIADO', 'PRIMA TOTAL: {{primaTotal}} €')]
   assert.equal(tarjetasListasParaLeer(calculando), false)
   assert.throws(() => primasDesdeTarjetas(calculando), /prima ilegible/)
+})
+
+test('firmaTarjetas ignora el textContent crudo: misma prima y distinto textoTarjeta dan la misma firma', () => {
+  const lectura1 = [tarjeta('TERCEROS', 'PRIMA TOTAL: 392,02 €', 'TERCEROS  392,02 €  ver más')]
+  const lectura2 = [tarjeta('TERCEROS', 'PRIMA TOTAL: 392,02 €', 'TERCEROS 392,02 € ver más  (actualizado)')]
+  assert.equal(firmaTarjetas(lectura1), firmaTarjetas(lectura2))
+  // Y cambiar la prima sí cambia la firma (la estabilidad sigue detectando un precio nuevo).
+  const otra = [tarjeta('TERCEROS', 'PRIMA TOTAL: 400,5 €', 'TERCEROS 400,5 €')]
+  assert.notEqual(firmaTarjetas(lectura1), firmaTarjetas(otra))
 })

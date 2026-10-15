@@ -275,6 +275,11 @@ export function tarjetaBloqueadaPorControles(t: TarjetaProductoLeida): boolean {
   return primaDeTarjeta(t) === null && /controles\s+t[eé]cnicos|impiden\s+tarificar/i.test(limpiar(`${t.textoTarjeta ?? ''} ${t.textoPrima}`))
 }
 
+/** Firma de estabilidad de las tarjetas: solo los campos normalizados (no el textContent crudo, que puede variar entre lecturas). */
+export function firmaTarjetas(tarjetas: readonly TarjetaProductoLeida[]): string {
+  return JSON.stringify(tarjetas.map((t) => [limpiar(t.producto), limpiar(t.periodicidad), primaDeTarjeta(t), tarjetaBloqueadaPorControles(t), t.avisoVerificacion]))
+}
+
 /** v0.8.5 · ¿Todas las tarjetas están resueltas (con prima o bloqueadas) y AL MENOS UNA tiene prima? */
 export function tarjetasListasParaLeer(tarjetas: readonly TarjetaProductoLeida[]): boolean {
   return tarjetas.some((t) => primaDeTarjeta(t) !== null) && tarjetas.every((t) => primaDeTarjeta(t) !== null || tarjetaBloqueadaPorControles(t))
@@ -1241,7 +1246,7 @@ export async function esperarPrimasMapfre(nsei: Page, ctx: Pick<ContextoPortal, 
     if (!ocupado) {
       const tarjetas = await leerTarjetasPrima(nsei).catch(() => [] as TarjetaProductoLeida[])
       const legibles = tarjetasListasParaLeer(tarjetas)
-      const firma = legibles ? JSON.stringify(tarjetas) : null
+      const firma = legibles ? firmaTarjetas(tarjetas) : null
       if (firma !== null && firma === previo) {
         const paso = await pasoActivoMapfre(nsei)
         if (paso?.includes('CONTRATACION')) throw new EmisionBloqueadaError('fase', 'Mapfre: al leer las primas el paso activo es «Contratación»')
