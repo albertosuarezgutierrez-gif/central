@@ -40,7 +40,7 @@ import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { garajeInicial } from '@/lib/supuestos-presupuesto'
+import { garajeInicial, garajePrevioAplicable } from '@/lib/supuestos-presupuesto'
 import { planPrecargaVehiculo, previoPuedeMandar, sigueSinConfirmar } from '@/lib/correduria/precarga-vehiculo'
 import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto, origenesHistorialManual, type DatosVehiculoRiesgo, type HistorialDeclaradoRiesgo } from '@central/module-seguros'
@@ -377,8 +377,10 @@ export default function CotizadorMoto({
           setKmAnuales((k) => (retomada ? String(v.kmAnuales) : k || String(v.kmAnuales)))
         }
         // El garaje con el que se pidió, si sigue en el catálogo y el corredor no ha elegido otro.
-        // Sin retomar, la última tarificación no tapa un garaje del riesgo que no casa (podía ser el defecto de antes).
-        if (v.garaje && (retomada || (!garajeElegido.current && garajeSinCasar === null)) && garajes.some((g) => g.id === v.garaje)) setGaraje(v.garaje)
+        // Con garaje en el riesgo, ni retomando: solo si es el mismo que el del riesgo (las variantes de antes del 15/10/2026
+        // traen el comunitario por defecto guardado). `garajePrevioAplicable`.
+        const garajePrevio = garajePrevioAplicable({ previo: v.garaje, garajeRiesgo: datosRiesgo?.garaje, resueltoDelRiesgo: garajeDelRiesgo, retomada, elegido: garajeElegido.current, catalogo: garajes })
+        if (garajePrevio !== null) setGaraje(garajePrevio)
       })
       .catch(() => {})
     return () => { vivo = false }

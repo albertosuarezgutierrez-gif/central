@@ -1576,12 +1576,15 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
   let figuras: Partial<Record<RolExtra, string>> = {}
   let nombresFig: Partial<Record<RolExtra, string>> = {}
   const huecosFig: string[] = []
+  // El garaje DECLARADO en el riesgo: si no se dicta otro, manda (`elegirGaraje`, 15/10/2026).
+  let garajeRiesgo: string | null = null
   if (e.oportunidadId) {
     const l = await riesgoAsegura(e.oportunidadId).then((x) => interpretarRiesgo(x.status, x.json)).catch(() => null)
     if (!l || l.estado === 'error') return { texto: `ERROR: no he podido leer el riesgo${l ? ` (${l.motivo})` : ''}. No pidas precio todavía: sin él saldría con el tomador en todos los papeles.`, ok: false }
     if (l.estado === 'no_encontrado') return { texto: 'NO SE PUEDE: no existe esa oportunidad (búscala con oportunidades_cliente).', ok: true }
     if (tomadorDelRiesgo(l.riesgo) !== clienteId) return { texto: 'NO SE PUEDE: esa oportunidad es de otro tomador. Usa el clienteId del tomador de esa oportunidad.', ok: true }
     if (l.riesgo.oportunidad.ramo !== ramo) return { texto: `NO SE PUEDE: esa oportunidad es de ${l.riesgo.oportunidad.ramo}, no de ${ramo}. Usa la oportunidad de ${ramo} (o ábrela).`, ok: true }
+    garajeRiesgo = l.riesgo.datosVehiculo?.garaje ?? null
     const v = varianteDeRiesgo(l.riesgo, clienteId, null)
     figuras = v.figuras
     for (const rol of Object.keys(figuras) as RolExtra[]) {
@@ -1668,13 +1671,16 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
   }
   if (matricula) piezas.push(fechaMatriculacion ? { campo: 'fechaMatriculacion', estado: 'ok' } : { campo: 'fechaMatriculacion', estado: 'falta' })
 
-  // Garaje: en garaje si no se dice (nunca la calle), y dicho como supuesto que se confirma al emitir.
+  // Garaje: el dicho; si no, el del riesgo (si no casa, hueco: no se cotiza); sin él, en garaje (nunca la calle), y dicho
+  // como supuesto que se confirma al emitir.
   let garaje: Opcion | null = null
   let garajeEsSupuesto = true
+  const huecosGaraje: string[] = []
   if (typeof garajes === 'string') piezas.push({ campo: 'garaje', estado: 'error', motivo: garajes })
   else {
-    const g = elegirGaraje(e.garaje, garajes)
-    piezas.push(pieza('garaje', g.resultado, e.garaje))
+    const g = elegirGaraje(e.garaje, garajes, garajeRiesgo)
+    if (g.hueco) huecosGaraje.push(g.hueco)
+    else piezas.push(pieza('garaje', g.resultado, e.garaje))
     if (g.resultado.estado === 'uno') {
       garaje = g.resultado.opcion
       if (g.supuesto) supuestos.push({ campo: 'garaje', valor: garaje.nombre, porque: g.supuesto, optimista: true })
@@ -1729,7 +1735,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
   }
   if (e.historial && !companiaAnterior) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
 
-  const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona), ...huecosFig]
+  const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona), ...huecosGaraje, ...huecosFig]
   const vehiculoOk = previo ? true : !!(marca && modelo && motor)
   if (huecos.length || !vehiculoOk || !version || !matricula || !fechaMatriculacion || !garaje || !estadoCivil || !municipio || (e.historial && !companiaAnterior)) {
     return {

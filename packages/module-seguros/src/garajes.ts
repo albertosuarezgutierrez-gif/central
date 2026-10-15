@@ -45,7 +45,8 @@ export function duermeEnGaraje(codigo: string | null | undefined): boolean | nul
 const CLASE_POR_TEXTO: readonly [ClaseGaraje, RegExp][] = [
   ['calle', /v[ií]a\s+p[uú]blica|\bcalle\b|\bstreet\b|public\s*road/i],
   ['comunitario', /comunitari|colectiv|communal/i],
-  ['individual', /individual|privad|private/i],
+  // Sin «privad»: «garaje privado» no dice que sea individual (un comunitario también es privado): equivalencia dudosa.
+  ['individual', /individual|private/i],
 ]
 
 function claseDeTexto(t: string): ClaseGaraje | null {

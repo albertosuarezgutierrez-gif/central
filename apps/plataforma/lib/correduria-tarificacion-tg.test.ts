@@ -39,6 +39,23 @@ test('elegirGaraje: sin decirlo, en GARAJE (nunca la calle) DECLARADO como supue
   assert.deepEqual(elegirGaraje(null, [{ id: 'VP', nombre: 'Vía pública' }, { id: 'C', nombre: 'Calle' }]).resultado, { estado: 'ninguno' })
 })
 
+test('elegirGaraje: con oportunidad y sin decirlo, el garaje DECLARADO en el riesgo; si no casa, hueco y nunca el defecto (15/10/2026)', () => {
+  const cat = [{ id: 'PrivateGarage', nombre: 'Garaje individual' }, { id: 'CommunalParking', nombre: 'Garaje comunitario' }]
+  const conCalle = [...cat, { id: 'Street', nombre: 'Calle' }]
+  const r = elegirGaraje(null, conCalle, 'PublicRoad')
+  assert.deepEqual(r, { resultado: { estado: 'uno', opcion: conCalle[2] }, supuesto: null, hueco: null })
+  const sin = elegirGaraje(null, cat, 'PublicRoad')
+  assert.deepEqual(sin.resultado, { estado: 'ninguno' })
+  assert.equal(sin.supuesto, null)
+  assert.match(sin.hueco ?? '', /En la vía pública/)
+  assert.match(sin.hueco ?? '', /avisa a Alberto/)
+  assert.match(elegirGaraje(null, [], 'PublicRoad').hueco ?? '', /vacía/)
+  // Lo dicho manda sobre el riesgo; sin garaje en el riesgo, el defecto de siempre.
+  assert.deepEqual(elegirGaraje('individual', cat, 'PublicRoad').resultado, { estado: 'uno', opcion: cat[0] })
+  assert.equal(elegirGaraje(null, cat, null).resultado.estado, 'uno')
+  assert.match(elegirGaraje(null, cat, '').supuesto ?? '', /no me has dicho/)
+})
+
 test('fechaFutura: efecto dicho desde hoy y a ≤90 días; lo demás se DICE', () => {
   assert.deepEqual(fechaFutura('15/10/2026', HOY), { valor: '2026-10-15' })
   assert.deepEqual(fechaFutura('2026-09-28', HOY), { valor: '2026-09-28' }, 'hoy vale (el vendor rechaza ANTERIOR a hoy)')

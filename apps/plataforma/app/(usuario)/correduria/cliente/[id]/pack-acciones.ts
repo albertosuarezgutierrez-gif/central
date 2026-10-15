@@ -8,7 +8,7 @@
 // solo entonces, hace la llamada. Si no cabe, 0,00€ y se explica.
 
 import { catalogoAsegura, cotizarAutoNuevaAsegura } from '@/lib/auto-nuevo-asegura'
-import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { garajeParaPack } from '@/lib/supuestos-presupuesto'
 import { cotizarMotoNuevaAsegura } from '@/lib/moto-nuevo-asegura'
 import { tarificacionNuevaGuardadaAsegura, type RespuestaRetarificar, type RespuestaTarificacionNueva } from '@/lib/retarificar-asegura'
 import { otroRamoPack, planPackOtroVehiculo, type RamoPack } from '@/lib/correduria/pack-otro-vehiculo'
@@ -42,14 +42,13 @@ export async function pedirCotizacionPack(entrada: {
   const plan = planPackOtroVehiculo({ ramo, datos: carga.riesgo.datosVehiculo ?? null, fechaEfecto: entrada.fechaEfecto })
   if (!plan.ok) return { estado: 'pack_no', motivo: plan.motivo }
 
-  // El garaje del otro vehículo si lo trae; si no, el supuesto de siempre, DE SU CATÁLOGO (el de moto y el de
-  // coche son listas distintas: el id de una no vale en la otra). Catálogo gratis.
-  let garaje = typeof plan.resueltos.garaje === 'string' ? plan.resueltos.garaje : null
-  if (garaje === null) {
-    const cat = await catalogoAsegura({ tipo: ramo === 'moto' ? 'garajes-moto' : 'garajes' })
-    garaje = cat.estado === 'ok' ? garajePorDefecto(cat.opciones)?.id ?? null : null
-    if (garaje === null) return { estado: 'pack_no', motivo: `No se ha podido leer el catálogo de garajes del ${ramo === 'moto' ? 'moto' : 'coche'} para el supuesto de siempre (0,00€).` }
-  }
+  // El garaje del otro vehículo, RESUELTO contra SU catálogo (el de moto y el de coche son listas distintas: el id de una
+  // no vale en la otra); sin garaje en su riesgo, el supuesto de siempre. Si el suyo no casa, no se tarifica (15/10/2026:
+  // antes viajaba el código tal cual, sin comprobar que la compañía lo tuviera). Catálogo gratis.
+  const cat = await catalogoAsegura({ tipo: ramo === 'moto' ? 'garajes-moto' : 'garajes' })
+  const g = garajeParaPack(typeof plan.resueltos.garaje === 'string' ? plan.resueltos.garaje : null, cat.estado === 'ok' ? cat.opciones : null, ramo === 'moto' ? 'moto' : 'coche')
+  if (!g.ok) return { estado: 'pack_no', motivo: g.motivo }
+  const garaje = g.id
 
   const cuerpo = {
     clienteId: entrada.clienteId,
