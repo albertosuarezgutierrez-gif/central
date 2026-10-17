@@ -41,7 +41,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { cerrarAvisoTomadorMapfre, cerrarClubMapfre, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { cerrarAvisoTomadorMapfre, cerrarClubMapfre, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -230,6 +230,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
         await ctx.pausaAccion()
         return marcarOpcionTurismosAllianz(marco, guard, etiqueta)
+      },
+      marcarTarjetaVehiculoTurismos: async (marco, indice, etiqueta) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return marcarTarjetaVehiculoTurismosAllianz(marco, guard, indice, etiqueta)
       },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,

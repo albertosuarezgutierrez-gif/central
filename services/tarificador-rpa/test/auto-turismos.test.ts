@@ -14,7 +14,9 @@ import {
   esAppTurismosAllianz,
   grupoOpcionesTurismosCasa,
   instalarGuardEmision,
+  leerTarjetasVehiculoTurismosAllianz,
   marcarOpcionTurismosAllianz,
+  marcarTarjetaVehiculoTurismosAllianz,
   OPCIONES_TURISMOS_ALLIANZ,
   pulsar,
 } from '../src/guard.ts'
@@ -27,6 +29,8 @@ import {
   ErrorEleccionVersion,
   ErrorMapaIncompleto,
   ETIQUETAS_TURISMOS,
+  decidirTarjetaVehiculoTurismos,
+  ENCABEZADO_TARJETAS_VEHICULO,
   HUECOS_FIJOS_TURISMOS,
   marcoFormularioTurismos,
   planDatosTurismos,
@@ -88,6 +92,14 @@ type Opc = {
   matriculaExtra?: 'oculta' | 'deshabilitada' | 'visible'
   /** v0.6.3: la cabecera de ePac (desplegable de mediador + buscador «Buscar Aquí...») en el MARCO PRINCIPAL, fuera del iframe. */
   cabeceraFuera?: boolean
+  /** v0.6.4 (inventario real del trabajo ebe2bb1e, 17/10/2026): «Encuentra mi vehículo» pinta TARJETAS seleccionables en `appArea`
+   * (control con id `…-nx-selectable-card-N`, sin `name`, oculto a la vista, y su `<label for>` hermano), bajo «Detalles del
+   * vehículo»; ni modal ni `<select>` «Versión»; «SIGUIENTE» se habilita al elegir una. Etiquetas de catálogo FICTICIAS. */
+  tarjetas?: string[]
+  /** Índice de la tarjeta que el portal deja ya elegida. */
+  tarjetaMarcada?: number
+  /** Encabezado sobre las tarjetas (por defecto el real, «Detalles del vehículo»). */
+  encabezadoTarjetas?: string
 }
 
 function app(o: Opc = {}): string {
@@ -141,6 +153,9 @@ ${o.sinContenedor ? formulario : `<main id="appArea">${formulario}</main>`}
   $('#ng-x1-btn-77').addEventListener('click', () => setTimeout(() => {
     ${o.modal ? "const d = document.createElement('div'); d.className = 'cdk-overlay-pane'; d.innerHTML = '<div role=\"dialog\" aria-modal=\"true\"><h3>Selecciona tu vehículo</h3><button type=\"button\">MODELO A 90 CV</button><button type=\"button\">MODELO B 120 CV</button></div>'; document.body.appendChild(d); return;" : ''}
     ${o.aviso ? "const a = document.createElement('div'); a.setAttribute('role', 'alert'); a.textContent = 'No encontrado'; $('#paso1').appendChild(a); return;" : ''}
+    ${o.tarjetas ? `const t = document.createElement('div'); t.innerHTML = ${JSON.stringify(`<h3>${o.encabezadoTarjetas ?? 'Detalles del vehículo'}</h3>` + o.tarjetas.map((e, i) => `<span><input type="radio" id="ng-x1-nx-selectable-card-24${i}" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0"${o.tarjetaMarcada === i ? ' checked' : ''}><label for="ng-x1-nx-selectable-card-24${i}">${e}</label></span>`).join(''))}; $('#ng-x1-btn-77').after(t);
+      t.querySelectorAll('input').forEach((c) => c.addEventListener('change', () => { $('#ng-x1-btn-99').disabled = false; }));
+      return;` : ''}
     $('#resultado').hidden = false;
     ${o.siguienteMuerto ? '' : o.siguienteAria ? "$('#ng-x1-btn-99').disabled = false; $('#ng-x1-btn-99').setAttribute('aria-disabled', 'true');" : "$('#ng-x1-btn-99').disabled = false;"}
   }, 150));
@@ -185,6 +200,11 @@ async function abrir(o: Opc = {}, rutaMotor = '/ngx-motor-azs/') {
       if (r.estado === 'marcada') pulsados.push(`opcion:${etiqueta}`)
       return r
     },
+    marcarTarjetaVehiculoTurismos: async (m: Frame, indice: number, etiqueta: string) => {
+      const r = await marcarTarjetaVehiculoTurismosAllianz(m, guard, indice, etiqueta)
+      if (r.estado === 'marcada') pulsados.push(`tarjeta:${indice}`)
+      return r
+    },
   }
   return { context, page, ctx, pulsados, guard }
 }
@@ -208,7 +228,7 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
 })
 
 test('versión del bot de Allianz Turismos', () => {
-  assert.equal(allianzAuto.version, '0.6.3')
+  assert.equal(allianzAuto.version, '0.6.4')
 })
 
 test('localización por etiqueta/rol: marco del motor y controles sin tocar ids dinámicos', async () => {
@@ -637,5 +657,153 @@ test('revisión 15/10/2026: una opción supuesta que NO queda marcada en el port
     assert.equal(supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro), efecto 16/10/2026, sin 2º conductor.')
   } finally {
     await context.close()
+  }
+})
+
+// ── v0.6.4: tarjetas de vehículo tras «Encuentra mi vehículo» (estructura del inventario real del trabajo ebe2bb1e) ──
+const TARJETAS = [
+  'Marca del vehículo MARCAFICT Modelo Alfa Tipo de combustible Diésel Versión 2.0 CRDI 90 CV',
+  'Marca del vehículo MARCAFICT Modelo Alfa Tipo de combustible Diésel Versión 2.0 CRDI 120 CV',
+  'Marca del vehículo MARCAFICT Modelo Alfa Tipo de combustible Diésel Versión 2.9 CRDI 150 CV',
+  'Marca del vehículo MARCAFICT Modelo Alfa Tipo de combustible Gasolina Versión 3.5 V6 195 CV',
+  'Marca del vehículo MARCAFICT Modelo Alfa Tipo de combustible Diésel Versión 2.9 CRDI 163 CV',
+]
+const marcadas = (marco: Frame) => marco.locator('input[id*="-nx-selectable-card-"]').evaluateAll((els) => els.map((e) => (e as HTMLInputElement).checked))
+
+test('v0.6.4 (atasco real ebe2bb1e): 5 tarjetas sin elección → la PRIMERA por ctx.pulsar, supuesto declarado sin datos personales, y «SIGUIENTE» avanza', async () => {
+  const { context, page, ctx, pulsados } = await abrir({ tarjetas: TARJETAS })
+  try {
+    const marco = await marcoFormularioTurismos(page, 5_000)
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, FORM, ctx)
+    assert.equal(await marco.getByRole('heading', { name: ENCABEZADO_TARJETAS_VEHICULO }).count(), 1, 'el fixture reproduce el encabezado real')
+    assert.equal(await modalTurismosCount(marco), 0, 'ni modal')
+    assert.equal(await marco.getByLabel('Versión', { exact: true }).isVisible(), false, 'ni <select> «Versión»')
+    assert.deepEqual(await marcadas(marco), [true, false, false, false, false])
+    assert.equal(r.supuestoVersion, 'vehículo/versión: el primero de la lista (supuesto, había 5)')
+    assert.ok(!r.supuestoVersion!.includes(FORM.matricula))
+    assert.deepEqual(r.huecos, [])
+    assert.deepEqual(pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'tarjeta:0'])
+    await assert.rejects(avanzarDesdeDatosVehiculo(page, marco, ctx, 3_000), (e: unknown) => e instanceof ErrorMapaIncompleto && /Datos personales/.test((e as Error).message))
+    assert.equal(pulsados.at(-1), 'SIGUIENTE')
+  } finally {
+    await context.close()
+  }
+})
+
+test('v0.6.4: tarjetas con elección de la bandeja (por etiqueta) o por similitud con el vehículo confirmado → esa, sin supuesto; una sola → esa', async () => {
+  const casos: Array<[Partial<FormularioAuto>, string[], boolean[]]> = [
+    [{ eleccionVersion: { codigo: null, etiqueta: TARJETAS[2]! } }, TARJETAS, [false, false, true, false, false]],
+    [{ vehiculoConfirmado: { origen: 'mapfre', denominacion: 'ALFA 2.0 CRDI', cv: 118, cc: null, puertas: null, fechaInicio: null } }, TARJETAS, [false, true, false, false, false]],
+    [{}, [TARJETAS[3]!], [true]],
+  ]
+  for (const [extra, tarjetas, esperado] of casos) {
+    const { context, page, ctx } = await abrir({ tarjetas })
+    try {
+      const marco = await marcoFormularioTurismos(page, 5_000)
+      const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, { ...FORM, ...extra }, ctx)
+      assert.deepEqual(await marcadas(marco), esperado, JSON.stringify(extra))
+      assert.equal(r.supuestoVersion, null)
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('v0.6.4: elección de la bandeja que no casa → ErrorEleccionVersion sin pulsar tarjeta; tarjeta ya elegida por el portal → no se pulsa', async () => {
+  const a = await abrir({ tarjetas: TARJETAS })
+  try {
+    const marco = await marcoFormularioTurismos(a.page, 5_000)
+    await assert.rejects(rellenarDatosVehiculoTurismosConSupuesto(a.page, marco, { ...FORM, eleccionVersion: { codigo: null, etiqueta: 'OTRA' } }, a.ctx), (e: unknown) => e instanceof ErrorEleccionVersion && e.opciones.length === 5)
+    assert.deepEqual(a.pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo'])
+    assert.deepEqual(await marcadas(marco), [false, false, false, false, false])
+  } finally {
+    await a.context.close()
+  }
+  const b = await abrir({ tarjetas: TARJETAS, tarjetaMarcada: 0 })
+  try {
+    const marco = await marcoFormularioTurismos(b.page, 5_000)
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(b.page, marco, FORM, b.ctx)
+    assert.equal(r.supuestoVersion, 'vehículo/versión: el primero de la lista (supuesto, había 5)')
+    assert.deepEqual(b.pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo'], 'ya elegida: ni un clic')
+    assert.equal((await leerTarjetasVehiculoTurismosAllianz(marco)).length, 5)
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('v0.6.4: decidirTarjetaVehiculoTurismos (pura): sin tarjetas → hueco; varias sin elección → la primera declarada', () => {
+  const t = TARJETAS.map((etiqueta) => ({ etiqueta, marcada: false }))
+  assert.throws(() => decidirTarjetaVehiculoTurismos([], FORM), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
+  assert.deepEqual(decidirTarjetaVehiculoTurismos(t, FORM), { indice: 0, supuesto: 'vehículo/versión: el primero de la lista (supuesto, había 5)' })
+  assert.deepEqual(decidirTarjetaVehiculoTurismos(t.slice(0, 1), FORM), { indice: 0, supuesto: null })
+  assert.deepEqual(decidirTarjetaVehiculoTurismos(t, { ...FORM, eleccionVersion: { codigo: null, etiqueta: TARJETAS[4]! } }), { indice: 4, supuesto: null })
+})
+
+const modalTurismosCount = (marco: Frame) => marco.locator('[role=dialog], [aria-modal=true]').count()
+
+// ── v0.6.4: la PUERTA de guard.ts para las tarjetas (único camino que lee y marca su radio) ──
+async function conTarjetas(o: Opc) {
+  const a = await abrir(o)
+  const marco = await marcoFormularioTurismos(a.page, 5_000)
+  await marcarOpcionTurismosAllianz(marco, a.guard, 'conoce_matricula:si')
+  await campoTurismos(marco, 'Matrícula').fill(FORM.matricula)
+  await pulsar(botonTurismos(marco, 'Encuentra mi vehículo'), a.guard)
+  await marco.locator('label[for="ng-x1-nx-selectable-card-240"]').waitFor()
+  return { ...a, marco }
+}
+
+test('guard: marcarTarjetaVehiculoTurismosAllianz marca la nº i con SU etiqueta, una vez; ya elegida → no pulsa; etiqueta o índice que no casan → no_unica', async () => {
+  const { context, marco, guard } = await conTarjetas({ tarjetas: TARJETAS })
+  try {
+    assert.deepEqual((await leerTarjetasVehiculoTurismosAllianz(marco)).map((t) => t.etiqueta), TARJETAS)
+    assert.deepEqual(await marcarTarjetaVehiculoTurismosAllianz(marco, guard, 1, TARJETAS[0]!), { estado: 'no_unica', coincidencias: 1 }, 'índice y etiqueta no casan')
+    assert.deepEqual(await marcarTarjetaVehiculoTurismosAllianz(marco, guard, 9, TARJETAS[0]!), { estado: 'no_unica', coincidencias: 1 })
+    assert.deepEqual(await marcadas(marco), [false, false, false, false, false])
+    assert.deepEqual(await marcarTarjetaVehiculoTurismosAllianz(marco, guard, 2, TARJETAS[2]!), { estado: 'marcada' })
+    assert.deepEqual(await marcarTarjetaVehiculoTurismosAllianz(marco, guard, 2, TARJETAS[2]!), { estado: 'ya_marcada' })
+    assert.deepEqual(await marcadas(marco), [false, false, true, false, false])
+  } finally {
+    await context.close()
+  }
+})
+
+test('guard: tarjetas que NO están bajo «Detalles del vehículo» no existen para la puerta (no_unica, nada leído ni marcado)', async () => {
+  const { context, marco, guard } = await conTarjetas({ tarjetas: TARJETAS, encabezadoTarjetas: 'Otra cosa' })
+  try {
+    assert.deepEqual(await leerTarjetasVehiculoTurismosAllianz(marco), [])
+    assert.deepEqual(await marcarTarjetaVehiculoTurismosAllianz(marco, guard, 0, TARJETAS[0]!), { estado: 'no_unica', coincidencias: 0 })
+    assert.deepEqual(await marcadas(marco), [false, false, false, false, false])
+  } finally {
+    await context.close()
+  }
+})
+
+test('guard: etiqueta pedida de contratación/pago o bancaria → RECHAZO (bloqueo) antes de mirar la pantalla, sin pulsar', async () => {
+  const { context, marco, guard } = await conTarjetas({ tarjetas: TARJETAS })
+  try {
+    // Ninguna tarjeta tiene estas etiquetas: sin el veto de la puerta saldría `no_unica`, no un bloqueo.
+    await assert.rejects(marcarTarjetaVehiculoTurismosAllianz(marco, guard, 0, 'Contratar'), (e: unknown) => e instanceof EmisionBloqueadaError && !(e instanceof ErrorFronteraEmision))
+    await assert.rejects(marcarTarjetaVehiculoTurismosAllianz(marco, guard, 0, 'IBAN'), ErrorFronteraEmision)
+    assert.deepEqual(await marcadas(marco), [false, false, false, false, false])
+  } finally {
+    await context.close()
+  }
+})
+
+test('guard: una TARJETA del portal con texto de contratación, o un campo bancario visible en la pantalla → bloqueo sin pulsar', async () => {
+  const a = await conTarjetas({ tarjetas: ['Contratar ahora este vehículo', TARJETAS[0]!] })
+  try {
+    await assert.rejects(marcarTarjetaVehiculoTurismosAllianz(a.marco, a.guard, 0, 'Contratar ahora este vehículo'), EmisionBloqueadaError)
+    assert.deepEqual(await marcadas(a.marco), [false, false])
+  } finally {
+    await a.context.close()
+  }
+  const b = await conTarjetas({ tarjetas: TARJETAS })
+  try {
+    await b.marco.evaluate(() => { document.querySelector<HTMLElement>('#pago')!.hidden = false })
+    await assert.rejects(marcarTarjetaVehiculoTurismosAllianz(b.marco, b.guard, 0, TARJETAS[0]!), ErrorFronteraEmision)
+    assert.deepEqual(await marcadas(b.marco), [false, false, false, false, false])
+  } finally {
+    await b.context.close()
   }
 })

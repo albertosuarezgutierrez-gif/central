@@ -1736,3 +1736,91 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
   guard.comprobar()
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
 }
+
+// ─────────── TARJETAS DE VEHÍCULO de Allianz AUTOS Turismos (v0.6.4 del bot, 17/10/2026) ───────────
+// Inventario real del trabajo ebe2bb1e: tras «Encuentra mi vehículo» el motor `ngx-motor-azs` pinta, DENTRO de `appArea` y bajo el
+// encabezado «Detalles del vehículo», una TARJETA SELECCIONABLE por vehículo (`nx-selectable-card`): un radio con id dinámico
+// `ng-…-nx-selectable-card-N`, sin `name`, y su `<label for>` hermano «Marca del vehículo … Modelo … Tipo de combustible …». Es un
+// radio: solo esta puerta lo lee y lo marca (el adaptador decide QUÉ tarjeta por su posición y su etiqueta).
+
+export const ENCABEZADO_TARJETAS_VEHICULO_TURISMOS = 'Detalles del vehículo'
+export const SEL_TARJETA_VEHICULO_TURISMOS = 'input[type=radio][id*="-nx-selectable-card-"]'
+/** Tarjeta tal como la ve el adaptador: su etiqueta de catálogo (texto visible de la tarjeta, nunca un valor tecleado) y si está elegida. */
+export type TarjetaVehiculoTurismos = { readonly etiqueta: string; readonly marcada: boolean }
+type TarjetaLeida = TarjetaVehiculoTurismos & { readonly id: string }
+
+/**
+ * Tarjetas VÁLIDAS en el orden del portal: en la zona `appArea` y fuera de la cabecera, habilitadas, con `<label>` VISIBLE (el radio
+ * nativo va oculto a la vista) y cuyo encabezado visible inmediatamente anterior es EXACTAMENTE «Detalles del vehículo». Solo lectura.
+ */
+async function tarjetasVehiculoTurismos(marco: Frame): Promise<TarjetaLeida[]> {
+  return marco
+    .locator(SEL_ZONA_APP_TURISMOS)
+    .locator(SEL_TARJETA_VEHICULO_TURISMOS)
+    .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
+    .evaluateAll((els, encabezado) => {
+      // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+      const titulos = Array.from(document.querySelectorAll('h1,h2,h3,h4,h5,h6,[role=heading]')).filter((t) => {
+        const cs = getComputedStyle(t)
+        return cs.display !== 'none' && cs.visibility !== 'hidden' && t.getClientRects().length > 0
+      })
+      return els.flatMap((el) => {
+        const h = el as HTMLInputElement
+        const previos = titulos.filter((t) => !t.contains(h) && (t.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0)
+        const anterior = previos.length ? previos[previos.length - 1] : null
+        const bajo = anterior ? ((anterior as HTMLElement).innerText || anterior.textContent || '').replace(/\s+/g, ' ').trim() === encabezado : false
+        const labs = (h.labels ? Array.from(h.labels) : []).filter((l) => {
+          const cs = getComputedStyle(l)
+          return cs.display !== 'none' && cs.visibility !== 'hidden' && l.getClientRects().length > 0
+        })
+        if (!h.id || h.disabled || !bajo || labs.length === 0) return []
+        return [{ id: h.id, etiqueta: labs.map((l) => l.innerText || l.textContent || '').join(' ').replace(/\s+/g, ' ').trim(), marcada: h.checked }]
+      })
+    }, ENCABEZADO_TARJETAS_VEHICULO_TURISMOS)
+    .catch(() => [] as TarjetaLeida[])
+}
+
+/** Lectura para el adaptador (sin ids): marco de otra app → ninguna. Solo lectura. */
+export async function leerTarjetasVehiculoTurismosAllianz(marco: Frame): Promise<TarjetaVehiculoTurismos[]> {
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) return []
+  return (await tarjetasVehiculoTurismos(marco)).map(({ etiqueta, marcada }) => ({ etiqueta, marcada }))
+}
+
+/**
+ * Elige UNA tarjeta de vehículo de Turismos (el ÚNICO camino para tocarla). Exige, como `marcarOpcionTurismosAllianz`: guard limpio y
+ * sin ventanas de red abiertas, marco vivo de la app de Turismos, sin campos de cuenta bancaria y pestaña seleccionada «Datos del
+ * vehículo» (si no, bloqueo). La etiqueta pedida NO puede parecer emisión/contratación/pago (`comprobarBoton`/`pareceEmision`) ni
+ * cuenta bancaria (`senalCuentaBancaria`): bloqueo antes de mirar nada. Luego la tarjeta nº `indice` de las VÁLIDAS (appArea, bajo
+ * «Detalles del vehículo») tiene que tener EXACTAMENTE esa etiqueta y un único `<label for>` visible; si no → `no_unica` (hueco). Ya
+ * elegida → no se pulsa. `comprobarBoton` sobre radio y etiqueta ANTES del único clic; después, que quede marcada (`no_quedo` si no).
+ */
+export async function marcarTarjetaVehiculoTurismosAllianz(marco: Frame, guard: GuardEmision, indice: number, etiqueta: string): Promise<ResultadoOpcionHogar> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'tarjeta de vehículo de Turismos con una ventana de red abierta')
+  comprobarBoton([etiqueta])
+  const banco = senalCuentaBancaria([etiqueta])
+  if (banco !== null) throw new ErrorFronteraEmision(banco)
+  if (!Number.isInteger(indice) || indice < 0) throw new EmisionBloqueadaError('boton', 'tarjeta de vehículo de Turismos: índice no válido')
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'tarjeta de vehículo fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_TURISMOS_ALLIANZ) throw new EmisionBloqueadaError('fase', 'tarjeta de vehículo fuera del paso «Datos del vehículo»')
+  const tarjetas = await tarjetasVehiculoTurismos(marco)
+  const t = tarjetas[indice]
+  if (!t || t.etiqueta !== etiqueta.replace(/\s+/g, ' ').trim()) return { estado: 'no_unica', coincidencias: tarjetas.filter((x) => x.etiqueta === etiqueta).length }
+  const id = t.id.replace(/["\\]/g, '')
+  const control = marco.locator(`${SEL_TARJETA_VEHICULO_TURISMOS}[id="${id}"]`)
+  if ((await control.count()) !== 1) return { estado: 'no_unica', coincidencias: await control.count() }
+  if (await control.isChecked()) return { estado: 'ya_marcada' }
+  const label = marco.locator(`label[for="${id}"]`).filter({ visible: true })
+  if ((await label.count()) !== 1) return { estado: 'no_unica', coincidencias: await label.count() }
+  comprobarBoton(await control.evaluate((el) => {
+    const h = el as HTMLInputElement
+    return [h.id || null, h.name || null, h.getAttribute('onclick'), h.getAttribute('onchange'), h.getAttribute('aria-label'), h.getAttribute('formaction')]
+  }))
+  comprobarBoton(await descripcion(label))
+  await label.click()
+  guard.comprobar()
+  return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}
