@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-17T08:17:54Z",
-  "sha": "5e1422b13b1016b55708c1a7a45b8e772f0827a5",
+  "generadoEn": "2026-10-17T08:43:33Z",
+  "sha": "7ff05b6ec81c7011e1b8c8af4a28c5a7e7f6c017",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -17427,12 +17427,12 @@
           "exportada": true,
           "params": "obj: Record<string, unknown>",
           "retorno": "string",
-          "linea": 263
+          "linea": 267
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0bf13c55e317"
+      "hash": "723b54755af9"
     },
     {
       "ruta": "apps/asegura-web/lib/siguiente-paso.ts",
@@ -44707,7 +44707,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined> = process.env",
           "retorno": "boolean",
-          "linea": 34,
+          "linea": 45,
           "resumen": "Solo el valor EXACTO `'1'` activa el borrado. `'true'`, `' 1'`, vacío o ausente = modo informe."
         },
         {
@@ -44716,7 +44716,7 @@
           "exportada": false,
           "params": "d: unknown",
           "retorno": "d is Date",
-          "linea": 41
+          "linea": 52
         },
         {
           "nombre": "sinPolizas",
@@ -44724,7 +44724,7 @@
           "exportada": false,
           "params": "polizas: readonly PolizaLeida[] | null | undefined",
           "retorno": "boolean",
-          "linea": 46,
+          "linea": 57,
           "resumen": "Ninguna póliza leída, y desde luego ninguna en vigor. `null`/no-array = no se sabe → false."
         },
         {
@@ -44733,7 +44733,7 @@
           "exportada": false,
           "params": "tipo: string | null | undefined, segmento: string | null | undefined",
           "retorno": "boolean",
-          "linea": 53,
+          "linea": 64,
           "resumen": "La ficha es un lead/prospecto (nunca cliente ni ex-cliente)."
         },
         {
@@ -44742,7 +44742,7 @@
           "exportada": true,
           "params": "d: DocumentoCandidato, dias = DIAS_RETENCION_DOCUMENTOS",
           "retorno": "boolean",
-          "linea": 84
+          "linea": 95
         },
         {
           "nombre": "haceMeses",
@@ -44750,7 +44750,7 @@
           "exportada": true,
           "params": "ahora: Date, meses: number",
           "retorno": "Date",
-          "linea": 125,
+          "linea": 136,
           "resumen": "`ahora` menos `meses` meses (calendario, UTC), igual que `interval 'N months'`."
         },
         {
@@ -44759,7 +44759,7 @@
           "exportada": true,
           "params": "p: ProspectoCandidato, meses = MESES_RETENCION_PROSPECTO",
           "retorno": "boolean",
-          "linea": 131
+          "linea": 142
         },
         {
           "nombre": "textoAvisoPurgaRgpd",
@@ -44767,7 +44767,7 @@
           "exportada": true,
           "params": "r: ResumenPurgaRgpd",
           "retorno": "string | null",
-          "linea": 156
+          "linea": 167
         },
         {
           "nombre": "num",
@@ -44775,7 +44775,7 @@
           "exportada": false,
           "params": "v: number | bigint | null | undefined",
           "retorno": "number | null",
-          "linea": 192
+          "linea": 203
         },
         {
           "nombre": "leerDocumentosCandidatos",
@@ -44783,7 +44783,7 @@
           "exportada": true,
           "params": "db: DbPurgaRgpd, correduriaId: string, limite = LOTE_PURGA_RGPD",
           "retorno": "Promise<",
-          "linea": 195,
+          "linea": 206,
           "resumen": "Documentos candidatos (pre-filtro SQL; decide `esDocumentoPurgable`). Pide `limite + 1` para saber si hay más."
         },
         {
@@ -44792,7 +44792,7 @@
           "exportada": true,
           "params": "db: DbPurgaRgpd, correduriaId: string, ids: readonly string[]",
           "retorno": "Promise<number>",
-          "linea": 238,
+          "linea": 249,
           "resumen": "Borra esos documentos RE-COMPROBANDO las guardas clave en el propio DELETE. Devuelve cuántos borró."
         },
         {
@@ -44801,7 +44801,7 @@
           "exportada": true,
           "params": "db: DbPurgaRgpd, correduriaId: string, limite = LOTE_PURGA_RGPD",
           "retorno": "Promise<",
-          "linea": 258,
+          "linea": 269,
           "resumen": "Prospectos web candidatos (pre-filtro SQL; decide `esProspectoAnonimizable`)."
         },
         {
@@ -44810,8 +44810,8 @@
           "exportada": true,
           "params": "db: DbPurgaRgpd, correduriaId: string, ids: readonly string[]",
           "retorno": "Promise<number>",
-          "linea": 314,
-          "resumen": "borra sus teléfonos, emails y carnés (tablas hijas de PII); REDACTA el texto de sus líneas previas de `historial_interno` (alta, comentario del lead, atribución web) y deja UNA línea nueva sin PII. El"
+          "linea": 328,
+          "resumen": "borra sus teléfonos, emails y carnés (tablas hijas de PII); REDACTA el texto de sus líneas previas de `historial_interno` (alta, comentario del lead, atribución web) y el texto libre de las tablas hij"
         },
         {
           "nombre": "ejecutarPurgaRgpd",
@@ -44819,16 +44819,17 @@
           "exportada": true,
           "params": "db: DbPurgaRgpd, correduriaId: string, opts: { activa: boolean; limite?: number; enviar: (texto: string) => Promise<number | null> },",
           "retorno": "Promise<ResultadoPurgaRgpd>",
-          "linea": 361,
+          "linea": 415,
           "resumen": "Una pasada completa. `activa` = false → solo lee y cuenta. `enviar` = Telegram (inyectable para el cepo); se llama solo si hay algo que contar. Las lecturas que fallan LANZAN antes de escribir nada."
         }
       ],
       "tablas": [
+        "cnv",
         "obj",
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "8d8660dd0ead"
+      "hash": "c5cf0eff6866"
     },
     {
       "ruta": "apps/asegura/lib/quejas.ts",
