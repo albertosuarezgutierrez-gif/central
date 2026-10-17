@@ -826,5 +826,5 @@ export function precalificarMoto(
     return valor
   }
   const datos: Partial<DatosMoto> = { ...base.datos, ...historialDePoliza(poliza, hoy, suponer) }
-  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
+  return { datos, supuestos, faltan: revisarDatosMoto(datos, { hoy }) }
 }

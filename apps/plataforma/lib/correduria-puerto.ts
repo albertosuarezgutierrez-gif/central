@@ -880,6 +880,18 @@ export type SustitucionPendiente = {
   nuevaConfirmadaCima: boolean | null
   nuevaReciboCima: boolean | null
   viejaEnVigorCima: boolean | null
+  /**
+   * ¿Sigue pendiente confirmar la anulación de la vieja? Lo decide asegura (`viejaPendienteDeAnular`: solo la
+   * cierran la anulación confirmada por la compañía o la baja en CIMA; la fecha NO, la vieja renovaría).
+   * Un asegura que aún no lo manda → se cae a `viejaEnVigorCima` (el comportamiento anterior). `null` = no se sabe.
+   */
+  viejaPendienteAnular: boolean | null
+  /** Por qué ya no está pendiente aunque CIMA la siga dando en vigor. `null` = no aplica / no lo manda. */
+  viejaCierre: 'anulacion_confirmada' | null
+  /** Si está pendiente: `doble_seguro` o `no_renovacion` (vence a más tardar cuando empieza la nueva). `null` = no lo manda. */
+  viejaAviso: 'doble_seguro' | 'no_renovacion' | null
+  /** Vencimiento de la vieja (`YYYY-MM-DD`). `null` = no consta / no lo manda. */
+  viejaVence: string | null
 }
 
 /** Póliza sustituida que sigue viva (posible doble seguro). Sin datos personales. */
@@ -925,6 +937,13 @@ export function interpretarSustituciones(status: number, json: unknown): Sustitu
             nuevaConfirmadaCima: typeof x.nuevaConfirmadaCima === 'boolean' ? x.nuevaConfirmadaCima : null,
             nuevaReciboCima: typeof x.nuevaReciboCima === 'boolean' ? x.nuevaReciboCima : null,
             viejaEnVigorCima: typeof x.viejaEnVigorCima === 'boolean' ? x.viejaEnVigorCima : null,
+            viejaPendienteAnular: typeof x.viejaPendienteAnular === 'boolean'
+              ? x.viejaPendienteAnular
+              : 'viejaPendienteAnular' in x ? null
+              : typeof x.viejaEnVigorCima === 'boolean' ? x.viejaEnVigorCima : null,
+            viejaCierre: x.viejaCierre === 'anulacion_confirmada' ? x.viejaCierre : null,
+            viejaAviso: x.viejaAviso === 'doble_seguro' || x.viejaAviso === 'no_renovacion' ? x.viejaAviso : null,
+            viejaVence: typeof x.viejaVence === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.viejaVence) ? x.viejaVence : null,
           }
         })
         .filter((x): x is SustitucionPendiente => x !== null)
@@ -947,6 +966,32 @@ export async function sustitucionesAsegura(): Promise<Sustituciones> {
     return interpretarSustituciones(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
+  }
+}
+
+export type SelloAnulacionConfirmada =
+  | { estado: 'ok' }
+  | { estado: 'sin_configurar' }
+  | { estado: 'rechazado'; motivo: string }
+  | { estado: 'sin_respuesta'; motivo: string }
+
+/**
+ * `POST /api/operador/sustituciones {accion:'anulacion_confirmada'}` — la compañía confirmó la anulación de la
+ * póliza VIEJA por su cauce (17/10/2026). El actor lo pone el servidor. No cambia el estado (lo manda CIMA).
+ * `sin_respuesta` (red o 5xx) NO es «no se hizo»: la transacción pudo terminar.
+ */
+export async function sellarAnulacionConfirmadaAsegura(
+  polizaViejaId: string, motivo: string, fechaEfectoBaja: string | null, actor: string,
+): Promise<SelloAnulacionConfirmada> {
+  try {
+    const r = await pedirPost('/api/operador/sustituciones', { accion: 'anulacion_confirmada', polizaViejaId, motivo, fechaEfectoBaja, actor })
+    if (r === null) return { estado: 'sin_configurar' }
+    const j = ((r.json ?? {}) as Record<string, unknown>)
+    if (r.status === 200 && j.estado === 'ok') return { estado: 'ok' }
+    const m = typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}`
+    return r.status >= 400 && r.status < 500 ? { estado: 'rechazado', motivo: m } : { estado: 'sin_respuesta', motivo: m }
+  } catch {
+    return { estado: 'sin_respuesta', motivo: 'no se pudo llegar a asegura' }
   }
 }
 

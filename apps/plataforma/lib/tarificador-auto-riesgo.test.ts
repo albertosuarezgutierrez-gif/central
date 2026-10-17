@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { formularioBotAuto } from './tarificador-auto-formulario.ts'
-import { armarFormularioBotsAuto, formularioBotsAutoDeRiesgo, matriculaDeRiesgo, type RiesgoParaBotsAuto } from './tarificador-auto-riesgo.ts'
+import { armarFormularioBotsAuto, conductorOcasionalDeRiesgo, formularioBotsAutoDeRiesgo, matriculaDeRiesgo, vencimientoActualDeRiesgo, type RiesgoParaBotsAuto } from './tarificador-auto-riesgo.ts'
 
 const riesgo = (c: Partial<RiesgoParaBotsAuto> = {}): RiesgoParaBotsAuto => ({
   oportunidad: { clienteId: 'c1', matricula: null },
@@ -95,6 +95,29 @@ test('conductor o propietario en OTRA ficha, o tomador empresa: el bot no tarifi
   assert.equal(formularioBotsAutoDeRiesgo(riesgo({ figuras: [{ rol: 'tomador', clienteId: 'c1', empresa: true, faltan: [] }] })).conductorEnOtraFicha, true)
   const prop = riesgo({ figuras: [{ rol: 'tomador', clienteId: 'c1', empresa: false, faltan: [] }, { rol: 'propietario', clienteId: 'c3', empresa: false, faltan: [] }] })
   assert.equal(formularioBotsAutoDeRiesgo(prop).propietarioEnOtraFicha, true)
+})
+
+test('supuestos de Allianz Turismos (15/10/2026): 1ª matriculación, vencimiento actual y ocasional salen del riesgo', () => {
+  const dv = riesgo().datosVehiculo!
+  const r = riesgo({
+    oportunidad: { clienteId: 'c1', matricula: null, vence: '2026-11-30' },
+    roles: ['tomador', 'conductor_habitual', 'propietario', 'conductor_ocasional'],
+    datosVehiculo: { ...dv, fechaMatriculacion: '2018-05-02' },
+    historial: { ...riesgo().historial!, seguroAnterior: { siniestrosUltimos5: 0, aniosSinSiniestros: 5, fechaVencimiento: '2025-11-30' } },
+    conductorOcasional: { ningunoConfirmadoAt: '2026-10-15T09:00:00Z' },
+  })
+  const f = formularioBotsAutoDeRiesgo(r)
+  assert.deepEqual([f.fechaMatriculacion, f.fechaVencimiento, f.conductorOcasional], ['2018-05-02', '2026-11-30', false])
+  // El vencimiento: el más tardío de los que se saben (el del documento puede ser del ciclo anterior).
+  assert.equal(vencimientoActualDeRiesgo({ oportunidad: { clienteId: 'c', matricula: null, vence: null }, historial: r.historial }), '2025-11-30')
+  assert.equal(vencimientoActualDeRiesgo({ oportunidad: { clienteId: 'c', matricula: null }, historial: null }), null)
+  // Ocasional: ficha → true; sin ficha ni confirmación → null (sin preguntar: el bot supone «no» y lo DECLARA); sin el papel → null.
+  assert.equal(conductorOcasionalDeRiesgo({ ...r, figuras: [...r.figuras, { rol: 'conductor_ocasional', clienteId: 'c9', empresa: false, faltan: [] }] }), true)
+  assert.equal(conductorOcasionalDeRiesgo({ ...r, conductorOcasional: null }), null)
+  assert.equal(conductorOcasionalDeRiesgo(riesgo()), null)
+  // Y llega al riesgo del bot por el adaptador.
+  const x = formularioBotAuto(f)
+  assert.ok(x.ok && x.riesgo.fechaVencimiento === '2026-11-30' && x.riesgo.conductorOcasional === false && x.riesgo.fechaMatriculacion === '2018-05-02')
 })
 
 test('armarFormularioBotsAuto: el CP del formulario de Avant2 sigue la misma regla (5 dígitos o «ficha»)', () => {
