@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/10/2026)** — Correduría · base de visibilidad en IA (OpenSEO, 18 consultas × ChatGPT/Gemini, 216 créditos): **Grupo ASegura sale en 0/36**, 0 citas propias. Fuentes que mandan: rastreator, segurfer, ocu, selectra, kelisto. Informe `docs/ASEGURA-VISIBILIDAD-IA-2026-10.md`. Tracker `8dc0311c` guardado y PAUSADO (sin gasto recurrente; reactivar = decisión de Alberto). Siguiente: publicar guías 01-04 tras revisar [VERIFICAR] y aparecer en directorios de corredurías de Sevilla.
+
 **(17/10/2026)** — Correduría · auditoría de captación nacional (solo lectura + informe `docs/ASEGURA-CAPTACION-AUDITORIA-2026-10.md`). El prompt original asumía Symfony inexistente.
 Embudo: 2 leads web en 12 meses, 0 con póliza viva -> cuello = TRÁFICO, no conversión. RGPD pendiente: sin purga de prospectos a 12 meses, `/datos` sin retención, consentimiento sin fecha/texto, sin UTM.
 Hallazgo: home `app/page.tsx:454` dice «el documento no se guarda» pero el portal lo archiva (`polizas/route.ts:134`). La subida «sin ser cliente» vive en asegura-portal (cuenta por correo), no en asegura-web.
