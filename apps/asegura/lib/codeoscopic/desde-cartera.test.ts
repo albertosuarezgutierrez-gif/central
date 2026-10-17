@@ -465,8 +465,15 @@ test('moto: NINGÚN supuesto rellena un dato personal', () => {
 
 // ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────
 
+// La moto valida la fecha de efecto contra el reloj REAL (ventana de 90 días vista), no contra HOY:
+// su vencimiento se calcula respecto a hoy real para que la fixture no caduque nunca.
+const diaReal = (dias: number) => new Date(Date.now() + dias * 86_400_000).toISOString().slice(0, 10)
+const VENCIMIENTO_MOTO = diaReal(30)
+const EFECTO_MOTO = diaReal(31)
+
 const POLIZA_MOTO: PolizaCartera = {
   ...POLIZA,
+  fechaVencimiento: VENCIMIENTO_MOTO,
   numeroPoliza: '031600009',
   codigoEntidadDgs: 'C0109',
   matricula: '1234ABC',
@@ -498,7 +505,7 @@ test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad),
 
 test('moto de cartera: efecto al día siguiente del vencimiento, y un solo supuesto de fecha', () => {
   const r = preMotoPoliza()
-  assert.equal(r.datos.fechaEfecto, '2026-10-16')
+  assert.equal(r.datos.fechaEfecto, EFECTO_MOTO)
   const fechas = r.supuestos.filter((x) => x.campo === 'fechaEfecto')
   assert.equal(fechas.length, 1)
   assert.match(String(fechas[0].porque), /vencimiento/)
