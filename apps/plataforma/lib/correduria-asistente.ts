@@ -95,19 +95,73 @@ export function leerClasificacion(respuesta: string | null | undefined): 'corred
  * herramienta antes de que lo vea la IA, y otra vez a la respuesta antes de Telegram (por si la
  * IA reconstruyera algo). El CIF de una empresa se deja: no es dato personal y sirve para buscar.
  */
+const RE_IBAN = /\b[A-Z]{2}\d{2}(?:[ -]?[A-Z0-9]{4}){4,7}(?:[ -]?[A-Z0-9]{1,3})?\b/g
+const RE_TARJETA = /\b(?:\d{4}[ -]?){3}\d{4}\b/g
+const RE_NIE = /\b[XYZ]\d{7}[A-Z]\b/gi
+const RE_DNI = /\b\d{8}[A-Z]\b/gi
+
 export function enmascarar(texto: string): string {
   return texto
-    .replace(/\b[A-Z]{2}\d{2}(?:[ -]?[A-Z0-9]{4}){4,7}(?:[ -]?[A-Z0-9]{1,3})?\b/g, (m) => {
+    .replace(RE_IBAN, (m) => {
       const limpio = m.replace(/[ -]/g, '')
       return `${limpio.slice(0, 2)}…${limpio.slice(-4)}`
     })
     // Solo si pasa el dígito de control (Luhn): un nº de póliza de 16 cifras no es una tarjeta.
-    .replace(/\b(?:\d{4}[ -]?){3}\d{4}\b/g, (m) => {
+    .replace(RE_TARJETA, (m) => {
       const d = m.replace(/[ -]/g, '')
       return luhn(d) ? `…${d.slice(-4)}` : m
     })
-    .replace(/\b[XYZ]\d{7}[A-Z]\b/gi, (m) => `…${m.slice(-4)}`)
-    .replace(/\b\d{8}[A-Z]\b/gi, (m) => `…${m.slice(-4)}`)
+    .replace(RE_NIE, (m) => `…${m.slice(-4)}`)
+    .replace(RE_DNI, (m) => `…${m.slice(-4)}`)
+}
+
+/** Datos personales que Alberto TECLEA en el modo bots y que no salen a la IA: se cambian por una clave (`[DNI_1]`). */
+export type DatosOcultos = { texto: string; claves: Record<string, string> }
+
+const RE_DNI_SEPARADO = /\b\d{8}[ -][A-Z]\b/gi
+const RE_EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g
+// Teléfono español (9 cifras, empieza por 6/7/8/9, con o sin +34/0034 y separadores). Bordes sin letra/cifra/guion: un uuid no casa.
+const RE_TELEFONO = /(?<![\w-])(?:(?:\+|00)34[ .-]?)?[6789](?:[ .-]?\d){8}(?![\w-])/g
+const RE_CLAVE_OCULTA = /\[(DNI|NIE|IBAN|TARJETA|EMAIL|TEL)_(\d{1,3})\]/g
+
+/**
+ * Modo bots (revisión 15/10/2026): DNI/NIE, IBAN, tarjeta (Luhn), email y teléfono → `[DNI_1]`, `[IBAN_1]`… con los MISMOS patrones
+ * que `enmascarar`. Lo que va a la IA es `texto`; `claves` se queda en el servidor para que la búsqueda use el dato original
+ * (`restaurarDatosOcultos`). El CIF de empresa se deja (igual que `enmascarar`). PURA.
+ */
+export function ocultarDatosPersonales(texto: string): DatosOcultos {
+  const claves: Record<string, string> = {}
+  const n: Record<string, number> = {}
+  const clave = (tipo: string, original: string): string => {
+    const ya = Object.entries(claves).find(([k, v]) => v === original && k.startsWith(`[${tipo}_`))
+    if (ya) return ya[0]
+    n[tipo] = (n[tipo] ?? 0) + 1
+    const k = `[${tipo}_${n[tipo]}]`
+    claves[k] = original
+    return k
+  }
+  const t = texto
+    .replace(RE_IBAN, (m) => clave('IBAN', m.replace(/[ -]/g, '')))
+    // Dentro de un uuid (cifras pegadas a «-» o a una letra) no es una tarjeta.
+    .replace(RE_TARJETA, (m, i: number, todo: string) => (!pegado(todo, i, m.length) && luhn(m.replace(/[ -]/g, '')) ? clave('TARJETA', m.replace(/[ -]/g, '')) : m))
+    .replace(RE_EMAIL, (m) => clave('EMAIL', m))
+    .replace(RE_NIE, (m) => clave('NIE', m.toUpperCase()))
+    .replace(RE_DNI, (m) => clave('DNI', m.toUpperCase()))
+    .replace(RE_DNI_SEPARADO, (m) => clave('DNI', m.replace(/[ -]/g, '').toUpperCase()))
+    .replace(RE_TELEFONO, (m) => clave('TEL', m.replace(/[ .-]/g, '')))
+  return { texto: t, claves }
+}
+
+const pegado = (todo: string, i: number, largo: number): boolean => /[\w-]/.test(todo.charAt(i - 1)) || /[\w-]/.test(todo.charAt(i + largo))
+
+/** Vuelve a poner el dato original en los textos de los argumentos que la IA devuelve (solo en servidor). PURA. */
+export function restaurarDatosOcultos<T>(valor: T, claves: Readonly<Record<string, string>>): T {
+  if (typeof valor === 'string') return valor.replace(RE_CLAVE_OCULTA, (k) => claves[k] ?? k) as T
+  if (Array.isArray(valor)) return valor.map((v) => restaurarDatosOcultos(v, claves)) as T
+  if (valor !== null && typeof valor === 'object') {
+    return Object.fromEntries(Object.entries(valor as Record<string, unknown>).map(([k, v]) => [k, restaurarDatosOcultos(v, claves)])) as T
+  }
+  return valor
 }
 
 function luhn(digitos: string): boolean {

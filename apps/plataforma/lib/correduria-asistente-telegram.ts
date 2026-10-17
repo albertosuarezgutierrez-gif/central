@@ -62,10 +62,10 @@ import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
   sinPrefijo, SYSTEM_CLASIFICADOR, systemAsistente, altaParaIA, autonomoActivo, figuraParaIA, textoSinBoton, HERRAMIENTAS_ESCRITURA,
-  herramientasPara, huellaEscritura, dejaHuella, dniEnmascarado, MINUTOS_HUELLA, TEXTO_DNI_ENMASCARADO,
+  herramientasPara, huellaEscritura, dejaHuella, dniEnmascarado, MINUTOS_HUELLA, TEXTO_DNI_ENMASCARADO, ocultarDatosPersonales, restaurarDatosOcultos,
 } from './correduria-asistente'
 import { interpretarRiesgo } from '@/lib/riesgo-asegura'
-import { dentroDeTopeBots, esParaBots, HERRAMIENTAS_BOTS, pideAccionProhibida, systemBots, TEXTO_PROHIBIDA } from './correduria-bots-tg'
+import { conBloqueSupuestosBots, dentroDeTopeBots, esParaBots, type SupuestosTrabajoBots, HERRAMIENTAS_BOTS, pideAccionProhibida, remitenteAutorizadoBots, systemBots, TEXTO_PROHIBIDA, TEXTO_REMITENTE_BOTS } from './correduria-bots-tg'
 import { APP_BOTS, ejecutarBots, limpiarPropuestasBots, usoBots24h } from './correduria-bots-telegram'
 import { cerrarTarea, contactoCliente, estadoOportunidad, seguirSiniestro, verRiesgo, verSiniestro } from './correduria-gestion-tg'
 import { tomadorDelRiesgo, varianteDeRiesgo, type RolExtra } from '@/app/(usuario)/correduria/oportunidad/[id]/variante'
@@ -2065,7 +2065,11 @@ async function soltarHuella(huella: string, turnoId: number): Promise<void> {
     DELETE FROM correduria_asistente_huella WHERE huella = ${huella} AND turno_id = ${turnoId}`).catch(() => {})
 }
 
-export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> {
+/**
+ * `fromId` = `message.from.id` de quien escribió (revisión 15/10/2026). El modo bots lo exige igual a `TELEGRAM_CHAT_ID` antes de
+ * proponer nada o llamar a la IA; sin él (llamadas internas), el modo bots no arranca.
+ */
+export async function manejarCorreduriaTg(textoOriginal: string, fromId?: unknown): Promise<void> {
   const inicio = Date.now()
   const pregunta = sinPrefijo(textoOriginal) || textoOriginal.trim()
   if (apagado(process.env.CORREDURIA_ASISTENTE_APAGADO)) {
@@ -2075,7 +2079,13 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   // MODO BOTS (15/10/2026): lo que va de los bots del tarificador usa este mismo bucle con sus 4 herramientas, su prompt y
   // su tope propio (0,50€ / 12 llamadas cada 24 h, fail-closed). Lo prohibido (emitir, pagar, enviar…) se contesta sin IA.
   const bots = esParaBots(pregunta)
+  // Solo la PERSONA autorizada (from.id), no solo el chat: en un grupo nadie más provoca propuestas ni gasto de IA.
+  if (bots && !remitenteAutorizadoBots(fromId, process.env.TELEGRAM_CHAT_ID)) { await tgSend(TEXTO_REMITENTE_BOTS).catch(() => {}); return }
   if (bots && pideAccionProhibida(pregunta)) { await tgSend(TEXTO_PROHIBIDA).catch(() => {}); return }
+  // Modo bots: lo que Alberto TECLEA (DNI/NIE, IBAN, tarjeta, teléfono, email) no sale a la IA; va con claves ([DNI_1]) y el
+  // servidor las vuelve a poner en los argumentos de sus herramientas (la búsqueda usa el dato original).
+  const oculto = bots ? ocultarDatosPersonales(pregunta) : { texto: pregunta, claves: {} }
+  const preguntaIA = oculto.texto
   const app = bots ? APP_BOTS : APP
   if (bots) {
     const t = dentroDeTopeBots(await usoBots24h())
@@ -2135,12 +2145,14 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
     .filter(Boolean).join('\n\n')
   // A la IA va la pregunta TAL CUAL (si Alberto busca por DNI, la IA necesita el DNI para buscarlo;
   // el proveedor es de retención cero). Enmascarada queda solo en el registro y en Telegram.
-  const mensajes: NimToolMessage[] = [...(bots ? [] : historial.mensajes), { role: 'user', content: pregunta }]
+  const mensajes: NimToolMessage[] = [...(bots ? [] : historial.mensajes), { role: 'user', content: preguntaIA }]
   const rastro: Rastro[] = []
   const yaConsultado = new Map<string, string>()
   const conflictosEnTurno = new Set<string>()
   const herramientas = bots ? HERRAMIENTAS_BOTS : herramientasPara(autonomo)
   let topeBots: string | null = null
+  // Supuestos de los precios que ha leído bots_estado en este turno: el servidor los añade al final (no depende de la IA).
+  const supuestosBots: SupuestosTrabajoBots[] = []
   const consultado: string[] = []
   const t0 = Date.now()
   const { model, fallbacks } = modelosPorDefecto()
@@ -2187,7 +2199,9 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
         let huella: string | null = null
         if (bots) {
           // Modo bots: SOLO sus 4 herramientas (un nombre de otra, aunque sea de escritura, no llega a `ejecutar`).
-          res = await ejecutarBots(nombreH, args, turnoId).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos ni que está hecho.`, ok: false }))
+          const rb: { texto: string; ok: boolean; supuestos?: SupuestosTrabajoBots[] } = await ejecutarBots(nombreH, args === null ? null : restaurarDatosOcultos(args, oculto.claves), turnoId).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos ni que está hecho.`, ok: false }))
+          if (rb.supuestos?.length) supuestosBots.push(...rb.supuestos)
+          res = { texto: rb.texto, ok: rb.ok }
         } else if (escribe && args?.forzar === true && conflictosEnTurno.has(nombreH)) {
           // El 409 y el forzar en la misma vuelta = la IA contestándose a sí misma lo que tenía que preguntar.
           res = { texto: 'NO: forzar=true solo cuando Alberto te conteste, en OTRO mensaje, que es otra persona. Pregúntaselo ahora y para.', ok: true }
@@ -2222,7 +2236,7 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
       // vez de tirar todo lo consultado y devolver un «no he llegado» que no dice nada.
       // SIN herramientas (chat de texto, historial aplanado): con ellas el modelo volvía a pedir otra
       // consulta en vez de contestar, y la respuesta salía vacía otra vez.
-      const cierre = `${pregunta}\n\nLo que ya has consultado:\n${consultado.join('\n\n').slice(-12_000)}\n\nSe han acabado las consultas de esta pregunta: contéstame ya con lo que has averiguado, qué falta y cuál es el siguiente paso concreto.`
+      const cierre = `${preguntaIA}\n\nLo que ya has consultado:\n${consultado.join('\n\n').slice(-12_000)}\n\nSe han acabado las consultas de esta pregunta: contéstame ya con lo que has averiguado, qué falta y cuál es el siguiente paso concreto.`
       const tc = Date.now()
       const r = await openrouterChatEx(or, [{ role: 'user', content: cierre }], {
         system, models: [model, ...fallbacks].slice(0, 3), maxTokens: 900, temperature: 0.2,
@@ -2246,6 +2260,8 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   }
 
   respuesta = enmascarar(respuesta).slice(0, 3800)
+  // Modo bots: el bloque fijo «Precio con supuestos (Compañía): …» lo pone el SERVIDOR, al final y sin recortarlo.
+  if (bots && supuestosBots.length) respuesta = conBloqueSupuestosBots(respuesta, supuestosBots, 3800)
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_turno
     SET respuesta = ${respuesta}, herramientas = ${JSON.stringify(rastro)}::jsonb, modelo = ${modelo},

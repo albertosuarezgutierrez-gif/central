@@ -187,6 +187,65 @@ export function casarCandidatoAtasco(candidatos: readonly CandidatoAtascoTg[], c
   return { tipo: 'ninguno', motivo: 'ningún candidato del atasco se llama así' }
 }
 
+// ── Quién escribe ────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Texto libre del modo bots (revisión 15/10/2026): además de que el CHAT sea el de Alberto, la PERSONA (`from.id`) tiene que ser
+ * EXACTAMENTE `TELEGRAM_CHAT_ID`. En un grupo, el chat casa para todos; así nadie más provoca propuestas ni llamadas a la IA. Sin
+ * chat configurado o sin `from`, nadie (fail-closed). PURA.
+ */
+export function remitenteAutorizadoBots(fromId: unknown, chatAutorizado: string | undefined): boolean {
+  const esperado = String(chatAutorizado ?? '').trim()
+  const quien = typeof fromId === 'number' || typeof fromId === 'string' ? String(fromId).trim() : ''
+  return esperado !== '' && quien !== '' && quien === esperado
+}
+
+export const TEXTO_REMITENTE_BOTS = '🤖 Los bots del tarificador solo se piden desde la cuenta de Alberto.'
+
+// ── Estado para la IA ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Un trabajo de bot tal como lo ve la IA en `bots_estado`. Los SUPUESTOS («Precio con supuestos: …») van junto a las ofertas: sin
+ * ellos el precio parecería firme. Sin ofertas no se pasan (no hay precio al que acompañar). PURA.
+ */
+export function trabajoBotsParaIA(
+  compania: string | null,
+  cuando: unknown,
+  s: { titulo: string; motivo: string | null; ofertas: readonly string[]; supuestos: readonly string[] },
+): Record<string, unknown> {
+  return {
+    compania, cuando: cuando ?? null, estado: s.titulo, motivo: s.motivo, ofertas: [...s.ofertas],
+    ...(s.ofertas.length > 0 && s.supuestos.length > 0 ? { supuestos: [...s.supuestos], aviso: 'Precio con supuestos: dilo literal junto al precio y que lo confirme con el cliente.' } : {}),
+  }
+}
+
+/** Supuestos de un trabajo CON precio, para el bloque fijo que añade el servidor. */
+export type SupuestosTrabajoBots = { compania: string | null; supuestos: readonly string[] }
+
+/**
+ * Bloque FIJO que el SERVIDOR añade al final del mensaje de Telegram (revisión 15/10/2026: no depende de que la IA lo cite):
+ * «Precio con supuestos (Allianz): uso diario, garaje colectivo.» por trabajo con precio y supuestos, sin repetir. `''` si no hay. PURA.
+ */
+export function bloqueSupuestosBots(items: readonly SupuestosTrabajoBots[]): string {
+  const lineas: string[] = []
+  for (const it of items) {
+    const quien = (it.compania ?? '').trim() || 'compañía sin nombre'
+    for (const s of it.supuestos) {
+      const cuerpo = s.replace(/^Precio con supuestos:\s*/i, '').trim()
+      if (!cuerpo) continue
+      const l = `Precio con supuestos (${quien}): ${cuerpo}`
+      if (!lineas.includes(l)) lineas.push(l)
+    }
+  }
+  return lineas.length ? `\n\n⚠️ ${lineas.join('\n⚠️ ')}\nConfírmalo con el cliente.` : ''
+}
+
+/** Respuesta + bloque, dentro de `max`: si hay que recortar, se recorta la parte de la IA, nunca el bloque. PURA. */
+export function conBloqueSupuestosBots(respuesta: string, items: readonly SupuestosTrabajoBots[], max = 3800): string {
+  const bloque = bloqueSupuestosBots(items).slice(0, max)
+  return respuesta.slice(0, Math.max(0, max - bloque.length)) + bloque
+}
+
 // ── Botones ──────────────────────────────────────────────────────────────────────────────────────
 
 export type DecisionBotonBots = { ok: true; accion: 'ok' | 'no'; id: string; quien: string } | { ok: false; toast: string }
@@ -266,5 +325,7 @@ export function systemBots(hoyIso: string): string {
     'Nunca emites, contratas, grabas pólizas, pagas ni envías nada a nadie. Si te lo piden, di que eso no se hace por aquí.',
     'Lo que lanza o cambia algo NO lo haces tú: el sistema le manda a Alberto un botón y es él quien confirma. No digas que está lanzado: di que tiene el botón.',
     'Nunca inventes una oportunidad, una compañía ni un campo: si una herramienta no lo encuentra, dilo y pregunta. Lo que no trae una herramienta es «no consta».',
+    'Si un trabajo de bots_estado trae `supuestos`, copia ese texto («Precio con supuestos: …») literal junto a su precio y añade «Confírmalo con el cliente.». Nunca lo omitas.',
+    'Los datos personales del mensaje llegan cambiados por claves como [DNI_1], [TEL_1] o [EMAIL_1]: pásalas tal cual en `buscar` (el sistema las resuelve) y no las repitas en la respuesta.',
   ].join('\n')
 }

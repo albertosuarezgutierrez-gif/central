@@ -23,13 +23,15 @@ import { formularioBotsAutoDeRiesgo, tomadorDeRiesgoBots } from '@/lib/tarificad
 import { actorTelegram, aplicarBotonAtasco, leerAtascosAsegura, lineaCandidato, lineaTrasAtasco, puertoRobustez, type Atasco } from '@/lib/tarificador-atascos-asegura'
 import {
   atascoSigueIgual, candidatasBots, casarCandidatoAtasco, companiasParaRamo, esUuid, etiquetaOportunidad, etiquetaParaIA, leerPropuesta,
-  MAX_CANDIDATOS_BOTS, MINUTOS_PROPUESTA_BOTS, PREFIJO_BOTS_TG, rotuloCandidato,
+  MAX_CANDIDATOS_BOTS, MINUTOS_PROPUESTA_BOTS, PREFIJO_BOTS_TG, rotuloCandidato, trabajoBotsParaIA,
+  type SupuestosTrabajoBots,
   type CuerpoAtasco, type CuerpoTarificar, type DecisionBotonBots, type OportunidadBots, type RamoBotsTg, type UsoBots,
 } from './correduria-bots-tg'
 
 export const APP_BOTS = 'correduria-bots'
 
-type Salida = { texto: string; ok: boolean }
+/** `supuestos`: solo `bots_estado`; el asistente los añade, por servidor, al final del mensaje de Telegram. */
+type Salida = { texto: string; ok: boolean; supuestos?: SupuestosTrabajoBots[] }
 type Boton = { texto: string; callback: string }
 
 // ── Tope (ventana móvil de 24 h sobre `ai_usos`) ──────────────────────────────────────────────────
@@ -237,6 +239,7 @@ async function estado(args: Record<string, unknown>): Promise<Salida> {
   if (typeof loc === 'string') return { texto: `ERROR: ${loc}. NO digas que no hay precios.`, ok: false }
   if (!loc.ops.length) return { texto: `No encuentro ninguna oportunidad abierta de coche o comunidad que case${loc.incompleto ? ' (búsqueda incompleta)' : ''}.`, ok: true }
   const salida: Record<string, unknown>[] = []
+  const supuestos: SupuestosTrabajoBots[] = []
   for (const op of loc.ops.slice(0, 4)) {
     const r = await leerPresupuestosOportunidad(op.id).catch(() => ({ status: 502, json: null }))
     const o = (r.json ?? {}) as Record<string, unknown>
@@ -245,13 +248,16 @@ async function estado(args: Record<string, unknown>): Promise<Salida> {
       const x = (t ?? {}) as Record<string, unknown>
       const l = leerTrabajo(200, t)
       if (!l.ok) return { compania: x.compania ?? null, estado: 'ilegible' }
+      // Los supuestos del precio viajan con él (revisión 15/10/2026): antes se descartaban y el precio parecía firme.
+      const compania = typeof x.compania === 'string' ? rotuloCompania(x.compania) : null
       const s = resumenTrabajo(l.trabajo)
-      return { compania: typeof x.compania === 'string' ? rotuloCompania(x.compania) : null, cuando: x.actualizadoEn ?? x.creadoEn ?? null, estado: s.titulo, motivo: s.motivo, ofertas: s.ofertas }
+      if (s.ofertas.length > 0 && s.supuestos.length > 0) supuestos.push({ compania, supuestos: s.supuestos })
+      return trabajoBotsParaIA(compania, x.actualizadoEn ?? x.creadoEn, s)
     })
     salida.push({ oportunidad: etiquetaParaIA(op), bots: trabajos.length ? trabajos : 'aún no se ha pedido precio por bot' })
   }
   if (loc.ops.length > 4) salida.push({ nota: `hay ${loc.ops.length - 4} oportunidades más; acota con la matrícula o la marca` })
-  return { texto: JSON.stringify(salida).slice(0, 7000), ok: true }
+  return { texto: JSON.stringify(salida).slice(0, 7000), ok: true, supuestos }
 }
 
 /** Herramientas del modo bots. Nombre desconocido → error (la IA solo tiene estas). */

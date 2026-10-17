@@ -1234,7 +1234,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     // borrador de un huésped, aunque el modo respuesta siga abierto.
     if (tienePrefijo(msg.text || '')) {
       const t = (msg.text || '').trim()
-      after(() => correduriaSegura(t))
+      after(() => correduriaSegura(t, msg.from?.id))
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).
@@ -1299,7 +1299,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     const citado = String(msg.reply_to_message.text ?? msg.reply_to_message.caption ?? '')
     if (esRespuestaACorreduria(citado)) {
       const t = conCita(msg.text, citado)
-      after(() => correduriaSegura(t))
+      after(() => correduriaSegura(t, msg.from?.id))
       return NextResponse.json({ ok: true })
     }
   }
@@ -1314,7 +1314,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       const voz = vozDeMensaje(msg)
       if (voz) {
         const file = await descargarTelegram(voz.fileId, voz.mimeHint, voz.nameHint)
-        if (file) await manejarVozTg(cuentaId, file.buffer, file.fileName, file.mimeType, (t) => enrutarTextoLibre(cuentaId, t))
+        if (file) await manejarVozTg(cuentaId, file.buffer, file.fileName, file.mimeType, (t) => enrutarTextoLibre(cuentaId, t, msg.from?.id))
         else await tgSend('No pude descargar la nota de voz. Reinténtala.').catch(() => {})
         return NextResponse.json({ ok: true })
       }
@@ -1333,7 +1333,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         const aCorreduria = pieDeCorreduria(pie) || await albumDeCorreduria(grupo)
         const docId = await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
         if (aCorreduria) {
-          if (pie) after(() => correduriaSegura(pie))
+          if (pie) after(() => correduriaSegura(pie, msg.from?.id))
           return NextResponse.json({ ok: true })
         }
         const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)
@@ -1348,7 +1348,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       // conoce activos/valoraciones/recomendaciones); el detector es estrecho a propósito.
       if (texto && esPreguntaPatrimonio(texto)) { await manejarPatrimonioTg(cuentaId, texto); return NextResponse.json({ ok: true }) }
       if (texto && esComandoContable(texto)) { await arrancarOnboarding(); return NextResponse.json({ ok: true }) }
-      if (texto && (!texto.startsWith('/') || /^\/seguros?\b/i.test(texto))) { await enrutarTextoLibre(cuentaId, texto); return NextResponse.json({ ok: true }) }
+      if (texto && (!texto.startsWith('/') || /^\/seguros?\b/i.test(texto))) { await enrutarTextoLibre(cuentaId, texto, msg.from?.id); return NextResponse.json({ ok: true }) }
     }
   }
   return NextResponse.json({ ok: true })
@@ -1357,9 +1357,9 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
 // Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El
 // patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el
 // contable, que es quien atendía todo el texto libre hasta el 26/09/2026.
-async function enrutarTextoLibre(cuentaId: string, texto: string): Promise<void> {
+async function enrutarTextoLibre(cuentaId: string, texto: string, fromId: unknown): Promise<void> {
   // El asistente puede tardar (herramientas, documentos): Telegram recibe su 200 ya y él sigue en `after`.
-  if (await esParaCorreduria(texto)) { after(() => correduriaSegura(texto)); return }
+  if (await esParaCorreduria(texto)) { after(() => correduriaSegura(texto, fromId)); return }
   await manejarTextoLibreTg(cuentaId, texto)
 }
 
@@ -1382,8 +1382,9 @@ async function olvidarUpdate(updateId: unknown): Promise<void> {
 }
 
 /** El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto. */
-async function correduriaSegura(texto: string): Promise<void> {
-  await manejarCorreduriaTg(texto).catch(async (e) => {
+async function correduriaSegura(texto: string, fromId: unknown): Promise<void> {
+  // `fromId`: el modo bots exige que la PERSONA sea la autorizada (no solo el chat).
+  await manejarCorreduriaTg(texto, fromId).catch(async (e) => {
     console.error('[tg] asistente de la correduría', e)
     await tgSend('⚠️ El asistente de la correduría ha fallado con ese mensaje; repítemelo.').catch(() => {})
   })

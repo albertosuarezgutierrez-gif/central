@@ -98,8 +98,13 @@ test('supuestos del bot (15/10/2026): se leen de cada oferta y el resumen los da
 
 test('PrecioBots enseña los supuestos JUNTO al precio (cepo de fuente)', async () => {
   const { readFileSync } = await import('node:fs')
-  const src = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx', import.meta.url), 'utf8')
-  assert.match(src, /res\.supuestos\.map\(/)
+  // Las dos pantallas que enseñan el precio de un bot (revisión 15/10/2026: ProbarTarificacion no los pintaba).
+  for (const f of ['PrecioBots.tsx', 'ProbarTarificacion.tsx']) {
+    const src = readFileSync(new URL(`../app/(usuario)/correduria/cliente/[id]/${f}`, import.meta.url), 'utf8')
+    assert.match(src, /res\.supuestos\.map\(/, f)
+    assert.match(src, /Confírmalo con el cliente\./, f)
+    assert.match(src, /color: 'var\(--warning\)'/, f)
+  }
 })
 
 test('mensajeDeFallo 502: «no respondió a tiempo» (timeout) vs «no se pudo conectar» (red o sin motivo)', async () => {

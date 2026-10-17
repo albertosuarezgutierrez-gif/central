@@ -1040,8 +1040,8 @@ export async function rellenarDatosVehiculoTurismos(page: Page, marco: Frame, fo
 export const HUECOS_FIJOS_TURISMOS: readonly string[] = Object.freeze(['el colaborador: no es un dato del riesgo'])
 
 export type OperacionTurismos =
-  | { tipo: 'opcion'; clave: string; que: string }
-  | { tipo: 'texto'; etiqueta: string; valor: string; fecha: boolean }
+  | { tipo: 'opcion'; clave: string; que: string; supuesto?: string }
+  | { tipo: 'texto'; etiqueta: string; valor: string; fecha: boolean; supuesto?: string }
   | { tipo: 'localidad'; valor: string }
 
 /** Tipo de tomador INEQUÍVOCO: el declarado (`tomador`/`datosTomador`) y el que dice el documento (CIF → empresa; DNI/NIE → persona) no se contradicen. Puro. */
@@ -1053,10 +1053,22 @@ export function tipoTomadorTurismos(f: Pick<FormularioAuto, 'tomador' | 'datosTo
   return vistos.every((t) => t === vistos[0]) ? vistos[0] : null
 }
 
-/** Supuestos que DECLARA Allianz Turismos (v0.6.2): los de `supuestosAuto`, tal cual. Puro. */
-export function etiquetasSupuestosTurismos(s: SupuestosAuto): string[] {
-  return etiquetasSupuestos(s)
+/** Etiqueta del supuesto de un campo (solo si es SUPUESTO, no dato), para colgarla de la operación que lo aplica. Puro. */
+const declarado = (x: { supuesto: boolean; valor: unknown; etiqueta: string | null }): { supuesto?: string } =>
+  x.supuesto && x.valor !== null && x.etiqueta ? { supuesto: x.etiqueta } : {}
+
+/**
+ * «Precio con supuestos: …» con SOLO lo que se aplicó en el portal (revisión 15/10/2026): un supuesto calculado que se queda en
+ * hueco (antecedentes) o cuya opción/campo no quedó puesto NO se declara. Orden canónico de `etiquetasSupuestos`. Puro.
+ */
+export function supuestosAplicadosTurismos(s: SupuestosAuto, aplicados: Iterable<string>): string | null {
+  const hechos = new Set(aplicados)
+  return textoSupuestos(etiquetasSupuestos(s).filter((e) => hechos.has(e)))
 }
+
+/** Etiquetas de supuesto que lleva el plan (lo que se INTENTARÁ aplicar). Puro. */
+const supuestosDelPlan = (ops: readonly OperacionTurismos[]): string[] =>
+  ops.flatMap((o) => (o.tipo !== 'localidad' && o.supuesto ? [o.supuesto] : []))
 
 /**
  * Plan del resto del paso, en el orden de la pantalla. PURO. Datos del riesgo y, donde Alberto lo decidió (v0.6.2), el valor
@@ -1068,10 +1080,10 @@ export function planDatosTurismos(f: FormularioAuto, hoy: Date = new Date()): { 
   const operaciones: OperacionTurismos[] = []
   const huecos: string[] = [...HUECOS_FIJOS_TURISMOS]
   // Compra (nuevo / ya lo tenía; la 2ª mano nunca se supone), uso y garaje: dato o supuesto, siempre por la puerta de opciones.
-  if (sup.compra.valor === 'nuevo') operaciones.push({ tipo: 'opcion', clave: CLAVE_COMPRA_NUEVO, que: 'la compra «nuevo»' })
-  else operaciones.push({ tipo: 'opcion', clave: CLAVE_COMPRA_YA_LO_TENIA, que: 'la compra «ya lo tenía»' })
-  if (sup.uso.valor) operaciones.push({ tipo: 'opcion', clave: claveUsoTurismos(sup.uso.valor), que: `el uso «${sup.uso.valor}»` })
-  if (sup.garaje.valor) operaciones.push({ tipo: 'opcion', clave: claveGarajeTurismos(sup.garaje.valor), que: `el garaje «${sup.garaje.valor}»` })
+  if (sup.compra.valor === 'nuevo') operaciones.push({ tipo: 'opcion', clave: CLAVE_COMPRA_NUEVO, que: 'la compra «nuevo»', ...declarado(sup.compra) })
+  else operaciones.push({ tipo: 'opcion', clave: CLAVE_COMPRA_YA_LO_TENIA, que: 'la compra «ya lo tenía»', ...declarado(sup.compra) })
+  if (sup.uso.valor) operaciones.push({ tipo: 'opcion', clave: claveUsoTurismos(sup.uso.valor), que: `el uso «${sup.uso.valor}»`, ...declarado(sup.uso) })
+  if (sup.garaje.valor) operaciones.push({ tipo: 'opcion', clave: claveGarajeTurismos(sup.garaje.valor), que: `el garaje «${sup.garaje.valor}»`, ...declarado(sup.garaje) })
   const tipo = tipoTomadorTurismos(f)
   if (tipo === null) huecos.push('el tipo de tomador Individual/Empresa (no consta o el riesgo se contradice)')
   else operaciones.push({ tipo: 'opcion', clave: tipo === 'juridica' ? CLAVE_TOMADOR_EMPRESA : CLAVE_TOMADOR_INDIVIDUAL, que: `el tomador «${tipo === 'juridica' ? 'Empresa' : 'Individual'}»` })
@@ -1094,17 +1106,18 @@ export function planDatosTurismos(f: FormularioAuto, hoy: Date = new Date()): { 
     { tipo: 'texto', etiqueta: ETIQUETAS_TURISMOS.carnetConductor, valor: fechaEs(f.conductor.fechaCarne, 'allianz/auto: la fecha del carné del conductor'), fecha: true },
   )
   // Segundo conductor: «No» (dato o supuesto). «Sí» abre los datos de otra persona, sin mapa → hueco (no se pulsa).
-  if (sup.segundoConductor.valor === false) operaciones.push({ tipo: 'opcion', clave: CLAVE_SEGUNDO_CONDUCTOR_NO, que: 'el segundo conductor «No»' })
+  if (sup.segundoConductor.valor === false) operaciones.push({ tipo: 'opcion', clave: CLAVE_SEGUNDO_CONDUCTOR_NO, que: 'el segundo conductor «No»', ...declarado(sup.segundoConductor) })
   else huecos.push('el segundo conductor «Sí» (el riesgo trae conductor ocasional: sus datos no tienen mapa)')
-  if (sup.fechaEfecto.valor) operaciones.push({ tipo: 'texto', etiqueta: ETIQUETAS_TURISMOS.fechaEfecto, valor: fechaEs(sup.fechaEfecto.valor, 'allianz/auto: la fecha de efecto'), fecha: true })
-  // Antecedentes: el supuesto se calcula (y se declara), pero los valores del desplegable del portal no están mapeados → hueco.
+  if (sup.fechaEfecto.valor) operaciones.push({ tipo: 'texto', etiqueta: ETIQUETAS_TURISMOS.fechaEfecto, valor: fechaEs(sup.fechaEfecto.valor, 'allianz/auto: la fecha de efecto'), fecha: true, ...declarado(sup.fechaEfecto) })
+  // Antecedentes: el supuesto se calcula, pero los valores del desplegable del portal no están mapeados → hueco, y por eso NO se
+  // declara (solo se declara lo que el bot aplica de verdad).
   huecos.push('el nivel de antecedentes (los valores del portal no están mapeados: no se elige a ojo)')
   huecos.push(
     sup.direccion.valor === 'consta'
       ? 'la dirección desglosada (provincia, población, tipo de vía, nombre, número…): el riesgo la trae en una sola línea y no se trocea a ojo'
       : 'la dirección (provincia, población, tipo de vía, nombre, número…): el riesgo no la trae',
   )
-  return { operaciones, huecos, supuestos: textoSupuestos(etiquetasSupuestosTurismos(sup)) }
+  return { operaciones, huecos, supuestos: supuestosAplicadosTurismos(sup, supuestosDelPlan(operaciones)) }
 }
 
 /** ¿El control es un campo de TEXTO editable (no un desplegable/combobox, que solo se tocaría por una puerta de guard.ts)? */
@@ -1138,10 +1151,18 @@ const soloCifras = (s: string) => s.replace(/\D/g, '')
  * Resto del paso según `planDatosTurismos`. Cada control por su etiqueta EXACTA en la zona `appArea`; un campo de texto se escribe
  * tras `comprobarCampo` (guard de emisión + frontera bancaria) y se RELEE; las opciones, SOLO por la puerta guardada
  * (`ctx.marcarOpcionTurismos`, lista cerrada de guard.ts). Lo que no aparece, aparece repetido, no es un campo de texto o no
- * queda puesto → hueco (no para aquí: se juntan y viajan en el `ErrorMapaIncompleto` final). Devuelve TODOS los huecos del paso.
+ * queda puesto → hueco (no para aquí: se juntan y viajan en el `ErrorMapaIncompleto` final). Devuelve TODOS los huecos del paso y
+ * `supuestos`: el «Precio con supuestos: …» de lo que QUEDÓ aplicado en el portal (lo que acabó en hueco no se declara).
  */
-export async function rellenarDatosRiesgoTurismos(page: Page, marco: Frame, form: FormularioAuto, ctx: CtxTurismos, hoy: Date = new Date()): Promise<string[]> {
+export async function rellenarDatosRiesgoTurismos(
+  page: Page,
+  marco: Frame,
+  form: FormularioAuto,
+  ctx: CtxTurismos,
+  hoy: Date = new Date(),
+): Promise<{ huecos: string[]; supuestos: string | null }> {
   const { operaciones, huecos } = planDatosTurismos(form, hoy)
+  const aplicados: string[] = []
   const marcar = ctx?.marcarOpcionTurismos
   if (typeof marcar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
   const esperar = async (etiqueta: string): Promise<Locator | string> => {
@@ -1156,6 +1177,7 @@ export async function rellenarDatosRiesgoTurismos(page: Page, marco: Frame, form
     if (op.tipo === 'opcion') {
       const r = await marcar(marco, op.clave)
       if (r.estado === 'no_unica' || r.estado === 'no_quedo') huecos.push(`cómo se marca ${op.que} (${r.estado === 'no_unica' ? `${r.coincidencias} coincidencias` : 'tras pulsar no quedó marcada'})`)
+      else if (op.supuesto) aplicados.push(op.supuesto)
       continue
     }
     const etiqueta = op.tipo === 'texto' ? op.etiqueta : ETIQUETAS_TURISMOS.localidad
@@ -1176,8 +1198,9 @@ export async function rellenarDatosRiesgoTurismos(page: Page, marco: Frame, form
     const leido = await textoMostrado(campo)
     const quedo = op.tipo === 'texto' && op.fecha ? soloCifras(leido) === soloCifras(op.valor) : op.tipo === 'localidad' ? clavePoblacion(leido) === clavePoblacion(op.valor) : leido.trim() === op.valor
     if (!quedo) huecos.push(`«${etiqueta}» (el portal no dejó puesto el valor)`)
+    else if (op.tipo === 'texto' && op.supuesto) aplicados.push(op.supuesto)
   }
-  return huecos
+  return { huecos, supuestos: supuestosAplicadosTurismos(supuestosAuto(form, hoy), aplicados) }
 }
 
 /**
@@ -1258,9 +1281,10 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
       const huecos = await rellenarDatosVehiculoTurismos(page, marco, form, ctx)
       await ctx.pausa()
       // v0.6.1: resto del paso con los datos del riesgo; v0.6.2: y los SUPUESTOS declarados. Lo demás, huecos del error final.
-      const hoy = new Date()
-      const { supuestos } = planDatosTurismos(form, hoy)
-      huecos.push(...(await rellenarDatosRiesgoTurismos(page, marco, form, ctx, hoy)))
+      // Solo se declara lo que QUEDÓ aplicado en el portal (no lo calculado).
+      const riesgo = await rellenarDatosRiesgoTurismos(page, marco, form, ctx, new Date())
+      huecos.push(...riesgo.huecos)
+      const { supuestos } = riesgo
       await ctx.pausa()
       // «SIGUIENTE» (guard) y la pantalla que sigue → hueco con inventario. Cuando haya mapa: leerPrimas → ofertasDesdePrimas(…, supuestos).
       return avanzarDesdeDatosVehiculo(page, marco, ctx, undefined, huecos, supuestos)

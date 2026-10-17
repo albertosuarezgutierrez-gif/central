@@ -7,7 +7,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame, type Page } from 'playwright'
-import { EmisionBloqueadaError, senalCuentaBancaria, type FormularioAuto } from '@central/module-tarificacion'
+import { EmisionBloqueadaError, senalCuentaBancaria, supuestosAuto, type FormularioAuto } from '@central/module-tarificacion'
 import { pideInventarioDom } from '../src/errores.ts'
 import {
   ErrorFronteraEmision,
@@ -31,6 +31,7 @@ import {
   marcoFormularioTurismos,
   planDatosTurismos,
   rellenarDatosRiesgoTurismos,
+  supuestosAplicadosTurismos,
   rellenarDatosVehiculoTurismos,
   tipoTomadorTurismos,
   type CtxTurismos,
@@ -424,8 +425,8 @@ for (const sinContenedor of [false, true]) {
       const marco = await marcoFormularioTurismos(page, 5_000)
       assert.deepEqual(await rellenarDatosVehiculoTurismos(page, marco, FORM_COMPLETO, ctx), [])
       const HOY = new Date('2026-10-15T10:00:00Z')
-      const huecos = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx, HOY)
-      const { supuestos } = planDatosTurismos(FORM_COMPLETO, HOY)
+      const { huecos, supuestos } = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx, HOY)
+      assert.equal(supuestos, planDatosTurismos(FORM_COMPLETO, HOY).supuestos, 'todo lo planeado quedó aplicado: se declara entero')
       const valor = (id: string) => marco.locator(`#${id}`).inputValue()
       const marcado = (id: string) => marco.locator(`#${id}`).isChecked()
       assert.equal(await campoTurismos(marco, 'Matrícula').inputValue(), FORM_COMPLETO.matricula)
@@ -471,7 +472,7 @@ test('v0.6.1 «Localidad» desplegable: no se elige (sin puerta) → hueco, y el
   try {
     const marco = await marcoFormularioTurismos(page, 5_000)
     await rellenarDatosVehiculoTurismos(page, marco, FORM_COMPLETO, ctx)
-    const huecos = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx)
+    const { huecos } = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx)
     assert.ok(huecos.some((h) => /«Localidad» \(no es un campo de texto/.test(h)))
     assert.equal(await marco.locator('#ng-x1-loc').inputValue(), '')
   } finally {
@@ -548,6 +549,39 @@ test('v0.6.1 radios SIN `name`: los hermanos salen del contenedor de grupo; «¿
       'opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'opcion:compra:ya_lo_tenia', 'opcion:uso:diario', 'opcion:garaje:calle',
       'opcion:tomador:individual', 'opcion:segundo_conductor:no',
     ])
+  } finally {
+    await context.close()
+  }
+})
+
+test('revisión 15/10/2026: «Precio con supuestos» solo lista lo APLICADO (antecedentes en hueco no se declaran)', () => {
+  const HOY = new Date('2026-10-15T10:00:00Z')
+  // Sin años ni siniestros: el supuesto de antecedentes SE CALCULA…
+  const f: FormularioAuto = { ...FORM_COMPLETO, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null }
+  const sup = supuestosAuto(f, HOY)
+  assert.equal(sup.antecedentes.supuesto, true)
+  // …pero el desplegable sigue en hueco: no puede salir en el texto del precio.
+  const plan = planDatosTurismos(f, HOY)
+  assert.ok(plan.huecos.some((h) => /nivel de antecedentes/.test(h)))
+  assert.doesNotMatch(plan.supuestos ?? '', /otra compañía|siniestros/)
+  assert.equal(plan.supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro), uso diario, efecto 16/10/2026, sin 2º conductor.')
+  // Filtro por lo aplicado: lo que no quedó puesto no se declara; orden canónico; nada aplicado → null.
+  assert.equal(supuestosAplicadosTurismos(sup, ['sin 2º conductor', 'uso diario']), 'Precio con supuestos: uso diario, sin 2º conductor.')
+  assert.equal(supuestosAplicadosTurismos(sup, []), null)
+  assert.equal(supuestosAplicadosTurismos(sup, ['procede de otra compañía, sin siniestros', 'uso diario']), 'Precio con supuestos: uso diario, procede de otra compañía, sin siniestros.')
+})
+
+test('revisión 15/10/2026: una opción supuesta que NO queda marcada en el portal no se declara', async () => {
+  const { context, page, ctx } = await abrir()
+  try {
+    const marco = await marcoFormularioTurismos(page, 5_000)
+    await rellenarDatosVehiculoTurismos(page, marco, FORM_COMPLETO, ctx)
+    // Grupo del uso roto (una opción menos): «uso diario» acaba en hueco y no puede salir entre los supuestos.
+    await marco.evaluate(() => document.querySelector('#ng-x1-uso-2')!.parentElement!.remove())
+    const HOY = new Date('2026-10-15T10:00:00Z')
+    const { huecos, supuestos } = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx, HOY)
+    assert.ok(huecos.some((h) => /cómo se marca el uso/.test(h)))
+    assert.equal(supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro), efecto 16/10/2026, sin 2º conductor.')
   } finally {
     await context.close()
   }
