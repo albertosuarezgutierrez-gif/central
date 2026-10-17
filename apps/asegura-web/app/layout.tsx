@@ -7,8 +7,9 @@
 //
 // La ficha JSON-LD del negocio va en el layout y no en la home a propósito: es
 // la identidad del negocio, no de una página, y Google la quiere ver en todas.
+import type { CSSProperties, ReactNode } from 'react'
 import type { Metadata } from 'next'
-import type { ReactNode } from 'react'
+import { Nunito_Sans, Quicksand } from 'next/font/google'
 import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss, emitirVariables, emitirVariablesOscuras } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion, telefonoLegible, whatsappUrl } from '@central/module-seguros'
@@ -28,15 +29,39 @@ import './globals.css'
  * ella pero hecha para leer párrafos, formularios y letra legal en el móvil.
  * Sustituye a Fraunces + Inter.
  *
- * Una sola petición para las dos familias, y SOLO esta: el Inter de
- * `@central/brand` ya no se pide aquí (sería un webfont descargado para nada).
- * El portal y los correos siguen con Inter; esto es de esta superficie.
+ * Se sirven con `next/font/google` (self-hosted, sin hoja externa ni
+ * preconnect a Google): el navegador descarga los ficheros desde el propio
+ * dominio. Mismos pesos que antes: Quicksand variable (300–700) y Nunito Sans
+ * 400/600/700/800. El Inter de `@central/brand` no se pide aquí.
+ *
+ * Las variables `--display` y `--sans` de `globals.css` se redefinen en el
+ * `<html>` con la familia que genera `next/font` (que lleva un nombre con
+ * hash, no «Quicksand»), así `var(--display)` y `var(--sans)` siguen igual.
  *
  * 🚨 Sin itálica: no se pide el eje `ital`, así que un `font-style: italic`
  * sobre estas familias saldría sintetizado. Lo vigila `lib/tipografia.test.ts`.
  */
-const TIPOGRAFIA =
-  'https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&family=Nunito+Sans:wght@400;600;700;800&display=swap'
+const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand', display: 'swap' })
+const nunitoSans = Nunito_Sans({
+  subsets: ['latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-nunito-sans',
+  display: 'swap',
+})
+/* Los títulos del pie eran `<h4>` (regla `.pie h4` de globals.css, que ya no
+ * aplica). Un `h4` sin `h1`–`h3` delante rompe la jerarquía de la página; se
+ * pintan igual con `<p>` y estos mismos valores. */
+const TITULO_PIE: CSSProperties = {
+  margin: '0 0 var(--e3)',
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+}
+const FUENTES = {
+  '--display': `${quicksand.style.fontFamily}, ui-rounded, system-ui, sans-serif`,
+  '--sans': `${nunitoSans.style.fontFamily}, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`,
+} as CSSProperties
 
 /**
  * Hoja de tokens de la marca.
@@ -81,7 +106,6 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'es_ES',
     siteName: 'Grupo ASegura',
-    url: SITIO_URL,
   },
   // La imagen de la tarjeta la inyecta Next desde `app/opengraph-image.tsx`
   // (convención de fichero), así que no se declara aquí: declararla a mano
@@ -108,11 +132,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${quicksand.variable} ${nunitoSans.variable}`} style={FUENTES}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="stylesheet" href={TIPOGRAFIA} />
         {/* Tokens de marca. Van en el head para que no haya un parpadeo con los
             colores por defecto antes de que cargue el CSS de la app. */}
         <style dangerouslySetInnerHTML={{ __html: CSS_MARCA }} />
@@ -140,7 +161,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <footer className="pie">
           <div className="wrap pie-cols">
             <div>
-              <h4>Grupo ASegura</h4>
+              <p style={TITULO_PIE}>Grupo ASegura</p>
               {/* Art. 173 RDL 3/2020: la identificación del mediador se ve
                   SIEMPRE, no solo si el visitante entra en una página aparte. */}
               <p style={{ margin: '0 0 8px', fontSize: 14, fontWeight: 600 }}>{lineaIdentificacion()}</p>
@@ -170,7 +191,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </p>
             </div>
             <div>
-              <h4>Seguros</h4>
+              <p style={TITULO_PIE}>Seguros</p>
               <nav className="pie-lista" aria-label="Ramos">
                 {NAV.map((n) => (
                   <Link key={n.href} href={n.href}>
@@ -180,7 +201,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               </nav>
             </div>
             <div>
-              <h4>Información legal</h4>
+              <p style={TITULO_PIE}>Información legal</p>
               <nav className="pie-lista" aria-label="Información legal">
                 <Link href="/legal/informacion-mediador">Información del mediador</Link>
                 <Link href="/legal/privacidad">Privacidad</Link>

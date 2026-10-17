@@ -16,6 +16,7 @@
 Embudo: 2 leads web en 12 meses, 0 con póliza viva -> cuello = TRÁFICO, no conversión. RGPD pendiente: sin purga de prospectos a 12 meses, `/datos` sin retención, consentimiento sin fecha/texto, sin UTM.
 Hallazgo: home `app/page.tsx:454` dice «el documento no se guarda» pero el portal lo archiva (`polizas/route.ts:134`). La subida «sin ser cliente» vive en asegura-portal (cuenta por correo), no en asegura-web.
 Plan: F1 RGPD+atribución+SEO barato · F2 revisión anual a cartera viva · F3 subida pública IA · F4 tarificación. Pendiente Alberto: GSC (403), retención, salud/vida, asesoría legal, créditos OpenSEO.
+F1 HECHA (PR #4768): consentimiento a `consent_logs` (gestion + comercial separado, versión `privacidad-2026-10-17`), atribución first-touch a `historial_interno`; cron `purga-rgpd` (docs no-cliente 30 d, prospectos web anonimizados 12 m) en MODO INFORME hasta `CORREDURIA_PURGA_RGPD_ACTIVA=1`; textos legales y SEO barato en asegura-web.
 
 **(15/10/2026)** — Correduría · clientes EMPRESA. «Nuevo cliente» con selector Particular/Empresa (Razón social, CIF, F. constitución, sin apellidos; el CIF válido manda y asegura ya guardaba `tipo_persona=juridica` desde él). Rótulos CIF/razón social/«misma empresa» en ficha, EditarFichaModal, VerDniCompleto, FichasDuplicadas y `textoMotivo(motivo, juridica)`. PR #4732 (draft, CI verde).
 Pendiente decisión de Alberto: `solicitud-datos.ts` pide DNI+F. nacimiento a tomador empresa; `NuevaPersona.tsx` no permite propietario empresa; rótulos de `datos-cotizados.ts` y huecos de retarificar.

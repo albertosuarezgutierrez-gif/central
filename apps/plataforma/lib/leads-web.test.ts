@@ -174,3 +174,93 @@ test('aviso: el enlace viaja dentro del WhatsApp; el tope se dice en una línea'
   assert.ok(tope.includes(encodeURIComponent('¿me puedes enviar una foto del permiso de circulación')))
   assert.equal(LINEA_TOPE_LEADS_WEB, '⚠️ tope diario de leads web alcanzado: formulario no generado')
 })
+
+// ─── Prueba del consentimiento y atribución (17/10/2026) ────────────────────
+import {
+  cuerpoAltaLead,
+  FINALIDAD_LEAD,
+  lineaConsentimientoContacto,
+  revisarAtribucion,
+  revisarLeadWeb,
+  truncarIp,
+} from './leads-web.ts'
+
+const formulario = {
+  nombre: 'Ana',
+  telefono: '612345678',
+  tipoSeguro: 'hogar',
+  consentimiento: true,
+  consentimiento_version: 'privacidad-2026-10-17',
+  comunicaciones_comerciales: false,
+  atribucion: { utm_source: 'google', gclid: 'Cj0K_a-1', landing: '/seguros/hogar?x=1', email: 'ana@x.es', referrer: 'https://www.google.com/search?q=ana' },
+}
+
+test('lead SIN consentimiento sigue rechazándose (también con versión y comerciales)', () => {
+  for (const c of [undefined, false, 'true', 1, 'on']) {
+    const r = revisarLeadWeb({ ...formulario, consentimiento: c, comunicaciones_comerciales: true })
+    assert.equal(r.ok, false, `consentimiento=${String(c)} no puede pasar`)
+    if (!r.ok) assert.equal(r.campo, 'consentimiento')
+  }
+})
+
+test('la casilla de comerciales NO sustituye al consentimiento obligatorio', () => {
+  const r = revisarLeadWeb({ ...formulario, consentimiento: undefined, comunicaciones_comerciales: true })
+  assert.equal(r.ok, false)
+})
+
+test('versión y fecha del SERVIDOR se pasan al puerto, con finalidad, comerciales e IP /24', () => {
+  const r = revisarLeadWeb(formulario)
+  assert.ok(r.ok)
+  const ahora = new Date('2026-10-17T10:11:12.000Z')
+  const body = cuerpoAltaLead(r.lead, { ahora, ip: '203.0.113.77' })
+  assert.equal(body.fuente, 'web')
+  assert.deepEqual(body.consentimiento, {
+    version: 'privacidad-2026-10-17',
+    at: '2026-10-17T10:11:12.000Z',
+    finalidad: FINALIDAD_LEAD,
+    comunicaciones_comerciales: false,
+    ip_truncada: '203.0.113.0',
+  })
+  assert.deepEqual(body.atribucion, { utm_source: 'google', gclid: 'Cj0K_a-1', landing: '/seguros/hogar', referrer: 'https://www.google.com' })
+  assert.ok(!JSON.stringify(body).includes('203.0.113.77'), 'la IP completa no viaja')
+})
+
+test('una fecha que mande el navegador se ignora: manda la del servidor', () => {
+  const r = revisarLeadWeb({ ...formulario, consentimiento_at: '2001-01-01T00:00:00.000Z' })
+  assert.ok(r.ok)
+  const body = cuerpoAltaLead(r.lead, { ahora: new Date('2026-10-17T00:00:00.000Z'), ip: null })
+  assert.equal((body.consentimiento as { at: string }).at, '2026-10-17T00:00:00.000Z')
+})
+
+test('web vieja (sin versión ni casilla) → null = no informado, y el lead pasa', () => {
+  const r = revisarLeadWeb({ nombre: 'Ana', telefono: '612345678', tipoSeguro: 'hogar', consentimiento: true })
+  assert.ok(r.ok)
+  assert.equal(r.lead.consentimientoVersion, null)
+  assert.equal(r.lead.comunicacionesComerciales, null)
+  assert.equal(r.lead.atribucion, null)
+  assert.match(lineaConsentimientoContacto(r.lead, new Date('2026-10-17T00:00:00.000Z')), /versión no informada.*comerciales: no informado/)
+})
+
+test('versión con forma rara no se guarda', () => {
+  const r = revisarLeadWeb({ ...formulario, consentimiento_version: 'privacidad-2026-10-17<script>' })
+  assert.ok(r.ok)
+  assert.equal(r.lead.consentimientoVersion, null)
+})
+
+test('atribución: clave no permitida fuera, PII y largos saneados', () => {
+  assert.deepEqual(
+    revisarAtribucion({ utm_source: 'a'.repeat(300), utm_medium: 'x@y.es', utm_term: '600 111 222', nif: '1Z', fbclid: 'IwAR<1>' }),
+    { utm_source: 'a'.repeat(100) },
+  )
+  assert.equal(revisarAtribucion({ utm_source: 'a'.repeat(5000) }), null)
+  assert.equal(revisarAtribucion('utm_source=x'), null)
+})
+
+test('truncarIp: /24 y /48; basura → null', () => {
+  assert.equal(truncarIp('81.45.200.13'), '81.45.200.0')
+  assert.equal(truncarIp('2001:db8:85a3:1:2:3:4:5'), '2001:db8:85a3::')
+  assert.equal(truncarIp('2001:db8::1'), '2001:db8:0::')
+  assert.equal(truncarIp('999.1.1.1'), null)
+  assert.equal(truncarIp('unknown'), null)
+  assert.equal(truncarIp(null), null)
+})

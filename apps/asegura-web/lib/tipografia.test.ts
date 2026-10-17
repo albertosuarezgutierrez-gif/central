@@ -28,12 +28,22 @@ const css = leer('app', 'globals.css')
 const layout = leer('app', 'layout.tsx')
 const pagina = leer('app', 'page.tsx')
 
-/** La petición de Google Fonts del layout (las dos familias van en una). */
-const peticion = /https:\/\/fonts\.googleapis\.com\/css2\?[^'"]+/.exec(layout)?.[0] ?? ''
+/** Las llamadas a `next/font/google` del layout (cada familia, con sus pesos). */
+const llamadaQuicksand = /Quicksand\(\{[^}]*\}\)/.exec(layout)?.[0] ?? ''
+const llamadaNunito = /Nunito_Sans\(\{[^}]*\}\)/.exec(layout)?.[0] ?? ''
+const peticion = `${llamadaQuicksand}\n${llamadaNunito}`
 
-test('el layout pide las dos familias del sitio', () => {
-  assert.match(peticion, /family=Quicksand:/, 'el layout dejó de pedir Quicksand: titulares y botones caerían a la fuente del sistema')
-  assert.match(peticion, /family=Nunito\+Sans:/, 'el layout dejó de pedir Nunito Sans: el cuerpo caería a la fuente del sistema')
+test('el layout sirve las dos familias del sitio con next/font/google', () => {
+  assert.match(layout, /from 'next\/font\/google'/, 'el layout ya no usa next/font/google: vuelve la hoja externa de Google Fonts')
+  assert.match(layout, /import \{[^}]*\bQuicksand\b[^}]*\} from 'next\/font\/google'/, 'el layout dejó de importar Quicksand: los titulares caerían a la fuente del sistema')
+  assert.match(layout, /import \{[^}]*\bNunito_Sans\b[^}]*\} from 'next\/font\/google'/, 'el layout dejó de importar Nunito_Sans: el cuerpo caería a la fuente del sistema')
+  assert.ok(llamadaQuicksand, 'no se encuentra la llamada Quicksand({…}) en el layout')
+  assert.ok(llamadaNunito, 'no se encuentra la llamada Nunito_Sans({…}) en el layout')
+  // Marca: Quicksand 600-700 en titulares (variable: sin `weight` cubre 300-700); Nunito Sans 400-800 en cuerpo.
+  assert.doesNotMatch(llamadaQuicksand, /weight:\s*\[(?![^\]]*'(600|700)')/, 'Quicksand sin el peso 600 ni 700')
+  for (const peso of ['400', '600', '700', '800']) {
+    assert.match(llamadaNunito, new RegExp(`'${peso}'`), `Nunito Sans sin el peso ${peso}`)
+  }
   assert.match(css, /--display:\s*'Quicksand'/, '--display ya no apunta a Quicksand')
   assert.match(css, /--sans:\s*'Nunito Sans'/, '--sans ya no apunta a Nunito Sans')
 })

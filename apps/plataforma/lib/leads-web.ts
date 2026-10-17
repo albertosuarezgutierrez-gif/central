@@ -53,6 +53,99 @@ export const CAMPO_HONEYPOT = 'web'
 export const MAX_COMENTARIO = 1000
 export const MOTIVO_BOT = 'bot'
 
+// ─── Prueba del consentimiento y atribución (17/10/2026) ─────────────────────
+//
+// El formulario manda la VERSIÓN del texto que la persona tenía delante, el sí
+// obligatorio (finalidad `tramitar_solicitud`) y, aparte, un booleano opcional
+// `comunicaciones_comerciales` (casilla desmarcada por defecto). La FECHA del
+// consentimiento la pone el servidor (`cuerpoAltaLead`), nunca el navegador.
+// De la IP solo viaja la /24 (IPv4) o la /48 (IPv6): `truncarIp`.
+//
+// Tres estados, también aquí: `null` = el formulario no lo informó (pestaña con
+// la versión vieja de la web) ≠ `false` = vio la casilla y no la marcó.
+
+/** Finalidad del consentimiento obligatorio del formulario. */
+export const FINALIDAD_LEAD = 'tramitar_solicitud'
+/** Forma de `CONSENTIMIENTO_VERSION` de asegura-web (`lib/atribucion.ts`). */
+export const RE_VERSION_CONSENTIMIENTO = /^privacidad-\d{4}-\d{2}-\d{2}$/
+
+/** Lista blanca de la atribución first-touch. Debe coincidir con la de asegura-web (lo vigila su test). */
+export const CLAVES_ATRIBUCION = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'landing', 'referrer', 'fecha'] as const
+export type ClaveAtribucion = (typeof CLAVES_ATRIBUCION)[number]
+export type AtribucionLead = Partial<Record<ClaveAtribucion, string>>
+export const MAX_VALOR_ATRIBUCION = 100
+
+// eslint-disable-next-line no-control-regex
+const CONTROL = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g
+function limpioAtr(v: unknown): string | null {
+  if (typeof v !== 'string' || v.length > 4 * MAX_VALOR_ATRIBUCION) return null
+  const s = v.replace(CONTROL, '').replace(/\s+/g, ' ').trim()
+  return s === '' ? null : s
+}
+
+/**
+ * Sanea la atribución que manda la web. Manda esta, no la del navegador: solo
+ * claves de la lista blanca; utm_* sin correos, sin números largos (teléfono/DNI)
+ * ni caracteres de marcado; gclid/fbclid opacos; `landing` solo ruta; `referrer`
+ * solo origen http(s); `fecha` ISO. Todo ≤100. `null` = no hay nada que contar.
+ */
+export function revisarAtribucion(entrada: unknown): AtribucionLead | null {
+  if (typeof entrada !== 'object' || entrada === null || Array.isArray(entrada)) return null
+  const e = entrada as Record<string, unknown>
+  const out: AtribucionLead = {}
+  for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'] as const) {
+    const s = limpioAtr(e[k])
+    if (!s || s.includes('@') || /\d{9,}/.test(s.replace(/[\s.\-]/g, '')) || /[<>"'`\\]/.test(s)) continue
+    out[k] = s.slice(0, MAX_VALOR_ATRIBUCION)
+  }
+  for (const k of ['gclid', 'fbclid'] as const) {
+    const s = limpioAtr(e[k])
+    if (s && /^[A-Za-z0-9_-]+$/.test(s)) out[k] = s.slice(0, MAX_VALOR_ATRIBUCION)
+  }
+  const landing = limpioAtr(e.landing)
+  if (landing && landing.startsWith('/') && !landing.startsWith('//')) {
+    const ruta = landing.split(/[?#]/)[0]
+    if (/^\/[A-Za-z0-9/_\-.~%]*$/.test(ruta)) out.landing = ruta.slice(0, MAX_VALOR_ATRIBUCION)
+  }
+  const ref = limpioAtr(e.referrer)
+  if (ref) {
+    try {
+      const u = new URL(ref)
+      if ((u.protocol === 'https:' || u.protocol === 'http:') && !u.username && !u.password) out.referrer = u.origin.slice(0, MAX_VALOR_ATRIBUCION)
+    } catch {
+      /* no es una URL: fuera */
+    }
+  }
+  const fecha = limpioAtr(e.fecha)
+  if (fecha && fecha.length <= 40 && /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(fecha) && !Number.isNaN(Date.parse(fecha))) {
+    out.fecha = new Date(Date.parse(fecha)).toISOString()
+  }
+  return Object.keys(out).length > 0 ? out : null
+}
+
+/**
+ * IP truncada para la prueba del consentimiento: IPv4 → /24 (`203.0.113.0`),
+ * IPv6 → /48 (`2001:db8:85a3::`). Cualquier otra cosa → `null` (no se sabe).
+ * Nunca se guarda la IP completa.
+ */
+export function truncarIp(ip: string | null | undefined): string | null {
+  const s = (ip ?? '').trim()
+  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s)
+  if (v4) {
+    const o = v4.slice(1).map(Number)
+    if (o.some((n) => n > 255)) return null
+    return `${o[0]}.${o[1]}.${o[2]}.0`
+  }
+  if (!s.includes(':') || !/^[0-9a-fA-F:]+$/.test(s) || s.length > 39) return null
+  const [izq, der] = s.split('::')
+  if (s.split('::').length > 2) return null
+  const a = izq ? izq.split(':') : []
+  const b = der !== undefined ? (der ? der.split(':') : []) : null
+  const grupos = b === null ? a : [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill('0'), ...b]
+  if (grupos.length !== 8 || grupos.some((g) => !/^[0-9a-fA-F]{1,4}$/.test(g))) return null
+  return `${grupos.slice(0, 3).map((g) => parseInt(g, 16).toString(16)).join(':')}::`
+}
+
 export type LeadWeb = {
   nombre: string
   apellidos: string
@@ -60,6 +153,11 @@ export type LeadWeb = {
   email: string | null
   tipoSeguro: TipoSeguroLead
   comentario: string | null
+  /** Versión del texto de privacidad que tenía delante; `null` = la web no la informó. */
+  consentimientoVersion: string | null
+  /** Casilla opcional de comerciales; `null` = la web no la informó (≠ `false`, no la marcó). */
+  comunicacionesComerciales: boolean | null
+  atribucion: AtribucionLead | null
 }
 
 export type LeadRevisado =
@@ -118,7 +216,66 @@ export function revisarLeadWeb(body: unknown): LeadRevisado {
   if (b.consentimiento !== true) {
     return { ok: false, motivo: 'Necesitamos tu consentimiento para tratar tus datos y llamarte.', campo: 'consentimiento' }
   }
-  return { ok: true, lead: { nombre: nombre.valor, apellidos, telefono, email, tipoSeguro, comentario: comentario || null } }
+  // La versión se acepta solo con su forma; otra cosa (o ninguna) = no informada,
+  // pero NO tumba el lead: una pestaña con la web vieja sigue pudiendo pedir precio.
+  const version = typeof b.consentimiento_version === 'string' && RE_VERSION_CONSENTIMIENTO.test(b.consentimiento_version.trim())
+    ? b.consentimiento_version.trim()
+    : null
+  const comerciales = typeof b.comunicaciones_comerciales === 'boolean' ? b.comunicaciones_comerciales : null
+  return {
+    ok: true,
+    lead: {
+      nombre: nombre.valor, apellidos, telefono, email, tipoSeguro, comentario: comentario || null,
+      consentimientoVersion: version,
+      comunicacionesComerciales: comerciales,
+      atribucion: revisarAtribucion(b.atribucion),
+    },
+  }
+}
+
+/** Lo que viaja al puerto como prueba del consentimiento (asegura lo guarda en `seguros.consent_logs`). */
+export type ConsentimientoLead = {
+  version: string | null
+  /** ISO, hora del SERVIDOR de plataforma al recibir el formulario. */
+  at: string
+  finalidad: typeof FINALIDAD_LEAD
+  comunicaciones_comerciales: boolean | null
+  ip_truncada: string | null
+}
+
+/**
+ * Cuerpo del alta por el puerto de asegura para un lead web. Puro: `ahora` y la
+ * IP los pasa la ruta. La fecha del consentimiento es la de AQUÍ, no la del cliente.
+ */
+export function cuerpoAltaLead(lead: LeadWeb, ctx: { ahora: Date; ip: string | null }): Record<string, unknown> {
+  const consentimiento: ConsentimientoLead = {
+    version: lead.consentimientoVersion,
+    at: ctx.ahora.toISOString(),
+    finalidad: FINALIDAD_LEAD,
+    comunicaciones_comerciales: lead.comunicacionesComerciales,
+    ip_truncada: truncarIp(ctx.ip),
+  }
+  return {
+    nombre: lead.nombre,
+    apellidos: lead.apellidos,
+    telefono: lead.telefono,
+    email: lead.email,
+    notas: notasAlta(lead),
+    fuente: 'web',
+    actor: 'web',
+    consentimiento,
+    atribucion: lead.atribucion,
+  }
+}
+
+/**
+ * Línea de consentimiento para el historial `contacto` de una ficha que YA existía
+ * (allí no se escribe `consent_logs`: quien teclea un teléfono que ya estaba puede no
+ * ser el titular de esa ficha, y apuntarle un «sí» sería atribuírselo a otro).
+ */
+export function lineaConsentimientoContacto(lead: Pick<LeadWeb, 'consentimientoVersion' | 'comunicacionesComerciales'>, ahora: Date): string {
+  const com = lead.comunicacionesComerciales === null ? 'no informado' : lead.comunicacionesComerciales ? 'sí' : 'no'
+  return `Consentimiento web: ${FINALIDAD_LEAD}, versión ${lead.consentimientoVersion ?? 'no informada'}, ${ahora.toISOString()} · comerciales: ${com}`
 }
 
 // ─── Textos que van a la cartera ─────────────────────────────────────────────

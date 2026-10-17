@@ -3,11 +3,12 @@ import { getIp, rateLimit } from '@/lib/rate-limit'
 import { altaClienteAsegura, historialClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { solicitudLeadWebAsegura } from '@/lib/seguimiento-asegura'
 import {
+  cuerpoAltaLead,
+  lineaConsentimientoContacto,
   interpretarAltaLead,
   interpretarEnlaceDatos,
   ramoEnlaceDatos,
   type EnlaceDatos,
-  notasAlta,
   revisarLeadWeb,
   textoHistorialContacto,
   textoTelegramLead,
@@ -49,16 +50,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, motivo: r.motivo, campo: r.campo ?? null }, { status: 422 })
   }
   const lead = r.lead
+  // Hora del SERVIDOR: es la fecha del consentimiento que se guarda (nunca la del navegador).
+  const ahora = new Date()
 
-  const alta = await altaClienteAsegura({
-    nombre: lead.nombre,
-    apellidos: lead.apellidos,
-    telefono: lead.telefono,
-    email: lead.email,
-    notas: notasAlta(lead),
-    fuente: 'web',
-    actor: 'web',
-  })
+  // Prueba del consentimiento (versión, fecha, finalidad, comerciales, IP /24) y atribución
+  // first-touch viajan con el alta; asegura guarda la prueba en `seguros.consent_logs` y la
+  // atribución en `historial_interno` (la purga RGPD la anonimiza con la ficha).
+  const alta = await altaClienteAsegura(cuerpoAltaLead(lead, { ahora, ip: ip === 'unknown' ? null : ip }))
   const resultado = interpretarAltaLead(interpretarEscritura(alta.status, alta.json))
 
   let ficha: FichaLead = null
@@ -69,7 +67,7 @@ export async function POST(req: NextRequest) {
     ficha = { id: resultado.id, nueva: false, nombre: resultado.nombre }
     // El contacto se anota en la ficha que ya existía. Si no se puede, se dice en el aviso:
     // un historial que no ha quedado no se da por anotado.
-    const h = await historialClienteAsegura({ clienteId: resultado.id, tipo: 'contacto', texto: textoHistorialContacto(lead) })
+    const h = await historialClienteAsegura({ clienteId: resultado.id, tipo: 'contacto', texto: `${textoHistorialContacto(lead)} · ${lineaConsentimientoContacto(lead, ahora)}` })
     const hr = interpretarEscritura(h.status, h.json)
     if (hr.estado !== 'ok') motivo = `contacto NO anotado en su historial (${hr.estado === 'error' ? hr.motivo : hr.estado})`
   } else {

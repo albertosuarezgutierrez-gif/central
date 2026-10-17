@@ -27,7 +27,7 @@ test('formulario válido: normaliza nombre, teléfono y email; comentario recort
   const r = revisarLeadWeb(OK)
   assert.equal(r.ok, true)
   if (!r.ok) return
-  assert.deepEqual(r.lead, { nombre: 'Ana', apellidos: 'López Pérez', telefono: '600123456', email: 'ana@x.es', tipoSeguro: 'auto', comentario: 'Golf 2019' })
+  assert.deepEqual(r.lead, { nombre: 'Ana', apellidos: 'López Pérez', telefono: '600123456', email: 'ana@x.es', tipoSeguro: 'auto', comentario: 'Golf 2019', consentimientoVersion: null, comunicacionesComerciales: null, atribucion: null })
 })
 
 test('nombre obligatorio; teléfono O email; consentimiento === true; tipo de la lista', () => {

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
 import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
-import { CALCULADORA_HIPOTECA, PERFILES, PORTAL_URL, url } from '@/lib/sitio'
+import { CALCULADORA_HIPOTECA, OG_IMAGEN, PERFILES, PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
@@ -19,6 +19,13 @@ export const metadata: Metadata = {
   description:
     'Correduría inscrita en la DGSFP que media en toda España. Comparamos varias compañías para tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   alternates: { canonical: url('/') },
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Grupo ASegura',
+    url: url('/'),
+    images: [OG_IMAGEN],
+  },
 }
 
 /** Palomita de las garantías del hero. Trazo grueso, como el suyo. */
@@ -229,9 +236,9 @@ export default function Home() {
               al lado, y no falla nada. Lo ancla `lib/ramos.test.ts`.
             */}
             <h1 className="display">
-              Sube tus seguros.
+              Correduría de seguros online:
               <br />
-              <span className="destaca">Y contrólalos.</span>
+              <span className="destaca">sube tu póliza y la revisamos.</span>
             </h1>
             {/* Tres herramientas visibles sin scroll, justo bajo el titular.
                 `EnlaceMedido` es un `<a>` normal: admite `#ancla` y rutas
@@ -451,7 +458,7 @@ export default function Home() {
               </li>
               <li>
                 <Check />
-                El documento no se guarda, solo sus datos
+                Tu documento se guarda en tu ficha de la correduría; puedes pedir su borrado en cualquier momento
               </li>
             </ul>
             {/* 🚨 Esto NO es un «regístrate» de marketing: es lo que el portal

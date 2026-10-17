@@ -70,7 +70,13 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // El cuerpo viaja TAL CUAL (con `consentimiento_version`, `comunicaciones_comerciales`
+  // y `atribucion`): quien los valida y sanea es plataforma (`revisarLeadWeb`). Aquí solo
+  // se corta lo que no puede ser un formulario (comentario ≤1000 + atribución ≤10×100).
   const cuerpo = await req.text()
+  if (cuerpo.length > 20_000) {
+    return NextResponse.json({ ok: false, motivo: 'Formulario demasiado grande.' }, { status: 413 })
+  }
   const ip = ipVisitante(req)
 
   try {

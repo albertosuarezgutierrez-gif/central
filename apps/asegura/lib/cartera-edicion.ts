@@ -1038,6 +1038,35 @@ export async function altaCliente(
         insert into historial_interno (correduria_id, cliente_id, tipo, texto)
         values (${correduriaId}::uuid, ${creado.id}::uuid, cast(${tipoHist} as tipo_historial_interno),
                 ${textoHistorialAlta(a, { actor, compartido: telEnOtra || mailEnOtra })})`
+      // Prueba del consentimiento del formulario web (17/10/2026), en la MISMA transacción:
+      // una ficha web sin su prueba es justo el hueco que se cierra. `consent_logs` es
+      // append-only (triggers que rechazan UPDATE/DELETE) y por eso la purga RGPD no puede
+      // anonimizarlo: ahí va SOLO lo que prueba el consentimiento (versión, fecha, finalidad,
+      // IP /24, página donde se dio). Fila `gestion` = el sí obligatorio; `comercial` solo si
+      // la web lo informó. La atribución de marketing (utm/gclid/fbclid/referrer) NO va ahí:
+      // va a `historial_interno`, que sí sigue la retención del prospecto (lo anonimiza la purga).
+      const consent = a.fuente === 'web' ? consentimientoWeb(entrada) : null
+      if (consent) {
+        const meta = JSON.stringify({ canal: 'web', finalidad: consent.finalidad, version_informada: consent.version !== null, landing: consent.atribucion?.landing ?? null })
+        await tx.$executeRaw`
+          insert into consent_logs (cliente_id, tipo_consentimiento, granted, clause_version, source_ip, granted_at, metadata)
+          values (${creado.id}::uuid, 'gestion', true, ${consent.version ?? 'no-informada'}, ${consent.ip}::inet,
+                  ${consent.at}::timestamptz, ${meta}::jsonb)`
+        if (consent.comerciales !== null) {
+          await tx.$executeRaw`
+            insert into consent_logs (cliente_id, tipo_consentimiento, granted, clause_version, source_ip, granted_at, metadata)
+            values (${creado.id}::uuid, 'comercial', ${consent.comerciales}, ${consent.version ?? 'no-informada'}, ${consent.ip}::inet,
+                    ${consent.at}::timestamptz, ${JSON.stringify({ canal: 'web', finalidad: 'comunicaciones_comerciales' })}::jsonb)`
+        }
+        if (consent.atribucion) {
+          // Sin columna estructurada en `historial_interno` (no hay `detalle`): JSON canónico tras
+          // un prefijo FIJO, para poder extraerlo por SQL (`substring(texto from '^Atribución web: (.*)$')::jsonb`).
+          await tx.$executeRaw`
+            insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+            values (${correduriaId}::uuid, ${creado.id}::uuid, cast('gestion' as tipo_historial_interno),
+                    ${'Atribución web: ' + JSON.stringify(consent.atribucion)})`
+        }
+      }
       // Anotar cambio de auditoria
       anotarCambio({ entidad: 'cliente', id: creado.id, campo: 'activo', antes: null, despues: true })
       return creado.id
@@ -1050,6 +1079,42 @@ export async function altaCliente(
     }
     return fallo(e)
   }
+}
+
+const CLAVES_ATRIBUCION_WEB = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'fbclid', 'landing', 'referrer', 'fecha'] as const
+
+/**
+ * Lo que plataforma manda como prueba del consentimiento del lead web (`cuerpoAltaLead`
+ * de `apps/plataforma/lib/leads-web.ts`), revalidado aquí porque esto escribe en BD:
+ * versión con su forma o `null`; fecha del SERVIDOR de plataforma (si falta o se va más de
+ * 10 min de la de aquí, manda la de aquí); IP ya truncada (/24 o /48) o `null`;
+ * atribución solo con claves de la lista blanca y valores ≤100. `null` = no hay prueba que guardar.
+ */
+function consentimientoWeb(entrada: Record<string, unknown>): {
+  version: string | null; at: string; finalidad: string; comerciales: boolean | null; ip: string | null; atribucion: Record<string, string> | null
+} | null {
+  const c = entrada.consentimiento
+  if (typeof c !== 'object' || c === null || Array.isArray(c)) return null
+  const o = c as Record<string, unknown>
+  if (o.finalidad !== 'tramitar_solicitud') return null
+  const version = typeof o.version === 'string' && /^privacidad-\d{4}-\d{2}-\d{2}$/.test(o.version) ? o.version : null
+  const ahora = Date.now()
+  const t = typeof o.at === 'string' ? Date.parse(o.at) : NaN
+  const at = new Date(Number.isFinite(t) && Math.abs(t - ahora) <= 10 * 60_000 ? t : ahora).toISOString()
+  const ipS = typeof o.ip_truncada === 'string' ? o.ip_truncada : ''
+  const ip = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.0$/.test(ipS) || /^[0-9a-f]{1,4}:[0-9a-f]{1,4}:[0-9a-f]{1,4}::$/.test(ipS) ? ipS : null
+  const comerciales = typeof o.comunicaciones_comerciales === 'boolean' ? o.comunicaciones_comerciales : null
+  let atribucion: Record<string, string> | null = null
+  const at0 = entrada.atribucion
+  if (typeof at0 === 'object' && at0 !== null && !Array.isArray(at0)) {
+    const r: Record<string, string> = {}
+    for (const k of CLAVES_ATRIBUCION_WEB) {
+      const v = (at0 as Record<string, unknown>)[k]
+      if (typeof v === 'string' && v !== '' && v.length <= 100) r[k] = v
+    }
+    atribucion = Object.keys(r).length > 0 ? r : null
+  }
+  return { version, at, finalidad: 'tramitar_solicitud', comerciales, ip, atribucion }
 }
 
 // ─── Carnés de conducir ──────────────────────────────────────────────────────
