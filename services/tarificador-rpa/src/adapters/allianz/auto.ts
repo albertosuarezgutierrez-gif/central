@@ -1,3 +1,10 @@
+// v0.6.4 (17/10/2026, trabajo real ebe2bb1e atascado con «faltan el resultado de «Encuentra mi vehículo»»): el resultado NO es un
+// modal ni un `<select>` «Versión»: son TARJETAS SELECCIONABLES (`nx-selectable-card`) DENTRO del marco `appArea`, bajo el
+// encabezado «Detalles del vehículo»: un control por vehículo con id dinámico `ng-…-nx-selectable-card-N`, SIN `name`, y su
+// `<label for>` hermano «Marca del vehículo … Modelo … Tipo de combustible …»; «SIGUIENTE» sigue deshabilitado hasta elegir.
+// Elección (Alberto, 17/10/2026, «como Avant2»): la de la bandeja (`eleccionVersion`) o la del vehículo confirmado por similitud
+// (`eleccionVersionConOrigen`, CV/CC de la etiqueta); si no, LA PRIMERA, declarada como supuesto. Leer y marcar la tarjeta es de
+// guard.ts (`leerTarjetasVehiculoTurismosAllianz` / `ctx.marcarTarjetaVehiculoTurismos`): aquí solo se decide CUÁL. Moto no cambia.
 // v0.6.3 (17/10/2026, trabajo real c0a75a2c atascado con «Matrícula (hay 2, se esperaba uno)»): la cabecera de ePac vive en el
 // marco PRINCIPAL y `appArea` es el IFRAME del motor; dentro de él había DOS «Matrícula» (una no visible). Los campos de texto del
 // paso se localizan con `localizarControl` (src/localizar.ts) en la zona `appArea` DEL MARCO: descarta ocultos, deshabilitados,
@@ -86,7 +93,16 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { conRespaldoIA, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
-import { ErrorAvanceSinLlegar, esAppTurismosAllianz, exigirCampoNoBancario, SEL_FUERA_CABECERA_TURISMOS, SEL_ZONA_APP_TURISMOS } from '../../guard.ts'
+import {
+  ENCABEZADO_TARJETAS_VEHICULO_TURISMOS,
+  ErrorAvanceSinLlegar,
+  esAppTurismosAllianz,
+  exigirCampoNoBancario,
+  leerTarjetasVehiculoTurismosAllianz,
+  SEL_FUERA_CABECERA_TURISMOS,
+  SEL_ZONA_APP_TURISMOS,
+  type TarjetaVehiculoTurismos,
+} from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
 /** Flag de registro de TURISMOS: ENCENDIDO el 15/10/2026 (Alberto) para EXPLORAR con riesgos reales; sin mapa reconoce el marco o cae en ErrorMapaIncompleto + inventario antes de escribir. */
@@ -948,7 +964,7 @@ export const botonTurismos = (marco: Pick<Frame, 'locator'>, nombre: string): Lo
   sinCabecera(marco, zonaTurismos(marco).getByRole('button', { name: nombre, exact: true })).filter({ visible: true })
 
 /** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos'> & Partial<Pick<ContextoPortal, 'formador'>>
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -1044,6 +1060,65 @@ export async function resolverVersionTurismos(
   return { conVersiones: true, supuesto }
 }
 
+// ── v0.6.4: tarjetas de vehículo tras «Encuentra mi vehículo» (inventario real del trabajo ebe2bb1e, 17/10/2026) ──
+
+/** Encabezado bajo el que el portal pinta las tarjetas (la puerta de guard.ts lo exige). */
+export const ENCABEZADO_TARJETAS_VEHICULO = ENCABEZADO_TARJETAS_VEHICULO_TURISMOS
+export type { TarjetaVehiculoTurismos }
+
+/** Las tarjetas, solo cuando su número no cambia en dos lecturas seguidas (el portal puede pintarlas de una en una). */
+async function tarjetasVehiculoEstables(page: Pick<Page, 'waitForTimeout'>, marco: Frame): Promise<TarjetaVehiculoTurismos[]> {
+  const a = await leerTarjetasVehiculoTurismosAllianz(marco)
+  if (a.length === 0) return a
+  await page.waitForTimeout(400)
+  const b = await leerTarjetasVehiculoTurismosAllianz(marco)
+  return b.length === a.length ? b : []
+}
+
+/**
+ * Qué tarjeta se elige (pura). Una → esa. Varias: la elección de la bandeja (`eleccionVersion`, por ETIQUETA: los ids son
+ * dinámicos y no valen de una sesión a otra) o la del vehículo confirmado por similitud (`eleccionVersionConOrigen`); si no hay
+ * ninguna, LA PRIMERA y se DECLARA como supuesto. Elección explícita que no casa con una sola → `ErrorEleccionVersion`
+ * (requiere_humano), como el `<select>`. Sin datos personales en el supuesto (solo el recuento).
+ */
+export function decidirTarjetaVehiculoTurismos(
+  tarjetas: readonly Pick<TarjetaVehiculoTurismos, 'etiqueta'>[],
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+): { indice: number; supuesto: string | null } {
+  if (tarjetas.length === 0) throw new ErrorMapaIncompleto(`las tarjetas de vehículo de «${BOTON_ENCUENTRA_VEHICULO}» (no hay ninguna)`, true)
+  if (tarjetas.length === 1) return { indice: 0, supuesto: null }
+  const candidatos: CandidatoVersion[] = tarjetas.map((t) => ({ etiqueta: t.etiqueta, codigo: null }))
+  const { eleccion } = eleccionVersionConOrigen({ versiones: candidatos }, form)
+  if (eleccion) {
+    const r = resolverVersion(candidatos, eleccion)
+    if (r.tipo === 'unica') {
+      const i = tarjetas.findIndex((t) => t.etiqueta === r.candidato.etiqueta)
+      if (i >= 0) return { indice: i, supuesto: null }
+    }
+    if (r.tipo === 'ambigua' && form.eleccionVersion) throw new ErrorEleccionVersion(r.opciones)
+  }
+  return { indice: 0, supuesto: `vehículo/versión: el primero de la lista (supuesto, había ${tarjetas.length})` }
+}
+
+/**
+ * Elige la tarjeta decidida por la puerta de guard.ts (`ctx.marcarTarjetaVehiculoTurismos`: appArea, bajo «Detalles del vehículo»,
+ * veto de emisión/pago/banca, un clic y relectura). `no_unica`/`no_quedo` → hueco con inventario.
+ */
+export async function elegirTarjetaVehiculoTurismos(
+  marco: Frame,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  ctx: Pick<CtxTurismos, 'marcarTarjetaVehiculoTurismos'>,
+  tarjetas: readonly TarjetaVehiculoTurismos[],
+): Promise<{ supuesto: string | null }> {
+  if (typeof ctx?.marcarTarjetaVehiculoTurismos !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de tarjetas de vehículo de Turismos en el contexto del worker', false, true)
+  const { indice, supuesto } = decidirTarjetaVehiculoTurismos(tarjetas, form)
+  const r = await ctx.marcarTarjetaVehiculoTurismos(marco, indice, tarjetas[indice]!.etiqueta)
+  if (r.estado === 'no_unica' || r.estado === 'no_quedo') {
+    throw new ErrorMapaIncompleto(`la tarjeta de vehículo elegida tras «${BOTON_ENCUENTRA_VEHICULO}» (${r.estado === 'no_unica' ? `${r.coincidencias} coincidencias` : 'tras pulsarla no quedó elegida'})`, true)
+  }
+  return { supuesto }
+}
+
 /** Une el supuesto de la versión al «Precio con supuestos: …» del riesgo (un solo aviso, versión primero). Puro. */
 export function unirSupuestoVersion(supuestoVersion: string | null, riesgo: string | null): string | null {
   if (!supuestoVersion) return riesgo
@@ -1058,6 +1133,8 @@ export function unirSupuestoVersion(supuestoVersion: string | null, riesgo: stri
  * formulario. La estructura de ese modal NO está mapeada: si aparece (`role=dialog`/`aria-modal`, en TODO el marco: los overlays
  * se pintan fuera de `appArea`) → hueco CON inventario y no se pulsa nada dentro. Un aviso del portal → hueco. Se conserva el camino
  * del `<select>` «Versión» nativo. Sin modal, ni versiones ni «SIGUIENTE» habilitado en el plazo → hueco. Sin log de la matrícula.
+ * v0.6.4 (inventario real del 17/10/2026): en producción salen TARJETAS de vehículo en `appArea` (no modal): se elige una
+ * (`elegirTarjetaVehiculoTurismos`: bandeja / vehículo confirmado / la primera como supuesto) y sigue el resto del paso.
  */
 export async function rellenarDatosVehiculoTurismos(page: Page, marco: Frame, form: FormularioAuto, ctx: CtxTurismos): Promise<string[]> {
   return (await rellenarDatosVehiculoTurismosConSupuesto(page, marco, form, ctx)).huecos
@@ -1078,12 +1155,15 @@ export async function rellenarDatosVehiculoTurismosConSupuesto(page: Page, marco
   const boton = await unicoControl(page, botonTurismos(marco, BOTON_ENCUENTRA_VEHICULO), `el botón «${BOTON_ENCUENTRA_VEHICULO}»`, true)
   await ctx.pausaAccion()
   await ctx.pulsar(boton)
-  // Resultado: el modal de vehículos (sin mapa → hueco), versiones elegibles, «SIGUIENTE» habilitado o un aviso del portal.
+  // Resultado: el modal de vehículos (sin mapa → hueco), las tarjetas de vehículo (v0.6.4), versiones elegibles, «SIGUIENTE»
+  // habilitado o un aviso del portal.
   const fin = Date.now() + ESPERA_RESULTADO_VEHICULO_MS
   for (;;) {
     if ((await modalTurismos(marco).count().catch(() => 0)) > 0) {
       throw new ErrorMapaIncompleto(`el modal con la lista de vehículos que abre «${BOTON_ENCUENTRA_VEHICULO}» (estructura sin mapear: elegir uno si hay uno, «eleccion» si hay varios, y cerrarlo)`, true)
     }
+    const tarjetas = await tarjetasVehiculoEstables(page, marco)
+    if (tarjetas.length > 0) return { huecos: [], supuestoVersion: (await elegirTarjetaVehiculoTurismos(marco, form, ctx, tarjetas)).supuesto }
     const { conVersiones, supuesto } = await resolverVersionTurismos(marco, form)
     const siguiente = botonTurismos(marco, BOTON_SIGUIENTE_TURISMOS)
     if (conVersiones || ((await siguiente.count().catch(() => 0)) === 1 && (await habilitadoDeVerdad(siguiente)))) return { huecos: [], supuestoVersion: supuesto }
@@ -1328,8 +1408,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1, 0.6.2 ni 0.6.3 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.3',
+    // Moto no cambia en la 0.6.1, 0.6.2, 0.6.3 ni 0.6.4 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.4',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
