@@ -1,9 +1,9 @@
 ---
 slug: revisar-poliza-antes-de-renovar
 titulo: Qué revisar en tu póliza antes de renovar
-descripcion: Checklist de ocho puntos para revisar tu seguro antes de que se prorrogue: capitales, exclusiones, franquicias y plazos de aviso (arts. de la LCS).
+descripcion: "Checklist de ocho puntos para revisar tu seguro antes de que se prorrogue: capitales, exclusiones, franquicias y plazos de aviso (arts. de la LCS)."
 palabra_clave_principal: revisar póliza antes de renovar
-intencion: informacional (problema: «se me renueva el seguro y no sé qué mirar»)
+intencion: "informacional (problema: «se me renueva el seguro y no sé qué mirar»)"
 cta: { texto: "Sube tu póliza y te la revisamos", href: "/gestor-de-seguros" }
 estado: BORRADOR — pendiente de revisión de Alberto
 ---

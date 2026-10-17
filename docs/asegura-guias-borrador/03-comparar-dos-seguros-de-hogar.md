@@ -1,7 +1,7 @@
 ---
 slug: como-comparar-dos-seguros-de-hogar
 titulo: Cómo comparar dos seguros de hogar bien
-descripcion: Para comparar dos pólizas de hogar no basta la prima: continente, contenido, infraseguro y regla proporcional (art. 30 LCS) en una lista de comprobación.
+descripcion: "Para comparar dos pólizas de hogar no basta la prima: continente, contenido, infraseguro y regla proporcional (art. 30 LCS) en una lista de comprobación."
 palabra_clave_principal: comparar seguros de hogar
 intencion: informacional/comercial (decisión entre dos ofertas)
 cta: { texto: "Pídenos que revisemos tus dos ofertas de hogar", href: "/seguros/hogar" }

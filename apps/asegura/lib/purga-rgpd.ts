@@ -380,7 +380,7 @@ export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string
             returning 1),
     ges as (update seguros.gestiones g set observaciones = ${HISTORIAL_REDACTADO}::text
             from obj where g.cliente_id = obj.id and g.correduria_id = obj.correduria_id
-              and g.poliza_id is null and g.siniestro_id is null
+              and g.poliza_id is null and g.siniestro_id is null and g.observaciones is not null
             returning 1),
     tar as (update seguros.tarificaciones t set nota = ${HISTORIAL_REDACTADO}::text
             from obj where t.cliente_id = obj.id and t.correduria_id = obj.correduria_id

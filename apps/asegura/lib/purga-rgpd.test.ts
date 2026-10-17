@@ -259,7 +259,7 @@ test('la anonimización redacta el texto libre de las tablas hijas con sus guard
   const guardas: [string, string, string[]][] = [
     ['opo', 'oportunidades', ['o.cliente_id = obj.id', 'o.poliza_id is null', 'o.poliza_ganada_id is null', 'notas = case when o.notas is null then null else ${HISTORIAL_REDACTADO}']],
     ['pre', 'presupuesto', ['pr.cliente_id = obj.id', 'pr.poliza_id is null', 'pr.poliza_emitida_id is null', 'pr.emitido_at is null', 'pr.aceptado_at is null', 'pr.firma_id is null', 'pr.vence_el < now()', 'necesidades = case when pr.necesidades is null then null else ${HISTORIAL_REDACTADO}']],
-    ['ges', 'gestiones', ['g.cliente_id = obj.id', 'g.poliza_id is null', 'g.siniestro_id is null', 'observaciones = ${HISTORIAL_REDACTADO}']],
+    ['ges', 'gestiones', ['g.cliente_id = obj.id', 'g.poliza_id is null', 'g.siniestro_id is null', 'g.observaciones is not null', 'observaciones = ${HISTORIAL_REDACTADO}']],
     ['tar', 'tarificaciones', ['t.cliente_id = obj.id', 't.poliza_id is null', 'nota = ${HISTORIAL_REDACTADO}']],
     ['cnv', 'conversaciones', ['v.cliente_id = obj.id', 'wa_perfil_nombre_cifrado = null', 'wa_telefono_cifrado = null', 'analisis = null']],
     ['msj', 'mensajes', ['m.conversacion_id = cnv.id', "contenido = ''", 'texto_purgado_at = now()']],
@@ -280,6 +280,8 @@ test('la anonimización redacta el texto libre de las tablas hijas con sus guard
   const anon = src.slice(src.indexOf(`update ${S}clientes c set`), src.indexOf('returning c.id, c.correduria_id'))
   const lectura = src.slice(src.indexOf('export async function leerProspectosCandidatos'), src.indexOf('export async function anonimizarProspectos'))
   const wa = `${S}conversaciones v where v.cliente_id = c.id`
+  const umbral = "greatest(v.ultimo_mensaje_at, v.updated_at at time zone 'UTC') > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month'"
   assert.ok(anon.includes(`not exists (select 1 from ${wa}`), 'UPDATE sin guarda de WhatsApp reciente')
+  assert.ok(anon.includes(umbral) && lectura.includes(umbral), 'guarda de WhatsApp sin el mismo umbral en lectura y UPDATE')
   assert.ok(lectura.includes(`(select count(*) from ${wa}`), 'actividad_reciente sin WhatsApp')
 })

@@ -3,7 +3,7 @@ slug: regla-proporcional-seguro-que-es
 titulo: Qué es la regla proporcional y cómo te afecta
 descripcion: La regla proporcional (art. 30 LCS) reduce tu indemnización si aseguraste por menos de lo que vale. Cómo se calcula, ejemplo y cómo evitarla.
 palabra_clave_principal: regla proporcional seguro
-intencion: informacional (problema: «me pagan menos de lo que esperaba»)
+intencion: "informacional (problema: «me pagan menos de lo que esperaba»)"
 cta: { texto: "Revisa si tus capitales están al día", href: "/seguros/hogar" }
 estado: BORRADOR — pendiente de revisión de Alberto
 nota: Sustituye al tema «cómo dar de baja un seguro», que ya existe (dar-de-baja-seguro-coche, como-dar-de-baja-un-seguro-a-tiempo, preaviso-un-mes-no-renovar-seguro).

@@ -1,6 +1,6 @@
 ---
 slug: franquicia-limite-sublimite-diferencias
-titulo: Franquicia, límite y sublímite: diferencias
+titulo: "Franquicia, límite y sublímite: diferencias"
 descripcion: Qué es una franquicia, un límite y un sublímite, con ejemplos numéricos inventados para ver cómo cambia lo que cobras en un siniestro.
 palabra_clave_principal: franquicia límite sublímite seguro
 intencion: informacional (entender tres términos que se confunden en la póliza)
@@ -30,6 +30,7 @@ Los números que siguen son inventados y solo sirven para ver la mecánica. No s
 >
 > - **Daño por agua en el parquet y los muebles: 2.000 €.** La franquicia se aplica una vez: la aseguradora paga 1.850 € y tú, 150 €.
 > - **Incendio con pérdidas de 40.000 €.** El límite general es 30.000 €: el máximo a cobrar por contenido es 30.000 € (menos la franquicia, si procede). Los otros 10.000 € son tuyos.
+>   - [VERIFICAR] Si el contenido está asegurado por menos de su valor real (infraseguro), se aplica la regla proporcional (art. 30 LCS) y se cobra menos de lo que sale de esta cuenta.
 > - **Robo de joyas por valor de 6.000 €.** El sublímite es 1.500 €: ese es el máximo para las joyas, aunque el contenido general sea 30.000 €. Quedan 4.500 € sin cubrir.
 
 La franquicia reduce lo que cobras *en cada siniestro*; el límite fija el *techo general*; el sublímite fija un *techo específico más bajo*.
