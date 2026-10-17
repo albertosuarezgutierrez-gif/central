@@ -7,7 +7,7 @@
 // `@central/module-seguros`, que es la que comparten el panel del corredor y el
 // portal del asegurado.
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO, GEO, HORARIO, PERFILES, SITIO_URL, url } from './sitio.ts'
+import { AMBITO, GEO, HORARIO, OG_IMAGEN, PERFILES, SITIO_URL, url } from './sitio.ts'
 import { RAMOS, type Ramo } from './ramos.ts'
 import type { Articulo } from './articulos.ts'
 
@@ -255,6 +255,10 @@ export function fichaArticulo(a: Articulo): Record<string, unknown> {
       },
     },
     publisher: { '@id': `${SITIO_URL}/#correduria` },
+    // La MISMA tarjeta que el `og:image` de la página (`openGraph.images: [OG_IMAGEN]`
+    // en `app/blog/[slug]/page.tsx`), no una URL escrita aparte. Lo vigila
+    // `lib/seo-articulo.test.ts`.
+    image: url(OG_IMAGEN.url),
   }
   if (a.revisado) ficha.dateModified = a.revisado
   return ficha
