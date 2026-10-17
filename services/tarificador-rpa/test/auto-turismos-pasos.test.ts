@@ -1,0 +1,454 @@
+// Allianz AUTOS Turismos v0.6.5 (17/10/2026): recorrido «Datos del vehículo» → «Datos personales» → «Antecedentes» con la
+// ESTRUCTURA del HTML real del trabajo 590a330e (un `tabpanel` por paso, todos en el DOM y ocultos salvo el activo; tomador con
+// `nx-circle-toggle-group` bajo `nx-x-common-header[text]`; TRES «Código postal»/«Localidad»; carné MM / AAAA; «Segundo conductor»
+// como interruptor `role=switch`; «Compañía actual del vehículo» desplegable sin etiqueta de texto; fecha de efecto con min/max;
+// «Nivel antecedentes» deshabilitado y «Colaborador» opcional en el panel de agente de «Selección de paquete»; botones « Siguiente »).
+// Portal SINTÉTICO servido con `context.route` (ni red ni datos personales: documento, CP, población y fechas FICTICIOS).
+import assert from 'node:assert/strict'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { after, before, test } from 'node:test'
+import { chromium, type Browser, type Frame } from 'playwright'
+import { EmisionBloqueadaError, senalCuentaBancaria, type FormularioAuto } from '@central/module-tarificacion'
+import { pideInventarioDom } from '../src/errores.ts'
+import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, instalarGuardEmision, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, pulsar } from '../src/guard.ts'
+import {
+  ErrorMapaIncompleto,
+  SUPUESTO_COMPANIA_NO_CASA,
+  SUPUESTO_COMPANIA_NO_CONSTA,
+  fichaTomadorTurismos,
+  marcoFormularioTurismos,
+  pasoActivoTurismos,
+  planDatosTurismos,
+  recorrerPasosTurismos,
+  rellenarDatosVehiculoTurismosConSupuesto,
+  SUPUESTO_LOCALIDAD_PORTAL,
+  SUPUESTO_TOMADOR_CONDUCE,
+  tipoTomadorTurismos,
+  type CtxTurismos,
+} from '../src/adapters/allianz/auto.ts'
+
+const FORM: FormularioAuto = {
+  ramo: 'auto',
+  matricula: '0000BBB',
+  codigoPostal: '00000',
+  conductor: { fechaNacimiento: '1990-02-03', fechaCarne: '2010-04-05', sexo: 'mujer' },
+  tomadorEsConductor: true,
+  tomadorEsPropietario: true,
+  aniosAseguradoAnterior: 3,
+  siniestrosUltimos5Anios: 0,
+  garajeNoche: false,
+  documentoTomador: '00000000T',
+  tomador: { tipo: 'fisica', nombre: 'A', apellido1: 'B', apellido2: null, razonSocial: null, documentoIdentidad: '00000000T', fechaNacimiento: null, codigoPostal: '00000', poblacion: 'Villaficticia', direccion: null, telefono: null, email: null },
+  eleccionVersion: null,
+}
+const PERSONALES = ['00000000T', '00000', 'Villaficticia', '1990', '2010', '0000BBB']
+
+const iso = (d: Date) => d.toISOString().slice(0, 10)
+const masDias = (n: number) => new Date(Date.now() + n * 86_400_000)
+const dma = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`
+
+type Opc = {
+  /** Lo que el portal propone en «Localidad» al teclear el CP del tomador (`null` = nada). */
+  localidadPortal?: string | null
+  /** El interruptor «Segundo conductor» viene ENCENDIDO (y habilitado). */
+  segundoEncendido?: boolean
+  /** Ninguna opción de propietario/conductor marcada de partida. */
+  sinDefectos?: boolean
+  /** Sin la cabecera `nx-x-common-header` en el formulario del conductor. */
+  sinCabeceraConductor?: boolean
+  /** Opciones del panel de «Compañía actual del vehículo» (overlay CDK fuera de `appArea`, solo al abrirlo). */
+  companias?: string[]
+  /** El desplegable de compañía ya enseña un valor. */
+  companiaPrefijada?: string
+}
+const COMPANIAS = ['ASEGURADORA ALFA, S.A.', 'Beta Seguros y Reaseguros', 'Gamma Mutua', 'Otras compañías']
+
+const TARJETAS = ['Marca del vehículo MARCAFICT Modelo Alfa Versión 90 CV', 'Marca del vehículo MARCAFICT Modelo Alfa Versión 120 CV']
+const OCULTO = 'style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0"'
+
+function app(o: Opc = {}): string {
+  const pasos = ['Datos del vehículo', 'Datos personales', 'Antecedentes', 'Selección de paquete', 'Datos', 'Revisión', 'Pago', 'Confirmación']
+  const op = (id: string, name: string, etq: string, marcada = false) =>
+    `<span><input type="radio" id="${id}" name="${name}" ${OCULTO}${marcada ? ' checked' : ''}><label for="${id}">${etq}</label></span>`
+  const circulo = (id: string, etqs: string[], marcada: number | null) =>
+    `<div><div><nx-circle-toggle-group role="radiogroup" aria-labelledby="ng-z-${id}-lbl" name="ng-z-${id}">${etqs.map((e, i) => `<nx-circle-toggle>${op(`ng-z-${id}-${i}`, `ng-z-${id}`, e, marcada === i)}</nx-circle-toggle>`).join('')}</nx-circle-toggle-group></div></div>`
+  const cab = (t: string) => `<nx-x-common-header text="${t}"><div><div><h3>${t}</h3></div></div></nx-x-common-header>`
+  const texto = (id: string, etq: string, extra = '') => `<label for="${id}">${etq}</label><input id="${id}" type="text" ${extra}>`
+  const ubicacion = (n: number) => `<nx-mt-person-location>${texto(`ng-z-cp${n}`, 'Código postal')}<label for="ng-z-loc${n}">Localidad</label><input id="ng-z-loc${n}" role="combobox" type="text" maxlength="50"></nx-mt-person-location>`
+  const nav = (primero: boolean) => `<nav><app-navigation-buttons>${primero ? '' : '<button type="button" class="ant"> Anterior </button>'}<button type="button" class="sig"> Siguiente </button></app-navigation-buttons></nav>`
+  const def = o.sinDefectos ? null : 0
+  const p1 = `
+  <div role="radiogroup" aria-labelledby="ng-z-l5"><label id="ng-z-l5">¿Conoces la matrícula del vehículo?</label>${op('ng-z-cm-0', 'ng-z-cm', 'Sí')}${op('ng-z-cm-1', 'ng-z-cm', 'No')}</div>
+  <div id="bloqueMatricula" hidden>${texto('ng-z-mat', 'Matrícula', 'required')}<button type="button" id="ng-z-enc" disabled>Encuentra mi vehículo</button></div>
+  <nx-radio-toggle>${['Sí, lo he comprado nuevo', 'No, ya lo tenía y quiero cambiar de seguro', 'Sí, lo he comprado de 2ª mano a un particular', 'Sí, lo he comprado de 2ª mano a un concesionario'].map((e, i) => op(`ng-z-compra-${i}`, 'ng-z-compra', e)).join('')}</nx-radio-toggle>
+  <nx-radio-toggle>${['Ocasional (fines de semana, vacaciones, etc)', 'A diario y fines de semana', 'Actividad laboral'].map((e, i) => op(`ng-z-uso-${i}`, 'ng-z-uso', e)).join('')}</nx-radio-toggle>
+  <nx-radio-toggle>${['En la calle', 'En un garaje colectivo', 'En un garaje individual'].map((e, i) => op(`ng-z-garaje-${i}`, 'ng-z-garaje', e)).join('')}</nx-radio-toggle>`
+  const p2 = `<app-holder>
+  <nx-mt-person-information><form>${cab('¿Quién es el tomador?')}${circulo('tom', ['Individual Individual', 'Empresa Empresa'], 0)}
+    <nx-mt-natural-person-information><label id="ng-z-ltd" for="ng-z-tdoc">Tipo de documento</label><nx-dropdown role="combobox" id="ng-z-tdoc" tabindex="0" aria-labelledby="ng-z-ltd">NIF</nx-dropdown>
+    ${texto('ng-z-doc', 'Número de documento', 'required')}${ubicacion(1)}</nx-mt-natural-person-information></form></nx-mt-person-information>
+  <nx-mt-owner-information><form>${cab('¿Es el tomador de la póliza el propietario?')}${circulo('prop', ['Sí Sí', 'No No'], def)}</form></nx-mt-owner-information>
+  <nx-mt-person-information><form><nx-mt-natural-person-information>${ubicacion(2)}</nx-mt-natural-person-information></form></nx-mt-person-information>
+  <nx-mt-driver-information><form>${o.sinCabeceraConductor ? '' : cab('El tomador ¿también conduce el vehículo?')}${circulo('cond', ['Sí Sí', 'No No'], def)}</form></nx-mt-driver-information>
+  <nx-mt-natural-person-information>${ubicacion(3)}${texto('ng-z-fnac', 'Fecha de nacimiento del conductor', `max="${iso(masDias(-18 * 366))}T00:00:00Z"`)}${texto('ng-z-fcar', 'Fecha de expedición de carnet', `max="${iso(new Date())}T00:00:00Z"`)}</nx-mt-natural-person-information>
+  <nx-mt-nominated-driver-information><form><nx-switcher><input type="checkbox" role="switch" id="ng-z-sw" ${o.segundoEncendido ? 'checked aria-checked="true"' : 'disabled aria-checked="false"'}><label for="ng-z-sw"> Segundo conductor </label></nx-switcher></form></nx-mt-nominated-driver-information>
+  </app-holder>`
+  const p3 = `<app-insurance><nx-mt-insured-policy-holder><form>${cab('Compañía actual del vehículo')}<label id="ng-z-l249" for="ng-z-dd250"></label><nx-dropdown role="combobox" id="ng-z-dd250" style="display:inline-block;min-width:120px;min-height:20px" tabindex="0" aria-labelledby="ng-z-l249" aria-controls="ng-z-nx-dropdown-modal-251"><div id="ng-z-dd250-r">${o.companiaPrefijada ?? ''}</div></nx-dropdown></form></nx-mt-insured-policy-holder>
+  <nx-mt-offerings-start-date>${cab('Fecha de inicio del seguro')}${texto('ng-z-ef', '¿Cuándo quieres que comience tu seguro?', `required min="${iso(new Date())}T00:00:00Z" max="${iso(masDias(90))}T00:00:00Z"`)}</nx-mt-offerings-start-date></app-insurance>`
+  const p4 = `<nx-mt-summary-panel><nx-expansion-panel><nx-expansion-panel-header aria-expanded="false">Vista Ampliada</nx-expansion-panel-header><div id="vista" hidden><nx-mt-agent-options><form>
+    ${texto('ng-z-niv', 'Nivel antecedentes', 'disabled')}${texto('ng-z-col', 'Colaborador', 'maxlength="4"')}</form></nx-mt-agent-options></div></nx-expansion-panel></nx-mt-summary-panel><p>Precio no vinculante.</p>`
+  const p7 = `${texto('ng-z-iban', 'IBAN')}${texto('ng-z-bic', 'BIC/SWIFT')}`
+  const cuerpos = [p1, p2, p3, p4, texto('ng-z-prov', 'Provincia'), '', p7, '']
+  return `<!doctype html><html><body>
+<div>${pasos.map((p, i) => `<nx-multi-step-item role="tab" aria-selected="${i === 0}" ${i === 0 ? '' : 'aria-disabled="true"'}>${p}</nx-multi-step-item>`).join('')}</div>
+<main id="appArea">${cuerpos.map((c, i) => `<div role="tabpanel" id="cdk-stepper-0-content-${i}" aria-label="Paso 1/8: Datos del vehículo" ${i === 0 ? '' : 'hidden'}><main>${c}</main>${nav(i === 0)}</div>`).join('')}</main>
+<script>
+  const $ = (s) => document.querySelector(s);
+  window.__clics = [];
+  document.addEventListener('click', (e) => { const t = e.target; if (t && t.id) window.__clics.push(t.id); }, true);
+  ['#ng-z-iban', '#ng-z-bic', '#ng-z-col', '#ng-z-niv', '#ng-z-tdoc', '#ng-z-cp2', '#ng-z-cp3', '#ng-z-loc2', '#ng-z-loc3', '#ng-z-sw']
+    .forEach((s) => ['focus', 'input', 'click'].forEach((ev) => $(s).addEventListener(ev, () => window.__clics.push(s + ':' + ev))));
+  document.querySelectorAll('#ng-z-cm-0, #ng-z-cm-1').forEach((r) => r.addEventListener('change', () => { $('#bloqueMatricula').hidden = false; }));
+  $('#ng-z-mat').addEventListener('input', () => { $('#ng-z-enc').disabled = $('#ng-z-mat').value.length < 4; });
+  const sig0 = document.querySelector('#cdk-stepper-0-content-0 .sig'); sig0.disabled = true;
+  $('#ng-z-enc').addEventListener('click', () => setTimeout(() => {
+    const t = document.createElement('div');
+    t.innerHTML = ${JSON.stringify(`<h3>Detalles del vehículo</h3>` + TARJETAS.map((e, i) => `<span><input type="radio" id="ng-z-nx-selectable-card-24${i}" ${OCULTO}><label for="ng-z-nx-selectable-card-24${i}">${e}</label></span>`).join(''))};
+    $('#ng-z-enc').after(t);
+    t.querySelectorAll('input').forEach((c) => c.addEventListener('change', () => { sig0.disabled = false; }));
+  }, 100));
+  $('#ng-z-cp1').addEventListener('input', () => { if ($('#ng-z-cp1').value.length === 5) setTimeout(() => { ${o.localidadPortal === null ? '' : `$('#ng-z-loc1').value = ${JSON.stringify(o.localidadPortal ?? 'Villaficticia')};`} }, 150); });
+  const OPS = ${JSON.stringify(o.companias ?? COMPANIAS)};
+  window.__abiertos = 0;
+  $('#ng-z-dd250').addEventListener('click', () => { if (document.getElementById('ng-z-nx-dropdown-modal-251')) return; window.__abiertos++; setTimeout(() => {
+    const ov = document.createElement('div'); ov.className = 'cdk-overlay-pane'; ov.innerHTML = '<div id="ng-z-nx-dropdown-modal-251" role="listbox"></div>'; document.body.appendChild(ov);
+    OPS.forEach((t, i) => { const it = document.createElement('nx-dropdown-item'); it.setAttribute('role', 'option'); it.id = 'ng-z-opt-' + i; it.textContent = t;
+      it.addEventListener('click', () => { $('#ng-z-dd250-r').textContent = t; ov.remove(); }); ov.firstChild.appendChild(it); });
+  }, 100); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const p = document.getElementById('ng-z-nx-dropdown-modal-251'); if (p) p.parentElement.remove(); } });
+  document.querySelectorAll('.sig').forEach((b, i) => b.addEventListener('click', () => {
+    const ps = document.querySelectorAll('[role=tabpanel]'); const ts = document.querySelectorAll('nx-multi-step-item');
+    ps[i].hidden = true; ps[i + 1].hidden = false;
+    ts[i].setAttribute('aria-selected', 'false'); ts[i + 1].setAttribute('aria-selected', 'true'); ts[i + 1].removeAttribute('aria-disabled');
+  }));
+</script></body></html>`
+}
+
+const CARCASA = `<!doctype html><html><body><h1>ePac</h1><iframe name="appArea" id="appArea" src="https://cloud.e-pacallianz.com/ngx-motor-azs/"></iframe></body></html>`
+
+let browser: Browser
+before(async () => {
+  const opciones = { headless: true, args: ['--proxy-server=http://127.0.0.1:9'] }
+  try {
+    browser = await chromium.launch(opciones)
+  } catch (e) {
+    const dir0 = process.env.PLAYWRIGHT_BROWSERS_PATH ?? '/opt/pw-browsers'
+    const dir = existsSync(dir0) ? readdirSync(dir0).filter((d) => /^chromium_headless_shell-\d+$/.test(d)).sort().pop() : undefined
+    const exe = dir ? join(dir0, dir, 'chrome-linux', 'headless_shell') : null
+    if (!exe || !existsSync(exe)) throw e
+    browser = await chromium.launch({ ...opciones, executablePath: exe })
+  }
+})
+after(async () => { await browser?.close() })
+
+async function abrir(o: Opc = {}) {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  await context.route('https://**/*', (r) => {
+    const u = new URL(r.request().url())
+    return r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: u.hostname === 'cloud.e-pacallianz.com' ? app(o) : CARCASA })
+  })
+  const page = await context.newPage()
+  page.setDefaultTimeout(3_000)
+  await page.goto('https://www.e-pacallianz.com/ngx-azs-epac/private/application')
+  const pulsados: string[] = []
+  const ctx: CtxTurismos = {
+    pulsar: async (b) => { pulsados.push(((await b.textContent()) ?? '').replace(/\s+/g, ' ').trim()); await pulsar(b, guard) },
+    pausaAccion: async () => undefined,
+    marcarOpcionTurismos: async (m: Frame, clave: string) => {
+      const r = await marcarOpcionTurismosAllianz(m, guard, clave)
+      if (r.estado === 'marcada') pulsados.push(`opcion:${clave}`)
+      return r
+    },
+    marcarTarjetaVehiculoTurismos: async (m: Frame, indice: number, etiqueta: string) => {
+      const r = await marcarTarjetaVehiculoTurismosAllianz(m, guard, indice, etiqueta)
+      if (r.estado === 'marcada') pulsados.push(`tarjeta:${indice}`)
+      return r
+    },
+    companiaActualTurismos: async (m: Frame, buscada: string | null) => {
+      const r = await companiaActualTurismosAllianz(m, guard, buscada)
+      pulsados.push(`compania:${r.estado}`)
+      return r
+    },
+  }
+  const marco = await marcoFormularioTurismos(page, 5_000)
+  const clics = () => marco.evaluate(() => (window as unknown as { __clics: string[] }).__clics.filter((c) => c.includes(':')))
+  const valor = (id: string) => marco.locator(`#${id}`).inputValue()
+  /** Lleva el asistente a «Datos personales» (paso 1 completo y su «Siguiente»), como hace el adaptador. */
+  const aPersonales = async () => {
+    await rellenarDatosVehiculoTurismosConSupuesto(page, marco, FORM, ctx)
+    await marco.evaluate(() => { (document.querySelector('#cdk-stepper-0-content-0 .sig') as HTMLButtonElement).click() })
+  }
+  return { context, page, ctx, pulsados, guard, marco, clics, valor, aPersonales }
+}
+
+const esMapa = (re: RegExp) => (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e) && re.test((e as Error).message)
+const sinPersonales = (m: string) => PERSONALES.every((v) => !m.includes(v))
+
+test('v0.6.5 plan (puro): cada campo en SU paso, carné MM/AAAA, colaborador y nivel de antecedentes ya no son huecos, dirección fuera', () => {
+  const HOY = new Date('2026-10-15T10:00:00Z')
+  const { pasos, supuestos } = planDatosTurismos(FORM, HOY)
+  const claves = pasos.map((p) => [p.paso, p.operaciones.map((o) => (o.tipo === 'opcion' ? o.clave : o.tipo === 'texto' ? o.etiqueta : o.tipo === 'compania' ? 'Compañía actual' : 'Localidad'))])
+  assert.deepEqual(claves, [
+    ['Datos del vehículo', ['compra:ya_lo_tenia', 'uso:diario', 'garaje:calle']],
+    ['Datos personales', ['tomador:individual', 'Número de documento', 'Código postal', 'Localidad', 'tomador_propietario:si', 'tomador_conduce:si', 'Fecha de nacimiento del conductor', 'Fecha de expedición de carnet', 'segundo_conductor:no']],
+    ['Antecedentes', ['Compañía actual', '¿Cuándo quieres que comience tu seguro?']],
+  ])
+  const valor = (etq: string) => pasos.flatMap((p) => p.operaciones).flatMap((o) => (o.tipo === 'texto' && o.etiqueta === etq ? [o.valor] : []))[0]
+  assert.equal(valor('Fecha de nacimiento del conductor'), '03/02/1990')
+  assert.equal(valor('Fecha de expedición de carnet'), '04/2010', 'carné: MM / AAAA')
+  assert.deepEqual(pasos.map((p) => p.huecos), [[], [], []], 'ningún hueco con el riesgo completo')
+  assert.deepEqual(pasos[2].operaciones[0], { tipo: 'compania', valor: null }, 'sin compañía en el riesgo: no consta')
+  assert.deepEqual(planDatosTurismos({ ...FORM, companiaAnterior: 'Gamma Mutua' }, HOY).pasos[2].operaciones[0], { tipo: 'compania', valor: 'Gamma Mutua' })
+  assert.deepEqual(planDatosTurismos({ ...FORM, companiaActual: 'Gamma Mutua' } as unknown as FormularioAuto, HOY).pasos[2].operaciones[0], { tipo: 'compania', valor: 'Gamma Mutua' }, 'clave opcional companiaActual')
+  const todo = JSON.stringify(pasos)
+  assert.doesNotMatch(todo, /[Cc]olaborador|[Nn]ivel antecedentes|[Dd]irecci[oó]n|Provincia|IBAN|BIC/)
+  assert.equal(supuestos, `Precio con supuestos: ya lo tenía (cambio de seguro), uso diario, efecto 16/10/2026, sin 2º conductor, ${SUPUESTO_COMPANIA_NO_CONSTA}.`)
+  for (const p of pasos) for (const o of p.operaciones) if (o.tipo === 'texto') assert.equal(senalCuentaBancaria([o.etiqueta]), null, o.etiqueta)
+  assert.ok(sinPersonales([...pasos.flatMap((p) => p.huecos), supuestos].join(' ')))
+})
+
+test('v0.6.5 plan (puro): propietario/conductor «No» → hueco; sin dato → «Sí» DECLARADO; sin documento/CP → huecos de «Datos personales»', () => {
+  const HOY = new Date('2026-10-15T10:00:00Z')
+  const no = planDatosTurismos({ ...FORM, tomadorEsConductor: false, tomadorEsPropietario: false }, HOY)
+  assert.ok(no.pasos[1].huecos.some((h) => /conductor distinto/.test(h)) && no.pasos[1].huecos.some((h) => /propietario distinto/.test(h)))
+  assert.ok(!no.pasos[1].operaciones.some((o) => o.tipo === 'opcion' && /^tomador_(conduce|propietario)/.test(o.clave)))
+  const nulo = planDatosTurismos({ ...FORM, tomadorEsConductor: null, tomadorEsPropietario: null }, HOY)
+  assert.match(nulo.supuestos ?? '', /sin 2º conductor, el tomador es el propietario, el tomador es el conductor, compañía actual: sin indicar \(no consta\)\.$/)
+  const pobre = planDatosTurismos({ ...FORM, documentoTomador: null, tomador: null }, HOY)
+  for (const re of [/Número de documento/, /CP del tomador/, /tipo de tomador/]) assert.ok(pobre.pasos[1].huecos.some((h) => re.test(h)), String(re))
+  assert.ok(sinPersonales(pobre.pasos.flatMap((p) => p.huecos).join(' ')))
+})
+
+test('v0.6.5 plan (puro): `fichaTomador` OPCIONAL (tipo, documento, codigoPostal, localidad, fechaNacimiento, fechaCarnet) se usa si existe', () => {
+  const HOY = new Date('2026-10-15T10:00:00Z')
+  const conFicha = { ...FORM, documentoTomador: null, tomador: null, conductor: { fechaNacimiento: '', fechaCarne: '', sexo: 'mujer' }, fichaTomador: { tipo: 'fisica', documento: '00000000T', codigoPostal: '00000', localidad: 'Villaficticia', direccion: null, fechaNacimiento: '1990-02-03', fechaCarnet: '2010-04-05', tipoCarnet: 'B' } } as unknown as FormularioAuto
+  assert.deepEqual(fichaTomadorTurismos(conFicha), { tipo: 'fisica', documento: '00000000T', codigoPostal: '00000', localidad: 'Villaficticia', fechaNacimiento: '1990-02-03', fechaCarnet: '2010-04-05' })
+  assert.equal(tipoTomadorTurismos(conFicha), 'fisica')
+  const p = planDatosTurismos(conFicha, HOY).pasos[1]
+  assert.deepEqual(p.huecos, [])
+  const ops = p.operaciones.flatMap((o) => (o.tipo === 'texto' ? [o.valor] : o.tipo === 'localidad' ? [o.valor] : []))
+  assert.deepEqual(ops, ['00000000T', '00000', 'Villaficticia', '03/02/1990', '04/2010'])
+  // Ficha con nulos o ausente: no consta (nunca relleno).
+  assert.equal(fichaTomadorTurismos(FORM), null)
+  assert.deepEqual(planDatosTurismos({ ...conFicha, fichaTomador: { tipo: null, documento: null, codigoPostal: null, localidad: null } } as unknown as FormularioAuto, HOY).pasos[1].huecos.length, 5)
+  // La ficha que se contradice con el documento → tipo de tomador sin decidir.
+  assert.equal(tipoTomadorTurismos({ ...conFicha, fichaTomador: { tipo: 'juridica', documento: '00000000T' } } as unknown as FormularioAuto), null)
+})
+
+test('v0.6.5 recorrido real: los TRES pasos con su «Siguiente» (bloque del tomador, compañía sin dato → vacía y declarada) y para en «Selección de paquete» con las opciones leídas', async () => {
+  const { context, page, ctx, pulsados, marco, clics, valor } = await abrir()
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, FORM, ctx)
+    await assert.rejects(recorrerPasosTurismos(page, marco, FORM, ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => {
+      const m = (e as Error).message
+      return esMapa(/la pantalla de precios «Selección de paquete» del asistente de Turismos/)(e) &&
+        m.includes(`Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 2), ya lo tenía (cambio de seguro), uso diario, efecto ${dma(iso(masDias(1)))}, sin 2º conductor, ${SUPUESTO_COMPANIA_NO_CONSTA}.`) &&
+        m.includes(`opciones de «Compañía actual del vehículo» leídas (4): ${COMPANIAS.join(' | ')}`) && sinPersonales(m)
+    })
+    assert.equal(await pasoActivoTurismos(marco), 'Selección de paquete')
+    assert.deepEqual(pulsados, [
+      'opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'tarjeta:0', 'opcion:compra:ya_lo_tenia', 'opcion:uso:diario', 'opcion:garaje:calle',
+      'Siguiente', 'Siguiente', 'compania:sin_elegir', 'Siguiente',
+    ], 'tomador/propietario/conductor ya estaban en su valor: no se pulsan; nunca «Anterior»')
+    assert.equal(await valor('ng-z-doc'), '00000000T')
+    assert.equal(await valor('ng-z-cp1'), '00000', 'CP del bloque del TOMADOR')
+    assert.equal(await valor('ng-z-loc1'), 'Villaficticia', 'la propuso el portal: no se teclea')
+    assert.equal(await valor('ng-z-fnac'), '03/02/1990')
+    assert.equal(await valor('ng-z-fcar'), '04/2010')
+    assert.equal(await valor('ng-z-ef'), dma(iso(masDias(1))))
+    assert.equal(await marco.locator('#ng-z-dd250-r').innerText(), '', 'compañía sin dato: vacía')
+    assert.equal(await marco.locator('#ng-z-nx-dropdown-modal-251').count(), 0, 'el panel se cerró')
+    for (const id of ['ng-z-cp2', 'ng-z-cp3', 'ng-z-loc2', 'ng-z-loc3', 'ng-z-col', 'ng-z-niv', 'ng-z-iban', 'ng-z-bic', 'ng-z-prov']) assert.equal(await valor(id), '', `${id} intacto`)
+    assert.equal(await marco.locator('#ng-z-sw').isChecked(), false, 'segundo conductor apagado, sin tocar')
+    assert.deepEqual(await clics(), [], 'ni IBAN/BIC, ni colaborador, ni otros desplegables, ni otros CP, ni el interruptor')
+  } finally {
+    await context.close()
+  }
+})
+
+/** Lleva el asistente hasta «Antecedentes» con el recorrido real (paso 1 y 2) y devuelve el resultado de la compañía. */
+async function hastaCompania(o: Opc, form: FormularioAuto) {
+  const a = await abrir(o)
+  const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, form, a.ctx)
+  const error = await recorrerPasosTurismos(a.page, a.marco, form, a.ctx, r.supuestoVersion, new Date(), 3_000).catch((e: unknown) => e as Error)
+  return { ...a, error, mostrado: await a.marco.locator('#ng-z-dd250-r').innerText(), abiertos: await a.marco.evaluate(() => (window as unknown as { __abiertos: number }).__abiertos) }
+}
+
+test('v0.6.5 compañía actual del riesgo: casa con UNA → elegida (sin supuesto); con VARIAS → hueco sin elegir y sin «Siguiente»; con ninguna → vacía y declarada', async () => {
+  const una = await hastaCompania({}, { ...FORM, companiaAnterior: 'Aseguradora Alfa' })
+  try {
+    assert.equal(una.mostrado, 'ASEGURADORA ALFA, S.A.')
+    assert.ok(una.error instanceof ErrorMapaIncompleto && /Selección de paquete/.test(una.error.message) && !/compañía actual: sin indicar/.test(una.error.message))
+    assert.ok(una.pulsados.includes('compania:elegida'))
+  } finally {
+    await una.context.close()
+  }
+  const dos = await hastaCompania({ companias: ['Gamma Mutua', 'GAMMA MUTUA SEGUROS, S.A.', 'Otra'] }, { ...FORM, companiaAnterior: 'gamma mutua' })
+  try {
+    assert.equal(dos.mostrado, '', 'nunca se adivina entre dos')
+    assert.ok(esMapa(/los datos de «Antecedentes» antes de «SIGUIENTE».*casa con 2 opciones del portal: no se adivina/)(dos.error))
+    assert.match(dos.error.message, /opciones de «Compañía actual del vehículo» leídas \(3\): Gamma Mutua \| GAMMA MUTUA SEGUROS, S\.A\. \| Otra/)
+    assert.equal(await pasoActivoTurismos(dos.marco), 'Antecedentes')
+    assert.equal(dos.pulsados.filter((p) => p === 'Siguiente').length, 2)
+  } finally {
+    await dos.context.close()
+  }
+  const ninguna = await hastaCompania({}, { ...FORM, companiaAnterior: 'Delta Ficticia' })
+  try {
+    assert.equal(ninguna.mostrado, '')
+    assert.ok(ninguna.error.message.includes(SUPUESTO_COMPANIA_NO_CASA) && /Selección de paquete/.test(ninguna.error.message))
+    assert.equal(await ninguna.marco.locator('#ng-z-nx-dropdown-modal-251').count(), 0, 'cerrado sin elegir')
+  } finally {
+    await ninguna.context.close()
+  }
+  const yaTrae = await hastaCompania({ companiaPrefijada: 'Beta Seguros y Reaseguros' }, { ...FORM, companiaAnterior: 'Aseguradora Alfa' })
+  try {
+    assert.equal(yaTrae.mostrado, 'Beta Seguros y Reaseguros', 'el valor del portal no se toca')
+    assert.ok(esMapa(/el portal ya trae una: no se toca/)(yaTrae.error))
+  } finally {
+    await yaTrae.context.close()
+  }
+})
+
+test('guard v0.6.5: la puerta de la compañía actual solo en «Antecedentes» (si no, bloqueo SIN abrir) y veta una opción de emisión antes de pulsarla', async () => {
+  assert.deepEqual(casarCompaniaActualTurismos(COMPANIAS, 'aseguradora alfa'), [0])
+  assert.deepEqual(casarCompaniaActualTurismos(COMPANIAS, 'Beta'), [1], 'sin «Seguros y Reaseguros»')
+  assert.deepEqual(casarCompaniaActualTurismos(COMPANIAS, 'Alf'), [], 'nunca por parecido')
+  assert.deepEqual(casarCompaniaActualTurismos(COMPANIAS, 'S.A.'), [], 'solo forma jurídica: nada')
+  const a = await abrir()
+  try {
+    await a.aPersonales()
+    await assert.rejects(companiaActualTurismosAllianz(a.marco, a.guard, 'Aseguradora Alfa'), EmisionBloqueadaError)
+    assert.equal(await a.marco.evaluate(() => (window as unknown as { __abiertos: number }).__abiertos), 0, 'ni se abre')
+  } finally {
+    await a.context.close()
+  }
+  const b = await abrir({ companias: ['Contratar', 'Otra'] })
+  try {
+    await b.aPersonales()
+    await b.marco.evaluate(() => { (document.querySelector('#cdk-stepper-0-content-1 .sig') as HTMLButtonElement).click() })
+    assert.equal(await pasoActivoTurismos(b.marco), 'Antecedentes')
+    await assert.rejects(companiaActualTurismosAllianz(b.marco, b.guard, 'Contratar'), EmisionBloqueadaError)
+    assert.equal(await b.marco.locator('#ng-z-dd250-r').innerText(), '', 'la opción vetada no se pulsa')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('v0.6.5 «Localidad»: el portal propone OTRA → hueco sin teclear y sin «Siguiente»; sin dato y propuesta → se DECLARA; sin propuesta → hueco', async () => {
+  const a = await abrir({ localidadPortal: 'Otrapoblacion' })
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, FORM, a.ctx)
+    await assert.rejects(recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => esMapa(/huecos de «Datos personales»: «Localidad» \(no es un campo de texto: desplegable\/autocompletado sin puerta en guard\.ts; el portal propone otra/)(e) && sinPersonales((e as Error).message) && !(e as Error).message.includes('Otrapoblacion'))
+    assert.equal(await a.valor('ng-z-loc1'), 'Otrapoblacion', 'no se teclea en el autocompletado')
+    assert.equal(a.pulsados.filter((p) => p === 'Siguiente').length, 1, 'el «Siguiente» de «Datos personales» NO se pulsa')
+    assert.equal(await pasoActivoTurismos(a.marco), 'Datos personales')
+  } finally {
+    await a.context.close()
+  }
+  const sinLocalidad: FormularioAuto = { ...FORM, tomador: { ...FORM.tomador!, poblacion: '' } }
+  const b = await abrir()
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(b.page, b.marco, sinLocalidad, b.ctx)
+    await assert.rejects(recorrerPasosTurismos(b.page, b.marco, sinLocalidad, b.ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => esMapa(/«Selección de paquete»/)(e) && (e as Error).message.includes(SUPUESTO_LOCALIDAD_PORTAL))
+  } finally {
+    await b.context.close()
+  }
+  const c = await abrir({ localidadPortal: null })
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(c.page, c.marco, sinLocalidad, c.ctx)
+    await assert.rejects(recorrerPasosTurismos(c.page, c.marco, sinLocalidad, c.ctx, r.supuestoVersion, new Date(), 3_000), esMapa(/«Localidad» \(el riesgo no la trae y el portal no propuso ninguna/))
+    assert.equal(await pasoActivoTurismos(c.marco), 'Datos personales')
+  } finally {
+    await c.context.close()
+  }
+})
+
+test('v0.6.5 fecha de efecto fuera del rango min/max del portal → hueco, sin teclearla', async () => {
+  const lejos: FormularioAuto = { ...FORM, fechaVencimiento: iso(masDias(200)) }
+  const { context, page, ctx, marco, valor } = await abrir()
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, lejos, ctx)
+    await assert.rejects(recorrerPasosTurismos(page, marco, lejos, ctx, r.supuestoVersion, new Date(), 3_000), esMapa(/«¿Cuándo quieres que comience tu seguro\?» \(la fecha queda fuera del rango que admite el portal\)/))
+    assert.equal(await valor('ng-z-ef'), '')
+  } finally {
+    await context.close()
+  }
+})
+
+test('v0.6.5 sin documento del tomador: para en «Datos personales» ANTES de su «Siguiente» (nada inventado)', async () => {
+  const sinDoc: FormularioAuto = { ...FORM, documentoTomador: null, tomador: { ...FORM.tomador!, documentoIdentidad: '' } }
+  const { context, page, ctx, pulsados, marco, valor } = await abrir()
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, sinDoc, ctx)
+    await assert.rejects(recorrerPasosTurismos(page, marco, sinDoc, ctx, r.supuestoVersion, new Date(), 3_000), esMapa(/los datos de «Datos personales» antes de «SIGUIENTE».*Número de documento/))
+    assert.equal(await valor('ng-z-doc'), '')
+    assert.equal(pulsados.filter((p) => p === 'Siguiente').length, 1)
+  } finally {
+    await context.close()
+  }
+})
+
+test('guard v0.6.5: «Segundo conductor» es un interruptor que SOLO se lee: apagado → ya_marcada; encendido → no_quedo; nunca se pulsa', async () => {
+  for (const encendido of [false, true]) {
+    const { context, guard, marco, clics, aPersonales } = await abrir({ segundoEncendido: encendido })
+    try {
+      await aPersonales()
+      assert.equal(await pasoActivoTurismos(marco), 'Datos personales')
+      assert.deepEqual(await marcarOpcionTurismosAllianz(marco, guard, 'segundo_conductor:no'), encendido ? { estado: 'no_quedo' } : { estado: 'ya_marcada' })
+      assert.equal(await marco.locator('#ng-z-sw').isChecked(), encendido, 'el interruptor no cambia')
+      assert.deepEqual(await clics(), [], 'ni un clic en el interruptor')
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('guard v0.6.5: propietario/conductor «Sí» por la cabecera de SU formulario; sin cabecera → no_unica; «No» y claves de otro paso → bloqueo', async () => {
+  const a = await abrir({ sinDefectos: true })
+  try {
+    await a.aPersonales()
+    assert.deepEqual(await marcarOpcionTurismosAllianz(a.marco, a.guard, 'tomador_conduce:si'), { estado: 'marcada' })
+    assert.deepEqual(await Promise.all(['ng-z-cond-0', 'ng-z-cond-1', 'ng-z-prop-0', 'ng-z-prop-1'].map((id) => a.marco.locator(`#${id}`).isChecked())), [true, false, false, false], 'solo el «Sí» del conductor')
+    assert.deepEqual(await marcarOpcionTurismosAllianz(a.marco, a.guard, 'tomador_propietario:si'), { estado: 'marcada' })
+    assert.equal(await a.marco.locator('#ng-z-prop-0').isChecked(), true)
+    assert.deepEqual(await marcarOpcionTurismosAllianz(a.marco, a.guard, 'tomador:individual'), { estado: 'ya_marcada' })
+    for (const clave of ['tomador_conduce:no', 'tomador_propietario:no', 'segundo_conductor:si']) await assert.rejects(marcarOpcionTurismosAllianz(a.marco, a.guard, clave), EmisionBloqueadaError, clave)
+    // Claves de «Datos del vehículo» con «Datos personales» seleccionado → bloqueo (fase).
+    for (const clave of ['garaje:calle', 'conoce_matricula:si']) await assert.rejects(marcarOpcionTurismosAllianz(a.marco, a.guard, clave), EmisionBloqueadaError, clave)
+  } finally {
+    await a.context.close()
+  }
+  const b = await abrir({ sinDefectos: true, sinCabeceraConductor: true })
+  try {
+    await b.aPersonales()
+    assert.deepEqual(await marcarOpcionTurismosAllianz(b.marco, b.guard, 'tomador_conduce:si'), { estado: 'no_unica', coincidencias: 0 })
+    assert.deepEqual(await Promise.all(['ng-z-cond-0', 'ng-z-prop-0'].map((id) => b.marco.locator(`#${id}`).isChecked())), [false, false], 'nada marcado a ciegas')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('v0.6.5 «Datos personales» con el tomador sin cabecera conductor: el plan lo deja en hueco y no se pulsa «Siguiente»', async () => {
+  const { context, page, ctx, pulsados, marco } = await abrir({ sinDefectos: true, sinCabeceraConductor: true })
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, FORM, ctx)
+    await assert.rejects(recorrerPasosTurismos(page, marco, FORM, ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) =>
+      esMapa(/cómo se marca el tomador conductor «Sí» \(0 coincidencias\)/)(e) && !(e as Error).message.includes(SUPUESTO_TOMADOR_CONDUCE))
+    assert.equal(pulsados.filter((p) => p === 'Siguiente').length, 1)
+  } finally {
+    await context.close()
+  }
+})

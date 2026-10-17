@@ -1589,42 +1589,63 @@ export async function marcarOpcionResueltaHogarAllianz(marco: Frame, guard: Guar
 // ─────────── OPCIONES de Allianz AUTOS Turismos (app Angular `ngx-motor-azs`, 15/10/2026; v0.6.1 del bot) ───────────
 
 /**
- * Opción marcable de «Datos del vehículo» de Turismos. `clave` = lo que el adaptador pide (por `ctx.marcarOpcionTurismos`); la
- * puerta la traduce aquí a su ANCLA: `pregunta` (nombre accesible del grupo o etiqueta inmediatamente anterior; `null` = el inventario
- * no da la pregunta) + `grupo`, el conjunto EXACTO y COMPLETO de opciones del grupo (las del inventario saneado del 15/10/2026). Un
- * grupo con otras opciones (de más o de menos) no es el de la clave → hueco, nunca «el parecido».
+ * Opción marcable del asistente de Turismos. `clave` = lo que el adaptador pide (por `ctx.marcarOpcionTurismos`); la puerta la
+ * traduce aquí a su ANCLA: `paso` (la pestaña que debe estar seleccionada: otra → bloqueo), `pregunta` (nombre accesible del grupo,
+ * etiqueta inmediatamente anterior o, v0.6.5, el `text` del `nx-x-common-header` de SU formulario; `null` = el inventario no da la
+ * pregunta) + `grupo`, el conjunto EXACTO y COMPLETO de opciones del grupo. Un grupo con otras opciones (de más o de menos) no es el
+ * de la clave → hueco, nunca «el parecido». `interruptor` (v0.6.5): la clave NO es un grupo de opciones sino un interruptor
+ * (`role=switch`) con esa etiqueta que debe quedar APAGADO; la puerta solo lo LEE y jamás lo pulsa.
  */
-export type OpcionTurismosAllianz = { readonly clave: string; readonly pregunta: string | null; readonly opcion: string; readonly grupo: readonly string[] }
+export type OpcionTurismosAllianz = {
+  readonly clave: string
+  readonly paso: string
+  readonly pregunta: string | null
+  readonly opcion: string
+  readonly grupo: readonly string[]
+  readonly interruptor?: true
+}
 
-const opcionTurismos = (clave: string, pregunta: string | null, opcion: string, grupo: readonly string[]): OpcionTurismosAllianz =>
-  Object.freeze({ clave, pregunta, opcion, grupo: Object.freeze([...grupo]) })
+/** Pasos del asistente de Turismos donde la puerta marca algo (HTML real del trabajo 590a330e, 17/10/2026: un `tabpanel` por paso). */
+export const PASOS_OPCIONES_TURISMOS_ALLIANZ = Object.freeze({ vehiculo: 'Datos del vehículo', personales: 'Datos personales' } as const)
+
+const opcionTurismos = (clave: string, paso: string, pregunta: string | null, opcion: string, grupo: readonly string[]): OpcionTurismosAllianz =>
+  Object.freeze({ clave, paso, pregunta, opcion, grupo: Object.freeze([...grupo]) })
+const interruptorApagadoTurismos = (clave: string, paso: string, etiqueta: string): OpcionTurismosAllianz =>
+  Object.freeze({ clave, paso, pregunta: null, opcion: etiqueta, grupo: Object.freeze([]), interruptor: true as const })
 
 const GRUPO_SI_NO = ['Sí', 'No']
 const GRUPO_GARAJE = ['En la calle', 'En un garaje colectivo', 'En un garaje individual']
 const GRUPO_TIPO_TOMADOR = ['Individual', 'Empresa']
 const GRUPO_COMPRA = ['Sí, lo he comprado nuevo', 'No, ya lo tenía y quiero cambiar de seguro', 'Sí, lo he comprado de 2ª mano a un particular', 'Sí, lo he comprado de 2ª mano a un concesionario']
 const GRUPO_USO = ['Ocasional (fines de semana, vacaciones, etc)', 'A diario y fines de semana', 'Actividad laboral']
+const P_VEH = PASOS_OPCIONES_TURISMOS_ALLIANZ.vehiculo
+const P_PER = PASOS_OPCIONES_TURISMOS_ALLIANZ.personales
 
 /**
- * LISTA CERRADA de lo que el robot marca en «Datos del vehículo» de Turismos. v0.6.1: consultar por matrícula; garaje «En la calle»;
+ * LISTA CERRADA de lo que el robot marca en el asistente de Turismos. v0.6.1: consultar por matrícula; garaje «En la calle»;
  * tomador Individual/Empresa. v0.6.2 (15/10/2026, decisión de Alberto: valores «no determinantes» DECLARADOS junto al precio,
  * `supuestosAuto` de module-tarificacion): compra (nuevo / ya lo tenía; la 2ª mano NO: ningún dato la pide), uso, garaje colectivo/individual y segundo
- * conductor «No». Todas son preguntas de TARIFICACIÓN del primer paso (ninguna emite, guarda ni paga). El segundo conductor «Sí» NO
- * está: abriría los datos de otra persona, sin mapa. Mismo anclaje que el resto (grupo con el conjunto EXACTO de opciones).
+ * conductor «No». v0.6.5 (HTML real del trabajo 590a330e, 17/10/2026): el tomador, «¿Es el tomador de la póliza el propietario?»,
+ * «El tomador ¿también conduce el vehículo?» y el «Segundo conductor» NO están en «Datos del vehículo» sino en «Datos personales»
+ * (otro `tabpanel`, oculto hasta pulsar «Siguiente»); el segundo conductor es un INTERRUPTOR (`role=switch`, apagado por defecto)
+ * que solo se lee. Propietario/conductor: solo «Sí» (el «No» abre los datos de OTRA persona, sin mapa). Todas son preguntas de
+ * TARIFICACIÓN (ninguna emite, guarda ni paga). Mismo anclaje que el resto (grupo con el conjunto EXACTO de opciones).
  */
 export const OPCIONES_TURISMOS_ALLIANZ: readonly OpcionTurismosAllianz[] = Object.freeze([
-  opcionTurismos('conoce_matricula:si', '¿Conoces la matrícula del vehículo?', 'Sí', GRUPO_SI_NO),
-  opcionTurismos('garaje:calle', null, 'En la calle', GRUPO_GARAJE),
-  opcionTurismos('garaje:colectivo', null, 'En un garaje colectivo', GRUPO_GARAJE),
-  opcionTurismos('garaje:individual', null, 'En un garaje individual', GRUPO_GARAJE),
-  opcionTurismos('tomador:individual', null, 'Individual', GRUPO_TIPO_TOMADOR),
-  opcionTurismos('tomador:empresa', null, 'Empresa', GRUPO_TIPO_TOMADOR),
-  opcionTurismos('compra:nuevo', null, 'Sí, lo he comprado nuevo', GRUPO_COMPRA),
-  opcionTurismos('compra:ya_lo_tenia', null, 'No, ya lo tenía y quiero cambiar de seguro', GRUPO_COMPRA),
-  opcionTurismos('uso:ocasional', null, 'Ocasional (fines de semana, vacaciones, etc)', GRUPO_USO),
-  opcionTurismos('uso:diario', null, 'A diario y fines de semana', GRUPO_USO),
-  opcionTurismos('uso:laboral', null, 'Actividad laboral', GRUPO_USO),
-  opcionTurismos('segundo_conductor:no', 'Segundo conductor', 'No', GRUPO_SI_NO),
+  opcionTurismos('conoce_matricula:si', P_VEH, '¿Conoces la matrícula del vehículo?', 'Sí', GRUPO_SI_NO),
+  opcionTurismos('garaje:calle', P_VEH, null, 'En la calle', GRUPO_GARAJE),
+  opcionTurismos('garaje:colectivo', P_VEH, null, 'En un garaje colectivo', GRUPO_GARAJE),
+  opcionTurismos('garaje:individual', P_VEH, null, 'En un garaje individual', GRUPO_GARAJE),
+  opcionTurismos('tomador:individual', P_PER, '¿Quién es el tomador?', 'Individual', GRUPO_TIPO_TOMADOR),
+  opcionTurismos('tomador:empresa', P_PER, '¿Quién es el tomador?', 'Empresa', GRUPO_TIPO_TOMADOR),
+  opcionTurismos('compra:nuevo', P_VEH, null, 'Sí, lo he comprado nuevo', GRUPO_COMPRA),
+  opcionTurismos('compra:ya_lo_tenia', P_VEH, null, 'No, ya lo tenía y quiero cambiar de seguro', GRUPO_COMPRA),
+  opcionTurismos('uso:ocasional', P_VEH, null, 'Ocasional (fines de semana, vacaciones, etc)', GRUPO_USO),
+  opcionTurismos('uso:diario', P_VEH, null, 'A diario y fines de semana', GRUPO_USO),
+  opcionTurismos('uso:laboral', P_VEH, null, 'Actividad laboral', GRUPO_USO),
+  interruptorApagadoTurismos('segundo_conductor:no', P_PER, 'Segundo conductor'),
+  opcionTurismos('tomador_propietario:si', P_PER, '¿Es el tomador de la póliza el propietario?', 'Sí', GRUPO_SI_NO),
+  opcionTurismos('tomador_conduce:si', P_PER, 'El tomador ¿también conduce el vehículo?', 'Sí', GRUPO_SI_NO),
 ])
 export const PASO_TURISMOS_ALLIANZ = 'Datos del vehículo'
 export const GRUPO_TURISMOS_ALLIANZ = '¿Conoces la matrícula del vehículo?'
@@ -1668,9 +1689,30 @@ export function grupoOpcionesTurismosCasa(leidas: readonly string[], esperadas: 
 }
 
 /**
- * Marca UNA opción de «Datos del vehículo» de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
+ * v0.6.5: estado de un INTERRUPTOR (`input[type=checkbox][role=switch]`) de Turismos por su etiqueta EXACTA, en la zona `appArea` y
+ * fuera de la cabecera. SOLO LECTURA: nunca se pulsa. Uno y apagado → `ya_marcada` (queda en «No»); encendido → `no_quedo` (hueco:
+ * no se apaga a ciegas); ninguno o varios → `no_unica`. Solo la llama `marcarOpcionTurismosAllianz` tras sus comprobaciones.
+ */
+async function leerInterruptorApagadoTurismos(marco: Frame, etiqueta: string): Promise<ResultadoOpcionHogar> {
+  const leidos = await marco
+    .locator(SEL_ZONA_APP_TURISMOS)
+    .locator('input[type=checkbox][role=switch]')
+    .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const h = el as HTMLInputElement
+        return { etiqueta: h.labels && h.labels.length ? Array.from(h.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '', encendido: h.checked || h.getAttribute('aria-checked') === 'true' }
+      }),
+    )
+  const hits = leidos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, etiqueta))
+  if (hits.length !== 1) return { estado: 'no_unica', coincidencias: hits.length }
+  return hits[0].encendido ? { estado: 'no_quedo' } : { estado: 'ya_marcada' }
+}
+
+/**
+ * Marca UNA opción del asistente de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
  * Mismas exigencias que `marcarOpcionRiesgoHogarAllianz`: guard limpio y sin ventanas de red abiertas; `clave` en la lista
- * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; pestaña seleccionada «Datos del vehículo» (todo eso, bloqueo);
+ * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; pestaña seleccionada = el paso de la clave (todo eso, bloqueo);
  * dentro de la zona `appArea` y fuera de la cabecera, EXACTAMENTE un control cuya etiqueta casa EXACTA, de un grupo con la
  * pregunta de la clave (si la tiene) y con el conjunto COMPLETO de opciones de la clave (si ya está marcado no se pulsa nada);
  * `comprobarBoton` sobre control y etiqueta ANTES del único clic; después, que quede marcado. Grupo no encontrado o ambiguo →
@@ -1683,10 +1725,11 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
   if (!op) throw new EmisionBloqueadaError('boton', `opción de Turismos fuera de la lista cerrada: «${clave.slice(0, 80)}»`)
   if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera de la app de Allianz AUTOS')
   await exigirSinCuentaBancaria(marco.page())
-  // Anclaje (revisión 15/10/2026): pestaña seleccionada = «Datos del vehículo» y la opción es de SU grupo. Otro grupo u otro paso → bloqueo.
+  // Anclaje (revisión 15/10/2026; v0.6.5 por clave): pestaña seleccionada = el paso DE LA CLAVE y la opción es de SU grupo. Otro paso → bloqueo.
   const pestanas = marco.getByRole('tab', { selected: true })
   const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
-  if (activa !== PASO_TURISMOS_ALLIANZ) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera del paso «Datos del vehículo»')
+  if (activa !== op.paso) throw new EmisionBloqueadaError('fase', `opción de Turismos fuera del paso «${op.paso}»`)
+  if (op.interruptor) return leerInterruptorApagadoTurismos(marco, op.opcion)
   const todos = await marco
     .locator(SEL_ZONA_APP_TURISMOS)
     .locator('input[type=radio]')
@@ -1702,6 +1745,12 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
         // Sin nombre accesible: la etiqueta INMEDIATAMENTE anterior al grupo (`<label>`/`nx-label`), y nada más lejos.
         const prev = g?.previousElementSibling as HTMLElement | null | undefined
         if (grupo.trim() === '' && prev && /^(LABEL|NX-LABEL)$/.test(prev.tagName)) grupo = prev.innerText || prev.textContent || ''
+        // v0.6.5 (HTML real 590a330e): sin nada de lo anterior, la cabecera `nx-x-common-header` HIJA DIRECTA de SU formulario (su `text`).
+        if (grupo.trim() === '') {
+          const f = g?.closest('form')
+          const cab = f ? Array.from(f.children).find((c) => c.tagName === 'NX-X-COMMON-HEADER') : undefined
+          if (cab) grupo = cab.getAttribute('text') || (cab as HTMLElement).innerText || cab.textContent || ''
+        }
         // Hermanos: los del mismo `name`; sin `name`, los del contenedor de grupo más cercano; sin ninguno de los dos, solo él (no casará).
         const hermanas = (h.name
           ? Array.from(document.querySelectorAll('input[type=radio]')).filter((x) => (x as HTMLInputElement).name === h.name)
@@ -1735,6 +1784,102 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
   await label.click()
   guard.comprobar()
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}
+
+// ─────────── «Compañía actual del vehículo» de Allianz AUTOS Turismos (v0.6.5 del bot, 17/10/2026) ───────────
+// HTML real del trabajo 590a330e: en «Antecedentes», un `nx-dropdown` (role=combobox, `aria-controls` → su panel de opciones) SIN
+// etiqueta de texto, dentro del `<form>` cuya cabecera `nx-x-common-header` dice «Compañía actual del vehículo». Las opciones solo
+// existen al abrirlo. Esta puerta es el ÚNICO camino del adaptador para abrirlo, leer sus opciones y, como mucho, elegir UNA.
+
+export const PASO_COMPANIA_ACTUAL_TURISMOS = 'Antecedentes'
+export const CABECERA_COMPANIA_ACTUAL_TURISMOS = 'Compañía actual del vehículo'
+export const SEL_COMPANIA_ACTUAL_TURISMOS = `form:has(> nx-x-common-header[text="${CABECERA_COMPANIA_ACTUAL_TURISMOS}"]) nx-dropdown[role=combobox]`
+const MS_PANEL_COMPANIA = 3_000
+const MAX_OPCIONES_COMPANIA = 200
+
+export type ResultadoCompaniaActualTurismos =
+  /** Elegida la ÚNICA opción que casa con `buscada`. */
+  | { estado: 'elegida'; opciones: string[]; elegida: string }
+  /** Sin `buscada` (no consta): se abrió, se leyó y se cerró sin elegir. */
+  | { estado: 'sin_elegir'; opciones: string[] }
+  /** `buscada` no casa con ninguna opción: se cerró sin elegir. */
+  | { estado: 'no_casa'; opciones: string[] }
+  /** `buscada` casa con VARIAS: nunca se adivina; se cerró sin elegir. */
+  | { estado: 'ambigua'; opciones: string[]; coincidencias: number }
+  /** El portal ya enseña un valor: no se toca. */
+  | { estado: 'con_valor'; opciones: string[] }
+  /** Control ausente/repetido, panel que no abre o elección que no quedó. */
+  | { estado: 'no_unica'; opciones: string[]; motivo: string }
+
+const PALABRAS_VACIAS_COMPANIA = new Set(['sa', 'sau', 'seguros', 'seguro', 'reaseguros', 'compania', 'cia', 'de', 'y', 'sociedad', 'anonima', 'grupo', 'the'])
+/** Nombre de aseguradora normalizado (sin tildes, puntuación, forma jurídica ni «seguros»). Puro. */
+export function normalizarCompaniaTurismos(t: string | null | undefined): string {
+  return planoOpcion(t).replace(/\bs\s*\.\s*a\s*\.?(\s*u\s*\.?)?(?=[\s,]|$)/g, ' ').replace(/[^a-z0-9ñ ]+/g, ' ').split(' ').filter((w) => w !== '' && !PALABRAS_VACIAS_COMPANIA.has(w)).join(' ')
+}
+/** Índices de las opciones que casan EXACTAMENTE (normalizadas) con `buscada`; vacía si `buscada` normaliza a nada. Puro. */
+export function casarCompaniaActualTurismos(opciones: readonly string[], buscada: string): number[] {
+  const b = normalizarCompaniaTurismos(buscada)
+  if (b === '') return []
+  return opciones.flatMap((o, i) => (normalizarCompaniaTurismos(o) === b ? [i] : []))
+}
+
+/**
+ * Abre «Compañía actual del vehículo», LEE sus opciones y elige como mucho UNA (la única que casa con `buscada`), o ninguna.
+ * Exige: guard limpio y sin ventanas de red; marco de la app de Turismos; sin campos bancarios; pestaña «Antecedentes» (todo eso,
+ * bloqueo); EXACTAMENTE un control bajo esa cabecera, en `appArea` y fuera de la cabecera de ePac; `comprobarBoton` sobre el
+ * control y sobre la opción ANTES de pulsarlos. Las opciones son las `[role=option]` del panel de SU `aria-controls` y nada más.
+ * Sin elegir → se cierra con Escape. Solo nombres de compañías: ningún dato personal sale de aquí.
+ */
+export async function companiaActualTurismosAllianz(marco: Frame, guard: GuardEmision, buscada: string | null): Promise<ResultadoCompaniaActualTurismos> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'compañía actual de Turismos con una ventana de red abierta')
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'compañía actual de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_COMPANIA_ACTUAL_TURISMOS) throw new EmisionBloqueadaError('fase', `compañía actual de Turismos fuera del paso «${PASO_COMPANIA_ACTUAL_TURISMOS}»`)
+  const control = marco.locator(SEL_ZONA_APP_TURISMOS).locator(SEL_COMPANIA_ACTUAL_TURISMOS).and(marco.locator(SEL_FUERA_CABECERA_TURISMOS)).filter({ visible: true })
+  const n = await control.count()
+  if (n !== 1) return { estado: 'no_unica', opciones: [], motivo: `${n} desplegables` }
+  comprobarBoton(await descripcion(control))
+  const mostrado = (await control.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+  const panelId = ((await control.getAttribute('aria-controls')) ?? '').replace(/["\\]/g, '')
+  if (!panelId) return { estado: 'no_unica', opciones: [], motivo: 'sin aria-controls' }
+  const panel = marco.locator(`[id="${panelId}"]`)
+  await control.click()
+  guard.comprobar()
+  const fin = Date.now() + MS_PANEL_COMPANIA
+  while ((await panel.locator('[role=option]').count().catch(() => 0)) === 0 && Date.now() < fin) await marco.page().waitForTimeout(150)
+  const items = panel.locator('[role=option]')
+  const opciones = (await items.evaluateAll((els) => els.map((e) => ((e as HTMLElement).innerText || e.textContent || '').replace(/\s+/g, ' ').trim()))).slice(0, MAX_OPCIONES_COMPANIA)
+  const cerrar = async () => {
+    await marco.page().keyboard.press('Escape').catch(() => undefined)
+    guard.comprobar()
+  }
+  if (opciones.length === 0) {
+    await cerrar()
+    return { estado: 'no_unica', opciones, motivo: 'el panel no mostró opciones' }
+  }
+  if (mostrado !== '') {
+    await cerrar()
+    return { estado: 'con_valor', opciones }
+  }
+  if (buscada === null || buscada.trim() === '') {
+    await cerrar()
+    return { estado: 'sin_elegir', opciones }
+  }
+  const hits = casarCompaniaActualTurismos(opciones, buscada)
+  if (hits.length !== 1) {
+    await cerrar()
+    return hits.length === 0 ? { estado: 'no_casa', opciones } : { estado: 'ambigua', opciones, coincidencias: hits.length }
+  }
+  const item = items.nth(hits[0])
+  comprobarBoton(await descripcion(item))
+  await item.click()
+  guard.comprobar()
+  const ahora = (await control.innerText().catch(() => '')).replace(/\s+/g, ' ').trim()
+  if (planoOpcion(ahora) !== planoOpcion(opciones[hits[0]])) return { estado: 'no_unica', opciones, motivo: 'la opción no quedó elegida' }
+  return { estado: 'elegida', opciones, elegida: opciones[hits[0]] }
 }
 
 // ─────────── TARJETAS DE VEHÍCULO de Allianz AUTOS Turismos (v0.6.4 del bot, 17/10/2026) ───────────

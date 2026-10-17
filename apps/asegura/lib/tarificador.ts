@@ -27,6 +27,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
+import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
@@ -188,6 +189,32 @@ async function leerTomadorFicha(correduriaId: string, clienteId: string): Promis
     from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
   const f = filas[0]
   return f ? { dni: f.dni, nombre: f.nombre, apellidos: f.apellidos, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona } : null
+}
+
+/**
+ * Tomador de la ficha para `fichaTomador` (Allianz auto/moto, 17/10/2026): las columnas que lee Codeoscopic (`clienteOrigenDe`)
+ * más `ciudad`/`provincia` y los carnés, TAL CUAL (lo cifrado, cifrado), de ESTA correduría y de la ficha VIVA (una lápida de
+ * fusión no da datos: podrían ser viejos). Los abre `fichaTomadorAutoDeFicha`. `null` = no hay ficha viva o la lectura falló
+ * (entonces el riesgo va SIN `fichaTomador`: «no se miró», nunca «no tiene»).
+ */
+async function leerFichaTomadorAuto(correduriaId: string, clienteId: string): Promise<FilaFichaTomadorAuto | null> {
+  try {
+    const filas = await prisma.$queryRaw<{ dni: string | null; direccion: string | null; codigo_postal: string | null; ciudad: string | null; provincia: string | null; fecha_nacimiento: string | null; tipo_persona: string | null }[]>`
+      select dni, direccion, codigo_postal, ciudad, provincia, fecha_nacimiento, tipo_persona::text as tipo_persona
+      from seguros.clientes
+      where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+    const f = filas[0]
+    if (!f) return null
+    // Carnés aparte: si esta lectura falla, `null` (no se pudieron leer), no «no tiene carné».
+    const carnets = await prisma.$queryRaw<{ tipo: string; fecha_carnet: string | null }[]>`
+      select tipo, fecha_carnet from seguros.cliente_carnets_conducir
+      where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+      .then((ks) => ks.map((k) => ({ tipo: k.tipo, fechaCarnet: k.fecha_carnet })))
+      .catch(() => null)
+    return { dni: f.dni, direccion: f.direccion, codigoPostal: f.codigo_postal, ciudad: f.ciudad, provincia: f.provincia, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona, carnets }
+  } catch {
+    return null
+  }
 }
 
 /** DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`. */
@@ -375,6 +402,13 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
       return null
     }
     riesgo = conDatos.riesgo
+  }
+  // Tomador de la ficha (Allianz auto/moto, 17/10/2026): tipo, documento, CP, localidad, dirección y fechas, campo a campo con
+  // tres estados. Igual que el NIF: solo en la respuesta, nunca en BD. No falla el trabajo: lo que no consta es hueco del bot.
+  if (modo !== 'exploracion' && modo !== 'humo' && necesitaFichaTomador(f.compania, f.ramo)) {
+    const fila = f.cliente_id ? await leerFichaTomadorAuto(f.correduria_id, f.cliente_id) : null
+    const conFicha = aplicarFichaTomador(f.compania, f.ramo, riesgo, () => fichaTomadorAutoDeFicha(fila, decryptField, f.ramo))
+    riesgo = conFicha
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base

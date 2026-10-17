@@ -123,9 +123,10 @@ export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknow
  * inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA.
  */
 export function riesgoSinNifTomador<T>(riesgo: T): T {
-  if (!esObj(riesgo) || !('documentoTomador' in riesgo || 'datosTomador' in riesgo)) return riesgo
-  // También `datosTomador` (nombre, apellidos, nacimiento: mismo régimen que el NIF, se inyectan al entregar).
-  const { documentoTomador: _fuera, datosTomador: _fuera2, ...resto } = riesgo
+  if (!esObj(riesgo) || !('documentoTomador' in riesgo || 'datosTomador' in riesgo || 'fichaTomador' in riesgo)) return riesgo
+  // También `datosTomador` (nombre, apellidos, nacimiento: mismo régimen que el NIF, se inyectan al entregar) y
+  // `fichaTomador` (17/10/2026: documento, CP, localidad, dirección y fechas de la ficha; mismo régimen).
+  const { documentoTomador: _fuera, datosTomador: _fuera2, fichaTomador: _fuera3, ...resto } = riesgo
   return resto as T
 }
 
