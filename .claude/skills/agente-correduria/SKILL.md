@@ -46,7 +46,7 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   congelada: no lo uses como fuente. Lectura: `apps/asegura` (rol `prisma_seguros`) →
   `/api/operador/resumen` (Bearer `ASEGURA_OPERADOR_SECRET`) → plataforma
   `/api/correduria/cartera`. La ingesta de CIMA la escribe el CRM (repo `asegura`, ya de
-  Alberto) con el rol `crm_seguros`; su adaptador Java vive en el Fly de Manuel y NO se toca.
+  Alberto) con el rol `crm_seguros`; su adaptador Java es de Alberto (Fly `grupo-asegura`) y NO se reescribe; los secrets TIREA de producción siguen fuera (skill `cima-ingesta`).
 - **Datos = PII sensible de verdad** (salud en decesos/vida, DNI, matrículas). Nada de
   volcar registros de clientes a chats, commits o informes: agregados y conteos, sí;
   filas con nombres, solo si Alberto pide un caso concreto.
