@@ -20,13 +20,20 @@ import {
   VERSION_TEXTOS_WEB,
 } from '@central/module-seguros'
 
-import { AMBITO, SITIO_URL, url } from '@/lib/sitio'
+import { AMBITO, OG_IMAGEN, SITIO_URL, url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
   title: 'Aviso legal',
   description:
     'Titular, objeto, condiciones de uso, propiedad intelectual, ley aplicable y fuero de la web de Grupo ASegura, correduría de seguros que media en toda España.',
   alternates: { canonical: url('/legal/aviso-legal') },
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Grupo ASegura',
+    url: url('/legal/aviso-legal'),
+    images: [OG_IMAGEN],
+  },
   robots: { index: true, follow: true },
 }
 

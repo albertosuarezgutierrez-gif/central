@@ -8,11 +8,35 @@
 // aparte a la que nadie entra. De ahí el bloque de aviso encima del botón y el
 // consentimiento explícito, que va sin marcar por defecto (una casilla premarcada
 // no es consentimiento válido).
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import Link from 'next/link'
+import * as CookieConsent from 'vanilla-cookieconsent'
 import { MEDIADOR } from '@central/module-seguros'
 import { TIPOS_SEGURO, ETIQUETA_TIPO, CAMPO_HONEYPOT, MAX_COMENTARIO } from '@/lib/contrato-lead'
 import { medir } from '@/lib/medir'
+import { atribucionFirstTouch, capturarAtribucion, CONSENTIMIENTO_VERSION, type Atribucion } from '@/lib/atribucion'
+
+/** First-touch de la sesión. Solo escribe en sessionStorage con el sí de estadística (ver `lib/atribucion.ts`). */
+function leerAtribucion(): Atribucion | null {
+  try {
+    const actual = capturarAtribucion(window.location.href, document.referrer, new Date())
+    let almacen: Storage | null = null
+    try {
+      almacen = window.sessionStorage
+    } catch {
+      almacen = null
+    }
+    let puedeGuardar = false
+    try {
+      puedeGuardar = CookieConsent.acceptedCategory('statistics')
+    } catch {
+      puedeGuardar = false
+    }
+    return atribucionFirstTouch(almacen, actual, puedeGuardar)
+  } catch {
+    return null
+  }
+}
 
 // El aspecto de los campos (alto táctil, anillo de foco, los 16 px exactos que
 // evitan el zoom de Safari en iPhone) vive en `globals.css` como `.f-in` y
@@ -28,6 +52,13 @@ type Estado =
 export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string }) {
   const [estado, setEstado] = useState<Estado>({ fase: 'idle' })
   const [consentimiento, setConsentimiento] = useState(false)
+  // Casilla APARTE y opcional: comunicaciones comerciales. Desmarcada por defecto
+  // y no condiciona el envío (el consentimiento no puede ir atado al servicio).
+  const [comerciales, setComerciales] = useState(false)
+  const atribucion = useRef<Atribucion | null>(null)
+  useEffect(() => {
+    atribucion.current = leerAtribucion()
+  }, [])
 
   async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -46,6 +77,9 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
           tipoSeguro: fd.get('tipoSeguro'),
           comentario: fd.get('comentario'),
           consentimiento,
+          consentimiento_version: CONSENTIMIENTO_VERSION,
+          comunicaciones_comerciales: comerciales,
+          atribucion: atribucion.current ?? leerAtribucion(),
           [CAMPO_HONEYPOT]: fd.get(CAMPO_HONEYPOT),
         }),
       })
@@ -173,6 +207,22 @@ export default function Formulario({ ramoPorDefecto }: { ramoPorDefecto?: string
         <span>
           Acepto que <strong>Alberto Suárez Gutiérrez</strong> (Grupo ASegura) trate mis datos para responder a esta
           solicitud y prepararme un presupuesto. Puedo retirar el consentimiento cuando quiera.
+        </span>
+      </label>
+
+      <label
+        style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, marginBottom: 16, cursor: 'pointer' }}
+      >
+        <input
+          type="checkbox"
+          name="comunicaciones_comerciales"
+          checked={comerciales}
+          onChange={(e) => setComerciales(e.target.checked)}
+          style={{ width: 20, height: 20, marginTop: 2, flexShrink: 0 }}
+        />
+        <span>
+          <span style={{ fontWeight: 400, color: 'var(--muted)' }}>(Opcional)</span> Quiero recibir avisos y ofertas de
+          seguros de Grupo ASegura. Puedo darme de baja cuando quiera.
         </span>
       </label>
 

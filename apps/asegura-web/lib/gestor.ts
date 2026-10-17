@@ -52,7 +52,7 @@ export const GESTOR = {
   garantias: [
     'Gratis, seas cliente o no',
     'Vale un PDF o una foto desde el móvil',
-    'El documento no se guarda: solo sus datos',
+    'Tu documento se guarda en tu ficha de la correduría; puedes pedir su borrado en cualquier momento',
     'Subir una póliza no te cambia de correduría',
   ] as const,
   pasos: [

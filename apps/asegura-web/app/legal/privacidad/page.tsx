@@ -33,13 +33,20 @@ import {
   VERSION_TEXTOS_WEB,
 } from '@central/module-seguros'
 
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, PORTAL_URL, url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
   title: 'Política de privacidad',
   description:
     'Qué datos trata Grupo ASegura cuando pides presupuesto, con qué base jurídica, quién más los ve, cuánto se conservan y cómo ejercer tus derechos ante el RGPD.',
   alternates: { canonical: url('/legal/privacidad') },
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Grupo ASegura',
+    url: url('/legal/privacidad'),
+    images: [OG_IMAGEN],
+  },
   robots: { index: true, follow: true },
 }
 
@@ -327,6 +334,26 @@ export default function Privacidad() {
             visitan— y solo eso; el apartado 8 lo explica y ahí puedes retirar el permiso.
           </p>
 
+          <h3 style={h3}>Lo que pasa en «Mis seguros»</h3>
+          <p style={parrafo}>
+            Cuando el usuario sube una póliza en su portal «Mis seguros» (
+            <a href={PORTAL_URL} style={enlace}>clientes.grupoasegura.es</a>), el documento se lee con IA
+            mediante proveedores externos (OpenRouter), que pueden tratarlo fuera del EEE. Esa lectura se
+            rige por la política de privacidad de ese portal:{' '}
+            <a href={`${PORTAL_URL}/legal/privacidad`} style={enlace}>
+              clientes.grupoasegura.es/legal/privacidad
+            </a>
+            .
+          </p>
+          <p style={parrafoUltimo}>
+            Cuando subes una póliza, su contenido se envía a un modelo de lenguaje a través de{' '}
+            <strong>OpenRouter</strong> (empresa estadounidense) para extraer compañía, número, ramo,
+            prima y vencimiento y ahorrarte teclearlo. Eso implica que{' '}
+            <strong>ese documento puede procesarse fuera del Espacio Económico Europeo</strong>, según a
+            qué proveedor enrute la petición. Si no quieres que ocurra, no subas el documento: puedes
+            escribir los datos de tu póliza a mano y el portal funciona igual.
+          </p>
+
           <h3 style={h3}>Datos de salud</h3>
           <p style={destacado}>
             En los ramos de <strong>vida, salud y decesos</strong> la contratación exige datos de
@@ -507,6 +534,10 @@ export default function Privacidad() {
             </li>
             <li>
               El texto de tus conversaciones de WhatsApp, dos años desde cada mensaje (apartado 5).
+            </li>
+            <li>
+              Los documentos que subas en «Mis seguros» sin llegar a ser cliente se borran a los
+              30 días.
             </li>
             <li>
               La documentación de la mediación, durante los plazos que exigen la normativa de

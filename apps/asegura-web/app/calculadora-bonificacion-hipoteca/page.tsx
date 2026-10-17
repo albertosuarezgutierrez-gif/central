@@ -14,7 +14,7 @@ import Formulario from '@/components/Formulario'
 // encima es el coste real. No promete ahorro (lib/ramos.test.ts lo vigila):
 // enseña una cuenta con los datos de la persona y deja la decisión en su mano.
 
-const TITULO = 'Calculadora del seguro de la hipoteca: coste real con bonificación'
+const TITULO = 'Calculadora seguro hipoteca: coste real'
 
 export const metadata: Metadata = {
   title: TITULO,

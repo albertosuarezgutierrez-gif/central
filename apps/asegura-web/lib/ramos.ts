@@ -440,7 +440,7 @@ export const RAMOS: readonly Ramo[] = [
     h1: 'Seguro de decesos en toda España',
     title: 'Seguro de decesos en España',
     description:
-      'Correduría de seguros en toda España. Seguro de decesos: capital asegurado, cómo sube la prima con la edad, traslados y qué servicios incluye de verdad tu póliza.',
+      'Correduría de seguros en toda España. Seguro de decesos: capital asegurado, cómo sube la prima con la edad, traslados y qué servicios incluye tu póliza.',
     intro: [
       'El seguro de decesos se encarga del sepelio y de los trámites cuando fallece un asegurado, para que la familia no tenga que organizarlo ni adelantar el dinero en el peor momento. Muchas familias lo tienen desde hace décadas, heredado de los padres, y nadie ha vuelto a mirar qué cubre ni cuánto cuesta cada año.',
       'Somos correduría y trabajamos con varias compañías. Revisamos tu póliza actual antes de proponer nada: a veces lo que conviene es ajustar el capital o la forma de prima, no cambiar de seguro.',
@@ -487,7 +487,7 @@ export const RAMOS: readonly Ramo[] = [
     h1: 'Seguro de responsabilidad civil para perros en toda España',
     title: 'Seguro de RC para perros en España',
     description:
-      'Correduría de seguros en toda España. Seguro de RC para perros: qué exige la Ley de Bienestar Animal, perros potencialmente peligrosos y si tu hogar ya lo cubre.',
+      'Correduría de seguros en toda España. Seguro de RC para perros: qué exige la Ley de Bienestar Animal, perros potencialmente peligrosos y si tu hogar lo cubre.',
     intro: [
       'La Ley 7/2023 de bienestar animal establece que quien tiene un perro debe contratar un seguro de responsabilidad civil por los daños que pueda causar a otras personas. Los perros potencialmente peligrosos ya lo tenían obligatorio desde antes, con su propia normativa y su licencia.',
       'Somos correduría y trabajamos con varias compañías. Miramos primero si tu seguro de hogar ya cubre al perro y en qué condiciones, porque a veces basta con ampliar lo que tienes, y si no, buscamos la póliza que encaja con tu perro.',
@@ -534,7 +534,7 @@ export const RAMOS: readonly Ramo[] = [
     h1: 'Seguro de impago de alquiler para propietarios en toda España',
     title: 'Seguro de impago de alquiler en España',
     description:
-      'Correduría de seguros en toda España. Seguro de impago de alquiler: meses de renta cubiertos, carencia, estudio del inquilino y defensa jurídica en el desahucio.',
+      'Correduría de seguros en toda España. Seguro de impago de alquiler: meses de renta, carencia, estudio del inquilino y defensa jurídica en desahucio.',
     intro: [
       'Si alquilas una vivienda, el riesgo que más pesa no es una avería: es que el inquilino deje de pagar y el desahucio tarde meses. El seguro de impago de alquiler responde de las rentas que no cobras y, según la póliza, de los gastos del procedimiento para recuperar la vivienda.',
       'Somos correduría y trabajamos con varias compañías. Antes de hablar de primas miramos el contrato, la renta y a quién vas a alquilar, porque cada compañía estudia al inquilino a su manera y de ese estudio depende que la póliza se pueda contratar y con qué condiciones.',

@@ -19,7 +19,7 @@ import Link from 'next/link'
 
 import { MEDIADOR, NO_EXCLUSIVIDAD, lineaIdentificacion } from '@central/module-seguros'
 
-import { AMBITO, url } from '@/lib/sitio'
+import { AMBITO, OG_IMAGEN, url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
   title: 'Quiénes somos: correduría en toda España',
@@ -27,6 +27,13 @@ export const metadata: Metadata = {
   // es la misma fuente que pinta el cuerpo de la página.
   description: `${MEDIADOR.marca} es la correduría de ${MEDIADOR.identidad.nombre}, corredor inscrito en la DGSFP (${MEDIADOR.identidad.claveDgsfp}). Qué es una correduría, quién responde y cómo cobramos.`,
   alternates: { canonical: url('/quienes-somos') },
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Grupo ASegura',
+    url: url('/quienes-somos'),
+    images: [OG_IMAGEN],
+  },
   robots: { index: true, follow: true },
 }
 

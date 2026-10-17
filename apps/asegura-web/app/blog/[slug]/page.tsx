@@ -6,7 +6,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { normaPorId, citaLegible } from '@central/module-seguros'
+import { MEDIADOR, normaPorId, citaLegible } from '@central/module-seguros'
 import { ARTICULOS, articuloPorSlug } from '@/lib/articulos'
 import { ramoPorSlug } from '@/lib/ramos'
 import { PORTAL_URL, OG_IMAGEN, url } from '@/lib/sitio'
@@ -71,7 +71,8 @@ export default async function ArticuloPagina({ params }: { params: Promise<{ slu
       <article style={{ maxWidth: 680 }}>
         <h1>{a.h1}</h1>
         <p style={{ fontSize: 14, color: 'var(--muted)', margin: '0 0 20px' }}>
-          <time dateTime={a.fecha}>{fechaLegible(a.fecha)}</time>
+          {/* El mismo autor que declara el JSON-LD (`fichaArticulo`, en `lib/seo.ts`). */}
+          Por {MEDIADOR.identidad.nombre} · <time dateTime={a.fecha}>{fechaLegible(a.fecha)}</time>
           {a.revisado && <> · revisado el <time dateTime={a.revisado}>{fechaLegible(a.revisado)}</time></>}
         </p>
 

@@ -12,13 +12,15 @@ import type { Ramo } from '@/lib/ramos'
 const RUTA = '/seguro-hipoteca-banco-obligatorio'
 const BOE = 'https://www.boe.es/buscar/act.php?id=BOE-A-2019-3814'
 const TITULO = '¿Te obliga el banco a contratar su seguro con la hipoteca?'
+// Solo para `<title>` y og:title: el h1 conserva el TITULO entero.
+const TITULO_META = '¿Te obliga el banco a su seguro de hipoteca?'
 
 export const metadata: Metadata = {
-  title: TITULO,
+  title: TITULO_META,
   description:
     'Qué puede exigirte el banco con la hipoteca y qué no: el seguro de daños, el de vida, la bonificación del tipo y tu derecho a llevar una póliza de otra aseguradora.',
   alternates: { canonical: url(RUTA) },
-  openGraph: { title: TITULO, url: url(RUTA), type: 'website', images: [OG_IMAGEN] },
+  openGraph: { title: TITULO_META, url: url(RUTA), type: 'website', images: [OG_IMAGEN] },
 }
 
 const panel: CSSProperties = {

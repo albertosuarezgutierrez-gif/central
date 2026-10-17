@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/10/2026)** — Correduría · auditoría de captación nacional (solo lectura + informe `docs/ASEGURA-CAPTACION-AUDITORIA-2026-10.md`). El prompt original asumía Symfony inexistente.
+Embudo: 2 leads web en 12 meses, 0 con póliza viva -> cuello = TRÁFICO, no conversión. RGPD pendiente: sin purga de prospectos a 12 meses, `/datos` sin retención, consentimiento sin fecha/texto, sin UTM.
+Hallazgo: home `app/page.tsx:454` dice «el documento no se guarda» pero el portal lo archiva (`polizas/route.ts:134`). La subida «sin ser cliente» vive en asegura-portal (cuenta por correo), no en asegura-web.
+Plan: F1 RGPD+atribución+SEO barato · F2 revisión anual a cartera viva · F3 subida pública IA · F4 tarificación. Pendiente Alberto: GSC (403), retención, salud/vida, asesoría legal, créditos OpenSEO.
+F1 HECHA (PR #4768): consentimiento a `consent_logs` (gestion + comercial separado, versión `privacidad-2026-10-17`), atribución first-touch a `historial_interno`; cron `purga-rgpd` (docs no-cliente 30 d, prospectos web anonimizados 12 m) en MODO INFORME hasta `CORREDURIA_PURGA_RGPD_ACTIVA=1`; textos legales y SEO barato en asegura-web.
+🚨 ANTES de `CORREDURIA_PURGA_RGPD_ACTIVA=1` (revisión architect): la anonimización no mira `cliente_relaciones` ni `portal_autorizacion` (anonimizaría al cónyuge de un cliente) y no redacta el `historial_interno` previo ni `provincia`. Arreglar en `purga-rgpd.ts:265-310` con test.
+
 **(17/10/2026)** — Correduría · seguimiento de sustituciones. Nuevo botón «Anulación confirmada por la compañía» (`POST /api/operador/sustituciones`, columnas propias `anulacion_confirmada_*`; NO `baja_verificada_*`, que cancela en el acto). La fecha ya no cierra un caso: si la vieja vence <= efecto de la nueva → «confirma que no renueva» y no cuenta como doble seguro. Un caso solo se cierra con el sello, con el expediente `anulacion` confirmada o con la baja en CIMA.
 ✅ SQL `2026-10-17_poliza_anulacion_confirmada.sql` aplicada en prod (17/10, OK de Alberto).
 Pendiente de Alberto: Pablo Guzmán, Mapfre 0008414300069, recibo 494,69€ (en BD «cobrado», pero Mapfre avisó el 07/10 de impago); Jose Suárez, anular el recibo de Mapfre emitido el 30/09; Pilar Franco, carta de baja a Occident; Victor, Allianz confirmó la baja con efecto 01/11 (sellarla con el botón).

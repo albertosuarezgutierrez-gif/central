@@ -26,13 +26,20 @@ import {
   VERSION_TEXTOS_WEB,
 } from '@central/module-seguros'
 
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
   title: 'Información del mediador',
   description:
     'Información precontractual del mediador (art. 173 del RDL 3/2020): identidad, registro DGSFP, independencia, remuneración y reclamaciones.',
   alternates: { canonical: url('/legal/informacion-mediador') },
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Grupo ASegura',
+    url: url('/legal/informacion-mediador'),
+    images: [OG_IMAGEN],
+  },
   robots: { index: true, follow: true },
 }
 

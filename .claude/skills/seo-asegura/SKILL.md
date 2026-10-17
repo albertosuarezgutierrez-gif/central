@@ -243,6 +243,25 @@ Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede index
 
 ---
 
+## Estado / lecciones 17/10/2026 (auditoría de captación)
+
+Fuente: `docs/ASEGURA-CAPTACION-AUDITORIA-2026-10.md` y PR #4768.
+- 🚨 **El contenedor NO puede abrir `grupoasegura.es`** (proxy 403 / sin DNS). Un SEO «en vivo» solo se
+  hace desde código o con Search Console. El cron SEO recibe 403 de GSC.
+- ✅ Arreglado en el PR #4768: H1 comercial, autor visible, `next/font`, `og:url` por página, títulos
+  ≤60 y descripciones ≤155, footer sin `h4`.
+- ⏳ Pendiente: `image` en el JSON-LD del Article (`lib/seo.ts`); canibalización (baja de seguro:
+  `/carta-baja-seguro` + 3 artículos; siniestros; hipoteca; 3 páginas de RC; dos de salud), que se
+  valida con GSC antes de fusionar o redirigir. FAQPage ya no da rich results (desde 2023): no es palanca.
+- Competencia (consultada el 17/10/2026): Rastreator J3257, Acierto J3208, Kelisto J-3607, Selectra
+  (agencia AJ0260), CHECK24, Coverfy, Life5 y Barón Seguros J-59. **Ninguno ofrece «sube el PDF y te
+  damos un diagnóstico»**: esa es la diferencia a contar.
+- Ramos con hueco: comunidades, RC profesional, decesos y vida hipoteca.
+- `robots` permite todos los bots de IA; no hace falta `llms.txt`. Visibilidad en IA: mídela con OpenSEO
+  `ai_visibility` (gasta créditos: pide OK a Alberto).
+
+---
+
 ## Redes sociales
 
 **Estado: no hay perfiles.** No los crees. Lo que sí puedes hacer sin permiso adicional es

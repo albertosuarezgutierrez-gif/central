@@ -9,7 +9,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { VERSION_TEXTOS_WEB, FECHA_TEXTOS_WEB } from '@central/module-seguros'
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 import { POSTHOG_KEY } from '@/lib/analitica'
 import BotonCookies from '@/components/BotonCookies'
 
@@ -20,6 +20,13 @@ export const metadata: Metadata = {
   // Como las otras tres legales: sin canonical, una página que está en el
   // sitemap puede indexarse por varias URLs y repartir la señal.
   alternates: { canonical: url('/legal/cookies') },
+  openGraph: {
+    type: 'website',
+    locale: 'es_ES',
+    siteName: 'Grupo ASegura',
+    url: url('/legal/cookies'),
+    images: [OG_IMAGEN],
+  },
 }
 
 export default function Cookies() {

@@ -46,7 +46,7 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   congelada: no lo uses como fuente. Lectura: `apps/asegura` (rol `prisma_seguros`) →
   `/api/operador/resumen` (Bearer `ASEGURA_OPERADOR_SECRET`) → plataforma
   `/api/correduria/cartera`. La ingesta de CIMA la escribe el CRM (repo `asegura`, ya de
-  Alberto) con el rol `crm_seguros`; su adaptador Java vive en el Fly de Manuel y NO se toca.
+  Alberto) con el rol `crm_seguros`; su adaptador Java es de Alberto (Fly `grupo-asegura`) y NO se reescribe; los secrets TIREA de producción siguen fuera (skill `cima-ingesta`).
 - **Datos = PII sensible de verdad** (salud en decesos/vida, DNI, matrículas). Nada de
   volcar registros de clientes a chats, commits o informes: agregados y conteos, sí;
   filas con nombres, solo si Alberto pide un caso concreto.
@@ -161,6 +161,9 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    BOE) que afecten a un corredor: regulación, ramos, compañías vivas de la casa.
 4. **Aprende:** si descubriste algo estructural (del sector o del negocio), añádelo a
    `references/sector.md` por PR — conocimiento acumulativo, no notas de un día.
+4b. **Captación (solo lectura):** revisa el informe de `purga-rgpd` (Telegram; sigue en modo informe
+   hasta `CORREDURIA_PURGA_RGPD_ACTIVA=1`) y las cifras de leads web por fuente y utm (prefijo
+   «Atribución web: » en `historial_interno`). Sigue sin contactar a nadie.
 5. **Informa:** Telegram vía plataforma `/api/internal/alerta` (Bearer `ALERTA_TOKEN`):
    estado cartera + vencimientos + 1-3 titulares del sector + qué aprendió. Corto.
 6. **Bitácora:** auto-informe en `docs/AGENTES-BITACORA.md` (PR de registro, se

@@ -55,6 +55,10 @@
       "schedule": "25 3 * * *"
     },
     {
+      "path": "/api/cron/purga-rgpd",
+      "schedule": "47 3 * * *"
+    },
+    {
       "path": "/api/cron/google-contactos",
       "schedule": "37 * * * *"
     },

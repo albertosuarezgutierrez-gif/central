@@ -39,7 +39,8 @@ test('la landing dice las cuatro cosas que la hacen distinta de un comparador', 
   const t = textoGestor()
   assert.match(t, /cualquier compañ[ií]a/i)
   assert.match(t, /sin ser cliente|seas cliente o no/i)
-  assert.match(t, /no se guarda|no se almacena/i)
+  assert.match(t, /puedes pedir su borrado/i, 'la landing ya no dice que el documento se puede pedir borrar')
+  assert.doesNotMatch(t, /El documento no se guarda/, 'vuelve la frase falsa: el documento SÍ se guarda en la ficha')
   assert.match(t, /casilla aparte|independiente/i)
 })
 

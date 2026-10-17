@@ -149,6 +149,16 @@ Vault, `PII_LOOKUP_KEY` idéntica a la de `central-asegura`, secretos de sesión
 `PORTAL_PUBLIC_URL`) más `CRON_SECRET` en `central-asegura`. Tabla completa en el documento (§4) y
 orden en §9.
 
+### Leads web: consentimiento, atribución y purga (auditoría 17/10/2026)
+- Lead web → `consent_logs` con DOS filas, `gestion` y `comercial` (esta solo si la web la informa);
+  `CONSENTIMIENTO_VERSION` en `apps/asegura-web/lib/atribucion.ts`. `consent_logs` solo admite añadir filas.
+- Atribución first-touch → `historial_interno` con prefijo «Atribución web: » + JSON. A futuro:
+  `clientes.origen_web jsonb`.
+- Cron `apps/asegura/app/api/cron/purga-rgpd`: documentos `subido_por='cliente'` de leads sin póliza a los
+  30 días; prospectos `fuente='web'` anonimizados a los 12 meses. **MODO INFORME** hasta
+  `CORREDURIA_PURGA_RGPD_ACTIVA=1`. Pendiente: textos antiguos de historial y presupuestos pueden conservar PII.
+- Métrica real: solo 2 leads web (sept. y oct. 2026). El cuello de botella es el tráfico, no el formulario.
+
 9. **Siniestros: dos orígenes, dos reglas.** En uno de CIMA el estado lo fija la compañía (CIMA lo
    reescribe en cada pull) y se anota lo que CIMA no manda; en uno nuestro, la referencia de la
    compañía va TAMBIÉN a `id_siniestro_entidad` para que el pull case y no duplique.
