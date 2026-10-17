@@ -790,6 +790,17 @@ test('guard: etiqueta pedida de contratación/pago o bancaria → RECHAZO (bloqu
   }
 })
 
+test('guard: pestaña seleccionada distinta de «Datos del vehículo» → RECHAZO (fase) sin pulsar la tarjeta', async () => {
+  const { context, marco, guard } = await conTarjetas({ tarjetas: TARJETAS })
+  try {
+    await marco.evaluate(() => { const t = document.querySelectorAll('nx-multi-step-item'); t[0].setAttribute('aria-selected', 'false'); t[1].setAttribute('aria-selected', 'true') })
+    await assert.rejects(marcarTarjetaVehiculoTurismosAllianz(marco, guard, 0, TARJETAS[0]!), (e: unknown) => e instanceof EmisionBloqueadaError && !(e instanceof ErrorFronteraEmision))
+    assert.deepEqual(await marcadas(marco), [false, false, false, false, false])
+  } finally {
+    await context.close()
+  }
+})
+
 test('guard: una TARJETA del portal con texto de contratación, o un campo bancario visible en la pantalla → bloqueo sin pulsar', async () => {
   const a = await conTarjetas({ tarjetas: ['Contratar ahora este vehículo', TARJETAS[0]!] })
   try {

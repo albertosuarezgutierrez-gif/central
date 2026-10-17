@@ -1810,10 +1810,11 @@ export async function marcarTarjetaVehiculoTurismosAllianz(marco: Frame, guard: 
   const t = tarjetas[indice]
   if (!t || t.etiqueta !== etiqueta.replace(/\s+/g, ' ').trim()) return { estado: 'no_unica', coincidencias: tarjetas.filter((x) => x.etiqueta === etiqueta).length }
   const id = t.id.replace(/["\\]/g, '')
-  const control = marco.locator(`${SEL_TARJETA_VEHICULO_TURISMOS}[id="${id}"]`)
+  const zona = marco.locator(SEL_ZONA_APP_TURISMOS)
+  const control = zona.locator(`${SEL_TARJETA_VEHICULO_TURISMOS}[id="${id}"]`)
   if ((await control.count()) !== 1) return { estado: 'no_unica', coincidencias: await control.count() }
   if (await control.isChecked()) return { estado: 'ya_marcada' }
-  const label = marco.locator(`label[for="${id}"]`).filter({ visible: true })
+  const label = zona.locator(`label[for="${id}"]`).filter({ visible: true })
   if ((await label.count()) !== 1) return { estado: 'no_unica', coincidencias: await label.count() }
   comprobarBoton(await control.evaluate((el) => {
     const h = el as HTMLInputElement
