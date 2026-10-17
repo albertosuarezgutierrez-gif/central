@@ -16,6 +16,7 @@
 
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-10-17 · mercado-booking** · hizo: 23/24 ventanas de mercado (227 comps; ene-14/19/21, mar-20, abr-2/18/21; aforos 2/4/5/12) + 4/4 escaparate propio; 3 propios (House Sevillana) descartados del corpus; dudas: plan_total 556, tope 24 dejó 532 fuera, mes 2026-10 sin bucket elegible; fallos: 1 ventana sin respuesta (2026-10-17 aforo 12, evento Mistela, not_found); PRs/commits: —
 - **2026-10-15 · mercado-booking** · hizo: 23/24 ventanas de mercado (227 comps, ene-8/ene-16/abr-18/abr-24/may-15/jul-10/nov-27, aforos 2/4/5/12) + 4/4 escaparate propio; 3 propios descartados del mercado (Luxury Busto jul-10, House Sevillana jul-10 y ene-8); dudas: —; fallos: 1 ventana sin respuesta (2026-10-17 aforo 12, evento Mistela, not_found x2 → NO medido; corpus de ese evento sigue viejo); `destination_not_found` transitorio en 3 búsquedas, resuelto reintentando; 1 POST con HTTP 000 reintentado ok; PRs/commits: —
 - **2026-10-15 · facturas-correo** · hizo: Vía B sana (copia 15/10); 1 candidato real (Vercel recibo 94,20 US$, 14/10) archivado en 10-Octubre-2026 + fila facturas_drive + Procesada; resto del correo = ruido/correduría no factura; backlog 4.0: 3 sin_revisar (SiQue oct 1.128,48€, Supabase 25 US$, Anthropic 180€) sin cargo aún en banco; dudas: Vercel sep 106,76 US$ ↔ cargo 16/09 −95,44€ (ratio 0,894 = ago) sin casar por ser divisa → para tu decisión; PDF-pendiente: 2 hilos Endesa Socorro (sep/ago), Extraccion-fallida: 4 Allianz/Giraldillo/acta; fallos: —; PRs/commits: —
 
