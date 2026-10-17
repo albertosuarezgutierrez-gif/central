@@ -20,6 +20,7 @@ import FigurasRiesgo from './FigurasRiesgo'
 import HistorialRiesgo from './HistorialRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import OfertasOportunidad from './OfertasOportunidad'
+import ConsultasCompanias from './ConsultasCompanias'
 import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import BotsAutoRiesgo from './BotsAutoRiesgo'
@@ -295,6 +296,9 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
       <ParrillaPrecios oportunidadId={op.id} claveVariantes={riesgo.variantes.map((v) => v.id).join(',')} bot={ladoBot} />
 
       <OfertasOportunidad oportunidadId={op.id} clienteId={op.clienteId} polizaId={op.polizaId} />
+
+      {/* Consultas a compañías por correo (15/10/2026, fase 1): borrador por compañía, envío uno a uno con confirmación. */}
+      <ConsultasCompanias oportunidadId={op.id} hoy={hoy} />
 
       {/* Bots de compañía (07/10/2026): solo se pinta si algún bot cotiza este ramo (hoy, comunidades). */}
       <PresupuestosCompanias

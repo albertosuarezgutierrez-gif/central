@@ -18,7 +18,7 @@ import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import {
   AVISO_COMERCIO, AVISO_RIESGO_LIBRE, BIENES_COMERCIO, CATALOGO_HOGAR_DE_CAMPO, COMPANIAS_COMERCIO, ESPEC_POR_COMPANIA, ETIQUETA_COMPANIA_COMERCIO, ESPEC_CAPITAL, ESPEC_COMERCIO, ESPEC_LIBRE, ESPEC_VIVIENDA,
   ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_CAPITAL, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_CAMPO_LIBRE, ETIQUETA_CAMPO_VIVIENDA, ETIQUETA_REGIMEN_LOCAL,
-  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, soloLoQueCambia, textoFaltanComercio,
+  MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, camposCapitalDelRamo, camposLibreDelRamo, esRamoRc, soloLoQueCambia, textoFaltanComercio,
   type AseguradoAdicional, type CampoCapital, type CompaniaComercio, type PorCompaniaComercio, type CampoFaltaComercio, type CampoVivienda, type CapitalComercio, type EspecCampo, type MedidaComercio, type RamoCapital,
 } from '@central/module-seguros'
 import type { Opcion } from '@/lib/auto-nuevo-asegura'
@@ -808,13 +808,18 @@ function DatosComercio(props: Props & { d: Record<string, unknown>; faltan: stri
 
 function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boolean }) {
   const { d, dePoliza } = props
-  const E = useEdicion('datosRiesgoLibre', props, ESPEC_LIBRE, d, 'los datos del riesgo')
-  const claves = ['descripcion', 'direccion', 'capital', 'notas'] as const
   const ramo = props.riesgo.oportunidad.ramo
+  // RC (15/10/2026): el MISMO bloque guarda los datos mínimos que pide una compañía para cotizar (actividad, CNAE,
+  // facturación, plantilla, siniestralidad 3 años, límite). «Consultas a compañías» los lee de aquí.
+  const rc = esRamoRc(ramo)
+  const claves = camposLibreDelRamo(ramo)
+  // Solo los campos que se enseñan en este ramo: no se mandan como «borrados» los que no se ven.
+  const spec = ESPEC_LIBRE.filter((c) => (claves as readonly string[]).includes(c.clave))
+  const E = useEdicion('datosRiesgoLibre', props, spec, d, 'los datos del riesgo')
   return (
     <Marco
       titulo="Datos del riesgo"
-      ayuda="Lo que se asegura, dónde y por cuánto."
+      ayuda={rc ? 'Lo que se asegura, dónde y por cuánto, y lo que pide una compañía para cotizar la RC.' : 'Lo que se asegura, dónde y por cuánto.'}
       nota={avisoRamoSinTarifa(ramo, AVISO_RIESGO_LIBRE)}
       confirmadoAt={d.confirmadoAt as string | null} dePoliza={dePoliza}
       aviso={null}
@@ -828,7 +833,7 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
               <div key={k} style={{ display: 'grid', gap: 2, minWidth: 0 }}>
                 <dt style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{ETIQUETA_CAMPO_LIBRE[k]}</dt>
                 <dd style={{ margin: 0, fontWeight: 600, overflowWrap: 'anywhere', whiteSpace: k === 'notas' ? 'pre-wrap' : undefined }}>
-                  {v === null || v === undefined ? sinDato : k === 'capital' ? euros(v) ?? sinDato : String(v)}
+                  {v === null || v === undefined ? sinDato : k === 'capital' || k === 'facturacion' || k === 'limiteDeseado' ? euros(v) ?? sinDato : String(v)}
                 </dd>
               </div>
             )
@@ -840,6 +845,18 @@ function DatosLibre(props: Props & { d: Record<string, unknown>; dePoliza: boole
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.descripcion}<input value={E.form.descripcion ?? ''} onChange={E.set('descripcion')} maxLength={300} style={campoCss} /></label>
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.direccion}<input value={E.form.direccion ?? ''} onChange={E.set('direccion')} maxLength={200} style={campoCss} /></label>
           <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.capital}<input inputMode="decimal" value={E.form.capital ?? ''} onChange={E.set('capital')} placeholder="p. ej. 300.000" style={campoCss} /></label>
+          {rc && (
+            <>
+              <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.actividad}<input value={E.form.actividad ?? ''} onChange={E.set('actividad')} maxLength={200} placeholder="p. ej. bar de tapas" style={campoCss} /></label>
+              <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.cnae}<input value={E.form.cnae ?? ''} onChange={E.set('cnae')} maxLength={20} placeholder="p. ej. 5630" style={campoCss} /></label>
+              <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.facturacion} (€)<input inputMode="decimal" value={E.form.facturacion ?? ''} onChange={E.set('facturacion')} placeholder="p. ej. 250.000" style={campoCss} /></label>
+              <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.plantilla}<input inputMode="numeric" value={E.form.plantilla ?? ''} onChange={E.set('plantilla')} placeholder="p. ej. 4" style={campoCss} /></label>
+              <label style={etiquetaCss}>{ETIQUETA_CAMPO_LIBRE.limiteDeseado} (€)<input inputMode="decimal" value={E.form.limiteDeseado ?? ''} onChange={E.set('limiteDeseado')} placeholder="p. ej. 600.000" style={campoCss} /></label>
+              <label style={{ ...etiquetaCss, gridColumn: '1 / -1' }}>{ETIQUETA_CAMPO_LIBRE.siniestralidad3Anios}
+                <input value={E.form.siniestralidad3Anios ?? ''} onChange={E.set('siniestralidad3Anios')} maxLength={300} placeholder="p. ej. sin siniestros / 1 siniestro de 2.000 € en 2025" style={campoCss} />
+              </label>
+            </>
+          )}
           <label style={{ ...etiquetaCss, gridColumn: '1 / -1' }}>{ETIQUETA_CAMPO_LIBRE.notas}
             <textarea value={E.form.notas ?? ''} onChange={E.set('notas')} maxLength={1000} rows={3} style={{ ...campoCss, minHeight: 88, resize: 'vertical' }} />
           </label>

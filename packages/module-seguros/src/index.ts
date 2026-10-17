@@ -1299,11 +1299,11 @@ export {
 } from './datos-capital-riesgo.ts'
 export type { AseguradoAdicional, CampoCapital, DatosCapitalRiesgo, RamoCapital, ValidacionCapital, ValorEdicionCapital } from './datos-capital-riesgo.ts'
 export {
-  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, admiteDatosRiesgoLibre, aplicarEdicionLibre,
-  datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,
+  AVISO_RIESGO_LIBRE, CAMPOS_LIBRE, CAMPOS_LIBRE_BASE, CAMPOS_LIBRE_RC, ESPEC_LIBRE, ETIQUETA_CAMPO_LIBRE, RAMOS_RC_LIBRE,
+  admiteDatosRiesgoLibre, aplicarEdicionLibre, camposLibreDelRamo, esRamoRc, datosRiesgoLibreVacios, faltanDatosRiesgoLibre, leerDatosRiesgoLibre, motivoNoConfirmableLibre, precargaLibreDePoliza,
   validarDatosRiesgoLibre,
 } from './datos-riesgo-libre.ts'
-export type { CampoRiesgoLibre, DatosRiesgoLibre, ValidacionLibre } from './datos-riesgo-libre.ts'
+export type { CampoRiesgoLibre, CampoRiesgoLibreBase, CampoRiesgoLibreRc, DatosRiesgoLibre, ValidacionLibre } from './datos-riesgo-libre.ts'
 export {
   AVISO_COMERCIO, BIENES_COMERCIO, CAMPOS_COMERCIO, COMPANIAS_COMERCIO, ESPEC_COMERCIO, ESPEC_OCCIDENT, ESPEC_POR_COMPANIA, ESPEC_REALE, ETIQUETA_COMPANIA_COMERCIO, ETIQUETA_BIEN_COMERCIO, ETIQUETA_CAMPO_COMERCIO, ETIQUETA_REGIMEN_LOCAL,
   MAX_CAPITALES_COMERCIO, MAX_MEDIDAS_COMERCIO, REGIMENES_LOCAL, admiteDatosComercio, aplicarEdicionComercio, datosComercioVacios,
@@ -1496,3 +1496,20 @@ export {
   type CorreoPresentacion, type EmbudoCampana, type EtapaPersona, type FilaEmbudo, type VariantePresentacion,
 } from './presentacion-app.ts'
 export { exigeSiniestrosUltimos5 } from './siniestros-cinco-anios.ts'
+
+// Consultas a compañías por correo desde la oportunidad (15/10/2026, fase 1). Lista blanca de riesgo para la IA:
+// la identidad del tomador solo existe como marcadores que asegura sustituye al enviar.
+export {
+  AVISO_ADJUNTO_CONSULTA, CAMPOS_IDENTIDAD_PROHIBIDOS, CAMPOS_MINIMOS_RC, CAMPOS_RIESGO_IA, DIAS_MARGEN_RESPUESTA,
+  ESTADOS_CONSULTA_COMPANIA, ETIQUETA_CAMPO_RIESGO_IA, MARCADOR_DOC_TOMADOR, MARCADOR_NOMBRE_TOMADOR, PATRON_CODIGO_REF,
+  RAMOS_RC_CONSULTA, TIPOS_CONSULTA_COMPANIA,
+  agruparPorCompania, asegurarMarcadores, asuntoConCodigo, asuntoPropuesto, competenciaDeOportunidad, competenciaParaIA,
+  esEstadoConsultaCompania, esRamoRcConsulta, faltanDatosConsulta, generarCodigoRef, leerDatosConsultaRc, leerResponderAntes,
+  plantillaBorradorConsulta, promptBorradorConsulta, quedanMarcadores, responderAntesPropuesta, riesgoParaIA,
+  sustituirMarcadores, validarDestinatarios, cuerpoLlevaIdentidad, cuerpoParaPantalla, cuerpoTieneDocumentoEnmascarado,
+  identidadParaPantalla, volverAMarcadores, DOCUMENTO_NO_CONSTA, NOMBRE_NO_CONSTA, leerRamosContacto,
+  datosRamoParaConsulta, etiquetaFaltaConsulta,
+  type CampoMinimoRc, type CampoRiesgoIA, type CompetenciaConsulta, type ContactoParaConsulta, type DatosConsultaRc,
+  type EntradaBorradorConsulta, type EstadoConsultaCompania, type GrupoConsulta, type TipoConsultaCompania,
+  type ValidacionDestinatarios, type ValorRiesgo,
+} from './consulta-compania.ts'

@@ -1,0 +1,127 @@
+{
+ "sesion": "2e69d2bd-a0dd-51a4-b06a-66c0bce5c84c",
+ "inicio": "2026-10-15T16:26:09.538Z",
+ "fin": "2026-10-15T18:06:45.468Z",
+ "llamadas": 229,
+ "categorias": {
+  "otro": {
+   "llamadas": 40,
+   "chars_in": 29184,
+   "chars_out": 282924,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "SubagentHandback": 10,
+    "AskUserQuestion": 2,
+    "SendMessage": 5,
+    "ToolSearch": 2,
+    "ReadNotifications": 20
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1661,
+   "chars_out": 1905,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 106025,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 19,
+   "chars_in": 2854,
+   "chars_out": 54283,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 11,
+    "Read": 8
+   }
+  },
+  "bash": {
+   "llamadas": 123,
+   "chars_in": 154568,
+   "chars_out": 552149,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 123
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 12789,
+   "chars_out": 13673,
+   "errores": 0,
+   "archivos_citados": 14,
+   "chars_citados": 1373969,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 1317,
+   "chars_out": 9766,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 2,
+   "chars_in": 262,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__subscribe_pr_activity": 1,
+    "mcp__claude-code-remote__send_later": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 34,
+   "chars_in": 128735,
+   "chars_out": 1050239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 27,
+    "Write": 7
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 2,
+   "chars_in": 8781,
+   "chars_out": 9251,
+   "errores": 0,
+   "archivos_citados": 7,
+   "chars_citados": 109600,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 1458,
+   "chars_out": 1695,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 20110,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(15/10/2026)** — Correduría · spec de consultas a compañías por correo desde la oportunidad (`docs/superpowers/specs/2026-10-15-correduria-consultas-companias-design.md`). Un correo por compañía desde `hola@grupoasegura.es` (Gmail SMTP), IA redacta y Alberto aprueba cada envío; casado por hilo → `[ASG-XXXX]` → remitente único, si no «sin asignar»; 3 PRs.
+Pendiente: OK de Alberto para implementar; comprobar SPF/DKIM/DMARC (bloquea la fase 1). Sin código ni migración.
+
 **(15/10/2026)** — Correduría · clientes EMPRESA. «Nuevo cliente» con selector Particular/Empresa (Razón social, CIF, F. constitución, sin apellidos; el CIF válido manda y asegura ya guardaba `tipo_persona=juridica` desde él). Rótulos CIF/razón social/«misma empresa» en ficha, EditarFichaModal, VerDniCompleto, FichasDuplicadas y `textoMotivo(motivo, juridica)`. PR #4732 (draft, CI verde).
 Pendiente decisión de Alberto: `solicitud-datos.ts` pide DNI+F. nacimiento a tomador empresa; `NuevaPersona.tsx` no permite propietario empresa; rótulos de `datos-cotizados.ts` y huecos de retarificar.
 
