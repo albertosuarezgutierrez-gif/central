@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, ResultadoOpcionHogar, SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -100,6 +100,8 @@ export type ContextoPortal = ContextoTarificacion & {
   marcarOpcionTurismos?: (marco: Frame, etiqueta: string) => Promise<ResultadoOpcionHogar>
   /** Allianz AUTOS Turismos (v0.6.4, 17/10/2026): elige la tarjeta de vehículo nº `indice` (con ESA etiqueta) tras «Encuentra mi vehículo», por `marcarTarjetaVehiculoTurismosAllianz` (guard.ts). */
   marcarTarjetaVehiculoTurismos?: (marco: Frame, indice: number, etiqueta: string) => Promise<ResultadoOpcionHogar>
+  /** Allianz AUTOS Turismos (v0.6.5, 17/10/2026): abre «Compañía actual del vehículo», lee sus opciones y elige como mucho la ÚNICA que casa con `buscada`, por `companiaActualTurismosAllianz` (guard.ts). */
+  companiaActualTurismos?: (marco: Frame, buscada: string | null) => Promise<ResultadoCompaniaActualTurismos>
   /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para

@@ -77,6 +77,143 @@ export type DatosTomadorFicha =
   | { tipo: 'fisica'; nombre: string; apellido1: string; apellido2: string | null; fechaNacimiento: string }
   | { tipo: 'juridica'; razonSocial: string }
 
+/**
+ * Dirección del TOMADOR troceada (17/10/2026), de la ficha. La POBLACIÓN es `FichaTomadorAuto.localidad` (no se repite aquí).
+ * Cada pieza `null` = no consta / no se pudo trocear sin adivinar (`partirDireccion` de asegura es conservador).
+ */
+export type DireccionTomadorFicha = {
+  provincia: string | null
+  /** Nombre canónico («Calle», «Avenida»…), no un código de catálogo. */
+  tipoVia: string | null
+  nombreVia: string | null
+  numero: string | null
+  planta: string | null
+  puerta: string | null
+}
+
+/**
+ * Datos del TOMADOR (y de su carné) sacados de SU FICHA por asegura (17/10/2026, Allianz Turismos «Datos del vehículo»: tipo
+ * Individual/Empresa, «Número de documento», «Código postal», «Localidad» y la dirección). Lo pone ASEGURA SOLO al ENTREGAR
+ * el trabajo al worker (nunca se guarda en `tarificacion_trabajos.riesgo`), mismo régimen que `datosTomador`: SECRETO del
+ * trabajo (`secretosDelRiesgo`). 🚨 Tres estados por campo: `null` = no consta en la ficha (o no se pudo leer); jamás un valor
+ * de relleno. La clave AUSENTE = no se miró la ficha (otra compañía, sin cliente, lectura caída).
+ */
+export type FichaTomadorAuto = {
+  /** `clientes.tipo_persona`; sin él, deducido SOLO del documento (CIF → juridica; DNI/NIE → fisica). */
+  tipo: TipoTomadorFicha | null
+  /** DNI/NIE/CIF válido (letra de control), normalizado. */
+  documento: string | null
+  /** CP de residencia del tomador (5 dígitos, provincia 01-52). NO es el de circulación (`codigoPostal`). */
+  codigoPostal: string | null
+  /** Población/localidad de residencia del tomador (`clientes.ciudad`). */
+  localidad: string | null
+  /** `null` = la ficha no tiene dirección (o no se pudo descifrar). */
+  direccion: DireccionTomadorFicha | null
+  /** ISO AAAA-MM-DD. Solo persona física. */
+  fechaNacimiento: string | null
+  /** Expedición del carné del TOMADOR (ISO): en auto el B; en moto el de moto de mayor rango si consta, si no el B. Solo física. */
+  fechaCarnet: string | null
+  /** Tipo de ese carné («B», «A2»…). `null` si no hay `fechaCarnet`. */
+  tipoCarnet: string | null
+}
+export type TipoTomadorFicha = 'fisica' | 'juridica'
+
+/** Máximos de los textos de `fichaTomador` (los mismos que valida `validarFichaTomadorAuto`). */
+export const MAX_FICHA_TOMADOR = { localidad: 80, provincia: 60, tipoVia: 30, nombreVia: 120, numero: 10, planta: 10, puerta: 10 } as const
+
+export type ValidacionFichaTomador = { ok: true; valor: FichaTomadorAuto } | { ok: false; errores: string[] }
+
+/** Fecha ISO real y no futura. */
+function fechaIsoPasada(s: string, hoy: Date): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (!m) return false
+  const f = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
+  return f.toISOString().slice(0, 10) === s && s <= hoy.toISOString().slice(0, 10)
+}
+
+/**
+ * Valida el bloque `fichaTomador` (lo construye asegura; el worker lo repite). PURA. Cada campo: `null`/ausente → `null`; con
+ * valor → tiene que ser válido o es ERROR (nunca se «arregla» ni se convierte en `null` en silencio). Los errores NO repiten
+ * valores (son datos personales).
+ */
+export function validarFichaTomadorAuto(entrada: unknown, hoy: Date = new Date()): ValidacionFichaTomador {
+  if (typeof entrada !== 'object' || entrada === null || Array.isArray(entrada)) return { ok: false, errores: ['fichaTomador: tiene que ser un objeto'] }
+  const e = entrada as Record<string, unknown>
+  const errores: string[] = []
+  const nada = (v: unknown) => v === undefined || v === null
+  const txt = (v: unknown, campo: string, max: number): string | null => {
+    if (nada(v)) return null
+    if (typeof v !== 'string' || v.trim() === '' || tieneCaracteresProhibidos(v)) { errores.push(`fichaTomador.${campo}: tiene que ser texto (o null)`); return null }
+    const t = v.replace(/\s+/g, ' ').trim()
+    if (t.length > max) { errores.push(`fichaTomador.${campo}: máximo ${max} caracteres`); return null }
+    return t
+  }
+  let tipo: TipoTomadorFicha | null = null
+  if (!nada(e.tipo)) {
+    if (e.tipo === 'fisica' || e.tipo === 'juridica') tipo = e.tipo
+    else errores.push('fichaTomador.tipo: fisica, juridica o null')
+  }
+  let documento: string | null = null
+  if (!nada(e.documento)) {
+    const d = typeof e.documento === 'string' ? normalizarDocumento(e.documento.trim()) : ''
+    if (d !== '' && (esDniNie(d) || esCif(d))) documento = d
+    else errores.push('fichaTomador.documento: no es un DNI/NIE/CIF válido')
+  }
+  let codigoPostal: string | null = null
+  if (!nada(e.codigoPostal)) {
+    const cp = typeof e.codigoPostal === 'string' ? e.codigoPostal.trim() : ''
+    const prov = Number(cp.slice(0, 2))
+    if (/^\d{5}$/.test(cp) && prov >= 1 && prov <= 52) codigoPostal = cp
+    else errores.push('fichaTomador.codigoPostal: 5 dígitos de un código postal español (o null)')
+  }
+  const localidad = txt(e.localidad, 'localidad', MAX_FICHA_TOMADOR.localidad)
+  let direccion: DireccionTomadorFicha | null = null
+  if (!nada(e.direccion)) {
+    const d = typeof e.direccion === 'object' && !Array.isArray(e.direccion) ? (e.direccion as Record<string, unknown>) : null
+    if (!d) errores.push('fichaTomador.direccion: tiene que ser un objeto (o null)')
+    else {
+      direccion = {
+        provincia: txt(d.provincia, 'direccion.provincia', MAX_FICHA_TOMADOR.provincia),
+        tipoVia: txt(d.tipoVia, 'direccion.tipoVia', MAX_FICHA_TOMADOR.tipoVia),
+        nombreVia: txt(d.nombreVia, 'direccion.nombreVia', MAX_FICHA_TOMADOR.nombreVia),
+        numero: txt(d.numero, 'direccion.numero', MAX_FICHA_TOMADOR.numero),
+        planta: txt(d.planta, 'direccion.planta', MAX_FICHA_TOMADOR.planta),
+        puerta: txt(d.puerta, 'direccion.puerta', MAX_FICHA_TOMADOR.puerta),
+      }
+    }
+  }
+  const fecha = (v: unknown, campo: string): string | null => {
+    if (nada(v)) return null
+    if (typeof v === 'string' && fechaIsoPasada(v.trim(), hoy)) return v.trim()
+    errores.push(`fichaTomador.${campo}: fecha AAAA-MM-DD real y no futura (o null)`)
+    return null
+  }
+  const fechaNacimiento = fecha(e.fechaNacimiento, 'fechaNacimiento')
+  const fechaCarnet = fecha(e.fechaCarnet, 'fechaCarnet')
+  let tipoCarnet: string | null = null
+  if (!nada(e.tipoCarnet)) {
+    if (typeof e.tipoCarnet === 'string' && /^[A-Z][A-Z0-9]{0,3}$/.test(e.tipoCarnet.trim().toUpperCase())) tipoCarnet = e.tipoCarnet.trim().toUpperCase()
+    else errores.push('fichaTomador.tipoCarnet: tipo de carné («B», «A2»…) o null')
+  }
+  if (tipo === 'juridica' && (fechaNacimiento !== null || fechaCarnet !== null)) errores.push('fichaTomador: una empresa no tiene fecha de nacimiento ni carné')
+  if (tipoCarnet !== null && fechaCarnet === null) errores.push('fichaTomador.tipoCarnet: solo con fechaCarnet')
+  if (fechaNacimiento !== null && fechaCarnet !== null && fechaCarnet <= fechaNacimiento) errores.push('fichaTomador.fechaCarnet: no puede ser anterior al nacimiento')
+  if (errores.length) return { ok: false, errores }
+  return { ok: true, valor: { tipo, documento, codigoPostal, localidad, direccion, fechaNacimiento, fechaCarnet, tipoCarnet } }
+}
+
+/** CP del TOMADOR para el portal: el del bloque `tomador` o, si no, el de `fichaTomador`. `null` = no consta. PURO. */
+export function codigoPostalTomadorDe(f: Pick<FormularioAuto, 'tomador' | 'fichaTomador'> | null | undefined): string | null {
+  const v = f?.tomador?.codigoPostal ?? f?.fichaTomador?.codigoPostal ?? null
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+/** Localidad del TOMADOR: `tomador.poblacion` o, si no, `fichaTomador.localidad`. `null` = no consta. PURO. */
+export function localidadTomadorDe(f: Pick<FormularioAuto, 'tomador' | 'fichaTomador'> | null | undefined): string | null {
+  const v = f?.tomador?.poblacion ?? f?.fichaTomador?.localidad ?? null
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
 export type FormularioAuto = {
   ramo: RamoVehiculo
   /** Normalizada (sin espacios ni guiones). */
@@ -129,6 +266,8 @@ export type FormularioAuto = {
    * es SECRETO del trabajo (`secretosDelRiesgo`) y no sale en logs, mensajes, IA ni resultado. Ausente = no consta.
    */
   datosTomador?: DatosTomadorFicha | null
+  /** Tomador de la ficha con tres estados por campo (`FichaTomadorAuto`, 17/10/2026). Lo pone asegura al entregar; ausente = no se miró. */
+  fichaTomador?: FichaTomadorAuto | null
   /** Uso del vehículo (`USOS_VEHICULO`). En auto, por defecto `particular`; en moto, ausente = no consta. */
   usoVehiculo?: UsoVehiculo | null
   /** Ámbito de circulación (`AMBITOS_CIRCULACION`). En auto, por defecto `espana`. */
@@ -154,8 +293,8 @@ export type FormularioAuto = {
  * Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque
  * `tomador`. `null` = no consta. PURO; nunca se loguea.
  */
-export function documentoTomadorDe(f: Pick<FormularioAuto, 'documentoTomador' | 'tomador'> | null | undefined): string | null {
-  const d = f?.documentoTomador ?? f?.tomador?.documentoIdentidad ?? null
+export function documentoTomadorDe(f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined): string | null {
+  const d = f?.documentoTomador ?? f?.tomador?.documentoIdentidad ?? f?.fichaTomador?.documento ?? null
   return typeof d === 'string' && d.trim() !== '' ? d : null
 }
 
@@ -172,8 +311,9 @@ export function secretosDelRiesgo(riesgo: unknown): string[] {
   const obj = (v: unknown) => (typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null)
   const t = obj(r.tomador)
   const dt = obj(r.datosTomador)
+  const ft = obj(r.fichaTomador)
   const out = new Set<string>()
-  for (const v of [r.documentoTomador, t?.documentoIdentidad]) {
+  for (const v of [r.documentoTomador, t?.documentoIdentidad, ft?.documento]) {
     if (typeof v !== 'string') continue
     const d = normalizarDocumento(v)
     if (d.length < 4) continue
@@ -198,6 +338,16 @@ export function secretosDelRiesgo(riesgo: unknown): string[] {
     }
     const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto(b.fechaNacimiento))
     if (f) for (const x of [`${f[1]}-${f[2]}-${f[3]}`, `${f[3]}/${f[2]}/${f[1]}`, `${f[3]}-${f[2]}-${f[1]}`, `${f[3]}.${f[2]}.${f[1]}`]) out.add(x)
+  }
+  // `fichaTomador` (17/10/2026): nacimiento, carné y la calle del tomador. CP, localidad y provincia NO: son públicos y el
+  // portal los pinta en sus propias celdas (redactarlos rompería el buscador de poblaciones).
+  if (ft) {
+    for (const k of [ft.fechaNacimiento, ft.fechaCarnet]) {
+      const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(texto(k))
+      if (f) for (const x of [`${f[1]}-${f[2]}-${f[3]}`, `${f[3]}/${f[2]}/${f[1]}`, `${f[3]}-${f[2]}-${f[1]}`, `${f[3]}.${f[2]}.${f[1]}`]) out.add(x)
+    }
+    const via = texto(obj(ft.direccion)?.nombreVia)
+    if (via.length >= 4) { out.add(via); out.add(via.toUpperCase()) }
   }
   return [...out].sort((a, b) => b.length - a.length)
 }
@@ -431,6 +581,14 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
     } else errores.push('datosTomador.tipo: tiene que ser fisica o juridica')
   }
 
+  // Tomador de la ficha (opcional; lo pone asegura al entregar, 17/10/2026). Nunca se repite el valor en el error.
+  let fichaTomador: FichaTomadorAuto | null = null
+  if (e.fichaTomador !== undefined && e.fichaTomador !== null) {
+    const ft = validarFichaTomadorAuto(e.fichaTomador, hoy)
+    if (ft.ok) fichaTomador = ft.valor
+    else errores.push(...ft.errores)
+  }
+
   // Mat-select de Mapfre (opcionales con defecto en auto). Valor fuera de la lista cerrada = error (nunca se repite el valor).
   const cerrado = <T extends string>(v: unknown, campo: string, lista: readonly T[], porDefecto: T | null): T | null => {
     if (vacio(v)) return porDefecto
@@ -480,6 +638,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(vehiculoConfirmado !== null ? { vehiculoConfirmado } : {}),
       ...(documentoTomador !== null ? { documentoTomador } : {}),
       ...(datosTomador !== null ? { datosTomador } : {}),
+      ...(fichaTomador !== null ? { fichaTomador } : {}),
       ...(usoVehiculo !== null ? { usoVehiculo } : {}),
       ...(ambitoCirculacion !== null ? { ambitoCirculacion } : {}),
       ...(clasePermiso !== null ? { clasePermiso } : {}),

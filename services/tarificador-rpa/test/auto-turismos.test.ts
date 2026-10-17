@@ -31,15 +31,12 @@ import {
   ETIQUETAS_TURISMOS,
   decidirTarjetaVehiculoTurismos,
   ENCABEZADO_TARJETAS_VEHICULO,
-  HUECOS_FIJOS_TURISMOS,
   marcoFormularioTurismos,
-  planDatosTurismos,
   rellenarDatosRiesgoTurismos,
   supuestosAplicadosTurismos,
   rellenarDatosVehiculoTurismos,
   rellenarDatosVehiculoTurismosConSupuesto,
   unirSupuestoVersion,
-  tipoTomadorTurismos,
   type CtxTurismos,
 } from '../src/adapters/allianz/auto.ts'
 
@@ -217,7 +214,15 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
   assert.deepEqual(OPCIONES_TURISMOS_ALLIANZ.map((o) => o.clave), [
     'conoce_matricula:si', 'garaje:calle', 'garaje:colectivo', 'garaje:individual', 'tomador:individual', 'tomador:empresa',
     'compra:nuevo', 'compra:ya_lo_tenia', 'uso:ocasional', 'uso:diario', 'uso:laboral', 'segundo_conductor:no',
+    'tomador_propietario:si', 'tomador_conduce:si',
   ])
+  // v0.6.5: cada clave con SU paso (HTML real 590a330e): tomador, propietario, conductor y segundo conductor son de «Datos personales».
+  const deP2 = OPCIONES_TURISMOS_ALLIANZ.filter((o) => o.paso === 'Datos personales').map((o) => o.clave)
+  assert.deepEqual(deP2, ['tomador:individual', 'tomador:empresa', 'segundo_conductor:no', 'tomador_propietario:si', 'tomador_conduce:si'])
+  assert.ok(OPCIONES_TURISMOS_ALLIANZ.every((o) => o.paso === 'Datos personales' || o.paso === 'Datos del vehículo'))
+  // Propietario/conductor: solo «Sí» (el «No» abre los datos de otra persona). El segundo conductor, solo como interruptor APAGADO.
+  assert.ok(!OPCIONES_TURISMOS_ALLIANZ.some((o) => /^tomador_(propietario|conduce):no$/.test(o.clave)))
+  assert.equal(OPCIONES_TURISMOS_ALLIANZ.find((o) => o.clave === 'segundo_conductor:no')?.interruptor, true)
   // v0.6.2: compra/uso/segundo conductor entran (supuestos declarados), pero nunca la 2ª mano (ningún dato la pide), el segundo
   // conductor «Sí» (datos de otra persona) ni nada de pago.
   for (const o of OPCIONES_TURISMOS_ALLIANZ) {
@@ -228,7 +233,7 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
 })
 
 test('versión del bot de Allianz Turismos', () => {
-  assert.equal(allianzAuto.version, '0.6.4')
+  assert.equal(allianzAuto.version, '0.6.5')
 })
 
 test('localización por etiqueta/rol: marco del motor y controles sin tocar ids dinámicos', async () => {
@@ -432,127 +437,6 @@ test('H5: «SIGUIENTE» con aria-disabled="true" cuenta como deshabilitado (no s
 
 // ───────────── v0.6.1: zona `appArea`, resto del paso y frontera bancaria ─────────────
 
-test('v0.6.1 puros: tipo de tomador inequívoco, grupo completo y plan sin valores de cajón ni campos de pago', () => {
-  assert.equal(tipoTomadorTurismos({ documentoTomador: '00000000T' }), 'fisica')
-  assert.equal(tipoTomadorTurismos({ documentoTomador: null, datosTomador: { tipo: 'juridica', razonSocial: 'X' } }), 'juridica')
-  assert.equal(tipoTomadorTurismos({ documentoTomador: '00000000T', datosTomador: { tipo: 'juridica', razonSocial: 'X' } }), null, 'si se contradicen, no consta')
-  assert.equal(tipoTomadorTurismos({}), null)
-  assert.ok(grupoOpcionesTurismosCasa(['Individual Individual', 'Empresa Empresa'], ['Individual', 'Empresa']))
-  assert.ok(!grupoOpcionesTurismosCasa(['Individual'], ['Individual', 'Empresa']), 'de menos')
-  assert.ok(!grupoOpcionesTurismosCasa(['Sí', 'No', 'Quizá'], ['Sí', 'No']), 'de más')
-  assert.ok(!grupoOpcionesTurismosCasa(['Sí', 'Sí'], ['Sí', 'No']), 'repetida')
-
-  const HOY = new Date('2026-10-15T10:00:00Z')
-  const completo = planDatosTurismos(FORM_COMPLETO, HOY)
-  assert.deepEqual(completo.operaciones.map((o) => (o.tipo === 'opcion' ? o.clave : o.tipo === 'texto' ? o.etiqueta : 'Localidad')), [
-    'compra:ya_lo_tenia', 'uso:diario', 'garaje:calle', 'tomador:individual', 'Número de documento', 'Código postal', 'Localidad',
-    'Fecha de nacimiento del conductor', 'Fecha de expedición de carnet', 'segundo_conductor:no', '¿Cuándo quieres que comience tu seguro?',
-  ])
-  assert.equal(completo.operaciones.find((o) => o.tipo === 'texto' && o.etiqueta === ETIQUETAS_TURISMOS.fechaEfecto && o.valor === '16/10/2026')?.tipo, 'texto', 'efecto: mañana')
-  // v0.6.2: lo supuesto queda DECLARADO (sin fecha ni póliza: «ya lo tenía»).
-  assert.equal(completo.supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro), uso diario, efecto 16/10/2026, sin 2º conductor.')
-  // Compra: matriculado en los últimos 12 meses y sin póliza → «nuevo» SUPUESTO (declarado); con póliza → «ya lo tenía» (dato).
-  const reciente = planDatosTurismos({ ...FORM_COMPLETO, fechaMatriculacion: '2026-06-01' }, HOY)
-  assert.ok(reciente.operaciones.some((o) => o.tipo === 'opcion' && o.clave === 'compra:nuevo'))
-  assert.match(reciente.supuestos ?? '', /^Precio con supuestos: vehículo nuevo,/)
-  const conPoliza = planDatosTurismos({ ...FORM_COMPLETO, fechaMatriculacion: '2026-06-01', fechaVencimiento: '2026-12-01' }, HOY)
-  assert.ok(conPoliza.operaciones.some((o) => o.tipo === 'opcion' && o.clave === 'compra:ya_lo_tenia'))
-  assert.doesNotMatch(conPoliza.supuestos ?? '', /ya lo tenía|nuevo/)
-  // Solo quedan huecos que no se suponen: colaborador, antecedentes (valores sin mapa) y dirección (no se inventa).
-  assert.deepEqual(completo.huecos, [...HUECOS_FIJOS_TURISMOS, 'el nivel de antecedentes (los valores del portal no están mapeados: no se elige a ojo)', 'la dirección (provincia, población, tipo de vía, nombre, número…): el riesgo no la trae'])
-  // Garaje: con garaje sin tipo o sin dato → «colectivo» SUPUESTO (declarado); con tipo del riesgo → ese, sin declarar.
-  const conGaraje = planDatosTurismos({ ...FORM_COMPLETO, garajeNoche: true }, HOY)
-  assert.ok(conGaraje.operaciones.some((o) => o.tipo === 'opcion' && o.clave === 'garaje:colectivo'))
-  assert.match(conGaraje.supuestos ?? '', /garaje colectivo/)
-  const individual = planDatosTurismos({ ...FORM_COMPLETO, garajeNoche: true, tipoGaraje: 'individual' }, HOY)
-  assert.ok(individual.operaciones.some((o) => o.tipo === 'opcion' && o.clave === 'garaje:individual'))
-  assert.doesNotMatch(individual.supuestos ?? '', /garaje/)
-  // Datos del riesgo: nuevo, uso, vencimiento futuro y ocasional confirmado → nada que declarar salvo lo que no consta.
-  const rico = planDatosTurismos({ ...FORM_COMPLETO, fechaMatriculacion: '2026-03-01', usoFrecuencia: 'laboral', fechaVencimiento: '2026-11-20', conductorOcasional: false }, HOY)
-  assert.deepEqual(rico.operaciones.filter((o) => o.tipo === 'opcion').map((o) => (o as { clave: string }).clave), ['compra:ya_lo_tenia', 'uso:laboral', 'garaje:calle', 'tomador:individual', 'segundo_conductor:no'])
-  assert.ok(rico.operaciones.some((o) => o.tipo === 'texto' && o.valor === '20/11/2026'))
-  assert.equal(rico.supuestos, null)
-  // Con conductor ocasional en el riesgo: «Sí» no se pulsa (sin mapa de sus datos) → hueco.
-  const conOcasional = planDatosTurismos({ ...FORM_COMPLETO, conductorOcasional: true }, HOY)
-  assert.ok(!conOcasional.operaciones.some((o) => o.tipo === 'opcion' && o.clave.startsWith('segundo_conductor')))
-  assert.ok(conOcasional.huecos.some((h) => /segundo conductor «Sí»/.test(h)))
-  // Dirección en una línea: sigue siendo hueco (no se trocea).
-  assert.ok(planDatosTurismos({ ...FORM_COMPLETO, tomador: { ...FORM_COMPLETO.tomador!, direccion: 'CALLE FICTICIA 1' } }, HOY).huecos.some((h) => /una sola línea/.test(h)))
-  // Sin CP del tomador → hueco de CP y localidad (nunca el de circulación).
-  const sinCp = planDatosTurismos({ ...FORM_COMPLETO, tomador: { ...FORM_COMPLETO.tomador!, codigoPostal: null } }, HOY)
-  assert.ok(!sinCp.operaciones.some((o) => (o.tipo === 'texto' && o.etiqueta === 'Código postal') || o.tipo === 'localidad'))
-  assert.ok(sinCp.huecos.some((h) => /CP del tomador/.test(h)))
-  // Sin documento ni población: huecos.
-  const pobre = planDatosTurismos(FORM, HOY)
-  for (const re of [/Número de documento/, /Localidad/, /tipo de tomador/]) assert.ok(pobre.huecos.some((h) => re.test(h)), String(re))
-  // Frontera: el plan nunca nombra un campo bancario, y ningún hueco lleva un valor del riesgo.
-  for (const o of completo.operaciones) if (o.tipo === 'texto') assert.equal(senalCuentaBancaria([o.etiqueta]), null, o.etiqueta)
-  const texto = [...completo.huecos, ...pobre.huecos, completo.supuestos, pobre.supuestos].join(' ')
-  for (const v of ['00000000T', '00000', 'Villaficticia', '1990', '0000BBB']) assert.ok(!texto.includes(v), `sin «${v}» en los huecos`)
-})
-
-for (const sinContenedor of [false, true]) {
-  test(`v0.6.1 paso completo (${sinContenedor ? 'sin #appArea: body y fuera de <header>' : 'contenedor #appArea'}): rellena lo inequívoco, deja huecos y SIGUIENTE → hueco con inventario`, async () => {
-    const { context, page, ctx, pulsados } = await abrir({ sinContenedor })
-    try {
-      const marco = await marcoFormularioTurismos(page, 5_000)
-      assert.deepEqual(await rellenarDatosVehiculoTurismos(page, marco, FORM_COMPLETO, ctx), [])
-      const HOY = new Date('2026-10-15T10:00:00Z')
-      const { huecos, supuestos } = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx, HOY)
-      assert.equal(supuestos, planDatosTurismos(FORM_COMPLETO, HOY).supuestos, 'todo lo planeado quedó aplicado: se declara entero')
-      const valor = (id: string) => marco.locator(`#${id}`).inputValue()
-      const marcado = (id: string) => marco.locator(`#${id}`).isChecked()
-      assert.equal(await campoTurismos(marco, 'Matrícula').inputValue(), FORM_COMPLETO.matricula)
-      assert.equal(await marco.locator('#ng-h-busca').inputValue(), '', 'el buscador de la cabecera no se toca')
-      assert.equal(await marcado('ng-x1-garaje-0'), true, 'En la calle')
-      assert.equal(await marcado('ng-x1-tomador-0'), true, 'Individual')
-      // v0.6.2: supuestos declarados → ya lo tenía, uso diario, segundo conductor «No».
-      assert.equal(await marcado('ng-x1-segundo-1'), true, 'segundo conductor «No» (supuesto)')
-      assert.equal(await marcado('ng-x1-segundo-0'), false, 'nunca «Sí»')
-      assert.deepEqual(await Promise.all([0, 1, 2, 3].map((i) => marcado(`ng-x1-compra-${i}`))), [false, true, false, false], 'compra: ya lo tenía')
-      assert.deepEqual(await Promise.all([0, 1, 2].map((i) => marcado(`ng-x1-uso-${i}`))), [false, true, false], 'uso: a diario')
-      assert.equal(await marcado('ng-x1-nx-radio-toggle-button-19'), false, 'el «Ocasional» señuelo de otro grupo no se toca')
-      assert.equal(await valor('ng-x1-doc'), '00000000T')
-      assert.equal(await valor('ng-x1-cp'), '00000')
-      assert.equal(await valor('ng-x1-loc'), 'Villaficticia')
-      assert.equal(await valor('ng-x1-fnac'), '03/02/1990')
-      assert.equal(await valor('ng-x1-fcar'), '05/04/2010')
-      assert.equal(await valor('ng-x1-efecto'), '16/10/2026', 'fecha de efecto: mañana (supuesto)')
-      for (const id of ['ng-x1-ant', 'ng-x1-col', 'ng-x1-prov', 'ng-x1-pob', 'ng-x1-via', 'ng-x1-num', 'ng-x1-iban', 'ng-x1-bic']) assert.equal(await valor(id), '', `${id} vacío`)
-      assert.deepEqual(await marco.evaluate(() => (window as unknown as { __tocados: string[] }).__tocados), [], 'IBAN/BIC ni se enfocan')
-      assert.deepEqual(huecos, planDatosTurismos(FORM_COMPLETO, HOY).huecos, 'solo los huecos que no se suponen')
-      assert.deepEqual(pulsados, [
-        'opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'opcion:compra:ya_lo_tenia', 'opcion:uso:diario', 'opcion:garaje:calle',
-        'opcion:tomador:individual', 'opcion:segundo_conductor:no',
-      ])
-      // Con huecos, «SIGUIENTE» NO se pulsa (aunque esté habilitado): hueco con inventario y la lista.
-      assert.equal(await botonTurismos(marco, 'SIGUIENTE').isEnabled(), true)
-      await assert.rejects(avanzarDesdeDatosVehiculo(page, marco, ctx, 3_000, huecos, supuestos), (e: unknown) => {
-        const m = (e as Error).message
-        return e instanceof ErrorMapaIncompleto && pideInventarioDom(e) && /no se pulsa con huecos/.test(m) && /nivel de antecedentes/.test(m) &&
-          m.includes('Precio con supuestos: ya lo tenía (cambio de seguro), uso diario') && !/00000000T|Villaficticia|0000BBB|1990/.test(m)
-      })
-      assert.ok(!pulsados.includes('SIGUIENTE'), 'SIGUIENTE no se pulsa con huecos')
-      assert.equal(await marco.locator('#paso1').isVisible(), true)
-    } finally {
-      await context.close()
-    }
-  })
-}
-
-test('v0.6.1 «Localidad» desplegable: no se elige (sin puerta) → hueco, y el desplegable queda intacto', async () => {
-  const { context, page, ctx } = await abrir({ localidadSelect: true })
-  try {
-    const marco = await marcoFormularioTurismos(page, 5_000)
-    await rellenarDatosVehiculoTurismos(page, marco, FORM_COMPLETO, ctx)
-    const { huecos } = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx)
-    assert.ok(huecos.some((h) => /«Localidad» \(no es un campo de texto/.test(h)))
-    assert.equal(await marco.locator('#ng-x1-loc').inputValue(), '')
-  } finally {
-    await context.close()
-  }
-})
-
 test('v0.6.1 FRONTERA BANCARIA: IBAN/BIC nunca se escriben; con IBAN visible se para antes de tocar nada', async () => {
   // a) El campo de IBAN/BIC (aunque esté oculto en otro paso) no pasa `comprobarCampo`.
   const a = await abrir()
@@ -588,10 +472,10 @@ test('v0.6.1 puerta de opciones: grupo de más/de menos → hueco (no_unica), si
     // Segundo conductor «Sí» y cualquier 2ª mano: fuera de la lista cerrada → bloqueo, nada pulsado.
     for (const clave of ['segundo_conductor:si', 'compra:segunda_mano_concesionario', 'compra:segunda_mano_particular']) await assert.rejects(marcarOpcionTurismosAllianz(marco, guard, clave), EmisionBloqueadaError, clave)
     assert.equal(await marco.locator('#ng-x1-segundo-0').isChecked(), false)
-    // «No» del segundo conductor: casa SOLO con su pregunta (el «No» de «¿Conoces la matrícula?» no se toca).
-    assert.deepEqual(await marcarOpcionTurismosAllianz(marco, guard, 'segundo_conductor:no'), { estado: 'marcada' })
-    assert.equal(await marco.locator('#ng-x1-nx-radio-10-input').isChecked(), false)
-    assert.equal(await marco.locator('#ng-x1-segundo-1').isChecked(), true)
+    // v0.6.5: el segundo conductor y el tomador son de «Datos personales»: con «Datos del vehículo» seleccionado → bloqueo, nada pulsado.
+    for (const clave of ['segundo_conductor:no', 'tomador:individual', 'tomador_conduce:si']) await assert.rejects(marcarOpcionTurismosAllianz(marco, guard, clave), EmisionBloqueadaError, clave)
+    assert.equal(await marco.locator('#ng-x1-segundo-1').isChecked(), false)
+    assert.equal(await marco.locator('#ng-x1-tomador-0').isChecked(), false)
   } finally {
     await context.close()
   }
@@ -618,30 +502,10 @@ test('v0.6.1 radios SIN `name`: los hermanos salen del contenedor de grupo; «¿
     await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx)
     assert.equal(await marco.locator('#ng-x1-garaje-0').isChecked(), true)
     assert.equal(await marco.locator('#ng-x1-uso-1').isChecked(), true, 'uso a diario sin `name`')
-    assert.deepEqual(pulsados, [
-      'opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'opcion:compra:ya_lo_tenia', 'opcion:uso:diario', 'opcion:garaje:calle',
-      'opcion:tomador:individual', 'opcion:segundo_conductor:no',
-    ])
+    assert.deepEqual(pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'opcion:compra:ya_lo_tenia', 'opcion:uso:diario', 'opcion:garaje:calle'])
   } finally {
     await context.close()
   }
-})
-
-test('revisión 15/10/2026: «Precio con supuestos» solo lista lo APLICADO (antecedentes en hueco no se declaran)', () => {
-  const HOY = new Date('2026-10-15T10:00:00Z')
-  // Sin años ni siniestros: el supuesto de antecedentes SE CALCULA…
-  const f: FormularioAuto = { ...FORM_COMPLETO, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null }
-  const sup = supuestosAuto(f, HOY)
-  assert.equal(sup.antecedentes.supuesto, true)
-  // …pero el desplegable sigue en hueco: no puede salir en el texto del precio.
-  const plan = planDatosTurismos(f, HOY)
-  assert.ok(plan.huecos.some((h) => /nivel de antecedentes/.test(h)))
-  assert.doesNotMatch(plan.supuestos ?? '', /otra compañía|siniestros/)
-  assert.equal(plan.supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro), uso diario, efecto 16/10/2026, sin 2º conductor.')
-  // Filtro por lo aplicado: lo que no quedó puesto no se declara; orden canónico; nada aplicado → null.
-  assert.equal(supuestosAplicadosTurismos(sup, ['sin 2º conductor', 'uso diario']), 'Precio con supuestos: uso diario, sin 2º conductor.')
-  assert.equal(supuestosAplicadosTurismos(sup, []), null)
-  assert.equal(supuestosAplicadosTurismos(sup, ['procede de otra compañía, sin siniestros', 'uso diario']), 'Precio con supuestos: uso diario, procede de otra compañía, sin siniestros.')
 })
 
 test('revisión 15/10/2026: una opción supuesta que NO queda marcada en el portal no se declara', async () => {
@@ -654,7 +518,8 @@ test('revisión 15/10/2026: una opción supuesta que NO queda marcada en el port
     const HOY = new Date('2026-10-15T10:00:00Z')
     const { huecos, supuestos } = await rellenarDatosRiesgoTurismos(page, marco, FORM_COMPLETO, ctx, HOY)
     assert.ok(huecos.some((h) => /cómo se marca el uso/.test(h)))
-    assert.equal(supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro), efecto 16/10/2026, sin 2º conductor.')
+    // v0.6.5: este tramo solo es «Datos del vehículo» (efecto y segundo conductor son de otros pasos).
+    assert.equal(supuestos, 'Precio con supuestos: ya lo tenía (cambio de seguro).')
   } finally {
     await context.close()
   }

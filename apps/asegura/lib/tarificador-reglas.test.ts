@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import {
   avisoTraza, aplicarNifTomador, aplicarDatosTomador, fechaIsoDeFicha, lecturaTomadorFicha, necesitaDatosTomador, riesgoParaEncolar, faltaCompaniaAnteriorRiesgo, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
+import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador } from './tarificador-ficha-tomador.ts'
 
 const APP = join(import.meta.dirname, '..')
 const JOB = '11111111-1111-4111-8111-111111111111'
@@ -435,7 +436,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b/g, '')), 'el riesgo solo se toca para la respuesta')
 })
 
 // ─── Datos del tomador para el alta en Mapfre (revisión PR #4710): como el NIF, comprobados al encolar e inyectados al entregar ───
@@ -575,4 +576,104 @@ test('Obligatorios · riesgoParaEncolar: falta algo → 422 `faltan_datos` con l
   const otraFecha = () => ({ estado: 'ok' as const, datos: { ...DATOS_TOMADOR, fechaNacimiento: '1970-05-05' } })
   const r2 = riesgoParaEncolar('mapfre', 'auto', sinTec, () => ({ estado: 'ok', documento: NIF }), otraFecha)
   assert.ok(!r2.ok && r2.motivo === 'faltan_datos: Falta: si el tomador es el conductor habitual.')
+})
+
+// ─── fichaTomador (Allianz Turismos/Moto, 17/10/2026). Fixtures FICTICIAS ───────────────────────────────────────────
+const HOY_FT = new Date('2026-10-17T00:00:00Z')
+const descFt = (v: string) => {
+  if (v === 'v1:ROTO') throw new Error('no abre')
+  if (v === 'v1:SINCLAVE') return v // sin PII_ENCRYPTION_KEY, decryptField devuelve el cifrado: eso NO es un valor
+  return v.slice(3)
+}
+const FILA_FT = {
+  dni: `v1:${NIF}`, direccion: 'v1:CL INVENTADA 12 3º IZQ', codigoPostal: '28999', ciudad: 'POBLACION PRUEBA', provincia: 'PROVINCIA PRUEBA',
+  fechaNacimiento: 'v1:02/01/1980', tipoPersona: 'fisica', carnets: [{ tipo: 'B', fechaCarnet: 'v1:1999-03-04' }, { tipo: 'A2', fechaCarnet: 'v1:2005-06-07' }],
+}
+
+test('fichaTomador: solo Allianz auto/moto la recibe', () => {
+  assert.equal(necesitaFichaTomador('allianz', 'auto'), true)
+  assert.equal(necesitaFichaTomador('Allianz', 'moto'), true)
+  assert.equal(necesitaFichaTomador('mapfre', 'auto'), false)
+  assert.equal(necesitaFichaTomador('allianz', 'comunidades'), false)
+})
+
+test('fichaTomador: ficha completa → todos los campos, la calle troceada y el carné B en auto', () => {
+  assert.deepEqual(fichaTomadorAutoDeFicha(FILA_FT, descFt, 'auto', HOY_FT), {
+    tipo: 'fisica', documento: NIF, codigoPostal: '28999', localidad: 'POBLACION PRUEBA',
+    direccion: { provincia: 'PROVINCIA PRUEBA', tipoVia: 'Calle', nombreVia: 'INVENTADA', numero: '12', planta: '3', puerta: 'IZQ' },
+    fechaNacimiento: '1980-01-02', fechaCarnet: '1999-03-04', tipoCarnet: 'B',
+  })
+  // En moto, el carné de moto de mayor rango.
+  const m = fichaTomadorAutoDeFicha(FILA_FT, descFt, 'moto', HOY_FT)
+  assert.equal(m?.tipoCarnet, 'A2')
+  assert.equal(m?.fechaCarnet, '2005-06-07')
+})
+
+test('fichaTomador: TRES estados — lo que no consta o no abre es null, nunca vacío ni inventado', () => {
+  const vacia = fichaTomadorAutoDeFicha({ dni: null, direccion: null, codigoPostal: null, ciudad: null, provincia: null, fechaNacimiento: null, tipoPersona: null, carnets: [] }, descFt, 'auto', HOY_FT)
+  assert.deepEqual(vacia, { tipo: null, documento: null, codigoPostal: null, localidad: null, direccion: null, fechaNacimiento: null, fechaCarnet: null, tipoCarnet: null })
+  // Cifrado que no abre o sin clave → null (no «no tiene»), y el tipo NO se deduce de un documento que no se ha podido leer.
+  const ilegible = fichaTomadorAutoDeFicha({ ...FILA_FT, dni: 'v1:ROTO', direccion: 'v1:SINCLAVE', fechaNacimiento: 'v1:ROTO', tipoPersona: null, carnets: null }, descFt, 'auto', HOY_FT)
+  assert.equal(ilegible?.documento, null)
+  assert.equal(ilegible?.tipo, null)
+  assert.equal(ilegible?.fechaNacimiento, null)
+  assert.equal(ilegible?.fechaCarnet, null)
+  assert.deepEqual(ilegible?.direccion, { provincia: 'PROVINCIA PRUEBA', tipoVia: null, nombreVia: null, numero: null, planta: null, puerta: null })
+  // DNI con la letra mal o CP raro: no se manda lo que el portal rechazaría.
+  const malos = fichaTomadorAutoDeFicha({ ...FILA_FT, dni: 'v1:00000000A', codigoPostal: '99999' }, descFt, 'auto', HOY_FT)
+  assert.equal(malos?.documento, null)
+  assert.equal(malos?.codigoPostal, null)
+  // Sin ficha → null (y entonces la clave no viaja).
+  assert.equal(fichaTomadorAutoDeFicha(null, descFt, 'auto', HOY_FT), null)
+})
+
+test('fichaTomador: empresa (CIF o tipo_persona) → juridica, sin nacimiento ni carné', () => {
+  const cif = 'B00000000'
+  const e = fichaTomadorAutoDeFicha({ ...FILA_FT, dni: `v1:${cif}`, tipoPersona: null }, descFt, 'auto', HOY_FT)
+  assert.equal(e?.tipo, 'juridica')
+  assert.equal(e?.documento, cif)
+  assert.equal(e?.fechaNacimiento, null)
+  assert.equal(e?.fechaCarnet, null)
+  assert.equal(fichaTomadorAutoDeFicha({ ...FILA_FT, tipoPersona: 'juridica' }, descFt, 'auto', HOY_FT)?.tipo, 'juridica')
+  // Sin tipo y con DNI → fisica (lo dice el documento).
+  assert.equal(fichaTomadorAutoDeFicha({ ...FILA_FT, tipoPersona: null }, descFt, 'auto', HOY_FT)?.tipo, 'fisica')
+})
+
+test('fichaTomador: fechas que se contradicen (carné antes de nacer, o futuras) → las dos null, no se elige una', () => {
+  const r = fichaTomadorAutoDeFicha({ ...FILA_FT, carnets: [{ tipo: 'B', fechaCarnet: 'v1:1970-01-01' }] }, descFt, 'auto', HOY_FT)
+  assert.equal(r?.fechaNacimiento, null)
+  assert.equal(r?.fechaCarnet, null)
+  assert.equal(r?.documento, NIF, 'el resto de campos sigue')
+  const fut = fichaTomadorAutoDeFicha({ ...FILA_FT, fechaNacimiento: 'v1:2099-01-01' }, descFt, 'auto', HOY_FT)
+  assert.equal(fut?.fechaNacimiento, null)
+})
+
+test('fichaTomador: aplicar — Allianz con ficha la añade; otra compañía o sin ficha la QUITA; nunca se guarda en la cola', () => {
+  const ft = fichaTomadorAutoDeFicha(FILA_FT, descFt, 'auto', HOY_FT)
+  assert.deepEqual(aplicarFichaTomador('allianz', 'auto', RIESGO_MOTO, () => ft), { ...RIESGO_MOTO, fichaTomador: ft })
+  assert.deepEqual(aplicarFichaTomador('allianz', 'auto', { ...RIESGO_MOTO, fichaTomador: ft }, () => null), RIESGO_MOTO)
+  assert.deepEqual(aplicarFichaTomador('mapfre', 'auto', { ...RIESGO_MOTO, fichaTomador: ft }, noLeer), RIESGO_MOTO)
+  assert.deepEqual(riesgoSinNifTomador({ a: 1, fichaTomador: ft }), { a: 1 })
+  // Lo que se entrega lo acepta el validador del worker y conserva el bloque.
+  const v = validarEntradaRamo('auto', { ...RIESGO_MOTO, ramo: 'auto', fichaTomador: ft })
+  assert.ok(v.ok && (v.entrada.riesgo as { fichaTomador?: unknown }).fichaTomador)
+})
+
+test('fichaTomador: trabajoParaWorker la inyecta al ENTREGAR (no en encolar) y lee la ficha VIVA de esta correduría', () => {
+  const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  const enc = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
+  assert.ok(!enc.includes('aplicarFichaTomador('), 'encolar NO inyecta')
+  const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
+  assert.match(w, /necesitaFichaTomador\(f\.compania, f\.ramo\)/)
+  assert.ok(w.indexOf('aplicarFichaTomador(') > 0 && w.indexOf('aplicarFichaTomador(') < w.indexOf('const base = {'))
+  const lee = src.slice(src.indexOf('async function leerFichaTomadorAuto'), src.indexOf('/** DNI de la ficha TAL CUAL'))
+  assert.match(lee, /correduria_id = \$\{correduriaId\}::uuid and merged_into_cliente_id is null/)
+  assert.match(lee, /cliente_carnets_conducir[\s\S]*correduria_id = \$\{correduriaId\}::uuid/)
+})
+
+test('fichaTomador: su módulo solo toma de codeoscopic/ los TROCEADORES puros (ni red, ni env, ni consumo del vendor)', () => {
+  const src = readFileSync(join(APP, 'lib/tarificador-ficha-tomador.ts'), 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n')
+  const deCodeoscopic = [...src.matchAll(/from ['"]([^'"]*codeoscopic[^'"]*)['"]/gi)].map((m) => m[1]).sort()
+  assert.deepEqual(deCodeoscopic, ['./codeoscopic/desde-cartera.ts', './codeoscopic/direccion.ts'])
+  assert.ok(!/CODEOSCOPIC_|fetch\(|prisma|process\.env/.test(src), 'puro: sin env, red ni BD')
 })

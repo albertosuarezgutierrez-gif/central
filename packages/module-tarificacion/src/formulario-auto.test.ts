@@ -143,3 +143,46 @@ describe('faltaCompaniaAnterior (Mapfre auto pide el nombre con años > 0)', () 
     expect(faltaCompaniaAnterior('mapfre', 'auto', 3, 'x'.repeat(81))).toMatch(/80/)
   })
 })
+
+describe('fichaTomador (Allianz Turismos; lo pone asegura al entregar, 17/10/2026). Fixtures FICTICIAS', () => {
+  const ft = {
+    tipo: 'fisica', documento: '00000000T', codigoPostal: '28999', localidad: 'POBLACION PRUEBA',
+    direccion: { provincia: 'PROVINCIA PRUEBA', tipoVia: 'Calle', nombreVia: 'INVENTADA', numero: '12', planta: '3', puerta: 'IZQ' },
+    fechaNacimiento: '1980-01-02', fechaCarnet: '1999-03-04', tipoCarnet: 'B',
+  }
+  it('opcional; si viene válido, el formulario lo conserva y los lectores lo usan', async () => {
+    const { documentoTomadorDe, codigoPostalTomadorDe, localidadTomadorDe } = await import('./index.ts')
+    const r = validarFormularioAuto({ ...base, fichaTomador: ft }, hoy)
+    expect(r.ok && r.formulario.fichaTomador).toEqual(ft)
+    expect(r.ok && documentoTomadorDe(r.formulario)).toBe('00000000T')
+    expect(r.ok && codigoPostalTomadorDe(r.formulario)).toBe('28999')
+    expect(r.ok && localidadTomadorDe(r.formulario)).toBe('POBLACION PRUEBA')
+    const sin = validarFormularioAuto(base, hoy)
+    expect(sin.ok && 'fichaTomador' in sin.formulario).toBe(false)
+    expect(sin.ok && codigoPostalTomadorDe(sin.formulario)).toBe(null)
+  })
+  it('tres estados: todo null es válido (no consta) y se conserva como null, nunca como vacío', () => {
+    const nulos = { tipo: null, documento: null, codigoPostal: null, localidad: null, direccion: null, fechaNacimiento: null, fechaCarnet: null, tipoCarnet: null }
+    const r = validarFormularioAuto({ ...base, fichaTomador: nulos }, hoy)
+    expect(r.ok && r.formulario.fichaTomador).toEqual(nulos)
+  })
+  it('valor presente e inválido → error SIN repetir el valor (no se convierte en null en silencio)', () => {
+    const r = validarFormularioAuto({ ...base, fichaTomador: { ...ft, documento: '12345678A', codigoPostal: '99999', fechaNacimiento: '2099-01-01', tipo: 'otro' } }, hoy)
+    const t = errs(r as ReturnType<typeof con>)
+    expect(r.ok).toBe(false)
+    expect(t).toMatch(/fichaTomador\.documento/)
+    expect(t).toMatch(/fichaTomador\.codigoPostal/)
+    expect(t).toMatch(/fichaTomador\.fechaNacimiento/)
+    expect(t).toMatch(/fichaTomador\.tipo/)
+    expect(t).not.toContain('12345678')
+    const emp = validarFormularioAuto({ ...base, fichaTomador: { ...ft, tipo: 'juridica', documento: 'B00000000' } }, hoy)
+    expect(errs(emp as ReturnType<typeof con>)).toMatch(/una empresa no tiene fecha de nacimiento ni carné/)
+  })
+  it('sus datos personales son SECRETOS del trabajo (documento, fechas y calle); CP y localidad no', async () => {
+    const { secretosDelRiesgo } = await import('./index.ts')
+    const s = secretosDelRiesgo({ ...base, fichaTomador: ft })
+    for (const x of ['00000000T', '00000000-T', '02/01/1980', '04/03/1999', 'INVENTADA']) expect(s).toContain(x)
+    expect(s).not.toContain('28999')
+    expect(s).not.toContain('POBLACION PRUEBA')
+  })
+})
