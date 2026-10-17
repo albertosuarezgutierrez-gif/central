@@ -339,7 +339,7 @@ export const ARTICULOS: readonly Articulo[] = [
         parrafos: [
           'El continente se asegura por el valor de reconstrucción —lo que costaría volver a levantar la vivienda—, no por el precio al que se vendería ni por lo que se pagó al comprarla: el suelo no hay que reconstruirlo. El contenido se asegura por el valor de reposición: lo que costaría comprar hoy algo equivalente a lo que tienes.',
           'Un capital que se queda corto no solo limita lo que se cobra en un siniestro total: en muchas pólizas, si el capital declarado es menor que el valor real, la indemnización de un daño PARCIAL también se reduce en la misma proporción, no solo la de un siniestro que se lo lleve todo.',
-          'Y un capital revisado hace años suele quedarse corto sin que nadie lo note: una reforma, una cocina nueva, un salón que se ha ido llenando. Es de las pocas cosas de la póliza que conviene mirar aunque no haya pasado nada, no solo cuando llega el vencimiento.',
+          'Y un capital revisado hace años suele quedarse corto sin que nadie lo note: una reforma, una cocina nueva, un salón que se ha ido llenando. Es de las pocas cosas de la póliza que conviene mirar aunque no haya pasado nada, no solo cuando llega el vencimiento. Cómo funciona esa reducción, con un ejemplo numérico, está en la guía «Qué es la regla proporcional y cómo te afecta».',
         ],
       },
       {
@@ -1345,6 +1345,415 @@ export const ARTICULOS: readonly Articulo[] = [
         pregunta: '¿Me atienden a cualquier hora?',
         respuesta:
           'Depende de la compañía. Occident publica atención las 24 horas; el WhatsApp de hogar de Mapfre, de lunes a viernes de 8:00 a 20:00. Fuera de horario puedes escribir igual, pero la respuesta llegará cuando abran.',
+      },
+    ],
+  },
+  {
+    slug: 'revisar-poliza-antes-de-renovar',
+    h1: 'Qué revisar en tu póliza antes de renovar',
+    title: 'Qué revisar en tu póliza antes de renovar',
+    description:
+      'Checklist de ocho puntos para revisar tu seguro antes de que se prorrogue: capitales, exclusiones, franquicias y plazos de aviso según la LCS.',
+    fecha: '2026-10-17',
+    consulta: 'qué revisar en la póliza antes de renovar',
+    resumen:
+      'Antes de renovar, mira las condiciones particulares y no el recibo: qué capital hay, qué garantías, qué exclusiones y qué ha cambiado respecto al año pasado. Y hazlo con margen: si quieres oponerte a la prórroga, el tomador debe avisar por escrito al menos un mes antes del vencimiento.',
+    base: ['lcs-3', 'lcs-8', 'lcs-11', 'lcs-22', 'lcs-30', 'lcs-32'],
+    ramos: ['hogar'],
+    cta: {
+      titulo: 'Sube tu póliza y te la revisamos',
+      texto:
+        'En Grupo ASegura te explicamos qué dice tu póliza, qué no cubre y qué conviene preguntar a la compañía antes del vencimiento.',
+      boton: 'Pedir la revisión',
+      href: '/gestor-de-seguros',
+    },
+    secciones: [
+      {
+        titulo: '¿Cuándo hay que revisar la póliza?',
+        parrafos: [
+          'Antes de que llegue el vencimiento, y con margen: el contrato se prorroga solo salvo que alguien se oponga a tiempo. Según el artículo 22.2 de la Ley de Contrato de Seguro (LCS), el tomador debe avisar con al menos un mes de antelación al fin del período en curso si no quiere renovar. Revisar la póliza el último día es revisarla demasiado tarde.',
+        ],
+      },
+      {
+        titulo: '¿Qué documento hay que mirar?',
+        parrafos: [
+          'Las condiciones particulares, no el recibo. El recibo solo dice cuánto pagas; las condiciones particulares dicen qué aseguras, por cuánto y con qué límites. El artículo 8 de la LCS obliga a que la póliza recoja, como mínimo, la naturaleza del riesgo cubierto, las exclusiones y limitaciones destacadas tipográficamente, los objetos asegurados, la suma asegurada y la duración. Si falta alguno de esos datos, ya tienes una pregunta para tu aseguradora o tu corredor.',
+        ],
+      },
+      {
+        titulo: 'Checklist de ocho puntos',
+        parrafos: [
+          '1. ¿Siguen siendo correctos mis datos y los del bien asegurado? Dirección, metros, uso de la vivienda, conductores habituales, actividad de la empresa. Son las circunstancias que declaraste al contratar. Si han cambiado de forma que agravan el riesgo, el artículo 11 de la LCS te obliga a comunicarlo a la aseguradora tan pronto como puedas.',
+          '2. ¿La suma asegurada refleja el valor actual? Una suma que se quedó antigua puede activar la regla proporcional del artículo 30 de la LCS: si en el siniestro la suma asegurada es inferior al valor del interés asegurado, la indemnización se reduce en la misma proporción. Tienes una guía propia sobre ello en este blog (regla proporcional).',
+          '3. ¿Qué garantías están realmente incluidas? Lee la lista de coberturas, no el nombre comercial del producto. «Todo riesgo» o «completo» no son categorías legales; lo que cuenta es lo que figura en las condiciones.',
+          '4. ¿Qué exclusiones y limitaciones hay? El artículo 3 de la LCS exige que las cláusulas limitativas de tus derechos se destaquen de modo especial y se acepten específicamente por escrito. Búscalas: suelen estar en negrita o en un apartado propio.',
+          '5. ¿Qué franquicias y sublímites se aplican? Una franquicia es la parte del daño que pagas tú; un sublímite es un tope más bajo para una categoría concreta (joyas, por ejemplo). Distínguelos en la guía «Franquicia, límite y sublímite».',
+          '6. ¿Han cambiado las condiciones respecto al año pasado? El artículo 22.3 de la LCS obliga al asegurador a comunicarte cualquier modificación del contrato con al menos dos meses de antelación a la conclusión del período en curso. Compara las condiciones nuevas con las anteriores, no solo el importe.',
+          '7. ¿Tengo seguros duplicados? Dos pólizas que cubren el mismo riesgo sobre el mismo interés y en el mismo período deben comunicarse entre sí, salvo pacto en contrario (artículo 32 de la LCS). No pagarás dos veces la indemnización, pero sí dos veces la prima.',
+          '8. ¿Quién es el beneficiario y quién figura como asegurado? En vida y accidentes, un beneficiario desactualizado es un error clásico. En hogar con hipoteca, comprueba si el banco figura como beneficiario y hasta cuándo.',
+        ],
+      },
+      {
+        titulo: '¿Cuándo es mejor no renovar?',
+        parrafos: [
+          'Cuando, tras revisar, las coberturas no encajan con lo que necesitas o la compañía ha cambiado condiciones que no te convienen. Pero «no renovar» exige comunicarlo por escrito con el plazo de un mes (artículo 22.2 LCS) y, si el cambio es de compañía, tener la nueva póliza lista para que no quede un hueco sin cobertura. Un corredor puede ayudarte a ordenar los dos pasos.',
+        ],
+      },
+      {
+        titulo: '¿Qué pasa si no hago nada?',
+        parrafos: [
+          'El contrato se prorroga, normalmente por otro año. El artículo 22.1 de la LCS permite pactar prórrogas por períodos no superiores a un año cada vez. No es un mal resultado si la póliza sigue siendo la que necesitas; lo es si has dejado pasar la fecha porque no sabías que existía.',
+        ],
+      },
+      {
+        titulo: '¿Y si solo quiero que alguien me la mire?',
+        parrafos: [
+          'En Grupo ASegura puedes subir tu póliza y recibir una explicación de lo que cubre, de lo que no y de lo que conviene preguntar a la compañía. No hacemos comparativas de precio en este texto ni prometemos que haya una póliza mejor: puede que la tuya sea la adecuada.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Cuánto tiempo tengo para oponerme a la renovación?',
+        respuesta:
+          'Según el artículo 22.2 de la Ley de Contrato de Seguro, el tomador debe notificarlo por escrito con al menos un mes de antelación al fin del período en curso; el asegurador, con dos meses.',
+      },
+      {
+        pregunta: '¿Qué documento debo mirar, el recibo o las condiciones particulares?',
+        respuesta:
+          'Las condiciones particulares: dicen qué aseguras, por cuánto y con qué límites. El recibo solo indica lo que pagas.',
+      },
+      {
+        pregunta: '¿Qué pasa si no hago nada?',
+        respuesta:
+          'El contrato se prorroga, normalmente por otro año. No es un mal resultado si la póliza sigue siendo la que necesitas.',
+      },
+    ],
+  },
+  {
+    slug: 'franquicia-limite-sublimite-diferencias',
+    h1: 'Franquicia, límite y sublímite: en qué se diferencian',
+    title: 'Franquicia, límite y sublímite: diferencias',
+    description:
+      'Qué es una franquicia, un límite y un sublímite, con ejemplos numéricos inventados para ver cómo cambia lo que cobras en un siniestro de hogar.',
+    fecha: '2026-10-17',
+    consulta: 'franquicia límite sublímite seguro diferencias',
+    resumen:
+      'La franquicia es lo que pagas tú en cada siniestro; el límite es el máximo que paga la aseguradora; el sublímite es un máximo más bajo para una categoría concreta, como las joyas. Se confunden porque los tres aparecen en la misma póliza, pero actúan de forma distinta.',
+    base: ['lcs-3', 'lcs-8', 'lcs-27', 'lcs-30'],
+    ramos: ['hogar'],
+    cta: {
+      titulo: 'Mira qué franquicias y límites tiene tu seguro de hogar',
+      texto:
+        'Si tienes la póliza a mano, te ayudamos a localizar franquicias, límites y sublímites y a preguntar a la compañía lo que no esté claro.',
+      boton: 'Ver seguros de hogar',
+      href: '/seguros/hogar',
+    },
+    secciones: [
+      {
+        titulo: '¿Qué es una franquicia?',
+        parrafos: [
+          'Es la parte del daño que pagas tú en cada siniestro. La aseguradora indemniza el resto. Se puede expresar en euros (una cantidad fija), en porcentaje del daño o en tiempo (por ejemplo, los primeros días de una baja o de una paralización de actividad). La Ley de Contrato de Seguro no la define: es un pacto de la póliza, y por eso su importe y su forma de aplicarse figuran en las condiciones particulares.',
+          'Si quieres el panorama general de qué entra y qué no en una póliza de hogar, está en la guía «Qué cubre de verdad tu seguro de hogar (y qué no)»; aquí vamos al detalle de este punto, sin repetirlo.',
+        ],
+      },
+      {
+        titulo: '¿Qué es un límite de indemnización?',
+        parrafos: [
+          'Es la cantidad máxima que la aseguradora pagará por un siniestro o por una garantía. El artículo 27 de la LCS lo recoge para los seguros de daños: la suma asegurada representa el límite máximo de la indemnización a pagar por el asegurador en cada siniestro. Si el daño supera ese tope, la diferencia la asumes tú.',
+        ],
+      },
+      {
+        titulo: '¿Qué es un sublímite?',
+        parrafos: [
+          'Es un límite más bajo, dentro del límite general, para una garantía o una categoría de bienes concretos. «Joyas: hasta 1.500 euros» dentro de un contenido asegurado por 30.000 es un sublímite. El término no es una figura legal con régimen propio: es la forma habitual de llamar a un tope parcial pactado en la póliza.',
+        ],
+      },
+      {
+        titulo: '¿En qué se diferencian, con un ejemplo?',
+        parrafos: [
+          'Los números que siguen son inventados y solo sirven para ver la mecánica. No son datos de ninguna póliza real ni de ninguna compañía.',
+          'Ejemplo ficticio. Seguro de hogar con contenido asegurado por 30.000 €, franquicia de 150 € por siniestro y sublímite de 1.500 € para joyas.',
+          'Daño por agua en el parquet y los muebles: 2.000 €. La franquicia se aplica una vez: la aseguradora paga 1.850 € y tú, 150 €.',
+          'Incendio con pérdidas de 40.000 €. El límite general es 30.000 €: el máximo a cobrar por contenido es 30.000 € (menos la franquicia, si procede). Los otros 10.000 € son tuyos.',
+          'Si el contenido está asegurado por menos de su valor real (infraseguro), se aplica la regla proporcional (art. 30 LCS: el asegurador indemniza el daño en la misma proporción en que la suma asegurada cubre el interés) y se cobra menos de lo que sale de esta cuenta, salvo que las partes hayan pactado excluirla.',
+          'Robo de joyas por valor de 6.000 €. El sublímite es 1.500 €: ese es el máximo para las joyas, aunque el contenido general sea 30.000 €. Quedan 4.500 € sin cubrir.',
+          'La franquicia reduce lo que cobras en cada siniestro; el límite fija el techo general; el sublímite fija un techo específico más bajo.',
+        ],
+      },
+      {
+        titulo: '¿Cuál afecta más a mi bolsillo?',
+        parrafos: [
+          'Depende del tipo de siniestro. La franquicia pesa en los siniestros pequeños y frecuentes; el límite y el sublímite pesan en los grandes y raros. Por eso mirar solo la franquicia, que es lo primero que se negocia, puede dejar un sublímite bajo sin ver.',
+        ],
+      },
+      {
+        titulo: '¿Se pueden aplicar varias a la vez?',
+        parrafos: [
+          'Sí. En el ejemplo del robo de joyas podrían concurrir franquicia, sublímite y límite general. El orden en que se aplican (si la franquicia se resta antes o después del tope) lo fija la póliza. No hay un orden general fijado por la ley: depende de la redacción de cada condicionado.',
+        ],
+      },
+      {
+        titulo: '¿Puede la aseguradora ponerme cualquier límite?',
+        parrafos: [
+          'No cualquiera sin más. El artículo 3 de la LCS exige que las cláusulas limitativas de los derechos del asegurado se destaquen de modo especial y se acepten específicamente por escrito. Y el artículo 8 exige que la póliza recoja las exclusiones y limitaciones de cada cobertura destacadas tipográficamente.',
+        ],
+      },
+      {
+        titulo: '¿Cómo sé qué franquicias y sublímites tengo?',
+        parrafos: [
+          'Busca, en las condiciones particulares y generales, las palabras «franquicia», «límite», «sublímite», «hasta un máximo de» y «con el límite de». Después, comprueba tres cosas:',
+          '1. Si la franquicia es por siniestro, por año o por garantía.',
+          '2. Qué categorías de bienes tienen tope propio (joyas, dinero, obras de arte, bicicletas, equipos electrónicos portátiles).',
+          '3. Si el tope se aplica por objeto o por siniestro.',
+        ],
+      },
+      {
+        titulo: '¿Merece la pena una franquicia más alta?',
+        parrafos: [
+          'Es una decisión personal que depende de cuánto riesgo estés dispuesto a asumir tú. Asumir una franquicia mayor cambia lo que cobras en los siniestros pequeños; no cambia lo que ocurre en los grandes. Un corredor puede explicarte las opciones de cada compañía sin que tomes la decisión a ciegas.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿La ley define la franquicia?',
+        respuesta:
+          'No. La Ley de Contrato de Seguro no contiene el término: es un pacto de la póliza.',
+      },
+      {
+        pregunta: '¿Un sublímite es lo mismo que un límite?',
+        respuesta:
+          'No. El límite es el techo general; el sublímite es un techo más bajo para una garantía o categoría de bienes dentro de ese general.',
+      },
+      {
+        pregunta: '¿Puede la aseguradora ponerme cualquier límite?',
+        respuesta:
+          'Las cláusulas limitativas de tus derechos deben destacarse de modo especial y aceptarse específicamente por escrito (artículo 3 de la LCS).',
+      },
+    ],
+  },
+  {
+    slug: 'como-comparar-dos-seguros-de-hogar',
+    h1: 'Cómo comparar dos seguros de hogar correctamente',
+    title: 'Cómo comparar dos seguros de hogar bien',
+    description:
+      'Para comparar dos pólizas de hogar no basta la prima: continente, contenido, infraseguro y regla proporcional (art. 30 LCS) en una lista de comprobación.',
+    fecha: '2026-10-17',
+    consulta: 'comparar dos seguros de hogar',
+    resumen:
+      'Dos pólizas con la misma prima pueden asegurar capitales distintos, con franquicias y exclusiones diferentes. Pon las dos ofertas en paralelo y compara, como mínimo, capital de continente y contenido, criterio de valoración, regla proporcional, franquicias, sublímites y cláusulas limitativas.',
+    base: ['lcs-3', 'lcs-8', 'lcs-26', 'lcs-28', 'lcs-29', 'lcs-30'],
+    ramos: ['hogar'],
+    cta: {
+      titulo: 'Pídenos que revisemos tus dos ofertas de hogar',
+      texto:
+        'Si tienes dos ofertas delante, las revisamos contigo punto por punto, sin prometerte que haya una mejor.',
+      boton: 'Ver seguros de hogar',
+      href: '/seguros/hogar',
+    },
+    secciones: [
+      {
+        titulo: '¿Se pueden comparar dos seguros de hogar por la prima?',
+        parrafos: [
+          'No. Dos pólizas con la misma prima pueden asegurar capitales distintos, tener franquicias distintas y excluir cosas diferentes. Comparar solo el importe es comparar dos precios sin saber qué se compra. Hay que poner las dos pólizas en paralelo y mirar, como mínimo, cinco cosas.',
+          'Si quieres el panorama general de qué entra y qué no en una póliza de hogar, está en la guía «Qué cubre de verdad tu seguro de hogar (y qué no)»; aquí vamos al detalle de este punto, sin repetirlo.',
+        ],
+      },
+      {
+        titulo: '1. ¿Qué capital hay en continente y cuál en contenido?',
+        parrafos: [
+          'El continente es la construcción: estructura, instalaciones fijas, suelos, techos. El contenido son los bienes muebles: muebles, ropa, electrodomésticos. Son dos capitales independientes y cada uno tiene su propio riesgo de quedarse corto.',
+          'Mira si las dos ofertas usan las mismas cifras. Si una asegura el continente por 120.000 € y la otra por 180.000 € para la misma vivienda, no están asegurando lo mismo, y la de menor capital es otro producto.',
+        ],
+      },
+      {
+        titulo: '2. ¿Con qué criterio se valora la vivienda?',
+        parrafos: [
+          'Hay que preguntar si la póliza indemniza al valor de reconstrucción o reposición a nuevo, o con depreciación por antigüedad. El artículo 26 de la LCS establece que, para determinar el daño, se atiende al valor del interés asegurado en el momento inmediatamente anterior al siniestro, y que el seguro no puede ser fuente de enriquecimiento injusto. Las partes pueden pactar otro criterio: el artículo 28 permite fijar de común acuerdo el valor del interés asegurado, y el artículo 29 exige que, si se pacta que la suma cubra plenamente el valor, la póliza recoja el procedimiento para adecuarla a las oscilaciones de valor.',
+          'Por tanto: pregunta cómo define cada compañía «valor» y si el capital se actualiza cada año. Cómo encaja un «valor a nuevo» pactado con el artículo 26 depende de la redacción de cada póliza, así que conviene pedirlo por escrito.',
+        ],
+      },
+      {
+        titulo: '3. ¿Hay riesgo de infraseguro?',
+        parrafos: [
+          'Infraseguro significa que la suma asegurada es menor que el valor real de lo asegurado. Es el fallo más caro de una póliza de hogar y no se nota hasta el siniestro. Sus consecuencias, en la LCS, están en el artículo 30.',
+        ],
+      },
+      {
+        titulo: '4. ¿Qué dice el artículo 30 de la LCS?',
+        parrafos: [
+          'Que si en el momento del siniestro la suma asegurada es inferior al valor del interés, el asegurador indemniza el daño en la misma proporción en la que la suma cubre ese valor. Es la regla proporcional. El mismo artículo permite que las partes, de común acuerdo, excluyan su aplicación en la póliza o después de firmarla.',
+          'Ejemplo ficticio. Vivienda cuyo continente vale 200.000 €. Oferta A: capital de 200.000 €. Oferta B: capital de 100.000 €, con prima más baja. Un daño de 20.000 €:',
+          'Oferta A: cubre el 100 % del valor, la indemnización es de 20.000 € (antes de franquicia).',
+          'Oferta B: cubre el 50 % del valor, la indemnización es de 10.000 € (antes de franquicia). Los otros 10.000 € los pagas tú.',
+          'La menor prima de la oferta B tenía contrapartida: aseguraba la mitad del valor.',
+        ],
+      },
+      {
+        titulo: '5. ¿Aplica la regla proporcional cada póliza?',
+        parrafos: [
+          'Es la pregunta que casi nadie hace. Pregunta a cada compañía, por escrito: «¿Se aplica regla proporcional en esta póliza? ¿Está excluida por pacto?» El artículo 30 permite que las partes, de común acuerdo, la excluyan en la póliza o después de firmarla; si tu póliza lo ha hecho o no depende de cada producto y de sus condiciones.',
+        ],
+      },
+      {
+        titulo: '6. ¿Qué franquicias, sublímites y exclusiones tiene cada una?',
+        parrafos: [
+          'Pon en una tabla, para cada oferta: franquicia por siniestro, tope de joyas y objetos de valor, daños por agua (qué incluye la búsqueda de la fuga), responsabilidad civil y capital, robo fuera de la vivienda. Los conceptos están explicados en la guía «Franquicia, límite y sublímite».',
+        ],
+      },
+      {
+        titulo: '7. ¿Qué cláusulas me limitan?',
+        parrafos: [
+          'El artículo 3 de la LCS exige que las cláusulas limitativas se destaquen y se acepten específicamente por escrito. Si no las encuentras destacadas, pregunta. El artículo 8 añade que la póliza debe recoger exclusiones y limitaciones destacadas tipográficamente.',
+        ],
+      },
+      {
+        titulo: '¿Cómo lo resumo?',
+        parrafos: [
+          'Usa esta lista con las dos ofertas delante:',
+          '1. Capital de continente y de contenido, y cómo se han calculado.',
+          '2. Criterio de valoración (reconstrucción, reposición, depreciación).',
+          '3. Actualización anual del capital.',
+          '4. Regla proporcional: si se aplica o está excluida.',
+          '5. Franquicias y sublímites.',
+          '6. Responsabilidad civil: capital y qué cubre.',
+          '7. Cláusulas limitativas destacadas.',
+          '8. Fecha de efecto y de vencimiento.',
+        ],
+      },
+      {
+        titulo: '¿Y si ninguna me convence?',
+        parrafos: [
+          'Es posible. Una comparación bien hecha puede terminar en «ninguna de las dos». En ese caso, lo útil es saber qué preguntar. En Grupo ASegura puedes pedirnos que revisemos las dos ofertas contigo; no te prometemos que haya una mejor ni te damos un precio en este texto.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Basta con comparar la prima?',
+        respuesta:
+          'No. Sin saber qué capital, franquicia y exclusiones tiene cada póliza, comparar la prima es comparar dos precios sin saber qué se compra.',
+      },
+      {
+        pregunta: '¿Qué es el infraseguro?',
+        respuesta:
+          'Que la suma asegurada es menor que el valor real de lo asegurado. Puede activar la regla proporcional del artículo 30 de la LCS.',
+      },
+      {
+        pregunta: '¿Puedo preguntar si se aplica la regla proporcional?',
+        respuesta:
+          'Sí, y conviene hacerlo por escrito. La ley permite que las partes la excluyan por pacto; si tu póliza lo hace depende de sus condiciones.',
+      },
+    ],
+  },
+  {
+    slug: 'regla-proporcional-seguro-que-es',
+    h1: 'Qué es la regla proporcional y cómo te afecta',
+    title: 'Qué es la regla proporcional y cómo te afecta',
+    description:
+      'La regla proporcional (art. 30 LCS) reduce tu indemnización si aseguraste por menos de lo que vale. Cómo se calcula, ejemplo y cómo evitarla.',
+    fecha: '2026-10-17',
+    consulta: 'regla proporcional seguro',
+    resumen:
+      'Si en el momento del siniestro la suma asegurada es inferior al valor de lo asegurado, la aseguradora indemniza el daño únicamente en la misma proporción en que esa suma cubre el valor. Se aplica también a los daños pequeños, y se evita asegurando por el valor correcto o pactando su exclusión.',
+    base: ['lcs-11', 'lcs-22', 'lcs-26', 'lcs-27', 'lcs-28', 'lcs-29', 'lcs-30', 'lcs-31'],
+    ramos: ['hogar'],
+    cta: {
+      titulo: 'Revisa si tus capitales están al día',
+      texto:
+        'Te ayudamos a leer el capital de continente y de contenido de tu póliza y a preguntar a la compañía si aplica regla proporcional.',
+      boton: 'Ver seguros de hogar',
+      href: '/seguros/hogar',
+    },
+    secciones: [
+      {
+        titulo: '¿Qué es la regla proporcional?',
+        parrafos: [
+          'Es el mecanismo por el que, si aseguraste un bien por menos de lo que vale, la aseguradora indemniza el daño en esa misma proporción y no por el total. Está en el artículo 30 de la Ley de Contrato de Seguro (LCS): si en el momento del siniestro la suma asegurada es inferior al valor del interés, el asegurador indemniza el daño causado en la misma proporción en la que aquella cubre el interés asegurado.',
+          'Si quieres el panorama general de qué entra y qué no en una póliza de hogar, está en la guía «Qué cubre de verdad tu seguro de hogar (y qué no)»; aquí vamos al detalle de este punto, sin repetirlo.',
+        ],
+      },
+      {
+        titulo: '¿Cuándo se aplica?',
+        parrafos: [
+          'Cuando, en el momento del siniestro, la suma asegurada es menor que el valor del bien. No importa cuánto valiera cuando firmaste: el artículo 26 de la LCS dice que se atiende al valor del interés asegurado en el momento inmediatamente anterior al siniestro. Una vivienda reformada, una subida de costes de construcción o un contenido que has ido ampliando pueden dejar un capital correcto en el pasado y corto en el presente.',
+        ],
+      },
+      {
+        titulo: '¿Cómo se calcula?',
+        parrafos: [
+          'Con una fracción: suma asegurada dividida entre valor real. El resultado se aplica al daño.',
+          'Ejemplo ficticio. Contenido de una vivienda con valor real de 40.000 €, asegurado por 30.000 €. Proporción: 30.000 / 40.000 = 75 %. Daño de 8.000 €. Indemnización: 8.000 × 75 % = 6.000 €. Los 2.000 € restantes los asumes tú.',
+          'Ejemplo ficticio con franquicia. Mismo caso, con una franquicia de 150 €. Si la póliza resta la franquicia después de aplicar la proporción, el resultado es de 5.850 € (6.000 − 150); si la aplica en otro orden, la cifra puede ser distinta. La ley no fija el orden: remite a las condiciones de cada póliza.',
+        ],
+      },
+      {
+        titulo: '¿Se aplica también a daños pequeños?',
+        parrafos: [
+          'Sí, esa es la parte que sorprende. Aunque el daño sea mucho menor que la suma asegurada, el porcentaje se aplica igual. Un capital que cubre el 75 % del valor reduce cada indemnización a ese 75 %, no solo las grandes.',
+        ],
+      },
+      {
+        titulo: '¿Es lo mismo que el límite máximo de indemnización?',
+        parrafos: [
+          'No. El artículo 27 de la LCS establece que la suma asegurada es el límite máximo a pagar por siniestro. La regla proporcional actúa antes: reduce lo que se paga aunque el daño no llegue al límite. Son dos efectos distintos del mismo número.',
+        ],
+      },
+      {
+        titulo: '¿Se puede evitar la regla proporcional?',
+        parrafos: [
+          'De tres maneras que reconoce la propia ley o que se derivan de ella:',
+          '1. Asegurando por el valor correcto. Es la forma más sencilla. Si el capital cubre el valor, no hay proporción que aplicar.',
+          '2. Pactando su exclusión. El artículo 30 prevé que las partes, de común acuerdo, puedan excluir la regla proporcional en la póliza o con posterioridad a firmarla.',
+          '3. Pactando un valor estimado o la adecuación automática del capital. El artículo 28 permite fijar de común acuerdo el valor del interés asegurado, y el artículo 29 regula el pacto por el que la suma cubre plenamente el valor, que obliga a recoger en la póliza los criterios para adecuar la suma y las primas.',
+          'Ninguna de las tres es automática: hay que mirar qué dice tu póliza.',
+        ],
+      },
+      {
+        titulo: '¿Y si aseguré de más?',
+        parrafos: [
+          'El problema inverso es el sobreseguro. El artículo 31 de la LCS permite a cualquiera de las partes exigir la reducción de la suma y de la prima cuando la suma asegurada supera notablemente el valor, y establece que, si ocurre un siniestro, el asegurador indemniza el daño efectivamente causado. Es decir, asegurar de más no hace cobrar más: hace pagar más prima.',
+        ],
+      },
+      {
+        titulo: '¿Cómo sé si estoy en infraseguro?',
+        parrafos: [
+          'Calcula, a grandes rasgos, cuánto costaría reconstruir y reponer hoy lo asegurado y compáralo con el capital de las condiciones particulares. En el continente, ese cálculo lo hace mejor un profesional que una intuición. En el contenido, un inventario sencillo por habitaciones suele revelar que el capital está corto. Este texto no da cifras de mercado ni un método oficial de cálculo.',
+        ],
+      },
+      {
+        titulo: '¿Qué hago antes del siguiente vencimiento?',
+        parrafos: [
+          '1. Lee en tus condiciones particulares el capital de continente y de contenido.',
+          '2. Pregunta por escrito si se aplica regla proporcional o está excluida.',
+          '3. Pregunta si el capital se actualiza solo cada año y con qué índice.',
+          '4. Comunica reformas o ampliaciones: el artículo 11 de la LCS obliga a avisar de circunstancias que agraven el riesgo, y una reforma importante conviene reflejarla en los capitales.',
+          '5. Hazlo antes del vencimiento: el artículo 22.2 de la LCS te da un mes para oponerte a la prórroga si decides cambiar.',
+        ],
+      },
+      {
+        titulo: '¿Puede ayudarme un corredor?',
+        parrafos: [
+          'Un corredor no cambia la ley, pero sí puede revisar contigo los capitales y pedir a la compañía, por escrito, la aclaración sobre la regla proporcional. En Grupo ASegura puedes subir tu póliza y te explicamos qué dice de este punto; no hacemos promesas de precio.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Qué dice el artículo 30 de la LCS?',
+        respuesta:
+          'Que si la suma asegurada es inferior al valor del interés en el momento del siniestro, el asegurador indemniza el daño en la misma proporción en que aquella cubre el interés. Las partes pueden excluir la regla por pacto.',
+      },
+      {
+        pregunta: '¿Se aplica a los daños pequeños?',
+        respuesta:
+          'Sí: el porcentaje se aplica a cada indemnización, no solo a las grandes.',
+      },
+      {
+        pregunta: '¿Asegurar de más me hace cobrar más?',
+        respuesta:
+          'No. En caso de sobreseguro, el asegurador indemniza el daño efectivamente causado (artículo 31 de la LCS).',
       },
     ],
   },

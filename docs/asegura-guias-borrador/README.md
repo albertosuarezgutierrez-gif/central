@@ -21,10 +21,7 @@ Los ya presentes en `NORMAS_CITABLES`: 3, 22. **Faltan por añadir** (con `verif
 ## [VERIFICAR] (revisados el 17/10/2026)
 Resueltos contra la copia consolidada del BOE de la LCS (25/07/2025, `docs/normativa/`; boe.es sigue bloqueado desde la sesión): art. 30 (regla proporcional y exclusión por pacto), art. 22.2 (un mes tomador / dos meses asegurador), 22.3, 3, 8, 11, 26-29, 31, 32. Sin cifras ni plazos inventados.
 Resueltos por reformulación (la frase ya no afirma nada no contrastado): orden franquicia/sublímite/proporción, sentencia del TS (retirada), pólizas sin regla proporcional, valor a nuevo vs. art. 26, información precontractual (no se afirma), método de valoración (no se da), ministerio y enlace de la DGSFP (no se citan; la web ya enlaza la DGSFP en contacto).
-Quedan 0 marcas [VERIFICAR] en las guías, pero NO están montadas: ver abajo.
-
-## Bloqueo para montarlas en `articulos.ts`
-El cepo de `articulos.test.ts` exige que toda norma nombrada esté en `NORMAS_CITABLES` (`packages/module-seguros/src/normas.ts`). Faltan los ids `lcs-8`, `lcs-11`, `lcs-26`, `lcs-27`, `lcs-28`, `lcs-29`, `lcs-30`, `lcs-31`, `lcs-32` (ya leídos y confirmados arriba). Ese fichero queda fuera del alcance de esta tarea: añadirlos (con `verificado` = fecha) y después montar las cuatro guías.
+Quedan 0 marcas [VERIFICAR]. **Montadas (17/10/2026)** en `apps/asegura-web/lib/articulos.ts` (slugs `revisar-poliza-antes-de-renovar`, `franquicia-limite-sublimite-diferencias`, `como-comparar-dos-seguros-de-hogar`, `regla-proporcional-seguro-que-es`) con las normas `lcs-8`, `lcs-11`, `lcs-26`..`lcs-32` añadidas a `NORMAS_CITABLES`. Se publican al mergear el PR, tras la revisión de Alberto.
 
 ## Cómo se publicarían
 1. Alberto aprueba y resuelve los [VERIFICAR] (o se eliminan esas frases).
