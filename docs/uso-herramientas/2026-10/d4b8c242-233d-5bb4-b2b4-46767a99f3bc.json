@@ -1,0 +1,75 @@
+{
+ "sesion": "d4b8c242-233d-5bb4-b2b4-46767a99f3bc",
+ "inicio": "2026-10-17T07:04:47.840Z",
+ "fin": "2026-10-17T07:05:00.061Z",
+ "llamadas": 16,
+ "categorias": {
+  "agente:Explore": {
+   "llamadas": 2,
+   "chars_in": 2499,
+   "chars_out": 2987,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 24026,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 950,
+   "chars_out": 1171,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 1582,
+   "chars_out": 22527,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  },
+  "otro": {
+   "llamadas": 6,
+   "chars_in": 862,
+   "chars_out": 1854,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1,
+    "WebFetch": 5
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 236,
+   "chars_out": 313,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 149,
+   "chars_out": 1326,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  }
+ }
+}
