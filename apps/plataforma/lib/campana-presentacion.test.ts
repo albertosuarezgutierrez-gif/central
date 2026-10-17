@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarCampana, pasosEmbudo, porcentaje, textoNumero, textoPorcentaje, estadoPersona, type EmbudoCampana } from './campana-presentacion.ts'
+import { interpretarCampana, pasosEmbudo, porcentaje, textoNumero, textoPorcentaje, estadoPersona, personasDelPaso, fechaDelPaso, type EmbudoCampana, type PersonaCampana } from './campana-presentacion.ts'
 
 const emb = (o: Partial<EmbudoCampana> = {}): EmbudoCampana => ({
   enviados: 200, fallidos: 0, entregados: 190, abiertos: 95, clics: 19, visitas: 10, registrados: 5, rebotados: 2, bajas: 1, ...o,
@@ -60,4 +60,33 @@ test('estadoPersona: rebote y baja pesan más que la etapa', () => {
   assert.equal(estadoPersona({ etapa: 'clic', bajaEn: null, rebotadoEn: null }), 'Clic')
   assert.equal(estadoPersona({ etapa: 'clic', bajaEn: '2026-10-02', rebotadoEn: null }), 'Baja')
   assert.equal(estadoPersona({ etapa: 'enviado', bajaEn: null, rebotadoEn: '2026-10-02' }), 'Rebotado')
+})
+
+const per = (id: string, etapa: PersonaCampana['etapa'], o: Partial<PersonaCampana> = {}): PersonaCampana => ({
+  clienteId: id, nombre: id, email: `${id}@x.es`, lote: 1, loteFecha: '2026-10-15', variante: 'A', etapa,
+  enviadoEn: '2026-10-15T08:00:00Z', entregadoEn: null, abiertoEn: null, clicEn: null, visitaEn: null,
+  registradoEn: null, bajaEn: null, rebotadoEn: null, ...o,
+})
+
+test('personasDelPaso: cada lista tiene tantas filas como la cifra del embudo (cumulativo, sin fallidos)', () => {
+  const ps = [
+    per('f', 'fallido'), per('s', 'sin_datos'), per('e', 'enviado'),
+    per('d', 'entregado', { entregadoEn: '2026-10-15T08:01:00Z' }),
+    per('a1', 'abierto', { abiertoEn: '2026-10-15T09:00:00Z' }),
+    per('a2', 'abierto', { abiertoEn: '2026-10-16T09:00:00Z' }),
+    per('c', 'clic', { clicEn: '2026-10-16T10:00:00Z' }),
+    per('v', 'visita', { visitaEn: '2026-10-16T11:00:00Z' }),
+  ]
+  const n = (k: string) => personasDelPaso(ps, k).length
+  assert.deepEqual(['enviados', 'entregados', 'abiertos', 'clics', 'visitas', 'registrados'].map(n), [7, 5, 4, 2, 1, 0])
+  assert.deepEqual(personasDelPaso(ps, 'abiertos').map((p) => p.clienteId), ['c', 'v', 'a2', 'a1'].sort((x, y) =>
+    (fechaDelPaso(ps.find((p) => p.clienteId === y)!, 'abiertos')?.iso ?? '').localeCompare(fechaDelPaso(ps.find((p) => p.clienteId === x)!, 'abiertos')?.iso ?? '')))
+  assert.deepEqual(personasDelPaso(ps, 'inexistente'), [])
+})
+
+test('fechaDelPaso: la propia; si falta, la del paso posterior marcada como deducida; si no hay, null', () => {
+  const p = per('c', 'clic', { clicEn: '2026-10-16T10:00:00Z' })
+  assert.deepEqual(fechaDelPaso(p, 'clics'), { iso: '2026-10-16T10:00:00Z', inferido: false })
+  assert.deepEqual(fechaDelPaso(p, 'abiertos'), { iso: '2026-10-16T10:00:00Z', inferido: true })
+  assert.equal(fechaDelPaso(per('e', 'enviado'), 'abiertos'), null)
 })

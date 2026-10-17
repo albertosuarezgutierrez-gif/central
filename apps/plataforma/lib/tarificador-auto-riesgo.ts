@@ -8,6 +8,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR. Tres estados: `null` = «no se sabe», nunca un valor por defecto. Lo que falta lo dice
 // `formularioBotAuto` (el adaptador) con QUÉ falta, jamás el valor (dato personal).
+import { estadoOcasional, type RolFigura } from '@central/module-seguros'
 import { datoDePersonaBot, type DatoPersona } from './tarificador-moto-formulario.ts'
 import type { EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
@@ -34,6 +35,10 @@ export type PiezasBotsAuto = {
   aniosSinSiniestros: string
   siniestrosUltimos5: string
   companiaAnterior: string | null
+  /** 15/10/2026: lo que Allianz Turismos supone si no viene (y lo declara). Opcionales: sin ellos, el bot supone. */
+  fechaMatriculacion?: string | null
+  fechaVencimiento?: string | null
+  conductorOcasional?: boolean | null
 }
 
 /** Piezas → entrada del adaptador de coche. PURA. */
@@ -55,25 +60,49 @@ export function armarFormularioBotsAuto(p: PiezasBotsAuto): EntradaBotAuto {
     aniosSinSiniestros: p.aniosSinSiniestros,
     siniestrosUltimos5: p.siniestrosUltimos5,
     companiaAnterior: p.companiaAnterior,
+    ...(p.fechaMatriculacion !== undefined ? { fechaMatriculacion: p.fechaMatriculacion } : {}),
+    ...(p.fechaVencimiento !== undefined ? { fechaVencimiento: p.fechaVencimiento } : {}),
+    ...(p.conductorOcasional !== undefined ? { conductorOcasional: p.conductorOcasional } : {}),
   }
 }
 
 /** Lo mínimo del `Riesgo` (`lib/riesgo-asegura.ts`) que hace falta; estructural para no acoplar el helper al tipo entero. */
 export type RiesgoParaBotsAuto = {
-  oportunidad: { clienteId: string; matricula: string | null }
+  oportunidad: { clienteId: string; matricula: string | null; vence?: string | null }
   roles: readonly string[]
   figuras: readonly { rol: string; clienteId: string; empresa: boolean; faltan: string[] | null }[]
   datosVehiculo: {
     matricula: string | null; marca: string | null; modelo: string | null; version: string | null
-    garaje: string | null; cpCirculacion: string | null
+    garaje: string | null; cpCirculacion: string | null; fechaMatriculacion?: string | null
   } | null
   historial: {
-    seguroAnterior: { siniestrosUltimos5: number | null; aniosSinSiniestros: number | null } | null
+    seguroAnterior: { siniestrosUltimos5: number | null; aniosSinSiniestros: number | null; fechaVencimiento?: string | null } | null
     historialDeclarado: {
       aniosAsegurado: number | null; aniosSinSiniestros: number | null; siniestrosUltimos5: number | null; tieneSeguroActual: boolean | null
     }
     carnet: { fecha: string | null; legible: boolean } | null
   } | null
+  /** Conductor ocasional (`Riesgo.conductorOcasional`): `null`/ausente = no se sabe (sin preguntar). */
+  conductorOcasional?: { ningunoConfirmadoAt: string | null } | null
+}
+
+/**
+ * Vencimiento de la póliza ACTUAL para la fecha de efecto del bot (15/10/2026): el más tardío de los que se saben (el de la
+ * oportunidad, que se corre al próximo ciclo, y el leído del documento). Sin ninguno con forma de fecha → `null` (el bot supone
+ * «mañana» y lo declara). PURA y sin reloj: si el más tardío ya pasó, el bot lo descarta.
+ */
+export function vencimientoActualDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'historial'>): string | null {
+  const c = [r.oportunidad.vence, r.historial?.seguroAnterior?.fechaVencimiento]
+    .map((v) => (typeof v === 'string' ? v.trim().slice(0, 10) : ''))
+    .filter((v) => ISO.test(v))
+    .sort()
+  return c.length ? c[c.length - 1]! : null
+}
+
+/** ¿Hay conductor ocasional? `true` ficha en el papel · `false` confirmado que no · `null` sin preguntar o no aplica (misma regla que asegura). PURA. */
+export function conductorOcasionalDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'roles' | 'figuras' | 'conductorOcasional'>): boolean | null {
+  const e = estadoOcasional({ roles: r.roles as readonly RolFigura[], figuras: r.figuras as readonly { rol: RolFigura }[], conductorOcasional: r.conductorOcasional ?? null })
+  return e === 'si' ? true : e === 'ninguno' ? false : null
 }
 
 const texto = (n: number | null | undefined): string => (typeof n === 'number' && Number.isInteger(n) && n >= 0 ? String(n) : '')
@@ -119,6 +148,10 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto): EntradaBotAut
     aniosSinSiniestros: texto(decl?.aniosSinSiniestros ?? ant?.aniosSinSiniestros),
     siniestrosUltimos5: texto(decl?.siniestrosUltimos5 ?? ant?.siniestrosUltimos5),
     companiaAnterior: null,
+    // Supuestos de Allianz Turismos: lo que el riesgo sabe viaja; lo demás lo supone el bot y lo declara junto al precio.
+    fechaMatriculacion: dv?.fechaMatriculacion ?? null,
+    fechaVencimiento: vencimientoActualDeRiesgo(r),
+    conductorOcasional: conductorOcasionalDeRiesgo(r),
   })
 }
 

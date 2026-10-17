@@ -299,6 +299,8 @@ export async function aplicarBajaCampanaPorRebote(resendMessageId: string, motiv
 export type PersonaCampana = {
   clienteId: string
   nombre: string
+  /** Correo de la ficha (descifrado). `null` = no se pudo leer: no se sabe, no es «sin correo». */
+  email: string | null
   lote: number
   loteFecha: string
   variante: string
@@ -329,7 +331,7 @@ export type EmbudoPresentacion =
 const LIMITE_PERSONAS = 1000
 
 type FilaBD = {
-  clienteId: string; nombre: string | null; apellidos: string | null; lote: number; loteFecha: string; variante: string
+  clienteId: string; nombre: string | null; apellidos: string | null; email: string | null; lote: number; loteFecha: string; variante: string
   estado: string; resendId: string | null; eventos: string[] | null; creadoEn: Date
   entregadoEn: Date | null; abiertoEn: Date | null; clicEn: Date | null; rebotadoEn: Date | null
   visitaEn: Date | null; registradoEn: Date | null; bajaEn: Date | null
@@ -341,7 +343,7 @@ const iso = (d: Date | null) => (d ? d.toISOString() : null)
 export async function embudoPresentacionApp(correduriaId: string): Promise<EmbudoPresentacion> {
   if (!(await campanaMigrada())) return { estado: 'sin_migracion' }
   const filas = await prismaAsegura().$queryRaw<FilaBD[]>(Prisma.sql`
-    select k.cliente_id as "clienteId", c.nombre, c.apellidos, k.lote, to_char(k.lote_fecha, 'YYYY-MM-DD') as "loteFecha",
+    select k.cliente_id as "clienteId", c.nombre, c.apellidos, c.email, k.lote, to_char(k.lote_fecha, 'YYYY-MM-DD') as "loteFecha",
       k.variante, k.estado, k.resend_message_id as "resendId", k.creado_en as "creadoEn",
       ev.tipos as eventos, ev.entregado as "entregadoEn", ev.abierto as "abiertoEn", ev.clic as "clicEn", ev.rebote as "rebotadoEn",
       k.visita_en as "visitaEn", a.registrado_en as "registradoEn", k.baja_en as "bajaEn"
@@ -378,6 +380,7 @@ export async function embudoPresentacionApp(correduriaId: string): Promise<Embud
     personas: conEmbudo.slice(0, LIMITE_PERSONAS).map(({ f, ...fila }) => ({
       clienteId: f.clienteId,
       nombre: [f.nombre, f.apellidos].filter(Boolean).join(' ').trim(),
+      email: descifrarCampo(f.email),
       lote: Number(f.lote),
       loteFecha: f.loteFecha,
       variante: f.variante,

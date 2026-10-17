@@ -24,7 +24,7 @@ test('proyecta estado, fechas, prima total, desglose y pdfs; nada más', () => {
   const t = proyectarTrabajo(fila, respuesta)
   assert.equal(t.estado, 'ok')
   assert.equal(t.creadoEn, '2026-10-06T10:00:00.000Z')
-  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0, fechaTerminoPortal: null }])
+  assert.deepEqual(t.ofertas, [{ compania: 'allianz', producto: 'Comunidades 2020', primaTotalAnual: 1234.5, primaNeta: 1000, impuestos: 234.5, primaTotalSucesivos: null, primaNetaSucesivos: null, impuestosSucesivos: null, pdfIndice: 0, fechaTerminoPortal: null, supuestos: null }])
   assert.deepEqual(t.pdfs, [{ indice: 0, nombre: 'oferta.pdf' }])
   const s = JSON.stringify(t)
   for (const prohibido of ['documentoId', 'doc-1', 'referenciaPortal', 'coberturas', 'avisos']) assert.ok(!s.includes(prohibido), prohibido)
@@ -45,6 +45,16 @@ test('propaga la fecha de término real del portal solo si es ISO (si no, null: 
   assert.equal(ok.fechaTerminoPortal, '2027-10-01')
   const mal = proyectarTrabajo(fila, { ofertas: [{ ...base, fechaTerminoPortal: '01102027' }] }).ofertas[0]
   assert.equal(mal.fechaTerminoPortal, null)
+})
+
+test('supuestos del bot (15/10/2026): de `avisos[]` solo cruza el «Precio con supuestos: …» (recortado); el resto no', () => {
+  const base = respuesta.ofertas[0]
+  const con = proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: ['Vehículo según el catálogo de Allianz: X.', 'Precio con supuestos: uso diario, garaje colectivo.'] }] }).ofertas[0]
+  assert.equal(con.supuestos, 'Precio con supuestos: uso diario, garaje colectivo.')
+  assert.ok(!JSON.stringify(con).includes('catálogo'), 'los demás avisos no cruzan')
+  const largo = proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: [`Precio con supuestos: ${'x'.repeat(500)}`] }] }).ofertas[0]
+  assert.equal(largo.supuestos?.length, 300)
+  assert.equal(proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: 'Precio con supuestos: no es lista' }] }).ofertas[0].supuestos, null)
 })
 
 test('un trabajo que no está ok no enseña ofertas; el error sale sin url ni ids de evidencia', () => {

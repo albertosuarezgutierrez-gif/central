@@ -27,6 +27,8 @@ export type EtapaPersona = 'fallido' | 'sin_datos' | 'enviado' | 'entregado' | '
 export type PersonaCampana = {
   clienteId: string
   nombre: string
+  /** `null` = asegura no pudo leer el correo de la ficha. */
+  email: string | null
   lote: number
   loteFecha: string
   variante: string
@@ -107,6 +109,7 @@ function leerPersona(v: unknown): PersonaCampana | null {
   return {
     clienteId,
     nombre: cadena(o.nombre) ?? '',
+    email: cadena(o.email),
     lote: numeroONull(o.lote) ?? 0,
     loteFecha: cadena(o.loteFecha) ?? '',
     variante: cadena(o.variante) ?? '',
@@ -183,6 +186,48 @@ export function pasosEmbudo(e: EmbudoCampana): PasoEmbudo[] {
     clave, etiqueta, valor,
     pctPrevio: i === 0 ? null : porcentaje(valor, base[i - 1][2]),
   }))
+}
+
+const NIVEL_ETAPA: Record<EtapaPersona, number> = {
+  fallido: -1, sin_datos: 0, enviado: 0, entregado: 1, abierto: 2, clic: 3, visita: 4, registrado: 5,
+}
+/** Nivel mínimo de cada tarjeta del embudo (mismo orden y regla que `embudoCampana` de module-seguros). */
+const NIVEL_PASO: Record<string, number> = { enviados: 0, entregados: 1, abiertos: 2, clics: 3, visitas: 4, registrados: 5 }
+/** Evento propio de cada paso, y los posteriores que lo implican si el propio no consta. */
+const EVENTOS_PASO: Record<string, (keyof PersonaCampana)[]> = {
+  enviados: ['enviadoEn'],
+  entregados: ['entregadoEn', 'abiertoEn', 'clicEn', 'visitaEn', 'registradoEn'],
+  abiertos: ['abiertoEn', 'clicEn', 'visitaEn', 'registradoEn'],
+  clics: ['clicEn', 'visitaEn', 'registradoEn'],
+  visitas: ['visitaEn', 'registradoEn'],
+  registrados: ['registradoEn'],
+}
+
+/**
+ * Las personas de UNA tarjeta del embudo, con el MISMO criterio que la cifra (`embudoCampana`): salió
+ * (no `fallido`) y su etapa más avanzada es ≥ la del paso (cada etapa implica las anteriores, así que
+ * «Abiertos» incluye a quien hizo clic). Una fila por persona (la campaña es única por persona).
+ * Orden: evento del paso más reciente primero.
+ */
+export function personasDelPaso(personas: readonly PersonaCampana[], clave: string): PersonaCampana[] {
+  const nivel = NIVEL_PASO[clave]
+  if (nivel === undefined) return []
+  return personas
+    .filter((p) => p.etapa !== 'fallido' && NIVEL_ETAPA[p.etapa] >= nivel)
+    .sort((a, b) => (fechaDelPaso(b, clave)?.iso ?? '').localeCompare(fechaDelPaso(a, clave)?.iso ?? ''))
+}
+
+/**
+ * Fecha del evento del paso. Si el propio no consta pero otro posterior lo implica (p. ej. clic sin
+ * apertura registrada), se da la fecha de ese y `inferido: true`. `null` = sin fecha: no se inventa.
+ */
+export function fechaDelPaso(p: PersonaCampana, clave: string): { iso: string; inferido: boolean } | null {
+  const campos = EVENTOS_PASO[clave] ?? []
+  for (const [i, c] of campos.entries()) {
+    const v = p[c]
+    if (typeof v === 'string' && v) return { iso: v, inferido: i > 0 }
+  }
+  return null
 }
 
 export const ETIQUETA_ETAPA: Record<EtapaPersona, string> = {

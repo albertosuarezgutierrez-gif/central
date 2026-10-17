@@ -4,7 +4,7 @@
 //    ofertas con sus primas. NUNCA la URL del portal, el HTML/captura del fallo (`html_documento_id`,
 //    `evidencia_documento_id`: solo operador interno), ni el riesgo, ni credenciales.
 
-import { motivoLegible, riesgoYaPurgado, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
+import { motivoLegible, riesgoYaPurgado, supuestosDeAvisos, validarOpcionesVersion, type CandidatoVersion } from '@central/module-tarificacion'
 
 export type FilaTrabajoLectura = {
   estado: string
@@ -26,6 +26,11 @@ export type OfertaLectura = {
   pdfIndice: number | null
   /** Fecha de término REAL que fijó el portal (ISO; ePAC la ajusta al día 1 del mes). `null` = no se leyó. */
   fechaTerminoPortal: string | null
+  /**
+   * Lo que el bot SUPUSO para dar este precio (15/10/2026, Allianz Turismos): «Precio con supuestos: uso diario, garaje colectivo…».
+   * Solo ese aviso de `avisos[]` cruza (lista blanca; sin datos personales). `null` = el bot no supuso nada (o no lo dice).
+   */
+  supuestos: string | null
 }
 
 export type TrabajoLectura = {
@@ -82,6 +87,7 @@ export function ofertasPublicas(respuesta: unknown): { ofertas: OfertaLectura[];
       impuestosSucesivos: num(ds?.impuestosEur),
       pdfIndice: indice,
       fechaTerminoPortal: fechaIso(o.fechaTerminoPortal),
+      supuestos: supuestosDeAvisos(o.avisos),
     })
   }
   return {

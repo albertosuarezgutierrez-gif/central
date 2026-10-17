@@ -365,7 +365,25 @@ export {
   type DatosTomadorFicha,
   type SeleccionVehiculo,
   type ValidacionFormularioAuto,
+  USOS_FRECUENCIA,
+  TIPOS_GARAJE,
+  type UsoFrecuencia,
+  type TipoGaraje,
 } from './formulario-auto.ts'
+// Supuestos de un precio de coche por bot (15/10/2026): el valor «no determinante» de lo que el formulario no trae, DECLARADO.
+export {
+  supuestosAuto,
+  etiquetasSupuestos,
+  textoSupuestos,
+  supuestosDeAvisos,
+  hoyEspana,
+  PREFIJO_SUPUESTOS,
+  MAX_AVISO_SUPUESTOS,
+  type Supuesto,
+  type SupuestosAuto,
+  type CompraVehiculo,
+  type Antecedentes,
+} from './supuestos-auto.ts'
 // Vehículo de catálogo CONFIRMADO por matrícula en Mapfre (14/10/2026): sin matrícula ni bastidor; elige versión en otros bots.
 export {
   ORIGENES_VEHICULO_CONFIRMADO,
