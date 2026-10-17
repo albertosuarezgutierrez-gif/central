@@ -70,3 +70,5 @@
 | 14/10/2026 | solo docs: bitácora común de errores y capa por ramo en CONOCIMIENTO-PORTALES.md, regla en MANUAL-NUEVO-BOT.md (§4 y §6) | agente-mecanico | ok (sin tsc: no se tocó código) |
 | 14/10/2026 | solo docs: subsección «Flujo NSEI Auto (tarificación rápida)» en la capa Mapfre de CONOCIMIENTO-PORTALES.md (sin datos personales) | agente-mecanico | ok (sin tsc: no se tocó código) |
 | 15/10/2026 | fix `adaptadorMoto.construir`: sexo `""` (valor inicial del desplegable) usa `f.sexo` en vez de null + test de regresión en `tarificador-bots-ramos.test.ts` (rojo antes, verde después) | agente-mecanico | ok (tsc limpio) |
+| 17/10/2026 | corrección de una frase de la skill agente-correduria | agente-mecanico | ok |
+| 17/10/2026 | asegura-web: textos legales y SEO (PR #4768) | agente-mecanico | ok; hicieron falta 2 tests de seguimiento: `tipografia.test.ts` esperaba Google Fonts por URL y `gestor.test.ts` casaba la frase vieja por casualidad |

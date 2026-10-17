@@ -104,7 +104,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Datos del riesgo de oportunidades por ramo | ✅ PR #4127 | `datos-riesgo-{generico,ramo,vivienda,capital,libre}` · `/api/operador/oportunidad/riesgo` |
 | **Emitir por Codeoscopic** | 🟡 OK de Alberto 02/09. Acuñar la póliza emitida (D2) está: `registrarPolizaEmitida` + puerto `POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`. ✅ **El envío al vendor SÍ está** (`emitir-envio.ts`, desde 11/09; emisiones reales Allianz 17/09 y Reale 23/09, medido 25/09). Sigue sin probar la idempotencia del `attempt_id` (no hay sandbox). **Solo emite desde «Retarificar» de una póliza auto/moto**: negocio nuevo (`*-nuevo`) y proyectos creados a mano en Avant2 no se pueden emitir ni importar por id | `asegura/lib/emision.ts` · spec §3 |
 | **Conciliación emitida ↔ CIMA** | 🟡 reglas puras hechas y testeadas (`emparejarConCima` D4, `conciliarConCima` D3) + `companias_dgs` (DGS → nombre exacto de CIMA) + enum `emitida_codeoscopic`. Falta el port de la ingesta CIMA que las use (aparcado); mientras, el legacy casa por nombre y D2 lo hace compatible | `module-seguros/emision.ts` · `seguros.companias_dgs` |
-| Alta automática de leads (web, WhatsApp, agente) | 🟡 **Web ✅** (02/09): landing pública `/seguros` en plataforma → `POST /api/publico/correduria/lead` (rate limit, honeypot, RGPD) → alta con `fuente = web` e historial `contacto`; si el teléfono/email ya está en una ficha NO se duplica: se anota el contacto en esa ficha. Telegram `correduria.lead-nuevo` siempre, con enlace a la ficha. WhatsApp ❌ (sin WABA) · agente ❌ | `plataforma/app/seguros` · `lib/leads-web.ts` · `asegura /cliente/historial` |
+| Alta automática de leads (web, WhatsApp, agente) | 🟡 **Web ✅** (02/09): formulario público en `apps/asegura-web` → `POST /api/publico/correduria/lead` (rate limit, honeypot, RGPD) → alta con `fuente = web` e historial `contacto`; si el teléfono/email ya está en una ficha NO se duplica: se anota el contacto en esa ficha. Telegram `correduria.lead-nuevo` siempre, con enlace a la ficha. WhatsApp ❌ (sin WABA) · agente ❌ | `apps/asegura-web` (formulario; `plataforma/app/seguros` no existe) · `lib/leads-web.ts` · `asegura /cliente/historial` |
 | Estado «con presupuesto» / «ex-cliente» | ✅ derivado (`estadoCliente`, module-seguros) | `estado-cliente.ts` |
 | Portal del cliente leyendo la cartera | ✅ Fase 4 (02/09): al canjear el código, `vincularIdentidad` casa el email por índice ciego (`PII_LOOKUP_KEY`) con UNA ficha → `portal_vinculo`; varias fichas → `ambiguo` (no se adivina). La bóveda enseña las pólizas vivas de CIMA con `camposVisibles(nivel)`. **Sin desplegar**: falta contraseña del rol + `DATABASE_URL` + `PII_LOOKUP_KEY` en el proyecto Vercel del portal (sin confirmar que exista) | `asegura-portal/lib/vinculo.ts` · `lib/cartera-lectura.ts` |
 | Autorizados en el portal | ✅ grant a `prisma_asegura_portal` sobre `cliente_relaciones` y sección «Seguros que te han autorizado a ver» (`clientesVisiblesPara`, nivel `completo` porque la relación es un booleano) | `module-seguros/relaciones.ts` |
@@ -178,6 +178,12 @@ X → Y» anualizado (sin ahorro si no asegura), pack coche+moto opcional (inter
   agente IA · teléfono (alta manual, ya). Cada contacto deja `historial_interno` tipo `contacto`.
 - **Convierte** cuando Codeoscopic emite y CIMA confirma (§5). No se toca `tipo` a mano: lo deriva
   la pantalla (§3).
+- **Web, auditado 17/10/2026:** `consent_logs` con dos filas (`gestion` y `comercial`, esta solo si la web la
+  informa; versión en `apps/asegura-web/lib/atribucion.ts`; solo se añaden filas). Atribución first-touch en
+  `historial_interno` («Atribución web: » + JSON; a futuro `clientes.origen_web jsonb`). Cron `purga-rgpd`
+  (asegura): documentos del cliente de leads sin póliza a 30 días y prospectos `fuente='web'` anonimizados a
+  12 meses, en MODO INFORME hasta `CORREDURIA_PURGA_RGPD_ACTIVA=1`. Pendiente: PII en textos antiguos de
+  historial y presupuestos. Real: 2 leads web (sept. y oct. 2026); el cuello de botella es el tráfico.
 
 ## 7. El portal del cliente (lo que «verá el cliente final»)
 

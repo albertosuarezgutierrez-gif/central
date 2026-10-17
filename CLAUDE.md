@@ -83,6 +83,9 @@ y los `module-*` de cada vertical.
 - **Dinero en formato español:** `2.162,49€` (puntos de miles también en 4 cifras, coma decimal, € detrás).
   En plataforma, `eur()` de `lib/dinero.ts`.
 - **Secretos de auth sin fallback a literal:** `requireSecret()` de `@central/core-identity`. Guardián `regression-secrets`.
+- **MCP `Supabase_asegura` ≠ BD de la cartera:** el schema `seguros` está en el MCP `Supabase` (proyecto central).
+- **Tests con fecha fija contra validaciones con reloj real = bomba de tiempo** (un test de moto tumbó `main` el
+  17/10): fechas relativas a hoy o inyecta `hoy`. La web pública no se abre desde el contenedor: SEO por código y GSC.
 - **Los cambios que ROMPEN se hacen AHORA**, mientras no hay clientes en producción.
 
 ## Agentes y tokens

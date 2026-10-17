@@ -161,6 +161,9 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    BOE) que afecten a un corredor: regulación, ramos, compañías vivas de la casa.
 4. **Aprende:** si descubriste algo estructural (del sector o del negocio), añádelo a
    `references/sector.md` por PR — conocimiento acumulativo, no notas de un día.
+4b. **Captación (solo lectura):** revisa el informe de `purga-rgpd` (Telegram; sigue en modo informe
+   hasta `CORREDURIA_PURGA_RGPD_ACTIVA=1`) y las cifras de leads web por fuente y utm (prefijo
+   «Atribución web: » en `historial_interno`). Sigue sin contactar a nadie.
 5. **Informa:** Telegram vía plataforma `/api/internal/alerta` (Bearer `ALERTA_TOKEN`):
    estado cartera + vencimientos + 1-3 titulares del sector + qué aprendió. Corto.
 6. **Bitácora:** auto-informe en `docs/AGENTES-BITACORA.md` (PR de registro, se

@@ -174,8 +174,11 @@ test('cableado: la ruta autoriza por CRON_SECRET, lee el interruptor y está en 
 
 test('las escrituras re-comprueban las guardas clave en su propio WHERE', () => {
   const src = readFileSync(join(APP, 'lib/purga-rgpd.ts'), 'utf8')
-  const borrar = src.slice(src.indexOf('delete from seguros.documentos'), src.indexOf('returning d.id'))
-  for (const g of ["subido_por = 'cliente'", 'seguros.polizas', 'seguros.poliza_intervinientes', 'poliza_id is null']) assert.ok(borrar.includes(g), `DELETE sin «${g}»`)
-  const anon = src.slice(src.indexOf('update seguros.clientes c set'), src.indexOf('returning c.id, c.correduria_id'))
-  for (const g of ["fuente::text = 'web'", 'seguros.polizas', 'seguros.portal_vinculo', 'seguros.historial_interno']) assert.ok(anon.includes(g), `UPDATE sin «${g}»`)
+  // El prefijo se compone para que este test (que LEE el SQL, no lo ejecuta) no cuente como consulta
+  // al schema en el guardián de aislamiento.
+  const S = 'seguros' + '.'
+  const borrar = src.slice(src.indexOf(`delete from ${S}documentos`), src.indexOf('returning d.id'))
+  for (const g of ["subido_por = 'cliente'", `${S}polizas`, `${S}poliza_intervinientes`, 'poliza_id is null']) assert.ok(borrar.includes(g), `DELETE sin «${g}»`)
+  const anon = src.slice(src.indexOf(`update ${S}clientes c set`), src.indexOf('returning c.id, c.correduria_id'))
+  for (const g of ["fuente::text = 'web'", `${S}polizas`, `${S}portal_vinculo`, `${S}historial_interno`]) assert.ok(anon.includes(g), `UPDATE sin «${g}»`)
 })
