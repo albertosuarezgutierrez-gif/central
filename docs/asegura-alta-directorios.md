@@ -18,8 +18,8 @@ Borrador para Alberto. Nada de esto está enviado ni registrado. Los datos salen
 
 **PENDIENTE (Alberto):**
 - Horario en la ficha de Google Business: en el código consta que el perfil no lo tenía (`sitio.ts:270-271`). Confirmar que ya está publicado.
-- Teléfono: es el móvil PERSONAL de Alberto (`mediador.ts:129`). Un directorio lo copia y no se borra. Decidir si se publica o si hay una línea de empresa.
-- Email: la web publica todavía `info@grupoasegura.es` en Términos, privacidad y `/info-mediador` (`mediador.ts:113-114`). Antes de dar de alta el correo, unificarlo.
+
+**Resuelto (Alberto, 17/10/2026):** el email público único es hola@grupoasegura.es y el móvil público es 637 349 990 (`mediador.ts`). `info@grupoasegura.es` ya no se publica.
 
 ## 2. Textos
 
