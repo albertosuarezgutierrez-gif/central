@@ -39,7 +39,7 @@ Una franquicia es la parte del daño que pagas tú; un sublímite es un tope má
 El artículo 22.3 de la LCS obliga al asegurador a comunicarte cualquier modificación del contrato con al menos dos meses de antelación a la conclusión del período en curso. Compara las condiciones nuevas con las anteriores, no solo el importe.
 
 **7. ¿Tengo seguros duplicados?**
-Dos pólizas que cubren el mismo riesgo sobre el mismo interés y en el mismo período deben comunicarse entre sí, salvo pacto en contrario (artículo 32 de la LCS). No pagarás dos veces la indemnización, pero sí dos veces la prima.
+Si tienes dos pólizas con distintas compañías que cubren el mismo riesgo sobre el mismo interés y en el mismo período, debes comunicar a cada aseguradora las demás, salvo pacto en contrario (artículo 32 de la LCS). En un siniestro las compañías pagan en proporción a su suma asegurada, sin superar el daño: no cobras dos veces la indemnización, pero sí pagas dos primas.
 
 **8. ¿Quién es el beneficiario y quién figura como asegurado?**
 En vida y accidentes, un beneficiario desactualizado es un error clásico. En hogar con hipoteca, comprueba si el banco figura como beneficiario y hasta cuándo.
@@ -58,7 +58,6 @@ En Grupo ASegura puedes subir tu póliza y recibir una explicación de lo que cu
 
 ## Fuentes
 
-- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 3 (cláusulas limitativas), artículo 8 (contenido mínimo de la póliza), artículo 11 (agravación del riesgo), artículo 22 (duración, prórroga y oposición; apartado 2 para los plazos de un mes y dos meses, apartado 3 para las modificaciones), artículo 30 (regla proporcional) y artículo 32 (pluralidad de seguros). Texto consolidado, BOE-A-1980-22501.
-- Dirección General de Seguros y Fondos de Pensiones (DGSFP), Ministerio de Economía, Comercio y Empresa: supervisor de las aseguradoras y de los mediadores. Su Servicio de Reclamaciones atiende las quejas una vez agotada la vía del servicio de atención al cliente de la entidad (Orden ECC/2502/2012).
-- [VERIFICAR] Nombre vigente del ministerio del que depende la DGSFP en la fecha de publicación.
-- [VERIFICAR] Enlace oficial a la sede de la DGSFP para citar (no se ha podido consultar desde el entorno de trabajo).
+- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 3 (cláusulas limitativas), artículo 8 (contenido mínimo de la póliza), artículo 11 (agravación del riesgo), artículo 22 (duración, prórroga y oposición; apartado 2 para los plazos de un mes y dos meses, apartado 3 para las modificaciones), artículo 30 (regla proporcional) y artículo 32 (pluralidad de seguros). Texto consolidado, BOE-A-1980-22501 (https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501). Comprobado el 17/10/2026 contra la copia consolidada de 25/07/2025 de `docs/normativa/`: art. 22.2 (un mes el tomador, dos meses el asegurador), art. 22.3 (modificaciones con dos meses de antelación), art. 3, art. 8 (apdos. 3 y 5), art. 11, art. 30 y art. 32.
+- Dirección General de Seguros y Fondos de Pensiones (DGSFP): supervisor de las aseguradoras y de los mediadores. Su Servicio de Reclamaciones atiende las quejas una vez agotada la vía del servicio de atención al cliente de la entidad (Orden ECC/2502/2012).
+- Nota editorial: no se cita el ministerio ni se enlaza la sede de la DGSFP en el texto (no se pudo consultar desde el entorno de trabajo); la web ya recoge el contacto de la DGSFP en su sección de contacto.

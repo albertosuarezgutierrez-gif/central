@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/10/2026)** — Correduría · 4 guías de hogar publicadas en grupoasegura.es (revisar póliza, franquicia/sublímite, comparar hogar, regla proporcional), 0 [VERIFICAR] contra la LCS consolidada de `docs/normativa/`; `NORMAS_CITABLES` + LCS 8, 11, 26-32. Paquete de alta en directorios `docs/asegura-alta-directorios.md` (sin registrar nada). Decisión Alberto: email público único `hola@grupoasegura.es`, móvil 637349990. Pendiente: horario de Google Business, altas en directorios (OK por directorio), re-medir visibilidad IA en ~4 semanas.
+
 **(17/10/2026)** — Correduría · base de visibilidad en IA (OpenSEO, 18 consultas × ChatGPT/Gemini, 216 créditos): **Grupo ASegura sale en 0/36**, 0 citas propias. Fuentes que mandan: rastreator, segurfer, ocu, selectra, kelisto. Informe `docs/ASEGURA-VISIBILIDAD-IA-2026-10.md`. Tracker `8dc0311c` guardado y PAUSADO (sin gasto recurrente; reactivar = decisión de Alberto). Siguiente: publicar guías 01-04 tras revisar [VERIFICAR] y aparecer en directorios de corredurías de Sevilla.
 
 **(17/10/2026)** — Correduría · auditoría de captación nacional (solo lectura + informe `docs/ASEGURA-CAPTACION-AUDITORIA-2026-10.md`). El prompt original asumía Symfony inexistente.

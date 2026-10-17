@@ -110,23 +110,22 @@ export const MEDIADOR = {
      * cliente que contesta a su código de acceso y el que presenta una queja
      * llegan al mismo sitio — que es justo lo que un SAC tiene que garantizar.
      *
-     * ⚠️ La web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
-     * en sus Términos, en su política de privacidad y en `/info-mediador`. Dos
-     * canales de reclamación distintos para el mismo mediador es una
-     * contradicción entre documentos legales publicados, no una errata: hay que
-     * unificarlo allí también, y ese cambio toca textos con `LegalVersionGate`.
+     * Decisión de Alberto (17/10/2026): TODO email público de la correduría es
+     * este; `info@grupoasegura.es` ya no se publica en ninguna superficie (lo
+     * vigila `mediador.test.ts`).
      */
     email: 'hola@grupoasegura.es',
     /**
-     * Móvil de Alberto, confirmado por él el 05/09/2026 para publicarlo en la
-     * web y usarlo como WhatsApp de contacto.
+     * Móvil público de la correduría (637 349 990): confirmado por Alberto el
+     * 05/09/2026 y ratificado el 17/10/2026 como único móvil publicable, en la
+     * web y como WhatsApp de contacto.
      *
      * 🚨 En E.164 y SIN espacios a propósito: es el formato que exige `wa.me/`
      * y el que Google espera en `telephone` del JSON-LD. Para PINTARLO usa
      * `telefonoLegible`, no este: un `+34637349990` de corrido en una web se
      * lee mal y se copia peor.
      *
-     * ⚠️ Es su número PERSONAL, no una línea de empresa. Publicarlo es
+     * ⚠️ Es un móvil, no una línea fija de empresa. Publicarlo es
      * irreversible: los rastreadores lo copian en horas. Si algún día hay una
      * línea de la correduría (o la WABA que el portal espera para su canal de
      * WhatsApp), se sustituye AQUÍ y cambia en todas las superficies a la vez.

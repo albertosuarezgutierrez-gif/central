@@ -18,12 +18,10 @@ las guías 2-4 deben enlazarlo y no repetirlo (riesgo de canibalización, ver GS
 3, 8, 11, 22 (apdos. 1-3), 26, 27, 28, 29, 30, 31, 32. Confirmado: la LCS no contiene «franquicia» ni «sublímite».
 Los ya presentes en `NORMAS_CITABLES`: 3, 22. **Faltan por añadir** (con `verificado` = fecha de hoy): 8, 11, 26, 27, 28, 29, 30, 31, 32.
 
-## [VERIFICAR] pendientes
-- Todas: enlace oficial a la sede de la DGSFP (boe.es y la web quedan fuera de alcance desde la sesión) y nombre vigente de su ministerio (guía 1).
-- Guía 2: orden de aplicación franquicia/sublímite/límite (depende de la póliza); sentencia del TS sobre cláusulas delimitadoras vs. limitativas, si se cita.
-- Guía 3: relación entre «valor a nuevo» pactado y el art. 26; existencia de pólizas sin regla proporcional por producto; base normativa de la información precontractual comparable.
-- Guía 4: orden franquicia/regla proporcional; fuente oficial para valorar la reconstrucción.
-- Texto de copy: pasar `lib/ramos.test.ts` (sin promesas de precio) y revisar que ningún «en Sevilla» entre en los h1.
+## [VERIFICAR] (revisados el 17/10/2026)
+Resueltos contra la copia consolidada del BOE de la LCS (25/07/2025, `docs/normativa/`; boe.es sigue bloqueado desde la sesión): art. 30 (regla proporcional y exclusión por pacto), art. 22.2 (un mes tomador / dos meses asegurador), 22.3, 3, 8, 11, 26-29, 31, 32. Sin cifras ni plazos inventados.
+Resueltos por reformulación (la frase ya no afirma nada no contrastado): orden franquicia/sublímite/proporción, sentencia del TS (retirada), pólizas sin regla proporcional, valor a nuevo vs. art. 26, información precontractual (no se afirma), método de valoración (no se da), ministerio y enlace de la DGSFP (no se citan; la web ya enlaza la DGSFP en contacto).
+Quedan 0 marcas [VERIFICAR]. **Montadas (17/10/2026)** en `apps/asegura-web/lib/articulos.ts` (slugs `revisar-poliza-antes-de-renovar`, `franquicia-limite-sublimite-diferencias`, `como-comparar-dos-seguros-de-hogar`, `regla-proporcional-seguro-que-es`) con las normas `lcs-8`, `lcs-11`, `lcs-26`..`lcs-32` añadidas a `NORMAS_CITABLES`. Se publican al mergear el PR, tras la revisión de Alberto.
 
 ## Cómo se publicarían
 1. Alberto aprueba y resuelve los [VERIFICAR] (o se eliminan esas frases).
