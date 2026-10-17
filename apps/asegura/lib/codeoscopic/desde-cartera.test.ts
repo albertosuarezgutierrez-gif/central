@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { hoyEnMadrid } from './fecha-efecto.ts'
+import { hoyEnMadrid, sumarDias } from './fecha-efecto.ts'
 import {
   precalificarAuto,
   precalificarAutoNueva,
@@ -26,6 +26,10 @@ import {
 
 const HOY = '2026-09-01'
 
+// Vencimiento de la póliza de la cartera: hoy + 30 días (no una fecha fija, que caduca).
+// Las validaciones de fecha de efecto miran el reloj real, así que el fixture tiene que ir con él.
+const VENCIMIENTO_POLIZA = sumarDias(hoyEnMadrid(), 30)
+
 const CLIENTE: ClienteCartera = {
   nombre: 'José',
   apellidos: 'Suárez Gutiérrez',
@@ -43,7 +47,7 @@ const POLIZA: PolizaCartera = {
   codigoEntidadDgs: 'C0058',
   matricula: '1234ABC',
   fechaEfectoInicial: '2016-03-01',
-  fechaVencimiento: '2026-10-15',
+  fechaVencimiento: VENCIMIENTO_POLIZA,
   siniestrosRegistrados: 0,
   vehiculo: { marca: 'SMART', modelo: 'FORFOUR', versiones: [] },
 }
@@ -149,7 +153,7 @@ test('la póliza actual pasa a ser la ANTERIOR de la cotización', () => {
 
 test('la fecha de efecto es el día siguiente al vencimiento de la póliza actual', () => {
   const { datos } = pre()
-  assert.equal(datos.fechaEfecto, '2026-10-16')
+  assert.equal(datos.fechaEfecto, sumarDias(VENCIMIENTO_POLIZA, 1))
 })
 
 test('si la póliza ya venció, se cotiza para mañana y se dice por qué', () => {
@@ -498,7 +502,7 @@ test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad),
 
 test('moto de cartera: efecto al día siguiente del vencimiento, y un solo supuesto de fecha', () => {
   const r = preMotoPoliza()
-  assert.equal(r.datos.fechaEfecto, '2026-10-16')
+  assert.equal(r.datos.fechaEfecto, sumarDias(VENCIMIENTO_POLIZA, 1))
   const fechas = r.supuestos.filter((x) => x.campo === 'fechaEfecto')
   assert.equal(fechas.length, 1)
   assert.match(String(fechas[0].porque), /vencimiento/)

@@ -206,6 +206,10 @@ test('primasDesdeCeldas: B_A primer recibo y sucesivos; modalidad sin celda no e
   assert.equal(of.length, 2)
   assert.equal(of[0].primaAnualEur, 100.1)
   assert.equal(of[0].desglose?.sucesivos.primaTotalEur, 102.2)
+  // v0.6.2: los SUPUESTOS de Turismos viajan junto al precio, en cada oferta (y solo si los hay).
+  assert.ok(!of[0].avisos.some((a) => a.startsWith('Precio con supuestos')))
+  const conSup = ofertasDesdePrimas(primasDesdeCeldas(celdas, mods), 'Allianz Autos', null, 'Precio con supuestos: uso diario.')
+  assert.ok(conSup.every((o) => o.avisos.includes('Precio con supuestos: uso diario.')))
 })
 
 test('leerPrimasTarificar lee la tabla (DOM sintético)', async () => {

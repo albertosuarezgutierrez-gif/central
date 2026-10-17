@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { claveCerrada, formularioBotAuto, garajeNocheDeCodigo, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { claveCerrada, formularioBotAuto, garajeNocheDeCodigo, tipoGarajeDeCodigo, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 import { completarRiesgoAutoDesdeFicha, datoDePersonaBot, historialBot, mensajeFaltanDeFicha, type FichaParaBot } from './tarificador-moto-formulario.ts'
 
 const HOY = new Date('2026-10-14T10:00:00Z')
@@ -47,6 +47,18 @@ test('garaje: calle/vía pública → false; garajes → true; vacío o código 
   for (const g of [null, undefined, '', 'Desconocido', 'publicroad']) assert.equal(garajeNocheDeCodigo(g), null, String(g))
   assert.equal(ok(entrada({ garaje: 'PublicRoad' })).riesgo.garajeNoche, false)
   assert.equal(ok(entrada({ garaje: 'PrivateGarage' })).riesgo.garajeNoche, true)
+})
+
+test('supuestos de Allianz Turismos (15/10/2026): tipo de garaje, 1ª matriculación, vencimiento y ocasional viajan solo si son dato', () => {
+  assert.equal(tipoGarajeDeCodigo('CommunalParking'), 'colectivo')
+  for (const g of ['PrivateGarage', 'IndividualGarage']) assert.equal(tipoGarajeDeCodigo(g), 'individual', g)
+  for (const g of ['PublicRoad', 'Street', 'NoGarage']) assert.equal(tipoGarajeDeCodigo(g), 'calle', g)
+  for (const g of [null, '', 'Garage', 'Desconocido']) assert.equal(tipoGarajeDeCodigo(g), null, String(g)) // «Garaje» a secas: el bot supone
+  const r = ok(entrada({ garaje: 'CommunalParking', fechaMatriculacion: '2019-03-01', fechaVencimiento: '2027-01-15', conductorOcasional: false }))
+  assert.deepEqual([r.riesgo.tipoGaraje, r.riesgo.fechaMatriculacion, r.riesgo.fechaVencimiento, r.riesgo.conductorOcasional], ['colectivo', '2019-03-01', '2027-01-15', false])
+  // Sin forma válida (o matriculación futura) no viajan y NUNCA bloquean el botón: el bot supone y lo declara.
+  const raro = ok(entrada({ fechaMatriculacion: '2030-01-01', fechaVencimiento: '15/01/2027', conductorOcasional: null }))
+  for (const k of ['fechaMatriculacion', 'fechaVencimiento', 'conductorOcasional', 'tipoGaraje']) assert.equal(k in raro.riesgo, false, k)
 })
 
 test('marca/modelo opcionales en coche (Mapfre confirma por matrícula): sin los dos, no viaja seleccionVehiculo', () => {

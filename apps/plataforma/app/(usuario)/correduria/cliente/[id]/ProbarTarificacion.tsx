@@ -172,6 +172,10 @@ export default function ProbarTarificacion({ clienteId }: { clienteId: string })
                   {res.ofertas.map((o, n) => <li key={n} style={{ overflowWrap: 'anywhere' }}>{o}</li>)}
                 </ul>
               )}
+              {/* Lo que el bot SUPUSO para dar ese precio (uso, garaje, 2º conductor…): junto al precio, igual que en PrecioBots. */}
+              {res && res.ofertas.length > 0 && res.supuestos.map((s) => (
+                <span key={s} role="note" style={{ fontSize: 13, color: 'var(--warning)', overflowWrap: 'anywhere' }}>{s} Confírmalo con el cliente.</span>
+              ))}
               {seg.trabajo && seg.trabajo.ofertas.some((o) => o.pdfIndice !== null) && (
                 <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
                   {seg.trabajo.ofertas.filter((o) => o.pdfIndice !== null).map((o) => (

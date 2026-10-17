@@ -387,7 +387,7 @@ test('webhook: descarta reintentos de Telegram y contesta rápido a la corredur�
   assert.match(src, /if \(filas === null\) return false/)
   // ningún manejarCorreduriaTg se espera dentro de la petición: el único await es el de correduriaSegura (en after)
   assert.equal(src.match(/await manejarCorreduriaTg\(/g)?.length, 1)
-  assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto\)\.catch/)
+  assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto, fromId\)\.catch/)
   assert.match(src, /action === 'guardar' \|\| action === 'actualizar'(?: \|\| action === '\w+')*\) && String\(cb\.from/)
 })
 
