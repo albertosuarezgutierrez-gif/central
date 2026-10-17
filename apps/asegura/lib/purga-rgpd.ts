@@ -13,6 +13,13 @@
 //    la escritura gana) y la anonimización es UNA sentencia (ficha + teléfonos + emails + carnés + historial): o todo o nada.
 //    El texto de las líneas PREVIAS de `historial_interno` de la ficha (alta del lead, comentario, atribución web…) se
 //    REDACTA a `HISTORIAL_REDACTADO` en esa misma sentencia; la tabla no tiene trigger append-only (comprobado 17/10/2026).
+//    También el texto libre que cuelga de la ficha (inventario 17/10/2026, `TEXTO_LIBRE_REDACTADO`): notas de oportunidades
+//    sin póliza, necesidades/documento de presupuestos NO aceptados/firmados/emitidos y ya vencidos, observaciones de
+//    gestiones sin póliza ni siniestro, nota de tarificaciones sin póliza y el canal WhatsApp de la ficha (texto de
+//    `mensajes` y crudo de `channel_inbound_messages` como `whatsapp/retencion.ts`; nombre/teléfono cifrados y análisis IA).
+//    FUERA a propósito: `correo_envio` (append-only por GRANT: `prisma_seguros` no puede cambiar `asunto` → la sentencia
+//    entera fallaría), `consent_logs`/`firma`/`*_merge_log`/`interviniente_purga_log` (triggers append-only, prueba legal),
+//    `queja` (el SAC obliga a conservar) y todo lo colgado de una póliza o siniestro.
 // Sin `import` de prisma en tiempo de ejecución (solo el TIPO): el cepo `purga-rgpd.test.ts` la prueba con una BD falsa.
 
 import { esCarteraEnVigor } from '@central/module-seguros'
@@ -29,6 +36,10 @@ export const NOMBRE_ANONIMIZADO = 'Anonimizado (RGPD)'
 export const ENV_PURGA_RGPD = 'CORREDURIA_PURGA_RGPD_ACTIVA'
 /** Texto con el que se sustituyen las líneas previas de `historial_interno` de una ficha anonimizada. */
 export const HISTORIAL_REDACTADO = '[anonimizado RGPD]'
+/** Tablas hijas cuyo texto libre se redacta (o, en WhatsApp, se purga) en la misma sentencia. */
+export const TEXTO_LIBRE_REDACTADO = ['oportunidades', 'presupuesto', 'gestiones', 'tarificaciones', 'conversaciones', 'mensajes', 'channel_inbound_messages'] as const
+/** Crudo de Meta minimizado (mismo valor que `whatsapp/retencion.ts`). */
+const CRUDO_MINIMIZADO = JSON.stringify({ minimizado: true })
 
 /** Solo el valor EXACTO `'1'` activa el borrado. `'true'`, `' 1'`, vacío o ausente = modo informe. */
 export function purgaRgpdActiva(env: Record<string, string | undefined> = process.env): boolean {
@@ -279,7 +290,9 @@ export async function leerProspectosCandidatos(db: DbPurgaRgpd, correduriaId: st
             + (select count(*) from seguros.oportunidad_figura f join seguros.oportunidades o on o.id = f.oportunidad_id where f.cliente_id = c.id
                and greatest(o.created_at, coalesce(o.updated_at, o.created_at)) > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month')
             + (select count(*) from seguros.presupuesto pr where pr.cliente_id = c.id
-               and pr.creado_at > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month'))::int as actividad_reciente
+               and pr.creado_at > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month')
+            + (select count(*) from seguros.conversaciones v where v.cliente_id = c.id
+               and greatest(v.ultimo_mensaje_at, v.updated_at at time zone 'UTC') > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month'))::int as actividad_reciente
     from seguros.clientes c
     where c.correduria_id = ${correduriaId}::uuid
       and c.fuente::text = 'web'
@@ -307,7 +320,8 @@ export async function leerProspectosCandidatos(db: DbPurgaRgpd, correduriaId: st
 /**
  * Anonimiza esas fichas en UNA sentencia (atómica): nombre → marca, PII y sus índices ciegos a NULL, `activo = false`;
  * borra sus teléfonos, emails y carnés (tablas hijas de PII); REDACTA el texto de sus líneas previas de
- * `historial_interno` (alta, comentario del lead, atribución web) y deja UNA línea nueva sin PII. El CTE de redacción
+ * `historial_interno` (alta, comentario del lead, atribución web) y el texto libre de las tablas hijas seguras
+ * (`TEXTO_LIBRE_REDACTADO`, ver cabecera), y deja UNA línea nueva sin PII. El CTE de redacción
  * no ve la línea nueva (misma instantánea), así que esa se queda con su texto.
  * La fila del cliente NO se borra (sin cascada). Re-comprueba las guardas clave en el UPDATE. Devuelve cuántas.
  */
@@ -339,6 +353,8 @@ export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string
         and not exists (select 1 from seguros.oportunidades o where o.cliente_id = c.id and o.cerrada_at is null)
         and not exists (select 1 from seguros.historial_interno h where h.cliente_id = c.id
                         and greatest(h.created_at, coalesce(h.updated_at, h.created_at)) > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month')
+        and not exists (select 1 from seguros.conversaciones v where v.cliente_id = c.id
+                        and greatest(v.ultimo_mensaje_at, v.updated_at at time zone 'UTC') > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month')
       returning c.id, c.correduria_id
     ),
     tel as (delete from seguros.cliente_telefonos t using obj where t.cliente_id = obj.id returning 1),
@@ -346,6 +362,44 @@ export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string
     car as (delete from seguros.cliente_carnets_conducir k using obj where k.cliente_id = obj.id returning 1),
     red as (update seguros.historial_interno hp set texto = ${HISTORIAL_REDACTADO}
             from obj where hp.cliente_id = obj.id returning 1),
+    opo as (update seguros.oportunidades o set
+              notas = case when o.notas is null then null else ${HISTORIAL_REDACTADO}::text end,
+              motivo_perdida_detalle = case when o.motivo_perdida_detalle is null then null else ${HISTORIAL_REDACTADO}::text end,
+              aparcada_motivo = case when o.aparcada_motivo is null then null else ${HISTORIAL_REDACTADO}::text end
+            from obj where o.cliente_id = obj.id and o.correduria_id = obj.correduria_id
+              and o.poliza_id is null and o.poliza_ganada_id is null
+              and (o.notas is not null or o.motivo_perdida_detalle is not null or o.aparcada_motivo is not null)
+            returning 1),
+    pre as (update seguros.presupuesto pr set
+              necesidades = case when pr.necesidades is null then null else ${HISTORIAL_REDACTADO}::text end,
+              documento_texto = case when pr.documento_texto is null then null else ${HISTORIAL_REDACTADO}::text end
+            from obj where pr.cliente_id = obj.id and pr.correduria_id = obj.correduria_id
+              and pr.poliza_id is null and pr.poliza_emitida_id is null and pr.emitido_at is null
+              and pr.aceptado_at is null and pr.firma_id is null and pr.vence_el < now()
+              and (pr.necesidades is not null or pr.documento_texto is not null)
+            returning 1),
+    ges as (update seguros.gestiones g set observaciones = ${HISTORIAL_REDACTADO}::text
+            from obj where g.cliente_id = obj.id and g.correduria_id = obj.correduria_id
+              and g.poliza_id is null and g.siniestro_id is null
+            returning 1),
+    tar as (update seguros.tarificaciones t set nota = ${HISTORIAL_REDACTADO}::text
+            from obj where t.cliente_id = obj.id and t.correduria_id = obj.correduria_id
+              and t.poliza_id is null and t.nota is not null
+            returning 1),
+    cnv as (update seguros.conversaciones v set
+              wa_perfil_nombre_cifrado = null, wa_telefono_cifrado = null, analisis = null, analisis_error = null
+            from obj where v.cliente_id = obj.id and v.correduria_id = obj.correduria_id
+            returning v.id, v.correduria_id),
+    msj as (update seguros.mensajes m set contenido = '', texto_purgado_at = now()
+            from cnv where m.conversacion_id = cnv.id and m.texto_purgado_at is null
+            returning 1),
+    cim as (update seguros.channel_inbound_messages i set
+              payload = case when i.payload_minimizado_at is null then ${CRUDO_MINIMIZADO}::jsonb else i.payload end,
+              payload_minimizado_at = coalesce(i.payload_minimizado_at, now()),
+              message_text = null, lead_name = null, lead_phone = null
+            where i.correduria_id = ${correduriaId}::uuid
+              and (i.cliente_id in (select obj.id from obj) or i.conversacion_id in (select cnv.id from cnv))
+            returning 1),
     his as (insert into seguros.historial_interno (correduria_id, cliente_id, tipo, texto)
             select obj.correduria_id, obj.id, cast('gestion' as seguros.tipo_historial_interno), ${texto} from obj returning 1)
     select obj.id::text as id from obj`
