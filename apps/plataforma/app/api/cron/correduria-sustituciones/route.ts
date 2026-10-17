@@ -44,6 +44,9 @@ export async function GET(req: NextRequest) {
       nuevaConfirmadaCima: f.nuevaConfirmadaCima,
       nuevaReciboCima: f.nuevaReciboCima,
       viejaEnVigorCima: f.viejaEnVigorCima,
+      viejaPendienteAnular: f.viejaPendienteAnular,
+      viejaAviso: f.viejaAviso,
+      viejaVence: f.viejaVence,
     })),
   )
 
