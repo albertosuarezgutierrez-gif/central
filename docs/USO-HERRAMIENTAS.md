@@ -171,19 +171,19 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 332 | 49.548 | 41.724.580 | 0 | 0 |
-| `otro` | 327 | 11.742 | 28.314.909 | 18.308.805 | 0 |
-| `lectura-directa` | 285 | 8.050 | 25.217.478 | 0 | 0 |
-| `mcp:github` | 288 | 6.679 | 5.253.690 | 54.244.319 | 96 |
+| `bash` | 332 | 49.569 | 41.727.359 | 0 | 0 |
+| `otro` | 327 | 11.750 | 28.331.966 | 18.308.805 | 0 |
+| `lectura-directa` | 285 | 8.054 | 25.231.271 | 0 | 0 |
+| `mcp:github` | 288 | 6.687 | 5.256.741 | 54.244.319 | 96 |
 | `sql` | 209 | 4.726 | 2.349.440 | 2.351.230 | 18 |
-| `escritura` | 212 | 4.586 | 67.019.167 | 0 | 0 |
+| `escritura` | 212 | 4.587 | 67.277.629 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 46 | 1.216 | 1.279.480 | 0 | 72 |
 | `mcp:Booking-com` | 38 | 1.059 | 4.376.755 | 0 | 0 |
-| `mcp:Vercel` | 72 | 866 | 1.022.226 | 204.477 | 27 |
+| `mcp:Vercel` | 72 | 873 | 1.024.249 | 204.477 | 28 |
 | `agente:general-purpose` | 103 | 704 | 426.874 | 13.060.060 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
-| `mcp:claude-code-remote` | 41 | 416 | 43.577 | 20.519 | 0 |
+| `mcp:claude-code-remote` | 41 | 419 | 43.728 | 20.519 | 0 |
 | `mcp:Supabase` | 125 | 371 | 59.974 | 5.123 | 7 |
 | `mcp:Google_Drive` | 22 | 365 | 409.953 | 0 | 40 |
 | `agente:agente-architect` | 65 | 280 | 195.002 | 7.607.262 | 0 |
@@ -200,8 +200,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
+| `agente:verificador-esceptico` | 12 | 17 | 5.074 | 64.818 | 0 |
 | `agente:general` | 12 | 16 | 10.198 | 592.852 | 0 |
-| `agente:verificador-esceptico` | 12 | 16 | 4.762 | 64.818 | 0 |
 | `mcp:Supabase_asegura` | 14 | 15 | 3.939 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:lector-correo` | 4 | 11 | 4.256 | 0 | 0 |
