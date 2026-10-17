@@ -7,9 +7,12 @@
 //    pudo leer (`null`/`undefined`) dice NO. Si una consulta falla, lanza: el cron no borra nada y responde 500.
 // 🚨 Criterio CONSERVADOR: cualquier póliza (en cualquier estado, también del volcado histórico o de una ficha fusionada
 //    en esta), figurar como interviniente en una póliza, un proceso comercial abierto o un documento referenciado por
-//    otra tabla → NO se toca. Además se re-aplica `esCarteraEnVigor()` a las pólizas leídas.
+//    otra tabla → NO se toca. Un prospecto enlazado a otra ficha (relación familiar/societaria en `cliente_relaciones`,
+//    en cualquiera de los dos lados) o en una autorización del portal (otorgante o autorizado) tampoco se anonimiza. Además se re-aplica `esCarteraEnVigor()` a las pólizas leídas.
 // 🚨 La sentencia que escribe RE-COMPRUEBA las guardas clave en su propio WHERE (una póliza creada entre la lectura y
 //    la escritura gana) y la anonimización es UNA sentencia (ficha + teléfonos + emails + carnés + historial): o todo o nada.
+//    El texto de las líneas PREVIAS de `historial_interno` de la ficha (alta del lead, comentario, atribución web…) se
+//    REDACTA a `HISTORIAL_REDACTADO` en esa misma sentencia; la tabla no tiene trigger append-only (comprobado 17/10/2026).
 // Sin `import` de prisma en tiempo de ejecución (solo el TIPO): el cepo `purga-rgpd.test.ts` la prueba con una BD falsa.
 
 import { esCarteraEnVigor } from '@central/module-seguros'
@@ -24,6 +27,8 @@ export const LOTE_PURGA_RGPD = 200
 /** Marca de una ficha anonimizada (no hay columna propia): la selección la excluye, así que es idempotente. */
 export const NOMBRE_ANONIMIZADO = 'Anonimizado (RGPD)'
 export const ENV_PURGA_RGPD = 'CORREDURIA_PURGA_RGPD_ACTIVA'
+/** Texto con el que se sustituyen las líneas previas de `historial_interno` de una ficha anonimizada. */
+export const HISTORIAL_REDACTADO = '[anonimizado RGPD]'
 
 /** Solo el valor EXACTO `'1'` activa el borrado. `'true'`, `' 1'`, vacío o ausente = modo informe. */
 export function purgaRgpdActiva(env: Record<string, string | undefined> = process.env): boolean {
@@ -108,6 +113,10 @@ export type ProspectoCandidato = {
   conPortal: boolean | null
   /** Oportunidad sin cerrar (propia o como figura): el acuerdo aún está en juego. */
   oportunidadAbierta: boolean | null
+  /** Enlazada a otra ficha en `cliente_relaciones` (como A o como B): cónyuge, hijo, administrador… de alguien. */
+  conRelacion: boolean | null
+  /** Figura en `portal_autorizacion` (como otorgante o como autorizado). */
+  conAutorizacionPortal: boolean | null
   /** Eventos comerciales (historial_interno, oportunidades, presupuestos) en los últimos 12 meses. 0 = revisado, ninguno. */
   actividadReciente: number | null
 }
@@ -130,6 +139,8 @@ export function esProspectoAnonimizable(p: ProspectoCandidato, meses = MESES_RET
   if (p.interviniente !== false) return false
   if (p.conPortal !== false) return false
   if (p.oportunidadAbierta !== false) return false
+  if (p.conRelacion !== false) return false
+  if (p.conAutorizacionPortal !== false) return false
   if (typeof p.actividadReciente !== 'number' || !Number.isFinite(p.actividadReciente) || p.actividadReciente !== 0) return false
   return true
 }
@@ -174,7 +185,8 @@ type FilaDoc = {
 type FilaProspecto = {
   id: string; fuente: string | null; tipo_cliente: string | null; segmento: string | null; created_at: Date | null; ahora: Date | null
   anonimizado: boolean | null; fusionada: boolean | null; polizas: PolizaLeida[] | null; interviniente: boolean | null
-  con_portal: boolean | null; oportunidad_abierta: boolean | null; actividad_reciente: number | bigint | null
+  con_portal: boolean | null; oportunidad_abierta: boolean | null
+  con_relacion: boolean | null; con_autorizacion_portal: boolean | null; actividad_reciente: number | bigint | null
 }
 
 const num = (v: number | bigint | null | undefined): number | null => (v == null ? null : Number(v))
@@ -256,6 +268,10 @@ export async function leerProspectosCandidatos(db: DbPurgaRgpd, correduriaId: st
            exists (select 1 from seguros.oportunidades o
                    where o.cerrada_at is null
                      and (o.cliente_id = c.id or exists (select 1 from seguros.oportunidad_figura f where f.oportunidad_id = o.id and f.cliente_id = c.id))) as oportunidad_abierta,
+           (exists (select 1 from seguros.cliente_relaciones r where r.cliente_a_id = c.id)
+            or exists (select 1 from seguros.cliente_relaciones r where r.cliente_b_id = c.id)) as con_relacion,
+           (exists (select 1 from seguros.portal_autorizacion pa where pa.otorgante_cliente_id = c.id)
+            or exists (select 1 from seguros.portal_autorizacion pa where pa.autorizado_cliente_id = c.id)) as con_autorizacion_portal,
            ((select count(*) from seguros.historial_interno h where h.cliente_id = c.id
                and greatest(h.created_at, coalesce(h.updated_at, h.created_at)) > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month')
             + (select count(*) from seguros.oportunidades o where o.cliente_id = c.id
@@ -272,20 +288,27 @@ export async function leerProspectosCandidatos(db: DbPurgaRgpd, correduriaId: st
       and c.nombre <> ${NOMBRE_ANONIMIZADO}
       and c.merged_into_cliente_id is null
       and not exists (select 1 from seguros.polizas p where p.cliente_id = c.id)
+      and not exists (select 1 from seguros.cliente_relaciones r where r.cliente_a_id = c.id)
+      and not exists (select 1 from seguros.cliente_relaciones r where r.cliente_b_id = c.id)
+      and not exists (select 1 from seguros.portal_autorizacion pa where pa.otorgante_cliente_id = c.id)
+      and not exists (select 1 from seguros.portal_autorizacion pa where pa.autorizado_cliente_id = c.id)
     order by c.created_at
     limit ${limite + 1}::int`
   const masDelLote = filas.length > limite
   const candidatos = filas.slice(0, limite).map((f): ProspectoCandidato => ({
     id: f.id, fuente: f.fuente, tipoCliente: f.tipo_cliente, segmento: f.segmento, altaAt: f.created_at, ahora: f.ahora,
     anonimizado: f.anonimizado, fusionada: f.fusionada, polizas: f.polizas, interviniente: f.interviniente,
-    conPortal: f.con_portal, oportunidadAbierta: f.oportunidad_abierta, actividadReciente: num(f.actividad_reciente),
+    conPortal: f.con_portal, oportunidadAbierta: f.oportunidad_abierta,
+    conRelacion: f.con_relacion, conAutorizacionPortal: f.con_autorizacion_portal, actividadReciente: num(f.actividad_reciente),
   }))
   return { candidatos, masDelLote }
 }
 
 /**
  * Anonimiza esas fichas en UNA sentencia (atómica): nombre → marca, PII y sus índices ciegos a NULL, `activo = false`;
- * borra sus teléfonos, emails y carnés (tablas hijas de PII); deja UNA línea en `historial_interno` sin PII.
+ * borra sus teléfonos, emails y carnés (tablas hijas de PII); REDACTA el texto de sus líneas previas de
+ * `historial_interno` (alta, comentario del lead, atribución web) y deja UNA línea nueva sin PII. El CTE de redacción
+ * no ve la línea nueva (misma instantánea), así que esa se queda con su texto.
  * La fila del cliente NO se borra (sin cascada). Re-comprueba las guardas clave en el UPDATE. Devuelve cuántas.
  */
 export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string, ids: readonly string[]): Promise<number> {
@@ -297,8 +320,8 @@ export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string
         nombre = ${NOMBRE_ANONIMIZADO}, apellidos = '', dni = null, dni_lookup_hash = null,
         telefono = null, telefono_lookup_hash = null, wa_phone_number = null,
         email = null, email_lookup_hash = null, email_dominio_hash = null, email_usuario_hash = null,
-        fecha_nacimiento = null, direccion = null, codigo_postal = null, ciudad = null,
-        direccion_fiscal = null, cp_fiscal = null, ciudad_fiscal = null, cuenta_bancaria = null,
+        fecha_nacimiento = null, direccion = null, codigo_postal = null, ciudad = null, provincia = null,
+        direccion_fiscal = null, cp_fiscal = null, ciudad_fiscal = null, provincia_fiscal = null, cuenta_bancaria = null,
         notas = null, estado_civil = null, ocupacion = null, sector = null, saludo = null,
         activo = false, updated_at = now()
       where c.id = any(${[...ids]}::uuid[]) and c.correduria_id = ${correduriaId}::uuid
@@ -309,6 +332,10 @@ export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string
                         where p.cliente_id = any(array[c.id] || array(select a.id from seguros.clientes a where a.merged_into_cliente_id = c.id)))
         and not exists (select 1 from seguros.poliza_intervinientes i where i.cliente_id = c.id)
         and not exists (select 1 from seguros.portal_vinculo v where v.cliente_id = c.id)
+        and not exists (select 1 from seguros.cliente_relaciones r where r.cliente_a_id = c.id)
+        and not exists (select 1 from seguros.cliente_relaciones r where r.cliente_b_id = c.id)
+        and not exists (select 1 from seguros.portal_autorizacion pa where pa.otorgante_cliente_id = c.id)
+        and not exists (select 1 from seguros.portal_autorizacion pa where pa.autorizado_cliente_id = c.id)
         and not exists (select 1 from seguros.oportunidades o where o.cliente_id = c.id and o.cerrada_at is null)
         and not exists (select 1 from seguros.historial_interno h where h.cliente_id = c.id
                         and greatest(h.created_at, coalesce(h.updated_at, h.created_at)) > now() - ${MESES_RETENCION_PROSPECTO}::int * interval '1 month')
@@ -317,6 +344,8 @@ export async function anonimizarProspectos(db: DbPurgaRgpd, correduriaId: string
     tel as (delete from seguros.cliente_telefonos t using obj where t.cliente_id = obj.id returning 1),
     ema as (delete from seguros.cliente_emails e using obj where e.cliente_id = obj.id returning 1),
     car as (delete from seguros.cliente_carnets_conducir k using obj where k.cliente_id = obj.id returning 1),
+    red as (update seguros.historial_interno hp set texto = ${HISTORIAL_REDACTADO}
+            from obj where hp.cliente_id = obj.id returning 1),
     his as (insert into seguros.historial_interno (correduria_id, cliente_id, tipo, texto)
             select obj.correduria_id, obj.id, cast('gestion' as seguros.tipo_historial_interno), ${texto} from obj returning 1)
     select obj.id::text as id from obj`

@@ -1044,7 +1044,8 @@ export async function altaCliente(
       // anonimizarlo: ahí va SOLO lo que prueba el consentimiento (versión, fecha, finalidad,
       // IP /24, página donde se dio). Fila `gestion` = el sí obligatorio; `comercial` solo si
       // la web lo informó. La atribución de marketing (utm/gclid/fbclid/referrer) NO va ahí:
-      // va a `historial_interno`, que sí sigue la retención del prospecto (lo anonimiza la purga).
+      // va a `historial_interno`, que sí sigue la retención del prospecto: al anonimizar la ficha,
+      // la purga RGPD sustituye el texto de sus líneas previas por `HISTORIAL_REDACTADO` (lib/purga-rgpd.ts).
       const consent = a.fuente === 'web' ? consentimientoWeb(entrada) : null
       if (consent) {
         const meta = JSON.stringify({ canal: 'web', finalidad: consent.finalidad, version_informada: consent.version !== null, landing: consent.atribucion?.landing ?? null })
