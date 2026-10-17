@@ -148,7 +148,7 @@ export function revisarDatosMoto(d: Partial<DatosMoto>, opciones: { vehiculoNuev
   }
   // Efecto: ni anterior a hoy ni a más de 90 días (mismo cepo que auto; no se arregla tras pagar).
   if (texto(d.fechaEfecto) && RE_FECHA.test(String(d.fechaEfecto))) {
-    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto))
+    const mal = motivoFechaEfectoInvalida(String(d.fechaEfecto), opciones.hoy)
     if (mal) r.push({ campo: 'fechaEfecto', motivo: mal })
   }
 
