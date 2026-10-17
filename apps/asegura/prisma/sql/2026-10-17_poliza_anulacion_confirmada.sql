@@ -12,7 +12,7 @@
 --   anulacion_confirmada_motivo     → de dónde sale la confirmación (OBLIGATORIO, CHECK)
 --   anulacion_efecto                → fecha de efecto de la baja según la compañía (opcional; NULL = no se sabe)
 --
--- ⚠️ NO APLICADA. El código es tolerante sin ella (`hayAnulacionConfirmada()`): el digest se calcula como
+-- ✅ Aplicada el 17/10/2026. El código es tolerante sin ella (`hayAnulacionConfirmada()`): el digest se calcula como
 -- antes salvo el «vence cuando empieza la nueva», y POST /api/operador/sustituciones responde 503 `sin_migracion`.
 -- Idempotente. Deshacer un sello = poner las cuatro a NULL en el MISMO UPDATE.
 

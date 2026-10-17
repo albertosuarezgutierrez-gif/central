@@ -13,7 +13,7 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(17/10/2026)** — Correduría · seguimiento de sustituciones. Nuevo botón «Anulación confirmada por la compañía» (`POST /api/operador/sustituciones`, columnas propias `anulacion_confirmada_*`; NO `baja_verificada_*`, que cancela en el acto). La fecha ya no cierra un caso: si la vieja vence <= efecto de la nueva → «confirma que no renueva» y no cuenta como doble seguro. Un caso solo se cierra con el sello, con el expediente `anulacion` confirmada o con la baja en CIMA.
-⚠️ SQL `apps/asegura/prisma/sql/2026-10-17_poliza_anulacion_confirmada.sql` SIN aplicar (el clasificador bloqueó la migración en prod). Sin ella el POST da 503 `sin_migracion`.
+✅ SQL `2026-10-17_poliza_anulacion_confirmada.sql` aplicada en prod (17/10, OK de Alberto).
 Pendiente de Alberto: Pablo Guzmán, Mapfre 0008414300069, recibo 494,69€ (en BD «cobrado», pero Mapfre avisó el 07/10 de impago); Jose Suárez, anular el recibo de Mapfre emitido el 30/09; Pilar Franco, carta de baja a Occident; Victor, Allianz confirmó la baja con efecto 01/11 (sellarla con el botón).
 
 **(15/10/2026)** — Correduría · clientes EMPRESA. «Nuevo cliente» con selector Particular/Empresa (Razón social, CIF, F. constitución, sin apellidos; el CIF válido manda y asegura ya guardaba `tipo_persona=juridica` desde él). Rótulos CIF/razón social/«misma empresa» en ficha, EditarFichaModal, VerDniCompleto, FichasDuplicadas y `textoMotivo(motivo, juridica)`. PR #4732 (draft, CI verde).
