@@ -39,7 +39,7 @@ Una franquicia es la parte del daño que pagas tú; un sublímite es un tope má
 El artículo 22.3 de la LCS obliga al asegurador a comunicarte cualquier modificación del contrato con al menos dos meses de antelación a la conclusión del período en curso. Compara las condiciones nuevas con las anteriores, no solo el importe.
 
 **7. ¿Tengo seguros duplicados?**
-Dos pólizas que cubren el mismo riesgo sobre el mismo interés y en el mismo período deben comunicarse entre sí, salvo pacto en contrario (artículo 32 de la LCS). No pagarás dos veces la indemnización, pero sí dos veces la prima.
+Si tienes dos pólizas con distintas compañías que cubren el mismo riesgo sobre el mismo interés y en el mismo período, debes comunicar a cada aseguradora las demás, salvo pacto en contrario (artículo 32 de la LCS). En un siniestro las compañías pagan en proporción a su suma asegurada, sin superar el daño: no cobras dos veces la indemnización, pero sí pagas dos primas.
 
 **8. ¿Quién es el beneficiario y quién figura como asegurado?**
 En vida y accidentes, un beneficiario desactualizado es un error clásico. En hogar con hipoteca, comprueba si el banco figura como beneficiario y hasta cuándo.
