@@ -1,0 +1,42 @@
+{
+ "sesion": "de5f9654-1e54-5f83-9eb6-af219137fce9",
+ "inicio": "2026-10-17T08:06:44.585Z",
+ "fin": "2026-10-17T08:07:12.352Z",
+ "llamadas": 9,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 89,
+   "chars_out": 162,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 424,
+   "chars_out": 3931,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 1711,
+   "chars_out": 15972,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
+   }
+  }
+ }
+}
