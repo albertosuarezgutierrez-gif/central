@@ -1,21 +1,21 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-17T08:05:04.132Z",
- "llamadas": 4056,
+ "fin": "2026-10-17T09:25:33.905Z",
+ "llamadas": 4109,
  "categorias": {
   "otro": {
-   "llamadas": 398,
-   "chars_in": 75166,
-   "chars_out": 2995493,
+   "llamadas": 406,
+   "chars_in": 75802,
+   "chars_out": 3063724,
    "errores": 0,
    "archivos_citados": 28,
    "chars_citados": 5639070,
    "tools": {
-    "ToolSearch": 91,
+    "ToolSearch": 96,
     "SubagentHandback": 10,
     "SendMessage": 27,
-    "ReadNotifications": 211,
+    "ReadNotifications": 214,
     "Monitor": 59
    }
   },
@@ -31,33 +31,33 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 377,
-   "chars_in": 49759,
-   "chars_out": 3729789,
+   "llamadas": 381,
+   "chars_in": 50208,
+   "chars_out": 3784960,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 11,
-    "Grep": 141,
-    "Read": 225
+    "Grep": 142,
+    "Read": 228
    }
   },
   "mcp:github": {
-   "llamadas": 217,
-   "chars_in": 64594,
-   "chars_out": 395473,
+   "llamadas": 225,
+   "chars_in": 67313,
+   "chars_out": 407674,
    "errores": 1,
    "archivos_citados": 6,
    "chars_citados": 3217388,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__actions_run_trigger": 16,
-    "mcp__github__actions_list": 47,
-    "mcp__github__create_pull_request": 26,
-    "mcp__github__update_pull_request": 20,
-    "mcp__github__pull_request_read": 41,
-    "mcp__github__merge_pull_request": 28,
+    "mcp__github__actions_run_trigger": 17,
+    "mcp__github__actions_list": 49,
+    "mcp__github__create_pull_request": 28,
+    "mcp__github__update_pull_request": 21,
+    "mcp__github__pull_request_read": 42,
+    "mcp__github__merge_pull_request": 29,
     "mcp__github__add_reply_to_pull_request_comment": 16,
     "mcp__github__get_job_logs": 5,
     "mcp__github__add_issue_comment": 3,
@@ -76,32 +76,33 @@
    }
   },
   "bash": {
-   "llamadas": 2345,
-   "chars_in": 1629589,
-   "chars_out": 7234394,
+   "llamadas": 2366,
+   "chars_in": 1636216,
+   "chars_out": 7245512,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2345
+    "Bash": 2366
    }
   },
   "mcp:Vercel": {
-   "llamadas": 86,
-   "chars_in": 12446,
-   "chars_out": 135396,
-   "errores": 2,
+   "llamadas": 93,
+   "chars_in": 13392,
+   "chars_out": 143486,
+   "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_projects": 1,
-    "mcp__Vercel__filter_project_envs": 2,
-    "mcp__Vercel__edit_project_env": 16,
-    "mcp__Vercel__list_deployments": 18,
-    "mcp__Vercel__create_deployment": 17,
-    "mcp__Vercel__get_deployment": 25,
+    "mcp__Vercel__filter_project_envs": 3,
+    "mcp__Vercel__edit_project_env": 18,
+    "mcp__Vercel__list_deployments": 19,
+    "mcp__Vercel__create_deployment": 18,
+    "mcp__Vercel__get_deployment": 26,
     "mcp__Vercel__get_runtime_logs": 4,
-    "mcp__Vercel__create_project_env": 3
+    "mcp__Vercel__create_project_env": 3,
+    "mcp__Vercel__get_project_env": 1
    }
   },
   "sql": {
@@ -129,27 +130,27 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 34,
-   "chars_in": 2944,
-   "chars_out": 7430,
+   "llamadas": 37,
+   "chars_in": 3163,
+   "chars_out": 8034,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 28,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 5,
+    "mcp__claude-code-remote__subscribe_pr_activity": 30,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 6,
     "mcp__claude-code-remote__send_later": 1
    }
   },
   "escritura": {
-   "llamadas": 188,
-   "chars_in": 547321,
-   "chars_out": 11146432,
+   "llamadas": 189,
+   "chars_in": 548453,
+   "chars_out": 12180281,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 143,
+    "Edit": 144,
     "Write": 45
    }
   },
@@ -165,14 +166,14 @@
    }
   },
   "agente:verificador-esceptico": {
-   "llamadas": 3,
-   "chars_in": 3460,
-   "chars_out": 4081,
+   "llamadas": 4,
+   "chars_in": 4502,
+   "chars_out": 5330,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 49900,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "agente:agente-mecanico": {
