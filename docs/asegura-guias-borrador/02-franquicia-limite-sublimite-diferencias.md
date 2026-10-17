@@ -30,7 +30,7 @@ Los números que siguen son inventados y solo sirven para ver la mecánica. No s
 >
 > - **Daño por agua en el parquet y los muebles: 2.000 €.** La franquicia se aplica una vez: la aseguradora paga 1.850 € y tú, 150 €.
 > - **Incendio con pérdidas de 40.000 €.** El límite general es 30.000 €: el máximo a cobrar por contenido es 30.000 € (menos la franquicia, si procede). Los otros 10.000 € son tuyos.
->   - [VERIFICAR] Si el contenido está asegurado por menos de su valor real (infraseguro), se aplica la regla proporcional (art. 30 LCS) y se cobra menos de lo que sale de esta cuenta.
+>   - Si el contenido está asegurado por menos de su valor real (infraseguro), se aplica la regla proporcional (art. 30 LCS: el asegurador indemniza el daño en la misma proporción en que la suma asegurada cubre el interés) y se cobra menos de lo que sale de esta cuenta, salvo que las partes hayan pactado excluirla.
 > - **Robo de joyas por valor de 6.000 €.** El sublímite es 1.500 €: ese es el máximo para las joyas, aunque el contenido general sea 30.000 €. Quedan 4.500 € sin cubrir.
 
 La franquicia reduce lo que cobras *en cada siniestro*; el límite fija el *techo general*; el sublímite fija un *techo específico más bajo*.
@@ -41,13 +41,11 @@ Depende del tipo de siniestro. La franquicia pesa en los siniestros pequeños y 
 
 ## ¿Se pueden aplicar varias a la vez?
 
-Sí. En el ejemplo del robo de joyas podrían concurrir franquicia, sublímite y límite general. El orden en que se aplican (si la franquicia se resta antes o después del tope) lo fija la póliza. [VERIFICAR] No afirmar un orden general: depende de la redacción de cada condicionado.
+Sí. En el ejemplo del robo de joyas podrían concurrir franquicia, sublímite y límite general. El orden en que se aplican (si la franquicia se resta antes o después del tope) lo fija la póliza. No hay un orden general fijado por la ley: depende de la redacción de cada condicionado.
 
 ## ¿Puede la aseguradora ponerme cualquier límite?
 
 No cualquiera sin más. El artículo 3 de la LCS exige que las cláusulas limitativas de los derechos del asegurado se destaquen de modo especial y se acepten específicamente por escrito. Y el artículo 8 exige que la póliza recoja las exclusiones y limitaciones de cada cobertura destacadas tipográficamente.
-
-La frontera entre una cláusula que «delimita» el riesgo y una que «limita» los derechos del asegurado se ha perfilado en la jurisprudencia del Tribunal Supremo. [VERIFICAR] Si se quiere citar esa doctrina en el texto publicado, hay que localizar la sentencia concreta y leerla; este borrador no la cita.
 
 ## ¿Cómo sé qué franquicias y sublímites tengo?
 
@@ -63,8 +61,7 @@ Es una decisión personal que depende de cuánto riesgo estés dispuesto a asumi
 
 ## Fuentes
 
-- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 3 (cláusulas limitativas destacadas y aceptadas por escrito), artículo 8 (contenido mínimo de la póliza; exclusiones y limitaciones destacadas) y artículo 27 (la suma asegurada como límite máximo de la indemnización por siniestro). Texto consolidado, BOE-A-1980-22501.
+- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 3 (cláusulas limitativas destacadas y aceptadas por escrito), artículo 8 (contenido mínimo de la póliza; exclusiones y limitaciones destacadas) y artículo 27 (la suma asegurada como límite máximo de la indemnización por siniestro) y artículo 30 (regla proporcional). Texto consolidado, BOE-A-1980-22501 (https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501); contrastado el 17/10/2026 con la copia consolidada de 25/07/2025 de `docs/normativa/`.
 - La LCS no contiene los términos «franquicia» ni «sublímite» (comprobado en el texto consolidado de 25/07/2025 guardado en `docs/normativa/`).
 - Dirección General de Seguros y Fondos de Pensiones (DGSFP): supervisor del sector; su Servicio de Reclamaciones atiende las quejas tras pasar por el servicio de atención al cliente de la entidad (Orden ECC/2502/2012).
-- [VERIFICAR] Sentencia del Tribunal Supremo sobre cláusulas delimitadoras y limitativas, si se decide citarla.
-- [VERIFICAR] Enlace oficial a la DGSFP.
+- Nota editorial: no se cita jurisprudencia del Tribunal Supremo (no se pudo localizar y leer una sentencia concreta) ni se enlaza la sede de la DGSFP.
