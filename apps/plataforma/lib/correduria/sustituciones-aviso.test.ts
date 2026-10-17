@@ -121,3 +121,55 @@ test('mensajeSustituciones: campos null no inventan ni «sin rastro» ni aviso d
   assert.ok(!msg.includes('⚠️ Confirma'))
   assert.ok(msg.includes('sin determinar'))
 })
+
+// ── 17/10/2026: anulación confirmada por la compañía / la vieja vence cuando empieza la nueva ──
+const VICTOR: SustitucionAviso = {
+  cliente: 'Victor', diasSustituida: 5,
+  polizaVieja: { aseguradora: 'Allianz', numeroPoliza: '031698897' }, polizaNueva: { aseguradora: 'Reale', numeroPoliza: 'R-1' },
+  nuevaConfirmadaCima: false, nuevaReciboCima: true, viejaEnVigorCima: true,
+}
+
+test('anulación confirmada por la compañía → «cerrada»: sin ⚠️ aunque CIMA la dé en vigor; «falta la ficha» sigue', () => {
+  assert.equal(clasificarSustitucion({ viejaEnVigorCima: true, viejaPendienteAnular: false }).vieja, 'cerrada')
+  const msg = mensajeSustituciones([{ ...VICTOR, viejaPendienteAnular: false }])
+  assert.ok(msg)
+  assert.ok(!msg.includes('DOBLE SEGURO'))
+  assert.ok(!msg.includes('⚠️'))
+  assert.ok(msg.includes('falta la ficha de póliza'))
+})
+
+test('vence cuando empieza la nueva → ⚠️ «no renueva» con la fecha, pero NO cuenta como doble seguro', () => {
+  const f = { ...VICTOR, viejaPendienteAnular: true, viejaAviso: 'no_renovacion' as const, viejaVence: '2026-11-01' }
+  assert.equal(clasificarSustitucion(f).vieja, 'no_renueva')
+  const msg = mensajeSustituciones([f])!
+  assert.ok(msg.includes('⚠️ Confirma en Allianz que nº 031698897 no renueva (vence 01/11/2026)'))
+  assert.ok(!msg.includes('DOBLE SEGURO'))
+  assert.ok(!msg.includes('sigue en vigor'))
+})
+
+test('vence después del efecto de la nueva → como siempre: doble seguro en la cabecera y «sigue en vigor»', () => {
+  const msg = mensajeSustituciones([{ ...VICTOR, viejaPendienteAnular: true, viejaAviso: 'doble_seguro', viejaVence: '2027-09-09' }])!
+  assert.ok(msg.includes('(1 con posible DOBLE SEGURO)'))
+  assert.ok(msg.includes('⚠️ Confirma en Allianz la anulación de nº 031698897 (sigue en vigor en CIMA)'))
+})
+
+test('clasificar: sin el dato nuevo (asegura antiguo) se usa viejaEnVigorCima, como antes; pendiente null = desconocido', () => {
+  assert.equal(clasificarSustitucion({ viejaEnVigorCima: true }).vieja, 'en_vigor')
+  assert.equal(clasificarSustitucion({ viejaEnVigorCima: true, viejaPendienteAnular: true }).vieja, 'en_vigor')
+  assert.equal(clasificarSustitucion({ viejaEnVigorCima: true, viejaPendienteAnular: null }).vieja, 'desconocido')
+  assert.equal(clasificarSustitucion({ viejaEnVigorCima: false, viejaPendienteAnular: false }).vieja, 'anulada')
+})
+
+test('interpretarSustituciones: viejaPendienteAnular ausente cae a viejaEnVigorCima; presente null se respeta; aviso y vence se leen', async () => {
+  const { interpretarSustituciones } = await import('../correduria-puerto.ts')
+  const fila = { clienteId: 'c', cliente: 'X', diasSustituida: 3, sustituidaAt: '2026-10-01', polizaVieja: { id: 'v', aseguradora: 'A' }, viejaEnVigorCima: true }
+  const viejo = interpretarSustituciones(200, { estado: 'ok', sustituciones: [fila] })
+  assert.equal(viejo.estado === 'ok' && viejo.filas[0]!.viejaPendienteAnular, true)
+  const nulo = interpretarSustituciones(200, { estado: 'ok', sustituciones: [{ ...fila, viejaPendienteAnular: null }] })
+  assert.equal(nulo.estado === 'ok' && nulo.filas[0]!.viejaPendienteAnular, null)
+  const r = interpretarSustituciones(200, { estado: 'ok', sustituciones: [{ ...fila, viejaPendienteAnular: true, viejaAviso: 'no_renovacion', viejaVence: '2026-11-01' }] })
+  assert.equal(r.estado === 'ok' && r.filas[0]!.viejaAviso, 'no_renovacion')
+  assert.equal(r.estado === 'ok' && r.filas[0]!.viejaVence, '2026-11-01')
+  const cerrada = interpretarSustituciones(200, { estado: 'ok', sustituciones: [{ ...fila, viejaPendienteAnular: false, viejaCierre: 'anulacion_confirmada' }] })
+  assert.equal(cerrada.estado === 'ok' && cerrada.filas[0]!.viejaCierre, 'anulacion_confirmada')
+})

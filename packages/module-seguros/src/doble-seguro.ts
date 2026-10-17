@@ -40,16 +40,64 @@ function dia(iso: string | null): number | null {
   return Number.isNaN(t) ? null : Math.floor(t / 86_400_000)
 }
 
-export function avisoDobleSeguro(vieja: ViejaParaDobleSeguro, nueva: NuevaParaDobleSeguro): AvisoDobleSeguro | null {
-  const efecto = dia(nueva.fechaEfecto)
-  if (efecto === null || !esEstadoVigente(vieja.estado) || !esEstadoVigente(nueva.estado)) return null
-  const corte = efecto + DOBLE_SEGURO_DIAS_TOLERANCIA
+/**
+ * ¿La vieja se SOLAPA con la nueva? La misma comparación que usa `avisoDobleSeguro` (vencimiento o recibo de
+ * la vieja más allá del efecto de la nueva + `toleranciaDias`), separada para que el seguimiento de sustituciones
+ * no la duplique. `avisoDobleSeguro` la usa con `DOBLE_SEGURO_DIAS_TOLERANCIA`; el seguimiento, con 0.
+ * Tres estados: `solapa` · `no_solapa` (fechas CONOCIDAS y la vieja vence a más tardar cuando empieza la nueva +
+ * tolerancia) · `no_se_sabe` (falta el efecto de la nueva o el vencimiento de la vieja: nunca «no solapa»).
+ */
+export type SolapeViejaNueva = { solape: 'solapa' | 'no_solapa' | 'no_se_sabe'; motivos: AvisoDobleSeguro['motivos'] }
+
+export function solapeViejaNueva(
+  vieja: Pick<ViejaParaDobleSeguro, 'fechaVencimiento' | 'fechaEfectoUltimoRecibo'>,
+  fechaEfectoNueva: string | null,
+  toleranciaDias: number = DOBLE_SEGURO_DIAS_TOLERANCIA,
+): SolapeViejaNueva {
+  const efecto = dia(fechaEfectoNueva)
+  if (efecto === null) return { solape: 'no_se_sabe', motivos: [] }
+  const corte = efecto + toleranciaDias
   const motivos: AvisoDobleSeguro['motivos'] = []
   const venc = dia(vieja.fechaVencimiento)
   if (venc !== null && venc > corte) motivos.push('vencimiento_posterior')
   const rec = dia(vieja.fechaEfectoUltimoRecibo)
   if (rec !== null && rec > corte) motivos.push('recibo_posterior')
-  if (motivos.length === 0) return null
+  if (motivos.length > 0) return { solape: 'solapa', motivos }
+  // Sin vencimiento conocido no se puede decir que la vieja se acabe: un recibo «antiguo» no lo prueba.
+  return { solape: venc === null ? 'no_se_sabe' : 'no_solapa', motivos }
+}
+
+export function avisoDobleSeguro(vieja: ViejaParaDobleSeguro, nueva: NuevaParaDobleSeguro): AvisoDobleSeguro | null {
+  if (!esEstadoVigente(vieja.estado) || !esEstadoVigente(nueva.estado)) return null
+  const s = solapeViejaNueva(vieja, nueva.fechaEfecto)
+  if (s.solape !== 'solapa') return null
   const num = vieja.numeroPoliza?.trim() || 'la póliza sustituida'
-  return { motivos, texto: `posible doble seguro: pedir anulación de ${num} a ${vieja.aseguradora}` }
+  return { motivos: s.motivos, texto: `posible doble seguro: pedir anulación de ${num} a ${vieja.aseguradora}` }
+}
+
+/** Por qué una vieja que CIMA sigue dando en vigor ya NO está pendiente de anular. */
+export type CierreViejaSustituida = 'anulacion_confirmada'
+
+/** Qué hay que confirmar con la compañía de la vieja: que se ANULE (doble seguro) o que NO RENUEVE. */
+export type AvisoViejaSustituida = 'doble_seguro' | 'no_renovacion'
+
+/**
+ * Seguimiento de sustituciones (17/10/2026): ¿sigue pendiente confirmar la anulación de la vieja?
+ * 🚨 La FECHA no cierra nunca el caso: una vieja que vence cuando empieza la nueva RENUEVA tácitamente al vencer
+ * si nadie comunicó la baja (art. 22 LCS). Solo cierran: CIMA ya no la da en vigor, o la compañía confirmó la
+ * anulación (sello del corredor o expediente `confirmada`).
+ *  - `pendiente`: `false` (cerrada) · `true` · `null` (estado en CIMA ilegible: no se sabe).
+ *  - `aviso` (solo si pendiente): `no_renovacion` cuando la vieja vence a más tardar el día que empieza la nueva
+ *    (`solapeViejaNueva` con tolerancia 0 = `no_solapa`); si no (o no se sabe), `doble_seguro`.
+ */
+export function viejaPendienteDeAnular(e: {
+  enVigorCima: boolean | null
+  anulacionConfirmada: boolean
+  /** `solapeViejaNueva(…, 0).solape`; `null` = no hay nueva enlazada. */
+  solape: SolapeViejaNueva['solape'] | null
+}): { pendiente: boolean | null; cierre: CierreViejaSustituida | null; aviso: AvisoViejaSustituida | null } {
+  if (e.enVigorCima === false) return { pendiente: false, cierre: null, aviso: null }
+  if (e.anulacionConfirmada) return { pendiente: false, cierre: 'anulacion_confirmada', aviso: null }
+  if (e.enVigorCima === null) return { pendiente: null, cierre: null, aviso: null }
+  return { pendiente: true, cierre: null, aviso: e.solape === 'no_solapa' ? 'no_renovacion' : 'doble_seguro' }
 }

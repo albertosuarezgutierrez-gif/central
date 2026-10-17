@@ -27,3 +27,6 @@ export const hayExplorador = () => esquema.existeTabla('tarificador_exploracion_
 export const hayConfianzaAprendido = () => esquema.existeColumna('tarificador_conocimiento', 'descartado_at')
 export const hayPausas = () => esquema.existeTabla('tarificador_pausas')
 export const hayAtascos = () => esquema.existeTabla('tarificador_atascos')
+// «Anulación confirmada por la compañía» (SQL 2026-10-17_poliza_anulacion_confirmada): sin él, el sello responde 503
+// `sin_migracion` y el seguimiento de sustituciones no lo tiene en cuenta (sí el «vence cuando empieza la nueva»).
+export const hayAnulacionConfirmada = () => esquema.existeColumna('polizas', 'anulacion_confirmada_at')

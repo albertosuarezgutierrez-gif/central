@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(17/10/2026)** — Correduría · seguimiento de sustituciones. Nuevo botón «Anulación confirmada por la compañía» (`POST /api/operador/sustituciones`, columnas propias `anulacion_confirmada_*`; NO `baja_verificada_*`, que cancela en el acto). La fecha ya no cierra un caso: si la vieja vence <= efecto de la nueva → «confirma que no renueva» y no cuenta como doble seguro. Un caso solo se cierra con el sello, con el expediente `anulacion` confirmada o con la baja en CIMA.
+✅ SQL `2026-10-17_poliza_anulacion_confirmada.sql` aplicada en prod (17/10, OK de Alberto).
+Pendiente de Alberto: Pablo Guzmán, Mapfre 0008414300069, recibo 494,69€ (en BD «cobrado», pero Mapfre avisó el 07/10 de impago); Jose Suárez, anular el recibo de Mapfre emitido el 30/09; Pilar Franco, carta de baja a Occident; Victor, Allianz confirmó la baja con efecto 01/11 (sellarla con el botón).
+
 **(17/10/2026)** — Correduría · campaña «presentación app»: las tarjetas del embudo se pulsan y despliegan quién está en ese paso
 (nombre→ficha, email, fecha Madrid; 50 + «Ver más»). Mismo criterio acumulativo que la cifra (`personasDelPaso` en
 `apps/plataforma/lib/campana-presentacion.ts`). El puerto de asegura añade `email` descifrado: desplegar asegura y plataforma juntas.
