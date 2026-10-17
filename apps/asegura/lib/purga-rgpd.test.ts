@@ -38,7 +38,7 @@ const doc = (x: Partial<DocumentoCandidato> = {}): DocumentoCandidato => ({
 const pro = (x: Partial<ProspectoCandidato> = {}): ProspectoCandidato => ({
   id: 'c1', fuente: 'web', tipoCliente: 'lead', segmento: 'prospecto', altaAt: haceMeses(13), ahora: AHORA,
   anonimizado: false, fusionada: false, polizas: [], interviniente: false, conPortal: false, oportunidadAbierta: false,
-  actividadReciente: 0, ...x,
+  conRelacion: false, conAutorizacionPortal: false, actividadReciente: 0, ...x,
 })
 
 // ─── 1 · Documentos ─────────────────────────────────────────────────────────
@@ -87,6 +87,15 @@ test('prospecto: ya anonimizado / con portal / oportunidad abierta / intervinien
     assert.equal(esProspectoAnonimizable(pro({ [k]: null })), false, `${k}=null`)
   }
 })
+test('prospecto: enlazado en cliente_relaciones (cónyuge de un cliente…) → no; sin leer → no', () => {
+  assert.equal(esProspectoAnonimizable(pro({ conRelacion: true })), false)
+  assert.equal(esProspectoAnonimizable(pro({ conRelacion: null })), false)
+  assert.equal(esProspectoAnonimizable(pro({ conRelacion: undefined as unknown as null })), false)
+})
+test('prospecto: en una autorización del portal (otorgante o autorizado) → no; sin leer → no', () => {
+  assert.equal(esProspectoAnonimizable(pro({ conAutorizacionPortal: true })), false)
+  assert.equal(esProspectoAnonimizable(pro({ conAutorizacionPortal: null })), false)
+})
 
 // ─── 3 · Modo informe / activa ─────────────────────────────────────────────
 test('interruptor: solo el valor exacto «1» activa', () => {
@@ -97,7 +106,7 @@ test('interruptor: solo el valor exacto «1» activa', () => {
 
 const filaDoc = { id: 'd1', subido_por: 'cliente', created_at: haceDias(40), ahora: AHORA, cliente_id: 'c1', poliza_id: null, siniestro_id: null, portal_parte_id: null, tipo_cliente: 'lead', segmento: 'prospecto', fusionada: false, polizas: [], interviniente: false, referenciado: false, proceso_abierto: false }
 const filaDocViva = { ...filaDoc, id: 'd2', polizas: [POLIZA_VIVA] }
-const filaPro = { id: 'c9', fuente: 'web', tipo_cliente: 'lead', segmento: 'prospecto', created_at: haceMeses(14), ahora: AHORA, anonimizado: false, fusionada: false, polizas: [], interviniente: false, con_portal: false, oportunidad_abierta: false, actividad_reciente: 0 }
+const filaPro = { id: 'c9', fuente: 'web', tipo_cliente: 'lead', segmento: 'prospecto', created_at: haceMeses(14), ahora: AHORA, anonimizado: false, fusionada: false, polizas: [], interviniente: false, con_portal: false, oportunidad_abierta: false, con_relacion: false, con_autorizacion_portal: false, actividad_reciente: 0 }
 
 /** BD falsa: las lecturas devuelven por orden; toda sentencia de escritura (delete/update) se apunta. */
 function bdFalsa(lecturas: (unknown[] | Error)[]) {
@@ -144,6 +153,19 @@ test('CEPO modo activa: borra SOLO los que pasan la función pura', async () => 
   assert.equal(r.prospectos.anonimizados, 1)
 })
 
+test('CEPO: prospecto con relación o autorización de portal leída de la BD → no se anonimiza', async () => {
+  const filas = [
+    { ...filaPro, id: 'rel' , con_relacion: true },
+    { ...filaPro, id: 'aut', con_autorizacion_portal: true },
+    { ...filaPro, id: 'sinleer', con_relacion: null },
+    { ...filaPro, id: 'ok' },
+  ]
+  const { db, escrituras } = bdFalsa([[], filas])
+  const r = await ejecutarPurgaRgpd(db, 'cor', { activa: true, enviar: async () => 1 })
+  assert.deepEqual(escrituras.map((e) => e.ids), [['ok']])
+  assert.equal(r.prospectos.descartados, 3)
+})
+
 test('CEPO fail-closed: si falla la lectura de prospectos, tampoco se borran documentos', async () => {
   const { db, escrituras } = bdFalsa([[filaDoc], new Error('permission denied for table portal_vinculo')])
   await assert.rejects(ejecutarPurgaRgpd(db, 'cor', { activa: true, enviar: async () => 1 }))
@@ -181,4 +203,44 @@ test('las escrituras re-comprueban las guardas clave en su propio WHERE', () => 
   for (const g of ["subido_por = 'cliente'", `${S}polizas`, `${S}poliza_intervinientes`, 'poliza_id is null']) assert.ok(borrar.includes(g), `DELETE sin «${g}»`)
   const anon = src.slice(src.indexOf(`update ${S}clientes c set`), src.indexOf('returning c.id, c.correduria_id'))
   for (const g of ["fuente::text = 'web'", `${S}polizas`, `${S}portal_vinculo`, `${S}historial_interno`]) assert.ok(anon.includes(g), `UPDATE sin «${g}»`)
+})
+
+// Guardas de vínculos con otras fichas: en los DOS sentidos, en la LECTURA y en el WHERE del UPDATE.
+const GUARDAS_VINCULO = (S: string) => [
+  `not exists (select 1 from ${S}cliente_relaciones r where r.cliente_a_id = c.id)`,
+  `not exists (select 1 from ${S}cliente_relaciones r where r.cliente_b_id = c.id)`,
+  `not exists (select 1 from ${S}portal_autorizacion pa where pa.otorgante_cliente_id = c.id)`,
+  `not exists (select 1 from ${S}portal_autorizacion pa where pa.autorizado_cliente_id = c.id)`,
+]
+test('relación como A, como B y autorización de portal: guardas en la lectura y en el UPDATE', () => {
+  const src = readFileSync(join(APP, 'lib/purga-rgpd.ts'), 'utf8')
+  const S = 'seguros' + '.'
+  const ini = src.indexOf('export async function leerProspectosCandidatos')
+  const lectura = src.slice(ini, src.indexOf('export async function anonimizarProspectos'))
+  const where = lectura.slice(lectura.lastIndexOf(`from ${S}clientes c`))
+  const anon = src.slice(src.indexOf(`update ${S}clientes c set`), src.indexOf('returning c.id, c.correduria_id'))
+  for (const g of GUARDAS_VINCULO(S)) {
+    assert.ok(where.includes(g), `lectura (WHERE) sin «${g}»`)
+    assert.ok(anon.includes(g), `UPDATE sin «${g}»`)
+  }
+  // Y las columnas que decide la función pura, en los dos sentidos.
+  const columnas = lectura.slice(0, lectura.lastIndexOf(`from ${S}clientes c`))
+  for (const g of ['r.cliente_a_id = c.id)', 'r.cliente_b_id = c.id)) as con_relacion', 'pa.otorgante_cliente_id = c.id)', 'pa.autorizado_cliente_id = c.id)) as con_autorizacion_portal']) {
+    assert.ok(columnas.includes(g), `lectura (columnas) sin «${g}»`)
+  }
+})
+
+test('la anonimización redacta el historial previo y anula provincia en la MISMA sentencia', () => {
+  const src = readFileSync(join(APP, 'lib/purga-rgpd.ts'), 'utf8')
+  const S = 'seguros' + '.'
+  const sentencia = src.slice(src.indexOf('with obj as ('), src.indexOf('select obj.id::text as id from obj'))
+  assert.ok(sentencia.includes('provincia = null'), 'sin «provincia = null»')
+  assert.ok(sentencia.includes('provincia_fiscal = null'), 'sin «provincia_fiscal = null»')
+  const red = sentencia.slice(sentencia.indexOf(`red as (update ${S}historial_interno`))
+  assert.ok(sentencia.includes(`red as (update ${S}historial_interno`), 'sin CTE de redacción del historial')
+  assert.match(red, /set texto = \$\{HISTORIAL_REDACTADO\}\s+from obj where hp\.cliente_id = obj\.id/)
+  assert.ok(src.includes("export const HISTORIAL_REDACTADO = '[anonimizado RGPD]'"))
+  // La línea nueva que deja la purga va sin PII: solo constantes (meses), ninguna interpolación de la ficha.
+  const texto = src.slice(src.indexOf('const texto = `Ficha anonimizada'), src.indexOf('const r = await db.$queryRaw<{ id: string }[]>`\n    with obj'))
+  assert.deepEqual(texto.match(/\$\{[^}]+\}/g), ['${MESES_RETENCION_PROSPECTO}'])
 })

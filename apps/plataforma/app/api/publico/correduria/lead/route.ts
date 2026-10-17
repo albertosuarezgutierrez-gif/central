@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
 
   // Prueba del consentimiento (versión, fecha, finalidad, comerciales, IP /24) y atribución
   // first-touch viajan con el alta; asegura guarda la prueba en `seguros.consent_logs` y la
-  // atribución en `historial_interno` (la purga RGPD la anonimiza con la ficha).
+  // atribución en `historial_interno` (al anonimizar la ficha, la purga RGPD de asegura redacta el
+  // texto de esas líneas en la misma sentencia; `consent_logs` es append-only y no se toca).
   const alta = await altaClienteAsegura(cuerpoAltaLead(lead, { ahora, ip: ip === 'unknown' ? null : ip }))
   const resultado = interpretarAltaLead(interpretarEscritura(alta.status, alta.json))
 
