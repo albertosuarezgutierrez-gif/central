@@ -1,3 +1,8 @@
+// v0.6.3 (17/10/2026, trabajo real c0a75a2c atascado con «Matrícula (hay 2, se esperaba uno)»): la cabecera de ePac vive en el
+// marco PRINCIPAL y `appArea` es el IFRAME del motor; dentro de él había DOS «Matrícula» (una no visible). Los campos de texto del
+// paso se localizan con `localizarControl` (src/localizar.ts) en la zona `appArea` DEL MARCO: descarta ocultos, deshabilitados,
+// cabecera/menús, buscadores y bancarios; 1 → ese; 0 o ≥2 → hueco con inventario (y atasco del formador en «Matrícula»).
+// Botones y «Versión», solo los VISIBLES. Nunca se adivina entre dos válidos.
 // v0.6.2 (15/10/2026, decisión de Alberto): compra, uso, fecha de efecto, garaje colectivo/individual y segundo conductor ya NO son
 // huecos: si el riesgo no los trae, el bot usa un valor «no determinante» (`supuestosAuto` de module-tarificacion) y lo DECLARA
 // («Precio con supuestos: …» en el error y en cada oferta). Mismo cuidado que 0.6.1: opciones solo por la puerta de guard.ts (lista
@@ -59,6 +64,7 @@ import {
   mensajeEleccionPoblacion,
   mensajeEleccionVersion,
   opcionesPoblacionDesdeCeldas,
+  PREFIJO_SUPUESTOS,
   redactarDatosPersonales,
   resolverPoblacion,
   resolverVersion,
@@ -79,6 +85,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { conRespaldoIA, registrarAtasco, type PeticionResolver } from '../../formador.ts'
+import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
 import { ErrorAvanceSinLlegar, esAppTurismosAllianz, exigirCampoNoBancario, SEL_FUERA_CABECERA_TURISMOS, SEL_ZONA_APP_TURISMOS } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
@@ -936,10 +943,12 @@ export const modalTurismos = (marco: Pick<Frame, 'locator'>): Locator => marco.l
 
 /** Campo de texto por su etiqueta EXACTA, dentro de la zona `appArea` y fuera de la cabecera. */
 export const campoTurismos = (marco: Pick<Frame, 'locator'>, etiqueta: string): Locator => sinCabecera(marco, zonaTurismos(marco).getByLabel(etiqueta, { exact: true }))
-/** Botón por su nombre accesible EXACTO, dentro de la zona `appArea` y fuera de la cabecera. */
-export const botonTurismos = (marco: Pick<Frame, 'locator'>, nombre: string): Locator => sinCabecera(marco, zonaTurismos(marco).getByRole('button', { name: nombre, exact: true }))
+/** Botón VISIBLE por su nombre accesible EXACTO, dentro de la zona `appArea` y fuera de la cabecera (v0.6.3: un gemelo oculto no cuenta). */
+export const botonTurismos = (marco: Pick<Frame, 'locator'>, nombre: string): Locator =>
+  sinCabecera(marco, zonaTurismos(marco).getByRole('button', { name: nombre, exact: true })).filter({ visible: true })
 
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos'>
+/** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos'> & Partial<Pick<ContextoPortal, 'formador'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -963,10 +972,40 @@ async function unicoControl(page: Pick<Page, 'waitForTimeout'>, loc: Locator, qu
   }
 }
 
+/**
+ * v0.6.3: campo de texto ÚNICO por su etiqueta EXACTA en la zona `appArea` DEL MARCO del motor, por el localizador común
+ * (`localizarControl`): fuera ocultos, deshabilitados, cabecera/menús, buscadores, bancarios y no editables. Se reintenta hasta
+ * `timeoutMs` solo con la heurística; el último intento lleva el `formador` (pistas aprendidas y, si no, ATASCO con los
+ * candidatos). 0 o ≥2 → `ErrorMapaIncompleto` (con inventario) del adaptador: «… (no aparece)» / «… (hay N, se esperaba uno)».
+ */
+export async function campoUnicoTurismos(
+  page: Pick<Page, 'waitForTimeout'>,
+  marco: Frame,
+  etiqueta: string,
+  que: string,
+  timeoutMs = ESPERA_CONTROL_TURISMOS_MS,
+  formador?: ContextoPortal['formador'],
+): Promise<{ locator: Locator; confirmar: () => Promise<void> }> {
+  const buscar = (f?: ContextoPortal['formador']) =>
+    localizarControl(marco, { paso: PASO_VEHICULO, etiqueta }, { adaptador: 'allianz/auto', contenedor: SEL_ZONA_APP_TURISMOS, formador: f, pideInventarioDom: true })
+  const fin = Date.now() + timeoutMs
+  for (;;) {
+    const ultimo = Date.now() >= fin
+    try {
+      const r = await buscar(ultimo ? formador : undefined)
+      return { locator: r.locator, confirmar: r.confirmar }
+    } catch (e) {
+      if (!(e instanceof ErrorLocalizar)) throw e
+      if (ultimo) throw new ErrorMapaIncompleto(`${que} (${e.decision === 'varios' ? `hay ${e.candidatos.length}, se esperaba uno` : 'no aparece'})`, true)
+    }
+    await page.waitForTimeout(300)
+  }
+}
+
 /** Versiones que ofrece el portal, SOLO si el control es un `<select>` nativo con etiqueta «Versión». Otro control → `null`. */
 export async function leerVersionesTurismos(marco: Pick<Frame, 'locator'>): Promise<{ control: Locator; opciones: CandidatoVersion[] } | null> {
-  const control = sinCabecera(marco, zonaTurismos(marco).getByLabel(/^versi[oó]n$/i))
-  if ((await control.count().catch(() => 0)) !== 1 || !(await control.isVisible().catch(() => false))) return null
+  const control = sinCabecera(marco, zonaTurismos(marco).getByLabel(/^versi[oó]n$/i)).filter({ visible: true })
+  if ((await control.count().catch(() => 0)) !== 1) return null
   const opciones = await control
     .evaluate((el) => (el.tagName === 'SELECT' ? Array.from((el as HTMLSelectElement).options).map((o) => ({ etiqueta: (o.textContent ?? '').trim(), codigo: o.value || null })) : null))
     .catch(() => null)
@@ -974,28 +1013,42 @@ export async function leerVersionesTurismos(marco: Pick<Frame, 'locator'>): Prom
 }
 
 /**
- * Elección de versión tras «Encuentra mi vehículo». Varias sin elección → `ErrorEleccionVersion` (requiere_humano con las
- * opciones, mismo patrón que Moto); una sola o elegida → se FIJA por el código de SU opción y se relee. Devuelve `true` si
- * había selector de versiones (nativo).
+ * Elección de versión tras «Encuentra mi vehículo». Una sola o elegida → se FIJA por el código de SU opción y se relee.
+ * Varias SIN elección del formulario → decisión de Alberto (17/10/2026, «en la versión son todos prácticamente lo mismo»): se
+ * toma LA PRIMERA de la lista y se DECLARA como supuesto (`supuesto`, nunca como dato). Elección explícita ambigua o que no
+ * casa → `ErrorEleccionVersion` como siempre (requiere_humano). Solo Turismos (Moto no cambia). `conVersiones`: había selector.
  */
 export async function resolverVersionTurismos(
   marco: Pick<Frame, 'locator'>,
   form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
-): Promise<boolean> {
+): Promise<{ conVersiones: boolean; supuesto: string | null }> {
   const l = await leerVersionesTurismos(marco)
-  if (!l || l.opciones.length === 0) return false
+  if (!l || l.opciones.length === 0) return { conVersiones: false, supuesto: null }
   const { eleccion } = eleccionVersionConOrigen({ versiones: l.opciones }, form)
   const r = resolverVersion(l.opciones, eleccion)
-  if (r.tipo === 'ambigua') throw new ErrorEleccionVersion(r.opciones)
-  if (r.tipo === 'ninguna') return false
-  const codigo = r.candidato.codigo
+  let supuesto: string | null = null
+  let elegida: CandidatoVersion
+  if (r.tipo === 'ninguna') return { conVersiones: false, supuesto: null }
+  if (r.tipo === 'ambigua') {
+    if (eleccion !== null) throw new ErrorEleccionVersion(r.opciones)
+    elegida = l.opciones[0]!
+    supuesto = `versión: la primera de la lista (supuesto, había ${l.opciones.length})`
+  } else elegida = r.candidato
+  const codigo = elegida.codigo
   if (!codigo) throw new ErrorTarificador('portal', 'allianz/auto: la versión resuelta no tiene código en el desplegable: no se puede fijar')
   if ((await l.control.inputValue()) !== codigo) {
     await comprobarCampo(l.control)
     await l.control.selectOption(codigo)
   }
   if ((await l.control.inputValue()) !== codigo) throw new ErrorTarificador('portal', 'allianz/auto: el portal no dejó fijada la versión resuelta')
-  return true
+  return { conVersiones: true, supuesto }
+}
+
+/** Une el supuesto de la versión al «Precio con supuestos: …» del riesgo (un solo aviso, versión primero). Puro. */
+export function unirSupuestoVersion(supuestoVersion: string | null, riesgo: string | null): string | null {
+  if (!supuestoVersion) return riesgo
+  const resto = riesgo?.startsWith(PREFIJO_SUPUESTOS) ? riesgo.slice(PREFIJO_SUPUESTOS.length).replace(/\.$/, '').split(', ') : []
+  return textoSupuestos([supuestoVersion, ...resto])
 }
 
 /**
@@ -1007,15 +1060,21 @@ export async function resolverVersionTurismos(
  * del `<select>` «Versión» nativo. Sin modal, ni versiones ni «SIGUIENTE» habilitado en el plazo → hueco. Sin log de la matrícula.
  */
 export async function rellenarDatosVehiculoTurismos(page: Page, marco: Frame, form: FormularioAuto, ctx: CtxTurismos): Promise<string[]> {
+  return (await rellenarDatosVehiculoTurismosConSupuesto(page, marco, form, ctx)).huecos
+}
+
+/** Como `rellenarDatosVehiculoTurismos`, y además devuelve el supuesto de versión (primera de la lista) si se aplicó. */
+export async function rellenarDatosVehiculoTurismosConSupuesto(page: Page, marco: Frame, form: FormularioAuto, ctx: CtxTurismos): Promise<{ huecos: string[]; supuestoVersion: string | null }> {
   if (typeof ctx?.marcarOpcionTurismos !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
   const r = await ctx.marcarOpcionTurismos(marco, CLAVE_CONOCE_MATRICULA)
   if (r.estado === 'no_unica' || r.estado === 'no_quedo') {
     throw new ErrorMapaIncompleto(`cómo se marca «${OPCION_SI}» en «${ETIQUETA_CONOCE_MATRICULA}» (${r.estado === 'no_unica' ? `${r.coincidencias} coincidencias` : 'tras pulsar no quedó marcada'})`, true)
   }
-  const campo = await unicoControl(page, campoTurismos(marco, ETIQUETA_MATRICULA), `el campo «${ETIQUETA_MATRICULA}»`, false)
+  const { locator: campo, confirmar } = await campoUnicoTurismos(page, marco, ETIQUETA_MATRICULA, `el campo «${ETIQUETA_MATRICULA}»`, ESPERA_CONTROL_TURISMOS_MS, ctx.formador)
   await ctx.pausaAccion()
   await comprobarCampo(campo)
   await campo.fill(form.matricula)
+  await confirmar()
   const boton = await unicoControl(page, botonTurismos(marco, BOTON_ENCUENTRA_VEHICULO), `el botón «${BOTON_ENCUENTRA_VEHICULO}»`, true)
   await ctx.pausaAccion()
   await ctx.pulsar(boton)
@@ -1025,9 +1084,9 @@ export async function rellenarDatosVehiculoTurismos(page: Page, marco: Frame, fo
     if ((await modalTurismos(marco).count().catch(() => 0)) > 0) {
       throw new ErrorMapaIncompleto(`el modal con la lista de vehículos que abre «${BOTON_ENCUENTRA_VEHICULO}» (estructura sin mapear: elegir uno si hay uno, «eleccion» si hay varios, y cerrarlo)`, true)
     }
-    const conVersiones = await resolverVersionTurismos(marco, form)
+    const { conVersiones, supuesto } = await resolverVersionTurismos(marco, form)
     const siguiente = botonTurismos(marco, BOTON_SIGUIENTE_TURISMOS)
-    if (conVersiones || ((await siguiente.count().catch(() => 0)) === 1 && (await habilitadoDeVerdad(siguiente)))) return []
+    if (conVersiones || ((await siguiente.count().catch(() => 0)) === 1 && (await habilitadoDeVerdad(siguiente)))) return { huecos: [], supuestoVersion: supuesto }
     if ((await zonaTurismos(marco).getByRole('alert').count().catch(() => 0)) > 0) throw new ErrorMapaIncompleto(`qué respondió Allianz a «${BOTON_ENCUENTRA_VEHICULO}» (aviso en pantalla)`, true)
     if (Date.now() >= fin) throw new ErrorMapaIncompleto(`el resultado de «${BOTON_ENCUENTRA_VEHICULO}» (ni modal de vehículos, ni versiones elegibles, ni «${BOTON_SIGUIENTE_TURISMOS}» habilitado)`, true)
     await page.waitForTimeout(500)
@@ -1167,7 +1226,7 @@ export async function rellenarDatosRiesgoTurismos(
   if (typeof marcar !== 'function') throw new ErrorMapaIncompleto('la puerta guardada de opciones de Turismos en el contexto del worker', false, true)
   const esperar = async (etiqueta: string): Promise<Locator | string> => {
     try {
-      return await unicoControl(page, campoTurismos(marco, etiqueta), `«${etiqueta}»`, false, ESPERA_CAMPO_TURISMOS_MS)
+      return (await campoUnicoTurismos(page, marco, etiqueta, `«${etiqueta}»`, ESPERA_CAMPO_TURISMOS_MS)).locator
     } catch (e) {
       if (e instanceof ErrorMapaIncompleto) return e.message.replace(/^.*?mapa incompleto: faltan /, '')
       throw e
@@ -1232,7 +1291,8 @@ export async function avanzarDesdeDatosVehiculo(
   await ctx.pulsar(boton)
   const fin = Date.now() + esperaMs
   for (;;) {
-    if (!(await campoTurismos(marco, ETIQUETA_MATRICULA).first().isVisible().catch(() => false))) {
+    // v0.6.3: «sigue en el paso» = queda ALGUNA «Matrícula» visible (un gemelo oculto delante no engaña).
+    if ((await campoTurismos(marco, ETIQUETA_MATRICULA).filter({ visible: true }).count().catch(() => 0)) === 0) {
       const paso = await marco.getByRole('tab', { selected: true }).first().innerText().catch(() => '')
       throw new ErrorMapaIncompleto(conHuecos(`la pantalla que sigue a «${PASO_VEHICULO}»${paso.trim() ? ` («${paso.replace(/\s+/g, ' ').trim().slice(0, 40)}»)` : ''} del asistente de Turismos (sin explorar)`), true)
     }
@@ -1268,8 +1328,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 ni en la 0.6.2 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.2',
+    // Moto no cambia en la 0.6.1, 0.6.2 ni 0.6.3 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.3',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
@@ -1278,13 +1338,13 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
       await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Turismos', selectorTarjeta: TARJETA_AUTOS.turismos })
       // v0.6.0: marco del motor `ngx-motor-azs` (sin marco → hueco + inventario ANTES de escribir) y exploración por pasos.
       const marco = await marcoFormularioTurismos(page)
-      const huecos = await rellenarDatosVehiculoTurismos(page, marco, form, ctx)
+      const { huecos, supuestoVersion } = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, form, ctx)
       await ctx.pausa()
       // v0.6.1: resto del paso con los datos del riesgo; v0.6.2: y los SUPUESTOS declarados. Lo demás, huecos del error final.
       // Solo se declara lo que QUEDÓ aplicado en el portal (no lo calculado).
       const riesgo = await rellenarDatosRiesgoTurismos(page, marco, form, ctx, new Date())
       huecos.push(...riesgo.huecos)
-      const { supuestos } = riesgo
+      const supuestos = unirSupuestoVersion(supuestoVersion, riesgo.supuestos)
       await ctx.pausa()
       // «SIGUIENTE» (guard) y la pantalla que sigue → hueco con inventario. Cuando haya mapa: leerPrimas → ofertasDesdePrimas(…, supuestos).
       return avanzarDesdeDatosVehiculo(page, marco, ctx, undefined, huecos, supuestos)

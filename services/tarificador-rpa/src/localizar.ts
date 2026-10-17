@@ -117,11 +117,14 @@ export class ErrorMapaIncompleto extends ErrorTarificador {
   readonly pideInventarioDom: boolean
   readonly sinAtasco = false
   readonly candidatos: readonly CandidatoLocalizado[]
-  constructor(adaptador: string, que: string, candidatos: readonly CandidatoLocalizado[] = [], pideInventarioDom = false) {
+  /** Qué decidió la heurística: `varios` (≥2 válidos: `candidatos` son ellos), `ninguno`, o `null` (sin contenedor). */
+  readonly decision: 'ninguno' | 'varios' | null
+  constructor(adaptador: string, que: string, candidatos: readonly CandidatoLocalizado[] = [], pideInventarioDom = false, decision: 'ninguno' | 'varios' | null = null) {
     super('portal', `${adaptador}: mapa incompleto: faltan ${redactarDatosPersonales(que)}`)
     this.name = 'ErrorMapaIncompleto'
     this.pideInventarioDom = pideInventarioDom
     this.candidatos = candidatos
+    this.decision = decision
   }
 }
 
@@ -424,5 +427,5 @@ export async function localizarControl(raiz: Raiz, b: BusquedaControl, o: Opcion
   const conAtasco = prepararAtasco(o.formador, clave, que, b.etiqueta ?? b.nombre ?? null, marcoDe(raiz), candidatos)
   // Sin atasco propio (formador apagado o ningún candidato con pista): nunca muere mudo. Con `pideInventarioDom` el runner
   // adjunta el inventario y `atascoDeRespaldoHueco` (formador.ts) deja el atasco de respaldo con los candidatos de la pantalla.
-  throw new ErrorMapaIncompleto(o.adaptador, textoFalta(que, ambito, decision, decision.tipo === 'varios' ? candidatos : [], descartes), candidatos, o.pideInventarioDom === true || !conAtasco)
+  throw new ErrorMapaIncompleto(o.adaptador, textoFalta(que, ambito, decision, decision.tipo === 'varios' ? candidatos : [], descartes), candidatos, o.pideInventarioDom === true || !conAtasco, decision.tipo)
 }

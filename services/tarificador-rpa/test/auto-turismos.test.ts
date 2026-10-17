@@ -33,6 +33,8 @@ import {
   rellenarDatosRiesgoTurismos,
   supuestosAplicadosTurismos,
   rellenarDatosVehiculoTurismos,
+  rellenarDatosVehiculoTurismosConSupuesto,
+  unirSupuestoVersion,
   tipoTomadorTurismos,
   type CtxTurismos,
 } from '../src/adapters/allianz/auto.ts'
@@ -58,6 +60,8 @@ const FORM_COMPLETO: FormularioAuto = {
   tomador: { tipo: 'fisica', nombre: 'A', apellido1: 'B', apellido2: null, razonSocial: null, documentoIdentidad: '00000000T', fechaNacimiento: null, codigoPostal: '00000', poblacion: 'Villaficticia', direccion: null, telefono: null, email: null },
 }
 
+/** v0.6.3: carcasa con la CABECERA real de ePac en el marco principal (atasco del 17/10/2026: desplegable de mediador y buscador). */
+const CABECERA_CARCASA = `<nx-header><label id="ng-c-lbl">Matrícula</label><nx-dropdown role="combobox" tabindex="0" aria-labelledby="ng-c-lbl"></nx-dropdown><input id="ng-c-nx-input-9" name="target" role="searchbox" type="text" aria-labelledby="ng-c-lbl" placeholder="Buscar Aquí..."></nx-header>`
 const CARCASA = `<!doctype html><html><body><h1>ePac</h1><iframe name="appArea" id="appArea" src="https://cloud.e-pacallianz.com/ngx-motor-azs/"></iframe></body></html>`
 
 type Opc = {
@@ -80,6 +84,10 @@ type Opc = {
   sinName?: boolean
   /** «Encuentra mi vehículo» abre un MODAL con la lista de coches (captura real de la 0.6.0), en un overlay fuera de `appArea`. */
   modal?: boolean
+  /** v0.6.3 (trabajo real del 17/10/2026): una SEGUNDA «Matrícula» dentro del marco `appArea` (oculta, deshabilitada o visible). */
+  matriculaExtra?: 'oculta' | 'deshabilitada' | 'visible'
+  /** v0.6.3: la cabecera de ePac (desplegable de mediador + buscador «Buscar Aquí...») en el MARCO PRINCIPAL, fuera del iframe. */
+  cabeceraFuera?: boolean
 }
 
 function app(o: Opc = {}): string {
@@ -92,11 +100,14 @@ function app(o: Opc = {}): string {
   const cabecera = `<label id="ng-h-lbl">Matrícula</label><div role="combobox" tabindex="0" aria-labelledby="ng-h-lbl">Matrícula</div><input id="ng-h-busca" role="searchbox" aria-labelledby="ng-h-lbl" placeholder="Buscar Aquí..."><button type="button">SIGUIENTE</button>`
   const formulario = `
 <section id="paso1">
+  ${o.matriculaExtra === 'oculta' ? '<label for="ng-x1-nx-input-300">Matrícula</label><input id="ng-x1-nx-input-300" type="text" style="display:none">' : ''}
+  ${o.matriculaExtra === 'deshabilitada' ? '<label for="ng-x1-nx-input-301">Matrícula</label><input id="ng-x1-nx-input-301" type="text" disabled>' : ''}
   <div role="radiogroup" aria-labelledby="ng-x1-nx-label-5"><label id="ng-x1-nx-label-5">¿Conoces la matrícula del vehículo?</label>
   ${radio('ng-x1-nx-radio-9-input', 'ng-x1-nx-radio-group-4', 'Sí')}${radio('ng-x1-nx-radio-10-input', 'ng-x1-nx-radio-group-4', o.sisDuplicados ? 'Sí' : 'No')}</div>
   <div id="bloqueMatricula" hidden>
     <label for="ng-x1-nx-input-12">Matrícula</label><input id="ng-x1-nx-input-12" type="text" required>
     <button type="button" id="ng-x1-btn-77" disabled>Encuentra mi vehículo</button>
+    ${o.matriculaExtra === 'visible' ? '<label for="ng-x1-nx-input-302">Matrícula</label><input id="ng-x1-nx-input-302" type="text">' : ''}
     <div id="resultado" hidden>
       <label for="ng-x1-select-3">Versión</label>
       <select id="ng-x1-select-3"><option value=""></option>${versiones.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select>
@@ -118,7 +129,7 @@ function app(o: Opc = {}): string {
 </section>
 <section id="paso2" hidden><h2>Datos personales</h2><label for="ng-x1-nx-input-201">Nº Documento</label><input id="ng-x1-nx-input-201" type="text"></section>`
   return `<!doctype html><html><body>
-${o.sinContenedor ? `<header>${cabecera}</header>` : `<nx-header-actions>${cabecera}</nx-header-actions>`}
+${o.cabeceraFuera ? '' : o.sinContenedor ? `<header>${cabecera}</header>` : `<nx-header-actions>${cabecera}</nx-header-actions>`}
 <div>${pasos.map((p, i) => `<nx-multi-step-item role="tab" aria-selected="${i === 0}" ${i === 0 ? '' : 'aria-disabled="true"'}>${p}</nx-multi-step-item>`).join('')}</div>
 ${o.sinContenedor ? formulario : `<main id="appArea">${formulario}</main>`}
 <script>
@@ -158,7 +169,8 @@ async function abrir(o: Opc = {}, rutaMotor = '/ngx-motor-azs/') {
   const guard = await instalarGuardEmision(context)
   await context.route('https://**/*', (r) => {
     const u = new URL(r.request().url())
-    const body = u.hostname === 'cloud.e-pacallianz.com' ? app(o) : CARCASA.replace('/ngx-motor-azs/', rutaMotor)
+    const carcasa = o.cabeceraFuera ? CARCASA.replace('<h1>ePac</h1>', `<h1>ePac</h1>${CABECERA_CARCASA}`) : CARCASA
+    const body = u.hostname === 'cloud.e-pacallianz.com' ? app(o) : carcasa.replace('/ngx-motor-azs/', rutaMotor)
     return r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body })
   })
   const page = await context.newPage()
@@ -196,7 +208,7 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
 })
 
 test('versión del bot de Allianz Turismos', () => {
-  assert.equal(allianzAuto.version, '0.6.2')
+  assert.equal(allianzAuto.version, '0.6.3')
 })
 
 test('localización por etiqueta/rol: marco del motor y controles sin tocar ids dinámicos', async () => {
@@ -211,6 +223,41 @@ test('localización por etiqueta/rol: marco del motor y controles sin tocar ids 
     assert.equal(await botonTurismos(marco, 'Encuentra mi vehículo').count(), 1)
     assert.equal(await botonTurismos(marco, 'SIGUIENTE').count(), 1)
     assert.equal(await botonTurismos(marco, 'Encuentra').count(), 0, 'nombre EXACTO, no «contiene»')
+  } finally {
+    await context.close()
+  }
+})
+
+test('v0.6.3 (atasco real 17/10/2026): cabecera en el marco principal + DOS «Matrícula» en appArea, una oculta o deshabilitada → la única visible y editable', async () => {
+  for (const extra of ['oculta', 'deshabilitada'] as const) {
+    const { context, page, ctx, pulsados } = await abrir({ cabeceraFuera: true, matriculaExtra: extra })
+    try {
+      // El fixture reproduce el atasco: la cabecera vive en el marco PRINCIPAL y en el marco `appArea` hay dos «Matrícula».
+      assert.ok((await page.mainFrame().getByLabel('Matrícula', { exact: true }).count()) >= 2, 'cabecera con «Matrícula» fuera del iframe')
+      const marco = await marcoFormularioTurismos(page, 5_000)
+      assert.equal(marco.name(), 'appArea')
+      await rellenarDatosVehiculoTurismos(page, marco, FORM, ctx)
+      assert.equal(await marco.locator('#ng-x1-nx-input-12').inputValue(), FORM.matricula, `${extra}: se escribe en la visible y editable`)
+      assert.equal(await marco.locator(extra === 'oculta' ? '#ng-x1-nx-input-300' : '#ng-x1-nx-input-301').inputValue(), '', `${extra}: la descartada no se toca`)
+      assert.equal(await page.mainFrame().locator('#ng-c-nx-input-9').inputValue(), '', 'el buscador de la cabecera no se toca')
+      assert.deepEqual(pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo'])
+    } finally {
+      await context.close()
+    }
+  }
+})
+
+test('v0.6.3: DOS «Matrícula» visibles y editables en appArea → sigue siendo hueco con inventario (no se adivina) y no se escribe nada', async () => {
+  const { context, page, ctx, pulsados } = await abrir({ cabeceraFuera: true, matriculaExtra: 'visible' })
+  try {
+    const marco = await marcoFormularioTurismos(page, 5_000)
+    await assert.rejects(
+      rellenarDatosVehiculoTurismos(page, marco, FORM, ctx),
+      (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e) && /«Matrícula» \(hay 2, se esperaba uno\)/.test((e as Error).message),
+    )
+    assert.equal(await marco.locator('#ng-x1-nx-input-12').inputValue(), '')
+    assert.equal(await marco.locator('#ng-x1-nx-input-302').inputValue(), '')
+    assert.deepEqual(pulsados, ['opcion:conoce_matricula:si'], 'no se pulsa «Encuentra mi vehículo»')
   } finally {
     await context.close()
   }
@@ -241,20 +288,26 @@ test('paso 1: Sí + matrícula + «Encuentra mi vehículo» por ctx.pulsar; una 
   }
 })
 
-test('varias versiones sin elección → ErrorEleccionVersion (requiere_humano) con las opciones; con elección explícita se fija', async () => {
+test('varias versiones SIN elección → se fija la PRIMERA y se declara el supuesto (sin matrícula); con elección explícita → la elegida, sin supuesto', async () => {
   const versiones: Array<[string, string]> = [['A1', 'Version A 90 CV'], ['B2', 'Version B 120 CV']]
   const a = await abrir({ versiones })
   try {
     const marco = await marcoFormularioTurismos(a.page, 5_000)
-    await assert.rejects(rellenarDatosVehiculoTurismos(a.page, marco, FORM, a.ctx), (e: unknown) => e instanceof ErrorEleccionVersion && e.opciones.length === 2)
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, marco, FORM, a.ctx)
+    assert.equal(await marco.getByLabel('Versión').inputValue(), 'A1')
+    assert.equal(r.supuestoVersion, 'versión: la primera de la lista (supuesto, había 2)')
+    assert.ok(!r.supuestoVersion!.includes(FORM.matricula))
+    assert.equal(unirSupuestoVersion(r.supuestoVersion, 'Precio con supuestos: uso diario.'), 'Precio con supuestos: versión: la primera de la lista (supuesto, había 2), uso diario.')
+    assert.equal(unirSupuestoVersion(null, 'Precio con supuestos: uso diario.'), 'Precio con supuestos: uso diario.')
   } finally {
     await a.context.close()
   }
   const b = await abrir({ versiones })
   try {
     const marco = await marcoFormularioTurismos(b.page, 5_000)
-    await rellenarDatosVehiculoTurismos(b.page, marco, { ...FORM, eleccionVersion: { codigo: 'B2', etiqueta: 'Version B 120 CV' } }, b.ctx)
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(b.page, marco, { ...FORM, eleccionVersion: { codigo: 'B2', etiqueta: 'Version B 120 CV' } }, b.ctx)
     assert.equal(await marco.getByLabel('Versión').inputValue(), 'B2')
+    assert.equal(r.supuestoVersion, null)
   } finally {
     await b.context.close()
   }
