@@ -167,13 +167,13 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 347 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 348 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 337 | 50.167 | 42.122.118 | 0 | 0 |
+| `bash` | 338 | 50.171 | 42.126.008 | 0 | 0 |
 | `otro` | 332 | 11.933 | 28.693.298 | 18.324.455 | 0 |
-| `lectura-directa` | 287 | 8.139 | 25.386.125 | 0 | 0 |
+| `lectura-directa` | 288 | 8.143 | 25.388.758 | 0 | 0 |
 | `mcp:github` | 292 | 6.770 | 5.318.763 | 54.296.318 | 96 |
 | `sql` | 210 | 4.822 | 2.417.186 | 2.351.230 | 18 |
 | `escritura` | 214 | 4.636 | 68.352.352 | 0 | 0 |
@@ -181,7 +181,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Gmail` | 47 | 1.219 | 1.281.482 | 0 | 72 |
 | `mcp:Booking-com` | 40 | 1.114 | 4.582.717 | 0 | 0 |
 | `mcp:Vercel` | 72 | 901 | 1.033.262 | 204.477 | 28 |
-| `agente:general-purpose` | 104 | 719 | 435.950 | 13.139.424 | 0 |
+| `agente:general-purpose` | 105 | 720 | 436.411 | 13.139.424 | 0 |
 | `mcp:claude-code-remote` | 43 | 446 | 45.209 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
 | `mcp:Supabase` | 125 | 372 | 60.072 | 5.123 | 7 |

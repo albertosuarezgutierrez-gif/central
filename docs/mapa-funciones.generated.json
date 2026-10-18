@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T10:43:50Z",
-  "sha": "ad788b82054941de81c761b745acc41d4e89ca8e",
+  "generadoEn": "2026-10-18T11:19:20Z",
+  "sha": "b1d56fd37a9ccf544c2934371334b4e88cbe33a1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -102702,7 +102702,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 30
+          "linea": 31
         },
         {
           "nombre": "causaLectura",
@@ -102710,7 +102710,7 @@
           "exportada": false,
           "params": "d: Exclude<Expedientes, { estado: 'ok' }>",
           "retorno": "string",
-          "linea": 35,
+          "linea": 36,
           "resumen": "Causa legible de un fallo de lectura (nunca una lista vacía)."
         },
         {
@@ -102719,7 +102719,7 @@
           "exportada": false,
           "params": "body: Record<string, unknown>",
           "retorno": "Promise<string | null>",
-          "linea": 42,
+          "linea": 43,
           "resumen": "Envía una acción por el proxy de la ficha. Devuelve el texto del error, o `null` si se guardó."
         },
         {
@@ -102728,7 +102728,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "Bloque",
@@ -102736,7 +102736,7 @@
           "exportada": false,
           "params": "{ bloque, filas, hoy, onCambio }: { bloque: BloqueMesa; filas: Expediente[]; hoy: string; onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 143
+          "linea": 148
         },
         {
           "nombre": "Fila",
@@ -102744,7 +102744,7 @@
           "exportada": false,
           "params": "{ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa; hoy: string; onCambio: () => Promise<void> }",
           "retorno": null,
-          "linea": 169
+          "linea": 174
         },
         {
           "nombre": "PanelPerder",
@@ -102752,7 +102752,7 @@
           "exportada": false,
           "params": "{ enviando, onEnviar }: { enviando: boolean; onEnviar: (b: Record<string, unknown>) => Promise<void> }",
           "retorno": null,
-          "linea": 258,
+          "linea": 263,
           "resumen": "Motivos de un toque; «otra compañía» y «otro» piden además una palabra (el puerto la exige)."
         },
         {
@@ -102761,7 +102761,7 @@
           "exportada": false,
           "params": "{ enviando, hoy, onEnviar }: { enviando: boolean; hoy: string; onEnviar: (b: Record<string, unknown>) => Promise<void> }",
           "retorno": null,
-          "linea": 292,
+          "linea": 297,
           "resumen": "Atajos de un toque + fecha libre. El puerto exige un porqué al aparcar: va uno fijo, sin pedírselo a Alberto."
         },
         {
@@ -102770,12 +102770,12 @@
           "exportada": false,
           "params": "{ inicial, enviando, onEnviar }: { inicial: string; enviando: boolean; onEnviar: (b: Record<string, unknown>) => Promise<void> }",
           "retorno": null,
-          "linea": 315
+          "linea": 320
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cabd7d4079e0"
+      "hash": "b9d46e7577c2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/mesa/page.tsx",
