@@ -171,18 +171,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 339 | 50.214 | 42.195.240 | 0 | 0 |
-| `otro` | 333 | 11.940 | 28.709.698 | 18.324.455 | 0 |
-| `lectura-directa` | 289 | 8.144 | 25.390.500 | 0 | 0 |
-| `mcp:github` | 293 | 6.774 | 5.322.786 | 54.296.318 | 96 |
-| `sql` | 210 | 4.822 | 2.417.186 | 2.351.230 | 18 |
-| `escritura` | 214 | 4.636 | 68.352.352 | 0 | 0 |
+| `bash` | 339 | 50.418 | 42.411.588 | 0 | 0 |
+| `otro` | 333 | 11.994 | 28.801.142 | 18.324.455 | 0 |
+| `lectura-directa` | 289 | 8.187 | 25.428.730 | 0 | 0 |
+| `mcp:github` | 293 | 6.791 | 5.335.462 | 54.296.318 | 96 |
+| `sql` | 210 | 4.849 | 2.428.547 | 2.351.230 | 18 |
+| `escritura` | 215 | 4.643 | 68.367.198 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 47 | 1.219 | 1.281.482 | 0 | 72 |
 | `mcp:Booking-com` | 40 | 1.114 | 4.582.717 | 0 | 0 |
-| `mcp:Vercel` | 72 | 901 | 1.033.262 | 204.477 | 28 |
-| `agente:general-purpose` | 106 | 723 | 437.369 | 13.155.914 | 0 |
-| `mcp:claude-code-remote` | 44 | 448 | 45.296 | 20.519 | 0 |
+| `mcp:Vercel` | 72 | 905 | 1.035.195 | 204.477 | 28 |
+| `agente:general-purpose` | 106 | 735 | 444.698 | 13.215.993 | 0 |
+| `mcp:claude-code-remote` | 44 | 457 | 45.929 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
 | `mcp:Supabase` | 125 | 372 | 60.072 | 5.123 | 7 |
 | `mcp:Google_Drive` | 22 | 365 | 409.953 | 0 | 40 |
@@ -198,7 +198,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:verificador-esceptico` | 12 | 23 | 7.076 | 80.888 | 0 |
+| `agente:verificador-esceptico` | 12 | 24 | 7.504 | 80.888 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `agente:general` | 12 | 16 | 10.198 | 592.852 | 0 |

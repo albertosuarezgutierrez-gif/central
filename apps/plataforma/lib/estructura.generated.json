@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-18T10:43:50Z",
+  "generadoEn": "2026-10-18T12:43:58Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 196
+        "evidencias": 200
       },
       "rrhh": {
         "estado": "no",
