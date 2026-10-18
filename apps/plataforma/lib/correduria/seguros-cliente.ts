@@ -393,8 +393,14 @@ export function segurosDeReparto(r: RepartoSeguros): PolizaFicha[] {
  * no es «abierta». `null` = no se pudieron leer las oportunidades: el número sería un suelo, no se dice.
  */
 export function contarOportunidades(r: RepartoSeguros): number | null {
+  const l = oportunidadesContables(r)
+  return l === null ? null : l.length
+}
+
+/** Las oportunidades que cuenta `contarOportunidades` (mismo criterio; `null` = no se pudieron leer). */
+export function oportunidadesContables(r: RepartoSeguros): SeguroCliente[] | null {
   if (!r.oportunidadesLeidas) return null
-  return r.oportunidades.filter(s => !(s.clase === 'oportunidad' && !abierta(s.oportunidad))).length
+  return r.oportunidades.filter(s => !(s.clase === 'oportunidad' && !abierta(s.oportunidad)))
 }
 
 /** Con qué se precarga el alta de una oportunidad creada desde una fila del volcado. */

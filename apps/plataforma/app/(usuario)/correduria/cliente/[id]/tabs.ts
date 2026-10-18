@@ -55,6 +55,11 @@ export function tabDeParametro(v: string | string[] | undefined): TabFicha {
 export type DatosAccesos = {
   conNosotros: number
   oportunidadesAbiertas: number | null
+  /**
+   * Subtítulo ya hecho de la tarjeta «Oportunidades» (`subtituloOportunidades`: «N abiertas · ~X€/año»).
+   * Ausente o `null` = el de siempre, solo con el número.
+   */
+  oportunidadesTexto?: string | null
   /** `siguienteAccion`: `accion` (con urgencia), `nada` o `sin_comprobar`. */
   pendiente: { estado: 'accion'; urgente: boolean } | { estado: 'nada' } | { estado: 'sin_comprobar' }
   /** Tareas (del cliente y de sus pólizas): `contarTareasAbiertas`; `null`/ausente = no se pudieron leer (no es «0»). */
@@ -139,7 +144,7 @@ export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, Detal
   const r: Partial<Record<TabFicha, DetalleAcceso>> = {}
   r.resumen = { texto: textoSeguros(d.conNosotros, d.oportunidadesAbiertas) }
   if (d.oportunidadesAbiertas !== null) {
-    r.oportunidades = { texto: d.oportunidadesAbiertas === 0 ? 'ninguna abierta' : plural(d.oportunidadesAbiertas, 'abierta', 'abiertas') }
+    r.oportunidades = { texto: d.oportunidadesAbiertas === 0 ? 'ninguna abierta' : d.oportunidadesTexto ?? plural(d.oportunidadesAbiertas, 'abierta', 'abiertas') }
   }
   const pend = detallePendiente(d.pendiente, d.tareas)
   if (pend) r.pendiente = pend
