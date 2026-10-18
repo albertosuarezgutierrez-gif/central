@@ -24,7 +24,7 @@ Mira si las dos ofertas usan las mismas cifras. Si una asegura el continente por
 
 Hay que preguntar si la póliza indemniza al valor de reconstrucción o reposición a nuevo, o con depreciación por antigüedad. El artículo 26 de la LCS establece que, para determinar el daño, se atiende al valor del interés asegurado en el momento inmediatamente anterior al siniestro, y que el seguro no puede ser fuente de enriquecimiento injusto. Las partes pueden pactar otro criterio: el artículo 28 permite fijar de común acuerdo el valor del interés asegurado, y el artículo 29 exige que, si se pacta que la suma cubra plenamente el valor, la póliza recoja el procedimiento para adecuarla a las oscilaciones de valor.
 
-Por tanto: pregunta cómo define cada compañía «valor» y si el capital se actualiza cada año. [VERIFICAR] La relación exacta entre «valor a nuevo» pactado y el artículo 26 depende de la redacción de cada póliza; no generalizar.
+Por tanto: pregunta cómo define cada compañía «valor» y si el capital se actualiza cada año. Cómo encaja un «valor a nuevo» pactado con el artículo 26 depende de la redacción de cada póliza, así que conviene pedirlo por escrito.
 
 ## 3. ¿Hay riesgo de infraseguro?
 
@@ -43,7 +43,7 @@ La oferta B no era más barata: te aseguraba la mitad.
 
 ## 5. ¿Aplica la regla proporcional cada póliza?
 
-Es la pregunta que casi nadie hace. Pregunta a cada compañía, por escrito: «¿Se aplica regla proporcional en esta póliza? ¿Está excluida por pacto?» El artículo 30 abre la puerta a excluirla, y algunas pólizas lo hacen en ciertas garantías o bajo ciertas condiciones. [VERIFICAR] No afirmar que existan pólizas concretas sin regla proporcional: depende de cada producto.
+Es la pregunta que casi nadie hace. Pregunta a cada compañía, por escrito: «¿Se aplica regla proporcional en esta póliza? ¿Está excluida por pacto?» El artículo 30 permite que las partes, de común acuerdo, la excluyan en la póliza o después de firmarla; si tu póliza lo ha hecho o no depende de cada producto y de sus condiciones.
 
 ## 6. ¿Qué franquicias, sublímites y exclusiones tiene cada una?
 
@@ -72,7 +72,6 @@ Es posible. Una comparación bien hecha puede terminar en «ninguna de las dos»
 
 ## Fuentes
 
-- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 3 (cláusulas limitativas), artículo 8 (contenido de la póliza), artículo 26 (valor del interés y prohibición de enriquecimiento injusto), artículo 28 (valor estimado), artículo 29 (suma que cubra plenamente el valor), artículo 30 (regla proporcional) y artículo 31 (sobreseguro). Texto consolidado, BOE-A-1980-22501.
+- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 3 (cláusulas limitativas), artículo 8 (contenido de la póliza), artículo 26 (valor del interés y prohibición de enriquecimiento injusto), artículo 28 (valor estimado), artículo 29 (suma que cubra plenamente el valor), artículo 30 (regla proporcional) y artículo 31 (sobreseguro). Texto consolidado, BOE-A-1980-22501 (https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501). Comprobado el 17/10/2026 contra la copia consolidada de 25/07/2025 de `docs/normativa/`.
 - Dirección General de Seguros y Fondos de Pensiones (DGSFP): supervisión del sector y Servicio de Reclamaciones (Orden ECC/2502/2012).
-- [VERIFICAR] La obligación de ofrecer información precontractual comparable (documento de información previo) en el seguro de hogar, y su base normativa exacta, antes de citarla.
-- [VERIFICAR] Enlace oficial a la DGSFP.
+- Nota editorial: el texto no afirma ninguna obligación de información precontractual comparable en el seguro de hogar (su base normativa no pudo contrastarse); tampoco enlaza la sede de la DGSFP.

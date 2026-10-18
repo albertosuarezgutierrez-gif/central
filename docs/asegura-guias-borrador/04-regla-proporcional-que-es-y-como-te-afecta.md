@@ -25,7 +25,7 @@ Con una fracción: suma asegurada dividida entre valor real. El resultado se apl
 
 > **Ejemplo ficticio.** Contenido de una vivienda con valor real de 40.000 €, asegurado por 30.000 €. Proporción: 30.000 / 40.000 = 75 %. Daño de 8.000 €. Indemnización: 8.000 × 75 % = 6.000 €. Los 2.000 € restantes los asumes tú.
 
-> **Ejemplo ficticio con franquicia.** Mismo caso, con una franquicia de 150 €. Según cómo redacte la póliza el orden de aplicación, el resultado puede ser de 5.850 € (franquicia restada tras la proporción) u otro ligeramente distinto. [VERIFICAR] No afirmar un orden único; remitir a las condiciones.
+> **Ejemplo ficticio con franquicia.** Mismo caso, con una franquicia de 150 €. Si la póliza resta la franquicia después de aplicar la proporción, el resultado es de 5.850 € (6.000 − 150); si la aplica en otro orden, la cifra puede ser distinta. La ley no fija el orden: remite a las condiciones de cada póliza.
 
 ## ¿Se aplica también a daños pequeños?
 
@@ -51,7 +51,7 @@ El problema inverso es el sobreseguro. El artículo 31 de la LCS permite a cualq
 
 ## ¿Cómo sé si estoy en infraseguro?
 
-Calcula, a grandes rasgos, cuánto costaría reconstruir y reponer hoy lo asegurado y compáralo con el capital de las condiciones particulares. En el continente, ese cálculo lo hace mejor un profesional que una intuición. En el contenido, un inventario sencillo por habitaciones suele revelar que el capital está corto. [VERIFICAR] Si se quiere aportar un método de cálculo del valor de reconstrucción, citar una fuente oficial; este borrador no da cifras de mercado.
+Calcula, a grandes rasgos, cuánto costaría reconstruir y reponer hoy lo asegurado y compáralo con el capital de las condiciones particulares. En el continente, ese cálculo lo hace mejor un profesional que una intuición. En el contenido, un inventario sencillo por habitaciones suele revelar que el capital está corto. Este texto no da cifras de mercado ni un método oficial de cálculo.
 
 ## ¿Qué hago antes del siguiente vencimiento?
 
@@ -67,6 +67,6 @@ Un corredor no cambia la ley, pero sí puede revisar contigo los capitales y ped
 
 ## Fuentes
 
-- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 11 (agravación del riesgo), artículo 22 (prórroga y oposición), artículo 26 (valor en el momento anterior al siniestro), artículo 27 (suma asegurada como límite máximo), artículo 28 (valor estimado), artículo 29 (suma que cubre plenamente el valor), artículo 30 (regla proporcional y su exclusión por pacto) y artículo 31 (sobreseguro). Texto consolidado, BOE-A-1980-22501; contrastado con la copia de 25/07/2025 de `docs/normativa/`.
+- Ley 50/1980, de 8 de octubre, de Contrato de Seguro: artículo 11 (agravación del riesgo), artículo 22 (prórroga y oposición), artículo 26 (valor en el momento anterior al siniestro), artículo 27 (suma asegurada como límite máximo), artículo 28 (valor estimado), artículo 29 (suma que cubre plenamente el valor), artículo 30 (regla proporcional y su exclusión por pacto) y artículo 31 (sobreseguro). Texto consolidado, BOE-A-1980-22501 (https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501); contrastado el 17/10/2026 con la copia consolidada de 25/07/2025 de `docs/normativa/`.
 - Dirección General de Seguros y Fondos de Pensiones (DGSFP): supervisión del sector y Servicio de Reclamaciones, al que se acude tras agotar el servicio de atención al cliente de la entidad (Orden ECC/2502/2012).
-- [VERIFICAR] Enlace oficial a la DGSFP.
+- Nota editorial: no se enlaza la sede de la DGSFP (no se pudo consultar desde el entorno de trabajo).

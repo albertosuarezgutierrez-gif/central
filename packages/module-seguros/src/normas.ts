@@ -135,6 +135,98 @@ export const NORMAS_CITABLES: readonly NormaCitable[] = [
     verificado: '2026-09-23',
     cubre: ['articulo:73', 'ley:50/1980'],
   },
+  // Leídos el 17/10/2026 en la copia consolidada del BOE de `docs/normativa/`
+  // («Última modificación: 25 de julio de 2025»): arts. 8, 11, 26-32 completos.
+  {
+    id: 'lcs-8',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '8',
+    sintesis:
+      'La póliza debe contener, como mínimo, la naturaleza del riesgo cubierto con las exclusiones y limitaciones de cada garantía destacadas tipográficamente, los objetos asegurados, la suma asegurada o alcance de la cobertura, la prima y la duración del contrato.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:8', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-11',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '11',
+    sintesis:
+      'Durante la vigencia del contrato, el tomador o el asegurado deben comunicar al asegurador, tan pronto como les sea posible, la alteración de las circunstancias declaradas que agrave el riesgo en los términos que fija la ley.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:11', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-26',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '26',
+    sintesis:
+      'El seguro no puede ser objeto de enriquecimiento injusto para el asegurado; para determinar el daño se atiende al valor del interés asegurado en el momento inmediatamente anterior al siniestro.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:26', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-27',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '27',
+    sintesis:
+      'La suma asegurada representa el límite máximo de la indemnización que el asegurador debe pagar en cada siniestro.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:27', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-28',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '28',
+    sintesis:
+      'Las partes, de común acuerdo, pueden fijar en la póliza o con posterioridad el valor del interés asegurado que se tendrá en cuenta para calcular la indemnización (póliza estimada); el asegurador solo puede impugnarlo en los supuestos que la ley señala.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:28', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-29',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '29',
+    sintesis:
+      'Si por pacto expreso la suma asegurada cubre plenamente el valor del interés durante la vigencia del contrato, la póliza debe contener los criterios y el procedimiento para adecuar la suma asegurada y las primas a las oscilaciones de ese valor.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:29', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-30',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '30',
+    sintesis:
+      'Si en el momento del siniestro la suma asegurada es inferior al valor del interés, el asegurador indemniza el daño causado en la misma proporción en que aquella cubre el interés asegurado; las partes pueden excluir esta regla por pacto, en la póliza o después de celebrado el contrato.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:30', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-31',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '31',
+    sintesis:
+      'Si la suma asegurada supera notablemente el valor del interés, cualquiera de las partes puede exigir la reducción de la suma y de la prima, y si hay siniestro el asegurador indemniza el daño efectivamente causado; si el sobreseguro se debe a mala fe del asegurado, el contrato es ineficaz.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:31', 'ley:50/1980'],
+  },
+  {
+    id: 'lcs-32',
+    norma: 'Ley 50/1980, de 8 de octubre, de Contrato de Seguro',
+    articulo: '32',
+    sintesis:
+      'Cuando varios contratos con distintos aseguradores cubren el mismo riesgo sobre el mismo interés y durante el mismo período, el tomador o el asegurado deben, salvo pacto en contrario, comunicar a cada asegurador los demás seguros; los aseguradores contribuyen al pago de la indemnización en proporción a su suma asegurada, sin superar el daño.',
+    url: 'https://www.boe.es/buscar/act.php?id=BOE-A-1980-22501',
+    verificado: '2026-10-17',
+    cubre: ['articulo:32', 'ley:50/1980'],
+  },
   {
     id: 'orden-ecc-2502-2012',
     norma:
