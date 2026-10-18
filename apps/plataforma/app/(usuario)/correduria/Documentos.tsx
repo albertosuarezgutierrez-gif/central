@@ -4,6 +4,7 @@ import { CheckCircle2, Clock, Download, Eye, HelpCircle, Paperclip, Sparkles, Tr
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Ico, FILA } from './iconos'
+import { PAGINA_DOCUMENTOS, agruparDocumentos, limitarGrupos } from '@/lib/correduria/ficha-listas'
 import { interpretarOportunidadDocumento, type AvisoOportunidadDocumento } from '@/lib/oportunidad-documento'
 import {
   TIPOS_DOCUMENTO,
@@ -33,6 +34,7 @@ export default function Documentos({
   inicial,
   sugeridos,
   tipoInicial,
+  polizas,
 }: {
   clienteId?: string | null
   polizaId?: string | null
@@ -42,6 +44,12 @@ export default function Documentos({
   sugeridos?: readonly TipoDocumento[]
   /** Tipo preseleccionado al subir (el botón «Subir póliza» de la ficha llega con `poliza`). */
   tipoInicial?: TipoDocumento
+  /**
+   * Solo en la ficha del CLIENTE: sus pólizas (id + rótulo). Con ellas la lista se agrupa por póliza
+   * («Del cliente» para los sueltos), por tipo dentro, con buscador y plegado. Sin ellas (póliza o
+   * siniestro), la lista plana de siempre.
+   */
+  polizas?: readonly { id: string; etiqueta: string }[]
 }) {
   const [lista, setLista] = useState<DocumentoResumen[] | null>(inicial)
   const [ocupado, setOcupado] = useState(false)
@@ -87,6 +95,7 @@ export default function Documentos({
     }
   }
 
+  const agrupar = !!clienteId && !polizaId && !siniestroId && polizas !== undefined
   const destino = { clienteId: clienteId ?? null, polizaId: polizaId ?? null, siniestroId: siniestroId ?? null }
   const resumen = resumenDocumentos(lista)
 
@@ -220,6 +229,53 @@ export default function Documentos({
     }
   }
 
+  /** Una fila de documento (la misma en la lista plana y en la agrupada). */
+  const fila = (d: DocumentoResumen) => (
+    <li
+      key={d.id}
+      style={{
+        border: '1px solid var(--border)',
+        borderRadius: 8,
+        padding: '8px 10px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 8,
+        alignItems: 'center',
+        fontSize: 13,
+      }}
+    >
+      <span style={{ flex: '1 1 220px', minWidth: 0 }}>
+        <strong>{etiquetaTipoDocumento(d.tipo)}</strong>
+        {d.nombre ? <> · <span style={{ wordBreak: 'break-all' }}>{d.nombre}</span></> : null}
+        {d.bytes ? <span style={{ color: 'var(--muted)' }}> · {(d.bytes / 1024).toFixed(0)} KB</span> : null}
+        <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+          {etiquetaEstadoDocumento(d.estado)} · {new Date(d.creado).toLocaleDateString('es-ES')}
+          {d.notas ? ` · ${d.notas}` : ''}
+        </div>
+      </span>
+      <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {d.estado !== 'pedido' && (
+          <a href={`/api/correduria/documentos/${d.id}`} target="_blank" rel="noreferrer" style={{ ...btn, gap: 6 }}>
+            <Ico i={Eye} /> Ver
+          </a>
+        )}
+        {leerPoliza && d.estado !== 'pedido' && (
+          <button type="button" onClick={() => void leerGuardado(d)} disabled={ocupado || oportunidad === 'leyendo'} title="La IA lo lee (compañía, vencimiento, prima y bonus) y abre o completa la oportunidad" style={{ ...btn, gap: 6 }}>
+            <Ico i={Sparkles} /> Leer para oportunidad
+          </button>
+        )}
+        {d.estado === 'recibido' && (
+          <button type="button" onClick={() => revisar(d.id)} disabled={ocupado} style={{ ...btn, gap: 6 }}>
+            <Ico i={CheckCircle2} /> Revisado
+          </button>
+        )}
+        <button type="button" onClick={() => borrar(d.id)} disabled={ocupado} aria-label="Borrar documento" title="Borrar documento" style={{ ...btn, color: 'var(--negative)' }}>
+          <Ico i={Trash2} />
+        </button>
+      </span>
+    </li>
+  )
+
   const tipos: TipoDocumento[] = [...(sugeridos ?? []), ...TIPOS_DOCUMENTO.filter((t) => !sugeridos?.includes(t))]
 
   return (
@@ -230,53 +286,13 @@ export default function Documentos({
       </div>
 
       {lista && lista.length > 0 && (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
-          {lista.map((d) => (
-            <li
-              key={d.id}
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: 8,
-                padding: '8px 10px',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                alignItems: 'center',
-                fontSize: 13,
-              }}
-            >
-              <span style={{ flex: '1 1 220px', minWidth: 0 }}>
-                <strong>{etiquetaTipoDocumento(d.tipo)}</strong>
-                {d.nombre ? <> · <span style={{ wordBreak: 'break-all' }}>{d.nombre}</span></> : null}
-                {d.bytes ? <span style={{ color: 'var(--muted)' }}> · {(d.bytes / 1024).toFixed(0)} KB</span> : null}
-                <div style={{ color: 'var(--muted)', fontSize: 12 }}>
-                  {etiquetaEstadoDocumento(d.estado)} · {new Date(d.creado).toLocaleDateString('es-ES')}
-                  {d.notas ? ` · ${d.notas}` : ''}
-                </div>
-              </span>
-              <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {d.estado !== 'pedido' && (
-                  <a href={`/api/correduria/documentos/${d.id}`} target="_blank" rel="noreferrer" style={{ ...btn, gap: 6 }}>
-                    <Ico i={Eye} /> Ver
-                  </a>
-                )}
-                {leerPoliza && d.estado !== 'pedido' && (
-                  <button type="button" onClick={() => void leerGuardado(d)} disabled={ocupado || oportunidad === 'leyendo'} title="La IA lo lee (compañía, vencimiento, prima y bonus) y abre o completa la oportunidad" style={{ ...btn, gap: 6 }}>
-                    <Ico i={Sparkles} /> Leer para oportunidad
-                  </button>
-                )}
-                {d.estado === 'recibido' && (
-                  <button type="button" onClick={() => revisar(d.id)} disabled={ocupado} style={{ ...btn, gap: 6 }}>
-                    <Ico i={CheckCircle2} /> Revisado
-                  </button>
-                )}
-                <button type="button" onClick={() => borrar(d.id)} disabled={ocupado} aria-label="Borrar documento" title="Borrar documento" style={{ ...btn, color: 'var(--negative)' }}>
-                  <Ico i={Trash2} />
-                </button>
-              </span>
-            </li>
-          ))}
-        </ul>
+        agrupar
+          ? <ListaAgrupada lista={lista} polizas={polizas!} fila={fila} />
+          : (
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
+              {lista.map(fila)}
+            </ul>
+          )
       )}
 
       {polizaId && !siniestroId && (
@@ -351,6 +367,66 @@ export default function Documentos({
         </ul>
       )}
       {oportunidad !== null && <AvisoOportunidad a={oportunidad} fichaActual={clienteId ?? null} />}
+    </div>
+  )
+}
+
+/**
+ * La lista de la ficha del cliente: por póliza, por tipo dentro, con buscador (en memoria) y grupos
+ * plegables. Las filas de un grupo plegado no se montan y se enseñan `PAGINA_DOCUMENTOS` de golpe
+ * en total, con «Ver más».
+ */
+function ListaAgrupada({ lista, polizas, fila }: {
+  lista: DocumentoResumen[]
+  polizas: readonly { id: string; etiqueta: string }[]
+  fila: (d: DocumentoResumen) => React.ReactNode
+}) {
+  const [buscar, setBuscar] = useState('')
+  const [plegados, setPlegados] = useState<ReadonlySet<string>>(new Set())
+  const [visibles, setVisibles] = useState(PAGINA_DOCUMENTOS)
+  const grupos = agruparDocumentos(lista, polizas, buscar)
+  const { visibles: pintar, restantes } = limitarGrupos(grupos, visibles, plegados)
+  const alternar = (clave: string) => setPlegados((p) => { const n = new Set(p); if (!n.delete(clave)) n.add(clave); return n })
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {lista.length > 5 && (
+        <input
+          type="search"
+          value={buscar}
+          onChange={(e) => { setBuscar(e.target.value); setVisibles(PAGINA_DOCUMENTOS) }}
+          placeholder="Buscar documento por nombre…"
+          aria-label="Buscar documento por nombre"
+          style={{ ...inp, width: '100%', boxSizing: 'border-box' }}
+        />
+      )}
+      {grupos.length === 0 && <div style={{ fontSize: 13, color: 'var(--muted)' }}>Ningún documento coincide con «{buscar}».</div>}
+      {pintar.map((g) => {
+        const plegado = plegados.has(g.clave)
+        return (
+          <section key={g.clave} style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+            <button
+              type="button"
+              onClick={() => alternar(g.clave)}
+              aria-expanded={!plegado}
+              style={{ ...btn, justifyContent: 'space-between', gap: 8, fontWeight: 700, width: '100%', textAlign: 'left' }}
+            >
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{g.titulo}</span>
+              <span style={{ fontWeight: 400, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{g.total} · {plegado ? 'ver' : 'ocultar'}</span>
+            </button>
+            {g.porTipo.map((t) => (
+              <div key={t.tipo} style={{ display: 'grid', gap: 6 }}>
+                <div style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{t.etiqueta} ({t.docs.length})</div>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>{t.docs.map(fila)}</ul>
+              </div>
+            ))}
+          </section>
+        )
+      })}
+      {restantes > 0 && (
+        <button type="button" onClick={() => setVisibles((n) => n + PAGINA_DOCUMENTOS)} style={{ ...btn, width: '100%', justifyContent: 'center' }}>
+          Ver más ({restantes} documentos restantes)
+        </button>
+      )}
     </div>
   )
 }

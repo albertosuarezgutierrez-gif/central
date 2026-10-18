@@ -254,3 +254,63 @@ test('«ver siniestros →» y «ver en sus pólizas →» llevan a un ancla que
   assert.match(pend, /#con-nosotros`\}>ver en sus pólizas/)
   assert.match(seg, /id="con-nosotros"/)
 })
+
+// ─── Llamar / WhatsApp, Oportunidades con prima, Documentos e Historial largos (18/10/2026) ──────────
+
+const CORREDURIA = path.join(DIR, '../..')
+const leerCorreduria = (f: string) => readFileSync(path.join(CORREDURIA, f), 'utf8')
+
+test('«Llamar» y «WhatsApp» de la cabecera: solo con teléfono propio y a 44 px', () => {
+  const cab = leer('Cabecera.tsx')
+  // Se montan con guarda de teléfono (y no el de la correduría): sin teléfono no se pinta ni un botón apagado.
+  assert.match(cab, /ef\.telefono && !ef\.canalCorreduria\.telefono && <BotonesContacto telefono=\{ef\.telefono\}/)
+
+  const b = leer('BotonesContacto.tsx')
+  assert.match(b, /if \(!telefono \|\| !a\.tel\) return null/, 'sin teléfono el componente no pinta nada')
+  assert.match(b, /href=\{a\.tel\}/)
+  assert.ok(b.includes('Llamar'), 'rótulo «Llamar»')
+  assert.match(b, /<BotonWhatsapp telefono=\{telefono\} mensaje=\{mensaje\} rotulo="WhatsApp" \/>/)
+  assert.match(b, /minHeight: 44/)
+  assert.match(b, /flexWrap: 'wrap'/, 'a 320 px los botones saltan de línea en vez de desbordar')
+  // El WhatsApp no se decide a mano: lo decide BotonWhatsapp → urlWhatsapp (un fijo no lo ofrece).
+  assert.doesNotMatch(b, /wa\.me/)
+})
+
+test('el subtítulo de Oportunidades suma la prima conocida: «~» si todas, «≥» si faltan, nada si ninguna', async () => {
+  const { detallesAccesos } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
+  const base = { conNosotros: 0, pendiente: { estado: 'nada' as const }, telefonos: null, emails: null, personas: null, documentos: null, documentosPedidos: null, correos: null, notas: null, historial: null }
+  assert.equal(detallesAccesos({ ...base, oportunidadesAbiertas: 2, oportunidadesTexto: '2 abiertas · ~900,00€/año' }).oportunidades?.texto, '2 abiertas · ~900,00€/año')
+  // Sin texto de prima, el de siempre.
+  assert.equal(detallesAccesos({ ...base, oportunidadesAbiertas: 2 }).oportunidades?.texto, '2 abiertas')
+  assert.equal(detallesAccesos({ ...base, oportunidadesAbiertas: 0, oportunidadesTexto: 'basura' }).oportunidades?.texto, 'ninguna abierta')
+  // No se pudieron leer: la baldosa no dice nada (no se inventa).
+  assert.equal(detallesAccesos({ ...base, oportunidadesAbiertas: null, oportunidadesTexto: null }).oportunidades, undefined)
+  assert.match(leer('page.tsx'), /oportunidadesTexto: textoOportunidades/)
+})
+
+test('Documentos: agrupados por póliza, con buscador y «Ver más» (nunca >50 filas de golpe)', async () => {
+  const { PAGINA_DOCUMENTOS, PAGINA_HISTORIAL } = await import('../apps/plataforma/lib/correduria/ficha-listas.ts')
+  assert.equal(PAGINA_DOCUMENTOS, 50)
+  assert.equal(PAGINA_HISTORIAL, 20)
+
+  const doc = leerCorreduria('Documentos.tsx')
+  assert.match(doc, /limitarGrupos\(grupos, visibles, plegados\)/, 'las filas pasan por el tope')
+  assert.match(doc, /setVisibles\(\(n\) => n \+ PAGINA_DOCUMENTOS\)/)
+  assert.match(doc, /Ver más \(\{restantes\} documentos restantes\)/)
+  assert.match(doc, /type="search"/, 'buscador por nombre')
+  assert.match(doc, /aria-expanded=\{!plegado\}/, 'grupos plegables')
+  // La ficha del cliente le pasa sus pólizas; sin ellas (póliza/siniestro) sigue la lista plana.
+  assert.match(leer('page.tsx'), /<Documentos clienteId=\{ficha\.id\}[^>]*polizas=\{/)
+  assert.match(doc, /const agrupar = !!clienteId && !polizaId && !siniestroId && polizas !== undefined/)
+})
+
+test('Historial: chips por tipo presente y páginas de 20 con «Ver más»', () => {
+  const h = leerCorreduria('Historial.tsx')
+  assert.match(h, /paginar\(filtrarPorTipo\(historial, tipo\), visibles\)/, 'las filas pasan por el tope')
+  assert.match(h, /useState\(PAGINA_HISTORIAL\)/)
+  assert.match(h, /setVisibles\(n => n \+ PAGINA_HISTORIAL\)/)
+  assert.match(h, /Ver más \(\{restantes\} anotaciones restantes\)/)
+  assert.match(h, /tiposPresentes\(historial\)/, 'los chips salen de los tipos que HAY')
+  assert.match(h, /elegir\(t\.tipo\)/)
+  assert.doesNotMatch(h, /historial\.map\(/, 'la lista entera no se monta de golpe')
+})

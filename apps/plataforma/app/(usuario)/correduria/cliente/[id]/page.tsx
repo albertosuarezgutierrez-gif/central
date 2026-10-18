@@ -25,7 +25,8 @@ import { Pagina } from '@/components/ui'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, tareasVinculadasAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import TareasVinculadas from '../../TareasVinculadas'
 import { contarTareasAbiertas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
-import { contarOportunidades, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
+import { contarOportunidades, oportunidadesContables, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
+import { subtituloOportunidades } from '@/lib/correduria/prima-oportunidades'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,8 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // más las derivadas de otras casas. `null` = no se pudieron leer: no se pinta un número.
   const seguros = segurosDeReparto(reparto)
   const nOportunidades = contarOportunidades(reparto)
+  // «N abiertas · ~X€/año»: la prima sale de lo que la ficha ya cargó (sin consulta nueva).
+  const textoOportunidades = subtituloOportunidades(oportunidadesContables(reparto))
   // Con qué se precarga el alta al crear la oportunidad desde una fila del volcado.
   const precargas = Object.fromEntries(reparto.oportunidades.flatMap(s => (s.clase === 'poliza' && s.historica ? [[s.id, precargaAlta(s.poliza, hoy)] as const] : [])))
 
@@ -172,6 +175,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         detalles={detallesAccesos({
           conNosotros: reparto.conNosotros.length,
           oportunidadesAbiertas: nOportunidades,
+          oportunidadesTexto: textoOportunidades,
           tareas: contarTareasAbiertas(tareas),
           pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
@@ -221,7 +225,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (
         <Tarjeta titulo="Documentos">
-          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} />
+          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: `${p.aseguradora} · ${etiquetaPoliza(p)}` }))} />
         </Tarjeta>
       )}
 
