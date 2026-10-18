@@ -36,7 +36,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
 
   return (
     <>
-      <Cubo titulo={`Con nosotros (${conNosotros.length})`}>
+      <Cubo id="con-nosotros" titulo={`Con nosotros (${conNosotros.length})`}>
         {conNosotros.length === 0
           ? <Vacio>Ahora no tiene ningún seguro con nosotros.</Vacio>
           : <Rejilla>{conNosotros.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>}
@@ -84,9 +84,9 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
 type Ctx = { abiertos: Map<string, number> | null; clienteId: string; hoy: Date }
 type Aviso = { texto: string; tono: 'malo' | 'aviso' | 'info' }
 
-function Cubo({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
+function Cubo({ titulo, nota, id, children }: { titulo: string; nota?: string; id?: string; children: React.ReactNode }) {
   return (
-    <section style={{ display: 'grid', gap: 12 }}>
+    <section id={id} style={{ display: 'grid', gap: 12, scrollMarginTop: 16 }}>
       <div>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{titulo}</h2>
         {nota && <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>{nota}</p>}
@@ -217,6 +217,12 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     else if (vigente && p.fechaVencimiento) {
       const d = dias(p.fechaVencimiento.slice(0, 10), ctx.hoy)
       if (d >= 0 && d <= 45) avisos.push({ texto: `Vence en ${d} día(s)`, tono: 'aviso' })
+      // El aviso de no renovar (un mes antes del vencimiento) vive aquí cuando aún está lejos: arriba
+      // solo sube si quedan ≤60 días (`avisoVaArriba`). Solo «Con nosotros»; a las oportunidades no se les avisa.
+      if (!eliminable && !s.historica) {
+        const av = alertaVencimiento(p.fechaVencimiento, ctx.hoy)
+        if (av.estado === 'en_plazo' && av.limiteAviso) avisos.push({ texto: `Avisar antes del ${fmt(av.limiteAviso)} · quedan ${av.diasParaAvisar} día(s)`, tono: 'info' })
+      }
       // En vigor para la compañía pero con la fecha ya pasada: la renovación no ha llegado
       // por CIMA (ni la fecha nueva ni el recibo). No se inventa la fecha: se avisa
       // (27/09/2026: 10 de Mapfre así desde junio, entre ellas un Mercedes GLC).

@@ -23,7 +23,7 @@ import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 import { Pagina } from '@/components/ui'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, tareasVinculadasAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import TareasVinculadas from '../../TareasVinculadas'
-import { detalleTareas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
+import { contarTareasAbiertas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
 import { contarOportunidades, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
 
 export const dynamic = 'force-dynamic'
@@ -153,12 +153,15 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         <>
           <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
           <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
-          <Siniestros
-            lista={ficha.siniestros}
-            polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
-            documentos={ficha.documentos}
-            clienteId={ficha.id}
-          />
+          {/* Ancla de «ver siniestros →» (Pendiente); `scrollMarginTop` por si hay cabecera pegada. */}
+          <div id="siniestros" style={{ scrollMarginTop: 16 }}>
+            <Siniestros
+              lista={ficha.siniestros}
+              polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
+              documentos={ficha.documentos}
+              clienteId={ficha.id}
+            />
+          </div>
         </>
       )}
 
@@ -168,7 +171,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         detalles={detallesAccesos({
           conNosotros: reparto.conNosotros.length,
           oportunidadesAbiertas: nOportunidades,
-          tareas: detalleTareas(tareas),
+          tareas: contarTareasAbiertas(tareas),
           pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
           emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
@@ -196,18 +199,20 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         </Tarjeta>
       )}
 
-      {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
-
-      {/* Tareas del cliente y de sus pólizas (14/10/2026): la misma tabla de tareas de Mi mesa. */}
-      {tab === 'tareas' && (
-        <Tarjeta titulo="Tareas">
-          <TareasVinculadas
-            clienteId={ficha.id}
-            polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
-            inicial={tareas}
-            hoy={hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })}
-          />
-        </Tarjeta>
+      {/* Pendiente + Tareas, UNA tarjeta (18/10/2026): arriba lo sugerido y las peticiones derivadas,
+          debajo las tareas guardadas del cliente y de sus pólizas (la misma tabla de Mi mesa). */}
+      {tab === 'pendiente' && (
+        <>
+          <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />
+          <Tarjeta titulo="Tareas">
+            <TareasVinculadas
+              clienteId={ficha.id}
+              polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
+              inicial={tareas}
+              hoy={hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })}
+            />
+          </Tarjeta>
+        </>
       )}
 
       {tab === 'contactos' && <TabContactos ficha={ficha} personas={personas} />}

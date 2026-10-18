@@ -132,6 +132,7 @@ test('los accesos dicen algo: contactos cuenta teléfonos, correos y personas; n
   const base = {
     conNosotros: 1, oportunidadesAbiertas: 0, pendiente: { estado: 'nada' as const },
     telefonos: 2, emails: 1, personas: 3, documentos: 0, documentosPedidos: 0, correos: 0, notas: 2, historial: 5,
+    tareas: { abiertas: 0, truncado: false },
   }
   const d = detallesAccesos(base)
   assert.equal(d.contactos?.texto, '2 teléfonos · 1 correo · 3 personas')
@@ -140,7 +141,7 @@ test('los accesos dicen algo: contactos cuenta teléfonos, correos y personas; n
   assert.equal(d.notas?.texto, '2 notas')
   assert.equal(d.historial?.texto, '5 anotaciones')
   // Lo que no se pudo leer NO se pinta como cero.
-  const n = detallesAccesos({ ...base, telefonos: null, emails: null, personas: null, oportunidadesAbiertas: null, correos: null, notas: null, historial: null, documentos: null, documentosPedidos: null, pendiente: { estado: 'sin_comprobar' } })
+  const n = detallesAccesos({ ...base, telefonos: null, emails: null, personas: null, oportunidadesAbiertas: null, correos: null, notas: null, historial: null, documentos: null, documentosPedidos: null, pendiente: { estado: 'sin_comprobar' }, tareas: null })
   for (const k of ['contactos', 'oportunidades', 'correos', 'notas', 'historial', 'documentos', 'pendiente'] as const) {
     assert.equal(n[k], undefined, `${k} sin leer no puede pintarse`)
   }
@@ -165,4 +166,90 @@ test('TarjetaSeguro de «Con nosotros» pinta la forma de pago y «Retarificar»
   assert.match(tarjeta, /\{retarificarViva\}/)
   assert.match(tarjeta, /urlRetarificar\(p\.id\)/)
   assert.match(tarjeta, /minHeight: 44/)
+})
+
+const TABS = '../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts'
+
+test('«Tareas» se fundió en «Pendiente»: sin acceso propio y ?tab=tareas aterriza en pendiente', async () => {
+  const { tabDeParametro, TABS_FICHA } = await import(TABS)
+  assert.equal(tabDeParametro('tareas'), 'pendiente')
+  assert.equal(tabDeParametro(['tareas']), 'pendiente')
+  assert.equal(tabDeParametro('pendiente'), 'pendiente')
+  assert.ok(!(TABS_FICHA as readonly string[]).includes('tareas'), 'el grid vuelve a tener la entrada «tareas»')
+  const tabs = leer('FichaTabs.tsx')
+  assert.doesNotMatch(tabs, /\btareas:/)
+  assert.doesNotMatch(tabs, /titulo: 'Tareas'/)
+  // La tarjeta fusionada pinta las tareas guardadas debajo de lo sugerido, dentro de la vista `pendiente`.
+  const page = leer('page.tsx')
+  assert.doesNotMatch(page, /tab === 'tareas'/)
+  const bloque = page.slice(page.indexOf("tab === 'pendiente'"), page.indexOf("tab === 'contactos'"))
+  assert.match(bloque, /<TabPendiente\b/)
+  assert.match(bloque, /<TareasVinculadas\b/)
+  assert.ok(bloque.indexOf('<TabPendiente') < bloque.indexOf('<TareasVinculadas'), 'las tareas van DEBAJO de lo sugerido')
+  // Ningún enlace interno al alias viejo.
+  for (const f of ['SegurosCliente.tsx', 'TabPendiente.tsx', 'page.tsx', 'Cabecera.tsx', 'OportunidadesCliente.tsx']) assert.doesNotMatch(leer(f), /tab=tareas/, f)
+})
+
+test('orden del grid: primero trabajo (Seguros, Pendiente, Oportunidades), luego consulta', async () => {
+  const { TABS_FICHA } = await import(TABS)
+  assert.deepEqual([...TABS_FICHA], ['resumen', 'pendiente', 'oportunidades', 'contactos', 'documentos', 'correos', 'notas', 'historial'])
+})
+
+test('subtítulo de Pendiente: combina lo sugerido y las tareas; null no es 0', async () => {
+  const { detallePendiente } = await import(TABS)
+  const T = (abiertas: number, truncado = false) => ({ abiertas, truncado })
+  assert.deepEqual(detallePendiente({ estado: 'accion', urgente: true }, T(1)), { texto: 'urgente · 1 tarea', tono: 'malo' })
+  assert.deepEqual(detallePendiente({ estado: 'accion', urgente: false }, T(2)), { texto: 'hay algo que hacer · 2 tareas', tono: 'aviso' })
+  assert.deepEqual(detallePendiente({ estado: 'accion', urgente: false }, T(0)), { texto: 'hay algo que hacer', tono: 'aviso' })
+  assert.deepEqual(detallePendiente({ estado: 'nada' }, T(0)), { texto: 'al día' })
+  assert.deepEqual(detallePendiente({ estado: 'nada' }, T(3)), { texto: '3 tareas', tono: 'aviso' })
+  assert.equal(detallePendiente({ estado: 'nada' }, T(3, true))?.texto, '3+ tareas')
+  // Tareas sin leer: no se inventa «0» ni se afirma «al día» a secas.
+  assert.equal(detallePendiente({ estado: 'nada' }, null)?.texto, 'al día · tareas sin leer')
+  assert.equal(detallePendiente({ estado: 'accion', urgente: true }, null)?.texto, 'urgente')
+  assert.equal(detallePendiente({ estado: 'sin_comprobar' }, null), undefined)
+  assert.equal(detallePendiente({ estado: 'sin_comprobar' }, T(0)), undefined)
+  assert.equal(detallePendiente({ estado: 'sin_comprobar' }, T(2))?.texto, '2 tareas')
+})
+
+test('vacíos: Notas a 0 se atenúa (se sigue pudiendo crear), Historial a 0 se oculta; null no hace nada', async () => {
+  const { detallesAccesos, accesosVisibles } = await import(TABS)
+  const base = {
+    conNosotros: 1, oportunidadesAbiertas: 0, pendiente: { estado: 'nada' as const }, tareas: { abiertas: 0, truncado: false },
+    telefonos: 1, emails: 1, personas: 0, documentos: 0, documentosPedidos: 0, correos: 0, notas: 0, historial: 0,
+  }
+  const d = detallesAccesos(base)
+  assert.equal(d.notas?.tenue, true)
+  assert.notEqual(d.notas?.oculto, true, 'Notas no puede ocultarse: desde ahí se crea la primera')
+  assert.equal(d.historial?.oculto, true)
+  assert.ok(!accesosVisibles(d, 'resumen').includes('historial'))
+  assert.ok(accesosVisibles(d, 'resumen').includes('notas'))
+  // La abierta nunca desaparece.
+  assert.ok(accesosVisibles(d, 'historial').includes('historial'))
+  // No leído ≠ vacío: ni atenuado ni oculto.
+  const n = detallesAccesos({ ...base, notas: null, historial: null })
+  assert.equal(n.notas, undefined)
+  assert.equal(n.historial, undefined)
+  assert.deepEqual(accesosVisibles(n, 'resumen'), ['resumen', 'pendiente', 'oportunidades', 'contactos', 'documentos', 'correos', 'notas', 'historial'])
+  // Con datos: normales.
+  const c = detallesAccesos({ ...base, notas: 2, historial: 4 })
+  assert.equal(c.notas?.tenue, undefined)
+  assert.equal(c.historial?.oculto, undefined)
+})
+
+test('el aviso de vencimiento solo sube arriba con ≤60 días; si no, chip en la tarjeta de «Con nosotros»', () => {
+  assert.match(leer('Cabecera.tsx'), /if \(!avisoVaArriba\(a\)\) return null/)
+  const seg = leer('SegurosCliente.tsx')
+  assert.match(seg, /Avisar antes del \$\{fmt\(av\.limiteAviso\)\}/)
+  assert.match(seg, /!eliminable && !s\.historica/, 'el chip es de «Con nosotros», no de oportunidades')
+})
+
+test('«ver siniestros →» y «ver en sus pólizas →» llevan a un ancla que existe', () => {
+  const pend = leer('TabPendiente.tsx')
+  const page = leer('page.tsx')
+  const seg = leer('SegurosCliente.tsx')
+  assert.match(pend, /#siniestros`\}>ver siniestros/)
+  assert.match(page, /id="siniestros"/)
+  assert.match(pend, /#con-nosotros`\}>ver en sus pólizas/)
+  assert.match(seg, /id="con-nosotros"/)
 })

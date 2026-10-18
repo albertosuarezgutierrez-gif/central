@@ -14,6 +14,7 @@ import PedirPresupuestoBot from './PedirPresupuestoBot'
 import ProbarTarificacion from './ProbarTarificacion'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
+import { avisoVaArriba } from '@/lib/correduria/aviso-vencimiento'
 
 /**
  * La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada
@@ -286,6 +287,9 @@ function ProximoVencimiento({ proximo, vivas, sinFecha }: {
   if (a.estado === 'aviso_pasado') {
     return <Kpi label="Aviso pasado el" valor={fmt(a.limiteAviso as string)} pequeno color="var(--muted)" sub={`renueva otro año · vence el ${fmt(proximo.vencimiento)}`} />
   }
+  // (18/10/2026) Con el aviso aún lejos (>60 días) no ocupa sitio arriba: se ve como chip en la
+  // tarjeta de su póliza, en «Con nosotros». Solo sube cuando queda poco (`avisoVaArriba`).
+  if (!avisoVaArriba(a)) return null
   return (
     <Kpi
       label="Hay que avisar antes del"

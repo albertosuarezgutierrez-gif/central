@@ -90,6 +90,12 @@ export function detalleTareas(l: LecturaTareasVinculadas): { texto: string; tono
   return { texto: `${n}${l.truncado ? '+' : ''} pendiente${n === 1 ? '' : 's'}`, tono: 'aviso' }
 }
 
+/** Cuántas tareas abiertas hay: `null` si no se pudo leer (no es «0»). `truncado` = hay más de las que se ven. */
+export function contarTareasAbiertas(l: LecturaTareasVinculadas): { abiertas: number; truncado: boolean } | null {
+  if (l.estado !== 'ok') return null
+  return { abiertas: l.tareas.filter(abierta).length, truncado: l.truncado }
+}
+
 /**
  * Atajos de las gestiones más comunes del corredor. Rellenan título, tipo y plazo; todo se puede cambiar.
  * El tipo es el de la tabla (`tarea`/`llamada`/`email`/`whatsapp`), no uno nuevo.
