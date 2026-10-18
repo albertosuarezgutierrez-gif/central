@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { agruparDocumentos, limitarGrupos, tiposPresentes, filtrarPorTipo, paginar, GRUPO_CLIENTE } from './ficha-listas.ts'
+import { agruparDocumentos, limitarGrupos, tiposPresentes, filtrarPorTipo, paginar, GRUPO_CLIENTE, GRUPO_SINIESTROS } from './ficha-listas.ts'
 import type { DocumentoResumen } from '@central/module-seguros'
 
 const doc = (id: string, over: Partial<DocumentoResumen> = {}): DocumentoResumen => ({
@@ -15,6 +15,23 @@ test('agrupa por póliza con «Del cliente» primero y por tipo dentro', () => {
   assert.equal(g[0].clave, GRUPO_CLIENTE)
   assert.equal(g[1].porTipo.length, 2)
   assert.equal(g[1].total, 2)
+})
+
+test('un documento de siniestro sin póliza va a la póliza de ese siniestro', () => {
+  const g = agruparDocumentos([doc('a', { siniestroId: 's1' }), doc('b', { polizaId: 'p1' })], POLIZAS, '', [{ id: 's1', polizaId: 'p2' }])
+  assert.deepEqual(g.map(x => x.titulo), ['Auto · Reale', 'Hogar · Mapfre'])
+  assert.equal(g.find(x => x.clave === 'p2')!.porTipo[0].docs[0].id, 'a')
+})
+
+test('un documento de siniestro sin póliza conocida va al grupo «Siniestros», el último, y no se pierde', () => {
+  const docs = [doc('a', { siniestroId: 's9' }), doc('b', { siniestroId: 's1' }), doc('c'), doc('d', { polizaId: 'p1' })]
+  for (const sin of [null, [{ id: 's1', polizaId: 'p2' }]]) {
+    const g = agruparDocumentos(docs, POLIZAS, '', sin)
+    assert.equal(g[g.length - 1].clave, GRUPO_SINIESTROS)
+    assert.equal(g[g.length - 1].titulo, 'Siniestros')
+    assert.equal(g.find(x => x.clave === GRUPO_CLIENTE)!.total, 1)
+    assert.equal(g.reduce((n, x) => n + x.total, 0), 4)
+  }
 })
 
 test('una póliza que no está en la lista se rotula «Otra póliza», no se pierde', () => {

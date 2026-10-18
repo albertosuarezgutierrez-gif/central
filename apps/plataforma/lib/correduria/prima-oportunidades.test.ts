@@ -37,3 +37,25 @@ test('la prima de la oportunidad anotada manda sobre la de la póliza; un 0 no e
   assert.equal(primaDeOportunidad(pol('p', 0)), null)
   assert.equal(primaDeOportunidad(opo('x', -5)), null)
 })
+
+test('la prima de una póliza fraccionada YA es anual (EIAC): no se multiplica por su fraccionamiento', () => {
+  // semestral: prima 255,22 anual y recibos de 128,56 (medido en seguros.polizas, 18/10/2026).
+  const semestral = { clase: 'poliza', id: 'p', poliza: { id: 'p', prima: 255.22, fraccionamiento: 'semestral' } as PolizaFicha, oportunidad: null } as SeguroCliente
+  const mensual = { clase: 'poliza', id: 'm', poliza: { id: 'm', prima: 600, fraccionamiento: 'mensual' } as PolizaFicha, oportunidad: null } as SeguroCliente
+  assert.equal(primaDeOportunidad(semestral), 255.22)
+  assert.equal(primaDeOportunidad(mensual), 600)
+  assert.equal(subtituloOportunidades([semestral, mensual]), '2 abiertas · ~855,22€/año')
+})
+
+test('una prima de periodicidad desconocida o inservible no suma como dato: cuenta para «≥»', () => {
+  const rara = [NaN, Infinity, '300', undefined] as unknown[]
+  for (const v of rara) assert.equal(primaDeOportunidad(opo('x', v as number)), null)
+  assert.equal(subtituloOportunidades([opo('a', 400), opo('b', NaN)]), '2 abiertas · ≥400,00€/año')
+})
+
+test('una prima anotada 0 o inválida en la oportunidad no tapa la de la póliza', () => {
+  for (const mala of [0, -3, NaN]) {
+    assert.equal(primaDeOportunidad(pol('p', 300, { id: 'o', prima: mala } as OportunidadDeCliente)), 300)
+  }
+  assert.equal(primaDeOportunidad(pol('p', 0, { id: 'o', prima: 0 } as OportunidadDeCliente)), null)
+})

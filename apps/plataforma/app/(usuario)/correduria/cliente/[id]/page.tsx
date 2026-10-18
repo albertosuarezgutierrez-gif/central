@@ -225,7 +225,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (
         <Tarjeta titulo="Documentos">
-          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: `${p.aseguradora} · ${etiquetaPoliza(p)}` }))} />
+          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: `${p.aseguradora} · ${etiquetaPoliza(p)}` }))} siniestros={ficha.siniestros} />
         </Tarjeta>
       )}
 

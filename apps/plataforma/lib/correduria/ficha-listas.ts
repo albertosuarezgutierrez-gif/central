@@ -18,6 +18,8 @@ export function normalizar(s: string): string {
 // ─── Documentos ──────────────────────────────────────────────────────────────
 
 export const GRUPO_CLIENTE = 'cliente'
+/** Documentos de un siniestro que no se sabe ligar a ninguna póliza. */
+export const GRUPO_SINIESTROS = 'siniestros'
 
 export type GrupoDocumentos = {
   /** `cliente` o el id de la póliza. */
@@ -31,6 +33,10 @@ export type GrupoDocumentos = {
 
 /**
  * Agrupa por póliza (los sin póliza, en «Del cliente», que va primero) y dentro por tipo.
+ * Un documento con `siniestroId` y sin `polizaId` va a la póliza de ese siniestro si `siniestros`
+ * (los de la ficha, ya cargados) la dice; si no consta (siniestro desconocido o lista `null` = no
+ * se pudo leer), a un grupo propio «Siniestros», el ÚLTIMO: es el residuo de lo que no se sabe
+ * ligar, y «Del cliente» conserva su sitio de cabecera. Ningún documento se pierde.
  * `buscar` filtra EN MEMORIA por nombre de fichero (y por el rótulo del tipo, para hallar los
  * «pedidos», que aún no tienen nombre). Una póliza que no está en `polizas` se rotula «Otra póliza».
  */
@@ -38,18 +44,22 @@ export function agruparDocumentos(
   docs: readonly DocumentoResumen[],
   polizas: readonly { id: string; etiqueta: string }[],
   buscar = '',
+  siniestros: readonly { id: string; polizaId: string }[] | null = null,
 ): GrupoDocumentos[] {
   const q = normalizar(buscar)
+  const polizaDeSiniestro = new Map((siniestros ?? []).map(s => [s.id, s.polizaId]))
   const etiquetas = new Map(polizas.map(p => [p.id, p.etiqueta]))
   const grupos = new Map<string, GrupoDocumentos>()
   const orden: string[] = [GRUPO_CLIENTE, ...polizas.map(p => p.id)]
   for (const d of docs) {
     const etq = etiquetaTipoDocumento(d.tipo)
     if (q && !normalizar(`${d.nombre ?? ''} ${etq}`).includes(q)) continue
-    const clave = d.polizaId ?? GRUPO_CLIENTE
+    const clave = d.polizaId
+      ?? (d.siniestroId ? (polizaDeSiniestro.get(d.siniestroId) || GRUPO_SINIESTROS) : GRUPO_CLIENTE)
     let g = grupos.get(clave)
     if (!g) {
-      g = { clave, titulo: clave === GRUPO_CLIENTE ? 'Del cliente' : etiquetas.get(clave) ?? 'Otra póliza', porTipo: [], total: 0 }
+      const titulo = clave === GRUPO_CLIENTE ? 'Del cliente' : clave === GRUPO_SINIESTROS ? 'Siniestros' : etiquetas.get(clave) ?? 'Otra póliza'
+      g = { clave, titulo, porTipo: [], total: 0 }
       grupos.set(clave, g)
       if (!orden.includes(clave)) orden.push(clave)
     }
@@ -58,7 +68,10 @@ export function agruparDocumentos(
     t.docs.push(d)
     g.total++
   }
-  return orden.flatMap(c => (grupos.has(c) ? [grupos.get(c)!] : []))
+  // «Siniestros» al final, también tras las «Otra póliza» que se añaden al vuelo.
+  const fin = orden.filter(c => c !== GRUPO_SINIESTROS)
+  fin.push(GRUPO_SINIESTROS)
+  return fin.flatMap(c => (grupos.has(c) ? [grupos.get(c)!] : []))
 }
 
 /**

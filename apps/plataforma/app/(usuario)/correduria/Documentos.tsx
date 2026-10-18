@@ -35,6 +35,7 @@ export default function Documentos({
   sugeridos,
   tipoInicial,
   polizas,
+  siniestros,
 }: {
   clienteId?: string | null
   polizaId?: string | null
@@ -50,6 +51,8 @@ export default function Documentos({
    * siniestro), la lista plana de siempre.
    */
   polizas?: readonly { id: string; etiqueta: string }[]
+  /** Siniestros ya cargados en la ficha (`null` = no se pudieron leer): ligan sus documentos a su póliza. */
+  siniestros?: readonly { id: string; polizaId: string }[] | null
 }) {
   const [lista, setLista] = useState<DocumentoResumen[] | null>(inicial)
   const [ocupado, setOcupado] = useState(false)
@@ -287,7 +290,7 @@ export default function Documentos({
 
       {lista && lista.length > 0 && (
         agrupar
-          ? <ListaAgrupada lista={lista} polizas={polizas!} fila={fila} />
+          ? <ListaAgrupada lista={lista} polizas={polizas!} siniestros={siniestros ?? null} fila={fila} />
           : (
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
               {lista.map(fila)}
@@ -376,15 +379,16 @@ export default function Documentos({
  * plegables. Las filas de un grupo plegado no se montan y se enseñan `PAGINA_DOCUMENTOS` de golpe
  * en total, con «Ver más».
  */
-function ListaAgrupada({ lista, polizas, fila }: {
+function ListaAgrupada({ lista, polizas, siniestros, fila }: {
   lista: DocumentoResumen[]
   polizas: readonly { id: string; etiqueta: string }[]
+  siniestros: readonly { id: string; polizaId: string }[] | null
   fila: (d: DocumentoResumen) => React.ReactNode
 }) {
   const [buscar, setBuscar] = useState('')
   const [plegados, setPlegados] = useState<ReadonlySet<string>>(new Set())
   const [visibles, setVisibles] = useState(PAGINA_DOCUMENTOS)
-  const grupos = agruparDocumentos(lista, polizas, buscar)
+  const grupos = agruparDocumentos(lista, polizas, buscar, siniestros)
   const { visibles: pintar, restantes } = limitarGrupos(grupos, visibles, plegados)
   const alternar = (clave: string) => setPlegados((p) => { const n = new Set(p); if (!n.delete(clave)) n.add(clave); return n })
   return (
