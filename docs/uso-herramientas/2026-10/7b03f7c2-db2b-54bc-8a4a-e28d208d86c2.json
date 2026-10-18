@@ -1,23 +1,23 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-18T09:09:01.962Z",
- "llamadas": 4762,
+ "fin": "2026-10-18T09:50:50.077Z",
+ "llamadas": 4808,
  "categorias": {
   "otro": {
-   "llamadas": 482,
-   "chars_in": 84622,
-   "chars_out": 3695894,
+   "llamadas": 485,
+   "chars_in": 85873,
+   "chars_out": 3697257,
    "errores": 0,
    "archivos_citados": 28,
    "chars_citados": 5639070,
    "tools": {
-    "ToolSearch": 121,
+    "ToolSearch": 123,
     "SubagentHandback": 10,
     "SendMessage": 32,
     "ReadNotifications": 258,
     "Monitor": 60,
-    "AskUserQuestion": 1
+    "AskUserQuestion": 2
    }
   },
   "agente:rastreador-codigo": {
@@ -32,22 +32,22 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 436,
-   "chars_in": 56856,
-   "chars_out": 4244481,
+   "llamadas": 437,
+   "chars_in": 56978,
+   "chars_out": 4248470,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 12,
-    "Grep": 166,
+    "Grep": 167,
     "Read": 258
    }
   },
   "mcp:github": {
-   "llamadas": 269,
-   "chars_in": 79619,
-   "chars_out": 520358,
+   "llamadas": 270,
+   "chars_in": 80986,
+   "chars_out": 520449,
    "errores": 1,
    "archivos_citados": 6,
    "chars_citados": 3217388,
@@ -55,7 +55,7 @@
     "mcp__github__list_pull_requests": 1,
     "mcp__github__actions_run_trigger": 22,
     "mcp__github__actions_list": 54,
-    "mcp__github__create_pull_request": 33,
+    "mcp__github__create_pull_request": 34,
     "mcp__github__update_pull_request": 27,
     "mcp__github__pull_request_read": 56,
     "mcp__github__merge_pull_request": 35,
@@ -66,25 +66,25 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 92,
-   "chars_in": 192265,
-   "chars_out": 210885,
+   "llamadas": 93,
+   "chars_in": 195843,
+   "chars_out": 214658,
    "errores": 0,
-   "archivos_citados": 67,
-   "chars_citados": 1742506,
+   "archivos_citados": 68,
+   "chars_citados": 1749785,
    "tools": {
-    "Agent": 92
+    "Agent": 93
    }
   },
   "bash": {
-   "llamadas": 2693,
-   "chars_in": 1868404,
-   "chars_out": 8039419,
+   "llamadas": 2717,
+   "chars_in": 1883447,
+   "chars_out": 8140125,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 2693
+    "Bash": 2717
    }
   },
   "mcp:Vercel": {
@@ -107,15 +107,15 @@
    }
   },
   "sql": {
-   "llamadas": 364,
-   "chars_in": 148744,
-   "chars_out": 700540,
+   "llamadas": 376,
+   "chars_in": 154259,
+   "chars_out": 714115,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 359
+    "mcp__Supabase__execute_sql": 371
    }
   },
   "mcp:Supabase": {
@@ -131,28 +131,28 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 48,
-   "chars_in": 3966,
-   "chars_out": 9985,
+   "llamadas": 49,
+   "chars_in": 4039,
+   "chars_out": 10224,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__claude-code-remote__subscribe_pr_activity": 35,
+    "mcp__claude-code-remote__subscribe_pr_activity": 36,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 12,
     "mcp__claude-code-remote__send_later": 1
    }
   },
   "escritura": {
-   "llamadas": 219,
-   "chars_in": 634947,
-   "chars_out": 13585460,
+   "llamadas": 221,
+   "chars_in": 641731,
+   "chars_out": 13599451,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Edit": 172,
-    "Write": 47
+    "Write": 49
    }
   },
   "agente:agente-architect": {
@@ -167,14 +167,14 @@
    }
   },
   "agente:verificador-esceptico": {
-   "llamadas": 9,
-   "chars_in": 10022,
-   "chars_out": 11901,
+   "llamadas": 10,
+   "chars_in": 11244,
+   "chars_out": 13338,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 49900,
+   "archivos_citados": 3,
+   "chars_citados": 114181,
    "tools": {
-    "Agent": 9
+    "Agent": 10
    }
   },
   "agente:agente-mecanico": {
