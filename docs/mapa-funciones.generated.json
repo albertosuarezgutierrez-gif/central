@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T12:43:58Z",
-  "sha": "266340820ff355306cc54893c6302d8a11962868",
+  "generadoEn": "2026-10-18T13:41:44Z",
+  "sha": "6f54724c8fdcf6ee3d56067f2b58fe14a719f19d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47051,7 +47051,9 @@
       "exporta": [
         "nombreCompaniaUtil",
         "companiaActualDeCliente",
-        "aplicarCompaniaActual"
+        "aplicarCompaniaActual",
+        "ultimosCincoDigitosPoliza",
+        "aplicarPolizaAnteriorUltimos5"
       ],
       "funciones": [
         {
@@ -47096,11 +47098,29 @@
           "retorno": "unknown",
           "linea": 64,
           "resumen": "Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaAnterior` = la del cliente (es la clave que `validarFormularioAuto` conserva y que el bot lee primero; `companiaActual"
+        },
+        {
+          "nombre": "ultimosCincoDigitosPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "numero: unknown",
+          "retorno": "string | null",
+          "linea": 80,
+          "resumen": "Últimas 5 cifras de un número de póliza (solo dígitos; ≥5), o `null` si no hay dato utilizable. PURA."
+        },
+        {
+          "nombre": "aplicarPolizaAnteriorUltimos5",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, riesgo: unknown, numeroPoliza: unknown",
+          "retorno": "unknown",
+          "linea": 90,
+          "resumen": "Si el riesgo (Allianz auto) no trae ya `polizaAnteriorUltimos5`, se la pone con las 5 últimas cifras de `numeroPoliza`. Si ya trae algo, o no hay ≥5 cifras, devuelve el MISMO riesgo. Solo Allianz auto"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "646e2a5dce98"
+      "hash": "c9b994772681"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
@@ -51305,12 +51325,21 @@
           "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
+          "nombre": "leerNumeroPolizaActual",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, oportunidadId: string | null",
+          "retorno": "Promise<string | null>",
+          "linea": 250,
+          "resumen": "Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló."
+        },
+        {
           "nombre": "reclamarSiguiente",
           "kind": "function",
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 269,
+          "linea": 281,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -51319,7 +51348,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 324
+          "linea": 336
         },
         {
           "nombre": "lanzarPendientes",
@@ -51327,7 +51356,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 329,
+          "linea": 341,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -51336,7 +51365,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 354
+          "linea": 366
         },
         {
           "nombre": "destruirMaquina",
@@ -51344,7 +51373,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 368,
+          "linea": 380,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -51353,7 +51382,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 394,
+          "linea": 406,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -51362,7 +51391,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 472
+          "linea": 487
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -51370,7 +51399,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 612,
+          "linea": 627,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -51379,7 +51408,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 616
+          "linea": 631
         },
         {
           "nombre": "guardarAdjunto",
@@ -51387,7 +51416,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 666
+          "linea": 681
         },
         {
           "nombre": "guardarPasos",
@@ -51395,7 +51424,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 688,
+          "linea": 703,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -51404,7 +51433,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null",
           "retorno": "Promise<",
-          "linea": 707,
+          "linea": 722,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -51413,7 +51442,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 838,
+          "linea": 853,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -51424,7 +51453,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "bb1a80c4ea47"
+      "hash": "e9e6220e4e97"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -216115,7 +216144,7 @@
           "exportada": true,
           "params": "f: Pick<FormularioAuto, 'documentoTomador' | 'tomador' | 'fichaTomador'> | null | undefined",
           "retorno": "string | null",
-          "linea": 296,
+          "linea": 298,
           "resumen": "Documento del tomador que el robot teclea en el portal: `documentoTomador` (lo pone asegura) o, si no, el del bloque `tomador`. `null` = no consta. PURO; nunca se loguea."
         },
         {
@@ -216124,7 +216153,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "string[]",
-          "linea": 308,
+          "linea": 310,
           "resumen": "Formas en que el documento del tomador puede aparecer en un texto o en el HTML del portal (tal cual, con guion o espacio antes de la letra de control), más el NOMBRE, los APELLIDOS, la RAZÓN SOCIAL y "
         },
         {
@@ -216133,7 +216162,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 377,
+          "linea": 379,
           "resumen": "email (algo@algo.algo); teléfono español (9 dígitos que empiezan por 6, 7, 8 o 9, con espacios o guiones opcionales y prefijo +34 o 0034 opcional); IBAN (ES + 22 dígitos, con o sin espacios); y bastid"
         },
         {
@@ -216142,7 +216171,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": null,
-          "linea": 395
+          "linea": 397
         },
         {
           "nombre": "fechaIso",
@@ -216150,7 +216179,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "string | null",
-          "linea": 397
+          "linea": 399
         },
         {
           "nombre": "entero",
@@ -216158,7 +216187,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], min: number, max: number",
           "retorno": "number | null",
-          "linea": 409
+          "linea": 411
         },
         {
           "nombre": "booleano",
@@ -216166,7 +216195,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[]",
           "retorno": "boolean | null",
-          "linea": 419
+          "linea": 421
         },
         {
           "nombre": "edad",
@@ -216174,7 +216203,7 @@
           "exportada": false,
           "params": "iso: string, hoy: Date",
           "retorno": null,
-          "linea": 428
+          "linea": 430
         },
         {
           "nombre": "validarFormularioAuto",
@@ -216182,12 +216211,12 @@
           "exportada": true,
           "params": "entrada: unknown, hoy: Date = new Date()",
           "retorno": "ValidacionFormularioAuto",
-          "linea": 435
+          "linea": 437
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7eaadafb65ca"
+      "hash": "fae5543e1e41"
     },
     {
       "ruta": "packages/module-tarificacion/src/formulario-comercio.ts",
@@ -220541,6 +220570,6 @@
   ],
   "resumen": {
     "archivos": 4740,
-    "funciones": 17574
+    "funciones": 17577
   }
 }
