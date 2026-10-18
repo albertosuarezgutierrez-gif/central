@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import {
   evaluarCambioHorario, peticionCambioHorario, extraerHoraPedida, contraoferta, botonesCambioHorario,
   horaDeCallback, textoAceptacion, textoNegativa, tareaLimpieza, resolverTipo, LIMITE_CALLBACK,
-  BLOQUE_PROMPT_CAMBIO_HORARIO, type ReservaHorario,
+  BLOQUE_PROMPT_CAMBIO_HORARIO, anunciaSalidaTardia, respuestaConfirmaHorario, type ReservaHorario,
 } from './cambio-horario.ts'
 import { decidirAutoEnvio } from './auto.ts'
 import type { Decision } from './decidir.ts'
@@ -182,4 +182,36 @@ test('tarea de limpieza: fecha de salida / de entrada y texto', () => {
 test('el prompt prohíbe coste y reseña', () => {
   assert.match(BLOQUE_PROMPT_CAMBIO_HORARIO, /PROHIBIDO mencionar coste/)
   assert.match(BLOQUE_PROMPT_CAMBIO_HORARIO, /reseña/)
+})
+
+// ── Caso Maria (18/10/2026): anuncia «saldremos a las 12:00» sin pedirlo y el bot lo aceptó solo ──
+test('ANUNCIAR una salida posterior a la oficial cuenta como petición (sin palabras de petición)', () => {
+  assert.ok(anunciaSalidaTardia('Hola, saldremos a las 12:00', '11:00'))
+  assert.ok(peticionCambioHorario('Buenas noches, saldremos a las 12:00 si no hay problema', 'general'))
+  assert.equal(peticionCambioHorario('Salimos a las 12', 'checkout')?.tipo, 'salida')
+  assert.ok(peticionCambioHorario('We will check out at 1pm', 'general'))
+})
+
+test('anunciar una salida a la hora oficial o antes NO escala; la oficial de la reserva manda', () => {
+  assert.equal(anunciaSalidaTardia('Saldremos a las 10:00', '11:00'), false)
+  assert.equal(anunciaSalidaTardia('Saldremos a las 11:00', '11:00'), false)
+  assert.equal(anunciaSalidaTardia('Saldremos a las 12:00', '12:00'), false)
+  assert.equal(peticionCambioHorario('¿A qué hora es el check-out?', 'checkout'), null)
+})
+
+test('la RESPUESTA del bot que acepta una hora fuera de la oficial se detecta (frase literal del caso)', () => {
+  const reply = '¡Buenas noches, Maria! Perfecto, tomo nota de que saldréis a las 12:00 😊 Cuando os vayáis, escribidnos por aquí para coordinar la limpieza.'
+  assert.equal(respuestaConfirmaHorario(reply, { checkIn: '15:00', checkOut: '11:00' }), 'salida')
+  assert.equal(respuestaConfirmaHorario('Perfecto, podéis entrar a las 12:00 el día de la llegada.', { checkIn: '15:00', checkOut: '11:00' }), 'entrada')
+  // Un borrador que mantiene el horario oficial no se toca.
+  assert.equal(respuestaConfirmaHorario('Recuerda que la salida es hasta las 11:00. ¡Gracias!', { checkIn: '15:00', checkOut: '11:00' }), null)
+  assert.equal(respuestaConfirmaHorario('La entrada es a partir de las 15:00.', { checkIn: '15:00', checkOut: '11:00' }), null)
+})
+
+test('decidirAutoEnvio: ni el anuncio de Maria ni un borrador que lo acepta salen solos', () => {
+  const dec = { reply: 'Perfecto, tomo nota de que saldréis a las 12:00', confidence: 0.9, needs_human: false, requiere_respuesta: true, es_cortesia: false, apoyada_en_fuente: true, categoria: 'general', sentimiento: 'neutro', motivo: '', fuente: 'ia' } as Decision
+  assert.equal(decidirAutoEnvio(dec, 'Saldremos a las 12:00').auto, false)
+  // Aunque la pregunta no se detectara, el borrador que acepta la hora tampoco sale.
+  assert.equal(decidirAutoEnvio(dec, 'Hola, gracias por todo', { checkIn: '15:00', checkOut: '11:00' }).auto, false)
+  assert.equal(decidirAutoEnvio({ ...dec, reply: 'Gracias, hasta pronto' }, 'Hola, gracias por todo', { checkIn: '15:00', checkOut: '11:00' }).auto, true)
 })

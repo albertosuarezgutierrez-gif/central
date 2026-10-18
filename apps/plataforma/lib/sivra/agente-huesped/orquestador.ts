@@ -4,7 +4,7 @@ import { detectLang, detectCategory, tipoHueco, vaARecomendador, esAutomatico, e
 import { idiomaConocido } from './idiomas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
-import { peticionCambioHorario } from './cambio-horario'
+import { peticionCambioHorario, respuestaConfirmaHorario } from './cambio-horario'
 import { esModoNoche } from './noche'
 import { acusarNocturno } from './noche-guardia'
 import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
@@ -196,14 +196,18 @@ export async function procesarMensajeHuesped(
     // 2-quater) 🚨 COMPUERTA DE HORARIO (03/10/2026): entrar antes, salir más tarde o guardar maletas fuera
     // de la estancia NUNCA sale solo (ver `cambio-horario.ts`). Se marca aquí para que el log y el aviso
     // lo reflejen (needs_human); `decidirAutoEnvio` lo vuelve a exigir por si alguien salta este paso.
-    if (peticionCambioHorario(pregunta, dec.categoria) || peticionCambioHorario(pregunta, categoria)) {
+    const horarioOficial = { checkIn: ctx.horaCheckIn, checkOut: ctx.horaCheckOut }
+    if (peticionCambioHorario(pregunta, dec.categoria, horarioOficial) || peticionCambioHorario(pregunta, categoria, horarioOficial)) {
       dec.needs_human = true
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Petición de cambio de horario / maletas — la decides tú (semáforo y botones abajo).`
+    } else if (dec.reply && respuestaConfirmaHorario(dec.reply, horarioOficial)) {
+      dec.needs_human = true
+      dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}El borrador acepta una hora de entrada/salida distinta de la oficial — solo la autorizas tú.`
     }
 
     // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí
     //    solo se ejecuta. Las dos vías y sus guardas están documentadas en ese módulo.
-    const { auto: puedeAuto } = decidirAutoEnvio(dec, pregunta)
+    const { auto: puedeAuto } = decidirAutoEnvio(dec, pregunta, horarioOficial)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false, emisor: emisorDiag })

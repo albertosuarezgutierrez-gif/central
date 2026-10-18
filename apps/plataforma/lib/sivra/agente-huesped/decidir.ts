@@ -22,7 +22,7 @@ import { revisarCierre, bloqueCierre } from './cierre'
 import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
 import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
-import { peticionCambioHorario, BLOQUE_PROMPT_CAMBIO_HORARIO } from './cambio-horario'
+import { peticionCambioHorario, BLOQUE_PROMPT_CAMBIO_HORARIO, HORA_SALIDA_OFICIAL_DEFECTO } from './cambio-horario'
 import { NOMBRE_IDIOMA } from './idiomas'
 import { esCierre, esIntercambioDeCortesia } from './cortesia'
 import { precedentesEstables, bloquePrecedentes } from './precedentes'
@@ -187,7 +187,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
   // Alberto. La ficha trae la línea «TIENE UN COSTE…» de la política antigua: se quita aquí para que el
   // modelo no tenga de dónde sacar un coste que no existe, y los bloques de disponibilidad (que
   // condicionan «confirmar/negar») se sustituyen por la regla de consultar y confirmar.
-  const cambioHorario = !!peticionCambioHorario(pregunta, categoria)
+  const cambioHorario = !!peticionCambioHorario(pregunta, categoria, { checkIn: ctx.horaCheckIn, checkOut: ctx.horaCheckOut })
   const fichaPrompt = cambioHorario
     ? (ctx.ficha || '').split('\n').filter(l => !/\bcoste\b|suplemento/i.test(l)).join('\n')
     : (ctx.ficha || '')
@@ -283,6 +283,7 @@ Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} �
 Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'inglés'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}${ctx.preguntaTs ? ' ' + bloqueAntiguedad(ctx.preguntaTs) : ''}
 ${REGLA_COHERENCIA}
+HORAS DE ENTRADA/SALIDA — NO AUTORIZAS NADA (decisión de Alberto, 18/10/2026): NUNCA aceptes, confirmes ni «tomes nota» de una salida POSTERIOR a las ${ctx.horaCheckOut || HORA_SALIDA_OFICIAL_DEFECTO} ni de una entrada ANTERIOR a las ${ctx.horaCheckIn || 'oficial'}, ni siquiera si el huésped solo la anuncia («saldremos a las 12:00») sin pedirla. Dile con amabilidad que está sujeto a disponibilidad, que lo consultas con el equipo y se lo confirmas, y que mientras tanto vale el horario oficial. La única excepción es la que diga expresamente el bloque SALIDA TARDÍA / EARLY CHECK-IN de abajo.
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
 NO EJECUTAS ACCIONES: solo escribes mensajes; no gestionas la reserva, no cancelas, no reembolsas, no cambias fechas ni haces cobros. NUNCA afirmes haber hecho o completado una gestión de ese tipo («ya está cancelada», «te he cambiado las fechas», «te he tramitado el reembolso»): no es cierto y no te consta. ${REGLA_GESTIONES} Y NO le pidas que te confirme datos de su reserva (fechas, condiciones de cancelación…): ya los tienes en la INFORMACIÓN de abajo, no los verifiques con él.
 ${REGLA_VOZ}

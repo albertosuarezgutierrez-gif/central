@@ -146,6 +146,50 @@ const NOMBRE_MALETAS = String.raw`maleta\w*|equipaje\w*|luggage|baggage|bags?|su
 const RE_EQUIPAJE = new RegExp(
   `\\b(?:${VERBO_MALETAS})\\b[^.?!]{0,40}?\\b(?:${NOMBRE_MALETAS})\\b|\\b(?:${NOMBRE_MALETAS})\\b[^.?!]{0,40}?\\b(?:${VERBO_MALETAS})\\b`, 'iu')
 
+// ── ANUNCIO de hora (sin pedirla) y ACEPTACIÓN en la respuesta (Maria, 18/10/2026) ──
+// «Saldremos a las 12:00» no lleva ninguna palabra de petición («tarde», «quedarnos», «late checkout»),
+// así que nada lo detectaba: el bot contestó «tomo nota de que saldréis a las 12:00» y autorizó una salida
+// tardía por su cuenta. Un huésped que ANUNCIA una hora posterior a la oficial está pidiendo un permiso.
+export const HORA_SALIDA_OFICIAL_DEFECTO = '11:00' // todos los pisos (`horarios.ts`); solo si no llega la de la reserva
+export type HorarioOficial = { checkIn?: string | null; checkOut?: string | null }
+
+const minutos = (hhmm?: string | null): number | null => {
+  const m = (hhmm || '').match(/^(\d{1,2}):(\d{2})/)
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null
+}
+const VERBO_SALIDA = /\b(sal(?:go|imos|dremos|dr[eé]is|dr[eé]|iremos|ir[eé]is|ir[eé]|ida)|nos\s+(?:vamos|iremos|marchamos|marcharemos|vais)|os\s+(?:vais|ir[eé]is|marcha[ií]s)|irnos|marcharnos|check.?out|check\s+out|leav\w*|depart\w*|partiamo|partiremo|abreis\w*|auschecken|part(?:ons|irons)|d[eé]part)\b/iu
+const VERBO_ENTRADA = /\b(entr(?:ar|ar[eé]is|[aá]is|ada|ad)|llegar\w*|lleg(?:amos|o)|check.?in|check\s+in|acceso|arriv\w*)\b/iu
+
+/** Frases del texto que contienen `verbo`, con la primera hora pedida de cada una. */
+function horasPorFrase(texto: string, verbo: RegExp): number[] {
+  const out: number[] = []
+  for (const frase of (texto || '').split(/(?<=[.?!\n])/u)) {
+    if (!verbo.test(frase)) continue
+    const h = minutos(extraerHoraPedida(frase))
+    if (h !== null) out.push(h)
+  }
+  return out
+}
+
+/** ¿El huésped ANUNCIA una salida posterior a la hora oficial («saldremos a las 12:00»)? */
+export function anunciaSalidaTardia(texto: string, checkOut?: string | null): boolean {
+  const lim = minutos(checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
+  return horasPorFrase(texto, VERBO_SALIDA).some(h => h > lim && h <= 22 * 60)
+}
+
+/**
+ * ¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las
+ * 12:00»)? Salida > checkOut o entrada < checkIn (solo si se conoce). Conservador: un falso positivo solo
+ * manda el borrador a Telegram. Es la red de seguridad si el modelo se salta la regla del prompt.
+ */
+export function respuestaConfirmaHorario(reply: string, horario: HorarioOficial = {}): 'salida' | 'entrada' | null {
+  const lim = minutos(horario.checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
+  if (horasPorFrase(reply, VERBO_SALIDA).some(h => h > lim && h <= 22 * 60)) return 'salida'
+  const ini = minutos(horario.checkIn)
+  if (ini !== null && horasPorFrase(reply, VERBO_ENTRADA).some(h => h < ini)) return 'entrada'
+  return null
+}
+
 export type PeticionHorario = { tipo: 'entrada' | 'salida' | 'equipaje' }
 
 /**
@@ -153,13 +197,14 @@ export type PeticionHorario = { tipo: 'entrada' | 'salida' | 'equipaje' }
  * positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir
  * solo una promesa sobre el horario del piso. `categoria` es la de `detectCategory`/`dec.categoria`.
  */
-export function peticionCambioHorario(texto: string, categoria?: string | null): PeticionHorario | null {
+export function peticionCambioHorario(texto: string, categoria?: string | null, horario: HorarioOficial = {}): PeticionHorario | null {
   const t = texto || ''
   if (categoria === 'early_checkin') return { tipo: 'entrada' }
   if (categoria === 'late_checkout') return { tipo: 'salida' }
   if (RE_ENTRADA.test(t)) return { tipo: 'entrada' }
   if (RE_SALIDA.test(t)) return { tipo: 'salida' }
   if (RE_HASTA_HORA.test(t) && RE_CTX_SALIDA.test(t)) return { tipo: 'salida' }
+  if (anunciaSalidaTardia(t, horario.checkOut)) return { tipo: 'salida' }
   if (categoria === 'equipaje' || RE_EQUIPAJE.test(t)) return { tipo: 'equipaje' }
   return null
 }

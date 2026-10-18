@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(18/10/2026)** — Sivra · agente de huéspedes: aceptó solo una salida a las 12:00 («tomo nota de que saldréis a las 12:00», huésped Maria).
+La compuerta de horario (03/10) solo cazaba PETICIONES («más tarde», «late checkout»), no ANUNCIOS («saldremos a las 12»). Fix en
+`apps/plataforma/lib/sivra/agente-huesped/`: `anunciaSalidaTardia` + red sobre el BORRADOR `respuestaConfirmaHorario` (auto.ts y orquestador →
+needs_human + Telegram), regla de prompt en `decidir.ts`. Hora oficial = la de la reserva (salida 11:00). Tests vistos en rojo, 393/393.
+Pendiente Alberto: decidir con Maria si mantiene las 12:00; anuncios de entrada anticipada solo se cazan en el borrador.
+
 **(17/10/2026)** — Correduría · base de visibilidad en IA (OpenSEO, 18 consultas × ChatGPT/Gemini, 216 créditos): **Grupo ASegura sale en 0/36**, 0 citas propias. Fuentes que mandan: rastreator, segurfer, ocu, selectra, kelisto. Informe `docs/ASEGURA-VISIBILIDAD-IA-2026-10.md`. Tracker `8dc0311c` guardado y PAUSADO (sin gasto recurrente; reactivar = decisión de Alberto). Siguiente: publicar guías 01-04 tras revisar [VERIFICAR] y aparecer en directorios de corredurías de Sevilla.
 
 **(17/10/2026)** — Correduría · auditoría de captación nacional (solo lectura + informe `docs/ASEGURA-CAPTACION-AUDITORIA-2026-10.md`). El prompt original asumía Symfony inexistente.
