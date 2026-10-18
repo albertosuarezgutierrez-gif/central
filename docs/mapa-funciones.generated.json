@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T05:01:08Z",
-  "sha": "2331b2648f6c4dc7b8dcb57e3f6a42dbbfc292da",
+  "generadoEn": "2026-10-18T05:30:03Z",
+  "sha": "15032639a236b0f6d916f19ae70acb42300ba066",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -157858,7 +157858,7 @@
           "nombre": "decidirAutoEnvio",
           "kind": "function",
           "exportada": true,
-          "params": "dec: Decision, pregunta: string",
+          "params": "dec: Decision, pregunta: string, horario: HorarioOficial = {}",
           "retorno": "",
           "linea": 28,
           "resumen": "¿Puede salir solo? Dos vías, sobre una misma guarda común. Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato inventado / escalado IA / control de calidad ca"
@@ -157866,7 +157866,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0af9112ef01b"
+      "hash": "dca231700d13"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cambio-horario.ts",
@@ -157874,6 +157874,9 @@
       "resumen": "lib/sivra/agente-huesped/cambio-horario.ts — entrada anticipada, salida tardía y maletas. PURO. Origen (03/10/2026): un huésped de House Sevillana pidió dejar el equipaje / quedarse hasta las 15:00 el día de salida. Se clasificó «equipaje», salió AUTOMÁTICO y prometió un «coste según la hora» que no",
       "exporta": [
         "evaluarCambioHorario",
+        "horasEnTexto",
+        "anunciaSalidaTardia",
+        "respuestaConfirmaHorario",
         "peticionCambioHorario",
         "mencionaMaletas",
         "resolverTipo",
@@ -157931,12 +157934,74 @@
           "resumen": "¿Lo permite el calendario del piso? - salida tardía + otra entrada el mismo día del check-out → rojo - salida tardía sin entrada ese día → amarillo (hace falta el OK de la limpieza, nunca verde) - ent"
         },
         {
+          "nombre": "minutos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "hhmm?: string | null",
+          "retorno": "number | null",
+          "linea": 156
+        },
+        {
+          "nombre": "horasEnTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, tardeSiAmbiguo = false",
+          "retorno": "number[]",
+          "linea": 178,
+          "resumen": "TODAS las horas (en minutos) de un texto: «12:00», «13h», «1 pm», «a la 1», «12 del mediodía», y las palabras mediodía/noon/midday/mezzogiorno/midi = 12:00. Rango 0-23:59 (sin tope superior). Una cifr"
+        },
+        {
+          "nombre": "frases",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "texto: string",
+          "retorno": null,
+          "linea": 203,
+          "resumen": "Un punto entre dos cifras («11.30») es una hora, no el fin de una frase."
+        },
+        {
+          "nombre": "clausulas",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "frase: string",
+          "retorno": null,
+          "linea": 205,
+          "resumen": "Cláusulas dentro de una frase (coma/punto y coma fuera de cifras, «y», «and»…): «la entrada es a las 15:00 y podéis salir a las 15:00»."
+        },
+        {
+          "nombre": "horasPorFrase",
+          "kind": "function",
+          "exportada": false,
+          "params": "texto: string, verbo: RegExp, tardeSiAmbiguo: boolean",
+          "retorno": "number[]",
+          "linea": 208,
+          "resumen": "Horas de las frases del texto que contienen `verbo` (TODAS las de cada frase, no solo la primera)."
+        },
+        {
+          "nombre": "anunciaSalidaTardia",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, checkOut?: string | null",
+          "retorno": "boolean",
+          "linea": 215,
+          "resumen": "¿El huésped ANUNCIA una salida posterior a la hora oficial («saldremos a las 12:00»)?"
+        },
+        {
+          "nombre": "respuestaConfirmaHorario",
+          "kind": "function",
+          "exportada": true,
+          "params": "reply: string, horario: HorarioOficial = {}",
+          "retorno": "'salida' | 'entrada' | null",
+          "linea": 227,
+          "resumen": "¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las 12:00»)? Sin depender de un verbo: SALIDA = cualquier hora posterior al check-out que no sea la de e"
+        },
+        {
           "nombre": "peticionCambioHorario",
           "kind": "function",
           "exportada": true,
-          "params": "texto: string, categoria?: string | null",
+          "params": "texto: string, categoria?: string | null, horario: HorarioOficial = {}",
           "retorno": "PeticionHorario | null",
-          "linea": 156,
+          "linea": 253,
           "resumen": "¿Es una petición de cambio de horario o de guardar maletas? Conservador a propósito: un falso positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir solo"
         },
         {
@@ -157945,7 +158010,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 167
+          "linea": 265
         },
         {
           "nombre": "resolverTipo",
@@ -157953,7 +158018,7 @@
           "exportada": true,
           "params": "pet: PeticionHorario, texto: string, o: { hoy: string; checkIn: string | null }",
           "retorno": "TipoCambio",
-          "linea": 176,
+          "linea": 274,
           "resumen": "«equipaje» no dice si es antes de entrar o después de salir: lo dice el texto, y si no, el momento (`hoy` ≤ llegada → antes de entrar; si no → el día de salida). Fechas YYYY-MM-DD."
         },
         {
@@ -157962,7 +158027,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string | null",
-          "linea": 188,
+          "linea": 286,
           "resumen": "Primera hora pedida («a las 15:00», «until 3pm», «um 15 Uhr»…) como 'HH:MM', o null. Rango 06–23."
         },
         {
@@ -157971,7 +158036,7 @@
           "exportada": true,
           "params": "tipo: TipoCambio, horaPedida: string | null",
           "retorno": "number | null",
-          "linea": 214,
+          "linea": 312,
           "resumen": "Contraoferta (hora entera, 13 o 14) para el botón `🕐`. Salida: 14 si pide 15:00 o más, 13 si no. Entrada: 13 si pide a las 12 o antes, 14 si no. null si coincide con lo que ya pidió (botón redundante"
         },
         {
@@ -157980,7 +158045,7 @@
           "exportada": true,
           "params": "cb: string",
           "retorno": "string",
-          "linea": 228,
+          "linea": 326,
           "resumen": "Telegram rechaza un `callback_data` > 64 BYTES (y el aviso entero falla): se comprueba al construir."
         },
         {
@@ -157989,7 +158054,7 @@
           "exportada": true,
           "params": "p: { bookingId: string; tipo: TipoCambio; semaforo: Semaforo; horaPedida: string | null }",
           "retorno": "BotonCH[][]",
-          "linea": 238,
+          "linea": 336,
           "resumen": "Botones de la propuesta. Prefijo `hsp_` (mismo emisor autorizado que el resto): `hsp_chsi:<id>:<HHMM>`, `hsp_chhasta:<id>:<HH>`, `hsp_chno:<id>`, `hsp_chlimp:<id>`. En ROJO no se ofrecen los «sí»: el "
         },
         {
@@ -157998,7 +158063,7 @@
           "exportada": true,
           "params": "arg: string | undefined",
           "retorno": "string | null",
-          "linea": 256,
+          "linea": 354,
           "resumen": "'HHMM' (callback) → 'HH:MM'; null si no es una hora válida."
         },
         {
@@ -158007,7 +158072,7 @@
           "exportada": false,
           "params": "nombre?: string | null",
           "retorno": null,
-          "linea": 267
+          "linea": 365
         },
         {
           "nombre": "textoAceptacion",
@@ -158015,7 +158080,7 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; hora: string; nombre?: string | null }",
           "retorno": "string",
-          "linea": 272
+          "linea": 370
         },
         {
           "nombre": "consignasDePiso",
@@ -158023,7 +158088,7 @@
           "exportada": true,
           "params": "propertyId: string",
           "retorno": "string[]",
-          "linea": 279,
+          "linea": 377,
           "resumen": "Consignas de la zona del piso (de `equipaje.ts`); vacío = piso sin zona → texto genérico."
         },
         {
@@ -158032,7 +158097,7 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; semaforo: Semaforo; propertyId: string; nombre?: string | null; ofrecerMaletas?: boolean }",
           "retorno": "string",
-          "linea": 284
+          "linea": 382
         },
         {
           "nombre": "tareaLimpieza",
@@ -158040,13 +158105,13 @@
           "exportada": true,
           "params": "p: { tipo: TipoCambio; hora: string; checkIn: string | null; checkOut: string | null; huesped?: string | null; reservationId: string }",
           "retorno": "",
-          "linea": 302,
+          "linea": 400,
           "resumen": "Instrucción para la tarea de limpieza y fecha en la que se crea."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5bef3b2bab1e"
+      "hash": "6021b95ea9a7"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cierre.ts",
@@ -158410,7 +158475,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "420f9a8bd3e6"
+      "hash": "9f970441d59c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -159468,7 +159533,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "08422eeef9a4"
+      "hash": "5db1296d326e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -160297,7 +160362,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "7fc8d6d158bc"
+      "hash": "0fed4cfbd3ef"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/alertas-autoresolucion.ts",
@@ -220155,6 +220220,6 @@
   ],
   "resumen": {
     "archivos": 4735,
-    "funciones": 17540
+    "funciones": 17547
   }
 }
