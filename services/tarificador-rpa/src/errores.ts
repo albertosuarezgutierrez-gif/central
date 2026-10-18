@@ -83,10 +83,18 @@ export function timeoutDeControl(e: unknown): { accion: string; selector: string
   return { accion: m[1]!, selector: sel ? sel.slice(0, 160) : null }
 }
 
+/**
+ * v0.6.6 (trabajo 3553424d, 18/10/2026): el call log de Playwright repite el VALOR tecleado (`fill("…")`), y el CP del tomador
+ * salió en claro en la columna `error`. Se tapa el argumento de las acciones que teclean antes de que el mensaje salga del worker.
+ */
+export function taparValoresTecleados(texto: string): string {
+  return texto.replace(/\b(fill|type|pressSequentially)\((["'`])(?:\\.|(?!\2)[^\\])*\2/g, '$1(«dato tecleado»')
+}
+
 export function clasificar(e: unknown): { tipo: TipoError; mensaje: string } {
   if (e instanceof EmisionBloqueadaError) return { tipo: 'emision', mensaje: e.message }
   if (e instanceof ErrorTarificador) return { tipo: e.tipo, mensaje: e.message }
-  const msg = e instanceof Error ? e.message : String(e)
+  const msg = taparValoresTecleados(e instanceof Error ? e.message : String(e))
   // Red caída / DNS / conexión: infraestructura (se reintenta una vez).
   if (/net::ERR_|ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|socket hang up|Target (page|browser).*closed/i.test(msg)) {
     return { tipo: 'infra', mensaje: msg }

@@ -1,3 +1,8 @@
+// v0.6.6 (18/10/2026, trabajo real 3553424d muerto en «Datos personales» con un timeout crudo de `fill` sobre el «Código postal» del
+// tomador, que el portal deja DESHABILITADO y relleno tras el documento): en los pasos 2-3 un campo bloqueado (disabled/readonly) no
+// se teclea: se LEE y vale si casa (normalizado) con el riesgo, o si el riesgo no trae el dato y el portal sí; si no casa o está
+// vacío → hueco con motivo. Todo tecleo con tope corto y su fallo → hueco (el error de Playwright, que lleva el valor, no sube).
+// Igual «Localidad». Moto no cambia. Ver «campos DESHABILITADOS».
 // v0.6.5 (17/10/2026, trabajo real 590a330e parado en «Datos del vehículo» con huecos que NO eran de ese paso): el HTML real dice
 // que el asistente tiene un `tabpanel` por paso, todos en el DOM. Tomador, documento, CP/localidad, fechas del conductor y segundo
 // conductor son de «Datos personales»; la fecha de efecto y la compañía actual, de «Antecedentes»; «Nivel antecedentes»
@@ -1167,7 +1172,8 @@ export async function rellenarDatosVehiculoTurismosConSupuesto(page: Page, marco
   const { locator: campo, confirmar } = await campoUnicoTurismos(page, marco, ETIQUETA_MATRICULA, `el campo «${ETIQUETA_MATRICULA}»`, ESPERA_CONTROL_TURISMOS_MS, ctx.formador)
   await ctx.pausaAccion()
   await comprobarCampo(campo)
-  await campo.fill(form.matricula)
+  // v0.6.6: tope corto y sin el error crudo de Playwright (lleva la matrícula).
+  if (!(await teclearTurismos(campo, form.matricula))) throw new ErrorMapaIncompleto(`el campo «${ETIQUETA_MATRICULA}» (el portal no dejó escribir en él a tiempo)`, true)
   await confirmar()
   const boton = await unicoControl(page, botonTurismos(marco, BOTON_ENCUENTRA_VEHICULO), `el botón «${BOTON_ENCUENTRA_VEHICULO}»`, true)
   await ctx.pausaAccion()
@@ -1408,6 +1414,77 @@ export async function pasoActivoTurismos(marco: Pick<Frame, 'getByRole'>): Promi
 }
 
 const ESPERA_LOCALIDAD_MS = 3_000
+/** v0.6.6: tope de cada tecleo de los pasos 2-3 (nunca los 30 s por defecto de Playwright, ni su error crudo con el valor). */
+export const ESPERA_TECLEO_TURISMOS_MS = 5_000
+
+// ── v0.6.6: campos DESHABILITADOS / solo lectura de los pasos 2-3 (trabajo real 3553424d, 18/10/2026) ──
+// HTML real (solo estructura): tras teclear el documento, el portal deja «Número de documento», «Código postal» y «Localidad» del
+// bloque del tomador `disabled` y RELLENOS (`is-filled is-disabled`); nombre/apellidos quedan deshabilitados y vacíos. La 0.6.5
+// tecleaba encima y moría con un timeout crudo de `fill` (con el CP en claro en el mensaje). Regla: un campo bloqueado NUNCA se
+// teclea; se LEE y, si casa con el riesgo (o el riesgo no trae el dato y el portal sí), vale; si no, hueco con motivo.
+
+/** Cómo se comparan el valor del portal y el del riesgo: texto (mayúsculas, sin espacios/guiones/puntos ni tildes), fecha (solo cifras) o población (`clavePoblacion`). */
+export type ComparacionCampoTurismos = 'texto' | 'fecha' | 'poblacion'
+
+export function normalizarValorCampoTurismos(v: string, como: ComparacionCampoTurismos): string {
+  if (como === 'fecha') return soloCifras(v)
+  if (como === 'poblacion') return clavePoblacion(v)
+  return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s.\-]/g, '').toUpperCase()
+}
+
+export type DecisionCampoBloqueado = { tipo: 'vale' } | { tipo: 'vale_portal' } | { tipo: 'hueco'; motivo: string }
+
+/**
+ * Campo bloqueado (deshabilitado o solo lectura) → qué se hace, SIN teclear. PURO. Vacío → hueco; el riesgo no trae el dato y el
+ * portal sí → `vale_portal` (el llamante lo declara si procede); casa (normalizado) → `vale`; no casa → hueco. Los motivos nunca
+ * llevan ninguno de los dos valores.
+ */
+export function decidirCampoBloqueadoTurismos(etiqueta: string, valorPortal: string, valorRiesgo: string | null, como: ComparacionCampoTurismos): DecisionCampoBloqueado {
+  const portal = normalizarValorCampoTurismos(valorPortal, como)
+  if (portal === '') return { tipo: 'hueco', motivo: `«${etiqueta}» (el portal lo tiene deshabilitado y vacío: no se puede rellenar)` }
+  const riesgo = valorRiesgo === null ? '' : normalizarValorCampoTurismos(valorRiesgo, como)
+  if (riesgo === '') return { tipo: 'vale_portal' }
+  if (portal === riesgo) return { tipo: 'vale' }
+  return { tipo: 'hueco', motivo: `«${etiqueta}» (el portal lo trae deshabilitado con un valor distinto del riesgo: no se teclea)` }
+}
+
+/** Estado de un control: bloqueado (disabled, readonly, aria-disabled/aria-readonly o fieldset deshabilitado) y su valor. Solo lectura. */
+async function estadoCampoTurismos(campo: Locator): Promise<{ bloqueado: boolean; valor: string } | null> {
+  return campo
+    .evaluate((el) => {
+      const e = el as HTMLInputElement
+      const bloqueado =
+        e.disabled === true || e.readOnly === true || e.getAttribute('aria-disabled') === 'true' || e.getAttribute('aria-readonly') === 'true' || !!e.closest('fieldset[disabled]')
+      const valor = e.tagName === 'INPUT' || e.tagName === 'TEXTAREA' ? (e.value ?? '') : (el.textContent ?? '')
+      return { bloqueado, valor }
+    }, undefined, { timeout: 1_000 })
+    .catch(() => null)
+}
+
+/**
+ * El control VISIBLE con esa etiqueta EXACTA (en el bloque del tomador si `bloqueTomador`), SOLO si es uno y está bloqueado. El
+ * localizador común descarta los deshabilitados (para él «no aparece»): este es el camino de los que el portal prerrellena.
+ */
+async function campoBloqueadoTurismos(marco: Frame, etiqueta: string, bloqueTomador: boolean): Promise<{ campo: Locator; valor: string } | null> {
+  const base = bloqueTomador ? zonaTurismos(marco).locator(SEL_BLOQUE_TOMADOR_TURISMOS) : zonaTurismos(marco)
+  const l = sinCabecera(marco, base.getByLabel(etiqueta, { exact: true })).filter({ visible: true })
+  if ((await l.count().catch(() => 0)) !== 1) return null
+  const e = await estadoCampoTurismos(l.first())
+  return e?.bloqueado ? { campo: l.first(), valor: e.valor } : null
+}
+
+/**
+ * Teclea con tope corto. `true` = escrito; `false` = no se pudo (el llamante lo convierte en hueco). El error de Playwright NUNCA
+ * sube: su mensaje lleva el valor tecleado (dato personal).
+ */
+async function teclearTurismos(campo: Locator, valor: string): Promise<boolean> {
+  try {
+    await campo.fill(valor, { timeout: ESPERA_TECLEO_TURISMOS_MS })
+    return true
+  } catch {
+    return false
+  }
+}
 
 /**
  * Rellena UN paso según su plan (`planDatosTurismos(...).pasos[i]`). Solo con SU pestaña seleccionada (si no, hueco con inventario,
@@ -1433,6 +1510,13 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       throw e
     }
   }
+  // v0.6.6: campo bloqueado → se lee y se decide (nunca se teclea). `supuestoPortal`: lo que se declara si el riesgo no traía el dato.
+  const segunBloqueado = (etiqueta: string, valorPortal: string, valorRiesgo: string | null, como: ComparacionCampoTurismos, supuesto?: string, supuestoPortal?: string) => {
+    const d = decidirCampoBloqueadoTurismos(etiqueta, valorPortal, valorRiesgo, como)
+    if (d.tipo === 'hueco') huecos.push(d.motivo)
+    else if (d.tipo === 'vale_portal' && supuestoPortal) aplicados.push(supuestoPortal)
+    else if (d.tipo === 'vale' && supuesto) aplicados.push(supuesto)
+  }
   for (const op of plan.operaciones) {
     if (op.tipo === 'compania') {
       const puerta = ctx.companiaActualTurismos
@@ -1457,6 +1541,17 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       continue
     }
     if (op.tipo === 'localidad') {
+      // v0.6.6: bloqueada (el portal la fija desde el CP o la ficha del cliente): se lee, con la espera del autocompletado si sigue vacía.
+      let bloq = await campoBloqueadoTurismos(marco, ETIQUETAS_TURISMOS.localidad, true)
+      const finBloq = Date.now() + ESPERA_LOCALIDAD_MS
+      while (bloq && bloq.valor.trim() === '' && Date.now() < finBloq) {
+        await page.waitForTimeout(300)
+        bloq = await campoBloqueadoTurismos(marco, ETIQUETAS_TURISMOS.localidad, true)
+      }
+      if (bloq) {
+        segunBloqueado(ETIQUETAS_TURISMOS.localidad, bloq.valor, op.valor, 'poblacion', undefined, SUPUESTO_LOCALIDAD_PORTAL)
+        continue
+      }
       const campo = await esperar(ETIQUETAS_TURISMOS.localidad, true)
       if (typeof campo === 'string') {
         huecos.push(campo)
@@ -1468,6 +1563,11 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       while (mostrada === '' && Date.now() < fin) {
         await page.waitForTimeout(300)
         mostrada = (await textoMostrado(campo)).trim()
+      }
+      const eLoc = await estadoCampoTurismos(campo)
+      if (eLoc?.bloqueado) {
+        segunBloqueado(ETIQUETAS_TURISMOS.localidad, eLoc.valor, op.valor, 'poblacion', undefined, SUPUESTO_LOCALIDAD_PORTAL)
+        continue
       }
       if (op.valor === null) {
         if (mostrada !== '') aplicados.push(SUPUESTO_LOCALIDAD_PORTAL)
@@ -1481,14 +1581,31 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       await ctx.pausaAccion()
       await comprobarCampo(campo)
-      await campo.fill(op.valor)
+      if (!(await teclearTurismos(campo, op.valor))) {
+        const e = await estadoCampoTurismos(campo)
+        if (e?.bloqueado) segunBloqueado(ETIQUETAS_TURISMOS.localidad, e.valor, op.valor, 'poblacion', undefined, SUPUESTO_LOCALIDAD_PORTAL)
+        else huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (el portal no dejó escribir en el campo a tiempo)`)
+        continue
+      }
       await campo.blur().catch(() => undefined)
       if (clavePoblacion(await textoMostrado(campo)) !== clavePoblacion(op.valor)) huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (el portal no dejó puesto el valor)`)
+      continue
+    }
+    const como: ComparacionCampoTurismos = op.fecha ? 'fecha' : 'texto'
+    // v0.6.6: bloqueado ya (el localizador común lo descartaría como «no aparece») → se lee y se decide, sin teclear.
+    const bloq = await campoBloqueadoTurismos(marco, op.etiqueta, op.bloqueTomador === true)
+    if (bloq) {
+      segunBloqueado(op.etiqueta, bloq.valor, op.valor, como, op.supuesto)
       continue
     }
     const campo = await esperar(op.etiqueta, op.bloqueTomador === true)
     if (typeof campo === 'string') {
       huecos.push(campo)
+      continue
+    }
+    const e0 = await estadoCampoTurismos(campo)
+    if (e0?.bloqueado) {
+      segunBloqueado(op.etiqueta, e0.valor, op.valor, como, op.supuesto)
       continue
     }
     if (!(await esCampoTexto(campo))) {
@@ -1504,7 +1621,18 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
     }
     await ctx.pausaAccion()
     await comprobarCampo(campo)
-    await campo.fill(op.valor)
+    // El portal puede bloquearlo DESPUÉS de localizarlo (p. ej. al validar el documento): se relee antes y, si falla, después.
+    const e1 = await estadoCampoTurismos(campo)
+    if (e1?.bloqueado) {
+      segunBloqueado(op.etiqueta, e1.valor, op.valor, como, op.supuesto)
+      continue
+    }
+    if (!(await teclearTurismos(campo, op.valor))) {
+      const e2 = await estadoCampoTurismos(campo)
+      if (e2?.bloqueado) segunBloqueado(op.etiqueta, e2.valor, op.valor, como, op.supuesto)
+      else huecos.push(`«${op.etiqueta}» (el portal no dejó escribir en el campo a tiempo)`)
+      continue
+    }
     await campo.blur().catch(() => undefined)
     const leido = await textoMostrado(campo)
     const quedo = op.fecha ? soloCifras(leido) === soloCifras(op.valor) : leido.trim().toUpperCase() === op.valor.toUpperCase()
@@ -1655,8 +1783,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1, 0.6.2, 0.6.3, 0.6.4 ni 0.6.5 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.5',
+    // Moto no cambia en la 0.6.1 … 0.6.6 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.6',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

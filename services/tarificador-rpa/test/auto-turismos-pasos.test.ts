@@ -10,10 +10,12 @@ import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame } from 'playwright'
 import { EmisionBloqueadaError, senalCuentaBancaria, type FormularioAuto } from '@central/module-tarificacion'
-import { pideInventarioDom } from '../src/errores.ts'
+import { clasificar, pideInventarioDom } from '../src/errores.ts'
 import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, instalarGuardEmision, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, pulsar } from '../src/guard.ts'
 import {
   ErrorMapaIncompleto,
+  decidirCampoBloqueadoTurismos,
+  normalizarValorCampoTurismos,
   SUPUESTO_COMPANIA_NO_CASA,
   SUPUESTO_COMPANIA_NO_CONSTA,
   fichaTomadorTurismos,
@@ -61,6 +63,10 @@ type Opc = {
   companias?: string[]
   /** El desplegable de compañía ya enseña un valor. */
   companiaPrefijada?: string
+  /** v0.6.6: «Código postal» del TOMADOR deshabilitado de partida con este valor ('' = vacío), como lo deja el portal real. */
+  cpBloqueado?: string
+  /** v0.6.6: «Localidad» del TOMADOR deshabilitada de partida con este valor. */
+  locBloqueada?: string
 }
 const COMPANIAS = ['ASEGURADORA ALFA, S.A.', 'Beta Seguros y Reaseguros', 'Gamma Mutua', 'Otras compañías']
 
@@ -75,7 +81,9 @@ function app(o: Opc = {}): string {
     `<div><div><nx-circle-toggle-group role="radiogroup" aria-labelledby="ng-z-${id}-lbl" name="ng-z-${id}">${etqs.map((e, i) => `<nx-circle-toggle>${op(`ng-z-${id}-${i}`, `ng-z-${id}`, e, marcada === i)}</nx-circle-toggle>`).join('')}</nx-circle-toggle-group></div></div>`
   const cab = (t: string) => `<nx-x-common-header text="${t}"><div><div><h3>${t}</h3></div></div></nx-x-common-header>`
   const texto = (id: string, etq: string, extra = '') => `<label for="${id}">${etq}</label><input id="${id}" type="text" ${extra}>`
-  const ubicacion = (n: number) => `<nx-mt-person-location>${texto(`ng-z-cp${n}`, 'Código postal')}<label for="ng-z-loc${n}">Localidad</label><input id="ng-z-loc${n}" role="combobox" type="text" maxlength="50"></nx-mt-person-location>`
+  const bloq = (v: string | undefined) => (v === undefined ? '' : ` disabled value="${v}" class="nx-input${v ? ' is-filled' : ''} is-disabled"`)
+  const ubicacion = (n: number) =>
+    `<nx-mt-person-location>${texto(`ng-z-cp${n}`, 'Código postal', n === 1 ? bloq(o.cpBloqueado) : '')}<label for="ng-z-loc${n}">Localidad</label><input id="ng-z-loc${n}" role="combobox" type="text" maxlength="50"${n === 1 ? bloq(o.locBloqueada) : ''}></nx-mt-person-location>`
   const nav = (primero: boolean) => `<nav><app-navigation-buttons>${primero ? '' : '<button type="button" class="ant"> Anterior </button>'}<button type="button" class="sig"> Siguiente </button></app-navigation-buttons></nav>`
   const def = o.sinDefectos ? null : 0
   const p1 = `
@@ -107,6 +115,7 @@ function app(o: Opc = {}): string {
   const $ = (s) => document.querySelector(s);
   window.__clics = [];
   document.addEventListener('click', (e) => { const t = e.target; if (t && t.id) window.__clics.push(t.id); }, true);
+  ['#ng-z-cp1', '#ng-z-loc1'].forEach((s) => ['focus', 'input'].forEach((ev) => $(s).addEventListener(ev, () => { if ($(s).disabled) window.__clics.push(s + ':' + ev + ':bloqueado'); })));
   ['#ng-z-iban', '#ng-z-bic', '#ng-z-col', '#ng-z-niv', '#ng-z-tdoc', '#ng-z-cp2', '#ng-z-cp3', '#ng-z-loc2', '#ng-z-loc3', '#ng-z-sw']
     .forEach((s) => ['focus', 'input', 'click'].forEach((ev) => $(s).addEventListener(ev, () => window.__clics.push(s + ':' + ev))));
   document.querySelectorAll('#ng-z-cm-0, #ng-z-cm-1').forEach((r) => r.addEventListener('change', () => { $('#bloqueMatricula').hidden = false; }));
@@ -450,5 +459,113 @@ test('v0.6.5 «Datos personales» con el tomador sin cabecera conductor: el plan
     assert.equal(pulsados.filter((p) => p === 'Siguiente').length, 1)
   } finally {
     await context.close()
+  }
+})
+
+// ───────────── v0.6.6: campos DESHABILITADOS de los pasos 2-3 (trabajo real 3553424d: CP del tomador `disabled` y relleno) ─────────────
+
+test('v0.6.6 (puro): campo bloqueado igual (normalizado) → vale; distinto → hueco; vacío → hueco; sin dato del riesgo y con valor → vale_portal; sin valores en los motivos', () => {
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Código postal', ' 00000 ', '00000', 'texto'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Número de documento', '00000000-t', '00000000T', 'texto'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Fecha de nacimiento del conductor', '03 / 02 / 1990', '03/02/1990', 'fecha'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Localidad', 'VILLAFICTÍCIA', 'villaficticia', 'poblacion'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Localidad', 'Villaficticia', null, 'poblacion'), { tipo: 'vale_portal' })
+  const distinto = decidirCampoBloqueadoTurismos('Código postal', '11111', '00000', 'texto')
+  assert.equal(distinto.tipo, 'hueco')
+  assert.match(distinto.tipo === 'hueco' ? distinto.motivo : '', /^«Código postal» \(el portal lo trae deshabilitado con un valor distinto del riesgo: no se teclea\)$/)
+  const vacio = decidirCampoBloqueadoTurismos('Código postal', '  ', '00000', 'texto')
+  assert.match(vacio.tipo === 'hueco' ? vacio.motivo : '', /deshabilitado y vacío/)
+  assert.equal(decidirCampoBloqueadoTurismos('Localidad', '', null, 'poblacion').tipo, 'hueco', 'vacío y sin dato: hueco, nunca «vale»')
+  assert.equal(normalizarValorCampoTurismos('a-b.c d', 'texto'), 'ABCD')
+})
+
+test('v0.6.6 el error crudo de Playwright no saca el valor tecleado (`fill("…")` tapado)', () => {
+  const crudo = new Error('locator.fill: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator(\'x\').getByLabel(\'Código postal\').first()\n    - fill("00000")\n  - attempting fill action')
+  const c = clasificar(crudo)
+  assert.equal(c.tipo, 'portal')
+  assert.ok(!c.mensaje.includes('00000'), c.mensaje)
+  assert.match(c.mensaje, /fill\(«dato tecleado»\)/)
+  assert.ok(!clasificar(new Error('x.type(\'0000BBB\') y pressSequentially(`00000000T`)')).mensaje.match(/0000BBB|00000000T/))
+})
+
+/** Recorre hasta donde llegue y devuelve el error, el tiempo y si se tecleó en un campo bloqueado. */
+async function recorrerConBloqueo(o: Opc, form: FormularioAuto = FORM, antesDeTeclear?: (marco: Frame) => Promise<void>) {
+  const a = await abrir(o)
+  if (antesDeTeclear) {
+    const base = a.ctx.pausaAccion
+    a.ctx.pausaAccion = async () => { await base(); await antesDeTeclear(a.marco) }
+  }
+  const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, form, a.ctx)
+  const t0 = Date.now()
+  const error = await recorrerPasosTurismos(a.page, a.marco, form, a.ctx, r.supuestoVersion, new Date(), 3_000).then(() => null, (e: unknown) => e as Error)
+  const tecleoBloqueado = (await a.marco.evaluate(() => (window as unknown as { __clics: string[] }).__clics)).filter((c) => c.endsWith(':bloqueado'))
+  return { ...a, error: error as Error, ms: Date.now() - t0, tecleoBloqueado }
+}
+
+test('v0.6.6 CP y localidad del tomador DESHABILITADOS y prerrellenos IGUALES al riesgo → se dan por buenos sin teclear y se llega al precio', async () => {
+  const a = await recorrerConBloqueo({ cpBloqueado: '00000', locBloqueada: 'VILLAFICTICIA' })
+  try {
+    assert.ok(esMapa(/la pantalla de precios «Selección de paquete»/)(a.error), a.error?.message)
+    assert.ok(!a.error.message.includes(SUPUESTO_LOCALIDAD_PORTAL), 'la localidad casaba con el riesgo: no es supuesto')
+    assert.deepEqual(a.tecleoBloqueado, [], 'ni foco ni tecleo en los bloqueados')
+    assert.ok(sinPersonales(a.error.message))
+  } finally {
+    await a.context.close()
+  }
+  // Localidad bloqueada y el riesgo SIN localidad: vale la del portal, DECLARADA.
+  const sinLoc: FormularioAuto = { ...FORM, tomador: { ...FORM.tomador!, poblacion: '' } }
+  const b = await recorrerConBloqueo({ cpBloqueado: '00000', locBloqueada: 'Villaficticia' }, sinLoc)
+  try {
+    assert.ok(esMapa(/«Selección de paquete»/)(b.error) && b.error.message.includes(SUPUESTO_LOCALIDAD_PORTAL), b.error?.message)
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('v0.6.6 CP del tomador DESHABILITADO con OTRO valor → hueco con motivo, sin teclear, sin «Siguiente» y sin valores en el mensaje', async () => {
+  const a = await recorrerConBloqueo({ cpBloqueado: '11111', locBloqueada: 'Otrapoblacion' })
+  try {
+    assert.ok(esMapa(/huecos de «Datos personales»: .*«Código postal» \(el portal lo trae deshabilitado con un valor distinto del riesgo: no se teclea\).*«Localidad» \(el portal lo trae deshabilitado con un valor distinto/)(a.error), a.error?.message)
+    assert.ok(sinPersonales(a.error.message) && !a.error.message.includes('11111') && !a.error.message.includes('Otrapoblacion'))
+    assert.equal(await a.valor('ng-z-cp1'), '11111', 'no se toca')
+    assert.equal(await pasoActivoTurismos(a.marco), 'Datos personales')
+    assert.deepEqual(a.tecleoBloqueado, [])
+  } finally {
+    await a.context.close()
+  }
+})
+
+test('v0.6.6 CP del tomador DESHABILITADO y VACÍO → hueco «deshabilitado y vacío» (nunca un timeout crudo)', async () => {
+  const a = await recorrerConBloqueo({ cpBloqueado: '' })
+  try {
+    assert.ok(esMapa(/«Código postal» \(el portal lo tiene deshabilitado y vacío: no se puede rellenar\)/)(a.error), a.error?.message)
+    assert.equal(await pasoActivoTurismos(a.marco), 'Datos personales')
+  } finally {
+    await a.context.close()
+  }
+})
+
+test('v0.6.6 el portal BLOQUEA el CP después de localizarlo (como tras validar el documento): se relee y se decide, sin timeout crudo ni el CP en el error', async () => {
+  // Justo antes de teclear el CP (la pausa previa a cada tecleo), el portal lo deshabilita con un valor: igual al riesgo → vale.
+  const bloquear = (valor: string) => async (m: Frame) => {
+    await m.evaluate((v) => {
+      const doc = document.querySelector('#ng-z-doc') as HTMLInputElement
+      const cp = document.querySelector('#ng-z-cp1') as HTMLInputElement
+      if (doc.value && !cp.disabled) { cp.value = v; cp.disabled = true; const loc = document.querySelector('#ng-z-loc1') as HTMLInputElement; loc.value = 'Villaficticia'; loc.disabled = true }
+    }, valor)
+  }
+  const igual = await recorrerConBloqueo({}, FORM, bloquear('00000'))
+  try {
+    assert.ok(esMapa(/«Selección de paquete»/)(igual.error), igual.error?.message)
+    assert.ok(igual.ms < 25_000, `sin esperar los 30 s de Playwright (${igual.ms} ms)`)
+  } finally {
+    await igual.context.close()
+  }
+  const otro = await recorrerConBloqueo({}, FORM, bloquear('11111'))
+  try {
+    assert.ok(esMapa(/«Código postal» \(el portal lo trae deshabilitado con un valor distinto del riesgo/)(otro.error), otro.error?.message)
+    assert.ok(!/Timeout|locator\.fill|11111|00000/.test(otro.error.message), otro.error.message)
+  } finally {
+    await otro.context.close()
   }
 })
