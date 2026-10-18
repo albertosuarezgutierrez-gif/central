@@ -1,0 +1,43 @@
+{
+ "sesion": "a789a736-0703-5f08-91da-d273cbef4b35",
+ "inicio": "2026-10-18T10:49:16.599Z",
+ "fin": "2026-10-18T10:49:57.908Z",
+ "llamadas": 23,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 21,
+   "chars_in": 3196,
+   "chars_out": 48379,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 13,
+    "Glob": 1,
+    "Read": 7
+   }
+  },
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 3756,
+   "chars_out": 61,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "SubagentHandback": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 916,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
