@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T15:57:22Z",
-  "sha": "edd3333c0b62097d24f91539820b5675d13169ea",
+  "generadoEn": "2026-10-18T16:20:43Z",
+  "sha": "d8cfbcdaf82b492a110907ab4532edfc6608344a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -105246,6 +105246,26 @@
       "hash": "312388bcd222"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PrepararPresupuestoBotSolo.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PrepararPresupuestoBotSolo"
+      ],
+      "funciones": [
+        {
+          "nombre": "PrepararPresupuestoBotSolo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ oportunidadId }: { oportunidadId: string }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f8b29d395bf"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -105359,12 +105379,12 @@
           "exportada": true,
           "params": "{ inicial, hoy }: { inicial: Riesgo; hoy: string }",
           "retorno": null,
-          "linea": 37
+          "linea": 38
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "212288b2c810"
+      "hash": "953c9d86ea64"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/SelectorCatalogoVehiculo.tsx",
@@ -220966,7 +220986,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4746,
-    "funciones": 17611
+    "archivos": 4747,
+    "funciones": 17612
   }
 }
