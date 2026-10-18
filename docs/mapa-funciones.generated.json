@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T07:10:39Z",
-  "sha": "1c2517e7bf3e828537b8cc071c12861101120507",
+  "generadoEn": "2026-10-18T08:03:54Z",
+  "sha": "a2f845ae494e74203d83baa170e7e2d5ecb2a251",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -169797,7 +169797,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "str",
@@ -169805,7 +169805,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 33
+          "linea": 34
         },
         {
           "nombre": "num",
@@ -169813,7 +169813,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "mensajeDeFallo",
@@ -169821,7 +169821,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "string",
-          "linea": 39,
+          "linea": 40,
           "resumen": "Mensaje común de un fallo de pasarela (sin datos del cliente)."
         },
         {
@@ -169830,7 +169830,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaIntegraciones",
-          "linea": 51,
+          "linea": 52,
           "resumen": "Lista de compañía+ramo activos. `[]` es «revisado y no hay ninguna»; una respuesta rota NO es `[]`."
         },
         {
@@ -169839,7 +169839,7 @@
           "exportada": true,
           "params": "c: string",
           "retorno": "string",
-          "linea": 69
+          "linea": 70
         },
         {
           "nombre": "rotuloIntegracion",
@@ -169847,7 +169847,7 @@
           "exportada": true,
           "params": "i: { compania: string; ramo: string }",
           "retorno": "string",
-          "linea": 73
+          "linea": 74
         },
         {
           "nombre": "leerEncolado",
@@ -169855,7 +169855,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaEncolado",
-          "linea": 86,
+          "linea": 87,
           "resumen": "Respuesta de «probar»: 202 encolado, o `duplicado: true` con el id del trabajo existente (se muestra ese)."
         },
         {
@@ -169864,7 +169864,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "LecturaTrabajo",
-          "linea": 106,
+          "linea": 107,
           "resumen": "Estado y ofertas de UN trabajo. Respuesta rota o sin estado → «no se pudo comprobar», nunca «sin ofertas»."
         },
         {
@@ -169873,7 +169873,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "boolean",
-          "linea": 147
+          "linea": 148
         },
         {
           "nombre": "rotuloEstado",
@@ -169881,7 +169881,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "string",
-          "linea": 166,
+          "linea": 167,
           "resumen": "Texto del estado (para personas). Un estado que no conocemos se muestra tal cual, sin inventar."
         },
         {
@@ -169890,7 +169890,7 @@
           "exportada": true,
           "params": "estado: string",
           "retorno": "TonoEstado",
-          "linea": 172
+          "linea": 173
         },
         {
           "nombre": "textoPrima",
@@ -169898,7 +169898,7 @@
           "exportada": true,
           "params": "n: number | null",
           "retorno": "string",
-          "linea": 180,
+          "linea": 181,
           "resumen": "Prima total anual en formato español; `null` = «—» (no se leyó, nunca 0,00€)."
         },
         {
@@ -169907,7 +169907,7 @@
           "exportada": true,
           "params": "o: OfertaVista",
           "retorno": "string",
-          "linea": 185,
+          "linea": 186,
           "resumen": "Resumen de una oferta: «Allianz · Moto — 312,45€/año (neta 280,00€ · impuestos 32,45€)»."
         },
         {
@@ -169916,13 +169916,13 @@
           "exportada": true,
           "params": "t: TrabajoVista",
           "retorno": "",
-          "linea": 195,
+          "linea": 196,
           "resumen": "Qué decir de un trabajo: título, tono, motivo (si lo hay), ofertas y si hay que elegir versión. Un `ok` SIN ofertas no se presenta como éxito vacío: «terminó sin ofertas» (el bot pudo no leer el preci"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1274a2b56ae4"
+      "hash": "0d9d4a6a2cab"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-verificacion-asegura.ts",
@@ -218052,7 +218052,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5aed7794d7d9"
+      "hash": "136249bc29f3"
     },
     {
       "ruta": "packages/module-tarificacion/src/tomador.ts",
