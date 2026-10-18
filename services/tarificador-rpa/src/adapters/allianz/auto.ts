@@ -1,3 +1,4 @@
+// v0.6.8 (18/10/2026): «Compañía actual del vehículo» se localiza también cuando la cabecera real no lleva `text` ni es hija directa del formulario (guard.ts).
 // v0.6.7 (18/10/2026, decisión de Alberto): campo bloqueado con valor no vacío y distinto del riesgo → se acepta el del portal y se declara como supuesto (no hueco); vacío sigue siendo hueco. CP: solo cifras a 5 dígitos; localidad sin prefijo «NNNNN - ».
 // v0.6.6 (18/10/2026, trabajo real 3553424d muerto en «Datos personales» con un timeout crudo de `fill` sobre el «Código postal» del
 // tomador, que el portal deja DESHABILITADO y relleno tras el documento): en los pasos 2-3 un campo bloqueado (disabled/readonly) no
@@ -1797,8 +1798,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 … 0.6.7 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.7',
+    // Moto no cambia en la 0.6.1 … 0.6.8 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.8',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

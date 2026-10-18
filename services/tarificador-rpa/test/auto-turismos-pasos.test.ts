@@ -63,6 +63,8 @@ type Opc = {
   sinCabeceraConductor?: boolean
   /** Opciones del panel de «Compañía actual del vehículo» (overlay CDK fuera de `appArea`, solo al abrirlo). */
   companias?: string[]
+  /** v0.6.8: cabecera de «Compañía actual» como en el HTML real 324ff9db: sin atributo `text` y dentro de un `div` (no hija directa del formulario). */
+  cabeceraCompaniaReal?: boolean
   /** El desplegable de compañía ya enseña un valor. */
   companiaPrefijada?: string
   /** v0.6.6: «Código postal» del TOMADOR deshabilitado de partida con este valor ('' = vacío), como lo deja el portal real. */
@@ -104,7 +106,7 @@ function app(o: Opc = {}): string {
   <nx-mt-natural-person-information>${ubicacion(3)}${texto('ng-z-fnac', 'Fecha de nacimiento del conductor', `max="${iso(masDias(-18 * 366))}T00:00:00Z"`)}${texto('ng-z-fcar', 'Fecha de expedición de carnet', `max="${iso(new Date())}T00:00:00Z"`)}</nx-mt-natural-person-information>
   <nx-mt-nominated-driver-information><form><nx-switcher><input type="checkbox" role="switch" id="ng-z-sw" ${o.segundoEncendido ? 'checked aria-checked="true"' : 'disabled aria-checked="false"'}><label for="ng-z-sw"> Segundo conductor </label></nx-switcher></form></nx-mt-nominated-driver-information>
   </app-holder>`
-  const p3 = `<app-insurance><nx-mt-insured-policy-holder><form>${cab('Compañía actual del vehículo')}<label id="ng-z-l249" for="ng-z-dd250"></label><nx-dropdown role="combobox" id="ng-z-dd250" style="display:inline-block;min-width:120px;min-height:20px" tabindex="0" aria-labelledby="ng-z-l249" aria-controls="ng-z-nx-dropdown-modal-251"><div id="ng-z-dd250-r">${o.companiaPrefijada ?? ''}</div></nx-dropdown></form></nx-mt-insured-policy-holder>
+  const p3 = `<app-insurance><nx-mt-insured-policy-holder><form>${o.cabeceraCompaniaReal ? '<div nxlayout="grid nopadding"><nx-x-common-header><div><div><h3 class="nx-heading"><span>Compañía actual del vehículo</span></h3></div></div></nx-x-common-header></div>' : cab('Compañía actual del vehículo')}<label id="ng-z-l249" for="ng-z-dd250"></label><nx-dropdown role="combobox" id="ng-z-dd250" style="display:inline-block;min-width:120px;min-height:20px" tabindex="0" aria-labelledby="ng-z-l249" aria-controls="ng-z-nx-dropdown-modal-251"><div id="ng-z-dd250-r">${o.companiaPrefijada ?? ''}</div></nx-dropdown></form></nx-mt-insured-policy-holder>
   <nx-mt-offerings-start-date>${cab('Fecha de inicio del seguro')}${texto('ng-z-ef', '¿Cuándo quieres que comience tu seguro?', `required min="${iso(new Date())}T00:00:00Z" max="${iso(masDias(90))}T00:00:00Z"`)}</nx-mt-offerings-start-date></app-insurance>`
   const p4 = `<nx-mt-summary-panel><nx-expansion-panel><nx-expansion-panel-header aria-expanded="false">Vista Ampliada</nx-expansion-panel-header><div id="vista" hidden><nx-mt-agent-options><form>
     ${texto('ng-z-niv', 'Nivel antecedentes', 'disabled')}${texto('ng-z-col', 'Colaborador', 'maxlength="4"')}</form></nx-mt-agent-options></div></nx-expansion-panel></nx-mt-summary-panel><p>Precio no vinculante.</p>`
@@ -296,6 +298,17 @@ async function hastaCompania(o: Opc, form: FormularioAuto) {
   const error = await recorrerPasosTurismos(a.page, a.marco, form, a.ctx, r.supuestoVersion, new Date(), 3_000).catch((e: unknown) => e as Error)
   return { ...a, error, mostrado: await a.marco.locator('#ng-z-dd250-r').innerText(), abiertos: await a.marco.evaluate(() => (window as unknown as { __abiertos: number }).__abiertos) }
 }
+
+test('v0.6.8 compañía actual con la cabecera REAL (sin `text`, dentro de un div): se localiza el desplegable, se lee y se elige la única que casa', async () => {
+  const r = await hastaCompania({ cabeceraCompaniaReal: true }, { ...FORM, companiaAnterior: 'Aseguradora Alfa' })
+  try {
+    assert.equal(r.mostrado, 'ASEGURADORA ALFA, S.A.')
+    assert.ok(r.pulsados.includes('compania:elegida'))
+    assert.ok(!r.pulsados.includes('compania:no_unica'))
+  } finally {
+    await r.context.close()
+  }
+})
 
 test('v0.6.5 compañía actual del riesgo: casa con UNA → elegida (sin supuesto); con VARIAS → hueco sin elegir y sin «Siguiente»; con ninguna → vacía y declarada', async () => {
   const una = await hastaCompania({}, { ...FORM, companiaAnterior: 'Aseguradora Alfa' })

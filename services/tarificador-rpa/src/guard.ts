@@ -1793,7 +1793,9 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
 
 export const PASO_COMPANIA_ACTUAL_TURISMOS = 'Antecedentes'
 export const CABECERA_COMPANIA_ACTUAL_TURISMOS = 'Compañía actual del vehículo'
-export const SEL_COMPANIA_ACTUAL_TURISMOS = `form:has(> nx-x-common-header[text="${CABECERA_COMPANIA_ACTUAL_TURISMOS}"]) nx-dropdown[role=combobox]`
+// v0.6.8 (HTML real del trabajo 324ff9db): la cabecera ya NO lleva el atributo `text` ni es hija directa del `<form>` (va dentro de un
+// `div[nxlayout=grid]`); su título es el `<h*><span>` interior. Se aceptan las DOS formas; el control sigue siendo EXACTAMENTE uno.
+export const SEL_COMPANIA_ACTUAL_TURISMOS = `form:has(> nx-x-common-header[text="${CABECERA_COMPANIA_ACTUAL_TURISMOS}"]) nx-dropdown[role=combobox], form:has(nx-x-common-header :text-is("${CABECERA_COMPANIA_ACTUAL_TURISMOS}")) nx-dropdown[role=combobox]`
 const MS_PANEL_COMPANIA = 3_000
 const MAX_OPCIONES_COMPANIA = 200
 
