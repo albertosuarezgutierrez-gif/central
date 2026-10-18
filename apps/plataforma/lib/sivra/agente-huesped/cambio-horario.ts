@@ -151,6 +151,7 @@ const RE_EQUIPAJE = new RegExp(
 // así que nada lo detectaba: el bot contestó «tomo nota de que saldréis a las 12:00» y autorizó una salida
 // tardía por su cuenta. Un huésped que ANUNCIA una hora posterior a la oficial está pidiendo un permiso.
 export const HORA_SALIDA_OFICIAL_DEFECTO = '11:00' // todos los pisos (`horarios.ts`); solo si no llega la de la reserva
+export const HORA_ENTRADA_OFICIAL_DEFECTO = '15:00' // regla de Alberto (23/06/2026, `horarios.ts`); mismo valor que `decidir.ts`
 export type HorarioOficial = { checkIn?: string | null; checkOut?: string | null }
 
 const minutos = (hhmm?: string | null): number | null => {
@@ -217,6 +218,24 @@ export function anunciaSalidaTardia(texto: string, checkOut?: string | null): bo
   return horasPorFrase(texto, VERBO_SALIDA, true).some(h => h > lim)
 }
 
+// Verbos de LLEGAR (ES·EN·IT·FR·DE) + «check-in»/entrar. Más estrecho que VERBO_ENTRADA a propósito: aquí
+// solo se mira qué dice el huésped de SU llegada.
+const VERBO_LLEGADA = /\b(lleg\p{L}*|entr(?:ar|amos|aremos|o|aré)\b|check.?in|check\s+in|arriv\p{L}*|get(?:ting)?\s+there|reach\p{L}*|be\s+there|ankomm\p{L}*|ankunft|anreis\p{L}*|eintreff\p{L}*|einchecken|arrivare|arrivo|arriv[ae]\p{L}*|giung\p{L}*)\b/iu
+
+/**
+ * ¿El huésped ANUNCIA una llegada anterior a la hora oficial de entrada («llegamos a las 10», «we arrive at 11am»)?
+ * Regla de Alberto (18/10/2026): la hora oficial manda salvo que él autorice; el bot SIEMPRE le consulta antes.
+ * Llegar a la hora de entrada o después NO dispara. Sin check-in conocido se usa el 15:00 de `HORA_ENTRADA_OFICIAL_DEFECTO`.
+ */
+export function anunciaEntradaAnticipada(texto: string, checkIn?: string | null): boolean {
+  const lim = minutos(checkIn) ?? minutos(HORA_ENTRADA_OFICIAL_DEFECTO)!
+  for (const frase of frases(texto)) for (const cl of clausulas(frase)) {
+    if (!VERBO_LLEGADA.test(cl) || VERBO_SALIDA.test(cl)) continue
+    if (horasEnTexto(cl, true).some(h => h < lim)) return true
+  }
+  return false
+}
+
 /**
  * ¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las
  * 12:00»)? Sin depender de un verbo: SALIDA = cualquier hora posterior al check-out que no sea la de entrada
@@ -258,6 +277,7 @@ export function peticionCambioHorario(texto: string, categoria?: string | null, 
   if (RE_SALIDA.test(t)) return { tipo: 'salida' }
   if (RE_HASTA_HORA.test(t) && RE_CTX_SALIDA.test(t)) return { tipo: 'salida' }
   if (anunciaSalidaTardia(t, horario.checkOut)) return { tipo: 'salida' }
+  if (anunciaEntradaAnticipada(t, horario.checkIn)) return { tipo: 'entrada' }
   if (categoria === 'equipaje' || RE_EQUIPAJE.test(t)) return { tipo: 'equipaje' }
   return null
 }

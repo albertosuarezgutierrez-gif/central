@@ -3,7 +3,7 @@ import assert from 'node:assert'
 import {
   evaluarCambioHorario, peticionCambioHorario, extraerHoraPedida, contraoferta, botonesCambioHorario,
   horaDeCallback, textoAceptacion, textoNegativa, tareaLimpieza, resolverTipo, LIMITE_CALLBACK,
-  BLOQUE_PROMPT_CAMBIO_HORARIO, anunciaSalidaTardia, respuestaConfirmaHorario, type ReservaHorario,
+  BLOQUE_PROMPT_CAMBIO_HORARIO, anunciaSalidaTardia, anunciaEntradaAnticipada, respuestaConfirmaHorario, type ReservaHorario,
 } from './cambio-horario.ts'
 import { decidirAutoEnvio } from './auto.ts'
 import type { Decision } from './decidir.ts'
@@ -326,4 +326,30 @@ test('horas con punto («11.30», «12.30») no se parten en frases distintas', 
   assert.equal(anunciaSalidaTardia('Salimos a las 10.30', '11:00'), false)
   // el punto de fin de frase sigue separando
   assert.equal(anunciaSalidaTardia('Salimos a las 10. Llegamos a las 18', '11:00'), false)
+})
+
+// ── Llegada ANUNCIADA antes de la hora de entrada (Alberto, 18/10/2026): siempre se le consulta ──
+test('ANUNCIAR una llegada anterior al check-in cuenta como petición de entrada anticipada', () => {
+  assert.ok(anunciaEntradaAnticipada('Hola, llegamos a las 10', '15:00'))
+  assert.ok(anunciaEntradaAnticipada('We arrive at 11am', '15:00'))
+  assert.ok(anunciaEntradaAnticipada('Arriviamo alle 12', '15:00'))
+  assert.ok(anunciaEntradaAnticipada('Llegaremos sobre las 13h', '15:00'))
+  assert.equal(peticionCambioHorario('llegamos a las 10', 'general', { checkIn: '15:00', checkOut: '11:00' })?.tipo, 'entrada')
+  assert.equal(peticionCambioHorario('We arrive at 11am', null, { checkIn: '15:00' })?.tipo, 'entrada')
+  // sin check-in conocido se usa el 15:00 oficial
+  assert.ok(anunciaEntradaAnticipada('llegamos a las 10'))
+})
+
+test('llegar a la hora de entrada o después NO escala', () => {
+  assert.equal(anunciaEntradaAnticipada('Llegaremos a las 16:00', '15:00'), false)
+  assert.equal(anunciaEntradaAnticipada('Llegamos a las 15:00', '15:00'), false)
+  assert.equal(anunciaEntradaAnticipada('We arrive at 9pm', '15:00'), false)
+  assert.equal(anunciaEntradaAnticipada('Llegamos a las 10 de la noche', '15:00'), false)
+  assert.equal(peticionCambioHorario('Llegaremos a las 16:00', 'general', { checkIn: '15:00' }), null)
+  // la salida citada en la misma frase no cuenta como llegada
+  assert.equal(anunciaEntradaAnticipada('Llegamos a las 16:00 y salimos a las 10:00', '15:00'), false)
+})
+
+test('la respuesta del bot que acepta una entrada anterior sigue cazada', () => {
+  assert.equal(respuestaConfirmaHorario('Perfecto, podéis entrar a las 10:00', { checkIn: '15:00', checkOut: '11:00' }), 'entrada')
 })
