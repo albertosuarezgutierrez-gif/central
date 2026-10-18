@@ -26,6 +26,7 @@ import BotsAutoRiesgo from './BotsAutoRiesgo'
 import { AnfitrionBotsContext } from '../../cliente/[id]/PrecioBots'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
+import PrepararPresupuestoBotSolo from './PrepararPresupuestoBotSolo'
 import { avisoSinAvant2 } from '@/lib/correduria/registro-ramos'
 import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
 import type { LadoBot } from './parrilla-precios'
@@ -304,6 +305,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         riesgoLibre={bloqueDatos?.clave === 'datosRiesgoLibre' ? { capital: bloqueDatos.datos.capital, direccion: bloqueDatos.datos.direccion } : null}
         onLectura={alLeerBots}
       />
+      {/* Ramos sin bloque de compañías (auto, moto…): el botón de «preparar presupuesto» se monta aparte. */}
+      {botsDelRamo.length === 0 && <PrepararPresupuestoBotSolo oportunidadId={op.id} />}
 
       <HistorialVariantes riesgo={riesgo} abrirPrecios={abrirPrecios} />
 
