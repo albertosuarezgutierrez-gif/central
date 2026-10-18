@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { alertaVencimiento } from '@central/module-seguros'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
 import { ESTADOS_ABIERTOS, aniversarioOportunidad, estaHuerfana, estadoVencimiento, referenciaRiesgo, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
+import { polizaLlevaChipAviso } from '@/lib/correduria/aviso-vencimiento'
 import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
@@ -219,9 +220,9 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
       if (d >= 0 && d <= 45) avisos.push({ texto: `Vence en ${d} día(s)`, tono: 'aviso' })
       // El aviso de no renovar (un mes antes del vencimiento) vive aquí cuando aún está lejos: arriba
       // solo sube si quedan ≤60 días (`avisoVaArriba`). Solo «Con nosotros»; a las oportunidades no se les avisa.
-      if (!eliminable && !s.historica) {
+      if (polizaLlevaChipAviso(p, { eliminable, historica: s.historica })) {
         const av = alertaVencimiento(p.fechaVencimiento, ctx.hoy)
-        if (av.estado === 'en_plazo' && av.limiteAviso) avisos.push({ texto: `Avisar antes del ${fmt(av.limiteAviso)} · quedan ${av.diasParaAvisar} día(s)`, tono: 'info' })
+        if (av.estado === 'en_plazo' && av.limiteAviso) avisos.push({ texto: `Avisar antes del ${fmt(av.limiteAviso)}${av.diasParaAvisar !== null ? ` · quedan ${av.diasParaAvisar} día(s)` : ''}`, tono: 'info' })
       }
       // En vigor para la compañía pero con la fecha ya pasada: la renovación no ha llegado
       // por CIMA (ni la fecha nueva ni el recibo). No se inventa la fecha: se avisa

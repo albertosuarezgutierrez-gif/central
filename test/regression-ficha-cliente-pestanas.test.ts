@@ -238,10 +238,10 @@ test('vacíos: Notas a 0 se atenúa (se sigue pudiendo crear), Historial a 0 se 
 })
 
 test('el aviso de vencimiento solo sube arriba con ≤60 días; si no, chip en la tarjeta de «Con nosotros»', () => {
-  assert.match(leer('Cabecera.tsx'), /if \(!avisoVaArriba\(a\)\) return null/)
+  assert.match(leer('Cabecera.tsx'), /avisoVaArriba\(a, \{ tieneChip: pol \? polizaLlevaChipAviso\(pol\) : false \}\)\) return null/)
   const seg = leer('SegurosCliente.tsx')
   assert.match(seg, /Avisar antes del \$\{fmt\(av\.limiteAviso\)\}/)
-  assert.match(seg, /!eliminable && !s\.historica/, 'el chip es de «Con nosotros», no de oportunidades')
+  assert.match(seg, /polizaLlevaChipAviso\(p, \{ eliminable, historica: s\.historica \}\)/, 'el chip es de «Con nosotros», no de oportunidades')
 })
 
 test('«ver siniestros →» y «ver en sus pólizas →» llevan a un ancla que existe', () => {

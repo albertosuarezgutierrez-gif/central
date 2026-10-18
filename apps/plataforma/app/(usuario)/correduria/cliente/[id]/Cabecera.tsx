@@ -14,7 +14,7 @@ import PedirPresupuestoBot from './PedirPresupuestoBot'
 import ProbarTarificacion from './ProbarTarificacion'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
-import { avisoVaArriba } from '@/lib/correduria/aviso-vencimiento'
+import { avisoVaArriba, polizaLlevaChipAviso } from '@/lib/correduria/aviso-vencimiento'
 
 /**
  * La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada
@@ -114,7 +114,7 @@ export default function Cabecera({ ficha, resumen, seguros }: {
 
       <Acciones clienteId={ficha.id} />
 
-      <Titulares resumen={resumen} />
+      <Titulares resumen={resumen} polizas={seguros} />
 
       {/* Herramientas (Fase 1, 14/10/2026): «Probar tarificación» salió de los botones de la cabecera. Plegado por defecto. */}
       <details className="plegable-dato">
@@ -204,7 +204,7 @@ function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
 // estado: un contador que no distingue «cero» de «no informado» es justo el que
 // hace decir «está todo al día» sobre lo que no se ha mirado.
 
-function Titulares({ resumen }: { resumen: ResumenFicha }) {
+function Titulares({ resumen, polizas }: { resumen: ResumenFicha; polizas: Ficha['polizas'] }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
   // Flex que envuelve y estira: una 5.ª tarjeta no se queda sola y pequeña en su fila.
   return (
@@ -244,7 +244,7 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
         color={abiertos ? 'var(--warning)' : undefined}
         sub={abiertos === null ? 'no se han podido leer' : abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
       />
-      <ProximoVencimiento proximo={proximo} vivas={conteo.vivas} sinFecha={resumen.vivasSinFechaVencimiento} />
+      <ProximoVencimiento proximo={proximo} polizas={polizas} vivas={conteo.vivas} sinFecha={resumen.vivasSinFechaVencimiento} />
     </div>
   )
 }
@@ -259,8 +259,8 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
  * vencimiento se dice debajo, para que no falte, pero el número grande es el
  * día que importa.
  */
-function ProximoVencimiento({ proximo, vivas, sinFecha }: {
-  proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number
+function ProximoVencimiento({ proximo, polizas, vivas, sinFecha }: {
+  proximo: ResumenFicha['proximo']; polizas: Ficha['polizas']; vivas: number; sinFecha: number
 }) {
   if (proximo === null) {
     return (
@@ -289,7 +289,9 @@ function ProximoVencimiento({ proximo, vivas, sinFecha }: {
   }
   // (18/10/2026) Con el aviso aún lejos (>60 días) no ocupa sitio arriba: se ve como chip en la
   // tarjeta de su póliza, en «Con nosotros». Solo sube cuando queda poco (`avisoVaArriba`).
-  if (!avisoVaArriba(a)) return null
+  // Solo se aparta si la póliza `proximo` lleva ese chip (misma regla que la tarjeta); si no se encuentra, arriba.
+  const pol = polizas?.find(x => x.id === proximo.polizaId)
+  if (!avisoVaArriba(a, { tieneChip: pol ? polizaLlevaChipAviso(pol) : false })) return null
   return (
     <Kpi
       label="Hay que avisar antes del"
