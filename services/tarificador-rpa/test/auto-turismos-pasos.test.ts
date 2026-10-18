@@ -371,6 +371,21 @@ test('guard v0.6.5: la puerta de la compañía actual solo en «Antecedentes» (
   }
 })
 
+test('v0.6.9 compañía actual: casa por clave normalizada y por contención de la clave de la ficha, solo si hay UNA candidata', () => {
+  const LISTA = ['MAPFRE ESPAÑA COMPAÑÍA DE SEGUROS', 'GENERALI-LA ESTRELLA', 'DIVINA PASTORA SEGUROS GENERALES, M.P.S.', 'ASEGURADORA ALFA, S.A.', 'ALFA VIDA SEGUROS', 'BETA NORTE MUTUA', 'BETA SUR, S.A.']
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Divina Pastora'), [2], 'la clave de la ficha está en la opción')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'DIVINA PASTORA, S.A.'), [2], 'con forma jurídica en la ficha')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Mapfre'), [0])
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'generali'), [1])
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Aseguradora Alfa'), [3], 'igual exacta gana a la contención')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Alfa'), [3, 4], 'ambigua: dos candidatas → el llamador no elige')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Beta'), [5, 6], 'ambigua')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Divina'), [2], 'palabra completa')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Past'), [], 'nunca por trozo de palabra')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Otra Compañía'), [], 'ninguna')
+  assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Seguros S.A.'), [], 'solo palabras vacías: nada')
+})
+
 test('v0.6.5 «Localidad»: el portal propone OTRA → hueco sin teclear y sin «Siguiente»; sin dato y propuesta → se DECLARA; sin propuesta → hueco', async () => {
   const a = await abrir({ localidadPortal: 'Otrapoblacion' })
   try {

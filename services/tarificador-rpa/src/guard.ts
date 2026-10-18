@@ -1818,11 +1818,22 @@ const PALABRAS_VACIAS_COMPANIA = new Set(['sa', 'sau', 'seguros', 'seguro', 'rea
 export function normalizarCompaniaTurismos(t: string | null | undefined): string {
   return planoOpcion(t).replace(/\bs\s*\.\s*a\s*\.?(\s*u\s*\.?)?(?=[\s,]|$)/g, ' ').replace(/[^a-z0-9ñ ]+/g, ' ').split(' ').filter((w) => w !== '' && !PALABRAS_VACIAS_COMPANIA.has(w)).join(' ')
 }
-/** Índices de las opciones que casan EXACTAMENTE (normalizadas) con `buscada`; vacía si `buscada` normaliza a nada. Puro. */
+/** ¿`clave` aparece en `opcion` como secuencia de palabras completas? (ambas ya normalizadas). Puro. */
+function contienePalabras(opcion: string, clave: string): boolean {
+  return clave !== '' && (` ${opcion} `).includes(` ${clave} `)
+}
+/**
+ * Índices de las opciones que casan con `buscada` (v0.6.9). Primero por clave normalizada IGUAL; si ninguna, por CONTENCIÓN de la clave
+ * de la ficha en la de la opción (palabras completas: «DIVINA PASTORA» en «DIVINA PASTORA SEGUROS GENERALES, M.P.S.»). Quien llama solo
+ * elige si devuelve EXACTAMENTE un índice; 0 o varios → no se elige. Vacía si `buscada` normaliza a nada. Puro.
+ */
 export function casarCompaniaActualTurismos(opciones: readonly string[], buscada: string): number[] {
   const b = normalizarCompaniaTurismos(buscada)
   if (b === '') return []
-  return opciones.flatMap((o, i) => (normalizarCompaniaTurismos(o) === b ? [i] : []))
+  const claves = opciones.map(normalizarCompaniaTurismos)
+  const iguales = claves.flatMap((o, i) => (o === b ? [i] : []))
+  if (iguales.length > 0) return iguales
+  return claves.flatMap((o, i) => (contienePalabras(o, b) ? [i] : []))
 }
 
 /**
