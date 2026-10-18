@@ -37,7 +37,8 @@ export function vistaPresupuestoRpa(status: number, json: unknown): VistaPresupu
     return { tono: 'info', texto: 'El bot no ha sacado ofertas con las que preparar un presupuesto.', presupuestoId: null }
   }
   if (status === 404) return { tono: 'error', texto: 'La oportunidad no existe o no es de la correduría.', presupuestoId: null }
-  if (status === 401) return { tono: 'error', texto: 'asegura rechazó el secreto de operador.', presupuestoId: null }
+  // 401/403 aquí es la sesión del usuario (exigirCorreduria); el rechazo del secreto de operador llega como 502.
+  if (status === 401 || status === 403) return { tono: 'error', texto: 'Tu sesión ha caducado o no tiene acceso a la correduría: vuelve a entrar.', presupuestoId: null }
   if (status === 502) return { tono: 'error', texto: 'asegura no ha respondido: vuelve a intentarlo.', presupuestoId: null }
   if (status === 503 && j.estado === 'sin_configurar') return { tono: 'error', texto: 'Falta ASEGURA_OPERADOR_SECRET en plataforma.', presupuestoId: null }
   return { tono: 'error', texto: `No se ha podido preparar el presupuesto (asegura respondió ${status}).`, presupuestoId: null }

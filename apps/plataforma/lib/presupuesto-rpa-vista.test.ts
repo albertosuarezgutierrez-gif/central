@@ -28,3 +28,8 @@ test('id no uuid no se enlaza; sin ofertas (409) y errores', () => {
   assert.equal(vistaPresupuestoRpa(502, null).tono, 'error')
   assert.equal(vistaPresupuestoRpa(503, { estado: 'sin_configurar' }).texto, 'Falta ASEGURA_OPERADOR_SECRET en plataforma.')
 })
+
+test('401/403 es la sesión del usuario, no el secreto de operador', () => {
+  assert.match(vistaPresupuestoRpa(401, { error: 'No autorizado' }).texto, /sesión/)
+  assert.match(vistaPresupuestoRpa(403, null).texto, /sesión/)
+})
