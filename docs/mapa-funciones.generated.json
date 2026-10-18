@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-17T14:52:35Z",
-  "sha": "54f655aa2453696534021c94746e576b25e105af",
+  "generadoEn": "2026-10-18T05:01:08Z",
+  "sha": "2331b2648f6c4dc7b8dcb57e3f6a42dbbfc292da",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16870,7 +16870,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo | null",
-          "linea": 1361
+          "linea": 1770
         },
         {
           "nombre": "textoArticulo",
@@ -16878,7 +16878,7 @@
           "exportada": true,
           "params": "a: Articulo",
           "retorno": "string",
-          "linea": 1366,
+          "linea": 1775,
           "resumen": "Todo el texto visible de un artículo, en una cadena, para barrerlo."
         },
         {
@@ -16887,7 +16887,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Articulo[]",
-          "linea": 1379,
+          "linea": 1788,
           "resumen": "Los artículos que enlazan con un ramo. Alimenta el enlazado de su página."
         },
         {
@@ -16896,13 +16896,13 @@
           "exportada": true,
           "params": "articulos: readonly Articulo[] = ARTICULOS",
           "retorno": "",
-          "linea": 1403,
+          "linea": 1812,
           "resumen": "Entradas de sitemap del blog: el índice más una fila por artículo. 🚨 Vive aquí, y no dentro de `app/sitemap.ts`, por una razón de VERIFICACIÓN: el sitemap de Next no se puede ejecutar desde `node --t"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6379d9854e87"
+      "hash": "4450d561adb7"
     },
     {
       "ruta": "apps/asegura-web/lib/atribucion.ts",
@@ -205474,7 +205474,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 265,
+          "linea": 264,
           "resumen": "Una línea con la identificación mínima del mediador, para pies de página donde no cabe la ficha entera. Es lo que el art. 173 RDL 3/2020 exige que el cliente vea SIEMPRE, no solo si entra en una págin"
         },
         {
@@ -205483,7 +205483,7 @@
           "exportada": true,
           "params": "env?: string | undefined | null",
           "retorno": "string",
-          "linea": 319
+          "linea": 318
         },
         {
           "nombre": "telefonoLegible",
@@ -205491,7 +205491,7 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 345,
+          "linea": 344,
           "resumen": "El teléfono, escrito como se lee: `+34 637 34 99 90`. Existe como función y no como una segunda constante para que **no puedan divergir**: dos cadenas con el mismo número escritas a mano acaban siendo"
         },
         {
@@ -205500,13 +205500,13 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 358,
+          "linea": 357,
           "resumen": "Enlace de WhatsApp al mediador, con el primer mensaje ya escrito. `wa.me` quiere el número **sin `+` y sin espacios**; con el `+` delante abre la app pero deja el chat en blanco, que es un fallo que n"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ad3ac75dafd3"
+      "hash": "5166ff8457e2"
     },
     {
       "ruta": "packages/module-seguros/src/mensaje-presupuesto.ts",
@@ -205781,7 +205781,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "NormaCitable | null",
-          "linea": 151,
+          "linea": 243,
           "resumen": "La norma con ese id, o `null`. No inventa: un id desconocido es un error."
         },
         {
@@ -205790,7 +205790,7 @@
           "exportada": true,
           "params": "n: NormaCitable",
           "retorno": "string",
-          "linea": 156,
+          "linea": 248,
           "resumen": "Cómo se cita en la página, bajo «Normativa citada»."
         },
         {
@@ -205799,7 +205799,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string[]",
-          "linea": 174,
+          "linea": 266,
           "resumen": "Toda mención con forma de norma que aparece en un texto, normalizada. Devuelve claves comparables con el campo `cubre` de las normas: `articulo:22`, `ley:50/1980`, `orden:ECC/2502/2012`, `rdl:3/2020`."
         },
         {
@@ -205808,7 +205808,7 @@
           "exportada": true,
           "params": "texto: string, base: readonly string[]",
           "retorno": "string[]",
-          "linea": 209,
+          "linea": 301,
           "resumen": "Las menciones del texto que NINGUNA de las normas declaradas respalda. Vacío = todo lo que el texto cita está verificado. Con contenido = el artículo no se publica: o se añade la norma a la lista (ley"
         },
         {
@@ -205817,13 +205817,13 @@
           "exportada": true,
           "params": "base: readonly string[]",
           "retorno": "string[]",
-          "linea": 219,
+          "linea": 311,
           "resumen": "Ids declarados que no existen en la lista. Un `base` que no se puede resolver."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "524f78213548"
+      "hash": "3baccf249ab5"
     },
     {
       "ruta": "packages/module-seguros/src/objeto.ts",
