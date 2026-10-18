@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T10:16:26Z",
-  "sha": "a5fd8b64889f4361085f65bf980c430f403c7aa7",
+  "generadoEn": "2026-10-18T10:43:50Z",
+  "sha": "ad788b82054941de81c761b745acc41d4e89ca8e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47094,13 +47094,13 @@
           "exportada": true,
           "params": "compania: string, ramo: string, riesgo: unknown, actual: string | null",
           "retorno": "unknown",
-          "linea": 57,
-          "resumen": "Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaActual` = la del cliente. Si ya trae alguna, o no se sabe la del cliente, devuelve el MISMO riesgo. Solo para auto; no"
+          "linea": 64,
+          "resumen": "Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaAnterior` = la del cliente (es la clave que `validarFormularioAuto` conserva y que el bot lee primero; `companiaActual"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "39862eef5f47"
+      "hash": "646e2a5dce98"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
