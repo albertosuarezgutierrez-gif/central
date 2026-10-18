@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { MAX_AVISO_SUPUESTOS } from '@central/module-tarificacion'
 import { documentoDePdf, errorPublico, indicePdfValido, proyectarTrabajo, proyectarUltimoRiesgo, riesgoParaReencolar, riesgoPublico } from './tarificador-lectura-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -52,8 +53,8 @@ test('supuestos del bot (15/10/2026): de `avisos[]` solo cruza el «Precio con s
   const con = proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: ['Vehículo según el catálogo de Allianz: X.', 'Precio con supuestos: uso diario, garaje colectivo.'] }] }).ofertas[0]
   assert.equal(con.supuestos, 'Precio con supuestos: uso diario, garaje colectivo.')
   assert.ok(!JSON.stringify(con).includes('catálogo'), 'los demás avisos no cruzan')
-  const largo = proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: [`Precio con supuestos: ${'x'.repeat(500)}`] }] }).ofertas[0]
-  assert.equal(largo.supuestos?.length, 300)
+  const largo = proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: [`Precio con supuestos: ${'x'.repeat(MAX_AVISO_SUPUESTOS + 200)}`] }] }).ofertas[0]
+  assert.equal(largo.supuestos?.length, MAX_AVISO_SUPUESTOS)
   assert.equal(proyectarTrabajo(fila, { ofertas: [{ ...base, avisos: 'Precio con supuestos: no es lista' }] }).ofertas[0].supuestos, null)
 })
 

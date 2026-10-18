@@ -92,7 +92,7 @@ describe('aviso de supuestos en la oferta', () => {
     expect(supuestosDeAvisos(['Vehículo según el catálogo…', `${PREFIJO_SUPUESTOS}uso diario.`])).toBe('Precio con supuestos: uso diario.')
     expect(supuestosDeAvisos(['otra cosa'])).toBe(null)
     expect(supuestosDeAvisos(null)).toBe(null)
-    expect(supuestosDeAvisos([`${PREFIJO_SUPUESTOS}${'x'.repeat(400)}`])!.length).toBe(300)
+    expect(supuestosDeAvisos([`${PREFIJO_SUPUESTOS}${'x'.repeat(600)}`])!.length).toBe(500)
   })
 })
 
