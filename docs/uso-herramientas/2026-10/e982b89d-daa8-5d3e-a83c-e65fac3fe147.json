@@ -1,0 +1,42 @@
+{
+ "sesion": "e982b89d-daa8-5d3e-a83c-e65fac3fe147",
+ "inicio": "2026-10-18T13:40:22.132Z",
+ "fin": "2026-10-18T13:44:52.514Z",
+ "llamadas": 41,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 101,
+   "chars_out": 186,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1
+   }
+  },
+  "bash": {
+   "llamadas": 13,
+   "chars_in": 21660,
+   "chars_out": 22620,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 13
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 26,
+   "chars_in": 5320,
+   "chars_out": 412254,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 26
+   }
+  }
+ }
+}
