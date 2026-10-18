@@ -81,7 +81,7 @@ test('el panel de accesos solo monta el abierto', () => {
 test('la ficha del cliente enseña sus seguros en tres cubos y el seguimiento va dentro de la oportunidad', () => {
   const page = leer('cliente/[id]/page.tsx')
   assert.match(page, /repartirSegurosCliente\(/)
-  assert.match(page, /\{tab === 'resumen' && \(\s*<SegurosCliente/)
+  assert.match(page, /\{tab === 'resumen' && \(\s*<>\s*<SegurosCliente/)
   const seguros = leer('cliente/[id]/SegurosCliente.tsx')
   for (const cubo of ['Con nosotros', 'Oportunidades', 'Ya no existe']) assert.ok(seguros.includes(cubo), `falta el cubo «${cubo}»`)
   assert.match(seguros, /href = `\/correduria\/cliente\/\$\{ctx\.clienteId\}\?tab=oportunidades&op=\$\{o\.id\}`/, 'la tarjeta de oportunidad lleva a su seguimiento, desplegado en la ficha')

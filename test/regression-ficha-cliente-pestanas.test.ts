@@ -53,9 +53,11 @@ test('la fecha grande del quinto tile es el LÍMITE DE AVISO, no el vencimiento'
 test('un ?tab= desconocido cae en «Resumen» en vez de dejar la ficha en blanco', async () => {
   const { tabDeParametro } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
   assert.equal(tabDeParametro(undefined), 'resumen')
-  // Recibos y Siniestros ya no son pestañas (24/09/2026): un enlace viejo lleva a Pólizas, donde viven.
-  assert.equal(tabDeParametro('recibos'), 'polizas')
-  assert.equal(tabDeParametro('siniestros'), 'polizas')
+  // Recibos, Siniestros y Pólizas ya no son pestañas: un enlace viejo lleva a la vista de seguros
+  // («resumen», tarjeta «Seguros»), donde viven las pólizas, el histórico y los siniestros.
+  assert.equal(tabDeParametro('recibos'), 'resumen')
+  assert.equal(tabDeParametro('siniestros'), 'resumen')
+  assert.equal(tabDeParametro('polizas'), 'resumen')
   assert.equal(tabDeParametro('inventada'), 'resumen')
   // Claves heredadas de Object no pueden colarse como pestaña (dejarían la ficha en blanco).
   for (const t of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) assert.equal(tabDeParametro(t), 'resumen', t)
@@ -90,18 +92,45 @@ test('la sección lleva el acento de Grupo ASegura por TOKENS, no por hex suelto
   }
 })
 
-test('los siniestros del cliente siguen alcanzables: se montan en la pestaña Pólizas', () => {
+test('los siniestros del cliente siguen alcanzables: se montan en la tarjeta «Seguros»', () => {
   // Al quitar la pestaña propia, el único sitio de la ficha donde abrir o seguir un siniestro es
-  // Pólizas. Si alguien lo quita de ahí, el siniestro solo se vería entrando póliza a póliza.
+  // la vista de seguros. Si alguien lo quita de ahí, solo se vería entrando póliza a póliza.
   const page = leer('page.tsx')
-  const bloque = page.slice(page.indexOf("tab === 'polizas'"), page.indexOf("tab === 'contactos'"))
+  const bloque = page.slice(page.indexOf("tab === 'resumen'"), page.indexOf('<FichaTabs'))
   assert.match(bloque, /<Siniestros\b/)
+  assert.match(bloque, /<SegurosCliente\b/)
+  assert.match(bloque, /<TabPolizas\b/)
+})
+
+test('«Todas las pólizas» se fundió en «Seguros»: sin acceso propio, ?tab=polizas aterriza en seguros', async () => {
+  const { tabDeParametro, TABS_FICHA, detallesAccesos, textoSeguros } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
+  assert.equal(tabDeParametro('polizas'), 'resumen')
+  assert.equal(tabDeParametro(['polizas']), 'resumen')
+  assert.ok(!(TABS_FICHA as readonly string[]).includes('polizas'), 'el grid vuelve a tener la entrada «polizas»')
+  const tabs = leer('FichaTabs.tsx')
+  assert.doesNotMatch(tabs, /Todas las pólizas/)
+  assert.doesNotMatch(tabs, /\bpolizas:/)
+  assert.match(tabs, /resumen: \{[^\n]*titulo: 'Seguros'/)
+  // Ningún enlace interno al alias viejo.
+  for (const f of ['SegurosCliente.tsx', 'TabPendiente.tsx', 'page.tsx']) assert.doesNotMatch(leer(f), /tab=polizas/, f)
+  // El bloque redundante «Pólizas vivas» no vuelve (ya es «Con nosotros»).
+  assert.doesNotMatch(leer('TabPolizas.tsx'), /titulo="Pólizas vivas"/)
+  // Subtítulo único.
+  assert.equal(textoSeguros(2, 1), '2 con nosotros · 1 oportunidad')
+  assert.equal(textoSeguros(2, 3), '2 con nosotros · 3 oportunidades')
+  assert.equal(textoSeguros(2, 0), '2 con nosotros')
+  assert.equal(textoSeguros(2, null), '2 con nosotros')
+  assert.equal(textoSeguros(0, 0), 'ninguno')
+  assert.equal(textoSeguros(0, 2), 'ninguno con nosotros · 2 oportunidades')
+  const d = detallesAccesos({ conNosotros: 1, oportunidadesAbiertas: 2, pendiente: { estado: 'nada' }, telefonos: 0, emails: 0, personas: 0, documentos: 0, documentosPedidos: 0, correos: 0, notas: 0, historial: 0 })
+  assert.equal(d.resumen?.texto, '1 con nosotros · 2 oportunidades')
+  assert.equal((d as Record<string, unknown>).polizas, undefined)
 })
 
 test('los accesos dicen algo: contactos cuenta teléfonos, correos y personas; null no es 0', async () => {
   const { detallesAccesos } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
   const base = {
-    conNosotros: 1, oportunidadesAbiertas: 0, pendiente: { estado: 'nada' as const }, polizas: 1,
+    conNosotros: 1, oportunidadesAbiertas: 0, pendiente: { estado: 'nada' as const },
     telefonos: 2, emails: 1, personas: 3, documentos: 0, documentosPedidos: 0, correos: 0, notas: 2, historial: 5,
   }
   const d = detallesAccesos(base)
@@ -127,4 +156,13 @@ test('contarPersonas: pólizas + vínculos declarados, sin contar dos veces; nul
   assert.equal(contarPersonas([{ fichaId: 'a' }, { fichaId: null }], [{ relacionadoId: 'a' }, { relacionadoId: 'b' }]), 3)
   assert.equal(contarPersonas(null, []), null)
   assert.equal(contarPersonas([], null), null)
+})
+
+test('TarjetaSeguro de «Con nosotros» pinta la forma de pago y «Retarificar» de la póliza viva', () => {
+  const seguros = leer('SegurosCliente.tsx')
+  const tarjeta = seguros.slice(seguros.indexOf('function TarjetaSeguro'))
+  assert.match(tarjeta, /<CeldaPago p=\{p\} \/>/)
+  assert.match(tarjeta, /\{retarificarViva\}/)
+  assert.match(tarjeta, /urlRetarificar\(p\.id\)/)
+  assert.match(tarjeta, /minHeight: 44/)
 })

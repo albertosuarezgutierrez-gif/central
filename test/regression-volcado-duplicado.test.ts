@@ -42,9 +42,13 @@ test('el volcado histórico agrupa las filas que solo cambian de prima', () => {
 })
 
 test('las vivas, las canceladas y las pendientes NO agrupan: ahí un duplicado hay que verlo', () => {
-  for (const titulo of ['Pólizas vivas', 'pendientes de confirmación por CIMA', 'Canceladas en CIMA']) {
+  // Desde el 18/10/2026 las vivas y las pendientes de CIMA ya no se pintan en TabPolizas: son el cubo
+  // «Con nosotros» de SegurosCliente (que tampoco agrupa). Aquí solo quedan canceladas y sustituidas.
+  for (const titulo of ['Sustituidas por otra', 'Canceladas en CIMA']) {
     assert.doesNotMatch(bloque(titulo), /agruparIguales/, `${titulo} no puede agrupar`)
   }
+  assert.ok(!tab.includes('titulo="Pólizas vivas"') && !tab.includes('pendientes de confirmación por CIMA'), 'las vivas/pendientes vuelven a pintarse dos veces')
+  assert.doesNotMatch(readFileSync(join(import.meta.dirname, '..', 'apps/plataforma/app/(usuario)/correduria/cliente/[id]/SegurosCliente.tsx'), 'utf8'), /agruparIguales/)
   // `<Polizas` del tab de Resumen y cualquier otro consumidor: solo UNO agrupa.
   assert.equal((tab.match(/agruparIguales/g) ?? []).length, 1)
 })

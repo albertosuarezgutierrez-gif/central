@@ -1324,6 +1324,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (18/10/2026) Correduría · ficha cliente: «Sus seguros» + «Todas las pólizas» → una tarjeta «Seguros»
+- Grid de 10 → 9 accesos. «Seguros» = cubos (Con nosotros/Oportunidades/Ya no existe) + figura en, aportadas, plegado «Histórico, canceladas y sustituidas» y Siniestros.
+- Fuera el bloque «Pólizas vivas» (repetía «Con nosotros»). Subtítulo «N con nosotros · M oportunidades». `?tab=polizas|recibos|siniestros` → resumen.
+- Cepo en `test/regression-ficha-cliente-pestanas.test.ts` (visto en rojo). «Pendiente» y «Tareas» NO se fusionaron (fuentes distintas).
+
 ## (18/10/2026) Correduría · «Mi mesa» con la fila de acciones
 - «Mi mesa» (`/correduria/mesa`) es ruta propia y no montaba `AccionesCabecera` (Subir póliza, Vencimientos, «…»); ahora sí, igual que el resto de pestañas. Solo `mesa/MesaClient.tsx`.
 

@@ -9,7 +9,7 @@ import { eur } from '@/lib/dinero'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { btnStyle } from '@/components/ui'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
-import { TIPOS, fmt } from './piezas'
+import { CeldaPago, TIPOS, fmt } from './piezas'
 import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidades'
 import EditarVencimiento from './EditarVencimiento'
 import DescartarVolcado from './DescartarVolcado'
@@ -51,7 +51,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
         {historicas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
             Además, {historicas.length} póliza(s) más del volcado histórico (2013-2018, sin CIMA).{' '}
-            <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>verlas</Link>
+            Están más abajo, en «Histórico, canceladas y sustituidas».
           </p>
         )}
         {descartadas.length > 0 && (
@@ -169,9 +169,22 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
   let titulo: string
   let lineas: (string | null)[]
   const avisos: Aviso[] = []
+  // Póliza viva en cartera («Con nosotros»): lleva forma de pago y «Retarificar» (antes en la tabla «Pólizas vivas»).
+  let pagoViva: React.ReactNode = null
+  let retarificarViva: React.ReactNode = null
 
   if (s.clase === 'poliza') {
     const p = s.poliza
+    if (!s.historica && p.viva) {
+      pagoViva = <div style={{ fontSize: 12, overflowWrap: 'anywhere' }}><CeldaPago p={p} /></div>
+      if (p.retarificable && p.estado !== 'cancelada') {
+        retarificarViva = (
+          <Link href={urlRetarificar(p.id)} prefetch={false} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, textDecoration: 'none' }}>
+            {rotuloRetarificar(p.retarificacion)}
+          </Link>
+        )
+      }
+    }
     const o = s.oportunidad
     // En «oportunidad», si hay seguimiento abierto la tarjeta lleva a él: eso es lo que se trabaja.
     href = o ? `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}` : `/correduria/poliza/${p.id}`
@@ -254,6 +267,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
       </div>
       <div style={{ fontSize: 15, fontWeight: 700 }}>{titulo}</div>
       {lineas.filter(Boolean).map((l, i) => <div key={i} style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}>{l}</div>)}
+      {pagoViva}
       {avisos.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
           {avisos.map((a, i) => <Chip key={i} a={a} />)}
@@ -314,12 +328,13 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
         : { ramo: s.oportunidad.ramo, tomadorId: ctx.clienteId, oportunidadId: s.oportunidad.id, polizaId: null })}
     />
   )
-  if (!quitar && !vencimiento && !accionesDerivada && !tarificar) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  if (!quitar && !vencimiento && !accionesDerivada && !tarificar && !retarificarViva) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
     <div style={{ ...tarjetaSeguro, gap: 8 }}>
       <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'start' }}>
         {tarificar}
+        {retarificarViva}
         {accionesDerivada}
         {!derivada && vencimiento}
         {!derivada && quitar && <div style={{ display: 'grid', flex: '1 1 auto' }}>{quitar}</div>}

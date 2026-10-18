@@ -57,7 +57,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
     items.push(
       <>
         <b>{recibos.devueltos} recibo(s) devuelto(s)</b>: hay dinero que reclamar.{' '}
-        <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver en sus pólizas →</Link>
+        <Link href={`/correduria/cliente/${clienteId}`}>ver en sus pólizas →</Link>
       </>,
     )
   }
@@ -65,7 +65,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
     items.push(
       <>
         <b>{siniestrosAbiertos} siniestro(s) abierto(s)</b> en tramitación.{' '}
-        <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver siniestros →</Link>
+        <Link href={`/correduria/cliente/${clienteId}`}>ver siniestros →</Link>
       </>,
     )
   }
