@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T11:19:20Z",
-  "sha": "b1d56fd37a9ccf544c2934371334b4e88cbe33a1",
+  "generadoEn": "2026-10-18T11:58:12Z",
+  "sha": "299d2ebefaaae488e7e7fdb51cf277e4b4364d36",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -98520,12 +98520,12 @@
           "exportada": true,
           "params": "{ clienteId, activa, detalles }: { clienteId: string activa: TabFicha detalles: Partial<Record<TabFicha, DetalleAcceso>> }",
           "retorno": null,
-          "linea": 34
+          "linea": 33
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3a3f1410df28"
+      "hash": "c1d39254dd92"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/acciones.ts",
@@ -99116,12 +99116,12 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 259
+          "linea": 256
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8dbae9ba08e3"
+      "hash": "c87943e52a2b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PanelDatosCliente.tsx",
@@ -99248,6 +99248,7 @@
       "exporta": [
         "Polizas",
         "huellaBien",
+        "CeldaPago",
         "CeldaRecibos",
         "PolizasDondeFigura",
         "PolizasDeclaradas",
@@ -99312,7 +99313,7 @@
         {
           "nombre": "CeldaPago",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "{ p }: { p: PolizaFicha }",
           "retorno": null,
           "linea": 317,
@@ -99399,7 +99400,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "22b872275634"
+      "hash": "3d2310b43465"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx",
@@ -99850,12 +99851,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 331
+          "linea": 346
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac6334ca0167"
+      "hash": "9a7f86fcf211"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -100010,7 +100011,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6e7f8dccb1ea"
+      "hash": "918b59723262"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
@@ -100025,13 +100026,13 @@
           "exportada": true,
           "params": "{ porClase, intervinientes, declaradas, figuraEn }: { porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'sustituida' | 'historica', PolizaFicha[]> intervinientes: IntervinienteFicha[] | null declaradas: PolizaDeclaradaFicha[] | nul",
           "retorno": null,
-          "linea": 21,
-          "resumen": "históricas → volcado de junio de 2026: oportunidades, no seguros (solo consulta). El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188 filas / 77 clientes, medido 21/09/2026: el "
+          "linea": 17,
+          "resumen": "histórico → sustituidas, canceladas y volcado de junio de 2026 (oportunidades, solo consulta), plegado y con montaje perezoso: son cientos de filas. El volcado repite el MISMO riesgo cambiando solo la"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20f9558fc5cb"
+      "hash": "1169d8639c3f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts",
@@ -100040,6 +100041,7 @@
       "exporta": [
         "tabDeParametro",
         "contarPersonas",
+        "textoSeguros",
         "detallesAccesos"
       ],
       "funciones": [
@@ -100049,7 +100051,7 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "TabFicha",
-          "linea": 29,
+          "linea": 34,
           "resumen": "Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen»."
         },
         {
@@ -100058,7 +100060,7 @@
           "exportada": true,
           "params": "personas: readonly { fichaId: string | null }[] | null, relaciones: readonly { relacionadoId: string }[] | null,",
           "retorno": "number | null",
-          "linea": 75,
+          "linea": 78,
           "resumen": "Cuántas PERSONAS tiene la ficha: las de sus pólizas más los vínculos declarados (familia, empresa…) que no salen ya en una póliza — la misma lista que pinta el bloque «Personas» de Contactos. Hasta el"
         },
         {
@@ -100067,7 +100069,16 @@
           "exportada": false,
           "params": "n: number, uno: string, varios: string",
           "retorno": null,
-          "linea": 85
+          "linea": 88
+        },
+        {
+          "nombre": "textoSeguros",
+          "kind": "function",
+          "exportada": true,
+          "params": "conNosotros: number, oportunidades: number | null",
+          "retorno": "string",
+          "linea": 94,
+          "resumen": "Subtítulo de la tarjeta «Seguros»: «N con nosotros · M oportunidades». La parte de oportunidades se omite si M = 0 o no se pudo leer (`null`: no se inventa un número); sin nada de ambos, «ninguno»."
         },
         {
           "nombre": "detallesAccesos",
@@ -100075,13 +100086,13 @@
           "exportada": true,
           "params": "d: DatosAccesos",
           "retorno": "Partial<Record<TabFicha, DetalleAcceso>>",
-          "linea": 88,
+          "linea": 101,
           "resumen": "El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "06c55982d0b5"
+      "hash": "344373bc8f10"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TarificarOportunidad.tsx",
@@ -220297,6 +220308,6 @@
   ],
   "resumen": {
     "archivos": 4736,
-    "funciones": 17554
+    "funciones": 17555
   }
 }
