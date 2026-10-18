@@ -4,6 +4,7 @@ import { registrarResultado } from '@/lib/tarificador'
 import { avisoTraza, leerResultadoWorker } from '@/lib/tarificador-reglas'
 import { eleccionIaActiva } from '@/lib/tarificador-eleccion-reglas'
 import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
+import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -32,6 +33,10 @@ export const maxDuration = 90
  * Inventario de estructura (13/10/2026): un hueco de mapa trae `error.inventarioDom` (solo estructura de la pantalla,
  * saneado por el worker y OTRA VEZ en `leerResultadoWorker`, ≤60 KB) y se guarda con el resto del `error` jsonb del
  * trabajo. Aquí no se loguea nunca (ni entero ni en parte).
+ *
+ * Presupuesto en BORRADOR (18/10/2026, «todo con bot»): tras un `ok` con tarificación, en `after` (el worker no espera),
+ * si la oportunidad ya no tiene trabajos abiertos se prepara UN borrador con las ofertas de todas sus compañías + estudio
+ * + Telegram a Alberto (`lib/presupuesto-rpa.ts`). NUNCA envía nada al cliente y nunca rompe esta respuesta.
  */
 export async function POST(req: Request) {
   if (!workerAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -47,6 +52,12 @@ export async function POST(req: Request) {
     if (l.r.tipo === 'error' && l.r.error.opcionesVersion && r.estadoTrabajo === 'requiere_humano' && eleccionIaActiva(process.env)) {
       const trabajoId = l.r.trabajoId
       after(() => intentarEleccionVersionIa(trabajoId).then(() => undefined))
+    }
+    if (l.r.tipo === 'ok' && r.estadoTrabajo === 'ok' && r.tarificacionId) {
+      const trabajoId = l.r.trabajoId
+      after(() => presupuestoTrasTrabajoRpa(trabajoId).then((p) => {
+        if (p.estado === 'error') console.error('[tarificador] presupuesto tras RPA', trabajoId, p.motivo)
+      }))
     }
     return NextResponse.json(r)
   } catch (e) {

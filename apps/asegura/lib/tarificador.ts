@@ -30,6 +30,7 @@ import { decryptField } from '@central/module-seguros-pii'
 import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
+import { sobreCoberturasRpa } from './presupuesto-rpa-reglas'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
@@ -661,18 +662,22 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
     ) returning id::text as id`
   const id = filas[0]?.id
   if (!id) throw new Error('tarificacion_rpa_sin_id')
+  const leidasAt = new Date().toISOString()
   for (const o of ofertas) {
     // `frecuencia_pago` NO se escribe: es vocabulario de Avant2 (`paymentFrequency`); el fraccionamiento
     // del portal viaja en `respuesta.ofertas[]`. Mezclar vocabularios en una columna es inventar dato.
     // Un precio de portal es una OFERTA de la compañía, no un precio cerrado: `estimado` hasta que el
     // corredor lo revise (y nunca ReRate: no hay proyecto de Avant2 que re-tarificar).
+    // COBERTURAS (18/10/2026): el sobre que entiende `coberturasDeSobre()`; sin ninguna legible → NULL (no consta,
+    // jamás `vacias` = «no cubre nada»). Los avisos (supuestos incluidos) siguen en `avisos`, como aviso y no como dato.
+    const sobre = sobreCoberturasRpa(o.coberturas, leidasAt)
     await tx.$executeRaw`
       insert into seguros.tarificacion_precios (
         tarificacion_id, compania, producto, modalidad, categoria, prima_eur, franquicia_eur,
-        firmeza, requiere_rerate, referencia_vendor, avisos
+        firmeza, requiere_rerate, referencia_vendor, avisos, coberturas
       ) values (
         ${id}::uuid, ${o.compania}, ${o.producto}, null, null, ${o.primaAnualEur}::numeric, ${franquiciaGeneral(o)}::numeric,
-        'estimado', false, ${o.referenciaPortal}, ${JSON.stringify(o.avisos)}::jsonb
+        'estimado', false, ${o.referenciaPortal}, ${JSON.stringify(o.avisos)}::jsonb, ${sobre ? JSON.stringify(sobre) : null}::jsonb
       )`
   }
   return id
