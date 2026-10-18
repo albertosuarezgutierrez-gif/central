@@ -12,6 +12,8 @@ import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import TrazaTrabajo from '../../tarificador/TrazaTrabajo'
 import PedirEmision from './PedirEmision'
+import PrepararPresupuestoBot from './PrepararPresupuestoBot'
+import { hayTrabajoOk } from '@/lib/presupuesto-rpa-vista'
 import {
   SONDEO_MAX_MS, SONDEO_MS, estimarInfraseguro, fechaCorta, sigueEnCurso, vistaPrecio, vistaTrabajo,
 } from '@/lib/tarificador-asegura-reglas'
@@ -207,6 +209,8 @@ export default function PresupuestosCompanias({ oportunidadId, clienteId, ramo, 
           {resultados.map((r) => <li key={r.compania} style={{ color: r.ok ? 'var(--text)' : 'var(--negative)', overflowWrap: 'anywhere' }}>{r.texto}</li>)}
         </ul>
       )}
+
+      {hayTrabajoOk(trabajos) && <PrepararPresupuestoBot oportunidadId={oportunidadId} />}
 
       {abierto && (
         <form onSubmit={pedir} style={COLUMNA}>
