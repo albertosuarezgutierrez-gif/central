@@ -51,7 +51,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
         {historicas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
             Además, {historicas.length} póliza(s) más del volcado histórico (2013-2018, sin CIMA).{' '}
-            <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>verlas</Link>
+            Están más abajo, en «Histórico, canceladas y sustituidas».
           </p>
         )}
         {descartadas.length > 0 && (

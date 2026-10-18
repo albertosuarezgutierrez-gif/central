@@ -146,9 +146,20 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       <FichasDuplicadas clienteId={ficha.id} juridica={personaDeFicha({ tipoPersona: ficha.identidad?.tipoPersona, dniEnmascarado: ficha.identidad?.dniEnmascarado, segmento: ficha.segmento }) === 'juridica'} />
 
       {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
-          pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}
+          pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección.
+          (18/10/2026) «Todas las pólizas» se fundió aquí: debajo de los cubos van lo que solo
+          aportaba aquella vista (figura en, declaradas, histórico plegado) y los siniestros. */}
       {tab === 'resumen' && (
-        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
+        <>
+          <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
+          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
+          <Siniestros
+            lista={ficha.siniestros}
+            polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
+            documentos={ficha.documentos}
+            clienteId={ficha.id}
+          />
+        </>
       )}
 
       <FichaTabs
@@ -159,7 +170,6 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           oportunidadesAbiertas: nOportunidades,
           tareas: detalleTareas(tareas),
           pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
-          polizas: seguros.length,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
           emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
           personas: contarPersonas(personas, ficha.relaciones),
@@ -198,19 +208,6 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
             hoy={hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })}
           />
         </Tarjeta>
-      )}
-
-      {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
-      {tab === 'polizas' && (
-        <>
-          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
-          <Siniestros
-            lista={ficha.siniestros}
-            polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
-            documentos={ficha.documentos}
-            clienteId={ficha.id}
-          />
-        </>
       )}
 
       {tab === 'contactos' && <TabContactos ficha={ficha} personas={personas} />}

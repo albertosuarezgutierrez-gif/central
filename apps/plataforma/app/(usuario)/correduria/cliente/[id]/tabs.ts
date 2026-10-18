@@ -7,7 +7,7 @@
  */
 
 export type TabFicha =
-  | 'resumen' | 'oportunidades' | 'pendiente' | 'tareas' | 'polizas' | 'contactos' | 'documentos' | 'correos' | 'notas' | 'historial'
+  | 'resumen' | 'oportunidades' | 'pendiente' | 'tareas' | 'contactos' | 'documentos' | 'correos' | 'notas' | 'historial'
 
 /**
  * Desde el 24/09/2026 no son pestañas sino ACCESOS directos (Alberto: «tiene que ser todo
@@ -15,15 +15,20 @@ export type TabFicha =
  * carga su sección debajo.
  */
 export const TABS_FICHA: readonly TabFicha[] = [
-  'resumen', 'oportunidades', 'pendiente', 'tareas', 'polizas', 'contactos', 'documentos', 'correos', 'notas', 'historial',
+  'resumen', 'oportunidades', 'pendiente', 'tareas', 'contactos', 'documentos', 'correos', 'notas', 'historial',
 ]
 
 /**
  * Recibos y Siniestros dejaron de ser pestañas el 24/09/2026 (Alberto: «dentro de las pólizas
  * está recibos, siniestros…»): viven en cada póliza y en la pestaña Pólizas. Un enlace viejo
  * con `?tab=recibos|siniestros` lleva a Pólizas, que es donde están ahora, no a Resumen.
+ *
+ * (18/10/2026) «Todas las pólizas» se FUSIONÓ con «Sus seguros» en la tarjeta «Seguros» (Alberto
+ * veía redundancia: ambas contaban lo mismo). Ya no hay `?tab=polizas`, pero el enlace viejo sigue
+ * vivo y aterriza en la vista de seguros (`resumen`), que lleva ahora las pólizas, el histórico y los
+ * siniestros.
  */
-const HEREDADAS: Record<string, TabFicha> = { recibos: 'polizas', siniestros: 'polizas' }
+const HEREDADAS: Record<string, TabFicha> = { recibos: 'resumen', siniestros: 'resumen', polizas: 'resumen' }
 
 /** Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen». */
 export function tabDeParametro(v: string | string[] | undefined): TabFicha {
@@ -50,8 +55,6 @@ export type DatosAccesos = {
   pendiente: { estado: 'accion'; urgente: boolean } | { estado: 'nada' } | { estado: 'sin_comprobar' }
   /** Tareas (del cliente y de sus pólizas): texto ya hecho por `detalleTareas`; `null` = no se pudieron leer. */
   tareas?: DetalleAcceso | null
-  /** Seguros en vigor (no todas las filas de la ficha). */
-  polizas: number
   telefonos: number | null
   emails: number | null
   personas: number | null
@@ -84,18 +87,26 @@ export function contarPersonas(
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
+/**
+ * Subtítulo de la tarjeta «Seguros»: «N con nosotros · M oportunidades». La parte de oportunidades se
+ * omite si M = 0 o no se pudo leer (`null`: no se inventa un número); sin nada de ambos, «ninguno».
+ */
+export function textoSeguros(conNosotros: number, oportunidades: number | null): string {
+  const opo = oportunidades !== null && oportunidades > 0 ? plural(oportunidades, 'oportunidad', 'oportunidades') : null
+  if (conNosotros === 0) return opo ? `ninguno con nosotros · ${opo}` : 'ninguno'
+  return opo ? `${conNosotros} con nosotros · ${opo}` : `${conNosotros} con nosotros`
+}
+
 /** El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`. */
 export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, DetalleAcceso>> {
   const r: Partial<Record<TabFicha, DetalleAcceso>> = {}
-  r.resumen = { texto: d.conNosotros === 0 ? 'ninguno con nosotros' : `${d.conNosotros} con nosotros` }
+  r.resumen = { texto: textoSeguros(d.conNosotros, d.oportunidadesAbiertas) }
   if (d.oportunidadesAbiertas !== null) {
     r.oportunidades = { texto: d.oportunidadesAbiertas === 0 ? 'ninguna abierta' : plural(d.oportunidadesAbiertas, 'abierta', 'abiertas') }
   }
   if (d.pendiente.estado === 'accion') r.pendiente = d.pendiente.urgente ? { texto: 'urgente', tono: 'malo' } : { texto: 'hay algo que hacer', tono: 'aviso' }
   else if (d.pendiente.estado === 'nada') r.pendiente = { texto: 'al día' }
   if (d.tareas) r.tareas = d.tareas
-  // Solo los SEGUROS (cartera en vigor): las filas del volcado son oportunidades, no pólizas.
-  r.polizas = { texto: d.polizas === 0 ? 'ninguna en vigor' : `${d.polizas} en vigor` }
 
   // Contactos: teléfonos, correos y personas. Lo que no se pudo leer se OMITE,
   // no se cuenta como cero.
