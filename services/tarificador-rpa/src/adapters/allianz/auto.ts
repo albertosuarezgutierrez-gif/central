@@ -1,3 +1,4 @@
+// v0.6.12 (20/10/2026, trabajo real d675077b llegó a «Selección de paquete»): LECTOR DE PRECIOS. La pantalla es una tabla comparativa `nx-comparison-table` (3 paquetes: «Terceros con lunas», «Tercero Ampliado», «Todo Riesgo con franq.»; cada cabecera trae «primer recibo» y «la anualidad»; filas de cobertura con icono check/minus o desplegable por paquete, filas de elección única que abarcan los 3 paquetes y «Todos los paquetes incluyen»). `leerPaquetesTurismosAllianz` (guard.ts, solo lectura) + `ofertasDesdePaquetesTurismos` devuelven una oferta por paquete con supuestos y coberturas; importe ilegible → fuera + aviso; sin tabla → hueco como antes. No se pulsa nada en esta pantalla.
 // v0.6.11 (19/10/2026, trabajo real atascado en «Antecedentes» con «qué falta para habilitar SIGUIENTE»): el input obligatorio «Cinco últimos dígitos de la póliza actual» (aparece al haber compañía actual) se rellena con `polizaAnteriorUltimos5` del riesgo por la puerta `polizaActualTurismosAllianz` (guard.ts); sin dato → hueco con nombre, nunca inventado; ya con valor → «fijada por Allianz». El atasco genérico lista ahora las etiquetas de los obligatorios vacíos/inválidos del paso. Los 5 dígitos nunca van a supuestos, avisos ni errores.
 // v0.6.10 (18/10/2026, decisión de Alberto «supuesto favorable»): «Antecedentes» contesta las 3 preguntas que bloqueaban «SIGUIENTE» (tiempo en la compañía, partes culpables, tiempo como titular): con dato del riesgo la opción que casa; sin dato, la más favorable y DECLARADA (guard.ts).
 // v0.6.9 (18/10/2026): «Compañía actual del vehículo» casa también por contención de la clave de la ficha en la opción (solo si hay UNA candidata; guard.ts).
@@ -97,7 +98,9 @@ import {
   vehiculoDesdeLectura,
   type CandidatoVersion,
   type EleccionVersion,
+  type CoberturaOferta,
   type FormularioAuto,
+  type FranquiciaOferta,
   type LecturaVehiculoPortal,
   type OfertaNormalizada,
   type OpcionPoblacion,
@@ -117,7 +120,9 @@ import {
   ETIQUETA_POLIZA_ACTUAL_TURISMOS,
   esAppTurismosAllianz,
   exigirCampoNoBancario,
+  leerPaquetesTurismosAllianz,
   leerTarjetasVehiculoTurismosAllianz,
+  type LecturaPaquetesTurismos,
   SEL_FUERA_CABECERA_TURISMOS,
   SEL_ZONA_APP_TURISMOS,
   type TarjetaVehiculoTurismos,
@@ -1826,10 +1831,90 @@ export async function avanzarDesdeDatosVehiculo(
 }
 
 /**
+ * v0.6.12: ofertas de «Selección de paquete» (tabla comparativa `nx-comparison-table`, una columna por paquete). PURA.
+ * Prima anual = «la anualidad»; «primer recibo» = `importeReciboEur` (la pantalla no dice el fraccionamiento: `null`, declarado).
+ * Un paquete sin nombre o con «la anualidad» ilegible queda FUERA con aviso; un «primer recibo» ilegible solo deja `importeReciboEur` en
+ * null. Coberturas: icono check/minus y valor de desplegable por paquete, opciones de elección única (la que trae marcada el portal) y
+ * «Todos los paquetes incluyen». Nunca se inventa un importe, un límite ni una franquicia. `supuestos` = «Precio con supuestos: …».
+ */
+export function ofertasDesdePaquetesTurismos(lectura: LecturaPaquetesTurismos, supuestos: string | null = null): OfertaNormalizada[] {
+  const n = lectura.paquetes.length
+  const fuera: string[] = []
+  const filasValidas = lectura.filas.filter((f) => f.descripcion !== '' && (f.comunes.length > 0 || f.opciones.length > 0 || f.celdas.length === n))
+  const hayCoberturas = filasValidas.some((f) => f.comunes.length > 0 || f.opciones.length > 0 || f.celdas.some((c) => c.icono !== null || c.texto !== ''))
+  const opcionesMarcadas = filasValidas.flatMap((f) => f.opciones.filter((o) => o.marcada).map((o) => `${f.descripcion}: ${o.texto}${o.adicional ? ` ${o.adicional}` : ''}`))
+  const coberturasDe = (i: number): { coberturas: CoberturaOferta[]; franquicias: FranquiciaOferta[] } => {
+    const coberturas: CoberturaOferta[] = []
+    const franquicias: FranquiciaOferta[] = []
+    const cob = (clave: string, literal: string, estado: CoberturaOferta['estado'], capital: number | null = null) => coberturas.push({ clave, literal, estado, capital, limite: null, franquicia: null })
+    for (const f of filasValidas) {
+      for (const c of f.comunes) if (c !== '') cob(c, c, 'incluida')
+      for (const o of f.opciones.filter((x) => x.marcada && x.texto !== '')) {
+        const estado: CoberturaOferta['estado'] = /^no\s+incluid/i.test(o.texto) ? 'excluida' : 'incluida'
+        cob(f.descripcion, `${f.descripcion}: ${o.texto}`, estado, importeEs(o.texto))
+      }
+      const c = f.celdas.length === n ? f.celdas[i]! : null
+      if (c === null || f.opciones.length > 0 || f.comunes.length > 0) continue
+      if (c.texto !== '') {
+        const t = c.texto.toLowerCase()
+        const estado: CoberturaOferta['estado'] = t === 'no' ? 'excluida' : 'incluida'
+        cob(f.descripcion, `${f.descripcion}: ${c.texto}`, estado)
+        if (t !== 'sí' && t !== 'si' && t !== 'no') franquicias.push({ ambito: f.descripcion, importeEur: null, literal: `nivel «${c.texto}» del desplegable (sin importe en pantalla)` })
+      } else if (c.icono === 'check') cob(f.descripcion, f.descripcion, 'incluida')
+      else if (c.icono === 'minus') cob(f.descripcion, f.descripcion, 'excluida')
+    }
+    return { coberturas, franquicias }
+  }
+  const ofertas: Array<{ idx: number; oferta: OfertaNormalizada }> = []
+  lectura.paquetes.forEach((p, i) => {
+    const anual = importeEs(p.anualidad)
+    if (p.nombre === '' || anual === null) {
+      fuera.push(`Paquete ${p.nombre !== '' ? `«${p.nombre}»` : `nº ${i + 1}`} descartado: «la anualidad» no se pudo leer como importe.`)
+      return
+    }
+    const recibo = importeEs(p.primerRecibo)
+    const { coberturas, franquicias } = hayCoberturas ? coberturasDe(i) : { coberturas: [], franquicias: [] }
+    ofertas.push({
+      idx: i,
+      oferta: {
+        compania: 'allianz',
+        producto: `Auto · ${p.nombre}`,
+        primaAnualEur: anual,
+        primaNetaEur: null,
+        fraccionamiento: null,
+        importeReciboEur: recibo,
+        coberturas,
+        franquicias,
+        validaHasta: null,
+        referenciaPortal: null,
+        pdf: null,
+        desglose: null,
+        avisos: [
+          'Prima anual = «la anualidad» de la tabla comparativa de Allianz (con impuestos; sin desglose neta/impuestos). El importe del recibo es el «primer recibo»; la pantalla no indica el fraccionamiento, no se asume.',
+          ...(recibo === null ? ['«Primer recibo» ilegible: importe del recibo no consta.'] : []),
+          ...(p.mejorOpcion ? ['El portal lo marca como «MEJOR OPCIÓN».'] : []),
+          ...(p.conAviso ? ['El portal muestra un aviso en el título del paquete (icono de advertencia; texto no leído).'] : []),
+          ...(opcionesMarcadas.length > 0 ? [`Precio con las opciones que traía marcadas el portal: ${opcionesMarcadas.join('; ')}.`] : []),
+          ...(hayCoberturas ? [] : ['coberturas no leídas']),
+          ...(supuestos ? [supuestos] : []),
+        ],
+      },
+    })
+  })
+  return ofertas.map(({ oferta }) => ({ ...oferta, avisos: [...oferta.avisos, ...fuera] }))
+}
+
+/** `app-price` presente en el marco (la pantalla de precios existe aunque la tabla aún no se haya pintado). */
+async function hayPantallaPreciosTurismos(marco: Frame): Promise<boolean> {
+  return (await marco.locator('app-price').count().catch(() => 0)) > 0
+}
+
+/**
  * Recorrido completo hasta el precio (v0.6.5): resto de «Datos del vehículo» → «SIGUIENTE» → «Datos personales» → «SIGUIENTE» →
  * «Antecedentes» → «SIGUIENTE» → «Selección de paquete». Cada paso, solo SIN huecos; el primero que tenga alguno para con la
- * lista + inventario (y los supuestos ya aplicados). En «Selección de paquete» (precios sin mapa: la tabla se pinta vacía en el
- * inventario) → hueco con inventario. Nunca toca «Vista Ampliada» (colaborador vacío = sin colaborador; antecedentes, del portal).
+ * lista + inventario (y los supuestos ya aplicados). v0.6.12: en «Selección de paquete» se LEE la tabla comparativa (paquetes, primas
+ * y coberturas; solo lectura: ni «Seleccionar» ni desplegables ni opciones) y se devuelven las ofertas; sin tabla legible →
+ * hueco con inventario. Nunca toca «Vista Ampliada» (colaborador vacío = sin colaborador; antecedentes, del portal).
  */
 export async function recorrerPasosTurismos(
   page: Page,
@@ -1839,7 +1924,7 @@ export async function recorrerPasosTurismos(
   supuestoVersion: string | null,
   hoy: Date = new Date(),
   esperaMs = 15_000,
-): Promise<never> {
+): Promise<ResultadoAdaptador> {
   const sup = supuestosAuto(form, hoy)
   const { pasos } = planDatosTurismos(form, hoy)
   const aplicados: string[] = []
@@ -1864,6 +1949,20 @@ export async function recorrerPasosTurismos(
     }
   }
   const s = declarar()
+  // v0.6.12: la tabla de precios se pinta tras unos instantes; solo se espera si la pantalla de precios (`app-price`) existe.
+  if (await hayPantallaPreciosTurismos(marco)) {
+    const fin = Date.now() + esperaMs
+    for (;;) {
+      const lectura = await leerPaquetesTurismosAllianz(marco)
+      if (lectura && lectura.paquetes.some((p) => p.anualidad !== '')) {
+        const ofertas = ofertasDesdePaquetesTurismos(lectura, s)
+        if (ofertas.length === 0) throw new ErrorMapaIncompleto(conOpciones(`importes legibles en la pantalla de precios «${PASO_PAQUETE}» (${lectura.paquetes.length} paquetes, ninguna «anualidad» legible)${s ? `; ${s}` : ''}`), true)
+        return { ofertas }
+      }
+      if (Date.now() >= fin) break
+      await page.waitForTimeout(300)
+    }
+  }
   throw new ErrorMapaIncompleto(conOpciones(`la pantalla de precios «${PASO_PAQUETE}» del asistente de Turismos (sin mapa del lector de primas)${s ? `; ${s}` : ''}`), true)
 }
 
@@ -1894,8 +1993,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 … 0.6.11 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.11',
+    // Moto no cambia en la 0.6.1 … 0.6.12 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.12',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
