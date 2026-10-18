@@ -27,6 +27,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
+import { aplicarCompaniaActual, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
@@ -224,6 +225,27 @@ async function leerDniFicha(correduriaId: string, clienteId: string): Promise<st
   return filas[0]?.dni ?? null
 }
 
+/** Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló. */
+async function leerCompaniaActualCliente(correduriaId: string, clienteId: string | null, oportunidadId: string | null): Promise<string | null> {
+  try {
+    const comp = oportunidadId
+      ? await prisma.$queryRaw<{ pc: unknown }[]>`
+          select poliza_competencia as pc from seguros.oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+      : []
+    const polizas = clienteId
+      ? await prisma.$queryRaw<{ tipo: string | null; aseguradora: string | null; compania_declarada: string | null; estado: string | null; import_ref: string | null; eiac_xml_hash: string | null; sustituida_at: Date | null; fecha_efecto: string | null }[]>`
+          select tipo::text as tipo, aseguradora, compania_declarada, estado::text as estado, import_ref, eiac_xml_hash, sustituida_at,
+                 coalesce(fecha_efecto_actual, fecha_inicio)::text as fecha_efecto
+          from seguros.polizas
+          where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null`
+      : []
+    const ps: PolizaParaCompaniaActual[] = polizas.map((p) => ({ tipo: p.tipo, aseguradora: p.aseguradora, companiaDeclarada: p.compania_declarada, estado: p.estado, importRef: p.import_ref, eiacXmlHash: p.eiac_xml_hash, sustituidaAt: p.sustituida_at, fechaEfecto: p.fecha_efecto }))
+    return companiaActualDeCliente(comp[0]?.pc ?? null, ps)
+  } catch {
+    return null
+  }
+}
+
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
 
 type Reclamado = { id: string; intentos: number }
@@ -370,8 +392,8 @@ export type TrabajoParaWorker = {
  * quien la declara, y con su entrada (sin cabecera de exploración legible → no se sirve).
  */
 export async function trabajoParaWorker(id: string, modosWorker: readonly string[] = ['tarificar', 'emision']): Promise<TrabajoParaWorker | null> {
-  const filas = await prisma.$queryRaw<{ id: string; correduria_id: string; cliente_id: string | null; intentos: number; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
-    select t.id::text as id, t.correduria_id::text as correduria_id, t.cliente_id::text as cliente_id, t.intentos,
+  const filas = await prisma.$queryRaw<{ id: string; correduria_id: string; cliente_id: string | null; oportunidad_id: string | null; intentos: number; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
+    select t.id::text as id, t.correduria_id::text as correduria_id, t.cliente_id::text as cliente_id, t.oportunidad_id::text as oportunidad_id, t.intentos,
            t.compania, t.ramo, t.riesgo, t.lease_hasta, to_jsonb(t)->>'modo' as modo, (t.cliente_id is not null) as con_cliente
     from seguros.tarificacion_trabajos t
     where t.id = ${id}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
@@ -409,6 +431,12 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     const fila = f.cliente_id ? await leerFichaTomadorAuto(f.correduria_id, f.cliente_id) : null
     const conFicha = aplicarFichaTomador(f.compania, f.ramo, riesgo, () => fichaTomadorAutoDeFicha(fila, decryptField, f.ramo))
     riesgo = conFicha
+  }
+  // Compañía actual del vehículo (Allianz auto, 18/10/2026): si el riesgo no la trae, la del cliente (su póliza de la competencia
+  // en la oportunidad, o su póliza de auto en vigor). Solo en la respuesta; no bloquea: sin dato, el bot lo deja como hueco.
+  if (modo !== 'exploracion' && modo !== 'humo' && f.compania === 'allianz' && f.ramo === 'auto') {
+    const conCompania = aplicarCompaniaActual(f.compania, f.ramo, riesgo, await leerCompaniaActualCliente(f.correduria_id, f.cliente_id, f.oportunidad_id))
+    riesgo = conCompania
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base

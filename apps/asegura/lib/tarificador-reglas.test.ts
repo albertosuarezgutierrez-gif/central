@@ -436,7 +436,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b/g, '')), 'el riesgo solo se toca para la respuesta')
 })
 
 // ─── Datos del tomador para el alta en Mapfre (revisión PR #4710): como el NIF, comprobados al encolar e inyectados al entregar ───
