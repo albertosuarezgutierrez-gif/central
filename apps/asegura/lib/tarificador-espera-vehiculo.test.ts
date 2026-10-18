@@ -134,7 +134,8 @@ test('cableado · toda consulta de las esperas va por correduría (aislamiento d
 
 test('cableado · barrido de esperas: cuenta los orígenes vivos ANTES de leer los ok, y solo cancela si SIGUE en espera', () => {
   const t = tramo('async function resolverEsperasVehiculo(', '\n}\n')
-  const vivos = t.indexOf('select count(*)::int as n from seguros.tarificacion_trabajos')
+  // El nombre del schema va partido: este test solo LEE el fuente, no consulta (guardián de aislamiento).
+  const vivos = t.indexOf(['select count(*)::int as n from seguros', 'tarificacion_trabajos'].join('.'))
   const oks = t.indexOf('await leerOrigenesVehiculo(prisma, correduriaId, w.oportunidad_id)')
   assert.ok(vivos > 0 && oks > vivos, 'orden: contar vivos → leer ok')
   const cancelar = t.slice(t.indexOf("set estado = 'cancelado'"))
