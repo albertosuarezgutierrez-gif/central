@@ -14,6 +14,11 @@
 >
 **(18/10/2026)** — agentes-entrenador · pasada semanal (11→18/10): 25 entradas de bitácora podadas, 0 PRs de prompt (sin patrón de prompt). Pendiente de CÓDIGO: `scripts/canal-aviso.sh` no admite cuerpos >128 KB (3 pasadas de trading-analista con rodeo `@fichero`). Backlog PRs `claude/*`: 11 abiertos, 2 con 2+ semanas (#3755, #3995; docs-only).
 
+**(18/10/2026)** — Sivra · agente de huéspedes: entrada anticipada ANUNCIADA («llegamos a las 10») ahora también va a Telegram
+(`anunciaEntradaAnticipada` en `cambio-horario.ts`, check-in por defecto 15:00). Regla de Alberto: si nadie sale ese día el piso
+estará listo, pero SIEMPRE se le pregunta antes; sin su OK, horario oficial. El semáforo ya lo refleja (verde = noche anterior vacía,
+rojo = otra reserva sale ese día). 404 tests.
+
 **(18/10/2026)** — Sivra · agente de huéspedes: aceptó solo una salida a las 12:00 («tomo nota de que saldréis a las 12:00», huésped Maria).
 La compuerta de horario (03/10) solo cazaba PETICIONES («más tarde», «late checkout»), no ANUNCIOS («saldremos a las 12»). Fix en
 `apps/plataforma/lib/sivra/agente-huesped/`: `anunciaSalidaTardia` + red sobre el BORRADOR `respuestaConfirmaHorario` (auto.ts y orquestador →
