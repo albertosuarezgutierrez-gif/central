@@ -141,8 +141,8 @@ const RE_HASTA_HORA = /(hasta|until|till|bis|jusqu|fino\s*a|by)\s*(las?|les|l'|a
 const RE_CTX_SALIDA = /salida|check.?out|d[ií]a\s*que\s*(nos\s*)?(vamos|salimos|nos\s*fuimos)|departure|abreise|d[eé]part|partenza|ultimo\s*d[ií]a/iu
 
 // Maletas SOLO con un verbo de dejar/guardar cerca («¿hay ascensor para las maletas?» NO es una petición).
-const VERBO_MALETAS = String.raw`dej\w*|guard\w*|deposit\w*|d[eé]pos\w*|laiss\w*|lasci\w*|lass\w*|abstell\w*|aufbewahr\w*|leav\w*|left|keep\w*|stor\w*|drop\w*`
-const NOMBRE_MALETAS = String.raw`maleta\w*|equipaje\w*|luggage|baggage|bags?|suitcase\w*|valig\w*|bagagl\w*|bagage\w*|valise\w*|gep[aä]ck|koffer\w*`
+const VERBO_MALETAS = String.raw`dej\p{L}*|guard\p{L}*|deposit\p{L}*|d[eé]pos\p{L}*|laiss\p{L}*|lasci\p{L}*|lass\p{L}*|abstell\p{L}*|aufbewahr\p{L}*|leav\p{L}*|left|keep\p{L}*|stor\p{L}*|drop\p{L}*`
+const NOMBRE_MALETAS = String.raw`maleta\p{L}*|equipaje\p{L}*|luggage|baggage|bags?|suitcase\p{L}*|valig\p{L}*|bagagl\p{L}*|bagage\p{L}*|valise\p{L}*|gep[aä]ck|koffer\p{L}*`
 const RE_EQUIPAJE = new RegExp(
   `\\b(?:${VERBO_MALETAS})\\b[^.?!]{0,40}?\\b(?:${NOMBRE_MALETAS})\\b|\\b(?:${NOMBRE_MALETAS})\\b[^.?!]{0,40}?\\b(?:${VERBO_MALETAS})\\b`, 'iu')
 
@@ -159,9 +159,9 @@ const minutos = (hhmm?: string | null): number | null => {
 }
 // Verbos de SALIR / quedarse / dejar el piso (ES·EN·IT·FR·DE). Amplio a propósito: solo decide qué frases se
 // miran; un falso positivo cuesta una revisión por Telegram, un falso negativo una autorización que es de Alberto.
-const VERBO_SALIDA = /\b(sal(?:go|gamos|gan?|gas|ir\w*|[ií]\w*|dr\w*|e|en|es|ed)|nos\s+(?:vamos|iremos|marchamos|marcharemos|vais|vayamos)|os\s+(?:vais|ir[eé]is|marcha[ií]s|qued\w*)|irnos|iros|marcha\w*|vay\w*|queda\w*|dej\w*\s+(?:(?:el|la|los|las)\s+)?(?:piso|apartamento|alojamiento|casa|habitaci\w+|llaves?)|abandon\w*|desaloj\w*|entreg\w*|liber\w*|check.?out|check\s+out|leav\w*|left|stay\w*|vacat\w*|depart\w*|partiamo|partiremo|partir\w*|uscir\w*|usciamo|rest(?:are|iamo)|lasci\w*|abreis\w*|reis\w*|fahr\w*|abfahr\w*|auscheck\w*|verlass\w*|bleib\w*|part(?:ons|irons|ez)|quitt\w*|d[eé]part)\b/iu
+const VERBO_SALIDA = /\b(sal(?:go|gamos|gan?|gas|ir\p{L}*|[ií]\p{L}*|dr\p{L}*|e|en|es|ed)|nos\s+(?:vamos|iremos|marchamos|marcharemos|vais|vayamos)|os\s+(?:vais|ir[eé]is|marcha[ií]s|qued\p{L}*)|irnos|iros|marcha\p{L}*|vay\p{L}*|queda\p{L}*|dej\p{L}*\s+(?:(?:el|la|los|las)\s+)?(?:piso|apartamento|alojamiento|casa|habitaci\p{L}+|llaves?)|abandon\p{L}*|desaloj\p{L}*|entreg\p{L}*|liber\p{L}*|check.?out|check\s+out|leav\p{L}*|left|stay\p{L}*|vacat\p{L}*|depart\p{L}*|partiamo|partiremo|partir(?!\s+de\b)\p{L}*|uscir\p{L}*|usciamo|rest(?:are|iamo)|lasci\p{L}*|abreis\p{L}*|reis\p{L}*|fahr\p{L}*|abfahr\p{L}*|auscheck\p{L}*|verlass\p{L}*|bleib\p{L}*|part(?:ons|irons|ez)|quitt\p{L}*|d[eé]part)\b/iu
 // Verbos de ENTRAR / llegar / acceder (infinitivos y conjugaciones).
-const VERBO_ENTRADA = /\b(entr\w*|acce[sd]\w*|lleg\w*|instal\w*|ingres\w*|check.?in|check\s+in|arriv\w*|enter\w*|get\s+in|come\s+in|ankomm\w*|anreis\w*|einchecken|arrivare|arrivo)\b/iu
+const VERBO_ENTRADA = /\b(entr\p{L}*|acce[sd]\p{L}*|lleg\p{L}*|instal\p{L}*|ingres\p{L}*|check.?in|check\s+in|arriv\p{L}*|enter\p{L}*|get\s+in|come\s+in|ankomm\p{L}*|anreis\p{L}*|einchecken|arrivare|arrivo)\b/iu
 
 const PALABRA_MEDIODIA = /\b(?:mediod[ií]a|noon|midday|mezzogiorno|midi|mittag)\b/giu
 const SUFIJO_TARDE = /^\s*(?:de\s+la\s+(?:tarde|noche)|del?\s+(?:mediod[ií]a|la\s+tarde|la\s+noche)|della?\s+(?:sera|pomeriggio|notte)|du\s+(?:soir|apr[eè]s.midi)|de\s+l.apr[eè]s.midi|nachmittags|abends|in\s+the\s+(?:afternoon|evening)|at\s+night)/iu
@@ -199,7 +199,10 @@ export function horasEnTexto(texto: string, tardeSiAmbiguo = false): number[] {
   return out
 }
 
-const frases = (texto: string) => (texto || '').split(/(?<=[.?!\n])/u)
+// Un punto entre dos cifras («11.30») es una hora, no el fin de una frase.
+const frases = (texto: string) => (texto || '').split(/(?<=[?!\n])|(?<=\D\.)|(?<=\d\.)(?!\d)/u)
+// Cláusulas dentro de una frase (coma/punto y coma fuera de cifras, «y», «and»…): «la entrada es a las 15:00 y podéis salir a las 15:00».
+const clausulas = (frase: string) => frase.split(/;|(?<!\d),|,(?!\d)|\s+(?:y|e|and|und|et)\s+/iu)
 
 /** Horas de las frases del texto que contienen `verbo` (TODAS las de cada frase, no solo la primera). */
 function horasPorFrase(texto: string, verbo: RegExp, tardeSiAmbiguo: boolean): number[] {
@@ -225,16 +228,16 @@ export function respuestaConfirmaHorario(reply: string, horario: HorarioOficial 
   const lim = minutos(horario.checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
   const ini = minutos(horario.checkIn)
   const exenta = ini ?? 15 * 60 // sin check-in conocido se asume 15:00; la rama por verbo cubre un «hasta las 15:00»
-  for (const frase of frases(reply)) {
-    // «podéis entrar a las 12:00» es cuestión de ENTRADA (se mira abajo), no una salida tardía.
-    if (VERBO_ENTRADA.test(frase) && !VERBO_SALIDA.test(frase)) continue
-    // Cualquier hora > check-out que no sea la de entrada oficial («la entrada es a las 15:00»), con o sin verbo.
-    if (horasEnTexto(frase, true).some(h => h > lim && h !== exenta)) return 'salida'
+  for (const frase of frases(reply)) for (const cl of clausulas(frase)) {
+    // Cláusula PURA de entrada («la entrada es a las 15:00»): solo ahí la hora de check-in está exenta, y las
+    // horas anteriores al check-in son asunto de ENTRADA (se miran abajo). Con un verbo de salir NUNCA hay exención.
+    const entradaPura = VERBO_ENTRADA.test(cl) && !VERBO_SALIDA.test(cl)
+    if (horasEnTexto(cl, true).some(h => h > lim && !(entradaPura && (h === exenta || (ini !== null && h < ini))))) return 'salida'
   }
   if (ini !== null) {
-    for (const frase of frases(reply)) {
-      if (!VERBO_ENTRADA.test(frase) || VERBO_SALIDA.test(frase)) continue // «la entrada es a las 15:00 y la salida a las 11:00»
-      if (horasEnTexto(frase, false).some(h => h < ini)) return 'entrada'
+    for (const frase of frases(reply)) for (const cl of clausulas(frase)) {
+      if (!VERBO_ENTRADA.test(cl) || VERBO_SALIDA.test(cl)) continue // «la entrada es a las 15:00 y la salida a las 11:00»
+      if (horasEnTexto(cl, false).some(h => h < ini)) return 'entrada'
     }
   }
   return null

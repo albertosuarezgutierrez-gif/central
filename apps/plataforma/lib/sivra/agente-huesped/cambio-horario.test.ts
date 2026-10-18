@@ -278,3 +278,52 @@ test('huésped: verbos nuevos, varias horas por frase, tarde ambigua, palabras y
   for (const t of ['Salimos a las 9', 'Tenemos 2 maletas y salimos con 3 niños a las 10', 'La entrada es a las 3'])
     assert.equal(anunciaSalidaTardia(t, '11:00'), false, t)
 })
+
+// ── Revisión del bot (18/10/2026): falsos negativos = el bot autoriza sin Alberto ──
+const OFI2 = { checkIn: '15:00', checkOut: '11:00' }
+
+test('respuesta que concede salida hasta la hora de ENTRADA oficial se marca (la excepción es solo de frases de entrada)', () => {
+  for (const r of [
+    'Podéis quedaros hasta las 15:00',
+    'Sin problema, salida a las 15:00',
+    'Claro, podéis salir a las 15:00. ¡Gracias!',
+    'Perfecto, hasta las 15:00',
+    'La entrada es a las 15:00 y podéis salir a las 15:00',
+  ]) assert.equal(respuestaConfirmaHorario(r, OFI2), 'salida', r)
+  // lo legítimo sigue sin marcarse, también en la misma frase (cláusulas)
+  for (const r of [
+    'La entrada es a las 15:00.',
+    'Podéis entrar a partir de las 15:00 y la salida es a las 11:00.',
+    'Check-in a las 15:00, salida a las 11:00.',
+  ]) assert.equal(respuestaConfirmaHorario(r, OFI2), null, r)
+})
+
+test('frase con «entrada» pero que no es solo la entrada a su hora se marca igualmente', () => {
+  for (const r of [
+    'Perfecto, la entrada es libre y la hora límite son las 17:00.',
+    'Sobre la entrada, sin problema; tenéis el piso hasta las 13:00.',
+    'La entrada es a las 15:00; el piso es vuestro hasta las 17:00.',
+  ]) assert.equal(respuestaConfirmaHorario(r, OFI2), 'salida', r)
+})
+
+test('conjugaciones con tilde de dejar/salir se detectan (\\w no cubre las letras acentuadas)', () => {
+  for (const t of [
+    'Dejaríais el piso a las 13:00',
+    'Dejaréis el piso a las 13:00',
+    'Dejarán el apartamento a las 13:00',
+    'Saldrán a las 13:00',
+  ]) {
+    assert.equal(anunciaSalidaTardia(t, '11:00'), true, t)
+    assert.deepEqual(peticionCambioHorario(t, null, OFI2), { tipo: 'salida' }, t)
+  }
+  assert.equal(respuestaConfirmaHorario('Dejaréis el piso a las 13:00', OFI2), 'salida')
+})
+
+test('horas con punto («11.30», «12.30») no se parten en frases distintas', () => {
+  assert.equal(anunciaSalidaTardia('Saldremos a las 11.30', '11:00'), true)
+  assert.equal(anunciaSalidaTardia('Saldremos a las 11.30. Gracias', '11:00'), true)
+  assert.equal(respuestaConfirmaHorario('Perfecto, saldréis a las 11.30', OFI2), 'salida')
+  assert.equal(anunciaSalidaTardia('Salimos a las 10.30', '11:00'), false)
+  // el punto de fin de frase sigue separando
+  assert.equal(anunciaSalidaTardia('Salimos a las 10. Llegamos a las 18', '11:00'), false)
+})
