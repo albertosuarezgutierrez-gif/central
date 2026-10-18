@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-18T12:43:58Z",
+  "generadoEn": "2026-10-18T15:40:27Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -961,7 +961,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 254
+        "evidencias": 256
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2311,7 +2311,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 40
+        "evidencias": 41
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 52
+        "evidencias": 53
       },
       "asegura-portal": {
         "estado": "no",
@@ -4246,6 +4246,7 @@
       "/api/operador/tarificador/oportunidad/[id]/propuesta",
       "/api/operador/tarificador/panel",
       "/api/operador/tarificador/pausas/[id]",
+      "/api/operador/tarificador/presupuesto-rpa",
       "/api/operador/tarificador/probar",
       "/api/operador/tarificador/relanzar",
       "/api/operador/tarificador/trabajo/[id]",
@@ -6925,7 +6926,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1718,
+    "apis": 1719,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
