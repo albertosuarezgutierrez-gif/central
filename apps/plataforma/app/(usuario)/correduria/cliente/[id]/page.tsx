@@ -6,6 +6,7 @@ import Siniestros from '../../Siniestros'
 import { NECESARIOS_EMISION_AUTO } from '@central/module-seguros'
 import { fichaAsegura, type PolizaFicha } from '@/lib/ficha-asegura'
 import Cabecera from './Cabecera'
+import { idsConChipAviso } from '@/lib/correduria/aviso-vencimiento'
 import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
 import FichasDuplicadas from './FichasDuplicadas'
@@ -140,7 +141,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
       <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
 
-      <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} />
+      <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} idsConChip={idsConChipAviso(reparto)} />
 
       {/* La misma persona en otra ficha (mismo DNI/CIF): se avisa y se ofrece fusionar eligiendo campo a campo. */}
       <FichasDuplicadas clienteId={ficha.id} juridica={personaDeFicha({ tipoPersona: ficha.identidad?.tipoPersona, dniEnmascarado: ficha.identidad?.dniEnmascarado, segmento: ficha.segmento }) === 'juridica'} />

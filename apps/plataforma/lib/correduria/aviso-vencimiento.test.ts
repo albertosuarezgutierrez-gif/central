@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { alertaVencimiento } from '@central/module-seguros'
-import { DIAS_AVISO_ARRIBA, avisoVaArriba, polizaLlevaChipAviso } from './aviso-vencimiento.ts'
+import { DIAS_AVISO_ARRIBA, avisoVaArriba, idsConChipAviso, polizaLlevaChipAviso } from './aviso-vencimiento.ts'
 
 // Todas las fechas son relativas a un `hoy` inyectado: nunca contra el reloj real.
 const HOY = '2026-10-18'
@@ -59,4 +59,22 @@ test('proximo sin chip con >60 días: el aviso va arriba', () => {
   const p = { viva: true, estado: 'fin_riesgo', fechaVencimiento: vencConAvisoEn(120) }
   assert.equal(avisoVaArriba(lejos, { tieneChip: polizaLlevaChipAviso(p) }), true)
   assert.equal(avisoVaArriba(lejos, { tieneChip: polizaLlevaChipAviso({ ...p, estado: 'en_vigor' }) }), false)
+})
+
+test('idsConChipAviso: viva pero en Oportunidades o histórica → sin chip → el KPI se queda arriba', () => {
+  const p = (id: string) => ({ id, viva: true, estado: 'en_vigor', fechaVencimiento: '2027-03-01' })
+  const reparto = {
+    conNosotros: [
+      { clase: 'poliza' as const, poliza: p('a') },
+      { clase: 'poliza' as const, poliza: p('h'), historica: true as const },
+      { clase: 'oportunidad' as const },
+    ],
+  }
+  const ids = idsConChipAviso(reparto)
+  assert.deepEqual([...ids], ['a'])
+  const lejos = { estado: 'en_plazo', diasParaAvisar: 120 }
+  assert.equal(avisoVaArriba(lejos, { tieneChip: ids.has('a') }), false)
+  // Viva pero ausente de «Con nosotros» (va en Oportunidades) o histórica: arriba.
+  assert.equal(avisoVaArriba(lejos, { tieneChip: ids.has('o') }), true)
+  assert.equal(avisoVaArriba(lejos, { tieneChip: ids.has('h') }), true)
 })

@@ -28,6 +28,24 @@ export function polizaLlevaChipAviso(
 }
 
 /**
+ * Ids de póliza cuya tarjeta de «Con nosotros» pinta de verdad el chip (UNA fuente para la cabecera).
+ * Aplica la regla con el contexto REAL de la tarjeta (`eliminable: false`, `historica` de la tarjeta):
+ * una póliza viva que va en «Oportunidades» o es volcado histórico NO está aquí.
+ */
+export function idsConChipAviso(reparto: {
+  conNosotros: ReadonlyArray<
+    | { clase: 'poliza'; poliza: Parameters<typeof polizaLlevaChipAviso>[0] & { id: string }; historica?: true }
+    | { clase: 'oportunidad' | 'declarada' }
+  >
+}): Set<string> {
+  const ids = new Set<string>()
+  for (const s of reparto.conNosotros) {
+    if (s.clase === 'poliza' && polizaLlevaChipAviso(s.poliza, { eliminable: false, historica: s.historica })) ids.add(s.poliza.id)
+  }
+  return ids
+}
+
+/**
  * `tieneChip`: la póliza del aviso lleva chip en su tarjeta (`polizaLlevaChipAviso`). Solo entonces
  * se aparta de arriba; sin chip, o sin poder saberlo, el aviso se queda arriba.
  */
