@@ -1,6 +1,7 @@
 // `node --test`. Nombres de compañía FICTICIOS; sin datos personales.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { validarFormularioAuto } from '@central/module-tarificacion'
 import { aplicarCompaniaActual, companiaActualDeCliente, nombreCompaniaUtil, type PolizaParaCompaniaActual } from './tarificador-compania-actual.ts'
 
 const p = (x: Partial<PolizaParaCompaniaActual>): PolizaParaCompaniaActual => ({
@@ -31,7 +32,7 @@ test('nombreCompaniaUtil: vacío, cajón y no-string → null', () => {
 })
 test('aplicarCompaniaActual rellena solo si falta y solo Allianz auto', () => {
   const r = { ramo: 'auto', matricula: 'X' }
-  assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', r, 'Beta'), { ...r, companiaActual: 'Beta' })
+  assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', r, 'Beta'), { ...r, companiaAnterior: 'Beta' })
   assert.equal(aplicarCompaniaActual('allianz', 'auto', r, null), r)
   assert.equal(aplicarCompaniaActual('allianz', 'moto', r, 'Beta'), r)
   assert.equal(aplicarCompaniaActual('mapfre', 'auto', r, 'Beta'), r)
@@ -39,6 +40,33 @@ test('aplicarCompaniaActual rellena solo si falta y solo Allianz auto', () => {
   assert.equal(aplicarCompaniaActual('allianz', 'auto', conAnterior, 'Beta'), conAnterior)
   const conActual = { ...r, companiaActual: 'Ya' }
   assert.equal(aplicarCompaniaActual('allianz', 'auto', conActual, 'Beta'), conActual)
-  assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', { ...r, companiaActual: ' ' }, 'Beta'), { ...r, companiaActual: 'Beta' })
+  assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', { ...r, companiaActual: ' ' }, 'Beta'), { ...r, companiaActual: ' ', companiaAnterior: 'Beta' })
   assert.equal(aplicarCompaniaActual('allianz', 'auto', 'no-objeto', 'Beta'), 'no-objeto')
+})
+test('compañía demasiado larga o con caracteres prohibidos: no se pone (el validador daría error)', () => {
+  const r = { ramo: 'auto' }
+  assert.equal(aplicarCompaniaActual('allianz', 'auto', r, 'A'.repeat(81)), r)
+  assert.equal(aplicarCompaniaActual('allianz', 'auto', r, 'Beta <x>'), r)
+  assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', r, 'A'.repeat(80)), { ...r, companiaAnterior: 'A'.repeat(80) })
+})
+// Formulario de auto SINTÉTICO válido, sin compañía anterior (como llega cuando nadie la tecleó).
+const cocheSinCompania = () => ({
+  ramo: 'auto', matricula: '1234BCD', codigoPostal: '41003',
+  conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'mujer' },
+  tomadorEsConductor: true, tomadorEsPropietario: true, aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0, garajeNoche: false,
+  documentoTomador: '00000000T',
+  datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1985-03-10' },
+})
+const HOY = new Date('2026-10-15T10:00:00Z')
+
+test('INTEGRACIÓN: la compañía sobrevive a validarFormularioAuto (companiaActual se descartaba)', () => {
+  const base = validarFormularioAuto(cocheSinCompania(), HOY)
+  assert.equal(base.ok, true, 'el formulario base tiene que ser válido')
+  const v = validarFormularioAuto(aplicarCompaniaActual('allianz', 'auto', cocheSinCompania(), 'Aseguradora Beta'), HOY)
+  assert.equal(v.ok, true)
+  if (v.ok) assert.equal(v.formulario.companiaAnterior, 'Aseguradora Beta')
+})
+test('INTEGRACIÓN: una compañía de 81 caracteres no tumba el formulario (se omite)', () => {
+  const v = validarFormularioAuto(aplicarCompaniaActual('allianz', 'auto', cocheSinCompania(), 'A'.repeat(81)), HOY)
+  assert.equal(v.ok, true)
 })

@@ -50,12 +50,20 @@ export function companiaActualDeCliente(competencia: unknown, polizas: readonly 
 
 const vacio = (v: unknown): boolean => typeof v !== 'string' || v.trim() === ''
 
+/** Tope de `companiaAnterior` en el validador del formulario (`MAX_COMPANIA_ANTERIOR`): por encima, el validador da ERROR y tumba el trabajo. */
+const MAX_COMPANIA_ANTERIOR = 80
+/** Caracteres que el validador rechaza en texto libre (copia de `CARACTERES_PROHIBIDOS` de module-tarificacion). */
+const CARACTERES_PROHIBIDOS = /[<>{}\[\]\\`$]|[\u0000-\u001f]/
+
 /**
- * Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaActual` = la del cliente. Si ya trae
- * alguna, o no se sabe la del cliente, devuelve el MISMO riesgo. Solo para auto; no toca otros ramos ni compañías. PURA.
+ * Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaAnterior` = la del cliente (es la clave que
+ * `validarFormularioAuto` conserva y que el bot lee primero; `companiaActual` se descartaba y el bot veía «no consta»).
+ * Si ya trae alguna, no se sabe la del cliente o no cabe en el validador (>80 o caracteres prohibidos: no se pone, nunca se
+ * recorta ni se rompe el trabajo), devuelve el MISMO riesgo. Solo para auto; no toca otros ramos ni compañías. PURA.
  */
 export function aplicarCompaniaActual(compania: string, ramo: string, riesgo: unknown, actual: string | null): unknown {
   if (compania !== 'allianz' || ramo !== 'auto' || !esObj(riesgo) || actual === null) return riesgo
   if (!vacio(riesgo.companiaAnterior) || !vacio(riesgo.companiaActual)) return riesgo
-  return { ...riesgo, companiaActual: actual }
+  if (actual.length > MAX_COMPANIA_ANTERIOR || CARACTERES_PROHIBIDOS.test(actual)) return riesgo
+  return { ...riesgo, companiaAnterior: actual }
 }
