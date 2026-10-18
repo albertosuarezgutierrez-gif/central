@@ -389,7 +389,7 @@ function ListaAgrupada({ lista, polizas, fila }: {
   const alternar = (clave: string) => setPlegados((p) => { const n = new Set(p); if (!n.delete(clave)) n.add(clave); return n })
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      {lista.length > 5 && (
+      {(lista.length > 5 || buscar !== '') && (
         <input
           type="search"
           value={buscar}
