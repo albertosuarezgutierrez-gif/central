@@ -14,6 +14,7 @@ import PedirPresupuestoBot from './PedirPresupuestoBot'
 import ProbarTarificacion from './ProbarTarificacion'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
+import { avisoVaArriba } from '@/lib/correduria/aviso-vencimiento'
 
 /**
  * La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada
@@ -29,8 +30,10 @@ import { fmt, TIPOS } from './piezas'
  * Cada tile tiene tres estados y nunca dos: `—` = no se ha podido mirar ·
  * `0` = se miró y no hay · el número.
  */
-export default function Cabecera({ ficha, resumen, seguros }: {
+export default function Cabecera({ ficha, resumen, seguros, idsConChip }: {
   ficha: Ficha; resumen: ResumenFicha
+  /** Ids de póliza cuya tarjeta pinta el chip de aviso (`idsConChipAviso`, calculado en page.tsx). */
+  idsConChip: ReadonlySet<string>
   /** Solo los SEGUROS (cartera en vigor): el volcado y lo que ya no cubre son oportunidades. */
   seguros: Ficha['polizas']
 }) {
@@ -113,7 +116,7 @@ export default function Cabecera({ ficha, resumen, seguros }: {
 
       <Acciones clienteId={ficha.id} />
 
-      <Titulares resumen={resumen} />
+      <Titulares resumen={resumen} idsConChip={idsConChip} />
 
       {/* Herramientas (Fase 1, 14/10/2026): «Probar tarificación» salió de los botones de la cabecera. Plegado por defecto. */}
       <details className="plegable-dato">
@@ -203,7 +206,7 @@ function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
 // estado: un contador que no distingue «cero» de «no informado» es justo el que
 // hace decir «está todo al día» sobre lo que no se ha mirado.
 
-function Titulares({ resumen }: { resumen: ResumenFicha }) {
+function Titulares({ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip: ReadonlySet<string> }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
   // Flex que envuelve y estira: una 5.ª tarjeta no se queda sola y pequeña en su fila.
   return (
@@ -243,7 +246,7 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
         color={abiertos ? 'var(--warning)' : undefined}
         sub={abiertos === null ? 'no se han podido leer' : abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
       />
-      <ProximoVencimiento proximo={proximo} vivas={conteo.vivas} sinFecha={resumen.vivasSinFechaVencimiento} />
+      <ProximoVencimiento proximo={proximo} idsConChip={idsConChip} vivas={conteo.vivas} sinFecha={resumen.vivasSinFechaVencimiento} />
     </div>
   )
 }
@@ -258,8 +261,8 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
  * vencimiento se dice debajo, para que no falte, pero el número grande es el
  * día que importa.
  */
-function ProximoVencimiento({ proximo, vivas, sinFecha }: {
-  proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number
+function ProximoVencimiento({ proximo, idsConChip, vivas, sinFecha }: {
+  proximo: ResumenFicha['proximo']; idsConChip: ReadonlySet<string>; vivas: number; sinFecha: number
 }) {
   if (proximo === null) {
     return (
@@ -286,6 +289,11 @@ function ProximoVencimiento({ proximo, vivas, sinFecha }: {
   if (a.estado === 'aviso_pasado') {
     return <Kpi label="Aviso pasado el" valor={fmt(a.limiteAviso as string)} pequeno color="var(--muted)" sub={`renueva otro año · vence el ${fmt(proximo.vencimiento)}`} />
   }
+  // (18/10/2026) Con el aviso aún lejos (>60 días) no ocupa sitio arriba: se ve como chip en la
+  // tarjeta de su póliza, en «Con nosotros». Solo sube cuando queda poco (`avisoVaArriba`).
+  // Solo se aparta si la tarjeta de `proximo` pinta de verdad ese chip (`idsConChipAviso`, UNA fuente
+  // calculada sobre el reparto en page.tsx); viva pero en Oportunidades/histórica, o sin dato: arriba.
+  if (!avisoVaArriba(a, { tieneChip: proximo.polizaId ? idsConChip.has(proximo.polizaId) : false })) return null
   return (
     <Kpi
       label="Hay que avisar antes del"
