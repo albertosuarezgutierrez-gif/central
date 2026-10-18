@@ -47,6 +47,9 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.6 (18/10/2026, trabajos reales a59d12ac / 9aaeb074) · «requiere_eleccion_version» (5 filas en «Selección de vehículo»): Alberto
+//   decide que, si ninguna fila casa SOLA con el riesgo, se coge la PRIMERA y se DECLARA («Precio con supuestos: vehículo/versión:
+//   el primero de la lista (supuesto, había N)»), como en Allianz Turismos. Casada por regla fija = dato, sin supuesto. Coche y moto.
 // v0.8.5 (15/10/2026, trabajo real 815f6675) · en «Coberturas» con primas visibles moría por atasco: el lector exigía 2 decimales
 //   («670,1 €» no casaba) y que TODAS las tarjetas tuvieran prima (TODO RIESGO sale bloqueada por «controles técnicos»). Ahora 0-2
 //   decimales + miles, y una tarjeta bloqueada se omite si otra tiene prima. Sin ninguna prima → atasco como antes. Solo lectura.
@@ -68,6 +71,7 @@ import {
   normalizarMatricula,
   redactarDatosPersonales,
   resolverVersion,
+  textoSupuestos,
   USO_VEHICULO_POR_DEFECTO,
   vehiculoConfirmadoDesdeMapfre,
   type CandidatoVersion,
@@ -327,7 +331,7 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
 }
 
 /** Primas → ofertas normalizadas (una por producto). `vehiculo` es opcional: Mapfre no separa marca y modelo (ver `lecturaResumenVehiculo`). */
-export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null): OfertaNormalizada[] {
+export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null): OfertaNormalizada[] {
   return primas.map((p) => ({
     compania: 'mapfre',
     producto: `Auto · ${p.producto}`,
@@ -345,6 +349,8 @@ export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[],
       'PRIMA TOTAL anual de la tarjeta del producto; sin desglose neta/impuestos (el desglose está tras el botón «Desgloses», sin grabar).',
       ...(p.requiereVerificacionVehiculo ? ['Mapfre exige la verificación del vehículo antes de contratar este producto.'] : []),
       ...(vehiculo ? [`Vehículo según el catálogo de Mapfre: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.version}.`] : []),
+      // v0.8.6: lo que el bot SUPUSO (la fila del vehículo), junto al precio, como en Allianz. Asegura lo deja pasar (`supuestosDeAvisos`).
+      ...(supuestos ? [supuestos] : []),
     ],
   }))
 }
@@ -431,6 +437,14 @@ export function indiceFilaVehiculoMapfre(filas: readonly FilaVehiculoDialogo[], 
   return null
 }
 
+/**
+ * v0.8.6 (Alberto, 18/10/2026): varias filas en «Selección de vehículo» y ninguna casa SOLA con el riesgo → se coge LA PRIMERA
+ * y se DECLARA como supuesto en el precio (mismo texto que Allianz Turismos). Un supuesto nunca se presenta como dato. PURA.
+ */
+export function supuestoPrimeraFilaVehiculo(total: number): string {
+  return `vehículo/versión: el primero de la lista (supuesto, había ${total})`
+}
+
 const ESPERA_DIALOGO_VEHICULO_MS = 15_000
 
 /** Cómo se abrió «Selección de vehículo»: ya estaba abierto al teclear, o al salir del campo (blur/focusout/change). */
@@ -485,6 +499,8 @@ export async function consultarVehiculoPorMatricula(
   esperaDialogoMs = ESPERA_DIALOGO_VEHICULO_MS,
   respaldo: RespaldoCampos = SIN_RESPALDO,
   criterio: Partial<CriterioFilaVehiculo> | null = null,
+  /** v0.8.6: recibe el supuesto cuando se cogió la primera fila por no casar ninguna sola (el precio lo declara). */
+  declararSupuesto?: (supuesto: string) => void,
 ): Promise<VehiculoConfirmado> {
   if (!ctx.confirmarVehiculoMapfre) throw new ErrorMapaIncompleto('la función guardada que confirma el vehículo (contexto sin `confirmarVehiculoMapfre`)')
   const r = await campoConRespaldo(nsei, SEL_OBJETO.matricula, { ...respaldo, page: respaldo.page ?? null, etiqueta: 'Matrícula', descripcion: 'Campo «Matrícula» del vehículo en el paso «Objeto asegurado» de Mapfre NSEI' })
@@ -500,17 +516,11 @@ export async function consultarVehiculoPorMatricula(
   respaldo.formador?.log('mapfre_busqueda_matricula', { disparo })
   const filas = await leerFilasDialogoVehiculo(nsei)
   if (filas.length === 0) throw new ErrorTarificador('datos', 'mapfre/auto: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  // Fila por REGLA FIJA (v0.8.0): una sola, o la única que casa con el riesgo. Si no → atasco + elección de una persona.
-  const indice = indiceFilaVehiculoMapfre(filas, criterio)
-  if (indice === null) {
-    await registrarAtasco(nsei, respaldo.formador, {
-      clave: claveCampo('seleccion vehiculo mapfre'),
-      tipo: 'campo',
-      etiqueta: 'Selección de vehículo',
-      descripcion: `Paso 2 «Objeto asegurado» de Mapfre NSEI: «Selección de vehículo» trae ${filas.length} vehículos y ninguno casa SOLO con los datos del riesgo (versión elegida, vehículo confirmado, marca y modelo). El robot no elige a ciegas.`,
-    }).catch(() => undefined)
-    throw new ErrorEleccionVersion(filas.map((f) => ({ etiqueta: etiquetaFilaVehiculo(f), codigo: null })))
-  }
+  // Fila por REGLA FIJA (v0.8.0): una sola, o la única que casa con el riesgo (dato). v0.8.6: si no casa ninguna SOLA, la
+  // PRIMERA como SUPUESTO declarado (decisión de Alberto, 18/10/2026); ya no se para con `requiere_eleccion_version`.
+  const casada = indiceFilaVehiculoMapfre(filas, criterio)
+  const indice = casada ?? 0
+  if (casada === null) declararSupuesto?.(supuestoPrimeraFilaVehiculo(filas.length))
   const vehiculo = vehiculoConfirmadoDesdeMapfre(filas[indice]!)
   if (!vehiculo) throw new ErrorTarificador('portal', 'mapfre/auto: la fila de «Selección de vehículo» no trae denominación comercial legible')
   // El guard confirma ESA fila y exige que su matrícula sea la del riesgo (la comparación no sale de guard.ts).
@@ -1275,6 +1285,7 @@ export async function precioDesdeObjetoAsegurado(
   vehiculo: VehiculoConfirmado,
   ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
+  supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
   if (f.ramo === 'moto') throw new ErrorMapaIncompleto('el plan de campos de MOTO en NSEI (clase de permiso y figuras sin grabación de moto)', true)
   const plan = planObjetoYFiguras(f)
@@ -1294,7 +1305,7 @@ export async function precioDesdeObjetoAsegurado(
   exigirPasoCompleto(plan, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
-  return { ofertas: ofertasDesdePrimasMapfre(primas, null), vehiculoConfirmado: vehiculo }
+  return { ofertas: ofertasDesdePrimasMapfre(primas, null, supuestos), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1307,7 +1318,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.5',
+  version: '0.8.6',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -1320,9 +1331,10 @@ export const mapfreAuto = {
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales })
     await pasoDatosBasicos(nsei, form, ctx)
-    const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
+    const supuestosVehiculo: string[] = []
+    const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form, (x) => supuestosVehiculo.push(x))
     ctx.log('vehiculo confirmado')
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx)
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos(supuestosVehiculo))
   },
 } as const
 

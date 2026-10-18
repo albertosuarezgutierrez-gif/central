@@ -1709,28 +1709,10 @@ async function leerInterruptorApagadoTurismos(marco: Frame, etiqueta: string): P
   return hits[0].encendido ? { estado: 'no_quedo' } : { estado: 'ya_marcada' }
 }
 
-/**
- * Marca UNA opción del asistente de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
- * Mismas exigencias que `marcarOpcionRiesgoHogarAllianz`: guard limpio y sin ventanas de red abiertas; `clave` en la lista
- * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; pestaña seleccionada = el paso de la clave (todo eso, bloqueo);
- * dentro de la zona `appArea` y fuera de la cabecera, EXACTAMENTE un control cuya etiqueta casa EXACTA, de un grupo con la
- * pregunta de la clave (si la tiene) y con el conjunto COMPLETO de opciones de la clave (si ya está marcado no se pulsa nada);
- * `comprobarBoton` sobre control y etiqueta ANTES del único clic; después, que quede marcado. Grupo no encontrado o ambiguo →
- * `no_unica` (hueco), nunca un bloqueo.
- */
-export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmision, clave: string): Promise<ResultadoOpcionHogar> {
-  guard.comprobar()
-  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'opción de Turismos con una ventana de red abierta')
-  const op = OPCIONES_TURISMOS_ALLIANZ.find((o) => o.clave === clave)
-  if (!op) throw new EmisionBloqueadaError('boton', `opción de Turismos fuera de la lista cerrada: «${clave.slice(0, 80)}»`)
-  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera de la app de Allianz AUTOS')
-  await exigirSinCuentaBancaria(marco.page())
-  // Anclaje (revisión 15/10/2026; v0.6.5 por clave): pestaña seleccionada = el paso DE LA CLAVE y la opción es de SU grupo. Otro paso → bloqueo.
-  const pestanas = marco.getByRole('tab', { selected: true })
-  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
-  if (activa !== op.paso) throw new EmisionBloqueadaError('fase', `opción de Turismos fuera del paso «${op.paso}»`)
-  if (op.interruptor) return leerInterruptorApagadoTurismos(marco, op.opcion)
-  const todos = await marco
+/** Radios de la zona `appArea` (fuera de la cabecera) con su grupo, su etiqueta, las de sus hermanas (orden del DOM) y si están marcados. Solo lectura. */
+type RadioTurismosLeido = { id: string | null; marcada: boolean; grupo: string; etiqueta: string; hermanas: string[] }
+async function leerRadiosTurismos(marco: Frame): Promise<RadioTurismosLeido[]> {
+  return marco
     .locator(SEL_ZONA_APP_TURISMOS)
     .locator('input[type=radio]')
     .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
@@ -1759,18 +1741,18 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
             : [h]) as HTMLInputElement[]
         return {
           id: h.id || null,
+          marcada: h.checked,
           grupo,
           etiqueta: h.labels && h.labels.length ? Array.from(h.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '',
           hermanas: hermanas.map((x) => (x.labels && x.labels.length ? Array.from(x.labels).map((l) => l.innerText || l.textContent || '').join(' ') : '')),
         }
       }),
     )
-  const deSuPregunta = (r: { grupo: string }) => op.pregunta === null || planoOpcion(r.grupo) === planoOpcion(op.pregunta)
-  const hits = todos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, op.opcion) && deSuPregunta(r) && grupoOpcionesTurismosCasa(r.hermanas, op.grupo))
-  // Sin su grupo (pregunta u opciones distintas a las del inventario) o con varios candidatos → `no_unica` (hueco de mapa, sin pulsar).
-  // `EmisionBloqueadaError` queda para lo prohibido de verdad (clave fuera de la lista, otra app, otro paso, ventana de red abierta).
-  if (hits.length !== 1 || !hits[0].id) return { estado: 'no_unica', coincidencias: hits.length }
-  const id = hits[0].id.replace(/["\\]/g, '')
+}
+
+/** Pulsa (por su `<label for>`) el radio de Turismos con ese id: ya marcado → no se toca; `comprobarBoton` sobre control y etiqueta ANTES del único clic. */
+async function pulsarRadioTurismos(marco: Frame, guard: GuardEmision, idCrudo: string): Promise<ResultadoOpcionHogar> {
+  const id = idCrudo.replace(/["\\]/g, '')
   const control = marco.locator(`input[type=radio][id="${id}"]`)
   if ((await control.count()) !== 1) return { estado: 'no_unica', coincidencias: await control.count() }
   if (await control.isChecked()) return { estado: 'ya_marcada' }
@@ -1784,6 +1766,128 @@ export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmis
   await label.click()
   guard.comprobar()
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}
+
+/**
+ * Marca UNA opción del asistente de Turismos (el ÚNICO camino del adaptador para tocar una opción de este tipo).
+ * Mismas exigencias que `marcarOpcionRiesgoHogarAllianz`: guard limpio y sin ventanas de red abiertas; `clave` en la lista
+ * cerrada; marco vivo y de la app de Turismos; sin campos de cuenta bancaria; pestaña seleccionada = el paso de la clave (todo eso, bloqueo);
+ * dentro de la zona `appArea` y fuera de la cabecera, EXACTAMENTE un control cuya etiqueta casa EXACTA, de un grupo con la
+ * pregunta de la clave (si la tiene) y con el conjunto COMPLETO de opciones de la clave (si ya está marcado no se pulsa nada);
+ * `comprobarBoton` sobre control y etiqueta ANTES del único clic; después, que quede marcado. Grupo no encontrado o ambiguo →
+ * `no_unica` (hueco), nunca un bloqueo.
+ */
+export async function marcarOpcionTurismosAllianz(marco: Frame, guard: GuardEmision, clave: string): Promise<ResultadoOpcionHogar> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'opción de Turismos con una ventana de red abierta')
+  const op = OPCIONES_TURISMOS_ALLIANZ.find((o) => o.clave === clave)
+  if (!op) throw new EmisionBloqueadaError('boton', `opción de Turismos fuera de la lista cerrada: «${clave.slice(0, 80)}»`)
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'opción de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  // Anclaje (revisión 15/10/2026; v0.6.5 por clave): pestaña seleccionada = el paso DE LA CLAVE y la opción es de SU grupo. Otro paso → bloqueo.
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== op.paso) throw new EmisionBloqueadaError('fase', `opción de Turismos fuera del paso «${op.paso}»`)
+  if (op.interruptor) return leerInterruptorApagadoTurismos(marco, op.opcion)
+  const todos = await leerRadiosTurismos(marco)
+  const deSuPregunta = (r: { grupo: string }) => op.pregunta === null || planoOpcion(r.grupo) === planoOpcion(op.pregunta)
+  const hits = todos.filter((r) => etiquetaOpcionHogarCasa(r.etiqueta, op.opcion) && deSuPregunta(r) && grupoOpcionesTurismosCasa(r.hermanas, op.grupo))
+  // Sin su grupo (pregunta u opciones distintas a las del inventario) o con varios candidatos → `no_unica` (hueco de mapa, sin pulsar).
+  // `EmisionBloqueadaError` queda para lo prohibido de verdad (clave fuera de la lista, otra app, otro paso, ventana de red abierta).
+  if (hits.length !== 1 || !hits[0].id) return { estado: 'no_unica', coincidencias: hits.length }
+  return pulsarRadioTurismos(marco, guard, hits[0].id)
+}
+
+// ─────────── Preguntas de «Antecedentes» de Allianz AUTOS Turismos (v0.6.10 del bot, 18/10/2026) ───────────
+// HTML real del trabajo fdabd09c: tres grupos de opciones que bloquean «SIGUIENTE» si no se contestan:
+//   «¿Cuánto tiempo llevas en tu compañía?»: Menos de 1 año | 1 año | 2 años | 3 años | 4 años | 5 años o más
+//   «¿Has declarado algún parte culpable con contrario en los últimos 5 años?»: No he declarado ningún parte | 1 parte | 2 partes | 3 partes o más
+//   «¿Cuánto tiempo llevas como titular de un seguro de vehículo?»: Menos de 1 año | 1-2 años | 3-4 años | 5-6 años | 7-8 años | 9-10 años o más
+// Decisión de Alberto («supuesto favorable»): sin dato del riesgo se elige la opción MÁXIMA (por texto; si no casa, la última del grupo)
+// y el adaptador la DECLARA. Con dato, la que casa por texto (si no casa → `no_unica`, hueco: nunca la última). Grupo ausente → no se hace nada.
+
+export const PASO_ANTECEDENTES_TURISMOS = 'Antecedentes'
+export type ClaveAntecedenteTurismos = 'compania_tiempo' | 'partes_culpables' | 'titular_tiempo'
+type DefAntecedenteTurismos = { readonly pregunta: RegExp; readonly maxima: RegExp; readonly porDato: (n: number) => RegExp | null }
+const DEF_ANTECEDENTES_TURISMOS: Readonly<Record<ClaveAntecedenteTurismos, DefAntecedenteTurismos>> = Object.freeze({
+  compania_tiempo: {
+    pregunta: /tiempo llevas en tu compania/,
+    maxima: /^5 anos o mas$/,
+    porDato: (n) => (n < 1 ? /^menos de 1 ano$/ : n === 1 ? /^1 ano$/ : n < 5 ? new RegExp(`^${n} anos$`) : /^5 anos o mas$/),
+  },
+  partes_culpables: {
+    pregunta: /parte culpable/,
+    maxima: /^no he declarado ningun parte$/,
+    porDato: (n) => (n < 1 ? /^no he declarado ningun parte$/ : n === 1 ? /^1 parte$/ : n === 2 ? /^2 partes$/ : /^3 partes o mas$/),
+  },
+  titular_tiempo: {
+    pregunta: /titular de un seguro/,
+    maxima: /^9-10 anos o mas$/,
+    porDato: () => null,
+  },
+})
+export type ResultadoAntecedenteTurismos =
+  /** `ultima`: sin dato y sin casar el texto de la máxima, se pulsó la ÚLTIMA del grupo (`elegida` es su etiqueta REAL). */
+  | { estado: 'marcada' | 'ya_marcada'; elegida: string; ultima?: true }
+  /** El grupo no está en la pantalla (o no es identificable): no se hace nada. */
+  | { estado: 'sin_grupo' }
+  /** El portal ya trae una opción marcada en el grupo: no se toca. `marcada` = su etiqueta REAL; `coincide` = hay dato y es esa. */
+  | { estado: 'con_valor'; marcada: string; coincide: boolean }
+  | { estado: 'no_unica'; motivo: string }
+  | { estado: 'no_quedo' }
+
+/**
+ * Contesta UNA pregunta de «Antecedentes» de Turismos (el ÚNICO camino para tocarla). Mismas exigencias que `marcarOpcionTurismosAllianz`
+ * (guard limpio, sin ventanas de red, marco de la app de Turismos, sin cuenta bancaria, pestaña «Antecedentes»: todo eso, bloqueo) y
+ * `comprobarBoton` sobre control y etiqueta ANTES del único clic. El grupo es el de radios hermanos cuyo nombre contiene la pregunta o
+ * que trae la opción máxima; `dato` null → la máxima (por texto, si no la última); con `dato` → la que casa por texto.
+ */
+export async function marcarAntecedenteTurismosAllianz(marco: Frame, guard: GuardEmision, clave: ClaveAntecedenteTurismos, dato: number | null): Promise<ResultadoAntecedenteTurismos> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'antecedente de Turismos con una ventana de red abierta')
+  const def = DEF_ANTECEDENTES_TURISMOS[clave]
+  if (!def) throw new EmisionBloqueadaError('boton', 'antecedente de Turismos fuera de la lista cerrada')
+  if (dato !== null && !(Number.isInteger(dato) && dato >= 0)) throw new EmisionBloqueadaError('boton', 'antecedente de Turismos: dato no válido')
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'antecedente de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_ANTECEDENTES_TURISMOS) throw new EmisionBloqueadaError('fase', `antecedente de Turismos fuera del paso «${PASO_ANTECEDENTES_TURISMOS}»`)
+  const todos = await leerRadiosTurismos(marco)
+  const clavesGrupo = new Set<string>()
+  for (const r of todos) {
+    if (r.hermanas.length < 2) continue
+    if (def.pregunta.test(planoOpcion(r.grupo)) || r.hermanas.some((h) => def.maxima.test(planoOpcion(h)))) clavesGrupo.add(JSON.stringify(r.hermanas))
+  }
+  if (clavesGrupo.size === 0) return { estado: 'sin_grupo' }
+  if (clavesGrupo.size > 1) return { estado: 'no_unica', motivo: `${clavesGrupo.size} grupos candidatos` }
+  const grupo = todos.filter((r) => JSON.stringify(r.hermanas) === [...clavesGrupo][0])
+  if (grupo.length < 2 || grupo.some((r) => !r.id)) return { estado: 'no_unica', motivo: 'grupo sin ids' }
+  const yaMarcadas = grupo.filter((r) => r.marcada)
+  if (yaMarcadas.length > 0) {
+    const reDato = dato === null ? null : def.porDato(dato)
+    const coincide = reDato !== null && yaMarcadas.length === 1 && reDato.test(planoOpcion(yaMarcadas[0]!.etiqueta))
+    return { estado: 'con_valor', marcada: yaMarcadas.map((r) => r.etiqueta.replace(/\s+/g, ' ').trim()).join(' / '), coincide }
+  }
+  let elegido: RadioTurismosLeido | undefined
+  let ultima = false
+  if (dato === null) {
+    const porTexto = grupo.filter((r) => def.maxima.test(planoOpcion(r.etiqueta)))
+    ultima = porTexto.length === 0
+    elegido = porTexto.length === 1 ? porTexto[0] : ultima ? grupo[grupo.length - 1] : undefined
+  } else {
+    const re = def.porDato(dato)
+    const porTexto = re ? grupo.filter((r) => re.test(planoOpcion(r.etiqueta))) : []
+    elegido = porTexto.length === 1 ? porTexto[0] : undefined
+  }
+  if (!elegido) return { estado: 'no_unica', motivo: 'ninguna opción casa' }
+  const texto = elegido.etiqueta.replace(/\s+/g, ' ').trim()
+  comprobarBoton([texto])
+  const banco = senalCuentaBancaria([texto])
+  if (banco !== null) throw new ErrorFronteraEmision(banco)
+  const r = await pulsarRadioTurismos(marco, guard, elegido.id as string)
+  if (r.estado === 'marcada' || r.estado === 'ya_marcada') return ultima ? { estado: r.estado, elegida: texto, ultima: true } : { estado: r.estado, elegida: texto }
+  return r.estado === 'no_unica' ? { estado: 'no_unica', motivo: `${r.coincidencias} coincidencias` } : { estado: 'no_quedo' }
 }
 
 // ─────────── «Compañía actual del vehículo» de Allianz AUTOS Turismos (v0.6.5 del bot, 17/10/2026) ───────────

@@ -35,7 +35,7 @@ import { adaptadores } from '../src/adapters/index.ts'
 import { ErrorEleccionVersion } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { ErrorOpcionSinResolver } from '../src/mat-select.ts'
-import { comprobarBoton, EmisionBloqueadaError, type FormularioAuto } from '@central/module-tarificacion'
+import { comprobarBoton, EmisionBloqueadaError, supuestosDeAvisos, textoSupuestos, type FormularioAuto } from '@central/module-tarificacion'
 
 const form: FormularioAuto = {
   ramo: 'auto',
@@ -155,6 +155,16 @@ test('leerPrimasMapfre lee las 3 tarjetas y marca las que piden verificación', 
   assert.equal(o[2]!.primaAnualEur, 1300.3)
   assert.ok(o[1]!.avisos.some((a) => /verificación del vehículo/.test(a)))
   assert.ok(!o[0]!.avisos.some((a) => /verificación del vehículo/.test(a)))
+})
+
+test('ofertasDesdePrimasMapfre (v0.8.6): el supuesto de la versión llega a los avisos de CADA oferta con el prefijo «Precio con supuestos»; sin supuesto, ninguno', async () => {
+  await page.setContent(PRIMAS)
+  const p = await leerPrimasMapfre(page)
+  const sup = textoSupuestos(['vehículo/versión: el primero de la lista (supuesto, había 5)'])
+  const con = ofertasDesdePrimasMapfre(p, null, sup)
+  for (const o of con) assert.ok(o.avisos.includes('Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5).'))
+  assert.equal(supuestosDeAvisos(con[0]!.avisos), 'Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5).')
+  for (const o of ofertasDesdePrimasMapfre(p, null)) assert.equal(supuestosDeAvisos(o.avisos), null)
 })
 
 test('leerPrimasMapfre: sin tarjetas (paso sin calcular) → error portal, nunca lista vacía', async () => {

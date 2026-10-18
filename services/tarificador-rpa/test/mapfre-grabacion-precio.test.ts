@@ -201,15 +201,33 @@ test('confirmarVehiculoMapfre con denominación: la tabla re-ordenada entre lect
   await b.context.close()
 })
 
-test('consultarVehiculoPorMatricula: varias filas sin dato que desempate → ATASCO + ErrorEleccionVersion con las opciones (solo catálogo), sin pulsar', async () => {
+test('consultarVehiculoPorMatricula (v0.8.6): varias filas sin dato que desempate → la PRIMERA, confirmada por el guard, y el supuesto se DECLARA (había N)', async () => {
   const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6'], [MATRICULA, 'MARCA PRUEBA MODELO Y 2.0']] }))
   const ctx = ctxReal(page, guard)
-  await assert.rejects(
-    () => consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form),
-    (e) => e instanceof ErrorEleccionVersion && e.opciones.length === 2 && !/0000|BBB|BASTIDOR/.test(e.message),
-  )
-  assert.equal(await marca(page, '__fila'), null)
-  assert.equal(await marca(page, '__aceptado'), null)
+  const supuestos: string[] = []
+  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form, (x) => supuestos.push(x))
+  assert.equal(v.denominacion, 'MARCA PRUEBA MODELO X 1.6')
+  assert.deepEqual(supuestos, ['vehículo/versión: el primero de la lista (supuesto, había 2)'])
+  assert.equal(await marca(page, '__aceptado'), 1, 'el guard confirmó la fila (Aceptar pulsado)')
+  await context.close()
+})
+
+test('consultarVehiculoPorMatricula (v0.8.6): UNA sola fila → esa, como dato, SIN supuesto', async () => {
+  const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6']] }))
+  const supuestos: string[] = []
+  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, form, (x) => supuestos.push(x))
+  assert.equal(v.denominacion, 'MARCA PRUEBA MODELO X 1.6')
+  assert.deepEqual(supuestos, [])
+  await context.close()
+})
+
+test('consultarVehiculoPorMatricula (v0.8.6): varias filas y UNA casa con la versión elegida → esa, como dato, SIN supuesto', async () => {
+  const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6'], [MATRICULA, 'MARCA PRUEBA MODELO Y 2.0']] }))
+  const supuestos: string[] = []
+  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, { ...form, eleccionVersion: { etiqueta: 'MARCA PRUEBA MODELO Y 2.0' } }, (x) => supuestos.push(x))
+  assert.equal(v.denominacion, 'MARCA PRUEBA MODELO Y 2.0')
+  assert.deepEqual(supuestos, [])
+  assert.equal(await marca(page, '__aceptado'), 1)
   await context.close()
 })
 
