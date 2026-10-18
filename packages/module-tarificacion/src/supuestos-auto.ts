@@ -43,7 +43,7 @@ export type SupuestosAuto = {
 /** Comienzo del aviso que viaja con la oferta (y que asegura deja pasar a plataforma). */
 export const PREFIJO_SUPUESTOS = 'Precio con supuestos: '
 /** Máximo del aviso de supuestos que cruza a plataforma. */
-export const MAX_AVISO_SUPUESTOS = 300
+export const MAX_AVISO_SUPUESTOS = 500
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 const esIso = (v: unknown): v is string => typeof v === 'string' && ISO.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v

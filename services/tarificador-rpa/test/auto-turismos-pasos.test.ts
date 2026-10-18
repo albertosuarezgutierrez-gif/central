@@ -25,6 +25,8 @@ import {
   recorrerPasosTurismos,
   rellenarDatosVehiculoTurismosConSupuesto,
   SUPUESTO_LOCALIDAD_PORTAL,
+  SUPUESTO_CP_FIJADO_DISTINTO,
+  SUPUESTO_LOCALIDAD_FIJADA_DISTINTA,
   SUPUESTO_TOMADOR_CONDUCE,
   tipoTomadorTurismos,
   type CtxTurismos,
@@ -464,15 +466,27 @@ test('v0.6.5 «Datos personales» con el tomador sin cabecera conductor: el plan
 
 // ───────────── v0.6.6: campos DESHABILITADOS de los pasos 2-3 (trabajo real 3553424d: CP del tomador `disabled` y relleno) ─────────────
 
-test('v0.6.6 (puro): campo bloqueado igual (normalizado) → vale; distinto → hueco; vacío → hueco; sin dato del riesgo y con valor → vale_portal; sin valores en los motivos', () => {
+test('v0.6.6 (puro): campo bloqueado igual (normalizado) → vale; distinto (v0.6.7) → vale_distinto; vacío → hueco; sin dato del riesgo y con valor → vale_portal; sin valores en los motivos', () => {
   assert.deepEqual(decidirCampoBloqueadoTurismos('Código postal', ' 00000 ', '00000', 'texto'), { tipo: 'vale' })
   assert.deepEqual(decidirCampoBloqueadoTurismos('Número de documento', '00000000-t', '00000000T', 'texto'), { tipo: 'vale' })
   assert.deepEqual(decidirCampoBloqueadoTurismos('Fecha de nacimiento del conductor', '03 / 02 / 1990', '03/02/1990', 'fecha'), { tipo: 'vale' })
   assert.deepEqual(decidirCampoBloqueadoTurismos('Localidad', 'VILLAFICTÍCIA', 'villaficticia', 'poblacion'), { tipo: 'vale' })
   assert.deepEqual(decidirCampoBloqueadoTurismos('Localidad', 'Villaficticia', null, 'poblacion'), { tipo: 'vale_portal' })
   const distinto = decidirCampoBloqueadoTurismos('Código postal', '11111', '00000', 'texto')
-  assert.equal(distinto.tipo, 'hueco')
-  assert.match(distinto.tipo === 'hueco' ? distinto.motivo : '', /^«Código postal» \(el portal lo trae deshabilitado con un valor distinto del riesgo: no se teclea\)$/)
+  assert.deepEqual(distinto, { tipo: 'vale_distinto' })
+  // v0.6.7: normalización del CP (5 dígitos) y de la localidad (sin prefijo «NNNNN - »).
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Código postal', '1001', '01001', 'cp'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Código postal', '00 000', '00000', 'cp'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Localidad', '00000 - VILLAFICTÍCIA', 'Villaficticia', 'poblacion'), { tipo: 'vale' })
+  assert.deepEqual(decidirCampoBloqueadoTurismos('Localidad', '00000-Villaficticia', 'VILLAFICTICIA', 'poblacion'), { tipo: 'vale' })
+  assert.equal(decidirCampoBloqueadoTurismos('Código postal', '00001', '00000', 'cp').tipo, 'vale_distinto')
+  // Solo CP y localidad: documento y fechas bloqueados y distintos siguen siendo hueco (un documento distinto sería otra persona).
+  for (const [et, p, rs, como] of [['Fecha de nacimiento del conductor', '03/02/1990', '04/02/1990', 'fecha'], ['Número de documento', '00000000T', '00000001R', 'texto']] as const) {
+    const d = decidirCampoBloqueadoTurismos(et, p, rs, como)
+    assert.equal(d.tipo, 'hueco')
+    assert.match(d.tipo === 'hueco' ? d.motivo : '', /deshabilitado con un valor distinto del riesgo: no se teclea\)$/)
+    assert.ok(d.tipo === 'hueco' && !d.motivo.includes('1990') && !d.motivo.includes('0000'))
+  }
   const vacio = decidirCampoBloqueadoTurismos('Código postal', '  ', '00000', 'texto')
   assert.match(vacio.tipo === 'hueco' ? vacio.motivo : '', /deshabilitado y vacío/)
   assert.equal(decidirCampoBloqueadoTurismos('Localidad', '', null, 'poblacion').tipo, 'hueco', 'vacío y sin dato: hueco, nunca «vale»')
@@ -522,13 +536,14 @@ test('v0.6.6 CP y localidad del tomador DESHABILITADOS y prerrellenos IGUALES al
   }
 })
 
-test('v0.6.6 CP del tomador DESHABILITADO con OTRO valor → hueco con motivo, sin teclear, sin «Siguiente» y sin valores en el mensaje', async () => {
+test('v0.6.7 CP y localidad del tomador DESHABILITADOS con OTRO valor no vacío → se aceptan, sin teclear, y se declaran como supuesto (sin valores)', async () => {
   const a = await recorrerConBloqueo({ cpBloqueado: '11111', locBloqueada: 'Otrapoblacion' })
   try {
-    assert.ok(esMapa(/huecos de «Datos personales»: .*«Código postal» \(el portal lo trae deshabilitado con un valor distinto del riesgo: no se teclea\).*«Localidad» \(el portal lo trae deshabilitado con un valor distinto/)(a.error), a.error?.message)
+    assert.ok(esMapa(/«Selección de paquete»/)(a.error), a.error?.message)
+    assert.ok(a.error.message.includes(SUPUESTO_CP_FIJADO_DISTINTO) && a.error.message.includes(SUPUESTO_LOCALIDAD_FIJADA_DISTINTA), a.error?.message)
+    assert.ok(!/huecos de «Datos personales»/.test(a.error.message), a.error.message)
     assert.ok(sinPersonales(a.error.message) && !a.error.message.includes('11111') && !a.error.message.includes('Otrapoblacion'))
     assert.equal(await a.valor('ng-z-cp1'), '11111', 'no se toca')
-    assert.equal(await pasoActivoTurismos(a.marco), 'Datos personales')
     assert.deepEqual(a.tecleoBloqueado, [])
   } finally {
     await a.context.close()
@@ -563,7 +578,7 @@ test('v0.6.6 el portal BLOQUEA el CP después de localizarlo (como tras validar 
   }
   const otro = await recorrerConBloqueo({}, FORM, bloquear('11111'))
   try {
-    assert.ok(esMapa(/«Código postal» \(el portal lo trae deshabilitado con un valor distinto del riesgo/)(otro.error), otro.error?.message)
+    assert.ok(esMapa(/«Selección de paquete»/)(otro.error) && otro.error.message.includes(SUPUESTO_CP_FIJADO_DISTINTO), otro.error?.message)
     assert.ok(!/Timeout|locator\.fill|11111|00000/.test(otro.error.message), otro.error.message)
   } finally {
     await otro.context.close()

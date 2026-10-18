@@ -1,3 +1,4 @@
+// v0.6.7 (18/10/2026, decisión de Alberto): campo bloqueado con valor no vacío y distinto del riesgo → se acepta el del portal y se declara como supuesto (no hueco); vacío sigue siendo hueco. CP: solo cifras a 5 dígitos; localidad sin prefijo «NNNNN - ».
 // v0.6.6 (18/10/2026, trabajo real 3553424d muerto en «Datos personales» con un timeout crudo de `fill` sobre el «Código postal» del
 // tomador, que el portal deja DESHABILITADO y relleno tras el documento): en los pasos 2-3 un campo bloqueado (disabled/readonly) no
 // se teclea: se LEE y vale si casa (normalizado) con el riesgo, o si el riesgo no trae el dato y el portal sí; si no casa o está
@@ -1228,9 +1229,13 @@ export const SEL_BLOQUE_TOMADOR_TURISMOS = 'nx-mt-person-information:has(nx-x-co
 export const SUPUESTO_TOMADOR_PROPIETARIO = 'el tomador es el propietario'
 export const SUPUESTO_TOMADOR_CONDUCE = 'el tomador es el conductor'
 export const SUPUESTO_LOCALIDAD_PORTAL = 'localidad: la que propone el portal para el CP'
+/** v0.6.7: campo fijado (deshabilitado) por Allianz con un valor no vacío y distinto del riesgo: se acepta y se declara. */
+export const SUPUESTO_CP_FIJADO_DISTINTO = 'código postal fijado por Allianz (no editable), distinto de la ficha'
+export const SUPUESTO_LOCALIDAD_FIJADA_DISTINTA = 'localidad fijada por Allianz (no editable), distinta de la ficha'
+const supuestoFijadoDistintoTurismos = (etiqueta: string): string => (etiqueta === ETIQUETAS_TURISMOS.codigoPostal ? SUPUESTO_CP_FIJADO_DISTINTO : SUPUESTO_LOCALIDAD_FIJADA_DISTINTA)
 export const SUPUESTO_COMPANIA_NO_CONSTA = 'compañía actual: sin indicar (no consta)'
 export const SUPUESTO_COMPANIA_NO_CASA = 'compañía actual: sin indicar (la del riesgo no está en la lista del portal)'
-const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA] as const
+const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA] as const
 export const ETIQUETA_COMPANIA_ACTUAL = 'Compañía actual del vehículo'
 
 /**
@@ -1424,20 +1429,25 @@ export const ESPERA_TECLEO_TURISMOS_MS = 5_000
 // teclea; se LEE y, si casa con el riesgo (o el riesgo no trae el dato y el portal sí), vale; si no, hueco con motivo.
 
 /** Cómo se comparan el valor del portal y el del riesgo: texto (mayúsculas, sin espacios/guiones/puntos ni tildes), fecha (solo cifras) o población (`clavePoblacion`). */
-export type ComparacionCampoTurismos = 'texto' | 'fecha' | 'poblacion'
+export type ComparacionCampoTurismos = 'texto' | 'fecha' | 'poblacion' | 'cp'
 
 export function normalizarValorCampoTurismos(v: string, como: ComparacionCampoTurismos): string {
   if (como === 'fecha') return soloCifras(v)
-  if (como === 'poblacion') return clavePoblacion(v)
+  // v0.6.7: la localidad del portal puede venir como «NNNNN - NOMBRE»; el CP, con ceros perdidos o decorado (solo cifras, 5 dígitos).
+  if (como === 'poblacion') return clavePoblacion(v.replace(/^\s*\d{5}\s*-\s*/, ''))
+  if (como === 'cp') {
+    const d = soloCifras(v)
+    return d === '' ? v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s.\-]/g, '').toUpperCase() : d.padStart(5, '0')
+  }
   return v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s.\-]/g, '').toUpperCase()
 }
 
-export type DecisionCampoBloqueado = { tipo: 'vale' } | { tipo: 'vale_portal' } | { tipo: 'hueco'; motivo: string }
+export type DecisionCampoBloqueado = { tipo: 'vale' } | { tipo: 'vale_portal' } | { tipo: 'vale_distinto' } | { tipo: 'hueco'; motivo: string }
 
 /**
  * Campo bloqueado (deshabilitado o solo lectura) → qué se hace, SIN teclear. PURO. Vacío → hueco; el riesgo no trae el dato y el
- * portal sí → `vale_portal` (el llamante lo declara si procede); casa (normalizado) → `vale`; no casa → hueco. Los motivos nunca
- * llevan ninguno de los dos valores.
+ * portal sí → `vale_portal` (el llamante lo declara si procede); casa (normalizado) → `vale`; no casa (v0.6.7) → `vale_distinto`
+ * (se acepta el del portal y se declara como supuesto). Los motivos y supuestos nunca llevan ninguno de los dos valores.
  */
 export function decidirCampoBloqueadoTurismos(etiqueta: string, valorPortal: string, valorRiesgo: string | null, como: ComparacionCampoTurismos): DecisionCampoBloqueado {
   const portal = normalizarValorCampoTurismos(valorPortal, como)
@@ -1445,6 +1455,9 @@ export function decidirCampoBloqueadoTurismos(etiqueta: string, valorPortal: str
   const riesgo = valorRiesgo === null ? '' : normalizarValorCampoTurismos(valorRiesgo, como)
   if (riesgo === '') return { tipo: 'vale_portal' }
   if (portal === riesgo) return { tipo: 'vale' }
+  // v0.6.7 (decisión de Alberto): SOLO «Código postal» y «Localidad» bloqueados, no vacíos y distintos → se acepta el del portal y se
+  // DECLARA (sin valores). Cualquier otro (documento, fechas…) sigue siendo hueco: un documento distinto sería otra persona.
+  if (etiqueta === ETIQUETAS_TURISMOS.codigoPostal || etiqueta === ETIQUETAS_TURISMOS.localidad) return { tipo: 'vale_distinto' }
   return { tipo: 'hueco', motivo: `«${etiqueta}» (el portal lo trae deshabilitado con un valor distinto del riesgo: no se teclea)` }
 }
 
@@ -1510,10 +1523,11 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       throw e
     }
   }
-  // v0.6.6: campo bloqueado → se lee y se decide (nunca se teclea). `supuestoPortal`: lo que se declara si el riesgo no traía el dato.
+  // v0.6.6: campo bloqueado → se lee y se decide (nunca se teclea; v0.6.7: distinto y no vacío → se acepta y se declara). `supuestoPortal`: lo que se declara si el riesgo no traía el dato.
   const segunBloqueado = (etiqueta: string, valorPortal: string, valorRiesgo: string | null, como: ComparacionCampoTurismos, supuesto?: string, supuestoPortal?: string) => {
     const d = decidirCampoBloqueadoTurismos(etiqueta, valorPortal, valorRiesgo, como)
     if (d.tipo === 'hueco') huecos.push(d.motivo)
+    else if (d.tipo === 'vale_distinto') aplicados.push(supuestoFijadoDistintoTurismos(etiqueta))
     else if (d.tipo === 'vale_portal' && supuestoPortal) aplicados.push(supuestoPortal)
     else if (d.tipo === 'vale' && supuesto) aplicados.push(supuesto)
   }
@@ -1591,7 +1605,7 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       if (clavePoblacion(await textoMostrado(campo)) !== clavePoblacion(op.valor)) huecos.push(`«${ETIQUETAS_TURISMOS.localidad}» (el portal no dejó puesto el valor)`)
       continue
     }
-    const como: ComparacionCampoTurismos = op.fecha ? 'fecha' : 'texto'
+    const como: ComparacionCampoTurismos = op.fecha ? 'fecha' : op.etiqueta === ETIQUETAS_TURISMOS.codigoPostal ? 'cp' : 'texto'
     // v0.6.6: bloqueado ya (el localizador común lo descartaría como «no aparece») → se lee y se decide, sin teclear.
     const bloq = await campoBloqueadoTurismos(marco, op.etiqueta, op.bloqueTomador === true)
     if (bloq) {
@@ -1783,8 +1797,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 … 0.6.6 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.6',
+    // Moto no cambia en la 0.6.1 … 0.6.7 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.7',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
