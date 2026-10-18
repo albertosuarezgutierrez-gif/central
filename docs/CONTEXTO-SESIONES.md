@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(18/10/2026)** — agentes-entrenador · pasada semanal (11→18/10): 25 entradas de bitácora podadas, 0 PRs de prompt (sin patrón de prompt). Pendiente de CÓDIGO: `scripts/canal-aviso.sh` no admite cuerpos >128 KB (3 pasadas de trading-analista con rodeo `@fichero`). Backlog PRs `claude/*`: 11 abiertos, 2 con 2+ semanas (#3755, #3995; docs-only).
+
 **(18/10/2026)** — Sivra · agente de huéspedes: aceptó solo una salida a las 12:00 («tomo nota de que saldréis a las 12:00», huésped Maria).
 La compuerta de horario (03/10) solo cazaba PETICIONES («más tarde», «late checkout»), no ANUNCIOS («saldremos a las 12»). Fix en
 `apps/plataforma/lib/sivra/agente-huesped/`: `anunciaSalidaTardia` + red sobre el BORRADOR `respuestaConfirmaHorario` (auto.ts y orquestador →
