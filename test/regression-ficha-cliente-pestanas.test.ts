@@ -157,3 +157,12 @@ test('contarPersonas: pólizas + vínculos declarados, sin contar dos veces; nul
   assert.equal(contarPersonas(null, []), null)
   assert.equal(contarPersonas([], null), null)
 })
+
+test('TarjetaSeguro de «Con nosotros» pinta la forma de pago y «Retarificar» de la póliza viva', () => {
+  const seguros = leer('SegurosCliente.tsx')
+  const tarjeta = seguros.slice(seguros.indexOf('function TarjetaSeguro'))
+  assert.match(tarjeta, /<CeldaPago p=\{p\} \/>/)
+  assert.match(tarjeta, /\{retarificarViva\}/)
+  assert.match(tarjeta, /urlRetarificar\(p\.id\)/)
+  assert.match(tarjeta, /minHeight: 44/)
+})
