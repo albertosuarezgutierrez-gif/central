@@ -436,7 +436,18 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b/g, '')), 'el riesgo solo se toca para la respuesta')
+})
+
+test('póliza actual (19/10/2026): se lee SOLO esa clave, de ESTA correduría, y se inyecta al entregar sin escribir en BD', () => {
+  const src = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  const lec = src.slice(src.indexOf('async function leerNumeroPolizaActual'), src.indexOf('// ─── Reclamar y lanzar'))
+  assert.match(lec, /poliza_competencia->'historialDeclarado'->>'numeroPoliza'/)
+  assert.match(lec, /correduria_id = \$\{correduriaId\}::uuid/)
+  assert.ok(!/select\s+(\*|poliza_competencia\s+as)/.test(lec), 'no se lee la póliza de la competencia entera')
+  assert.ok(!/console\./.test(lec), 'dato sensible: sin logs')
+  const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
+  assert.match(w, /aplicarPolizaAnteriorUltimos5\(f\.compania, f\.ramo, riesgo, await leerNumeroPolizaActual\(f\.correduria_id, f\.oportunidad_id\)\)/)
 })
 
 // ─── Datos del tomador para el alta en Mapfre (revisión PR #4710): como el NIF, comprobados al encolar e inyectados al entregar ───

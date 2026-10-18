@@ -67,3 +67,29 @@ export function aplicarCompaniaActual(compania: string, ramo: string, riesgo: un
   if (actual.length > MAX_COMPANIA_ANTERIOR || CARACTERES_PROHIBIDOS.test(actual)) return riesgo
   return { ...riesgo, companiaAnterior: actual }
 }
+
+// ── Últimos 5 dígitos de la póliza ACTUAL (19/10/2026) ──
+// Allianz Turismos pide en «Antecedentes» «Cinco últimos dígitos de la póliza actual» (obligatorio si hay compañía actual). El dato
+// está en `oportunidades.poliza_competencia -> historialDeclarado -> numeroPoliza`. Al riesgo viaja SOLO la cola de 5 cifras, en
+// `polizaAnteriorUltimos5` (clave que conserva `validarFormularioAuto`); el número entero nunca sale de aquí. Dato sensible: sin logs.
+
+/** Clave del riesgo (la misma del validador de module-tarificacion). */
+export const CLAVE_POLIZA_ANTERIOR_5 = 'polizaAnteriorUltimos5'
+
+/** Últimas 5 cifras de un número de póliza (solo dígitos; ≥5), o `null` si no hay dato utilizable. PURA. */
+export function ultimosCincoDigitosPoliza(numero: unknown): string | null {
+  if (typeof numero !== 'string') return null
+  const cifras = numero.replace(/\D/g, '')
+  return cifras.length >= 5 ? cifras.slice(-5) : null
+}
+
+/**
+ * Si el riesgo (Allianz auto) no trae ya `polizaAnteriorUltimos5`, se la pone con las 5 últimas cifras de `numeroPoliza`. Si ya trae
+ * algo, o no hay ≥5 cifras, devuelve el MISMO riesgo. Solo Allianz auto. PURA.
+ */
+export function aplicarPolizaAnteriorUltimos5(compania: string, ramo: string, riesgo: unknown, numeroPoliza: unknown): unknown {
+  if (compania !== 'allianz' || ramo !== 'auto' || !esObj(riesgo)) return riesgo
+  if (!vacio(riesgo[CLAVE_POLIZA_ANTERIOR_5])) return riesgo
+  const ultimos = ultimosCincoDigitosPoliza(numeroPoliza)
+  return ultimos === null ? riesgo : { ...riesgo, [CLAVE_POLIZA_ANTERIOR_5]: ultimos }
+}
