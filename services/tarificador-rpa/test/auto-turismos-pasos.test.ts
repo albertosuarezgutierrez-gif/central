@@ -78,6 +78,8 @@ type Opc = {
   sinAntecedentes?: boolean
   /** v0.6.10: el grupo «tiempo en la compañía» con textos que no casan (la máxima solo se reconoce por ser la última). */
   antecedentesRaros?: boolean
+  /** v0.6.10: el portal trae YA marcada la opción de este índice en el grupo (ant1 tiempo compañía, ant2 partes, ant3 titular). */
+  antPrefijada?: Partial<Record<'ant1' | 'ant2' | 'ant3', number>>
 }
 const COMPANIAS = ['ASEGURADORA ALFA, S.A.', 'Beta Seguros y Reaseguros', 'Gamma Mutua', 'Otras compañías']
 
@@ -114,7 +116,7 @@ function app(o: Opc = {}): string {
   <nx-mt-nominated-driver-information><form><nx-switcher><input type="checkbox" role="switch" id="ng-z-sw" ${o.segundoEncendido ? 'checked aria-checked="true"' : 'disabled aria-checked="false"'}><label for="ng-z-sw"> Segundo conductor </label></nx-switcher></form></nx-mt-nominated-driver-information>
   </app-holder>`
   const grupoAnt = (id: string, pregunta: string, etqs: string[]) =>
-    `<div role="radiogroup" aria-labelledby="ng-z-${id}-q"><label id="ng-z-${id}-q">${pregunta}</label>${etqs.map((e, i) => op(`ng-z-${id}-${i}`, `ng-z-${id}`, e)).join('')}</div>`
+    `<div role="radiogroup" aria-labelledby="ng-z-${id}-q"><label id="ng-z-${id}-q">${pregunta}</label>${etqs.map((e, i) => op(`ng-z-${id}-${i}`, `ng-z-${id}`, e, o.antPrefijada?.[id as 'ant1'] === i)).join('')}</div>`
   const antecedentes = o.sinAntecedentes
     ? ''
     : grupoAnt('ant1', '¿Cuánto tiempo llevas en tu compañía?', o.antecedentesRaros ? ['Poco', 'Algo', 'Bastante', 'Mucho', 'Muchísimo', 'Más de cuatro'] : ['Menos de 1 año', '1 año', '2 años', '3 años', '4 años', '5 años o más']) +
@@ -682,7 +684,7 @@ test('v0.6.10 «Antecedentes»: la máxima sin casar por texto es la última del
   const raro = await hastaCompania({ antecedentesRaros: true }, sin)
   try {
     assert.equal(await marcada(raro, 'ant1'), 5, 'la última')
-    assert.ok(raro.error.message.includes(SUPUESTO_TIEMPO_COMPANIA))
+    assert.ok(raro.error.message.includes('tiempo en la compañía: «Más de cuatro»'))
   } finally {
     await raro.context.close()
   }
@@ -703,10 +705,50 @@ test('guard v0.6.10: la puerta de «Antecedentes» fuera de ese paso es bloqueo;
     await assert.rejects(marcarAntecedenteTurismosAllianz(a.marco, a.guard, 'partes_culpables', null), EmisionBloqueadaError)
     await a.marco.evaluate(() => { (document.querySelector('#cdk-stepper-0-content-1 .sig') as HTMLButtonElement).click() })
     await a.marco.evaluate(() => { (document.querySelector('#ng-z-ant2-2') as HTMLInputElement).checked = true })
-    assert.deepEqual(await marcarAntecedenteTurismosAllianz(a.marco, a.guard, 'partes_culpables', null), { estado: 'con_valor' })
+    assert.deepEqual(await marcarAntecedenteTurismosAllianz(a.marco, a.guard, 'partes_culpables', null), { estado: 'con_valor', marcada: '2 partes', coincide: false })
+    assert.deepEqual(await marcarAntecedenteTurismosAllianz(a.marco, a.guard, 'partes_culpables', 2), { estado: 'con_valor', marcada: '2 partes', coincide: true })
     assert.equal(await marcada(a, 'ant2'), 2)
     assert.deepEqual(await marcarAntecedenteTurismosAllianz(a.marco, a.guard, 'compania_tiempo', 7), { estado: 'marcada', elegida: '5 años o más' })
   } finally {
     await a.context.close()
+  }
+})
+
+test('v0.6.10 «Antecedentes»: el portal ya trae valor → se declara con su etiqueta REAL (sin dato / distinto de la ficha); igual al dato → es dato y no se declara', async () => {
+  // (a) sin dato: el precio sale con el valor por defecto del portal → supuesto con la etiqueta real.
+  const sin = await hastaCompania({ antPrefijada: { ant2: 1 } }, { ...FORM, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null })
+  try {
+    assert.equal(await marcada(sin, 'ant2'), 1, 'no se toca')
+    assert.ok(sin.error.message.includes('partes culpables: «1 parte» (fijado por Allianz)'), sin.error.message)
+    assert.ok(!sin.error.message.includes(SUPUESTO_PARTES_CULPABLES), 'no se declara «ninguno» si el portal tiene otro valor')
+  } finally {
+    await sin.context.close()
+  }
+  // (b) dato distinto del marcado → se declara «distinto de la ficha».
+  const distinto = await hastaCompania({ antPrefijada: { ant1: 1 } }, { ...FORM, aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 })
+  try {
+    assert.equal(await marcada(distinto, 'ant1'), 1, 'no se toca')
+    assert.ok(distinto.error.message.includes('tiempo en la compañía: «1 año» (fijado por Allianz, distinto de la ficha)'), distinto.error.message)
+  } finally {
+    await distinto.context.close()
+  }
+  // (c) marcado igual al dato → dato: sin supuesto.
+  const igual = await hastaCompania({ antPrefijada: { ant1: 3 } }, { ...FORM, aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 })
+  try {
+    assert.ok(!igual.error.message.includes('tiempo en la compañía'), igual.error.message)
+    assert.ok(/Selección de paquete/.test(igual.error.message))
+  } finally {
+    await igual.context.close()
+  }
+})
+
+test('v0.6.10 «Antecedentes»: la máxima sin casar por texto → se pulsa la última y el supuesto nombra su etiqueta REAL', async () => {
+  const raro = await hastaCompania({ antecedentesRaros: true }, { ...FORM, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null })
+  try {
+    assert.equal(await marcada(raro, 'ant1'), 5)
+    assert.ok(raro.error.message.includes('tiempo en la compañía: «Más de cuatro» (la última del grupo, supuesto favorable, no consta)'), raro.error.message)
+    assert.ok(!raro.error.message.includes(SUPUESTO_TIEMPO_COMPANIA), 'no dice «5 años o más» si no es lo que se pulsó')
+  } finally {
+    await raro.context.close()
   }
 })

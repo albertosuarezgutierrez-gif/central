@@ -1827,11 +1827,12 @@ const DEF_ANTECEDENTES_TURISMOS: Readonly<Record<ClaveAntecedenteTurismos, DefAn
   },
 })
 export type ResultadoAntecedenteTurismos =
-  | { estado: 'marcada' | 'ya_marcada'; elegida: string }
+  /** `ultima`: sin dato y sin casar el texto de la máxima, se pulsó la ÚLTIMA del grupo (`elegida` es su etiqueta REAL). */
+  | { estado: 'marcada' | 'ya_marcada'; elegida: string; ultima?: true }
   /** El grupo no está en la pantalla (o no es identificable): no se hace nada. */
   | { estado: 'sin_grupo' }
-  /** El portal ya trae una opción marcada en el grupo: no se toca. */
-  | { estado: 'con_valor' }
+  /** El portal ya trae una opción marcada en el grupo: no se toca. `marcada` = su etiqueta REAL; `coincide` = hay dato y es esa. */
+  | { estado: 'con_valor'; marcada: string; coincide: boolean }
   | { estado: 'no_unica'; motivo: string }
   | { estado: 'no_quedo' }
 
@@ -1862,11 +1863,18 @@ export async function marcarAntecedenteTurismosAllianz(marco: Frame, guard: Guar
   if (clavesGrupo.size > 1) return { estado: 'no_unica', motivo: `${clavesGrupo.size} grupos candidatos` }
   const grupo = todos.filter((r) => JSON.stringify(r.hermanas) === [...clavesGrupo][0])
   if (grupo.length < 2 || grupo.some((r) => !r.id)) return { estado: 'no_unica', motivo: 'grupo sin ids' }
-  if (grupo.some((r) => r.marcada)) return { estado: 'con_valor' }
+  const yaMarcadas = grupo.filter((r) => r.marcada)
+  if (yaMarcadas.length > 0) {
+    const reDato = dato === null ? null : def.porDato(dato)
+    const coincide = reDato !== null && yaMarcadas.length === 1 && reDato.test(planoOpcion(yaMarcadas[0]!.etiqueta))
+    return { estado: 'con_valor', marcada: yaMarcadas.map((r) => r.etiqueta.replace(/\s+/g, ' ').trim()).join(' / '), coincide }
+  }
   let elegido: RadioTurismosLeido | undefined
+  let ultima = false
   if (dato === null) {
     const porTexto = grupo.filter((r) => def.maxima.test(planoOpcion(r.etiqueta)))
-    elegido = porTexto.length === 1 ? porTexto[0] : porTexto.length === 0 ? grupo[grupo.length - 1] : undefined
+    ultima = porTexto.length === 0
+    elegido = porTexto.length === 1 ? porTexto[0] : ultima ? grupo[grupo.length - 1] : undefined
   } else {
     const re = def.porDato(dato)
     const porTexto = re ? grupo.filter((r) => re.test(planoOpcion(r.etiqueta))) : []
@@ -1878,7 +1886,7 @@ export async function marcarAntecedenteTurismosAllianz(marco: Frame, guard: Guar
   const banco = senalCuentaBancaria([texto])
   if (banco !== null) throw new ErrorFronteraEmision(banco)
   const r = await pulsarRadioTurismos(marco, guard, elegido.id as string)
-  if (r.estado === 'marcada' || r.estado === 'ya_marcada') return { estado: r.estado, elegida: texto }
+  if (r.estado === 'marcada' || r.estado === 'ya_marcada') return ultima ? { estado: r.estado, elegida: texto, ultima: true } : { estado: r.estado, elegida: texto }
   return r.estado === 'no_unica' ? { estado: 'no_unica', motivo: `${r.coincidencias} coincidencias` } : { estado: 'no_quedo' }
 }
 

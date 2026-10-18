@@ -1243,6 +1243,8 @@ export const SUPUESTO_COMPANIA_NO_CASA = 'compañía actual: sin indicar (la del
 export const SUPUESTO_TIEMPO_COMPANIA = 'tiempo en la compañía: 5 años o más (supuesto favorable, no consta)'
 export const SUPUESTO_PARTES_CULPABLES = 'partes culpables: ninguno (supuesto favorable, no consta)'
 export const SUPUESTO_TIEMPO_TITULAR = 'tiempo como titular de un seguro: 9-10 años o más (supuesto favorable, no consta)'
+// v0.6.10: supuestos DINÁMICOS de «Antecedentes» (nombran la etiqueta REAL del portal): «<prefijo>: «<etiqueta>» (…)».
+const PREFIJOS_ANTECEDENTES_TURISMOS = ['tiempo en la compañía', 'partes culpables', 'tiempo como titular de un seguro'] as const
 const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA, SUPUESTO_TIEMPO_COMPANIA, SUPUESTO_PARTES_CULPABLES, SUPUESTO_TIEMPO_TITULAR] as const
 export const ETIQUETA_COMPANIA_ACTUAL = 'Compañía actual del vehículo'
 
@@ -1310,7 +1312,7 @@ const declarado = (x: { supuesto: boolean; valor: unknown; etiqueta: string | nu
  */
 export function supuestosAplicadosTurismos(s: SupuestosAuto, aplicados: Iterable<string>): string | null {
   const hechos = new Set(aplicados)
-  return textoSupuestos([...etiquetasSupuestos(s).filter((e) => hechos.has(e)), ...SUPUESTOS_EXTRA_TURISMOS.filter((e) => hechos.has(e))])
+  return textoSupuestos([...etiquetasSupuestos(s).filter((e) => hechos.has(e)), ...SUPUESTOS_EXTRA_TURISMOS.filter((e) => hechos.has(e)), ...[...hechos].filter((e) => PREFIJOS_ANTECEDENTES_TURISMOS.some((p) => e.startsWith(`${p}: «`)))])
 }
 
 /** Etiquetas de supuesto que lleva el plan (lo que se INTENTARÁ aplicar). Puro. */
@@ -1570,8 +1572,12 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
         continue
       }
       const r = await puerta(marco, op.clave, op.dato)
-      if (r.estado === 'marcada' && op.dato === null) aplicados.push(op.supuesto)
-      else if (r.estado === 'no_unica') huecos.push(`${op.que} (${r.motivo})`)
+      const prefijo = op.supuesto.split(':')[0]
+      if (r.estado === 'marcada' && op.dato === null) aplicados.push(r.ultima ? `${prefijo}: «${r.elegida}» (la última del grupo, supuesto favorable, no consta)` : op.supuesto)
+      // El portal ya trae un valor: el precio sale con ÉL. Si es el dato de la ficha es dato; si no, se DECLARA con su etiqueta real.
+      else if (r.estado === 'con_valor') {
+        if (!r.coincide) aplicados.push(`${prefijo}: «${r.marcada}» (${op.dato === null ? 'fijado por Allianz' : 'fijado por Allianz, distinto de la ficha'})`)
+      } else if (r.estado === 'no_unica') huecos.push(`${op.que} (${r.motivo})`)
       else if (r.estado === 'no_quedo') huecos.push(`${op.que} (tras pulsar no quedó marcada)`)
       continue
     }
