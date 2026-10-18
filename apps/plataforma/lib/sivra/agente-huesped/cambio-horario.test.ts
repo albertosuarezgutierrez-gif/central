@@ -215,3 +215,66 @@ test('decidirAutoEnvio: ni el anuncio de Maria ni un borrador que lo acepta sale
   assert.equal(decidirAutoEnvio(dec, 'Hola, gracias por todo', { checkIn: '15:00', checkOut: '11:00' }).auto, false)
   assert.equal(decidirAutoEnvio({ ...dec, reply: 'Gracias, hasta pronto' }, 'Hola, gracias por todo', { checkIn: '15:00', checkOut: '11:00' }).auto, true)
 })
+
+// ── Revisión (18/10/2026): huecos que dejaban pasar la aceptación de una salida tardía ──
+const OFI = { checkIn: '15:00', checkOut: '11:00' }
+
+test('respuesta: cualquier hora posterior al check-out que no sea la de entrada se marca (sin depender del verbo)', () => {
+  for (const r of [
+    'Podéis salir a las 12:00 sin problema',
+    'Vale, podéis quedaros hasta las 12:00',
+    'Tomo nota de que dejaréis el piso a las 12:00',
+    'Os dejamos salir a las 13h',
+    'Sin problema con las 12:00',
+    'Of course, noon is fine',
+    'Podéis salir a las 23:00',
+    'Sin problema, hasta las 12 del mediodía',
+    'No problem, you can stay until 1 pm',
+    'Vale, hasta la 1 de la tarde',
+    'Perfecto, podéis salir a las 2',
+    'Kein Problem, bis 12 Uhr',
+  ]) assert.equal(respuestaConfirmaHorario(r, OFI), 'salida', r)
+})
+
+test('respuesta: la hora oficial, la de entrada o ninguna hora NO se marcan', () => {
+  for (const r of [
+    'El check-out es a las 11:00',
+    'La entrada es a las 15:00 y la salida a las 11:00',
+    'La salida es antes de las 11:00, ¡gracias!',
+    'Hola, claro, os ayudamos con cualquier duda. ¡Gracias!',
+    'El wifi es gratis, para 4 personas y 2 maletas',
+  ]) assert.equal(respuestaConfirmaHorario(r, OFI), null, r)
+})
+
+test('respuesta, entrada: infinitivos y variantes', () => {
+  for (const r of [
+    'Vale, podéis entrar a las 12:00',
+    'Podéis acceder al piso a las 10:00',
+    'Os dejamos llegar a las 13h',
+    'Sin problema, entráis a las 9',
+    'You can check in at 11am',
+    'You can enter at noon',
+  ]) assert.equal(respuestaConfirmaHorario(r, OFI), 'entrada', r)
+  assert.equal(respuestaConfirmaHorario('Podéis entrar a partir de las 15:00', OFI), null)
+})
+
+test('huésped: verbos nuevos, varias horas por frase, tarde ambigua, palabras y horas altas', () => {
+  for (const t of [
+    'Tenemos vuelo a las 9, salimos a las 12',
+    'Salimos a la 1',
+    'Vamos a salir a las 2',
+    'Pensamos dejar el piso a las 12:30',
+    'Queremos quedarnos hasta las 12',
+    'Podríamos quedaros hasta el mediodía',
+    'Salimos a las 12 del mediodía',
+    'Wir reisen um 13 Uhr ab',
+    'We leave at noon',
+    'We will leave at 1 pm',
+    'Partiamo a mezzogiorno',
+    'Nous partons à midi',
+    'Saldremos a las 23:00',
+    'Saldremos a la 1 de la tarde',
+  ]) assert.equal(anunciaSalidaTardia(t, '11:00'), true, t)
+  for (const t of ['Salimos a las 9', 'Tenemos 2 maletas y salimos con 3 niños a las 10', 'La entrada es a las 3'])
+    assert.equal(anunciaSalidaTardia(t, '11:00'), false, t)
+})

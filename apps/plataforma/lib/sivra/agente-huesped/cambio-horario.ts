@@ -157,36 +157,86 @@ const minutos = (hhmm?: string | null): number | null => {
   const m = (hhmm || '').match(/^(\d{1,2}):(\d{2})/)
   return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null
 }
-const VERBO_SALIDA = /\b(sal(?:go|imos|dremos|dr[eé]is|dr[eé]|iremos|ir[eé]is|ir[eé]|ida)|nos\s+(?:vamos|iremos|marchamos|marcharemos|vais)|os\s+(?:vais|ir[eé]is|marcha[ií]s)|irnos|marcharnos|check.?out|check\s+out|leav\w*|depart\w*|partiamo|partiremo|abreis\w*|auschecken|part(?:ons|irons)|d[eé]part)\b/iu
-const VERBO_ENTRADA = /\b(entr(?:ar|ar[eé]is|[aá]is|ada|ad)|llegar\w*|lleg(?:amos|o)|check.?in|check\s+in|acceso|arriv\w*)\b/iu
+// Verbos de SALIR / quedarse / dejar el piso (ES·EN·IT·FR·DE). Amplio a propósito: solo decide qué frases se
+// miran; un falso positivo cuesta una revisión por Telegram, un falso negativo una autorización que es de Alberto.
+const VERBO_SALIDA = /\b(sal(?:go|gamos|gan?|gas|ir\w*|[ií]\w*|dr\w*|e|en|es|ed)|nos\s+(?:vamos|iremos|marchamos|marcharemos|vais|vayamos)|os\s+(?:vais|ir[eé]is|marcha[ií]s|qued\w*)|irnos|iros|marcha\w*|vay\w*|queda\w*|dej\w*\s+(?:(?:el|la|los|las)\s+)?(?:piso|apartamento|alojamiento|casa|habitaci\w+|llaves?)|abandon\w*|desaloj\w*|entreg\w*|liber\w*|check.?out|check\s+out|leav\w*|left|stay\w*|vacat\w*|depart\w*|partiamo|partiremo|partir\w*|uscir\w*|usciamo|rest(?:are|iamo)|lasci\w*|abreis\w*|reis\w*|fahr\w*|abfahr\w*|auscheck\w*|verlass\w*|bleib\w*|part(?:ons|irons|ez)|quitt\w*|d[eé]part)\b/iu
+// Verbos de ENTRAR / llegar / acceder (infinitivos y conjugaciones).
+const VERBO_ENTRADA = /\b(entr\w*|acce[sd]\w*|lleg\w*|instal\w*|ingres\w*|check.?in|check\s+in|arriv\w*|enter\w*|get\s+in|come\s+in|ankomm\w*|anreis\w*|einchecken|arrivare|arrivo)\b/iu
 
-/** Frases del texto que contienen `verbo`, con la primera hora pedida de cada una. */
-function horasPorFrase(texto: string, verbo: RegExp): number[] {
+const PALABRA_MEDIODIA = /\b(?:mediod[ií]a|noon|midday|mezzogiorno|midi|mittag)\b/giu
+const SUFIJO_TARDE = /^\s*(?:de\s+la\s+(?:tarde|noche)|del?\s+(?:mediod[ií]a|la\s+tarde|la\s+noche)|della?\s+(?:sera|pomeriggio|notte)|du\s+(?:soir|apr[eè]s.midi)|de\s+l.apr[eè]s.midi|nachmittags|abends|in\s+the\s+(?:afternoon|evening)|at\s+night)/iu
+const SUFIJO_MANANA = /^\s*(?:de\s+la\s+ma[ñn]ana|della\s+mattina|du\s+matin|morgens|in\s+the\s+morning)/iu
+const CTX_HORA_AMPLIO = /(?:\b(?:a|hasta|until|till|by|at|around|about|sobre|um|bis|gegen|alle|verso|vers|desde|from|ab|dopo|[àa]|jusqu['’]?[àa])\s*(?:las?|les|l['’]|ore|the)?|\b(?:con|por|para|antes\s+de|despu[eé]s\s+de|pasadas|en\s+torno\s+a|no\s+later\s+than)\s+(?:las?|les))\s*$/iu
+const SIGUE_NOMBRE = /^\s*(?:personas?|adultos?|ni[ñn]os?|maletas?|noches?|d[ií]as?|hu[eé]spedes|people|guests?|adults?|nights?|bags?|days?|persone|notti|ospiti|euros?|€|%)/iu
+
+/**
+ * TODAS las horas (en minutos) de un texto: «12:00», «13h», «1 pm», «a la 1», «12 del mediodía», y las palabras
+ * mediodía/noon/midday/mezzogiorno/midi = 12:00. Rango 0-23:59 (sin tope superior). Una cifra suelta
+ * («2 maletas») solo cuenta con marca (minutos/sufijo) o con preposición de hora delante.
+ * `tardeSiAmbiguo`: «a la 1»/«a las 3» sin am/pm se leen como 13-15 h (salida: el caso conservador).
+ */
+export function horasEnTexto(texto: string, tardeSiAmbiguo = false): number[] {
+  const t = texto || ''
   const out: number[] = []
-  for (const frase of (texto || '').split(/(?<=[.?!\n])/u)) {
-    if (!verbo.test(frase)) continue
-    const h = minutos(extraerHoraPedida(frase))
-    if (h !== null) out.push(h)
+  for (const w of t.matchAll(PALABRA_MEDIODIA)) { void w; out.push(12 * 60) }
+  const re = /(?<![\d/.:])(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?(?:\s*(a\.?m\.?|p\.?m\.?|uhr|horas?|hrs?|h(?![a-zà-ÿ])))?(?!\d)/giu
+  let m: RegExpExecArray | null
+  while ((m = re.exec(t))) {
+    let h = parseInt(m[1], 10)
+    const min = m[2] ? parseInt(m[2], 10) : 0
+    const suf = (m[3] || '').toLowerCase()
+    if (isNaN(h) || h > 23 || min > 59) continue
+    const resto = t.slice(m.index + m[0].length)
+    const marcada = !!m[2] || !!suf
+    if (!marcada && (!CTX_HORA_AMPLIO.test(t.slice(Math.max(0, m.index - 22), m.index)) || SIGUE_NOMBRE.test(resto))) continue
+    const pm = suf.startsWith('p') || SUFIJO_TARDE.test(resto)
+    const am = suf.startsWith('a') || SUFIJO_MANANA.test(resto)
+    if (pm && h < 12) h += 12
+    else if (am && h === 12) h = 0
+    else if (!pm && !am && tardeSiAmbiguo && h >= 1 && h <= 3) h += 12
+    out.push(h * 60 + min)
   }
+  return out
+}
+
+const frases = (texto: string) => (texto || '').split(/(?<=[.?!\n])/u)
+
+/** Horas de las frases del texto que contienen `verbo` (TODAS las de cada frase, no solo la primera). */
+function horasPorFrase(texto: string, verbo: RegExp, tardeSiAmbiguo: boolean): number[] {
+  const out: number[] = []
+  for (const frase of frases(texto)) if (verbo.test(frase)) out.push(...horasEnTexto(frase, tardeSiAmbiguo))
   return out
 }
 
 /** ¿El huésped ANUNCIA una salida posterior a la hora oficial («saldremos a las 12:00»)? */
 export function anunciaSalidaTardia(texto: string, checkOut?: string | null): boolean {
   const lim = minutos(checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
-  return horasPorFrase(texto, VERBO_SALIDA).some(h => h > lim && h <= 22 * 60)
+  return horasPorFrase(texto, VERBO_SALIDA, true).some(h => h > lim)
 }
 
 /**
  * ¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las
- * 12:00»)? Salida > checkOut o entrada < checkIn (solo si se conoce). Conservador: un falso positivo solo
- * manda el borrador a Telegram. Es la red de seguridad si el modelo se salta la regla del prompt.
+ * 12:00»)? Sin depender de un verbo: SALIDA = cualquier hora posterior al check-out que no sea la de entrada
+ * oficial (las respuestas citan «la entrada es a las 15:00»); además, la detección por verbo de salida.
+ * ENTRADA = hora anterior al check-in junto a un verbo de entrar (solo si se conoce el check-in).
+ * Conservador: un falso positivo solo manda el borrador a Telegram. Red de seguridad si el modelo se salta el prompt.
  */
 export function respuestaConfirmaHorario(reply: string, horario: HorarioOficial = {}): 'salida' | 'entrada' | null {
   const lim = minutos(horario.checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
-  if (horasPorFrase(reply, VERBO_SALIDA).some(h => h > lim && h <= 22 * 60)) return 'salida'
   const ini = minutos(horario.checkIn)
-  if (ini !== null && horasPorFrase(reply, VERBO_ENTRADA).some(h => h < ini)) return 'entrada'
+  const exenta = ini ?? 15 * 60 // sin check-in conocido se asume 15:00; la rama por verbo cubre un «hasta las 15:00»
+  for (const frase of frases(reply)) {
+    // «podéis entrar a las 12:00» es cuestión de ENTRADA (se mira abajo), no una salida tardía.
+    if (VERBO_ENTRADA.test(frase) && !VERBO_SALIDA.test(frase)) continue
+    // Cualquier hora > check-out que no sea la de entrada oficial («la entrada es a las 15:00»), con o sin verbo.
+    if (horasEnTexto(frase, true).some(h => h > lim && h !== exenta)) return 'salida'
+  }
+  if (ini !== null) {
+    for (const frase of frases(reply)) {
+      if (!VERBO_ENTRADA.test(frase) || VERBO_SALIDA.test(frase)) continue // «la entrada es a las 15:00 y la salida a las 11:00»
+      if (horasEnTexto(frase, false).some(h => h < ini)) return 'entrada'
+    }
+  }
   return null
 }
 
