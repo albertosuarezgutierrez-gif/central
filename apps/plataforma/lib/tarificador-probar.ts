@@ -4,6 +4,7 @@
 //
 // Tres estados: cargando · «no se pudo comprobar» (`ok:false` con mensaje) ≠ vacío (lista revisada sin elementos).
 // `null` = no consta («—»), nunca 0.
+import { MAX_AVISO_SUPUESTOS } from '@central/module-tarificacion'
 import { eur } from './dinero.ts'
 
 /** Cada cuánto se sondea un trabajo en curso y cuánto se espera antes de decir «sigue en marcha». */
@@ -128,7 +129,7 @@ export function leerTrabajo(status: number, json: unknown): LecturaTrabajo {
         compania: str(f.compania) ?? '', producto: str(f.producto) ?? '', primaAnual: prima,
         primaNeta: num(f.primaNeta), impuestos: num(f.impuestos), primaSucesivos: num(f.primaTotalSucesivos),
         pdfIndice: typeof f.pdfIndice === 'number' && Number.isInteger(f.pdfIndice) ? f.pdfIndice : null,
-        supuestos: str(f.supuestos)?.slice(0, 300) ?? null,
+        supuestos: str(f.supuestos)?.slice(0, MAX_AVISO_SUPUESTOS) ?? null,
       })
     }
   }

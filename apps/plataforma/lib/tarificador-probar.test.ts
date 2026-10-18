@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { MAX_AVISO_SUPUESTOS } from '@central/module-tarificacion'
 import {
   esEstadoFinal, leerEncolado, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloEstado, textoOferta, textoPrima, rotuloIntegracion,
 } from './tarificador-probar.ts'
@@ -94,6 +95,16 @@ test('supuestos del bot (15/10/2026): se leen de cada oferta y el resumen los da
   // Una versión de asegura que aún no lo manda: nada que enseñar (no se inventa «sin supuestos»).
   const viejo = leerTrabajo(200, { estado: 'ok', ofertas: [OFERTA] })
   assert.ok(viejo.ok && resumenTrabajo(viejo.trabajo).supuestos.length === 0)
+})
+
+test('supuestos: el tope de aviso es MAX_AVISO_SUPUESTOS (no un 300 a mano); uno de 450 sale entero', () => {
+  const largo = 'x'.repeat(MAX_AVISO_SUPUESTOS + 100)
+  const corto = 'y'.repeat(450)
+  const l = leerTrabajo(200, { estado: 'ok', ofertas: [{ ...OFERTA, supuestos: largo }, { ...OFERTA, producto: 'B', supuestos: corto }] })
+  assert.ok(l.ok)
+  if (!l.ok) return
+  assert.equal(l.trabajo.ofertas[0].supuestos?.length, MAX_AVISO_SUPUESTOS)
+  assert.equal(l.trabajo.ofertas[1].supuestos, corto)
 })
 
 test('PrecioBots enseña los supuestos JUNTO al precio (cepo de fuente)', async () => {
