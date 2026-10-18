@@ -2115,6 +2115,55 @@ export async function leerTarjetasVehiculoTurismosAllianz(marco: Frame): Promise
   return (await tarjetasVehiculoTurismos(marco)).map(({ etiqueta, marcada }) => ({ etiqueta, marcada }))
 }
 
+// ─────────── Lector de «Selección de paquete» de Allianz AUTOS Turismos (v0.6.12 del bot, 20/10/2026) ───────────
+/** Un paquete (columna) de la tabla comparativa tal como se ve: textos crudos, sin interpretar. */
+export type PaqueteLeidoTurismos = { nombre: string; primerRecibo: string; anualidad: string; mejorOpcion: boolean; conAviso: boolean }
+/** Celda de un paquete en una fila de cobertura: icono (check/minus) y/o texto (valor de un desplegable). */
+export type CeldaLeidaTurismos = { icono: string | null; texto: string }
+/** Opción de una fila de elección única que abarca todos los paquetes (límite, nivel o incluido/no); `marcada` = la que trae el portal. */
+export type OpcionLeidaTurismos = { texto: string; marcada: boolean; adicional: string }
+export type FilaPaqueteLeidaTurismos = { descripcion: string; celdas: CeldaLeidaTurismos[]; opciones: OpcionLeidaTurismos[]; comunes: string[] }
+export type LecturaPaquetesTurismos = { paquetes: PaqueteLeidoTurismos[]; filas: FilaPaqueteLeidaTurismos[] }
+
+/**
+ * SOLO LECTURA de la tabla comparativa de precios (`app-price` → `nx-comparison-table`) de «Selección de paquete»: por paquete,
+ * nombre, «primer recibo» y «la anualidad»; por fila, la cobertura con el icono/valor de cada paquete, las opciones de elección
+ * única (con la marcada y su suplemento) o la lista «Todos los paquetes incluyen». No pulsa nada (ni «Seleccionar», ni los
+ * desplegables, ni las opciones): las coberturas ya están pintadas. Marco de otra app, sin `app-price` o sin tabla → `null`.
+ */
+export async function leerPaquetesTurismosAllianz(marco: Frame): Promise<LecturaPaquetesTurismos | null> {
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) return null
+  // Fuente JS como TEXTO (no como función): el transpilador (tsx/esbuild) envuelve las funciones con nombre en `__name(…)`, que no existe en la página.
+  return (marco.evaluate(SCRIPT_LEER_PAQUETES_TURISMOS) as Promise<LecturaPaquetesTurismos | null>).catch(() => null)
+}
+const SCRIPT_LEER_PAQUETES_TURISMOS = `(() => {
+  const txt = (e) => ((e && (e.innerText || e.textContent)) || '').replace(/[\\s\\u00a0]+/g, ' ').trim();
+  const visible = (e) => getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
+  const tabla = Array.from(document.querySelectorAll('app-price nx-comparison-table')).find(visible);
+  if (!tabla) return null;
+  const paquetes = Array.from(tabla.querySelectorAll('.is-header-row .nx-comparison-table__header-cell')).map((c) => ({
+    nombre: txt(c.querySelector('.product-title-wrap .has-popover > p')),
+    primerRecibo: txt(c.querySelector('.price-first')),
+    anualidad: txt(c.querySelector('.price-regular')),
+    mejorOpcion: c.querySelector('.product-title-wrap.best-option') !== null,
+    conAviso: c.querySelector('.has-popover nx-icon[name*="exclamation"]') !== null,
+  }));
+  const filas = Array.from(tabla.querySelectorAll('.is-content-row')).map((f) => ({
+    descripcion: txt(f.querySelector('.nx-comparison-table__description-cell')),
+    celdas: Array.from(f.querySelectorAll('.nx-comparison-table__cell')).map((c) => ({
+      icono: c.querySelector('nx-icon[name="check"]') ? 'check' : c.querySelector('nx-icon[name="minus"]') ? 'minus' : null,
+      texto: txt(c.querySelector('.nx-dropdown__rendered')),
+    })),
+    opciones: Array.from(f.querySelectorAll('.nx-comparison-table__intersection-cell nx-radio')).map((o) => ({
+      texto: txt(o.querySelector('.nx-radio__label--text > span:first-child')),
+      marcada: o.querySelector('.nx-radio__dot') !== null || (o.querySelector('input') !== null && o.querySelector('input').checked === true),
+      adicional: txt(o.querySelector('.option-additional-text')),
+    })),
+    comunes: Array.from(f.querySelectorAll('.common-coverages li')).map((li) => txt(li.querySelector('span'))),
+  }));
+  return { paquetes, filas };
+})()`
+
 /**
  * Elige UNA tarjeta de vehículo de Turismos (el ÚNICO camino para tocarla). Exige, como `marcarOpcionTurismosAllianz`: guard limpio y
  * sin ventanas de red abiertas, marco vivo de la app de Turismos, sin campos de cuenta bancaria y pestaña seleccionada «Datos del

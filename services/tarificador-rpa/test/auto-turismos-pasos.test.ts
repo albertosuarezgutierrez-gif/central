@@ -88,7 +88,35 @@ type Opc = {
   poliza?: { valor?: string; bloqueada?: boolean }
   /** v0.6.11: un obligatorio AJENO al bot en «Antecedentes» que deja «Siguiente» deshabilitado (el atasco genérico). */
   obligatorioAjeno?: boolean
+  /** v0.6.12: pantalla de precios de «Selección de paquete» (`app-price` → `nx-comparison-table`) con la ESTRUCTURA real e importes INVENTADOS. `vacia` = tabla sin cabeceras (como en el inventario). */
+  paquetes?: 'completa' | 'ilegible' | 'sin_coberturas' | 'vacia'
 }
+/** v0.6.12: tabla comparativa con la estructura real de «Selección de paquete» (clases de Allianz; nombres, importes y límites inventados). */
+function tablaPaquetes(modo: NonNullable<Opc['paquetes']>): string {
+  if (modo === 'vacia') return '<app-price><nx-comparison-table></nx-comparison-table></app-price>'
+  const cab = (nombre: string, primer: string, anual: string, extra = '', mejor = false) =>
+    `<div class="nx-comparison-table__cell nx-comparison-table__header-cell"><div class="nx-comparison-table__cell-content"><div class="product-title-wrap${mejor ? ' best-option' : ''}"><div class="has-popover"><p class="nx-margin-0">${nombre}</p>${extra}</div><div><div><p class="price-first">${primer}&nbsp;€</p><p>primer recibo</p></div><div><p class="price-regular">${anual}&nbsp;€</p><p>la anualidad</p></div></div><button type="button" class="nx-comparison-table__select-button">Seleccionar</button></div></div></div>`
+  const desc = (t: string) => `<div class="nx-comparison-table__description-cell"><div class="nx-comparison-table__cell-content"><div class="has-popover"><div>${t}</div></div></div></div>`
+  const icono = (n: string) => `<div class="nx-comparison-table__cell"><nx-mt-coverage-option><form><nx-icon name="${n}"></nx-icon></form></nx-mt-coverage-option></div>`
+  const desplegable = (t: string) => `<div class="nx-comparison-table__cell"><nx-mt-coverage-option><form><nx-dropdown><div class="nx-dropdown__container"><div class="nx-dropdown__rendered"><span>${t}</span></div></div></nx-dropdown></form></nx-mt-coverage-option></div>`
+  const fila = (d: string, celdas: string) => `<nx-comparison-table-flex-row class="is-content-row"><div class="nx-comparison-table__row">${desc(d)}${celdas}</div></nx-comparison-table-flex-row>`
+  const opcion = (t: string, marcada: boolean, extra = '') =>
+    `<nx-radio><input type="radio" class="nx-radio__input"><label><div class="nx-radio__circle">${marcada ? '<div class="nx-radio__dot"></div>' : ''}</div><span class="nx-radio__label--text"><span>${t}&nbsp;</span>${extra ? `<span class="option-additional-text">${extra}</span>` : ''}</span></label></nx-radio>`
+  const eleccion = (d: string, opciones: string) => `<nx-comparison-table-flex-row class="is-content-row has-intersection"><div class="nx-comparison-table__row">${desc(d)}<div class="nx-comparison-table__intersection-cell"><nx-radio-group>${opciones}</nx-radio-group></div></div></nx-comparison-table-flex-row>`
+  const comunes = `<nx-comparison-table-flex-row class="is-content-row has-intersection"><div class="nx-comparison-table__row">${desc('Todos los paquetes incluyen')}<div class="nx-comparison-table__intersection-cell"><div class="common-coverages"><ul><li><span>RC Obligatoria</span><nx-icon name="info-circle-o"></nx-icon></li><li><span>Cristales</span></li></ul></div></div></div></nx-comparison-table-flex-row>`
+  const anualB = modo === 'ilegible' ? 'pendiente' : '800,00'
+  const cuerpo =
+    modo === 'sin_coberturas'
+      ? ''
+      : fila('Daños propios', icono('minus') + icono('minus') + desplegable('Baja')) +
+        fila('Fenómenos de la naturaleza', icono('minus') + desplegable('Sí') + icono('check')) +
+        eleccion('Accidentes del conductor', opcion('30.000', false) + opcion('100.000', true, '[9.95 € Anual (sin impuestos)]')) +
+        eleccion('Vehículo de sustitución', opcion('No Incluido', true) + opcion('Incluido', false, '[42.5 € Anual (sin impuestos)]')) +
+        comunes +
+        fila('Robo', icono('minus') + icono('check') + icono('check'))
+  return `<app-price><nx-comparison-table><div><nx-comparison-table-flex-row class="is-header-row is-sticky-row"><div class="nx-comparison-table__row"><div class="nx-comparison-table__placeholder-cell"></div>${cab('Paquete Uno', '700,00', '710,00', '', true)}${cab('Paquete Dos', '780,00', anualB)}${cab('Paquete Tres', '1.100,50', '1.234,56', '<div><nx-icon name="exclamation-circle-warning"></nx-icon></div>')}</div></nx-comparison-table-flex-row>${cuerpo}</div></nx-comparison-table></app-price>`
+}
+
 const COMPANIAS = ['ASEGURADORA ALFA, S.A.', 'Beta Seguros y Reaseguros', 'Gamma Mutua', 'Otras compañías']
 
 const TARJETAS = ['Marca del vehículo MARCAFICT Modelo Alfa Versión 90 CV', 'Marca del vehículo MARCAFICT Modelo Alfa Versión 120 CV']
@@ -135,7 +163,7 @@ function app(o: Opc = {}): string {
   const ajenoHtml = o.obligatorioAjeno ? `<label for="ng-z-ajeno">Dato ajeno obligatorio *</label><input id="ng-z-ajeno" required type="text"><label for="ng-z-opc">Dato opcional</label><input id="ng-z-opc" type="text">` : ''
   const p3 = `<app-insurance><nx-mt-insured-policy-holder><form>${o.cabeceraCompaniaReal ? '<div nxlayout="grid nopadding"><nx-x-common-header><div><div><h3 class="nx-heading"><span>Compañía actual del vehículo</span></h3></div></div></nx-x-common-header></div>' : cab('Compañía actual del vehículo')}<label id="ng-z-l249" for="ng-z-dd250"></label><nx-dropdown role="combobox" id="ng-z-dd250" style="display:inline-block;min-width:120px;min-height:20px" tabindex="0" aria-labelledby="ng-z-l249" aria-controls="ng-z-nx-dropdown-modal-251"><div id="ng-z-dd250-r">${o.companiaPrefijada ?? ''}</div></nx-dropdown></form></nx-mt-insured-policy-holder>
   ${antecedentes}${polizaHtml}${ajenoHtml}<nx-mt-offerings-start-date>${cab('Fecha de inicio del seguro')}${texto('ng-z-ef', '¿Cuándo quieres que comience tu seguro?', `required min="${iso(new Date())}T00:00:00Z" max="${iso(masDias(90))}T00:00:00Z"`)}</nx-mt-offerings-start-date></app-insurance>`
-  const p4 = `<nx-mt-summary-panel><nx-expansion-panel><nx-expansion-panel-header aria-expanded="false">Vista Ampliada</nx-expansion-panel-header><div id="vista" hidden><nx-mt-agent-options><form>
+  const p4 = `${o.paquetes ? tablaPaquetes(o.paquetes) : ''}<nx-mt-summary-panel><nx-expansion-panel><nx-expansion-panel-header aria-expanded="false">Vista Ampliada</nx-expansion-panel-header><div id="vista" hidden><nx-mt-agent-options><form>
     ${texto('ng-z-niv', 'Nivel antecedentes', 'disabled')}${texto('ng-z-col', 'Colaborador', 'maxlength="4"')}</form></nx-mt-agent-options></div></nx-expansion-panel></nx-mt-summary-panel><p>Precio no vinculante.</p>`
   const p7 = `${texto('ng-z-iban', 'IBAN')}${texto('ng-z-bic', 'BIC/SWIFT')}`
   const cuerpos = [p1, p2, p3, p4, texto('ng-z-prov', 'Provincia'), '', p7, '']
@@ -168,6 +196,7 @@ function app(o: Opc = {}): string {
   }, 100); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const p = document.getElementById('ng-z-nx-dropdown-modal-251'); if (p) p.parentElement.remove(); } });
   ${o.obligatorioAjeno ? `document.querySelectorAll('.sig')[2].disabled = true; $('#ng-z-ajeno').addEventListener('input', () => { document.querySelectorAll('.sig')[2].disabled = $('#ng-z-ajeno').value === ''; });` : ''}
+  window.__clicsPrecios = []; document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('app-price')) window.__clicsPrecios.push(e.target.tagName); }, true);
   document.querySelectorAll('.sig').forEach((b, i) => b.addEventListener('click', () => {
     const ps = document.querySelectorAll('[role=tabpanel]'); const ts = document.querySelectorAll('nx-multi-step-item');
     ps[i].hidden = true; ps[i + 1].hidden = false;
@@ -333,7 +362,7 @@ test('v0.6.5 recorrido real: los TRES pasos con su «Siguiente» (bloque del tom
 async function hastaCompania(o: Opc, form: FormularioAuto) {
   const a = await abrir(o)
   const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, form, a.ctx)
-  const error = await recorrerPasosTurismos(a.page, a.marco, form, a.ctx, r.supuestoVersion, new Date(), 3_000).catch((e: unknown) => e as Error)
+  const error = await recorrerPasosTurismos(a.page, a.marco, form, a.ctx, r.supuestoVersion, new Date(), 3_000).then(() => new Error('el recorrido NO falló (se esperaba un hueco)'), (e: unknown) => e as Error)
   return { ...a, error, mostrado: await a.marco.locator('#ng-z-dd250-r').innerText(), abiertos: await a.marco.evaluate(() => (window as unknown as { __abiertos: number }).__abiertos) }
 }
 
@@ -876,5 +905,72 @@ test('v0.6.11 atasco genérico de «SIGUIENTE»: lista las etiquetas de los obli
     assert.deepEqual(await obligatoriosPendientesTurismos(r.marco), ['Dato ajeno obligatorio'])
   } finally {
     await r.context.close()
+  }
+})
+
+// ───────────── v0.6.12: lector de «Selección de paquete» (tabla comparativa; importes y nombres INVENTADOS) ─────────────
+async function llegarAPrecios(o: Opc) {
+  const a = await abrir(o)
+  const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, FORM, a.ctx)
+  return { ...a, resultado: await recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 3_000) }
+}
+
+test('v0.6.12 «Selección de paquete»: 3 paquetes → 3 ofertas (anualidad, primer recibo, supuestos en avisos, coberturas) SIN pulsar nada de la pantalla', async () => {
+  const a = await llegarAPrecios({ paquetes: 'completa' })
+  try {
+    const o = a.resultado.ofertas
+    assert.deepEqual(o.map((x) => [x.producto, x.primaAnualEur, x.importeReciboEur]), [['Auto · Paquete Uno', 710, 700], ['Auto · Paquete Dos', 800, 780], ['Auto · Paquete Tres', 1234.56, 1100.5]])
+    for (const x of o) {
+      assert.equal(x.compania, 'allianz')
+      assert.equal(x.primaNetaEur, null)
+      assert.equal(x.fraccionamiento, null, 'la pantalla no dice el fraccionamiento')
+      assert.ok(x.avisos.some((v) => v.startsWith('Precio con supuestos: ') && v.includes('uso diario')), x.avisos.join(' | '))
+      assert.ok(x.avisos.some((v) => v.includes('no indica el fraccionamiento')))
+      assert.ok(x.avisos.some((v) => v.startsWith('Precio con las opciones que traía marcadas el portal: Accidentes del conductor: 100.000 [9.95 € Anual (sin impuestos)]; Vehículo de sustitución: No Incluido.')), x.avisos.join(' | '))
+      assert.ok(!x.avisos.includes('coberturas no leídas'))
+    }
+    assert.ok(o[0]!.avisos.some((v) => v.includes('MEJOR OPCIÓN')) && !o[1]!.avisos.some((v) => v.includes('MEJOR OPCIÓN')))
+    assert.ok(o[2]!.avisos.some((v) => v.includes('aviso en el título')))
+    const cob = (i: number) => o[i]!.coberturas.map((c) => `${c.literal}=${c.estado}`)
+    assert.deepEqual(cob(0), ['Daños propios=excluida', 'Fenómenos de la naturaleza=excluida', 'Accidentes del conductor: 100.000=incluida', 'Vehículo de sustitución: No Incluido=excluida', 'RC Obligatoria=incluida', 'Cristales=incluida', 'Robo=excluida'])
+    assert.ok(cob(1).includes('Fenómenos de la naturaleza: Sí=incluida') && cob(1).includes('Robo=incluida'))
+    assert.ok(cob(2).includes('Daños propios: Baja=incluida') && cob(2).includes('Fenómenos de la naturaleza=incluida'))
+    assert.equal(o[0]!.coberturas.find((c) => c.clave === 'Accidentes del conductor')?.capital, 100_000)
+    assert.deepEqual(o[2]!.franquicias.map((f) => f.ambito), ['Daños propios'])
+    assert.deepEqual(o[0]!.franquicias, [])
+    // Solo lectura: lo último que se pulsó fue el «Siguiente» de «Antecedentes»; ni «Seleccionar» ni opciones de la tabla.
+    assert.equal(a.pulsados[a.pulsados.length - 1], 'Siguiente')
+    assert.deepEqual(await a.marco.evaluate(() => (window as unknown as { __clicsPrecios: string[] }).__clicsPrecios), [], 'ningún clic dentro de la pantalla de precios (ni «Seleccionar», ni opciones, ni desplegables)')
+    assert.ok(!a.pulsados.some((p) => /Seleccionar|opcion:(accidentes|vehiculo_sustitucion)/.test(p)), a.pulsados.join(','))
+  } finally {
+    await a.context.close()
+  }
+})
+
+test('v0.6.12 «Selección de paquete»: «la anualidad» ilegible → ESE paquete fuera con aviso (las demás ofertas siguen); sin tabla de coberturas → «coberturas no leídas»', async () => {
+  const a = await llegarAPrecios({ paquetes: 'ilegible' })
+  try {
+    const o = a.resultado.ofertas
+    assert.deepEqual(o.map((x) => x.producto), ['Auto · Paquete Uno', 'Auto · Paquete Tres'])
+    for (const x of o) assert.ok(x.avisos.includes('Paquete «Paquete Dos» descartado: «la anualidad» no se pudo leer como importe.'), x.avisos.join(' | '))
+  } finally {
+    await a.context.close()
+  }
+  const b = await llegarAPrecios({ paquetes: 'sin_coberturas' })
+  try {
+    assert.equal(b.resultado.ofertas.length, 3)
+    for (const x of b.resultado.ofertas) assert.deepEqual([x.coberturas, x.franquicias, x.avisos.includes('coberturas no leídas')], [[], [], true])
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('v0.6.12 «Selección de paquete»: tabla vacía (sin paquetes) → el hueco de siempre con inventario', async () => {
+  const a = await abrir({ paquetes: 'vacia' })
+  try {
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, a.marco, FORM, a.ctx)
+    await assert.rejects(recorrerPasosTurismos(a.page, a.marco, FORM, a.ctx, r.supuestoVersion, new Date(), 1_500), esMapa(/la pantalla de precios «Selección de paquete» del asistente de Turismos \(sin mapa del lector de primas\)/))
+  } finally {
+    await a.context.close()
   }
 })
