@@ -6,7 +6,7 @@ import type { ModalidadPortal, NombrePasoTraza, PermisoEmision } from '@central/
 import type { ContextoTarificacion, RiesgoComunidad, TarificadorAdapter } from '@central/module-tarificacion'
 import type { ContextoFormador } from './formador.ts'
 import type { OpcionesMatSelect } from './mat-select.ts'
-import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, SelectorAvancePestana } from './guard.ts'
+import type { PasoContinuarMapfre, ClaveAntecedenteTurismos, ResultadoAntecedenteTurismos, ResultadoCompaniaActualTurismos, ResultadoOpcionHogar, ResultadoPolizaActualTurismos, ResultadoGuardarPresupuestoTurismos, SelectorAvancePestana } from './guard.ts'
 
 export type ContextoPortal = ContextoTarificacion & {
   /** Pulsa un botón/enlace SOLO si no casa con el patrón de emisión. Nunca `locator.click()`. */
@@ -106,6 +106,15 @@ export type ContextoPortal = ContextoTarificacion & {
   marcarAntecedenteTurismos?: (marco: Frame, clave: ClaveAntecedenteTurismos, dato: number | null) => Promise<ResultadoAntecedenteTurismos>
   /** Allianz AUTOS Turismos (v0.6.11, 19/10/2026): escribe los 5 últimos dígitos de la póliza actual en «Antecedentes» por `polizaActualTurismosAllianz` (guard.ts). Dato sensible. */
   polizaActualTurismos?: (marco: Frame, ultimos5: string | null) => Promise<ResultadoPolizaActualTurismos>
+  /** Allianz AUTOS Turismos (v0.6.13, 18/10/2026, autorizado por Alberto): «Guardar presupuesto» (no vinculante) en la pantalla de precios por `guardarPresupuestoTurismosAllianz` (guard.ts). */
+  guardarPresupuestoTurismos?: (marco: Frame, identificador: string) => Promise<ResultadoGuardarPresupuestoTurismos>
+  /**
+   * Generali (18/10/2026): botón de «Seleccionar mediador» por `pulsarMediadorGenerali` de guard.ts. El guard comprueba
+   * que el desplegable `selectMediador` tiene puesto EXACTAMENTE el mediador de la correduría (`MEDIADOR_GENERALI`).
+   */
+  confirmarMediadorGenerali?: (selectMediador: Locator) => Promise<void>
+  /** Generali: entrada NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES › TURISMOS (RAMO UV) por `entrarTurismosGenerali` de guard.ts (una vez). */
+  entrarTurismosGenerali?: () => Promise<void>
   /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para

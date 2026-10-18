@@ -12,6 +12,7 @@ export type {
   FranquiciaOferta,
   PdfRef,
   OfertaNormalizada,
+  DatosUsadosOferta,
   DesglosePrima,
   ModalidadPortal,
   Credenciales,
@@ -63,7 +64,7 @@ export { MARCA_REDACTADO, esVariableSecreta, secretosDelEntorno, redactar, redac
 export { variablesProhibidas, ENV_MAQUINA_PERMITIDAS, envDeMaquina, nombresCredencial } from './entorno.ts'
 export { importeEs, importePuntoDecimal } from './importes.ts'
 export { validarRiesgoComunidad, type ValidacionRiesgo } from './riesgo.ts'
-export { validarOfertas, franquiciaGeneral, garantiasComoRegistro, type ValidacionOfertas, type ValorGarantiaCompatible } from './ofertas.ts'
+export { validarOfertas, datosUsadosDe, conDatosUsados, franquiciaGeneral, garantiasComoRegistro, type ValidacionOfertas, type ValorGarantiaCompatible } from './ofertas.ts'
 export { claveCompania, crearRegistro, type RegistroAdaptadores } from './registro.ts'
 export {
   MARCA_DATO_PERSONAL,
@@ -105,6 +106,7 @@ export {
 // la ficha/oportunidad y el cuestionario.
 export {
   faltanParaTarificar,
+  supuestosFavorablesPara,
   mensajeFaltan,
   obligatoriosPara,
   obligatoriosDeRamo,
@@ -385,6 +387,14 @@ export {
   textoSupuestos,
   supuestosDeAvisos,
   hoyEspana,
+  conAntecedentesFavorables,
+  SUPUESTO_CONDUCTOR_TOMADOR,
+  supuestoConductorTomador,
+  ANIOS_ASEGURADO_FAVORABLE,
+  SINIESTROS_FAVORABLE,
+  SUPUESTO_FAVORABLE_ANIOS,
+  SUPUESTO_FAVORABLE_SINIESTROS,
+  type ClaveAntecedenteFavorable,
   PREFIJO_SUPUESTOS,
   MAX_AVISO_SUPUESTOS,
   type Supuesto,

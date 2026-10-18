@@ -1,6 +1,6 @@
 // Cliente HTTP del worker hacia apps/asegura. El ÚNICO canal del worker con la casa: sin BD.
 
-import type { AtascoWorker, CandidatoVersion, IncidenciaEjecucion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, Recorrido, TipoError } from '@central/module-tarificacion'
+import type { AtascoWorker, CandidatoVersion, IncidenciaEjecucion, InventarioDom, OfertaNormalizada, OpcionPoblacion, PasoTraza, Recorrido, ResultadoAdaptador, SeleccionVehiculo, TipoError, VehiculoConfirmado } from '@central/module-tarificacion'
 
 export type Config = { jobId: string; apiUrl: string; secreto: string }
 
@@ -109,8 +109,26 @@ export async function salidaSinTrabajo(
 /** Traza (pasos con tiempos y códigos, sin datos personales) y versión del adaptador; viajan en el MISMO POST del resultado. */
 export type MetaTraza = { pasos?: PasoTraza[]; botVersion?: string }
 
+/**
+ * Vehículo de catálogo que el bot dejó confirmado en su portal (18/10/2026), solo en un `ok`: `vehiculoConfirmado` (Mapfre:
+ * denominación, CV, CC…) y/o `seleccionVehiculo` (marca, modelo y versión separados). SIN matrícula ni bastidor. Asegura lo
+ * valida otra vez y lo encadena al bot de Generali de la misma oportunidad (Generali no busca por matrícula).
+ */
+export type VehiculoDelResultado = { vehiculoConfirmado?: VehiculoConfirmado; seleccionVehiculo?: Pick<SeleccionVehiculo, 'marca' | 'modelo' | 'descripcion'> }
+
+/** Lo que del resultado del adaptador viaja como vehículo confirmado (solo lo que trae; `null`/vacío no viaja). PURA. */
+export function vehiculoDelResultado(r: Pick<ResultadoAdaptador, 'vehiculoConfirmado' | 'seleccionVehiculo'>): VehiculoDelResultado {
+  const out: VehiculoDelResultado = {}
+  if (r.vehiculoConfirmado) out.vehiculoConfirmado = r.vehiculoConfirmado
+  const sv = r.seleccionVehiculo
+  if (sv && sv.marca?.trim() && sv.modelo?.trim()) {
+    out.seleccionVehiculo = { marca: sv.marca.trim(), modelo: sv.modelo.trim(), ...(sv.descripcion?.trim() ? { descripcion: sv.descripcion.trim() } : {}) }
+  }
+  return out
+}
+
 export type CuerpoResultado =
-  | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & MetaTraza)
+  | ({ trabajoId: string; resultado: 'ok'; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] } & VehiculoDelResultado & MetaTraza)
   | ({ trabajoId: string; resultado: 'error'; error: { tipo: TipoError; mensaje: string; url: string | null; opcionesVersion?: CandidatoVersion[]; opcionesPoblacion?: OpcionPoblacion[]; inventarioDom?: InventarioDom; recorrido?: Recorrido; atasco?: AtascoWorker }; capturaBase64?: string; html?: string } & MetaTraza)
   /** Exploración terminada (13/10/2026): el MAPA ya lo construyó asegura en `/explorador/cierre`; aquí solo el desenlace. */
   | ({ trabajoId: string; resultado: 'explorado'; motivoFin: string; presupuesto?: CuerpoResultadoPresupuesto } & MetaTraza)

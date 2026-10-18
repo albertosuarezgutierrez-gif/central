@@ -3985,6 +3985,13 @@ h1 em {
 .presu-salida p { margin: 0; font-size: 14px; color: var(--muted); flex: 1 1 auto; }
 
 .presu-plegable-cuerpo { margin-top: 12px; }
+/* «Ver los datos con los que hemos calculado tu precio» (revisión 18/10/2026): el <summary> es flex y pierde el
+   marcador nativo, así que lleva chevron propio que gira al abrir. Sin él parecía una nota, no algo que se despliega. */
+.revisa-datos > summary { list-style: none; cursor: pointer; }
+.revisa-datos > summary::-webkit-details-marker { display: none; }
+.revisa-chevron { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--border); font-size: 18px; line-height: 1; transition: transform .15s ease; }
+.revisa-datos[open] > summary .revisa-chevron { transform: rotate(90deg); }
+@media (prefers-reduced-motion: reduce) { .revisa-chevron { transition: none; } }
 .presu-mediador p { font-size: 13px; line-height: 1.5; }
 
 /* «Tus vencimientos» (pieza 1-5, 23/09/2026): una tarjeta por póliza que

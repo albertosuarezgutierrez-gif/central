@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  TEXTOS_OFERTAS, copyOfertas, cuadroOfertas, esRecomendada, garantiasTarjeta, ordenarOfertas, origenVista, puedeDescargarPdf,
+  TEXTOS_OFERTAS, avisosDeTarjeta, copyOfertas, cuadroOfertas, esRecomendada, garantiasClave, garantiasTarjeta, supuestosDeOpciones, ordenarOfertas, origenVista, puedeDescargarPdf,
   textoCompaniasOfertas, textoValidezOfertas, valorCelda,
 } from './presupuesto-ofertas-vista.ts'
 import { esPapel, etiquetaPapeles, revisarCopyFijo } from './presupuesto-vista.ts'
@@ -115,4 +115,53 @@ test('la pantalla enseña el texto de ofertas y no el de la tarificación cuando
   assert.match(pag, /origen=\{p\.origen\}/)
   const est = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id]/EstudioOfertas.tsx', import.meta.url), 'utf8')
   assert.match(est, /origen="ofertas"/)
+})
+
+test('tarjeta simple (18/10/2026): 4 coberturas clave con ✔/✘; «sin estado» no es ✘; sin leer = no constan', () => {
+  const lista = [
+    { nombre: 'RC obligatoria', incluida: true, texto: 'Límite 1.000.000,00€' },
+    { nombre: 'Asistencia', incluida: null, texto: null },
+    { nombre: 'Daños propios', incluida: false, texto: 'Franquicia 300,00€' },
+    { nombre: 'Lunas', incluida: true, texto: null },
+    { nombre: 'Robo', incluida: true, texto: null },
+    { nombre: 'Incendio', incluida: true, texto: null },
+  ]
+  const g = garantiasClave(op('a', 1, 'A', [], lista))
+  assert.deepEqual(g.items, [
+    { texto: 'RC obligatoria: Límite 1.000.000,00€', incluida: true },
+    { texto: 'Daños propios', incluida: false },
+    { texto: 'Lunas', incluida: true },
+    { texto: 'Robo', incluida: true },
+  ])
+  assert.equal(g.resto, 1)
+  assert.equal(garantiasClave(op('b', 1, 'B', [], null)).sinLeer, true)
+})
+
+test('supuestos en lenguaje claro: solo los «Precio calculado con…», sin repetir', () => {
+  const s = supuestosDeOpciones([
+    { avisos: ['Precio obtenido por nuestro tarificador…', 'Precio calculado con estas suposiciones: uso diario del vehículo.'] },
+    { avisos: ['Precio calculado con estas suposiciones: uso diario del vehículo.', 'Precio con supuestos: crudo'] },
+  ])
+  assert.deepEqual(s, ['Precio calculado con estas suposiciones: uso diario del vehículo.'])
+})
+
+test('revisión 18/10: la frase de supuestos NO se repite en la tarjeta si va en la sección de datos', () => {
+  const sup = 'Precio calculado con estas suposiciones: uso diario del vehículo.'
+  assert.deepEqual(avisosDeTarjeta(['Aviso de la compañía', sup], true), { avisos: ['Aviso de la compañía'], conSupuestos: true })
+  // Sin sección de datos, la frase se queda: si no, el supuesto no se diría en ningún sitio.
+  assert.deepEqual(avisosDeTarjeta(['Aviso de la compañía', sup], false), { avisos: ['Aviso de la compañía', sup], conSupuestos: false })
+  assert.deepEqual(avisosDeTarjeta(['Aviso de la compañía'], true), { avisos: ['Aviso de la compañía'], conSupuestos: false })
+  const est = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id]/EstudioOfertas.tsx', import.meta.url), 'utf8')
+  assert.match(est, /avisosDeTarjeta\(o\.avisos, supuestosEnDatos\)/)
+  assert.doesNotMatch(est, /o\.avisos\.map/, 'la tarjeta pinta los avisos SIN filtrar')
+  const pag = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id]/page.tsx', import.meta.url), 'utf8')
+  assert.match(pag, /supuestosEnDatos=\{mostrarCotizados\}/)
+})
+
+test('revisión 18/10: «Ver los datos…» se ve desplegable (chevron propio) y abre solo si hay supuestos', () => {
+  const rev = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id]/RevisaTusDatos.tsx', import.meta.url), 'utf8')
+  assert.match(rev, /open=\{supuestos\.length > 0\}/)
+  assert.match(rev, /className="revisa-chevron" aria-hidden="true"/)
+  assert.match(rev, /'Ver los datos con los que hemos calculado tu precio'/)
+  assert.match(rev, /minHeight: 44/)
 })

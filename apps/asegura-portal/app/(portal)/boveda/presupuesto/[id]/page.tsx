@@ -8,7 +8,8 @@ import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fec
 import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { EstudioOfertas } from './EstudioOfertas'
-import { TEXTOS_OFERTAS, puedeDescargarPdf, textoCompaniasOfertas, textoValidezOfertas } from '@/lib/presupuesto-ofertas-vista'
+import { TEXTOS_OFERTAS, puedeDescargarPdf, supuestosDeOpciones, textoCompaniasOfertas, textoValidezOfertas } from '@/lib/presupuesto-ofertas-vista'
+import { TEXTOS_VISTA_PREVIA, esVistaPreviaBorrador } from '@/lib/vista-previa'
 import { DatosParaContratar } from './DatosParaContratar'
 import { RevisaTusDatos } from './RevisaTusDatos'
 import { ResumenOpciones } from './ResumenOpciones'
@@ -125,6 +126,8 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const companias = new Set(portada.map((o) => o.compania)).size
   // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
   const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
+  // «Ver como el cliente» un BORRADOR (18/10/2026): la misma página, con los botones de acción deshabilitados y rotulados.
+  const vistaPrevia = esVistaPreviaBorrador(p) && !p.caducado && !p.retirado
 
   return (
     <>
@@ -155,6 +158,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           abierto.
         </p>
       )}
+      {esVistaPreviaBorrador(p) && <p className="pendiente" role="note"><strong>{TEXTOS_VISTA_PREVIA.banda}</strong></p>}
 
       {/* ARRIBA del todo: los datos con los que se calculó el precio (dictado de Alberto, 28/09/2026). */}
       {mostrarCotizados && (
@@ -164,6 +168,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           corredor={p.vistaDeCorredor}
           telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
           origen={p.origen}
+          supuestos={supuestosDeOpciones(p.opciones)}
         />
       )}
 
@@ -211,6 +216,8 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           corredor={p.vistaDeCorredor}
           codigoWhatsapp={p.accesoWhatsapp}
           pdf={puedeDescargarPdf(p)}
+          vistaPrevia={vistaPrevia}
+          supuestosEnDatos={mostrarCotizados}
         />
       ) : (
         <>
@@ -235,6 +242,12 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         return (
           <section className="seccion" key={`g-${o.id}`}>
             <Garantias o={o} actual={p.actual} />
+            {vistaPrevia && o.primaEur !== null && (
+              <div style={{ display: 'grid', gap: 6 }}>
+                <button type="button" className="boton" disabled aria-disabled="true" style={{ minHeight: 48, opacity: 0.55, cursor: 'not-allowed' }}>La quiero</button>
+                <p className="suave" style={{ margin: 0, fontSize: 13 }}>{TEXTOS_VISTA_PREVIA.aceptar}</p>
+              </div>
+            )}
             {puedeAceptar && o.primaEur !== null && (
               <AceptarOpcion
                 presupuestoId={p.id}

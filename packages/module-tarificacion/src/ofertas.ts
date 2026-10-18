@@ -3,7 +3,7 @@
 // limite, franquicia, evidencia}). El worker es código nuestro, pero corre en otra máquina y
 // rasca HTML ajeno: su salida se valida como si viniera de fuera.
 
-import type { DesglosePrima, CoberturaOferta, Fraccionamiento, FranquiciaOferta, OfertaNormalizada } from './tipos.ts'
+import type { DesglosePrima, CoberturaOferta, Fraccionamiento, FranquiciaOferta, OfertaNormalizada, DatosUsadosOferta } from './tipos.ts'
 
 export type ValidacionOfertas = { ok: true; ofertas: OfertaNormalizada[] } | { ok: false; errores: string[] }
 
@@ -93,9 +93,39 @@ export function validarOfertas(entrada: unknown, numPdfs: number): ValidacionOfe
       desglose: desglose(o.desglose),
       fechaTerminoPortal: fecha(o.fechaTerminoPortal),
       avisos: Array.isArray(o.avisos) ? o.avisos.map(txt).filter((a): a is string => a !== null) : [],
+      ...((du) => (du ? { datosUsados: du } : {}))(datosUsadosDe(o.datosUsados)),
     })
   })
   return errores.length ? { ok: false, errores } : { ok: true, ofertas }
+}
+
+const textoUsado = (v: unknown, max = 120): string | null => {
+  if (typeof v !== 'string') return null
+  const t = v.replace(/\s+/g, ' ').trim()
+  return t === '' || t.length > max ? null : t
+}
+
+/**
+ * Datos que la compañía usó (18/10/2026), saneados. PURA. CP: 5 cifras (un CP «decorado» se limpia; otra cosa → `null`);
+ * localidad sin el prefijo «NNNNN - »; textos ≤120. Todo vacío o sin forma → `null` (no se sabe), nunca un valor de la ficha.
+ * `null` entero = no hay nada legible.
+ */
+export function datosUsadosDe(v: unknown): DatosUsadosOferta | null {
+  const o = obj(v)
+  if (!o) return null
+  const cifras = typeof o.codigoPostal === 'string' ? o.codigoPostal.replace(/\D/g, '') : ''
+  const codigoPostal = /^\d{5}$/.test(cifras) ? cifras : null
+  const localidad = textoUsado(typeof o.localidad === 'string' ? o.localidad.replace(/^\s*\d{5}\s*-\s*/, '') : null, 80)
+  const ve = obj(o.vehiculo) ?? {}
+  const vehiculo = { marca: textoUsado(ve.marca), modelo: textoUsado(ve.modelo), version: textoUsado(ve.version), ...(textoUsado(ve.denominacion, 200) ? { denominacion: textoUsado(ve.denominacion, 200) } : {}) }
+  if (!codigoPostal && !localidad && !vehiculo.marca && !vehiculo.modelo && !vehiculo.version && !('denominacion' in vehiculo)) return null
+  return { codigoPostal, localidad, vehiculo }
+}
+
+/** Cuelga los datos usados (ya leídos del portal) de cada oferta; `null` → las ofertas tal cual. PURA. */
+export function conDatosUsados(ofertas: readonly OfertaNormalizada[], crudo: unknown): OfertaNormalizada[] {
+  const du = datosUsadosDe(crudo)
+  return du ? ofertas.map((o) => ({ ...o, datosUsados: du })) : [...ofertas]
 }
 
 /** La franquicia GENERAL si la oferta la declara con importe; `null` = no la declara (≠ «sin franquicia»). */

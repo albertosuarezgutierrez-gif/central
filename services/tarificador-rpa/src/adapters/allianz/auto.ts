@@ -1,3 +1,13 @@
+// v0.6.14 (18/10/2026, revisión de seguridad): «Guardar presupuesto» relee las 4 casillas justo antes del clic y solo da por
+// guardado lo que APARECE tras él (guard.ts); el vehículo marcado viaja como `seleccionVehiculo` (Generali lo usa).
+// v0.6.13 (18/10/2026, autorizado por Alberto: «a ver si puede guardar presupuesto»): tras leer los paquetes, «Guardar presupuesto»
+// (NO vinculante) por `guardarPresupuestoTurismosAllianz` (guard.ts: lista blanca exacta, «Envío a cliente/agente» y «Mostrar en
+// eCliente» DESMARCADAS, solo el identificador sin datos personales); la referencia va a `referenciaPortal`. CP/localidad del tomador:
+// Allianz los rellena y BLOQUEA desde su fichero tras el Nº de documento («Datos personales»); no hay otro campo editable: aviso.
+// Moto v0.7.0 (18/10/2026, trabajo real atascado en `requiere_eleccion_version` con 20 versiones): la versión NO bloquea
+// (`eleccionVersionMotoPorSimilitud`: riesgo normalizado → cilindrada → 1 = esa; varias o ninguna = la primera, DECLARADA), y
+// los antecedentes sin dato van al supuesto favorable declarado (`conAntecedentesFavorables`). Se fija por el `<select>` de
+// siempre (`resolverVehiculo`: código de la lista leída + relectura).
 // v0.6.12 (20/10/2026, trabajo real d675077b llegó a «Selección de paquete»): LECTOR DE PRECIOS. La pantalla es una tabla comparativa `nx-comparison-table` (3 paquetes: «Terceros con lunas», «Tercero Ampliado», «Todo Riesgo con franq.»; cada cabecera trae «primer recibo» y «la anualidad»; filas de cobertura con icono check/minus o desplegable por paquete, filas de elección única que abarcan los 3 paquetes y «Todos los paquetes incluyen»). `leerPaquetesTurismosAllianz` (guard.ts, solo lectura) + `ofertasDesdePaquetesTurismos` devuelven una oferta por paquete con supuestos y coberturas; importe ilegible → fuera + aviso; sin tabla → hueco como antes. No se pulsa nada en esta pantalla.
 // v0.6.11 (19/10/2026, trabajo real atascado en «Antecedentes» con «qué falta para habilitar SIGUIENTE»): el input obligatorio «Cinco últimos dígitos de la póliza actual» (aparece al haber compañía actual) se rellena con `polizaAnteriorUltimos5` del riesgo por la puerta `polizaActualTurismosAllianz` (guard.ts); sin dato → hueco con nombre, nunca inventado; ya con valor → «fijada por Allianz». El atasco genérico lista ahora las etiquetas de los obligatorios vacíos/inválidos del paso. Los 5 dígitos nunca van a supuestos, avisos ni errores.
 // v0.6.10 (18/10/2026, decisión de Alberto «supuesto favorable»): «Antecedentes» contesta las 3 preguntas que bloqueaban «SIGUIENTE» (tiempo en la compañía, partes culpables, tiempo como titular): con dato del riesgo la opción que casa; sin dato, la más favorable y DECLARADA (guard.ts).
@@ -75,6 +85,10 @@ import type { Frame, Locator, Page } from 'playwright'
 import {
   clavePoblacion,
   comprobarBoton,
+  conAntecedentesFavorables,
+  conDatosUsados,
+  MAX_DESCRIPCION_VEHICULO,
+  pareceDatoPersonalEnDescripcion,
   AVISO_VERSION_POR_SIMILITUD,
   documentoTomadorDe,
   esCif,
@@ -122,6 +136,9 @@ import {
   exigirCampoNoBancario,
   leerPaquetesTurismosAllianz,
   leerTarjetasVehiculoTurismosAllianz,
+  identificadorPresupuestoTurismos,
+  leerDatosUsadosTurismosAllianz,
+  type ResultadoGuardarPresupuestoTurismos,
   type LecturaPaquetesTurismos,
   SEL_FUERA_CABECERA_TURISMOS,
   SEL_ZONA_APP_TURISMOS,
@@ -317,6 +334,46 @@ export function eleccionVersionConOrigen(lectura: Pick<LecturaVehiculoPortal, 'v
 
 export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 'versiones'>, form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>): EleccionVersion | null {
   return eleccionVersionConOrigen(lectura, form).eleccion
+}
+
+// ───────────────────────── MOTO: versión por similitud (v0.7.0, 18/10/2026) ─────────────────────────
+// Decisión de Alberto (la misma de Mapfre 0.8.6): la versión NO bloquea. Con varias versiones en el desplegable y sin elección
+// explícita, se casa con lo que trae el riesgo (marca/modelo/descripción de `seleccionVehiculo`, normalizado) y la cilindrada.
+
+/** Prefijo del supuesto declarado cuando la versión se elige por parecido entre varias. */
+export const SUPUESTO_VERSION_SIMILITUD_MOTO = 'versión elegida por similitud'
+
+const normalizarVersion = (t: string): string =>
+  t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/C\.\s*C\.?/g, 'CC').replace(/[^A-Z0-9]+/g, ' ').trim()
+const tokensVersion = (t: string): string[] => normalizarVersion(t).split(' ').filter((x) => x !== '')
+/** Cilindradas que nombra una etiqueta («798C.C.» → 798; «895 CC» → 895). */
+const cilindradasDe = (etiqueta: string): number[] => [...normalizarVersion(etiqueta).matchAll(/\b(\d{2,4}) ?CC\b/g)].map((m) => Number(m[1]))
+
+/**
+ * Elección AUTOMÁTICA de la versión de moto. Pura. Orden: (1) opciones cuyas palabras (sin la cilindrada) están TODAS en
+ * marca + modelo + descripción del riesgo; (2) de ellas, las de la cilindrada del riesgo (si filtrar no deja ninguna, se
+ * conservan); (3) una sola → esa, sin supuesto; varias → la primera, DECLARADA («… (supuesto, había N)», N = las que casaban);
+ * (4) ninguna casa → la primera de la cilindrada del riesgo o, si tampoco hay, la primera de la lista, DECLARADA con N =
+ * todas. `null` = no hace falta elegir (0 o 1 opciones). Sin datos personales en el supuesto (solo el recuento).
+ */
+export function eleccionVersionMotoPorSimilitud(
+  versiones: readonly CandidatoVersion[],
+  sel: Pick<SeleccionVehiculo, 'marca' | 'modelo' | 'cilindradaCc' | 'descripcion'> | null | undefined,
+): { eleccion: EleccionVersion; supuesto: string | null } | null {
+  const ops = versiones.filter((v) => !esOpcionVacia(v.etiqueta))
+  if (ops.length <= 1) return null
+  const delRiesgo = new Set(tokensVersion([sel?.marca, sel?.modelo, sel?.descripcion].filter((x): x is string => typeof x === 'string').join(' ')))
+  const cc = typeof sel?.cilindradaCc === 'number' ? sel.cilindradaCc : null
+  const esCc = (t: string) => /^\d+CC$/.test(t) || (cc !== null && t === String(cc))
+  const casan = ops.filter((o) => tokensVersion(o.etiqueta).filter((t) => !esCc(t)).every((t) => delRiesgo.has(t)))
+  const porCc = (l: readonly CandidatoVersion[]) => (cc === null ? [...l] : l.filter((o) => cilindradasDe(o.etiqueta).includes(cc)))
+  const elegir = (o: CandidatoVersion) => ({ codigo: o.codigo, etiqueta: o.etiqueta })
+  const supuesto = (n: number) => `${SUPUESTO_VERSION_SIMILITUD_MOTO} (supuesto, había ${n})`
+  if (casan.length) {
+    const finos = porCc(casan).length ? porCc(casan) : casan
+    return finos.length === 1 ? { eleccion: elegir(finos[0]!), supuesto: null } : { eleccion: elegir(finos[0]!), supuesto: supuesto(finos.length) }
+  }
+  return { eleccion: elegir(porCc(ops)[0] ?? ops[0]!), supuesto: supuesto(ops.length) }
 }
 
 /**
@@ -765,24 +822,25 @@ async function fijarSelect(raiz: Pick<Frame, 'locator'>, sel: string, valor: str
 export type OperacionCampo = { sel: string; tipo: 'texto' | 'select' | 'casilla'; valor: string | boolean }
 
 /**
- * Plan de escritura de Datos básicos de MOTO. Puro. FAIL-CLOSED: el portal NO tiene «sin dato» en sexo ni en
- * antecedentes (asume Hombre / 0 años), así que si el formulario no los trae se para en vez de cotizar con un valor de cajón.
+ * Plan de escritura de Datos básicos de MOTO. Puro. El portal NO tiene «sin dato» en sexo (asume Hombre): sin sexo se para
+ * (FAIL-CLOSED, nunca se inventa). Antecedentes sin dato (18/10/2026, decisión de Alberto «supuesto favorable»): el tramo
+ * más favorable (`conAntecedentesFavorables`: más de 5 años, ningún siniestro), DECLARADO en el precio
+ * (`supuestosDatosBasicosMoto`), nunca como dato.
  *   · `aniosAseguradoAnterior` → «ha estado asegurado» (S si > 0) y `yearsOrigCompany` (0-5; más de 5 → «6»).
  *   · 0 siniestros en 5 años → `aniosSinSiniestros` = min(5, años asegurado): ASUNCIÓN (sin siniestros durante todo el
  *     tiempo asegurado); se relee y, si el portal lo cambia, aborta. Con siniestros > 0 → hueco (el portal pide «años sin
  *     siniestros» y «nº en el último año», que el formulario canónico no distingue).
  */
-export function planDatosBasicosMoto(f: FormularioAuto): OperacionCampo[] {
-  if (f.conductor.sexo === null) throw new ErrorTarificador('datos', 'allianz/moto: falta el sexo del conductor (el portal asumiría «Hombre»)')
-  if (f.aniosAseguradoAnterior === null) throw new ErrorTarificador('datos', 'allianz/moto: falta la antigüedad en la compañía anterior (el portal asumiría 0 años)')
-  if (f.siniestrosUltimos5Anios === null) throw new ErrorTarificador('datos', 'allianz/moto: faltan los siniestros de los últimos años (el portal asumiría ninguno)')
+export function planDatosBasicosMoto(form: FormularioAuto): OperacionCampo[] {
+  if (form.conductor.sexo === null) throw new ErrorTarificador('datos', 'allianz/moto: falta el sexo del conductor (el portal asumiría «Hombre»)')
+  const f = conAntecedentesFavorables(form).formulario
   if (f.siniestrosUltimos5Anios > 0) throw new ErrorMapaIncompleto('la traducción de siniestros > 0 a «años sin siniestros» y «nº de siniestros en el último año» de Antecedentes', false, true)
   const anios = f.aniosAseguradoAnterior
   const plan: OperacionCampo[] = [
     { sel: SEL_DATOS_MOTO.uso, tipo: 'select', valor: USO_PARTICULAR },
     { sel: SEL_DATOS_MOTO.conductorNacimiento, tipo: 'texto', valor: fechaEs(f.conductor.fechaNacimiento) },
     { sel: SEL_DATOS_MOTO.conductorCarne, tipo: 'texto', valor: fechaEs(f.conductor.fechaCarne) },
-    { sel: SEL_DATOS_MOTO.conductorSexo, tipo: 'select', valor: SEXO_PORTAL[f.conductor.sexo] },
+    { sel: SEL_DATOS_MOTO.conductorSexo, tipo: 'select', valor: SEXO_PORTAL[form.conductor.sexo] },
   ]
   if (f.garajeNoche !== null) plan.push({ sel: SEL_DATOS_MOTO.garajeNoche, tipo: 'casilla', valor: f.garajeNoche })
   plan.push(
@@ -792,6 +850,16 @@ export function planDatosBasicosMoto(f: FormularioAuto): OperacionCampo[] {
     { sel: SEL_DATOS_MOTO.aniosSinSiniestros, tipo: 'select', valor: `0${Math.min(5, anios)}` },
   )
   return plan
+}
+
+/** «Precio con supuestos: …» de Datos básicos de MOTO (los antecedentes que el riesgo no trae), o `null`. Puro. */
+export function supuestosDatosBasicosMoto(f: FormularioAuto): string | null {
+  return textoSupuestos(conAntecedentesFavorables(f).supuestos)
+}
+
+/** Aviso único de supuestos de MOTO: la versión (si se eligió por similitud entre varias) y los antecedentes favorables. Puro. */
+export function supuestosMoto(supuestoVersion: string | null, f: FormularioAuto): string | null {
+  return textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...conAntecedentesFavorables(f).supuestos])
 }
 
 export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto): Promise<void> {
@@ -885,10 +953,18 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Moto', selectorTarjeta: TARJETA_AUTOS.moto })
   const riesgo = await marcoCon(page, (r) => r.locator(SEL_RIESGO_MOTO.marca), 'Riesgo municipio (marca)')
   await elegirVehiculoMoto(riesgo, form.seleccionVehiculo, page)
-  const vehiculo = await resolverVehiculo(riesgo, await leerVehiculoPortal(riesgo), form)
+  // v0.7.0: la versión no bloquea. Sin elección explícita ni vehículo confirmado que case, se elige por similitud (DECLARADA).
+  const lectura = await leerVehiculoPortal(riesgo)
+  const yaElegida = eleccionVersionConOrigen(lectura, form).eleccion !== null
+  const auto = yaElegida ? null : eleccionVersionMotoPorSimilitud(lectura.versiones, form.seleccionVehiculo)
+  const vehiculo = await resolverVehiculo(riesgo, lectura, auto ? { ...form, eleccionVersion: auto.eleccion } : form)
+  const supuestoVersion = auto?.supuesto ?? null
   await ctx.pausa()
   await rellenarRiesgoMoto(riesgo, form, page, ctx)
   await lanzarSiHayErrores(riesgo)
+  // 18/10/2026: lo que Allianz USA (leído del portal, no de la ficha): CP y población del riesgo, y el vehículo fijado.
+  const leerCampo = async (sel: string) => (await riesgo.locator(sel).first().inputValue({ timeout: 2_000 }).catch(() => null))
+  const usados = { codigoPostal: await leerCampo(SEL_RIESGO_MOTO.codigoPostal), localidad: await leerCampo(SEL_RIESGO_MOTO.poblacion), vehiculo: { marca: vehiculo.marca, modelo: vehiculo.modelo, version: vehiculo.version } }
   await ctx.pausa()
   // El marco de Datos básicos es el del formulario de DESTINO que confirma el guard (no uno elegido por otro selector).
   const datos = await avanzarPestanaGuardada(page, ctx, 'datosBasicos', 'moto')
@@ -901,7 +977,12 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   const tarifa = await avanzarPestanaGuardada(page, ctx, 'tarificar', 'moto')
   await lanzarSiHayErrores(tarifa)
   const primas = await leerPrimasTarificar(tarifa)
-  return { ofertas: ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }) }
+  // 18/10/2026: los antecedentes SUPUESTOS (favorables) viajan con cada oferta («Precio con supuestos: …»).
+  return {
+    ofertas: conDatosUsados(ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }, supuestosMoto(supuestoVersion, form)), usados),
+    // El vehículo fijado en el `<select>` (resolverVehiculo): asegura solo lo encadena a Generali en ramo auto; viaja igual.
+    seleccionVehiculo: seleccionVehiculoConfirmada(usados.vehiculo),
+  }
 }
 
 // ───────────────────────── flujo (con huecos) ─────────────────────────
@@ -997,7 +1078,7 @@ export const RE_BOTON_SIGUIENTE_TURISMOS = /^\s*siguiente\s*$/i
 export const botonSiguienteTurismos = (marco: Pick<Frame, 'locator'>): Locator => botonTurismos(marco, RE_BOTON_SIGUIENTE_TURISMOS)
 
 /** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos'>>
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos' | 'guardarPresupuestoTurismos' | 'trabajoId'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -1957,13 +2038,60 @@ export async function recorrerPasosTurismos(
       if (lectura && lectura.paquetes.some((p) => p.anualidad !== '')) {
         const ofertas = ofertasDesdePaquetesTurismos(lectura, s)
         if (ofertas.length === 0) throw new ErrorMapaIncompleto(conOpciones(`importes legibles en la pantalla de precios «${PASO_PAQUETE}» (${lectura.paquetes.length} paquetes, ninguna «anualidad» legible)${s ? `; ${s}` : ''}`), true)
-        return { ofertas }
+        // v0.6.13 (autorizado por Alberto, 18/10/2026): «Guardar presupuesto» en el portal (NO vinculante), por la puerta del guard.
+        // Lo que no se pueda guardar («no aparece el botón», casilla, diálogo…) se avisa en la oferta y el precio leído se devuelve.
+        // EXCEPCIÓN: si salta la red de emisión del guard (violación), `guardarPresupuestoTurismosAllianz` la RELANZA y el trabajo
+        // entero cae como bloqueo de emisión (`error_definitivo`): ese precio NO llega a asegura. Es a propósito (fail-closed).
+        const guardado = ctx.guardarPresupuestoTurismos
+          ? await ctx.guardarPresupuestoTurismos(marco, identificadorPresupuestoTurismos(ctx.trabajoId ?? 'sin-trabajo'))
+          : ({ estado: 'no_guardado', motivo: 'el runner no trae la puerta de guardado' } as const)
+        ctx.formador?.log('turismos_guardar_presupuesto', { estado: guardado.estado })
+        // 18/10/2026: CP, localidad y vehículo que Allianz usó, leídos del portal (guard.ts, solo lectura); null = no se leyó.
+        const usados = await leerDatosUsadosTurismosAllianz(marco).catch(() => null)
+        // v0.6.14: el vehículo de catálogo que Allianz dejó MARCADO viaja también como `seleccionVehiculo` (Generali lo usa).
+        return { ofertas: conDatosUsados(ofertasConPresupuestoTurismos(ofertas, guardado), usados), seleccionVehiculo: seleccionVehiculoConfirmada(usados?.vehiculo) }
       }
       if (Date.now() >= fin) break
       await page.waitForTimeout(300)
     }
   }
   throw new ErrorMapaIncompleto(conOpciones(`la pantalla de precios «${PASO_PAQUETE}» del asistente de Turismos (sin mapa del lector de primas)${s ? `; ${s}` : ''}`), true)
+}
+
+/**
+ * Marca, modelo y versión de catálogo CONFIRMADOS en el portal → `ResultadoAdaptador.seleccionVehiculo` (v0.6.14 / moto 0.7.0).
+ * Los mismos que van a `datosUsados.vehiculo`. Sin marca o sin modelo → `null` (no viaja nada); sin versión → sin `descripcion`.
+ * Un texto con forma de dato personal (matrícula, NIF…) → `null` entero (asegura lo valida otra vez). PURA.
+ */
+export function seleccionVehiculoConfirmada(v: { marca: string | null; modelo: string | null; version: string | null } | null | undefined): SeleccionVehiculo | null {
+  const t = (x: string | null | undefined) => (typeof x === 'string' ? x.replace(/\s+/g, ' ').trim() : '')
+  const marca = t(v?.marca)
+  const modelo = t(v?.modelo)
+  const version = t(v?.version)
+  if (!marca || !modelo || marca.length > 80 || modelo.length > 80 || version.length > MAX_DESCRIPCION_VEHICULO) return null
+  if ([marca, modelo, version].some((x) => x !== '' && pareceDatoPersonalEnDescripcion(x))) return null
+  return { marca, modelo, ...(version ? { descripcion: version } : {}) }
+}
+
+/** Aviso fijo cuando el presupuesto quedó guardado en Allianz (para rescatarlo al emitir). */
+export const AVISO_PRESUPUESTO_GUARDADO = 'Presupuesto guardado en Allianz (no vinculante)'
+
+/**
+ * v0.6.13: lleva el resultado de «Guardar presupuesto» a cada oferta. Guardado → `referenciaPortal` = el número que dio el portal o,
+ * si no lo enseñó, el identificador que puso el bot (con qué es cada uno, en el aviso). Sin confirmar / no guardado → solo un aviso
+ * (no es error del precio). PURA.
+ */
+export function ofertasConPresupuestoTurismos(ofertas: readonly OfertaNormalizada[], r: ResultadoGuardarPresupuestoTurismos): OfertaNormalizada[] {
+  const aviso =
+    r.estado === 'guardado'
+      ? r.referencia
+        ? `${AVISO_PRESUPUESTO_GUARDADO}: nº ${r.referencia} (identificador ${r.identificador}).`
+        : `${AVISO_PRESUPUESTO_GUARDADO}: identificador ${r.identificador} (el portal no enseñó número).`
+      : r.estado === 'sin_confirmar'
+        ? `Se pulsó «Guardar presupuesto» (identificador ${r.identificador}) pero el portal no lo confirmó: compruébalo en Allianz.`
+        : `Presupuesto NO guardado en Allianz: ${r.motivo}.`
+  const ref = r.estado === 'guardado' ? (r.referencia ?? r.identificador) : null
+  return ofertas.map((o) => ({ ...o, referenciaPortal: ref ?? o.referenciaPortal, avisos: [...o.avisos, aviso] }))
 }
 
 /** Petición del atasco de cualquier pantalla de Moto sin mapa (la lista que ve Alberto en Telegram son las opciones visibles). */
@@ -1993,8 +2121,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 … 0.6.12 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.12',
+    // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
+    version: ramo === 'moto' ? '0.7.0' : '0.6.14',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

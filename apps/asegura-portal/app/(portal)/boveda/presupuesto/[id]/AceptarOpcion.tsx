@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { MENSAJE_VARIAS_FICHAS } from '@/lib/mensajes-ficha'
 import { eur } from '@/lib/dinero'
 import { listaY, type AvisoPerdidas } from '@/lib/todas-las-opciones'
-import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
+import { ID_DATOS_CALCULO, TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
 
 /**
  * Aceptar una opción del presupuesto (pieza 4-d).
@@ -42,6 +42,15 @@ function leerCuentaFicha(v: unknown): CuentaFicha {
   }
 }
 
+/** El `id` de la sección de los datos (`RevisaTusDatos`): el enlace «Avisar de un error» la abre. */
+export { ID_DATOS_CALCULO }
+
+/** «Avisar de un error»: NO acepta nada; abre la sección plegada de los datos, donde está «Hay un dato que no es correcto». */
+function abrirDatos() {
+  const d = document.getElementById(ID_DATOS_CALCULO)
+  if (d instanceof HTMLDetailsElement) d.open = true
+}
+
 export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null, origen = 'codeoscopic', codigoWhatsapp = false }: {
   presupuestoId: string
   opcionId: string
@@ -68,6 +77,9 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
   const [ocupado, setOcupado] = useState(false)
   // Si pierde garantías frente a su póliza actual, lo marca él antes de seguir (29/09/2026).
   const [asumePerdidas, setAsumePerdidas] = useState(false)
+  // 18/10/2026 (Alberto): antes de «La quiero», casilla OBLIGATORIA. Si los datos o los supuestos no son ciertos, el
+  // precio cambia al emitir. Es una casilla de la pantalla; la confirmación que se FIRMA sigue siendo la de abajo.
+  const [revisado, setRevisado] = useState(false)
   const pierde = perdidas !== null && perdidas.pierdes.length > 0
   const [aviso, setAviso] = useState<string | null>(null)
 
@@ -283,8 +295,18 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
                 )}
               </div>
             )}
-            <button type="button" className="boton" style={{ minHeight: 48 }} disabled={ocupado || (pierde && !asumePerdidas)} onClick={elegir}>
-              {ocupado ? 'Cargando…' : 'Elegir esta opción'}
+            <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, minHeight: 44, cursor: 'pointer' }}>
+              <input
+                type="checkbox" checked={revisado} onChange={(e) => setRevisado(e.target.checked)}
+                style={{ width: 22, height: 22, flex: '0 0 auto', marginTop: 1 }}
+              />
+              <span>He revisado mis datos y son correctos <span className="suave">(los de la sección de tus datos, arriba)</span></span>
+            </label>
+            <a href={`#${ID_DATOS_CALCULO}`} onClick={abrirDatos} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontSize: 14 }}>
+              Avisar de un error en mis datos
+            </a>
+            <button type="button" className="boton" style={{ minHeight: 48 }} disabled={ocupado || !revisado || (pierde && !asumePerdidas)} onClick={elegir}>
+              {ocupado ? 'Cargando…' : 'La quiero'}
             </button>
             </>
           ) : paso.paso === 'cuenta' ? (
@@ -410,7 +432,7 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
                   type="checkbox" checked={confirma} onChange={(e) => setConfirma(e.target.checked)}
                   style={{ width: 22, height: 22, flex: '0 0 auto', marginTop: 1 }}
                 />
-                <span>{paso.confirmacionDatos} <span className="suave">{origen === 'ofertas' ? TEXTOS_OFERTAS.casillaPista : '(los de «Revisa tus datos», arriba)'}</span></span>
+                <span>{paso.confirmacionDatos} <span className="suave">{origen === 'ofertas' ? TEXTOS_OFERTAS.casillaPista : '(los de «Datos con los que hemos calculado tu precio», arriba)'}</span></span>
               </label>
               <button
                 type="button" className="boton" style={{ minHeight: 48 }}

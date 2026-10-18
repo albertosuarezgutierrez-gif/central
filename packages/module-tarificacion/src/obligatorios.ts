@@ -19,6 +19,7 @@
 import { claveCompania } from './registro.ts'
 import { faltaCompaniaAnterior } from './formulario-auto.ts'
 import { CAPACIDAD_ALLIANZ_COMUNIDADES } from './capacidades.ts'
+import { conAntecedentesFavorables } from './supuestos-auto.ts'
 
 /**
  * `formulario`: el riesgo tal como lo recibe el bot. `ficha`: lo pone ASEGURA desde la ficha del cliente al ENTREGAR el
@@ -155,10 +156,14 @@ const MAPFRE_AUTO_FIGURAS: readonly CampoObligatorio[] = [
   }),
 ]
 
-/** Allianz Moto (`planDatosBasicosMoto`, `tarificarMoto`): el portal no tiene «sin dato» en sexo ni en antecedentes. */
+/**
+ * Allianz Moto (`planDatosBasicosMoto`, `tarificarMoto`): el portal no tiene «sin dato» en sexo. Antecedentes sin dato →
+ * supuesto favorable declarado (`conAntecedentesFavorables`), no bloquean. El sexo, si el formulario no lo trae, lo pone
+ * ASEGURA desde el tratamiento de la ficha (Sr./Sra., `clientes.saludo`) al encolar; sin él, falta (nunca se inventa).
+ */
 const ALLIANZ_MOTO: readonly CampoObligatorio[] = [
   campo('seleccionVehiculo.clase', 'clase de la moto (tramo de cilindrada 1-4)'),
-  campo('conductor.sexo', 'sexo del conductor'),
+  campo('conductor.sexo', 'sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha)', { origen: 'ficha' }),
   campo('aniosAseguradoAnterior', 'años asegurado en la compañía anterior'),
   campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años'),
 ]
@@ -172,6 +177,24 @@ const MAPFRE_HOGAR: readonly CampoObligatorio[] = [
   // inyecta en hogar (`necesitaDatosTomador` solo auto/moto): hasta que lo haga, este bot no es tarificable.
   { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.nombre) },
   { clave: 'datosTomador.apellido1', etiqueta: 'primer apellido del tomador', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.apellido1) },
+]
+
+/**
+ * Generali Turismos (18/10/2026, regla de Alberto): Generali NO saca marca/modelo/versión por matrícula; los busca en sus
+ * desplegables con el vehículo que CONFIRMÓ antes Allianz o Mapfre en la MISMA oportunidad. Lo pone ASEGURA (origen `ficha`:
+ * no lo teclea nadie en el formulario): al encolar, si aún no hay ningún `ok` de Allianz/Mapfre, el trabajo queda `pendiente`
+ * con la marca `esperaVehiculo` y entonces NO se exige (asegura no lo reclama hasta inyectarlo: apps/asegura
+ * lib/tarificador-espera-vehiculo.ts). Sin la marca, falta = no arranca. Con `seleccionVehiculo` (marca y modelo separados)
+ * o con `vehiculoConfirmado.denominacion` (Mapfre: un solo texto) basta.
+ */
+const GENERALI_AUTO: readonly CampoObligatorio[] = [
+  {
+    clave: 'seleccionVehiculo',
+    etiqueta: 'marca, modelo y versión confirmados por Allianz o Mapfre en la misma oportunidad',
+    origen: 'ficha',
+    aplica: (r) => r.esperaVehiculo !== true,
+    presente: (r) => (hay(obj(r.seleccionVehiculo)?.marca) && hay(obj(r.seleccionVehiculo)?.modelo)) || hay(obj(r.vehiculoConfirmado)?.denominacion),
+  },
 ]
 
 /** Allianz Comunidades: los desplegables obligatorios de ePAC, DERIVADOS de los extras de su capacidad (capacidades.ts). */
@@ -193,12 +216,16 @@ const DECLARACIONES: readonly Declaracion[] = [
   // Hogar pantalla 1: todo lo que lee lo exige ya `validarFormularioHogar`.
   { compania: 'allianz', ramo: 'hogar', propios: () => [] },
   { compania: 'mapfre', ramo: 'auto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS] },
-  // Moto NSEI: el paso 1 es el del coche; el plan de «Figuras» de moto aún no existe (hueco de mapa, no de datos).
-  { compania: 'mapfre', ramo: 'moto', propios: () => MAPFRE_TOMADOR },
+  // Moto NSEI (0.8.7, 18/10/2026): el MISMO plan que el coche (paso 1, objeto y «Figuras»); la clase de permiso de moto, si
+  // no consta, se supone «A» y se declara (no bloquea).
+  { compania: 'mapfre', ramo: 'moto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS] },
   { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR },
   // Occident hogar (hueco, sin registrar): lee nif, nacimiento, CP, vía y tipo de vivienda; todos ya en la forma de hogar.
   // OJO: su `planFormularioHogar` lee `tomador.nif` (forma de riesgo-oportunidad), no `tomador.documentoIdentidad`.
   { compania: 'occident', ramo: 'hogar', propios: () => [] },
+  // Generali Turismos (0.1.0, tras su flag APAGADO): el vehículo lo inyecta asegura desde Allianz/Mapfre; el resto de datos, la
+  // forma del ramo (tomador, conductor y antecedentes como en las demás; antecedentes sin dato = supuesto favorable declarado).
+  { compania: 'generali', ramo: 'auto', propios: () => GENERALI_AUTO },
 ]
 
 const k = (compania: string, ramo: string) => `${claveCompania(compania)}::${String(ramo).trim().toLowerCase()}`
@@ -234,7 +261,7 @@ export function obligatoriosPara(compania: string, ramo: string): readonly Campo
 export function faltanParaTarificar(compania: string, ramo: string, formulario: unknown, opciones: { sinFicha?: boolean } = {}): Faltante[] | null {
   const lista = obligatoriosPara(compania, ramo)
   if (!lista) return null
-  const r = obj(formulario) ?? {}
+  const r = conSupuestosFavorables(ramo, obj(formulario) ?? {})
   const faltan: Faltante[] = []
   for (const c of lista) {
     if (opciones.sinFicha && c.origen === 'ficha') continue
@@ -243,6 +270,26 @@ export function faltanParaTarificar(compania: string, ramo: string, formulario: 
     if (!esta) faltan.push({ clave: c.clave, etiqueta: c.etiqueta })
   }
   return faltan
+}
+
+const esVehiculo = (ramo: string) => ['auto', 'moto'].includes(String(ramo).trim().toLowerCase())
+
+/** Vehículo: el riesgo con los antecedentes que falten al valor FAVORABLE (en memoria); otro ramo, tal cual. PURA. */
+function conSupuestosFavorables(ramo: string, r: Record<string, unknown>): Record<string, unknown> {
+  return esVehiculo(ramo) ? conAntecedentesFavorables(r).formulario : r
+}
+
+/**
+ * Claves de los obligatorios de este bot que NO trae el riesgo y se cubren con el SUPUESTO FAVORABLE (no bloquean; el bot los
+ * declara en «Precio con supuestos: …»). Para que una pantalla los pinte como «supuesto», nunca como dato. `null` = sin
+ * declaración. PURA.
+ */
+export function supuestosFavorablesPara(compania: string, ramo: string, formulario: unknown): string[] | null {
+  const lista = obligatoriosPara(compania, ramo)
+  if (!lista) return null
+  if (!esVehiculo(ramo)) return []
+  const claves = new Set(lista.map((c) => c.clave))
+  return conAntecedentesFavorables(obj(formulario) ?? {}).claves.filter((c) => claves.has(c))
 }
 
 /** «Faltan: CP de circulación, fecha del carné.» — el mensaje legible (sin valores). Lista vacía → `''`. PURA. */

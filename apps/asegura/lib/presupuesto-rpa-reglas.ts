@@ -87,13 +87,134 @@ export function avisoParaCliente(aviso: string): boolean {
   return a !== '' && AVISOS_CLIENTE.some((re) => re.test(a))
 }
 
-/** Reparto de los avisos de una oferta: los que ve el cliente y los internos (notas de la oferta). */
-export function repartirAvisos(avisos: readonly string[]): { cliente: string[]; internos: string[] } {
+// ─── Supuestos: frase limpia para el cliente, detalle y alertas para Alberto (18/10/2026) ──────────────
+//
+// El texto crudo del bot («Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5), código
+// postal fijado por Allianz (no editable), distinto de la ficha…») es jerga de pantalla: «había N», «fijado por
+// Allianz», «no editable», «distinto de la ficha» no le dicen nada al cliente y SÍ le importan a Alberto. Se trocea
+// por comas de primer nivel (las de dentro de paréntesis/comillas no cortan) y cada trozo se traduce por TABLA:
+//   · traducción conocida → frase para el cliente;
+//   · `null` → interno (dato de cómo se rellenó el portal);
+//   · trozo desconocido → interno, y la frase del cliente lo reconoce sin inventarlo («y algún dato más…»).
+// El crudo ENTERO va siempre a las notas internas. Un dato que la compañía usó DISTINTO de la ficha es ALERTA.
+
+/** Lo que la frase del cliente dice del vehículo cuando el bot cogió la primera versión: la primera, no «la habitual». */
+const VERSION_PRIMERA = 'la primera versión del vehículo que propone la compañía para tu matrícula'
+
+/** Traducción por trozo (se prueba en orden; la primera que casa decide). `null` = interno. */
+const TRADUCCION_SUPUESTOS: readonly (readonly [RegExp, string | null])[] = [
+  [/^vehículo\/versión: el primero de la lista\b/i, VERSION_PRIMERA],
+  [/^versión: la primera de la lista\b/i, VERSION_PRIMERA],
+  [/^versión elegida por similitud\b/i, 'la versión del vehículo más parecida a la de tus datos'],
+  [/^vehículo nuevo$/i, 'vehículo nuevo'],
+  [/^uso diario$/i, 'uso diario del vehículo'],
+  [/^garaje colectivo$/i, 'aparcado en garaje colectivo'],
+  [/^sin 2º conductor$/i, 'sin segundo conductor'],
+  [/^procede de otra compañía$/i, 'vienes de otra compañía'],
+  [/^sin siniestros$/i, 'sin siniestros'],
+  [/^años asegurado: 5 o más\b/i, '5 años o más asegurado'],
+  [/^siniestros en 5 años: ninguno\b/i, 'ningún siniestro en los últimos 5 años'],
+  [/^tiempo en la compañía: 5 años o más\b/i, '5 años o más en tu compañía actual'],
+  [/^partes culpables: ninguno\b/i, 'ningún parte con culpa'],
+  [/^tiempo como titular de un seguro: 9-10 años o más\b/i, 'más de 9 años con un seguro a tu nombre'],
+  [/^el tomador es el propietario$/i, 'el tomador es también el propietario del vehículo'],
+  [/^el tomador es el conductor$/i, 'el tomador es el conductor habitual'],
+  // Internos: cómo estaba el portal, no algo que el cliente pueda confirmar o corregir.
+  [/fijad[oa] por /i, null],
+  [/^localidad: la que propone el portal\b/i, null],
+  [/^compañía actual: sin indicar\b/i, null],
+  [/^póliza actual:/i, null],
+]
+
+/** Trozos de primer nivel del texto de supuestos (sin el prefijo). «…, distinto de la ficha» se pega al trozo anterior. */
+export function trozosSupuestos(aviso: string): string[] | null {
+  const t = aviso.trim()
+  if (!PREFIJO_SUPUESTOS.test(t)) return null
+  const cuerpo = t.replace(/^Precio con supuestos:\s*/, '').replace(/\.\s*$/, '')
+  const trozos: string[] = []
+  let nivel = 0
+  let actual = ''
+  for (const ch of cuerpo) {
+    if (ch === '(' || ch === '«') nivel++
+    else if ((ch === ')' || ch === '»') && nivel > 0) nivel--
+    if (ch === ',' && nivel === 0) { trozos.push(actual.trim()); actual = ''; continue }
+    actual += ch
+  }
+  trozos.push(actual.trim())
+  const out: string[] = []
+  for (const x of trozos.filter(Boolean)) {
+    if (/^distint[oa] de la ficha$/i.test(x) && out.length > 0) out[out.length - 1] = `${out[out.length - 1]}, ${x}`
+    else out.push(x)
+  }
+  return out
+}
+
+export type SupuestosTraducidos = {
+  /** La frase que ve el cliente. `null` = el aviso no es de supuestos. */
+  cliente: string | null
+  /** El texto crudo, para las notas internas de la oferta. */
+  internos: string[]
+  /** Datos que la compañía usó DISTINTOS de la ficha: alerta para Alberto (Telegram + oferta en plataforma). */
+  alertas: string[]
+}
+
+/** Qué dato de la ficha cambió la compañía, en palabras de Alberto. */
+function alertaDeTrozo(trozo: string, compania: string | null): string | null {
+  if (!/distint[oa] de la ficha/i.test(trozo)) return null
+  const quien = compania?.trim() || 'La compañía'
+  if (/^código postal\b/i.test(trozo)) return `${quien} ha calculado el precio con un código postal DISTINTO del de la ficha (lo fija el portal y no se puede cambiar): revísalo antes de enviar.`
+  if (/^localidad\b/i.test(trozo)) return `${quien} ha calculado el precio con una localidad DISTINTA de la de la ficha (la fija el portal y no se puede cambiar): revísalo antes de enviar.`
+  return `${quien} ha calculado el precio con un dato DISTINTO de la ficha («${trozo}»): revísalo antes de enviar.`
+}
+
+/**
+ * El aviso «Precio con supuestos: …» del bot → frase limpia para el cliente + crudo interno + alertas. PURA.
+ * Un aviso que no tiene ese formato devuelve `cliente: null` y no se toca (lo reparte `repartirAvisos`).
+ */
+export function traducirSupuestos(aviso: string, compania: string | null = null): SupuestosTraducidos {
+  const trozos = trozosSupuestos(aviso)
+  if (!trozos) return { cliente: null, internos: [], alertas: [] }
+  const frases: string[] = []
+  const alertas: string[] = []
+  let quedaAlgo = false
+  for (const trozo of trozos) {
+    const a = alertaDeTrozo(trozo, compania)
+    if (a && !alertas.includes(a)) alertas.push(a)
+    const regla = TRADUCCION_SUPUESTOS.find(([re]) => re.test(trozo))
+    const frase = regla ? regla[1] : null
+    if (frase === null) { quedaAlgo = true; continue }
+    if (!frases.includes(frase)) frases.push(frase)
+  }
+  const resto = 'algún dato más que tu corredor confirmará antes de contratar'
+  const cliente = frases.length > 0
+    ? `Precio calculado con estas suposiciones: ${frases.join('; ')}${quedaAlgo ? `; y ${resto}` : ''}.`
+    : `Precio calculado con ${resto}.`
+  return { cliente, internos: [aviso.trim()], alertas }
+}
+
+/** Las alertas para Alberto de todos los avisos de una oferta (sin repetir). */
+export function alertasDeAvisos(avisos: readonly string[], compania: string | null): string[] {
+  const out: string[] = []
+  for (const a of avisos) for (const x of traducirSupuestos(a, compania).alertas) if (!out.includes(x)) out.push(x)
+  return out
+}
+
+/**
+ * Reparto de los avisos de una oferta: los que ve el cliente y los internos (notas de la oferta). Los SUPUESTOS no
+ * llegan crudos al cliente: él ve la frase limpia y el crudo va a las notas internas.
+ */
+export function repartirAvisos(avisos: readonly string[], compania: string | null = null): { cliente: string[]; internos: string[] } {
   const cliente: string[] = []
   const internos: string[] = []
   for (const a of avisos) {
     const t = a.trim()
     if (!t) continue
+    const s = traducirSupuestos(t, compania)
+    if (s.cliente !== null) {
+      if (!cliente.includes(s.cliente)) cliente.push(s.cliente)
+      internos.push(...s.internos)
+      continue
+    }
     ;(avisoParaCliente(t) ? cliente : internos).push(t)
   }
   return { cliente, internos }
@@ -105,8 +226,8 @@ export const AVISO_OPCION_RPA =
   'La compañía lo confirma al emitir y tu corredor lo revisa antes de enviártelo.'
 
 /** Avisos VISIBLES de la opción: el fijo + solo los de la lista permitida (los supuestos, como supuestos, nunca como dato). */
-export function avisosOpcionRpa(avisos: readonly string[]): string[] {
-  return [AVISO_OPCION_RPA, ...repartirAvisos(avisos).cliente]
+export function avisosOpcionRpa(avisos: readonly string[], compania: string | null = null): string[] {
+  return [AVISO_OPCION_RPA, ...repartirAvisos(avisos, compania).cliente]
 }
 
 // ─── Ofertas guardadas → filas ────────────────────────────────────────────────
@@ -176,12 +297,18 @@ export function filaOfertaRpa(l: OfertaRpaLeida): {
       validezHasta: o.validaHasta,
       franquiciaGeneral: franquiciaGeneralRpa(o),
       literales,
-      avisos: repartirAvisos(o.avisos).cliente,
-      // Lo que el bot anotó para nosotros (lectura de la pantalla, iconos…): notas internas, nunca al cliente.
-      avisosInternos: repartirAvisos(o.avisos).internos,
+      avisos: repartirAvisos(o.avisos, o.compania).cliente,
+      // Lo que el bot anotó para nosotros (lectura de la pantalla, iconos, el texto crudo de los supuestos…): notas
+      // internas, nunca al cliente.
+      avisosInternos: repartirAvisos(o.avisos, o.compania).internos,
+      // Datos que la compañía usó DISTINTOS de la ficha (CP/localidad fijados por el portal…): ALERTA para Alberto.
+      alertasCorredor: alertasDeAvisos(o.avisos, o.compania),
       supuestos: supuestosDe(o.avisos),
       // `true` = el portal no dio ninguna cobertura legible: NO CONSTAN (no «no cubre»).
       coberturasNoConstan: o.coberturas.length === 0,
+      // 18/10/2026: CP, localidad y vehículo que la COMPAÑÍA usó, leídos de su portal (cada campo null = no se leyó; nunca la
+      // ficha). `null` = el bot no los leyó.
+      datosUsados: o.datosUsados ?? null,
     },
   }
 }
@@ -307,6 +434,8 @@ export type EntradaAvisoRpa = {
   sinLeer?: string[]
   /** Borradores anteriores del bot que Alberto ya había tocado: se dejan los dos. */
   conservados?: number
+  /** Datos que la compañía usó DISTINTOS de la ficha (`alertasDeAvisos`): van arriba, en negrita. */
+  alertas?: string[]
 }
 
 /** El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono. */
@@ -317,6 +446,7 @@ export function textoAvisoPresupuestoRpa(e: EntradaAvisoRpa): string {
   return [
     `🤖 <b>Presupuesto en BORRADOR</b> preparado por el tarificador (${escapeHtml(e.ramo)})`,
     `Cliente: ${escapeHtml(quien)}`,
+    ...[...new Set(e.alertas ?? [])].map((a) => `⚠️ <b>Alerta</b>: ${escapeHtml(a)}`),
     `Ofertas: ${e.primas.length}${companias ? ` (${escapeHtml(companias)})` : ''}`,
     `Primas anuales: ${rango ? escapeHtml(rango) : 'no constan'}`,
     ...(e.sinLeer?.length ? [`Sin leer: ${escapeHtml([...new Set(e.sinLeer)].join(', '))} (no entran en el borrador).`] : []),
