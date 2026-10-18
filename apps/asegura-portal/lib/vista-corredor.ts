@@ -17,6 +17,7 @@ import {
 } from '@central/module-seguros-portal'
 
 import { prisma } from './db'
+export { destinoVistaCorredor } from './vista-previa'
 import { getIdentidad } from './session'
 
 export type AperturaVista =

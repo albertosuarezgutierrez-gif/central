@@ -89,7 +89,7 @@ test('humo.ts: solo login y entrada. Nada de rellenar, avanzar, proyecto, guarda
   assert.ok(!/pulsarEnlaceEntrada|abrirNuevaAlta|abrirTarificacion|abrirComunidades|abrirFormulario/.test(CODIGO), 'la entrada no se abre ni se pulsa: solo se comprueba que el menú es visible')
   // El menú se comprueba VISIBLE, nunca pulsado: ninguna prueba recibe `ctx.pulsar` en su función de menú.
   const menus = CODIGO.match(/async function menu\w+\([^)]*\)/g) ?? []
-  assert.equal(menus.length, 2)
+  assert.equal(menus.length, 3) // allianz, mapfre, generali (18/10/2026)
   for (const m of menus) assert.ok(!/ctx/.test(m), `${m}: el menú no recibe el contexto (no puede pulsar)`)
   assert.equal((CODIGO.match(/waitFor\(\{ state: 'visible'/g) ?? []).length, 1)
   assert.match(CODIGO, /localizar\(page, \['tab'\], PESTANA_NUEVA_PRODUCCION/)

@@ -45,14 +45,29 @@ test('lo que el adaptador deja a la ficha (completarDesdeFicha) cuenta como «fi
   assert.deepEqual(con.filas.filter((f) => f.estado === 'ficha').map((f) => f.clave).sort(), ['codigoPostal', 'conductor.fechaCarne', 'conductor.fechaNacimiento'])
 })
 
-test('Allianz moto exige sexo y clase aunque el formulario de moto no los pidiera (0 y false son datos)', () => {
+test('Allianz moto: sin sexo tecleado se toma del Sr./Sra. de la ficha (no bloquea aquí; asegura lo exige al encolar); sin clase, falta', () => {
   const moto = {
     ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: null },
     aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0, seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
   }
   const x = checklistCompania('allianz', 'moto', moto)
-  assert.ok(x.estado === 'evaluado' && x.bloquea)
-  assert.deepEqual(x.faltan.map((f) => f.clave), ['conductor.sexo'])
-  const ok = checklistCompania('allianz', 'moto', { ...moto, conductor: { ...moto.conductor, sexo: 'hombre' } })
-  assert.ok(ok.estado === 'evaluado' && !ok.bloquea)
+  assert.ok(x.estado === 'evaluado' && !x.bloquea)
+  assert.equal(x.filas.find((f) => f.clave === 'conductor.sexo')?.estado, 'ficha')
+  const sinClase = checklistCompania('allianz', 'moto', { ...moto, seleccionVehiculo: { ...moto.seleccionVehiculo, clase: null } })
+  assert.ok(sinClase.estado === 'evaluado' && sinClase.bloquea)
+  assert.deepEqual(sinClase.faltan.map((f) => f.clave), ['seleccionVehiculo.clase'])
+})
+
+test('18/10/2026 supuesto favorable: antecedentes vacíos no bloquean y se pintan como «supuesto», nunca como «listo»', () => {
+  const moto = {
+    ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: 'mujer' },
+    aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null, seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
+  }
+  const x = checklistCompania('allianz', 'moto', moto)
+  assert.ok(x.estado === 'evaluado' && !x.bloquea)
+  assert.deepEqual(x.filas.filter((f) => f.estado === 'supuesto').map((f) => f.clave), ['aniosAseguradoAnterior', 'siniestrosUltimos5Anios'])
+  // Mapfre auto: 5 años supuestos ⇒ hace falta el NOMBRE de la compañía anterior (no se inventa) y el checklist lo dice.
+  const m = checklistCompania('mapfre', 'auto', { ...AUTO, aniosAseguradoAnterior: null, companiaAnterior: null })
+  assert.ok(m.estado === 'evaluado' && m.bloquea)
+  assert.deepEqual(m.faltan.map((f) => f.clave), ['companiaAnterior'])
 })

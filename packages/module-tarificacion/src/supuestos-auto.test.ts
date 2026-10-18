@@ -1,6 +1,6 @@
 // Supuestos de un precio de coche por bot (15/10/2026). Fixtures SINTÉTICAS: ningún dato personal.
 import { describe, it, expect } from 'vitest'
-import { etiquetasSupuestos, hoyEspana, PREFIJO_SUPUESTOS, supuestosAuto, supuestosDeAvisos, textoSupuestos, validarFormularioAuto } from './index.ts'
+import { ANIOS_ASEGURADO_FAVORABLE, conAntecedentesFavorables, SUPUESTO_CONDUCTOR_TOMADOR, supuestoConductorTomador, etiquetasSupuestos, hoyEspana, PREFIJO_SUPUESTOS, SUPUESTO_FAVORABLE_ANIOS, SUPUESTO_FAVORABLE_SINIESTROS, supuestosAuto, supuestosDeAvisos, textoSupuestos, validarFormularioAuto } from './index.ts'
 
 const hoy = new Date('2026-10-15T10:00:00Z')
 const vacio = { garajeNoche: null, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null }
@@ -108,5 +108,46 @@ describe('validarFormularioAuto: los campos nuevos son opcionales y cerrados', (
     for (const extra of [{ tipoGaraje: 'parking' }, { usoFrecuencia: 'mucho' }, { fechaMatriculacion: '2030-01-01' }, { fechaVencimiento: '01/01/2027' }, { conductorOcasional: 'no' }]) {
       expect(validarFormularioAuto({ ...base, ...extra }, hoy).ok).toBe(false)
     }
+  })
+})
+
+// 18/10/2026, decisión de Alberto «supuesto favorable en todo» (vehículo, todas las compañías).
+describe('conAntecedentesFavorables: lo que falta, al tramo más favorable y DECLARADO', () => {
+  it('sin años ni siniestros → 5 o más (6 = «más de 5») y ninguno, los dos supuestos y en orden', () => {
+    const r = conAntecedentesFavorables({ ramo: 'moto', aniosAseguradoAnterior: null, siniestrosUltimos5Anios: undefined })
+    expect(r.formulario).toEqual({ ramo: 'moto', aniosAseguradoAnterior: ANIOS_ASEGURADO_FAVORABLE, siniestrosUltimos5Anios: 0 })
+    expect(ANIOS_ASEGURADO_FAVORABLE).toBeGreaterThan(5)
+    expect(r.supuestos).toEqual([SUPUESTO_FAVORABLE_ANIOS, SUPUESTO_FAVORABLE_SINIESTROS])
+    expect(r.claves).toEqual(['aniosAseguradoAnterior', 'siniestrosUltimos5Anios'])
+    expect(textoSupuestos(r.supuestos)).toBe(`${PREFIJO_SUPUESTOS}${SUPUESTO_FAVORABLE_ANIOS}, ${SUPUESTO_FAVORABLE_SINIESTROS}.`)
+    for (const e of r.supuestos) expect(e).toMatch(/supuesto favorable, no consta/)
+  })
+  it('un dato es dato (0 incluido): no se toca ni se declara', () => {
+    const r = conAntecedentesFavorables({ aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 2 })
+    expect(r.formulario).toEqual({ aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 2 })
+    expect(r.supuestos).toEqual([])
+  })
+  it('solo lo que falta: años dato, siniestros supuestos', () => {
+    const r = conAntecedentesFavorables({ aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: null })
+    expect(r.formulario).toEqual({ aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 })
+    expect(r.claves).toEqual(['siniestrosUltimos5Anios'])
+  })
+  it('basura (texto, negativo, decimal) no es dato: se supone', () => {
+    expect(conAntecedentesFavorables({ aniosAseguradoAnterior: '4', siniestrosUltimos5Anios: -1 }).claves).toEqual(['aniosAseguradoAnterior', 'siniestrosUltimos5Anios'])
+    expect(conAntecedentesFavorables({ aniosAseguradoAnterior: 2.5, siniestrosUltimos5Anios: 0 }).claves).toEqual(['aniosAseguradoAnterior'])
+  })
+  it('idempotente: aplicada dos veces no declara nada la segunda', () => {
+    const una = conAntecedentesFavorables({ aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null })
+    expect(conAntecedentesFavorables(una.formulario).supuestos).toEqual([])
+  })
+})
+
+describe('conductor habitual = tomador: supuesto declarado solo si no consta', () => {
+  it('null/ausente → supuesto; true/false → dato (nada)', () => {
+    expect(supuestoConductorTomador({ tomadorEsConductor: null })).toBe(SUPUESTO_CONDUCTOR_TOMADOR)
+    expect(supuestoConductorTomador({})).toBe(SUPUESTO_CONDUCTOR_TOMADOR)
+    expect(supuestoConductorTomador({ tomadorEsConductor: true })).toBeNull()
+    expect(supuestoConductorTomador({ tomadorEsConductor: false })).toBeNull()
+    expect(SUPUESTO_CONDUCTOR_TOMADOR).toBe('conductor habitual: el tomador (supuesto)')
   })
 })

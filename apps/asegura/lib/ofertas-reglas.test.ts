@@ -85,11 +85,11 @@ test('coberturas: solo lo que CONSTA; «excluida» = incluida:false; sin estado 
     continente: { estado: null, capital: 250000, limite: null, franquicia: null },
     defensa_juridica: { estado: 'excluida', capital: null, limite: null, franquicia: null },
     danos_agua: { estado: null, capital: null, limite: null, franquicia: null },
-  }, { literales: { continente: 'Continente (edificio)' } }, new Date('2026-10-05T10:00:00Z'))
+  }, { literales: { continente: 'Continente (edificio)' } }, new Date('2026-10-05T10:00:00Z'))!
   assert.equal(s.estado, 'leidas')
   assert.deepEqual(s.lista.map((c) => [c.nombre, c.incluida]), [['Continente (edificio)', true], [s.lista[1]!.nombre, false]])
   assert.match(s.lista[0]!.texto ?? '', /250\.000,00€/)
-  assert.equal(sobreCoberturasDeOferta('comunidades', {}, null, new Date()).estado, 'vacias')
+  assert.equal(sobreCoberturasDeOferta('comunidades', {}, null, new Date())?.estado, 'vacias')
 })
 
 test('caducidad: la que ya venció bloquea; la validez más próxima manda en vence_el', () => {

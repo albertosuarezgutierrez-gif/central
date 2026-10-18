@@ -1,4 +1,7 @@
 // Mapfre wmediadores · NSEI «Nueva Alta» AUTO y MOTO (13-14/10/2026).
+// v0.8.7 (18/10/2026, trabajo real de moto atascado en «plan de campos de MOTO»): el inventario guardado del paso 2 de moto es el
+// del coche (matrícula, 1ª matriculación, CP; licencia con «Clase *» y «Valido desde *»): MOTO va por el mismo plan con la clase
+// de permiso de moto (A si no consta, declarada). Antecedentes sin dato → supuesto favorable declarado (decisión de Alberto).
 // Registrado SIEMPRE en `adapters/index.ts` (14/10/2026: el worker de Fly no recibe secretos nuevos). La PUERTA es la fila
 // `seguros.companias_integracion` mapfre/<ramo> activa y `rpa_autorizada`: sin ella asegura no encola, no reclama ni lanza.
 // Ver docs/TARIFICADOR-RPA.md y docs/TARIFICADOR-MATRIZ.md (fila Mapfre).
@@ -72,6 +75,9 @@ import {
   redactarDatosPersonales,
   resolverVersion,
   textoSupuestos,
+  supuestoConductorTomador,
+  conAntecedentesFavorables,
+  conDatosUsados,
   USO_VEHICULO_POR_DEFECTO,
   vehiculoConfirmadoDesdeMapfre,
   type CandidatoVersion,
@@ -678,15 +684,32 @@ export function exigirConductorEsTomador(f: FormularioAuto): void {
  */
 export type PlanNsei = { escribibles: OperacionNsei[]; pendientes: OperacionNsei[] }
 
-export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
-  if (f.ramo !== 'auto') throw new ErrorTarificador('datos', `mapfre/auto: el formulario es de ${f.ramo}`)
-  if (!CP.test(f.codigoPostal)) throw new ErrorTarificador('datos', 'mapfre/auto: el código postal de circulación tiene que tener 5 dígitos')
-  if (f.siniestrosUltimos5Anios === null) throw new ErrorTarificador('datos', 'mapfre/auto: faltan los siniestros RC de los últimos 5 años (el portal no admite «sin dato»)')
-  if (f.aniosAseguradoAnterior === null) throw new ErrorTarificador('datos', 'mapfre/auto: faltan los años asegurado en la compañía anterior (el portal pregunta por la compañía anterior: no se asume)')
+/** v0.8.7: clase de permiso SUPUESTA en moto cuando el riesgo no la trae (carné A completo), DECLARADA en el precio. */
+export const SUPUESTO_CLASE_PERMISO_MOTO = 'clase del permiso: A (supuesto, no consta)'
+
+/**
+ * Clase de permiso de MOTO (v0.8.7, 18/10/2026). Pura. La del riesgo si es de moto (A, A1, A2); si no consta, «A» (el carné de
+ * moto completo: la fecha del carné que viaja es la del carné A de la ficha) DECLARADA como supuesto. Una clase que no es de
+ * moto (B) en un riesgo de moto → `datos` (no se cambia en silencio). Coche: la del riesgo, sin supuesto.
+ */
+export function clasePermisoNsei(f: Pick<FormularioAuto, 'ramo'> & DatosMatSelectMapfre): { clase: string | null; supuesto: string | null } {
+  const c = typeof f.clasePermiso === 'string' && f.clasePermiso.trim() !== '' ? f.clasePermiso.trim().toLowerCase() : null
+  if (f.ramo !== 'moto') return { clase: c, supuesto: null }
+  if (c === null) return { clase: 'a', supuesto: SUPUESTO_CLASE_PERMISO_MOTO }
+  if (!['a', 'a1', 'a2'].includes(c)) throw new ErrorTarificador('datos', 'mapfre/moto: la clase del permiso del riesgo no es de moto (A, A1 o A2)')
+  return { clase: c, supuesto: null }
+}
+
+export function planObjetoYFiguras(form: FormularioAuto): PlanNsei {
+  if (form.ramo !== 'auto' && form.ramo !== 'moto') throw new ErrorTarificador('datos', `mapfre/auto: el formulario es de ${form.ramo}`)
+  if (!CP.test(form.codigoPostal)) throw new ErrorTarificador('datos', 'mapfre/auto: el código postal de circulación tiene que tener 5 dígitos')
+  // 18/10/2026 (decisión de Alberto «supuesto favorable»): antecedentes sin dato → 5 años o más y ningún siniestro, DECLARADOS
+  // en el precio por `tarificar`. Con años > 0 sigue haciendo falta el NOMBRE de la compañía anterior (no se inventa).
+  const f = conAntecedentesFavorables(form).formulario
   const extra = f as FormularioAuto & DatosMatSelectMapfre
   const nombreAnterior = typeof extra.companiaAnterior === 'string' ? extra.companiaAnterior.trim() : ''
   if (f.aniosAseguradoAnterior > 0 && (nombreAnterior === '' || nombreAnterior.length > 80)) {
-    throw new ErrorTarificador('datos', 'mapfre/auto: falta el nombre de la compañía anterior (el riesgo dice que estuvo asegurado y Mapfre la pide en «Figuras»; no se inventa)')
+    throw new ErrorTarificador('datos', 'mapfre/auto: falta el nombre de la compañía anterior (estuvo asegurado —dato del riesgo o supuesto favorable de 5 años o más— y Mapfre la pide en «Figuras»; no se inventa)')
   }
   exigirConductorEsTomador(f)
   const escribibles: OperacionNsei[] = [
@@ -706,7 +729,9 @@ export function planObjetoYFiguras(f: FormularioAuto): PlanNsei {
   // Opcional SOLO con valor nulo o igual al defecto; con otro valor, ausente = atasco + hueco.
   selectDe(SEL_OBJETO.uso, 'uso del vehículo', 'objetoAsegurado', textosMapfreDe('uso', extra.usoVehiculo), esDefectoOVacio(extra.usoVehiculo, USO_VEHICULO_POR_DEFECTO))
   selectDe(SEL_OBJETO.ambitoCirculacion, 'ámbito de circulación', 'objetoAsegurado', textosMapfreDe('ambito', extra.ambitoCirculacion), esDefectoOVacio(extra.ambitoCirculacion, AMBITO_CIRCULACION_POR_DEFECTO))
-  selectDe(SEL_LICENCIA.clasePermiso, 'clase del permiso', 'figuras', textosMapfreDe('clasePermiso', extra.clasePermiso))
+  // v0.8.7: moto (inventario real del 18/10/2026: paso 2 con matrícula, 1ª matriculación y CP; «Clase *» y «Valido desde *» en
+  // la licencia, como en coche) → clase de permiso de moto (`clasePermisoNsei`).
+  selectDe(SEL_LICENCIA.clasePermiso, 'clase del permiso', 'figuras', textosMapfreDe('clasePermiso', clasePermisoNsei(extra).clase))
   if (f.aniosAseguradoAnterior > 0) selectDe(SEL_HISTORIAL.companiaAnterior, 'compañía anterior', 'figuras', [nombreAnterior])
   return { escribibles, pendientes }
 }
@@ -1281,13 +1306,15 @@ export async function esperarPrimasMapfre(nsei: Page, ctx: Pick<ContextoPortal, 
  */
 export async function precioDesdeObjetoAsegurado(
   nsei: Page,
-  f: FormularioAuto,
+  form: FormularioAuto,
   vehiculo: VehiculoConfirmado,
   ctx: Pick<ContextoPortal, 'continuarMapfre' | 'formador' | 'elegirMatSelect' | 'cerrarClubMapfre'>,
   esperaPrimasMs = ESPERA_PRIMAS_MS,
   supuestos: string | null = null,
 ): Promise<ResultadoAdaptador> {
-  if (f.ramo === 'moto') throw new ErrorMapaIncompleto('el plan de campos de MOTO en NSEI (clase de permiso y figuras sin grabación de moto)', true)
+  // v0.8.7: MOTO por el mismo plan que el coche (antes: hueco de mapa «el plan de campos de MOTO en NSEI»).
+  // Antecedentes favorables (18/10/2026) también para el interruptor de compañía anterior de `historialAnterior`.
+  const f = conAntecedentesFavorables(form).formulario
   const plan = planObjetoYFiguras(f)
   const respaldo: RespaldoCampos = { page: nsei, formador: ctx.formador }
   await rellenarCamposTexto(nsei, planDelPaso(plan, 'objetoAsegurado', [SEL_OBJETO.matricula]), respaldo)
@@ -1305,7 +1332,11 @@ export async function precioDesdeObjetoAsegurado(
   exigirPasoCompleto(plan, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
-  return { ofertas: ofertasDesdePrimasMapfre(primas, null, supuestos), vehiculoConfirmado: vehiculo }
+  // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
+  // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
+  const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
+  const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
+  return { ofertas: conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos), usados), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1318,7 +1349,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.6',
+  version: '0.8.7',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -1326,7 +1357,8 @@ export const mapfreAuto = {
     // Sin NIF del tomador no se abre el portal (asegura lo pone; si falta, es un dato, no un hueco).
     if (documentoTomadorDe(form) === null) throw new ErrorTarificador('datos', 'mapfre/auto: falta el NIF/CIF del tomador (Mapfre lo busca en el paso 1; asegura lo pone desde la ficha del cliente)')
     // Coche: lo que falta del riesgo para los pasos 2-3 (compañía anterior, conductor = tomador…) se sabe ANTES de abrir el portal.
-    if (form.ramo === 'auto') planObjetoYFiguras(form)
+    // v0.8.7: también moto (mismo plan; clase de permiso de moto).
+    planObjetoYFiguras(form)
     await login(page, ctx)
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales })
@@ -1334,7 +1366,11 @@ export const mapfreAuto = {
     const supuestosVehiculo: string[] = []
     const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form, (x) => supuestosVehiculo.push(x))
     ctx.log('vehiculo confirmado')
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos(supuestosVehiculo))
+    // 18/10/2026: los antecedentes SUPUESTOS (favorables) van detrás del supuesto del vehículo, en el mismo aviso.
+    // Conductor = tomador sin `tomadorEsConductor` (solo pasa con la fecha de nacimiento de la ficha igual: `exigirConductorEsTomador`):
+    // SUPUESTO declarado, no dato.
+    const conductor = supuestoConductorTomador(form)
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...supuestosVehiculo, ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
   },
 } as const
 

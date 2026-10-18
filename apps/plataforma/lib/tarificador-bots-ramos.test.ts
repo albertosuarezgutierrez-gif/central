@@ -93,8 +93,11 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
     sexo: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
     aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0',
   }
+  // 18/10/2026: vacío no se inventa — se toma del Sr./Sra. de la ficha (asegura, al encolar): fila «de la ficha», no bloquea aquí.
   const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
-  assert.ok(sin.estado === 'evaluado' && sin.faltan.some((f) => f.clave === 'conductor.sexo'))
+  assert.ok(sin.estado === 'evaluado' && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'ficha')
+  const r0 = a.construir(F, { cilindrada: '125', sexo: '' })
+  assert.ok(r0.ok && (r0.riesgo.conductor as { sexo: unknown }).sexo === null)
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'mujer' }, 'allianz')
   assert.ok(con.estado === 'evaluado' && !con.bloquea)
   const r = a.construir(F, { cilindrada: '125', sexo: 'mujer' })

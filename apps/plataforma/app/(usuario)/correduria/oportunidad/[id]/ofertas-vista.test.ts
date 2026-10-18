@@ -84,3 +84,15 @@ test('generar presupuesto: solo con todas las elegidas revisadas y con prima', (
   assert.equal(puedeGenerarPresupuesto([o1, of({ id: 'd', estado: 'descartada' })], new Set(['1', 'd'])).ok, true)
   assert.deepEqual([...elegidasPorDefecto([o1, o2, of({ id: 'a', rol: 'actual' }), of({ id: 'd', estado: 'descartada' })])], ['1', '2'])
 })
+
+test('oferta del bot: la ALERTA (dato distinto de la ficha) va la primera y las notas internas detrás', () => {
+  const a = avisosDeOferta({ datosExtra: {
+    origen: 'rpa',
+    alertasCorredor: ['Allianz ha calculado el precio con un código postal DISTINTO del de la ficha (lo fija el portal y no se puede cambiar): revísalo antes de enviar.'],
+    avisosInternos: ['Precio con supuestos: código postal fijado por Allianz (no editable), distinto de la ficha.', 7],
+  } })
+  assert.equal(a.length, 2)
+  assert.match(a[0], /^⚠️ ALERTA: Allianz ha calculado el precio con un código postal DISTINTO/)
+  assert.match(a[1], /^Nota del bot: Precio con supuestos/)
+  assert.deepEqual(avisosDeOferta({ datosExtra: { alertasCorredor: null } }), [], 'sin alertas no se inventa ninguna')
+})

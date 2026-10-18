@@ -1,11 +1,13 @@
 import { eur } from '@/lib/dinero'
 import type { OpcionCliente } from '@/lib/presupuesto'
 import {
-  TEXTOS_OFERTAS, cuadroOfertas, esRecomendada, garantiasTarjeta, ordenarOfertas,
+  ID_DATOS_CALCULO, TEXTOS_OFERTAS, avisosDeTarjeta, cuadroOfertas, esRecomendada, garantiasClave, ordenarOfertas,
 } from '@/lib/presupuesto-ofertas-vista'
+import { TEXTOS_VISTA_PREVIA } from '@/lib/vista-previa'
 import { etiquetaPapeles, textoFranquicia } from '@/lib/presupuesto-vista'
 import { AceptarOpcion } from './AceptarOpcion'
 import { LogoCompania } from './LogoCompania'
+import { Plegable } from './RestoDeOpciones'
 
 /**
  * El estudio de un presupuesto de origen `ofertas` (ramos libres: comunidades, comercio…): una tarjeta
@@ -20,7 +22,7 @@ import { LogoCompania } from './LogoCompania'
  * 🚨 «No figura» ≠ «No»: una garantía que la oferta no menciona no se pinta como excluida.
  */
 export function EstudioOfertas({
-  presupuestoId, opciones, caducado, puedeAceptar, bloqueoDatos, corredor, pdf, codigoWhatsapp = false,
+  presupuestoId, opciones, caducado, puedeAceptar, bloqueoDatos, corredor, pdf, codigoWhatsapp = false, vistaPrevia = false, supuestosEnDatos = false,
 }: {
   presupuestoId: string
   opciones: OpcionCliente[]
@@ -32,6 +34,10 @@ export function EstudioOfertas({
   pdf: boolean
   /** Entró con el código del WhatsApp: puede firmar con ese mismo código. */
   codigoWhatsapp?: boolean
+  /** Alberto viendo un BORRADOR como el cliente: el botón se enseña DESHABILITADO con su rótulo. */
+  vistaPrevia?: boolean
+  /** La sección de datos se pinta con «Lo que hemos supuesto»: la tarjeta no repite la frase, pone el aviso corto. */
+  supuestosEnDatos?: boolean
 }) {
   const orden = ordenarOfertas(opciones)
   const cuadro = cuadroOfertas(orden)
@@ -46,8 +52,9 @@ export function EstudioOfertas({
         ) : (
           <div className="presu-tarjetas">
             {orden.map((o) => {
-              const g = garantiasTarjeta(o)
+              const g = garantiasClave(o)
               const papel = etiquetaPapeles(o.papeles, false)
+              const av = avisosDeTarjeta(o.avisos, supuestosEnDatos)
               return (
                 <article key={o.id} className="presu-tarjeta" data-caducado={caducado ? 'si' : undefined} data-recomendada={esRecomendada(o) ? 'si' : undefined}>
                   {papel !== null && <p className="presu-papel">{papel}</p>}
@@ -58,21 +65,32 @@ export function EstudioOfertas({
                     {o.primaEur === null ? <span className="pendiente">sin precio</span> : eur(o.primaEur)}
                     <span className="presu-anual">al año</span>
                   </p>
-                  <p className="presu-firmeza-texto">{TEXTOS_OFERTAS.firmeza}</p>
                   <p className="presu-franquicia">{textoFranquicia(o.franquiciaEur, eur)}</p>
 
+                  {/* Lo esencial (18/10/2026): 3-4 coberturas clave con ✔/✘; el resto, en la comparativa plegada. */}
                   {g.sinLeer ? (
                     <p className="pendiente" style={{ fontSize: 13 }}>{TEXTOS_OFERTAS.sinLeer}</p>
                   ) : g.items.length > 0 ? (
-                    <ul className="presu-clave">
-                      {g.items.map((t, i) => <li key={i}>{t}</li>)}
-                      {g.resto > 0 && <li className="suave">y {g.resto} más en el cuadro de abajo</li>}
+                    <ul className="presu-clave" style={{ listStyle: 'none', paddingLeft: 0 }}>
+                      {g.items.map((t, i) => (
+                        <li key={i} style={{ display: 'flex', gap: 6, alignItems: 'baseline', overflowWrap: 'anywhere' }}>
+                          <span role="img" aria-label={t.incluida ? 'Incluida' : 'No incluida'} style={{ color: t.incluida ? 'var(--positive)' : 'var(--negative)', fontWeight: 700, flex: '0 0 auto' }}>{t.incluida ? '✔' : '✘'}</span>
+                          <span>{t.texto}</span>
+                        </li>
+                      ))}
+                      {g.resto > 0 && <li className="suave">y {g.resto} más en la comparativa de abajo</li>}
                     </ul>
                   ) : null}
+                  <p className="presu-firmeza-texto">{TEXTOS_OFERTAS.firmeza}</p>
 
-                  {o.avisos.length > 0 && (
+                  {av.conSupuestos && (
+                    <p style={{ margin: '8px 0 0', fontSize: 13 }}>
+                      <a href={`#${ID_DATOS_CALCULO}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>{TEXTOS_OFERTAS.tarjetaSupuestos}</a>
+                    </p>
+                  )}
+                  {av.avisos.length > 0 && (
                     <ul className="presu-avisos">
-                      {o.avisos.map((a, i) => <li key={i}>{a}</li>)}
+                      {av.avisos.map((a, i) => <li key={i}>{a}</li>)}
                     </ul>
                   )}
                   {o.ipidId && (
@@ -83,7 +101,13 @@ export function EstudioOfertas({
                     </p>
                   )}
 
-                  {puedeAceptar && o.primaEur !== null && (
+                  {vistaPrevia && o.primaEur !== null && (
+                    <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
+                      <button type="button" className="boton" disabled aria-disabled="true" style={{ minHeight: 48, opacity: 0.55, cursor: 'not-allowed' }}>La quiero</button>
+                      <p className="suave" style={{ margin: 0, fontSize: 13 }}>{TEXTOS_VISTA_PREVIA.aceptar}</p>
+                    </div>
+                  )}
+                  {!vistaPrevia && puedeAceptar && o.primaEur !== null && (
                     <div style={{ marginTop: 12 }}>
                       <AceptarOpcion
                         presupuestoId={presupuestoId}
@@ -113,9 +137,11 @@ export function EstudioOfertas({
         )}
       </section>
 
+      {/* La comparativa completa, PLEGADA (18/10/2026: arriba solo lo esencial). Montaje perezoso (`Plegable`). */}
       {cuadro.filas.length > 0 && (
         <section className="seccion" aria-labelledby="cuadro-ofertas-titulo">
           <h2 id="cuadro-ofertas-titulo" style={{ marginTop: 0 }}>{TEXTOS_OFERTAS.comparativoTitulo}</h2>
+          <Plegable titulo={TEXTOS_OFERTAS.comparativoPlegable}>
           {cuadro.sinLeer.length > 0 && (
             <p className="pendiente" style={{ fontSize: 14 }}>
               Las garantías de {cuadro.sinLeer.join(', ')} no se han podido leer. Eso no quiere decir que no cubra nada: pídeme su condicionado.
@@ -167,6 +193,7 @@ export function EstudioOfertas({
           </div>
 
           <p className="suave presu-nota">{TEXTOS_OFERTAS.nota}</p>
+          </Plegable>
         </section>
       )}
     </>

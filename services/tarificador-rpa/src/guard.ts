@@ -9,6 +9,7 @@
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { ErrorTarificador } from './errores.ts'
+import { MEDIADOR_GENERALI, opcionMediadorGenerali } from './adapters/generali/reglas.ts'
 import {
   EmisionBloqueadaError,
   MaquinaFases,
@@ -127,6 +128,10 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   let login: { hasta: number; origen: string } | null = null
   const loginVigente = () => (login && Date.now() < login.hasta ? login : null)
   let rechazoLogin: string | null = null
+  // Ventana de la NAVEGACIÓN a «TURISMOS (RAMO UV)» de Generali (18/10/2026, autorizada por Alberto). Solo la abre
+  // `entrarTurismosGenerali`: mientras dura, una navegación GET a www.generali.es cuyo ÚNICO motivo de bloqueo sean los
+  // sustantivos «emisión»/«contratación» del menú pasa (`urlTurismosGeneraliPermitida`). Nada más se relaja.
+  let turismosGenerali = 0
   // La ventana se cierra en cuanto el MARCO PRINCIPAL navega a otro origen (el SSO redirige al portal tras el login: el
   // portal ya no está en la fase de login). `request` también salta en cada salto de una redirección (route no lo ve).
   context.on('request', (req) => {
@@ -158,6 +163,13 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
       const op = { permitirAceptar: fases.aceptarEnVuelo() || enLista, permitirGuardarPresupuesto: enGuardado }
       const porUrl = pareceEmision(url, op) || parametrosParecenEmision(url, op)
       const porCuerpo = !porUrl && noGet && parametrosParecenEmision(cuerpoDe(req), op)
+      if (porUrl && !porCuerpo && !noGet && Date.now() < turismosGenerali && av === null && gv === null && Date.now() >= ventanaHasta && urlTurismosGeneraliPermitida(url)) {
+        // Navegación del ÚNICO clic de «TURISMOS (RAMO UV)» (ventana abierta por entrarTurismosGenerali): GET a Generali con
+        // «emisión»/«contratación» como sustantivo de menú y nada más que case con el patrón. Un POST, otro origen o cualquier
+        // otro verbo (emitir, contratar, grabar, pagar, aceptar…) sigue abortando abajo.
+        await route.continue()
+        return
+      }
       if ((porUrl || porCuerpo) && Date.now() < ventanaHasta && av === null && gv === null) {
         // Consecuencia del ÚNICO clic autorizado (ventana abierta por pulsarEmisionAutorizada): pasa.
         await route.continue()
@@ -220,6 +232,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
   ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
   ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
+  ABRIR_TURISMOS_GENERALI.set(g, { abrir: (ms) => { turismosGenerali = Date.now() + Math.min(ms, VENTANA_RED_TURISMOS_GENERALI_MS) }, cerrar: () => { turismosGenerali = 0 }, abierta: () => Date.now() < turismosGenerali })
   VENTANA_LOGIN.set(g, {
     abrir: (origen) => { login = { hasta: Date.now() + VENTANA_RED_LOGIN_MS, origen }; rechazoLogin = null },
     cerrar: () => { login = null },
@@ -265,6 +278,42 @@ function origenDe(url: string): string | null {
   } catch {
     return null
   }
+}
+
+/** Solo `entrarTurismosGenerali` (este fichero) puede abrir la ventana de la navegación de Turismos de Generali. */
+const ABRIR_TURISMOS_GENERALI = new WeakMap<GuardEmision, { abrir(ms: number): void; cerrar(): void; abierta(): boolean }>()
+/** Tope de esa ventana: el clic + la carga del formulario de Turismos. Se cierra antes en cuanto aparece (finally). */
+export const VENTANA_RED_TURISMOS_GENERALI_MS = 15_000
+
+/** Sustantivos de MENÚ de Generali que casan con `emisi`/`contrat` («NEGOCIO › EMISIÓN › CONTRATACIÓN»). Solo estas dos palabras. */
+const RE_SUSTANTIVOS_MENU_GENERALI = /emision|contratacion/gi
+const sinTildesNi = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+/** El texto sin los sustantivos «emisión»/«contratación» (decodificado y sin tildes), para volver a pasarle el patrón entero. PURA. */
+export function sinSustantivosMenuGenerali(texto: string): string {
+  let t = texto
+  try {
+    t = decodeURIComponent(texto)
+  } catch {}
+  return sinTildesNi(t).replace(RE_SUSTANTIVOS_MENU_GENERALI, ' ')
+}
+
+/**
+ * EXCEPCIÓN de red de Turismos (Ramo UV) de Generali (Alberto, 18/10/2026). ¿Puede pasar esta NAVEGACIÓN GET durante la ventana
+ * del clic de «TURISMOS (RAMO UV)»? Solo si: origen EXACTO `https://www.generali.es` (sin credenciales en la URL) y, quitando
+ * los sustantivos «emisión»/«contratación», NADA más de la URL (ruta, query, fragmento) casa con el patrón de emisión ni con las
+ * acciones en parámetros (emitir, contratar, formalizar, grabar póliza, pagar, firmar, aceptar, `action=…`). PURA.
+ */
+export function urlTurismosGeneraliPermitida(url: string): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.origin !== ORIGEN_PORTAL_GENERALI || u.username || u.password) return false
+  const resto = sinSustantivosMenuGenerali(url)
+  return !pareceEmision(resto) && !parametrosParecenEmision(resto)
 }
 
 /** Solo `pulsarGuardadoPresupuesto` (este fichero) puede abrir la ventana del guardado. */
@@ -2202,4 +2251,331 @@ export async function marcarTarjetaVehiculoTurismosAllianz(marco: Frame, guard: 
   await label.click()
   guard.comprobar()
   return (await control.isChecked()) ? { estado: 'marcada' } : { estado: 'no_quedo' }
+}
+
+// ─────────── Generali · portal del corredor (18/10/2026, capturas de Alberto en Drive «BOT compañías › Generali») ───────────
+// Dos controles que el adaptador NO nombra: el «ACEPTAR» de «Seleccionar mediador» (casa con `aceptar`) y el camino de menú
+// NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES › TURISMOS (RAMO UV) (casa con `emisi`/`contrat`). Alberto fija ese camino
+// (18/10/2026: el de las capturas, NO «Cálculo rápido»). Los cuatro primeros niveles solo se SOBREVUELAN (hover: abren el
+// desplegable, no envían nada); el único clic es «TURISMOS (RAMO UV)», con texto exacto y `comprobarBoton` sobre todo lo demás
+// (href, onclick, ancestros). EXCEPCIÓN (Alberto, 18/10/2026, v0.1.1): «emisión»/«contratación» como SUSTANTIVOS del menú se
+// perdonan SOLO en el enlace de TURISMOS (RAMO UV) y en las navegaciones GET a www.generali.es durante la ventana de ESE clic
+// (`urlTurismosGeneraliPermitida`); emitir/contratar/grabar/pagar/aceptar, POST, otro origen o fuera de la ventana: bloqueado. «EMISIÓN (NUEVO)», «ALTA DE PÓLIZA», «CÁLCULO RÁPIDO DE PRIMAS»… no están en la lista: no se tocan.
+
+/** Hueco de mapa visto por el guard de Generali: para SIN pulsar y pide el inventario de estructura. */
+export class ErrorMapaGuardGenerali extends ErrorTarificador {
+  readonly pideInventarioDom = true
+  constructor(que: string) {
+    super('portal', `generali: mapa incompleto: faltan ${que}`)
+    this.name = 'ErrorMapaGuardGenerali'
+  }
+}
+
+export const ORIGEN_PORTAL_GENERALI = 'https://www.generali.es'
+export const RUTA_INICIO_GENERALI = '/arq_genernetPortalFormWeb/CorredorInicio.po'
+export const RUTA_PORTAL_GENERALI = '/arq_genernetPortalFormWeb/CorredorPortal.po'
+/** Texto EXACTO del botón de «Seleccionar mediador» (captura 2). */
+export const BOTON_MEDIADOR_GENERALI = 'ACEPTAR'
+/** Camino de menú hasta Turismos (captura 3). Los cuatro primeros se sobrevuelan; el último es el único clic. */
+export const MENU_TURISMOS_GENERALI = Object.freeze(['NEGOCIO', 'EMISIÓN', 'CONTRATACIÓN', 'AUTOMÓVILES', 'TURISMOS (RAMO UV)'] as const)
+
+const textoMenu = (t: string | null | undefined) => (t ?? '').normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleUpperCase('es')
+
+function enRutaGenerali(page: Page, ruta: string): boolean {
+  try {
+    const u = new URL(page.url())
+    return u.origin === ORIGEN_PORTAL_GENERALI && u.pathname === ruta
+  } catch {
+    return false
+  }
+}
+
+/** El ÚNICO control VISIBLE cuyo texto normalizado es EXACTAMENTE `texto` (si hay varios, los de la barra de menú). */
+async function unicoPorTextoGenerali(page: Page, texto: string): Promise<Locator | null> {
+  const re = new RegExp(`^\\s*${texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'i')
+  const todos = page.getByText(re).filter({ visible: true })
+  const n = await todos.count()
+  if (n === 1) return todos.first()
+  if (n === 0) return null
+  const enMenu = page.locator('nav, [role=navigation], [role=menu], [role=menubar], ul').getByText(re).filter({ visible: true })
+  return (await enMenu.count()) === 1 ? enMenu.first() : null
+}
+
+/**
+ * «ACEPTAR» de «Seleccionar mediador» (captura 2), UNA vez por trabajo y solo si: guard limpio y sin ventanas abiertas; la
+ * página es `CorredorInicio.po` de www.generali.es; el desplegable del mediador (`selectMediador`, lo localiza el adaptador)
+ * tiene puesto EXACTAMENTE el mediador de la correduría (`opcionMediadorGenerali`); y hay un solo botón visible de texto
+ * exacto «ACEPTAR». `comprobarBoton` (con «aceptar» permitido SOLO aquí) mira el resto de su descripción antes del clic.
+ */
+export async function pulsarMediadorGenerali(page: Page, guard: GuardEmision, selectMediador: Locator): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'mediador de Generali con una ventana de red abierta')
+  if (!enRutaGenerali(page, RUTA_INICIO_GENERALI)) throw new ErrorMapaGuardGenerali('la pantalla «Seleccionar mediador» (CorredorInicio.po)')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:mediador')) throw new EmisionBloqueadaError('fase', 'el mediador de Generali ya se aceptó en este trabajo')
+  if ((await selectMediador.count()) !== 1) throw new ErrorMapaGuardGenerali('el desplegable «Mediador» (no hay exactamente uno)')
+  const puesta = await selectMediador.evaluate((el) => {
+    const s = el as HTMLSelectElement
+    const o = s.selectedIndex >= 0 ? s.options[s.selectedIndex] : null
+    return o ? { valor: o.value ?? '', texto: (o.textContent ?? '').trim() } : null
+  })
+  if (!puesta || opcionMediadorGenerali([puesta], MEDIADOR_GENERALI).tipo !== 'unica') throw new EmisionBloqueadaError('fase', 'el mediador elegido no es el de la correduría: no se acepta')
+  await exigirSinCuentaBancaria(page)
+  const boton = page.getByRole('button', { name: BOTON_MEDIADOR_GENERALI, exact: true }).filter({ visible: true })
+  if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali(`el botón «${BOTON_MEDIADOR_GENERALI}» de «Seleccionar mediador» (no hay exactamente uno visible)`)
+  const desc = await descripcion(boton.first())
+  if (textoMenu(desc[0]) !== BOTON_MEDIADOR_GENERALI) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  comprobarBoton(desc, { permitirAceptar: true })
+  usados.add('generali:mediador')
+  AVANCES_USADOS.set(guard, usados)
+  await boton.first().click()
+  guard.comprobar()
+}
+
+/**
+ * Entrada a «Turismos (Ramo UV)» por el menú (captura 3), UNA vez por trabajo, solo desde `CorredorPortal.po`: sobrevuela
+ * NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES (cada uno el ÚNICO visible con ese texto exacto) y pulsa «TURISMOS (RAMO UV)»
+ * tras `comprobarBoton` sobre su descripción sin el texto autorizado. Un nivel que no aparece → hueco con inventario.
+ */
+export async function entrarTurismosGenerali(page: Page, guard: GuardEmision, esperaMs = VENTANA_RED_TURISMOS_GENERALI_MS): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'menú de Generali con una ventana de red abierta')
+  if (!enRutaGenerali(page, RUTA_PORTAL_GENERALI)) throw new ErrorMapaGuardGenerali('el portal del corredor (CorredorPortal.po) antes del menú')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:turismos')) throw new EmisionBloqueadaError('fase', 'el menú de Turismos de Generali ya se usó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const niveles = MENU_TURISMOS_GENERALI.slice(0, -1)
+  for (const texto of niveles) {
+    const l = await unicoPorTextoGenerali(page, texto)
+    if (!l) throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (no hay exactamente uno visible tras sobrevolar el anterior)`)
+    await l.hover()
+    await page.waitForTimeout(400)
+  }
+  const final = MENU_TURISMOS_GENERALI[MENU_TURISMOS_GENERALI.length - 1]!
+  const destino = await unicoPorTextoGenerali(page, final)
+  if (!destino) throw new ErrorMapaGuardGenerali(`la opción «${final}» del menú (no hay exactamente una visible)`)
+  const desc = await descripcion(destino, true)
+  if (textoMenu(desc[0]) !== final) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  // Excepción mínima (Alberto, 18/10/2026): en el href/onclick del enlace de TURISMOS solo se perdonan los sustantivos
+  // «emisión»/«contratación» del camino del menú; un href a otro origen o cualquier otro verbo de emisión sigue bloqueando.
+  const resto = desc.filter((d) => textoMenu(d) !== final)
+  for (const d of resto) {
+    if (typeof d === 'string' && /^\s*https?:/i.test(d) && !d.trim().toLowerCase().startsWith(`${ORIGEN_PORTAL_GENERALI}/`)) throw new EmisionBloqueadaError('boton', `TURISMOS (RAMO UV) apunta fuera de ${ORIGEN_PORTAL_GENERALI}`)
+  }
+  comprobarBoton(resto.map((d) => (typeof d === 'string' ? sinSustantivosMenuGenerali(d) : d)))
+  const ventana = ABRIR_TURISMOS_GENERALI.get(guard)
+  if (!ventana) throw new EmisionBloqueadaError('fase', 'guard sin ventana de Turismos de Generali')
+  usados.add('generali:turismos')
+  AVANCES_USADOS.set(guard, usados)
+  ventana.abrir(esperaMs)
+  try {
+    await destino.click()
+    // La ventana dura lo que tarda en aparecer el formulario («Datos de Valoración», captura 4) o su tope; luego se cierra.
+    const fin = Date.now() + Math.min(esperaMs, VENTANA_RED_TURISMOS_GENERALI_MS)
+    while (Date.now() < fin && ventana.abierta()) {
+      guard.comprobar()
+      let llego = false
+      for (const f of page.frames()) {
+        if (!f.isDetached() && (await f.getByText('Datos de Valoración', { exact: true }).filter({ visible: true }).count().catch(() => 0)) > 0) llego = true
+      }
+      if (llego) break
+      await page.waitForTimeout(300)
+    }
+  } finally {
+    ventana.cerrar()
+  }
+  guard.comprobar()
+}
+
+// ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────
+// HTML real (trabajo d675077b, pantalla «Selección de paquete»): bajo la tabla de precios vive el formulario `nx-mt-save-proposal`
+// («Guardar el presupuesto»): «Identificador presupuesto» (obligatorio, ≤30), tipo/nº de documento, nombre y apellidos del tomador
+// (obligatorios; el portal los trae de los pasos anteriores), casillas «Envío a cliente», «Envío a agente», «Mostrar presupuesto en
+// eCliente» (MARCADA por defecto), «Selección de productos» (los paquetes y «Todos los paquetes») y el botón «Guardar presupuesto».
+// NO vinculante. Reglas: (1) solo un botón cuyo texto ENTERO casa con la lista blanca y que pase `comprobarBoton` + la lista única
+// (guardar, nunca emisión ni prohibido); (2) NADA sale al cliente: «Envío a cliente», «Envío a agente» y «Mostrar en eCliente»
+// tienen que quedar DESMARCADAS antes de pulsar (si no quedan, no se pulsa); (3) el bot solo escribe el identificador (sin datos
+// personales); un obligatorio vacío (nombre, documento…) = no se pulsa y se dice cuál; (4) el clic va por `pulsarGuardadoPresupuesto`
+// (ventana de red de guardado, tope por trabajo, diálogos rechazados). Si algo no casa → `no_guardado` con motivo: no es error del precio.
+
+/** Textos EXACTOS (tras normalizar espacios) del botón que se puede pulsar. Nada más: ni «Emitir», ni «Contratar», ni «Confirmar». */
+export const BOTONES_GUARDAR_PRESUPUESTO_TURISMOS: readonly string[] = Object.freeze(['Guardar presupuesto', 'Guardar proyecto'])
+export const SEL_FORM_GUARDAR_PRESUPUESTO_TURISMOS = 'nx-mt-save-proposal form'
+export const ETIQUETA_IDENTIFICADOR_PRESUPUESTO_TURISMOS = 'Identificador presupuesto'
+/** Estado OBLIGATORIO de cada casilla antes de pulsar: nada se envía ni se publica al cliente; se guardan todos los paquetes. */
+export const CASILLAS_GUARDAR_PRESUPUESTO_TURISMOS: Readonly<Record<string, boolean>> = Object.freeze({
+  'Envío a cliente': false,
+  'Envío a agente': false,
+  'Mostrar presupuesto en eCliente': false,
+  'Todos los paquetes': true,
+})
+export const MS_CONFIRMA_GUARDADO_TURISMOS = 15_000
+
+const planoTurismos = (t: string | null | undefined) => (t ?? '').replace(/\s+/g, ' ').trim()
+
+/** ¿Este botón se puede pulsar para GUARDAR el presupuesto? Texto entero en la lista blanca Y la lista única lo ve como guardar. PURA. */
+export function esBotonGuardarPresupuestoTurismos(descripciones: readonly (string | null | undefined)[]): boolean {
+  if (!BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(planoTurismos(descripciones[0]))) return false
+  try {
+    comprobarBoton(descripciones, { permitirGuardarPresupuesto: true })
+  } catch {
+    return false
+  }
+  const cat = clasificarAccionPortal(descripciones.filter((d): d is string => typeof d === 'string'))
+  return !cat.emision && !cat.prohibida && !!cat.guardar
+}
+
+/** Identificador que el bot pone al presupuesto: SIN datos personales, ≤30 («GA-AAAAMMDD-<8 del trabajo>»). PURA. */
+export function identificadorPresupuestoTurismos(trabajoId: string, hoy: Date = new Date()): string {
+  const f = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(hoy).replace(/-/g, '')
+  return `GA-${f}-${trabajoId.replace(/[^0-9a-z]/gi, '').slice(0, 8).toUpperCase()}`.slice(0, 30)
+}
+
+const RE_REFERENCIA_PRESUPUESTO = /(?:n(?:[ºo°]|úm(?:ero)?)\.?\s*(?:de\s*)?(?:presupuesto|proyecto)|(?:presupuesto|proyecto)\s*(?:n(?:[ºo°]|úm(?:ero)?)\.?|número))\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\/]{4,29})/gi
+const RE_FRASE_GUARDADO = /presupuesto[^.]{0,40}(?:guardad|grabad|almacenad)|se ha guardado/gi
+
+/** Todas las referencias «Nº presupuesto …» de un texto, en orden y en mayúsculas. PURA. */
+function referenciasPresupuestoDeTexto(texto: string): string[] {
+  return [...planoTurismos(texto).matchAll(RE_REFERENCIA_PRESUPUESTO)].map((m) => m[1]!.toUpperCase())
+}
+
+/** Número/referencia que el portal enseña tras guardar, de un texto de la pantalla. `null` = no se ve. PURA. */
+export function referenciaPresupuestoDeTexto(texto: string): string | null {
+  return referenciasPresupuestoDeTexto(texto)[0] ?? null
+}
+
+/**
+ * ¿El texto de DESPUÉS del clic confirma un guardado NUEVO respecto del de ANTES? (v0.6.14, revisión de seguridad.) Solo cuenta lo
+ * que APARECE tras el clic: una referencia «Nº presupuesto …» que antes no estaba (→ esa es la referencia) o más frases «presupuesto
+ * … guardado» que antes (→ confirmado, pero SIN referencia: la que ya estaba en pantalla puede ser de otro presupuesto). Lo que ya
+ * estaba antes del clic no confirma nada. PURA.
+ */
+export function confirmacionGuardadoNueva(antes: string, despues: string): { confirmado: boolean; referencia: string | null } {
+  const previas = new Set(referenciasPresupuestoDeTexto(antes))
+  const referencia = referenciasPresupuestoDeTexto(despues).find((r) => !previas.has(r)) ?? null
+  const frases = (t: string) => [...planoTurismos(t).matchAll(RE_FRASE_GUARDADO)].length
+  return { confirmado: referencia !== null || frases(despues) > frases(antes), referencia }
+}
+
+export type ResultadoGuardarPresupuestoTurismos =
+  | { estado: 'guardado'; identificador: string; referencia: string | null }
+  | { estado: 'sin_confirmar'; identificador: string }
+  | { estado: 'no_guardado'; motivo: string }
+
+/** Guarda el presupuesto en la pantalla de precios de Turismos con las reglas de arriba. Nunca lanza por «no se pudo»: lo devuelve. */
+export async function guardarPresupuestoTurismosAllianz(marco: Frame, guard: GuardEmision, identificador: string, esperaMs = MS_CONFIRMA_GUARDADO_TURISMOS): Promise<ResultadoGuardarPresupuestoTurismos> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) return { estado: 'no_guardado', motivo: 'otra ventana de red abierta' }
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) return { estado: 'no_guardado', motivo: 'fuera de la app de Allianz AUTOS' }
+  if (!/^[A-Z0-9-]{1,30}$/.test(identificador)) return { estado: 'no_guardado', motivo: 'identificador no válido' }
+  const page = marco.page()
+  const form = marco.locator(SEL_FORM_GUARDAR_PRESUPUESTO_TURISMOS).filter({ visible: true })
+  if ((await form.count().catch(() => 0)) !== 1) return { estado: 'no_guardado', motivo: 'el formulario «Guardar el presupuesto» no está a la vista' }
+  // Botón: exactamente uno con texto de la lista blanca DENTRO del formulario.
+  const botones = form.locator('button').filter({ visible: true })
+  const candidatos: Locator[] = []
+  for (let i = 0; i < (await botones.count()); i++) {
+    const b = botones.nth(i)
+    if (BOTONES_GUARDAR_PRESUPUESTO_TURISMOS.includes(planoTurismos(await b.innerText().catch(() => '')))) candidatos.push(b)
+  }
+  if (candidatos.length !== 1) return { estado: 'no_guardado', motivo: candidatos.length === 0 ? 'no aparece el botón «Guardar presupuesto»' : 'más de un botón de guardar' }
+  const boton = candidatos[0]!
+  const desc = await descripcion(boton)
+  if (!esBotonGuardarPresupuestoTurismos(desc)) return { estado: 'no_guardado', motivo: 'el texto del botón no casa con la lista blanca' }
+  try {
+    await exigirSinCuentaBancaria(page)
+    // Identificador (sin datos personales): solo si el campo está vacío o ya es el nuestro.
+    const id = form.getByLabel(ETIQUETA_IDENTIFICADOR_PRESUPUESTO_TURISMOS, { exact: true }).and(marco.locator('input')).filter({ visible: true })
+    if ((await id.count()) !== 1) return { estado: 'no_guardado', motivo: `no aparece «${ETIQUETA_IDENTIFICADOR_PRESUPUESTO_TURISMOS}»` }
+    await exigirCampoNoBancario(id)
+    const actual = planoTurismos(await id.inputValue().catch(() => ''))
+    if (actual !== '' && actual !== identificador) return { estado: 'no_guardado', motivo: `«${ETIQUETA_IDENTIFICADOR_PRESUPUESTO_TURISMOS}» ya trae otro valor` }
+    if (actual === '') await id.fill(identificador, { timeout: 5_000 })
+    // Casillas: cada una, EXACTAMENTE una, al estado obligatorio; se relee. Ninguna sin quedar → no se pulsa.
+    const cajaDe = (etiqueta: string) => form.locator('nx-checkbox').filter({ has: marco.locator('label', { hasText: new RegExp(`^\\s*${etiqueta.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`) }) })
+    for (const [etiqueta, quiero] of Object.entries(CASILLAS_GUARDAR_PRESUPUESTO_TURISMOS)) {
+      const caja = cajaDe(etiqueta)
+      if ((await caja.count()) !== 1) return { estado: 'no_guardado', motivo: `no aparece la casilla «${etiqueta}»` }
+      const input = caja.locator('input[type=checkbox]')
+      if ((await input.isChecked()) !== quiero) {
+        const label = caja.locator('label').first()
+        comprobarBoton(await descripcion(label))
+        await label.click({ timeout: 5_000 })
+        guard.comprobar()
+      }
+      if ((await input.isChecked()) !== quiero) return { estado: 'no_guardado', motivo: `la casilla «${etiqueta}» no quedó ${quiero ? 'marcada' : 'desmarcada'}` }
+    }
+    // Obligatorios vacíos (nombre, documento…): el bot NO los teclea. Botón deshabilitado → se dice cuáles (solo etiquetas).
+    if (!(await boton.isEnabled().catch(() => false))) {
+      const vacios = await form.locator('input[required], input[aria-required=true]').evaluateAll((ns) =>
+        ns.filter((n) => (n as HTMLInputElement).value.trim() === '').map((n) => ((n as HTMLInputElement).labels?.[0]?.textContent ?? n.getAttribute('aria-label') ?? '').replace(/\s+/g, ' ').trim()).filter((x) => x !== ''))
+      return { estado: 'no_guardado', motivo: vacios.length ? `el portal pide ${vacios.map((v) => `«${v}»`).join(', ')} (el bot no los rellena)` : 'el botón «Guardar presupuesto» está deshabilitado' }
+    }
+    // v0.6.14 (revisión de seguridad): RELECTURA de las 4 casillas justo antes del clic. Angular puede volver a marcar «Envío a
+    // cliente/agente» o «Mostrar en eCliente» al cambiar otra (p. ej. «Todos los paquetes»): si alguna no está en su estado
+    // obligatorio AHORA, no se pulsa. Sin esto, el bucle de arriba solo garantiza el estado de cada casilla en SU momento.
+    for (const [etiqueta, quiero] of Object.entries(CASILLAS_GUARDAR_PRESUPUESTO_TURISMOS)) {
+      const input = cajaDe(etiqueta).locator('input[type=checkbox]')
+      if ((await input.count()) !== 1) return { estado: 'no_guardado', motivo: `la casilla «${etiqueta}» desapareció antes de guardar` }
+      if ((await input.isChecked()) !== quiero) return { estado: 'no_guardado', motivo: `la casilla «${etiqueta}» volvió a quedar ${quiero ? 'desmarcada' : 'marcada'} antes de guardar (el portal la cambió): no se pulsa` }
+    }
+    // Confirmación: solo lo que APARECE tras el clic (`confirmacionGuardadoNueva`); un «Nº presupuesto» que ya estaba no vale.
+    const textoAntes = await marco.locator('body').innerText().catch(() => '')
+    let confirmado = false
+    let referencia: string | null = null
+    await pulsarGuardadoPresupuesto(page, guard, boton, { el: { tag: 'button', texto: planoTurismos(desc[0]) }, pantalla: { tipoPantalla: 'resultado', hayImportes: true, presupuestoEnCurso: false } }, async () => {
+      const fin = Date.now() + esperaMs
+      while (Date.now() < fin) {
+        const c = confirmacionGuardadoNueva(textoAntes, await marco.locator('body').innerText().catch(() => ''))
+        if (c.confirmado) {
+          confirmado = true
+          referencia = c.referencia
+          return
+        }
+        await page.waitForTimeout(300)
+      }
+    })
+    return confirmado ? { estado: 'guardado', identificador, referencia } : { estado: 'sin_confirmar', identificador }
+  } catch (e) {
+    // Una violación del guard (red de emisión) NO se traga: `comprobar` la relanza. Lo demás (campo bancario a la vista, casilla
+    // sospechosa, diálogo, timeout) = no se guardó, sin tocar el precio ya leído.
+    guard.comprobar()
+    const motivo = e instanceof ErrorFronteraEmision ? 'hay un campo de cuenta bancaria a la vista' : e instanceof GuardadoConDialogoError ? 'el portal abrió un diálogo (no se acepta)' : e instanceof EmisionBloqueadaError ? 'el guard no autorizó el control' : 'el portal no dejó completar el guardado'
+    return { estado: 'no_guardado', motivo }
+  }
+}
+
+// ─────────── Datos que Allianz Turismos USÓ para calcular (18/10/2026, decisión de Alberto) · SOLO LECTURA ───────────
+// HTML real (d675077b): todos los pasos viven en el DOM. CP y localidad, los del bloque «¿Quién es el tomador?» de «Datos personales»
+// (Allianz los fija desde su fichero tras el documento); vehículo, la tarjeta marcada de «Datos del vehículo» (`nx-data-display`
+// «Marca del vehículo», «Modelo», «Versión»; una sola tarjeta sin radio también vale). El resumen final (`app-review`) aún está vacío
+// en la pantalla de precios: no se usa. Lo que no se lea → null (nunca la ficha). No pulsa ni escribe nada.
+export const SEL_BLOQUE_TOMADOR_TURISMOS = 'nx-mt-person-information:has(nx-x-common-header[text="¿Quién es el tomador?"])'
+
+export async function leerDatosUsadosTurismosAllianz(marco: Frame): Promise<{ codigoPostal: string | null; localidad: string | null; vehiculo: { marca: string | null; modelo: string | null; version: string | null } }> {
+  const bloque = marco.locator(SEL_BLOQUE_TOMADOR_TURISMOS)
+  const valorDe = async (etiqueta: string): Promise<string | null> => {
+    const l = bloque.getByLabel(etiqueta, { exact: true })
+    if ((await l.count().catch(() => 0)) !== 1) return null
+    const v = await l.first().evaluate((n) => ((n as HTMLInputElement).value ?? n.textContent ?? '').replace(/\s+/g, ' ').trim()).catch(() => '')
+    return v === '' ? null : v
+  }
+  // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página): todo en línea.
+  const vehiculo = await marco.evaluate((etiquetas) => {
+    const marcada = Array.from(document.querySelectorAll('input[type=radio][id*="-nx-selectable-card-"]')).find((r) => (r as HTMLInputElement).checked)
+    let raiz: Element | null = marcada ? (marcada.closest('nx-selectable-card') ?? null) : null
+    if (!raiz) {
+      const grupos = Array.from(document.querySelectorAll('nx-data-display[label="Marca del vehículo"]')).filter((n) => !n.closest('app-review'))
+      raiz = grupos.length === 1 ? (grupos[0]!.parentElement?.closest(':has(nx-data-display[label="Versión"])') ?? null) : null
+    }
+    const out: (string | null)[] = []
+    for (const et of etiquetas) {
+      const d = raiz ? raiz.querySelector(`nx-data-display[label="${et}"]`) : null
+      const div = d ? (Array.from(d.children).find((c) => c.tagName !== 'NX-DATA-DISPLAY-LABEL') as HTMLElement | undefined) : undefined
+      const t = (div?.textContent ?? '').replace(/\s+/g, ' ').trim()
+      out.push(t === '' ? null : t)
+    }
+    return { marca: out[0] ?? null, modelo: out[1] ?? null, version: out[2] ?? null }
+  }, ['Marca del vehículo', 'Modelo', 'Versión']).catch(() => ({ marca: null, modelo: null, version: null }))
+  return { codigoPostal: await valorDe('Código postal'), localidad: await valorDe('Localidad'), vehiculo }
 }

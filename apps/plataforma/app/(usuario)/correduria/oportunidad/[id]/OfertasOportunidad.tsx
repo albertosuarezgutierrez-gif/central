@@ -256,7 +256,7 @@ function TarjetaOferta({ o, ocupado, elegida, onElegir, onParchear }: {
       <span style={{ fontSize: 12, color: lectura.clave === 'ok' ? 'var(--muted)' : 'var(--negative)' }}>{lectura.texto}</span>
       {avisos.length > 0 && (
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--warning)' }}>
-          {avisos.map((a) => <li key={a}>{a}</li>)}
+          {avisos.map((a) => <li key={a} style={a.startsWith('⚠️ ALERTA') ? { color: 'var(--negative)', fontWeight: 700 } : undefined}>{a}</li>)}
         </ul>
       )}
 

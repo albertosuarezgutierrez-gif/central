@@ -13,7 +13,7 @@
 // completa del cotizador) se pinta en línea. Un solo bloque por pantalla.
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bot, Check, X, UserRound } from 'lucide-react'
+import { Bot, Check, Info, X, UserRound } from 'lucide-react'
 import { btnStyle, cardStyle, CardHeader } from '@/components/ui'
 import {
   SONDEO_MS, SONDEO_TOPE_MS, leerIntegraciones, leerTrabajo, resumenTrabajo, rotuloCompania,
@@ -284,6 +284,7 @@ const MARCA: Record<EstadoFila, { color: string; icono: typeof Check; texto: str
   ok: { color: 'var(--positive)', icono: Check, texto: 'listo' },
   ficha: { color: 'var(--muted)', icono: UserRound, texto: 'se toma de la ficha' },
   falta: { color: 'var(--negative)', icono: X, texto: 'falta' },
+  supuesto: { color: 'var(--warning)', icono: Info, texto: 'supuesto favorable (se declara en el precio)' },
 }
 
 /** Desplegable con los datos que pide el bot de la compañía (≤ ~16 filas): ✓ listo · ✗ falta · «se toma de la ficha». */

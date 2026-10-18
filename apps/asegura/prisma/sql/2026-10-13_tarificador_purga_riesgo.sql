@@ -25,6 +25,8 @@
 -- (14/10/2026) Añadida a la lista de vehículo la clave `vehiculoConfirmado` (sub-claves origen, denominacion, cv, cc, puertas,
 --    fechaInicio; SIN matrícula ni bastidor) para que siga IGUAL que el código. Solo CONSERVA más: no hace falta re-aplicarla
 --    (ningún trabajo cerrado la tenía); si se re-aplica, sigue siendo idempotente.
+-- (18/10/2026) Añadida `vehiculoCatalogo` (sub-claves origen, marca, modelo, descripcion: el catálogo que confirmó Allianz/Mapfre
+--    y que asegura encadena a Generali). Igual que la anterior: solo CONSERVA más; no hace falta re-aplicarla.
 
 SET search_path = seguros, public;
 
@@ -38,7 +40,7 @@ AS $f$
   SELECT CASE WHEN r IS NULL OR jsonb_typeof(r) <> 'object' THEN r ELSE (
     SELECT coalesce(jsonb_object_agg(e.key,
              CASE
-               WHEN e.key IN ('direccion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa', 'vehiculoConfirmado') AND jsonb_typeof(e.value) = 'object' THEN (
+               WHEN e.key IN ('direccion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa', 'vehiculoConfirmado', 'vehiculoCatalogo') AND jsonb_typeof(e.value) = 'object' THEN (
                  SELECT coalesce(jsonb_object_agg(s.key, s.value), '{}'::jsonb)
                  FROM jsonb_each(e.value) s
                  WHERE s.key = ANY (CASE e.key
@@ -46,6 +48,7 @@ AS $f$
                                       WHEN 'seleccionVehiculo' THEN /*lista:sub:seleccionVehiculo*/ array['marca','modelo','clase','cilindradaCc','descripcion']::text[]
                                       WHEN 'eleccionVersion' THEN /*lista:sub:eleccionVersion*/ array['codigo','etiqueta']::text[]
                                       WHEN 'vehiculoConfirmado' THEN /*lista:sub:vehiculoConfirmado*/ array['origen','denominacion','cv','cc','puertas','fechaInicio']::text[]
+                                      WHEN 'vehiculoCatalogo' THEN /*lista:sub:vehiculoCatalogo*/ array['origen','marca','modelo','descripcion']::text[]
                                       ELSE /*lista:sub:eleccionVersionIa*/ array['origen','clave']::text[] END)
                    AND jsonb_typeof(s.value) IN ('string', 'number', 'boolean', 'null'))
                ELSE e.value
@@ -53,10 +56,10 @@ AS $f$
     FROM jsonb_each(r) e
     WHERE e.key = ANY (CASE
                          WHEN lower(trim(ramo)) = 'comunidades' THEN /*lista:comunidades*/ array['ramo','direccion','fechaEfecto','fechaTermino','m2Construidos','anioConstruccion','anioRehabilitacion','tipoVivienda','uso','plantas','plantasBajoRasante','sotanos','numEdificios','contiguos','numViviendasYLocales','numViviendas','numLocales','numGarajes','listaPropietarios','instalacionesAnexas','formaPagoPrimerRecibo','formaPagoSucesivos','comision','capitalContinente','capitalContenido','asistenciaPlagas','asesoramientoJuridico','impagoCuotas','ite','modalidad','opciones','ascensor','piscina','zonasAjardinadas','calidadConstruccion','siniestrosUltimos3Anios','companiaActual']::text[]
-                         WHEN lower(trim(ramo)) IN ('moto', 'auto') THEN /*lista:vehiculo*/ array['ramo','codigoPostal','poblacion','eleccionPoblacion','seleccionVehiculo','eleccionVersion','eleccionVersionIa','vehiculoConfirmado']::text[]
+                         WHEN lower(trim(ramo)) IN ('moto', 'auto') THEN /*lista:vehiculo*/ array['ramo','codigoPostal','poblacion','eleccionPoblacion','seleccionVehiculo','eleccionVersion','eleccionVersionIa','vehiculoConfirmado','vehiculoCatalogo']::text[]
                          ELSE /*lista:otro*/ array['ramo']::text[] END)
       AND CASE
-            WHEN e.key IN ('direccion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa', 'vehiculoConfirmado') THEN jsonb_typeof(e.value) IN ('object', 'null')
+            WHEN e.key IN ('direccion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa', 'vehiculoConfirmado', 'vehiculoCatalogo') THEN jsonb_typeof(e.value) IN ('object', 'null')
             ELSE jsonb_typeof(e.value) IN ('string', 'number', 'boolean', 'null')
           END
   ) END

@@ -5,11 +5,14 @@
 //
 // 🚨 Sin datos personales: claves y etiquetas, jamás valores. 🚨 Sin declaración para esa compañía/ramo (`null`) = NO
 // disponible (nunca «todo ok»). 🚨 Un dato de la ficha que plataforma no ve NO bloquea (asegura lo valida al encolar).
-import { faltanParaTarificar, mensajeFaltan, obligatoriosPara, type Faltante } from '@central/module-tarificacion'
+import { faltanParaTarificar, mensajeFaltan, obligatoriosPara, supuestosFavorablesPara, conAntecedentesFavorables, type Faltante } from '@central/module-tarificacion'
 import type { CampoDeFicha } from './tarificador-moto-formulario.ts'
 
-/** `ok` = el riesgo lo trae · `ficha` = se toma de la ficha del cliente (no bloquea) · `falta` = hay que completarlo. */
-export type EstadoFila = 'ok' | 'ficha' | 'falta'
+/**
+ * `ok` = el riesgo lo trae · `ficha` = se toma de la ficha del cliente (no bloquea) · `falta` = hay que completarlo ·
+ * `supuesto` (18/10/2026) = no consta y el bot usa el SUPUESTO FAVORABLE declarado (antecedentes; no bloquea, nunca «listo»).
+ */
+export type EstadoFila = 'ok' | 'ficha' | 'falta' | 'supuesto'
 export type FilaChecklist = { clave: string; etiqueta: string; estado: EstadoFila }
 
 export type ChecklistCompania =
@@ -42,13 +45,16 @@ export function checklistCompania(compania: string, ramo: string, riesgo: Record
   const rutasFicha = new Set(completarDesdeFicha.map((c) => RUTA_DE_CAMPO_FICHA[c]))
   const faltaForm = new Set(sinFicha.map((f) => f.clave))
   const faltaTodo = new Set(conFicha.map((f) => f.clave))
+  const supuestas = new Set(supuestosFavorablesPara(compania, ramo, riesgo) ?? [])
   const filas: FilaChecklist[] = []
   const faltan: Faltante[] = []
   for (const c of lista) {
-    if (c.aplica && !c.aplica(riesgo)) continue
+    // `aplica` sobre el riesgo CON los supuestos favorables (p. ej. Mapfre: 5 años supuestos ⇒ pide la compañía anterior).
+    if (c.aplica && !c.aplica(ramo === 'auto' || ramo === 'moto' ? conAntecedentesFavorables(riesgo).formulario : riesgo)) continue
     let estado: EstadoFila
     if (faltaForm.has(c.clave)) estado = rutasFicha.has(c.clave) ? 'ficha' : 'falta'
     else if (faltaTodo.has(c.clave)) estado = 'ficha' // origen ficha: lo pone asegura, no se puede saber desde aquí
+    else if (supuestas.has(c.clave)) estado = 'supuesto'
     else estado = 'ok'
     filas.push({ clave: c.clave, etiqueta: c.etiqueta, estado })
     if (estado === 'falta') faltan.push({ clave: c.clave, etiqueta: c.etiqueta })

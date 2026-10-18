@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import type { DatosCotizados } from '@/lib/presupuesto-firma'
-import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
+import { ID_DATOS_CALCULO, TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
 
 /**
  * «Revisa tus datos» — lo PRIMERO de la pantalla del presupuesto (dictado de Alberto, 28/09/2026).
@@ -16,13 +16,15 @@ import { TEXTOS_OFERTAS } from '@/lib/presupuesto-ofertas-vista'
  *  - El DNI llega ya enmascarado desde asegura; aquí no se toca.
  *  - «Hay un dato que no es correcto» avisa a la correduría; con eso ya no se emite nada.
  */
-export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono, origen = 'codeoscopic' }: {
+export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono, origen = 'codeoscopic', supuestos = [] }: {
   presupuestoId: string
   datos: DatosCotizados | null
   corredor: boolean
   telefono: { tel: string; texto: string } | null
   /** `ofertas`: no hay petición a ninguna compañía de la que «se calculó el precio»; se revisa quién es el tomador. */
   origen?: 'codeoscopic' | 'ofertas'
+  /** Los SUPUESTOS de las opciones, ya en lenguaje claro (`supuestosDeOpciones`). */
+  supuestos?: string[]
 }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
@@ -59,8 +61,17 @@ export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono, orige
   const llamar = telefono ? <> Llámanos al <a href={`tel:${telefono.tel}`}>{telefono.texto}</a>.</> : null
 
   return (
-    <section className="seccion" aria-labelledby="revisa-datos-titulo">
-      <h2 id="revisa-datos-titulo" style={{ marginTop: 0 }}>Revisa tus datos</h2>
+    // PLEGADA por defecto (Alberto, 18/10/2026: arriba solo lo esencial). Un `<details>` a secas: es poco DOM, y así
+    // «Avisar de un error» (AceptarOpcion) la abre por su `id`. 🚨 Con SUPUESTOS va ABIERTA: el precio depende de algo
+    // que hemos supuesto y el cliente lo tiene que ver sin buscarlo (revisión 18/10/2026).
+    // El `display:flex` del <summary> quita el marcador nativo: por eso lleva chevron PROPIO (`.revisa-chevron`, gira
+    // con `[open]`) y un texto que dice que se abre; con `.plegable-suave` a secas parecía una nota al pie.
+    <details className="seccion plegable-suave presu-plegable revisa-datos" id={ID_DATOS_CALCULO} open={supuestos.length > 0}>
+      <summary id="revisa-datos-titulo" style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, width: 'auto' }}>
+        <span className="revisa-chevron" aria-hidden="true">›</span>
+        {/* «Calculado» solo si hubo cálculo: tarificación (Codeoscopic) o supuestos declarados por el bot. Una oferta en PDF de compañía no se calculó. */}
+        <span>{origen !== 'ofertas' || supuestos.length > 0 ? 'Ver los datos con los que hemos calculado tu precio' : `Ver ${TEXTOS_OFERTAS.datosTitulo.charAt(0).toLowerCase()}${TEXTOS_OFERTAS.datosTitulo.slice(1)}`}</span>
+      </summary>
 
       {datos === null || datos.estado === 'sin_datos' ? (
         <p className="pendiente" style={{ margin: 0 }}>
@@ -78,6 +89,7 @@ export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono, orige
             )}
           </p>
 
+          {origen === 'ofertas' && supuestos.length > 0 && <p className="suave" style={{ margin: '0 0 12px', fontSize: 14 }}>{TEXTOS_OFERTAS.revisaBot}</p>}
           <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {datos.grupos.map((g) => (
               <div key={g.titulo}>
@@ -127,6 +139,15 @@ export function RevisaTusDatos({ presupuestoId, datos, corredor, telefono, orige
           {aviso && <p className="error-linea" role="alert" style={{ margin: '8px 0 0' }}>{aviso}</p>}
         </>
       )}
-    </section>
+      {supuestos.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <h3 style={{ margin: '0 0 6px', fontSize: 15 }}>Lo que hemos supuesto</h3>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14, display: 'grid', gap: 4 }}>
+            {supuestos.map((s) => <li key={s} style={{ overflowWrap: 'anywhere' }}>{s}</li>)}
+          </ul>
+          <p className="suave" style={{ margin: '6px 0 0', fontSize: 13 }}>Si algo de esto no es así, avísanos antes de elegir: el precio puede cambiar al emitir.</p>
+        </div>
+      )}
+    </details>
   )
 }

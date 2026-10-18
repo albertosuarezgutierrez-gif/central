@@ -4,6 +4,7 @@ import { allianzComunidades } from './allianz/comunidades.ts'
 import { allianzAuto, allianzMoto, AUTO_ACTIVO, MOTO_ACTIVO } from './allianz/auto.ts'
 import { mapfreAuto, mapfreMoto } from './mapfre/auto.ts'
 import { ALLIANZ_HOGAR_ACTIVO, allianzHogar } from './allianz/hogar.ts'
+import { GENERALI_AUTO_ACTIVO, generaliAuto } from './generali/auto.ts'
 
 /** Los adaptadores que trae compilados esta imagen (de cualquier ramo: el runner valida el riesgo con el del ramo, ramo.ts). */
 export const adaptadores = crearRegistro<AdaptadorRegistrado>()
@@ -24,3 +25,7 @@ adaptadores.registrar(mapfreMoto)
 // con inventario. Se registra SOLO con su flag (allianz/hogar.ts, APAGADO; lo enciende Alberto). Apagado, un trabajo de hogar
 // cae como `datos` («sin adaptador») sin abrir el navegador. Además asegura no acepta aún trabajos de hogar (validarEntradaRamo).
 if (ALLIANZ_HOGAR_ACTIVO) adaptadores.registrar(allianzHogar)
+// Generali TURISMOS (18/10/2026, v0.1.0): mapa de 6 capturas hasta «Datos de Valoración»; lo que sigue (modelo/versión del
+// selector, tomador, antecedentes y PRECIO) es hueco con inventario. Se registra SOLO con su flag (generali/auto.ts, ENCENDIDO por
+// Alberto el 18/10/2026). La fila `seguros.companias_integracion` generali/auto sigue siendo la puerta de BD: sin ella no corre nada.
+if (GENERALI_AUTO_ACTIVO) adaptadores.registrar(generaliAuto)

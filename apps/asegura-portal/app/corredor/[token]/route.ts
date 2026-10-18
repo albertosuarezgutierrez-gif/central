@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { COOKIE_NAME, COOKIE_OPTS_CORREDOR, crearSesionCorredor } from '@/lib/auth'
-import { abrirVistaCorredor } from '@/lib/vista-corredor'
+import { abrirVistaCorredor, destinoVistaCorredor } from '@/lib/vista-corredor'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,7 +35,9 @@ export async function GET(req: Request, ctx: { params: Promise<{ token: string }
     return new NextResponse(texto, { status, headers: { 'content-type': 'text/plain; charset=utf-8' } })
   }
   const sesion = await crearSesionCorredor(r.clienteId)
-  const res = NextResponse.redirect(new URL('/boveda', req.url), 303)
+  // «Ver como el cliente» un presupuesto (18/10/2026): aterriza en su página. Solo un uuid compone la ruta (nada de
+  // redirecciones abiertas); la página vuelve a autorizar por el vínculo temporal de ESTA ficha.
+  const res = NextResponse.redirect(new URL(destinoVistaCorredor(new URL(req.url).searchParams.get('presupuesto')), req.url), 303)
   res.cookies.set(COOKIE_NAME, sesion, COOKIE_OPTS_CORREDOR)
   return res
 }

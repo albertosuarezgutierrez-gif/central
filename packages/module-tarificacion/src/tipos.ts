@@ -5,6 +5,7 @@
 // oferta «sin franquicia».
 
 import type { VehiculoConfirmado } from './vehiculo-confirmado.ts'
+import type { SeleccionVehiculo } from './formulario-auto.ts'
 
 /**
  * Ramos que el canal RPA sabe tarificar. Se amplía cuando haya un adaptador de otro ramo. 'hogar' (14/10/2026): contrato
@@ -173,6 +174,19 @@ export type OfertaNormalizada = {
   fechaTerminoPortal?: string | null
   /** Avisos de la compañía (se enseñan SIEMPRE) y del adaptador (lo que supuso o no pudo leer). */
   avisos: string[]
+  /**
+   * (18/10/2026, decisión de Alberto) Datos que la COMPAÑÍA usó de verdad para calcular, LEÍDOS de la pantalla del portal. Cada
+   * campo `null` = no se pudo leer (NUNCA se rellena con la ficha). Ausente = el bot no lo lee. Ver `datosUsadosDe` (ofertas.ts).
+   */
+  datosUsados?: DatosUsadosOferta | null
+}
+
+/** Lo que la compañía usó para el precio, leído del portal (sin matrícula ni datos del tomador salvo CP y localidad). */
+export type DatosUsadosOferta = {
+  codigoPostal: string | null
+  localidad: string | null
+  /** `denominacion`: cuando el portal da marca + modelo + versión en un solo texto (Mapfre). */
+  vehiculo: { marca: string | null; modelo: string | null; version: string | null; denominacion?: string | null }
 }
 
 /** Credenciales de UN portal, solo en memoria del worker (salen de fly secrets). */
@@ -196,7 +210,15 @@ export type ContextoTarificacion = {
  * `vehiculoConfirmado` (14/10/2026): el vehículo de catálogo que un bot confirmó por matrícula (hoy solo Mapfre). Sin
  * matrícula ni bastidor. Opcional; el encadenado hacia otros bots es la fase siguiente (todavía no viaja por el cable).
  */
-export type ResultadoAdaptador = { ofertas: OfertaNormalizada[]; vehiculoConfirmado?: VehiculoConfirmado | null }
+export type ResultadoAdaptador = {
+  ofertas: OfertaNormalizada[]
+  vehiculoConfirmado?: VehiculoConfirmado | null
+  /**
+   * (18/10/2026) Marca, modelo y versión (`descripcion`) de catálogo que el bot dejó FIJADOS en su portal, cuando el portal los
+   * da SEPARADOS. Viaja en el resultado `ok` y asegura lo encadena al bot de Generali de la misma oportunidad. Sin matrícula.
+   */
+  seleccionVehiculo?: SeleccionVehiculo | null
+}
 
 /**
  * Contrato de un adaptador de portal. `P` es la página del navegador (Playwright `Page` en el

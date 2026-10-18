@@ -34,7 +34,7 @@ import { cargarPropuestaOportunidad, referenciaOportunidad } from './propuesta-o
 import { trabajosVigentes, type TrabajoParaPropuesta } from './propuesta-oportunidad-reglas'
 import { URL_PLATAFORMA_DEFECTO } from './datos-cotizados'
 import {
-  ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
+  ACTOR_RPA, EUR_ESTIMADO_NARRATIVA, alertasDeAvisos, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, decidirSustitucion, enlaceOportunidad,
   filaOfertaRpa, mismoConjunto, nombreDePila, ofertasDeRespuesta, sobreCoberturasRpa, textoAvisoCorteRpa, textoAvisoPresupuestoRpa, type OfertaRpaLeida,
 } from './presupuesto-rpa-reglas'
 
@@ -197,7 +197,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
         firmeza: 'estimado',
         requiereRerate: false,
         referenciaVendor: null,
-        avisos: avisosOpcionRpa(l.oferta.avisos),
+        avisos: avisosOpcionRpa(l.oferta.avisos, l.oferta.compania),
         papeles: [] as string[],
         ofertaId: f.id,
         ...(fila.garantias ? { garantias: { origen: 'ofertas', ramo: op.ramoOferta, valores: fila.garantias } as Prisma.InputJsonValue } : {}),
@@ -206,6 +206,11 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
       }
     })
   if (opciones.length === 0) return { estado: 'nada', motivo: 'sin_opciones' }
+  // Datos que una compañía usó DISTINTOS de la ficha (CP/localidad fijados por su portal): alerta en el Telegram.
+  const alertas = [...new Set(vivas.flatMap((f) => {
+    const l = leidaDe.get(claveRpaDeFila(f.datosExtra) ?? '')
+    return l ? alertasDeAvisos(l.oferta.avisos, l.oferta.compania) : []
+  }))]
 
   const { venceEl } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
   // El token en claro no se guarda ni se devuelve: es un borrador; el aviso (`accion:'avisar'`) genera el enlace.
@@ -284,6 +289,7 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
         sinIa,
         sinLeer: descartadas,
         conservados: hecho.conservados,
+        alertas,
       }))
     : false
   return { estado: 'creado', presupuestoId: hecho.creado.id, referencia: hecho.creado.referencia ?? null, ofertas: opciones.length, narrativa: narrativa.fuente, sinIa, avisado, sustituidos: hecho.sustituidos, conservados: hecho.conservados }

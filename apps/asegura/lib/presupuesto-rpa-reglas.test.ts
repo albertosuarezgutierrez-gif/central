@@ -6,8 +6,9 @@ import { join } from 'node:path'
 import {
   ACTOR_RPA, AVISO_OPCION_RPA, MAX_LLAMADAS_IA_24H, avisosOpcionRpa, claveRpaDeFila, decidirDisparo, decidirIaAuto, enlaceOportunidad,
   filaOfertaRpa, garantiasRpa, mismoConjunto, nombreDePila, ofertasDeRespuesta, rangoPrimas, sobreCoberturasRpa, textoAvisoPresupuestoRpa,
-  borradorTocado, decidirSustitucion, repartirAvisos, textoAvisoCorteRpa,
+  borradorTocado, decidirSustitucion, repartirAvisos, textoAvisoCorteRpa, traducirSupuestos, trozosSupuestos, alertasDeAvisos,
 } from './presupuesto-rpa-reglas.ts'
+import { sobreCoberturasDeOferta } from './ofertas-reglas.ts'
 import { coberturasDeSobre } from './codeoscopic/coberturas-presupuesto.ts'
 
 const AHORA = new Date().toISOString()
@@ -75,9 +76,11 @@ test('los supuestos viajan como AVISO (y aparte en datos_extra.supuestos), nunca
   assert.equal(claveRpaDeFila({ rpaClave: 'x' }), null, 'una oferta subida a mano no es del bot')
   const a = avisosOpcionRpa(v[0].oferta.avisos)
   assert.equal(a[0], AVISO_OPCION_RPA)
-  assert.ok(a.includes('Precio con supuestos: conductor ocasional no declarado'))
+  assert.ok(!a.some((x) => x.startsWith('Precio con supuestos:')), 'el crudo de los supuestos no llega al cliente')
+  assert.ok(a.includes('Precio calculado con algún dato más que tu corredor confirmará antes de contratar.'), 'un supuesto sin traducción se reconoce sin inventarlo')
   assert.ok(!a.includes('Aviso de la compañía'), 'un aviso crudo del bot no llega al texto visible')
-  assert.deepEqual(f.datosExtra.avisosInternos, ['Aviso de la compañía'])
+  assert.deepEqual(f.datosExtra.avisosInternos, ['Precio con supuestos: conductor ocasional no declarado', 'Aviso de la compañía'])
+  assert.deepEqual(f.datosExtra.alertasCorredor, [])
 })
 
 test('avisos al cliente: solo supuestos con su formato exacto y la lista permitida; el resto, notas internas', () => {
@@ -92,7 +95,8 @@ test('avisos al cliente: solo supuestos con su formato exacto y la lista permiti
     '  ',
   ])
   assert.equal(r.cliente.length, 4)
-  assert.deepEqual(r.internos, ['precio con supuestos sin formato', 'El portal muestra un aviso en el título del paquete (icono de advertencia; texto no leído).', 'coberturas no leídas'])
+  assert.equal(r.cliente[0], 'Precio calculado con estas suposiciones: uso diario del vehículo; aparcado en garaje colectivo.')
+  assert.deepEqual(r.internos, ['Precio con supuestos: uso diario, garaje colectivo.', 'precio con supuestos sin formato', 'El portal muestra un aviso en el título del paquete (icono de advertencia; texto no leído).', 'coberturas no leídas'])
 })
 
 test('borrador del bot tocado por Alberto: ocultas, necesidades escritas, cualquier evento suyo; lo del propio bot no cuenta', () => {
@@ -205,4 +209,61 @@ test('cableado: el precio RPA guarda sus coberturas, el resultado dispara el bor
   assert.match(srv, /textoAvisoCorteRpa\(\{ \.\.\.base, motivo: 'caducada'/)
   assert.match(srv, /cliente: nombreDePila\(c\?\.nombre\)/)
   assert.equal(ACTOR_RPA, 'tarificador-rpa')
+})
+
+// El aviso REAL de Allianz en AS-26-0015 (18/10/2026): sin datos personales.
+const ALLIANZ_AS0015 = 'Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5), uso diario, código postal fijado por Allianz (no editable), distinto de la ficha, localidad fijada por Allianz (no editable), distinta de la ficha, tiempo como titular de un seguro: 9-10 años o más (supuesto favorable, no consta).'
+
+test('supuestos de Allianz (AS-26-0015): frase limpia al cliente; «había N», «fijado por», «no editable», «distinto de la ficha» a notas internas', () => {
+  assert.deepEqual(trozosSupuestos(ALLIANZ_AS0015), [
+    'vehículo/versión: el primero de la lista (supuesto, había 5)', 'uso diario',
+    'código postal fijado por Allianz (no editable), distinto de la ficha', 'localidad fijada por Allianz (no editable), distinta de la ficha',
+    'tiempo como titular de un seguro: 9-10 años o más (supuesto favorable, no consta)',
+  ])
+  const t = traducirSupuestos(ALLIANZ_AS0015, 'Allianz')
+  assert.equal(t.cliente, 'Precio calculado con estas suposiciones: la primera versión del vehículo que propone la compañía para tu matrícula; uso diario del vehículo; más de 9 años con un seguro a tu nombre; y algún dato más que tu corredor confirmará antes de contratar.')
+  for (const jerga of [/había/, /fijad[oa] por/, /no editable/, /de la ficha/, /código postal/, /localidad/, /supuesto favorable/, /no consta/]) assert.doesNotMatch(t.cliente!, jerga)
+  assert.deepEqual(t.internos, [ALLIANZ_AS0015], 'el crudo entero queda para Alberto')
+  assert.equal(t.alertas.length, 2)
+  assert.match(t.alertas[0], /^Allianz ha calculado el precio con un código postal DISTINTO/)
+  assert.match(t.alertas[1], /^Allianz ha calculado el precio con una localidad DISTINTA/)
+  const r = repartirAvisos([ALLIANZ_AS0015], 'Allianz')
+  assert.deepEqual(r.cliente, [t.cliente])
+  assert.deepEqual(r.internos, [ALLIANZ_AS0015])
+})
+
+test('supuestos de Mapfre (AS-26-0015) y alertas: sin dato distinto de la ficha no hay alerta; un fijado igual tampoco', () => {
+  const m = traducirSupuestos('Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5).', 'Mapfre')
+  assert.equal(m.cliente, 'Precio calculado con estas suposiciones: la primera versión del vehículo que propone la compañía para tu matrícula.')
+  assert.deepEqual(m.alertas, [])
+  assert.deepEqual(alertasDeAvisos(['Precio con supuestos: localidad: la que propone el portal para el CP, uso diario.', 'Aviso suelto'], 'Allianz'), [])
+  const dinamico = alertasDeAvisos(['Precio con supuestos: partes culpables: «1» (fijado por Allianz, distinto de la ficha).'], 'Allianz')
+  assert.equal(dinamico.length, 1, 'un antecedente fijado distinto de la ficha también es alerta')
+  assert.equal(traducirSupuestos('Aviso sin formato').cliente, null)
+  const tg = textoAvisoPresupuestoRpa({ cliente: null, referencia: 'OP-1', ramo: 'auto', companias: ['Allianz'], primas: [100], enlace: 'x', narrativa: 'ia', sinIa: null, alertas: traducirSupuestos(ALLIANZ_AS0015, 'Allianz').alertas })
+  assert.match(tg, /⚠️ <b>Alerta<\/b>: Allianz ha calculado el precio con un código postal DISTINTO/)
+  assert.doesNotMatch(textoAvisoPresupuestoRpa({ cliente: null, referencia: 'OP-1', ramo: 'auto', companias: [], primas: [100], enlace: 'x', narrativa: 'ia', sinIa: null }), /Alerta/)
+})
+
+test('no constan (AS-26-0015): ni el bot ni «Generar presupuesto» a mano escriben «vacias» para una oferta sin garantías leídas', () => {
+  // Bot: sin coberturas → sin sobre → la columna se queda en `[]` desnudo (= «no se intentó» para todos los lectores).
+  assert.equal(sobreCoberturasRpa([], AHORA), null)
+  assert.equal(coberturasDeSobre([]).lista, null)
+  const v = ofertasDeRespuesta({ ofertas: [oferta({ coberturas: [] })] }, { tarificacionId: TAR, trabajoId: JOB })!
+  const f = filaOfertaRpa(v[0])
+  assert.equal(f.garantias, null)
+  assert.equal(f.datosExtra.coberturasNoConstan, true)
+  // A mano (`opcionesDeOfertas`): garantías NULL o el bot dice «no constan» → sin sobre, nunca `vacias`.
+  assert.equal(sobreCoberturasDeOferta('generico', null, null, new Date()), null)
+  assert.equal(sobreCoberturasDeOferta('generico', {}, f.datosExtra, new Date()), null)
+  assert.equal(sobreCoberturasDeOferta('generico', { x: { estado: null, capital: null, limite: null, franquicia: null, evidencia: null } } as never, null, new Date()), null, 'garantías que no afirman nada: no constan')
+  assert.equal(sobreCoberturasDeOferta('comunidades', {}, null, new Date())?.estado, 'vacias', 'solo una lectura explícita sin garantías es «vacias»')
+})
+
+test('datosUsados (18/10/2026): lo que la compañía usó viaja de la respuesta del bot a datos_extra; sin él, null (no se inventa)', () => {
+  const du = { codigoPostal: '00001', localidad: 'LOCALIDAD', vehiculo: { marca: 'MARCA', modelo: 'MODELO', version: null } }
+  const v = ofertasDeRespuesta({ ofertas: [oferta({ datosUsados: du })] }, { tarificacionId: TAR, trabajoId: JOB })!
+  assert.deepEqual(filaOfertaRpa(v[0]).datosExtra.datosUsados, du)
+  const s = ofertasDeRespuesta({ ofertas: [oferta()] }, { tarificacionId: TAR, trabajoId: JOB })!
+  assert.equal(filaOfertaRpa(s[0]).datosExtra.datosUsados, null)
 })

@@ -1156,7 +1156,8 @@ export async function prepararPresupuestoDeOfertas(
             papeles: o.papeles,
             ofertaId: o.ofertaId,
             garantias: o.garantias as unknown as Prisma.InputJsonValue,
-            coberturas: o.coberturas as unknown as Prisma.InputJsonValue,
+            // Sin sobre (no constan) se deja el default `[]` desnudo = «no se intentó»; nunca `vacias`.
+            ...(o.coberturas ? { coberturas: o.coberturas as unknown as Prisma.InputJsonValue } : {}),
           })),
         },
         eventos: {
