@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T08:03:54Z",
-  "sha": "a2f845ae494e74203d83baa170e7e2d5ecb2a251",
+  "generadoEn": "2026-10-18T10:16:26Z",
+  "sha": "a5fd8b64889f4361085f65bf980c430f403c7aa7",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -47045,6 +47045,64 @@
       "hash": "3b92d749c497"
     },
     {
+      "ruta": "apps/asegura/lib/tarificador-compania-actual.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Compañía ACTUAL del vehículo para el bot de Allianz Turismos (18/10/2026). PURO: sin BD ni red (`node --test`). Causa: el desplegable «Compañía actual del vehículo» (Antecedentes) es obligatorio y el bot solo lee `companiaAnterior` / `companiaActual` del riesgo, que viene del formulario de bots. Si ",
+      "exporta": [
+        "nombreCompaniaUtil",
+        "companiaActualDeCliente",
+        "aplicarCompaniaActual"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 13
+        },
+        {
+          "nombre": "nombreCompaniaUtil",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 19,
+          "resumen": "Nombre de compañía utilizable o `null` (vacío, de cajón o con forma rara)."
+        },
+        {
+          "nombre": "companiaActualDeCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "competencia: unknown, polizas: readonly PolizaParaCompaniaActual[] | null",
+          "retorno": "string | null",
+          "linea": 40,
+          "resumen": "Compañía con la que está asegurado hoy el cliente, o `null` si no se sabe. PURA."
+        },
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 51
+        },
+        {
+          "nombre": "aplicarCompaniaActual",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, riesgo: unknown, actual: string | null",
+          "retorno": "unknown",
+          "linea": 57,
+          "resumen": "Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaActual` = la del cliente. Si ya trae alguna, o no se sabe la del cliente, devuelve el MISMO riesgo. Solo para auto; no"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "39862eef5f47"
+    },
+    {
       "ruta": "apps/asegura/lib/tarificador-coste-reglas.ts",
       "ambito": "apps/asegura",
       "resumen": "Coste por tarificación del bot (07/10/2026). PURO: sin BD ni red (`node --test`). Dos partes: IA (tabla `ai_usos`, app='asegura') + máquina de Fly (segundos de ejecución × tarifa). 🚨 Dato que no hay ≠ 0: sin lectura de `ai_usos`, o con suma 0 (columna con DEFAULT 0), la IA es `null` («no consta»); ",
@@ -51200,7 +51258,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 71
+          "linea": 72
         },
         {
           "nombre": "encolarTrabajo",
@@ -51208,7 +51266,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 99
+          "linea": 100
         },
         {
           "nombre": "leerTomadorFicha",
@@ -51216,7 +51274,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaTomadorFicha | null>",
-          "linea": 186,
+          "linea": 187,
           "resumen": "Nombre, apellidos, nacimiento y tipo de persona de la ficha TAL CUAL están en BD (lo cifrado, cifrado), de ESTA correduría. Los abre `lecturaTomadorFicha`. `null` = no hay ficha de esta correduría con"
         },
         {
@@ -51225,7 +51283,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaFichaTomadorAuto | null>",
-          "linea": 200,
+          "linea": 201,
           "resumen": "Tomador de la ficha para `fichaTomador` (Allianz auto/moto, 17/10/2026): las columnas que lee Codeoscopic (`clienteOrigenDe`) más `ciudad`/`provincia` y los carnés, TAL CUAL (lo cifrado, cifrado), de "
         },
         {
@@ -51234,8 +51292,17 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 221,
+          "linea": 222,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
+        },
+        {
+          "nombre": "leerCompaniaActualCliente",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null",
+          "retorno": "Promise<string | null>",
+          "linea": 229,
+          "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
           "nombre": "reclamarSiguiente",
@@ -51243,7 +51310,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 247,
+          "linea": 269,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -51252,7 +51319,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 302
+          "linea": 324
         },
         {
           "nombre": "lanzarPendientes",
@@ -51260,7 +51327,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 307,
+          "linea": 329,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -51269,7 +51336,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 332
+          "linea": 354
         },
         {
           "nombre": "destruirMaquina",
@@ -51277,7 +51344,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 346,
+          "linea": 368,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -51286,7 +51353,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 372,
+          "linea": 394,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -51295,7 +51362,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 444
+          "linea": 472
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -51303,7 +51370,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 584,
+          "linea": 612,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -51312,7 +51379,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 588
+          "linea": 616
         },
         {
           "nombre": "guardarAdjunto",
@@ -51320,7 +51387,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 638
+          "linea": 666
         },
         {
           "nombre": "guardarPasos",
@@ -51328,7 +51395,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 660,
+          "linea": 688,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -51337,7 +51404,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null",
           "retorno": "Promise<",
-          "linea": 679,
+          "linea": 707,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -51346,7 +51413,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 810,
+          "linea": 838,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -51357,7 +51424,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "00d7d1b21ebf"
+      "hash": "bb1a80c4ea47"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -220229,7 +220296,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4735,
-    "funciones": 17548
+    "archivos": 4736,
+    "funciones": 17554
   }
 }
