@@ -435,7 +435,8 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   // Compañía actual del vehículo (Allianz auto, 18/10/2026): si el riesgo no la trae, la del cliente (su póliza de la competencia
   // en la oportunidad, o su póliza de auto en vigor). Solo en la respuesta; no bloquea: sin dato, el bot lo deja como hueco.
   if (modo !== 'exploracion' && modo !== 'humo' && f.compania === 'allianz' && f.ramo === 'auto') {
-    riesgo = aplicarCompaniaActual(f.compania, f.ramo, riesgo, await leerCompaniaActualCliente(f.correduria_id, f.cliente_id, f.oportunidad_id))
+    const conCompania = aplicarCompaniaActual(f.compania, f.ramo, riesgo, await leerCompaniaActualCliente(f.correduria_id, f.cliente_id, f.oportunidad_id))
+    riesgo = conCompania
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base

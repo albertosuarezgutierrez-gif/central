@@ -384,6 +384,10 @@ test('v0.6.9 compañía actual: casa por clave normalizada y por contención de 
   assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Past'), [], 'nunca por trozo de palabra')
   assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Otra Compañía'), [], 'ninguna')
   assert.deepEqual(casarCompaniaActualTurismos(LISTA, 'Seguros S.A.'), [], 'solo palabras vacías: nada')
+  const CON_HERMANA = ['MAPFRE', 'MAPFRE VIDA', 'S.A.', 'ALFA SEGUROS']
+  assert.deepEqual(casarCompaniaActualTurismos(CON_HERMANA, 'Mapfre'), [0], 'igual exacta gana: no también «MAPFRE VIDA» por contención')
+  assert.deepEqual(casarCompaniaActualTurismos(CON_HERMANA, 'S.A.'), [], 'ficha vacía tras normalizar: nada, aunque una opción también normalice a vacío')
+  assert.deepEqual(casarCompaniaActualTurismos(CON_HERMANA, '  '), [], 'espacios: nada')
 })
 
 test('v0.6.5 «Localidad»: el portal propone OTRA → hueco sin teclear y sin «Siguiente»; sin dato y propuesta → se DECLARA; sin propuesta → hueco', async () => {
