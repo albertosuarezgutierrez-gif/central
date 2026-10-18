@@ -1890,6 +1890,73 @@ export async function marcarAntecedenteTurismosAllianz(marco: Frame, guard: Guar
   return r.estado === 'no_unica' ? { estado: 'no_unica', motivo: `${r.coincidencias} coincidencias` } : { estado: 'no_quedo' }
 }
 
+// ─────────── «Cinco últimos dígitos de la póliza actual» de Allianz AUTOS Turismos (v0.6.11 del bot, 19/10/2026) ───────────
+// Trabajo real: «Antecedentes» no habilita «SIGUIENTE» porque este `<input nxinput maxlength="5" required>` (aparece cuando hay compañía
+// actual) queda vacío. Esta puerta es el ÚNICO camino del adaptador para escribirlo. Dato sensible: ni el valor ni el error de Playwright
+// (que lo lleva) salen de aquí.
+
+export const ETIQUETA_POLIZA_ACTUAL_TURISMOS = 'Cinco últimos dígitos de la póliza actual'
+const RE_ETIQUETA_POLIZA_ACTUAL_TURISMOS = /^\s*cinco\s+[úu]ltimos\s+d[íi]gitos\s+de\s+la\s+p[óo]liza\s+actual\s*\*?\s*$/i
+const MS_APARECE_POLIZA_ACTUAL = 1_200
+const MS_TECLEO_POLIZA_ACTUAL = 3_000
+
+export type ResultadoPolizaActualTurismos =
+  /** El campo no está en la pantalla (sin compañía actual no se pinta): no se hace nada. */
+  | { estado: 'ausente' }
+  /** Escrito y releído igual. */
+  | { estado: 'escrita' }
+  /** El portal ya trae un valor: no se toca (el adaptador lo declara «fijado por Allianz»). */
+  | { estado: 'con_valor' }
+  /** Hay campo vacío pero no hay dato: nunca se inventa. */
+  | { estado: 'sin_dato' }
+  | { estado: 'no_unica'; motivo: string }
+  | { estado: 'no_quedo' }
+
+/**
+ * Escribe los 5 últimos dígitos de la póliza actual en «Antecedentes». Mismas exigencias que el resto de puertas (guard limpio, sin
+ * ventanas de red, marco de la app de Turismos, sin cuenta bancaria, pestaña «Antecedentes»: todo eso, bloqueo) y `comprobarBoton`
+ * + frontera bancaria sobre el control ANTES de escribir. `ultimos5` debe ser EXACTAMENTE 5 cifras (o `null` = no consta).
+ */
+export async function polizaActualTurismosAllianz(marco: Frame, guard: GuardEmision, ultimos5: string | null): Promise<ResultadoPolizaActualTurismos> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'póliza actual de Turismos con una ventana de red abierta')
+  if (ultimos5 !== null && !/^\d{5}$/.test(ultimos5)) throw new EmisionBloqueadaError('boton', 'póliza actual de Turismos: dato no válido')
+  if (marco.isDetached() || !esAppTurismosAllianz(marco.url())) throw new EmisionBloqueadaError('fase', 'póliza actual de Turismos fuera de la app de Allianz AUTOS')
+  await exigirSinCuentaBancaria(marco.page())
+  const pestanas = marco.getByRole('tab', { selected: true })
+  const activa = (await pestanas.count()) === 1 ? (await pestanas.first().innerText().catch(() => '')).replace(/\s+/g, ' ').trim() : ''
+  if (activa !== PASO_ANTECEDENTES_TURISMOS) throw new EmisionBloqueadaError('fase', `póliza actual de Turismos fuera del paso «${PASO_ANTECEDENTES_TURISMOS}»`)
+  // HTML real (4ec62749): `<nx-label><label for="null">…</label></nx-label>` y el input en un HERMANO posterior (`div[nxrow] > div[nxcol] >
+  // nx-formfield > input[maxlength=5]`): `getByLabel` no lo ve. Se localiza por ESTRUCTURA: el contenedor con un `nx-label` hijo directo
+  // cuyo texto casa, y dentro el `input[maxlength="5"]`. `getByLabel` queda como segundo camino (misma etiqueta con `for` válido).
+  // (regex sin barras: `.` = espacio/tilde; un texto que EMPIEZA así y no más largo que la etiqueta real)
+  const porEstructura = marco.locator(SEL_ZONA_APP_TURISMOS).locator('*:is(:has(> nx-label:text-matches("^ *cinco.+ltimos.+d.gitos.+de.+la.+p.liza.+actual[ *]*$", "i")), :has(> nx-label *:text-matches("^ *cinco.+ltimos.+d.gitos.+de.+la.+p.liza.+actual[ *]*$", "i"))) input[maxlength="5"]')
+  const porEtiqueta = marco.locator(SEL_ZONA_APP_TURISMOS).getByLabel(RE_ETIQUETA_POLIZA_ACTUAL_TURISMOS).and(marco.locator('input'))
+  const control = porEstructura
+    .or(porEtiqueta)
+    .and(marco.locator(SEL_FUERA_CABECERA_TURISMOS))
+    .filter({ visible: true })
+  // Aparece al elegir la compañía actual: se espera un momento a que Angular lo pinte.
+  const fin = Date.now() + MS_APARECE_POLIZA_ACTUAL
+  while ((await control.count().catch(() => 0)) === 0 && Date.now() < fin) await marco.page().waitForTimeout(150)
+  const n = await control.count().catch(() => 0)
+  if (n === 0) return { estado: 'ausente' }
+  if (n !== 1) return { estado: 'no_unica', motivo: `${n} campos` }
+  comprobarBoton(await descripcion(control))
+  await exigirCampoNoBancario(control)
+  if ((await control.inputValue().catch(() => '')).trim() !== '') return { estado: 'con_valor' }
+  if (ultimos5 === null) return { estado: 'sin_dato' }
+  if (!(await control.isEditable().catch(() => false))) return { estado: 'no_unica', motivo: 'campo no editable' }
+  try {
+    await control.fill(ultimos5, { timeout: MS_TECLEO_POLIZA_ACTUAL })
+  } catch {
+    return { estado: 'no_quedo' }
+  }
+  guard.comprobar()
+  await control.blur().catch(() => undefined)
+  return (await control.inputValue().catch(() => '')).trim() === ultimos5 ? { estado: 'escrita' } : { estado: 'no_quedo' }
+}
+
 // ─────────── «Compañía actual del vehículo» de Allianz AUTOS Turismos (v0.6.5 del bot, 17/10/2026) ───────────
 // HTML real del trabajo 590a330e: en «Antecedentes», un `nx-dropdown` (role=combobox, `aria-controls` → su panel de opciones) SIN
 // etiqueta de texto, dentro del `<form>` cuya cabecera `nx-x-common-header` dice «Compañía actual del vehículo». Las opciones solo

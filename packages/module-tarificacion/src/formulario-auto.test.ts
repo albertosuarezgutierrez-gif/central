@@ -81,6 +81,19 @@ describe('mat-select de Mapfre: uso, ámbito, clase del permiso y compañía ant
   it('compañía anterior: >80 o con caracteres prohibidos o no texto → error', () => {
     for (const v of ['x'.repeat(81), 'Cía <script>', 5]) expect(validarFormularioAuto({ ...base, companiaAnterior: v }, hoy).ok).toBe(false)
   })
+  it('últimos 5 dígitos de la póliza actual: 5 cifras exactas se conservan; ausente/vacío → ausente; otra cosa → error sin repetir el valor', () => {
+    const r = validarFormularioAuto({ ...base, polizaAnteriorUltimos5: ' 90817 ' }, hoy)
+    expect(r.ok && r.formulario.polizaAnteriorUltimos5).toBe('90817')
+    for (const v of [undefined, null, '']) {
+      const q = validarFormularioAuto({ ...base, polizaAnteriorUltimos5: v }, hoy)
+      expect(q.ok && 'polizaAnteriorUltimos5' in q.formulario).toBe(false)
+    }
+    for (const v of ['9081', '908171', '9081a', 'abcde', 90817, '90 817']) {
+      const q = validarFormularioAuto({ ...base, polizaAnteriorUltimos5: v }, hoy)
+      expect(q.ok).toBe(false)
+      expect(JSON.stringify(q)).not.toMatch(/9081|abcde/)
+    }
+  })
   it('los valores del validador casan con las claves de MAPEO_MAPFRE_AUTO del bot (mismo contrato)', async () => {
     const { USOS_VEHICULO, AMBITOS_CIRCULACION, CLASES_PERMISO } = await import('./index.ts')
     const { readFileSync } = await import('node:fs')

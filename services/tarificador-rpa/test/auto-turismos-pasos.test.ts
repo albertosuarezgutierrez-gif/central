@@ -11,7 +11,7 @@ import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame } from 'playwright'
 import { EmisionBloqueadaError, senalCuentaBancaria, type FormularioAuto } from '@central/module-tarificacion'
 import { clasificar, pideInventarioDom } from '../src/errores.ts'
-import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, instalarGuardEmision, marcarAntecedenteTurismosAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, pulsar } from '../src/guard.ts'
+import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, instalarGuardEmision, marcarAntecedenteTurismosAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz, pulsar } from '../src/guard.ts'
 import {
   ErrorMapaIncompleto,
   decidirCampoBloqueadoTurismos,
@@ -27,6 +27,10 @@ import {
   planDatosTurismos,
   recorrerPasosTurismos,
   rellenarDatosVehiculoTurismosConSupuesto,
+  HUECO_POLIZA_ACTUAL,
+  SUPUESTO_POLIZA_FIJADA,
+  obligatoriosPendientesTurismos,
+  polizaActualUltimos5De,
   SUPUESTO_LOCALIDAD_PORTAL,
   SUPUESTO_CP_FIJADO_DISTINTO,
   SUPUESTO_LOCALIDAD_FIJADA_DISTINTA,
@@ -80,6 +84,10 @@ type Opc = {
   antecedentesRaros?: boolean
   /** v0.6.10: el portal trae YA marcada la opción de este índice en el grupo (ant1 tiempo compañía, ant2 partes, ant3 titular). */
   antPrefijada?: Partial<Record<'ant1' | 'ant2' | 'ant3', number>>
+  /** v0.6.11: input «Cinco últimos dígitos de la póliza actual» (`required`, maxlength 5) en «Antecedentes»: vacío, ya con valor, o deshabilitado y vacío. */
+  poliza?: { valor?: string; bloqueada?: boolean }
+  /** v0.6.11: un obligatorio AJENO al bot en «Antecedentes» que deja «Siguiente» deshabilitado (el atasco genérico). */
+  obligatorioAjeno?: boolean
 }
 const COMPANIAS = ['ASEGURADORA ALFA, S.A.', 'Beta Seguros y Reaseguros', 'Gamma Mutua', 'Otras compañías']
 
@@ -122,8 +130,11 @@ function app(o: Opc = {}): string {
     : grupoAnt('ant1', '¿Cuánto tiempo llevas en tu compañía?', o.antecedentesRaros ? ['Poco', 'Algo', 'Bastante', 'Mucho', 'Muchísimo', 'Más de cuatro'] : ['Menos de 1 año', '1 año', '2 años', '3 años', '4 años', '5 años o más']) +
       grupoAnt('ant2', '¿Has declarado algún parte culpable con contrario en los últimos 5 años?', ['No he declarado ningún parte', '1 parte', '2 partes', '3 partes o más']) +
       grupoAnt('ant3', '¿Cuánto tiempo llevas como titular de un seguro de vehículo?', ['Menos de 1 año', '1-2 años', '3-4 años', '5-6 años', '7-8 años', '9-10 años o más'])
+  // Marcado REAL (documento 4ec62749): `for="null"` y el input en el nxrow HERMANO del nx-label.
+  const polizaHtml = o.poliza ? `<div><nx-label><label class="nx-label__content" for="null" id="ng-z-nx-label-411">Cinco últimos dígitos de la póliza actual</label></nx-label><div nxrow><div nxcol="3"><nx-formfield class="no-formfield-label"><div><input id="ng-z-pol" nxinput maxlength="5" required type="text"${o.poliza.valor ? ` value="${o.poliza.valor}"` : ''}${o.poliza.bloqueada ? ' disabled' : ''}></div></nx-formfield></div></div></div>` : ''
+  const ajenoHtml = o.obligatorioAjeno ? `<label for="ng-z-ajeno">Dato ajeno obligatorio *</label><input id="ng-z-ajeno" required type="text"><label for="ng-z-opc">Dato opcional</label><input id="ng-z-opc" type="text">` : ''
   const p3 = `<app-insurance><nx-mt-insured-policy-holder><form>${o.cabeceraCompaniaReal ? '<div nxlayout="grid nopadding"><nx-x-common-header><div><div><h3 class="nx-heading"><span>Compañía actual del vehículo</span></h3></div></div></nx-x-common-header></div>' : cab('Compañía actual del vehículo')}<label id="ng-z-l249" for="ng-z-dd250"></label><nx-dropdown role="combobox" id="ng-z-dd250" style="display:inline-block;min-width:120px;min-height:20px" tabindex="0" aria-labelledby="ng-z-l249" aria-controls="ng-z-nx-dropdown-modal-251"><div id="ng-z-dd250-r">${o.companiaPrefijada ?? ''}</div></nx-dropdown></form></nx-mt-insured-policy-holder>
-  ${antecedentes}<nx-mt-offerings-start-date>${cab('Fecha de inicio del seguro')}${texto('ng-z-ef', '¿Cuándo quieres que comience tu seguro?', `required min="${iso(new Date())}T00:00:00Z" max="${iso(masDias(90))}T00:00:00Z"`)}</nx-mt-offerings-start-date></app-insurance>`
+  ${antecedentes}${polizaHtml}${ajenoHtml}<nx-mt-offerings-start-date>${cab('Fecha de inicio del seguro')}${texto('ng-z-ef', '¿Cuándo quieres que comience tu seguro?', `required min="${iso(new Date())}T00:00:00Z" max="${iso(masDias(90))}T00:00:00Z"`)}</nx-mt-offerings-start-date></app-insurance>`
   const p4 = `<nx-mt-summary-panel><nx-expansion-panel><nx-expansion-panel-header aria-expanded="false">Vista Ampliada</nx-expansion-panel-header><div id="vista" hidden><nx-mt-agent-options><form>
     ${texto('ng-z-niv', 'Nivel antecedentes', 'disabled')}${texto('ng-z-col', 'Colaborador', 'maxlength="4"')}</form></nx-mt-agent-options></div></nx-expansion-panel></nx-mt-summary-panel><p>Precio no vinculante.</p>`
   const p7 = `${texto('ng-z-iban', 'IBAN')}${texto('ng-z-bic', 'BIC/SWIFT')}`
@@ -156,6 +167,7 @@ function app(o: Opc = {}): string {
       it.addEventListener('click', () => { $('#ng-z-dd250-r').textContent = t; ov.remove(); }); ov.firstChild.appendChild(it); });
   }, 100); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const p = document.getElementById('ng-z-nx-dropdown-modal-251'); if (p) p.parentElement.remove(); } });
+  ${o.obligatorioAjeno ? `document.querySelectorAll('.sig')[2].disabled = true; $('#ng-z-ajeno').addEventListener('input', () => { document.querySelectorAll('.sig')[2].disabled = $('#ng-z-ajeno').value === ''; });` : ''}
   document.querySelectorAll('.sig').forEach((b, i) => b.addEventListener('click', () => {
     const ps = document.querySelectorAll('[role=tabpanel]'); const ts = document.querySelectorAll('nx-multi-step-item');
     ps[i].hidden = true; ps[i + 1].hidden = false;
@@ -215,6 +227,11 @@ async function abrir(o: Opc = {}) {
       pulsados.push(`compania:${r.estado}`)
       return r
     },
+    polizaActualTurismos: async (m: Frame, ultimos5: string | null) => {
+      const r = await polizaActualTurismosAllianz(m, guard, ultimos5)
+      pulsados.push(`poliza:${r.estado}`)
+      return r
+    },
   }
   const marco = await marcoFormularioTurismos(page, 5_000)
   const clics = () => marco.evaluate(() => (window as unknown as { __clics: string[] }).__clics.filter((c) => c.includes(':')))
@@ -233,11 +250,11 @@ const sinPersonales = (m: string) => PERSONALES.every((v) => !m.includes(v))
 test('v0.6.5 plan (puro): cada campo en SU paso, carné MM/AAAA, colaborador y nivel de antecedentes ya no son huecos, dirección fuera', () => {
   const HOY = new Date('2026-10-15T10:00:00Z')
   const { pasos, supuestos } = planDatosTurismos(FORM, HOY)
-  const claves = pasos.map((p) => [p.paso, p.operaciones.map((o) => (o.tipo === 'opcion' ? o.clave : o.tipo === 'texto' ? o.etiqueta : o.tipo === 'compania' ? 'Compañía actual' : o.tipo === 'antecedente' ? `antecedente:${o.clave}` : 'Localidad'))])
+  const claves = pasos.map((p) => [p.paso, p.operaciones.map((o) => (o.tipo === 'opcion' ? o.clave : o.tipo === 'texto' ? o.etiqueta : o.tipo === 'compania' ? 'Compañía actual' : o.tipo === 'poliza' ? 'Póliza actual' : o.tipo === 'antecedente' ? `antecedente:${o.clave}` : 'Localidad'))])
   assert.deepEqual(claves, [
     ['Datos del vehículo', ['compra:ya_lo_tenia', 'uso:diario', 'garaje:calle']],
     ['Datos personales', ['tomador:individual', 'Número de documento', 'Código postal', 'Localidad', 'tomador_propietario:si', 'tomador_conduce:si', 'Fecha de nacimiento del conductor', 'Fecha de expedición de carnet', 'segundo_conductor:no']],
-    ['Antecedentes', ['Compañía actual', 'antecedente:compania_tiempo', 'antecedente:partes_culpables', 'antecedente:titular_tiempo', '¿Cuándo quieres que comience tu seguro?']],
+    ['Antecedentes', ['Compañía actual', 'Póliza actual', 'antecedente:compania_tiempo', 'antecedente:partes_culpables', 'antecedente:titular_tiempo', '¿Cuándo quieres que comience tu seguro?']],
   ])
   const valor = (etq: string) => pasos.flatMap((p) => p.operaciones).flatMap((o) => (o.tipo === 'texto' && o.etiqueta === etq ? [o.valor] : []))[0]
   assert.equal(valor('Fecha de nacimiento del conductor'), '03/02/1990')
@@ -294,7 +311,7 @@ test('v0.6.5 recorrido real: los TRES pasos con su «Siguiente» (bloque del tom
     assert.equal(await pasoActivoTurismos(marco), 'Selección de paquete')
     assert.deepEqual(pulsados, [
       'opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'tarjeta:0', 'opcion:compra:ya_lo_tenia', 'opcion:uso:diario', 'opcion:garaje:calle',
-      'Siguiente', 'Siguiente', 'compania:sin_elegir', 'antecedente:compania_tiempo:marcada', 'antecedente:partes_culpables:marcada', 'antecedente:titular_tiempo:marcada', 'Siguiente',
+      'Siguiente', 'Siguiente', 'compania:sin_elegir', 'poliza:ausente', 'antecedente:compania_tiempo:marcada', 'antecedente:partes_culpables:marcada', 'antecedente:titular_tiempo:marcada', 'Siguiente',
     ], 'tomador/propietario/conductor ya estaban en su valor: no se pulsan; nunca «Anterior»')
     assert.equal(await valor('ng-z-doc'), '00000000T')
     assert.equal(await valor('ng-z-cp1'), '00000', 'CP del bloque del TOMADOR')
@@ -750,5 +767,114 @@ test('v0.6.10 «Antecedentes»: la máxima sin casar por texto → se pulsa la �
     assert.ok(!raro.error.message.includes(SUPUESTO_TIEMPO_COMPANIA), 'no dice «5 años o más» si no es lo que se pulsó')
   } finally {
     await raro.context.close()
+  }
+})
+
+// ─────────── v0.6.11 · «Cinco últimos dígitos de la póliza actual» ───────────
+// Números INVENTADOS (90817); ningún dato real.
+const POL = '90817'
+const valorPoliza = (a: { marco: Frame }) => a.marco.locator('#ng-z-pol').inputValue()
+
+test('v0.6.11 plan (puro): la clave del riesgo solo vale con 5 cifras exactas; la operación va tras la compañía y no genera supuesto', () => {
+  assert.equal(polizaActualUltimos5De({ polizaAnteriorUltimos5: POL }), POL)
+  for (const v of ['9081', '908171', 'abcde', ' ', null, undefined, 90817]) assert.equal(polizaActualUltimos5De({ polizaAnteriorUltimos5: v }), null, String(v))
+  const HOY = new Date('2026-10-15T10:00:00Z')
+  const ant = planDatosTurismos({ ...FORM, polizaAnteriorUltimos5: POL } as FormularioAuto, HOY).pasos[2]
+  assert.deepEqual(ant.operaciones.slice(0, 2).map((o) => o.tipo), ['compania', 'poliza'])
+  const { supuestos } = planDatosTurismos({ ...FORM, polizaAnteriorUltimos5: POL } as FormularioAuto, HOY)
+  assert.ok(!supuestos?.includes('póliza') && !JSON.stringify(supuestos).includes(POL))
+})
+
+test('v0.6.11 con dato: escribe los 5 dígitos en el input por su etiqueta, sin otros campos, y el dato no sale en ningún mensaje', async () => {
+  const r = await hastaCompania({ poliza: {} }, { ...FORM, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: POL } as FormularioAuto)
+  try {
+    assert.equal(await valorPoliza(r), POL)
+    assert.ok(r.pulsados.includes('poliza:escrita'))
+    assert.ok(/Selección de paquete/.test(r.error.message), 'sin hueco: se avanza')
+    assert.ok(!r.error.message.includes(POL), 'los 5 dígitos no van a los supuestos ni al error')
+    assert.ok(!JSON.stringify(clasificar(r.error)).includes(POL))
+    assert.ok(!r.error.message.includes(SUPUESTO_POLIZA_FIJADA) && !r.error.message.includes(HUECO_POLIZA_ACTUAL))
+    assert.equal(await r.valor('ng-z-col'), '', 'nada más tocado')
+  } finally {
+    await r.context.close()
+  }
+})
+
+test('v0.6.11 sin dato: hueco con nombre, el campo queda vacío y NO se pulsa «Siguiente» de Antecedentes', async () => {
+  const r = await hastaCompania({ poliza: {} }, { ...FORM, companiaAnterior: 'Aseguradora Alfa' })
+  try {
+    assert.equal(await valorPoliza(r), '', 'nunca se inventa')
+    assert.ok(r.pulsados.includes('poliza:sin_dato'))
+    assert.ok(esMapa(/póliza actual: faltan los 5 últimos dígitos/)(r.error), r.error.message)
+    assert.ok(!r.pulsados.includes('Siguiente'.toLowerCase()) && (await r.clics()).every((c) => !c.includes('ng-z-ef')), 'no se avanzó')
+    assert.equal(await r.marco.locator('[role=tab][aria-selected=true]').innerText(), 'Antecedentes', 'sigue en Antecedentes')
+    assert.equal(HUECO_POLIZA_ACTUAL, 'póliza actual: faltan los 5 últimos dígitos')
+  } finally {
+    await r.context.close()
+  }
+})
+
+test('v0.6.11 el portal ya trae valor: no se toca y se declara «fijada por Allianz» (sin el valor)', async () => {
+  const r = await hastaCompania({ poliza: { valor: '12345' } }, { ...FORM, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: POL } as FormularioAuto)
+  try {
+    assert.equal(await valorPoliza(r), '12345', 'no se pisa')
+    assert.ok(r.pulsados.includes('poliza:con_valor'))
+    assert.ok(r.error.message.includes(SUPUESTO_POLIZA_FIJADA), r.error.message)
+    assert.ok(!r.error.message.includes('12345') && !r.error.message.includes(POL))
+  } finally {
+    await r.context.close()
+  }
+})
+
+test('v0.6.11 campo deshabilitado y vacío → hueco (no se teclea); campo ausente → nada, ni hueco ni supuesto', async () => {
+  const bloq = await hastaCompania({ poliza: { bloqueada: true } }, { ...FORM, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: POL } as FormularioAuto)
+  try {
+    assert.equal(await valorPoliza(bloq), '')
+    assert.ok(esMapa(/Cinco últimos dígitos de la póliza actual.*no editable/)(bloq.error), bloq.error.message)
+    assert.ok(!bloq.error.message.includes(POL))
+  } finally {
+    await bloq.context.close()
+  }
+  const aus = await hastaCompania({}, { ...FORM, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: POL } as FormularioAuto)
+  try {
+    assert.ok(aus.pulsados.includes('poliza:ausente'))
+    assert.ok(/Selección de paquete/.test(aus.error.message))
+    assert.ok(!aus.error.message.includes('póliza actual') && !aus.error.message.includes(POL))
+  } finally {
+    await aus.context.close()
+  }
+})
+
+test('guard v0.6.11: la puerta de la póliza actual fuera de «Antecedentes» es bloqueo; un dato que no son 5 cifras es bloqueo (sin repetirlo)', async () => {
+  const a = await abrir({ poliza: {} })
+  try {
+    await a.aPersonales()
+    await assert.rejects(polizaActualTurismosAllianz(a.marco, a.guard, POL), EmisionBloqueadaError)
+    assert.equal(await valorPoliza(a).catch(() => ''), '')
+    await a.marco.evaluate(() => { (document.querySelector('#cdk-stepper-0-content-1 .sig') as HTMLButtonElement).click() })
+    for (const malo of ['9081', '908171', '9081a', "90817'; x"]) {
+      await assert.rejects(polizaActualTurismosAllianz(a.marco, a.guard, malo), (e: unknown) => e instanceof EmisionBloqueadaError && !(e as Error).message.includes(malo))
+    }
+    assert.deepEqual(await polizaActualTurismosAllianz(a.marco, a.guard, POL), { estado: 'escrita' })
+    assert.deepEqual(await polizaActualTurismosAllianz(a.marco, a.guard, '11111'), { estado: 'con_valor' })
+    assert.equal(await valorPoliza(a), POL)
+  } finally {
+    await a.context.close()
+  }
+})
+
+test('v0.6.11 privacidad: clasificar tapa un fill(...) crudo con los 5 dígitos', () => {
+  assert.ok(!clasificar(new Error(`locator.fill("${POL}"): Timeout 3000ms exceeded`)).mensaje.includes(POL))
+})
+
+test('v0.6.11 atasco genérico de «SIGUIENTE»: lista las etiquetas de los obligatorios vacíos del paso (ni los opcionales, ni los de otros pasos, ni valores)', async () => {
+  const r = await hastaCompania({ obligatorioAjeno: true, poliza: {} }, { ...FORM, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: POL } as FormularioAuto)
+  try {
+    assert.ok(esMapa(/qué falta para habilitar «SIGUIENTE» en «Antecedentes» \(obligatorios sin rellenar o inválidos: «Dato ajeno obligatorio»\)/)(r.error), r.error.message)
+    assert.ok(!/Dato opcional|Matrícula|Número de documento/.test(r.error.message), 'solo los del paso activo')
+    assert.ok(!r.error.message.includes(POL))
+    assert.deepEqual(await obligatoriosPendientesTurismos(r.marco), ['Dato ajeno obligatorio'])
+  } finally {
+    await r.context.close()
   }
 })

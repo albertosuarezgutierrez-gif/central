@@ -1,3 +1,4 @@
+// v0.6.11 (19/10/2026, trabajo real atascado en «Antecedentes» con «qué falta para habilitar SIGUIENTE»): el input obligatorio «Cinco últimos dígitos de la póliza actual» (aparece al haber compañía actual) se rellena con `polizaAnteriorUltimos5` del riesgo por la puerta `polizaActualTurismosAllianz` (guard.ts); sin dato → hueco con nombre, nunca inventado; ya con valor → «fijada por Allianz». El atasco genérico lista ahora las etiquetas de los obligatorios vacíos/inválidos del paso. Los 5 dígitos nunca van a supuestos, avisos ni errores.
 // v0.6.10 (18/10/2026, decisión de Alberto «supuesto favorable»): «Antecedentes» contesta las 3 preguntas que bloqueaban «SIGUIENTE» (tiempo en la compañía, partes culpables, tiempo como titular): con dato del riesgo la opción que casa; sin dato, la más favorable y DECLARADA (guard.ts).
 // v0.6.9 (18/10/2026): «Compañía actual del vehículo» casa también por contención de la clave de la ficha en la opción (solo si hay UNA candidata; guard.ts).
 // v0.6.8 (18/10/2026): «Compañía actual del vehículo» se localiza también cuando la cabecera real no lleva `text` ni es hija directa del formulario (guard.ts).
@@ -91,6 +92,7 @@ import {
   resolverPoblacion,
   resolverVersion,
   supuestosAuto,
+  senalCuentaBancaria,
   textoSupuestos,
   vehiculoDesdeLectura,
   type CandidatoVersion,
@@ -112,6 +114,7 @@ import {
   ENCABEZADO_TARJETAS_VEHICULO_TURISMOS,
   type ClaveAntecedenteTurismos,
   ErrorAvanceSinLlegar,
+  ETIQUETA_POLIZA_ACTUAL_TURISMOS,
   esAppTurismosAllianz,
   exigirCampoNoBancario,
   leerTarjetasVehiculoTurismosAllianz,
@@ -989,7 +992,7 @@ export const RE_BOTON_SIGUIENTE_TURISMOS = /^\s*siguiente\s*$/i
 export const botonSiguienteTurismos = (marco: Pick<Frame, 'locator'>): Locator => botonTurismos(marco, RE_BOTON_SIGUIENTE_TURISMOS)
 
 /** `formador` (opcional): solo para el atasco de «Matrícula» (candidatos con pista, se aprende al elegir). */
-export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos'>>
+export type CtxTurismos = Pick<ContextoPortal, 'pulsar' | 'pausaAccion' | 'marcarOpcionTurismos' | 'marcarTarjetaVehiculoTurismos'> & Partial<Pick<ContextoPortal, 'formador' | 'companiaActualTurismos' | 'marcarAntecedenteTurismos' | 'polizaActualTurismos'>>
 
 const ESPERA_CONTROL_TURISMOS_MS = 8_000
 /** Espera por campo del resto del paso (la pantalla ya está pintada tras la consulta: no se acumulan 8 s por hueco). */
@@ -1244,8 +1247,12 @@ export const SUPUESTO_TIEMPO_COMPANIA = 'tiempo en la compañía: 5 años o más
 export const SUPUESTO_PARTES_CULPABLES = 'partes culpables: ninguno (supuesto favorable, no consta)'
 export const SUPUESTO_TIEMPO_TITULAR = 'tiempo como titular de un seguro: 9-10 años o más (supuesto favorable, no consta)'
 // v0.6.10: supuestos DINÁMICOS de «Antecedentes» (nombran la etiqueta REAL del portal): «<prefijo>: «<etiqueta>» (…)».
+/** v0.6.11: el input «Cinco últimos dígitos de la póliza actual» ya traía valor: se acepta sin tocar y se declara (sin el valor). */
+export const SUPUESTO_POLIZA_FIJADA = 'póliza actual: fijada por Allianz (ya traía valor)'
+/** v0.6.11: hueco con nombre cuando el campo está en pantalla, vacío, y la ficha no trae el número (nunca se inventa). */
+export const HUECO_POLIZA_ACTUAL = 'póliza actual: faltan los 5 últimos dígitos'
 const PREFIJOS_ANTECEDENTES_TURISMOS = ['tiempo en la compañía', 'partes culpables', 'tiempo como titular de un seguro'] as const
-const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA, SUPUESTO_TIEMPO_COMPANIA, SUPUESTO_PARTES_CULPABLES, SUPUESTO_TIEMPO_TITULAR] as const
+const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA, SUPUESTO_TIEMPO_COMPANIA, SUPUESTO_PARTES_CULPABLES, SUPUESTO_TIEMPO_TITULAR, SUPUESTO_POLIZA_FIJADA] as const
 export const ETIQUETA_COMPANIA_ACTUAL = 'Compañía actual del vehículo'
 
 /**
@@ -1257,6 +1264,15 @@ export function companiaActualDe(f: object): string | null {
   return textoDe(r.companiaAnterior) ?? textoDe(r.companiaActual)
 }
 
+/**
+ * Últimos 5 dígitos de la póliza ACTUAL, del riesgo (`polizaAnteriorUltimos5`, que añade asegura al entregar): solo si son
+ * EXACTAMENTE 5 cifras. `null` = no consta: nunca se inventa. Dato sensible. Puro.
+ */
+export function polizaActualUltimos5De(f: object): string | null {
+  const v = textoDe((f as { polizaAnteriorUltimos5?: unknown }).polizaAnteriorUltimos5)
+  return v !== null && /^\d{5}$/.test(v) ? v : null
+}
+
 export type OperacionTurismos =
   | { tipo: 'opcion'; clave: string; que: string; supuesto?: string }
   /** `iso`: la fecha ISO detrás de `valor` (para el rango `min`/`max` del portal). `bloqueTomador`: se busca en el bloque del tomador. */
@@ -1265,6 +1281,8 @@ export type OperacionTurismos =
   | { tipo: 'localidad'; valor: string | null }
   /** «Compañía actual del vehículo» por la puerta de guard.ts. `valor` null = no consta: se deja vacía y se DECLARA. */
   | { tipo: 'compania'; valor: string | null }
+  /** v0.6.11: los 5 últimos dígitos de la póliza actual por la puerta de guard.ts. `valor` null = no consta (hueco si el campo está en pantalla). Sensible. */
+  | { tipo: 'poliza'; valor: string | null }
   /** v0.6.10: pregunta de «Antecedentes» por la puerta de guard.ts. `dato` null = no consta: la más favorable, DECLARADA con `supuesto`. */
   | { tipo: 'antecedente'; clave: ClaveAntecedenteTurismos; dato: number | null; que: string; supuesto: string }
 
@@ -1318,7 +1336,7 @@ export function supuestosAplicadosTurismos(s: SupuestosAuto, aplicados: Iterable
 /** Etiquetas de supuesto que lleva el plan (lo que se INTENTARÁ aplicar). Puro. */
 const supuestosDelPlan = (ops: readonly OperacionTurismos[]): string[] =>
   ops.flatMap((o) =>
-    o.tipo === 'localidad' ? (o.valor === null ? [SUPUESTO_LOCALIDAD_PORTAL] : []) : o.tipo === 'compania' ? (o.valor === null ? [SUPUESTO_COMPANIA_NO_CONSTA] : []) : o.tipo === 'antecedente' ? (o.dato === null ? [o.supuesto] : []) : o.supuesto ? [o.supuesto] : [],
+    o.tipo === 'localidad' ? (o.valor === null ? [SUPUESTO_LOCALIDAD_PORTAL] : []) : o.tipo === 'compania' ? (o.valor === null ? [SUPUESTO_COMPANIA_NO_CONSTA] : []) : o.tipo === 'poliza' ? [] : o.tipo === 'antecedente' ? (o.dato === null ? [o.supuesto] : []) : o.supuesto ? [o.supuesto] : [],
   )
 
 /** ISO AAAA-MM-DD válido → `{ dia: 'DD/MM/AAAA', mes: 'MM/AAAA' }`; si no, `null` (hueco, nunca una excepción en el plan). Puro. */
@@ -1380,7 +1398,7 @@ export function planDatosTurismos(f: FormularioAuto, hoy: Date = new Date()): { 
   else per.huecos.push('el segundo conductor «Sí» (el riesgo trae conductor ocasional: sus datos no tienen mapa)')
 
   // 3 «Antecedentes»: la compañía actual (decisión de Alberto: «procede de otra compañía»; la del riesgo si consta) y la fecha de efecto.
-  const ant: PasoPlanTurismos = { paso: PASO_ANTECEDENTES, operaciones: [{ tipo: 'compania', valor: companiaActualDe(f) }], huecos: [] }
+  const ant: PasoPlanTurismos = { paso: PASO_ANTECEDENTES, operaciones: [{ tipo: 'compania', valor: companiaActualDe(f) }, { tipo: 'poliza', valor: polizaActualUltimos5De(f) }], huecos: [] }
   // v0.6.10: tres preguntas que bloquean «SIGUIENTE». Dato del formulario si existe (0 es un DATO); si no, la más favorable y declarada.
   const entero = (x: unknown): number | null => (typeof x === 'number' && Number.isInteger(x) && x >= 0 ? x : null)
   ant.operaciones.push({ tipo: 'antecedente', clave: 'compania_tiempo', dato: entero(f.aniosAseguradoAnterior), que: 'el tiempo en la compañía', supuesto: SUPUESTO_TIEMPO_COMPANIA })
@@ -1565,6 +1583,20 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       else huecos.push(`«${ETIQUETA_COMPANIA_ACTUAL}» (${r.motivo})`)
       continue
     }
+    if (op.tipo === 'poliza') {
+      const puerta = ctx.polizaActualTurismos
+      if (typeof puerta !== 'function') {
+        huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (sin la puerta guardada en el contexto del worker)`)
+        continue
+      }
+      // Ni el dato ni nada derivado de él sale en huecos ni supuestos: solo estados.
+      const r = await puerta(marco, op.valor)
+      if (r.estado === 'con_valor') aplicados.push(SUPUESTO_POLIZA_FIJADA)
+      else if (r.estado === 'sin_dato') huecos.push(HUECO_POLIZA_ACTUAL)
+      else if (r.estado === 'no_unica') huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (${r.motivo})`)
+      else if (r.estado === 'no_quedo') huecos.push(`«${ETIQUETA_POLIZA_ACTUAL_TURISMOS}» (el portal no dejó puesto el valor)`)
+      continue
+    }
     if (op.tipo === 'antecedente') {
       const puerta = ctx.marcarAntecedenteTurismos
       if (typeof puerta !== 'function') {
@@ -1706,6 +1738,35 @@ export async function rellenarDatosRiesgoTurismos(
 }
 
 /**
+ * v0.6.11: etiquetas de los campos OBLIGATORIOS (`required` / `aria-required`) del paso visible que están vacíos o inválidos
+ * (`aria-invalid`, `ng-invalid`), para que el atasco de «SIGUIENTE» diga qué falta. SOLO etiquetas (nunca valores). Máx. 8 de 60
+ * caracteres; sin las que describen una cuenta bancaria. Solo lectura; un fallo de lectura → vacío.
+ */
+export async function obligatoriosPendientesTurismos(marco: Pick<Frame, 'locator'>): Promise<string[]> {
+  // Sin funciones con nombre dentro de `evaluate` (tsx les mete `__name`, que no existe en la página).
+  const etiquetas = await marco
+    .locator('[role=tabpanel]:not([hidden]) :is(input,textarea,select)[required], [role=tabpanel]:not([hidden]) :is(input,textarea,select)[aria-required=true]')
+    .evaluateAll((els) => {
+      const salida: string[] = []
+      for (const el of els) {
+        const h = el as HTMLInputElement
+        const cs = getComputedStyle(h)
+        if (h.disabled || h.type === 'hidden' || cs.display === 'none' || cs.visibility === 'hidden' || h.getClientRects().length === 0) continue
+        const vacio = (h.value ?? '').trim() === ''
+        const invalido = h.getAttribute('aria-invalid') === 'true' || h.classList.contains('ng-invalid')
+        if (!vacio && !invalido) continue
+        const lab = h.labels && h.labels.length > 0 ? (h.labels[0].cloneNode(true) as HTMLElement) : null
+        if (lab) lab.querySelectorAll('input,select,textarea,button').forEach((x) => x.remove())
+        const t = ((lab ? lab.textContent : null) || h.getAttribute('aria-label') || h.getAttribute('placeholder') || '').replace(/\s+/g, ' ').replace(/\s*\*\s*$/, '').trim()
+        salida.push(t === '' ? '(campo sin etiqueta)' : t.slice(0, 60))
+      }
+      return salida
+    })
+    .catch(() => [] as string[])
+  return [...new Set(etiquetas.filter((t) => senalCuentaBancaria([t]) === null))].slice(0, 8)
+}
+
+/**
  * «SIGUIENTE» de `paso` por `ctx.pulsar` (guard de emisión) y espera a que la pestaña seleccionada pase a `siguiente`. Nunca pulsa
  * nada más que esa navegación. Solo con `paso` seleccionado y SIN `huecos` (con alguno, `ErrorMapaIncompleto` con la lista +
  * inventario ANTES de pulsar: Allianz guardaría el paso con sus valores por defecto). «SIGUIENTE» ausente, deshabilitado o sin
@@ -1727,7 +1788,10 @@ export async function avanzarPasoTurismos(
   if (huecos.length > 0) throw new ErrorMapaIncompleto(conHuecos(`los datos de «${paso}» antes de «${BOTON_SIGUIENTE_TURISMOS}» (no se pulsa con huecos)`), true)
   const boton = botonSiguienteTurismos(marco)
   if ((await boton.count()) !== 1) throw new ErrorMapaIncompleto(conHuecos(`el botón «${BOTON_SIGUIENTE_TURISMOS}» del paso «${paso}»`), true)
-  if (!(await habilitadoDeVerdad(boton))) throw new ErrorMapaIncompleto(conHuecos(`qué falta para habilitar «${BOTON_SIGUIENTE_TURISMOS}» en «${paso}»`), true)
+  if (!(await habilitadoDeVerdad(boton))) {
+    const pendientes = await obligatoriosPendientesTurismos(marco)
+    throw new ErrorMapaIncompleto(conHuecos(`qué falta para habilitar «${BOTON_SIGUIENTE_TURISMOS}» en «${paso}»${pendientes.length > 0 ? ` (obligatorios sin rellenar o inválidos: ${pendientes.map((e) => `«${e}»`).join(' · ')})` : ''}`), true)
+  }
   const activa = await pasoActivoTurismos(marco)
   if (activa !== paso) throw new ErrorMapaIncompleto(conHuecos(`el paso activo del asistente (se esperaba «${paso}», la pestaña seleccionada es «${activa.slice(0, 40) || 'desconocida'}»)`), true)
   await ctx.pausaAccion()
@@ -1830,8 +1894,8 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     compania: 'allianz',
     ramo,
     credencial: 'ALLIANZ_EPAC',
-    // Moto no cambia en la 0.6.1 … 0.6.10 (solo Turismos): conserva su versión.
-    version: ramo === 'moto' ? '0.6.0' : '0.6.10',
+    // Moto no cambia en la 0.6.1 … 0.6.11 (solo Turismos): conserva su versión.
+    version: ramo === 'moto' ? '0.6.0' : '0.6.11',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

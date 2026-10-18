@@ -27,7 +27,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
-import { aplicarCompaniaActual, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { hayBotVersion, hayPasos } from './esquema-bd'
@@ -246,6 +246,18 @@ async function leerCompaniaActualCliente(correduriaId: string, clienteId: string
   }
 }
 
+/** Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló. */
+async function leerNumeroPolizaActual(correduriaId: string, oportunidadId: string | null): Promise<string | null> {
+  if (!oportunidadId) return null
+  try {
+    const f = await prisma.$queryRaw<{ n: string | null }[]>`
+      select poliza_competencia->'historialDeclarado'->>'numeroPoliza' as n from seguros.oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+    return f[0]?.n ?? null
+  } catch {
+    return null
+  }
+}
+
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
 
 type Reclamado = { id: string; intentos: number }
@@ -437,6 +449,9 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
   if (modo !== 'exploracion' && modo !== 'humo' && f.compania === 'allianz' && f.ramo === 'auto') {
     const conCompania = aplicarCompaniaActual(f.compania, f.ramo, riesgo, await leerCompaniaActualCliente(f.correduria_id, f.cliente_id, f.oportunidad_id))
     riesgo = conCompania
+    // Últimos 5 dígitos de la póliza actual (19/10/2026): Allianz los pide en «Antecedentes». Solo la cola de 5 cifras, en la respuesta.
+    const conPoliza = aplicarPolizaAnteriorUltimos5(f.compania, f.ramo, riesgo, await leerNumeroPolizaActual(f.correduria_id, f.oportunidad_id))
+    riesgo = conPoliza
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base
