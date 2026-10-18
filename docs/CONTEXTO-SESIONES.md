@@ -18,6 +18,7 @@
 La compuerta de horario (03/10) solo cazaba PETICIONES («más tarde», «late checkout»), no ANUNCIOS («saldremos a las 12»). Fix en
 `apps/plataforma/lib/sivra/agente-huesped/`: `anunciaSalidaTardia` + red sobre el BORRADOR `respuestaConfirmaHorario` (auto.ts y orquestador →
 needs_human + Telegram), regla de prompt en `decidir.ts`. Hora oficial = la de la reserva (salida 11:00). Tests vistos en rojo, 393/393.
+Revisión: también caza aceptaciones sin verbo, mediodía/noon, 15:00 = entrada solo en frase de entrada, acentos, «11.30». 401 tests. ✅ PR #4791 mergeado.
 Pendiente Alberto: decidir con Maria si mantiene las 12:00; anuncios de entrada anticipada solo se cazan en el borrador.
 
 **(17/10/2026)** — Correduría · 4 guías de hogar publicadas en grupoasegura.es (revisar póliza, franquicia/sublímite, comparar hogar, regla proporcional), 0 [VERIFICAR] contra la LCS consolidada de `docs/normativa/`; `NORMAS_CITABLES` + LCS 8, 11, 26-32. Paquete de alta en directorios `docs/asegura-alta-directorios.md` (sin registrar nada). Decisión Alberto: email público único `hola@grupoasegura.es`, móvil 637349990. Pendiente: horario de Google Business, altas en directorios (OK por directorio), re-medir visibilidad IA en ~4 semanas.
