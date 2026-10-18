@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-18T13:41:44Z",
-  "sha": "6f54724c8fdcf6ee3d56067f2b58fe14a719f19d",
+  "generadoEn": "2026-10-18T15:57:22Z",
+  "sha": "edd3333c0b62097d24f91539820b5675d13169ea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22674,6 +22674,15 @@
       "hash": "19eefef604de"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/tarificador/presupuesto-rpa/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/tarificador/presupuesto-rpa",
+      "hash": "ec5e39af6e62"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/tarificador/probar/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -23531,13 +23540,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 36,
+          "linea": 41,
           "resumen": "el rastro es la propia fila de `tarificacion_trabajos` (estado, error, evidencia, sellos). Se acepta aunque el canal se haya apagado después de lanzar: el bot ya entró, el dato se guarda. Versión de v"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/tarificador/resultado",
-      "hash": "3651249f63ee"
+      "hash": "a8d4c3c174c3"
     },
     {
       "ruta": "apps/asegura/app/api/tarificador/sesion/[compania]/route.ts",
@@ -43858,6 +43867,303 @@
       "hash": "4c36b2c81d5a"
     },
     {
+      "ruta": "apps/asegura/lib/presupuesto-rpa-reglas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Presupuesto en BORRADOR tras el tarificador RPA (18/10/2026, decisión de Alberto: «todo con bot»). Reglas PURAS (sin BD ni red): la BD vive en `presupuesto-rpa.ts`. Test: `presupuesto-rpa-reglas.test.ts`. 🚨 NADA de aquí envía nada al cliente. El bot deja un borrador de origen `ofertas` cuyas opcion",
+      "exporta": [
+        "sobreCoberturasRpa",
+        "garantiasRpa",
+        "supuestosDe",
+        "avisoParaCliente",
+        "repartirAvisos",
+        "avisosOpcionRpa",
+        "ofertasDeRespuesta",
+        "filaOfertaRpa",
+        "claveRpaDeFila",
+        "decidirDisparo",
+        "mismoConjunto",
+        "borradorTocado",
+        "decidirSustitucion",
+        "decidirIaAuto",
+        "enlaceOportunidad",
+        "rangoPrimas",
+        "textoAvisoPresupuestoRpa",
+        "textoAvisoCorteRpa"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 19
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 21
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 22
+        },
+        {
+          "nombre": "sobreCoberturasRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "coberturas: unknown, leidasAt: string",
+          "retorno": "SobreCoberturas | null",
+          "linea": 34,
+          "resumen": "Las coberturas de una oferta RPA (`OfertaNormalizada.coberturas`, o el mismo array leído del jsonb `tarificaciones.respuesta.ofertas[]`) en el SOBRE que ya entiende `coberturasDeSobre()` (Codeoscopic)"
+        },
+        {
+          "nombre": "garantiasRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: OfertaNormalizada",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 59,
+          "resumen": "Garantías en la forma de `oportunidad_oferta.garantias` (`ValorGarantia`). `null` = no constan (≠ `{}` «leída sin garantías»)."
+        },
+        {
+          "nombre": "supuestosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly string[]",
+          "retorno": "string[]",
+          "linea": 69,
+          "resumen": "Los avisos del bot que son SUPUESTOS declarados (lo que el adaptador dio por hecho para poder tarificar)."
+        },
+        {
+          "nombre": "avisoParaCliente",
+          "kind": "function",
+          "exportada": true,
+          "params": "aviso: string",
+          "retorno": "boolean",
+          "linea": 85
+        },
+        {
+          "nombre": "repartirAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly string[]",
+          "retorno": "",
+          "linea": 91,
+          "resumen": "Reparto de los avisos de una oferta: los que ve el cliente y los internos (notas de la oferta)."
+        },
+        {
+          "nombre": "avisosOpcionRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "avisos: readonly string[]",
+          "retorno": "string[]",
+          "linea": 108,
+          "resumen": "Avisos VISIBLES de la opción: el fijo + solo los de la lista permitida (los supuestos, como supuestos, nunca como dato)."
+        },
+        {
+          "nombre": "ofertasDeRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: unknown, ids: { tarificacionId: string; trabajoId: string }",
+          "retorno": "OfertaRpaLeida[] | null",
+          "linea": 130,
+          "resumen": "`tarificaciones.respuesta` (canal rpa) → ofertas validadas OTRA VEZ con `validarOfertas` (lo guardado vino del worker). Si alguna no valida, la tarificación entera se descarta (devuelve `null`): mejor"
+        },
+        {
+          "nombre": "filaOfertaRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: OfertaRpaLeida",
+          "retorno": "",
+          "linea": 149,
+          "resumen": "Lo que se escribe en `oportunidad_oferta` por cada oferta RPA (estado `extraida`: la revisión es de Alberto)."
+        },
+        {
+          "nombre": "claveRpaDeFila",
+          "kind": "function",
+          "exportada": true,
+          "params": "datosExtra: unknown",
+          "retorno": "string | null",
+          "linea": 190,
+          "resumen": "La clave RPA guardada en `datos_extra.rpaClave` de una fila de `oportunidad_oferta` (`null` = no es del bot)."
+        },
+        {
+          "nombre": "decidirDisparo",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: readonly TrabajoParaDisparo[]",
+          "retorno": "",
+          "linea": 207,
+          "resumen": "¿Se prepara ya el presupuesto de la oportunidad? Solo cuando NINGÚN trabajo de tarificar sigue abierto y hay al menos un `ok` con tarificación. Exploraciones, humo y emisiones no cuentan. Un `atascado"
+        },
+        {
+          "nombre": "mismoConjunto",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: readonly string[], b: readonly string[]",
+          "retorno": "boolean",
+          "linea": 215,
+          "resumen": "Mismo conjunto de ids (orden indiferente). Para no duplicar un borrador con exactamente las mismas ofertas."
+        },
+        {
+          "nombre": "borradorTocado",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: Pick<BorradorPrevio, 'ocultas' | 'eventos'>",
+          "retorno": "boolean",
+          "linea": 231,
+          "resumen": "¿Alberto ya ha tocado este borrador del bot? Cualquier cosa que no sea lo que hace el propio bot al crearlo (`preparado` del sistema y las necesidades DEDUCIDAS) cuenta: ocultar opciones, escribir nec"
+        },
+        {
+          "nombre": "decidirSustitucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "inicio: Date, previos: readonly BorradorPrevio[]",
+          "retorno": "DecisionSustitucion",
+          "linea": 249,
+          "resumen": "Qué hacer con los borradores vivos del bot (ya bajo el cerrojo). `inicio` = cuándo empezó ESTA ejecución (es también el `creado_at` de lo que crea). Un borrador creado DESPUÉS de `inicio` es de una ej"
+        },
+        {
+          "nombre": "decidirIaAuto",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { llamadas24h: number; eur24h: number }",
+          "retorno": "",
+          "linea": 268,
+          "resumen": "¿Se le pide la narrativa a la IA? Con ≥12 llamadas automáticas en 24 h, o si la siguiente pasaría de 0,50 € estimados, NO: el estudio sale con la narrativa determinista y se dice. Entrada rara (NaN, n"
+        },
+        {
+          "nombre": "enlaceOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "oportunidadId: string, base: string",
+          "retorno": "string",
+          "linea": 282
+        },
+        {
+          "nombre": "rangoPrimas",
+          "kind": "function",
+          "exportada": true,
+          "params": "primas: readonly number[]",
+          "retorno": "string | null",
+          "linea": 287,
+          "resumen": "«de 392,02€ a 1.212,65€» (o el único importe). `null` = no hay primas (no se inventa un rango)."
+        },
+        {
+          "nombre": "textoAvisoPresupuestoRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaAvisoRpa",
+          "retorno": "string",
+          "linea": 313,
+          "resumen": "El Telegram para Alberto (parse_mode HTML: todo lo variable, escapado). Solo nombre de pila o referencia: sin NIF ni teléfono."
+        },
+        {
+          "nombre": "textoAvisoCorteRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCorteRpa",
+          "retorno": "string",
+          "linea": 345,
+          "resumen": "Telegram a Alberto cuando el proceso se CORTA (no hay borrador): que no crea que está hecho."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5c23e5b5342e"
+    },
+    {
+      "ruta": "apps/asegura/lib/presupuesto-rpa.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Presupuesto en BORRADOR tras el tarificador RPA (18/10/2026, Alberto: «todo con bot»). La parte con BD, IA y Telegram; las reglas PURAS (con test) en `presupuesto-rpa-reglas.ts`. Qué hace, cuando un trabajo RPA termina `ok` y su oportunidad ya no tiene trabajos de tarificar abiertos: 1. Pasa las ofe",
+      "exporta": [
+        "presupuestoTrasTrabajoRpa",
+        "prepararPresupuestoRpa"
+      ],
+      "funciones": [
+        {
+          "nombre": "presupuestoTrasTrabajoRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajoId: string",
+          "retorno": "Promise<ResultadoPresupuestoRpa>",
+          "linea": 66,
+          "resumen": "Lo que llama la ruta del resultado del worker (en `after`) con el trabajo recién cerrado. NUNCA lanza. Solo trabajos de tarificar `ok` con oportunidad: el resto no tiene nada que presupuestar."
+        },
+        {
+          "nombre": "prepararPresupuestoRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, oportunidadId: string, opts: Opciones = {}",
+          "retorno": "Promise<ResultadoPresupuestoRpa>",
+          "linea": 87,
+          "resumen": "El presupuesto en borrador de las ofertas RPA de una oportunidad. Idempotente: si ya hay un borrador del bot (vivo) con EXACTAMENTE las mismas ofertas, devuelve ése y no avisa. Un borrador anterior DE"
+        },
+        {
+          "nombre": "preparar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, oportunidadId: string, opts: Opciones",
+          "retorno": "Promise<ResultadoPresupuestoRpa>",
+          "linea": 95
+        },
+        {
+          "nombre": "avisarAlberto",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, op: { id: string; ramo: string | null }, texto: (base: BaseAviso) => string",
+          "retorno": "Promise<boolean>",
+          "linea": 295,
+          "resumen": "Telegram INTERNO a Alberto. Del cliente solo `clientes.nombre` → nombre de pila. Best effort: `false` si no salió."
+        },
+        {
+          "nombre": "borradorDelBotIgual",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, oportunidadId: string, ofertaIds: string[], db: Db | Tx = prismaAsegura()",
+          "retorno": "Promise<string | null>",
+          "linea": 317,
+          "resumen": "Un borrador del bot, vivo y sin salir, con EXACTAMENTE estas ofertas (`null` = no hay)."
+        },
+        {
+          "nombre": "gastoIaAuto",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string",
+          "retorno": "Promise<",
+          "linea": 330,
+          "resumen": "Llamadas y € ESTIMADOS de las narrativas automáticas de las últimas 24 h (de esta correduría). Un fallo → NaN (fail-closed)."
+        },
+        {
+          "nombre": "analisisRecomendador",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, oportunidadId: string, ahora: Date",
+          "retorno": "Promise<Record<string, unknown> | null>",
+          "linea": 345,
+          "resumen": "El análisis del recomendador (control de calidad + ranking) para el estudio. `null` = no se pudo (se dice, no se inventa)."
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "oportunidades",
+        "presupuesto",
+        "presupuesto_evento",
+        "tarificacion_trabajos",
+        "tarificaciones"
+      ],
+      "rutaApi": null,
+      "hash": "e6f531b8480c"
+    },
+    {
       "ruta": "apps/asegura/lib/presupuesto-seguimiento-llamada.ts",
       "ambito": "apps/asegura",
       "resumen": "La llamada de seguimiento en «Hoy» (28/09/2026). Vive FUERA de presupuesto-seguimiento-servicio.ts a propósito: ese fichero tiene prohibido cualquier `catch` (un fallo de LECTURA tiene que lanzar), y esto es una ESCRITURA best-effort que no puede deshacer el «avisado».",
@@ -51278,7 +51584,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 72
+          "linea": 73
         },
         {
           "nombre": "encolarTrabajo",
@@ -51286,7 +51592,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 100
+          "linea": 101
         },
         {
           "nombre": "leerTomadorFicha",
@@ -51294,7 +51600,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaTomadorFicha | null>",
-          "linea": 187,
+          "linea": 188,
           "resumen": "Nombre, apellidos, nacimiento y tipo de persona de la ficha TAL CUAL están en BD (lo cifrado, cifrado), de ESTA correduría. Los abre `lecturaTomadorFicha`. `null` = no hay ficha de esta correduría con"
         },
         {
@@ -51303,7 +51609,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaFichaTomadorAuto | null>",
-          "linea": 201,
+          "linea": 202,
           "resumen": "Tomador de la ficha para `fichaTomador` (Allianz auto/moto, 17/10/2026): las columnas que lee Codeoscopic (`clienteOrigenDe`) más `ciudad`/`provincia` y los carnés, TAL CUAL (lo cifrado, cifrado), de "
         },
         {
@@ -51312,7 +51618,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 222,
+          "linea": 223,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
@@ -51321,7 +51627,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 229,
+          "linea": 230,
           "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
@@ -51330,7 +51636,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 250,
+          "linea": 251,
           "resumen": "Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló."
         },
         {
@@ -51339,7 +51645,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 281,
+          "linea": 282,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -51348,7 +51654,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 336
+          "linea": 337
         },
         {
           "nombre": "lanzarPendientes",
@@ -51356,7 +51662,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 341,
+          "linea": 342,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -51365,7 +51671,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 366
+          "linea": 367
         },
         {
           "nombre": "destruirMaquina",
@@ -51373,7 +51679,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 380,
+          "linea": 381,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -51382,7 +51688,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 406,
+          "linea": 407,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -51391,7 +51697,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 487
+          "linea": 488
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -51399,7 +51705,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 627,
+          "linea": 628,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -51408,7 +51714,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 631
+          "linea": 632
         },
         {
           "nombre": "guardarAdjunto",
@@ -51416,7 +51722,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 681
+          "linea": 686
         },
         {
           "nombre": "guardarPasos",
@@ -51424,7 +51730,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 703,
+          "linea": 708,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -51433,7 +51739,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null",
           "retorno": "Promise<",
-          "linea": 722,
+          "linea": 727,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -51442,7 +51748,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 853,
+          "linea": 858,
           "resumen": "4. lanza lo que quepa por compañía."
         }
       ],
@@ -51453,7 +51759,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "e9e6220e4e97"
+      "hash": "ec95e981edb9"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -104920,6 +105226,26 @@
       "hash": "2b41b66b4201"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PrepararPresupuestoBot.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "PrepararPresupuestoBot"
+      ],
+      "funciones": [
+        {
+          "nombre": "PrepararPresupuestoBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ oportunidadId, alTerminar }: { oportunidadId: string; alTerminar?: () => void }",
+          "retorno": null,
+          "linea": 11
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "312388bcd222"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PresupuestosCompanias.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -104932,7 +105258,7 @@
           "exportada": true,
           "params": "{ oportunidadId, clienteId, ramo, riesgoLibre = null, onLectura }: { oportunidadId: string clienteId: string ramo: string /** Capital y dirección del bloque «Datos del riesgo» de la oportunidad: siembran los campos vacíos del formulario. */",
           "retorno": null,
-          "linea": 34
+          "linea": 36
         },
         {
           "nombre": "TarjetaTrabajo",
@@ -104940,7 +105266,7 @@
           "exportada": false,
           "params": "{ t, nombre, clienteId, anterior = false }: { t: TrabajoCompania; nombre: string; clienteId?: string; anterior?: boolean }",
           "retorno": null,
-          "linea": 356
+          "linea": 360
         },
         {
           "nombre": "Recomendacion",
@@ -104948,7 +105274,7 @@
           "exportada": false,
           "params": "{ oportunidadId, clave }: { oportunidadId: string; clave: string }",
           "retorno": null,
-          "linea": 414,
+          "linea": 418,
           "resumen": "«Recomendación» (08/10/2026): la compañía que mejor encaja (puntos, motivos, reservas), las ofertas con errores de calidad (salen con aviso y NO se recomiendan) y «Descargar propuesta (PDF)». 🚨 SOLO "
         }
       ],
@@ -104957,7 +105283,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "58f6e6873e5f"
+      "hash": "d097c583cfa0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/PropuestaEscenarios.tsx",
@@ -119478,6 +119804,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/tarificador/integraciones",
       "hash": "b274927463f4"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/tarificador/oportunidad/[id]/presupuesto-rpa/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, ctx: { params: Promise<{ id: string }> }",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "POST /api/correduria/tarificador/oportunidad/[id]/presupuesto-rpa — prepara el presupuesto en BORRADOR con las ofertas del bot de la oportunidad (idempotente). Con la sesión de la correduría; el secre"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/tarificador/oportunidad/[id]/presupuesto-rpa",
+      "hash": "67cec2a8a15b"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/tarificador/oportunidad/[id]/propuesta/route.ts",
@@ -153123,6 +153470,46 @@
       "hash": "9c5157433d27"
     },
     {
+      "ruta": "apps/plataforma/lib/presupuesto-rpa-vista.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Preparar presupuesto con lo que ha sacado el bot» (18/10/2026) — lo PURO: sin red ni envs, importable desde `'use client'`. Visibilidad del botón y texto del resultado. Nada se envía al cliente: es un BORRADOR.",
+      "exporta": [
+        "hayTrabajoOk",
+        "vistaPresupuestoRpa"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 4
+        },
+        {
+          "nombre": "hayTrabajoOk",
+          "kind": "function",
+          "exportada": true,
+          "params": "trabajos: ReadonlyArray<{ estado: string }> | null | undefined",
+          "retorno": "boolean",
+          "linea": 8,
+          "resumen": "El botón solo tiene sentido si algún trabajo del bot terminó en `ok` (hay ofertas que presupuestar)."
+        },
+        {
+          "nombre": "vistaPresupuestoRpa",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "VistaPresupuestoRpa",
+          "linea": 22,
+          "resumen": "Respuesta del endpoint de plataforma (status + JSON de asegura) → texto para el operador."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3f41dc3e06b4"
+    },
+    {
       "ruta": "apps/plataforma/lib/presupuestos-companias.ts",
       "ambito": "apps/plataforma",
       "resumen": "«Presupuestos de compañías» de una oportunidad — lo PURO (07/10/2026): sin red, sin envs, importable desde `'use client'`. UN formulario de riesgo común + los extras que declara cada bot (registro de capacidades de `@central/module-tarificacion`). Añadir un bot = registrar su capacidad: esto no camb",
@@ -168194,6 +168581,7 @@
         "leerPanelTarificador",
         "leerPresupuestosOportunidad",
         "pedirPresupuestosOportunidad",
+        "prepararPresupuestoRpaOportunidad",
         "leerTrabajoTarificador",
         "descargarPdfTarificador",
         "leerPropuestaOportunidad",
@@ -168276,12 +168664,21 @@
           "resumen": "Pide presupuesto a las compañías elegidas desde la oportunidad: asegura valida el formulario común con cada capacidad (todo o nada), lo guarda en la oportunidad y encola un trabajo por compañía. Solo "
         },
         {
+          "nombre": "prepararPresupuestoRpaOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "oportunidadId: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 90,
+          "resumen": "Prepara A MANO el presupuesto en BORRADOR con las ofertas del bot de la oportunidad (idempotente). `avisar:false` fijo: lo pide el operador y lo ve en pantalla, sin Telegram. NO ENVÍA NADA AL CLIENTE."
+        },
+        {
           "nombre": "leerTrabajoTarificador",
           "kind": "function",
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 86
+          "linea": 98
         },
         {
           "nombre": "descargarPdfTarificador",
@@ -168289,7 +168686,7 @@
           "exportada": true,
           "params": "id: string, indice: number",
           "retorno": "Promise<Response | null>",
-          "linea": 91,
+          "linea": 103,
           "resumen": "El PDF de una oferta (streaming). `null` = sin secreto configurado."
         },
         {
@@ -168298,7 +168695,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 102,
+          "linea": 114,
           "resumen": "Recomendación de una oportunidad (ranking, motivos, calidad) en JSON. Solo lectura; no envía nada."
         },
         {
@@ -168307,7 +168704,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Response | null>",
-          "linea": 107,
+          "linea": 119,
           "resumen": "La propuesta comercial en PDF (streaming). `null` = sin secreto configurado. Solo DESCARGA: nunca se envía."
         },
         {
@@ -168316,7 +168713,7 @@
           "exportada": true,
           "params": "limite: number, desde: number",
           "retorno": "Promise<Reenvio>",
-          "linea": 118,
+          "linea": 130,
           "resumen": "Bandeja «Necesita tu atención»: trabajos del bot que esperan a una persona (solo lectura)."
         },
         {
@@ -168325,7 +168722,7 @@
           "exportada": true,
           "params": "id: string, accion: 'reintentar' | 'cancelar', /** Solo con reintentar: versión del vehículo elegida a mano; asegura la valida contra la lista guardada del trabajo. */ eleccionVersion: { codigo: string | null; etiqueta?: string | null } | n",
           "retorno": "Promise<Reenvio>",
-          "linea": 123,
+          "linea": 135,
           "resumen": "Reintentar (→ pendiente) o cancelar un trabajo de la bandeja. Solo precio: nunca emite."
         },
         {
@@ -168334,7 +168731,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 139,
+          "linea": 151,
           "resumen": "Traza de un trabajo (pasos con duración y error) y versión del bot."
         },
         {
@@ -168343,7 +168740,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 144,
+          "linea": 156,
           "resumen": "Compañía+ramo que el bot puede tarificar hoy (`companias_integracion` activa y `rpa_autorizada`). Solo lectura."
         },
         {
@@ -168352,13 +168749,13 @@
           "exportada": true,
           "params": "clienteId: string, compania: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 153,
+          "linea": 165,
           "resumen": "«Probar tarificación» de la ficha: asegura reencola en SERVIDOR el riesgo del último trabajo de ese cliente+compañía+ramo (el riesgo no cruza el puerto). Solo precio: nunca emite. 202 `{trabajoId}` · "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c870818423ec"
+      "hash": "16f94df0dfb1"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-atascos-asegura.ts",
@@ -220569,7 +220966,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4740,
-    "funciones": 17577
+    "archivos": 4746,
+    "funciones": 17611
   }
 }
