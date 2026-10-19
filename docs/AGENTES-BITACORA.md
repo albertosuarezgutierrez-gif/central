@@ -17,6 +17,8 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-19 · facturas-correo** · hizo: Vía B sana (última copia 17/10), canal de aviso 200, sin candidatos nuevos deducibles en 2d (Amazon 18/10 rodilleras = personal, no archivado; Agoda 17/10 ya Procesada); barrido 4.0: 4 `sin_revisar` de octubre (Anthropic 180€, Supabase 25USD, Vercel 94,20USD, Sique Brilla 1.128,48€) sin cargo casable en el banco (feed al 19/10) → NO escritas, quedan en cola; dudas: Sique Brilla 03/10 aún sin transferencia `TRANSF. 2100` (¿impagada o pendiente?), Giraldillo AFV-11808 sigue reenviándose (ya archivada, en `Revisar`); fallos: `gmail-adjuntos` (Vía A) CONNECTION_CLOSED, no necesaria; PRs/commits: —
+
 - **2026-10-19 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos en paralelo (4 agentes), comps Booking house=127, busto=130, luxury=129, duplex=130 (13 fechas/piso); 52 propuestas dry-run por aplicar-propuesta (200, sin recortes); aprendizaje id 85; dudas: —; fallos: —; PRs/commits: —
 - **2026-10-18 · mercado-booking (2ª pasada del día)** · hizo: 24/24 ventanas de mercado (26-sep, 1/9/26-oct 2027, 9-ene, 13-mar × aforos 2/4/5/12) = 239 comps `booking_mcp`; escaparate propio 3/4 medido (Luxury Busto 338,70€/2n, Dúplex 358,14€/3n, House 1.492€/3n). Descartado 1 anuncio propio en mercado (House, 9-ene aforo 12). Falló: escaparate Busto Reform 27-29/12/2026 sin disponibilidad (hueco, no «canal cuadra»); 1 HTTP 000 transitorio al ingerir (reintento OK). Plan: 24 de 552, 528 recortadas. Latido ok:true; dudas: el plan devuelve fechas de mercado en 2027 (sep-oct, ene, mar) pese a ser oct-2026; fallos: —
 
