@@ -27,6 +27,40 @@ const nextConfig: NextConfig = {
         destination: '/cambiar-de-correduria',
         permanent: true,
       },
+      {
+        source: '/contacto',
+        // Search Console (19/10/2026) la marca 404. `/quienes-somos` NO sirve de
+        // destino: su cuerpo da domicilio y correo pero no el teléfono (solo sale
+        // en el pie, común a todas las páginas), así que no responde a quien
+        // busca «contacto». El formulario de presupuesto de la portada sí es la
+        // vía de contacto real.
+        destination: '/#presupuesto',
+        permanent: true,
+      },
+      {
+        source: '/index.htm',
+        // El sitio viejo servía la portada como `index.htm` (llega también vía
+        // `www`, que ya redirige al apex).
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/index.html',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/en-GB',
+        // Era la portada en inglés del sitio viejo. Este no tiene versión en
+        // inglés, pero la portada es su equivalente directo. Google entra con la
+        // barra final; Next la quita y aterriza en esta regla.
+        destination: '/',
+        permanent: true,
+      },
+      // 🚫 A PROPÓSITO sin regla: `/en-CA/*` (spam tipo «keno-bclc») y
+      // `/wp-content/*` (restos del tema WordPress). No son URLs nuestras con un
+      // destino equivalente: llevarlas a la portada sería un soft-404. Se quedan
+      // en 404, que es la respuesta correcta.
     ]
   },
 }
