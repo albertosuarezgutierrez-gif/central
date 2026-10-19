@@ -129,11 +129,25 @@ export const RUTAS: RutaCorreo[] = [
     ejemplos: ['New messages from your guests', 'Mensajes nuevos de sus huéspedes'],
   },
   {
+    // 🛡️ El lead de la CORREDURÍA (19/10/2026): una persona escribe a hola@grupoasegura.es pidiendo un
+    // seguro. Lo decide una regla DETERMINISTA (`lead-correduria.ts::esLeadCorreduria`: destinatario
+    // público de la correduría + remitente externo + correo que abre hilo), no la IA: el 19/10 la IA lo
+    // mandó a `leads-negocio` y en la cartera no quedó nada. En vivo, el triaje da de alta la ficha por el
+    // puerto de la web, abre la oportunidad y prepara la petición de datos (`lead-correduria-proceso.ts`).
+    // No se archiva: hay que contestarle desde ese mismo hilo.
+    categoria: 'correduria-lead',
+    etiqueta: 'Triaje/Correduria-Leads',
+    archivar: false,
+    aviso: 'inmediato',
+    descripcion: 'Una PERSONA (cliente o posible cliente) escribe a la correduría de seguros de Alberto (Grupo ASegura, hola@grupoasegura.es) pidiendo un seguro, un presupuesto, una comparativa o información sobre una póliza suya. NO es una aseguradora (correduria), ni una asociación de corredores, ni un lead de ia-rest/ialimp (leads-negocio).',
+    ejemplos: ['comparativa de presupuestos para seguro', 'quiero asegurar mi casa', 'precio seguro de coche', 'mensaje a hola@grupoasegura.es'],
+  },
+  {
     categoria: 'leads-negocio',
     etiqueta: 'Triaje/Leads',
     archivar: false,
     aviso: 'inmediato',
-    descripcion: 'Oportunidades de negocio: partnerships, respuestas a mailings comerciales, leads entrantes de ia-rest / ialimp.',
+    descripcion: 'Oportunidades de negocio de ia-rest (hostelería) / ialimp (limpiezas): partnerships, respuestas a mailings comerciales, leads entrantes. NUNCA una persona que pide un SEGURO o un presupuesto de seguro (eso es correduria-lead).',
     ejemplos: ['partnership a hola@iarest.es', 'respuesta a mailing frío de ialimp', 'interés de un cliente potencial'],
   },
   {

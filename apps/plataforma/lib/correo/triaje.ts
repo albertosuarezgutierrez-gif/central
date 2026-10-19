@@ -28,6 +28,8 @@ import { eventoConfirmado, leerResultadosEvento, textoAvisoEvento } from './even
 import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
+import { procesarLeadCorreo } from './lead-correduria-proceso'
+import { cursorTrasPasada, diferirCorreo, diferirLead } from './lead-correduria'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -69,6 +71,7 @@ function etiquetaBonita(categoria: string): string {
     'correduria-recibo': 'Recibo sin cobrar (correduría)',
     'huespedes': 'Huésped',
     'leads-negocio': 'Oportunidad de negocio',
+    'correduria-lead': 'Lead de seguros (hola@)',
     'asociacion-corredores': 'Asociación de corredores',
     'seguridad-sospechosa': 'Seguridad',
   }
@@ -76,7 +79,7 @@ function etiquetaBonita(categoria: string): string {
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -85,6 +88,11 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
 
   const sesion = await abrirTriaje()
   let maxUid = lastUid
+  // Presupuesto de tiempo (revisión 19/10/2026): la función muere a los 300 s y un correo a medias se
+  // quedaría `pendiente` para siempre. Lo que no cabe se DIFIERE: el cursor no pasa de él.
+  const t0 = Date.now()
+  let uidDiferido: number | null = null
+  let leadsPasada = 0
   try {
     // Tope BAJO por pasada: cada correo hace 1 llamada a la IA en serie; con la función limitada a
     // 300s, ~30 correos la agotaban (504) y el cursor no avanzaba → re-escaneo infinito. Con 10 la
@@ -93,6 +101,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
     stats.nuevos = nuevos.length
 
     for (const correo of nuevos) {
+      if (diferirCorreo(Date.now() - t0)) { uidDiferido = correo.uid; break }
       maxUid = Math.max(maxUid, correo.uid)
       let filaId: bigint | null = null
       try {
@@ -126,6 +135,19 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           : clasificado
         const ruta = rutaDe(c.categoria)
         let accion = 'ninguna'
+
+        // Un lead cuesta hasta ~110 s: si no cabe en esta pasada (o ya van los de la pasada), se difiere
+        // ENTERO —se borra su fila para que el dedupe no lo salte y el cursor se queda antes— y lo coge la
+        // siguiente (10 min). Nunca se queda a medias.
+        if (!DRY_RUN() && c.categoria === 'correduria-lead') {
+          if (diferirLead(Date.now() - t0, leadsPasada)) {
+            await prisma.$executeRaw`DELETE FROM correo_triaje WHERE id = ${filaId} AND categoria = 'pendiente'`
+            filaId = null
+            uidDiferido = correo.uid
+            break
+          }
+          leadsPasada++
+        }
 
         if (DRY_RUN()) {
           accion = 'sombra'
@@ -237,6 +259,13 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const texto = textoAvisoEvento(evento, correo.subject, resultados, (id) => urlFichaCliente(id), res.estado === 'ok' ? null : res)
             const enviado = await tgAviso('correo.correduria-evento', texto).catch(() => null)
             if (enviado !== null) stats.avisados++
+          } else if (c.categoria === 'correduria-lead' && (await procesarLeadCorreo(correo)).avisado) {
+            // Lead de la CORREDURÍA (19/10/2026): alta en la cartera por el puerto de la web, oportunidad y
+            // petición de datos para copiar (`lead-correduria-proceso.ts`). Nada sale hacia el lead. Si el
+            // proceso no llega a avisar (falla, o el aviso no sale), cae al aviso genérico de abajo: el
+            // correo nunca se queda sin señal.
+            stats.leadsCorreduria++
+            stats.avisados++
           } else if (ruta.aviso === 'inmediato') {
             // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
             // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa
@@ -308,7 +337,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
     // Avanza el cursor SIEMPRE (aunque el bucle fallara), y cierra la sesión.
     await prisma.$executeRaw`
       INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
-      VALUES ('INBOX', ${maxUid}, ${BigInt(sesion.uidValidity)}, now())
+      VALUES ('INBOX', ${cursorTrasPasada(maxUid, uidDiferido)}, ${BigInt(sesion.uidValidity)}, now())
       ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
     `.catch(() => {})
     await sesion.cerrar()

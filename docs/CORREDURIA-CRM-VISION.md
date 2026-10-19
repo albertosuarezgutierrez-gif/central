@@ -184,6 +184,18 @@ X → Y» anualizado (sin ahorro si no asegura), pack coche+moto opcional (inter
   (asegura): documentos del cliente de leads sin póliza a 30 días y prospectos `fuente='web'` anonimizados a
   12 meses, en MODO INFORME hasta `CORREDURIA_PURGA_RGPD_ACTIVA=1`. Pendiente: PII en textos antiguos de
   historial y presupuestos. Real: 2 leads web (sept. y oct. 2026); el cuello de botella es el tráfico.
+- **Correo a hola@, 19/10/2026 (decisión de Alberto: automatizar al máximo lead → datos → presupuesto →
+  seguimiento con compañías, sin que se escape nada).** Hecho: el triaje de plataforma reconoce el lead SIN IA
+  (`correduria-lead`), da de alta por el puerto de siempre con `fuente_origen = 'correo'` (SQL
+  `apps/asegura/prisma/sql/2026-10-19_seguros_fuente_correo.sql`, a aplicar ANTES del despliegue), abre la
+  oportunidad y deja la petición de datos por ramo lista para copiar (skill `correo-triaje`). Fases siguientes,
+  en orden: (1) **acuse/petición de datos enviado solo** desde hola@ — PENDIENTE de autorización explícita de
+  Alberto (regla «Comunicaciones salientes»); hoy es texto para copiar porque plataforma no tiene borradores de
+  Gmail. (2) **Presupuesto** vía Codeoscopic con los datos recibidos: SIEMPRE con confirmación de Alberto
+  (cada `POST /insurances` cuesta 0,50 €). (3) **Seguimiento** con plazos y recordatorios sobre la oportunidad
+  (tareas de «Hoy»). (4) **Consultas a compañías por correo**: es la spec del PR abierto #4759 — no pisarlo.
+  Huecos conocidos: la purga RGPD de prospectos y la pantalla de leads web filtran `fuente='web'` (los de
+  correo no entran); el alta por correo no guarda `consent_logs` (no hubo formulario: base precontractual).
 
 ## 7. El portal del cliente (lo que «verá el cliente final»)
 

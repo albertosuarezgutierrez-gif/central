@@ -73,7 +73,7 @@ export type ResultadoPolizaDocumento =
   | {
       ok: false
       motivo: string
-      status: 400 | 404 | 409 | 415 | 422 | 500
+      status: 400 | 404 | 409 | 415 | 422 | 429 | 500
       /** Fichas que ya tienen ese DNI, teléfono o email. */
       coincidencias?: Coincidencia[]
       /** El alta se puede repetir con `forzar` (teléfono/email repetido, no DNI). */

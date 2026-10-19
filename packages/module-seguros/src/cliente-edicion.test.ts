@@ -358,3 +358,19 @@ test('sexo: solo hombre/mujer, ausente no cambia nada, solo-sexo es una edición
   const sinSexo = revisarEdicion({ libre: { ciudad: 'Sevilla' } })
   assert.equal(sinSexo.ok && sinSexo.sexo, undefined)
 })
+
+// 🪤 (19/10/2026) Un valor de `FUENTES_ORIGEN` que no está en el enum de Prisma no compila en asegura,
+// pero uno que no está en la BD SÍ compila y revienta el alta en producción (cast a `fuente_origen`).
+// Este brazo exige las dos cosas: mismo enum en `asegura.prisma` y un `ADD VALUE`/DDL que lo cree.
+test('🪤 FUENTES_ORIGEN = enum FuenteOrigen de asegura.prisma, y cada valor tiene su SQL', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs')
+  const prisma = readFileSync(new URL('../../../apps/asegura/prisma/asegura.prisma', import.meta.url), 'utf8')
+  const bloque = /enum FuenteOrigen \{([\s\S]*?)\}/.exec(prisma)?.[1] ?? ''
+  const enPrisma = bloque.split('\n').map((l) => l.trim()).filter((l) => /^[a-z_]+$/.test(l))
+  assert.deepEqual(enPrisma, [...FUENTES_ORIGEN])
+  const dir = new URL('../../../apps/asegura/prisma/sql/', import.meta.url)
+  const sql = readdirSync(dir).filter((f) => f.endsWith('.sql')).map((f) => readFileSync(new URL(f, dir), 'utf8')).join('\n')
+  for (const f of FUENTES_CANAL) {
+    assert.ok(new RegExp(`fuente_origen ADD VALUE IF NOT EXISTS '${f}'`).test(sql), `falta el SQL que añade '${f}' a seguros.fuente_origen`)
+  }
+})
