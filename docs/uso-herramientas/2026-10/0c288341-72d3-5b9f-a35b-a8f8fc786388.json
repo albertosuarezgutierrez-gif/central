@@ -1,18 +1,18 @@
 {
  "sesion": "0c288341-72d3-5b9f-a35b-a8f8fc786388",
  "inicio": "2026-10-19T10:38:18.284Z",
- "fin": "2026-10-19T11:28:00.130Z",
- "llamadas": 92,
+ "fin": "2026-10-19T15:49:23.248Z",
+ "llamadas": 114,
  "categorias": {
   "bash": {
-   "llamadas": 10,
-   "chars_in": 8914,
-   "chars_out": 28618,
+   "llamadas": 11,
+   "chars_in": 11542,
+   "chars_out": 28752,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10
+    "Bash": 11
    }
   },
   "lectura-directa": {
@@ -27,30 +27,30 @@
    }
   },
   "otro": {
-   "llamadas": 13,
-   "chars_in": 10549,
-   "chars_out": 3254,
+   "llamadas": 15,
+   "chars_in": 12840,
+   "chars_out": 3770,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 5,
-    "SendUserFile": 1,
-    "SubagentHandback": 3,
+    "SendUserFile": 2,
+    "SubagentHandback": 4,
     "SendMessage": 3,
     "ReadNotifications": 1
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 9,
-   "chars_in": 1410,
-   "chars_out": 103277,
+   "llamadas": 28,
+   "chars_in": 2779,
+   "chars_out": 158793,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 8,
-    "mcp__Google_Drive__read_file_content": 1
+    "mcp__Google_Drive__search_files": 13,
+    "mcp__Google_Drive__read_file_content": 15
    }
   },
   "mcp:Gmail": {
