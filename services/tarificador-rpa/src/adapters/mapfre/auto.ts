@@ -50,6 +50,10 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.9 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»): varias
+//   filas y ninguna casa SOLA → se elige SOLA si son equivalentes (`filaVehiculoPorEquivalencia`, regla común de module-tarificacion:
+//   CV ±10 %, cc ±5 %; la de fecha de inicio más cercana (≤) a la matriculación o la primera) y se DECLARA en el aviso de supuestos.
+//   Solo si difieren de forma MATERIAL → `ErrorEleccionVersion` con todas (como la 0.8.8). Coche y moto.
 // v0.8.8 (19/10/2026, decisión de Alberto: «puede dar el precio de otro coche»): se REVOCA el «primero de la lista» de la 0.8.6. Varias
 //   filas y ninguna casa SOLA (elección de la bandeja, vehículo confirmado, marca+modelo[+cc]) → `ErrorEleccionVersion` (requiere_humano)
 //   con TODAS las filas (`opcionesFilasVehiculo`: denominación · CV · cc · fecha). Coche y moto.
@@ -81,6 +85,8 @@ import {
   supuestoConductorTomador,
   conAntecedentesFavorables,
   conDatosUsados,
+  elegirVersionAutomaticamente,
+  referenciaRiesgoVersion,
   USO_VEHICULO_POR_DEFECTO,
   vehiculoConfirmadoDesdeMapfre,
   type CandidatoVersion,
@@ -408,7 +414,7 @@ export function etiquetaFilaVehiculo(f: FilaVehiculoDialogo): string {
 }
 
 /** Datos del riesgo con los que se elige la fila del diálogo cuando hay VARIAS (nunca la matrícula: esa la compara el guard). */
-export type CriterioFilaVehiculo = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo'>
+export type CriterioFilaVehiculo = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
 
 /**
  * Fila de «Selección de vehículo» por REGLA FIJA (grabación 15/10/2026; sin IA ni «la primera»). PURA. Una fila → 0. Varias →
@@ -454,6 +460,28 @@ export function indiceFilaVehiculoMapfre(filas: readonly FilaVehiculoDialogo[], 
  */
 export function opcionesFilasVehiculo(filas: readonly FilaVehiculoDialogo[]): CandidatoVersion[] {
   return filas.map((f) => ({ etiqueta: etiquetaFilaVehiculo(f), codigo: null }))
+}
+
+/**
+ * v0.8.9 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»):
+ * varias filas y ninguna casa SOLA por regla fija → se elige SOLA si son EQUIVALENTES (CV ±10 %, cc ±5 % entre sí y compatibles con
+ * el riesgo; combustible exacto si consta): la de fecha de inicio más cercana (≤) a la 1ª matriculación o, sin fechas, la primera del
+ * portal, y se DECLARA (`supuesto`). Si difieren de forma MATERIAL (CV/cc fuera de tolerancia) → `ErrorEleccionVersion` con TODAS las
+ * filas, como en la 0.8.8. La elección de la bandeja se respeta exacta (`indiceFilaVehiculoMapfre`, antes que esto). PURA.
+ */
+export function filaVehiculoPorEquivalencia(filas: readonly FilaVehiculoDialogo[], c: Partial<CriterioFilaVehiculo> | null | undefined): { indice: number; supuesto: string | null } {
+  const casada = indiceFilaVehiculoMapfre(filas, c)
+  if (casada !== null) return { indice: casada, supuesto: null }
+  const r = elegirVersionAutomaticamente(
+    filas.map((f) => {
+      const v = vehiculoConfirmadoDesdeMapfre(f)
+      return { etiqueta: etiquetaFilaVehiculo(f), codigo: null, datos: { cv: v?.cv ?? null, cc: v?.cc ?? null, puertas: v?.puertas ?? null, fechaInicio: v?.fechaInicio ?? null } }
+    }),
+    // La elección de la bandeja que no casó arriba NO se ignora: `elegirVersionAutomaticamente` la vuelve a preguntar.
+    { riesgo: referenciaRiesgoVersion(c ?? null), eleccion: c?.eleccionVersion ?? null },
+  )
+  if (r.tipo === 'automatica' || r.tipo === 'bandeja' || r.tipo === 'unica') return { indice: r.indice, supuesto: r.supuesto }
+  throw new ErrorEleccionVersion(opcionesFilasVehiculo(filas))
 }
 
 const ESPERA_DIALOGO_VEHICULO_MS = 15_000
@@ -511,6 +539,18 @@ export async function consultarVehiculoPorMatricula(
   respaldo: RespaldoCampos = SIN_RESPALDO,
   criterio: Partial<CriterioFilaVehiculo> | null = null,
 ): Promise<VehiculoConfirmado> {
+  return (await consultarVehiculoPorMatriculaConSupuesto(nsei, matricula, ctx, esperaDialogoMs, respaldo, criterio)).vehiculo
+}
+
+/** Como `consultarVehiculoPorMatricula`, y además devuelve el supuesto de versión (fila elegida sola por equivalencia) si lo hubo. */
+export async function consultarVehiculoPorMatriculaConSupuesto(
+  nsei: Page,
+  matricula: string,
+  ctx: Pick<ContextoPortal, 'confirmarVehiculoMapfre'>,
+  esperaDialogoMs = ESPERA_DIALOGO_VEHICULO_MS,
+  respaldo: RespaldoCampos = SIN_RESPALDO,
+  criterio: Partial<CriterioFilaVehiculo> | null = null,
+): Promise<{ vehiculo: VehiculoConfirmado; supuestoVersion: string | null }> {
   if (!ctx.confirmarVehiculoMapfre) throw new ErrorMapaIncompleto('la función guardada que confirma el vehículo (contexto sin `confirmarVehiculoMapfre`)')
   const r = await campoConRespaldo(nsei, SEL_OBJETO.matricula, { ...respaldo, page: respaldo.page ?? null, etiqueta: 'Matrícula', descripcion: 'Campo «Matrícula» del vehículo en el paso «Objeto asegurado» de Mapfre NSEI' })
   if (!r) throw new ErrorMapaIncompleto('el campo de matrícula del paso «Objeto asegurado» (no aparece)', true)
@@ -525,16 +565,14 @@ export async function consultarVehiculoPorMatricula(
   respaldo.formador?.log('mapfre_busqueda_matricula', { disparo })
   const filas = await leerFilasDialogoVehiculo(nsei)
   if (filas.length === 0) throw new ErrorTarificador('datos', 'mapfre/auto: «Selección de vehículo» no trae ningún vehículo para la matrícula del riesgo')
-  // Fila por REGLA FIJA (v0.8.0): una sola, o la única que casa con el riesgo (dato). v0.8.8: si no casa ninguna SOLA, NO se
-  // elige (se revoca el «primero de la lista» de la 0.8.6): `ErrorEleccionVersion` con las filas y sus datos (requiere_humano).
-  const casada = indiceFilaVehiculoMapfre(filas, criterio)
-  if (casada === null) throw new ErrorEleccionVersion(opcionesFilasVehiculo(filas))
-  const indice = casada
+  // Fila por REGLA FIJA (v0.8.0): una sola, o la única que casa con el riesgo (dato). v0.8.9: si no casa ninguna SOLA, se elige
+  // la equivalente (declarada) o, si difieren de forma material, `ErrorEleccionVersion` con las filas y sus datos (requiere_humano).
+  const { indice, supuesto: supuestoVersion } = filaVehiculoPorEquivalencia(filas, criterio)
   const vehiculo = vehiculoConfirmadoDesdeMapfre(filas[indice]!)
   if (!vehiculo) throw new ErrorTarificador('portal', 'mapfre/auto: la fila de «Selección de vehículo» no trae denominación comercial legible')
   // El guard confirma ESA fila y exige que su matrícula sea la del riesgo (la comparación no sale de guard.ts).
   await ctx.confirmarVehiculoMapfre(nsei, matricula, indice, filas[indice]!.denominacion)
-  return vehiculo
+  return { vehiculo, supuestoVersion }
 }
 
 export type ResumenVehiculoMapfre = {
@@ -1352,7 +1390,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.8',
+  version: '0.8.9',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
@@ -1366,13 +1404,13 @@ export const mapfreAuto = {
     await ctx.trasLogin()
     const nsei = await abrirTarificacionRapidaAuto(page, { pulsar: ctx.pulsar, pausa: ctx.pausa, pulsarEnlaceEntrada, formador: ctx.formador, credenciales: ctx.credenciales })
     await pasoDatosBasicos(nsei, form, ctx)
-    const vehiculoConfirmado = await consultarVehiculoPorMatricula(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
+    const { vehiculo: vehiculoConfirmado, supuestoVersion } = await consultarVehiculoPorMatriculaConSupuesto(nsei, form.matricula, ctx, undefined, { page: nsei, formador: ctx.formador }, form)
     ctx.log('vehiculo confirmado')
     // 18/10/2026: los antecedentes SUPUESTOS (favorables) van detrás del supuesto del vehículo, en el mismo aviso.
     // Conductor = tomador sin `tomadorEsConductor` (solo pasa con la fecha de nacimiento de la ficha igual: `exigirConductorEsTomador`):
     // SUPUESTO declarado, no dato.
     const conductor = supuestoConductorTomador(form)
-    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
+    return precioDesdeObjetoAsegurado(nsei, form, vehiculoConfirmado, ctx, undefined, textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...(clasePermisoNsei(form).supuesto ? [SUPUESTO_CLASE_PERMISO_MOTO] : []), ...(conductor ? [conductor] : []), ...conAntecedentesFavorables(form).supuestos]))
   },
 } as const
 

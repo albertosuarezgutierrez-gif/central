@@ -30,6 +30,9 @@
 import type { Frame, Locator, Page } from 'playwright'
 import {
   conAntecedentesFavorables,
+  datosEquivalenciaDesdeEtiqueta,
+  elegirVersionAutomaticamente,
+  referenciaRiesgoVersion,
   supuestosAuto,
   textoSupuestos,
   type CandidatoVersion,
@@ -93,6 +96,9 @@ export const GENERALI_AUTO_ACTIVO = true
  * scroll del panel + registro de campos/botones + mapa provisional de tomador/conductor/antecedentes + «Garantías y
  * Resultados» por la compuerta del guard + lector tolerante del precio (oferta) o hueco con el registro de esa pantalla.
  * 0.2.9 (19/10/2026): la versión elegida por una persona que no casa con UNA sola opción vuelve a `ErrorEleccionVersion` (con la lista), no a hueco de mapa. Generali ya NO elegía «la primera»: solo exacta o contención única.
+ * 0.2.10 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»): la VERSIÓN
+ * con varias candidatas y sin elección de la bandeja se elige SOLA si son EQUIVALENTES (`versionGeneraliPorEquivalencia`, regla común de
+ * module-tarificacion) y se declara en el aviso de supuestos; con diferencias materiales sigue siendo `ErrorEleccionVersion` con todas.
  * 0.2.1 (19/10/2026): SMS de Okta relevado por Telegram (`codigoSms`) y dispositivo recordado 30 días en la bóveda; el login ya no
  * espera 30 s en la pantalla del SMS.
  * 0.2.2 (19/10/2026, prueba real b41be722): «Seleccionar mediador» vive en un MARCO (`seleccionAmbito.do`) con 5 campos sin
@@ -104,7 +110,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * (`select#X_input` OCULTO + `div#X[role=combobox]`); se reconoce, la marca se elige por igualdad EXACTA normalizada (0 o varias →
  * atasco `eleccion` con las cercanas), «Placas especiales» = «No» y «Confirmar» por puertas de guard.ts; la pantalla siguiente → hueco.
  */
-export const VERSION_GENERALI_AUTO = '0.2.9'
+export const VERSION_GENERALI_AUTO = '0.2.10'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -564,8 +570,24 @@ async function mediadorDelFormulario(marco: Raiz, ctx: ContextoPortal): Promise<
   await escribir(campo, MEDIADOR_GENERALI, ctx)
 }
 
-/** Un nivel del selector (marca/modelo/versión) en un `<select>` nativo, casado por la regla de Alberto. Devuelve si fue por similitud. */
-async function elegirNivel(sel: Locator, nivel: 'marca' | 'modelo' | 'version', v: VehiculoBuscado, form: Pick<FormularioAuto, 'eleccionVersion'>, ctx: ContextoPortal): Promise<boolean> {
+type FormVersionGenerali = Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>
+
+/**
+ * Versión de Generali por EQUIVALENCIA (v0.2.10, 19/10/2026). `candidatas` = textos de las opciones (las que siguen en juego); devuelve
+ * el índice dentro de `candidatas` y el supuesto a declarar, o lanza `ErrorEleccionVersion` con `candidatas` si difieren de forma
+ * material (combustible, CV/cc fuera de tolerancia) o ninguna es compatible con el riesgo. Datos leídos de la etiqueta. PURA salvo el lanzamiento.
+ */
+export function versionGeneraliPorEquivalencia(candidatas: readonly string[], form: FormVersionGenerali): { indice: number; supuesto: string | null } {
+  const r = elegirVersionAutomaticamente(
+    candidatas.map((o) => ({ etiqueta: o, codigo: null, datos: datosEquivalenciaDesdeEtiqueta(o) })),
+    { riesgo: referenciaRiesgoVersion(form) },
+  )
+  if (r.tipo === 'automatica' || r.tipo === 'unica') return { indice: r.indice, supuesto: r.supuesto }
+  throw new ErrorEleccionVersion(candidatas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+}
+
+/** Un nivel del selector (marca/modelo/versión) en un `<select>` nativo, casado por la regla de Alberto. Devuelve si fue por similitud. `avisos` recoge el supuesto de una versión elegida sola. */
+async function elegirNivel(sel: Locator, nivel: 'marca' | 'modelo' | 'version', v: VehiculoBuscado, form: FormVersionGenerali, ctx: ContextoPortal, avisos?: string[]): Promise<boolean> {
   const opciones = (await opcionesSelect(sel)).map((o) => o.texto)
   // Versión: la elección de una PERSONA (bandeja) manda; texto EXACTO de la opción.
   const persona = nivel === 'version' ? form.eleccionVersion?.etiqueta?.trim() : undefined
@@ -579,16 +601,27 @@ async function elegirNivel(sel: Locator, nivel: 'marca' | 'modelo' | 'version', 
   const b = buscadoEnNivel(v, nivel)
   const validas = opciones.filter((o) => !esOpcionVaciaCatalogo(o))
   if (!b) {
-    // Sin versión confirmada: una sola versión → esa; varias → elige una persona (bandeja), nunca la primera.
+    // Sin versión confirmada: una sola versión → esa; varias → la equivalente (declarada) o, si difieren de forma material, elige una persona.
     if (validas.length === 1) {
       await elegirIndice(sel, opciones.indexOf(validas[0]!), ctx)
       return false
     }
-    throw new ErrorEleccionVersion(validas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+    const a = nivel === 'version' ? versionGeneraliPorEquivalencia(validas, form) : null
+    if (!a) throw new ErrorEleccionVersion(validas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+    if (a.supuesto) avisos?.push(a.supuesto)
+    await elegirIndice(sel, opciones.indexOf(validas[a.indice]!), ctx)
+    return false
   }
   const e = elegirOpcionCatalogo(opciones, b.texto, b.modo)
   if (e.tipo !== 'unica') {
-    if (nivel === 'version') throw new ErrorEleccionVersion((e.tipo === 'varias' ? e.indices.map((i) => opciones[i]!) : validas).map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+    if (nivel === 'version' && e.tipo === 'varias') {
+      const entre = e.indices.map((i) => opciones[i]!)
+      const a = versionGeneraliPorEquivalencia(entre, form)
+      if (a.supuesto) avisos?.push(a.supuesto)
+      await elegirIndice(sel, e.indices[a.indice]!, ctx)
+      return false
+    }
+    if (nivel === 'version') throw new ErrorEleccionVersion(validas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
     throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo(nivel, b.texto, opciones, e))
   }
   await elegirIndice(sel, e.indice, ctx)
@@ -692,7 +725,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
  * las marcas». Modelo y versión: SIN captura; se buscan como desplegables etiquetados «Modelo»/«Versión» y, si no están así,
  * PARA con inventario. Devuelve si alguna elección fue por similitud.
  */
-export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form: FormularioAuto, ctx: ContextoPortal): Promise<boolean> {
+export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form: FormularioAuto, ctx: ContextoPortal, avisos?: string[]): Promise<boolean> {
   const v = vehiculoBuscadoGenerali(form)
   if (!v) throw new ErrorTarificador('datos', 'generali/auto: falta el vehículo confirmado por Allianz o Mapfre (Generali no busca por matrícula; asegura lo pone desde la oportunidad)')
   const boton = marco.getByRole('button', { name: 'Vehículo', exact: true }).filter({ visible: true })
@@ -713,7 +746,7 @@ export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form:
   await page.waitForTimeout(1_500)
   const version = await selectPorEtiqueta(selector, /^\s*versi[oó]n(es)?\s*:?\s*$/i)
   if (!version) throw new ErrorMapaIncompletoGenerali(`el desplegable de versión del selector tras elegir el modelo: SIN CAPTURA; no hay un desplegable «Versión». Desplegables vistos: ${await describirSelects(selector)}`)
-  similitud = (await elegirNivel(version, 'version', v, form, ctx)) || similitud
+  similitud = (await elegirNivel(version, 'version', v, form, ctx, avisos)) || similitud
   const valoracion = await marcoConTexto(page, 'Identificación del vehículo', 10_000)
   if (!valoracion) {
     const p = await leerPantalla(selector)
@@ -923,8 +956,11 @@ export const generaliAuto = {
     const marco = await marcoConTexto(page, 'Datos de Valoración')
     if (!marco) throw new ErrorMapaIncompletoGenerali('el formulario «Valoración Riesgo › Datos de Valoración» tras el menú de Turismos (captura 4)')
     await mediadorDelFormulario(marco, ctx)
-    const similitud = await seleccionarVehiculoGenerali(page, marco, form, ctx)
+    const avisosVersion: string[] = []
+    const similitud = await seleccionarVehiculoGenerali(page, marco, form, ctx, avisosVersion)
     const supuestos = await rellenarValoracionGenerali(page, form, ctx, hoy)
+    // v0.2.10: la versión elegida SOLA (equivalentes) va delante, declarada («revisar en la emisión»).
+    supuestos.unshift(...avisosVersion)
     if (similitud) supuestos.unshift(AVISO_SIMILITUD_GENERALI)
     // Antecedentes (regla 3): sin dato, supuesto FAVORABLE declarado (lo añade `hastaPrecioGenerali`, que también los teclea
     // si el formulario tiene esos campos con etiqueta del mapa provisional).

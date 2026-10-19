@@ -15,7 +15,7 @@
 // Fuera de tolerancia o sin CV/CC legibles → no elige (flujo de siempre: memoria / IA / persona). Una elección explícita
 // de persona o IA siempre manda sobre esta (lo decide el llamante).
 
-import { pareceDatoPersonalEnDescripcion } from './formulario-auto.ts'
+import { pareceDatoPersonalEnDescripcion, type FormularioAuto } from './formulario-auto.ts'
 import { COMBUSTIBLES, esOpcionVacia, fechaIsoDesdeTexto, type Combustible, type CandidatoVersion, type EleccionVersion } from './vehiculo.ts'
 
 export const ORIGENES_VEHICULO_CONFIRMADO = ['mapfre'] as const
@@ -133,6 +133,8 @@ export type DatosVersionCatalogo = {
   /** Años de comercialización de la candidata (rango abierto por un lado si solo trae uno). */
   anioDesde?: number | null
   anioHasta?: number | null
+  /** Potencia en kW tal como la escribe la etiqueta (Allianz: «Potencia (kW) 163»). Solo para comparar candidatas ENTRE SÍ (la unidad del portal no es fiable frente a Mapfre). */
+  kw?: number | null
 }
 export type CandidataConDatos = CandidatoVersion & { datos: DatosVersionCatalogo }
 
@@ -146,6 +148,18 @@ export const TOLERANCIA_CV = 0.1
 export const TOLERANCIA_CC = 0.05
 /** Texto de traza de una versión elegida por similitud (aviso del resultado). */
 export const AVISO_VERSION_POR_SIMILITUD = 'Versión elegida por similitud con el vehículo confirmado en Mapfre (CV ±10 %, CC ±5 %), no por coincidencia exacta.'
+
+/** Lo que se sabe del riesgo para filtrar candidatas (todo opcional: `null`/ausente = no consta). `VehiculoConfirmado` encaja. */
+export type ReferenciaRiesgo = {
+  cv?: number | null
+  cc?: number | null
+  puertas?: number | null
+  combustible?: Combustible | null
+  /** Fecha de inicio del vehículo en el catálogo (Mapfre): se compara con el rango de años de la candidata. */
+  fechaInicio?: string | null
+  /** 1ª matriculación del riesgo (ISO): filtra por rango de años y desempata «la comercialización más cercana (≤)». */
+  fechaMatriculacion?: string | null
+}
 
 const EPS = 1e-9
 /** Holgura (años) al comprobar la fecha de inicio de Mapfre contra el rango de la candidata. */
@@ -180,24 +194,24 @@ export function anioEnRango(fechaInicio: string | null | undefined, desde: numbe
  * tolerancia en alguno, o con puertas que contradicen (ambas lo traen y difieren). `distancia` = media de las distancias
  * normalizadas de CV y CC comparados (0 = exacta).
  */
-function puntuar(vc: VehiculoConfirmado, d: DatosVersionCatalogo): { distancia: number } | { motivo: 'sin_datos' | 'fuera_de_tolerancia' } {
+function puntuar(vc: ReferenciaRiesgo, d: DatosVersionCatalogo): { distancia: number } | { motivo: 'sin_datos' | 'fuera_de_tolerancia' } {
   const partes: number[] = []
   let fuera = false
   for (const [a, tol] of [['cv', TOLERANCIA_CV], ['cc', TOLERANCIA_CC]] as const) {
     const x = vc[a]
     const y = d[a]
-    if (x === null || y === null || y === undefined) continue
+    if (typeof x !== 'number' || y === null || y === undefined) continue
     const r = distanciaRelativa(x, y, tol)
     if (r === null) fuera = true
     else partes.push(r)
   }
-  if (!fuera && partes.length === 0) return { motivo: 'sin_datos' }
-  if (vc.puertas !== null && d.puertas !== null && d.puertas !== undefined && vc.puertas !== d.puertas) fuera = true
+  if (typeof vc.puertas === 'number' && d.puertas !== null && d.puertas !== undefined && vc.puertas !== d.puertas) fuera = true
   // Combustible exacto (Alberto, 19/10/2026) cuando AMBOS lo traen; si uno no consta, no descarta.
   if (vc.combustible && d.combustible && vc.combustible !== d.combustible) fuera = true
   // Años: la fecha de inicio de Mapfre tiene que caer en el rango de la candidata (±1 año). Sin fecha o sin rango, no descarta.
-  if (!anioEnRango(vc.fechaInicio, d.anioDesde, d.anioHasta)) fuera = true
+  if (!anioEnRango(vc.fechaInicio ?? vc.fechaMatriculacion, d.anioDesde, d.anioHasta)) fuera = true
   if (fuera) return { motivo: 'fuera_de_tolerancia' }
+  if (partes.length === 0) return { motivo: 'sin_datos' }
   return { distancia: partes.reduce((a, b) => a + b, 0) / partes.length }
 }
 
@@ -266,4 +280,143 @@ export function datosDesdeEtiquetaVersion(etiqueta: string): DatosVersionCatalog
 export function eleccionPorVehiculoConfirmadoDeEtiquetas(vc: VehiculoConfirmado | null | undefined, versiones: readonly CandidatoVersion[]): EleccionVersion | null {
   const r = eleccionPorVehiculoConfirmado(vc, versiones.map((v) => ({ ...v, datos: datosDesdeEtiquetaVersion(v.etiqueta ?? '') })))
   return r.tipo === 'unica' ? r.eleccion : null
+}
+
+// ───────────────────────── elección AUTOMÁTICA de versión por EQUIVALENCIA (19/10/2026) ─────────────────────────
+// Alberto (dueño), 19/10/2026: la versión se elige SOLA; las diferencias entre acabados (GL/GLS/Full…) no influyen en tarificar y
+// el cliente lo revisa en la emisión. Solo se PREGUNTA si las candidatas difieren de forma MATERIAL (combustible distinto, o CV/cc
+// fuera de tolerancia entre ellas). Regla común de Mapfre (auto/moto), Allianz (Turismos/Moto) y Generali. PURA.
+//   0. Elección de la bandeja (código o etiqueta exacta) que casa con UNA → esa, exacta. Que no case → se pregunta de nuevo.
+//   1. Una sola candidata → esa (dato, sin supuesto).
+//   2. Se filtran las compatibles con el riesgo (`puntuar`: CV ±10 %, cc ±5 %, combustible exacto si ambos lo traen, puertas, rango
+//      de años). Lo que el riesgo o la candidata no dicen no descarta. Ninguna compatible → se pregunta.
+//   3. Las compatibles son EQUIVALENTES si, respecto a la primera, comparten combustible y CV/kW/cc dentro de tolerancia (solo lo
+//      que ambas traen). Equivalentes → se elige la de fecha de inicio más cercana (≤) a la matriculación; sin fechas, la primera
+//      del portal; y se DECLARA (`supuesto`). Una difiere materialmente → se pregunta con TODAS.
+
+export type CandidataEquivalencia = { etiqueta: string; codigo?: string | null; datos?: DatosVersionCatalogo | null }
+
+export type ResolucionAutomaticaVersion =
+  /** `indice` = posición en la lista ORIGINAL que se pasó. */
+  | { tipo: 'bandeja'; indice: number; eleccion: EleccionVersion; supuesto: null }
+  | { tipo: 'unica'; indice: number; eleccion: EleccionVersion; supuesto: null }
+  | { tipo: 'automatica'; indice: number; eleccion: EleccionVersion; supuesto: string; equivalentes: number }
+  | { tipo: 'preguntar'; motivo: 'material' | 'sin_compatibles' | 'eleccion_no_casa'; opciones: CandidatoVersion[] }
+  | { tipo: 'ninguna' }
+
+/** Texto del supuesto de una versión elegida sola (va en el aviso «Precio con supuestos: …»; sin comas dentro de la etiqueta). */
+export function supuestoVersionAutomatica(etiqueta: string, equivalentes: number): string {
+  return `Versión elegida automáticamente: ${espacios(etiqueta).replace(/,/g, ' ').replace(/\s+/g, ' ')} (había ${equivalentes} ${equivalentes === 1 ? 'equivalente' : 'equivalentes'}; revisar en la emisión)`
+}
+
+const sinTildes = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+/**
+ * Datos de catálogo leídos de la etiqueta para comparar candidatas (Allianz/Generali): lo de `datosDesdeEtiquetaVersion` (CV, cc,
+ * puertas con unidad explícita) más kW («Potencia (kW) 163», «120 kW») y combustible SI el texto lo dice (gasolina, diésel,
+ * eléctrico, híbrido…). Sin nada que parsear → todo `null` (no es influyente: se trata como equivalente). kW no se convierte.
+ */
+export function datosEquivalenciaDesdeEtiqueta(etiqueta: string): DatosVersionCatalogo {
+  const base = datosDesdeEtiquetaVersion(etiqueta)
+  const t = ` ${sinTildes(espacios(etiqueta)).toUpperCase()} `
+  const kws = new Set<number>()
+  for (const re of [/(?<![\d.,])(\d{2,4})\s*KW(?![A-Z0-9])/g, /KW\)?\s*[:=]?\s*(\d{2,4})(?![\d.,A-Z])/g]) for (const m of t.matchAll(re)) kws.add(Number(m[1]))
+  const kw = kws.size === 1 ? [...kws][0]! : null
+  let combustible: Combustible | null = null
+  if (/ENCHUF|PLUG-?IN|PHEV/.test(t)) combustible = 'hibrido_enchufable'
+  else if (/HIBRID|HYBRID/.test(t) || (/ELECTRIC/.test(t) && /GASOLINA|DIESEL|GASOIL|GASOLEO/.test(t))) combustible = 'hibrido'
+  else if (/ELECTRIC/.test(t)) combustible = 'electrico'
+  else if (/DIESEL|GASOIL|GASOLEO/.test(t)) combustible = 'diesel'
+  else if (/GASOLINA|PETROL/.test(t)) combustible = 'gasolina'
+  return { ...base, kw: kw !== null && kw > 0 ? kw : null, combustible }
+}
+
+/** Referencia del riesgo para filtrar y desempatar: vehículo confirmado + cilindrada de `seleccionVehiculo` + 1ª matriculación. PURA. */
+export function referenciaRiesgoVersion(f: Pick<FormularioAuto, 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'> | null | undefined): ReferenciaRiesgo {
+  const vc = f?.vehiculoConfirmado ?? null
+  const ccSel = typeof f?.seleccionVehiculo?.cilindradaCc === 'number' ? f.seleccionVehiculo.cilindradaCc : null
+  return {
+    cv: vc?.cv ?? null,
+    cc: vc?.cc ?? ccSel,
+    puertas: vc?.puertas ?? null,
+    combustible: vc?.combustible ?? null,
+    fechaInicio: vc?.fechaInicio ?? null,
+    fechaMatriculacion: typeof f?.fechaMatriculacion === 'string' && fechaIsoDesdeTexto(f.fechaMatriculacion) ? f.fechaMatriculacion : null,
+  }
+}
+
+/** ¿`b` es equivalente a la referencia `a`? Mismo combustible (si ambas lo traen) y CV/kW/cc dentro de tolerancia (solo lo que ambas traen). */
+function equivalentePara(a: DatosVersionCatalogo, b: DatosVersionCatalogo): boolean {
+  if (a.combustible && b.combustible && a.combustible !== b.combustible) return false
+  for (const [k, tol] of [['cv', TOLERANCIA_CV], ['kw', TOLERANCIA_CV], ['cc', TOLERANCIA_CC]] as const) {
+    const x = a[k]
+    const y = b[k]
+    if (typeof x !== 'number' || typeof y !== 'number') continue
+    if (distanciaRelativa(x, y, tol) === null) return false
+  }
+  return true
+}
+
+const DATOS_VACIOS: DatosVersionCatalogo = { cv: null, cc: null, puertas: null, fechaInicio: null }
+
+/**
+ * Elige la versión SOLA cuando las candidatas son equivalentes; pregunta solo si difieren de forma material (ver arriba). PURA y
+ * determinista. `eleccion` = la de la bandeja (explícita): manda y se usa exacta.
+ */
+export function elegirVersionAutomaticamente(
+  candidatas: readonly CandidataEquivalencia[],
+  opciones: { riesgo?: ReferenciaRiesgo | null; eleccion?: EleccionVersion | null } = {},
+): ResolucionAutomaticaVersion {
+  const vistas = new Set<string>()
+  const limpias: Array<{ i: number; etiqueta: string; codigo: string | null; datos: DatosVersionCatalogo }> = []
+  candidatas.forEach((c, i) => {
+    const etiqueta = espacios(String(c?.etiqueta ?? ''))
+    if (esOpcionVacia(etiqueta)) return
+    const codigo = c.codigo == null || String(c.codigo).trim() === '' ? null : String(c.codigo).trim()
+    const k = `${codigo ?? ''}|${etiqueta.toUpperCase()}`
+    if (vistas.has(k)) return
+    vistas.add(k)
+    limpias.push({ i, etiqueta, codigo, datos: c.datos ?? DATOS_VACIOS })
+  })
+  if (limpias.length === 0) return { tipo: 'ninguna' }
+  const todas = (): CandidatoVersion[] => limpias.map((l) => ({ etiqueta: l.etiqueta, codigo: l.codigo }))
+  const elegida = (l: (typeof limpias)[number]): EleccionVersion => ({ codigo: l.codigo, etiqueta: l.etiqueta })
+  const clave = (t: string) => sinTildes(espacios(t)).toUpperCase()
+
+  // 0. Elección de la bandeja: exacta (código idéntico, o etiqueta igual salvo mayúsculas/tildes/espacios). Si no casa con UNA, se pregunta.
+  const cod = opciones.eleccion?.codigo?.trim() || null
+  const eti = opciones.eleccion?.etiqueta?.trim() ? clave(opciones.eleccion.etiqueta) : null
+  if (cod || eti) {
+    const casan = limpias.filter((l) => (cod !== null ? l.codigo === cod : clave(l.etiqueta) === eti))
+    if (casan.length === 1) return { tipo: 'bandeja', indice: casan[0]!.i, eleccion: elegida(casan[0]!), supuesto: null }
+    return { tipo: 'preguntar', motivo: 'eleccion_no_casa', opciones: todas() }
+  }
+  if (limpias.length === 1) return { tipo: 'unica', indice: limpias[0]!.i, eleccion: elegida(limpias[0]!), supuesto: null }
+
+  // 1. Compatibles con el riesgo (lo que no se sabe no descarta).
+  const riesgo = opciones.riesgo ?? {}
+  const compatibles = limpias.filter((l) => {
+    const r = puntuar(riesgo, l.datos)
+    return !('motivo' in r && r.motivo === 'fuera_de_tolerancia')
+  })
+  if (compatibles.length === 0) return { tipo: 'preguntar', motivo: 'sin_compatibles', opciones: todas() }
+
+  // 2. Equivalentes entre sí (respecto a la primera del portal); una distinta de forma material → se pregunta con todas.
+  const primera = compatibles[0]!
+  if (!compatibles.every((l) => equivalentePara(primera.datos, l.datos))) return { tipo: 'preguntar', motivo: 'material', opciones: todas() }
+
+  // 3. Determinista: fecha de inicio más cercana (≤) a la matriculación; si no hay fechas utilizables, la primera del portal.
+  let ganadora = primera
+  const mat = riesgo.fechaMatriculacion ?? null
+  if (mat) {
+    let mejor: string | null = null
+    for (const l of compatibles) {
+      const f = l.datos.fechaInicio ?? null
+      if (f && f <= mat && (mejor === null || f > mejor)) {
+        mejor = f
+        ganadora = l
+      }
+    }
+  }
+  return { tipo: 'automatica', indice: ganadora.i, eleccion: elegida(ganadora), supuesto: supuestoVersionAutomatica(ganadora.etiqueta, compatibles.length), equivalentes: compatibles.length }
 }

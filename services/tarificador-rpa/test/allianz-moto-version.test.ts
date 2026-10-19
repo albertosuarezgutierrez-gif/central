@@ -1,8 +1,8 @@
-// Allianz MOTO v0.7.1 (19/10/2026): sin «la primera». Regla pura: inequívoca → elige; ambigua → `ambigua` (el flujo lanza ErrorEleccionVersion). Etiquetas con la FORMA del
+// Allianz MOTO v0.7.1/0.7.2 (19/10/2026): regla pura inequívoca → elige; ambigua → `ambigua` y el flujo aplica la EQUIVALENCIA (v0.7.2: equivalentes → elige sola y declara; materiales → ErrorEleccionVersion). Etiquetas con la FORMA del
 // catálogo real (sin datos personales); códigos inventados.
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { allianzMoto, eleccionVersionMotoPorSimilitud, supuestosMoto } from '../src/adapters/allianz/auto.ts'
+import { allianzMoto, eleccionVersionMotoPorSimilitud, ErrorEleccionVersion, supuestosMoto, versionAutomaticaAllianz } from '../src/adapters/allianz/auto.ts'
 import { PREFIJO_SUPUESTOS, SUPUESTO_FAVORABLE_ANIOS, type FormularioAuto } from '@central/module-tarificacion'
 
 const lista = (...etiquetas: string[]) => etiquetas.map((etiqueta, i) => ({ etiqueta, codigo: `C${i}` }))
@@ -37,9 +37,37 @@ test('0 o 1 opciones: no hay nada que elegir', () => {
   assert.equal(eleccionVersionMotoPorSimilitud([], sel({})), null)
 })
 
-test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.1', () => {
+test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.2', () => {
   const f = { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: 0 } as unknown as FormularioAuto
   assert.equal(supuestosMoto('versión elegida por similitud (supuesto, había 2)', f), `${PREFIJO_SUPUESTOS}versión elegida por similitud (supuesto, había 2), ${SUPUESTO_FAVORABLE_ANIOS}.`)
   assert.equal(supuestosMoto(null, { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto), null)
-  assert.equal(allianzMoto.version, '0.7.1')
+  assert.equal(allianzMoto.version, '0.7.2')
+})
+
+test('v0.7.2 · ambigua con candidatas EQUIVALENTES (misma cilindrada) → se elige SOLA la primera y se declara en el aviso de supuestos', () => {
+  const adv = eleccionVersionMotoPorSimilitud(CATALOGO, sel({ descripcion: 'F 800 GS ADVENTURE' }))
+  assert.equal(adv?.tipo, 'ambigua')
+  if (adv?.tipo !== 'ambigua') return
+  const r = versionAutomaticaAllianz(adv.opciones, { seleccionVehiculo: sel({ descripcion: 'F 800 GS ADVENTURE' }) })
+  assert.equal(r.indice, 0)
+  assert.deepEqual(r.eleccion, { codigo: 'C1', etiqueta: 'GS 798C.C.' })
+  assert.equal(r.supuesto, 'Versión elegida automáticamente: GS 798C.C. (había 2 equivalentes; revisar en la emisión)')
+  const f = { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto
+  assert.ok(supuestosMoto(r.supuesto, f)!.startsWith(`${PREFIJO_SUPUESTOS}Versión elegida automáticamente: GS 798C.C. (había 2 equivalentes; revisar en la emisión)`))
+})
+
+test('v0.7.2 · cilindradas MATERIALMENTE distintas (798 y 895 cc) o ninguna compatible con la del riesgo → ErrorEleccionVersion con las candidatas', () => {
+  const mixta = lista('GS 798C.C.', 'GS 895C.C.')
+  assert.throws(() => versionAutomaticaAllianz(mixta, {}), (e: unknown) => e instanceof ErrorEleccionVersion && e.opciones.length === 2)
+  assert.throws(() => versionAutomaticaAllianz(CATALOGO, { seleccionVehiculo: sel({ cilindradaCc: 1200 }) }), (e: unknown) => e instanceof ErrorEleccionVersion && e.opciones.length === 6)
+  // Con la cilindrada del riesgo, solo cuenta la compatible: 895 → la de 895 cc.
+  const r = versionAutomaticaAllianz(mixta, { seleccionVehiculo: sel({ cilindradaCc: 895 }) })
+  assert.deepEqual(r.eleccion, { codigo: 'C1', etiqueta: 'GS 895C.C.' })
+})
+
+test('v0.7.2 · la elección de la bandeja se usa EXACTA y sin supuesto; si no casa con UNA, se vuelve a preguntar', () => {
+  const r = versionAutomaticaAllianz(CATALOGO, { eleccionVersion: { codigo: 'C3', etiqueta: 'GS ADVENTURE 798C.C.' } })
+  assert.equal(r.indice, 3)
+  assert.equal(r.supuesto, null)
+  assert.throws(() => versionAutomaticaAllianz(CATALOGO, { eleccionVersion: { codigo: 'NO', etiqueta: null } }), ErrorEleccionVersion)
 })

@@ -637,7 +637,7 @@ test('v0.8.7 moto: el plan sale (ya no es hueco de mapa); sin clase de permiso �
 })
 
 // ───────────────────────── v0.8.8 · nunca «la primera» ─────────────────────────
-import { indiceFilaVehiculoMapfre as indiceFilaMapfre88, opcionesFilasVehiculo } from '../src/adapters/mapfre/auto.ts'
+import { filaVehiculoPorEquivalencia, indiceFilaVehiculoMapfre as indiceFilaMapfre88, opcionesFilasVehiculo } from '../src/adapters/mapfre/auto.ts'
 
 test('v0.8.8 · opcionesFilasVehiculo: una opción por fila con denominación · CV · cc · fecha; la etiqueta elegida vuelve y casa EXACTA con una sola fila', () => {
   const filas = [
@@ -651,5 +651,5 @@ test('v0.8.8 · opcionesFilasVehiculo: una opción por fila con denominación ·
   assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X' } }), null, 'marca+modelo casan con las 3: ambiguo')
   assert.equal(indiceFilaMapfre88(filas, { eleccionVersion: { codigo: null, etiqueta: ops[1]!.etiqueta } }), 1, 'la etiqueta de la bandeja distingue la fila')
   assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X', cilindradaCc: 1968 } }), 2, 'una única candidata por cilindrada: inequívoca')
-  assert.equal(mapfreAuto.version, '0.8.8')
+  assert.equal(mapfreAuto.version, '0.8.9')
 })

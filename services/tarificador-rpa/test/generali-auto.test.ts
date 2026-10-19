@@ -150,8 +150,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.9')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.9')
+  assert.equal(generaliAuto.version, '0.2.10')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.10')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -349,10 +349,10 @@ test('Datos de Valoración: sin el campo de verificación de la matrícula (capt
   }
 })
 
-const SELECTOR_HTML = (marcas: string[], conModelo: boolean) => `<button onclick="document.getElementById('sel').style.display='block'">Vehículo</button>
+const SELECTOR_HTML = (marcas: string[], conModelo: boolean, versiones: string[] = ['1.0 TSI STYLE', '1.0 TSI FR']) => `<button onclick="document.getElementById('sel').style.display='block'">Vehículo</button>
   <div id="sel" style="display:none"><h2>Selector de vehículos</h2>
   <label for="tm">Todas las marcas</label><select id="tm"><option>Seleccione una</option>${marcas.map((m) => `<option>${m}</option>`).join('')}</select>
-  ${conModelo ? '<label>Modelo</label><select id="mo"><option>Seleccione uno</option><option>IBIZA</option><option>IBIZA ST</option></select><label>Versión</label><select id="ve"><option>1.0 TSI STYLE</option><option>1.0 TSI FR</option></select>' : ''}
+  ${conModelo ? '<label>Modelo</label><select id="mo"><option>Seleccione uno</option><option>IBIZA</option><option>IBIZA ST</option></select><label>Versión</label><select id="ve">' + versiones.map((v) => `<option>${v}</option>`).join('') + '</select>' : ''}
   </div>`
 
 test('selector de vehículos: marca exacta y, sin captura de lo que sigue, PARA con inventario', async () => {
@@ -375,7 +375,7 @@ test('selector de vehículos: dos marcas casan → atasco con las opciones, sin 
   }
 })
 
-test('selector de vehículos: modelo exacto y versión de la oportunidad; sin versión confirmada y varias → elige una persona', async () => {
+test('selector de vehículos: modelo exacto y versión de la oportunidad; sin versión confirmada: varias equivalentes → elige sola (v0.2.10); materiales → elige una persona', async () => {
   const a = await abrir(PORTAL, SELECTOR_HTML(['SEAT'], true))
   try {
     // Llega a la versión y para porque la fixture no lleva a «Identificación del vehículo» (paso sin captura).
@@ -385,12 +385,26 @@ test('selector de vehículos: modelo exacto y versión de la oportunidad; sin ve
   } finally {
     await a.cerrar()
   }
+  // v0.2.10: sin versión confirmada y varias EQUIVALENTES (mismo texto de acabado, sin diferencias materiales) → elige SOLA la primera y la declara.
   const b = await abrir(PORTAL, SELECTOR_HTML(['SEAT'], true))
   try {
     const sinVersion = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA' } })
-    await assert.rejects(seleccionarVehiculoGenerali(b.page, b.page, sinVersion, ctxSimple(b.page, b.guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 2)
+    const avisos: string[] = []
+    await assert.rejects(seleccionarVehiculoGenerali(b.page, b.page, sinVersion, ctxSimple(b.page, b.guard), avisos), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /cómo se confirma/.test(e.message))
+    assert.equal(await b.page.locator('#ve').inputValue(), '1.0 TSI STYLE', 'la primera del portal')
+    assert.deepEqual(avisos, ['Versión elegida automáticamente: 1.0 TSI STYLE (había 2 equivalentes; revisar en la emisión)'])
   } finally {
     await b.cerrar()
+  }
+  // Diferencias MATERIALES (combustible distinto) → sigue preguntando con todas, sin tocar el desplegable.
+  const c = await abrir(PORTAL, SELECTOR_HTML(['SEAT'], true, ['1.0 TSI 95 CV Gasolina', '1.6 TDI 95 CV Diésel']))
+  try {
+    const sinVersion = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'IBIZA' } })
+    const antes = await c.page.locator('#ve').inputValue()
+    await assert.rejects(seleccionarVehiculoGenerali(c.page, c.page, sinVersion, ctxSimple(c.page, c.guard), []), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 2)
+    assert.equal(await c.page.locator('#ve').inputValue(), antes)
+  } finally {
+    await c.cerrar()
   }
 })
 

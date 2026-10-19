@@ -8,6 +8,10 @@ import {
   SUBCLAVES_RIESGO,
   comprobarBoton,
   datosDesdeEtiquetaVersion,
+  datosEquivalenciaDesdeEtiqueta,
+  elegirVersionAutomaticamente,
+  referenciaRiesgoVersion,
+  supuestoVersionAutomatica,
   eleccionPorVehiculoConfirmado,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
   EmisionBloqueadaError,
@@ -215,5 +219,94 @@ describe('guard · botones del diálogo «Selección de vehículo» de Mapfre', 
   it('«Aceptar» solo pasa con la opción de la función guardada', () => {
     expect(() => comprobarBoton(['Aceptar'])).toThrow(EmisionBloqueadaError)
     expect(() => comprobarBoton(['Aceptar'], { permitirAceptar: true })).not.toThrow()
+  })
+})
+
+// ───────────────────────── elección AUTOMÁTICA por equivalencia (19/10/2026, Alberto) ─────────────────────────
+// Caso real «Terracan»: 5 versiones 2.9 CRDI 163 GL/GLS/Full, 163 CV, 2902 cc, diésel → antes requiere_humano; ahora se elige sola.
+describe('elegirVersionAutomaticamente · equivalentes → elige y declara; material → pregunta; bandeja → exacta', () => {
+  const dato = (o: Partial<{ cv: number; cc: number; fechaInicio: string; combustible: 'diesel' | 'gasolina' | 'electrico' }> = {}) => ({ cv: 163, cc: 2902, puertas: null, fechaInicio: null, combustible: 'diesel' as const, ...o })
+  const TERRACAN = ['HYUNDAI TERRACAN 2.9 CRDI 163 GL', 'HYUNDAI TERRACAN 2.9 CRDI 163 GLS', 'HYUNDAI TERRACAN 2.9 CRDI 163 FULL', 'HYUNDAI TERRACAN 2.9 CRDI 163 GLS AUT', 'HYUNDAI TERRACAN 2.9 CRDI 163 FULL AUT'].map((e, i) => ({ etiqueta: e, codigo: `C${i}`, datos: dato() }))
+
+  it('equivalentes (GL/GLS/Full: mismo combustible, CV y cc) → elige la PRIMERA del portal y declara el supuesto', () => {
+    const r = elegirVersionAutomaticamente(TERRACAN)
+    expect(r.tipo).toBe('automatica')
+    if (r.tipo !== 'automatica') return
+    expect(r.indice).toBe(0)
+    expect(r.eleccion).toEqual({ codigo: 'C0', etiqueta: 'HYUNDAI TERRACAN 2.9 CRDI 163 GL' })
+    expect(r.equivalentes).toBe(5)
+    expect(r.supuesto).toBe('Versión elegida automáticamente: HYUNDAI TERRACAN 2.9 CRDI 163 GL (había 5 equivalentes; revisar en la emisión)')
+    expect(supuestoVersionAutomatica('A, B', 1)).toBe('Versión elegida automáticamente: A B (había 1 equivalente; revisar en la emisión)')
+  })
+  it('dentro de tolerancia respecto a la PRIMERA (CV ±10 %, cc ±5 %) sigue siendo equivalente; fuera, material', () => {
+    const base = { etiqueta: 'A', codigo: null, datos: dato({ cv: 100, cc: 1500 }) }
+    expect(elegirVersionAutomaticamente([base, { etiqueta: 'B', codigo: null, datos: dato({ cv: 110, cc: 1575 }) }]).tipo).toBe('automatica')
+    expect(elegirVersionAutomaticamente([base, { etiqueta: 'B', codigo: null, datos: dato({ cv: 111, cc: 1500 }) }]).tipo).toBe('preguntar')
+    expect(elegirVersionAutomaticamente([base, { etiqueta: 'B', codigo: null, datos: dato({ cv: 100, cc: 1576 }) }]).tipo).toBe('preguntar')
+  })
+  it('MATERIAL: combustible distinto → pregunta con TODAS (motivo material)', () => {
+    const r = elegirVersionAutomaticamente([TERRACAN[0]!, { etiqueta: 'HYUNDAI TERRACAN 3.5 V6', codigo: 'G', datos: dato({ combustible: 'gasolina' }) }])
+    expect(r.tipo).toBe('preguntar')
+    if (r.tipo === 'preguntar') {
+      expect(r.motivo).toBe('material')
+      expect(r.opciones.map((o) => o.codigo)).toEqual(['C0', 'G'])
+    }
+  })
+  it('lo que una candidata no dice no cuenta (sin CV/cc/combustible → equivalente); sin nada que comparar elige la primera', () => {
+    const r = elegirVersionAutomaticamente([{ etiqueta: 'X UNO', datos: null }, { etiqueta: 'X DOS' }, { etiqueta: 'X TRES', datos: dato() }])
+    expect(r.tipo === 'automatica' && r.indice === 0).toBe(true)
+  })
+  it('con fechas: la de inicio más cercana (≤) a la matriculación; si ninguna es ≤, la primera del portal', () => {
+    const c = ['2015-01-01', '2018-06-01', '2020-03-01', '2023-01-01'].map((f, i) => ({ etiqueta: `V${i}`, codigo: null, datos: dato({ fechaInicio: f }) }))
+    const a = elegirVersionAutomaticamente(c, { riesgo: { fechaMatriculacion: '2019-05-10' } })
+    expect(a.tipo === 'automatica' && a.indice === 1).toBe(true)
+    const b = elegirVersionAutomaticamente(c, { riesgo: { fechaMatriculacion: '2010-01-01' } })
+    expect(b.tipo === 'automatica' && b.indice === 0).toBe(true)
+    // Determinista: mismo resultado si se repite, y desempate de fechas iguales → la primera.
+    const d = [{ etiqueta: 'A', datos: dato({ fechaInicio: '2018-01-01' }) }, { etiqueta: 'B', datos: dato({ fechaInicio: '2018-01-01' }) }]
+    expect(elegirVersionAutomaticamente(d, { riesgo: { fechaMatriculacion: '2019-01-01' } })).toEqual(elegirVersionAutomaticamente(d, { riesgo: { fechaMatriculacion: '2019-01-01' } }))
+    expect((elegirVersionAutomaticamente(d, { riesgo: { fechaMatriculacion: '2019-01-01' } }) as { indice: number }).indice).toBe(0)
+  })
+  it('filtra por el riesgo: la única compatible gana; ninguna compatible → pregunta (sin_compatibles)', () => {
+    const c = [{ etiqueta: 'D', datos: dato({ cv: 90, cc: 1400 }) }, { etiqueta: 'E', datos: dato({ cv: 163, cc: 2902 }) }, { etiqueta: 'F', datos: dato({ cv: 300, cc: 5000 }) }]
+    const uno = elegirVersionAutomaticamente(c, { riesgo: { cv: 163, cc: 2902 } })
+    expect(uno.tipo === 'automatica' && uno.indice === 1 && uno.equivalentes === 1).toBe(true)
+    const ninguna = elegirVersionAutomaticamente(c, { riesgo: { cv: 500, cc: 8000 } })
+    expect(ninguna.tipo === 'preguntar' && ninguna.motivo === 'sin_compatibles').toBe(true)
+    // Combustible del riesgo exacto cuando ambos lo traen, aunque no haya CV ni cc.
+    const comb = elegirVersionAutomaticamente([{ etiqueta: 'G1', datos: dato({ combustible: 'gasolina' }) }, { etiqueta: 'D1', datos: dato({ combustible: 'diesel' }) }], { riesgo: { combustible: 'diesel' } })
+    expect(comb.tipo === 'automatica' && comb.indice === 1).toBe(true)
+  })
+  it('la ELECCIÓN DE LA BANDEJA manda y se usa EXACTA (código o etiqueta); si no casa con UNA, se vuelve a preguntar (nunca se elige otra)', () => {
+    const porCodigo = elegirVersionAutomaticamente(TERRACAN, { eleccion: { codigo: 'C3', etiqueta: null } })
+    expect(porCodigo.tipo === 'bandeja' && porCodigo.indice === 3 && porCodigo.supuesto === null).toBe(true)
+    const porEtiqueta = elegirVersionAutomaticamente(TERRACAN, { eleccion: { etiqueta: ' hyundai terracan 2.9 crdi 163 full ' } })
+    expect(porEtiqueta.tipo === 'bandeja' && porEtiqueta.indice === 2).toBe(true)
+    const noCasa = elegirVersionAutomaticamente(TERRACAN, { eleccion: { etiqueta: 'OTRO COCHE' } })
+    expect(noCasa.tipo === 'preguntar' && noCasa.motivo === 'eleccion_no_casa' && noCasa.opciones.length === 5).toBe(true)
+  })
+  it('una sola candidata → esa, sin supuesto; vacías y duplicadas fuera; ninguna → ninguna', () => {
+    expect(elegirVersionAutomaticamente([{ etiqueta: 'Seleccione', datos: null }, { etiqueta: 'SOLA', codigo: 'S' }, { etiqueta: 'sola', codigo: 'S' }])).toEqual({ tipo: 'unica', indice: 1, eleccion: { codigo: 'S', etiqueta: 'SOLA' }, supuesto: null })
+    expect(elegirVersionAutomaticamente([{ etiqueta: '' }, { etiqueta: '--' }])).toEqual({ tipo: 'ninguna' })
+  })
+  it('referenciaRiesgoVersion: vehículo confirmado + cilindrada de la selección + matriculación válida', () => {
+    expect(referenciaRiesgoVersion({ vehiculoConfirmado: { ...VC, combustible: 'diesel' }, fechaMatriculacion: '2019-05-10' })).toEqual({ cv: 110, cc: 1598, puertas: 5, combustible: 'diesel', fechaInicio: '2019-03-01', fechaMatriculacion: '2019-05-10' })
+    expect(referenciaRiesgoVersion({ seleccionVehiculo: { marca: 'A', modelo: 'B', cilindradaCc: 798 }, fechaMatriculacion: 'basura' })).toMatchObject({ cc: 798, cv: null, fechaMatriculacion: null })
+    expect(referenciaRiesgoVersion(null)).toMatchObject({ cv: null, cc: null })
+  })
+  it('datosEquivalenciaDesdeEtiqueta: CV, cc, kW («Potencia (kW) 163») y combustible solo si el texto lo dice; nada parseable → todo null', () => {
+    expect(datosEquivalenciaDesdeEtiqueta('Versión 2.9 CRDI 163 CV 2902 cc Diésel')).toMatchObject({ cv: 163, cc: 2902, combustible: 'diesel', kw: null })
+    expect(datosEquivalenciaDesdeEtiqueta('Combustible Gasolina Potencia (kW) 163 GLS')).toMatchObject({ kw: 163, cv: null, combustible: 'gasolina' })
+    expect(datosEquivalenciaDesdeEtiqueta('Versión 120 kW Eléctrico')).toMatchObject({ kw: 120, combustible: 'electrico' })
+    expect(datosEquivalenciaDesdeEtiqueta('Híbrido enchufable 1.6')).toMatchObject({ combustible: 'hibrido_enchufable' })
+    expect(datosEquivalenciaDesdeEtiqueta('Gasolina Eléctrico')).toMatchObject({ combustible: 'hibrido' })
+    expect(datosEquivalenciaDesdeEtiqueta('2.9 CRDI 163 GL')).toMatchObject({ cv: null, cc: null, kw: null, combustible: null })
+  })
+  it('etiquetas de Allianz con kW: mismas kW/diésel → equivalentes; combustible distinto en el texto → material; kW fuera de tolerancia → material', () => {
+    const e = (t: string) => ({ etiqueta: t, datos: datosEquivalenciaDesdeEtiqueta(t) })
+    expect(elegirVersionAutomaticamente([e('Tipo de combustible Diésel Versión 2.9 CRDI 163 GL Potencia (kW) 163'), e('Tipo de combustible Diésel Versión 2.9 CRDI 163 FULL Potencia (kW) 163')]).tipo).toBe('automatica')
+    expect(elegirVersionAutomaticamente([e('Tipo de combustible Diésel Versión A'), e('Tipo de combustible Gasolina Versión B')]).tipo).toBe('preguntar')
+    expect(elegirVersionAutomaticamente([e('Versión A Potencia (kW) 100'), e('Versión B Potencia (kW) 140')]).tipo).toBe('preguntar')
+    expect(elegirVersionAutomaticamente([e('Versión A'), e('Versión B')]).tipo).toBe('automatica')
   })
 })

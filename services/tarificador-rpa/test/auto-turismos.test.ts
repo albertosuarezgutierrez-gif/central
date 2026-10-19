@@ -234,7 +234,7 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
 })
 
 test('versión del bot de Allianz Turismos', () => {
-  assert.equal(allianzAuto.version, '0.6.17')
+  assert.equal(allianzAuto.version, '0.6.18')
 })
 
 test('localización por etiqueta/rol: marco del motor y controles sin tocar ids dinámicos', async () => {
@@ -335,6 +335,40 @@ test('varias versiones SIN elección → ErrorEleccionVersion con todas y SIN fi
   } finally {
     await b.context.close()
   }
+})
+
+test('v0.6.18 · versiones EQUIVALENTES (Terracan: GL/GLS/Full, 163 CV, diésel) → se elige SOLA la primera y se DECLARA; diferencias MATERIALES (CV/combustible) → ErrorEleccionVersion', async () => {
+  const equivalentes: Array<[string, string]> = [['T1', 'Tipo de combustible Diésel Versión 2.9 CRDI 163 GL 163 CV'], ['T2', 'Tipo de combustible Diésel Versión 2.9 CRDI 163 GLS 163 CV'], ['T3', 'Tipo de combustible Diésel Versión 2.9 CRDI 163 FULL 163 CV']]
+  const a = await abrir({ versiones: equivalentes })
+  try {
+    const marco = await marcoFormularioTurismos(a.page, 5_000)
+    const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, marco, FORM, a.ctx)
+    assert.equal(await marco.getByLabel('Versión').inputValue(), 'T1', 'la primera del portal (sin fechas)')
+    assert.equal(r.supuestoVersion, 'Versión elegida automáticamente: Tipo de combustible Diésel Versión 2.9 CRDI 163 GL 163 CV (había 3 equivalentes; revisar en la emisión)')
+    assert.match(unirSupuestoVersion(r.supuestoVersion, 'Precio con supuestos: uso diario.')!, /^Precio con supuestos: Versión elegida automáticamente: .*revisar en la emisión\), uso diario\.$/)
+  } finally {
+    await a.context.close()
+  }
+  const b = await abrir({ versiones: [['T1', 'Tipo de combustible Diésel Versión 2.9 CRDI 163 CV'], ['G1', 'Tipo de combustible Gasolina Versión 3.5 V6 163 CV']] })
+  try {
+    const marco = await marcoFormularioTurismos(b.page, 5_000)
+    const antes = await marco.getByLabel('Versión').inputValue()
+    await assert.rejects(rellenarDatosVehiculoTurismosConSupuesto(b.page, marco, FORM, b.ctx), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 2)
+    assert.equal(await marco.getByLabel('Versión').inputValue(), antes, 'material: el desplegable no se tocó')
+  } finally {
+    await b.context.close()
+  }
+})
+
+test('v0.6.18 · tarjetas EQUIVALENTES (Terracan, 5 versiones GL/GLS/Full, 163 CV, 2902 cc, diésel) → elige sola la primera y declara; con la elección de la bandeja, la exacta y sin supuesto', () => {
+  const T = ['GL', 'GLS', 'FULL', 'GLS AUTOMATICO', 'FULL AUTOMATICO'].map((a) => ({ etiqueta: `Marca del vehículo HYUNDAI Modelo Terracan Tipo de combustible Diésel Versión 2.9 CRDI 163 ${a} 163 CV 2902 cc`, marcada: false }))
+  const r = decidirTarjetaVehiculoTurismos(T, FORM)
+  assert.equal(r.indice, 0)
+  assert.equal(r.supuesto, `Versión elegida automáticamente: ${T[0]!.etiqueta} (había 5 equivalentes; revisar en la emisión)`)
+  assert.deepEqual(decidirTarjetaVehiculoTurismos(T, { ...FORM, eleccionVersion: { codigo: null, etiqueta: T[3]!.etiqueta } }), { indice: 3, supuesto: null })
+  assert.throws(() => decidirTarjetaVehiculoTurismos(T, { ...FORM, eleccionVersion: { codigo: null, etiqueta: 'OTRA COSA' } }), (e: unknown) => e instanceof ErrorEleccionVersion, 'una elección que no casa se vuelve a preguntar, no se elige otra')
+  // La fecha de matriculación elige entre equivalentes con fechas (aquí las tarjetas no las traen → la primera).
+  assert.equal(decidirTarjetaVehiculoTurismos(T, { ...FORM, fechaMatriculacion: '2005-03-01' }).indice, 0)
 })
 
 test('huecos: aviso del portal, «SIGUIENTE» muerto y «Sí» ambiguo → ErrorMapaIncompleto con inventario; nunca se pulsa SIGUIENTE deshabilitado', async () => {

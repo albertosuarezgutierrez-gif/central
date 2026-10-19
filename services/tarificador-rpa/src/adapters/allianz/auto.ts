@@ -1,3 +1,7 @@
+// v0.6.18 / Moto v0.7.2 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»):
+// con varias versiones y sin elección de la bandeja, se elige SOLA si son EQUIVALENTES (`versionAutomaticaAllianz`, regla común de
+// module-tarificacion: mismo combustible y CV/kW/cc dentro de tolerancia; lo que la etiqueta no dice no cuenta) y se DECLARA en el aviso de
+// supuestos («Versión elegida automáticamente: … revisar en la emisión»). Solo si difieren de forma MATERIAL → `ErrorEleccionVersion` con todas.
 // v0.6.17 / Moto v0.7.1 (19/10/2026, decisión de Alberto: «la primera» puede dar el precio de otro coche): se REVOCA la elección de
 // «el primero de la lista» (tarjetas y `<select>` de Turismos, `<select>` de Moto). Solo se elige si es inequívoco (elección de la bandeja,
 // vehículo confirmado o riesgo que casan con UNA); si no, `ErrorEleccionVersion` (requiere_humano) con el texto exacto de cada versión.
@@ -105,6 +109,9 @@ import {
   esCif,
   esDniNie,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
+  elegirVersionAutomaticamente,
+  datosEquivalenciaDesdeEtiqueta,
+  referenciaRiesgoVersion,
   etiquetasSupuestos,
   esOpcionVacia,
   fechaIsoDesdeTexto,
@@ -385,6 +392,27 @@ export function eleccionVersionMotoPorSimilitud(
   }
   const soloCc = cc === null ? [] : porCc(ops)
   return soloCc.length === 1 ? elegir(soloCc[0]!) : { tipo: 'ambigua', opciones: ops }
+}
+
+/**
+ * Elección AUTOMÁTICA por EQUIVALENCIA (v0.6.18 / Moto v0.7.2, 19/10/2026). Candidatas = opciones del desplegable o tarjetas (los datos
+ * salen de la ETIQUETA: «163 CV», «2902 cc», «Potencia (kW) 163», «Diésel»; lo que no se puede leer no cuenta). Equivalentes → índice de la
+ * elegida (de `opciones`) + el supuesto a declarar; la elección de la bandeja (`form.eleccionVersion`) casa exacta, sin supuesto; diferencias
+ * MATERIALES (combustible, CV/cc fuera de tolerancia) o nada compatible con el riesgo → `ErrorEleccionVersion` con `mostrar` (por defecto,
+ * todas). PURA salvo el lanzamiento.
+ */
+export function versionAutomaticaAllianz(
+  opciones: readonly CandidatoVersion[],
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
+  mostrar: readonly CandidatoVersion[] = opciones,
+): { indice: number; eleccion: EleccionVersion; supuesto: string | null } {
+  const r = elegirVersionAutomaticamente(
+    opciones.map((o) => ({ etiqueta: o.etiqueta, codigo: o.codigo, datos: datosEquivalenciaDesdeEtiqueta(o.etiqueta) })),
+    { riesgo: referenciaRiesgoVersion(form), eleccion: form.eleccionVersion ?? null },
+  )
+  if (r.tipo === 'ninguna') throw new ErrorTarificador('portal', 'allianz/auto: el portal no ofrece ninguna versión utilizable')
+  if (r.tipo === 'preguntar') throw new ErrorEleccionVersion(mostrar.filter((o) => !esOpcionVacia(o.etiqueta)).map((o): CandidatoVersion => ({ etiqueta: o.etiqueta, codigo: o.codigo })))
+  return { indice: r.indice, eleccion: r.eleccion, supuesto: r.supuesto }
 }
 
 /**
@@ -968,9 +996,11 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   const lectura = await leerVehiculoPortal(riesgo)
   const yaElegida = eleccionVersionConOrigen(lectura, form).eleccion !== null
   const auto = yaElegida ? null : eleccionVersionMotoPorSimilitud(lectura.versiones, form.seleccionVehiculo)
-  if (auto?.tipo === 'ambigua') throw new ErrorEleccionVersion(auto.opciones)
-  const vehiculo = await resolverVehiculo(riesgo, lectura, auto ? { ...form, eleccionVersion: auto.eleccion } : form)
-  const supuestoVersion: string | null = null
+  // v0.7.2: ambigua → se elige SOLA si las candidatas son equivalentes (declarado); diferencias materiales → ErrorEleccionVersion (como la 0.7.1).
+  const porEquivalencia = auto?.tipo === 'ambigua' ? versionAutomaticaAllianz(auto.opciones, form) : null
+  const elegidaAuto = auto?.tipo === 'unica' ? auto.eleccion : (porEquivalencia?.eleccion ?? null)
+  const vehiculo = await resolverVehiculo(riesgo, lectura, elegidaAuto ? { ...form, eleccionVersion: elegidaAuto } : form)
+  const supuestoVersion: string | null = porEquivalencia?.supuesto ?? null
   await ctx.pausa()
   await rellenarRiesgoMoto(riesgo, form, page, ctx)
   await lanzarSiHayErrores(riesgo)
@@ -1159,22 +1189,24 @@ export async function leerVersionesTurismos(marco: Pick<Frame, 'locator'>): Prom
 /**
  * Elección de versión tras «Encuentra mi vehículo». Una sola o elegida → se FIJA por el código de SU opción y se relee.
  * Varias que no casan con UNA sola (elección del formulario o vehículo confirmado) → `ErrorEleccionVersion` (requiere_humano) con
- * todas, sin elegir (v0.6.17, 19/10/2026: se revoca «la primera» del 17/10, que podía dar el precio de otro coche). `supuesto` queda
- * siempre `null`. Solo Turismos. `conVersiones`: había selector.
+ * todas (v0.6.17, 19/10/2026: se revoca «la primera»). v0.6.18: si son EQUIVALENTES se elige sola y `supuesto` lo declara. Solo Turismos. `conVersiones`: había selector.
  */
 export async function resolverVersionTurismos(
   marco: Pick<Frame, 'locator'>,
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
 ): Promise<{ conVersiones: boolean; supuesto: string | null }> {
   const l = await leerVersionesTurismos(marco)
   if (!l || l.opciones.length === 0) return { conVersiones: false, supuesto: null }
   const { eleccion } = eleccionVersionConOrigen({ versiones: l.opciones }, form)
   const r = resolverVersion(l.opciones, eleccion)
-  const supuesto: string | null = null
+  let supuesto: string | null = null
   let elegida: CandidatoVersion
   if (r.tipo === 'ninguna') return { conVersiones: false, supuesto: null }
   if (r.tipo === 'ambigua') {
-    throw new ErrorEleccionVersion(r.opciones)
+    // v0.6.18: equivalentes → se elige SOLA y se declara; diferencias materiales → ErrorEleccionVersion con todas.
+    const a = versionAutomaticaAllianz(r.opciones, form)
+    supuesto = a.supuesto
+    elegida = r.opciones[a.indice]!
   } else elegida = r.candidato
   const codigo = elegida.codigo
   if (!codigo) throw new ErrorTarificador('portal', 'allianz/auto: la versión resuelta no tiene código en el desplegable: no se puede fijar')
@@ -1204,12 +1236,12 @@ async function tarjetasVehiculoEstables(page: Pick<Page, 'waitForTimeout'>, marc
 /**
  * Qué tarjeta se elige (pura). Una → esa. Varias: la elección de la bandeja (`eleccionVersion`, por ETIQUETA: los ids son
  * dinámicos y no valen de una sesión a otra) o la del vehículo confirmado por similitud (`eleccionVersionConOrigen`, solo si casa UNA).
- * v0.6.17: cualquier otro caso con varias → `ErrorEleccionVersion` (requiere_humano) con la etiqueta exacta de cada tarjeta (marca,
- * modelo, combustible… tal como las pinta el portal); nunca «la primera». `supuesto` queda siempre `null`.
+ * v0.6.18: cualquier otro caso con varias → se elige SOLA si las tarjetas son EQUIVALENTES (`versionAutomaticaAllianz`; `supuesto` lo declara);
+ * si difieren de forma material → `ErrorEleccionVersion` (requiere_humano) con la etiqueta exacta de cada tarjeta (marca, modelo, combustible…).
  */
 export function decidirTarjetaVehiculoTurismos(
   tarjetas: readonly Pick<TarjetaVehiculoTurismos, 'etiqueta'>[],
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
 ): { indice: number; supuesto: string | null } {
   if (tarjetas.length === 0) throw new ErrorMapaIncompleto(`las tarjetas de vehículo de «${BOTON_ENCUENTRA_VEHICULO}» (no hay ninguna)`, true)
   if (tarjetas.length === 1) return { indice: 0, supuesto: null }
@@ -1222,7 +1254,9 @@ export function decidirTarjetaVehiculoTurismos(
       if (i >= 0) return { indice: i, supuesto: null }
     }
   }
-  throw new ErrorEleccionVersion(candidatos)
+  // v0.6.18: equivalentes → la primera de las compatibles (o la de fecha más cercana), declarada; diferencias materiales → ErrorEleccionVersion.
+  const a = versionAutomaticaAllianz(candidatos, form)
+  return { indice: a.indice, supuesto: a.supuesto }
 }
 
 /**
@@ -1231,7 +1265,7 @@ export function decidirTarjetaVehiculoTurismos(
  */
 export async function elegirTarjetaVehiculoTurismos(
   marco: Frame,
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
   ctx: Pick<CtxTurismos, 'marcarTarjetaVehiculoTurismos'>,
   tarjetas: readonly TarjetaVehiculoTurismos[],
 ): Promise<{ supuesto: string | null }> {
@@ -2168,7 +2202,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.1' : '0.6.17',
+    version: ramo === 'moto' ? '0.7.2' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
