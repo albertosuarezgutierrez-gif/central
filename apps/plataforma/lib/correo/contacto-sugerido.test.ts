@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   botonesContactoSugerido, buscarFichaDeRemitente, clasificarBuzon, contactoParaDirectorio, debeSugerirContactoAseguradora, decidirBotonCsg,
-  inferirCompania, interpretarAltaContacto, leerDatosContactoSugerido, lineaTrasAlta, partirRemitente, pareceContactoPersonal, textoAvisoCorreoCliente,
+  inferirCompania, candidatasCompania, botonesElegirCompania, leerCandidatasGuardadas, candidataElegida, interpretarAltaContacto, leerDatosContactoSugerido, lineaTrasAlta, partirRemitente, pareceContactoPersonal, textoAvisoCorreoCliente,
 } from './contacto-sugerido.ts'
 
 test('pareceContactoPersonal: un nombre.apellido es persona', () => {
@@ -149,7 +149,55 @@ test('interpretarAltaContacto + lineaTrasAlta: creado / ya existía / error nunc
   const ya = interpretarAltaContacto(200, { estado: 'existia', compania: 'Occident' })
   assert.match(lineaTrasAlta(ya), /Ya existía/)
   assert.equal(interpretarAltaContacto(200, { estado: 'creado' }).estado, 'error', 'creado sin compañía no se da por bueno')
-  assert.equal(interpretarAltaContacto(502, null).estado, 'error')
   assert.equal(interpretarAltaContacto(404, { estado: 'compania_desconocida' }).estado, 'error')
   assert.match(lineaTrasAlta({ estado: 'sin_compania' }), /añádelo a mano/)
+})
+
+test('🚨 incierto ≠ «no se ha creado»: 502/red, 5xx y 200 estado:error son INCIERTOS; 400/404/sin configurar son PREVIOS', () => {
+  for (const [st, j] of [[502, { estado: 'error', motivo: 'red' }], [502, null], [500, null], [504, {}], [200, { estado: 'error', causa: 'x' }]] as const) {
+    const r = interpretarAltaContacto(st, j)
+    assert.equal(r.estado, 'error'); assert.equal(r.estado === 'error' && r.incierto, true, `${st}`)
+    const l = lineaTrasAlta(r)
+    assert.match(l, /No sé si se ha añadido/); assert.match(l, /Directorio/); assert.doesNotMatch(l, /no se ha creado nada/)
+  }
+  for (const [st, j] of [[400, { estado: 'invalido' }], [404, { estado: 'compania_desconocida' }], [503, { estado: 'sin_configurar' }]] as const) {
+    const r = interpretarAltaContacto(st, j)
+    assert.equal(r.estado === 'error' && !r.incierto, true, `${st}`)
+    assert.match(lineaTrasAlta(r), /no se ha creado nada, añádelo a mano/)
+  }
+})
+
+const CS = [
+  { codigoDgs: 'A1', nombreComun: 'Generali Vida' }, { codigoDgs: 'A2', nombreComun: 'Generali Hogar' },
+  { codigoDgs: 'A3', nombreComun: 'Generali Salud' }, { codigoDgs: 'A4', nombreComun: 'Generali Auto' },
+  { codigoDgs: 'B1', nombreComun: 'Mapfre' },
+]
+
+test('ambigua (2-3 candidatas) → un botón por candidata + Ignorar; >3 o 0 → a mano', () => {
+  const amb = candidatasCompania('x@generali.es', CS.slice(0, 3).concat(CS[4]))
+  assert.equal(amb.tipo, 'ambigua')
+  if (amb.tipo !== 'ambigua') return
+  assert.deepEqual(amb.candidatas.map((c) => c.codigoDgs), ['A1', 'A2', 'A3'])
+  const b = botonesElegirCompania(77, amb.candidatas)!.flat().map((x) => x.callback!)
+  assert.deepEqual(b, ['csg_c:77:A1', 'csg_c:77:A2', 'csg_c:77:A3', 'csg_no:77'])
+  for (const c of b) assert.ok(Buffer.byteLength(c) <= 64)
+  assert.equal(candidatasCompania('x@generali.es', CS).tipo, 'ninguna', '4 candidatas: a mano')
+  assert.equal(candidatasCompania('x@desconocida.es', CS).tipo, 'ninguna')
+  assert.equal(candidatasCompania('x@mapfre.es', CS).tipo, 'una')
+  assert.equal(inferirCompania('x@generali.es', CS.slice(0, 3)), null, 'inferirCompania sigue sin adivinar')
+  assert.equal(botonesElegirCompania(1, [CS[0]]), null)
+  assert.equal(botonesElegirCompania(1, [CS[0], { codigoDgs: 'x'.repeat(70), nombreComun: 'L' }]), null, 'no cabe en 64 bytes')
+})
+
+test('🚨 código no candidato → rechazado; decidirBotonCsg valida forma y titular', () => {
+  const g = leerCandidatasGuardadas({ candidatos: CS.slice(0, 2) })
+  assert.equal(candidataElegida(g, 'A2')?.nombreComun, 'Generali Hogar')
+  assert.equal(candidataElegida(g, 'A3'), null)
+  assert.equal(candidataElegida(g, 'B1'), null)
+  assert.deepEqual(leerCandidatasGuardadas({}), [])
+  assert.deepEqual(leerCandidatasGuardadas({ candidatos: CS }), [])
+  const t = { from: { id: 42 } }
+  assert.deepEqual(decidirBotonCsg(t, 'c', ['7', 'A2'], '42'), { ok: true, accion: 'c', id: 7, quien: '42', codigoDgs: 'A2' })
+  assert.equal(decidirBotonCsg({ from: { id: 9 } }, 'c', ['7', 'A2'], '42').ok, false)
+  for (const mal of [[], ['7'], ['7', 'A;DROP'], ['7', 'A', 'B'], ['7', '']]) assert.equal(decidirBotonCsg(t, 'c', mal, '42').ok, false, JSON.stringify(mal))
 })

@@ -121,6 +121,7 @@ export function botonesContactoSugerido(id: number | string): Boton[][] {
 export type DecisionCsg =
   | { ok: false; toast: string }
   | { ok: true; accion: 'ok' | 'no'; id: number; quien: string }
+  | { ok: true; accion: 'c'; id: number; quien: string; codigoDgs: string }
 
 /** ¿Vale la pulsación? Solo la persona autorizada (`cb.from.id === TELEGRAM_CHAT_ID`), acción conocida, id numérico. PURA. */
 export function decidirBotonCsg(
@@ -130,9 +131,14 @@ export function decidirBotonCsg(
   chatPermitido: string | undefined,
 ): DecisionCsg {
   if (!chatPermitido || String(cb.from?.id ?? '') !== String(chatPermitido)) return { ok: false, toast: 'Solo el titular puede hacerlo' }
-  if (action !== 'ok' && action !== 'no') return { ok: false, toast: 'Acción desconocida' }
+  if (action !== 'ok' && action !== 'no' && action !== 'c') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Sugerencia no encontrada' }
+  if (action === 'c') {
+    // Compañía elegida entre las candidatas: el código se valida otra vez contra las guardadas en el pendiente.
+    if (args.length !== 2 || !/^[A-Za-z0-9._-]{1,40}$/.test(args[1])) return { ok: false, toast: 'Compañía no válida' }
+    return { ok: true, accion: 'c', id, quien: String(cb.from?.id ?? ''), codigoDgs: args[1] }
+  }
   return { ok: true, accion: action, id, quien: String(cb.from?.id ?? '') }
 }
 
@@ -191,8 +197,23 @@ function etiquetaDominio(email: string): string | null {
  * (ambiguo: se pregunta a mano, no se adivina). Sin match → `null`. PURA.
  */
 export function inferirCompania(email: string, companias: readonly CompaniaMinima[]): CompaniaMinima | null {
+  const r = candidatasCompania(email, companias)
+  return r.tipo === 'una' ? r.compania : null
+}
+
+/** Máximo de candidatas con botón; más = demasiado ambiguo, se añade a mano. */
+export const MAX_CANDIDATAS_CSG = 3
+
+export type CompaniaCandidata = { codigoDgs: string; nombreComun: string }
+export type CandidatasCompania =
+  | { tipo: 'una'; compania: CompaniaMinima }
+  | { tipo: 'ambigua'; candidatas: CompaniaMinima[] }
+  | { tipo: 'ninguna' }
+
+/** Como `inferirCompania` pero distingue AMBIGUA (2-3 candidatas del nivel ganador) de «ninguna» (0, o >3). PURA. */
+export function candidatasCompania(email: string, companias: readonly CompaniaMinima[]): CandidatasCompania {
   const et = etiquetaDominio(email)
-  if (!et || et.length < 3) return null
+  if (!et || et.length < 3) return { tipo: 'ninguna' }
   const claves = companias.map((c) => ({ c, comun: [claveNombre(c.nombreComun)].filter((k) => k.length >= 3), cima: [claveNombre(c.nombreCima ?? '')].filter((k) => k.length >= 3) }))
   const niveles: ((k: string) => boolean)[] = [
     (k) => k === et,
@@ -204,11 +225,43 @@ export function inferirCompania(email: string, companias: readonly CompaniaMinim
   for (const casa of niveles) {
     for (const campos of [['comun'], ['comun', 'cima']] as const) {
       const hits = claves.filter((x) => campos.some((f) => x[f].some(casa))).map((x) => x.c)
-      if (hits.length === 1) return hits[0]
-      if (hits.length > 1) return null
+      if (hits.length === 1) return { tipo: 'una', compania: hits[0] }
+      if (hits.length > 1) return hits.length <= MAX_CANDIDATAS_CSG ? { tipo: 'ambigua', candidatas: hits } : { tipo: 'ninguna' }
     }
   }
-  return null
+  return { tipo: 'ninguna' }
+}
+
+/** Un botón por candidata (`csg_c:<id>:<codigoDgs>`, ≤64 bytes) + Ignorar. `null` si no cabe (→ a mano). PURA. */
+export function botonesElegirCompania(id: number | string, candidatas: readonly CompaniaCandidata[]): Boton[][] | null {
+  if (candidatas.length < 2 || candidatas.length > MAX_CANDIDATAS_CSG) return null
+  const filas: Boton[][] = []
+  for (const c of candidatas) {
+    const callback = `${PREFIJO_CSG}_c:${id}:${c.codigoDgs}`
+    if (!/^[A-Za-z0-9._-]{1,40}$/.test(c.codigoDgs) || Buffer.byteLength(callback) > 64) return null
+    filas.push([{ texto: `🏢 ${c.nombreComun}`.slice(0, 60), callback }])
+  }
+  filas.push([{ texto: '🚫 Ignorar', callback: `${PREFIJO_CSG}_no:${id}` }])
+  return filas
+}
+
+/** Candidatas guardadas en `datos.candidatos` (2-3 con código y nombre); algo raro = `[]`. PURA. */
+export function leerCandidatasGuardadas(v: unknown): CompaniaCandidata[] {
+  const o = typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+  const l = o?.candidatos
+  if (!Array.isArray(l) || l.length < 2 || l.length > MAX_CANDIDATAS_CSG) return []
+  const out: CompaniaCandidata[] = []
+  for (const x of l) {
+    const c = typeof x === 'object' && x !== null ? (x as Record<string, unknown>) : null
+    if (!c || typeof c.codigoDgs !== 'string' || typeof c.nombreComun !== 'string' || !c.codigoDgs) return []
+    out.push({ codigoDgs: c.codigoDgs, nombreComun: c.nombreComun })
+  }
+  return out
+}
+
+/** La elegida SOLO vale si es una de las guardadas para ese pendiente. PURA. */
+export function candidataElegida(guardadas: readonly CompaniaCandidata[], codigoDgs: string): CompaniaCandidata | null {
+  return guardadas.find((c) => c.codigoDgs === codigoDgs) ?? null
 }
 
 // ── Buzón genérico / departamento ────────────────────────────────────────────────────────────────────────────
@@ -251,14 +304,19 @@ export type ResultadoAlta =
   | { estado: 'creado'; compania: string }
   | { estado: 'existia'; compania: string | null }
   | { estado: 'sin_compania' }
-  | { estado: 'error'; motivo?: string }
+  | { estado: 'ambigua'; candidatas: CompaniaCandidata[] }
+  | { estado: 'error'; motivo?: string; incierto?: boolean }
 
 export function lineaTrasAlta(r: ResultadoAlta): string {
   switch (r.estado) {
     case 'creado': return `✅ <i>Añadido a ${esc(r.compania)}.</i>`
     case 'existia': return `ℹ️ <i>Ya existía en el directorio${r.compania ? ` (${esc(r.compania)})` : ''}: no he duplicado nada.</i>`
+    case 'ambigua': return '❓ <i>El dominio encaja con varias compañías: elige a cuál pertenece (o ignora).</i>'
     case 'sin_compania': return '❓ <i>No sé de qué compañía es (dominio sin coincidencia clara en el directorio): añádelo a mano en /correduria → Directorio de compañías.</i>'
-    default: return '⚠️ <i>No he podido añadirlo (fallo interno o asegura no responde): no se ha creado nada, añádelo a mano.</i>'
+    default:
+      // Incierto (la llamada salió y no sé cómo acabó): NUNCA «no se ha creado». El puerto es idempotente por email.
+      if (r.incierto) return '⚠️ <i>No sé si se ha añadido (asegura no ha confirmado): mira el Directorio antes de repetir.</i>'
+      return '⚠️ <i>No he podido añadirlo (fallo interno o asegura no responde): no se ha creado nada, añádelo a mano.</i>'
   }
 }
 
@@ -268,5 +326,9 @@ export function interpretarAltaContacto(status: number, json: unknown): Resultad
   const comp = typeof o.compania === 'string' && o.compania ? o.compania : null
   if (status === 200 && o.estado === 'creado' && comp) return { estado: 'creado', compania: comp }
   if (status === 200 && o.estado === 'existia') return { estado: 'existia', compania: comp }
-  return { estado: 'error', motivo: typeof o.estado === 'string' ? o.estado : `HTTP ${status}` }
+  const motivo = typeof o.estado === 'string' ? o.estado : `HTTP ${status}`
+  // PREVIO a escribir (nada se ha creado): sin configurar, datos inválidos (400), compañía desconocida (404).
+  if (status === 400 || status === 404 || o.estado === 'sin_configurar' || o.estado === 'invalido' || o.estado === 'compania_desconocida') return { estado: 'error', motivo }
+  // Lo demás (timeout/red 502, 5xx, 200 con estado:'error' del catch de asegura, respuesta rara): INCIERTO.
+  return { estado: 'error', motivo, incierto: true }
 }

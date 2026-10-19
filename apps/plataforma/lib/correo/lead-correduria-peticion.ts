@@ -22,7 +22,7 @@ export const AVISO_PETICION_LEAD = 'correduria.lead-peticion'
  * Claves de `datos` con dato personal: el email del lead, el asunto de su correo y su nombre de pila. Al CERRAR el
  * pendiente (enviado, descartado o caducado) se borran junto con el borrador; quedan ids y estado.
  */
-export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila'] as const
+export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre'] as const
 
 /** Lo que el pendiente guarda para poder enviar (sin el texto, que va en `borrador`). */
 export type DatosPeticion = {

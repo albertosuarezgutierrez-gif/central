@@ -1013,15 +1013,15 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, d.accion === 'ok' ? '⏳ Añadiendo al directorio…' : 'Ignorado')
+      await tgAnswerCallback(cb.id, d.accion === 'no' ? 'Ignorado' : '⏳ Añadiendo al directorio…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
       after(async () => {
         const hoy = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })
-        const linea = await resolverBotonCsg(d, hoy).catch(() => '⚠️ <i>No sé si se ha hecho (fallo interno): mira el Directorio antes de repetir.</i>')
-        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
-        else await tgSend(linea).catch(() => {})
+        const r = await resolverBotonCsg(d, hoy).catch(() => ({ linea: '⚠️ <i>No sé si se ha hecho (fallo interno): mira el Directorio antes de repetir.</i>', botones: undefined }))
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
+        else await tgSend(r.linea).catch(() => {})
       })
       return NextResponse.json({ ok: true })
     }

@@ -91,14 +91,17 @@ export async function tgAnswerCallback(callbackQueryId: string, text?: string): 
   } catch {}
 }
 
-export async function tgEditMessage(messageId: number, text: string, opts: { chatId?: string } = {}): Promise<void> {
+export async function tgEditMessage(messageId: number, text: string, opts: { chatId?: string; botones?: Boton[][] } = {}): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) return
   try {
     await fetch(API(token, 'editMessageText'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, message_id: messageId, text, parse_mode: 'HTML', disable_web_page_preview: true }),
+      body: JSON.stringify({
+        chat_id, message_id: messageId, text, parse_mode: 'HTML', disable_web_page_preview: true,
+        ...(opts.botones ? { reply_markup: { inline_keyboard: opts.botones.map(fila => fila.map(b => b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: b.callback || '' })) } } : {}),
+      }),
     })
   } catch {}
 }
