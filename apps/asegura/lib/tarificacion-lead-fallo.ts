@@ -1,6 +1,7 @@
 // F3b (19/10/2026) — un bot LANZADO DESDE UN LEAD (botón 🤖 `clp_tar`) ha fallado: aviso en Telegram EN EL HILO del aviso
 // «Listo para tarificar» y, si el fallo es un dato del CLIENTE, botón «📝 Preparar repregunta» (`clp_fal:<p>`, lo resuelve
-// plataforma con su borrador F2 y su ✅). NUNCA se reintenta solo. Las reglas viven en `tarificacion-lead-puro.ts` (con test).
+// plataforma con su borrador F2 y su ✅); en coche/moto, además «💶 Avant2 (0,50€)» (`clp_cds:<p>:<ramo>`: entrega el lead al
+// asistente, que pide el precio con su propio botón). NUNCA se reintenta solo. Las reglas viven en `tarificacion-lead-puro.ts` (con test).
 //
 // Lo llama `POST /api/tarificador/resultado` en `after()` (el worker no espera), solo con un fallo terminal. Un trabajo que no
 // salió de un lead (sin fila `tarificacion_bots_lead` que lo nombre) no hace nada. Un aviso por trabajo (fila
@@ -8,7 +9,7 @@
 // cliente salen de aquí: compañía, ramo, etiquetas y el id corto del pendiente.
 import { tgSendButtons, tgSend } from '@central/core-telegram'
 import { prisma } from './tenant'
-import { clasificarFalloBot, esFalloTerminal, textoFalloBotLead } from './tarificacion-lead-puro'
+import { botonesFalloBotLead, clasificarFalloBot, esFalloTerminal, textoFalloBotLead } from './tarificacion-lead-puro'
 
 const esObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 const ID_CORTO = /^\d{1,15}$/
@@ -46,8 +47,10 @@ export async function avisarFalloBotLead(trabajoId: string): Promise<AvisoFallo>
     if (!marca.length) return { estado: 'ya_avisado' }
     const texto = textoFalloBotLead({ compania: t.compania, ramo: t.ramo, pendienteId, clase, tipoError: typeof error?.tipo === 'string' ? error.tipo : null })
     const enHilo = tgMessageId !== null ? { responderA: tgMessageId } : {}
-    const msg = clase.tipo === 'dato_cliente' && pendienteId
-      ? await tgSendButtons(texto, [[{ texto: '📝 Preparar repregunta', callback: `clp_fal:${pendienteId}` }]], enHilo)
+    // 📝 `clp_fal` (dato del cliente) y, en coche/moto, 💶 `clp_cds` (entrega a Avant2 sin pagar): `botonesFalloBotLead`.
+    const botones = botonesFalloBotLead({ ramo: t.ramo, pendienteId, clase })
+    const msg = botones.length
+      ? await tgSendButtons(texto, botones, enHilo)
       : await tgSend(texto, { html: true, ...enHilo })
     return { estado: msg === null ? 'sin_telegram' : 'avisado' }
   } catch (e) {

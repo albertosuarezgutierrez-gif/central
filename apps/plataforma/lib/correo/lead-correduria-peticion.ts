@@ -126,6 +126,11 @@ export function textoBorradorTelegram(a: {
 
 // ─── Botón ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Los ramos que Avant2 tarifica por el asistente de Telegram (`proponer_tarificacion`): coche y moto, ninguno más. */
+export const RAMOS_AVANT2 = ['auto', 'moto'] as const
+export type RamoAvant2 = (typeof RAMOS_AVANT2)[number]
+export const esRamoAvant2 = (r: unknown): r is RamoAvant2 => r === 'auto' || r === 'moto'
+
 /** Los tipos que pueden ir en automático (F5). `propuesta` no está, a propósito. */
 type TipoClpAuto = 'peticion_datos' | 'repregunta' | 'recordatorio_cliente'
 
@@ -143,6 +148,12 @@ export type DecisionClp =
   | { ok: true; accion: 'dis'; id: number; indice: number; eleccion: 'ficha' | 'correo'; quien: string }
   /** `per` (F5): 🗑 cerrar como perdida el hilo del pendiente `id` (tipo `recordatorio_cliente`). */
   | { ok: true; accion: 'per'; id: number; quien: string }
+  /**
+   * `cds` (19/10/2026, opción B): 💶 ENTREGAR el lead de coche/moto al asistente de tarificación (`cas_tarif`) para pedir
+   * precio a Avant2. No paga nada: la IA propone el vehículo del catálogo y el 0,50€ solo sale con el «💶 Pedir precio» de
+   * ese resumen (segundo clic). Solo `auto`/`moto`: cualquier otro ramo se rechaza aquí.
+   */
+  | { ok: true; accion: 'cds'; id: number; ramo: RamoAvant2; quien: string }
   /** `aut` / `man` (F5): 🔓 pasar a automático / ⏸ volver a manual un TIPO. `propuesta` nunca llega aquí. */
   | { ok: true; accion: 'aut'; tipo: TipoClpAuto; quien: string }
   | { ok: true; accion: 'man'; tipo: TipoClpAuto; quien: string }
@@ -167,9 +178,15 @@ export function decidirBotonClp(
     const quien = String(cb.from?.id ?? '')
     return action === 'aut' ? { ok: true, accion: 'aut', tipo, quien } : { ok: true, accion: 'man', tipo, quien }
   }
-  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis' && action !== 'pro' && action !== 'eli' && action !== 'per') return { ok: false, toast: 'Acción desconocida' }
+  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis' && action !== 'pro' && action !== 'eli' && action !== 'per' && action !== 'cds') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Borrador no encontrado' }
+  if (action === 'cds') {
+    // 💶 Avant2: solo coche o moto. Otro ramo (o ninguno) no llega ni a leer la BD.
+    const ramo = args[1]
+    if (!esRamoAvant2(ramo)) return { ok: false, toast: 'Avant2 solo para coche o moto' }
+    return { ok: true, accion: 'cds', id, ramo, quien: String(cb.from?.id ?? '') }
+  }
   if (action === 'dis') {
     if (!/^\d{1,2}$/.test(args[1] ?? '') || (args[2] !== 'f' && args[2] !== 'c')) return { ok: false, toast: 'Botón no válido' }
     return { ok: true, accion: 'dis', id, indice: Number(args[1]), eleccion: args[2] === 'f' ? 'ficha' : 'correo', quien: String(cb.from?.id ?? '') }
