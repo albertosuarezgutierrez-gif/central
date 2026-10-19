@@ -45,7 +45,7 @@ test('🪤 hay bot = lo que ya declara el código (RAMOS_TARIFICABLES_RPA), no u
   assert.equal(ramoConBot('auto'), true)
   assert.equal(ramoConBot('moto'), true)
   assert.equal(ramoConBot('comunidades'), true)
-  assert.equal(ramoConBot('hogar'), false)
+  assert.equal(ramoConBot('hogar'), true, 'hogar tiene bot (Allianz) desde 19/10/2026: RAMOS_TARIFICABLES_RPA')
   assert.equal(ramoConBot('vida'), false)
 })
 
