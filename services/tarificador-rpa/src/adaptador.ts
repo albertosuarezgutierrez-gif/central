@@ -116,6 +116,11 @@ export type ContextoPortal = ContextoTarificacion & {
   /** Generali: entrada NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES › TURISMOS (RAMO UV) por `entrarTurismosGenerali` de guard.ts (una vez). */
   entrarTurismosGenerali?: () => Promise<void>
   /**
+   * Generali (v0.2.0, 19/10/2026): subpestaña de «Valoración Riesgo» por `pulsarSubpestanaGenerali` de guard.ts (lista blanca de
+   * textos EXACTOS, hoy solo «Garantías y Resultados»; una vez por subpestaña). Devuelve el marco donde estaba la subpestaña.
+   */
+  pulsarSubpestanaGenerali?: (texto: string) => Promise<Frame>
+  /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para
    * cualquier bot; Mapfre NSEI usa `continuarMapfre` (stepper cerrado), que ya lleva el mismo respaldo.
@@ -151,6 +156,12 @@ export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, Contexto
    * solo reutiliza la sesión sellada que dio de alta una persona; sin ella, `requiere_humano` sin abrir el navegador.
    */
   readonly sesion?: 'manual'
+  /**
+   * `'okta-generali'` (19/10/2026): si el portal pide el SMS de Okta tras el login, el runner pide el código por Telegram
+   * (relevo-sms.ts), verifica marcando «No volver a solicitar en este dispositivo en 30 días» y guarda el dispositivo de
+   * confianza en la bóveda (30 días). Ausente = una pantalla de código es `requiere_humano`, como siempre.
+   */
+  readonly codigoSms?: 'okta-generali'
   /** Emisión asistida (10/10/2026). Ausente = este portal NO emite (y además tiene que estar en la lista blanca del módulo). */
   readonly emision?: EmisionPortal
 }

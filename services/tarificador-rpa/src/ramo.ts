@@ -19,7 +19,7 @@ import type { Page } from 'playwright'
 import type { AdaptadorPortal, ContextoPortal } from './adaptador.ts'
 
 /** Lo común a todo adaptador del worker (credencial, versión, sesión, emisión), sin atar el tipo de riesgo. */
-type ExtrasAdaptador = Pick<AdaptadorPortal, 'credencial' | 'version' | 'sesion' | 'emision'>
+type ExtrasAdaptador = Pick<AdaptadorPortal, 'credencial' | 'version' | 'sesion' | 'codigoSms' | 'emision'>
 
 export type AdaptadorComunidades = AdaptadorPortal
 export type AdaptadorVehiculo = TarificadorAdapter<Page, FormularioAuto, ContextoPortal> & ExtrasAdaptador & { readonly ramo: 'auto' | 'moto' }

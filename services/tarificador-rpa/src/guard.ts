@@ -2374,6 +2374,57 @@ export async function entrarTurismosGenerali(page: Page, guard: GuardEmision, es
   guard.comprobar()
 }
 
+/**
+ * Subpestañas de «Valoración Riesgo» de Generali que el robot puede pulsar (v0.2.0 del bot, 19/10/2026). LISTA BLANCA CERRADA
+ * de textos EXACTOS (captura 6: «Datos de Valoración» activa · «Garantías y Resultados»). Pulsar una subpestaña solo cambia la
+ * vista del formulario; NO relaja el guard de red: si ese clic manda una petición que casa con el patrón de emisión, se aborta
+ * y el trabajo cae (fail-closed) con el HTML de la pantalla para mapearlo.
+ */
+export const SUBPESTANAS_GENERALI = Object.freeze(['Garantías y Resultados'] as const)
+/** Lo que NUNCA puede llevar el texto de una subpestaña pulsable, aunque alguien la añada a la lista (sin tildes, sin mayúsculas). */
+const RE_SUBPESTANA_PELIGROSA_GENERALI = /emit|emisi|contrat|grab|firm|pag|acept|poliza|formaliz|suplement|anul/i
+
+/** ¿Puede el robot pulsar la subpestaña de Generali con ESTE texto? Exacto (salvo espacios) en la lista y sin nada peligroso. PURA. */
+export function subpestanaGeneraliPermitida(texto: string): boolean {
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (t === '' || RE_SUBPESTANA_PELIGROSA_GENERALI.test(sinTildesNi(t))) return false
+  return (SUBPESTANAS_GENERALI as readonly string[]).includes(t)
+}
+
+/**
+ * Subpestaña «Garantías y Resultados» de Generali (y solo las de `SUBPESTANAS_GENERALI`), UNA vez por subpestaña y trabajo:
+ * guard limpio y sin ventanas de red; página `CorredorPortal.po` de www.generali.es; texto en la lista blanca y sin palabras
+ * de emisión; el ÚNICO control visible de todos los marcos con ese texto exacto; su descripción (contenedor clicable incluido:
+ * href, onclick, ancestros) pasa `comprobarBoton`. Devuelve el marco donde estaba. Un hueco (0 o varios) → inventario, sin pulsar.
+ */
+export async function pulsarSubpestanaGenerali(page: Page, guard: GuardEmision, texto: string): Promise<Frame> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'subpestaña de Generali con una ventana de red abierta')
+  if (!subpestanaGeneraliPermitida(texto)) throw new EmisionBloqueadaError('boton', String(texto ?? '').slice(0, 80))
+  if (!enRutaGenerali(page, RUTA_PORTAL_GENERALI)) throw new ErrorMapaGuardGenerali('el portal del corredor (CorredorPortal.po) para la subpestaña')
+  const clave = `generali:subpestana:${texto}`
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `la subpestaña «${texto}» de Generali ya se pulsó en este trabajo`)
+  await exigirSinCuentaBancaria(page)
+  const re = new RegExp(`^\\s*${texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`)
+  const hallados: { marco: Frame; control: Locator }[] = []
+  for (const f of marcosVivos(page)) {
+    const l = f.getByText(re).filter({ visible: true })
+    const n = await l.count().catch(() => 0)
+    for (let i = 0; i < n; i++) hallados.push({ marco: f, control: l.nth(i) })
+  }
+  if (hallados.length !== 1) throw new ErrorMapaGuardGenerali(`la subpestaña «${texto}» (${hallados.length} controles visibles con ese texto; hace falta exactamente uno)`)
+  const { marco, control } = hallados[0]!
+  const desc = await descripcion(control, true)
+  if (textoMenu(desc[0]) !== textoMenu(texto)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await control.click()
+  guard.comprobar()
+  return marco
+}
+
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────
 // HTML real (trabajo d675077b, pantalla «Selección de paquete»): bajo la tabla de precios vive el formulario `nx-mt-save-proposal`
 // («Guardar el presupuesto»): «Identificador presupuesto» (obligatorio, ≤30), tipo/nº de documento, nombre y apellidos del tomador
@@ -2565,4 +2616,145 @@ export async function leerDatosUsadosTurismosAllianz(marco: Frame): Promise<{ co
     return { marca: out[0] ?? null, modelo: out[1] ?? null, version: out[2] ?? null }
   }, ['Marca del vehículo', 'Modelo', 'Versión']).catch(() => ({ marca: null, modelo: null, version: null }))
   return { codigoPostal: await valorDe('Código postal'), localidad: await valorDe('Localidad'), vehiculo }
+}
+
+// ─────────── Generali · Okta «Autenticación por SMS» (19/10/2026, decisión de Alberto) ───────────
+// Tras «Iniciar sesión», access.generali.es (Okta) puede pedir el SMS (cada 30 días por dispositivo). Alberto decide que el bot
+// pida el código por Telegram (relevo-sms.ts), lo escriba, marque «No volver a solicitar en este dispositivo en 30 días» y pulse
+// «Verificar». Tres controles, y SOLO en esa pantalla (origen y ruta EXACTOS): «Enviar» (lista blanca exacta), la casilla de 30
+// días (etiqueta exacta) y «Verificar» (texto exacto). Cada uno UNA vez por trabajo, con el guard limpio y sin ventanas de red.
+// El valor del código solo va a SU campo (etiqueta exacta «Introducir código»); nunca a mensajes, errores ni logs.
+
+export const ORIGEN_ACCESO_OKTA_GENERALI = 'https://access.generali.es'
+export const RUTA_OKTA_SMS_GENERALI = '/signin/verify/okta/sms'
+/** Textos EXACTOS del control que manda el SMS (el enlace «Enviar» de la pantalla). */
+export const TEXTOS_ENVIAR_SMS_GENERALI = Object.freeze(['Enviar', 'Enviar código'] as const)
+export const BOTON_VERIFICAR_SMS_GENERALI = 'Verificar'
+export const ETIQUETA_CODIGO_SMS_GENERALI = 'Introducir código'
+export const ETIQUETA_RECORDAR_DISPOSITIVO_GENERALI = 'No volver a solicitar en este dispositivo en 30 días'
+
+const normalOkta = (t: string | null | undefined) => (t ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+
+/** ¿Es la pantalla de SMS de Okta de Generali? Origen EXACTO `https://access.generali.es` y ruta exacta (sin credenciales). PURA. */
+export function esUrlOktaSmsGenerali(url: string): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.origin !== ORIGEN_ACCESO_OKTA_GENERALI || u.username || u.password) return false
+  return u.pathname.replace(/\/+$/, '') === RUTA_OKTA_SMS_GENERALI
+}
+
+function exigirPantallaOkta(page: Page, guard: GuardEmision, que: string): void {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', `${que} de Okta con una ventana de red abierta`)
+  if (!esUrlOktaSmsGenerali(page.url())) throw new ErrorMapaGuardGenerali(`la pantalla «Autenticación por SMS» de Okta (${que})`)
+}
+
+function marcarUsoOkta(guard: GuardEmision, clave: string): void {
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `${clave} ya se usó en este trabajo`)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+}
+
+/** Un href absoluto a otro origen que no sea el de Okta de Generali: no se pulsa. */
+function hrefFueraDeOkta(desc: readonly (string | null)[]): boolean {
+  return desc.some((d) => typeof d === 'string' && /^\s*https?:/i.test(d) && !d.trim().toLowerCase().startsWith(`${ORIGEN_ACCESO_OKTA_GENERALI}/`))
+}
+
+/**
+ * «Enviar» del SMS, SI HACE FALTA: si no hay ningún control visible con un texto de `TEXTOS_ENVIAR_SMS_GENERALI` → `false` (el
+ * portal ya lo mandó; no se pulsa nada). Uno → se pulsa UNA vez por trabajo tras `comprobarBoton`. Varios → hueco, sin pulsar.
+ */
+export async function pulsarEnviarSmsGenerali(page: Page, guard: GuardEmision): Promise<boolean> {
+  exigirPantallaOkta(page, guard, '«Enviar» del SMS')
+  const hallados: Locator[] = []
+  for (const rol of ['link', 'button'] as const) {
+    for (const texto of TEXTOS_ENVIAR_SMS_GENERALI) {
+      const l = page.getByRole(rol, { name: texto, exact: true }).filter({ visible: true })
+      const n = await l.count().catch(() => 0)
+      for (let i = 0; i < n; i++) hallados.push(l.nth(i))
+    }
+  }
+  if (hallados.length === 0) return false
+  if (hallados.length !== 1) throw new ErrorMapaGuardGenerali(`el control «Enviar» del SMS (${hallados.length} visibles; hace falta exactamente uno)`)
+  const control = hallados[0]!
+  const desc = await descripcion(control)
+  if (!(TEXTOS_ENVIAR_SMS_GENERALI as readonly string[]).includes(normalOkta(desc[0]))) throw new EmisionBloqueadaError('boton', normalOkta(desc[0]).slice(0, 80))
+  if (hrefFueraDeOkta(desc)) throw new EmisionBloqueadaError('boton', '«Enviar» del SMS apunta fuera de Okta')
+  comprobarBoton(desc)
+  marcarUsoOkta(guard, 'generali:okta:enviar')
+  await control.click()
+  guard.comprobar()
+  return true
+}
+
+/** El campo del código: etiqueta EXACTA «Introducir código»; si no la hay, los nombres de Okta (classic `answer`, OIE `credentials.passcode`). */
+async function campoCodigoOkta(page: Page): Promise<Locator> {
+  const porEtiqueta = page.getByLabel(ETIQUETA_CODIGO_SMS_GENERALI, { exact: true }).filter({ visible: true })
+  if ((await porEtiqueta.count().catch(() => 0)) === 1) return porEtiqueta.first()
+  const porNombre = page.locator('input[name="answer"], input[name="credentials.passcode"]').filter({ visible: true })
+  if ((await porNombre.count().catch(() => 0)) === 1) return porNombre.first()
+  throw new ErrorMapaGuardGenerali('el campo «Introducir código» del SMS (no hay exactamente uno visible)')
+}
+
+/**
+ * Escribe el código (4-8 dígitos), marca «No volver a solicitar en este dispositivo en 30 días» (si la casilla existe) y pulsa
+ * «Verificar», UNA vez por trabajo. Devuelve si la casilla quedó marcada. No espera al resultado: eso lo mira relevo-sms.ts.
+ */
+export async function verificarCodigoSmsGenerali(page: Page, guard: GuardEmision, codigo: string): Promise<{ recordado: boolean }> {
+  exigirPantallaOkta(page, guard, '«Verificar» del SMS')
+  if (!/^\d{4,8}$/.test(codigo)) throw new ErrorTarificador('datos', 'generali: el código SMS no tiene forma de código (4-8 dígitos)')
+  marcarUsoOkta(guard, 'generali:okta:verificar')
+  await exigirSinCuentaBancaria(page)
+  const campo = await campoCodigoOkta(page)
+  await exigirCampoNoBancario(campo)
+  // Casilla de 30 días: etiqueta EXACTA. Una sola; si no existe se sigue (el código vale igual, pero el dispositivo no se recuerda).
+  let recordado = false
+  const casilla = page.getByLabel(ETIQUETA_RECORDAR_DISPOSITIVO_GENERALI, { exact: true })
+  const nCasillas = await casilla.count().catch(() => 0)
+  if (nCasillas > 1) throw new ErrorMapaGuardGenerali('la casilla «No volver a solicitar en este dispositivo en 30 días» (hay varias)')
+  if (nCasillas === 1) {
+    const c = casilla.first()
+    const tipo = await c.getAttribute('type').catch(() => null)
+    if (tipo !== 'checkbox') throw new ErrorMapaGuardGenerali('la casilla de 30 días (no es un checkbox)')
+    // Marcar también es pulsar: la casilla (atributos, onclick, ancestros) pasa `comprobarBoton` antes.
+    comprobarBoton(await descripcion(c))
+    if (!(await c.isChecked().catch(() => false))) {
+      await c.check({ timeout: 5_000 }).catch(async () => {
+        // Okta pinta su propia casilla encima del input: se pulsa la ETIQUETA exacta (texto completo, sin manejadores de emisión).
+        const lab = page.locator('label').filter({ hasText: ETIQUETA_RECORDAR_DISPOSITIVO_GENERALI }).filter({ visible: true })
+        if ((await lab.count().catch(() => 0)) !== 1) return
+        const desc = await descripcion(lab.first())
+        if (normalOkta(desc[0]) !== ETIQUETA_RECORDAR_DISPOSITIVO_GENERALI) return
+        comprobarBoton(desc)
+        await lab.first().click()
+      })
+    }
+    recordado = await c.isChecked().catch(() => false)
+  }
+  const boton = page.getByRole('button', { name: BOTON_VERIFICAR_SMS_GENERALI, exact: true }).filter({ visible: true })
+  if ((await boton.count().catch(() => 0)) !== 1) throw new ErrorMapaGuardGenerali('el botón «Verificar» del SMS (no hay exactamente uno visible)')
+  const desc = await descripcion(boton.first())
+  const texto = normalOkta(desc[0]) || normalOkta(desc[3])
+  if (texto !== BOTON_VERIFICAR_SMS_GENERALI) throw new EmisionBloqueadaError('boton', texto.slice(0, 80))
+  if (hrefFueraDeOkta(desc)) throw new EmisionBloqueadaError('boton', '«Verificar» apunta fuera de Okta')
+  comprobarBoton(desc)
+  await campo.fill(codigo, { timeout: 5_000 })
+  await boton.first().click()
+  guard.comprobar()
+  return { recordado }
+}
+
+/** Vacía el campo del código si la pantalla sigue ahí (para que ni la captura ni el HTML de evidencia lo lleven). */
+export async function vaciarCodigoSmsGenerali(page: Page): Promise<void> {
+  if (!esUrlOktaSmsGenerali(page.url())) return
+  const campos = page.locator('input[name="answer"], input[name="credentials.passcode"]')
+  const n = await campos.count().catch(() => 0)
+  for (let i = 0; i < n; i++) await campos.nth(i).fill('', { timeout: 2_000 }).catch(() => undefined)
+  const porEtiqueta = page.getByLabel(ETIQUETA_CODIGO_SMS_GENERALI, { exact: true })
+  if ((await porEtiqueta.count().catch(() => 0)) === 1) await porEtiqueta.first().fill('', { timeout: 2_000 }).catch(() => undefined)
 }

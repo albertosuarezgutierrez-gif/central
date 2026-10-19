@@ -5,8 +5,10 @@ Releído el 18/10/2026 (tarde): **6 archivos**, descargados y VISTOS como imagen
 Sin datos personales: usuario, nombre del corredor y código de mediador sustituidos por [dato] (el código de la correduría vive
 en una sola constante del bot, `MEDIADOR_GENERALI` de `src/adapters/generali/reglas.ts`, por decisión de Alberto).
 
-Bot: `src/adapters/generali/auto.ts` (v0.1.0, flag `GENERALI_AUTO_ACTIVO` APAGADO) + reglas puras `src/adapters/generali/reglas.ts`
-+ puertas del guard `pulsarMediadorGenerali` / `entrarTurismosGenerali` (`src/guard.ts`). Tests: `test/generali-auto.test.ts`.
+Bot: `src/adapters/generali/auto.ts` (**v0.2.0**, 19/10/2026; flag `GENERALI_AUTO_ACTIVO` encendido, la puerta real es la fila de
+`seguros.companias_integracion`) + reglas puras `src/adapters/generali/reglas.ts` + puertas del guard `pulsarMediadorGenerali` /
+`entrarTurismosGenerali` / `pulsarSubpestanaGenerali` (`src/guard.ts`). Tests: `test/generali-auto.test.ts`,
+`test/generali-red-turismos.test.ts`, `test/generali-v020.test.ts`.
 
 ## Archivos (orden por número del nombre)
 
@@ -68,7 +70,10 @@ Bot: `src/adapters/generali/auto.ts` (v0.1.0, flag `GENERALI_AUTO_ACTIVO` APAGAD
 - Bot: tipo y subtipo se dejan; la marca SIEMPRE por «Todas las marcas» (no por los logos), casada exacto → palabra entera →
   una sola; 0 o varias → atasco con las opciones.
 - **SIN CAPTURA** lo que sale tras elegir la marca (¿desplegables de modelo y versión? ¿lista? ¿botón de confirmar?). El bot
-  busca `<select>` etiquetados «Modelo»/«Versión»; si no los encuentra, para con inventario + HTML.
+  busca `<select>` etiquetados «Modelo»/«Versión»; si no los encuentra, para con inventario + HTML **y, desde v0.2.0, con la
+  lista de desplegables visibles (etiqueta, nº de opciones y las 20 primeras) en el mensaje**. Si la opción no casa (0 o varias),
+  para con las opciones leídas (marca/modelo) o pide la versión a una persona (bandeja). Si tras la versión no aparece
+  «Identificación del vehículo», el mensaje lleva los botones visibles del selector (para saber cuál confirma).
 
 ### 6. Datos de Valoración tras elegir el vehículo
 - «Identificación del vehículo»: Matrícula (texto + «?»), Uso del Vehículo («Seleccione un uso»), Renting (opciones No/Sí,
@@ -77,11 +82,36 @@ Bot: `src/adapters/generali/auto.ts` (v0.1.0, flag `GENERALI_AUTO_ACTIVO` APAGAD
   ¿Entrada en puertos/aeropuertos? («SIN ENTRADA EN PUERTOS/AEROPUERTOS»).
 - «Personas que intervienen › Roles»: ¿Es el propietario el mismo que el interesado/tomador? (Sí marcado) · ¿El conductor o
   conductores son personas identificadas? (Sí marcado) · El primer conductor coincide con («TOMADOR»). Sigue más abajo (cortado).
-- Bot: Matrícula «1234*BCD» (regla de Alberto) y el campo de VERIFICACIÓN igual — **ese campo no sale en la captura 6**: se busca
-  por su etiqueta (matrícula + verificar/confirmar/repetir) y, si no está, para con inventario. Uso: «PARTICULAR» (otro uso →
+- Bot: Matrícula «1234*BCD» (regla de Alberto) y, si el portal la pide, la VERIFICACIÓN igual. **v0.2.0: la verificación es
+  OPCIONAL** (la captura 6 solo tiene un campo «Matrícula»): se busca por su etiqueta (matrícula + verificar/confirmar/repetir);
+  si no está, se espera ~1,2 s tras salir del campo y se vuelve a mirar; 0 → sigue · 1 → la misma matrícula · >1 → para. Uso: «PARTICULAR» (otro uso →
   sin mapa). Garaje: el del riesgo o «colectivo» supuesto y DECLARADO. Fecha 1ª matriculación: la del riesgo; si el riesgo no la
   trae y Generali no la autorrellena → `datos`. Renting, KM, valores y puertos: como vienen. Roles: se dejan si el riesgo dice
   tomador = propietario = conductor o no lo dice (SUPUESTO declarado); si dice que no → para (sin captura de esa variante).
+
+### 7. Resto de «Datos de Valoración» y «Garantías y Resultados» (SIN CAPTURA; lo que hace v0.2.0)
+- **Inferido de la captura 6:** el formulario tiene su PROPIA barra de scroll (panel interno) y está cortado a la altura de «Roles»;
+  la subpestaña «Garantías y Resultados» está al lado de «Datos de Valoración» y no hay ningún botón de avance visible
+  (ni «Calcular» ni «Siguiente»). Suposición de trabajo: el precio sale al pulsar esa subpestaña.
+- **Scroll + registro (solo lee):** el bot baja todos los contenedores con scroll del marco del formulario (pasos de ~80 % con
+  pausas, por si pinta campos al bajar) y registra cada control VISIBLE: etiqueta, tipo (`,ro` = solo lectura), obligatorio
+  (`required`/`aria-required`/«*») y valor — de un campo de texto SOLO «vacío»/«con valor» (nunca el dato); de un desplegable,
+  la opción puesta (salvo etiquetas que pueden llevar datos personales: «con valor»); de las casillas, «marcado/sin marcar».
+  También los botones/pestañas visibles y los avisos de error. Ese registro va en el mensaje del hueco (`resumenPantallaGenerali`).
+- **Mapa PROVISIONAL (`ETIQUETAS_RIESGO_GENERALI`):** si aparece un campo de texto VACÍO, editable y ÚNICO con una de estas
+  etiquetas EXACTAS (normalizadas), se teclea: fecha de nacimiento (del conductor = tomador, supuesto ya declarado), fecha del
+  carné, código postal, años asegurado y siniestros últimos 5 años (dato o supuesto FAVORABLE de `conAntecedentesFavorables`,
+  declarado en el precio). Lo que ya tiene valor no se pisa; una etiqueta repetida no se toca; sin respaldo de IA. Desplegables
+  de antecedentes: solo se registran.
+- **«Garantías y Resultados»:** solo por `pulsarSubpestanaGenerali` (guard.ts): lista blanca `SUBPESTANAS_GENERALI` de textos
+  EXACTOS, nada con emitir/emisión/contratar/grabar/firmar/pagar/aceptar/póliza, un único control visible en todos los marcos,
+  `comprobarBoton` sobre su descripción (onclick, href, ancestros) y una vez por trabajo. NO relaja la red.
+- **Precio (`leerPrecioGenerali`, lector TOLERANTE):** en el texto visible de todos los marcos, líneas con prima/precio/importe/
+  total/a pagar (no franquicia, capital, valor, límite, km), importe en formato español en la misma línea o la siguiente; manda
+  «total»; horquilla 30-20.000 €; se ignoran los importes que ya estaban antes del clic; estable en dos lecturas. Un único
+  importe → OFERTA «Auto · Turismos (Ramo UV)» con aviso «lector tolerante… no consta la modalidad ni si es anual» + supuestos.
+  Varios (p. ej. una por modalidad) o ninguno → `ErrorMapaIncompletoGenerali` con los candidatos y el registro de ESA pantalla;
+  el runner guarda HTML redactado (→ `html_documento_id`), inventario de estructura y recorrido (capturas de cada paso).
 
 ## Matrícula con asterisco (`matriculaGenerali`, regla de Alberto 18/10/2026)
 - Actual (4 cifras + 3 consonantes): `1234BCD` → `1234*BCD`, en «Matrícula» y en su verificación.
@@ -107,8 +137,18 @@ Bot: `src/adapters/generali/auto.ts` (v0.1.0, flag `GENERALI_AUTO_ACTIVO` APAGAD
    esas palabras, el trabajo cae y se mira con el HTML. Test: `test/generali-red-turismos.test.ts`.
 2. «Mediador» del formulario a «00000»: el bot teclea el de la correduría (supuesto sin captura).
 3. SMS de 30 días: el relevo del código por Telegram NO está hecho; hoy para con `requiere_humano`.
+4. **v0.2.0 · red de «Garantías y Resultados».** El clic NO abre ninguna ventana de red: si la subpestaña manda una petición
+   (POST o URL) que casa con el patrón de emisión (p. ej. una ruta con «emision»/«contratacion» por venir de ese menú), el guard
+   la aborta y el trabajo cae `emision`/`error_definitivo` con el HTML. Si pasa, se mira la URL real y se decide con Alberto una
+   excepción estrecha como la de Turismos.
+5. **v0.2.0 · precio sin captura.** El lector es tolerante: si Generali enseña varias modalidades con su total, el bot PARA
+   (no elige); el mapeo de modalidades se hace con el HTML de esa primera ejecución.
 
 ## Capturas que faltan (para cerrar hasta el PRECIO)
+> v0.2.0: ya NO hace falta pedirlas para avanzar. Una ejecución real deja en el `error` del trabajo el registro de la pantalla
+> donde para (campos, botones, avisos, desplegables o importes candidatos) + HTML redactado + inventario + recorrido. La lista
+> de abajo queda como qué mirar en esa evidencia.
+
 1. Selector de vehículos DESPUÉS de elegir la marca: modelo, versión (lista completa) y el botón con el que se confirma.
 2. «Datos de Valoración» entera tras el vehículo (bajar el scroll): el campo de **verificación de la matrícula**, el resto de
    «Roles», tomador (NIF, nacimiento, CP), conductor (nacimiento, carné) y antecedentes (años asegurado, siniestros, compañía).

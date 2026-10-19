@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/10/2026)** — Tarificador · PR #4831 mergeado: botón «Pedir precio a todas» (plataforma, encola todas las compañías del ramo, Generali al final, ofrece «Preparar presupuesto» al acabar), 409 `bot_pausado` con mensaje claro, Allianz Turismos 0.6.15 casa la «Compañía actual» por alias y NUNCA con otra marca (ambigua/no casa → `datos`; Allianz exige `companiaAnterior` con cambio de seguro). Imagen `v20261019-allianz0615`, asegura redesplegada. Generali: credenciales en Fly puestas por Alberto y pausa quitada. Mapfre auto (Manuel) dio precio. Lección: relanzar por SQL un trabajo cerrado no sirve (riesgo purgado). Pendiente: Alberto pulsa «Pedir precio a todas» en Manuel (auto) y F800 (Línea Directa).
 **(19/10/2026)** — Correduría · leads por CORREO a hola@grupoasegura.es. Lead de hoy (Alejandro Cutanda, hogar+vida) se avisó como
 «Oportunidad de negocio» genérica y NO creó ficha. 🎯 Decisión de Alberto: la correduría automatiza al máximo lead→datos→presupuesto→
 seguimiento con compañías. Hecho: categoría `correduria-lead` por regla fija (destinatario @grupoasegura.es), alta por el puerto cifrado

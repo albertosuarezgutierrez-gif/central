@@ -209,6 +209,10 @@ export const CRON_JOBS: CronJob[] = [
   // acaba `requiere_humano`. Avisa a Alberto UNA vez por trabajo (marca en asegura, solo si el Telegram salió)
   // para que entre en el portal, valide y pulse Reintentar. Sin datos personales en el mensaje.
   { path: '/api/cron/tarificador-verificacion', schedule: '*/10 * * * *' },
+  // Relevo del CÓDIGO SMS del tarificador (19/10/2026, Generali/Okta): un bot está en la pantalla del SMS y espera el código
+  // como mucho 5 min. Cada minuto, un Telegram (force_reply) por petición nueva; Alberto contesta y el webhook lo entrega a
+  // asegura. Una sola llamada barata a asegura por pasada; sin peticiones no manda nada.
+  { path: '/api/cron/tarificador-codigo-sms', schedule: '* * * * *' },
   // Seguimiento de presupuestos enviados (28/09/2026): 08:12, 13:12 y 18:12 UTC — horario de oficina
   // para que el «¿le llamas?» llegue cuando se puede llamar. Asegura decide qué toca (48 h sin abrir,
   // 72 h sin elegir, un aviso por etapa); este job solo avisa y marca lo avisado.

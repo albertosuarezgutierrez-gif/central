@@ -239,3 +239,143 @@ export function rolesGenerali(form: Pick<FormularioAuto, 'tomadorEsPropietario' 
   if (conductor) supuestos.push(conductor)
   return { ok: true, supuestos }
 }
+
+// ───────────────────────── v0.2.0 (19/10/2026): verificación opcional, registro de pantalla, precio ─────────────────────────
+
+/**
+ * Campo de VERIFICACIÓN de la matrícula (regla de Alberto: «si el portal pide verificación, la misma otra vez»). La captura 6
+ * enseña UN solo campo «Matrícula»: la verificación es OPCIONAL. 0 candidatos → se sigue; 1 → se rellena igual; >1 → PARA
+ * (no se elige a ciegas). PURA.
+ */
+export type DecisionVerificacion = { tipo: 'ninguna' } | { tipo: 'rellenar' } | { tipo: 'parar'; motivo: string }
+export function decidirVerificacionMatricula(candidatos: number): DecisionVerificacion {
+  if (!Number.isInteger(candidatos) || candidatos < 0) return { tipo: 'parar', motivo: 'el campo de VERIFICACIÓN de la matrícula (recuento ilegible)' }
+  if (candidatos === 0) return { tipo: 'ninguna' }
+  if (candidatos === 1) return { tipo: 'rellenar' }
+  return { tipo: 'parar', motivo: `el campo de VERIFICACIÓN de la matrícula: hay ${candidatos} candidatos y no se elige a ciegas` }
+}
+
+/** Un control visible de la pantalla, LEÍDO (nunca el valor de un campo de texto: solo si tiene o no). */
+export type CampoPantalla = { etiqueta: string; tipo: string; obligatorio: boolean; valor: string }
+export type PantallaLeida = { campos: CampoPantalla[]; botones: string[]; avisos: string[] }
+
+/**
+ * Resumen corto de una pantalla para el mensaje del hueco (va al `error` del trabajo, redactado por el runner): campos
+ * («Etiqueta [tipo*] = valor», `*` = obligatorio), botones y avisos visibles, con tope. PURA.
+ */
+export function resumenPantallaGenerali(p: PantallaLeida, max = 1400): string {
+  const corta = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1)}…` : t)
+  const campos = p.campos.map((c) => `${corta(c.etiqueta || '(sin etiqueta)', 60)} [${c.tipo}${c.obligatorio ? '*' : ''}] = ${corta(c.valor, 40)}`)
+  const vacios = p.campos.filter((c) => c.obligatorio && c.valor === 'vacío').length
+  const partes = [
+    `${p.campos.length} campos${vacios ? ` (${vacios} obligatorios vacíos)` : ''}: ${campos.join('; ')}`,
+    `botones: ${p.botones.map((b) => corta(b, 40)).join(' · ') || '(ninguno)'}`,
+    ...(p.avisos.length ? [`avisos: ${p.avisos.map((a) => corta(a, 160)).join(' · ')}`] : []),
+  ]
+  return corta(partes.join(' | '), max)
+}
+
+/**
+ * Campos de tomador/conductor/antecedentes que el bot RELLENA en «Datos de Valoración» si aparecen con una de estas etiquetas
+ * EXACTAS (normalizadas con `normalizarCatalogo`, sin «:» ni «*»). Mapa PROVISIONAL (sin captura de esa parte): solo un campo
+ * de TEXTO vacío y único por etiqueta; lo demás se registra y no se toca.
+ */
+export const ETIQUETAS_RIESGO_GENERALI = Object.freeze({
+  fechaNacimiento: ['FECHA DE NACIMIENTO', 'FECHA NACIMIENTO', 'F NACIMIENTO'],
+  fechaCarne: ['FECHA DE CARNE', 'FECHA CARNE', 'FECHA DE CARNET', 'FECHA CARNET', 'FECHA EXPEDICION CARNE', 'FECHA EXPEDICION CARNET', 'FECHA DE EXPEDICION DEL CARNE', 'FECHA DE EXPEDICION DEL CARNET', 'FECHA EXPEDICION PERMISO', 'FECHA DE EXPEDICION DEL PERMISO'],
+  codigoPostal: ['CODIGO POSTAL', 'C P', 'CP'],
+  aniosAsegurado: ['ANOS ASEGURADO', 'ANOS ASEGURADOS', 'ANOS DE ASEGURAMIENTO', 'ANOS ASEGURADO ANTERIOR', 'ANOS EN LA COMPANIA ANTERIOR'],
+  siniestros: ['SINIESTROS ULTIMOS 5 ANOS', 'N SINIESTROS ULTIMOS 5 ANOS', 'NUMERO DE SINIESTROS', 'SINIESTROS CON CULPA ULTIMOS 5 ANOS'],
+} as const)
+export type ClaveRiesgoGenerali = keyof typeof ETIQUETAS_RIESGO_GENERALI
+
+/** La clave del mapa provisional para una etiqueta de la pantalla, o `null`. PURA. */
+export function claveEtiquetaRiesgoGenerali(etiqueta: string): ClaveRiesgoGenerali | null {
+  const t = normalizarCatalogo(String(etiqueta ?? '').replace(/[:*]+\s*$/, ''))
+  for (const [k, lista] of Object.entries(ETIQUETAS_RIESGO_GENERALI) as [ClaveRiesgoGenerali, readonly string[]][]) if (lista.includes(t)) return k
+  return null
+}
+
+/**
+ * Valor a teclear para una clave del mapa provisional, con los antecedentes YA resueltos (dato o supuesto favorable de
+ * `conAntecedentesFavorables`, que el adaptador declara aparte). `null` = el riesgo no lo trae en un formato válido (no se
+ * inventa). PURA.
+ */
+export function valorRiesgoGenerali(
+  clave: ClaveRiesgoGenerali,
+  form: Pick<FormularioAuto, 'conductor' | 'codigoPostal'> & { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number },
+): string | null {
+  switch (clave) {
+    case 'fechaNacimiento':
+      return fechaGenerali(form.conductor?.fechaNacimiento)
+    case 'fechaCarne':
+      return fechaGenerali(form.conductor?.fechaCarne)
+    case 'codigoPostal':
+      return /^\d{5}$/.test(String(form.codigoPostal ?? '')) ? form.codigoPostal : null
+    case 'aniosAsegurado':
+      return Number.isInteger(form.aniosAseguradoAnterior) && form.aniosAseguradoAnterior >= 0 ? String(form.aniosAseguradoAnterior) : null
+    case 'siniestros':
+      return Number.isInteger(form.siniestrosUltimos5Anios) && form.siniestrosUltimos5Anios >= 0 ? String(form.siniestrosUltimos5Anios) : null
+  }
+}
+
+// ───────────────────────── lector TOLERANTE del precio («Garantías y Resultados», sin captura) ─────────────────────────
+
+/** Importes en formato español (1.234,56 € · 1234,56€ · € 1.234,56 · 1.234 €), dentro de una línea. */
+const RE_IMPORTE_EN_LINEA = /(?:€\s*)?\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+(?:,\d{1,2})\s*(?:€|eur(?:os)?\b)?|(?:€\s*)?\d+\s*(?:€|eur(?:os)?\b)|€\s*\d+/gi
+const RE_LINEA_PRECIO = /\b(PRIMA|PRECIO|IMPORTE|TOTAL|A PAGAR)\b/
+const RE_LINEA_TOTAL = /\bTOTAL\b/
+/** Líneas con importes que NO son el precio (capitales, franquicias, valores del vehículo, límites). */
+const RE_LINEA_NO_PRECIO = /\b(FRANQUICIA|CAPITAL|SUMA ASEGURADA|LIMITE|VALOR|ACCESORIOS|INDEMNIZACION|KM|KILOMETROS)\b/
+/** Horquilla sensata de una prima anual de turismo: fuera de ella no se cree el número. */
+export const PRIMA_MIN_GENERALI_EUR = 30
+export const PRIMA_MAX_GENERALI_EUR = 20_000
+
+/** «1.234,56 €» → 1234.56 (formato español; con € o con decimales). `null` si no es un importe. PURA. */
+export function importeEspanolEur(texto: string): number | null {
+  const t = String(texto ?? '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim()
+  const m = /^(?:€\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)\s*(?:€|eur(?:os)?)?$/i.exec(t)
+  if (!m || !(/€|eur/i.test(t) || /,\d{1,2}$/.test(m[1]!))) return null
+  const n = Number(m[1]!.replace(/\./g, '').replace(',', '.'))
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null
+}
+
+export type LecturaPrecioGenerali =
+  | { tipo: 'unico'; eur: number; linea: string }
+  | { tipo: 'ninguno' }
+  | { tipo: 'varios'; candidatos: { eur: number; linea: string }[] }
+
+/**
+ * Lector TOLERANTE del precio en el texto visible de «Garantías y Resultados» (sin captura de esa pantalla, v0.2.0). Busca
+ * líneas con «prima/precio/importe/total/a pagar» (no franquicias, capitales ni valores) y su importe en formato español, en
+ * la MISMA línea o en la siguiente (etiqueta y valor en celdas distintas). Manda «total» si lo hay. Un único importe distinto
+ * dentro de la horquilla → ese; varios → `varios` (el adaptador PARA con la lista: nunca elige uno); ninguno → `ninguno`.
+ * `ignorar`: importes que ya estaban en la pantalla ANTES de pulsar la subpestaña (no son el precio). PURA.
+ */
+export function leerPrecioGenerali(texto: string, ignorar: readonly number[] = []): LecturaPrecioGenerali {
+  const lineas = String(texto ?? '').replace(/ /g, ' ').split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter((l) => l !== '')
+  const importesDe = (l: string) => [...l.matchAll(RE_IMPORTE_EN_LINEA)].map((m) => importeEspanolEur(m[0])).filter((n): n is number => n !== null)
+  const total: { eur: number; linea: string }[] = []
+  const otros: { eur: number; linea: string }[] = []
+  for (let i = 0; i < lineas.length; i++) {
+    const l = lineas[i]!
+    const n = normalizarCatalogo(l)
+    if (!RE_LINEA_PRECIO.test(n) || RE_LINEA_NO_PRECIO.test(n)) continue
+    let imps = importesDe(l)
+    let linea = l
+    const sig = lineas[i + 1]
+    if (imps.length === 0 && sig && sig.length <= 30 && !RE_LINEA_PRECIO.test(normalizarCatalogo(sig))) {
+      imps = importesDe(sig)
+      linea = `${l} ${sig}`
+    }
+    for (const eur of imps) {
+      if (eur < PRIMA_MIN_GENERALI_EUR || eur > PRIMA_MAX_GENERALI_EUR || ignorar.includes(eur)) continue
+      ;(RE_LINEA_TOTAL.test(n) ? total : otros).push({ eur, linea: linea.slice(0, 120) })
+    }
+  }
+  const base = total.length > 0 ? total : otros
+  const distintos = [...new Map(base.map((c) => [c.eur, c])).values()]
+  if (distintos.length === 0) return { tipo: 'ninguno' }
+  if (distintos.length === 1) return { tipo: 'unico', eur: distintos[0]!.eur, linea: distintos[0]!.linea }
+  return { tipo: 'varios', candidatos: distintos.slice(0, 12) }
+}

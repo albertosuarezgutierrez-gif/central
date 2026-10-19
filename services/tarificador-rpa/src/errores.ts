@@ -35,6 +35,18 @@ export class ErrorVerificacionHumana extends ErrorTarificador {
 }
 
 /**
+ * Okta de Generali pide el SMS y ESTE trabajo puede relevar el código por Telegram (relevo-sms.ts, 19/10/2026). Lo lanza
+ * `ctx.trasLogin` para cortar el adaptador; el runner lo coge, releva el código y repite el intento ya verificado. Si nadie
+ * lo releva (sin relevo, o ya usado) se comporta EXACTAMENTE como `ErrorVerificacionHumana` (requiere_humano).
+ */
+export class ErrorCodigoSmsPendiente extends ErrorVerificacionHumana {
+  constructor(compania: string) {
+    super(compania)
+    this.name = 'ErrorCodigoSmsPendiente'
+  }
+}
+
+/**
  * Lista COMPLETA y estructurada de versiones de un `ErrorEleccionVersion` (13/10/2026). Viaja en `error.opcionesVersion`
  * del resultado; el mensaje sigue truncado («(+8 más)») y no se parsea. Solo nombres/códigos de catálogo.
  */

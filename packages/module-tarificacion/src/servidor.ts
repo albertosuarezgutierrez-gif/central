@@ -8,3 +8,10 @@ export {
   verificarFirmaAutorizacionEmision,
   decidirCanje,
 } from './emision-servidor.ts'
+export {
+  ParCodigoSms,
+  clavePublicaSmsValida,
+  codigoSmsValido,
+  sellarCodigoSms,
+  selloCodigoSmsValido,
+} from './codigo-sms-servidor.ts'

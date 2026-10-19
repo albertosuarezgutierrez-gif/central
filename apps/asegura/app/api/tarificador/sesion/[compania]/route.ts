@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { workerAutorizado } from '@/lib/tarificador-worker-auth'
 import { correduriaUnica } from '@/lib/cartera'
 import { borrarSesion, guardarSesion, leerSesion } from '@/lib/tarificador-sesion'
-import { clasificarErrorBd, codigoErrorParaLog, cuerpoExcedeTope, leerCompania, leerCuerpoConTope, leerGuardado } from '@/lib/tarificador-sesion-reglas'
+import { clasificarErrorBd, codigoErrorParaLog, cuerpoExcedeTope, leerCompania, leerCuerpoConTope, leerGuardado, maxCaducidadMs } from '@/lib/tarificador-sesion-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic'
  * (services/tarificador-rpa/src/sesion-manual.ts → `almacenHttp`). Bearer `TARIFICADOR_WORKER_SECRET`, igual que
  * las rutas hermanas del worker. Asegura guarda el token OPACO (no tiene la clave) con su `caduca_en`.
  *   GET    → 200 `{ token }` · 404 si no hay o caducó (la caducada se borra).
- *   PUT    `{ token, caducaEn }` → upsert. 400 forma/caducidad, 413 tamaño.
+ *   PUT    `{ token, caducaEn }` → upsert. 400 forma/caducidad (techo 25 h; 30 días + 1 h para el DISPOSITIVO de confianza
+ *          de Generali, `maxCaducidadMs`), 413 tamaño.
  *   DELETE → 200 siempre (idempotente).
  * Sin el SQL aplicado → 503 `sesion_sin_activar`. Un 5xx NO es «no hay sesión» para el worker (es `infra`).
  *
@@ -51,7 +52,7 @@ export async function PUT(req: Request, ctx: Ctx) {
   if (cuerpoExcedeTope(req.headers.get('content-length'))) return NextResponse.json({ estado: 'error', motivo: 'cuerpo_grande' }, { status: 413 })
   const texto = await leerCuerpoConTope(req.body)
   if (texto === null) return NextResponse.json({ estado: 'error', motivo: 'cuerpo_grande' }, { status: 413 })
-  const g = leerGuardado(texto, Date.now())
+  const g = leerGuardado(texto, Date.now(), maxCaducidadMs(c.valor))
   if (!g.ok) return NextResponse.json({ estado: 'error', motivo: g.motivo }, { status: g.status })
   try {
     const correduria = await correduriaUnica()
