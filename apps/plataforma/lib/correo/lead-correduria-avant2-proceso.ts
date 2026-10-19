@@ -3,7 +3,8 @@
 //   1. Asistente encendido y escrituras del asistente activas (si no, no se hace nada: 0€ y el botón sigue valiendo).
 //   2. El pendiente de tarificar `p` → la ficha y sus oportunidades (sin datos personales) → la de ESE ramo y tomador
 //      (lectura gratis del riesgo en asegura).
-//   3. Marca de un solo uso `cds:<hilo>:<ramo>` (ON CONFLICT DO NOTHING): dos pulsaciones = una entrega.
+//   3. Marca `cds:<hilo>:<ramo>` que caduca a los 15 min (ON CONFLICT DO UPDATE solo si ya caducó): dos pulsaciones seguidas = una entrega;
+//      si el asistente lanza, se borra; si sale en silencio, se puede reintentar pasados 15 min.
 //   4. Se ENTREGA al asistente (`manejarCorreduriaTg`) con una instrucción de solo ids. Él propone el vehículo del catálogo
 //      y manda el resumen con «💶 Pedir precio (0,50€)» (`cas_tarif`, un solo uso, tope diario). AQUÍ NO SE PAGA NADA.
 // Nunca lanza; ningún dato personal en `console.*` ni en Telegram.
@@ -43,17 +44,24 @@ export async function resolverAvant2Clp(id: number, ramo: RamoAvant2, quien: str
     if (!oportunidadId) return `<i>No encuentro UNA oportunidad de ${RAMO_TXT[ramo]} de este lead: no se ha hecho nada (0€). Pídeselo al asistente nombrando la oportunidad.</i>`
 
     const marca = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
-      INSERT INTO correduria_pendiente_tg (tipo, gmail_message_id, datos, borrador, estado, decidido_por, decidido_at)
+      INSERT INTO correduria_pendiente_tg (tipo, gmail_message_id, datos, borrador, estado, decidido_por, decidido_at, caduca_at)
       VALUES ('tarificar', ${claveAvant2(hilo, ramo)}, ${JSON.stringify({ clienteId: datos.clienteId, oportunidadIds: [oportunidadId], avant2: ramo })}::jsonb, '',
-              'enviado', ${actorTelegram(quien)}, now())
-      ON CONFLICT (gmail_message_id, tipo) DO NOTHING
+              'enviado', ${actorTelegram(quien)}, now(), now() + interval '15 minutes')
+      ON CONFLICT (gmail_message_id, tipo) DO UPDATE SET caduca_at = EXCLUDED.caduca_at, datos = EXCLUDED.datos
+        WHERE correduria_pendiente_tg.caduca_at < now()
       RETURNING id`).catch(() => null)
     if (marca === null) return '⚠️ <i>No he podido registrar la pulsación: no se ha hecho nada (0€).</i>'
     if (!marca.length) return `<i>Este lead de ${RAMO_TXT[ramo]} ya se pasó al asistente para Avant2: no se repite (0€). Si quieres otra petición, pídesela a él.</i>`
 
     const { manejarCorreduriaTg } = await import('@/lib/correduria-asistente-telegram')
-    await manejarCorreduriaTg(instruccionAvant2({ clienteId: datos.clienteId, oportunidadId, ramo }), quien)
-    return `💶 Lead de ${RAMO_TXT[ramo]} pasado al asistente (#clp${id}). Su propuesta llega aparte con «💶 Pedir precio (0,50€)»: <b>no se paga nada hasta que pulses ese botón</b>.`
+    try {
+      await manejarCorreduriaTg(instruccionAvant2({ clienteId: datos.clienteId, oportunidadId, ramo }), quien)
+    } catch (e) {
+      // El asistente reventó: la marca no puede quedar gastada (el botón debe poder reintentarse).
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM correduria_pendiente_tg WHERE id = ${marca[0].id}`).catch(() => null)
+      throw e
+    }
+    return `💶 #clp${id}. Pasado al asistente: si no ves su propuesta en un momento, vuelve a pulsar 💶 en 15 min. <b>No se paga nada hasta que pulses «💶 Pedir precio (0,50€)»</b>.`
   } catch (e) {
     console.error('[triaje] entregar lead a Avant2:', e instanceof Error ? e.name : 'error')
     return '⚠️ <i>Fallo interno al pasarlo al asistente: no se ha pedido ningún precio. Mira si te llegó su propuesta antes de repetir.</i>'

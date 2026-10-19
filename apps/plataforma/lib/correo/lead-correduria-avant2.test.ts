@@ -111,11 +111,27 @@ const CODIGO = PROCESO.replace(/^\s*\/\/.*$/gm, '')
 test('🪤 la entrega NUNCA paga: ni cotiza ni pulsa cas_tarif por su cuenta (lee el fuente)', () => {
   assert.ok(!/tarificarDesdeBoton|cotizar[A-Z(]|cas_tarif|auto-nuevo|moto-nuevo/.test(CODIGO))
 })
-test('🪤 un solo uso: la marca ON CONFLICT DO NOTHING va ANTES de entregar al asistente (lee el fuente)', () => {
-  const marca = CODIGO.search(/INSERT INTO correduria_pendiente_tg[^`]*\$\{claveAvant2\(hilo, ramo\)\}[^`]*ON CONFLICT \(gmail_message_id, tipo\) DO NOTHING/)
+test('🪤 un solo uso: la marca va ANTES de entregar al asistente (lee el fuente)', () => {
+  const marca = CODIGO.search(/INSERT INTO correduria_pendiente_tg[^`]*\$\{claveAvant2\(hilo, ramo\)\}/)
   const yaUsado = CODIGO.indexOf('if (!marca.length) return')
   const entrega = CODIGO.indexOf('await manejarCorreduriaTg(')
   assert.ok(marca > 0 && yaUsado > marca && entrega > yaUsado)
+})
+test('🪤 la marca caduca a los 15 min (caduca_at en el INSERT) (lee el fuente)', () => {
+  assert.match(CODIGO, /INSERT INTO correduria_pendiente_tg \([^)]*caduca_at\)[^`]*now\(\) \+ interval '15 minutes'\)/)
+})
+test('🪤 el conflicto solo se reabre si la marca ya caducó (DO UPDATE ... WHERE caduca_at < now()) (lee el fuente)', () => {
+  assert.match(CODIGO, /ON CONFLICT \(gmail_message_id, tipo\) DO UPDATE SET caduca_at = EXCLUDED\.caduca_at, datos = EXCLUDED\.datos\s+WHERE correduria_pendiente_tg\.caduca_at < now\(\)\s+RETURNING id/)
+  assert.ok(!/DO NOTHING/.test(CODIGO))
+})
+test('🪤 si el asistente lanza, la marca se borra (DELETE por id) antes de devolver el error (lee el fuente)', () => {
+  const m = CODIGO.match(/try \{\s*await manejarCorreduriaTg\([^\n]*\n\s*\} catch \(e\) \{([\s\S]*?)throw e\s*\}/)
+  assert.ok(m, 'try/catch alrededor de manejarCorreduriaTg')
+  assert.match(m![1], /DELETE FROM correduria_pendiente_tg WHERE id = \$\{marca\[0\]\.id\}/)
+})
+test('🪤 el texto de Telegram es honesto: avisa de reintentar en 15 min (lee el fuente)', () => {
+  assert.match(CODIGO, /si no ves su propuesta en un momento, vuelve a pulsar 💶 en 15 min/)
+  assert.ok(!/Lead de \$\{RAMO_TXT\[ramo\]\} pasado al asistente \(#clp/.test(CODIGO))
 })
 test('🪤 la entrega pasa por instruccionAvant2 (solo ids) (lee el fuente)', () => {
   assert.match(CODIGO, /manejarCorreduriaTg\(instruccionAvant2\(\{ clienteId: datos\.clienteId, oportunidadId, ramo \}\), quien\)/)
