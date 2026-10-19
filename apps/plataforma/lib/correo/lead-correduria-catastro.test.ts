@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { cambiosViviendaDesdeCatastro, conocidosDeVivienda, elegirViviendaCatastro, lineaCatastroTelegram, type DatosCatastroLead } from './lead-correduria-catastro.ts'
+import { readFileSync } from 'node:fs'
+import { puedeEscribirCatastro, cambiosViviendaDesdeCatastro, conocidosDeVivienda, elegirViviendaCatastro, lineaCatastroTelegram, type DatosCatastroLead } from './lead-correduria-catastro.ts'
 
 const VIV: DatosCatastroLead = { metrosCuadrados: 68, anioConstruccion: 1992, direccion: 'CL EJEMPLO 1 Es:1 Pl:02 Pt:B', localidad: 'DOS HERMANAS', provincia: 'SEVILLA', codigoPostal: '41700', uso: 'Residencial' }
 const GARAJE: DatosCatastroLead = { ...VIV, metrosCuadrados: 12, uso: 'Almacen-Estacionamiento' }
@@ -38,4 +39,15 @@ test('la línea de Telegram: m², año, uso y CP, sin la calle', () => {
   assert.match(l, /41700 DOS HERMANAS/)
   assert.ok(!l.includes('EJEMPLO'), 'la calle no va a Telegram')
   assert.match(lineaCatastroTelegram({ estado: 'fallo' }), /no se sabe/)
+})
+
+test('🪤 el Catastro solo escribe en la oportunidad que abrió ESTE correo y sin riesgo confirmado', () => {
+  assert.equal(puedeEscribirCatastro({ recienAbierta: true, confirmadoAt: null }), true)
+  assert.equal(puedeEscribirCatastro({ recienAbierta: true, confirmadoAt: '2026-10-18T10:00:00Z' }), false, 'escribir sin confirmar borraría el confirmadoAt de Alberto')
+  assert.equal(puedeEscribirCatastro({ recienAbierta: false, confirmadoAt: null }), false, 'una oportunidad que ya existía no se toca desde un correo')
+  assert.match(lineaCatastroTelegram({ estado: 'ok', datos: VIV, guardado: 'protegido', distintos: [] }), /solo te lo enseño/)
+  const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8')
+  assert.ok(src.indexOf('puedeEscribirCatastro({') > 0 && src.indexOf('puedeEscribirCatastro({') < src.indexOf('datosRiesgoAsegura({'), 'la guarda va ANTES de escribir')
+  const proc = readFileSync(new URL('./lead-correduria-proceso.ts', import.meta.url), 'utf8')
+  assert.match(proc, /recienAbierta: op\.estado === 'abierta'/)
 })

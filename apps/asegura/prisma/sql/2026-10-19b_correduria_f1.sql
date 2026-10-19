@@ -28,9 +28,11 @@ CREATE TABLE IF NOT EXISTS seguros.correduria_hilo (
   created_at                  timestamptz NOT NULL DEFAULT now()
 );
 
--- Un hilo por (raíz, oportunidad). `oportunidad_id` NULL (lead sin oportunidad) cuenta como un valor más.
+-- Un hilo por (cliente, raíz, oportunidad). El `cliente_id` va en la clave (revisión 19/10/2026): la raíz sale de
+-- `References[0]` del correo, que escribe el remitente, y sin él dos clientes con la misma raíz fundirían sus hilos.
+-- `oportunidad_id` NULL (lead sin oportunidad) cuenta como un valor más.
 CREATE UNIQUE INDEX IF NOT EXISTS correduria_hilo_unico
-  ON seguros.correduria_hilo (correduria_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)));
+  ON seguros.correduria_hilo (correduria_id, cliente_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)));
 CREATE INDEX IF NOT EXISTS correduria_hilo_ids ON seguros.correduria_hilo USING gin (message_ids);
 CREATE INDEX IF NOT EXISTS correduria_hilo_cliente ON seguros.correduria_hilo (correduria_id, cliente_id);
 

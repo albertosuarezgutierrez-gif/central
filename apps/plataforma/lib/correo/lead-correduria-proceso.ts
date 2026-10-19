@@ -120,7 +120,8 @@ export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()
     // Catastro (hogar con referencia válida en el correo): rellena el riesgo y ya no se pregunta lo que da.
     let catastro: CatastroLead | null = null
     if (lead.esLead !== false && lead.ramos.includes('hogar') && lead.referenciasCatastrales?.length) {
-      catastro = await catastroDeLead(lead.referenciasCatastrales, oportunidades.find((o) => o.ramo === 'hogar' && o.id)?.id ?? null)
+      const op = oportunidades.find((o) => o.ramo === 'hogar' && o.id)
+      catastro = await catastroDeLead(lead.referenciasCatastrales, op?.id ? { id: op.id, recienAbierta: op.estado === 'abierta' } : null)
     }
 
     // La petición de datos se prepara aunque el alta haya fallado (el lead sigue esperando respuesta);

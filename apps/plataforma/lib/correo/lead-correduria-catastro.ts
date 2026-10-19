@@ -31,6 +31,16 @@ export function elegirViviendaCatastro(consultas: readonly { referencia: string;
   return { estado: 'ambiguo', residenciales: residenciales.length }
 }
 
+/**
+ * ¿Se puede escribir lo del Catastro en el riesgo? (revisión 19/10/2026) Solo en la oportunidad de hogar que ACABA de
+ * abrir este correo y cuyos datos de vivienda no estén CONFIRMADOS: `editarDatosRiesgo` sin `confirmar` borra el
+ * `confirmadoAt`, y un riesgo que Alberto confirmó (o una oportunidad que ya existía) no se toca desde un correo. En
+ * los demás casos el Catastro solo se enseña en Telegram. PURA.
+ */
+export function puedeEscribirCatastro(a: { recienAbierta: boolean; confirmadoAt: unknown }): boolean {
+  return a.recienAbierta === true && (a.confirmadoAt === null || a.confirmadoAt === undefined || a.confirmadoAt === '')
+}
+
 /** `datosVivienda` guardado → formulario de texto (lo que espera `precargaCatastroVivienda`). `null`/'' = vacío. PURA. */
 function comoFormulario(datos: Record<string, unknown> | null): Record<string, string | undefined> {
   const f: Record<string, string | undefined> = {}
@@ -74,7 +84,7 @@ const m2 = (n: number) => `${new Intl.NumberFormat('es-ES', { maximumFractionDig
 
 /** La línea de Telegram. Sin la calle. PURA. */
 export function lineaCatastroTelegram(
-  r: { estado: 'ok'; datos: DatosCatastroLead; guardado: 'si' | 'no' | 'nada_nuevo'; distintos: string[] }
+  r: { estado: 'ok'; datos: DatosCatastroLead; guardado: 'si' | 'no' | 'nada_nuevo' | 'protegido'; distintos: string[] }
     | { estado: 'ambiguo'; residenciales: number } | { estado: 'sin_dato' } | { estado: 'fallo' },
 ): string {
   if (r.estado === 'fallo') return '📍 Catastro: no se ha podido consultar (no se sabe). Se le preguntan los datos de la vivienda.'
@@ -88,7 +98,9 @@ export function lineaCatastroTelegram(
     [d.codigoPostal, d.localidad].filter(Boolean).join(' ') || null,
   ].filter((x): x is string => !!x)
   const guardado = r.guardado === 'si' ? 'guardado en el riesgo (derivado, sin confirmar)'
-    : r.guardado === 'nada_nuevo' ? 'el riesgo ya lo tenía' : '⚠️ NO se ha podido guardar en el riesgo: se le pregunta'
+    : r.guardado === 'nada_nuevo' ? 'el riesgo ya lo tenía'
+    : r.guardado === 'protegido' ? 'solo te lo enseño: la oportunidad ya existía o su riesgo está confirmado, no lo toco'
+    : '⚠️ NO se ha podido guardar en el riesgo: se le pregunta'
   const distintos = r.distintos.length ? ` · ⚠️ distinto de lo guardado: ${r.distintos.join(', ')} (no se ha tocado)` : ''
   return `📍 Catastro: ${escapeHtml(partes.join(' · ') || 'sin datos publicados')} — ${guardado}${escapeHtml(distintos)}`
 }

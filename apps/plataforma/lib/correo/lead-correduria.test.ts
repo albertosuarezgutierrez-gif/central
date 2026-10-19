@@ -263,14 +263,18 @@ test('🪤 [3] presupuesto de tiempo: se difiere antes de pasarse, y el cursor n
   assert.match(src, /diferirLead\(/)
 })
 
-test('🪤 el ECO de nuestra respuesta (BCC a hola@) no es un lead ni su respuesta, y va ANTES (lee el fuente)', async () => {
+test('🪤 el ECO de nuestra respuesta (BCC a hola@) se calla SOLO con nuestro From exacto y un hilo de lead (lee el fuente)', async () => {
   const { esEcoPropioCorreduria } = await import('./lead-correduria.ts')
-  assert.equal(esEcoPropioCorreduria({ from: 'hola@grupoasegura.es', referencias: ['<lead@gmail.com>'] }), true)
-  assert.equal(esEcoPropioCorreduria({ from: 'hola@envios.grupoasegura.es', referencias: ['<lead@gmail.com>'] }), true)
-  assert.equal(esEcoPropioCorreduria({ from: 'ana@gmail.com', referencias: ['<lead@gmail.com>'] }), false, 'la respuesta del cliente sí se lee')
-  assert.equal(esEcoPropioCorreduria({ from: 'hola@grupoasegura.es', referencias: [] }), false)
+  const remitentePropio = 'Grupo ASegura <hola@grupoasegura.es>'
+  assert.equal(esEcoPropioCorreduria({ from: 'hola@grupoasegura.es', remitentePropio, casaConLead: true }), true)
+  assert.equal(esEcoPropioCorreduria({ from: 'manuel@grupoasegura.es', remitentePropio, casaConLead: true }), false, 'Manuel (u otro del dominio) en el hilo de un lead NO se silencia')
+  assert.equal(esEcoPropioCorreduria({ from: 'hola@envios.grupoasegura.es', remitentePropio, casaConLead: true }), false, 'otro buzón del dominio no es nuestro remitente')
+  assert.equal(esEcoPropioCorreduria({ from: 'hola@grupoasegura.es', remitentePropio, casaConLead: false }), false, 'From nuestro sin hilo de lead: no es el eco')
+  assert.equal(esEcoPropioCorreduria({ from: 'ana@gmail.com', remitentePropio, casaConLead: true }), false, 'la respuesta del cliente sí se lee')
   const src = readFileSync(new URL('./clasificador.ts', import.meta.url), 'utf8')
-  assert.ok(src.indexOf('esEcoPropioCorreduria({') < src.indexOf('esRespuestaDeLeadBD(correo.referencias)'), 'el eco casaría con el hilo del lead')
+  assert.match(src, /const remitentePropio = remitenteCorreo\(process\.env\.ASEGURA_MAIL_FROM\)/)
+  assert.match(src, /esEcoPropioCorreduria\(\{ from: correo\.from, remitentePropio, casaConLead \}\)/)
+  assert.ok(src.indexOf('esEcoPropioCorreduria({ from: correo.from, remitentePropio, casaConLead })') < src.indexOf("categoria: 'correduria-lead', confianza: 1"), 'el eco casaría con el hilo del lead')
   const { rutaDe, CATEGORIAS_IA } = await import('./rutas.ts')
   assert.equal(rutaDe('correduria-eco').aviso, 'ninguno')
   assert.equal(CATEGORIAS_IA.includes('correduria-eco'), false, 'la IA no puede elegir el eco')

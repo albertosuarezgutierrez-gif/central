@@ -1875,7 +1875,8 @@ model CorreoEventoEntrante {
 
 /// Hilo de correo de un lead ↔ su oportunidad (19/10/2026, SQL `prisma/sql/2026-10-19b_correduria_f1.sql`). Sin email
 /// en claro (`email_cliente_ciego` = índice ciego). Se escribe por SQL crudo en `lib/correo-lead.ts` (el único índice
-/// único lleva `coalesce(oportunidad_id, …)`, que Prisma no sabe declarar).
+/// único — `(correduria_id, cliente_id, message_id_raiz, coalesce(oportunidad_id, …))` — lleva una expresión, que
+/// Prisma no sabe declarar; el `cliente_id` va en la clave para que dos clientes con la misma raíz no fundan su hilo).
 model CorreduriaHilo {
   id                      BigInt    @id @default(autoincrement())
   correduriaId            String    @map("correduria_id") @db.Uuid

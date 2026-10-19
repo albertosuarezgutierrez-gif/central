@@ -105,14 +105,16 @@ export function esLeadCorreduria(c: {
 }
 
 /**
- * ¿Es el ECO de nuestra propia respuesta a un lead? (19/10/2026) La petición de datos sale por Resend desde hola@ con
- * copia oculta a hola@ (lo de Resend no aparece en «Enviados» de Gmail): esa copia vuelve al buzón con el From de la
- * correduría y las referencias del hilo del lead. No es un lead ni su respuesta: no crea ficha, no anota historial
- * (asegura ya lo anotó al enviar) y no avisa. PURA.
+ * ¿Es el ECO de nuestra propia respuesta a un lead? (19/10/2026) La petición de datos sale por Resend con copia oculta
+ * a hola@ (lo de Resend no aparece en «Enviados» de Gmail): esa copia vuelve al buzón. Para silenciarla hacen falta LAS
+ * DOS cosas (revisión 19/10/2026): el From es EXACTAMENTE nuestro remitente (`remitenteCorreo(ASEGURA_MAIL_FROM)`, no
+ * «cualquiera del dominio»: una respuesta de Manuel o un From falsificado no se callan) y sus referencias casan con un
+ * `correduria-lead` registrado (`esRespuestaDeLead`). Lo que no cumpla ambas sigue su camino y avisa. PURA.
  */
-export function esEcoPropioCorreduria(c: { from: string; referencias?: readonly string[] }): boolean {
+export function esEcoPropioCorreduria(c: { from: string; remitentePropio: string; casaConLead: boolean }): boolean {
   const from = (c.from ?? '').trim().toLowerCase()
-  return from.includes('@') && esDeCorreduria(from) && (c.referencias ?? []).length > 0
+  const propio = (c.remitentePropio.match(/<([^>]+)>/)?.[1] ?? c.remitentePropio).trim().toLowerCase()
+  return from.includes('@') && propio.includes('@') && from === propio && c.casaConLead
 }
 
 /**

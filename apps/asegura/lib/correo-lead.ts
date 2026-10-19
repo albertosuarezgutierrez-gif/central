@@ -16,6 +16,10 @@
 import { Prisma } from './generated/asegura-client'
 import { MEDIADOR } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
+// `seguros.correduria_hilo` va por el cliente de la puerta única (`lib/tenant`), como `oportunidad-riesgo.ts`: toda
+// fila lleva y se filtra por el `correduria_id` que resolvió la ruta (`correduriaUnica`).
+import { prisma as prismaTenant } from './tenant'
+import { Prisma as PrismaTenant } from '@prisma/client'
 
 import { TIPO_CORREO_PETICION_LEAD, textoHistorialEnvioLead, type EnvioLead } from './correo-lead-puro'
 export { TIPO_CORREO_PETICION_LEAD, validarEnvioLead, type EnvioLead } from './correo-lead-puro'
@@ -67,13 +71,13 @@ async function registrarHilo(correduriaId: string, e: EnvioLead, emailCiego: str
   const ops: (string | null)[] = e.oportunidadIds.length ? e.oportunidadIds : [null]
   try {
     for (const op of ops) {
-      await prismaAsegura().$executeRaw(Prisma.sql`
+      await prismaTenant.$executeRaw(PrismaTenant.sql`
         insert into seguros.correduria_hilo as h
           (correduria_id, oportunidad_id, cliente_id, message_id_raiz, message_ids, email_cliente_ciego, estado_datos, ultima_peticion_at)
         select ${correduriaId}::uuid, ${op}::uuid, ${e.clienteId}::uuid, ${raiz}, ${ids}::text[], ${emailCiego}, 'pedida', now()
         where ${op}::uuid is null or exists (
           select 1 from seguros.oportunidades o where o.id = ${op}::uuid and o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${e.clienteId}::uuid)
-        on conflict (correduria_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)))
+        on conflict (correduria_id, cliente_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)))
         do update set message_ids = array(select distinct unnest(h.message_ids || excluded.message_ids)),
                       estado_datos = 'pedida', ultima_peticion_at = now()`)
     }

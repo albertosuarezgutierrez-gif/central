@@ -15,12 +15,25 @@ import { datosRiesgoAsegura, peticionLeadAsegura, riesgoAsegura } from '@/lib/se
 import { interpretarRiesgo } from '@/lib/riesgo-asegura'
 import {
   botonesPeticion, borradorEditado, interpretarEnvioPeticion, leerDatosPeticion, lineaTrasEnviar,
-  textoBorradorTelegram, textoPedirEdicion, type DatosPeticion, type DecisionClp,
+  CLAVES_PII_PENDIENTE, textoBorradorTelegram, textoPedirEdicion, type DatosPeticion, type DecisionClp,
 } from './lead-correduria-peticion'
 import {
-  cambiosViviendaDesdeCatastro, conocidosDeVivienda, elegirViviendaCatastro, lineaCatastroTelegram, type DatosCatastroLead,
+  cambiosViviendaDesdeCatastro, conocidosDeVivienda, puedeEscribirCatastro, elegirViviendaCatastro, lineaCatastroTelegram, type DatosCatastroLead,
 } from './lead-correduria-catastro'
 import { ACTOR_TRIAJE_CORREO } from './lead-correduria'
+
+// ─── Purga (revisión 19/10/2026) ─────────────────────────────────────────────
+// Un pendiente CERRADO (enviado, descartado o caducado) no necesita ni el email del lead ni el texto: se anulan y
+// quedan solo ids y estado (`CLAVES_PII_PENDIENTE`). Lo enviado ya consta en asegura (`correo_envio` + historial).
+// Fallido/incierto los conservan: Alberto tiene que poder mirarlo antes de contestar a mano.
+const PURGA = Prisma.sql`datos = datos - ${[...CLAVES_PII_PENDIENTE]}::text[], borrador = ''`
+
+/** Caducados sin pulsar: se cierran y purgan (se llama en cada lead nuevo; nunca lanza). */
+async function purgarCaducados(): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA}
+    WHERE estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
+}
 
 // ─── Catastro ────────────────────────────────────────────────────────────────
 
@@ -33,7 +46,8 @@ export type CatastroLead = { linea: string; conocidos: string[] }
  * Referencias VÁLIDAS del correo + la oportunidad de hogar → datos del Catastro en su riesgo (solo lo vacío) y las
  * claves que ya no hay que preguntar. Nunca lanza; un fallo = «no se sabe» y la petición pregunta como siempre.
  */
-export async function catastroDeLead(referencias: readonly string[], oportunidadHogarId: string | null): Promise<CatastroLead | null> {
+export async function catastroDeLead(referencias: readonly string[], hogar: { id: string; recienAbierta: boolean } | null): Promise<CatastroLead | null> {
+  const oportunidadHogarId = hogar?.id ?? null
   if (!referencias.length) return null
   try {
     const trabajo = (async (): Promise<CatastroLead> => {
@@ -57,6 +71,10 @@ export async function catastroDeLead(referencias: readonly string[], oportunidad
       const actual = r.estado === 'ok' && r.riesgo.datosRiesgo?.clave === 'datosVivienda' ? (r.riesgo.datosRiesgo.datos as unknown as Record<string, unknown>) : null
       if (r.estado !== 'ok') return { linea: lineaCatastroTelegram({ estado: 'ok', datos: e.datos, guardado: 'no', distintos: [] }), conocidos: [] }
       const { cambios, distintos } = cambiosViviendaDesdeCatastro(actual, e.referencia, e.datos)
+      // Ni oportunidad que ya existía ni riesgo confirmado: escribir sin `confirmar` borraría su `confirmadoAt`.
+      if (!puedeEscribirCatastro({ recienAbierta: hogar?.recienAbierta === true, confirmadoAt: actual?.confirmadoAt })) {
+        return { linea: lineaCatastroTelegram({ estado: 'ok', datos: e.datos, guardado: 'protegido', distintos }), conocidos: conocidosDeVivienda(actual ?? {}) }
+      }
       if (Object.keys(cambios).length === 0) {
         return { linea: lineaCatastroTelegram({ estado: 'ok', datos: e.datos, guardado: 'nada_nuevo', distintos }), conocidos: conocidosDeVivienda(actual ?? {}) }
       }
@@ -85,6 +103,7 @@ export async function catastroDeLead(referencias: readonly string[], oportunidad
 export async function proponerPeticion(a: {
   gmailMessageId: string; datos: DatosPeticion; borrador: string; preguntas: number; catastro: string | null
 }): Promise<{ id: number; nuevo: boolean } | null> {
+  await purgarCaducados()
   let id: number
   try {
     const filas = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
@@ -107,7 +126,7 @@ export async function proponerPeticion(a: {
   if (msg === null) {
     // Sin botón en Telegram nadie puede aprobarlo: se cierra para que no quede un pendiente fantasma.
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_pendiente_tg SET estado = 'descartado', resultado = '{"motivo":"sin_telegram"}'::jsonb WHERE id = ${id}`).catch(() => {})
+      UPDATE correduria_pendiente_tg SET estado = 'descartado', resultado = '{"motivo":"sin_telegram"}'::jsonb, ${PURGA} WHERE id = ${id}`).catch(() => {})
     return null
   }
   await prisma.$executeRaw(Prisma.sql`UPDATE correduria_pendiente_tg SET tg_message_id = ${msg} WHERE id = ${id}`).catch(() => {})
@@ -122,7 +141,7 @@ const actorTelegram = (quien: string) => `agente:telegram-${quien}`
 export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>): Promise<string | null> {
   if (d.accion === 'no') {
     const n = await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_pendiente_tg SET estado = 'descartado', decidido_por = ${actorTelegram(d.quien)}, decidido_at = now(), esperando_edit = false
+      UPDATE correduria_pendiente_tg SET estado = 'descartado', decidido_por = ${actorTelegram(d.quien)}, decidido_at = now(), esperando_edit = false, ${PURGA}
       WHERE id = ${d.id} AND estado = 'pendiente'`).catch(() => null)
     if (n === null) return '⚠️ <i>No he podido descartarlo; caduca solo a los 7 días.</i>'
     return n > 0 ? '❌ <i>Descartado: no se le ha enviado nada.</i>' : lineaTrasEnviar({ estado: 'usado' })
@@ -143,7 +162,7 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>): P
   if (filas === null) return '⚠️ <i>No he podido leer el borrador: no se ha enviado nada.</i>'
   if (!filas.length) {
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_pendiente_tg SET estado = 'caducado' WHERE id = ${d.id} AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
+      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
     return lineaTrasEnviar({ estado: 'usado' })
   }
   const datos = leerDatosPeticion(filas[0].datos)
@@ -162,8 +181,9 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>): P
 }
 
 async function cerrar(id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown): Promise<void> {
+  // Solo lo ENVIADO se purga: fallido/incierto conservan email y texto para contestar a mano.
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE correduria_pendiente_tg SET estado = ${estado}, resultado = ${JSON.stringify(resultado ?? null)}::jsonb
+    UPDATE correduria_pendiente_tg SET estado = ${estado}, resultado = ${JSON.stringify(resultado ?? null)}::jsonb${estado === 'enviado' ? Prisma.sql`, ${PURGA}` : Prisma.empty}
     WHERE id = ${id} AND estado = 'enviando'`).catch(() => {})
 }
 
