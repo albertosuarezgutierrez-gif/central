@@ -9,6 +9,8 @@ import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// Encola y lanza la máquina Fly en la misma petición (hasta ~20 s de Fly + arranque en frío): sin esto, el tope por defecto de Vercel.
+export const maxDuration = 60
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const uuidONull = (v: unknown): string | null | false =>
