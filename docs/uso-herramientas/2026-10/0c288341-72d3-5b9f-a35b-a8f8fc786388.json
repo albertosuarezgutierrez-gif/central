@@ -1,0 +1,53 @@
+{
+ "sesion": "0c288341-72d3-5b9f-a35b-a8f8fc786388",
+ "inicio": "2026-10-19T10:38:18.284Z",
+ "fin": "2026-10-19T10:38:38.275Z",
+ "llamadas": 6,
+ "categorias": {
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 421,
+   "chars_out": 16438,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 103,
+   "chars_out": 4520,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 218,
+   "chars_out": 426,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 2,
+   "chars_in": 223,
+   "chars_out": 23102,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 1,
+    "mcp__Google_Drive__read_file_content": 1
+   }
+  }
+ }
+}
