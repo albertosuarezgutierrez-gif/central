@@ -34,7 +34,7 @@ import { oportunidadDelPrecioReal } from './oportunidad-presupuesto-reglas.ts'
 
 /** Import diferido: `propuesta-lead` tira de media app (Prisma, módulos) y `cotizar()` se prueba con `node --test`. */
 const hiloTrasPrecioAvant2PorDefecto = async (correduriaId: string, oportunidadId: string): Promise<void> =>
-  (await import('../propuesta-lead')).hiloTrasPrecioAvant2(correduriaId, oportunidadId)
+  (await import('../propuesta-lead.ts')).hiloTrasPrecioAvant2(correduriaId, oportunidadId)
 import { aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje, type TopesHistorial } from '@central/module-seguros'
 import { guardarTopesHistorial, leerTopesHistorial } from './topes-historial.ts'
 import { comprobarTopeEuros } from './tope-euros-bd.ts'
