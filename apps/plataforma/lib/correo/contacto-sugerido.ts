@@ -363,7 +363,7 @@ export type RutaAltaSugerida =
  */
 export function decidirRutaAlta(email: string, companias: readonly FichaCompaniaConContactos[], altaValida: boolean): RutaAltaSugerida {
   const e = (email || '').trim().toLowerCase()
-  const ya = companias.find((c) => c.contactos.some((x) => (x.email ?? '').toLowerCase() === e))
+  const ya = e ? companias.find((c) => c.contactos.some((x) => (x.email ?? '').toLowerCase() === e)) : undefined
   if (ya) return { ruta: 'existia', compania: ya.nombreComun }
   const cand = candidatasCompania(e, companias)
   if (cand.tipo === 'ninguna') return { ruta: 'a_mano' }

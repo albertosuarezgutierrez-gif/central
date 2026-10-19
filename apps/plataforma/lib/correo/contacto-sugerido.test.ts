@@ -247,6 +247,8 @@ test('🚨 decidirRutaAlta: exacta → auto; parcial → confirmar; ninguna → 
   assert.deepEqual(decidirRutaAlta('ana@desconocida.com', DIRC, true), { ruta: 'a_mano' })
   assert.deepEqual(decidirRutaAlta('Viejo@Occident.com', DIRC, true), { ruta: 'existia', compania: 'Occident' }, 'mayúsculas no duplican')
   assert.deepEqual(decidirRutaAlta('ana@mapfre.com', DIRC, false), { ruta: 'a_mano' }, 'alta no válida: nunca sola')
+  const conSinEmail = [{ codigoDgs: 'A1', nombreComun: 'Occident', contactos: [{ email: null }] }]
+  assert.notEqual(decidirRutaAlta('', conSinEmail, false).ruta, 'existia', 'email vacío no casa con contactos sin email')
 })
 
 test('deshacer: botón corto csg_u:<id>, línea del alta y callback validado (chat ajeno / forma abierta rechazados)', () => {
