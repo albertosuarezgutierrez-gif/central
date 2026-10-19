@@ -38,6 +38,12 @@ export const POST = auditado(async (req: Request) => {
       select: { id: true, compania: { select: { nombreComun: true } } },
     })
     if (ya) return NextResponse.json({ estado: 'existia', id: ya.id, compania: ya.compania.nombreComun })
+    // Dado de baja (p. ej. con «↩️ Deshacer»): NO se vuelve a crear solo, o el siguiente correo del remitente lo resucitaría.
+    const baja = await db.companiaContacto.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' }, activo: false },
+      select: { compania: { select: { nombreComun: true } } },
+    })
+    if (baja) return NextResponse.json({ estado: 'desactivado', compania: baja.compania.nombreComun })
     const ultimo = await db.companiaContacto.aggregate({ where: { companiaCodigoDgs: codigo }, _max: { orden: true } })
     const creado = await db.companiaContacto.create({
       data: {

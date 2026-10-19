@@ -1006,7 +1006,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       return NextResponse.json({ ok: true })
     }
 
-    // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no, 19/10/2026) ──
+    // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no; csg_u = ↩️ deshacer el alta automática, 19/10/2026) ──
     // Solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID); el id corto apunta a `correduria_pendiente_tg`, un solo uso.
     if (prefix === PREFIJO_CSG) {
       const d = decidirBotonCsg(cb, action, args, process.env.TELEGRAM_CHAT_ID)
@@ -1014,7 +1014,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, d.accion === 'no' ? 'Ignorado' : '⏳ Añadiendo al directorio…')
+      await tgAnswerCallback(cb.id, d.accion === 'no' ? 'Ignorado' : d.accion === 'u' ? '↩️ Deshaciendo…' : '⏳ Añadiendo al directorio…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})

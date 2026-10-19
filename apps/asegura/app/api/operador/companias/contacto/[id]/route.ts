@@ -18,6 +18,9 @@ type Ctx = { params: Promise<{ id: string }> }
  * `{ accion: 'telefono', telefono: string | null }` (05/10/2026) — pone o quita el teléfono del
  * contacto, validado y guardado en E.164 (`lib/compania-contacto-telefono.ts`). Texto que no es un
  * teléfono → 400 y no se toca nada. Es el teléfono de los contactos 🔵 de Google Contacts.
+ *
+ * `{ accion: 'desactivar' }` (19/10/2026) — pone `activo=false` (no borra): es el «↩️ Deshacer» del alta
+ * automática del triaje. Idempotente: desactivar uno ya desactivado devuelve `ok`; id que no existe → 404.
  */
 export const PATCH = auditado(async (req: Request, ctx: Ctx) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -36,6 +39,15 @@ export const PATCH = auditado(async (req: Request, ctx: Ctx) => {
       // Teléfono de una persona: no está en CAMPOS_CON_VALOR, así que consta como «tocado» sin valor.
       anotarCambio({ entidad: 'compania_contacto', id, campo: 'telefono', despues: t.telefono })
       return NextResponse.json({ estado: 'ok', telefono: t.telefono })
+    }
+    if (body?.accion === 'desactivar') {
+      const r = await prismaAsegura().companiaContacto.updateMany({
+        where: { id },
+        data: { activo: false, updatedAt: new Date() },
+      })
+      if (r.count === 0) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
+      anotarCambio({ entidad: 'compania_contacto', id, campo: 'activo', despues: 'false' })
+      return NextResponse.json({ estado: 'ok' })
     }
     if (body?.accion !== 'contactado') {
       return NextResponse.json({ error: 'acción desconocida' }, { status: 400 })
