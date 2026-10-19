@@ -96,8 +96,10 @@ export const GENERALI_AUTO_ACTIVO = true
  * 0.2.2 (19/10/2026, prueba real b41be722): «Seleccionar mediador» vive en un MARCO (`seleccionAmbito.do`) con 5 campos sin
  * etiqueta: se busca en TODOS los marcos el desplegable por la OPCIÓN del mediador, esperando a que el bucle CorredorInicio →
  * seleccionAmbito → Refresh se estabilice; el botón de ese marco, solo por la lista blanca del guard; 0 o varias → inventario.
+ * 0.2.5 (19/10/2026, prueba real c8838c26): el overlay «¿Sabías qué…?» llega segundos DESPUÉS del portal y interceptaba el sobrevuelo de
+ * NEGOCIO: el cierre espera a que aparezca; el menú cierra el aviso si sigue, sobrevuela con plazo corto y, si no se despliega, pulsa el toggle.
  */
-export const VERSION_GENERALI_AUTO = '0.2.4'
+export const VERSION_GENERALI_AUTO = '0.2.5'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */

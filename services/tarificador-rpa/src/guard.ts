@@ -2445,6 +2445,8 @@ export async function pulsarEntrarGenerali(page: Page, guard: GuardEmision): Pro
   guard.comprobar()
 }
 
+/** Cuánto se espera (solo lectura) a que aparezca el aviso «¿Sabías qué…?» tras llegar al portal (prueba real c8838c26: tarda segundos). */
+export const ESPERA_AVISO_SABIAS_QUE_GENERALI_MS = 8_000
 /** Id EXACTO del «×» del modal «¿Sabías qué…?» de CorredorPortal.po (inventario real, prueba 31e76085). */
 export const ID_CIERRE_SABIAS_QUE_GENERALI = 'closeModalSabiasQueIntro'
 /** Textos que puede tener ese control para ser un CIERRE (tras `textoMenu`): la aspa o nada. Nunca aceptar/contratar/etc. */
@@ -2457,29 +2459,40 @@ const TEXTOS_CIERRE_SABIAS_QUE_GENERALI: readonly string[] = Object.freeze(['×'
  * Sin modal → `'sin_aviso'` (no es error, no se pulsa nada). UNA vez por trabajo. Más de uno o un control que no es un cierre →
  * hueco (no se pulsa).
  */
-export async function cerrarAvisoSabiasQueGenerali(page: Page, guard: GuardEmision): Promise<'cerrado' | 'sin_aviso'> {
+export async function cerrarAvisoSabiasQueGenerali(page: Page, guard: GuardEmision, esperaMs = ESPERA_AVISO_SABIAS_QUE_GENERALI_MS): Promise<'cerrado' | 'sin_aviso'> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'aviso «¿Sabías qué…?» con una ventana de red abierta')
   if (!esPortalCorredorGeneraliGuard(page)) return 'sin_aviso'
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('generali:sabias-que')) return 'sin_aviso'
-  const porId: Locator[] = []
-  const porModal: Locator[] = []
-  for (const marco of marcosVivos(page)) {
-    let origen = ''
-    try {
-      origen = new URL(marco.url()).origin
-    } catch {
-      continue
+  // Prueba real c8838c26 (v0.2.5): el overlay `div.modalOverlay#modalSabiasQueIntro` aparece UNOS SEGUNDOS DESPUÉS de llegar al
+  // portal (mientras cargan sus marcos y los vídeos); mirar una sola vez daba «sin aviso» y el overlay tapaba el menú. Se espera
+  // (solo lectura) hasta `esperaMs` a que aparezca el «×»; sin él en ese plazo → `'sin_aviso'`.
+  const limite = Date.now() + Math.max(0, esperaMs)
+  let porId: Locator[] = []
+  let porModal: Locator[] = []
+  for (;;) {
+    guard.comprobar()
+    porId = []
+    porModal = []
+    for (const marco of marcosVivos(page)) {
+      let origen = ''
+      try {
+        origen = new URL(marco.url()).origin
+      } catch {
+        continue
+      }
+      if (origen !== ORIGEN_PORTAL_GENERALI) continue
+      const ids = marco.locator(`[id="${ID_CIERRE_SABIAS_QUE_GENERALI}"]`).filter({ visible: true })
+      for (let i = 0, n = await ids.count().catch(() => 0); i < n; i++) porId.push(ids.nth(i))
+      const cierres = marco.locator('.modal, .modalOverlay, [role=dialog]').filter({ hasText: /sab[ií]as\s+qu[eé]/i }).filter({ visible: true }).locator('button, [role=button], a, .close').filter({ visible: true })
+      for (let i = 0, n = await cierres.count().catch(() => 0); i < n; i++) {
+        const c = cierres.nth(i)
+        if (textoMenu(await c.innerText().catch(() => 'no')) === '×') porModal.push(c)
+      }
     }
-    if (origen !== ORIGEN_PORTAL_GENERALI) continue
-    const ids = marco.locator(`[id="${ID_CIERRE_SABIAS_QUE_GENERALI}"]`).filter({ visible: true })
-    for (let i = 0, n = await ids.count().catch(() => 0); i < n; i++) porId.push(ids.nth(i))
-    const cierres = marco.locator('.modal, [role=dialog]').filter({ hasText: /sab[ií]as\s+qu[eé]/i }).filter({ visible: true }).locator('button, [role=button], a, .close').filter({ visible: true })
-    for (let i = 0, n = await cierres.count().catch(() => 0); i < n; i++) {
-      const c = cierres.nth(i)
-      if (textoMenu(await c.innerText().catch(() => 'no')) === '×') porModal.push(c)
-    }
+    if (porId.length > 0 || porModal.length > 0 || Date.now() >= limite) break
+    await page.waitForTimeout(250)
   }
   const candidatos = porId.length > 0 ? porId : porModal
   if (candidatos.length === 0) return 'sin_aviso'
@@ -2495,8 +2508,8 @@ export async function cerrarAvisoSabiasQueGenerali(page: Page, guard: GuardEmisi
   usados.add('generali:sabias-que')
   AVANCES_USADOS.set(guard, usados)
   await clicSinDialogoNativo(page, guard, control, 'aviso «¿Sabías qué…?»')
-  const hasta = Date.now() + 3_000
-  while (Date.now() < hasta) {
+  const hastaCierre = Date.now() + 3_000
+  while (Date.now() < hastaCierre) {
     guard.comprobar()
     let visibles = 0
     for (const f of marcosVivos(page)) visibles += await f.locator(`[id="${ID_CIERRE_SABIAS_QUE_GENERALI}"]`).filter({ visible: true }).count().catch(() => 0)
@@ -2510,6 +2523,9 @@ function esPortalCorredorGeneraliGuard(page: Page): boolean {
   return enRutaGenerali(page, RUTA_PORTAL_GENERALI)
 }
 
+/** Plazo corto del sobrevuelo/clic de cada nivel del menú de Generali (el de Playwright por defecto, 30 s, tapaba el fallo real). */
+const PLAZO_MENU_GENERALI_MS = 5_000
+
 /**
  * Entrada a «Turismos (Ramo UV)» por el menú (captura 3), UNA vez por trabajo, solo desde `CorredorPortal.po`: sobrevuela
  * NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES (cada uno el ÚNICO visible con ese texto exacto) y pulsa «TURISMOS (RAMO UV)»
@@ -2522,15 +2538,42 @@ export async function entrarTurismosGenerali(page: Page, guard: GuardEmision, es
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('generali:turismos')) throw new EmisionBloqueadaError('fase', 'el menú de Turismos de Generali ya se usó en este trabajo')
   await exigirSinCuentaBancaria(page)
+  // v0.2.5 (prueba real c8838c26): un overlay encima intercepta el sobrevuelo. Si el aviso sigue ahí se cierra por SU compuerta
+  // (sin espera: ya tuvo su plazo en el adaptador); sin aviso, no hace nada.
+  await cerrarAvisoSabiasQueGenerali(page, guard, 0)
   const niveles = MENU_TURISMOS_GENERALI.slice(0, -1)
-  for (const texto of niveles) {
-    const l = await esperarUnicoGenerali(page, texto)
-    if (!l) throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (no hay exactamente uno visible tras sobrevolar el anterior)`)
-    await l.hover()
+  let actual = await esperarUnicoGenerali(page, niveles[0]!)
+  for (let i = 0; i < niveles.length; i++) {
+    const texto = niveles[i]!
+    const sig = MENU_TURISMOS_GENERALI[i + 1]!
+    if (!actual) throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (no hay exactamente uno visible tras sobrevolar el anterior)`)
+    // 1) Sobrevuelo con plazo corto (el menú Bootstrap con `data-hover` se abre así). Si falla, no es fatal: se prueba el clic.
+    await actual.hover({ timeout: PLAZO_MENU_GENERALI_MS }).catch(() => undefined)
     await page.waitForTimeout(400)
+    let siguiente = await esperarUnicoGenerali(page, sig, 2_500)
+    if (!siguiente) {
+      // 2) Alternativa: pulsar el toggle de ESE nivel (solo los textos de MENU_TURISMOS_GENERALI; el mismo control, nunca otro).
+      // La descripción (texto, href, onclick, ancestros) pasa por la lista única, con la excepción de los sustantivos del camino.
+      await cerrarAvisoSabiasQueGenerali(page, guard, 0)
+      const dn = await descripcion(actual, true)
+      if (textoMenu(dn[0]) !== textoMenu(texto)) throw new EmisionBloqueadaError('boton', String(dn[0] ?? '').slice(0, 120))
+      for (const d of dn) {
+        if (typeof d === 'string' && /^\s*https?:/i.test(d) && !d.trim().toLowerCase().startsWith(`${ORIGEN_PORTAL_GENERALI}/`)) throw new EmisionBloqueadaError('boton', `«${texto}» apunta fuera de ${ORIGEN_PORTAL_GENERALI}`)
+      }
+      comprobarBoton(dn.filter((d) => textoMenu(d) !== textoMenu(texto)).map((d) => (typeof d === 'string' ? sinSustantivosMenuGenerali(d) : d)))
+      try {
+        await actual.click({ timeout: PLAZO_MENU_GENERALI_MS })
+      } catch {
+        throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (ni el sobrevuelo ni el clic lo despliegan o algo lo tapa)`)
+      }
+      guard.comprobar()
+      await page.waitForTimeout(400)
+      siguiente = await esperarUnicoGenerali(page, sig, 5_000)
+    }
+    actual = siguiente
   }
   const final = MENU_TURISMOS_GENERALI[MENU_TURISMOS_GENERALI.length - 1]!
-  const destino = await esperarUnicoGenerali(page, final)
+  const destino = actual
   if (!destino) throw new ErrorMapaGuardGenerali(`la opción «${final}» del menú (no hay exactamente una visible)`)
   const desc = await descripcion(destino, true)
   if (textoMenu(desc[0]) !== final) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))

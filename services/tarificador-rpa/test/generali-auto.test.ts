@@ -149,8 +149,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.4')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.4')
+  assert.equal(generaliAuto.version, '0.2.5')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.5')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -413,7 +413,7 @@ test('v0.2.4 · modal «¿Sabías qué…?»: se cierra por la compuerta (una ve
 test('v0.2.4 · modal «¿Sabías qué…?»: sin modal no hace nada y no es error', async () => {
   const { page, guard, cerrar } = await abrir(PORTAL, '<h1>Portal del Corredor</h1><a>NEGOCIO</a>')
   try {
-    assert.equal(await cerrarAvisoSabiasQueGenerali(page, guard), 'sin_aviso')
+    assert.equal(await cerrarAvisoSabiasQueGenerali(page, guard, 0), 'sin_aviso')
   } finally {
     await cerrar()
   }
@@ -422,7 +422,7 @@ test('v0.2.4 · modal «¿Sabías qué…?»: sin modal no hace nada y no es err
 test('v0.2.4 · modal «¿Sabías qué…?»: fail-closed (fuera del portal, dos cierres, o un control que no es un cierre → no se pulsa)', async () => {
   const fuera = await abrir(INICIO, MODAL_SABIAS())
   try {
-    assert.equal(await cerrarAvisoSabiasQueGenerali(fuera.page, fuera.guard), 'sin_aviso', 'fuera de CorredorPortal.po no se pulsa')
+    assert.equal(await cerrarAvisoSabiasQueGenerali(fuera.page, fuera.guard, 0), 'sin_aviso', 'fuera de CorredorPortal.po no se pulsa')
     assert.equal(await fuera.page.evaluate(() => (window as unknown as { __cerrado?: number }).__cerrado ?? 0), 0)
   } finally {
     await fuera.cerrar()
@@ -440,5 +440,69 @@ test('v0.2.4 · modal «¿Sabías qué…?»: fail-closed (fuera del portal, dos
     } finally {
       await p.cerrar()
     }
+  }
+})
+
+// ───────────── v0.2.5 (prueba real c8838c26): el overlay `div.modalOverlay#modalSabiasQueIntro` llega TARDE y tapa el menú ─────────────
+
+/** Overlay real (inventario de la prueba): capa fija a pantalla completa, id `modalSabiasQueIntro`, con el «×» `#closeModalSabiasQueIntro`. */
+const OVERLAY_SABIAS = `<div class="modalOverlay" id="modalSabiasQueIntro" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,.5)"><div style="background:#fff;margin:40px"><h4>¿Sabías qué...?</h4><span id="closeModalSabiasQueIntro" role="button" aria-label="Cerrar" onclick="document.getElementById('modalSabiasQueIntro').remove();window.__cerrado=1">×</span></div></div>`
+const TARDE = (ms: number) => `<script>setTimeout(function(){document.body.insertAdjacentHTML('beforeend', ${JSON.stringify(OVERLAY_SABIAS)})}, ${ms})</script>`
+
+test('v0.2.5 · el aviso que aparece DESPUÉS de llegar al portal se espera y se cierra por la compuerta', async () => {
+  const { page, guard, cerrar } = await abrir(PORTAL, `<h1>Portal del Corredor</h1><a>NEGOCIO</a>${TARDE(1200)}`)
+  try {
+    assert.equal(await page.locator('#modalSabiasQueIntro').count(), 0, 'al empezar aún no está')
+    assert.equal(await cerrarAvisoSabiasQueGenerali(page, guard), 'cerrado')
+    assert.equal(await page.locator('#modalSabiasQueIntro').count(), 0)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.5 · el menú no se sobrevuela con el overlay encima: entrarTurismosGenerali lo cierra antes (si no lo cerró nadie)', async () => {
+  const { page, guard, cerrar } = await abrir(PORTAL, MENU_HTML('#uv') + OVERLAY_SABIAS)
+  try {
+    await entrarTurismosGenerali(page, guard, 500)
+    assert.equal(await page.evaluate(() => (window as unknown as { __cerrado?: number }).__cerrado), 1)
+    assert.equal(await page.evaluate(() => (window as unknown as { __turismos?: number }).__turismos), 1)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await cerrar()
+  }
+})
+
+// Menú Bootstrap real: toggle `<a href="#" class="dropdown-toggle disabled" data-hover="dropdown">`; aquí SOLO se abre con clic.
+const MENU_CLIC_HTML = `<style>.sub{display:none} .abierto>.sub{display:block}</style>
+  <nav><ul>
+  <li id="n0"><a href="#" class="dropdown-toggle disabled" data-hover="dropdown" data-toggle="dropdown" onclick="this.parentNode.classList.add('abierto');return false">Negocio</a><ul class="sub">
+    <li id="n1"><a href="#" onclick="this.parentNode.classList.add('abierto');return false">EMISIÓN</a><ul class="sub">
+    <li id="n2"><a href="#" onclick="this.parentNode.classList.add('abierto');return false">CONTRATACIÓN</a><ul class="sub">
+    <li id="n3"><a href="#" onclick="this.parentNode.classList.add('abierto');return false">AUTOMÓVILES</a><ul class="sub">
+      <li><a href="#uv" onclick="window.__turismos=1;return false">TURISMOS (RAMO UV)</a></li>
+      <li><a href="#uy" onclick="window.__otro=1;return false">VEHÍCULOS COMERCIALES Y RESTO (RAMO UY)</a></li>
+    </ul></li></ul></li></ul></li></ul></li></ul></nav>`
+
+test('v0.2.5 · si el sobrevuelo no despliega el menú, se pulsa el toggle del nivel (compuerta) y solo ese; nunca otra opción', async () => {
+  const { page, guard, cerrar } = await abrir(PORTAL, MENU_CLIC_HTML)
+  try {
+    await entrarTurismosGenerali(page, guard, 500)
+    assert.equal(await page.evaluate(() => (window as unknown as { __turismos?: number }).__turismos), 1)
+    assert.equal(await page.evaluate(() => (window as unknown as { __otro?: number }).__otro ?? 0), 0)
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.5 · menú que no se despliega ni con clic → hueco con inventario, sin pulsar TURISMOS', async () => {
+  const roto = MENU_CLIC_HTML.replace(/this\.parentNode\.classList\.add\('abierto'\);/g, '')
+  const { page, guard, cerrar } = await abrir(PORTAL, roto)
+  try {
+    await assert.rejects(entrarTurismosGenerali(page, guard, 500), (e: unknown) => e instanceof ErrorTarificador && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.evaluate(() => (window as unknown as { __turismos?: number }).__turismos ?? 0), 0)
+  } finally {
+    await cerrar()
   }
 })
