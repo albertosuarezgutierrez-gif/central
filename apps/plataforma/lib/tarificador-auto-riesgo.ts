@@ -10,6 +10,7 @@
 // `formularioBotAuto` (el adaptador) con QUÉ falta, jamás el valor (dato personal).
 import { estadoOcasional, type RolFigura } from '@central/module-seguros'
 import { datoDePersonaBot, type DatoPersona } from './tarificador-moto-formulario.ts'
+import { MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
 import type { EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
@@ -68,7 +69,7 @@ export function armarFormularioBotsAuto(p: PiezasBotsAuto): EntradaBotAuto {
 
 /** Lo mínimo del `Riesgo` (`lib/riesgo-asegura.ts`) que hace falta; estructural para no acoplar el helper al tipo entero. */
 export type RiesgoParaBotsAuto = {
-  oportunidad: { clienteId: string; matricula: string | null; vence?: string | null }
+  oportunidad: { clienteId: string; matricula: string | null; vence?: string | null; aseguradora?: string | null; aseguradoraActual?: boolean | null }
   roles: readonly string[]
   figuras: readonly { rol: string; clienteId: string; empresa: boolean; faltan: string[] | null }[]
   datosVehiculo: {
@@ -97,6 +98,21 @@ export function vencimientoActualDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunid
     .filter((v) => ISO.test(v))
     .sort()
   return c.length ? c[c.length - 1]! : null
+}
+
+/** Valores de cajón que NO son una compañía (misma lista que `nombreCompaniaUtil` de asegura). */
+const COMPANIA_CAJON = new Set(['otro', 'otra', 'otros', 'n/a', 'na', 'ninguna', 'ninguno', 'desconocida', 'desconocido', 'no consta', 'sin datos', '-', '?'])
+
+/**
+ * Compañía anterior que la oportunidad YA sabe: la aseguradora de HOY (`poliza_competencia`, `aseguradoraActual === true`); la de
+ * nuestra oferta (`aseguradoraActual` false/null/ausente) NO vale. Vacía, de cajón o más larga que el tope → `null` (no consta). PURA.
+ */
+export function companiaAnteriorDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>): string | null {
+  if (r.oportunidad.aseguradoraActual !== true) return null
+  // Años asegurado declarados = 0: no hay seguro anterior que nombrar (la aseguradora de la oportunidad no es «la anterior»).
+  if (r.historial?.historialDeclarado?.aniosAsegurado === 0) return null
+  const t = (r.oportunidad.aseguradora ?? '').replace(/\s+/g, ' ').trim()
+  return t === '' || t.length > MAX_COMPANIA_ANTERIOR || COMPANIA_CAJON.has(t.toLowerCase()) ? null : t
 }
 
 /** ¿Hay conductor ocasional? `true` ficha en el papel · `false` confirmado que no · `null` sin preguntar o no aplica (misma regla que asegura). PURA. */
@@ -147,7 +163,7 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto): EntradaBotAut
     aniosAsegurado: texto(decl?.aniosAsegurado),
     aniosSinSiniestros: texto(decl?.aniosSinSiniestros ?? ant?.aniosSinSiniestros),
     siniestrosUltimos5: texto(decl?.siniestrosUltimos5 ?? ant?.siniestrosUltimos5),
-    companiaAnterior: null,
+    companiaAnterior: companiaAnteriorDeRiesgo(r),
     // Supuestos de Allianz Turismos: lo que el riesgo sabe viaja; lo demás lo supone el bot y lo declara junto al precio.
     fechaMatriculacion: dv?.fechaMatriculacion ?? null,
     fechaVencimiento: vencimientoActualDeRiesgo(r),
@@ -169,6 +185,7 @@ export function faltanFichaTomadorParaAlta(r: Pick<RiesgoParaBotsAuto, 'figuras'
   const k = new Set(t.faltan)
   if (t.empresa) return k.has('nombre') ? ['la razón social'] : []
   const out: string[] = []
+  if (k.has('dni')) out.push('el DNI/NIE')
   if (k.has('nombre')) out.push('el nombre')
   if (k.has('apellido1')) out.push('el primer apellido')
   if (k.has('fechaNacimiento') || k.has('fechaNacimiento_invalida')) out.push('la fecha de nacimiento')

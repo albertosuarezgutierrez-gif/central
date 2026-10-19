@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { adaptadorDeRamo, checklistBot, ramosConBots } from './tarificador-bots-ramos.ts'
 
 test('ramo sin adaptador (o raro) → null', () => {
-  for (const r of ['hogar', 'vida', 'salud', 'decesos', 'comunidades', 'AUTO', '', 'toString', '__proto__', null, undefined]) {
+  for (const r of ['vida', 'salud', 'decesos', 'comunidades', 'HOGAR', 'AUTO', '', 'toString', '__proto__', null, undefined]) {
     assert.equal(adaptadorDeRamo(r as string | null | undefined), null, String(r))
   }
 })
@@ -23,8 +23,8 @@ test('moto → adaptador con cilindrada editable; sin ella faltan datos y lo dic
   if (!r.ok) assert.ok(r.faltan.some((f) => /Cilindrada/.test(f)))
 })
 
-test('lista de ramos con bots fijada: moto y auto (coche, Mapfre NSEI, 14/10/2026)', () => {
-  assert.deepEqual(ramosConBots().sort(), ['auto', 'moto'])
+test('lista de ramos con bots fijada: moto, auto (coche, Mapfre NSEI, 14/10/2026) y hogar (Allianz, en exploración, 19/10/2026)', () => {
+  assert.deepEqual(ramosConBots().sort(), ['auto', 'hogar', 'moto'])
 })
 
 test('auto → adaptador con 3 desplegables (uso, ámbito, clase del permiso; defecto de coche) + compañía anterior (texto); sin historial ni matrícula faltan datos y lo dice sin valores', () => {
@@ -79,7 +79,9 @@ test('auto · sin años (0) no se afirma que falte la compañía anterior; sin s
   const c = checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '0' }, {}, 'mapfre')
   assert.ok(c.estado === 'evaluado' && !c.filas.some((f) => f.clave === 'companiaAnterior'))
   assert.equal(checklistBot(a, { ...AUTO_BASE, tieneSeguroActual: false }, {}, 'mapfre').estado, 'sin_formulario')
-  assert.equal(checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '' }, {}, 'mapfre').estado, 'sin_formulario')
+  // 19/10/2026: años asegurado sin dato = supuesto favorable (no bloquea el formulario ni desactiva los botones, como moto).
+  const sinAnios = checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '' }, {}, 'mapfre')
+  assert.ok(sinAnios.estado === 'evaluado' && sinAnios.filas.find((f) => f.clave === 'aniosAseguradoAnterior')?.estado === 'supuesto')
 })
 
 test('compañía sin declaración → no_disponible, también con el formulario incompleto; nunca evaluado', () => {
@@ -118,4 +120,66 @@ test('moto · desplegable de sexo en su valor inicial («») no pisa el sexo del
   }
   const r = a.construir(F, { cilindrada: '125', sexo: '' })
   assert.ok(r.ok && (r.riesgo.conductor as { sexo: string }).sexo === 'hombre')
+})
+
+// 19/10/2026: Allianz Hogar (en exploración). Las cuatro elecciones que deciden la tarifa NO tienen valor por defecto.
+const HOGAR_BASE = {
+  codigoPostal: '41001', municipio: 'VILLAPRUEBA', nombreVia: 'INVENTADA', numero: '1', planta: '2', puerta: 'B', anioConstruccion: 1990, anioReforma: null,
+  superficieM2: 90, referenciaCatastral: '1234567AB1234C0001DF', capitalContinenteEur: null, capitalContenidoEur: null, tomadorEmpresa: false,
+}
+const ELECCIONES = { uso: 'habitual', regimen: 'propietario', tipoVivienda: 'piso', conMadera: 'no' }
+
+test('hogar → adaptador con 4 desplegables SIN valor por defecto (uso, régimen, tipo, madera) y estado honesto «en exploración»', () => {
+  const a = adaptadorDeRamo('hogar')
+  assert.ok(a)
+  assert.equal(a.ramo, 'hogar')
+  assert.deepEqual(a.campos.map((c) => [c.clave, c.porDefecto]), [['uso', ''], ['regimen', ''], ['tipoVivienda', ''], ['conMadera', '']])
+  assert.ok(a.campos.every((c) => c.opciones?.[0]?.valor === '' && c.opciones[0].etiqueta === 'Elegir…'), 'la primera opción es «Elegir…»')
+  assert.match(a.estado ?? '', /en exploración/)
+  assert.match(a.estado ?? '', /primera prueba real/)
+  assert.match(a.estado ?? '', /no emite/)
+  assert.match(a.sinIntegraciones ?? '', /integración activa/)
+})
+
+test('hogar: sin elegir nada el bot no puede encolar y lo dice (sin valores); con las cuatro elecciones y la vivienda, sí', () => {
+  const a = adaptadorDeRamo('hogar')!
+  const sin = a.construir(HOGAR_BASE, {})
+  assert.equal(sin.ok, false)
+  if (!sin.ok) {
+    for (const re of [/Uso de la vivienda/, /Régimen/, /Tipo de vivienda/, /madera/]) assert.ok(sin.faltan.some((f) => re.test(f)), String(re))
+  }
+  const ok = a.construir(HOGAR_BASE, ELECCIONES)
+  assert.equal(ok.ok, true)
+  if (ok.ok) {
+    assert.equal(ok.riesgo.ramo, 'hogar')
+    assert.ok(!('tomador' in ok.riesgo), 'el tomador (DNI y nacimiento) no sale de plataforma')
+    assert.deepEqual(ok.completarDesdeFicha, [])
+  }
+})
+
+test('hogar: checklist de Allianz — el DNI/NIE y el nacimiento del tomador se toman de la ficha (no bloquean); lo que falta del formulario, sí; Mapfre/Occident no se evalúan como Allianz', () => {
+  const a = adaptadorDeRamo('hogar')!
+  const ok = checklistBot(a, HOGAR_BASE, ELECCIONES, 'allianz')
+  assert.equal(ok.estado, 'evaluado')
+  if (ok.estado === 'evaluado') {
+    assert.equal(ok.bloquea, false)
+    assert.deepEqual(ok.filas.filter((f) => f.estado === 'ficha').map((f) => f.clave), ['tomador.documentoIdentidad', 'tomador.fechaNacimiento'])
+  }
+  // Formulario incompleto → sin_formulario (los faltantes generales se listan aparte).
+  assert.equal(checklistBot(a, HOGAR_BASE, {}, 'allianz').estado, 'sin_formulario')
+  // Compañía sin declaración → no disponible, nunca «todo ok».
+  assert.equal(checklistBot(a, HOGAR_BASE, ELECCIONES, 'reale').estado, 'no_disponible')
+})
+
+test('moto · sexoSinFicha (la ficha no da Sr./Sra.) bloquea Allianz Moto salvo que se elija el sexo en el bloque', () => {
+  const a = adaptadorDeRamo('moto')!
+  const F = {
+    matricula: '1234BCD', marca: 'Honda', modelo: 'PCX', version: null, codigoPostal: '41003', fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01',
+    sexo: null, sexoSinFicha: true, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
+    aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0',
+  }
+  const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
+  assert.ok(sin.estado === 'evaluado' && sin.bloquea && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'falta')
+  const con = checklistBot(a, F, { cilindrada: '125', sexo: 'hombre' }, 'allianz')
+  assert.ok(con.estado === 'evaluado' && !con.bloquea)
 })

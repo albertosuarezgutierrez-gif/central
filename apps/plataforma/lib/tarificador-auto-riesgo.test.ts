@@ -137,6 +137,7 @@ test('Mapfre: a la ficha del tomador le faltan nombre / primer apellido / nacimi
   const con = (f: { empresa?: boolean; faltan: string[] | null }) => faltanFichaTomadorParaAlta(riesgo({ figuras: [{ rol: 'tomador', clienteId: 'c1', empresa: f.empresa ?? false, faltan: f.faltan }] }))
   assert.deepEqual(con({ faltan: [] }), [])
   assert.deepEqual(con({ faltan: ['nombre', 'apellido1', 'fechaNacimiento_invalida', 'telefono', 'sexo'] }), ['el nombre', 'el primer apellido', 'la fecha de nacimiento'])
+  assert.deepEqual(con({ faltan: ['dni', 'nombre'] }), ['el DNI/NIE', 'el nombre'])
   assert.deepEqual(con({ empresa: true, faltan: ['nombre'] }), ['la razón social'])
   assert.equal(con({ faltan: null }), null)
   assert.equal(avisoFichaTomadorParaAlta(null), null)
@@ -157,4 +158,58 @@ test('Mapfre: el bloque de la oportunidad bloquea SOLO el botón de Mapfre con e
   assert.ok(!s.ok && /HTTP 422/.test(s.mensaje))
   const c = leerEncoladoBot(422, { estado: 'rechazado', motivo: 'falta_compania_anterior: falta la compañía anterior (x); indícala en el formulario de bots' })
   assert.ok(!c.ok && /compañía anterior/.test(c.mensaje))
+})
+
+// ─── Compañía anterior desde la oportunidad (19/10/2026) ───
+import { companiaAnteriorDeRiesgo } from './tarificador-auto-riesgo.ts'
+import { checklistCompania } from './tarificador-checklist.ts'
+
+const conCompania = (aseguradora: string | null, aseguradoraActual: boolean | null) =>
+  riesgo({ oportunidad: { clienteId: 'c1', matricula: null, aseguradora, aseguradoraActual } })
+
+test('compañía anterior: sale de la aseguradora de HOY de la oportunidad; la de nuestra oferta, vacía o de cajón NO cuentan', () => {
+  assert.equal(companiaAnteriorDeRiesgo(conCompania('  Aseguradora   Beta ', true)), 'Aseguradora Beta')
+  assert.equal(companiaAnteriorDeRiesgo(conCompania('Aseguradora Beta', false)), null)
+  assert.equal(companiaAnteriorDeRiesgo(conCompania('Aseguradora Beta', null)), null)
+  assert.equal(companiaAnteriorDeRiesgo(conCompania('Otro', true)), null)
+  assert.equal(companiaAnteriorDeRiesgo(conCompania('', true)), null)
+  assert.equal(companiaAnteriorDeRiesgo(conCompania('x'.repeat(81), true)), null)
+  assert.equal(formularioBotsAutoDeRiesgo(conCompania('Aseguradora Beta', true)).companiaAnterior, 'Aseguradora Beta')
+  assert.equal(formularioBotsAutoDeRiesgo(conCompania(null, null)).companiaAnterior, null)
+})
+
+test('checklist Mapfre auto: con compañía conocida la fila NO es «falta»; sin ella sigue siendo «falta» y bloquea', () => {
+  const fila = (r: RiesgoParaBotsAuto) => {
+    const x = formularioBotAuto(formularioBotsAutoDeRiesgo(r))
+    assert.equal(x.ok, true)
+    const c = checklistCompania('mapfre', 'auto', (x as { riesgo: Record<string, unknown> }).riesgo, (x as { completarDesdeFicha: ("codigoPostal" | "fechaNacimiento" | "fechaCarne")[] }).completarDesdeFicha)
+    assert.equal(c.estado, 'evaluado')
+    return (c as Extract<typeof c, { estado: 'evaluado' }>).filas.find((f) => f.clave === 'companiaAnterior')?.estado
+  }
+  assert.equal(fila(conCompania('Aseguradora Beta', true)), 'ok')
+  assert.equal(fila(conCompania(null, null)), 'falta')
+})
+
+test('historial sin años/siniestros NO bloquea el formulario de coche y el checklist los pinta «supuesto»', () => {
+  const r = riesgo({ historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: null, aniosSinSiniestros: null, siniestrosUltimos5: null, tieneSeguroActual: true }, carnet: { fecha: '2005-06-30', legible: true } } })
+  const x = formularioBotAuto(formularioBotsAutoDeRiesgo(r))
+  assert.equal(x.ok, true)
+  const c = checklistCompania('mapfre', 'auto', (x as { riesgo: Record<string, unknown> }).riesgo)
+  const filas = (c as Extract<typeof c, { estado: 'evaluado' }>).filas
+  assert.equal(filas.find((f) => f.clave === 'aniosAseguradoAnterior')?.estado, 'supuesto')
+  assert.equal(filas.find((f) => f.clave === 'siniestrosUltimos5Anios')?.estado, 'supuesto')
+})
+
+test('compañía anterior: con 0 años asegurado declarados no hay compañía anterior (riesgo y formulario)', () => {
+  const con = (anios: number | null) => riesgo({
+    oportunidad: { clienteId: 'c1', matricula: null, aseguradora: 'Aseguradora Beta', aseguradoraActual: true },
+    historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: anios, aniosSinSiniestros: null, siniestrosUltimos5: null, tieneSeguroActual: true }, carnet: { fecha: '2005-06-30', legible: true } },
+  })
+  assert.equal(companiaAnteriorDeRiesgo(con(0)), null)
+  assert.equal(companiaAnteriorDeRiesgo(con(3)), 'Aseguradora Beta')
+  assert.equal(companiaAnteriorDeRiesgo(con(null)), 'Aseguradora Beta')
+  assert.equal(formularioBotsAutoDeRiesgo(con(0)).companiaAnterior, null)
+  const f = formularioBotAuto({ ...formularioBotsAutoDeRiesgo(con(3)), aniosAsegurado: '0', companiaAnterior: 'Aseguradora Beta' })
+  assert.ok(f.ok)
+  assert.equal('companiaAnterior' in (f.riesgo as Record<string, unknown>), false)
 })

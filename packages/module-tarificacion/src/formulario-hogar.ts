@@ -82,6 +82,14 @@ export type FormularioHogar = {
 
 export type ValidacionFormularioHogar = { ok: true; formulario: FormularioHogar } | { ok: false; errores: string[] }
 
+/**
+ * El formulario de hogar SIN el bloque `tomador` (19/10/2026): lo que viaja de plataforma a asegura y lo que se GUARDA en la cola.
+ * El DNI/NIE y la fecha de nacimiento del tomador son datos personales que NO cruzan el puerto: los pone asegura desde la ficha
+ * del cliente al ENTREGAR el trabajo al worker (mismo régimen que el NIF de Mapfre), y el worker valida el formulario ENTERO.
+ */
+export type FormularioHogarSinTomador = Omit<FormularioHogar, 'tomador'>
+export type ValidacionFormularioHogarSinTomador = { ok: true; formulario: FormularioHogarSinTomador } | { ok: false; errores: string[] }
+
 const obj = (v: unknown): Record<string, unknown> | null =>
   typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
 const vacio = (v: unknown) => v === undefined || v === null || (typeof v === 'string' && v.trim() === '')
@@ -142,6 +150,25 @@ export function fechaDdMmAaaaDeIso(iso: string): string | null {
  * personales en el caso del tomador). `hoy` fija la edad del tomador y el año máximo de construcción/reforma.
  */
 export function validarFormularioHogar(entrada: unknown, hoy: Date = new Date()): ValidacionFormularioHogar {
+  const v = validarHogar(entrada, hoy, true)
+  if (!v.ok) return v
+  return { ok: true, formulario: { ...v.formulario, tomador: v.formulario.tomador! } }
+}
+
+/**
+ * Como `validarFormularioHogar` pero IGNORANDO el bloque `tomador` (si viene, no se valida ni se devuelve): lo demás (inmueble,
+ * uso, régimen, tipo, madera, capitales) se exige igual. Es la validación de plataforma → asegura al encolar; el tomador lo
+ * pone asegura desde la ficha al entregar y el worker valida el formulario completo. Los errores nunca nombran el tomador.
+ */
+export function validarFormularioHogarSinTomador(entrada: unknown, hoy: Date = new Date()): ValidacionFormularioHogarSinTomador {
+  const v = validarHogar(entrada, hoy, false)
+  if (!v.ok) return v
+  const { tomador: _fuera, ...resto } = v.formulario
+  return { ok: true, formulario: resto }
+}
+
+function validarHogar(entrada: unknown, hoy: Date, exigirTomador: boolean):
+  { ok: true; formulario: Omit<FormularioHogar, 'tomador'> & { tomador: TomadorHogar | null } } | { ok: false; errores: string[] } {
   const e = obj(entrada)
   if (!e) return { ok: false, errores: ['formulario: tiene que ser un objeto'] }
   const errores: string[] = []
@@ -149,9 +176,10 @@ export function validarFormularioHogar(entrada: unknown, hoy: Date = new Date())
   const anioHoy = hoy.getUTCFullYear()
 
   // ── tomador ──
-  const t = obj(e.tomador)
+  const t = exigirTomador ? obj(e.tomador) : null
   let tomador: TomadorHogar | null = null
-  if (!t) errores.push('tomador: obligatorio (objeto con documentoIdentidad y fechaNacimiento)')
+  if (!exigirTomador) { /* el tomador lo pone asegura desde la ficha al entregar el trabajo */ }
+  else if (!t) errores.push('tomador: obligatorio (objeto con documentoIdentidad y fechaNacimiento)')
   else {
     let doc: string | null = null
     const docCrudo = texto(t.documentoIdentidad, 'tomador.documentoIdentidad', errores, 20, true)
@@ -223,6 +251,6 @@ export function validarFormularioHogar(entrada: unknown, hoy: Date = new Date())
     }
   }
 
-  if (errores.length || !tomador || !inmueble || !hogar) return { ok: false, errores: errores.length ? errores : ['formulario: incompleto'] }
+  if (errores.length || (exigirTomador && !tomador) || !inmueble || !hogar) return { ok: false, errores: errores.length ? errores : ['formulario: incompleto'] }
   return { ok: true, formulario: { ramo: 'hogar', tomador, inmueble, hogar } }
 }

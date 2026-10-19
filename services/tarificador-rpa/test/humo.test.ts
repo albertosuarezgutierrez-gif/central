@@ -5,7 +5,11 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 import { MODOS_SOPORTADOS } from '../src/api.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { HUMO_COMPANIAS_SOPORTADAS, HUMO_VERSION, PRUEBAS_HUMO, claveHumo, decidirHumo, mensajeFalloHumo, pruebaDeHumo, ramosConBotDe } from '../src/humo.ts'
+import { HUMO_COMPANIAS_SOPORTADAS, HUMO_VERSION, HumoRequiereSms, PRUEBAS_HUMO, claveHumo, decidirHumo, humoRequiereSms, mensajeFalloHumo, motivoOmitidoSms, pruebaDeHumo, ramosConBotDe } from '../src/humo.ts'
+import { ErrorVerificacionHumana } from '../src/errores.ts'
+import { leerDispositivo } from '../src/sesion-manual.ts'
+import { sellarSesion } from '../src/boveda-sesion.ts'
+import { randomBytes } from 'node:crypto'
 
 const SRC = readFileSync(join(import.meta.dirname, '../src/humo.ts'), 'utf8')
 const CODIGO = SRC.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n')
@@ -89,13 +93,52 @@ test('humo.ts: solo login y entrada. Nada de rellenar, avanzar, proyecto, guarda
   assert.ok(!/pulsarEnlaceEntrada|abrirNuevaAlta|abrirTarificacion|abrirComunidades|abrirFormulario/.test(CODIGO), 'la entrada no se abre ni se pulsa: solo se comprueba que el menú es visible')
   // El menú se comprueba VISIBLE, nunca pulsado: ninguna prueba recibe `ctx.pulsar` en su función de menú.
   const menus = CODIGO.match(/async function menu\w+\([^)]*\)/g) ?? []
-  assert.equal(menus.length, 3) // allianz, mapfre, generali (18/10/2026)
+  assert.equal(menus.length, 3) // allianz, mapfre, generali (18/10/2026; generali recibe el guard para la puerta del mediador, 19/10/2026)
   for (const m of menus) assert.ok(!/ctx/.test(m), `${m}: el menú no recibe el contexto (no puede pulsar)`)
   assert.equal((CODIGO.match(/waitFor\(\{ state: 'visible'/g) ?? []).length, 1)
   assert.match(CODIGO, /localizar\(page, \['tab'\], PESTANA_NUEVA_PRODUCCION/)
   // Lo que un adaptador usaría para tarificar está PROHIBIDO en este contexto.
   for (const n of ['adjuntarPdf', 'elegirOpcion', 'avanzarATarificar', 'abrirProyecto']) assert.match(CODIGO, new RegExp(`${n}: prohibido\\('${n}'\\)`), `${n} tiene que lanzar`)
   // Sin riesgo: no lee ni valida datos de cliente; sin sesión previa; sin tracing; sin disco.
-  assert.ok(!/trabajo\.riesgo|prepararTrabajo|validarRiesgo|storageState|tracing|from ['"](node:)?fs/.test(CODIGO), 'toca riesgo, sesión, tracing o disco')
+  assert.ok(!/trabajo\.riesgo|prepararTrabajo|validarRiesgo|tracing|from ['"](node:)?fs/.test(CODIGO), 'toca riesgo, tracing o disco')
+  // Sesión previa: SOLO el dispositivo de Okta leído de la bóveda (leerDispositivo, que nunca escribe ni borra).
+  assert.deepEqual(CODIGO.match(/storageState[^,)}]*/g), ['storageState: dispositivo as never '])
+  assert.ok(!/guardarNueva|refrescar|invalidar|\.borrar\(|\.guardar\(/.test(CODIGO), 'el humo no escribe en la bóveda')
+  // SMS de Okta: ni se pide ni se envía ni se verifica de madrugada.
+  assert.ok(!/pulsarEnviarSmsGenerali|verificarCodigoSmsGenerali|relevarCodigoSmsGenerali|puertoCodigoHttp/.test(CODIGO), 'el humo no releva el SMS')
+  // Las únicas puertas guardadas tras el login: el botón del mediador y el «ENTRAR» de Generali (listas blancas del guard).
+  assert.deepEqual([...new Set(CODIGO.match(/pulsar[A-Z]\w*/g) ?? [])].sort(), ['pulsarEntrarGenerali', 'pulsarMediadorGenerali'])
   assert.match(CODIGO, /sesionReutilizada: false/)
+})
+
+test('SMS de Okta en el humo: se OMITE («requiere SMS»), no es fallo ni credenciales ni aviso de verificación', () => {
+  const OKTA = 'https://access.generali.es/signin/verify/okta/sms'
+  assert.equal(humoRequiereSms(new HumoRequiereSms(), 'https://x.test/', false), true)
+  assert.equal(humoRequiereSms(new ErrorVerificacionHumana('generali'), OKTA, false), true, 'el detector genérico en la pantalla del SMS → omitido')
+  assert.equal(humoRequiereSms(new Error('tope'), OKTA, false), true)
+  assert.equal(humoRequiereSms(new HumoRequiereSms(), OKTA, true), false, 'una violación del guard manda siempre')
+  assert.equal(humoRequiereSms(new ErrorVerificacionHumana('allianz'), 'https://www.e-pacallianz.com/login', false), false, 'otra verificación sigue siendo la de siempre')
+  const m = motivoOmitidoSms('ninguna')
+  assert.match(m, /^requiere SMS: /)
+  assert.match(m, /sin dispositivo guardado en la bóveda \(ninguna\)/)
+  assert.ok(!/requiere_verificacion_humana/.test(m), 'no casa con el aviso de verificación de asegura')
+  assert.ok(m.length <= 200)
+  assert.match(motivoOmitidoSms('ok'), /el dispositivo guardado no evitó el SMS/)
+  // El omitido lo manda el flujo antes que cualquier `error` (y el reclasificador de credenciales lo salta).
+  assert.match(CODIGO, /if \(fallo instanceof HumoRequiereSms\) \{\s*const st = await enviarResultado\(cfg, \{ trabajoId: trabajo\.id, resultado: 'humo', omitido: motivoOmitidoSms/)
+  assert.match(CODIGO, /if \(fallo && !\(fallo instanceof HumoRequiereSms\) && clasificar\(fallo\)\.tipo === 'portal'\)/)
+  assert.match(CODIGO, /if \(esUrlOktaSmsGenerali\(page\.url\(\)\)\) throw new HumoRequiereSms\(\)\s*await exigirSinVerificacion/)
+})
+
+test('leerDispositivo (humo): SOLO lee; caducado o ilegible → sin estado y sin borrar; almacén caído → motivo sin datos', async () => {
+  const clave = randomBytes(32)
+  const estado = { cookies: [{ name: 'DT', value: 'x' }], origins: [] }
+  const { token } = sellarSesion(estado, { compania: 'generali', clave, ahora: 1_000, maxMs: 10_000 })
+  let escrituras = 0
+  const alm = { leer: async () => token, guardar: async () => { escrituras++ }, borrar: async () => { escrituras++ } }
+  assert.deepEqual(await leerDispositivo(alm, clave, 'generali', 2_000), { estado, motivo: 'ok' })
+  assert.deepEqual(await leerDispositivo(alm, clave, 'generali', 99_999), { estado: null, motivo: 'caducada' })
+  assert.deepEqual(await leerDispositivo({ leer: async () => null }, clave, 'generali'), { estado: null, motivo: 'ninguna' })
+  assert.deepEqual(await leerDispositivo({ leer: async () => { throw new Error('almacén de sesión: leer respondió 503') } }, clave, 'generali'), { estado: null, motivo: 'almacen_leer_503' })
+  assert.equal(escrituras, 0)
 })

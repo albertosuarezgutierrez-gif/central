@@ -2288,36 +2288,243 @@ async function unicoPorTextoGenerali(page: Page, texto: string): Promise<Locator
   return (await enMenu.count()) === 1 ? enMenu.first() : null
 }
 
+/** Como `unicoPorTextoGenerali`, esperando hasta `esperaMs` a que el menú (plegado o aún cargando) lo deje ver. Solo lee. */
+async function esperarUnicoGenerali(page: Page, texto: string, esperaMs = 8_000): Promise<Locator | null> {
+  const fin = Date.now() + esperaMs
+  for (;;) {
+    const l = await unicoPorTextoGenerali(page, texto)
+    if (l || Date.now() >= fin) return l
+    await page.waitForTimeout(300)
+  }
+}
+
 /**
- * «ACEPTAR» de «Seleccionar mediador» (captura 2), UNA vez por trabajo y solo si: guard limpio y sin ventanas abiertas; la
- * página es `CorredorInicio.po` de www.generali.es; el desplegable del mediador (`selectMediador`, lo localiza el adaptador)
- * tiene puesto EXACTAMENTE el mediador de la correduría (`opcionMediadorGenerali`); y hay un solo botón visible de texto
- * exacto «ACEPTAR». `comprobarBoton` (con «aceptar» permitido SOLO aquí) mira el resto de su descripción antes del clic.
+ * Pantalla «Seleccionar mediador» (prueba real b41be722, 19/10/2026): la carcasa es `CorredorInicio.po` («PORTAL DEL CORREDOR»)
+ * y la cascada vive en un MARCO de Genernet (`seleccionAmbito.do`, que se recarga como `seleccionAmbitoRefresh.do` al cambiar
+ * un desplegable). Rutas EXACTAS de www.generali.es en las que puede estar la página o el marco del desplegable.
+ */
+export const RUTAS_MEDIADOR_GENERALI = Object.freeze([
+  RUTA_INICIO_GENERALI,
+  '/age3k/red_agendaComercialFormWeb/mediador/seleccionAmbito.do',
+  '/age3k/red_agendaComercialFormWeb/mediador/seleccionAmbitoRefresh.do',
+] as const)
+/**
+ * Botón de «Seleccionar mediador» que el robot puede pulsar: LISTA BLANCA CERRADA de textos EXACTOS (sin tildes ni mayúsculas
+ * que cuenten). La captura 2 enseña «ACEPTAR»; el marco de Genernet no está capturado y puede decir «Continuar».
+ */
+export const BOTONES_MEDIADOR_GENERALI = Object.freeze([BOTON_MEDIADOR_GENERALI, 'CONTINUAR'] as const)
+/** Lo que NUNCA puede llevar ese botón aunque alguien lo añada a la lista («aceptar» va aparte: es el de la captura). */
+const RE_BOTON_MEDIADOR_PELIGROSO = /emit|emisi|contrat|grab|firm|pag|poliza|formaliz|suplement|anul|tarif|guard/i
+
+/** ¿Puede el robot pulsar el botón de «Seleccionar mediador» con ESTE texto? Exacto en la lista y sin nada peligroso. PURA. */
+export function botonMediadorGeneraliPermitido(texto: string | null | undefined): boolean {
+  const t = textoMenu(texto)
+  if (t === '' || RE_BOTON_MEDIADOR_PELIGROSO.test(sinTildesNi(t))) return false
+  return (BOTONES_MEDIADOR_GENERALI as readonly string[]).includes(t)
+}
+
+/** ¿`url` es de www.generali.es y su ruta EXACTA es una de `RUTAS_MEDIADOR_GENERALI`? PURA. */
+export function rutaMediadorGenerali(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.origin === ORIGEN_PORTAL_GENERALI && !u.username && !u.password && (RUTAS_MEDIADOR_GENERALI as readonly string[]).includes(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+/** Texto visible de un control para la lista blanca: su texto, o el `value`/`alt`/`title`/`aria-label` de un input/imagen. */
+const textoControl = (d: (string | null)[]) => [d[0], d[3], d[1], d[2]].map((x) => (x ?? '').trim()).find((x) => x !== '') ?? ''
+
+/**
+ * Botón de «Seleccionar mediador» (captura 2 + prueba real b41be722), UNA vez por trabajo y solo si: guard limpio y sin
+ * ventanas abiertas; la página Y el marco del desplegable están en `RUTAS_MEDIADOR_GENERALI` de www.generali.es; el desplegable
+ * del mediador (`selectMediador`, lo localiza el adaptador en el marco que sea) tiene puesto EXACTAMENTE el mediador de la
+ * correduría (`opcionMediadorGenerali`); y en ESE MARCO hay un único control visible (button, input de botón/imagen, enlace,
+ * role=button) cuyo texto es uno de `BOTONES_MEDIADOR_GENERALI` (exacto). `comprobarBoton` (con «aceptar» permitido SOLO
+ * aquí) mira el resto de su descripción (onclick, href, formaction, ancestros) antes del clic. Nada de emitir/contratar/
+ * grabar/firmar/pagar.
  */
 export async function pulsarMediadorGenerali(page: Page, guard: GuardEmision, selectMediador: Locator): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'mediador de Generali con una ventana de red abierta')
-  if (!enRutaGenerali(page, RUTA_INICIO_GENERALI)) throw new ErrorMapaGuardGenerali('la pantalla «Seleccionar mediador» (CorredorInicio.po)')
+  if (!rutaMediadorGenerali(page.url())) throw new ErrorMapaGuardGenerali('la pantalla «Seleccionar mediador» (CorredorInicio.po / seleccionAmbito.do)')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('generali:mediador')) throw new EmisionBloqueadaError('fase', 'el mediador de Generali ya se aceptó en este trabajo')
   if ((await selectMediador.count()) !== 1) throw new ErrorMapaGuardGenerali('el desplegable «Mediador» (no hay exactamente uno)')
+  const handle = await selectMediador.elementHandle()
+  const marco = handle ? await handle.ownerFrame() : null
+  await handle?.dispose()
+  if (!marco || marco.page() !== page || marco.isDetached()) throw new ErrorMapaGuardGenerali('el marco del desplegable «Mediador»')
+  if (!rutaMediadorGenerali(marco.url())) throw new ErrorMapaGuardGenerali('el marco de «Seleccionar mediador» (ruta fuera de la lista de Generali)')
   const puesta = await selectMediador.evaluate((el) => {
     const s = el as HTMLSelectElement
+    if (s.tagName !== 'SELECT') return null
     const o = s.selectedIndex >= 0 ? s.options[s.selectedIndex] : null
     return o ? { valor: o.value ?? '', texto: (o.textContent ?? '').trim() } : null
   })
   if (!puesta || opcionMediadorGenerali([puesta], MEDIADOR_GENERALI).tipo !== 'unica') throw new EmisionBloqueadaError('fase', 'el mediador elegido no es el de la correduría: no se acepta')
   await exigirSinCuentaBancaria(page)
-  const boton = page.getByRole('button', { name: BOTON_MEDIADOR_GENERALI, exact: true }).filter({ visible: true })
-  if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali(`el botón «${BOTON_MEDIADOR_GENERALI}» de «Seleccionar mediador» (no hay exactamente uno visible)`)
-  const desc = await descripcion(boton.first())
-  if (textoMenu(desc[0]) !== BOTON_MEDIADOR_GENERALI) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const candidatos = marco.locator('button, input[type=button], input[type=submit], input[type=image], a, [role=button]').filter({ visible: true })
+  const n = await candidatos.count()
+  // Fail-closed: la unicidad solo vale si se miraron TODOS. Más de 200 candidatos, o uno cuya lectura falla, no se pulsa.
+  if (n > 200) throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (${n} controles visibles en su marco; más de 200, no se puede asegurar que sea único)`)
+  const validos: { control: Locator; desc: (string | null)[] }[] = []
+  for (let i = 0; i < n; i++) {
+    const c = candidatos.nth(i)
+    let d: (string | null)[]
+    try {
+      d = await descripcion(c)
+    } catch {
+      throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (no se pudo leer el control ${i + 1} de ${n}; sin leerlos todos no se asegura que sea único)`)
+    }
+    if (botonMediadorGeneraliPermitido(textoControl(d))) validos.push({ control: c, desc: d })
+  }
+  if (validos.length !== 1) throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (${validos.length} visibles en su marco con texto ${BOTONES_MEDIADOR_GENERALI.join('/')}; hace falta exactamente uno)`)
+  const { control, desc } = validos[0]!
+  if (!botonMediadorGeneraliPermitido(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   comprobarBoton(desc, { permitirAceptar: true })
   usados.add('generali:mediador')
   AVANCES_USADOS.set(guard, usados)
-  await boton.first().click()
+  await control.click()
   guard.comprobar()
 }
+
+/** Texto EXACTO del enlace que lleva de `CorredorInicio.po` (ya con mediador) al portal con el menú (prueba real 351f946b, v0.2.3). */
+export const ENLACE_ENTRAR_GENERALI = 'ENTRAR'
+
+/** ¿Puede el robot pulsar el enlace de entrada al portal con ESTE texto? Solo «ENTRAR» exacto. PURA. */
+export function enlaceEntrarGeneraliPermitido(texto: string | null | undefined): boolean {
+  return textoMenu(texto) === ENLACE_ENTRAR_GENERALI
+}
+
+/**
+ * «ENTRAR» de `CorredorInicio.po` (prueba real 351f946b, 19/10/2026): tras aceptar el mediador la carcasa se queda en
+ * «PORTAL DEL CORREDOR» con «Cerrar sesión» y «ENTRAR». UNA vez por trabajo y solo si: guard limpio y sin ventanas abiertas;
+ * la página está en la ruta EXACTA `CorredorInicio.po` de www.generali.es; y, entre TODOS los marcos vivos de www.generali.es,
+ * hay exactamente un control visible (enlace, botón, input de botón/imagen, role=button) con texto «ENTRAR» exacto. Fail-closed:
+ * un control que no se deja leer, o más de 200 por marco, no se pulsa. `comprobarBoton` mira el resto de su descripción.
+ */
+export async function pulsarEntrarGenerali(page: Page, guard: GuardEmision): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'ENTRAR de Generali con una ventana de red abierta')
+  if (!enRutaGenerali(page, RUTA_INICIO_GENERALI)) throw new ErrorMapaGuardGenerali('la pantalla CorredorInicio.po antes de «ENTRAR»')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:entrar')) throw new EmisionBloqueadaError('fase', '«ENTRAR» de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const validos: { control: Locator; desc: (string | null)[] }[] = []
+  for (const marco of page.frames()) {
+    if (marco.isDetached()) continue
+    let origen = ''
+    try {
+      origen = new URL(marco.url()).origin
+    } catch {
+      continue
+    }
+    if (origen !== ORIGEN_PORTAL_GENERALI) continue
+    const candidatos = marco.locator('button, input[type=button], input[type=submit], input[type=image], a, [role=button]').filter({ visible: true })
+    const n = await candidatos.count()
+    if (n > 200) throw new ErrorMapaGuardGenerali(`«ENTRAR» (${n} controles visibles en un marco; más de 200, no se puede asegurar que sea único)`)
+    for (let i = 0; i < n; i++) {
+      const c = candidatos.nth(i)
+      let d: (string | null)[]
+      try {
+        d = await descripcion(c)
+      } catch {
+        throw new ErrorMapaGuardGenerali(`«ENTRAR» (no se pudo leer el control ${i + 1} de ${n}; sin leerlos todos no se asegura que sea único)`)
+      }
+      if (enlaceEntrarGeneraliPermitido(textoControl(d))) validos.push({ control: c, desc: d })
+    }
+  }
+  if (validos.length !== 1) throw new ErrorMapaGuardGenerali(`el enlace «ENTRAR» de CorredorInicio.po (${validos.length} visibles con ese texto; hace falta exactamente uno)`)
+  const { control, desc } = validos[0]!
+  comprobarBoton(desc)
+  usados.add('generali:entrar')
+  AVANCES_USADOS.set(guard, usados)
+  await control.click()
+  guard.comprobar()
+}
+
+/** Cuánto se espera (solo lectura) a que aparezca el aviso «¿Sabías qué…?» tras llegar al portal (prueba real c8838c26: tarda segundos). */
+export const ESPERA_AVISO_SABIAS_QUE_GENERALI_MS = 8_000
+/** Id EXACTO del «×» del modal «¿Sabías qué…?» de CorredorPortal.po (inventario real, prueba 31e76085). */
+export const ID_CIERRE_SABIAS_QUE_GENERALI = 'closeModalSabiasQueIntro'
+/** Textos que puede tener ese control para ser un CIERRE (tras `textoMenu`): la aspa o nada. Nunca aceptar/contratar/etc. */
+const TEXTOS_CIERRE_SABIAS_QUE_GENERALI: readonly string[] = Object.freeze(['×', '✕', 'X', ''])
+
+/**
+ * Modal «¿Sabías qué…?» que tapa `CorredorPortal.po` al llegar (prueba real 31e76085). Solo si la página es EXACTAMENTE el portal
+ * del corredor de www.generali.es: el ÚNICO control visible con id `closeModalSabiasQueIntro` (o, si no está, el único «×» de un
+ * modal/diálogo cuyo texto contiene «Sabías qué»), con texto «×»/vacío (aria «Cerrar» como mucho), que pase `comprobarBoton`.
+ * Sin modal → `'sin_aviso'` (no es error, no se pulsa nada). UNA vez por trabajo. Más de uno o un control que no es un cierre →
+ * hueco (no se pulsa).
+ */
+export async function cerrarAvisoSabiasQueGenerali(page: Page, guard: GuardEmision, esperaMs = ESPERA_AVISO_SABIAS_QUE_GENERALI_MS): Promise<'cerrado' | 'sin_aviso'> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'aviso «¿Sabías qué…?» con una ventana de red abierta')
+  if (!esPortalCorredorGeneraliGuard(page)) return 'sin_aviso'
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:sabias-que')) return 'sin_aviso'
+  // Prueba real c8838c26 (v0.2.5): el overlay `div.modalOverlay#modalSabiasQueIntro` aparece UNOS SEGUNDOS DESPUÉS de llegar al
+  // portal (mientras cargan sus marcos y los vídeos); mirar una sola vez daba «sin aviso» y el overlay tapaba el menú. Se espera
+  // (solo lectura) hasta `esperaMs` a que aparezca el «×»; sin él en ese plazo → `'sin_aviso'`.
+  const limite = Date.now() + Math.max(0, esperaMs)
+  let porId: Locator[] = []
+  let porModal: Locator[] = []
+  for (;;) {
+    guard.comprobar()
+    porId = []
+    porModal = []
+    for (const marco of marcosVivos(page)) {
+      let origen = ''
+      try {
+        origen = new URL(marco.url()).origin
+      } catch {
+        continue
+      }
+      if (origen !== ORIGEN_PORTAL_GENERALI) continue
+      const ids = marco.locator(`[id="${ID_CIERRE_SABIAS_QUE_GENERALI}"]`).filter({ visible: true })
+      for (let i = 0, n = await ids.count().catch(() => 0); i < n; i++) porId.push(ids.nth(i))
+      const cierres = marco.locator('.modal, .modalOverlay, [role=dialog]').filter({ hasText: /sab[ií]as\s+qu[eé]/i }).filter({ visible: true }).locator('button, [role=button], a, .close').filter({ visible: true })
+      for (let i = 0, n = await cierres.count().catch(() => 0); i < n; i++) {
+        const c = cierres.nth(i)
+        if (textoMenu(await c.innerText().catch(() => 'no')) === '×') porModal.push(c)
+      }
+    }
+    if (porId.length > 0 || porModal.length > 0 || Date.now() >= limite) break
+    await page.waitForTimeout(250)
+  }
+  const candidatos = porId.length > 0 ? porId : porModal
+  if (candidatos.length === 0) return 'sin_aviso'
+  if (candidatos.length !== 1) throw new ErrorMapaGuardGenerali(`el «×» del aviso «¿Sabías qué…?» (${candidatos.length} visibles; hace falta exactamente uno)`)
+  const control = candidatos[0]!
+  await exigirSinCuentaBancaria(page)
+  const desc = await descripcion(control)
+  const aria = textoMenu(desc[1])
+  if (!TEXTOS_CIERRE_SABIAS_QUE_GENERALI.includes(textoMenu(desc[0])) || (aria !== '' && aria !== 'CERRAR')) {
+    throw new ErrorMapaGuardGenerali(`el cierre del aviso «¿Sabías qué…?» (el control no es una aspa de cierre: «${String(desc[0] ?? '').replace(/\s+/g, ' ').trim().slice(0, 20)}»)`)
+  }
+  comprobarBoton(desc)
+  usados.add('generali:sabias-que')
+  AVANCES_USADOS.set(guard, usados)
+  await clicSinDialogoNativo(page, guard, control, 'aviso «¿Sabías qué…?»')
+  const hastaCierre = Date.now() + 3_000
+  while (Date.now() < hastaCierre) {
+    guard.comprobar()
+    let visibles = 0
+    for (const f of marcosVivos(page)) visibles += await f.locator(`[id="${ID_CIERRE_SABIAS_QUE_GENERALI}"]`).filter({ visible: true }).count().catch(() => 0)
+    if (visibles === 0) break
+    await page.waitForTimeout(150)
+  }
+  return 'cerrado'
+}
+
+function esPortalCorredorGeneraliGuard(page: Page): boolean {
+  return enRutaGenerali(page, RUTA_PORTAL_GENERALI)
+}
+
+/** Plazo corto del sobrevuelo/clic de cada nivel del menú de Generali (el de Playwright por defecto, 30 s, tapaba el fallo real). */
+const PLAZO_MENU_GENERALI_MS = 5_000
 
 /**
  * Entrada a «Turismos (Ramo UV)» por el menú (captura 3), UNA vez por trabajo, solo desde `CorredorPortal.po`: sobrevuela
@@ -2331,15 +2538,42 @@ export async function entrarTurismosGenerali(page: Page, guard: GuardEmision, es
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('generali:turismos')) throw new EmisionBloqueadaError('fase', 'el menú de Turismos de Generali ya se usó en este trabajo')
   await exigirSinCuentaBancaria(page)
+  // v0.2.5 (prueba real c8838c26): un overlay encima intercepta el sobrevuelo. Si el aviso sigue ahí se cierra por SU compuerta
+  // (sin espera: ya tuvo su plazo en el adaptador); sin aviso, no hace nada.
+  await cerrarAvisoSabiasQueGenerali(page, guard, 0)
   const niveles = MENU_TURISMOS_GENERALI.slice(0, -1)
-  for (const texto of niveles) {
-    const l = await unicoPorTextoGenerali(page, texto)
-    if (!l) throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (no hay exactamente uno visible tras sobrevolar el anterior)`)
-    await l.hover()
+  let actual = await esperarUnicoGenerali(page, niveles[0]!)
+  for (let i = 0; i < niveles.length; i++) {
+    const texto = niveles[i]!
+    const sig = MENU_TURISMOS_GENERALI[i + 1]!
+    if (!actual) throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (no hay exactamente uno visible tras sobrevolar el anterior)`)
+    // 1) Sobrevuelo con plazo corto (el menú Bootstrap con `data-hover` se abre así). Si falla, no es fatal: se prueba el clic.
+    await actual.hover({ timeout: PLAZO_MENU_GENERALI_MS }).catch(() => undefined)
     await page.waitForTimeout(400)
+    let siguiente = await esperarUnicoGenerali(page, sig, 2_500)
+    if (!siguiente) {
+      // 2) Alternativa: pulsar el toggle de ESE nivel (solo los textos de MENU_TURISMOS_GENERALI; el mismo control, nunca otro).
+      // La descripción (texto, href, onclick, ancestros) pasa por la lista única, con la excepción de los sustantivos del camino.
+      await cerrarAvisoSabiasQueGenerali(page, guard, 0)
+      const dn = await descripcion(actual, true)
+      if (textoMenu(dn[0]) !== textoMenu(texto)) throw new EmisionBloqueadaError('boton', String(dn[0] ?? '').slice(0, 120))
+      for (const d of dn) {
+        if (typeof d === 'string' && /^\s*https?:/i.test(d) && !d.trim().toLowerCase().startsWith(`${ORIGEN_PORTAL_GENERALI}/`)) throw new EmisionBloqueadaError('boton', `«${texto}» apunta fuera de ${ORIGEN_PORTAL_GENERALI}`)
+      }
+      comprobarBoton(dn.filter((d) => textoMenu(d) !== textoMenu(texto)).map((d) => (typeof d === 'string' ? sinSustantivosMenuGenerali(d) : d)))
+      try {
+        await actual.click({ timeout: PLAZO_MENU_GENERALI_MS })
+      } catch {
+        throw new ErrorMapaGuardGenerali(`el nivel «${texto}» del menú (ni el sobrevuelo ni el clic lo despliegan o algo lo tapa)`)
+      }
+      guard.comprobar()
+      await page.waitForTimeout(400)
+      siguiente = await esperarUnicoGenerali(page, sig, 5_000)
+    }
+    actual = siguiente
   }
   const final = MENU_TURISMOS_GENERALI[MENU_TURISMOS_GENERALI.length - 1]!
-  const destino = await unicoPorTextoGenerali(page, final)
+  const destino = actual
   if (!destino) throw new ErrorMapaGuardGenerali(`la opción «${final}» del menú (no hay exactamente una visible)`)
   const desc = await descripcion(destino, true)
   if (textoMenu(desc[0]) !== final) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))

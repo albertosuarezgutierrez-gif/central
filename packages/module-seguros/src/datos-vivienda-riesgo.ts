@@ -52,6 +52,9 @@ export const ESPEC_VIVIENDA = [
   { clave: 'joyasFueraDeCaja', etiqueta: 'Joyas fuera de caja (€)', tipo: { t: 'numero', min: 0, max: 100_000 } },
   { clave: 'objetosDeValor', etiqueta: 'Objetos de valor (€)', tipo: { t: 'numero', min: 0, max: 100_000_000 } },
   { clave: 'perrosPeligrosos', etiqueta: 'Perros peligrosos', tipo: { t: 'entero', min: 0, max: 20 } },
+  // 19/10/2026: Allianz Hogar (bot) lo pregunta («Sin madera / Con madera») y decide la tarifa. Pregunta EXPLÍCITA, sin valor
+  // por defecto: `null` = no contestado (≠ «sin madera»). Codeoscopic no lo pide: no entra en `faltanDatosVivienda`.
+  { clave: 'conMadera', etiqueta: 'Construcción con madera', tipo: { t: 'bool' } },
 ] as const satisfies Espec
 
 export type CampoVivienda =
@@ -60,6 +63,7 @@ export type CampoVivienda =
   | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma' | 'puertasSecundarias'
   | 'asentamiento' | 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
   | 'capitalContinente' | 'capitalContenido' | 'joyasEnCajaFuerte' | 'joyasFueraDeCaja' | 'objetosDeValor' | 'perrosPeligrosos'
+  | 'conMadera'
 
 export type DatosViviendaRiesgo = {
   [K in CampoVivienda]: K extends
@@ -67,7 +71,7 @@ export type DatosViviendaRiesgo = {
     | 'puertaVivienda' | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma'
     | 'puertasSecundarias' | 'asentamiento'
     ? string | null
-    : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
+    : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador' | 'conMadera'
       ? boolean | null
       : number | null
 } & { confirmadoAt: string | null }

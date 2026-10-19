@@ -9,7 +9,7 @@
 //         Tras un trabajo bueno se re-sella el estado refrescado con la caducidad ORIGINAL (el uso no la alarga).
 
 import { ErrorTarificador } from './errores.ts'
-import { abrirSesion, sellarSesion, type SesionAbierta } from './boveda-sesion.ts'
+import { CADUCIDAD_DISPOSITIVO_MS, NOMBRE_CLAVE_SESION, abrirSesion, sellarSesion, type SesionAbierta } from './boveda-sesion.ts'
 import type { EstadoNavegador } from './sesion.ts'
 
 /** Almacén del blob sellado. `leer` → `null` SOLO si el almacén dice «no hay» (404); otro fallo lanza (no es «no hay»). */
@@ -89,11 +89,117 @@ export function almacenHttp(c: { apiUrl: string; secreto: string }): AlmacenSesi
         body: JSON.stringify({ token, caducaEn: new Date(caduca).toISOString() }),
         signal: AbortSignal.timeout(15_000),
       })
-      if (!res.ok) throw fallo('guardar', res.status)
+      if (!res.ok) {
+        // El motivo de asegura (`caduca_excesiva`, `sesion_sin_activar`, `token_formato`…) es un código, nunca el token.
+        const j = (await res.json().catch(() => null)) as { estado?: unknown; motivo?: unknown } | null
+        const m = codigoSeguro(j?.motivo) ?? codigoSeguro(j?.estado)
+        throw new ErrorTarificador('infra', `almacén de sesión: guardar respondió ${res.status}${m ? ` (${m})` : ''}`)
+      }
     },
     async borrar(compania) {
       const res = await fetch(url(compania), { method: 'DELETE', headers: auth, signal: AbortSignal.timeout(15_000) })
       if (!res.ok && res.status !== 404) throw fallo('borrar', res.status)
     },
+  }
+}
+
+/** Un código corto de asegura (`caduca_excesiva`…) o `null`: nada que no sea `[a-z0-9_]` sale al log ni al mensaje. PURA. */
+function codigoSeguro(v: unknown): string | null {
+  return typeof v === 'string' && /^[a-z0-9_]{1,40}$/.test(v) ? v : null
+}
+
+/**
+ * Motivo SIN DATOS SENSIBLES de un fallo de la bóveda (19/10/2026, prueba real b41be722: SMS verificado y 0 filas en
+ * `seguros.tarificador_sesiones`; el `catch` solo dejaba «dispositivo_no_guardado» en el stdout de una máquina efímera).
+ * Solo códigos fijos o el estado HTTP del almacén: nunca el token, la clave ni el estado del navegador. PURA.
+ */
+export function motivoFalloBoveda(e: unknown): string {
+  const m = e instanceof Error ? e.message : typeof e === 'string' ? e : ''
+  if (m.includes(NOMBRE_CLAVE_SESION)) return /32 bytes/.test(m) ? 'clave_mal_formada' : 'sin_clave'
+  const http = /^almacén de sesión: (leer|guardar|borrar) respondió (\d{1,3})(?: \(([a-z0-9_]{1,40})\))?$/.exec(m)
+  if (http) return `almacen_${http[1]}_${http[2]}${http[3] ? `_${http[3]}` : ''}`
+  const nombre = e instanceof Error ? e.name : ''
+  if (nombre === 'TimeoutError' || nombre === 'AbortError') return 'almacen_tiempo'
+  if (nombre === 'TypeError' && /fetch/i.test(m)) return 'almacen_red'
+  return 'desconocido'
+}
+
+/** Lo que el runner necesita de una fuente de sesión (estructural con `FuenteSesion` de runner.ts). */
+export type FuenteDispositivo = {
+  manual: false
+  previa: () => EstadoNavegador | null
+  alExito: (estado: EstadoNavegador) => Promise<void>
+  alFallo: (rechazada: boolean) => Promise<void>
+  alVerificar: (estado: EstadoNavegador) => Promise<void>
+  /** `null` = nada que contar; si no, por qué el dispositivo NO quedó en la bóveda (sin datos sensibles; va al mensaje del error). */
+  notaBoveda: () => string | null
+}
+
+/**
+ * Fuente del DISPOSITIVO DE CONFIANZA (19/10/2026, Generali/Okta). Arranca con el estado de la bóveda (si lo hay); tras una
+ * verificación del SMS guarda el estado NUEVO con 30 días EN ESE MOMENTO (justo tras pasar el login/SMS, antes del segundo
+ * intento: la sesión vale aunque luego el mapa falle); tras un trabajo bueno re-sella el refrescado con la caducidad que ya
+ * tenía (el uso no la alarga). Un fallo del trabajo NO borra nada. Sin gestor (sin `TARIFICADOR_SESION_KEY`) solo vive en
+ * memoria de este proceso. Un fallo al guardar NO para el trabajo: se registra (`dispositivo_no_guardado` + motivo sin
+ * datos) y queda en `notaBoveda` para el mensaje del resultado (el stdout de la máquina efímera se pierde).
+ */
+export function fuenteDispositivo(
+  gestor: GestorSesionManual | null,
+  compania: string,
+  inicial: SesionAbierta | null,
+  o: { log: (m: string, d?: Record<string, unknown>) => void; motivoSinBoveda?: string; ahora?: () => number },
+): FuenteDispositivo {
+  const ahora = o.ahora ?? Date.now
+  let actual: { valor: EstadoNavegador; caduca: number } | null = inicial ? { valor: inicial.valor, caduca: inicial.caduca } : null
+  let nota: string | null = null
+  return {
+    manual: false,
+    previa: () => (actual && ahora() < actual.caduca ? actual.valor : null),
+    alExito: async (estado) => {
+      if (!actual) return
+      actual = { valor: estado, caduca: actual.caduca }
+      if (gestor) await gestor.refrescar(compania, estado, actual.caduca)
+    },
+    alFallo: async () => undefined,
+    alVerificar: async (estado) => {
+      actual = { valor: estado, caduca: ahora() + CADUCIDAD_DISPOSITIVO_MS }
+      if (!gestor) {
+        const motivo = o.motivoSinBoveda ?? 'sin_clave'
+        nota = `dispositivo no guardado en la bóveda (${motivo})`
+        o.log('dispositivo_no_guardado', { motivo })
+        return
+      }
+      try {
+        const caduca = await gestor.guardarNueva(compania, estado)
+        actual = { valor: estado, caduca }
+        nota = null
+        o.log('dispositivo_guardado', { caducaEn: new Date(caduca).toISOString() })
+      } catch (e) {
+        const motivo = motivoFalloBoveda(e)
+        nota = `dispositivo no guardado en la bóveda (${motivo})`
+        o.log('dispositivo_no_guardado', { motivo })
+      }
+    },
+    notaBoveda: () => nota,
+  }
+}
+
+/**
+ * Estado del DISPOSITIVO de confianza en SOLO LECTURA (prueba nocturna de humo, 19/10/2026): abre el blob de la bóveda y nunca
+ * escribe ni borra (ni siquiera el caducado: eso lo hace un trabajo de verdad). `motivo` sin datos sensibles. Nunca lanza.
+ */
+export async function leerDispositivo(
+  almacen: Pick<AlmacenSesion, 'leer'>,
+  clave: Buffer,
+  compania: string,
+  ahora: number = Date.now(),
+): Promise<{ estado: EstadoNavegador | null; motivo: string }> {
+  try {
+    const token = await almacen.leer(compania)
+    if (token === null) return { estado: null, motivo: 'ninguna' }
+    const a = abrirSesion(token, { compania, clave, ahora })
+    return a.estado === 'ok' ? { estado: a.sesion.valor, motivo: 'ok' } : { estado: null, motivo: a.estado }
+  } catch (e) {
+    return { estado: null, motivo: motivoFalloBoveda(e) }
   }
 }

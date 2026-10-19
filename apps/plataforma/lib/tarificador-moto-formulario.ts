@@ -5,6 +5,7 @@
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Dato personal: nunca se escribe en un log ni en un mensaje de error; los avisos
 // dicen QUÉ falta, jamás el valor. Tres estados: `null` = «no consta», nunca 0/false inventados.
 import { esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto } from '@central/module-tarificacion'
+import { carnetMotoMasAntiguo } from '@central/module-seguros'
 import { leerEncolado } from './tarificador-probar.ts'
 
 /** Datos que NO están en el navegador (viven en la ficha del cliente en asegura) y que el servidor completa. */
@@ -223,7 +224,9 @@ export function completarRiesgoVehiculoDesdeFicha(
       else faltan.push(campo)
     } else {
       if (typeof conductor.fechaCarne === 'string' && conductor.fechaCarne) continue
-      const delRamo = (ficha?.carnets ?? []).filter((c) => carneDelRamo(ramo, c.tipo) && esIso(c.fechaExpedicion)).map((c) => c.fechaExpedicion as string).sort()[0]
+      const delRamo = ramo === 'moto'
+        ? carnetMotoMasAntiguo(ficha?.carnets)?.fecha // MISMA regla que asegura (`fichaTomador`): el más antiguo de A/A1/A2
+        : (ficha?.carnets ?? []).filter((c) => carneDelRamo(ramo, c.tipo) && esIso(c.fechaExpedicion)).map((c) => c.fechaExpedicion as string).sort()[0]
       const f = delRamo ?? (esIso(ficha?.dePolizas?.fechaCarnet) ? ficha?.dePolizas?.fechaCarnet : undefined)
       if (f) conductor.fechaCarne = f
       else faltan.push(campo)

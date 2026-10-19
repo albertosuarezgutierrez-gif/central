@@ -63,3 +63,74 @@ test('paginación: tope 50', () => {
   assert.deepEqual(paginacionBandeja('51', null), { limite: 50, desde: 0 })
   assert.deepEqual(paginacionBandeja('10', '50'), { limite: 10, desde: 50 })
 })
+
+// ─── Elección de población (19/10/2026) ──────────────────────────────────────
+import { cuerpoEleccionPoblacion, opcionesPoblacionDeItem } from './tarificador-bandeja.ts'
+
+const OPS = [{ codigo: '00001- PUEBLO NUEVO', etiqueta: 'PUEBLO NUEVO' }, { codigo: '00001- VILLA ÁLAMO', etiqueta: 'VILLA ÁLAMO' }]
+
+test('población: la lista estructurada del puerto llega al item; sin lista → null (no se inventa desde el mensaje)', () => {
+  const r = leerRespuestaBandeja(200, { total: 2, items: [
+    { ...ITEM, motivo: 'requiere_eleccion_poblacion: el código postal tiene 2 poblaciones; elige una en la bandeja y reintenta: PUEBLO NUEVO · VILLA ÁLAMO', opcionesPoblacion: OPS },
+    { ...ITEM, id: '22222222-2222-4222-8222-222222222222', motivo: 'requiere_eleccion_poblacion: x' },
+  ] })
+  assert.ok(r.ok)
+  if (r.ok) {
+    assert.deepEqual(r.bandeja.items[0].opcionesPoblacion, OPS)
+    assert.equal(r.bandeja.items[1].opcionesPoblacion, null)
+  }
+})
+
+test('población: opciones rotas o repetidas no se ofrecen; el código viaja EXACTO, nunca la etiqueta', () => {
+  assert.equal(opcionesPoblacionDeItem({ opcionesPoblacion: [{ codigo: 5 }] }), null)
+  assert.equal(opcionesPoblacionDeItem({ opcionesPoblacion: [] }), null)
+  assert.equal(opcionesPoblacionDeItem({}), null)
+  assert.deepEqual(opcionesPoblacionDeItem({ opcionesPoblacion: [...OPS, OPS[0]] }), OPS)
+  assert.equal(cuerpoEleccionPoblacion(OPS, '1'), '00001- VILLA ÁLAMO')
+  for (const mal of ['', '2', '-1', 'x', '0.5']) assert.equal(cuerpoEleccionPoblacion(OPS, mal), null, mal)
+})
+
+// ─── Elección de versión de vehículo (19/10/2026) ────────────────────────────
+import { cuerpoEleccionVersion, filtrarOpcionesVersion, opcionesVersionDeItem } from './tarificador-bandeja.ts'
+
+const VERS = [
+  { etiqueta: 'GOLF 1.6 TDI 105CV', codigo: 'A1' },
+  { etiqueta: 'Golf 2.0 TDI 150CV Sport', codigo: null },
+  { etiqueta: 'POLO 1.0 TSI 95CV', codigo: 'B2' },
+]
+
+test('versión: la lista estructurada llega al item; sin lista o rota → null (no se inventa)', () => {
+  const r = leerRespuestaBandeja(200, { total: 2, items: [
+    { ...ITEM, opcionesVersion: VERS },
+    { ...ITEM, id: '22222222-2222-4222-8222-222222222222' },
+  ] })
+  assert.ok(r.ok)
+  if (r.ok) {
+    assert.deepEqual(r.bandeja.items[0].opcionesVersion, VERS)
+    assert.equal(r.bandeja.items[1].opcionesVersion, null)
+  }
+  assert.equal(opcionesVersionDeItem({ opcionesVersion: [{ etiqueta: '' }] }), null)
+  assert.equal(opcionesVersionDeItem({ opcionesVersion: [] }), null)
+  assert.deepEqual(opcionesVersionDeItem({ opcionesVersion: [...VERS, VERS[0]] }), VERS)
+})
+
+test('versión: el cuerpo es {codigo, etiqueta} EXACTOS de la opción (codigo null si no hay); índice inválido → null', () => {
+  assert.deepEqual(cuerpoEleccionVersion(VERS, '0'), { codigo: 'A1', etiqueta: 'GOLF 1.6 TDI 105CV' })
+  assert.deepEqual(cuerpoEleccionVersion(VERS, '1'), { codigo: null, etiqueta: 'Golf 2.0 TDI 150CV Sport' })
+  for (const mal of ['', '3', '-1', 'x', '0.5']) assert.equal(cuerpoEleccionVersion(VERS, mal), null, mal)
+})
+
+test('versión: el buscador filtra por todas las palabras, sin tildes ni mayúsculas, y conserva el índice original', () => {
+  assert.deepEqual(filtrarOpcionesVersion(VERS, ''), [0, 1, 2])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, '  golf  tdi '), [0, 1])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, 'golf 150'), [1])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, 'polo'), [2])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, 'seat'), [])
+})
+
+// ─── «Reintentar» genérico oculto con elección de población/versión (19/10/2026) ───
+test('BandejaAtencion: el botón «Reintentar» genérico no sale si el item pide elegir población o versión', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/(usuario)/correduria/tarificador/BandejaAtencion.tsx', import.meta.url), 'utf8')
+  assert.match(src, /\{it\.puedeReintentar && !it\.opcionesPoblacion && !it\.opcionesVersion && \(\s*<button type="button" onClick=\{\(\) => void resolver\(it, 'reintentar'\)/)
+})

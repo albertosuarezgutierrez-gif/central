@@ -394,3 +394,20 @@ export function poblacionDesdeFicha(
   if (tieneCaracteresProhibidos(ciudad)) return null
   return ciudad
 }
+
+/**
+ * Hogar (19/10/2026): el riesgo es `{ inmueble: { codigoPostal, municipio?, … } }`. Si el inmueble NO trae `municipio` y el CP
+ * de la vivienda es el MISMO que el de la ficha, se toma la ciudad de la ficha (misma regla que `poblacionDesdeFicha`); si el CP
+ * difiere (o la ficha no tiene ciudad) NO se rellena: esa ciudad sería de otro sitio. Devuelve el MISMO riesgo si no hay nada
+ * que rellenar. PURA.
+ */
+export function completarMunicipioHogarDesdeFicha(
+  riesgo: Record<string, unknown>,
+  contacto: { codigoPostal: string | null; ciudad: string | null } | null | undefined,
+): Record<string, unknown> {
+  const inm = riesgo.inmueble
+  if (typeof inm !== 'object' || inm === null || Array.isArray(inm)) return riesgo
+  const i = inm as Record<string, unknown>
+  const municipio = poblacionDesdeFicha({ codigoPostal: i.codigoPostal, poblacion: i.municipio }, contacto)
+  return municipio ? { ...riesgo, inmueble: { ...i, municipio } } : riesgo
+}

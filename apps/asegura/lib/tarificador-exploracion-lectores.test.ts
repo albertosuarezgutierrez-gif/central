@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { bloqueaDuplicado, RAMOS_TARIFICABLES_RPA, validarEntradaRamo } from './tarificador-reglas.ts'
+import { bloqueaDuplicado, COMPANIAS_HOGAR_RPA, RAMOS_TARIFICABLES_RPA, validarEntradaRamo } from './tarificador-reglas.ts'
 import { planEleccionVersion } from './tarificador-eleccion-reglas.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -42,11 +42,14 @@ for (const [nombre, fichero, desde, hasta] of LECTORES) {
   })
 }
 
-test('«Probar tarificación»: solo integraciones de un ramo con adaptador (Hogar solo explora)', () => {
-  assert.match(trozo('lib/tarificador-lectura.ts', 'export async function leerIntegracionesActivas', 'export async function leerRiesgoParaReencolar'), /ramo = any\(\$\{\[\.\.\.RAMOS_TARIFICABLES_RPA\]\}::text\[\]\)/)
-  assert.ok(!(RAMOS_TARIFICABLES_RPA as readonly string[]).includes('hogar'))
-  // Lista FIJADA (14/10/2026: + auto, coche de Mapfre NSEI). Un ramo nuevo aquí abre «Probar tarificación» e integraciones.
-  assert.deepEqual([...RAMOS_TARIFICABLES_RPA], ['comunidades', 'moto', 'auto'])
+test('«Probar tarificación»: solo integraciones de un ramo con adaptador (Hogar solo de Allianz; el resto de Hogar solo explora)', () => {
+  const lec = trozo('lib/tarificador-lectura.ts', 'export async function leerIntegracionesActivas', 'export async function leerRiesgoParaReencolar')
+  assert.match(lec, /ramo = any\(\$\{\[\.\.\.RAMOS_TARIFICABLES_RPA\]\}::text\[\]\)/)
+  // 19/10/2026: Hogar entra en la lista, pero la consulta lo limita a las compañías con bot de tarificación de Hogar.
+  assert.match(lec, /and \(ramo <> 'hogar' or compania = any\(\$\{\[\.\.\.COMPANIAS_HOGAR_RPA\]\}::text\[\]\)\)/)
+  assert.deepEqual([...COMPANIAS_HOGAR_RPA], ['allianz'])
+  // Lista FIJADA (14/10/2026: + auto, coche de Mapfre NSEI; 19/10/2026: + hogar, solo Allianz). Un ramo nuevo aquí abre «Probar tarificación» e integraciones.
+  assert.deepEqual([...RAMOS_TARIFICABLES_RPA], ['comunidades', 'moto', 'auto', 'hogar'])
   for (const r of RAMOS_TARIFICABLES_RPA) {
     const v = validarEntradaRamo(r, {})
     assert.ok(v.ok || !v.mensaje.startsWith('ramo no soportado'), `${r} sin adaptador`)

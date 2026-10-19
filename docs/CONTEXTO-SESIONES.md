@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/10/2026)** — Tarificador · PR #4841 mergeado y desplegado: Generali 0.2.1 (matrícula NNNN*LLL con verificación opcional, compuerta «Garantías y Resultados», lector de precio) + relevo del SMS de Okta por Telegram (aviso `correduria.tarificador-codigo-sms`, código sellado para el worker, un uso, 10 min) y bóveda de sesión 30 días (`TARIFICADOR_SESION_KEY` en Fly puesta por Alberto). SQL aplicado: `tarificador_sesiones` y `tarificador_codigos_sms`. Imagen `v20261019-generali021`. Lección: Okta pide SMS a cada máquina nueva; Actions no se dispara con algunos pushes (mergear main). Pendiente: primera prueba real de Generali con SMS.
 **(19/10/2026)** — Correduría · lead de correo → propuesta automática, F1-F5 MERGEADAS (último #4864). Flujo: petición de datos en el hilo →
 lee la respuesta (adjuntos cifrados, sin IA) → 🤖 tarificar con bots RPA (tope 20/día) → propuesta con ✅ Enviar en el hilo → recordatorios
 48h/+72h/cierre perdido. Todo envío al cliente pasa por botón de Telegram; modo auto por tipo (`clp_aut`, nunca `propuesta`). Leads de correo

@@ -34,9 +34,10 @@ export const MOTIVO_SIN_DECLARACION = 'No se sabe qué datos pide el bot de esta
 /**
  * Checklist de una compañía sobre el `riesgo` que construyó el adaptador. `completarDesdeFicha`: campos que el servidor pone
  * desde la ficha (cuentan como cubiertos, «se toma de la ficha»). Los obligatorios de origen ficha (NIF y datos del
- * tomador) que el riesgo no trae tampoco bloquean: asegura los pone al entregar el trabajo y los valida al encolar. PURA.
+ * tomador) que el riesgo no trae tampoco bloquean: asegura los pone al entregar el trabajo y los valida al encolar, SALVO los
+ * de `sinDatoEnFicha` (claves que la precalificación ya sabe que la ficha no tiene, p. ej. `conductor.sexo`): esos faltan. PURA.
  */
-export function checklistCompania(compania: string, ramo: string, riesgo: Record<string, unknown>, completarDesdeFicha: readonly CampoDeFicha[] = []): ChecklistCompania {
+export function checklistCompania(compania: string, ramo: string, riesgo: Record<string, unknown>, completarDesdeFicha: readonly CampoDeFicha[] = [], sinDatoEnFicha: readonly string[] = []): ChecklistCompania {
   const lista = obligatoriosPara(compania, ramo)
   const sinFicha = faltanParaTarificar(compania, ramo, riesgo, { sinFicha: true })
   const conFicha = faltanParaTarificar(compania, ramo, riesgo)
@@ -53,7 +54,7 @@ export function checklistCompania(compania: string, ramo: string, riesgo: Record
     if (c.aplica && !c.aplica(ramo === 'auto' || ramo === 'moto' ? conAntecedentesFavorables(riesgo).formulario : riesgo)) continue
     let estado: EstadoFila
     if (faltaForm.has(c.clave)) estado = rutasFicha.has(c.clave) ? 'ficha' : 'falta'
-    else if (faltaTodo.has(c.clave)) estado = 'ficha' // origen ficha: lo pone asegura, no se puede saber desde aquí
+    else if (faltaTodo.has(c.clave)) estado = sinDatoEnFicha.includes(c.clave) ? 'falta' : 'ficha' // origen ficha: lo pone asegura; salvo que se SEPA que la ficha no lo tiene
     else if (supuestas.has(c.clave)) estado = 'supuesto'
     else estado = 'ok'
     filas.push({ clave: c.clave, etiqueta: c.etiqueta, estado })

@@ -8,17 +8,31 @@ import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
 import { leerVehiculoWorker, type VehiculoEncadenado } from './tarificador-espera-vehiculo.ts'
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
-  claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FormularioAuto, type InventarioDom, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
+  claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarFormularioHogar, validarFormularioHogarSinTomador, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
+  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FormularioAuto, type FormularioHogarSinTomador, type InventarioDom, type TomadorHogar, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
-/** Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto). */
-export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto' | 'auto'; riesgo: FormularioAuto }
+/**
+ * Entrada de `POST /encolar` ya validada: el ramo discrimina el riesgo (13/10/2026: comunidades o moto; 14/10/2026: auto;
+ * 19/10/2026: hogar, SIN el bloque `tomador`: el DNI y el nacimiento los pone asegura desde la ficha al entregar el trabajo).
+ */
+export type EntradaRamo = { ramo: 'comunidades'; riesgo: RiesgoComunidad } | { ramo: 'moto' | 'auto'; riesgo: FormularioAuto } | { ramo: 'hogar'; riesgo: FormularioHogarSinTomador }
 export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: false; mensaje: string; errores?: string[]; faltan?: Faltante[] }
 
 /** Cada ramo con SU validador (el worker repite la misma validación antes de abrir el navegador). */
-/** Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Una integración de otro ramo (Hogar) solo explora. */
-export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto'] as const
+/**
+ * Ramos con adaptador de TARIFICACIÓN (lo que acepta `validarEntradaRamo`). Hogar (19/10/2026) solo para las compañías de
+ * `COMPANIAS_HOGAR_RPA`: la fila `mapfre/hogar` u `occident/hogar` sigue habilitando solo la EXPLORACIÓN.
+ */
+export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto', 'hogar'] as const
+
+/** Compañías con bot de TARIFICACIÓN de Hogar. Hoy solo Allianz (Mapfre hogar pide datos del tomador que asegura no inyecta; Occident, sin bot). */
+export const COMPANIAS_HOGAR_RPA = ['allianz'] as const
+
+/** ¿Esta compañía puede tarificar este ramo por RPA? Todo ramo salvo Hogar (solo `COMPANIAS_HOGAR_RPA`). PURA. */
+export function companiaAdmiteRamoRpa(compania: string, ramo: string): boolean {
+  return ramo !== 'hogar' || (COMPANIAS_HOGAR_RPA as readonly string[]).includes(claveCompania(compania))
+}
 
 /**
  * Con `compania` (15/10/2026), además de la FORMA del ramo, lo que el bot de esa compañía necesita para llegar a precio
@@ -28,6 +42,7 @@ export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto'] as const
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown, compania?: string): ValidacionEntradaRamo {
   const v = validarFormaRamo(ramo, riesgo)
   if (!v.ok || compania === undefined) return v
+  if (!companiaAdmiteRamoRpa(compania, v.entrada.ramo)) return { ok: false, mensaje: `ramo_no_admitido: el bot de ${claveCompania(compania)} no tarifica ${v.entrada.ramo} (hogar: solo ${COMPANIAS_HOGAR_RPA.join(', ')})` }
   const faltan = faltanParaTarificar(compania, v.entrada.ramo, v.entrada.riesgo, { sinFicha: true })
   if (faltan && faltan.length) return { ok: false, mensaje: mensajeFaltan(faltan), errores: faltan.map((f) => f.etiqueta), faltan }
   return v
@@ -46,7 +61,13 @@ function validarFormaRamo(ramo: unknown, riesgo: unknown): ValidacionEntradaRamo
     if (v.formulario.ramo !== ramo) return { ok: false, mensaje: 'riesgo inválido', errores: [`ramo: el formulario de un trabajo ${ramo} tiene que ser de ${ramo}`] }
     return { ok: true, entrada: { ramo, riesgo: v.formulario } }
   }
-  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades, moto o auto)' }
+  // Hogar (19/10/2026): el formulario SIN tomador. Un `tomador` que venga se DESCARTA (no se valida ni se guarda): el DNI y el
+  // nacimiento del tomador salen siempre de la ficha, nunca de plataforma (no cruzan el puerto).
+  if (ramo === 'hogar') {
+    const v = validarFormularioHogarSinTomador(riesgo)
+    return v.ok ? { ok: true, entrada: { ramo, riesgo: v.formulario } } : { ok: false, mensaje: 'riesgo inválido', errores: v.errores }
+  }
+  return { ok: false, mensaje: 'ramo no soportado por el tarificador RPA (comunidades, moto, auto u hogar)' }
 }
 
 // ─── NIF del tomador para Mapfre (14/10/2026, decisión de Alberto) ──────────
@@ -124,6 +145,11 @@ export function aplicarNifTomador(compania: string, ramo: string, riesgo: unknow
  * inyecta solo al entregar el trabajo al worker). Lo demás, tal cual. PURA.
  */
 export function riesgoSinNifTomador<T>(riesgo: T): T {
+  // Hogar (19/10/2026): el bloque `tomador` (DNI y nacimiento) lo pone asegura al entregar; en la cola nunca se guarda.
+  if (esObj(riesgo) && riesgo.ramo === 'hogar' && 'tomador' in riesgo) {
+    const { tomador: _fuera0, ...sinTomador } = riesgo
+    return riesgoSinNifTomador(sinTomador as T)
+  }
   if (!esObj(riesgo) || !('documentoTomador' in riesgo || 'datosTomador' in riesgo || 'fichaTomador' in riesgo)) return riesgo
   // También `datosTomador` (nombre, apellidos, nacimiento: mismo régimen que el NIF, se inyectan al entregar) y
   // `fichaTomador` (17/10/2026: documento, CP, localidad, dirección y fechas de la ficha; mismo régimen).
@@ -144,7 +170,11 @@ export function faltaCompaniaAnteriorRiesgo(compania: string, ramo: string, ries
  * mismos rechazos que `aplicarNifTomador`, pero el riesgo devuelto es SIEMPRE `riesgoSinNifTomador` (el documento
  * descifrado jamás vuelve de aquí ni se persiste). PURA.
  */
-export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string; faltan?: Faltante[] } {
+export function riesgoParaEncolar<T>(
+  compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador,
+  /** Hogar (19/10/2026): DNI/NIE y nacimiento de la ficha. Sin función = fail-closed (503 ilegible), nunca «no hace falta». */
+  leerTomadorHogar: () => LecturaTomadorHogar = () => ({ estado: 'ilegible' }),
+): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string; faltan?: Faltante[] } {
   const guardado = riesgoSinNifTomador(riesgo)
   // Compañía anterior (Mapfre auto, 15/10/2026): con años asegurado > 0 el portal pide su NOMBRE en «Figuras». Se corta aquí,
   // antes de gastar máquina, igual que `falta_datos_tomador`. El motivo dice QUÉ falta, nunca un valor.
@@ -158,10 +188,71 @@ export function riesgoParaEncolar<T>(compania: string, ramo: string, riesgo: T, 
   // Datos obligatorios para llegar a precio (15/10/2026, fuente única `faltanParaTarificar`): se evalúan sobre el riesgo TAL
   // COMO LO RECIBIRÁ EL WORKER (con NIF y datos de la ficha aplicados EN MEMORIA; `d.riesgo` no sale de aquí ni se guarda).
   // Sin declaración para esa compañía/ramo → fail-closed (el worker también lo rechazaría, tras gastar máquina).
-  const faltan = faltanParaTarificar(compania, ramo, d.riesgo)
+  // Tomador de Hogar (DNI/NIE y nacimiento de la ficha): igual, se COMPRUEBA aquí y se inyecta al entregar; nunca se guarda.
+  const h = aplicarTomadorHogar(compania, ramo, d.riesgo, leerTomadorHogar)
+  if (!h.ok) return h
+  const faltan = faltanParaTarificar(compania, ramo, h.riesgo)
   if (faltan === null) return { ok: false, status: 422, motivo: `sin_obligatorios_declarados: ${claveCompania(compania)}/${ramo} no declara qué datos necesita su bot para tarificar (module-tarificacion obligatorios.ts)` }
   if (faltan.length) return { ok: false, status: 422, motivo: `faltan_datos: ${mensajeFaltan(faltan)}`, faltan }
+  // Hogar: el worker valida el formulario ENTERO (edad del tomador 18-110, rangos…). Se corta aquí, antes de gastar máquina.
+  // Los errores nombran el campo, nunca el valor.
+  if (ramo === 'hogar') {
+    const v = validarFormularioHogar(h.riesgo)
+    if (!v.ok) return { ok: false, status: 422, motivo: `riesgo_invalido: ${v.errores.join('; ')}` }
+  }
   return { ok: true, riesgo: guardado }
+}
+
+// ─── Tomador de HOGAR (19/10/2026) ───────────────────────────────────────────
+// Allianz Hogar pide DNI/NIE y fecha de nacimiento del tomador en la pantalla 1. Mismo régimen que el NIF de Mapfre: los pone
+// ASEGURA desde la ficha del cliente (descifrada aquí); al encolar solo se COMPRUEBA que la ficha los tiene legibles y válidos
+// y se guarda el riesgo sin `tomador`; se inyectan al ENTREGAR el trabajo `en_curso`, solo en la respuesta, nunca en BD. Los
+// motivos nombran qué falta, jamás el valor. Solo personas físicas con DNI/NIE (el formulario de hogar no admite CIF).
+
+/** `incompleta` = la ficha se leyó y le falta o tiene mal algo (frases, nunca valores); `ilegible` = el cifrado no abre (no se ha podido mirar). */
+export type LecturaTomadorHogar = { estado: 'ok'; tomador: TomadorHogar } | { estado: 'incompleta'; faltan: string[] } | { estado: 'ilegible' }
+
+/** ¿El bot de este trabajo necesita el tomador de la ficha? Allianz + hogar. PURA. */
+export function necesitaTomadorHogar(compania: string, ramo: string): boolean {
+  return ramo === 'hogar' && (COMPANIAS_HOGAR_RPA as readonly string[]).includes(claveCompania(compania))
+}
+
+/** Ficha → tomador de hogar, con TRES estados por campo. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza → `ilegible`. PURA. */
+export function lecturaTomadorHogar(fila: FilaTomadorFicha | null, descifrar: (v: string) => string): LecturaTomadorHogar {
+  if (!fila) return { estado: 'incompleta', faltan: ['la ficha'] }
+  const abrir = (v: string | null): string | null => {
+    if (typeof v !== 'string' || v.trim() === '') return null
+    const claro = v.startsWith('v1:') ? descifrar(v) : v
+    return typeof claro === 'string' && claro.trim() !== '' ? claro.trim() : null
+  }
+  let dni: string | null, nac: string | null
+  try {
+    dni = abrir(fila.dni)
+    nac = abrir(fila.fechaNacimiento)
+  } catch {
+    return { estado: 'ilegible' }
+  }
+  if (fila.tipoPersona === 'juridica' || (dni !== null && esCif(normalizarDocumento(dni)))) {
+    return { estado: 'incompleta', faltan: ['un tomador persona física con DNI/NIE (el hogar de Allianz no admite empresas)'] }
+  }
+  const faltan: string[] = []
+  const doc = dni === null ? null : normalizarDocumento(dni)
+  if (dni === null) faltan.push('el DNI/NIE')
+  else if (doc === null || !esDniNie(doc)) faltan.push('un DNI/NIE válido')
+  const fecha = nac === null ? null : fechaIsoDeFicha(nac)
+  if (nac === null) faltan.push('la fecha de nacimiento')
+  else if (fecha === null) faltan.push('una fecha de nacimiento válida')
+  if (faltan.length || doc === null || fecha === null) return { estado: 'incompleta', faltan }
+  return { estado: 'ok', tomador: { documentoIdentidad: doc, fechaNacimiento: fecha } }
+}
+
+/** Pone `tomador` (de la ficha) en el riesgo de Hogar de Allianz; otro ramo o compañía, tal cual. 422 `falta_datos_tomador` / 503 `datos_tomador_ilegibles`. PURA. */
+export function aplicarTomadorHogar(compania: string, ramo: string, riesgo: unknown, leer: () => LecturaTomadorHogar): NifTomadorAplicado {
+  if (!necesitaTomadorHogar(compania, ramo)) return { ok: true, riesgo }
+  const l = leer()
+  if (l.estado === 'ok') return { ok: true, riesgo: { ...(esObj(riesgo) ? riesgo : {}), tomador: l.tomador } }
+  if (l.estado === 'ilegible') return { ok: false, status: 503, motivo: 'datos_tomador_ilegibles: los datos de la ficha del cliente no se pueden descifrar (clave de la cartera); no se encola' }
+  return { ok: false, status: 422, motivo: `falta_datos_tomador: falta ${enumerar(l.faltan)} en la ficha del cliente (Allianz Hogar los pide en la pantalla del tomador); complétalo en la ficha` }
 }
 
 // ─── Datos del tomador para el ALTA en Mapfre (14/10/2026, revisión del PR #4710) ──────────

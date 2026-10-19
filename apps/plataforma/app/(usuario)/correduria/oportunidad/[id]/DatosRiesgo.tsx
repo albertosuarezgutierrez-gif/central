@@ -33,7 +33,7 @@ import {
   type FilaCapital, type FilaMedida, type FormCompanias,
 } from './piezas-comercio'
 import type { Riesgo } from '@/lib/riesgo-asegura'
-import { consultaCatastroDeForm, precargaCatastroVivienda, type CatastroVivienda, type PrecargaCatastro } from '@/lib/correduria/catastro-vivienda'
+import { avisoUsoCatastral, consultaCatastroDeForm, precargaCatastroVivienda, type CatastroVivienda, type PrecargaCatastro } from '@/lib/correduria/catastro-vivienda'
 
 const campoCss: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44,
@@ -174,7 +174,7 @@ const euros = (v: unknown) => (typeof v === 'number' ? eur(v) : null)
 
 const GRUPOS_VIVIENDA: Array<{ titulo: string; campos: CampoVivienda[] }> = [
   { titulo: 'Dónde está', campos: ['referenciaCatastral', 'direccion', 'tipoViaId', 'nombreVia', 'numeroVia', 'planta', 'puertaVivienda', 'cp', 'municipio', 'provincia'] },
-  { titulo: 'Cómo es', campos: ['metrosCuadrados', 'anioConstruccion', 'anioUltimaReforma', 'habitaciones', 'tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad'] },
+  { titulo: 'Cómo es', campos: ['metrosCuadrados', 'anioConstruccion', 'anioUltimaReforma', 'habitaciones', 'tipoVivienda', 'uso', 'ocupacion', 'conMadera', 'ubicacion', 'material', 'calidad'] },
   { titulo: 'Protecciones', campos: ['alarma', 'puertasSecundarias', 'puertaPrincipalBlindada', 'ventanasSeguras', 'urbanizacionCerrada', 'vigilante'] },
   { titulo: 'Qué se asegura', campos: ['propietarioEsTomador', 'capitalContinente', 'capitalContenido', 'joyasEnCajaFuerte', 'joyasFueraDeCaja', 'objetosDeValor', 'perrosPeligrosos', 'asentamiento'] },
 ]
@@ -187,11 +187,18 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
   const [notaMunicipio, setNotaMunicipio] = useState<string | null>(null)
   const E = useEdicion('datosVivienda', props, ESPEC_VIVIENDA, d, 'los datos de la vivienda')
   const [catastro, setCatastro] = useState<CatastroLectura>({ estado: 'idle' })
+  // Campos que acaba de rellenar el Catastro y nadie ha tocado ni guardado: se pintan como SUGERIDOS (borde discontinuo) hasta que
+  // la persona los cambie o los guarde. Lo que trae el Catastro es una sugerencia; Alberto la confirma con «Guardar» y «Confirmar».
+  const [sugeridos, setSugeridos] = useState<string[]>([])
+  useEffect(() => { if (!E.editando) { setSugeridos([]); setCatastro({ estado: 'idle' }) } }, [E.editando])
+  const quitarSugerido = (k: string) => setSugeridos((l) => (l.includes(k) ? l.filter((x) => x !== k) : l))
 
   // Rellenar desde el Catastro (gratis, servicio público; el mismo que `HogarCatastro`/`hogar-nuevo`): solo lo VACÍO
-  // del formulario; lo ya escrito que difiere se enseña, no se pisa. Nada se guarda hasta «Guardar».
-  async function leerCatastro(cuerpo?: { referencia: string }) {
-    const q = cuerpo ? { ok: true as const, cuerpo } : consultaCatastroDeForm(E.form, nombreOpcion('tipoViaId', E.form.tipoViaId || null))
+  // del formulario; lo ya escrito que difiere se enseña, no se pisa. Nada se guarda hasta «Guardar». `base` = el formulario recién
+  // abierto desde la lectura (el estado aún no se ha repintado).
+  async function leerCatastro(cuerpo?: { referencia: string }, base?: Form) {
+    const form = base ?? E.form
+    const q = cuerpo ? { ok: true as const, cuerpo } : consultaCatastroDeForm(form, nombreOpcion('tipoViaId', form.tipoViaId || null))
     if (!q.ok) { setCatastro({ estado: 'aviso', texto: q.motivo }); return }
     setCatastro({ estado: 'consultando' })
     try {
@@ -199,10 +206,11 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       const j = (await res.json().catch(() => null)) as RespuestaCatastro | { error?: string } | null
       if (!j || !('estado' in j)) { setCatastro({ estado: 'aviso', texto: `No se ha podido consultar el Catastro (${(j as { error?: string } | null)?.error ?? `HTTP ${res.status}`}). No significa que la vivienda no exista: no se ha podido mirar.` }); return }
       if (j.estado === 'ok') {
-        const pre = precargaCatastroVivienda(E.form, j.referencia, j.precalificacion.datos)
+        const pre = precargaCatastroVivienda(form, j.referencia, j.precalificacion.datos)
         // El relleno se calcula sobre el formulario de AHORA (no el de antes de la consulta): no pisa lo escrito mientras tanto.
         if (Object.keys(pre.cambios).length > 0) E.setForm((f) => ({ ...f, ...precargaCatastroVivienda(f, j.referencia, j.precalificacion.datos).cambios }))
-        setCatastro({ estado: 'hecho', pre })
+        setSugeridos(Object.keys(pre.cambios))
+        setCatastro({ estado: 'hecho', pre, uso: j.precalificacion.datos.uso ?? null })
         return
       }
       if (j.estado === 'elegir') { setCatastro({ estado: 'elegir', via: j.via, inmuebles: j.inmuebles }); return }
@@ -241,6 +249,7 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
   function valorLegible(k: CampoVivienda): React.ReactNode {
     const v = d[k]
     if (v === null || v === undefined) return sinDato
+    if (k === 'conMadera') return v === true ? 'Con madera' : v === false ? 'Sin madera' : sinDato
     if (typeof v === 'boolean') return v ? 'Sí' : 'No'
     if (CAMPOS_EUROS.has(k)) return euros(v) ?? sinDato
     if (k === 'metrosCuadrados') return `${(v as number).toLocaleString('es-ES')} m²`
@@ -277,6 +286,11 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
     }))
   }
 
+  // «Rellenar desde el Catastro» ya desde la lectura: hay una referencia de bien (20 caracteres) y aún falta algo que el Catastro da.
+  const referenciaGuardada = typeof d.referenciaCatastral === 'string' ? d.referenciaCatastral.replace(/[\s-]/g, '').toUpperCase() : null
+  const ofreceCatastro = referenciaGuardada !== null && /^[0-9A-Z]{20}$/.test(referenciaGuardada)
+    && ['metrosCuadrados', 'anioConstruccion', 'cp', 'nombreVia', 'numeroVia'].some((k) => d[k] === null || d[k] === undefined)
+
   return (
     <Marco
       titulo="Datos de la vivienda"
@@ -288,6 +302,17 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
       onEditar={E.abrir} onConfirmar={() => void E.guardar({}, true)} onGuardar={E.enviar} onCancelar={() => E.setEditando(false)}
       lectura={
         <div style={{ display: 'grid', gap: 12 }}>
+          {ofreceCatastro && (
+            <div style={{ display: 'grid', gap: 6, minWidth: 0 }}>
+              <button type="button" disabled={E.bloqueado} onClick={() => { E.abrir(); void leerCatastro({ referencia: referenciaGuardada! }, aForm(ESPEC_VIVIENDA, d)) }}
+                style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start', maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
+                Rellenar desde el Catastro (gratis)
+              </button>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                Con la referencia catastral se traen dirección, m² y año de construcción. Quedan como sugeridos hasta que los revises y pulses «Guardar»; el uso, el régimen, el tipo y la madera no los sabe el Catastro.
+              </span>
+            </div>
+          )}
           {GRUPOS_VIVIENDA.map((g) => (
             <div key={g.titulo} style={{ display: 'grid', gap: 6 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)' }}>{g.titulo}</div>
@@ -312,6 +337,17 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                 {g.campos.map((k) => {
                   const c = ESPEC_VIVIENDA.find((x) => x.clave === k)!
                   const et = ETIQUETA_CAMPO_VIVIENDA[k]
+                  if (k === 'conMadera') {
+                    // Pregunta EXPLÍCITA (Allianz la hace y decide la tarifa): sin respuesta no se asume «sin madera».
+                    return (
+                      <label key={k} style={etiquetaCss}>{et}
+                        <select value={E.form[k] ?? ''} onChange={E.set(k)} style={campoCss}>
+                          <option value="">Sin contestar</option><option value="no">Sin madera</option><option value="si">Con madera</option>
+                        </select>
+                        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 400 }}>Allianz Hogar lo pregunta; sin contestar, el bot no pide precio.</span>
+                      </label>
+                    )
+                  }
                   if (c.tipo.t === 'bool') {
                     return (
                       <label key={k} style={etiquetaCss}>{et}
@@ -337,10 +373,13 @@ function DatosVivienda(props: Props & { d: Record<string, unknown>; faltan: stri
                     )
                   }
                   const numerico = c.tipo.t === 'entero' || c.tipo.t === 'numero'
+                  const sugerido = sugeridos.includes(k)
                   return (
                     <label key={k} style={etiquetaCss}>{et}
-                      <input value={E.form[k] ?? ''} onChange={k === 'cp' ? alCambiarCp : E.set(k)} inputMode={numerico ? 'decimal' : k === 'cp' ? 'numeric' : undefined}
-                        maxLength={c.tipo.t === 'texto' ? c.tipo.max : k === 'referenciaCatastral' ? 24 : undefined} style={campoCss} />
+                      <input value={E.form[k] ?? ''} onChange={(ev) => { quitarSugerido(k); if (k === 'cp') alCambiarCp(ev); else E.set(k)(ev) }} inputMode={numerico ? 'decimal' : k === 'cp' ? 'numeric' : undefined}
+                        maxLength={c.tipo.t === 'texto' ? c.tipo.max : k === 'referenciaCatastral' ? 24 : undefined}
+                        style={sugerido ? { ...campoCss, borderStyle: 'dashed', borderColor: 'var(--warning)' } : campoCss} />
+                      {sugerido && <span style={{ fontSize: 11, color: 'var(--warning)', fontWeight: 400 }}>Sugerido por el Catastro: revísalo y guarda.</span>}
                     </label>
                   )
                 })}
@@ -384,7 +423,7 @@ type RespuestaCatastro =
 
 type CatastroLectura =
   | { estado: 'idle' } | { estado: 'consultando' } | { estado: 'aviso'; texto: string }
-  | { estado: 'hecho'; pre: PrecargaCatastro }
+  | { estado: 'hecho'; pre: PrecargaCatastro; uso: string | null }
   | { estado: 'elegir'; via: string; inmuebles: Array<{ refCompleta: string; planta: string | null; puerta: string | null }> }
 
 /** Qué ha hecho el Catastro con el formulario: lo rellenado, lo que difiere (sin tocar) o el piso a elegir. */
@@ -410,6 +449,8 @@ function CatastroResultado({ c, onElegir, deshabilitado }: { c: CatastroLectura;
       <span style={{ color: 'var(--muted)' }}>
         {rellenos.length > 0 ? `Del Catastro: ${rellenos.join(', ')}. Revísalo y pulsa «Guardar».` : 'El Catastro no trae nada que no estuviera ya escrito.'}
       </span>
+      {/* Uso CATASTRAL: informativo. El uso del seguro (habitual, secundaria, alquiler…) y el régimen NO se infieren del Catastro. */}
+      <span style={{ color: avisoUsoCatastral(c.uso)?.startsWith('Uso catastral') ? 'var(--muted)' : 'var(--warning)' }}>{avisoUsoCatastral(c.uso)}</span>
       {c.pre.distintos.map((x) => (
         <span key={x.campo} style={{ color: 'var(--warning)' }}>
           {ETIQUETA_CAMPO_VIVIENDA[x.campo]}: escrito «{x.escrito}», el Catastro dice «{x.catastro}» (no se ha cambiado).

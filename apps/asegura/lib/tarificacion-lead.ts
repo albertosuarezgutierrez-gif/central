@@ -12,15 +12,16 @@
 // 🛡️ Todo SQL lleva `correduria_id` (puerta `lib/tenant`). 🚨 TARIFICAR ≠ EMITIR: nada de aquí habla con Codeoscopic.
 // Nada de valores personales en la respuesta ni en logs: compañías, claves y conteos.
 import { prisma } from './tenant'
+import { personaDeFicha } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
 import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
-import { rpaActivo, validarEntradaRamo } from './tarificador-reglas'
+import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
-import { claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
+import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
-  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
+  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, carneDePersonaFicha, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
   type FormularioLead, type LecturaMoto, type RamoBotLead, type Supuesto, type ValoracionCompania,
 } from './tarificacion-lead-puro'
 
@@ -79,6 +80,8 @@ async function companiasConBot(correduriaId: string, ramo: string): Promise<stri
   const out: string[] = []
   for (const f of filas) {
     if (!puedeAutomatizar(f.modo)) continue
+    // Una fila activa solo habilita EXPLORAR en ramos como hogar (mapfre/occident): sin bot de tarificación no cuenta (→ `sin_bot`).
+    if (!companiaAdmiteRamoRpa(f.compania, ramo)) continue
     if (await pausaViva(prisma, correduriaId, claveCompania(f.compania), ramo).catch(() => true)) continue
     out.push(claveCompania(f.compania))
   }
@@ -110,6 +113,15 @@ async function nacimientoFicha(correduriaId: string, clienteId: string): Promise
     const es = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t)
     return iso ? `${iso[1]}-${iso[2]}-${iso[3]}` : es ? `${es[3]}-${es[2]}-${es[1]}` : null
   } catch { return null }
+}
+
+/**
+ * Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de
+ * la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo leer (nunca un valor de relleno).
+ */
+async function carneFicha(correduriaId: string, clienteId: string, ramo: string): Promise<string | null> {
+  const p = await personaDeFicha(correduriaId, clienteId, ramo === 'moto' ? 'moto' : 'auto').catch(() => null)
+  return carneDePersonaFicha(p, ramo)
 }
 
 type Interno = RevisionOportunidad & { formulario: FormularioLead | null }
@@ -164,8 +176,11 @@ async function revisarInterno(correduriaId: string, clienteId: string, oportunid
     if (pendientes.length) { ops.push({ ...base, estado: 'discrepancias', pendientes }); continue }
     const { valores, ilegibles } = await descifrarContrato(info)
     const ramo: RamoBotLead = f.tipo
+    const vehiculo = ramo === 'auto' || ramo === 'moto'
     const formulario = formularioBotDesdeLead({
-      ramo, valores, ilegibles, bloque: esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
+      // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
+      ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
+      ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo) } : {}),
       ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
       ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
     })

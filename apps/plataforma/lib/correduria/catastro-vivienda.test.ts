@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { consultaCatastroDeForm, precargaCatastroVivienda, type CatastroVivienda } from './catastro-vivienda.ts'
+import { avisoUsoCatastral, consultaCatastroDeForm, partirViaCatastro, precargaCatastroVivienda, type CatastroVivienda } from './catastro-vivienda.ts'
 
 const cat: CatastroVivienda = {
   metrosCuadrados: 76, anioConstruccion: 1994, direccion: 'CL SAN VICENTE 40 Pl:02 Pt:14', localidad: 'SEVILLA', provincia: 'SEVILLA', codigoPostal: '41002',
@@ -9,7 +9,7 @@ const REF = '4825101TG3442E0015JW'
 
 test('rellena SOLO lo vacío del formulario', () => {
   const r = precargaCatastroVivienda({ referenciaCatastral: '', metrosCuadrados: '', anioConstruccion: '', cp: '', direccion: '', municipio: '', provincia: '' }, REF, cat)
-  assert.deepEqual(r.cambios, { referenciaCatastral: REF, direccion: 'CL SAN VICENTE 40 Pl:02 Pt:14', cp: '41002', municipio: 'SEVILLA', provincia: 'SEVILLA', metrosCuadrados: '76', anioConstruccion: '1994' })
+  assert.deepEqual(r.cambios, { referenciaCatastral: REF, direccion: 'CL SAN VICENTE 40 Pl:02 Pt:14', nombreVia: 'SAN VICENTE', numeroVia: '40', planta: '2', puertaVivienda: '14', cp: '41002', municipio: 'SEVILLA', provincia: 'SEVILLA', metrosCuadrados: '76', anioConstruccion: '1994' })
   assert.deepEqual(r.distintos, [])
 })
 
@@ -24,6 +24,7 @@ test('lo ya escrito NO se pisa: si el Catastro dice otra cosa, se enseña como d
 test('lo que el Catastro no trae NO se convierte en 0 ni en vacío: sigue sin dato', () => {
   const r = precargaCatastroVivienda({}, REF, { metrosCuadrados: null, anioConstruccion: null, direccion: null, localidad: null, provincia: null, codigoPostal: null })
   assert.deepEqual(r.cambios, { referenciaCatastral: REF })
+  assert.deepEqual(Object.keys(precargaCatastroVivienda({}, REF, { ...cat, direccion: null }).cambios), ['referenciaCatastral', 'cp', 'municipio', 'provincia', 'metrosCuadrados', 'anioConstruccion'], 'sin dirección no hay calle, número, planta ni puerta')
   const cero = precargaCatastroVivienda({}, null, { ...cat, metrosCuadrados: 0, codigoPostal: '410' })
   assert.equal(cero.cambios.metrosCuadrados, undefined, '0 m² no es una superficie')
   assert.equal(cero.cambios.cp, undefined, 'un CP que no son 5 cifras no se escribe')
@@ -40,4 +41,35 @@ test('consulta: la referencia escrita manda; si no, calle + número + municipio 
   assert.equal(sinMunicipio.ok, false)
   const nada = consultaCatastroDeForm({}, null)
   assert.equal(nada.ok, false)
+})
+
+// 19/10/2026: calle, número, planta y puerta salen de la dirección del Catastro SOLO si tiene la forma esperada.
+test('partirViaCatastro: sigla + nombre + número (+ interior, CP y municipio opcionales)', () => {
+  assert.deepEqual(partirViaCatastro('CL SAN VICENTE 40 Pl:02 Pt:14'), { nombreVia: 'SAN VICENTE', numeroVia: '40', planta: '2', puerta: '14' })
+  assert.deepEqual(partirViaCatastro('AV JUAN ANT RUIZ 43 Es:1 Pl:01 Pt:IZ 41807 ESPARTINAS'), { nombreVia: 'JUAN ANT RUIZ', numeroVia: '43', planta: '1', puerta: 'IZ' })
+  assert.deepEqual(partirViaCatastro('CL PRUEBA 12B'), { nombreVia: 'PRUEBA', numeroVia: '12B', planta: null, puerta: null })
+})
+
+test('partirViaCatastro: planta baja («00») y lo ilegible quedan SIN DATO (no se supone); S/N no es un número', () => {
+  assert.equal(partirViaCatastro('CL PRUEBA 5 Pl:00 Pt:A').planta, null)
+  assert.equal(partirViaCatastro('CL PRUEBA 5 Pl:AT Pt:A').planta, 'AT')
+  assert.deepEqual(partirViaCatastro('CL PRUEBA S/N'), { nombreVia: null, numeroVia: null, planta: null, puerta: null })
+  assert.deepEqual(partirViaCatastro('PRUEBA 5'), { nombreVia: null, numeroVia: null, planta: null, puerta: null })
+  for (const raro of [null, undefined, '', '   ']) assert.deepEqual(partirViaCatastro(raro), { nombreVia: null, numeroVia: null, planta: null, puerta: null })
+})
+
+test('precarga: calle/número/planta/puerta del Catastro se rellenan SOLO si estaban vacíos; lo escrito no se pisa', () => {
+  const r = precargaCatastroVivienda({ nombreVia: 'Otra Calle', numeroVia: '', planta: '2' }, REF, cat)
+  assert.equal(r.cambios.numeroVia, '40')
+  assert.equal(r.cambios.puertaVivienda, '14')
+  assert.equal(r.cambios.nombreVia, undefined)
+  assert.deepEqual(r.distintos.map((d) => d.campo), ['nombreVia'], 'la planta escrita coincide: no es una diferencia')
+})
+
+test('uso catastral: solo informa. Residencial no alarma; otro uso o sin uso avisa; nunca decide el uso del seguro', () => {
+  assert.match(avisoUsoCatastral('Residencial')!, /Es informativo: el uso del seguro/)
+  assert.match(avisoUsoCatastral('Comercial')!, /no como vivienda/)
+  assert.match(avisoUsoCatastral(null)!, /no informa el uso/)
+  const conUso = precargaCatastroVivienda({}, REF, { ...cat, uso: 'Residencial' })
+  assert.ok(!('uso' in conUso.cambios) && !('ocupacion' in conUso.cambios), 'el uso catastral no rellena ningún campo del formulario')
 })

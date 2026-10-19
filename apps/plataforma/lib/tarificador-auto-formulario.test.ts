@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { supuestosFavorablesPara } from '@central/module-tarificacion'
 import { join } from 'node:path'
 import { claveCerrada, formularioBotAuto, garajeNocheDeCodigo, tipoGarajeDeCodigo, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 import { completarRiesgoAutoDesdeFicha, datoDePersonaBot, historialBot, mensajeFaltanDeFicha, type FichaParaBot } from './tarificador-moto-formulario.ts'
@@ -66,10 +67,14 @@ test('marca/modelo opcionales en coche (Mapfre confirma por matrícula): sin los
   assert.equal('descripcion' in (ok(entrada({ version: 'llamar al 600123456' })).riesgo.seleccionVehiculo as object), false)
 })
 
-test('historial que el bot exige y no consta → se ENSEÑA como falta (no se encola a ciegas, nunca 0 inventado)', () => {
+test('historial que no consta → NO bloquea (supuesto favorable, como moto): viaja null, nunca un número inventado', () => {
   assert.match(faltan(entrada({ tieneSeguroActual: false })), /Seguro actual/)
-  assert.match(faltan(entrada({ aniosAsegurado: '' })), /Años asegurado/)
-  assert.match(faltan(entrada({ aniosSinSiniestros: '2', siniestrosUltimos5: '' })), /Siniestros con culpa/)
+  const sinAnios = ok(entrada({ aniosAsegurado: '' }))
+  assert.equal(sinAnios.riesgo.aniosAseguradoAnterior, null)
+  const sinSin = ok(entrada({ aniosSinSiniestros: '2', siniestrosUltimos5: '' }))
+  assert.equal(sinSin.riesgo.siniestrosUltimos5Anios, null)
+  // el supuesto queda marcado como tal en la fuente única del checklist
+  assert.deepEqual(supuestosFavorablesPara('mapfre', 'auto', sinAnios.riesgo), ['aniosAseguradoAnterior'])
   assert.equal(ok(entrada({ aniosSinSiniestros: '2', siniestrosUltimos5: '0' })).riesgo.siniestrosUltimos5Anios, 0)
   assert.equal(ok(entrada({ aniosSinSiniestros: '2', siniestrosUltimos5: '1' })).riesgo.siniestrosUltimos5Anios, 1)
 })
