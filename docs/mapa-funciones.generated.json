@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-19T10:45:56Z",
-  "sha": "62f7b9f97d40c8deceb84467f192512e5b51865c",
+  "generadoEn": "2026-10-19T11:23:44Z",
+  "sha": "0700b59454ea827ba0622e9b192023a6886e3304",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -20792,6 +20792,15 @@
       "hash": "33982150c621"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/correo/tarificar-lead/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [],
+      "rutaApi": "/api/operador/correo/tarificar-lead",
+      "hash": "f0d91837834b"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/declaradas-vencer/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -37073,7 +37082,8 @@
         "conocidosDeFicha",
         "estadoDatosTrasRespuesta",
         "textoHistorialRespuesta",
-        "validarAdjunto"
+        "validarAdjunto",
+        "previosDeFicha"
       ],
       "funciones": [
         {
@@ -37172,11 +37182,20 @@
           "retorno": "",
           "linea": 153,
           "resumen": "`{ hiloId, from, gmailMessageId, nombre, mime, base64 }`. PURA."
+        },
+        {
+          "nombre": "previosDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { nombre: string | null; apellidos: string | null; fechaNacimiento: string | null; estadoCivil: string | null }, conocidos: ReadonlySet<string>, descifrar: (v: string) => string,",
+          "retorno": "Record<string, unknown>",
+          "linea": 176,
+          "resumen": "Lo que la FICHA ya dice de la persona, en la forma que compara `decidirFusion` (revisión F2, 19/10/2026): nombre y apellidos en claro, estado civil tal cual (se compara por categoría) y la fecha de na"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "24308c3522e0"
+      "hash": "44da2ae6778e"
     },
     {
       "ruta": "apps/asegura/lib/correo-respuesta-lead.ts",
@@ -37275,7 +37294,7 @@
           "exportada": false,
           "params": "fn: () => T",
           "retorno": "T | null",
-          "linea": 248
+          "linea": 243
         },
         {
           "nombre": "guardarAdjuntoLead",
@@ -37283,7 +37302,7 @@
           "exportada": true,
           "params": "correduriaId: string, a: AdjuntoLead",
           "retorno": "Promise<ResultadoAdjunto>",
-          "linea": 260,
+          "linea": 255,
           "resumen": "Guarda un adjunto del cliente CIFRADO entero (contenido y nombre) ligado a su ficha y a la oportunidad del hilo. Fail-closed: sin `PII_ENCRYPTION_KEY` no se guarda, tampoco en desarrollo. Idempotente "
         }
       ],
@@ -37291,7 +37310,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "f253e2bb541a"
+      "hash": "ee180b38078c"
     },
     {
       "ruta": "apps/asegura/lib/correo-seguimiento.ts",
@@ -47976,6 +47995,269 @@
       ],
       "rutaApi": null,
       "hash": "58bc2858c1e0"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificacion-lead-puro.ts",
+      "ambito": "apps/asegura",
+      "resumen": "F3a — «Listo para tarificar» de un lead, PRIMERO con los BOTS (gratis) (19/10/2026, spec lead → propuesta §F3 y §3.3; decisión de Alberto: los bots RPA van antes que Avant2 para no gastar 0,50€). PURO: sin BD, sin red, sin env (salvo el que se le pasa). La parte con BD es `tarificacion-lead.ts`; el ",
+      "exporta": [
+        "topeDiario",
+        "diaMadrid",
+        "diaDeCompacto",
+        "caben",
+        "esRamoBotLead",
+        "ramoConBot",
+        "garajeDeTexto",
+        "historialDeTexto",
+        "formularioBotDesdeLead",
+        "claveContratoDeBot",
+        "valorarCompania",
+        "validarPeticionTarificarLead"
+      ],
+      "funciones": [
+        {
+          "nombre": "topeDiario",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: Record<string, string | undefined>",
+          "retorno": "number",
+          "linea": 28,
+          "resumen": "Tope diario de trabajos de bot desde leads. Vacío o inválido → 20; nunca más de 100. PURA."
+        },
+        {
+          "nombre": "diaMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "string",
+          "linea": 37,
+          "resumen": "Día de Madrid `aaaa-mm-dd` (la fila del contador). PURA (el reloj se inyecta)."
+        },
+        {
+          "nombre": "diaDeCompacto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 42,
+          "resumen": "`aaaammdd` (lo que viaja en `clp_top:<aaaammdd>`) → `aaaa-mm-dd`, o `null` si no es una fecha real. PURA."
+        },
+        {
+          "nombre": "caben",
+          "kind": "function",
+          "exportada": true,
+          "params": "usadas: number, tope: number, extra: number, n: number",
+          "retorno": "boolean",
+          "linea": 51,
+          "resumen": "¿Caben `n` trabajos más hoy? El tope efectivo nunca pasa de 100 aunque se amplíe. PURA."
+        },
+        {
+          "nombre": "esRamoBotLead",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "r: string",
+          "retorno": "r is RamoBotLead",
+          "linea": 61
+        },
+        {
+          "nombre": "ramoConBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string",
+          "retorno": "boolean",
+          "linea": 64,
+          "resumen": "¿Hay bot para este ramo en el código? Fuente: `RAMOS_TARIFICABLES_RPA` (la BD decide luego qué compañías). PURA."
+        },
+        {
+          "nombre": "txt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string",
+          "linea": 94
+        },
+        {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 95
+        },
+        {
+          "nombre": "hay",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": null,
+          "linea": 96
+        },
+        {
+          "nombre": "garajeDeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 99,
+          "resumen": "«dónde duerme» en palabras del cliente → garaje del bot. `null` = no se entiende (no se traduce a ojo). PURA."
+        },
+        {
+          "nombre": "historialDeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "",
+          "linea": 128,
+          "resumen": "El texto libre del «seguro anterior» → lo que piden los bots. CONSERVADOR: solo lo que se lee sin ambigüedad (un único número de años, «sin partes» = 0 siniestros, una sola compañía reconocida). Lo de"
+        },
+        {
+          "nombre": "formularioBotDesdeLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaFormulario",
+          "retorno": "FormularioLead",
+          "linea": 150,
+          "resumen": "Contrato del lead + bloque del riesgo → `FormularioAuto` candidato (auto/moto). Nada personal se inventa: lo que falta no se pone (lo dirá `faltanParaTarificar`). Lo supuesto va en `supuestos`. PURA."
+        },
+        {
+          "nombre": "claveContratoDeBot",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, claveBot: string",
+          "retorno": "string | null",
+          "linea": 225,
+          "resumen": "Clave de un validador del bot («conductor.fechaCarne») → clave del contrato que la pregunta (`fechaCarnet`). PURA."
+        },
+        {
+          "nombre": "valorarCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: RamoBotLead, f: FormularioLead",
+          "retorno": "ValoracionCompania",
+          "linea": 247,
+          "resumen": "Para UNA compañía con bot activo: ¿llega a precio con este riesgo? Primero lo que falta (`faltanParaTarificar`, sin lo que pone la ficha al encolar), luego la FORMA (`validarEntradaRamo`). Cada hueco "
+        },
+        {
+          "nombre": "validarPeticionTarificarLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "b: unknown, hoy: string",
+          "retorno": "",
+          "linea": 279,
+          "resumen": "`{ accion, clienteId, oportunidadIds[], actor }` · `{ accion:'ampliar_tope', dia:'aaaammdd', actor }`. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ed11a6a1b0d8"
+    },
+    {
+      "ruta": "apps/asegura/lib/tarificacion-lead.ts",
+      "ambito": "apps/asegura",
+      "resumen": "F3a — tarificar con BOTS un lead «listo para tarificar» (19/10/2026, spec lead → propuesta §F3; decisión de Alberto: bots antes que Avant2). Parte con BD; las reglas viven en `tarificacion-lead-puro.ts` (con test). Puerto `POST /api/operador/correo/tarificar-lead`, que solo llama plataforma tras el ",
+      "exporta": [
+        "revisarTarificacionLead",
+        "tarificarLead",
+        "ampliarTopeLead"
+      ],
+      "funciones": [
+        {
+          "nombre": "esObj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is Record<string, unknown>",
+          "linea": 25
+        },
+        {
+          "nombre": "sinTabla",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "err: unknown",
+          "retorno": null,
+          "linea": 26
+        },
+        {
+          "nombre": "leerContador",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, dia: string",
+          "retorno": "Promise<",
+          "linea": 52
+        },
+        {
+          "nombre": "companiasConBot",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, ramo: string",
+          "retorno": "Promise<string[]>",
+          "linea": 65,
+          "resumen": "Compañías con bot ACTIVO para ese ramo en ESTA correduría (fila activa, `rpa_autorizada`, sin pausa)."
+        },
+        {
+          "nombre": "descifrarContrato",
+          "kind": "function",
+          "exportada": false,
+          "params": "info: Record<string, unknown>",
+          "retorno": "Promise<",
+          "linea": 79
+        },
+        {
+          "nombre": "nacimientoFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 91
+        },
+        {
+          "nombre": "revisarInterno",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, oportunidadIds: string[], ahora: Date",
+          "retorno": "Promise<",
+          "linea": 108
+        },
+        {
+          "nombre": "publico",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "o: Interno",
+          "retorno": "RevisionOportunidad",
+          "linea": 131
+        },
+        {
+          "nombre": "revisarTarificacionLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[] }, ahora = new Date()",
+          "retorno": "Promise<Revision>",
+          "linea": 133
+        },
+        {
+          "nombre": "tarificarLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, p: { clienteId: string; oportunidadIds: string[]; actor: string }, ahora = new Date()",
+          "retorno": "Promise<ResultadoTarificar>",
+          "linea": 149
+        },
+        {
+          "nombre": "ampliarTopeLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, dia: string",
+          "retorno": "Promise<ResultadoAmpliar>",
+          "linea": 231,
+          "resumen": "«➕ 10 más hoy». Solo para HOY (lo valida el puerto). El tope efectivo nunca pasa de 100."
+        }
+      ],
+      "tablas": [
+        "seguros",
+        "set"
+      ],
+      "rutaApi": null,
+      "hash": "72898b1989a6"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-bandeja-reglas.ts",
@@ -127001,7 +127283,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1413,
+          "linea": 1414,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -127010,7 +127292,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1420,
+          "linea": 1421,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -127019,7 +127301,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1432
+          "linea": 1433
         },
         {
           "nombre": "correduriaSegura",
@@ -127027,7 +127309,7 @@
           "exportada": false,
           "params": "texto: string, fromId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1438,
+          "linea": 1439,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -127058,7 +127340,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "51bc85b5a168"
+      "hash": "02b44cfb66b3"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -145817,10 +146099,10 @@
           "nombre": "resolverBotonClp",
           "kind": "function",
           "exportada": true,
-          "params": "d: Extract<DecisionClp, { ok: true }>",
+          "params": "d: Extract<DecisionClp, { ok: true }>, mensajeId: number | null = null",
           "retorno": "Promise<string | null>",
-          "linea": 147,
-          "resumen": "✅ / ✏️ / ❌. Devuelve la línea que sustituye a los botones (o `null` si ya se ha contestado de otra forma)."
+          "linea": 150,
+          "resumen": "✅ / ✏️ / ❌ y, F3a, 🤖 `tar` / ➕ `top`. Devuelve la línea que sustituye a los botones (o `null` si ya se ha contestado de otra forma). `mensajeId`: el mensaje pulsado (el ➕ es de un solo uso POR mensaj"
         },
         {
           "nombre": "cerrar",
@@ -145828,7 +146110,7 @@
           "exportada": false,
           "params": "id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown",
           "retorno": "Promise<void>",
-          "linea": 189
+          "linea": 207
         },
         {
           "nombre": "guardarEdicionClp",
@@ -145836,7 +146118,7 @@
           "exportada": true,
           "params": "id: number, texto: string",
           "retorno": "Promise<boolean>",
-          "linea": 200,
+          "linea": 218,
           "resumen": "Respuesta de Alberto a «✏️ Responde con el texto corregido [clp #id]». Sustituye el borrador (con el pie legal si faltaba) y lo vuelve a mandar con ✅/✏️/❌. `false` = no era una edición pendiente (el w"
         }
       ],
@@ -145844,7 +146126,7 @@
         "correduria_pendiente_tg"
       ],
       "rutaApi": null,
-      "hash": "57eb92c6b393"
+      "hash": "b7a533745169"
     },
     {
       "ruta": "apps/plataforma/lib/correo/lead-correduria-peticion.ts",
@@ -145902,7 +146184,7 @@
           "exportada": true,
           "params": "cb: { from?: { id?: number | string } }, action: string, args: readonly string[], chatPermitido: string | undefined,",
           "retorno": "DecisionClp",
-          "linea": 106,
+          "linea": 109,
           "resumen": "¿Vale la pulsación? Persona autorizada, acción conocida e id numérico. PURA."
         },
         {
@@ -145911,7 +146193,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "ResultadoEnvioPeticion",
-          "linea": 130,
+          "linea": 138,
           "resumen": "Respuesta de `POST /api/operador/correo/lead` → qué pasó. Lo desconocido es «incierto», jamás «no salió». PURA."
         },
         {
@@ -145920,7 +146202,7 @@
           "exportada": false,
           "params": "hilo: string",
           "retorno": "string",
-          "linea": 144,
+          "linea": 152,
           "resumen": "Aviso breve sobre el registro del hilo en asegura (`ok` → nada). PURA."
         },
         {
@@ -145929,7 +146211,7 @@
           "exportada": true,
           "params": "r: ResultadoEnvioPeticion | { estado: 'usado' } | { estado: 'ilegible' }",
           "retorno": "string",
-          "linea": 151,
+          "linea": 159,
           "resumen": "La línea que sustituye a los botones tras pulsar ✅. PURA."
         },
         {
@@ -145938,7 +146220,7 @@
           "exportada": true,
           "params": "id: number | string",
           "retorno": "string",
-          "linea": 170,
+          "linea": 178,
           "resumen": "El texto que pide la respuesta. El webhook reconoce la marca `[clp #<id>]` en `reply_to_message`."
         },
         {
@@ -145947,7 +146229,7 @@
           "exportada": true,
           "params": "textoCitado: string | null | undefined",
           "retorno": "number | null",
-          "linea": 175,
+          "linea": 183,
           "resumen": "Id del pendiente citado en la respuesta, o `null`. PURA."
         },
         {
@@ -145956,13 +146238,13 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "string | null",
-          "linea": 184,
+          "linea": 192,
           "resumen": "El texto que manda Alberto → el borrador nuevo. Sin el pie legal del mediador (DGSFP, RGPD) se le añade: la información previa del mediador va SIEMPRE. Vacío o demasiado corto → `null` (no se toca el "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d3d5f43e2be"
+      "hash": "0a06ce52486f"
     },
     {
       "ruta": "apps/plataforma/lib/correo/lead-correduria-proceso.ts",
@@ -146034,7 +146316,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo, ramos: string[], hoy: string",
           "retorno": "Promise<",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "procesarRespuestaLead",
@@ -146042,7 +146324,7 @@
           "exportada": true,
           "params": "correo: CorreoNuevo, ahora = new Date()",
           "retorno": "Promise<ResultadoRespuestaLead>",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "notaSinLeer",
@@ -146050,13 +146332,13 @@
           "exportada": true,
           "params": "motivo: string",
           "retorno": "string",
-          "linea": 113,
+          "linea": 127,
           "resumen": "Línea para el aviso de siempre cuando la respuesta NO se ha podido leer (HTML seguro). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dfa50590177a"
+      "hash": "2c264aa0a4ae"
     },
     {
       "ruta": "apps/plataforma/lib/correo/lead-correduria-respuesta.ts",
@@ -146187,6 +146469,287 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "bd2f93415803"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/lead-correduria-tarificar-proceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/lead-correduria-tarificar-proceso.ts — F3a con RED y BD: ofrecer y ejecutar la tarificación con BOTS de un lead (19/10/2026). Las reglas viven en `lead-correduria-tarificar.ts` (puro, con test) y en asegura (`tarificacion-lead-puro.ts`). Aquí solo se encadenan: · `ofrecerTarificacion`: re",
+      "exporta": [
+        "ofrecerTarificacion",
+        "resolverTarificarClp",
+        "resolverTopeClp"
+      ],
+      "funciones": [
+        {
+          "nombre": "actorTelegram",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "quien: string",
+          "retorno": null,
+          "linea": 24
+        },
+        {
+          "nombre": "sinListo",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "resumen: string",
+          "retorno": null,
+          "linea": 26,
+          "resumen": "La línea «✅ Datos completos — listo para tarificar» de F2 solo vale si de verdad se ofrece 🤖."
+        },
+        {
+          "nombre": "ofrecerTarificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { gmailMessageId: string; datos: DatosPeticion; resumen: string; asuntoOriginal: string }",
+          "retorno": "Promise<boolean>",
+          "linea": 32,
+          "resumen": "Datos completos (F2) → ¿qué se ofrece? `datos` es el de la petición (para una repregunta en el hilo) con `tipo: 'tarificar'`. Devuelve si se avisó. Nunca lanza."
+        },
+        {
+          "nombre": "tarificarPendiente",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: number, quien: string",
+          "retorno": "Promise<",
+          "linea": 90,
+          "resumen": "🤖 sobre el pendiente `id`. Devuelve la línea y el resultado (para que ➕ sepa si volvió a toparse). Nunca lanza."
+        },
+        {
+          "nombre": "despuesDeNada",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: number, datos: DatosPeticion, rev: Extract<Revision, { estado: 'ok' }>",
+          "retorno": "Promise<void>",
+          "linea": 120,
+          "resumen": "Tras «ningún bot llega a precio»: si es por algo que el cliente puede dar, repregunta F2 (con ✅); si no, qué falta."
+        },
+        {
+          "nombre": "cerrar",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown, purgar: boolean",
+          "retorno": "Promise<void>",
+          "linea": 139
+        },
+        {
+          "nombre": "resolverTarificarClp",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: number, quien: string",
+          "retorno": "Promise<string>",
+          "linea": 146,
+          "resumen": "🤖 `clp_tar:<id>`. La línea que sustituye a los botones. Si no se hizo nada, los botones vuelven. Nunca lanza."
+        },
+        {
+          "nombre": "enCola",
+          "kind": "function",
+          "exportada": false,
+          "params": "dia: string",
+          "retorno": "Promise<number | null>",
+          "linea": 154
+        },
+        {
+          "nombre": "avisarTope",
+          "kind": "function",
+          "exportada": false,
+          "params": "dia: string, tope: number | null",
+          "retorno": "Promise<void>",
+          "linea": 161
+        },
+        {
+          "nombre": "resolverTopeClp",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: string, quien: string, mensajeId: number | null",
+          "retorno": "Promise<string>",
+          "linea": 170,
+          "resumen": "➕ `clp_top:<aaaammdd>`. Un solo uso por MENSAJE (fila `tope:<día>:<mensaje>`): dos pulsaciones = una ampliación. Amplía 10 en asegura y relanza la cola de ese día en orden, hasta que se acabe o vuelva"
+        }
+      ],
+      "tablas": [
+        "correduria_pendiente_tg"
+      ],
+      "rutaApi": null,
+      "hash": "06dbf7301d60"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/lead-correduria-tarificar.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/lead-correduria-tarificar.ts — F3a: «🧮 Listo para tarificar» de un lead, PRIMERO con los BOTS (gratis) (19/10/2026, spec lead → propuesta §F3 y §3.3; decisión de Alberto: bots antes que Avant2 para no gastar 0,50€). PURO: sin red, sin BD, sin env (lo usan el triaje y el webhook; test al ",
+      "exporta": [
+        "leerRevision",
+        "decidirOferta",
+        "lineaContador",
+        "textoTarificar",
+        "botonesTarificar",
+        "botonTope",
+        "textoTope",
+        "leerTarificar",
+        "estadoPendienteTras",
+        "textoBotonVivo",
+        "lineaTrasTarificar",
+        "leerAmpliar"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown>",
+          "linea": 20
+        },
+        {
+          "nombre": "lista",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string[]",
+          "linea": 21
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 22
+        },
+        {
+          "nombre": "leerRevision",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "Revision",
+          "linea": 41,
+          "resumen": "Respuesta de `accion:'revisar'`. Lo desconocido es `error` (no se ofrece tarificar), nunca «todo listo». PURA."
+        },
+        {
+          "nombre": "decidirOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: Extract<Revision, { estado: 'ok' }>",
+          "retorno": "Oferta",
+          "linea": 78,
+          "resumen": "Qué se hace con la revisión. PURA."
+        },
+        {
+          "nombre": "cia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "c: string",
+          "retorno": null,
+          "linea": 89
+        },
+        {
+          "nombre": "ramoTxt",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: string",
+          "retorno": null,
+          "linea": 91
+        },
+        {
+          "nombre": "y",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "xs: readonly string[]",
+          "retorno": null,
+          "linea": 92
+        },
+        {
+          "nombre": "lineaContador",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { usadas: number; tope: number } | null",
+          "retorno": "string",
+          "linea": 95,
+          "resumen": "«Hoy: 7/20 tarificaciones con bots» (o que no se ha podido contar). PURA."
+        },
+        {
+          "nombre": "textoTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { id: number | string | null; pila: string | null; revision: Extract<Revision, { estado: 'ok' }> }",
+          "retorno": "string",
+          "linea": 103,
+          "resumen": "El cuerpo del aviso (HTML seguro): qué compañías se lanzarían por ramo, las que no y por qué (etiquetas), lo supuesto, los ramos sin bot y el contador. Sin € (los bots no cuestan; Avant2 no se ofrece "
+        },
+        {
+          "nombre": "botonesTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: number | string",
+          "retorno": "Boton[][]",
+          "linea": 129
+        },
+        {
+          "nombre": "botonTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: string",
+          "retorno": "Boton[][]",
+          "linea": 137,
+          "resumen": "`aaaa-mm-dd` → el botón «➕ 10 más hoy» (`clp_top:aaaammdd`, sin datos personales). PURA."
+        },
+        {
+          "nombre": "textoTope",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { tope: number; enCola: number }",
+          "retorno": "string",
+          "linea": 141
+        },
+        {
+          "nombre": "leerTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "ResultadoTarificar",
+          "linea": 159,
+          "resumen": "Respuesta → qué pasó. Lo desconocido es «incierto», jamás «no se lanzó». PURA."
+        },
+        {
+          "nombre": "estadoPendienteTras",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoTarificar",
+          "retorno": "'enviado' | 'fallido' | 'incierto' | 'pendiente' | 'cola'",
+          "linea": 176,
+          "resumen": "Qué hace el pendiente tras pulsar 🤖: se cierra, vuelve a esperar el botón o queda en cola. PURA."
+        },
+        {
+          "nombre": "textoBotonVivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoTarificar, id: number | string",
+          "retorno": "string | null",
+          "linea": 191,
+          "resumen": "Tras 🤖, si el pendiente sigue vivo (no se ha hecho nada, o quedó EN COLA por el tope), el texto del mensaje nuevo que vuelve a traer sus botones; `null` si ya no hay nada que pulsar. Sin esto, lo que"
+        },
+        {
+          "nombre": "lineaTrasTarificar",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoTarificar",
+          "retorno": "string",
+          "linea": 199,
+          "resumen": "La línea que sustituye a los botones tras pulsar 🤖. PURA."
+        },
+        {
+          "nombre": "leerAmpliar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "",
+          "linea": 228,
+          "resumen": "Respuesta de `accion:'ampliar_tope'`. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ae9515232564"
     },
     {
       "ruta": "apps/plataforma/lib/correo/lead-correduria.ts",
@@ -158477,7 +159040,8 @@
         "traspasarOportunidadAsegura",
         "peticionLeadAsegura",
         "respuestaLeadAsegura",
-        "adjuntoLeadAsegura"
+        "adjuntoLeadAsegura",
+        "tarificarLeadAsegura"
       ],
       "funciones": [
         {
@@ -159165,11 +159729,20 @@
           "retorno": "Promise<Reenvio>",
           "linea": 1127,
           "resumen": "`POST /api/operador/correo/adjunto`: un adjunto del cliente, que asegura guarda CIFRADO (sin clave, no lo guarda)."
+        },
+        {
+          "nombre": "tarificarLeadAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 1137,
+          "resumen": "`POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta), `accion:'tarificar'` (encola los bots; SOLO tras `clp_tar`) o `accion:'ampliar_top"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e00c8937241"
+      "hash": "37740ca152c4"
     },
     {
       "ruta": "apps/plataforma/lib/seguimiento-presupuestos-asegura.ts",
@@ -173455,7 +174028,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 817
+          "linea": 823
         },
         {
           "nombre": "avisosDe",
@@ -173463,7 +174036,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 822,
+          "linea": 828,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -173472,13 +174045,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 832,
+          "linea": 838,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b59b0fe2c5a8"
+      "hash": "ad1975bc0e1f"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -211422,6 +211995,7 @@
         "leerRespuestaIa",
         "cuerpoSinCita",
         "camposDeBloqueRellenables",
+        "categoriaEstadoCivil",
         "mismoValor",
         "decidirFusion",
         "conocidosDeBloque",
@@ -211582,12 +212156,20 @@
           "linea": 323
         },
         {
+          "nombre": "categoriaEstadoCivil",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "CategoriaEstadoCivil | null",
+          "linea": 333
+        },
+        {
           "nombre": "mismoValor",
           "kind": "function",
           "exportada": true,
           "params": "clave: string, a: unknown, b: unknown",
           "retorno": "boolean",
-          "linea": 328,
+          "linea": 347,
           "resumen": "¿Dos valores son el mismo dato? Texto sin tildes/mayúsculas/espacios; documentos y códigos sin separadores. PURA."
         },
         {
@@ -211596,7 +212178,7 @@
           "exportada": true,
           "params": "e: { nuevos: Readonly<Record<string, ValorContrato>> previos: Readonly<Record<string, unknown>> claveBloque: string bloque: Readonly<Record<string, unknown>> | null fichaDni?: 'igual' | 'distinto' | null }",
           "retorno": "DecisionFusion",
-          "linea": 355,
+          "linea": 386,
           "resumen": "Qué hacer con cada dato nuevo. `previos` = lo ya guardado de la respuesta del cliente (descifrado); `bloque` = los datos del riesgo del ramo (`info_riesgo.<clave>`), con su `confirmadoAt`; `fichaDni` "
         },
         {
@@ -211605,7 +212187,7 @@
           "exportada": true,
           "params": "ramo: RamoOportunidad | string | null, bloque: Readonly<Record<string, unknown>> | null",
           "retorno": "string[]",
-          "linea": 388,
+          "linea": 419,
           "resumen": "Claves que el riesgo ya tiene: las del bloque (`info_riesgo.<clave>`) no nulas que el contrato pide, incluidas las que el campo `cubre`. PURA."
         },
         {
@@ -211614,7 +212196,7 @@
           "exportada": true,
           "params": "ramo: RamoOportunidad | string | null, conocidos: ReadonlySet<string>",
           "retorno": "CampoContrato[]",
-          "linea": 401,
+          "linea": 432,
           "resumen": "Obligatorios (`siempre`) que se le preguntan al cliente y no se saben todavía. Orden del contrato. PURA."
         },
         {
@@ -211623,7 +212205,7 @@
           "exportada": true,
           "params": "campos: readonly Pick<CampoContrato, 'etiqueta'>[]",
           "retorno": "string[]",
-          "linea": 406,
+          "linea": 437,
           "resumen": "Etiquetas sin repetir (en el orden en que llegan)."
         },
         {
@@ -211632,13 +212214,13 @@
           "exportada": true,
           "params": "ramos: readonly (RamoOportunidad | string)[], faltan: ReadonlySet<string>",
           "retorno": "ReturnType<typeof peticionDatos>",
-          "linea": 414,
+          "linea": 445,
           "resumen": "Las preguntas de la REPREGUNTA: solo las de un obligatorio que falta o de un dato inválido. Lo opcional o condicional que no contestó no se vuelve a pedir (no se le persigue por lo que no hace falta)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7349fa4964d2"
+      "hash": "f775257a0b4d"
     },
     {
       "ruta": "packages/module-seguros/src/retarificable.ts",
@@ -224033,7 +224615,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4785,
-    "funciones": 17888
+    "archivos": 4790,
+    "funciones": 17945
   }
 }
