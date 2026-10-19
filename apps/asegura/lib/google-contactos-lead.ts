@@ -141,21 +141,78 @@ export async function anadirFichasAGoogle(
   return salida()
 }
 
+/** Condición común del relleno: leads de correo activos, sin fusionar, sin vínculo y sin duda en la cola. */
+const SIN_CONTACTO = Prisma.sql`c.fuente::text = 'correo' and c.activo and c.merged_into_cliente_id is null
+      and not exists (select 1 from google_contactos_vinculo v where v.correduria_id = c.correduria_id and v.cliente_id = c.id)
+      -- Ya con una duda en la cola (pendiente o resuelta): la decide Alberto, el relleno no la repite.
+      and not exists (select 1 from google_contactos_revision r where r.correduria_id = c.correduria_id and r.cliente_id = c.id)`
+
 /**
  * RELLENO: los leads de correo (`fuente='correo'`, activos, sin fusionar) que aún NO tienen vínculo, del más
  * reciente al más antiguo, sin los que ya tienen una duda en la cola. Solo lectura. Volver a llamarlo es
  * seguro: los ya añadidos (o encolados) ya no salen.
+ * `rotar` (solo el relleno automático del cron): orden barajado con semilla de la HORA, para que las fichas
+ * que no avanzan (sin teléfono legible, fuera de alcance…) no ocupen siempre la cabeza del lote.
+ * `excluir`: ids ya intentados en esta pasada (no se reintentan dentro de ella).
  */
-export async function leadsCorreoSinContacto(correduriaId: string, limite: number): Promise<string[]> {
+export async function leadsCorreoSinContacto(
+  correduriaId: string, limite: number, opciones: { rotar?: boolean; excluir?: readonly string[] } = {},
+): Promise<string[]> {
   const n = Math.max(1, Math.min(MAX_FICHAS_CONTACTO_LEAD, Math.floor(limite)))
+  const excluir = (opciones.excluir ?? []).filter((id) => UUID.test(id))
+  const semilla = opciones.rotar ? new Date().toISOString().slice(0, 13) : ''
   const filas = await prismaAsegura().$queryRaw<{ id: string }[]>(Prisma.sql`
     select c.id::text as id
     from clientes c
-    where c.correduria_id = ${correduriaId}::uuid and c.fuente::text = 'correo' and c.activo and c.merged_into_cliente_id is null
-      and not exists (select 1 from google_contactos_vinculo v where v.correduria_id = c.correduria_id and v.cliente_id = c.id)
-      -- Ya con una duda en la cola (pendiente o resuelta): la decide Alberto, el relleno no la repite.
-      and not exists (select 1 from google_contactos_revision r where r.correduria_id = c.correduria_id and r.cliente_id = c.id)
-    order by c.created_at desc, c.id
+    where c.correduria_id = ${correduriaId}::uuid and ${SIN_CONTACTO}
+      and c.id <> all(${excluir}::uuid[])
+    order by ${opciones.rotar ? Prisma.sql`md5(c.id::text || ${semilla})` : Prisma.sql`c.created_at desc, c.id`}
     limit ${n}`)
   return filas.map((f) => f.id)
+}
+
+/** Cuántos leads de correo siguen sin contacto ni duda (solo un número; sin PII). Los que no avanzan cuentan. */
+export async function contarLeadsCorreoSinContacto(correduriaId: string): Promise<number> {
+  const f = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
+    select count(*)::int as n from clientes c where c.correduria_id = ${correduriaId}::uuid and ${SIN_CONTACTO}`)
+  return f[0]?.n ?? 0
+}
+
+export const LOTE_RELLENO = 10
+export const MAX_LOTES_RELLENO = 3
+/** No se abre otro lote pasado este tiempo desde que arrancó el cron (maxDuration 300 s; cada lote lista la agenda). */
+export const PRESUPUESTO_RELLENO_MS = 150_000
+
+export type InformeRelleno = { estado: 'ok' | 'fin' | 'detenido'; motivo?: MotivoContactoLead; lotes: number; totales: Record<string, number>; pendientes: number | null }
+
+/**
+ * RELLENO AUTOMÁTICO (19/10/2026): lo llama el cron horario tras la sincronización. Sin tabla ni SQL nuevos:
+ * lotes pequeños de `leadsCorreoSinContacto` (barajados por hora) por `anadirFichasAGoogle`, que ya es
+ * idempotente (vínculo ⇒ `ya_estaba` sin escribir; huella única en la cola). Se para solo: con 0 pendientes
+ * no pide ningún lote (ni toca Google) y responde `fin`. Límite conocido: una ficha que no avanza (sin
+ * teléfono legible, `fuera_de_alcance`…) no deja rastro, así que cuenta como pendiente y se reintenta cada
+ * hora (la baraja por hora evita que bloquee a las demás). Sin PII.
+ */
+export async function rellenarLeadsCorreo(
+  correduriaId: string, desde: number = Date.now(),
+  ajustes: { lote?: number; maxLotes?: number; presupuestoMs?: number } = {},
+): Promise<InformeRelleno> {
+  const lote = ajustes.lote ?? LOTE_RELLENO
+  const maxLotes = ajustes.maxLotes ?? MAX_LOTES_RELLENO
+  const presupuesto = ajustes.presupuestoMs ?? PRESUPUESTO_RELLENO_MS
+  const totales: Record<string, number> = {}
+  const intentados: string[] = []
+  let lotes = 0
+  while (lotes < maxLotes && Date.now() - desde < presupuesto) {
+    const ids = await leadsCorreoSinContacto(correduriaId, lote, { rotar: true, excluir: intentados })
+    if (ids.length === 0) break
+    intentados.push(...ids)
+    const r = await anadirFichasAGoogle(correduriaId, ids)
+    lotes++
+    // Conexión sin activar / revocada / clave PII / límite: nada que hacer ahora; se reintenta en la hora siguiente.
+    if (r.estado !== 'ok') return { estado: 'detenido', motivo: r.motivo, lotes, totales, pendientes: null }
+    for (const x of r.resultados) totales[x.estado] = (totales[x.estado] ?? 0) + 1
+  }
+  const pendientes = await contarLeadsCorreoSinContacto(correduriaId)
+  return { estado: pendientes === 0 ? 'fin' : 'ok', lotes, totales, pendientes }
 }

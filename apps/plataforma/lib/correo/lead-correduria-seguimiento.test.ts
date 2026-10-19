@@ -215,7 +215,7 @@ test('silencio: la huella de asegura es la MISMA que calcula el SQL de plataform
 test('silencio cableado: recordatorio (✅ y automático) comprueba ANTES de llamar a asegura; ha escrito = no sale', () => {
   const i = proceso.indexOf('export async function enviarRecordatorioReclamado')
   const cuerpo = proceso.slice(i, proceso.indexOf('/** ✏️ guardado de un recordatorio'))
-  const chequeo = cuerpo.indexOf('await silencioCliente({ huellas: datos.remitentes, desde: datos.ancla })')
+  const chequeo = cuerpo.indexOf('await silencioCliente({ huellas: datos.remitentes, desde: datos.ancla, hilo: datos.raiz ? [datos.raiz] : [] })')
   assert.ok(chequeo > 0, 'falta la comprobación justo antes de mandar')
   assert.ok(chequeo < cuerpo.indexOf("accion: 'recordar'"), 'la comprobación va ANTES del envío')
   assert.match(cuerpo, /if \(s\.estado === 'ha_escrito'\) \{[\s\S]{0,400}return \{ enviado: false/)
@@ -230,10 +230,10 @@ test('silencio cableado: en automático es OBLIGATORIO y va antes de reclamar; l
   assert.ok(chequeo > 0 && chequeo < cuerpo.indexOf("SET estado = 'enviando'"), 'sin «callado» no se reclama ni se envía solo')
   assert.match(cuerpo, /if \(r\.sinEnviar === 'no_se_sabe'\) return false/)
   // La petición/repregunta automática compara con el correo suyo al que contesta.
-  assert.match(pendiente, /silencio: \(\) => silencioCliente\(\{ huellas: huella \? \[huella\] : null, trasMensaje: a\.datos\.messageId \}\)/)
+  assert.match(pendiente, /silencio: \(\) => silencioCliente\(\{ huellas: huella \? \[huella\] : null, trasMensaje: a\.datos\.messageId, hilo: \[a\.datos\.messageId, \.\.\.a\.datos\.references\] \}\)/)
   const p = proceso.indexOf('export async function pasadaSeguimientoLeads')
   const pasada = proceso.slice(p, proceso.indexOf('// ─── Envío del recordatorio'))
-  const s = pasada.indexOf('await silencioCliente({ huellas: h.remitentes, desde: hito.ancla }, ahora)')
+  const s = pasada.indexOf('await silencioCliente({ huellas: h.remitentes, desde: hito.ancla, hilo: h.raiz ? [h.raiz] : [] }, ahora)')
   assert.ok(s > 0 && s < pasada.indexOf("VALUES ('recordatorio_cliente', ${claveHitoSeguimiento(h.hiloId, hito)}, ${JSON.stringify(datos)}"), 'se mira antes de crear el aviso con ✅')
   assert.match(pasada, /if \(silencio\.estado === 'no_se_sabe'\) \{ out\.sinComprobar = \(out\.sinComprobar \?\? 0\) \+ 1; continue \}/)
 })
@@ -244,4 +244,92 @@ test('huellas del pendiente: solo hex de 64, y sin ninguna = null (no se sabe), 
   assert.equal(leerHuellas([]), null)
   assert.equal(leerHuellas(['x', 'ana@x.es']), null)
   assert.deepEqual(leerHuellas(['b'.repeat(64), 'b'.repeat(64)]), ['b'.repeat(64)])
+})
+
+// ─── 🚨 La respuesta que un filtro de Gmail etiqueta/archiva (no pasa por INBOX) también cuenta (19/10/2026) ──────────
+
+const H1 = 'a'.repeat(64)
+const H2 = 'b'.repeat(64)
+const REF = '2026-10-17T09:00:00Z'
+
+test('hilo completo: cuenta SOLO correos de esas huellas posteriores a la referencia; el excluido no cuenta', async () => {
+  const { contarEscritosEnHilo } = await import('./lead-correduria-seguimiento.ts')
+  const m = (huella: string | null, fecha: string | null, messageId = '<x@y>') => ({ huella, fecha, messageId })
+  const base = { huellas: [H1], referencia: REF }
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [] }), 0)
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [m(H1, '2026-10-18T09:00:00Z')] }), 1, 'suyo y posterior')
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [m(H1, '2026-10-16T09:00:00Z')] }), 0, 'suyo pero anterior')
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [m(H2, '2026-10-18T09:00:00Z')] }), 0, 'de otro (p. ej. nuestro recordatorio)')
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [m(null, '2026-10-18T09:00:00Z')] }), 0, 'sin huella')
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [m(H1, '2026-10-18T09:00:00Z', '<orig@y>')], excluir: '<orig@y>' }), 0, 'el correo al que se contesta')
+  assert.equal(contarEscritosEnHilo({ ...base, mensajes: [m(H1, null)] }), 1, 'suyo sin fecha legible: ante la duda, ha escrito')
+})
+
+test('hilo completo: no poder leerlo es null, NUNCA 0 (un catch no afirma silencio)', async () => {
+  const { contarEscritosEnHilo, combinarEntrantes, decidirSilencioCliente } = await import('./lead-correduria-seguimiento.ts')
+  assert.equal(contarEscritosEnHilo({ mensajes: null, huellas: [H1], referencia: REF }), null)
+  assert.equal(contarEscritosEnHilo({ mensajes: [], huellas: [H1], referencia: null }), null)
+  assert.equal(combinarEntrantes(0, null), null, 'BD vio 0 pero Gmail no se pudo leer')
+  assert.equal(combinarEntrantes(null, 0), null)
+  assert.equal(combinarEntrantes(0, 0), 0)
+  assert.equal(combinarEntrantes(0, 2), 2, 'solo lo ve el hilo (filtro de Gmail)')
+  assert.equal(combinarEntrantes(3, null), 3)
+  const ahora = new Date('2026-10-19T10:00:00Z')
+  const b = { huellas: [H1], referencia: REF, cursorAt: '2026-10-19T09:55:00Z', ahora }
+  assert.equal(decidirSilencioCliente({ ...b, entrantes: combinarEntrantes(0, null) }).estado, 'no_se_sabe')
+  assert.equal(decidirSilencioCliente({ ...b, entrantes: combinarEntrantes(0, 1) }).estado, 'ha_escrito')
+})
+
+test('✅ manual: solo se bloquea si el cliente ha escrito; el aviso no lleva datos personales', async () => {
+  const { decidirGuardaManual, lineaClienteEscribioManual } = await import('./lead-correduria-seguimiento.ts')
+  assert.equal(decidirGuardaManual({ estado: 'ha_escrito', n: 1 }), 'cliente_escribio')
+  assert.equal(decidirGuardaManual({ estado: 'callado' }), 'enviar')
+  assert.equal(decidirGuardaManual({ estado: 'no_se_sabe', motivo: 'sin_leer' }), 'enviar')
+  assert.match(lineaClienteEscribioManual(), /el cliente ha contestado desde que se preparó; revísalo/)
+  assert.doesNotMatch(lineaClienteEscribioManual(), /@|\d{6}/)
+})
+
+test('hilo completo cableado: silencioCliente mira Gmail (hilo) solo si la BD vio 0, y todas las llamadas pasan sus anclas', () => {
+  const i = proceso.indexOf('export async function silencioCliente')
+  const cuerpo = proceso.slice(i, proceso.indexOf('// ─── La pasada del cron'))
+  assert.match(cuerpo, /if \(referencia !== null && \(bd \?\? 0\) === 0\) hilo = await escritosEnHiloGmail\(/)
+  assert.match(cuerpo, /entrantes: combinarEntrantes\(bd, hilo\)/)
+  assert.match(cuerpo, /} catch \{\s+return null\s+}/, 'un fallo de IMAP devuelve null (no se sabe)')
+  assert.match(proceso, /silencioCliente\(\{ huellas: h\.remitentes, desde: hito\.ancla, hilo: h\.raiz \? \[h\.raiz\] : \[\] \}, ahora\)/)
+  assert.match(proceso, /silencio: \(\) => silencioCliente\(\{ huellas: datos\.remitentes, desde: datos\.ancla, hilo: datos\.raiz \? \[datos\.raiz\] : \[\] \}\)/)
+  assert.match(proceso, /const s = await silencioCliente\(\{ huellas: datos\.remitentes, desde: datos\.ancla, hilo: datos\.raiz \? \[datos\.raiz\] : \[\] \}\)/)
+  assert.match(proceso, /asunto: await asuntoDeRaiz\(h\.raiz\), remitentes: h\.remitentes, raiz: h\.raiz,/)
+})
+
+test('IMAP del hilo: busca en \\All por X-GM-THRID, solo lectura, con tope de tiempo y null ante fallo', () => {
+  const imap = leer('imap.ts')
+  const i = imap.indexOf('export async function leerHiloCompleto')
+  const f = imap.slice(i)
+  assert.match(f, /specialUse === '\\\\All'/)
+  assert.match(f, /readOnly: true/)
+  assert.match(f, /search\(\{ threadId: t \}/)
+  assert.match(f, /if \(!hilos\.size\) return null/, 'sin ancla encontrada no se afirma un hilo vacío')
+  assert.match(f, /setTimeout\(\(\) => r\(null\), HILO_TIMEOUT_MS\)/)
+  assert.match(f, /} catch \{\s+return null/)
+})
+
+test('✅ manual cableado: tras reclamar y ANTES de enviar, comprueba el hilo; si escribió vuelve a pendiente y reenvía botones', () => {
+  assert.match(pendiente, /: await enviarPeticionManual\(d\.id, fila\.tipo, fila\.datos, fila\.borrador, actorTelegram\(d\.quien\)\)/)
+  const i = pendiente.indexOf('async function enviarPeticionManual')
+  const f = pendiente.slice(i, pendiente.indexOf('export async function enviarPeticionReclamada'))
+  assert.match(f, /tipo === 'peticion_datos' \|\| tipo === 'repregunta'/)
+  assert.match(f, /trasMensaje: datos\.messageId, hilo: \[datos\.messageId, \.\.\.datos\.references\]/)
+  const guarda = f.indexOf("decidirGuardaManual(s) === 'cliente_escribio'")
+  assert.ok(guarda > 0 && guarda < f.indexOf('return enviarPeticionReclamada('), 'la guarda va antes del envío')
+  assert.match(f, /SET estado = 'pendiente', decidido_por = NULL, decidido_at = NULL\s+WHERE id = \$\{id\} AND estado = 'enviando'/)
+  assert.match(f, /botonesPeticion\(id\)/)
+  assert.match(f, /enviado: false, linea: lineaClienteEscribioManual\(\)/)
+})
+
+test('raiz del recordatorio: solo un Message-ID entre <>; si no, null', async () => {
+  const { leerDatosRecordatorio } = await import('./lead-correduria-seguimiento.ts')
+  const d = { hiloId: '1', clienteId: '11111111-1111-1111-1111-111111111111', etapa: 'datos_1', ancla: REF }
+  assert.equal(leerDatosRecordatorio({ ...d, raiz: '<a@b.c>' })?.raiz, '<a@b.c>')
+  assert.equal(leerDatosRecordatorio({ ...d, raiz: 'a@b.c' })?.raiz, null)
+  assert.equal(leerDatosRecordatorio(d)?.raiz, null)
 })
