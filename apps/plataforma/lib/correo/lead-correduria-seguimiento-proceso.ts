@@ -20,7 +20,7 @@ import { ETAPAS_CON_ENVIO, claveHitoSeguimiento, enVentanaSeguimiento, hitoSegui
 import { CLAVES_PII_PENDIENTE, purgaAlCerrar, type DecisionClp } from './lead-correduria-peticion'
 import { hoyMadrid } from './lead-correduria'
 import {
-  RACHA_PARA_OFRECER, botonesCerrar, decidirSilencioCliente, lineaSilencio, textoClienteEscribio, botonesOfertaAuto, botonesRecordatorio, botonesVolverManual, debeOfrecerAuto, decidirEnvioAuto,
+  RACHA_PARA_OFRECER, botonesCerrar, combinarEntrantes, contarEscritosEnHilo, decidirSilencioCliente, lineaSilencio, textoClienteEscribio, botonesOfertaAuto, botonesRecordatorio, botonesVolverManual, debeOfrecerAuto, decidirEnvioAuto,
   esTipoAutomatizable, interpretarPendientes, interpretarRecordar, leerDatosRecordatorio, lineaModo, lineaTrasCerrar, lineaTrasRecordar,
   rachaTras, textoAvisoSeguimiento, textoEnviadoSolo, textoOfertaAuto, textoRecordatorioCliente, topeAutoDiario,
   type DatosRecordatorio, type DecisionManual, type Silencio, type TipoAutomatizable,
@@ -40,12 +40,18 @@ const actorTelegram = (quien: string) => `agente:telegram-${quien}`
 // ─── ¿Ha escrito el cliente? ─────────────────────────────────────────────────
 
 /**
- * ¿Ha entrado en el buzón algún correo de esas huellas DESPUÉS de la referencia? Mira `correo_triaje` entero (todo lo
- * que entra, se clasifique como se clasifique), no solo lo casado con el hilo. Referencia: `desde` (ISO del último
- * envío) o `trasMensaje` (el Message-ID del correo suyo al que se contesta: cuenta lo que entró después de él).
+ * ¿Ha escrito el cliente DESPUÉS de la referencia? Dos miradas, y solo hay «callado» si las dos leyeron y vieron cero:
+ *   1) `correo_triaje` entero (todo lo que entró a INBOX, se clasifique como se clasifique);
+ *   2) el HILO completo en «Todos los mensajes» de Gmail por IMAP (`hilo` = Message-ID ancla: el original del lead, o el
+ *      correo al que se contesta + sus References). Así una respuesta que un filtro etiquetó o archivó sin pasar por
+ *      INBOX tampoco se escapa (19/10/2026). Sin ancla o con fallo de IMAP = no se sabe, nunca «callado».
+ * Referencia: `desde` (ISO del último envío) o `trasMensaje` (el Message-ID del correo suyo al que se contesta).
  * Cualquier fallo = `no_se_sabe`. Nunca lanza. La huella en SQL es la de `huellaRemitente` (cepo en el test).
  */
-export async function silencioCliente(a: { huellas: readonly string[] | null; desde?: string; trasMensaje?: string }, ahora = new Date()): Promise<Silencio> {
+export async function silencioCliente(
+  a: { huellas: readonly string[] | null; desde?: string; trasMensaje?: string; hilo?: readonly string[] },
+  ahora = new Date(),
+): Promise<Silencio> {
   const huellas = a.huellas?.length ? [...a.huellas] : null
   if (!huellas) return decidirSilencioCliente({ huellas: null, referencia: null, entrantes: null, cursorAt: null, ahora })
   const ref = a.trasMensaje !== undefined
@@ -62,9 +68,29 @@ export async function silencioCliente(a: { huellas: readonly string[] | null; de
       (SELECT updated_at FROM correo_cursor WHERE buzon = 'INBOX') AS cursor_at
     FROM r`).catch(() => null)
   const fila = f?.[0]
+  const referencia = fila?.referencia ?? null
+  const bd = fila && fila.n !== null ? Number(fila.n) : null
+  // Si ya hay correo suyo en la BD no hace falta ir a Gmail; si no, se mira el hilo completo.
+  let hilo: number | null = null
+  if (referencia !== null && (bd ?? 0) === 0) hilo = await escritosEnHiloGmail(huellas, a.hilo ?? [], referencia, a.trasMensaje ?? null)
   return decidirSilencioCliente({
-    huellas, referencia: fila?.referencia ?? null, entrantes: fila && fila.n !== null ? Number(fila.n) : null, cursorAt: fila?.cursor_at ?? null, ahora,
+    huellas, referencia, entrantes: combinarEntrantes(bd, hilo), cursorAt: fila?.cursor_at ?? null, ahora,
   })
+}
+
+/** Correos de esas huellas en el hilo completo de Gmail posteriores a `referencia`; `null` = no se pudo mirar. Nunca lanza. */
+async function escritosEnHiloGmail(huellas: readonly string[], anclas: readonly string[], referencia: Date, excluir: string | null): Promise<number | null> {
+  try {
+    const { leerHiloCompleto } = await import('./imap')
+    const { huellaRemitente } = await import('@central/module-seguros/huella-remitente')
+    const leidos = await leerHiloCompleto([...anclas, ...(excluir ? [excluir] : [])])
+    return contarEscritosEnHilo({
+      mensajes: leidos === null ? null : leidos.map((m) => ({ huella: huellaRemitente(m.from), fecha: m.fecha, messageId: m.messageId })),
+      huellas, referencia, excluir,
+    })
+  } catch {
+    return null
+  }
 }
 
 // ─── La pasada del cron ──────────────────────────────────────────────────────
@@ -100,7 +126,7 @@ export async function pasadaSeguimientoLeads(ahora = new Date()): Promise<Result
     if (!hito) continue
     const conEnvio = ETAPAS_CON_ENVIO.includes(hito.etapa)
     // 🚨 ¿Ha escrito después del último envío aunque el triaje no lo casara con el hilo? Entonces no hay hito que avisar.
-    const silencio = await silencioCliente({ huellas: h.remitentes, desde: hito.ancla }, ahora)
+    const silencio = await silencioCliente({ huellas: h.remitentes, desde: hito.ancla, hilo: h.raiz ? [h.raiz] : [] }, ahora)
     if (silencio.estado === 'no_se_sabe') { out.sinComprobar = (out.sinComprobar ?? 0) + 1; continue } // la próxima pasada lo mira
     if (silencio.estado === 'ha_escrito') {
       // Una vez por hito (misma clave): la fila nace cerrada y sin datos personales; el aviso no lleva botones.
@@ -119,7 +145,7 @@ export async function pasadaSeguimientoLeads(ahora = new Date()): Promise<Result
     }
     const datos: DatosRecordatorio = {
       hiloId: h.hiloId, clienteId: h.clienteId, etapa: hito.etapa, ancla: hito.ancla, pila: h.pila, ramos: h.ramos,
-      asunto: await asuntoDeRaiz(h.raiz), remitentes: h.remitentes,
+      asunto: await asuntoDeRaiz(h.raiz), remitentes: h.remitentes, raiz: h.raiz,
     }
     const borrador = conEnvio ? textoRecordatorioCliente({ pila: h.pila, etapa: hito.etapa, ramos: h.ramos }) : ''
     let id: number
@@ -139,7 +165,7 @@ export async function pasadaSeguimientoLeads(ahora = new Date()): Promise<Result
     if (conEnvio) {
       const solo = await enviarSoloSiToca({
         id, tipo: 'recordatorio_cliente', pila: h.pila, ramos: h.ramos, ahora,
-        silencio: () => silencioCliente({ huellas: datos.remitentes, desde: datos.ancla }),
+        silencio: () => silencioCliente({ huellas: datos.remitentes, desde: datos.ancla, hilo: datos.raiz ? [datos.raiz] : [] }),
         enviar: (actor) => enviarRecordatorioReclamado(id, datos, borrador, actor),
       }).catch(() => false)
       if (solo) { out.enviadosSolos++; continue }
@@ -181,7 +207,7 @@ export async function enviarRecordatorioReclamado(id: number, datosRaw: unknown,
   }
   // 🚨 Justo antes de mandar (✅ o automático): si ha escrito después del último envío, no sale; si no se puede saber,
   //    tampoco (el pendiente vuelve a `pendiente` con su ✅ para reintentarlo, nada se pierde).
-  const s = await silencioCliente({ huellas: datos.remitentes, desde: datos.ancla })
+  const s = await silencioCliente({ huellas: datos.remitentes, desde: datos.ancla, hilo: datos.raiz ? [datos.raiz] : [] })
   if (s.estado === 'ha_escrito') {
     await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_pendiente_tg SET estado = 'descartado', resultado = '{"motivo":"cliente_escribio"}'::jsonb, ${PURGA}

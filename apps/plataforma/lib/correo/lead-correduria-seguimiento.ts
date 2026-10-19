@@ -120,6 +120,8 @@ export type DatosRecordatorio = {
   asunto: string
   /** Huellas de las direcciones de la ficha (`huellaRemitente`). `null` = no se sabe → no sale nada. */
   remitentes: string[] | null
+  /** Message-ID del correo original del lead: ancla para buscar su hilo completo en «Todos los mensajes». */
+  raiz?: string | null
 }
 
 const ETAPAS = ['datos_1', 'datos_2', 'datos_cerrar', 'propuesta_1'] as const
@@ -144,6 +146,7 @@ export function leerDatosRecordatorio(v: unknown): DatosRecordatorio | null {
     hiloId: s(o.hiloId), clienteId: s(o.clienteId), etapa: s(o.etapa) as EtapaSeguimientoLead, ancla: s(o.ancla),
     pila: typeof o.pila === 'string' ? o.pila : null, ramos: Array.isArray(o.ramos) ? o.ramos.filter((x): x is string => typeof x === 'string') : [],
     asunto: s(o.asunto), remitentes: leerHuellas(o.remitentes),
+    raiz: /^<[^<>\s]+>$/.test(s(o.raiz)) ? s(o.raiz) : null,
   }
 }
 
@@ -237,6 +240,54 @@ export function decidirSilencioCliente(a: {
   const cur = a.cursorAt === null ? NaN : new Date(a.cursorAt).getTime()
   if (!Number.isFinite(cur) || a.ahora.getTime() - cur > CURSOR_FRESCO_MIN * 60_000) return { estado: 'no_se_sabe', motivo: 'buzon_atrasado' }
   return { estado: 'callado' }
+}
+
+/** Un correo del hilo completo ya reducido a lo que importa: huella de quien lo envió, cuándo y su Message-ID. */
+export type MensajeHiloLeido = { huella: string | null; fecha: Date | string | null; messageId: string | null }
+
+/**
+ * Cuántos correos de esas huellas hay en el HILO COMPLETO (cualquier etiqueta o carpeta) posteriores a la referencia.
+ * `mensajes === null` (no se pudo leer) → `null`, NUNCA 0. Un correo suyo sin fecha legible cuenta como posterior (ante la
+ * duda, «ha escrito»). `excluir`: el correo al que se contesta (no cuenta contra sí mismo). PURA.
+ */
+export function contarEscritosEnHilo(a: {
+  mensajes: readonly MensajeHiloLeido[] | null; huellas: readonly string[]; referencia: string | Date | null; excluir?: string | null
+}): number | null {
+  if (a.mensajes === null) return null
+  const ref = a.referencia === null ? NaN : new Date(a.referencia).getTime()
+  if (!Number.isFinite(ref)) return null
+  let n = 0
+  for (const m of a.mensajes) {
+    if (!m.huella || !a.huellas.includes(m.huella)) continue
+    if (a.excluir && m.messageId === a.excluir) continue
+    const t = m.fecha === null ? NaN : new Date(m.fecha).getTime()
+    if (!Number.isFinite(t) || t > ref) n++
+  }
+  return n
+}
+
+/**
+ * Junta lo visto en `correo_triaje` (`bd`) con lo visto en el hilo completo de Gmail (`hilo`). Si cualquiera de los dos
+ * ve un correo suyo → hay; solo «cero» si LOS DOS leyeron y vieron cero; si uno no pudo leer y el otro vio cero → `null`
+ * (no se sabe). PURA.
+ */
+export function combinarEntrantes(bd: number | null, hilo: number | null): number | null {
+  if ((bd ?? 0) > 0 || (hilo ?? 0) > 0) return (bd ?? 0) + (hilo ?? 0)
+  return bd === null || hilo === null ? null : 0
+}
+
+/**
+ * ✅ MANUAL de una petición de datos o repregunta: ¿sale el borrador? Solo se bloquea si el cliente ha escrito después de
+ * prepararse (Alberto mira esa conversación y decide). Si no se pudo comprobar NO se bloquea: el ✅ es una decisión humana
+ * sobre un texto que está viendo, y no se afirma nada sobre el silencio. PURA.
+ */
+export function decidirGuardaManual(s: Silencio): 'enviar' | 'cliente_escribio' {
+  return s.estado === 'ha_escrito' ? 'cliente_escribio' : 'enviar'
+}
+
+/** Aviso (sin datos personales) de que el ✅ manual NO ha enviado porque el cliente escribió. PURA. */
+export function lineaClienteEscribioManual(): string {
+  return '📭 <b>No se ha enviado</b>: el cliente ha contestado desde que se preparó; revísalo en tu correo. El borrador sigue pendiente con sus botones para que decidas.'
 }
 
 const MOTIVO_SILENCIO: Record<Extract<Silencio, { estado: 'no_se_sabe' }>['motivo'], string> = {

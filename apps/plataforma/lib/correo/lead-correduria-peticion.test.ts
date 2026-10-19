@@ -68,7 +68,9 @@ test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotenci
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8')
   assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia', 'propuesta'\) AND estado = 'pendiente' AND caduca_at > now\(\)/)
   // F5: el envío vive en `enviarPeticionReclamada` (lo comparten el ✅ y el modo automático); la clave es el id del pendiente.
-  assert.match(src, /await enviarPeticionReclamada\(d\.id, fila\.datos, fila\.borrador, actorTelegram\(d\.quien\)\)/)
+  // 19/10/2026: el ✅ manual pasa por `enviarPeticionManual` (guarda «¿ha escrito el cliente?») y ésta delega en el mismo envío.
+  assert.match(src, /await enviarPeticionManual\(d\.id, fila\.tipo, fila\.datos, fila\.borrador, actorTelegram\(d\.quien\)\)/)
+  assert.match(src, /return enviarPeticionReclamada\(id, datosRaw, borrador, actor\)/)
   assert.match(src, /idempotencia: `clp-\$\{id\}`/)
   const hook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
   assert.match(hook, /if \(prefix === PREFIJO_CLP\) \{\s*const d = decidirBotonClp\(cb, action, args, process\.env\.TELEGRAM_CHAT_ID\)/)

@@ -21,6 +21,7 @@ import {
   cambiosViviendaDesdeCatastro, conocidosDeVivienda, puedeEscribirCatastro, elegirViviendaCatastro, lineaCatastroTelegram, type DatosCatastroLead,
 } from './lead-correduria-catastro'
 import { ACTOR_TRIAJE_CORREO } from './lead-correduria'
+import { decidirGuardaManual, lineaClienteEscribioManual, type Silencio } from './lead-correduria-seguimiento'
 
 // ─── Purga (revisión 19/10/2026) ─────────────────────────────────────────────
 // Un pendiente CERRADO (enviado, descartado o caducado) no necesita ni el email del lead ni el texto: se anulan y
@@ -138,7 +139,7 @@ export async function proponerPeticion(a: {
   const huella = huellaRemitente(a.datos.to)
   const solo = await enviarSoloSiToca({
     id, tipo, pila: a.datos.pila, ramos: a.datos.ramos,
-    silencio: () => silencioCliente({ huellas: huella ? [huella] : null, trasMensaje: a.datos.messageId }),
+    silencio: () => silencioCliente({ huellas: huella ? [huella] : null, trasMensaje: a.datos.messageId, hilo: [a.datos.messageId, ...a.datos.references] }),
     enviar: (actor) => enviarPeticionReclamada(id, a.datos, a.borrador, actor),
   }).catch(() => false)
   if (solo) return { id, nuevo: true }
@@ -226,10 +227,37 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
   // F5: el recordatorio al cliente sale por su propio puerto (asegura pone el destinatario desde la ficha).
   const r = fila.tipo === 'recordatorio_cliente'
     ? await (await import('./lead-correduria-seguimiento-proceso')).enviarRecordatorioReclamado(d.id, fila.datos, fila.borrador, actorTelegram(d.quien))
-    : await enviarPeticionReclamada(d.id, fila.datos, fila.borrador, actorTelegram(d.quien))
+    : await enviarPeticionManual(d.id, fila.tipo, fila.datos, fila.borrador, actorTelegram(d.quien))
   // F5: solo un ✅ SIN editar que de verdad salió suma a la racha; uno editado la reinicia.
   if (r.enviado) await registrarDecision(fila.tipo, fila.editado ? 'editado' : 'aprobado')
   return r.linea
+}
+
+/**
+ * ✅ MANUAL de petición/repregunta: antes de mandar, ¿ha escrito el cliente en el hilo desde que se preparó el borrador
+ * (aunque un filtro de Gmail lo etiquetara o archivara)? Si sí NO sale: el pendiente vuelve a `pendiente` (con sus
+ * botones, reenviado) y se avisa sin datos personales. Si no se pudo comprobar, decide Alberto (`decidirGuardaManual`).
+ */
+async function enviarPeticionManual(id: number, tipo: string, datosRaw: unknown, borrador: string, actor: string): Promise<{ enviado: boolean; linea: string }> {
+  const datos = leerDatosPeticion(datosRaw)
+  if (datos && (tipo === 'peticion_datos' || tipo === 'repregunta')) {
+    const { silencioCliente } = await import('./lead-correduria-seguimiento-proceso')
+    const { huellaRemitente } = await import('@central/module-seguros/huella-remitente')
+    const huella = huellaRemitente(datos.to)
+    const s = await silencioCliente({ huellas: huella ? [huella] : null, trasMensaje: datos.messageId, hilo: [datos.messageId, ...datos.references] })
+      .catch((): Silencio => ({ estado: 'no_se_sabe', motivo: 'sin_leer' }))
+    if (decidirGuardaManual(s) === 'cliente_escribio') {
+      const vuelto = await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_pendiente_tg SET estado = 'pendiente', decidido_por = NULL, decidido_at = NULL
+        WHERE id = ${id} AND estado = 'enviando'`).catch(() => 0)
+      if (vuelto) {
+        const msg = await tgSendButtons(textoBorradorTelegram({ id, datos, borrador, preguntas: null }), botonesPeticion(id)).catch(() => null)
+        if (msg !== null) await prisma.$executeRaw(Prisma.sql`UPDATE correduria_pendiente_tg SET tg_message_id = ${msg} WHERE id = ${id}`).catch(() => {})
+      }
+      return { enviado: false, linea: lineaClienteEscribioManual() }
+    }
+  }
+  return enviarPeticionReclamada(id, datosRaw, borrador, actor)
 }
 
 /**

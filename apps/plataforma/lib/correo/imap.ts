@@ -184,3 +184,63 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
     },
   }
 }
+
+// ─── El HILO completo, sin mirar etiqueta ni carpeta (19/10/2026) ────────────
+
+/** Un correo del hilo tal como lo ve «Todos los mensajes» (sin cuerpo: solo quién y cuándo). */
+export interface MensajeHilo { from: string; fecha: Date | null; messageId: string | null }
+
+const HILO_TIMEOUT_MS = 20_000
+
+/**
+ * Todos los correos de los hilos de Gmail a los que pertenece alguno de esos Message-ID, buscados en «Todos los mensajes»
+ * (`\All`, se llame «All Mail» o «Todos»): lo que un filtro etiquetó o archivó sin pasar por INBOX también está. Usa
+ * X-GM-THRID (`threadId`). Conexión propia y de solo lectura (la llaman el cron Y el webhook de Telegram).
+ * `null` = no se pudo mirar (red, carpeta, ninguna ancla encontrada): NUNCA equivale a «el hilo está vacío».
+ */
+export async function leerHiloCompleto(messageIds: readonly string[]): Promise<MensajeHilo[] | null> {
+  const anclas = [...new Set(messageIds.filter((m) => typeof m === 'string' && /^<[^<>\s]+>$/.test(m)))].slice(0, 20)
+  if (!anclas.length) return null
+  let client: ImapFlow | null = null
+  const trabajo = (async (): Promise<MensajeHilo[] | null> => {
+    client = nuevoCliente()
+    await client.connect()
+    const carpetas = await client.list()
+    const todos = carpetas.find((c) => c.specialUse === '\\All')?.path ?? '[Gmail]/All Mail'
+    const lock = await client.getMailboxLock(todos, { readOnly: true })
+    try {
+      const hilos = new Set<string>()
+      for (const id of anclas) {
+        const uids = await client.search({ header: { 'message-id': id } }, { uid: true })
+        if (!uids || !uids.length) continue
+        for await (const m of client.fetch(uids.slice(0, 3), { threadId: true }, { uid: true })) if (m.threadId) hilos.add(String(m.threadId))
+      }
+      if (!hilos.size) return null // ninguna ancla encontrada: no sabemos de qué hilo hablamos
+      const out: MensajeHilo[] = []
+      for (const t of hilos) {
+        const uids = await client.search({ threadId: t }, { uid: true })
+        if (!uids || !uids.length) continue
+        for await (const m of client.fetch(uids.slice(0, 200), { envelope: true, internalDate: true }, { uid: true })) {
+          const f = m.envelope?.from?.[0]?.address
+          const interna = m.internalDate instanceof Date ? m.internalDate : m.internalDate ? new Date(m.internalDate) : null
+          const cab = m.envelope?.date instanceof Date ? m.envelope.date : null
+          // La más tardía de las dos fechas: ante la duda, «llegó después» (conservador).
+          const fecha = interna && cab ? (interna > cab ? interna : cab) : (interna ?? cab)
+          out.push({ from: (f || '').toLowerCase(), fecha, messageId: m.envelope?.messageId ?? null })
+        }
+      }
+      return out
+    } finally {
+      lock.release()
+    }
+  })()
+  try {
+    return await Promise.race([trabajo, new Promise<null>((r) => setTimeout(() => r(null), HILO_TIMEOUT_MS))])
+  } catch {
+    return null
+  } finally {
+    const c = client as ImapFlow | null
+    if (c) await c.logout().catch(() => {})
+    trabajo.catch(() => {})
+  }
+}
