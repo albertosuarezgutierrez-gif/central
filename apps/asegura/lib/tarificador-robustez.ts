@@ -34,7 +34,7 @@ import { anotarCambio } from './auditoria'
 import { decidirRelanzar } from './tarificador-relanzar-reglas'
 import { purgarRiesgoTrabajos } from './tarificador-purga'
 import { MENSAJE_HUMO_OMITIDO_CREDENCIALES, motivoPausaHumo } from './tarificador-humo-reglas'
-import { PAUSA_CADUCA_HORAS } from './tarificador-reglas'
+import { PAUSA_CADUCA_HORAS, PAUSA_CADUCABLE_REGEX } from './tarificador-reglas'
 
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0]
 type Db = Pick<Tx, '$queryRaw' | '$executeRaw'>
@@ -429,7 +429,7 @@ export async function pausarTrasHumo(db: Db, trabajoId: string): Promise<number>
 }
 
 /**
- * Cierra las pausas sin reanudar con más de `PAUSA_CADUCA_HORAS` (19/10/2026): `reanudada_at = now()`, `reanudada_por = 'caducidad'`.
+ * Cierra las pausas CADUCABLES (`PAUSA_CADUCABLE_REGEX`: solo rachas de errores del bot, no credenciales ni prueba nocturna) sin reanudar con más de `PAUSA_CADUCA_HORAS` (19/10/2026): `reanudada_at = now()`, `reanudada_por = 'caducidad'`.
  * No borra filas (queda el rastro y `evaluarCorte` cuenta los fallos desde ahí). Libera además el hueco del índice «una viva por
  * pareja», que si no impediría abrir una pausa nueva. Sin el SQL de la F2 → 0. Devuelve cuántas cerró.
  */
@@ -439,7 +439,8 @@ export async function caducarPausas(correduriaId: string): Promise<number> {
     update seguros.tarificador_pausas
     set reanudada_at = now(), reanudada_por = 'caducidad'
     where correduria_id = ${correduriaId}::uuid and reanudada_at is null
-      and pausada_at <= now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour'`
+      and pausada_at <= now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour'
+      and coalesce(motivo ~ ${PAUSA_CADUCABLE_REGEX}::text, false)`
 }
 
 /** ¿Hay una pausa viva para la pareja? (Sin el SQL de la F2 → `false`: comportamiento anterior.) */
@@ -448,7 +449,7 @@ export async function pausaViva(db: Db, correduriaId: string, compania: string, 
   const f = await db.$queryRaw<{ ok: number }[]>`
     select 1 as ok from seguros.tarificador_pausas
     where correduria_id = ${correduriaId}::uuid and compania = ${compania} and ramo = ${ramo} and reanudada_at is null
-      and pausada_at > now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour' limit 1`
+      and not (pausada_at <= now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour' and coalesce(motivo ~ ${PAUSA_CADUCABLE_REGEX}::text, false)) limit 1`
   return f.length > 0
 }
 
@@ -461,7 +462,7 @@ export async function sqlSinPausa(): Promise<Prisma.Sql> {
   return Prisma.sql`and not exists (
     select 1 from seguros.tarificador_pausas p
     where p.correduria_id = w.correduria_id and p.compania = w.compania and p.ramo = w.ramo and p.reanudada_at is null
-      and p.pausada_at > now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour')`
+      and not (p.pausada_at <= now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour' and coalesce(p.motivo ~ ${PAUSA_CADUCABLE_REGEX}::text, false)))`
 }
 
 /**

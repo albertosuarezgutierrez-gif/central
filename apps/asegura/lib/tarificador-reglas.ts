@@ -415,6 +415,20 @@ export const UMBRAL_ATASCADO_BLOQUEA_MS = 24 * 60 * 60_000
 /** Una pausa (`tarificador_pausas`) sin reanudar deja de bloquear pasado este plazo (19/10/2026); la fila no se borra. */
 export const PAUSA_CADUCA_HORAS = 24
 
+/**
+ * Qué pausas pueden caducar solas (19/10/2026). SOLO las abiertas por `motivoCorte` por rachas de errores del bot (portal/infra).
+ * Las de credenciales rechazadas (`motivoCorte`) y las de la prueba nocturna (`motivoPausaHumo`) piden acción manual (actualizar
+ * CRED_…_PASS y quitar la pausa): si caducaran solas se relanzaría el login con la contraseña mala y se bloquearía la cuenta del
+ * mediador. La tabla no tiene código de motivo, así que se reconoce por el texto exacto de `motivoCorte`; ante la duda NO caduca.
+ * Expresión POSIX válida igual en Postgres (`~`) y en JS.
+ */
+export const PAUSA_CADUCABLE_REGEX = '^[0-9]+ trabajos seguidos de .+ terminaron en error del bot \\(portal o infraestructura\\)\\.$'
+
+/** ¿Es una pausa de las que pueden caducar sola? Texto desconocido o vacío → `false` (conservador). */
+export function pausaEsCaducable(motivo: string | null | undefined): boolean {
+  return typeof motivo === 'string' && new RegExp(PAUSA_CADUCABLE_REGEX, 's').test(motivo)
+}
+
 /** ¿Esta pausa sin reanudar ya caducó? Hora ilegible/futura → NO caducada (conservador: sigue bloqueando). */
 export function pausaCaducada(pausadaAt: Date | null | undefined, ahora: Date): boolean {
   if (!pausadaAt || Number.isNaN(pausadaAt.getTime())) return false

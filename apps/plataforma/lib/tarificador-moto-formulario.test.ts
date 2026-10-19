@@ -53,6 +53,23 @@ test('sin seguro actual: 0 años asegurado (no hay compañía anterior que nombr
   assert.equal(r.riesgo.siniestrosUltimos5Anios, null)
 })
 
+test('seguro actual NO SE SABE (null): no es «sin seguro» → años null (supuesto favorable), nunca 0/novel; la compañía anterior sigue viajando', () => {
+  const r = ok(entrada({ tieneSeguroActual: null, aniosAsegurado: '', aniosSinSiniestros: '', siniestrosUltimos5: '' }))
+  assert.equal(r.riesgo.aniosAseguradoAnterior, null)
+  assert.equal(r.riesgo.siniestrosUltimos5Anios, null)
+  assert.equal(ok(entrada({ tieneSeguroActual: null, aniosAsegurado: '', companiaAnterior: 'Línea Directa' })).riesgo.companiaAnterior, 'Línea Directa')
+  assert.equal(ok(entrada({ tieneSeguroActual: false, companiaAnterior: 'Línea Directa' })).riesgo.aniosAseguradoAnterior, 0)
+})
+
+test('tieneSeguroParaBots: tres estados; la casilla sin tocar y sin dato NO es «no tiene»', async () => {
+  const { tieneSeguroParaBots } = await import('./tarificador-moto-formulario.ts')
+  assert.equal(tieneSeguroParaBots({ tiene: true, sinDato: true, tocado: true }), true)
+  assert.equal(tieneSeguroParaBots({ tiene: true, sinDato: false, tocado: false }), true)
+  assert.equal(tieneSeguroParaBots({ tiene: false, sinDato: true, tocado: false }), null, 'sin dato y sin tocar: no se sabe')
+  assert.equal(tieneSeguroParaBots({ tiene: false, sinDato: true, tocado: true }), false, 'desmarcada a propósito')
+  assert.equal(tieneSeguroParaBots({ tiene: false, sinDato: false, tocado: false }), false, 'declarado arriba: no tiene')
+})
+
 test('sexo: solo hombre/mujer elegidos; otra cosa → null', () => {
   assert.equal((ok(entrada({ sexo: 'mujer' })).riesgo.conductor as { sexo: unknown }).sexo, 'mujer')
   assert.equal((ok(entrada({ sexo: 'x' })).riesgo.conductor as { sexo: unknown }).sexo, null)

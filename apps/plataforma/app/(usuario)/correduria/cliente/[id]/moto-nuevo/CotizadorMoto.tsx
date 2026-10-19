@@ -74,7 +74,7 @@ import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
 import PrecioBots from '../PrecioBots'
 import { bloqueosAltaTomador } from '@/lib/tarificador-alta-tomador'
-import { datoDePersonaBot, companiaActualParaBots } from '@/lib/tarificador-moto-formulario'
+import { datoDePersonaBot, companiaActualParaBots, tieneSeguroParaBots } from '@/lib/tarificador-moto-formulario'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -427,6 +427,8 @@ export default function CotizadorMoto({
   // (compañía traducida al catálogo de compañías de MOTO), y lo que no viene de arriba se topa a los años asegurado (Avant2
   // rechaza en la compañía / sin siniestros > asegurado, y ese 400 se paga). Todo eso vive en `valoresQueViajan`.
   const [tieneSeguroActual, setTieneSeguroActual] = useState(ini.tieneSeguroActual)
+  // La casilla «tiene seguro» nace desmarcada cuando no hay dato: solo cuenta como «NO tiene» si el corredor la ha tocado (19/10/2026).
+  const [seguroTocado, setSeguroTocado] = useState(false)
   const [companiaActualCodigo, setCompaniaActualCodigo] = useState(ini.companiaActualCodigo)
   const [companiaActualLibre, setCompaniaActualLibre] = useState(ini.companiaActualLibre)
   const [polizaActualDigitos, setPolizaActualDigitos] = useState(ini.polizaActualDigitos)
@@ -590,6 +592,7 @@ export default function CotizadorMoto({
   // ✗ de siniestros en 5 años EXACTAMENTE cuando asegura los exige (15/10/2026, como coche: `exigeSiniestrosUltimos5`, la
   // regla única de module-seguros que también usa `peticion-moto.ts`). Sin dato ya no se supone 0.
   const numOVacio = (t: string) => (t.trim() === '' ? null : Number(t))
+  const tieneSeguroBots = tieneSeguroParaBots({ tiene: tieneSeguroActual, sinDato: tieneSeguroSinDato(viajan), tocado: seguroTocado })
   const siniestros5SinDato = exigeSiniestrosUltimos5({ aseguradoAntes: tieneSeguroActual, aniosAsegurado: numOVacio(aniosAsegurado), aniosSinSiniestros: numOVacio(aniosSinSiniestros) })
     && siniestrosUltimos5.trim() === ''
   const faltaAnios = aniosAsegurado.trim() === '' || aniosEnCompania.trim() === '' || aniosSinSiniestros.trim() === ''
@@ -1191,7 +1194,7 @@ export default function CotizadorMoto({
           <input
             type="checkbox"
             checked={tieneSeguroActual}
-            onChange={(e) => setTieneSeguroActual(e.target.checked)}
+            onChange={(e) => { setSeguroTocado(true); setTieneSeguroActual(e.target.checked) }}
             style={{ width: 18, height: 18 }}
           />
           Sí, tiene un seguro de moto en vigor ahora mismo
@@ -1327,11 +1330,11 @@ export default function CotizadorMoto({
             sexoSinFicha: (faltanInicial ?? []).some((f) => f.campo === 'sexo'),
             conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual,
             propietarioEnOtraFicha: !!figs.propietario,
-            tieneSeguroActual,
+            tieneSeguroActual: tieneSeguroBots,
             aniosAsegurado,
             aniosSinSiniestros,
             siniestrosUltimos5,
-            companiaAnterior: companiaActualParaBots({ tieneSeguroActual, companias, codigo: companiaActualCodigo, libre: companiaActualLibre, leida: anterior?.aseguradora }),
+            companiaAnterior: companiaActualParaBots({ tieneSeguroActual: tieneSeguroBots !== false, companias, codigo: companiaActualCodigo, libre: companiaActualLibre, leida: anterior?.aseguradora }),
           }}
         />
       )}

@@ -45,7 +45,8 @@ export type EntradaBotMoto = {
   /** El tomador conduce otra ficha (conductor habitual en otra ficha o tomador empresa): el bot aún no lo soporta. */
   conductorEnOtraFicha: boolean
   propietarioEnOtraFicha: boolean
-  tieneSeguroActual: boolean
+  /** `true` con seguro · `false` SOLO si se ha declarado/marcado que no tiene · `null` = no se sabe (supuesto favorable). */
+  tieneSeguroActual: boolean | null
   aniosAsegurado: string
   aniosSinSiniestros: string
   siniestrosUltimos5: string
@@ -61,21 +62,33 @@ const ISO = /^\d{4}-\d{2}-\d{2}$/
 const entero = (s: string): number | null => (/^\d{1,4}$/.test(s.trim()) ? Number(s.trim()) : null)
 
 /** Lo del historial que el cotizador (moto o coche) le da al bot: «¿tiene seguro ahora?» y los años/siniestros tecleados. */
-export type HistorialBotEntrada = { tieneSeguroActual: boolean; aniosAsegurado: string; aniosSinSiniestros: string; siniestrosUltimos5: string }
+export type HistorialBotEntrada = { tieneSeguroActual: boolean | null; aniosAsegurado: string; aniosSinSiniestros: string; siniestrosUltimos5: string }
 
 /**
  * Historial que viaja al bot (moto y coche, el MISMO criterio): solo lo que el corredor ha declarado. SIN seguro actual
  * declarado = 0 años asegurado (19/10/2026, regla de Alberto: no hay compañía anterior que nombrar; sin esto el supuesto
  * favorable de 5 años hacía pedir la compañía a Mapfre); siniestros `null` (no consta). Con seguro y años sin teclear: `null`
- * (no se sabe → supuesto favorable declarado por el bot). Un texto que no es un entero → `null`. 5 o más años sin siniestros ⇒ 0 siniestros en los
+ * (no se sabe → supuesto favorable declarado por el bot). `tieneSeguroActual === null` (NO se sabe si tiene seguro, 19/10/2026: dato que
+ * no hay ≠ dato que dice «no») NO es «sin seguro»: años `null` como con seguro sin años (supuesto favorable), nunca 0 / novel. Un texto que no es un entero → `null`. 5 o más años sin siniestros ⇒ 0 siniestros en los
  * últimos 5 (deducción, no suposición); si no, solo el dato declarado. PURA.
  */
 export function historialBot(e: HistorialBotEntrada): { aniosAseguradoAnterior: number | null; siniestrosUltimos5Anios: number | null } {
-  if (!e.tieneSeguroActual) return { aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: null }
+  if (e.tieneSeguroActual === false) return { aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: null }
   let siniestrosUltimos5Anios = entero(e.siniestrosUltimos5)
   const sinSin = entero(e.aniosSinSiniestros)
   if (siniestrosUltimos5Anios === null && sinSin !== null && sinSin >= 5) siniestrosUltimos5Anios = 0
   return { aniosAseguradoAnterior: entero(e.aniosAsegurado), siniestrosUltimos5Anios }
+}
+
+/**
+ * Tres estados del «seguro actual» que viaja al bot de moto (19/10/2026): con seguro → `true`; sin seguro → `false` SOLO si hay
+ * una declaración explícita (arriba, o la casilla tocada por el corredor); sin dato y casilla sin tocar → `null` (no se sabe).
+ * `tiene` = estado de la casilla; `sinDato` = ni el riesgo ni la póliza leída dicen nada (`tieneSeguroSinDato`); `tocado` = el
+ * corredor ha pulsado la casilla. PURA.
+ */
+export function tieneSeguroParaBots(a: { tiene: boolean; sinDato: boolean; tocado: boolean }): boolean | null {
+  if (a.tiene) return true
+  return a.sinDato && !a.tocado ? null : false
 }
 
 /** Clase de Allianz Moto por cilindrada (tramos del portal). `null` = ≤50 cc (ciclomotor) o sin dato. */
@@ -131,7 +144,7 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
   const { aniosAseguradoAnterior, siniestrosUltimos5Anios } = historialBot(e)
 
   // La compañía anterior solo tiene sentido con seguro actual y años ≠ 0; sin nombre (o demasiado largo) no viaja (no consta).
-  const companiaTxt = e.tieneSeguroActual && aniosAseguradoAnterior !== 0 ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
+  const companiaTxt = e.tieneSeguroActual !== false && aniosAseguradoAnterior !== 0 ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
   const companiaAnterior = companiaTxt !== '' && companiaTxt.length <= MAX_COMPANIA_ANTERIOR ? companiaTxt : null
 
   const version = e.version?.replace(/\s+/g, ' ').trim() ?? ''

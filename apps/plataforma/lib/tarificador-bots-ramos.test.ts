@@ -220,4 +220,7 @@ test('moto: la compañía anterior viaja en el riesgo solo con seguro actual y a
   assert.equal('companiaAnterior' in riesgo({ ...MOTO_BASE, aniosAsegurado: '0' }, { companiaAnterior: 'Línea Directa' }), false)
   assert.equal('companiaAnterior' in riesgo({ ...MOTO_BASE, tieneSeguroActual: false }, { companiaAnterior: 'Línea Directa' }), false)
   assert.equal(riesgo({ ...MOTO_BASE, tieneSeguroActual: false }, {}).aniosAseguradoAnterior, 0)
+  // No se sabe (null) ≠ sin seguro: años null (supuesto favorable), y la compañía tecleada en el checklist sigue viajando.
+  assert.equal(riesgo({ ...MOTO_BASE, tieneSeguroActual: null, aniosAsegurado: '' }, {}).aniosAseguradoAnterior, null)
+  assert.equal(riesgo({ ...MOTO_BASE, tieneSeguroActual: null, aniosAsegurado: '' }, { companiaAnterior: 'Línea Directa' }).companiaAnterior, 'Línea Directa')
 })
