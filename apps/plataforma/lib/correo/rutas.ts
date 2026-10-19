@@ -19,6 +19,7 @@ export interface RutaCorreo {
   enrutarSivra?: boolean    // pasar al agente de huéspedes de SIVRA
   vigilarReserva?: boolean  // registrar en reservas_correo_booking (vigía Booking↔Smoobu)
   enrutarCorreduria?: boolean // preguntar a asegura si resuelve a una póliza VIVA y anotarlo en su ficha
+  soloRegla?: boolean       // la decide una regla determinista: NO se ofrece a la IA ni entra en su prompt
   descripcion: string       // para el prompt de clasificación
   ejemplos: string[]        // remitentes/tipos de ejemplo (para el prompt)
 }
@@ -143,6 +144,18 @@ export const RUTAS: RutaCorreo[] = [
     ejemplos: ['comparativa de presupuestos para seguro', 'quiero asegurar mi casa', 'precio seguro de coche', 'mensaje a hola@grupoasegura.es'],
   },
   {
+    // 🔁 El ECO de nuestra respuesta a un lead (19/10/2026): la copia oculta a hola@ de la petición de datos que sale
+    // por Resend (`lead-correduria.ts::esEcoPropioCorreduria`). Se etiqueta con los leads (para verla en su hilo) y
+    // no avisa ni anota nada: asegura ya dejó el envío en la ficha. Solo por regla: la IA no la puede elegir.
+    categoria: 'correduria-eco',
+    etiqueta: 'Triaje/Correduria-Leads',
+    archivar: false,
+    aviso: 'ninguno',
+    soloRegla: true,
+    descripcion: 'Copia de una respuesta que la propia correduría envió a un lead (eco de hola@). Solo por regla.',
+    ejemplos: [],
+  },
+  {
     categoria: 'leads-negocio',
     etiqueta: 'Triaje/Leads',
     archivar: false,
@@ -183,12 +196,12 @@ export function rutaDe(categoria: string): RutaCorreo {
 }
 
 // Lista de categorías que la IA puede elegir (excluye ninguna: 'dudoso' es válida como salida).
-export const CATEGORIAS_IA = RUTAS.map(r => r.categoria)
+export const CATEGORIAS_IA = RUTAS.filter(r => !r.soloRegla).map(r => r.categoria)
 
 // Genera el bloque de categorías para el prompt de clasificación (sin duplicar la lista).
 export function descripcionParaPrompt(): string {
   return RUTAS
-    .filter(r => r.categoria !== 'dudoso')
+    .filter(r => r.categoria !== 'dudoso' && !r.soloRegla)
     .map(r => {
       const ej = r.ejemplos.length ? ` Ej: ${r.ejemplos.join(', ')}.` : ''
       return `- ${r.categoria}: ${r.descripcion}${ej}`

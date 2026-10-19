@@ -13,6 +13,7 @@ type Empleado = {
   tipo_contrato: string | null; centro_trabajo: string | null
   cuenta_cotizacion: string | null; categoria: string | null
   grupo_cotizacion: string | null; tipo_jornada: string | null
+  coche: string | null; matricula: string | null
   fecha_alta: string | null
   fecha_reconocimiento_medico: string | null
 }
@@ -55,6 +56,8 @@ export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl,
     categoria: empleado.categoria ?? '',
     grupo_cotizacion: empleado.grupo_cotizacion ?? '',
     tipo_jornada: empleado.tipo_jornada ?? '',
+    coche: empleado.coche ?? '',
+    matricula: empleado.matricula ?? '',
     fecha_alta: toDateInput(empleado.fecha_alta),
     fecha_reconocimiento_medico: toDateInput(empleado.fecha_reconocimiento_medico),
   })
@@ -274,6 +277,14 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Categoría
               <input value={ficha.categoria} onChange={f('categoria')} placeholder="Categoría profesional" className="text-sm" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-2">
+              Coche
+              <input value={ficha.coche} onChange={f('coche')} placeholder="Seat León blanco" className="text-sm" />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-ink-2">
+              Matrícula
+              <input value={ficha.matricula} onChange={f('matricula')} placeholder="1234 ABC" autoCapitalize="characters" className="text-sm uppercase" />
             </label>
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Grupo de cotización

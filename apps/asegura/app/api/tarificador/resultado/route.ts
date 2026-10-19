@@ -5,6 +5,8 @@ import { avisoTraza, leerResultadoWorker } from '@/lib/tarificador-reglas'
 import { eleccionIaActiva } from '@/lib/tarificador-eleccion-reglas'
 import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
+import { avisarFalloBotLead } from '@/lib/tarificacion-lead-fallo'
+import { esFalloTerminal } from '@/lib/tarificacion-lead-puro'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,6 +54,12 @@ export async function POST(req: Request) {
     if (l.r.tipo === 'error' && l.r.error.opcionesVersion && r.estadoTrabajo === 'requiere_humano' && eleccionIaActiva(process.env)) {
       const trabajoId = l.r.trabajoId
       after(() => intentarEleccionVersionIa(trabajoId).then(() => undefined))
+    }
+    // F3b (19/10/2026): un bot lanzado desde el aviso de un LEAD que falla del todo → Telegram en el hilo del lead (y, si es un
+    // dato del cliente, botón de repregunta). Una versión ambigua con la IA de elección encendida aún puede relanzarse: no se avisa.
+    if (l.r.tipo === 'error' && esFalloTerminal(r.estadoTrabajo) && !(l.r.error.opcionesVersion && eleccionIaActiva(process.env))) {
+      const trabajoId = l.r.trabajoId
+      after(() => avisarFalloBotLead(trabajoId).then(() => undefined))
     }
     if (l.r.tipo === 'ok' && r.estadoTrabajo === 'ok' && r.tarificacionId) {
       const trabajoId = l.r.trabajoId

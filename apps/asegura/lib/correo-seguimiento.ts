@@ -41,15 +41,18 @@ export type EnvioARegistrar = {
  * Deja constancia del correo. Si falla, NO se lanza: el correo ya salió (o ya falló) y tumbar al
  * llamante por el registro sería peor. Se loguea sin la dirección.
  */
-export async function registrarEnvioCorreo(e: EnvioARegistrar): Promise<void> {
+/** `repetido` = ese `resend_id` ya estaba (reintento con la misma clave de idempotencia); `error` = no se pudo escribir. */
+export async function registrarEnvioCorreo(e: EnvioARegistrar): Promise<'nuevo' | 'repetido' | 'error'> {
   try {
-    await prismaAsegura().$executeRaw(Prisma.sql`
+    const filas = await prismaAsegura().$executeRaw(Prisma.sql`
       insert into correo_envio (correduria_id, cliente_id, poliza_id, tipo, asunto, destino_cifrado, resend_id, proveedor, estado, error)
       values (${e.correduriaId}::uuid, ${e.clienteId}::uuid, ${e.polizaId ?? null}::uuid, ${e.tipo}, ${e.asunto.slice(0, 300)}, ${encryptField(e.destino)},
               ${e.resendId}, ${e.proveedor}, ${e.estado}, ${e.error?.slice(0, 500) ?? null})
       on conflict (resend_id) do nothing`)
+    return filas === 0 && e.resendId ? 'repetido' : 'nuevo'
   } catch (err) {
     console.error(`[correo-seguimiento] no se pudo registrar el envío (${e.tipo}):`, err instanceof Error ? err.message : err)
+    return 'error'
   }
 }
 

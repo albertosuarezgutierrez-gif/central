@@ -14,6 +14,11 @@
  *   · «UN NÚMERO, UN CONTACTO» (05/10/2026): `tipo_persona` (decide la principal de un teléfono
  *         compartido), el resumen ramo · compañía («También: …») y si la ficha NO tiene ningún
  *         teléfono/correo (columna Y tabla hija vacías: «Enriquecer ficha»; si no, no se propone).
+ *   · F · LEADS DE CORREO (19/10/2026, Alberto amplía el alcance): fichas `fuente='correo'` activas que YA
+ *         tienen vínculo (las añadió `POST /api/operador/google-contactos/lead` al entrar el lead) o que se
+ *         piden en esta llamada (`opciones.leadsCorreo`, solo ese endpoint). Sin vínculo NO entran solas: el
+ *         relleno de los antiguos lo decide Alberto. Sin este bloque el cron las RETIRARÍA (no salen en
+ *         `contactosMovil`). 🟡 lead, nota «Lead por correo (hola@): fecha».
  * 🚨 Si la consulta de siniestros, recibos, motes o ex-clientes FALLA, se lanza como las demás: el
  * cron no escribe nada y cada contacto conserva su emoji anterior («no se pudo mirar» ≠ «no hay»).
  * Lo que no se puede leer va como `null` («no se sabe»): ese campo de Google no se toca. Si una
@@ -22,6 +27,7 @@
  * 🛡️ Clientes y pólizas filtrados por `correduriaId`. `compania_contactos` es un catálogo GLOBAL
  * (no lleva correduría): hoy hay una sola correduría; con una segunda habría que acotarlo.
  */
+import { notaLeadCorreo } from '@central/module-seguros/google-contactos-lead'
 import {
   alertaPrioritaria, avisoVencimiento, conLineasEstado, lineasEstado, nombreCompaniaContacto, normalizarNacimiento,
   notaCliente, notaExCliente, notaLead, proximoVencimiento, resumenPolizas, trocear, PREFIJO_CLAVE_COMPANIA, type ContactoGoogle,
@@ -46,7 +52,13 @@ export function urlFichaPlataforma(clienteId: string): string {
   return `${base}/correduria/cliente/${encodeURIComponent(clienteId)}`
 }
 
-export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMadrid()): Promise<SeleccionGoogle> {
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export async function seleccionGoogle(
+  correduriaId: string,
+  hoy: string = hoyMadrid(),
+  opciones: { leadsCorreo?: readonly string[] } = {},
+): Promise<SeleccionGoogle> {
   const db = prismaAsegura()
   const sel = await contactosMovil(correduriaId)
 
@@ -96,7 +108,15 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
       and not exists (select 1 from polizas p where p.cliente_id = c.id and p.correduria_id = c.correduria_id
         and p.merged_into_poliza_id is null and ${Prisma.raw(sqlCarteraEnVigor('p'))})`)
   const contactoEx = exClientes.length ? await contactosDe(correduriaId, exClientes.map((x) => x.id)) : new Map()
-  const fichas = [...ids, ...exClientes.map((x) => x.id)]
+  // F · Leads de correo: los ya vinculados (los mantiene el cron) y los pedidos ahora (el endpoint del lead).
+  const exIds = new Set(exClientes.map((x) => x.id))
+  const candidatasCorreo = [...new Set([...vinculadas, ...(opciones.leadsCorreo ?? [])])].filter((id) => UUID.test(id) && !enSel.has(id) && !exIds.has(id))
+  const leadsCorreo = candidatasCorreo.length === 0 ? [] : await db.cliente.findMany({
+    where: { correduriaId, id: { in: candidatasCorreo }, fuente: 'correo', activo: true, mergedIntoClienteId: null },
+    select: { id: true, nombre: true, apellidos: true, createdAt: true },
+  })
+  const contactoCorreo = leadsCorreo.length ? await contactosDe(correduriaId, leadsCorreo.map((x) => x.id)) : new Map()
+  const fichas = [...ids, ...exClientes.map((x) => x.id), ...leadsCorreo.map((x) => x.id)]
 
   // 🚨 Siniestros abiertos y 💶 recibos devueltos de pólizas EN VIGOR. Una consulta caída LANZA.
   const siniestros = fichas.length === 0 ? [] : await db.$queryRaw<{ clienteId: string; numero: string | null; estado: string }[]>(Prisma.sql`
@@ -190,6 +210,16 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
     }
   })
 
+  const deLeadsCorreo: ContactoGoogle[] = contactoCorreo === null ? [] : leadsCorreo.map((x) => {
+    const k = contactoCorreo.get(x.id)
+    return {
+      clienteId: x.id, nombre: x.nombre, apellidos: x.apellidos, telefono: k?.telefono ?? null, email: k?.email ?? null,
+      grupo: 'lead', url: urlFichaPlataforma(x.id), cumpleanos: null, mote: motes.get(x.id) ?? null,
+      nota: notaLeadCorreo(x.createdAt.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })), aviso: false, resumen: null,
+      ...deFicha(x.id),
+    }
+  })
+
   // C · Compañías: catálogo de contactos humanos (comercial, siniestros…). Sin cifrar.
   const contactosCompania = await db.companiaContacto.findMany({
     where: { activo: true, compania: { activa: true } },
@@ -205,7 +235,10 @@ export async function seleccionGoogle(correduriaId: string, hoy: string = hoyMad
     grupo: 'compania',
   }))
 
-  // Sin el contacto de los ex-clientes no salen en la lista: entonces la selección NO está completa
-  // (si no, se retirarían de Google por «ya no están»).
-  return { contactos: [...deCartera, ...deExClientes, ...deCompanias], seleccionCompleta: sel.clientesSinLeer === 0 && contactoEx !== null }
+  // Sin el contacto de los ex-clientes (o de los leads de correo) no salen en la lista: entonces la selección
+  // NO está completa (si no, se retirarían de Google por «ya no están»).
+  return {
+    contactos: [...deCartera, ...deExClientes, ...deLeadsCorreo, ...deCompanias],
+    seleccionCompleta: sel.clientesSinLeer === 0 && contactoEx !== null && contactoCorreo !== null,
+  }
 }

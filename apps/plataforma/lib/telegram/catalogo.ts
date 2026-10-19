@@ -747,8 +747,26 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correduria.lead-correo', categoria: 'correduria',
     titulo: 'Lead nuevo por correo (hola@)',
-    que: 'Alguien escribe a hola@grupoasegura.es pidiendo un seguro: qué quiere, la ficha (nueva o la que ya tenía), las oportunidades abiertas y la petición de datos lista para copiar. Nunca se le envía nada.',
+    que: 'Alguien escribe a hola@grupoasegura.es pidiendo un seguro: qué quiere, la ficha (nueva o la que ya tenía), las oportunidades abiertas y lo que dio el Catastro. Si no se puede preparar el botón de envío, la petición de datos llega aquí para copiar. Nunca se le envía nada desde este aviso.',
     cuando: 'Al llegar el correo (revisión cada 10 min)',
+  },
+  {
+    id: 'correduria.lead-peticion', categoria: 'correduria',
+    titulo: 'Petición de datos al lead (✅ Enviar / ✏️ Editar / ❌ Descartar)',
+    que: 'El borrador de respuesta al lead de hola@ con SOLO los datos que faltan. Sale al cliente, en el hilo de su correo y desde hola@, únicamente si pulsas ✅; ✏️ te deja corregir el texto; caduca a los 7 días.',
+    cuando: 'Justo después del aviso del lead nuevo por correo',
+  },
+  {
+    id: 'correduria.lead-respuesta', categoria: 'correduria',
+    titulo: 'Respuesta del lead leída (y repregunta ✅ / ✏️ / ❌)',
+    que: 'El cliente contesta en el hilo de su lead: qué datos ha dado (solo los nombres de los datos, nunca los valores), cuáles no valen o no cuadran con lo que ya había, qué falta y si dejó adjuntos (se guardan cifrados, sin leer). Si falta algo, el borrador de repregunta con SOLO eso, que sale únicamente si pulsas ✅; si está todo, «listo para tarificar».',
+    cuando: 'Al llegar su respuesta (revisión cada 10 min)',
+  },
+  {
+    id: 'correduria.lead-tarificar', categoria: 'correduria',
+    titulo: 'Lead listo para tarificar con bots (🤖 Tarificar / ✏️ / ⏸) y tope diario (➕ 10 más hoy)',
+    que: 'Con los datos del lead completos: qué compañías lanzarían su bot (gratis, en su portal), qué se supone y cuántas tarificaciones con bots llevas hoy. Nada se lanza sin pulsar 🤖. Si un ramo no tiene bot, lo dice. Si se llega al tope del día, lo que falta queda en cola y puedes ampliar 10 más.',
+    cuando: 'Cuando la respuesta del lead completa sus datos, y al llegar al tope diario',
   },
   {
     id: 'correduria.aviso-web', categoria: 'correduria',

@@ -131,6 +131,12 @@ marca `sync_activada_en`: responde `200 { estado: 'pendiente_activar' }`.
   en la cola. La simulación cuenta números compartidos, combinados, cola y desvinculaciones. «Añadir a la ficha»: dato del contacto que la ficha NO tiene (BD vacía) → cola; aceptar usa
   `anadirContacto` y nunca pisa. Lógica: `agruparNumeros`/`personaSinGestion`; tests `google-contactos-numero.test.ts`.
 
+## Lead de correo al momento (19/10/2026)
+Detalle y reglas en la skill `google-contactos` (sección homónima). Resumen: `POST /api/operador/google-contactos/lead`
+`{ clienteId }` añade SOLO esa ficha con las reglas del cron (crear / adoptar / cola); plataforma lo llama tras el alta del
+lead de hola@ y lo pinta como «📇 …» en el Telegram. El cron mantiene los leads `fuente='correo'` que ya tienen vínculo.
+Relleno de los antiguos, a mano: `?desdeCorreo=1&limite=N` (con `?ensayo=1` primero). Sin migración de BD.
+
 ## Límites
 - **Google admite 25.000 contactos por cuenta (incluidos los personales).** Si la sincronización los superaría, se
   aborta con error y no escribe nada. Escrituras por lotes de 200, máx. 25 lotes por hora (la primera carga puede

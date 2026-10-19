@@ -14,8 +14,9 @@ import { clasificarPorKeyword } from './keywords'
 import { parsearAvisoBooking } from './reserva-booking'
 import { esAvisoMensajesAgoda } from './agoda-mensajes'
 import type { CorreoNuevo } from './imap'
-import { RE_CODIGO_POSTAL, esDestinoCorreduria, esLeadCorreduria } from './lead-correduria'
+import { RE_CODIGO_POSTAL, esDestinoCorreduria, esEcoPropioCorreduria, esLeadCorreduria } from './lead-correduria'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
+import { remitenteCorreo } from '@central/module-seguros'
 
 export interface Clasificacion {
   categoria: string
@@ -66,11 +67,12 @@ function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 // Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM,
 // que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay
 // GROQ_API_KEY o Groq falla. Lanza si ambos fallan (el llamador lo trata como 'dudoso').
-export async function llamarIA(system: string, user: string): Promise<string> {
+// `maxTokens`: 400 basta para clasificar; la lectura de la respuesta de un lead (F2) pide más (un JSON con citas).
+export async function llamarIA(system: string, user: string, maxTokens = 400): Promise<string> {
   const groqKey = process.env.GROQ_API_KEY
   if (groqKey) {
     try {
-      return await conTimeout(groqText({ apiKey: groqKey }, system, user, 400), 15_000)
+      return await conTimeout(groqText({ apiKey: groqKey }, system, user, maxTokens), 15_000)
     } catch (e) {
       console.warn('[triaje/clasif] Groq falló, pruebo NIM:', String(e).slice(0, 120))
     }
@@ -95,10 +97,24 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     return { categoria: 'agoda-huespedes', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Responder en el buzón de YCS (Smoobu no llega)', fechaLimite: null }
   }
 
+  // (0-ter-a) ECO de nuestra respuesta a un lead (19/10/2026): la copia oculta a hola@ de lo que sale por Resend vuelve
+  // con el From de la correduría y las referencias del hilo. ANTES que la respuesta del lead: si no, casaría con su hilo
+  // y se anotaría/avisaría como si hubiera contestado él. Categoría silenciosa (sin aviso, sin historial, sin IA).
+  // Revisión 19/10/2026: From EXACTO de nuestro remitente + referencias que casan con un `correduria-lead`; cualquier
+  // otro del dominio (Manuel) o un From falsificado sigue su camino y avisa.
+  const remitentePropio = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
+  // Solo se consulta la BD si puede importar: va a la correduría o lo firma nuestro remitente (el eco).
+  const casaConLead = !!correo.referencias?.length
+    && (esDestinoCorreduria(correo.destinatarios) || esEcoPropioCorreduria({ from: correo.from, remitentePropio, casaConLead: true }))
+    && (await esRespuestaDeLeadBD(correo.referencias))
+  if (esEcoPropioCorreduria({ from: correo.from, remitentePropio, casaConLead })) {
+    return { categoria: 'correduria-eco', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+
   // (0-ter) Respuesta de un LEAD de la correduría en su propio hilo (19/10/2026): un hilo = un lead, y
   // la respuesta va a su ficha. Determinista: sus referencias casan con un Message-ID ya registrado como
   // `correduria-lead`. Antes que correo_reglas: es la continuación de algo que ya se decidió.
-  if (correo.referencias?.length && esDestinoCorreduria(correo.destinatarios) && (await esRespuestaDeLeadBD(correo.referencias))) {
+  if (casaConLead && esDestinoCorreduria(correo.destinatarios)) {
     return { categoria: 'correduria-lead', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
   const leadCorreduria = esLeadCorreduria({ from: correo.from, destinatarios: correo.destinatarios, referencias: correo.referencias, buzonPropio: process.env.GMAIL_USER ?? null, automatico: correo.automatico })

@@ -695,6 +695,14 @@ export function oportunidadesClienteAsegura(clienteId: string): Promise<Reenvio>
 export function accionOportunidadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad', { method: 'POST', body: JSON.stringify(body) })
 }
+/**
+ * Lead de correo → Google Contacts al momento (19/10/2026): `POST /api/operador/google-contactos/lead` de
+ * asegura con la ficha recién dada de alta. Tiempo acotado (el lead del triaje tiene presupuesto); si no
+ * contesta a tiempo, `interpretarContactosLead` lo dice como error `red`, nunca como «añadido».
+ */
+export function anadirLeadAContactosAsegura(clienteId: string, timeoutMs: number): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/lead', { method: 'POST', body: JSON.stringify({ clienteId }) }, timeoutMs)
+}
 export function crearTareaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/tarea', { method: 'POST', body: JSON.stringify(body) })
 }
@@ -1103,4 +1111,57 @@ export function riesgoDePolizaAsegura(body: { polizaId: string; actor: string })
 /** «Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis. */
 export function traspasarOportunidadAsegura(body: { oportunidadId: string; nuevoClienteId: string; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/traspasar', { method: 'POST', body: JSON.stringify(body) })
+}
+
+// ─── Petición de datos al lead, EN SU HILO (19/10/2026) ──────────────────────
+/**
+ * `POST /api/operador/correo/lead`: SOLO tras el «✅ Enviar» de Alberto en Telegram (`clp_env`). 30 s: Resend puede
+ * reintentar un 429. Un 5xx o un corte = «no se sabe si salió» (`interpretarEnvioPeticion`), nunca se reintenta.
+ */
+export function peticionLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/lead', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+
+// ─── Respuesta del lead en su hilo (19/10/2026, F2) ──────────────────────────
+/**
+ * `POST /api/operador/correo/respuesta-lead`: `accion:'casar'` (¿de qué hilo/oportunidades es?) o `accion:'guardar'`
+ * (los datos leídos, para escribirlos sin pisar nada). Responde SOLO claves, nunca valores.
+ */
+export function respuestaLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/respuesta-lead', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+
+/** `POST /api/operador/correo/adjunto`: un adjunto del cliente, que asegura guarda CIFRADO (sin clave, no lo guarda). */
+export function adjuntoLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/adjunto', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+
+// ─── Tarificar con BOTS un lead «listo para tarificar» (19/10/2026, F3a) ─────
+/**
+ * `POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta),
+ * `accion:'tarificar'` (encola los bots; SOLO tras `clp_tar`) o `accion:'ampliar_tope'` (SOLO tras `clp_top`). Nunca habla
+ * con Codeoscopic. Responde compañías, claves y conteos; ningún valor personal.
+ */
+export function tarificarLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/tarificar-lead', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}
+
+// ─── Lead de correo → Google Contacts (19/10/2026) ───────────────────────────
+
+export const ESTADOS_CONTACTOS_LEAD = ['anadido', 'ya_estaba', 'revision', 'no_activada', 'sin_conexion', 'error'] as const
+export type ContactosLead = { estado: (typeof ESTADOS_CONTACTOS_LEAD)[number]; motivo: string | null }
+
+/**
+ * La respuesta del puerto de Contactos, en uno de sus seis estados. Lo que no se entiende es `error` con
+ * motivo (nunca «añadido» ni «ya estaba» por defecto: no se afirma lo que no se ha visto). Sin PII: el
+ * motivo es un código corto del puerto, no texto libre.
+ */
+export function interpretarContactosLead(r: Reenvio): ContactosLead {
+  const o = objeto(r.json)
+  const estado = uno(ESTADOS_CONTACTOS_LEAD, o?.estado)
+  const m = texto(o?.motivo)
+  const motivo = m && /^[a-z_]{1,40}$/.test(m) ? m : null
+  if (estado) return { estado, motivo }
+  if (r.status === 401) return { estado: 'error', motivo: 'no_autorizado' }
+  return { estado: 'error', motivo: motivo ?? `http_${r.status}` }
 }

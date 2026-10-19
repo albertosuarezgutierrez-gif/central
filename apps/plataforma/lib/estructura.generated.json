@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-19T07:39:58Z",
+  "generadoEn": "2026-10-19T11:23:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -395,7 +395,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 40
+        "evidencias": 41
       },
       "rrhh": {
         "estado": "usado",
@@ -449,7 +449,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -989,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 29
       },
       "rrhh": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 257
+        "evidencias": 265
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 199
+        "evidencias": 209
       },
       "rrhh": {
         "estado": "no",
@@ -2257,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 61
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 61
       },
       "asegura-portal": {
         "estado": "no",
@@ -3975,7 +3975,8 @@
     "module-seguros": [
       "core-ai",
       "module-seguros-pii",
-      "module-seguros-portal"
+      "module-seguros-portal",
+      "module-tarificacion"
     ],
     "module-seguros-pii": [
       "core-identity"
@@ -4136,9 +4137,13 @@
       "/api/operador/companias/contacto/[id]",
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
+      "/api/operador/correo/adjunto",
       "/api/operador/correo/evento",
       "/api/operador/correo/evento/reevaluar",
+      "/api/operador/correo/lead",
       "/api/operador/correo/resolver",
+      "/api/operador/correo/respuesta-lead",
+      "/api/operador/correo/tarificar-lead",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
       "/api/operador/documentos",
@@ -4227,6 +4232,7 @@
       "/api/operador/tarificador/bandeja",
       "/api/operador/tarificador/bandeja/[id]",
       "/api/operador/tarificador/coberturas",
+      "/api/operador/tarificador/codigo-sms",
       "/api/operador/tarificador/emision",
       "/api/operador/tarificador/emision/autorizar",
       "/api/operador/tarificador/emision/avisos",
@@ -4278,6 +4284,8 @@
       "/api/portal/solicitud-datos/documento",
       "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
+      "/api/tarificador/codigo-sms",
+      "/api/tarificador/codigo-sms/[trabajo]",
       "/api/tarificador/emision/canje",
       "/api/tarificador/emision/resultado",
       "/api/tarificador/explorador/cierre",
@@ -5377,6 +5385,7 @@
       "/api/cron/subastas-ingesta",
       "/api/cron/subastas-mercado",
       "/api/cron/subastas-radar",
+      "/api/cron/tarificador-codigo-sms",
       "/api/cron/tarificador-verificacion",
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
@@ -5821,6 +5830,9 @@
       "seguros.companias_integracion",
       "seguros.consent_logs",
       "seguros.conversaciones",
+      "seguros.correduria_adjunto",
+      "seguros.correduria_hilo",
+      "seguros.correduria_tarif_auto_uso",
       "seguros.corredurias",
       "seguros.correo_envio",
       "seguros.correo_evento",
@@ -5893,6 +5905,7 @@
       "seguros.tarificador_acompanamiento",
       "seguros.tarificador_atascos",
       "seguros.tarificador_coberturas_presupuesto",
+      "seguros.tarificador_codigos_sms",
       "seguros.tarificador_conocimiento",
       "seguros.tarificador_elecciones",
       "seguros.tarificador_exploracion_pasos",
@@ -6108,6 +6121,7 @@
       "correduria_avisos_renovacion",
       "correduria_bots_propuesta",
       "correduria_dni_otp",
+      "correduria_pendiente_tg",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -6929,7 +6943,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1722,
+    "apis": 1730,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

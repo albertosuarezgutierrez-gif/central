@@ -14,6 +14,7 @@ import {
   obligatoriosDeRamo,
   obligatoriosPara,
   valorEnRuta,
+  llegaAPrecio,
 } from './obligatorios.ts'
 
 const HOY = new Date('2026-10-15T10:00:00Z')
@@ -274,5 +275,24 @@ describe('mensajeFaltan', () => {
     expect(mensajeFaltan([])).toBe('')
     expect(mensajeFaltan([{ clave: 'codigoPostal', etiqueta: 'CP de circulación' }])).toBe('Falta: CP de circulación.')
     expect(mensajeFaltan([{ clave: 'codigoPostal', etiqueta: 'CP de circulación' }, { clave: 'conductor.fechaCarne', etiqueta: 'fecha del carné' }])).toBe('Faltan: CP de circulación, fecha del carné.')
+  })
+})
+
+// F3b de la correduría (19/10/2026): desde un LEAD solo se lanzan bots que LLEGAN A PRECIO. Declaración explícita.
+describe('llegaAPrecio (bots que dan precio de verdad)', () => {
+  it('Generali auto se para antes del precio: en pruebas', () => {
+    expect(llegaAPrecio('generali', 'auto')).toBe(false)
+  })
+  it('Allianz Turismos se para antes del precio: en pruebas', () => {
+    expect(llegaAPrecio('allianz', 'auto')).toBe(false)
+  })
+  it('Mapfre auto, Allianz moto y comunidades llegan', () => {
+    expect(llegaAPrecio('mapfre', 'auto')).toBe(true)
+    expect(llegaAPrecio('Allianz', 'moto')).toBe(true)
+    expect(llegaAPrecio('allianz', 'comunidades')).toBe(true)
+  })
+  it('sin declaración = no llega (no se sabe = no se lanza)', () => {
+    expect(llegaAPrecio('axa', 'auto')).toBe(false)
+    expect(llegaAPrecio('allianz', 'vida')).toBe(false)
   })
 })

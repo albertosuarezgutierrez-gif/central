@@ -1497,3 +1497,14 @@ export {
   type CorreoPresentacion, type EmbudoCampana, type EtapaPersona, type FilaEmbudo, type VariantePresentacion,
 } from './presentacion-app.ts'
 export { exigeSiniestrosUltimos5 } from './siniestros-cinco-anios.ts'
+export {
+  clavesCubiertas, contratoDatos, etiquetasDe, peticionDatos, sePideDeEntrada,
+  type BloquePeticion, type CampoContrato, type ClaveContrato, type ContratoDatos, type ObligatorioCampo, type OrigenCampo,
+} from './contrato-datos.ts'
+export { normalizarReferenciaCatastral, referenciaCatastralValida, referenciasCatastralesEn } from './referencia-catastral.ts'
+export {
+  apareceEnCorreo, camposDeBloqueRellenables, camposLeibles, categoriaEstadoCivil, conocidosDeBloque, cuerpoSinCita, decidirFusion, etiquetasUnicas,
+  faltanObligatorios, leerRespuestaIa, mismoValor, preguntasRepregunta, promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
+  type CategoriaEstadoCivil, type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,
+} from './respuesta-lead.ts'
+export { PREGUNTAS_CONCRETAS, esCodigoConcreto, preguntasConcretas, type CodigoConcreto } from './repregunta-concreta.ts'

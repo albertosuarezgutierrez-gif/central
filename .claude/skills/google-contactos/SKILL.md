@@ -45,12 +45,27 @@ landmines, estado). Después, según lo que toques:
   organization «también» + nota. Nunca fusiona fichas ni borra en Google (la secundaria sobrante se desvincula limpia).
 - Dato del contacto que la ficha NO tiene → cola «Añadir a la ficha» (`anadirContacto`). Detalle en el doc.
 
+## Lead de correo al momento (19/10/2026, Alberto lo pidió expresamente)
+- `POST /api/operador/google-contactos/lead` (`apps/asegura/lib/google-contactos-lead.ts`): `{ clienteId }` → `anadido` |
+  `ya_estaba` | `revision` | `no_activada` | `sin_conexion` | `error` + `motivo` (código, sin PII). Arma EL MISMO plan que
+  el cron y ejecuta SOLO lo de esa ficha (`accionesParaFichas`, puro: `packages/module-seguros/src/google-contactos-lead.ts`).
+  Compuerta del cron primero (sin `sync_activada_en`/conexión no escribe); clave PII que no abre → no escribe.
+- Lo llama plataforma tras `altaClienteAsegura` en `lead-correduria-proceso.ts` (ficha nueva o existente; 12 s de tope,
+  nunca bloquea): línea «📇 …» en el Telegram del lead.
+- **El cron lo mantiene:** `seleccionGoogle` incluye los leads `fuente='correo'` activos que YA tienen vínculo (bloque F de
+  `contactos-google.ts`). Sin vínculo no entran solos. Una ficha fuera de la selección (p. ej. lead web sin póliza) →
+  `error`/`fuera_de_alcance`: el cron la retiraría.
+- **Relleno a mano** (no automático): `?desdeCorreo=1&limite=N` (≤50, sin vínculo y sin duda en la cola) o
+  `{ clienteIds: [...] }`; `ensayo: true`/`?ensayo=1` = qué pasaría sin escribir. Idempotente.
+
 ## 🚨 No romper
 
 1. **Gmail personal sin DPA.** Decisión cerrada por Alberto el 05/10/2026; revierte la nota de
    `vcard.ts` del 23/09. El CRM funciona sin validación GDPR explícita en Google.
 2. **Alcance cerrado:** solo selección de `apps/asegura/lib/contactos-movil.ts` (cartera viva +
-   leads), tope Google 25.000 contactos.
+   leads), tope Google 25.000 contactos. **Única excepción (19/10/2026, pedida por Alberto):** los leads que
+   entran por correo (`fuente='correo'`), añadidos uno a uno por `…/google-contactos/lead` (o su relleno a mano)
+   y mantenidos por el cron SOLO si ya tienen vínculo. Ampliarlo a otra fuente es otra decisión de Alberto.
 3. **El CRM manda.** Cambios en Google van a la cola `seguros.google_contactos_revision`;
    revisión y activación manual. No se usan conectores de Claude.
 4. **Reconectar la MISMA cuenta no revoca el token.** Revoke mata el grant entero. Reconexión =

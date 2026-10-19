@@ -52,6 +52,7 @@ import {
 import { Prisma } from './generated/asegura-client'
 import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
+import { comoSeAbrioOportunidad } from './oportunidad-origen'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -927,7 +928,7 @@ export async function crearOportunidad(
     const extra = r.completada ? ' Le he guardado lo leído de la póliza (compañía, nº y bonus que faltaran).' : ''
     return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.${extra}`, status: 409, id: r.id, completada: r.completada }
   }
-  const como = origen === ORIGEN_MANUAL ? 'a mano' : origen === ORIGEN_LEAD_WEB ? 'sola desde el formulario web' : 'sola desde un documento subido'
+  const como = comoSeAbrioOportunidad(origen)
   await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta ${como}; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
   return { ok: true, id: r.id }
 }

@@ -19,14 +19,24 @@ export function parseCallback(data: string): { prefix: string; action: string; a
   return { prefix: head.slice(0, us), action: head.slice(us + 1), args }
 }
 
-export async function tgSend(text: string, opts: { chatId?: string; html?: boolean } = {}): Promise<number | null> {
+/**
+ * `responderA` (19/10/2026): id del mensaje al que se RESPONDE (hilo de Telegram). Si ese mensaje ya no existe, Telegram
+ * lo manda igual sin cita (`allow_sending_without_reply`): un aviso nunca se pierde por el hilo.
+ */
+export function respuestaA(responderA: number | undefined): Record<string, unknown> {
+  return typeof responderA === 'number' && Number.isSafeInteger(responderA) && responderA > 0
+    ? { reply_parameters: { message_id: responderA, allow_sending_without_reply: true } }
+    : {}
+}
+
+export async function tgSend(text: string, opts: { chatId?: string; html?: boolean; responderA?: number } = {}): Promise<number | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) return null
   try {
     const res = await fetch(API(token, 'sendMessage'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, text, parse_mode: opts.html === false ? undefined : 'HTML', disable_web_page_preview: true }),
+      body: JSON.stringify({ chat_id, text, parse_mode: opts.html === false ? undefined : 'HTML', disable_web_page_preview: true, ...respuestaA(opts.responderA) }),
     })
     const d = await res.json()
     return d?.result?.message_id ?? null
@@ -63,7 +73,7 @@ export async function tgSendPhoto(
   } catch { return null }
 }
 
-export async function tgSendButtons(text: string, botones: Boton[][], opts: { chatId?: string } = {}): Promise<number | null> {
+export async function tgSendButtons(text: string, botones: Boton[][], opts: { chatId?: string; responderA?: number } = {}): Promise<number | null> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) return null
@@ -73,7 +83,7 @@ export async function tgSendButtons(text: string, botones: Boton[][], opts: { ch
   try {
     const res = await fetch(API(token, 'sendMessage'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id, text, parse_mode: 'HTML', reply_markup, disable_web_page_preview: true }),
+      body: JSON.stringify({ chat_id, text, parse_mode: 'HTML', reply_markup, disable_web_page_preview: true, ...respuestaA(opts.responderA) }),
     })
     const d = await res.json()
     return d?.result?.message_id ?? null
