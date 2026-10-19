@@ -137,7 +137,9 @@ export async function entregarCodigo(correduriaId: string, ref: string | null, c
   const r = await prisma.$queryRaw<{ id: string }[]>`
     update seguros.tarificador_codigos_sms set codigo_sellado = ${sello}, respondido_en = now()
     where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and respondido_en is null and caduca_en > now()
+      and clave_publica = ${f.clave_publica}
     returning id::text as id`
+  // Sin fila: ya contestada, o el bot volvió a pedir entre medias con otra clave (el sello viejo no lo abriría): se re-pide.
   if (!r[0]) return { estado: 'ya_respondida' }
   return { estado: 'entregado', ref: refDePeticion(f.id), compania: f.compania }
 }
