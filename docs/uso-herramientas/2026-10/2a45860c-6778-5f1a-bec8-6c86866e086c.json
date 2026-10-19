@@ -1,0 +1,103 @@
+{
+ "sesion": "2a45860c-6778-5f1a-bec8-6c86866e086c",
+ "inicio": "2026-10-19T20:16:20.593Z",
+ "fin": "2026-10-19T20:25:08.522Z",
+ "llamadas": 162,
+ "categorias": {
+  "otro": {
+   "llamadas": 17,
+   "chars_in": 5446,
+   "chars_out": 2193,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 9,
+    "Skill": 1,
+    "SubagentHandback": 7
+   }
+  },
+  "sql": {
+   "llamadas": 4,
+   "chars_in": 675,
+   "chars_out": 9189,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 94,
+   "chars_out": 21444,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1
+   }
+  },
+  "mcp:Interactive-Brokers--IBKR-": {
+   "llamadas": 54,
+   "chars_in": 3129,
+   "chars_out": 309190,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Interactive-Brokers--IBKR-__get_account_summary": 1,
+    "mcp__Interactive-Brokers--IBKR-__get_account_positions": 1,
+    "mcp__Interactive-Brokers--IBKR-__get_account_trades": 1,
+    "mcp__Interactive-Brokers--IBKR-__search_contracts": 23,
+    "mcp__Interactive-Brokers--IBKR-__get_price_history": 27,
+    "mcp__Interactive-Brokers--IBKR-__get_price_snapshot": 1
+   }
+  },
+  "bash": {
+   "llamadas": 53,
+   "chars_in": 17468,
+   "chars_out": 36948,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 53
+   }
+  },
+  "escritura": {
+   "llamadas": 25,
+   "chars_in": 182724,
+   "chars_out": 192122,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 25
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 7,
+   "chars_in": 8688,
+   "chars_out": 4925,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 7
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 389,
+   "chars_out": 91,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1
+   }
+  }
+ }
+}
