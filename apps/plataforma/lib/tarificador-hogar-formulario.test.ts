@@ -135,5 +135,19 @@ test('cepo de fuente: plataforma no construye ni envía el tomador de hogar (lo 
   assert.ok(hogar.length > 200 && !/documentoIdentidad|fechaNacimiento/.test(hogar))
   assert.ok(!/porDefecto: '[^']/.test(hogar), 'ninguna de las cuatro elecciones tiene valor por defecto')
   const ruta = readFileSync(join(lib, '..', 'app/api/correduria/tarificador/encolar/route.ts'), 'utf8')
-  assert.match(ruta, /ramo === 'hogar'\s*\?\s*await encolarTarificacionHogar\(clienteId, oportunidadId, riesgo, compania\)/)
+  assert.match(ruta, /ramo === 'hogar'\s*\?\s*await encolarTarificacionHogar\(clienteId, oportunidadId, riesgoHogarSinTomador\(riesgo\), compania\)/)
+})
+
+test('riesgoHogarSinTomador: quita tomador y dni/nif/nacimiento, deja la vivienda y no muta', async () => {
+  const { riesgoHogarSinTomador } = await import('./tarificador-hogar-formulario.ts')
+  const entrada = { ramo: 'hogar', inmueble: { codigoPostal: '41001', dni: 'X' }, hogar: { uso: 'habitual' }, tomador: { documentoIdentidad: '00000000T', fechaNacimiento: '1980-01-01' }, nif: 'Y' }
+  const copia = structuredClone(entrada)
+  assert.deepEqual(riesgoHogarSinTomador(entrada), { ramo: 'hogar', inmueble: { codigoPostal: '41001' }, hogar: { uso: 'habitual' } })
+  assert.deepEqual(entrada, copia)
+})
+
+test('la ruta encolar pasa el riesgo de hogar por riesgoHogarSinTomador', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/api/correduria/tarificador/encolar/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /encolarTarificacionHogar\(clienteId, oportunidadId, riesgoHogarSinTomador\(riesgo\)/)
 })

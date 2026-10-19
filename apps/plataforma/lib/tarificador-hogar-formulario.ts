@@ -199,3 +199,19 @@ export function avisoFichaTomadorParaHogar(faltan: readonly string[] | null): st
   const lista = faltan.length === 1 ? faltan[0] : `${faltan.slice(0, -1).join(', ')} y ${faltan[faltan.length - 1]}`
   return `Falta ${lista} en la ficha del tomador: Allianz Hogar los pide en su primera pantalla y los toma de la ficha. Complétalo en la ficha.`
 }
+
+/**
+ * Riesgo de hogar para encolar sin datos del tomador (19/10/2026): quita `tomador` y cualquier dni/nif/nie/documento/nacimiento
+ * (en cualquier nivel) que el navegador haya mandado. El DNI y el nacimiento los lee asegura de la ficha. No muta la entrada.
+ */
+export function riesgoHogarSinTomador(riesgo: Record<string, unknown>): Record<string, unknown> {
+  const PROHIBIDA = /^(tomador|dni|nif|nie|documento(identidad)?|fechanacimiento|nacimiento)$/i
+  const limpiar = (v: unknown): unknown => {
+    if (Array.isArray(v)) return v.map(limpiar)
+    if (v && typeof v === 'object') {
+      return Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([k]) => !PROHIBIDA.test(k)).map(([k, x]) => [k, limpiar(x)]))
+    }
+    return v
+  }
+  return limpiar(riesgo) as Record<string, unknown>
+}

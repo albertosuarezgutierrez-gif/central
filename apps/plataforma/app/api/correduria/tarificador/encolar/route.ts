@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { exigirCorreduria } from '@/lib/correduria-acceso'
+import { riesgoHogarSinTomador } from '@/lib/tarificador-hogar-formulario'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { encolarTarificacionComunidad, encolarTarificacionHogar, encolarTarificacionVehiculo, leerIntegracionesTarificador } from '@/lib/tarificador-asegura'
 import { poblacionDesdeFicha } from '@/lib/tarificador-asegura-reglas'
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
   // Hogar (19/10/2026, Allianz): el riesgo es el formulario de la vivienda SIN tomador. El DNI/NIE y el nacimiento del tomador
   // NO pasan por aquí: asegura los lee de la ficha, los comprueba al encolar y los inyecta al entregar el trabajo al bot.
   const r = ramo === 'hogar'
-    ? await encolarTarificacionHogar(clienteId, oportunidadId, riesgo, compania)
+    ? await encolarTarificacionHogar(clienteId, oportunidadId, riesgoHogarSinTomador(riesgo), compania)
     : vehiculo !== null
     ? await encolarTarificacionVehiculo(vehiculo, clienteId, oportunidadId, riesgo, compania)
     : await encolarTarificacionComunidad(clienteId, oportunidadId, b.riesgo as Record<string, unknown>, compania)

@@ -38,6 +38,7 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
+import { formasRiesgoDuplicado } from './tarificador-duplicados'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
@@ -192,9 +193,9 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   // (igualdad `jsonb`) con un trabajo aún vivo, o terminado con precio hace menos de 10 min → se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
   // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
   const compania = claveCompania(e.compania)
-  const riesgoJson = JSON.stringify(guardar.riesgo)
-  // Un `ok` ya purgó su riesgo a la lista blanca (salvo origen de emisión): se compara con ambas formas.
-  const riesgoPurgadoJson = JSON.stringify(riesgoSinDatosPersonales(guardar.riesgo, e.ramo))
+  // Un `ok` ya purgó su riesgo a la lista blanca (salvo origen de emisión): se compara con ambas formas, salvo hogar (su
+  // forma purgada no distingue viviendas: `riesgoPurgadoJson` es null y `t.riesgo = null` nunca casa).
+  const { riesgoJson, riesgoPurgadoJson } = formasRiesgoDuplicado(guardar.riesgo as Record<string, unknown>, e.ramo)
   const cid = clienteId
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`

@@ -144,3 +144,17 @@ test('cableado: encolar valida con la compañía, el tomador se lee de la ficha 
   const ruta = readFileSync(join(APP, 'app/api/operador/tarificador/encolar/route.ts'), 'utf8')
   assert.match(ruta, /validarEntradaRamo\(body\.ramo, body\.riesgo, compania\)/)
 })
+
+test('duplicados hogar: con el primero ya ok y purgado, otra vivienda NO es duplicada; la idéntica sin purgar sí', async () => {
+  const { formasRiesgoDuplicado } = await import('./tarificador-duplicados.ts')
+  const { riesgoSinDatosPersonales } = await import('@central/module-tarificacion')
+  const otra = { ...HOGAR, inmueble: { ...HOGAR.inmueble, numero: '2' } }
+  const purgado = JSON.stringify(riesgoSinDatosPersonales(HOGAR, 'hogar')) // lo que queda en BD tras el ok
+  const casa = (previo: string, f: { riesgoJson: string; riesgoPurgadoJson: string | null }): boolean => previo === f.riesgoJson || previo === f.riesgoPurgadoJson
+  assert.equal(casa(purgado, formasRiesgoDuplicado(otra, 'hogar')), false, 'otra vivienda vs primero purgado')
+  assert.equal(casa(purgado, formasRiesgoDuplicado(HOGAR, 'hogar')), false, 'ni la misma vivienda casa con la forma purgada')
+  assert.equal(casa(JSON.stringify(HOGAR), formasRiesgoDuplicado(HOGAR, 'hogar')), true, 'idéntico sin purgar: duplicado')
+  assert.equal(casa(JSON.stringify(HOGAR), formasRiesgoDuplicado(otra, 'hogar')), false)
+  const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
+  assert.match(src, /formasRiesgoDuplicado\(guardar\.riesgo/)
+})
