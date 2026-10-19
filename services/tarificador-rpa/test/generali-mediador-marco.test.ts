@@ -12,6 +12,7 @@ import { EmisionBloqueadaError } from '@central/module-tarificacion'
 import {
   MEDIADOR_GENERALI,
   decidirMediadorGenerali,
+  esPortalCorredorGenerali,
   inventarioMediadorGenerali,
   opcionSinDatosGenerali,
   type ControlMediador,
@@ -272,7 +273,7 @@ test('guard: un desplegable con el mediador en un marco de OTRA ruta no se confi
 
 const ACEPTAR_ENLACE = `<a href="#" onclick="top.location.href='/arq_genernetPortalFormWeb/CorredorInicio.po?paso=2'; return false">ACEPTAR</a>`
 
-async function abrirPortalEntrar(entrar: string): Promise<Portal> {
+async function abrirPortalEntrar(entrar: string, portalHtml = '<h1>Portal del Corredor</h1><nav><span>NEGOCIO</span></nav>'): Promise<Portal> {
   const context = await browser.newContext()
   const guard = await instalarGuardEmision(context)
   const page = await context.newPage()
@@ -292,7 +293,7 @@ async function abrirPortalEntrar(entrar: string): Promise<Portal> {
       const sel = m ? `<script>document.querySelector('select[name=mediador]').value=${JSON.stringify(m)}</script>` : ''
       return html(CAMPOS(OPS_OK, ACEPTAR_ENLACE) + sel)
     }
-    if (u.pathname === '/arq_genernetPortalFormWeb/CorredorPortal.po') return html('<h1>Portal del Corredor</h1><nav><span>NEGOCIO</span></nav>')
+    if (u.pathname === '/arq_genernetPortalFormWeb/CorredorPortal.po') return html(portalHtml)
     return html('otra')
   })
   await page.goto(INICIO)
@@ -351,4 +352,38 @@ test('humo nocturno de Generali: usa el MISMO paso (marcos) y la puerta del guar
   } finally {
     await p.cerrar()
   }
+})
+
+// ───────────── v0.2.4 (prueba real 31e76085): tras ENTRAR, CorredorPortal.po SIN `mediatorCode` y con «NEGOCIO» como <a> ─────────────
+// Pantalla real (sin datos personales): carcasa «Portal del Corredor» con la barra «NEGOCIO · COMPAÑÍA · … · CERRAR» como enlaces
+// `<a>` SIN href (el menú no cuenta como «visible» para Playwright mientras la barra está plegada) y el área de trabajo en un
+// marco `areaTrabajo`. La llegada se decide por la RUTA EXACTA de www.generali.es, no por el menú ni por la query.
+
+const PORTAL_REAL_HTML = `<h1>Portal del Corredor</h1><div style="display:none"><a>NEGOCIO</a><a>COMPAÑÍA</a><a>FORMACIÓN</a><a>CERRAR</a></div>
+  <iframe name="areaTrabajo" src="/gpf3k/arq_genernetPortalFormWeb/MediadorExHome.po" style="width:600px;height:300px"></iframe>`
+
+test('v0.2.4: ENTRAR → CorredorPortal.po sin mediatorCode y con NEGOCIO plegado (<a> sin href) = llegada al portal', async () => {
+  const p = await abrirPortalEntrar('<a href="/arq_genernetPortalFormWeb/CorredorPortal.po">ENTRAR</a>', PORTAL_REAL_HTML)
+  try {
+    const llamadas: string[] = []
+    await elegirMediadorGenerali(p.page, ctxEntrar(p.page, p.guard, llamadas), { esperaMs: 6_000, pausaMs: 200 })
+    assert.deepEqual(llamadas, ['mediador', 'entrar'])
+    assert.equal(new URL(p.page.url()).pathname, '/arq_genernetPortalFormWeb/CorredorPortal.po')
+    assert.equal(p.guard.violacion(), null)
+  } finally {
+    await p.cerrar()
+  }
+})
+
+test('v0.2.4: la llegada es fail-closed: ruta exacta de www.generali.es; otro origen, otra ruta u otro mediatorCode no cuentan', () => {
+  const base = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po'
+  assert.equal(esPortalCorredorGenerali(base), true)
+  assert.equal(esPortalCorredorGenerali(`${base}?mediatorCode=${MEDIADOR_GENERALI}#x`), true)
+  assert.equal(esPortalCorredorGenerali(`${base}?mediatorCode=11111`), false, 'otro mediador')
+  assert.equal(esPortalCorredorGenerali(base.replace('www.generali.es', 'access.generali.es')), false)
+  assert.equal(esPortalCorredorGenerali('http://www.generali.es/arq_genernetPortalFormWeb/CorredorPortal.po'), false)
+  assert.equal(esPortalCorredorGenerali(`${base}/otra`), false)
+  assert.equal(esPortalCorredorGenerali('https://www.generali.es/gpf3k/arq_genernetPortalFormWeb/CorredorPortal.po'), false)
+  assert.equal(esPortalCorredorGenerali('https://www.generali.es/arq_genernetPortalFormWeb/CorredorInicio.po'), false)
+  assert.equal(esPortalCorredorGenerali('no es una url'), false)
 })

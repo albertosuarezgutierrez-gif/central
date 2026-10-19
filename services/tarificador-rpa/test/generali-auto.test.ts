@@ -28,7 +28,7 @@ import {
 } from '../src/adapters/generali/reglas.ts'
 import { ErrorMapaIncompletoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
+import { cerrarAvisoSabiasQueGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { vehiculoDelResultado } from '../src/api.ts'
@@ -149,8 +149,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.3')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.3')
+  assert.equal(generaliAuto.version, '0.2.4')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.4')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -390,5 +390,55 @@ test('selector de vehículos: modelo exacto y versión de la oportunidad; sin ve
     await assert.rejects(seleccionarVehiculoGenerali(b.page, b.page, sinVersion, ctxSimple(b.page, b.guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 2)
   } finally {
     await b.cerrar()
+  }
+})
+
+// ───────────── v0.2.4: modal «¿Sabías qué…?» del portal (inventario real: span#closeModalSabiasQueIntro role=button «×») ─────────────
+
+const MODAL_SABIAS = (cierre = '<span id="closeModalSabiasQueIntro" role="button" aria-label="Cerrar" onclick="document.getElementById(\'m\').remove();window.__cerrado=1">×</span>') =>
+  `<h1>Portal del Corredor</h1><div id="m" class="modal in" style="display:block"><h4>¿Sabías qué...?</h4>${cierre}<p>vídeo</p></div><a>NEGOCIO</a>`
+
+test('v0.2.4 · modal «¿Sabías qué…?»: se cierra por la compuerta (una vez) y no se toca nada más', async () => {
+  const { page, guard, cerrar } = await abrir(PORTAL, MODAL_SABIAS())
+  try {
+    assert.equal(await cerrarAvisoSabiasQueGenerali(page, guard), 'cerrado')
+    assert.equal(await page.evaluate(() => (window as unknown as { __cerrado?: number }).__cerrado), 1)
+    assert.equal(guard.violacion(), null)
+    assert.equal(await cerrarAvisoSabiasQueGenerali(page, guard), 'sin_aviso', 'una vez por trabajo: la segunda no hace nada')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.4 · modal «¿Sabías qué…?»: sin modal no hace nada y no es error', async () => {
+  const { page, guard, cerrar } = await abrir(PORTAL, '<h1>Portal del Corredor</h1><a>NEGOCIO</a>')
+  try {
+    assert.equal(await cerrarAvisoSabiasQueGenerali(page, guard), 'sin_aviso')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.4 · modal «¿Sabías qué…?»: fail-closed (fuera del portal, dos cierres, o un control que no es un cierre → no se pulsa)', async () => {
+  const fuera = await abrir(INICIO, MODAL_SABIAS())
+  try {
+    assert.equal(await cerrarAvisoSabiasQueGenerali(fuera.page, fuera.guard), 'sin_aviso', 'fuera de CorredorPortal.po no se pulsa')
+    assert.equal(await fuera.page.evaluate(() => (window as unknown as { __cerrado?: number }).__cerrado ?? 0), 0)
+  } finally {
+    await fuera.cerrar()
+  }
+  const malos = [
+    MODAL_SABIAS('<span id="closeModalSabiasQueIntro" role="button" onclick="window.__cerrado=1">Aceptar</span>'),
+    MODAL_SABIAS('<span id="closeModalSabiasQueIntro" role="button" onclick="window.__cerrado=1">×</span><span id="closeModalSabiasQueIntro" role="button" onclick="window.__cerrado=1">×</span>'),
+    MODAL_SABIAS('<span id="closeModalSabiasQueIntro" role="button" onclick="window.__cerrado=1;emitirPoliza()">×</span>'),
+  ]
+  for (const html of malos) {
+    const p = await abrir(PORTAL, html)
+    try {
+      await assert.rejects(cerrarAvisoSabiasQueGenerali(p.page, p.guard), (e: unknown) => e instanceof ErrorTarificador || e instanceof EmisionBloqueadaError)
+      assert.equal(await p.page.evaluate(() => (window as unknown as { __cerrado?: number }).__cerrado ?? 0), 0)
+    } finally {
+      await p.cerrar()
+    }
   }
 })

@@ -63,3 +63,29 @@ test('paginación: tope 50', () => {
   assert.deepEqual(paginacionBandeja('51', null), { limite: 50, desde: 0 })
   assert.deepEqual(paginacionBandeja('10', '50'), { limite: 10, desde: 50 })
 })
+
+// ─── Elección de población (19/10/2026) ──────────────────────────────────────
+import { cuerpoEleccionPoblacion, opcionesPoblacionDeItem } from './tarificador-bandeja.ts'
+
+const OPS = [{ codigo: '00001- PUEBLO NUEVO', etiqueta: 'PUEBLO NUEVO' }, { codigo: '00001- VILLA ÁLAMO', etiqueta: 'VILLA ÁLAMO' }]
+
+test('población: la lista estructurada del puerto llega al item; sin lista → null (no se inventa desde el mensaje)', () => {
+  const r = leerRespuestaBandeja(200, { total: 2, items: [
+    { ...ITEM, motivo: 'requiere_eleccion_poblacion: el código postal tiene 2 poblaciones; elige una en la bandeja y reintenta: PUEBLO NUEVO · VILLA ÁLAMO', opcionesPoblacion: OPS },
+    { ...ITEM, id: '22222222-2222-4222-8222-222222222222', motivo: 'requiere_eleccion_poblacion: x' },
+  ] })
+  assert.ok(r.ok)
+  if (r.ok) {
+    assert.deepEqual(r.bandeja.items[0].opcionesPoblacion, OPS)
+    assert.equal(r.bandeja.items[1].opcionesPoblacion, null)
+  }
+})
+
+test('población: opciones rotas o repetidas no se ofrecen; el código viaja EXACTO, nunca la etiqueta', () => {
+  assert.equal(opcionesPoblacionDeItem({ opcionesPoblacion: [{ codigo: 5 }] }), null)
+  assert.equal(opcionesPoblacionDeItem({ opcionesPoblacion: [] }), null)
+  assert.equal(opcionesPoblacionDeItem({}), null)
+  assert.deepEqual(opcionesPoblacionDeItem({ opcionesPoblacion: [...OPS, OPS[0]] }), OPS)
+  assert.equal(cuerpoEleccionPoblacion(OPS, '1'), '00001- VILLA ÁLAMO')
+  for (const mal of ['', '2', '-1', 'x', '0.5']) assert.equal(cuerpoEleccionPoblacion(OPS, mal), null, mal)
+})

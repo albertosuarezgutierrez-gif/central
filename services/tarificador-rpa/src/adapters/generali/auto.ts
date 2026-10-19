@@ -1,4 +1,4 @@
-// Generali · portal del corredor · TURISMOS (Ramo UV) — v0.2.3 (19/10/2026).
+// Generali · portal del corredor · TURISMOS (Ramo UV) — v0.2.4 (19/10/2026).
 // Registrado SOLO con `GENERALI_AUTO_ACTIVO` (abajo, ENCENDIDO el 18/10/2026 por Alberto) y, además, la puerta de BD de siempre: la
 // fila `seguros.companias_integracion` generali/auto activa y `rpa_autorizada` (NO se activa desde aquí).
 //
@@ -72,6 +72,7 @@ import {
   type MarcoMediador,
   rolesGenerali,
   urlConMediador,
+  esPortalCorredorGenerali,
   vehiculoBuscadoGenerali,
   type VehiculoBuscado,
 } from './reglas.ts'
@@ -96,7 +97,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * etiqueta: se busca en TODOS los marcos el desplegable por la OPCIÓN del mediador, esperando a que el bucle CorredorInicio →
  * seleccionAmbito → Refresh se estabilice; el botón de ese marco, solo por la lista blanca del guard; 0 o varias → inventario.
  */
-export const VERSION_GENERALI_AUTO = '0.2.3'
+export const VERSION_GENERALI_AUTO = '0.2.4'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -465,28 +466,39 @@ async function selectDeCandidato(c: CandidatoMediador): Promise<Locator> {
   throw new ErrorMapaIncompletoGenerali(`el desplegable «Mediador» (captura 2): la candidata no se deja localizar de forma única en su marco (${m.ruta})`)
 }
 
-/** ¿Hay un «NEGOCIO» visible en algún marco? (el menú del portal del corredor) */
+/**
+ * ¿Hay un «NEGOCIO» en algún marco? (el menú del portal del corredor). Prueba real 31e76085: en `CorredorPortal.po` es un
+ * enlace `<a>` SIN href con ese texto exacto (junto a COMPAÑÍA · FORMACIÓN · NORMAS · … · CERRAR) que puede estar plegado y no
+ * contar como «visible»: aquí basta con que esté en el DOM (solo lee; el sobrevuelo lo hace la puerta del guard).
+ */
 async function menuNegocioVisible(page: Page): Promise<boolean> {
   for (const f of page.frames()) {
-    if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).filter({ visible: true }).count().catch(() => 0)) >= 1) return true
+    if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).count().catch(() => 0)) >= 1) return true
   }
   return false
 }
 
+/** ¿Ya estamos en el portal del corredor? Ruta EXACTA `CorredorPortal.po` de www.generali.es (con o sin `mediatorCode`) o el menú NEGOCIO. */
+async function llegadoAlPortal(page: Page): Promise<boolean> {
+  if (urlConMediador(page.url()) === true || esPortalCorredorGenerali(page.url())) return true
+  return rutaSinQuery(page.url()).startsWith('https://www.generali.es/') && (await menuNegocioVisible(page))
+}
+
+/** Tras «ENTRAR»: espera a la llegada a `CorredorPortal.po` (ruta exacta) o al menú NEGOCIO. */
 async function esperarMenuNegocio(page: Page, esperaMs: number, pausaMs: number): Promise<boolean> {
   const fin = Date.now() + esperaMs
   while (Date.now() < fin) {
-    if (await menuNegocioVisible(page)) return true
+    if (await llegadoAlPortal(page)) return true
     await page.waitForTimeout(pausaMs)
   }
-  return menuNegocioVisible(page)
+  return llegadoAlPortal(page)
 }
 
 /** Tras confirmar el mediador: espera a la URL con `mediatorCode`, al menú NEGOCIO o a que CorredorInicio.po ofrezca «ENTRAR». */
 async function esperarPortalOEntrar(page: Page, esperaMs: number, pausaMs: number): Promise<void> {
   const fin = Date.now() + esperaMs
   while (Date.now() < fin) {
-    if (urlConMediador(page.url()) === true || (await menuNegocioVisible(page))) return
+    if (await llegadoAlPortal(page)) return
     if (rutaSinQuery(page.url()).endsWith('/CorredorInicio.po')) {
       for (const f of page.frames()) {
         if (!f.isDetached() && (await f.getByText(/^\s*ENTRAR\s*$/).filter({ visible: true }).count().catch(() => 0)) >= 1) return
@@ -523,7 +535,7 @@ export async function elegirMediadorGenerali(page: Page, ctx: Pick<ContextoPorta
     }
     await ctx.confirmarMediadorGenerali(sel)
     await esperarPortalOEntrar(page, o.esperaMs ?? ESPERA_PANTALLA_MS, pausa)
-    if (urlConMediador(page.url()) === true || (await menuNegocioVisible(page))) return
+    if (await llegadoAlPortal(page)) return
     // Prueba real 351f946b (v0.2.3): aceptado el mediador, CorredorInicio.po se queda con «ENTRAR»: se pulsa por la puerta del guard.
     if (ctx.entrarPortalGenerali && rutaSinQuery(page.url()).endsWith('/CorredorInicio.po')) {
       await ctx.entrarPortalGenerali()
@@ -814,6 +826,8 @@ export const generaliAuto = {
     const hoy = new Date()
     await loginGenerali(page, ctx)
     await elegirMediadorGenerali(page, ctx)
+    // v0.2.4: el modal «¿Sabías qué…?» tapa el portal al llegar; si está, se cierra por la compuerta del guard (si no, nada).
+    await ctx.cerrarAvisoSabiasQueGenerali?.()
     await ctx.entrarTurismosGenerali()
     const marco = await marcoConTexto(page, 'Datos de Valoración')
     if (!marco) throw new ErrorMapaIncompletoGenerali('el formulario «Valoración Riesgo › Datos de Valoración» tras el menú de Turismos (captura 4)')

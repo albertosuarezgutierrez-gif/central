@@ -465,3 +465,20 @@ export function leerPrecioGenerali(texto: string, ignorar: readonly number[] = [
   if (distintos.length === 1) return { tipo: 'unico', eur: distintos[0]!.eur, linea: distintos[0]!.linea }
   return { tipo: 'varios', candidatos: distintos.slice(0, 12) }
 }
+
+/**
+ * ¿La URL es la llegada al portal del corredor (`CorredorPortal.po`, prueba real 31e76085, v0.2.4)? Tras «ENTRAR» el portal
+ * real NO lleva `mediatorCode` en la URL hasta más tarde. FAIL-CLOSED: https, origen EXACTO `www.generali.es`, ruta EXACTA
+ * `/arq_genernetPortalFormWeb/CorredorPortal.po`, y si trae `mediatorCode` tiene que ser el de la correduría. PURA.
+ */
+export function esPortalCorredorGenerali(url: string, codigo: string = MEDIADOR_GENERALI): boolean {
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.origin !== 'https://www.generali.es' || u.username || u.password) return false
+  if (u.pathname !== '/arq_genernetPortalFormWeb/CorredorPortal.po') return false
+  return urlConMediador(url, codigo) !== false
+}
