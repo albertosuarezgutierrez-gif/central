@@ -117,9 +117,9 @@ export async function resolverBotonCsg(d: Extract<DecisionCsg, { ok: true }>, ho
         const cand = candidatasCompania(datos.email, comp.companias)
         // Idempotencia previa barata (el puerto la repite): el email ya está en CUALQUIER compañía del directorio.
         const ya = comp.companias.find((c) => c.contactos.some((x) => (x.email ?? '').toLowerCase() === datos.email))
-        if (cand.tipo === 'ninguna') res = { estado: 'sin_compania' }
+        if (ya) res = { estado: 'existia', compania: ya.nombreComun }
+        else if (cand.tipo === 'ninguna') res = { estado: 'sin_compania' }
         else if (!alta) res = { estado: 'error', motivo: 'ilegible' }
-        else if (ya) res = { estado: 'existia', compania: ya.nombreComun }
         else if (cand.tipo === 'ambigua') res = { estado: 'ambigua', candidatas: cand.candidatas.map((c) => ({ codigoDgs: c.codigoDgs, nombreComun: c.nombreComun })) }
         else {
           llamado = true
