@@ -14,7 +14,7 @@ import { clasificarPorKeyword } from './keywords'
 import { parsearAvisoBooking } from './reserva-booking'
 import { esAvisoMensajesAgoda } from './agoda-mensajes'
 import type { CorreoNuevo } from './imap'
-import { RE_CODIGO_POSTAL, esDestinoCorreduria, esLeadCorreduria } from './lead-correduria'
+import { RE_CODIGO_POSTAL, esDestinoCorreduria, esEcoPropioCorreduria, esLeadCorreduria } from './lead-correduria'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 
 export interface Clasificacion {
@@ -93,6 +93,13 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   // de que un huésped ha escrito. El detector exige remitente de agoda.com + su asunto exacto.
   if (esAvisoMensajesAgoda(correo)) {
     return { categoria: 'agoda-huespedes', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Responder en el buzón de YCS (Smoobu no llega)', fechaLimite: null }
+  }
+
+  // (0-ter-a) ECO de nuestra respuesta a un lead (19/10/2026): la copia oculta a hola@ de lo que sale por Resend vuelve
+  // con el From de la correduría y las referencias del hilo. ANTES que la respuesta del lead: si no, casaría con su hilo
+  // y se anotaría/avisaría como si hubiera contestado él. Categoría silenciosa (sin aviso, sin historial, sin IA).
+  if (esEcoPropioCorreduria({ from: correo.from, referencias: correo.referencias })) {
+    return { categoria: 'correduria-eco', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
 
   // (0-ter) Respuesta de un LEAD de la correduría en su propio hilo (19/10/2026): un hilo = un lead, y

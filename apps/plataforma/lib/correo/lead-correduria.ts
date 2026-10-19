@@ -11,15 +11,17 @@
 //      dice y el correo no contiene se descarta (null = no se sabe). Nunca se inventa un teléfono.
 //   3. `cuerpoAltaLeadCorreo`: el alta por el MISMO puerto que la web, con `fuente: 'correo'`. Sin
 //      prueba de consentimiento web (no hubo formulario): la base es la propia solicitud de la persona.
-//   4. `plantillaPeticionDatos`: el texto FIJO por ramo para pedirle los datos. Solo texto: nada se envía.
+//   4. `plantillaPeticionDatos`: el texto para pedirle los datos, SOLO lo que falta, desde el contrato único por ramo
+//      (`peticionDatos` de `@central/module-seguros`). Aquí solo se redacta: enviarlo exige el ✅ de Alberto
+//      (`lead-correduria-peticion.ts`).
 //   5. `textoAvisoLeadCorreo`: el Telegram, con lo que se hizo y lo que NO.
 //
 // Test: `lib/correo/lead-correduria.test.ts`.
 
 import { escapeHtml } from '@central/core-telegram'
 import {
-  MEDIADOR, RAMOS_OPORTUNIDAD, nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono,
-  type RamoOportunidad,
+  MEDIADOR, RAMOS_OPORTUNIDAD, nombreDePila, normalizarEmail, normalizarNombre, normalizarTelefono, peticionDatos,
+  referenciasCatastralesEn, type RamoOportunidad,
 } from '@central/module-seguros'
 import { ASEGURADORAS } from './keywords.ts'
 import type { ResultadoEscritura } from '../cliente-edicion-asegura.ts'
@@ -103,6 +105,17 @@ export function esLeadCorreduria(c: {
 }
 
 /**
+ * ¿Es el ECO de nuestra propia respuesta a un lead? (19/10/2026) La petición de datos sale por Resend desde hola@ con
+ * copia oculta a hola@ (lo de Resend no aparece en «Enviados» de Gmail): esa copia vuelve al buzón con el From de la
+ * correduría y las referencias del hilo del lead. No es un lead ni su respuesta: no crea ficha, no anota historial
+ * (asegura ya lo anotó al enviar) y no avisa. PURA.
+ */
+export function esEcoPropioCorreduria(c: { from: string; referencias?: readonly string[] }): boolean {
+  const from = (c.from ?? '').trim().toLowerCase()
+  return from.includes('@') && esDeCorreduria(from) && (c.referencias ?? []).length > 0
+}
+
+/**
  * ¿Es la respuesta del lead a un hilo que YA abrió como lead? `idsLead` = los Message-ID de sus
  * referencias que el triaje registró como `correduria-lead`. Un hilo = un lead: esto solo anota.
  */
@@ -124,14 +137,16 @@ export const PROMPT_EXTRAER_LEAD = [
   'Responde SOLO con JSON, sin markdown:',
   '"es_lead" es true si es una persona que pide un seguro, un precio o información de seguros; false si es publicidad, spam,',
   'una oferta de servicios, un proveedor o una aseguradora.',
+  '"ramos" es una LISTA con TODOS los seguros que pide (p. ej. ["hogar","vida"]), cada uno con una palabra de la lista de ramos.',
+  '"datos" recoge SOLO lo que el correo dice LITERALMENTE (copia el texto tal cual), si aparece; si no, omítelo:',
+  '  capital (importe a asegurar), duracion_anios (años), ocupacion (vivienda habitual / segunda residencia / alquilada),',
+  '  cp (código postal de lo que asegura), matricula, metros (m² de la vivienda), anio_construccion.',
   '{"es_lead":true|false,"nombre":"nombre y apellidos o null","email":"o null","telefono":"o null","ramos":["..."],',
-  ' "pide_presupuesto":true|false|null,"resumen":"una línea en español: qué quiere"}',
+  ' "pide_presupuesto":true|false|null,"resumen":"una línea en español: qué quiere","datos":{"capital":"..."}}',
 ].join('\n')
 
 // ─── 2. Lo que la IA saca del correo, validado ───────────────────────────────
 
-/** Los ramos para los que hay plantilla propia de petición de datos. El resto, genérica. */
-export type RamoPlantilla = 'hogar' | 'vida' | 'auto' | 'generico'
 
 export type LeadCorreo = {
   /** Nombre tal cual aparece en el correo (firma o remitente). `null` = no consta. */
@@ -158,6 +173,14 @@ export type LeadCorreo = {
    * igual (perder un lead es peor que descartar una ficha) y el aviso lo dice.
    */
   esLead: boolean | null
+  /**
+   * Claves del contrato de datos (`contratoDatos`) que el correo YA responde (19/10/2026): la IA las señala y cada una
+   * se comprueba en el texto (como el teléfono). Solo sirven para NO volver a preguntarlas; no se escriben en la
+   * cartera (eso es la F2). `undefined` = no se miró.
+   */
+  datosDados?: string[]
+  /** Referencias catastrales VÁLIDAS (control correcto) escritas en el correo. Deterministas, sin IA. */
+  referenciasCatastrales?: string[]
 }
 
 /** Sinónimos → ramo de oportunidad. Lo que no esté aquí ni sea un ramo exacto se ignora. */
@@ -177,14 +200,82 @@ const SINONIMOS_RAMO: Record<string, RamoOportunidad> = {
 
 const sinTildes = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-/** Un texto de ramo → ramo de oportunidad, o `null` si no se reconoce (nunca se cae a `otros`). */
+/**
+ * Un texto de ramo → ramo de oportunidad, o `null` si no se reconoce (nunca se cae a `otros`). Tolera lo que la IA
+ * devuelve de verdad (19/10/2026, lead de hogar + vida que salió con la plantilla GENÉRICA): «Seguro de hogar»,
+ * «Vida (hipoteca)», «seguro del coche».
+ */
 export function ramoDeTexto(v: unknown): RamoOportunidad | null {
   if (typeof v !== 'string') return null
-  const s = sinTildes(v).toLowerCase().trim().replace(/[\s-]+/g, ' ')
+  const s = sinTildes(v).toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/[^a-z_ ]+/g, ' ').trim()
+    .replace(/^(un |el |la )?seguros? (de |del |para )?(la |el |mi |una |un )?/, '').replace(/[\s-]+/g, ' ').trim()
   if (!s) return null
   const exacto = RAMOS_OPORTUNIDAD.find((r) => r === s.replace(/ /g, '_'))
   if (exacto && exacto !== 'otros') return exacto
   return SINONIMOS_RAMO[s] ?? null
+}
+
+/** Lo que la IA da como ramos: lista, o un texto «hogar y vida», «hogar, vida». */
+function listaRamosIa(v: unknown): unknown[] {
+  if (Array.isArray(v)) return v.flatMap((x) => (typeof x === 'string' ? x.split(/\s*(?:,|;|\/|\by\b|\+)\s*/) : [x]))
+  if (typeof v === 'string') return v.split(/\s*(?:,|;|\/|\by\b|\+)\s*/)
+  return []
+}
+
+/**
+ * Ramos que el correo nombra SIN DUDA, sin IA: «seguro de hogar», «seguro de vida», «vida … hipoteca», «seguro del
+ * coche»… Frases, no palabras sueltas («vida» sola sale en cualquier saludo). Si la IA cae o se deja uno, el correo
+ * manda. PURA.
+ */
+const RAMOS_POR_FRASE: Array<[RegExp, RamoOportunidad]> = [
+  [/\bseguros? (de |del |para )?(el |la |mi |una |un )?(hogar|casa|vivienda|piso)\b|\bmultirriesgo (de )?hogar\b|\bseguro de hogar\b/, 'hogar'],
+  [/\bseguros? de vida\b|\bvida\b[^.]{0,60}\bhipoteca\b|\bhipoteca\b[^.]{0,60}\b(seguro de )?vida\b/, 'vida'],
+  [/\bseguros? (de |del |para )?(el |mi |un )?(coche|automovil|vehiculo|turismo|furgoneta)\b/, 'auto'],
+  [/\bseguros? (de |para )?(la |mi |una )?(moto|motocicleta|ciclomotor|scooter)\b/, 'moto'],
+  [/\bseguros? (de |medico|privado de )?salud\b|\bseguro medico\b/, 'salud'],
+  [/\bseguros? de decesos\b|\bdecesos\b/, 'decesos'],
+  [/\bcomunidad de (propietarios|vecinos)\b/, 'comunidades'],
+]
+export function ramosDelTexto(texto: string): RamoOportunidad[] {
+  const t = sinTildes(texto ?? '').toLowerCase().replace(/\s+/g, ' ')
+  return RAMOS_POR_FRASE.filter(([re]) => re.test(t)).map(([, r]) => r)
+}
+
+/** Datos que la IA dice que el correo trae → clave del contrato. Solo estos; el resto se ignora. */
+const DATO_A_CLAVE: Record<string, { claves: string[]; tipo: 'numero' | 'texto' }> = {
+  capital: { claves: ['capital'], tipo: 'numero' },
+  duracion_anios: { claves: ['duracionAnios'], tipo: 'numero' },
+  ocupacion: { claves: ['ocupacion'], tipo: 'texto' },
+  cp: { claves: ['cp'], tipo: 'numero' },
+  matricula: { claves: ['matricula'], tipo: 'texto' },
+  metros: { claves: ['metrosCuadrados'], tipo: 'numero' },
+  anio_construccion: { claves: ['anioConstruccion'], tipo: 'numero' },
+}
+
+/**
+ * Claves que el correo YA responde. Cada valor que da la IA se COMPRUEBA en el texto: un número, por sus cifras
+ * («90.000€» → 90000 tiene que estar); un texto, tal cual (sin tildes ni mayúsculas). Lo que no está, no cuenta. PURA.
+ */
+export function datosDadosEnCorreo(raw: unknown, texto: string): string[] {
+  const o = typeof raw === 'object' && raw !== null && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
+  const t = sinTildes(texto).toLowerCase()
+  const cifras = texto.replace(/(\d)[.\s](?=\d{3}\b)/g, '$1')
+  const out = new Set<string>()
+  for (const [k, def] of Object.entries(DATO_A_CLAVE)) {
+    const v = o[k]
+    const s = typeof v === 'number' ? String(v) : typeof v === 'string' ? v.trim() : ''
+    if (!s || s.length > 80) continue
+    let esta = false
+    if (def.tipo === 'numero') {
+      const d = s.replace(/(\d)[.\s](?=\d{3}\b)/g, '$1').match(/\d+/)?.[0]
+      esta = !!d && new RegExp(`(?<!\\d)${d}(?!\\d)`).test(cifras)
+    } else {
+      const n = sinTildes(s).toLowerCase().replace(/\s+/g, ' ')
+      esta = n.length >= 4 && t.replace(/\s+/g, ' ').includes(n)
+    }
+    if (esta) for (const c of def.claves) out.add(c)
+  }
+  return [...out]
 }
 
 const soloDigitos = (s: string) => s.replace(/\D/g, '')
@@ -242,15 +333,22 @@ export function normalizarLeadCorreo(raw: unknown, ctx: { texto: string; from: s
     }
   }
 
-  const listaRamos = Array.isArray(o.ramos) ? o.ramos : o.ramo !== undefined ? [o.ramo] : []
-  const ramos = [...new Set(listaRamos.map(ramoDeTexto).filter((r): r is RamoOportunidad => r !== null))].slice(0, 3)
+  // Los ramos: lo que diga la IA (tolerante) ∪ lo que el correo nombra sin duda. Un lead de hogar Y vida salió el
+  // 19/10/2026 con la petición GENÉRICA: la IA no los dio en la forma exacta y dos ramos caían a «genérico».
+  const listaRamos = listaRamosIa(o.ramos ?? o.ramo)
+  const ramosIa = listaRamos.map(ramoDeTexto).filter((r): r is RamoOportunidad => r !== null)
+  const ramos = [...new Set([...ramosIa, ...ramosDelTexto(ctx.texto)])].slice(0, 3)
 
   const pide = o.pide_presupuesto ?? o.pidePresupuesto
   const pidePresupuesto = pide === true || pide === 'true' ? true : pide === false || pide === 'false' ? false : null
 
   const esLead = o.es_lead === true || o.es_lead === 'true' ? true : o.es_lead === false || o.es_lead === 'false' ? false : null
 
-  return { nombre, email, emailRemitente, telefono, ramos, pidePresupuesto, resumen: textoValido(o.resumen, 300), esLead }
+  return {
+    nombre, email, emailRemitente, telefono, ramos, pidePresupuesto, resumen: textoValido(o.resumen, 300), esLead,
+    datosDados: datosDadosEnCorreo(o.datos, ctx.texto),
+    referenciasCatastrales: referenciasCatastralesEn(ctx.texto).slice(0, 3),
+  }
 }
 
 function esTelefonoCorreduria(t: string): boolean {
@@ -333,54 +431,22 @@ export function cuerpoOportunidadLeadCorreo(clienteId: string, ramo: RamoOportun
   }
 }
 
-// ─── 4. La petición de datos (plantilla FIJA por ramo; nada se envía) ────────
+// ─── 4. La petición de datos (desde el contrato único; SOLO lo que falta) ───
 
-export function ramoPlantilla(ramos: readonly RamoOportunidad[]): RamoPlantilla {
-  if (ramos.length !== 1) return 'generico'
-  const r = ramos[0]
-  if (r === 'hogar') return 'hogar'
-  if (r === 'vida') return 'vida'
-  if (r === 'auto' || r === 'moto') return 'auto'
-  return 'generico'
-}
-
-const DATOS_POR_RAMO: Record<RamoPlantilla, readonly string[]> = {
-  hogar: [
-    'Dirección completa de la vivienda (calle, número, piso y código postal).',
-    'Metros cuadrados construidos.',
-    'Año de construcción (aproximado si no lo sabes).',
-    'Si es tu vivienda habitual o una segunda residencia (o si está alquilada).',
-    'Qué quieres asegurar: continente (la construcción), contenido (muebles y enseres) o ambos, y por qué importe aproximado.',
-    'Si tiene hipoteca y con qué banco.',
-    'Si ya tienes un seguro: compañía, precio actual y fecha de vencimiento.',
-  ],
-  vida: [
-    'Fecha de nacimiento de cada persona a asegurar.',
-    'Capital que quieres asegurar.',
-    'Si está ligado a una hipoteca: banco y capital pendiente.',
-    'Profesión y si fumas (influye en el precio).',
-    'Si ya tienes un seguro: compañía, precio actual y fecha de vencimiento.',
-  ],
-  auto: [
-    'Matrícula del vehículo.',
-    'Fecha de expedición del carné de conducir del conductor principal.',
-    'Fecha de nacimiento del conductor principal.',
-    'Código postal donde duerme el vehículo.',
-    'Si ya tienes un seguro: compañía, precio actual, fecha de vencimiento y años sin siniestros.',
-  ],
-  generico: [
-    'Qué quieres asegurar y para qué (cuéntamelo con tus palabras).',
-    'Tu código postal.',
-    'Un teléfono por si es más rápido llamarte.',
-    'Si ya tienes un seguro: compañía, precio actual y fecha de vencimiento.',
-  ],
-}
-
-const INTRO_RAMO: Record<RamoPlantilla, string> = {
-  hogar: 'Para prepararte una comparativa del seguro de hogar entre varias compañías necesito estos datos:',
-  vida: 'Para prepararte una comparativa del seguro de vida entre varias compañías necesito estos datos:',
-  auto: 'Para prepararte una comparativa del seguro del vehículo entre varias compañías necesito estos datos:',
-  generico: 'Para prepararte una propuesta necesito que me cuentes un poco más:',
+/**
+ * Lo que ya se sabe del lead por su correo, en claves del contrato: nombre (con 3+ palabras se dan por dados los dos
+ * apellidos; con 2, el primero), teléfono, email y lo que `datosDadosEnCorreo` comprobó. PURA.
+ */
+export function conocidosDelLead(l: Pick<LeadCorreo, 'nombre' | 'telefono' | 'email' | 'datosDados' | 'referenciasCatastrales'>): Set<string> {
+  const s = new Set<string>(l.datosDados ?? [])
+  const palabras = (l.nombre ?? '').trim().split(/\s+/).filter(Boolean).length
+  if (palabras >= 1) s.add('nombre')
+  if (palabras >= 2) s.add('apellido1')
+  if (palabras >= 3) s.add('apellido2')
+  if (l.telefono) s.add('telefono')
+  if (l.email) s.add('email')
+  if (l.referenciasCatastrales?.length) s.add('referenciaCatastral')
+  return s
 }
 
 /**
@@ -399,19 +465,33 @@ export function pieLegalLeadCorreo(): string {
   ].join('\n')
 }
 
-/** Asunto y cuerpo del BORRADOR de respuesta. Texto fijo; solo cambia el saludo (nombre de pila) y el ramo. */
-export function plantillaPeticionDatos(l: Pick<LeadCorreo, 'nombre' | 'ramos'>, asuntoOriginal: string): { asunto: string; cuerpo: string; ramo: RamoPlantilla } {
-  const ramo = ramoPlantilla(l.ramos)
+/**
+ * Asunto y cuerpo del BORRADOR de respuesta: las preguntas del contrato (`peticionDatos`) que FALTAN, agrupadas por
+ * ramo si pide varios. `conocidos` = claves que ya se saben (las del correo + lo que trajo el Catastro). Solo cambia
+ * el saludo (nombre de pila); el pie legal y el aviso RGPD salen de `MEDIADOR`. Sin preguntas pendientes (raro), se
+ * dice que con lo que mandó basta y se le preparará la propuesta.
+ */
+export function plantillaPeticionDatos(
+  l: Pick<LeadCorreo, 'nombre' | 'ramos'> & Partial<Pick<LeadCorreo, 'telefono' | 'email' | 'datosDados' | 'referenciasCatastrales'>>,
+  asuntoOriginal: string,
+  conocidos: ReadonlySet<string> = conocidosDelLead({ nombre: l.nombre, telefono: l.telefono ?? null, email: l.email ?? null, datosDados: l.datosDados, referenciasCatastrales: l.referenciasCatastrales }),
+): { asunto: string; cuerpo: string; ramos: RamoOportunidad[]; preguntas: number } {
   const pila = l.nombre ? nombreDePila(l.nombre) : null
   const asunto = /^\s*re:/i.test(asuntoOriginal) ? asuntoOriginal.trim() : `Re: ${asuntoOriginal.trim()}`
+  const bloques = peticionDatos(l.ramos, conocidos)
+  const queRamos = l.ramos.length ? l.ramos.map(etiquetaRamo).join(' y ') : null
+  const intro = !queRamos
+    ? 'Para prepararte una propuesta necesito que me cuentes un poco más:'
+    : `Para prepararte una comparativa del seguro de ${queRamos} entre varias compañías${conocidos.size ? ', además de lo que ya me has contado,' : ''} necesito estos datos:`
+  const cuerpoPreguntas = bloques.length === 0
+    ? ['Con lo que me has enviado tengo lo necesario para empezar.']
+    : [intro, ...bloques.flatMap((b) => ['', ...(b.titulo ? [`${b.titulo}:`] : []), ...b.preguntas.map((p) => `- ${p}`)])]
   const cuerpo = [
     pila ? `Hola ${pila}:` : 'Hola:',
     '',
     `Gracias por escribirnos. Soy ${MEDIADOR.identidad.nombre.split(' ')[0]}, de ${MEDIADOR.marca}, y seré tu persona de contacto.`,
     '',
-    INTRO_RAMO[ramo],
-    '',
-    ...DATOS_POR_RAMO[ramo].map((d) => `- ${d}`),
+    ...cuerpoPreguntas,
     '',
     'Con eso te preparo la propuesta y te la envío. Si lo prefieres, dime a qué hora te viene bien que te llame.',
     '',
@@ -419,7 +499,7 @@ export function plantillaPeticionDatos(l: Pick<LeadCorreo, 'nombre' | 'ramos'>, 
     '',
     pieLegalLeadCorreo(),
   ].join('\n')
-  return { asunto: asunto.slice(0, 200), cuerpo, ramo }
+  return { asunto: asunto.slice(0, 200), cuerpo, ramos: [...l.ramos], preguntas: bloques.reduce((n, b) => n + b.preguntas.length, 0) }
 }
 
 // ─── 5. El aviso de Telegram ─────────────────────────────────────────────────
@@ -475,7 +555,7 @@ export function resolverAltaLeadCorreo(status: number, json: unknown, r: Resulta
   }
 }
 
-export type OportunidadLeadCorreo = { ramo: RamoOportunidad; estado: 'abierta' | 'ya_abierta' | 'tope' | 'error'; motivo?: string }
+export type OportunidadLeadCorreo = { ramo: RamoOportunidad; estado: 'abierta' | 'ya_abierta' | 'tope' | 'error'; motivo?: string; id?: string }
 
 /**
  * HTML de Telegram. Todo lo que viene del correo pasa por `escapeHtml`. Dice lo que se hizo Y lo que no:
@@ -490,6 +570,10 @@ export function textoAvisoLeadCorreo(a: {
   oportunidades: readonly OportunidadLeadCorreo[]
   plantilla: { asunto: string; cuerpo: string } | null
   respuesta?: boolean
+  /** `boton`: la petición va como borrador con ✅/✏️/❌ (no sale sin el ✅); `copiar` (por defecto): texto para copiar. */
+  peticion?: 'boton' | 'copiar'
+  /** Línea del Catastro ya en HTML seguro (`lineaCatastroTelegram`), si se consultó. */
+  catastro?: string | null
 }): string {
   const l = a.lead
   const lineas = [
@@ -523,7 +607,10 @@ export function textoAvisoLeadCorreo(a: {
     else if (o.estado === 'tope') lineas.push(`⚠️ Tope diario de oportunidades por correo: la de ${r} NO se ha abierto.`)
     else lineas.push(`⚠️ La oportunidad de ${r} NO se ha abierto${o.motivo ? ` (${escapeHtml(o.motivo)})` : ''}.`)
   }
-  if (a.plantilla) {
+  if (a.catastro) lineas.push(a.catastro)
+  if (a.plantilla && a.peticion === 'boton') {
+    lineas.push('📝 Petición de datos (solo lo que falta) en el mensaje siguiente, con ✅ Enviar / ✏️ Editar / ❌ Descartar. NO se ha enviado nada al lead: sale solo con tu ✅, en su hilo.')
+  } else if (a.plantilla) {
     lineas.push('📝 Petición de datos lista para copiar en el mensaje siguiente (no hay borrador en Gmail; NO se ha enviado nada al lead).')
   } else if (!a.respuesta) {
     lineas.push('📝 Sin petición de datos: no parece un lead.')
@@ -535,19 +622,20 @@ export function textoAvisoLeadCorreo(a: {
  * La plantilla va en un SEGUNDO mensaje a propósito: si Telegram rechazara este (HTML, longitud), el
  * aviso principal —que es el que no se puede perder— ya ha salido.
  */
-export function textoPlantillaTelegram(p: { asunto: string; cuerpo: string }): string {
-  return `📝 <b>Petición de datos (copiar y responder desde ${escapeHtml(MEDIADOR.identidad.email)})</b>\n<blockquote expandable>${escapeHtml(`Asunto: ${p.asunto}\n\n${p.cuerpo}`.slice(0, 3400))}</blockquote>`
+export function textoPlantillaTelegram(p: { asunto: string; cuerpo: string }, nota: string | null = null): string {
+  return `📝 <b>Petición de datos (copiar y responder desde ${escapeHtml(MEDIADOR.identidad.email)})</b>\n${nota ? `⚠️ ${escapeHtml(nota)}\n` : ''}<blockquote expandable>${escapeHtml(`Asunto: ${p.asunto}\n\n${p.cuerpo}`.slice(0, 3400))}</blockquote>`
 }
 
 // ─── 6. Presupuesto de tiempo de la pasada (revisión 19/10/2026) ─────────────
 //
-// Un lead cuesta hasta ~110 s (IA de extracción + alta + historial + oportunidades + dos avisos) y la
+// Un lead cuesta hasta ~140 s (IA de extracción + alta + historial + oportunidades + Catastro con tope de 25 s +
+// riesgo + pendiente + dos avisos) y la
 // función del triaje muere a los 300 s: un correo a medias se quedaría `pendiente` y el dedupe lo
 // saltaría para siempre, sin aviso. Por eso un lead NO se empieza pasados `LEAD_HASTA_MS` ni más de
 // `LEADS_POR_PASADA` por pasada, y ningún correo nuevo pasados `CORREO_HASTA_MS`: se DIFIERE (su fila se
 // borra y el cursor se queda justo antes), y la pasada siguiente —10 min— lo coge entero.
 export const LEADS_POR_PASADA = 2
-export const LEAD_HASTA_MS = 170_000
+export const LEAD_HASTA_MS = 150_000
 export const CORREO_HASTA_MS = 200_000
 
 export function diferirCorreo(transcurridoMs: number): boolean {

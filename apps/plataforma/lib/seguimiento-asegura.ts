@@ -1104,3 +1104,12 @@ export function riesgoDePolizaAsegura(body: { polizaId: string; actor: string })
 export function traspasarOportunidadAsegura(body: { oportunidadId: string; nuevoClienteId: string; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/traspasar', { method: 'POST', body: JSON.stringify(body) })
 }
+
+// ─── Petición de datos al lead, EN SU HILO (19/10/2026) ──────────────────────
+/**
+ * `POST /api/operador/correo/lead`: SOLO tras el «✅ Enviar» de Alberto en Telegram (`clp_env`). 30 s: Resend puede
+ * reintentar un 429. Un 5xx o un corte = «no se sabe si salió» (`interpretarEnvioPeticion`), nunca se reintenta.
+ */
+export function peticionLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/lead', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}

@@ -1872,3 +1872,23 @@ model CorreoEventoEntrante {
   @@index([correduriaId, createdAt(sort: Desc)], map: "correo_evento_entrante_reciente")
   @@map("correo_evento_entrante")
 }
+
+/// Hilo de correo de un lead ↔ su oportunidad (19/10/2026, SQL `prisma/sql/2026-10-19b_correduria_f1.sql`). Sin email
+/// en claro (`email_cliente_ciego` = índice ciego). Se escribe por SQL crudo en `lib/correo-lead.ts` (el único índice
+/// único lleva `coalesce(oportunidad_id, …)`, que Prisma no sabe declarar).
+model CorreduriaHilo {
+  id                      BigInt    @id @default(autoincrement())
+  correduriaId            String    @map("correduria_id") @db.Uuid
+  oportunidadId           String?   @map("oportunidad_id") @db.Uuid
+  clienteId               String    @map("cliente_id") @db.Uuid
+  messageIdRaiz           String    @map("message_id_raiz")
+  messageIds              String[]  @default([]) @map("message_ids")
+  emailClienteCiego       String?   @map("email_cliente_ciego")
+  estadoDatos             String    @default("sin_pedir") @map("estado_datos")
+  ultimoContactoClienteAt DateTime? @map("ultimo_contacto_cliente_at") @db.Timestamptz(6)
+  ultimaPeticionAt        DateTime? @map("ultima_peticion_at") @db.Timestamptz(6)
+  createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([correduriaId, clienteId], map: "correduria_hilo_cliente")
+  @@map("correduria_hilo")
+}

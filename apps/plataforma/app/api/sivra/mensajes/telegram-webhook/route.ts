@@ -36,6 +36,8 @@ import { PREFIJO_ATASCO, PREFIJO_PAUSA, aplicarBotonAtasco, decidirBotonAtasco, 
 import { PREFIJO_BOTS_TG, decidirBotonBots } from '@/lib/correduria-bots-tg'
 import { resolverBotonBots } from '@/lib/correduria-bots-telegram'
 import { requireSecret } from '@central/core-identity'
+import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-correduria-peticion'
+import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
 export const dynamic = 'force-dynamic'
@@ -956,6 +958,30 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Petición de datos a un LEAD de la correduría (clp_env / clp_edt / clp_no, 19/10/2026) ──────────
+    // ✅ envía el borrador al cliente EN SU HILO por el puerto de asegura: sale a un TERCERO, así que solo la PERSONA
+    // autorizada (from.id = TELEGRAM_CHAT_ID) y un solo uso (estado en BD). Se contesta YA y el envío va en after().
+    // ✏️ pide el texto corregido (force_reply con la marca [clp #id]); ❌ descarta. Nada se reintenta solo.
+    if (prefix === PREFIJO_CLP) {
+      const d = decidirBotonClp(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.accion === 'env' ? '⏳ Enviando en su hilo…' : d.accion === 'edt' ? '✏️ Escribe el texto corregido' : 'Descartando…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      // Se quitan los botones del mensaje pulsado en los tres casos: tras ✏️ el borrador vuelve en un mensaje nuevo.
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${d.accion === 'edt' ? '✏️ <i>Editando: el borrador nuevo llegará con sus botones.</i>' : '⏳ <i>Pulsado…</i>'}`).catch(() => {})
+      after(async () => {
+        const linea = await resolverBotonClp(d).catch(() => '⚠️ <i>No sé si se ha hecho (fallo interno): mira la ficha del lead antes de repetir.</i>')
+        if (linea === null) return
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
+        else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Documento de aseguradora: ¿gasto de Alberto o de un cliente? (cdoc_gasto / cdoc_cli) ──
     if (prefix === 'cdoc') {
       if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
@@ -1235,6 +1261,13 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     if (tienePrefijo(msg.text || '')) {
       const t = (msg.text || '').trim()
       after(() => correduriaSegura(t, msg.from?.id))
+      return NextResponse.json({ ok: true })
+    }
+    // Texto corregido de una petición de datos a un lead (✏️ de `clp_edt`, marca «[clp #id]»). Solo del chat autorizado.
+    const clpEdit = idDeEdicion(String(msg.reply_to_message.text))
+    if (clpEdit !== null && String(msg.from?.id ?? '') === String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      const hecho = await guardarEdicionClp(clpEdit, String(msg.text ?? ''))
+      if (!hecho) await tgSend('<i>Ese borrador ya no espera edición (enviado, descartado o caducado): no he cambiado nada.</i>').catch(() => {})
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).
