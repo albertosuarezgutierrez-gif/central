@@ -1136,6 +1136,14 @@ export function adjuntoLeadAsegura(body: Record<string, unknown>): Promise<Reenv
   return llamar('/api/operador/correo/adjunto', { method: 'POST', body: JSON.stringify(body) }, 30_000)
 }
 
+/**
+ * `POST /api/operador/correo/seguimiento-lead` (F5): `pendientes` (hilos vivos, sin email), `recordar` (UN recordatorio
+ * en el hilo; asegura re-decide el hito y pone el destinatario desde la ficha) o `cerrar_perdida`.
+ */
+export function seguimientoLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/seguimiento-lead', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+
 // ─── Tarificar con BOTS un lead «listo para tarificar» (19/10/2026, F3a) ─────
 /**
  * `POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta),

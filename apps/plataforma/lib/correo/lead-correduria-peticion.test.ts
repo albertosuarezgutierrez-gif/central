@@ -67,14 +67,16 @@ test('el mensaje de Telegram: nombre de pila, ramos y conteo; el borrador plegad
 test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotencia (lee el fuente)', () => {
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8')
   assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia', 'propuesta'\) AND estado = 'pendiente' AND caduca_at > now\(\)/)
-  assert.match(src, /idempotencia: `clp-\$\{d\.id\}`/)
+  // F5: el envío vive en `enviarPeticionReclamada` (lo comparten el ✅ y el modo automático); la clave es el id del pendiente.
+  assert.match(src, /await enviarPeticionReclamada\(d\.id, fila\.datos, fila\.borrador, actorTelegram\(d\.quien\)\)/)
+  assert.match(src, /idempotencia: `clp-\$\{id\}`/)
   const hook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
   assert.match(hook, /if \(prefix === PREFIJO_CLP\) \{\s*const d = decidirBotonClp\(cb, action, args, process\.env\.TELEGRAM_CHAT_ID\)/)
 })
 
 test('🪤 un pendiente CERRADO (enviado, descartado, caducado) se purga: sin email, asunto, nombre ni texto (lee el fuente)', async () => {
   const { CLAVES_PII_PENDIENTE } = await import('./lead-correduria-peticion.ts')
-  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'email', 'nombre', 'pila', 'to'])
+  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'email', 'nombre', 'pila', 'remitentes', 'to'])
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(src, /const PURGA = Prisma\.sql`datos = datos - \$\{\[\.\.\.CLAVES_PII_PENDIENTE\]\}::text\[\], borrador = ''`/)
   const cierres = [...src.matchAll(/UPDATE correduria_pendiente_tg SET estado = '(descartado|caducado)'[^`]*/g)]

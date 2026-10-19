@@ -17,6 +17,7 @@
     "./google-contactos-lead": "./src/google-contactos-lead.ts",
     "./telefono-e164": "./src/telefono-e164.ts",
     "./presentacion-app-ref": "./src/presentacion-app-ref.ts",
+    "./huella-remitente": "./src/huella-remitente.ts",
     "./garajes": "./src/garajes.ts"
   },
   "scripts": {

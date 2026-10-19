@@ -74,6 +74,13 @@ export async function casarRespuestaLead(correduriaId: string, c: Casar): Promis
   if (r.estado !== 'ok') return r
   const f = await ficha(correduriaId, r.clienteId)
   if (!f) return { estado: 'sin_hilo' }
+  // F5: el cliente HA ESCRITO en su hilo, se llegue o no a leer su correo (IA caída, nada que guardar). Corta la cadena
+  // de recordatorios: «no se pudo leer» nunca es «no contestó». Best-effort: un fallo aquí no impide casar.
+  await prisma.$executeRaw`
+    update seguros.correduria_hilo set ultimo_contacto_cliente_at = now()
+    where correduria_id = ${correduriaId}::uuid and cliente_id = ${r.clienteId}::uuid
+      and message_id_raiz = (select message_id_raiz from seguros.correduria_hilo where id = ${BigInt(r.hiloId)} and correduria_id = ${correduriaId}::uuid)`
+    .catch((e: unknown) => console.error('[correo-respuesta-lead] contacto sin anotar:', e instanceof Error ? e.name : 'error'))
   return { estado: 'ok', hiloId: r.hiloId, clienteId: r.clienteId, pila: nombreDePila(f.nombre), oportunidades: r.oportunidades }
 }
 

@@ -130,6 +130,18 @@ export async function proponerPeticion(a: {
     console.error('[triaje] pendiente de la petición (¿falta el SQL 2026-10-19b?):', e instanceof Error ? e.name : 'error')
     return null
   }
+  // F5: con el modo automático que Alberto activó para ESTE tipo (y dentro de ventana y tope), sale solo y se avisa
+  // «🤖 enviado solo» con ⏸. Cualquier «no» (apagado, fuera de ventana, tope, tablas sin crear) = el ✅ de siempre.
+  // 🚨 Y solo si NO ha entrado otro correo suyo después del que se contesta (aunque el triaje no lo casara con el hilo).
+  const { enviarSoloSiToca, silencioCliente } = await import('./lead-correduria-seguimiento-proceso')
+  const { huellaRemitente } = await import('@central/module-seguros/huella-remitente')
+  const huella = huellaRemitente(a.datos.to)
+  const solo = await enviarSoloSiToca({
+    id, tipo, pila: a.datos.pila, ramos: a.datos.ramos,
+    silencio: () => silencioCliente({ huellas: huella ? [huella] : null, trasMensaje: a.datos.messageId }),
+    enviar: (actor) => enviarPeticionReclamada(id, a.datos, a.borrador, actor),
+  }).catch(() => false)
+  if (solo) return { id, nuevo: true }
   const texto = textoBorradorTelegram({ id, datos: a.datos, borrador: a.borrador, preguntas: a.preguntas, catastro: a.catastro, resumen: a.resumen ?? null })
   const msg = tipo === 'repregunta'
     ? await tgAvisoBotones('correduria.lead-respuesta', texto, botonesPeticion(id)).catch(() => null)
@@ -153,6 +165,8 @@ const actorTelegram = (quien: string) => `agente:telegram-${quien}`
  * otra forma). `mensajeId`: el mensaje pulsado (el ➕ es de un solo uso POR mensaje).
  */
 export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, mensajeId: number | null = null): Promise<string | null> {
+  // F5: 🗑 cerrar perdida, 🔓 pasar a automático y ⏸ volver a manual.
+  if (d.accion === 'per' || d.accion === 'aut' || d.accion === 'man') return (await import('./lead-correduria-seguimiento-proceso')).resolverBotonSeguimiento(d)
   // F3a (import dinámico: el proceso de tarificar usa `proponerPeticion` de este fichero).
   if (d.accion === 'top') return (await import('./lead-correduria-tarificar-proceso')).resolverTopeClp(d.dia, d.quien, mensajeId)
   if (d.accion === 'tar') return (await import('./lead-correduria-tarificar-proceso')).resolverTarificarClp(d.id, d.quien)
@@ -169,6 +183,8 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
       RETURNING tipo`).catch(() => null)
     if (filas === null) return '⚠️ <i>No he podido descartarlo; caduca solo a los 7 días.</i>'
     if (!filas.length) return lineaTrasEnviar({ estado: 'usado' })
+    // F5: un rechazo reinicia la racha de «soltar a automático» de ese tipo.
+    await registrarDecision(filas[0].tipo, 'rechazado')
     return filas[0].tipo === 'tarificar'
       ? '⏸ <i>En espera: no se ha lanzado ningún bot. Cuando quieras, pide el precio desde su ficha.</i>'
       : filas[0].tipo === 'discrepancia'
@@ -196,29 +212,49 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
   // ✅ Un solo uso: dos pulsaciones (o un reintento del webhook) = una gana.
   // 🚨 Ni un pendiente de tarificar (no es un correo) ni una PROPUESTA (F4): la propuesta solo sale por 📤 `clp_pro`, con
   //    el precio exacto y el aviso del presupuesto; por aquí saldría su texto suelto como si fuera una petición de datos.
-  const filas = await prisma.$queryRaw<{ datos: unknown; borrador: string }[]>(Prisma.sql`
+  const filas = await prisma.$queryRaw<{ datos: unknown; borrador: string; tipo: string; editado: boolean }[]>(Prisma.sql`
     UPDATE correduria_pendiente_tg SET estado = 'enviando', esperando_edit = false, decidido_por = ${actorTelegram(d.quien)}, decidido_at = now()
     WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia', 'propuesta') AND estado = 'pendiente' AND caduca_at > now()
-    RETURNING datos, borrador`).catch(() => null)
+    RETURNING datos, borrador, tipo, editado`).catch(() => null)
   if (filas === null) return '⚠️ <i>No he podido leer el borrador: no se ha enviado nada.</i>'
   if (!filas.length) {
     await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia', 'propuesta') AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
     return lineaTrasEnviar({ estado: 'usado' })
   }
-  const datos = leerDatosPeticion(filas[0].datos)
+  const fila = filas[0]
+  // F5: el recordatorio al cliente sale por su propio puerto (asegura pone el destinatario desde la ficha).
+  const r = fila.tipo === 'recordatorio_cliente'
+    ? await (await import('./lead-correduria-seguimiento-proceso')).enviarRecordatorioReclamado(d.id, fila.datos, fila.borrador, actorTelegram(d.quien))
+    : await enviarPeticionReclamada(d.id, fila.datos, fila.borrador, actorTelegram(d.quien))
+  // F5: solo un ✅ SIN editar que de verdad salió suma a la racha; uno editado la reinicia.
+  if (r.enviado) await registrarDecision(fila.tipo, fila.editado ? 'editado' : 'aprobado')
+  return r.linea
+}
+
+/**
+ * Envía un pendiente de petición/repregunta YA reclamado (`estado = 'enviando'`) por el puerto de asegura y lo cierra.
+ * Lo usan el ✅ de Alberto y el modo automático (F5): un solo camino de envío. Nunca lanza.
+ */
+export async function enviarPeticionReclamada(id: number, datosRaw: unknown, borrador: string, actor: string): Promise<{ enviado: boolean; linea: string }> {
+  const datos = leerDatosPeticion(datosRaw)
   if (!datos) {
-    await cerrar(d.id, 'fallido', { motivo: 'ilegible' })
-    return lineaTrasEnviar({ estado: 'ilegible' })
+    await cerrar(id, 'fallido', { motivo: 'ilegible' })
+    return { enviado: false, linea: lineaTrasEnviar({ estado: 'ilegible' }) }
   }
   const r = await peticionLeadAsegura({
-    clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, to: datos.to, asunto: datos.asunto, texto: filas[0].borrador,
-    enRespuestaA: { messageId: datos.messageId, references: datos.references }, idempotencia: `clp-${d.id}`,
-    actor: actorTelegram(d.quien), ...(datos.tipo === 'repregunta' ? { tipo: 'repregunta' } : {}),
+    clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, to: datos.to, asunto: datos.asunto, texto: borrador,
+    enRespuestaA: { messageId: datos.messageId, references: datos.references }, idempotencia: `clp-${id}`,
+    actor, ...(datos.tipo === 'repregunta' ? { tipo: 'repregunta' } : {}),
   }).catch(() => ({ status: 502, json: { motivo: 'red' } }))
   const res = interpretarEnvioPeticion(r.status, r.json)
-  await cerrar(d.id, res.estado === 'enviado' ? 'enviado' : res.estado === 'no_enviado' ? 'fallido' : 'incierto', res)
-  return lineaTrasEnviar(res)
+  await cerrar(id, res.estado === 'enviado' ? 'enviado' : res.estado === 'no_enviado' ? 'fallido' : 'incierto', res)
+  return { enviado: res.estado === 'enviado', linea: lineaTrasEnviar(res) }
+}
+
+/** F5: la decisión de Alberto en la racha de «soltar a automático» (los tipos que no pueden ir solos se ignoran). */
+async function registrarDecision(tipo: string, d: 'aprobado' | 'editado' | 'rechazado'): Promise<void> {
+  await (await import('./lead-correduria-seguimiento-proceso')).registrarDecisionAuto(tipo, d).catch(() => {})
 }
 
 async function cerrar(id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown): Promise<void> {
@@ -239,14 +275,20 @@ export async function guardarEdicionClp(id: number, texto: string): Promise<bool
     await tgSendButtons('✏️ <i>Ese texto es demasiado corto: no he tocado el borrador.</i>', botonesPeticion(id)).catch(() => null)
     return true
   }
-  const filas = await prisma.$queryRaw<{ datos: unknown }[]>(Prisma.sql`
+  const filas = await prisma.$queryRaw<{ datos: unknown; tipo: string }[]>(Prisma.sql`
     UPDATE correduria_pendiente_tg SET borrador = ${nuevo}, editado = true, esperando_edit = false
     WHERE id = ${id} AND estado = 'pendiente' AND esperando_edit AND caduca_at > now()
-    RETURNING datos`).catch(() => null)
+    RETURNING datos, tipo`).catch(() => null)
   if (!filas?.length) return false
   // F4: la propuesta vuelve con SUS botones (📤/🔀), nunca con el ✅ de una petición de datos.
   if ((filas[0].datos as { tipo?: unknown } | null)?.tipo === 'propuesta') {
     return (await import('./lead-correduria-propuesta-proceso')).reenviarPropuestaEditada(id)
+  }
+  // F5: una edición reinicia la racha de «soltar a automático» de ese tipo.
+  await registrarDecision(filas[0].tipo, 'editado')
+  if (filas[0].tipo === 'recordatorio_cliente') {
+    await (await import('./lead-correduria-seguimiento-proceso')).reenviarRecordatorioEditado(id, filas[0].datos, nuevo)
+    return true
   }
   const datos = leerDatosPeticion(filas[0].datos)
   if (!datos) return true

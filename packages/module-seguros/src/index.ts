@@ -1503,6 +1503,10 @@ export {
 } from './contrato-datos.ts'
 export { normalizarReferenciaCatastral, referenciaCatastralValida, referenciasCatastralesEn } from './referencia-catastral.ts'
 export {
+  ETAPAS_CON_ENVIO, ETAPAS_SEGUIMIENTO_LEAD, HORAS_HITO, VENTANA_SEGUIMIENTO, claveHitoSeguimiento, enVentanaSeguimiento, esEtapaSeguimientoLead,
+  hitoSeguimientoLead, mismoHito, type EtapaSeguimientoLead, type HiloSeguimiento, type HitoSeguimiento,
+} from './seguimiento-lead.ts'
+export {
   apareceEnCorreo, camposDeBloqueRellenables, camposLeibles, categoriaEstadoCivil, conocidosDeBloque, cuerpoSinCita, decidirFusion, etiquetasUnicas,
   faltanObligatorios, leerRespuestaIa, mismoValor, preguntasRepregunta, promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
   type CategoriaEstadoCivil, type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,

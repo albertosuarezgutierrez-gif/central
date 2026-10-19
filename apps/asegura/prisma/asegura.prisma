@@ -1888,6 +1888,15 @@ model CorreduriaHilo {
   estadoDatos             String    @default("sin_pedir") @map("estado_datos")
   ultimoContactoClienteAt DateTime? @map("ultimo_contacto_cliente_at") @db.Timestamptz(6)
   ultimaPeticionAt        DateTime? @map("ultima_peticion_at") @db.Timestamptz(6)
+  /// F5 (SQL `2026-10-19g_correduria_f5_seguimiento.sql`): recordatorios ENVIADOS desde el envío base y cierre. La
+  /// propuesta (F4, SQL `2026-10-19e`) es `presupuesto_id` + `propuesta_enviada_at`, que escribe `marcarHiloPropuesta`.
+  /// Se leen y escriben por SQL crudo (`lib/correo-seguimiento-lead.ts`, `lib/propuesta-lead.ts`).
+  ultimoRecordatorioAt    DateTime? @map("ultimo_recordatorio_at") @db.Timestamptz(6)
+  recordatoriosEnviados   Int       @default(0) @map("recordatorios_enviados") @db.SmallInt
+  cerradoPerdidoAt        DateTime? @map("cerrado_perdido_at") @db.Timestamptz(6)
+  cerradoPor              String?   @map("cerrado_por")
+  presupuestoId           String?   @map("presupuesto_id") @db.Uuid
+  propuestaEnviadaAt      DateTime? @map("propuesta_enviada_at") @db.Timestamptz(6)
   createdAt               DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([correduriaId, clienteId], map: "correduria_hilo_cliente")

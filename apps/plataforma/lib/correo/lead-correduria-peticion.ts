@@ -22,7 +22,7 @@ export const AVISO_PETICION_LEAD = 'correduria.lead-peticion'
  * Claves de `datos` con dato personal: el email del lead, el asunto de su correo y su nombre de pila. Al CERRAR el
  * pendiente (enviado, descartado o caducado) se borran junto con el borrador; quedan ids y estado.
  */
-export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre'] as const
+export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre', 'remitentes'] as const
 
 /**
  * Qué se PURGA al cerrar un pendiente (revisión F3a, 19/10/2026). Lo ENVIADO/descartado/caducado pierde todo lo personal y
@@ -126,6 +126,9 @@ export function textoBorradorTelegram(a: {
 
 // ─── Botón ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Los tipos que pueden ir en automático (F5). `propuesta` no está, a propósito. */
+type TipoClpAuto = 'peticion_datos' | 'repregunta' | 'recordatorio_cliente'
+
 export type DecisionClp =
   | { ok: false; toast: string }
   /** `tar` (F3a): 🤖 tarificar con bots el pendiente `id` (tipo `tarificar`). `eli` (F4): 🔀 elegir otro precio. */
@@ -138,6 +141,11 @@ export type DecisionClp =
   | { ok: true; accion: 'fal'; id: number; quien: string }
   /** `dis` (F3b): en la discrepancia `indice` del pendiente `id`, quedarse con lo de la ficha (`ficha`) o con lo del correo. */
   | { ok: true; accion: 'dis'; id: number; indice: number; eleccion: 'ficha' | 'correo'; quien: string }
+  /** `per` (F5): 🗑 cerrar como perdida el hilo del pendiente `id` (tipo `recordatorio_cliente`). */
+  | { ok: true; accion: 'per'; id: number; quien: string }
+  /** `aut` / `man` (F5): 🔓 pasar a automático / ⏸ volver a manual un TIPO. `propuesta` nunca llega aquí. */
+  | { ok: true; accion: 'aut'; tipo: TipoClpAuto; quien: string }
+  | { ok: true; accion: 'man'; tipo: TipoClpAuto; quien: string }
 
 /** ¿Vale la pulsación? Persona autorizada, acción conocida e id numérico. PURA. */
 export function decidirBotonClp(
@@ -152,7 +160,14 @@ export function decidirBotonClp(
     if (!m) return { ok: false, toast: 'Día no válido' }
     return { ok: true, accion: 'top', dia: `${m[1]}-${m[2]}-${m[3]}`, quien: String(cb.from?.id ?? '') }
   }
-  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis' && action !== 'pro' && action !== 'eli') return { ok: false, toast: 'Acción desconocida' }
+  if (action === 'aut' || action === 'man') {
+    // 🚨 Solo los tipos automatizables: `propuesta` (o cualquier otro) se rechaza aquí, antes de tocar la BD.
+    const tipo = args[0]
+    if (tipo !== 'peticion_datos' && tipo !== 'repregunta' && tipo !== 'recordatorio_cliente') return { ok: false, toast: 'Ese tipo no puede ir en automático' }
+    const quien = String(cb.from?.id ?? '')
+    return action === 'aut' ? { ok: true, accion: 'aut', tipo, quien } : { ok: true, accion: 'man', tipo, quien }
+  }
+  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis' && action !== 'pro' && action !== 'eli' && action !== 'per') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Borrador no encontrado' }
   if (action === 'dis') {
