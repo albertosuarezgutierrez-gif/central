@@ -17,6 +17,7 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-10-19 · buscador-ia** · hizo: pasada semanal por WebSearch (sin keys): Gemini 2.5 Flash post-16/10, Groq gpt-oss-120b, OpenRouter/Qwen; sin hallazgos nuevos, sin Telegram; dudas: fuentes contradictorias sobre Gemini 2.5 y precio/gratuidad de Groq (sin key para zanjar); fallos: WebFetch a catálogos sigue sin usarse (proxy); PRs/commits: —
 - **2026-10-18 · mercado-booking (2ª pasada del día)** · hizo: 24/24 ventanas de mercado (26-sep, 1/9/26-oct 2027, 9-ene, 13-mar × aforos 2/4/5/12) = 239 comps `booking_mcp`; escaparate propio 3/4 medido (Luxury Busto 338,70€/2n, Dúplex 358,14€/3n, House 1.492€/3n). Descartado 1 anuncio propio en mercado (House, 9-ene aforo 12). Falló: escaparate Busto Reform 27-29/12/2026 sin disponibilidad (hueco, no «canal cuadra»); 1 HTTP 000 transitorio al ingerir (reintento OK). Plan: 24 de 552, 528 recortadas. Latido ok:true; dudas: el plan devuelve fechas de mercado en 2027 (sep-oct, ene, mar) pese a ser oct-2026; fallos: —
 
 - **2026-10-18 · mercado-booking** · hizo: 24/24 ventanas de mercado (8-nov, 17-nov, 25-abr, 17-may, 17-jun, 6-jul × aforos 2/4/5/12) = 236 comps `booking_mcp`; 4/4 ventanas de escaparate propio (Luxury Busto 631,82€/4n, Dúplex 253,59€/2n, House 876€/2n, Busto Reform 185,98€/2n). Descartados 4 anuncios propios (House en aforo 12). Falló: 1 SSL transitorio al escribir (reintento OK). Plan: 24 de 552, 528 recortadas; 2026-10 sin bucket elegible. Latido ok:true.
