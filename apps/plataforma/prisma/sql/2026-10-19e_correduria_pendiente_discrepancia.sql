@@ -9,4 +9,4 @@
 
 ALTER TABLE correduria_pendiente_tg DROP CONSTRAINT IF EXISTS correduria_pendiente_tg_tipo_check;
 ALTER TABLE correduria_pendiente_tg ADD CONSTRAINT correduria_pendiente_tg_tipo_check
-  CHECK (tipo IN ('peticion_datos', 'repregunta', 'recordatorio_cliente', 'tarificar', 'propuesta', 'discrepancia'));
+  CHECK (tipo IN ('peticion_datos', 'repregunta', 'recordatorio_cliente', 'tarificar', 'propuesta', 'contacto_sugerido', 'discrepancia'));
