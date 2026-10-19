@@ -487,9 +487,9 @@ export const RAMOS: readonly Ramo[] = [
     h1: 'Seguro de responsabilidad civil para perros en toda España',
     title: 'Seguro de RC para perros en España',
     description:
-      'Correduría de seguros en toda España. Seguro de RC para perros: qué exige la Ley de Bienestar Animal, perros potencialmente peligrosos y si tu hogar lo cubre.',
+      'Correduría de seguros en toda España. Seguro de RC para perros: qué prevé la Ley de Bienestar Animal, perros potencialmente peligrosos y si tu hogar lo cubre.',
     intro: [
-      'La Ley 7/2023 de bienestar animal establece que quien tiene un perro debe contratar un seguro de responsabilidad civil por los daños que pueda causar a otras personas. Los perros potencialmente peligrosos ya lo tenían obligatorio desde antes, con su propia normativa y su licencia.',
+      'La Ley 7/2023 de bienestar animal prevé que quien tiene un perro contrate un seguro de responsabilidad civil por los daños que pueda causar a otras personas, pero esa obligación general aún no se puede exigir hasta que se apruebe su reglamento. Los perros potencialmente peligrosos sí lo tienen obligatorio desde antes, con su propia normativa y su licencia.',
       'Somos correduría y trabajamos con varias compañías. Miramos primero si tu seguro de hogar ya cubre al perro y en qué condiciones, porque a veces basta con ampliar lo que tienes, y si no, buscamos la póliza que encaja con tu perro.',
     ],
     cubre: [
@@ -509,7 +509,7 @@ export const RAMOS: readonly Ramo[] = [
       {
         pregunta: '¿Es obligatorio el seguro para perros?',
         respuesta:
-          'La Ley 7/2023 de bienestar animal obliga a quien tiene un perro a contratar un seguro de responsabilidad civil. La cobertura mínima que debe tener la fijará un desarrollo reglamentario que aún está pendiente, así que conviene revisar lo que exige tu comunidad autónoma. Para los perros potencialmente peligrosos el seguro ya era obligatorio para obtener la licencia.',
+          'La Ley 7/2023 de bienestar animal lo prevé para quien tiene un perro, pero todavía no es exigible con carácter general: falta el reglamento que fije la cobertura mínima. Conviene revisar lo que exige tu comunidad autónoma o tu ayuntamiento. Para los perros potencialmente peligrosos el seguro ya era obligatorio para obtener la licencia.',
       },
       {
         pregunta: '¿Me cubre el seguro de hogar los daños que cause mi perro?',
@@ -519,7 +519,7 @@ export const RAMOS: readonly Ramo[] = [
       {
         pregunta: '¿Qué pasa si mi perro muerde a alguien y no tengo seguro?',
         respuesta:
-          'Respondes tú de los daños, con tu patrimonio: gastos médicos, indemnización y, si hay reclamación, los costes del procedimiento. Además, no tener el seguro que exige la normativa puede suponer una sanción.',
+          'Respondes tú de los daños, con tu patrimonio: gastos médicos, indemnización y, si hay reclamación, los costes del procedimiento. Y si tu perro es potencialmente peligroso, o tu comunidad o tu ayuntamiento exigen el seguro, no tenerlo puede suponer una sanción.',
       },
       {
         pregunta: '¿Hace falta un seguro distinto para un perro potencialmente peligroso?',
