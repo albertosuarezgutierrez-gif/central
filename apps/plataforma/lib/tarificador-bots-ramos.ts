@@ -25,7 +25,7 @@ export type CampoExtraBot = {
 }
 
 export type ResultadoAdaptadorBot =
-  | { ok: true; riesgo: Record<string, unknown>; completarDesdeFicha: CampoDeFicha[] }
+  | { ok: true; riesgo: Record<string, unknown>; completarDesdeFicha: CampoDeFicha[]; sinDatoEnFicha?: string[] }
   | { ok: false; faltan: string[] }
 
 export type AdaptadorBot = {
@@ -41,7 +41,10 @@ export type AdaptadorBot = {
 }
 
 /** Lo que el cotizador de moto le da al bloque (todo de `EntradaBotMoto` salvo la cilindrada, que se completa aquí). */
-export type FormularioBotsMoto = Omit<EntradaBotMoto, 'cilindrada'>
+export type FormularioBotsMoto = Omit<EntradaBotMoto, 'cilindrada'> & {
+  /** La precalificación dice que la ficha NO permite deducir el sexo (tratamiento distinto de Sr./Sra.: `sexoDeSaludo`). */
+  sexoSinFicha?: boolean
+}
 
 const OPCIONES_SEXO = [{ valor: '', etiqueta: 'Elegir…' }, { valor: 'hombre', etiqueta: 'Hombre' }, { valor: 'mujer', etiqueta: 'Mujer' }] as const
 
@@ -58,7 +61,10 @@ const adaptadorMoto: AdaptadorBot = {
     // El desplegable arranca en '' («Elegir…»): vacío = no tocado, así que manda el del formulario.
     const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined || extra.sexo === '' ? f.sexo : null
     const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '' })
-    return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
+    if (!r.ok) return { ok: false, faltan: r.faltan }
+    // Sin sexo tecleado, asegura lo toma del Sr./Sra. de la ficha al encolar; si la ficha no lo permite, el checklist dice «falta».
+    const sinDatoEnFicha = sexo === null && f.sexoSinFicha === true ? ['conductor.sexo'] : undefined
+    return { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha, ...(sinDatoEnFicha ? { sinDatoEnFicha } : {}) }
   },
 }
 
@@ -127,7 +133,7 @@ export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot |
 export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string): ChecklistCompania {
   const r = adaptador.construir(formulario, extra)
   if (!r.ok) return obligatoriosPara(compania, adaptador.ramo) === null ? { estado: 'no_disponible', motivo: MOTIVO_SIN_DECLARACION } : { estado: 'sin_formulario' }
-  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha)
+  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
 }
 
 /** Ramos con adaptador (para saber qué anfitrión monta el bloque). */

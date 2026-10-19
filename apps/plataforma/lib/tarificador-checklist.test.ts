@@ -82,3 +82,17 @@ test('Generali auto: matrícula presente y carné «de la ficha» (completarDesd
   assert.ok(sin.estado === 'evaluado' && sin.bloquea)
   assert.deepEqual(sin.faltan.map((f) => f.clave).sort(), ['conductor.fechaCarne', 'conductor.fechaNacimiento'])
 })
+
+test('Allianz moto: si la ficha NO permite deducir el sexo (Sr./Sra.), conductor.sexo es «falta» y bloquea', () => {
+  const moto = {
+    ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: null },
+    aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0, seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
+  }
+  const x = checklistCompania('allianz', 'moto', moto, [], ['conductor.sexo'])
+  assert.ok(x.estado === 'evaluado' && x.bloquea)
+  assert.deepEqual(x.faltan.map((f) => f.clave), ['conductor.sexo'])
+  assert.equal(x.filas.find((f) => f.clave === 'conductor.sexo')?.estado, 'falta')
+  // Con sexo en el riesgo (tecleado), la marca de la ficha no pesa.
+  const con = checklistCompania('allianz', 'moto', { ...moto, conductor: { ...moto.conductor, sexo: 'mujer' } }, [], ['conductor.sexo'])
+  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+})

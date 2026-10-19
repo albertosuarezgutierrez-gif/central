@@ -4,7 +4,7 @@ import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { riesgoHogarSinTomador } from '@/lib/tarificador-hogar-formulario'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { encolarTarificacionComunidad, encolarTarificacionHogar, encolarTarificacionVehiculo, leerIntegracionesTarificador } from '@/lib/tarificador-asegura'
-import { poblacionDesdeFicha } from '@/lib/tarificador-asegura-reglas'
+import { completarMunicipioHogarDesdeFicha, poblacionDesdeFicha } from '@/lib/tarificador-asegura-reglas'
 import { CAMPOS_DE_FICHA, claveDeCompania, completarRiesgoVehiculoDesdeFicha, mensajeFaltanDeFicha, type CampoDeFicha } from '@/lib/tarificador-moto-formulario'
 import { leerIntegraciones } from '@/lib/tarificador-probar'
 
@@ -86,6 +86,14 @@ export async function POST(req: Request) {
     const f = fichaLeida !== undefined ? fichaLeida : await fichaAsegura(clienteId).catch(() => null)
     const poblacion = f?.estado === 'ok' ? poblacionDesdeFicha(riesgo, f.ficha.contacto) : null
     if (poblacion) riesgo = { ...riesgo, poblacion }
+  }
+  // Hogar: sin municipio en la vivienda, el de la ficha SOLO si el CP es el mismo (si no, se queda sin rellenar).
+  if (ramo === 'hogar') {
+    const inm = (riesgo.inmueble ?? {}) as Record<string, unknown>
+    if (!(typeof inm.municipio === 'string' && inm.municipio.trim())) {
+      const f = fichaLeida !== undefined ? fichaLeida : await fichaAsegura(clienteId).catch(() => null)
+      riesgo = completarMunicipioHogarDesdeFicha(riesgo, f?.estado === 'ok' ? f.ficha.contacto : null)
+    }
   }
   // Hogar (19/10/2026, Allianz): el riesgo es el formulario de la vivienda SIN tomador. El DNI/NIE y el nacimiento del tomador
   // NO pasan por aquí: asegura los lee de la ficha, los comprueba al encolar y los inyecta al entregar el trabajo al bot.

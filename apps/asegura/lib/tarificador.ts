@@ -28,7 +28,7 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
-import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
@@ -189,6 +189,12 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
       select saludo from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null`
       .then((f) => f[0]?.saludo ?? null).catch((): string | null => null)
     riesgoEntrada = aplicarSexoDeFicha(e.ramo, riesgoEntrada, saludo)
+  }
+  // Compañía anterior (Mapfre/Allianz auto, 19/10/2026): si el formulario no la trae pero la oportunidad o las pólizas del cliente la
+  // saben, se rellena ANTES de validar (si no, `falta_compania_anterior` rechazaba con 422 antes de que la entrega la pusiera).
+  // No pisa lo que ya trae; sin dato sigue faltando (nunca un valor de cajón: `nombreCompaniaUtil`).
+  if (necesitaCompaniaActual(claveCompania(e.compania), e.ramo, riesgoEntrada)) {
+    riesgoEntrada = aplicarCompaniaActual(claveCompania(e.compania), e.ramo, riesgoEntrada, await leerCompaniaActualCliente(e.correduriaId, clienteId, e.oportunidadId ?? null)) as typeof riesgoEntrada
   }
   // Tomador de Hogar (19/10/2026, Allianz): DNI/NIE y nacimiento de la ficha; solo se COMPRUEBAN aquí, se inyectan al entregar.
   const fichaHogar = necesitaTomadorHogar(e.compania, e.ramo) ? await leerTomadorFicha(e.correduriaId, clienteId) : null

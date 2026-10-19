@@ -79,7 +79,9 @@ test('auto · sin años (0) no se afirma que falte la compañía anterior; sin s
   const c = checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '0' }, {}, 'mapfre')
   assert.ok(c.estado === 'evaluado' && !c.filas.some((f) => f.clave === 'companiaAnterior'))
   assert.equal(checklistBot(a, { ...AUTO_BASE, tieneSeguroActual: false }, {}, 'mapfre').estado, 'sin_formulario')
-  assert.equal(checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '' }, {}, 'mapfre').estado, 'sin_formulario')
+  // 19/10/2026: años asegurado sin dato = supuesto favorable (no bloquea el formulario ni desactiva los botones, como moto).
+  const sinAnios = checklistBot(a, { ...AUTO_BASE, aniosAsegurado: '' }, {}, 'mapfre')
+  assert.ok(sinAnios.estado === 'evaluado' && sinAnios.filas.find((f) => f.clave === 'aniosAseguradoAnterior')?.estado === 'supuesto')
 })
 
 test('compañía sin declaración → no_disponible, también con el formulario incompleto; nunca evaluado', () => {
@@ -167,4 +169,17 @@ test('hogar: checklist de Allianz — el DNI/NIE y el nacimiento del tomador se 
   assert.equal(checklistBot(a, HOGAR_BASE, {}, 'allianz').estado, 'sin_formulario')
   // Compañía sin declaración → no disponible, nunca «todo ok».
   assert.equal(checklistBot(a, HOGAR_BASE, ELECCIONES, 'reale').estado, 'no_disponible')
+})
+
+test('moto · sexoSinFicha (la ficha no da Sr./Sra.) bloquea Allianz Moto salvo que se elija el sexo en el bloque', () => {
+  const a = adaptadorDeRamo('moto')!
+  const F = {
+    matricula: '1234BCD', marca: 'Honda', modelo: 'PCX', version: null, codigoPostal: '41003', fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01',
+    sexo: null, sexoSinFicha: true, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
+    aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0',
+  }
+  const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
+  assert.ok(sin.estado === 'evaluado' && sin.bloquea && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'falta')
+  const con = checklistBot(a, F, { cilindrada: '125', sexo: 'hombre' }, 'allianz')
+  assert.ok(con.estado === 'evaluado' && !con.bloquea)
 })

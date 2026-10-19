@@ -55,15 +55,27 @@ const MAX_COMPANIA_ANTERIOR = 80
 /** Caracteres que el validador rechaza en texto libre (copia de `CARACTERES_PROHIBIDOS` de module-tarificacion). */
 const CARACTERES_PROHIBIDOS = /[<>{}\[\]\\`$]|[\u0000-\u001f]/
 
+/** Compañías de auto cuyo bot pide la compañía anterior (Allianz Turismos, Mapfre NSEI). */
+const COMPANIAS_CON_COMPANIA_ANTERIOR = ['allianz', 'mapfre']
+
 /**
- * Si el riesgo (Allianz auto) no trae compañía actual ni anterior, le pone `companiaAnterior` = la del cliente (es la clave que
+ * ¿Hay que buscar la compañía del cliente para este riesgo? Auto de Allianz/Mapfre sin `companiaAnterior` ni `companiaActual`, y
+ * sin la declaración «0 años asegurado» (sin seguro anterior: poner compañía cambiaría la procedencia). PURA; evita lecturas de BD.
+ */
+export function necesitaCompaniaActual(compania: string, ramo: string, riesgo: unknown): boolean {
+  if (!COMPANIAS_CON_COMPANIA_ANTERIOR.includes(compania) || ramo !== 'auto' || !esObj(riesgo)) return false
+  if (riesgo.aniosAseguradoAnterior === 0) return false
+  return vacio(riesgo.companiaAnterior) && vacio(riesgo.companiaActual)
+}
+
+/**
+ * Si el riesgo (Allianz o Mapfre auto) no trae compañía actual ni anterior, le pone `companiaAnterior` = la del cliente (es la clave que
  * `validarFormularioAuto` conserva y que el bot lee primero; `companiaActual` se descartaba y el bot veía «no consta»).
  * Si ya trae alguna, no se sabe la del cliente o no cabe en el validador (>80 o caracteres prohibidos: no se pone, nunca se
  * recorta ni se rompe el trabajo), devuelve el MISMO riesgo. Solo para auto; no toca otros ramos ni compañías. PURA.
  */
 export function aplicarCompaniaActual(compania: string, ramo: string, riesgo: unknown, actual: string | null): unknown {
-  if (compania !== 'allianz' || ramo !== 'auto' || !esObj(riesgo) || actual === null) return riesgo
-  if (!vacio(riesgo.companiaAnterior) || !vacio(riesgo.companiaActual)) return riesgo
+  if (!esObj(riesgo) || !necesitaCompaniaActual(compania, ramo, riesgo) || actual === null) return riesgo
   if (actual.length > MAX_COMPANIA_ANTERIOR || CARACTERES_PROHIBIDOS.test(actual)) return riesgo
   return { ...riesgo, companiaAnterior: actual }
 }

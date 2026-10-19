@@ -6,7 +6,8 @@
 // ni consumo del vendor.
 
 import { partirDireccion } from './codeoscopic/direccion.ts'
-import { carnetBDeFicha, carnetMotoDeFicha } from './codeoscopic/desde-cartera.ts'
+import { carnetBDeFicha } from './codeoscopic/desde-cartera.ts'
+import { carnetMotoMasAntiguo } from '@central/module-seguros'
 import { fechaIsoDeFicha } from './tarificador-reglas.ts'
 import { claveCompania, esCif, esDniNie, normalizarDocumento, tieneCaracteresProhibidos, validarFichaTomadorAuto, type FichaTomadorAuto } from '@central/module-tarificacion'
 
@@ -92,9 +93,9 @@ export function fichaTomadorAutoDeFicha(fila: FilaFichaTomadorAuto | null, desci
       const f = abrir(k.fechaCarnet)
       return { tipo: k.tipo, fechaExpedicion: f === null ? null : fechaIsoDeFicha(f) }
     })
-    const deMoto = ramo === 'moto' ? carnetMotoDeFicha(carnets) : null
+    const deMoto = ramo === 'moto' ? carnetMotoMasAntiguo(carnets) : null
     const fB = carnetBDeFicha(carnets)
-    const fecha = deMoto ? fechaIsoDeFicha(deMoto.fecha) : fB === null ? null : fechaIsoDeFicha(fB)
+    const fecha = deMoto ? deMoto.fecha : fB === null ? null : fechaIsoDeFicha(fB)
     if (fecha !== null) { fechaCarnet = fecha; tipoCarnet = deMoto ? deMoto.tipo : 'B' }
   }
   const candidato: FichaTomadorAuto = { tipo, documento, codigoPostal, localidad: corto(fila.ciudad, 80), direccion, fechaNacimiento, fechaCarnet, tipoCarnet }

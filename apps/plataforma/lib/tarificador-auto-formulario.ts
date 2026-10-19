@@ -117,14 +117,11 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
   const fechaNacimiento = dato(e.fechaNacimiento, 'Fecha de nacimiento del conductor', 'fechaNacimiento', (s) => ISO.test(s))
   const fechaCarne = dato(e.fechaCarne, 'Fecha del carné B del conductor', 'fechaCarne', (s) => ISO.test(s))
 
-  // Historial (Mapfre «Historial de siniestralidad»): el portal no admite «sin dato» y el bot no lo inventa. Mismo criterio
-  // que moto (`historialBot`); lo que no consta se enseña aquí en vez de encolar un trabajo que fallaría.
+  // Historial: mismo criterio que moto (`historialBot`). Lo que no consta viaja `null` y NO bloquea (18/10/2026, «supuesto favorable
+  // en todo»): el checklist lo pinta «supuesto» (`supuestosFavorablesPara`) y el bot lo declara en «Precio con supuestos». Nunca se
+  // escribe un número inventado en el riesgo. Solo «¿tiene seguro actual?» sigue pidiéndose: sin él no hay compañía anterior.
   const { aniosAseguradoAnterior, siniestrosUltimos5Anios } = historialBot(e)
   if (!e.tieneSeguroActual) faltan.push('Seguro actual: el bot necesita saber si tiene compañía anterior (márcalo y completa años asegurado y siniestros en «Historial y bonificaciones»)')
-  else {
-    if (aniosAseguradoAnterior === null) faltan.push('Años asegurado en la compañía anterior')
-    if (siniestrosUltimos5Anios === null) faltan.push('Siniestros con culpa en los últimos 5 años')
-  }
 
   const usoVehiculo = claveCerrada(e.usoVehiculo, USOS_VEHICULO, USO_VEHICULO_POR_DEFECTO)
   const ambitoCirculacion = claveCerrada(e.ambitoCirculacion, AMBITOS_CIRCULACION, AMBITO_CIRCULACION_POR_DEFECTO)

@@ -1,8 +1,11 @@
 // `node --test`. Nombres de compañía FICTICIOS; sin datos personales.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { validarFormularioAuto } from '@central/module-tarificacion'
-import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, nombreCompaniaUtil, ultimosCincoDigitosPoliza, type PolizaParaCompaniaActual } from './tarificador-compania-actual.ts'
+import { riesgoParaEncolar } from './tarificador-reglas.ts'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, necesitaCompaniaActual, nombreCompaniaUtil, ultimosCincoDigitosPoliza, type PolizaParaCompaniaActual } from './tarificador-compania-actual.ts'
 
 const p = (x: Partial<PolizaParaCompaniaActual>): PolizaParaCompaniaActual => ({
   tipo: 'auto', aseguradora: 'Aseguradora Uno', estado: 'activa', importRef: null, eiacXmlHash: null, sustituidaAt: null, fechaEfecto: '2026-01-01', ...x,
@@ -30,12 +33,12 @@ test('nombreCompaniaUtil: vacío, cajón y no-string → null', () => {
   for (const v of ['', '  ', 'Otro', 'n/a', null, 7, undefined]) assert.equal(nombreCompaniaUtil(v), null)
   assert.equal(nombreCompaniaUtil('  Aseguradora   Gamma '), 'Aseguradora Gamma')
 })
-test('aplicarCompaniaActual rellena solo si falta y solo Allianz auto', () => {
+test('aplicarCompaniaActual rellena solo si falta y solo Allianz/Mapfre auto', () => {
   const r = { ramo: 'auto', matricula: 'X' }
   assert.deepEqual(aplicarCompaniaActual('allianz', 'auto', r, 'Beta'), { ...r, companiaAnterior: 'Beta' })
   assert.equal(aplicarCompaniaActual('allianz', 'auto', r, null), r)
   assert.equal(aplicarCompaniaActual('allianz', 'moto', r, 'Beta'), r)
-  assert.equal(aplicarCompaniaActual('mapfre', 'auto', r, 'Beta'), r)
+  assert.equal(aplicarCompaniaActual('generali', 'auto', r, 'Beta'), r)
   const conAnterior = { ...r, companiaAnterior: 'Ya' }
   assert.equal(aplicarCompaniaActual('allianz', 'auto', conAnterior, 'Beta'), conAnterior)
   const conActual = { ...r, companiaActual: 'Ya' }
@@ -95,4 +98,31 @@ test('INTEGRACIÓN: los 5 dígitos sobreviven a validarFormularioAuto (una clave
   const v = validarFormularioAuto(aplicarPolizaAnteriorUltimos5('allianz', 'auto', cocheSinCompania(), 'ZZ-98765432'), HOY)
   assert.equal(v.ok, true)
   if (v.ok) assert.equal(v.formulario.polizaAnteriorUltimos5, '65432')
+})
+
+// ── Compañía anterior ANTES de validar al encolar (19/10/2026) ──
+test('Mapfre auto: sin compañía, riesgoParaEncolar rechaza 422; con la compañía de la oportunidad aplicada ANTES, no', () => {
+  const noLeer = () => ({ estado: 'ilegible' as const })
+  const datos = () => ({ estado: 'ok' as const, datos: { tipo: 'fisica' as const, nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1985-03-10' } })
+  const sin = riesgoParaEncolar('mapfre', 'auto', cocheSinCompania(), () => ({ estado: 'ok', documento: '00000000T' }), datos)
+  assert.ok(!sin.ok && /^falta_compania_anterior/.test(sin.motivo))
+  const con = riesgoParaEncolar('mapfre', 'auto', aplicarCompaniaActual('mapfre', 'auto', cocheSinCompania(), 'Aseguradora Beta'), () => ({ estado: 'ok', documento: '00000000T' }), datos)
+  assert.ok(!(!con.ok && /falta_compania_anterior/.test(con.motivo)), 'ya no se corta por la compañía anterior')
+  void noLeer
+})
+test('necesitaCompaniaActual: solo Allianz/Mapfre auto sin compañía y sin «0 años asegurado» (sin seguro anterior)', () => {
+  const r = { ramo: 'auto', aniosAseguradoAnterior: 3 }
+  assert.equal(necesitaCompaniaActual('mapfre', 'auto', r), true)
+  assert.equal(necesitaCompaniaActual('allianz', 'auto', r), true)
+  assert.equal(necesitaCompaniaActual('mapfre', 'auto', { ...r, aniosAseguradoAnterior: 0 }), false)
+  assert.equal(necesitaCompaniaActual('mapfre', 'auto', { ...r, companiaAnterior: 'Ya' }), false)
+  assert.equal(necesitaCompaniaActual('mapfre', 'moto', r), false)
+  assert.equal(necesitaCompaniaActual('generali', 'auto', r), false)
+  assert.deepEqual(aplicarCompaniaActual('mapfre', 'auto', { ...r, aniosAseguradoAnterior: 0 }, 'Beta'), { ...r, aniosAseguradoAnterior: 0 })
+})
+test('FORMA DEL FUENTE: encolarTrabajo rellena la compañía anterior ANTES de riesgoParaEncolar (si se quita, este test falla)', () => {
+  const src = readFileSync(join(import.meta.dirname, 'tarificador.ts'), 'utf8')
+  const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
+  const rellena = fn.indexOf('aplicarCompaniaActual(')
+  assert.ok(rellena > -1 && rellena < fn.indexOf('riesgoParaEncolar('), 'compañía aplicada antes de validar')
 })

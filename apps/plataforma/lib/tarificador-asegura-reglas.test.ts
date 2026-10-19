@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  vistaPrecio, fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, poblacionDesdeFicha, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
+  vistaPrecio, fechasPorDefecto, formularioInicial, leerTrabajoBot, mensajeEncolar, completarMunicipioHogarDesdeFicha, poblacionDesdeFicha, riesgoDesdeFormulario, sigueEnCurso, vistaTrabajo,
 } from './tarificador-asegura-reglas.ts'
 
 import { fechaCorta, formularioConUltimoRiesgo, importeDeTexto, importeParaCampo, leerUltimoRiesgoBot } from './tarificador-asegura-reglas.ts'
@@ -268,4 +268,24 @@ test('puerto() ya no traga el fallo (console.error con la causa) y PrecioBots de
   // PrecioBots es del NAVEGADOR: sin console.* (guardián de tarificador-moto-formulario.test.ts); el motivo sí viaja.
   assert.match(bots, /catch \(e\) \{[\s\S]*motivo: describirFalloRed\(e\)\.motivo \}/)
   assert.doesNotMatch(bots, /console\./)
+})
+
+test('completarMunicipioHogarDesdeFicha: sin municipio y mismo CP → ciudad de la ficha; CP distinto o municipio propio → no se toca', () => {
+  const ficha = { codigoPostal: '00001', ciudad: 'Villa Álamo' }
+  const riesgo = { ramo: 'hogar', inmueble: { codigoPostal: '00001', nombreVia: 'Calle Inventada' } }
+  const r = completarMunicipioHogarDesdeFicha(riesgo, ficha) as { inmueble: Record<string, unknown> }
+  assert.equal(r.inmueble.municipio, 'Villa Álamo')
+  assert.equal(r.inmueble.nombreVia, 'Calle Inventada')
+  const otroCp = { ramo: 'hogar', inmueble: { codigoPostal: '00002' } }
+  assert.equal(completarMunicipioHogarDesdeFicha(otroCp, ficha), otroCp, 'CP distinto: no se rellena')
+  const propio = { ramo: 'hogar', inmueble: { codigoPostal: '00001', municipio: 'Pueblo Nuevo' } }
+  assert.equal(completarMunicipioHogarDesdeFicha(propio, ficha), propio)
+  assert.equal(completarMunicipioHogarDesdeFicha(riesgo, null), riesgo)
+  assert.equal(completarMunicipioHogarDesdeFicha({ ramo: 'hogar' }, ficha).inmueble, undefined)
+})
+
+test('la ruta de encolar completa el municipio de hogar con la ficha', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/api/correduria/tarificador/encolar/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /ramo === 'hogar'[\s\S]{0,400}completarMunicipioHogarDesdeFicha\(riesgo/)
 })
