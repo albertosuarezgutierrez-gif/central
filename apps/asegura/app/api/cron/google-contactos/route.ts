@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { sincronizarGoogleContactos } from '@/lib/google-contactos'
+import { rellenarLeadsCorreo, type InformeRelleno } from '@/lib/google-contactos-lead'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,6 +19,8 @@ export const maxDuration = 300
  * lead. Sin conexión → `sin_conexion` (200, no hace nada). Sin la sincronización ACTIVADA tras
  * revisar la simulación → `pendiente_activar` (200, no escribe nada, ni la etiqueta). Clave PII
  * que no abre → no escribe.
+ * Tras la sincronización, RELLENO de los leads de correo antiguos (19/10/2026): hasta 3 lotes de 10 por pasada,
+ * idempotente, solo si la sincronización está activada y conectada; se calla solo al no quedar pendientes.
  * Auth: `CRON_SECRET` por `Authorization: Bearer`.
  */
 export async function GET(req: Request) {
@@ -26,8 +29,19 @@ export async function GET(req: Request) {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
+    const inicio = Date.now()
     const r = await sincronizarGoogleContactos(correduria.id)
-    return NextResponse.json(r, { status: r.estado === 'pii_no_descifra' ? 503 : 200 })
+    // El relleno nunca tumba el cron ni su respuesta: solo códigos y cifras (sin PII).
+    let relleno: InformeRelleno | { estado: 'error' } | undefined
+    if (r.estado !== 'pii_no_descifra') {
+      try {
+        relleno = await rellenarLeadsCorreo(correduria.id, inicio)
+      } catch (e) {
+        registrarErrorCartera('cron/google-contactos/relleno', e)
+        relleno = { estado: 'error' }
+      }
+    }
+    return NextResponse.json({ ...r, ...(relleno ? { relleno } : {}) }, { status: r.estado === 'pii_no_descifra' ? 503 : 200 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('cron/google-contactos', e) }, { status: 500 })
   }
