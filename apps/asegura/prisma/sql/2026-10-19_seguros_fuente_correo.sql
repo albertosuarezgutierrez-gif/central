@@ -1,0 +1,13 @@
+-- 19/10/2026 — `correo` en seguros.fuente_origen: el lead que escribe a hola@grupoasegura.es.
+--
+-- El triaje de correo de plataforma (`apps/plataforma/lib/correo/lead-correduria*.ts`) da de alta la
+-- ficha por el MISMO puerto que el formulario web (`POST /api/operador/cliente`) con `fuente: 'correo'`,
+-- y abre la oportunidad con esa misma fuente. Hasta hoy ese lead no tenía valor propio: `otros` es un
+-- «no lo sé» disfrazado de dato, y `web` mentiría (no hay formulario ni prueba de consentimiento web).
+--
+-- 🚨 ORDEN: aplicar ANTES de desplegar el código. Sin este valor, el alta por correo revienta en el
+-- cast a `fuente_origen` (el aviso de Telegram sale igual y dice «NO registrado»: no se pierde el lead,
+-- pero no queda ficha). Es aditivo e idempotente; no toca filas.
+-- ⚠️ El CRM de Manuel (rol crm_seguros, otro repo) tiene su propio Prisma: una ficha con `correo` que lea
+-- con un enum que no lo conozca le daría error al leerla. Mismo riesgo que tuvo `web` el 02/09/2026.
+ALTER TYPE seguros.fuente_origen ADD VALUE IF NOT EXISTS 'correo';

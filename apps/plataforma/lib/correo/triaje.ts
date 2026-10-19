@@ -28,6 +28,7 @@ import { eventoConfirmado, leerResultadosEvento, textoAvisoEvento } from './even
 import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
+import { procesarLeadCorreo } from './lead-correduria-proceso'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -69,6 +70,7 @@ function etiquetaBonita(categoria: string): string {
     'correduria-recibo': 'Recibo sin cobrar (correduría)',
     'huespedes': 'Huésped',
     'leads-negocio': 'Oportunidad de negocio',
+    'correduria-lead': 'Lead de seguros (hola@)',
     'asociacion-corredores': 'Asociación de corredores',
     'seguridad-sospechosa': 'Seguridad',
   }
@@ -76,7 +78,7 @@ function etiquetaBonita(categoria: string): string {
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -237,6 +239,13 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const texto = textoAvisoEvento(evento, correo.subject, resultados, (id) => urlFichaCliente(id), res.estado === 'ok' ? null : res)
             const enviado = await tgAviso('correo.correduria-evento', texto).catch(() => null)
             if (enviado !== null) stats.avisados++
+          } else if (c.categoria === 'correduria-lead' && (await procesarLeadCorreo(correo)).avisado) {
+            // Lead de la CORREDURÍA (19/10/2026): alta en la cartera por el puerto de la web, oportunidad y
+            // petición de datos para copiar (`lead-correduria-proceso.ts`). Nada sale hacia el lead. Si el
+            // proceso no llega a avisar (falla, o el aviso no sale), cae al aviso genérico de abajo: el
+            // correo nunca se queda sin señal.
+            stats.leadsCorreduria++
+            stats.avisados++
           } else if (ruta.aviso === 'inmediato') {
             // Un interruptor POR CATEGORÍA (panel /telegram): «avísame de los leads pero no de cada
             // correo de huéspedes» es la distinción real. Una categoría sin id catalogado avisa

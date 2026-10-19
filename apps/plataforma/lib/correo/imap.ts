@@ -31,6 +31,39 @@ export interface CorreoNuevo {
    * una pasada son hasta 50 correos y no se sujetan en memoria adjuntos que nadie va a leer.
    */
   pdfs?: Buffer[]
+  /**
+   * Direcciones a las que IBA el correo (To, Cc, Delivered-To, X-Original-To, X-Forwarded-To), en
+   * minúsculas y sin repetir. Es lo que distingue un lead que escribe a hola@grupoasegura.es de
+   * cualquier otro correo del mismo buzón (19/10/2026). `[]` = no se pudo leer ninguna cabecera.
+   */
+  destinatarios?: string[]
+  /** Message-IDs de los que este correo es respuesta (In-Reply-To + References), para casar el hilo. */
+  referencias?: string[]
+}
+
+const RE_DIRECCION = /[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
+const CABECERAS_DESTINO = ['to', 'cc', 'delivered-to', 'x-original-to', 'x-forwarded-to']
+
+/** Puro: direcciones de destino a partir de las líneas de cabecera crudas (`parsed.headerLines`). */
+export function destinatariosDe(lineas: readonly { key: string; line: string }[] | undefined): string[] {
+  const out = new Set<string>()
+  for (const { key, line } of lineas ?? []) {
+    if (!CABECERAS_DESTINO.includes(key.toLowerCase())) continue
+    const valor = line.slice(line.indexOf(':') + 1)
+    for (const m of valor.matchAll(RE_DIRECCION)) out.add(m[0].toLowerCase())
+  }
+  return [...out]
+}
+
+/** Puro: los Message-ID de In-Reply-To/References (mailparser da string o string[]). */
+export function referenciasDe(inReplyTo: unknown, references: unknown): string[] {
+  const todas = [inReplyTo, ...(Array.isArray(references) ? references : [references])]
+  const out = new Set<string>()
+  for (const v of todas) {
+    if (typeof v !== 'string') continue
+    for (const m of v.matchAll(/<[^<>\s]+>/g)) out.add(m[0])
+  }
+  return [...out]
 }
 
 /** Dominios cuyos PDFs adjuntos se conservan para leerlos (ver `CorreoNuevo.pdfs`). */
@@ -108,6 +141,8 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           extracto: `${subject}\n${cuerpo}`.slice(0, EXTRACTO_MAX),
           texto: (parsed.text || '').slice(0, TEXTO_MAX),
           pdfs: pdfsDe(from, parsed.attachments),
+          destinatarios: destinatariosDe(parsed.headerLines),
+          referencias: referenciasDe(parsed.inReplyTo, parsed.references),
         })
         if (out.length >= max) break
       }

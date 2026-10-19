@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(19/10/2026)** — Correduría · leads por CORREO a hola@grupoasegura.es. Lead de hoy (Alejandro Cutanda, hogar+vida) se avisó como
+«Oportunidad de negocio» genérica y NO creó ficha. 🎯 Decisión de Alberto: la correduría automatiza al máximo lead→datos→presupuesto→
+seguimiento con compañías. Hecho: categoría `correduria-lead` por regla fija (destinatario @grupoasegura.es), alta por el puerto cifrado
+(`altaClienteAsegura`) + oportunidad por ramo `fuente='correo'`, aviso `correduria.lead-correo` + plantilla de petición de datos por ramo
+para copiar. ⏳ BLOQUEANTE: aplicar `apps/asegura/prisma/sql/2026-10-19_seguros_fuente_correo.sql` antes de mergear. Envío automático
+del acuse al lead: bloqueado por el clasificador de permisos → pendiente de OK explícito. Alejandro: alta A MANO en /correduria (SQL
+directo rompería el cifrado PII). Huecos: purga RGPD/pantalla leads filtran `fuente='web'`.
+
 **(18/10/2026)** — Tarificador · 3 compañías + presupuesto interactivo (PRs #4822, #4824, #4826, #4828 mergeados). Supuestos favorables (`conAntecedentesFavorables`), moto Allianz 0.7.0, Allianz «Guardar presupuesto» 0.6.14, Mapfre 0.8.7, **Generali 0.1.1 encendida** (mediador 65792, matrícula `NNNN*LLL` dos veces, marca/modelo de Allianz/Mapfre; hoy llega hasta «Datos de Valoración»). Página del cliente en el portal: datos plegados, CP que usó la compañía, borrador no visible al cliente (404 IA). Imagen Fly `v20261018-genali011` (anterior `v20261018-allianz0612` en `TARIFICADOR_FLY_IMAGE_ANTERIOR`), fila `companias_integracion` generali/auto, central-asegura redesplegado. Pendiente: prueba real de Alberto (Manuel auto + F800), bucle de exploración Generali hasta precio, aseguradora anterior de la F800 para Mapfre moto, traducción «conductor habitual = tomador (supuesto)», tarea programada de autorreparación. Prueba desde la sesión (18/10 20:50): el riesgo de un trabajo `ok` está PURGADO (sin matrícula/conductor) → copiarlo no sirve, hay que pedir desde la oportunidad; el workflow `tarificador-relanzar.yml` falla porque falta el secreto de repo `ASEGURA_OPERADOR_SECRET`; Mapfre moto F800 → «Falta: nombre de la compañía anterior».
 
 **(18/10/2026)** — agentes-entrenador · pasada semanal (11→18/10): 25 entradas de bitácora podadas, 0 PRs de prompt (sin patrón de prompt). Pendiente de CÓDIGO: `scripts/canal-aviso.sh` no admite cuerpos >128 KB (3 pasadas de trading-analista con rodeo `@fichero`). Backlog PRs `claude/*`: 11 abiertos, 2 con 2+ semanas (#3755, #3995; docs-only).

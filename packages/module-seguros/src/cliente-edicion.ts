@@ -481,16 +481,19 @@ export function textoHistorialEdicion(
  * De dónde sale una ficha (`clientes.fuente`, enum `fuente_origen` de la BD).
  * Los seis primeros son los del CRM de Manuel (nadie los escribía); los tres
  * últimos son los CANALES de lead (02/09/2026): formulario web, portal del
- * cliente y WhatsApp. Mismo orden y mismos literales que el enum de Prisma.
+ * cliente y WhatsApp. `correo` (19/10/2026): el lead que escribe a hola@grupoasegura.es y el
+ * triaje de correo de plataforma da de alta solo. Mismo orden y mismos literales que el enum de Prisma
+ * (y el valor tiene que existir en `seguros.fuente_origen` ANTES de desplegar: SQL
+ * `apps/asegura/prisma/sql/2026-10-19_seguros_fuente_correo.sql`).
  */
 export const FUENTES_ORIGEN = [
   'venta_directa', 'tarifas_blancas', 'ahorro_seguro', 'recomendacion', 'renovacion', 'otros',
-  'web', 'portal', 'whatsapp',
+  'web', 'portal', 'whatsapp', 'correo',
 ] as const
 export type FuenteOrigen = (typeof FUENTES_ORIGEN)[number]
 
 /** Los canales por los que ENTRA un lead sin que nadie lo teclee (§6 de la visión del CRM). */
-export const FUENTES_CANAL: readonly FuenteOrigen[] = ['web', 'portal', 'whatsapp']
+export const FUENTES_CANAL: readonly FuenteOrigen[] = ['web', 'portal', 'whatsapp', 'correo']
 
 export function esFuenteCanal(f: FuenteOrigen | null | undefined): boolean {
   return f != null && FUENTES_CANAL.includes(f)
@@ -516,6 +519,7 @@ export const ETIQUETA_FUENTE: Record<FuenteOrigen, string> = {
   web: 'formulario web',
   portal: 'portal del cliente',
   whatsapp: 'WhatsApp',
+  correo: 'correo electrónico',
 }
 
 export type AltaCliente = {

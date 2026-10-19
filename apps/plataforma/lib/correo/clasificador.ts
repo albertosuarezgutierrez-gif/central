@@ -14,6 +14,8 @@ import { clasificarPorKeyword } from './keywords'
 import { parsearAvisoBooking } from './reserva-booking'
 import { esAvisoMensajesAgoda } from './agoda-mensajes'
 import type { CorreoNuevo } from './imap'
+import { esDestinoCorreduria, esLeadCorreduria } from './lead-correduria'
+import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 
 export interface Clasificacion {
   categoria: string
@@ -64,7 +66,7 @@ function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 // Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM,
 // que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay
 // GROQ_API_KEY o Groq falla. Lanza si ambos fallan (el llamador lo trata como 'dudoso').
-async function llamarIA(system: string, user: string): Promise<string> {
+export async function llamarIA(system: string, user: string): Promise<string> {
   const groqKey = process.env.GROQ_API_KEY
   if (groqKey) {
     try {
@@ -93,10 +95,27 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     return { categoria: 'agoda-huespedes', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Responder en el buzón de YCS (Smoobu no llega)', fechaLimite: null }
   }
 
-  // (1) Regla explícita (semilla VIP o auto-aprendida).
+  // (0-ter) Respuesta de un LEAD de la correduría en su propio hilo (19/10/2026): un hilo = un lead, y
+  // la respuesta va a su ficha. Determinista: sus referencias casan con un Message-ID ya registrado como
+  // `correduria-lead`. Antes que correo_reglas: es la continuación de algo que ya se decidió.
+  if (correo.referencias?.length && esDestinoCorreduria(correo.destinatarios) && (await esRespuestaDeLeadBD(correo.referencias))) {
+    return { categoria: 'correduria-lead', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+  const leadCorreduria = esLeadCorreduria({ from: correo.from, destinatarios: correo.destinatarios, referencias: correo.referencias, buzonPropio: process.env.GMAIL_USER ?? null })
+
+  // (1) Regla explícita (semilla VIP o auto-aprendida). Una aprendida hacia `leads-negocio` (la IA lo
+  // confundía) no le gana al lead de la correduría.
   const regla = await reglaDe(correo.from)
-  if (regla) {
+  if (regla && !(leadCorreduria && regla === 'leads-negocio')) {
     return { categoria: regla, confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  }
+
+  // (2.6) Lead de la CORREDURÍA (19/10/2026), DETERMINISTA y sin IA: a hola@grupoasegura.es (u otro contacto
+  // público de la correduría), de un remitente externo que no es aseguradora/proveedor/ruido (eso ya lo han
+  // decidido correo_reglas y lo decide `clasificarPorKeyword`, que se mira aquí) y abriendo hilo. Antes que el
+  // regex de OTP: «código postal 41010» en el asunto de un lead no es un código de verificación. La IA lo mandaba a `leads-negocio` y no quedaba nada.
+  if (leadCorreduria && !clasificarPorKeyword(correo.from, correo.subject)) {
+    return { categoria: 'correduria-lead', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Contestarle desde hola@ pidiendo los datos', fechaLimite: null }
   }
 
   // (2) Código de verificación (barato, no gasta IA).

@@ -327,7 +327,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correo.leads', categoria: 'correo',
     titulo: 'Oportunidades de negocio',
-    que: 'Leads entrantes, partnerships y respuestas a mailings de ia-rest / ialimp.',
+    que: 'Leads entrantes, partnerships y respuestas a mailings de ia-rest / ialimp. Los de seguros (hola@grupoasegura.es) van aparte: «Lead nuevo por correo».',
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
@@ -739,6 +739,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar un formulario',
   },
   {
+    id: 'correduria.lead-correo', categoria: 'correduria',
+    titulo: 'Lead nuevo por correo (hola@)',
+    que: 'Alguien escribe a hola@grupoasegura.es pidiendo un seguro: qué quiere, la ficha (nueva o la que ya tenía), las oportunidades abiertas y la petición de datos lista para copiar. Nunca se le envía nada.',
+    cuando: 'Al llegar el correo (revisión cada 10 min)',
+  },
+  {
     id: 'correduria.aviso-web', categoria: 'correduria',
     titulo: 'Aviso de vencimiento confirmado desde la web',
     que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',
@@ -812,6 +818,7 @@ export function avisoDeCategoriaCorreo(categoria: string): string | null {
     'agoda-huespedes': 'correo.agoda',
     'correduria-recibo': 'correo.correduria-recibo',
     'leads-negocio': 'correo.leads',
+    'correduria-lead': 'correduria.lead-correo',
     'seguridad-sospechosa': 'correo.seguridad',
   }
   return mapa[categoria] ?? null

@@ -16,7 +16,7 @@ mapa para entenderlo y tocarlo con seguridad.
 - 🔔 **El aviso «inmediato» tiene INTERRUPTOR POR CATEGORÍA** (panel `/telegram`, 01/09/2026):
   `avisoDeCategoriaCorreo()` de `lib/telegram/catalogo.ts` mapea la categoría a su id
   (`correo.personal-importante` · `correo.huespedes` · `correo.agoda` · `correo.leads` ·
-  `correo.seguridad`) y `triaje.ts` emite con `tgAviso`. **Categoría sin id mapeado → avisa
+  `correo.seguridad` · `correduria.lead-correo`) y `triaje.ts` emite con `tgAviso`. **Categoría sin id mapeado → avisa
   siempre**, nunca al revés. Al añadir una categoría con `aviso:'inmediato'`, añade su id al mapa Y
   al catálogo en el mismo PR (lo exige el guardián `lib/telegram/catalogo.test.ts`).
   ⚠️ **`correo.huespedes` está SILENCIADO** desde el 01/09/2026 por decisión de Alberto («esto
@@ -35,6 +35,22 @@ mapa para entenderlo y tocarlo con seguridad.
   no toca el correo). Auto-aprende reglas. (PRs #743/#744/#745, 04/07/2026: normalización de
   categoría tolerante a mayúsculas/puntuación, cap de 10 correos/pasada para no agotar los 300s
   de Vercel, y el cambio a Groq — NIM colgaba cada llamada y todo caía a `dudoso`.)
+- **Lead de la CORREDURÍA por correo (19/10/2026), categoría `correduria-lead`** (`Triaje/Correduria-Leads`,
+  inmediato, no se archiva; aviso `correduria.lead-correo`). Regla DETERMINISTA sin IA
+  (`lib/correo/lead-correduria.ts::esLeadCorreduria`): destinatario (To/Cc/Delivered-To/X-Original-To/
+  X-Forwarded-To, `imap.ts::destinatariosDe`) en `@grupoasegura.es|.com` (dominio de `MEDIADOR`) + remitente
+  externo (ni la correduría, ni `GMAIL_USER`, ni aseguradora, ni no-reply) + abre hilo (sin In-Reply-To/
+  References) + sin keyword. Corre tras `correo_reglas` (una aprendida a `leads-negocio` no le gana) y antes
+  del regex OTP. Respuestas del lead en su hilo: casan por referencias con un Message-ID `correduria-lead` de
+  `correo_triaje` (`lead-correduria-hilo.ts`) → solo historial. En VIVO (`lead-correduria-proceso.ts`): la IA
+  (`llamarIA`) extrae y TODO se valida contra el texto (teléfono/email/nombre que no estén en el correo → null);
+  `es_lead:false` (publicidad/proveedor) no da de alta. Alta por el MISMO puerto que la web
+  (`altaClienteAsegura` → `interpretarAltaLead`, `fuente:'correo'`, actor `agente:triaje-correo`, sin
+  consentimiento web); ficha existente → historial `contacto`; una oportunidad por ramo (`fuente:'correo'`,
+  tope 20/día en asegura, primer paso email HOY). La petición de datos (plantilla FIJA por ramo + pie legal de
+  `MEDIADOR` + RGPD) sale como 2.º mensaje de Telegram para COPIAR: **no hay mecanismo de borradores de Gmail
+  en plataforma y NADA se envía al lead** (envío automático pendiente de autorización de Alberto).
+  `leads-negocio` es SOLO ia-rest/ialimp.
 - **Huéspedes → SIVRA:** `lib/correo/huespedes.ts` — resuelve el nº de confirmación de Booking a
   bookingId de Smoobu y llama a `procesarMensajeHuesped` (el agente de huéspedes ya existente).
 - **Orquestador:** `lib/correo/triaje.ts` — `pasadaTriaje()` / `digestTriaje()` / `resumenSemanal()`.
