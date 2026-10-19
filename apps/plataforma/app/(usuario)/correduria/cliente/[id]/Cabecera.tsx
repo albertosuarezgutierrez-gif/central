@@ -10,7 +10,6 @@ import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/co
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import EditarFicha from './EditarFicha'
-import BotonesContacto from './BotonesContacto'
 import PedirPresupuestoBot from './PedirPresupuestoBot'
 import ProbarTarificacion from './ProbarTarificacion'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
@@ -571,8 +570,6 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
         </span>
       )}
       {sitio && <span style={FILA}><Ico i={MapPin} />{sitio}</span>}
-      {/* Llamar y WhatsApp a 44 px. Solo con teléfono PROPIO y legible: el canal de la correduría no es del cliente. */}
-      {ef.telefono && !ef.canalCorreduria.telefono && <BotonesContacto telefono={ef.telefono} quien={nombre} mensaje={mensajeWa} />}
     </>
   )
 }
