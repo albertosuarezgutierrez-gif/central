@@ -49,7 +49,8 @@ export type OportunidadLeida = {
   pendientes: string[]
 }
 export type GuardadoLead =
-  | { estado: 'ok'; oportunidades: OportunidadLeida[]; completo: boolean }
+  /** `estadoHilo` (F4): el estado REAL del hilo en asegura (`null` = no lo dijo). Con precio pedido no se vuelve a tarificar. */
+  | { estado: 'ok'; oportunidades: OportunidadLeida[]; completo: boolean; estadoHilo?: string | null }
   | { estado: 'no'; motivo: string }
 
 /** Respuesta de `accion:'guardar'`. Sin un `ok` legible no se da NADA por guardado ni por completo. PURA. */
@@ -66,7 +67,12 @@ export function leerGuardar(status: number, json: unknown): GuardadoLead {
   if (!ops.length) return { estado: 'no', motivo: 'sin oportunidades' }
   // «Completo» lo dice asegura Y se comprueba aquí: una oportunidad no guardada o con algo pendiente no lo es.
   const completo = o.completo === true && ops.every((x) => x.guardado && x.faltan.length === 0 && x.pendientes.length === 0)
-  return { estado: 'ok', oportunidades: ops, completo }
+  return { estado: 'ok', oportunidades: ops, completo, estadoHilo: typeof o.estadoHilo === 'string' ? o.estadoHilo : null }
+}
+
+/** Estados del hilo con precio ya pedido o propuesta enviada: su respuesta actualiza la PROPUESTA (F4), no se re-tarifica. PURA. */
+export function hiloConPrecio(g: GuardadoLead): boolean {
+  return g.estado === 'ok' && (g.estadoHilo === 'tarificando' || g.estadoHilo === 'tarificada' || g.estadoHilo === 'propuesta_enviada')
 }
 
 // ─── Adjuntos ─────────────────────────────────────────────────────────────────────────────────────────────────────

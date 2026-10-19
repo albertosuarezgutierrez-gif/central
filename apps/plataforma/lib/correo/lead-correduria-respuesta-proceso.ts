@@ -21,8 +21,8 @@ import { ACTOR_TRIAJE_CORREO, hoyMadrid, textoPlantillaTelegram } from './lead-c
 import { proponerPeticion } from './lead-correduria-pendiente'
 import { ofrecerTarificacion } from './lead-correduria-tarificar-proceso'
 import {
-  cuboAdjunto, discrepanciasPendientes, leerCasar, leerGuardar, lineaAdjuntos, plantillaRepregunta, resumirRespuesta, textoRespuestaTelegram,
-  type CuentaAdjuntos, type GuardadoLead,
+  cuboAdjunto, discrepanciasPendientes, hiloConPrecio, leerCasar, leerGuardar, lineaAdjuntos, plantillaRepregunta, resumirRespuesta,
+  textoRespuestaTelegram, type CuentaAdjuntos, type GuardadoLead,
 } from './lead-correduria-respuesta'
 import { proponerDiscrepancias } from './lead-correduria-discrepancia-proceso'
 
@@ -97,6 +97,20 @@ export async function procesarRespuestaLead(correo: CorreoNuevo, ahora = new Dat
     const plantilla = !resumen.sinLeer && !resumen.completo
       ? plantillaRepregunta({ pila: casado.pila, ramos, faltan: resumen.faltan, invalidos: resumen.invalidos, asuntoOriginal: correo.subject })
       : null
+    // F4: con precio ya pedido (o propuesta enviada), lo que conteste (p. ej. sus necesidades) actualiza la PROPUESTA en
+    // el momento: no se le vuelve a ofrecer tarificar (los bots ya corrieron).
+    if (!plantilla && hiloConPrecio(guardado)) {
+      const enviada = guardado.estado === 'ok' && guardado.estadoHilo === 'propuesta_enviada'
+      const nota = enviada
+        ? '📨 <i>Ya tiene su propuesta enviada: lee su correo (el seguimiento de la propuesta aún no es automático).</i>'
+        : '📊 <i>Ya tiene precios: actualizo su propuesta con lo que ha contestado.</i>'
+      const msg = await tgAviso('correduria.lead-respuesta', `${texto.replace(/\n✅ <b>Datos completos[^\n]*/g, '')}\n\n${nota}`).catch(() => null)
+      if (!enviada) {
+        const { revisarPropuestasLead } = await import('./lead-correduria-propuesta-proceso')
+        await revisarPropuestasLead().catch(() => null)
+      }
+      return { leida: true, avisado: msg !== null }
+    }
     // F3a: datos completos → en vez del «✅ Datos completos» a secas, la revisión GRATIS de los bots y el aviso §3.3 con 🤖
     // (o la repregunta de lo que les falta). Nada se lanza sin el botón.
     if (!plantilla && resumen.completo && !resumen.sinLeer && RE_MSGID.test(correo.messageId)) {

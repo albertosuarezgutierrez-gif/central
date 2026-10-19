@@ -128,8 +128,10 @@ export function textoBorradorTelegram(a: {
 
 export type DecisionClp =
   | { ok: false; toast: string }
-  /** `tar` (F3a): 🤖 tarificar con bots el pendiente `id` (tipo `tarificar`). */
-  | { ok: true; accion: 'env' | 'edt' | 'no' | 'tar'; id: number; quien: string }
+  /** `tar` (F3a): 🤖 tarificar con bots el pendiente `id` (tipo `tarificar`). `eli` (F4): 🔀 elegir otro precio. */
+  | { ok: true; accion: 'env' | 'edt' | 'no' | 'tar' | 'eli'; id: number; quien: string }
+  /** `pro` (F4): 📤 enviar la propuesta `id` con EXACTAMENTE el precio número `n`. */
+  | { ok: true; accion: 'pro'; id: number; n: number; quien: string }
   /** `top` (F3a): «➕ 10 más hoy» para el día `dia` (aaaa-mm-dd) y relanzar la cola. */
   | { ok: true; accion: 'top'; dia: string; quien: string }
   /** `fal` (F3b): preparar la repregunta tras el fallo de un bot del pendiente de tarificar `id`. */
@@ -150,12 +152,18 @@ export function decidirBotonClp(
     if (!m) return { ok: false, toast: 'Día no válido' }
     return { ok: true, accion: 'top', dia: `${m[1]}-${m[2]}-${m[3]}`, quien: String(cb.from?.id ?? '') }
   }
-  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis') return { ok: false, toast: 'Acción desconocida' }
+  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis' && action !== 'pro' && action !== 'eli') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Borrador no encontrado' }
   if (action === 'dis') {
     if (!/^\d{1,2}$/.test(args[1] ?? '') || (args[2] !== 'f' && args[2] !== 'c')) return { ok: false, toast: 'Botón no válido' }
     return { ok: true, accion: 'dis', id, indice: Number(args[1]), eleccion: args[2] === 'f' ? 'ficha' : 'correo', quien: String(cb.from?.id ?? '') }
+  }
+  if (action === 'pro') {
+    // El precio pulsado, por su número estable. Sin número válido no se elige ninguno «por defecto».
+    const n = Number(args[1])
+    if (!/^\d{1,3}$/.test(args[1] ?? '') || n < 1) return { ok: false, toast: 'Precio no válido' }
+    return { ok: true, accion: 'pro', id, n, quien: String(cb.from?.id ?? '') }
   }
   return { ok: true, accion: action, id, quien: String(cb.from?.id ?? '') }
 }

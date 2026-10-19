@@ -15,6 +15,7 @@ import { contratoDatos, peticionDatos, sePideDeEntrada, type CampoContrato } fro
 import { normalizarDni, normalizarEmail } from './cliente-edicion.ts'
 import { formatoMatricula, normalizarMatricula } from './matricula.ts'
 import type { RamoOportunidad } from './oportunidad-seguimiento.ts'
+import { camposIdd, citaHablaDeIdd, esClaveIdd, opcionIdd, opcionesIdd } from './propuesta-lead.ts'
 
 export type ValorContrato = string | number | boolean
 
@@ -23,6 +24,8 @@ type Tipo =
   | { t: 'fecha'; que: 'nacimiento' | 'pasada' | 'efecto' }
   | { t: 'numero'; min: number; max: number; entero?: true }
   | { t: 'texto'; max: number }
+  /** F4: respuesta a una pregunta IDD (`idd_<id>`): solo vale una de sus opciones. */
+  | { t: 'opcion' }
 
 const ENTERO = (min: number, max: number): Tipo => ({ t: 'numero', min, max, entero: true })
 
@@ -55,7 +58,7 @@ const TIPO_DE_CLAVE: Readonly<Record<string, Tipo>> = {
   urbanizacionCerrada: { t: 'bool' },
   propietarioEsTomador: { t: 'bool' },
 }
-const tipoDe = (clave: string): Tipo => TIPO_DE_CLAVE[clave] ?? { t: 'texto', max: 300 }
+const tipoDe = (clave: string): Tipo => (esClaveIdd(clave) ? { t: 'opcion' } : TIPO_DE_CLAVE[clave] ?? { t: 'texto', max: 300 })
 
 /**
  * Claves cuyo valor es dato personal que NO se guarda en claro en `info_riesgo` (asegura las cifra con la clave PII; sin
@@ -72,7 +75,10 @@ export function seGuardaCifrado(campo: Pick<CampoContrato, 'clave' | 'sensible' 
 
 // ─── Qué se le pide a la IA ───────────────────────────────────────────────────────────────────────────────────────
 
-/** Campos que se pueden leer de la respuesta: los que tienen pregunta (nunca salud), sin repetir clave. */
+/**
+ * Campos que se pueden leer de la respuesta: los que tienen pregunta (nunca salud), sin repetir clave. F4: también las
+ * necesidades IDD del ramo (`idd_<id>`, opcionales): si el cliente dice lo que quiere, queda guardado como lo demás.
+ */
 export function camposLeibles(ramos: readonly (RamoOportunidad | string)[]): CampoContrato[] {
   const out = new Map<string, CampoContrato>()
   for (const r of ramos.length ? ramos : [null]) {
@@ -81,13 +87,16 @@ export function camposLeibles(ramos: readonly (RamoOportunidad | string)[]): Cam
       if (f.origen !== 'cliente' && f.origen !== 'catalogo') continue
       if (!out.has(f.clave)) out.set(f.clave, f)
     }
+    for (const f of camposIdd(r)) if (!out.has(f.clave)) out.set(f.clave, f)
   }
   return [...out.values()]
 }
 
 /** El prompt de extracción: SOLO las claves del contrato, con su cita literal. */
 export function promptExtraerRespuesta(ramos: readonly (RamoOportunidad | string)[], hoy: string): string {
-  const lista = camposLeibles(ramos).map((f) => `- ${f.clave}: ${f.etiqueta}`).join('\n')
+  const lista = camposLeibles(ramos)
+    .map((f) => (esClaveIdd(f.clave) ? `- ${f.clave}: ${f.etiqueta} — SOLO una de estas palabras: ${opcionesIdd(f.clave).join(', ')}` : `- ${f.clave}: ${f.etiqueta}`))
+    .join('\n')
   return [
     'Eres el asistente de una correduría de seguros. Te paso la RESPUESTA de un cliente a nuestra petición de datos.',
     'Extrae SOLO los datos que el cliente escribe en ESTE texto, y solo de estas claves:',
@@ -202,6 +211,12 @@ export function validarValorContrato(clave: string, valor: unknown, hoy: string)
       if (!s || CAJON.test(norm(s))) return { ok: false, motivo: 'vacío' }
       return { ok: true, valor: s.slice(0, tipo.max) }
     }
+    case 'opcion': {
+      // Una respuesta IDD que no es una de sus opciones NO se repregunta como «dato inválido»: simplemente no se sabe
+      // (motivo «vacío», que nadie lista) y la propuesta la volverá a preguntar con sus opciones.
+      const o = opcionIdd(clave, valor)
+      return o ? { ok: true, valor: o } : { ok: false, motivo: 'vacío' }
+    }
   }
 }
 
@@ -244,6 +259,9 @@ export function apareceEnCorreo(clave: string, valor: ValorContrato, cita: unkno
     }
     case 'bool': case 'sexo':
       return true
+    case 'opcion':
+      // Un «sí» suelto no dice a qué: la cita tiene que hablar de ESA necesidad (lunas, franquicia, todo riesgo…).
+      return citaHablaDeIdd(clave, cita)
     case 'texto':
       return norm(String(valor)).length >= 2 && c.includes(norm(String(valor)))
   }

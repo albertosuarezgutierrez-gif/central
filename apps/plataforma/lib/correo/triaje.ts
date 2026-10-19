@@ -369,6 +369,13 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
     `.catch(() => {})
     await sesion.cerrar()
   }
+  // F4 (19/10/2026): propuestas de leads de correo con precio → aviso §3.4 (o su actualización). Solo en vivo; nunca envía
+  // nada al cliente (eso es 📤 en Telegram) y un fallo no rompe el triaje.
+  if (!DRY_RUN()) {
+    const { revisarPropuestasLead } = await import('./lead-correduria-propuesta-proceso')
+    const r = await revisarPropuestasLead().catch(() => null)
+    if (r && (r.nuevo || r.actualizado || r.fallo)) console.log(`[triaje] propuestas de leads: ${r.nuevo} nuevas, ${r.actualizado} actualizadas, ${r.fallo} fallos`)
+  }
   // Emisiones «aún no llegadas por CIMA» que CIMA ya trae: pasan a duplicado_cima. Solo en vivo; un fallo no rompe el triaje.
   if (!DRY_RUN()) {
     try {

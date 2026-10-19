@@ -769,6 +769,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cuando la respuesta del lead completa sus datos, y al llegar al tope diario',
   },
   {
+    id: 'correduria.lead-propuesta', categoria: 'correduria',
+    titulo: 'Propuesta de un lead lista (📤 Enviar recomendada / 🔀 Elegir otra / ✏️ / 🚫)',
+    que: 'Cuando llegan precios de un lead de correo: la comparativa (compañía, prima, franquicia, si el precio es estimado o firme, coberturas y si la compañía la dejaría bloqueada), las necesidades del cliente que se han leído de sus respuestas y la recomendada con su porqué. Si faltan necesidades no hay botón de enviar: te propongo repreguntárselas. Si llegan más precios, el mismo mensaje se actualiza. Nada sale sin pulsar 📤.',
+    cuando: 'Cuando hay precio para un lead que vino por correo (revisión cada 10 min)',
+  },
+  {
     id: 'correduria.aviso-web', categoria: 'correduria',
     titulo: 'Aviso de vencimiento confirmado desde la web',
     que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',

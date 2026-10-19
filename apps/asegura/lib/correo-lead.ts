@@ -84,7 +84,7 @@ async function registrarHilo(correduriaId: string, e: EnvioLead, emailCiego: str
           select 1 from seguros.oportunidades o where o.id = ${op}::uuid and o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${e.clienteId}::uuid)
         on conflict (correduria_id, cliente_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)))
         do update set message_ids = array(select distinct unnest(h.message_ids || excluded.message_ids)),
-                      estado_datos = case when h.estado_datos in ('tarificando', 'tarificada') then h.estado_datos else excluded.estado_datos end,
+                      estado_datos = case when h.estado_datos in ('tarificando', 'tarificada', 'propuesta_enviada') then h.estado_datos else excluded.estado_datos end,
                       ultima_peticion_at = now()`))
     }
     return estadoRegistroHilo(filas)

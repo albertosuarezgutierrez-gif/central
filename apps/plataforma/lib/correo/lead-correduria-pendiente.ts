@@ -159,6 +159,9 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
   // F3b: repregunta tras el fallo de un bot (📝 `clp_fal`) y elección en una discrepancia (`clp_dis`).
   if (d.accion === 'fal') return (await import('./lead-correduria-tarificar-proceso')).resolverFalloClp(d.id, d.quien)
   if (d.accion === 'dis') return (await import('./lead-correduria-discrepancia-proceso')).resolverDiscrepanciaClp(d)
+  // F4 (import dinámico: el proceso de la propuesta usa `proponerPeticion` de este fichero).
+  if (d.accion === 'pro') return (await import('./lead-correduria-propuesta-proceso')).resolverPropuestaClp(d.id, d.n, d.quien)
+  if (d.accion === 'eli') return (await import('./lead-correduria-propuesta-proceso')).resolverElegirClp(d.id)
   if (d.accion === 'no') {
     const filas = await prisma.$queryRaw<{ tipo: string }[]>(Prisma.sql`
       UPDATE correduria_pendiente_tg SET estado = 'descartado', decidido_por = ${actorTelegram(d.quien)}, decidido_at = now(), esperando_edit = false, ${PURGA}
@@ -170,6 +173,8 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
       ? '⏸ <i>En espera: no se ha lanzado ningún bot. Cuando quieras, pide el precio desde su ficha.</i>'
       : filas[0].tipo === 'discrepancia'
         ? '⏸ <i>Sin elegir: el expediente sigue sin estar completo (elige en la ficha cuando quieras).</i>'
+      : filas[0].tipo === 'propuesta'
+        ? '🚫 <i>Propuesta NO enviada: no se le ha mandado nada y no te la vuelvo a proponer. Si cambias de idea, desde su ficha.</i>'
         : '❌ <i>Descartado: no se le ha enviado nada.</i>'
   }
   if (d.accion === 'edt') {
@@ -189,14 +194,16 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
     return null
   }
   // ✅ Un solo uso: dos pulsaciones (o un reintento del webhook) = una gana.
+  // 🚨 Ni un pendiente de tarificar (no es un correo) ni una PROPUESTA (F4): la propuesta solo sale por 📤 `clp_pro`, con
+  //    el precio exacto y el aviso del presupuesto; por aquí saldría su texto suelto como si fuera una petición de datos.
   const filas = await prisma.$queryRaw<{ datos: unknown; borrador: string }[]>(Prisma.sql`
     UPDATE correduria_pendiente_tg SET estado = 'enviando', esperando_edit = false, decidido_por = ${actorTelegram(d.quien)}, decidido_at = now()
-    WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia') AND estado = 'pendiente' AND caduca_at > now()
+    WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia', 'propuesta') AND estado = 'pendiente' AND caduca_at > now()
     RETURNING datos, borrador`).catch(() => null)
   if (filas === null) return '⚠️ <i>No he podido leer el borrador: no se ha enviado nada.</i>'
   if (!filas.length) {
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia') AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
+      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia', 'propuesta') AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
     return lineaTrasEnviar({ estado: 'usado' })
   }
   const datos = leerDatosPeticion(filas[0].datos)
@@ -237,6 +244,10 @@ export async function guardarEdicionClp(id: number, texto: string): Promise<bool
     WHERE id = ${id} AND estado = 'pendiente' AND esperando_edit AND caduca_at > now()
     RETURNING datos`).catch(() => null)
   if (!filas?.length) return false
+  // F4: la propuesta vuelve con SUS botones (📤/🔀), nunca con el ✅ de una petición de datos.
+  if ((filas[0].datos as { tipo?: unknown } | null)?.tipo === 'propuesta') {
+    return (await import('./lead-correduria-propuesta-proceso')).reenviarPropuestaEditada(id)
+  }
   const datos = leerDatosPeticion(filas[0].datos)
   if (!datos) return true
   const msg = await tgSendButtons(textoBorradorTelegram({ id, datos, borrador: nuevo, preguntas: null, editado: true }), botonesPeticion(id)).catch(() => null)

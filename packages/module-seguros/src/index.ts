@@ -1508,3 +1508,9 @@ export {
   type CategoriaEstadoCivil, type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,
 } from './respuesta-lead.ts'
 export { PREGUNTAS_CONCRETAS, esCodigoConcreto, preguntasConcretas, type CodigoConcreto } from './repregunta-concreta.ts'
+export {
+  PREFIJO_IDD, camposIdd, citaHablaDeIdd, claveIdd, coberturasIncluidas, conInformacionPrevia, declaracionNecesidadesLead, deducirNecesidadesLead,
+  encajeOpcion, esClaveIdd, huellaPropuesta, informacionPreviaMediador, llevaInformacionPrevia, opcionIdd, opcionesIdd, preguntaIdd, recomendarOpcion,
+  type Encaje, type FuenteNecesidad, type NecesidadFalta, type NecesidadLeida, type NecesidadesLead, type OpcionComparada, type OrigenPrecio,
+  type Recomendacion,
+} from './propuesta-lead.ts'

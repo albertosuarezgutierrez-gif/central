@@ -40,6 +40,8 @@ import { fechaEfectoDe } from './presupuesto'
 import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
 import { movilDeFicha } from './presupuesto-codigo-whatsapp'
 import type { BarreraLote, ResultadoCorreoLote } from './barrera-lote'
+import type { EnRespuestaA } from './correo-hilo'
+import { correoEnHilo } from './propuesta-lead-puro'
 
 export type CanalAviso = 'email' | 'whatsapp_enlace'
 
@@ -243,6 +245,14 @@ export async function prepararAviso(correduriaId: string, entrada: EntradaAviso,
   }
 }
 
+/**
+ * F4 (19/10/2026, propuesta de un lead por correo): el aviso sale como RESPUESTA en el hilo del cliente. Lo de siempre
+ * (portal con código, compare-and-swap del token, aceptación firmada) no cambia; solo el envoltorio del correo: el texto
+ * que aprobó Alberto delante, el asunto del hilo, `In-Reply-To`/`References`, copia oculta al buzón propio y clave de
+ * idempotencia de Resend. Nunca con lote.
+ */
+export type AvisoEnHilo = { asunto: string; intro: string; enRespuestaA: EnRespuestaA; copiaOculta: string; idempotencia: string }
+
 /** Lo que `ejecutarAviso` escribe: el cliente de siempre o la transacción del lote de WhatsApp. */
 export type DbAviso = Pick<ReturnType<typeof prismaAsegura>, 'presupuesto' | 'presupuestoEvento'>
 
@@ -251,8 +261,12 @@ export type DbAviso = Pick<ReturnType<typeof prismaAsegura>, 'presupuesto' | 'pr
  * `lote`: solo correo, se une a la barrera en vez de mandar el suyo. `db`: el lote de WhatsApp pasa su
  * transacción, para que un compare-and-swap perdido deshaga las rotaciones de los demás.
  */
-export async function ejecutarAviso(prep: AvisoPreparado, lote: BarreraLote<ParteLote> | null = null, db: DbAviso = prismaAsegura()): Promise<ResultadoEnvio> {
+export async function ejecutarAviso(
+  prep: AvisoPreparado, lote: BarreraLote<ParteLote> | null = null, db: DbAviso = prismaAsegura(), hilo: AvisoEnHilo | null = null,
+): Promise<ResultadoEnvio> {
   const { correduriaId, entrada, ahora, p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos } = prep
+  // En el hilo solo por correo y nunca dentro de un lote (el lote compone su propio correo único).
+  if (hilo && (entrada.canal !== 'email' || lote)) return error('no_enviable', 'Un aviso en el hilo del cliente solo sale por correo y suelto.')
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
   const nuevoHash = await hashTokenVista(token)
@@ -285,8 +299,10 @@ export async function ejecutarAviso(prep: AvisoPreparado, lote: BarreraLote<Part
   // Por correo `emailAcceso` es SIEMPRE el de la ficha: sin él se cortó arriba, antes de escribir.
   const correo = emailAcceso as string
   const directo = await enlaceDirectoPresupuesto(correduriaId, p.clienteId, correo, enlace)
-  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, correoPresupuesto({ ...datos, enlaceDirecto: directo }),
-    lote ? { barrera: lote, parte: { presupuestoId: p.id, clienteId: p.clienteId, email: correo, nombre, enlace: directo ?? enlace, venceEl: venceSiSale } } : null)
+  const base = correoPresupuesto({ ...datos, enlaceDirecto: directo })
+  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, hilo ? correoEnHilo(base, hilo) : base,
+    lote ? { barrera: lote, parte: { presupuestoId: p.id, clienteId: p.clienteId, email: correo, nombre, enlace: directo ?? enlace, venceEl: venceSiSale } } : null,
+    hilo)
   if (envio !== 'enviado') {
     // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
     await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso, whatsappCodigoHash: p.whatsappCodigoHash, whatsappCodigoIntentos: p.whatsappCodigoIntentos } })
@@ -303,7 +319,7 @@ export async function ejecutarAviso(prep: AvisoPreparado, lote: BarreraLote<Part
     data: {
       ...(p.enviadoAt === null ? { enviadoAt: ahora } : {}),
       venceEl: venceSiSale,
-      eventos: { create: [{ tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'email', reenvio: p.enviadoAt !== null } }] },
+      eventos: { create: [{ tipo: 'enviado', origen: 'corredor', detalle: { actor: entrada.actor, canal: 'email', reenvio: p.enviadoAt !== null, ...(hilo ? { enHilo: true, idempotencia: hilo.idempotencia } : {}) } }] },
     },
   })
   return { estado: 'enviado', email: correo, venceEl: venceSiSale.toISOString() }
@@ -366,13 +382,17 @@ type ResultadoCorreo = ResultadoCorreoLote
 async function mandarCorreo(
   correduriaId: string, clienteId: string, tipo: string, destino: string, c: { asunto: string; texto: string; html: string },
   lote: { barrera: BarreraLote<ParteLote>; parte: ParteLote } | null = null,
+  hilo: AvisoEnHilo | null = null,
 ): Promise<ResultadoCorreo> {
   // Parte de un lote: el correo individual NO sale; sale el del lote, una vez, cuando se han unido todos.
   if (lote) return lote.barrera.unirse(lote.parte)
   // Import dinámico: igual que el resto de correos de asegura, para que los cepos
   // con `node --test` puedan cargar el módulo sin resolver `@central/core-email`.
   const { enviarCorreoSeguido } = await import('./correo-envio')
-  const r = await enviarCorreoSeguido({ correduriaId, clienteId, tipo, to: destino, asunto: c.asunto, texto: c.texto, html: c.html })
+  const r = await enviarCorreoSeguido({
+    correduriaId, clienteId, tipo, to: destino, asunto: c.asunto, texto: c.texto, html: c.html,
+    ...(hilo ? { enRespuestaA: hilo.enRespuestaA, copiaOculta: hilo.copiaOculta, idempotencia: hilo.idempotencia } : {}),
+  })
   if (r.resultado === 'enviado') return 'enviado'
   if (r.resultado === 'sin_proveedor') return 'sin_proveedor'
   console.error('[asegura/presupuesto] fallo enviando el aviso:', r.motivo)

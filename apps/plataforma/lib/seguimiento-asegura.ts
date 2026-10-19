@@ -1165,3 +1165,14 @@ export function interpretarContactosLead(r: Reenvio): ContactosLead {
   if (r.status === 401) return { estado: 'error', motivo: 'no_autorizado' }
   return { estado: 'error', motivo: motivo ?? `http_${r.status}` }
 }
+
+// ─── Propuesta de un lead de correo (19/10/2026, F4) ─────────────────────────
+/**
+ * `POST /api/operador/correo/propuesta-lead`: `accion:'pendientes'`/`'revisar'` (gratis: comparativa, necesidades IDD y
+ * recomendada de los hilos con precio) o `accion:'enviar'` (SOLO tras «📤 Enviar» de Alberto: la opción y la prima
+ * pulsadas, en el hilo, por el aviso del presupuesto de siempre). Nunca habla con Codeoscopic. Sin datos personales salvo
+ * el nombre de pila.
+ */
+export function propuestaLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/propuesta-lead', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}
