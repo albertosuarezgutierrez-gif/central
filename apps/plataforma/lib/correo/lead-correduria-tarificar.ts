@@ -183,6 +183,18 @@ export function estadoPendienteTras(r: ResultadoTarificar): 'enviado' | 'fallido
   }
 }
 
+/**
+ * Tras 🤖, si el pendiente sigue vivo (no se ha hecho nada, o quedó EN COLA por el tope), el texto del mensaje nuevo que
+ * vuelve a traer sus botones; `null` si ya no hay nada que pulsar. Sin esto, lo que quedó en cola un día y no salió con ➕
+ * se quedaba sin botón (el pulsado los pierde) hasta caducar: «cola, nunca descarte». PURA.
+ */
+export function textoBotonVivo(r: ResultadoTarificar, id: number | string): string | null {
+  const tras = estadoPendienteTras(r)
+  if (tras === 'pendiente') return `🧮 Sigue pendiente de tarificar (#clp${id}).`
+  if (tras === 'cola') return `⏳ En cola por el tope de hoy (#clp${id}): sale con ➕ o volviendo a pulsar 🤖 otro día. No se ha lanzado nada.`
+  return null
+}
+
 /** La línea que sustituye a los botones tras pulsar 🤖. PURA. */
 export function lineaTrasTarificar(r: ResultadoTarificar): string {
   switch (r.estado) {

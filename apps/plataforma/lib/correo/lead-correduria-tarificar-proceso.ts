@@ -17,7 +17,7 @@ import { plantillaRepregunta } from './lead-correduria-respuesta'
 import { proponerPeticion } from './lead-correduria-pendiente'
 import {
   botonTope, botonesTarificar, decidirOferta, estadoPendienteTras, leerAmpliar, leerRevision, leerTarificar, lineaContador, lineaTrasTarificar,
-  textoTarificar, textoTope, type ResultadoTarificar, type Revision,
+  textoBotonVivo, textoTarificar, textoTope, type ResultadoTarificar, type Revision,
 } from './lead-correduria-tarificar'
 
 const PURGA = Prisma.sql`datos = datos - ${[...CLAVES_PII_PENDIENTE]}::text[], borrador = ''`
@@ -145,9 +145,8 @@ async function cerrar(id: number, estado: 'enviado' | 'fallido' | 'incierto', re
 /** 🤖 `clp_tar:<id>`. La línea que sustituye a los botones. Si no se hizo nada, los botones vuelven. Nunca lanza. */
 export async function resolverTarificarClp(id: number, quien: string): Promise<string> {
   const { linea, r } = await tarificarPendiente(id, quien)
-  if (r && estadoPendienteTras(r) === 'pendiente') {
-    await tgSendButtons(`🧮 Sigue pendiente de tarificar (#clp${id}).`, botonesTarificar(id)).catch(() => null)
-  }
+  const vivo = r ? textoBotonVivo(r, id) : null
+  if (vivo) await tgSendButtons(vivo, botonesTarificar(id)).catch(() => null)
   if (r?.estado === 'tope') await avisarTope(r.dia, r.tope)
   return linea
 }

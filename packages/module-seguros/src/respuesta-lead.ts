@@ -324,7 +324,6 @@ export function camposDeBloqueRellenables(claveBloque: string): readonly string[
   return CAMPOS_BLOQUE[claveBloque] ?? []
 }
 
-/** ¿Dos valores son el mismo dato? Texto sin tildes/mayúsculas/espacios; documentos y códigos sin separadores. PURA. */
 /**
  * Estado civil → categoría comparable (19/10/2026, revisión F2). La ficha lo guarda como texto libre del CRM («Casado») o
  * como id del vendor («Married», «Single»); el cliente escribe «casada», «soltero/a», «pareja de hecho». `null` = no se
@@ -344,6 +343,7 @@ export function categoriaEstadoCivil(v: unknown): CategoriaEstadoCivil | null {
   return null
 }
 
+/** ¿Dos valores son el mismo dato? Texto sin tildes/mayúsculas/espacios; documentos y códigos sin separadores. PURA. */
 export function mismoValor(clave: string, a: unknown, b: unknown): boolean {
   if (a === null || a === undefined || b === null || b === undefined) return false
   if (clave === 'estadoCivil') {

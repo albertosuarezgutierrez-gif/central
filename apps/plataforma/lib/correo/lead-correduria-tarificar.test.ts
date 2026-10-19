@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { decidirBotonClp } from './lead-correduria-peticion.ts'
 import {
-  botonTope, botonesTarificar, decidirOferta, estadoPendienteTras, leerRevision, leerTarificar, lineaTrasTarificar, textoTarificar,
+  botonTope, botonesTarificar, decidirOferta, estadoPendienteTras, leerRevision, leerTarificar, lineaTrasTarificar, textoBotonVivo, textoTarificar,
 } from './lead-correduria-tarificar.ts'
 
 const CHAT = '12345'
@@ -95,4 +95,14 @@ test('🪤 el 🤖 es de un solo uso, solo sobre pendientes de tarificar, y ✅ 
   assert.ok(!/codeoscopic|cotizar|retarificar|auto-nuevo|cas_tarif/i.test(codigo))
   const pend = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(pend, /SET estado = 'enviando'[^`]*WHERE id = \$\{d\.id\} AND tipo <> 'tarificar' AND estado = 'pendiente'/)
+})
+
+test('🪤 lo que queda EN COLA por el tope no se queda sin botón (cola, nunca descarte); lo cerrado no lo recupera', () => {
+  const tope = leerTarificar(409, { estado: 'tope', usadas: 20, tope: 20, pendientes: 2, dia: '2026-10-19' })
+  assert.match(textoBotonVivo(tope, 7) ?? '', /En cola[^\n]*#clp7[^\n]*No se ha lanzado nada/)
+  assert.match(textoBotonVivo(leerTarificar(503, { estado: 'apagado' }), 7) ?? '', /Sigue pendiente[^\n]*#clp7/)
+  assert.equal(textoBotonVivo(leerTarificar(502, { estado: 'red' }), 7), null) // incierto: nada que pulsar
+  assert.equal(textoBotonVivo(leerTarificar(200, { estado: 'encolado', trabajos: [{ compania: 'mapfre', estado: 'encolado' }] }), 7), null)
+  const src = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
+  assert.match(src, /const vivo = r \? textoBotonVivo\(r, id\) : null if \(vivo\) await tgSendButtons\(vivo, botonesTarificar\(id\)\)/)
 })
