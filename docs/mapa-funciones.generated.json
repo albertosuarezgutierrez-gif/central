@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-19T13:56:40Z",
-  "sha": "ae986939181af2920277068c638353deb737bbb8",
+  "generadoEn": "2026-10-19T17:53:33Z",
+  "sha": "65415f4d1be31ff9375cd80a92c7e9f9ff128ce2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -18593,7 +18593,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/tarificador-cola",
-      "hash": "2730356dfb48"
+      "hash": "cae6d09dcef2"
     },
     {
       "ruta": "apps/asegura/app/api/cron/tarificador-humo-informe/route.ts",
@@ -22474,7 +22474,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/bandeja/[id]",
-      "hash": "6634615ced3f"
+      "hash": "0698defece9f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/bandeja/route.ts",
@@ -22605,12 +22605,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null | false",
-          "linea": 14
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/encolar",
-      "hash": "6faec95d52c7"
+      "hash": "ba1aa74ba3a8"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/estadisticas/route.ts",
@@ -22948,7 +22948,7 @@
       "funciones": [],
       "tablas": [],
       "rutaApi": "/api/operador/tarificador/probar",
-      "hash": "1c5c14861716"
+      "hash": "5bbf55d0d2b0"
     },
     {
       "ruta": "apps/asegura/app/api/operador/tarificador/relanzar/route.ts",
@@ -50120,6 +50120,7 @@
         "vehiculoParaRiesgoOrigen",
         "vehiculoDeOrigenes",
         "riesgoAlEncolar",
+        "esperaLiberable",
         "decidirEspera"
       ],
       "funciones": [
@@ -50129,7 +50130,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 37
+          "linea": 39
         },
         {
           "nombre": "texto",
@@ -50137,7 +50138,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 39
+          "linea": 41
         },
         {
           "nombre": "necesitaVehiculoEncadenado",
@@ -50145,7 +50146,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string",
           "retorno": "boolean",
-          "linea": 42,
+          "linea": 44,
           "resumen": "¿El bot de esta compañía/ramo necesita el vehículo encadenado? Hoy solo Generali Turismos. PURA."
         },
         {
@@ -50154,7 +50155,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string",
           "retorno": "boolean",
-          "linea": 47,
+          "linea": 49,
           "resumen": "¿Puede el `ok` de esta compañía/ramo dar el vehículo a Generali? PURA."
         },
         {
@@ -50163,7 +50164,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SeleccionCatalogo | null",
-          "linea": 56,
+          "linea": 58,
           "resumen": "`seleccionVehiculo` del worker: marca y modelo (≤80) y versión opcional (`descripcion`), sin forma de dato personal. PURA."
         },
         {
@@ -50172,7 +50173,7 @@
           "exportada": true,
           "params": "cuerpo: Record<string, unknown>",
           "retorno": "",
-          "linea": 73,
+          "linea": 75,
           "resumen": "El vehículo del cuerpo `ok` del worker (`seleccionVehiculo` / `vehiculoConfirmado`). ACCESORIO: lo inválido se descarta (`descartado` dice qué), nunca tumba el resultado. `null` = no trae nada válido."
         },
         {
@@ -50181,7 +50182,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "boolean",
-          "linea": 90,
+          "linea": 92,
           "resumen": "¿El riesgo ya trae un vehículo que Generali puede buscar? (marca+modelo, o denominación de Mapfre). PURA."
         },
         {
@@ -50190,7 +50191,7 @@
           "exportada": true,
           "params": "riesgo: unknown",
           "retorno": "boolean",
-          "linea": 98,
+          "linea": 100,
           "resumen": "¿El riesgo está en espera del vehículo? PURA."
         },
         {
@@ -50199,7 +50200,7 @@
           "exportada": true,
           "params": "riesgo: T",
           "retorno": "T",
-          "linea": 103,
+          "linea": 105,
           "resumen": "El riesgo con la marca de espera (sin tocar lo demás). PURA."
         },
         {
@@ -50208,7 +50209,7 @@
           "exportada": true,
           "params": "riesgo: T, v: VehiculoEncadenado",
           "retorno": "T",
-          "linea": 108,
+          "linea": 110,
           "resumen": "El riesgo SIN la marca y con el vehículo inyectado (las claves del vehículo encadenado mandan). PURA."
         },
         {
@@ -50217,7 +50218,7 @@
           "exportada": true,
           "params": "compania: string, v: VehiculoEncadenado",
           "retorno": "Record<string, unknown>",
-          "linea": 121,
+          "linea": 123,
           "resumen": "Lo que se ESCRIBE en el riesgo del trabajo de origen (Allianz/Mapfre) al registrar su `ok`: `vehiculoCatalogo` (con el origen) y `vehiculoConfirmado`. Solo lo escribe asegura con lo que mandó el bot: "
         },
         {
@@ -50226,7 +50227,7 @@
           "exportada": true,
           "params": "filas: readonly FilaOrigen[]",
           "retorno": "VehiculoEncadenado | null",
-          "linea": 135,
+          "linea": 137,
           "resumen": "El vehículo de los `ok` de la oportunidad: el `seleccionVehiculo` y el `vehiculoConfirmado` MÁS RECIENTES (cada uno de quien lo tenga). Solo filas de origen válido; lo inválido no cuenta. `null` = nin"
         },
         {
@@ -50235,22 +50236,31 @@
           "exportada": true,
           "params": "riesgo: T, oportunidadId: string | null, deOrigenes: VehiculoEncadenado | null",
           "retorno": "",
-          "linea": 155,
+          "linea": 157,
           "resumen": "Al ENCOLAR (solo si `necesitaVehiculoEncadenado`): el riesgo que se guarda. Ya trae vehículo → tal cual; hay un `ok` de origen en la oportunidad → con ese vehículo; sin oportunidad → rechazo; si no → "
+        },
+        {
+          "nombre": "esperaLiberable",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string",
+          "retorno": "boolean",
+          "linea": 174,
+          "resumen": "¿Un trabajo en espera de esta compañía/ramo se puede LIBERAR (sigue SIN vehículo y tarifica preguntando su versión)? Mapfre y Allianz sí: buscan por matrícula y saben preguntar. Generali NO: no busca "
         },
         {
           "nombre": "decidirEspera",
           "kind": "function",
           "exportada": true,
-          "params": "e: { vehiculo: VehiculoEncadenado | null; origenesVivos: number; creadoAt: Date; ahora: Date }",
+          "params": "e: { vehiculo: VehiculoEncadenado | null origenesVivos: number creadoAt: Date ahora: Date /** Compañía/ramo del trabajo que espera. Por defecto Generali auto (la regla de siempre). */ compania?: string ramo?: string /** El origen (identific",
           "retorno": "DecisionEspera",
-          "linea": 169,
+          "linea": 189,
           "resumen": "Un Generali en espera, en el BARRIDO: con vehículo → inyectar; sin vehículo y con algún origen vivo y dentro de las 24 h → esperar; si no → cancelar con el motivo (nunca se lanza sin vehículo). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "76c63d21da20"
+      "hash": "3d4abc5a24ac"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-estadisticas-reglas.ts",
@@ -53130,6 +53140,9 @@
         "repartirEnCurso",
         "huecosLibres",
         "claveEncolar",
+        "pausaEsCaducable",
+        "pausaCaducada",
+        "mensajeDuplicado",
         "bloqueaDuplicado",
         "configFly",
         "peticionMaquina",
@@ -53353,12 +53366,39 @@
           "resumen": "Clave de deduplicación al ENCOLAR: un mismo cliente no pide dos veces el mismo riesgo a la misma compañía y ramo. El riesgo NO va en la clave (se compara en SQL como `jsonb`, que ya es igualdad semánt"
         },
         {
+          "nombre": "pausaEsCaducable",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 428,
+          "resumen": "¿Es una pausa de las que pueden caducar sola? Texto desconocido o vacío → `false` (conservador)."
+        },
+        {
+          "nombre": "pausaCaducada",
+          "kind": "function",
+          "exportada": true,
+          "params": "pausadaAt: Date | null | undefined, ahora: Date",
+          "retorno": "boolean",
+          "linea": 433,
+          "resumen": "¿Esta pausa sin reanudar ya caducó? Hora ilegible/futura → NO caducada (conservador: sigue bloqueando)."
+        },
+        {
+          "nombre": "mensajeDuplicado",
+          "kind": "function",
+          "exportada": true,
+          "params": "estado: string",
+          "retorno": "string",
+          "linea": 440,
+          "resumen": "Qué decirle a quien pide algo que ya existe: el estado REAL del trabajo que bloquea (no siempre «en marcha»)."
+        },
+        {
           "nombre": "bloqueaDuplicado",
           "kind": "function",
           "exportada": true,
-          "params": "f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null; terminadoAt?: Date | null; conPrecio?: boolean }, ahora: Date, maxIntentos: number,",
+          "params": "f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null; terminadoAt?: Date | null; conPrecio?: boolean; actualizadoAt?: Date | null }, ahora: Date, maxIntentos: number,",
           "retorno": "boolean",
-          "linea": 420,
+          "linea": 460,
           "resumen": "¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope"
         },
         {
@@ -53367,7 +53407,7 @@
           "exportada": true,
           "params": "env: Record<string, string | undefined>",
           "retorno": "",
-          "linea": 446
+          "linea": 492
         },
         {
           "nombre": "peticionMaquina",
@@ -53375,7 +53415,7 @@
           "exportada": true,
           "params": "cfg: ConfigFly, jobId: string, vistaExplorador?: string | null",
           "retorno": "",
-          "linea": 461,
+          "linea": 507,
           "resumen": "La petición a la API de Fly Machines que crea la máquina de UN trabajo. El `env` sale de la lista blanca de `envDeMaquina` (JOB_ID + URL + `TARIFICADOR_EXPLORADOR_VISTA` si vale dom|aria|ambas, que re"
         },
         {
@@ -53384,7 +53424,7 @@
           "exportada": true,
           "params": "e: Record<string, unknown>",
           "retorno": "MetaWorker",
-          "linea": 520,
+          "linea": 566,
           "resumen": "Traza y versión del cuerpo del worker. La traza es ACCESORIA: si trae una clave que no es de las cinco permitidas (p. ej. un dato personal) se descarta ENTERA y el resultado del trabajo se guarda igua"
         },
         {
@@ -53393,7 +53433,7 @@
           "exportada": true,
           "params": "trabajoId: string, motivo: unknown",
           "retorno": "string",
-          "linea": 533
+          "linea": 579
         },
         {
           "nombre": "obj",
@@ -53401,7 +53441,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 542
+          "linea": 588
         },
         {
           "nombre": "base64",
@@ -53409,7 +53449,7 @@
           "exportada": false,
           "params": "v: unknown, campo: string, errores: string[], max: number",
           "retorno": "Buffer | null",
-          "linea": 545
+          "linea": 591
         },
         {
           "nombre": "esPdf",
@@ -53417,7 +53457,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 557
+          "linea": 603
         },
         {
           "nombre": "esPng",
@@ -53425,7 +53465,7 @@
           "exportada": false,
           "params": "b: Buffer",
           "retorno": null,
-          "linea": 558
+          "linea": 604
         },
         {
           "nombre": "leerResultadoWorker",
@@ -53433,12 +53473,12 @@
           "exportada": true,
           "params": "entrada: unknown",
           "retorno": "",
-          "linea": 560
+          "linea": 606
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "93844392be32"
+      "hash": "b3c5c645dd07"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-relanzar-reglas.ts",
@@ -53476,6 +53516,7 @@
         "relanzarTrabajo",
         "caducarAtascos",
         "pausarTrasHumo",
+        "caducarPausas",
         "pausaViva",
         "sqlSinPausa",
         "evaluarCorte",
@@ -53490,7 +53531,7 @@
           "exportada": true,
           "params": "db: Db, f: { trabajoId: string; estado: string; modo: string | null; tipoError: string; atasco: AtascoWorker | null | undefined }",
           "retorno": "Promise<AtascoWorker | null>",
-          "linea": 50,
+          "linea": 51,
           "resumen": "¿Este fallo se queda `atascado`? Lo llama `marcarFallo` (misma transacción) con el estado que tocaría por política. Sin el SQL de la F2, sin interruptor, de otro modo/tipo o pasado el tope de rondas →"
         },
         {
@@ -53499,7 +53540,7 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string, quien: string",
           "retorno": "Promise<number>",
-          "linea": 62,
+          "linea": 63,
           "resumen": "Cierra como `descartado` los atascos ESPERANDO de un trabajo (su id ya no puede aplicarse). Devuelve cuántos cerró."
         },
         {
@@ -53508,7 +53549,7 @@
           "exportada": true,
           "params": "db: Db, t: { id: string; correduriaId: string; compania: string; ramo: string }, a: AtascoWorker, capturaId: string | null",
           "retorno": "Promise<void>",
-          "linea": 70,
+          "linea": 71,
           "resumen": "Guarda el checkpoint (la fila del trabajo ya está `atascado` en esta misma transacción)."
         },
         {
@@ -53517,7 +53558,7 @@
           "exportada": false,
           "params": "f: { clave: string; tipo: string; descripcion: string; etiqueta: string | null; texto_esperado: string | null; candidatos: unknown }",
           "retorno": "AtascoWorker | null",
-          "linea": 85,
+          "linea": 86,
           "resumen": "El checkpoint guardado, re-leído por la MISMA lista blanca (una fila rara no se enseña ni se elige)."
         },
         {
@@ -53526,7 +53567,7 @@
           "exportada": false,
           "params": "correduriaId: string, documentoId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 118
+          "linea": 119
         },
         {
           "nombre": "capturaDentroDeTope",
@@ -53534,7 +53575,7 @@
           "exportada": false,
           "params": "correduriaId: string, documentoId: string | null, usado: number, suma: (n: number) => void",
           "retorno": "Promise<string | null>",
-          "linea": 128,
+          "linea": 129,
           "resumen": "Captura del atasco si cabe en el tope TOTAL de la respuesta (si no, `null`: el aviso sale sin foto)."
         },
         {
@@ -53543,7 +53584,7 @@
           "exportada": true,
           "params": "correduriaId: string, o: { pendientesAviso?: boolean; id?: string | null; conCaptura?: boolean } = {}",
           "retorno": "Promise<",
-          "linea": 139,
+          "linea": 140,
           "resumen": "`id` = uno concreto; `conCaptura` añade la imagen (avisos y detalle). Filas ilegibles se cuentan, no desaparecen."
         },
         {
@@ -53552,7 +53593,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<number>",
-          "linea": 173,
+          "linea": 174,
           "resumen": "Marca como avisados (idempotente). Solo lo que salió por Telegram."
         },
         {
@@ -53561,7 +53602,7 @@
           "exportada": true,
           "params": "correduriaId: string, atascoId: string, r: RespuestaAtasco, actor: string",
           "retorno": "Promise<ResultadoRespuestaAtasco>",
-          "linea": 195,
+          "linea": 196,
           "resumen": "Aplica la respuesta en UNA transacción con `for update` (atasco y trabajo). Elegir = el candidato N se APRENDE (`humano`, consolidado) y el MISMO trabajo vuelve a `pendiente` con los intentos a 0 (dec"
         },
         {
@@ -53570,7 +53611,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "Promise<number>",
-          "linea": 277,
+          "linea": 278,
           "resumen": "Relanzamientos de la compañía en las últimas 24 h, contados en `auditoria` (solo llamadas que salieron bien)."
         },
         {
@@ -53579,7 +53620,7 @@
           "exportada": true,
           "params": "correduriaId: string, trabajoId: string, actor: string",
           "retorno": "Promise<ResultadoRelanzar>",
-          "linea": 293,
+          "linea": 294,
           "resumen": "Devuelve a `pendiente` un trabajo `atascado` de TARIFICAR (no `requiere_humano`: captcha/OTP mandarían otro SMS) con su MISMO riesgo (intentos 0, lease/fly/error/ fechas a null), tras descartar sus at"
         },
         {
@@ -53588,7 +53629,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 338,
+          "linea": 339,
           "resumen": "Atascos sin respuesta pasada su hora → el trabajo a `error_definitivo` (con el motivo), su riesgo purgado y el corte evaluado. Un atasco cuyo trabajo ya no está `atascado` (lo movió otra vía) se cierr"
         },
         {
@@ -53597,8 +53638,17 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string",
           "retorno": "Promise<number>",
-          "linea": 403,
+          "linea": 404,
           "resumen": "PRUEBA DE HUMO (15/10/2026) con la contraseña rechazada: abre la pausa de TODAS las parejas activas de esa compañía (la credencial es de la compañía: repetir el login desde otra pareja es como se bloq"
+        },
+        {
+          "nombre": "caducarPausas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<number>",
+          "linea": 436,
+          "resumen": "Cierra las pausas CADUCABLES (`PAUSA_CADUCABLE_REGEX`: solo rachas de errores del bot, no credenciales ni prueba nocturna) sin reanudar con más de `PAUSA_CADUCA_HORAS` (19/10/2026): `reanudada_at = no"
         },
         {
           "nombre": "pausaViva",
@@ -53606,7 +53656,7 @@
           "exportada": true,
           "params": "db: Db, correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<boolean>",
-          "linea": 431,
+          "linea": 447,
           "resumen": "¿Hay una pausa viva para la pareja? (Sin el SQL de la F2 → `false`: comportamiento anterior.)"
         },
         {
@@ -53615,7 +53665,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Prisma.Sql>",
-          "linea": 443,
+          "linea": 460,
           "resumen": "Condición para el `where` de `reclamarSiguiente` (alias `w` de `tarificacion_trabajos`): sin pausa viva de su pareja. Sin el SQL de la F2 → vacía (la tabla no existe y nombrarla rompería la consulta d"
         },
         {
@@ -53624,7 +53674,7 @@
           "exportada": true,
           "params": "db: Db, trabajoId: string",
           "retorno": "Promise<boolean>",
-          "linea": 454,
+          "linea": 472,
           "resumen": "Tras un `error_definitivo` de un trabajo de TARIFICAR: si los `UMBRAL_CORTE_BOT` últimos cerrados de su pareja (desde la última reanudación) son fallos del bot, o el último es de `credenciales` (basta"
         },
         {
@@ -53633,7 +53683,7 @@
           "exportada": true,
           "params": "correduriaId: string, o: { pendientesAviso?: boolean } = {}",
           "retorno": "Promise<",
-          "linea": 484,
+          "linea": 502,
           "resumen": "Pausas VIVAS de la correduría (con cuántos trabajos esperan detrás). `pendientesAviso` = solo las no avisadas."
         },
         {
@@ -53642,7 +53692,7 @@
           "exportada": true,
           "params": "correduriaId: string, ids: string[]",
           "retorno": "Promise<number>",
-          "linea": 501
+          "linea": 519
         },
         {
           "nombre": "reanudarPausa",
@@ -53650,7 +53700,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, actor: string",
           "retorno": "Promise<",
-          "linea": 509,
+          "linea": 527,
           "resumen": "Reanuda (solo Alberto, por el puerto). Idempotente: una ya reanudada → `sin_cambios`."
         }
       ],
@@ -53660,7 +53710,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "ad193cf51982"
+      "hash": "2dbf780cc964"
     },
     {
       "ruta": "apps/asegura/lib/tarificador-sesion-reglas.ts",
@@ -53981,7 +54031,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, ramo: string",
           "retorno": "Promise<Integracion | null>",
-          "linea": 94
+          "linea": 96
         },
         {
           "nombre": "encolarTrabajo",
@@ -53989,7 +54039,7 @@
           "exportada": true,
           "params": "e: EntradaEncolar",
           "retorno": "Promise<ResultadoEncolar>",
-          "linea": 128
+          "linea": 130
         },
         {
           "nombre": "leerTomadorFicha",
@@ -53997,7 +54047,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaTomadorFicha | null>",
-          "linea": 245,
+          "linea": 247,
           "resumen": "Nombre, apellidos, nacimiento y tipo de persona de la ficha TAL CUAL están en BD (lo cifrado, cifrado), de ESTA correduría. Los abre `lecturaTomadorFicha`. `null` = no hay ficha de esta correduría con"
         },
         {
@@ -54006,7 +54056,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<FilaFichaTomadorAuto | null>",
-          "linea": 259,
+          "linea": 261,
           "resumen": "Tomador de la ficha para `fichaTomador` (Allianz auto/moto, 17/10/2026): las columnas que lee Codeoscopic (`clienteOrigenDe`) más `ciudad`/`provincia` y los carnés, TAL CUAL (lo cifrado, cifrado), de "
         },
         {
@@ -54015,7 +54065,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<string | null>",
-          "linea": 280,
+          "linea": 282,
           "resumen": "DNI de la ficha TAL CUAL está en BD (cifrado `v1:` o legado), de ESTA correduría. Lo descifra `lecturaNifFicha`."
         },
         {
@@ -54024,7 +54074,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string | null, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 287,
+          "linea": 289,
           "resumen": "Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló."
         },
         {
@@ -54033,7 +54083,7 @@
           "exportada": false,
           "params": "correduriaId: string, oportunidadId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 308,
+          "linea": 310,
           "resumen": "Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló."
         },
         {
@@ -54042,7 +54092,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, modos: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<ReclamoCola>",
-          "linea": 339,
+          "linea": 341,
           "resumen": "uno de emisión → `requiere_humano`), así un trabajo colgado no bloquea la cola hasta el siguiente barrido."
         },
         {
@@ -54051,7 +54101,7 @@
           "exportada": false,
           "params": "",
           "retorno": "DepsLanzador",
-          "linea": 396
+          "linea": 398
         },
         {
           "nombre": "lanzarPendientes",
@@ -54059,7 +54109,7 @@
           "exportada": true,
           "params": "correduriaId: string, compania: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenLanzar>",
-          "linea": 401,
+          "linea": 403,
           "resumen": "Lanza tantos trabajos como quepan para (correduría, compañía). Uno por máquina."
         },
         {
@@ -54068,7 +54118,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, jobId: string, f: typeof fetch",
           "retorno": "Promise<",
-          "linea": 426
+          "linea": 428
         },
         {
           "nombre": "destruirMaquina",
@@ -54076,7 +54126,7 @@
           "exportada": false,
           "params": "cfg: ConfigFly, machineId: string, f: typeof fetch",
           "retorno": "Promise<void>",
-          "linea": 440,
+          "linea": 442,
           "resumen": "Mejor esfuerzo: una máquina colgada se destruye (auto_destroy la quita sola si el proceso sale)."
         },
         {
@@ -54085,7 +54135,7 @@
           "exportada": true,
           "params": "id: string, modosWorker: readonly string[] = ['tarificar', 'emision']",
           "retorno": "Promise<TrabajoParaWorker | null>",
-          "linea": 466,
+          "linea": 468,
           "resumen": "Solo un trabajo `en_curso` con lease vivo. Ni cliente, ni póliza, ni correduría: solo el riesgo. `modo` por to_jsonb (sin el SQL de emisión la columna no existe: null = tarificar). Lo de la emisión lo"
         },
         {
@@ -54094,7 +54144,7 @@
           "exportada": true,
           "params": "r: ResultadoWorker",
           "retorno": "Promise<ResultadoRegistro>",
-          "linea": 558
+          "linea": 560
         },
         {
           "nombre": "notasPresupuestoExplorado",
@@ -54102,7 +54152,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string, referencia: string | null",
           "retorno": "string",
-          "linea": 707,
+          "linea": 709,
           "resumen": "Notas del documento del presupuesto guardado por el explorador. La referencia es del portal (no es un dato personal)."
         },
         {
@@ -54111,7 +54161,7 @@
           "exportada": false,
           "params": "tx: Db, t: FilaTrabajo, ofertas: OfertaNormalizada[], docs: string[]",
           "retorno": "Promise<string>",
-          "linea": 711
+          "linea": 713
         },
         {
           "nombre": "guardarAdjunto",
@@ -54119,7 +54169,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'correduria_id' | 'cliente_id' | 'poliza_id'>, a: { nombre: string; mime: string; contenido: Buffer; notas: string },",
           "retorno": "Promise<string>",
-          "linea": 768
+          "linea": 770
         },
         {
           "nombre": "guardarPasos",
@@ -54127,7 +54177,7 @@
           "exportada": false,
           "params": "tx: Db, t: Pick<FilaTrabajo, 'id' | 'correduria_id' | 'intentos'>, pasos: PasoTraza[], captura: 'con_captura' | null",
           "retorno": "Promise<void>",
-          "linea": 790,
+          "linea": 792,
           "resumen": "Traza (08/10/2026): una fila por paso en `tarificacion_trabajo_pasos`. Los pasos ya vienen validados (solo cinco claves, nombres de una lista cerrada). Si el trabajo falló con captura, el ÚLTIMO paso "
         },
         {
@@ -54136,7 +54186,7 @@
           "exportada": false,
           "params": "db: Db, id: string, intentos: number, error: { tipo: TipoError; mensaje: string; url: string | null; atasco?: AtascoWorker }, evidencia: { trabajo: FilaTrabajo; captura: Buffer | null; html: string | null } | null, botVersion: string | null",
           "retorno": "Promise<",
-          "linea": 809,
+          "linea": 811,
           "resumen": "Marca el fallo de un trabajo `en_curso` según la política (1 reintento, solo infra)."
         },
         {
@@ -54145,7 +54195,7 @@
           "exportada": true,
           "params": "correduriaId: string, deps: DepsLanzador = depsReales()",
           "retorno": "Promise<ResumenBarrido>",
-          "linea": 942,
+          "linea": 948,
           "resumen": "4. lanza lo que quepa por compañía."
         },
         {
@@ -54154,7 +54204,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string",
           "retorno": "Promise<FilaOrigen[]>",
-          "linea": 1018,
+          "linea": 1033,
           "resumen": "Los `ok` de Allianz/Mapfre AUTO de la oportunidad (de ESTA correduría), los más recientes primero."
         },
         {
@@ -54163,7 +54213,7 @@
           "exportada": false,
           "params": "db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado",
           "retorno": "Promise<number>",
-          "linea": 1031,
+          "linea": 1046,
           "resumen": "Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos."
         },
         {
@@ -54172,8 +54222,8 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 1050,
-          "resumen": "Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta; sin ningún origen vivo o pasadas 24 h → `cancelado` con el motivo (y riesgo purgado). Nunca se lan"
+          "linea": 1067,
+          "resumen": "Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo: · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancel"
         }
       ],
       "tablas": [
@@ -54183,7 +54233,7 @@
         "toc"
       ],
       "rutaApi": null,
-      "hash": "966501d8a755"
+      "hash": "4ac4968cb36c"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -100470,7 +100520,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "boolean",
-          "linea": 165,
+          "linea": 166,
           "resumen": "¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor."
         },
         {
@@ -100479,7 +100529,7 @@
           "exportada": false,
           "params": "p: PersonaForm, conCarnet: boolean",
           "retorno": "Record<string, unknown>",
-          "linea": 179,
+          "linea": 180,
           "resumen": "La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura."
         },
         {
@@ -100488,7 +100538,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, matriculaInicial = '', etiquetaCliente, faltanInicial, garajes, civiles, zonasCarnet, tiposCarnet, municipios, municipiosMotivo, estadoCivilAuto, consumo, simulacion, c",
           "retorno": null,
-          "linea": 217
+          "linea": 218
         },
         {
           "nombre": "BloquePersona",
@@ -100496,7 +100546,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 2104,
+          "linea": 2105,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -100505,7 +100555,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 2176,
+          "linea": 2177,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -100514,7 +100564,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 2181
+          "linea": 2182
         },
         {
           "nombre": "PapelDelTomador",
@@ -100522,7 +100572,7 @@
           "exportada": false,
           "params": "{ rol, oportunidadId }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional' oportunidadId: string }",
           "retorno": null,
-          "linea": 2190,
+          "linea": 2191,
           "resumen": "Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se"
         },
         {
@@ -100531,7 +100581,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 2210
+          "linea": 2211
         },
         {
           "nombre": "Contador",
@@ -100539,7 +100589,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 2229
+          "linea": 2230
         },
         {
           "nombre": "Precios",
@@ -100547,7 +100597,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId, actual, familiaAllianz }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. ",
           "retorno": null,
-          "linea": 2248
+          "linea": 2249
         },
         {
           "nombre": "PreciosVarianteAuto",
@@ -100555,7 +100605,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 2365,
+          "linea": 2366,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (10/10/2026, oportunidad de AUTO; hermano de `PreciosVarianteMoto`): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con e"
         }
       ],
@@ -100565,7 +100615,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6bffc659de10"
+      "hash": "e8b3367024f0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/datos-cotizador.ts",
@@ -101564,7 +101614,7 @@
           "exportada": true,
           "params": "{ embebido = false, bloqueo = null, onCotizando, onCotizado, clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, otroVehiculo = null, var",
           "retorno": null,
-          "linea": 146
+          "linea": 147
         },
         {
           "nombre": "hoyLocal",
@@ -101572,7 +101622,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 1413,
+          "linea": 1418,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -101581,7 +101631,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 1418
+          "linea": 1423
         },
         {
           "nombre": "Campo",
@@ -101589,7 +101639,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1423
+          "linea": 1428
         },
         {
           "nombre": "Contador",
@@ -101597,7 +101647,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 1437
+          "linea": 1442
         },
         {
           "nombre": "Precios",
@@ -101605,7 +101655,7 @@
           "exportada": false,
           "params": "{ r, simulacion, emitible = false, sustituye = true, clienteId, actual = null, }: { /** «Pagas X → te proponemos Y» (03/10/2026): lo que paga hoy, anualizado. `null` = sin comparación. */ actual?: ReturnType<typeof primaActualParaLista> r: ",
           "retorno": null,
-          "linea": 1456
+          "linea": 1461
         },
         {
           "nombre": "PreciosVarianteMoto",
@@ -101613,7 +101663,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 1577,
+          "linea": 1582,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (07/10/2026, oportunidad de MOTO): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con el MISMO panel de emisión que tras "
         }
       ],
@@ -101622,7 +101672,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "baf7ea178e5e"
+      "hash": "f2b5c294023b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/datos-cotizador.ts",
@@ -102194,7 +102244,7 @@
           "exportada": false,
           "params": "url: string, init?: RequestInit",
           "retorno": "Promise<",
-          "linea": 43
+          "linea": 44
         },
         {
           "nombre": "sinBots",
@@ -102202,7 +102252,7 @@
           "exportada": false,
           "params": "texto: string, estado?: string",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "PrecioBots",
@@ -102210,7 +102260,7 @@
           "exportada": true,
           "params": "{ ramo, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: { ramo: string clienteId: string oportunidadId: string | null /** Lo que el cotizador del ramo ya sabe (lo entiende el adaptador del ramo). */ formulario: ",
           "retorno": null,
-          "linea": 64
+          "linea": 65
         },
         {
           "nombre": "BloqueBots",
@@ -102218,7 +102268,7 @@
           "exportada": false,
           "params": "{ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: { ramo: string adaptador: NonNullable<ReturnType<typeof adaptadorDeRamo>> clienteId: string oportunidadId: string | null formulario: unknown ini",
           "retorno": null,
-          "linea": 92
+          "linea": 93
         },
         {
           "nombre": "PedirATodas",
@@ -102226,7 +102276,7 @@
           "exportada": false,
           "params": "{ ramo, clienteId, oportunidadId, formulario, companias }: { ramo: string; clienteId: string; oportunidadId: string | null formulario: ResultadoAdaptadorBot companias: { compania: string; bloqueo: string | null }[] }",
           "retorno": null,
-          "linea": 181,
+          "linea": 182,
           "resumen": "«Pedir precio a todas» (19/10/2026): UN botón que encola el bot de cada compañía con integración activa del ramo, con el mismo riesgo del formulario y el MISMO endpoint que los botones por compañía (q"
         },
         {
@@ -102235,7 +102285,7 @@
           "exportada": false,
           "params": "{ integracion, clienteId, oportunidadId, formulario, ramo, aviso, checklist }: { integracion: IntegracionVista /** Por qué ESTA compañía no puede encolar con la ficha actual (se pinta bajo su botón). */ aviso?: string | null /** Datos que p",
           "retorno": null,
-          "linea": 293
+          "linea": 310
         },
         {
           "nombre": "ChecklistDatos",
@@ -102243,7 +102293,7 @@
           "exportada": false,
           "params": "{ check, nombre }: { check: Extract<ChecklistCompania, { estado: 'evaluado' }>; nombre: string }",
           "retorno": null,
-          "linea": 420,
+          "linea": 440,
           "resumen": "Desplegable con los datos que pide el bot de la compañía (≤ ~16 filas): ✓ listo · ✗ falta · «se toma de la ficha»."
         }
       ],
@@ -102252,7 +102302,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "c8fa72856e6a"
+      "hash": "4627d9473b30"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PresupuestosAvant2.tsx",
@@ -105758,12 +105808,12 @@
           "exportada": true,
           "params": "{ riesgo }: { riesgo: Riesgo }",
           "retorno": null,
-          "linea": 15
+          "linea": 16
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e7c02fff6c3b"
+      "hash": "0fe24fca870d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/BotsHogarRiesgo.tsx",
@@ -145818,6 +145868,37 @@
       "hash": "a8f249c8f736"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria/sexo-cotizador-ficha.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Sexo elegido en el cotizador (moto/auto) → ficha del cliente (19/10/2026). PURO salvo `guardarSexoEnFicha`. Antes el selector «Sexo» (obligatorio en Allianz Moto) solo viajaba en `correcciones` al bot/cotización y NUNCA se guardaba: al volver a entrar la ficha seguía sin él. Regla: se persiste SOLO ",
+      "exporta": [
+        "sexoAPersistir",
+        "guardarSexoEnFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "sexoAPersistir",
+          "kind": "function",
+          "exportada": true,
+          "params": "faltan: readonly { campo: string }[] | null | undefined, elegido: string | null | undefined",
+          "retorno": "SexoFicha | null",
+          "linea": 9
+        },
+        {
+          "nombre": "guardarSexoEnFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, sexo: SexoFicha",
+          "retorno": "Promise<boolean>",
+          "linea": 16,
+          "resumen": "PATCH de la ficha con solo `{ id, sexo }` (el resto no se toca). `true` = guardado. Nunca lanza."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5deef4c47bc0"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria/supuestos-auto.ts",
       "ambito": "apps/plataforma",
       "resumen": "LO QUE VIAJA al pedir precio de COCHE y de MOTO (Avant2 y bots), campo a campo y con su ORIGEN (15/10/2026). PURO, sin E/S. Antes cada pantalla lo calculaba a su manera: el cotizador (`AutoNuevo.tsx`) arrancaba su estado con `garajeInicial`, los 10.000 km, «compra = matriculación», `historialDeclara",
@@ -174035,7 +174116,7 @@
           "exportada": true,
           "params": "ruta: string, init: RequestInit, topeMs = 30_000",
           "retorno": "Promise<Reenvio>",
-          "linea": 14
+          "linea": 20
         },
         {
           "nombre": "encolarTarificacionComunidad",
@@ -174043,7 +174124,7 @@
           "exportada": true,
           "params": "clienteId: string, oportunidadId: string | null, riesgo: Record<string, unknown>, compania: string = COMPANIA_BOT",
           "retorno": "Promise<Reenvio>",
-          "linea": 34,
+          "linea": 40,
           "resumen": "Encola una cotización de COMUNIDAD en Allianz (solo precio; nunca emite). 202 `{trabajoId}`."
         },
         {
@@ -174052,7 +174133,7 @@
           "exportada": true,
           "params": "ramo: 'moto' | 'auto', clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT",
           "retorno": "Promise<Reenvio>",
-          "linea": 48,
+          "linea": 54,
           "resumen": "solo precio). `formulario` = FormularioAuto del ramo (moto con `seleccionVehiculo` marca/modelo/clase); asegura lo valida con el validador del ramo y exige la fila `companias_integracion` activa y `rp"
         },
         {
@@ -174061,7 +174142,7 @@
           "exportada": true,
           "params": "clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT",
           "retorno": "Promise<Reenvio>",
-          "linea": 61,
+          "linea": 67,
           "resumen": "Encola una cotización de HOGAR en el bot de una compañía (19/10/2026, Allianz; solo precio). `formulario` = la vivienda y las elecciones SIN el bloque `tomador`: el DNI/NIE y el nacimiento los pone as"
         },
         {
@@ -174070,7 +174151,7 @@
           "exportada": true,
           "params": "clienteId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 70,
+          "linea": 76,
           "resumen": "Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`."
         },
         {
@@ -174079,7 +174160,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 76,
+          "linea": 82,
           "resumen": "Panel de salud del bot, renovaciones de comunidades y alertas de cambio de tarifa (solo lectura)."
         },
         {
@@ -174088,7 +174169,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 81,
+          "linea": 87,
           "resumen": "«Presupuestos de compañías» de una oportunidad: formulario guardado, pre-relleno y trabajos (solo lectura)."
         },
         {
@@ -174097,7 +174178,7 @@
           "exportada": true,
           "params": "body: { oportunidadId: string; ramo: string; formulario: unknown; extras: Record<string, unknown>; companias: string[] }",
           "retorno": "Promise<Reenvio>",
-          "linea": 89,
+          "linea": 95,
           "resumen": "Pide presupuesto a las compañías elegidas desde la oportunidad: asegura valida el formulario común con cada capacidad (todo o nada), lo guarda en la oportunidad y encola un trabajo por compañía. Solo "
         },
         {
@@ -174106,7 +174187,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 103,
+          "linea": 109,
           "resumen": "Prepara A MANO el presupuesto en BORRADOR con las ofertas del bot de la oportunidad (idempotente). `avisar:false` fijo: lo pide el operador y lo ve en pantalla, sin Telegram. NO ENVÍA NADA AL CLIENTE."
         },
         {
@@ -174115,7 +174196,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 111
+          "linea": 117
         },
         {
           "nombre": "descargarPdfTarificador",
@@ -174123,7 +174204,7 @@
           "exportada": true,
           "params": "id: string, indice: number",
           "retorno": "Promise<Response | null>",
-          "linea": 116,
+          "linea": 122,
           "resumen": "El PDF de una oferta (streaming). `null` = sin secreto configurado."
         },
         {
@@ -174132,7 +174213,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 127,
+          "linea": 133,
           "resumen": "Recomendación de una oportunidad (ranking, motivos, calidad) en JSON. Solo lectura; no envía nada."
         },
         {
@@ -174141,7 +174222,7 @@
           "exportada": true,
           "params": "oportunidadId: string",
           "retorno": "Promise<Response | null>",
-          "linea": 132,
+          "linea": 138,
           "resumen": "La propuesta comercial en PDF (streaming). `null` = sin secreto configurado. Solo DESCARGA: nunca se envía."
         },
         {
@@ -174150,7 +174231,7 @@
           "exportada": true,
           "params": "limite: number, desde: number",
           "retorno": "Promise<Reenvio>",
-          "linea": 143,
+          "linea": 149,
           "resumen": "Bandeja «Necesita tu atención»: trabajos del bot que esperan a una persona (solo lectura)."
         },
         {
@@ -174159,7 +174240,7 @@
           "exportada": true,
           "params": "id: string, accion: 'reintentar' | 'cancelar', /** Solo con reintentar: versión del vehículo elegida a mano; asegura la valida contra la lista guardada del trabajo. */ eleccionVersion: { codigo: string | null; etiqueta?: string | null } | n",
           "retorno": "Promise<Reenvio>",
-          "linea": 148,
+          "linea": 154,
           "resumen": "Reintentar (→ pendiente) o cancelar un trabajo de la bandeja. Solo precio: nunca emite."
         },
         {
@@ -174168,7 +174249,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 164,
+          "linea": 170,
           "resumen": "Traza de un trabajo (pasos con duración y error) y versión del bot."
         },
         {
@@ -174177,7 +174258,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Reenvio>",
-          "linea": 169,
+          "linea": 175,
           "resumen": "Compañía+ramo que el bot puede tarificar hoy (`companias_integracion` activa y `rpa_autorizada`). Solo lectura."
         },
         {
@@ -174186,13 +174267,13 @@
           "exportada": true,
           "params": "clienteId: string, compania: string, ramo: string",
           "retorno": "Promise<Reenvio>",
-          "linea": 178,
+          "linea": 184,
           "resumen": "«Probar tarificación» de la ficha: asegura reencola en SERVIDOR el riesgo del último trabajo de ese cliente+compañía+ramo (el riesgo no cruza el puerto). Solo precio: nunca emite. 202 `{trabajoId}` · "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5c3465f68665"
+      "hash": "881bd0677978"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-atascos-asegura.ts",
@@ -174488,7 +174569,7 @@
           "exportada": true,
           "params": "p: PiezasBotsAuto",
           "retorno": "EntradaBotAuto",
-          "linea": 46,
+          "linea": 47,
           "resumen": "Piezas → entrada del adaptador de coche. PURA."
         },
         {
@@ -174497,7 +174578,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'historial'>",
           "retorno": "string | null",
-          "linea": 95,
+          "linea": 96,
           "resumen": "Vencimiento de la póliza ACTUAL para la fecha de efecto del bot (15/10/2026): el más tardío de los que se saben (el de la oportunidad, que se corre al próximo ciclo, y el leído del documento). Sin nin"
         },
         {
@@ -174506,7 +174587,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>",
           "retorno": "string | null",
-          "linea": 110,
+          "linea": 111,
           "resumen": "Compañía anterior que la oportunidad YA sabe: la aseguradora de HOY (`poliza_competencia`, `aseguradoraActual === true`); la de nuestra oferta (`aseguradoraActual` false/null/ausente) NO vale. Vacía, "
         },
         {
@@ -174515,7 +174596,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'roles' | 'figuras' | 'conductorOcasional'>",
           "retorno": "boolean | null",
-          "linea": 119,
+          "linea": 120,
           "resumen": "¿Hay conductor ocasional? `true` ficha en el papel · `false` confirmado que no · `null` sin preguntar o no aplica (misma regla que asegura). PURA."
         },
         {
@@ -174524,7 +174605,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 124
+          "linea": 125
         },
         {
           "nombre": "matriculaDeRiesgo",
@@ -174532,7 +174613,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'datosVehiculo'>",
           "retorno": "string",
-          "linea": 127,
+          "linea": 128,
           "resumen": "Matrícula normalizada como la pinta «Datos del vehículo»; sin ella, la de la oportunidad."
         },
         {
@@ -174541,16 +174622,16 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'figuras'>",
           "retorno": "string",
-          "linea": 132,
+          "linea": 133,
           "resumen": "Id de la ficha del tomador del riesgo (la figura `tomador`; sin ella, el cliente de la oportunidad)."
         },
         {
           "nombre": "formularioBotsAutoDeRiesgo",
           "kind": "function",
           "exportada": true,
-          "params": "r: RiesgoParaBotsAuto",
+          "params": "r: RiesgoParaBotsAuto, porPolizas: CompaniaPorPolizas = { estado: 'pendiente' }",
           "retorno": "EntradaBotAuto",
-          "linea": 137,
+          "linea": 138,
           "resumen": "Riesgo de la oportunidad de coche → formulario que entiende el adaptador de auto (sin Avant2). PURA."
         },
         {
@@ -174559,7 +174640,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'figuras'>",
           "retorno": "string[] | null",
-          "linea": 182,
+          "linea": 186,
           "resumen": "Lo que a la FICHA del tomador le falta para que Mapfre pueda darlo de alta si no lo conoce (nombre, primer apellido y fecha de nacimiento; en empresa, la razón social), en castellano y sin valores. `n"
         },
         {
@@ -174568,13 +174649,13 @@
           "exportada": true,
           "params": "faltan: readonly string[] | null",
           "retorno": "string | null",
-          "linea": 196,
+          "linea": 200,
           "resumen": "«Falta el nombre y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "51089fd8d001"
+      "hash": "2078844e40b3"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-bandeja.ts",
@@ -174752,7 +174833,7 @@
           "exportada": false,
           "params": "formulario: unknown, extra: Record<string, string>",
           "retorno": "EntradaBotAuto",
-          "linea": 91,
+          "linea": 93,
           "resumen": "Formulario del cotizador + campos extra → entrada del adaptador. Un campo extra TOCADO (aunque vacío) manda sobre el del riesgo."
         },
         {
@@ -174761,7 +174842,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "AdaptadorBot | null",
-          "linea": 123,
+          "linea": 125,
           "resumen": "Adaptador del ramo, o `null` si ese ramo aún no tiene bots (ramo ausente, desconocido o de otro tipo → `null`)."
         },
         {
@@ -174770,7 +174851,7 @@
           "exportada": true,
           "params": "adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string",
           "retorno": "ChecklistCompania",
-          "linea": 133,
+          "linea": 135,
           "resumen": "Checklist de datos obligatorios de UNA compañía para este formulario (15/10/2026): reemplaza al antiguo `faltaPorCompania`. Construye el riesgo con el adaptador y lo pasa por `faltanParaTarificar` (la"
         },
         {
@@ -174779,13 +174860,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string[]",
-          "linea": 140,
+          "linea": 142,
           "resumen": "Ramos con adaptador (para saber qué anfitrión monta el bloque)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e19141d83ba0"
+      "hash": "d40bc2227e4f"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-checklist.ts",
@@ -174977,6 +175058,54 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "862cc9ff56a2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-compania-poliza.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Compañía anterior que el cliente ya tiene en la CARTERA (19/10/2026). PURO: sin red ni envs (`node --test`, y 'use client'). Hueco: el riesgo/lead no trae «compañía anterior» pero el cliente tiene una póliza de coche EN VIGOR en la cartera (la compañía la sabemos por ella). Allianz y Mapfre bloqueab",
+      "exporta": [
+        "companiaAnteriorDePolizas",
+        "resolverCompaniaAnterior"
+      ],
+      "funciones": [
+        {
+          "nombre": "norm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "m: string | null | undefined",
+          "retorno": "string",
+          "linea": 35
+        },
+        {
+          "nombre": "nombreUtil",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 37
+        },
+        {
+          "nombre": "companiaAnteriorDePolizas",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaParaCompaniaPoliza[] | null, opts: { tipo: string; matricula?: string | null }",
+          "retorno": "CompaniaPorPolizas",
+          "linea": 47,
+          "resumen": "Compañía de la(s) póliza(s) de `tipo` en vigor del cliente. `polizas: null` = no se han podido leer → `pendiente` (nunca «no tiene»). Con matrícula del riesgo, las pólizas con OTRA matrícula conocida "
+        },
+        {
+          "nombre": "resolverCompaniaAnterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "delRiesgo: string | null, aniosAsegurado: number | null | undefined, porPolizas: CompaniaPorPolizas,",
+          "retorno": "",
+          "linea": 76,
+          "resumen": "Qué compañía anterior usar: la del riesgo manda; si no hay, la de la cartera SOLO si hay una candidata. Años asegurado = 0 → nunca (no hay seguro anterior que nombrar). `bloqueo` = mensaje para Allian"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "500cfd62a9e7"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-emision-asegura.ts",
@@ -175246,6 +175375,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e0497b25f301"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-encolar-incierto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "«Encolar» al bot (19/10/2026): ¿el fallo de la llamada a asegura prueba que NO se encoló, o puede haberse encolado? PURO: sin red ni envs (importable desde 'use client'). Incidente: «Pedir precio a todas» dijo «0 encoladas, 3 rechazadas · no se pudo conectar con asegura» y asegura SÍ había encolado ",
+      "exporta": [
+        "clasificarEncolar"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 14
+        },
+        {
+          "nombre": "clasificarEncolar",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "VeredictoEncolar",
+          "linea": 23,
+          "resumen": "Clasifica el resultado de `POST /api/correduria/tarificador/encolar` (status + JSON): · `respuesta`: asegura (o la propia ruta, antes de llamarla) contestó con un veredicto → se lee con `leerEncoladoB"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "733745ddd348"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-estadisticas-asegura.ts",
@@ -176067,6 +176226,7 @@
       "exporta": [
         "datoDePersonaBot",
         "historialBot",
+        "tieneSeguroParaBots",
         "claseMotoPorCilindrada",
         "cilindradaDeTexto",
         "formularioBotMoto",
@@ -176075,7 +176235,8 @@
         "completarRiesgoVehiculoDesdeFicha",
         "mensajeFaltanDeFicha",
         "claveDeCompania",
-        "leerEncoladoBot"
+        "leerEncoladoBot",
+        "companiaActualParaBots"
       ],
       "funciones": [
         {
@@ -176093,7 +176254,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 59
+          "linea": 62
         },
         {
           "nombre": "historialBot",
@@ -176101,8 +176262,17 @@
           "exportada": true,
           "params": "e: HistorialBotEntrada",
           "retorno": "",
-          "linea": 69,
-          "resumen": "Historial que viaja al bot (moto y coche, el MISMO criterio): solo lo que el corredor ha declarado. Sin seguro actual no se sabe (`null`), no «0 años»; un texto que no es un entero → `null`. 5 o más a"
+          "linea": 75,
+          "resumen": "Historial que viaja al bot (moto y coche, el MISMO criterio): solo lo que el corredor ha declarado. SIN seguro actual declarado = 0 años asegurado (19/10/2026, regla de Alberto: no hay compañía anteri"
+        },
+        {
+          "nombre": "tieneSeguroParaBots",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { tiene: boolean; sinDato: boolean; tocado: boolean }",
+          "retorno": "boolean | null",
+          "linea": 89,
+          "resumen": "Tres estados del «seguro actual» que viaja al bot de moto (19/10/2026): con seguro → `true`; sin seguro → `false` SOLO si hay una declaración explícita (arriba, o la casilla tocada por el corredor); s"
         },
         {
           "nombre": "claseMotoPorCilindrada",
@@ -176110,7 +176280,7 @@
           "exportada": true,
           "params": "cc: number | null",
           "retorno": "1 | 2 | 3 | 4 | null",
-          "linea": 78,
+          "linea": 95,
           "resumen": "Clase de Allianz Moto por cilindrada (tramos del portal). `null` = ≤50 cc (ciclomotor) o sin dato."
         },
         {
@@ -176119,7 +176289,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "number | null",
-          "linea": 84,
+          "linea": 101,
           "resumen": "«1.000» / «1000» / «125 cc» → 1000 / 1000 / 125. Lo que no es un número entero inequívoco → `null`."
         },
         {
@@ -176128,7 +176298,7 @@
           "exportada": true,
           "params": "e: EntradaBotMoto, hoy: Date = new Date()",
           "retorno": "FormularioBotMoto",
-          "linea": 95,
+          "linea": 112,
           "resumen": "Formulario del cotizador → `riesgo` de moto para asegura. Si falta algo obligatorio devuelve QUÉ falta (en castellano, sin valores); el botón se deshabilita con esa lista. Lo de la ficha (CP, nacimien"
         },
         {
@@ -176137,7 +176307,7 @@
           "exportada": false,
           "params": "s: string | null | undefined",
           "retorno": "s is string",
-          "linea": 170
+          "linea": 192
         },
         {
           "nombre": "carneDelRamo",
@@ -176145,7 +176315,7 @@
           "exportada": false,
           "params": "ramo: RamoVehiculoBot, tipo: string",
           "retorno": "boolean",
-          "linea": 176,
+          "linea": 198,
           "resumen": "¿Este tipo de carné de la ficha vale para el ramo? Moto: A, A1, A2. Coche: B (mismo criterio que `carnetBDeFicha` de asegura)."
         },
         {
@@ -176154,7 +176324,7 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 187,
+          "linea": 209,
           "resumen": "coche: B); si no hay, el que traen sus pólizas. Nada se inventa: lo que la ficha no tiene va en `faltan` (el servidor corta sin gastar). El NIF del tomador NO va aquí: lo inyecta asegura al entregar e"
         },
         {
@@ -176163,7 +176333,7 @@
           "exportada": true,
           "params": "riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 196,
+          "linea": 218,
           "resumen": "Lo mismo para el COCHE (14/10/2026): carné B."
         },
         {
@@ -176172,7 +176342,7 @@
           "exportada": true,
           "params": "ramo: RamoVehiculoBot, riesgo: Record<string, unknown>, ficha: FichaParaBot | null, pedidos: readonly CampoDeFicha[],",
           "retorno": "",
-          "linea": 204
+          "linea": 226
         },
         {
           "nombre": "mensajeFaltanDeFicha",
@@ -176180,7 +176350,7 @@
           "exportada": true,
           "params": "faltan: readonly CampoDeFicha[], ramo: RamoVehiculoBot = 'moto'",
           "retorno": "string",
-          "linea": 242
+          "linea": 264
         },
         {
           "nombre": "claveDeCompania",
@@ -176188,7 +176358,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 248,
+          "linea": 270,
           "resumen": "`compania` de la petición → clave limpia, o `null` si no tiene forma de clave (minúsculas, dígitos, `_`/`-`)."
         },
         {
@@ -176197,13 +176367,22 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "EncoladoBot",
-          "linea": 262,
+          "linea": 284,
           "resumen": "Respuesta de `POST /api/correduria/tarificador/encolar` → trabajo o texto para la persona. Los `errores` de asegura son de forma y no llevan el valor (el validador nunca lo repite), así que se pueden "
+        },
+        {
+          "nombre": "companiaActualParaBots",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { tieneSeguroActual: boolean companias: readonly { codigoDgs: string; nombreComun: string }[] | null codigo: string libre: string leida?: string | null }",
+          "retorno": "string | null",
+          "linea": 317,
+          "resumen": "sin elegir, la compañía leída de la póliza de la oportunidad (`poliza_competencia.aseguradora`). Sin seguro actual → `null` (los años = 0 los descarta `formularioBotMoto`). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "61ff6bb66c5b"
+      "hash": "d3c080e7ca83"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-panel.ts",
@@ -176453,7 +176632,7 @@
           "exportada": true,
           "params": "filas: readonly FilaLote[]",
           "retorno": "boolean",
-          "linea": 23,
+          "linea": 25,
           "resumen": "¿Acabaron todos los trabajos encolados? (Rechazadas/omitidas no esperan.) Sin ninguna encolada → `false`. PURA."
         },
         {
@@ -176462,7 +176641,7 @@
           "exportada": true,
           "params": "filas: readonly FilaLote[]",
           "retorno": "boolean",
-          "linea": 29,
+          "linea": 31,
           "resumen": "¿Hay algún trabajo terminado con `ok` (hay con qué preparar el borrador del presupuesto)? PURA."
         },
         {
@@ -176471,13 +176650,13 @@
           "exportada": true,
           "params": "filas: readonly FilaLote[]",
           "retorno": "string",
-          "linea": 34,
+          "linea": 36,
           "resumen": "Resumen de una línea: «3 compañías: 2 encoladas, 1 rechazada». PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "be4c3e055c3b"
+      "hash": "25671ca44929"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-verificacion-asegura.ts",
@@ -224870,7 +225049,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5cd44a5ce4ac"
+      "hash": "a27d67502f10"
     },
     {
       "ruta": "packages/module-tarificacion/src/recomendador.ts",
@@ -225846,9 +226025,14 @@
       "exporta": [
         "validarVehiculoConfirmado",
         "vehiculoConfirmadoDesdeMapfre",
+        "anioEnRango",
         "eleccionPorVehiculoConfirmado",
         "datosDesdeEtiquetaVersion",
-        "eleccionPorVehiculoConfirmadoDeEtiquetas"
+        "eleccionPorVehiculoConfirmadoDeEtiquetas",
+        "supuestoVersionAutomatica",
+        "datosEquivalenciaDesdeEtiqueta",
+        "referenciaRiesgoVersion",
+        "elegirVersionAutomaticamente"
       ],
       "funciones": [
         {
@@ -225857,7 +226041,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "validarVehiculoConfirmado",
@@ -225865,7 +226049,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "ValidacionVehiculoConfirmado",
-          "linea": 50,
+          "linea": 52,
           "resumen": "Valida el `vehiculoConfirmado` del formulario. Nunca repite el valor en el error (la denominación podría traer, por error, algo personal). Claves fuera de las seis (p. ej. `matricula`, `bastidor`) → e"
         },
         {
@@ -225874,7 +226058,7 @@
           "exportada": false,
           "params": "t: string, max: number",
           "retorno": "number | null",
-          "linea": 89,
+          "linea": 97,
           "resumen": "«110», «110,00», «110.0» → 110; vacío, guion o basura → null (nunca 0 por defecto)."
         },
         {
@@ -225883,7 +226067,7 @@
           "exportada": true,
           "params": "f: FilaCatalogoMapfre",
           "retorno": "VehiculoConfirmado | null",
-          "linea": 100,
+          "linea": 108,
           "resumen": "Fila de Mapfre → `VehiculoConfirmado`. Denominación vacía → `null` (no hay vehículo). Cada número/fecha ilegible → `null` («no consta»), nunca 0. CV: la columna «CV/KW» trae CV (Alberto); un decimal d"
         },
         {
@@ -225892,7 +226076,7 @@
           "exportada": false,
           "params": "base: number, otro: number, tol: number",
           "retorno": "number | null",
-          "linea": 135,
+          "linea": 169,
           "resumen": "Distancia relativa normalizada por su tolerancia (0 = igual; ≤1 = dentro); `null` = fuera de tolerancia."
         },
         {
@@ -225901,16 +226085,25 @@
           "exportada": false,
           "params": "denominacion: string, etiqueta: string",
           "retorno": "number",
-          "linea": 142,
+          "linea": 176,
           "resumen": "Palabras de la denominación de Mapfre presentes en la etiqueta (desempate)."
+        },
+        {
+          "nombre": "anioEnRango",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaInicio: string | null | undefined, desde: number | null | undefined, hasta: number | null | undefined",
+          "retorno": "boolean",
+          "linea": 183,
+          "resumen": "¿El año de `fechaInicio` cae en [desde, hasta] con `HOLGURA_ANIOS` de holgura? Sin fecha o sin ninguna cota → true (no se sabe)."
         },
         {
           "nombre": "puntuar",
           "kind": "function",
           "exportada": false,
-          "params": "vc: VehiculoConfirmado, d: DatosVersionCatalogo",
+          "params": "vc: ReferenciaRiesgo, d: DatosVersionCatalogo",
           "retorno": "",
-          "linea": 153,
+          "linea": 197,
           "resumen": "Puntúa una candidata frente al vehículo de Mapfre. `null` = no elegible: sin ningún CV/CC comparable (no se sabe), fuera de tolerancia en alguno, o con puertas que contradicen (ambas lo traen y difier"
         },
         {
@@ -225919,7 +226112,7 @@
           "exportada": true,
           "params": "vc: VehiculoConfirmado | null | undefined, candidatas: readonly CandidataConDatos[]",
           "retorno": "ResolucionPorVehiculoConfirmado",
-          "linea": 176,
+          "linea": 224,
           "resumen": "Elige la versión de catálogo de otra compañía por SIMILITUD con el vehículo confirmado: la de menor distancia (CV y CC con tolerancia relativa) dentro de tolerancia; empate → más palabras de la denomi"
         },
         {
@@ -225928,7 +226121,7 @@
           "exportada": true,
           "params": "etiqueta: string",
           "retorno": "DatosVersionCatalogo",
-          "linea": 211,
+          "linea": 259,
           "resumen": "Datos de catálogo LEÍDOS de la etiqueta de una versión («F 800 S 85 CV», «1.6 TDI 110CV 5P 1598 CC»). Solo cifras con su UNIDAD explícita (CV, CC/CM3, P/PUERTAS); una unidad que aparece dos veces con "
         },
         {
@@ -225937,13 +226130,66 @@
           "exportada": true,
           "params": "vc: VehiculoConfirmado | null | undefined, versiones: readonly CandidatoVersion[]",
           "retorno": "EleccionVersion | null",
-          "linea": 232,
+          "linea": 280,
           "resumen": "Atajo para los portales cuyas versiones son solo etiqueta + código (Allianz): los datos salen de la etiqueta. Devuelve la elección POR SIMILITUD (código y etiqueta de la candidata) o `null` = sin deci"
+        },
+        {
+          "nombre": "supuestoVersionAutomatica",
+          "kind": "function",
+          "exportada": true,
+          "params": "etiqueta: string, equivalentes: number",
+          "retorno": "string",
+          "linea": 308,
+          "resumen": "Texto del supuesto de una versión elegida sola (va en el aviso «Precio con supuestos: …»; sin comas dentro de la etiqueta)."
+        },
+        {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": null,
+          "linea": 312
+        },
+        {
+          "nombre": "datosEquivalenciaDesdeEtiqueta",
+          "kind": "function",
+          "exportada": true,
+          "params": "etiqueta: string",
+          "retorno": "DatosVersionCatalogo",
+          "linea": 319,
+          "resumen": "Datos de catálogo leídos de la etiqueta para comparar candidatas (Allianz/Generali): lo de `datosDesdeEtiquetaVersion` (CV, cc, puertas con unidad explícita) más kW («Potencia (kW) 163», «120 kW») y c"
+        },
+        {
+          "nombre": "referenciaRiesgoVersion",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: Pick<FormularioAuto, 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'> | null | undefined",
+          "retorno": "ReferenciaRiesgo",
+          "linea": 335,
+          "resumen": "Referencia del riesgo para filtrar y desempatar: vehículo confirmado + cilindrada de `seleccionVehiculo` + 1ª matriculación. PURA."
+        },
+        {
+          "nombre": "equivalentePara",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: DatosVersionCatalogo, b: DatosVersionCatalogo",
+          "retorno": "boolean",
+          "linea": 349,
+          "resumen": "¿`b` es equivalente a la referencia `a`? Mismo combustible (si ambas lo traen) y CV/kW/cc dentro de tolerancia (solo lo que ambas traen)."
+        },
+        {
+          "nombre": "elegirVersionAutomaticamente",
+          "kind": "function",
+          "exportada": true,
+          "params": "candidatas: readonly CandidataEquivalencia[], opciones: { riesgo?: ReferenciaRiesgo | null; eleccion?: EleccionVersion | null } = {},",
+          "retorno": "ResolucionAutomaticaVersion",
+          "linea": 366,
+          "resumen": "Elige la versión SOLA cuando las candidatas son equivalentes; pregunta solo si difieren de forma material (ver arriba). PURA y determinista. `eleccion` = la de la bandeja (explícita): manda y se usa e"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2380c6ab6d10"
+      "hash": "ddf83f855456"
     },
     {
       "ruta": "packages/module-tarificacion/src/vehiculo.ts",
@@ -227869,7 +228115,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4821,
-    "funciones": 18249
+    "archivos": 4824,
+    "funciones": 18271
   }
 }
