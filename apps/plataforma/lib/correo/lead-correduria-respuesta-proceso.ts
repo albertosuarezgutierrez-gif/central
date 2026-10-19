@@ -3,7 +3,7 @@
 // `@central/module-seguros` (`respuesta-lead.ts`), puros y con test. Aquí solo se encadenan:
 //   1. asegura CASA el hilo (Message-IDs + índice ciego del remitente). 0 o varios → no se lee: el llamante cae al aviso
 //      de siempre («respuesta de un lead») diciendo por qué.
-//   2. La IA (`llamarIA`) lee SOLO el cuerpo sin lo citado y SOLO claves del contrato de sus ramos, con cita literal;
+//   2. La IA (`llamarIAPrivada`: solo OpenRouter, retención cero) lee SOLO el cuerpo sin lo citado y SOLO claves del contrato de sus ramos, con cita literal;
 //      `leerRespuestaIa` tira lo que no aparece en el texto y separa lo que no vale. IA caída = «no lo he podido leer»,
 //      nunca «no mandó nada».
 //   3. asegura lo GUARDA en `info_riesgo` sin pisar (discrepancias y bloques confirmados se dicen) y dice qué falta.
@@ -15,7 +15,7 @@ import { escapeHtml } from '@central/core-telegram'
 import { cuerpoSinCita, leerRespuestaIa, promptExtraerRespuesta, type LecturaRespuesta } from '@central/module-seguros'
 import { tgAviso } from '@/lib/telegram/avisos'
 import { adjuntoLeadAsegura, respuestaLeadAsegura } from '@/lib/seguimiento-asegura'
-import { llamarIA } from './clasificador'
+import { llamarIAPrivada } from './ia-lead-privada'
 import type { CorreoNuevo } from './imap'
 import { ACTOR_TRIAJE_CORREO, hoyMadrid, textoPlantillaTelegram } from './lead-correduria'
 import { proponerPeticion } from './lead-correduria-pendiente'
@@ -35,7 +35,7 @@ async function leerConIa(correo: CorreoNuevo, ramos: string[], hoy: string): Pro
   const texto = cuerpoSinCita(correo.texto ?? correo.extracto).slice(0, 6000)
   if (!texto.trim()) return { lectura: { valores: {}, invalidos: [] }, iaFallo: false } // solo adjuntos: nada que leer
   try {
-    const r = await llamarIA(promptExtraerRespuesta(ramos, hoy), texto, 900)
+    const r = await llamarIAPrivada(promptExtraerRespuesta(ramos, hoy), texto, 900)
     const m = r.match(/\{[\s\S]*\}/)
     if (!m) return { lectura: { valores: {}, invalidos: [] }, iaFallo: true }
     return { lectura: leerRespuestaIa(JSON.parse(m[0]), { texto, ramos, hoy }), iaFallo: false }

@@ -36,7 +36,10 @@ export function validarGuardar(b: unknown): { ok: true; valor: Guardar } | { ok:
   const valores: Record<string, ValorContrato> = {}
   for (const [k, v] of Object.entries(crudos).slice(0, 80)) {
     if (!CLAVE.test(k)) continue
-    if (typeof v === 'string' && v.length <= 400) valores[k] = v
+    if (typeof v === 'string') {
+      const t = v.trim()
+      if (t && t.length <= 400) valores[k] = t // vacío tras trim = «no dado»: no se guarda ni bloquea el campo
+    }
     else if (typeof v === 'number' && Number.isFinite(v)) valores[k] = v
     else if (typeof v === 'boolean') valores[k] = v
   }
