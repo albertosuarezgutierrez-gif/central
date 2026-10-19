@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-19T06:46:55Z",
-  "sha": "d4ed3d62620d6e3a7296703e2e271de03fbfbbbd",
+  "generadoEn": "2026-10-19T07:39:58Z",
+  "sha": "5c26534fdbb28388f0260ed85d7c212c12daed74",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -17465,7 +17465,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e410299ffed3"
+      "hash": "d7fe2f2c106a"
     },
     {
       "ruta": "apps/asegura-web/lib/seo.ts",
@@ -98848,27 +98848,6 @@
       "hash": "ec2e9cecd4fa"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/BotonesContacto.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "BotonesContacto"
-      ],
-      "funciones": [
-        {
-          "nombre": "BotonesContacto",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ telefono, quien, mensaje }: { telefono: string | null /** Para el `aria-label`: «Llamar a Jose Suárez». */ quien: string /** Texto con el que abrir WhatsApp ya escrito (lo redacta `@central/module-seguros`). */ mensaje?: string | null }",
-          "retorno": null,
-          "linea": 14,
-          "resumen": "«Llamar» y «WhatsApp» con rótulo, a 44 px, bajo el contacto de la cabecera de la ficha. Los iconos sueltos de al lado del nombre (`AccionesContacto`) caben en una línea densa pero en el móvil son un b"
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "eb27bf291890"
-    },
-    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/Cabecera.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -98881,7 +98860,7 @@
           "exportada": true,
           "params": "{ ficha, resumen, seguros, idsConChip }: { ficha: Ficha; resumen: ResumenFicha /** Ids de póliza cuya tarjeta pinta el chip de aviso (`idsConChipAviso`, calculado en page.tsx). */ idsConChip: ReadonlySet<string> /** Solo los SEGUROS (carter",
           "retorno": null,
-          "linea": 34,
+          "linea": 33,
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
@@ -98890,7 +98869,7 @@
           "exportada": false,
           "params": "{ ficha, resumen, tiposVivos, seguros }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[]; seguros: Ficha['polizas'] }",
           "retorno": null,
-          "linea": 139,
+          "linea": 138,
           "resumen": "── Siguiente paso ────────────────────────────────────────────────────────── UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla vive pura y testeada en `siguientePaso` de "
         },
         {
@@ -98899,7 +98878,7 @@
           "exportada": false,
           "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 191,
+          "linea": 190,
           "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
@@ -98908,7 +98887,7 @@
           "exportada": false,
           "params": "{ resumen, idsConChip }: { resumen: ResumenFicha; idsConChip: ReadonlySet<string> }",
           "retorno": null,
-          "linea": 210
+          "linea": 209
         },
         {
           "nombre": "ProximoVencimiento",
@@ -98916,7 +98895,7 @@
           "exportada": false,
           "params": "{ proximo, idsConChip, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; idsConChip: ReadonlySet<string>; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 265,
+          "linea": 264,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
@@ -98925,7 +98904,7 @@
           "exportada": false,
           "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 309
+          "linea": 308
         },
         {
           "nombre": "EstadoCabecera",
@@ -98933,7 +98912,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 335
+          "linea": 334
         },
         {
           "nombre": "Acciones",
@@ -98941,7 +98920,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 393
+          "linea": 392
         },
         {
           "nombre": "Contacto",
@@ -98949,7 +98928,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 476
+          "linea": 475
         },
         {
           "nombre": "Identidad",
@@ -98957,7 +98936,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId, dePolizas, juridica }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null; juridica: boolean }",
           "retorno": null,
-          "linea": 587
+          "linea": 584
         },
         {
           "nombre": "Carnets",
@@ -98965,12 +98944,12 @@
           "exportada": false,
           "params": "{ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }",
           "retorno": null,
-          "linea": 627
+          "linea": 624
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cbfffdc17dd7"
+      "hash": "daf9685136b5"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/CorreosCliente.tsx",
@@ -221694,7 +221673,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4756,
-    "funciones": 17675
+    "archivos": 4755,
+    "funciones": 17674
   }
 }
