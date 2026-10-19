@@ -1759,6 +1759,11 @@ async function leerInterruptorApagadoTurismos(marco: Frame, etiqueta: string): P
   return hits[0].encendido ? { estado: 'no_quedo' } : { estado: 'ya_marcada' }
 }
 
+/** v0.6.16: nº de opciones marcables (casillas de opción) en el DOM del marco. SOLO LECTURA: no pulsa nada. Fallo de lectura → 0. */
+export async function contarOpcionesMarcablesTurismos(marco: Pick<Frame, 'locator'>): Promise<number> {
+  return marco.locator('input[type=radio], [role=radio]').count().catch(() => 0)
+}
+
 /** Radios de la zona `appArea` (fuera de la cabecera) con su grupo, su etiqueta, las de sus hermanas (orden del DOM) y si están marcados. Solo lectura. */
 type RadioTurismosLeido = { id: string | null; marcada: boolean; grupo: string; etiqueta: string; hermanas: string[] }
 async function leerRadiosTurismos(marco: Frame): Promise<RadioTurismosLeido[]> {

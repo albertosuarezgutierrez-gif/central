@@ -1,3 +1,7 @@
+// v0.6.16 (19/10/2026, mismo trabajo 02fd821b; el inventario de «Antecedentes» solo traía «Compañía actual del vehículo» y «Fecha de inicio del seguro»):
+// las 3 preguntas (tiempo en la compañía, partes culpables, tiempo como titular) y los 5 dígitos de la póliza NO existen hasta elegir la
+// compañía y Angular las pinta tarde: tras elegirla se espera (≤6 s, solo lectura) a que suba el nº de opciones marcables antes de contestarlas, en
+// vez de dar `sin_grupo` en silencio. Sin dato, favorable y declarado (v0.6.10); con dato, el dato.
 // v0.6.15 (19/10/2026, trabajo real 02fd821b atascado en «Antecedentes»: «compañía actual: sin indicar (la del riesgo no está en la lista)»
 // con 96 opciones de nombre de registro): casado puro en `compania-actual.ts` (alias por «/» y «-», sin forma societaria, por niveles);
 // ambigua o sin casar → `datos` con las candidatas / la lista (nunca se elige); cambio de seguro sin compañía en el riesgo → `datos`
@@ -148,6 +152,7 @@ import {
   SEL_FUERA_CABECERA_TURISMOS,
   SEL_ZONA_APP_TURISMOS,
   type TarjetaVehiculoTurismos,
+  contarOpcionesMarcablesTurismos,
 } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
@@ -1345,6 +1350,26 @@ export const HUECO_POLIZA_ACTUAL = 'póliza actual: faltan los 5 últimos dígit
 const PREFIJOS_ANTECEDENTES_TURISMOS = ['tiempo en la compañía', 'partes culpables', 'tiempo como titular de un seguro'] as const
 const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA, SUPUESTO_TIEMPO_COMPANIA, SUPUESTO_PARTES_CULPABLES, SUPUESTO_TIEMPO_TITULAR, SUPUESTO_POLIZA_FIJADA] as const
 export const ETIQUETA_COMPANIA_ACTUAL = 'Compañía actual del vehículo'
+/**
+ * v0.6.16: las tres preguntas de «Antecedentes» (tiempo en la compañía, partes culpables, tiempo como titular) y los 5 dígitos de la
+ * póliza SOLO se pintan DESPUÉS de elegir la compañía actual (trabajo real 02fd821b: el inventario del paso solo traía «Compañía actual
+ * del vehículo» y «Fecha de inicio del seguro»). Elegida la compañía, Angular las pinta de forma asíncrona: contestar antes daba
+ * `sin_grupo` (silencioso) y «SIGUIENTE» seguía deshabilitado sin decir qué faltaba. Puro: ¿hay que seguir esperando a que aparezcan?
+ * Sí si la compañía se ELIGIÓ y el número de opciones marcables del DOM no ha subido respecto de antes de elegirla.
+ */
+export function antecedentesPendientesDeAparecer(companiaElegida: boolean, opcionesAntes: number, opcionesAhora: number): boolean {
+  return companiaElegida && opcionesAhora <= opcionesAntes
+}
+export const ESPERA_ANTECEDENTES_TURISMOS_MS = 6_000
+/** Tras elegir la compañía: espera (tope `ms`) a que aparezcan las preguntas. `true` = aparecieron. Solo lee; nunca pulsa. */
+export async function esperarPreguntasAntecedentesTurismos(page: Pick<Page, 'waitForTimeout'>, marco: Pick<Frame, 'locator'>, opcionesAntes: number, ms: number = ESPERA_ANTECEDENTES_TURISMOS_MS): Promise<boolean> {
+  const fin = Date.now() + ms
+  for (;;) {
+    if (!antecedentesPendientesDeAparecer(true, opcionesAntes, await contarOpcionesMarcablesTurismos(marco))) return true
+    if (Date.now() >= fin) return false
+    await page.waitForTimeout(300)
+  }
+}
 /** v0.6.15: con «ya lo tenía (cambio de seguro)» Allianz exige la compañía actual; sin ella en el riesgo → `datos` (la pantalla la pide). */
 export const MENSAJE_FALTA_COMPANIA_ACTUAL = 'falta la compañía actual del vehículo; Allianz la exige con cambio de seguro'
 /** v0.6.15: cambio de seguro sin compañía actual en el riesgo → `datos` (no un «mapa incompleto» del portal). Se llama ANTES del login. Puro. */
@@ -1651,6 +1676,8 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
   const huecos = [...plan.huecos]
   const aplicados: string[] = []
   let opcionesCompania: string[] | undefined
+  // v0.6.16: opciones marcables del DOM ANTES de elegir la compañía (las preguntas de «Antecedentes» aparecen después).
+  const opcionesAntes = plan.paso === PASO_ANTECEDENTES ? await contarOpcionesMarcablesTurismos(marco) : 0
   const esperar = async (etiqueta: string, bloqueTomador: boolean): Promise<Locator | string> => {
     try {
       return (await campoUnicoTurismos(page, marco, etiqueta, `«${etiqueta}»`, ESPERA_CAMPO_TURISMOS_MS, undefined, plan.paso, bloqueTomador ? SEL_BLOQUE_TOMADOR_TURISMOS : undefined)).locator
@@ -1676,7 +1703,10 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       const r = await puerta(marco, op.valor)
       opcionesCompania = r.opciones
-      if (r.estado === 'elegida') continue
+      if (r.estado === 'elegida') {
+        if (plan.paso === PASO_ANTECEDENTES) await esperarPreguntasAntecedentesTurismos(page, marco, opcionesAntes)
+        continue
+      }
       if (r.estado === 'sin_elegir') aplicados.push(SUPUESTO_COMPANIA_NO_CONSTA)
       // v0.6.15: la compañía del riesgo que el portal no resuelve ya NO sigue «sin indicar» (Allianz la exige con cambio de seguro y
       // «SIGUIENTE» quedaba deshabilitado): es un error de DATOS claro, con las candidatas si hay varias. Nunca se elige una.
@@ -2139,7 +2169,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.0' : '0.6.15',
+    version: ramo === 'moto' ? '0.7.0' : '0.6.16',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
