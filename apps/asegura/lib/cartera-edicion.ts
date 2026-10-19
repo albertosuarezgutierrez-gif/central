@@ -88,7 +88,7 @@ export function campoIlegible(v: string | null | undefined): boolean {
   return typeof v === 'string' && v.startsWith('v1:') && descifrarCampo(v) === null
 }
 
-type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 400 | 404 | 409 | 422 | 500 }
+type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error' | 'tope'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 400 | 404 | 409 | 422 | 429 | 500 }
 
 function invalido(motivo: string, campo?: string, status: 400 | 422 = 422): Fallo {
   return { ok: false, estado: 'invalido', motivo, campo, status }
@@ -928,6 +928,15 @@ export async function reactivarPorPoliza(correduriaId: string, clienteId: string
 export type ResultadoAlta = { ok: true; id: string } | Fallo
 
 /**
+ * Tope diario de fichas que puede abrir el triaje de correo (`fuente='correo'`, 19/10/2026): hola@ es un
+ * buzón público y un aluvión de spam no puede llenar la cartera de leads. Superado → 429 `tope` y el
+ * triaje solo avisa. Contado en BD, dentro de la transacción del alta y bajo cerrojo (mismo patrón que
+ * `topeDiario` de `crearOportunidad`).
+ */
+export const TOPE_DIARIO_ALTAS_CORREO = 20
+class TopeAltaCorreo extends Error {}
+
+/**
  * Lead SIN DNI, teléfono ni email (29/09/2026): el tomador de un documento subido que solo trae su
  * nombre. `altaCliente` exige uno de los tres para poder volver a encontrar la ficha; aquí se
  * encuentra por la RELACIÓN con quien subió el documento (la crea quien llama) y por el nombre.
@@ -993,6 +1002,14 @@ export async function altaCliente(
     const mailEnOtra = otros.some((o) => o.por === 'email')
     const db = prismaAsegura()
     const id = await db.$transaction(async (tx) => {
+      if (a.fuente === 'correo') {
+        await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`tope-alta-correo:${correduriaId}`}))`
+        const [n] = await tx.$queryRaw<{ n: number }[]>`
+          select count(*)::int as n from clientes
+          where correduria_id = ${correduriaId}::uuid and fuente::text = 'correo'
+            and created_at >= ((now() at time zone 'Europe/Madrid')::date)::timestamp at time zone 'Europe/Madrid'`
+        if ((n?.n ?? 0) >= TOPE_DIARIO_ALTAS_CORREO) throw new TopeAltaCorreo()
+      }
       const tel = a.telefono ? cifrado('telefono', a.telefono) : null
       const mail = a.email ? cifrado('email', a.email) : null
       const dni = a.dni ? cifrado('dni', a.dni) : null
@@ -1074,6 +1091,9 @@ export async function altaCliente(
     })
     return { ok: true, id }
   } catch (e) {
+    if (e instanceof TopeAltaCorreo) {
+      return { ok: false, estado: 'tope', motivo: `tope diario de altas por correo (${TOPE_DIARIO_ALTAS_CORREO}) alcanzado`, status: 429 }
+    }
     if (esUnicoViolado(e)) {
       const otros = await coincidencias(correduriaId, { dni: a.dni, telefono: a.telefono, email: a.email }).catch(() => [])
       return conflicto(otros, false)

@@ -777,6 +777,10 @@ function sqlNumeroPoliza(p: string): string {
 export const ORIGEN_MANUAL = 'ficha:manual'
 /** Oportunidad abierta sola por un lead del formulario web de auto/moto (06/10/2026, `lib/lead-web-solicitud.ts`). */
 export const ORIGEN_LEAD_WEB = 'web:lead'
+/** Oportunidad abierta sola por un lead que escribió a hola@ (19/10/2026, triaje de correo de plataforma). */
+export const ORIGEN_LEAD_CORREO = 'correo:lead'
+/** Tope diario de oportunidades abiertas por correo: un buzón público recibe spam, y cada una es una tarea en «Hoy». */
+export const TOPE_DIARIO_LEADS_CORREO = 20
 
 export type OpcionesAltaOportunidad = {
   hoy?: Date
@@ -791,9 +795,9 @@ export type OpcionesAltaOportunidad = {
   /** Admite nacer en `pendiente_cliente` (`validarAltaOportunidad(…, { desdeServidor })`). */
   desdeServidor?: boolean
   /** La columna `oportunidades.fuente` (por defecto `venta_directa`). */
-  fuente?: 'web'
+  fuente?: 'web' | 'correo'
   /** `oportunidad_historial.accion` del alta (texto libre; por defecto `creada_mano`). */
-  accionHistorial?: 'creada_web'
+  accionHistorial?: 'creada_web' | 'creada_correo'
   /**
    * Máximo de oportunidades con ESTE `origen` creadas hoy (Europe/Madrid), contado en BD dentro de la misma
    * transacción y bajo cerrojo (dos leads a la vez no se cuelan los dos con 19).

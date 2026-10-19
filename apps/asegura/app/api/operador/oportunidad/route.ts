@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
+import { ORIGEN_LEAD_CORREO, TOPE_DIARIO_LEADS_CORREO, cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
 import type { AccionOportunidad } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
 
@@ -69,7 +69,7 @@ export const POST = auditado(async (req: Request) => {
       const r = await crearOportunidad(correduria.id, b.clienteId, {
         ramo: b.ramo, estado: b.estado, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora,
         prima: b.prima, numeroPoliza: b.numeroPoliza, matricula: b.matricula, vehiculo: b.vehiculo, seguroAnterior: b.seguroAnterior, tipoTarea: b.tipoTarea, fechaTarea: b.fechaTarea, nota: b.nota,
-      }, actorDe(b))
+      }, actorDe(b), opcionesLeadCorreo(b))
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo, ...('id' in r ? { id: r.id } : {}) }, { status: r.status })
       return NextResponse.json({ estado: 'ok', id: r.id }, { status: 201 })
     }
@@ -115,4 +115,15 @@ export const POST = auditado(async (req: Request) => {
 
 function actorDe(b: Record<string, unknown>): string {
   return typeof b.actor === 'string' && b.actor.trim() !== '' ? b.actor.trim().slice(0, 120) : 'plataforma'
+}
+
+/**
+ * Lead por CORREO (19/10/2026): el triaje de plataforma abre la oportunidad con `fuente: 'correo'`. Solo se
+ * acepta del actor del triaje (`agente:triaje-correo`): desde la pantalla el `actor` lo pone plataforma con
+ * la sesión y va el ÚLTIMO del cuerpo, así que nadie puede pasar por él. Cualquier otra cosa = alta a mano.
+ */
+const ACTOR_TRIAJE_CORREO = 'agente:triaje-correo'
+function opcionesLeadCorreo(b: Record<string, unknown>) {
+  if (b.fuente !== 'correo' || actorDe(b) !== ACTOR_TRIAJE_CORREO) return {}
+  return { fuente: 'correo' as const, origen: ORIGEN_LEAD_CORREO, accionHistorial: 'creada_correo' as const, topeDiario: TOPE_DIARIO_LEADS_CORREO }
 }

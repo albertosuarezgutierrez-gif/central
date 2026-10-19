@@ -38,3 +38,13 @@ test('🪤 las respuestas de las asociaciones de corredores avisan al momento, n
   assert.equal(r.aviso, 'inmediato')
   assert.equal(r.archivar, false, 'archivarlo lo sacaría de INBOX: una negociación abierta se queda a la vista')
 })
+
+test('🪤 el lead de la correduría (hola@grupoasegura.es) avisa al momento, se etiqueta y NO se archiva', () => {
+  const r = rutaDe('correduria-lead')
+  assert.equal(r.categoria, 'correduria-lead', 'la categoría no existe: rutaDe() ha devuelto el fallback y el lead caería a dudoso')
+  assert.equal(r.aviso, 'inmediato')
+  assert.equal(r.etiqueta, 'Triaje/Correduria-Leads')
+  assert.equal(r.archivar, false, 'archivarlo lo sacaría de INBOX: hay que contestarle desde ese hilo')
+  // La IA mandó el lead del 19/10/2026 a leads-negocio: su descripción tiene que excluir los seguros.
+  assert.match(rutaDe('leads-negocio').descripcion, /NUNCA una persona que pide un SEGURO/)
+})
