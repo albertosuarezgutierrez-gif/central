@@ -107,8 +107,10 @@ const COMPANIA_CAJON = new Set(['otro', 'otra', 'otros', 'n/a', 'na', 'ninguna',
  * Compañía anterior que la oportunidad YA sabe: la aseguradora de HOY (`poliza_competencia`, `aseguradoraActual === true`); la de
  * nuestra oferta (`aseguradoraActual` false/null/ausente) NO vale. Vacía, de cajón o más larga que el tope → `null` (no consta). PURA.
  */
-export function companiaAnteriorDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad'>): string | null {
+export function companiaAnteriorDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>): string | null {
   if (r.oportunidad.aseguradoraActual !== true) return null
+  // Años asegurado declarados = 0: no hay seguro anterior que nombrar (la aseguradora de la oportunidad no es «la anterior»).
+  if (r.historial?.historialDeclarado?.aniosAsegurado === 0) return null
   const t = (r.oportunidad.aseguradora ?? '').replace(/\s+/g, ' ').trim()
   return t === '' || t.length > MAX_COMPANIA_ANTERIOR || COMPANIA_CAJON.has(t.toLowerCase()) ? null : t
 }

@@ -130,7 +130,7 @@ export function formularioBotAuto(e: EntradaBotAuto, hoy: Date = new Date()): Fo
   if (ambitoCirculacion === undefined) faltan.push('Ámbito de circulación: valor no válido')
   if (clasePermiso === undefined) faltan.push('Clase del permiso: valor no válido')
   // La compañía anterior solo tiene sentido con seguro actual; sin nombre (o demasiado largo) no viaja (no consta).
-  const companiaTxt = e.tieneSeguroActual ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
+  const companiaTxt = e.tieneSeguroActual && aniosAseguradoAnterior !== 0 ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
   const companiaAnterior = companiaTxt !== '' && companiaTxt.length <= MAX_COMPANIA_ANTERIOR ? companiaTxt : null
   // Supuestos de Allianz Turismos: solo viajan si tienen forma válida (si no, el bot supone y lo declara; nunca bloquea).
   const isoValida = (v: string | null | undefined): string | null => {

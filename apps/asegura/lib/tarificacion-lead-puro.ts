@@ -13,7 +13,7 @@
 //     repregunta (F2). Un bot sin declaración (`null`) no es «no falta nada»: no se lanza.
 //   · el tope diario (env `ASEGURA_TARIF_AUTO_TOPE_DIARIO`: inválido → 20, máximo duro 100) por día de Madrid.
 // 🚨 TARIFICAR ≠ EMITIR. 🚨 Nada de valores en lo que sale de aquí hacia Telegram: claves, etiquetas y nombres de compañía.
-import { contratoDatos, etiquetasDe, type CodigoConcreto } from '@central/module-seguros'
+import { CARNETS_MOTO_PRECIO, contratoDatos, etiquetasDe, type CodigoConcreto } from '@central/module-seguros'
 import { duermeEnGaraje, GARAJES_CONOCIDOS } from '@central/module-seguros/garajes'
 import { CAPACIDAD_ALLIANZ_COMUNIDADES, faltanParaTarificar, llegaAPrecio, obligatoriosPara, type Faltante } from '@central/module-tarificacion'
 import { RAMOS_TARIFICABLES_RPA, validarEntradaRamo } from './tarificador-reglas.ts'
@@ -646,4 +646,19 @@ export function textoFalloBotLead(a: { compania: string; ramo: string; pendiente
   }
   const tipo = a.tipoError && /^[a-z_]{2,20}$/.test(a.tipoError) ? ` (fallo de ${a.tipoError})` : ''
   return `❌ <b>El bot de ${cia} (${ramo}) no ha llegado a precio</b>${ref}${tipo}. No se reintenta solo: míralo en /correduria/tarificador.`
+}
+
+/**
+ * Fecha del carné que devuelve `personaDeFicha` para tarificar. En MOTO solo vale un carné de moto (A, A1, A2): si la ficha solo
+ * trae el B (`tipoCarnet` 'B' o ausente), su fecha NO es la de moto → `null`. `null` = no consta (nunca un valor de relleno). PURA.
+ */
+export function carneDePersonaFicha(p: object | null, ramo: string): string | null {
+  const o = p as { fechaCarnet?: unknown; tipoCarnet?: unknown } | null
+  const f = o !== null && typeof o.fechaCarnet === 'string' ? o.fechaCarnet.trim() : ''
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f)) return null
+  if (ramo === 'moto') {
+    const tipo = typeof o?.tipoCarnet === 'string' ? o.tipoCarnet.toUpperCase().replace(/\s/g, '') : ''
+    if (!CARNETS_MOTO_PRECIO.includes(tipo)) return null
+  }
+  return f
 }

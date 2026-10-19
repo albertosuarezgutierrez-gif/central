@@ -21,7 +21,7 @@ import { pausaViva } from './tarificador-robustez'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
-  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
+  AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, carneDePersonaFicha, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
   type FormularioLead, type LecturaMoto, type RamoBotLead, type Supuesto, type ValoracionCompania,
 } from './tarificacion-lead-puro'
 
@@ -116,13 +116,12 @@ async function nacimientoFicha(correduriaId: string, clienteId: string): Promise
 }
 
 /**
- * Fecha del carné del conductor en la FICHA (carné B en coche; en moto, el de moto si consta), la MISMA que lee la pantalla de
+ * Fecha del carné del conductor en la FICHA (carné B en coche; en moto SOLO el de moto: A, A1 o A2), la MISMA que lee la pantalla de
  * la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo leer (nunca un valor de relleno).
  */
 async function carneFicha(correduriaId: string, clienteId: string, ramo: string): Promise<string | null> {
   const p = await personaDeFicha(correduriaId, clienteId, ramo === 'moto' ? 'moto' : 'auto').catch(() => null)
-  const f = p !== null && 'fechaCarnet' in p && typeof p.fechaCarnet === 'string' ? p.fechaCarnet.trim() : ''
-  return /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null
+  return carneDePersonaFicha(p, ramo)
 }
 
 type Interno = RevisionOportunidad & { formulario: FormularioLead | null }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
-  caben, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
+  caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
   garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
   valorarCompania, viviendasYLocalesDeTexto,
 } from './tarificacion-lead-puro.ts'
@@ -257,4 +257,15 @@ test('🪤 la matrícula del lead sale del bloque de la oportunidad, también co
   const viejo = datosVehiculoDeInfoRiesgo({ matricula: '0000xxx' })
   for (const b of [nuevo, viejo]) assert.equal(formularioBotDesdeLead({ ramo: 'auto', valores: sinMat, bloque: { ...b }, fichaNacimiento: null, hoy: HOY }).riesgo.matricula, '0000XXX')
   assert.equal('matricula' in formularioBotDesdeLead({ ramo: 'auto', valores: sinMat, bloque: { ...datosVehiculoDeInfoRiesgo({}) }, fichaNacimiento: null, hoy: HOY }).riesgo, false)
+})
+
+test('carné de la ficha: en moto solo vale A, A1 o A2; la fecha del B no se cuela', () => {
+  const b = { fechaCarnet: '2004-06-01', tipoCarnet: 'B' }
+  assert.equal(carneDePersonaFicha(b, 'moto'), null)
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2004-06-01' }, 'moto'), null)
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2004-06-01', tipoCarnet: 'AM' }, 'moto'), null)
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2010-02-03', tipoCarnet: 'A2' }, 'moto'), '2010-02-03')
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2010-02-03', tipoCarnet: 'a1' }, 'moto'), '2010-02-03')
+  assert.equal(carneDePersonaFicha(b, 'auto'), '2004-06-01')
+  assert.equal(carneDePersonaFicha(null, 'moto'), null)
 })

@@ -199,3 +199,17 @@ test('historial sin años/siniestros NO bloquea el formulario de coche y el chec
   assert.equal(filas.find((f) => f.clave === 'aniosAseguradoAnterior')?.estado, 'supuesto')
   assert.equal(filas.find((f) => f.clave === 'siniestrosUltimos5Anios')?.estado, 'supuesto')
 })
+
+test('compañía anterior: con 0 años asegurado declarados no hay compañía anterior (riesgo y formulario)', () => {
+  const con = (anios: number | null) => riesgo({
+    oportunidad: { clienteId: 'c1', matricula: null, aseguradora: 'Aseguradora Beta', aseguradoraActual: true },
+    historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: anios, aniosSinSiniestros: null, siniestrosUltimos5: null, tieneSeguroActual: true }, carnet: { fecha: '2005-06-30', legible: true } },
+  })
+  assert.equal(companiaAnteriorDeRiesgo(con(0)), null)
+  assert.equal(companiaAnteriorDeRiesgo(con(3)), 'Aseguradora Beta')
+  assert.equal(companiaAnteriorDeRiesgo(con(null)), 'Aseguradora Beta')
+  assert.equal(formularioBotsAutoDeRiesgo(con(0)).companiaAnterior, null)
+  const f = formularioBotAuto({ ...formularioBotsAutoDeRiesgo(con(3)), aniosAsegurado: '0', companiaAnterior: 'Aseguradora Beta' })
+  assert.ok(f.ok)
+  assert.equal('companiaAnterior' in (f.riesgo as Record<string, unknown>), false)
+})
