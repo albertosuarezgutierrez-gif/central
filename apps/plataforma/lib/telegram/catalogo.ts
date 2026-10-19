@@ -769,6 +769,24 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cuando la respuesta del lead completa sus datos, y al llegar al tope diario',
   },
   {
+    id: 'correduria.lead-propuesta', categoria: 'correduria',
+    titulo: 'Propuesta de un lead lista (📤 Enviar recomendada / 🔀 Elegir otra / ✏️ / 🚫)',
+    que: 'Cuando llegan precios de un lead de correo: la comparativa (compañía, prima, franquicia, si el precio es estimado o firme, coberturas y si la compañía la dejaría bloqueada), las necesidades del cliente que se han leído de sus respuestas y la recomendada con su porqué. Si faltan necesidades no hay botón de enviar: te propongo repreguntárselas. Si llegan más precios, el mismo mensaje se actualiza. Nada sale sin pulsar 📤.',
+    cuando: 'Cuando hay precio para un lead que vino por correo (revisión cada 10 min)',
+  },
+  {
+    id: 'correduria.lead-seguimiento', categoria: 'correduria',
+    titulo: 'Seguimiento del lead: recordatorio (✅ Recordar / ✏️ / 🗑 Cerrar perdida)',
+    que: 'El lead no contesta a la petición de datos (48 h; 2º recordatorio a los 5 días) o no acepta la propuesta (72 h): borrador de recordatorio en su hilo, que sale SOLO si pulsas ✅. Tras dos recordatorios sin respuesta, «¿cerrar como perdida?» (no se borra nada). Un aviso por hito, nunca repetido; si el cliente contesta, se corta.',
+    cuando: 'En la revisión del correo (cada 10 min), solo de 9 a 20 h',
+  },
+  {
+    id: 'correduria.lead-auto', categoria: 'correduria',
+    titulo: 'Envíos al lead en automático (🔓 ofrecer · 🤖 enviado solo · ⏸ volver a manual)',
+    que: 'Tras 20 envíos seguidos de un mismo tipo (petición de datos, repregunta o recordatorio) aprobados sin editar, te ofrece pasarlo a automático; solo se activa si pulsas 🔓. Con el modo puesto, cada envío que sale solo te llega aquí con ⏸ para volver a manual. La propuesta nunca va sola.',
+    cuando: 'Al llegar a la racha de 20, y en cada envío automático (de 9 a 20 h, con tope diario)',
+  },
+  {
     id: 'correduria.aviso-web', categoria: 'correduria',
     titulo: 'Aviso de vencimiento confirmado desde la web',
     que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',

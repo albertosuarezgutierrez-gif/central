@@ -22,6 +22,7 @@
 //     solo si alguna de ellas sigue sin saberse.
 
 import type { RamoOportunidad } from './oportunidad-seguimiento.ts'
+import { camposIdd } from './propuesta-lead.ts'
 
 export type OrigenCampo = 'cliente' | 'catalogo' | 'derivado' | 'correduria'
 export type ObligatorioCampo = 'siempre' | 'condicional' | 'para_emitir' | 'opcional'
@@ -337,6 +338,10 @@ export function peticionDatos(ramos: readonly (RamoOportunidad | string)[], cono
 /** Etiquetas de un conjunto de claves de un contrato, para decir en Telegram qué se sabe ya. */
 export function etiquetasDe(ramos: readonly (RamoOportunidad | string)[], claves: ReadonlySet<string>): string[] {
   const out = new Set<string>()
-  for (const r of ramos.length ? ramos : [null]) for (const f of contratoDatos(r).campos) if (claves.has(f.clave)) out.add(f.etiqueta)
+  for (const r of ramos.length ? ramos : [null]) {
+    for (const f of contratoDatos(r).campos) if (claves.has(f.clave)) out.add(f.etiqueta)
+    // F4: las necesidades IDD que contestó (`idd_<id>`) también se nombran («modalidad», «lunas»…), sin su valor.
+    for (const f of camposIdd(r)) if (claves.has(f.clave)) out.add(f.etiqueta)
+  }
   return [...out]
 }

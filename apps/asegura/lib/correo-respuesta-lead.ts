@@ -74,6 +74,13 @@ export async function casarRespuestaLead(correduriaId: string, c: Casar): Promis
   if (r.estado !== 'ok') return r
   const f = await ficha(correduriaId, r.clienteId)
   if (!f) return { estado: 'sin_hilo' }
+  // F5: el cliente HA ESCRITO en su hilo, se llegue o no a leer su correo (IA caída, nada que guardar). Corta la cadena
+  // de recordatorios: «no se pudo leer» nunca es «no contestó». Best-effort: un fallo aquí no impide casar.
+  await prisma.$executeRaw`
+    update seguros.correduria_hilo set ultimo_contacto_cliente_at = now()
+    where correduria_id = ${correduriaId}::uuid and cliente_id = ${r.clienteId}::uuid
+      and message_id_raiz = (select message_id_raiz from seguros.correduria_hilo where id = ${BigInt(r.hiloId)} and correduria_id = ${correduriaId}::uuid)`
+    .catch((e: unknown) => console.error('[correo-respuesta-lead] contacto sin anotar:', e instanceof Error ? e.name : 'error'))
   return { estado: 'ok', hiloId: r.hiloId, clienteId: r.clienteId, pila: nombreDePila(f.nombre), oportunidades: r.oportunidades }
 }
 
@@ -90,7 +97,10 @@ export type ResultadoOportunidad = {
 }
 export type ResultadoGuardar =
   | { estado: 'sin_hilo' | 'ambiguo' | 'sin_tabla' | 'sin_oportunidad' }
-  | { estado: 'ok'; clienteId: string; pila: string | null; oportunidades: ResultadoOportunidad[]; completo: boolean; estadoDatos: string; historial: boolean }
+  | { estado: 'ok'; clienteId: string; pila: string | null; oportunidades: ResultadoOportunidad[]; completo: boolean; estadoDatos: string; estadoHilo: string | null; historial: boolean }
+
+/** Estados del hilo que ya tienen precio pedido o propuesta: una respuesta no los hace retroceder (F4). */
+const ESTADOS_CON_PRECIO = new Set(['tarificando', 'tarificada', 'propuesta_enviada'])
 
 /** Cifra en un sobre `v1:`; sin clave (o con clave rota) → `null`: NO se guarda en claro. */
 async function cifrar(valor: ValorContrato): Promise<string | null> {
@@ -227,13 +237,18 @@ export async function guardarRespuestaLead(correduriaId: string, g: Guardar): Pr
 
   const completo = resultados.every((r) => r.guardado && r.faltan.length === 0 && r.pendientes.length === 0)
   const estadoDatos = estadoDatosTrasRespuesta(completo ? 0 : 1)
+  // F4: el estado REAL del hilo tras la respuesta. Con precio ya pedido (tarificando/tarificada) o propuesta enviada no
+  // retrocede, y plataforma no vuelve a ofrecer tarificar: la respuesta (p. ej. sus necesidades) actualiza la propuesta.
+  let estadoHilo: string | null = null
   try {
-    await prisma.$executeRaw`
+    const f = await prisma.$queryRaw<{ estado_datos: string }[]>`
       update seguros.correduria_hilo
       set estado_datos = case when estado_datos in ('sin_pedir', 'pedida', 'incompleta', 'lista_para_tarificar') then ${estadoDatos} else estado_datos end,
           ultimo_contacto_cliente_at = now(),
           message_ids = array(select distinct unnest(message_ids || array[${g.gmailMessageId}]::text[]))
-      where correduria_id = ${correduriaId}::uuid and cliente_id = ${casado.clienteId}::uuid and message_id_raiz = ${casado.raiz}`
+      where correduria_id = ${correduriaId}::uuid and cliente_id = ${casado.clienteId}::uuid and message_id_raiz = ${casado.raiz}
+      returning estado_datos`
+    estadoHilo = f.find((x) => ESTADOS_CON_PRECIO.has(x.estado_datos))?.estado_datos ?? f[0]?.estado_datos ?? null
   } catch (e) {
     console.error('[correo-respuesta-lead] hilo sin actualizar:', e instanceof Error ? e.name : 'error')
   }
@@ -250,7 +265,7 @@ export async function guardarRespuestaLead(correduriaId: string, g: Guardar): Pr
   } catch (e) {
     console.error('[correo-respuesta-lead] historial no anotado:', e instanceof Error ? e.name : 'error')
   }
-  return { estado: 'ok', clienteId: casado.clienteId, pila: nombreDePila(f.nombre), oportunidades: resultados, completo, estadoDatos: completo ? 'lista_para_tarificar' : 'incompleta', historial }
+  return { estado: 'ok', clienteId: casado.clienteId, pila: nombreDePila(f.nombre), oportunidades: resultados, completo, estadoDatos: completo ? 'lista_para_tarificar' : 'incompleta', estadoHilo, historial }
 }
 
 function safe<T>(fn: () => T): T | null {

@@ -45,6 +45,7 @@ import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { generarNarrativa, type Narrativa } from './estudio-ia'
 import { AVISO_OPCION_OFERTA, caducidadOfertas, opcionesDeOfertas, seleccionarParaConsolidar } from './ofertas-reglas'
 import { leerOportunidadParaOfertas, ofertasDeOportunidad } from './oportunidad-ofertas'
+import { VIA_PROPUESTA_LEAD, sustituiblePorPropuestaLead } from './presupuesto-rpa-reglas'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -1065,7 +1066,15 @@ export type ResultadoPrepararOfertas =
  */
 export async function prepararPresupuestoDeOfertas(
   correduriaId: string,
-  entrada: { oportunidadId: string; ofertaIds?: string[] | null; superficieM2?: number | null; actor: string },
+  entrada: {
+    oportunidadId: string; ofertaIds?: string[] | null; superficieM2?: number | null; actor: string
+    /**
+     * `VIA_PROPUESTA_LEAD` (F4, 📤 de la propuesta de un lead): solo se sustituyen los presupuestos AUTOMÁTICOS sin enviar
+     * (`sustituiblePorPropuestaLead`); los hechos a mano se quedan como estén. Sin `via` (botón «Generar presupuesto»), lo
+     * de siempre: se sustituyen todos los borradores de ofertas sin enviar.
+     */
+    via?: typeof VIA_PROPUESTA_LEAD
+  },
   ahora: Date = new Date(),
 ): Promise<ResultadoPrepararOfertas> {
   const op = await leerOportunidadParaOfertas(correduriaId, entrada.oportunidadId)
@@ -1113,10 +1122,15 @@ export async function prepararPresupuestoDeOfertas(
   const hecho = await db.$transaction(async (tx) => {
     // Bajo cerrojo por oportunidad: dos «Generar presupuesto» a la vez no dejan dos borradores.
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`presupuesto-ofertas:${correduriaId}:${op.id}`}))`
-    const previos = await tx.presupuesto.findMany({
+    const candidatos = await tx.presupuesto.findMany({
       where: { correduriaId, origen: 'ofertas', oportunidadId: op.id, retiradoAt: null, enviadoAt: null, enlaceGeneradoAt: null, aceptadoAt: null },
-      select: { id: true },
+      // oculta-exenta: se cuentan las ocultas precisamente para saber si alguien ha tocado el presupuesto.
+      select: { id: true, creadoPor: true, opciones: { select: { ocultaAt: true } }, eventos: { select: { tipo: true, origen: true, detalle: true } } },
     })
+    // 🚨 Desde la propuesta de un lead, lo manual NO se toca (revisión F4): solo lo que montó el flujo automático.
+    const previos = entrada.via === VIA_PROPUESTA_LEAD
+      ? candidatos.filter((p) => sustituiblePorPropuestaLead({ creadoPor: p.creadoPor, ocultas: p.opciones.filter((o) => o.ocultaAt !== null).length, eventos: p.eventos }))
+      : candidatos
     for (const p of previos) {
       const motivo = 'Sustituido por un presupuesto nuevo de las ofertas de la misma oportunidad (sin haberse enviado).'
       await tx.presupuesto.update({
@@ -1167,6 +1181,7 @@ export async function prepararPresupuestoDeOfertas(
             detalle: {
               actor: entrada.actor,
               origen: 'ofertas',
+              ...(entrada.via ? { via: entrada.via } : {}),
               ofertas: opciones.map((o) => o.ofertaId),
               recomendada: recomendadaId,
               narrativa: narrativa.fuente,

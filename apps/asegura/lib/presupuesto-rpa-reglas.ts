@@ -364,6 +364,37 @@ export function borradorTocado(b: Pick<BorradorPrevio, 'ocultas' | 'eventos'>): 
   })
 }
 
+/** Vía del presupuesto que monta la PROPUESTA de un lead (F4) al pulsar 📤: va en el detalle de su evento `preparado`. */
+export const VIA_PROPUESTA_LEAD = 'propuesta_lead'
+
+export type PresupuestoPrevio = Pick<BorradorPrevio, 'ocultas' | 'eventos'> & { creadoPor: string | null }
+
+/**
+ * Al enviar la propuesta de un lead (F4), ¿se retira este presupuesto de la MISMA oportunidad que no ha salido? Solo lo
+ * que montó el propio flujo automático: el borrador del bot que Alberto no ha tocado (`borradorTocado`) o un presupuesto
+ * de otro 📤 de la propuesta que no llegó a salir (sin opciones ocultas). Lo hecho a mano —y el borrador del bot que
+ * Alberto ya ha tocado— NUNCA (revisión F4, 19/10/2026). Ante la duda, se conserva. PURA.
+ */
+export function sustituiblePorPropuestaLead(p: PresupuestoPrevio): boolean {
+  if (p.creadoPor === ACTOR_RPA) return !borradorTocado(p)
+  const deLaPropuesta = p.eventos.some((e) => e.tipo === 'preparado' && obj(e.detalle)?.via === VIA_PROPUESTA_LEAD)
+  // 🚨 Solo si NADIE lo ha tocado después: cualquier evento que no sea del propio 📤 (Alberto editó necesidades, generó
+  //    un enlace, lo descargó, salió o quedó incierto…) lo conserva. Lista CERRADA: un evento nuevo cuenta como tocado.
+  return deLaPropuesta && p.ocultas === 0 && p.eventos.every(eventoPropioDeLaPropuesta)
+}
+
+/** Motivos de `envio_fallido` que aseguran que el correo NO salió (el `rechazado` antiguo podía ser un corte). */
+const FALLO_SEGURO = new Set(['sin_proveedor', 'remitente_no_verificado', 'cancelado'])
+
+/** ¿Lo escribió el propio flujo del 📤 (y no deja rastro en el cliente)? PURA. */
+function eventoPropioDeLaPropuesta(e: EventoBorrador): boolean {
+  const d = obj(e.detalle)
+  if (e.tipo === 'preparado') return d?.via === VIA_PROPUESTA_LEAD
+  if (e.tipo === 'necesidades') return d?.via === 'lead_correo' || d?.deducido === true
+  if (e.tipo === 'envio_fallido') return typeof d?.motivo === 'string' && FALLO_SEGURO.has(d.motivo)
+  return false
+}
+
 export type DecisionSustitucion =
   | { accion: 'abandonar' }
   | { accion: 'crear'; retirar: string[]; conservar: string[] }

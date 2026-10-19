@@ -94,7 +94,7 @@ test('🪤 el 🤖 es de un solo uso, solo sobre pendientes de tarificar, y ✅ 
   const codigo = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '')
   assert.ok(!/codeoscopic|cotizar|retarificar|auto-nuevo|cas_tarif/i.test(codigo))
   const pend = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
-  assert.match(pend, /SET estado = 'enviando'[^`]*WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia'\) AND estado = 'pendiente'/)
+  assert.match(pend, /SET estado = 'enviando'[^`]*WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia', 'propuesta'\) AND estado = 'pendiente'/)
 })
 
 test('🪤 lo que queda EN COLA por el tope no se queda sin botón (cola, nunca descarte); lo cerrado no lo recupera', () => {

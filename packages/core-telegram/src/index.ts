@@ -101,19 +101,25 @@ export async function tgAnswerCallback(callbackQueryId: string, text?: string): 
   } catch {}
 }
 
-export async function tgEditMessage(messageId: number, text: string, opts: { chatId?: string; botones?: Boton[][] } = {}): Promise<void> {
+/**
+ * Edita el texto de un mensaje. Sin `botones`, Telegram le QUITA los que tuviera (es lo que se quiere tras pulsar); con
+ * `botones`, los sustituye (un aviso que se ACTUALIZA en sitio en vez de mandar otro). `true` = Telegram lo aceptó.
+ */
+export async function tgEditMessage(messageId: number, text: string, opts: { chatId?: string; botones?: Boton[][] } = {}): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = opts.chatId || process.env.TELEGRAM_CHAT_ID
-  if (!token || !chat_id) return
+  if (!token || !chat_id) return false
+  const reply_markup = opts.botones
+    ? { inline_keyboard: opts.botones.map(fila => fila.map(b => b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: b.callback || '' })) }
+    : undefined
   try {
-    await fetch(API(token, 'editMessageText'), {
+    const res = await fetch(API(token, 'editMessageText'), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id, message_id: messageId, text, parse_mode: 'HTML', disable_web_page_preview: true,
-        ...(opts.botones ? { reply_markup: { inline_keyboard: opts.botones.map(fila => fila.map(b => b.url ? { text: b.texto, url: b.url } : { text: b.texto, callback_data: b.callback || '' })) } } : {}),
-      }),
+      body: JSON.stringify({ chat_id, message_id: messageId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...(reply_markup ? { reply_markup } : {}) }),
     })
-  } catch {}
+    const d = await res.json().catch(() => null)
+    return d?.ok === true
+  } catch { return false }
 }
 
 // Pide texto libre ligado a la respuesta (force_reply). El webhook lee message.reply_to_message.
