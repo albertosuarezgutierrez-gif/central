@@ -51,13 +51,19 @@ export const POST = auditado(async (req: Request, ctx: { params: Promise<{ id: s
     if (r.estado === 'no_encontrado') return NextResponse.json(r, { status: 404 })
     if (r.estado === 'conflicto') return NextResponse.json(r, { status: 409 })
     let lanzado = false
+    let errorLanzando = null as string | null
     if (accion === 'reintentar' && r.estado === 'aplicado') {
       // Mejor esfuerzo, como al encolar: si Fly falla, el trabajo queda `pendiente` y el barrido lo lanza.
-      const l = await lanzarPendientes(correduria.id, r.compania).catch(() => null)
+      // El fallo concreto (tipo + mensaje) se devuelve: `lanzado: false` sin motivo era «no se miró» leído como «no hizo falta».
+      const l = await lanzarPendientes(correduria.id, r.compania).catch((e: unknown) => {
+        errorLanzando = `${e instanceof Error ? e.name : 'Error'}: ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`
+        return null
+      })
       lanzado = !!l?.lanzados.includes(id)
+      if (!errorLanzando && l?.omitido) errorLanzando = l.omitido
     }
     const { estado, estadoTrabajo } = r
-    return NextResponse.json({ estado, estadoTrabajo, lanzado })
+    return NextResponse.json({ estado, estadoTrabajo, lanzado, ...(errorLanzando ? { errorLanzando } : {}) })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/bandeja', e) }, { status: 503 })
   }

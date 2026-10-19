@@ -409,6 +409,32 @@ export const ESTADOS_DUPLICADO = ['pendiente', 'en_curso', 'error_reintentable',
 /** Ventana (15/10/2026) en la que un trabajo terminado `ok` CON PRECIO sigue contando como «ya tarificado»: segundo clic o dos comerciales. */
 export const VENTANA_OK_DUPLICADO_MS = 10 * 60_000
 
+/** Un trabajo `atascado` solo bloquea relanzar el mismo encargo durante este tiempo (19/10/2026): luego cuenta como abandonado. */
+export const UMBRAL_ATASCADO_BLOQUEA_MS = 24 * 60 * 60_000
+
+/** Una pausa (`tarificador_pausas`) sin reanudar deja de bloquear pasado este plazo (19/10/2026); la fila no se borra. */
+export const PAUSA_CADUCA_HORAS = 24
+
+/** ¿Esta pausa sin reanudar ya caducó? Hora ilegible/futura → NO caducada (conservador: sigue bloqueando). */
+export function pausaCaducada(pausadaAt: Date | null | undefined, ahora: Date): boolean {
+  if (!pausadaAt || Number.isNaN(pausadaAt.getTime())) return false
+  const edad = ahora.getTime() - pausadaAt.getTime()
+  return edad >= PAUSA_CADUCA_HORAS * 3_600_000
+}
+
+/** Qué decirle a quien pide algo que ya existe: el estado REAL del trabajo que bloquea (no siempre «en marcha»). */
+export function mensajeDuplicado(estado: string): string {
+  switch (estado) {
+    case 'pendiente': return 'Ya había un trabajo pendiente en la cola con estos datos: se muestra ese.'
+    case 'en_curso': return 'Ya había un trabajo en curso con estos datos: se muestra ese.'
+    case 'error_reintentable': return 'Ya había un trabajo que falló y está pendiente de reintento automático: se muestra ese.'
+    case 'atascado': return 'Ya había un trabajo atascado esperando una elección tuya (pantalla «Bots atascados»): respóndela o espera a que caduque.'
+    case 'ok': return 'Ese presupuesto ya se calculó hace pocos minutos: se muestra ese resultado.'
+    case 'requiere_humano': return 'Ya había un trabajo que requiere una persona (captcha/código): resuélvelo desde la bandeja.'
+    default: return `Ya había un trabajo con estos datos (estado: ${estado}): se muestra ese.`
+  }
+}
+
 /**
  * ¿Un trabajo previo con el MISMO riesgo hace que el nuevo sea duplicado? `pendiente` sí; `en_curso` solo con lease
  * vivo (uno colgado no bloquea pedirlo otra vez); `error_reintentable` solo bajo el tope de intentos (el barrido lo
@@ -418,7 +444,7 @@ export const VENTANA_OK_DUPLICADO_MS = 10 * 60_000
  * fin legible, en el futuro o sin dato de precio → NO bloquea (se vuelve a tarificar antes que servir un resultado dudoso).
  */
 export function bloqueaDuplicado(
-  f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null; terminadoAt?: Date | null; conPrecio?: boolean },
+  f: { estado: string; leaseHasta: Date | null; intentos: number; modo: string | null; terminadoAt?: Date | null; conPrecio?: boolean; actualizadoAt?: Date | null },
   ahora: Date,
   maxIntentos: number,
 ): boolean {
@@ -427,7 +453,13 @@ export function bloqueaDuplicado(
   if (f.estado === 'en_curso') return !leaseVencido(f.leaseHasta, ahora)
   if (f.estado === 'error_reintentable') return Number.isInteger(f.intentos) && f.intentos < maxIntentos
   // ATASCO (F2): espera la elección de Alberto y volverá a la cola: pedir lo mismo otra vez sería el mismo encargo dos veces.
-  if (f.estado === 'atascado') return true
+  // Solo mientras es reciente (`updated_at` = cuando se atascó): pasado el umbral el atasco caduca solo (`caducarAtascos`) y,
+  // si el barrido no llegó, no puede impedir relanzar para siempre. Sin hora legible o futura (dato dudoso) → bloquea (conservador).
+  if (f.estado === 'atascado') {
+    if (!f.actualizadoAt || Number.isNaN(f.actualizadoAt.getTime())) return true
+    const edad = ahora.getTime() - f.actualizadoAt.getTime()
+    return edad < 0 || edad < UMBRAL_ATASCADO_BLOQUEA_MS
+  }
   if (f.estado === 'ok') {
     if (f.conPrecio !== true || !f.terminadoAt || Number.isNaN(f.terminadoAt.getTime())) return false
     const edad = ahora.getTime() - f.terminadoAt.getTime()
