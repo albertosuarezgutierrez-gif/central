@@ -1,8 +1,8 @@
 {
  "sesion": "d4b8c242-233d-5bb4-b2b4-46767a99f3bc",
  "inicio": "2026-10-17T07:04:47.840Z",
- "fin": "2026-10-19T07:39:49.993Z",
- "llamadas": 873,
+ "fin": "2026-10-19T07:40:05.830Z",
+ "llamadas": 874,
  "categorias": {
   "agente:Explore": {
    "llamadas": 2,
@@ -38,9 +38,9 @@
    }
   },
   "otro": {
-   "llamadas": 177,
-   "chars_in": 60917,
-   "chars_out": 1141715,
+   "llamadas": 178,
+   "chars_in": 60919,
+   "chars_out": 1142496,
    "errores": 0,
    "archivos_citados": 23,
    "chars_citados": 340788,
@@ -50,7 +50,7 @@
     "ExitPlanMode": 1,
     "SubagentHandback": 23,
     "WebSearch": 27,
-    "ReadNotifications": 78,
+    "ReadNotifications": 79,
     "SendMessage": 4
    }
   },
