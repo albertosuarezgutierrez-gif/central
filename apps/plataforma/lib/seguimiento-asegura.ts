@@ -1113,3 +1113,17 @@ export function traspasarOportunidadAsegura(body: { oportunidadId: string; nuevo
 export function peticionLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/correo/lead', { method: 'POST', body: JSON.stringify(body) }, 30_000)
 }
+
+// ─── Respuesta del lead en su hilo (19/10/2026, F2) ──────────────────────────
+/**
+ * `POST /api/operador/correo/respuesta-lead`: `accion:'casar'` (¿de qué hilo/oportunidades es?) o `accion:'guardar'`
+ * (los datos leídos, para escribirlos sin pisar nada). Responde SOLO claves, nunca valores.
+ */
+export function respuestaLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/respuesta-lead', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}
+
+/** `POST /api/operador/correo/adjunto`: un adjunto del cliente, que asegura guarda CIFRADO (sin clave, no lo guarda). */
+export function adjuntoLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/adjunto', { method: 'POST', body: JSON.stringify(body) }, 30_000)
+}

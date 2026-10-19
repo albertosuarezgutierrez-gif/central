@@ -15,6 +15,15 @@ export type EnvioLead = {
   enRespuestaA: EnRespuestaA
   idempotencia: string
   actor: string
+  /** F1 `peticion` (por defecto) o F2 `repregunta` (solo lo que falta): cambia el estado del hilo y el historial. */
+  tipo: TipoEnvioLead
+}
+
+export type TipoEnvioLead = 'peticion' | 'repregunta'
+
+/** Estado del expediente de datos tras enviar: la repregunta deja el hilo `incompleta`, la petición `pedida`. PURA. */
+export function estadoHiloTrasEnvio(tipo: TipoEnvioLead): 'pedida' | 'incompleta' {
+  return tipo === 'repregunta' ? 'incompleta' : 'pedida'
 }
 
 /** Valida el cuerpo del puerto. PURA. */
@@ -41,15 +50,17 @@ export function validarEnvioLead(b: unknown): { ok: true; valor: EnvioLead } | {
   if (!/^[A-Za-z0-9_:-]{4,128}$/.test(idempotencia)) return { ok: false, motivo: 'idempotencia no válida' }
   const actor = txt(o.actor)
   if (!actor) return { ok: false, motivo: 'falta el actor' }
+  if (o.tipo !== undefined && o.tipo !== 'peticion' && o.tipo !== 'repregunta') return { ok: false, motivo: 'tipo no válido' }
+  const tipo: TipoEnvioLead = o.tipo === 'repregunta' ? 'repregunta' : 'peticion'
   return {
     ok: true,
-    valor: { clienteId, oportunidadIds: [...new Set(ops)], to, asunto, texto, enRespuestaA: { messageId: en.messageId as string, references }, idempotencia, actor: actor.slice(0, 120) },
+    valor: { clienteId, oportunidadIds: [...new Set(ops)], to, asunto, texto, enRespuestaA: { messageId: en.messageId as string, references }, idempotencia, actor: actor.slice(0, 120), tipo },
   }
 }
 
 /** Texto del historial de la ficha. Sin el cuerpo (ya queda en `correo_envio`): qué se mandó, por dónde y con el OK de quién. */
-export function textoHistorialEnvioLead(asunto: string, actor: string): string {
-  return `Petición de datos enviada por correo desde ${MEDIADOR.identidad.email}, en el hilo de su mensaje («${asunto.slice(0, 160)}»), con el OK de ${actor}.`.slice(0, 2000)
+export function textoHistorialEnvioLead(asunto: string, actor: string, tipo: TipoEnvioLead = 'peticion'): string {
+  return `${tipo === 'repregunta' ? 'Repregunta de los datos que faltan' : 'Petición de datos'} enviada por correo desde ${MEDIADOR.identidad.email}, en el hilo de su mensaje («${asunto.slice(0, 160)}»), con el OK de ${actor}.`.slice(0, 2000)
 }
 
 

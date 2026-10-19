@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { anotarHistorialTrasEnvio, estadoRegistroHilo, textoHistorialEnvioLead, validarEnvioLead } from './correo-lead-puro.ts'
+import { anotarHistorialTrasEnvio, estadoHiloTrasEnvio, estadoRegistroHilo, textoHistorialEnvioLead, validarEnvioLead } from './correo-lead-puro.ts'
 
 const OK = {
   clienteId: '11111111-1111-4111-8111-111111111111',
@@ -58,6 +58,17 @@ test('🪤 References larguísimo: la RAÍZ (la primera) se conserva, que es la 
 test('🪤 reintento deduplicado por Resend (mismo id) → no se vuelve a anotar el historial', () => {
   assert.equal(anotarHistorialTrasEnvio({ repetido: true }), false)
   assert.equal(anotarHistorialTrasEnvio({}), true)
+})
+
+test('🪤 tipo: la repregunta (F2) deja el hilo «incompleta» y lo dice el historial; un tipo raro no pasa', () => {
+  const r = validarEnvioLead({ ...OK, tipo: 'repregunta' })
+  assert.equal(r.ok && r.valor.tipo, 'repregunta')
+  const p = validarEnvioLead(OK)
+  assert.equal(p.ok && p.valor.tipo, 'peticion')
+  assert.equal(validarEnvioLead({ ...OK, tipo: 'propuesta' }).ok, false)
+  assert.equal(estadoHiloTrasEnvio('repregunta'), 'incompleta')
+  assert.equal(estadoHiloTrasEnvio('peticion'), 'pedida')
+  assert.match(textoHistorialEnvioLead('Re: x', 'agente:telegram-1', 'repregunta'), /^Repregunta/)
 })
 
 test('🪤 una oportunidad que no es del cliente no escribe fila: el hilo NO se da por registrado', () => {

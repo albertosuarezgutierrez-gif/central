@@ -11,6 +11,7 @@
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
 import { esCorreoAutomatico } from './lead-correduria.ts'
+import { ADJ_PRESUPUESTO_PASADA, adjuntosDeRespuestaLead, type AdjuntoCorreo } from './lead-correduria-adjuntos.ts'
 
 export interface CorreoNuevo {
   uid: number
@@ -42,6 +43,14 @@ export interface CorreoNuevo {
   referencias?: string[]
   /** Lista, autorespuesta o envío masivo (`List-Unsubscribe`, `Auto-Submitted`, `Precedence`): nunca un lead. */
   automatico?: boolean
+  /**
+   * Fotos y PDF de lo que PUEDE ser la respuesta de un lead en su hilo (19/10/2026, F2): solo si es respuesta, iba a un
+   * buzón de la correduría y no es automático; con topes (`lead-correduria-adjuntos.ts`). Si el hilo no casa, se
+   * descartan en memoria. Nunca a la IA ni a Telegram: asegura los guarda cifrados.
+   */
+  adjuntosLead?: AdjuntoCorreo[]
+  /** Documentos válidos que se quedaron fuera por tope (se dice en el aviso; no es «no mandó nada»). */
+  adjuntosLeadOmitidos?: number
 }
 
 const RE_DIRECCION = /[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
@@ -125,6 +134,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         : { uid: `${lastUid + 1}:*` }
 
       const out: CorreoNuevo[] = []
+      const presupuestoAdjuntos = { bytes: ADJ_PRESUPUESTO_PASADA }
       for await (const msg of client.fetch(busqueda, { uid: true, labels: true, source: true })) {
         // Con `uid:'N:*'` IMAP puede devolver el propio N si no hay nada nuevo: filtrar.
         if (!reset && lastUid > 0 && msg.uid <= lastUid) continue
@@ -133,6 +143,10 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
         const from = (parsed.from?.value?.[0]?.address || '').toLowerCase()
         const subject = parsed.subject || ''
         const cuerpo = (parsed.text || '').replace(/\s+/g, ' ').trim()
+        const destinatarios = destinatariosDe(parsed.headerLines)
+        const referencias = referenciasDe(parsed.inReplyTo, parsed.references)
+        const automatico = esCorreoAutomatico(parsed.headerLines)
+        const adjLead = adjuntosDeRespuestaLead({ referencias, destinatarios, automatico }, parsed.attachments, presupuestoAdjuntos)
         out.push({
           uid: msg.uid,
           messageId: parsed.messageId || `no-id:${uidValidity}:${msg.uid}`,
@@ -144,9 +158,10 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           extracto: `${subject}\n${cuerpo}`.slice(0, EXTRACTO_MAX),
           texto: (parsed.text || '').slice(0, TEXTO_MAX),
           pdfs: pdfsDe(from, parsed.attachments),
-          destinatarios: destinatariosDe(parsed.headerLines),
-          referencias: referenciasDe(parsed.inReplyTo, parsed.references),
-          automatico: esCorreoAutomatico(parsed.headerLines),
+          destinatarios,
+          referencias,
+          automatico,
+          ...(adjLead ? { adjuntosLead: adjLead.adjuntos, adjuntosLeadOmitidos: adjLead.omitidos } : {}),
         })
         if (out.length >= max) break
       }

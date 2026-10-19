@@ -1,7 +1,8 @@
 // lib/correo/lead-correduria-proceso.ts — qué HACE el triaje con un `correduria-lead` (con red).
 //
 // Las reglas viven en `lead-correduria.ts` (puro, con test); aquí solo se encadenan:
-//   1. ¿respuesta en el hilo de un lead que ya registramos? → SOLO historial en su ficha y aviso.
+//   1. ¿respuesta en el hilo de un lead que ya registramos? → F2: se LEE y se propone la repregunta de lo que falta
+//      (`lead-correduria-respuesta-proceso.ts`); si no casa con un único hilo, SOLO historial en su ficha y aviso.
 //   2. Si no: la IA lee el correo (`llamarIA`), `normalizarLeadCorreo` valida contra el texto, y el
 //      alta va por el MISMO puerto que el formulario web (`altaClienteAsegura`), solo con `es_lead:true`:
 //      ficha nueva, o la que ya tenía el email del REMITENTE (no se fuerza duplicado: se anota el contacto).
@@ -27,6 +28,7 @@ import { urlFichaCliente } from '@/lib/leads-web'
 import { llamarIA } from './clasificador'
 import type { CorreoNuevo } from './imap'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
+import { notaSinLeer, procesarRespuestaLead } from './lead-correduria-respuesta-proceso'
 import {
   ACTOR_TRIAJE_CORREO, PROMPT_EXTRAER_LEAD, conocidosDelLead, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
   motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, resolverAltaLeadCorreo, textoAvisoLeadCorreo,
@@ -81,18 +83,23 @@ function leerOportunidad(status: number, json: unknown): Pick<OportunidadLeadCor
 export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()): Promise<{ avisado: boolean; ficha: FichaLeadCorreo['estado'] | null }> {
   try {
     const respuesta = await esRespuestaDeLeadBD(correo.referencias)
-    const lead = await extraer(correo)
 
     if (respuesta) {
-      // Un hilo = un lead: la respuesta NO da de alta ni abre oportunidad; solo se anota en su ficha.
-      // La ficha se busca por el FROM, nunca por un email escrito en el cuerpo.
+      // F2 (19/10/2026): la respuesta casada con SU hilo se LEE (datos al riesgo sin pisar, adjuntos cifrados) y se
+      // propone la repregunta de lo que falta (`lead-correduria-respuesta-proceso.ts`). Si no casa con un único hilo,
+      // como antes: un hilo = un lead, NO da de alta ni abre oportunidad; solo se anota en su ficha y se dice por qué
+      // no se ha leído. La ficha se busca por el FROM, nunca por un email escrito en el cuerpo.
+      const leida = await procesarRespuestaLead(correo, ahora)
+      if (leida.leida) return { avisado: leida.avisado, ficha: 'existente' }
+      const lead = await extraer(correo)
       const f = await fichaPorEmail(lead.emailRemitente)
       const ficha: FichaLeadCorreo = f
         ? { estado: 'existente', id: f.id, nombre: f.nombre, url: urlFichaCliente(f.id), historial: await anotar(f.id, textoHistorialLeadCorreo(lead, correo.subject, true)) }
         : { estado: 'no_registrado', motivo: 'no encuentro una única ficha con el email del remitente: anótalo a mano' }
-      const enviado = await tgAviso('correduria.lead-correo', textoAvisoLeadCorreo({ remitente: correo.fromRaw, asunto: correo.subject, lead, ficha, oportunidades: [], plantilla: null, respuesta: true }))
+      const enviado = await tgAviso('correduria.lead-correo', `${textoAvisoLeadCorreo({ remitente: correo.fromRaw, asunto: correo.subject, lead, ficha, oportunidades: [], plantilla: null, respuesta: true })}\n${notaSinLeer(leida.motivo)}`)
       return { avisado: enviado !== null, ficha: ficha.estado }
     }
+    const lead = await extraer(correo)
 
     let ficha: FichaLeadCorreo
     const sinAlta = motivoSinAlta(lead)

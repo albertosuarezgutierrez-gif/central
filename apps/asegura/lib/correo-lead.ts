@@ -21,7 +21,7 @@ import { prismaAsegura } from './asegura-db'
 import { prisma as prismaTenant } from './tenant'
 import { Prisma as PrismaTenant } from '@prisma/client'
 
-import { TIPO_CORREO_PETICION_LEAD, anotarHistorialTrasEnvio, estadoRegistroHilo, textoHistorialEnvioLead, type EnvioLead } from './correo-lead-puro'
+import { TIPO_CORREO_PETICION_LEAD, anotarHistorialTrasEnvio, estadoHiloTrasEnvio, estadoRegistroHilo, textoHistorialEnvioLead, type EnvioLead } from './correo-lead-puro'
 export { TIPO_CORREO_PETICION_LEAD, validarEnvioLead, type EnvioLead } from './correo-lead-puro'
 
 export type ResultadoEnvioLead =
@@ -58,7 +58,7 @@ export async function enviarPeticionLead(correduriaId: string, e: EnvioLead): Pr
   if (anotar) try {
     await db.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-      values (${correduriaId}::uuid, ${e.clienteId}::uuid, cast('contacto' as tipo_historial_interno), ${textoHistorialEnvioLead(e.asunto, e.actor)})`)
+      values (${correduriaId}::uuid, ${e.clienteId}::uuid, cast('contacto' as tipo_historial_interno), ${textoHistorialEnvioLead(e.asunto, e.actor, e.tipo)})`)
     historial = true
   } catch (err) {
     console.error('[correo-lead] historial no anotado:', err instanceof Error ? err.name : 'error')
@@ -72,18 +72,20 @@ async function registrarHilo(correduriaId: string, e: EnvioLead, emailCiego: str
   const raiz = e.enRespuestaA.references[0] ?? e.enRespuestaA.messageId
   const ids = [...new Set([...e.enRespuestaA.references, e.enRespuestaA.messageId])]
   const ops: (string | null)[] = e.oportunidadIds.length ? e.oportunidadIds : [null]
+  const estado = estadoHiloTrasEnvio(e.tipo)
   const filas: number[] = []
   try {
     for (const op of ops) {
       filas.push(await prismaTenant.$executeRaw(PrismaTenant.sql`
         insert into seguros.correduria_hilo as h
           (correduria_id, oportunidad_id, cliente_id, message_id_raiz, message_ids, email_cliente_ciego, estado_datos, ultima_peticion_at)
-        select ${correduriaId}::uuid, ${op}::uuid, ${e.clienteId}::uuid, ${raiz}, ${ids}::text[], ${emailCiego}, 'pedida', now()
+        select ${correduriaId}::uuid, ${op}::uuid, ${e.clienteId}::uuid, ${raiz}, ${ids}::text[], ${emailCiego}, ${estado}, now()
         where ${op}::uuid is null or exists (
           select 1 from seguros.oportunidades o where o.id = ${op}::uuid and o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${e.clienteId}::uuid)
         on conflict (correduria_id, cliente_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)))
         do update set message_ids = array(select distinct unnest(h.message_ids || excluded.message_ids)),
-                      estado_datos = 'pedida', ultima_peticion_at = now()`))
+                      estado_datos = case when h.estado_datos in ('tarificando', 'tarificada') then h.estado_datos else excluded.estado_datos end,
+                      ultima_peticion_at = now()`))
     }
     return estadoRegistroHilo(filas)
   } catch (err) {
