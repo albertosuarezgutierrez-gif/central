@@ -52,6 +52,8 @@ model empleados {
   categoria         String?
   grupo_cotizacion  String?
   tipo_jornada      String?
+  coche             String?
+  matricula         String?
   fecha_alta        DateTime? @db.Date
   fecha_reconocimiento_medico DateTime? @db.Date
   estado            String    @default("activo")
