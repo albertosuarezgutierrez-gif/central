@@ -9,6 +9,7 @@
 
 import type { BrowserContext, Dialog, Frame, Locator, Page, Request } from 'playwright'
 import { ErrorTarificador } from './errores.ts'
+import { indicesCompaniaActual } from './compania-actual.ts'
 import { MEDIADOR_GENERALI, opcionMediadorGenerali } from './adapters/generali/reglas.ts'
 import {
   EmisionBloqueadaError,
@@ -2027,33 +2028,19 @@ export type ResultadoCompaniaActualTurismos =
   /** `buscada` no casa con ninguna opción: se cerró sin elegir. */
   | { estado: 'no_casa'; opciones: string[] }
   /** `buscada` casa con VARIAS: nunca se adivina; se cerró sin elegir. */
-  | { estado: 'ambigua'; opciones: string[]; coincidencias: number }
+  | { estado: 'ambigua'; opciones: string[]; coincidencias: number; candidatas: string[] }
   /** El portal ya enseña un valor: no se toca. */
   | { estado: 'con_valor'; opciones: string[] }
   /** Control ausente/repetido, panel que no abre o elección que no quedó. */
   | { estado: 'no_unica'; opciones: string[]; motivo: string }
 
-const PALABRAS_VACIAS_COMPANIA = new Set(['sa', 'sau', 'seguros', 'seguro', 'reaseguros', 'compania', 'cia', 'de', 'y', 'sociedad', 'anonima', 'grupo', 'the'])
-/** Nombre de aseguradora normalizado (sin tildes, puntuación, forma jurídica ni «seguros»). Puro. */
-export function normalizarCompaniaTurismos(t: string | null | undefined): string {
-  return planoOpcion(t).replace(/\bs\s*\.\s*a\s*\.?(\s*u\s*\.?)?(?=[\s,]|$)/g, ' ').replace(/[^a-z0-9ñ ]+/g, ' ').split(' ').filter((w) => w !== '' && !PALABRAS_VACIAS_COMPANIA.has(w)).join(' ')
-}
-/** ¿`clave` aparece en `opcion` como secuencia de palabras completas? (ambas ya normalizadas). Puro. */
-function contienePalabras(opcion: string, clave: string): boolean {
-  return clave !== '' && (` ${opcion} `).includes(` ${clave} `)
-}
 /**
  * Índices de las opciones que casan con `buscada` (v0.6.9). Primero por clave normalizada IGUAL; si ninguna, por CONTENCIÓN de la clave
  * de la ficha en la de la opción (palabras completas: «DIVINA PASTORA» en «DIVINA PASTORA SEGUROS GENERALES, M.P.S.»). Quien llama solo
  * elige si devuelve EXACTAMENTE un índice; 0 o varios → no se elige. Vacía si `buscada` normaliza a nada. Puro.
  */
 export function casarCompaniaActualTurismos(opciones: readonly string[], buscada: string): number[] {
-  const b = normalizarCompaniaTurismos(buscada)
-  if (b === '') return []
-  const claves = opciones.map(normalizarCompaniaTurismos)
-  const iguales = claves.flatMap((o, i) => (o === b ? [i] : []))
-  if (iguales.length > 0) return iguales
-  return claves.flatMap((o, i) => (contienePalabras(o, b) ? [i] : []))
+  return indicesCompaniaActual(opciones, buscada)
 }
 
 /**
@@ -2104,7 +2091,7 @@ export async function companiaActualTurismosAllianz(marco: Frame, guard: GuardEm
   const hits = casarCompaniaActualTurismos(opciones, buscada)
   if (hits.length !== 1) {
     await cerrar()
-    return hits.length === 0 ? { estado: 'no_casa', opciones } : { estado: 'ambigua', opciones, coincidencias: hits.length }
+    return hits.length === 0 ? { estado: 'no_casa', opciones } : { estado: 'ambigua', opciones, coincidencias: hits.length, candidatas: hits.map((i) => opciones[i]) }
   }
   const item = items.nth(hits[0])
   comprobarBoton(await descripcion(item))
