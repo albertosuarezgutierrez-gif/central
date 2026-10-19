@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-19T12:28:45Z",
+  "generadoEn": "2026-10-19T13:56:40Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -989,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 268
+        "evidencias": 275
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 209
+        "evidencias": 217
       },
       "rrhh": {
         "estado": "no",
@@ -2257,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 61
+        "evidencias": 63
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 61
+        "evidencias": 63
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 21
+        "evidencias": 27
       },
       "rrhh": {
         "estado": "no",
@@ -4142,8 +4142,10 @@
       "/api/operador/correo/evento",
       "/api/operador/correo/evento/reevaluar",
       "/api/operador/correo/lead",
+      "/api/operador/correo/propuesta-lead",
       "/api/operador/correo/resolver",
       "/api/operador/correo/respuesta-lead",
+      "/api/operador/correo/seguimiento-lead",
       "/api/operador/correo/tarificar-lead",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
@@ -6120,6 +6122,9 @@
       "correduria_asistente_regla",
       "correduria_asistente_tarificacion",
       "correduria_asistente_turno",
+      "correduria_auto_config",
+      "correduria_auto_envios",
+      "correduria_auto_historial",
       "correduria_avisos_renovacion",
       "correduria_bots_propuesta",
       "correduria_dni_otp",
@@ -6945,7 +6950,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1732,
+    "apis": 1734,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
