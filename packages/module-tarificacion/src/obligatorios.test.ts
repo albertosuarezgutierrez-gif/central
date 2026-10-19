@@ -161,6 +161,18 @@ describe('obligatorios · propios de cada portal', () => {
     }
   })
 
+  // 19/10/2026: el DNI/NIE y el nacimiento del tomador de HOGAR son de la ficha (no cruzan el puerto): sin ficha no se miran, con ella sí.
+  it('Hogar: tomador.documentoIdentidad y tomador.fechaNacimiento son de origen ficha (sinFicha no los pide; con ficha, sí)', () => {
+    const { tomador: _t, ...sinTomador } = hogar()
+    expect(faltanParaTarificar('allianz', 'hogar', sinTomador, { sinFicha: true })).toEqual([])
+    expect(faltanParaTarificar('allianz', 'hogar', sinTomador)!.map((f) => f.clave)).toEqual(['tomador.documentoIdentidad', 'tomador.fechaNacimiento'])
+    expect(faltanParaTarificar('allianz', 'hogar', hogar())).toEqual([])
+    // Lo que NO es de la ficha sigue faltando sin ficha: año, m², uso, régimen, tipo y madera.
+    for (const clave of ['inmueble.anioConstruccion', 'inmueble.superficieM2', 'hogar.uso', 'hogar.regimen', 'hogar.tipoVivienda', 'hogar.conMadera']) {
+      expect(faltanParaTarificar('allianz', 'hogar', sinRuta(sinTomador, clave), { sinFicha: true })!.map((f) => f.clave), clave).toEqual([clave])
+    }
+  })
+
   // 18/10/2026 (Alberto): Generali no saca el vehículo por matrícula; lo pone asegura desde el ok de Allianz/Mapfre de la oportunidad.
   it('Generali auto: sin vehículo confirmado falta (salvo en espera); vale seleccionVehiculo o la denominación de Mapfre', () => {
     const { seleccionVehiculo: _sv, ...sinVehiculo } = coche()

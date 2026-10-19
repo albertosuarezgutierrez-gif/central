@@ -1,7 +1,7 @@
 // Lectura (solo SELECT) de un trabajo del tarificador RPA para el puerto de operador. Todo por
 // `correduria_id`. La proyección pública vive en `tarificador-lectura-reglas.ts`.
 import { prisma } from './tenant'
-import { RAMOS_TARIFICABLES_RPA } from './tarificador-reglas'
+import { COMPANIAS_HOGAR_RPA, RAMOS_TARIFICABLES_RPA } from './tarificador-reglas'
 import { documentoDePdf, primeroReutilizable, proyectarTrabajo, proyectarUltimoRiesgo, type TrabajoLectura, type UltimoRiesgo } from './tarificador-lectura-reglas'
 
 /** Cuántos trabajos recientes se miran para encontrar uno cuyo riesgo no esté purgado (plantillas). */
@@ -60,13 +60,15 @@ export type IntegracionActiva = { compania: string; ramo: string }
 
 /**
  * Compañía+ramo que el bot PUEDE tarificar hoy: fila activa en `rpa_autorizada` (mismo cerrojo que `encolarTrabajo`) Y de un
- * ramo con adaptador (`RAMOS_TARIFICABLES_RPA`): la fila `allianz/hogar` solo habilita la EXPLORACIÓN. Solo SELECT.
+ * ramo con adaptador (`RAMOS_TARIFICABLES_RPA`); Hogar (19/10/2026) solo de las compañías de `COMPANIAS_HOGAR_RPA` (la fila
+ * `mapfre/hogar` u `occident/hogar` solo habilita la EXPLORACIÓN). Solo SELECT.
  */
 export async function leerIntegracionesActivas(correduriaId: string): Promise<IntegracionActiva[]> {
   return prisma.$queryRaw<IntegracionActiva[]>`
     select compania, ramo from seguros.companias_integracion
     where correduria_id = ${correduriaId}::uuid and activo and modo = 'rpa_autorizada'
       and ramo = any(${[...RAMOS_TARIFICABLES_RPA]}::text[])
+      and (ramo <> 'hogar' or compania = any(${[...COMPANIAS_HOGAR_RPA]}::text[]))
     order by compania, ramo`
 }
 

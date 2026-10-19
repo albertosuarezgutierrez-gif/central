@@ -1,6 +1,6 @@
 // Formulario canónico de Hogar (14/10/2026): uso/régimen/tipo explícitos, año y m² obligatorios, errores sin valores.
 import { describe, it, expect } from 'vitest'
-import { fechaDdMmAaaaDeIso, validarFormularioHogar } from './formulario-hogar.ts'
+import { fechaDdMmAaaaDeIso, validarFormularioHogar, validarFormularioHogarSinTomador } from './formulario-hogar.ts'
 
 const HOY = new Date('2026-10-14T10:00:00Z')
 // DNI SINTÉTICO con letra de control válida (00000000T): no es de nadie.
@@ -88,5 +88,45 @@ describe('fechaDdMmAaaaDeIso', () => {
     expect(fechaDdMmAaaaDeIso('1980-01-15')).toBe('15/01/1980')
     expect(fechaDdMmAaaaDeIso('1980-02-31')).toBeNull()
     expect(fechaDdMmAaaaDeIso('15/01/1980')).toBeNull()
+  })
+})
+
+// 19/10/2026: el DNI y el nacimiento del tomador no cruzan el puerto; asegura los pone desde la ficha al entregar el trabajo.
+describe('validarFormularioHogarSinTomador', () => {
+  it('acepta el formulario SIN tomador y no devuelve ninguno (aunque venga uno: se descarta, no se guarda)', () => {
+    const { tomador: _t, ...sin } = base()
+    const v = validarFormularioHogarSinTomador(sin, HOY)
+    expect(v.ok).toBe(true)
+    if (!v.ok) return
+    expect('tomador' in v.formulario).toBe(false)
+    expect(v.formulario.hogar.conMadera).toBe(false)
+    const conTomador = validarFormularioHogarSinTomador(base(), HOY)
+    expect(conTomador.ok && 'tomador' in conTomador.formulario).toBe(false)
+    // Un tomador roto no hace fallar: ni se mira ni se nombra.
+    const roto = validarFormularioHogarSinTomador({ ...sin, tomador: { documentoIdentidad: 'x' } }, HOY)
+    expect(roto.ok).toBe(true)
+  })
+
+  it('lo demás se exige igual: uso, régimen, tipo, madera, año y m² (los errores no nombran al tomador)', () => {
+    const { tomador: _t, ...sin } = base()
+    for (const campo of ['uso', 'regimen', 'tipoVivienda', 'conMadera']) {
+      const malo = structuredClone(sin)
+      delete (malo.hogar as Record<string, unknown>)[campo]
+      const v = validarFormularioHogarSinTomador(malo, HOY)
+      expect(v.ok, campo).toBe(false)
+      if (!v.ok) expect(v.errores.some((e) => e.startsWith(`hogar.${campo}`)), campo).toBe(true)
+    }
+    for (const campo of ['anioConstruccion', 'superficieM2']) {
+      const malo = structuredClone(sin)
+      delete (malo.inmueble as Record<string, unknown>)[campo]
+      const v = validarFormularioHogarSinTomador(malo, HOY)
+      expect(v.ok, campo).toBe(false)
+      if (!v.ok) expect(v.errores.every((e) => !e.startsWith('tomador')), campo).toBe(true)
+    }
+  })
+
+  it('el validador completo sigue exigiendo el tomador', () => {
+    const { tomador: _t, ...sin } = base()
+    expect(errores(sin).some((e) => e.startsWith('tomador: obligatorio'))).toBe(true)
   })
 })

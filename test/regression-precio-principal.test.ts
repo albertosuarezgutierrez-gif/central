@@ -109,7 +109,8 @@ test('salud y decesos: los asegurados adicionales se precargan del riesgo', () =
 
 test('hogar: cambiar el código postal suelta el municipio del catálogo (era de otro CP)', () => {
   const d = activas(leer(DIR + 'DatosRiesgo.tsx'))
-  assert.match(d, /onChange=\{k === 'cp' \? alCambiarCp : E\.set\(k\)\}/)
+  // 19/10/2026: el cambio también retira el «sugerido por el Catastro» del campo; el CP sigue yendo por `alCambiarCp`.
+  assert.match(d, /if \(k === 'cp'\) alCambiarCp\(ev\); else E\.set\(k\)\(ev\)/)
   const f = d.slice(d.indexOf('function alCambiarCp'), d.indexOf('const aviso = textoFaltanVivienda'))
   assert.match(f, /municipioId: igualAlGuardado && d\.municipioId != null \? String\(d\.municipioId\) : ''/)
   assert.match(f, /setMunicipios\(null\)/)

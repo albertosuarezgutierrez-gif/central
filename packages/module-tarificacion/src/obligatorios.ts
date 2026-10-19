@@ -80,10 +80,15 @@ const BASE_MOTO: readonly CampoObligatorio[] = [
   campo('seleccionVehiculo.cilindradaCc', 'cilindrada de la moto (cc)'),
 ]
 
-/** `validarFormularioHogar`: tomador, situación, construcción y las cuatro elecciones sin valor por defecto. */
+/**
+ * `validarFormularioHogar`: tomador, situación, construcción y las cuatro elecciones sin valor por defecto.
+ * El DNI/NIE y la fecha de nacimiento del tomador son de origen FICHA (19/10/2026): no cruzan el puerto plataforma → asegura;
+ * asegura los lee de la ficha, comprueba que los tiene legibles y válidos al encolar y los inyecta en `tomador` al ENTREGAR el
+ * trabajo (`tarificador-tomador-hogar.ts`). Sin ficha (`sinFicha`) no se miran; con ella aplicada, sí.
+ */
 const BASE_HOGAR: readonly CampoObligatorio[] = [
-  campo('tomador.documentoIdentidad', 'DNI/NIE del tomador'),
-  campo('tomador.fechaNacimiento', 'fecha de nacimiento del tomador'),
+  campo('tomador.documentoIdentidad', 'DNI/NIE del tomador', { origen: 'ficha' }),
+  campo('tomador.fechaNacimiento', 'fecha de nacimiento del tomador', { origen: 'ficha' }),
   campo('inmueble.codigoPostal', 'código postal de la vivienda'),
   campo('inmueble.nombreVia', 'calle de la vivienda'),
   campo('inmueble.numero', 'número de la calle'),

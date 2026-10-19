@@ -48,6 +48,67 @@ export function etiquetaIdHogar(campo: CampoIdHogar, id: unknown): string | null
   return Object.hasOwn(m, id) ? m[id] : null
 }
 
+// ─── Claves CANÓNICAS del formulario de Hogar desde el catálogo de Codeoscopic (19/10/2026) ───────────────────────────────
+//
+// El bot de Allianz Hogar (`FormularioHogar`) usa claves en español (`habitual`, `propietario`, `piso`…), no los ids de Codeoscopic
+// que guarda `datosVivienda`. La traducción es CERRADA y EXACTA, por dos vías y nada más:
+//   1. el id atestiguado en el repo (`ETIQUETAS_ID_HOGAR`: MainResidence, Owner, Tenant, MiddleFloor);
+//   2. el NOMBRE en español de esa opción en el catálogo vivo (`GET /home/<catálogo>`), igual a una de las frases de la tabla
+//      tras quitar mayúsculas, tildes y signos. Una frase parecida pero distinta NO casa.
+// 🚨 Sin suponer: lo que no casa exactamente es `null` («sin dato») y lo elige una persona. Los ids de «segunda residencia»,
+//    «alquiler», «turístico» y de los demás tipos de vivienda NO están atestiguados en el repo: por eso se casan por su nombre y
+//    no por un id escrito de memoria. Añadir una frase = haberla visto en el catálogo vivo.
+
+/** Los tres campos de `datosVivienda` que el bot de Hogar traduce. `uso` = `ocupacion`; `regimen` = `uso` (ojo: Codeoscopic los cruza). */
+export type CampoCanonicoHogar = 'uso' | 'regimen' | 'tipoVivienda'
+
+const sinSignos = (s: string): string =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+const FRASES_CANONICAS: Readonly<Record<CampoCanonicoHogar, Readonly<Record<string, readonly string[]>>>> = Object.freeze({
+  uso: Object.freeze({
+    habitual: ['vivienda habitual', 'habitual', 'residencia habitual'],
+    secundaria: ['vivienda secundaria', 'secundaria', 'segunda residencia', 'segunda vivienda', 'residencia secundaria'],
+    alquiler: ['alquiler', 'vivienda en alquiler', 'vivienda alquilada', 'alquilada', 'en alquiler'],
+    turistico: ['turistico', 'vivienda turistica', 'uso turistico', 'turistico o vacacional', 'vivienda de uso turistico', 'alquiler turistico', 'vivienda vacacional'],
+  }),
+  regimen: Object.freeze({
+    propietario: ['propietario', 'propietaria'],
+    inquilino: ['inquilino', 'inquilina', 'arrendatario', 'arrendataria'],
+  }),
+  tipoVivienda: Object.freeze({
+    piso: ['piso', 'piso intermedio'],
+    planta_baja: ['planta baja', 'piso planta baja', 'piso en planta baja'],
+    atico: ['atico', 'piso atico'],
+    adosada: ['adosada', 'vivienda adosada', 'casa adosada', 'chalet adosado', 'adosado'],
+    independiente: ['independiente', 'vivienda independiente', 'casa independiente', 'chalet independiente'],
+  }),
+})
+
+/** id atestiguado → clave canónica (la misma lista cerrada que `ETIQUETAS_ID_HOGAR`). */
+const CLAVE_DE_ID: Readonly<Record<CampoCanonicoHogar, Readonly<Record<string, string>>>> = Object.freeze({
+  uso: Object.freeze({ MainResidence: 'habitual' }),
+  regimen: Object.freeze({ Owner: 'propietario', Tenant: 'inquilino' }),
+  tipoVivienda: Object.freeze({ MiddleFloor: 'piso' }),
+})
+
+/**
+ * Clave canónica de Hogar para un valor de `datosVivienda`, o `null` si no casa EXACTAMENTE (ni por id atestiguado ni por el
+ * nombre del catálogo). `nombre` = el texto de esa opción en el catálogo vivo (opcional: sin él solo vale el id). Si el id y el
+ * nombre dicen cosas distintas, `null` (hay algo raro: lo decide una persona). Nunca un valor por defecto. PURA.
+ */
+export function claveHogarDeCatalogo(campo: CampoCanonicoHogar, id: unknown, nombre?: unknown): string | null {
+  const porId = typeof id === 'string' && Object.hasOwn(CLAVE_DE_ID[campo], id.trim()) ? CLAVE_DE_ID[campo][id.trim()] : null
+  let porNombre: string | null = null
+  if (typeof nombre === 'string' && sinSignos(nombre) !== '') {
+    const n = sinSignos(nombre)
+    const hallados = Object.entries(FRASES_CANONICAS[campo]).filter(([, frases]) => frases.includes(n)).map(([clave]) => clave)
+    porNombre = hallados.length === 1 ? hallados[0]! : null
+  }
+  if (porId !== null && porNombre !== null && porId !== porNombre) return null
+  return porId ?? porNombre
+}
+
 /** Tipo de vía solo si ya es una palabra («Calle», «Avenida»): un código numérico de catálogo no lo es. */
 const RE_TIPO_VIA = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ. ]{2,30}$/
 

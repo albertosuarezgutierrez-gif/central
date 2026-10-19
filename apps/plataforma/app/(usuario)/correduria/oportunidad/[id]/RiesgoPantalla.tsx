@@ -23,6 +23,7 @@ import OfertasOportunidad from './OfertasOportunidad'
 import PasarOportunidad from './PasarOportunidad'
 import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import BotsAutoRiesgo from './BotsAutoRiesgo'
+import BotsHogarRiesgo from './BotsHogarRiesgo'
 import { AnfitrionBotsContext } from '../../cliente/[id]/PrecioBots'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
@@ -230,6 +231,8 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
             </div>
             {/* Bots RPA (gratis) con entrada propia: no dependen de Avant2 (ni de su precalificación) ni de abrir el cotizador. */}
             {op.ramo === 'auto' && <BotsAutoRiesgo riesgo={riesgo} />}
+            {/* Hogar (19/10/2026): Allianz Hogar en exploración, con los datos de la vivienda y el Catastro; uso/régimen/tipo/madera, a elegir. */}
+            {op.ramo === 'hogar' && <BotsHogarRiesgo riesgo={riesgo} />}
             {CotizadorEmbebido && cotizadorAbierto && (
               <div id="pedir-precio-cotizador" style={{ borderTop: '1px solid var(--border)', paddingTop: 10, minWidth: 0 }}>
                 <CotizadorEmbebido

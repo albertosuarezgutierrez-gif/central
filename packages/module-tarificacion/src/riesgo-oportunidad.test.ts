@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { completarInmuebleConCatastro, etiquetaIdHogar, faltanDatosCatastro, fechaDdMmAaaa, inmuebleUnicoCatastro, normPlantaCatastro, normPlantaPuerta, normPuertaCatastro, riesgoExploracionDeOportunidad } from './riesgo-oportunidad.ts'
+import { claveHogarDeCatalogo, completarInmuebleConCatastro, etiquetaIdHogar, faltanDatosCatastro, fechaDdMmAaaa, inmuebleUnicoCatastro, normPlantaCatastro, normPlantaPuerta, normPuertaCatastro, riesgoExploracionDeOportunidad } from './riesgo-oportunidad.ts'
 import { catalogoParaIA, resolverDato } from './explorador.ts'
 
 // Valores SINTÉTICOS obvios: ninguna persona ni dirección real.
@@ -193,5 +193,42 @@ describe('completarInmuebleConCatastro', () => {
     const r = completarInmuebleConCatastro(base, { anioConstruccion: null, metrosCuadrados: 0 })
     expect(r.anadidos).toEqual([])
     expect(completarInmuebleConCatastro(base, { anioConstruccion: 1200, metrosCuadrados: null }).anadidos).toEqual([])
+  })
+})
+
+// 19/10/2026: claves canónicas del bot de Hogar desde el catálogo de Codeoscopic. Exactas; lo que no casa es null (sin suponer).
+describe('claveHogarDeCatalogo', () => {
+  it('ids atestiguados → clave canónica (ojo: ocupacion = uso, uso = régimen)', () => {
+    expect(claveHogarDeCatalogo('uso', 'MainResidence')).toBe('habitual')
+    expect(claveHogarDeCatalogo('regimen', 'Owner')).toBe('propietario')
+    expect(claveHogarDeCatalogo('regimen', 'Tenant')).toBe('inquilino')
+    expect(claveHogarDeCatalogo('tipoVivienda', 'MiddleFloor')).toBe('piso')
+  })
+  it('por el NOMBRE exacto del catálogo (sin mayúsculas, tildes ni signos): secundaria, alquiler, turístico y tipos de vivienda', () => {
+    expect(claveHogarDeCatalogo('uso', 'XId', 'Segunda residencia')).toBe('secundaria')
+    expect(claveHogarDeCatalogo('uso', 'XId', 'VIVIENDA  SECUNDARIA.')).toBe('secundaria')
+    expect(claveHogarDeCatalogo('uso', 'XId', 'Alquiler')).toBe('alquiler')
+    expect(claveHogarDeCatalogo('uso', 'XId', 'Turístico o vacacional')).toBe('turistico')
+    expect(claveHogarDeCatalogo('uso', 'XId', 'Vivienda habitual')).toBe('habitual')
+    expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Ático')).toBe('atico')
+    expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Planta baja')).toBe('planta_baja')
+    expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Chalet adosado')).toBe('adosada')
+    expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Chalet independiente')).toBe('independiente')
+    expect(claveHogarDeCatalogo('regimen', 'XId', 'Inquilino')).toBe('inquilino')
+  })
+  it('no casa EXACTAMENTE → null: parecidos, ambiguos, id desconocido sin nombre, vacíos y tipos raros', () => {
+    expect(claveHogarDeCatalogo('uso', 'XId')).toBeNull()
+    expect(claveHogarDeCatalogo('uso', 'XId', 'Segunda residencia de verano')).toBeNull()
+    expect(claveHogarDeCatalogo('uso', 'XId', 'Deshabitada')).toBeNull()
+    expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Chalet')).toBeNull()
+    expect(claveHogarDeCatalogo('tipoVivienda', 'XId', 'Vivienda unifamiliar')).toBeNull()
+    expect(claveHogarDeCatalogo('regimen', 'XId', 'Usufructuario')).toBeNull()
+    for (const raro of [null, undefined, 3, {}, '']) expect(claveHogarDeCatalogo('uso', raro, raro)).toBeNull()
+    expect(claveHogarDeCatalogo('uso', '__proto__', 'constructor')).toBeNull()
+  })
+  it('id y nombre que se contradicen → null (lo decide una persona); si coinciden, vale', () => {
+    expect(claveHogarDeCatalogo('uso', 'MainResidence', 'Segunda residencia')).toBeNull()
+    expect(claveHogarDeCatalogo('uso', 'MainResidence', 'Vivienda habitual')).toBe('habitual')
+    expect(claveHogarDeCatalogo('tipoVivienda', 'MiddleFloor', 'Piso intermedio')).toBe('piso')
   })
 })

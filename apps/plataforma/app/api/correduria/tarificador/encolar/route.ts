@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { fichaAsegura } from '@/lib/ficha-asegura'
-import { encolarTarificacionComunidad, encolarTarificacionVehiculo, leerIntegracionesTarificador } from '@/lib/tarificador-asegura'
+import { encolarTarificacionComunidad, encolarTarificacionHogar, encolarTarificacionVehiculo, leerIntegracionesTarificador } from '@/lib/tarificador-asegura'
 import { poblacionDesdeFicha } from '@/lib/tarificador-asegura-reglas'
 import { CAMPOS_DE_FICHA, claveDeCompania, completarRiesgoVehiculoDesdeFicha, mensajeFaltanDeFicha, type CampoDeFicha } from '@/lib/tarificador-moto-formulario'
 import { leerIntegraciones } from '@/lib/tarificador-probar'
@@ -27,6 +27,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * `completarDesdeFicha` (opcional, moto o auto): lista de datos que el navegador no tiene (`codigoPostal`, `fechaNacimiento`,
  * `fechaCarne`) y que el servidor lee de la ficha; si la ficha no los tiene, 422 sin encolar ni gastar nada.
  *
+ * Hogar (19/10/2026): `ramo: 'hogar'` con el formulario de la vivienda sin tomador (solo Allianz; asegura lo rechaza en otras compañías).
+ *
  * Auto (coche, 14/10/2026, Mapfre NSEI): exactamente el patrón de moto (`ramo: 'auto'`, FormularioAuto de coche; carné B de
  * la ficha). El NIF del tomador no viaja: lo pone asegura desde la ficha al entregar el trabajo.
  */
@@ -43,10 +45,10 @@ export async function POST(req: Request) {
   if (!b.riesgo || typeof b.riesgo !== 'object' || Array.isArray(b.riesgo)) {
     return NextResponse.json({ estado: 'error', mensaje: 'falta el riesgo' }, { status: 400 })
   }
-  if (b.ramo !== undefined && b.ramo !== 'comunidades' && b.ramo !== 'moto' && b.ramo !== 'auto') {
-    return NextResponse.json({ estado: 'error', mensaje: 'ramo no soportado (comunidades, moto o auto)' }, { status: 400 })
+  if (b.ramo !== undefined && b.ramo !== 'comunidades' && b.ramo !== 'moto' && b.ramo !== 'auto' && b.ramo !== 'hogar') {
+    return NextResponse.json({ estado: 'error', mensaje: 'ramo no soportado (comunidades, moto, auto u hogar)' }, { status: 400 })
   }
-  const ramo = b.ramo === 'moto' || b.ramo === 'auto' ? b.ramo : 'comunidades'
+  const ramo = b.ramo === 'moto' || b.ramo === 'auto' || b.ramo === 'hogar' ? b.ramo : 'comunidades'
   const vehiculo = ramo === 'moto' || ramo === 'auto' ? ramo : null
   let compania: string | undefined
   if (b.compania !== undefined && b.compania !== null && b.compania !== '') {
@@ -84,7 +86,11 @@ export async function POST(req: Request) {
     const poblacion = f?.estado === 'ok' ? poblacionDesdeFicha(riesgo, f.ficha.contacto) : null
     if (poblacion) riesgo = { ...riesgo, poblacion }
   }
-  const r = vehiculo !== null
+  // Hogar (19/10/2026, Allianz): el riesgo es el formulario de la vivienda SIN tomador. El DNI/NIE y el nacimiento del tomador
+  // NO pasan por aquí: asegura los lee de la ficha, los comprueba al encolar y los inyecta al entregar el trabajo al bot.
+  const r = ramo === 'hogar'
+    ? await encolarTarificacionHogar(clienteId, oportunidadId, riesgo, compania)
+    : vehiculo !== null
     ? await encolarTarificacionVehiculo(vehiculo, clienteId, oportunidadId, riesgo, compania)
     : await encolarTarificacionComunidad(clienteId, oportunidadId, b.riesgo as Record<string, unknown>, compania)
   return NextResponse.json(r.json ?? { estado: 'error' }, { status: r.status })
