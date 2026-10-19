@@ -393,7 +393,7 @@ test('fuente: la petición de moto usa los mismos tramos que `peticion()` de est
     'garaje: garajeElegido.current ? garaje : null,',
   ]) assert.ok(moto.includes(linea), linea)
   // El bot de moto recibe los mismos estados.
-  assert.match(moto, /tieneSeguroActual,\s*aniosAsegurado,\s*aniosSinSiniestros,\s*siniestrosUltimos5,\s*\}\}/)
+  assert.match(moto, /tieneSeguroActual,\s*aniosAsegurado,\s*aniosSinSiniestros,\s*siniestrosUltimos5,\s*companiaAnterior: companiaActualParaBots\(\{[^\n]*codigo: companiaActualCodigo[^\n]*\}\),\s*\}\}/)
   // Y declara qué fue supuesto (solo moto nueva; asegura lo guarda en `tarificaciones.figuras.supuestos`).
   assert.match(moto, /supuestosPantalla: supuestosAlPedir\(viajan, \{/)
 })
