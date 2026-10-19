@@ -1,4 +1,4 @@
-// Generali · portal del corredor · TURISMOS (Ramo UV) — v0.1.1 (18/10/2026).
+// Generali · portal del corredor · TURISMOS (Ramo UV) — v0.2.0 (19/10/2026).
 // Registrado SOLO con `GENERALI_AUTO_ACTIVO` (abajo, ENCENDIDO el 18/10/2026 por Alberto) y, además, la puerta de BD de siempre: la
 // fila `seguros.companias_integracion` generali/auto activa y `rpa_autorizada` (NO se activa desde aquí).
 //
@@ -7,10 +7,12 @@
 //   3 menú NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES › TURISMOS (RAMO UV) → 4 «Valoración Riesgo › Datos de Valoración»
 //   (General: Mediador, Flota, F.Efectos, canal y subcanal; botón «Vehículo») → 5 «Selector de vehículos» (tipo, subtipo, marca)
 //   → 6 «Datos de Valoración» (Identificación del vehículo + Roles).
-// SIN CAPTURA (el bot llega hasta ahí y PARA con `ErrorMapaIncompletoGenerali` + inventario de estructura + HTML redactado, que
-// es el «modo exploración» del worker): lo que sale tras elegir la marca (modelo, versión y cómo se confirma), el campo de
-// verificación de la matrícula, el resto de «Datos de Valoración» (tomador, conductor, antecedentes) y «Garantías y
-// Resultados» (el PRECIO).
+// SIN CAPTURA (v0.2.0: el bot AVANZA todo lo que puede y, donde no sabe seguir, PARA con `ErrorMapaIncompletoGenerali` +
+// registro de la pantalla en el mensaje + inventario de estructura + HTML redactado, que es el «modo exploración» del worker):
+// lo que sale tras elegir la marca (modelo, versión y cómo se confirma), el resto de «Datos de Valoración» (tomador, conductor,
+// antecedentes: se recorre el scroll del panel, se registra y se rellena lo del mapa PROVISIONAL por etiqueta exacta) y
+// «Garantías y Resultados» (se pulsa por la compuerta del guard y se lee el PRECIO con un lector tolerante). La verificación
+// de la matrícula es OPCIONAL (la captura 6 solo tiene un campo).
 //
 // Reglas de Alberto (18/10/2026): matrícula «1234*BCD» también en su verificación (`matriculaGenerali`); el vehículo NO se
 // busca por matrícula: llega confirmado de Allianz/Mapfre de la misma oportunidad (asegura lo inyecta) y se casa en los
@@ -20,7 +22,8 @@
 // `requiere_humano` (verificacion.ts). El relevo del código por Telegram NO está hecho (ver docs/tarificador/CONOCIMIENTO-PORTALES.md).
 //
 // 🚨 SEGURIDAD. Este fichero no pulsa nada del menú ni del mediador: lo hacen `ctx.entrarTurismosGenerali` y
-// `ctx.confirmarMediadorGenerali` (guard.ts). Aquí solo `ctx.pulsar` («Iniciar sesión», «Vehículo») y campos tras `comprobarCampo`.
+// `ctx.confirmarMediadorGenerali` (guard.ts). Aquí solo `ctx.pulsar` («Iniciar sesión», «Vehículo»),
+// `ctx.pulsarSubpestanaGenerali` (lista blanca del guard) y campos tras `comprobarCampo`. Scroll y lectura de pantalla SOLO LEEN.
 // Nunca emitir, contratar, grabar póliza ni pagar. Datos personales (matrícula, credenciales) solo en su campo: nunca en mensajes.
 
 import type { Frame, Locator, Page } from 'playwright'
@@ -30,6 +33,7 @@ import {
   textoSupuestos,
   type CandidatoVersion,
   type FormularioAuto,
+  type OfertaNormalizada,
   type ResultadoAdaptador,
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
@@ -38,6 +42,12 @@ import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
 import {
   AVISO_MATRICULA_PROVINCIAL,
+  claveEtiquetaRiesgoGenerali,
+  decidirVerificacionMatricula,
+  leerPrecioGenerali,
+  resumenPantallaGenerali,
+  valorRiesgoGenerali,
+  type PantallaLeida,
   AVISO_SIMILITUD_GENERALI,
   ETIQUETAS_VALORACION,
   MEDIADOR_GENERALI,
@@ -66,8 +76,20 @@ import {
  */
 export const GENERALI_AUTO_ACTIVO = true
 
-/** 0.1.1 (18/10/2026): flag encendido; «conductor habitual: el tomador (supuesto)» común (`supuestoConductorTomador`). */
-export const VERSION_GENERALI_AUTO = '0.1.1'
+/**
+ * 0.1.1 (18/10/2026): flag encendido; «conductor habitual: el tomador (supuesto)» común (`supuestoConductorTomador`).
+ * 0.2.0 (19/10/2026): verificación de matrícula OPCIONAL (0 sigue · 1 rellena · >1 para; se vuelve a mirar tras salir del
+ * campo); selector de vehículos sin el desplegable esperado → hueco con los desplegables y opciones LEÍDOS; tras «Roles»,
+ * scroll del panel + registro de campos/botones + mapa provisional de tomador/conductor/antecedentes + «Garantías y
+ * Resultados» por la compuerta del guard + lector tolerante del precio (oferta) o hueco con el registro de esa pantalla.
+ */
+export const VERSION_GENERALI_AUTO = '0.2.0'
+/** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
+export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
+/** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
+const ESPERA_VERIFICACION_MS = 1_200
+/** Espera del precio tras pulsar la subpestaña. */
+const ESPERA_PRECIO_MS = 25_000
 
 export const URL_INICIO_GENERALI = 'https://www.generali.es/arq_genernetPortalFormWeb/CorredorInicio.po'
 export const ORIGEN_ACCESO_GENERALI = 'https://access.generali.es'
@@ -148,6 +170,157 @@ async function elegirIndice(sel: Locator, indice: number, ctx: ContextoPortal): 
   await comprobarCampo(sel)
   await sel.selectOption({ index: indice })
   await confirmarUso(sel)
+}
+
+// ───────────────────────── lectura de pantalla (v0.2.0: SOLO LEE; nunca pulsa ni escribe) ─────────────────────────
+// Los extractores van como TEXTO (no como función): tsx envuelve las funciones con nombre en `__name`, que no existe en la
+// página. Nunca sale el valor de un campo de texto (solo «vacío»/«con valor»); de un desplegable, el texto de la opción puesta
+// salvo en etiquetas que pueden llevar datos personales.
+
+const JS_COMUN = `
+  const T = (n) => (n ? (n.innerText || n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const VIS = (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility === 'visible';
+  const ETQ = (el) => {
+    if (el.labels && el.labels.length) {
+      const c = el.labels[0].cloneNode(true);
+      c.querySelectorAll('input,select,textarea').forEach((x) => x.remove());
+      const t = T(c);
+      if (t) return t;
+    }
+    const a = el.getAttribute('aria-label') || el.getAttribute('title');
+    if (a && a.trim()) return a.trim();
+    let c = el;
+    for (let i = 0; c && i < 4; i++) {
+      let p = c.previousElementSibling;
+      while (p) {
+        if (!p.matches('input,select,textarea,button')) {
+          const t = T(p);
+          if (t && t.length <= 80) return t;
+        }
+        p = p.previousElementSibling;
+      }
+      c = c.parentElement;
+    }
+    return el.getAttribute('name') || el.id || '';
+  };`
+
+/** Lee campos (etiqueta, tipo, obligatorio, valor), botones y avisos VISIBLES de un marco. */
+const JS_LEER_PANTALLA = `(() => {${JS_COMUN}
+  const TEXTO = ['text', 'password', 'email', 'tel', 'number', 'date', 'search', 'url', ''];
+  const PERSONAL = /mediador|nombre|apellido|nif|dni|documento|direcci|tel[eé]fono|correo|email|cuenta|iban|matr[ií]cula/i;
+  const campos = [];
+  for (const el of Array.from(document.querySelectorAll('input,select,textarea'))) {
+    const ta = (el.getAttribute('type') || '').toLowerCase();
+    if (el.tagName === 'INPUT' && ta === 'hidden') continue;
+    if (!VIS(el)) continue;
+    const etiqueta = ETQ(el).slice(0, 80);
+    const tag = el.tagName.toLowerCase();
+    let tipo = tag === 'input' ? (ta || 'text') : tag;
+    if (el.disabled || el.readOnly) tipo += ',ro';
+    const obligatorio = el.required === true || el.getAttribute('aria-required') === 'true' || /\\*\\s*$/.test(etiqueta);
+    let valor;
+    if (tag === 'select') {
+      const o = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+      const t = o ? T(o) : '';
+      valor = t === '' ? 'vacío' : PERSONAL.test(etiqueta) ? 'con valor' : t.slice(0, 40);
+    } else if (tag === 'input' && !TEXTO.includes(ta)) {
+      valor = el.checked === true ? 'marcado' : 'sin marcar';
+    } else {
+      valor = String(el.value || '').trim() === '' ? 'vacío' : 'con valor';
+    }
+    campos.push({ etiqueta, tipo, obligatorio, valor });
+    if (campos.length >= 150) break;
+  }
+  const botones = [];
+  for (const el of Array.from(document.querySelectorAll('button,input[type=button],input[type=submit],[role=button],[role=tab],a[onclick],li[onclick],td[onclick],span[onclick],div[onclick]'))) {
+    if (!VIS(el)) continue;
+    const t = (T(el) || el.value || el.getAttribute('aria-label') || el.getAttribute('title') || '').trim();
+    if (t && t.length <= 60 && !botones.includes(t)) botones.push(t);
+    if (botones.length >= 40) break;
+  }
+  const avisos = [];
+  for (const el of Array.from(document.querySelectorAll('[role=alert],[class*=error],[class*=Error],[class*=aviso],[class*=Aviso],[class*=alert],[class*=mensaje]'))) {
+    if (!VIS(el)) continue;
+    const t = T(el);
+    if (t.length >= 3 && t.length <= 160 && !avisos.includes(t)) avisos.push(t);
+    if (avisos.length >= 10) break;
+  }
+  return { campos, botones, avisos };
+})()`
+
+/** Desplegables visibles con su etiqueta y sus primeras opciones (para el hueco del selector de vehículos). */
+const JS_SELECTS = `(() => {${JS_COMUN}
+  return Array.from(document.querySelectorAll('select')).filter(VIS).slice(0, 12).map((s) => ({
+    etiqueta: ETQ(s).slice(0, 60),
+    opciones: Array.from(s.options).map((o) => T(o)).filter((t) => t !== '').slice(0, 20),
+    total: s.options.length,
+  }));
+})()`
+
+/** Un paso de scroll en TODOS los contenedores con scroll del marco (el formulario tiene el suyo). `true` = alguno bajó. */
+const JS_SCROLL = `(() => {
+  const els = Array.from(document.querySelectorAll('*')).filter((e) => {
+    const cs = getComputedStyle(e);
+    return /(auto|scroll)/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 10;
+  });
+  if (document.scrollingElement) els.push(document.scrollingElement);
+  let bajo = false;
+  for (const e of els) {
+    const antes = e.scrollTop;
+    e.scrollTop = antes + Math.max(200, Math.floor(e.clientHeight * 0.8));
+    if (e.scrollTop > antes) bajo = true;
+  }
+  return bajo;
+})()`
+
+/** Pantalla leída de un marco (vacía si el marco no se deja leer). */
+export async function leerPantalla(raiz: Raiz): Promise<PantallaLeida> {
+  const r = await raiz.evaluate(JS_LEER_PANTALLA).catch(() => null)
+  return (r as PantallaLeida | null) ?? { campos: [], botones: [], avisos: [] }
+}
+
+/** Pantalla leída de TODOS los marcos de la página (la vista tras la subpestaña puede estar en otro marco). */
+async function leerPantallaPagina(page: Page): Promise<PantallaLeida> {
+  const total: PantallaLeida = { campos: [], botones: [], avisos: [] }
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const p = await leerPantalla(f)
+    total.campos.push(...p.campos)
+    for (const b of p.botones) if (!total.botones.includes(b)) total.botones.push(b)
+    for (const a of p.avisos) if (!total.avisos.includes(a)) total.avisos.push(a)
+  }
+  return total
+}
+
+/**
+ * Recorre el scroll del formulario (contenedor propio, captura 6) hasta abajo, con pausas cortas por si pinta más campos al
+ * bajar. Solo desplaza: no pulsa ni escribe. Devuelve cuántos pasos bajó.
+ */
+export async function recorrerScroll(page: Page, raiz: Raiz, maxPasos = 15): Promise<number> {
+  let n = 0
+  for (; n < maxPasos; n++) {
+    const bajo = await raiz.evaluate(JS_SCROLL).catch(() => false)
+    if (!bajo) break
+    await page.waitForTimeout(250)
+  }
+  return n
+}
+
+/** «Etiqueta: op1 | op2 …» de los desplegables visibles del marco (catálogo, sin datos personales). */
+async function describirSelects(raiz: Raiz): Promise<string> {
+  const r = ((await raiz.evaluate(JS_SELECTS).catch(() => [])) as { etiqueta: string; opciones: string[]; total: number }[]) ?? []
+  if (r.length === 0) return 'ningún desplegable visible'
+  return r.map((s) => `«${s.etiqueta || '(sin etiqueta)'}» (${s.total}): ${s.opciones.join(' | ')}`).join(' ; ').slice(0, 1200)
+}
+
+/** Texto visible de todos los marcos (para el lector tolerante del precio). */
+async function textoPagina(page: Page): Promise<string> {
+  const partes: string[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    partes.push(await f.locator('body').innerText({ timeout: 2_000 }).catch(() => ''))
+  }
+  return partes.join('\n')
 }
 
 // ───────────────────────── 1 · login ─────────────────────────
@@ -273,18 +446,21 @@ export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form:
   const selector = await marcoConTexto(page, 'Selector de vehículos')
   if (!selector) throw new ErrorMapaIncompletoGenerali('la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5)')
   const marcas = await controlJuntoA(selector, 'Todas las marcas', 'select', ctx.formador)
-  if (!marcas || !(await esSelectNativo(marcas))) throw new ErrorMapaIncompletoGenerali('el desplegable «Todas las marcas» del selector (captura 5; ¿no es un <select> nativo?)')
+  if (!marcas || !(await esSelectNativo(marcas))) throw new ErrorMapaIncompletoGenerali(`el desplegable «Todas las marcas» del selector (captura 5; ¿no es un <select> nativo?). Desplegables vistos: ${await describirSelects(selector)}`)
   let similitud = await elegirNivel(marcas, 'marca', v, form, ctx)
   await page.waitForTimeout(1_500)
   const modelo = await selectPorEtiqueta(selector, /^\s*modelos?\s*:?\s*$/i)
-  if (!modelo) throw new ErrorMapaIncompletoGenerali('la pantalla del selector tras elegir la marca (modelo y versión): SIN CAPTURA')
+  if (!modelo) throw new ErrorMapaIncompletoGenerali(`la pantalla del selector tras elegir la marca (modelo y versión): SIN CAPTURA; no hay un desplegable «Modelo». Desplegables vistos: ${await describirSelects(selector)}`)
   similitud = (await elegirNivel(modelo, 'modelo', v, form, ctx)) || similitud
   await page.waitForTimeout(1_500)
   const version = await selectPorEtiqueta(selector, /^\s*versi[oó]n(es)?\s*:?\s*$/i)
-  if (!version) throw new ErrorMapaIncompletoGenerali('el desplegable de versión del selector tras elegir el modelo: SIN CAPTURA')
+  if (!version) throw new ErrorMapaIncompletoGenerali(`el desplegable de versión del selector tras elegir el modelo: SIN CAPTURA; no hay un desplegable «Versión». Desplegables vistos: ${await describirSelects(selector)}`)
   similitud = (await elegirNivel(version, 'version', v, form, ctx)) || similitud
   const valoracion = await marcoConTexto(page, 'Identificación del vehículo', 10_000)
-  if (!valoracion) throw new ErrorMapaIncompletoGenerali('cómo se confirma el vehículo elegido en el selector (sin captura del paso que lleva a «Identificación del vehículo»)')
+  if (!valoracion) {
+    const p = await leerPantalla(selector)
+    throw new ErrorMapaIncompletoGenerali(`cómo se confirma el vehículo elegido en el selector (sin captura del paso que lleva a «Identificación del vehículo»). Botones vistos: ${p.botones.join(' · ').slice(0, 600) || '(ninguno)'}`)
+  }
   return similitud
 }
 
@@ -301,15 +477,25 @@ export async function rellenarValoracionGenerali(page: Page, form: FormularioAut
   const campoMat = await controlJuntoA(marco, ETIQUETAS_VALORACION.matricula, 'input', ctx.formador)
   if (!campoMat) throw new ErrorMapaIncompletoGenerali(`el campo «${ETIQUETAS_VALORACION.matricula}» (captura 6)`)
   await escribir(campoMat, m.valor, ctx)
-  // Verificación (Alberto): un segundo campo que se rellena IGUAL. No sale en la captura 6: se busca por su etiqueta.
-  const textos = marco.getByText(/matr[ií]cula/i).filter({ visible: true })
-  const verif: Locator[] = []
-  for (let i = 0; i < (await textos.count()); i++) {
-    const t = (await textos.nth(i).innerText().catch(() => '')).trim()
-    if (esEtiquetaVerificacionMatricula(t)) verif.push(textos.nth(i).locator("xpath=following::input[not(@type='hidden')][1]"))
+  // Verificación (Alberto): si el portal la pide, la MISMA matrícula otra vez. La captura 6 tiene UN solo campo: es OPCIONAL
+  // (0 → se sigue; 1 → se rellena; >1 → para). Si no está, se vuelve a mirar tras una espera corta (puede pintarse al salir).
+  const buscarVerificacion = async (): Promise<Locator[]> => {
+    const textos = marco.getByText(/matr[ií]cula/i).filter({ visible: true })
+    const out: Locator[] = []
+    for (let i = 0; i < (await textos.count().catch(() => 0)); i++) {
+      const t = (await textos.nth(i).innerText().catch(() => '')).trim()
+      if (esEtiquetaVerificacionMatricula(t)) out.push(textos.nth(i).locator("xpath=following::input[not(@type='hidden')][1]"))
+    }
+    return out
   }
-  if (verif.length !== 1) throw new ErrorMapaIncompletoGenerali(`el campo de VERIFICACIÓN de la matrícula (${verif.length} candidatos; no sale en la captura 6)`)
-  await escribir(verif[0]!, m.valor, ctx)
+  let verif = await buscarVerificacion()
+  if (verif.length === 0) {
+    await page.waitForTimeout(ESPERA_VERIFICACION_MS)
+    verif = await buscarVerificacion()
+  }
+  const dv = decidirVerificacionMatricula(verif.length)
+  if (dv.tipo === 'parar') throw new ErrorMapaIncompletoGenerali(dv.motivo)
+  if (dv.tipo === 'rellenar') await escribir(verif[0]!, m.valor, ctx)
 
   const uso = await controlJuntoA(marco, ETIQUETAS_VALORACION.uso, 'select', ctx.formador)
   if (!uso) throw new ErrorMapaIncompletoGenerali(`el desplegable «${ETIQUETAS_VALORACION.uso}» (captura 6)`)
@@ -339,9 +525,122 @@ export async function rellenarValoracionGenerali(page: Page, form: FormularioAut
   return supuestos
 }
 
+// ───────────────────────── 7 · resto de «Datos de Valoración» + «Garantías y Resultados» (v0.2.0) ─────────────────────────
+
+const TIPOS_TEXTO = new Set(['text', 'tel', 'number', 'date', 'search', ''])
+
 /**
- * Adaptador de Generali Turismos. Hoy llega hasta «Datos de Valoración» (captura 6) y PARA con el hueco del resto (tomador,
- * conductor, antecedentes, «Garantías y Resultados»): `ErrorMapaIncompletoGenerali` + inventario + HTML, para mapearlo.
+ * Mapa PROVISIONAL de tomador/conductor/antecedentes (`ETIQUETAS_RIESGO_GENERALI`): para cada campo de TEXTO registrado cuya
+ * etiqueta casa EXACTA con una clave, VACÍO, editable y único para esa clave, teclea el dato del riesgo (antecedentes: dato o
+ * supuesto favorable ya declarado). Sin respaldo de IA (no se adivina un campo sin captura). Devuelve las claves rellenadas.
+ */
+export async function rellenarMapaProvisionalGenerali(
+  marco: Raiz,
+  pantalla: PantallaLeida,
+  form: Parameters<typeof valorRiesgoGenerali>[1],
+  ctx: ContextoPortal,
+): Promise<string[]> {
+  const porClave = new Map<string, { etiqueta: string; editable: boolean; vacio: boolean }[]>()
+  for (const c of pantalla.campos) {
+    const k = claveEtiquetaRiesgoGenerali(c.etiqueta)
+    if (!k) continue
+    const tipo = c.tipo.split(',')[0]!
+    const lista = porClave.get(k) ?? []
+    lista.push({ etiqueta: c.etiqueta, editable: TIPOS_TEXTO.has(tipo) && !c.tipo.includes(',ro'), vacio: c.valor === 'vacío' })
+    porClave.set(k, lista)
+  }
+  const hechos: string[] = []
+  for (const [k, lista] of porClave) {
+    if (lista.length !== 1 || !lista[0]!.editable || !lista[0]!.vacio) continue
+    const valor = valorRiesgoGenerali(k as Parameters<typeof valorRiesgoGenerali>[0], form)
+    if (valor === null) continue
+    const campo = await controlJuntoA(marco, lista[0]!.etiqueta, 'input')
+    if (!campo) continue
+    if ((await campo.inputValue().catch(() => 'x')).trim() !== '') continue
+    await escribir(campo, valor, ctx)
+    hechos.push(k)
+  }
+  return hechos
+}
+
+/** Oferta de Generali con el importe del lector tolerante: avisos claros de lo que NO se sabe y de lo SUPUESTO. */
+export function ofertaGenerali(eur: number, supuestos: string | null): OfertaNormalizada {
+  return {
+    compania: 'generali',
+    producto: 'Auto · Turismos (Ramo UV)',
+    primaAnualEur: eur,
+    primaNetaEur: null,
+    fraccionamiento: null,
+    importeReciboEur: null,
+    coberturas: [],
+    franquicias: [],
+    validaHasta: null,
+    referenciaPortal: null,
+    pdf: null,
+    desglose: null,
+    avisos: [
+      'Importe leído de «Garantías y Resultados» con un lector tolerante (bot 0.2.0, sin captura de esa pantalla): compruébalo en el portal; no consta la modalidad ni si es anual.',
+      ...(supuestos ? [supuestos] : []),
+    ],
+  }
+}
+
+/** Espera el precio tras la subpestaña: un único importe, estable en dos lecturas; si no, la última lectura. */
+async function esperarPrecioGenerali(page: Page, ignorar: readonly number[], ms = ESPERA_PRECIO_MS): Promise<ReturnType<typeof leerPrecioGenerali>> {
+  const fin = Date.now() + ms
+  let ultima: ReturnType<typeof leerPrecioGenerali> = { tipo: 'ninguno' }
+  for (;;) {
+    ultima = leerPrecioGenerali(await textoPagina(page), ignorar)
+    if (ultima.tipo === 'unico') {
+      await page.waitForTimeout(1_000)
+      const otra = leerPrecioGenerali(await textoPagina(page), ignorar)
+      if (otra.tipo === 'unico' && otra.eur === ultima.eur) return otra
+      ultima = otra
+    }
+    if (Date.now() >= fin) return ultima
+    await page.waitForTimeout(800)
+  }
+}
+
+/**
+ * Tras «Roles»: scroll del panel, registro de la pantalla, mapa provisional, «Garantías y Resultados» por la compuerta del
+ * guard y lectura del precio. Devuelve la oferta o PARA (`ErrorMapaIncompletoGenerali`) con el registro de donde se quedó; el
+ * runner guarda además el HTML redactado, el inventario de estructura y el recorrido.
+ */
+export async function hastaPrecioGenerali(page: Page, form: FormularioAuto, supuestos: string[], ctx: ContextoPortal, opciones: { esperaPrecioMs?: number } = {}): Promise<ResultadoAdaptador> {
+  const paso = <T>(n: Parameters<ContextoPortal['paso']>[0], fn: () => Promise<T>): Promise<T> => (typeof ctx.paso === 'function' ? ctx.paso(n, fn) : fn())
+  const ant = conAntecedentesFavorables(form)
+  for (const x of ant.supuestos) if (!supuestos.includes(x)) supuestos.push(x)
+  const texto = textoSupuestos(supuestos)
+  const marco = (await marcoConTexto(page, 'Identificación del vehículo', 5_000)) ?? page
+  const { pantalla, hechos } = await paso('formulario', async () => {
+    await recorrerScroll(page, marco)
+    const antes = await leerPantalla(marco)
+    const hechos = await rellenarMapaProvisionalGenerali(marco, antes, ant.formulario, ctx)
+    // Tras rellenar, se relee (el portal puede pintar campos nuevos al salir de uno).
+    if (hechos.length > 0) await recorrerScroll(page, marco)
+    return { pantalla: hechos.length > 0 ? await leerPantalla(marco) : antes, hechos }
+  })
+  ctx.log?.(`generali/auto: Datos de Valoración: ${pantalla.campos.length} campos, ${pantalla.botones.length} botones, mapa provisional: ${hechos.join(',') || 'nada'}`)
+  const datos = `Datos de Valoración: ${resumenPantallaGenerali(pantalla, 700)}`
+  if (!ctx.pulsarSubpestanaGenerali) throw new ErrorMapaIncompletoGenerali(`la puerta guardada de «${SUBPESTANA_PRECIO_GENERALI}» en el contexto del runner; ${datos}`)
+  // Importes que YA estaban antes del clic no son el precio (la lectura de después los ignora).
+  const lAntes = leerPrecioGenerali(await textoPagina(page))
+  const ignorar = lAntes.tipo === 'unico' ? [lAntes.eur] : lAntes.tipo === 'varios' ? lAntes.candidatos.map((c) => c.eur) : []
+  await paso('tarificar', () => ctx.pulsarSubpestanaGenerali!(SUBPESTANA_PRECIO_GENERALI))
+  const lectura = await paso('lectura_primas', () => esperarPrecioGenerali(page, ignorar, opciones.esperaPrecioMs ?? ESPERA_PRECIO_MS))
+  if (lectura.tipo === 'unico') return { ofertas: [ofertaGenerali(lectura.eur, texto)] }
+  const despues = await leerPantallaPagina(page)
+  const que = lectura.tipo === 'varios'
+    ? `${lectura.candidatos.length} importes candidatos y no se elige uno a ciegas: ${lectura.candidatos.map((c) => `${c.eur} € («${c.linea.slice(0, 60)}»)`).join(' · ')}`
+    : 'ningún importe legible con «prima/precio/importe/total»'
+  throw new ErrorMapaIncompletoGenerali(`el PRECIO de «${SUBPESTANA_PRECIO_GENERALI}» (${que}). Pantalla: ${resumenPantallaGenerali(despues, 900)}. Mapa provisional: ${hechos.join(',') || 'nada'}${texto ? `; ${texto}` : ''}`)
+}
+
+/**
+ * Adaptador de Generali Turismos (v0.2.0). Llega a «Datos de Valoración» (captura 6), recorre y registra el resto del panel,
+ * pulsa «Garantías y Resultados» por la compuerta del guard y devuelve la oferta si lee un precio; donde no sabe seguir, PARA
+ * con `ErrorMapaIncompletoGenerali` + registro de la pantalla + inventario + HTML, para mapearlo sin pedir capturas.
  */
 export const generaliAuto = {
   compania: 'generali',
@@ -365,9 +664,8 @@ export const generaliAuto = {
     const similitud = await seleccionarVehiculoGenerali(page, marco, form, ctx)
     const supuestos = await rellenarValoracionGenerali(page, form, ctx, hoy)
     if (similitud) supuestos.unshift(AVISO_SIMILITUD_GENERALI)
-    // Antecedentes (regla 3): sin dato, supuesto FAVORABLE declarado. Se calculan ya para declararlos; su pantalla no tiene captura.
-    supuestos.push(...conAntecedentesFavorables(form).supuestos)
-    const texto = textoSupuestos(supuestos)
-    throw new ErrorMapaIncompletoGenerali(`el resto de «Datos de Valoración» (tomador, conductor, antecedentes) y «Garantías y Resultados» (el PRECIO): SIN CAPTURA${texto ? `; ${texto}` : ''}`)
+    // Antecedentes (regla 3): sin dato, supuesto FAVORABLE declarado (lo añade `hastaPrecioGenerali`, que también los teclea
+    // si el formulario tiene esos campos con etiqueta del mapa provisional).
+    return hastaPrecioGenerali(page, form, supuestos, ctx)
   },
 } as const

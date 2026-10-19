@@ -2374,6 +2374,57 @@ export async function entrarTurismosGenerali(page: Page, guard: GuardEmision, es
   guard.comprobar()
 }
 
+/**
+ * Subpestañas de «Valoración Riesgo» de Generali que el robot puede pulsar (v0.2.0 del bot, 19/10/2026). LISTA BLANCA CERRADA
+ * de textos EXACTOS (captura 6: «Datos de Valoración» activa · «Garantías y Resultados»). Pulsar una subpestaña solo cambia la
+ * vista del formulario; NO relaja el guard de red: si ese clic manda una petición que casa con el patrón de emisión, se aborta
+ * y el trabajo cae (fail-closed) con el HTML de la pantalla para mapearlo.
+ */
+export const SUBPESTANAS_GENERALI = Object.freeze(['Garantías y Resultados'] as const)
+/** Lo que NUNCA puede llevar el texto de una subpestaña pulsable, aunque alguien la añada a la lista (sin tildes, sin mayúsculas). */
+const RE_SUBPESTANA_PELIGROSA_GENERALI = /emit|emisi|contrat|grab|firm|pag|acept|poliza|formaliz|suplement|anul/i
+
+/** ¿Puede el robot pulsar la subpestaña de Generali con ESTE texto? Exacto (salvo espacios) en la lista y sin nada peligroso. PURA. */
+export function subpestanaGeneraliPermitida(texto: string): boolean {
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (t === '' || RE_SUBPESTANA_PELIGROSA_GENERALI.test(sinTildesNi(t))) return false
+  return (SUBPESTANAS_GENERALI as readonly string[]).includes(t)
+}
+
+/**
+ * Subpestaña «Garantías y Resultados» de Generali (y solo las de `SUBPESTANAS_GENERALI`), UNA vez por subpestaña y trabajo:
+ * guard limpio y sin ventanas de red; página `CorredorPortal.po` de www.generali.es; texto en la lista blanca y sin palabras
+ * de emisión; el ÚNICO control visible de todos los marcos con ese texto exacto; su descripción (contenedor clicable incluido:
+ * href, onclick, ancestros) pasa `comprobarBoton`. Devuelve el marco donde estaba. Un hueco (0 o varios) → inventario, sin pulsar.
+ */
+export async function pulsarSubpestanaGenerali(page: Page, guard: GuardEmision, texto: string): Promise<Frame> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'subpestaña de Generali con una ventana de red abierta')
+  if (!subpestanaGeneraliPermitida(texto)) throw new EmisionBloqueadaError('boton', String(texto ?? '').slice(0, 80))
+  if (!enRutaGenerali(page, RUTA_PORTAL_GENERALI)) throw new ErrorMapaGuardGenerali('el portal del corredor (CorredorPortal.po) para la subpestaña')
+  const clave = `generali:subpestana:${texto}`
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `la subpestaña «${texto}» de Generali ya se pulsó en este trabajo`)
+  await exigirSinCuentaBancaria(page)
+  const re = new RegExp(`^\\s*${texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`)
+  const hallados: { marco: Frame; control: Locator }[] = []
+  for (const f of marcosVivos(page)) {
+    const l = f.getByText(re).filter({ visible: true })
+    const n = await l.count().catch(() => 0)
+    for (let i = 0; i < n; i++) hallados.push({ marco: f, control: l.nth(i) })
+  }
+  if (hallados.length !== 1) throw new ErrorMapaGuardGenerali(`la subpestaña «${texto}» (${hallados.length} controles visibles con ese texto; hace falta exactamente uno)`)
+  const { marco, control } = hallados[0]!
+  const desc = await descripcion(control, true)
+  if (textoMenu(desc[0]) !== textoMenu(texto)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await control.click()
+  guard.comprobar()
+  return marco
+}
+
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────
 // HTML real (trabajo d675077b, pantalla «Selección de paquete»): bajo la tabla de precios vive el formulario `nx-mt-save-proposal`
 // («Guardar el presupuesto»): «Identificador presupuesto» (obligatorio, ≤30), tipo/nº de documento, nombre y apellidos del tomador

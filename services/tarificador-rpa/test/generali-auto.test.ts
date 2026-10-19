@@ -149,8 +149,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.1.1')
-  assert.equal(VERSION_GENERALI_AUTO, '0.1.1')
+  assert.equal(generaliAuto.version, '0.2.0')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.0')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -336,10 +336,13 @@ test('Datos de Valoración: matrícula «1234*BCD» en el campo Y en su verifica
   }
 })
 
-test('Datos de Valoración: sin el campo de verificación de la matrícula → hueco con inventario (no se sigue a medias)', async () => {
+test('Datos de Valoración: sin el campo de verificación de la matrícula (captura 6) → v0.2.0 SIGUE y rellena el resto', async () => {
   const { page, guard, cerrar } = await abrir(PORTAL, VALORACION_HTML(false))
   try {
-    await assert.rejects(rellenarValoracionGenerali(page, coche(), ctxSimple(page, guard), HOY), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /VERIFICACIÓN/.test(e.message) && e.pideInventarioDom)
+    await rellenarValoracionGenerali(page, coche(), ctxSimple(page, guard), HOY)
+    assert.equal(await page.locator('#mat').inputValue(), '1234*BCD')
+    assert.equal(await page.locator('#uso').inputValue(), 'PARTICULAR')
+    assert.equal(await page.locator('#f1').inputValue(), '02/05/2019')
   } finally {
     await cerrar()
   }
