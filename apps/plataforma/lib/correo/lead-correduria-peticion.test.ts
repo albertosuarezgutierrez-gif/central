@@ -74,7 +74,7 @@ test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotenci
 
 test('🪤 un pendiente CERRADO (enviado, descartado, caducado) se purga: sin email, asunto, nombre ni texto (lee el fuente)', async () => {
   const { CLAVES_PII_PENDIENTE } = await import('./lead-correduria-peticion.ts')
-  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'pila', 'to'])
+  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'email', 'nombre', 'pila', 'to'])
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(src, /const PURGA = Prisma\.sql`datos = datos - \$\{\[\.\.\.CLAVES_PII_PENDIENTE\]\}::text\[\], borrador = ''`/)
   const cierres = [...src.matchAll(/UPDATE correduria_pendiente_tg SET estado = '(descartado|caducado)'[^`]*/g)]
@@ -98,12 +98,12 @@ test('🪤 reintento deduplicado (repetido) → «ya enviado antes», nunca «no
 
 test('🪤 F3b: al cerrar, fallido/incierto ya NO guardan email ni nombre; lo que no envía al cliente se purga entero', async () => {
   const { purgaAlCerrar } = await import('./lead-correduria-peticion.ts')
-  assert.deepEqual(purgaAlCerrar('peticion_datos', 'enviado'), { claves: ['to', 'asunto', 'pila'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('peticion_datos', 'enviado'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
   assert.deepEqual(purgaAlCerrar('repregunta', 'fallido'), { claves: ['to', 'pila'], borrador: false })
   assert.deepEqual(purgaAlCerrar('peticion_datos', 'incierto'), { claves: ['to', 'pila'], borrador: false })
-  assert.deepEqual(purgaAlCerrar('tarificar', 'fallido'), { claves: ['to', 'asunto', 'pila'], borrador: true })
-  assert.deepEqual(purgaAlCerrar('tarificar', 'incierto'), { claves: ['to', 'asunto', 'pila'], borrador: true })
-  assert.deepEqual(purgaAlCerrar('discrepancia', 'enviado'), { claves: ['to', 'asunto', 'pila'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('tarificar', 'fallido'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('tarificar', 'incierto'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('discrepancia', 'enviado'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
   const tar = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(tar, /const p = purgaAlCerrar\('tarificar', estado\)[^`]*`[^`]*datos = datos - \$\{p\.claves\}::text\[\], borrador = ''/)
 })

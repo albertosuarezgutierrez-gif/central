@@ -21,6 +21,7 @@ import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './corredu
 import { buscarFichaDeRemitente, debeSugerirContactoAseguradora, esDominioPersonal, textoAvisoCorreoCliente } from './contacto-sugerido'
 import { asuntoDeRecibo } from './keywords'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
+import { proponerContactoSugerido } from './contacto-sugerido-pendiente'
 import { MOTIVO_POLIZA_ANULADA, esCorreoDevolucion, eventoNecesitaAdjuntos, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
@@ -333,10 +334,14 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // 🚨 Solo personas de un dominio de ASEGURADORA (19/10/2026): un gmail/hotmail o un dominio
             // cualquiera NUNCA se propone, por mucho que el asunto hable de Mapfre o de un recibo.
             if (debeSugerirContactoAseguradora(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
-              await tgAviso(
-                'correo.contacto-sugerido',
-                `👤 <b>Posible contacto nuevo de aseguradora</b>\n${escapeHtml(correo.fromRaw)}\n${escapeHtml(correo.subject)}\n➡️ Si es una persona real, añádela en /correduria → Directorio de compañías.`,
-              ).catch(() => null)
+              // Con botones ✅/🚫 (19/10/2026); sin la tabla/CHECK (SQL 2026-10-19c) o sin Telegram, el aviso de siempre.
+              const conBotones = await proponerContactoSugerido({ gmailMessageId: correo.messageId, fromRaw: correo.fromRaw, asunto: correo.subject }).catch(() => false)
+              if (!conBotones) {
+                await tgAviso(
+                  'correo.contacto-sugerido',
+                  `👤 <b>Posible contacto nuevo de aseguradora</b>\n${escapeHtml(correo.fromRaw)}\n${escapeHtml(correo.subject)}\n➡️ Si es una persona real, añádela en /correduria → Directorio de compañías.`,
+                ).catch(() => null)
+              }
             }
           }
 
