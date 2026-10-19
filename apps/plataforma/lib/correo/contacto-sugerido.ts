@@ -378,8 +378,10 @@ export function botonDeshacerCsg(id: number | string): Boton[][] {
 }
 
 /** Aviso informativo del alta automática (HTML). `nombre` = el visible del remitente (persona o buzón). PURA. */
-export function textoAltaAutomatica(nombre: string, compania: string): string {
-  return `✅ <b>Añadido al Directorio</b>: ${esc(nombre)} → ${esc(compania)}`
+export function textoAltaAutomatica(nombre: string, compania: string, sinDeshacer = false): string {
+  const base = `✅ <b>Añadido al Directorio</b>: ${esc(nombre)} → ${esc(compania)}`
+  // Sin botón (no se pudo guardar el id para deshacer): se dice dónde quitarlo, nunca un botón que no funcionaría.
+  return sinDeshacer ? `${base}\n↩️ Si no lo quieres, desactívalo en /correduria → Directorio de compañías.` : base
 }
 
 /** `id` del contacto que devuelve el puerto al crear (`{estado:'creado', id}`); lo raro = `null` (sin él no hay deshacer). PURA. */
