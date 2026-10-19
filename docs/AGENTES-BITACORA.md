@@ -156,3 +156,6 @@ arriba).
 
 ## 15/10/2026 — sivra_mercado_booking
 23/24 ventanas de mercado (17-23 oct, 6 y 28-nov-2026, 22-ene-2027; aforos 2/4/5/12) = 227 comps booking_mcp; 1 sin respuesta (17-oct aforo 12, not_found). Escaparate propio 4/4 (Dúplex 4n 649,59€, Luxury Busto 2n 244,31€, House 2n 939€, Busto Reform 3n 244,76€). 3 anuncios propios (House Sevillana) descartados del corpus. Plan: 532 ventanas recortadas por tope.
+
+## 19/10/2026 — sivra_mercado_booking
+24/24 ventanas de mercado (18-nov y 13-dic-2026; 27-mar, 2-abr, 17-abr, 6-may y 16-may-2027; aforos 2/4/5/12) = 238 comps booking_mcp; 0 sin respuesta. Escaparate propio 4/4 (Luxury Busto 3n 467,87€, Dúplex 4n 480,10€, House 4n 6.504€ [abr-2027, Feria], Busto Reform 4n 1.259,06€). 2 anuncios propios (House Sevillana) descartados en ventanas aforo 12. Plan: 552 candidatas, el tope dejó fuera 528.
