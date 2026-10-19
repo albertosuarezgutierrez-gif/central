@@ -257,6 +257,8 @@ test('deshacer: botón corto csg_u:<id>, línea del alta y callback validado (ch
   assert.ok(Buffer.byteLength(b[0][0].callback) <= 64)
   assert.equal(b[0][0].texto, '↩️ Deshacer')
   assert.equal(textoAltaAutomatica('Ana <b>', 'Mapfre'), '✅ <b>Añadido al Directorio</b>: Ana &lt;b&gt; → Mapfre')
+  assert.match(textoAltaAutomatica('Ana', 'Mapfre', true), /desactívalo en \/correduria/, 'sin deshacer guardado: se dice cómo quitarlo')
+  assert.doesNotMatch(textoAltaAutomatica('Ana', 'Mapfre'), /desactívalo/)
   const t = { from: { id: 42 } }
   assert.deepEqual(decidirBotonCsg(t, 'u', ['12'], '42'), { ok: true, accion: 'u', id: 12, quien: '42' })
   assert.equal(decidirBotonCsg({ from: { id: 99 } }, 'u', ['12'], '42').ok, false, 'chat ajeno')

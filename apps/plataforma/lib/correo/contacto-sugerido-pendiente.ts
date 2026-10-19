@@ -81,14 +81,16 @@ export async function proponerContactoSugerido(a: { gmailMessageId: string; from
       if (i.estado === 'creado' && r) {
         const contactoId = idContactoCreado(r.json)
         // Se guarda solo el id del contacto (y la compañía) para poder deshacer; email/nombre/asunto se purgan.
-        await prisma.$executeRaw(Prisma.sql`
+        const filas = await prisma.$executeRaw(Prisma.sql`
           UPDATE correduria_pendiente_tg SET estado = 'enviado', resultado = ${JSON.stringify({ estado: 'creado', auto: true })}::jsonb,
             datos = datos || ${JSON.stringify(contactoId ? { contactoId } : {})}::jsonb
-          WHERE id = ${id} AND estado = 'enviando'`).catch(() => {})
+          WHERE id = ${id} AND estado = 'enviando'`).catch(() => 0)
         await prisma.$executeRaw(Prisma.sql`UPDATE correduria_pendiente_tg SET ${PURGA} WHERE id = ${id}`).catch(() => {})
+        // El botón de deshacer solo si el id quedó GUARDADO: si no, el botón fallaría; se indica cómo quitarlo a mano.
+        const conDeshacer = Boolean(contactoId) && filas === 1
         // Silenciado o sin Telegram → `null`: el contacto ya está, simplemente no hay mensaje (ni botón de deshacer).
-        const txt = textoAltaAutomatica(nombre, i.compania)
-        const msg = await (contactoId ? tgAvisoBotones('correo.contacto-sugerido', txt, botonDeshacerCsg(id)) : tgAviso('correo.contacto-sugerido', txt)).catch(() => null)
+        const txt = textoAltaAutomatica(nombre, i.compania, !conDeshacer)
+        const msg = await (conDeshacer ? tgAvisoBotones('correo.contacto-sugerido', txt, botonDeshacerCsg(id)) : tgAviso('correo.contacto-sugerido', txt)).catch(() => null)
         if (msg !== null) await prisma.$executeRaw(Prisma.sql`UPDATE correduria_pendiente_tg SET tg_message_id = ${msg} WHERE id = ${id}`).catch(() => {})
         return true
       }
