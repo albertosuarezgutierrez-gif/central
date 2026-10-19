@@ -339,7 +339,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correo.contacto-sugerido', categoria: 'correo',
     titulo: 'Posible contacto nuevo de aseguradora',
-    que: 'Una persona (no un buzón genérico) de una aseguradora escribe por primera vez: con botones «✅ Añadir al directorio» / «🚫 Ignorar»: el alta solo se hace al pulsar, nunca sola.',
+    que: 'Una persona (no un buzón genérico) de una aseguradora escribe por primera vez. Si la compañía es exacta se añade SOLA al Directorio y el aviso trae «↩️ Deshacer»; si es dudosa, botones «✅ Añadir al directorio» / «🚫 Ignorar». Silenciarlo apaga el mensaje, no el alta automática.',
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {

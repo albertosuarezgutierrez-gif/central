@@ -2,8 +2,8 @@
 //
 // El directorio (`compania_contactos`) lo mantiene una pasada manual de la
 // skill `agente-correduria` minando el Gmail de vez en cuando — no hay nada
-// que lo alimente en el momento. Esto NO da de alta a nadie (sería inventar
-// un contacto sin que Alberto lo mirara): solo AVISA la primera vez que ve
+// que lo alimente en el momento. Salvo la compañía EXACTA (alta automática con «↩️ Deshacer», al final
+// de este fichero), esto NO da de alta a nadie sin que Alberto lo mire: AVISA la primera vez que ve
 // escribir a una persona de una aseguradora, para que decida si merece la
 // pena añadirla. Una sugerencia rechazada sin querer no borra nada; un alta
 // automática equivocada ensucia un directorio que hoy es de fiar.
@@ -120,7 +120,7 @@ export function botonesContactoSugerido(id: number | string): Boton[][] {
 
 export type DecisionCsg =
   | { ok: false; toast: string }
-  | { ok: true; accion: 'ok' | 'no'; id: number; quien: string }
+  | { ok: true; accion: 'ok' | 'no' | 'u'; id: number; quien: string }
   | { ok: true; accion: 'c'; id: number; quien: string; codigoDgs: string }
 
 /** ¿Vale la pulsación? Solo la persona autorizada (`cb.from.id === TELEGRAM_CHAT_ID`), acción conocida, id numérico. PURA. */
@@ -131,7 +131,7 @@ export function decidirBotonCsg(
   chatPermitido: string | undefined,
 ): DecisionCsg {
   if (!chatPermitido || String(cb.from?.id ?? '') !== String(chatPermitido)) return { ok: false, toast: 'Solo el titular puede hacerlo' }
-  if (action !== 'ok' && action !== 'no' && action !== 'c') return { ok: false, toast: 'Acción desconocida' }
+  if (action !== 'ok' && action !== 'no' && action !== 'c' && action !== 'u') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Sugerencia no encontrada' }
   if (action === 'c') {
@@ -139,6 +139,8 @@ export function decidirBotonCsg(
     if (args.length !== 2 || !/^[A-Za-z0-9._-]{1,40}$/.test(args[1])) return { ok: false, toast: 'Compañía no válida' }
     return { ok: true, accion: 'c', id, quien: String(cb.from?.id ?? ''), codigoDgs: args[1] }
   }
+  // `ok`/`no`/`u` llevan SOLO el id: cualquier argumento de más es forma no cerrada y se rechaza.
+  if (args.length !== 1) return { ok: false, toast: 'Sugerencia no encontrada' }
   return { ok: true, accion: action, id, quien: String(cb.from?.id ?? '') }
 }
 
@@ -307,6 +309,7 @@ export function contactoParaDirectorio(fromRaw: string, asunto: string, hoy: str
 export type ResultadoAlta =
   | { estado: 'creado'; compania: string }
   | { estado: 'existia'; compania: string | null }
+  | { estado: 'desactivado'; compania: string | null }
   | { estado: 'sin_compania' }
   | { estado: 'ambigua'; candidatas: CompaniaCandidata[] }
   | { estado: 'error'; motivo?: string; incierto?: boolean }
@@ -315,6 +318,7 @@ export function lineaTrasAlta(r: ResultadoAlta): string {
   switch (r.estado) {
     case 'creado': return `✅ <i>Añadido a ${esc(r.compania)}.</i>`
     case 'existia': return `ℹ️ <i>Ya existía en el directorio${r.compania ? ` (${esc(r.compania)})` : ''}: no he duplicado nada.</i>`
+    case 'desactivado': return `ℹ️ <i>Estaba dado de baja${r.compania ? ` en ${esc(r.compania)}` : ''}: reactívalo en el Directorio si lo quieres.</i>`
     case 'ambigua':
       return r.candidatas.length === 1
         ? `❓ <i>No es seguro que sea ${esc(r.candidatas[0].nombreComun)}: confirma la compañía (o ignora).</i>`
@@ -333,9 +337,78 @@ export function interpretarAltaContacto(status: number, json: unknown): Resultad
   const comp = typeof o.compania === 'string' && o.compania ? o.compania : null
   if (status === 200 && o.estado === 'creado' && comp) return { estado: 'creado', compania: comp }
   if (status === 200 && o.estado === 'existia') return { estado: 'existia', compania: comp }
+  if (status === 200 && o.estado === 'desactivado') return { estado: 'desactivado', compania: comp }
   const motivo = typeof o.estado === 'string' ? o.estado : `HTTP ${status}`
   // PREVIO a escribir (nada se ha creado): sin configurar, datos inválidos (400), compañía desconocida (404).
   if (status === 400 || status === 404 || o.estado === 'sin_configurar' || o.estado === 'invalido' || o.estado === 'compania_desconocida') return { estado: 'error', motivo }
   // Lo demás (timeout/red 502, 5xx, 200 con estado:'error' del catch de asegura, respuesta rara): INCIERTO.
   return { estado: 'error', motivo, incierto: true }
+}
+
+// ── Alta AUTOMÁTICA cuando no hay duda (19/10/2026) ──────────────────────────────────────────────────────────────
+// Compañía EXACTA + email que no estaba + alta válida → se crea sin pulsar nada y se avisa con «↩️ Deshacer»
+// (`csg_u:<id>`, un solo uso; desactiva el contacto, no lo borra). Parcial → botones de confirmar; ninguna → a mano.
+
+export type FichaCompaniaConContactos = CompaniaMinima & { nombreComun: string; contactos: readonly { email?: string | null }[] }
+
+export type RutaAltaSugerida =
+  | { ruta: 'existia'; compania: string }
+  | { ruta: 'auto'; compania: CompaniaMinima }
+  | { ruta: 'confirmar' }
+  | { ruta: 'a_mano' }
+
+/**
+ * ¿Qué se hace con un remitente de aseguradora? PURA. Orden: el email ya está en el directorio → `existia` (silencio);
+ * compañía EXACTA y alta válida → `auto`; parcial(es) o varias exactas → `confirmar` (botones); sin match → `a_mano`.
+ */
+export function decidirRutaAlta(email: string, companias: readonly FichaCompaniaConContactos[], altaValida: boolean): RutaAltaSugerida {
+  const e = (email || '').trim().toLowerCase()
+  const ya = e ? companias.find((c) => c.contactos.some((x) => (x.email ?? '').toLowerCase() === e)) : undefined
+  if (ya) return { ruta: 'existia', compania: ya.nombreComun }
+  const cand = candidatasCompania(e, companias)
+  if (cand.tipo === 'ninguna') return { ruta: 'a_mano' }
+  if (cand.tipo === 'ambigua') return { ruta: 'confirmar' }
+  return altaValida ? { ruta: 'auto', compania: cand.compania } : { ruta: 'a_mano' }
+}
+
+export const BOTON_DESHACER_CSG = '↩️ Deshacer'
+
+export function botonDeshacerCsg(id: number | string): Boton[][] {
+  return [[{ texto: BOTON_DESHACER_CSG, callback: `${PREFIJO_CSG}_u:${id}` }]]
+}
+
+/** Aviso informativo del alta automática (HTML). `nombre` = el visible del remitente (persona o buzón). PURA. */
+export function textoAltaAutomatica(nombre: string, compania: string): string {
+  return `✅ <b>Añadido al Directorio</b>: ${esc(nombre)} → ${esc(compania)}`
+}
+
+/** `id` del contacto que devuelve el puerto al crear (`{estado:'creado', id}`); lo raro = `null` (sin él no hay deshacer). PURA. */
+export function idContactoCreado(json: unknown): string | null {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : null
+  const id = o?.id
+  return typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : null
+}
+
+/** Lee el id de contacto guardado en `datos.contactoId` del pendiente; lo raro = `null`. PURA. */
+export function leerContactoIdGuardado(v: unknown): string | null {
+  const o = typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+  return idContactoCreado({ id: o?.contactoId })
+}
+
+export type ResultadoDeshacer = { estado: 'deshecho' } | { estado: 'no_encontrado' } | { estado: 'error' }
+
+/** Respuesta de `PATCH …/contacto/[id] {accion:'desactivar'}`. Lo desconocido es `error` (se puede repetir: es idempotente). PURA. */
+export function interpretarDeshacer(status: number, json: unknown): ResultadoDeshacer {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  if (status === 200 && o.estado === 'ok') return { estado: 'deshecho' }
+  if (status === 404 && o.estado === 'no_encontrado') return { estado: 'no_encontrado' }
+  return { estado: 'error' }
+}
+
+export function lineaTrasDeshacer(r: ResultadoDeshacer): string {
+  switch (r.estado) {
+    case 'deshecho': return '↩️ <i>Deshecho: el contacto queda desactivado en el Directorio.</i>'
+    case 'no_encontrado': return '⚠️ <i>No encuentro ese contacto en el Directorio: míralo a mano.</i>'
+    default: return '⚠️ <i>No he podido deshacerlo (asegura no ha confirmado): pulsa de nuevo o desactívalo a mano en el Directorio.</i>'
+  }
 }

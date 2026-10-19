@@ -334,11 +334,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
               }
             }
 
-            // Sugerencia de alta de contacto (20/09/2026): NUNCA da de alta —
-            // solo avisa la primera vez que ve escribir a una persona (no un
-            // buzón genérico) de una aseguradora, para que Alberto decida si
-            // la añade al directorio (`compania_contactos`). Best-effort: un
-            // fallo aquí no toca ni el aviso ni la anotación de arriba.
+            // Contacto nuevo de aseguradora (20/09/2026; alta automática 19/10/2026): la primera vez que
+            // escribe una persona (no un buzón genérico) de una aseguradora. Compañía EXACTA → se añade
+            // sola al directorio (`compania_contactos`) con «↩️ Deshacer»; dudosa → botón de confirmar;
+            // ninguna → «añádelo a mano». Best-effort: un fallo aquí no toca ni el aviso ni la anotación de arriba.
             // 🚨 Solo personas de un dominio de ASEGURADORA (19/10/2026): un gmail/hotmail o un dominio
             // cualquiera NUNCA se propone, por mucho que el asunto hable de Mapfre o de un recibo.
             if (debeSugerirContactoAseguradora(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
