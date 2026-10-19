@@ -71,3 +71,14 @@ test('18/10/2026 supuesto favorable: antecedentes vacíos no bloquean y se pinta
   assert.ok(m.estado === 'evaluado' && m.bloquea)
   assert.deepEqual(m.faltan.map((f) => f.clave), ['companiaAnterior'])
 })
+
+test('Generali auto: matrícula presente y carné «de la ficha» (completarDesdeFicha) no bloquean; sin carné en ficha ni formulario, falta', () => {
+  const r = { ...AUTO, conductor: {}, seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO' } }
+  const con = checklistCompania('generali', 'auto', r, ['fechaNacimiento', 'fechaCarne'])
+  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+  assert.equal(con.filas.find((f) => f.clave === 'matricula')?.estado, 'ok')
+  assert.equal(con.filas.find((f) => f.clave === 'conductor.fechaCarne')?.estado, 'ficha')
+  const sin = checklistCompania('generali', 'auto', r, [])
+  assert.ok(sin.estado === 'evaluado' && sin.bloquea)
+  assert.deepEqual(sin.faltan.map((f) => f.clave).sort(), ['conductor.fechaCarne', 'conductor.fechaNacimiento'])
+})

@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
   caben, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
   garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
@@ -235,4 +236,25 @@ test('🪤 F3b (lee el fuente): solo duplicados no reservan cupo; el fallo de un
   assert.match(src, /if \(!lanzar\.length && duplicados\.length\) \{.{0,200}return \{ estado: 'encolado', trabajos: duplicados/)
   const ruta = readFileSync(new URL('../app/api/tarificador/resultado/route.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(ruta, /esFalloTerminal\(r\.estadoTrabajo\)[^]*after\(\(\) => avisarFalloBotLead\(trabajoId\)/)
+})
+
+test('🪤 el carné de la FICHA completa el riesgo del lead (lo del correo manda; sin ninguno, no hay carné)', () => {
+  const { fechaCarnet: _quitada, ...sinCarnet } = COMPLETO as Record<string, unknown>
+  const base = { ramo: 'auto' as const, valores: sinCarnet, bloque: { matricula: '0000XXX' }, fichaNacimiento: null, hoy: HOY }
+  const conductor = (f: ReturnType<typeof formularioBotDesdeLead>) => f.riesgo.conductor as Record<string, unknown>
+  assert.equal(conductor(formularioBotDesdeLead({ ...base, fichaCarne: '2001-02-03' })).fechaCarne, '2001-02-03')
+  assert.equal(conductor(formularioBotDesdeLead({ ...base, valores: { ...sinCarnet, fechaCarnet: '2002-03-04' }, fichaCarne: '2001-02-03' })).fechaCarne, '2002-03-04')
+  assert.equal('fechaCarne' in conductor(formularioBotDesdeLead({ ...base, fichaCarne: null })), false, 'null = no se sabe: nada de relleno')
+  assert.equal('fechaCarne' in conductor(formularioBotDesdeLead({ ...base, fichaCarne: 'no-es-fecha' })), false)
+  assert.equal('fechaCarne' in conductor(formularioBotDesdeLead(base)), false)
+  const f = formularioBotDesdeLead({ ...base, fichaCarne: '2001-02-03' })
+  assert.ok(!JSON.stringify(valorarCompania('generali', 'auto', f)).includes('fechaCarne'))
+})
+
+test('🪤 la matrícula del lead sale del bloque de la oportunidad, también con las claves antiguas (datosVehiculoDeInfoRiesgo)', () => {
+  const sinMat = { ...(COMPLETO as Record<string, unknown>), matricula: '' }
+  const nuevo = datosVehiculoDeInfoRiesgo({ datosVehiculo: { matricula: '0000XXX' } })
+  const viejo = datosVehiculoDeInfoRiesgo({ matricula: '0000xxx' })
+  for (const b of [nuevo, viejo]) assert.equal(formularioBotDesdeLead({ ramo: 'auto', valores: sinMat, bloque: { ...b }, fichaNacimiento: null, hoy: HOY }).riesgo.matricula, '0000XXX')
+  assert.equal('matricula' in formularioBotDesdeLead({ ramo: 'auto', valores: sinMat, bloque: { ...datosVehiculoDeInfoRiesgo({}) }, fichaNacimiento: null, hoy: HOY }).riesgo, false)
 })

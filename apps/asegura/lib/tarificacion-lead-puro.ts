@@ -89,6 +89,11 @@ export type EntradaFormulario = {
   bloque: Readonly<Record<string, unknown>> | null
   /** De la FICHA: fecha de nacimiento descifrada (ISO) o `null`. */
   fichaNacimiento: string | null
+  /**
+   * De la FICHA: fecha del carné del conductor (B en coche; de moto, si consta, en moto), ISO, o `null`/ausente = no se sabe.
+   * Lo dicho en el correo manda; esto cubre lo que el cliente no repite (igual que `fichaNacimiento`).
+   */
+  fichaCarne?: string | null
   /** `aaaa-mm-dd` de hoy (Madrid). */
   hoy: string
   /** Moto: la lectura del catálogo (`null` = el cliente no dio marca/modelo). */
@@ -408,7 +413,8 @@ export function formularioBotDesdeLead(e: EntradaFormulario): FormularioLead {
   const conductor: Record<string, unknown> = {}
   const nac = txt(v.fechaNacimiento) || (e.fichaNacimiento && ISO.test(e.fichaNacimiento) ? e.fichaNacimiento : '')
   if (ISO.test(nac)) conductor.fechaNacimiento = nac
-  if (ISO.test(txt(v.fechaCarnet))) conductor.fechaCarne = txt(v.fechaCarnet)
+  const carne = txt(v.fechaCarnet) || (e.fichaCarne && ISO.test(e.fichaCarne) ? e.fichaCarne : '')
+  if (ISO.test(carne)) conductor.fechaCarne = carne
   conductor.sexo = v.sexo === 'H' ? 'hombre' : v.sexo === 'M' ? 'mujer' : null
   riesgo.conductor = conductor
 

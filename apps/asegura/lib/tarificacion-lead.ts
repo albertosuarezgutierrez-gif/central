@@ -12,13 +12,14 @@
 // 🛡️ Todo SQL lleva `correduria_id` (puerta `lib/tenant`). 🚨 TARIFICAR ≠ EMITIR: nada de aquí habla con Codeoscopic.
 // Nada de valores personales en la respuesta ni en logs: compañías, claves y conteos.
 import { prisma } from './tenant'
+import { personaDeFicha } from './oportunidad-riesgo'
 import { prismaAsegura } from './asegura-db'
 import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
 import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
-import { claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
+import { datosVehiculoDeInfoRiesgo, claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
 import {
   AMPLIACION_TOPE, TOPE_DIARIO_MAXIMO, diaMadrid, esRamoBotLead, formularioBotDesdeLead, lecturaMoto, ramoConBot, topeDiario, valorarCompania,
   type FormularioLead, type LecturaMoto, type RamoBotLead, type Supuesto, type ValoracionCompania,
@@ -114,6 +115,16 @@ async function nacimientoFicha(correduriaId: string, clienteId: string): Promise
   } catch { return null }
 }
 
+/**
+ * Fecha del carné del conductor en la FICHA (carné B en coche; en moto, el de moto si consta), la MISMA que lee la pantalla de
+ * la oportunidad (`personaDeFicha`). `null` = no consta o no se pudo leer (nunca un valor de relleno).
+ */
+async function carneFicha(correduriaId: string, clienteId: string, ramo: string): Promise<string | null> {
+  const p = await personaDeFicha(correduriaId, clienteId, ramo === 'moto' ? 'moto' : 'auto').catch(() => null)
+  const f = p !== null && 'fechaCarnet' in p && typeof p.fechaCarnet === 'string' ? p.fechaCarnet.trim() : ''
+  return /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null
+}
+
 type Interno = RevisionOportunidad & { formulario: FormularioLead | null }
 
 /** Tope de cada consulta externa GRATIS de la revisión (catálogo de motos, Catastro): la revisión corre dentro del triaje. */
@@ -166,8 +177,11 @@ async function revisarInterno(correduriaId: string, clienteId: string, oportunid
     if (pendientes.length) { ops.push({ ...base, estado: 'discrepancias', pendientes }); continue }
     const { valores, ilegibles } = await descifrarContrato(info)
     const ramo: RamoBotLead = f.tipo
+    const vehiculo = ramo === 'auto' || ramo === 'moto'
     const formulario = formularioBotDesdeLead({
-      ramo, valores, ilegibles, bloque: esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
+      // Vehículo: el MISMO bloque que ve la oportunidad (con el fallback a las claves antiguas), no solo `datosVehiculo` a pelo.
+      ramo, valores, ilegibles, bloque: vehiculo ? { ...datosVehiculoDeInfoRiesgo(info) } : esObj(info.datosVehiculo) ? info.datosVehiculo : null, fichaNacimiento: nac, hoy: dia,
+      ...(vehiculo ? { fichaCarne: await carneFicha(correduriaId, clienteId, ramo) } : {}),
       ...(ramo === 'moto' ? { moto: await motoDelLead(valores.codigoVehiculo) } : {}),
       ...(ramo === 'comunidades' ? { catastro: await catastroComunidad(valores).catch(() => null) } : {}),
     })
