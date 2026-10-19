@@ -106,6 +106,7 @@ export {
 // la ficha/oportunidad y el cuestionario.
 export {
   faltanParaTarificar,
+  llegaAPrecio,
   supuestosFavorablesPara,
   mensajeFaltan,
   obligatoriosPara,

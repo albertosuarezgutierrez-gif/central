@@ -227,6 +227,8 @@ const COMUNIDADES: readonly CampoContrato[] = [
   c('capitalContinente', 'valor del edificio', 'El valor de reconstrucción del edificio, si lo sabes (si no, lo calculamos).', 'cliente', 'siempre'),
   c('fechaEfecto', 'fecha de efecto', P_EFECTO, 'cliente', 'siempre'),
   c('fechaTermino', 'fecha de término', null, 'derivado', 'siempre'),
+  // F3b (19/10/2026): con una referencia de 20 caracteres el Catastro da el año de construcción y el CP del edificio.
+  c('referenciaCatastral', 'referencia catastral', 'La referencia catastral del edificio o de una de sus viviendas (viene en el recibo del IBI), si la tenéis a mano.', 'cliente', 'opcional', { pedirDeEntrada: true }),
   c('polizaAReemplazar', 'póliza actual', 'Si ya tenéis seguro: compañía, precio actual y fecha de vencimiento.', 'cliente', 'opcional', { pedirDeEntrada: true }),
   // Desplegables del portal de Allianz con valor por defecto: los elige la correduría, no el cliente.
   c('tipoVivienda', 'tipo (portal)', null, 'correduria', 'siempre'),

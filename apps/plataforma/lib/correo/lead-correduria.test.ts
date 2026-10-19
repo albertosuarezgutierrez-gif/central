@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { MEDIADOR } from '@central/module-seguros'
 import {
-  CORREO_HASTA_MS, LEADS_POR_PASADA, LEAD_HASTA_MS, RE_CODIGO_POSTAL, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
+  CORREO_HASTA_MS, LEADS_POR_PASADA, LEAD_HASTA_MS, RE_CODIGO_POSTAL, TIMEOUT_CONTACTOS_LEAD_MS, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
   cursorTrasPasada, diferirCorreo, diferirLead, esCorreoAutomatico, esDestinoCorreduria, esLeadCorreduria, esRespuestaDeLead,
   conocidosDelLead, datosDadosEnCorreo, hoyMadrid, motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, ramoDeTexto,
   ramosDelTexto, resolverAltaLeadCorreo, textoAvisoLeadCorreo, textoPlantillaTelegram, type LeadCorreo,
@@ -250,7 +250,7 @@ test('🪤 [2] el OTP va ANTES que el lead (salvo «código postal»), lee el fu
 })
 
 test('🪤 [3] presupuesto de tiempo: se difiere antes de pasarse, y el cursor no pasa del diferido', () => {
-  assert.ok(LEAD_HASTA_MS + 140_000 < 300_000, 'un lead empezado al límite tiene que acabar antes de los 300 s')
+  assert.ok(LEAD_HASTA_MS + 140_000 + TIMEOUT_CONTACTOS_LEAD_MS < 300_000, 'un lead empezado al límite (con Google Contacts) tiene que acabar antes de los 300 s')
   assert.equal(diferirLead(0, LEADS_POR_PASADA), true)
   assert.equal(diferirLead(LEAD_HASTA_MS + 1, 0), true)
   assert.equal(diferirLead(10_000, 0), false)

@@ -78,25 +78,40 @@ export function agruparHilos(filas: readonly FilaHilo[]): Casado {
 /** Valor guardado: en claro, o `{ cifrado: 'v1:…', hash? }` (DNI con su índice ciego para comparar sin descifrar). */
 export type ValorGuardado = ValorContrato | { cifrado: string; hash?: string }
 export type Procedencia = { fuente: 'cliente'; at: string; correo: string }
-export type DatosContrato = { valores: Record<string, ValorGuardado>; _procedencia: Record<string, Procedencia> }
+export type DatosContrato = {
+  valores: Record<string, ValorGuardado>
+  _procedencia: Record<string, Procedencia>
+  /**
+   * F3b (19/10/2026): lo que el cliente dio DISTINTO de lo que ya había (ficha o respuesta anterior). No se pisa ni se usa:
+   * espera a que Alberto elija (`elegirEnContrato`). Mientras haya alguno, el expediente NO está completo.
+   */
+  pendientes: Record<string, ValorGuardado>
+  /** Lo que Alberto eligió en cada discrepancia (sin valores). */
+  elecciones: Record<string, 'ficha' | 'correo'>
+}
+
+function valorGuardado(x: unknown): ValorGuardado | null {
+  if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') return x
+  const c = obj(x)
+  if (typeof c.cifrado === 'string' && c.cifrado.startsWith('v1:')) return { cifrado: c.cifrado, ...(typeof c.hash === 'string' ? { hash: c.hash } : {}) }
+  return null
+}
 
 /** Lee `info_riesgo.datosContrato` sin fiarse (lo raro se ignora, nunca se inventa). PURA. */
 export function leerDatosContrato(v: unknown): DatosContrato {
   const o = obj(v)
   const valores: Record<string, ValorGuardado> = {}
-  for (const [k, x] of Object.entries(obj(o.valores))) {
-    if (typeof x === 'string' || typeof x === 'number' || typeof x === 'boolean') valores[k] = x
-    else {
-      const c = obj(x)
-      if (typeof c.cifrado === 'string' && c.cifrado.startsWith('v1:')) valores[k] = { cifrado: c.cifrado, ...(typeof c.hash === 'string' ? { hash: c.hash } : {}) }
-    }
-  }
+  for (const [k, x] of Object.entries(obj(o.valores))) { const g = valorGuardado(x); if (g !== null) valores[k] = g }
+  const pendientes: Record<string, ValorGuardado> = {}
+  for (const [k, x] of Object.entries(obj(o.pendientes))) { const g = valorGuardado(x); if (g !== null) pendientes[k] = g }
+  const elecciones: Record<string, 'ficha' | 'correo'> = {}
+  for (const [k, x] of Object.entries(obj(o.elecciones))) if (x === 'ficha' || x === 'correo') elecciones[k] = x
   const _procedencia: Record<string, Procedencia> = {}
   for (const [k, x] of Object.entries(obj(o._procedencia))) {
     const p = obj(x)
     if (p.fuente === 'cliente' && typeof p.at === 'string') _procedencia[k] = { fuente: 'cliente', at: p.at, correo: txt(p.correo) }
   }
-  return { valores, _procedencia }
+  return { valores, _procedencia, pendientes, elecciones }
 }
 
 /** Añade lo nuevo (nunca quita ni cambia lo que ya había) con su procedencia. PURA. */
@@ -108,7 +123,39 @@ export function anadirDatosContrato(actual: DatosContrato, nuevos: Record<string
     valores[k] = v
     _procedencia[k] = { fuente: 'cliente', at: p.ahora, correo: p.correo }
   }
-  return { valores, _procedencia }
+  return { ...actual, valores, _procedencia }
+}
+
+/** Lo DISTINTO que trae el correo queda pendiente de elección (el último gana; lo ya elegido se vuelve a preguntar). PURA. */
+export function conPendientes(actual: DatosContrato, distintos: Record<string, ValorGuardado>): DatosContrato {
+  if (!Object.keys(distintos).length) return actual
+  const elecciones = { ...actual.elecciones }
+  for (const k of Object.keys(distintos)) delete elecciones[k]
+  return { ...actual, pendientes: { ...actual.pendientes, ...distintos }, elecciones }
+}
+
+/** Claves cuyo dato manda la FICHA del cliente (los bots leen de ahí al tomador: elegir «correo» no corrige la ficha). */
+export const CLAVES_DE_FICHA = ['dni', 'nombre', 'apellido1', 'apellido2', 'fechaNacimiento', 'estadoCivil', 'telefono', 'email'] as const
+
+export type ResultadoEleccion =
+  | { ok: true; dc: DatosContrato; corregirFicha: boolean }
+  | { ok: false; motivo: 'no_pendiente' }
+
+/**
+ * Alberto elige en una discrepancia. `ficha` = se queda lo que ya había (el del correo se descarta); `correo` = el del correo
+ * pasa a ser EL dato del contrato (y, si es de los que guarda la ficha, se avisa de que la ficha sigue diciendo otra cosa).
+ * Sin esa clave pendiente → `no_pendiente` (botón viejo o ya elegido). PURA.
+ */
+export function elegirEnContrato(actual: DatosContrato, clave: string, eleccion: 'ficha' | 'correo', p: { ahora: string }): ResultadoEleccion {
+  if (!Object.hasOwn(actual.pendientes, clave)) return { ok: false, motivo: 'no_pendiente' }
+  const { [clave]: valor, ...pendientes } = actual.pendientes
+  const elecciones = { ...actual.elecciones, [clave]: eleccion }
+  if (eleccion === 'ficha') return { ok: true, dc: { ...actual, pendientes, elecciones }, corregirFicha: false }
+  return {
+    ok: true,
+    dc: { ...actual, pendientes, elecciones, valores: { ...actual.valores, [clave]: valor }, _procedencia: { ...actual._procedencia, [clave]: { fuente: 'cliente', at: p.ahora, correo: actual._procedencia[clave]?.correo ?? '' } } },
+    corregirFicha: (CLAVES_DE_FICHA as readonly string[]).includes(clave),
+  }
 }
 
 /** Lo que la ficha ya sabe de la persona (claves del contrato). Sin descifrar nada. PURA. */

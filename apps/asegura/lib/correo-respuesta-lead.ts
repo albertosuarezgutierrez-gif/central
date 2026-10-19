@@ -19,7 +19,7 @@ import {
   nombreDePila, seGuardaCifrado, validarValorContrato, type ValorContrato,
 } from '@central/module-seguros'
 import {
-  agruparHilos, anadirDatosContrato, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, previosDeFicha, textoHistorialRespuesta,
+  agruparHilos, anadirDatosContrato, conPendientes, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, previosDeFicha, textoHistorialRespuesta,
   type AdjuntoLead, type Casado, type Casar, type FilaHilo, type Guardar, type ValorGuardado,
 } from './correo-respuesta-lead-puro'
 
@@ -83,6 +83,8 @@ export type ResultadoOportunidad = {
   id: string; ramo: string
   nuevos: string[]; iguales: string[]; discrepancias: string[]; protegidos: string[]; sinClave: string[]; invalidos: string[]
   faltan: string[]
+  /** F3b: discrepancias que esperan la elección de Alberto (claves). Con alguna, la oportunidad NO está completa. */
+  pendientes: string[]
   /** `false` = no se pudo escribir (la oportunidad ya no es de la correduría o la BD falló): nada se dio por sabido. */
   guardado: boolean
 }
@@ -181,10 +183,20 @@ export async function guardarRespuestaLead(correduriaId: string, g: Guardar): Pr
             aBloque = malos.size ? aBloque.filter((k) => !malos.has(k)) : []
           }
         }
-        const dcNuevo = anadirDatosContrato(dc, aGuardar, { ahora, correo: g.gmailMessageId })
+        // F3b: lo DISTINTO queda pendiente de que Alberto elija (cifrado lo personal; sin clave, no se guarda y se dice).
+        const distintos: Record<string, ValorGuardado> = {}
+        for (const k of d.discrepancias) {
+          const campo = leibles.get(k)
+          if (!campo || nuevos[k] === undefined) continue
+          if (!seGuardaCifrado(campo)) { distintos[k] = nuevos[k]; continue }
+          const sobre = await cifrar(nuevos[k])
+          if (!sobre) { sinClave.push(k); continue }
+          distintos[k] = k === 'dni' ? { cifrado: sobre, hash: safe(() => pii.computeDniLookupHash(String(nuevos[k]))) ?? undefined } : { cifrado: sobre }
+        }
+        const dcNuevo = conPendientes(anadirDatosContrato(dc, aGuardar, { ahora, correo: g.gmailMessageId }), distintos)
         infoNueva = { ...infoNueva, datosContrato: dcNuevo }
         const nuevosGuardados = Object.keys(aGuardar)
-        if (nuevosGuardados.length) {
+        if (nuevosGuardados.length || Object.keys(distintos).length) {
           await tx.$executeRaw`
             update seguros.oportunidades set info_riesgo = ${JSON.stringify(infoNueva)}::jsonb
             where id = ${op.id}::uuid and correduria_id = ${correduriaId}::uuid`
@@ -198,6 +210,7 @@ export async function guardarRespuestaLead(correduriaId: string, g: Guardar): Pr
         return {
           id: op.id, ramo: fila.tipo, nuevos: nuevosGuardados, iguales: d.iguales, discrepancias: d.discrepancias,
           protegidos: d.protegidos, sinClave, invalidos, faltan: faltanObligatorios(fila.tipo, conocidos).map((c) => c.clave), guardado: true,
+          pendientes: Object.keys(dcNuevo.pendientes),
         } satisfies ResultadoOportunidad
       })
       if (r) resultados.push(r)
@@ -206,13 +219,13 @@ export async function guardarRespuestaLead(correduriaId: string, g: Guardar): Pr
       // Nada se da por sabido: lo que falta es TODO lo obligatorio que la ficha no tiene.
       resultados.push({
         id: op.id, ramo: op.ramo, nuevos: [], iguales: [], discrepancias: [], protegidos: [], sinClave: [], invalidos, guardado: false,
-        faltan: faltanObligatorios(op.ramo, deFicha).map((c) => c.clave),
+        faltan: faltanObligatorios(op.ramo, deFicha).map((c) => c.clave), pendientes: [],
       })
     }
   }
   if (!resultados.length) return { estado: 'sin_oportunidad' }
 
-  const completo = resultados.every((r) => r.guardado && r.faltan.length === 0)
+  const completo = resultados.every((r) => r.guardado && r.faltan.length === 0 && r.pendientes.length === 0)
   const estadoDatos = estadoDatosTrasRespuesta(completo ? 0 : 1)
   try {
     await prisma.$executeRaw`

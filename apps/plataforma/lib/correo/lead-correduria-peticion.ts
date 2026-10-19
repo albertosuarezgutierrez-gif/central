@@ -24,6 +24,18 @@ export const AVISO_PETICION_LEAD = 'correduria.lead-peticion'
  */
 export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila'] as const
 
+/**
+ * Qué se PURGA al cerrar un pendiente (revisión F3a, 19/10/2026). Lo ENVIADO/descartado/caducado pierde todo lo personal y
+ * el borrador. Un fallido/incierto de una petición o repregunta conserva asunto y borrador (Alberto contesta a mano en su
+ * Gmail, donde ya tiene el hilo), pero NO el email (`to`) ni el nombre (`pila`): no hacen falta para eso. Un pendiente que
+ * no envía nada al cliente (`tarificar`, `discrepancia`) se purga entero en cualquier cierre. PURA.
+ */
+export function purgaAlCerrar(tipo: string, estado: string): { claves: string[]; borrador: boolean } {
+  const sinEnvio = tipo === 'tarificar' || tipo === 'discrepancia'
+  if (sinEnvio || estado === 'enviado' || estado === 'descartado' || estado === 'caducado') return { claves: [...CLAVES_PII_PENDIENTE], borrador: true }
+  return { claves: ['to', 'pila'], borrador: false }
+}
+
 /** Lo que el pendiente guarda para poder enviar (sin el texto, que va en `borrador`). */
 export type DatosPeticion = {
   clienteId: string
@@ -36,8 +48,13 @@ export type DatosPeticion = {
   /** Para el mensaje de Telegram: nombre de pila (o null), ramos y nº de preguntas. Sin apellidos ni contacto. */
   pila: string | null
   ramos: string[]
-  /** F1 petición (por defecto), F2 repregunta (solo lo que falta) o F3a tarificar (🤖, no envía nada al cliente). */
-  tipo?: 'peticion' | 'repregunta' | 'tarificar'
+  /**
+   * F1 petición (por defecto), F2 repregunta (solo lo que falta), F3a tarificar (🤖, no envía nada al cliente) o F3b
+   * discrepancia (elegir ficha/correo, no envía nada al cliente).
+   */
+  tipo?: 'peticion' | 'repregunta' | 'tarificar' | 'discrepancia'
+  /** F3b (`discrepancia`): las claves a elegir, en el orden de los botones (`clp_dis:<p>:<i>:f|c`), y las ya elegidas. */
+  discrepancias?: { oportunidadId: string; ramo: string; clave: string; elegida?: 'ficha' | 'correo' }[]
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -54,8 +71,19 @@ export function leerDatosPeticion(v: unknown): DatosPeticion | null {
   return {
     clienteId: s(o.clienteId), oportunidadIds: ops, to: s(o.to), asunto: s(o.asunto), messageId: s(o.messageId), references: refs,
     pila: typeof o.pila === 'string' ? o.pila : null, ramos: Array.isArray(o.ramos) ? o.ramos.filter((x): x is string => typeof x === 'string') : [],
-    ...(o.tipo === 'repregunta' ? { tipo: 'repregunta' as const } : o.tipo === 'tarificar' ? { tipo: 'tarificar' as const } : {}),
+    ...(o.tipo === 'repregunta' ? { tipo: 'repregunta' as const } : o.tipo === 'tarificar' ? { tipo: 'tarificar' as const } : o.tipo === 'discrepancia' ? { tipo: 'discrepancia' as const } : {}),
+    ...(Array.isArray(o.discrepancias) ? { discrepancias: leerDiscrepancias(o.discrepancias) } : {}),
   }
+}
+
+const RE_CLAVE = /^[A-Za-z][A-Za-z0-9.]{0,39}$/
+
+function leerDiscrepancias(v: unknown[]): NonNullable<DatosPeticion['discrepancias']> {
+  return v.slice(0, 20).flatMap((x) => {
+    const d = typeof x === 'object' && x !== null && !Array.isArray(x) ? (x as Record<string, unknown>) : {}
+    if (typeof d.oportunidadId !== 'string' || !UUID.test(d.oportunidadId) || typeof d.clave !== 'string' || !RE_CLAVE.test(d.clave) || typeof d.ramo !== 'string') return []
+    return [{ oportunidadId: d.oportunidadId, ramo: d.ramo, clave: d.clave, ...(d.elegida === 'ficha' || d.elegida === 'correo' ? { elegida: d.elegida } : {}) }]
+  })
 }
 
 export function botonesPeticion(id: number | string): Boton[][] {
@@ -104,6 +132,10 @@ export type DecisionClp =
   | { ok: true; accion: 'env' | 'edt' | 'no' | 'tar'; id: number; quien: string }
   /** `top` (F3a): «➕ 10 más hoy» para el día `dia` (aaaa-mm-dd) y relanzar la cola. */
   | { ok: true; accion: 'top'; dia: string; quien: string }
+  /** `fal` (F3b): preparar la repregunta tras el fallo de un bot del pendiente de tarificar `id`. */
+  | { ok: true; accion: 'fal'; id: number; quien: string }
+  /** `dis` (F3b): en la discrepancia `indice` del pendiente `id`, quedarse con lo de la ficha (`ficha`) o con lo del correo. */
+  | { ok: true; accion: 'dis'; id: number; indice: number; eleccion: 'ficha' | 'correo'; quien: string }
 
 /** ¿Vale la pulsación? Persona autorizada, acción conocida e id numérico. PURA. */
 export function decidirBotonClp(
@@ -118,9 +150,13 @@ export function decidirBotonClp(
     if (!m) return { ok: false, toast: 'Día no válido' }
     return { ok: true, accion: 'top', dia: `${m[1]}-${m[2]}-${m[3]}`, quien: String(cb.from?.id ?? '') }
   }
-  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar') return { ok: false, toast: 'Acción desconocida' }
+  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Borrador no encontrado' }
+  if (action === 'dis') {
+    if (!/^\d{1,2}$/.test(args[1] ?? '') || (args[2] !== 'f' && args[2] !== 'c')) return { ok: false, toast: 'Botón no válido' }
+    return { ok: true, accion: 'dis', id, indice: Number(args[1]), eleccion: args[2] === 'f' ? 'ficha' : 'correo', quien: String(cb.from?.id ?? '') }
+  }
   return { ok: true, accion: action, id, quien: String(cb.from?.id ?? '') }
 }
 

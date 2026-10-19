@@ -1507,3 +1507,4 @@ export {
   faltanObligatorios, leerRespuestaIa, mismoValor, preguntasRepregunta, promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
   type CategoriaEstadoCivil, type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,
 } from './respuesta-lead.ts'
+export { PREGUNTAS_CONCRETAS, esCodigoConcreto, preguntasConcretas, type CodigoConcreto } from './repregunta-concreta.ts'

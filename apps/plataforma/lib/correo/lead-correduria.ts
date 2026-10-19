@@ -576,6 +576,8 @@ export function textoAvisoLeadCorreo(a: {
   peticion?: 'boton' | 'copiar'
   /** Línea del Catastro ya en HTML seguro (`lineaCatastroTelegram`), si se consultó. */
   catastro?: string | null
+  /** Resultado de añadirlo a Google Contacts (`interpretarContactosLead`); `null`/ausente = no se intentó. */
+  contactos?: { estado: string; motivo: string | null } | null
 }): string {
   const l = a.lead
   const lineas = [
@@ -602,6 +604,8 @@ export function textoAvisoLeadCorreo(a: {
   } else {
     lineas.push(`⚠️ <b>NO se ha registrado en la cartera</b> (${escapeHtml(f.motivo)}). Este aviso es el único rastro: dale de alta a mano.`)
   }
+  const contactos = lineaContactosLead(a.contactos ?? null)
+  if (contactos) lineas.push(contactos)
   for (const o of a.oportunidades) {
     const r = escapeHtml(etiquetaRamo(o.ramo))
     if (o.estado === 'abierta') lineas.push(`📌 Oportunidad de ${r} abierta, primer paso hoy: pedirle los datos.`)
@@ -618,6 +622,37 @@ export function textoAvisoLeadCorreo(a: {
     lineas.push('📝 Sin petición de datos: no parece un lead.')
   }
   return lineas.join('\n')
+}
+
+/** Por qué no se pudo añadir a Google Contacts, en palabras de Alberto (códigos del puerto de asegura). */
+const MOTIVO_CONTACTOS: Record<string, string> = {
+  pendiente_activar: 'la sincronización con Google no está activada',
+  sin_conexion: 'Google Contactos no está conectado',
+  revocada: 'hay que volver a conectar Google Contactos',
+  pii_no_descifra: 'la clave de cifrado no abre la cartera',
+  limite: 'la agenda llegaría al tope de 25.000 contactos',
+  fuera_de_alcance: 'la ficha no es un lead de correo ni de la cartera',
+  sacado_del_grupo: 'lo sacaste de la etiqueta «Grupo ASegura»',
+  ilegible: 'su teléfono o correo no se puede descifrar',
+  fallo_google: 'Google ha fallado',
+  red: 'sin respuesta a tiempo: míralo en Contactos',
+  sin_configurar: 'el puerto de la correduría no está configurado',
+}
+const DUDA_CONTACTOS = new Set(['nombre_distinto', 'telefono_compartido', 'mismo_email', 'mismo_nombre', 'varios_candidatos', 'telefono_titular', 'telefono_muchas_fichas', 'en_cola'])
+
+/**
+ * La línea 📇 del aviso del lead (19/10/2026): «añadido a Contactos» / «ya estaba en Contactos» / «no se
+ * pudo añadir a Contactos (motivo)». Sin datos personales: solo el estado y el motivo. `null` = no se intentó.
+ */
+export function lineaContactosLead(r: { estado: string; motivo: string | null } | null): string | null {
+  if (!r) return null
+  if (r.estado === 'anadido') return '📇 añadido a Contactos'
+  if (r.estado === 'ya_estaba') return '📇 ya estaba en Contactos'
+  const m = r.motivo ?? ''
+  const motivo = r.estado === 'revision' || DUDA_CONTACTOS.has(m)
+    ? 'dudoso: está en la cola de revisión de Google Contactos'
+    : MOTIVO_CONTACTOS[m] ?? (m ? `error: ${m}` : 'error sin detalle')
+  return `📇 no se pudo añadir a Contactos (${escapeHtml(motivo)})`
 }
 
 /**
@@ -637,7 +672,12 @@ export function textoPlantillaTelegram(p: { asunto: string; cuerpo: string }, no
 // `LEADS_POR_PASADA` por pasada, y ningún correo nuevo pasados `CORREO_HASTA_MS`: se DIFIERE (su fila se
 // borra y el cursor se queda justo antes), y la pasada siguiente —10 min— lo coge entero.
 export const LEADS_POR_PASADA = 2
-export const LEAD_HASTA_MS = 150_000
+/**
+ * Tope de la llamada a Google Contacts del lead (19/10/2026). Sale del presupuesto: `LEAD_HASTA_MS` bajó de
+ * 150 s a 135 s para que un lead empezado al límite (≈140 s + esto) siga acabando antes de los 300 s.
+ */
+export const TIMEOUT_CONTACTOS_LEAD_MS = 12_000
+export const LEAD_HASTA_MS = 135_000
 export const CORREO_HASTA_MS = 200_000
 
 export function diferirCorreo(transcurridoMs: number): boolean {

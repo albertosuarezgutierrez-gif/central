@@ -215,33 +215,48 @@ function allianzComunidades(): readonly CampoObligatorio[] {
   return CAPACIDAD_ALLIANZ_COMUNIDADES.extras.filter((x) => x.obligatorio).map((x) => campo(x.clave, x.etiqueta.toLowerCase()))
 }
 
-type Declaracion = { compania: string; ramo: string; propios: () => readonly CampoObligatorio[]; nota?: string }
+/**
+ * `llegaAPrecio` (19/10/2026, F3b de la correduría): ¿el bot de esa compañía/ramo LLEGA HOY a leer un precio en su portal?
+ * Declaración EXPLÍCITA (no se deduce de que esté registrado): un bot que se para antes del precio («en pruebas») gastaría
+ * cupo, máquina y la paciencia de Alberto sin dar nada. Lo que lanza un LEAD (aviso «Listo para tarificar» de Telegram) solo
+ * usa los que llegan; los demás se listan como «en pruebas» y no se encolan desde el lead. Se pasa a `true` SOLO tras ver un
+ * precio real de ese bot (la sesión que lo vea lo cambia aquí, con su cepo en `obligatorios.test.ts`).
+ */
+type Declaracion = { compania: string; ramo: string; propios: () => readonly CampoObligatorio[]; llegaAPrecio: boolean; nota?: string }
 
 /**
  * Una entrada por bot (compañía × ramo) registrado o en construcción. `propios` = lo que pide SU portal además de la forma
  * del ramo. Lista vacía = el portal no pide nada más que la forma (declarado, no «no se sabe»).
  */
 const DECLARACIONES: readonly Declaracion[] = [
-  { compania: 'allianz', ramo: 'comunidades', propios: allianzComunidades },
-  { compania: 'allianz', ramo: 'moto', propios: () => ALLIANZ_MOTO },
+  { compania: 'allianz', ramo: 'comunidades', propios: allianzComunidades, llegaAPrecio: true },
+  { compania: 'allianz', ramo: 'moto', propios: () => ALLIANZ_MOTO, llegaAPrecio: true },
   // Turismos (0.5.0, en exploración): consulta por matrícula; lo opcional (garaje, titulares) solo se escribe si viene.
-  { compania: 'allianz', ramo: 'auto', propios: () => ALLIANZ_AUTO },
+  { compania: 'allianz', ramo: 'auto', propios: () => ALLIANZ_AUTO, llegaAPrecio: false, nota: 'Turismos: se para antes del precio (19/10/2026)' },
   // Hogar pantalla 1: todo lo que lee lo exige ya `validarFormularioHogar`.
-  { compania: 'allianz', ramo: 'hogar', propios: () => [] },
-  { compania: 'mapfre', ramo: 'auto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS] },
+  { compania: 'allianz', ramo: 'hogar', propios: () => [], llegaAPrecio: false, nota: 'flag apagado; pantalla 1' },
+  { compania: 'mapfre', ramo: 'auto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS], llegaAPrecio: true, nota: 'precio real 19/10/2026' },
   // Moto NSEI (0.8.7, 18/10/2026): el MISMO plan que el coche (paso 1, objeto y «Figuras»); la clase de permiso de moto, si
   // no consta, se supone «A» y se declara (no bloquea).
-  { compania: 'mapfre', ramo: 'moto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS] },
-  { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR },
+  { compania: 'mapfre', ramo: 'moto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS], llegaAPrecio: true, nota: 'mismo plan NSEI que el coche (que dio precio real)' },
+  { compania: 'mapfre', ramo: 'hogar', propios: () => MAPFRE_HOGAR, llegaAPrecio: false, nota: 'borrador apagado' },
   // Occident hogar (hueco, sin registrar): lee nif, nacimiento, CP, vía y tipo de vivienda; todos ya en la forma de hogar.
   // OJO: su `planFormularioHogar` lee `tomador.nif` (forma de riesgo-oportunidad), no `tomador.documentoIdentidad`.
-  { compania: 'occident', ramo: 'hogar', propios: () => [] },
+  { compania: 'occident', ramo: 'hogar', propios: () => [], llegaAPrecio: false, nota: 'sin registrar' },
   // Generali Turismos (0.1.0, tras su flag APAGADO): el vehículo lo inyecta asegura desde Allianz/Mapfre; el resto de datos, la
   // forma del ramo (tomador, conductor y antecedentes como en las demás; antecedentes sin dato = supuesto favorable declarado).
-  { compania: 'generali', ramo: 'auto', propios: () => GENERALI_AUTO },
+  { compania: 'generali', ramo: 'auto', propios: () => GENERALI_AUTO, llegaAPrecio: false, nota: 'llega a «Datos de Valoración», no al precio (19/10/2026)' },
 ]
 
 const k = (compania: string, ramo: string) => `${claveCompania(compania)}::${String(ramo).trim().toLowerCase()}`
+
+/**
+ * ¿El bot de `compania`/`ramo` llega hoy a precio? `false` también sin declaración (no se sabe = no se lanza desde un lead).
+ * PURA.
+ */
+export function llegaAPrecio(compania: string, ramo: string): boolean {
+  return DECLARACIONES.find((x) => k(x.compania, x.ramo) === k(compania, ramo))?.llegaAPrecio === true
+}
 
 /** Compañía × ramo con declaración (para cepos y pantallas). PURA. */
 export function capacidadesConObligatorios(): { compania: string; ramo: string }[] {

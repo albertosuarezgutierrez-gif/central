@@ -1,33 +1,33 @@
 {
  "sesion": "d880fe8e-c895-5522-9c6a-3a83ce87f1dc",
  "inicio": "2026-10-19T07:24:37.050Z",
- "fin": "2026-10-19T11:04:45.316Z",
- "llamadas": 950,
+ "fin": "2026-10-19T11:46:56.762Z",
+ "llamadas": 1341,
  "categorias": {
   "otro": {
-   "llamadas": 118,
-   "chars_in": 74839,
-   "chars_out": 786822,
+   "llamadas": 132,
+   "chars_in": 84309,
+   "chars_out": 906738,
    "errores": 0,
-   "archivos_citados": 12,
-   "chars_citados": 138102,
+   "archivos_citados": 17,
+   "chars_citados": 214542,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 26,
-    "SubagentHandback": 23,
-    "ReadNotifications": 60,
-    "SendMessage": 8
+    "ToolSearch": 27,
+    "SubagentHandback": 26,
+    "ReadNotifications": 69,
+    "SendMessage": 9
    }
   },
   "agente:general-purpose": {
-   "llamadas": 9,
-   "chars_in": 13398,
-   "chars_out": 15387,
+   "llamadas": 10,
+   "chars_in": 15376,
+   "chars_out": 17586,
    "errores": 0,
-   "archivos_citados": 9,
-   "chars_citados": 48796,
+   "archivos_citados": 10,
+   "chars_citados": 59528,
    "tools": {
-    "Agent": 9
+    "Agent": 10
    }
   },
   "agente:rastreador-codigo": {
@@ -42,16 +42,16 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 52,
-   "chars_in": 7211,
-   "chars_out": 337089,
+   "llamadas": 60,
+   "chars_in": 8014,
+   "chars_out": 461086,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 3,
     "Grep": 29,
-    "Read": 20
+    "Read": 28
    }
   },
   "mcp:Gmail": {
@@ -67,31 +67,31 @@
    }
   },
   "sql": {
-   "llamadas": 33,
-   "chars_in": 9968,
-   "chars_out": 69725,
+   "llamadas": 34,
+   "chars_in": 10263,
+   "chars_out": 70316,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 33
+    "mcp__Supabase__execute_sql": 34
    }
   },
   "bash": {
-   "llamadas": 621,
-   "chars_in": 410879,
-   "chars_out": 2827606,
+   "llamadas": 942,
+   "chars_in": 546578,
+   "chars_out": 4281164,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 621
+    "Bash": 942
    }
   },
   "mcp:github": {
-   "llamadas": 30,
-   "chars_in": 15207,
-   "chars_out": 74417,
+   "llamadas": 33,
+   "chars_in": 16443,
+   "chars_out": 74732,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 27121,
@@ -100,22 +100,22 @@
     "mcp__github__create_pull_request": 5,
     "mcp__github__pull_request_read": 10,
     "mcp__github__actions_list": 1,
-    "mcp__github__update_pull_request": 5,
-    "mcp__github__add_issue_comment": 1,
-    "mcp__github__merge_pull_request": 4,
+    "mcp__github__update_pull_request": 6,
+    "mcp__github__add_issue_comment": 2,
+    "mcp__github__merge_pull_request": 5,
     "mcp__github__get_job_logs": 2,
     "mcp__github__actions_run_trigger": 1
    }
   },
   "agente:agente-architect": {
-   "llamadas": 10,
-   "chars_in": 26583,
-   "chars_out": 28887,
+   "llamadas": 13,
+   "chars_in": 35331,
+   "chars_out": 38294,
    "errores": 0,
-   "archivos_citados": 22,
-   "chars_citados": 407240,
+   "archivos_citados": 29,
+   "chars_citados": 550310,
    "tools": {
-    "Agent": 10
+    "Agent": 13
    }
   },
   "mcp:Supabase": {
@@ -130,27 +130,27 @@
    }
   },
   "escritura": {
-   "llamadas": 58,
-   "chars_in": 337170,
-   "chars_out": 1161740,
+   "llamadas": 97,
+   "chars_in": 566366,
+   "chars_out": 1829280,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 39,
-    "Edit": 19
+    "Write": 67,
+    "Edit": 30
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 10,
-   "chars_in": 1017,
-   "chars_out": 1807,
+   "llamadas": 11,
+   "chars_in": 1090,
+   "chars_out": 1933,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 5,
-    "mcp__claude-code-remote__unsubscribe_pr_activity": 4,
+    "mcp__claude-code-remote__unsubscribe_pr_activity": 5,
     "mcp__claude-code-remote__send_later": 1
    }
   }

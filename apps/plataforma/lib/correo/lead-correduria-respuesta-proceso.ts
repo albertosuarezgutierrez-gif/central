@@ -21,9 +21,10 @@ import { ACTOR_TRIAJE_CORREO, hoyMadrid, textoPlantillaTelegram } from './lead-c
 import { proponerPeticion } from './lead-correduria-pendiente'
 import { ofrecerTarificacion } from './lead-correduria-tarificar-proceso'
 import {
-  cuboAdjunto, leerCasar, leerGuardar, lineaAdjuntos, plantillaRepregunta, resumirRespuesta, textoRespuestaTelegram, type CuentaAdjuntos,
-  type GuardadoLead,
+  cuboAdjunto, discrepanciasPendientes, leerCasar, leerGuardar, lineaAdjuntos, plantillaRepregunta, resumirRespuesta, textoRespuestaTelegram,
+  type CuentaAdjuntos, type GuardadoLead,
 } from './lead-correduria-respuesta'
+import { proponerDiscrepancias } from './lead-correduria-discrepancia-proceso'
 
 const RE_MSGID = /^<[^<>\s@]+@[^<>\s@]+>$/
 
@@ -78,6 +79,19 @@ export async function procesarRespuestaLead(correo: CorreoNuevo, ahora = new Dat
 
     const resumen = resumirRespuesta(guardado, lectura.invalidos, iaFallo)
     const texto = textoRespuestaTelegram({ pila: casado.pila, ramos, guardado, resumen, iaFallo, adjuntos: lineaAdjuntos(cuenta) })
+
+    // F3b: lo que NO cuadra con lo que ya había espera a que Alberto elija (botones aparte); hasta entonces no está completo
+    // (asegura no lo da por completo y la revisión de los bots no lanza nada).
+    const discrepancias = discrepanciasPendientes(guardado)
+    if (discrepancias.length && RE_MSGID.test(correo.messageId)) {
+      await proponerDiscrepancias({
+        gmailMessageId: correo.messageId, lista: discrepancias,
+        datos: {
+          clienteId: casado.clienteId, oportunidadIds: casado.oportunidades.map((o) => o.id), to: correo.from, asunto: correo.subject || 'Tu seguro',
+          messageId: correo.messageId, references: referencias, pila: casado.pila, ramos,
+        },
+      })
+    }
 
     // Repregunta SOLO si se pudo leer y guardar (si no, podría pedirle lo que ya mandó) y falta algo.
     const plantilla = !resumen.sinLeer && !resumen.completo

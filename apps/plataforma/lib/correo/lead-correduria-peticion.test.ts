@@ -66,7 +66,7 @@ test('el mensaje de Telegram: nombre de pila, ramos y conteo; el borrador plegad
 
 test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotencia (lee el fuente)', () => {
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8')
-  assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at > now\(\)/)
+  assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia'\) AND estado = 'pendiente' AND caduca_at > now\(\)/)
   assert.match(src, /idempotencia: `clp-\$\{d\.id\}`/)
   const hook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
   assert.match(hook, /if \(prefix === PREFIJO_CLP\) \{\s*const d = decidirBotonClp\(cb, action, args, process\.env\.TELEGRAM_CHAT_ID\)/)
@@ -80,7 +80,8 @@ test('🪤 un pendiente CERRADO (enviado, descartado, caducado) se purga: sin em
   const cierres = [...src.matchAll(/UPDATE correduria_pendiente_tg SET estado = '(descartado|caducado)'[^`]*/g)]
   assert.ok(cierres.length >= 4, `esperaba ≥4 cierres descartado/caducado, hay ${cierres.length}`)
   for (const c of cierres) assert.match(c[0], /\$\{PURGA\}/, `cierre sin purga: ${c[0].slice(0, 120)}`)
-  assert.match(src, /estado === 'enviado' \? Prisma\.sql`, \$\{PURGA\}`/)
+  // El cierre tras ✅ purga según `purgaAlCerrar` (enviado: todo; fallido/incierto: sin email ni nombre).
+  assert.match(src, /resultado = \$\{JSON\.stringify\(resultado \?\? null\)\}::jsonb\$\{purgaDe\('peticion_datos', estado\)\}/)
   assert.match(src, /await purgarCaducados\(\)/)
 })
 
@@ -93,4 +94,24 @@ test('🪤 reintento deduplicado (repetido) → «ya enviado antes», nunca «no
   assert.match(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: true, hilo: 'sin_oportunidad' })), /oportunidad/i)
   assert.match(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: true, hilo: 'sin_tabla' })), /SQL del hilo/)
   assert.doesNotMatch(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: true, hilo: 'ok' })), /oportunidad|SQL/)
+})
+
+test('🪤 F3b: al cerrar, fallido/incierto ya NO guardan email ni nombre; lo que no envía al cliente se purga entero', async () => {
+  const { purgaAlCerrar } = await import('./lead-correduria-peticion.ts')
+  assert.deepEqual(purgaAlCerrar('peticion_datos', 'enviado'), { claves: ['to', 'asunto', 'pila'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('repregunta', 'fallido'), { claves: ['to', 'pila'], borrador: false })
+  assert.deepEqual(purgaAlCerrar('peticion_datos', 'incierto'), { claves: ['to', 'pila'], borrador: false })
+  assert.deepEqual(purgaAlCerrar('tarificar', 'fallido'), { claves: ['to', 'asunto', 'pila'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('tarificar', 'incierto'), { claves: ['to', 'asunto', 'pila'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('discrepancia', 'enviado'), { claves: ['to', 'asunto', 'pila'], borrador: true })
+  const tar = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
+  assert.match(tar, /const p = purgaAlCerrar\('tarificar', estado\)[^`]*`[^`]*datos = datos - \$\{p\.claves\}::text\[\], borrador = ''/)
+})
+
+test('🪤 F3b: botones de fallo y de discrepancia solo para el titular y con forma cerrada', () => {
+  assert.deepEqual(decidirBotonClp({ from: { id: 12345 } }, 'fal', ['7'], '12345'), { ok: true, accion: 'fal', id: 7, quien: '12345' })
+  assert.deepEqual(decidirBotonClp({ from: { id: 12345 } }, 'dis', ['7', '2', 'c'], '12345'), { ok: true, accion: 'dis', id: 7, indice: 2, eleccion: 'correo', quien: '12345' })
+  assert.equal(decidirBotonClp({ from: { id: 12345 } }, 'dis', ['7', '2', 'x'], '12345').ok, false)
+  assert.equal(decidirBotonClp({ from: { id: 999 } }, 'dis', ['7', '0', 'f'], '12345').ok, false)
+  assert.equal(decidirBotonClp({ from: { id: 999 } }, 'fal', ['7'], '12345').ok, false)
 })

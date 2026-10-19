@@ -51,7 +51,7 @@ function cifrar(texto: string): string {
   return c
 }
 
-function descifrarToken(c: string): string {
+export function descifrarToken(c: string): string {
   if (!c.startsWith('v1:')) throw new Error('Refresh token sin cifrar en la BD: se rechaza')
   return decryptField(c)
 }
@@ -193,7 +193,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * absorbida → en quién se fusionó, siguiendo las CADENAS (A→B y después B→C): sin el segundo
  * salto, el vínculo de A no lo heredaba C y se creaba un contacto duplicado.
  */
-async function fusionesDe(correduriaId: string, ids: string[]): Promise<Map<string, string>> {
+export async function fusionesDe(correduriaId: string, ids: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>()
   let pendientes = [...new Set(ids.filter((id) => UUID.test(id)))]
   for (let salto = 0; salto < 10 && pendientes.length > 0; salto++) {
@@ -235,7 +235,7 @@ export function whereClaves(claves: readonly string[]) {
   return { OR: [{ clienteId: { in: clientes } }, { companiaContactoId: { in: companias } }] }
 }
 
-async function leerVinculos(correduriaId: string): Promise<Vinculo[]> {
+export async function leerVinculos(correduriaId: string): Promise<Vinculo[]> {
   const filas = await prismaAsegura().googleContactosVinculo.findMany({ where: { correduriaId } })
   return filas.map((v) => ({
     clienteId: claveDeFila(v), resourceName: v.resourceName, etag: v.etag, hashEnviado: v.hashEnviado,
@@ -244,7 +244,7 @@ async function leerVinculos(correduriaId: string): Promise<Vinculo[]> {
 }
 
 /** Upsert por clave (el de Prisma no admite una clave única con NULL): borrar + crear, juntos. */
-async function guardarVinculo(correduriaId: string, v: { clienteId: string; resourceName: string; etag: string | null; hash: string; origen: OrigenVinculo }, sustituye: string[] = []): Promise<void> {
+export async function guardarVinculo(correduriaId: string, v: { clienteId: string; resourceName: string; etag: string | null; hash: string; origen: OrigenVinculo }, sustituye: string[] = []): Promise<void> {
   const db = prismaAsegura()
   await db.$transaction([
     db.googleContactosVinculo.deleteMany({ where: { correduriaId, ...whereClaves([v.clienteId, ...sustituye]) } }),
@@ -263,7 +263,7 @@ async function guardarVinculo(correduriaId: string, v: { clienteId: string; reso
  * nunca se guarda en claro). Si la tabla no se puede leer, LANZA: sin saber quién es el titular no se
  * escribe nada (el cron sale con error y nada cambia en Google).
  */
-async function titularesGoogle(correduriaId: string): Promise<{ titulares: Map<string, string>; hashTelefono: (e164: string) => string }> {
+export async function titularesGoogle(correduriaId: string): Promise<{ titulares: Map<string, string>; hashTelefono: (e164: string) => string }> {
   const filas = await prismaAsegura().googleContactosTitularTelefono.findMany({ where: { correduriaId }, select: { telefonoHash: true, clienteId: true } })
   return {
     titulares: new Map(filas.map((f) => [f.telefonoHash, f.clienteId])),
@@ -275,7 +275,7 @@ async function titularesGoogle(correduriaId: string): Promise<{ titulares: Map<s
   }
 }
 
-async function encolarRevisiones(correduriaId: string, plan: Plan): Promise<number> {
+export async function encolarRevisiones(correduriaId: string, plan: Pick<Plan, 'revisiones'>): Promise<number> {
   if (plan.revisiones.length === 0) return 0
   const filas = plan.revisiones.map((r) => ({
     correduriaId,

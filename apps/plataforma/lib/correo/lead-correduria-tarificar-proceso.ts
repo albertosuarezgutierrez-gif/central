@@ -12,7 +12,7 @@ import { prisma } from '@/lib/db'
 import { escapeHtml, tgSend, tgSendButtons } from '@central/core-telegram'
 import { tgAviso, tgAvisoBotones } from '@/lib/telegram/avisos'
 import { tarificarLeadAsegura } from '@/lib/seguimiento-asegura'
-import { CLAVES_PII_PENDIENTE, leerDatosPeticion, type DatosPeticion } from './lead-correduria-peticion'
+import { CLAVES_PII_PENDIENTE, leerDatosPeticion, purgaAlCerrar, type DatosPeticion } from './lead-correduria-peticion'
 import { plantillaRepregunta } from './lead-correduria-respuesta'
 import { proponerPeticion } from './lead-correduria-pendiente'
 import {
@@ -40,7 +40,7 @@ export async function ofrecerTarificacion(a: { gmailMessageId: string; datos: Da
     }
     const oferta = decidirOferta(rev)
     if (oferta.tipo === 'repregunta') {
-      const plantilla = plantillaRepregunta({ pila: a.datos.pila, ramos: a.datos.ramos, faltan: oferta.preguntar, invalidos: [], asuntoOriginal: a.asuntoOriginal })
+      const plantilla = plantillaRepregunta({ pila: a.datos.pila, ramos: a.datos.ramos, faltan: oferta.preguntar, invalidos: [], asuntoOriginal: a.asuntoOriginal, concretas: oferta.concretas })
       const resumen = `${sinListo(a.resumen)}\n${textoTarificar({ id: null, pila: a.datos.pila, revision: rev })}`
       if (plantilla) {
         const p = await proponerPeticion({
@@ -88,18 +88,21 @@ export async function ofrecerTarificacion(a: { gmailMessageId: string; datos: Da
 
 /** 🤖 sobre el pendiente `id`. Devuelve la línea y el resultado (para que ➕ sepa si volvió a toparse). Nunca lanza. */
 async function tarificarPendiente(id: number, quien: string): Promise<{ linea: string; r: ResultadoTarificar | null }> {
-  const filas = await prisma.$queryRaw<{ datos: unknown }[]>(Prisma.sql`
+  const filas = await prisma.$queryRaw<{ datos: unknown; tg_message_id: bigint | null }[]>(Prisma.sql`
     UPDATE correduria_pendiente_tg SET estado = 'enviando', esperando_edit = false, decidido_por = ${actorTelegram(quien)}, decidido_at = now()
     WHERE id = ${id} AND tipo = 'tarificar' AND estado = 'pendiente' AND caduca_at > now()
-    RETURNING datos`).catch(() => null)
+    RETURNING datos, tg_message_id`).catch(() => null)
   if (filas === null) return { linea: '⚠️ <i>No he podido leer el pendiente: no se ha lanzado nada.</i>', r: null }
   if (!filas.length) return { linea: '<i>Ese botón ya se usó, se descartó o ha caducado: no se ha lanzado nada.</i>', r: null }
   const datos = leerDatosPeticion(filas[0].datos)
   if (!datos || !datos.oportunidadIds.length) {
-    await cerrar(id, 'fallido', { motivo: 'ilegible' }, true)
+    await cerrar(id, 'fallido', { motivo: 'ilegible' })
     return { linea: '⚠️ <i>El pendiente guardado no se entiende: no se ha lanzado nada.</i>', r: null }
   }
-  const res = await tarificarLeadAsegura({ accion: 'tarificar', clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, actor: actorTelegram(quien) })
+  const tgMsg = filas[0].tg_message_id !== null ? String(filas[0].tg_message_id) : undefined
+  const res = await tarificarLeadAsegura({
+    accion: 'tarificar', clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, pendienteId: String(id), ...(tgMsg ? { tgMessageId: tgMsg } : {}), actor: actorTelegram(quien),
+  })
     .catch(() => ({ status: 502, json: { estado: 'red' } }))
   const r = leerTarificar(res.status, res.json)
   const tras = estadoPendienteTras(r)
@@ -110,7 +113,7 @@ async function tarificarPendiente(id: number, quien: string): Promise<{ linea: s
         resultado = ${JSON.stringify(r.estado === 'tope' ? { cola: r.dia } : { motivo: r.estado })}::jsonb
       WHERE id = ${id} AND estado = 'enviando'`).catch(() => {})
   } else {
-    await cerrar(id, tras, r, tras === 'enviado')
+    await cerrar(id, tras, r)
   }
   if (r.estado === 'nada' && r.revision.estado === 'ok') await despuesDeNada(id, datos, r.revision)
   return { linea: lineaTrasTarificar(r), r }
@@ -121,7 +124,7 @@ async function despuesDeNada(id: number, datos: DatosPeticion, rev: Extract<Revi
   const oferta = decidirOferta(rev)
   const texto = textoTarificar({ id: null, pila: datos.pila, revision: rev })
   if (oferta.tipo === 'repregunta') {
-    const plantilla = plantillaRepregunta({ pila: datos.pila, ramos: datos.ramos, faltan: oferta.preguntar, invalidos: [], asuntoOriginal: datos.asunto })
+    const plantilla = plantillaRepregunta({ pila: datos.pila, ramos: datos.ramos, faltan: oferta.preguntar, invalidos: [], asuntoOriginal: datos.asunto, concretas: oferta.concretas })
     if (plantilla) {
       const p = await proponerPeticion({
         gmailMessageId: datos.messageId, datos: { ...datos, asunto: plantilla.asunto, tipo: 'repregunta' },
@@ -136,9 +139,11 @@ async function despuesDeNada(id: number, datos: DatosPeticion, rev: Extract<Revi
   await tgSend(texto, { html: true }).catch(() => null)
 }
 
-async function cerrar(id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown, purgar: boolean): Promise<void> {
+async function cerrar(id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown): Promise<void> {
+  // Un pendiente de tarificar no envía nada al cliente: en CUALQUIER cierre pierde email, asunto y nombre (`purgaAlCerrar`).
+  const p = purgaAlCerrar('tarificar', estado)
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE correduria_pendiente_tg SET estado = ${estado}, resultado = ${JSON.stringify(resultado ?? null)}::jsonb${purgar ? Prisma.sql`, ${PURGA}` : Prisma.empty}
+    UPDATE correduria_pendiente_tg SET estado = ${estado}, resultado = ${JSON.stringify(resultado ?? null)}::jsonb, datos = datos - ${p.claves}::text[], borrador = ''
     WHERE id = ${id} AND estado = 'enviando'`).catch(() => {})
 }
 
@@ -200,3 +205,42 @@ export async function resolverTopeClp(dia: string, quien: string, mensajeId: num
   return lineas.join('\n')
 }
 
+
+// ─── F3b: repregunta tras el fallo de un bot ya lanzado (📝 `clp_fal:<p>`) ─────────────────────────────────────────
+
+/**
+ * asegura avisó (en el hilo del aviso 🤖) de que un bot lanzado falló por un dato del CLIENTE. Aquí: qué claves (asegura
+ * `accion:'fallos'`, solo claves) → borrador de repregunta F2 con ✅/✏️/❌ en el hilo del cliente. Nunca reintenta el bot ni
+ * envía nada sin ✅. El pendiente de tarificar ya no guarda el email ni el asunto (purgados al cerrarse): se leen de la fila
+ * del triaje de SU correo (`correo_triaje`, la misma dirección que ya guarda). Nunca lanza.
+ */
+export async function resolverFalloClp(id: number, quien: string): Promise<string> {
+  try {
+    const filas = await prisma.$queryRaw<{ datos: unknown; gmail_message_id: string }[]>(Prisma.sql`
+      SELECT datos, gmail_message_id FROM correduria_pendiente_tg WHERE id = ${id} AND tipo = 'tarificar'`)
+    if (!filas.length) return '<i>No encuentro ese aviso de tarificar: no preparo nada.</i>'
+    const crudo = (typeof filas[0].datos === 'object' && filas[0].datos !== null ? filas[0].datos : {}) as Record<string, unknown>
+    const correo = await prisma.$queryRaw<{ remitente: string; asunto: string }[]>(Prisma.sql`
+      SELECT remitente, asunto FROM correo_triaje WHERE gmail_message_id = ${filas[0].gmail_message_id}`)
+    const datos = leerDatosPeticion({ ...crudo, to: correo[0]?.remitente ?? '', asunto: correo[0]?.asunto || 'Tu seguro', pila: null })
+    if (!datos || !datos.oportunidadIds.length) return '⚠️ <i>No he podido recuperar a quién contestar (falta su correo en el triaje): prepárala a mano.</i>'
+    const r = await tarificarLeadAsegura({ accion: 'fallos', clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, actor: actorTelegram(quien) })
+      .catch(() => ({ status: 502, json: null }))
+    const o = (typeof r.json === 'object' && r.json !== null ? r.json : {}) as { estado?: unknown; fallos?: unknown }
+    if (r.status !== 200 || o.estado !== 'ok' || !Array.isArray(o.fallos)) return '⚠️ <i>No he podido leer qué dato falló (asegura no contesta): no preparo nada todavía.</i>'
+    const claves = [...new Set((o.fallos as { claves?: unknown }[]).flatMap((f) => (Array.isArray(f.claves) ? f.claves.filter((k): k is string => typeof k === 'string') : [])))]
+    if (!claves.length) return '<i>No consta ningún fallo por un dato del cliente: no hay nada que repreguntar.</i>'
+    const plantilla = plantillaRepregunta({ pila: null, ramos: datos.ramos, faltan: claves, invalidos: [], asuntoOriginal: datos.asunto })
+    if (!plantilla) return '<i>Esos datos no se le preguntan al cliente: corrígelos en la ficha.</i>'
+    const p = await proponerPeticion({
+      // Clave propia por pendiente y claves: una segunda pulsación no duplica la repregunta.
+      gmailMessageId: `fallo:${id}:${claves.sort().join(',')}`.slice(0, 300), datos: { ...datos, asunto: plantilla.asunto, tipo: 'repregunta' },
+      borrador: plantilla.cuerpo, preguntas: plantilla.preguntas, catastro: null,
+    })
+    if (!p) return '⚠️ <i>No he podido preparar la repregunta (¿falta el SQL del pendiente o Telegram no responde?).</i>'
+    return p.nuevo ? `📝 Repregunta preparada abajo (#clp${p.id}): no sale nada sin ✅.` : `<i>Esa repregunta ya estaba preparada (#clp${p.id}).</i>`
+  } catch (e) {
+    console.error('[triaje] repregunta tras fallo de bot:', e instanceof Error ? e.name : 'error')
+    return '⚠️ <i>Fallo interno al preparar la repregunta: no se ha enviado nada.</i>'
+  }
+}
