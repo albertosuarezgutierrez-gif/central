@@ -22,6 +22,7 @@ import {
 } from '../src/guard.ts'
 import {
   consultarVehiculoPorMatricula,
+  consultarVehiculoPorMatriculaConSupuesto,
   ErrorMapaIncompleto,
   esperarPrimasMapfre,
   exigirConductorEsTomador,
@@ -108,11 +109,11 @@ const ctxReal = (page: Page, guard: GuardEmision) => {
 const PASOS = ['Datos básicos', 'Objeto asegurado', 'Figuras', 'Coberturas', 'Proyectos', 'Contratación']
 
 /** Diálogo «Selección de vehículo» SIN radio (tabla CDK: la fila se elige pulsando una celda, como en la grabación). */
-const FILAS_DIALOGO = (filas: Array<[string, string]>) =>
-  filas.map(([mat, den], i) => `<tr class="mat-row cdk-row" onclick="window.__fila=${i};document.getElementById('okv').disabled=false"><td class="cdk-column-select"></td><td class="cdk-column-matricula">${mat}</td><td class="cdk-column-bastidor">BASTIDOR-FICTICIO-${i}</td><td class="cdk-column-denominacion">${den}</td><td>${100 + i}</td><td>${1500 + i}</td><td>5</td><td>01/0${i + 1}/2020</td></tr>`).join('')
+const FILAS_DIALOGO = (filas: Array<[string, string, string?, string?]>) =>
+  filas.map(([mat, den, cv, cc], i) => `<tr class="mat-row cdk-row" onclick="window.__fila=${i};document.getElementById('okv').disabled=false"><td class="cdk-column-select"></td><td class="cdk-column-matricula">${mat}</td><td class="cdk-column-bastidor">BASTIDOR-FICTICIO-${i}</td><td class="cdk-column-denominacion">${den}</td><td>${cv ?? 100 + i}</td><td>${cc ?? 1500 + i}</td><td>5</td><td>01/0${i + 1}/2020</td></tr>`).join('')
 // DOM de la prueba real del 15/10/2026 (trabajo f46682c2): `cdk-overlay-pane custom-dialog`, título «Selección de vehículo»,
 // botones «Cancelar», «No es el vehículo.» y «Aceptar».
-const DIALOGO_VEHICULO = (filas: Array<[string, string]>) => `<div class="cdk-overlay-pane custom-dialog"><mat-dialog-container><app-matricula-dialog><h2>Selección de vehículo</h2><div><table><thead><tr><th></th><th>Matrícula</th><th>Nº Bastidor</th><th>Denominación comercial</th><th>CV/KW</th><th>CC</th><th>Nº Puertas</th><th>Fecha Inicio</th></tr></thead><tbody>${FILAS_DIALOGO(filas)}</tbody></table></div>
+const DIALOGO_VEHICULO = (filas: Array<[string, string, string?, string?]>) => `<div class="cdk-overlay-pane custom-dialog"><mat-dialog-container><app-matricula-dialog><h2>Selección de vehículo</h2><div><table><thead><tr><th></th><th>Matrícula</th><th>Nº Bastidor</th><th>Denominación comercial</th><th>CV/KW</th><th>CC</th><th>Nº Puertas</th><th>Fecha Inicio</th></tr></thead><tbody>${FILAS_DIALOGO(filas)}</tbody></table></div>
 <div><div class="right"><button onclick="window.__cancelar=1">Cancelar</button><button onclick="window.__noCatalogado=1">No es el vehículo.</button><button id="okv" disabled onclick="window.__aceptado=1;document.querySelector('.custom-dialog').remove()">Aceptar</button></div></div></app-matricula-dialog></mat-dialog-container></div>`
 
 const CLUB = (izquierda = 'No, gracias') => `<mat-dialog-container><app-club-mapfre><section><p>Club MAPFRE</p><div class="botonera"><div class="left"><button onclick="cerrarClub()">${izquierda}</button></div><div class="right"><button onclick="window.__adherido=1">Adherirme al Club</button></div></div></section></app-club-mapfre></mat-dialog-container>`
@@ -120,7 +121,7 @@ const CLUB = (izquierda = 'No, gracias') => `<mat-dialog-container><app-club-map
 const TARJETA = (producto: string, prima: string) => `<prima-producto><section><mat-select><span class="mat-select-value-text">${producto}</span></mat-select><mat-select><span class="mat-select-value-text">ANUAL</span></mat-select></section><section><div class="caja-primas"><p><strong>${prima}</strong></p></div></section></prima-producto>`
 
 /** Una página NSEI con TODOS los componentes a la vez (como la SPA): el stepper manda. Mat-select con overlay CDK. */
-const NSEI = (o: { filas?: Array<[string, string]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean } = {}) => `<!doctype html><body>
+const NSEI = (o: { filas?: Array<[string, string, string?, string?]>; polizaObligatoria?: boolean; club?: string | null; primas?: string; interruptor?: boolean | null; cpAsincrono?: boolean; errorEn?: 'matriculacion' | null; sinUsoAmbito?: boolean } = {}) => `<!doctype html><body>
 <style>mat-select{display:inline-block;min-width:80px;min-height:14px;border:1px solid #999}</style>
 <mat-horizontal-stepper>${PASOS.map((p, i) => `<mat-step-header role="tab" aria-selected="${i === 0}">${i + 1} ${p}</mat-step-header>`).join('')}</mat-horizontal-stepper>
 <template id="tplVeh">${DIALOGO_VEHICULO(o.filas ?? [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6']])}</template>
@@ -201,32 +202,46 @@ test('confirmarVehiculoMapfre con denominación: la tabla re-ordenada entre lect
   await b.context.close()
 })
 
-test('consultarVehiculoPorMatricula (v0.8.6): varias filas sin dato que desempate → la PRIMERA, confirmada por el guard, y el supuesto se DECLARA (había N)', async () => {
-  const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6'], [MATRICULA, 'MARCA PRUEBA MODELO Y 2.0']] }))
+test('consultarVehiculoPorMatricula (v0.8.9): varias filas MATERIALMENTE distintas (cc 1500 vs 2500) y sin dato que desempate → NO elige: ErrorEleccionVersion con TODAS las filas (denominación · CV · cc · fecha) y sin pulsar «Aceptar»', async () => {
+  const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6', '100', '1500'], [MATRICULA, 'MARCA PRUEBA MODELO Y 2.0', '150', '2500']] }))
   const ctx = ctxReal(page, guard)
-  const supuestos: string[] = []
-  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form, (x) => supuestos.push(x))
-  assert.equal(v.denominacion, 'MARCA PRUEBA MODELO X 1.6')
-  assert.deepEqual(supuestos, ['vehículo/versión: el primero de la lista (supuesto, había 2)'])
-  assert.equal(await marca(page, '__aceptado'), 1, 'el guard confirmó la fila (Aceptar pulsado)')
+  await assert.rejects(
+    () => consultarVehiculoPorMatricula(page, MATRICULA, ctx, 3_000, undefined, form),
+    (e) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 2 && e.opcionesVersion[0]!.etiqueta.startsWith('MARCA PRUEBA MODELO X 1.6') && e.opcionesVersion[1]!.etiqueta.startsWith('MARCA PRUEBA MODELO Y 2.0') && !JSON.stringify(e.opcionesVersion).includes(MATRICULA),
+  )
+  assert.equal(await marca(page, '__aceptado'), null, 'no se confirmó ninguna fila')
   await context.close()
+})
+
+test('consultarVehiculoPorMatricula (v0.8.9, caso Terracan): 5 filas equivalentes (GL/GLS/Full, 163 CV, 2902 cc) → elige SOLA la primera, la confirma por el guard y DECLARA el supuesto', async () => {
+  const filas = ['GL', 'GLS', 'FULL', 'GLS AUT', 'FULL AUT'].map((a): [string, string, string, string] => [MATRICULA, `HYUNDAI TERRACAN 2.9 CRDI 163 ${a}`, '163', '2902'])
+  const { context, page, guard } = await preparar(NSEI({ filas }))
+  const r = await consultarVehiculoPorMatriculaConSupuesto(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, form)
+  assert.equal(r.vehiculo.denominacion, 'HYUNDAI TERRACAN 2.9 CRDI 163 GL')
+  assert.equal(await marca(page, '__fila'), 0, 'la primera del portal (sin fecha de matriculación)')
+  assert.equal(await marca(page, '__aceptado'), 1)
+  assert.match(r.supuestoVersion!, /^Versión elegida automáticamente: HYUNDAI TERRACAN 2\.9 CRDI 163 GL · 163 CV · 2902 cc · .* \(había 5 equivalentes; revisar en la emisión\)$/)
+  assert.ok(!r.supuestoVersion!.includes(MATRICULA))
+  await context.close()
+  // Con la 1ª matriculación del riesgo elige la de fecha de inicio más cercana (≤): las filas traen 01/01/2020 … 01/05/2020.
+  const b = await preparar(NSEI({ filas }))
+  const r2 = await consultarVehiculoPorMatriculaConSupuesto(b.page, MATRICULA, ctxReal(b.page, b.guard), 3_000, undefined, { ...form, fechaMatriculacion: '2020-03-15' })
+  assert.equal(r2.vehiculo.denominacion, 'HYUNDAI TERRACAN 2.9 CRDI 163 FULL')
+  assert.equal(await marca(b.page, '__fila'), 2)
+  await b.context.close()
 })
 
 test('consultarVehiculoPorMatricula (v0.8.6): UNA sola fila → esa, como dato, SIN supuesto', async () => {
   const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6']] }))
-  const supuestos: string[] = []
-  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, form, (x) => supuestos.push(x))
+  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, form)
   assert.equal(v.denominacion, 'MARCA PRUEBA MODELO X 1.6')
-  assert.deepEqual(supuestos, [])
   await context.close()
 })
 
 test('consultarVehiculoPorMatricula (v0.8.6): varias filas y UNA casa con la versión elegida → esa, como dato, SIN supuesto', async () => {
   const { context, page, guard } = await preparar(NSEI({ filas: [[MATRICULA, 'MARCA PRUEBA MODELO X 1.6'], [MATRICULA, 'MARCA PRUEBA MODELO Y 2.0']] }))
-  const supuestos: string[] = []
-  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, { ...form, eleccionVersion: { etiqueta: 'MARCA PRUEBA MODELO Y 2.0' } }, (x) => supuestos.push(x))
+  const v = await consultarVehiculoPorMatricula(page, MATRICULA, ctxReal(page, guard), 3_000, undefined, { ...form, eleccionVersion: { etiqueta: 'MARCA PRUEBA MODELO Y 2.0' } })
   assert.equal(v.denominacion, 'MARCA PRUEBA MODELO Y 2.0')
-  assert.deepEqual(supuestos, [])
   assert.equal(await marca(page, '__aceptado'), 1)
   await context.close()
 })

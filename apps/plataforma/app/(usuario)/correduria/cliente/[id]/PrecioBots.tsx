@@ -23,6 +23,7 @@ import { leerEncoladoBot } from '@/lib/tarificador-moto-formulario'
 import { adaptadorDeRamo, checklistBot, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
 import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila } from '@/lib/tarificador-checklist'
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
+import { clasificarEncolar, MENSAJE_ENCOLAR_INCIERTO, MENSAJE_ENCOLAR_SIN_CONEXION, REINTENTO_INCIERTO_MS, REINTENTOS_INCIERTO } from '@/lib/tarificador-encolar-incierto'
 import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from '@/lib/tarificador-todas'
 import PrepararPresupuestoBot from '../../oportunidad/[id]/PrepararPresupuestoBot'
 
@@ -46,12 +47,12 @@ async function pedirJson(url: string, init?: RequestInit): Promise<{ status: num
     return { status: r.status, json: await r.json().catch(() => null) }
   } catch (e) {
     // Sin logs en el navegador (guardián del bloque): el motivo (timeout|red) viaja al mensaje de la fila.
-    return { status: 502, json: { estado: 'error', motivo: describirFalloRed(e).motivo } }
+    return { status: 502, json: { estado: 'error', causa: describirFalloRed(e).causa, motivo: describirFalloRed(e).motivo } }
   }
 }
 
 type Integraciones = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'ok'; lista: IntegracionVista[] }
-type Seguimiento = { trabajoId: string; duplicado: boolean; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
+type Seguimiento = { trabajoId: string; duplicado: boolean; mensajePrevio: string | null; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
 
 const sinBots = (texto: string, estado?: string) => (
   <div style={cardStyle}>
@@ -232,15 +233,30 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
         let fila: FilaLote
         if (bloqueo) fila = { compania, estado: 'omitida', mensaje: bloqueo }
         else {
-          const r = await pedirJson('/api/correduria/tarificador/encolar', {
+          const init: RequestInit = {
             method: 'POST', headers: { 'content-type': 'application/json' },
             body: JSON.stringify({
               clienteId, oportunidadId, ramo, compania, riesgo: formulario.riesgo,
               ...(formulario.completarDesdeFicha.length ? { completarDesdeFicha: formulario.completarDesdeFicha } : {}),
             }),
-          })
-          const e = leerEncoladoBot(r.status, r.json)
-          fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false } : { compania, estado: 'rechazada', mensaje: e.mensaje }
+          }
+          const encolar = () => pedirJson('/api/correduria/tarificador/encolar', init)
+          let r = await encolar()
+          // Sin respuesta fiable (timeout, conexión cortada, 502/504 mudo) NO es «rechazada»: asegura puede haber encolado. Se
+          // re-sondea repitiendo el MISMO encolar, que es idempotente (devuelve `duplicado: true` con el trabajo vivo).
+          for (let i = 0; i < REINTENTOS_INCIERTO && clasificarEncolar(r.status, r.json) === 'incierto'; i++) {
+            await new Promise((res) => setTimeout(res, REINTENTO_INCIERTO_MS))
+            if (mia !== generacion.current) break
+            r = await encolar()
+          }
+          if (mia !== generacion.current) break
+          const veredicto = clasificarEncolar(r.status, r.json)
+          if (veredicto === 'incierto') fila = { compania, estado: 'incierta', mensaje: MENSAJE_ENCOLAR_INCIERTO }
+          else if (veredicto === 'sin_conexion') fila = { compania, estado: 'rechazada', mensaje: MENSAJE_ENCOLAR_SIN_CONEXION }
+          else {
+            const e = leerEncoladoBot(r.status, r.json)
+            fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false } : { compania, estado: 'rechazada', mensaje: e.mensaje }
+          }
         }
         if (mia !== generacion.current) break
         acumulado.push(fila)
@@ -248,6 +264,7 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
       }
       if (mia !== generacion.current) return
       if (acumulado.some((f) => f.estado === 'encolada')) void sondear(mia)
+      else if (acumulado.some((f) => f.estado === 'incierta')) setAviso('Alguna compañía puede haberse encolado aunque asegura no respondió: mira «Presupuestos» en unos segundos antes de volver a pedir.')
       else setAviso('No se ha encolado ninguna compañía: mira el motivo de cada una.')
     } finally {
       enVuelo.current = false
@@ -315,11 +332,11 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
   }, [])
   useEffect(() => parar, [parar])
 
-  const sondear = useCallback((trabajoId: string, duplicado: boolean) => {
+  const sondear = useCallback((trabajoId: string, duplicado: boolean, mensajePrevio: string | null) => {
     parar()
     const mia = generacion.current
     const inicio = Date.now()
-    setSeg({ trabajoId, duplicado, trabajo: null, aviso: null, agotado: false })
+    setSeg({ trabajoId, duplicado, mensajePrevio, trabajo: null, aviso: null, agotado: false })
     const vuelta = async () => {
       const r = await pedirJson(`/api/correduria/tarificador/trabajo/${encodeURIComponent(trabajoId)}`)
       if (mia !== generacion.current) return
@@ -354,7 +371,10 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
       })
       const e = leerEncoladoBot(r.status, r.json)
       if (!e.ok) { setError(e.mensaje); return }
-      sondear(e.trabajoId, e.duplicado)
+      // `mensaje` (asegura): estado real del trabajo previo. Vacío o ausente → texto de respaldo.
+      const mensaje = (r.json as { mensaje?: unknown } | null)?.mensaje
+      const m = typeof mensaje === 'string' ? mensaje.trim() : ''
+      sondear(e.trabajoId, e.duplicado, m || null)
     } finally {
       enVuelo.current = false
       setOcupado(false)
@@ -375,7 +395,7 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
       {error && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)', overflowWrap: 'anywhere' }}>{error}</span>}
       {seg && (
         <div aria-live="polite" style={{ display: 'grid', gap: 6, minWidth: 0 }}>
-          {seg.duplicado && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Ya había un trabajo en marcha con estos datos: se muestra ese.</span>}
+          {seg.duplicado && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{seg.mensajePrevio ?? 'Ya había un trabajo en marcha con estos datos: se muestra ese.'}</span>}
           {!res && !seg.aviso && <span style={{ fontSize: 13, color: 'var(--muted)' }}>Comprobando el estado…</span>}
           {res && <strong style={{ fontSize: 14, color: TONO[res.tono] }}>{nombre}: {res.titulo}</strong>}
           {res?.motivo && <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{res.motivo}</span>}

@@ -9,6 +9,8 @@ import { rpaActivo, validarEntradaRamo } from '@/lib/tarificador-reglas'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// Encola y lanza la máquina Fly en la misma petición (hasta ~20 s de Fly + arranque en frío): sin esto, el tope por defecto de Vercel.
+export const maxDuration = 60
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const uuidONull = (v: unknown): string | null | false =>
@@ -61,7 +63,7 @@ export const POST = auditado(async (req: Request) => {
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
     // `duplicado: true` = ya había un trabajo vivo con este mismo riesgo: se devuelve ESE y no se crea otro (13/10/2026).
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/encolar', e) }, { status: 503 })
   }

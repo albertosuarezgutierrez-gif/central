@@ -17,6 +17,8 @@ export function ordenEncolado(companias: readonly string[]): string[] {
 export type FilaLote =
   | { compania: string; estado: 'omitida'; mensaje: string }
   | { compania: string; estado: 'rechazada'; mensaje: string }
+  /** Sin respuesta fiable de asegura: PUEDE haberse encolado. Ni rechazada ni encolada; no se da por fallida. */
+  | { compania: string; estado: 'incierta'; mensaje: string }
   | { compania: string; estado: 'encolada'; trabajoId: string; duplicado: boolean; final: boolean; ok: boolean }
 
 /** ¿Acabaron todos los trabajos encolados? (Rechazadas/omitidas no esperan.) Sin ninguna encolada → `false`. PURA. */
@@ -35,6 +37,7 @@ export function resumenLote(filas: readonly FilaLote[]): string {
   const n = (e: FilaLote['estado']) => filas.filter((f) => f.estado === e).length
   const partes = [`${n('encolada')} encolada${n('encolada') === 1 ? '' : 's'}`]
   if (n('rechazada')) partes.push(`${n('rechazada')} rechazada${n('rechazada') === 1 ? '' : 's'}`)
+  if (n('incierta')) partes.push(`${n('incierta')} por confirmar`)
   if (n('omitida')) partes.push(`${n('omitida')} sin pedir`)
   return `${filas.length} compañía${filas.length === 1 ? '' : 's'}: ${partes.join(', ')}`
 }

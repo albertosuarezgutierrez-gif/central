@@ -1,3 +1,14 @@
+// v0.6.18 / Moto v0.7.2 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»):
+// con varias versiones y sin elección de la bandeja, se elige SOLA si son EQUIVALENTES (`versionAutomaticaAllianz`, regla común de
+// module-tarificacion: mismo combustible y CV/kW/cc dentro de tolerancia; lo que la etiqueta no dice no cuenta) y se DECLARA en el aviso de
+// supuestos («Versión elegida automáticamente: … revisar en la emisión»). Solo si difieren de forma MATERIAL → `ErrorEleccionVersion` con todas.
+// v0.6.17 / Moto v0.7.1 (19/10/2026, decisión de Alberto: «la primera» puede dar el precio de otro coche): se REVOCA la elección de
+// «el primero de la lista» (tarjetas y `<select>` de Turismos, `<select>` de Moto). Solo se elige si es inequívoco (elección de la bandeja,
+// vehículo confirmado o riesgo que casan con UNA); si no, `ErrorEleccionVersion` (requiere_humano) con el texto exacto de cada versión.
+// v0.6.16 (19/10/2026, mismo trabajo 02fd821b; el inventario de «Antecedentes» solo traía «Compañía actual del vehículo» y «Fecha de inicio del seguro»):
+// las 3 preguntas (tiempo en la compañía, partes culpables, tiempo como titular) y los 5 dígitos de la póliza NO existen hasta elegir la
+// compañía y Angular las pinta tarde: tras elegirla se espera (≤6 s, solo lectura) a que suba el nº de opciones marcables antes de contestarlas, en
+// vez de dar `sin_grupo` en silencio. Sin dato, favorable y declarado (v0.6.10); con dato, el dato.
 // v0.6.15 (19/10/2026, trabajo real 02fd821b atascado en «Antecedentes»: «compañía actual: sin indicar (la del riesgo no está en la lista)»
 // con 96 opciones de nombre de registro): casado puro en `compania-actual.ts` (alias por «/» y «-», sin forma societaria, por niveles);
 // ambigua o sin casar → `datos` con las candidatas / la lista (nunca se elige); cambio de seguro sin compañía en el riesgo → `datos`
@@ -98,6 +109,9 @@ import {
   esCif,
   esDniNie,
   eleccionPorVehiculoConfirmadoDeEtiquetas,
+  elegirVersionAutomaticamente,
+  datosEquivalenciaDesdeEtiqueta,
+  referenciaRiesgoVersion,
   etiquetasSupuestos,
   esOpcionVacia,
   fechaIsoDesdeTexto,
@@ -148,6 +162,7 @@ import {
   SEL_FUERA_CABECERA_TURISMOS,
   SEL_ZONA_APP_TURISMOS,
   type TarjetaVehiculoTurismos,
+  contarOpcionesMarcablesTurismos,
 } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
@@ -341,12 +356,10 @@ export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 've
   return eleccionVersionConOrigen(lectura, form).eleccion
 }
 
-// ───────────────────────── MOTO: versión por similitud (v0.7.0, 18/10/2026) ─────────────────────────
-// Decisión de Alberto (la misma de Mapfre 0.8.6): la versión NO bloquea. Con varias versiones en el desplegable y sin elección
-// explícita, se casa con lo que trae el riesgo (marca/modelo/descripción de `seleccionVehiculo`, normalizado) y la cilindrada.
-
-/** Prefijo del supuesto declarado cuando la versión se elige por parecido entre varias. */
-export const SUPUESTO_VERSION_SIMILITUD_MOTO = 'versión elegida por similitud'
+// ───────────────────────── MOTO: versión por regla fija (v0.7.1, 19/10/2026) ─────────────────────────
+// Decisión de Alberto (19/10/2026): NUNCA «la primera» (v0.7.0 lo hacía y podía dar el precio de otra moto). Con varias versiones en
+// el desplegable y sin elección explícita, se elige SOLO si es inequívoco (una única candidata que case con marca/modelo/descripción
+// del riesgo y su cilindrada, o una única de la cilindrada del riesgo); ambiguo → `ErrorEleccionVersion` (requiere_humano).
 
 const normalizarVersion = (t: string): string =>
   t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/C\.\s*C\.?/g, 'CC').replace(/[^A-Z0-9]+/g, ' ').trim()
@@ -355,16 +368,16 @@ const tokensVersion = (t: string): string[] => normalizarVersion(t).split(' ').f
 const cilindradasDe = (etiqueta: string): number[] => [...normalizarVersion(etiqueta).matchAll(/\b(\d{2,4}) ?CC\b/g)].map((m) => Number(m[1]))
 
 /**
- * Elección AUTOMÁTICA de la versión de moto. Pura. Orden: (1) opciones cuyas palabras (sin la cilindrada) están TODAS en
- * marca + modelo + descripción del riesgo; (2) de ellas, las de la cilindrada del riesgo (si filtrar no deja ninguna, se
- * conservan); (3) una sola → esa, sin supuesto; varias → la primera, DECLARADA («… (supuesto, había N)», N = las que casaban);
- * (4) ninguna casa → la primera de la cilindrada del riesgo o, si tampoco hay, la primera de la lista, DECLARADA con N =
- * todas. `null` = no hace falta elegir (0 o 1 opciones). Sin datos personales en el supuesto (solo el recuento).
+ * Elección AUTOMÁTICA de la versión de moto. Pura, sin «la primera». Orden: (1) opciones cuyas palabras (sin la cilindrada) están
+ * TODAS en marca + modelo + descripción del riesgo; (2) de ellas, las de la cilindrada del riesgo (si filtrar no deja ninguna, se
+ * conservan); (3) UNA sola → `unica`; varias → `ambigua` con ESAS (las que casan; el texto exacto de cada una); (4) ninguna casa
+ * por palabras: si la cilindrada del riesgo deja UNA sola → esa; si no → `ambigua` con todas. `null` = no hace falta elegir
+ * (0 o 1 opciones).
  */
 export function eleccionVersionMotoPorSimilitud(
   versiones: readonly CandidatoVersion[],
   sel: Pick<SeleccionVehiculo, 'marca' | 'modelo' | 'cilindradaCc' | 'descripcion'> | null | undefined,
-): { eleccion: EleccionVersion; supuesto: string | null } | null {
+): { tipo: 'unica'; eleccion: EleccionVersion } | { tipo: 'ambigua'; opciones: CandidatoVersion[] } | null {
   const ops = versiones.filter((v) => !esOpcionVacia(v.etiqueta))
   if (ops.length <= 1) return null
   const delRiesgo = new Set(tokensVersion([sel?.marca, sel?.modelo, sel?.descripcion].filter((x): x is string => typeof x === 'string').join(' ')))
@@ -372,13 +385,34 @@ export function eleccionVersionMotoPorSimilitud(
   const esCc = (t: string) => /^\d+CC$/.test(t) || (cc !== null && t === String(cc))
   const casan = ops.filter((o) => tokensVersion(o.etiqueta).filter((t) => !esCc(t)).every((t) => delRiesgo.has(t)))
   const porCc = (l: readonly CandidatoVersion[]) => (cc === null ? [...l] : l.filter((o) => cilindradasDe(o.etiqueta).includes(cc)))
-  const elegir = (o: CandidatoVersion) => ({ codigo: o.codigo, etiqueta: o.etiqueta })
-  const supuesto = (n: number) => `${SUPUESTO_VERSION_SIMILITUD_MOTO} (supuesto, había ${n})`
+  const elegir = (o: CandidatoVersion) => ({ tipo: 'unica' as const, eleccion: { codigo: o.codigo, etiqueta: o.etiqueta } })
   if (casan.length) {
     const finos = porCc(casan).length ? porCc(casan) : casan
-    return finos.length === 1 ? { eleccion: elegir(finos[0]!), supuesto: null } : { eleccion: elegir(finos[0]!), supuesto: supuesto(finos.length) }
+    return finos.length === 1 ? elegir(finos[0]!) : { tipo: 'ambigua', opciones: finos }
   }
-  return { eleccion: elegir(porCc(ops)[0] ?? ops[0]!), supuesto: supuesto(ops.length) }
+  const soloCc = cc === null ? [] : porCc(ops)
+  return soloCc.length === 1 ? elegir(soloCc[0]!) : { tipo: 'ambigua', opciones: ops }
+}
+
+/**
+ * Elección AUTOMÁTICA por EQUIVALENCIA (v0.6.18 / Moto v0.7.2, 19/10/2026). Candidatas = opciones del desplegable o tarjetas (los datos
+ * salen de la ETIQUETA: «163 CV», «2902 cc», «Potencia (kW) 163», «Diésel»; lo que no se puede leer no cuenta). Equivalentes → índice de la
+ * elegida (de `opciones`) + el supuesto a declarar; la elección de la bandeja (`form.eleccionVersion`) casa exacta, sin supuesto; diferencias
+ * MATERIALES (combustible, CV/cc fuera de tolerancia) o nada compatible con el riesgo → `ErrorEleccionVersion` con `mostrar` (por defecto,
+ * todas). PURA salvo el lanzamiento.
+ */
+export function versionAutomaticaAllianz(
+  opciones: readonly CandidatoVersion[],
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
+  mostrar: readonly CandidatoVersion[] = opciones,
+): { indice: number; eleccion: EleccionVersion; supuesto: string | null } {
+  const r = elegirVersionAutomaticamente(
+    opciones.map((o) => ({ etiqueta: o.etiqueta, codigo: o.codigo, datos: datosEquivalenciaDesdeEtiqueta(o.etiqueta) })),
+    { riesgo: referenciaRiesgoVersion(form), eleccion: form.eleccionVersion ?? null },
+  )
+  if (r.tipo === 'ninguna') throw new ErrorTarificador('portal', 'allianz/auto: el portal no ofrece ninguna versión utilizable')
+  if (r.tipo === 'preguntar') throw new ErrorEleccionVersion(mostrar.filter((o) => !esOpcionVacia(o.etiqueta)).map((o): CandidatoVersion => ({ etiqueta: o.etiqueta, codigo: o.codigo })))
+  return { indice: r.indice, eleccion: r.eleccion, supuesto: r.supuesto }
 }
 
 /**
@@ -958,12 +992,15 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Moto', selectorTarjeta: TARJETA_AUTOS.moto })
   const riesgo = await marcoCon(page, (r) => r.locator(SEL_RIESGO_MOTO.marca), 'Riesgo municipio (marca)')
   await elegirVehiculoMoto(riesgo, form.seleccionVehiculo, page)
-  // v0.7.0: la versión no bloquea. Sin elección explícita ni vehículo confirmado que case, se elige por similitud (DECLARADA).
+  // v0.7.1: sin elección explícita ni vehículo confirmado que case, solo se elige si es inequívoco; si no, requiere_humano (nunca «la primera»).
   const lectura = await leerVehiculoPortal(riesgo)
   const yaElegida = eleccionVersionConOrigen(lectura, form).eleccion !== null
   const auto = yaElegida ? null : eleccionVersionMotoPorSimilitud(lectura.versiones, form.seleccionVehiculo)
-  const vehiculo = await resolverVehiculo(riesgo, lectura, auto ? { ...form, eleccionVersion: auto.eleccion } : form)
-  const supuestoVersion = auto?.supuesto ?? null
+  // v0.7.2: ambigua → se elige SOLA si las candidatas son equivalentes (declarado); diferencias materiales → ErrorEleccionVersion (como la 0.7.1).
+  const porEquivalencia = auto?.tipo === 'ambigua' ? versionAutomaticaAllianz(auto.opciones, form) : null
+  const elegidaAuto = auto?.tipo === 'unica' ? auto.eleccion : (porEquivalencia?.eleccion ?? null)
+  const vehiculo = await resolverVehiculo(riesgo, lectura, elegidaAuto ? { ...form, eleccionVersion: elegidaAuto } : form)
+  const supuestoVersion: string | null = porEquivalencia?.supuesto ?? null
   await ctx.pausa()
   await rellenarRiesgoMoto(riesgo, form, page, ctx)
   await lanzarSiHayErrores(riesgo)
@@ -1151,13 +1188,12 @@ export async function leerVersionesTurismos(marco: Pick<Frame, 'locator'>): Prom
 
 /**
  * Elección de versión tras «Encuentra mi vehículo». Una sola o elegida → se FIJA por el código de SU opción y se relee.
- * Varias SIN elección del formulario → decisión de Alberto (17/10/2026, «en la versión son todos prácticamente lo mismo»): se
- * toma LA PRIMERA de la lista y se DECLARA como supuesto (`supuesto`, nunca como dato). Elección explícita ambigua o que no
- * casa → `ErrorEleccionVersion` como siempre (requiere_humano). Solo Turismos (Moto no cambia). `conVersiones`: había selector.
+ * Varias que no casan con UNA sola (elección del formulario o vehículo confirmado) → `ErrorEleccionVersion` (requiere_humano) con
+ * todas (v0.6.17, 19/10/2026: se revoca «la primera»). v0.6.18: si son EQUIVALENTES se elige sola y `supuesto` lo declara. Solo Turismos. `conVersiones`: había selector.
  */
 export async function resolverVersionTurismos(
   marco: Pick<Frame, 'locator'>,
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
 ): Promise<{ conVersiones: boolean; supuesto: string | null }> {
   const l = await leerVersionesTurismos(marco)
   if (!l || l.opciones.length === 0) return { conVersiones: false, supuesto: null }
@@ -1167,9 +1203,10 @@ export async function resolverVersionTurismos(
   let elegida: CandidatoVersion
   if (r.tipo === 'ninguna') return { conVersiones: false, supuesto: null }
   if (r.tipo === 'ambigua') {
-    if (eleccion !== null) throw new ErrorEleccionVersion(r.opciones)
-    elegida = l.opciones[0]!
-    supuesto = `versión: la primera de la lista (supuesto, había ${l.opciones.length})`
+    // v0.6.18: equivalentes → se elige SOLA y se declara; diferencias materiales → ErrorEleccionVersion con todas.
+    const a = versionAutomaticaAllianz(r.opciones, form)
+    supuesto = a.supuesto
+    elegida = r.opciones[a.indice]!
   } else elegida = r.candidato
   const codigo = elegida.codigo
   if (!codigo) throw new ErrorTarificador('portal', 'allianz/auto: la versión resuelta no tiene código en el desplegable: no se puede fijar')
@@ -1198,13 +1235,13 @@ async function tarjetasVehiculoEstables(page: Pick<Page, 'waitForTimeout'>, marc
 
 /**
  * Qué tarjeta se elige (pura). Una → esa. Varias: la elección de la bandeja (`eleccionVersion`, por ETIQUETA: los ids son
- * dinámicos y no valen de una sesión a otra) o la del vehículo confirmado por similitud (`eleccionVersionConOrigen`); si no hay
- * ninguna, LA PRIMERA y se DECLARA como supuesto. Elección explícita que no casa con una sola → `ErrorEleccionVersion`
- * (requiere_humano), como el `<select>`. Sin datos personales en el supuesto (solo el recuento).
+ * dinámicos y no valen de una sesión a otra) o la del vehículo confirmado por similitud (`eleccionVersionConOrigen`, solo si casa UNA).
+ * v0.6.18: cualquier otro caso con varias → se elige SOLA si las tarjetas son EQUIVALENTES (`versionAutomaticaAllianz`; `supuesto` lo declara);
+ * si difieren de forma material → `ErrorEleccionVersion` (requiere_humano) con la etiqueta exacta de cada tarjeta (marca, modelo, combustible…).
  */
 export function decidirTarjetaVehiculoTurismos(
   tarjetas: readonly Pick<TarjetaVehiculoTurismos, 'etiqueta'>[],
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
 ): { indice: number; supuesto: string | null } {
   if (tarjetas.length === 0) throw new ErrorMapaIncompleto(`las tarjetas de vehículo de «${BOTON_ENCUENTRA_VEHICULO}» (no hay ninguna)`, true)
   if (tarjetas.length === 1) return { indice: 0, supuesto: null }
@@ -1216,9 +1253,10 @@ export function decidirTarjetaVehiculoTurismos(
       const i = tarjetas.findIndex((t) => t.etiqueta === r.candidato.etiqueta)
       if (i >= 0) return { indice: i, supuesto: null }
     }
-    if (r.tipo === 'ambigua' && form.eleccionVersion) throw new ErrorEleccionVersion(r.opciones)
   }
-  return { indice: 0, supuesto: `vehículo/versión: el primero de la lista (supuesto, había ${tarjetas.length})` }
+  // v0.6.18: equivalentes → la primera de las compatibles (o la de fecha más cercana), declarada; diferencias materiales → ErrorEleccionVersion.
+  const a = versionAutomaticaAllianz(candidatos, form)
+  return { indice: a.indice, supuesto: a.supuesto }
 }
 
 /**
@@ -1227,7 +1265,7 @@ export function decidirTarjetaVehiculoTurismos(
  */
 export async function elegirTarjetaVehiculoTurismos(
   marco: Frame,
-  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado'>,
+  form: Pick<FormularioAuto, 'eleccionVersion' | 'vehiculoConfirmado' | 'seleccionVehiculo' | 'fechaMatriculacion'>,
   ctx: Pick<CtxTurismos, 'marcarTarjetaVehiculoTurismos'>,
   tarjetas: readonly TarjetaVehiculoTurismos[],
 ): Promise<{ supuesto: string | null }> {
@@ -1345,6 +1383,26 @@ export const HUECO_POLIZA_ACTUAL = 'póliza actual: faltan los 5 últimos dígit
 const PREFIJOS_ANTECEDENTES_TURISMOS = ['tiempo en la compañía', 'partes culpables', 'tiempo como titular de un seguro'] as const
 const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA, SUPUESTO_TIEMPO_COMPANIA, SUPUESTO_PARTES_CULPABLES, SUPUESTO_TIEMPO_TITULAR, SUPUESTO_POLIZA_FIJADA] as const
 export const ETIQUETA_COMPANIA_ACTUAL = 'Compañía actual del vehículo'
+/**
+ * v0.6.16: las tres preguntas de «Antecedentes» (tiempo en la compañía, partes culpables, tiempo como titular) y los 5 dígitos de la
+ * póliza SOLO se pintan DESPUÉS de elegir la compañía actual (trabajo real 02fd821b: el inventario del paso solo traía «Compañía actual
+ * del vehículo» y «Fecha de inicio del seguro»). Elegida la compañía, Angular las pinta de forma asíncrona: contestar antes daba
+ * `sin_grupo` (silencioso) y «SIGUIENTE» seguía deshabilitado sin decir qué faltaba. Puro: ¿hay que seguir esperando a que aparezcan?
+ * Sí si la compañía se ELIGIÓ y el número de opciones marcables del DOM no ha subido respecto de antes de elegirla.
+ */
+export function antecedentesPendientesDeAparecer(companiaElegida: boolean, opcionesAntes: number, opcionesAhora: number): boolean {
+  return companiaElegida && opcionesAhora <= opcionesAntes
+}
+export const ESPERA_ANTECEDENTES_TURISMOS_MS = 6_000
+/** Tras elegir la compañía: espera (tope `ms`) a que aparezcan las preguntas. `true` = aparecieron. Solo lee; nunca pulsa. */
+export async function esperarPreguntasAntecedentesTurismos(page: Pick<Page, 'waitForTimeout'>, marco: Pick<Frame, 'locator'>, opcionesAntes: number, ms: number = ESPERA_ANTECEDENTES_TURISMOS_MS): Promise<boolean> {
+  const fin = Date.now() + ms
+  for (;;) {
+    if (!antecedentesPendientesDeAparecer(true, opcionesAntes, await contarOpcionesMarcablesTurismos(marco))) return true
+    if (Date.now() >= fin) return false
+    await page.waitForTimeout(300)
+  }
+}
 /** v0.6.15: con «ya lo tenía (cambio de seguro)» Allianz exige la compañía actual; sin ella en el riesgo → `datos` (la pantalla la pide). */
 export const MENSAJE_FALTA_COMPANIA_ACTUAL = 'falta la compañía actual del vehículo; Allianz la exige con cambio de seguro'
 /** v0.6.15: cambio de seguro sin compañía actual en el riesgo → `datos` (no un «mapa incompleto» del portal). Se llama ANTES del login. Puro. */
@@ -1651,6 +1709,8 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
   const huecos = [...plan.huecos]
   const aplicados: string[] = []
   let opcionesCompania: string[] | undefined
+  // v0.6.16: opciones marcables del DOM ANTES de elegir la compañía (las preguntas de «Antecedentes» aparecen después).
+  const opcionesAntes = plan.paso === PASO_ANTECEDENTES ? await contarOpcionesMarcablesTurismos(marco) : 0
   const esperar = async (etiqueta: string, bloqueTomador: boolean): Promise<Locator | string> => {
     try {
       return (await campoUnicoTurismos(page, marco, etiqueta, `«${etiqueta}»`, ESPERA_CAMPO_TURISMOS_MS, undefined, plan.paso, bloqueTomador ? SEL_BLOQUE_TOMADOR_TURISMOS : undefined)).locator
@@ -1676,7 +1736,10 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       }
       const r = await puerta(marco, op.valor)
       opcionesCompania = r.opciones
-      if (r.estado === 'elegida') continue
+      if (r.estado === 'elegida') {
+        if (plan.paso === PASO_ANTECEDENTES) await esperarPreguntasAntecedentesTurismos(page, marco, opcionesAntes)
+        continue
+      }
       if (r.estado === 'sin_elegir') aplicados.push(SUPUESTO_COMPANIA_NO_CONSTA)
       // v0.6.15: la compañía del riesgo que el portal no resuelve ya NO sigue «sin indicar» (Allianz la exige con cambio de seguro y
       // «SIGUIENTE» quedaba deshabilitado): es un error de DATOS claro, con las candidatas si hay varias. Nunca se elige una.
@@ -2139,7 +2202,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.0' : '0.6.15',
+    version: ramo === 'moto' ? '0.7.2' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

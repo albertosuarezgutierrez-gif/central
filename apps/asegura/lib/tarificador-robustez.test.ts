@@ -29,7 +29,7 @@ test('cola: no se encola ni se reclama una pareja en pausa; el barrido caduca lo
   const reclamar = tramo(src, 'export async function reclamarSiguiente', 'export type DepsLanzador')
   assert.match(reclamar, /const sinPausa = await sqlSinPausa\(\)/)
   assert.match(reclamar, /= any\(\$\{\[\.\.\.modos\]\}::text\[\]\)\s+\$\{sinPausa\}/, 'la condición de pausa tiene que ir en el where del reclamo')
-  assert.match(tramo(src, 'export async function barrerTarificadorRpa', 'r.reencolados = await'), /caducarAtascos\(correduriaId\)/)
+  assert.match(tramo(src, 'export async function barrerTarificadorRpa', 'r.reencolados = (await'), /caducarAtascos\(correduriaId\)/)
 })
 
 test('robustez (BD): la pausa sin el SQL no rompe la cola; responder re-encola el MISMO trabajo y aprende como humano', () => {

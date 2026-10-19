@@ -47,10 +47,27 @@ test('siniestros: sin 5 años limpios y sin dato declarado → null (no consta),
   assert.equal(ok(entrada({ aniosSinSiniestros: '2', siniestrosUltimos5: '0' })).riesgo.siniestrosUltimos5Anios, 0)
 })
 
-test('sin seguro actual: años y siniestros no constan (null), no 0', () => {
+test('sin seguro actual: 0 años asegurado (no hay compañía anterior que nombrar); siniestros no constan (null)', () => {
   const r = ok(entrada({ tieneSeguroActual: false }))
+  assert.equal(r.riesgo.aniosAseguradoAnterior, 0)
+  assert.equal(r.riesgo.siniestrosUltimos5Anios, null)
+})
+
+test('seguro actual NO SE SABE (null): no es «sin seguro» → años null (supuesto favorable), nunca 0/novel; la compañía anterior sigue viajando', () => {
+  const r = ok(entrada({ tieneSeguroActual: null, aniosAsegurado: '', aniosSinSiniestros: '', siniestrosUltimos5: '' }))
   assert.equal(r.riesgo.aniosAseguradoAnterior, null)
   assert.equal(r.riesgo.siniestrosUltimos5Anios, null)
+  assert.equal(ok(entrada({ tieneSeguroActual: null, aniosAsegurado: '', companiaAnterior: 'Línea Directa' })).riesgo.companiaAnterior, 'Línea Directa')
+  assert.equal(ok(entrada({ tieneSeguroActual: false, companiaAnterior: 'Línea Directa' })).riesgo.aniosAseguradoAnterior, 0)
+})
+
+test('tieneSeguroParaBots: tres estados; la casilla sin tocar y sin dato NO es «no tiene»', async () => {
+  const { tieneSeguroParaBots } = await import('./tarificador-moto-formulario.ts')
+  assert.equal(tieneSeguroParaBots({ tiene: true, sinDato: true, tocado: true }), true)
+  assert.equal(tieneSeguroParaBots({ tiene: true, sinDato: false, tocado: false }), true)
+  assert.equal(tieneSeguroParaBots({ tiene: false, sinDato: true, tocado: false }), null, 'sin dato y sin tocar: no se sabe')
+  assert.equal(tieneSeguroParaBots({ tiene: false, sinDato: true, tocado: true }), false, 'desmarcada a propósito')
+  assert.equal(tieneSeguroParaBots({ tiene: false, sinDato: false, tocado: false }), false, 'declarado arriba: no tiene')
 })
 
 test('sexo: solo hombre/mujer elegidos; otra cosa → null', () => {
@@ -196,4 +213,20 @@ test('bloque «Bots (gratis)»: sin emisión, un botón por integración del ram
   assert.match(e, /HuecoBotsContext\.Provider/)
   assert.match(e, /Avant2 — 0,50€ por petición/)
   assert.match(e, /!ramoConAdaptador && <PrecioBots/) // la carcasa solo monta el suyo si el cotizador del ramo no lo hace
+})
+
+test('companiaActualParaBots: la compañía elegida arriba viaja al bot (código DGS → nombre común)', async () => {
+  const { companiaActualParaBots } = await import('./tarificador-moto-formulario.ts')
+  const cat = [{ codigoDgs: 'C0001', nombreComun: 'Aseguradora Beta' }]
+  const base = { tieneSeguroActual: true, companias: cat, codigo: 'C0001', libre: '' }
+  assert.equal(companiaActualParaBots(base), 'Aseguradora Beta')
+  assert.equal(companiaActualParaBots({ ...base, codigo: '', libre: '  Texto   libre ' }), 'Texto libre')
+  assert.equal(companiaActualParaBots({ ...base, companias: null, codigo: '', libre: 'C0001' }), 'C0001')
+  assert.equal(companiaActualParaBots({ ...base, codigo: '', leida: ' Aseguradora Gamma ' }), 'Aseguradora Gamma')
+  assert.equal(companiaActualParaBots({ ...base, codigo: 'C9999' }), null, 'código fuera de catálogo y sin texto: no consta')
+  assert.equal(companiaActualParaBots({ ...base, tieneSeguroActual: false }), null)
+  // de punta a punta: con años = 0 el formulario descarta la compañía; con años > 0 la lleva
+  const nombre = companiaActualParaBots(base)
+  assert.equal('companiaAnterior' in ok(entrada({ aniosAsegurado: '0', companiaAnterior: nombre })).riesgo, false)
+  assert.equal(ok(entrada({ aniosAsegurado: '8', companiaAnterior: nombre })).riesgo.companiaAnterior, 'Aseguradora Beta')
 })

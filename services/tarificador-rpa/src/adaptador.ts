@@ -124,6 +124,14 @@ export type ContextoPortal = ContextoTarificacion & {
    * textos EXACTOS, hoy solo «Garantías y Resultados»; una vez por subpestaña). Devuelve el marco donde estaba la subpestaña.
    */
   pulsarSubpestanaGenerali?: (texto: string) => Promise<Frame>
+  /** Generali (v0.2.6): «Placas especiales» = «No» del selector de vehículos por `marcarPlacasEspecialesGenerali` de guard.ts. */
+  marcarPlacasEspecialesGenerali?: () => Promise<void>
+  /** Generali (v0.2.6): «Confirmar» del selector de vehículos (solo confirma el vehículo) por `pulsarConfirmarVehiculoGenerali` de guard.ts (una vez). */
+  confirmarVehiculoGenerali?: () => Promise<void>
+  /** Generali (v0.2.7): abre «Todas las marcas» por su disparador (`abrirDesplegableMarcaGenerali` de guard.ts; id `buscamarca`, una vez). */
+  abrirDesplegableMarcaGenerali?: (base: string) => Promise<void>
+  /** Generali (v0.2.7): pulsa el `li` de la marca elegida (`elegirMarcaListaGenerali` de guard.ts; texto exacto, una vez). */
+  elegirMarcaListaGenerali?: (base: string, texto: string) => Promise<void>
   /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para

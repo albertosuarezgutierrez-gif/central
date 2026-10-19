@@ -142,7 +142,7 @@ const CIERRES: [string, string, string, string | undefined][] = [
   ['resultado ok (tarificación)', 'lib/tarificador.ts', 'const tarificacionId = await guardarTarificacionRpa', 'return { res: { estado: \'registrado\' as const, estadoTrabajo: \'ok\', tarificacionId }'],
   ['resultado explorado', 'lib/tarificador.ts', "if (r.tipo === 'explorado') {", "if (r.tipo === 'error') {"],
   ['fallo (error_definitivo)', 'lib/tarificador.ts', 'async function marcarFallo(', '// ─── Barrido'],
-  ['barrido: cancela pendientes sin integración', 'lib/tarificador.ts', "set estado = 'cancelado', terminado_at = now(), updated_at = now(),\n        error = jsonb_build_object('tipo', 'datos'", 'const companias = await prisma'],
+  ['barrido: cancela pendientes sin integración', 'lib/tarificador.ts', "set estado = 'cancelado', terminado_at = now(), updated_at = now(),\n          error = jsonb_build_object('tipo', 'datos'", 'const companias = await prisma'],
   ['bandeja: cancelar', 'lib/tarificador-bandeja.ts', "set estado = 'cancelado', lease_hasta = null", 'return { estado: \'aplicado\' as const'],
   ['emisión: resultado (emitido)', 'lib/tarificador-emision.ts', 'set estado = ${d.estado}, error = ${err}::jsonb', "return { estado: 'registrado' as const, estadoTrabajo: d.estado }"],
   ['emisión: rechazada por Telegram', 'lib/tarificador-emision.ts', "mensaje: 'Emisión rechazada por Telegram'", "return { estado: 'cancelado' as const"],

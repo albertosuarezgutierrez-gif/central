@@ -49,7 +49,7 @@ export const POST = auditado(async (req: Request) => {
     const lanzado = await lanzarPendientes(correduria.id, compania).catch((e: unknown) => ({
       lanzados: [] as string[], fallidos: [], omitido: `error_lanzando: ${e instanceof Error ? e.message : String(e)}`,
     }))
-    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
+    return NextResponse.json({ estado: 'encolado', trabajoId: r.trabajoId, duplicado: r.duplicado, estadoPrevio: r.estadoPrevio ?? null, mensaje: r.mensaje ?? null, lanzado: lanzado.lanzados.includes(r.trabajoId), detalle: lanzado.omitido ?? null }, { status: 202 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/tarificador/probar', e) }, { status: 503 })
   }

@@ -11,6 +11,12 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
+/**
+ * Tope SOLO de encolar (19/10/2026): asegura encola y lanza la máquina Fly de forma síncrona (arranque en frío + hasta 20 s de
+ * Fly), así que el tope general de 30 s se quedaba justo. Por debajo del `maxDuration = 60` de la ruta (que antes lee la ficha).
+ */
+export const TOPE_ENCOLAR_MS = 45_000
+
 export async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): Promise<Reenvio> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
@@ -26,7 +32,7 @@ export async function puerto(ruta: string, init: RequestInit, topeMs = 30_000): 
     const f = describirFalloRed(e)
     // Solo la ruta sin query ni ids (ni datos personales) y la causa técnica: sin esto el fallo era mudo.
     console.error('[tarificador-asegura] la llamada a asegura falló', { ruta: ruta.split('?')[0]!.split('/')[0], motivo: f.motivo, nombre: f.nombre, causa: f.causa })
-    return { status: 502, json: { estado: 'error', motivo: f.motivo } }
+    return { status: 502, json: { estado: 'error', causa: f.causa, motivo: f.motivo } }
   }
 }
 
@@ -36,7 +42,7 @@ export function encolarTarificacionComunidad(clienteId: string, oportunidadId: s
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ clienteId, oportunidadId, compania, ramo: 'comunidades', riesgo }),
-  })
+  }, TOPE_ENCOLAR_MS)
 }
 
 /**
@@ -50,7 +56,7 @@ export function encolarTarificacionVehiculo(ramo: 'moto' | 'auto', clienteId: st
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ clienteId, oportunidadId, compania, ramo, riesgo: formulario }),
-  })
+  }, TOPE_ENCOLAR_MS)
 }
 
 /**
@@ -63,7 +69,7 @@ export function encolarTarificacionHogar(clienteId: string, oportunidadId: strin
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ clienteId, oportunidadId, compania, ramo: 'hogar', riesgo: formulario }),
-  })
+  }, TOPE_ENCOLAR_MS)
 }
 
 /** Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`. */

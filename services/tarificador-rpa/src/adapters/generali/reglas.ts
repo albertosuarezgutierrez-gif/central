@@ -273,6 +273,25 @@ export function mensajeAtascoCatalogo(nivel: string, buscado: string, opciones: 
   return `el ${nivel} de Generali para «${buscado.slice(0, 120)}»: ${que} (una persona elige; nunca a ciegas). Opciones: ${lista.join(' | ').slice(0, 900)}`
 }
 
+/** Marca del «Selector de vehículos» (SelectOneMenu de PrimeFaces, v0.2.6): SOLO igualdad EXACTA normalizada; sin contención ni similitud. */
+export type EleccionMarcaGenerali = { tipo: 'unica'; indice: number } | { tipo: 'ninguna' | 'varias'; cercanas: string[] }
+
+/**
+ * Elige la marca por coincidencia EXACTA del texto normalizado (mayúsculas, sin tildes ni espacios dobles). Una sola → esa.
+ * 0 o varias → NO se elige; `cercanas` (tope 25) = las exactas repetidas o, si no hay, las que contienen la frase (o la frase las
+ * contiene) o empiezan igual, para que una persona decida. Nunca la primera, nunca «la más parecida». PURA.
+ */
+export function elegirMarcaExactaGenerali(opciones: readonly string[], buscado: string): EleccionMarcaGenerali {
+  const b = normalizarCatalogo(buscado)
+  const validas = opciones.map((o, i) => ({ o, i })).filter((x) => !esOpcionVaciaCatalogo(x.o))
+  if (b === '') return { tipo: 'ninguna', cercanas: [] }
+  const exactas = validas.filter((x) => normalizarCatalogo(x.o) === b)
+  if (exactas.length === 1) return { tipo: 'unica', indice: exactas[0]!.i }
+  if (exactas.length > 1) return { tipo: 'varias', cercanas: exactas.map((x) => x.o).slice(0, 25) }
+  const cerca = validas.filter((x) => contieneFrase(buscado, x.o) || contieneFrase(x.o, buscado) || normalizarCatalogo(x.o).startsWith(b.slice(0, 3)))
+  return { tipo: 'ninguna', cercanas: cerca.map((x) => x.o).slice(0, 25) }
+}
+
 // ───────────────────────── «Datos de Valoración» (captura 6) ─────────────────────────
 
 /** Etiquetas EXACTAS de la captura 6 (sección «Identificación del vehículo» y «Roles»). */

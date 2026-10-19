@@ -51,7 +51,8 @@ const FORM: FormularioAuto = {
   garajeNoche: false,
   documentoTomador: '00000000T',
   tomador: { tipo: 'fisica', nombre: 'A', apellido1: 'B', apellido2: null, razonSocial: null, documentoIdentidad: '00000000T', fechaNacimiento: null, codigoPostal: '00000', poblacion: 'Villaficticia', direccion: null, telefono: null, email: null },
-  eleccionVersion: null,
+  // v0.6.17: con varias tarjetas el robot NO elige la primera; la persona (bandeja) eligió la primera.
+  eleccionVersion: { codigo: null, etiqueta: 'Marca del vehículo MARCAFICT Modelo Alfa Versión 90 CV' },
 }
 const PERSONALES = ['00000000T', '00000', 'Villaficticia', '1990', '2010', '0000BBB']
 
@@ -334,7 +335,7 @@ test('v0.6.5 recorrido real: los TRES pasos con su «Siguiente» (bloque del tom
     await assert.rejects(recorrerPasosTurismos(page, marco, FORM, ctx, r.supuestoVersion, new Date(), 3_000), (e: unknown) => {
       const m = (e as Error).message
       return esMapa(/la pantalla de precios «Selección de paquete» del asistente de Turismos/)(e) &&
-        m.includes(`Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 2), ya lo tenía (cambio de seguro), uso diario, efecto ${dma(iso(masDias(1)))}, sin 2º conductor, ${SUPUESTO_COMPANIA_NO_CONSTA}, ${SUPUESTO_TIEMPO_TITULAR}.`) &&
+        m.includes(`Precio con supuestos: ya lo tenía (cambio de seguro), uso diario, efecto ${dma(iso(masDias(1)))}, sin 2º conductor, ${SUPUESTO_COMPANIA_NO_CONSTA}, ${SUPUESTO_TIEMPO_TITULAR}.`) &&
         m.includes(`opciones de «Compañía actual del vehículo» leídas (4): ${COMPANIAS.join(' | ')}`) && sinPersonales(m)
     })
     assert.equal(await pasoActivoTurismos(marco), 'Selección de paquete')

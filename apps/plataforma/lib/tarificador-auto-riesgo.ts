@@ -12,6 +12,7 @@ import { estadoOcasional, type RolFigura } from '@central/module-seguros'
 import { datoDePersonaBot, type DatoPersona } from './tarificador-moto-formulario.ts'
 import { MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
 import type { EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { resolverCompaniaAnterior, type CompaniaPorPolizas } from './tarificador-compania-poliza.ts'
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 const CP = /^\d{5}$/
@@ -134,7 +135,7 @@ export function tomadorDeRiesgoBots(r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 
 }
 
 /** Riesgo de la oportunidad de coche → formulario que entiende el adaptador de auto (sin Avant2). PURA. */
-export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto): EntradaBotAuto {
+export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto, porPolizas: CompaniaPorPolizas = { estado: 'pendiente' }): EntradaBotAuto {
   const dv = r.datosVehiculo
   const tomadorId = tomadorDeRiesgoBots(r)
   const tomador = r.figuras.find((f) => f.rol === 'tomador') ?? null
@@ -146,6 +147,8 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto): EntradaBotAut
   const fechaCarnet = carnet && carnet.legible && carnet.fecha && ISO.test(carnet.fecha) ? carnet.fecha : ''
   const decl = r.historial?.historialDeclarado ?? null
   const ant = r.historial?.seguroAnterior ?? null
+  // Compañía anterior: la del riesgo; si no hay, la de la póliza de coche en vigor del cliente (solo si es UNA; años = 0 → ninguna).
+  const compAnt = resolverCompaniaAnterior(companiaAnteriorDeRiesgo(r), decl?.aniosAsegurado, porPolizas)
   return armarFormularioBotsAuto({
     matricula: matriculaDeRiesgo(r),
     marca: dv?.marca ?? null,
@@ -159,11 +162,12 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto): EntradaBotAut
     conductorEnOtraFicha: tomador?.empresa === true || otraFicha('conductor_habitual'),
     propietarioEnOtraFicha: otraFicha('propietario'),
     // `null` (no se sabe) y «sin seguro» no se distinguen aquí: ambos dejan al adaptador diciendo QUÉ falta, nunca inventan.
-    tieneSeguroActual: decl?.tieneSeguroActual ?? ant !== null,
+    // Una póliza en vigor de la cartera propuesta como anterior implica seguro actual, salvo que se haya declarado lo contrario.
+    tieneSeguroActual: decl?.tieneSeguroActual ?? (ant !== null || compAnt.propuestaDePoliza),
     aniosAsegurado: texto(decl?.aniosAsegurado),
     aniosSinSiniestros: texto(decl?.aniosSinSiniestros ?? ant?.aniosSinSiniestros),
     siniestrosUltimos5: texto(decl?.siniestrosUltimos5 ?? ant?.siniestrosUltimos5),
-    companiaAnterior: companiaAnteriorDeRiesgo(r),
+    companiaAnterior: compAnt.compania,
     // Supuestos de Allianz Turismos: lo que el riesgo sabe viaja; lo demás lo supone el bot y lo declara junto al precio.
     fechaMatriculacion: dv?.fechaMatriculacion ?? null,
     fechaVencimiento: vencimientoActualDeRiesgo(r),

@@ -123,7 +123,7 @@ test('ficha (coche): CP, nacimiento y el carné B (no el de moto); respaldo en p
 })
 
 test('historialBot y datoDePersonaBot (compartidos con moto)', () => {
-  assert.deepEqual(historialBot({ tieneSeguroActual: false, aniosAsegurado: '9', aniosSinSiniestros: '9', siniestrosUltimos5: '0' }), { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null })
+  assert.deepEqual(historialBot({ tieneSeguroActual: false, aniosAsegurado: '9', aniosSinSiniestros: '9', siniestrosUltimos5: '0' }), { aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: null })
   assert.deepEqual(historialBot({ tieneSeguroActual: true, aniosAsegurado: 'x', aniosSinSiniestros: '', siniestrosUltimos5: '' }), { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null })
   assert.equal(datoDePersonaBot('fechaCarnet', [], { fechaCarnet: ' 2005-01-01 ' }), '2005-01-01')
   assert.equal(datoDePersonaBot('fechaCarnet', [{ campo: 'fechaCarnet' }], {}), null)

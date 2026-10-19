@@ -4,8 +4,10 @@ import assert from 'node:assert/strict'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  avisoTraza, aplicarNifTomador, aplicarDatosTomador, fechaIsoDeFicha, lecturaTomadorFicha, necesitaDatosTomador, riesgoParaEncolar, faltaCompaniaAnteriorRiesgo, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
+  avisoTraza, aplicarNifTomador, aplicarDatosTomador, fechaIsoDeFicha, lecturaTomadorFicha, necesitaDatosTomador, riesgoParaEncolar, faltaCompaniaAnteriorRiesgo, riesgoSinNifTomador, tipoFalloNifTomador, bloqueaDuplicado, mensajeDuplicado, pausaCaducada, PAUSA_CADUCA_HORAS, pausaEsCaducable, PAUSA_CADUCABLE_REGEX, UMBRAL_ATASCADO_BLOQUEA_MS, claveEncolar, lecturaNifFicha, necesitaNifTomador, configFly, huecosLibres, leaseVencido, leerResultadoWorker, peticionMaquina, repartirEnCurso, rpaActivo, validarEntradaRamo,
 } from './tarificador-reglas.ts'
+import { motivoCorte } from '@central/module-tarificacion'
+import { motivoPausaHumo } from './tarificador-humo-reglas.ts'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador } from './tarificador-ficha-tomador.ts'
 
 const APP = join(import.meta.dirname, '..')
@@ -193,6 +195,69 @@ test('duplicado: pendiente sí; en_curso solo con lease vivo; reintentable bajo 
   assert.equal(f('pendiente', { modo: 'emision' }), false)
   // ATASCO (F2): espera a Alberto y volverá a la cola: pedir lo mismo es duplicado.
   assert.equal(f('atascado'), true)
+})
+
+test('duplicado 19/10: un atascado solo bloquea mientras es reciente (no «para siempre»)', () => {
+  const at = (actualizadoAt?: Date | null) => bloqueaDuplicado({ estado: 'atascado', leaseHasta: null, intentos: 1, modo: null, actualizadoAt }, AHORA, 2)
+  assert.equal(at(antes(60_000)), true, 'recién atascado: espera a Alberto')
+  assert.equal(at(antes(UMBRAL_ATASCADO_BLOQUEA_MS - 1000)), true)
+  assert.equal(at(antes(UMBRAL_ATASCADO_BLOQUEA_MS + 1000)), false, 'abandonado: se puede relanzar')
+  assert.equal(at(undefined), true, 'sin hora legible → conservador (bloquea)')
+  assert.equal(at(null), true)
+  assert.equal(at(despues(60_000)), true, 'hora futura = dato dudoso → bloquea')
+  assert.equal(at(new Date('x')), true)
+})
+
+test('pausa 19/10: sin reanudar caduca a las PAUSA_CADUCA_HORAS; hora dudosa no caduca', () => {
+  assert.equal(PAUSA_CADUCA_HORAS, 24)
+  assert.equal(pausaCaducada(antes(23 * 3_600_000), AHORA), false)
+  assert.equal(pausaCaducada(antes(24 * 3_600_000), AHORA), true)
+  assert.equal(pausaCaducada(antes(30 * 3_600_000), AHORA), true)
+  for (const d of [null, undefined, new Date('x'), despues(1000)]) assert.equal(pausaCaducada(d as Date | null | undefined, AHORA), false)
+})
+
+test('pausa 19/10: solo caducan las de racha de errores del bot; credenciales y prueba nocturna NO', () => {
+  const p = { compania: 'allianz', ramo: 'auto' }
+  const bot = motivoCorte([1, 2, 3].map(() => ({ estado: 'error_definitivo', tipoError: 'portal' })), p)
+  const cred = motivoCorte([{ estado: 'error_definitivo', tipoError: 'credenciales' }], p)
+  assert.ok(bot && cred)
+  assert.equal(pausaEsCaducable(bot), true)
+  assert.equal(pausaEsCaducable(cred), false, 'credenciales rechazadas: acción manual')
+  assert.equal(pausaEsCaducable(motivoPausaHumo('allianz', 'auto')), false, 'prueba nocturna: acción manual')
+  for (const d of [null, undefined, '', 'motivo raro']) assert.equal(pausaEsCaducable(d), false, `dudoso: ${d}`)
+  assert.ok(PAUSA_CADUCABLE_REGEX.length > 0)
+})
+
+test('mensaje de duplicado 19/10: dice el estado REAL, no «en marcha» a ciegas', () => {
+  assert.match(mensajeDuplicado('atascado'), /atascado/)
+  assert.doesNotMatch(mensajeDuplicado('atascado'), /en marcha/)
+  assert.match(mensajeDuplicado('requiere_humano'), /persona/)
+  assert.match(mensajeDuplicado('pendiente'), /pendiente/)
+  assert.match(mensajeDuplicado('en_curso'), /en curso/)
+  assert.match(mensajeDuplicado('error_reintentable'), /reintento/)
+  assert.match(mensajeDuplicado('raro'), /estado: raro/)
+  for (const e of ['pendiente', 'en_curso', 'atascado', 'ok', 'otro']) assert.doesNotMatch(mensajeDuplicado(e), /en marcha/, e)
+})
+
+test('cableado 19/10: la limpieza del barrido corre con el RPA apagado, cada paso aislado, y las pausas caducan', () => {
+  const src = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  const b = src.slice(src.indexOf('export async function barrerTarificadorRpa'), src.indexOf('// ─── Vehículo encadenado'))
+  assert.doesNotMatch(b, /if \(!rpaActivo\(deps\.env\)\) return/, 'el barrido sale entero con el RPA apagado')
+  assert.doesNotMatch(b.slice(0, b.indexOf("await paso('leases_vencidos'")), /if \(!\w+(\([^)]*\))?\) return/, 'el barrido sale antes de limpiar si el RPA está apagado')
+  assert.match(b, /if \(!activo\) return r\s+await paso\('lanzar'/, 'solo lanzar depende del flag')
+  assert.match(b, /caducarPausas\(correduriaId\)/)
+  assert.ok((b.match(/await paso\(/g) ?? []).length >= 10, 'cada paso con su try/catch (paso)')
+  assert.match(b, /\(r\.errores \?\?= \{\}\)\[nombre\]/, 'los fallos se informan, no se tragan')
+  const cron = readFileSync(join(APP, 'app', 'api', 'cron', 'tarificador-cola', 'route.ts'), 'utf8')
+  assert.doesNotMatch(cron, /rpaActivo/, 'el cron no puede cortar el barrido por el flag')
+  const rob = readFileSync(join(APP, 'lib', 'tarificador-robustez.ts'), 'utf8')
+  const cond = "pausada_at <= now() - ${PAUSA_CADUCA_HORAS}::int * interval '1 hour'"
+  assert.equal(rob.split(cond).length - 1, 3, 'caducarPausas, pausaViva y sqlSinPausa usan la misma condición de edad')
+  assert.equal((rob.match(/coalesce\(p?\.?motivo ~ \$\{PAUSA_CADUCABLE_REGEX\}::text, false\)/g) ?? []).length, 3, 'las tres solo caducan pausas caducables')
+  assert.equal((rob.match(/and not \(p?\.?pausada_at <= /g) ?? []).length, 2, 'pausaViva y sqlSinPausa: bloquea salvo caducable Y vieja')
+  assert.match(rob, /export async function caducarPausas[\s\S]*?set reanudada_at = now\(\), reanudada_por = 'caducidad'/)
+  assert.doesNotMatch(rob.slice(rob.indexOf('export async function caducarPausas'), rob.indexOf('export async function pausaViva')), /delete from/i, 'las pausas no se borran')
+  assert.match(src, /actualizadoAt: p\.actualizado_at/, 'el dedupe no pasa la hora del atascado')
 })
 
 test('duplicado 15/10: ok solo con precio y terminado hace menos de 10 min', () => {

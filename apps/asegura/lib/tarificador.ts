@@ -40,7 +40,7 @@ import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
 import { formasRiesgoDuplicado } from './tarificador-duplicados'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
-import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
+import { atascoParaFallo, caducarAtascos, caducarPausas, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
 import {
   CLAVE_ESPERA_VEHICULO,
@@ -48,6 +48,7 @@ import {
   ORIGENES_VEHICULO_ENCADENADO,
   decidirEspera,
   esOrigenVehiculo,
+  esperaLiberable,
   necesitaVehiculoEncadenado,
   riesgoAlEncolar,
   riesgoConVehiculo,
@@ -65,6 +66,7 @@ import {
   claveEncolar,
   configFly,
   huecosLibres,
+  mensajeDuplicado,
   peticionMaquina,
   repartirEnCurso,
   aplicarNifTomador,
@@ -122,7 +124,7 @@ export type EntradaEncolar = {
 
 export type ResultadoEncolar =
   /** `duplicado: true` = ya había un trabajo vivo con el mismo riesgo y se devuelve ESE (no se crea otro). */
-  | { estado: 'encolado'; trabajoId: string; duplicado: boolean }
+  | { estado: 'encolado'; trabajoId: string; duplicado: boolean; /** Estado REAL del trabajo devuelto cuando `duplicado` (nunca «en marcha» a ciegas). */ estadoPrevio?: string; mensaje?: string }
   | { estado: 'rechazado'; status: number; motivo: string }
 
 export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncolar> {
@@ -211,8 +213,8 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   const cid = clienteId
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
-    const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date; terminado_at: Date | null; con_precio: boolean }[]>`
-      select t.id::text as id, t.estado, t.lease_hasta, t.intentos, to_jsonb(t)->>'modo' as modo, now() as ahora, t.terminado_at,
+    const previos = await tx.$queryRaw<{ id: string; estado: string; lease_hasta: Date | null; intentos: number; modo: string | null; ahora: Date; terminado_at: Date | null; actualizado_at: Date | null; con_precio: boolean }[]>`
+      select t.id::text as id, t.estado, t.lease_hasta, t.intentos, to_jsonb(t)->>'modo' as modo, now() as ahora, t.terminado_at, t.updated_at as actualizado_at,
              (t.tarificacion_id is not null and exists (
                select 1 from seguros.tarificacion_precios p where p.tarificacion_id = t.tarificacion_id and p.prima_eur is not null)) as con_precio
       from seguros.tarificacion_trabajos t
@@ -225,8 +227,8 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
         and t.poliza_id is not distinct from ${polizaId ?? null}::uuid
         and coalesce(to_jsonb(t)->>'modo', 'tarificar') not in ('exploracion', 'humo')
       order by t.created_at`
-    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio }, p.ahora, MAX_INTENTOS))
-    if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
+    const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio, actualizadoAt: p.actualizado_at }, p.ahora, MAX_INTENTOS))
+    if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true, estadoPrevio: vivo.estado, mensaje: mensajeDuplicado(vivo.estado) }
     if (e.soloComprobarDuplicado) return { estado: 'rechazado' as const, status: 409, motivo: 'no_duplicado' }
     const filas = await tx.$queryRaw<{ id: string }[]>`
       insert into seguros.tarificacion_trabajos
@@ -912,7 +914,11 @@ async function marcarFallo(
 // ─── Barrido (enganchable a un cron existente) ───────────────────────────────
 
 export type ResumenBarrido = {
+  /** `rpa_apagado`: la limpieza SÍ corrió; solo se omitió el lanzamiento de máquinas. */
   omitido?: string
+  /** Pasos del barrido que fallaron (nombre → mensaje). Ausente = ninguno falló; un paso fallido deja su campo sin definir, no a 0. */
+  errores?: Record<string, string>
+  pausasCaducadas?: number
   emisionesCaducadas?: { solicitudes: number; autorizaciones: number }
   leasesVencidos: number
   reencolados: number
@@ -926,7 +932,7 @@ export type ResumenBarrido = {
   /** F2: atascos sin respuesta que pasaron a `error_definitivo`. */
   atascosCaducados?: number
   /** Generali en espera del vehículo (18/10/2026): cuántos recibieron el de Allianz/Mapfre y cuántos se cancelaron sin él. */
-  esperasVehiculo?: { inyectados: number; cancelados: number; esperando: number }
+  esperasVehiculo?: { inyectados: number; cancelados: number; liberados: number; esperando: number }
   lanzar: Record<string, ResumenLanzar>
 }
 
@@ -941,74 +947,83 @@ export type ResumenBarrido = {
  */
 export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanzador = depsReales()): Promise<ResumenBarrido> {
   const r: ResumenBarrido = { leasesVencidos: 0, reencolados: 0, cancelados: 0, lanzar: {} }
-  if (!rpaActivo(deps.env)) return { ...r, omitido: 'rpa_apagado' }
-
-  const vencidos = await prisma.$queryRaw<{ id: string; intentos: number; fly_machine_id: string | null }[]>`
-    select id::text as id, intentos, fly_machine_id from seguros.tarificacion_trabajos
-    where correduria_id = ${correduriaId}::uuid and estado = 'en_curso' and lease_hasta < now()`
-  const fly = configFly(deps.env)
-  for (const v of vencidos) {
-    const f = await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
-    if (!f.tocada) continue // un resultado llegó a la vez y ganó: ni se cuenta ni se destruye la máquina
-    if (fly.ok && v.fly_machine_id) await destruirMaquina(fly.cfg, v.fly_machine_id, deps.fetch)
-    r.leasesVencidos++
+  // La LIMPIEZA corre siempre (19/10/2026): con el RPA apagado los colgados se limpiaban nunca. Solo LANZAR máquinas depende del flag.
+  const activo = rpaActivo(deps.env)
+  if (!activo) r.omitido = 'rpa_apagado'
+  // Cada paso con su propio try/catch (un fallo no impide los demás): `errores` los lista; nunca se calla un fallo como «0».
+  const paso = async <T>(nombre: string, fn: () => Promise<T>): Promise<T | undefined> => {
+    try {
+      return await fn()
+    } catch (e) {
+      const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : String(e).slice(0, 200)
+      console.error(`[tarificador] barrido, paso ${nombre}`, msg)
+      ;(r.errores ??= {})[nombre] = msg
+      return undefined
+    }
   }
 
-  // Emisión: 24 h sin botón, o autorización caducada sin máquina → cancelado (nunca se emite tarde).
-  r.emisionesCaducadas = await caducarEmisiones(correduriaId).catch((e: unknown) => {
-    console.error('[tarificador] caducar emisiones', e instanceof Error ? e.message.slice(0, 200) : e)
-    return { solicitudes: 0, autorizaciones: 0 }
+  await paso('leases_vencidos', async () => {
+    const vencidos = await prisma.$queryRaw<{ id: string; intentos: number; fly_machine_id: string | null }[]>`
+      select id::text as id, intentos, fly_machine_id from seguros.tarificacion_trabajos
+      where correduria_id = ${correduriaId}::uuid and estado = 'en_curso' and lease_hasta < now()`
+    const fly = configFly(deps.env)
+    for (const v of vencidos) {
+      const f = await marcarFallo(prisma, v.id, v.intentos, { tipo: 'infra', mensaje: 'lease_vencido: el worker no devolvió resultado a tiempo', url: null }, null)
+      if (!f.tocada) continue // un resultado llegó a la vez y ganó: ni se cuenta ni se destruye la máquina
+      if (fly.ok && v.fly_machine_id) await destruirMaquina(fly.cfg, v.fly_machine_id, deps.fetch)
+      r.leasesVencidos++
+    }
   })
+
+  // Emisión: 24 h sin botón, o autorización caducada sin máquina → cancelado (nunca se emite tarde).
+  r.emisionesCaducadas = await paso('emisiones', () => caducarEmisiones(correduriaId))
 
   // ATASCO (F2): sin respuesta pasada su hora → error_definitivo (riesgo purgado y corte evaluado). Sin lanzar: el barrido sigue.
-  r.atascosCaducados = await caducarAtascos(correduriaId).catch((e: unknown) => {
-    console.error('[tarificador] caducar atascos', e instanceof Error ? e.message.slice(0, 200) : e)
-    return 0
-  })
+  r.atascosCaducados = await paso('atascos', () => caducarAtascos(correduriaId))
 
-  r.reencolados = await prisma.$executeRaw`
+  // PAUSAS (19/10/2026): una sin reanudar pasadas `PAUSA_CADUCA_HORAS` se cierra (reanudada_por = 'caducidad'); la fila se conserva.
+  r.pausasCaducadas = await paso('pausas', () => caducarPausas(correduriaId))
+
+  r.reencolados = (await paso('reencolar', () => prisma.$executeRaw`
     update seguros.tarificacion_trabajos set estado = 'pendiente', updated_at = now()
-    where correduria_id = ${correduriaId}::uuid and estado = 'error_reintentable' and intentos < ${MAX_INTENTOS}`
+    where correduria_id = ${correduriaId}::uuid and estado = 'error_reintentable' and intentos < ${MAX_INTENTOS}`)) ?? 0
 
-  const cancelados = await prisma.$queryRaw<{ id: string }[]>`
-    update seguros.tarificacion_trabajos w
-    set estado = 'cancelado', terminado_at = now(), updated_at = now(),
-        error = jsonb_build_object('tipo', 'datos', 'mensaje', 'modo_no_automatizable: la integración ya no está autorizada o activa')
-    where w.correduria_id = ${correduriaId}::uuid and w.estado = 'pendiente'
-      and not exists (
-        select 1 from seguros.companias_integracion ci
-        where ci.correduria_id = w.correduria_id and ci.compania = w.compania and ci.ramo = w.ramo
-          and ci.activo and ci.modo = 'rpa_autorizada')
-    returning w.id::text as id`
-  r.cancelados = cancelados.length
-  await purgarRiesgoTrabajos(prisma, cancelados.map((c) => c.id))
+  r.cancelados = (await paso('cancelar_no_autorizados', async () => {
+    const cancelados = await prisma.$queryRaw<{ id: string }[]>`
+      update seguros.tarificacion_trabajos w
+      set estado = 'cancelado', terminado_at = now(), updated_at = now(),
+          error = jsonb_build_object('tipo', 'datos', 'mensaje', 'modo_no_automatizable: la integración ya no está autorizada o activa')
+      where w.correduria_id = ${correduriaId}::uuid and w.estado = 'pendiente'
+        and not exists (
+          select 1 from seguros.companias_integracion ci
+          where ci.correduria_id = w.correduria_id and ci.compania = w.compania and ci.ramo = w.ramo
+            and ci.activo and ci.modo = 'rpa_autorizada')
+      returning w.id::text as id`
+    await purgarRiesgoTrabajos(prisma, cancelados.map((c) => c.id))
+    return cancelados.length
+  })) ?? 0
 
   // Respaldo de la purga: lo cerrado por un camino que no la llamó (o antes de existir). Sin lanzar: el barrido sigue.
-  r.riesgosPurgados = await purgarRiesgosCerrados(prisma, correduriaId).catch((e: unknown) => {
-    console.error('[tarificador] respaldo de purga del riesgo', e instanceof Error ? e.message.slice(0, 200) : e)
-    return 0
-  })
+  r.riesgosPurgados = await paso('purga_riesgos', () => purgarRiesgosCerrados(prisma, correduriaId))
   // El recorrido y el inventario de pantalla de un trabajo cerrado se guardan `DIAS_RETENCION_RECORRIDO` días (diagnóstico).
-  r.recorridosCaducados = await purgarRecorridosCaducados(prisma, correduriaId).catch((e: unknown) => {
-    console.error('[tarificador] caducidad del recorrido', e instanceof Error ? e.message.slice(0, 200) : e)
-    return 0
-  })
+  r.recorridosCaducados = await paso('recorridos', () => purgarRecorridosCaducados(prisma, correduriaId))
   // La EVIDENCIA de fallo (captura/HTML con datos personales) de un trabajo terminado vive `DIAS_RETENCION_EVIDENCIA` días (15).
-  r.evidenciasPurgadas = await purgarEvidenciaCaducada(prisma, correduriaId).catch((e: unknown) => {
-    console.error('[tarificador] purga de evidencia', e instanceof Error ? e.message.slice(0, 200) : e)
-    return 0
-  })
+  r.evidenciasPurgadas = await paso('evidencias', () => purgarEvidenciaCaducada(prisma, correduriaId))
 
   // Vehículo encadenado (Generali, 18/10/2026): inyecta el de Allianz/Mapfre o cancela si ya no puede llegar. Sin lanzar.
-  r.esperasVehiculo = await resolverEsperasVehiculo(correduriaId).catch((e: unknown) => {
-    console.error('[tarificador] esperas de vehículo', e instanceof Error ? e.message.slice(0, 200) : e)
-    return { inyectados: 0, cancelados: 0, esperando: 0 }
-  })
+  r.esperasVehiculo = await paso('esperas_vehiculo', () => resolverEsperasVehiculo(correduriaId))
 
-  const companias = await prisma.$queryRaw<{ compania: string }[]>`
-    select distinct compania from seguros.tarificacion_trabajos
-    where correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`
-  for (const c of companias) r.lanzar[c.compania] = await lanzarPendientes(correduriaId, c.compania, deps)
+  // Lanzar máquinas SÍ depende del flag (`lanzarPendientes` también lo comprueba).
+  if (!activo) return r
+  await paso('lanzar', async () => {
+    const companias = await prisma.$queryRaw<{ compania: string }[]>`
+      select distinct compania from seguros.tarificacion_trabajos
+      where correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`
+    for (const c of companias) {
+      // Un fallo de una compañía no impide lanzar las demás.
+      await paso(`lanzar_${c.compania}`, async () => { r.lanzar[c.compania] = await lanzarPendientes(correduriaId, c.compania, deps) })
+    }
+  })
   return r
 }
 
@@ -1021,7 +1036,7 @@ async function leerOrigenesVehiculo(db: Db, correduriaId: string, oportunidadId:
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid
       and t.estado = 'ok' and t.ramo = 'auto' and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[])
-      and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'tarificar'
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') in ('tarificar', 'identificar')
     order by t.terminado_at desc nulls last
     limit 10`
   return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
@@ -1044,33 +1059,71 @@ async function inyectarVehiculoEnEspera(db: Db, correduriaId: string, oportunida
 }
 
 /**
- * Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta; sin ningún origen vivo
- * o pasadas 24 h → `cancelado` con el motivo (y riesgo purgado). Nunca se lanza uno sin vehículo.
+ * Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo:
+ *   · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancelado` con el motivo (y riesgo purgado).
+ *   · Mapfre/Allianz: nunca se cancelan ni se congelan; si la identificación no está en curso, falló, Mapfre está pausado/inactivo
+ *     o pasaron 2 h, se LIBERAN (se quita la marca) y tarifican preguntando su versión, como siempre.
  */
-async function resolverEsperasVehiculo(correduriaId: string): Promise<{ inyectados: number; cancelados: number; esperando: number }> {
-  const res = { inyectados: 0, cancelados: 0, esperando: 0 }
-  const esperas = await prisma.$queryRaw<{ id: string; oportunidad_id: string | null; created_at: Date; ahora: Date }[]>`
-    select t.id::text as id, t.oportunidad_id::text as oportunidad_id, t.created_at, now() as ahora
+async function resolverEsperasVehiculo(correduriaId: string): Promise<{ inyectados: number; cancelados: number; liberados: number; esperando: number }> {
+  const res = { inyectados: 0, cancelados: 0, liberados: 0, esperando: 0 }
+  const esperas = await prisma.$queryRaw<{ id: string; oportunidad_id: string | null; compania: string; ramo: string; created_at: Date; ahora: Date }[]>`
+    select t.id::text as id, t.oportunidad_id::text as oportunidad_id, t.compania, t.ramo, t.created_at, now() as ahora
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = 'pendiente'
       and (case when jsonb_typeof(t.riesgo) = 'object' then t.riesgo -> ${CLAVE_ESPERA_VEHICULO}::text end) is not null
     order by t.created_at
     limit 100`
+  // ¿Puede avanzar una identificación de Mapfre? (pausa viva de la pareja o integración inactiva/ausente → no). Una vez por barrido, y solo si hace falta.
+  let mapfreBloqueado: boolean | null = null
+  const origenBloqueado = async (): Promise<boolean> => {
+    if (mapfreBloqueado === null) {
+      // Si no se puede comprobar, se considera bloqueado: lo conservador es liberar (que pregunte), nunca congelar.
+      mapfreBloqueado = await Promise.all([pausaViva(prisma, correduriaId, 'mapfre', 'auto'), leerIntegracion(correduriaId, 'mapfre', 'auto')])
+        .then(([pausa, integ]) => pausa || !integ || !integ.activo)
+        .catch(() => true)
+    }
+    return mapfreBloqueado
+  }
   for (const w of esperas) {
+    const liberable = esperaLiberable(w.compania, w.ramo)
     // Orden (revisión 18/10/2026): PRIMERO se cuentan los orígenes vivos y DESPUÉS se leen los `ok`. Al revés, un Allianz/Mapfre
     // que acaba `ok` entre las dos lecturas no se ve ni como `ok` ni como vivo, y el Generali se cancelaría con vehículo disponible.
+    // Para un trabajo liberable el origen vivo es una IDENTIFICACIÓN de Mapfre (`modo = identificar`), no otra tarificación.
     const vivos = w.oportunidad_id
-      ? await prisma.$queryRaw<{ n: number }[]>`
-          select count(*)::int as n from seguros.tarificacion_trabajos t
-          where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
-            and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[]) and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
+      ? liberable
+        ? await prisma.$queryRaw<{ n: number }[]>`
+            select count(*)::int as n from seguros.tarificacion_trabajos t
+            where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
+              and t.compania = 'mapfre' and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'identificar'
+              and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
+        : await prisma.$queryRaw<{ n: number }[]>`
+            select count(*)::int as n from seguros.tarificacion_trabajos t
+            where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
+              and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[]) and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
       : [{ n: 0 }]
     const origenes = w.oportunidad_id ? await leerOrigenesVehiculo(prisma, correduriaId, w.oportunidad_id) : []
-    const d = decidirEspera({ vehiculo: vehiculoDeOrigenes(origenes), origenesVivos: vivos[0]?.n ?? 0, creadoAt: w.created_at, ahora: w.ahora })
+    const vehiculo = vehiculoDeOrigenes(origenes)
+    const d = decidirEspera({
+      vehiculo,
+      origenesVivos: vivos[0]?.n ?? 0,
+      creadoAt: w.created_at,
+      ahora: w.ahora,
+      compania: w.compania,
+      ramo: w.ramo,
+      origenBloqueado: liberable && !vehiculo ? await origenBloqueado() : false,
+    })
     if (d.tipo === 'esperar') {
       res.esperando++
     } else if (d.tipo === 'inyectar') {
       res.inyectados += await prisma.$transaction((tx) => inyectarVehiculoEnEspera(tx, correduriaId, w.oportunidad_id!, d.vehiculo))
+    } else if (d.tipo === 'liberar') {
+      // Solo si SIGUE pendiente y en espera: si mientras tanto el registro del ok le inyectó el vehículo (quita la marca), no hay nada que liberar.
+      const l = await prisma.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set riesgo = riesgo - ${CLAVE_ESPERA_VEHICULO}::text, updated_at = now()
+        where id = ${w.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'
+          and jsonb_typeof(riesgo) = 'object' and (riesgo -> ${CLAVE_ESPERA_VEHICULO}::text) is not null`
+      res.liberados += l
     } else {
       const c = await prisma.$executeRaw`
         update seguros.tarificacion_trabajos

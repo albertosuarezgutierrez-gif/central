@@ -57,7 +57,7 @@ export const SUBCLAVES_RIESGO: Readonly<Record<string, readonly string[]>> = Obj
   eleccionVersion: Object.freeze(['codigo', 'etiqueta']),
   eleccionVersionIa: Object.freeze(['origen', 'clave']),
   // Sub-claves EXPLÍCITAS (no se importa `CLAVES_VEHICULO_CONFIRMADO`: una clave nueva allí no se conserva sola aquí).
-  vehiculoConfirmado: Object.freeze(['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio']),
+  vehiculoConfirmado: Object.freeze(['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio', 'combustible']),
   vehiculoCatalogo: Object.freeze(['origen', 'marca', 'modelo', 'descripcion']),
 })
 
