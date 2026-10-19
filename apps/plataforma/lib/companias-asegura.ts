@@ -193,6 +193,28 @@ export async function telefonoContactoAsegura(contactoId: string, telefono: stri
   }
 }
 
+/**
+ * Alta de un contacto en el Directorio (`POST /api/operador/companias/contacto`). Idempotente por email: si ya existe
+ * en cualquier compañía, asegura contesta `existia` y no crea nada.
+ */
+export async function crearContactoAsegura(c: {
+  companiaCodigoDgs: string; nombre: string; email: string; cargo: string | null; area: string | null; notas: string
+}): Promise<Reenvio> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/companias/contacto`, {
+      method: 'POST',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify(c),
+      signal: AbortSignal.timeout(10_000),
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch {
+    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  }
+}
+
 /** Cuadro de comisiones pactado cruzado con los recibos de CIMA (`GET /api/operador/comisiones-pactadas`). */
 export async function comisionesPactadasAsegura(): Promise<Reenvio> {
   const h = await cabeceras()

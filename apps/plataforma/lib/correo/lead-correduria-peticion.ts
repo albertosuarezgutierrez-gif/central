@@ -22,16 +22,16 @@ export const AVISO_PETICION_LEAD = 'correduria.lead-peticion'
  * Claves de `datos` con dato personal: el email del lead, el asunto de su correo y su nombre de pila. Al CERRAR el
  * pendiente (enviado, descartado o caducado) se borran junto con el borrador; quedan ids y estado.
  */
-export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila'] as const
+export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre'] as const
 
 /**
  * Qué se PURGA al cerrar un pendiente (revisión F3a, 19/10/2026). Lo ENVIADO/descartado/caducado pierde todo lo personal y
  * el borrador. Un fallido/incierto de una petición o repregunta conserva asunto y borrador (Alberto contesta a mano en su
  * Gmail, donde ya tiene el hilo), pero NO el email (`to`) ni el nombre (`pila`): no hacen falta para eso. Un pendiente que
- * no envía nada al cliente (`tarificar`, `discrepancia`) se purga entero en cualquier cierre. PURA.
+ * no envía nada al cliente (`tarificar`, `discrepancia`, `contacto_sugerido`) se purga entero en cualquier cierre. PURA.
  */
 export function purgaAlCerrar(tipo: string, estado: string): { claves: string[]; borrador: boolean } {
-  const sinEnvio = tipo === 'tarificar' || tipo === 'discrepancia'
+  const sinEnvio = tipo === 'tarificar' || tipo === 'discrepancia' || tipo === 'contacto_sugerido'
   if (sinEnvio || estado === 'enviado' || estado === 'descartado' || estado === 'caducado') return { claves: [...CLAVES_PII_PENDIENTE], borrador: true }
   return { claves: ['to', 'pila'], borrador: false }
 }

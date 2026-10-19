@@ -1,13 +1,13 @@
 {
  "sesion": "d880fe8e-c895-5522-9c6a-3a83ce87f1dc",
  "inicio": "2026-10-19T07:24:37.050Z",
- "fin": "2026-10-19T12:24:41.808Z",
- "llamadas": 1583,
+ "fin": "2026-10-19T12:27:14.398Z",
+ "llamadas": 1598,
  "categorias": {
   "otro": {
-   "llamadas": 146,
-   "chars_in": 98401,
-   "chars_out": 999071,
+   "llamadas": 150,
+   "chars_in": 98409,
+   "chars_out": 1064393,
    "errores": 0,
    "archivos_citados": 25,
    "chars_citados": 374580,
@@ -15,19 +15,19 @@
     "Skill": 1,
     "ToolSearch": 30,
     "SubagentHandback": 30,
-    "ReadNotifications": 76,
+    "ReadNotifications": 80,
     "SendMessage": 9
    }
   },
   "agente:general-purpose": {
-   "llamadas": 10,
-   "chars_in": 15376,
-   "chars_out": 17586,
+   "llamadas": 11,
+   "chars_in": 16810,
+   "chars_out": 19241,
    "errores": 0,
    "archivos_citados": 10,
    "chars_citados": 59528,
    "tools": {
-    "Agent": 10
+    "Agent": 11
    }
   },
   "agente:rastreador-codigo": {
@@ -42,15 +42,15 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 60,
-   "chars_in": 8014,
-   "chars_out": 461086,
+   "llamadas": 61,
+   "chars_in": 8174,
+   "chars_out": 461781,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 3,
-    "Grep": 29,
+    "Grep": 30,
     "Read": 28
    }
   },
@@ -67,38 +67,38 @@
    }
   },
   "sql": {
-   "llamadas": 39,
-   "chars_in": 11107,
-   "chars_out": 74265,
+   "llamadas": 40,
+   "chars_in": 11476,
+   "chars_out": 74810,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 39
+    "mcp__Supabase__execute_sql": 40
    }
   },
   "bash": {
-   "llamadas": 1118,
-   "chars_in": 656290,
-   "chars_out": 4881441,
+   "llamadas": 1125,
+   "chars_in": 658279,
+   "chars_out": 4923684,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1118
+    "Bash": 1125
    }
   },
   "mcp:github": {
-   "llamadas": 39,
-   "chars_in": 23346,
-   "chars_out": 80407,
+   "llamadas": 40,
+   "chars_in": 23445,
+   "chars_out": 80737,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 27121,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 7,
-    "mcp__github__pull_request_read": 12,
+    "mcp__github__pull_request_read": 13,
     "mcp__github__actions_list": 1,
     "mcp__github__update_pull_request": 6,
     "mcp__github__add_issue_comment": 3,

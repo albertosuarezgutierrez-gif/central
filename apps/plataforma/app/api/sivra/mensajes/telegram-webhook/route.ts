@@ -39,6 +39,8 @@ import { entregarCodigoSmsAsegura, leerMensajeCodigoSms, textoTrasEntrega } from
 import { requireSecret } from '@central/core-identity'
 import { PREFIJO_CLP, decidirBotonClp, idDeEdicion } from '@/lib/correo/lead-correduria-peticion'
 import { guardarEdicionClp, resolverBotonClp } from '@/lib/correo/lead-correduria-pendiente'
+import { PREFIJO_CSG, decidirBotonCsg } from '@/lib/correo/contacto-sugerido'
+import { resolverBotonCsg } from '@/lib/correo/contacto-sugerido-pendiente'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
 export const dynamic = 'force-dynamic'
@@ -1003,6 +1005,27 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         if (linea === null) return
         if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${linea}`).catch(() => {})
         else await tgSend(linea).catch(() => {})
+      })
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no, 19/10/2026) ──
+    // Solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID); el id corto apunta a `correduria_pendiente_tg`, un solo uso.
+    if (prefix === PREFIJO_CSG) {
+      const d = decidirBotonCsg(cb, action, args, process.env.TELEGRAM_CHAT_ID)
+      if (!d.ok) {
+        await tgAnswerCallback(cb.id, d.toast)
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, d.accion === 'no' ? 'Ignorado' : '⏳ Añadiendo al directorio…')
+      const original = escapeHtml(cb.message?.text ?? '')
+      const mensajeId: number | undefined = cb.message?.message_id
+      if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})
+      after(async () => {
+        const hoy = new Date().toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })
+        const r = await resolverBotonCsg(d, hoy).catch(() => ({ linea: '⚠️ <i>No sé si se ha hecho (fallo interno): mira el Directorio antes de repetir.</i>', botones: undefined }))
+        if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n${r.linea}`, r.botones ? { botones: r.botones } : {}).catch(() => {})
+        else await tgSend(r.linea).catch(() => {})
       })
       return NextResponse.json({ ok: true })
     }
