@@ -1,18 +1,18 @@
 {
  "sesion": "0c288341-72d3-5b9f-a35b-a8f8fc786388",
  "inicio": "2026-10-19T10:38:18.284Z",
- "fin": "2026-10-19T10:38:38.275Z",
- "llamadas": 6,
+ "fin": "2026-10-19T11:28:00.130Z",
+ "llamadas": 92,
  "categorias": {
   "bash": {
-   "llamadas": 1,
-   "chars_in": 421,
-   "chars_out": 16438,
+   "llamadas": 10,
+   "chars_in": 8914,
+   "chars_out": 28618,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 10
    }
   },
   "lectura-directa": {
@@ -27,26 +27,69 @@
    }
   },
   "otro": {
-   "llamadas": 2,
-   "chars_in": 218,
-   "chars_out": 426,
+   "llamadas": 13,
+   "chars_in": 10549,
+   "chars_out": 3254,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 2
+    "ToolSearch": 5,
+    "SendUserFile": 1,
+    "SubagentHandback": 3,
+    "SendMessage": 3,
+    "ReadNotifications": 1
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 2,
-   "chars_in": 223,
-   "chars_out": 23102,
+   "llamadas": 9,
+   "chars_in": 1410,
+   "chars_out": 103277,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 1,
+    "mcp__Google_Drive__search_files": 8,
     "mcp__Google_Drive__read_file_content": 1
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 57,
+   "chars_in": 11490,
+   "chars_out": 325718,
+   "errores": 2,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__create_draft": 1,
+    "mcp__Gmail__update_draft": 2,
+    "mcp__Gmail__search_threads": 16,
+    "mcp__Gmail__get_thread": 6,
+    "mcp__Gmail__get_message": 5,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__label_thread": 26
+   }
+  },
+  "agente:lector-correo": {
+   "llamadas": 1,
+   "chars_in": 1805,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:claude-code-remote": {
+   "llamadas": 1,
+   "chars_in": 473,
+   "chars_out": 108,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__claude-code-remote__send_later": 1
    }
   }
  }
