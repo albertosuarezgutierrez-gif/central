@@ -14,7 +14,7 @@ import { tgAvisoBotones } from '@/lib/telegram/avisos'
 import { datosRiesgoAsegura, peticionLeadAsegura, riesgoAsegura } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo } from '@/lib/riesgo-asegura'
 import {
-  botonesPeticion, borradorEditado, interpretarEnvioPeticion, leerDatosPeticion, lineaTrasEnviar,
+  botonesPeticion, borradorEditado, interpretarEnvioPeticion, leerDatosPeticion, lineaTrasEnviar, purgaAlCerrar,
   CLAVES_PII_PENDIENTE, textoBorradorTelegram, textoPedirEdicion, type DatosPeticion, type DecisionClp,
 } from './lead-correduria-peticion'
 import {
@@ -27,6 +27,11 @@ import { ACTOR_TRIAJE_CORREO } from './lead-correduria'
 // quedan solo ids y estado (`CLAVES_PII_PENDIENTE`). Lo enviado ya consta en asegura (`correo_envio` + historial).
 // Fallido/incierto los conservan: Alberto tiene que poder mirarlo antes de contestar a mano.
 const PURGA = Prisma.sql`datos = datos - ${[...CLAVES_PII_PENDIENTE]}::text[], borrador = ''`
+/** La purga de un cierre según tipo y estado (`purgaAlCerrar`, con test): fallido/incierto ya no guardan email ni nombre. */
+const purgaDe = (tipo: string, estado: string) => {
+  const p = purgaAlCerrar(tipo, estado)
+  return p.borrador ? Prisma.sql`, datos = datos - ${p.claves}::text[], borrador = ''` : Prisma.sql`, datos = datos - ${p.claves}::text[]`
+}
 
 /** Caducados sin pulsar: se cierran y purgan (se llama en cada lead nuevo; nunca lanza). */
 async function purgarCaducados(): Promise<void> {
@@ -151,6 +156,9 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
   // F3a (import dinámico: el proceso de tarificar usa `proponerPeticion` de este fichero).
   if (d.accion === 'top') return (await import('./lead-correduria-tarificar-proceso')).resolverTopeClp(d.dia, d.quien, mensajeId)
   if (d.accion === 'tar') return (await import('./lead-correduria-tarificar-proceso')).resolverTarificarClp(d.id, d.quien)
+  // F3b: repregunta tras el fallo de un bot (📝 `clp_fal`) y elección en una discrepancia (`clp_dis`).
+  if (d.accion === 'fal') return (await import('./lead-correduria-tarificar-proceso')).resolverFalloClp(d.id, d.quien)
+  if (d.accion === 'dis') return (await import('./lead-correduria-discrepancia-proceso')).resolverDiscrepanciaClp(d)
   if (d.accion === 'no') {
     const filas = await prisma.$queryRaw<{ tipo: string }[]>(Prisma.sql`
       UPDATE correduria_pendiente_tg SET estado = 'descartado', decidido_por = ${actorTelegram(d.quien)}, decidido_at = now(), esperando_edit = false, ${PURGA}
@@ -160,7 +168,9 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
     if (!filas.length) return lineaTrasEnviar({ estado: 'usado' })
     return filas[0].tipo === 'tarificar'
       ? '⏸ <i>En espera: no se ha lanzado ningún bot. Cuando quieras, pide el precio desde su ficha.</i>'
-      : '❌ <i>Descartado: no se le ha enviado nada.</i>'
+      : filas[0].tipo === 'discrepancia'
+        ? '⏸ <i>Sin elegir: el expediente sigue sin estar completo (elige en la ficha cuando quieras).</i>'
+        : '❌ <i>Descartado: no se le ha enviado nada.</i>'
   }
   if (d.accion === 'edt') {
     // Un pendiente de TARIFICAR no tiene texto que editar: el dato se corrige en la ficha y el 🤖 sigue vivo.
@@ -173,7 +183,7 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
     }
     const n = await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_pendiente_tg SET esperando_edit = true
-      WHERE id = ${d.id} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at > now()`).catch(() => null)
+      WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia') AND estado = 'pendiente' AND caduca_at > now()`).catch(() => null)
     if (!n) return lineaTrasEnviar({ estado: 'usado' })
     await tgAskForReply(textoPedirEdicion(d.id)).catch(() => null)
     return null
@@ -181,12 +191,12 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
   // ✅ Un solo uso: dos pulsaciones (o un reintento del webhook) = una gana.
   const filas = await prisma.$queryRaw<{ datos: unknown; borrador: string }[]>(Prisma.sql`
     UPDATE correduria_pendiente_tg SET estado = 'enviando', esperando_edit = false, decidido_por = ${actorTelegram(d.quien)}, decidido_at = now()
-    WHERE id = ${d.id} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at > now()
+    WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia') AND estado = 'pendiente' AND caduca_at > now()
     RETURNING datos, borrador`).catch(() => null)
   if (filas === null) return '⚠️ <i>No he podido leer el borrador: no se ha enviado nada.</i>'
   if (!filas.length) {
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
+      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND tipo NOT IN ('tarificar', 'discrepancia') AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
     return lineaTrasEnviar({ estado: 'usado' })
   }
   const datos = leerDatosPeticion(filas[0].datos)
@@ -205,9 +215,10 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
 }
 
 async function cerrar(id: number, estado: 'enviado' | 'fallido' | 'incierto', resultado: unknown): Promise<void> {
-  // Solo lo ENVIADO se purga: fallido/incierto conservan email y texto para contestar a mano.
+  // Lo ENVIADO se purga entero; fallido/incierto conservan asunto y texto para contestar a mano, pero ya no el email ni el
+  // nombre (`purgaAlCerrar`; revisión F3a). Aquí solo llegan petición y repregunta (los que envían al cliente).
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE correduria_pendiente_tg SET estado = ${estado}, resultado = ${JSON.stringify(resultado ?? null)}::jsonb${estado === 'enviado' ? Prisma.sql`, ${PURGA}` : Prisma.empty}
+    UPDATE correduria_pendiente_tg SET estado = ${estado}, resultado = ${JSON.stringify(resultado ?? null)}::jsonb${purgaDe('peticion_datos', estado)}
     WHERE id = ${id} AND estado = 'enviando'`).catch(() => {})
 }
 

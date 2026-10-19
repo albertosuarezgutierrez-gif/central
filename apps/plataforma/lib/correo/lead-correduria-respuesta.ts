@@ -8,8 +8,8 @@
 //     hilo que la F1. Nada sale sin el ✅.
 //   · Si está todo: «✅ Datos completos para Hogar — listo para tarificar» (la F3 tarificará; aquí no se tarifica).
 // Un fallo (IA caída, asegura sin responder) NUNCA se lee como «no mandó nada»: se dice que no se ha podido leer.
-import { escapeHtml } from '@central/core-telegram'
-import { MEDIADOR, etiquetasDe, nombreDePila, preguntasRepregunta } from '@central/module-seguros'
+import { escapeHtml, type Boton } from '@central/core-telegram'
+import { MEDIADOR, etiquetasDe, nombreDePila, preguntasConcretas, preguntasRepregunta } from '@central/module-seguros'
 import type { RamoOportunidad } from '@central/module-seguros'
 import { etiquetaRamo, pieLegalLeadCorreo } from './lead-correduria.ts'
 
@@ -45,6 +45,8 @@ export type OportunidadLeida = {
   id: string; ramo: string
   nuevos: string[]; iguales: string[]; discrepancias: string[]; protegidos: string[]; sinClave: string[]; invalidos: string[]; faltan: string[]
   guardado: boolean
+  /** F3b: discrepancias que esperan la elección de Alberto (con alguna, NO está completa). */
+  pendientes: string[]
 }
 export type GuardadoLead =
   | { estado: 'ok'; oportunidades: OportunidadLeida[]; completo: boolean }
@@ -59,10 +61,11 @@ export function leerGuardar(status: number, json: unknown): GuardadoLead {
   const ops = o.oportunidades.map(obj).filter((x) => typeof x.id === 'string' && typeof x.ramo === 'string').map((x) => ({
     id: x.id as string, ramo: x.ramo as string, nuevos: lista(x.nuevos), iguales: lista(x.iguales), discrepancias: lista(x.discrepancias),
     protegidos: lista(x.protegidos), sinClave: lista(x.sinClave), invalidos: lista(x.invalidos), faltan: lista(x.faltan), guardado: x.guardado === true,
+    pendientes: lista(x.pendientes),
   }))
   if (!ops.length) return { estado: 'no', motivo: 'sin oportunidades' }
   // «Completo» lo dice asegura Y se comprueba aquí: una oportunidad no guardada o con algo pendiente no lo es.
-  const completo = o.completo === true && ops.every((x) => x.guardado && x.faltan.length === 0)
+  const completo = o.completo === true && ops.every((x) => x.guardado && x.faltan.length === 0 && x.pendientes.length === 0)
   return { estado: 'ok', oportunidades: ops, completo }
 }
 
@@ -143,7 +146,7 @@ export function textoRespuestaTelegram(a: {
       l.push(`⚠️ no valen: ${escapeHtml(a.resumen.invalidos.map((x) => `${etiquetas(a.ramos, [x.clave])[0] ?? x.clave} (${x.motivo})`).join(', '))}`)
     }
     const disc = etiquetas(a.ramos, ops.flatMap((o) => o.discrepancias))
-    if (disc.length) l.push(`⚠️ no cuadran con lo que ya había (no lo piso, míralo en su correo): ${escapeHtml(y(disc))}`)
+    if (disc.length) l.push(`⚖️ no cuadran con lo que ya había (no lo piso; elige cuál vale con los botones, hasta entonces no está completo): ${escapeHtml(y(disc))}`)
     const prot = etiquetas(a.ramos, ops.flatMap((o) => o.protegidos))
     if (prot.length) l.push(`🔒 de un riesgo que ya confirmaste (guardado aparte, el riesgo no se toca): ${escapeHtml(y(prot))}`)
     const sinClave = etiquetas(a.ramos, ops.flatMap((o) => o.sinClave))
@@ -164,10 +167,18 @@ export function textoRespuestaTelegram(a: {
  */
 export function plantillaRepregunta(a: {
   pila: string | null; ramos: readonly string[]; faltan: readonly string[]; invalidos: readonly { clave: string; motivo: string }[]; asuntoOriginal: string
+  /**
+   * F3b: códigos de pregunta CONCRETA (`PREGUNTAS_CONCRETAS`): lo que el cliente ya contestó pero no se lee con certeza. Su
+   * clave se pregunta con ESA frase y no con la general del contrato.
+   */
+  concretas?: readonly string[]
 }): { asunto: string; cuerpo: string; preguntas: number } | null {
-  const pedir = new Set([...a.faltan, ...a.invalidos.map((x) => x.clave)])
-  if (!pedir.size) return null
-  const bloques = preguntasRepregunta(a.ramos, pedir)
+  const concretas = preguntasConcretas(a.concretas ?? [])
+  const conConcreta = new Set(concretas.map((c) => c.clave))
+  const pedir = new Set([...a.faltan, ...a.invalidos.map((x) => x.clave)].filter((k) => !conConcreta.has(k)))
+  if (!pedir.size && !concretas.length) return null
+  const generales = pedir.size ? preguntasRepregunta(a.ramos, pedir) : []
+  const bloques = concretas.length ? [...generales, { titulo: 'Sobre lo que me contestaste, para no equivocarme', preguntas: concretas.map((c) => c.pregunta) }] : generales
   const n = bloques.reduce((s, b) => s + b.preguntas.length, 0)
   if (!n) return null
   const pila = a.pila ? nombreDePila(a.pila) ?? a.pila : null
@@ -188,4 +199,53 @@ export function plantillaRepregunta(a: {
     pieLegalLeadCorreo(),
   ].join('\n')
   return { asunto, cuerpo, preguntas: n }
+}
+
+// ─── F3b: discrepancias (ficha ↔ correo) ─────────────────────────────────────────────────────────────────────────
+
+export type Discrepancia = { oportunidadId: string; ramo: string; clave: string; elegida?: 'ficha' | 'correo' }
+
+/** Las discrepancias pendientes de la respuesta guardada, en orden estable (el de los botones). Máximo 10. PURA. */
+export function discrepanciasPendientes(g: GuardadoLead): Discrepancia[] {
+  if (g.estado !== 'ok') return []
+  return g.oportunidades.flatMap((o) => o.pendientes.map((clave) => ({ oportunidadId: o.id, ramo: o.ramo, clave }))).slice(0, 10)
+}
+
+/**
+ * «⚖️ No cuadran» con un par de botones por dato: 📇 lo que ya había (la ficha) · ✉️ lo del correo. Solo ETIQUETAS (ni un
+ * valor: Alberto los compara en su correo y en la ficha). `callback_data` = `clp_dis:<p>:<i>:f|c` (≤ 64 bytes). PURA.
+ */
+export function textoDiscrepancias(a: { id: number | string; pila: string | null; lista: readonly Discrepancia[] }): string {
+  const quien = a.pila ? escapeHtml(a.pila) : 'el cliente'
+  const l = [`⚖️ <b>Datos de ${quien} que no cuadran con los que había</b>: elige cuál vale en cada uno (el expediente no está completo hasta entonces; nada se envía al cliente).`]
+  a.lista.forEach((d, i) => {
+    const etq = etiquetasDe([d.ramo], new Set([d.clave]))[0] ?? d.clave
+    l.push(`${i + 1}. ${escapeHtml(etq)}${d.elegida ? ` — elegido: ${d.elegida === 'ficha' ? 'lo que había' : 'el del correo'}` : ''}`)
+  })
+  l.push('<i>Míralos en su correo y en la ficha. «El del correo» no corrige la ficha: si es el bueno, corrígela también. #clp' + escapeHtml(String(a.id)) + '</i>')
+  return l.join('\n')
+}
+
+export function botonesDiscrepancias(id: number | string, lista: readonly Discrepancia[]): Boton[][] {
+  return lista.flatMap((d, i) => (d.elegida ? [] : [[
+    { texto: `${i + 1}. 📇 Lo que había`, callback: `clp_dis:${id}:${i}:f` },
+    { texto: `${i + 1}. ✉️ El del correo`, callback: `clp_dis:${id}:${i}:c` },
+  ]]))
+}
+
+export type ResultadoElegir =
+  | { estado: 'ok'; pendientes: string[]; completo: boolean; corregirFicha: boolean }
+  | { estado: 'no_pendiente'; motivo: string }
+  | { estado: 'no_encontrada'; motivo: string }
+  | { estado: 'error'; motivo: string }
+
+/** Respuesta de `accion:'elegir'`. Lo desconocido es `error` (no se da nada por elegido). PURA. */
+export function leerElegir(status: number, json: unknown): ResultadoElegir {
+  const o = obj(json)
+  if (status === 200 && o.estado === 'ok' && Array.isArray(o.pendientes)) {
+    return { estado: 'ok', pendientes: lista(o.pendientes), completo: o.completo === true, corregirFicha: o.corregirFicha === true }
+  }
+  if (status === 409 && o.estado === 'no_pendiente') return { estado: 'no_pendiente', motivo: 'ya estaba elegido' }
+  if (status === 404) return { estado: 'no_encontrada', motivo: 'la oportunidad ya no es de esta ficha' }
+  return { estado: 'error', motivo: typeof o.estado === 'string' ? `asegura: ${String(o.estado).slice(0, 40)}` : `HTTP ${status}` }
 }

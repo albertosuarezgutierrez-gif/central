@@ -2,8 +2,25 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   agruparHilos, anadirDatosContrato, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, previosDeFicha, textoHistorialRespuesta,
-  validarAdjunto, validarCasar, validarGuardar,
+  validarAdjunto, validarCasar, validarGuardar, conPendientes, elegirEnContrato,
 } from './correo-respuesta-lead-puro.ts'
+
+test('🪤 F3b: una discrepancia queda PENDIENTE hasta que Alberto elige; «ficha» la descarta, «correo» la usa (y avisa de la ficha)', () => {
+  const base = leerDatosContrato({ valores: { kmAnuales: 9000 }, pendientes: { raro: { cifrado: 'claro' } } })
+  assert.deepEqual(base.pendientes, {})
+  const p = conPendientes(base, { fechaNacimiento: { cifrado: 'v1:a:b:c' }, kmAnuales: 12000 })
+  assert.deepEqual(Object.keys(p.pendientes).sort(), ['fechaNacimiento', 'kmAnuales'])
+  assert.equal(p.valores.kmAnuales, 9000) // no se pisa
+  const f = elegirEnContrato(p, 'kmAnuales', 'ficha', { ahora: 't' })
+  assert.ok(f.ok && f.dc.valores.kmAnuales === 9000 && !('kmAnuales' in f.dc.pendientes) && f.dc.elecciones.kmAnuales === 'ficha')
+  const c = elegirEnContrato(p, 'kmAnuales', 'correo', { ahora: 't' })
+  assert.ok(c.ok && c.dc.valores.kmAnuales === 12000 && !c.corregirFicha)
+  const n = elegirEnContrato(p, 'fechaNacimiento', 'correo', { ahora: 't' })
+  assert.ok(n.ok && n.corregirFicha && 'fechaNacimiento' in n.dc.valores)
+  assert.deepEqual(elegirEnContrato(p, 'matricula', 'correo', { ahora: 't' }), { ok: false, motivo: 'no_pendiente' })
+  // Lo leído y vuelto a escribir conserva lo pendiente.
+  assert.deepEqual(Object.keys(leerDatosContrato(JSON.parse(JSON.stringify(p))).pendientes).sort(), ['fechaNacimiento', 'kmAnuales'])
+})
 
 const C1 = '11111111-1111-4111-8111-111111111111'
 const C2 = '33333333-3333-4333-8333-333333333333'

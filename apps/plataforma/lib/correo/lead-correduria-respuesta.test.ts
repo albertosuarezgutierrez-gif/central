@@ -7,7 +7,7 @@ import {
 
 const OP = '22222222-2222-4222-8222-222222222222'
 const CLI = '11111111-1111-4111-8111-111111111111'
-const op = (x: object = {}) => ({ id: OP, ramo: 'hogar', nuevos: [], iguales: [], discrepancias: [], protegidos: [], sinClave: [], invalidos: [], faltan: [], guardado: true, ...x })
+const op = (x: object = {}) => ({ id: OP, ramo: 'hogar', nuevos: [], iguales: [], discrepancias: [], protegidos: [], sinClave: [], invalidos: [], faltan: [], guardado: true, pendientes: [] as string[], ...x })
 
 test('🪤 casar: solo un «ok» legible casa; lo demás NO se lee (nunca «casa» por defecto)', () => {
   assert.equal(leerCasar(200, { estado: 'ok', hiloId: '5', clienteId: CLI, pila: 'Ana', oportunidades: [{ id: OP, ramo: 'hogar' }] }).estado, 'ok')
@@ -85,4 +85,28 @@ test('🪤 con la IA caída el proceso NO llama a «guardar» (no se anota «0 d
   const { readFileSync } = await import('node:fs')
   const fuente = readFileSync(new URL('./lead-correduria-respuesta-proceso.ts', import.meta.url), 'utf8')
   assert.match(fuente, /iaFallo\s*\n?\s*\?\s*\{ estado: 'no', motivo: 'sin leer' \}\s*\n?\s*:\s*await respuestaLeadAsegura\(\{\s*\n?\s*accion: 'guardar'/)
+})
+
+test('🪤 F3b: repregunta CONCRETA (lo dudoso con su frase, no la general) y discrepancias con botones y sin valores', async () => {
+  const { plantillaRepregunta, discrepanciasPendientes, textoDiscrepancias, botonesDiscrepancias, leerElegir, leerGuardar } = await import('./lead-correduria-respuesta.ts')
+  const p = plantillaRepregunta({ pila: 'Ana', ramos: ['auto'], faltan: ['aseguradoAntes', 'fechaCarnet'], invalidos: [], asuntoOriginal: 'Seguro coche', concretas: ['seguro_anterior_siniestros'] })
+  assert.ok(p)
+  assert.match(p!.cuerpo, /partes con culpa has dado en los últimos 5 años/)
+  assert.doesNotMatch(p!.cuerpo, /el número de póliza/, 'la pregunta general del seguro anterior no se repite')
+  assert.match(p!.cuerpo, /fecha en que te sacaste el carné/)
+  const solo = plantillaRepregunta({ pila: null, ramos: ['moto'], faltan: [], invalidos: [], asuntoOriginal: 'x', concretas: ['moto_cilindrada'] })
+  assert.equal(solo?.preguntas, 1)
+  const g = leerGuardar(200, { estado: 'ok', completo: true, oportunidades: [{ id: OP, ramo: 'auto', guardado: true, faltan: [], pendientes: ['fechaNacimiento'] }] })
+  assert.equal(g.estado === 'ok' && g.completo, false, 'con una discrepancia pendiente NO está completo')
+  const lista = discrepanciasPendientes(g)
+  assert.deepEqual(lista, [{ oportunidadId: OP, ramo: 'auto', clave: 'fechaNacimiento' }])
+  const t = textoDiscrepancias({ id: 4, pila: 'Ana', lista })
+  assert.match(t, /fecha de nacimiento/)
+  assert.doesNotMatch(t, /\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4}/, 'ni una fecha en Telegram')
+  const b = botonesDiscrepancias(123456789012345, lista)
+  assert.deepEqual(b[0].map((x) => x.callback), ['clp_dis:123456789012345:0:f', 'clp_dis:123456789012345:0:c'])
+  for (const f of b) for (const x of f) assert.ok(Buffer.byteLength(x.callback ?? '') <= 64)
+  assert.deepEqual(botonesDiscrepancias(4, [{ ...lista[0], elegida: 'ficha' }]), [])
+  assert.equal(leerElegir(200, { estado: 'ok', pendientes: [], completo: true, corregirFicha: true }).estado, 'ok')
+  assert.equal(leerElegir(502, null).estado, 'error')
 })

@@ -106,6 +106,12 @@ export type EntradaEncolar = {
   ramo: 'comunidades' | 'moto' | 'auto'
   riesgo: RiesgoComunidad | FormularioAuto
   solicitadoPor: string
+  /**
+   * F3b (19/10/2026, aviso «Listo para tarificar» de un lead): solo COMPRUEBA si ya hay un trabajo vivo igual (el mismo cálculo
+   * que el encolado), sin crear nada. Con uno → `encolado` + `duplicado: true`; sin él → `rechazado` 409 `no_duplicado`. Así una
+   * pulsación que solo trae duplicados dice «ya en marcha» sin reservar cupo (ni toparse con el tope).
+   */
+  soloComprobarDuplicado?: boolean
 }
 
 export type ResultadoEncolar =
@@ -205,6 +211,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
       order by t.created_at`
     const vivo = previos.find((p) => bloqueaDuplicado({ estado: p.estado, leaseHasta: p.lease_hasta, intentos: p.intentos, modo: p.modo, terminadoAt: p.terminado_at, conPrecio: p.con_precio }, p.ahora, MAX_INTENTOS))
     if (vivo) return { estado: 'encolado' as const, trabajoId: vivo.id, duplicado: true }
+    if (e.soloComprobarDuplicado) return { estado: 'rechazado' as const, status: 409, motivo: 'no_duplicado' }
     const filas = await tx.$queryRaw<{ id: string }[]>`
       insert into seguros.tarificacion_trabajos
         (correduria_id, oportunidad_id, cliente_id, poliza_id, compania, ramo, riesgo, solicitado_por)

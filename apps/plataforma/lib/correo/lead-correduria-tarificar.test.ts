@@ -33,7 +33,7 @@ test('🪤 con ≥1 compañía lista se ofrece 🤖; si les falta un dato del cl
   if (lista.estado !== 'ok') return
   assert.deepEqual(decidirOferta(lista), { tipo: 'boton' })
   const faltan = revisionOk([{ compania: 'mapfre', estado: 'faltan', preguntar: ['fechaCarnet'], noLeidas: [], otros: [] }])
-  if (faltan.estado === 'ok') assert.deepEqual(decidirOferta(faltan), { tipo: 'repregunta', preguntar: ['fechaCarnet'] })
+  if (faltan.estado === 'ok') assert.deepEqual(decidirOferta(faltan), { tipo: 'repregunta', preguntar: ['fechaCarnet'], concretas: [] })
   const sinBot = leerRevision(200, { estado: 'ok', rpaActivo: true, contador: null, oportunidades: [{ id: OP, ramo: 'hogar', estado: 'sin_bot', companias: [] }] })
   if (sinBot.estado === 'ok') {
     assert.deepEqual(decidirOferta(sinBot), { tipo: 'aviso' })
@@ -94,7 +94,7 @@ test('🪤 el 🤖 es de un solo uso, solo sobre pendientes de tarificar, y ✅ 
   const codigo = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, '')
   assert.ok(!/codeoscopic|cotizar|retarificar|auto-nuevo|cas_tarif/i.test(codigo))
   const pend = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
-  assert.match(pend, /SET estado = 'enviando'[^`]*WHERE id = \$\{d\.id\} AND tipo <> 'tarificar' AND estado = 'pendiente'/)
+  assert.match(pend, /SET estado = 'enviando'[^`]*WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia'\) AND estado = 'pendiente'/)
 })
 
 test('🪤 lo que queda EN COLA por el tope no se queda sin botón (cola, nunca descarte); lo cerrado no lo recupera', () => {
@@ -105,4 +105,35 @@ test('🪤 lo que queda EN COLA por el tope no se queda sin botón (cola, nunca 
   assert.equal(textoBotonVivo(leerTarificar(200, { estado: 'encolado', trabajos: [{ compania: 'mapfre', estado: 'encolado' }] }), 7), null)
   const src = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(src, /const vivo = r \? textoBotonVivo\(r, id\) : null if \(vivo\) await tgSendButtons\(vivo, botonesTarificar\(id\)\)/)
+})
+
+test('🪤 F3b: los bots «en pruebas» se listan y NO dan botón; las preguntas concretas viajan a la repregunta; una discrepancia frena', () => {
+  const soloPruebas = revisionOk([{ compania: 'generali', estado: 'en_pruebas' }, { compania: 'allianz', estado: 'en_pruebas' }])
+  assert.equal(soloPruebas.estado, 'ok')
+  if (soloPruebas.estado !== 'ok') return
+  assert.deepEqual(decidirOferta(soloPruebas), { tipo: 'aviso' })
+  const t = textoTarificar({ id: null, pila: 'Ana', revision: soloPruebas })
+  assert.match(t, /En pruebas[^\n]*Generali y Allianz/)
+  assert.doesNotMatch(t, /Se lanzarían/)
+  const conDudas = leerRevision(200, {
+    estado: 'ok', rpaActivo: true, contador: null,
+    oportunidades: [{ id: OP, ramo: 'auto', estado: 'evaluada', companias: [{ compania: 'mapfre', estado: 'faltan', preguntar: ['aseguradoAntes'], noLeidas: [], otros: [] }], supuestos: [], noLeidos: [], concretas: ['seguro_anterior_siniestros', 'inventado'] }],
+  })
+  if (conDudas.estado === 'ok') assert.deepEqual(decidirOferta(conDudas), { tipo: 'repregunta', preguntar: ['aseguradoAntes'], concretas: ['seguro_anterior_siniestros'] })
+  const dis = leerRevision(200, {
+    estado: 'ok', rpaActivo: true, contador: null,
+    oportunidades: [{ id: OP, ramo: 'auto', estado: 'discrepancias', companias: [], pendientes: ['fechaNacimiento'] }, { id: OP, ramo: 'moto', estado: 'evaluada', companias: [{ compania: 'mapfre', estado: 'lista' }] }],
+  })
+  if (dis.estado === 'ok') {
+    assert.deepEqual(decidirOferta(dis), { tipo: 'aviso' })
+    assert.match(textoTarificar({ id: null, pila: null, revision: dis }), /no cuadran[^\n]*fecha de nacimiento/)
+  }
+})
+
+test('🪤 F3b: una pulsación que solo trae duplicados dice «ya en marcha» (y no reabre el botón)', () => {
+  const r = leerTarificar(200, { estado: 'encolado', trabajos: [{ compania: 'mapfre', estado: 'duplicado' }], usadas: null, tope: null })
+  assert.match(lineaTrasTarificar(r), /Ya estaban en marcha[^\n]*Mapfre/)
+  assert.doesNotMatch(lineaTrasTarificar(r), /Bots en marcha|Tope/)
+  assert.equal(estadoPendienteTras(r), 'enviado')
+  assert.equal(textoBotonVivo(r, 3), null)
 })

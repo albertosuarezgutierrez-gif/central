@@ -4,7 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { auditado } from '@/lib/auditoria'
-import { ampliarTopeLead, revisarTarificacionLead, tarificarLead } from '@/lib/tarificacion-lead'
+import { ampliarTopeLead, elegirDiscrepanciaLead, fallosDatoLead, revisarTarificacionLead, tarificarLead } from '@/lib/tarificacion-lead'
 import { diaMadrid, validarPeticionTarificarLead } from '@/lib/tarificacion-lead-puro'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +18,10 @@ export const maxDuration = 60
  *   { accion:'revisar', clienteId, oportunidadIds[], actor } → 200 { estado:'ok', rpaActivo, oportunidades[], contador|null }
  *   { accion:'tarificar', … } → 200 encolado | 200 nada | 409 tope | 503 apagado | 503 sin_tabla | 503 sin_contador
  *   { accion:'ampliar_tope', dia:'aaaammdd', actor } → 200 ok | 503 sin_tabla
+ *   F3b: { accion:'tarificar', …, pendienteId?, tgMessageId? } (para avisar en su hilo si un bot falla)
+ *   F3b: { accion:'elegir', clienteId, oportunidadIds:[id], clave, eleccion:'ficha'|'correo', actor } → 200 { estado:'ok',
+ *     pendientes[], completo, corregirFicha } | 409 no_pendiente | 404 no_encontrada (botón `clp_dis`; nunca toca la ficha)
+ *   F3b: { accion:'fallos', clienteId, oportunidadIds[], actor } → 200 { estado:'ok', fallos[{oportunidadId, claves[]}] } | 503
  * Respuestas con compañías, claves del contrato y conteos: ningún valor personal.
  */
 export const POST = auditado(async (req: Request) => {
@@ -33,6 +37,14 @@ export const POST = auditado(async (req: Request) => {
     if (p.accion === 'ampliar_tope') {
       const r = await ampliarTopeLead(correduria.id, p.dia)
       return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 503 })
+    }
+    if (p.accion === 'elegir') {
+      const r = await elegirDiscrepanciaLead(correduria.id, { clienteId: p.clienteId, oportunidadId: p.oportunidadIds[0], clave: p.clave, eleccion: p.eleccion, actor: p.actor })
+      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : r.estado === 'no_encontrada' ? 404 : 409 })
+    }
+    if (p.accion === 'fallos') {
+      const f = await fallosDatoLead(correduria.id, p)
+      return NextResponse.json(f ? { estado: 'ok', fallos: f } : { estado: 'error' }, { status: f ? 200 : 503 })
     }
     if (p.accion === 'revisar') {
       return NextResponse.json(await revisarTarificacionLead(correduria.id, p), { status: 200 })

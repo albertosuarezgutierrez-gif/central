@@ -139,6 +139,11 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 ## Allianz Negocio 2038 (en construcción)
 - `allianz/comercio.ts` (`COMERCIO_ACTIVO=false`, no registrado; entrada: acordeón «Particulares» → tile «Allianz Negocio Plus», no Empresas/«Negocio»): hecho paso 4 «Datos» (tomador canónico `tomador.ts`, solo `fill`, RGPD intacto) y lector de prima `.alz-presupuesto-precio span` (fail-closed); HUECO pasos 1-3 (`ErrorMapaIncompleto`); prohibido «Siguiente» (#idbtnAceptar → Revisión), bloqueado en el guard.
 
+**«Llega a precio» (19/10/2026, F3b de la correduría).** Cada declaración de `obligatorios.ts` lleva `llegaAPrecio` explícito
+(`llegaAPrecio(compania, ramo)`; sin declaración = `false`). Desde el aviso de un LEAD solo se lanzan los que llegan; los demás salen
+«🧪 en pruebas» y no gastan cupo. Hoy `false`: Generali auto y Allianz Turismos (se paran antes del precio), hogares y Occident. Al ver
+el primer precio real de un bot, se pone `true` ahí (con su cepo en `obligatorios.test.ts`).
+
 ## Allianz Autos/Moto (en construcción, 10/10/2026)
 - `allianz/auto.ts` → `allianzAuto` y `allianzMoto` (`AUTO_ACTIVO=false`, Turismos no se registra; Moto solo con `MOTO_ACTIVO`). Mapa de la grabación de Moto del 09/10 (app legada «Motos-online» en el iframe `appArea`); se SUPONE que Turismos usa los mismos ids (la grabación de Auto del 08/10 no pudo leer el iframe).
 - Hecho: entrada (`entrada.ts`, sección «Autos», tarjeta por clase de icono `alz-icon-coches`/`alz-icon-moto`); consulta por matrícula (`#licensePlate` + `change`) → lectura de `#marca/#modelo/#version/#motorPower/#fechaMatriculacion/#mobileCode` → **vehículo canónico** (`module-tarificacion/src/vehiculo.ts`, reutilizable por otros bots); varias versiones sin elección → `requiere_humano` con las opciones (prefijo `requiere_eleccion_version:`, lo enseña `motivoLegible`); la elección vuelve en `FormularioAuto.eleccionVersion` (código o etiqueta EXACTA, nunca «la más parecida»); Datos básicos del conductor (`fill`); lector de primas de Tarificar (`td#<m>_B_A_<0|1>_0`) → `OfertaNormalizada` por modalidad.
