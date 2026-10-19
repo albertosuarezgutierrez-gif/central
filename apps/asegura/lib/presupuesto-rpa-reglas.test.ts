@@ -287,6 +287,28 @@ test('propuesta de lead: solo se sustituye lo automático; lo hecho a mano nunca
   assert.equal(sustituiblePorPropuestaLead({ creadoPor: null, ocultas: 0, eventos: [] }), false)
 })
 
+test('propuesta de lead: lo de la propuesta que Alberto EDITÓ (o que pudo salir) no se retira nunca', async () => {
+  const { sustituiblePorPropuestaLead, VIA_PROPUESTA_LEAD } = await import('./presupuesto-rpa-reglas.ts')
+  const prepLead = { tipo: 'preparado', origen: 'corredor', detalle: { actor: 'agente:telegram-1', via: VIA_PROPUESTA_LEAD } }
+  const deducidas = { tipo: 'necesidades', origen: 'corredor', detalle: { actor: 'agente:telegram-1', antes: 'vacío', deducido: true } }
+  const delLead = { tipo: 'necesidades', origen: 'corredor', detalle: { actor: 'agente:telegram-1', via: 'lead_correo' } }
+  const base = { creadoPor: 'agente:telegram-1', ocultas: 0 }
+  // Lo que escribe el propio 📤 (y un fallo SEGURO del envío) no lo hace intocable.
+  assert.equal(sustituiblePorPropuestaLead({ ...base, eventos: [prepLead, deducidas, delLead] }), true)
+  assert.equal(sustituiblePorPropuestaLead({ ...base, eventos: [prepLead, delLead, { tipo: 'envio_fallido', origen: 'sistema', detalle: { motivo: 'sin_proveedor' } }] }), true)
+  // Alberto lo tocó, o pudo llegar al cliente → se conserva.
+  for (const e of [
+    { tipo: 'necesidades', origen: 'corredor', detalle: { actor: 'alberto@x.es', antes: 'escrito' } },
+    { tipo: 'envio_incierto', origen: 'sistema', detalle: { idempotencia: 'clp-1' } },
+    { tipo: 'envio_fallido', origen: 'sistema', detalle: { motivo: 'rechazado' } },
+    { tipo: 'enlace_generado', origen: 'corredor', detalle: {} },
+    { tipo: 'pdf_descargado', origen: 'corredor', detalle: {} },
+    { tipo: 'algo_nuevo', origen: 'corredor', detalle: {} },
+  ]) {
+    assert.equal(sustituiblePorPropuestaLead({ ...base, eventos: [prepLead, delLead, e] }), false, e.tipo)
+  }
+})
+
 test('propuesta de lead: el envío pasa `via` y el presupuesto filtra los previos con la regla', () => {
   const dir = import.meta.dirname
   const prop = readFileSync(join(dir, 'propuesta-lead.ts'), 'utf8')

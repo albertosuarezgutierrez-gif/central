@@ -177,13 +177,17 @@ export type ResultadoEnviar =
 
 const noEnviado = (motivo: string, detalle: string, status: 404 | 409 | 503 = 409): ResultadoEnviar => ({ estado: 'no_enviado', motivo, detalle, status })
 
-/** ¿Ya salió un aviso con esta clave? (un reintento del webhook o del puerto no vuelve a rotar el enlace del cliente). */
-async function yaEnviado(correduriaId: string, idempotencia: string): Promise<string | null> {
-  const f = await prismaAsegura().$queryRaw<{ id: string }[]>`
-    select p.id::text as id from presupuesto_evento e join presupuesto p on p.id = e.presupuesto_id
-    where p.correduria_id = ${correduriaId}::uuid and e.tipo = 'enviado' and e.detalle->>'idempotencia' = ${idempotencia}
+/**
+ * ¿Ya se usó esta clave? `enviado` = salió (un reintento no vuelve a rotar el enlace del cliente); `envio_incierto` = no
+ * consta si salió: tampoco se repite (ni presupuesto nuevo, que retiraría el que quizá ya tiene, ni enlace rotado).
+ */
+async function yaEnviado(correduriaId: string, idempotencia: string): Promise<{ id: string; tipo: 'enviado' | 'envio_incierto' } | null> {
+  const f = await prismaAsegura().$queryRaw<{ id: string; tipo: 'enviado' | 'envio_incierto' }[]>`
+    select p.id::text as id, e.tipo from presupuesto_evento e join presupuesto p on p.id = e.presupuesto_id
+    where p.correduria_id = ${correduriaId}::uuid and e.tipo in ('enviado', 'envio_incierto') and e.detalle->>'idempotencia' = ${idempotencia}
+    order by (e.tipo = 'enviado') desc
     limit 1`
-  return f[0]?.id ?? null
+  return f[0] ?? null
 }
 
 async function hashEmail(email: string): Promise<string | null> {
@@ -194,7 +198,8 @@ async function hashEmail(email: string): Promise<string | null> {
 export async function enviarPropuestaLead(correduriaId: string, e: Enviar, ahora = new Date()): Promise<ResultadoEnviar> {
   // 0. Idempotencia: lo que ya salió con esta clave no se repite (ni rota el enlace que el cliente ya tiene).
   const previo = await yaEnviado(correduriaId, e.idempotencia)
-  if (previo) return { estado: 'enviado', presupuestoId: previo, repetido: true, hilo: 'ok', oportunidad: 'sin_cambio', historial: false }
+  if (previo?.tipo === 'enviado') return { estado: 'enviado', presupuestoId: previo.id, repetido: true, hilo: 'ok', oportunidad: 'sin_cambio', historial: false }
+  if (previo) return { estado: 'fallo_envio', motivo: 'incierto', detalle: 'Esta propuesta ya se intentó con esa misma clave y no consta si salió: no la repito (rotaría el enlace que quizá ya tiene). Míralo en Resend o en su hilo.' }
 
   // 1. La propuesta AHORA (precios y necesidades pueden haber cambiado desde el aviso) y la opción EXACTA pulsada.
   let h: FilaHilo | null

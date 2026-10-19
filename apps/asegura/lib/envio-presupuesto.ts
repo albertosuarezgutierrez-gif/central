@@ -40,7 +40,7 @@ import { fechaEfectoDe } from './presupuesto'
 import { admiteCodeoscopic, decidirSalida } from './presupuesto-origen'
 import { movilDeFicha } from './presupuesto-codigo-whatsapp'
 import type { BarreraLote, ResultadoCorreoLote } from './barrera-lote'
-import type { EnRespuestaA } from './correo-hilo'
+import { envioIncierto, type EnRespuestaA } from './correo-hilo'
 import { correoEnHilo } from './propuesta-lead-puro'
 
 export type CanalAviso = 'email' | 'whatsapp_enlace'
@@ -50,6 +50,11 @@ export type FalloEnvio =
   /** Origen `ofertas`: alguna opción no sale de una oferta REVISADA. `origen_desconocido`: no se sabe de dónde salen los precios. */
   | 'sin_revisar' | 'origen_desconocido'
   | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
+  /**
+   * Aviso EN EL HILO (F4) cuyo envío no consta ni como salido ni como rechazado (red, 5xx, «aceptado sin id»). El enlace
+   * NUEVO se queda vivo (quizá ya está en su buzón) y esa clave de idempotencia no vuelve a rotarlo.
+   */
+  | 'incierto'
   /** Aviso de un LOTE (propuesta de escenarios): otro presupuesto del lote no pudo salir, así que no sale ninguno. */
   | 'lote_cancelado'
 
@@ -267,6 +272,9 @@ export async function ejecutarAviso(
   const { correduriaId, entrada, ahora, p, token, codigoWhatsapp, enlace, venceSiSale, nombre, emailAcceso, datos } = prep
   // En el hilo solo por correo y nunca dentro de un lote (el lote compone su propio correo único).
   if (hilo && (entrada.canal !== 'email' || lote)) return error('no_enviable', 'Un aviso en el hilo del cliente solo sale por correo y suelto.')
+  // 🚨 Con una clave que YA se usó (salió o quedó incierta) no se rota el enlace: el correo que quizá tiene el cliente
+  //    lleva el token de entonces, y Resend no reenvía con la misma clave. Rotar aquí le dejaría un enlace muerto.
+  if (hilo && (await claveYaUsada(db, p.id, hilo.idempotencia))) return error('incierto', TEXTO_CLAVE_USADA)
 
   // Compare-and-swap sobre el hash anterior: el segundo clic no encuentra la fila.
   const nuevoHash = await hashTokenVista(token)
@@ -303,6 +311,13 @@ export async function ejecutarAviso(
   const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', correo, hilo ? correoEnHilo(base, hilo) : base,
     lote ? { barrera: lote, parte: { presupuestoId: p.id, clienteId: p.clienteId, email: correo, nombre, enlace: directo ?? enlace, venceEl: venceSiSale } } : null,
     hilo)
+  if (envio === 'incierto') {
+    // Pudo salir: el enlace NUEVO se queda (devolver la llave vieja mataría el que quizá ya está en su buzón).
+    await db.presupuestoEvento.create({
+      data: { presupuestoId: p.id, tipo: 'envio_incierto', origen: 'sistema', detalle: { actor: entrada.actor, canal: 'email', ...(hilo ? { idempotencia: hilo.idempotencia } : {}) } },
+    })
+    return error('incierto', 'No consta si el correo ha salido (se cortó la respuesta del proveedor). El enlace nuevo sigue vivo; míralo en Resend o en su hilo ANTES de repetir.')
+  }
   if (envio !== 'enviado') {
     // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
     await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso, whatsappCodigoHash: p.whatsappCodigoHash, whatsappCodigoIntentos: p.whatsappCodigoIntentos } })
@@ -379,11 +394,21 @@ export async function confirmarWhatsapp(
 
 type ResultadoCorreo = ResultadoCorreoLote
 
+/** ¿Esta clave de idempotencia ya se usó con este presupuesto (salió o quedó incierta)? Ante la duda, sí. */
+async function claveYaUsada(db: DbAviso, presupuestoId: string, idempotencia: string): Promise<boolean> {
+  const n = await db.presupuestoEvento.count({
+    where: { presupuestoId, tipo: { in: ['enviado', 'envio_incierto'] }, detalle: { path: ['idempotencia'], equals: idempotencia } },
+  }).catch(() => null)
+  return n === null || n > 0
+}
+
+export const TEXTO_CLAVE_USADA = 'Este aviso ya se intentó con esa misma clave y no se repite (rotaría el enlace que quizá ya tiene el cliente). Míralo en Resend o en su hilo.'
+
 async function mandarCorreo(
   correduriaId: string, clienteId: string, tipo: string, destino: string, c: { asunto: string; texto: string; html: string },
   lote: { barrera: BarreraLote<ParteLote>; parte: ParteLote } | null = null,
   hilo: AvisoEnHilo | null = null,
-): Promise<ResultadoCorreo> {
+): Promise<ResultadoCorreo | 'incierto'> {
   // Parte de un lote: el correo individual NO sale; sale el del lote, una vez, cuando se han unido todos.
   if (lote) return lote.barrera.unirse(lote.parte)
   // Import dinámico: igual que el resto de correos de asegura, para que los cepos
@@ -396,6 +421,8 @@ async function mandarCorreo(
   if (r.resultado === 'enviado') return 'enviado'
   if (r.resultado === 'sin_proveedor') return 'sin_proveedor'
   console.error('[asegura/presupuesto] fallo enviando el aviso:', r.motivo)
+  // Solo EN EL HILO (F4, con clave de idempotencia): fuera de él se mantiene lo de siempre (devolver la llave anterior).
+  if (hilo && envioIncierto(r)) return 'incierto'
   return rechazoDeRemitente(r.motivo ?? '') ? 'remitente_no_verificado' : 'rechazado'
 }
 

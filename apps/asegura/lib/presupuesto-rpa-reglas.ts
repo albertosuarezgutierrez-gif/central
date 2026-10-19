@@ -378,7 +378,21 @@ export type PresupuestoPrevio = Pick<BorradorPrevio, 'ocultas' | 'eventos'> & { 
 export function sustituiblePorPropuestaLead(p: PresupuestoPrevio): boolean {
   if (p.creadoPor === ACTOR_RPA) return !borradorTocado(p)
   const deLaPropuesta = p.eventos.some((e) => e.tipo === 'preparado' && obj(e.detalle)?.via === VIA_PROPUESTA_LEAD)
-  return deLaPropuesta && p.ocultas === 0
+  // 🚨 Solo si NADIE lo ha tocado después: cualquier evento que no sea del propio 📤 (Alberto editó necesidades, generó
+  //    un enlace, lo descargó, salió o quedó incierto…) lo conserva. Lista CERRADA: un evento nuevo cuenta como tocado.
+  return deLaPropuesta && p.ocultas === 0 && p.eventos.every(eventoPropioDeLaPropuesta)
+}
+
+/** Motivos de `envio_fallido` que aseguran que el correo NO salió (el `rechazado` antiguo podía ser un corte). */
+const FALLO_SEGURO = new Set(['sin_proveedor', 'remitente_no_verificado', 'cancelado'])
+
+/** ¿Lo escribió el propio flujo del 📤 (y no deja rastro en el cliente)? PURA. */
+function eventoPropioDeLaPropuesta(e: EventoBorrador): boolean {
+  const d = obj(e.detalle)
+  if (e.tipo === 'preparado') return d?.via === VIA_PROPUESTA_LEAD
+  if (e.tipo === 'necesidades') return d?.via === 'lead_correo' || d?.deducido === true
+  if (e.tipo === 'envio_fallido') return typeof d?.motivo === 'string' && FALLO_SEGURO.has(d.motivo)
+  return false
 }
 
 export type DecisionSustitucion =

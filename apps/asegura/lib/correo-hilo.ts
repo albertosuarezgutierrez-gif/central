@@ -42,3 +42,14 @@ export function asuntoEnvio(asunto: string, en: EnRespuestaA | null | undefined)
 export function direccionSimple(v: unknown): string | null {
   return typeof v === 'string' && /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(v.trim()) ? v.trim().toLowerCase() : null
 }
+
+/**
+ * ¿El fallo de un envío por Resend deja la duda de si SALIÓ? Red/timeout (sin código), «aceptado sin id» (2xx) o un 5xx.
+ * Solo un 4xx es un rechazo seguro. Lo usa el aviso en el hilo (F4) para no matar un enlace que quizá ya está en su
+ * buzón. PURA.
+ */
+export function envioIncierto(r: { resultado: string; codigo?: string }): boolean {
+  if (r.resultado !== 'rechazado') return false
+  const c = Number(r.codigo)
+  return !r.codigo || !Number.isFinite(c) || c < 400 || c >= 500
+}
