@@ -52,14 +52,16 @@ const AUTO_BASE = {
   aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0', companiaAnterior: null,
 }
 
-test('auto · Mapfre: con años y sin compañía anterior falta (por compañía); otra compañía no lo pide', () => {
+test('auto · Mapfre y Allianz: con seguro actual y sin compañía anterior falta (Allianz la exige con cambio de seguro, 19/10/2026)', () => {
   const a = adaptadorDeRamo('auto')!
   const m = checklistBot(a, AUTO_BASE, {}, 'mapfre')
   assert.ok(m.estado === 'evaluado' && m.bloquea && /compañía anterior/.test(m.resumen))
   const m2 = checklistBot(a, AUTO_BASE, { companiaAnterior: '   ' }, 'mapfre')
   assert.ok(m2.estado === 'evaluado' && m2.bloquea && /compañía anterior/.test(m2.resumen))
   const al = checklistBot(a, AUTO_BASE, {}, 'allianz')
-  assert.ok(al.estado === 'evaluado' && !al.bloquea)
+  assert.ok(al.estado === 'evaluado' && al.bloquea && /compañía actual del vehículo/.test(al.resumen))
+  const al2 = checklistBot(a, AUTO_BASE, { companiaAnterior: 'Línea Directa' }, 'allianz')
+  assert.ok(al2.estado === 'evaluado' && !al2.bloquea)
 })
 
 test('auto · compañía anterior tecleada (o traída del formulario) quita la falta y viaja en el riesgo; tocar el campo vacío manda', () => {

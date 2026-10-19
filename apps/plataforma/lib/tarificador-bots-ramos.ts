@@ -66,7 +66,7 @@ const adaptadorAuto: AdaptadorBot = {
     { clave: 'ambitoCirculacion', etiqueta: 'Ámbito de circulación', opciones: OPCIONES_AMBITO_CIRCULACION, porDefecto: 'espana' },
     { clave: 'clasePermiso', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (el riesgo guarda el código DGS, no el nombre): se teclea aquí.
-    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre y Allianz si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
   ],
   construir: (formulario, extra) => {
     const r = formularioBotAuto(entradaAuto(formulario, extra))
