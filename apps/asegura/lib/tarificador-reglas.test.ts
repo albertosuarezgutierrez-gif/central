@@ -422,7 +422,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
   const cliente = fn.indexOf("'cliente_no_encontrado'")
   const comprueba = fn.indexOf('riesgoParaEncolar(')
-  const json = fn.indexOf('const riesgoJson = JSON.stringify(guardar.riesgo)')
+  const json = fn.indexOf('formasRiesgoDuplicado(guardar.riesgo as Record<string, unknown>')
   assert.ok(cliente > -1 && comprueba > cliente && json > comprueba, 'cliente comprobado → NIF comprobado → riesgo SIN NIF serializado')
   assert.ok(fn.search(/insert into \w+\.tarificacion_trabajos/) > json)
   assert.ok(!/JSON\.stringify\(e\.riesgo\)/.test(fn), 'nada encola el riesgo sin pasar por riesgoParaEncolar')
