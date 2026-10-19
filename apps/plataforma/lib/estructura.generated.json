@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-19T11:23:44Z",
+  "generadoEn": "2026-10-19T12:13:01Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -421,7 +421,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "asegura-portal": {
         "estado": "usado",
@@ -961,7 +961,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-portal": {
         "estado": "usado",
@@ -989,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 30
       },
       "rrhh": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 265
+        "evidencias": 267
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4162,6 +4162,7 @@
       "/api/operador/google-contactos",
       "/api/operador/google-contactos/activar",
       "/api/operador/google-contactos/desconectar",
+      "/api/operador/google-contactos/lead",
       "/api/operador/google-contactos/ordenar",
       "/api/operador/google-contactos/revision",
       "/api/operador/google-contactos/simular",
@@ -6943,7 +6944,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1730,
+    "apis": 1731,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
