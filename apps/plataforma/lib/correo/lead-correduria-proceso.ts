@@ -53,7 +53,7 @@ async function extraer(correo: CorreoNuevo): Promise<LeadCorreo> {
 }
 
 /** Una ÚNICA ficha con ese email (índice ciego, exacto). Cero o varias → `null`: no se adivina. */
-async function fichaPorEmail(email: string | null): Promise<{ id: string; nombre: string } | null> {
+export async function fichaPorEmail(email: string | null): Promise<{ id: string; nombre: string } | null> {
   if (!email) return null
   const b = await buscarAsegura(email)
   if (b.estado !== 'ok') return null

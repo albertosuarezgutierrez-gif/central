@@ -18,7 +18,8 @@ import { parsearNotificacionSmoobu } from './smoobu-notificacion'
 import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
-import { pareceContactoPersonal } from './contacto-sugerido'
+import { buscarFichaDeRemitente, debeSugerirContactoAseguradora, esDominioPersonal, textoAvisoCorreoCliente } from './contacto-sugerido'
+import { asuntoDeRecibo } from './keywords'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
 import { MOTIVO_POLIZA_ANULADA, esCorreoDevolucion, eventoNecesitaAdjuntos, leerCorreoDevolucion, leerCorreoEventoAseguradora, type EventoAseguradora, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { textoPdfPorFilas } from './pdf-filas'
@@ -28,7 +29,7 @@ import { eventoConfirmado, leerResultadosEvento, textoAvisoEvento } from './even
 import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
-import { procesarLeadCorreo } from './lead-correduria-proceso'
+import { fichaPorEmail, procesarLeadCorreo } from './lead-correduria-proceso'
 import { cursorTrasPasada, diferirCorreo, diferirLead } from './lead-correduria'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
@@ -129,8 +130,11 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
         // caía al digest sin pasar nunca por el lector ni por la cartera. Se decide SOLO por remitente +
         // asunto (`esCorreoDevolucion`): el cuerpo no cuenta, así que no secuestra otros correos (un boletín
         // de Allianz que hablase de «recibos devueltos»). La lectura de verdad, con cuerpo y PDF, va después.
+        // Y lo mismo cuando alguien escribe desde un correo PERSONAL (gmail, hotmail…: un cliente que reenvía a
+        // hola@ el aviso de Mapfre) sobre un recibo devuelto/impagado (19/10/2026): igual de urgente, no espera al digest.
         const c = clasificado.categoria === 'correduria'
-          && esCorreoDevolucion({ remitente: correo.from, asunto: correo.subject })
+          && (esCorreoDevolucion({ remitente: correo.from, asunto: correo.subject })
+            || (esDominioPersonal(correo.from) && asuntoDeRecibo(correo.subject)))
           ? { ...clasificado, categoria: 'correduria-recibo', via: 'regla' as const }
           : clasificado
         const ruta = rutaDe(c.categoria)
@@ -212,6 +216,14 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           const textoPdfs = (): Promise<string | null> => (pdfsLeidos ??= textoDePdfs(correo))
           // `true` = asegura confirmó lo que hizo con el aviso de compañía: la nota genérica de abajo sobra.
           let eventoAplicado = false
+          // ¿Lo escribe un CLIENTE? (19/10/2026) Un correo de correduría cuyo remitente NO es de una aseguradora
+          // (un gmail que reenvía «Devolución de Recibo MAPFRE») se busca por el email del remitente en la cartera
+          // (índice ciego, exacto, una única ficha). Si casa, es correo de cliente: historial + aviso con su ficha,
+          // y jamás «posible contacto de aseguradora». Fallo de red o varias fichas → `null`: sigue como siempre.
+          const clienteRemitente = (c.categoria === 'correduria' || c.categoria === 'correduria-recibo')
+            && buscarFichaDeRemitente(correo.from)
+            ? await fichaPorEmail(correo.from).catch(() => null)
+            : null
           const avisoAgoda = ruta.aviso === 'inmediato' && c.categoria === 'agoda-huespedes'
             // `extracto` es asunto+cuerpo truncado a 1500 chars: el nombre y el texto del mensaje van
             // al PRINCIPIO y siempre sobreviven; el enlace de YCS va al final y puede caerse. El parser
@@ -259,6 +271,19 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const texto = textoAvisoEvento(evento, correo.subject, resultados, (id) => urlFichaCliente(id), res.estado === 'ok' ? null : res)
             const enviado = await tgAviso('correo.correduria-evento', texto).catch(() => null)
             if (enviado !== null) stats.avisados++
+          } else if (clienteRemitente) {
+            // Correo de un CLIENTE de la cartera: se anota en SU historial y, si es de recibo (urgente), el aviso
+            // va por el interruptor de recibos con enlace a su ficha. Un `correduria` normal suyo queda en el digest.
+            const anotado = await anotarHistorialDesdeCorreo(
+              clienteRemitente.id,
+              `Correo del cliente (${etiquetaBonita(c.categoria)}) desde ${correo.fromRaw}: ${correo.subject}`.slice(0, 2000),
+            ).catch(() => false)
+            if (anotado) stats.correduriaResueltos++
+            if (c.categoria === 'correduria-recibo') {
+              const texto = textoAvisoCorreoCliente({ nombre: clienteRemitente.nombre, asunto: correo.subject, url: urlFichaCliente(clienteRemitente.id), anotado })
+              const enviado = await tgAviso('correo.correduria-recibo', texto).catch(() => null)
+              if (enviado !== null) stats.avisados++
+            }
           } else if (c.categoria === 'correduria-lead' && (await procesarLeadCorreo(correo)).avisado) {
             // Lead de la CORREDURÍA (19/10/2026): alta en la cartera por el puerto de la web, oportunidad y
             // petición de datos para copiar (`lead-correduria-proceso.ts`). Nada sale hacia el lead. Si el
@@ -287,7 +312,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           // varias pólizas VIVAS de la cartera, se anota en la ficha de cada cliente; si no
           // resuelve ninguna —o no se pudo ni preguntar—, no pasa nada: el aviso/digest de
           // siempre sigue siendo la única señal, exactamente como hasta hoy.
-          if (ruta.enrutarCorreduria) {
+          if (ruta.enrutarCorreduria && !clienteRemitente) {
             // Si el aviso de compañía ya quedó aplicado arriba (nota/tarea/siniestro en su ficha), la nota
             // genérica sería un duplicado. Si asegura no lo confirmó, se deja como red.
             const textoParaResolver = `${correo.subject}\n${correo.extracto ?? ''}`.slice(0, 4000)
@@ -305,7 +330,9 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // buzón genérico) de una aseguradora, para que Alberto decida si
             // la añade al directorio (`compania_contactos`). Best-effort: un
             // fallo aquí no toca ni el aviso ni la anotación de arriba.
-            if (pareceContactoPersonal(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
+            // 🚨 Solo personas de un dominio de ASEGURADORA (19/10/2026): un gmail/hotmail o un dominio
+            // cualquiera NUNCA se propone, por mucho que el asunto hable de Mapfre o de un recibo.
+            if (debeSugerirContactoAseguradora(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
               await tgAviso(
                 'correo.contacto-sugerido',
                 `👤 <b>Posible contacto nuevo de aseguradora</b>\n${escapeHtml(correo.fromRaw)}\n${escapeHtml(correo.subject)}\n➡️ Si es una persona real, añádela en /correduria → Directorio de compañías.`,

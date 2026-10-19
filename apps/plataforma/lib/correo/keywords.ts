@@ -46,6 +46,17 @@ export const ASEGURADORAS = [
 // la cobertura y por tanto el más útil de todos.
 const ASUNTO_RECIBO = /\brecibos?\b|\bimpago\b|devuelt|anulacion|\banulad|\bdomiciliacion\b/i
 
+/** Asunto que habla de un recibo que no ha entrado (devuelto, impagado, anulación). Solo el asunto. */
+export function asuntoDeRecibo(subject: string): boolean {
+  return ASUNTO_RECIBO.test(sinTildes(subject || ''))
+}
+
+/** `true` = el dominio del remitente es de una aseguradora conocida (`ASEGURADORAS`, subdominios incluidos). */
+export function esDominioAseguradora(from: string): boolean {
+  const dom = dominioDe(norm(from))
+  return !!dom && ASEGURADORAS.some(d => enDominio(dom, d))
+}
+
 function esReciboAseguradora(from: string, subject: string): boolean {
   const dom = dominioDe(from)
   if (!dom || !ASEGURADORAS.some(d => enDominio(dom, d))) return false
