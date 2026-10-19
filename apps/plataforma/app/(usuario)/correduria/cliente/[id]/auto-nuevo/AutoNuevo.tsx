@@ -32,6 +32,7 @@
 // calcula esta pantalla en local, exactamente igual que la retarificación de
 // auto ya hace.
 
+import { sexoAPersistir, guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Flag, FlaskConical } from 'lucide-react'
@@ -1641,7 +1642,7 @@ export default function AutoNuevo({
             <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
               {aMano.some((f) => f.campo === 'sexo') && (
                 <Campo etiqueta="Sexo" falta={!(correcciones.sexo ?? '').trim()}>
-                  <select value={correcciones.sexo ?? ''} onChange={(e) => setCorrecciones((c) => ({ ...c, sexo: e.target.value }))} style={input}>
+                  <select value={correcciones.sexo ?? ''} onChange={(e) => { const v = e.target.value; setCorrecciones((c) => ({ ...c, sexo: v })); const aGuardar = sexoAPersistir(faltanInicial, v); if (aGuardar) void guardarSexoEnFicha(clienteId, aGuardar) }} style={input}>
                     <option value="">Elige</option>
                     <option value="hombre">Hombre</option>
                     <option value="mujer">Mujer</option>
