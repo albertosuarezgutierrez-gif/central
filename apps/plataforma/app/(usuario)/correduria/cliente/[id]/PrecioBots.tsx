@@ -188,7 +188,8 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
   const generacion = useRef(0)
   const filasRef = useRef<FilaLote[]>([]) // lo último publicado: el sondeo lo lee sin depender del render
   const publicar = useCallback((f: FilaLote[]) => { filasRef.current = f; setFilas(f) }, [])
-  useEffect(() => () => { generacion.current += 1 }, [])
+  const montado = useRef(true)
+  useEffect(() => { montado.current = true; return () => { montado.current = false; generacion.current += 1 } }, [])
 
   const sondear = useCallback(async (mia: number) => {
     const inicio = Date.now()
@@ -208,6 +209,9 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
       if (nuevos.size) publicar(filasRef.current.map((f) => (f.estado === 'encolada' && nuevos.has(f.trabajoId) ? { ...f, ...nuevos.get(f.trabajoId)! } : f)))
       if (vivos === 0) return
     }
+    if (mia === generacion.current && montado.current && filasRef.current.some((f) => f.estado === 'encolada' && !f.final)) {
+      setAviso('Siguen en marcha; míralo en Presupuestos o recarga.')
+    }
   }, [publicar])
 
   async function pedirTodas() {
@@ -221,6 +225,7 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
       const bloqueos = new Map(companias.map((c) => [c.compania.toLowerCase(), c.bloqueo]))
       // Secuencial: las de origen del vehículo se encolan antes que Generali.
       for (const compania of ordenEncolado(companias.map((c) => c.compania))) {
+        if (mia !== generacion.current) break
         const bloqueo = bloqueos.get(compania)
         let fila: FilaLote
         if (bloqueo) fila = { compania, estado: 'omitida', mensaje: bloqueo }
@@ -235,14 +240,16 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
           const e = leerEncoladoBot(r.status, r.json)
           fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false } : { compania, estado: 'rechazada', mensaje: e.mensaje }
         }
+        if (mia !== generacion.current) break
         acumulado.push(fila)
         publicar([...acumulado])
       }
+      if (mia !== generacion.current) return
       if (acumulado.some((f) => f.estado === 'encolada')) void sondear(mia)
       else setAviso('No se ha encolado ninguna compañía: mira el motivo de cada una.')
     } finally {
       enVuelo.current = false
-      setOcupado(false)
+      if (montado.current) setOcupado(false)
     }
   }
 
@@ -254,8 +261,8 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
         style={{ ...btnStyle('primario'), minHeight: 44, width: '100%', maxWidth: 420, whiteSpace: 'normal', opacity: !formulario.ok || ocupado ? 0.6 : 1 }}>
         <Bot size={16} aria-hidden /> {ocupado ? 'Encolando…' : 'Pedir precio a todas'}
       </button>
-      {filas.length > 0 && (
-        <div aria-live="polite" style={{ display: 'grid', gap: 4, fontSize: 13, minWidth: 0 }}>
+      <div aria-live="polite" style={{ display: 'grid', gap: 4, fontSize: 13, minWidth: 0 }}>
+        {filas.length > 0 && (<>
           <strong>{resumenLote(filas)}</strong>
           <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
             {filas.map((f) => (
@@ -268,8 +275,8 @@ function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: 
             ))}
           </ul>
           <span style={{ color: 'var(--muted)' }}>El detalle de cada precio sale al pulsar su botón de abajo o en «Presupuestos».</span>
-        </div>
-      )}
+        </>)}
+      </div>
       {aviso && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)' }}>{aviso}</span>}
       {terminado && oportunidadId && loteConOk(filas) && (
         <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>

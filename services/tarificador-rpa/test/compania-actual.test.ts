@@ -44,10 +44,10 @@ test('casa por palabra clave distintiva: una sola candidata', () => {
   }
 })
 
-test('ambigua: «Allianz» casa con ALLIANZ DIRECT y BBVA ALLIANZ → no se elige; «Allianz Direct» sí es una', () => {
+test('«Allianz» no casa con ALLIANZ DIRECT ni con BBVA ALLIANZ; «Allianz Direct» y «BBVA Allianz» sí', () => {
   const r = idx('Allianz')
-  assert.equal(r.estado, 'ambigua')
-  assert.deepEqual(r.indices, [9, 10])
+  assert.equal(r.estado, 'ninguna')
+  assert.deepEqual(r.indices, [])
   assert.equal(idx('Allianz Direct').estado, 'unica')
   assert.deepEqual(idx('Allianz Direct').indices, [9])
   assert.deepEqual(idx('BBVA Allianz').indices, [10])
@@ -66,9 +66,15 @@ test('nunca se inventa: sin parecido, trozos de palabra o vacío → ninguna', (
   assert.equal(casarCompaniaActual(LISTA, null).estado, 'ninguna')
 })
 
-test('el nombre del riesgo más largo que la opción casa por el alias (nivel 4)', () => {
-  assert.deepEqual(casarCompaniaActual(['REALE AUTOS', 'PELAYO/PELAYONEX'], 'Reale Autos Seguros Sociedad Anonima').indices, [0])
-  assert.equal(casarCompaniaActual(['NU', 'ZZ'], 'nu zz yy').estado, 'ninguna', 'alias de menos de 3 letras: no cuenta')
+test('nunca otra compañía: BBVA ALLIANZ, ALLIANZ DIRECT, Mutua Madrileña ausente y Zurich Connect → no casan', () => {
+  assert.equal(casarCompaniaActual(['BBVA ALLIANZ SEGUROS Y REASEGUROS'], 'Allianz').estado, 'ninguna')
+  assert.equal(casarCompaniaActual(['ALLIANZ DIRECT VERSICHERUNGS-AG, SUCURSAL EN ESPAÑA'], 'Allianz').estado, 'ninguna')
+  assert.equal(casarCompaniaActual(['ALLIANZ DIRECT VERSICHERUNGS-AG, SUCURSAL EN ESPAÑA', 'BBVA ALLIANZ SEGUROS Y REASEGUROS'], 'Allianz').estado, 'ninguna')
+  assert.equal(casarCompaniaActual(['MUTUA/MUTUA DE PROPIETARIOS', 'MUTUA GENERAL'], 'Mutua Madrileña').estado, 'ninguna', 'alias «MUTUA» de otra: no se elige')
+  assert.equal(casarCompaniaActual(['ZURICH INSURANCE PLC SUC. ESPAÑA', 'ZURICH VIDA'], 'Zurich Connect').estado, 'ninguna')
+  assert.equal(casarCompaniaActual(['ZURICH CONNECT', 'ZURICH INSURANCE PLC SUC. ESPAÑA'], 'Zurich').indices.join(), '1', '«Zurich» no casa con «Zurich Connect»')
+  assert.equal(casarCompaniaActual(['REALE AUTOS', 'PELAYO/PELAYONEX'], 'Reale Autos Seguros Sociedad Anonima').indices.join(), '0', 'igual al nombre normalizado')
+  assert.equal(casarCompaniaActual(['NU', 'ZZ'], 'nu zz yy').estado, 'ninguna')
 })
 
 test('mensajes: la ambigua nombra las candidatas; la que no casa lleva la lista; nada de datos personales', () => {
