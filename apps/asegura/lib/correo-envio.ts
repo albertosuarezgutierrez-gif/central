@@ -10,7 +10,7 @@ import { conMarcaCorreo, remitenteCorreo } from '@central/module-seguros'
 import { registrarEnvioCorreo } from './correo-seguimiento'
 import { sinCorreos } from './recaptacion-email'
 import { etiquetaTipo } from './correo-eventos'
-import { asuntoRespuesta, cabecerasHilo, direccionSimple, type EnRespuestaA } from './correo-hilo'
+import { asuntoEnvio, cabecerasHilo, direccionSimple, type EnRespuestaA } from './correo-hilo'
 
 export type CorreoCliente = {
   correduriaId: string
@@ -48,7 +48,11 @@ export type ResultadoCorreoCliente = 'enviado' | 'sin_proveedor' | 'rechazado'
  * El resultado con el motivo CRUDO del proveedor, para los remitentes que distinguen «dominio sin
  * verificar», «se cortó y pudo salir» o el código SMTP. `motivo` nunca lleva direcciones.
  */
-export type EnvioDetallado = { resultado: ResultadoCorreoCliente; motivo?: string; codigo?: string }
+export type EnvioDetallado = {
+  resultado: ResultadoCorreoCliente; motivo?: string; codigo?: string
+  /** `true` = Resend devolvió un id que YA estaba en `correo_envio`: reintento deduplicado por la clave de idempotencia. */
+  repetido?: boolean
+}
 
 export async function enviarCorreoCliente(c: CorreoCliente, fetchImpl: typeof fetch = fetch): Promise<ResultadoCorreoCliente> {
   return (await enviarCorreoSeguido(c, fetchImpl)).resultado
@@ -62,7 +66,8 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
   const hilo = cabecerasHilo(c.enRespuestaA)
-  const asunto = c.enRespuestaA ? asuntoRespuesta(c.asunto) : c.asunto
+  // «Re:» solo si de verdad sale en el hilo: con un Message-ID sin forma sale como correo nuevo, con su asunto.
+  const asunto = asuntoEnvio(c.asunto, c.enRespuestaA)
   const bcc = direccionSimple(c.copiaOculta)
   const base = { correduriaId: c.correduriaId, clienteId: c.clienteId, polizaId: c.polizaId ?? null, tipo: c.tipo, asunto, destino: c.to }
   const apiKey = process.env.RESEND_API_KEY?.trim()
@@ -106,8 +111,8 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
         await registrarEnvioCorreo({ ...base, resendId: null, proveedor: 'resend_api', estado: 'fallido', error: motivo })
         return { resultado: 'rechazado', motivo, codigo: String(res.status) }
       }
-      await registrarEnvioCorreo({ ...base, resendId: json.id, proveedor: 'resend_api', estado: 'enviado' })
-      return { resultado: 'enviado' }
+      const registro = await registrarEnvioCorreo({ ...base, resendId: json.id, proveedor: 'resend_api', estado: 'enviado' })
+      return { resultado: 'enviado', ...(registro === 'repetido' ? { repetido: true } : {}) }
     } catch (e) {
       const motivo = e instanceof Error ? e.message : String(e)
       console.error(`[correo-envio] fallo de red con Resend («${c.tipo}»):`, motivo)

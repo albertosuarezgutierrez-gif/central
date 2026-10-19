@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { asuntoRespuesta, cabecerasHilo, direccionSimple } from './correo-hilo.ts'
+import { asuntoEnvio, asuntoRespuesta, cabecerasHilo, direccionSimple } from './correo-hilo.ts'
 
 test('🪤 el hilo: In-Reply-To = su Message-ID y References = sus referencias + ese id', () => {
   const h = cabecerasHilo({ messageId: '<b@x.es>', references: ['<a@x.es>'] })
@@ -32,4 +32,11 @@ test('BCC: una sola dirección simple', () => {
   assert.equal(direccionSimple('Hola@GrupoAsegura.es'), 'hola@grupoasegura.es')
   assert.equal(direccionSimple('a@b.es, c@d.es'), null)
   assert.equal(direccionSimple('"X" <a@b.es>'), null)
+})
+
+test('🪤 metadatos de respuesta inválidos → sale como correo nuevo y SIN «Re:» en el asunto', () => {
+  assert.equal(asuntoEnvio('Seguro de casa', { messageId: 'sin-forma', references: [] }), 'Seguro de casa')
+  assert.equal(asuntoEnvio('Seguro de casa', { messageId: '<a\r\nBcc: x@y.es>', references: [] }), 'Seguro de casa')
+  assert.equal(asuntoEnvio('Seguro de casa', { messageId: '<abc@mail.ejemplo.es>', references: [] }), 'Re: Seguro de casa')
+  assert.equal(asuntoEnvio('Seguro de casa', undefined), 'Seguro de casa')
 })

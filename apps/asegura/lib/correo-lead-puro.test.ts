@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { textoHistorialEnvioLead, validarEnvioLead } from './correo-lead-puro.ts'
+import { anotarHistorialTrasEnvio, estadoRegistroHilo, textoHistorialEnvioLead, validarEnvioLead } from './correo-lead-puro.ts'
 
 const OK = {
   clienteId: '11111111-1111-4111-8111-111111111111',
@@ -42,4 +42,26 @@ test('el historial dice qué, por dónde y con el OK de quién, sin el cuerpo', 
   assert.match(t, /hola@grupoasegura\.es/)
   assert.match(t, /agente:telegram-1/)
   assert.doesNotMatch(t, /necesito estos datos/)
+})
+
+test('🪤 References larguísimo: la RAÍZ (la primera) se conserva, que es la que registra el hilo', () => {
+  const refs = Array.from({ length: 60 }, (_, i) => `<r${i}@mail.ejemplo.es>`)
+  const r = validarEnvioLead({ ...OK, enRespuestaA: { messageId: '<abc@mail.ejemplo.es>', references: refs } })
+  assert.equal(r.ok, true)
+  if (r.ok) {
+    assert.equal(r.valor.enRespuestaA.references[0], '<r0@mail.ejemplo.es>')
+    assert.equal(r.valor.enRespuestaA.references.length, 50)
+    assert.equal(r.valor.enRespuestaA.references.at(-1), '<r59@mail.ejemplo.es>')
+  }
+})
+
+test('🪤 reintento deduplicado por Resend (mismo id) → no se vuelve a anotar el historial', () => {
+  assert.equal(anotarHistorialTrasEnvio({ repetido: true }), false)
+  assert.equal(anotarHistorialTrasEnvio({}), true)
+})
+
+test('🪤 una oportunidad que no es del cliente no escribe fila: el hilo NO se da por registrado', () => {
+  assert.equal(estadoRegistroHilo([1, 0]), 'sin_oportunidad')
+  assert.equal(estadoRegistroHilo([0]), 'sin_oportunidad')
+  assert.equal(estadoRegistroHilo([1, 1]), 'ok')
 })

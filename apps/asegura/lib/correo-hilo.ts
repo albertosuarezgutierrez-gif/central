@@ -33,6 +33,11 @@ export function asuntoRespuesta(asunto: string): string {
   return (/^re:/i.test(a) ? a : `Re: ${a}`).slice(0, 200)
 }
 
+/** Asunto con el que sale el correo: «Re: …» SOLO si de verdad sale en el hilo (cabeceras válidas). PURA. */
+export function asuntoEnvio(asunto: string, en: EnRespuestaA | null | undefined): string {
+  return cabecerasHilo(en) ? asuntoRespuesta(asunto) : asunto
+}
+
 /** Una dirección de correo simple (para el BCC propio). Sin nombre visible ni comas: una sola. */
 export function direccionSimple(v: unknown): string | null {
   return typeof v === 'string' && /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/.test(v.trim()) ? v.trim().toLowerCase() : null

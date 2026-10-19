@@ -34,7 +34,9 @@ export function validarEnvioLead(b: unknown): { ok: true; valor: EnvioLead } | {
   const en = typeof o.enRespuestaA === 'object' && o.enRespuestaA !== null ? (o.enRespuestaA as Record<string, unknown>) : null
   // Sin Message-ID válido NO se manda: este puerto es para responder EN EL HILO; un correo suelto lo manda Alberto.
   if (!en || !messageIdValido(en.messageId)) return { ok: false, motivo: 'enRespuestaA.messageId no válido' }
-  const references = Array.isArray(en.references) ? en.references.filter(messageIdValido).slice(-50) : []
+  // Tope de 50, pero la RAÍZ (la primera) se conserva siempre: es la que `registrarHilo` guarda como `message_id_raiz`.
+  const refsValidas = Array.isArray(en.references) ? en.references.filter(messageIdValido) : []
+  const references = refsValidas.length > 50 ? [refsValidas[0], ...refsValidas.slice(-49)] : refsValidas
   const idempotencia = txt(o.idempotencia)
   if (!/^[A-Za-z0-9_:-]{4,128}$/.test(idempotencia)) return { ok: false, motivo: 'idempotencia no válida' }
   const actor = txt(o.actor)
@@ -50,3 +52,14 @@ export function textoHistorialEnvioLead(asunto: string, actor: string): string {
   return `Petición de datos enviada por correo desde ${MEDIADOR.identidad.email}, en el hilo de su mensaje («${asunto.slice(0, 160)}»), con el OK de ${actor}.`.slice(0, 2000)
 }
 
+
+/** ¿Se anota el historial tras el envío? Un reintento deduplicado (mismo id de Resend) ya lo anotó la primera vez. PURA. */
+export function anotarHistorialTrasEnvio(envio: { repetido?: boolean }): boolean {
+  return envio.repetido !== true
+}
+
+/** Estado del registro del hilo a partir de las filas escritas por oportunidad. PURA. */
+export function estadoRegistroHilo(filas: readonly number[]): 'ok' | 'sin_oportunidad' {
+  // `insert … select … where exists(oportunidad del cliente)` escribe 0 filas si la oportunidad no es suya.
+  return filas.length > 0 && filas.every((n) => n > 0) ? 'ok' : 'sin_oportunidad'
+}

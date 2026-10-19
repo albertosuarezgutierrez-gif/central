@@ -83,3 +83,14 @@ test('🪤 un pendiente CERRADO (enviado, descartado, caducado) se purga: sin em
   assert.match(src, /estado === 'enviado' \? Prisma\.sql`, \$\{PURGA\}`/)
   assert.match(src, /await purgarCaducados\(\)/)
 })
+
+test('🪤 reintento deduplicado (repetido) → «ya enviado antes», nunca «no se pudo anotar»; hilo sin oportunidad / sin tabla → aviso breve', () => {
+  const rep = interpretarEnvioPeticion(200, { estado: 'enviado', historial: false, repetido: true, hilo: 'ok' })
+  const l1 = lineaTrasEnviar(rep)
+  assert.match(l1, /ya enviado antes, no se repite/)
+  assert.doesNotMatch(l1, /No se pudo anotar/)
+  assert.match(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: false, hilo: 'ok' })), /No se pudo anotar/)
+  assert.match(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: true, hilo: 'sin_oportunidad' })), /oportunidad/i)
+  assert.match(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: true, hilo: 'sin_tabla' })), /SQL del hilo/)
+  assert.doesNotMatch(lineaTrasEnviar(interpretarEnvioPeticion(200, { estado: 'enviado', historial: true, hilo: 'ok' })), /oportunidad|SQL/)
+})

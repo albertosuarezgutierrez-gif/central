@@ -21,11 +21,12 @@ import { prismaAsegura } from './asegura-db'
 import { prisma as prismaTenant } from './tenant'
 import { Prisma as PrismaTenant } from '@prisma/client'
 
-import { TIPO_CORREO_PETICION_LEAD, textoHistorialEnvioLead, type EnvioLead } from './correo-lead-puro'
+import { TIPO_CORREO_PETICION_LEAD, anotarHistorialTrasEnvio, estadoRegistroHilo, textoHistorialEnvioLead, type EnvioLead } from './correo-lead-puro'
 export { TIPO_CORREO_PETICION_LEAD, validarEnvioLead, type EnvioLead } from './correo-lead-puro'
 
 export type ResultadoEnvioLead =
-  | { estado: 'enviado'; historial: boolean; hilo: 'ok' | 'sin_tabla' | 'error' }
+  // `repetido`: reintento que Resend deduplicó (el correo salió UNA vez); el historial no se vuelve a anotar (`historial: false`).
+  | { estado: 'enviado'; historial: boolean; repetido?: true; hilo: 'ok' | 'sin_oportunidad' | 'sin_tabla' | 'error' }
   | { estado: 'no_encontrado' | 'email_no_es_de_la_ficha' | 'baja_de_correos' | 'sin_proveedor' }
   | { estado: 'rechazado'; motivo: string }
 
@@ -53,7 +54,8 @@ export async function enviarPeticionLead(correduriaId: string, e: EnvioLead): Pr
 
   // El correo YA salió: nada de aquí abajo puede convertirlo en un fallo (se reintentaría y saldría dos veces).
   let historial = false
-  try {
+  const anotar = anotarHistorialTrasEnvio(r)
+  if (anotar) try {
     await db.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${e.clienteId}::uuid, cast('contacto' as tipo_historial_interno), ${textoHistorialEnvioLead(e.asunto, e.actor)})`)
@@ -61,17 +63,19 @@ export async function enviarPeticionLead(correduriaId: string, e: EnvioLead): Pr
   } catch (err) {
     console.error('[correo-lead] historial no anotado:', err instanceof Error ? err.name : 'error')
   }
+  // El hilo es un upsert: repetirlo en un reintento no duplica fila (y completa uno que falló la primera vez).
   const hilo = await registrarHilo(correduriaId, e, h)
-  return { estado: 'enviado', historial, hilo }
+  return { estado: 'enviado', historial, ...(anotar ? {} : { repetido: true as const }), hilo }
 }
 
-async function registrarHilo(correduriaId: string, e: EnvioLead, emailCiego: string): Promise<'ok' | 'sin_tabla' | 'error'> {
+async function registrarHilo(correduriaId: string, e: EnvioLead, emailCiego: string): Promise<'ok' | 'sin_oportunidad' | 'sin_tabla' | 'error'> {
   const raiz = e.enRespuestaA.references[0] ?? e.enRespuestaA.messageId
   const ids = [...new Set([...e.enRespuestaA.references, e.enRespuestaA.messageId])]
   const ops: (string | null)[] = e.oportunidadIds.length ? e.oportunidadIds : [null]
+  const filas: number[] = []
   try {
     for (const op of ops) {
-      await prismaTenant.$executeRaw(PrismaTenant.sql`
+      filas.push(await prismaTenant.$executeRaw(PrismaTenant.sql`
         insert into seguros.correduria_hilo as h
           (correduria_id, oportunidad_id, cliente_id, message_id_raiz, message_ids, email_cliente_ciego, estado_datos, ultima_peticion_at)
         select ${correduriaId}::uuid, ${op}::uuid, ${e.clienteId}::uuid, ${raiz}, ${ids}::text[], ${emailCiego}, 'pedida', now()
@@ -79,9 +83,9 @@ async function registrarHilo(correduriaId: string, e: EnvioLead, emailCiego: str
           select 1 from seguros.oportunidades o where o.id = ${op}::uuid and o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${e.clienteId}::uuid)
         on conflict (correduria_id, cliente_id, message_id_raiz, (coalesce(oportunidad_id, '00000000-0000-0000-0000-000000000000'::uuid)))
         do update set message_ids = array(select distinct unnest(h.message_ids || excluded.message_ids)),
-                      estado_datos = 'pedida', ultima_peticion_at = now()`)
+                      estado_datos = 'pedida', ultima_peticion_at = now()`))
     }
-    return 'ok'
+    return estadoRegistroHilo(filas)
   } catch (err) {
     const code = (err as { code?: string; meta?: { code?: string } })?.meta?.code ?? (err as { code?: string })?.code
     if (code === '42P01' || /correduria_hilo.*does not exist|relation .* does not exist/i.test(String((err as Error)?.message))) return 'sin_tabla'

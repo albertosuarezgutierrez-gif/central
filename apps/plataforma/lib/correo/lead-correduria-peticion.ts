@@ -109,7 +109,8 @@ export function decidirBotonClp(
 // ─── Lo que contesta el puerto de asegura ─────────────────────────────────────────────────────────────────────────
 
 export type ResultadoEnvioPeticion =
-  | { estado: 'enviado'; historial: boolean; hilo: string }
+  /** `repetido`: asegura vio el mismo id de Resend (reintento deduplicado): salió UNA vez y no se re-anota. */
+  | { estado: 'enviado'; historial: boolean; repetido?: boolean; hilo: string }
   /** Seguro que NO salió (asegura lo rechazó antes de mandar). */
   | { estado: 'no_enviado'; motivo: string }
   /** No se sabe si salió (red, 5xx tras pedirlo): NUNCA se reintenta solo. */
@@ -119,7 +120,7 @@ export type ResultadoEnvioPeticion =
 export function interpretarEnvioPeticion(status: number, json: unknown): ResultadoEnvioPeticion {
   const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
   const motivo = typeof o.motivo === 'string' ? o.motivo.slice(0, 160) : null
-  if (status === 200 && o.estado === 'enviado') return { estado: 'enviado', historial: o.historial === true, hilo: typeof o.hilo === 'string' ? o.hilo : 'desconocido' }
+  if (status === 200 && o.estado === 'enviado') return { estado: 'enviado', historial: o.historial === true, repetido: o.repetido === true, hilo: typeof o.hilo === 'string' ? o.hilo : 'desconocido' }
   if (status === 409 && o.estado === 'email_no_es_de_la_ficha') return { estado: 'no_enviado', motivo: 'el remitente del correo no es un email de la ficha' }
   if (status === 409 && o.estado === 'baja_de_correos') return { estado: 'no_enviado', motivo: 'la ficha tiene la baja de correos' }
   if (status === 404) return { estado: 'no_enviado', motivo: 'la ficha ya no existe en la correduría' }
@@ -129,11 +130,19 @@ export function interpretarEnvioPeticion(status: number, json: unknown): Resulta
   return { estado: 'incierto', motivo: motivo ?? `HTTP ${status}` }
 }
 
+/** Aviso breve sobre el registro del hilo en asegura (`ok` → nada). PURA. */
+function notaHilo(hilo: string): string {
+  if (hilo === 'sin_tabla') return ' (Falta el SQL del hilo: su respuesta se casará como antes.)'
+  if (hilo === 'sin_oportunidad') return ' (Hilo sin atar: la oportunidad no es de esta ficha.)'
+  return ''
+}
+
 /** La línea que sustituye a los botones tras pulsar ✅. PURA. */
 export function lineaTrasEnviar(r: ResultadoEnvioPeticion | { estado: 'usado' } | { estado: 'ilegible' }): string {
   switch (r.estado) {
     case 'enviado':
-      return `✅ <b>Enviado en su hilo</b> desde ${escapeHtml(MEDIADOR.identidad.email)} (con copia a ese buzón).${r.historial ? ' Anotado en su ficha.' : ' ⚠️ No se pudo anotar en su ficha: el correo SÍ salió, no lo repitas.'}${r.hilo === 'sin_tabla' ? ' (Falta el SQL del hilo: su respuesta se casará como antes.)' : ''}`
+      if (r.repetido) return `✅ <b>Correo ya enviado antes, no se repite</b> (mismo envío en su hilo desde ${escapeHtml(MEDIADOR.identidad.email)}).${notaHilo(r.hilo)}`
+      return `✅ <b>Enviado en su hilo</b> desde ${escapeHtml(MEDIADOR.identidad.email)} (con copia a ese buzón).${r.historial ? ' Anotado en su ficha.' : ' ⚠️ No se pudo anotar en su ficha: el correo SÍ salió, no lo repitas.'}${notaHilo(r.hilo)}`
     case 'no_enviado':
       return `❌ <b>No se ha enviado</b>: ${escapeHtml(r.motivo)}. Contéstale a mano desde ${escapeHtml(MEDIADOR.identidad.email)}.`
     case 'incierto':
