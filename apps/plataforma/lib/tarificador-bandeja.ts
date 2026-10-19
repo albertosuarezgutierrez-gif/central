@@ -4,7 +4,7 @@
 // 🚨 La regla de qué se puede reintentar/cancelar la decide ASEGURA (`puedeReintentar`/`puedeCancelar` por fila y 409
 //    en el POST); aquí solo se pintan. Tres estados: `null` = no consta («—»), nunca 0.
 
-import { validarOpcionesPoblacion, type OpcionPoblacion } from '@central/module-tarificacion'
+import { validarOpcionesPoblacion, validarOpcionesVersion, type CandidatoVersion, type OpcionPoblacion } from '@central/module-tarificacion'
 
 export const BANDEJA_PAGINA = 50
 
@@ -23,6 +23,8 @@ export type ItemBandeja = {
   puedeCancelar: boolean
   /** Poblaciones del CP para elegir a mano (lista estructurada del puerto). `null` = el trabajo no pide población o no guardó la lista. */
   opcionesPoblacion: OpcionPoblacion[] | null
+  /** Versiones de vehículo (o fila de catastro) para elegir a mano. `null` = el trabajo no pide versión o no guardó la lista. */
+  opcionesVersion: CandidatoVersion[] | null
 }
 
 export type Bandeja = { total: number; hayMas: boolean; items: ItemBandeja[] }
@@ -58,6 +60,35 @@ export function cuerpoEleccionPoblacion(opciones: readonly OpcionPoblacion[], in
   return opciones[Number(indice)]?.codigo ?? null
 }
 
+/** Lista de versiones del item (campo estructurado de asegura, validado, sin repetidas por código+etiqueta) o `null`. */
+export function opcionesVersionDeItem(o: Record<string, unknown>): CandidatoVersion[] | null {
+  const l = validarOpcionesVersion(o.opcionesVersion)
+  if (!l) return null
+  const vistos = new Set<string>()
+  const out = l.filter((x) => { const k = `${x.codigo ?? ''}\u0000${x.etiqueta}`; return vistos.has(k) ? false : (vistos.add(k), true) })
+  return out.length ? out : null
+}
+
+/** El valor elegido es el ÍNDICE de la opción (hay portales sin código); viaja `{codigo, etiqueta}` exactos. Índice inválido → `null`. */
+export function cuerpoEleccionVersion(opciones: readonly CandidatoVersion[], indice: string): { codigo: string | null; etiqueta: string } | null {
+  if (!/^\d+$/.test(indice)) return null
+  const o = opciones[Number(indice)]
+  return o ? { codigo: o.codigo, etiqueta: o.etiqueta } : null
+}
+
+const plano = (t: string): string => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+/** Índices (de la lista original) de las opciones que contienen TODAS las palabras del buscador. Vacío → todas. */
+export function filtrarOpcionesVersion(opciones: readonly CandidatoVersion[], texto: string): number[] {
+  const palabras = plano(texto).split(/\s+/).filter(Boolean)
+  const out: number[] = []
+  opciones.forEach((o, i) => {
+    const e = plano(o.etiqueta)
+    if (palabras.every((w) => e.includes(w))) out.push(i)
+  })
+  return out
+}
+
 function itemValido(v: unknown): ItemBandeja | null {
   const o = obj(v)
   if (!o) return null
@@ -74,6 +105,7 @@ function itemValido(v: unknown): ItemBandeja | null {
     puedeReintentar: o.puedeReintentar === true,
     puedeCancelar: o.puedeCancelar === true,
     opcionesPoblacion: opcionesPoblacionDeItem(o),
+    opcionesVersion: opcionesVersionDeItem(o),
   }
 }
 

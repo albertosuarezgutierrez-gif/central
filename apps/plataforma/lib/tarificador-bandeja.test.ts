@@ -89,3 +89,41 @@ test('población: opciones rotas o repetidas no se ofrecen; el código viaja EXA
   assert.equal(cuerpoEleccionPoblacion(OPS, '1'), '00001- VILLA ÁLAMO')
   for (const mal of ['', '2', '-1', 'x', '0.5']) assert.equal(cuerpoEleccionPoblacion(OPS, mal), null, mal)
 })
+
+// ─── Elección de versión de vehículo (19/10/2026) ────────────────────────────
+import { cuerpoEleccionVersion, filtrarOpcionesVersion, opcionesVersionDeItem } from './tarificador-bandeja.ts'
+
+const VERS = [
+  { etiqueta: 'GOLF 1.6 TDI 105CV', codigo: 'A1' },
+  { etiqueta: 'Golf 2.0 TDI 150CV Sport', codigo: null },
+  { etiqueta: 'POLO 1.0 TSI 95CV', codigo: 'B2' },
+]
+
+test('versión: la lista estructurada llega al item; sin lista o rota → null (no se inventa)', () => {
+  const r = leerRespuestaBandeja(200, { total: 2, items: [
+    { ...ITEM, opcionesVersion: VERS },
+    { ...ITEM, id: '22222222-2222-4222-8222-222222222222' },
+  ] })
+  assert.ok(r.ok)
+  if (r.ok) {
+    assert.deepEqual(r.bandeja.items[0].opcionesVersion, VERS)
+    assert.equal(r.bandeja.items[1].opcionesVersion, null)
+  }
+  assert.equal(opcionesVersionDeItem({ opcionesVersion: [{ etiqueta: '' }] }), null)
+  assert.equal(opcionesVersionDeItem({ opcionesVersion: [] }), null)
+  assert.deepEqual(opcionesVersionDeItem({ opcionesVersion: [...VERS, VERS[0]] }), VERS)
+})
+
+test('versión: el cuerpo es {codigo, etiqueta} EXACTOS de la opción (codigo null si no hay); índice inválido → null', () => {
+  assert.deepEqual(cuerpoEleccionVersion(VERS, '0'), { codigo: 'A1', etiqueta: 'GOLF 1.6 TDI 105CV' })
+  assert.deepEqual(cuerpoEleccionVersion(VERS, '1'), { codigo: null, etiqueta: 'Golf 2.0 TDI 150CV Sport' })
+  for (const mal of ['', '3', '-1', 'x', '0.5']) assert.equal(cuerpoEleccionVersion(VERS, mal), null, mal)
+})
+
+test('versión: el buscador filtra por todas las palabras, sin tildes ni mayúsculas, y conserva el índice original', () => {
+  assert.deepEqual(filtrarOpcionesVersion(VERS, ''), [0, 1, 2])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, '  golf  tdi '), [0, 1])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, 'golf 150'), [1])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, 'polo'), [2])
+  assert.deepEqual(filtrarOpcionesVersion(VERS, 'seat'), [])
+})

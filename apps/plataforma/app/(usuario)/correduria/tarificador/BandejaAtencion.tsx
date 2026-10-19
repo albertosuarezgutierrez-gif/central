@@ -11,6 +11,7 @@ import { Badge, btnStyle } from '@/components/ui'
 import { BANDEJA_PAGINA, ROTULO_ESTADO_BANDEJA, leerRespuestaBandeja, type ItemBandeja } from '@/lib/tarificador-bandeja'
 import TrazaTrabajo from './TrazaTrabajo'
 import EleccionPoblacion from './EleccionPoblacion'
+import EleccionVersion from './EleccionVersion'
 
 const fecha = (iso: string) => {
   const d = new Date(iso)
@@ -111,6 +112,10 @@ export default function BandejaAtencion() {
                   <p style={{ margin: 0, fontSize: 14, overflowWrap: 'anywhere' }}>{it.motivo}</p>
                   {it.puedeReintentar && it.opcionesPoblacion && (
                     <EleccionPoblacion trabajoId={it.id} opciones={it.opcionesPoblacion} deshabilitado={ocupado !== null}
+                      alTerminar={async (m) => { setAviso(m); await cargar(0) }} />
+                  )}
+                  {it.puedeReintentar && it.opcionesVersion && (
+                    <EleccionVersion trabajoId={it.id} opciones={it.opcionesVersion} deshabilitado={ocupado !== null}
                       alTerminar={async (m) => { setAviso(m); await cargar(0) }} />
                   )}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
