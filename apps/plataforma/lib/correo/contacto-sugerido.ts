@@ -187,14 +187,13 @@ function etiquetaDominio(email: string): string | null {
   const partes = d.split('.')
   if (partes.length < 2) return null
   const sld = ['com', 'co', 'org', 'net'].includes(partes[partes.length - 2]) && partes.length >= 3 ? partes.length - 3 : partes.length - 2
-  return partes[sld] || null
+  return (partes[sld] ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '') || null
 }
 
 /**
  * Compañía del directorio a la que pertenece el remitente, por su DOMINIO. Tres niveles y gana el primero con
- * UN solo candidato: etiqueta == nombre · uno empieza por el otro (≥4 letras; `occidentinforma` → Occident) ·
- * la etiqueta CONTIENE el nombre (≥5; `tugenerali` → Generali). Varios candidatos en el nivel que gana → `null`
- * (ambiguo: se pregunta a mano, no se adivina). Sin match → `null`. PURA.
+ * etiqueta == nombre (tras quitar espacios, guiones, tildes y sufijos societarios) es la ÚNICA que se asigna sola;
+ * las parciales (prefijo/contiene: `allianztrade` → Allianz) NO se asignan: van como candidatas a confirmar. → `null`. PURA.
  */
 export function inferirCompania(email: string, companias: readonly CompaniaMinima[]): CompaniaMinima | null {
   const r = candidatasCompania(email, companias)
@@ -210,46 +209,51 @@ export type CandidatasCompania =
   | { tipo: 'ambigua'; candidatas: CompaniaMinima[] }
   | { tipo: 'ninguna' }
 
-/** Como `inferirCompania` pero distingue AMBIGUA (2-3 candidatas del nivel ganador) de «ninguna» (0, o >3). PURA. */
+/** Como `inferirCompania` pero distingue AMBIGUA (1-3 candidatas por confirmar: varias exactas o solo parciales) de «ninguna» (0, o >3). PURA. */
 export function candidatasCompania(email: string, companias: readonly CompaniaMinima[]): CandidatasCompania {
   const et = etiquetaDominio(email)
   if (!et || et.length < 3) return { tipo: 'ninguna' }
   const claves = companias.map((c) => ({ c, comun: [claveNombre(c.nombreComun)].filter((k) => k.length >= 3), cima: [claveNombre(c.nombreCima ?? '')].filter((k) => k.length >= 3) }))
-  const niveles: ((k: string) => boolean)[] = [
-    (k) => k === et,
-    (k) => Math.min(k.length, et.length) >= 4 && (k.startsWith(et) || et.startsWith(k)),
-    (k) => k.length >= 5 && et.includes(k),
-  ]
   // En cada nivel manda el nombre COMÚN; el de CIMA solo desempata cuando el común no casa con nadie
   // (Occident tiene como nombre CIMA «Catalana Occidente»: no puede robarle el dominio a la otra).
-  for (const casa of niveles) {
-    for (const campos of [['comun'], ['comun', 'cima']] as const) {
+  const camposOrden = [['comun'], ['comun', 'cima']] as const
+  const buscar = (casa: (k: string) => boolean) => {
+    for (const campos of camposOrden) {
       const hits = claves.filter((x) => campos.some((f) => x[f].some(casa))).map((x) => x.c)
-      if (hits.length === 1) return { tipo: 'una', compania: hits[0] }
-      if (hits.length > 1) return hits.length <= MAX_CANDIDATAS_CSG ? { tipo: 'ambigua', candidatas: hits } : { tipo: 'ninguna' }
+      if (hits.length) return hits
     }
+    return []
   }
+  // 1) EXACTA (tras normalizar): única que se asigna sin preguntar. Gana siempre a las parciales.
+  const exactas = buscar((k) => k === et)
+  if (exactas.length === 1) return { tipo: 'una', compania: exactas[0] }
+  if (exactas.length > 1) return exactas.length <= MAX_CANDIDATAS_CSG ? { tipo: 'ambigua', candidatas: exactas } : { tipo: 'ninguna' }
+  // 2) PARCIAL (prefijo / contiene): el grupo puede ser el correcto pero no la compañía exacta
+  //    (`allianztrade` → ¿Allianz?). NUNCA se asigna: se devuelve para confirmar con botón, aunque sea una sola.
+  const parciales = buscar((k) =>
+    (Math.min(k.length, et.length) >= 4 && (k.startsWith(et) || et.startsWith(k))) || (k.length >= 5 && et.includes(k)))
+  if (parciales.length) return parciales.length <= MAX_CANDIDATAS_CSG ? { tipo: 'ambigua', candidatas: parciales } : { tipo: 'ninguna' }
   return { tipo: 'ninguna' }
 }
 
 /** Un botón por candidata (`csg_c:<id>:<codigoDgs>`, ≤64 bytes) + Ignorar. `null` si no cabe (→ a mano). PURA. */
 export function botonesElegirCompania(id: number | string, candidatas: readonly CompaniaCandidata[]): Boton[][] | null {
-  if (candidatas.length < 2 || candidatas.length > MAX_CANDIDATAS_CSG) return null
+  if (candidatas.length < 1 || candidatas.length > MAX_CANDIDATAS_CSG) return null
   const filas: Boton[][] = []
   for (const c of candidatas) {
     const callback = `${PREFIJO_CSG}_c:${id}:${c.codigoDgs}`
     if (!/^[A-Za-z0-9._-]{1,40}$/.test(c.codigoDgs) || Buffer.byteLength(callback) > 64) return null
-    filas.push([{ texto: `🏢 ${c.nombreComun}`.slice(0, 60), callback }])
+    filas.push([{ texto: (candidatas.length === 1 ? `🏢 ¿${c.nombreComun}?` : `🏢 ${c.nombreComun}`).slice(0, 60), callback }])
   }
   filas.push([{ texto: '🚫 Ignorar', callback: `${PREFIJO_CSG}_no:${id}` }])
   return filas
 }
 
-/** Candidatas guardadas en `datos.candidatos` (2-3 con código y nombre); algo raro = `[]`. PURA. */
+/** Candidatas guardadas en `datos.candidatos` (1-3 con código y nombre); algo raro = `[]`. PURA. */
 export function leerCandidatasGuardadas(v: unknown): CompaniaCandidata[] {
   const o = typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
   const l = o?.candidatos
-  if (!Array.isArray(l) || l.length < 2 || l.length > MAX_CANDIDATAS_CSG) return []
+  if (!Array.isArray(l) || l.length < 1 || l.length > MAX_CANDIDATAS_CSG) return []
   const out: CompaniaCandidata[] = []
   for (const x of l) {
     const c = typeof x === 'object' && x !== null ? (x as Record<string, unknown>) : null
@@ -311,7 +315,10 @@ export function lineaTrasAlta(r: ResultadoAlta): string {
   switch (r.estado) {
     case 'creado': return `✅ <i>Añadido a ${esc(r.compania)}.</i>`
     case 'existia': return `ℹ️ <i>Ya existía en el directorio${r.compania ? ` (${esc(r.compania)})` : ''}: no he duplicado nada.</i>`
-    case 'ambigua': return '❓ <i>El dominio encaja con varias compañías: elige a cuál pertenece (o ignora).</i>'
+    case 'ambigua':
+      return r.candidatas.length === 1
+        ? `❓ <i>No es seguro que sea ${esc(r.candidatas[0].nombreComun)}: confirma la compañía (o ignora).</i>`
+        : '❓ <i>El dominio encaja con varias compañías: elige a cuál pertenece (o ignora).</i>'
     case 'sin_compania': return '❓ <i>No sé de qué compañía es (dominio sin coincidencia clara en el directorio): añádelo a mano en /correduria → Directorio de compañías.</i>'
     default:
       // Incierto (la llamada salió y no sé cómo acabó): NUNCA «no se ha creado». El puerto es idempotente por email.

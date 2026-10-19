@@ -84,13 +84,43 @@ test('el aviso real de Occident: el buzón genérico SE sugiere y se parte bien'
 
 test('inferirCompania: occident.com → Occident, no Catalana Occidente', () => {
   assert.equal(inferirCompania('x@occident.com', DIR)?.codigoDgs, 'A1')
-  assert.equal(inferirCompania('x@occidentinforma.com', DIR)?.codigoDgs, 'A1')
   assert.equal(inferirCompania('x@catalanaoccidente.com', DIR)?.codigoDgs, 'A2')
+  assert.equal(inferirCompania('x@catalana-occidente.com', DIR)?.codigoDgs, 'A2', 'guiones fuera')
+})
+
+test('🚨 solo la coincidencia EXACTA se asigna sola; las parciales (filiales) van a confirmar', () => {
+  const dir = [...DIR, { codigoDgs: 'B2', nombreComun: 'Mapfre Asistencia' }]
+  // «Mapfre Asistencia» está en el directorio: casa EXACTA con ella y no con Mapfre
+  assert.equal(inferirCompania('x@mapfreasistencia.com', dir)?.codigoDgs, 'B2')
+  assert.equal(inferirCompania('x@mapfre-asistencia.com', dir)?.codigoDgs, 'B2')
+  // Sin ella, mapfreasistencia.com NO se asigna a Mapfre: candidata por confirmar
+  const sinFilial = candidatasCompania('x@mapfreasistencia.com', DIR)
+  assert.equal(sinFilial.tipo, 'ambigua')
+  assert.equal(inferirCompania('x@allianztrade.com', DIR), null, 'allianztrade no se asigna a Allianz')
+  const t = candidatasCompania('x@allianztrade.com', DIR)
+  assert.deepEqual(t.tipo === 'ambigua' ? t.candidatas.map((c) => c.codigoDgs) : null, ['D1'])
+  // Occident: ni prefijo ni contiene se asignan solos
+  assert.equal(inferirCompania('x@occidentinforma.com', DIR), null)
+  assert.equal(candidatasCompania('x@occidentinforma.com', DIR).tipo, 'ambigua')
+  assert.equal(inferirCompania('a@tugenerali.es', DIR), null)
+  // Exacta + parciales: gana la exacta
+  assert.equal(inferirCompania('x@mapfre.com', dir)?.codigoDgs, 'B1')
+  // Más de 3 parciales: a mano
+  const muchas = ['Vida', 'Hogar', 'Salud', 'Auto'].map((n, i) => ({ codigoDgs: `Z${i}`, nombreComun: `Zeta ${n}` }))
+  assert.equal(candidatasCompania('x@zeta.es', muchas).tipo, 'ninguna')
+})
+
+test('una sola candidata por confirmar: botón «¿X?» + Ignorar y mensaje «No es seguro»', () => {
+  const b = botonesElegirCompania(5, [{ codigoDgs: 'D1', nombreComun: 'Allianz' }])!
+  assert.equal(b[0][0].texto, '🏢 ¿Allianz?')
+  assert.deepEqual(b.flat().map((x) => x.callback), ['csg_c:5:D1', 'csg_no:5'])
+  assert.match(lineaTrasAlta({ estado: 'ambigua', candidatas: [{ codigoDgs: 'D1', nombreComun: 'Allianz' }] }), /No es seguro que sea Allianz: confirma la compañía/)
+  assert.equal(leerCandidatasGuardadas({ candidatos: [{ codigoDgs: 'D1', nombreComun: 'Allianz' }] }).length, 1)
 })
 
 test('inferirCompania: subdominios, tugenerali.es y .com.es', () => {
   assert.equal(inferirCompania('a@info.mapfre.com', DIR)?.codigoDgs, 'B1')
-  assert.equal(inferirCompania('a@tugenerali.es', DIR)?.codigoDgs, 'C1')
+  assert.equal(inferirCompania('a@generali.es', DIR)?.codigoDgs, 'C1')
   assert.equal(inferirCompania('a@allianz.com.es', DIR)?.codigoDgs, 'D1')
 })
 
@@ -184,8 +214,9 @@ test('ambigua (2-3 candidatas) → un botón por candidata + Ignorar; >3 o 0 →
   assert.equal(candidatasCompania('x@generali.es', CS).tipo, 'ninguna', '4 candidatas: a mano')
   assert.equal(candidatasCompania('x@desconocida.es', CS).tipo, 'ninguna')
   assert.equal(candidatasCompania('x@mapfre.es', CS).tipo, 'una')
+  assert.equal(candidatasCompania('x@generalivida.es', CS).tipo, 'una', 'exacta única')
   assert.equal(inferirCompania('x@generali.es', CS.slice(0, 3)), null, 'inferirCompania sigue sin adivinar')
-  assert.equal(botonesElegirCompania(1, [CS[0]]), null)
+  assert.equal(botonesElegirCompania(1, []), null)
   assert.equal(botonesElegirCompania(1, [CS[0], { codigoDgs: 'x'.repeat(70), nombreComun: 'L' }]), null, 'no cabe en 64 bytes')
 })
 
