@@ -10,7 +10,7 @@ import { join } from 'node:path'
 import { after, before, test } from 'node:test'
 import { chromium, type Browser, type Frame } from 'playwright'
 import { EmisionBloqueadaError, senalCuentaBancaria, type FormularioAuto } from '@central/module-tarificacion'
-import { clasificar, pideInventarioDom } from '../src/errores.ts'
+import { ErrorTarificador, clasificar, pideInventarioDom } from '../src/errores.ts'
 import { casarCompaniaActualTurismos, companiaActualTurismosAllianz, instalarGuardEmision, marcarAntecedenteTurismosAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz, pulsar } from '../src/guard.ts'
 import {
   ErrorMapaIncompleto,
@@ -389,8 +389,10 @@ test('v0.6.5 compañía actual del riesgo: casa con UNA → elegida (sin supuest
   const dos = await hastaCompania({ companias: ['Gamma Mutua', 'GAMMA MUTUA SEGUROS, S.A.', 'Otra'] }, { ...FORM, companiaAnterior: 'gamma mutua' })
   try {
     assert.equal(dos.mostrado, '', 'nunca se adivina entre dos')
-    assert.ok(esMapa(/los datos de «Antecedentes» antes de «SIGUIENTE».*casa con 2 opciones del portal: no se adivina/)(dos.error))
-    assert.match(dos.error.message, /opciones de «Compañía actual del vehículo» leídas \(3\): Gamma Mutua \| GAMMA MUTUA SEGUROS, S\.A\. \| Otra/)
+    // v0.6.15: ambigua → error de DATOS con las candidatas (nunca «mapa incompleto»), sin elegir y sin «Siguiente» de Antecedentes.
+    assert.ok(dos.error instanceof ErrorTarificador && dos.error.tipo === 'datos')
+    assert.match(dos.error.message, /casa con 2 opciones de Allianz.*Gamma Mutua \| GAMMA MUTUA SEGUROS, S\.A\./)
+    assert.ok(!dos.error.message.includes('Otra'), 'solo las candidatas')
     assert.equal(await pasoActivoTurismos(dos.marco), 'Antecedentes')
     assert.equal(dos.pulsados.filter((p) => p === 'Siguiente').length, 2)
   } finally {
@@ -399,7 +401,8 @@ test('v0.6.5 compañía actual del riesgo: casa con UNA → elegida (sin supuest
   const ninguna = await hastaCompania({}, { ...FORM, companiaAnterior: 'Delta Ficticia' })
   try {
     assert.equal(ninguna.mostrado, '')
-    assert.ok(ninguna.error.message.includes(SUPUESTO_COMPANIA_NO_CASA) && /Selección de paquete/.test(ninguna.error.message))
+    // v0.6.15: la compañía del riesgo que no está en la lista ya no sigue «sin indicar»: error de DATOS con la lista leída.
+    assert.ok(ninguna.error instanceof ErrorTarificador && ninguna.error.tipo === 'datos' && /no está en la lista de Allianz/.test(ninguna.error.message))
     assert.equal(await ninguna.marco.locator('#ng-z-nx-dropdown-modal-251').count(), 0, 'cerrado sin elegir')
   } finally {
     await ninguna.context.close()

@@ -172,6 +172,18 @@ describe('obligatorios · propios de cada portal', () => {
     expect(faltanParaTarificar('generali', 'auto', coche())).toEqual([])
   })
 
+  // 19/10/2026 (trabajo real 02fd821b): Allianz Turismos exige la compañía actual con cambio de seguro; sin ella, SIGUIENTE no se habilita.
+  it('Allianz auto: cambio de seguro sin compañía actual falta; con ella, o vehículo nuevo, no', () => {
+    const { companiaAnterior: _c, ...sinCompania } = coche()
+    expect(faltanParaTarificar('allianz', 'auto', coche())).toEqual([])
+    expect(faltanParaTarificar('allianz', 'auto', sinCompania)!.map((f) => f.clave)).toEqual(['companiaAnterior'])
+    expect(faltanParaTarificar('allianz', 'auto', { ...sinCompania, companiaAnterior: '   ' })!.map((f) => f.clave)).toEqual(['companiaAnterior'])
+    expect(faltanParaTarificar('allianz', 'auto', { ...sinCompania, companiaActual: 'OTRA COMPAÑÍA' })).toEqual([])
+    // Relativo a hoy (sin fechas fijas): matriculado hace 30 días y sin póliza actual = nuevo → no se exige.
+    const hace30 = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+    expect(faltanParaTarificar('allianz', 'auto', { ...sinCompania, fechaMatriculacion: hace30 })).toEqual([])
+  })
+
   it('tres estados: 0 siniestros y false son DATOS; null es «no consta» y falta', () => {
     expect(faltanParaTarificar('mapfre', 'auto', { ...coche(), siniestrosUltimos5Anios: 0, aniosAseguradoAnterior: 0, companiaAnterior: null })).toEqual([])
     expect(faltanParaTarificar('allianz', 'moto', { ...moto(), conductor: { ...moto().conductor, sexo: null } })!.map((f) => f.clave)).toEqual(['conductor.sexo'])

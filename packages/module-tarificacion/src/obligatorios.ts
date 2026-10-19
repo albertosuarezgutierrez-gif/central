@@ -19,7 +19,7 @@
 import { claveCompania } from './registro.ts'
 import { faltaCompaniaAnterior } from './formulario-auto.ts'
 import { CAPACIDAD_ALLIANZ_COMUNIDADES } from './capacidades.ts'
-import { conAntecedentesFavorables } from './supuestos-auto.ts'
+import { conAntecedentesFavorables, supuestosAuto } from './supuestos-auto.ts'
 
 /**
  * `formulario`: el riesgo tal como lo recibe el bot. `ficha`: lo pone ASEGURA desde la ficha del cliente al ENTREGAR el
@@ -168,6 +168,19 @@ const ALLIANZ_MOTO: readonly CampoObligatorio[] = [
   campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años'),
 ]
 
+/**
+ * Allianz Turismos (19/10/2026, trabajo real 02fd821b): con «ya lo tenía (cambio de seguro)» (póliza actual, o matriculado hace más
+ * de 12 meses, o sin fecha) Allianz exige «Compañía actual del vehículo» y sin ella «SIGUIENTE» queda deshabilitado en «Antecedentes».
+ * Vehículo nuevo: no se exige. Lo mismo que lanza `planDatosTurismos` (`datos`). Solo presencia: el casado con la lista del portal
+ * lo hace el bot (`compania-actual.ts` del worker) y, si no casa o es ambiguo, también falla `datos`, con las candidatas.
+ */
+const ALLIANZ_AUTO: readonly CampoObligatorio[] = [
+  campo('companiaAnterior', 'compañía actual del vehículo (Allianz la exige con cambio de seguro)', {
+    aplica: (r) => supuestosAuto(r as Parameters<typeof supuestosAuto>[0]).compra.valor === 'ya_lo_tenia',
+    presente: (r) => hay(r.companiaAnterior) || hay(r.companiaActual),
+  }),
+]
+
 /** Mapfre Hogar (`exigirDatosHogar`): se tarifica con la referencia catastral del BIEN (20); 14 (parcela) no vale. */
 const MAPFRE_HOGAR: readonly CampoObligatorio[] = [
   campo('inmueble.referenciaCatastral', 'referencia catastral de la vivienda (20 caracteres)', {
@@ -212,7 +225,7 @@ const DECLARACIONES: readonly Declaracion[] = [
   { compania: 'allianz', ramo: 'comunidades', propios: allianzComunidades },
   { compania: 'allianz', ramo: 'moto', propios: () => ALLIANZ_MOTO },
   // Turismos (0.5.0, en exploración): consulta por matrícula; lo opcional (garaje, titulares) solo se escribe si viene.
-  { compania: 'allianz', ramo: 'auto', propios: () => [] },
+  { compania: 'allianz', ramo: 'auto', propios: () => ALLIANZ_AUTO },
   // Hogar pantalla 1: todo lo que lee lo exige ya `validarFormularioHogar`.
   { compania: 'allianz', ramo: 'hogar', propios: () => [] },
   { compania: 'mapfre', ramo: 'auto', propios: () => [...MAPFRE_TOMADOR, ...MAPFRE_AUTO_FIGURAS] },

@@ -1,3 +1,7 @@
+// v0.6.15 (19/10/2026, trabajo real 02fd821b atascado en «Antecedentes»: «compañía actual: sin indicar (la del riesgo no está en la lista)»
+// con 96 opciones de nombre de registro): casado puro en `compania-actual.ts` (alias por «/» y «-», sin forma societaria, por niveles);
+// ambigua o sin casar → `datos` con las candidatas / la lista (nunca se elige); cambio de seguro sin compañía en el riesgo → `datos`
+// «falta la compañía actual del vehículo» (obligatorio declarado en module-tarificacion). Ya no se sigue «sin indicar».
 // v0.6.14 (18/10/2026, revisión de seguridad): «Guardar presupuesto» relee las 4 casillas justo antes del clic y solo da por
 // guardado lo que APARECE tras él (guard.ts); el vehículo marcado viaja como `seleccionVehiculo` (Generali lo usa).
 // v0.6.13 (18/10/2026, autorizado por Alberto: «a ver si puede guardar presupuesto»): tras leer los paquetes, «Guardar presupuesto»
@@ -125,6 +129,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { mensajeCompaniaAmbigua } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
 import {
@@ -1340,6 +1345,16 @@ export const HUECO_POLIZA_ACTUAL = 'póliza actual: faltan los 5 últimos dígit
 const PREFIJOS_ANTECEDENTES_TURISMOS = ['tiempo en la compañía', 'partes culpables', 'tiempo como titular de un seguro'] as const
 const SUPUESTOS_EXTRA_TURISMOS = [SUPUESTO_TOMADOR_PROPIETARIO, SUPUESTO_TOMADOR_CONDUCE, SUPUESTO_LOCALIDAD_PORTAL, SUPUESTO_CP_FIJADO_DISTINTO, SUPUESTO_LOCALIDAD_FIJADA_DISTINTA, SUPUESTO_COMPANIA_NO_CONSTA, SUPUESTO_COMPANIA_NO_CASA, SUPUESTO_TIEMPO_COMPANIA, SUPUESTO_PARTES_CULPABLES, SUPUESTO_TIEMPO_TITULAR, SUPUESTO_POLIZA_FIJADA] as const
 export const ETIQUETA_COMPANIA_ACTUAL = 'Compañía actual del vehículo'
+/** v0.6.15: con «ya lo tenía (cambio de seguro)» Allianz exige la compañía actual; sin ella en el riesgo → `datos` (la pantalla la pide). */
+export const MENSAJE_FALTA_COMPANIA_ACTUAL = 'falta la compañía actual del vehículo; Allianz la exige con cambio de seguro'
+/** v0.6.15: cambio de seguro sin compañía actual en el riesgo → `datos` (no un «mapa incompleto» del portal). Se llama ANTES del login. Puro. */
+export function exigirCompaniaActualTurismos(f: FormularioAuto, hoy: Date = new Date()): void {
+  if (supuestosAuto(f, hoy).compra.valor === 'ya_lo_tenia' && companiaActualDe(f) === null) throw new ErrorTarificador('datos', MENSAJE_FALTA_COMPANIA_ACTUAL)
+}
+export function mensajeCompaniaNoCasa(buscada: string, opciones: readonly string[]): string {
+  const lista = opciones.length > 0 ? `; opciones leídas (${opciones.length}): ${opciones.join(' | ')}`.slice(0, 1_200) : ''
+  return `la compañía actual «${buscada.replace(/\s+/g, ' ').trim().slice(0, 80)}» no está en la lista de Allianz y no se elige ninguna${lista}`
+}
 
 /**
  * Compañía ACTUAL del vehículo (la que el cliente quiere dejar), leída del riesgo: `companiaAnterior` (FormularioAuto: la del seguro
@@ -1663,8 +1678,10 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       opcionesCompania = r.opciones
       if (r.estado === 'elegida') continue
       if (r.estado === 'sin_elegir') aplicados.push(SUPUESTO_COMPANIA_NO_CONSTA)
-      else if (r.estado === 'no_casa') aplicados.push(SUPUESTO_COMPANIA_NO_CASA)
-      else if (r.estado === 'ambigua') huecos.push(`«${ETIQUETA_COMPANIA_ACTUAL}» (la del riesgo casa con ${r.coincidencias} opciones del portal: no se adivina)`)
+      // v0.6.15: la compañía del riesgo que el portal no resuelve ya NO sigue «sin indicar» (Allianz la exige con cambio de seguro y
+      // «SIGUIENTE» quedaba deshabilitado): es un error de DATOS claro, con las candidatas si hay varias. Nunca se elige una.
+      else if (r.estado === 'no_casa') throw new ErrorTarificador('datos', mensajeCompaniaNoCasa(op.valor ?? '', r.opciones))
+      else if (r.estado === 'ambigua') throw new ErrorTarificador('datos', mensajeCompaniaAmbigua(op.valor ?? '', r.candidatas))
       else if (r.estado === 'con_valor') huecos.push(`«${ETIQUETA_COMPANIA_ACTUAL}» (el portal ya trae una: no se toca)`)
       else huecos.push(`«${ETIQUETA_COMPANIA_ACTUAL}» (${r.motivo})`)
       continue
@@ -2122,10 +2139,11 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.0' : '0.6.14',
+    version: ramo === 'moto' ? '0.7.0' : '0.6.15',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
+      exigirCompaniaActualTurismos(form)
       if (!(ctx.sesionReutilizada && (await sesionSirve(page, ctx)))) await login(page, ctx)
       await ctx.trasLogin()
       await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Turismos', selectorTarjeta: TARJETA_AUTOS.turismos })

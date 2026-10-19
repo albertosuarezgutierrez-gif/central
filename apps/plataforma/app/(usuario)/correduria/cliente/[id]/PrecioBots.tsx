@@ -23,6 +23,8 @@ import { leerEncoladoBot } from '@/lib/tarificador-moto-formulario'
 import { adaptadorDeRamo, checklistBot, type ResultadoAdaptadorBot } from '@/lib/tarificador-bots-ramos'
 import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila } from '@/lib/tarificador-checklist'
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
+import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from '@/lib/tarificador-todas'
+import PrepararPresupuestoBot from '../../oportunidad/[id]/PrepararPresupuestoBot'
 
 /** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
 export const HuecoBotsContext = createContext<HTMLElement | null>(null)
@@ -145,6 +147,13 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
           <button type="button" onClick={() => void cargar()} style={{ ...btnStyle('secundario'), minHeight: 44 }}>Reintentar</button>
         </p>
       )}
+      {lista.length > 0 && (
+        <PedirATodas ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId} formulario={resultado}
+          companias={lista.map((i) => {
+            const check = checklistBot(adaptador, formulario, extra, i.compania)
+            return { compania: i.compania, bloqueo: bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? avisoDeChecklist(check) : null) }
+          })} />
+      )}
       <div style={{ display: 'grid', gap: 12, marginTop: lista.length ? 12 : 0 }}>
         {lista.map((i) => {
           // Aviso fijo de la ficha (bloqueosPorCompania) o, si no hay, lo que falta SOLO para esa compañía según su checklist de
@@ -157,6 +166,124 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
           )
         })}
       </div>
+    </div>
+  )
+}
+
+/**
+ * «Pedir precio a todas» (19/10/2026): UN botón que encola el bot de cada compañía con integración activa del ramo, con el
+ * mismo riesgo del formulario y el MISMO endpoint que los botones por compañía (que siguen debajo, como secundarios). Las de
+ * origen del vehículo (Allianz/Mapfre) van antes; Generali se encadena sola en asegura (`esperaVehiculo`). Estado por compañía,
+ * nunca tragado. Al terminar todos se OFRECE «Preparar presupuesto» (solo borrador: no se envía nada al cliente).
+ */
+function PedirATodas({ ramo, clienteId, oportunidadId, formulario, companias }: {
+  ramo: string; clienteId: string; oportunidadId: string | null
+  formulario: ResultadoAdaptadorBot
+  companias: { compania: string; bloqueo: string | null }[]
+}) {
+  const [ocupado, setOcupado] = useState(false)
+  const [filas, setFilas] = useState<FilaLote[]>([])
+  const [aviso, setAviso] = useState<string | null>(null)
+  const enVuelo = useRef(false)
+  const generacion = useRef(0)
+  const filasRef = useRef<FilaLote[]>([]) // lo último publicado: el sondeo lo lee sin depender del render
+  const publicar = useCallback((f: FilaLote[]) => { filasRef.current = f; setFilas(f) }, [])
+  const montado = useRef(true)
+  useEffect(() => { montado.current = true; return () => { montado.current = false; generacion.current += 1 } }, [])
+
+  const sondear = useCallback(async (mia: number) => {
+    const inicio = Date.now()
+    while (mia === generacion.current && Date.now() - inicio < SONDEO_TOPE_MS) {
+      await new Promise((r) => setTimeout(r, SONDEO_MS))
+      if (mia !== generacion.current) return
+      let vivos = 0
+      const nuevos = new Map<string, { final: boolean; ok: boolean }>()
+      for (const f of filasRef.current) {
+        if (f.estado !== 'encolada' || f.final) continue
+        const r = await pedirJson(`/api/correduria/tarificador/trabajo/${encodeURIComponent(f.trabajoId)}`)
+        const l = leerTrabajo(r.status, r.json)
+        if (l.ok && resumenTrabajo(l.trabajo).final) nuevos.set(f.trabajoId, { final: true, ok: l.trabajo.estado === 'ok' && l.trabajo.ofertas.length > 0 })
+        else vivos++
+      }
+      if (mia !== generacion.current) return
+      if (nuevos.size) publicar(filasRef.current.map((f) => (f.estado === 'encolada' && nuevos.has(f.trabajoId) ? { ...f, ...nuevos.get(f.trabajoId)! } : f)))
+      if (vivos === 0) return
+    }
+    if (mia === generacion.current && montado.current && filasRef.current.some((f) => f.estado === 'encolada' && !f.final)) {
+      setAviso('Siguen en marcha; míralo en Presupuestos o recarga.')
+    }
+  }, [publicar])
+
+  async function pedirTodas() {
+    if (!formulario.ok || enVuelo.current) return
+    enVuelo.current = true
+    generacion.current += 1
+    const mia = generacion.current
+    setOcupado(true); setAviso(null); publicar([])
+    const acumulado: FilaLote[] = []
+    try {
+      const bloqueos = new Map(companias.map((c) => [c.compania.toLowerCase(), c.bloqueo]))
+      // Secuencial: las de origen del vehículo se encolan antes que Generali.
+      for (const compania of ordenEncolado(companias.map((c) => c.compania))) {
+        if (mia !== generacion.current) break
+        const bloqueo = bloqueos.get(compania)
+        let fila: FilaLote
+        if (bloqueo) fila = { compania, estado: 'omitida', mensaje: bloqueo }
+        else {
+          const r = await pedirJson('/api/correduria/tarificador/encolar', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              clienteId, oportunidadId, ramo, compania, riesgo: formulario.riesgo,
+              ...(formulario.completarDesdeFicha.length ? { completarDesdeFicha: formulario.completarDesdeFicha } : {}),
+            }),
+          })
+          const e = leerEncoladoBot(r.status, r.json)
+          fila = e.ok ? { compania, estado: 'encolada', trabajoId: e.trabajoId, duplicado: e.duplicado, final: false, ok: false } : { compania, estado: 'rechazada', mensaje: e.mensaje }
+        }
+        if (mia !== generacion.current) break
+        acumulado.push(fila)
+        publicar([...acumulado])
+      }
+      if (mia !== generacion.current) return
+      if (acumulado.some((f) => f.estado === 'encolada')) void sondear(mia)
+      else setAviso('No se ha encolado ninguna compañía: mira el motivo de cada una.')
+    } finally {
+      enVuelo.current = false
+      if (montado.current) setOcupado(false)
+    }
+  }
+
+  const terminado = loteTerminado(filas)
+  return (
+    <div style={{ display: 'grid', gap: 8, marginTop: 12, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      <button type="button" onClick={() => void pedirTodas()} disabled={!formulario.ok || ocupado} aria-busy={ocupado}
+        title="Encola el bot de todas las compañías con integración activa en este ramo (solo precio: no emite)."
+        style={{ ...btnStyle('primario'), minHeight: 44, width: '100%', maxWidth: 420, whiteSpace: 'normal', opacity: !formulario.ok || ocupado ? 0.6 : 1 }}>
+        <Bot size={16} aria-hidden /> {ocupado ? 'Encolando…' : 'Pedir precio a todas'}
+      </button>
+      <div aria-live="polite" style={{ display: 'grid', gap: 4, fontSize: 13, minWidth: 0 }}>
+        {filas.length > 0 && (<>
+          <strong>{resumenLote(filas)}</strong>
+          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            {filas.map((f) => (
+              <li key={f.compania} style={{ overflowWrap: 'anywhere', color: f.estado === 'encolada' ? 'var(--text)' : 'var(--warning)' }}>
+                <strong>{rotuloCompania(f.compania)}:</strong>{' '}
+                {f.estado === 'encolada'
+                  ? `${f.duplicado ? 'ya había un trabajo en marcha' : 'encolado'} — ${f.final ? (f.ok ? 'con precio' : 'terminó sin precio') : 'en marcha'}`
+                  : f.mensaje}
+              </li>
+            ))}
+          </ul>
+          <span style={{ color: 'var(--muted)' }}>El detalle de cada precio sale al pulsar su botón de abajo o en «Presupuestos».</span>
+        </>)}
+      </div>
+      {aviso && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)' }}>{aviso}</span>}
+      {terminado && oportunidadId && loteConOk(filas) && (
+        <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>Los bots han terminado. Puedes preparar el borrador del presupuesto (no se envía nada al cliente).</span>
+          <PrepararPresupuestoBot oportunidadId={oportunidadId} />
+        </div>
+      )}
     </div>
   )
 }
