@@ -153,8 +153,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.11')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.11')
+  assert.equal(generaliAuto.version, '0.2.12')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.12')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -802,8 +802,20 @@ test('v0.2.11 · modelo: igualdad EXACTA normalizada; repetido → varias; sin c
   // Dos «Otros» (ambiguo) o buscado vacío: tampoco se elige.
   assert.equal(elegirModeloGenerali(['Otros', 'OTROS', 'IBIZA'], 'TARRACO').tipo, 'ninguna')
   assert.equal(elegirModeloGenerali(ops, '').tipo, 'ninguna')
-  // Una denominación completa (marca+modelo+versión) no es un modelo suelto: nunca cae a «Otros» por sí sola.
-  assert.equal(elegirModeloGenerali(ops, 'SEAT IBIZA 1.0 TSI STYLE', 'denominacion').tipo, 'ninguna')
+  // v0.2.12 · denominación completa: el modelo como palabra entera, el más largo gana; ninguno → «Otros».
+  assert.deepEqual(elegirModeloGenerali(ops, 'SEAT IBIZA 1.0 TSI STYLE', 'denominacion'), { tipo: 'unica', indice: 1 })
+  assert.equal(elegirModeloGenerali(ops, 'SEAT TARRACO 2.0 TDI', 'denominacion').tipo, 'otros')
+  const largo = elegirModeloGenerali(['I20', 'I20 ACTIVE', 'Otros modelos ...'], 'HYUNDAI I20 ACTIVE 1.0', 'denominacion')
+  assert.deepEqual(largo, { tipo: 'unica', indice: 1 })
+  assert.equal(elegirModeloGenerali(['IBIZA', 'LEON', 'Otros'], 'SEAT IBIZA LEON', 'denominacion').tipo, 'varias')
+})
+
+test('v0.2.12 · la opción real de Generali es «Otros modelos ...»: cuenta como «Otros»', () => {
+  const ops = ['Seleccione uno', 'I10', 'I20', 'TUCSON', 'Otros modelos ...']
+  const e = elegirModeloGenerali(ops, 'TERRACAN')
+  assert.ok(e.tipo === 'otros' && e.indice === 4)
+  // «OTRO» suelto o algo que solo contiene «otros» en medio no es la opción de cierre.
+  assert.equal(elegirModeloGenerali(['I10', 'Modelos otros'], 'TERRACAN').tipo, 'ninguna')
 })
 
 test('v0.2.11 · campos nuevos del selector: lo que no estaba antes y no es un menú del bot; resumen con etiquetas y opciones', () => {

@@ -118,7 +118,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * modelo salen campos NUEVOS sin rellenar, NO se pulsa «Confirmar»: se baja el scroll y se PARA con hueco listando etiquetas y opciones.
  * El hueco ya no dice «SIN CAPTURA» (el runner SÍ guarda la captura/recorrido/inventario en cualquier hueco con `pideInventarioDom`).
  */
-export const VERSION_GENERALI_AUTO = '0.2.11'
+export const VERSION_GENERALI_AUTO = '0.2.12'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */

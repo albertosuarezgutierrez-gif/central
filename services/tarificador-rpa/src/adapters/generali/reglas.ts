@@ -292,7 +292,7 @@ export function elegirMarcaExactaGenerali(opciones: readonly string[], buscado: 
   return { tipo: 'ninguna', cercanas: cerca.map((x) => x.o).slice(0, 25) }
 }
 
-/** Opción de cierre de la lista de modelos del selector de Generali (v0.2.11): «Otros». */
+/** Opción de cierre de la lista de modelos del selector de Generali: empieza por «Otros» (real: «Otros modelos ...», v0.2.12). */
 export const OPCION_OTROS_MODELO_GENERALI = 'OTROS'
 
 /** Supuesto declarado cuando el modelo no figura en la lista y se elige «Otros» (el modelo es dato de catálogo, no personal). PURA. */
@@ -314,8 +314,17 @@ export type EleccionModeloGenerali =
 
 export function elegirModeloGenerali(opciones: readonly string[], buscado: string, modo: 'dato' | 'denominacion' = 'dato'): EleccionModeloGenerali {
   const e = elegirMarcaExactaGenerali(opciones, buscado)
-  if (e.tipo !== 'ninguna' || modo !== 'dato' || normalizarCatalogo(buscado) === '') return e
-  const otros = opciones.flatMap((o, i) => (!esOpcionVaciaCatalogo(o) && normalizarCatalogo(o) === OPCION_OTROS_MODELO_GENERALI ? [i] : []))
+  if (e.tipo !== 'ninguna' || normalizarCatalogo(buscado) === '') return e
+  const esOtros = (o: string) => !esOpcionVaciaCatalogo(o) && normalizarCatalogo(o).split(' ')[0] === OPCION_OTROS_MODELO_GENERALI
+  if (modo === 'denominacion') {
+    // v0.2.12: la denominación completa contiene el modelo como palabra entera («… TUCSON 1.6 …»); se queda el más largo («I20 ACTIVE»
+    // gana a «I20»). Uno → ese; varios distintos → una persona elige; ninguno → «Otros» como con un dato suelto.
+    const casan = opciones.map((o, i) => ({ o, i })).filter((x) => !esOpcionVaciaCatalogo(x.o) && !esOtros(x.o) && contieneFrase(buscado, x.o))
+    const maximas = casan.filter((x) => !casan.some((y) => y !== x && normalizarCatalogo(y.o).length > normalizarCatalogo(x.o).length && contieneFrase(y.o, x.o)))
+    if (maximas.length === 1) return { tipo: 'unica', indice: maximas[0]!.i }
+    if (maximas.length > 1) return { tipo: 'varias', cercanas: maximas.map((x) => x.o).slice(0, 25) }
+  }
+  const otros = opciones.flatMap((o, i) => (esOtros(o) ? [i] : []))
   if (otros.length === 1) return { tipo: 'otros', indice: otros[0]!, supuesto: avisoModeloOtrosGenerali(buscado) }
   return e
 }
