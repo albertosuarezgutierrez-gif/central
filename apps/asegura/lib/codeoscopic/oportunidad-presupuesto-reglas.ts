@@ -31,3 +31,13 @@ export function fuenteDePresupuesto(polizaId: string | null | undefined): 'renov
 
 /** Días hasta el primer paso de una oportunidad nacida de un presupuesto: llamar para presentarlo. */
 export const DIAS_PRIMER_PASO = 2
+
+/**
+ * ¿De qué oportunidad es el precio que acaba de PAGARSE? Solo un precio REAL (nunca simulado) que quedó colgado de su
+ * oportunidad (`enlazada`/`creada`). Lo usa el gancho del hilo del lead (💶 Avant2 → `tarificada`, F4). PURA.
+ */
+export function oportunidadDelPrecioReal(simulado: boolean, enlace: { estado: string; oportunidadId?: string } | undefined | null): string | null {
+  if (simulado || !enlace) return null
+  if (enlace.estado !== 'enlazada' && enlace.estado !== 'creada') return null
+  return typeof enlace.oportunidadId === 'string' && enlace.oportunidadId ? enlace.oportunidadId : null
+}

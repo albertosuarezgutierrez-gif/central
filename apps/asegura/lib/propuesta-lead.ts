@@ -20,7 +20,7 @@ import {
 import { leerDatosContrato } from './correo-respuesta-lead-puro'
 import { VIA_PROPUESTA_LEAD, ofertasDeRespuesta } from './presupuesto-rpa-reglas'
 import {
-  ESTADOS_HILO_CON_PRECIO, ESTADO_HILO_PROPUESTA_ENVIADA, armarPropuesta, decidirEnvio, opcionDeOfertaRpa, opcionDePrecioAvant2,
+  ESTADOS_HILO_CON_PRECIO, ESTADO_HILO_PROPUESTA_ENVIADA, HILO_ANTES_DE_PRECIO, armarPropuesta, decidirEnvio, opcionDeOfertaRpa, opcionDePrecioAvant2,
   textoHistorialPropuesta, type CabeceraPropuesta, type FilaPrecioAvant2, type PeticionPropuesta, type Propuesta,
 } from './propuesta-lead-puro'
 
@@ -118,7 +118,10 @@ export async function revisarPropuestaLead(correduriaId: string, hiloId: string,
   return { estado: 'ok', propuesta: p }
 }
 
-/** Hilos de lead con precio pedido (F3a) y al menos un precio, sin propuesta enviada. Para el cron del triaje. */
+/**
+ * Hilos de lead con precio pedido (F3a) y al menos un precio (de bot, o REAL de Avant2 por 💶 `clp_cds`), sin propuesta
+ * enviada. Para el cron del triaje.
+ */
 export async function pendientesPropuestaLead(correduriaId: string, ahora = new Date()): Promise<{ estado: 'ok'; propuestas: Propuesta[] } | { estado: 'sin_tabla' }> {
   let filas: FilaHilo[]
   try {
@@ -130,8 +133,10 @@ export async function pendientesPropuestaLead(correduriaId: string, ahora = new 
       join seguros.clientes c on c.id = h.cliente_id and c.correduria_id = h.correduria_id and c.merged_into_cliente_id is null
       where h.correduria_id = ${correduriaId}::uuid and h.estado_datos = any(${[...ESTADOS_HILO_CON_PRECIO]}::text[])
         and h.created_at > now() - interval '30 days'
-        and exists (select 1 from seguros.oportunidad_oferta f where f.correduria_id = h.correduria_id and f.oportunidad_id = h.oportunidad_id
-                      and f.rol = 'oferta' and f.estado <> 'descartada' and f.datos_extra->>'origen' = 'rpa')
+        and (exists (select 1 from seguros.oportunidad_oferta f where f.correduria_id = h.correduria_id and f.oportunidad_id = h.oportunidad_id
+                       and f.rol = 'oferta' and f.estado <> 'descartada' and f.datos_extra->>'origen' = 'rpa')
+             or exists (select 1 from seguros.tarificaciones t where t.correduria_id = h.correduria_id and t.oportunidad_id = h.oportunidad_id
+                          and t.simulado = false and coalesce(to_jsonb(t)->>'canal', 'codeoscopic') = 'codeoscopic'))
       order by h.id desc
       limit ${MAX_PENDIENTES}`
   } catch (e) {
@@ -161,6 +166,26 @@ export async function hiloTrasPrecioRpa(trabajoId: string): Promise<void> {
         and h.estado_datos = 'tarificando'`
   } catch (e) {
     if (!sinTabla(e)) console.error('[propuesta-lead] hilo tras precio:', e instanceof Error ? e.name : 'error')
+  }
+}
+
+/**
+ * Gancho de Avant2 (opción B, 19/10/2026): tras un precio REAL de Codeoscopic colgado de su oportunidad (`cotizar()`, paso de
+ * enlazar), el hilo del lead pasa a `tarificada` para que la propuesta F4 lo recoja. Solo desde `lista_para_tarificar` o
+ * `tarificando` (`HILO_ANTES_DE_PRECIO`): nunca deshace una propuesta enviada. Exige la tarificación real en BD (no simulada).
+ * Nunca lanza: el precio ya está pagado y guardado; esto solo es el estado del expediente.
+ */
+export async function hiloTrasPrecioAvant2(correduriaId: string, oportunidadId: string): Promise<void> {
+  try {
+    if (!/^[0-9a-f-]{36}$/i.test(oportunidadId) || !/^[0-9a-f-]{36}$/i.test(correduriaId)) return
+    await prisma.$executeRaw`
+      update seguros.correduria_hilo h set estado_datos = 'tarificada'
+      where h.correduria_id = ${correduriaId}::uuid and h.oportunidad_id = ${oportunidadId}::uuid
+        and h.estado_datos = any(${[...HILO_ANTES_DE_PRECIO]}::text[])
+        and exists (select 1 from seguros.tarificaciones t where t.correduria_id = h.correduria_id and t.oportunidad_id = h.oportunidad_id
+                      and t.simulado = false and coalesce(to_jsonb(t)->>'canal', 'codeoscopic') = 'codeoscopic')`
+  } catch (e) {
+    if (!sinTabla(e)) console.error('[propuesta-lead] hilo tras precio de Avant2:', e instanceof Error ? e.name : 'error')
   }
 }
 

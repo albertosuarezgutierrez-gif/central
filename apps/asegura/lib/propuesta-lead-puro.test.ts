@@ -149,3 +149,17 @@ test('todo SQL del servicio va por correduría (tenant) y nada habla con Codeosc
     assert.match(m[1], /correduria_id/, `consulta sin correduría: ${m[1].slice(0, 80)}`)
   }
 })
+
+// 💶 Opción B (19/10/2026): un lead con precio REAL de Avant2 (y sin precio de bot) también llega a la propuesta.
+test('🪤 pendientesPropuestaLead acepta precio de bot O tarificación real de Avant2 (lee el fuente)', () => {
+  const src = readFileSync(new URL('./propuesta-lead.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
+  const f = src.slice(src.indexOf('export async function pendientesPropuestaLead'), src.indexOf('export async function hiloTrasPrecioRpa'))
+  assert.match(f, /f\.datos_extra->>'origen' = 'rpa'\) or exists \(select 1 from seguros\.tarificaciones t where t\.correduria_id = h\.correduria_id and t\.oportunidad_id = h\.oportunidad_id and t\.simulado = false/)
+})
+test('🪤 el hilo pasa a tarificada tras Avant2 solo desde lista_para_tarificar/tarificando y con precio real (lee el fuente)', async () => {
+  const { HILO_ANTES_DE_PRECIO } = await import('./propuesta-lead-puro.ts')
+  assert.deepEqual([...HILO_ANTES_DE_PRECIO], ['lista_para_tarificar', 'tarificando'])
+  const src = readFileSync(new URL('./propuesta-lead.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
+  const f = src.slice(src.indexOf('export async function hiloTrasPrecioAvant2'))
+  assert.match(f, /h\.estado_datos = any\(\$\{\[\.\.\.HILO_ANTES_DE_PRECIO\]\}::text\[\]\) and exists \(select 1 from seguros\.tarificaciones t [^`]*t\.simulado = false/)
+})

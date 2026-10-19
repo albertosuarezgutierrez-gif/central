@@ -634,6 +634,19 @@ export function esFalloTerminal(estadoTrabajo: string): boolean {
   return estadoTrabajo === 'error_definitivo' || estadoTrabajo === 'requiere_humano'
 }
 
+/**
+ * Los botones del aviso del fallo. 📝 `clp_fal:<p>` si el fallo es un dato del CLIENTE. 💶 `clp_cds:<p>:<ramo>` (opción B,
+ * 19/10/2026) SOLO en coche/moto: entrega el lead al asistente de Avant2 de plataforma, que propone el vehículo del catálogo
+ * y pide el 0,50€ con OTRO botón (`cas_tarif`); este no paga. Sin pendiente (lead sin aviso) no hay botones. PURA.
+ */
+export function botonesFalloBotLead(a: { ramo: string; pendienteId: string | null; clase: ClaseFalloBot }): { texto: string; callback: string }[][] {
+  if (!a.pendienteId || !/^\d{1,15}$/.test(a.pendienteId)) return []
+  const fila: { texto: string; callback: string }[] = []
+  if (a.clase.tipo === 'dato_cliente') fila.push({ texto: '📝 Preparar repregunta', callback: `clp_fal:${a.pendienteId}` })
+  if (a.ramo === 'auto' || a.ramo === 'moto') fila.push({ texto: '💶 Avant2 (0,50€)', callback: `clp_cds:${a.pendienteId}:${a.ramo}` })
+  return fila.length ? [fila] : []
+}
+
 /** Aviso del fallo (HTML seguro para Telegram): compañía, ramo y etiquetas; NUNCA el mensaje del portal ni un valor. PURA. */
 export function textoFalloBotLead(a: { compania: string; ramo: string; pendienteId: string | null; clase: ClaseFalloBot; tipoError: string | null }): string {
   const cia = a.compania.charAt(0).toUpperCase() + a.compania.slice(1)

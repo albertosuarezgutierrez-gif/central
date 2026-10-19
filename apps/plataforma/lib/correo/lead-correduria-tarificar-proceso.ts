@@ -15,6 +15,7 @@ import { tarificarLeadAsegura } from '@/lib/seguimiento-asegura'
 import { CLAVES_PII_PENDIENTE, leerDatosPeticion, purgaAlCerrar, type DatosPeticion } from './lead-correduria-peticion'
 import { plantillaRepregunta } from './lead-correduria-respuesta'
 import { proponerPeticion } from './lead-correduria-pendiente'
+import { botonesAvant2, ramosAvant2, textoOfertaAvant2 } from './lead-correduria-avant2'
 import {
   botonTope, botonesTarificar, decidirOferta, estadoPendienteTras, leerAmpliar, leerRevision, leerTarificar, lineaContador, lineaTrasTarificar,
   textoBotonVivo, textoTarificar, textoTope, type ResultadoTarificar, type Revision,
@@ -53,7 +54,16 @@ export async function ofrecerTarificacion(a: { gmailMessageId: string; datos: Da
       return msg !== null
     }
     if (oferta.tipo === 'aviso') {
-      const msg = await tgAviso('correduria.lead-tarificar', `${sinListo(a.resumen)}\n\n${textoTarificar({ id: null, pila: a.datos.pila, revision: rev })}`).catch(() => null)
+      const texto = `${sinListo(a.resumen)}\n\n${textoTarificar({ id: null, pila: a.datos.pila, revision: rev })}`
+      // 💶 Coche/moto sin ningún bot que llegue a precio: se ofrece pasar el lead al asistente de Avant2 (no paga: su
+      // resumen trae el botón del 0,50€). Necesita un id corto para el botón: un ancla SIN datos personales.
+      const avant2 = ramosAvant2(rev)
+      const ancla = avant2.length ? await anclaAvant2(a.gmailMessageId, a.datos) : null
+      if (ancla !== null) {
+        const msg = await tgAvisoBotones('correduria.lead-tarificar', `${texto}\n${textoOfertaAvant2(avant2)}`, botonesAvant2(ancla, avant2)).catch(() => null)
+        if (msg !== null) return true
+      }
+      const msg = await tgAviso('correduria.lead-tarificar', texto).catch(() => null)
       return msg !== null
     }
     // 🤖: pendiente de un solo uso; un correo reprocesado no vuelve a mandar el botón.
@@ -84,6 +94,22 @@ export async function ofrecerTarificacion(a: { gmailMessageId: string; datos: Da
     console.error('[triaje] ofrecer tarificación:', e instanceof Error ? e.name : 'error')
     return false
   }
+}
+
+/**
+ * El id corto para 💶 cuando no hay pendiente de 🤖: una fila de tarificar YA CERRADA (`fallido`, nadie la lanza) con solo la
+ * ficha, las oportunidades y el hilo. Clave propia (`avant2:<correo>`) para no ocupar la del 🤖 de ese correo. `null` si no
+ * se pudo (sin SQL): entonces va el aviso de siempre, sin botón.
+ */
+async function anclaAvant2(gmailMessageId: string, datos: DatosPeticion): Promise<number | null> {
+  const filas = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+    INSERT INTO correduria_pendiente_tg (tipo, gmail_message_id, datos, borrador, estado, resultado)
+    VALUES ('tarificar', ${`avant2:${gmailMessageId}`.slice(0, 300)},
+            ${JSON.stringify({ clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, ramos: datos.ramos, hilo: gmailMessageId })}::jsonb, '',
+            'fallido', '{"motivo":"ningun_bot_a_precio"}'::jsonb)
+    ON CONFLICT (gmail_message_id, tipo) DO UPDATE SET resultado = correduria_pendiente_tg.resultado
+    RETURNING id`).catch(() => null)
+  return filas?.length ? Number(filas[0].id) : null
 }
 
 /** 🤖 sobre el pendiente `id`. Devuelve la línea y el resultado (para que ➕ sepa si volvió a toparse). Nunca lanza. */
@@ -123,6 +149,10 @@ async function tarificarPendiente(id: number, quien: string): Promise<{ linea: s
 async function despuesDeNada(id: number, datos: DatosPeticion, rev: Extract<Revision, { estado: 'ok' }>): Promise<void> {
   const oferta = decidirOferta(rev)
   const texto = textoTarificar({ id: null, pila: datos.pila, revision: rev })
+  // 💶 Ningún bot llega a precio de coche/moto: se ofrece pasar el lead al asistente de Avant2 (no paga: su resumen trae el
+  // botón del 0,50€). El id es el de ESTE pendiente (ya cerrado), que conserva la ficha y las oportunidades.
+  const avant2 = ramosAvant2(rev)
+  if (avant2.length) await tgSendButtons(textoOfertaAvant2(avant2), botonesAvant2(id, avant2)).catch(() => null)
   if (oferta.tipo === 'repregunta') {
     const plantilla = plantillaRepregunta({ pila: datos.pila, ramos: datos.ramos, faltan: oferta.preguntar, invalidos: [], asuntoOriginal: datos.asunto, concretas: oferta.concretas })
     if (plantilla) {

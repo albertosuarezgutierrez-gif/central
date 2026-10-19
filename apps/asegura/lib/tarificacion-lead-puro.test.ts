@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
-  caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
+  botonesFalloBotLead, caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
   garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
   valorarCompania, viviendasYLocalesDeTexto,
 } from './tarificacion-lead-puro.ts'
@@ -236,6 +236,34 @@ test('🪤 F3b (lee el fuente): solo duplicados no reservan cupo; el fallo de un
   assert.match(src, /if \(!lanzar\.length && duplicados\.length\) \{.{0,200}return \{ estado: 'encolado', trabajos: duplicados/)
   const ruta = readFileSync(new URL('../app/api/tarificador/resultado/route.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(ruta, /esFalloTerminal\(r\.estadoTrabajo\)[^]*after\(\(\) => avisarFalloBotLead\(trabajoId\)/)
+})
+
+// 💶 Opción B (19/10/2026): el aviso del fallo de un bot ofrece entregar el lead a Avant2 SOLO en coche/moto.
+test('💶 aviso del fallo: coche lleva «Avant2 (0,50€)» con clp_cds:<p>:auto', () => {
+  const b = botonesFalloBotLead({ ramo: 'auto', pendienteId: '7', clase: { tipo: 'otro' } })
+  assert.deepEqual(b.flat().map((x) => x.callback), ['clp_cds:7:auto'])
+})
+test('💶 aviso del fallo: moto también', () => {
+  assert.deepEqual(botonesFalloBotLead({ ramo: 'moto', pendienteId: '7', clase: { tipo: 'otro' } }).flat().map((x) => x.callback), ['clp_cds:7:moto'])
+})
+test('💶 aviso del fallo: hogar NO lleva botón de Avant2', () => {
+  assert.equal(botonesFalloBotLead({ ramo: 'hogar', pendienteId: '7', clase: { tipo: 'otro' } }).flat().some((x) => x.callback.startsWith('clp_cds')), false)
+})
+test('💶 aviso del fallo: comunidades NO lleva botón de Avant2', () => {
+  assert.equal(botonesFalloBotLead({ ramo: 'comunidades', pendienteId: '7', clase: { tipo: 'otro' } }).length, 0)
+})
+test('💶 aviso del fallo: dato del cliente en coche = 📝 repregunta Y 💶 Avant2', () => {
+  assert.deepEqual(botonesFalloBotLead({ ramo: 'auto', pendienteId: '9', clase: { tipo: 'dato_cliente', claves: ['fechaCarnet'] } }).flat().map((x) => x.callback), ['clp_fal:9', 'clp_cds:9:auto'])
+})
+test('💶 aviso del fallo: sin pendiente no hay botones (nada a lo que atar la pulsación)', () => {
+  assert.equal(botonesFalloBotLead({ ramo: 'auto', pendienteId: null, clase: { tipo: 'otro' } }).length, 0)
+})
+test('💶 aviso del fallo: callback_data ≤ 64 bytes', () => {
+  for (const f of botonesFalloBotLead({ ramo: 'moto', pendienteId: '999999999999999', clase: { tipo: 'dato_cliente', claves: [] } }).flat()) assert.ok(Buffer.byteLength(f.callback) <= 64)
+})
+test('🪤 el aviso del fallo usa botonesFalloBotLead (lee el fuente)', () => {
+  const src = readFileSync(new URL('./tarificacion-lead-fallo.ts', import.meta.url), 'utf8')
+  assert.match(src, /const botones = botonesFalloBotLead\(\{ ramo: t\.ramo, pendienteId, clase \}\)/)
 })
 
 test('🪤 el carné de la FICHA completa el riesgo del lead (lo del correo manda; sin ninguno, no hay carné)', () => {

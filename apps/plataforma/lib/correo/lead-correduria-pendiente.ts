@@ -174,6 +174,8 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, me
   // F3b: repregunta tras el fallo de un bot (📝 `clp_fal`) y elección en una discrepancia (`clp_dis`).
   if (d.accion === 'fal') return (await import('./lead-correduria-tarificar-proceso')).resolverFalloClp(d.id, d.quien)
   if (d.accion === 'dis') return (await import('./lead-correduria-discrepancia-proceso')).resolverDiscrepanciaClp(d)
+  // 💶 `clp_cds` (opción B): entrega el lead de coche/moto al asistente de tarificación. Aquí no se paga nada.
+  if (d.accion === 'cds') return (await import('./lead-correduria-avant2-proceso')).resolverAvant2Clp(d.id, d.ramo, d.quien)
   // F4 (import dinámico: el proceso de la propuesta usa `proponerPeticion` de este fichero).
   if (d.accion === 'pro') return (await import('./lead-correduria-propuesta-proceso')).resolverPropuestaClp(d.id, d.n, d.quien)
   if (d.accion === 'eli') return (await import('./lead-correduria-propuesta-proceso')).resolverElegirClp(d.id)

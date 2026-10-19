@@ -20,6 +20,9 @@ const txt = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
 
 /** Estados del hilo con precio pedido (F3a) en los que se monta la propuesta. */
 export const ESTADOS_HILO_CON_PRECIO = ['tarificando', 'tarificada'] as const
+/** Estados del hilo desde los que un precio REAL de Avant2 (💶 `clp_cds`) lo pasa a `tarificada`. Ni antes (faltan datos)
+ *  ni después (propuesta ya enviada): un precio pedido a mano no deshace el expediente. */
+export const HILO_ANTES_DE_PRECIO = ['lista_para_tarificar', 'tarificando'] as const
 /** Tras enviar la propuesta (SQL 2026-10-19e). F5 lee este estado y `propuesta_enviada_at` para el seguimiento. */
 export const ESTADO_HILO_PROPUESTA_ENVIADA = 'propuesta_enviada'
 /** Tipo del correo en `correo_envio` (y etiqueta en Resend). */

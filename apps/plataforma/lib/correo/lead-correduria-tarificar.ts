@@ -6,8 +6,8 @@
 //     cuáles se lanzarían, qué se supone y «Hoy: N/20 tarificaciones con bots», con 🤖 `clp_tar:<p>` · ✏️ `clp_edt:<p>` ·
 //     ⏸ `clp_no:<p>`. NADA se lanza sin pulsar 🤖 (F3a).
 //   · Si a los bots les falta un dato que el cliente puede dar → no se ofrece tarificar: repregunta F2 con eso.
-//   · Ramo sin bot → «sin bot para <ramo>»; NO se ofrece pagar Avant2 por defecto (hueco declarado: el botón de Avant2,
-//     `clp_cds`, no existe todavía; el precio de Avant2 sigue por el asistente, `cas_tarif`, con su 0,50€ y su tope).
+//   · Ramo sin bot → «sin bot para <ramo>»; NO se ofrece pagar Avant2 por defecto. En coche/moto sin ningún bot a precio
+//     sale 💶 `clp_cds` (`lead-correduria-avant2.ts`), que solo ENTREGA el lead al asistente: el 0,50€ es su `cas_tarif`.
 //   · F3b (19/10/2026): solo cuentan los bots que LLEGAN A PRECIO; los demás salen «🧪 en pruebas» (ni se lanzan ni gastan
 //     cupo). Lo que el cliente dijo y no se lee con certeza viaja como códigos de pregunta CONCRETA para la repregunta.
 //   · Tope diario: lo que no cabe queda EN COLA y llega «⛔ Tope diario (20) alcanzado: N en cola» con

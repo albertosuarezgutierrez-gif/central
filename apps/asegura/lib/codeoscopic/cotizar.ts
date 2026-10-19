@@ -30,6 +30,11 @@ import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
 import { cotizacionSimulada } from './simulacion.ts'
 import { enlazarPresupuestoConOportunidad } from './oportunidad-presupuesto.ts'
+import { oportunidadDelPrecioReal } from './oportunidad-presupuesto-reglas.ts'
+
+/** Import diferido: `propuesta-lead` tira de media app (Prisma, módulos) y `cotizar()` se prueba con `node --test`. */
+const hiloTrasPrecioAvant2PorDefecto = async (correduriaId: string, oportunidadId: string): Promise<void> =>
+  (await import('../propuesta-lead.ts')).hiloTrasPrecioAvant2(correduriaId, oportunidadId)
 import { aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje, type TopesHistorial } from '@central/module-seguros'
 import { guardarTopesHistorial, leerTopesHistorial } from './topes-historial.ts'
 import { comprobarTopeEuros } from './tope-euros-bd.ts'
@@ -113,6 +118,8 @@ export type DepsCotizar = {
   guardar?: GuardarCotizacion
   /** Colgar el presupuesto de su oportunidad. Con `guardar` doblado y sin esto, no se enlaza (test). */
   enlazar?: typeof enlazarPresupuestoConOportunidad
+  /** El hilo del lead pasa a `tarificada` tras un precio REAL (F4, 💶 Avant2). Con `guardar` doblado y sin esto, nada (test). */
+  hilo?: (correduriaId: string, oportunidadId: string) => Promise<void>
   /** Topes aprendidos del historial. Con `guardar` doblado y sin esto, no se tocan (test). */
   topes?: { leer: () => Promise<TopesHistorial>; guardar: (t: TopesHistorial, mensaje: string) => Promise<void> }
 }
@@ -161,6 +168,11 @@ async function anotar(
       } catch (e) {
         g.oportunidad = { estado: 'no_enlazada', motivo: e instanceof Error ? e.message : String(e) }
       }
+      // 💶 Si la oportunidad vino de un lead de correo, su hilo pasa a `tarificada` (la propuesta F4 lo recoge). Nunca tumba
+      // nada: el precio ya está pagado y guardado (el gancho no lanza, y aun así va en su propio try).
+      const hilo = deps.hilo ?? (deps.guardar ? null : hiloTrasPrecioAvant2PorDefecto)
+      const opPrecio = oportunidadDelPrecioReal(extra.simulado, g.oportunidad)
+      if (hilo && opPrecio) await hilo(p.correduriaId, opPrecio).catch(() => {})
     }
     return g
   } catch (e) {
