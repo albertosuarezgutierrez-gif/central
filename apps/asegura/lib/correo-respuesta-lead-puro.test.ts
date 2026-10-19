@@ -36,6 +36,12 @@ test('cuerpos del puerto: referencias, from simple, hiloId numérico, claves con
   assert.equal(validarGuardar({ hiloId: 'x', from: 'ana@x.es', gmailMessageId: '<r@x.es>', actor: 'a', valores: {} }).ok, false)
 })
 
+test('🪤 guardar: un valor vacío o solo espacios cuenta como «no dado» (no bloquea el campo)', () => {
+  const g = validarGuardar({ hiloId: '12', from: 'ana@x.es', gmailMessageId: '<r@x.es>', actor: 'a', valores: { dni: '', matricula: '   ', ciudad: ' Sevilla ' } })
+  assert.equal(g.ok, true)
+  if (g.ok) assert.deepEqual(g.valor.valores, { ciudad: 'Sevilla' })
+})
+
 test('🪤 datosContrato: lo nuevo se AÑADE con procedencia; lo que ya había no se cambia; lo raro se ignora', () => {
   const actual = leerDatosContrato({ valores: { kmAnuales: 9000, dni: { cifrado: 'v1:a:b:c', hash: 'h' }, malo: { cifrado: 'claro' } }, _procedencia: { kmAnuales: { fuente: 'cliente', at: 't0', correo: '<a@x>' } } })
   assert.deepEqual(Object.keys(actual.valores).sort(), ['dni', 'kmAnuales'])
