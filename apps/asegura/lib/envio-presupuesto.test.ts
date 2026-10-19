@@ -58,3 +58,42 @@ test('🪤 el correo lleva acceso directo (tras el compare-and-swap) y el WhatsA
   assert.ok(llave > avisar.indexOf("if (entrada.canal === 'whatsapp_enlace') {\n    const mensaje"), 'el WhatsApp no lleva llave')
   assert.match(avisar, /correoPresupuesto\(\{ \.\.\.datos, enlaceDirecto: directo \}\)/)
 })
+
+// ─── F4: un aviso EN EL HILO nunca deja al cliente con un enlace muerto (revisión 19/10/2026) ──────────────────
+const ejecutar = src.slice(src.indexOf('export async function ejecutarAviso'), src.indexOf('async function enlaceDirectoPresupuesto'))
+
+test('🪤 en el hilo, una clave ya usada (salió o quedó incierta) NO rota el token: se mira ANTES del compare-and-swap', () => {
+  const guarda = ejecutar.indexOf("if (hilo && (await claveYaUsada(db, p.id, hilo.idempotencia))) return error('incierto'")
+  assert.ok(guarda > 0, 'falta la guarda de la clave usada')
+  assert.ok(guarda < ejecutar.indexOf('db.presupuesto.updateMany('), 'la guarda va antes de rotar')
+  assert.match(src, /tipo: \{ in: \['enviado', 'envio_incierto'\] \}, detalle: \{ path: \['idempotencia'\], equals: idempotencia \}/)
+  // Lo que no se puede leer cuenta como usada.
+  assert.match(src, /return n === null \|\| n > 0/)
+})
+
+test('🪤 en el hilo, un envío INCIERTO no devuelve la llave vieja (mataría el enlace que quizá ya tiene) y deja rastro', () => {
+  const incierto = ejecutar.indexOf("if (envio === 'incierto') {")
+  const devolver = ejecutar.indexOf('data: { tokenHash: p.tokenHash')
+  assert.ok(incierto > 0 && incierto < devolver, 'el incierto se resuelve ANTES de devolver la llave anterior')
+  assert.match(ejecutar.slice(incierto, devolver), /tipo: 'envio_incierto'[\s\S]{0,200}idempotencia: hilo\.idempotencia/)
+  assert.match(ejecutar.slice(incierto, devolver), /return error\('incierto'/)
+  assert.match(src, /if \(hilo && envioIncierto\(r\)\) return 'incierto'/)
+})
+
+test('envioIncierto: red, «aceptado sin id» y 5xx son duda; un 4xx es rechazo seguro', async () => {
+  const { envioIncierto } = await import('./correo-hilo.ts')
+  assert.equal(envioIncierto({ resultado: 'rechazado' }), true)
+  assert.equal(envioIncierto({ resultado: 'rechazado', codigo: '200' }), true)
+  assert.equal(envioIncierto({ resultado: 'rechazado', codigo: '503' }), true)
+  assert.equal(envioIncierto({ resultado: 'rechazado', codigo: '422' }), false)
+  assert.equal(envioIncierto({ resultado: 'enviado' }), false)
+  assert.equal(envioIncierto({ resultado: 'sin_proveedor' }), false)
+})
+
+test('🪤 la propuesta con una clave ya intentada e incierta no prepara otro presupuesto (retiraría el que quizá tiene)', () => {
+  const prop = readFileSync(new URL('./propuesta-lead.ts', import.meta.url), 'utf8')
+  assert.match(prop, /e\.tipo in \('enviado', 'envio_incierto'\) and e\.detalle->>'idempotencia' = \$\{idempotencia\}/)
+  const f = prop.slice(prop.indexOf('export async function enviarPropuestaLead'))
+  const guarda = f.indexOf("if (previo) return { estado: 'fallo_envio', motivo: 'incierto'")
+  assert.ok(guarda > 0 && guarda < f.indexOf('prepararPresupuestoDeOfertas('), 'se corta antes de crear/retirar presupuestos')
+})

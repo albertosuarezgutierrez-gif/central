@@ -983,6 +983,8 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
     // ── Petición de datos a un LEAD de la correduría (clp_env / clp_edt / clp_no, 19/10/2026) ──────────
     // F3a: 🤖 clp_tar (tarificar con BOTS, gratis; nada de Avant2) y ➕ clp_top:<aaaammdd> (10 más hoy). Mismo candado.
     // F3b: 📝 clp_fal:<p> (repregunta tras el fallo de un bot, con su ✅) y clp_dis:<p>:<i>:f|c (elegir en una discrepancia).
+    // F4: 📤 clp_pro:<p>:<n> (envía la propuesta con EXACTAMENTE el precio n) y 🔀 clp_eli:<p> (un botón por precio).
+    // F5: 🗑 clp_per:<id> (cerrar perdida), 🔓 clp_aut:<tipo> (pasar a automático) y ⏸ clp_man:<tipo> (volver a manual).
     // ✅ envía el borrador al cliente EN SU HILO por el puerto de asegura: sale a un TERCERO, así que solo la PERSONA
     // autorizada (from.id = TELEGRAM_CHAT_ID) y un solo uso (estado en BD). Se contesta YA y el envío va en after().
     // ✏️ pide el texto corregido (force_reply con la marca [clp #id]); ❌ descarta. Nada se reintenta solo.
@@ -992,7 +994,10 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, d.accion === 'env' ? '⏳ Enviando en su hilo…' : d.accion === 'edt' ? '✏️ Corrige el dato' : d.accion === 'tar' ? '🤖 Lanzando los bots…' : d.accion === 'top' ? '➕ Ampliando el tope de hoy…' : d.accion === 'fal' ? '📝 Preparando la repregunta…' : d.accion === 'dis' ? '⚖️ Anotando tu elección…' : 'Descartando…')
+      await tgAnswerCallback(cb.id, d.accion === 'env' ? '⏳ Enviando en su hilo…' : d.accion === 'edt' ? '✏️ Corrige el dato' : d.accion === 'tar' ? '🤖 Lanzando los bots…'
+        : d.accion === 'top' ? '➕ Ampliando el tope de hoy…' : d.accion === 'fal' ? '📝 Preparando la repregunta…' : d.accion === 'dis' ? '⚖️ Anotando tu elección…'
+        : d.accion === 'pro' ? '📤 Enviando la propuesta en su hilo…' : d.accion === 'eli' ? '🔀 Elige el precio'
+        : d.accion === 'per' ? '🗑 Cerrando como perdida…' : d.accion === 'aut' ? '🔓 Pasando a automático…' : d.accion === 'man' ? '⏸ Volviendo a manual…' : 'Descartando…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       // Se quitan los botones del mensaje pulsado en los tres casos: tras ✏️ el borrador vuelve en un mensaje nuevo.
@@ -1006,7 +1011,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       return NextResponse.json({ ok: true })
     }
 
-    // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no, 19/10/2026) ──
+    // ── Posible contacto nuevo de aseguradora: ✅ añadir al Directorio / 🚫 ignorar (csg_ok / csg_no; csg_u = ↩️ deshacer el alta automática, 19/10/2026) ──
     // Solo la PERSONA autorizada (from.id = TELEGRAM_CHAT_ID); el id corto apunta a `correduria_pendiente_tg`, un solo uso.
     if (prefix === PREFIJO_CSG) {
       const d = decidirBotonCsg(cb, action, args, process.env.TELEGRAM_CHAT_ID)
@@ -1014,7 +1019,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         await tgAnswerCallback(cb.id, d.toast)
         return NextResponse.json({ ok: true })
       }
-      await tgAnswerCallback(cb.id, d.accion === 'no' ? 'Ignorado' : '⏳ Añadiendo al directorio…')
+      await tgAnswerCallback(cb.id, d.accion === 'no' ? 'Ignorado' : d.accion === 'u' ? '↩️ Deshaciendo…' : '⏳ Añadiendo al directorio…')
       const original = escapeHtml(cb.message?.text ?? '')
       const mensajeId: number | undefined = cb.message?.message_id
       if (mensajeId) await tgEditMessage(mensajeId, `${original}\n\n⏳ <i>Pulsado…</i>`).catch(() => {})

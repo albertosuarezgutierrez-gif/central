@@ -5,7 +5,7 @@ import { auditado } from '@/lib/auditoria'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { anadirFichasAGoogle, leadsCorreoSinContacto } from '@/lib/google-contactos-lead'
+import { anadirFichasAGoogle, contarLeadsCorreoSinContacto, leadsCorreoSinContacto } from '@/lib/google-contactos-lead'
 import { ErrorGoogle } from '@/lib/google-people'
 import { MAX_FICHAS_CONTACTO_LEAD } from '@central/module-seguros/google-contactos-lead'
 
@@ -62,7 +62,8 @@ export const POST = auditado(async (req: Request) => {
     }
     const totales: Record<string, number> = {}
     for (const x of r.resultados) totales[x.estado] = (totales[x.estado] ?? 0) + 1
-    return NextResponse.json({ ...r, totales })
+    // `pendientes`: leads de correo aún sin contacto ni duda (tras esta llamada); solo en el relleno.
+    return NextResponse.json({ ...r, totales, ...(desdeCorreo ? { pendientes: await contarLeadsCorreoSinContacto(correduria.id) } : {}) })
   } catch (e) {
     if (e instanceof ErrorGoogle) {
       // El cuerpo de Google no sale de aquí: solo el código HTTP.

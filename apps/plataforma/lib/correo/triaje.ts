@@ -32,6 +32,10 @@ import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
 import { fichaPorEmail, procesarLeadCorreo } from './lead-correduria-proceso'
 import { cursorTrasPasada, diferirCorreo, diferirLead } from './lead-correduria'
+import { pasadaSeguimientoLeads } from './lead-correduria-seguimiento-proceso'
+
+/** F5: el seguimiento de leads solo arranca si la pasada va holgada (la función muere a los 300 s). */
+const SEGUIMIENTO_HASTA_MS = 200_000
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -81,7 +85,7 @@ function etiquetaBonita(categoria: string): string {
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0, seguimientoLeads: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -95,12 +99,16 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
   const t0 = Date.now()
   let uidDiferido: number | null = null
   let leadsPasada = 0
+  // F5: ¿se ha leído TODO el buzón sin fallos? Solo entonces «el cliente no ha contestado» es un dato y no un «no lo he
+  // podido mirar» (spec §4): si no, esta pasada no recuerda nada.
+  let buzonAlDia = false
   try {
     // Tope BAJO por pasada: cada correo hace 1 llamada a la IA en serie; con la función limitada a
     // 300s, ~30 correos la agotaban (504) y el cursor no avanzaba → re-escaneo infinito. Con 10 la
     // pasada termina holgada (10×≤20s), el cursor avanza y las siguientes drenan el resto (cada 10 min).
     const nuevos = await sesion.listarNuevos(lastUid, uidValidityPrevio, 10)
     stats.nuevos = nuevos.length
+    const quedanMas = nuevos.length >= 10
 
     for (const correo of nuevos) {
       if (diferirCorreo(Date.now() - t0)) { uidDiferido = correo.uid; break }
@@ -326,11 +334,10 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
               }
             }
 
-            // Sugerencia de alta de contacto (20/09/2026): NUNCA da de alta —
-            // solo avisa la primera vez que ve escribir a una persona (no un
-            // buzón genérico) de una aseguradora, para que Alberto decida si
-            // la añade al directorio (`compania_contactos`). Best-effort: un
-            // fallo aquí no toca ni el aviso ni la anotación de arriba.
+            // Contacto nuevo de aseguradora (20/09/2026; alta automática 19/10/2026): la primera vez que
+            // escribe una persona (no un buzón genérico) de una aseguradora. Compañía EXACTA → se añade
+            // sola al directorio (`compania_contactos`) con «↩️ Deshacer»; dudosa → botón de confirmar;
+            // ninguna → «añádelo a mano». Best-effort: un fallo aquí no toca ni el aviso ni la anotación de arriba.
             // 🚨 Solo personas de un dominio de ASEGURADORA (19/10/2026): un gmail/hotmail o un dominio
             // cualquiera NUNCA se propone, por mucho que el asunto hable de Mapfre o de un recibo.
             if (debeSugerirContactoAseguradora(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
@@ -365,6 +372,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
         }
       }
     }
+    buzonAlDia = !quedanMas && uidDiferido === null && stats.errores === 0
   } finally {
     // Avanza el cursor SIEMPRE (aunque el bucle fallara), y cierra la sesión.
     await prisma.$executeRaw`
@@ -373,6 +381,18 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
       ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
     `.catch(() => {})
     await sesion.cerrar()
+  }
+  // F4 (19/10/2026): propuestas de leads de correo con precio → aviso §3.4 (o su actualización). Solo en vivo; nunca envía
+  // nada al cliente (eso es 📤 en Telegram) y un fallo no rompe el triaje.
+  if (!DRY_RUN()) {
+    const { revisarPropuestasLead } = await import('./lead-correduria-propuesta-proceso')
+    const r = await revisarPropuestasLead().catch(() => null)
+    if (r && (r.nuevo || r.actualizado || r.fallo)) console.log(`[triaje] propuestas de leads: ${r.nuevo} nuevas, ${r.actualizado} actualizadas, ${r.fallo} fallos`)
+  }
+  // F5: recordatorios del seguimiento de leads (solo 9-20 h Madrid, un aviso por hito, con el buzón al día y con tiempo).
+  if (!DRY_RUN() && buzonAlDia && Date.now() - t0 < SEGUIMIENTO_HASTA_MS) {
+    const s = await pasadaSeguimientoLeads().catch(() => null)
+    if (s) stats.seguimientoLeads = s.avisados + s.enviadosSolos
   }
   // Emisiones «aún no llegadas por CIMA» que CIMA ya trae: pasan a duplicado_cima. Solo en vivo; un fallo no rompe el triaje.
   if (!DRY_RUN()) {

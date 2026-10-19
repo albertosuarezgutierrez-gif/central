@@ -66,15 +66,19 @@ test('el mensaje de Telegram: nombre de pila, ramos y conteo; el borrador plegad
 
 test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotencia (lee el fuente)', () => {
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8')
-  assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia'\) AND estado = 'pendiente' AND caduca_at > now\(\)/)
-  assert.match(src, /idempotencia: `clp-\$\{d\.id\}`/)
+  assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo NOT IN \('tarificar', 'discrepancia', 'propuesta'\) AND estado = 'pendiente' AND caduca_at > now\(\)/)
+  // F5: el envío vive en `enviarPeticionReclamada` (lo comparten el ✅ y el modo automático); la clave es el id del pendiente.
+  // 19/10/2026: el ✅ manual pasa por `enviarPeticionManual` (guarda «¿ha escrito el cliente?») y ésta delega en el mismo envío.
+  assert.match(src, /await enviarPeticionManual\(d\.id, fila\.tipo, fila\.datos, fila\.borrador, actorTelegram\(d\.quien\)\)/)
+  assert.match(src, /return enviarPeticionReclamada\(id, datosRaw, borrador, actor\)/)
+  assert.match(src, /idempotencia: `clp-\$\{id\}`/)
   const hook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
   assert.match(hook, /if \(prefix === PREFIJO_CLP\) \{\s*const d = decidirBotonClp\(cb, action, args, process\.env\.TELEGRAM_CHAT_ID\)/)
 })
 
 test('🪤 un pendiente CERRADO (enviado, descartado, caducado) se purga: sin email, asunto, nombre ni texto (lee el fuente)', async () => {
   const { CLAVES_PII_PENDIENTE } = await import('./lead-correduria-peticion.ts')
-  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'email', 'nombre', 'pila', 'to'])
+  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'email', 'nombre', 'pila', 'remitentes', 'to'])
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(src, /const PURGA = Prisma\.sql`datos = datos - \$\{\[\.\.\.CLAVES_PII_PENDIENTE\]\}::text\[\], borrador = ''`/)
   const cierres = [...src.matchAll(/UPDATE correduria_pendiente_tg SET estado = '(descartado|caducado)'[^`]*/g)]
@@ -97,13 +101,15 @@ test('🪤 reintento deduplicado (repetido) → «ya enviado antes», nunca «no
 })
 
 test('🪤 F3b: al cerrar, fallido/incierto ya NO guardan email ni nombre; lo que no envía al cliente se purga entero', async () => {
-  const { purgaAlCerrar } = await import('./lead-correduria-peticion.ts')
-  assert.deepEqual(purgaAlCerrar('peticion_datos', 'enviado'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
+  const { purgaAlCerrar, CLAVES_PII_PENDIENTE } = await import('./lead-correduria-peticion.ts')
+  const TODO = [...CLAVES_PII_PENDIENTE] // main (#4858) añadió email y nombre a la lista completa
+  assert.deepEqual(purgaAlCerrar('peticion_datos', 'enviado'), { claves: TODO, borrador: true })
   assert.deepEqual(purgaAlCerrar('repregunta', 'fallido'), { claves: ['to', 'pila'], borrador: false })
   assert.deepEqual(purgaAlCerrar('peticion_datos', 'incierto'), { claves: ['to', 'pila'], borrador: false })
-  assert.deepEqual(purgaAlCerrar('tarificar', 'fallido'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
-  assert.deepEqual(purgaAlCerrar('tarificar', 'incierto'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
-  assert.deepEqual(purgaAlCerrar('discrepancia', 'enviado'), { claves: ['to', 'asunto', 'pila', 'email', 'nombre'], borrador: true })
+  assert.deepEqual(purgaAlCerrar('tarificar', 'fallido'), { claves: TODO, borrador: true })
+  assert.deepEqual(purgaAlCerrar('tarificar', 'incierto'), { claves: TODO, borrador: true })
+  assert.deepEqual(purgaAlCerrar('discrepancia', 'enviado'), { claves: TODO, borrador: true })
+  for (const e of ['enviado', 'fallido', 'incierto', 'descartado', 'caducado']) assert.deepEqual(purgaAlCerrar('contacto_sugerido', e), { claves: TODO, borrador: true })
   const tar = readFileSync(new URL('./lead-correduria-tarificar-proceso.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(tar, /const p = purgaAlCerrar\('tarificar', estado\)[^`]*`[^`]*datos = datos - \$\{p\.claves\}::text\[\], borrador = ''/)
 })

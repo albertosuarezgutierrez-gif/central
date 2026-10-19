@@ -7,6 +7,7 @@ import { intentarEleccionVersionIa } from '@/lib/tarificador-eleccion'
 import { presupuestoTrasTrabajoRpa } from '@/lib/presupuesto-rpa'
 import { avisarFalloBotLead } from '@/lib/tarificacion-lead-fallo'
 import { esFalloTerminal } from '@/lib/tarificacion-lead-puro'
+import { hiloTrasPrecioRpa } from '@/lib/propuesta-lead'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -66,6 +67,8 @@ export async function POST(req: Request) {
       after(() => presupuestoTrasTrabajoRpa(trabajoId).then((p) => {
         if (p.estado === 'error') console.error('[tarificador] presupuesto tras RPA', trabajoId, p.motivo)
       }))
+      // F4: si la oportunidad vino de un lead de correo, su hilo pasa a `tarificada` (la propuesta la monta el triaje).
+      after(() => hiloTrasPrecioRpa(trabajoId))
     }
     return NextResponse.json(r)
   } catch (e) {

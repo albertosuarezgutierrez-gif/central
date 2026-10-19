@@ -53,3 +53,37 @@ test('la selección de Google incluye los leads de correo vinculados (y solo los
   // Sin poder leer su contacto la selección NO está completa (si no, el cron los retiraría).
   assert.match(seleccion, /contactoCorreo !== null/)
 })
+
+// 🪤 RELLENO AUTOMÁTICO de leads de correo antiguos (19/10/2026): lo hace el cron horario, sin Bearer a mano.
+const cron = readFileSync(new URL('../app/api/cron/google-contactos/route.ts', import.meta.url), 'utf8')
+const iR = lead.indexOf('export async function rellenarLeadsCorreo')
+const relleno = lead.slice(iR, lead.indexOf('\n}\n', iR))
+
+test('el cron horario hace el relleno DESPUÉS de sincronizar y un fallo suyo no tumba el cron', () => {
+  const iSync = cron.indexOf('await sincronizarGoogleContactos(')
+  const iRel = cron.indexOf('await rellenarLeadsCorreo(')
+  assert.ok(iSync > 0 && iRel > iSync, 'el relleno no va después de la sincronización')
+  assert.match(cron, /try \{\s*relleno = await rellenarLeadsCorreo[\s\S]*?\} catch/)
+  assert.match(cron, /r\.estado !== 'pii_no_descifra'/)
+})
+
+test('el relleno es acotado, se para solo y reutiliza la ruta idempotente (sin PII en logs)', () => {
+  assert.ok(iR > 0)
+  assert.match(lead, /export const LOTE_RELLENO = 10/)
+  assert.match(lead, /export const MAX_LOTES_RELLENO = 3/)
+  assert.match(relleno, /while \(lotes < maxLotes && Date\.now\(\) - desde < presupuesto\)/)
+  assert.match(relleno, /if \(ids\.length === 0\) break/)          // sin pendientes no se pide ni un lote
+  assert.match(relleno, /excluir: intentados/)                      // no repite fichas dentro de la pasada
+  assert.match(relleno, /anadirFichasAGoogle\(correduriaId, ids\)/) // misma compuerta + vínculo ⇒ ya_estaba
+  assert.match(relleno, /pendientes === 0 \? 'fin'/)
+  assert.ok(!/console\./.test(relleno), 'el relleno no debe loguear')
+})
+
+test('el candidato del relleno excluye vinculadas y con duda en cola; el endpoint informa de `pendientes`', () => {
+  assert.match(lead, /const SIN_CONTACTO = /)
+  const cond = lead.slice(lead.indexOf('const SIN_CONTACTO'), lead.indexOf('export async function leadsCorreoSinContacto'))
+  assert.match(cond, /google_contactos_vinculo/)
+  assert.match(cond, /google_contactos_revision/)
+  const ruta = readFileSync(new URL('../app/api/operador/google-contactos/lead/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /pendientes: await contarLeadsCorreoSinContacto/)
+})

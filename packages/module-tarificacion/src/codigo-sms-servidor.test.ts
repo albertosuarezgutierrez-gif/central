@@ -31,8 +31,11 @@ describe('código SMS · sello', () => {
   it('un byte cambiado o un sello sin forma = null (nunca lanza)', () => {
     const par = new ParCodigoSms()
     const s = sellarCodigoSms('1234', par.publica, T1)
-    const ultimo = s.at(-1) === 'A' ? 'B' : 'A'
-    expect(par.abrir(s.slice(0, -1) + ultimo, T1)).toBeNull()
+    // Primer carácter del cifrado, no el último: el último base64 lleva bits de relleno y cambiarlo
+    // a veces no altera ningún byte (test intermitente).
+    const i = s.lastIndexOf('.') + 1
+    const otro = s[i] === 'A' ? 'B' : 'A'
+    expect(par.abrir(s.slice(0, i) + otro + s.slice(i + 1), T1)).toBeNull()
     expect(par.abrir('c1.basura', T1)).toBeNull()
     expect(par.abrir('', T1)).toBeNull()
   })

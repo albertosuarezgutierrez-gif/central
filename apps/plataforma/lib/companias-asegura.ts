@@ -193,6 +193,23 @@ export async function telefonoContactoAsegura(contactoId: string, telefono: stri
   }
 }
 
+/** Desactiva (`activo=false`, no borra) un contacto del Directorio: el «↩️ Deshacer» del alta automática del triaje. Idempotente. */
+export async function desactivarContactoAsegura(contactoId: string): Promise<Reenvio> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/companias/contacto/${encodeURIComponent(contactoId)}`, {
+      method: 'PATCH',
+      headers: { ...h, 'content-type': 'application/json' },
+      body: JSON.stringify({ accion: 'desactivar' }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch {
+    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  }
+}
+
 /**
  * Alta de un contacto en el Directorio (`POST /api/operador/companias/contacto`). Idempotente por email: si ya existe
  * en cualquier compañía, asegura contesta `existia` y no crea nada.

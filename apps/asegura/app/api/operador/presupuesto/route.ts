@@ -23,6 +23,8 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
   no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422, sin_acceso: 422, sin_necesidades: 422,
   sin_revisar: 422, origen_desconocido: 422, lote_cancelado: 409,
   sin_enlace: 503, sin_proveedor: 503, remitente_no_verificado: 503, rechazado: 502,
+  // Solo en el hilo (F4): no consta si salió. 502 como el rechazo, pero el detalle dice que NO se repita a ciegas.
+  incierto: 502,
 }
 
 /**

@@ -22,16 +22,16 @@ export const AVISO_PETICION_LEAD = 'correduria.lead-peticion'
  * Claves de `datos` con dato personal: el email del lead, el asunto de su correo y su nombre de pila. Al CERRAR el
  * pendiente (enviado, descartado o caducado) se borran junto con el borrador; quedan ids y estado.
  */
-export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre'] as const
+export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre', 'remitentes'] as const
 
 /**
  * Qué se PURGA al cerrar un pendiente (revisión F3a, 19/10/2026). Lo ENVIADO/descartado/caducado pierde todo lo personal y
  * el borrador. Un fallido/incierto de una petición o repregunta conserva asunto y borrador (Alberto contesta a mano en su
  * Gmail, donde ya tiene el hilo), pero NO el email (`to`) ni el nombre (`pila`): no hacen falta para eso. Un pendiente que
- * no envía nada al cliente (`tarificar`, `discrepancia`) se purga entero en cualquier cierre. PURA.
+ * no envía nada al cliente (`tarificar`, `discrepancia`, `contacto_sugerido`) se purga entero en cualquier cierre. PURA.
  */
 export function purgaAlCerrar(tipo: string, estado: string): { claves: string[]; borrador: boolean } {
-  const sinEnvio = tipo === 'tarificar' || tipo === 'discrepancia'
+  const sinEnvio = tipo === 'tarificar' || tipo === 'discrepancia' || tipo === 'contacto_sugerido'
   if (sinEnvio || estado === 'enviado' || estado === 'descartado' || estado === 'caducado') return { claves: [...CLAVES_PII_PENDIENTE], borrador: true }
   return { claves: ['to', 'pila'], borrador: false }
 }
@@ -126,16 +126,26 @@ export function textoBorradorTelegram(a: {
 
 // ─── Botón ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
+/** Los tipos que pueden ir en automático (F5). `propuesta` no está, a propósito. */
+type TipoClpAuto = 'peticion_datos' | 'repregunta' | 'recordatorio_cliente'
+
 export type DecisionClp =
   | { ok: false; toast: string }
-  /** `tar` (F3a): 🤖 tarificar con bots el pendiente `id` (tipo `tarificar`). */
-  | { ok: true; accion: 'env' | 'edt' | 'no' | 'tar'; id: number; quien: string }
+  /** `tar` (F3a): 🤖 tarificar con bots el pendiente `id` (tipo `tarificar`). `eli` (F4): 🔀 elegir otro precio. */
+  | { ok: true; accion: 'env' | 'edt' | 'no' | 'tar' | 'eli'; id: number; quien: string }
+  /** `pro` (F4): 📤 enviar la propuesta `id` con EXACTAMENTE el precio número `n`. */
+  | { ok: true; accion: 'pro'; id: number; n: number; quien: string }
   /** `top` (F3a): «➕ 10 más hoy» para el día `dia` (aaaa-mm-dd) y relanzar la cola. */
   | { ok: true; accion: 'top'; dia: string; quien: string }
   /** `fal` (F3b): preparar la repregunta tras el fallo de un bot del pendiente de tarificar `id`. */
   | { ok: true; accion: 'fal'; id: number; quien: string }
   /** `dis` (F3b): en la discrepancia `indice` del pendiente `id`, quedarse con lo de la ficha (`ficha`) o con lo del correo. */
   | { ok: true; accion: 'dis'; id: number; indice: number; eleccion: 'ficha' | 'correo'; quien: string }
+  /** `per` (F5): 🗑 cerrar como perdida el hilo del pendiente `id` (tipo `recordatorio_cliente`). */
+  | { ok: true; accion: 'per'; id: number; quien: string }
+  /** `aut` / `man` (F5): 🔓 pasar a automático / ⏸ volver a manual un TIPO. `propuesta` nunca llega aquí. */
+  | { ok: true; accion: 'aut'; tipo: TipoClpAuto; quien: string }
+  | { ok: true; accion: 'man'; tipo: TipoClpAuto; quien: string }
 
 /** ¿Vale la pulsación? Persona autorizada, acción conocida e id numérico. PURA. */
 export function decidirBotonClp(
@@ -150,12 +160,25 @@ export function decidirBotonClp(
     if (!m) return { ok: false, toast: 'Día no válido' }
     return { ok: true, accion: 'top', dia: `${m[1]}-${m[2]}-${m[3]}`, quien: String(cb.from?.id ?? '') }
   }
-  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis') return { ok: false, toast: 'Acción desconocida' }
+  if (action === 'aut' || action === 'man') {
+    // 🚨 Solo los tipos automatizables: `propuesta` (o cualquier otro) se rechaza aquí, antes de tocar la BD.
+    const tipo = args[0]
+    if (tipo !== 'peticion_datos' && tipo !== 'repregunta' && tipo !== 'recordatorio_cliente') return { ok: false, toast: 'Ese tipo no puede ir en automático' }
+    const quien = String(cb.from?.id ?? '')
+    return action === 'aut' ? { ok: true, accion: 'aut', tipo, quien } : { ok: true, accion: 'man', tipo, quien }
+  }
+  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar' && action !== 'fal' && action !== 'dis' && action !== 'pro' && action !== 'eli' && action !== 'per') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Borrador no encontrado' }
   if (action === 'dis') {
     if (!/^\d{1,2}$/.test(args[1] ?? '') || (args[2] !== 'f' && args[2] !== 'c')) return { ok: false, toast: 'Botón no válido' }
     return { ok: true, accion: 'dis', id, indice: Number(args[1]), eleccion: args[2] === 'f' ? 'ficha' : 'correo', quien: String(cb.from?.id ?? '') }
+  }
+  if (action === 'pro') {
+    // El precio pulsado, por su número estable. Sin número válido no se elige ninguno «por defecto».
+    const n = Number(args[1])
+    if (!/^\d{1,3}$/.test(args[1] ?? '') || n < 1) return { ok: false, toast: 'Precio no válido' }
+    return { ok: true, accion: 'pro', id, n, quien: String(cb.from?.id ?? '') }
   }
   return { ok: true, accion: action, id, quien: String(cb.from?.id ?? '') }
 }

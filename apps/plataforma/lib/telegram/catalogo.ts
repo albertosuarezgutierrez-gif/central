@@ -339,7 +339,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correo.contacto-sugerido', categoria: 'correo',
     titulo: 'Posible contacto nuevo de aseguradora',
-    que: 'Una persona (no un buzón genérico) de una aseguradora escribe por primera vez: con botones «✅ Añadir al directorio» / «🚫 Ignorar»: el alta solo se hace al pulsar, nunca sola.',
+    que: 'Una persona (no un buzón genérico) de una aseguradora escribe por primera vez. Si la compañía es exacta se añade SOLA al Directorio y el aviso trae «↩️ Deshacer»; si es dudosa, botones «✅ Añadir al directorio» / «🚫 Ignorar». Silenciarlo apaga el mensaje, no el alta automática.',
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
@@ -767,6 +767,24 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Lead listo para tarificar con bots (🤖 Tarificar / ✏️ / ⏸) y tope diario (➕ 10 más hoy)',
     que: 'Con los datos del lead completos: qué compañías lanzarían su bot (gratis, en su portal), qué se supone y cuántas tarificaciones con bots llevas hoy. Nada se lanza sin pulsar 🤖. Si un ramo no tiene bot, lo dice. Si se llega al tope del día, lo que falta queda en cola y puedes ampliar 10 más.',
     cuando: 'Cuando la respuesta del lead completa sus datos, y al llegar al tope diario',
+  },
+  {
+    id: 'correduria.lead-propuesta', categoria: 'correduria',
+    titulo: 'Propuesta de un lead lista (📤 Enviar recomendada / 🔀 Elegir otra / ✏️ / 🚫)',
+    que: 'Cuando llegan precios de un lead de correo: la comparativa (compañía, prima, franquicia, si el precio es estimado o firme, coberturas y si la compañía la dejaría bloqueada), las necesidades del cliente que se han leído de sus respuestas y la recomendada con su porqué. Si faltan necesidades no hay botón de enviar: te propongo repreguntárselas. Si llegan más precios, el mismo mensaje se actualiza. Nada sale sin pulsar 📤.',
+    cuando: 'Cuando hay precio para un lead que vino por correo (revisión cada 10 min)',
+  },
+  {
+    id: 'correduria.lead-seguimiento', categoria: 'correduria',
+    titulo: 'Seguimiento del lead: recordatorio (✅ Recordar / ✏️ / 🗑 Cerrar perdida)',
+    que: 'El lead no contesta a la petición de datos (48 h; 2º recordatorio a los 5 días) o no acepta la propuesta (72 h): borrador de recordatorio en su hilo, que sale SOLO si pulsas ✅. Tras dos recordatorios sin respuesta, «¿cerrar como perdida?» (no se borra nada). Un aviso por hito, nunca repetido; si el cliente contesta, se corta.',
+    cuando: 'En la revisión del correo (cada 10 min), solo de 9 a 20 h',
+  },
+  {
+    id: 'correduria.lead-auto', categoria: 'correduria',
+    titulo: 'Envíos al lead en automático (🔓 ofrecer · 🤖 enviado solo · ⏸ volver a manual)',
+    que: 'Tras 20 envíos seguidos de un mismo tipo (petición de datos, repregunta o recordatorio) aprobados sin editar, te ofrece pasarlo a automático; solo se activa si pulsas 🔓. Con el modo puesto, cada envío que sale solo te llega aquí con ⏸ para volver a manual. La propuesta nunca va sola.',
+    cuando: 'Al llegar a la racha de 20, y en cada envío automático (de 9 a 20 h, con tope diario)',
   },
   {
     id: 'correduria.aviso-web', categoria: 'correduria',

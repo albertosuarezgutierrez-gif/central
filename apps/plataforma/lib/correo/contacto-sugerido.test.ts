@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import {
   botonesContactoSugerido, buscarFichaDeRemitente, clasificarBuzon, contactoParaDirectorio, debeSugerirContactoAseguradora, decidirBotonCsg,
   inferirCompania, candidatasCompania, botonesElegirCompania, leerCandidatasGuardadas, candidataElegida, interpretarAltaContacto, leerDatosContactoSugerido, lineaTrasAlta, partirRemitente, pareceContactoPersonal, textoAvisoCorreoCliente,
+  decidirRutaAlta, botonDeshacerCsg, textoAltaAutomatica, idContactoCreado, leerContactoIdGuardado, interpretarDeshacer, lineaTrasDeshacer,
 } from './contacto-sugerido.ts'
 
 test('pareceContactoPersonal: un nombre.apellido es persona', () => {
@@ -231,4 +232,64 @@ test('🚨 código no candidato → rechazado; decidirBotonCsg valida forma y ti
   assert.deepEqual(decidirBotonCsg(t, 'c', ['7', 'A2'], '42'), { ok: true, accion: 'c', id: 7, quien: '42', codigoDgs: 'A2' })
   assert.equal(decidirBotonCsg({ from: { id: 9 } }, 'c', ['7', 'A2'], '42').ok, false)
   for (const mal of [[], ['7'], ['7', 'A;DROP'], ['7', 'A', 'B'], ['7', '']]) assert.equal(decidirBotonCsg(t, 'c', mal, '42').ok, false, JSON.stringify(mal))
+})
+
+// ── Alta automática (19/10/2026) ───────────────────────────────────────────────────────────────────────────────
+const DIRC = [
+  { codigoDgs: 'A1', nombreComun: 'Occident', contactos: [{ email: 'viejo@occident.com' }] },
+  { codigoDgs: 'B1', nombreComun: 'Mapfre', contactos: [] },
+  { codigoDgs: 'D1', nombreComun: 'Allianz', contactos: [] },
+]
+
+test('🚨 decidirRutaAlta: exacta → auto; parcial → confirmar; ninguna → a mano; ya existe → silencio', () => {
+  assert.deepEqual(decidirRutaAlta('ana@mapfre.com', DIRC, true), { ruta: 'auto', compania: DIRC[1] })
+  assert.deepEqual(decidirRutaAlta('ana@allianztrade.com', DIRC, true), { ruta: 'confirmar' }, 'parcial: NUNCA sola')
+  assert.deepEqual(decidirRutaAlta('ana@desconocida.com', DIRC, true), { ruta: 'a_mano' })
+  assert.deepEqual(decidirRutaAlta('Viejo@Occident.com', DIRC, true), { ruta: 'existia', compania: 'Occident' }, 'mayúsculas no duplican')
+  assert.deepEqual(decidirRutaAlta('ana@mapfre.com', DIRC, false), { ruta: 'a_mano' }, 'alta no válida: nunca sola')
+  const conSinEmail = [{ codigoDgs: 'A1', nombreComun: 'Occident', contactos: [{ email: null }] }]
+  assert.notEqual(decidirRutaAlta('', conSinEmail, false).ruta, 'existia', 'email vacío no casa con contactos sin email')
+})
+
+test('deshacer: botón corto csg_u:<id>, línea del alta y callback validado (chat ajeno / forma abierta rechazados)', () => {
+  const b = botonDeshacerCsg(12)
+  assert.equal(b[0][0].callback, 'csg_u:12')
+  assert.ok(Buffer.byteLength(b[0][0].callback) <= 64)
+  assert.equal(b[0][0].texto, '↩️ Deshacer')
+  assert.equal(textoAltaAutomatica('Ana <b>', 'Mapfre'), '✅ <b>Añadido al Directorio</b>: Ana &lt;b&gt; → Mapfre')
+  assert.match(textoAltaAutomatica('Ana', 'Mapfre', true), /desactívalo en \/correduria/, 'sin deshacer guardado: se dice cómo quitarlo')
+  assert.doesNotMatch(textoAltaAutomatica('Ana', 'Mapfre'), /desactívalo/)
+  const t = { from: { id: 42 } }
+  assert.deepEqual(decidirBotonCsg(t, 'u', ['12'], '42'), { ok: true, accion: 'u', id: 12, quien: '42' })
+  assert.equal(decidirBotonCsg({ from: { id: 99 } }, 'u', ['12'], '42').ok, false, 'chat ajeno')
+  assert.equal(decidirBotonCsg(t, 'u', ['12'], undefined).ok, false, 'sin chat configurado')
+  for (const mal of ['', 'x', '0', '-3', '1;2']) assert.equal(decidirBotonCsg(t, 'u', [mal], '42').ok, false, mal)
+  assert.equal(decidirBotonCsg(t, 'u', ['12', 'extra'], '42').ok, false, 'forma cerrada: un solo argumento')
+  assert.equal(decidirBotonCsg(t, 'ok', ['12', 'extra'], '42').ok, false)
+})
+
+test('deshacer: id del contacto creado e interpretación de la respuesta (lo raro = error repetible)', () => {
+  assert.equal(idContactoCreado({ estado: 'creado', id: 'abc-123' }), 'abc-123')
+  assert.equal(idContactoCreado({ id: 7 }), null)
+  assert.equal(idContactoCreado({ id: '../x' }), null)
+  assert.equal(leerContactoIdGuardado({ contactoId: 'abc-123' }), 'abc-123')
+  assert.equal(leerContactoIdGuardado({}), null)
+  assert.equal(interpretarDeshacer(200, { estado: 'ok' }).estado, 'deshecho')
+  assert.equal(interpretarDeshacer(404, { estado: 'no_encontrado' }).estado, 'no_encontrado')
+  for (const [s, j] of [[502, { estado: 'error' }], [200, { estado: 'error' }], [500, null], [200, null]] as const) assert.equal(interpretarDeshacer(s, j).estado, 'error')
+  assert.match(lineaTrasDeshacer({ estado: 'deshecho' }), /Deshecho/)
+  assert.match(lineaTrasDeshacer({ estado: 'error' }), /No he podido deshacerlo/)
+})
+
+test('alta automática incierta: «No sé si se ha añadido», nunca «no se ha creado»', () => {
+  assert.match(lineaTrasAlta({ estado: 'error', incierto: true }), /No sé si se ha añadido/)
+})
+
+test('🚨 «desactivado» (dado de baja): ni creado ni incierto; línea con «reactívalo»', () => {
+  const r = interpretarAltaContacto(200, { estado: 'desactivado', compania: 'Mapfre' })
+  assert.deepEqual(r, { estado: 'desactivado', compania: 'Mapfre' })
+  assert.notEqual(r.estado, 'creado')
+  assert.equal((r as { incierto?: boolean }).incierto, undefined)
+  assert.match(lineaTrasAlta(r), /Estaba dado de baja en Mapfre: reactívalo en el Directorio/)
+  assert.equal(interpretarAltaContacto(500, { estado: 'desactivado' }).estado, 'error', 'solo el 200 vale')
 })
