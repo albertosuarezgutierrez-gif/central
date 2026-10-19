@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-19T11:23:44Z",
-  "sha": "0700b59454ea827ba0622e9b192023a6886e3304",
+  "generadoEn": "2026-10-19T11:55:15Z",
+  "sha": "1af260d3d53927c8b8fa2221e6689b223dd8dd50",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -177521,7 +177521,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": null,
-          "linea": 26
+          "linea": 27
         },
         {
           "nombre": "ExpedienteClient",
@@ -177529,7 +177529,7 @@
           "exportada": true,
           "params": "{ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFic",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "subir",
@@ -177537,14 +177537,14 @@
           "exportada": false,
           "params": "carpeta: string, file: File, modo: string = 'none'",
           "retorno": null,
-          "linea": 90
+          "linea": 93
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "93144e0ec2dd"
+      "hash": "415d62e0ad0b"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -177567,7 +177567,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "9f97396fb530"
+      "hash": "549abdb42af9"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/EmpleadosClient.tsx",
@@ -178547,7 +178547,7 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 6
+          "linea": 7
         },
         {
           "nombre": "DELETE",
@@ -178555,7 +178555,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 79
+          "linea": 84
         }
       ],
       "tablas": [
@@ -178563,7 +178563,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]",
-      "hash": "cb5a35087f5d"
+      "hash": "66c7ef59f632"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/route.ts",
@@ -181579,12 +181579,12 @@
           "exportada": true,
           "params": "clave: string",
           "retorno": "EntidadDef | undefined",
-          "linea": 376
+          "linea": 378
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ffa256deeb97"
+      "hash": "b63091df1c74"
     },
     {
       "ruta": "apps/rrhh/lib/informes/consultas.ts",
@@ -181685,7 +181685,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "20980eede3f8"
+      "hash": "9eab60b39f43"
     },
     {
       "ruta": "apps/rrhh/lib/informes/ejecutar.ts",
@@ -182132,6 +182132,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d4e3dab88570"
+    },
+    {
+      "ruta": "apps/rrhh/lib/matricula.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Normalización de la matrícula de la ficha del empleado. Módulo PURO. rrhh no depende de module-seguros/module-tarificacion (no se acopla un paquete a otra vertical), así que el helper vive aquí: mayúsculas, sin espacios, guiones ni puntos.",
+      "exporta": [
+        "normalizarMatriculaFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarMatriculaFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown",
+          "retorno": "string | null",
+          "linea": 6,
+          "resumen": "Matrícula normalizada para guardar, o null si queda vacía (nunca '' ni 'N/A')."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ea3ef0ca1cdd"
     },
     {
       "ruta": "apps/rrhh/lib/nomina-pdf.tsx",
@@ -224615,7 +224637,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4790,
-    "funciones": 17945
+    "archivos": 4791,
+    "funciones": 17946
   }
 }
