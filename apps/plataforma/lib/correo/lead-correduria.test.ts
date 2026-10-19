@@ -4,8 +4,8 @@ import { MEDIADOR } from '@central/module-seguros'
 import {
   CORREO_HASTA_MS, LEADS_POR_PASADA, LEAD_HASTA_MS, RE_CODIGO_POSTAL, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
   cursorTrasPasada, diferirCorreo, diferirLead, esCorreoAutomatico, esDestinoCorreduria, esLeadCorreduria, esRespuestaDeLead,
-  hoyMadrid, motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, ramoDeTexto,
-  ramoPlantilla, resolverAltaLeadCorreo, textoAvisoLeadCorreo, textoPlantillaTelegram, type LeadCorreo,
+  conocidosDelLead, datosDadosEnCorreo, hoyMadrid, motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, ramoDeTexto,
+  ramosDelTexto, resolverAltaLeadCorreo, textoAvisoLeadCorreo, textoPlantillaTelegram, type LeadCorreo,
 } from './lead-correduria.ts'
 import { destinatariosDe, referenciasDe } from './imap.ts'
 import { readFileSync } from 'node:fs'
@@ -80,8 +80,8 @@ test('🪤 lo que dice la IA se COMPRUEBA contra el correo: nada inventado entra
 
 test('IA caída o basura: tres estados, nunca un valor de cajón', () => {
   const nada = normalizarLeadCorreo(null, { texto: 'hola', from: 'x@gmail.com', fromNombre: null })
-  assert.deepEqual(nada, { nombre: null, email: 'x@gmail.com', emailRemitente: 'x@gmail.com', telefono: null, ramos: [], pidePresupuesto: null, resumen: null, esLead: null })
-  const raro = normalizarLeadCorreo({ ramos: ['otros', 'patata', 'coche'], resumen: 'null', pide_presupuesto: 'quizá' }, CTX)
+  assert.deepEqual(nada, { nombre: null, email: 'x@gmail.com', emailRemitente: 'x@gmail.com', telefono: null, ramos: [], pidePresupuesto: null, resumen: null, esLead: null, datosDados: [], referenciasCatastrales: [] })
+  const raro = normalizarLeadCorreo({ ramos: ['otros', 'patata', 'coche'], resumen: 'null', pide_presupuesto: 'quizá' }, { ...CTX, texto: 'Hola, quiero precio' })
   assert.deepEqual(raro.ramos, ['auto'], '«otros» y lo desconocido se descartan: ramo sin identificar ≠ «otros»')
   assert.equal(raro.resumen, null)
   assert.equal(raro.pidePresupuesto, null)
@@ -113,22 +113,69 @@ test('cuerpo del alta: fuente correo, actor del triaje y SIN consentimiento web'
   assert.equal(hoyMadrid(new Date('2026-10-19T10:00:00Z')), '2026-10-19')
 })
 
-test('🪤 plantilla FIJA por ramo, con pie legal de MEDIADOR y enlace RGPD', () => {
+test('🪤 petición desde el contrato único, con pie legal de MEDIADOR y enlace RGPD', () => {
   const hogar = plantillaPeticionDatos({ nombre: 'Ana Pérez', ramos: ['hogar'] }, 'COMPARATIVA')
-  assert.equal(hogar.ramo, 'hogar')
+  assert.deepEqual(hogar.ramos, ['hogar'])
   assert.equal(hogar.asunto, 'Re: COMPARATIVA')
-  for (const d of ['metros cuadrados', 'Año de construcción', 'habitual', 'continente', 'contenido', 'hipoteca']) {
+  for (const d of ['metros cuadrados', 'año de construcción', 'habitual', 'continente', 'contenido', 'dirección completa de la vivienda']) {
     assert.ok(hogar.cuerpo.toLowerCase().includes(d.toLowerCase()), `hogar sin «${d}»`)
   }
   assert.ok(hogar.cuerpo.startsWith('Hola Ana:'))
   for (const dato of [MEDIADOR.identidad.claveDgsfp, MEDIADOR.identidad.nif, MEDIADOR.identidad.domicilio, `${MEDIADOR.identidad.web}/legal/privacidad`, MEDIADOR.identidad.email]) {
     assert.ok(hogar.cuerpo.includes(dato), `el pie no lleva «${dato}» de MEDIADOR`)
   }
-  assert.ok(plantillaPeticionDatos({ nombre: null, ramos: ['vida'] }, 'x').cuerpo.includes('Fecha de nacimiento'))
-  assert.ok(plantillaPeticionDatos({ nombre: null, ramos: ['moto'] }, 'x').cuerpo.includes('Matrícula'))
+  assert.ok(plantillaPeticionDatos({ nombre: null, ramos: ['vida'] }, 'x').cuerpo.includes('Tu fecha de nacimiento'))
+  assert.ok(plantillaPeticionDatos({ nombre: null, ramos: ['moto'] }, 'x').cuerpo.includes('La matrícula de la moto'))
   assert.equal(plantillaPeticionDatos({ nombre: null, ramos: [] }, 'Re: x').asunto, 'Re: x')
-  assert.equal(ramoPlantilla(['hogar', 'auto']), 'generico', 'dos ramos: genérica, no se elige uno a ciegas')
   assert.ok(plantillaPeticionDatos({ nombre: null, ramos: [] }, 'x').cuerpo.startsWith('Hola:'))
+  assert.match(plantillaPeticionDatos({ nombre: null, ramos: [] }, 'x').cuerpo, /Qué quieres asegurar/)
+})
+
+// El lead REAL del 19/10/2026 (datos inventados; la referencia es el ejemplo público del Catastro): pidió HOGAR y VIDA,
+// la IA los detectó (ficha y dos oportunidades abiertas) y aun así la petición salió GENÉRICA, porque con dos ramos la
+// plantilla caía a «genérico».
+const CORREO_HOGAR_VIDA = `Buenas tardes,
+Quería pedir presupuesto del seguro de hogar de mi vivienda habitual en Dos Hermanas y de un seguro de vida de 90.000€
+para la hipoteca, a 30 años. Os paso la referencia catastral de la vivienda: 9872023 VH5797S 0001 WX.
+Un saludo, Luis Gómez Ruiz`
+
+test('🪤 dos ramos detectados (hogar + vida) → la petición junta los dos, nunca la genérica', () => {
+  const l = normalizarLeadCorreo(
+    { es_lead: true, nombre: 'Luis Gómez Ruiz', ramos: ['hogar', 'vida'], pide_presupuesto: true, datos: { capital: '90.000€', duracion_anios: '30 años', ocupacion: 'vivienda habitual' } },
+    { texto: CORREO_HOGAR_VIDA, from: 'luis@ejemplo.es', fromNombre: 'Luis Gómez' },
+  )
+  assert.deepEqual(l.ramos, ['hogar', 'vida'])
+  const p = plantillaPeticionDatos(l, 'Presupuesto seguros')
+  assert.doesNotMatch(p.cuerpo, /Qué quieres asegurar y para qué/, 'con los ramos claros no se pregunta qué quiere asegurar')
+  assert.match(p.cuerpo, /seguro de hogar y vida/)
+  assert.match(p.cuerpo, /De la vivienda:/)
+  assert.match(p.cuerpo, /Del seguro de vida:/)
+  assert.equal((p.cuerpo.match(/DNI o NIE/g) ?? []).length, 1, 'la persona se pregunta UNA vez')
+  // Lo que ya dio no se repite: nombre completo, capital, años, vivienda habitual y la referencia catastral.
+  assert.doesNotMatch(p.cuerpo, /nombre y tus dos apellidos/)
+  assert.doesNotMatch(p.cuerpo, /El capital que quieres asegurar/)
+  assert.doesNotMatch(p.cuerpo, /Durante cuántos años/)
+  assert.doesNotMatch(p.cuerpo, /vivienda habitual, una segunda residencia/)
+  assert.doesNotMatch(p.cuerpo, /referencia catastral/)
+  assert.deepEqual(l.referenciasCatastrales, ['9872023VH5797S0001WX'])
+})
+
+test('🪤 la IA en otra forma («Seguro de hogar», «vida (hipoteca)», «hogar y vida») o caída: los ramos salen igual', () => {
+  assert.equal(ramoDeTexto('Seguro de hogar'), 'hogar')
+  assert.equal(ramoDeTexto('Vida (hipoteca)'), 'vida')
+  assert.equal(ramoDeTexto('seguro del coche'), 'auto')
+  assert.equal(ramoDeTexto('Hogar'), 'hogar')
+  const ctx = { texto: CORREO_HOGAR_VIDA, from: 'luis@ejemplo.es', fromNombre: null }
+  assert.deepEqual(normalizarLeadCorreo({ es_lead: true, ramos: 'hogar y vida' }, ctx).ramos, ['hogar', 'vida'])
+  assert.deepEqual(normalizarLeadCorreo(null, ctx).ramos, ['hogar', 'vida'], 'IA caída: el correo los nombra sin duda')
+  assert.deepEqual(ramosDelTexto('Hola, ¿qué tal la vida? Quiero un seguro para mi coche'), ['auto'], '«vida» suelta no es un ramo')
+})
+
+test('🪤 lo que la IA dice que el correo trae se COMPRUEBA en el texto', () => {
+  assert.deepEqual(datosDadosEnCorreo({ capital: '90.000 €', duracion_anios: 30 }, CORREO_HOGAR_VIDA).sort(), ['capital', 'duracionAnios'])
+  assert.deepEqual(datosDadosEnCorreo({ capital: '150.000€', ocupacion: 'segunda residencia' }, CORREO_HOGAR_VIDA), [], 'inventado: no cuenta')
+  const c = conocidosDelLead({ nombre: 'Luis Gómez', telefono: null, email: 'l@x.es', datosDados: [], referenciasCatastrales: [] })
+  assert.ok(c.has('apellido1') && !c.has('apellido2'), 'con dos palabras falta el segundo apellido')
 })
 
 test('aviso: dice lo que se hizo y lo que NO, escapa el HTML y la plantilla va aparte', () => {
@@ -203,7 +250,7 @@ test('🪤 [2] el OTP va ANTES que el lead (salvo «código postal»), lee el fu
 })
 
 test('🪤 [3] presupuesto de tiempo: se difiere antes de pasarse, y el cursor no pasa del diferido', () => {
-  assert.ok(LEAD_HASTA_MS + 110_000 < 300_000, 'un lead empezado al límite tiene que acabar antes de los 300 s')
+  assert.ok(LEAD_HASTA_MS + 140_000 < 300_000, 'un lead empezado al límite tiene que acabar antes de los 300 s')
   assert.equal(diferirLead(0, LEADS_POR_PASADA), true)
   assert.equal(diferirLead(LEAD_HASTA_MS + 1, 0), true)
   assert.equal(diferirLead(10_000, 0), false)
@@ -214,4 +261,21 @@ test('🪤 [3] presupuesto de tiempo: se difiere antes de pasarse, y el cursor n
   const src = readFileSync(new URL('./triaje.ts', import.meta.url), 'utf8')
   assert.match(src, /cursorTrasPasada\(maxUid, uidDiferido\)/, 'el cursor del finally no usa el helper')
   assert.match(src, /diferirLead\(/)
+})
+
+test('🪤 el ECO de nuestra respuesta (BCC a hola@) se calla SOLO con nuestro From exacto y un hilo de lead (lee el fuente)', async () => {
+  const { esEcoPropioCorreduria } = await import('./lead-correduria.ts')
+  const remitentePropio = 'Grupo ASegura <hola@grupoasegura.es>'
+  assert.equal(esEcoPropioCorreduria({ from: 'hola@grupoasegura.es', remitentePropio, casaConLead: true }), true)
+  assert.equal(esEcoPropioCorreduria({ from: 'manuel@grupoasegura.es', remitentePropio, casaConLead: true }), false, 'Manuel (u otro del dominio) en el hilo de un lead NO se silencia')
+  assert.equal(esEcoPropioCorreduria({ from: 'hola@envios.grupoasegura.es', remitentePropio, casaConLead: true }), false, 'otro buzón del dominio no es nuestro remitente')
+  assert.equal(esEcoPropioCorreduria({ from: 'hola@grupoasegura.es', remitentePropio, casaConLead: false }), false, 'From nuestro sin hilo de lead: no es el eco')
+  assert.equal(esEcoPropioCorreduria({ from: 'ana@gmail.com', remitentePropio, casaConLead: true }), false, 'la respuesta del cliente sí se lee')
+  const src = readFileSync(new URL('./clasificador.ts', import.meta.url), 'utf8')
+  assert.match(src, /const remitentePropio = remitenteCorreo\(process\.env\.ASEGURA_MAIL_FROM\)/)
+  assert.match(src, /esEcoPropioCorreduria\(\{ from: correo\.from, remitentePropio, casaConLead \}\)/)
+  assert.ok(src.indexOf('esEcoPropioCorreduria({ from: correo.from, remitentePropio, casaConLead })') < src.indexOf("categoria: 'correduria-lead', confianza: 1"), 'el eco casaría con el hilo del lead')
+  const { rutaDe, CATEGORIAS_IA } = await import('./rutas.ts')
+  assert.equal(rutaDe('correduria-eco').aviso, 'ninguno')
+  assert.equal(CATEGORIAS_IA.includes('correduria-eco'), false, 'la IA no puede elegir el eco')
 })

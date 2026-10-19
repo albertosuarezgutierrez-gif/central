@@ -8,21 +8,27 @@
 //      Si el teléfono del cuerpo cae en OTRA ficha → «revisar a mano» (`resolverAltaLeadCorreo`).
 //   3. Con ficha y ramo identificado (y sin «no quiero precio» explícito): una oportunidad por ramo
 //      (`fuente:'correo'`, primer paso HOY: pedirle los datos). asegura no duplica una abierta.
-//   4. Aviso Telegram con lo que se hizo y lo que NO, y la petición de datos como texto para copiar.
-//      🚨 NADA sale hacia el lead: el envío automático está pendiente de autorización de Alberto.
+//   4. Hogar con referencia catastral VÁLIDA en el correo: Catastro → riesgo de la oportunidad (solo lo vacío) y esos
+//      datos ya no se le preguntan (`lead-correduria-pendiente.ts::catastroDeLead`; fallo = «no se sabe»).
+//   5. Aviso Telegram con lo que se hizo y lo que NO; después, la petición de datos (SOLO lo que falta, desde el
+//      contrato único) como BORRADOR con ✅ Enviar / ✏️ Editar / ❌ Descartar (19/10/2026, spec F1). 🚨 NADA sale hacia
+//      el lead sin el ✅ de Alberto; el envío va por el puerto de asegura EN SU HILO. Sin la tabla del pendiente, sin
+//      ficha propia o sin Message-ID válido, cae a la plantilla «para copiar» de antes.
 //
 // Solo se llama en modo vivo (`TRIAJE_DRY_RUN=false`). Nunca lanza: el triaje cae al aviso genérico
 // si esto devuelve `avisado:false`. Ningún dato personal pasa por `console.*`.
 import { tgAviso } from '@/lib/telegram/avisos'
 import { altaClienteAsegura, historialClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { accionOportunidadAsegura } from '@/lib/seguimiento-asegura'
+import { nombreDePila } from '@central/module-seguros'
+import { catastroDeLead, proponerPeticion, type CatastroLead } from './lead-correduria-pendiente'
 import { buscarAsegura } from '@/lib/correduria-puerto'
 import { urlFichaCliente } from '@/lib/leads-web'
 import { llamarIA } from './clasificador'
 import type { CorreoNuevo } from './imap'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 import {
-  ACTOR_TRIAJE_CORREO, PROMPT_EXTRAER_LEAD, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
+  ACTOR_TRIAJE_CORREO, PROMPT_EXTRAER_LEAD, conocidosDelLead, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
   motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, resolverAltaLeadCorreo, textoAvisoLeadCorreo,
   textoHistorialLeadCorreo, textoPlantillaTelegram,
   type FichaLeadCorreo, type LeadCorreo, type OportunidadLeadCorreo,
@@ -47,7 +53,7 @@ async function extraer(correo: CorreoNuevo): Promise<LeadCorreo> {
 }
 
 /** Una ÚNICA ficha con ese email (índice ciego, exacto). Cero o varias → `null`: no se adivina. */
-async function fichaPorEmail(email: string | null): Promise<{ id: string; nombre: string } | null> {
+export async function fichaPorEmail(email: string | null): Promise<{ id: string; nombre: string } | null> {
   if (!email) return null
   const b = await buscarAsegura(email)
   if (b.estado !== 'ok') return null
@@ -63,10 +69,11 @@ async function anotar(clienteId: string, texto: string): Promise<boolean> {
   return interpretarEscritura(h.status, h.json).estado === 'ok'
 }
 
-function leerOportunidad(status: number, json: unknown): Pick<OportunidadLeadCorreo, 'estado' | 'motivo'> {
+function leerOportunidad(status: number, json: unknown): Pick<OportunidadLeadCorreo, 'estado' | 'motivo' | 'id'> {
   const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
-  if (status === 201 && o.estado === 'ok') return { estado: 'abierta' }
-  if (status === 409 && o.estado === 'duplicada') return { estado: 'ya_abierta' }
+  const id = typeof o.id === 'string' && /^[0-9a-f-]{36}$/i.test(o.id) ? o.id : undefined
+  if (status === 201 && o.estado === 'ok') return { estado: 'abierta', ...(id ? { id } : {}) }
+  if (status === 409 && o.estado === 'duplicada') return { estado: 'ya_abierta', ...(id ? { id } : {}) }
   if (status === 429 || o.estado === 'tope') return { estado: 'tope' }
   return { estado: 'error', motivo: typeof o.motivo === 'string' ? o.motivo.slice(0, 120) : `HTTP ${status}` }
 }
@@ -110,11 +117,37 @@ export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()
       }
     }
 
+    // Catastro (hogar con referencia válida en el correo): rellena el riesgo y ya no se pregunta lo que da.
+    let catastro: CatastroLead | null = null
+    if (lead.esLead !== false && lead.ramos.includes('hogar') && lead.referenciasCatastrales?.length) {
+      const op = oportunidades.find((o) => o.ramo === 'hogar' && o.id)
+      catastro = await catastroDeLead(lead.referenciasCatastrales, op?.id ? { id: op.id, recienAbierta: op.estado === 'abierta' } : null)
+    }
+
     // La petición de datos se prepara aunque el alta haya fallado (el lead sigue esperando respuesta);
-    // no, si la IA lo lee como publicidad/proveedor.
-    const plantilla = lead.esLead === false ? null : plantillaPeticionDatos(lead, correo.subject)
-    const enviado = await tgAviso('correduria.lead-correo', textoAvisoLeadCorreo({ remitente: correo.fromRaw, asunto: correo.subject, lead, ficha, oportunidades, plantilla }))
-    if (enviado !== null && plantilla) await tgAviso('correduria.lead-correo', textoPlantillaTelegram(plantilla)).catch(() => null)
+    // no, si la IA lo lee como publicidad/proveedor. SOLO lo que falta.
+    const conocidos = new Set([...conocidosDelLead(lead), ...(catastro?.conocidos ?? [])])
+    const plantilla = lead.esLead === false ? null : plantillaPeticionDatos(lead, correo.subject, conocidos)
+    const conFicha = ficha.estado === 'nueva' || ficha.estado === 'existente' ? ficha.id : null
+    const conBoton = !!(plantilla && conFicha && lead.emailRemitente && /^<[^<>\s@]+@[^<>\s@]+>$/.test(correo.messageId))
+    const enviado = await tgAviso('correduria.lead-correo', textoAvisoLeadCorreo({
+      remitente: correo.fromRaw, asunto: correo.subject, lead, ficha, oportunidades, plantilla,
+      peticion: conBoton ? 'boton' : 'copiar', catastro: catastro?.linea ?? null,
+    }))
+    if (enviado !== null && plantilla) {
+      const propuesta = conBoton && conFicha && lead.emailRemitente
+        ? await proponerPeticion({
+            gmailMessageId: correo.messageId,
+            datos: {
+              clienteId: conFicha, oportunidadIds: oportunidades.flatMap((o) => (o.id ? [o.id] : [])), to: lead.emailRemitente,
+              asunto: plantilla.asunto, messageId: correo.messageId, references: correo.referencias ?? [],
+              pila: lead.nombre ? nombreDePila(lead.nombre) : null, ramos: lead.ramos,
+            },
+            borrador: plantilla.cuerpo, preguntas: plantilla.preguntas, catastro: catastro?.linea ?? null,
+          })
+        : null
+      if (!propuesta) await tgAviso('correduria.lead-correo', textoPlantillaTelegram(plantilla, conBoton ? 'No he podido preparar el botón de envío (¿falta el SQL del pendiente?): cópiala y contéstale tú.' : null)).catch(() => null)
+    }
     return { avisado: enviado !== null, ficha: ficha.estado }
   } catch (e) {
     console.error('[triaje] lead de correduría:', e instanceof Error ? e.name : 'error')

@@ -44,12 +44,17 @@ mapa para entenderlo y tocarlo con seguridad.
   del regex OTP. Respuestas del lead en su hilo: casan por referencias con un Message-ID `correduria-lead` de
   `correo_triaje` (`lead-correduria-hilo.ts`) → solo historial. En VIVO (`lead-correduria-proceso.ts`): la IA
   (`llamarIA`) extrae y TODO se valida contra el texto (teléfono/email/nombre que no estén en el correo → null);
-  solo `es_lead:true` da de alta (null/false → solo aviso). Las fichas se casan SOLO por el From; si el teléfono del cuerpo cae en otra ficha → «revisar a mano» (sin historial ni oportunidad). Descarta no-reply/dmarc en cualquier parte del buzón y `List-Unsubscribe`/`Auto-Submitted`/`Precedence: bulk`; el OTP va antes (salvo «código postal»). Máx. 2 leads por pasada y ninguno pasados 170 s: se difieren (fila borrada, cursor antes). Tope diario en asegura: 20 altas y 20 oportunidades con fuente correo. Alta por el MISMO puerto que la web
+  solo `es_lead:true` da de alta (null/false → solo aviso). Las fichas se casan SOLO por el From; si el teléfono del cuerpo cae en otra ficha → «revisar a mano» (sin historial ni oportunidad). Descarta no-reply/dmarc en cualquier parte del buzón y `List-Unsubscribe`/`Auto-Submitted`/`Precedence: bulk`; el OTP va antes (salvo «código postal»). Máx. 2 leads por pasada y ninguno pasados 150 s: se difieren (fila borrada, cursor antes). Tope diario en asegura: 20 altas y 20 oportunidades con fuente correo. Alta por el MISMO puerto que la web
   (`altaClienteAsegura` → `interpretarAltaLead`, `fuente:'correo'`, actor `agente:triaje-correo`, sin
   consentimiento web); ficha existente → historial `contacto`; una oportunidad por ramo (`fuente:'correo'`,
-  tope 20/día en asegura, primer paso email HOY). La petición de datos (plantilla FIJA por ramo + pie legal de
-  `MEDIADOR` + RGPD) sale como 2.º mensaje de Telegram para COPIAR: **no hay mecanismo de borradores de Gmail
-  en plataforma y NADA se envía al lead** (envío automático pendiente de autorización de Alberto).
+  tope 20/día en asegura, primer paso email HOY). **Petición de datos (19/10/2026, F1):** SOLO lo que falta, desde el
+  contrato único `contratoDatos`/`peticionDatos` de `module-seguros` (varios ramos = un bloque por ramo, la persona una
+  vez; lo que el correo ya dice y lo del Catastro no se repite) + pie legal de `MEDIADOR` + RGPD. Va como borrador con
+  ✅/✏️/❌ (`clp_*`, aviso `correduria.lead-peticion`, tabla `correduria_pendiente_tg`): **nada sale sin el ✅**; el
+  ✅ envía por el puerto de asegura (`POST /api/operador/correo/lead`) EN SU HILO, con BCC a hola@. Sin tabla, sin ficha
+  propia o sin Message-ID válido → la plantilla para COPIAR de antes. Hogar con referencia catastral válida → Catastro
+  al riesgo (solo lo vacío). El eco de esa BCC (From de la correduría + referencias) es `correduria-eco`: solo por
+  regla, sin aviso ni historial.
   `leads-negocio` es SOLO ia-rest/ialimp.
 - **Huéspedes → SIVRA:** `lib/correo/huespedes.ts` — resuelve el nº de confirmación de Booking a
   bookingId de Smoobu y llama a `procesarMensajeHuesped` (el agente de huéspedes ya existente).

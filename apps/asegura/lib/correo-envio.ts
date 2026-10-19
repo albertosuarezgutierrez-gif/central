@@ -10,6 +10,7 @@ import { conMarcaCorreo, remitenteCorreo } from '@central/module-seguros'
 import { registrarEnvioCorreo } from './correo-seguimiento'
 import { sinCorreos } from './recaptacion-email'
 import { etiquetaTipo } from './correo-eventos'
+import { asuntoEnvio, cabecerasHilo, direccionSimple, type EnRespuestaA } from './correo-hilo'
 
 export type CorreoCliente = {
   correduriaId: string
@@ -25,6 +26,18 @@ export type CorreoCliente = {
   /** Opcional: hay correos (cartas a compañías) que salen solo en texto. */
   html?: string
   adjuntos?: AdjuntoCorreo[]
+  /**
+   * Responder EN EL HILO de un correo del cliente (19/10/2026): `In-Reply-To`/`References` y asunto «Re: …». Un
+   * Message-ID sin forma válida no rompe el envío: sale como correo nuevo (`correo-hilo.ts`).
+   */
+  enRespuestaA?: EnRespuestaA
+  /** Copia oculta a UNA dirección propia (p. ej. hola@, para que la respuesta quede en el Gmail de la correduría). */
+  copiaOculta?: string
+  /**
+   * Clave de idempotencia (Resend `Idempotency-Key`, 24 h): el mismo envío pedido dos veces sale una. Solo protege el
+   * camino de Resend; por SMTP no hay equivalente y la idempotencia la pone quien llama.
+   */
+  idempotencia?: string
 }
 
 export type AdjuntoCorreo = { nombre: string; contenido: string | Buffer; tipo: string }
@@ -35,7 +48,11 @@ export type ResultadoCorreoCliente = 'enviado' | 'sin_proveedor' | 'rechazado'
  * El resultado con el motivo CRUDO del proveedor, para los remitentes que distinguen «dominio sin
  * verificar», «se cortó y pudo salir» o el código SMTP. `motivo` nunca lleva direcciones.
  */
-export type EnvioDetallado = { resultado: ResultadoCorreoCliente; motivo?: string; codigo?: string }
+export type EnvioDetallado = {
+  resultado: ResultadoCorreoCliente; motivo?: string; codigo?: string
+  /** `true` = Resend devolvió un id que YA estaba en `correo_envio`: reintento deduplicado por la clave de idempotencia. */
+  repetido?: boolean
+}
 
 export async function enviarCorreoCliente(c: CorreoCliente, fetchImpl: typeof fetch = fetch): Promise<ResultadoCorreoCliente> {
   return (await enviarCorreoSeguido(c, fetchImpl)).resultado
@@ -48,7 +65,11 @@ function contenidoBase64(a: AdjuntoCorreo): string {
 export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fetch = fetch): Promise<EnvioDetallado> {
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
-  const base = { correduriaId: c.correduriaId, clienteId: c.clienteId, polizaId: c.polizaId ?? null, tipo: c.tipo, asunto: c.asunto, destino: c.to }
+  const hilo = cabecerasHilo(c.enRespuestaA)
+  // «Re:» solo si de verdad sale en el hilo: con un Message-ID sin forma sale como correo nuevo, con su asunto.
+  const asunto = asuntoEnvio(c.asunto, c.enRespuestaA)
+  const bcc = direccionSimple(c.copiaOculta)
+  const base = { correduriaId: c.correduriaId, clienteId: c.clienteId, polizaId: c.polizaId ?? null, tipo: c.tipo, asunto, destino: c.to }
   const apiKey = process.env.RESEND_API_KEY?.trim()
   // La marca va en el punto único: un correo nuevo la lleva sin que su plantilla se acuerde.
   const html = c.html ? conMarcaCorreo(c.html) : undefined
@@ -56,9 +77,11 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
   if (apiKey) {
     try {
       const cuerpo = JSON.stringify({
-        from, to: c.to, subject: c.asunto, text: c.texto,
+        from, to: c.to, subject: asunto, text: c.texto,
         ...(html ? { html } : {}),
         ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(bcc ? { bcc } : {}),
+        ...(hilo ? { headers: { 'In-Reply-To': hilo.inReplyTo, References: hilo.references.join(' ') } } : {}),
         ...(c.adjuntos?.length
           ? { attachments: c.adjuntos.map((a) => ({ filename: a.nombre, content: contenidoBase64(a), content_type: a.tipo })) }
           : {}),
@@ -70,7 +93,10 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
       for (let intento = 1; ; intento++) {
         res = await fetchImpl('https://api.resend.com/emails', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+          headers: {
+            Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json',
+            ...(c.idempotencia ? { 'Idempotency-Key': c.idempotencia.slice(0, 256) } : {}),
+          },
           body: cuerpo,
           signal: AbortSignal.timeout(15_000),
         })
@@ -85,8 +111,8 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
         await registrarEnvioCorreo({ ...base, resendId: null, proveedor: 'resend_api', estado: 'fallido', error: motivo })
         return { resultado: 'rechazado', motivo, codigo: String(res.status) }
       }
-      await registrarEnvioCorreo({ ...base, resendId: json.id, proveedor: 'resend_api', estado: 'enviado' })
-      return { resultado: 'enviado' }
+      const registro = await registrarEnvioCorreo({ ...base, resendId: json.id, proveedor: 'resend_api', estado: 'enviado' })
+      return { resultado: 'enviado', ...(registro === 'repetido' ? { repetido: true } : {}) }
     } catch (e) {
       const motivo = e instanceof Error ? e.message : String(e)
       console.error(`[correo-envio] fallo de red con Resend («${c.tipo}»):`, motivo)
@@ -102,7 +128,9 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
   if (!transporter) return { resultado: 'sin_proveedor' }
   try {
     await transporter.sendMail({
-      from, to: c.to, ...(replyTo ? { replyTo } : {}), subject: c.asunto, text: c.texto,
+      from, to: c.to, ...(replyTo ? { replyTo } : {}), subject: asunto, text: c.texto,
+      ...(bcc ? { bcc } : {}),
+      ...(hilo ? { inReplyTo: hilo.inReplyTo, references: hilo.references } : {}),
       ...(html ? { html } : {}),
       ...(c.adjuntos?.length ? { attachments: c.adjuntos.map((a) => ({ filename: a.nombre, content: a.contenido, contentType: a.tipo })) } : {}),
     })

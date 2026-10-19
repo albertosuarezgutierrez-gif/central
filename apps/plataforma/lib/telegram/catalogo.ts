@@ -747,8 +747,14 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correduria.lead-correo', categoria: 'correduria',
     titulo: 'Lead nuevo por correo (hola@)',
-    que: 'Alguien escribe a hola@grupoasegura.es pidiendo un seguro: qué quiere, la ficha (nueva o la que ya tenía), las oportunidades abiertas y la petición de datos lista para copiar. Nunca se le envía nada.',
+    que: 'Alguien escribe a hola@grupoasegura.es pidiendo un seguro: qué quiere, la ficha (nueva o la que ya tenía), las oportunidades abiertas y lo que dio el Catastro. Si no se puede preparar el botón de envío, la petición de datos llega aquí para copiar. Nunca se le envía nada desde este aviso.',
     cuando: 'Al llegar el correo (revisión cada 10 min)',
+  },
+  {
+    id: 'correduria.lead-peticion', categoria: 'correduria',
+    titulo: 'Petición de datos al lead (✅ Enviar / ✏️ Editar / ❌ Descartar)',
+    que: 'El borrador de respuesta al lead de hola@ con SOLO los datos que faltan. Sale al cliente, en el hilo de su correo y desde hola@, únicamente si pulsas ✅; ✏️ te deja corregir el texto; caduca a los 7 días.',
+    cuando: 'Justo después del aviso del lead nuevo por correo',
   },
   {
     id: 'correduria.aviso-web', categoria: 'correduria',
