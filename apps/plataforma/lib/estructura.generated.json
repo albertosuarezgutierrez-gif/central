@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-19T07:39:58Z",
+  "generadoEn": "2026-10-19T09:03:11Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -989,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 20
+        "evidencias": 22
       },
       "rrhh": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 199
+        "evidencias": 201
       },
       "rrhh": {
         "estado": "no",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 58
       },
       "asegura-portal": {
         "estado": "no",
@@ -4227,6 +4227,7 @@
       "/api/operador/tarificador/bandeja",
       "/api/operador/tarificador/bandeja/[id]",
       "/api/operador/tarificador/coberturas",
+      "/api/operador/tarificador/codigo-sms",
       "/api/operador/tarificador/emision",
       "/api/operador/tarificador/emision/autorizar",
       "/api/operador/tarificador/emision/avisos",
@@ -4278,6 +4279,8 @@
       "/api/portal/solicitud-datos/documento",
       "/api/publico/campana/baja",
       "/api/publico/recaptacion/baja",
+      "/api/tarificador/codigo-sms",
+      "/api/tarificador/codigo-sms/[trabajo]",
       "/api/tarificador/emision/canje",
       "/api/tarificador/emision/resultado",
       "/api/tarificador/explorador/cierre",
@@ -5377,6 +5380,7 @@
       "/api/cron/subastas-ingesta",
       "/api/cron/subastas-mercado",
       "/api/cron/subastas-radar",
+      "/api/cron/tarificador-codigo-sms",
       "/api/cron/tarificador-verificacion",
       "/api/cron/trading-backtest",
       "/api/cron/trading-cohetes-rebalanceo",
@@ -5893,6 +5897,7 @@
       "seguros.tarificador_acompanamiento",
       "seguros.tarificador_atascos",
       "seguros.tarificador_coberturas_presupuesto",
+      "seguros.tarificador_codigos_sms",
       "seguros.tarificador_conocimiento",
       "seguros.tarificador_elecciones",
       "seguros.tarificador_exploracion_pasos",
@@ -6929,7 +6934,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1722,
+    "apis": 1726,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
