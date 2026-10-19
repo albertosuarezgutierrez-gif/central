@@ -170,6 +170,8 @@ export const CATALOGO: EntidadDef[] = [
       { clave: 'grupo_cotizacion', etiqueta: 'Grupo de cotización', tipo: 'texto' },
       { clave: 'tipo_contrato', etiqueta: 'Tipo de contrato', tipo: 'texto' },
       { clave: 'tipo_jornada', etiqueta: 'Jornada', tipo: 'texto' },
+      { clave: 'coche', etiqueta: 'Coche', tipo: 'texto' },
+      { clave: 'matricula', etiqueta: 'Matrícula', tipo: 'texto' },
       { clave: 'centro_trabajo', etiqueta: 'Centro de trabajo', tipo: 'texto' },
       { clave: 'localidad', etiqueta: 'Localidad', tipo: 'texto' },
       { clave: 'provincia', etiqueta: 'Provincia', tipo: 'texto' },

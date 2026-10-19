@@ -1343,7 +1343,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Telegram: `csg_ok:<id>`/`csg_no:<id>`; sugerencia guardada en `correduria_pendiente_tg` (tipo `contacto_sugerido`, CHECK ya ampliado en prod).
 - Alta nueva en asegura `POST /api/operador/companias/contacto` (idempotente por email, nunca crea compañías). Compañía por dominio (`inferirCompania`, ambiguo → «añádelo a mano»).
 - Buzones genéricos (p. ej. Occident «Soporte Operativo Corredores Centro Sur») → cargo «Buzón genérico / departamento». Solo acepta pulsación del chat de Alberto.
-- Fase 2 posible: elegir compañía con botones cuando el dominio no casa.
+- Ambigua (2-3 candidatas) → botón por compañía (`csg_c`); alta incierta ≠ no creada; email/nombre purgados al cerrar.
+
+## (19/10/2026) rrhh · coche y matrícula en la ficha del empleado (petición de Pilar)
+- Campos opcionales `coche` (texto libre) y `matricula` en `rrhh.empleados`; un coche por empleado. Migración `0022_ficha_vehiculo.sql` **ya aplicada a mano** en producción (rrhh no tiene runner de migraciones).
+- Edita solo el admin/responsable en `/admin/empleados/[id]`; el empleado no los ve (el portal `/e` no tiene ficha de datos). Matrícula normalizada con `lib/matricula.ts` (helper propio: no acoplar rrhh a module-seguros). Columnas opcionales en `/admin/informes`.
 
 ## (18/10/2026) Correduría · ficha cliente: Llamar/WhatsApp, prima en Oportunidades, Documentos e Historial
 - Cabecera: `BotonesContacto` (Llamar + WhatsApp, 44 px; nada sin teléfono ni con el canal de la correduría).

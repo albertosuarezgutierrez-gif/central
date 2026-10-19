@@ -171,26 +171,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 344 | 52.167 | 43.978.088 | 0 | 0 |
-| `otro` | 339 | 12.272 | 29.287.733 | 18.419.942 | 0 |
-| `lectura-directa` | 293 | 8.430 | 26.087.174 | 0 | 0 |
-| `mcp:github` | 296 | 6.884 | 5.386.982 | 54.303.811 | 96 |
-| `sql` | 213 | 5.031 | 2.533.692 | 2.351.230 | 18 |
-| `escritura` | 217 | 4.749 | 70.106.461 | 0 | 0 |
+| `bash` | 344 | 52.292 | 44.120.760 | 0 | 0 |
+| `otro` | 339 | 12.294 | 29.326.651 | 18.424.117 | 0 |
+| `lectura-directa` | 293 | 8.455 | 26.128.048 | 0 | 0 |
+| `mcp:github` | 296 | 6.890 | 5.387.128 | 54.303.811 | 96 |
+| `sql` | 213 | 5.032 | 2.534.958 | 2.351.230 | 18 |
+| `escritura` | 217 | 4.763 | 70.168.086 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 49 | 1.225 | 1.291.843 | 0 | 72 |
 | `mcp:Booking-com` | 43 | 1.205 | 4.955.626 | 0 | 0 |
 | `mcp:Vercel` | 72 | 942 | 1.048.212 | 204.477 | 30 |
-| `agente:general-purpose` | 109 | 762 | 459.841 | 13.860.957 | 0 |
-| `mcp:claude-code-remote` | 46 | 488 | 47.829 | 20.519 | 0 |
+| `agente:general-purpose` | 109 | 764 | 460.776 | 13.865.966 | 0 |
+| `mcp:claude-code-remote` | 46 | 492 | 48.012 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
 | `mcp:Google_Drive` | 23 | 389 | 425.642 | 0 | 47 |
 | `mcp:Supabase` | 126 | 378 | 60.658 | 5.123 | 7 |
-| `agente:agente-architect` | 66 | 299 | 210.096 | 7.824.944 | 0 |
+| `agente:agente-architect` | 66 | 301 | 211.486 | 7.860.028 | 0 |
 | `mcp:Google-Drive` | 25 | 143 | 133.450 | 0 | 2 |
 | `agente:agente-mecanico` | 48 | 124 | 74.810 | 7.013.978 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
-| `agente:rastreador-codigo` | 50 | 89 | 28.498 | 1.245.920 | 0 |
+| `agente:rastreador-codigo` | 50 | 90 | 28.759 | 1.258.328 | 0 |
 | `agente:Explore` | 36 | 79 | 38.546 | 2.139.396 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:Resend` | 8 | 70 | 42.582 | 0 | 0 |
