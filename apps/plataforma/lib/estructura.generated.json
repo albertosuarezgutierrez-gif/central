@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-19T09:03:11Z",
+  "generadoEn": "2026-10-19T10:33:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -449,7 +449,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "no",
@@ -989,7 +989,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 22
+        "evidencias": 27
       },
       "rrhh": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 257
+        "evidencias": 262
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 201
+        "evidencias": 208
       },
       "rrhh": {
         "estado": "no",
@@ -2257,7 +2257,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 60
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 58
+        "evidencias": 59
       },
       "asegura-portal": {
         "estado": "no",
@@ -3975,7 +3975,8 @@
     "module-seguros": [
       "core-ai",
       "module-seguros-pii",
-      "module-seguros-portal"
+      "module-seguros-portal",
+      "module-tarificacion"
     ],
     "module-seguros-pii": [
       "core-identity"
@@ -4136,9 +4137,12 @@
       "/api/operador/companias/contacto/[id]",
       "/api/operador/companias/productividad",
       "/api/operador/contactos-movil",
+      "/api/operador/correo/adjunto",
       "/api/operador/correo/evento",
       "/api/operador/correo/evento/reevaluar",
+      "/api/operador/correo/lead",
       "/api/operador/correo/resolver",
+      "/api/operador/correo/respuesta-lead",
       "/api/operador/declaradas-vencer",
       "/api/operador/direccion/confirmar",
       "/api/operador/documentos",
@@ -5825,6 +5829,8 @@
       "seguros.companias_integracion",
       "seguros.consent_logs",
       "seguros.conversaciones",
+      "seguros.correduria_adjunto",
+      "seguros.correduria_hilo",
       "seguros.corredurias",
       "seguros.correo_envio",
       "seguros.correo_evento",
@@ -6113,6 +6119,7 @@
       "correduria_avisos_renovacion",
       "correduria_bots_propuesta",
       "correduria_dni_otp",
+      "correduria_pendiente_tg",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -6934,7 +6941,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1726,
+    "apis": 1729,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
