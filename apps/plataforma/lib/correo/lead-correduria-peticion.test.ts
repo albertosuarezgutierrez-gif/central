@@ -74,7 +74,7 @@ test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotenci
 
 test('🪤 un pendiente CERRADO (enviado, descartado, caducado) se purga: sin email, asunto, nombre ni texto (lee el fuente)', async () => {
   const { CLAVES_PII_PENDIENTE } = await import('./lead-correduria-peticion.ts')
-  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'pila', 'to'])
+  assert.deepEqual([...CLAVES_PII_PENDIENTE].sort(), ['asunto', 'email', 'nombre', 'pila', 'to'])
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8').replace(/\s+/g, ' ')
   assert.match(src, /const PURGA = Prisma\.sql`datos = datos - \$\{\[\.\.\.CLAVES_PII_PENDIENTE\]\}::text\[\], borrador = ''`/)
   const cierres = [...src.matchAll(/UPDATE correduria_pendiente_tg SET estado = '(descartado|caducado)'[^`]*/g)]

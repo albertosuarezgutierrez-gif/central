@@ -22,7 +22,7 @@ export const AVISO_PETICION_LEAD = 'correduria.lead-peticion'
  * Claves de `datos` con dato personal: el email del lead, el asunto de su correo y su nombre de pila. Al CERRAR el
  * pendiente (enviado, descartado o caducado) se borran junto con el borrador; quedan ids y estado.
  */
-export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila'] as const
+export const CLAVES_PII_PENDIENTE = ['to', 'asunto', 'pila', 'email', 'nombre'] as const
 
 /**
  * Qué se PURGA al cerrar un pendiente (revisión F3a, 19/10/2026). Lo ENVIADO/descartado/caducado pierde todo lo personal y
