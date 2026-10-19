@@ -36,6 +36,8 @@ export type DatosPeticion = {
   /** Para el mensaje de Telegram: nombre de pila (o null), ramos y nº de preguntas. Sin apellidos ni contacto. */
   pila: string | null
   ramos: string[]
+  /** F1 petición (por defecto) o F2 repregunta (solo lo que falta, tras leer su respuesta). */
+  tipo?: 'peticion' | 'repregunta'
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -52,6 +54,7 @@ export function leerDatosPeticion(v: unknown): DatosPeticion | null {
   return {
     clienteId: s(o.clienteId), oportunidadIds: ops, to: s(o.to), asunto: s(o.asunto), messageId: s(o.messageId), references: refs,
     pila: typeof o.pila === 'string' ? o.pila : null, ramos: Array.isArray(o.ramos) ? o.ramos.filter((x): x is string => typeof x === 'string') : [],
+    ...(o.tipo === 'repregunta' ? { tipo: 'repregunta' as const } : {}),
   }
 }
 
@@ -69,16 +72,23 @@ const RAMO_LEGIBLE = (r: string) => r.replace(/_/g, ' ')
  * entero va plegado. `catastro`: la línea del Catastro (ya en HTML seguro) si se consultó. PURA.
  */
 export function textoBorradorTelegram(a: {
-  id: number | string; datos: Pick<DatosPeticion, 'pila' | 'ramos' | 'asunto'>; borrador: string; preguntas: number | null
+  id: number | string; datos: Pick<DatosPeticion, 'pila' | 'ramos' | 'asunto' | 'tipo'>; borrador: string; preguntas: number | null
   editado?: boolean; catastro?: string | null
+  /** F2: el resumen de lo que contestó (HTML seguro, `textoRespuestaTelegram`); sustituye a la cabecera. */
+  resumen?: string | null
 }): string {
   const quien = a.datos.pila ? escapeHtml(a.datos.pila) : 'sin nombre'
   const ramos = a.datos.ramos.length ? escapeHtml(a.datos.ramos.map(RAMO_LEGIBLE).join(', ')) : 'ramo sin identificar'
+  const repregunta = a.datos.tipo === 'repregunta'
   const lineas = [
-    `📨 <b>Lead · ${quien} · ${ramos}</b> (${escapeHtml(MEDIADOR.identidad.email)})`,
+    a.resumen ?? (repregunta
+      ? `📥 <b>Repregunta · ${quien} · ${ramos}</b> (${escapeHtml(MEDIADOR.identidad.email)})`
+      : `📨 <b>Lead · ${quien} · ${ramos}</b> (${escapeHtml(MEDIADOR.identidad.email)})`),
     a.editado
       ? '✏️ Borrador EDITADO por ti. Se responde EN SU HILO.'
-      : `Propongo responderle EN SU HILO${a.preguntas !== null ? ` pidiéndole ${a.preguntas} ${a.preguntas === 1 ? 'dato' : 'datos'}` : ''} (borrador abajo). No sale nada sin ✅.`,
+      : repregunta
+        ? `Propongo repreguntarle EN SU HILO solo lo que falta${a.preguntas !== null ? ` (${a.preguntas} ${a.preguntas === 1 ? 'pregunta' : 'preguntas'})` : ''} (borrador abajo). No sale nada sin ✅.`
+        : `Propongo responderle EN SU HILO${a.preguntas !== null ? ` pidiéndole ${a.preguntas} ${a.preguntas === 1 ? 'dato' : 'datos'}` : ''} (borrador abajo). No sale nada sin ✅.`,
   ]
   if (a.catastro) lineas.push(a.catastro)
   lineas.push(`<blockquote expandable>${escapeHtml(`Asunto: ${a.datos.asunto}\n\n${a.borrador}`.slice(0, 3300))}</blockquote>`)

@@ -67,11 +67,12 @@ function conTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
 // Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM,
 // que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay
 // GROQ_API_KEY o Groq falla. Lanza si ambos fallan (el llamador lo trata como 'dudoso').
-export async function llamarIA(system: string, user: string): Promise<string> {
+// `maxTokens`: 400 basta para clasificar; la lectura de la respuesta de un lead (F2) pide más (un JSON con citas).
+export async function llamarIA(system: string, user: string, maxTokens = 400): Promise<string> {
   const groqKey = process.env.GROQ_API_KEY
   if (groqKey) {
     try {
-      return await conTimeout(groqText({ apiKey: groqKey }, system, user, 400), 15_000)
+      return await conTimeout(groqText({ apiKey: groqKey }, system, user, maxTokens), 15_000)
     } catch (e) {
       console.warn('[triaje/clasif] Groq falló, pruebo NIM:', String(e).slice(0, 120))
     }

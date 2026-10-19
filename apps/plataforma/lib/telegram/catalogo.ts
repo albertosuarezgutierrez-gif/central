@@ -757,6 +757,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Justo después del aviso del lead nuevo por correo',
   },
   {
+    id: 'correduria.lead-respuesta', categoria: 'correduria',
+    titulo: 'Respuesta del lead leída (y repregunta ✅ / ✏️ / ❌)',
+    que: 'El cliente contesta en el hilo de su lead: qué datos ha dado (solo los nombres de los datos, nunca los valores), cuáles no valen o no cuadran con lo que ya había, qué falta y si dejó adjuntos (se guardan cifrados, sin leer). Si falta algo, el borrador de repregunta con SOLO eso, que sale únicamente si pulsas ✅; si está todo, «listo para tarificar».',
+    cuando: 'Al llegar su respuesta (revisión cada 10 min)',
+  },
+  {
     id: 'correduria.aviso-web', categoria: 'correduria',
     titulo: 'Aviso de vencimiento confirmado desde la web',
     que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',

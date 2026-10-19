@@ -102,18 +102,22 @@ export async function catastroDeLead(referencias: readonly string[], hogar: { id
  */
 export async function proponerPeticion(a: {
   gmailMessageId: string; datos: DatosPeticion; borrador: string; preguntas: number; catastro: string | null
+  /** F2: el resumen de su respuesta (HTML seguro) encabeza el borrador de la repregunta. */
+  resumen?: string | null
 }): Promise<{ id: number; nuevo: boolean } | null> {
   await purgarCaducados()
+  // La repregunta (F2) es otra fila (`tipo`), con su propio «un correo = un pendiente».
+  const tipo = a.datos.tipo === 'repregunta' ? 'repregunta' : 'peticion_datos'
   let id: number
   try {
     const filas = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
       INSERT INTO correduria_pendiente_tg (tipo, gmail_message_id, datos, borrador)
-      VALUES ('peticion_datos', ${a.gmailMessageId}, ${JSON.stringify(a.datos)}::jsonb, ${a.borrador})
+      VALUES (${tipo}, ${a.gmailMessageId}, ${JSON.stringify(a.datos)}::jsonb, ${a.borrador})
       ON CONFLICT (gmail_message_id, tipo) DO NOTHING
       RETURNING id`)
     if (!filas.length) {
       const ya = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
-        SELECT id FROM correduria_pendiente_tg WHERE gmail_message_id = ${a.gmailMessageId} AND tipo = 'peticion_datos'`)
+        SELECT id FROM correduria_pendiente_tg WHERE gmail_message_id = ${a.gmailMessageId} AND tipo = ${tipo}`)
       return ya.length ? { id: Number(ya[0].id), nuevo: false } : null
     }
     id = Number(filas[0].id)
@@ -121,8 +125,10 @@ export async function proponerPeticion(a: {
     console.error('[triaje] pendiente de la petición (¿falta el SQL 2026-10-19b?):', e instanceof Error ? e.name : 'error')
     return null
   }
-  const texto = textoBorradorTelegram({ id, datos: a.datos, borrador: a.borrador, preguntas: a.preguntas, catastro: a.catastro })
-  const msg = await tgAvisoBotones('correduria.lead-peticion', texto, botonesPeticion(id)).catch(() => null)
+  const texto = textoBorradorTelegram({ id, datos: a.datos, borrador: a.borrador, preguntas: a.preguntas, catastro: a.catastro, resumen: a.resumen ?? null })
+  const msg = tipo === 'repregunta'
+    ? await tgAvisoBotones('correduria.lead-respuesta', texto, botonesPeticion(id)).catch(() => null)
+    : await tgAvisoBotones('correduria.lead-peticion', texto, botonesPeticion(id)).catch(() => null)
   if (msg === null) {
     // Sin botón en Telegram nadie puede aprobarlo: se cierra para que no quede un pendiente fantasma.
     await prisma.$executeRaw(Prisma.sql`
@@ -173,7 +179,7 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>): P
   const r = await peticionLeadAsegura({
     clienteId: datos.clienteId, oportunidadIds: datos.oportunidadIds, to: datos.to, asunto: datos.asunto, texto: filas[0].borrador,
     enRespuestaA: { messageId: datos.messageId, references: datos.references }, idempotencia: `clp-${d.id}`,
-    actor: actorTelegram(d.quien),
+    actor: actorTelegram(d.quien), ...(datos.tipo === 'repregunta' ? { tipo: 'repregunta' } : {}),
   }).catch(() => ({ status: 502, json: { motivo: 'red' } }))
   const res = interpretarEnvioPeticion(r.status, r.json)
   await cerrar(d.id, res.estado === 'enviado' ? 'enviado' : res.estado === 'no_enviado' ? 'fallido' : 'incierto', res)
