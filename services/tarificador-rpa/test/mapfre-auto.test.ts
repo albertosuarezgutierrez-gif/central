@@ -635,3 +635,21 @@ test('v0.8.7 moto: el plan sale (ya no es hueco de mapa); sin clase de permiso �
   assert.throws(() => clasePermisoNsei({ ramo: 'moto', clasePermiso: 'b' }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
   assert.deepEqual(clasePermisoNsei({ ramo: 'auto', clasePermiso: null }), { clase: null, supuesto: null }, 'coche: sin supuesto (pendiente, como siempre)')
 })
+
+// ───────────────────────── v0.8.8 · nunca «la primera» ─────────────────────────
+import { indiceFilaVehiculoMapfre as indiceFilaMapfre88, opcionesFilasVehiculo } from '../src/adapters/mapfre/auto.ts'
+
+test('v0.8.8 · opcionesFilasVehiculo: una opción por fila con denominación · CV · cc · fecha; la etiqueta elegida vuelve y casa EXACTA con una sola fila', () => {
+  const filas = [
+    { denominacion: 'MARCA X 1.6 TDI', cvKw: '90', cc: '1598', puertas: '5', fechaInicio: '01/2018' },
+    { denominacion: 'MARCA X 1.6 TDI', cvKw: '115', cc: '1598', puertas: '5', fechaInicio: '01/2019' },
+    { denominacion: 'MARCA X 2.0 TDI', cvKw: '150', cc: '1968', puertas: '5', fechaInicio: '01/2019' },
+  ]
+  const ops = opcionesFilasVehiculo(filas)
+  assert.deepEqual(ops.map((o) => o.etiqueta), ['MARCA X 1.6 TDI · 90 CV · 1598 cc · 01/2018', 'MARCA X 1.6 TDI · 115 CV · 1598 cc · 01/2019', 'MARCA X 2.0 TDI · 150 CV · 1968 cc · 01/2019'])
+  assert.equal(indiceFilaMapfre88(filas, null), null, 'sin dato: no se elige (nunca la primera)')
+  assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X' } }), null, 'marca+modelo casan con las 3: ambiguo')
+  assert.equal(indiceFilaMapfre88(filas, { eleccionVersion: { codigo: null, etiqueta: ops[1]!.etiqueta } }), 1, 'la etiqueta de la bandeja distingue la fila')
+  assert.equal(indiceFilaMapfre88(filas, { seleccionVehiculo: { marca: 'MARCA', modelo: 'X', cilindradaCc: 1968 } }), 2, 'una única candidata por cilindrada: inequívoca')
+  assert.equal(mapfreAuto.version, '0.8.8')
+})

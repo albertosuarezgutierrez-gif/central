@@ -1,3 +1,6 @@
+// v0.6.17 / Moto v0.7.1 (19/10/2026, decisión de Alberto: «la primera» puede dar el precio de otro coche): se REVOCA la elección de
+// «el primero de la lista» (tarjetas y `<select>` de Turismos, `<select>` de Moto). Solo se elige si es inequívoco (elección de la bandeja,
+// vehículo confirmado o riesgo que casan con UNA); si no, `ErrorEleccionVersion` (requiere_humano) con el texto exacto de cada versión.
 // v0.6.16 (19/10/2026, mismo trabajo 02fd821b; el inventario de «Antecedentes» solo traía «Compañía actual del vehículo» y «Fecha de inicio del seguro»):
 // las 3 preguntas (tiempo en la compañía, partes culpables, tiempo como titular) y los 5 dígitos de la póliza NO existen hasta elegir la
 // compañía y Angular las pinta tarde: tras elegirla se espera (≤6 s, solo lectura) a que suba el nº de opciones marcables antes de contestarlas, en
@@ -346,12 +349,10 @@ export function eleccionVersionEfectiva(lectura: Pick<LecturaVehiculoPortal, 've
   return eleccionVersionConOrigen(lectura, form).eleccion
 }
 
-// ───────────────────────── MOTO: versión por similitud (v0.7.0, 18/10/2026) ─────────────────────────
-// Decisión de Alberto (la misma de Mapfre 0.8.6): la versión NO bloquea. Con varias versiones en el desplegable y sin elección
-// explícita, se casa con lo que trae el riesgo (marca/modelo/descripción de `seleccionVehiculo`, normalizado) y la cilindrada.
-
-/** Prefijo del supuesto declarado cuando la versión se elige por parecido entre varias. */
-export const SUPUESTO_VERSION_SIMILITUD_MOTO = 'versión elegida por similitud'
+// ───────────────────────── MOTO: versión por regla fija (v0.7.1, 19/10/2026) ─────────────────────────
+// Decisión de Alberto (19/10/2026): NUNCA «la primera» (v0.7.0 lo hacía y podía dar el precio de otra moto). Con varias versiones en
+// el desplegable y sin elección explícita, se elige SOLO si es inequívoco (una única candidata que case con marca/modelo/descripción
+// del riesgo y su cilindrada, o una única de la cilindrada del riesgo); ambiguo → `ErrorEleccionVersion` (requiere_humano).
 
 const normalizarVersion = (t: string): string =>
   t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/C\.\s*C\.?/g, 'CC').replace(/[^A-Z0-9]+/g, ' ').trim()
@@ -360,16 +361,16 @@ const tokensVersion = (t: string): string[] => normalizarVersion(t).split(' ').f
 const cilindradasDe = (etiqueta: string): number[] => [...normalizarVersion(etiqueta).matchAll(/\b(\d{2,4}) ?CC\b/g)].map((m) => Number(m[1]))
 
 /**
- * Elección AUTOMÁTICA de la versión de moto. Pura. Orden: (1) opciones cuyas palabras (sin la cilindrada) están TODAS en
- * marca + modelo + descripción del riesgo; (2) de ellas, las de la cilindrada del riesgo (si filtrar no deja ninguna, se
- * conservan); (3) una sola → esa, sin supuesto; varias → la primera, DECLARADA («… (supuesto, había N)», N = las que casaban);
- * (4) ninguna casa → la primera de la cilindrada del riesgo o, si tampoco hay, la primera de la lista, DECLARADA con N =
- * todas. `null` = no hace falta elegir (0 o 1 opciones). Sin datos personales en el supuesto (solo el recuento).
+ * Elección AUTOMÁTICA de la versión de moto. Pura, sin «la primera». Orden: (1) opciones cuyas palabras (sin la cilindrada) están
+ * TODAS en marca + modelo + descripción del riesgo; (2) de ellas, las de la cilindrada del riesgo (si filtrar no deja ninguna, se
+ * conservan); (3) UNA sola → `unica`; varias → `ambigua` con ESAS (las que casan; el texto exacto de cada una); (4) ninguna casa
+ * por palabras: si la cilindrada del riesgo deja UNA sola → esa; si no → `ambigua` con todas. `null` = no hace falta elegir
+ * (0 o 1 opciones).
  */
 export function eleccionVersionMotoPorSimilitud(
   versiones: readonly CandidatoVersion[],
   sel: Pick<SeleccionVehiculo, 'marca' | 'modelo' | 'cilindradaCc' | 'descripcion'> | null | undefined,
-): { eleccion: EleccionVersion; supuesto: string | null } | null {
+): { tipo: 'unica'; eleccion: EleccionVersion } | { tipo: 'ambigua'; opciones: CandidatoVersion[] } | null {
   const ops = versiones.filter((v) => !esOpcionVacia(v.etiqueta))
   if (ops.length <= 1) return null
   const delRiesgo = new Set(tokensVersion([sel?.marca, sel?.modelo, sel?.descripcion].filter((x): x is string => typeof x === 'string').join(' ')))
@@ -377,13 +378,13 @@ export function eleccionVersionMotoPorSimilitud(
   const esCc = (t: string) => /^\d+CC$/.test(t) || (cc !== null && t === String(cc))
   const casan = ops.filter((o) => tokensVersion(o.etiqueta).filter((t) => !esCc(t)).every((t) => delRiesgo.has(t)))
   const porCc = (l: readonly CandidatoVersion[]) => (cc === null ? [...l] : l.filter((o) => cilindradasDe(o.etiqueta).includes(cc)))
-  const elegir = (o: CandidatoVersion) => ({ codigo: o.codigo, etiqueta: o.etiqueta })
-  const supuesto = (n: number) => `${SUPUESTO_VERSION_SIMILITUD_MOTO} (supuesto, había ${n})`
+  const elegir = (o: CandidatoVersion) => ({ tipo: 'unica' as const, eleccion: { codigo: o.codigo, etiqueta: o.etiqueta } })
   if (casan.length) {
     const finos = porCc(casan).length ? porCc(casan) : casan
-    return finos.length === 1 ? { eleccion: elegir(finos[0]!), supuesto: null } : { eleccion: elegir(finos[0]!), supuesto: supuesto(finos.length) }
+    return finos.length === 1 ? elegir(finos[0]!) : { tipo: 'ambigua', opciones: finos }
   }
-  return { eleccion: elegir(porCc(ops)[0] ?? ops[0]!), supuesto: supuesto(ops.length) }
+  const soloCc = cc === null ? [] : porCc(ops)
+  return soloCc.length === 1 ? elegir(soloCc[0]!) : { tipo: 'ambigua', opciones: ops }
 }
 
 /**
@@ -963,12 +964,13 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   await abrirNuevaAlta(page, ctx, { pestana: 'Autos', producto: 'Moto', selectorTarjeta: TARJETA_AUTOS.moto })
   const riesgo = await marcoCon(page, (r) => r.locator(SEL_RIESGO_MOTO.marca), 'Riesgo municipio (marca)')
   await elegirVehiculoMoto(riesgo, form.seleccionVehiculo, page)
-  // v0.7.0: la versión no bloquea. Sin elección explícita ni vehículo confirmado que case, se elige por similitud (DECLARADA).
+  // v0.7.1: sin elección explícita ni vehículo confirmado que case, solo se elige si es inequívoco; si no, requiere_humano (nunca «la primera»).
   const lectura = await leerVehiculoPortal(riesgo)
   const yaElegida = eleccionVersionConOrigen(lectura, form).eleccion !== null
   const auto = yaElegida ? null : eleccionVersionMotoPorSimilitud(lectura.versiones, form.seleccionVehiculo)
+  if (auto?.tipo === 'ambigua') throw new ErrorEleccionVersion(auto.opciones)
   const vehiculo = await resolverVehiculo(riesgo, lectura, auto ? { ...form, eleccionVersion: auto.eleccion } : form)
-  const supuestoVersion = auto?.supuesto ?? null
+  const supuestoVersion: string | null = null
   await ctx.pausa()
   await rellenarRiesgoMoto(riesgo, form, page, ctx)
   await lanzarSiHayErrores(riesgo)
@@ -1156,9 +1158,9 @@ export async function leerVersionesTurismos(marco: Pick<Frame, 'locator'>): Prom
 
 /**
  * Elección de versión tras «Encuentra mi vehículo». Una sola o elegida → se FIJA por el código de SU opción y se relee.
- * Varias SIN elección del formulario → decisión de Alberto (17/10/2026, «en la versión son todos prácticamente lo mismo»): se
- * toma LA PRIMERA de la lista y se DECLARA como supuesto (`supuesto`, nunca como dato). Elección explícita ambigua o que no
- * casa → `ErrorEleccionVersion` como siempre (requiere_humano). Solo Turismos (Moto no cambia). `conVersiones`: había selector.
+ * Varias que no casan con UNA sola (elección del formulario o vehículo confirmado) → `ErrorEleccionVersion` (requiere_humano) con
+ * todas, sin elegir (v0.6.17, 19/10/2026: se revoca «la primera» del 17/10, que podía dar el precio de otro coche). `supuesto` queda
+ * siempre `null`. Solo Turismos. `conVersiones`: había selector.
  */
 export async function resolverVersionTurismos(
   marco: Pick<Frame, 'locator'>,
@@ -1168,13 +1170,11 @@ export async function resolverVersionTurismos(
   if (!l || l.opciones.length === 0) return { conVersiones: false, supuesto: null }
   const { eleccion } = eleccionVersionConOrigen({ versiones: l.opciones }, form)
   const r = resolverVersion(l.opciones, eleccion)
-  let supuesto: string | null = null
+  const supuesto: string | null = null
   let elegida: CandidatoVersion
   if (r.tipo === 'ninguna') return { conVersiones: false, supuesto: null }
   if (r.tipo === 'ambigua') {
-    if (eleccion !== null) throw new ErrorEleccionVersion(r.opciones)
-    elegida = l.opciones[0]!
-    supuesto = `versión: la primera de la lista (supuesto, había ${l.opciones.length})`
+    throw new ErrorEleccionVersion(r.opciones)
   } else elegida = r.candidato
   const codigo = elegida.codigo
   if (!codigo) throw new ErrorTarificador('portal', 'allianz/auto: la versión resuelta no tiene código en el desplegable: no se puede fijar')
@@ -1203,9 +1203,9 @@ async function tarjetasVehiculoEstables(page: Pick<Page, 'waitForTimeout'>, marc
 
 /**
  * Qué tarjeta se elige (pura). Una → esa. Varias: la elección de la bandeja (`eleccionVersion`, por ETIQUETA: los ids son
- * dinámicos y no valen de una sesión a otra) o la del vehículo confirmado por similitud (`eleccionVersionConOrigen`); si no hay
- * ninguna, LA PRIMERA y se DECLARA como supuesto. Elección explícita que no casa con una sola → `ErrorEleccionVersion`
- * (requiere_humano), como el `<select>`. Sin datos personales en el supuesto (solo el recuento).
+ * dinámicos y no valen de una sesión a otra) o la del vehículo confirmado por similitud (`eleccionVersionConOrigen`, solo si casa UNA).
+ * v0.6.17: cualquier otro caso con varias → `ErrorEleccionVersion` (requiere_humano) con la etiqueta exacta de cada tarjeta (marca,
+ * modelo, combustible… tal como las pinta el portal); nunca «la primera». `supuesto` queda siempre `null`.
  */
 export function decidirTarjetaVehiculoTurismos(
   tarjetas: readonly Pick<TarjetaVehiculoTurismos, 'etiqueta'>[],
@@ -1221,9 +1221,8 @@ export function decidirTarjetaVehiculoTurismos(
       const i = tarjetas.findIndex((t) => t.etiqueta === r.candidato.etiqueta)
       if (i >= 0) return { indice: i, supuesto: null }
     }
-    if (r.tipo === 'ambigua' && form.eleccionVersion) throw new ErrorEleccionVersion(r.opciones)
   }
-  return { indice: 0, supuesto: `vehículo/versión: el primero de la lista (supuesto, había ${tarjetas.length})` }
+  throw new ErrorEleccionVersion(candidatos)
 }
 
 /**
@@ -2169,7 +2168,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.0' : '0.6.16',
+    version: ramo === 'moto' ? '0.7.1' : '0.6.17',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

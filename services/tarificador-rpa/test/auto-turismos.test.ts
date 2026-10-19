@@ -234,7 +234,7 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
 })
 
 test('versión del bot de Allianz Turismos', () => {
-  assert.equal(allianzAuto.version, '0.6.16')
+  assert.equal(allianzAuto.version, '0.6.17')
 })
 
 test('localización por etiqueta/rol: marco del motor y controles sin tocar ids dinámicos', async () => {
@@ -314,16 +314,14 @@ test('paso 1: Sí + matrícula + «Encuentra mi vehículo» por ctx.pulsar; una 
   }
 })
 
-test('varias versiones SIN elección → se fija la PRIMERA y se declara el supuesto (sin matrícula); con elección explícita → la elegida, sin supuesto', async () => {
+test('varias versiones SIN elección → ErrorEleccionVersion con todas y SIN fijar ninguna (v0.6.17, nunca la primera); con elección explícita → la elegida, sin supuesto', async () => {
   const versiones: Array<[string, string]> = [['A1', 'Version A 90 CV'], ['B2', 'Version B 120 CV']]
   const a = await abrir({ versiones })
   try {
     const marco = await marcoFormularioTurismos(a.page, 5_000)
-    const r = await rellenarDatosVehiculoTurismosConSupuesto(a.page, marco, FORM, a.ctx)
-    assert.equal(await marco.getByLabel('Versión').inputValue(), 'A1')
-    assert.equal(r.supuestoVersion, 'versión: la primera de la lista (supuesto, había 2)')
-    assert.ok(!r.supuestoVersion!.includes(FORM.matricula))
-    assert.equal(unirSupuestoVersion(r.supuestoVersion, 'Precio con supuestos: uso diario.'), 'Precio con supuestos: versión: la primera de la lista (supuesto, había 2), uso diario.')
+    const antes = await marco.getByLabel('Versión').inputValue()
+    await assert.rejects(rellenarDatosVehiculoTurismosConSupuesto(a.page, marco, FORM, a.ctx), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.map((o) => o.etiqueta).join('|') === 'Version A 90 CV|Version B 120 CV' && !JSON.stringify(e.opcionesVersion).includes(FORM.matricula))
+    assert.equal(await marco.getByLabel('Versión').inputValue(), antes, 'el desplegable no se tocó')
     assert.equal(unirSupuestoVersion(null, 'Precio con supuestos: uso diario.'), 'Precio con supuestos: uso diario.')
   } finally {
     await a.context.close()
@@ -536,21 +534,16 @@ const TARJETAS = [
 ]
 const marcadas = (marco: Frame) => marco.locator('input[id*="-nx-selectable-card-"]').evaluateAll((els) => els.map((e) => (e as HTMLInputElement).checked))
 
-test('v0.6.4 (atasco real ebe2bb1e): 5 tarjetas sin elección → la PRIMERA por ctx.pulsar, supuesto declarado sin datos personales, y «SIGUIENTE» avanza', async () => {
+test('v0.6.17 (atasco real ebe2bb1e): 5 tarjetas sin elección → ErrorEleccionVersion con el texto exacto de las 5, sin pulsar NINGUNA tarjeta ni «SIGUIENTE»', async () => {
   const { context, page, ctx, pulsados } = await abrir({ tarjetas: TARJETAS })
   try {
     const marco = await marcoFormularioTurismos(page, 5_000)
-    const r = await rellenarDatosVehiculoTurismosConSupuesto(page, marco, FORM, ctx)
+    await assert.rejects(rellenarDatosVehiculoTurismosConSupuesto(page, marco, FORM, ctx), (e: unknown) =>
+      e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 5 && e.opcionesVersion.every((o, i) => o.etiqueta === TARJETAS[i]) && !JSON.stringify(e.opcionesVersion).includes(FORM.matricula))
     assert.equal(await marco.getByRole('heading', { name: ENCABEZADO_TARJETAS_VEHICULO }).count(), 1, 'el fixture reproduce el encabezado real')
     assert.equal(await modalTurismosCount(marco), 0, 'ni modal')
-    assert.equal(await marco.getByLabel('Versión', { exact: true }).isVisible(), false, 'ni <select> «Versión»')
-    assert.deepEqual(await marcadas(marco), [true, false, false, false, false])
-    assert.equal(r.supuestoVersion, 'vehículo/versión: el primero de la lista (supuesto, había 5)')
-    assert.ok(!r.supuestoVersion!.includes(FORM.matricula))
-    assert.deepEqual(r.huecos, [])
-    assert.deepEqual(pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo', 'tarjeta:0'])
-    await assert.rejects(avanzarDesdeDatosVehiculo(page, marco, ctx, 3_000), (e: unknown) => e instanceof ErrorMapaIncompleto && /Datos personales/.test((e as Error).message))
-    assert.equal(pulsados.at(-1), 'SIGUIENTE')
+    assert.deepEqual(await marcadas(marco), [false, false, false, false, false])
+    assert.deepEqual(pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo'])
   } finally {
     await context.close()
   }
@@ -588,19 +581,19 @@ test('v0.6.4: elección de la bandeja que no casa → ErrorEleccionVersion sin p
   const b = await abrir({ tarjetas: TARJETAS, tarjetaMarcada: 0 })
   try {
     const marco = await marcoFormularioTurismos(b.page, 5_000)
-    const r = await rellenarDatosVehiculoTurismosConSupuesto(b.page, marco, FORM, b.ctx)
-    assert.equal(r.supuestoVersion, 'vehículo/versión: el primero de la lista (supuesto, había 5)')
-    assert.deepEqual(b.pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo'], 'ya elegida: ni un clic')
+    // Una tarjeta que el PORTAL trae marcada de partida no es una elección de la persona: se pregunta igual (v0.6.17).
+    await assert.rejects(rellenarDatosVehiculoTurismosConSupuesto(b.page, marco, FORM, b.ctx), (e: unknown) => e instanceof ErrorEleccionVersion && e.opciones.length === 5)
+    assert.deepEqual(b.pulsados, ['opcion:conoce_matricula:si', 'Encuentra mi vehículo'], 'ni un clic')
     assert.equal((await leerTarjetasVehiculoTurismosAllianz(marco)).length, 5)
   } finally {
     await b.context.close()
   }
 })
 
-test('v0.6.4: decidirTarjetaVehiculoTurismos (pura): sin tarjetas → hueco; varias sin elección → la primera declarada', () => {
+test('v0.6.4: decidirTarjetaVehiculoTurismos (pura): sin tarjetas → hueco; varias sin elección → ErrorEleccionVersion (nunca la primera)', () => {
   const t = TARJETAS.map((etiqueta) => ({ etiqueta, marcada: false }))
   assert.throws(() => decidirTarjetaVehiculoTurismos([], FORM), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
-  assert.deepEqual(decidirTarjetaVehiculoTurismos(t, FORM), { indice: 0, supuesto: 'vehículo/versión: el primero de la lista (supuesto, había 5)' })
+  assert.throws(() => decidirTarjetaVehiculoTurismos(t, FORM), (e: unknown) => e instanceof ErrorEleccionVersion && e.opciones.length === 5 && e.opciones[2]!.etiqueta === TARJETAS[2])
   assert.deepEqual(decidirTarjetaVehiculoTurismos(t.slice(0, 1), FORM), { indice: 0, supuesto: null })
   assert.deepEqual(decidirTarjetaVehiculoTurismos(t, { ...FORM, eleccionVersion: { codigo: null, etiqueta: TARJETAS[4]! } }), { indice: 4, supuesto: null })
 })

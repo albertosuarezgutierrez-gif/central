@@ -92,6 +92,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * campo); selector de vehículos sin el desplegable esperado → hueco con los desplegables y opciones LEÍDOS; tras «Roles»,
  * scroll del panel + registro de campos/botones + mapa provisional de tomador/conductor/antecedentes + «Garantías y
  * Resultados» por la compuerta del guard + lector tolerante del precio (oferta) o hueco con el registro de esa pantalla.
+ * 0.2.9 (19/10/2026): la versión elegida por una persona que no casa con UNA sola opción vuelve a `ErrorEleccionVersion` (con la lista), no a hueco de mapa. Generali ya NO elegía «la primera»: solo exacta o contención única.
  * 0.2.1 (19/10/2026): SMS de Okta relevado por Telegram (`codigoSms`) y dispositivo recordado 30 días en la bóveda; el login ya no
  * espera 30 s en la pantalla del SMS.
  * 0.2.2 (19/10/2026, prueba real b41be722): «Seleccionar mediador» vive en un MARCO (`seleccionAmbito.do`) con 5 campos sin
@@ -103,7 +104,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * (`select#X_input` OCULTO + `div#X[role=combobox]`); se reconoce, la marca se elige por igualdad EXACTA normalizada (0 o varias →
  * atasco `eleccion` con las cercanas), «Placas especiales» = «No» y «Confirmar» por puertas de guard.ts; la pantalla siguiente → hueco.
  */
-export const VERSION_GENERALI_AUTO = '0.2.8'
+export const VERSION_GENERALI_AUTO = '0.2.9'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -570,7 +571,8 @@ async function elegirNivel(sel: Locator, nivel: 'marca' | 'modelo' | 'version', 
   const persona = nivel === 'version' ? form.eleccionVersion?.etiqueta?.trim() : undefined
   if (persona) {
     const ix = opciones.flatMap((o, i) => (normalizarCatalogo(o) === normalizarCatalogo(persona) ? [i] : []))
-    if (ix.length !== 1) throw new ErrorMapaIncompletoGenerali(`la versión elegida por la persona en la lista de Generali (${ix.length} coincidencias)`)
+    // v0.2.9: una elección que no casa con UNA sola opción se vuelve a preguntar con la lista (nunca se elige otra ni se para sin opciones).
+    if (ix.length !== 1) throw new ErrorEleccionVersion(opciones.filter((o) => !esOpcionVaciaCatalogo(o)).map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
     await elegirIndice(sel, ix[0]!, ctx)
     return false
   }
