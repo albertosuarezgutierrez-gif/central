@@ -1,22 +1,22 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-19T11:47:39.504Z",
- "llamadas": 7516,
+ "fin": "2026-10-19T12:22:57.702Z",
+ "llamadas": 7604,
  "categorias": {
   "otro": {
-   "llamadas": 714,
-   "chars_in": 117941,
-   "chars_out": 5497248,
+   "llamadas": 738,
+   "chars_in": 120701,
+   "chars_out": 5613014,
    "errores": 0,
    "archivos_citados": 42,
    "chars_citados": 5899618,
    "tools": {
-    "ToolSearch": 173,
+    "ToolSearch": 175,
     "SubagentHandback": 10,
-    "SendMessage": 46,
-    "ReadNotifications": 398,
-    "Monitor": 77,
+    "SendMessage": 47,
+    "ReadNotifications": 411,
+    "Monitor": 85,
     "AskUserQuestion": 8,
     "TaskStop": 2
    }
@@ -46,62 +46,62 @@
    }
   },
   "mcp:github": {
-   "llamadas": 364,
-   "chars_in": 111352,
-   "chars_out": 810986,
-   "errores": 1,
+   "llamadas": 367,
+   "chars_in": 111805,
+   "chars_out": 813871,
+   "errores": 2,
    "archivos_citados": 6,
    "chars_citados": 3217388,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__actions_run_trigger": 33,
-    "mcp__github__actions_list": 81,
+    "mcp__github__actions_run_trigger": 34,
+    "mcp__github__actions_list": 82,
     "mcp__github__create_pull_request": 45,
     "mcp__github__update_pull_request": 34,
     "mcp__github__pull_request_read": 69,
     "mcp__github__merge_pull_request": 46,
     "mcp__github__add_reply_to_pull_request_comment": 19,
-    "mcp__github__get_job_logs": 12,
+    "mcp__github__get_job_logs": 13,
     "mcp__github__add_issue_comment": 7,
     "mcp__github__actions_get": 16,
     "mcp__github__search_pull_requests": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 123,
-   "chars_in": 266219,
-   "chars_out": 291152,
+   "llamadas": 124,
+   "chars_in": 268663,
+   "chars_out": 293792,
    "errores": 0,
    "archivos_citados": 106,
    "chars_citados": 4712264,
    "tools": {
-    "Agent": 123
+    "Agent": 124
    }
   },
   "bash": {
-   "llamadas": 4345,
-   "chars_in": 3128329,
-   "chars_out": 13430623,
+   "llamadas": 4394,
+   "chars_in": 3153163,
+   "chars_out": 13530822,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 4345
+    "Bash": 4394
    }
   },
   "mcp:Vercel": {
-   "llamadas": 184,
-   "chars_in": 26968,
-   "chars_out": 277339,
+   "llamadas": 187,
+   "chars_in": 27496,
+   "chars_out": 280800,
    "errores": 5,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_projects": 2,
     "mcp__Vercel__filter_project_envs": 5,
-    "mcp__Vercel__edit_project_env": 48,
+    "mcp__Vercel__edit_project_env": 50,
     "mcp__Vercel__list_deployments": 42,
-    "mcp__Vercel__create_deployment": 34,
+    "mcp__Vercel__create_deployment": 35,
     "mcp__Vercel__get_deployment": 41,
     "mcp__Vercel__get_runtime_logs": 4,
     "mcp__Vercel__create_project_env": 3,
@@ -111,15 +111,15 @@
    }
   },
   "sql": {
-   "llamadas": 549,
-   "chars_in": 238923,
-   "chars_out": 1120811,
+   "llamadas": 553,
+   "chars_in": 240051,
+   "chars_out": 1136194,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 544
+    "mcp__Supabase__execute_sql": 548
    }
   },
   "mcp:Supabase": {
@@ -135,18 +135,18 @@
    }
   },
   "mcp:claude-code-remote": {
-   "llamadas": 85,
-   "chars_in": 7691,
-   "chars_out": 20421,
+   "llamadas": 89,
+   "chars_in": 8585,
+   "chars_out": 21839,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__claude-code-remote__subscribe_pr_activity": 49,
     "mcp__claude-code-remote__unsubscribe_pr_activity": 24,
-    "mcp__claude-code-remote__send_later": 7,
+    "mcp__claude-code-remote__send_later": 10,
     "mcp__claude-code-remote__read_documentation": 3,
-    "mcp__claude-code-remote__delete_trigger": 2
+    "mcp__claude-code-remote__delete_trigger": 3
    }
   },
   "escritura": {
