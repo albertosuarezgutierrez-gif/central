@@ -113,6 +113,8 @@ export type ContextoPortal = ContextoTarificacion & {
    * que el desplegable `selectMediador` tiene puesto EXACTAMENTE el mediador de la correduría (`MEDIADOR_GENERALI`).
    */
   confirmarMediadorGenerali?: (selectMediador: Locator) => Promise<void>
+  /** Generali (v0.2.3): «ENTRAR» de CorredorInicio.po tras aceptar el mediador, por `pulsarEntrarGenerali` de guard.ts (una vez). */
+  entrarPortalGenerali?: () => Promise<void>
   /** Generali: entrada NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES › TURISMOS (RAMO UV) por `entrarTurismosGenerali` de guard.ts (una vez). */
   entrarTurismosGenerali?: () => Promise<void>
   /**

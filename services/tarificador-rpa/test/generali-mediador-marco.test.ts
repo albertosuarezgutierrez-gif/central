@@ -17,7 +17,7 @@ import {
   type ControlMediador,
 } from '../src/adapters/generali/reglas.ts'
 import { ErrorMapaIncompletoGenerali, elegirMediadorGenerali } from '../src/adapters/generali/auto.ts'
-import { botonMediadorGeneraliPermitido, ErrorMapaGuardGenerali, instalarGuardEmision, pulsarMediadorGenerali, rutaMediadorGenerali, type GuardEmision } from '../src/guard.ts'
+import { botonMediadorGeneraliPermitido, enlaceEntrarGeneraliPermitido, ErrorMapaGuardGenerali, instalarGuardEmision, pulsarEntrarGenerali, pulsarMediadorGenerali, rutaMediadorGenerali, type GuardEmision } from '../src/guard.ts'
 import type { ContextoPortal } from '../src/adaptador.ts'
 import { PRUEBAS_HUMO } from '../src/humo.ts'
 
@@ -212,6 +212,38 @@ test('guard: un botón del marco que no está en la lista blanca (o lleva «emit
   }
 })
 
+test('guard fail-closed: si leer la descripción de un candidato falla, NO se pulsa (no se finge unicidad)', async () => {
+  // El segundo control es otro «Aceptar» cuya lectura lanza: ignorarlo dejaría «un único» botón y pulsaría el primero.
+  const boton = `<input type="button" value="Aceptar" onclick="window.__pulsado=(window.__pulsado||0)+1"><input type="button" id="roto" value="Aceptar" onclick="window.__pulsado=(window.__pulsado||0)+1"><script>document.getElementById('roto').getAttribute = () => { throw new Error('lectura rota') }</script>`
+  const p = await abrirPortal(OPS_OK, boton)
+  try {
+    const sel = marcoAmbito(p.page)
+    assert.ok(sel)
+    await p.page.waitForTimeout(800)
+    const s = marcoAmbito(p.page)!.locator('select[name=mediador]')
+    await s.selectOption(MEDIADOR_GENERALI)
+    await assert.rejects(pulsarMediadorGenerali(p.page, p.guard, s))
+    assert.equal(await marcoAmbito(p.page)!.evaluate(() => (window as unknown as { __pulsado?: number }).__pulsado ?? 0), 0)
+  } finally {
+    await p.cerrar()
+  }
+})
+
+test('guard fail-closed: más de 200 candidatos en el marco → no se pulsa aunque solo uno de los 200 primeros sea «Aceptar»', async () => {
+  const relleno = Array.from({ length: 250 }, (_, i) => `<button type="button">Otro ${i}</button>`).join('')
+  const boton = `<input type="button" value="Aceptar" onclick="window.__pulsado=(window.__pulsado||0)+1">${relleno}<input type="button" value="Continuar" onclick="window.__pulsado=(window.__pulsado||0)+1">`
+  const p = await abrirPortal(OPS_OK, boton)
+  try {
+    await p.page.waitForTimeout(800)
+    const s = marcoAmbito(p.page)!.locator('select[name=mediador]')
+    await s.selectOption(MEDIADOR_GENERALI)
+    await assert.rejects(pulsarMediadorGenerali(p.page, p.guard, s))
+    assert.equal(await marcoAmbito(p.page)!.evaluate(() => (window as unknown as { __pulsado?: number }).__pulsado ?? 0), 0)
+  } finally {
+    await p.cerrar()
+  }
+})
+
 test('guard: un desplegable con el mediador en un marco de OTRA ruta no se confirma', async () => {
   const context = await browser.newContext()
   const guard = await instalarGuardEmision(context)
@@ -234,6 +266,80 @@ test('guard: un desplegable con el mediador en un marco de OTRA ruta no se confi
   } finally {
     await context.close()
   }
+})
+
+// ───────────── v0.2.3 (prueba real 351f946b): ACEPTAR es un ENLACE <a>; después, CorredorInicio.po pide «ENTRAR» ─────────────
+
+const ACEPTAR_ENLACE = `<a href="#" onclick="top.location.href='/arq_genernetPortalFormWeb/CorredorInicio.po?paso=2'; return false">ACEPTAR</a>`
+
+async function abrirPortalEntrar(entrar: string): Promise<Portal> {
+  const context = await browser.newContext()
+  const guard = await instalarGuardEmision(context)
+  const page = await context.newPage()
+  page.setDefaultTimeout(3_000)
+  const peticiones: string[] = []
+  await page.route(`${ORIGEN}/**`, (r) => {
+    const u = new URL(r.request().url())
+    peticiones.push(u.pathname)
+    const html = (b: string) => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><body>${b}</body></html>` })
+    if (u.pathname === '/arq_genernetPortalFormWeb/CorredorInicio.po') {
+      if (u.searchParams.get('paso') === '2') return html(`<h1>PORTAL DEL CORREDOR</h1><a href="#">Cerrar sesión</a>${entrar}`)
+      return html(`<h1>PORTAL DEL CORREDOR</h1><iframe id="genernet" src="${RUTA_AMBITO}" style="width:900px;height:500px"></iframe>`)
+    }
+    if (u.pathname === RUTA_AMBITO) return html(`<p>Genernet</p><script>setTimeout(() => location.replace('${RUTA_REFRESH}'), 300)</script>`)
+    if (u.pathname === RUTA_REFRESH) {
+      const m = u.searchParams.get('m') ?? ''
+      const sel = m ? `<script>document.querySelector('select[name=mediador]').value=${JSON.stringify(m)}</script>` : ''
+      return html(CAMPOS(OPS_OK, ACEPTAR_ENLACE) + sel)
+    }
+    if (u.pathname === '/arq_genernetPortalFormWeb/CorredorPortal.po') return html('<h1>Portal del Corredor</h1><nav><span>NEGOCIO</span></nav>')
+    return html('otra')
+  })
+  await page.goto(INICIO)
+  return { page, guard, peticiones, cerrar: () => context.close() }
+}
+
+const ctxEntrar = (page: Page, guard: GuardEmision, llamadas: string[]) =>
+  ({
+    pausaAccion: async () => {},
+    confirmarMediadorGenerali: async (s: Parameters<NonNullable<ContextoPortal['confirmarMediadorGenerali']>>[0]) => {
+      llamadas.push('mediador')
+      await pulsarMediadorGenerali(page, guard, s)
+    },
+    entrarPortalGenerali: async () => {
+      llamadas.push('entrar')
+      await pulsarEntrarGenerali(page, guard)
+    },
+  }) as unknown as ContextoPortal
+
+test('v0.2.3: ACEPTAR como enlace <a> se pulsa; CorredorInicio.po con «ENTRAR» → se pulsa por la puerta y llega al menú NEGOCIO', async () => {
+  const p = await abrirPortalEntrar('<a href="/arq_genernetPortalFormWeb/CorredorPortal.po">ENTRAR</a>')
+  try {
+    const llamadas: string[] = []
+    await elegirMediadorGenerali(p.page, ctxEntrar(p.page, p.guard, llamadas), { esperaMs: 8_000, pausaMs: 200 })
+    assert.deepEqual(llamadas, ['mediador', 'entrar'])
+    assert.match(p.page.url(), /CorredorPortal\.po$/)
+    assert.equal(await p.page.getByText('NEGOCIO').count(), 1)
+    assert.equal(p.guard.violacion(), null)
+    await assert.rejects(pulsarEntrarGenerali(p.page, p.guard), (e: unknown) => e instanceof ErrorMapaGuardGenerali || e instanceof EmisionBloqueadaError, 'fuera de CorredorInicio.po / una sola vez')
+  } finally {
+    await p.cerrar()
+  }
+})
+
+test('v0.2.3: dos «ENTRAR» visibles, o uno con texto distinto → NO se pulsa', async () => {
+  for (const entrar of ['<a href="/arq_genernetPortalFormWeb/CorredorPortal.po">ENTRAR</a><button onclick="window.__e=1">ENTRAR</button>', '<a href="/arq_genernetPortalFormWeb/CorredorPortal.po">Entrar y emitir</a>']) {
+    const p = await abrirPortalEntrar(entrar)
+    try {
+      const llamadas: string[] = []
+      await assert.rejects(elegirMediadorGenerali(p.page, ctxEntrar(p.page, p.guard, llamadas), { esperaMs: 6_000, pausaMs: 200 }), (e: unknown) => e instanceof ErrorMapaGuardGenerali || e instanceof ErrorMapaIncompletoGenerali, entrar)
+      assert.ok(!p.peticiones.includes('/arq_genernetPortalFormWeb/CorredorPortal.po'), entrar)
+    } finally {
+      await p.cerrar()
+    }
+  }
+  assert.equal(enlaceEntrarGeneraliPermitido('Entrar'), true)
+  assert.equal(enlaceEntrarGeneraliPermitido('Entrar y emitir'), false)
 })
 
 test('humo nocturno de Generali: usa el MISMO paso (marcos) y la puerta del guard; llega al menú «NEGOCIO»', async () => {

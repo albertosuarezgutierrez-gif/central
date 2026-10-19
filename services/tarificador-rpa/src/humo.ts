@@ -24,7 +24,7 @@ import { enviarResultado, type Config, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorCredenciales, exigirSinRechazoCredenciales, motivoCredenciales, textoVisiblePagina } from './credenciales.ts'
 import { ErrorTarificador, clasificar } from './errores.ts'
-import { esUrlOktaSmsGenerali, instalarGuardEmision, pulsar, pulsarMediadorGenerali, type GuardEmision } from './guard.ts'
+import { esUrlOktaSmsGenerali, instalarGuardEmision, pulsar, pulsarEntrarGenerali, pulsarMediadorGenerali, type GuardEmision } from './guard.ts'
 import { claveSesion } from './boveda-sesion.ts'
 import { almacenHttp, leerDispositivo } from './sesion-manual.ts'
 import type { EstadoNavegador } from './sesion.ts'
@@ -84,9 +84,10 @@ async function menuMapfre(page: Page): Promise<void> {
  * se comprueba que el menú «NEGOCIO» está a la vista en algún marco. No se sobrevuela ni se pulsa el menú.
  */
 async function menuGenerali(page: Page, guard: GuardEmision): Promise<void> {
-  const puerta: Pick<ContextoPortal, 'pausaAccion' | 'confirmarMediadorGenerali'> = {
+  const puerta: Pick<ContextoPortal, 'pausaAccion' | 'confirmarMediadorGenerali' | 'entrarPortalGenerali'> = {
     pausaAccion: () => dormir(azar(300, 1_200)),
     confirmarMediadorGenerali: (sel) => pulsarMediadorGenerali(page, guard, sel),
+    entrarPortalGenerali: () => pulsarEntrarGenerali(page, guard),
   }
   await elegirMediadorGenerali(page, puerta)
   const fin = Date.now() + ESPERA_MENU_MS

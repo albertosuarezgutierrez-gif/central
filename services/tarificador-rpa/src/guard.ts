@@ -2357,17 +2357,79 @@ export async function pulsarMediadorGenerali(page: Page, guard: GuardEmision, se
   await exigirSinCuentaBancaria(page)
   const candidatos = marco.locator('button, input[type=button], input[type=submit], input[type=image], a, [role=button]').filter({ visible: true })
   const n = await candidatos.count()
+  // Fail-closed: la unicidad solo vale si se miraron TODOS. Más de 200 candidatos, o uno cuya lectura falla, no se pulsa.
+  if (n > 200) throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (${n} controles visibles en su marco; más de 200, no se puede asegurar que sea único)`)
   const validos: { control: Locator; desc: (string | null)[] }[] = []
-  for (let i = 0; i < n && i < 200; i++) {
+  for (let i = 0; i < n; i++) {
     const c = candidatos.nth(i)
-    const d = await descripcion(c).catch(() => null)
-    if (d && botonMediadorGeneraliPermitido(textoControl(d))) validos.push({ control: c, desc: d })
+    let d: (string | null)[]
+    try {
+      d = await descripcion(c)
+    } catch {
+      throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (no se pudo leer el control ${i + 1} de ${n}; sin leerlos todos no se asegura que sea único)`)
+    }
+    if (botonMediadorGeneraliPermitido(textoControl(d))) validos.push({ control: c, desc: d })
   }
   if (validos.length !== 1) throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (${validos.length} visibles en su marco con texto ${BOTONES_MEDIADOR_GENERALI.join('/')}; hace falta exactamente uno)`)
   const { control, desc } = validos[0]!
   if (!botonMediadorGeneraliPermitido(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   comprobarBoton(desc, { permitirAceptar: true })
   usados.add('generali:mediador')
+  AVANCES_USADOS.set(guard, usados)
+  await control.click()
+  guard.comprobar()
+}
+
+/** Texto EXACTO del enlace que lleva de `CorredorInicio.po` (ya con mediador) al portal con el menú (prueba real 351f946b, v0.2.3). */
+export const ENLACE_ENTRAR_GENERALI = 'ENTRAR'
+
+/** ¿Puede el robot pulsar el enlace de entrada al portal con ESTE texto? Solo «ENTRAR» exacto. PURA. */
+export function enlaceEntrarGeneraliPermitido(texto: string | null | undefined): boolean {
+  return textoMenu(texto) === ENLACE_ENTRAR_GENERALI
+}
+
+/**
+ * «ENTRAR» de `CorredorInicio.po` (prueba real 351f946b, 19/10/2026): tras aceptar el mediador la carcasa se queda en
+ * «PORTAL DEL CORREDOR» con «Cerrar sesión» y «ENTRAR». UNA vez por trabajo y solo si: guard limpio y sin ventanas abiertas;
+ * la página está en la ruta EXACTA `CorredorInicio.po` de www.generali.es; y, entre TODOS los marcos vivos de www.generali.es,
+ * hay exactamente un control visible (enlace, botón, input de botón/imagen, role=button) con texto «ENTRAR» exacto. Fail-closed:
+ * un control que no se deja leer, o más de 200 por marco, no se pulsa. `comprobarBoton` mira el resto de su descripción.
+ */
+export async function pulsarEntrarGenerali(page: Page, guard: GuardEmision): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'ENTRAR de Generali con una ventana de red abierta')
+  if (!enRutaGenerali(page, RUTA_INICIO_GENERALI)) throw new ErrorMapaGuardGenerali('la pantalla CorredorInicio.po antes de «ENTRAR»')
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:entrar')) throw new EmisionBloqueadaError('fase', '«ENTRAR» de Generali ya se pulsó en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const validos: { control: Locator; desc: (string | null)[] }[] = []
+  for (const marco of page.frames()) {
+    if (marco.isDetached()) continue
+    let origen = ''
+    try {
+      origen = new URL(marco.url()).origin
+    } catch {
+      continue
+    }
+    if (origen !== ORIGEN_PORTAL_GENERALI) continue
+    const candidatos = marco.locator('button, input[type=button], input[type=submit], input[type=image], a, [role=button]').filter({ visible: true })
+    const n = await candidatos.count()
+    if (n > 200) throw new ErrorMapaGuardGenerali(`«ENTRAR» (${n} controles visibles en un marco; más de 200, no se puede asegurar que sea único)`)
+    for (let i = 0; i < n; i++) {
+      const c = candidatos.nth(i)
+      let d: (string | null)[]
+      try {
+        d = await descripcion(c)
+      } catch {
+        throw new ErrorMapaGuardGenerali(`«ENTRAR» (no se pudo leer el control ${i + 1} de ${n}; sin leerlos todos no se asegura que sea único)`)
+      }
+      if (enlaceEntrarGeneraliPermitido(textoControl(d))) validos.push({ control: c, desc: d })
+    }
+  }
+  if (validos.length !== 1) throw new ErrorMapaGuardGenerali(`el enlace «ENTRAR» de CorredorInicio.po (${validos.length} visibles con ese texto; hace falta exactamente uno)`)
+  const { control, desc } = validos[0]!
+  comprobarBoton(desc)
+  usados.add('generali:entrar')
   AVANCES_USADOS.set(guard, usados)
   await control.click()
   guard.comprobar()

@@ -106,8 +106,8 @@ test('humo.ts: solo login y entrada. Nada de rellenar, avanzar, proyecto, guarda
   assert.ok(!/guardarNueva|refrescar|invalidar|\.borrar\(|\.guardar\(/.test(CODIGO), 'el humo no escribe en la bóveda')
   // SMS de Okta: ni se pide ni se envía ni se verifica de madrugada.
   assert.ok(!/pulsarEnviarSmsGenerali|verificarCodigoSmsGenerali|relevarCodigoSmsGenerali|puertoCodigoHttp/.test(CODIGO), 'el humo no releva el SMS')
-  // La única puerta guardada tras el login: el botón del mediador de Generali (lista blanca del guard).
-  assert.deepEqual([...new Set(CODIGO.match(/pulsar[A-Z]\w*/g) ?? [])], ['pulsarMediadorGenerali'])
+  // Las únicas puertas guardadas tras el login: el botón del mediador y el «ENTRAR» de Generali (listas blancas del guard).
+  assert.deepEqual([...new Set(CODIGO.match(/pulsar[A-Z]\w*/g) ?? [])].sort(), ['pulsarEntrarGenerali', 'pulsarMediadorGenerali'])
   assert.match(CODIGO, /sesionReutilizada: false/)
 })
 
