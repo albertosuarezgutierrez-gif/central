@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import path from 'node:path'
 
 /**
@@ -260,20 +260,11 @@ test('«ver siniestros →» y «ver en sus pólizas →» llevan a un ancla que
 const CORREDURIA = path.join(DIR, '../..')
 const leerCorreduria = (f: string) => readFileSync(path.join(CORREDURIA, f), 'utf8')
 
-test('«Llamar» y «WhatsApp» de la cabecera: solo con teléfono propio y a 44 px', () => {
+test('cabecera de la ficha: solo los iconos pequeños de contacto, sin botones grandes «Llamar»/«WhatsApp»', () => {
   const cab = leer('Cabecera.tsx')
-  // Se montan con guarda de teléfono (y no el de la correduría): sin teléfono no se pinta ni un botón apagado.
-  assert.match(cab, /ef\.telefono && !ef\.canalCorreduria\.telefono && <BotonesContacto telefono=\{ef\.telefono\}/)
-
-  const b = leer('BotonesContacto.tsx')
-  assert.match(b, /if \(!telefono \|\| !a\.tel\) return null/, 'sin teléfono el componente no pinta nada')
-  assert.match(b, /href=\{a\.tel\}/)
-  assert.ok(b.includes('Llamar'), 'rótulo «Llamar»')
-  assert.match(b, /<BotonWhatsapp telefono=\{telefono\} mensaje=\{mensaje\} rotulo="WhatsApp" \/>/)
-  assert.match(b, /minHeight: 44/)
-  assert.match(b, /flexWrap: 'wrap'/, 'a 320 px los botones saltan de línea en vez de desbordar')
-  // El WhatsApp no se decide a mano: lo decide BotonWhatsapp → urlWhatsapp (un fijo no lo ofrece).
-  assert.doesNotMatch(b, /wa\.me/)
+  assert.doesNotMatch(cab, /BotonesContacto/, 'los botones grandes se retiraron (Alberto prefiere los iconos)')
+  assert.match(cab, /<AccionesContacto telefono=\{ef\.telefono\} email=\{ef\.email\}/, 'los iconos pequeños siguen')
+  assert.equal(existsSync(path.join(DIR, 'BotonesContacto.tsx')), false)
 })
 
 test('el subtítulo de Oportunidades suma la prima conocida: «~» si todas, «≥» si faltan, nada si ninguna', async () => {

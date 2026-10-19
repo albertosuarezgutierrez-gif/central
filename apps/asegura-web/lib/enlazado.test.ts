@@ -140,6 +140,19 @@ test('la 301 de /mejoramos-tu-seguro sigue puesta', () => {
   assert.match(cfg, /permanent: true/, 'tiene que ser 301 (permanent), no 307: es un traslado definitivo')
 })
 
+test('las 301 de /contacto, /index.htm, /index.html y /en-GB siguen puestas, y /en-CA y /wp-content no se redirigen', () => {
+  const cfg = readFileSync(new URL('../next.config.ts', import.meta.url), 'utf8')
+  const regla = (source: string, destination: string) =>
+    new RegExp(
+      `source: '${source.replace(/[./]/g, '\\$&')}',[^{}]*?destination: '${destination.replace(/[./#]/g, '\\$&')}',\\s*permanent: true`,
+    )
+  assert.match(cfg, regla('/contacto', '/#presupuesto'), 'sin esta 301, /contacto vuelve a dar 404')
+  assert.match(cfg, regla('/index.htm', '/'), 'sin esta 301, /index.htm vuelve a dar 404')
+  assert.match(cfg, regla('/index.html', '/'), 'sin esta 301, /index.html vuelve a dar 404')
+  assert.match(cfg, regla('/en-GB', '/'), 'sin esta 301, /en-GB vuelve a dar 404')
+  assert.doesNotMatch(cfg, /source: '\/(en-CA|wp-content)/, 'redirigir spam/restos ajenos a la home es un soft-404')
+})
+
 // 🚨 Los tres cepos del blog, y son de lo MISMO que el de responsabilidad civil:
 // una página que solo existe en el sitemap es una página huérfana. `tsc` está
 // verde tanto si `/blog` se enlaza como si no, y el día que alguien reordene el
