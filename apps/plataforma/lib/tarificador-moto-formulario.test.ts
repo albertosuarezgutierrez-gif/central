@@ -47,9 +47,9 @@ test('siniestros: sin 5 años limpios y sin dato declarado → null (no consta),
   assert.equal(ok(entrada({ aniosSinSiniestros: '2', siniestrosUltimos5: '0' })).riesgo.siniestrosUltimos5Anios, 0)
 })
 
-test('sin seguro actual: años y siniestros no constan (null), no 0', () => {
+test('sin seguro actual: 0 años asegurado (no hay compañía anterior que nombrar); siniestros no constan (null)', () => {
   const r = ok(entrada({ tieneSeguroActual: false }))
-  assert.equal(r.riesgo.aniosAseguradoAnterior, null)
+  assert.equal(r.riesgo.aniosAseguradoAnterior, 0)
   assert.equal(r.riesgo.siniestrosUltimos5Anios, null)
 })
 

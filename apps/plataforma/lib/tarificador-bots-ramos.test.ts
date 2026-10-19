@@ -12,7 +12,7 @@ test('moto → adaptador con cilindrada editable; sin ella faltan datos y lo dic
   const a = adaptadorDeRamo('moto')
   assert.ok(a)
   assert.equal(a.ramo, 'moto')
-  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo'])
+  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo', 'companiaAnterior'])
   assert.ok(ramosConBots().includes('moto'))
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: null, fechaNacimiento: null, fechaCarne: null,
@@ -182,4 +182,42 @@ test('moto · sexoSinFicha (la ficha no da Sr./Sra.) bloquea Allianz Moto salvo 
   assert.ok(sin.estado === 'evaluado' && sin.bloquea && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'falta')
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'hombre' }, 'allianz')
   assert.ok(con.estado === 'evaluado' && !con.bloquea)
+})
+
+// ─── Mapfre MOTO y la compañía anterior (19/10/2026, captura de Alberto: BMW sin póliza de moto) ──────────────────────────
+const MOTO_BASE = {
+  matricula: '1234BCD', marca: 'BMW', modelo: 'F800', version: null, codigoPostal: 'ficha', fechaNacimiento: 'ficha', fechaCarne: 'ficha',
+  sexo: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
+  aniosAsegurado: '', aniosSinSiniestros: '', siniestrosUltimos5: '',
+}
+const extraMoto = { cilindrada: '800' }
+const faltaCompania = (c: ReturnType<typeof checklistBot>) => c.estado === 'evaluado' && c.faltan.some((f) => f.clave === 'companiaAnterior')
+
+test('moto Mapfre: SIN seguro actual declarado no se pide la compañía anterior', () => {
+  const a = adaptadorDeRamo('moto')!
+  const c = checklistBot(a, { ...MOTO_BASE, tieneSeguroActual: false }, extraMoto, 'mapfre')
+  assert.equal(c.estado, 'evaluado')
+  assert.equal(faltaCompania(c), false)
+})
+
+test('moto Mapfre: años asegurado 0 declarados → no se pide; con seguro y años > 0 sin nombre → falta; con nombre → listo', () => {
+  const a = adaptadorDeRamo('moto')!
+  assert.equal(faltaCompania(checklistBot(a, { ...MOTO_BASE, aniosAsegurado: '0' }, extraMoto, 'mapfre')), false)
+  assert.equal(faltaCompania(checklistBot(a, { ...MOTO_BASE, aniosAsegurado: '8' }, extraMoto, 'mapfre')), true)
+  assert.equal(faltaCompania(checklistBot(a, { ...MOTO_BASE, aniosAsegurado: '8' }, { ...extraMoto, companiaAnterior: 'Línea Directa' }, 'mapfre')), false)
+})
+
+test('moto Mapfre: con seguro y años SIN teclear (se desconoce) → supuesto favorable de 5 años ⇒ sigue pidiendo el nombre (no se inventa)', () => {
+  const a = adaptadorDeRamo('moto')!
+  assert.equal(faltaCompania(checklistBot(a, MOTO_BASE, extraMoto, 'mapfre')), true)
+  assert.equal(faltaCompania(checklistBot(a, MOTO_BASE, { ...extraMoto, companiaAnterior: 'Línea Directa' }, 'mapfre')), false)
+})
+
+test('moto: la compañía anterior viaja en el riesgo solo con seguro actual y años ≠ 0', () => {
+  const a = adaptadorDeRamo('moto')!
+  const riesgo = (f: object, x: Record<string, string>) => { const r = a.construir(f, { ...extraMoto, ...x }); assert.equal(r.ok, true, JSON.stringify(r)); return (r as { riesgo: Record<string, unknown> }).riesgo }
+  assert.equal(riesgo({ ...MOTO_BASE, aniosAsegurado: '8' }, { companiaAnterior: ' Línea  Directa ' }).companiaAnterior, 'Línea Directa')
+  assert.equal('companiaAnterior' in riesgo({ ...MOTO_BASE, aniosAsegurado: '0' }, { companiaAnterior: 'Línea Directa' }), false)
+  assert.equal('companiaAnterior' in riesgo({ ...MOTO_BASE, tieneSeguroActual: false }, { companiaAnterior: 'Línea Directa' }), false)
+  assert.equal(riesgo({ ...MOTO_BASE, tieneSeguroActual: false }, {}).aniosAseguradoAnterior, 0)
 })

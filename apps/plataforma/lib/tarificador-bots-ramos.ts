@@ -55,12 +55,14 @@ const adaptadorMoto: AdaptadorBot = {
     // Allianz Moto no tiene «sin dato» en sexo (obligatorio, 15/10/2026): se elige aquí si el cotizador no lo trae. Sin valor
     // por defecto: no se inventa. Un valor elegido aquí manda sobre el del formulario.
     { clave: 'sexo', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
+    // Mapfre la pide en «Figuras» si hubo seguro anterior (años asegurado > 0, dato o supuesto). Sin seguro actual / 0 años no se pide.
+    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
   ],
   construir: (formulario, extra) => {
     const f = formulario as FormularioBotsMoto
     // El desplegable arranca en '' («Elegir…»): vacío = no tocado, así que manda el del formulario.
     const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined || extra.sexo === '' ? f.sexo : null
-    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '' })
+    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '', companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior })
     if (!r.ok) return { ok: false, faltan: r.faltan }
     // Sin sexo tecleado, asegura lo toma del Sr./Sra. de la ficha al encolar; si la ficha no lo permite, el checklist dice «falta».
     const sinDatoEnFicha = sexo === null && f.sexoSinFicha === true ? ['conductor.sexo'] : undefined
