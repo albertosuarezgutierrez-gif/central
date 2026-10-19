@@ -1,23 +1,23 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-19T07:19:16.667Z",
- "llamadas": 6792,
+ "fin": "2026-10-19T08:13:30.457Z",
+ "llamadas": 6886,
  "categorias": {
   "otro": {
-   "llamadas": 646,
-   "chars_in": 112937,
-   "chars_out": 4929565,
+   "llamadas": 648,
+   "chars_in": 114468,
+   "chars_out": 4931130,
    "errores": 0,
    "archivos_citados": 38,
    "chars_citados": 5797709,
    "tools": {
-    "ToolSearch": 161,
+    "ToolSearch": 162,
     "SubagentHandback": 10,
     "SendMessage": 43,
     "ReadNotifications": 347,
     "Monitor": 77,
-    "AskUserQuestion": 7,
+    "AskUserQuestion": 8,
     "TaskStop": 1
    }
   },
@@ -33,16 +33,16 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 679,
-   "chars_in": 90992,
-   "chars_out": 6715723,
+   "llamadas": 681,
+   "chars_in": 91303,
+   "chars_out": 6716258,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 19,
-    "Grep": 286,
-    "Read": 374
+    "Grep": 287,
+    "Read": 375
    }
   },
   "mcp:github": {
@@ -78,14 +78,14 @@
    }
   },
   "bash": {
-   "llamadas": 3908,
-   "chars_in": 2756283,
-   "chars_out": 11926442,
+   "llamadas": 3983,
+   "chars_in": 2806079,
+   "chars_out": 12395325,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3908
+    "Bash": 3983
    }
   },
   "mcp:Vercel": {
@@ -109,15 +109,15 @@
    }
   },
   "sql": {
-   "llamadas": 519,
-   "chars_in": 228708,
-   "chars_out": 1060546,
+   "llamadas": 527,
+   "chars_in": 231187,
+   "chars_out": 1067981,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase_asegura__execute_sql": 5,
-    "mcp__Supabase__execute_sql": 514
+    "mcp__Supabase__execute_sql": 522
    }
   },
   "mcp:Supabase": {
@@ -147,26 +147,26 @@
    }
   },
   "escritura": {
-   "llamadas": 271,
-   "chars_in": 859427,
-   "chars_out": 19048784,
+   "llamadas": 277,
+   "chars_in": 877531,
+   "chars_out": 19108764,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 200,
-    "Write": 71
+    "Edit": 203,
+    "Write": 74
    }
   },
   "agente:agente-architect": {
-   "llamadas": 27,
-   "chars_in": 64652,
-   "chars_out": 70497,
+   "llamadas": 28,
+   "chars_in": 68214,
+   "chars_out": 74269,
    "errores": 0,
-   "archivos_citados": 46,
-   "chars_citados": 2216778,
+   "archivos_citados": 49,
+   "chars_citados": 2295775,
    "tools": {
-    "Agent": 27
+    "Agent": 28
    }
   },
   "agente:verificador-esceptico": {
