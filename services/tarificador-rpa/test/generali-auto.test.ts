@@ -14,6 +14,7 @@ import {
   buscadoEnNivel,
   contieneFrase,
   elegirGarajeGenerali,
+  elegirMarcaExactaGenerali,
   elegirOpcionCatalogo,
   elegirUsoGenerali,
   esEtiquetaVerificacionMatricula,
@@ -26,9 +27,9 @@ import {
   urlConMediador,
   vehiculoBuscadoGenerali,
 } from '../src/adapters/generali/reglas.ts'
-import { ErrorMapaIncompletoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
+import { ErrorMapaIncompletoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { cerrarAvisoSabiasQueGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
+import { botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { vehiculoDelResultado } from '../src/api.ts'
@@ -149,8 +150,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.5')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.5')
+  assert.equal(generaliAuto.version, '0.2.6')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.6')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -504,5 +505,131 @@ test('v0.2.5 · menú que no se despliega ni con clic → hueco con inventario, 
     assert.equal(await page.evaluate(() => (window as unknown as { __turismos?: number }).__turismos ?? 0), 0)
   } finally {
     await cerrar()
+  }
+})
+
+// ───────────── v0.2.6: «Selector de vehículos» PrimeFaces (marco `selVehiculo`; select OCULTO + div combobox) ─────────────
+
+const SEL_VEHICULOS = 'https://www.generali.es/mot_motorWeb/mvc/selVehiculo'
+
+/** Estructura del inventario real (ids `buscamarca*`, `placaesp:0/1`, `#cancelar`/`#confirmar`); marcas y valores de prueba. */
+const PRIMEFACES_HTML = (marcas: string[], boton = 'Confirmar') => `<button type="button">Vehículo</button><h2>Selector de vehículos</h2>
+  <span>Placas especiales</span>
+  <table><tr><td><input type="radio" id="placaesp:0" name="placaesp" value="S" style="position:absolute;left:-999px"><label for="placaesp:0">Sí</label></td>
+  <td><input type="radio" id="placaesp:1" name="placaesp" value="N" style="position:absolute;left:-999px"><label for="placaesp:1">No</label></td></tr></table>
+  <span>Principales marcas</span>
+  <span>Todas las marcas</span>
+  <div id="buscamarca" role="combobox" tabindex="0" onclick="document.getElementById('buscamarca_panel').style.display='block'"><label id="buscamarca_label">Seleccione una</label></div>
+  <select id="buscamarca_input" name="buscamarca_input" style="display:none"><option value="null">Seleccione una</option>${marcas.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select>
+  <div id="buscamarca_panel" style="display:none"><ul id="buscamarca_items">${marcas.map((m) => `<li data-label="${m}" class="ui-selectonemenu-item" onclick="var s=document.getElementById('buscamarca_input');s.selectedIndex=Array.from(s.options).findIndex(o=>o.textContent==='${m}');document.getElementById('buscamarca_label').textContent='${m}';s.dispatchEvent(new Event('change'));window.__cambios=(window.__cambios||0)+1;document.getElementById('buscamarca_panel').style.display='none'">${m}</li>`).join('')}</ul></div>
+  <button type="submit" id="cancelar" onclick="window.__cancelar=1">Cancelar</button>
+  <button type="submit" id="confirmar" onclick="window.__confirmado=(window.__confirmado||0)+1;return false">${boton}</button>`
+
+const ctxPF = (page: Page, guard: GuardEmision) => ({
+  pausaAccion: async () => {},
+  pulsar: async (b: Parameters<ContextoPortal['pulsar']>[0]) => { const { pulsar } = await import('../src/guard.ts'); await pulsar(b, guard) },
+  marcarPlacasEspecialesGenerali: () => marcarPlacasEspecialesGenerali(page, guard, 'No'),
+  confirmarVehiculoGenerali: () => pulsarConfirmarVehiculoGenerali(page, guard),
+  log: () => {},
+}) as unknown as ContextoPortal
+
+test('v0.2.6 · SelectOneMenu de PrimeFaces: se reconoce el select OCULTO `<id>_input` con su div combobox; un select nativo visible no lo es', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'SKODA']))
+  try {
+    assert.equal(await a.page.locator('#buscamarca_input').isVisible(), false, 'la fixture lo oculta como PrimeFaces')
+    const m = await menuPrimeFaces(a.page, 'Todas las marcas')
+    assert.ok(m)
+    assert.equal(m!.base, 'buscamarca')
+    assert.equal((await m!.select.evaluate((el) => el.id)), 'buscamarca_input')
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(PORTAL, SELECTOR_HTML(['SEAT'], false))
+  try {
+    assert.equal(await menuPrimeFaces(b.page, 'Todas las marcas'), null, 'select nativo sin div combobox: no es PrimeFaces')
+  } finally {
+    await b.cerrar()
+  }
+})
+
+test('v0.2.6 · marca: igualdad EXACTA normalizada (tildes, mayúsculas, espacios dobles); contención o repetida NO se elige', () => {
+  const ops = ['Seleccione una', 'SEAT', 'SEAT CUPRA', 'MERCEDES-BENZ', 'CITROËN', 'SKODA', 'SKODA']
+  assert.deepEqual(elegirMarcaExactaGenerali(ops, ' seat '), { tipo: 'unica', indice: 1 })
+  assert.deepEqual(elegirMarcaExactaGenerali(ops, 'Mercedes  Benz'), { tipo: 'unica', indice: 3 })
+  assert.deepEqual(elegirMarcaExactaGenerali(ops, 'citroen'), { tipo: 'unica', indice: 4 })
+  const rep = elegirMarcaExactaGenerali(ops, 'skoda')
+  assert.equal(rep.tipo, 'varias')
+  const parcial = elegirMarcaExactaGenerali(ops, 'CUPRA')
+  assert.notEqual(parcial.tipo, 'unica', '«CUPRA» no es «SEAT CUPRA»: sin similitud')
+  assert.ok('cercanas' in parcial && parcial.cercanas.includes('SEAT CUPRA'))
+  assert.equal(elegirMarcaExactaGenerali(ops, '').tipo, 'ninguna')
+})
+
+test('v0.2.6 · selector PrimeFaces: marca exacta por el panel (change disparado), placas «No», «Confirmar» pulsado una vez y hueco con la pantalla siguiente sin mapa', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'SEAT CUPRA']))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.locator('#buscamarca_input').inputValue(), '0', 'SEAT (índice 0 de la fixture), no «SEAT CUPRA»')
+    assert.equal(await page.locator('#buscamarca_label').innerText(), 'SEAT')
+    assert.equal(await page.evaluate(() => (window as unknown as { __cambios?: number }).__cambios ?? 0), 1, 'por el li del panel de PrimeFaces')
+    assert.equal(await page.locator('#placaesp\\:1').isChecked(), true)
+    assert.equal(await page.locator('#placaesp\\:0').isChecked(), false)
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+    assert.equal(await page.evaluate(() => (window as unknown as { __cancelar?: number }).__cancelar ?? 0), 0)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.6 · marca ambigua o sin coincidencia exacta: atasco `eleccion` con las cercanas y NO selecciona ni confirma', async () => {
+  for (const [marcas, marcaRiesgo] of [[['SEAT', 'SEAT'], 'SEAT'], [['SEAT CUPRA', 'SKODA'], 'SEAT']] as const) {
+    const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML([...marcas]))
+    try {
+      const f = coche({ seleccionVehiculo: { marca: marcaRiesgo, modelo: 'IBIZA' } })
+      await assert.rejects(seleccionarVehiculoGenerali(page, page, f, ctxPF(page, guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length >= 1 && e.tipo === 'eleccion')
+      assert.equal(await page.locator('#buscamarca_input').inputValue(), 'null', 'no se eligió ninguna marca')
+      assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0, 'no se confirmó')
+    } finally {
+      await cerrar()
+    }
+  }
+})
+
+test('v0.2.6 · puerta de «Confirmar»: solo el texto exacto, solo en la URL selVehiculo y una vez', async () => {
+  assert.equal(botonSelectorVehiculosGeneraliPermitido('Confirmar'), true)
+  assert.equal(botonSelectorVehiculosGeneraliPermitido(' confirmar '), true)
+  for (const t of ['Confirmar pago', 'Emitir', 'Cancelar', 'Contratar', 'Confirmar y emitir', '', null]) assert.equal(botonSelectorVehiculosGeneraliPermitido(t), false, String(t))
+  assert.equal(urlSelectorVehiculosGenerali(SEL_VEHICULOS), true)
+  assert.equal(urlSelectorVehiculosGenerali(`${SEL_VEHICULOS};jsessionid=abc?x=1`), true)
+  for (const u of ['https://www.generali.es/mot_motorWeb/mvc/otraCosa', 'https://otro.example/mot_motorWeb/mvc/selVehiculo', PORTAL, 'x']) assert.equal(urlSelectorVehiculosGenerali(u), false, u)
+
+  // Otro texto en el mismo botón: no se pulsa.
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Emitir póliza'))
+  try {
+    await assert.rejects(pulsarConfirmarVehiculoGenerali(a.page, a.guard), (e: unknown) => e instanceof ErrorTarificador)
+    assert.equal(await a.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0)
+  } finally {
+    await a.cerrar()
+  }
+  // Otra URL con un «Confirmar» idéntico: no se pulsa.
+  const b = await abrir(PORTAL, PRIMEFACES_HTML(['SEAT']))
+  try {
+    await assert.rejects(pulsarConfirmarVehiculoGenerali(b.page, b.guard), (e: unknown) => e instanceof ErrorTarificador)
+    await assert.rejects(marcarPlacasEspecialesGenerali(b.page, b.guard, 'No'), (e: unknown) => e instanceof ErrorTarificador)
+    assert.equal(await b.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0)
+    assert.equal(await b.page.locator('#placaesp\\:1').isChecked(), false)
+  } finally {
+    await b.cerrar()
+  }
+  // Texto y URL correctos: una vez, y la segunda se bloquea. «Sí» de placas nunca.
+  const c = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT']))
+  try {
+    await assert.rejects(marcarPlacasEspecialesGenerali(c.page, c.guard, 'Sí' as unknown as 'No'), EmisionBloqueadaError)
+    await pulsarConfirmarVehiculoGenerali(c.page, c.guard)
+    assert.equal(await c.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+    await assert.rejects(pulsarConfirmarVehiculoGenerali(c.page, c.guard), EmisionBloqueadaError)
+    assert.equal(await c.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+  } finally {
+    await c.cerrar()
   }
 })
