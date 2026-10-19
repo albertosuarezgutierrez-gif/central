@@ -59,6 +59,10 @@ import {
   buscadoEnNivel,
   elegirGarajeGenerali,
   elegirMarcaExactaGenerali,
+  elegirModeloGenerali,
+  camposNuevosSelectorGenerali,
+  resumenCamposSelectorGenerali,
+  type CampoSelectorGenerali,
   elegirOpcionCatalogo,
   elegirUsoGenerali,
   esEtiquetaVerificacionMatricula,
@@ -109,8 +113,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * 0.2.6 (19/10/2026, prueba real): el «Selector de vehículos» (marco `selVehiculo`) es PrimeFaces: «Todas las marcas» es un SelectOneMenu
  * (`select#X_input` OCULTO + `div#X[role=combobox]`); se reconoce, la marca se elige por igualdad EXACTA normalizada (0 o varias →
  * atasco `eleccion` con las cercanas), «Placas especiales» = «No» y «Confirmar» por puertas de guard.ts; la pantalla siguiente → hueco.
+ * 0.2.11 (19/10/2026, prueba real): tras la marca aparece «Modelo» (otro SelectOneMenu PrimeFaces): se espera, se elige por igualdad EXACTA
+ * normalizada (varias → atasco `eleccion`; ninguna → «Otros» declarado como supuesto) por las puertas de modelo de guard.ts. Si tras el
+ * modelo salen campos NUEVOS sin rellenar, NO se pulsa «Confirmar»: se baja el scroll y se PARA con hueco listando etiquetas y opciones.
+ * El hueco ya no dice «SIN CAPTURA» (el runner SÍ guarda la captura/recorrido/inventario en cualquier hueco con `pideInventarioDom`).
  */
-export const VERSION_GENERALI_AUTO = '0.2.10'
+export const VERSION_GENERALI_AUTO = '0.2.11'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -283,6 +291,46 @@ const JS_SELECTS = `(() => {${JS_COMUN}
     total: s.options.length,
   }));
 })()`
+
+/** Controles del selector de vehículos (solo lectura; NUNCA valores): menús de PrimeFaces (por el id de su combobox), selects visibles, campos de texto y grupos de opciones. */
+const JS_CAMPOS_SELECTOR = `(() => {${JS_COMUN}
+  const TEXTO = ['text', 'email', 'tel', 'number', 'date', 'search', 'url', ''];
+  const out = [];
+  const grupos = new Map();
+  for (const el of Array.from(document.querySelectorAll('input,select,textarea'))) {
+    const tag = el.tagName.toLowerCase();
+    const ta = (el.getAttribute('type') || '').toLowerCase();
+    if (tag === 'input' && ['hidden', 'button', 'submit', 'image', 'reset', 'password'].includes(ta)) continue;
+    if (el.id && /_(focus|filter)$/.test(el.id)) continue;
+    if (tag === 'select') {
+      const m = /^(.*)_input$/.exec(el.id || '');
+      const combo = m ? document.getElementById(m[1]) : null;
+      const pf = !!combo && combo.getAttribute('role') === 'combobox';
+      if (!(pf ? VIS(combo) : VIS(el))) continue;
+      const etiqueta = (pf ? ETQ(combo) : ETQ(el)).slice(0, 80);
+      const ops = Array.from(el.options).map((o) => T(o)).filter((t) => t !== '');
+      out.push({ clave: pf ? m[1] : (el.id || 'select|' + etiqueta), etiqueta, tipo: pf ? 'desplegable' : 'select', opciones: ops.slice(0, 25), total: el.options.length });
+    } else if (tag === 'input' && !TEXTO.includes(ta)) {
+      const g = el.name || el.id || ta;
+      let e = grupos.get(g);
+      if (!e) { e = { clave: 'grupo|' + g, etiqueta: g.slice(0, 80), tipo: ta === 'checkbox' ? 'casilla' : 'grupo', opciones: [], total: 0 }; grupos.set(g, e); out.push(e); }
+      const lab = el.labels && el.labels.length ? T(el.labels[0]) : '';
+      e.total++;
+      if (lab && e.opciones.length < 25) e.opciones.push(lab.slice(0, 60));
+    } else {
+      if (!VIS(el)) continue;
+      const etiqueta = ETQ(el).slice(0, 80);
+      out.push({ clave: el.id || 'texto|' + etiqueta, etiqueta, tipo: 'texto', opciones: [], total: 0 });
+    }
+    if (out.length >= 80) break;
+  }
+  return out;
+})()`
+
+/** Controles del selector de vehículos (solo lectura): sirve para detectar campos NUEVOS tras elegir marca/modelo. */
+export async function leerCamposSelector(raiz: Raiz): Promise<CampoSelectorGenerali[]> {
+  return ((await raiz.evaluate(JS_CAMPOS_SELECTOR).catch(() => [])) as CampoSelectorGenerali[] | null) ?? []
+}
 
 /** Un paso de scroll en TODOS los contenedores con scroll del marco (el formulario tiene el suyo). `true` = alguno bajó. */
 const JS_SCROLL = `(() => {
@@ -650,10 +698,10 @@ export type MenuPrimeFaces = { select: Locator; base: string }
  * que sigue a la etiqueta EXACTA `etiqueta` o, si no hay etiqueta, el único `select[id$="_input"]` de la marca; vale solo si su id
  * acaba en `_input` y existe `div#<base>` con role=combobox. `null` si nadie lo es (el llamador sigue con el `<select>` nativo).
  */
-export async function menuPrimeFaces(raiz: Raiz, etiqueta: string): Promise<MenuPrimeFaces | null> {
+export async function menuPrimeFaces(raiz: Raiz, etiqueta: string, fragmentoId = 'marca'): Promise<MenuPrimeFaces | null> {
   const lit = etiqueta.replace(/"/g, '')
   let cand = raiz.locator(`xpath=//*[normalize-space(text())="${lit}"]/following::select[1]`)
-  if ((await cand.count().catch(() => 0)) !== 1) cand = raiz.locator('select[id$="_input"][id*="marca" i]')
+  if ((await cand.count().catch(() => 0)) !== 1) cand = raiz.locator(`select[id$="_input"][id*="${fragmentoId.replace(/[^a-z]/gi, '')}" i]`)
   if ((await cand.count().catch(() => 0)) !== 1) return null
   const base = await cand.first().evaluate((el) => {
     const id = el.id
@@ -679,17 +727,33 @@ export async function elegirMarcaPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v:
     if (e.cercanas.length > 0) throw new ErrorEleccionVersion(e.cercanas.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
     throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('marca', b.texto, opciones.map((o) => o.texto), { tipo: 'ninguna' }))
   }
-  const elegida = opciones[e.indice]!
+  await ponerOpcionPrimeFaces(raiz, menu, opciones[e.indice]!, e.indice, ctx.abrirDesplegableMarcaGenerali, ctx.elegirMarcaListaGenerali, ctx, 'la marca elegida en «Todas las marcas»')
+}
+
+/**
+ * Pone una opción ya decidida en un SelectOneMenu de PrimeFaces: abre por su disparador (puerta del guard), pulsa el `li` de `data-label`
+ * exacto (puerta del guard) y, si el navegador agota el plazo, cae a `selectOption` en el select oculto + change. Comprueba que quedó puesta.
+ */
+async function ponerOpcionPrimeFaces(
+  raiz: Raiz,
+  menu: MenuPrimeFaces,
+  elegida: { valor: string; texto: string },
+  indice: number,
+  abrir: ((base: string) => Promise<void>) | undefined,
+  elegir: ((base: string, texto: string) => Promise<void>) | undefined,
+  ctx: Pick<ContextoPortal, 'pausaAccion'>,
+  que: string,
+): Promise<void> {
   const puesta = async () => (await menu.select.inputValue().catch(() => '')) === elegida.valor
-  if (!ctx.abrirDesplegableMarcaGenerali || !ctx.elegirMarcaListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de marcas (disparador y `li`) en el contexto del runner', false)
+  if (!abrir || !elegir) throw new ErrorMapaIncompletoGenerali(`las puertas guardadas del desplegable de ${que} (disparador y \`li\`) en el contexto del runner`, false)
   await ctx.pausaAccion()
   try {
-    // v0.2.7: se abre pulsando el disparador propio de PrimeFaces (sin las opciones dentro), no el `div#buscamarca`.
-    await ctx.abrirDesplegableMarcaGenerali(menu.base)
+    // v0.2.7: se abre pulsando el disparador propio de PrimeFaces (sin las opciones dentro), no el `div` que las contiene.
+    await abrir(menu.base)
     const etq = elegida.texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     const item = raiz.locator(`[id="${menu.base}_panel"] li[data-label="${etq}"]`)
     if ((await item.count()) === 1) {
-      await ctx.elegirMarcaListaGenerali(menu.base, elegida.texto)
+      await elegir(menu.base, elegida.texto)
       for (let i = 0; i < 10 && !(await puesta()); i++) await new Promise((r) => setTimeout(r, 300))
     }
   } catch (err) {
@@ -698,26 +762,77 @@ export async function elegirMarcaPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v:
   }
   if (!(await puesta())) {
     await comprobarCampo(menu.select)
-    await menu.select.selectOption({ index: e.indice }, { force: true })
+    await menu.select.selectOption({ index: indice }, { force: true })
     await menu.select.dispatchEvent('change')
   }
-  if (!(await puesta())) throw new ErrorMapaIncompletoGenerali('la marca elegida en «Todas las marcas» no quedó puesta en el selector (PrimeFaces)')
+  if (!(await puesta())) throw new ErrorMapaIncompletoGenerali(`${que} no quedó puesta en el selector (PrimeFaces)`)
+}
+
+const ESPERA_MODELO_MS = 12_000
+const PAUSA_CAMPOS_NUEVOS_MS = 1_500
+
+/** Espera (hasta `esperaMs`) al desplegable «Modelo» de PrimeFaces, distinto del de marcas y con alguna opción real. `null` si no sale. */
+export async function esperarMenuModelo(page: Page, selector: Raiz, baseMarca: string, esperaMs = ESPERA_MODELO_MS): Promise<MenuPrimeFaces | null> {
+  const fin = Date.now() + esperaMs
+  for (;;) {
+    const m = await menuPrimeFaces(selector, 'Modelo', 'model')
+    if (m && m.base !== baseMarca) {
+      const ops = await opcionesSelect(m.select).catch(() => [])
+      if (ops.some((o) => !esOpcionVaciaCatalogo(o.texto))) return m
+    }
+    if (Date.now() >= fin) return null
+    await page.waitForTimeout(400)
+  }
+}
+
+/**
+ * Elige el modelo en su SelectOneMenu con el criterio de la marca (igualdad EXACTA normalizada). Varias → atasco `eleccion`; ninguna →
+ * «Otros» si hay UNA (se declara en `avisos` como supuesto); sin «Otros» → atasco `eleccion` con las cercanas o todas, sin tocar nada.
+ */
+export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal, avisos?: string[]): Promise<void> {
+  const b = buscadoEnNivel(v, 'modelo')
+  if (!b) throw new ErrorMapaIncompletoGenerali('el modelo del vehículo de la oportunidad (el selector de Generali lo exige)', false)
+  const opciones = await opcionesSelect(menu.select)
+  const textos = opciones.map((o) => o.texto)
+  const e = elegirModeloGenerali(textos, b.texto, b.modo)
+  if (e.tipo === 'varias' || e.tipo === 'ninguna') {
+    const lista = e.cercanas.length > 0 ? e.cercanas : e.tipo === 'ninguna' ? textos.filter((o) => !esOpcionVaciaCatalogo(o)).slice(0, 25) : []
+    if (lista.length > 0) throw new ErrorEleccionVersion(lista.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+    throw new ErrorMapaIncompletoGenerali(mensajeAtascoCatalogo('modelo', b.texto, textos, { tipo: 'ninguna' }))
+  }
+  if (e.tipo === 'otros') avisos?.push(e.supuesto)
+  await ponerOpcionPrimeFaces(raiz, menu, opciones[e.indice]!, e.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo»')
 }
 
 /**
  * Selector PrimeFaces: «Placas especiales» = «No», marca exacta, «Confirmar» (solo confirma el vehículo) y se PARA con hueco
  * `hueco_mapa` si la pantalla siguiente no es «Identificación del vehículo»: su inventario lo captura el modo exploración.
  */
-async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal): Promise<boolean> {
+async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal, avisos?: string[]): Promise<boolean> {
   if (!ctx.marcarPlacasEspecialesGenerali || !ctx.confirmarVehiculoGenerali || !ctx.abrirDesplegableMarcaGenerali || !ctx.elegirMarcaListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del selector de vehículos (placas especiales, desplegable de marcas y «Confirmar») en el contexto del runner', false)
+  if (!ctx.abrirDesplegableModeloGenerali || !ctx.elegirModeloListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de modelos (disparador y `li`) en el contexto del runner', false)
   await ctx.marcarPlacasEspecialesGenerali()
+  // Lo que hay ANTES de elegir marca: lo que aparezca después y no sea el menú de modelos es campo NUEVO.
+  const antes = (await leerCamposSelector(selector)).map((c) => c.clave)
   await elegirMarcaPrimeFaces(selector, menu, v, ctx)
+  const modelo = await esperarMenuModelo(page, selector, menu.base)
+  if (!modelo) throw new ErrorMapaIncompletoGenerali(`el desplegable «Modelo» del selector de vehículos tras elegir la marca (no apareció en ${Math.round(ESPERA_MODELO_MS / 1000)} s). Campos vistos: ${resumenCamposSelectorGenerali(await leerCamposSelector(selector))}`)
+  await elegirModeloPrimeFaces(selector, modelo, v, ctx, avisos)
+  await page.waitForTimeout(PAUSA_CAMPOS_NUEVOS_MS)
+  const nuevos = camposNuevosSelectorGenerali(antes, await leerCamposSelector(selector), [menu.base, modelo.base])
+  if (nuevos.length > 0) {
+    // NO se pulsa «Confirmar»: campos que el bot no conoce. Se baja el scroll del selector (la evidencia del runner sale de ahí) y se PARA.
+    await recorrerScroll(page, selector)
+    const p = await leerPantalla(selector)
+    throw new ErrorMapaIncompletoGenerali(`los campos nuevos que salen en el selector de vehículos tras elegir marca y modelo (no se pulsa «Confirmar»): ${resumenCamposSelectorGenerali(nuevos)}. Botones vistos: ${p.botones.join(' · ').slice(0, 400) || '(ninguno)'}`)
+  }
   await ctx.confirmarVehiculoGenerali()
   const valoracion = await marcoConTexto(page, 'Identificación del vehículo', 10_000)
   if (valoracion) return false
   const botones: string[] = []
   for (const f of page.frames()) if (!f.isDetached()) botones.push(...(await leerPantalla(f).catch(() => ({ botones: [] as string[] }))).botones)
-  throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos (SIN CAPTURA; no es «Identificación del vehículo»). Botones vistos: ${[...new Set(botones)].join(' · ').slice(0, 600) || '(ninguno)'}`)
+  // La captura, el recorrido y el inventario de esta pantalla los guarda el runner al parar con un hueco de mapa.
+  throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos (no es «Identificación del vehículo»; su captura y su inventario los deja el runner). Botones vistos: ${[...new Set(botones)].join(' · ').slice(0, 600) || '(ninguno)'}`)
 }
 
 /**
@@ -735,7 +850,7 @@ export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form:
   if (!selector) throw new ErrorMapaIncompletoGenerali('la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5)')
   // v0.2.6: el selector real es PrimeFaces (select oculto + div combobox): ese camino NO busca modelo/versión (sin captura).
   const menuMarcas = await menuPrimeFaces(selector, 'Todas las marcas')
-  if (menuMarcas) return seleccionarVehiculoPrimeFaces(page, selector, menuMarcas, v, ctx)
+  if (menuMarcas) return seleccionarVehiculoPrimeFaces(page, selector, menuMarcas, v, ctx, avisos)
   const marcas = await controlJuntoA(selector, 'Todas las marcas', 'select', ctx.formador)
   if (!marcas || !(await esSelectNativo(marcas))) throw new ErrorMapaIncompletoGenerali(`el desplegable «Todas las marcas» del selector (captura 5; ¿no es un <select> nativo?). Desplegables vistos: ${await describirSelects(selector)}`)
   let similitud = await elegirNivel(marcas, 'marca', v, form, ctx)

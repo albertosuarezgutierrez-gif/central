@@ -2780,16 +2780,56 @@ export const ID_MENU_MARCAS_GENERALI = 'buscamarca'
 /** Una descripción de disparador más larga que esto no es un disparador (arrastra el texto de las opciones): no se pulsa. */
 const MAX_TEXTO_DISPARADOR_GENERALI = 80
 
-/** Preámbulo común de las dos puertas del desplegable de marcas: guard limpio, sin ventanas, id exacto, marco único y una vez. */
-async function prepararPuertaMarcasGenerali(page: Page, guard: GuardEmision, base: string, clave: string, que: string): Promise<{ marco: Frame; usados: Set<string> }> {
+/** Preámbulo común de las puertas de los desplegables del selector: guard limpio, sin ventanas, id permitido, marco único y una vez. */
+async function prepararPuertaMenuGenerali(page: Page, guard: GuardEmision, base: string, idValido: (b: string) => boolean, clave: string, que: string): Promise<{ marco: Frame; usados: Set<string> }> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', `${que} de Generali con una ventana de red abierta`)
-  if (base !== ID_MENU_MARCAS_GENERALI) throw new EmisionBloqueadaError('boton', String(base ?? '').slice(0, 80))
+  if (typeof base !== 'string' || !idValido(base)) throw new EmisionBloqueadaError('boton', String(base ?? '').slice(0, 80))
   const marco = marcoSelectorVehiculosGenerali(page)
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `${que} de Generali ya se hizo en este trabajo`)
   await exigirSinCuentaBancaria(page)
   return { marco, usados }
+}
+
+const esIdMarcasGenerali = (b: string) => b === ID_MENU_MARCAS_GENERALI
+/** Id de un SelectOneMenu de PrimeFaces distinto del de marcas y que no sea uno de sus elementos internos (`_input`, `_panel`, `_label`…). */
+const esIdModeloGenerali = (b: string) => /^[A-Za-z][A-Za-z0-9_-]{0,40}$/.test(b) && b !== ID_MENU_MARCAS_GENERALI && !/_(input|panel|label|items|focus|filter)$/i.test(b)
+
+/** Abre un SelectOneMenu pulsando SOLO su disparador propio (sin opciones dentro). Una vez por `clave`. */
+async function abrirMenuGenerali(page: Page, guard: GuardEmision, base: string, idValido: (b: string) => boolean, clave: string, que: string): Promise<void> {
+  const { marco, usados } = await prepararPuertaMenuGenerali(page, guard, base, idValido, clave, que)
+  const menu = marco.locator(`[id="${base}"]`)
+  if ((await menu.count()) !== 1) throw new ErrorMapaGuardGenerali(`el desplegable «#${base}» del selector de vehículos (no hay exactamente uno)`)
+  let disparador = marco.locator(`[id="${base}"] .ui-selectonemenu-trigger`).filter({ visible: true })
+  if ((await disparador.count()) !== 1) disparador = marco.locator(`[id="${base}_label"]`).filter({ visible: true })
+  const n = await disparador.count()
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`el disparador del desplegable «#${base}» (ni «.ui-selectonemenu-trigger» ni «#${base}_label» visibles y únicos; hay ${n})`)
+  const desc = await descripcion(disparador)
+  if (String(desc[0] ?? '').length > MAX_TEXTO_DISPARADOR_GENERALI) throw new ErrorMapaGuardGenerali(`el disparador del desplegable «#${base}» (su descripción arrastra ${String(desc[0]).length} caracteres: no es un disparador sin opciones)`)
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await disparador.click()
+  guard.comprobar()
+}
+
+/** Pulsa el `li` de `data-label` EXACTO del panel `#<base>_panel`. Exactamente uno; su texto y atributos pasan `comprobarBoton`. Una vez por `clave`. */
+async function elegirItemMenuGenerali(page: Page, guard: GuardEmision, base: string, texto: string, idValido: (b: string) => boolean, clave: string, que: string): Promise<void> {
+  const { marco, usados } = await prepararPuertaMenuGenerali(page, guard, base, idValido, clave, que)
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (t === '') throw new EmisionBloqueadaError('boton', '')
+  const etq = texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  const item = marco.locator(`[id="${base}_panel"] li[data-label="${etq}"]`)
+  const n = await item.count()
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`la opción «${t.slice(0, 60)}» en el panel «#${base}_panel» (${n} elementos con ese texto exacto; hace falta exactamente uno)`)
+  const desc = await descripcion(item)
+  if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add(clave)
+  AVANCES_USADOS.set(guard, usados)
+  await item.click()
+  guard.comprobar()
 }
 
 /**
@@ -2799,19 +2839,7 @@ async function prepararPuertaMarcasGenerali(page: Page, guard: GuardEmision, bas
  * descripción del DISPARADOR (nunca la del `div#buscamarca`, que contiene el `<select>` con todas las marcas).
  */
 export async function abrirDesplegableMarcaGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
-  const { marco, usados } = await prepararPuertaMarcasGenerali(page, guard, base, 'generali:abrir-marcas', 'el desplegable de marcas')
-  if ((await marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}"]`).count()) !== 1) throw new ErrorMapaGuardGenerali(`el desplegable «#${ID_MENU_MARCAS_GENERALI}» del selector de vehículos (no hay exactamente uno)`)
-  let disparador = marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}"] .ui-selectonemenu-trigger`).filter({ visible: true })
-  if ((await disparador.count()) !== 1) disparador = marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}_label"]`).filter({ visible: true })
-  const n = await disparador.count()
-  if (n !== 1) throw new ErrorMapaGuardGenerali(`el disparador del desplegable «#${ID_MENU_MARCAS_GENERALI}» (ni «.ui-selectonemenu-trigger» ni «#${ID_MENU_MARCAS_GENERALI}_label» visibles y únicos; hay ${n})`)
-  const desc = await descripcion(disparador)
-  if (String(desc[0] ?? '').length > MAX_TEXTO_DISPARADOR_GENERALI) throw new ErrorMapaGuardGenerali(`el disparador del desplegable «#${ID_MENU_MARCAS_GENERALI}» (su descripción arrastra ${String(desc[0]).length} caracteres: no es un disparador sin opciones)`)
-  comprobarBoton(desc)
-  usados.add('generali:abrir-marcas')
-  AVANCES_USADOS.set(guard, usados)
-  await disparador.click()
-  guard.comprobar()
+  await abrirMenuGenerali(page, guard, base, esIdMarcasGenerali, 'generali:abrir-marcas', 'el desplegable de marcas')
 }
 
 /**
@@ -2820,20 +2848,21 @@ export async function abrirDesplegableMarcaGenerali(page: Page, guard: GuardEmis
  * de emisión se BLOQUEA (fail-closed, correcto).
  */
 export async function elegirMarcaListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
-  const { marco, usados } = await prepararPuertaMarcasGenerali(page, guard, base, 'generali:elegir-marca', 'la marca de la lista')
-  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
-  if (t === '') throw new EmisionBloqueadaError('boton', '')
-  const etq = texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-  const item = marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}_panel"] li[data-label="${etq}"]`)
-  const n = await item.count()
-  if (n !== 1) throw new ErrorMapaGuardGenerali(`la marca «${t.slice(0, 60)}» en el panel «#${ID_MENU_MARCAS_GENERALI}_panel» (${n} elementos con ese texto exacto; hace falta exactamente uno)`)
-  const desc = await descripcion(item)
-  if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
-  comprobarBoton(desc)
-  usados.add('generali:elegir-marca')
-  AVANCES_USADOS.set(guard, usados)
-  await item.click()
-  guard.comprobar()
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdMarcasGenerali, 'generali:elegir-marca', 'la marca de la lista')
+}
+
+// v0.2.11 (19/10/2026): tras la marca aparece «Modelo» (otro SelectOneMenu de PrimeFaces, id que descubre el adaptador). Mismas reglas que
+// la marca: id de menú válido (no el de marcas ni sus elementos internos), solo el disparador propio, `li` de texto exacto (también «Otros»)
+// por `comprobarBoton`, URL `selVehiculo` y una vez por trabajo cada puerta.
+
+/** Abre el desplegable «Modelo» por su disparador propio, UNA vez por trabajo. */
+export async function abrirDesplegableModeloGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
+  await abrirMenuGenerali(page, guard, base, esIdModeloGenerali, 'generali:abrir-modelo', 'el desplegable de modelos')
+}
+
+/** Pulsa el `li` del modelo elegido (o «Otros») del panel `#<base>_panel`, UNA vez por trabajo; el texto pasa `comprobarBoton` (fail-closed). */
+export async function elegirModeloListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
+  await elegirItemMenuGenerali(page, guard, base, texto, esIdModeloGenerali, 'generali:elegir-modelo', 'el modelo de la lista')
 }
 
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────

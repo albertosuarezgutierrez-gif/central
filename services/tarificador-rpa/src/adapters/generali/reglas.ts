@@ -292,6 +292,49 @@ export function elegirMarcaExactaGenerali(opciones: readonly string[], buscado: 
   return { tipo: 'ninguna', cercanas: cerca.map((x) => x.o).slice(0, 25) }
 }
 
+/** Opción de cierre de la lista de modelos del selector de Generali (v0.2.11): «Otros». */
+export const OPCION_OTROS_MODELO_GENERALI = 'OTROS'
+
+/** Supuesto declarado cuando el modelo no figura en la lista y se elige «Otros» (el modelo es dato de catálogo, no personal). PURA. */
+export function avisoModeloOtrosGenerali(modelo: string): string {
+  return `modelo «${modelo.replace(/\s+/g, ' ').trim().slice(0, 60)}» no figura en la lista del selector de Generali: se eligió «Otros» (supuesto; revisar en la emisión)`
+}
+
+/**
+ * Modelo del selector (mismo criterio que la marca: SOLO igualdad EXACTA normalizada). Una → esa. Repetida → `varias` (una persona
+ * elige). Ninguna: si el dato es del riesgo (`dato`) y hay UNA opción «Otros» → `otros` con su supuesto; si el buscado es una
+ * denominación completa (no es un modelo suelto) o no hay «Otros» único → `ninguna` con las cercanas. Nunca la primera ni la más
+ * parecida. PURA.
+ */
+export type EleccionModeloGenerali =
+  | { tipo: 'unica'; indice: number }
+  | { tipo: 'otros'; indice: number; supuesto: string }
+  | { tipo: 'ninguna'; cercanas: string[] }
+  | { tipo: 'varias'; cercanas: string[] }
+
+export function elegirModeloGenerali(opciones: readonly string[], buscado: string, modo: 'dato' | 'denominacion' = 'dato'): EleccionModeloGenerali {
+  const e = elegirMarcaExactaGenerali(opciones, buscado)
+  if (e.tipo !== 'ninguna' || modo !== 'dato' || normalizarCatalogo(buscado) === '') return e
+  const otros = opciones.flatMap((o, i) => (!esOpcionVaciaCatalogo(o) && normalizarCatalogo(o) === OPCION_OTROS_MODELO_GENERALI ? [i] : []))
+  if (otros.length === 1) return { tipo: 'otros', indice: otros[0]!, supuesto: avisoModeloOtrosGenerali(buscado) }
+  return e
+}
+
+/** Un control del selector de vehículos leído de la página (solo lectura): etiqueta, tipo y sus opciones (catálogo). */
+export type CampoSelectorGenerali = { clave: string; etiqueta: string; tipo: string; opciones: string[]; total: number }
+
+/** Los campos que NO estaban antes de elegir marca/modelo (por `clave`) y que no son los menús que el bot maneja. PURA. */
+export function camposNuevosSelectorGenerali(antes: readonly string[], ahora: readonly CampoSelectorGenerali[], ignorar: readonly string[] = []): CampoSelectorGenerali[] {
+  const vistos = new Set([...antes, ...ignorar])
+  return ahora.filter((c) => !vistos.has(c.clave))
+}
+
+/** «Etiqueta [tipo]: op1 | op2 …» de cada campo nuevo, para el hueco (con tope). PURA. */
+export function resumenCamposSelectorGenerali(campos: readonly CampoSelectorGenerali[], max = 1500): string {
+  const t = campos.map((c) => `«${c.etiqueta || '(sin etiqueta)'}» [${c.tipo}]${c.opciones.length ? ` (${c.total}): ${c.opciones.join(' | ')}` : ''}`).join(' ; ')
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
 // ───────────────────────── «Datos de Valoración» (captura 6) ─────────────────────────
 
 /** Etiquetas EXACTAS de la captura 6 (sección «Identificación del vehículo» y «Roles»). */
