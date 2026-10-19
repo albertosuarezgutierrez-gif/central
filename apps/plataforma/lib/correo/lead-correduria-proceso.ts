@@ -3,7 +3,7 @@
 // Las reglas viven en `lead-correduria.ts` (puro, con test); aquí solo se encadenan:
 //   1. ¿respuesta en el hilo de un lead que ya registramos? → F2: se LEE y se propone la repregunta de lo que falta
 //      (`lead-correduria-respuesta-proceso.ts`); si no casa con un único hilo, SOLO historial en su ficha y aviso.
-//   2. Si no: la IA lee el correo (`llamarIA`), `normalizarLeadCorreo` valida contra el texto, y el
+//   2. Si no: la IA lee el correo (`llamarIAPrivada`: solo OpenRouter, retención cero), `normalizarLeadCorreo` valida contra el texto, y el
 //      alta va por el MISMO puerto que el formulario web (`altaClienteAsegura`), solo con `es_lead:true`:
 //      ficha nueva, o la que ya tenía el email del REMITENTE (no se fuerza duplicado: se anota el contacto).
 //      Si el teléfono del cuerpo cae en OTRA ficha → «revisar a mano» (`resolverAltaLeadCorreo`).
@@ -25,7 +25,7 @@ import { nombreDePila } from '@central/module-seguros'
 import { catastroDeLead, proponerPeticion, type CatastroLead } from './lead-correduria-pendiente'
 import { buscarAsegura } from '@/lib/correduria-puerto'
 import { urlFichaCliente } from '@/lib/leads-web'
-import { llamarIA } from './clasificador'
+import { llamarIAPrivada } from './ia-lead-privada'
 import type { CorreoNuevo } from './imap'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 import { notaSinLeer, procesarRespuestaLead } from './lead-correduria-respuesta-proceso'
@@ -41,7 +41,7 @@ async function extraer(correo: CorreoNuevo): Promise<LeadCorreo> {
   const cuerpo = (correo.texto ?? correo.extracto).slice(0, 4000)
   let raw: unknown = null
   try {
-    const r = await llamarIA(PROMPT_EXTRAER_LEAD, `Remitente: ${correo.fromRaw}\nAsunto: ${correo.subject}\nCuerpo:\n${cuerpo}`)
+    const r = await llamarIAPrivada(PROMPT_EXTRAER_LEAD, `Remitente: ${correo.fromRaw}\nAsunto: ${correo.subject}\nCuerpo:\n${cuerpo}`)
     const m = r.match(/\{[\s\S]*\}/)
     raw = m ? JSON.parse(m[0]) : null
   } catch {
