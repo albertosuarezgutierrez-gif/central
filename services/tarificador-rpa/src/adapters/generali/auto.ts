@@ -103,7 +103,7 @@ export const GENERALI_AUTO_ACTIVO = true
  * (`select#X_input` OCULTO + `div#X[role=combobox]`); se reconoce, la marca se elige por igualdad EXACTA normalizada (0 o varias →
  * atasco `eleccion` con las cercanas), «Placas especiales» = «No» y «Confirmar» por puertas de guard.ts; la pantalla siguiente → hueco.
  */
-export const VERSION_GENERALI_AUTO = '0.2.6'
+export const VERSION_GENERALI_AUTO = '0.2.7'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -631,7 +631,7 @@ export async function menuPrimeFaces(raiz: Raiz, etiqueta: string): Promise<Menu
 }
 
 /**
- * Elige la marca en el SelectOneMenu. Vía: abrir el combobox y pulsar el `li` de `data-label` exacto (la vía propia de PrimeFaces:
+ * Elige la marca en el SelectOneMenu. Vía: abrir el desplegable por su disparador (puerta del guard) y pulsar el `li` de `data-label` exacto (la vía propia de PrimeFaces:
  * actualiza etiqueta, valor y dispara su change/ajax); si eso falla (no por el guard), `selectOption` en el select oculto + change.
  * Solo igualdad EXACTA normalizada: 0 o varias → `ErrorEleccionVersion` (tipo `eleccion`) con las cercanas, sin tocar nada.
  */
@@ -646,14 +646,15 @@ export async function elegirMarcaPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v:
   }
   const elegida = opciones[e.indice]!
   const puesta = async () => (await menu.select.inputValue().catch(() => '')) === elegida.valor
+  if (!ctx.abrirDesplegableMarcaGenerali || !ctx.elegirMarcaListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de marcas (disparador y `li`) en el contexto del runner', false)
   await ctx.pausaAccion()
   try {
-    const combo = raiz.locator(`[id="${menu.base}"][role="combobox"]`)
-    await ctx.pulsar(combo)
+    // v0.2.7: se abre pulsando el disparador propio de PrimeFaces (sin las opciones dentro), no el `div#buscamarca`.
+    await ctx.abrirDesplegableMarcaGenerali(menu.base)
     const etq = elegida.texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
     const item = raiz.locator(`[id="${menu.base}_panel"] li[data-label="${etq}"]`)
     if ((await item.count()) === 1) {
-      await ctx.pulsar(item)
+      await ctx.elegirMarcaListaGenerali(menu.base, elegida.texto)
       for (let i = 0; i < 10 && !(await puesta()); i++) await new Promise((r) => setTimeout(r, 300))
     }
   } catch (err) {
@@ -673,7 +674,7 @@ export async function elegirMarcaPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v:
  * `hueco_mapa` si la pantalla siguiente no es «Identificación del vehículo»: su inventario lo captura el modo exploración.
  */
 async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal): Promise<boolean> {
-  if (!ctx.marcarPlacasEspecialesGenerali || !ctx.confirmarVehiculoGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del selector de vehículos (placas especiales y «Confirmar») en el contexto del runner', false)
+  if (!ctx.marcarPlacasEspecialesGenerali || !ctx.confirmarVehiculoGenerali || !ctx.abrirDesplegableMarcaGenerali || !ctx.elegirMarcaListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del selector de vehículos (placas especiales, desplegable de marcas y «Confirmar») en el contexto del runner', false)
   await ctx.marcarPlacasEspecialesGenerali()
   await elegirMarcaPrimeFaces(selector, menu, v, ctx)
   await ctx.confirmarVehiculoGenerali()

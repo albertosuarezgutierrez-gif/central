@@ -2752,6 +2752,73 @@ export async function marcarPlacasEspecialesGenerali(page: Page, guard: GuardEmi
   guard.comprobar()
 }
 
+// ─────────── Desplegable «Todas las marcas» del selector de vehículos (v0.2.7, 19/10/2026) ───────────
+// Fallo real de la 0.2.6: el bot pulsó `div#buscamarca` por `pulsar()`; su descripción llevaba el innerText de las 630 opciones del
+// `<select>` oculto que contiene, y alguna marca casó con el patrón de emisión (el guard bloqueó, con razón). Ahora el clic de
+// apertura va SOLO al disparador propio de PrimeFaces (sin opciones dentro) y el de la marca, al `li` de texto exacto; ambos por
+// puerta, con URL `selVehiculo`, id EXACTO `buscamarca` y una vez por trabajo. El patrón de emisión NO se relaja.
+
+/** Único id de SelectOneMenu cuyo desplegable puede abrir el robot en el selector de vehículos. */
+export const ID_MENU_MARCAS_GENERALI = 'buscamarca'
+/** Una descripción de disparador más larga que esto no es un disparador (arrastra el texto de las opciones): no se pulsa. */
+const MAX_TEXTO_DISPARADOR_GENERALI = 80
+
+/** Preámbulo común de las dos puertas del desplegable de marcas: guard limpio, sin ventanas, id exacto, marco único y una vez. */
+async function prepararPuertaMarcasGenerali(page: Page, guard: GuardEmision, base: string, clave: string, que: string): Promise<{ marco: Frame; usados: Set<string> }> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', `${que} de Generali con una ventana de red abierta`)
+  if (base !== ID_MENU_MARCAS_GENERALI) throw new EmisionBloqueadaError('boton', String(base ?? '').slice(0, 80))
+  const marco = marcoSelectorVehiculosGenerali(page)
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has(clave)) throw new EmisionBloqueadaError('fase', `${que} de Generali ya se hizo en este trabajo`)
+  await exigirSinCuentaBancaria(page)
+  return { marco, usados }
+}
+
+/**
+ * Abre el desplegable «Todas las marcas» (`#buscamarca`), UNA vez por trabajo, pulsando SOLO su disparador propio:
+ * `.ui-selectonemenu-trigger` o, en su defecto, `#buscamarca_label` (ninguno contiene las opciones). Debe haber exactamente un
+ * `#buscamarca` y exactamente un disparador visible; si no, hueco con inventario sin pulsar. `comprobarBoton` sobre la
+ * descripción del DISPARADOR (nunca la del `div#buscamarca`, que contiene el `<select>` con todas las marcas).
+ */
+export async function abrirDesplegableMarcaGenerali(page: Page, guard: GuardEmision, base: string): Promise<void> {
+  const { marco, usados } = await prepararPuertaMarcasGenerali(page, guard, base, 'generali:abrir-marcas', 'el desplegable de marcas')
+  if ((await marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}"]`).count()) !== 1) throw new ErrorMapaGuardGenerali(`el desplegable «#${ID_MENU_MARCAS_GENERALI}» del selector de vehículos (no hay exactamente uno)`)
+  let disparador = marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}"] .ui-selectonemenu-trigger`).filter({ visible: true })
+  if ((await disparador.count()) !== 1) disparador = marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}_label"]`).filter({ visible: true })
+  const n = await disparador.count()
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`el disparador del desplegable «#${ID_MENU_MARCAS_GENERALI}» (ni «.ui-selectonemenu-trigger» ni «#${ID_MENU_MARCAS_GENERALI}_label» visibles y únicos; hay ${n})`)
+  const desc = await descripcion(disparador)
+  if (String(desc[0] ?? '').length > MAX_TEXTO_DISPARADOR_GENERALI) throw new ErrorMapaGuardGenerali(`el disparador del desplegable «#${ID_MENU_MARCAS_GENERALI}» (su descripción arrastra ${String(desc[0]).length} caracteres: no es un disparador sin opciones)`)
+  comprobarBoton(desc)
+  usados.add('generali:abrir-marcas')
+  AVANCES_USADOS.set(guard, usados)
+  await disparador.click()
+  guard.comprobar()
+}
+
+/**
+ * Pulsa el `li` de la marca elegida (`data-label` EXACTO) del panel `#buscamarca_panel`, UNA vez por trabajo. Exactamente un `li`;
+ * su texto visible es el de la marca y, junto con sus atributos y ancestros, pasa `comprobarBoton`: si la marca casa con el patrón
+ * de emisión se BLOQUEA (fail-closed, correcto).
+ */
+export async function elegirMarcaListaGenerali(page: Page, guard: GuardEmision, base: string, texto: string): Promise<void> {
+  const { marco, usados } = await prepararPuertaMarcasGenerali(page, guard, base, 'generali:elegir-marca', 'la marca de la lista')
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (t === '') throw new EmisionBloqueadaError('boton', '')
+  const etq = texto.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  const item = marco.locator(`[id="${ID_MENU_MARCAS_GENERALI}_panel"] li[data-label="${etq}"]`)
+  const n = await item.count()
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`la marca «${t.slice(0, 60)}» en el panel «#${ID_MENU_MARCAS_GENERALI}_panel» (${n} elementos con ese texto exacto; hace falta exactamente uno)`)
+  const desc = await descripcion(item)
+  if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add('generali:elegir-marca')
+  AVANCES_USADOS.set(guard, usados)
+  await item.click()
+  guard.comprobar()
+}
+
 // ─────────── «Guardar presupuesto» de Allianz AUTOS Turismos (v0.6.13 del bot, 18/10/2026, autorizado por Alberto) ───────────
 // HTML real (trabajo d675077b, pantalla «Selección de paquete»): bajo la tabla de precios vive el formulario `nx-mt-save-proposal`
 // («Guardar el presupuesto»): «Identificador presupuesto» (obligatorio, ≤30), tipo/nº de documento, nombre y apellidos del tomador

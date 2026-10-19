@@ -29,7 +29,7 @@ import {
 } from '../src/adapters/generali/reglas.ts'
 import { ErrorMapaIncompletoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
+import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { vehiculoDelResultado } from '../src/api.ts'
@@ -150,8 +150,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.6')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.6')
+  assert.equal(generaliAuto.version, '0.2.7')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.7')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -519,8 +519,7 @@ const PRIMEFACES_HTML = (marcas: string[], boton = 'Confirmar') => `<button type
   <td><input type="radio" id="placaesp:1" name="placaesp" value="N" style="position:absolute;left:-999px"><label for="placaesp:1">No</label></td></tr></table>
   <span>Principales marcas</span>
   <span>Todas las marcas</span>
-  <div id="buscamarca" role="combobox" tabindex="0" onclick="document.getElementById('buscamarca_panel').style.display='block'"><label id="buscamarca_label">Seleccione una</label></div>
-  <select id="buscamarca_input" name="buscamarca_input" style="display:none"><option value="null">Seleccione una</option>${marcas.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select>
+  <div id="buscamarca" role="combobox" tabindex="0" onclick="document.getElementById('buscamarca_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="buscamarca_input" name="buscamarca_input" style="width:0;height:0;border:0;padding:0"><option value="null">Seleccione una</option>${marcas.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><label id="buscamarca_label" class="ui-selectonemenu-label">Seleccione una</label><div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div></div>
   <div id="buscamarca_panel" style="display:none"><ul id="buscamarca_items">${marcas.map((m) => `<li data-label="${m}" class="ui-selectonemenu-item" onclick="var s=document.getElementById('buscamarca_input');s.selectedIndex=Array.from(s.options).findIndex(o=>o.textContent==='${m}');document.getElementById('buscamarca_label').textContent='${m}';s.dispatchEvent(new Event('change'));window.__cambios=(window.__cambios||0)+1;document.getElementById('buscamarca_panel').style.display='none'">${m}</li>`).join('')}</ul></div>
   <button type="submit" id="cancelar" onclick="window.__cancelar=1">Cancelar</button>
   <button type="submit" id="confirmar" onclick="window.__confirmado=(window.__confirmado||0)+1;return false">${boton}</button>`
@@ -530,6 +529,8 @@ const ctxPF = (page: Page, guard: GuardEmision) => ({
   pulsar: async (b: Parameters<ContextoPortal['pulsar']>[0]) => { const { pulsar } = await import('../src/guard.ts'); await pulsar(b, guard) },
   marcarPlacasEspecialesGenerali: () => marcarPlacasEspecialesGenerali(page, guard, 'No'),
   confirmarVehiculoGenerali: () => pulsarConfirmarVehiculoGenerali(page, guard),
+  abrirDesplegableMarcaGenerali: (base: string) => abrirDesplegableMarcaGenerali(page, guard, base),
+  elegirMarcaListaGenerali: (base: string, texto: string) => elegirMarcaListaGenerali(page, guard, base, texto),
   log: () => {},
 }) as unknown as ContextoPortal
 
@@ -631,5 +632,93 @@ test('v0.2.6 · puerta de «Confirmar»: solo el texto exacto, solo en la URL se
     assert.equal(await c.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
   } finally {
     await c.cerrar()
+  }
+})
+
+// ───────────── v0.2.7: el desplegable de marcas se abre por su DISPARADOR (el `div#buscamarca` lleva todas las opciones dentro) ─────────────
+
+const cambiosPF = (page: Page) => page.evaluate(() => (window as unknown as { __cambios?: number }).__cambios ?? 0)
+
+test('v0.2.7 · la descripción del disparador NO incluye las opciones; la del `div#buscamarca` sí (el fallo real de la 0.2.6)', async () => {
+  const { page, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'BAJAJ']))
+  try {
+    const div = await page.locator('#buscamarca').evaluate((el) => (el as HTMLElement).innerText)
+    assert.match(div, /BAJAJ/, 'el contenedor arrastra el texto de TODAS las marcas')
+    for (const sel of ['#buscamarca .ui-selectonemenu-trigger', '#buscamarca_label']) {
+      const d = await page.locator(sel).evaluate((el) => (el as HTMLElement).innerText + '|' + el.outerHTML)
+      assert.doesNotMatch(d, /BAJAJ|SEAT/, sel)
+    }
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.7 · una marca que casa con el patrón de emisión (BAJAJ ← «baja») NO bloquea la apertura, pero SÍ su elección (fail-closed)', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'BAJAJ']))
+  try {
+    const f = coche({ seleccionVehiculo: { marca: 'BAJAJ', modelo: 'X' } })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, f, ctxPF(page, guard)), (e: unknown) => e instanceof EmisionBloqueadaError)
+    assert.equal(await page.locator('#buscamarca_panel').evaluate((el) => (el as HTMLElement).style.display), 'block', 'el desplegable SÍ se abrió (el disparador no arrastra las opciones)')
+    assert.equal(await cambiosPF(page), 0, 'no se pulsó el li de BAJAJ')
+    assert.equal(await page.locator('#buscamarca_input').inputValue(), 'null')
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.7 · la puerta de apertura exige la URL selVehiculo y el id EXACTO `buscamarca`', async () => {
+  const a = await abrir(PORTAL, PRIMEFACES_HTML(['SEAT']))
+  try {
+    await assert.rejects(abrirDesplegableMarcaGenerali(a.page, a.guard, 'buscamarca'), (e: unknown) => e instanceof ErrorTarificador)
+    await assert.rejects(elegirMarcaListaGenerali(a.page, a.guard, 'buscamarca', 'SEAT'), (e: unknown) => e instanceof ErrorTarificador)
+    assert.equal(await a.page.locator('#buscamarca_panel').evaluate((el) => (el as HTMLElement).style.display), 'none', 'no se abrió')
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT']))
+  try {
+    for (const id of ['buscamarca_input', 'buscamodelo', 'BUSCAMARCA', '']) {
+      await assert.rejects(abrirDesplegableMarcaGenerali(b.page, b.guard, id), EmisionBloqueadaError, id)
+      await assert.rejects(elegirMarcaListaGenerali(b.page, b.guard, id, 'SEAT'), EmisionBloqueadaError, id)
+    }
+    assert.equal(await b.page.locator('#buscamarca_panel').evaluate((el) => (el as HTMLElement).style.display), 'none')
+    assert.equal(await cambiosPF(b.page), 0)
+  } finally {
+    await b.cerrar()
+  }
+})
+
+test('v0.2.7 · las puertas de apertura y de elección de marca se usan UNA sola vez por trabajo', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'SKODA']))
+  try {
+    await abrirDesplegableMarcaGenerali(page, guard, 'buscamarca')
+    assert.equal(await page.locator('#buscamarca_panel').evaluate((el) => (el as HTMLElement).style.display), 'block')
+    await assert.rejects(abrirDesplegableMarcaGenerali(page, guard, 'buscamarca'), EmisionBloqueadaError)
+    await elegirMarcaListaGenerali(page, guard, 'buscamarca', 'SEAT')
+    assert.equal(await cambiosPF(page), 1)
+    await assert.rejects(elegirMarcaListaGenerali(page, guard, 'buscamarca', 'SKODA'), EmisionBloqueadaError)
+    assert.equal(await cambiosPF(page), 1, 'la segunda elección no pulsó nada')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.7 · sin disparador visible y único (ni trigger ni label) → hueco con inventario, sin pulsar; `li` repetido o ausente → hueco', async () => {
+  const sinDisparador = PRIMEFACES_HTML(['SEAT']).replace('<div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div>', '').replace('<label id="buscamarca_label" class="ui-selectonemenu-label">Seleccione una</label>', '')
+  const a = await abrir(SEL_VEHICULOS, sinDisparador)
+  try {
+    await assert.rejects(abrirDesplegableMarcaGenerali(a.page, a.guard, 'buscamarca'), (e: unknown) => e instanceof ErrorMapaGuardGenerali && e.pideInventarioDom)
+    assert.equal(await a.page.locator('#buscamarca_panel').evaluate((el) => (el as HTMLElement).style.display), 'none')
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'SEAT']))
+  try {
+    await assert.rejects(elegirMarcaListaGenerali(b.page, b.guard, 'buscamarca', 'SEAT'), (e: unknown) => e instanceof ErrorMapaGuardGenerali)
+    await assert.rejects(elegirMarcaListaGenerali(b.page, b.guard, 'buscamarca', 'NOEXISTE'), (e: unknown) => e instanceof ErrorMapaGuardGenerali)
+    assert.equal(await cambiosPF(b.page), 0)
+  } finally {
+    await b.cerrar()
   }
 })
