@@ -74,7 +74,7 @@ import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
 import PrecioBots from '../PrecioBots'
 import { bloqueosAltaTomador } from '@/lib/tarificador-alta-tomador'
-import { datoDePersonaBot } from '@/lib/tarificador-moto-formulario'
+import { datoDePersonaBot, companiaActualParaBots } from '@/lib/tarificador-moto-formulario'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -1331,6 +1331,7 @@ export default function CotizadorMoto({
             aniosAsegurado,
             aniosSinSiniestros,
             siniestrosUltimos5,
+            companiaAnterior: companiaActualParaBots({ tieneSeguroActual, companias, codigo: companiaActualCodigo, libre: companiaActualLibre, leida: anterior?.aseguradora }),
           }}
         />
       )}

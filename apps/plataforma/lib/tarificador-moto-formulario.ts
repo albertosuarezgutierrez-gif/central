@@ -294,3 +294,22 @@ export function leerEncoladoBot(status: number, json: unknown): EncoladoBot {
   }
   return leerEncolado(status, json)
 }
+
+/**
+ * «Compañía actual» del cotizador (arriba) → `companiaAnterior` del bloque de bots (19/10/2026). Antes no viajaba y Mapfre pedía
+ * de nuevo el nombre aunque ya estuviera elegido. Código DGS → `nombreComun` del catálogo; sin catálogo (`null`) vale el texto libre;
+ * sin elegir, la compañía leída de la póliza de la oportunidad (`poliza_competencia.aseguradora`). Sin seguro actual → `null`
+ * (los años = 0 los descarta `formularioBotMoto`). PURA.
+ */
+export function companiaActualParaBots(a: {
+  tieneSeguroActual: boolean
+  companias: readonly { codigoDgs: string; nombreComun: string }[] | null
+  codigo: string
+  libre: string
+  leida?: string | null
+}): string | null {
+  if (!a.tieneSeguroActual) return null
+  const delCatalogo = a.codigo ? a.companias?.find((c) => c.codigoDgs === a.codigo)?.nombreComun ?? '' : ''
+  const t = (delCatalogo || a.libre || a.leida || '').replace(/\s+/g, ' ').trim()
+  return t === '' ? null : t
+}

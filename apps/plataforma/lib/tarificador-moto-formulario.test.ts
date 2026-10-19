@@ -197,3 +197,19 @@ test('bloque «Bots (gratis)»: sin emisión, un botón por integración del ram
   assert.match(e, /Avant2 — 0,50€ por petición/)
   assert.match(e, /!ramoConAdaptador && <PrecioBots/) // la carcasa solo monta el suyo si el cotizador del ramo no lo hace
 })
+
+test('companiaActualParaBots: la compañía elegida arriba viaja al bot (código DGS → nombre común)', async () => {
+  const { companiaActualParaBots } = await import('./tarificador-moto-formulario.ts')
+  const cat = [{ codigoDgs: 'C0001', nombreComun: 'Aseguradora Beta' }]
+  const base = { tieneSeguroActual: true, companias: cat, codigo: 'C0001', libre: '' }
+  assert.equal(companiaActualParaBots(base), 'Aseguradora Beta')
+  assert.equal(companiaActualParaBots({ ...base, codigo: '', libre: '  Texto   libre ' }), 'Texto libre')
+  assert.equal(companiaActualParaBots({ ...base, companias: null, codigo: '', libre: 'C0001' }), 'C0001')
+  assert.equal(companiaActualParaBots({ ...base, codigo: '', leida: ' Aseguradora Gamma ' }), 'Aseguradora Gamma')
+  assert.equal(companiaActualParaBots({ ...base, codigo: 'C9999' }), null, 'código fuera de catálogo y sin texto: no consta')
+  assert.equal(companiaActualParaBots({ ...base, tieneSeguroActual: false }), null)
+  // de punta a punta: con años = 0 el formulario descarta la compañía; con años > 0 la lleva
+  const nombre = companiaActualParaBots(base)
+  assert.equal('companiaAnterior' in ok(entrada({ aniosAsegurado: '0', companiaAnterior: nombre })).riesgo, false)
+  assert.equal(ok(entrada({ aniosAsegurado: '8', companiaAnterior: nombre })).riesgo.companiaAnterior, 'Aseguradora Beta')
+})
