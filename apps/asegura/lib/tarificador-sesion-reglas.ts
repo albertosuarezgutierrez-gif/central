@@ -19,6 +19,18 @@ export const MAX_TOKEN_CHARS = 1_000_000
 export const MAX_CUERPO_BYTES = MAX_TOKEN_CHARS + 4_096
 /** Techo de caducidad que acepta asegura: el del worker (24 h) + 1 h de holgura por desfase de reloj. */
 export const MAX_CADUCIDAD_MS = 25 * 3_600_000
+/**
+ * DISPOSITIVO DE CONFIANZA (19/10/2026, Generali/Okta): tras verificar el SMS con «No volver a solicitar en este dispositivo
+ * en 30 días», el worker guarda el estado del navegador 30 días (`CADUCIDAD_DISPOSITIVO_MS` del worker). Solo las compañías
+ * de esta lista pueden pasar de 25 h, y nunca de 30 días + 1 h (holgura de reloj). El resto sigue con el techo de 25 h.
+ */
+export const COMPANIAS_DISPOSITIVO: ReadonlySet<string> = new Set(['generali'])
+export const MAX_CADUCIDAD_DISPOSITIVO_MS = 30 * 24 * 3_600_000 + 3_600_000
+
+/** Techo de caducidad para ESTA compañía. PURA. */
+export function maxCaducidadMs(compania: string): number {
+  return COMPANIAS_DISPOSITIVO.has(compania) ? MAX_CADUCIDAD_DISPOSITIVO_MS : MAX_CADUCIDAD_MS
+}
 
 const SLUG = /^[a-z0-9-]{1,40}$/
 /** `v1.<iv base64url>.<cifrado+tag base64url>` (boveda-sesion.ts). */
@@ -74,8 +86,8 @@ export async function leerCuerpoConTope(body: ReadableStream<Uint8Array> | null,
 
 export type Guardado = { token: string; caducaEn: Date }
 
-/** Cuerpo del PUT `{ token, caducaEn }` (lo que manda `almacenHttp().guardar`). */
-export function leerGuardado(texto: string, ahora: number): Lectura<Guardado> {
+/** Cuerpo del PUT `{ token, caducaEn }` (lo que manda `almacenHttp().guardar`). `maxMs`: el techo de la compañía. */
+export function leerGuardado(texto: string, ahora: number, maxMs: number = MAX_CADUCIDAD_MS): Lectura<Guardado> {
   if (Buffer.byteLength(texto, 'utf8') > MAX_CUERPO_BYTES) return { ok: false, status: 413, motivo: 'cuerpo_grande' }
   let body: unknown
   try {
@@ -92,7 +104,7 @@ export function leerGuardado(texto: string, ahora: number): Lectura<Guardado> {
   const t = Date.parse(b.caducaEn)
   if (!Number.isFinite(t)) return { ok: false, status: 400, motivo: 'caduca_invalida' }
   if (t <= ahora) return { ok: false, status: 400, motivo: 'caduca_pasada' }
-  if (t > ahora + MAX_CADUCIDAD_MS) return { ok: false, status: 400, motivo: 'caduca_excesiva' }
+  if (t > ahora + Math.min(maxMs, MAX_CADUCIDAD_DISPOSITIVO_MS)) return { ok: false, status: 400, motivo: 'caduca_excesiva' }
   return { ok: true, valor: { token: b.token, caducaEn: new Date(t) } }
 }
 

@@ -164,3 +164,17 @@ test('leerCuerpoConTope corta por BYTES leídos aunque no haya Content-Length', 
   assert.equal(await leerCuerpoConTope(null, 100), '')
   assert.match(readFileSync(join(APP, 'app/api/tarificador/sesion/[compania]/route.ts'), 'utf8'), /leerCuerpoConTope\(req\.body\)/)
 })
+
+test('DISPOSITIVO de confianza (19/10/2026): solo Generali pasa de 25 h, y nunca de 30 días + 1 h', async () => {
+  const { maxCaducidadMs, MAX_CADUCIDAD_DISPOSITIVO_MS } = await import('./tarificador-sesion-reglas.ts')
+  const dias = (n: number) => new Date(AHORA + n * 24 * 3_600_000).toISOString()
+  assert.equal(maxCaducidadMs('generali'), MAX_CADUCIDAD_DISPOSITIVO_MS)
+  assert.equal(maxCaducidadMs('allianz'), MAX_CADUCIDAD_MS)
+  assert.equal(leerGuardado(cuerpo({ token: TOKEN, caducaEn: dias(30) }), AHORA, maxCaducidadMs('generali')).ok, true)
+  const r = leerGuardado(cuerpo({ token: TOKEN, caducaEn: dias(30) }), AHORA, maxCaducidadMs('allianz'))
+  assert.equal(r.ok ? null : r.motivo, 'caduca_excesiva', 'otra compañía sigue con 25 h')
+  const r2 = leerGuardado(cuerpo({ token: TOKEN, caducaEn: dias(31) }), AHORA, maxCaducidadMs('generali'))
+  assert.equal(r2.ok ? null : r2.motivo, 'caduca_excesiva', 'ni Generali pasa de 30 días + 1 h')
+  const r3 = leerGuardado(cuerpo({ token: TOKEN, caducaEn: dias(300) }), AHORA, Number.MAX_SAFE_INTEGER)
+  assert.equal(r3.ok ? null : r3.motivo, 'caduca_excesiva', 'el techo duro no depende del llamante')
+})

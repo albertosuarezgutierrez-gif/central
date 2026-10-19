@@ -156,6 +156,12 @@ export type AdaptadorPortal = TarificadorAdapter<Page, RiesgoComunidad, Contexto
    * solo reutiliza la sesión sellada que dio de alta una persona; sin ella, `requiere_humano` sin abrir el navegador.
    */
   readonly sesion?: 'manual'
+  /**
+   * `'okta-generali'` (19/10/2026): si el portal pide el SMS de Okta tras el login, el runner pide el código por Telegram
+   * (relevo-sms.ts), verifica marcando «No volver a solicitar en este dispositivo en 30 días» y guarda el dispositivo de
+   * confianza en la bóveda (30 días). Ausente = una pantalla de código es `requiere_humano`, como siempre.
+   */
+  readonly codigoSms?: 'okta-generali'
   /** Emisión asistida (10/10/2026). Ausente = este portal NO emite (y además tiene que estar en la lista blanca del módulo). */
   readonly emision?: EmisionPortal
 }

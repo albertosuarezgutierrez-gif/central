@@ -20,6 +20,12 @@ export const NOMBRE_MAX_HORAS = 'TARIFICADOR_SESION_MAX_HORAS'
 export const MAX_HORAS_DEFECTO = 8
 /** Techo duro: ninguna configuración la alarga más allá de esto. */
 export const MAX_HORAS_TECHO = 24
+/**
+ * DISPOSITIVO DE CONFIANZA (19/10/2026, Generali/Okta): tras verificar el SMS con «No volver a solicitar en este dispositivo en
+ * 30 días», el estado del navegador (cookie de dispositivo de Okta incluida) se sella con ESTA caducidad, contada desde la
+ * verificación; el uso no la alarga (`refrescar` re-sella con la original). Mismo sello y misma clave que la sesión manual.
+ */
+export const CADUCIDAD_DISPOSITIVO_MS = 30 * 24 * 3_600_000
 const VERSION = 'v1'
 
 /** Clave de la bóveda desde el entorno. Sin fallback: sin el fly secret (o mal formado) se lanza. */

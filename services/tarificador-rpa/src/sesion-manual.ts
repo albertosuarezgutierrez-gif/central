@@ -49,6 +49,13 @@ export class GestorSesionManual {
     await this.almacen.borrar(compania)
   }
 
+  /** Sella y guarda un estado NUEVO con la caducidad completa (`maxMs` desde ahora): solo tras una verificación hecha. */
+  async guardarNueva(compania: string, estado: EstadoNavegador): Promise<number> {
+    const { token, caduca } = sellarSesion(estado, { compania, clave: this.o.clave, ahora: this.ahora(), maxMs: this.o.maxMs })
+    await this.almacen.guardar(compania, token, caduca)
+    return caduca
+  }
+
   /** Re-sella el estado refrescado tras un trabajo bueno SIN alargar la caducidad de la sesión original. */
   async refrescar(compania: string, estado: EstadoNavegador, caducaOriginal: number): Promise<void> {
     const ahora = this.ahora()

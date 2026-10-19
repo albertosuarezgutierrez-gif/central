@@ -697,3 +697,58 @@ test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactad
   const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
   assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
 })
+
+// ─── Relevo del código SMS de Okta por Telegram (Generali, Alberto 19/10/2026) ───────────────────────────────────
+
+/** Infracciones de la FORMA del relevo. Exportada en el test para verla FALLAR brazo a brazo. */
+function infraccionesRelevoSms(runner: string, relevo: string, guard: string): string[] {
+  const out: string[] = []
+  // 1. `trasLogin`: el corte por SMS va ANTES de la parada genérica de verificación, y solo con relevo sin usar en la URL exacta.
+  const tras = runner.slice(runner.indexOf('trasLogin: async () => {'), runner.indexOf('adjuntarPdf:'))
+  const iCorte = tras.indexOf('if (k.relevoSms && !k.relevoSms.usado && esUrlOktaSmsGenerali(page.url())) throw new ErrorCodigoSmsPendiente(k.compania)')
+  const iVerif = tras.indexOf('await exigirSinVerificacion(page, k.compania)')
+  if (iCorte < 0 || iVerif < 0 || iCorte > iVerif) out.push('trasLogin: el corte por SMS tiene que ir antes de exigirSinVerificacion (y solo con relevo sin usar)')
+  // 2. El relevo: solo ante ErrorCodigoSmsPendiente, con el guard LIMPIO, y se gasta ANTES de relevar (uno por trabajo).
+  if (!/if \(error instanceof ErrorCodigoSmsPendiente && k\.relevoSms && !k\.relevoSms\.usado && !guard\.violacion\(\)\) \{\s*k\.relevoSms\.usado = true\s*const rv: Relevo = await k\.relevoSms\.relevar\(page, guard\)/.test(runner)) out.push('runner: el relevo solo con el guard limpio y gastándolo antes de relevar')
+  // 3. El código abierto: UNA sola lectura, y va DIRECTA a verificarCodigoSmsGenerali (ni logs, ni mensajes, ni resultado).
+  const usos = relevo.match(/espera\.codigo\.valor/g) ?? []
+  if (usos.length !== 1 || !/await verificarCodigoSmsGenerali\(page, guard, espera\.codigo\.valor\)/.test(relevo)) out.push('relevo-sms: el código solo va a verificarCodigoSmsGenerali')
+  if (/console\.|d\.log\([^)]*codigo\.|d\.log\([^)]*sello/.test(relevo)) out.push('relevo-sms: un log nombra el código o el sello')
+  if (!/\} finally \{\s*await vaciarCodigoSmsGenerali\(page\)/.test(relevo)) out.push('relevo-sms: el campo del código se vacía SIEMPRE (finally)')
+  // 4. guard: el valor se escribe UNA vez, solo en verificarCodigoSmsGenerali, tras comprobar la pantalla, el botón y su texto.
+  const fn = guard.split(/^export async function /m).find((f) => f.startsWith('verificarCodigoSmsGenerali'))
+  if (!fn) out.push('falta verificarCodigoSmsGenerali en guard.ts')
+  else {
+    const iFill = fn.indexOf('await campo.fill(codigo')
+    for (const p of ["exigirPantallaOkta(page, guard, '«Verificar» del SMS')", "marcarUsoOkta(guard, 'generali:okta:verificar')", 'comprobarBoton(desc)', 'if (texto !== BOTON_VERIFICAR_SMS_GENERALI)']) {
+      const i = fn.indexOf(p)
+      if (i < 0 || iFill < 0 || i > iFill) out.push(`verificarCodigoSmsGenerali: «${p}» tiene que ir antes de escribir el código`)
+    }
+  }
+  if ((guard.match(/\.fill\(codigo/g) ?? []).length !== 1) out.push('guard: el código se escribe en un solo sitio')
+  const enviar = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarEnviarSmsGenerali'))
+  if (!enviar || !/exigirPantallaOkta\(page, guard, '«Enviar» del SMS'\)[\s\S]*comprobarBoton\(desc\)\s*marcarUsoOkta\(guard, 'generali:okta:enviar'\)\s*await control\.click\(\)/.test(enviar)) out.push('pulsarEnviarSmsGenerali: pantalla exacta + comprobarBoton + una vez, antes del clic')
+  return out
+}
+
+test('RELEVO SMS (19/10/2026): corte en trasLogin, relevo único con guard limpio, el código solo a su campo y vaciado al acabar', () => {
+  const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
+  const relevo = sinComentarios(readFileSync(join(SRV, 'src/relevo-sms.ts'), 'utf8'))
+  const guard = sinComentarios(readFileSync(join(SRV, 'src/guard.ts'), 'utf8'))
+  assert.deepEqual(infraccionesRelevoSms(runner, relevo, guard), [])
+  const cambia = (src: string, de: string, a: string) => {
+    const r = src.replace(de, a)
+    assert.notEqual(r, src, `el cepo no cambió nada: «${de}»`)
+    return r
+  }
+  const malos: [string, string, string, string][] = [
+    ['corte sin relevo', cambia(runner, 'if (k.relevoSms && !k.relevoSms.usado && esUrlOktaSmsGenerali(page.url())) throw', 'if (esUrlOktaSmsGenerali(page.url())) throw'), relevo, guard],
+    ['relevo con guard violado', cambia(runner, '!k.relevoSms.usado && !guard.violacion()) {', '!k.relevoSms.usado) {'), relevo, guard],
+    ['relevo sin gastar', cambia(runner, 'k.relevoSms.usado = true\n', ''), relevo, guard],
+    ['código al log', runner, cambia(relevo, "d.log('codigo_sms_recibido')", "d.log('codigo_sms_recibido', { c: espera.codigo.valor })"), guard],
+    ['sin vaciar', runner, cambia(relevo, 'await vaciarCodigoSmsGenerali(page).catch(() => undefined)', ''), guard],
+    ['escribe antes de comprobar', runner, relevo, cambia(cambia(guard, '  await campo.fill(codigo, { timeout: 5_000 })\n', ''), '  const campo = await campoCodigoOkta(page)\n', '  const campo = await campoCodigoOkta(page)\n  await campo.fill(codigo, { timeout: 5_000 })\n')],
+    ['Enviar sin comprobarBoton', runner, relevo, cambia(guard, "comprobarBoton(desc)\n  marcarUsoOkta(guard, 'generali:okta:enviar')", "marcarUsoOkta(guard, 'generali:okta:enviar')")],
+  ]
+  for (const [nombre, r, rl, g] of malos) assert.notDeepEqual(infraccionesRelevoSms(r, rl, g), [], nombre)
+})

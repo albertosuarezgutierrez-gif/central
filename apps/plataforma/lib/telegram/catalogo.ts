@@ -697,6 +697,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Cada 10 minutos, y solo cuando algún trabajo se ha parado así',
   },
   {
+    id: 'correduria.tarificador-codigo-sms', categoria: 'correduria',
+    titulo: 'El bot de presupuestos te pide el código SMS',
+    que: 'Generali (Okta) pide el código SMS que te acaba de llegar al móvil: respondes al mensaje con el código (o «/sms 123456») y el bot lo escribe, marca «no volver a pedir en este dispositivo en 30 días» y sigue con el presupuesto (solo precio; nunca contrata). Solo se acepta tu respuesta, un uso y 10 minutos; el código no se guarda. Sin datos del cliente: compañía, ramo y una referencia. ⚠️ Si lo silencias, el bot espera 5 minutos y se para (pulsa Reintentar).',
+    cuando: 'Al momento (cron de cada minuto), solo cuando un bot está en la pantalla del SMS (cada ~30 días por compañía)',
+  },
+  {
     id: 'correduria.tarificador-atasco', categoria: 'correduria',
     titulo: 'Bot de presupuestos atascado: elige el elemento',
     que: 'El bot no encuentra un campo o un botón en el portal de una compañía y ni lo aprendido ni la IA lo resuelven. Te llega la captura de la pantalla y los elementos numerados: pulsas el número, queda aprendido y el bot repite el presupuesto (solo precio; nunca contrata). Solo compañía, ramo y textos del portal sin datos personales. ⚠️ Si lo silencias, el atasco caduca a las 24 h y el presupuesto se pierde (sigue visible en /correduria/tarificador mientras espera).',

@@ -35,6 +35,7 @@ import { PREFIJO_EMISION, autorizarEnAsegura, decidirBotonEmision, lineaTrasPuls
 import { PREFIJO_ATASCO, PREFIJO_PAUSA, aplicarBotonAtasco, decidirBotonAtasco, lineaTrasAtasco } from '@/lib/tarificador-atascos-asegura'
 import { PREFIJO_BOTS_TG, decidirBotonBots } from '@/lib/correduria-bots-tg'
 import { resolverBotonBots } from '@/lib/correduria-bots-telegram'
+import { entregarCodigoSmsAsegura, leerMensajeCodigoSms, textoTrasEntrega } from '@/lib/tarificador-codigo-sms-asegura'
 import { requireSecret } from '@central/core-identity'
 import { ENV_FIRMA_AUTORIZACION } from '@central/module-tarificacion'
 
@@ -181,6 +182,25 @@ export async function POST(req: NextRequest) {
 }
 
 async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
+
+  // ── 🔐 CÓDIGO SMS del tarificador (19/10/2026) — ANTES que cualquier otro flujo ─────────────────────
+  // Respuesta al aviso «Generali pide el código SMS…», `/sms 123456` o el número solo: va a asegura (que lo SELLA para el
+  // bot) y a NINGÚN otro sitio (ni al asistente con IA, ni al contable, ni a ia-rest). Solo de TELEGRAM_CHAT_ID (from y chat).
+  // 🚨 El código no se loguea ni se repite en la respuesta.
+  const sms = leerMensajeCodigoSms(body.message, process.env.TELEGRAM_CHAT_ID)
+  if (sms.tipo === 'ignorar') return NextResponse.json({ ok: true })
+  if (sms.tipo === 'invalido') {
+    await tgSend(textoTrasEntrega({ estado: 'invalido' })).catch(() => {})
+    return NextResponse.json({ ok: true })
+  }
+  if (sms.tipo === 'codigo') {
+    const r = await entregarCodigoSmsAsegura(sms.ref, sms.codigo)
+    // El número suelto sin ningún bot esperando no era un código (p. ej. un código postal para el asistente): sigue su camino.
+    if (!(sms.forma === 'numero' && r.estado === 'sin_peticion')) {
+      await tgSend(textoTrasEntrega(r)).catch(() => {})
+      return NextResponse.json({ ok: true })
+    }
+  }
 
   // ── Agente Instagram/blog de ia-rest (bot compartido) ────────────────────
   // El webhook del bot apunta AQUÍ, pero los callbacks ig_*/blog_*/briefing_*

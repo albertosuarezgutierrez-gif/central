@@ -18,8 +18,9 @@
 // busca por matrícula: llega confirmado de Allianz/Mapfre de la misma oportunidad (asegura lo inyecta) y se casa en los
 // desplegables EXACTO → por palabra entera → uno solo (`elegirOpcionCatalogo`); 0 o varios = atasco con las opciones. Mediador
 // `MEDIADOR_GENERALI`; «Canal entrada», «Subcanal entrada» y «Flota» se dejan como vienen. Solo Turismos (moto, después).
-// Sesión: login con `CRED_GENERALI_MEDIADORES_USER/_PASS`; si Generali pide el SMS (cada 30 días), `ctx.trasLogin` para con
-// `requiere_humano` (verificacion.ts). El relevo del código por Telegram NO está hecho (ver docs/tarificador/CONOCIMIENTO-PORTALES.md).
+// Sesión: login con `CRED_GENERALI_MEDIADORES_USER/_PASS`; si Okta pide el SMS (cada 30 días por dispositivo), `ctx.trasLogin`
+// corta y el runner RELEVA el código por Telegram (`codigoSms: 'okta-generali'`, relevo-sms.ts, 19/10/2026): verifica, recuerda el
+// dispositivo 30 días en la bóveda y repite el intento. Sin código a tiempo → `requiere_humano`.
 //
 // 🚨 SEGURIDAD. Este fichero no pulsa nada del menú ni del mediador: lo hacen `ctx.entrarTurismosGenerali` y
 // `ctx.confirmarMediadorGenerali` (guard.ts). Aquí solo `ctx.pulsar` («Iniciar sesión», «Vehículo»),
@@ -40,6 +41,7 @@ import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { campoConRespaldo, type ContextoFormador } from '../../formador.ts'
+import { esUrlOktaSmsGenerali } from '../../guard.ts'
 import {
   AVISO_MATRICULA_PROVINCIAL,
   claveEtiquetaRiesgoGenerali,
@@ -82,8 +84,10 @@ export const GENERALI_AUTO_ACTIVO = true
  * campo); selector de vehículos sin el desplegable esperado → hueco con los desplegables y opciones LEÍDOS; tras «Roles»,
  * scroll del panel + registro de campos/botones + mapa provisional de tomador/conductor/antecedentes + «Garantías y
  * Resultados» por la compuerta del guard + lector tolerante del precio (oferta) o hueco con el registro de esa pantalla.
+ * 0.2.1 (19/10/2026): SMS de Okta relevado por Telegram (`codigoSms`) y dispositivo recordado 30 días en la bóveda; el login ya no
+ * espera 30 s en la pantalla del SMS.
  */
-export const VERSION_GENERALI_AUTO = '0.2.0'
+export const VERSION_GENERALI_AUTO = '0.2.1'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -325,7 +329,7 @@ async function textoPagina(page: Page): Promise<string> {
 
 // ───────────────────────── 1 · login ─────────────────────────
 
-/** Login en access.generali.es (captura 1) si hace falta. El SMS de 30 días lo detecta `ctx.trasLogin` (requiere_humano). */
+/** Login en access.generali.es (captura 1) si hace falta. El SMS de 30 días lo detecta `ctx.trasLogin` (relevo por Telegram). */
 export async function loginGenerali(page: Page, ctx: ContextoPortal): Promise<void> {
   await page.goto(URL_INICIO_GENERALI, { waitUntil: 'domcontentloaded' })
   await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
@@ -342,7 +346,8 @@ export async function loginGenerali(page: Page, ctx: ContextoPortal): Promise<vo
     const boton = page.getByRole('button', { name: 'Iniciar sesión', exact: true }).filter({ visible: true })
     if ((await boton.count()) !== 1) throw new ErrorMapaIncompletoGenerali('el botón «Iniciar sesión» del acceso (captura 1)')
     await ctx.pulsar(boton.first())
-    await page.waitForURL((u) => !u.toString().startsWith(ORIGEN_ACCESO_GENERALI), { timeout: 30_000 }).catch(() => undefined)
+    // Sale de access.generali.es… o se queda en la pantalla del SMS de Okta (la decide `ctx.trasLogin`): no se esperan 30 s en vano.
+    await page.waitForURL((u) => !u.toString().startsWith(ORIGEN_ACCESO_GENERALI) || esUrlOktaSmsGenerali(u.toString()), { timeout: 30_000 }).catch(() => undefined)
     await page.waitForLoadState('domcontentloaded').catch(() => undefined)
   }
   await ctx.trasLogin()
@@ -647,6 +652,8 @@ export const generaliAuto = {
   ramo: 'auto',
   credencial: 'GENERALI_MEDIADORES',
   version: VERSION_GENERALI_AUTO,
+  // SMS de Okta (cada 30 días por dispositivo): el runner releva el código por Telegram y recuerda el dispositivo (relevo-sms.ts).
+  codigoSms: 'okta-generali',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto') throw new ErrorTarificador('datos', 'generali/auto: solo turismos (moto, después)')
     // Lo que se sabe sin portal, ANTES de abrirlo: matrícula con asterisco y vehículo confirmado.

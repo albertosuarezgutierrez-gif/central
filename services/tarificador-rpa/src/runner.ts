@@ -10,6 +10,9 @@
 // Sesión (src/sesion.ts): el storageState de ePAC solo en MEMORIA, TTL 10 min, invalidado ante cualquier fallo.
 // Sesión MANUAL (07/10/2026, src/sesion-manual.ts; Generali, SMS en el acceso): sin credenciales; solo la sesión que
 // inició Alberto, sellada AES-GCM en asegura. Sin ella o rechazada → requiere_humano y aviso; el robot nunca hace login.
+// RELEVO del SMS (19/10/2026, src/relevo-sms.ts; Generali/Okta, `codigoSms`): si tras el login sale la pantalla del SMS, el
+// intento se corta, el código se pide por Telegram (vía asegura, que alarga el lease), se verifica marcando «No volver a
+// solicitar en este dispositivo en 30 días», el estado se guarda sellado en la bóveda (30 días) y se repite el intento UNA vez.
 //
 // 🚨 TARIFICAR ≠ EMITIR (guard.ts). 🔑 Credenciales solo de fly secrets, solo en memoria, sin tracing
 //    (nunca se arranca `context.tracing`) y con todo lo que sale pasado por el redactor.
@@ -40,10 +43,11 @@ import { adaptadores } from './adapters/index.ts'
 import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, vehiculoDelResultado, type Config, type CuerpoResultado, type VehiculoDelResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
-import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
+import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
 import { pulsarMediadorGenerali, entrarTurismosGenerali, pulsarSubpestanaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, companiaActualTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
-  guardarPresupuestoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+  guardarPresupuestoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
+import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -53,7 +57,7 @@ import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { textoAvisoSesionManual } from './aviso.ts'
 import { ErrorCredenciales, cortocircuito, exigirSinRechazoCredenciales, motivoCredenciales, motivoDeMensaje, textoAvisoCredenciales, textoVisiblePagina } from './credenciales.ts'
-import { caducidadMaximaMs, claveSesion } from './boveda-sesion.ts'
+import { CADUCIDAD_DISPOSITIVO_MS, caducidadMaximaMs, claveSesion, type SesionAbierta } from './boveda-sesion.ts'
 import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
@@ -80,6 +84,8 @@ type Evidencia = { url: string; captura: Buffer | null; html: string | null; inv
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[]; vehiculo: VehiculoDelResultado }
   | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
+/** El intento se cortó en la pantalla del SMS y el relevo la VERIFICÓ: hay que repetir el intento (ya con el dispositivo). */
+type Verificado = { verificado: true }
 
 /**
  * De dónde sale y a dónde vuelve la sesión del navegador en un intento.
@@ -92,6 +98,8 @@ type FuenteSesion = {
   alExito: (estado: EstadoNavegador) => Promise<void>
   /** `rechazada` = el portal devolvió al login o pidió código con esta sesión. */
   alFallo: (rechazada: boolean) => Promise<void>
+  /** Tras verificar el SMS (relevo): el estado NUEVO, con su caducidad completa. Ausente = no se recuerda nada. */
+  alVerificar?: (estado: EstadoNavegador) => Promise<void>
 }
 
 const fuenteEpac: FuenteSesion = {
@@ -99,6 +107,30 @@ const fuenteEpac: FuenteSesion = {
   previa: () => sesionEpac.obtener(),
   alExito: async (e) => sesionEpac.guardar(e),
   alFallo: async () => sesionEpac.invalidar(),
+}
+
+/**
+ * Fuente del DISPOSITIVO DE CONFIANZA (19/10/2026, Generali/Okta). Arranca con el estado de la bóveda (si lo hay); tras una
+ * verificación del SMS guarda el estado NUEVO con 30 días; tras un trabajo bueno re-sella el refrescado con la caducidad que
+ * ya tenía (el uso no la alarga). Un fallo del trabajo NO borra nada: el dispositivo sigue valiendo para el siguiente.
+ * Sin gestor (sin clave de bóveda) solo vive en memoria de este proceso.
+ */
+function fuenteDispositivo(gestor: GestorSesionManual | null, compania: string, inicial: SesionAbierta | null): FuenteSesion {
+  let actual: { valor: EstadoNavegador; caduca: number } | null = inicial ? { valor: inicial.valor, caduca: inicial.caduca } : null
+  return {
+    manual: false,
+    previa: () => (actual && Date.now() < actual.caduca ? actual.valor : null),
+    alExito: async (estado) => {
+      if (!actual) return
+      actual = { valor: estado, caduca: actual.caduca }
+      if (gestor) await gestor.refrescar(compania, estado, actual.caduca)
+    },
+    alFallo: async () => undefined,
+    alVerificar: async (estado) => {
+      actual = { valor: estado, caduca: Date.now() + CADUCIDAD_DISPOSITIVO_MS }
+      if (gestor) actual = { valor: estado, caduca: await gestor.guardarNueva(compania, estado) }
+    },
+  }
 }
 
 type Comun = {
@@ -114,10 +146,12 @@ type Comun = {
   /** Recorrido del trabajo (15/10/2026): capturas ligeras de cada pantalla/paso/diálogo, de los dos intentos. */
   recorrido: CapturadorRecorrido
   log: (m: string, d?: Record<string, unknown>) => void
+  /** Relevo del código SMS por Telegram (adaptador con `codigoSms`). UNO por trabajo: `usado` lo apaga tras el primero. */
+  relevoSms?: { usado: boolean; relevar: (page: Page, guard: GuardEmision) => Promise<Relevo> }
 }
 
-/** Un intento completo en un contexto NUEVO del navegador. Nunca lanza: devuelve ok o el fallo clasificado. */
-async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Intento> {
+/** Un intento completo en un contexto NUEVO del navegador. Nunca lanza: devuelve ok, el fallo clasificado o `verificado`. */
+async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Intento | Verificado> {
   const { log } = k
   const pdfs: { nombre: string; base64: string }[] = []
   const previa = k.sesion.previa()
@@ -168,6 +202,8 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         ti.marcarLogin()
         log('tras_login')
         await capturar('login')
+        // SMS de Okta con relevo disponible: se corta el adaptador aquí (sin rellenar nada) y el runner releva el código.
+        if (k.relevoSms && !k.relevoSms.usado && esUrlOktaSmsGenerali(page.url())) throw new ErrorCodigoSmsPendiente(k.compania)
         // ¿Pide un código (SMS/OTP)? Entonces NO se sigue ni se rellena nada: requiere_humano (verificacion.ts).
         await exigirSinVerificacion(page, k.compania)
         // ¿Entró pero el portal dice cuenta bloqueada / contraseña caducada? Tampoco se sigue (ni se reintenta el login).
@@ -316,6 +352,21 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       return { ok: true, ofertas: resultado.ofertas, pdfs, vehiculo: vehiculoDelResultado(resultado) }
     }
 
+    // RELEVO del SMS (19/10/2026): el adaptador se cortó en la pantalla del SMS de Okta (lo lanzó `trasLogin`, nunca un tope)
+    // y el guard está limpio → se pide el código por Telegram y se verifica en ESTA página. Bien → se guarda el dispositivo y
+    // el runner repite el intento; mal → el error claro del relevo (requiere_humano), con el campo del código ya vacío.
+    if (error instanceof ErrorCodigoSmsPendiente && k.relevoSms && !k.relevoSms.usado && !guard.violacion()) {
+      k.relevoSms.usado = true
+      const rv: Relevo = await k.relevoSms.relevar(page, guard).catch((e: unknown) => ({ ok: false as const, error: e as ErrorTarificador }))
+      if (rv.ok) {
+        const estado = await context.storageState().catch(() => null)
+        if (estado && k.sesion.alVerificar) await k.sesion.alVerificar(estado).catch(() => log('dispositivo_no_guardado'))
+        ti.cubrir({ ok: false, codigo: 'captcha' })
+        return { verificado: true }
+      }
+      error = guard.violacion() ?? rv.error
+    }
+
     const loginVisible = await page
       .locator('input[type="password"]')
       .filter({ visible: true })
@@ -459,6 +510,43 @@ async function main(): Promise<number> {
     }
   }
 
+  // DISPOSITIVO DE CONFIANZA + RELEVO del SMS (19/10/2026, adaptador con `codigoSms`): el estado guardado tras la última
+  // verificación (bóveda, 30 días) arranca el contexto; si Okta pide el SMS igual, se releva por Telegram. Sin la clave de la
+  // bóveda (`TARIFICADOR_SESION_KEY`) o con el almacén caído se releva igual, pero no se recuerda (NULL ≠ «no hay»: no se borra nada).
+  let relevoSms: Comun['relevoSms']
+  // Prórroga del lease que da asegura al pedir/entregar el código: la recoge el límite del trabajo y el tope duro (abajo).
+  let leaseActual = trabajo.leaseHasta
+  let alProrrogar: () => void = () => undefined
+  if (adaptador.codigoSms === 'okta-generali' && !fuente.manual) {
+    let gestor: GestorSesionManual | null = null
+    try {
+      gestor = new GestorSesionManual(almacenHttp(cfg), { clave: claveSesion(env), maxMs: CADUCIDAD_DISPOSITIVO_MS })
+    } catch {
+      log('dispositivo_sin_boveda')
+    }
+    let inicial: SesionAbierta | null = null
+    if (gestor) {
+      const c = await gestor.cargar(trabajo.compania).catch(() => null)
+      if (c?.estado === 'ok') inicial = c.sesion
+      log('dispositivo_cargado', { estado: c === null ? 'ilegible' : c.estado === 'ok' ? 'ok' : c.motivo })
+    }
+    fuente = fuenteDispositivo(gestor, trabajo.compania, inicial)
+    relevoSms = {
+      usado: false,
+      relevar: (page, guard) =>
+        relevarCodigoSmsGenerali(page, guard, {
+          compania: trabajo.compania,
+          trabajoId: trabajo.id,
+          puerto: puertoCodigoHttp(cfg, trabajo.id),
+          prorrogar: (l) => {
+            if (l && Number.isFinite(Date.parse(l))) leaseActual = l
+            alProrrogar()
+          },
+          log,
+        }),
+    }
+  }
+
   let credenciales: Credenciales = { usuario: '', contrasena: '' }
   if (!fuente.manual) {
     try {
@@ -503,27 +591,48 @@ async function main(): Promise<number> {
   })
 
   // Hasta cuándo acepta asegura el resultado (lease − margen): los dos intentos y la espera caben ahí o no hay reintento.
-  const limite = limiteDelTrabajo(inicio, trabajo.leaseHasta, TOPE_GLOBAL_MS, TOPE_TRABAJO_MS)
+  let limite = limiteDelTrabajo(inicio, trabajo.leaseHasta, TOPE_GLOBAL_MS, TOPE_TRABAJO_MS)
   let browser: Browser | null = null
   // Respaldo duro: si algo se cuelga por encima del límite (incluido el cierre del navegador), se sale.
-  const respaldo = setTimeout(() => {
-    log('tope_duro_superado: salida forzada')
-    process.exit(2)
-  }, Math.max(limite - Date.now(), 60_000) + 45_000)
-  respaldo.unref()
+  const armarRespaldo = () => {
+    const t = setTimeout(() => {
+      log('tope_duro_superado: salida forzada')
+      process.exit(2)
+    }, Math.max(limite - Date.now(), 60_000) + 45_000)
+    t.unref()
+    return t
+  }
+  let respaldo = armarRespaldo()
+  // Relevo del SMS: asegura alarga el lease mientras se espera el código; el límite y el tope duro se recalculan desde AHORA
+  // con el lease nuevo (nunca más de un trabajo completo por delante: `TOPE_TRABAJO_MS`).
+  alProrrogar = () => {
+    limite = limiteDelTrabajo(Date.now(), leaseActual, TOPE_GLOBAL_MS, TOPE_TRABAJO_MS)
+    clearTimeout(respaldo)
+    respaldo = armarRespaldo()
+  }
 
   // Traza del trabajo (pasos con tiempos y código de error, sin datos): acumula los dos intentos y viaja en el POST del resultado.
   const traza = crearTraza((e) => clasificar(e).tipo)
   const meta = () => ({ pasos: traza.pasos(), botVersion: adaptador.version })
   // Recorrido del trabajo (15/10/2026): mismo redactor que el resto de lo que sale + los valores del riesgo; tope ~60 KB.
   const recorrido = crearCapturadorRecorrido({ redactar: redactarTrabajo, valores: valoresSensiblesDeRiesgo(trabajo.riesgo), log })
-  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, recorrido, log }
+  const k: Comun = { sesion: fuente, trabajoId: trabajo.id, compania: trabajo.compania, adaptador, tarificar: v.tarificar, credenciales, formador, traza, recorrido, log, relevoSms }
+
+  // Un intento y, si se cortó en el SMS y el relevo lo verificó, OTRO (ya con el dispositivo) con el límite recalculado.
+  const intentarConRelevo = async (b: Browser, topeMs: number): Promise<Intento> => {
+    const r = await intentar(b, k, topeMs)
+    if (!('verificado' in r)) return r
+    const r2 = await intentar(b, k, Math.max(60_000, Math.min(TOPE_GLOBAL_MS, limite - Date.now())))
+    // Imposible (el relevo es de un solo uso): por si acaso, es infraestructura, nunca un «ok».
+    if ('verificado' in r2) throw new ErrorTarificador('infra', 'relevo del SMS: segunda verificación en el mismo trabajo')
+    return r2
+  }
 
   // Un trabajo a la vez por proceso (hoy la máquina solo hace uno; si atiende varios, siguen en serie).
   return enSerie(async () => {
     try {
       browser = await chromium.launch({ headless: true })
-      let r = await intentar(browser, k, Math.max(60_000, Math.min(TOPE_GLOBAL_MS, limite - Date.now())))
+      let r = await intentarConRelevo(browser, Math.max(60_000, Math.min(TOPE_GLOBAL_MS, limite - Date.now())))
       let primerFallo: Clasificacion | null = null
       if (!r.ok && r.c.transitorio) {
         const espera = esperaReintentoMs()
@@ -531,7 +640,7 @@ async function main(): Promise<number> {
           primerFallo = r.c
           log('reintento_programado', { motivo: r.c.transitorio, tipo: r.c.tipo, esperaMs: espera })
           await dormir(espera)
-          r = await intentar(browser, k, Math.min(TOPE_GLOBAL_MS, limite - Date.now()))
+          r = await intentarConRelevo(browser, Math.min(TOPE_GLOBAL_MS, limite - Date.now()))
         } else {
           log('reintento_descartado_sin_tiempo', { motivo: r.c.transitorio })
         }

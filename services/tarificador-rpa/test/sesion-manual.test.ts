@@ -157,3 +157,25 @@ test('cepo: el modo manual no lee credenciales, ni reenvía SMS, ni rellena cód
     assert.ok(!/reenviar|resend|\.fill\(|\.type\(|otp|contrase|password/i.test(s), `${f}: nada de SMS/OTP/contraseñas`)
   }
 })
+
+test('DISPOSITIVO de confianza (Generali/Okta, 19/10/2026): 30 días desde la verificación y el uso no los alarga', async () => {
+  const { CADUCIDAD_DISPOSITIVO_MS } = await import('../src/boveda-sesion.ts')
+  assert.equal(CADUCIDAD_DISPOSITIVO_MS, 30 * 24 * H, 'no más de 30 días (lo que promete Okta)')
+  const guardados: { token: string; caduca: number }[] = []
+  const almacen: AlmacenSesion = {
+    async leer() { return guardados.at(-1)?.token ?? null },
+    async guardar(_c, token, caduca) { guardados.push({ token, caduca }) },
+    async borrar() { guardados.length = 0 },
+  }
+  let ahora = T0
+  const g = new GestorSesionManual(almacen, { clave, maxMs: CADUCIDAD_DISPOSITIVO_MS, ahora: () => ahora })
+  const caduca = await g.guardarNueva('generali', estado)
+  assert.equal(caduca, T0 + CADUCIDAD_DISPOSITIVO_MS)
+  ahora = T0 + 10 * 24 * H
+  await g.refrescar('generali', estado, caduca)
+  assert.equal(guardados.at(-1)!.caduca, caduca, 'refrescar re-sella con la caducidad ORIGINAL')
+  const c = await g.cargar('generali')
+  assert.equal(c.estado, 'ok')
+  ahora = caduca
+  assert.deepEqual(await g.cargar('generali'), { estado: 'falta', motivo: 'caducada' })
+})
