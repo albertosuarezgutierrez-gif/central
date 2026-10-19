@@ -167,27 +167,27 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 353 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 355 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 342 | 51.841 | 43.611.839 | 0 | 0 |
-| `otro` | 337 | 12.209 | 29.186.334 | 18.411.455 | 0 |
-| `lectura-directa` | 292 | 8.423 | 26.049.080 | 0 | 0 |
-| `mcp:github` | 295 | 6.867 | 5.372.784 | 54.297.031 | 96 |
-| `sql` | 212 | 5.012 | 2.518.605 | 2.351.230 | 18 |
-| `escritura` | 216 | 4.708 | 69.901.578 | 0 | 0 |
+| `bash` | 344 | 52.095 | 43.910.277 | 0 | 0 |
+| `otro` | 339 | 12.258 | 29.260.787 | 18.419.942 | 0 |
+| `lectura-directa` | 293 | 8.430 | 26.087.174 | 0 | 0 |
+| `mcp:github` | 296 | 6.879 | 5.382.886 | 54.303.811 | 96 |
+| `sql` | 213 | 5.030 | 2.533.546 | 2.351.230 | 18 |
+| `escritura` | 217 | 4.720 | 69.956.827 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Gmail` | 48 | 1.221 | 1.284.981 | 0 | 72 |
-| `mcp:Booking-com` | 42 | 1.177 | 4.851.029 | 0 | 0 |
+| `mcp:Gmail` | 49 | 1.225 | 1.291.843 | 0 | 72 |
+| `mcp:Booking-com` | 43 | 1.205 | 4.955.626 | 0 | 0 |
 | `mcp:Vercel` | 72 | 942 | 1.048.212 | 204.477 | 30 |
-| `agente:general-purpose` | 109 | 757 | 457.930 | 13.855.929 | 0 |
-| `mcp:claude-code-remote` | 46 | 483 | 47.620 | 20.519 | 0 |
+| `agente:general-purpose` | 109 | 762 | 459.841 | 13.860.957 | 0 |
+| `mcp:claude-code-remote` | 46 | 486 | 47.738 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
 | `mcp:Google_Drive` | 23 | 389 | 425.642 | 0 | 47 |
-| `mcp:Supabase` | 126 | 375 | 60.365 | 5.123 | 7 |
-| `agente:agente-architect` | 66 | 295 | 207.446 | 7.792.385 | 0 |
-| `mcp:Google-Drive` | 24 | 140 | 127.310 | 0 | 2 |
+| `mcp:Supabase` | 126 | 378 | 60.658 | 5.123 | 7 |
+| `agente:agente-architect` | 66 | 298 | 209.492 | 7.819.523 | 0 |
+| `mcp:Google-Drive` | 25 | 143 | 133.450 | 0 | 2 |
 | `agente:agente-mecanico` | 48 | 124 | 74.810 | 7.013.978 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
 | `agente:rastreador-codigo` | 50 | 89 | 28.498 | 1.245.920 | 0 |
