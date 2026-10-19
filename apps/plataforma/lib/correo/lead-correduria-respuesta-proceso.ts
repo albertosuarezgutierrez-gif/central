@@ -21,6 +21,7 @@ import { ACTOR_TRIAJE_CORREO, hoyMadrid, textoPlantillaTelegram } from './lead-c
 import { proponerPeticion } from './lead-correduria-pendiente'
 import {
   cuboAdjunto, leerCasar, leerGuardar, lineaAdjuntos, plantillaRepregunta, resumirRespuesta, textoRespuestaTelegram, type CuentaAdjuntos,
+  type GuardadoLead,
 } from './lead-correduria-respuesta'
 
 const RE_MSGID = /^<[^<>\s@]+@[^<>\s@]+>$/
@@ -55,10 +56,13 @@ export async function procesarRespuestaLead(correo: CorreoNuevo, ahora = new Dat
     const hoy = hoyMadrid(ahora)
 
     const { lectura, iaFallo } = await leerConIa(correo, ramos, hoy)
-    const g = await respuestaLeadAsegura({
-      accion: 'guardar', hiloId: casado.hiloId, from: correo.from, gmailMessageId: correo.messageId, valores: lectura.valores, actor: ACTOR_TRIAJE_CORREO,
-    })
-    const guardado = leerGuardar(g.status, g.json)
+    // Con la IA caída NO se llama a `guardar`: con `valores: {}` asegura anotaría en su ficha «0 datos nuevos; faltan N»
+    // y movería el hilo, afirmando que contestó sin datos cuando nadie lo ha leído (regla de los tres estados).
+    const guardado: GuardadoLead = iaFallo
+      ? { estado: 'no', motivo: 'sin leer' }
+      : await respuestaLeadAsegura({
+          accion: 'guardar', hiloId: casado.hiloId, from: correo.from, gmailMessageId: correo.messageId, valores: lectura.valores, actor: ACTOR_TRIAJE_CORREO,
+        }).then((g) => leerGuardar(g.status, g.json))
 
     // Adjuntos: uno por llamada (el cuerpo va en base64 y Vercel corta a ~4,5 MB). Nunca se leen.
     const cuenta: CuentaAdjuntos = { guardados: 0, repetidos: 0, sinClave: 0, sinTabla: 0, fallidos: 0, omitidos: correo.adjuntosLeadOmitidos ?? 0 }

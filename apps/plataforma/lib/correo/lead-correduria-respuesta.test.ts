@@ -64,10 +64,25 @@ test('🪤 repregunta: SOLO lo que falta y lo que no vale; nada si no falta nada
   assert.equal(plantillaRepregunta({ pila: null, ramos: ['vida'], faltan: [], invalidos: [], asuntoOriginal: 'x' }), null)
 })
 
+test('🪤 lo que mandó y no se guardó por falta de clave NO se le repregunta (ni cuenta como completo)', () => {
+  const g = { estado: 'ok' as const, completo: false, oportunidades: [op({ ramo: 'vida', sinClave: ['dni'], faltan: ['dni', 'fechaEfecto'] })] }
+  const r = resumirRespuesta(g, [], false)
+  assert.deepEqual(r.faltan, ['fechaEfecto'])
+  assert.equal(r.completo, false)
+  const p = plantillaRepregunta({ pila: null, ramos: ['vida'], faltan: r.faltan, invalidos: r.invalidos, asuntoOriginal: 'x' })
+  assert.doesNotMatch(p!.cuerpo, /DNI/)
+})
+
 test('adjuntos: lo desconocido es fallo, nunca «guardado»', () => {
   assert.equal(cuboAdjunto(200, { estado: 'guardado' }), 'guardados')
   assert.equal(cuboAdjunto(503, { estado: 'sin_clave' }), 'sinClave')
   assert.equal(cuboAdjunto(200, { estado: 'raro' }), 'fallidos')
   assert.match(lineaAdjuntos({ guardados: 0, repetidos: 0, sinClave: 1, sinTabla: 0, fallidos: 0, omitidos: 1 }) ?? '', /NO guardado: asegura no tiene la clave[\s\S]*1 adjunto más/)
   assert.equal(lineaAdjuntos({ guardados: 0, repetidos: 0, sinClave: 0, sinTabla: 0, fallidos: 0, omitidos: 0 }), null)
+})
+
+test('🪤 con la IA caída el proceso NO llama a «guardar» (no se anota «0 datos» de un correo sin leer)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const fuente = readFileSync(new URL('./lead-correduria-respuesta-proceso.ts', import.meta.url), 'utf8')
+  assert.match(fuente, /iaFallo\s*\n?\s*\?\s*\{ estado: 'no', motivo: 'sin leer' \}\s*\n?\s*:\s*await respuestaLeadAsegura\(\{\s*\n?\s*accion: 'guardar'/)
 })

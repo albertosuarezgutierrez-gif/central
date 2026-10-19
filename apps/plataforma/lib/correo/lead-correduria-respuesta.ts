@@ -112,7 +112,10 @@ export type ResumenRespuesta = {
 /** Lo que se sabe tras leer: qué falta, qué no vale y si está completo. PURA. */
 export function resumirRespuesta(g: GuardadoLead, invalidosIa: readonly { clave: string; motivo: string }[], iaFallo: boolean): ResumenRespuesta {
   if (g.estado !== 'ok') return { faltan: [], invalidos: [...invalidosIa], completo: false, sinLeer: true }
-  const faltan = new Set(g.oportunidades.flatMap((o) => o.faltan))
+  // Lo que MANDÓ pero asegura no pudo guardar por falta de clave (`sinClave`) no «falta»: repreguntarlo sería pedirle
+  // otra vez lo que ya escribió. Se dice aparte («recibidos pero NO guardados») y el expediente no queda completo.
+  const sinClave = new Set(g.oportunidades.flatMap((o) => o.sinClave))
+  const faltan = new Set(g.oportunidades.flatMap((o) => o.faltan).filter((k) => !sinClave.has(k)))
   const invalidos = new Map(invalidosIa.map((x) => [x.clave, x]))
   for (const o of g.oportunidades) for (const k of o.invalidos) if (!invalidos.has(k)) invalidos.set(k, { clave: k, motivo: 'no tiene un formato válido' })
   return { faltan: [...faltan], invalidos: [...invalidos.values()], completo: g.completo && !iaFallo, sinLeer: iaFallo || g.oportunidades.some((o) => !o.guardado) }
