@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-19T07:39:58Z",
-  "sha": "5c26534fdbb28388f0260ed85d7c212c12daed74",
+  "generadoEn": "2026-10-19T08:53:59Z",
+  "sha": "d625166182dcd59168017324be8f0d90223038fe",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -21548,11 +21548,19 @@
           "params": "b: Record<string, unknown>",
           "retorno": "string",
           "linea": 116
+        },
+        {
+          "nombre": "opcionesLeadCorreo",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Record<string, unknown>",
+          "retorno": null,
+          "linea": 126
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/oportunidad",
-      "hash": "73b0b05cb727"
+      "hash": "227ca74f500a"
     },
     {
       "ruta": "apps/asegura/app/api/operador/oportunidad/tarea/route.ts",
@@ -27307,7 +27315,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { nombre: string; apellidos: string; tipoPersona: 'fisica' | 'juridica' | null }, actor: string, nota: string,",
           "retorno": "Promise<ResultadoAlta>",
-          "linea": 936,
+          "linea": 945,
           "resumen": "Lead SIN DNI, teléfono ni email (29/09/2026): el tomador de un documento subido que solo trae su nombre. `altaCliente` exige uno de los tres para poder volver a encontrar la ficha; aquí se encuentra p"
         },
         {
@@ -27316,7 +27324,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: Record<string, unknown>, actor: string,",
           "retorno": "Promise<ResultadoAlta>",
-          "linea": 978,
+          "linea": 987,
           "resumen": "Alta manual = `lead`, `prospecto`. Antes de crear, busca por DNI, teléfono y email: un DNI repetido es la misma persona y NO se crea; un teléfono o email repetidos pueden ser otra persona y se crea so"
         },
         {
@@ -27325,7 +27333,7 @@
           "exportada": false,
           "params": "entrada: Record<string, unknown>",
           "retorno": "",
-          "linea": 1094,
+          "linea": 1114,
           "resumen": "atribución solo con claves de la lista blanca y valores ≤100. `null` = no hay prueba que guardar."
         },
         {
@@ -27334,7 +27342,7 @@
           "exportada": false,
           "params": "entrada: { actor: string; origen?: OrigenCarnet }",
           "retorno": "",
-          "linea": 1133,
+          "linea": 1153,
           "resumen": "Quién escribe el carné y cómo consta en `historial_interno`. Por defecto, el corredor desde plataforma (tipo `gestion`, texto de siempre). Desde el portal (`/api/portal/carnets`) lo hace el CLIENTE: t"
         },
         {
@@ -27343,7 +27351,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string; origen?: OrigenCarnet },",
           "retorno": "Promise<ResultadoCarnet>",
-          "linea": 1139,
+          "linea": 1159,
           "resumen": "Añade (`id` ausente) o corrige (`id` de un carné de la ficha) un carné: tipo y fecha de expedición."
         },
         {
@@ -27352,7 +27360,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id: string; actor: string; origen?: OrigenCarnet },",
           "retorno": "Promise<ResultadoCarnet>",
-          "linea": 1181,
+          "linea": 1201,
           "resumen": "Quita un carné de la ficha (el anotado por error)."
         },
         {
@@ -27361,7 +27369,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: TipoHistorial, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1208,
+          "linea": 1228,
           "resumen": "Deja constancia en `historial_interno` (tabla del CRM, 0 filas hasta hoy). Best-effort a propósito: el cambio ya está hecho, y un historial caído no puede deshacerlo ni presentarlo como fallido."
         },
         {
@@ -27370,16 +27378,17 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, tipo: unknown, texto: unknown,",
           "retorno": "Promise<ResultadoHistorial>",
-          "linea": 1229,
+          "linea": 1249,
           "resumen": "Anotar una fila de historial COMO OPERACIÓN (puerto `POST /api/operador/cliente/historial`): un contacto que llega por un canal —formulario web sobre una ficha que ya existía, p. ej.— y cuyo único ras"
         }
       ],
       "tablas": [
+        "clientes",
         "consent_logs",
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "9c8c5a40a28f"
+      "hash": "6cf9965f3491"
     },
     {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
@@ -42115,7 +42124,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, datos: Parameters<typeof validarAltaOportunidad>[0], actor: string, opciones: OpcionesAltaOportunidad = {},",
           "retorno": "Promise<",
-          "linea": 817,
+          "linea": 821,
           "resumen": "Abre una oportunidad a mano con su primer paso, en UNA transacción: oportunidad + tarea + historial. Si el cliente ya tiene una ABIERTA del mismo ramo y de la misma compañía (o sin compañía en un lado"
         },
         {
@@ -42124,7 +42133,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, datos: Parameters<typeof validarEdicionOportunidad>[0], actor: string, // `reprogramar`: al cambiar el vencimiento, la próxima tarea de seguimiento va a 45 días antes // (`planTareaTrasVencimiento`). Opcion",
           "retorno": "Promise<",
-          "linea": 936,
+          "linea": 940,
           "resumen": "Corrige ramo, vencimiento, compañía o prima de una oportunidad ABIERTA. Una cerrada no se edita: se reabre antes, que es una acción con su rastro. Cada cambio deja antes/después en el historial (la co"
         },
         {
@@ -42133,7 +42142,7 @@
           "exportada": false,
           "params": "filtro: Prisma.Sql",
           "retorno": "Prisma.Sql",
-          "linea": 1154,
+          "linea": 1158,
           "resumen": "Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2` y/o `pr`). LEFT JOIN desde el 05/10/2026: un presupuesto de OFERTAS no tiene tarificación (`t2` = NULL) y cuelg"
         },
         {
@@ -42142,7 +42151,7 @@
           "exportada": false,
           "params": "j: JsonHitos",
           "retorno": "HitosPresupuesto | null",
-          "linea": 1162
+          "linea": 1166
         },
         {
           "nombre": "resumenPresupuestos",
@@ -42150,7 +42159,7 @@
           "exportada": false,
           "params": "j: JsonResumen",
           "retorno": "ResumenPresupuestos",
-          "linea": 1167
+          "linea": 1171
         },
         {
           "nombre": "oportunidadesDeCliente",
@@ -42158,7 +42167,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<",
-          "linea": 1182,
+          "linea": 1186,
           "resumen": "Las oportunidades de UN cliente: abiertas primero (las más nuevas arriba), luego las cerradas más recientes. La «próxima tarea» es solo de seguimiento (`central:seguimiento`), la misma que lista «Hoy»"
         },
         {
@@ -42167,7 +42176,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<PresupuestoSinOportunidad[] | null>",
-          "linea": 1281,
+          "linea": 1285,
           "resumen": "Lo tarificado para este cliente que no cuelga de ninguna oportunidad: las retarificaciones y altas anteriores al 24/09/2026, cuando aún no se enlazaban solas. Se ENSEÑAN tal cual, sin abrirles oportun"
         },
         {
@@ -42176,7 +42185,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, dias: unknown, actor: string, hoyIso: string = hoyMadridIso(),",
           "retorno": "Promise<",
-          "linea": 1320,
+          "linea": 1324,
           "resumen": "«Posponer N días» (13/10/2026): la próxima acción de seguimiento pasa a hoy + N (Madrid). Si no tenía ninguna, se crea una («Retomar el seguimiento») para que no quede huérfana. Se MUEVE, no se cierra"
         },
         {
@@ -42185,7 +42194,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1376
+          "linea": 1380
         }
       ],
       "tablas": [
@@ -42206,7 +42215,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "bd921d4f73ce"
+      "hash": "ffbf86674de0"
     },
     {
       "ruta": "apps/asegura/lib/oportunidad-traspaso.ts",
@@ -42793,7 +42802,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fb404214fa47"
+      "hash": "4c7e8c62a724"
     },
     {
       "ruta": "apps/asegura/lib/poliza-en-cartera.ts",
@@ -144302,6 +144311,7 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/clasificador.ts — Clasifica un correo en una categoría de rutas.ts. Orden (barato → caro): (1) correo_reglas por email exacto o @dominio → 0 tokens; (2) regex de código OTP en el asunto; (3) IA (aiComplete, NVIDIA NIM). Duda o error → 'dudoso' (default seguro: no se toca el correo). Auto-",
       "exporta": [
+        "llamarIA",
         "clasificar",
         "quizaAutoAprender"
       ],
@@ -144312,7 +144322,7 @@
           "exportada": false,
           "params": "from: string",
           "retorno": "Promise<string | null>",
-          "linea": 30,
+          "linea": 32,
           "resumen": "Busca una regla que aplique al remitente: primero email exacto, luego su dominio."
         },
         {
@@ -144321,7 +144331,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Date | null",
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "normalizarCategoria",
@@ -144329,7 +144339,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "string",
-          "linea": 50,
+          "linea": 52,
           "resumen": "Normaliza la categoría que devuelve el modelo a una de CATEGORIAS_IA (o '' si no encaja). Tolera mayúsculas, puntuación y texto extra (\"Contabilidad\", \"contabilidad.\", \"contabilidad (factura)\")."
         },
         {
@@ -144338,16 +144348,16 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 57,
+          "linea": 59,
           "resumen": "Corta una llamada colgada a la IA para que no agote el tiempo de la función (dejaría el cursor sin avanzar)."
         },
         {
           "nombre": "llamarIA",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "system: string, user: string",
           "retorno": "Promise<string>",
-          "linea": 67,
+          "linea": 69,
           "resumen": "Llama a la IA para clasificar. Groq PRIMERO (mismo Llama-70b pero en segundos, no ~25s como NIM, que agotaba el tiempo de la función y hacía caer todo a 'dudoso'); NIM como respaldo si no hay GROQ_API"
         },
         {
@@ -144356,7 +144366,7 @@
           "exportada": true,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<Clasificacion>",
-          "linea": 79
+          "linea": 81
         },
         {
           "nombre": "quizaAutoAprender",
@@ -144364,7 +144374,7 @@
           "exportada": true,
           "params": "from: string, categoria: string, confianza: number",
           "retorno": "Promise<void>",
-          "linea": 174,
+          "linea": 194,
           "resumen": "Auto-aprendizaje (mejora 4): si la IA ha clasificado este remitente igual ≥N veces con confianza ≥X (contando la actual), fija la regla en correo_reglas (creado_por='auto')."
         }
       ],
@@ -144373,7 +144383,7 @@
         "correo_triaje"
       ],
       "rutaApi": null,
-      "hash": "326485a07807"
+      "hash": "b56df5c05b7c"
     },
     {
       "ruta": "apps/plataforma/lib/correo/contacto-sugerido-consulta.ts",
@@ -144687,16 +144697,36 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/correo/imap.ts — Lector IMAP incremental para el triaje de correo. Extiende el patrón de lib/agente-facturas/gmail.ts (imapflow + mailparser, credenciales GMAIL_USER / GMAIL_APP_PASSWORD) pero para TODO lo nuevo de INBOX, no solo facturas, y con capacidad de ETIQUETAR (X-GM-LABELS vía messageCop",
       "exporta": [
+        "destinatariosDe",
+        "referenciasDe",
         "abrirTriaje"
       ],
       "funciones": [
+        {
+          "nombre": "destinatariosDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: readonly { key: string; line: string }[] | undefined",
+          "retorno": "string[]",
+          "linea": 51,
+          "resumen": "Puro: direcciones de destino a partir de las líneas de cabecera crudas (`parsed.headerLines`)."
+        },
+        {
+          "nombre": "referenciasDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "inReplyTo: unknown, references: unknown",
+          "retorno": "string[]",
+          "linea": 62,
+          "resumen": "Puro: los Message-ID de In-Reply-To/References (mailparser da string o string[])."
+        },
         {
           "nombre": "pdfsDe",
           "kind": "function",
           "exportada": false,
           "params": "from: string, adjuntos: { contentType?: string; filename?: string; content?: Buffer; size?: number }[] | undefined",
           "retorno": "Buffer[] | undefined",
-          "linea": 43
+          "linea": 79
         },
         {
           "nombre": "nuevoCliente",
@@ -144704,7 +144734,7 @@
           "exportada": false,
           "params": "",
           "retorno": "ImapFlow",
-          "linea": 53
+          "linea": 89
         },
         {
           "nombre": "abrirTriaje",
@@ -144712,12 +144742,12 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<SesionTriaje>",
-          "linea": 74
+          "linea": 110
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9ebaa7e9d86b"
+      "hash": "26571d6de49b"
     },
     {
       "ruta": "apps/plataforma/lib/correo/keywords.ts",
@@ -144797,6 +144827,377 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d2bc9d4af8aa"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/lead-correduria-hilo.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/lead-correduria-hilo.ts — ¿este correo es la respuesta de un lead en su propio hilo? Aparte de `lead-correduria-proceso.ts` para que el clasificador lo use sin importar el proceso (que a su vez importa `llamarIA` del clasificador: el ciclo funcionaría, pero no hace falta tenerlo). Un hilo",
+      "exporta": [
+        "esRespuestaDeLeadBD"
+      ],
+      "funciones": [
+        {
+          "nombre": "esRespuestaDeLeadBD",
+          "kind": "function",
+          "exportada": true,
+          "params": "referencias: string[] | undefined",
+          "retorno": "Promise<boolean>",
+          "linea": 11
+        }
+      ],
+      "tablas": [
+        "correo_triaje"
+      ],
+      "rutaApi": null,
+      "hash": "13a044044997"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/lead-correduria-proceso.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/lead-correduria-proceso.ts — qué HACE el triaje con un `correduria-lead` (con red). Las reglas viven en `lead-correduria.ts` (puro, con test); aquí solo se encadenan: 1. ¿respuesta en el hilo de un lead que ya registramos? → SOLO historial en su ficha y aviso. 2. Si no: la IA lee el corre",
+      "exporta": [
+        "procesarLeadCorreo"
+      ],
+      "funciones": [
+        {
+          "nombre": "extraer",
+          "kind": "function",
+          "exportada": false,
+          "params": "correo: CorreoNuevo",
+          "retorno": "Promise<LeadCorreo>",
+          "linea": 32
+        },
+        {
+          "nombre": "fichaPorEmail",
+          "kind": "function",
+          "exportada": false,
+          "params": "email: string | null",
+          "retorno": "Promise<",
+          "linea": 50,
+          "resumen": "Una ÚNICA ficha con ese email (índice ciego, exacto). Cero o varias → `null`: no se adivina."
+        },
+        {
+          "nombre": "anotar",
+          "kind": "function",
+          "exportada": false,
+          "params": "clienteId: string, texto: string",
+          "retorno": "Promise<boolean>",
+          "linea": 61
+        },
+        {
+          "nombre": "leerOportunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "status: number, json: unknown",
+          "retorno": "Pick<OportunidadLeadCorreo, 'estado' | 'motivo'>",
+          "linea": 66
+        },
+        {
+          "nombre": "procesarLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "correo: CorreoNuevo, ahora = new Date()",
+          "retorno": "Promise<",
+          "linea": 74
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f4904a1c5ffd"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correo/lead-correduria.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/correo/lead-correduria.ts — el lead que ESCRIBE a hola@grupoasegura.es, en PURO (sin red, sin env). 19/10/2026: un lead escribió a hola@ pidiendo «comparativa de presupuestos para seguro»; el triaje lo mandó por IA a `leads-negocio` (que es de ia-rest/ialimp), avisó con «Oportunidad de negocio» ",
+      "exporta": [
+        "esCorreoAutomatico",
+        "esDestinoCorreduria",
+        "esLeadCorreduria",
+        "esRespuestaDeLead",
+        "nombreVisible",
+        "ramoDeTexto",
+        "normalizarLeadCorreo",
+        "motivoSinAlta",
+        "etiquetaRamo",
+        "notasLeadCorreo",
+        "cuerpoAltaLeadCorreo",
+        "textoHistorialLeadCorreo",
+        "hoyMadrid",
+        "cuerpoOportunidadLeadCorreo",
+        "ramoPlantilla",
+        "pieLegalLeadCorreo",
+        "plantillaPeticionDatos",
+        "resolverAltaLeadCorreo",
+        "textoAvisoLeadCorreo",
+        "textoPlantillaTelegram",
+        "diferirCorreo",
+        "diferirLead",
+        "cursorTrasPasada"
+      ],
+      "funciones": [
+        {
+          "nombre": "dominioDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: string",
+          "retorno": null,
+          "linea": 37
+        },
+        {
+          "nombre": "enDominio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "dom: string, base: string",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "esDeCorreduria",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: string",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "esCorreoAutomatico",
+          "kind": "function",
+          "exportada": true,
+          "params": "lineas: readonly { key: string; line: string }[] | undefined",
+          "retorno": "boolean",
+          "linea": 55,
+          "resumen": "¿Lo ha mandado una máquina? Cabeceras crudas (`parsed.headerLines`): `List-Unsubscribe` (lista o campaña), `Auto-Submitted` distinto de `no` (RFC 3834: autorespuestas, avisos) y `Precedence` bulk/list"
+        },
+        {
+          "nombre": "esDestinoCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "destinatarios: readonly string[] | undefined",
+          "retorno": "boolean",
+          "linea": 70,
+          "resumen": "¿El correo iba a un contacto público de la correduría (hola@grupoasegura.es, …)?"
+        },
+        {
+          "nombre": "esLeadCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { from: string destinatarios?: readonly string[] referencias?: readonly string[] buzonPropio?: string | null /** `esCorreoAutomatico(cabeceras)`: lista, autorespuesta o envío masivo. */ automatico?: boolean }",
+          "retorno": "boolean",
+          "linea": 83,
+          "resumen": "- ABRE hilo (no es respuesta a nada). Una respuesta a un hilo de un lead se casa aparte (`esRespuestaDeLead`); una respuesta a algo que Alberto escribió (una asociación, un proveedor) no es un lead y "
+        },
+        {
+          "nombre": "esRespuestaDeLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "referencias: readonly string[] | undefined, idsLead: ReadonlySet<string>",
+          "retorno": "boolean",
+          "linea": 109,
+          "resumen": "¿Es la respuesta del lead a un hilo que YA abrió como lead? `idsLead` = los Message-ID de sus referencias que el triaje registró como `correduria-lead`. Un hilo = un lead: esto solo anota."
+        },
+        {
+          "nombre": "nombreVisible",
+          "kind": "function",
+          "exportada": true,
+          "params": "fromRaw: string",
+          "retorno": "string | null",
+          "linea": 114,
+          "resumen": "Nombre visible del remitente («\"Ana Pérez\" <ana@x.es>» → «Ana Pérez»). `null` si no hay o es un email."
+        },
+        {
+          "nombre": "sinTildes",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 178
+        },
+        {
+          "nombre": "ramoDeTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "RamoOportunidad | null",
+          "linea": 181,
+          "resumen": "Un texto de ramo → ramo de oportunidad, o `null` si no se reconoce (nunca se cae a `otros`)."
+        },
+        {
+          "nombre": "soloDigitos",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 190
+        },
+        {
+          "nombre": "textoValido",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 192
+        },
+        {
+          "nombre": "normalizarLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown, ctx: { texto: string; from: string; fromNombre: string | null }",
+          "retorno": "LeadCorreo",
+          "linea": 205,
+          "resumen": "Lo que la IA devuelve → `LeadCorreo` validado. Cada dato que «afirma» la IA se COMPRUEBA en el texto del correo (`ctx.texto` = asunto + cuerpo + remitente): un teléfono cuyos dígitos no están en el co"
+        },
+        {
+          "nombre": "esTelefonoCorreduria",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string",
+          "retorno": "boolean",
+          "linea": 256
+        },
+        {
+          "nombre": "motivoSinAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LeadCorreo",
+          "retorno": "string | null",
+          "linea": 261,
+          "resumen": "¿Se puede dar de alta? El puerto exige nombre y un dato para volver a encontrarla (email o teléfono)."
+        },
+        {
+          "nombre": "etiquetaRamo",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "r: RamoOportunidad",
+          "retorno": null,
+          "linea": 278
+        },
+        {
+          "nombre": "notasLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LeadCorreo, asunto: string",
+          "retorno": "string",
+          "linea": 281,
+          "resumen": "`notas` de la ficha y texto del historial: qué pidió, por dónde."
+        },
+        {
+          "nombre": "cuerpoAltaLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LeadCorreo, asunto: string",
+          "retorno": "Record<string, unknown>",
+          "linea": 293,
+          "resumen": "Cuerpo de `POST /api/operador/cliente`. Sin `consentimiento`: no hubo formulario (asegura solo escribe `consent_logs` con `fuente:'web'`). El email es el del REMITENTE (identifica); el teléfono del cu"
+        },
+        {
+          "nombre": "textoHistorialLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: LeadCorreo, asunto: string, respuesta: boolean",
+          "retorno": "string",
+          "linea": 307,
+          "resumen": "Historial `contacto` en una ficha que YA existía (o en la respuesta del hilo)."
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date",
+          "retorno": "string",
+          "linea": 314,
+          "resumen": "Fecha `YYYY-MM-DD` en Madrid (el primer paso de la oportunidad es HOY)."
+        },
+        {
+          "nombre": "cuerpoOportunidadLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, ramo: RamoOportunidad, l: LeadCorreo, ahora: Date",
+          "retorno": "Record<string, unknown>",
+          "linea": 322,
+          "resumen": "Cuerpo de `POST /api/operador/oportunidad {accion:'crear'}`. Nace «interesado» (pidió precio) con primer paso `email` HOY: pedirle los datos. `fuente:'correo'` solo la acepta asegura de este actor."
+        },
+        {
+          "nombre": "ramoPlantilla",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramos: readonly RamoOportunidad[]",
+          "retorno": "RamoPlantilla",
+          "linea": 338
+        },
+        {
+          "nombre": "pieLegalLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string",
+          "linea": 390,
+          "resumen": "Pie legal del correo: identidad del mediador, registro DGSFP y RGPD. TODO sale de `MEDIADOR` (`@central/module-seguros`), nunca a mano; la política es la de la web pública."
+        },
+        {
+          "nombre": "plantillaPeticionDatos",
+          "kind": "function",
+          "exportada": true,
+          "params": "l: Pick<LeadCorreo, 'nombre' | 'ramos'>, asuntoOriginal: string",
+          "retorno": "",
+          "linea": 403,
+          "resumen": "Asunto y cuerpo del BORRADOR de respuesta. Texto fijo; solo cambia el saludo (nombre de pila) y el ramo."
+        },
+        {
+          "nombre": "resolverAltaLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown, r: ResultadoEscritura",
+          "retorno": "AltaLeadCorreo",
+          "linea": 447,
+          "resumen": "Se casa con una ficha que ya existe SOLO si la coincidencia es por el email del REMITENTE (el único dato que viaja como `email` en el alta) y todo lo demás que coincide es esa misma ficha. Si el teléf"
+        },
+        {
+          "nombre": "textoAvisoLeadCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { remitente: string asunto: string lead: LeadCorreo ficha: FichaLeadCorreo oportunidades: readonly OportunidadLeadCorreo[] plantilla: { asunto: string; cuerpo: string } | null respuesta?: boolean }",
+          "retorno": "string",
+          "linea": 485,
+          "resumen": "HTML de Telegram. Todo lo que viene del correo pasa por `escapeHtml`. Dice lo que se hizo Y lo que no: la petición de datos es un TEXTO para copiar (no hay borrador en Gmail: no existe ese mecanismo) "
+        },
+        {
+          "nombre": "textoPlantillaTelegram",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { asunto: string; cuerpo: string }",
+          "retorno": "string",
+          "linea": 538,
+          "resumen": "La plantilla va en un SEGUNDO mensaje a propósito: si Telegram rechazara este (HTML, longitud), el aviso principal —que es el que no se puede perder— ya ha salido."
+        },
+        {
+          "nombre": "diferirCorreo",
+          "kind": "function",
+          "exportada": true,
+          "params": "transcurridoMs: number",
+          "retorno": "boolean",
+          "linea": 553
+        },
+        {
+          "nombre": "diferirLead",
+          "kind": "function",
+          "exportada": true,
+          "params": "transcurridoMs: number, leadsHechos: number",
+          "retorno": "boolean",
+          "linea": 556
+        },
+        {
+          "nombre": "cursorTrasPasada",
+          "kind": "function",
+          "exportada": true,
+          "params": "maxUid: number, uidDiferido: number | null",
+          "retorno": "number",
+          "linea": 560,
+          "resumen": "El cursor nunca pasa de un correo diferido: queda en el UID anterior para que se relea."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0cfe99b5f385"
     },
     {
       "ruta": "apps/plataforma/lib/correo/num-confirmacion.ts",
@@ -145018,7 +145419,7 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "RutaCorreo",
-          "linea": 166
+          "linea": 180
         },
         {
           "nombre": "descripcionParaPrompt",
@@ -145026,13 +145427,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string",
-          "linea": 175,
+          "linea": 189,
           "resumen": "Genera el bloque de categorías para el prompt de clasificación (sin duplicar la lista)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d2a3fc6c65a"
+      "hash": "549595d2d27f"
     },
     {
       "ruta": "apps/plataforma/lib/correo/smoobu-notificacion.ts",
@@ -145129,7 +145530,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 35,
+          "linea": 37,
           "resumen": "Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa. Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente no toca "
         },
         {
@@ -145138,7 +145539,7 @@
           "exportada": false,
           "params": "labels: string[]",
           "retorno": "boolean",
-          "linea": 37
+          "linea": 39
         },
         {
           "nombre": "fmtFecha",
@@ -145146,7 +145547,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string",
-          "linea": 43
+          "linea": 45
         },
         {
           "nombre": "mensajeAviso",
@@ -145154,7 +145555,7 @@
           "exportada": false,
           "params": "o: { categoria: string; remitente: string; asunto: string; resumen: string accion: string | null; fechaLimite: Date | null; cautela: boolean }",
           "retorno": "string",
-          "linea": 49,
+          "linea": 51,
           "resumen": "Construye el aviso inmediato de Telegram (remitente + resumen + acción/fecha + por qué importa)."
         },
         {
@@ -145163,7 +145564,7 @@
           "exportada": false,
           "params": "categoria: string",
           "retorno": "string",
-          "linea": 66
+          "linea": 68
         },
         {
           "nombre": "pasadaTriaje",
@@ -145171,7 +145572,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Record<string, number>>",
-          "linea": 78
+          "linea": 81
         },
         {
           "nombre": "digestTriaje",
@@ -145179,7 +145580,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 330,
+          "linea": 359,
           "resumen": "Digest diario: recuento por categoría de las últimas 24 h + lista corta de lo relevante no avisado."
         },
         {
@@ -145188,7 +145589,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 370,
+          "linea": 399,
           "resumen": "Resumen semanal de valor (mejora 6): señal de \"esto te está ahorrando trabajo\" + detector de deriva."
         },
         {
@@ -145197,7 +145598,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo",
           "retorno": "Promise<string | null>",
-          "linea": 393,
+          "linea": 422,
           "resumen": "Solo el texto de los PDF del correo (para el lector de eventos, que separa cuerpo y adjuntos). `null` = no hay o no se leen."
         },
         {
@@ -145206,7 +145607,7 @@
           "exportada": false,
           "params": "correo: CorreoNuevo, textoPdf: string | null",
           "retorno": "string",
-          "linea": 404,
+          "linea": 433,
           "resumen": "Cuerpo del correo + el texto por filas de sus PDF (Allianz manda la tabla de devueltos/anuladas en un PDF). Un PDF que no se puede leer no aporta nada, y entonces el lector cuenta el aviso como NO leí"
         }
       ],
@@ -145216,7 +145617,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "4339219f750d"
+      "hash": "936887d35c24"
     },
     {
       "ruta": "apps/plataforma/lib/correos-cliente.ts",
@@ -171563,7 +171964,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "boolean",
-          "linea": 793
+          "linea": 799
         },
         {
           "nombre": "avisosDe",
@@ -171571,7 +171972,7 @@
           "exportada": true,
           "params": "categoria: CategoriaAviso",
           "retorno": "AvisoTelegram[]",
-          "linea": 798,
+          "linea": 804,
           "resumen": "Avisos de una categoría, en el orden del catálogo."
         },
         {
@@ -171580,13 +171981,13 @@
           "exportada": true,
           "params": "categoria: string",
           "retorno": "string | null",
-          "linea": 808,
+          "linea": 814,
           "resumen": "Id del aviso inmediato del triaje de correo para una categoría de `lib/correo/rutas.ts`. `null` = esa categoría no avisa al momento (va al digest o no se toca), así que no hay interruptor que ofrecer."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1557cd7a21a8"
+      "hash": "54781da2d7df"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -199804,7 +200205,7 @@
           "exportada": true,
           "params": "f: FuenteOrigen | null | undefined",
           "retorno": "boolean",
-          "linea": 495
+          "linea": 498
         },
         {
           "nombre": "fuenteOrigen",
@@ -199812,7 +200213,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Revisado<FuenteOrigen | null>",
-          "linea": 500,
+          "linea": 503,
           "resumen": "Texto → fuente válida. Vacío/ausente → `null` (no se sabe); desconocida → rechazo con motivo."
         },
         {
@@ -199821,7 +200222,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoHistorial | null",
-          "linea": 541
+          "linea": 545
         },
         {
           "nombre": "tipoHistorialAlta",
@@ -199829,7 +200230,7 @@
           "exportada": true,
           "params": "fuente: FuenteOrigen | null",
           "retorno": "TipoHistorial",
-          "linea": 550,
+          "linea": 554,
           "resumen": "Qué fila deja un alta en `historial_interno`. Un lead que entra por un CANAL (web, portal, WhatsApp) es un CONTACTO del cliente con la correduría —§6: «cada contacto deja historial tipo contacto»—; un"
         },
         {
@@ -199838,7 +200239,7 @@
           "exportada": true,
           "params": "a: Pick<AltaCliente, 'fuente' | 'notas'>, ctx: { actor: string; compartido?: boolean },",
           "retorno": "string",
-          "linea": 554
+          "linea": 558
         },
         {
           "nombre": "revisarAlta",
@@ -199846,7 +200247,7 @@
           "exportada": true,
           "params": "e: Record<string, unknown>",
           "retorno": "AltaRevisada",
-          "linea": 574,
+          "linea": 578,
           "resumen": "Un alta exige nombre y AL MENOS un dato por el que se pueda volver a encontrar (DNI, teléfono o email): una ficha con solo un nombre es la que mañana se duplica, porque nadie la encuentra al buscar."
         },
         {
@@ -199855,7 +200256,7 @@
           "exportada": true,
           "params": "cs: readonly Coincidencia[]",
           "retorno": "boolean",
-          "linea": 651,
+          "linea": 655,
           "resumen": "Un DNI que ya está NUNCA se fuerza: es la misma persona. Teléfono o email repetidos sí pueden ser dos personas (matrimonio, padre e hijo) y se admite seguir adelante a sabiendas."
         },
         {
@@ -199864,12 +200265,12 @@
           "exportada": true,
           "params": "tipoPersona: TipoPersona | null | undefined",
           "retorno": "EtiquetasIdentidad",
-          "linea": 676
+          "linea": 680
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c7eb4f45d4a"
+      "hash": "eda137d2abd4"
     },
     {
       "ruta": "packages/module-seguros/src/cobertura-detalle.ts",
@@ -221673,7 +222074,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4755,
-    "funciones": 17674
+    "archivos": 4758,
+    "funciones": 17713
   }
 }
