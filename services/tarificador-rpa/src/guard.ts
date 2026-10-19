@@ -2289,33 +2289,87 @@ async function unicoPorTextoGenerali(page: Page, texto: string): Promise<Locator
 }
 
 /**
- * «ACEPTAR» de «Seleccionar mediador» (captura 2), UNA vez por trabajo y solo si: guard limpio y sin ventanas abiertas; la
- * página es `CorredorInicio.po` de www.generali.es; el desplegable del mediador (`selectMediador`, lo localiza el adaptador)
- * tiene puesto EXACTAMENTE el mediador de la correduría (`opcionMediadorGenerali`); y hay un solo botón visible de texto
- * exacto «ACEPTAR». `comprobarBoton` (con «aceptar» permitido SOLO aquí) mira el resto de su descripción antes del clic.
+ * Pantalla «Seleccionar mediador» (prueba real b41be722, 19/10/2026): la carcasa es `CorredorInicio.po` («PORTAL DEL CORREDOR»)
+ * y la cascada vive en un MARCO de Genernet (`seleccionAmbito.do`, que se recarga como `seleccionAmbitoRefresh.do` al cambiar
+ * un desplegable). Rutas EXACTAS de www.generali.es en las que puede estar la página o el marco del desplegable.
+ */
+export const RUTAS_MEDIADOR_GENERALI = Object.freeze([
+  RUTA_INICIO_GENERALI,
+  '/age3k/red_agendaComercialFormWeb/mediador/seleccionAmbito.do',
+  '/age3k/red_agendaComercialFormWeb/mediador/seleccionAmbitoRefresh.do',
+] as const)
+/**
+ * Botón de «Seleccionar mediador» que el robot puede pulsar: LISTA BLANCA CERRADA de textos EXACTOS (sin tildes ni mayúsculas
+ * que cuenten). La captura 2 enseña «ACEPTAR»; el marco de Genernet no está capturado y puede decir «Continuar».
+ */
+export const BOTONES_MEDIADOR_GENERALI = Object.freeze([BOTON_MEDIADOR_GENERALI, 'CONTINUAR'] as const)
+/** Lo que NUNCA puede llevar ese botón aunque alguien lo añada a la lista («aceptar» va aparte: es el de la captura). */
+const RE_BOTON_MEDIADOR_PELIGROSO = /emit|emisi|contrat|grab|firm|pag|poliza|formaliz|suplement|anul|tarif|guard/i
+
+/** ¿Puede el robot pulsar el botón de «Seleccionar mediador» con ESTE texto? Exacto en la lista y sin nada peligroso. PURA. */
+export function botonMediadorGeneraliPermitido(texto: string | null | undefined): boolean {
+  const t = textoMenu(texto)
+  if (t === '' || RE_BOTON_MEDIADOR_PELIGROSO.test(sinTildesNi(t))) return false
+  return (BOTONES_MEDIADOR_GENERALI as readonly string[]).includes(t)
+}
+
+/** ¿`url` es de www.generali.es y su ruta EXACTA es una de `RUTAS_MEDIADOR_GENERALI`? PURA. */
+export function rutaMediadorGenerali(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.origin === ORIGEN_PORTAL_GENERALI && !u.username && !u.password && (RUTAS_MEDIADOR_GENERALI as readonly string[]).includes(u.pathname)
+  } catch {
+    return false
+  }
+}
+
+/** Texto visible de un control para la lista blanca: su texto, o el `value`/`alt`/`title`/`aria-label` de un input/imagen. */
+const textoControl = (d: (string | null)[]) => [d[0], d[3], d[1], d[2]].map((x) => (x ?? '').trim()).find((x) => x !== '') ?? ''
+
+/**
+ * Botón de «Seleccionar mediador» (captura 2 + prueba real b41be722), UNA vez por trabajo y solo si: guard limpio y sin
+ * ventanas abiertas; la página Y el marco del desplegable están en `RUTAS_MEDIADOR_GENERALI` de www.generali.es; el desplegable
+ * del mediador (`selectMediador`, lo localiza el adaptador en el marco que sea) tiene puesto EXACTAMENTE el mediador de la
+ * correduría (`opcionMediadorGenerali`); y en ESE MARCO hay un único control visible (button, input de botón/imagen, enlace,
+ * role=button) cuyo texto es uno de `BOTONES_MEDIADOR_GENERALI` (exacto). `comprobarBoton` (con «aceptar» permitido SOLO
+ * aquí) mira el resto de su descripción (onclick, href, formaction, ancestros) antes del clic. Nada de emitir/contratar/
+ * grabar/firmar/pagar.
  */
 export async function pulsarMediadorGenerali(page: Page, guard: GuardEmision, selectMediador: Locator): Promise<void> {
   guard.comprobar()
   if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'mediador de Generali con una ventana de red abierta')
-  if (!enRutaGenerali(page, RUTA_INICIO_GENERALI)) throw new ErrorMapaGuardGenerali('la pantalla «Seleccionar mediador» (CorredorInicio.po)')
+  if (!rutaMediadorGenerali(page.url())) throw new ErrorMapaGuardGenerali('la pantalla «Seleccionar mediador» (CorredorInicio.po / seleccionAmbito.do)')
   const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
   if (usados.has('generali:mediador')) throw new EmisionBloqueadaError('fase', 'el mediador de Generali ya se aceptó en este trabajo')
   if ((await selectMediador.count()) !== 1) throw new ErrorMapaGuardGenerali('el desplegable «Mediador» (no hay exactamente uno)')
+  const handle = await selectMediador.elementHandle()
+  const marco = handle ? await handle.ownerFrame() : null
+  await handle?.dispose()
+  if (!marco || marco.page() !== page || marco.isDetached()) throw new ErrorMapaGuardGenerali('el marco del desplegable «Mediador»')
+  if (!rutaMediadorGenerali(marco.url())) throw new ErrorMapaGuardGenerali('el marco de «Seleccionar mediador» (ruta fuera de la lista de Generali)')
   const puesta = await selectMediador.evaluate((el) => {
     const s = el as HTMLSelectElement
+    if (s.tagName !== 'SELECT') return null
     const o = s.selectedIndex >= 0 ? s.options[s.selectedIndex] : null
     return o ? { valor: o.value ?? '', texto: (o.textContent ?? '').trim() } : null
   })
   if (!puesta || opcionMediadorGenerali([puesta], MEDIADOR_GENERALI).tipo !== 'unica') throw new EmisionBloqueadaError('fase', 'el mediador elegido no es el de la correduría: no se acepta')
   await exigirSinCuentaBancaria(page)
-  const boton = page.getByRole('button', { name: BOTON_MEDIADOR_GENERALI, exact: true }).filter({ visible: true })
-  if ((await boton.count()) !== 1) throw new ErrorMapaGuardGenerali(`el botón «${BOTON_MEDIADOR_GENERALI}» de «Seleccionar mediador» (no hay exactamente uno visible)`)
-  const desc = await descripcion(boton.first())
-  if (textoMenu(desc[0]) !== BOTON_MEDIADOR_GENERALI) throw new EmisionBloqueadaError('boton', String(desc[0] ?? ''))
+  const candidatos = marco.locator('button, input[type=button], input[type=submit], input[type=image], a, [role=button]').filter({ visible: true })
+  const n = await candidatos.count()
+  const validos: { control: Locator; desc: (string | null)[] }[] = []
+  for (let i = 0; i < n && i < 200; i++) {
+    const c = candidatos.nth(i)
+    const d = await descripcion(c).catch(() => null)
+    if (d && botonMediadorGeneraliPermitido(textoControl(d))) validos.push({ control: c, desc: d })
+  }
+  if (validos.length !== 1) throw new ErrorMapaGuardGenerali(`el botón de «Seleccionar mediador» (${validos.length} visibles en su marco con texto ${BOTONES_MEDIADOR_GENERALI.join('/')}; hace falta exactamente uno)`)
+  const { control, desc } = validos[0]!
+  if (!botonMediadorGeneraliPermitido(textoControl(desc))) throw new EmisionBloqueadaError('boton', textoControl(desc).slice(0, 80))
   comprobarBoton(desc, { permitirAceptar: true })
   usados.add('generali:mediador')
   AVANCES_USADOS.set(guard, usados)
-  await boton.first().click()
+  await control.click()
   guard.comprobar()
 }
 

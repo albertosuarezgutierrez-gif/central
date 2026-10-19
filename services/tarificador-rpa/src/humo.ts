@@ -5,6 +5,11 @@
 // 🚨 NO es una tarificación: sin riesgo, sin datos de ningún cliente, sin rellenar un solo campo. NO pulsa nada tras el login:
 //    ni «Nueva Alta», ni elegir producto, ni abrir el formulario (podría crear un borrador en el portal). Solo comprueba que el
 //    control de entrada está a la vista. El único clic es el del propio login, por el guard (`ctx.pulsar` = `pulsar(boton, guard)`).
+//    EXCEPCIÓN Generali (19/10/2026, v0.3.0): «Seleccionar mediador» vive en un marco; el humo usa el MISMO paso que la
+//    tarificación (`elegirMediadorGenerali`: elige el mediador de la correduría y su botón SOLO por `pulsarMediadorGenerali`, lista
+//    blanca exacta del guard) y comprueba el menú «NEGOCIO». No sobrevuela ni pulsa el menú.
+// 📵 SMS de Okta (Generali): el humo arranca con el dispositivo de confianza de la bóveda en SOLO LECTURA; si aun así llega a la
+//    pantalla del SMS, NO lo pide (nada de despertar a Alberto) ni es un fallo: resultado `humo` con «omitido: requiere SMS».
 //    Lo demás (opciones, avance, proyecto, PDF, enlace de entrada) está PROHIBIDO o ausente en el contexto de humo.
 // ♻️ Reutiliza los login (y, en Mapfre, el localizador del menú) de los adaptadores: no duplica selectores. Cada adaptador
 //    registrado EXIGE su prueba aquí (test/humo.test.ts): un bot nuevo sin humo no pasa los tests.
@@ -19,7 +24,10 @@ import { enviarResultado, type Config, type Trabajo } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { ErrorCredenciales, exigirSinRechazoCredenciales, motivoCredenciales, textoVisiblePagina } from './credenciales.ts'
 import { ErrorTarificador, clasificar } from './errores.ts'
-import { instalarGuardEmision, pulsar } from './guard.ts'
+import { esUrlOktaSmsGenerali, instalarGuardEmision, pulsar, pulsarMediadorGenerali, type GuardEmision } from './guard.ts'
+import { claveSesion } from './boveda-sesion.ts'
+import { almacenHttp, leerDispositivo } from './sesion-manual.ts'
+import type { EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { adaptadores } from './adapters/index.ts'
 import { allianzComunidades } from './adapters/allianz/comunidades.ts'
@@ -31,10 +39,9 @@ import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { PESTANA_NUEVA_PRODUCCION, localizar } from './adapters/mapfre/entrada.ts'
 import { mapfreHogar } from './adapters/mapfre/hogar.ts'
 import { mapfreAuto, mapfreMoto } from './adapters/mapfre/auto.ts'
-import { generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
-import { BOTON_MEDIADOR_GENERALI } from './guard.ts'
+import { elegirMediadorGenerali, generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
 
-export const HUMO_VERSION = '0.2.0'
+export const HUMO_VERSION = '0.3.0'
 const TOPE_HUMO_MS = 3 * 60_000
 const TOPE_PASO_MS = 30_000
 const ESPERA_MENU_MS = 20_000
@@ -49,8 +56,11 @@ export type PruebaHumo = {
   /** Clave de la credencial (fly secrets `CRED_<clave>_USER` / `_PASS`): la MISMA del adaptador. */
   credencial: string
   login: (page: Page, ctx: CtxHumo) => Promise<void>
-  /** El menú de entrada al tarificador existe y es VISIBLE. SOLO LECTURA: no pulsa nada, no abre nada (podría crear un borrador). */
-  menu: (page: Page, ctx: CtxHumo) => Promise<void>
+  /**
+   * El menú de entrada al tarificador existe y es VISIBLE. SOLO LECTURA: no pulsa nada, no abre nada (podría crear un borrador).
+   * Recibe el guard (no el contexto): Generali lo usa solo para la puerta del mediador (`pulsarMediadorGenerali`).
+   */
+  menu: (page: Page, guard: GuardEmision) => Promise<void>
 }
 
 /** ePAC: «Nueva Alta» (`#link_new_policy` o el botón de ese nombre) a la vista. NO se pulsa: pulsarlo abre el modal de altas. */
@@ -69,19 +79,47 @@ async function menuMapfre(page: Page): Promise<void> {
 }
 
 /**
- * Generali (18/10/2026, v0.1.1): tras el login el portal enseña «Seleccionar mediador» (el «ACEPTAR» solo lo pulsa el guard en una
- * tarificación) o, si entra ya con mediador, el portal con el menú «NEGOCIO». Cualquiera de los dos a la vista = el login y la
- * entrada no han cambiado. SOLO LECTURA: no se elige mediador ni se sobrevuela el menú.
+ * Generali (v0.3.0 del humo, 19/10/2026; prueba real b41be722): «Seleccionar mediador» vive en un MARCO sin etiquetas. Se usa el
+ * MISMO paso que la tarificación (`elegirMediadorGenerali`, todos los marcos; el botón SOLO por `pulsarMediadorGenerali`) y luego
+ * se comprueba que el menú «NEGOCIO» está a la vista en algún marco. No se sobrevuela ni se pulsa el menú.
  */
-async function menuGenerali(page: Page): Promise<void> {
-  const botonMediador = page.getByRole('button', { name: BOTON_MEDIADOR_GENERALI, exact: true }).filter({ visible: true })
-  const negocio = page.getByText(/^\s*NEGOCIO\s*$/).filter({ visible: true })
+async function menuGenerali(page: Page, guard: GuardEmision): Promise<void> {
+  const puerta: Pick<ContextoPortal, 'pausaAccion' | 'confirmarMediadorGenerali'> = {
+    pausaAccion: () => dormir(azar(300, 1_200)),
+    confirmarMediadorGenerali: (sel) => pulsarMediadorGenerali(page, guard, sel),
+  }
+  await elegirMediadorGenerali(page, puerta)
   const fin = Date.now() + ESPERA_MENU_MS
   while (Date.now() < fin) {
-    if ((await botonMediador.count().catch(() => 0)) === 1 || (await negocio.count().catch(() => 0)) >= 1) return
+    for (const f of page.frames()) {
+      if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).filter({ visible: true }).count().catch(() => 0)) >= 1) return
+    }
     await dormir(500)
   }
-  throw new ErrorTarificador('portal', 'generali: ni el botón de «Seleccionar mediador» ni el menú «NEGOCIO» están visibles tras el login')
+  throw new ErrorTarificador('portal', 'generali: el menú «NEGOCIO» no está visible tras elegir el mediador')
+}
+
+/** El humo llegó a la pantalla del SMS de Okta: no se pide el código de madrugada; se OMITE (no es fallo ni credenciales). */
+export class HumoRequiereSms extends Error {
+  constructor() {
+    super('humo: Okta pide el código SMS')
+    this.name = 'HumoRequiereSms'
+  }
+}
+
+/**
+ * ¿El humo se cortó por el SMS de Okta? Sin violación del guard (esa manda siempre) y: lo lanzó `trasLogin`, o la página está en
+ * la pantalla del SMS (el detector genérico de verificación habría dado `requiere_verificacion_humana`, que avisa a Alberto). PURA.
+ */
+export function humoRequiereSms(fallo: unknown, url: string, hayViolacion: boolean): boolean {
+  if (hayViolacion) return false
+  return fallo instanceof HumoRequiereSms || esUrlOktaSmsGenerali(url)
+}
+
+/** Motivo del omitido por SMS (≤200, sin datos). `dispositivo`: lo que dijo la bóveda al arrancar. PURO. */
+export function motivoOmitidoSms(dispositivo: string): string {
+  const d = dispositivo === 'ok' ? 'el dispositivo guardado no evitó el SMS' : `sin dispositivo guardado en la bóveda (${dispositivo})`
+  return `requiere SMS: Okta pide el código (${d}); no se pide de madrugada; la próxima tarificación lo releva por Telegram`.slice(0, 200)
 }
 
 /** La prueba de cada pareja (compañía/ramo). Las claves son `claveHumo(compania, ramo)`. */
@@ -186,14 +224,32 @@ export async function ejecutarHumo(d: DepsHumo): Promise<number> {
   }, TOPE_HUMO_MS + 60_000)
   respaldo.unref()
 
+  // Dispositivo de confianza (Okta/Generali): SOLO LECTURA de la bóveda; sin clave o sin fila, contexto limpio.
+  let dispositivo: EstadoNavegador | null = null
+  let motivoDispositivo = 'no_aplica'
+  if (adaptadores.obtener(trabajo.compania, dec.ramo)?.codigoSms === 'okta-generali') {
+    let clave: Buffer | null = null
+    try {
+      clave = claveSesion(env)
+    } catch {
+      motivoDispositivo = 'sin_clave'
+    }
+    if (clave) {
+      const r = await leerDispositivo(almacenHttp(cfg), clave, trabajo.compania)
+      dispositivo = r.estado
+      motivoDispositivo = r.motivo
+    }
+    log('humo_dispositivo', { estado: motivoDispositivo })
+  }
+
   let browser: Browser | null = null
   let fase: FaseHumo = 'login'
   let fallo: unknown = null
   let actual: Page | null = null
   try {
     browser = await chromium.launch({ headless: true })
-    // Contexto LIMPIO: sin cookies, sin sesión previa, sin descargas. Sin tracing (las credenciales irían al trace).
-    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: false })
+    // Contexto LIMPIO: sin cookies ni sesión previa (salvo el dispositivo de Okta de la bóveda), sin descargas. Sin tracing.
+    const context = await browser.newContext({ locale: 'es-ES', timezoneId: 'Europe/Madrid', acceptDownloads: false, ...(dispositivo ? { storageState: dispositivo as never } : {}) })
     const guard = await instalarGuardEmision(context)
     const page = await context.newPage()
     actual = page
@@ -208,6 +264,8 @@ export async function ejecutarHumo(d: DepsHumo): Promise<number> {
       sesionReutilizada: false,
       sesionManual: false,
       trasLogin: async () => {
+        // SMS de Okta: se para ANTES de nada (ni «Enviar» ni aviso): el humo lo omite.
+        if (esUrlOktaSmsGenerali(page.url())) throw new HumoRequiereSms()
         // ¿Pide un código (SMS/OTP)? O ¿la cuenta está bloqueada / caducada? Entonces se para: es un hallazgo, no se sigue.
         await exigirSinVerificacion(page, trabajo.compania)
         await exigirSinRechazoCredenciales(page, trabajo.compania, { soloInutilizable: true })
@@ -230,7 +288,7 @@ export async function ejecutarHumo(d: DepsHumo): Promise<number> {
           await prueba.login(page, ctx)
           await ctx.trasLogin()
           fase = 'menú'
-          await prueba.menu(page, ctx)
+          await prueba.menu(page, guard)
           guard.comprobar()
         })(),
         new Promise<never>((_, rechazar) => {
@@ -239,12 +297,14 @@ export async function ejecutarHumo(d: DepsHumo): Promise<number> {
       ])
     } catch (e) {
       fallo = guard.violacion() ?? e
+      // También si el detector genérico de verificación (o un tope) saltó estando en la pantalla del SMS de Okta.
+      if (humoRequiereSms(fallo, page.url(), guard.violacion() !== null)) fallo = new HumoRequiereSms()
     } finally {
       clearTimeout(tope)
     }
 
     // Un fallo «del portal» con el formulario de acceso a la vista y un mensaje de rechazo/bloqueo → es de CREDENCIALES.
-    if (fallo && clasificar(fallo).tipo === 'portal') {
+    if (fallo && !(fallo instanceof HumoRequiereSms) && clasificar(fallo).tipo === 'portal') {
       const loginVisible = await page.locator('input[type="password"]').filter({ visible: true }).count().then((c) => c > 0, () => false)
       if (loginVisible) {
         const m = motivoCredenciales(await textoVisiblePagina(page))
@@ -261,6 +321,11 @@ export async function ejecutarHumo(d: DepsHumo): Promise<number> {
     clearTimeout(respaldo)
   }
 
+  if (fallo instanceof HumoRequiereSms) {
+    const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'humo', omitido: motivoOmitidoSms(motivoDispositivo), ramosConBot: dec.ramosConBot, botVersion: HUMO_VERSION })
+    log('humo_omitido_sms', { status: st, dispositivo: motivoDispositivo })
+    return st >= 200 && st < 300 ? 0 : 1
+  }
   if (fallo) {
     const c = clasificar(fallo)
     return error(c.tipo === 'portal' && !actual ? 'infra' : c.tipo, mensajeFalloHumo(fase, c.mensaje, redactar))

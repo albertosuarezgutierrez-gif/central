@@ -5,7 +5,7 @@ Releído el 18/10/2026 (tarde): **6 archivos**, descargados y VISTOS como imagen
 Sin datos personales: usuario, nombre del corredor y código de mediador sustituidos por [dato] (el código de la correduría vive
 en una sola constante del bot, `MEDIADOR_GENERALI` de `src/adapters/generali/reglas.ts`, por decisión de Alberto).
 
-Bot: `src/adapters/generali/auto.ts` (**v0.2.0**, 19/10/2026; flag `GENERALI_AUTO_ACTIVO` encendido, la puerta real es la fila de
+Bot: `src/adapters/generali/auto.ts` (**v0.2.2**, 19/10/2026; flag `GENERALI_AUTO_ACTIVO` encendido, la puerta real es la fila de
 `seguros.companias_integracion`) + reglas puras `src/adapters/generali/reglas.ts` + puertas del guard `pulsarMediadorGenerali` /
 `entrarTurismosGenerali` / `pulsarSubpestanaGenerali` (`src/guard.ts`). Tests: `test/generali-auto.test.ts`,
 `test/generali-red-turismos.test.ts`, `test/generali-v020.test.ts`.
@@ -39,6 +39,15 @@ Bot: `src/adapters/generali/auto.ts` (**v0.2.0**, 19/10/2026; flag `GENERALI_AUT
 - Bot: Territorial…Comercial se dejan; en «Mediador» la opción del código de la correduría EXACTO (valor o «[dato] - …»);
   0 o varias → para. «ACEPTAR» solo por `pulsarMediadorGenerali` (guard: comprueba que el mediador puesto es el de la correduría).
   Tras ello la URL pasa a `.../CorredorPortal.po?mediatorCode=[dato]`; si ya entra con otro mediador, el bot para.
+- **Prueba real b41be722 (19/10/2026, v0.2.2):** la cascada NO está en la página sino en un MARCO de Genernet
+  (`/age3k/red_agendaComercialFormWeb/mediador/seleccionAmbito.do`, que se recarga como `seleccionAmbitoRefresh.do`) dentro de
+  `CorredorInicio.po`, con **5 campos SIN etiqueta**, y el portal hace un bucle CorredorInicio → seleccionAmbito → Refresh.
+  Bot: escanea TODOS los marcos hasta que la pantalla se ESTABILIZA (dos lecturas iguales; tope 45 s), identifica el desplegable
+  por su OPCIÓN (`decidirMediadorGenerali`: el único control con la opción del código), lo elige (si el marco se recarga, lo
+  vuelve a leer hasta verlo puesto) y el botón de ESE marco lo pulsa solo `pulsarMediadorGenerali`: página y marco en
+  `RUTAS_MEDIADOR_GENERALI`, lista blanca EXACTA `BOTONES_MEDIADOR_GENERALI` (ACEPTAR · CONTINUAR; nunca emitir/contratar/grabar/
+  firmar/pagar), un único control así en el marco y `comprobarBoton`. 0 o varias candidatas → para con inventario
+  (`inventarioMediadorGenerali`: marco, tipo, name/id, nº de opciones y textos sin datos: «65792 - …», marcadores, «[texto]»).
 
 ### 3. Portal del corredor, menú — `.../CorredorPortal.po?mediatorCode=[dato]#`
 - Cabecera: GENERALI; «Portal del Corredor» + «[dato] | [dato]»; «Mis favoritos», CAT, buzón; pestañas NEGOCIO · COMPAÑÍA ·

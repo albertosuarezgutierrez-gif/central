@@ -149,8 +149,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.1')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.1')
+  assert.equal(generaliAuto.version, '0.2.2')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.2')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -250,7 +250,7 @@ test('adaptador · mediador: elige el de la correduría en la cascada y pasa por
   const a = await abrir(INICIO, MEDIADOR_HTML(`<option value="${MEDIADOR_GENERALI}">${MEDIADOR_GENERALI} - PRUEBA</option>`))
   try {
     // La fixture no navega al portal: tras el ACEPTAR, el adaptador espera la URL con el mediador y para (hueco), pero ya aceptó UNA vez.
-    await assert.rejects(elegirMediadorGenerali(a.page, ctxCon(a.page, a.guard)), ErrorMapaIncompletoGenerali)
+    await assert.rejects(elegirMediadorGenerali(a.page, ctxCon(a.page, a.guard), { esperaMs: 1_500, pausaMs: 150 }), ErrorMapaIncompletoGenerali)
     assert.deepEqual(llamadas, ['aceptar'])
     assert.equal(await a.page.locator('#m').inputValue(), MEDIADOR_GENERALI)
   } finally {
@@ -259,7 +259,7 @@ test('adaptador · mediador: elige el de la correduría en la cascada y pasa por
   llamadas.length = 0
   const b = await abrir(INICIO, MEDIADOR_HTML('<option value="11111">11111 - OTRO</option>'))
   try {
-    await assert.rejects(elegirMediadorGenerali(b.page, ctxCon(b.page, b.guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /no aparece/.test(e.message) && !/OTRO/.test(e.message))
+    await assert.rejects(elegirMediadorGenerali(b.page, ctxCon(b.page, b.guard), { esperaMs: 1_500, pausaMs: 150 }), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /no aparece/.test(e.message) && !/OTRO/.test(e.message))
     assert.deepEqual(llamadas, [], 'sin el mediador no se pulsa nada')
   } finally {
     await b.cerrar()

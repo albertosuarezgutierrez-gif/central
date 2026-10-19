@@ -58,7 +58,7 @@ import { exigirSinVerificacion } from './verificacion.ts'
 import { textoAvisoSesionManual } from './aviso.ts'
 import { ErrorCredenciales, cortocircuito, exigirSinRechazoCredenciales, motivoCredenciales, motivoDeMensaje, textoAvisoCredenciales, textoVisiblePagina } from './credenciales.ts'
 import { CADUCIDAD_DISPOSITIVO_MS, caducidadMaximaMs, claveSesion, type SesionAbierta } from './boveda-sesion.ts'
-import { GestorSesionManual, almacenHttp } from './sesion-manual.ts'
+import { GestorSesionManual, almacenHttp, fuenteDispositivo, motivoFalloBoveda } from './sesion-manual.ts'
 import type { ContextoPortal } from './adaptador.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from './ramo.ts'
 import { ejecutarEmision } from './emision.ts'
@@ -100,6 +100,8 @@ type FuenteSesion = {
   alFallo: (rechazada: boolean) => Promise<void>
   /** Tras verificar el SMS (relevo): el estado NUEVO, con su caducidad completa. Ausente = no se recuerda nada. */
   alVerificar?: (estado: EstadoNavegador) => Promise<void>
+  /** Por qué el dispositivo verificado NO quedó en la bóveda (sin datos sensibles); `null` = nada que contar. */
+  notaBoveda?: () => string | null
 }
 
 const fuenteEpac: FuenteSesion = {
@@ -109,29 +111,7 @@ const fuenteEpac: FuenteSesion = {
   alFallo: async () => sesionEpac.invalidar(),
 }
 
-/**
- * Fuente del DISPOSITIVO DE CONFIANZA (19/10/2026, Generali/Okta). Arranca con el estado de la bóveda (si lo hay); tras una
- * verificación del SMS guarda el estado NUEVO con 30 días; tras un trabajo bueno re-sella el refrescado con la caducidad que
- * ya tenía (el uso no la alarga). Un fallo del trabajo NO borra nada: el dispositivo sigue valiendo para el siguiente.
- * Sin gestor (sin clave de bóveda) solo vive en memoria de este proceso.
- */
-function fuenteDispositivo(gestor: GestorSesionManual | null, compania: string, inicial: SesionAbierta | null): FuenteSesion {
-  let actual: { valor: EstadoNavegador; caduca: number } | null = inicial ? { valor: inicial.valor, caduca: inicial.caduca } : null
-  return {
-    manual: false,
-    previa: () => (actual && Date.now() < actual.caduca ? actual.valor : null),
-    alExito: async (estado) => {
-      if (!actual) return
-      actual = { valor: estado, caduca: actual.caduca }
-      if (gestor) await gestor.refrescar(compania, estado, actual.caduca)
-    },
-    alFallo: async () => undefined,
-    alVerificar: async (estado) => {
-      actual = { valor: estado, caduca: Date.now() + CADUCIDAD_DISPOSITIVO_MS }
-      if (gestor) actual = { valor: estado, caduca: await gestor.guardarNueva(compania, estado) }
-    },
-  }
-}
+// Fuente del DISPOSITIVO DE CONFIANZA (Generali/Okta): `fuenteDispositivo` de sesion-manual.ts (guarda justo tras el SMS).
 
 type Comun = {
   sesion: FuenteSesion
@@ -360,7 +340,9 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       const rv: Relevo = await k.relevoSms.relevar(page, guard).catch((e: unknown) => ({ ok: false as const, error: e as ErrorTarificador }))
       if (rv.ok) {
         const estado = await context.storageState().catch(() => null)
-        if (estado && k.sesion.alVerificar) await k.sesion.alVerificar(estado).catch(() => log('dispositivo_no_guardado'))
+        // Se guarda AQUÍ (justo tras pasar el SMS), no al terminar: el dispositivo vale aunque luego el mapa falle.
+        if (!estado) log('dispositivo_no_guardado', { motivo: 'sin_estado_navegador' })
+        else if (k.sesion.alVerificar) await k.sesion.alVerificar(estado).catch(() => log('dispositivo_no_guardado', { motivo: 'desconocido' }))
         ti.cubrir({ ok: false, codigo: 'captcha' })
         return { verificado: true }
       }
@@ -519,18 +501,21 @@ async function main(): Promise<number> {
   let alProrrogar: () => void = () => undefined
   if (adaptador.codigoSms === 'okta-generali' && !fuente.manual) {
     let gestor: GestorSesionManual | null = null
+    let motivoSinBoveda: string | undefined
     try {
       gestor = new GestorSesionManual(almacenHttp(cfg), { clave: claveSesion(env), maxMs: CADUCIDAD_DISPOSITIVO_MS })
-    } catch {
-      log('dispositivo_sin_boveda')
+    } catch (e) {
+      motivoSinBoveda = motivoFalloBoveda(e)
+      log('dispositivo_sin_boveda', { motivo: motivoSinBoveda })
     }
     let inicial: SesionAbierta | null = null
     if (gestor) {
-      const c = await gestor.cargar(trabajo.compania).catch(() => null)
+      let motivoCarga: string | undefined
+      const c = await gestor.cargar(trabajo.compania).catch((e: unknown) => { motivoCarga = motivoFalloBoveda(e); return null })
       if (c?.estado === 'ok') inicial = c.sesion
-      log('dispositivo_cargado', { estado: c === null ? 'ilegible' : c.estado === 'ok' ? 'ok' : c.motivo })
+      log('dispositivo_cargado', { estado: c === null ? 'ilegible' : c.estado === 'ok' ? 'ok' : c.motivo, ...(motivoCarga ? { motivo: motivoCarga } : {}) })
     }
-    fuente = fuenteDispositivo(gestor, trabajo.compania, inicial)
+    fuente = fuenteDispositivo(gestor, trabajo.compania, inicial, { log, motivoSinBoveda })
     relevoSms = {
       usado: false,
       relevar: (page, guard) =>
@@ -654,7 +639,7 @@ async function main(): Promise<number> {
         const ofertas = nota ? r.ofertas.map((o) => ({ ...o, avisos: [...o.avisos, `Cotizado al ${nota}`] })) : r.ofertas
         // Vehículo de catálogo confirmado (18/10/2026): asegura lo encadena al bot de Generali de la misma oportunidad.
         const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas, pdfs: r.pdfs, ...r.vehiculo, ...meta() })
-        log('resultado_ok_enviado', { status: st, ofertas: ofertas.length, intentos: primerFallo ? 2 : 1, recorridoCapturas: recorrido.recorrido().capturas.length, recorridoBytes: recorrido.colector.bytes() })
+        log('resultado_ok_enviado', { status: st, ...(fuente.notaBoveda?.() ? { boveda: fuente.notaBoveda() } : {}), ofertas: ofertas.length, intentos: primerFallo ? 2 : 1, recorridoCapturas: recorrido.recorrido().capturas.length, recorridoBytes: recorrido.colector.bytes() })
         return st >= 200 && st < 300 ? 0 : 1
       }
 
@@ -670,13 +655,17 @@ async function main(): Promise<number> {
       const recorridoDelTrabajo: Recorrido = recorrido.recorrido()
       const secretos = [...secretosDelEntorno(env), ...secretosRiesgo]
       const htmlRedactado = evidencia.html ? redactarHtml(evidencia.html, secretos) : null
+      // Dispositivo verificado pero NO guardado en la bóveda: que se vea en el resultado (el stdout de Fly se pierde).
+      // Va al FINAL (asegura reconoce `[nota] requiere_verificacion_humana:` con UNA sola nota delante) y cabe siempre en el tope.
+      const notaBoveda = fuente.notaBoveda?.() ?? null
+      const colaBoveda = notaBoveda ? ` [${notaBoveda}]` : ''
       const mensaje = (nota ? `[${nota}] ` : '') + c.mensaje
       const cuerpo: CuerpoResultado = {
         trabajoId: trabajo.id,
         resultado: 'error',
         error: {
           tipo: c.tipo,
-          mensaje: redactarTrabajo(mensaje).slice(0, 2000),
+          mensaje: redactarTrabajo(mensaje).slice(0, 2000 - colaBoveda.length) + colaBoveda,
           url: redactarTrabajo(evidencia.url).slice(0, 500),
           // Lista COMPLETA de versiones (solo catálogo), sin pasar por el redactor: asegura la valida y la usa por código.
           ...(c.opcionesVersion ? { opcionesVersion: c.opcionesVersion.slice(0, MAX_OPCIONES_VERSION_CABLE) } : {}),

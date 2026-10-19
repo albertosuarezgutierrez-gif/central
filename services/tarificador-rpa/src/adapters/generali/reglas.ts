@@ -91,6 +91,92 @@ export function urlConMediador(url: string, codigo: string = MEDIADOR_GENERALI):
   return m === null ? null : m.trim() === codigo
 }
 
+// ─────────── «Seleccionar mediador» en un MARCO sin etiquetas (prueba real b41be722, 19/10/2026, v0.2.2) ───────────
+// La cascada vive en un marco de Genernet (`seleccionAmbito.do`) con 5 campos SIN etiqueta: el desplegable del mediador se
+// identifica por su OPCIÓN (la del código de la correduría), en todos los marcos de la página.
+
+/** Un control de formulario leído de un marco (solo estructura y opciones; nunca el valor tecleado). */
+export type ControlMediador = {
+  /** `select`, `input:text`, `combobox`, `listbox`… */
+  tipo: string
+  name: string
+  id: string
+  /** Nativo `<select>`: se puede elegir con `selectOption`. Uno ARIA (combobox/listbox) solo se inventaría. */
+  nativo: boolean
+  /** Posición entre los `<select>` del marco (-1 si no es un select). */
+  indiceSelect: number
+  opciones: OpcionLista[]
+  seleccionada: OpcionLista | null
+}
+export type MarcoMediador = { ruta: string; controles: ControlMediador[] }
+export type DecisionMediador =
+  | { tipo: 'unica'; marco: number; control: number; indice: number; nativo: boolean; puesto: boolean }
+  | { tipo: 'ninguna' }
+  | { tipo: 'varias'; n: number }
+
+/**
+ * ¿Qué control de qué marco es el «Mediador»? El ÚNICO (en todos los marcos) con EXACTAMENTE una opción del código de la
+ * correduría (`opcionMediadorGenerali`). Un control con dos opciones que casan, o dos controles, = `varias` (no se elige).
+ * `puesto` = esa opción ya está seleccionada. PURA.
+ */
+export function decidirMediadorGenerali(marcos: readonly MarcoMediador[], codigo: string = MEDIADOR_GENERALI): DecisionMediador {
+  const hallados: { marco: number; control: number; indice: number; nativo: boolean; puesto: boolean }[] = []
+  let ambiguos = 0
+  marcos.forEach((m, mi) =>
+    m.controles.forEach((c, ci) => {
+      const r = opcionMediadorGenerali(c.opciones, codigo)
+      if (r.tipo === 'varias') ambiguos += r.n
+      if (r.tipo !== 'unica') return
+      const puesto = c.seleccionada !== null && opcionMediadorGenerali([c.seleccionada], codigo).tipo === 'unica'
+      hallados.push({ marco: mi, control: ci, indice: r.indice, nativo: c.nativo, puesto })
+    }),
+  )
+  if (hallados.length === 1 && ambiguos === 0) return { tipo: 'unica', ...hallados[0]! }
+  const n = hallados.length + ambiguos
+  return n === 0 ? { tipo: 'ninguna' } : { tipo: 'varias', n }
+}
+
+/**
+ * Texto de una opción SIN datos personales (las del mediador llevan nombres): «08 - SUROESTE» → «08 - …»; un marcador
+ * («Seleccionar...») tal cual; un código suelto tal cual; cualquier otro texto → «[texto]». PURA.
+ */
+export function opcionSinDatosGenerali(texto: string): string {
+  const t = String(texto ?? '').replace(/\s+/g, ' ').trim()
+  if (t === '') return '(vacía)'
+  if (/^(selecciona|seleccione|elija|escoja|todos|todas|ninguno|-{2,})/i.test(t)) return t.slice(0, 30)
+  const m = /^([A-Za-z0-9]{1,8})\s*[-–]\s*\S/.exec(t)
+  if (m) return `${m[1]} - …`
+  if (/^[A-Za-z0-9]{1,8}$/.test(t)) return t
+  return '[texto]'
+}
+
+/** Ruta de una URL sin query ni fragmento (las del portal llevan `mediatorCode` y sesión). PURA. */
+export function rutaSinQuery(url: string): string {
+  try {
+    const u = new URL(url)
+    return `${u.origin}${u.pathname}`
+  } catch {
+    return '(url ilegible)'
+  }
+}
+
+/**
+ * Inventario de «Seleccionar mediador» para mapear (tipo, name/id, nº de opciones y sus textos SIN datos personales), marco a
+ * marco. Solo marcos con controles. PURA.
+ */
+export function inventarioMediadorGenerali(marcos: readonly MarcoMediador[], max = 1500): string {
+  const partes = marcos
+    .filter((m) => m.controles.length > 0)
+    .map((m) => {
+      const cs = m.controles.map((c) => {
+        const ops = c.opciones.length > 0 ? `: ${c.opciones.slice(0, 12).map((o) => opcionSinDatosGenerali(o.texto)).join(' | ')}${c.opciones.length > 12 ? ' | …' : ''}` : ''
+        return `${c.tipo} name=${c.name.slice(0, 40) || '-'} id=${c.id.slice(0, 40) || '-'} (${c.opciones.length} opciones${ops})`
+      })
+      return `marco ${m.ruta}: ${cs.join(' ; ')}`
+    })
+  return (partes.length > 0 ? partes.join(' ‖ ') : 'ningún campo visible en ningún marco').slice(0, max)
+}
+
 // ───────────────────────── vehículo: casado de catálogo ─────────────────────────
 
 /** Mayúsculas, sin tildes, sin signos (salvo el punto decimal entre cifras), espacios colapsados. PURA. */
