@@ -214,7 +214,12 @@ const eurEs = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 
  * para que el PDF y el portal las pinten igual. Solo lo que CONSTA: una garantía sin estado ni cifra no
  * se lista (no figura ≠ no cubre). `incluida: false` solo si el documento la EXCLUYE.
  */
-export function sobreCoberturasDeOferta(ramo: RamoOferta, garantias: Record<string, ValorGarantia>, datosExtra: unknown, ahora: Date) {
+export function sobreCoberturasDeOferta(ramo: RamoOferta, garantias: Record<string, ValorGarantia> | null, datosExtra: unknown, ahora: Date) {
+  // 🚨 NO CONSTAN (18/10/2026, AS-26-0015): sin garantías leídas (`garantias` NULL en la oferta, o el bot dice
+  // `coberturasNoConstan`) NO hay sobre: la opción se queda con el default `[]` desnudo = «no se intentó», que el
+  // portal pinta «no se han podido leer». Un `vacias` diría «leída y sin garantías» (= no cubre nada).
+  const extra = datosExtra && typeof datosExtra === 'object' && !Array.isArray(datosExtra) ? (datosExtra as Record<string, unknown>) : {}
+  if (garantias === null || extra.coberturasNoConstan === true) return null
   const lista: { nombre: string; incluida: boolean | null; texto: string | null }[] = []
   for (const [clave, v] of Object.entries(garantias)) {
     const hayCifra = v.capital !== null || v.limite !== null || v.franquicia !== null
@@ -231,6 +236,9 @@ export function sobreCoberturasDeOferta(ramo: RamoOferta, garantias: Record<stri
       texto: detalle || null,
     })
   }
+  // Había garantías pero NINGUNA afirma nada (sin estado ni cifra): no constan, igual que arriba. Solo `{}` (leída y
+  // la lectura dijo que no trae ninguna) es `vacias`.
+  if (lista.length === 0 && Object.keys(garantias).length > 0) return null
   return { estado: lista.length > 0 ? 'leidas' : 'vacias', lista, leidasAt: ahora.toISOString() } as const
 }
 
@@ -261,6 +269,8 @@ export function opcionesDeOfertas(ramo: RamoOferta, ofertas: readonly FilaOferta
   conPrima.sort((a, b) => Number(b.f.recomendada) - Number(a.f.recomendada) || a.prima - b.prima || a.f.createdAt.getTime() - b.f.createdAt.getTime())
   return conPrima.map(({ f, prima }, i) => {
     const garantias = garantiasDeJson(f.garantias)
+    // `f.garantias` NULL = no se leyeron: el sobre lo sabe por el NULL (garantiasDeJson lo aplana a {}).
+    const crudas = f.garantias === null || f.garantias === undefined ? null : garantias
     return {
       orden: i + 1,
       ofertaId: f.id,
@@ -271,7 +281,7 @@ export function opcionesDeOfertas(ramo: RamoOferta, ofertas: readonly FilaOferta
       firmeza: 'condicionado',
       requiereRerate: false,
       papeles: f.recomendada ? ['recomendada'] : [],
-      coberturas: sobreCoberturasDeOferta(ramo, garantias, f.datosExtra, ahora),
+      coberturas: sobreCoberturasDeOferta(ramo, crudas, f.datosExtra, ahora),
       garantias: { origen: 'ofertas', ramo, valores: garantias },
     }
   })

@@ -42,6 +42,9 @@ export const CLAVES_RIESGO_COMUNIDAD = [
 export const CLAVES_RIESGO_VEHICULO = [
   'ramo', 'codigoPostal', 'poblacion', 'eleccionPoblacion', 'seleccionVehiculo', 'eleccionVersion', 'eleccionVersionIa',
   'vehiculoConfirmado',
+  // 18/10/2026: marca/modelo/versión de catálogo que CONFIRMÓ el bot (Allianz/Mapfre) en su `ok`; lo escribe asegura al
+  // registrar el resultado y lo encadena a Generali (lib/tarificador-espera-vehiculo.ts). Solo catálogo, sin matrícula.
+  'vehiculoCatalogo',
 ] as const
 
 /** Ramo sin lista propia (p. ej. una exploración de Hogar): solo el ramo. */
@@ -55,6 +58,7 @@ export const SUBCLAVES_RIESGO: Readonly<Record<string, readonly string[]>> = Obj
   eleccionVersionIa: Object.freeze(['origen', 'clave']),
   // Sub-claves EXPLÍCITAS (no se importa `CLAVES_VEHICULO_CONFIRMADO`: una clave nueva allí no se conserva sola aquí).
   vehiculoConfirmado: Object.freeze(['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio']),
+  vehiculoCatalogo: Object.freeze(['origen', 'marca', 'modelo', 'descripcion']),
 })
 
 export function clavesConservadas(ramo: unknown): readonly string[] {

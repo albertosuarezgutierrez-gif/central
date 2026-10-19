@@ -43,7 +43,7 @@ export type SupuestosAuto = {
 /** Comienzo del aviso que viaja con la oferta (y que asegura deja pasar a plataforma). */
 export const PREFIJO_SUPUESTOS = 'Precio con supuestos: '
 /** Máximo del aviso de supuestos que cruza a plataforma. */
-export const MAX_AVISO_SUPUESTOS = 300
+export const MAX_AVISO_SUPUESTOS = 500
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 const esIso = (v: unknown): v is string => typeof v === 'string' && ISO.test(v) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v
@@ -148,6 +148,55 @@ export function supuestosAuto(f: EntradaSupuestos, hoy: Date = new Date()): Supu
   const direccion: Supuesto<'consta'> = dir ? { valor: 'consta', supuesto: false, motivo: 'del riesgo', etiqueta: null } : { valor: null, supuesto: false, motivo: 'el riesgo no trae la dirección', etiqueta: null }
 
   return { compra, uso, fechaEfecto, garaje, segundoConductor, antecedentes, direccion }
+}
+
+// ─── Antecedentes: SUPUESTO FAVORABLE (18/10/2026, decisión de Alberto: «supuesto favorable en todo») ──────────────────
+// Si el riesgo de un vehículo (coche o moto, cualquier compañía) no trae los años asegurado o los siniestros, el bot NO se
+// bloquea: usa el tramo más favorable de cada portal (5 años o más; ningún siniestro) y lo DECLARA en «Precio con supuestos:
+// …». Nunca se presenta como dato y nunca se escribe en el riesgo guardado: se aplica EN MEMORIA donde se evalúa o se teclea
+// (`faltanParaTarificar` y los adaptadores que lo leen). ÚNICA fuente de la regla.
+
+/** Años asegurado SUPUESTOS: «más de 5», que cae en el tramo máximo de cada portal (Allianz Moto «más de 5»; Turismos «5 años o más»). */
+export const ANIOS_ASEGURADO_FAVORABLE = 6
+/** Siniestros con culpa SUPUESTOS en los últimos 5 años. */
+export const SINIESTROS_FAVORABLE = 0
+export const SUPUESTO_FAVORABLE_ANIOS = 'años asegurado: 5 o más (supuesto favorable, no consta)'
+export const SUPUESTO_FAVORABLE_SINIESTROS = 'siniestros en 5 años: ninguno (supuesto favorable, no consta)'
+
+type ConAntecedentes = { aniosAseguradoAnterior?: unknown; siniestrosUltimos5Anios?: unknown }
+const entero = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0
+
+/**
+ * El formulario (o riesgo crudo) con los antecedentes que falten puestos al valor FAVORABLE, y las etiquetas de lo supuesto
+ * (en orden: años, siniestros; `[]` = todo era dato). Un entero ≥ 0 es DATO (0 incluido) y no se toca. PURA, idempotente:
+ * aplicada dos veces no declara nada la segunda (ya son números).
+ */
+export type ClaveAntecedenteFavorable = 'aniosAseguradoAnterior' | 'siniestrosUltimos5Anios'
+
+export function conAntecedentesFavorables<T extends ConAntecedentes>(f: T): {
+  formulario: T & { aniosAseguradoAnterior: number; siniestrosUltimos5Anios: number }
+  /** Etiquetas para «Precio con supuestos: …». */
+  supuestos: string[]
+  /** Claves supuestas (mismo orden). */
+  claves: ClaveAntecedenteFavorable[]
+} {
+  const supuestos: string[] = []
+  const claves: ClaveAntecedenteFavorable[] = []
+  const suponer = (clave: ClaveAntecedenteFavorable, etiqueta: string, valor: number) => (claves.push(clave), supuestos.push(etiqueta), valor)
+  const anios = entero(f.aniosAseguradoAnterior) ? f.aniosAseguradoAnterior : suponer('aniosAseguradoAnterior', SUPUESTO_FAVORABLE_ANIOS, ANIOS_ASEGURADO_FAVORABLE)
+  const sin = entero(f.siniestrosUltimos5Anios) ? f.siniestrosUltimos5Anios : suponer('siniestrosUltimos5Anios', SUPUESTO_FAVORABLE_SINIESTROS, SINIESTROS_FAVORABLE)
+  return { formulario: { ...f, aniosAseguradoAnterior: anios, siniestrosUltimos5Anios: sin }, supuestos, claves }
+}
+
+// ─── Conductor habitual = tomador SUPUESTO (18/10/2026, revisión de seguridad) ─────────────────────────────────────────
+// Cuando el riesgo NO dice si el tomador es el conductor habitual (`tomadorEsConductor` null) y el bot cotiza con el tomador
+// como conductor (Mapfre: la licencia va en la pestaña del tomador; Generali: el portal viene con «primer conductor = TOMADOR»),
+// es un SUPUESTO y se declara en el precio; nunca se presenta como dato.
+export const SUPUESTO_CONDUCTOR_TOMADOR = 'conductor habitual: el tomador (supuesto)'
+
+/** La etiqueta del supuesto si `tomadorEsConductor` no consta (ni `true` ni `false`); `null` si es dato. PURA. */
+export function supuestoConductorTomador(f: { tomadorEsConductor?: unknown }): string | null {
+  return f.tomadorEsConductor === true || f.tomadorEsConductor === false ? null : SUPUESTO_CONDUCTOR_TOMADOR
 }
 
 /** Etiquetas cortas de lo SUPUESTO (en el orden de la pantalla del precio). Lo que es dato no sale. PURA. */

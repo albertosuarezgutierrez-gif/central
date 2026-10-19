@@ -276,6 +276,8 @@ export type FormularioAuto = {
   clasePermiso?: ClasePermiso | null
   /** Nombre de la compañía anterior (texto corto, ≤80). Ausente = no consta (el bot la deja como hueco, nunca la inventa). */
   companiaAnterior?: string | null
+  /** Últimos 5 dígitos (solo cifras) de la póliza ACTUAL del cliente (19/10/2026: Allianz Turismos los pide en «Antecedentes»). Texto de 5 cifras exactas; ausente = no consta. Dato sensible: nunca en supuestos, avisos ni logs. */
+  polizaAnteriorUltimos5?: string | null
   // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
   /** 1ª matriculación (ISO, no futura), de `datosVehiculo.fechaMatriculacion`. Decide compra nuevo / 2ª mano. Ausente = no consta. */
   fechaMatriculacion?: string | null
@@ -602,6 +604,12 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   const ambitoCirculacion = cerrado(e.ambitoCirculacion, 'ambitoCirculacion', AMBITOS_CIRCULACION, defectoAuto ? AMBITO_CIRCULACION_POR_DEFECTO : null)
   const clasePermiso = cerrado(e.clasePermiso, 'clasePermiso', CLASES_PERMISO, defectoAuto ? CLASE_PERMISO_POR_DEFECTO : null)
   const companiaAnterior = textoOpcional(e.companiaAnterior, 'companiaAnterior', MAX_COMPANIA_ANTERIOR)
+  // Últimos 5 dígitos de la póliza actual: exactamente 5 cifras (el error NO repite el valor).
+  let polizaAnteriorUltimos5: string | null = null
+  if (!vacio(e.polizaAnteriorUltimos5)) {
+    if (typeof e.polizaAnteriorUltimos5 === 'string' && /^\d{5}$/.test(e.polizaAnteriorUltimos5.trim())) polizaAnteriorUltimos5 = e.polizaAnteriorUltimos5.trim()
+    else errores.push('polizaAnteriorUltimos5: tienen que ser exactamente 5 cifras (o no venir)')
+  }
   // Supuestos de Allianz Turismos (opcionales, sin defecto: lo que no viene lo SUPONE el bot y lo declara).
   const fechaMatriculacion = fechaIso(e.fechaMatriculacion, 'fechaMatriculacion', errores)
   if (fechaMatriculacion !== null && fechaMatriculacion > hoy.toISOString().slice(0, 10)) errores.push('fechaMatriculacion: no puede ser futura')
@@ -643,6 +651,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(ambitoCirculacion !== null ? { ambitoCirculacion } : {}),
       ...(clasePermiso !== null ? { clasePermiso } : {}),
       ...(companiaAnterior !== null ? { companiaAnterior } : {}),
+      ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
       ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
       ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
       ...(tipoGaraje !== null ? { tipoGaraje } : {}),

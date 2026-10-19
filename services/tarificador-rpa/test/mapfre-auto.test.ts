@@ -35,7 +35,7 @@ import { adaptadores } from '../src/adapters/index.ts'
 import { ErrorEleccionVersion } from '../src/adapters/allianz/auto.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { ErrorOpcionSinResolver } from '../src/mat-select.ts'
-import { comprobarBoton, EmisionBloqueadaError, type FormularioAuto } from '@central/module-tarificacion'
+import { comprobarBoton, EmisionBloqueadaError, supuestosDeAvisos, textoSupuestos, type FormularioAuto } from '@central/module-tarificacion'
 
 const form: FormularioAuto = {
   ramo: 'auto',
@@ -157,6 +157,16 @@ test('leerPrimasMapfre lee las 3 tarjetas y marca las que piden verificación', 
   assert.ok(!o[0]!.avisos.some((a) => /verificación del vehículo/.test(a)))
 })
 
+test('ofertasDesdePrimasMapfre (v0.8.6): el supuesto de la versión llega a los avisos de CADA oferta con el prefijo «Precio con supuestos»; sin supuesto, ninguno', async () => {
+  await page.setContent(PRIMAS)
+  const p = await leerPrimasMapfre(page)
+  const sup = textoSupuestos(['vehículo/versión: el primero de la lista (supuesto, había 5)'])
+  const con = ofertasDesdePrimasMapfre(p, null, sup)
+  for (const o of con) assert.ok(o.avisos.includes('Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5).'))
+  assert.equal(supuestosDeAvisos(con[0]!.avisos), 'Precio con supuestos: vehículo/versión: el primero de la lista (supuesto, había 5).')
+  for (const o of ofertasDesdePrimasMapfre(p, null)) assert.equal(supuestosDeAvisos(o.avisos), null)
+})
+
 test('leerPrimasMapfre: sin tarjetas (paso sin calcular) → error portal, nunca lista vacía', async () => {
   await page.setContent('<body><app-primas></app-primas></body>')
   await assert.rejects(() => leerPrimasMapfre(page), ErrorTarificador)
@@ -187,7 +197,7 @@ test('resumen del vehículo: pares etiqueta/valor; vacío o ausente → null (no
   assert.deepEqual(resumenDesdePares(null, [['Combustible:', ' ']]), { denominacion: null, combustible: null, tipoVehiculo: null, potencia: null, codigoMapfre: null, cambio: null })
 })
 
-test('planObjetoYFiguras: escribe solo lo conocido y deja el resto como pendiente; fail-closed sin siniestros / CP', () => {
+test('planObjetoYFiguras: escribe solo lo conocido y deja el resto como pendiente; fail-closed sin CP; antecedentes sin dato = supuesto favorable', () => {
   const plan = planObjetoYFiguras(form)
   assert.deepEqual(plan.escribibles.map((o) => [o.sel, o.valor]), [
     [SEL_OBJETO.matricula, '0000BBB'],
@@ -200,10 +210,14 @@ test('planObjetoYFiguras: escribe solo lo conocido y deja el resto como pendient
   assert.deepEqual(plan.pendientes.map((o) => o.etiqueta), ['uso del vehículo', 'ámbito de circulación', 'clase del permiso'], 'sin valor en el formulario: pendientes (no se suponen)')
   assert.throws(() => planObjetoYFiguras({ ...form, companiaAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
   assert.ok(!plan.escribibles.some((o) => o.sel === SEL_HISTORIAL.aniosCompaniaAnterior), 'el campo deshabilitado nunca se escribe')
-  assert.throws(() => planObjetoYFiguras({ ...form, siniestrosUltimos5Anios: null }), /siniestros/)
-  assert.throws(() => planObjetoYFiguras({ ...form, aniosAseguradoAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
+  // 18/10/2026 «supuesto favorable»: sin siniestros → 0; sin años → 5 o más, y entonces la compañía anterior SÍ hace falta.
+  assert.equal(planObjetoYFiguras({ ...form, siniestrosUltimos5Anios: null }).escribibles.find((o) => o.sel === SEL_HISTORIAL.siniestrosRc5)?.valor, '0')
+  assert.ok(planObjetoYFiguras({ ...form, aniosAseguradoAnterior: null }).escribibles.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior))
+  assert.throws(() => planObjetoYFiguras({ ...form, aniosAseguradoAnterior: null, companiaAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos' && /compañía anterior/.test(e.message))
   assert.throws(() => planObjetoYFiguras({ ...form, codigoPostal: '123' }), /5 dígitos/)
-  assert.throws(() => planObjetoYFiguras({ ...form, ramo: 'moto' }), /moto/)
+  // v0.8.7: moto ya tiene plan (el del coche); un ramo ajeno sigue siendo `datos`.
+  assert.doesNotThrow(() => planObjetoYFiguras({ ...form, ramo: 'moto' }))
+  assert.throws(() => planObjetoYFiguras({ ...form, ramo: 'hogar' } as unknown as FormularioAuto), /hogar/)
 })
 
 test('rellenarCamposTexto escribe con ámbito (no toca el homónimo de otro componente) y devuelve lo pendiente', async () => {
@@ -359,7 +373,8 @@ test('del paso 2 al precio: escribe el CP y PARA antes de «Continuar» si queda
   assert.equal(await page.locator(SEL_OBJETO.cpCirculacion).inputValue(), '00001')
   assert.equal(await page.locator(SEL_OBJETO.matricula).inputValue(), '', 'la matrícula no se vuelve a teclear (ya la tecleó la consulta del vehículo)')
   assert.deepEqual(r, [], 'sin «Continuar» con controles pendientes')
-  await assert.rejects(() => precioDesdeObjetoAsegurado(page, { ...conNif, ramo: 'moto' }, veh, ctxFalso()), (e) => e instanceof ErrorMapaIncompleto && /MOTO/.test(e.message))
+  // v0.8.7: moto ya no es hueco de mapa «plan de campos de MOTO»: para por lo mismo que el coche (el «uso» sin mapear).
+  await assert.rejects(() => precioDesdeObjetoAsegurado(page, { ...conNif, ramo: 'moto' }, veh, ctxFalso()), (e) => e instanceof ErrorMapaIncompleto && !/MOTO/.test(e.message) && /uso del vehículo/.test(e.message))
 })
 
 test('v0.8.1 (trabajo real 39c8016e): sin mat-select «uso» ni «ámbito» en la pantalla, el paso 2 NO para: CP → «Continuar» y sigue a Figuras', async () => {
@@ -605,4 +620,18 @@ test('fechaEs: el error no lleva la fecha cruda ni el prefijo de Allianz fuera d
   assert.equal(fechaEs('1985-03-07'), '07/03/1985')
   assert.throws(() => fechaEs('07-03-1985', 'mapfre/auto: la fecha de nacimiento del tomador'), (e: Error) => /^mapfre\/auto: la fecha de nacimiento del tomador/.test(e.message) && !e.message.includes('1985') && !/allianz/.test(e.message))
   assert.throws(() => fechaEs('1985/03/07'), (e: Error) => !e.message.includes('1985'))
+})
+
+// ───────────── v0.8.7 (18/10/2026): MOTO por el plan del coche; clase de permiso de moto ─────────────
+import { clasePermisoNsei, SUPUESTO_CLASE_PERMISO_MOTO } from '../src/adapters/mapfre/auto.ts'
+
+test('v0.8.7 moto: el plan sale (ya no es hueco de mapa); sin clase de permiso → «A» DECLARADA; con A2 del riesgo, A2 sin supuesto', () => {
+  const moto = { ...form, ramo: 'moto', clasePermiso: null } as unknown as FormularioAuto
+  assert.deepEqual(clasePermisoNsei(moto), { clase: 'a', supuesto: SUPUESTO_CLASE_PERMISO_MOTO })
+  const plan = planObjetoYFiguras(moto)
+  assert.equal(plan.escribibles.find((o) => o.sel === SEL_LICENCIA.clasePermiso)?.valor, 'A')
+  assert.ok(!plan.pendientes.some((o) => o.etiqueta === 'clase del permiso'))
+  assert.deepEqual(clasePermisoNsei({ ramo: 'moto', clasePermiso: 'a2' }), { clase: 'a2', supuesto: null })
+  assert.throws(() => clasePermisoNsei({ ramo: 'moto', clasePermiso: 'b' }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  assert.deepEqual(clasePermisoNsei({ ramo: 'auto', clasePermiso: null }), { clase: null, supuesto: null }, 'coche: sin supuesto (pendiente, como siempre)')
 })

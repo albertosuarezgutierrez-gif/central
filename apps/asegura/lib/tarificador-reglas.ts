@@ -5,6 +5,7 @@
 // el resultado por HTTP con su propio Bearer (`TARIFICADOR_WORKER_SECRET`). TARIFICAR ≠ EMITIR.
 
 import { MOTIVOS_FIN, type MotivoFin } from './tarificador-explorador-reglas.ts'
+import { leerVehiculoWorker, type VehiculoEncadenado } from './tarificador-espera-vehiculo.ts'
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
   claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
@@ -392,7 +393,8 @@ export function peticionMaquina(cfg: ConfigFly, jobId: string, vistaExplorador?:
 export type MetaWorker = { pasos: PasoTraza[]; botVersion: string | null; trazaRechazada?: string[] }
 
 export type ResultadoWorker =
-  | ({ tipo: 'ok'; trabajoId: string; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; contenido: Buffer }[] } & MetaWorker)
+  /** `vehiculo` (18/10/2026): catálogo confirmado por el bot (Allianz/Mapfre), ACCESORIO (inválido → `null`); se encadena a Generali. */
+  | ({ tipo: 'ok'; trabajoId: string; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; contenido: Buffer }[]; vehiculo: VehiculoEncadenado | null } & MetaWorker)
   | ({
       tipo: 'error'
       trabajoId: string
@@ -489,7 +491,7 @@ export function leerResultadoWorker(entrada: unknown): { ok: true; r: ResultadoW
     const v = validarOfertas(e.ofertas, lista.length)
     if (!v.ok) errores.push(...v.errores)
     if (errores.length || !v.ok) return { ok: false, errores }
-    return { ok: true, r: { tipo: 'ok', trabajoId, ofertas: v.ofertas, pdfs, ...leerMetaWorker(e) } }
+    return { ok: true, r: { tipo: 'ok', trabajoId, ofertas: v.ofertas, pdfs, vehiculo: leerVehiculoWorker(e).vehiculo, ...leerMetaWorker(e) } }
   }
 
   if (e.resultado === 'error') {

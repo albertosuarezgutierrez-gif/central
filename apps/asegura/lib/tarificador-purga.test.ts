@@ -147,6 +147,8 @@ const CIERRES: [string, string, string, string | undefined][] = [
   ['emisión: resultado (emitido)', 'lib/tarificador-emision.ts', 'set estado = ${d.estado}, error = ${err}::jsonb', "return { estado: 'registrado' as const, estadoTrabajo: d.estado }"],
   ['emisión: rechazada por Telegram', 'lib/tarificador-emision.ts', "mensaje: 'Emisión rechazada por Telegram'", "return { estado: 'cancelado' as const"],
   ['emisión: caducadas', 'lib/tarificador-emision.ts', 'export async function caducarEmisiones', undefined],
+  // Generali en espera del vehículo de Allianz/Mapfre que ya no puede llegar (18/10/2026): `cancelado` y purgado.
+  ['barrido: cancela Generali sin vehículo confirmado', 'lib/tarificador.ts', 'async function resolverEsperasVehiculo(', undefined],
 ]
 for (const [nombre, fichero, desde, hasta] of CIERRES) {
   test(`cableado · ${nombre} llama a purgarRiesgoTrabajos`, () => {
@@ -173,7 +175,7 @@ test('cableado · todo UPDATE que pone un estado de cierre está en un sitio vig
   // añadirlo a CIERRES (y a purgar allí).
   const cuenta = (f: string) => (leer(f).match(/set estado = '(ok|cancelado|error_definitivo|emitido)'/g) ?? []).length
   // El `ok`/`cancelado` de la prueba de humo (15/10/2026) va en un UPDATE con `case` (riesgo VACÍO: nada que purgar) y no suma.
-  assert.equal(cuenta('lib/tarificador.ts'), 4)
+  assert.equal(cuenta('lib/tarificador.ts'), 5)
   assert.equal(cuenta('lib/tarificador-bandeja.ts'), 1)
   assert.equal(cuenta('lib/tarificador-emision.ts'), 3)
   for (const f of ['lib/tarificador-eleccion.ts', 'lib/tarificador-explorador.ts', 'lib/tarificador-exploraciones.ts', 'lib/tarificador-verificacion.ts', 'lib/tarificador-formador.ts', 'lib/tarificador-ops.ts']) {

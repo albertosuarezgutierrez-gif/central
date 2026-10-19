@@ -32,6 +32,7 @@ import {
   decidirTarjetaVehiculoTurismos,
   ENCABEZADO_TARJETAS_VEHICULO,
   marcoFormularioTurismos,
+  ofertasDesdePaquetesTurismos,
   rellenarDatosRiesgoTurismos,
   supuestosAplicadosTurismos,
   rellenarDatosVehiculoTurismos,
@@ -233,7 +234,7 @@ test('esAppTurismosAllianz: origen exacto y ruta del motor', () => {
 })
 
 test('versión del bot de Allianz Turismos', () => {
-  assert.equal(allianzAuto.version, '0.6.5')
+  assert.equal(allianzAuto.version, '0.6.15')
 })
 
 test('localización por etiqueta/rol: marco del motor y controles sin tocar ids dinámicos', async () => {
@@ -682,4 +683,29 @@ test('guard: una TARJETA del portal con texto de contratación, o un campo banca
   } finally {
     await b.context.close()
   }
+})
+
+// ───────────── v0.6.12: ofertas de «Selección de paquete» (PURO; importes INVENTADOS) ─────────────
+const LECTURA_PAQUETES = {
+  paquetes: [
+    { nombre: 'Paquete A', primerRecibo: '100,00 €', anualidad: '1.234,56 €', mejorOpcion: false, conAviso: false },
+    { nombre: 'Paquete B', primerRecibo: '', anualidad: '2.000,00 €', mejorOpcion: true, conAviso: false },
+    { nombre: 'Paquete C', primerRecibo: '300,00 €', anualidad: 'consultar', mejorOpcion: false, conAviso: false },
+  ],
+  filas: [{ descripcion: 'Robo', celdas: [{ icono: 'minus', texto: '' }, { icono: 'check', texto: '' }, { icono: 'check', texto: '' }], opciones: [], comunes: [] }],
+}
+
+test('v0.6.12 ofertasDesdePaquetesTurismos (puro): N ofertas con supuestos en avisos; importe ilegible → fuera con aviso; recibo ilegible → solo sin recibo', () => {
+  const o = ofertasDesdePaquetesTurismos(LECTURA_PAQUETES, 'Precio con supuestos: uso diario.')
+  assert.deepEqual(o.map((x) => [x.producto, x.primaAnualEur, x.importeReciboEur, x.primaNetaEur, x.fraccionamiento]), [['Auto · Paquete A', 1234.56, 100, null, null], ['Auto · Paquete B', 2000, null, null, null]])
+  for (const x of o) {
+    assert.ok(x.avisos.includes('Precio con supuestos: uso diario.'))
+    assert.ok(x.avisos.includes('Paquete «Paquete C» descartado: «la anualidad» no se pudo leer como importe.'))
+  }
+  assert.ok(o[1]!.avisos.includes('«Primer recibo» ilegible: importe del recibo no consta.') && !o[0]!.avisos.some((v) => v.includes('ilegible')))
+  assert.deepEqual(o[0]!.coberturas.map((c) => [c.literal, c.estado]), [['Robo', 'excluida']])
+  assert.deepEqual(o[1]!.coberturas.map((c) => [c.literal, c.estado]), [['Robo', 'incluida']])
+  // Ninguna anualidad legible → ninguna oferta (nunca se inventa); sin filas → coberturas no leídas.
+  assert.deepEqual(ofertasDesdePaquetesTurismos({ paquetes: [LECTURA_PAQUETES.paquetes[2]!], filas: [] }), [])
+  assert.ok(ofertasDesdePaquetesTurismos({ paquetes: [LECTURA_PAQUETES.paquetes[0]!], filas: [] })[0]!.avisos.includes('coberturas no leídas'))
 })

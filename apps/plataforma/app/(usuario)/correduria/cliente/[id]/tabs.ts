@@ -7,7 +7,7 @@
  */
 
 export type TabFicha =
-  | 'resumen' | 'oportunidades' | 'pendiente' | 'tareas' | 'polizas' | 'contactos' | 'documentos' | 'correos' | 'notas' | 'historial'
+  | 'resumen' | 'pendiente' | 'oportunidades' | 'contactos' | 'documentos' | 'correos' | 'notas' | 'historial'
 
 /**
  * Desde el 24/09/2026 no son pestañas sino ACCESOS directos (Alberto: «tiene que ser todo
@@ -15,15 +15,24 @@ export type TabFicha =
  * carga su sección debajo.
  */
 export const TABS_FICHA: readonly TabFicha[] = [
-  'resumen', 'oportunidades', 'pendiente', 'tareas', 'polizas', 'contactos', 'documentos', 'correos', 'notas', 'historial',
+  // Primero lo de trabajo, luego lo de consulta (18/10/2026).
+  'resumen', 'pendiente', 'oportunidades', 'contactos', 'documentos', 'correos', 'notas', 'historial',
 ]
 
 /**
  * Recibos y Siniestros dejaron de ser pestañas el 24/09/2026 (Alberto: «dentro de las pólizas
  * está recibos, siniestros…»): viven en cada póliza y en la pestaña Pólizas. Un enlace viejo
  * con `?tab=recibos|siniestros` lleva a Pólizas, que es donde están ahora, no a Resumen.
+ *
+ * (18/10/2026) «Todas las pólizas» se FUSIONÓ con «Sus seguros» en la tarjeta «Seguros» (Alberto
+ * veía redundancia: ambas contaban lo mismo). Ya no hay `?tab=polizas`, pero el enlace viejo sigue
+ * vivo y aterriza en la vista de seguros (`resumen`), que lleva ahora las pólizas, el histórico y los
+ * siniestros.
+ *
+ * (18/10/2026) «Tareas» se FUSIONÓ con «Pendiente» (una sola tarjeta: arriba la acción sugerida y las
+ * peticiones, debajo las tareas guardadas). `?tab=tareas` sigue vivo y aterriza en `pendiente`.
  */
-const HEREDADAS: Record<string, TabFicha> = { recibos: 'polizas', siniestros: 'polizas' }
+const HEREDADAS: Record<string, TabFicha> = { recibos: 'resumen', siniestros: 'resumen', polizas: 'resumen', tareas: 'pendiente' }
 
 /** Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen». */
 export function tabDeParametro(v: string | string[] | undefined): TabFicha {
@@ -46,12 +55,15 @@ export function tabDeParametro(v: string | string[] | undefined): TabFicha {
 export type DatosAccesos = {
   conNosotros: number
   oportunidadesAbiertas: number | null
+  /**
+   * Subtítulo ya hecho de la tarjeta «Oportunidades» (`subtituloOportunidades`: «N abiertas · ~X€/año»).
+   * Ausente o `null` = el de siempre, solo con el número.
+   */
+  oportunidadesTexto?: string | null
   /** `siguienteAccion`: `accion` (con urgencia), `nada` o `sin_comprobar`. */
   pendiente: { estado: 'accion'; urgente: boolean } | { estado: 'nada' } | { estado: 'sin_comprobar' }
-  /** Tareas (del cliente y de sus pólizas): texto ya hecho por `detalleTareas`; `null` = no se pudieron leer. */
-  tareas?: DetalleAcceso | null
-  /** Seguros en vigor (no todas las filas de la ficha). */
-  polizas: number
+  /** Tareas (del cliente y de sus pólizas): `contarTareasAbiertas`; `null`/ausente = no se pudieron leer (no es «0»). */
+  tareas?: { abiertas: number; truncado: boolean } | null
   telefonos: number | null
   emails: number | null
   personas: number | null
@@ -62,7 +74,40 @@ export type DatosAccesos = {
   historial: number | null
 }
 
-export type DetalleAcceso = { texto: string; tono?: 'bien' | 'aviso' | 'malo' }
+export type DetalleAcceso = {
+  texto: string
+  tono?: 'bien' | 'aviso' | 'malo'
+  /** Vacío CONFIRMADO (dato leído = 0) que se pinta atenuado: sigue siendo pulsable. */
+  tenue?: boolean
+  /** Vacío CONFIRMADO que no merece sitio en el grid. Nunca por `null` (no se pudo leer). */
+  oculto?: boolean
+}
+
+/**
+ * Subtítulo de la tarjeta fusionada «Pendiente»: lo sugerido + las tareas guardadas. Tres estados por
+ * parte: sin comprobar / sin leer → no se afirma nada de esa parte; 0 leído → se dice; n → el dato.
+ */
+export function detallePendiente(p: DatosAccesos['pendiente'], tareas: DatosAccesos['tareas']): DetalleAcceso | undefined {
+  const partes: string[] = []
+  let tono: DetalleAcceso['tono']
+  if (p.estado === 'accion') {
+    partes.push(p.urgente ? 'urgente' : 'hay algo que hacer')
+    tono = p.urgente ? 'malo' : 'aviso'
+  }
+  const n = tareas ? tareas.abiertas : null
+  if (n !== null && n > 0) {
+    partes.push(`${n}${tareas?.truncado ? '+' : ''} ${n === 1 ? 'tarea' : 'tareas'}`)
+    tono ??= 'aviso'
+  } else if (n === 0 && tareas?.truncado) {
+    partes.push('hay más tareas de las que se ven')
+    tono ??= 'aviso'
+  }
+  if (p.estado === 'nada' && partes.length === 0) {
+    // «Al día» solo si las tareas también se leyeron; si no, no se afirma.
+    return { texto: tareas ? 'al día' : 'al día · tareas sin leer' }
+  }
+  return partes.length > 0 ? { texto: partes.join(' · '), tono } : undefined
+}
 
 /**
  * Cuántas PERSONAS tiene la ficha: las de sus pólizas más los vínculos
@@ -84,18 +129,25 @@ export function contarPersonas(
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
+/**
+ * Subtítulo de la tarjeta «Seguros»: «N con nosotros · M oportunidades». La parte de oportunidades se
+ * omite si M = 0 o no se pudo leer (`null`: no se inventa un número); sin nada de ambos, «ninguno».
+ */
+export function textoSeguros(conNosotros: number, oportunidades: number | null): string {
+  const opo = oportunidades !== null && oportunidades > 0 ? plural(oportunidades, 'oportunidad', 'oportunidades') : null
+  if (conNosotros === 0) return opo ? `ninguno con nosotros · ${opo}` : 'ninguno'
+  return opo ? `${conNosotros} con nosotros · ${opo}` : `${conNosotros} con nosotros`
+}
+
 /** El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`. */
 export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, DetalleAcceso>> {
   const r: Partial<Record<TabFicha, DetalleAcceso>> = {}
-  r.resumen = { texto: d.conNosotros === 0 ? 'ninguno con nosotros' : `${d.conNosotros} con nosotros` }
+  r.resumen = { texto: textoSeguros(d.conNosotros, d.oportunidadesAbiertas) }
   if (d.oportunidadesAbiertas !== null) {
-    r.oportunidades = { texto: d.oportunidadesAbiertas === 0 ? 'ninguna abierta' : plural(d.oportunidadesAbiertas, 'abierta', 'abiertas') }
+    r.oportunidades = { texto: d.oportunidadesAbiertas === 0 ? 'ninguna abierta' : d.oportunidadesTexto ?? plural(d.oportunidadesAbiertas, 'abierta', 'abiertas') }
   }
-  if (d.pendiente.estado === 'accion') r.pendiente = d.pendiente.urgente ? { texto: 'urgente', tono: 'malo' } : { texto: 'hay algo que hacer', tono: 'aviso' }
-  else if (d.pendiente.estado === 'nada') r.pendiente = { texto: 'al día' }
-  if (d.tareas) r.tareas = d.tareas
-  // Solo los SEGUROS (cartera en vigor): las filas del volcado son oportunidades, no pólizas.
-  r.polizas = { texto: d.polizas === 0 ? 'ninguna en vigor' : `${d.polizas} en vigor` }
+  const pend = detallePendiente(d.pendiente, d.tareas)
+  if (pend) r.pendiente = pend
 
   // Contactos: teléfonos, correos y personas. Lo que no se pudo leer se OMITE,
   // no se cuenta como cero.
@@ -110,7 +162,14 @@ export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, Detal
   if (d.documentosPedidos !== null && d.documentosPedidos > 0) r.documentos = { texto: plural(d.documentosPedidos, 'pedido', 'pedidos'), tono: 'aviso' }
   else if (d.documentos !== null) r.documentos = { texto: d.documentos === 0 ? 'ninguno' : plural(d.documentos, 'documento', 'documentos') }
   if (d.correos !== null) r.correos = { texto: d.correos === 0 ? 'ninguno enviado' : plural(d.correos, 'enviado', 'enviados') }
-  if (d.notas !== null) r.notas = { texto: d.notas === 0 ? 'ninguna' : plural(d.notas, 'nota', 'notas') }
-  if (d.historial !== null) r.historial = { texto: d.historial === 0 ? 'sin anotaciones' : plural(d.historial, 'anotación', 'anotaciones') }
+  // Notas a 0 NO se oculta (desde ahí se crea la primera): se atenúa. Historial a 0 es solo lectura
+  // y no tiene nada que hacer: se oculta. Ambos SOLO con el 0 leído; `null` deja la tarjeta normal.
+  if (d.notas !== null) r.notas = d.notas === 0 ? { texto: 'ninguna', tenue: true } : { texto: plural(d.notas, 'nota', 'notas') }
+  if (d.historial !== null) r.historial = d.historial === 0 ? { texto: 'sin anotaciones', tenue: true, oculto: true } : { texto: plural(d.historial, 'anotación', 'anotaciones') }
   return r
+}
+
+/** Qué accesos se pintan: los vacíos confirmados `oculto` se van, salvo el que está abierto. */
+export function accesosVisibles(detalles: Partial<Record<TabFicha, DetalleAcceso>>, activa: TabFicha): TabFicha[] {
+  return TABS_FICHA.filter(k => k === activa || !detalles[k]?.oculto)
 }

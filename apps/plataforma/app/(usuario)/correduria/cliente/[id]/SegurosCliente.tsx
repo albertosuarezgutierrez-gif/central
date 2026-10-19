@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { alertaVencimiento } from '@central/module-seguros'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
 import { ESTADOS_ABIERTOS, aniversarioOportunidad, estaHuerfana, estadoVencimiento, referenciaRiesgo, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
+import { polizaLlevaChipAviso } from '@/lib/correduria/aviso-vencimiento'
 import { textoVenceCadaAño } from '@/lib/correduria/aniversario'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
@@ -9,7 +10,7 @@ import { eur } from '@/lib/dinero'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { btnStyle } from '@/components/ui'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
-import { TIPOS, fmt } from './piezas'
+import { CeldaPago, TIPOS, fmt } from './piezas'
 import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidades'
 import EditarVencimiento from './EditarVencimiento'
 import DescartarVolcado from './DescartarVolcado'
@@ -36,7 +37,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
 
   return (
     <>
-      <Cubo titulo={`Con nosotros (${conNosotros.length})`}>
+      <Cubo id="con-nosotros" titulo={`Con nosotros (${conNosotros.length})`}>
         {conNosotros.length === 0
           ? <Vacio>Ahora no tiene ningún seguro con nosotros.</Vacio>
           : <Rejilla>{conNosotros.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>}
@@ -51,7 +52,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
         {historicas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
             Además, {historicas.length} póliza(s) más del volcado histórico (2013-2018, sin CIMA).{' '}
-            <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>verlas</Link>
+            Están más abajo, en «Histórico, canceladas y sustituidas».
           </p>
         )}
         {descartadas.length > 0 && (
@@ -84,9 +85,9 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
 type Ctx = { abiertos: Map<string, number> | null; clienteId: string; hoy: Date }
 type Aviso = { texto: string; tono: 'malo' | 'aviso' | 'info' }
 
-function Cubo({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
+function Cubo({ titulo, nota, id, children }: { titulo: string; nota?: string; id?: string; children: React.ReactNode }) {
   return (
-    <section style={{ display: 'grid', gap: 12 }}>
+    <section id={id} style={{ display: 'grid', gap: 12, scrollMarginTop: 16 }}>
       <div>
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{titulo}</h2>
         {nota && <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>{nota}</p>}
@@ -169,9 +170,22 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
   let titulo: string
   let lineas: (string | null)[]
   const avisos: Aviso[] = []
+  // Póliza viva en cartera («Con nosotros»): lleva forma de pago y «Retarificar» (antes en la tabla «Pólizas vivas»).
+  let pagoViva: React.ReactNode = null
+  let retarificarViva: React.ReactNode = null
 
   if (s.clase === 'poliza') {
     const p = s.poliza
+    if (!s.historica && p.viva) {
+      pagoViva = <div style={{ fontSize: 12, overflowWrap: 'anywhere' }}><CeldaPago p={p} /></div>
+      if (p.retarificable && p.estado !== 'cancelada') {
+        retarificarViva = (
+          <Link href={urlRetarificar(p.id)} prefetch={false} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, textDecoration: 'none' }}>
+            {rotuloRetarificar(p.retarificacion)}
+          </Link>
+        )
+      }
+    }
     const o = s.oportunidad
     // En «oportunidad», si hay seguimiento abierto la tarjeta lleva a él: eso es lo que se trabaja.
     href = o ? `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}` : `/correduria/poliza/${p.id}`
@@ -204,6 +218,12 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     else if (vigente && p.fechaVencimiento) {
       const d = dias(p.fechaVencimiento.slice(0, 10), ctx.hoy)
       if (d >= 0 && d <= 45) avisos.push({ texto: `Vence en ${d} día(s)`, tono: 'aviso' })
+      // El aviso de no renovar (un mes antes del vencimiento) vive aquí cuando aún está lejos: arriba
+      // solo sube si quedan ≤60 días (`avisoVaArriba`). Solo «Con nosotros»; a las oportunidades no se les avisa.
+      if (polizaLlevaChipAviso(p, { eliminable, historica: s.historica })) {
+        const av = alertaVencimiento(p.fechaVencimiento, ctx.hoy)
+        if (av.estado === 'en_plazo' && av.limiteAviso) avisos.push({ texto: `Avisar antes del ${fmt(av.limiteAviso)}${av.diasParaAvisar !== null ? ` · quedan ${av.diasParaAvisar} día(s)` : ''}`, tono: 'info' })
+      }
       // En vigor para la compañía pero con la fecha ya pasada: la renovación no ha llegado
       // por CIMA (ni la fecha nueva ni el recibo). No se inventa la fecha: se avisa
       // (27/09/2026: 10 de Mapfre así desde junio, entre ellas un Mercedes GLC).
@@ -254,6 +274,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
       </div>
       <div style={{ fontSize: 15, fontWeight: 700 }}>{titulo}</div>
       {lineas.filter(Boolean).map((l, i) => <div key={i} style={{ color: 'var(--muted)', overflowWrap: 'anywhere' }}>{l}</div>)}
+      {pagoViva}
       {avisos.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
           {avisos.map((a, i) => <Chip key={i} a={a} />)}
@@ -314,12 +335,13 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
         : { ramo: s.oportunidad.ramo, tomadorId: ctx.clienteId, oportunidadId: s.oportunidad.id, polizaId: null })}
     />
   )
-  if (!quitar && !vencimiento && !accionesDerivada && !tarificar) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  if (!quitar && !vencimiento && !accionesDerivada && !tarificar && !retarificarViva) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
     <div style={{ ...tarjetaSeguro, gap: 8 }}>
       <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'start' }}>
         {tarificar}
+        {retarificarViva}
         {accionesDerivada}
         {!derivada && vencimiento}
         {!derivada && quitar && <div style={{ display: 'grid', flex: '1 1 auto' }}>{quitar}</div>}

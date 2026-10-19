@@ -27,8 +27,11 @@ import {
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
+import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
+import { sobreCoberturasRpa } from './presupuesto-rpa-reglas'
 import { hayBotVersion, hayPasos } from './esquema-bd'
 import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
@@ -37,6 +40,20 @@ import { guardarMemoriaVersion } from './tarificador-memoria'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
+import {
+  CLAVE_ESPERA_VEHICULO,
+  ESTADOS_ORIGEN_VIVOS,
+  ORIGENES_VEHICULO_ENCADENADO,
+  decidirEspera,
+  esOrigenVehiculo,
+  necesitaVehiculoEncadenado,
+  riesgoAlEncolar,
+  riesgoConVehiculo,
+  vehiculoDeOrigenes,
+  vehiculoParaRiesgoOrigen,
+  type FilaOrigen,
+  type VehiculoEncadenado,
+} from './tarificador-espera-vehiculo'
 import {
   ESTADOS_DUPLICADO,
   LEASE_MS,
@@ -132,15 +149,34 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
     if (!pol[0]) return { estado: 'rechazado', status: 404, motivo: 'poliza_no_encontrada' }
   }
 
+  // VEHÍCULO ENCADENADO (Generali Turismos, 18/10/2026, regla de Alberto): Generali no saca el vehículo por matrícula. Si un
+  // `ok` de Allianz/Mapfre de ESTA oportunidad ya lo confirmó, se encola con él; si no, queda `pendiente` con `esperaVehiculo`
+  // (no se reclama) hasta que llegue (`registrarResultado` / barrido). Sin oportunidad → rechazo. Ver tarificador-espera-vehiculo.ts.
+  let riesgoEntrada: RiesgoComunidad | FormularioAuto = e.riesgo
+  if (necesitaVehiculoEncadenado(e.compania, e.ramo)) {
+    const origenes = e.oportunidadId ? await leerOrigenesVehiculo(prisma, e.correduriaId, e.oportunidadId) : []
+    const enc = riesgoAlEncolar(e.riesgo, e.oportunidadId, vehiculoDeOrigenes(origenes))
+    if (!enc.ok) return { estado: 'rechazado', status: enc.status, motivo: enc.motivo }
+    riesgoEntrada = enc.riesgo
+  }
+
   // NIF del tomador para Mapfre (14/10/2026): lo pone ASEGURA desde la ficha, pero NO aquí. Al encolar solo se COMPRUEBA
   // que la ficha (de ESTA correduría) lo tiene legible y válido; sin NIF / ilegible / no válido → rechazo SIN encolar. Lo
   // que se guarda es el riesgo SIN documento (el NIF en claro no se persiste): se descifra e inyecta al ENTREGAR el trabajo
   // al worker (`trabajoParaWorker`). El documento no sale en ningún motivo ni en la respuesta.
-  const dniFicha = necesitaNifTomador(e.compania, e.ramo, riesgoSinNifTomador(e.riesgo)) ? await leerDniFicha(e.correduriaId, clienteId) : null
+  const dniFicha = necesitaNifTomador(e.compania, e.ramo, riesgoSinNifTomador(riesgoEntrada)) ? await leerDniFicha(e.correduriaId, clienteId) : null
   // Nombre, apellidos y nacimiento del tomador (alta en Mapfre si no lo conoce): misma regla, comprobados aquí y SOLO
   // inyectados al entregar. Si faltan → 422 `falta_datos_tomador` («falta X en la ficha») sin encolar ni gastar máquina.
-  const fichaTomador = necesitaDatosTomador(e.compania, e.ramo, riesgoSinNifTomador(e.riesgo)) ? await leerTomadorFicha(e.correduriaId, clienteId) : null
-  const guardar = riesgoParaEncolar(e.compania, e.ramo, e.riesgo, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField))
+  const fichaTomador = necesitaDatosTomador(e.compania, e.ramo, riesgoSinNifTomador(riesgoEntrada)) ? await leerTomadorFicha(e.correduriaId, clienteId) : null
+  // Sexo del conductor (18/10/2026): si el formulario no lo trae y conduce el cliente, del tratamiento Sr./Sra. de SU ficha
+  // (`aplicarSexoDeFicha`); sin tratamiento traducible no se pone (lo dirá `faltanParaTarificar`). Fallo de lectura = sin él.
+  if (necesitaSexoDeFicha(e.ramo, riesgoEntrada)) {
+    const saludo = await prisma.$queryRaw<{ saludo: string | null }[]>`
+      select saludo from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${e.correduriaId}::uuid and merged_into_cliente_id is null`
+      .then((f) => f[0]?.saludo ?? null).catch((): string | null => null)
+    riesgoEntrada = aplicarSexoDeFicha(e.ramo, riesgoEntrada, saludo)
+  }
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
   // Sin duplicados (13/10/2026; `ok` con precio <10 min, 15/10/2026): mismo cliente (ficha) + compañía + ramo + oportunidad/póliza + riesgo
@@ -224,6 +260,39 @@ async function leerDniFicha(correduriaId: string, clienteId: string): Promise<st
   return filas[0]?.dni ?? null
 }
 
+/** Compañía con la que está asegurado hoy el cliente (columnas NO personales). `null` = no se sabe o la lectura falló. */
+async function leerCompaniaActualCliente(correduriaId: string, clienteId: string | null, oportunidadId: string | null): Promise<string | null> {
+  try {
+    const comp = oportunidadId
+      ? await prisma.$queryRaw<{ pc: unknown }[]>`
+          select poliza_competencia as pc from seguros.oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+      : []
+    const polizas = clienteId
+      ? await prisma.$queryRaw<{ tipo: string | null; aseguradora: string | null; compania_declarada: string | null; estado: string | null; import_ref: string | null; eiac_xml_hash: string | null; sustituida_at: Date | null; fecha_efecto: string | null }[]>`
+          select tipo::text as tipo, aseguradora, compania_declarada, estado::text as estado, import_ref, eiac_xml_hash, sustituida_at,
+                 coalesce(fecha_efecto_actual, fecha_inicio)::text as fecha_efecto
+          from seguros.polizas
+          where cliente_id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null`
+      : []
+    const ps: PolizaParaCompaniaActual[] = polizas.map((p) => ({ tipo: p.tipo, aseguradora: p.aseguradora, companiaDeclarada: p.compania_declarada, estado: p.estado, importRef: p.import_ref, eiacXmlHash: p.eiac_xml_hash, sustituidaAt: p.sustituida_at, fechaEfecto: p.fecha_efecto }))
+    return companiaActualDeCliente(comp[0]?.pc ?? null, ps)
+  } catch {
+    return null
+  }
+}
+
+/** Número de la póliza actual declarado en la oportunidad (SOLO esa clave, de ESTA correduría). Dato sensible: nunca se registra. `null` = no hay o la lectura falló. */
+async function leerNumeroPolizaActual(correduriaId: string, oportunidadId: string | null): Promise<string | null> {
+  if (!oportunidadId) return null
+  try {
+    const f = await prisma.$queryRaw<{ n: string | null }[]>`
+      select poliza_competencia->'historialDeclarado'->>'numeroPoliza' as n from seguros.oportunidades where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`
+    return f[0]?.n ?? null
+  } catch {
+    return null
+  }
+}
+
 // ─── Reclamar y lanzar ───────────────────────────────────────────────────────
 
 type Reclamado = { id: string; intentos: number }
@@ -286,6 +355,8 @@ export async function reclamarSiguiente(correduriaId: string, compania: string, 
           -- (modosReclamables); una exploración no ocupa máquina ni hueco mientras esté apagado.
           and coalesce(to_jsonb(w)->>'modo', 'tarificar') = any(${[...modos]}::text[])
           ${sinPausa}
+          -- Vehículo encadenado (Generali, 18/10/2026): uno que ESPERA el vehículo de Allianz/Mapfre no se lanza todavía.
+          and (case when jsonb_typeof(w.riesgo) = 'object' then w.riesgo -> ${CLAVE_ESPERA_VEHICULO}::text end) is null
         order by w.created_at
         for update of w skip locked
         limit 1)
@@ -370,8 +441,8 @@ export type TrabajoParaWorker = {
  * quien la declara, y con su entrada (sin cabecera de exploración legible → no se sirve).
  */
 export async function trabajoParaWorker(id: string, modosWorker: readonly string[] = ['tarificar', 'emision']): Promise<TrabajoParaWorker | null> {
-  const filas = await prisma.$queryRaw<{ id: string; correduria_id: string; cliente_id: string | null; intentos: number; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
-    select t.id::text as id, t.correduria_id::text as correduria_id, t.cliente_id::text as cliente_id, t.intentos,
+  const filas = await prisma.$queryRaw<{ id: string; correduria_id: string; cliente_id: string | null; oportunidad_id: string | null; intentos: number; compania: string; ramo: string; riesgo: unknown; lease_hasta: Date; modo: string | null; con_cliente: boolean }[]>`
+    select t.id::text as id, t.correduria_id::text as correduria_id, t.cliente_id::text as cliente_id, t.oportunidad_id::text as oportunidad_id, t.intentos,
            t.compania, t.ramo, t.riesgo, t.lease_hasta, to_jsonb(t)->>'modo' as modo, (t.cliente_id is not null) as con_cliente
     from seguros.tarificacion_trabajos t
     where t.id = ${id}::uuid and t.estado = 'en_curso' and t.lease_hasta > now()`
@@ -409,6 +480,15 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     const fila = f.cliente_id ? await leerFichaTomadorAuto(f.correduria_id, f.cliente_id) : null
     const conFicha = aplicarFichaTomador(f.compania, f.ramo, riesgo, () => fichaTomadorAutoDeFicha(fila, decryptField, f.ramo))
     riesgo = conFicha
+  }
+  // Compañía actual del vehículo (Allianz auto, 18/10/2026): si el riesgo no la trae, la del cliente (su póliza de la competencia
+  // en la oportunidad, o su póliza de auto en vigor). Solo en la respuesta; no bloquea: sin dato, el bot lo deja como hueco.
+  if (modo !== 'exploracion' && modo !== 'humo' && f.compania === 'allianz' && f.ramo === 'auto') {
+    const conCompania = aplicarCompaniaActual(f.compania, f.ramo, riesgo, await leerCompaniaActualCliente(f.correduria_id, f.cliente_id, f.oportunidad_id))
+    riesgo = conCompania
+    // Últimos 5 dígitos de la póliza actual (19/10/2026): Allianz los pide en «Antecedentes». Solo la cola de 5 cifras, en la respuesta.
+    const conPoliza = aplicarPolizaAnteriorUltimos5(f.compania, f.ramo, riesgo, await leerNumeroPolizaActual(f.correduria_id, f.oportunidad_id))
+    riesgo = conPoliza
   }
   const base = { id: f.id, compania: f.compania, ramo: f.ramo, riesgo, leaseHasta: f.lease_hasta.toISOString(), modo }
   if (modo !== 'exploracion') return base
@@ -550,6 +630,15 @@ export async function registrarResultado(r: ResultadoWorker): Promise<ResultadoR
             lease_hasta = null, error = null, terminado_at = now(), updated_at = now()
         where id = ${t.id}::uuid`
     }
+    // VEHÍCULO ENCADENADO (18/10/2026): el catálogo que confirmó el bot de Allianz/Mapfre se guarda en SU riesgo (claves de
+    // la lista blanca: sobrevive a la purga) y se inyecta en los Generali de la oportunidad que lo esperaban. Mismo commit.
+    if (r.vehiculo && esOrigenVehiculo(t.compania, t.ramo)) {
+      await tx.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set riesgo = riesgo || ${JSON.stringify(vehiculoParaRiesgoOrigen(t.compania, r.vehiculo))}::jsonb
+        where id = ${t.id}::uuid and correduria_id = ${t.correduria_id}::uuid and jsonb_typeof(riesgo) = 'object'`
+      if (t.oportunidad_id) await inyectarVehiculoEnEspera(tx, t.correduria_id, t.oportunidad_id, r.vehiculo)
+    }
     // PURGA (13/10/2026): DESPUÉS de guardar la tarificación y los PDF (lo último que lee el riesgo dentro de la
     // transacción) y en el MISMO commit. El aprendizaje de versión de abajo usa la copia en memoria (`t`), no la fila.
     // Un `ok` de Allianz Comunidades es origen posible de una emisión y NO se purga (`esOrigenDeEmision`).
@@ -618,18 +707,22 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
     ) returning id::text as id`
   const id = filas[0]?.id
   if (!id) throw new Error('tarificacion_rpa_sin_id')
+  const leidasAt = new Date().toISOString()
   for (const o of ofertas) {
     // `frecuencia_pago` NO se escribe: es vocabulario de Avant2 (`paymentFrequency`); el fraccionamiento
     // del portal viaja en `respuesta.ofertas[]`. Mezclar vocabularios en una columna es inventar dato.
     // Un precio de portal es una OFERTA de la compañía, no un precio cerrado: `estimado` hasta que el
     // corredor lo revise (y nunca ReRate: no hay proyecto de Avant2 que re-tarificar).
+    // COBERTURAS (18/10/2026): el sobre que entiende `coberturasDeSobre()`; sin ninguna legible → NULL (no consta,
+    // jamás `vacias` = «no cubre nada»). Los avisos (supuestos incluidos) siguen en `avisos`, como aviso y no como dato.
+    const sobre = sobreCoberturasRpa(o.coberturas, leidasAt)
     await tx.$executeRaw`
       insert into seguros.tarificacion_precios (
         tarificacion_id, compania, producto, modalidad, categoria, prima_eur, franquicia_eur,
-        firmeza, requiere_rerate, referencia_vendor, avisos
+        firmeza, requiere_rerate, referencia_vendor, avisos, coberturas
       ) values (
         ${id}::uuid, ${o.compania}, ${o.producto}, null, null, ${o.primaAnualEur}::numeric, ${franquiciaGeneral(o)}::numeric,
-        'estimado', false, ${o.referenciaPortal}, ${JSON.stringify(o.avisos)}::jsonb
+        'estimado', false, ${o.referenciaPortal}, ${JSON.stringify(o.avisos)}::jsonb, ${sobre ? JSON.stringify(sobre) : null}::jsonb
       )`
   }
   return id
@@ -795,6 +888,8 @@ export type ResumenBarrido = {
   evidenciasPurgadas?: number
   /** F2: atascos sin respuesta que pasaron a `error_definitivo`. */
   atascosCaducados?: number
+  /** Generali en espera del vehículo (18/10/2026): cuántos recibieron el de Allianz/Mapfre y cuántos se cancelaron sin él. */
+  esperasVehiculo?: { inyectados: number; cancelados: number; esperando: number }
   lanzar: Record<string, ResumenLanzar>
 }
 
@@ -867,9 +962,92 @@ export async function barrerTarificadorRpa(correduriaId: string, deps: DepsLanza
     return 0
   })
 
+  // Vehículo encadenado (Generali, 18/10/2026): inyecta el de Allianz/Mapfre o cancela si ya no puede llegar. Sin lanzar.
+  r.esperasVehiculo = await resolverEsperasVehiculo(correduriaId).catch((e: unknown) => {
+    console.error('[tarificador] esperas de vehículo', e instanceof Error ? e.message.slice(0, 200) : e)
+    return { inyectados: 0, cancelados: 0, esperando: 0 }
+  })
+
   const companias = await prisma.$queryRaw<{ compania: string }[]>`
     select distinct compania from seguros.tarificacion_trabajos
     where correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`
   for (const c of companias) r.lanzar[c.compania] = await lanzarPendientes(correduriaId, c.compania, deps)
   return r
+}
+
+// ─── Vehículo encadenado (Generali, 18/10/2026) ─────────────────────────────
+
+/** Los `ok` de Allianz/Mapfre AUTO de la oportunidad (de ESTA correduría), los más recientes primero. */
+async function leerOrigenesVehiculo(db: Db, correduriaId: string, oportunidadId: string): Promise<FilaOrigen[]> {
+  const filas = await db.$queryRaw<{ compania: string; ramo: string; riesgo: unknown; terminado_at: Date | null }[]>`
+    select t.compania, t.ramo, t.riesgo, t.terminado_at
+    from seguros.tarificacion_trabajos t
+    where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid
+      and t.estado = 'ok' and t.ramo = 'auto' and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[])
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'tarificar'
+    order by t.terminado_at desc nulls last
+    limit 10`
+  return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
+}
+
+/** Inyecta `v` en los trabajos `pendiente` en espera de la oportunidad (de ESTA correduría). Devuelve cuántos. */
+async function inyectarVehiculoEnEspera(db: Db, correduriaId: string, oportunidadId: string, v: VehiculoEncadenado): Promise<number> {
+  const filas = await db.$queryRaw<{ id: string; riesgo: unknown }[]>`
+    select t.id::text as id, t.riesgo from seguros.tarificacion_trabajos t
+    where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid and t.estado = 'pendiente'
+      and (case when jsonb_typeof(t.riesgo) = 'object' then t.riesgo -> ${CLAVE_ESPERA_VEHICULO}::text end) is not null
+    for update`
+  let n = 0
+  for (const f of filas) {
+    n += await db.$executeRaw`
+      update seguros.tarificacion_trabajos set riesgo = ${JSON.stringify(riesgoConVehiculo(f.riesgo, v))}::jsonb, updated_at = now()
+      where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`
+  }
+  return n
+}
+
+/**
+ * Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta; sin ningún origen vivo
+ * o pasadas 24 h → `cancelado` con el motivo (y riesgo purgado). Nunca se lanza uno sin vehículo.
+ */
+async function resolverEsperasVehiculo(correduriaId: string): Promise<{ inyectados: number; cancelados: number; esperando: number }> {
+  const res = { inyectados: 0, cancelados: 0, esperando: 0 }
+  const esperas = await prisma.$queryRaw<{ id: string; oportunidad_id: string | null; created_at: Date; ahora: Date }[]>`
+    select t.id::text as id, t.oportunidad_id::text as oportunidad_id, t.created_at, now() as ahora
+    from seguros.tarificacion_trabajos t
+    where t.correduria_id = ${correduriaId}::uuid and t.estado = 'pendiente'
+      and (case when jsonb_typeof(t.riesgo) = 'object' then t.riesgo -> ${CLAVE_ESPERA_VEHICULO}::text end) is not null
+    order by t.created_at
+    limit 100`
+  for (const w of esperas) {
+    // Orden (revisión 18/10/2026): PRIMERO se cuentan los orígenes vivos y DESPUÉS se leen los `ok`. Al revés, un Allianz/Mapfre
+    // que acaba `ok` entre las dos lecturas no se ve ni como `ok` ni como vivo, y el Generali se cancelaría con vehículo disponible.
+    const vivos = w.oportunidad_id
+      ? await prisma.$queryRaw<{ n: number }[]>`
+          select count(*)::int as n from seguros.tarificacion_trabajos t
+          where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
+            and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[]) and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
+      : [{ n: 0 }]
+    const origenes = w.oportunidad_id ? await leerOrigenesVehiculo(prisma, correduriaId, w.oportunidad_id) : []
+    const d = decidirEspera({ vehiculo: vehiculoDeOrigenes(origenes), origenesVivos: vivos[0]?.n ?? 0, creadoAt: w.created_at, ahora: w.ahora })
+    if (d.tipo === 'esperar') {
+      res.esperando++
+    } else if (d.tipo === 'inyectar') {
+      res.inyectados += await prisma.$transaction((tx) => inyectarVehiculoEnEspera(tx, correduriaId, w.oportunidad_id!, d.vehiculo))
+    } else {
+      const c = await prisma.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set estado = 'cancelado', terminado_at = now(), updated_at = now(),
+            error = jsonb_build_object('tipo', 'datos', 'mensaje', ${d.motivo}::text)
+        where id = ${w.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'
+          -- Solo si SIGUE en espera: si mientras tanto el registro del ok le inyectó el vehículo (quita la marca), no se cancela.
+          -- (equivale a riesgo ? 'esperaVehiculo', escrito como la consulta de arriba, sin el operador ? en el SQL de Prisma).
+          and jsonb_typeof(riesgo) = 'object' and (riesgo -> ${CLAVE_ESPERA_VEHICULO}::text) is not null`
+      if (c > 0) {
+        await purgarRiesgoTrabajos(prisma, [w.id])
+        res.cancelados++
+      }
+    }
+  }
+  return res
 }

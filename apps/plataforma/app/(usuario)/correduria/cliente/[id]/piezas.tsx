@@ -314,7 +314,7 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
  * se afirma con el ciclo completo — con la mitad de los recibos la resta sale
  * negativa y parecería que fraccionar ahorra.
  */
-function CeldaPago({ p }: { p: PolizaFicha }) {
+export function CeldaPago({ p }: { p: PolizaFicha }) {
   if (p.pago === null) {
     return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa la forma de pago">—</span>
   }

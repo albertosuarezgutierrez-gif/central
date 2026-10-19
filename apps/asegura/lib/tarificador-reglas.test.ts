@@ -436,7 +436,18 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b/g, '')), 'el riesgo solo se toca para la respuesta')
+})
+
+test('póliza actual (19/10/2026): se lee SOLO esa clave, de ESTA correduría, y se inyecta al entregar sin escribir en BD', () => {
+  const src = readFileSync(join(APP, 'lib', 'tarificador.ts'), 'utf8')
+  const lec = src.slice(src.indexOf('async function leerNumeroPolizaActual'), src.indexOf('// ─── Reclamar y lanzar'))
+  assert.match(lec, /poliza_competencia->'historialDeclarado'->>'numeroPoliza'/)
+  assert.match(lec, /correduria_id = \$\{correduriaId\}::uuid/)
+  assert.ok(!/select\s+(\*|poliza_competencia\s+as)/.test(lec), 'no se lee la póliza de la competencia entera')
+  assert.ok(!/console\./.test(lec), 'dato sensible: sin logs')
+  const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
+  assert.match(w, /aplicarPolizaAnteriorUltimos5\(f\.compania, f\.ramo, riesgo, await leerNumeroPolizaActual\(f\.correduria_id, f\.oportunidad_id\)\)/)
 })
 
 // ─── Datos del tomador para el alta en Mapfre (revisión PR #4710): como el NIF, comprobados al encolar e inyectados al entregar ───
@@ -488,7 +499,9 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   const src = readFileSync(join(APP, 'lib/tarificador.ts'), 'utf8')
   const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
   assert.match(fn, /leerTomadorFicha\(e\.correduriaId, clienteId\)/)
-  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, e\.riesgo, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\)\)/)
+  // `riesgoEntrada` (18/10/2026) = el riesgo de la petición, con el vehículo encadenado de Generali si toca (tarificador-espera-vehiculo.ts).
+  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\)\)/)
+  assert.match(fn, /let riesgoEntrada: RiesgoComunidad \| FormularioAuto = e\.riesgo\n/)
   assert.ok(!fn.includes('aplicarDatosTomador('), 'encolar NO inyecta (eso es al entregar)')
   assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid`\n  const f = filas\[0\]/)
   const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
@@ -539,29 +552,31 @@ test('compañía anterior · con nombre, sin años, otra compañía u otro ramo:
 // ─── Obligatorios para tarificar (15/10/2026): fuente única `faltanParaTarificar` de module-tarificacion ─────────────
 
 test('Obligatorios · validarEntradaRamo con compañía: rechaza con la lista legible lo que el bot necesita (sin mirar la ficha)', () => {
+  // 18/10/2026 «supuesto favorable»: sin siniestros ni años NO se rechaza; con 5 años supuestos Mapfre pide el NOMBRE de la anterior.
   const sinSiniestros = { ...MOTO, ramo: 'auto', seleccionVehiculo: undefined, siniestrosUltimos5Anios: null, companiaAnterior: 'COMPAÑÍA DE PRUEBA' }
-  const v = validarEntradaRamo('auto', sinSiniestros, 'mapfre')
+  assert.equal(validarEntradaRamo('auto', sinSiniestros, 'mapfre').ok, true)
+  const sinNada = { ...sinSiniestros, aniosAseguradoAnterior: null, companiaAnterior: undefined }
+  const v = validarEntradaRamo('auto', sinNada, 'mapfre')
   assert.equal(v.ok, false)
   if (!v.ok) {
-    assert.equal(v.mensaje, 'Falta: siniestros con culpa de los últimos 5 años.')
-    assert.deepEqual(v.faltan?.map((f) => f.clave), ['siniestrosUltimos5Anios'])
+    assert.equal(v.mensaje, 'Falta: nombre de la compañía anterior.')
+    assert.deepEqual(v.faltan?.map((f) => f.clave), ['companiaAnterior'])
   }
   // Sin compañía: solo la forma (como antes). NIF y datos del tomador (ficha) no se miran aquí.
-  assert.equal(validarEntradaRamo('auto', sinSiniestros).ok, true)
-  assert.equal(validarEntradaRamo('auto', { ...sinSiniestros, siniestrosUltimos5Anios: 0 }, 'mapfre').ok, true)
-  // Allianz moto: sexo del conductor (el portal asumiría «Hombre»).
-  const sinSexo = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
-  assert.ok(!sinSexo.ok && sinSexo.mensaje === 'Falta: sexo del conductor.')
+  assert.equal(validarEntradaRamo('auto', sinNada).ok, true)
+  // Allianz moto: el sexo lo pone asegura del Sr./Sra. de la ficha al encolar → aquí (sin ficha) no se pide.
+  assert.equal(validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz').ok, true)
   // Compañía sin declaración: aquí no se rechaza (lo hace riesgoParaEncolar).
   assert.equal(validarEntradaRamo('moto', MOTO, 'generali').ok, true)
 })
 
 test('Obligatorios · riesgoParaEncolar: falta algo → 422 `faltan_datos` con la lista; sin declaración → fail-closed; sin valores en el motivo', () => {
+  // Sin sexo (ni Sr./Sra. en la ficha) falta; los años vacíos ya NO (supuesto favorable, 18/10/2026).
   const r = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, conductor: { ...RIESGO_MOTO.conductor, sexo: null }, aniosAseguradoAnterior: null }, noLeer, noLeer)
   assert.ok(!r.ok && r.status === 422)
   if (!r.ok) {
-    assert.equal(r.motivo, 'faltan_datos: Faltan: sexo del conductor, años asegurado en la compañía anterior.')
-    assert.deepEqual(r.faltan?.map((f) => f.clave), ['conductor.sexo', 'aniosAseguradoAnterior'])
+    assert.equal(r.motivo, 'faltan_datos: Falta: sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha).')
+    assert.deepEqual(r.faltan?.map((f) => f.clave), ['conductor.sexo'])
     assert.ok(!JSON.stringify(r).includes('0000BBB'))
   }
   const sinBot = riesgoParaEncolar('generali', 'moto', RIESGO_MOTO, noLeer, noLeer)

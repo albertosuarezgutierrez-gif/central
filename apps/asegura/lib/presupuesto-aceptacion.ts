@@ -39,6 +39,7 @@ import {
 import { origenPresupuesto } from './presupuesto-origen'
 import { datosAceptacionOfertas, gruposAceptacionOfertas, gruposRevisionOfertas, lineaEmitirEnCompania } from './ofertas-reglas'
 import { fichaDeTokenWhatsapp, gastarCodigoWhatsapp } from './presupuesto-codigo-whatsapp'
+import { gruposDatosUsadosDePresupuesto } from './datos-usados-ofertas-bd'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -595,7 +596,10 @@ export async function datosCotizadosDelPresupuesto(correduriaId: string, acceso:
   if ('estado' in p) return p
   // Ofertas: no hay petición a Avant2; se enseña quién es el tomador y quién emite (sin tarificaciones).
   if (p.origen === 'ofertas') {
-    return { estado: 'ok', datos: gruposRevisionOfertas(p.tomador), confirmacionDatos: textoAutorizacionOfertas(MEDIADOR.marca, 'la compañía que elija', false), enRevision: p.datosEnRevision }
+    // Ofertas DEL BOT (18/10/2026): además, CP/localidad que usó cada compañía, vehículo y conductor en años.
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+    const calculo = await gruposDatosUsadosDePresupuesto(correduriaId, presupuestoId, p.ramo, hoy)
+    return { estado: 'ok', datos: [...gruposRevisionOfertas(p.tomador), ...calculo], confirmacionDatos: textoAutorizacionOfertas(MEDIADOR.marca, 'la compañía que elija', false), enRevision: p.datosEnRevision }
   }
   // Puerta cerrada: solo un `codeoscopic` tiene petición de la que leer «con qué se calculó».
   if (origenPresupuesto(p.origen) !== 'codeoscopic') {

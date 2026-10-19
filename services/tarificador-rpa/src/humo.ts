@@ -31,6 +31,8 @@ import { login as loginMapfre } from './adapters/mapfre/login.ts'
 import { PESTANA_NUEVA_PRODUCCION, localizar } from './adapters/mapfre/entrada.ts'
 import { mapfreHogar } from './adapters/mapfre/hogar.ts'
 import { mapfreAuto, mapfreMoto } from './adapters/mapfre/auto.ts'
+import { generaliAuto, loginGenerali } from './adapters/generali/auto.ts'
+import { BOTON_MEDIADOR_GENERALI } from './guard.ts'
 
 export const HUMO_VERSION = '0.2.0'
 const TOPE_HUMO_MS = 3 * 60_000
@@ -66,6 +68,22 @@ async function menuMapfre(page: Page): Promise<void> {
   await localizar(page, ['tab'], PESTANA_NUEVA_PRODUCCION, 'pestaña', ESPERA_MENU_MS)
 }
 
+/**
+ * Generali (18/10/2026, v0.1.1): tras el login el portal enseña «Seleccionar mediador» (el «ACEPTAR» solo lo pulsa el guard en una
+ * tarificación) o, si entra ya con mediador, el portal con el menú «NEGOCIO». Cualquiera de los dos a la vista = el login y la
+ * entrada no han cambiado. SOLO LECTURA: no se elige mediador ni se sobrevuela el menú.
+ */
+async function menuGenerali(page: Page): Promise<void> {
+  const botonMediador = page.getByRole('button', { name: BOTON_MEDIADOR_GENERALI, exact: true }).filter({ visible: true })
+  const negocio = page.getByText(/^\s*NEGOCIO\s*$/).filter({ visible: true })
+  const fin = Date.now() + ESPERA_MENU_MS
+  while (Date.now() < fin) {
+    if ((await botonMediador.count().catch(() => 0)) === 1 || (await negocio.count().catch(() => 0)) >= 1) return
+    await dormir(500)
+  }
+  throw new ErrorTarificador('portal', 'generali: ni el botón de «Seleccionar mediador» ni el menú «NEGOCIO» están visibles tras el login')
+}
+
 /** La prueba de cada pareja (compañía/ramo). Las claves son `claveHumo(compania, ramo)`. */
 export const PRUEBAS_HUMO: Readonly<Record<string, PruebaHumo>> = Object.freeze({
   'allianz/comunidades': { credencial: allianzComunidades.credencial, login: loginAllianz, menu: menuAllianz },
@@ -75,6 +93,7 @@ export const PRUEBAS_HUMO: Readonly<Record<string, PruebaHumo>> = Object.freeze(
   'mapfre/auto': { credencial: mapfreAuto.credencial, login: loginMapfre, menu: menuMapfre },
   'mapfre/moto': { credencial: mapfreMoto.credencial, login: loginMapfre, menu: menuMapfre },
   'mapfre/hogar': { credencial: mapfreHogar.credencial, login: loginMapfre, menu: menuMapfre },
+  'generali/auto': { credencial: generaliAuto.credencial, login: loginGenerali, menu: menuGenerali },
 })
 
 /** Clave de la tabla: compañía normalizada + ramo. PURO. */

@@ -135,6 +135,11 @@ describe('purga del riesgo · lista BLANCA', () => {
     expect(r).toMatchObject({ m2Construidos: 1200, anioConstruccion: 1975, plantas: 5, capitalContinente: 900000, capitalContenido: null, companiaActual: 'mapfre', fechaEfecto: '2026-11-01' })
     for (const k of ['documentoIdentidad', 'tipoDocumento', 'polizaAReemplazar', 'referenciaCatastral', 'presidente']) expect(r).not.toHaveProperty(k)
   })
+  it('auto: conserva el vehículo de catálogo confirmado para Generali (vehiculoCatalogo) y nada que no sea catálogo dentro', () => {
+    const r = riesgoSinDatosPersonales({ ramo: 'auto', matricula: '1234BCD', vehiculoCatalogo: { origen: 'allianz', marca: 'SEAT', modelo: 'IBIZA', descripcion: '1.0 TSI', matricula: '1234BCD' } }, 'auto')
+    expect(r).toEqual({ ramo: 'auto', vehiculoCatalogo: { origen: 'allianz', marca: 'SEAT', modelo: 'IBIZA', descripcion: '1.0 TSI' } })
+  })
+
   it('una clave NUEVA que nadie conoce se borra por defecto (también dentro de un objeto de la lista)', () => {
     const r = riesgoSinDatosPersonales({ ramo: 'moto', codigoPostal: '41003', dniConductor: '12345678Z', seleccionVehiculo: { marca: 'BMW', modelo: 'X', propietario: 'Juana' } }, 'moto')
     expect(r).toEqual({ ramo: 'moto', codigoPostal: '41003', seleccionVehiculo: { marca: 'BMW', modelo: 'X' } })

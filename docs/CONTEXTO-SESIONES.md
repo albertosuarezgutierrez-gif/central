@@ -14,6 +14,22 @@
 >
 **(19/10/2026)** — Correduría · web: 301 de los 404 de GSC (`/contacto`→`/#presupuesto`, `/index.htm(l)`, `/en-GB`→`/`; `/en-CA`, `/wp-content` se quedan en 404 a propósito). `/seguro-perro`: la RC obligatoria de la Ley 7/2023 está PENDIENTE DE REGLAMENTO (nota DGSFP+DG Derechos Animales) → la página ya no la afirma como exigible; BOE no leído (proxy). GSC 28 d: 29 clics, 4.350 impr., pos. 21; marca real «grupo asegura» 52 % CTR. GBP verificada (horario OK). Pendiente Alberto: UTM+descripción GBP, altas qdq/Páginas Amarillas (OK por alta), ¿colegiado?, DGSFP CS-F/0170 a mano, ¿`clientes.grupoasegura.es` se usa?
 
+**(18/10/2026)** — Tarificador · 3 compañías + presupuesto interactivo (PRs #4822, #4824, #4826, #4828 mergeados). Supuestos favorables (`conAntecedentesFavorables`), moto Allianz 0.7.0, Allianz «Guardar presupuesto» 0.6.14, Mapfre 0.8.7, **Generali 0.1.1 encendida** (mediador 65792, matrícula `NNNN*LLL` dos veces, marca/modelo de Allianz/Mapfre; hoy llega hasta «Datos de Valoración»). Página del cliente en el portal: datos plegados, CP que usó la compañía, borrador no visible al cliente (404 IA). Imagen Fly `v20261018-genali011` (anterior `v20261018-allianz0612` en `TARIFICADOR_FLY_IMAGE_ANTERIOR`), fila `companias_integracion` generali/auto, central-asegura redesplegado. Pendiente: prueba real de Alberto (Manuel auto + F800), bucle de exploración Generali hasta precio, aseguradora anterior de la F800 para Mapfre moto, traducción «conductor habitual = tomador (supuesto)», tarea programada de autorreparación. Prueba desde la sesión (18/10 20:50): el riesgo de un trabajo `ok` está PURGADO (sin matrícula/conductor) → copiarlo no sirve, hay que pedir desde la oportunidad; el workflow `tarificador-relanzar.yml` falla porque falta el secreto de repo `ASEGURA_OPERADOR_SECRET`; Mapfre moto F800 → «Falta: nombre de la compañía anterior».
+
+**(18/10/2026)** — agentes-entrenador · pasada semanal (11→18/10): 25 entradas de bitácora podadas, 0 PRs de prompt (sin patrón de prompt). Pendiente de CÓDIGO: `scripts/canal-aviso.sh` no admite cuerpos >128 KB (3 pasadas de trading-analista con rodeo `@fichero`). Backlog PRs `claude/*`: 11 abiertos, 2 con 2+ semanas (#3755, #3995; docs-only).
+
+**(18/10/2026)** — Sivra · agente de huéspedes: entrada anticipada ANUNCIADA («llegamos a las 10») ahora también va a Telegram
+(`anunciaEntradaAnticipada` en `cambio-horario.ts`, check-in por defecto 15:00). Regla de Alberto: si nadie sale ese día el piso
+estará listo, pero SIEMPRE se le pregunta antes; sin su OK, horario oficial. El semáforo ya lo refleja (verde = noche anterior vacía,
+rojo = otra reserva sale ese día). 404 tests.
+
+**(18/10/2026)** — Sivra · agente de huéspedes: aceptó solo una salida a las 12:00 («tomo nota de que saldréis a las 12:00», huésped Maria).
+La compuerta de horario (03/10) solo cazaba PETICIONES («más tarde», «late checkout»), no ANUNCIOS («saldremos a las 12»). Fix en
+`apps/plataforma/lib/sivra/agente-huesped/`: `anunciaSalidaTardia` + red sobre el BORRADOR `respuestaConfirmaHorario` (auto.ts y orquestador →
+needs_human + Telegram), regla de prompt en `decidir.ts`. Hora oficial = la de la reserva (salida 11:00). Tests vistos en rojo, 393/393.
+Revisión: también caza aceptaciones sin verbo, mediodía/noon, 15:00 = entrada solo en frase de entrada, acentos, «11.30». 401 tests. ✅ PR #4791 mergeado.
+Pendiente Alberto: decidir con Maria si mantiene las 12:00; anuncios de entrada anticipada solo se cazan en el borrador.
+
 **(17/10/2026)** — Correduría · 4 guías de hogar publicadas en grupoasegura.es (revisar póliza, franquicia/sublímite, comparar hogar, regla proporcional), 0 [VERIFICAR] contra la LCS consolidada de `docs/normativa/`; `NORMAS_CITABLES` + LCS 8, 11, 26-32. Paquete de alta en directorios `docs/asegura-alta-directorios.md` (sin registrar nada). Decisión Alberto: email público único `hola@grupoasegura.es`, móvil 637349990. Pendiente: horario de Google Business, altas en directorios (OK por directorio), re-medir visibilidad IA en ~4 semanas.
 
 **(17/10/2026)** — Correduría · base de visibilidad en IA (OpenSEO, 18 consultas × ChatGPT/Gemini, 216 créditos): **Grupo ASegura sale en 0/36**, 0 citas propias. Fuentes que mandan: rastreator, segurfer, ocu, selectra, kelisto. Informe `docs/ASEGURA-VISIBILIDAD-IA-2026-10.md`. Tracker `8dc0311c` guardado y PAUSADO (sin gasto recurrente; reactivar = decisión de Alberto). Siguiente: publicar guías 01-04 tras revisar [VERIFICAR] y aparecer en directorios de corredurías de Sevilla.
@@ -1311,6 +1327,25 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 2 (auditoría + «que haga el trabajo por mí»).** Herramientas nuevas: `estado_oportunidad`, `cerrar_tarea`, `ver_siniestro`/`seguir_siniestro`, `contacto_cliente`, `ver_riesgo` y **`precio_hogar`** (Catastro → ficha de hogar → mismo cobro/cola que coche). Arreglos: descripciones por modo (en autónomo ya no dicen «botón»), **huella entre mensajes** (tabla `correduria_asistente_huella`, 30 min, `repetir=true`), `forzar` prohibido en el mismo turno, DNI tapado rechazado, timeout duro. Migración aplicada (huella + ramo `hogar`). Medido antes: 0 👍/👎 en 25 turnos; `preparar_emision` 5/5 fallaba por pasar nº de póliza en vez de uuid (regla nueva en el prompt).
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
+
+## (18/10/2026) Correduría · ficha cliente: Llamar/WhatsApp, prima en Oportunidades, Documentos e Historial
+- Cabecera: `BotonesContacto` (Llamar + WhatsApp, 44 px; nada sin teléfono ni con el canal de la correduría).
+- «Oportunidades»: «N abiertas · ~X€/año» (`lib/correduria/prima-oportunidades.ts`; ≥X si faltan primas; prima 0 = desconocida).
+- Documentos agrupados por póliza/tipo + buscador + tope 50 (`ficha-listas.ts`); Historial con chips por tipo y páginas de 20.
+- #4814 mergeado (Pendiente+Tareas, aviso ≤60 días con `idsConChipAviso` como fuente única).
+
+## (18/10/2026) Correduría · ficha cliente: Pendiente+Tareas, aviso de vencimiento, orden del grid
+- «Tareas» dentro de «Pendiente» (`?tab=tareas`→pendiente). Grid: Seguros, Pendiente, Oportunidades, Contactos, Documentos, Correos, Notas, Historial.
+- Aviso «Hay que avisar antes del…» arriba solo si ≤60 días (`lib/correduria/aviso-vencimiento.ts`); si no, chip en la tarjeta de la póliza.
+- Anclas `#siniestros`/`#con-nosotros` desde Pendiente. Notas a 0 atenuada; Historial a 0 oculto (null nunca se oculta).
+
+## (18/10/2026) Correduría · ficha cliente: «Sus seguros» + «Todas las pólizas» → una tarjeta «Seguros»
+- Grid de 10 → 9 accesos. «Seguros» = cubos (Con nosotros/Oportunidades/Ya no existe) + figura en, aportadas, plegado «Histórico, canceladas y sustituidas» y Siniestros.
+- Fuera el bloque «Pólizas vivas» (repetía «Con nosotros»). Subtítulo «N con nosotros · M oportunidades». `?tab=polizas|recibos|siniestros` → resumen.
+- Cepo en `test/regression-ficha-cliente-pestanas.test.ts` (visto en rojo). «Pendiente» y «Tareas» NO se fusionaron (fuentes distintas).
+
+## (18/10/2026) Correduría · «Mi mesa» con la fila de acciones
+- «Mi mesa» (`/correduria/mesa`) es ruta propia y no montaba `AccionesCabecera` (Subir póliza, Vencimientos, «…»); ahora sí, igual que el resto de pestañas. Solo `mesa/MesaClient.tsx`.
 
 ## (17/10/2026) Tarificador · Allianz Turismos 0.6.3: Matrícula única y primera versión (PR #4778)
 - La 0.6.2 se atascaba en producción (trabajo c0a75a2c) con «Matrícula (hay 2)»: dentro del iframe `appArea` hay un gemelo OCULTO. Los campos del paso van ahora por `localizarControl` (descarta ocultos, deshabilitados, cabecera, buscadores y bancarios).

@@ -250,8 +250,9 @@ test('planDatosBasicosMoto: valores del portal; lo que el portal asumiría por d
   assert.deepEqual(cero.slice(-3).map((o) => o.valor), ['N', '0', '00'])
   const datos = (f: FormularioAuto) => () => planDatosBasicosMoto(f)
   assert.throws(datos({ ...form, conductor: { ...form.conductor, sexo: null } }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
-  assert.throws(datos({ ...form, aniosAseguradoAnterior: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
-  assert.throws(datos({ ...form, siniestrosUltimos5Anios: null }), (e) => e instanceof ErrorTarificador && e.tipo === 'datos')
+  // 18/10/2026 «supuesto favorable»: antecedentes sin dato → tramo máximo (más de 5 años, sin siniestros), no `datos`.
+  assert.deepEqual(planDatosBasicosMoto({ ...form, aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null }).slice(-3).map((o) => o.valor), ['S', '6', '05'])
+  assert.deepEqual(planDatosBasicosMoto({ ...form, siniestrosUltimos5Anios: null }).slice(-3).map((o) => o.valor), ['S', '3', '03'])
   assert.throws(datos({ ...form, siniestrosUltimos5Anios: 2 }), ErrorMapaIncompleto)
 })
 
@@ -435,5 +436,5 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.6.0')
+  assert.equal(allianzMoto.version, '0.7.0')
 })

@@ -34,14 +34,16 @@ import {
   type MotivoCaptura,
   type Recorrido,
   valoresSensiblesDeRiesgo,
+  type ResultadoAdaptador,
 } from '@central/module-tarificacion'
 import { adaptadores } from './adapters/index.ts'
-import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, type Config, type CuerpoResultado } from './api.ts'
+import { enviarResultado, leerConfig, pedirTrabajo, salidaSinTrabajo, vehiculoDelResultado, type Config, type CuerpoResultado, type VehiculoDelResultado } from './api.ts'
 import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { cerrarAvisoTomadorMapfre, cerrarClubMapfre, companiaActualTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
+import { pulsarMediadorGenerali, entrarTurismosGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, companiaActualTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
+  guardarPresupuestoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto } from './guard.ts'
 import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
@@ -76,7 +78,7 @@ const azar = (min: number, max: number) => min + Math.random() * (max - min)
 
 type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null }
 type Intento =
-  | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[] }
+  | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[]; vehiculo: VehiculoDelResultado }
   | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
 
 /**
@@ -105,7 +107,7 @@ type Comun = {
   compania: string
   adaptador: AdaptadorRegistrado
   /** Tarifica con el riesgo ya validado por el validador del ramo (ramo.ts). */
-  tarificar: (page: Page, ctx: ContextoPortal) => Promise<{ ofertas: OfertaNormalizada[] }>
+  tarificar: (page: Page, ctx: ContextoPortal) => Promise<ResultadoAdaptador>
   credenciales: Credenciales
   formador: ContextoFormador | undefined
   traza: Traza
@@ -241,6 +243,31 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
         await ctx.pausaAccion()
         return companiaActualTurismosAllianz(marco, guard, buscada)
       },
+      marcarAntecedenteTurismos: async (marco, clave, dato) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return marcarAntecedenteTurismosAllianz(marco, guard, clave, dato)
+      },
+      polizaActualTurismos: async (marco, ultimos5) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return polizaActualTurismosAllianz(marco, guard, ultimos5)
+      },
+      guardarPresupuestoTurismos: async (marco, identificador) => {
+        if (marco.page() !== page) throw new ErrorTarificador('portal', 'allianz/auto: el marco no es de este trabajo')
+        await ctx.pausaAccion()
+        return guardarPresupuestoTurismosAllianz(marco, guard, identificador)
+      },
+      confirmarMediadorGenerali: async (selectMediador) => {
+        if (selectMediador.page() !== page) throw new ErrorTarificador('portal', 'generali: el desplegable del mediador no es de este trabajo')
+        await ctx.pausaAccion()
+        await pulsarMediadorGenerali(page, guard, selectMediador)
+      },
+      entrarTurismosGenerali: async () => {
+        await ctx.pausaAccion()
+        await entrarTurismosGenerali(page, guard)
+        await capturar('avance')
+      },
       exigirSinCaptcha: () => exigirSinCaptcha(page),
       formador: k.formador,
       // Cada paso de la traza deja una captura al entrar y otra al salir (ok o fallo): el recorrido documenta la transición.
@@ -254,7 +281,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       },
     }
 
-    let resultado: { ofertas: OfertaNormalizada[] } | null = null
+    let resultado: ResultadoAdaptador | null = null
     let error: unknown = null
     let tope: ReturnType<typeof setTimeout> | undefined
     // Traza (14/10/2026): los adaptadores de Moto/Auto/Mapfre no llaman a `ctx.paso`; sin esto su traza salía VACÍA. Si el
@@ -280,7 +307,7 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       // Sesión buena: se guarda EN MEMORIA (sin `path`: nunca a disco) para el siguiente trabajo de este proceso.
       const estado = await context.storageState().catch(() => null)
       if (estado) await k.sesion.alExito(estado).catch(() => log('sesion_no_guardada'))
-      return { ok: true, ofertas: resultado.ofertas, pdfs }
+      return { ok: true, ofertas: resultado.ofertas, pdfs, vehiculo: vehiculoDelResultado(resultado) }
     }
 
     const loginVisible = await page
@@ -510,7 +537,8 @@ async function main(): Promise<number> {
       await cerrarFormador(formador, r.ok ? 'ok' : 'error')
       if (r.ok) {
         const ofertas = nota ? r.ofertas.map((o) => ({ ...o, avisos: [...o.avisos, `Cotizado al ${nota}`] })) : r.ofertas
-        const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas, pdfs: r.pdfs, ...meta() })
+        // Vehículo de catálogo confirmado (18/10/2026): asegura lo encadena al bot de Generali de la misma oportunidad.
+        const st = await enviarResultado(cfg, { trabajoId: trabajo.id, resultado: 'ok', ofertas, pdfs: r.pdfs, ...r.vehiculo, ...meta() })
         log('resultado_ok_enviado', { status: st, ofertas: ofertas.length, intentos: primerFallo ? 2 : 1, recorridoCapturas: recorrido.recorrido().capturas.length, recorridoBytes: recorrido.colector.bytes() })
         return st >= 200 && st < 300 ? 0 : 1
       }

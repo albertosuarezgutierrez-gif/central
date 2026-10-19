@@ -1,22 +1,18 @@
 import type { IntervinienteFicha, PolizaDeclaradaFicha, PolizaFicha, PolizaFiguraFicha } from '@/lib/ficha-asegura'
-import { Polizas, PolizasDeclaradas, PolizasDondeFigura } from './piezas'
+import { Polizas, PolizasDeclaradas, PolizasDondeFigura, tarjeta } from './piezas'
 
 /**
- * Todo lo que el cliente tiene contratado, en cuatro bloques que NO son lo
- * mismo y por eso no se mezclan (el conteo de «pólizas vivas» se infla solo si
- * se juntan):
+ * Lo que la tarjeta «Seguros» enseña DEBAJO de los tres cubos (18/10/2026; antes, la pestaña «Todas las
+ * pólizas»). «Pólizas vivas» y «pendientes de CIMA» ya NO salen aquí: son exactamente «Con nosotros»
+ * (el reparto manda las vivas confirmadas y las emitidas sin CIMA a ese cubo, con su chip «Pendiente de
+ * CIMA»), y pintarlas dos veces era la redundancia que se quitó.
  *
- *   vivas          → entran por CIMA, confirmadas y sin cancelar;
- *   pendientes     → las emitimos nosotros y CIMA aún no las ha traído;
- *   canceladas     → CIMA las manda canceladas: ya no aseguran nada;
- *   históricas     → volcado de junio de 2026: oportunidades, no seguros (solo consulta).
+ *   figura en / declaradas → pólizas de otro tomador y las que subió el cliente (tablas propias);
+ *   histórico              → sustituidas, canceladas y volcado de junio de 2026 (oportunidades, solo
+ *                            consulta), plegado y con montaje perezoso: son cientos de filas.
  *
- * El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188
- * filas / 77 clientes, medido 21/09/2026: el FORD FOCUS 3935GPY sale a 201€ y
- * a 210€ con el mismo vencimiento). En la ficha eso se lee como una duplicidad,
- * así que ese bloque —y SOLO ese— agrupa las filas idénticas en una línea y
- * enseña todas las primas. En las vivas no se agrupa: ahí dos filas iguales son
- * un fallo de conciliación que hay que ver, no esconder.
+ * El volcado repite el MISMO riesgo cambiando solo la prima (84 grupos / 188 filas / 77 clientes,
+ * medido 21/09/2026), así que ese bloque —y SOLO ese— agrupa las filas idénticas.
  */
 export default function TabPolizas({ porClase, intervinientes, declaradas, figuraEn }: {
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'sustituida' | 'historica', PolizaFicha[]>
@@ -24,56 +20,57 @@ export default function TabPolizas({ porClase, intervinientes, declaradas, figur
   declaradas: PolizaDeclaradaFicha[] | null
   figuraEn: PolizaFiguraFicha[] | null
 }) {
+  const nHistorico = porClase.sustituida.length + porClase.cancelada.length + porClase.historica.length
   return (
     <>
-      <Polizas titulo="Pólizas vivas" polizas={porClase.viva} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={intervinientes} />
-
       <PolizasDondeFigura polizas={figuraEn} />
 
       <PolizasDeclaradas declaradas={declaradas} />
 
-      {porClase.pendiente_cima.length > 0 && (
-        <Polizas
-          titulo={`Emitidas, pendientes de confirmación por CIMA (${porClase.pendiente_cima.length})`}
-          nota="CIMA aún no la ha traído: no cuenta como viva ni genera avisos. Cuando la compañía la mande por CIMA se casará con esta y pasará a «Pólizas vivas»."
-          polizas={porClase.pendiente_cima}
-          vacio=""
-          intervinientes={intervinientes}
-        />
-      )}
+      {nHistorico > 0 && (
+        <div style={tarjeta}>
+          {/* Cerrado y sin montar hasta abrirlo; dentro, cada bloque conserva su propio plegado. */}
+          <details>
+            <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+              Histórico, canceladas y sustituidas ({nHistorico})
+            </summary>
+            <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
+              {porClase.sustituida.length > 0 && (
+                <Polizas
+                  titulo={`Sustituidas por otra (${porClase.sustituida.length})`}
+                  nota="Cambio de compañía ya emitido: cubren hasta su vencimiento y no se renuevan. No cuentan como vivas ni avisan de su vencimiento."
+                  polizas={porClase.sustituida}
+                  vacio=""
+                  plegado
+                  intervinientes={intervinientes}
+                />
+              )}
 
-      {porClase.sustituida.length > 0 && (
-        <Polizas
-          titulo={`Sustituidas por otra (${porClase.sustituida.length})`}
-          nota="Cambio de compañía ya emitido: cubren hasta su vencimiento y no se renuevan. No cuentan como vivas ni avisan de su vencimiento."
-          polizas={porClase.sustituida}
-          vacio=""
-          plegado
-          intervinientes={intervinientes}
-        />
-      )}
+              {porClase.cancelada.length > 0 && (
+                <Polizas
+                  titulo={`Canceladas en CIMA (${porClase.cancelada.length})`}
+                  nota="La compañía las manda por CIMA con estado «cancelada»: ya no aseguran nada. Sirven para saber qué tuvo y cuánto pagaba."
+                  polizas={porClase.cancelada}
+                  vacio=""
+                  plegado
+                  intervinientes={intervinientes}
+                />
+              )}
 
-      {porClase.cancelada.length > 0 && (
-        <Polizas
-          titulo={`Canceladas en CIMA (${porClase.cancelada.length})`}
-          nota="La compañía las manda por CIMA con estado «cancelada»: ya no aseguran nada. Sirven para saber qué tuvo y cuánto pagaba."
-          polizas={porClase.cancelada}
-          vacio=""
-          plegado
-          intervinientes={intervinientes}
-        />
-      )}
-
-      {porClase.historica.length > 0 && (
-        <Polizas
-          titulo={`Volcado histórico (${porClase.historica.length})`}
-          nota="Del volcado de junio de 2026: no son seguros nuestros sino oportunidades (se trabajan en «Sus seguros» → Oportunidades), con datos de hace años. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea con todas sus primas, sin borrar ninguna."
-          polizas={porClase.historica}
-          vacio=""
-          plegado
-          agruparIguales
-          intervinientes={intervinientes}
-        />
+              {porClase.historica.length > 0 && (
+                <Polizas
+                  titulo={`Volcado histórico (${porClase.historica.length})`}
+                  nota="Del volcado de junio de 2026: no son seguros nuestros sino oportunidades (se trabajan en «Seguros» → Oportunidades), con datos de hace años. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea con todas sus primas, sin borrar ninguna."
+                  polizas={porClase.historica}
+                  vacio=""
+                  plegado
+                  agruparIguales
+                  intervinientes={intervinientes}
+                />
+              )}
+            </div>
+          </details>
+        </div>
       )}
     </>
   )

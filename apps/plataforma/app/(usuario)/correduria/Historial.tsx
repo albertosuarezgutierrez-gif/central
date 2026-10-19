@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { History } from 'lucide-react'
 import { fechaHoraEs, type AnotacionHistorial } from '@/lib/ficha-asegura'
 import { ConIcono } from './iconos'
+import { PAGINA_HISTORIAL, filtrarPorTipo, paginar, tiposPresentes } from '@/lib/correduria/ficha-listas'
 
 /**
  * 🕘 Historial de la ficha (edición, alta, relaciones, documentos…), al final
@@ -48,22 +49,54 @@ function Contenido({ historial }: { historial: AnotacionHistorial[] | null }) {
       </p>
     )
   }
+  return <Lista historial={historial} />
+}
+
+/** Chips por tipo de anotación (solo los que hay) y páginas de 20 con «Ver más». */
+function Lista({ historial }: { historial: AnotacionHistorial[] }) {
+  const [tipo, setTipo] = useState<string | null>(null)
+  const [visibles, setVisibles] = useState(PAGINA_HISTORIAL)
+  const tipos = tiposPresentes(historial)
+  const { visibles: filas, restantes } = paginar(filtrarPorTipo(historial, tipo), visibles)
+  const elegir = (t: string | null) => { setTipo(t); setVisibles(PAGINA_HISTORIAL) }
+  const chip = (activo: boolean): React.CSSProperties => ({
+    minHeight: 44, padding: '0 14px', borderRadius: 999, fontSize: 12, cursor: 'pointer',
+    border: `1px solid ${activo ? 'var(--primary)' : 'var(--border)'}`,
+    background: activo ? 'var(--primary-light)' : 'transparent', color: activo ? 'var(--primary)' : 'inherit',
+  })
   return (
-    <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 6 }}>
-      {historial.map((h) => (
-        <li key={h.id} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', fontSize: 13, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-          <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fechaHoraEs(h.fecha)}</span>
-          <span
-            style={{
-              fontSize: 11, padding: '1px 8px', borderRadius: 999, whiteSpace: 'nowrap',
-              background: 'var(--primary-light)', color: 'var(--primary)',
-            }}
-          >
-            {h.tipo.replace(/_/g, ' ')}
-          </span>
-          <span style={{ flex: '1 1 200px', minWidth: 0, overflowWrap: 'anywhere' }}>{h.texto}</span>
-        </li>
-      ))}
-    </ul>
+    <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+      {tipos.length > 1 && (
+        <div role="group" aria-label="Filtrar por tipo de anotación" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => elegir(null)} aria-pressed={tipo === null} style={chip(tipo === null)}>Todas ({historial.length})</button>
+          {tipos.map(t => (
+            <button key={t.tipo} type="button" onClick={() => elegir(t.tipo)} aria-pressed={tipo === t.tipo} style={chip(tipo === t.tipo)}>
+              {t.tipo.replace(/_/g, ' ')} ({t.n})
+            </button>
+          ))}
+        </div>
+      )}
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
+        {filas.map((h) => (
+          <li key={h.id} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', fontSize: 13, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+            <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fechaHoraEs(h.fecha)}</span>
+            <span
+              style={{
+                fontSize: 11, padding: '1px 8px', borderRadius: 999, whiteSpace: 'nowrap',
+                background: 'var(--primary-light)', color: 'var(--primary)',
+              }}
+            >
+              {h.tipo.replace(/_/g, ' ')}
+            </span>
+            <span style={{ flex: '1 1 200px', minWidth: 0, overflowWrap: 'anywhere' }}>{h.texto}</span>
+          </li>
+        ))}
+      </ul>
+      {restantes > 0 && (
+        <button type="button" onClick={() => setVisibles(n => n + PAGINA_HISTORIAL)} style={{ minHeight: 44, width: '100%', border: '1px solid var(--border)', borderRadius: 8, background: 'transparent', color: 'inherit', cursor: 'pointer', fontSize: 13 }}>
+          Ver más ({restantes} anotaciones restantes)
+        </button>
+      )}
+    </div>
   )
 }

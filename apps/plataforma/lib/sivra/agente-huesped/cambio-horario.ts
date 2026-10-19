@@ -141,10 +141,126 @@ const RE_HASTA_HORA = /(hasta|until|till|bis|jusqu|fino\s*a|by)\s*(las?|les|l'|a
 const RE_CTX_SALIDA = /salida|check.?out|d[ií]a\s*que\s*(nos\s*)?(vamos|salimos|nos\s*fuimos)|departure|abreise|d[eé]part|partenza|ultimo\s*d[ií]a/iu
 
 // Maletas SOLO con un verbo de dejar/guardar cerca («¿hay ascensor para las maletas?» NO es una petición).
-const VERBO_MALETAS = String.raw`dej\w*|guard\w*|deposit\w*|d[eé]pos\w*|laiss\w*|lasci\w*|lass\w*|abstell\w*|aufbewahr\w*|leav\w*|left|keep\w*|stor\w*|drop\w*`
-const NOMBRE_MALETAS = String.raw`maleta\w*|equipaje\w*|luggage|baggage|bags?|suitcase\w*|valig\w*|bagagl\w*|bagage\w*|valise\w*|gep[aä]ck|koffer\w*`
+const VERBO_MALETAS = String.raw`dej\p{L}*|guard\p{L}*|deposit\p{L}*|d[eé]pos\p{L}*|laiss\p{L}*|lasci\p{L}*|lass\p{L}*|abstell\p{L}*|aufbewahr\p{L}*|leav\p{L}*|left|keep\p{L}*|stor\p{L}*|drop\p{L}*`
+const NOMBRE_MALETAS = String.raw`maleta\p{L}*|equipaje\p{L}*|luggage|baggage|bags?|suitcase\p{L}*|valig\p{L}*|bagagl\p{L}*|bagage\p{L}*|valise\p{L}*|gep[aä]ck|koffer\p{L}*`
 const RE_EQUIPAJE = new RegExp(
   `\\b(?:${VERBO_MALETAS})\\b[^.?!]{0,40}?\\b(?:${NOMBRE_MALETAS})\\b|\\b(?:${NOMBRE_MALETAS})\\b[^.?!]{0,40}?\\b(?:${VERBO_MALETAS})\\b`, 'iu')
+
+// ── ANUNCIO de hora (sin pedirla) y ACEPTACIÓN en la respuesta (Maria, 18/10/2026) ──
+// «Saldremos a las 12:00» no lleva ninguna palabra de petición («tarde», «quedarnos», «late checkout»),
+// así que nada lo detectaba: el bot contestó «tomo nota de que saldréis a las 12:00» y autorizó una salida
+// tardía por su cuenta. Un huésped que ANUNCIA una hora posterior a la oficial está pidiendo un permiso.
+export const HORA_SALIDA_OFICIAL_DEFECTO = '11:00' // todos los pisos (`horarios.ts`); solo si no llega la de la reserva
+export const HORA_ENTRADA_OFICIAL_DEFECTO = '15:00' // regla de Alberto (23/06/2026, `horarios.ts`); mismo valor que `decidir.ts`
+export type HorarioOficial = { checkIn?: string | null; checkOut?: string | null }
+
+const minutos = (hhmm?: string | null): number | null => {
+  const m = (hhmm || '').match(/^(\d{1,2}):(\d{2})/)
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : null
+}
+// Verbos de SALIR / quedarse / dejar el piso (ES·EN·IT·FR·DE). Amplio a propósito: solo decide qué frases se
+// miran; un falso positivo cuesta una revisión por Telegram, un falso negativo una autorización que es de Alberto.
+const VERBO_SALIDA = /\b(sal(?:go|gamos|gan?|gas|ir\p{L}*|[ií]\p{L}*|dr\p{L}*|e|en|es|ed)|nos\s+(?:vamos|iremos|marchamos|marcharemos|vais|vayamos)|os\s+(?:vais|ir[eé]is|marcha[ií]s|qued\p{L}*)|irnos|iros|marcha\p{L}*|vay\p{L}*|queda\p{L}*|dej\p{L}*\s+(?:(?:el|la|los|las)\s+)?(?:piso|apartamento|alojamiento|casa|habitaci\p{L}+|llaves?)|abandon\p{L}*|desaloj\p{L}*|entreg\p{L}*|liber\p{L}*|check.?out|check\s+out|leav\p{L}*|left|stay\p{L}*|vacat\p{L}*|depart\p{L}*|partiamo|partiremo|partir(?!\s+de\b)\p{L}*|uscir\p{L}*|usciamo|rest(?:are|iamo)|lasci\p{L}*|abreis\p{L}*|reis\p{L}*|fahr\p{L}*|abfahr\p{L}*|auscheck\p{L}*|verlass\p{L}*|bleib\p{L}*|part(?:ons|irons|ez)|quitt\p{L}*|d[eé]part)\b/iu
+// Verbos de ENTRAR / llegar / acceder (infinitivos y conjugaciones).
+const VERBO_ENTRADA = /\b(entr\p{L}*|acce[sd]\p{L}*|lleg\p{L}*|instal\p{L}*|ingres\p{L}*|check.?in|check\s+in|arriv\p{L}*|enter\p{L}*|get\s+in|come\s+in|ankomm\p{L}*|anreis\p{L}*|einchecken|arrivare|arrivo)\b/iu
+
+const PALABRA_MEDIODIA = /\b(?:mediod[ií]a|noon|midday|mezzogiorno|midi|mittag)\b/giu
+const SUFIJO_TARDE = /^\s*(?:de\s+la\s+(?:tarde|noche)|del?\s+(?:mediod[ií]a|la\s+tarde|la\s+noche)|della?\s+(?:sera|pomeriggio|notte)|du\s+(?:soir|apr[eè]s.midi)|de\s+l.apr[eè]s.midi|nachmittags|abends|in\s+the\s+(?:afternoon|evening)|at\s+night)/iu
+const SUFIJO_MANANA = /^\s*(?:de\s+la\s+ma[ñn]ana|della\s+mattina|du\s+matin|morgens|in\s+the\s+morning)/iu
+const CTX_HORA_AMPLIO = /(?:\b(?:a|hasta|until|till|by|at|around|about|sobre|um|bis|gegen|alle|verso|vers|desde|from|ab|dopo|[àa]|jusqu['’]?[àa])\s*(?:las?|les|l['’]|ore|the)?|\b(?:con|por|para|antes\s+de|despu[eé]s\s+de|pasadas|en\s+torno\s+a|no\s+later\s+than)\s+(?:las?|les))\s*$/iu
+const SIGUE_NOMBRE = /^\s*(?:personas?|adultos?|ni[ñn]os?|maletas?|noches?|d[ií]as?|hu[eé]spedes|people|guests?|adults?|nights?|bags?|days?|persone|notti|ospiti|euros?|€|%)/iu
+
+/**
+ * TODAS las horas (en minutos) de un texto: «12:00», «13h», «1 pm», «a la 1», «12 del mediodía», y las palabras
+ * mediodía/noon/midday/mezzogiorno/midi = 12:00. Rango 0-23:59 (sin tope superior). Una cifra suelta
+ * («2 maletas») solo cuenta con marca (minutos/sufijo) o con preposición de hora delante.
+ * `tardeSiAmbiguo`: «a la 1»/«a las 3» sin am/pm se leen como 13-15 h (salida: el caso conservador).
+ */
+export function horasEnTexto(texto: string, tardeSiAmbiguo = false): number[] {
+  const t = texto || ''
+  const out: number[] = []
+  for (const w of t.matchAll(PALABRA_MEDIODIA)) { void w; out.push(12 * 60) }
+  const re = /(?<![\d/.:])(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?(?:\s*(a\.?m\.?|p\.?m\.?|uhr|horas?|hrs?|h(?![a-zà-ÿ])))?(?!\d)/giu
+  let m: RegExpExecArray | null
+  while ((m = re.exec(t))) {
+    let h = parseInt(m[1], 10)
+    const min = m[2] ? parseInt(m[2], 10) : 0
+    const suf = (m[3] || '').toLowerCase()
+    if (isNaN(h) || h > 23 || min > 59) continue
+    const resto = t.slice(m.index + m[0].length)
+    const marcada = !!m[2] || !!suf
+    if (!marcada && (!CTX_HORA_AMPLIO.test(t.slice(Math.max(0, m.index - 22), m.index)) || SIGUE_NOMBRE.test(resto))) continue
+    const pm = suf.startsWith('p') || SUFIJO_TARDE.test(resto)
+    const am = suf.startsWith('a') || SUFIJO_MANANA.test(resto)
+    if (pm && h < 12) h += 12
+    else if (am && h === 12) h = 0
+    else if (!pm && !am && tardeSiAmbiguo && h >= 1 && h <= 3) h += 12
+    out.push(h * 60 + min)
+  }
+  return out
+}
+
+// Un punto entre dos cifras («11.30») es una hora, no el fin de una frase.
+const frases = (texto: string) => (texto || '').split(/(?<=[?!\n])|(?<=\D\.)|(?<=\d\.)(?!\d)/u)
+// Cláusulas dentro de una frase (coma/punto y coma fuera de cifras, «y», «and»…): «la entrada es a las 15:00 y podéis salir a las 15:00».
+const clausulas = (frase: string) => frase.split(/;|(?<!\d),|,(?!\d)|\s+(?:y|e|and|und|et)\s+/iu)
+
+/** Horas de las frases del texto que contienen `verbo` (TODAS las de cada frase, no solo la primera). */
+function horasPorFrase(texto: string, verbo: RegExp, tardeSiAmbiguo: boolean): number[] {
+  const out: number[] = []
+  for (const frase of frases(texto)) if (verbo.test(frase)) out.push(...horasEnTexto(frase, tardeSiAmbiguo))
+  return out
+}
+
+/** ¿El huésped ANUNCIA una salida posterior a la hora oficial («saldremos a las 12:00»)? */
+export function anunciaSalidaTardia(texto: string, checkOut?: string | null): boolean {
+  const lim = minutos(checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
+  return horasPorFrase(texto, VERBO_SALIDA, true).some(h => h > lim)
+}
+
+// Verbos de LLEGAR (ES·EN·IT·FR·DE) + «check-in»/entrar. Más estrecho que VERBO_ENTRADA a propósito: aquí
+// solo se mira qué dice el huésped de SU llegada.
+const VERBO_LLEGADA = /\b(lleg\p{L}*|entr(?:ar|amos|aremos|o|aré)\b|check.?in|check\s+in|arriv\p{L}*|get(?:ting)?\s+there|reach\p{L}*|be\s+there|ankomm\p{L}*|ankunft|anreis\p{L}*|eintreff\p{L}*|einchecken|arrivare|arrivo|arriv[ae]\p{L}*|giung\p{L}*)\b/iu
+
+/**
+ * ¿El huésped ANUNCIA una llegada anterior a la hora oficial de entrada («llegamos a las 10», «we arrive at 11am»)?
+ * Regla de Alberto (18/10/2026): la hora oficial manda salvo que él autorice; el bot SIEMPRE le consulta antes.
+ * Llegar a la hora de entrada o después NO dispara. Sin check-in conocido se usa el 15:00 de `HORA_ENTRADA_OFICIAL_DEFECTO`.
+ */
+export function anunciaEntradaAnticipada(texto: string, checkIn?: string | null): boolean {
+  const lim = minutos(checkIn) ?? minutos(HORA_ENTRADA_OFICIAL_DEFECTO)!
+  for (const frase of frases(texto)) for (const cl of clausulas(frase)) {
+    if (!VERBO_LLEGADA.test(cl) || VERBO_SALIDA.test(cl)) continue
+    if (horasEnTexto(cl, true).some(h => h < lim)) return true
+  }
+  return false
+}
+
+/**
+ * ¿El BORRADOR del bot acepta/confirma una hora fuera de la oficial («tomo nota de que saldréis a las
+ * 12:00»)? Sin depender de un verbo: SALIDA = cualquier hora posterior al check-out que no sea la de entrada
+ * oficial (las respuestas citan «la entrada es a las 15:00»); además, la detección por verbo de salida.
+ * ENTRADA = hora anterior al check-in junto a un verbo de entrar (solo si se conoce el check-in).
+ * Conservador: un falso positivo solo manda el borrador a Telegram. Red de seguridad si el modelo se salta el prompt.
+ */
+export function respuestaConfirmaHorario(reply: string, horario: HorarioOficial = {}): 'salida' | 'entrada' | null {
+  const lim = minutos(horario.checkOut) ?? minutos(HORA_SALIDA_OFICIAL_DEFECTO)!
+  const ini = minutos(horario.checkIn)
+  const exenta = ini ?? 15 * 60 // sin check-in conocido se asume 15:00; la rama por verbo cubre un «hasta las 15:00»
+  for (const frase of frases(reply)) for (const cl of clausulas(frase)) {
+    // Cláusula PURA de entrada («la entrada es a las 15:00»): solo ahí la hora de check-in está exenta, y las
+    // horas anteriores al check-in son asunto de ENTRADA (se miran abajo). Con un verbo de salir NUNCA hay exención.
+    const entradaPura = VERBO_ENTRADA.test(cl) && !VERBO_SALIDA.test(cl)
+    if (horasEnTexto(cl, true).some(h => h > lim && !(entradaPura && (h === exenta || (ini !== null && h < ini))))) return 'salida'
+  }
+  if (ini !== null) {
+    for (const frase of frases(reply)) for (const cl of clausulas(frase)) {
+      if (!VERBO_ENTRADA.test(cl) || VERBO_SALIDA.test(cl)) continue // «la entrada es a las 15:00 y la salida a las 11:00»
+      if (horasEnTexto(cl, false).some(h => h < ini)) return 'entrada'
+    }
+  }
+  return null
+}
 
 export type PeticionHorario = { tipo: 'entrada' | 'salida' | 'equipaje' }
 
@@ -153,13 +269,15 @@ export type PeticionHorario = { tipo: 'entrada' | 'salida' | 'equipaje' }
  * positivo solo convierte un mensaje en PROPUESTA por Telegram (sin daño); un falso negativo deja salir
  * solo una promesa sobre el horario del piso. `categoria` es la de `detectCategory`/`dec.categoria`.
  */
-export function peticionCambioHorario(texto: string, categoria?: string | null): PeticionHorario | null {
+export function peticionCambioHorario(texto: string, categoria?: string | null, horario: HorarioOficial = {}): PeticionHorario | null {
   const t = texto || ''
   if (categoria === 'early_checkin') return { tipo: 'entrada' }
   if (categoria === 'late_checkout') return { tipo: 'salida' }
   if (RE_ENTRADA.test(t)) return { tipo: 'entrada' }
   if (RE_SALIDA.test(t)) return { tipo: 'salida' }
   if (RE_HASTA_HORA.test(t) && RE_CTX_SALIDA.test(t)) return { tipo: 'salida' }
+  if (anunciaSalidaTardia(t, horario.checkOut)) return { tipo: 'salida' }
+  if (anunciaEntradaAnticipada(t, horario.checkIn)) return { tipo: 'entrada' }
   if (categoria === 'equipaje' || RE_EQUIPAJE.test(t)) return { tipo: 'equipaje' }
   return null
 }

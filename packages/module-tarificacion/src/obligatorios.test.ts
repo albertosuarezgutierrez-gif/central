@@ -9,6 +9,7 @@ import { validarFormularioComunidad } from './capacidades.ts'
 import {
   capacidadesConObligatorios,
   faltanParaTarificar,
+  supuestosFavorablesPara,
   mensajeFaltan,
   obligatoriosDeRamo,
   obligatoriosPara,
@@ -30,6 +31,7 @@ const coche = () => ({
   companiaAnterior: 'COMPAÑÍA DE PRUEBA',
   documentoTomador: '00000000T',
   datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1985-03-10' },
+  seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', descripcion: 'VERSION 1.0' } as Record<string, unknown>,
 })
 const moto = () => ({ ...coche(), ramo: 'moto', seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 } })
 const hogar = () => ({
@@ -79,15 +81,16 @@ function conRuta(o: Record<string, unknown>, ruta: string, v: unknown): void {
 }
 
 describe('obligatorios · declaraciones', () => {
-  it('los 8 bots (registrados o en construcción) tienen declaración; lo desconocido es null («no se sabe»), nunca []', () => {
-    const esperados = ['allianz::comunidades', 'allianz::moto', 'allianz::auto', 'allianz::hogar', 'mapfre::auto', 'mapfre::moto', 'mapfre::hogar', 'occident::hogar']
+  it('los 9 bots (registrados o en construcción) tienen declaración; lo desconocido es null («no se sabe»), nunca []', () => {
+    const esperados = ['allianz::comunidades', 'allianz::moto', 'allianz::auto', 'allianz::hogar', 'mapfre::auto', 'mapfre::moto', 'mapfre::hogar', 'occident::hogar', 'generali::auto']
     expect(capacidadesConObligatorios().map((c) => `${c.compania}::${c.ramo}`).sort()).toEqual([...esperados].sort())
     for (const k of esperados) {
       const [c, r] = k.split('::')
       expect(obligatoriosPara(c, r), k).not.toBeNull()
     }
-    expect(obligatoriosPara('generali', 'auto')).toBeNull()
-    expect(faltanParaTarificar('generali', 'auto', coche())).toBeNull()
+    expect(obligatoriosPara('reale', 'auto')).toBeNull()
+    expect(faltanParaTarificar('reale', 'auto', coche())).toBeNull()
+    expect(obligatoriosPara('generali', 'moto'), 'Generali solo turismos por ahora').toBeNull()
     expect(faltanParaTarificar('allianz', 'decesos', {})).toBeNull()
     expect(obligatoriosDeRamo('decesos')).toBeNull()
     // Compañía en forma no canónica: misma declaración.
@@ -144,9 +147,9 @@ describe('obligatorios · propios de cada portal', () => {
 
   it('quitar cada obligatorio propio lo señala (Allianz moto, Mapfre auto/moto/hogar, Allianz comunidades)', () => {
     const casos: [string, string, string[]][] = [
-      ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo', 'aniosAseguradoAnterior', 'siniestrosUltimos5Anios']],
-      ['mapfre', 'auto', ['siniestrosUltimos5Anios', 'aniosAseguradoAnterior', 'companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
-      ['mapfre', 'moto', ['documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
+      ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo']],
+      ['mapfre', 'auto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
+      ['mapfre', 'moto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['mapfre', 'hogar', ['inmueble.referenciaCatastral', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['allianz', 'comunidades', ['tipoVivienda', 'uso', 'listaPropietarios']],
     ]
@@ -158,10 +161,56 @@ describe('obligatorios · propios de cada portal', () => {
     }
   })
 
+  // 18/10/2026 (Alberto): Generali no saca el vehículo por matrícula; lo pone asegura desde el ok de Allianz/Mapfre de la oportunidad.
+  it('Generali auto: sin vehículo confirmado falta (salvo en espera); vale seleccionVehiculo o la denominación de Mapfre', () => {
+    const { seleccionVehiculo: _sv, ...sinVehiculo } = coche()
+    expect(faltanParaTarificar('generali', 'auto', sinVehiculo)!.map((f) => f.clave)).toEqual(['seleccionVehiculo'])
+    expect(faltanParaTarificar('generali', 'auto', sinVehiculo, { sinFicha: true }), 'lo pone asegura: el formulario no lo pide').toEqual([])
+    expect(faltanParaTarificar('generali', 'auto', { ...sinVehiculo, esperaVehiculo: true }), 'en espera no bloquea el encolado').toEqual([])
+    expect(faltanParaTarificar('generali', 'auto', { ...sinVehiculo, vehiculoConfirmado: { origen: 'mapfre', denominacion: 'MARCA MODELO 1.0' } })).toEqual([])
+    expect(faltanParaTarificar('generali', 'auto', { ...sinVehiculo, seleccionVehiculo: { marca: 'MARCA', modelo: '' } })!.map((f) => f.clave)).toEqual(['seleccionVehiculo'])
+    expect(faltanParaTarificar('generali', 'auto', coche())).toEqual([])
+  })
+
+  // 19/10/2026 (trabajo real 02fd821b): Allianz Turismos exige la compañía actual con cambio de seguro; sin ella, SIGUIENTE no se habilita.
+  it('Allianz auto: cambio de seguro sin compañía actual falta; con ella, o vehículo nuevo, no', () => {
+    const { companiaAnterior: _c, ...sinCompania } = coche()
+    expect(faltanParaTarificar('allianz', 'auto', coche())).toEqual([])
+    expect(faltanParaTarificar('allianz', 'auto', sinCompania)!.map((f) => f.clave)).toEqual(['companiaAnterior'])
+    expect(faltanParaTarificar('allianz', 'auto', { ...sinCompania, companiaAnterior: '   ' })!.map((f) => f.clave)).toEqual(['companiaAnterior'])
+    expect(faltanParaTarificar('allianz', 'auto', { ...sinCompania, companiaActual: 'OTRA COMPAÑÍA' })).toEqual([])
+    // Relativo a hoy (sin fechas fijas): matriculado hace 30 días y sin póliza actual = nuevo → no se exige.
+    const hace30 = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10)
+    expect(faltanParaTarificar('allianz', 'auto', { ...sinCompania, fechaMatriculacion: hace30 })).toEqual([])
+  })
+
   it('tres estados: 0 siniestros y false son DATOS; null es «no consta» y falta', () => {
     expect(faltanParaTarificar('mapfre', 'auto', { ...coche(), siniestrosUltimos5Anios: 0, aniosAseguradoAnterior: 0, companiaAnterior: null })).toEqual([])
     expect(faltanParaTarificar('allianz', 'moto', { ...moto(), conductor: { ...moto().conductor, sexo: null } })!.map((f) => f.clave)).toEqual(['conductor.sexo'])
-    expect(faltanParaTarificar('mapfre', 'auto', { ...coche(), siniestrosUltimos5Anios: null })!.map((f) => f.clave)).toEqual(['siniestrosUltimos5Anios'])
+  })
+
+  // 18/10/2026, decisión de Alberto «supuesto favorable en todo»: los antecedentes que faltan NO bloquean ningún bot de vehículo.
+  it('supuesto favorable: sin años asegurado ni siniestros no falta nada (Allianz moto); se dicen como SUPUESTOS, no como dato', () => {
+    const sinAnt = { ...moto(), aniosAseguradoAnterior: null, siniestrosUltimos5Anios: undefined }
+    expect(faltanParaTarificar('allianz', 'moto', sinAnt)).toEqual([])
+    expect(supuestosFavorablesPara('allianz', 'moto', sinAnt)).toEqual(['aniosAseguradoAnterior', 'siniestrosUltimos5Anios'])
+    expect(supuestosFavorablesPara('allianz', 'moto', moto()), '0 siniestros y 3 años son DATOS').toEqual([])
+    expect(supuestosFavorablesPara('allianz', 'hogar', hogar())).toEqual([])
+    expect(supuestosFavorablesPara('reale', 'moto', sinAnt), 'sin declaración: no se sabe').toBeNull()
+    // Allianz Turismos no declara los antecedentes como obligatorios (los resuelve el propio bot): no se rotulan aquí.
+    expect(supuestosFavorablesPara('allianz', 'auto', { ...coche(), aniosAseguradoAnterior: null })).toEqual([])
+  })
+
+  it('supuesto favorable en Mapfre auto: 5 años o más ⇒ tuvo seguro ⇒ su nombre SÍ hace falta (no se inventa la compañía)', () => {
+    expect(faltanParaTarificar('mapfre', 'auto', { ...coche(), siniestrosUltimos5Anios: null })).toEqual([])
+    expect(faltanParaTarificar('mapfre', 'auto', { ...coche(), aniosAseguradoAnterior: null })).toEqual([])
+    expect(faltanParaTarificar('mapfre', 'auto', { ...coche(), aniosAseguradoAnterior: null, companiaAnterior: null })!.map((f) => f.clave)).toEqual(['companiaAnterior'])
+  })
+
+  it('sexo del conductor (Allianz moto): lo pone asegura desde el Sr./Sra. de la ficha → `sinFicha` no lo pide; sin ficha que lo tenga, falta', () => {
+    const sinSexo = { ...moto(), conductor: { ...moto().conductor, sexo: null } }
+    expect(faltanParaTarificar('allianz', 'moto', sinSexo, { sinFicha: true })).toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', sinSexo)!.map((f) => f.etiqueta)).toEqual(['sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha)'])
   })
 
   it('Mapfre auto: la compañía anterior solo con años > 0, y con más de 80 caracteres cuenta como falta (no viaja)', () => {

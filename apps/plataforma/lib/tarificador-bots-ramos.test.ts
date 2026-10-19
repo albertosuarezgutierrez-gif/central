@@ -52,14 +52,16 @@ const AUTO_BASE = {
   aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0', companiaAnterior: null,
 }
 
-test('auto · Mapfre: con años y sin compañía anterior falta (por compañía); otra compañía no lo pide', () => {
+test('auto · Mapfre y Allianz: con seguro actual y sin compañía anterior falta (Allianz la exige con cambio de seguro, 19/10/2026)', () => {
   const a = adaptadorDeRamo('auto')!
   const m = checklistBot(a, AUTO_BASE, {}, 'mapfre')
   assert.ok(m.estado === 'evaluado' && m.bloquea && /compañía anterior/.test(m.resumen))
   const m2 = checklistBot(a, AUTO_BASE, { companiaAnterior: '   ' }, 'mapfre')
   assert.ok(m2.estado === 'evaluado' && m2.bloquea && /compañía anterior/.test(m2.resumen))
   const al = checklistBot(a, AUTO_BASE, {}, 'allianz')
-  assert.ok(al.estado === 'evaluado' && !al.bloquea)
+  assert.ok(al.estado === 'evaluado' && al.bloquea && /compañía actual del vehículo/.test(al.resumen))
+  const al2 = checklistBot(a, AUTO_BASE, { companiaAnterior: 'Línea Directa' }, 'allianz')
+  assert.ok(al2.estado === 'evaluado' && !al2.bloquea)
 })
 
 test('auto · compañía anterior tecleada (o traída del formulario) quita la falta y viaja en el riesgo; tocar el campo vacío manda', () => {
@@ -93,8 +95,11 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
     sexo: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
     aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0',
   }
+  // 18/10/2026: vacío no se inventa — se toma del Sr./Sra. de la ficha (asegura, al encolar): fila «de la ficha», no bloquea aquí.
   const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
-  assert.ok(sin.estado === 'evaluado' && sin.faltan.some((f) => f.clave === 'conductor.sexo'))
+  assert.ok(sin.estado === 'evaluado' && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'ficha')
+  const r0 = a.construir(F, { cilindrada: '125', sexo: '' })
+  assert.ok(r0.ok && (r0.riesgo.conductor as { sexo: unknown }).sexo === null)
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'mujer' }, 'allianz')
   assert.ok(con.estado === 'evaluado' && !con.bloquea)
   const r = a.construir(F, { cilindrada: '125', sexo: 'mujer' })

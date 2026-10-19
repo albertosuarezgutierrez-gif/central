@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-17T14:52:35Z",
+  "generadoEn": "2026-10-19T06:46:55Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -961,7 +961,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 7
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2203,7 +2203,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 253
+        "evidencias": 257
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2231,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 196
+        "evidencias": 200
       },
       "rrhh": {
         "estado": "no",
@@ -2311,7 +2311,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 40
+        "evidencias": 41
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2473,7 +2473,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 50
+        "evidencias": 55
       },
       "asegura-portal": {
         "estado": "no",
@@ -2501,7 +2501,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 21
       },
       "rrhh": {
         "estado": "no",
@@ -4199,6 +4199,7 @@
       "/api/operador/presupuesto/propuesta/pdf",
       "/api/operador/presupuesto/referencia",
       "/api/operador/presupuesto/seguimiento",
+      "/api/operador/presupuesto/vista-cliente",
       "/api/operador/quejas",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
@@ -4246,6 +4247,7 @@
       "/api/operador/tarificador/oportunidad/[id]/propuesta",
       "/api/operador/tarificador/panel",
       "/api/operador/tarificador/pausas/[id]",
+      "/api/operador/tarificador/presupuesto-rpa",
       "/api/operador/tarificador/probar",
       "/api/operador/tarificador/relanzar",
       "/api/operador/tarificador/trabajo/[id]",
@@ -5273,6 +5275,7 @@
       "/api/correduria/presupuesto/pdf",
       "/api/correduria/presupuesto/propuesta",
       "/api/correduria/presupuesto/propuesta/pdf",
+      "/api/correduria/presupuesto/vista-cliente",
       "/api/correduria/quejas",
       "/api/correduria/radar-recibos",
       "/api/correduria/recibo-devolucion",
@@ -5305,6 +5308,7 @@
       "/api/correduria/tarificador/grabaciones/[id]/pantallas",
       "/api/correduria/tarificador/integraciones",
       "/api/correduria/tarificador/oportunidad",
+      "/api/correduria/tarificador/oportunidad/[id]/presupuesto-rpa",
       "/api/correduria/tarificador/oportunidad/[id]/propuesta",
       "/api/correduria/tarificador/panel",
       "/api/correduria/tarificador/pausas/[id]",
@@ -6925,7 +6929,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1718,
+    "apis": 1722,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

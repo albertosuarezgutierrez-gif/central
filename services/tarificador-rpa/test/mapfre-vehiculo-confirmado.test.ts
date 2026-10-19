@@ -175,7 +175,7 @@ test('consultarVehiculoPorMatricula: moto (0 puertas) también', async () => {
   await context.close()
 })
 
-test('consultarVehiculoPorMatricula: varias filas → la ÚNICA que casa con el riesgo (v0.8.0), confirmada por el guard; sin regla → elección humana; sin diálogo → hueco', async () => {
+test('consultarVehiculoPorMatricula: varias filas → la ÚNICA que casa con el riesgo (v0.8.0), confirmada por el guard; sin regla → la primera como supuesto (v0.8.6); sin diálogo → hueco', async () => {
   const filas = [{ matricula: MATRICULA, denominacion: 'MARCA MOTO PRIMERA', cv: '95', cc: '798', puertas: '0', fecha: '15/06/2020' }, { matricula: MATRICULA, denominacion: 'MARCA MOTO SEGUNDA' }]
   const a = await preparar(PASO2(filas))
   const v = await consultarVehiculoPorMatricula(a.page, MATRICULA, { confirmarVehiculoMapfre: (p, m, i) => confirmarVehiculoMapfre(p, a.guard, m, i) }, undefined, undefined, { seleccionVehiculo: { marca: 'MARCA MOTO', modelo: 'SEGUNDA' } })
@@ -183,8 +183,11 @@ test('consultarVehiculoPorMatricula: varias filas → la ÚNICA que casa con el 
   assert.equal((await marcas(a.page)).aceptado, 1)
   await a.context.close()
   const c = await preparar(PASO2(filas))
-  await assert.rejects(() => consultarVehiculoPorMatricula(c.page, MATRICULA, { confirmarVehiculoMapfre: (p, m, i) => confirmarVehiculoMapfre(p, c.guard, m, i) }), (e) => e instanceof ErrorEleccionVersionAllianz && sinMatricula(e))
-  assert.equal((await marcas(c.page)).aceptado, null, 'sin regla fija no se elige la primera a ciegas')
+  const sup: string[] = []
+  const w = await consultarVehiculoPorMatricula(c.page, MATRICULA, { confirmarVehiculoMapfre: (p, m, i) => confirmarVehiculoMapfre(p, c.guard, m, i) }, undefined, undefined, null, (x) => sup.push(x))
+  assert.equal(w.denominacion, 'MARCA MOTO PRIMERA', 'sin regla que case sola (v0.8.6): la primera, como supuesto declarado')
+  assert.deepEqual(sup, ['vehículo/versión: el primero de la lista (supuesto, había 2)'])
+  assert.equal((await marcas(c.page)).aceptado, 1, 'el guard confirmó la fila')
   await c.context.close()
   const b = await preparar('<app-datos-vehiculo><input name="matricula"></app-datos-vehiculo>')
   await assert.rejects(

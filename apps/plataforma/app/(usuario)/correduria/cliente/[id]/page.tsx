@@ -6,6 +6,7 @@ import Siniestros from '../../Siniestros'
 import { NECESARIOS_EMISION_AUTO } from '@central/module-seguros'
 import { fichaAsegura, type PolizaFicha } from '@/lib/ficha-asegura'
 import Cabecera from './Cabecera'
+import { idsConChipAviso } from '@/lib/correduria/aviso-vencimiento'
 import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
 import FichasDuplicadas from './FichasDuplicadas'
@@ -23,8 +24,9 @@ import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 import { Pagina } from '@/components/ui'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, tareasVinculadasAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import TareasVinculadas from '../../TareasVinculadas'
-import { detalleTareas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
-import { contarOportunidades, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
+import { contarTareasAbiertas, interpretarTareasVinculadas, type LecturaTareasVinculadas } from '@/lib/correduria/tareas-vinculadas'
+import { contarOportunidades, oportunidadesContables, precargaAlta, repartirSegurosCliente, segurosDeReparto } from '@/lib/correduria/seguros-cliente'
+import { subtituloOportunidades } from '@/lib/correduria/prima-oportunidades'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,6 +90,8 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // más las derivadas de otras casas. `null` = no se pudieron leer: no se pinta un número.
   const seguros = segurosDeReparto(reparto)
   const nOportunidades = contarOportunidades(reparto)
+  // «N abiertas · ~X€/año»: la prima sale de lo que la ficha ya cargó (sin consulta nueva).
+  const textoOportunidades = subtituloOportunidades(oportunidadesContables(reparto))
   // Con qué se precarga el alta al crear la oportunidad desde una fila del volcado.
   const precargas = Object.fromEntries(reparto.oportunidades.flatMap(s => (s.clase === 'poliza' && s.historica ? [[s.id, precargaAlta(s.poliza, hoy)] as const] : [])))
 
@@ -140,15 +144,29 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
       <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
 
-      <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} />
+      <Cabecera ficha={ficha} resumen={resumen} seguros={seguros} idsConChip={idsConChipAviso(reparto)} />
 
       {/* La misma persona en otra ficha (mismo DNI/CIF): se avisa y se ofrece fusionar eligiendo campo a campo. */}
       <FichasDuplicadas clienteId={ficha.id} juridica={personaDeFicha({ tipoPersona: ficha.identidad?.tipoPersona, dniEnmascarado: ficha.identidad?.dniEnmascarado, segmento: ficha.segmento }) === 'juridica'} />
 
       {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
-          pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}
+          pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección.
+          (18/10/2026) «Todas las pólizas» se fundió aquí: debajo de los cubos van lo que solo
+          aportaba aquella vista (figura en, declaradas, histórico plegado) y los siniestros. */}
       {tab === 'resumen' && (
-        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
+        <>
+          <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={hoy} />
+          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
+          {/* Ancla de «ver siniestros →» (Pendiente); `scrollMarginTop` por si hay cabecera pegada. */}
+          <div id="siniestros" style={{ scrollMarginTop: 16 }}>
+            <Siniestros
+              lista={ficha.siniestros}
+              polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
+              documentos={ficha.documentos}
+              clienteId={ficha.id}
+            />
+          </div>
+        </>
       )}
 
       <FichaTabs
@@ -157,9 +175,9 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         detalles={detallesAccesos({
           conNosotros: reparto.conNosotros.length,
           oportunidadesAbiertas: nOportunidades,
-          tareas: detalleTareas(tareas),
+          oportunidadesTexto: textoOportunidades,
+          tareas: contarTareasAbiertas(tareas),
           pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
-          polizas: seguros.length,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
           emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
           personas: contarPersonas(personas, ficha.relaciones),
@@ -186,30 +204,19 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         </Tarjeta>
       )}
 
-      {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
-
-      {/* Tareas del cliente y de sus pólizas (14/10/2026): la misma tabla de tareas de Mi mesa. */}
-      {tab === 'tareas' && (
-        <Tarjeta titulo="Tareas">
-          <TareasVinculadas
-            clienteId={ficha.id}
-            polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
-            inicial={tareas}
-            hoy={hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })}
-          />
-        </Tarjeta>
-      )}
-
-      {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
-      {tab === 'polizas' && (
+      {/* Pendiente + Tareas, UNA tarjeta (18/10/2026): arriba lo sugerido y las peticiones derivadas,
+          debajo las tareas guardadas del cliente y de sus pólizas (la misma tabla de Mi mesa). */}
+      {tab === 'pendiente' && (
         <>
-          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
-          <Siniestros
-            lista={ficha.siniestros}
-            polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
-            documentos={ficha.documentos}
-            clienteId={ficha.id}
-          />
+          <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />
+          <Tarjeta titulo="Tareas">
+            <TareasVinculadas
+              clienteId={ficha.id}
+              polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
+              inicial={tareas}
+              hoy={hoy.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })}
+            />
+          </Tarjeta>
         </>
       )}
 
@@ -218,7 +225,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (
         <Tarjeta titulo="Documentos">
-          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} />
+          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} polizas={ficha.polizas.map(p => ({ id: p.id, etiqueta: `${p.aseguradora} · ${etiquetaPoliza(p)}` }))} siniestros={ficha.siniestros} />
         </Tarjeta>
       )}
 

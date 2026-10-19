@@ -76,7 +76,7 @@ function fmtFecha(f: string): string {
 // Propone el borrador por Telegram con botones y guarda el estado pendiente (liga el booking).
 export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: Decision): Promise<void> {
   // Entrada anticipada / salida tardía / maletas: propuesta propia con semáforo (nunca auto-envío).
-  const pet = peticionCambioHorario(pregunta, dec.categoria)
+  const pet = peticionCambioHorario(pregunta, dec.categoria, { checkIn: ctx.horaCheckIn, checkOut: ctx.horaCheckOut })
   if (pet) return proponerCambioHorario(ctx, pregunta, dec, pet)
   const urgente = dec.sentimiento === 'negativo'
   const cabecera = `${EMOJI(urgente)} <b>${escapeHtml(ctx.property)}</b> · ${escapeHtml(ctx.guestName)} (reserva ${ctx.bookingId})` +

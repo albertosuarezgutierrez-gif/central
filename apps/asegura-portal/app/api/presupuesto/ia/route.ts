@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { tgSend } from '@central/core-telegram'
 
 import { pedirLlamada, pedirResumenIA, preguntarIA } from '@/lib/presupuesto-ia'
+import { presupuestoAbiertoAlCliente } from '@/lib/presupuesto'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
   const s = (k: string) => (typeof b?.[k] === 'string' ? (b[k] as string).trim() : '')
   const presupuestoId = s('presupuestoId')
   if (!UUID.test(presupuestoId)) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
+  // Un borrador (ni enviado ni enlazado por WhatsApp) no gasta IA ni avisa: 404 neutro, como la pantalla.
+  if (!(await presupuestoAbiertoAlCliente(presupuestoId))) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
 
   if (b?.accion === 'resumen') {
     const r = await pedirResumenIA(identidad.id, presupuestoId)

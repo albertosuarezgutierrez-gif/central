@@ -451,6 +451,15 @@ export function vistaCorredorAsegura(entrada: { clienteId: string; actor: string
   return llamar('/api/operador/cliente/portal/vista', { method: 'POST', body: JSON.stringify(entrada) })
 }
 
+/**
+ * «Ver como el cliente» un PRESUPUESTO (18/10/2026), también un borrador sin enviar: la misma vista de corredor,
+ * aterrizando en la página del presupuesto. La ficha la saca asegura del presupuesto (nunca de aquí). Mismo
+ * `interpretarVista`/`textoVista`: el enlace es de un solo uso y se abre con `window.open`, nunca como `<a href>`.
+ */
+export function vistaPresupuestoAsegura(entrada: { presupuestoId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/presupuesto/vista-cliente', { method: 'POST', body: JSON.stringify(entrada) })
+}
+
 export type RespuestaVista =
   | { estado: 'ok'; url: string }
   | { estado: 'no_encontrado' | 'sin_portal' | 'sin_configurar' | 'invalido' | 'error'; motivo: string }
@@ -472,9 +481,14 @@ export function interpretarVista(status: number, json: unknown): RespuestaVista 
   return { estado: 'error', motivo: cadena(o.causa) ?? cadena(o.motivo) ?? cadena(o.error) ?? `HTTP ${status}` }
 }
 
-export function textoVista(r: Exclude<RespuestaVista, { estado: 'ok' }>, nombre: string): string {
+/** Textos de la vista. `que`: `presupuesto` = la vista previa de UN presupuesto (su 404 no es «la ficha no está»). */
+export const TEXTO_PRESUPUESTO_NO_DISPONIBLE = 'Este presupuesto ya no está disponible (retirado o la ficha cambió).'
+
+export function textoVista(r: Exclude<RespuestaVista, { estado: 'ok' }>, nombre: string, que: 'ficha' | 'presupuesto' = 'ficha'): string {
   switch (r.estado) {
     case 'no_encontrado':
+      // Un presupuesto retirado o de una ficha fusionada da 404: decir «la ficha ya no está» sería falso.
+      if (que === 'presupuesto') return TEXTO_PRESUPUESTO_NO_DISPONIBLE
       return 'asegura dice que esta ficha ya no está en la correduría: no hay portal que abrir.'
     case 'sin_portal':
       return 'asegura no tiene configurada la dirección del portal (ASEGURA_PORTAL_URL): no sabe a dónde abrir.'

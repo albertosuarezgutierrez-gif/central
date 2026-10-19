@@ -265,6 +265,11 @@ export function leerEncoladoBot(status: number, json: unknown): EncoladoBot {
     if (typeof o.mensaje === 'string') return { ok: false, mensaje: o.mensaje }
   }
   if (status === 409 && o.duplicado !== true) {
+    // Bot en pausa (3 fallos seguidos, p. ej. contraseña rechazada): antes salía como «no está autorizada», que despista (19/10/2026).
+    if (typeof o.motivo === 'string' && o.motivo.startsWith('bot_pausado')) {
+      const m = /^[a-z_]+: ([\s\S]+)$/.exec(o.motivo.trim())
+      return { ok: false, mensaje: `Bot en pausa, no se ha encolado: ${m ? m[1] : 'reanúdalo en /correduria/tarificador.'}` }
+    }
     const motivo = typeof o.motivo === 'string' ? ` (${o.motivo})` : ''
     return { ok: false, mensaje: typeof o.mensaje === 'string' ? o.mensaje : `Esa compañía no está autorizada para el bot${motivo}` }
   }

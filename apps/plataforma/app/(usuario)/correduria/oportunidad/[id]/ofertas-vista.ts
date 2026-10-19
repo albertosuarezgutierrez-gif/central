@@ -81,6 +81,10 @@ export function avisosDeOferta(o: Pick<OfertaVista, 'datosExtra'>): string[] {
   const literales = typeof o.datosExtra.literales === 'object' && o.datosExtra.literales !== null ? (o.datosExtra.literales as Record<string, unknown>) : {}
   const nombre = (c: string) => (typeof literales[c] === 'string' ? (literales[c] as string) : c)
   const out: string[] = []
+  // Bot (18/10/2026): primero las ALERTAS (la compañía calculó con un dato DISTINTO de la ficha) y luego las notas
+  // internas (texto crudo de los supuestos, cómo se leyó el portal…). Nada de esto lo ve el cliente.
+  for (const a of lista('alertasCorredor')) out.push(`⚠️ ALERTA: ${a}`)
+  for (const a of lista('avisosInternos')) out.push(`Nota del bot: ${a}`)
   for (const c of lista('evidenciaNoEncontrada')) out.push(`La cita de «${nombre(c)}» no se ha encontrado en el PDF.`)
   for (const c of lista('cifrasNoEncontradas')) out.push(`La cifra de «${nombre(c.split('.')[0] ?? c)}» no aparece escrita en el PDF${c.includes('.') ? ` (${c.split('.').slice(1).join('.')})` : ''}.`)
   const n = o.datosExtra.descartadasSinNombre

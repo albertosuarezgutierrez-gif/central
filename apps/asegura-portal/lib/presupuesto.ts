@@ -54,6 +54,7 @@ import type { AccesoPuente } from './presupuesto-firma'
 import { coberturasDeOpcion, type CoberturasOpcion } from './tabla-coberturas'
 import { garantiasDeJson } from './todas-las-opciones'
 import { origenVista, type OrigenVista } from './presupuesto-ofertas-vista'
+import { abiertoAlCliente } from './presupuesto-publicado'
 import { coberturasDeJson, leerFirmeza, leerSinEquivalente, esPapel, type Firmeza, type PapelPortada, type SinEquivalente } from './presupuesto-vista'
 
 // ─── Lo que la pantalla necesita ─────────────────────────────────────────────
@@ -226,6 +227,30 @@ export async function accesoPuenteDe(id: string): Promise<{ acceso: AccesoPuente
 
 // ─── La pantalla de dentro ───────────────────────────────────────────────────
 
+/** ¿Consta el evento `enlace_generado` (WhatsApp abierto por el corredor)? Un fallo de BD LANZA: lo recoge quien llama. */
+async function constaEnlaceGenerado(id: string): Promise<boolean> {
+  const e = await prisma.presupuestoEvento.findFirst({ where: { presupuestoId: id, tipo: 'enlace_generado' }, select: { id: true } })
+  return e !== null
+}
+
+/**
+ * Puerta de la comparativa con IA (`/api/presupuesto/ia`): el presupuesto está enviado o enlazado. NO
+ * autoriza QUIÉN (eso lo decide el puente de asegura por `portal_vinculo`): solo que no sea un borrador.
+ * Fallo de BD = `false` (cerrado: la IA cuesta).
+ */
+export async function presupuestoAbiertoAlCliente(id: string): Promise<boolean> {
+  if (!UUID.test(id)) return false
+  try {
+    const p = await prisma.presupuesto.findUnique({ where: { id }, select: { id: true, enviadoAt: true, retiradoAt: true } })
+    if (!p || p.retiradoAt !== null) return false
+    const enlaceGenerado = p.enviadoAt === null ? await constaEnlaceGenerado(p.id) : false
+    return abiertoAlCliente({ enviadoAt: p.enviadoAt, enlaceGenerado, porWhatsapp: false, vistaDeCorredor: false })
+  } catch (e) {
+    registrar('presupuestoAbiertoAlCliente', e)
+    return false
+  }
+}
+
 /**
  * El presupuesto `id`, para la identidad de la cookie.
  *
@@ -265,6 +290,12 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
       },
     })
     if (!p) return { estado: 'no_encontrado' }
+
+    // 🚨 Un BORRADOR no lo abre el cliente (ni dispara la IA, que cuesta). `enlazado` sí: el WhatsApp
+    // ya salió del móvil de Alberto aunque no haya confirmado el envío (ver `presupuesto-publicado.ts`).
+    // Va ANTES de la autorización: a quien no es suyo tampoco se le dice que existe.
+    const enlaceGenerado = p.enviadoAt === null && !vistaDeCorredor && !porWhatsapp ? await constaEnlaceGenerado(p.id) : false
+    if (!abiertoAlCliente({ enviadoAt: p.enviadoAt, enlaceGenerado, porWhatsapp, vistaDeCorredor })) return { estado: 'no_encontrado' }
 
     // Por el código del WhatsApp ya está autorizado (cookie de ESTE id + token vigente). Si no,
     // las dos ramas de siempre, que parten de la identidad de la cookie de sesión.

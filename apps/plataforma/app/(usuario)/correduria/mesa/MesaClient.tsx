@@ -13,6 +13,7 @@ import {
 } from '@/lib/correduria/mesa'
 import Secciones from '../Secciones'
 import AccionesContacto from '../AccionesContacto'
+import AccionesCabecera from '../AccionesCabecera'
 import BuscadorCartera from '../BuscadorCartera'
 import BandaAvisos from './BandaAvisos'
 import CorreosCompania from './CorreosCompania'
@@ -91,6 +92,10 @@ export default function MesaClient() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
       <h1 className="solo-lectores">Mi mesa</h1>
+      {/* Las mismas acciones que `/correduria` (Subir póliza, Vencimientos, «…»): son enlaces, no montan modales. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <AccionesCabecera />
+      </div>
       <BuscadorCartera />
       {/* La misma barra que `/correduria`: «Mi mesa» y «Prospección» son pantallas propias, el resto son secciones. */}
       <Secciones activa="mesa" contadores={{}} onCambiar={s => router.push(`/correduria?s=${s}`)} />

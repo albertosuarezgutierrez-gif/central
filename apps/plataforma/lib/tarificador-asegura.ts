@@ -83,6 +83,18 @@ export function pedirPresupuestosOportunidad(body: {
   }, 50_000)
 }
 
+/**
+ * Prepara A MANO el presupuesto en BORRADOR con las ofertas del bot de la oportunidad (idempotente). `avisar:false`
+ * fijo: lo pide el operador y lo ve en pantalla, sin Telegram. NO ENVÍA NADA AL CLIENTE.
+ */
+export function prepararPresupuestoRpaOportunidad(oportunidadId: string): Promise<Reenvio> {
+  return puerto('presupuesto-rpa', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ oportunidadId, avisar: false }),
+  }, 85_000)
+}
+
 export function leerTrabajoTarificador(id: string): Promise<Reenvio> {
   return puerto(`trabajo/${encodeURIComponent(id)}`, { method: 'GET' }, 15_000)
 }

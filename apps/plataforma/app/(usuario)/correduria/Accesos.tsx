@@ -26,6 +26,8 @@ export type Acceso = {
   /** Una línea con el dato: «12 · 1 devuelto». `null` = no se pinta (no es «0»). */
   detalle?: string | null
   tono?: Tono
+  /** Vacío confirmado: se pinta atenuado pero sigue siendo pulsable. */
+  tenue?: boolean
 }
 
 const COLOR: Record<Tono, string> = { malo: 'var(--negative)', aviso: 'var(--warning)', bien: 'var(--positive)' }
@@ -34,13 +36,14 @@ export const rejillaAccesos: React.CSSProperties = {
   display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10,
 }
 
-function estiloBaldosa(on: boolean): React.CSSProperties {
+function estiloBaldosa(on: boolean, tenue?: boolean): React.CSSProperties {
   return {
     display: 'grid', gap: 2, alignContent: 'start', textAlign: 'left',
     minHeight: 64, padding: '10px 12px', borderRadius: 'var(--radius)',
     background: 'var(--surface)', boxShadow: 'var(--shadow)',
     border: `2px solid ${on ? 'var(--primary)' : 'transparent'}`,
     color: 'var(--text)', textDecoration: 'none', cursor: 'pointer', font: 'inherit',
+    ...(tenue && !on ? { opacity: 0.6 } : {}),
   }
 }
 
@@ -65,7 +68,7 @@ export function TiraAccesos({ accesos, activo }: {
   return (
     <nav aria-label="Accesos" style={rejillaAccesos}>
       {accesos.map(a => (
-        <Link key={a.id} href={a.href} prefetch={false} scroll={false} aria-current={activo === a.id ? 'page' : undefined} style={estiloBaldosa(activo === a.id)}>
+        <Link key={a.id} href={a.href} prefetch={false} scroll={false} aria-current={activo === a.id ? 'page' : undefined} style={estiloBaldosa(activo === a.id, a.tenue)}>
           <Cuerpo a={a} />
         </Link>
       ))}
