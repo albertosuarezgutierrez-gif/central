@@ -11,6 +11,8 @@
 //      (`fuente:'correo'`, primer paso HOY: pedirle los datos). asegura no duplica una abierta.
 //   4. Hogar con referencia catastral VÁLIDA en el correo: Catastro → riesgo de la oportunidad (solo lo vacío) y esos
 //      datos ya no se le preguntan (`lead-correduria-pendiente.ts::catastroDeLead`; fallo = «no se sabe»).
+//   2b. Con ficha propia: Google Contacts AL MOMENTO (`POST /api/operador/google-contactos/lead`, 19/10/2026). Mismas
+//      reglas que el cron de asegura; tiempo acotado; NUNCA bloquea el alta ni el aviso (línea 📇 en el Telegram).
 //   5. Aviso Telegram con lo que se hizo y lo que NO; después, la petición de datos (SOLO lo que falta, desde el
 //      contrato único) como BORRADOR con ✅ Enviar / ✏️ Editar / ❌ Descartar (19/10/2026, spec F1). 🚨 NADA sale hacia
 //      el lead sin el ✅ de Alberto; el envío va por el puerto de asegura EN SU HILO. Sin la tabla del pendiente, sin
@@ -20,7 +22,7 @@
 // si esto devuelve `avisado:false`. Ningún dato personal pasa por `console.*`.
 import { tgAviso } from '@/lib/telegram/avisos'
 import { altaClienteAsegura, historialClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
-import { accionOportunidadAsegura } from '@/lib/seguimiento-asegura'
+import { accionOportunidadAsegura, anadirLeadAContactosAsegura, interpretarContactosLead, type ContactosLead } from '@/lib/seguimiento-asegura'
 import { nombreDePila } from '@central/module-seguros'
 import { catastroDeLead, proponerPeticion, type CatastroLead } from './lead-correduria-pendiente'
 import { buscarAsegura } from '@/lib/correduria-puerto'
@@ -30,7 +32,7 @@ import type { CorreoNuevo } from './imap'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 import { notaSinLeer, procesarRespuestaLead } from './lead-correduria-respuesta-proceso'
 import {
-  ACTOR_TRIAJE_CORREO, PROMPT_EXTRAER_LEAD, conocidosDelLead, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
+  ACTOR_TRIAJE_CORREO, PROMPT_EXTRAER_LEAD, TIMEOUT_CONTACTOS_LEAD_MS, conocidosDelLead, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
   motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, resolverAltaLeadCorreo, textoAvisoLeadCorreo,
   textoHistorialLeadCorreo, textoPlantillaTelegram,
   type FichaLeadCorreo, type LeadCorreo, type OportunidadLeadCorreo,
@@ -116,6 +118,14 @@ export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()
       } else ficha = { estado: 'no_registrado', motivo: r.motivo }
     }
 
+    // Google Contacts al momento: solo con ficha propia. Un fallo es una línea del aviso, nunca corta el lead.
+    let contactos: ContactosLead | null = null
+    if (ficha.estado === 'nueva' || ficha.estado === 'existente') {
+      contactos = interpretarContactosLead(
+        await anadirLeadAContactosAsegura(ficha.id, TIMEOUT_CONTACTOS_LEAD_MS).catch(() => ({ status: 502, json: { estado: 'error', motivo: 'red' } })),
+      )
+    }
+
     const oportunidades: OportunidadLeadCorreo[] = []
     if ((ficha.estado === 'nueva' || ficha.estado === 'existente') && lead.pidePresupuesto !== false) {
       for (const ramo of lead.ramos) {
@@ -139,7 +149,7 @@ export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()
     const conBoton = !!(plantilla && conFicha && lead.emailRemitente && /^<[^<>\s@]+@[^<>\s@]+>$/.test(correo.messageId))
     const enviado = await tgAviso('correduria.lead-correo', textoAvisoLeadCorreo({
       remitente: correo.fromRaw, asunto: correo.subject, lead, ficha, oportunidades, plantilla,
-      peticion: conBoton ? 'boton' : 'copiar', catastro: catastro?.linea ?? null,
+      peticion: conBoton ? 'boton' : 'copiar', catastro: catastro?.linea ?? null, contactos,
     }))
     if (enviado !== null && plantilla) {
       const propuesta = conBoton && conFicha && lead.emailRemitente

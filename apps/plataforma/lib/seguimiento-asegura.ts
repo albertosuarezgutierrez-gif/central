@@ -695,6 +695,14 @@ export function oportunidadesClienteAsegura(clienteId: string): Promise<Reenvio>
 export function accionOportunidadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad', { method: 'POST', body: JSON.stringify(body) })
 }
+/**
+ * Lead de correo → Google Contacts al momento (19/10/2026): `POST /api/operador/google-contactos/lead` de
+ * asegura con la ficha recién dada de alta. Tiempo acotado (el lead del triaje tiene presupuesto); si no
+ * contesta a tiempo, `interpretarContactosLead` lo dice como error `red`, nunca como «añadido».
+ */
+export function anadirLeadAContactosAsegura(clienteId: string, timeoutMs: number): Promise<Reenvio> {
+  return llamar('/api/operador/google-contactos/lead', { method: 'POST', body: JSON.stringify({ clienteId }) }, timeoutMs)
+}
 export function crearTareaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/tarea', { method: 'POST', body: JSON.stringify(body) })
 }
@@ -1136,4 +1144,24 @@ export function adjuntoLeadAsegura(body: Record<string, unknown>): Promise<Reenv
  */
 export function tarificarLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/correo/tarificar-lead', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}
+
+// ─── Lead de correo → Google Contacts (19/10/2026) ───────────────────────────
+
+export const ESTADOS_CONTACTOS_LEAD = ['anadido', 'ya_estaba', 'revision', 'no_activada', 'sin_conexion', 'error'] as const
+export type ContactosLead = { estado: (typeof ESTADOS_CONTACTOS_LEAD)[number]; motivo: string | null }
+
+/**
+ * La respuesta del puerto de Contactos, en uno de sus seis estados. Lo que no se entiende es `error` con
+ * motivo (nunca «añadido» ni «ya estaba» por defecto: no se afirma lo que no se ha visto). Sin PII: el
+ * motivo es un código corto del puerto, no texto libre.
+ */
+export function interpretarContactosLead(r: Reenvio): ContactosLead {
+  const o = objeto(r.json)
+  const estado = uno(ESTADOS_CONTACTOS_LEAD, o?.estado)
+  const m = texto(o?.motivo)
+  const motivo = m && /^[a-z_]{1,40}$/.test(m) ? m : null
+  if (estado) return { estado, motivo }
+  if (r.status === 401) return { estado: 'error', motivo: 'no_autorizado' }
+  return { estado: 'error', motivo: motivo ?? `http_${r.status}` }
 }
