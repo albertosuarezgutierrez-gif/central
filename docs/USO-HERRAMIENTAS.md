@@ -167,30 +167,30 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 352 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 353 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 341 | 51.459 | 43.216.903 | 0 | 0 |
-| `otro` | 336 | 12.124 | 29.027.814 | 18.364.114 | 0 |
-| `lectura-directa` | 291 | 8.380 | 25.933.241 | 0 | 0 |
-| `mcp:github` | 294 | 6.843 | 5.358.853 | 54.296.318 | 96 |
-| `sql` | 211 | 4.983 | 2.511.455 | 2.351.230 | 18 |
-| `escritura` | 215 | 4.682 | 69.240.633 | 0 | 0 |
+| `bash` | 342 | 51.841 | 43.611.839 | 0 | 0 |
+| `otro` | 337 | 12.209 | 29.186.334 | 18.411.455 | 0 |
+| `lectura-directa` | 292 | 8.423 | 26.049.080 | 0 | 0 |
+| `mcp:github` | 295 | 6.867 | 5.372.784 | 54.297.031 | 96 |
+| `sql` | 212 | 5.012 | 2.518.605 | 2.351.230 | 18 |
+| `escritura` | 216 | 4.708 | 69.901.578 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
-| `mcp:Gmail` | 47 | 1.219 | 1.281.482 | 0 | 72 |
+| `mcp:Gmail` | 48 | 1.221 | 1.284.981 | 0 | 72 |
 | `mcp:Booking-com` | 42 | 1.177 | 4.851.029 | 0 | 0 |
-| `mcp:Vercel` | 72 | 937 | 1.045.741 | 204.477 | 30 |
-| `agente:general-purpose` | 108 | 751 | 454.562 | 13.837.733 | 0 |
-| `mcp:claude-code-remote` | 45 | 476 | 47.323 | 20.519 | 0 |
+| `mcp:Vercel` | 72 | 942 | 1.048.212 | 204.477 | 30 |
+| `agente:general-purpose` | 109 | 757 | 457.930 | 13.855.929 | 0 |
+| `mcp:claude-code-remote` | 46 | 483 | 47.620 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 9 | 435 | 527.640 | 0 | 0 |
-| `mcp:Google_Drive` | 23 | 381 | 415.335 | 0 | 46 |
-| `mcp:Supabase` | 125 | 373 | 60.169 | 5.123 | 7 |
-| `agente:agente-architect` | 65 | 290 | 203.321 | 7.738.469 | 0 |
+| `mcp:Google_Drive` | 23 | 389 | 425.642 | 0 | 47 |
+| `mcp:Supabase` | 126 | 375 | 60.365 | 5.123 | 7 |
+| `agente:agente-architect` | 66 | 295 | 207.446 | 7.792.385 | 0 |
 | `mcp:Google-Drive` | 24 | 140 | 127.310 | 0 | 2 |
 | `agente:agente-mecanico` | 48 | 124 | 74.810 | 7.013.978 | 0 |
 | `mcp:OpenSEO` | 5 | 92 | 76.972 | 0 | 2 |
-| `agente:rastreador-codigo` | 49 | 88 | 28.137 | 1.245.920 | 0 |
+| `agente:rastreador-codigo` | 50 | 89 | 28.498 | 1.245.920 | 0 |
 | `agente:Explore` | 36 | 79 | 38.546 | 2.139.396 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:Resend` | 8 | 70 | 42.582 | 0 | 0 |
