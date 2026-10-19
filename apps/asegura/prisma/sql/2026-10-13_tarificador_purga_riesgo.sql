@@ -27,6 +27,7 @@
 --    (ningún trabajo cerrado la tenía); si se re-aplica, sigue siendo idempotente.
 -- (18/10/2026) Añadida `vehiculoCatalogo` (sub-claves origen, marca, modelo, descripcion: el catálogo que confirmó Allianz/Mapfre
 --    y que asegura encadena a Generali). Igual que la anterior: solo CONSERVA más; no hace falta re-aplicarla.
+-- (19/10/2026) `vehiculoConfirmado` conserva también `combustible` (el dato de catálogo que casa la versión). Solo CONSERVA más; no hace falta re-aplicarla.
 
 SET search_path = seguros, public;
 
@@ -47,7 +48,7 @@ AS $f$
                                       WHEN 'direccion' THEN /*lista:sub:direccion*/ array['codigoPostal','municipio','provincia']::text[]
                                       WHEN 'seleccionVehiculo' THEN /*lista:sub:seleccionVehiculo*/ array['marca','modelo','clase','cilindradaCc','descripcion']::text[]
                                       WHEN 'eleccionVersion' THEN /*lista:sub:eleccionVersion*/ array['codigo','etiqueta']::text[]
-                                      WHEN 'vehiculoConfirmado' THEN /*lista:sub:vehiculoConfirmado*/ array['origen','denominacion','cv','cc','puertas','fechaInicio']::text[]
+                                      WHEN 'vehiculoConfirmado' THEN /*lista:sub:vehiculoConfirmado*/ array['origen','denominacion','cv','cc','puertas','fechaInicio','combustible']::text[]
                                       WHEN 'vehiculoCatalogo' THEN /*lista:sub:vehiculoCatalogo*/ array['origen','marca','modelo','descripcion']::text[]
                                       ELSE /*lista:sub:eleccionVersionIa*/ array['origen','clave']::text[] END)
                    AND jsonb_typeof(s.value) IN ('string', 'number', 'boolean', 'null'))
