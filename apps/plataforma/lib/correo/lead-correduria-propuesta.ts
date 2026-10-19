@@ -94,14 +94,17 @@ export function leerPendientesPropuesta(status: number, json: unknown): { estado
 export type OpcionNumerada = Omit<OpcionLeida, 'producto'> & { n: number; producto: string | null }
 
 /**
- * Número estable por clave: lo que ya tenía número lo conserva; lo nuevo, el siguiente libre. Lo que ya no está, fuera
- * (su botón ya no sirve). Orden de pintado: el de asegura (de la prima más baja a la más alta). PURA.
+ * Número estable por PRECIO (clave + prima): lo que ya tenía número y no ha cambiado de prima lo conserva; lo nuevo —o
+ * la misma oferta con OTRA prima— toma el siguiente libre (los números no se reutilizan). Lo que ya no está, fuera (su
+ * botón ya no sirve). Así un botón viejo (p. ej. el mensaje 🔀, que no se edita) nunca envía una prima que Alberto no ha
+ * visto: su número deja de existir y no sale nada (revisión F4). Orden de pintado: el de asegura. PURA.
  */
-export function numerar(previas: readonly { n: number; clave: string }[], opciones: readonly OpcionLeida[]): OpcionNumerada[] {
-  const porClave = new Map(previas.map((p) => [p.clave, p.n]))
+export function numerar(previas: readonly { n: number; clave: string; primaEur: number }[], opciones: readonly OpcionLeida[]): OpcionNumerada[] {
+  const porClave = new Map(previas.map((p) => [p.clave, p]))
   let siguiente = Math.max(0, ...previas.map((p) => p.n)) + 1
   return opciones.map((o) => {
-    const n = porClave.get(o.clave) ?? siguiente++
+    const previa = porClave.get(o.clave)
+    const n = previa && Math.abs(previa.primaEur - o.primaEur) < 0.005 ? previa.n : siguiente++
     return { ...o, n }
   })
 }
@@ -163,7 +166,7 @@ export function leerDatosPropuesta(v: unknown): DatosPropuesta | null {
 export function datosDePropuesta(
   p: PropuestaLeida,
   contacto: { to: string; asunto: string; messageId: string },
-  previas: readonly { n: number; clave: string }[],
+  previas: readonly { n: number; clave: string; primaEur: number }[],
 ): DatosPropuesta {
   const opciones = numerar(previas, p.opciones)
   const rec = p.recomendada ? opciones.find((o) => o.clave === p.recomendada!.clave && o.enviable) : undefined

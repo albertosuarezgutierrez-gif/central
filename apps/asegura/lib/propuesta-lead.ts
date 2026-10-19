@@ -18,7 +18,7 @@ import {
   type OpcionComparada,
 } from '@central/module-seguros'
 import { leerDatosContrato } from './correo-respuesta-lead-puro'
-import { ofertasDeRespuesta } from './presupuesto-rpa-reglas'
+import { VIA_PROPUESTA_LEAD, ofertasDeRespuesta } from './presupuesto-rpa-reglas'
 import {
   ESTADOS_HILO_CON_PRECIO, ESTADO_HILO_PROPUESTA_ENVIADA, armarPropuesta, decidirEnvio, opcionDeOfertaRpa, opcionDePrecioAvant2,
   textoHistorialPropuesta, type CabeceraPropuesta, type FilaPrecioAvant2, type PeticionPropuesta, type Propuesta,
@@ -238,8 +238,11 @@ export async function enviarPropuestaLead(correduriaId: string, e: Enviar, ahora
   })
 
   // 4. El presupuesto de ESA oferta (sola), por el camino de siempre (trigger de revisión incluido).
+  //    🚨 `via`: solo se sustituyen presupuestos AUTOMÁTICOS sin enviar (borrador del bot sin tocar, otro 📤 que no salió);
+  //    lo que Alberto hizo a mano en la oportunidad no se retira nunca.
   const { prepararPresupuestoDeOfertas } = await import('./presupuesto')
-  const prep = await prepararPresupuestoDeOfertas(correduriaId, { oportunidadId: h.oportunidad_id, ofertaIds: [d.opcion.clave], actor: e.actor }, ahora)
+  const prep = await prepararPresupuestoDeOfertas(
+    correduriaId, { oportunidadId: h.oportunidad_id, ofertaIds: [d.opcion.clave], actor: e.actor, via: VIA_PROPUESTA_LEAD }, ahora)
   if (prep.estado !== 'ok') return noEnviado(prep.motivo, prep.detalle)
   const presupuestoId = prep.presupuesto.id
 

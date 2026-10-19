@@ -56,6 +56,15 @@ test('numerar: el número de un precio es ESTABLE cuando llegan otros (un botón
   assert.equal(b.find((o) => o.clave === nuevo.clave)!.n, 4)
 })
 
+test('numerar: la MISMA oferta con otra prima toma número nuevo (un botón viejo nunca envía una prima no vista)', () => {
+  const a = numerar([], P.opciones)
+  const subida = P.opciones.map((o) => (o.clave === OF2 ? { ...o, primaEur: o.primaEur + 25 } : o))
+  const b = numerar(a, subida)
+  assert.equal(b.find((o) => o.clave === OF2)!.n, 4, 'prima cambiada → número nuevo')
+  assert.ok(!b.some((o) => o.n === 1), 'el número viejo deja de existir: su botón no envía nada')
+  assert.equal(b.find((o) => o.clave === OF1)!.n, 2, 'el resto conserva su número')
+})
+
 test('botones §3.4: 📤 recomendada (clp_pro:<p>:<n>), 🔀, ✏️ y 🚫; ≤ 64 bytes; sin datos personales', () => {
   const b = botonesPropuesta(123, D).flat()
   assert.deepEqual(b.map((x) => x.callback), ['clp_pro:123:1', 'clp_eli:123', 'clp_edt:123', 'clp_no:123'])
@@ -160,7 +169,8 @@ test('📤 es de un solo uso y manda EXACTAMENTE el precio n con la idempotencia
 })
 
 test('✅ de una petición NUNCA envía una propuesta (su texto suelto, sin precio ni portal)', () => {
-  assert.match(PEND, /SET estado = 'enviando'[^`]*AND caduca_at > now\(\) AND tipo <> 'propuesta'\s*RETURNING datos, borrador/)
+  // Tras juntarse con F3b la guarda es `tipo NOT IN ('tarificar', 'discrepancia', 'propuesta')`.
+  assert.match(PEND, /SET estado = 'enviando'[^`]*WHERE id = \$\{d\.id\} AND tipo NOT IN \([^)]*'propuesta'[^)]*\) AND estado = 'pendiente'[^`]*RETURNING datos, borrador/)
 })
 
 test('el aviso se ACTUALIZA en sitio (un pendiente por hilo): no se duplica', () => {

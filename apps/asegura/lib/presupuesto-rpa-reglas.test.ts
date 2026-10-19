@@ -267,3 +267,32 @@ test('datosUsados (18/10/2026): lo que la compañía usó viaja de la respuesta 
   const s = ofertasDeRespuesta({ ofertas: [oferta()] }, { tarificacionId: TAR, trabajoId: JOB })!
   assert.equal(filaOfertaRpa(s[0]).datosExtra.datosUsados, null)
 })
+
+// ─── F4: al enviar la propuesta de un lead, lo manual NO se retira (revisión 19/10/2026) ───────────────────────
+test('propuesta de lead: solo se sustituye lo automático; lo hecho a mano nunca', async () => {
+  const { sustituiblePorPropuestaLead, VIA_PROPUESTA_LEAD } = await import('./presupuesto-rpa-reglas.ts')
+  const prepSistema = { tipo: 'preparado', origen: 'sistema', detalle: {} }
+  const prepLead = { tipo: 'preparado', origen: 'corredor', detalle: { actor: 'agente:telegram-1', via: VIA_PROPUESTA_LEAD } }
+  const prepMano = { tipo: 'preparado', origen: 'corredor', detalle: { actor: 'alberto@x.es', origen: 'ofertas' } }
+  // Borrador del bot sin tocar → se retira; tocado por Alberto → se queda.
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: ACTOR_RPA, ocultas: 0, eventos: [prepSistema] }), true)
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: ACTOR_RPA, ocultas: 1, eventos: [prepSistema] }), false)
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: ACTOR_RPA, ocultas: 0, eventos: [prepSistema, { tipo: 'necesidades', origen: 'corredor', detalle: {} }] }), false)
+  // Otro 📤 de la propuesta que no salió → se retira (sin ocultas).
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: 'agente:telegram-1', ocultas: 0, eventos: [prepLead] }), true)
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: 'agente:telegram-1', ocultas: 2, eventos: [prepLead] }), false)
+  // Hecho a mano (botón «Generar presupuesto»), con cualquier actor → NUNCA.
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: 'alberto@x.es', ocultas: 0, eventos: [prepMano] }), false)
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: 'agente:telegram-1', ocultas: 0, eventos: [prepMano] }), false)
+  assert.equal(sustituiblePorPropuestaLead({ creadoPor: null, ocultas: 0, eventos: [] }), false)
+})
+
+test('propuesta de lead: el envío pasa `via` y el presupuesto filtra los previos con la regla', () => {
+  const dir = import.meta.dirname
+  const prop = readFileSync(join(dir, 'propuesta-lead.ts'), 'utf8')
+  assert.match(prop, /prepararPresupuestoDeOfertas\([\s\S]{0,200}via: VIA_PROPUESTA_LEAD/, 'el 📤 de la propuesta marca su vía')
+  const pre = readFileSync(join(dir, 'presupuesto.ts'), 'utf8')
+  const f = pre.slice(pre.indexOf('export async function prepararPresupuestoDeOfertas'))
+  assert.match(f, /entrada\.via === VIA_PROPUESTA_LEAD\s*\?\s*candidatos\.filter\(\(p\) => sustituiblePorPropuestaLead\(/, 'con `via`, solo se retiran los sustituibles')
+  assert.match(f, /\.\.\.\(entrada\.via \? \{ via: entrada\.via \} : \{\}\)/, 'el `preparado` deja la vía (así otro 📤 lo reconoce)')
+})
