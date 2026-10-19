@@ -2695,6 +2695,9 @@ function marcoSelectorVehiculosGenerali(page: Page): Frame {
   return marcos[0]!
 }
 
+/** Tope del clic normal de «Confirmar» antes de caer al clic por DOM (0.2.8). */
+const MS_CLIC_NORMAL_CONFIRMAR_GENERALI = 5_000
+
 /**
  * «Confirmar» del selector de vehículos, UNA vez por trabajo: guard limpio y sin ventanas de red; marco `selVehiculo` único;
  * en él, exactamente un botón/submit visible cuyo texto es EXACTAMENTE «Confirmar» (`botonSelectorVehiculosGeneraliPermitido`);
@@ -2726,7 +2729,16 @@ export async function pulsarConfirmarVehiculoGenerali(page: Page, guard: GuardEm
   comprobarBoton(desc)
   usados.add('generali:confirmar-vehiculo')
   AVANCES_USADOS.set(guard, usados)
-  await control.click()
+  // 0.2.8: capas de la página padre (chatbot, toolbar) tapan el botón dentro del iframe y el clic por coordenadas agota el tiempo.
+  // Clic normal con tope corto; si Playwright agota por intercepción, clic por DOM sobre el MISMO control ya validado (dispara el
+  // onclick de PrimeFaces y el submit). Sin `force`, sin ocultar nada de la página.
+  try {
+    await control.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+  } catch (e) {
+    if ((e as { name?: string } | null)?.name !== 'TimeoutError') throw e
+    guard.comprobar()
+    await control.evaluate((el) => (el as HTMLElement).click())
+  }
   guard.comprobar()
 }
 

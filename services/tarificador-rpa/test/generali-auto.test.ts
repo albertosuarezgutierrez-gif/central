@@ -150,8 +150,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.7')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.7')
+  assert.equal(generaliAuto.version, '0.2.8')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.8')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -632,6 +632,35 @@ test('v0.2.6 · puerta de «Confirmar»: solo el texto exacto, solo en la URL se
     assert.equal(await c.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
   } finally {
     await c.cerrar()
+  }
+})
+
+// ───────────── v0.2.8: «Confirmar» tapado por capas del padre → clic por DOM sobre el mismo control ─────────────
+
+const CAPA_TAPA = '<div id="capa" style="position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:9999"></div>'
+
+test('v0.2.8 · «Confirmar» tapado por una capa: el clic normal agota y se pulsa por DOM (una vez); sin capa, clic normal', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT']) + CAPA_TAPA)
+  try {
+    await pulsarConfirmarVehiculoGenerali(a.page, a.guard)
+    assert.equal(await a.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1, 'pulsado por DOM pese a la capa')
+    await assert.rejects(pulsarConfirmarVehiculoGenerali(a.page, a.guard), EmisionBloqueadaError)
+    assert.equal(await a.page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+  } finally {
+    await a.cerrar()
+  }
+})
+
+test('v0.2.8 · cepo: con la capa puesta, texto distinto o URL distinta NO pulsan ni por clic ni por DOM', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Emitir póliza') + CAPA_TAPA)
+  const b = await abrir(PORTAL, PRIMEFACES_HTML(['SEAT']) + CAPA_TAPA)
+  try {
+    await assert.rejects(pulsarConfirmarVehiculoGenerali(a.page, a.guard), (e: unknown) => e instanceof ErrorTarificador)
+    await assert.rejects(pulsarConfirmarVehiculoGenerali(b.page, b.guard), (e: unknown) => e instanceof ErrorTarificador)
+    for (const p of [a.page, b.page]) assert.equal(await p.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0)
+  } finally {
+    await a.cerrar()
+    await b.cerrar()
   }
 })
 
