@@ -143,19 +143,37 @@ export async function proponerPeticion(a: {
 
 const actorTelegram = (quien: string) => `agente:telegram-${quien}`
 
-/** ✅ / ✏️ / ❌. Devuelve la línea que sustituye a los botones (o `null` si ya se ha contestado de otra forma). */
-export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>): Promise<string | null> {
+/**
+ * ✅ / ✏️ / ❌ y, F3a, 🤖 `tar` / ➕ `top`. Devuelve la línea que sustituye a los botones (o `null` si ya se ha contestado de
+ * otra forma). `mensajeId`: el mensaje pulsado (el ➕ es de un solo uso POR mensaje).
+ */
+export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>, mensajeId: number | null = null): Promise<string | null> {
+  // F3a (import dinámico: el proceso de tarificar usa `proponerPeticion` de este fichero).
+  if (d.accion === 'top') return (await import('./lead-correduria-tarificar-proceso')).resolverTopeClp(d.dia, d.quien, mensajeId)
+  if (d.accion === 'tar') return (await import('./lead-correduria-tarificar-proceso')).resolverTarificarClp(d.id, d.quien)
   if (d.accion === 'no') {
-    const n = await prisma.$executeRaw(Prisma.sql`
+    const filas = await prisma.$queryRaw<{ tipo: string }[]>(Prisma.sql`
       UPDATE correduria_pendiente_tg SET estado = 'descartado', decidido_por = ${actorTelegram(d.quien)}, decidido_at = now(), esperando_edit = false, ${PURGA}
-      WHERE id = ${d.id} AND estado = 'pendiente'`).catch(() => null)
-    if (n === null) return '⚠️ <i>No he podido descartarlo; caduca solo a los 7 días.</i>'
-    return n > 0 ? '❌ <i>Descartado: no se le ha enviado nada.</i>' : lineaTrasEnviar({ estado: 'usado' })
+      WHERE id = ${d.id} AND estado = 'pendiente'
+      RETURNING tipo`).catch(() => null)
+    if (filas === null) return '⚠️ <i>No he podido descartarlo; caduca solo a los 7 días.</i>'
+    if (!filas.length) return lineaTrasEnviar({ estado: 'usado' })
+    return filas[0].tipo === 'tarificar'
+      ? '⏸ <i>En espera: no se ha lanzado ningún bot. Cuando quieras, pide el precio desde su ficha.</i>'
+      : '❌ <i>Descartado: no se le ha enviado nada.</i>'
   }
   if (d.accion === 'edt') {
+    // Un pendiente de TARIFICAR no tiene texto que editar: el dato se corrige en la ficha y el 🤖 sigue vivo.
+    const tar = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+      SELECT id FROM correduria_pendiente_tg WHERE id = ${d.id} AND tipo = 'tarificar' AND estado = 'pendiente' AND caduca_at > now()`).catch(() => null)
+    if (tar?.length) {
+      const { botonesTarificar } = await import('./lead-correduria-tarificar')
+      await tgSendButtons(`✏️ Corrige el dato en su ficha (/correduria → oportunidad → riesgo) y vuelve a pulsar 🤖 (#clp${d.id}). No se ha lanzado nada.`, botonesTarificar(d.id)).catch(() => null)
+      return null
+    }
     const n = await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_pendiente_tg SET esperando_edit = true
-      WHERE id = ${d.id} AND estado = 'pendiente' AND caduca_at > now()`).catch(() => null)
+      WHERE id = ${d.id} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at > now()`).catch(() => null)
     if (!n) return lineaTrasEnviar({ estado: 'usado' })
     await tgAskForReply(textoPedirEdicion(d.id)).catch(() => null)
     return null
@@ -163,12 +181,12 @@ export async function resolverBotonClp(d: Extract<DecisionClp, { ok: true }>): P
   // ✅ Un solo uso: dos pulsaciones (o un reintento del webhook) = una gana.
   const filas = await prisma.$queryRaw<{ datos: unknown; borrador: string }[]>(Prisma.sql`
     UPDATE correduria_pendiente_tg SET estado = 'enviando', esperando_edit = false, decidido_por = ${actorTelegram(d.quien)}, decidido_at = now()
-    WHERE id = ${d.id} AND estado = 'pendiente' AND caduca_at > now()
+    WHERE id = ${d.id} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at > now()
     RETURNING datos, borrador`).catch(() => null)
   if (filas === null) return '⚠️ <i>No he podido leer el borrador: no se ha enviado nada.</i>'
   if (!filas.length) {
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
+      UPDATE correduria_pendiente_tg SET estado = 'caducado', esperando_edit = false, ${PURGA} WHERE id = ${d.id} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at <= now()`).catch(() => {})
     return lineaTrasEnviar({ estado: 'usado' })
   }
   const datos = leerDatosPeticion(filas[0].datos)

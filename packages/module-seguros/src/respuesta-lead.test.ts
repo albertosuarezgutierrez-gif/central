@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  apareceEnCorreo, conocidosDeBloque, cuerpoSinCita, decidirFusion, faltanObligatorios, leerRespuestaIa, preguntasRepregunta,
-  promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
+  apareceEnCorreo, categoriaEstadoCivil, conocidosDeBloque, cuerpoSinCita, decidirFusion, faltanObligatorios, leerRespuestaIa, preguntasRepregunta,
+  mismoValor, promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
 } from './respuesta-lead.ts'
 import { contratoDatos } from './contrato-datos.ts'
 
@@ -112,4 +112,24 @@ test('el DNI, los datos de terceros y el nacimiento se guardan cifrados; el prom
   assert.equal(seGuardaCifrado({ clave: 'nombreVia', deLaPersona: true }), true)
   assert.equal(seGuardaCifrado({ clave: 'nombreVia' }), false)
   assert.ok(!/preexistencias/.test(promptExtraerRespuesta(['salud'], HOY)))
+})
+
+test('revisión F2: nacimiento y estado civil se comparan NORMALIZADOS con la ficha; lo distinto es discrepancia', () => {
+  // Fecha: la ficha puede guardar dd/mm/aaaa; misma fecha = igual, otra = discrepancia, ilegible = discrepancia.
+  assert.equal(mismoValor('fechaNacimiento', '1985-03-07', '07/03/1985'), true)
+  assert.equal(mismoValor('fechaNacimiento', '1985-03-07', '1985-07-03'), false)
+  assert.equal(mismoValor('fechaNacimiento', '1985-03-07', '¿?'), false)
+  // Estado civil: categoría (texto del CRM, id del vendor o lo que escribe el cliente).
+  assert.equal(categoriaEstadoCivil('casada'), 'casado')
+  assert.equal(categoriaEstadoCivil('Married'), 'casado')
+  assert.equal(categoriaEstadoCivil('pareja de hecho'), 'pareja')
+  assert.equal(categoriaEstadoCivil('lo que sea'), null)
+  assert.equal(mismoValor('estadoCivil', 'casada', 'Casado'), true)
+  assert.equal(mismoValor('estadoCivil', 'soltera', 'Casado'), false)
+  const d = decidirFusion({
+    nuevos: { fechaNacimiento: '1985-03-07', estadoCivil: 'soltera' }, previos: { fechaNacimiento: '07/03/1990', estadoCivil: 'Casado' },
+    claveBloque: 'datosVehiculo', bloque: null,
+  })
+  assert.deepEqual(d.discrepancias.sort(), ['estadoCivil', 'fechaNacimiento'])
+  assert.deepEqual(d.escribir, [])
 })

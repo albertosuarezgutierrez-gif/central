@@ -166,3 +166,32 @@ export function validarAdjunto(b: unknown): { ok: true; valor: AdjuntoLead } | {
   const nombre = txt(o.nombre).replace(/[\r\n\0]/g, ' ').slice(0, 200) || 'adjunto'
   return { ok: true, valor: { hiloId, from, gmailMessageId: o.gmailMessageId as string, nombre, mime, contenido } }
 }
+
+/**
+ * Lo que la FICHA ya dice de la persona, en la forma que compara `decidirFusion` (revisión F2, 19/10/2026): nombre y
+ * apellidos en claro, estado civil tal cual (se compara por categoría) y la fecha de nacimiento DESCIFRADA y normalizada.
+ * Un nacimiento que no se puede abrir o no tiene forma de fecha vale «¿?»: cuenta como «ya hay algo» y lo del correo sale
+ * como DISCREPANCIA, nunca se guarda como dato nuevo por encima de la ficha. `descifrar` lo trae quien llama. PURA.
+ */
+export function previosDeFicha(
+  f: { nombre: string | null; apellidos: string | null; fechaNacimiento: string | null; estadoCivil: string | null },
+  conocidos: ReadonlySet<string>,
+  descifrar: (v: string) => string,
+): Record<string, unknown> {
+  const ap = (f.apellidos ?? '').trim().split(/\s+/).filter(Boolean)
+  const out: Record<string, unknown> = {
+    ...(conocidos.has('nombre') ? { nombre: f.nombre } : {}),
+    ...(ap[0] ? { apellido1: ap[0] } : {}),
+    ...(ap.length >= 2 ? { apellido2: ap.slice(1).join(' ') } : {}),
+    ...(f.estadoCivil && f.estadoCivil.trim() ? { estadoCivil: f.estadoCivil.trim() } : {}),
+  }
+  if (f.fechaNacimiento && f.fechaNacimiento.trim()) {
+    let claro: string | null
+    try { claro = descifrar(f.fechaNacimiento) } catch { claro = null }
+    const t = (claro ?? '').trim()
+    const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(t)
+    const es = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t)
+    out.fechaNacimiento = iso ? `${iso[1]}-${iso[2]}-${iso[3]}` : es ? `${es[3]}-${es[2]}-${es[1]}` : '¿?'
+  }
+  return out
+}

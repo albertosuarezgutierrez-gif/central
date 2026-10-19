@@ -1127,3 +1127,13 @@ export function respuestaLeadAsegura(body: Record<string, unknown>): Promise<Ree
 export function adjuntoLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/correo/adjunto', { method: 'POST', body: JSON.stringify(body) }, 30_000)
 }
+
+// ─── Tarificar con BOTS un lead «listo para tarificar» (19/10/2026, F3a) ─────
+/**
+ * `POST /api/operador/correo/tarificar-lead`: `accion:'revisar'` (gratis: qué bots llegarían a precio y qué les falta),
+ * `accion:'tarificar'` (encola los bots; SOLO tras `clp_tar`) o `accion:'ampliar_tope'` (SOLO tras `clp_top`). Nunca habla
+ * con Codeoscopic. Responde compañías, claves y conteos; ningún valor personal.
+ */
+export function tarificarLeadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/correo/tarificar-lead', { method: 'POST', body: JSON.stringify(body) }, 55_000)
+}

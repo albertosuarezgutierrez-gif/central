@@ -19,6 +19,7 @@ import { llamarIAPrivada } from './ia-lead-privada'
 import type { CorreoNuevo } from './imap'
 import { ACTOR_TRIAJE_CORREO, hoyMadrid, textoPlantillaTelegram } from './lead-correduria'
 import { proponerPeticion } from './lead-correduria-pendiente'
+import { ofrecerTarificacion } from './lead-correduria-tarificar-proceso'
 import {
   cuboAdjunto, leerCasar, leerGuardar, lineaAdjuntos, plantillaRepregunta, resumirRespuesta, textoRespuestaTelegram, type CuentaAdjuntos,
   type GuardadoLead,
@@ -82,6 +83,19 @@ export async function procesarRespuestaLead(correo: CorreoNuevo, ahora = new Dat
     const plantilla = !resumen.sinLeer && !resumen.completo
       ? plantillaRepregunta({ pila: casado.pila, ramos, faltan: resumen.faltan, invalidos: resumen.invalidos, asuntoOriginal: correo.subject })
       : null
+    // F3a: datos completos → en vez del «✅ Datos completos» a secas, la revisión GRATIS de los bots y el aviso §3.3 con 🤖
+    // (o la repregunta de lo que les falta). Nada se lanza sin el botón.
+    if (!plantilla && resumen.completo && !resumen.sinLeer && RE_MSGID.test(correo.messageId)) {
+      const avisado = await ofrecerTarificacion({
+        gmailMessageId: correo.messageId,
+        datos: {
+          clienteId: casado.clienteId, oportunidadIds: casado.oportunidades.map((o) => o.id), to: correo.from, asunto: correo.subject || 'Tu seguro',
+          messageId: correo.messageId, references: referencias, pila: casado.pila, ramos, tipo: 'tarificar',
+        },
+        resumen: texto, asuntoOriginal: correo.subject,
+      })
+      if (avisado) return { leida: true, avisado: true }
+    }
     if (!plantilla) {
       const msg = await tgAviso('correduria.lead-respuesta', texto).catch(() => null)
       return { leida: true, avisado: msg !== null }
