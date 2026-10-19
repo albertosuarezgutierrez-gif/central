@@ -4,6 +4,7 @@ import { describe, it, expect } from 'vitest'
 import {
   CLAVES_RIESGO_VEHICULO,
   CLAVES_VEHICULO_CONFIRMADO,
+  anioEnRango,
   SUBCLAVES_RIESGO,
   comprobarBoton,
   datosDesdeEtiquetaVersion,
@@ -33,8 +34,8 @@ describe('VehiculoConfirmado · tipo y validación', () => {
     const moto = { ...VC, puertas: 0, cc: 0, cv: null, fechaInicio: null }
     expect(validarVehiculoConfirmado(moto)).toEqual({ ok: true, valor: moto })
   })
-  it('las claves son EXACTAMENTE las seis (sin matrícula ni bastidor)', () => {
-    expect([...CLAVES_VEHICULO_CONFIRMADO]).toEqual(['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio'])
+  it('las claves son EXACTAMENTE las siete (sin matrícula ni bastidor)', () => {
+    expect([...CLAVES_VEHICULO_CONFIRMADO]).toEqual(['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio', 'combustible'])
   })
   it('rechaza matrícula, bastidor o cualquier clave extra, sin repetir el valor', () => {
     for (const extra of [{ matricula: '1234BCD' }, { bastidor: 'VF1AAAAAA00000001' }, { otra: 1 }]) {
@@ -128,6 +129,52 @@ describe('elección de versión por SIMILITUD con el vehículo de Mapfre (CV ±1
     expect(eleccionPorVehiculoConfirmado(null, [c('A', 110, 1598)])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_vehiculo' })
     expect(eleccionPorVehiculoConfirmado(VC, [{ etiqueta: 'Seleccione…', codigo: '', datos: { cv: null, cc: null, puertas: null, fechaInicio: null } }])).toEqual({ tipo: 'sin_decidir', motivo: 'sin_candidatas' })
     expect(eleccionPorVehiculoConfirmado(VC, [{ etiqueta: '', codigo: null, datos: { cv: null, cc: null, puertas: null, fechaInicio: null } }, c('B', 110, 1598)]).tipo).toBe('unica')
+  })
+})
+
+describe('elección por similitud · combustible exacto y años en rango (19/10/2026); tolerancias CV ±10 % / CC ±5 % intactas', () => {
+  const cd = (codigo: string, extra: Partial<CandidataConDatos['datos']>): CandidataConDatos =>
+    ({ etiqueta: `VERSION ${codigo}`, codigo, datos: { cv: 110, cc: 1598, puertas: null, fechaInicio: null, ...extra } })
+  const VCG: VehiculoConfirmado = { ...VC, combustible: 'gasolina' }
+  it('mismos CV/CC pero gasolina contra diésel → no casa; si el combustible coincide, sí', () => {
+    expect(eleccionPorVehiculoConfirmado(VCG, [cd('A', { combustible: 'diesel' })])).toEqual({ tipo: 'sin_decidir', motivo: 'fuera_de_tolerancia' })
+    expect(eleccionPorVehiculoConfirmado(VCG, [cd('A', { combustible: 'diesel' }), cd('B', { combustible: 'gasolina' })])).toMatchObject({ tipo: 'unica', eleccion: { codigo: 'B' } })
+  })
+  it('si uno de los dos no trae combustible, NO descarta (null ≠ distinto)', () => {
+    expect(eleccionPorVehiculoConfirmado(VCG, [cd('A', { combustible: null })]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado(VCG, [cd('A', {})]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado({ ...VC, combustible: null }, [cd('A', { combustible: 'diesel' })]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { combustible: 'diesel' })]).tipo).toBe('unica')
+  })
+  it('fecha de inicio fuera del rango de la candidata (con ±1 año de holgura) → no casa; dentro o en el borde, sí', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { anioDesde: 2012, anioHasta: 2016 })])).toEqual({ tipo: 'sin_decidir', motivo: 'fuera_de_tolerancia' })
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { anioDesde: 2021, anioHasta: 2024 })])).toEqual({ tipo: 'sin_decidir', motivo: 'fuera_de_tolerancia' })
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { anioDesde: 2012, anioHasta: 2018 })]).tipo).toBe('unica') // 2019 = hasta + 1
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { anioDesde: 2018, anioHasta: 2022 })]).tipo).toBe('unica')
+  })
+  it('sin rango o sin fecha de inicio, los años no descartan', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', {})]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { anioDesde: null, anioHasta: null })]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado({ ...VC, fechaInicio: null }, [cd('A', { anioDesde: 2000, anioHasta: 2005 })]).tipo).toBe('unica')
+  })
+  it('rango abierto por un lado', () => {
+    expect(anioEnRango('2019-03-01', 2021, null)).toBe(false)
+    expect(anioEnRango('2019-03-01', 2020, null)).toBe(true)
+    expect(anioEnRango('2019-03-01', null, 2017)).toBe(false)
+    expect(anioEnRango('basura', 2030, 2031)).toBe(true)
+  })
+  it('las tolerancias del 14/10 siguen: CV 99 pasa, 98 no; CC +5 % pasa, +6 % no', () => {
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { cv: 99 })]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { cv: 98 })]).tipo).toBe('sin_decidir')
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { cc: 1677 })]).tipo).toBe('unica')
+    expect(eleccionPorVehiculoConfirmado(VC, [cd('A', { cc: 1700 })]).tipo).toBe('sin_decidir')
+  })
+  it('el validador admite el combustible (solo los conocidos) y sin él el objeto no lo lleva', () => {
+    expect(validarVehiculoConfirmado({ ...VC, combustible: 'diesel' })).toEqual({ ok: true, valor: { ...VC, combustible: 'diesel' } })
+    expect(validarVehiculoConfirmado({ ...VC, combustible: null })).toEqual({ ok: true, valor: VC })
+    expect(validarVehiculoConfirmado({ ...VC, combustible: 'agua' }).ok).toBe(false)
+    const p = riesgoSinDatosPersonales({ ...BASE, vehiculoConfirmado: { ...VC, combustible: 'diesel' } }, 'auto')
+    expect(p.vehiculoConfirmado).toEqual({ ...VC, combustible: 'diesel' }) // sobrevive a la purga
   })
 })
 

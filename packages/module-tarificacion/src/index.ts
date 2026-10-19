@@ -414,6 +414,8 @@ export {
   validarVehiculoConfirmado,
   vehiculoConfirmadoDesdeMapfre,
   eleccionPorVehiculoConfirmado,
+  anioEnRango,
+  HOLGURA_ANIOS,
   TOLERANCIA_CV,
   TOLERANCIA_CC,
   AVISO_VERSION_POR_SIMILITUD,

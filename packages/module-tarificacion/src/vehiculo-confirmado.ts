@@ -16,7 +16,7 @@
 // de persona o IA siempre manda sobre esta (lo decide el llamante).
 
 import { pareceDatoPersonalEnDescripcion } from './formulario-auto.ts'
-import { esOpcionVacia, fechaIsoDesdeTexto, type CandidatoVersion, type EleccionVersion } from './vehiculo.ts'
+import { COMBUSTIBLES, esOpcionVacia, fechaIsoDesdeTexto, type Combustible, type CandidatoVersion, type EleccionVersion } from './vehiculo.ts'
 
 export const ORIGENES_VEHICULO_CONFIRMADO = ['mapfre'] as const
 export type OrigenVehiculoConfirmado = (typeof ORIGENES_VEHICULO_CONFIRMADO)[number]
@@ -33,10 +33,12 @@ export type VehiculoConfirmado = {
   puertas: number | null
   /** Fecha de inicio del vehículo en el catálogo (ISO AAAA-MM-DD). */
   fechaInicio: string | null
+  /** Combustible (Mapfre lo da en el resumen tras confirmar la fila). Ausente o `null` = «no consta»: nunca descarta una candidata. */
+  combustible?: Combustible | null
 }
 
 /** Las ÚNICAS claves del objeto (la misma lista conserva la purga: `SUBCLAVES_RIESGO.vehiculoConfirmado`). */
-export const CLAVES_VEHICULO_CONFIRMADO = ['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio'] as const
+export const CLAVES_VEHICULO_CONFIRMADO = ['origen', 'denominacion', 'cv', 'cc', 'puertas', 'fechaInicio', 'combustible'] as const
 export const MAX_DENOMINACION_VEHICULO = 200
 
 const espacios = (s: string) => s.replace(/\s+/g, ' ').trim()
@@ -78,8 +80,14 @@ export function validarVehiculoConfirmado(v: unknown): ValidacionVehiculoConfirm
     if (f === null) errores.push('vehiculoConfirmado.fechaInicio: tiene que ser una fecha AAAA-MM-DD (o null si no consta)')
     else fechaInicio = f
   }
+  let combustible: Combustible | null = null
+  if (o.combustible !== undefined && o.combustible !== null) {
+    if (typeof o.combustible === 'string' && (COMBUSTIBLES as readonly string[]).includes(o.combustible)) combustible = o.combustible as Combustible
+    else errores.push(`vehiculoConfirmado.combustible: tiene que ser uno de ${COMBUSTIBLES.join(', ')} (o null si no consta)`)
+  }
   if (errores.length || !origen || denominacion === null) return { ok: false, errores }
-  return { ok: true, valor: { origen, denominacion, cv, cc, puertas, fechaInicio } }
+  // `combustible` solo aparece si consta: un objeto sin él es idéntico al de antes (y a lo ya guardado).
+  return { ok: true, valor: { origen, denominacion, cv, cc, puertas, fechaInicio, ...(combustible ? { combustible } : {}) } }
 }
 
 /** Celdas de catálogo de UNA fila del diálogo «Selección de vehículo» de Mapfre (nunca matrícula ni bastidor). */
@@ -115,7 +123,17 @@ export function vehiculoConfirmadoDesdeMapfre(f: FilaCatalogoMapfre): VehiculoCo
 // ───────────────────────── elección de versión por el vehículo confirmado ─────────────────────────
 
 /** Datos de catálogo de una candidata de versión de OTRA compañía. `null` = la candidata no lo dice. */
-export type DatosVersionCatalogo = { cv: number | null; cc: number | null; puertas: number | null; fechaInicio: string | null }
+export type DatosVersionCatalogo = {
+  cv: number | null
+  cc: number | null
+  puertas: number | null
+  fechaInicio: string | null
+  /** Opcionales: ausente o `null` = la candidata no lo dice (no descarta). */
+  combustible?: Combustible | null
+  /** Años de comercialización de la candidata (rango abierto por un lado si solo trae uno). */
+  anioDesde?: number | null
+  anioHasta?: number | null
+}
 export type CandidataConDatos = CandidatoVersion & { datos: DatosVersionCatalogo }
 
 export type ResolucionPorVehiculoConfirmado =
@@ -130,6 +148,8 @@ export const TOLERANCIA_CC = 0.05
 export const AVISO_VERSION_POR_SIMILITUD = 'Versión elegida por similitud con el vehículo confirmado en Mapfre (CV ±10 %, CC ±5 %), no por coincidencia exacta.'
 
 const EPS = 1e-9
+/** Holgura (años) al comprobar la fecha de inicio de Mapfre contra el rango de la candidata. */
+export const HOLGURA_ANIOS = 1
 
 /** Distancia relativa normalizada por su tolerancia (0 = igual; ≤1 = dentro); `null` = fuera de tolerancia. */
 function distanciaRelativa(base: number, otro: number, tol: number): number | null {
@@ -143,6 +163,16 @@ function palabrasEnComun(denominacion: string, etiqueta: string): number {
   const trocear = (t: string) => t.toUpperCase().split(/[^A-Z0-9ÁÉÍÓÚÜÑ]+/).filter((w) => w.length >= 2)
   const e = new Set(trocear(etiqueta))
   return [...new Set(trocear(denominacion))].filter((w) => e.has(w)).length
+}
+
+/** ¿El año de `fechaInicio` cae en [desde, hasta] con `HOLGURA_ANIOS` de holgura? Sin fecha o sin ninguna cota → true (no se sabe). */
+export function anioEnRango(fechaInicio: string | null | undefined, desde: number | null | undefined, hasta: number | null | undefined): boolean {
+  const m = typeof fechaInicio === 'string' ? /^(\d{4})-\d{2}-\d{2}$/.exec(fechaInicio) : null
+  if (!m) return true
+  const anio = Number(m[1])
+  if (typeof desde === 'number' && anio < desde - HOLGURA_ANIOS) return false
+  if (typeof hasta === 'number' && anio > hasta + HOLGURA_ANIOS) return false
+  return true
 }
 
 /**
@@ -163,6 +193,10 @@ function puntuar(vc: VehiculoConfirmado, d: DatosVersionCatalogo): { distancia: 
   }
   if (!fuera && partes.length === 0) return { motivo: 'sin_datos' }
   if (vc.puertas !== null && d.puertas !== null && d.puertas !== undefined && vc.puertas !== d.puertas) fuera = true
+  // Combustible exacto (Alberto, 19/10/2026) cuando AMBOS lo traen; si uno no consta, no descarta.
+  if (vc.combustible && d.combustible && vc.combustible !== d.combustible) fuera = true
+  // Años: la fecha de inicio de Mapfre tiene que caer en el rango de la candidata (±1 año). Sin fecha o sin rango, no descarta.
+  if (!anioEnRango(vc.fechaInicio, d.anioDesde, d.anioHasta)) fuera = true
   if (fuera) return { motivo: 'fuera_de_tolerancia' }
   return { distancia: partes.reduce((a, b) => a + b, 0) / partes.length }
 }

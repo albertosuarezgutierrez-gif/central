@@ -6,6 +6,11 @@ import {
   ESPERA_MAXIMA_VEHICULO_MS,
   MOTIVO_CANCELADO_CADUCADO,
   MOTIVO_CANCELADO_SIN_ORIGEN,
+  ESPERA_MAXIMA_IDENTIFICACION_MS,
+  MOTIVO_LIBERADO_CADUCADO,
+  MOTIVO_LIBERADO_ORIGEN_BLOQUEADO,
+  MOTIVO_LIBERADO_SIN_ORIGEN,
+  esperaLiberable,
   MOTIVO_SIN_OPORTUNIDAD,
   decidirEspera,
   enEsperaVehiculo,
@@ -140,4 +145,41 @@ test('cableado · barrido de esperas: cuenta los orígenes vivos ANTES de leer l
   assert.ok(vivos > 0 && oks > vivos, 'orden: contar vivos → leer ok')
   const cancelar = t.slice(t.indexOf("set estado = 'cancelado'"))
   assert.match(cancelar, /and jsonb_typeof\(riesgo\) = 'object' and \(riesgo -> \$\{CLAVE_ESPERA_VEHICULO\}::text\) is not null`/)
+})
+
+// ─── Fase 4: liberar las esperas de Mapfre/Allianz (19/10/2026) ───
+test('solo Mapfre/Allianz AUTO se pueden liberar; Generali no (no busca por matrícula)', () => {
+  assert.equal(esperaLiberable('mapfre', 'auto'), true)
+  assert.equal(esperaLiberable(' Allianz ', 'auto'), true)
+  assert.equal(esperaLiberable('generali', 'auto'), false)
+  assert.equal(esperaLiberable('mapfre', 'hogar'), false)
+})
+
+test('espera de Mapfre/Allianz: sin identificación en curso, con el origen bloqueado o pasadas 2 h → LIBERAR (nunca cancelar ni congelar)', () => {
+  const t0 = new Date('2026-10-19T10:00:00Z')
+  const luego = (ms: number) => new Date(t0.getTime() + ms)
+  for (const compania of ['mapfre', 'allianz']) {
+    const b = { vehiculo: null, creadoAt: t0, compania, ramo: 'auto' }
+    assert.deepEqual(decidirEspera({ ...b, origenesVivos: 1, ahora: luego(60_000) }), { tipo: 'esperar' })
+    assert.deepEqual(decidirEspera({ ...b, origenesVivos: 0, ahora: luego(60_000) }), { tipo: 'liberar', motivo: MOTIVO_LIBERADO_SIN_ORIGEN })
+    assert.deepEqual(decidirEspera({ ...b, origenesVivos: 1, origenBloqueado: true, ahora: luego(60_000) }), { tipo: 'liberar', motivo: MOTIVO_LIBERADO_ORIGEN_BLOQUEADO })
+    assert.deepEqual(decidirEspera({ ...b, origenesVivos: 1, ahora: luego(ESPERA_MAXIMA_IDENTIFICACION_MS) }), { tipo: 'liberar', motivo: MOTIVO_LIBERADO_CADUCADO })
+    assert.equal(decidirEspera({ ...b, origenesVivos: 1, ahora: luego(ESPERA_MAXIMA_IDENTIFICACION_MS - 1) }).tipo, 'esperar')
+  }
+  assert.ok(ESPERA_MAXIMA_IDENTIFICACION_MS < ESPERA_MAXIMA_VEHICULO_MS)
+})
+
+test('espera liberable con vehículo disponible → INYECTAR (aunque el origen esté bloqueado o haya caducado)', () => {
+  const t0 = new Date('2026-10-19T10:00:00Z')
+  const d = decidirEspera({ vehiculo: { vehiculoConfirmado: VC as never }, origenesVivos: 0, creadoAt: t0, ahora: new Date(t0.getTime() + 9 * 3_600_000), compania: 'mapfre', ramo: 'auto', origenBloqueado: true })
+  assert.equal(d.tipo, 'inyectar')
+})
+
+test('Generali conserva su regla: nunca se libera (ni con el origen bloqueado); cancela sin origen o a las 24 h', () => {
+  const t0 = new Date('2026-10-19T10:00:00Z')
+  const luego = (ms: number) => new Date(t0.getTime() + ms)
+  const b = { vehiculo: null, creadoAt: t0, compania: 'generali', ramo: 'auto', origenBloqueado: true }
+  assert.deepEqual(decidirEspera({ ...b, origenesVivos: 1, ahora: luego(3 * 3_600_000) }), { tipo: 'esperar' })
+  assert.deepEqual(decidirEspera({ ...b, origenesVivos: 0, ahora: luego(60_000) }), { tipo: 'cancelar', motivo: MOTIVO_CANCELADO_SIN_ORIGEN })
+  assert.deepEqual(decidirEspera({ ...b, origenesVivos: 1, ahora: luego(ESPERA_MAXIMA_VEHICULO_MS) }), { tipo: 'cancelar', motivo: MOTIVO_CANCELADO_CADUCADO })
 })

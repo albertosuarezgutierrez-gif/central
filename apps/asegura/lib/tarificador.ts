@@ -48,6 +48,7 @@ import {
   ORIGENES_VEHICULO_ENCADENADO,
   decidirEspera,
   esOrigenVehiculo,
+  esperaLiberable,
   necesitaVehiculoEncadenado,
   riesgoAlEncolar,
   riesgoConVehiculo,
@@ -931,7 +932,7 @@ export type ResumenBarrido = {
   /** F2: atascos sin respuesta que pasaron a `error_definitivo`. */
   atascosCaducados?: number
   /** Generali en espera del vehículo (18/10/2026): cuántos recibieron el de Allianz/Mapfre y cuántos se cancelaron sin él. */
-  esperasVehiculo?: { inyectados: number; cancelados: number; esperando: number }
+  esperasVehiculo?: { inyectados: number; cancelados: number; liberados: number; esperando: number }
   lanzar: Record<string, ResumenLanzar>
 }
 
@@ -1035,7 +1036,7 @@ async function leerOrigenesVehiculo(db: Db, correduriaId: string, oportunidadId:
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${oportunidadId}::uuid
       and t.estado = 'ok' and t.ramo = 'auto' and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[])
-      and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'tarificar'
+      and coalesce(to_jsonb(t)->>'modo', 'tarificar') in ('tarificar', 'identificar')
     order by t.terminado_at desc nulls last
     limit 10`
   return filas.map((f) => ({ compania: f.compania, ramo: f.ramo, riesgo: f.riesgo, terminadoAt: f.terminado_at }))
@@ -1058,33 +1059,71 @@ async function inyectarVehiculoEnEspera(db: Db, correduriaId: string, oportunida
 }
 
 /**
- * Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta; sin ningún origen vivo
- * o pasadas 24 h → `cancelado` con el motivo (y riesgo purgado). Nunca se lanza uno sin vehículo.
+ * Barrido de los trabajos en espera del vehículo: con un `ok` de origen en la oportunidad → se inyecta. Sin vehículo:
+ *   · Generali (no busca por matrícula): sin ningún origen vivo o pasadas 24 h → `cancelado` con el motivo (y riesgo purgado).
+ *   · Mapfre/Allianz: nunca se cancelan ni se congelan; si la identificación no está en curso, falló, Mapfre está pausado/inactivo
+ *     o pasaron 2 h, se LIBERAN (se quita la marca) y tarifican preguntando su versión, como siempre.
  */
-async function resolverEsperasVehiculo(correduriaId: string): Promise<{ inyectados: number; cancelados: number; esperando: number }> {
-  const res = { inyectados: 0, cancelados: 0, esperando: 0 }
-  const esperas = await prisma.$queryRaw<{ id: string; oportunidad_id: string | null; created_at: Date; ahora: Date }[]>`
-    select t.id::text as id, t.oportunidad_id::text as oportunidad_id, t.created_at, now() as ahora
+async function resolverEsperasVehiculo(correduriaId: string): Promise<{ inyectados: number; cancelados: number; liberados: number; esperando: number }> {
+  const res = { inyectados: 0, cancelados: 0, liberados: 0, esperando: 0 }
+  const esperas = await prisma.$queryRaw<{ id: string; oportunidad_id: string | null; compania: string; ramo: string; created_at: Date; ahora: Date }[]>`
+    select t.id::text as id, t.oportunidad_id::text as oportunidad_id, t.compania, t.ramo, t.created_at, now() as ahora
     from seguros.tarificacion_trabajos t
     where t.correduria_id = ${correduriaId}::uuid and t.estado = 'pendiente'
       and (case when jsonb_typeof(t.riesgo) = 'object' then t.riesgo -> ${CLAVE_ESPERA_VEHICULO}::text end) is not null
     order by t.created_at
     limit 100`
+  // ¿Puede avanzar una identificación de Mapfre? (pausa viva de la pareja o integración inactiva/ausente → no). Una vez por barrido, y solo si hace falta.
+  let mapfreBloqueado: boolean | null = null
+  const origenBloqueado = async (): Promise<boolean> => {
+    if (mapfreBloqueado === null) {
+      // Si no se puede comprobar, se considera bloqueado: lo conservador es liberar (que pregunte), nunca congelar.
+      mapfreBloqueado = await Promise.all([pausaViva(prisma, correduriaId, 'mapfre', 'auto'), leerIntegracion(correduriaId, 'mapfre', 'auto')])
+        .then(([pausa, integ]) => pausa || !integ || !integ.activo)
+        .catch(() => true)
+    }
+    return mapfreBloqueado
+  }
   for (const w of esperas) {
+    const liberable = esperaLiberable(w.compania, w.ramo)
     // Orden (revisión 18/10/2026): PRIMERO se cuentan los orígenes vivos y DESPUÉS se leen los `ok`. Al revés, un Allianz/Mapfre
     // que acaba `ok` entre las dos lecturas no se ve ni como `ok` ni como vivo, y el Generali se cancelaría con vehículo disponible.
+    // Para un trabajo liberable el origen vivo es una IDENTIFICACIÓN de Mapfre (`modo = identificar`), no otra tarificación.
     const vivos = w.oportunidad_id
-      ? await prisma.$queryRaw<{ n: number }[]>`
-          select count(*)::int as n from seguros.tarificacion_trabajos t
-          where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
-            and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[]) and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
+      ? liberable
+        ? await prisma.$queryRaw<{ n: number }[]>`
+            select count(*)::int as n from seguros.tarificacion_trabajos t
+            where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
+              and t.compania = 'mapfre' and coalesce(to_jsonb(t)->>'modo', 'tarificar') = 'identificar'
+              and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
+        : await prisma.$queryRaw<{ n: number }[]>`
+            select count(*)::int as n from seguros.tarificacion_trabajos t
+            where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id = ${w.oportunidad_id}::uuid and t.ramo = 'auto'
+              and t.compania = any(${[...ORIGENES_VEHICULO_ENCADENADO]}::text[]) and t.estado = any(${[...ESTADOS_ORIGEN_VIVOS]}::text[])`
       : [{ n: 0 }]
     const origenes = w.oportunidad_id ? await leerOrigenesVehiculo(prisma, correduriaId, w.oportunidad_id) : []
-    const d = decidirEspera({ vehiculo: vehiculoDeOrigenes(origenes), origenesVivos: vivos[0]?.n ?? 0, creadoAt: w.created_at, ahora: w.ahora })
+    const vehiculo = vehiculoDeOrigenes(origenes)
+    const d = decidirEspera({
+      vehiculo,
+      origenesVivos: vivos[0]?.n ?? 0,
+      creadoAt: w.created_at,
+      ahora: w.ahora,
+      compania: w.compania,
+      ramo: w.ramo,
+      origenBloqueado: liberable && !vehiculo ? await origenBloqueado() : false,
+    })
     if (d.tipo === 'esperar') {
       res.esperando++
     } else if (d.tipo === 'inyectar') {
       res.inyectados += await prisma.$transaction((tx) => inyectarVehiculoEnEspera(tx, correduriaId, w.oportunidad_id!, d.vehiculo))
+    } else if (d.tipo === 'liberar') {
+      // Solo si SIGUE pendiente y en espera: si mientras tanto el registro del ok le inyectó el vehículo (quita la marca), no hay nada que liberar.
+      const l = await prisma.$executeRaw`
+        update seguros.tarificacion_trabajos
+        set riesgo = riesgo - ${CLAVE_ESPERA_VEHICULO}::text, updated_at = now()
+        where id = ${w.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'
+          and jsonb_typeof(riesgo) = 'object' and (riesgo -> ${CLAVE_ESPERA_VEHICULO}::text) is not null`
+      res.liberados += l
     } else {
       const c = await prisma.$executeRaw`
         update seguros.tarificacion_trabajos

@@ -28,6 +28,8 @@ export const ORIGENES_VEHICULO_ENCADENADO = Object.freeze(['allianz', 'mapfre'] 
 export const ESTADOS_ORIGEN_VIVOS = Object.freeze(['pendiente', 'en_curso', 'error_reintentable', 'atascado'] as const)
 /** Espera máxima de un Generali sin vehículo: pasado esto se cancela con el motivo (la oportunidad se puede volver a pedir). */
 export const ESPERA_MAXIMA_VEHICULO_MS = 24 * 3_600_000
+/** Espera máxima de un trabajo (Mapfre/Allianz) que espera una IDENTIFICACIÓN: pasado esto se LIBERA y pregunta su versión. */
+export const ESPERA_MAXIMA_IDENTIFICACION_MS = 2 * 3_600_000
 const MAX_NOMBRE_CATALOGO = 80
 
 export const MOTIVO_SIN_OPORTUNIDAD = 'generali_sin_vehiculo: Generali no busca el vehículo por matrícula; pídelo desde una oportunidad junto a Allianz o Mapfre (o con marca y modelo confirmados)'
@@ -160,14 +162,49 @@ export function riesgoAlEncolar<T>(riesgo: T, oportunidadId: string | null, deOr
   return { ok: true, riesgo: riesgoEnEspera(sinMarca), enEspera: true }
 }
 
-export type DecisionEspera = { tipo: 'inyectar'; vehiculo: VehiculoEncadenado } | { tipo: 'esperar' } | { tipo: 'cancelar'; motivo: string }
+/** Motivos (traza, sin datos personales) de liberar una espera sin vehículo. */
+export const MOTIVO_LIBERADO_SIN_ORIGEN = 'sin_identificacion: no hay identificación del vehículo en curso; el robot pregunta su versión'
+export const MOTIVO_LIBERADO_ORIGEN_BLOQUEADO = 'sin_identificacion: Mapfre está pausado o inactivo; el robot pregunta su versión'
+export const MOTIVO_LIBERADO_CADUCADO = 'sin_identificacion: la identificación tardó más de 2 h; el robot pregunta su versión'
+
+/**
+ * ¿Un trabajo en espera de esta compañía/ramo se puede LIBERAR (sigue SIN vehículo y tarifica preguntando su versión)? Mapfre y
+ * Allianz sí: buscan por matrícula y saben preguntar. Generali NO: no busca por matrícula, sin vehículo solo puede fallar. PURA.
+ */
+export function esperaLiberable(compania: string, ramo: string): boolean {
+  return ramo === 'auto' && ['mapfre', 'allianz'].includes(claveCompania(compania))
+}
+
+export type DecisionEspera =
+  | { tipo: 'inyectar'; vehiculo: VehiculoEncadenado }
+  | { tipo: 'esperar' }
+  | { tipo: 'cancelar'; motivo: string }
+  /** Quitar la marca de espera SIN vehículo: el trabajo se reclama y tarifica como si nunca hubiera esperado. */
+  | { tipo: 'liberar'; motivo: string }
 
 /**
  * Un Generali en espera, en el BARRIDO: con vehículo → inyectar; sin vehículo y con algún origen vivo y dentro de las 24 h →
  * esperar; si no → cancelar con el motivo (nunca se lanza sin vehículo). PURA.
  */
-export function decidirEspera(e: { vehiculo: VehiculoEncadenado | null; origenesVivos: number; creadoAt: Date; ahora: Date }): DecisionEspera {
+export function decidirEspera(e: {
+  vehiculo: VehiculoEncadenado | null
+  origenesVivos: number
+  creadoAt: Date
+  ahora: Date
+  /** Compañía/ramo del trabajo que espera. Por defecto Generali auto (la regla de siempre). */
+  compania?: string
+  ramo?: string
+  /** El origen (identificación de Mapfre) no puede avanzar: pausa viva o integración inactiva/ausente. Solo cuenta si se puede liberar. */
+  origenBloqueado?: boolean
+}): DecisionEspera {
   if (e.vehiculo) return { tipo: 'inyectar', vehiculo: e.vehiculo }
+  // Mapfre/Allianz: NUNCA se quedan congeladas ni se cancelan por no tener vehículo; se liberan y preguntan su versión.
+  if (esperaLiberable(e.compania ?? 'generali', e.ramo ?? 'auto')) {
+    if (e.origenBloqueado) return { tipo: 'liberar', motivo: MOTIVO_LIBERADO_ORIGEN_BLOQUEADO }
+    if (e.ahora.getTime() - e.creadoAt.getTime() >= ESPERA_MAXIMA_IDENTIFICACION_MS) return { tipo: 'liberar', motivo: MOTIVO_LIBERADO_CADUCADO }
+    if (e.origenesVivos > 0) return { tipo: 'esperar' }
+    return { tipo: 'liberar', motivo: MOTIVO_LIBERADO_SIN_ORIGEN }
+  }
   if (e.ahora.getTime() - e.creadoAt.getTime() >= ESPERA_MAXIMA_VEHICULO_MS) return { tipo: 'cancelar', motivo: MOTIVO_CANCELADO_CADUCADO }
   if (e.origenesVivos > 0) return { tipo: 'esperar' }
   return { tipo: 'cancelar', motivo: MOTIVO_CANCELADO_SIN_ORIGEN }
