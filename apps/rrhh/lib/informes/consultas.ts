@@ -88,7 +88,7 @@ const CONSULTAS: Record<string, Consulta> = {
   empleados: (empresaId, f, limite) => sql`
     SELECT e.id::text AS empleado_id, ${EMP_ETIQUETA} AS empleado_etiqueta,
            ${EMP_NOMBRE} AS empleado, e.dni, e.nss, e.email, e.telefono, e.puesto, e.categoria,
-           e.grupo_cotizacion, e.tipo_contrato, e.tipo_jornada, e.centro_trabajo, e.localidad,
+           e.grupo_cotizacion, e.tipo_contrato, e.tipo_jornada, e.coche, e.matricula, e.centro_trabajo, e.localidad,
            e.provincia, e.estado_civil, e.fecha_nacimiento::text AS fecha_nacimiento,
            e.fecha_alta::text AS fecha_alta,
            -- Antigüedad hasta hoy solo para activos: de una baja no sabemos la fecha de salida → null.
