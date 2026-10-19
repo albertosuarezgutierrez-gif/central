@@ -119,7 +119,7 @@ export default function BandejaAtencion() {
                       alTerminar={async (m) => { setAviso(m); await cargar(0) }} />
                   )}
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {it.puedeReintentar && (
+                    {it.puedeReintentar && !it.opcionesPoblacion && !it.opcionesVersion && (
                       <button type="button" onClick={() => void resolver(it, 'reintentar')} disabled={ocupado !== null} style={{ ...btnStyle('primario'), minHeight: 44 }}>
                         {ocupado === it.id ? 'Un momento…' : 'Reintentar'}
                       </button>

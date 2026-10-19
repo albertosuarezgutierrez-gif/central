@@ -239,7 +239,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
 async function leerTomadorFicha(correduriaId: string, clienteId: string): Promise<FilaTomadorFicha | null> {
   const filas = await prisma.$queryRaw<{ dni: string | null; nombre: string | null; apellidos: string | null; fecha_nacimiento: string | null; tipo_persona: string | null }[]>`
     select dni, nombre, apellidos, fecha_nacimiento, tipo_persona::text as tipo_persona
-    from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+    from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
   const f = filas[0]
   return f ? { dni: f.dni, nombre: f.nombre, apellidos: f.apellidos, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona } : null
 }

@@ -504,7 +504,7 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\), \(\) => lecturaTomadorHogar\(fichaHogar, decryptField\)\)/)
   assert.match(fn, /let riesgoEntrada: RiesgoComunidad \| FormularioAuto \| FormularioHogarSinTomador = e\.riesgo\n/)
   assert.ok(!fn.includes('aplicarDatosTomador('), 'encolar NO inyecta (eso es al entregar)')
-  assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid`\n  const f = filas\[0\]/)
+  assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and merged_into_cliente_id is null`\n  const f = filas\[0\]/)
   const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
   assert.match(w, /if \(modo !== 'exploracion' && modo !== 'humo' && necesitaDatosTomador\(f\.compania, f\.ramo, riesgo\)\)/)
   assert.match(w, /aplicarDatosTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaTomadorFicha\(ficha, decryptField\)\)/)

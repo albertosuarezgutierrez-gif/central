@@ -127,3 +127,10 @@ test('versión: el buscador filtra por todas las palabras, sin tildes ni mayúsc
   assert.deepEqual(filtrarOpcionesVersion(VERS, 'polo'), [2])
   assert.deepEqual(filtrarOpcionesVersion(VERS, 'seat'), [])
 })
+
+// ─── «Reintentar» genérico oculto con elección de población/versión (19/10/2026) ───
+test('BandejaAtencion: el botón «Reintentar» genérico no sale si el item pide elegir población o versión', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../app/(usuario)/correduria/tarificador/BandejaAtencion.tsx', import.meta.url), 'utf8')
+  assert.match(src, /\{it\.puedeReintentar && !it\.opcionesPoblacion && !it\.opcionesVersion && \(\s*<button type="button" onClick=\{\(\) => void resolver\(it, 'reintentar'\)/)
+})

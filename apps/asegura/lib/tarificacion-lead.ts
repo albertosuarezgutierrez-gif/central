@@ -15,7 +15,7 @@ import { prisma } from './tenant'
 import { prismaAsegura } from './asegura-db'
 import { claveCompania, puedeAutomatizar } from '@central/module-tarificacion'
 import { encolarTrabajo, lanzarPendientes } from './tarificador'
-import { rpaActivo, validarEntradaRamo } from './tarificador-reglas'
+import { companiaAdmiteRamoRpa, rpaActivo, validarEntradaRamo } from './tarificador-reglas'
 import { pausaViva } from './tarificador-robustez'
 import { conocidosDeFicha, elegirEnContrato, leerDatosContrato } from './correo-respuesta-lead-puro'
 import { claveDatosDeRamo, conocidosDeBloque, faltanObligatorios, referenciaCatastralValida, normalizarReferenciaCatastral, type CodigoConcreto } from '@central/module-seguros'
@@ -79,6 +79,8 @@ async function companiasConBot(correduriaId: string, ramo: string): Promise<stri
   const out: string[] = []
   for (const f of filas) {
     if (!puedeAutomatizar(f.modo)) continue
+    // Una fila activa solo habilita EXPLORAR en ramos como hogar (mapfre/occident): sin bot de tarificación no cuenta (→ `sin_bot`).
+    if (!companiaAdmiteRamoRpa(f.compania, ramo)) continue
     if (await pausaViva(prisma, correduriaId, claveCompania(f.compania), ramo).catch(() => true)) continue
     out.push(claveCompania(f.compania))
   }
