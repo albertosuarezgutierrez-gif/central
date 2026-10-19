@@ -51,7 +51,7 @@ async function pedirJson(url: string, init?: RequestInit): Promise<{ status: num
 }
 
 type Integraciones = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'ok'; lista: IntegracionVista[] }
-type Seguimiento = { trabajoId: string; duplicado: boolean; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
+type Seguimiento = { trabajoId: string; duplicado: boolean; mensajePrevio: string | null; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
 
 const sinBots = (texto: string, estado?: string) => (
   <div style={cardStyle}>
@@ -315,11 +315,11 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
   }, [])
   useEffect(() => parar, [parar])
 
-  const sondear = useCallback((trabajoId: string, duplicado: boolean) => {
+  const sondear = useCallback((trabajoId: string, duplicado: boolean, mensajePrevio: string | null) => {
     parar()
     const mia = generacion.current
     const inicio = Date.now()
-    setSeg({ trabajoId, duplicado, trabajo: null, aviso: null, agotado: false })
+    setSeg({ trabajoId, duplicado, mensajePrevio, trabajo: null, aviso: null, agotado: false })
     const vuelta = async () => {
       const r = await pedirJson(`/api/correduria/tarificador/trabajo/${encodeURIComponent(trabajoId)}`)
       if (mia !== generacion.current) return
@@ -354,7 +354,10 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
       })
       const e = leerEncoladoBot(r.status, r.json)
       if (!e.ok) { setError(e.mensaje); return }
-      sondear(e.trabajoId, e.duplicado)
+      // `mensaje` (asegura): estado real del trabajo previo. Vacío o ausente → texto de respaldo.
+      const mensaje = (r.json as { mensaje?: unknown } | null)?.mensaje
+      const m = typeof mensaje === 'string' ? mensaje.trim() : ''
+      sondear(e.trabajoId, e.duplicado, m || null)
     } finally {
       enVuelo.current = false
       setOcupado(false)
@@ -375,7 +378,7 @@ function FilaBot({ integracion, clienteId, oportunidadId, formulario, ramo, avis
       {error && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)', overflowWrap: 'anywhere' }}>{error}</span>}
       {seg && (
         <div aria-live="polite" style={{ display: 'grid', gap: 6, minWidth: 0 }}>
-          {seg.duplicado && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Ya había un trabajo en marcha con estos datos: se muestra ese.</span>}
+          {seg.duplicado && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{seg.mensajePrevio ?? 'Ya había un trabajo en marcha con estos datos: se muestra ese.'}</span>}
           {!res && !seg.aviso && <span style={{ fontSize: 13, color: 'var(--muted)' }}>Comprobando el estado…</span>}
           {res && <strong style={{ fontSize: 14, color: TONO[res.tono] }}>{nombre}: {res.titulo}</strong>}
           {res?.motivo && <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>{res.motivo}</span>}
