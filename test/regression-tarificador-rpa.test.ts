@@ -635,15 +635,18 @@ test('MAPFRE · la PUERTA es la fila companias_integracion: el worker registra s
 
 test('MAPFRE AUTO (coche, 14/10/2026) · se encola desde la ficha como moto: asegura y plataforma aceptan el ramo, y la puerta sigue siendo la fila', () => {
   const reglas = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador-reglas.ts'), 'utf8'))
-  assert.match(reglas, /export const RAMOS_TARIFICABLES_RPA = \['comunidades', 'moto', 'auto'\] as const/)
+  assert.match(reglas, /export const RAMOS_TARIFICABLES_RPA = \['comunidades', 'moto', 'auto', 'hogar'\] as const/)
+  // 19/10/2026: Hogar solo con Allianz (la fila mapfre/occident hogar solo habilita la exploración), formulario sin tomador.
+  assert.match(reglas, /export const COMPANIAS_HOGAR_RPA = \['allianz'\] as const/)
+  assert.match(reglas, /if \(ramo === 'hogar'\) \{\s*const v = validarFormularioHogarSinTomador\(riesgo\)/)
   assert.match(reglas, /if \(ramo === 'moto' \|\| ramo === 'auto'\) \{\s*const v = validarFormularioAuto\(riesgo\)[\s\S]*?v\.formulario\.ramo !== ramo/, 'auto/moto: mismo validador y el formulario tiene que ser del ramo del trabajo')
   const t = sinComentarios(readFileSync(join(RAIZ, 'apps/asegura/lib/tarificador.ts'), 'utf8'))
-  assert.match(t, /ramo: 'comunidades' \| 'moto' \| 'auto'/)
+  assert.match(t, /ramo: 'comunidades' \| 'moto' \| 'auto' \| 'hogar'/)
   const ruta = sinComentarios(readFileSync(join(RAIZ, 'apps/plataforma/app/api/correduria/tarificador/encolar/route.ts'), 'utf8'))
-  assert.match(ruta, /b\.ramo !== 'comunidades' && b\.ramo !== 'moto' && b\.ramo !== 'auto'/)
+  assert.match(ruta, /b\.ramo !== 'comunidades' && b\.ramo !== 'moto' && b\.ramo !== 'auto' && b\.ramo !== 'hogar'/)
   assert.match(ruta, /i\.compania === c && i\.ramo === ramo/, 'la compañía solo si (compañía, ramo) está entre las integraciones activas')
   const bots = sinComentarios(readFileSync(join(RAIZ, 'apps/plataforma/lib/tarificador-bots-ramos.ts'), 'utf8'))
-  assert.match(bots, /const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = \{ moto: adaptadorMoto, auto: adaptadorAuto \}/)
+  assert.match(bots, /const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = \{ moto: adaptadorMoto, auto: adaptadorAuto, hogar: adaptadorHogar \}/)
 })
 
 test('MAPFRE · «Continuar» solo por pulsarContinuarMapfre: lista cerrada 1→2→3 y todas las comprobaciones ANTES del único clic', () => {

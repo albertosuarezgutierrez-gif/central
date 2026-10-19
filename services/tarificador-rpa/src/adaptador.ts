@@ -113,8 +113,12 @@ export type ContextoPortal = ContextoTarificacion & {
    * que el desplegable `selectMediador` tiene puesto EXACTAMENTE el mediador de la correduría (`MEDIADOR_GENERALI`).
    */
   confirmarMediadorGenerali?: (selectMediador: Locator) => Promise<void>
+  /** Generali (v0.2.3): «ENTRAR» de CorredorInicio.po tras aceptar el mediador, por `pulsarEntrarGenerali` de guard.ts (una vez). */
+  entrarPortalGenerali?: () => Promise<void>
   /** Generali: entrada NEGOCIO › EMISIÓN › CONTRATACIÓN › AUTOMÓVILES › TURISMOS (RAMO UV) por `entrarTurismosGenerali` de guard.ts (una vez). */
   entrarTurismosGenerali?: () => Promise<void>
+  /** Generali (v0.2.4): cierra el modal «¿Sabías qué…?» de CorredorPortal.po por `cerrarAvisoSabiasQueGenerali` de guard.ts (una vez; sin modal no hace nada). */
+  cerrarAvisoSabiasQueGenerali?: () => Promise<'cerrado' | 'sin_aviso'>
   /**
    * Generali (v0.2.0, 19/10/2026): subpestaña de «Valoración Riesgo» por `pulsarSubpestanaGenerali` de guard.ts (lista blanca de
    * textos EXACTOS, hoy solo «Garantías y Resultados»; una vez por subpestaña). Devuelve el marco donde estaba la subpestaña.

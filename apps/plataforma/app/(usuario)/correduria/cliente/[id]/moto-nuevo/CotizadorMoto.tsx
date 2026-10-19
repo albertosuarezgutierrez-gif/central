@@ -72,6 +72,7 @@ import type { OtroVehiculo } from '@/lib/correduria/pack-otro-vehiculo'
 import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
 import PrecioBots from '../PrecioBots'
+import { bloqueosAltaTomador } from '@/lib/tarificador-alta-tomador'
 import { datoDePersonaBot } from '@/lib/tarificador-moto-formulario'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
@@ -1309,6 +1310,7 @@ export default function CotizadorMoto({
           ramo="moto"
           clienteId={clienteId}
           oportunidadId={variante?.oportunidadId ?? null}
+          bloqueosPorCompania={bloqueosAltaTomador(faltanInicial, tomadorEmpresa)}
           inicialesExtra={{ cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '', sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '' }}
           formulario={{
             matricula,
@@ -1321,6 +1323,7 @@ export default function CotizadorMoto({
             fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
             fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
             sexo: correcciones.sexo ?? null,
+            sexoSinFicha: (faltanInicial ?? []).some((f) => f.campo === 'sexo'),
             conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual,
             propietarioEnOtraFicha: !!figs.propietario,
             tieneSeguroActual,

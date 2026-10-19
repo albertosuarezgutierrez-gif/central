@@ -422,7 +422,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
   const cliente = fn.indexOf("'cliente_no_encontrado'")
   const comprueba = fn.indexOf('riesgoParaEncolar(')
-  const json = fn.indexOf('const riesgoJson = JSON.stringify(guardar.riesgo)')
+  const json = fn.indexOf('formasRiesgoDuplicado(guardar.riesgo as Record<string, unknown>')
   assert.ok(cliente > -1 && comprueba > cliente && json > comprueba, 'cliente comprobado → NIF comprobado → riesgo SIN NIF serializado')
   assert.ok(fn.search(/insert into \w+\.tarificacion_trabajos/) > json)
   assert.ok(!/JSON\.stringify\(e\.riesgo\)/.test(fn), 'nada encola el riesgo sin pasar por riesgoParaEncolar')
@@ -436,7 +436,7 @@ test('NIF Mapfre: encolarTrabajo GUARDA el riesgo sin NIF (comprobado tras el cl
   assert.match(w, /aplicarNifTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaNifFicha\(dni, decryptField\)\)/)
   assert.match(w, /const base = \{ id: f\.id, compania: f\.compania, ramo: f\.ramo, riesgo,/)
   assert.ok(!/update\s+\w+\.tarificacion_trabajos|insert into/i.test(w), 'el NIF nunca se escribe al entregar')
-  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b/g, '')), 'el riesgo solo se toca para la respuesta')
+  assert.ok(!/riesgo\s*=/.test(w.replace(/let riesgo = f\.riesgo|riesgo = conNif\.riesgo|riesgo = conDatos\.riesgo|riesgo = conTomador\.riesgo|riesgo = conFicha\b|riesgo = conCompania\b|riesgo = conPoliza\b/g, '')), 'el riesgo solo se toca para la respuesta')
 })
 
 test('póliza actual (19/10/2026): se lee SOLO esa clave, de ESTA correduría, y se inyecta al entregar sin escribir en BD', () => {
@@ -500,10 +500,11 @@ test('Datos tomador: encolarTrabajo los COMPRUEBA (leerTomadorFicha) y trabajoPa
   const fn = src.slice(src.indexOf('export async function encolarTrabajo'), src.indexOf('// ─── Reclamar y lanzar'))
   assert.match(fn, /leerTomadorFicha\(e\.correduriaId, clienteId\)/)
   // `riesgoEntrada` (18/10/2026) = el riesgo de la petición, con el vehículo encadenado de Generali si toca (tarificador-espera-vehiculo.ts).
-  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\)\)/)
-  assert.match(fn, /let riesgoEntrada: RiesgoComunidad \| FormularioAuto = e\.riesgo\n/)
+  // 19/10/2026: + el tomador de Hogar (DNI/NIE y nacimiento de la ficha) como 6.º argumento.
+  assert.match(fn, /riesgoParaEncolar\(e\.compania, e\.ramo, riesgoEntrada, \(\) => lecturaNifFicha\(dniFicha, decryptField\), \(\) => lecturaTomadorFicha\(fichaTomador, decryptField\), \(\) => lecturaTomadorHogar\(fichaHogar, decryptField\)\)/)
+  assert.match(fn, /let riesgoEntrada: RiesgoComunidad \| FormularioAuto \| FormularioHogarSinTomador = e\.riesgo\n/)
   assert.ok(!fn.includes('aplicarDatosTomador('), 'encolar NO inyecta (eso es al entregar)')
-  assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid`\n  const f = filas\[0\]/)
+  assert.match(src, /from seguros\.clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and merged_into_cliente_id is null`\n  const f = filas\[0\]/)
   const w = src.slice(src.indexOf('export async function trabajoParaWorker'), src.indexOf('// ─── Resultado'))
   assert.match(w, /if \(modo !== 'exploracion' && modo !== 'humo' && necesitaDatosTomador\(f\.compania, f\.ramo, riesgo\)\)/)
   assert.match(w, /aplicarDatosTomador\(f\.compania, f\.ramo, riesgo, \(\) => lecturaTomadorFicha\(ficha, decryptField\)\)/)

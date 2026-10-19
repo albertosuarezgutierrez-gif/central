@@ -199,6 +199,17 @@ export const SEXOS_FICHA: readonly SexoFicha[] = ['hombre', 'mujer']
 /** Código de `clientes.saludo` para cada sexo (el que ya lee `sexoDeSaludo` de asegura). */
 export const SALUDO_POR_SEXO: Record<SexoFicha, '1' | '2'> = { hombre: '1', mujer: '2' }
 
+/**
+ * Sexo a partir del tratamiento del CRM (`clientes.saludo`). ÚNICA regla (19/10/2026): la usan la cartera hacia Codeoscopic,
+ * la precalificación y el encolado de los bots. Medido el 01/09/2026 sobre las 32.600 fichas: con '1' los nombres de pila
+ * más frecuentes son Jose, Juan, Antonio, Francisco y Manuel; con '2', María. El '3' (634 fichas) no se traduce: no se sabe
+ * qué es, y suponerlo sería inventar. PURA.
+ */
+export function sexoDeSaludo(saludo: string | null | undefined): SexoFicha | null {
+  const t = typeof saludo === 'string' ? saludo.trim() : ''
+  return t === SALUDO_POR_SEXO.hombre ? 'hombre' : t === SALUDO_POR_SEXO.mujer ? 'mujer' : null
+}
+
 /** `null` en un campo = borrarlo; ausente = no tocarlo. */
 export type EdicionCliente = {
   identidad?: Partial<Record<CampoIdentidad, string | null>>

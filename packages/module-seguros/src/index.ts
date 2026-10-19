@@ -438,6 +438,7 @@ export {
   type SexoFicha,
   SEXOS_FICHA,
   SALUDO_POR_SEXO,
+  sexoDeSaludo,
   type IdentidadRevisada,
   type EdicionRevisada,
   type AltaCliente,
@@ -1511,6 +1512,7 @@ export {
   faltanObligatorios, leerRespuestaIa, mismoValor, preguntasRepregunta, promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
   type CategoriaEstadoCivil, type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,
 } from './respuesta-lead.ts'
+export { CARNETS_MOTO_PRECIO, carnetMotoMasAntiguo } from './carnet-moto.ts'
 export { PREGUNTAS_CONCRETAS, esCodigoConcreto, preguntasConcretas, type CodigoConcreto } from './repregunta-concreta.ts'
 export {
   PREFIJO_IDD, camposIdd, citaHablaDeIdd, claveIdd, coberturasIncluidas, conInformacionPrevia, declaracionNecesidadesLead, deducirNecesidadesLead,

@@ -1,4 +1,4 @@
-// Generali · portal del corredor · TURISMOS (Ramo UV) — v0.2.0 (19/10/2026).
+// Generali · portal del corredor · TURISMOS (Ramo UV) — v0.2.4 (19/10/2026).
 // Registrado SOLO con `GENERALI_AUTO_ACTIVO` (abajo, ENCENDIDO el 18/10/2026 por Alberto) y, además, la puerta de BD de siempre: la
 // fila `seguros.companias_integracion` generali/auto activa y `rpa_autorizada` (NO se activa desde aquí).
 //
@@ -64,8 +64,15 @@ import {
   mensajeAtascoCatalogo,
   normalizarCatalogo,
   opcionMediadorGenerali,
+  decidirMediadorGenerali,
+  inventarioMediadorGenerali,
+  rutaSinQuery,
+  type ControlMediador,
+  type DecisionMediador,
+  type MarcoMediador,
   rolesGenerali,
   urlConMediador,
+  esPortalCorredorGenerali,
   vehiculoBuscadoGenerali,
   type VehiculoBuscado,
 } from './reglas.ts'
@@ -86,8 +93,13 @@ export const GENERALI_AUTO_ACTIVO = true
  * Resultados» por la compuerta del guard + lector tolerante del precio (oferta) o hueco con el registro de esa pantalla.
  * 0.2.1 (19/10/2026): SMS de Okta relevado por Telegram (`codigoSms`) y dispositivo recordado 30 días en la bóveda; el login ya no
  * espera 30 s en la pantalla del SMS.
+ * 0.2.2 (19/10/2026, prueba real b41be722): «Seleccionar mediador» vive en un MARCO (`seleccionAmbito.do`) con 5 campos sin
+ * etiqueta: se busca en TODOS los marcos el desplegable por la OPCIÓN del mediador, esperando a que el bucle CorredorInicio →
+ * seleccionAmbito → Refresh se estabilice; el botón de ese marco, solo por la lista blanca del guard; 0 o varias → inventario.
+ * 0.2.5 (19/10/2026, prueba real c8838c26): el overlay «¿Sabías qué…?» llega segundos DESPUÉS del portal y interceptaba el sobrevuelo de
+ * NEGOCIO: el cierre espera a que aparezca; el menú cierra el aviso si sigue, sobrevuela con plazo corto y, si no se despliega, pulsa el toggle.
  */
-export const VERSION_GENERALI_AUTO = '0.2.1'
+export const VERSION_GENERALI_AUTO = '0.2.5'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -169,7 +181,7 @@ async function escribir(campo: Locator, valor: string, ctx: ContextoPortal): Pro
 }
 
 /** Elige la opción nº `indice` de un `<select>` nativo (guard del campo antes). */
-async function elegirIndice(sel: Locator, indice: number, ctx: ContextoPortal): Promise<void> {
+async function elegirIndice(sel: Locator, indice: number, ctx: Pick<ContextoPortal, 'pausaAccion'>): Promise<void> {
   await ctx.pausaAccion()
   await comprobarCampo(sel)
   await sel.selectOption({ index: indice })
@@ -356,31 +368,183 @@ export async function loginGenerali(page: Page, ctx: ContextoPortal): Promise<vo
 
 // ───────────────────────── 2 · mediador ─────────────────────────
 
+/** Lee los controles VISIBLES de formulario de un marco: estructura y opciones (nunca lo tecleado). SOLO LEE. */
+const JS_CONTROLES_MEDIADOR = `(() => {
+  const VIS = (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility === 'visible';
+  const T = (n) => (n ? (n.textContent || '') : '').replace(/\\s+/g, ' ').trim();
+  const selects = Array.from(document.querySelectorAll('select'));
+  const out = [];
+  for (const el of Array.from(document.querySelectorAll('select, input, textarea, [role=combobox], [role=listbox]'))) {
+    const ta = (el.getAttribute('type') || '').toLowerCase();
+    if (el.tagName === 'INPUT' && ['hidden', 'button', 'submit', 'image', 'reset'].includes(ta)) continue;
+    if (!VIS(el)) continue;
+    const nativo = el.tagName === 'SELECT';
+    const role = el.getAttribute('role') || '';
+    let opciones = [];
+    let seleccionada = null;
+    if (nativo) {
+      opciones = Array.from(el.options).map((o) => ({ valor: o.value || '', texto: T(o) }));
+      const o = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+      seleccionada = o ? { valor: o.value || '', texto: T(o) } : null;
+    } else if (role) {
+      const lista = el.getAttribute('aria-controls') ? document.getElementById(el.getAttribute('aria-controls')) : el;
+      opciones = Array.from((lista || el).querySelectorAll('[role=option]')).map((o) => ({ valor: o.getAttribute('data-value') || '', texto: T(o) }));
+      if (opciones.length === 0) opciones = [{ valor: '', texto: T(el) }];
+    }
+    const tipo = nativo ? 'select' : role ? role : el.tagName.toLowerCase() + (ta ? ':' + ta : '');
+    out.push({ tipo, name: el.getAttribute('name') || '', id: el.id || '', nativo, indiceSelect: nativo ? selects.indexOf(el) : -1, opciones: opciones.slice(0, 400), seleccionada });
+    if (out.length >= 40) break;
+  }
+  return out;
+})()`
+
+type EscaneoMediador = { marcos: (MarcoMediador & { frame: Frame })[] }
+
+/** Controles de TODOS los marcos vivos (la cascada de «Seleccionar mediador» vive en el marco `seleccionAmbito.do`). */
+async function escanearMediador(page: Page): Promise<EscaneoMediador> {
+  const marcos: EscaneoMediador['marcos'] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    const controles = ((await f.evaluate(JS_CONTROLES_MEDIADOR).catch(() => null)) as ControlMediador[] | null) ?? []
+    marcos.push({ frame: f, ruta: rutaSinQuery(f.url()), controles })
+  }
+  return { marcos }
+}
+
+/** Espera de «Seleccionar mediador»: tolera el bucle CorredorInicio → seleccionAmbito → seleccionAmbitoRefresh (prueba real). */
+export const ESPERA_MEDIADOR_MS = 45_000
+/** Tras elegir el mediador, el marco puede recargarse (`seleccionAmbitoRefresh.do`): lo que se espera a que vuelva estable. */
+const ESPERA_REFRESCO_MEDIADOR_MS = 15_000
+const PAUSA_MEDIADOR_MS = 700
+
+type CandidatoMediador = { escaneo: EscaneoMediador; d: Extract<DecisionMediador, { tipo: 'unica' }> }
+
 /**
- * «Seleccionar mediador» (captura 2): Territorial/Sucursal/Centro/Comercial vienen puestos; se elige en «Mediador» el de la
- * correduría (`MEDIADOR_GENERALI`, exacto) y «ACEPTAR» por el guard. Si el portal ya entra con ese mediador, nada; con otro, PARA.
+ * Escanea hasta que la pantalla se ESTABILIZA (dos lecturas seguidas iguales: rutas de los marcos, nº de controles y la
+ * decisión). `null` = el portal ya está con el mediador correcto. Una sola candidata estable → esa; varias estables → PARA
+ * con inventario; ninguna hasta el tope → PARA con inventario. Nunca elige a ciegas.
  */
-export async function elegirMediadorGenerali(page: Page, ctx: ContextoPortal): Promise<void> {
-  const fin = Date.now() + ESPERA_PANTALLA_MS
+async function candidatoMediadorEstable(page: Page, esperaMs: number, pausaMs: number): Promise<CandidatoMediador | null> {
+  const fin = Date.now() + esperaMs
+  let firmaAnterior: string | null = null
+  let ultimo: EscaneoMediador = { marcos: [] }
   for (;;) {
     const conMediador = urlConMediador(page.url())
-    if (conMediador === true) return
+    if (conMediador === true) return null
     if (conMediador === false) throw new ErrorMapaIncompletoGenerali('el portal entró con OTRO mediador (no se cambia a ciegas)', false)
-    if (/CorredorInicio\.po/.test(page.url())) break
-    if (Date.now() >= fin) throw new ErrorMapaIncompletoGenerali('la pantalla «Seleccionar mediador» o el portal del corredor tras el login')
-    await page.waitForTimeout(500)
+    const escaneo = await escanearMediador(page)
+    const d = decidirMediadorGenerali(escaneo.marcos)
+    const firma = JSON.stringify([escaneo.marcos.map((m) => [m.ruta, m.controles.length]), d])
+    if (firma === firmaAnterior) {
+      if (d.tipo === 'unica') {
+        if (!d.nativo) throw new ErrorMapaIncompletoGenerali(`el desplegable «Mediador» (captura 2): el código de la correduría está en un control que no es un desplegable nativo (sin mapa para elegirlo). Campos: ${inventarioMediadorGenerali(escaneo.marcos)}`)
+        return { escaneo, d }
+      }
+      // Las opciones llevan nombres de mediadores: el inventario solo lleva códigos y marcadores (opcionSinDatosGenerali).
+      if (d.tipo === 'varias') throw new ErrorMapaIncompletoGenerali(`el desplegable «Mediador» (captura 2): ${d.n} opciones/desplegables casan con el mediador de la correduría; no se elige ninguno. Campos: ${inventarioMediadorGenerali(escaneo.marcos)}`)
+    }
+    firmaAnterior = firma
+    ultimo = escaneo
+    if (Date.now() >= fin) {
+      throw new ErrorMapaIncompletoGenerali(`el desplegable «Mediador» (captura 2): el mediador de la correduría no aparece en ningún desplegable de ningún marco tras esperar a que la pantalla se estabilice; no se elige otro. Página: ${rutaSinQuery(page.url())}. Campos: ${inventarioMediadorGenerali(ultimo.marcos)}`)
+    }
+    await page.waitForTimeout(pausaMs)
   }
+}
+
+/** El `<select>` de la candidata en SU marco: por id, por name o por posición; siempre UNO y con la opción del mediador. */
+async function selectDeCandidato(c: CandidatoMediador): Promise<Locator> {
+  const m = c.escaneo.marcos[c.d.marco]!
+  const ctl = m.controles[c.d.control]!
+  const opciones: Locator[] = []
+  if (ctl.id) opciones.push(m.frame.locator(`select[id="${ctl.id.replace(/["\\]/g, '')}"]`))
+  if (ctl.name) opciones.push(m.frame.locator(`select[name="${ctl.name.replace(/["\\]/g, '')}"]`))
+  if (ctl.indiceSelect >= 0) opciones.push(m.frame.locator('select').nth(ctl.indiceSelect))
+  for (const l of opciones) {
+    if ((await l.count().catch(() => 0)) !== 1) continue
+    const r = opcionMediadorGenerali(await opcionesSelect(l).catch(() => []), MEDIADOR_GENERALI)
+    if (r.tipo === 'unica' && r.indice === c.d.indice) return l
+  }
+  throw new ErrorMapaIncompletoGenerali(`el desplegable «Mediador» (captura 2): la candidata no se deja localizar de forma única en su marco (${m.ruta})`)
+}
+
+/**
+ * ¿Hay un «NEGOCIO» en algún marco? (el menú del portal del corredor). Prueba real 31e76085: en `CorredorPortal.po` es un
+ * enlace `<a>` SIN href con ese texto exacto (junto a COMPAÑÍA · FORMACIÓN · NORMAS · … · CERRAR) que puede estar plegado y no
+ * contar como «visible»: aquí basta con que esté en el DOM (solo lee; el sobrevuelo lo hace la puerta del guard).
+ */
+async function menuNegocioVisible(page: Page): Promise<boolean> {
+  for (const f of page.frames()) {
+    if (!f.isDetached() && (await f.getByText(/^\s*NEGOCIO\s*$/).count().catch(() => 0)) >= 1) return true
+  }
+  return false
+}
+
+/** ¿Ya estamos en el portal del corredor? Ruta EXACTA `CorredorPortal.po` de www.generali.es (con o sin `mediatorCode`) o el menú NEGOCIO. */
+async function llegadoAlPortal(page: Page): Promise<boolean> {
+  if (urlConMediador(page.url()) === true || esPortalCorredorGenerali(page.url())) return true
+  return rutaSinQuery(page.url()).startsWith('https://www.generali.es/') && (await menuNegocioVisible(page))
+}
+
+/** Tras «ENTRAR»: espera a la llegada a `CorredorPortal.po` (ruta exacta) o al menú NEGOCIO. */
+async function esperarMenuNegocio(page: Page, esperaMs: number, pausaMs: number): Promise<boolean> {
+  const fin = Date.now() + esperaMs
+  while (Date.now() < fin) {
+    if (await llegadoAlPortal(page)) return true
+    await page.waitForTimeout(pausaMs)
+  }
+  return llegadoAlPortal(page)
+}
+
+/** Tras confirmar el mediador: espera a la URL con `mediatorCode`, al menú NEGOCIO o a que CorredorInicio.po ofrezca «ENTRAR». */
+async function esperarPortalOEntrar(page: Page, esperaMs: number, pausaMs: number): Promise<void> {
+  const fin = Date.now() + esperaMs
+  while (Date.now() < fin) {
+    if (await llegadoAlPortal(page)) return
+    if (rutaSinQuery(page.url()).endsWith('/CorredorInicio.po')) {
+      for (const f of page.frames()) {
+        if (!f.isDetached() && (await f.getByText(/^\s*ENTRAR\s*$/).filter({ visible: true }).count().catch(() => 0)) >= 1) return
+      }
+    }
+    await page.waitForTimeout(pausaMs)
+  }
+}
+
+/**
+ * «Seleccionar mediador» (captura 2 + prueba real b41be722, v0.2.2): la cascada vive en un MARCO (`seleccionAmbito.do`) con
+ * 5 campos SIN etiqueta. Se busca en TODOS los marcos el único desplegable con la opción del mediador de la correduría
+ * (`MEDIADOR_GENERALI`), esperando a que el bucle CorredorInicio → seleccionAmbito → Refresh se estabilice; se elige (el marco
+ * puede recargarse: se vuelve a leer hasta verla puesta) y el botón de ESE marco lo pulsa SOLO la puerta del guard
+ * (`ctx.confirmarMediadorGenerali`, lista blanca exacta). 0 o varias → PARA con inventario (tipo, name/id, nº de opciones y
+ * textos sin datos personales). Si el portal ya entra con ese mediador, nada; con otro, PARA.
+ */
+export async function elegirMediadorGenerali(page: Page, ctx: Pick<ContextoPortal, 'pausaAccion' | 'confirmarMediadorGenerali' | 'entrarPortalGenerali'>, o: { esperaMs?: number; pausaMs?: number } = {}): Promise<void> {
+  const espera = o.esperaMs ?? ESPERA_MEDIADOR_MS
+  const pausa = o.pausaMs ?? PAUSA_MEDIADOR_MS
   if (!ctx.confirmarMediadorGenerali) throw new ErrorMapaIncompletoGenerali('la puerta guardada del mediador en el contexto del runner', false)
-  const sel = await controlJuntoA(page, 'Mediador', 'select', ctx.formador)
-  if (!sel || !(await esSelectNativo(sel))) throw new ErrorMapaIncompletoGenerali('el desplegable «Mediador» (captura 2)')
-  const r = opcionMediadorGenerali(await opcionesSelect(sel), MEDIADOR_GENERALI)
-  // Las opciones llevan nombres de mediadores: solo se cuentan, nunca se copian al mensaje.
-  if (r.tipo !== 'unica') throw new ErrorMapaIncompletoGenerali(`el mediador de la correduría en «Mediador» (${r.tipo === 'varias' ? `${r.n} opciones casan` : 'no aparece'}; no se elige otro)`)
-  await elegirIndice(sel, r.indice, ctx)
-  await page.waitForTimeout(500)
-  await ctx.confirmarMediadorGenerali(sel)
-  await page.waitForURL((u) => urlConMediador(u.toString()) === true, { timeout: ESPERA_PANTALLA_MS }).catch(() => undefined)
-  if (urlConMediador(page.url()) !== true) throw new ErrorMapaIncompletoGenerali('la llegada al portal del corredor con el mediador elegido')
+  let elegidas = 0
+  for (let esperaEsta = espera; ; esperaEsta = Math.min(espera, ESPERA_REFRESCO_MEDIADOR_MS)) {
+    const c = await candidatoMediadorEstable(page, esperaEsta, pausa)
+    if (!c) return
+    const sel = await selectDeCandidato(c)
+    if (!c.d.puesto) {
+      // Elegir dispara el `onchange` de la cascada (recarga el marco): se vuelve a leer hasta verla puesta y estable.
+      if (elegidas >= 2) throw new ErrorMapaIncompletoGenerali('el desplegable «Mediador» (captura 2): el mediador de la correduría no se queda elegido tras recargarse el marco')
+      elegidas++
+      await elegirIndice(sel, c.d.indice, ctx)
+      await page.waitForTimeout(pausa)
+      continue
+    }
+    await ctx.confirmarMediadorGenerali(sel)
+    await esperarPortalOEntrar(page, o.esperaMs ?? ESPERA_PANTALLA_MS, pausa)
+    if (await llegadoAlPortal(page)) return
+    // Prueba real 351f946b (v0.2.3): aceptado el mediador, CorredorInicio.po se queda con «ENTRAR»: se pulsa por la puerta del guard.
+    if (ctx.entrarPortalGenerali && rutaSinQuery(page.url()).endsWith('/CorredorInicio.po')) {
+      await ctx.entrarPortalGenerali()
+      if (await esperarMenuNegocio(page, o.esperaMs ?? ESPERA_PANTALLA_MS, pausa)) return
+    }
+    throw new ErrorMapaIncompletoGenerali(`la llegada al portal del corredor con el mediador elegido (página: ${rutaSinQuery(page.url())})`)
+  }
 }
 
 // ───────────────────────── 4-5 · General + selector de vehículos ─────────────────────────
@@ -664,6 +828,8 @@ export const generaliAuto = {
     const hoy = new Date()
     await loginGenerali(page, ctx)
     await elegirMediadorGenerali(page, ctx)
+    // v0.2.4: el modal «¿Sabías qué…?» tapa el portal al llegar; si está, se cierra por la compuerta del guard (si no, nada).
+    await ctx.cerrarAvisoSabiasQueGenerali?.()
     await ctx.entrarTurismosGenerali()
     const marco = await marcoConTexto(page, 'Datos de Valoración')
     if (!marco) throw new ErrorMapaIncompletoGenerali('el formulario «Valoración Riesgo › Datos de Valoración» tras el menú de Turismos (captura 4)')

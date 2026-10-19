@@ -22,12 +22,13 @@ import {
   type OfertaNormalizada,
   type PasoTraza,
   type FormularioAuto,
+  type FormularioHogarSinTomador,
   type AtascoWorker,
   type RiesgoComunidad,
   type TipoError,
 } from '@central/module-tarificacion'
 import { decryptField } from '@central/module-seguros-pii'
-import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
+import { aplicarCompaniaActual, aplicarPolizaAnteriorUltimos5, companiaActualDeCliente, necesitaCompaniaActual, type PolizaParaCompaniaActual } from './tarificador-compania-actual'
 import { aplicarFichaTomador, fichaTomadorAutoDeFicha, necesitaFichaTomador, type FilaFichaTomadorAuto } from './tarificador-ficha-tomador'
 import { prisma } from './tenant'
 import { aplicarSexoDeFicha, necesitaSexoDeFicha } from './tarificador-sexo-ficha'
@@ -37,6 +38,7 @@ import { caducarEmisiones } from './tarificador-emision'
 import { MENSAJE_EMISION_INCIERTA, autorizacionSinResolver } from './tarificador-emision-reglas'
 import { memoriaTrasExito } from './tarificador-eleccion-reglas'
 import { guardarMemoriaVersion } from './tarificador-memoria'
+import { formasRiesgoDuplicado } from './tarificador-duplicados'
 import { purgarEvidenciaCaducada, purgarRecorridosCaducados, purgarRiesgoTrabajos, purgarRiesgosCerrados } from './tarificador-purga'
 import { atascoParaFallo, caducarAtascos, evaluarCorte, guardarAtasco, pausarTrasHumo, pausaViva, sqlSinPausa } from './tarificador-robustez'
 import { PREFIJO_HUMO_NO_SOPORTADO, estadoTrasFalloHumo, humoPideParar } from './tarificador-humo-reglas'
@@ -67,7 +69,11 @@ import {
   repartirEnCurso,
   aplicarNifTomador,
   aplicarDatosTomador,
+  aplicarTomadorHogar,
+  companiaAdmiteRamoRpa,
   lecturaNifFicha,
+  lecturaTomadorHogar,
+  necesitaTomadorHogar,
   lecturaTomadorFicha,
   necesitaDatosTomador,
   type FilaTomadorFicha,
@@ -102,9 +108,9 @@ export type EntradaEncolar = {
   clienteId: string | null
   polizaId: string | null
   compania: string
-  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto y (14/10/2026) Auto (FormularioAuto ya validado). El ramo discrimina el riesgo. */
-  ramo: 'comunidades' | 'moto' | 'auto'
-  riesgo: RiesgoComunidad | FormularioAuto
+  /** Comunidades (RiesgoComunidad) o, desde el 13/10/2026, Moto y (14/10/2026) Auto (FormularioAuto ya validado); Hogar (19/10/2026) sin tomador. El ramo discrimina el riesgo. */
+  ramo: 'comunidades' | 'moto' | 'auto' | 'hogar'
+  riesgo: RiesgoComunidad | FormularioAuto | FormularioHogarSinTomador
   solicitadoPor: string
   /**
    * F3b (19/10/2026, aviso «Listo para tarificar» de un lead): solo COMPRUEBA si ya hay un trabajo vivo igual (el mismo cálculo
@@ -120,6 +126,8 @@ export type ResultadoEncolar =
   | { estado: 'rechazado'; status: number; motivo: string }
 
 export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncolar> {
+  // Hogar solo para las compañías con bot de tarificación (hoy Allianz): la fila `mapfre/hogar` solo habilita la exploración.
+  if (!companiaAdmiteRamoRpa(e.compania, e.ramo)) return { estado: 'rechazado', status: 409, motivo: `ramo_no_admitido: el bot de ${claveCompania(e.compania)} no tarifica ${e.ramo}` }
   const integ = await leerIntegracion(e.correduriaId, e.compania, e.ramo)
   // Fail-closed: sin fila, inactiva o con un modo que no es rpa_autorizada, no se encola.
   if (!integ || !integ.activo || !puedeAutomatizar(integ.modo)) {
@@ -158,7 +166,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   // VEHÍCULO ENCADENADO (Generali Turismos, 18/10/2026, regla de Alberto): Generali no saca el vehículo por matrícula. Si un
   // `ok` de Allianz/Mapfre de ESTA oportunidad ya lo confirmó, se encola con él; si no, queda `pendiente` con `esperaVehiculo`
   // (no se reclama) hasta que llegue (`registrarResultado` / barrido). Sin oportunidad → rechazo. Ver tarificador-espera-vehiculo.ts.
-  let riesgoEntrada: RiesgoComunidad | FormularioAuto = e.riesgo
+  let riesgoEntrada: RiesgoComunidad | FormularioAuto | FormularioHogarSinTomador = e.riesgo
   if (necesitaVehiculoEncadenado(e.compania, e.ramo)) {
     const origenes = e.oportunidadId ? await leerOrigenesVehiculo(prisma, e.correduriaId, e.oportunidadId) : []
     const enc = riesgoAlEncolar(e.riesgo, e.oportunidadId, vehiculoDeOrigenes(origenes))
@@ -182,16 +190,24 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
       .then((f) => f[0]?.saludo ?? null).catch((): string | null => null)
     riesgoEntrada = aplicarSexoDeFicha(e.ramo, riesgoEntrada, saludo)
   }
-  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField))
+  // Compañía anterior (Mapfre/Allianz auto, 19/10/2026): si el formulario no la trae pero la oportunidad o las pólizas del cliente la
+  // saben, se rellena ANTES de validar (si no, `falta_compania_anterior` rechazaba con 422 antes de que la entrega la pusiera).
+  // No pisa lo que ya trae; sin dato sigue faltando (nunca un valor de cajón: `nombreCompaniaUtil`).
+  if (necesitaCompaniaActual(claveCompania(e.compania), e.ramo, riesgoEntrada)) {
+    riesgoEntrada = aplicarCompaniaActual(claveCompania(e.compania), e.ramo, riesgoEntrada, await leerCompaniaActualCliente(e.correduriaId, clienteId, e.oportunidadId ?? null)) as typeof riesgoEntrada
+  }
+  // Tomador de Hogar (19/10/2026, Allianz): DNI/NIE y nacimiento de la ficha; solo se COMPRUEBAN aquí, se inyectan al entregar.
+  const fichaHogar = necesitaTomadorHogar(e.compania, e.ramo) ? await leerTomadorFicha(e.correduriaId, clienteId) : null
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
   // Sin duplicados (13/10/2026; `ok` con precio <10 min, 15/10/2026): mismo cliente (ficha) + compañía + ramo + oportunidad/póliza + riesgo
   // (igualdad `jsonb`) con un trabajo aún vivo, o terminado con precio hace menos de 10 min → se devuelve ESE. Cerrojo consultivo por clave y no índice único parcial: «en_curso con lease vivo» depende de now()
   // (no cabe en el predicado de un índice) y el riesgo es un jsonb grande; el cerrojo serializa a dos que encolan lo mismo.
   const compania = claveCompania(e.compania)
-  const riesgoJson = JSON.stringify(guardar.riesgo)
-  // Un `ok` ya purgó su riesgo a la lista blanca (salvo origen de emisión): se compara con ambas formas.
-  const riesgoPurgadoJson = JSON.stringify(riesgoSinDatosPersonales(guardar.riesgo, e.ramo))
+  // Un `ok` ya purgó su riesgo a la lista blanca (salvo origen de emisión): se compara con ambas formas, salvo hogar (su
+  // forma purgada no distingue viviendas: `riesgoPurgadoJson` es null y `t.riesgo = null` nunca casa).
+  const { riesgoJson, riesgoPurgadoJson } = formasRiesgoDuplicado(guardar.riesgo as Record<string, unknown>, e.ramo)
   const cid = clienteId
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${claveEncolar({ correduriaId: e.correduriaId, clienteId: cid, compania, ramo: e.ramo })}))`
@@ -229,7 +245,7 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
 async function leerTomadorFicha(correduriaId: string, clienteId: string): Promise<FilaTomadorFicha | null> {
   const filas = await prisma.$queryRaw<{ dni: string | null; nombre: string | null; apellidos: string | null; fecha_nacimiento: string | null; tipo_persona: string | null }[]>`
     select dni, nombre, apellidos, fecha_nacimiento, tipo_persona::text as tipo_persona
-    from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+    from seguros.clientes where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
   const f = filas[0]
   return f ? { dni: f.dni, nombre: f.nombre, apellidos: f.apellidos, fechaNacimiento: f.fecha_nacimiento, tipoPersona: f.tipo_persona } : null
 }
@@ -481,6 +497,17 @@ export async function trabajoParaWorker(id: string, modosWorker: readonly string
     }
     riesgo = conDatos.riesgo
   }
+  // Tomador de Hogar (Allianz, 19/10/2026): DNI/NIE y nacimiento de la ficha, solo en la respuesta (nunca en BD). Si la ficha ya no
+  // lo permite el trabajo FALLA con el motivo (sin valores) y no se sirve: el worker sale sin entrar en el portal.
+  if (modo !== 'exploracion' && modo !== 'humo' && necesitaTomadorHogar(f.compania, f.ramo)) {
+    const fila = f.cliente_id ? await leerTomadorFicha(f.correduria_id, f.cliente_id) : null
+    const conTomador = aplicarTomadorHogar(f.compania, f.ramo, riesgo, () => lecturaTomadorHogar(fila, decryptField))
+    if (!conTomador.ok) {
+      await prisma.$transaction((tx) => marcarFallo(tx, f.id, f.intentos, { tipo: tipoFalloNifTomador(conTomador.status), mensaje: conTomador.motivo, url: null }, null))
+      return null
+    }
+    riesgo = conTomador.riesgo
+  }
   // Tomador de la ficha (Allianz auto/moto, 17/10/2026): tipo, documento, CP, localidad, dirección y fechas, campo a campo con
   // tres estados. Igual que el NIF: solo en la respuesta, nunca en BD. No falla el trabajo: lo que no consta es hueco del bot.
   if (modo !== 'exploracion' && modo !== 'humo' && necesitaFichaTomador(f.compania, f.ramo)) {
@@ -517,7 +544,7 @@ type FilaTrabajo = {
   oportunidad_id: string | null
   compania: string
   ramo: string
-  riesgo: RiesgoComunidad | FormularioAuto
+  riesgo: RiesgoComunidad | FormularioAuto | FormularioHogarSinTomador
   estado: string
   intentos: number
   solicitado_por: string
@@ -690,7 +717,10 @@ async function guardarTarificacionRpa(tx: Db, t: FilaTrabajo, ofertas: OfertaNor
   const col =
     rg.ramo === 'comunidades'
       ? { fechaEfecto: rg.fechaEfecto ?? null, codigoPostal: rg.direccion?.codigoPostal ?? null, m2: rg.m2Construidos ?? null, anioConstruccion: rg.anioConstruccion ?? null, capitalContinente: rg.capitalContinente ?? null, capitalContenido: rg.capitalContenido ?? null }
-      : { fechaEfecto: null, codigoPostal: rg.codigoPostal, m2: null, anioConstruccion: null, capitalContinente: null, capitalContenido: null }
+      : rg.ramo === 'hogar'
+        // Hogar (19/10/2026): la vivienda del formulario. `null` = no consta (nunca 0).
+        ? { fechaEfecto: null, codigoPostal: rg.inmueble.codigoPostal, m2: rg.inmueble.superficieM2, anioConstruccion: rg.inmueble.anioConstruccion, capitalContinente: rg.hogar.capitalContinenteEur, capitalContenido: rg.hogar.capitalContenidoEur }
+        : { fechaEfecto: null, codigoPostal: rg.codigoPostal, m2: null, anioConstruccion: null, capitalContinente: null, capitalContenido: null }
   const conDocs = ofertas.map((o) => ({ ...o, documentoId: o.pdf ? (docs[o.pdf.indice] ?? null) : null }))
   // ADITIVO (07/10/2026): el PDF del proyecto de la compañía (`seguros.documentos`), sin columna nueva: va en el
   // jsonb `respuesta`. `null` = el worker no lo obtuvo (el motivo va en los `avisos` de la oferta).

@@ -1,8 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { datosVehiculoDeInfoRiesgo } from '@central/module-seguros'
 import {
-  botonesFalloBotLead, caben, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
+  botonesFalloBotLead, caben, carneDePersonaFicha, cilindradaEnTexto, clasificarFalloBot, claveContratoDeBot, diaDeCompacto, diaMadrid, esElPropioCliente, formularioBotDesdeLead,
   garajeDeTexto, historialDeTexto, lecturaMoto, opcionEnTexto, ramoConBot, textoFalloBotLead, topeDiario, validarPeticionTarificarLead,
   valorarCompania, viviendasYLocalesDeTexto,
 } from './tarificacion-lead-puro.ts'
@@ -45,7 +46,7 @@ test('🪤 hay bot = lo que ya declara el código (RAMOS_TARIFICABLES_RPA), no u
   assert.equal(ramoConBot('auto'), true)
   assert.equal(ramoConBot('moto'), true)
   assert.equal(ramoConBot('comunidades'), true)
-  assert.equal(ramoConBot('hogar'), false)
+  assert.equal(ramoConBot('hogar'), true, 'hogar tiene bot (Allianz) desde 19/10/2026: RAMOS_TARIFICABLES_RPA')
   assert.equal(ramoConBot('vida'), false)
 })
 
@@ -263,4 +264,36 @@ test('💶 aviso del fallo: callback_data ≤ 64 bytes', () => {
 test('🪤 el aviso del fallo usa botonesFalloBotLead (lee el fuente)', () => {
   const src = readFileSync(new URL('./tarificacion-lead-fallo.ts', import.meta.url), 'utf8')
   assert.match(src, /const botones = botonesFalloBotLead\(\{ ramo: t\.ramo, pendienteId, clase \}\)/)
+})
+
+test('🪤 el carné de la FICHA completa el riesgo del lead (lo del correo manda; sin ninguno, no hay carné)', () => {
+  const { fechaCarnet: _quitada, ...sinCarnet } = COMPLETO as Record<string, unknown>
+  const base = { ramo: 'auto' as const, valores: sinCarnet, bloque: { matricula: '0000XXX' }, fichaNacimiento: null, hoy: HOY }
+  const conductor = (f: ReturnType<typeof formularioBotDesdeLead>) => f.riesgo.conductor as Record<string, unknown>
+  assert.equal(conductor(formularioBotDesdeLead({ ...base, fichaCarne: '2001-02-03' })).fechaCarne, '2001-02-03')
+  assert.equal(conductor(formularioBotDesdeLead({ ...base, valores: { ...sinCarnet, fechaCarnet: '2002-03-04' }, fichaCarne: '2001-02-03' })).fechaCarne, '2002-03-04')
+  assert.equal('fechaCarne' in conductor(formularioBotDesdeLead({ ...base, fichaCarne: null })), false, 'null = no se sabe: nada de relleno')
+  assert.equal('fechaCarne' in conductor(formularioBotDesdeLead({ ...base, fichaCarne: 'no-es-fecha' })), false)
+  assert.equal('fechaCarne' in conductor(formularioBotDesdeLead(base)), false)
+  const f = formularioBotDesdeLead({ ...base, fichaCarne: '2001-02-03' })
+  assert.ok(!JSON.stringify(valorarCompania('generali', 'auto', f)).includes('fechaCarne'))
+})
+
+test('🪤 la matrícula del lead sale del bloque de la oportunidad, también con las claves antiguas (datosVehiculoDeInfoRiesgo)', () => {
+  const sinMat = { ...(COMPLETO as Record<string, unknown>), matricula: '' }
+  const nuevo = datosVehiculoDeInfoRiesgo({ datosVehiculo: { matricula: '0000XXX' } })
+  const viejo = datosVehiculoDeInfoRiesgo({ matricula: '0000xxx' })
+  for (const b of [nuevo, viejo]) assert.equal(formularioBotDesdeLead({ ramo: 'auto', valores: sinMat, bloque: { ...b }, fichaNacimiento: null, hoy: HOY }).riesgo.matricula, '0000XXX')
+  assert.equal('matricula' in formularioBotDesdeLead({ ramo: 'auto', valores: sinMat, bloque: { ...datosVehiculoDeInfoRiesgo({}) }, fichaNacimiento: null, hoy: HOY }).riesgo, false)
+})
+
+test('carné de la ficha: en moto solo vale A, A1 o A2; la fecha del B no se cuela', () => {
+  const b = { fechaCarnet: '2004-06-01', tipoCarnet: 'B' }
+  assert.equal(carneDePersonaFicha(b, 'moto'), null)
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2004-06-01' }, 'moto'), null)
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2004-06-01', tipoCarnet: 'AM' }, 'moto'), null)
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2010-02-03', tipoCarnet: 'A2' }, 'moto'), '2010-02-03')
+  assert.equal(carneDePersonaFicha({ fechaCarnet: '2010-02-03', tipoCarnet: 'a1' }, 'moto'), '2010-02-03')
+  assert.equal(carneDePersonaFicha(b, 'auto'), '2004-06-01')
+  assert.equal(carneDePersonaFicha(null, 'moto'), null)
 })

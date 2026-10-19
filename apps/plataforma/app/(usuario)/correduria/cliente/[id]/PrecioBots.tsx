@@ -53,10 +53,11 @@ async function pedirJson(url: string, init?: RequestInit): Promise<{ status: num
 type Integraciones = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'ok'; lista: IntegracionVista[] }
 type Seguimiento = { trabajoId: string; duplicado: boolean; trabajo: TrabajoVista | null; aviso: string | null; agotado: boolean }
 
-const sinBots = (texto: string) => (
+const sinBots = (texto: string, estado?: string) => (
   <div style={cardStyle}>
     <CardHeader title="Bots (gratis)" />
     <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>{texto}</p>
+    {estado && <p role="note" style={{ fontSize: 13, color: 'var(--warning)', margin: '8px 0 0' }}>{estado}</p>}
   </div>
 )
 
@@ -114,12 +115,13 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
 
   const lista = integ.estado === 'ok' ? integ.lista : []
   // Revisado y sin ninguna compañía: línea discreta, ni campos ni botones.
-  if (integ.estado === 'ok' && lista.length === 0) return sinBots('Sin bots para este ramo todavía.')
+  if (integ.estado === 'ok' && lista.length === 0) return sinBots(adaptador.sinIntegraciones ?? 'Sin bots para este ramo todavía.', adaptador.estado)
 
   const resultado = adaptador.construir(formulario, extra)
   return (
     <div style={cardStyle}>
       <CardHeader title="Bots (gratis)" sub="Pide precio al portal de la compañía con los datos de este formulario. No cuesta 0,50€, tarda un par de minutos y solo da precio: no emite." />
+      {adaptador.estado && <p role="note" style={{ fontSize: 13, color: 'var(--warning)', margin: '8px 0 0', overflowWrap: 'anywhere' }}>{adaptador.estado}</p>}
       {adaptador.campos.map((c) => (
         <label key={c.clave} style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260, marginTop: 8 }}>
           <span>{c.etiqueta}{c.ayuda && <span style={{ color: 'var(--muted)' }}> — {c.ayuda}</span>}</span>

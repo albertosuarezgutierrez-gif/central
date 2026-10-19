@@ -144,14 +144,17 @@ export {
   USOS_VIVIENDA,
   fechaDdMmAaaaDeIso,
   validarFormularioHogar,
+  validarFormularioHogarSinTomador,
   type DatosHogar,
   type FormularioHogar,
+  type FormularioHogarSinTomador,
   type InmuebleHogar,
   type RegimenVivienda,
   type TipoVivienda,
   type TomadorHogar,
   type UsoVivienda,
   type ValidacionFormularioHogar,
+  type ValidacionFormularioHogarSinTomador,
 } from './formulario-hogar.ts'
 
 // Tomador canónico (08/10/2026): bloque reutilizable por los formularios.
@@ -722,7 +725,9 @@ export {
   fechaDdMmAaaa,
   ETIQUETAS_ID_HOGAR,
   etiquetaIdHogar,
+  claveHogarDeCatalogo,
   type CampoIdHogar,
+  type CampoCanonicoHogar,
   type NoReconocidoRiesgoOportunidad,
   type FichaTomadorExploracion,
   type FaltaRiesgoOportunidad,

@@ -19,6 +19,12 @@ const LOCAL_GENERICO = [
   'notificaciones', 'notificacion', 'avisos', 'newsletter', 'marketing', 'comunicacion',
 ]
 
+// Envíos AUTOMÁTICOS (19/10/2026): con el alta automática un remitente así entraría solo en el
+// Directorio. Casos reales de la cartera: no-responder@reale.es, eiac@reale.es, avisosrecibos@,
+// comisiones-mapfre@, portalmediadores@, $s0209uca@allianz.es, app-dmapappcolemp@mapfre.com.
+const LOCAL_AUTOMATICO = /^(?:\$|app-)|no-?reply|no-?responder|do-?not-?reply|mailer-daemon|postmaster|bounce|^eiac|^avisos?|^comisiones|^portal|^encuesta|^envio|e-?learning|^digitaliza|^comunicaciones|^newsletter/
+const LOCAL_AUTOMATICO_EXACTO = ['correo', 'email', 'mediador']
+
 function parteLocal(from: string): string | null {
   const f = (from || '').trim().toLowerCase()
   const at = f.indexOf('@')
@@ -36,6 +42,7 @@ function parteLocal(from: string): string | null {
 export function pareceContactoPersonal(from: string): boolean {
   const local = parteLocal(from)
   if (local === null) return false
+  if (LOCAL_AUTOMATICO_EXACTO.includes(local) || LOCAL_AUTOMATICO.test(local)) return false
   return !LOCAL_GENERICO.includes(local)
 }
 

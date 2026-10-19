@@ -53,6 +53,19 @@ export function encolarTarificacionVehiculo(ramo: 'moto' | 'auto', clienteId: st
   })
 }
 
+/**
+ * Encola una cotización de HOGAR en el bot de una compañía (19/10/2026, Allianz; solo precio). `formulario` = la vivienda y las
+ * elecciones SIN el bloque `tomador`: el DNI/NIE y el nacimiento los pone asegura desde la ficha (no cruzan el puerto). asegura lo
+ * valida con el validador del ramo y rechaza cualquier compañía que no sea Allianz (`ramo_no_admitido`).
+ */
+export function encolarTarificacionHogar(clienteId: string, oportunidadId: string | null, formulario: Record<string, unknown>, compania: string = COMPANIA_BOT): Promise<Reenvio> {
+  return puerto('encolar', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ clienteId, oportunidadId, compania, ramo: 'hogar', riesgo: formulario }),
+  })
+}
+
 /** Riesgo del último trabajo del cliente (pre-relleno del modal). 200 `{ riesgo|null, trabajoId, creadoEn }`. */
 export function leerUltimoRiesgoTarificador(clienteId: string): Promise<Reenvio> {
   const q = new URLSearchParams({ cliente_id: clienteId, compania: COMPANIA_BOT, ramo: 'comunidades' })

@@ -8,6 +8,9 @@
 import { MAX_COMPANIA_ANTERIOR, obligatoriosPara } from '@central/module-tarificacion'
 import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
 import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
+import {
+  formularioBotHogar, OPCIONES_MADERA_HOGAR, OPCIONES_REGIMEN_HOGAR, OPCIONES_TIPO_HOGAR, OPCIONES_USO_HOGAR, type DatosViviendaBot,
+} from './tarificador-hogar-formulario.ts'
 import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
@@ -22,11 +25,15 @@ export type CampoExtraBot = {
 }
 
 export type ResultadoAdaptadorBot =
-  | { ok: true; riesgo: Record<string, unknown>; completarDesdeFicha: CampoDeFicha[] }
+  | { ok: true; riesgo: Record<string, unknown>; completarDesdeFicha: CampoDeFicha[]; sinDatoEnFicha?: string[] }
   | { ok: false; faltan: string[] }
 
 export type AdaptadorBot = {
   ramo: string
+  /** Estado honesto del bot de este ramo (p. ej. «en exploración»): se pinta junto al bloque, en tono de aviso. */
+  estado?: string
+  /** Texto cuando NINGUNA compañía tiene el bot activo para el ramo (por defecto, «Sin bots para este ramo todavía.»). */
+  sinIntegraciones?: string
   /** Campos que se completan en el propio bloque (vacío si el formulario ya lo trae todo). */
   campos: readonly CampoExtraBot[]
   /** Formulario del cotizador del ramo + campos extra → riesgo, o QUÉ falta. */
@@ -34,7 +41,10 @@ export type AdaptadorBot = {
 }
 
 /** Lo que el cotizador de moto le da al bloque (todo de `EntradaBotMoto` salvo la cilindrada, que se completa aquí). */
-export type FormularioBotsMoto = Omit<EntradaBotMoto, 'cilindrada'>
+export type FormularioBotsMoto = Omit<EntradaBotMoto, 'cilindrada'> & {
+  /** La precalificación dice que la ficha NO permite deducir el sexo (tratamiento distinto de Sr./Sra.: `sexoDeSaludo`). */
+  sexoSinFicha?: boolean
+}
 
 const OPCIONES_SEXO = [{ valor: '', etiqueta: 'Elegir…' }, { valor: 'hombre', etiqueta: 'Hombre' }, { valor: 'mujer', etiqueta: 'Mujer' }] as const
 
@@ -51,7 +61,10 @@ const adaptadorMoto: AdaptadorBot = {
     // El desplegable arranca en '' («Elegir…»): vacío = no tocado, así que manda el del formulario.
     const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined || extra.sexo === '' ? f.sexo : null
     const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '' })
-    return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
+    if (!r.ok) return { ok: false, faltan: r.faltan }
+    // Sin sexo tecleado, asegura lo toma del Sr./Sra. de la ficha al encolar; si la ficha no lo permite, el checklist dice «falta».
+    const sinDatoEnFicha = sexo === null && f.sexoSinFicha === true ? ['conductor.sexo'] : undefined
+    return { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha, ...(sinDatoEnFicha ? { sinDatoEnFicha } : {}) }
   },
 }
 
@@ -83,7 +96,28 @@ function entradaAuto(formulario: unknown, extra: Record<string, string>): Entrad
   }
 }
 
-const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = { moto: adaptadorMoto, auto: adaptadorAuto }
+/** Lo que la vivienda de la oportunidad le da al bloque de hogar (todo de `EntradaBotHogar` salvo las elecciones, que se hacen aquí). */
+export type FormularioBotsHogar = DatosViviendaBot
+
+const adaptadorHogar: AdaptadorBot = {
+  ramo: 'hogar',
+  estado: 'Allianz Hogar está en exploración: es la primera prueba real del bot. Llega hasta donde tiene mapa del portal y se detiene pidiendo el inventario de la pantalla siguiente (valoración de bienes y precio aún sin mapear). Solo precio: no emite.',
+  sinIntegraciones: 'Allianz Hogar está en exploración y aún no tiene la integración activa: hay que autorizarla («rpa_autorizada») en el panel del tarificador antes de poder lanzarlo desde aquí.',
+  // Las cuatro elecciones deciden la tarifa de Allianz y NO tienen valor por defecto: arrancan en «Elegir…» (o precargadas solo si el
+  // dato guardado casa exactamente con una opción) y el botón no encola hasta que las hay. El Catastro no sabe ninguna de las cuatro.
+  campos: [
+    { clave: 'uso', etiqueta: 'Uso de la vivienda', ayuda: 'decide la tarifa; no lo sabe el Catastro', opciones: OPCIONES_USO_HOGAR, porDefecto: '' },
+    { clave: 'regimen', etiqueta: 'Régimen', ayuda: 'propietario o inquilino', opciones: OPCIONES_REGIMEN_HOGAR, porDefecto: '' },
+    { clave: 'tipoVivienda', etiqueta: 'Tipo de vivienda', opciones: OPCIONES_TIPO_HOGAR, porDefecto: '' },
+    { clave: 'conMadera', etiqueta: 'Construcción con madera', ayuda: 'pregunta explícita de Allianz', opciones: OPCIONES_MADERA_HOGAR, porDefecto: '' },
+  ],
+  construir: (formulario, extra) => {
+    const r = formularioBotHogar({ ...(formulario as FormularioBotsHogar), uso: extra.uso, regimen: extra.regimen, tipoVivienda: extra.tipoVivienda, conMadera: extra.conMadera })
+    return r.ok ? { ok: true, riesgo: r.riesgo, completarDesdeFicha: r.completarDesdeFicha } : { ok: false, faltan: r.faltan }
+  },
+}
+
+const ADAPTADORES: Readonly<Record<string, AdaptadorBot>> = { moto: adaptadorMoto, auto: adaptadorAuto, hogar: adaptadorHogar }
 
 /** Adaptador del ramo, o `null` si ese ramo aún no tiene bots (ramo ausente, desconocido o de otro tipo → `null`). */
 export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot | null {
@@ -99,7 +133,7 @@ export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot |
 export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string): ChecklistCompania {
   const r = adaptador.construir(formulario, extra)
   if (!r.ok) return obligatoriosPara(compania, adaptador.ramo) === null ? { estado: 'no_disponible', motivo: MOTIVO_SIN_DECLARACION } : { estado: 'sin_formulario' }
-  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha)
+  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
 }
 
 /** Ramos con adaptador (para saber qué anfitrión monta el bloque). */

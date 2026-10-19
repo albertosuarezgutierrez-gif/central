@@ -22,6 +22,19 @@ test('sin @ o vacío, no se sugiere (no hay nada que sugerir)', () => {
   assert.equal(pareceContactoPersonal('texto sin arroba'), false)
 })
 
+test('🚨 envíos automáticos reales no entran solos al Directorio; buzones útiles y personas sí', () => {
+  for (const e of ['no-responder@reale.es', 'eiac@reale.es', 'mediador@allianz.es', 'avisosrecibos@info.mapfre.com',
+    'comisiones-mapfre@info.mapfre.com', 'portalmediadores@mapfre.com', '$s0209uca@allianz.es', 'app-dmapappcolemp@mapfre.com',
+    'encuesta.calidad.corredores@observatorio.mapfre.com', 'enviodocumentacionpoliza@info.mapfre.com', 'e-learning.mediadores@allianz.es',
+    'correo@allianz.es', 'email@seguros.generali.com', 'noreply@comunica.mapfre.com', 'mailer-daemon@googlemail.com']) {
+    assert.equal(pareceContactoPersonal(e), false, e)
+  }
+  for (const e of ['contabilidad.mediadores@reale.es', 'cstsoportecorredores@cst.mapfre.com', 'desarrollo.comercial@allianz.es',
+    'soporteoperativocorredorescentrosur@occident.com', 'raul.palomino@occident.com', 'elena.perez@helvetia.es', 'nereiacastro@mapfre.es']) {
+    assert.equal(pareceContactoPersonal(e), true, e)
+  }
+})
+
 test('mayúsculas y variantes no cuelan un genérico como persona', () => {
   assert.equal(pareceContactoPersonal('Mediadores@Occident.com'), false)
 })

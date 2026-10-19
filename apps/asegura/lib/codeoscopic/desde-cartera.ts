@@ -35,7 +35,7 @@ import {
 } from './peticion-auto.ts'
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
 import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
-import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
+import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS, sexoDeSaludo } from '@central/module-seguros'
 import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
 import { DIAS_EFECTO_PRESUPUESTO_NUEVO, sumarDias } from './fecha-efecto.ts'
 import { nombreUtil, partirApellidos } from '../nombre-ficha.ts'
@@ -217,22 +217,8 @@ function limpio(v: string | null | undefined): string | null {
 // `nombreUtil` y `partirApellidos` viven en `lib/nombre-ficha.ts` (puro, sin codeoscopic: lo usa también el tarificador RPA).
 export { nombreUtil, partirApellidos }
 
-/**
- * Sexo a partir del tratamiento del CRM. Medido el 01/09/2026 sobre las 32.600
- * fichas: con `saludo='1'` los nombres de pila más frecuentes son Jose, Juan,
- * Antonio, Francisco y Manuel; con `'2'`, María. El '3' (634 fichas) no se
- * traduce: no se sabe qué es, y suponerlo sería inventar.
- */
-export function sexoDeSaludo(saludo: string | null): 'hombre' | 'mujer' | null {
-  switch (limpio(saludo)) {
-    case '1':
-      return 'hombre'
-    case '2':
-      return 'mujer'
-    default:
-      return null
-  }
-}
+// `sexoDeSaludo` (tratamiento → sexo) vive en `@central/module-seguros`: una sola regla para cartera, precalificación y bots.
+export { sexoDeSaludo }
 
 /** Años completos entre dos fechas aaaa-mm-dd. `null` si alguna no es fecha. */
 export function aniosEntre(desde: string | null, hasta: string): number | null {
