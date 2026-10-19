@@ -30,7 +30,7 @@ test('🚨 envíos automáticos reales no entran solos al Directorio; buzones ú
     assert.equal(pareceContactoPersonal(e), false, e)
   }
   for (const e of ['contabilidad.mediadores@reale.es', 'cstsoportecorredores@cst.mapfre.com', 'desarrollo.comercial@allianz.es',
-    'soporteoperativocorredorescentrosur@occident.com', 'raul.palomino@occident.com', 'elena.perez@helvetia.es']) {
+    'soporteoperativocorredorescentrosur@occident.com', 'raul.palomino@occident.com', 'elena.perez@helvetia.es', 'nereiacastro@mapfre.es']) {
     assert.equal(pareceContactoPersonal(e), true, e)
   }
 })
