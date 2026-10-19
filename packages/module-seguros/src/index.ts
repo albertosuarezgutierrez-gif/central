@@ -1503,7 +1503,7 @@ export {
 } from './contrato-datos.ts'
 export { normalizarReferenciaCatastral, referenciaCatastralValida, referenciasCatastralesEn } from './referencia-catastral.ts'
 export {
-  apareceEnCorreo, camposDeBloqueRellenables, camposLeibles, conocidosDeBloque, cuerpoSinCita, decidirFusion, etiquetasUnicas,
+  apareceEnCorreo, camposDeBloqueRellenables, camposLeibles, categoriaEstadoCivil, conocidosDeBloque, cuerpoSinCita, decidirFusion, etiquetasUnicas,
   faltanObligatorios, leerRespuestaIa, mismoValor, preguntasRepregunta, promptExtraerRespuesta, seGuardaCifrado, validarValorContrato,
-  type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,
+  type CategoriaEstadoCivil, type DecisionFusion, type LecturaRespuesta, type Validado, type ValorContrato,
 } from './respuesta-lead.ts'

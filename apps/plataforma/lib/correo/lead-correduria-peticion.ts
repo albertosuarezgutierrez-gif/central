@@ -36,8 +36,8 @@ export type DatosPeticion = {
   /** Para el mensaje de Telegram: nombre de pila (o null), ramos y nº de preguntas. Sin apellidos ni contacto. */
   pila: string | null
   ramos: string[]
-  /** F1 petición (por defecto) o F2 repregunta (solo lo que falta, tras leer su respuesta). */
-  tipo?: 'peticion' | 'repregunta'
+  /** F1 petición (por defecto), F2 repregunta (solo lo que falta) o F3a tarificar (🤖, no envía nada al cliente). */
+  tipo?: 'peticion' | 'repregunta' | 'tarificar'
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -54,7 +54,7 @@ export function leerDatosPeticion(v: unknown): DatosPeticion | null {
   return {
     clienteId: s(o.clienteId), oportunidadIds: ops, to: s(o.to), asunto: s(o.asunto), messageId: s(o.messageId), references: refs,
     pila: typeof o.pila === 'string' ? o.pila : null, ramos: Array.isArray(o.ramos) ? o.ramos.filter((x): x is string => typeof x === 'string') : [],
-    ...(o.tipo === 'repregunta' ? { tipo: 'repregunta' as const } : {}),
+    ...(o.tipo === 'repregunta' ? { tipo: 'repregunta' as const } : o.tipo === 'tarificar' ? { tipo: 'tarificar' as const } : {}),
   }
 }
 
@@ -100,7 +100,10 @@ export function textoBorradorTelegram(a: {
 
 export type DecisionClp =
   | { ok: false; toast: string }
-  | { ok: true; accion: 'env' | 'edt' | 'no'; id: number; quien: string }
+  /** `tar` (F3a): 🤖 tarificar con bots el pendiente `id` (tipo `tarificar`). */
+  | { ok: true; accion: 'env' | 'edt' | 'no' | 'tar'; id: number; quien: string }
+  /** `top` (F3a): «➕ 10 más hoy» para el día `dia` (aaaa-mm-dd) y relanzar la cola. */
+  | { ok: true; accion: 'top'; dia: string; quien: string }
 
 /** ¿Vale la pulsación? Persona autorizada, acción conocida e id numérico. PURA. */
 export function decidirBotonClp(
@@ -110,7 +113,12 @@ export function decidirBotonClp(
   chatPermitido: string | undefined,
 ): DecisionClp {
   if (!chatPermitido || String(cb.from?.id ?? '') !== String(chatPermitido)) return { ok: false, toast: 'Solo el titular puede hacerlo' }
-  if (action !== 'env' && action !== 'edt' && action !== 'no') return { ok: false, toast: 'Acción desconocida' }
+  if (action === 'top') {
+    const m = /^(\d{4})(\d{2})(\d{2})$/.exec(args[0] ?? '')
+    if (!m) return { ok: false, toast: 'Día no válido' }
+    return { ok: true, accion: 'top', dia: `${m[1]}-${m[2]}-${m[3]}`, quien: String(cb.from?.id ?? '') }
+  }
+  if (action !== 'env' && action !== 'edt' && action !== 'no' && action !== 'tar') return { ok: false, toast: 'Acción desconocida' }
   const id = Number(args[0])
   if (!/^\d{1,15}$/.test(args[0] ?? '') || !Number.isSafeInteger(id) || id <= 0) return { ok: false, toast: 'Borrador no encontrado' }
   return { ok: true, accion: action, id, quien: String(cb.from?.id ?? '') }

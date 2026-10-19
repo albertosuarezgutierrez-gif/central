@@ -763,6 +763,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar su respuesta (revisión cada 10 min)',
   },
   {
+    id: 'correduria.lead-tarificar', categoria: 'correduria',
+    titulo: 'Lead listo para tarificar con bots (🤖 Tarificar / ✏️ / ⏸) y tope diario (➕ 10 más hoy)',
+    que: 'Con los datos del lead completos: qué compañías lanzarían su bot (gratis, en su portal), qué se supone y cuántas tarificaciones con bots llevas hoy. Nada se lanza sin pulsar 🤖. Si un ramo no tiene bot, lo dice. Si se llega al tope del día, lo que falta queda en cola y puedes ampliar 10 más.',
+    cuando: 'Cuando la respuesta del lead completa sus datos, y al llegar al tope diario',
+  },
+  {
     id: 'correduria.aviso-web', categoria: 'correduria',
     titulo: 'Aviso de vencimiento confirmado desde la web',
     que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',

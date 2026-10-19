@@ -19,7 +19,7 @@ import {
   nombreDePila, seGuardaCifrado, validarValorContrato, type ValorContrato,
 } from '@central/module-seguros'
 import {
-  agruparHilos, anadirDatosContrato, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, textoHistorialRespuesta,
+  agruparHilos, anadirDatosContrato, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, previosDeFicha, textoHistorialRespuesta,
   type AdjuntoLead, type Casado, type Casar, type FilaHilo, type Guardar, type ValorGuardado,
 } from './correo-respuesta-lead-puro'
 
@@ -117,14 +117,9 @@ export async function guardarRespuestaLead(correduriaId: string, g: Guardar): Pr
 
   const pii = await import('@central/module-seguros-pii')
   const deFicha = new Set(conocidosDeFicha(f))
-  const ap = (f.apellidos ?? '').trim().split(/\s+/).filter(Boolean)
-  // Lo de la ficha que se puede comparar sin descifrar a ciegas: nombre y apellidos en claro, DNI y teléfono por hash.
-  const previosFicha: Record<string, unknown> = {
-    ...(deFicha.has('nombre') ? { nombre: f.nombre } : {}),
-    ...(ap[0] ? { apellido1: ap[0] } : {}),
-    ...(ap.length >= 2 ? { apellido2: ap.slice(1).join(' ') } : {}),
-    ...(f.estadoCivil ? { estadoCivil: f.estadoCivil } : {}),
-  }
+  // Lo de la ficha con lo que se compara: nombre y apellidos en claro, estado civil (por categoría), nacimiento DESCIFRADO
+  // (revisión F2: antes no se comparaba y uno distinto se guardaba como nuevo), y DNI/teléfono por hash más abajo.
+  const previosFicha: Record<string, unknown> = previosDeFicha(f, deFicha, pii.decryptField)
   const hoy = hoyMadrid()
   const ahora = new Date().toISOString()
   const resultados: ResultadoOportunidad[] = []

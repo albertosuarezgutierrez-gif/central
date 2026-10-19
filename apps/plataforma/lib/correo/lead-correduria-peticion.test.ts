@@ -66,7 +66,7 @@ test('el mensaje de Telegram: nombre de pila, ramos y conteo; el borrador plegad
 
 test('🪤 el ✅ es de un solo uso y el envío va por el puerto con idempotencia (lee el fuente)', () => {
   const src = readFileSync(new URL('./lead-correduria-pendiente.ts', import.meta.url), 'utf8')
-  assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND estado = 'pendiente' AND caduca_at > now\(\)/)
+  assert.match(src, /SET estado = 'enviando'[\s\S]{0,200}WHERE id = \$\{d\.id\} AND tipo <> 'tarificar' AND estado = 'pendiente' AND caduca_at > now\(\)/)
   assert.match(src, /idempotencia: `clp-\$\{d\.id\}`/)
   const hook = readFileSync(new URL('../../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url), 'utf8')
   assert.match(hook, /if \(prefix === PREFIJO_CLP\) \{\s*const d = decidirBotonClp\(cb, action, args, process\.env\.TELEGRAM_CHAT_ID\)/)

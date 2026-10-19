@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  agruparHilos, anadirDatosContrato, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, textoHistorialRespuesta,
+  agruparHilos, anadirDatosContrato, conocidosDeFicha, estadoDatosTrasRespuesta, leerDatosContrato, previosDeFicha, textoHistorialRespuesta,
   validarAdjunto, validarCasar, validarGuardar,
 } from './correo-respuesta-lead-puro.ts'
 
@@ -70,4 +70,22 @@ test('🪤 adjuntos: solo fotos y PDF, con tamaño acotado', () => {
   assert.equal(validarAdjunto({ ...base, mime: 'text/html' }).ok, false)
   assert.equal(validarAdjunto({ ...base, base64: Buffer.alloc(10).toString('base64') }).ok, false)
   assert.equal(validarAdjunto({ ...base, base64: Buffer.alloc(2_600_000).toString('base64') }).ok, false)
+})
+
+test('🪤 revisión F2: nacimiento y estado civil de la ficha entran en la comparación (distinto = discrepancia, no dato nuevo)', async () => {
+  const { decidirFusion } = await import('@central/module-seguros')
+  const conocidos = new Set(['nombre', 'fechaNacimiento', 'estadoCivil'])
+  const ficha = { nombre: 'Ana', apellidos: 'Pérez Gil', fechaNacimiento: 'v1:cifrado', estadoCivil: 'Casado' }
+  const prev = previosDeFicha(ficha, conocidos, () => '07/03/1990')
+  assert.equal(prev.fechaNacimiento, '1990-03-07')
+  assert.equal(prev.estadoCivil, 'Casado')
+  const d = decidirFusion({ nuevos: { fechaNacimiento: '1985-03-07', estadoCivil: 'soltera' }, previos: prev, claveBloque: 'datosVehiculo', bloque: null })
+  assert.deepEqual(d.discrepancias.sort(), ['estadoCivil', 'fechaNacimiento'])
+  assert.deepEqual(d.escribir, [])
+  const igual = decidirFusion({ nuevos: { fechaNacimiento: '1990-03-07', estadoCivil: 'casada' }, previos: prev, claveBloque: 'datosVehiculo', bloque: null })
+  assert.deepEqual(igual.iguales.sort(), ['estadoCivil', 'fechaNacimiento'])
+  // Ilegible: cuenta como «ya hay algo» → discrepancia, nunca se escribe encima.
+  const roto = previosDeFicha(ficha, conocidos, () => { throw new Error('no abre') })
+  assert.equal(roto.fechaNacimiento, '¿?')
+  assert.deepEqual(decidirFusion({ nuevos: { fechaNacimiento: '1990-03-07' }, previos: roto, claveBloque: 'datosVehiculo', bloque: null }).discrepancias, ['fechaNacimiento'])
 })

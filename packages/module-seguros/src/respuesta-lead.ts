@@ -324,10 +324,41 @@ export function camposDeBloqueRellenables(claveBloque: string): readonly string[
   return CAMPOS_BLOQUE[claveBloque] ?? []
 }
 
+/**
+ * Estado civil → categoría comparable (19/10/2026, revisión F2). La ficha lo guarda como texto libre del CRM («Casado») o
+ * como id del vendor («Married», «Single»); el cliente escribe «casada», «soltero/a», «pareja de hecho». `null` = no se
+ * reconoce (entonces se compara el texto tal cual: ante la duda, discrepancia, nunca «es lo mismo»). PURA.
+ */
+export type CategoriaEstadoCivil = 'soltero' | 'casado' | 'pareja' | 'separado' | 'divorciado' | 'viudo'
+export function categoriaEstadoCivil(v: unknown): CategoriaEstadoCivil | null {
+  if (typeof v !== 'string') return null
+  const s = norm(v).replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim()
+  if (!s) return null
+  if (/\b(pareja de hecho|pareja|unid[oa] de hecho|registered ?partner|domestic ?partner|commonlaw)\b/.test(s)) return 'pareja'
+  if (/\b(solter[oa]s?|single)\b/.test(s)) return 'soltero'
+  if (/\b(casad[oa]s?|married)\b/.test(s)) return 'casado'
+  if (/\b(divorciad[oa]s?|divorced)\b/.test(s)) return 'divorciado'
+  if (/\b(separad[oa]s?|separated)\b/.test(s)) return 'separado'
+  if (/\b(viud[oa]s?|widow(ed|er)?)\b/.test(s)) return 'viudo'
+  return null
+}
+
 /** ¿Dos valores son el mismo dato? Texto sin tildes/mayúsculas/espacios; documentos y códigos sin separadores. PURA. */
 export function mismoValor(clave: string, a: unknown, b: unknown): boolean {
   if (a === null || a === undefined || b === null || b === undefined) return false
+  if (clave === 'estadoCivil') {
+    const ca = categoriaEstadoCivil(a)
+    const cb = categoriaEstadoCivil(b)
+    if (ca !== null && cb !== null) return ca === cb
+    return norm(String(a)) === norm(String(b))
+  }
   const t = tipoDe(clave).t
+  if (t === 'fecha') {
+    // La ficha guarda «aaaa-mm-dd» o «dd/mm/aaaa»: se compara la FECHA, no el texto. Ilegible = distinta.
+    const fa = fechaIso(String(a))
+    const fb = fechaIso(String(b))
+    return fa !== null && fb !== null && iso(fa) === iso(fb)
+  }
   if (t === 'numero') return Number(a) === Number(b)
   if (t === 'bool') return Boolean(a) === Boolean(b)
   if (t === 'dni' || t === 'matricula' || t === 'cp' || t === 'telefono') return compacto(String(a)) === compacto(String(b))
