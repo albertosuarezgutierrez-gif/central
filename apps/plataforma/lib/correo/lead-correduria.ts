@@ -22,6 +22,7 @@ import {
   type RamoOportunidad,
 } from '@central/module-seguros'
 import { ASEGURADORAS } from './keywords.ts'
+import type { ResultadoEscritura } from '../cliente-edicion-asegura.ts'
 
 /** Actor con el que el triaje escribe en la cartera (asegura solo acepta `fuente:'correo'` de este actor). */
 export const ACTOR_TRIAJE_CORREO = 'agente:triaje-correo'
@@ -37,8 +38,33 @@ const dominioDe = (e: string) => (e.split('@')[1] ?? '').toLowerCase()
 const enDominio = (dom: string, base: string) => dom === base || dom.endsWith(`.${base}`)
 const esDeCorreduria = (e: string) => DOMINIOS_CORREDURIA.some((d) => enDominio(dominioDe(e), d))
 
-/** Buzones automáticos: nunca son una persona pidiendo un seguro. */
-const RE_BUZON_AUTOMATICO = /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|bounce|notificaciones?|notifications?|alertas?|newsletter|news|marketing)\b/i
+/**
+ * Buzones automáticos: nunca son una persona pidiendo un seguro. Las marcas inequívocas (no-reply,
+ * mailer-daemon, dmarc…) se buscan en CUALQUIER parte del local-part: `sc-noreply@google.com`,
+ * `businessprofile-noreply@`, `messages-noreply@linkedin.com`, `dmarcreport@` (revisión 19/10/2026).
+ */
+const RE_BUZON_AUTOMATICO = /no-?reply|do-?not-?reply|mailer-daemon|dmarc|postmaster|bounce/i
+/** Prefijos de buzón genérico que tampoco son una persona (anclados: «newsletter@», no «anews@»). */
+const RE_BUZON_GENERICO = /^(notificaciones?|notifications?|alertas?|alerts?|newsletter|news|marketing|info-?mailing)\b/i
+
+/**
+ * ¿Lo ha mandado una máquina? Cabeceras crudas (`parsed.headerLines`): `List-Unsubscribe` (lista o
+ * campaña), `Auto-Submitted` distinto de `no` (RFC 3834: autorespuestas, avisos) y `Precedence`
+ * bulk/list/junk. Puro.
+ */
+export function esCorreoAutomatico(lineas: readonly { key: string; line: string }[] | undefined): boolean {
+  for (const { key, line } of lineas ?? []) {
+    const k = key.toLowerCase()
+    const v = line.slice(line.indexOf(':') + 1).trim().toLowerCase()
+    if (k === 'list-unsubscribe') return true
+    if (k === 'auto-submitted' && v !== '' && v !== 'no') return true
+    if (k === 'precedence' && /^(bulk|list|junk)\b/.test(v)) return true
+  }
+  return false
+}
+
+/** «código postal 41010» / «CP 41010» en el asunto de un lead: el regex de OTP del clasificador no lo puede tomar por un código. */
+export const RE_CODIGO_POSTAL = /c[oó]d(igo|\.)?\s*postal|\bc\.?\s?p\.?\s*\d{5}\b/i
 
 /** ¿El correo iba a un contacto público de la correduría (hola@grupoasegura.es, …)? */
 export function esDestinoCorreduria(destinatarios: readonly string[] | undefined): boolean {
@@ -59,16 +85,20 @@ export function esLeadCorreduria(c: {
   destinatarios?: readonly string[]
   referencias?: readonly string[]
   buzonPropio?: string | null
+  /** `esCorreoAutomatico(cabeceras)`: lista, autorespuesta o envío masivo. */
+  automatico?: boolean
 }): boolean {
   const from = (c.from ?? '').trim().toLowerCase()
   if (!from.includes('@')) return false
+  if (c.automatico) return false
   if (!esDestinoCorreduria(c.destinatarios)) return false
   if ((c.referencias ?? []).length > 0) return false
   if (esDeCorreduria(from)) return false
   if (c.buzonPropio && from === c.buzonPropio.trim().toLowerCase()) return false
   const dom = dominioDe(from)
   if (ASEGURADORAS.some((d) => enDominio(dom, d))) return false
-  if (RE_BUZON_AUTOMATICO.test(from.split('@')[0])) return false
+  const local = from.split('@')[0]
+  if (RE_BUZON_AUTOMATICO.test(local) || RE_BUZON_GENERICO.test(local)) return false
   return true
 }
 
@@ -106,8 +136,14 @@ export type RamoPlantilla = 'hogar' | 'vida' | 'auto' | 'generico'
 export type LeadCorreo = {
   /** Nombre tal cual aparece en el correo (firma o remitente). `null` = no consta. */
   nombre: string | null
-  /** Email del lead. Por defecto el REMITENTE (eso sí se sabe); otro solo si está escrito en el correo. */
+  /** Email de contacto. Por defecto el REMITENTE; otro solo si está escrito en el correo. Se ENSEÑA; no identifica. */
   email: string | null
+  /**
+   * La dirección del From, normalizada: lo ÚNICO por lo que se casa con una ficha que ya existe (revisión
+   * 19/10/2026). Un email o teléfono escrito en el cuerpo lo puede poner cualquiera: si identificase,
+   * un tercero colgaría su petición en la ficha de un cliente real.
+   */
+  emailRemitente: string | null
   /** Teléfono escrito en el correo. `null` = no consta (nunca se deduce). */
   telefono: string | null
   /** Ramos de la oportunidad. `[]` = la IA no lo identificó (no «no quiere nada»). */
@@ -182,6 +218,9 @@ export function normalizarLeadCorreo(raw: unknown, ctx: { texto: string; from: s
     if (r.ok) { nombre = r.valor; break }
   }
 
+  const remitente = ctx.from && !esDeCorreduria(ctx.from.toLowerCase()) ? normalizarEmail(ctx.from) : null
+  const emailRemitente = remitente?.ok ? remitente.valor : null
+
   // Email: el del remitente es un HECHO; el de la IA solo si está escrito en el correo.
   let email: string | null = null
   const deIa = textoValido(o.email, 200)
@@ -211,7 +250,7 @@ export function normalizarLeadCorreo(raw: unknown, ctx: { texto: string; from: s
 
   const esLead = o.es_lead === true || o.es_lead === 'true' ? true : o.es_lead === false || o.es_lead === 'false' ? false : null
 
-  return { nombre, email, telefono, ramos, pidePresupuesto, resumen: textoValido(o.resumen, 300), esLead }
+  return { nombre, email, emailRemitente, telefono, ramos, pidePresupuesto, resumen: textoValido(o.resumen, 300), esLead }
 }
 
 function esTelefonoCorreduria(t: string): boolean {
@@ -221,8 +260,11 @@ function esTelefonoCorreduria(t: string): boolean {
 /** ¿Se puede dar de alta? El puerto exige nombre y un dato para volver a encontrarla (email o teléfono). */
 export function motivoSinAlta(l: LeadCorreo): string | null {
   if (l.esLead === false) return 'no parece alguien pidiendo un seguro (publicidad, spam o proveedor): si lo es, dale de alta a mano'
+  // Solo con un SÍ de la IA (revisión 19/10/2026): con `null` (IA caída o sin respuesta) no se escribe
+  // en la cartera; el aviso sale igual y Alberto decide.
+  if (l.esLead !== true) return 'la IA no ha podido confirmar que sea alguien pidiendo un seguro: si lo es, dale de alta a mano'
   if (!l.nombre) return 'no consta el nombre en el correo'
-  if (!l.email && !l.telefono) return 'no consta ni email ni teléfono'
+  if (!l.emailRemitente) return 'no se ha podido leer la dirección del remitente'
   return null
 }
 
@@ -242,14 +284,20 @@ export function notasLeadCorreo(l: LeadCorreo, asunto: string): string {
   return `${quiere}${resumen} (correo a ${MEDIADOR.identidad.email}: «${asunto.slice(0, 120)}»)`.slice(0, 1000)
 }
 
-/** Cuerpo de `POST /api/operador/cliente`. Sin `consentimiento`: no hubo formulario (asegura solo escribe `consent_logs` con `fuente:'web'`). */
+/**
+ * Cuerpo de `POST /api/operador/cliente`. Sin `consentimiento`: no hubo formulario (asegura solo escribe
+ * `consent_logs` con `fuente:'web'`). El email es el del REMITENTE (identifica); el teléfono del cuerpo
+ * viaja como contacto de la ficha NUEVA, pero si casa con otra ficha `resolverAltaLeadCorreo` lo manda a
+ * revisar a mano. Un email distinto escrito en el cuerpo va a las notas, no al índice.
+ */
 export function cuerpoAltaLeadCorreo(l: LeadCorreo, asunto: string): Record<string, unknown> {
+  const otroEmail = l.email && l.email !== l.emailRemitente ? ` Email que da en el correo: ${l.email}.` : ''
   return {
     nombre: l.nombre,
     apellidos: '',
     telefono: l.telefono,
-    email: l.email,
-    notas: notasLeadCorreo(l, asunto),
+    email: l.emailRemitente,
+    notas: `${notasLeadCorreo(l, asunto)}${otroEmail}`.slice(0, 1000),
     fuente: 'correo',
     actor: ACTOR_TRIAJE_CORREO,
   }
@@ -376,11 +424,56 @@ export function plantillaPeticionDatos(l: Pick<LeadCorreo, 'nombre' | 'ramos'>, 
 
 // ─── 5. El aviso de Telegram ─────────────────────────────────────────────────
 
-/** Qué pasó con la ficha: nueva · ya existía · no se registró (y por qué). */
+/** Qué pasó con la ficha: nueva · ya existía · casa con OTRA ficha (revisar a mano) · no se registró. */
 export type FichaLeadCorreo =
   | { estado: 'nueva'; id: string; url: string }
   | { estado: 'existente'; id: string; nombre: string; url: string; historial: boolean }
+  | { estado: 'revisar'; fichas: { id: string; nombre: string; url: string }[]; motivo: string }
   | { estado: 'no_registrado'; motivo: string }
+
+/** Respuesta del alta → qué hacer. Puro: la escritura ya interpretada (`interpretarEscritura`) + el status. */
+export type AltaLeadCorreo =
+  | { estado: 'nueva'; id: string }
+  | { estado: 'existente'; id: string; nombre: string }
+  | { estado: 'revisar'; fichas: { id: string; nombre: string }[]; motivo: string }
+  | { estado: 'no_registrado'; motivo: string }
+
+/**
+ * Se casa con una ficha que ya existe SOLO si la coincidencia es por el email del REMITENTE (el único
+ * dato que viaja como `email` en el alta) y todo lo demás que coincide es esa misma ficha. Si el
+ * teléfono del cuerpo cae en otra ficha (o solo coincide el teléfono), es «revisar a mano»: ni historial
+ * ni oportunidad en una ficha que quizá es de otra persona.
+ */
+export function resolverAltaLeadCorreo(status: number, json: unknown, r: ResultadoEscritura): AltaLeadCorreo {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  if (status === 429 || o.estado === 'tope') return { estado: 'no_registrado', motivo: typeof o.motivo === 'string' ? o.motivo : 'tope diario de altas por correo' }
+  switch (r.estado) {
+    case 'ok':
+      return r.id ? { estado: 'nueva', id: r.id } : { estado: 'no_registrado', motivo: 'el puerto dijo ok sin devolver el id de la ficha' }
+    case 'conflicto': {
+      const porEmail = new Map(r.coincidencias.filter((c) => c.por === 'email').map((c) => [c.id, c.nombre]))
+      const otras = r.coincidencias.filter((c) => !porEmail.has(c.id))
+      if (r.forzable && porEmail.size === 1 && otras.length === 0) {
+        const [[id, nombre]] = [...porEmail]
+        return { estado: 'existente', id, nombre }
+      }
+      const fichas = [...new Map(r.coincidencias.map((c) => [c.id, c.nombre]))].map(([id, nombre]) => ({ id, nombre }))
+      return {
+        estado: 'revisar',
+        fichas,
+        motivo: porEmail.size > 1 ? 'el email del remitente está en varias fichas' : 'el teléfono o el DNI del correo ya está en otra ficha',
+      }
+    }
+    case 'invalido':
+      return { estado: 'no_registrado', motivo: r.motivo }
+    case 'no_encontrado':
+      return { estado: 'no_registrado', motivo: 'el puerto no encontró la correduría' }
+    case 'sin_configurar':
+      return { estado: 'no_registrado', motivo: 'puerto sin configurar (ASEGURA_OPERADOR_SECRET)' }
+    case 'error':
+      return { estado: 'no_registrado', motivo: r.motivo }
+  }
+}
 
 export type OportunidadLeadCorreo = { ramo: RamoOportunidad; estado: 'abierta' | 'ya_abierta' | 'tope' | 'error'; motivo?: string }
 
@@ -409,7 +502,7 @@ export function textoAvisoLeadCorreo(a: {
     escapeHtml(a.asunto.slice(0, 200)),
   ]
   if (l.resumen) lineas.push(`🤖 ${escapeHtml(l.resumen)}`)
-  if (l.esLead === null && !a.respuesta) lineas.push('🤖 La IA no ha confirmado que sea un lead: se ha registrado igual (si no lo es, descarta la ficha).')
+  if (l.esLead === null && !a.respuesta) lineas.push('🤖 La IA no ha podido confirmar que sea un lead: no se ha tocado la cartera.')
   if (l.telefono) lineas.push(`📞 ${escapeHtml(l.telefono)}`)
   if (l.email) lineas.push(`✉️ ${escapeHtml(l.email)}`)
   const f = a.ficha
@@ -417,6 +510,9 @@ export function textoAvisoLeadCorreo(a: {
   else if (f.estado === 'existente') {
     lineas.push(`♻️ Ya estaba en la cartera como <b>${escapeHtml(f.nombre)}</b>: <a href="${escapeHtml(f.url)}">abrir ficha</a>`)
     if (!f.historial) lineas.push('⚠️ El contacto NO ha quedado anotado en su historial.')
+  } else if (f.estado === 'revisar') {
+    lineas.push(`⚠️ <b>Revisar a mano</b>: ${escapeHtml(f.motivo)}. No se ha anotado nada ni abierto oportunidad.`)
+    for (const x of f.fichas.slice(0, 3)) lineas.push(`   · <a href="${escapeHtml(x.url)}">${escapeHtml(x.nombre)}</a>`)
   } else {
     lineas.push(`⚠️ <b>NO se ha registrado en la cartera</b> (${escapeHtml(f.motivo)}). Este aviso es el único rastro: dale de alta a mano.`)
   }
@@ -441,4 +537,26 @@ export function textoAvisoLeadCorreo(a: {
  */
 export function textoPlantillaTelegram(p: { asunto: string; cuerpo: string }): string {
   return `📝 <b>Petición de datos (copiar y responder desde ${escapeHtml(MEDIADOR.identidad.email)})</b>\n<blockquote expandable>${escapeHtml(`Asunto: ${p.asunto}\n\n${p.cuerpo}`.slice(0, 3400))}</blockquote>`
+}
+
+// ─── 6. Presupuesto de tiempo de la pasada (revisión 19/10/2026) ─────────────
+//
+// Un lead cuesta hasta ~110 s (IA de extracción + alta + historial + oportunidades + dos avisos) y la
+// función del triaje muere a los 300 s: un correo a medias se quedaría `pendiente` y el dedupe lo
+// saltaría para siempre, sin aviso. Por eso un lead NO se empieza pasados `LEAD_HASTA_MS` ni más de
+// `LEADS_POR_PASADA` por pasada, y ningún correo nuevo pasados `CORREO_HASTA_MS`: se DIFIERE (su fila se
+// borra y el cursor se queda justo antes), y la pasada siguiente —10 min— lo coge entero.
+export const LEADS_POR_PASADA = 2
+export const LEAD_HASTA_MS = 170_000
+export const CORREO_HASTA_MS = 200_000
+
+export function diferirCorreo(transcurridoMs: number): boolean {
+  return transcurridoMs > CORREO_HASTA_MS
+}
+export function diferirLead(transcurridoMs: number, leadsHechos: number): boolean {
+  return leadsHechos >= LEADS_POR_PASADA || transcurridoMs > LEAD_HASTA_MS
+}
+/** El cursor nunca pasa de un correo diferido: queda en el UID anterior para que se relea. */
+export function cursorTrasPasada(maxUid: number, uidDiferido: number | null): number {
+  return uidDiferido == null ? maxUid : Math.min(maxUid, uidDiferido - 1)
 }

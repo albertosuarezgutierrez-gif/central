@@ -44,7 +44,7 @@ mapa para entenderlo y tocarlo con seguridad.
   del regex OTP. Respuestas del lead en su hilo: casan por referencias con un Message-ID `correduria-lead` de
   `correo_triaje` (`lead-correduria-hilo.ts`) → solo historial. En VIVO (`lead-correduria-proceso.ts`): la IA
   (`llamarIA`) extrae y TODO se valida contra el texto (teléfono/email/nombre que no estén en el correo → null);
-  `es_lead:false` (publicidad/proveedor) no da de alta. Alta por el MISMO puerto que la web
+  solo `es_lead:true` da de alta (null/false → solo aviso). Las fichas se casan SOLO por el From; si el teléfono del cuerpo cae en otra ficha → «revisar a mano» (sin historial ni oportunidad). Descarta no-reply/dmarc en cualquier parte del buzón y `List-Unsubscribe`/`Auto-Submitted`/`Precedence: bulk`; el OTP va antes (salvo «código postal»). Máx. 2 leads por pasada y ninguno pasados 170 s: se difieren (fila borrada, cursor antes). Tope diario en asegura: 20 altas y 20 oportunidades con fuente correo. Alta por el MISMO puerto que la web
   (`altaClienteAsegura` → `interpretarAltaLead`, `fuente:'correo'`, actor `agente:triaje-correo`, sin
   consentimiento web); ficha existente → historial `contacto`; una oportunidad por ramo (`fuente:'correo'`,
   tope 20/día en asegura, primer paso email HOY). La petición de datos (plantilla FIJA por ramo + pie legal de

@@ -29,6 +29,7 @@ import { urlFichaCliente } from '@/lib/leads-web'
 import { esCorreoFacturaSique } from '@/lib/sivra/factura-cuadre'
 import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
 import { procesarLeadCorreo } from './lead-correduria-proceso'
+import { cursorTrasPasada, diferirCorreo, diferirLead } from './lead-correduria'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -87,6 +88,11 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
 
   const sesion = await abrirTriaje()
   let maxUid = lastUid
+  // Presupuesto de tiempo (revisión 19/10/2026): la función muere a los 300 s y un correo a medias se
+  // quedaría `pendiente` para siempre. Lo que no cabe se DIFIERE: el cursor no pasa de él.
+  const t0 = Date.now()
+  let uidDiferido: number | null = null
+  let leadsPasada = 0
   try {
     // Tope BAJO por pasada: cada correo hace 1 llamada a la IA en serie; con la función limitada a
     // 300s, ~30 correos la agotaban (504) y el cursor no avanzaba → re-escaneo infinito. Con 10 la
@@ -95,6 +101,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
     stats.nuevos = nuevos.length
 
     for (const correo of nuevos) {
+      if (diferirCorreo(Date.now() - t0)) { uidDiferido = correo.uid; break }
       maxUid = Math.max(maxUid, correo.uid)
       let filaId: bigint | null = null
       try {
@@ -128,6 +135,19 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
           : clasificado
         const ruta = rutaDe(c.categoria)
         let accion = 'ninguna'
+
+        // Un lead cuesta hasta ~110 s: si no cabe en esta pasada (o ya van los de la pasada), se difiere
+        // ENTERO —se borra su fila para que el dedupe no lo salte y el cursor se queda antes— y lo coge la
+        // siguiente (10 min). Nunca se queda a medias.
+        if (!DRY_RUN() && c.categoria === 'correduria-lead') {
+          if (diferirLead(Date.now() - t0, leadsPasada)) {
+            await prisma.$executeRaw`DELETE FROM correo_triaje WHERE id = ${filaId} AND categoria = 'pendiente'`
+            filaId = null
+            uidDiferido = correo.uid
+            break
+          }
+          leadsPasada++
+        }
 
         if (DRY_RUN()) {
           accion = 'sombra'
@@ -317,7 +337,7 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
     // Avanza el cursor SIEMPRE (aunque el bucle fallara), y cierra la sesión.
     await prisma.$executeRaw`
       INSERT INTO correo_cursor (buzon, last_uid, uidvalidity, updated_at)
-      VALUES ('INBOX', ${maxUid}, ${BigInt(sesion.uidValidity)}, now())
+      VALUES ('INBOX', ${cursorTrasPasada(maxUid, uidDiferido)}, ${BigInt(sesion.uidValidity)}, now())
       ON CONFLICT (buzon) DO UPDATE SET last_uid = EXCLUDED.last_uid, uidvalidity = EXCLUDED.uidvalidity, updated_at = now()
     `.catch(() => {})
     await sesion.cerrar()

@@ -3,8 +3,9 @@
 // Las reglas viven en `lead-correduria.ts` (puro, con test); aquí solo se encadenan:
 //   1. ¿respuesta en el hilo de un lead que ya registramos? → SOLO historial en su ficha y aviso.
 //   2. Si no: la IA lee el correo (`llamarIA`), `normalizarLeadCorreo` valida contra el texto, y el
-//      alta va por el MISMO puerto que el formulario web (`altaClienteAsegura` → `interpretarAltaLead`):
-//      ficha nueva, o la que ya tenía ese email/teléfono (no se fuerza duplicado: se anota el contacto).
+//      alta va por el MISMO puerto que el formulario web (`altaClienteAsegura`), solo con `es_lead:true`:
+//      ficha nueva, o la que ya tenía el email del REMITENTE (no se fuerza duplicado: se anota el contacto).
+//      Si el teléfono del cuerpo cae en OTRA ficha → «revisar a mano» (`resolverAltaLeadCorreo`).
 //   3. Con ficha y ramo identificado (y sin «no quiero precio» explícito): una oportunidad por ramo
 //      (`fuente:'correo'`, primer paso HOY: pedirle los datos). asegura no duplica una abierta.
 //   4. Aviso Telegram con lo que se hizo y lo que NO, y la petición de datos como texto para copiar.
@@ -16,13 +17,13 @@ import { tgAviso } from '@/lib/telegram/avisos'
 import { altaClienteAsegura, historialClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { accionOportunidadAsegura } from '@/lib/seguimiento-asegura'
 import { buscarAsegura } from '@/lib/correduria-puerto'
-import { interpretarAltaLead, urlFichaCliente } from '@/lib/leads-web'
+import { urlFichaCliente } from '@/lib/leads-web'
 import { llamarIA } from './clasificador'
 import type { CorreoNuevo } from './imap'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 import {
   ACTOR_TRIAJE_CORREO, PROMPT_EXTRAER_LEAD, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
-  motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, textoAvisoLeadCorreo,
+  motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, resolverAltaLeadCorreo, textoAvisoLeadCorreo,
   textoHistorialLeadCorreo, textoPlantillaTelegram,
   type FichaLeadCorreo, type LeadCorreo, type OportunidadLeadCorreo,
 } from './lead-correduria'
@@ -77,10 +78,11 @@ export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()
 
     if (respuesta) {
       // Un hilo = un lead: la respuesta NO da de alta ni abre oportunidad; solo se anota en su ficha.
-      const f = await fichaPorEmail(lead.email)
+      // La ficha se busca por el FROM, nunca por un email escrito en el cuerpo.
+      const f = await fichaPorEmail(lead.emailRemitente)
       const ficha: FichaLeadCorreo = f
         ? { estado: 'existente', id: f.id, nombre: f.nombre, url: urlFichaCliente(f.id), historial: await anotar(f.id, textoHistorialLeadCorreo(lead, correo.subject, true)) }
-        : { estado: 'no_registrado', motivo: 'no encuentro una única ficha con ese email: anótalo a mano' }
+        : { estado: 'no_registrado', motivo: 'no encuentro una única ficha con el email del remitente: anótalo a mano' }
       const enviado = await tgAviso('correduria.lead-correo', textoAvisoLeadCorreo({ remitente: correo.fromRaw, asunto: correo.subject, lead, ficha, oportunidades: [], plantilla: null, respuesta: true }))
       return { avisado: enviado !== null, ficha: ficha.estado }
     }
@@ -91,15 +93,17 @@ export async function procesarLeadCorreo(correo: CorreoNuevo, ahora = new Date()
       ficha = { estado: 'no_registrado', motivo: sinAlta }
     } else {
       const alta = await altaClienteAsegura(cuerpoAltaLeadCorreo(lead, correo.subject), ACTOR_TRIAJE_CORREO)
-      const r = interpretarAltaLead(interpretarEscritura(alta.status, alta.json))
+      const r = resolverAltaLeadCorreo(alta.status, alta.json, interpretarEscritura(alta.status, alta.json))
       if (r.estado === 'nueva') ficha = { estado: 'nueva', id: r.id, url: urlFichaCliente(r.id) }
       else if (r.estado === 'existente') {
         ficha = { estado: 'existente', id: r.id, nombre: r.nombre, url: urlFichaCliente(r.id), historial: await anotar(r.id, textoHistorialLeadCorreo(lead, correo.subject, false)) }
+      } else if (r.estado === 'revisar') {
+        ficha = { estado: 'revisar', motivo: r.motivo, fichas: r.fichas.map((x) => ({ ...x, url: urlFichaCliente(x.id) })) }
       } else ficha = { estado: 'no_registrado', motivo: r.motivo }
     }
 
     const oportunidades: OportunidadLeadCorreo[] = []
-    if (ficha.estado !== 'no_registrado' && lead.pidePresupuesto !== false) {
+    if ((ficha.estado === 'nueva' || ficha.estado === 'existente') && lead.pidePresupuesto !== false) {
       for (const ramo of lead.ramos) {
         const o = await accionOportunidadAsegura(cuerpoOportunidadLeadCorreo(ficha.id, ramo, lead, ahora))
         oportunidades.push({ ramo, ...leerOportunidad(o.status, o.json) })

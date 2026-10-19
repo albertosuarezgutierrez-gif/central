@@ -14,7 +14,7 @@ import { clasificarPorKeyword } from './keywords'
 import { parsearAvisoBooking } from './reserva-booking'
 import { esAvisoMensajesAgoda } from './agoda-mensajes'
 import type { CorreoNuevo } from './imap'
-import { esDestinoCorreduria, esLeadCorreduria } from './lead-correduria'
+import { RE_CODIGO_POSTAL, esDestinoCorreduria, esLeadCorreduria } from './lead-correduria'
 import { esRespuestaDeLeadBD } from './lead-correduria-hilo'
 
 export interface Clasificacion {
@@ -101,7 +101,7 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
   if (correo.referencias?.length && esDestinoCorreduria(correo.destinatarios) && (await esRespuestaDeLeadBD(correo.referencias))) {
     return { categoria: 'correduria-lead', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
-  const leadCorreduria = esLeadCorreduria({ from: correo.from, destinatarios: correo.destinatarios, referencias: correo.referencias, buzonPropio: process.env.GMAIL_USER ?? null })
+  const leadCorreduria = esLeadCorreduria({ from: correo.from, destinatarios: correo.destinatarios, referencias: correo.referencias, buzonPropio: process.env.GMAIL_USER ?? null, automatico: correo.automatico })
 
   // (1) Regla explícita (semilla VIP o auto-aprendida). Una aprendida hacia `leads-negocio` (la IA lo
   // confundía) no le gana al lead de la correduría.
@@ -110,17 +110,18 @@ export async function clasificar(correo: CorreoNuevo): Promise<Clasificacion> {
     return { categoria: regla, confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
 
-  // (2.6) Lead de la CORREDURÍA (19/10/2026), DETERMINISTA y sin IA: a hola@grupoasegura.es (u otro contacto
-  // público de la correduría), de un remitente externo que no es aseguradora/proveedor/ruido (eso ya lo han
-  // decidido correo_reglas y lo decide `clasificarPorKeyword`, que se mira aquí) y abriendo hilo. Antes que el
-  // regex de OTP: «código postal 41010» en el asunto de un lead no es un código de verificación. La IA lo mandaba a `leads-negocio` y no quedaba nada.
-  if (leadCorreduria && !clasificarPorKeyword(correo.from, correo.subject)) {
-    return { categoria: 'correduria-lead', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Contestarle desde hola@ pidiendo los datos', fechaLimite: null }
+  // (2) Código de verificación (barato, no gasta IA). ANTES que el lead (revisión 19/10/2026): un OTP que
+  // llega a hola@ no es una persona. Excepción: «código postal 41010» en el asunto de un lead no es un OTP.
+  if (RE_OTP.test(correo.subject) && !(leadCorreduria && RE_CODIGO_POSTAL.test(correo.subject))) {
+    return { categoria: 'codigos-verificacion', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
   }
 
-  // (2) Código de verificación (barato, no gasta IA).
-  if (RE_OTP.test(correo.subject)) {
-    return { categoria: 'codigos-verificacion', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: null, fechaLimite: null }
+  // (2.6) Lead de la CORREDURÍA (19/10/2026), DETERMINISTA y sin IA: a hola@grupoasegura.es (u otro contacto
+  // público de la correduría), de un remitente externo que no es aseguradora/proveedor/ruido (eso ya lo han
+  // decidido correo_reglas y lo decide `clasificarPorKeyword`, que se mira aquí) y abriendo hilo. La IA lo
+  // mandaba a `leads-negocio` y no quedaba nada.
+  if (leadCorreduria && !clasificarPorKeyword(correo.from, correo.subject)) {
+    return { categoria: 'correduria-lead', confianza: 1, via: 'regla', resumen: correo.subject.slice(0, 140), accionSugerida: 'Contestarle desde hola@ pidiendo los datos', fechaLimite: null }
   }
 
   // (2.5) Keyword determinista (0 tokens): remitentes/asuntos INEQUÍVOCOS (procesadores de pago,

@@ -10,6 +10,7 @@
 // etiqueta INBOX (el correo permanece en «Todos los mensajes»). Requiere Auto-Expunge ON (default).
 import { ImapFlow } from 'imapflow'
 import { simpleParser } from 'mailparser'
+import { esCorreoAutomatico } from './lead-correduria.ts'
 
 export interface CorreoNuevo {
   uid: number
@@ -39,6 +40,8 @@ export interface CorreoNuevo {
   destinatarios?: string[]
   /** Message-IDs de los que este correo es respuesta (In-Reply-To + References), para casar el hilo. */
   referencias?: string[]
+  /** Lista, autorespuesta o envío masivo (`List-Unsubscribe`, `Auto-Submitted`, `Precedence`): nunca un lead. */
+  automatico?: boolean
 }
 
 const RE_DIRECCION = /[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}/gi
@@ -143,6 +146,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           pdfs: pdfsDe(from, parsed.attachments),
           destinatarios: destinatariosDe(parsed.headerLines),
           referencias: referenciasDe(parsed.inReplyTo, parsed.references),
+          automatico: esCorreoAutomatico(parsed.headerLines),
         })
         if (out.length >= max) break
       }

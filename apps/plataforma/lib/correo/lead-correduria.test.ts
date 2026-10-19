@@ -2,11 +2,13 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { MEDIADOR } from '@central/module-seguros'
 import {
-  cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo, esDestinoCorreduria, esLeadCorreduria, esRespuestaDeLead,
+  CORREO_HASTA_MS, LEADS_POR_PASADA, LEAD_HASTA_MS, RE_CODIGO_POSTAL, cuerpoAltaLeadCorreo, cuerpoOportunidadLeadCorreo,
+  cursorTrasPasada, diferirCorreo, diferirLead, esCorreoAutomatico, esDestinoCorreduria, esLeadCorreduria, esRespuestaDeLead,
   hoyMadrid, motivoSinAlta, nombreVisible, normalizarLeadCorreo, plantillaPeticionDatos, ramoDeTexto,
-  ramoPlantilla, textoAvisoLeadCorreo, textoPlantillaTelegram, type LeadCorreo,
+  ramoPlantilla, resolverAltaLeadCorreo, textoAvisoLeadCorreo, textoPlantillaTelegram, type LeadCorreo,
 } from './lead-correduria.ts'
 import { destinatariosDe, referenciasDe } from './imap.ts'
+import { readFileSync } from 'node:fs'
 
 // El correo real del 19/10/2026 (datos inventados): a hola@, desde un gmail, abriendo hilo.
 const LEAD = { from: 'ana.perez@gmail.com', destinatarios: ['hola@grupoasegura.es', 'alberto.suarez@gmail.com'], referencias: [] as string[], buzonPropio: 'alberto.suarez@gmail.com' }
@@ -78,7 +80,7 @@ test('🪤 lo que dice la IA se COMPRUEBA contra el correo: nada inventado entra
 
 test('IA caída o basura: tres estados, nunca un valor de cajón', () => {
   const nada = normalizarLeadCorreo(null, { texto: 'hola', from: 'x@gmail.com', fromNombre: null })
-  assert.deepEqual(nada, { nombre: null, email: 'x@gmail.com', telefono: null, ramos: [], pidePresupuesto: null, resumen: null, esLead: null })
+  assert.deepEqual(nada, { nombre: null, email: 'x@gmail.com', emailRemitente: 'x@gmail.com', telefono: null, ramos: [], pidePresupuesto: null, resumen: null, esLead: null })
   const raro = normalizarLeadCorreo({ ramos: ['otros', 'patata', 'coche'], resumen: 'null', pide_presupuesto: 'quizá' }, CTX)
   assert.deepEqual(raro.ramos, ['auto'], '«otros» y lo desconocido se descartan: ramo sin identificar ≠ «otros»')
   assert.equal(raro.resumen, null)
@@ -88,16 +90,17 @@ test('IA caída o basura: tres estados, nunca un valor de cajón', () => {
   assert.equal(ramoDeTexto(3), null)
 })
 
-test('alta: sin nombre o sin contacto no se da de alta; la publicidad tampoco', () => {
-  const base: LeadCorreo = { nombre: 'Ana', email: 'a@b.es', telefono: null, ramos: [], pidePresupuesto: null, resumen: null, esLead: null }
+test('🪤 alta SOLO con es_lead=true, nombre y remitente legible; null (IA caída) = solo aviso', () => {
+  const base: LeadCorreo = { nombre: 'Ana', email: 'a@b.es', emailRemitente: 'a@b.es', telefono: null, ramos: [], pidePresupuesto: null, resumen: null, esLead: true }
   assert.equal(motivoSinAlta(base), null)
-  assert.ok(motivoSinAlta({ ...base, nombre: null }))
-  assert.ok(motivoSinAlta({ ...base, email: null }))
+  assert.ok(motivoSinAlta({ ...base, esLead: null }), 'sin un SÍ de la IA no se escribe en la cartera')
   assert.ok(motivoSinAlta({ ...base, esLead: false }))
+  assert.ok(motivoSinAlta({ ...base, nombre: null }))
+  assert.ok(motivoSinAlta({ ...base, emailRemitente: null }), 'sin From legible no hay con qué identificarla')
 })
 
 test('cuerpo del alta: fuente correo, actor del triaje y SIN consentimiento web', () => {
-  const l: LeadCorreo = { nombre: 'Ana Pérez', email: 'a@b.es', telefono: null, ramos: ['hogar'], pidePresupuesto: true, resumen: 'Comparativa de hogar', esLead: true }
+  const l: LeadCorreo = { nombre: 'Ana Pérez', email: 'a@b.es', emailRemitente: 'a@b.es', telefono: null, ramos: ['hogar'], pidePresupuesto: true, resumen: 'Comparativa de hogar', esLead: true }
   const c = cuerpoAltaLeadCorreo(l, 'COMPARATIVA')
   assert.equal(c.fuente, 'correo')
   assert.equal(c.actor, 'agente:triaje-correo')
@@ -129,7 +132,7 @@ test('🪤 plantilla FIJA por ramo, con pie legal de MEDIADOR y enlace RGPD', ()
 })
 
 test('aviso: dice lo que se hizo y lo que NO, escapa el HTML y la plantilla va aparte', () => {
-  const l: LeadCorreo = { nombre: 'Ana <b>', email: 'a@b.es', telefono: null, ramos: ['hogar'], pidePresupuesto: true, resumen: null, esLead: true }
+  const l: LeadCorreo = { nombre: 'Ana <b>', email: 'a@b.es', emailRemitente: 'a@b.es', telefono: null, ramos: ['hogar'], pidePresupuesto: true, resumen: null, esLead: true }
   const p = plantillaPeticionDatos(l, 'x')
   const t = textoAvisoLeadCorreo({ remitente: 'Ana', asunto: 'x', lead: l, ficha: { estado: 'no_registrado', motivo: 'puerto caído' }, oportunidades: [], plantilla: p })
   assert.match(t, /NO se ha registrado/)
@@ -144,4 +147,71 @@ test('aviso: dice lo que se hizo y lo que NO, escapa el HTML y la plantilla va a
   assert.match(tp, /<blockquote expandable>/)
   assert.equal(nombreVisible('"Ana Pérez" <ana@gmail.com>'), 'Ana Pérez')
   assert.equal(nombreVisible('ana@gmail.com'), null)
+})
+
+// ─── Revisión de alto riesgo (19/10/2026) ────────────────────────────────────
+
+test('🪤 [1] solo el FROM identifica: un email del cuerpo no va al alta ni casa fichas', () => {
+  const texto = 'Hola, pido seguro de hogar para mi vecina, su correo es cliente.real@gmail.com y su móvil 612345678. Firmado: Pepe Ruiz'
+  const l = normalizarLeadCorreo({ es_lead: true, nombre: 'Pepe Ruiz', email: 'cliente.real@gmail.com', telefono: '612345678' }, { texto, from: 'pepe@gmail.com', fromNombre: 'Pepe Ruiz' })
+  assert.equal(l.emailRemitente, 'pepe@gmail.com')
+  const c = cuerpoAltaLeadCorreo(l, 'x')
+  assert.equal(c.email, 'pepe@gmail.com', 'el email que identifica en el alta es el del remitente')
+  assert.match(String(c.notas), /cliente\.real@gmail\.com/, 'el del cuerpo se conserva como dato, en notas')
+})
+
+test('🪤 [1] coincidencias: solo por el email del remitente = ficha existente; el teléfono en OTRA ficha = revisar', () => {
+  const porEmail = { id: 'A', nombre: 'Pepe', por: 'email' as const, tipo: 'lead' }
+  const porTel = { id: 'B', nombre: 'Cliente real', por: 'telefono' as const, tipo: 'cliente' }
+  assert.deepEqual(resolverAltaLeadCorreo(409, {}, { estado: 'conflicto', coincidencias: [porEmail], forzable: true }), { estado: 'existente', id: 'A', nombre: 'Pepe' })
+  assert.deepEqual(resolverAltaLeadCorreo(409, {}, { estado: 'conflicto', coincidencias: [porEmail, { ...porEmail, por: 'telefono' }], forzable: true }), { estado: 'existente', id: 'A', nombre: 'Pepe' })
+  assert.equal(resolverAltaLeadCorreo(409, {}, { estado: 'conflicto', coincidencias: [porTel], forzable: true }).estado, 'revisar', 'solo casa el teléfono del cuerpo: otra persona')
+  assert.equal(resolverAltaLeadCorreo(409, {}, { estado: 'conflicto', coincidencias: [porEmail, porTel], forzable: true }).estado, 'revisar')
+  assert.equal(resolverAltaLeadCorreo(409, {}, { estado: 'conflicto', coincidencias: [porEmail, { ...porEmail, id: 'C' }], forzable: true }).estado, 'revisar', 'remitente en dos fichas')
+  assert.deepEqual(resolverAltaLeadCorreo(201, {}, { estado: 'ok', id: 'N', contacto: null, contactos: null }), { estado: 'nueva', id: 'N' })
+  const l: LeadCorreo = { nombre: 'Pepe', email: 'pepe@gmail.com', emailRemitente: 'pepe@gmail.com', telefono: null, ramos: ['hogar'], pidePresupuesto: true, resumen: null, esLead: true }
+  const t = textoAvisoLeadCorreo({ remitente: 'Pepe', asunto: 'x', lead: l, ficha: { estado: 'revisar', motivo: 'm', fichas: [{ id: 'B', nombre: 'Cliente real', url: 'https://p/B' }] }, oportunidades: [], plantilla: null })
+  assert.match(t, /Revisar a mano/)
+})
+
+test('🪤 [1] la respuesta de hilo busca la ficha por el FROM (lee el fuente)', () => {
+  const src = readFileSync(new URL('./lead-correduria-proceso.ts', import.meta.url), 'utf8')
+  assert.match(src, /fichaPorEmail\(lead\.emailRemitente\)/)
+  assert.doesNotMatch(src, /fichaPorEmail\(lead\.email\)/)
+  assert.match(src, /ficha\.estado === 'nueva' \|\| ficha\.estado === 'existente'/, 'oportunidades solo con ficha propia, nunca en «revisar»')
+})
+
+test('🪤 [2] buzones y correos automáticos a hola@ no son leads', () => {
+  for (const from of ['sc-noreply@google.com', 'businessprofile-noreply@google.com', 'messages-noreply@linkedin.com', 'dmarcreport@microsoft.com', 'donotreply@registrador.es', 'newsletter@saas.io']) {
+    assert.equal(esLeadCorreduria({ ...LEAD, from }), false, from)
+  }
+  assert.equal(esLeadCorreduria({ ...LEAD, automatico: true }), false)
+  assert.equal(esCorreoAutomatico([{ key: 'list-unsubscribe', line: 'List-Unsubscribe: <mailto:u@x>' }]), true)
+  assert.equal(esCorreoAutomatico([{ key: 'auto-submitted', line: 'Auto-Submitted: auto-replied' }]), true)
+  assert.equal(esCorreoAutomatico([{ key: 'auto-submitted', line: 'Auto-Submitted: no' }]), false)
+  assert.equal(esCorreoAutomatico([{ key: 'precedence', line: 'Precedence: bulk' }]), true)
+  assert.equal(esCorreoAutomatico([{ key: 'subject', line: 'Subject: hola' }]), false)
+  assert.equal(esCorreoAutomatico(undefined), false)
+})
+
+test('🪤 [2] el OTP va ANTES que el lead (salvo «código postal»), lee el fuente del clasificador', () => {
+  const src = readFileSync(new URL('./clasificador.ts', import.meta.url), 'utf8')
+  assert.ok(src.indexOf('(2) Código de verificación') < src.indexOf('(2.6) Lead de la CORREDURÍA'), 'el lead se mira antes que el OTP')
+  assert.match(src, /automatico: correo\.automatico/)
+  assert.equal(RE_CODIGO_POSTAL.test('Seguro hogar código postal 41010'), true)
+  assert.equal(RE_CODIGO_POSTAL.test('Tu código de verificación es 123456'), false)
+})
+
+test('🪤 [3] presupuesto de tiempo: se difiere antes de pasarse, y el cursor no pasa del diferido', () => {
+  assert.ok(LEAD_HASTA_MS + 110_000 < 300_000, 'un lead empezado al límite tiene que acabar antes de los 300 s')
+  assert.equal(diferirLead(0, LEADS_POR_PASADA), true)
+  assert.equal(diferirLead(LEAD_HASTA_MS + 1, 0), true)
+  assert.equal(diferirLead(10_000, 0), false)
+  assert.equal(diferirCorreo(CORREO_HASTA_MS + 1), true)
+  assert.equal(diferirCorreo(1_000), false)
+  assert.equal(cursorTrasPasada(120, null), 120)
+  assert.equal(cursorTrasPasada(120, 118), 117)
+  const src = readFileSync(new URL('./triaje.ts', import.meta.url), 'utf8')
+  assert.match(src, /cursorTrasPasada\(maxUid, uidDiferido\)/, 'el cursor del finally no usa el helper')
+  assert.match(src, /diferirLead\(/)
 })
