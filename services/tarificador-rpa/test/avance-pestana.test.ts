@@ -21,6 +21,9 @@ import {
   destinoAvancePermitido,
   instalarGuardEmision,
   pulsarAvancePestanaAutorizado,
+  CONFIRMS_AVANCE_ACEPTABLES,
+  confirmAvanceAceptable,
+  supuestosAvanceAceptados,
   type GuardEmision,
   type SelectorAvancePestana,
 } from '../src/guard.ts'
@@ -454,4 +457,47 @@ test('NEGATIVO: el mensaje del guard para un AJAX rechazado lleva el motivo y la
   assert.match(msg, /\[pestaña de origen: \/drpc18\/riesgoMunicipio\/control\.do\]/)
   assert.ok(!/00000000T/.test(msg), 'ni el valor del cuerpo')
   await page.context().close()
+})
+
+// ── v0.7.15 (trabajo real 08abe9d5): excepción EXACTA «Primer periodo inferior a 355 días…» → se responde «No» y el avance sigue ──
+const PERIODO = 'Primer periodo inferior a 355 días. ¿Desea alargar el término 1 mes más?<br/>'
+const AVISO_PERIODO = /^Allianz: primer periodo inferior a un año .*la prima no es anual y no es directamente comparable$/
+const LLEGAR_DATOS = `document.getElementById('formulari').setAttribute('action', ${JSON.stringify(DATOS)})`
+
+test('confirmAvanceAceptable: SOLO confirm, texto normalizado igual, td#datosBasicos y la primera vez', () => {
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'confirm', PERIODO, false), true)
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'confirm', '  Primer periodo inferior a 355 días.\n ¿Desea alargar el término 1 mes más? ', false), true, 'solo espacios/<br>')
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'confirm', PERIODO, true), false, 'segunda vez en el trabajo')
+  assert.equal(confirmAvanceAceptable('td#rate', 'confirm', PERIODO, false), false, 'otra pestaña')
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'alert', PERIODO, false), false, 'no es confirm')
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'confirm', 'Primer periodo inferior a 355 días. ¿Desea alargar el término 2 meses más?', false), false, 'otro texto')
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'confirm', 'primer periodo inferior a 355 días. ¿desea alargar el término 1 mes más?', false), false, 'mayúsculas distintas')
+  assert.equal(confirmAvanceAceptable('td#datosBasicos', 'confirm', `${PERIODO} ¿Desea grabar el proyecto?`, false), false, 'texto añadido')
+  assert.deepEqual(Object.keys(CONFIRMS_AVANCE_ACEPTABLES), ['td#datosBasicos'])
+})
+
+test('POSITIVO td#datosBasicos: el confirm exacto del primer periodo se responde «No» (nunca se alarga), el avance llega y queda el aviso', async () => {
+  const { page, guard } = await pantalla({ origen: RIESGO, destino: DATOS, td: TD_DATOS, alClic: `window.alargar = confirm(${JSON.stringify(PERIODO)}); ${LLEGAR_DATOS}` })
+  await pulsarAvancePestanaAutorizado(page, guard, 'td#datosBasicos')
+  assert.equal(await page.evaluate(() => (window as unknown as { alargar?: boolean }).alargar), false, '«No»: no se alarga el término')
+  assert.equal(guard.violacion(), null)
+  const avisos = supuestosAvanceAceptados(page)
+  assert.equal(avisos.length, 1)
+  assert.match(avisos[0]!, AVISO_PERIODO)
+  await page.context().close()
+})
+
+test('NEGATIVO: variantes del confirm del primer periodo (otro texto, otra pestaña, segunda vez) → bloqueado, sin aviso', async () => {
+  const casos: Array<{ sel: SelectorAvancePestana; origen: string; td: string; alClic: string }> = [
+    { sel: 'td#datosBasicos', origen: RIESGO, td: TD_DATOS, alClic: `confirm('Primer periodo inferior a 355 días. ¿Desea alargar el término 2 meses más?'); ${LLEGAR_DATOS}` },
+    { sel: 'td#rate', origen: DATOS, td: TD_RATE, alClic: `confirm(${JSON.stringify(PERIODO)}); document.getElementById('formulari').setAttribute('action', ${JSON.stringify(TARIFA)})` },
+    { sel: 'td#datosBasicos', origen: RIESGO, td: TD_DATOS, alClic: `confirm(${JSON.stringify(PERIODO)}); confirm(${JSON.stringify(PERIODO)}); ${LLEGAR_DATOS}` },
+  ]
+  for (const c of casos) {
+    const { page, guard } = await pantalla({ origen: c.origen, destino: DATOS, td: c.td, alClic: c.alClic })
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, c.sel), (e) => e instanceof EmisionBloqueadaError && /confirmaci/.test(e.message), c.alClic.slice(0, 60))
+    assert.equal(guard.avance.abierta(), false)
+    if (c.sel === 'td#rate' || c.alClic.includes('2 meses')) assert.deepEqual(supuestosAvanceAceptados(page), [], 'sin aviso')
+    await page.context().close()
+  }
 })
