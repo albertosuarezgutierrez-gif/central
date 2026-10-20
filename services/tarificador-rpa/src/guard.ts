@@ -137,9 +137,16 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.free
  */
 export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
 
-/** Nombre de clave apto para un mensaje (las claves de ePAC son identificadores; cualquier otra cosa podría ser un dato). */
-const claveMostrable = (k: string): string => (/^[A-Za-z0-9_.-]{1,60}$/.test(k) ? k : '(clave ilegible)')
-const listaClaves = (ks: readonly string[]): string => [...new Set(ks.map(claveMostrable))].join(',')
+/** Claves que la regla declara (se pueden nombrar en un mensaje); cualquier otra podría ser un dato (NIF, nombre) y NUNCA se imprime. */
+const declaradasDe = (r: AjaxValidacionAvance): ReadonlySet<string> =>
+  new Set(['resource', ...r.parametros, ...(r.parametrosOpcionales ?? []), ...r.cuerpo])
+/** Nombra las claves declaradas y cuenta (sin nombrar) las no declaradas. */
+const listaClaves = (ks: readonly string[], decl: ReadonlySet<string>): string => {
+  const unicas = [...new Set(ks)]
+  const nombradas = unicas.filter((k) => decl.has(k))
+  const n = unicas.length - nombradas.length
+  return [...nombradas, ...(n ? [`${n} clave(s) no declarada(s)`] : [])].join(',')
+}
 
 /** Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). */
 function formaValor(v: string): string {
@@ -156,27 +163,28 @@ const VALOR_QUERY = /^[A-Za-z0-9_.-]{0,64}$/
 /** Por qué `r` rechaza la petición (solo nombres de claves y categorías, NUNCA valores), o `null` si la admite. */
 function motivoRechazoRegla(r: AjaxValidacionAvance, u: URL, cuerpo: string | null): string | null {
   const opc = r.parametrosOpcionales ?? []
+  const decl = declaradasDe(r)
   const qk = [...u.searchParams.keys()]
-  if (new Set(qk).size !== qk.length) return `clave de query repetida: ${listaClaves(qk.filter((k, i) => qk.indexOf(k) !== i))}`
+  if (new Set(qk).size !== qk.length) return `clave de query repetida: ${listaClaves(qk.filter((k, i) => qk.indexOf(k) !== i), decl)}`
   const sobran = qk.filter((k) => k !== 'resource' && !r.parametros.includes(k) && !opc.includes(k))
-  if (sobran.length) return `clave de query no permitida: ${listaClaves(sobran)}`
+  if (sobran.length) return `clave de query no permitida: ${listaClaves(sobran, decl)}`
   const faltan = r.parametros.filter((k) => !qk.includes(k))
-  if (faltan.length) return `falta clave de query: ${listaClaves(faltan)}`
+  if (faltan.length) return `falta clave de query: ${listaClaves(faltan, decl)}`
   for (const p of [...r.parametros, ...opc].filter((k) => qk.includes(k))) {
-    if (!VALOR_QUERY.test(u.searchParams.get(p) ?? '\u0000')) return `forma de valor de query no permitida en «${claveMostrable(p)}» (${formaValor(u.searchParams.get(p) ?? '')})`
+    if (!VALOR_QUERY.test(u.searchParams.get(p) ?? '\u0000')) return `forma de valor de query no permitida en «${p}» (${formaValor(u.searchParams.get(p) ?? '')})`
   }
   const texto = cuerpo ?? ''
   if (texto === '') return 'cuerpo vacío o ilegible (se esperaban claves urlencoded)'
   if (/^\s*[{[]/.test(texto) || texto.startsWith('--')) return 'cuerpo no urlencoded (JSON o multipart)'
   const cp = new URLSearchParams(texto)
   const ck = [...cp.keys()]
-  if (new Set(ck).size !== ck.length) return `clave de cuerpo repetida: ${listaClaves(ck.filter((k, i) => ck.indexOf(k) !== i))}`
+  if (new Set(ck).size !== ck.length) return `clave de cuerpo repetida: ${listaClaves(ck.filter((k, i) => ck.indexOf(k) !== i), decl)}`
   const extra = ck.filter((k) => !r.cuerpo.includes(k))
-  if (extra.length) return `clave de cuerpo no permitida: ${listaClaves(extra)}`
+  if (extra.length) return `clave de cuerpo no permitida: ${listaClaves(extra, decl)}`
   const falta = r.cuerpo.filter((k) => !ck.includes(k))
-  if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta)}`
+  if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta, decl)}`
   for (const k of r.cuerpo) {
-    if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${claveMostrable(k)}» (${formaValor(cp.get(k) ?? '')})`
+    if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${k}» (${formaValor(cp.get(k) ?? '')})`
   }
   return null
 }
@@ -822,7 +830,7 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
       const dlg = dialogo as { tipo: string; mensaje: string } | null // lo escribe el manejador del diálogo (TS no lo ve)
       if (dlg) {
         if (dlg.tipo === 'alert') throw new ErrorTarificador('datos', `allianz: el portal avisó al avanzar a ${regla.texto}: ${dlg.mensaje}`)
-        throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector}: el portal pidió confirmación («${dlg.tipo}») y el robot no confirma`)
+        throw new EmisionBloqueadaError('fase', `avance de pestaña ${selector}: el portal pidió confirmación («${dlg.tipo}»: «${dlg.mensaje}») y el robot no confirma`)
       }
       for (const f of marcosVivos(page)) if ((await accionFormulario(f)) === regla.formDestino) {
         guard.comprobar()

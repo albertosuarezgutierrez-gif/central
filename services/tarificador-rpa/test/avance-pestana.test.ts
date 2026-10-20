@@ -357,7 +357,7 @@ test('NEGATIVO capa (a) acotada: durante la ventana, una NAVEGACIÓN GET con «a
 test('NEGATIVO: el portal pide confirmación (confirm) → NO se acepta, el trabajo cae y la ventana se cierra; un alert → datos', async () => {
   {
     const { page, guard } = await pantalla({ origen: DATOS, destino: TARIFA, td: TD_RATE, alClic: `window.confirmado = confirm('¿Desea grabar el proyecto?')` })
-    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), (e) => e instanceof EmisionBloqueadaError && /confirmaci/.test(e.message))
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), (e) => e instanceof EmisionBloqueadaError && /confirmaci/.test(e.message) && /«confirm»: «¿Desea grabar el proyecto\?»/.test(e.message))
     assert.equal(await page.evaluate(() => (window as unknown as { confirmado?: boolean }).confirmado), false, 'el confirm se descartó')
     assert.equal(guard.avance.abierta(), false)
     await page.context().close()
@@ -405,8 +405,8 @@ test('motivoAjaxRechazado: dice QUÉ no cuadró (método/host/ruta/query/cuerpo/
     ['POST', URL_AYUDA.replace('/AJAXServlet', '/Otro'), CUERPO_AYUDA, /ruta distinta/],
     ['POST', URL_AYUDA.replace('https:', 'http:'), CUERPO_AYUDA, /protocolo/],
     ['POST', `${AJAX}?resource=pt.allianz.EmitirPolizaAjax`, CUERPO_AYUDA, /resource fuera de la lista blanca/],
-    ['POST', `${URL_AYUDA}&accionSecreta=1`, CUERPO_AYUDA, /clave de query no permitida: accionSecreta/],
-    ['POST', URL_AYUDA, 'pageId=x&codCia=9&nif=00000000T', /clave de cuerpo no permitida: nif/],
+    ['POST', `${URL_AYUDA}&accionSecreta=1`, CUERPO_AYUDA, /clave de query no permitida: 1 clave\(s\) no declarada\(s\)$/],
+    ['POST', URL_AYUDA, 'pageId=x&codCia=9&nif=00000000T', /clave de cuerpo no permitida: 1 clave\(s\) no declarada\(s\)$/],
     ['POST', URL_AYUDA, 'pageId=x', /falta clave de cuerpo: codCia/],
     ['POST', URL_AYUDA, 'pageId=a b c&codCia=9', /forma de valor de cuerpo no permitida en «pageId» \(longitud 5, letras\+espacios\)/],
     ['POST', URL_AYUDA, '{"pageId":"x","codCia":"9"}', /no urlencoded/],
@@ -416,9 +416,27 @@ test('motivoAjaxRechazado: dice QUÉ no cuadró (método/host/ruta/query/cuerpo/
   for (const [m, u, c, re] of casos) {
     const motivo = motivoAjaxRechazado(m, u, c, l)
     assert.match(motivo ?? '', re, `${m} ${u}`)
-    assert.ok(!/00000000T|a b c|accionSecreta=1|riesgoMunicipio|datosBasicos\$/.test(motivo ?? '') || /accionSecreta/.test(motivo ?? ''), 'ningún valor en el motivo')
+    assert.ok(!/00000000T|a b c|accionSecreta=1|riesgoMunicipio|accionSecreta|nif|datosBasicos\$/.test(motivo ?? ''), 'ningún valor ni clave no declarada en el motivo')
   }
   assert.doesNotMatch(motivoAjaxRechazado('POST', URL_AYUDA, 'pageId=00000000T x&codCia=9', l) ?? '', /00000000T/)
+})
+
+test('motivoAjaxRechazado: una clave NO declarada (p.ej. un NIF) jamás se nombra; las declaradas sí', () => {
+  const l = AJAX_LECTURA_ALLIANZ
+  for (const c of ['pageId=a&00000000T&codCia=b', 'pageId=a&codCia=b&00000000T=1&00000000T=2']) {
+    const m = motivoAjaxRechazado('POST', URL_AYUDA, c, l) ?? ''
+    assert.match(m, /1 clave\(s\) no declarada\(s\)/)
+    assert.doesNotMatch(m, /00000000T/)
+  }
+  assert.doesNotMatch(motivoAjaxRechazado('POST', `${URL_AYUDA}&00000000T=1`, CUERPO_AYUDA, l) ?? '', /00000000T/)
+  assert.match(motivoAjaxRechazado('POST', URL_AYUDA, 'pageId=x', l) ?? '', /falta clave de cuerpo: codCia/)
+})
+
+test('NEGATIVO: el texto del confirm sale en el error SANEADO (sin NIF ni dígitos largos)', async () => {
+  const { page, guard } = await pantalla({ origen: DATOS, destino: TARIFA, td: TD_RATE, alClic: `window.confirmado = confirm('Cliente 00000000T tel 600123456 ya existe')` })
+  try {
+    await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#rate'), (e) => e instanceof EmisionBloqueadaError && /Cliente/.test(e.message) && !/00000000T|600123456/.test(e.message))
+  } finally { await page.context().close() }
 })
 
 test('NEGATIVO: el mensaje del guard para un AJAX rechazado lleva el motivo y la pestaña de origen, sin valores', async () => {

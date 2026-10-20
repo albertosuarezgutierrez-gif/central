@@ -477,5 +477,5 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.9')
+  assert.equal(allianzMoto.version, '0.7.10')
 })
