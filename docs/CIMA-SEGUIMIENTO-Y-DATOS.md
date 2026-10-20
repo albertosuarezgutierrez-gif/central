@@ -162,6 +162,43 @@ a **siniestro** (el hueco real hoy), a **cobertura** (`datos_extra`) y, tras B2,
 desde el 17/09 (retención ~6 años, no 30 días); **no** guardamos las 96 rutas excluidas ni el resto de CEF; y **no pintamos** el resto del
 siniestro, ni de cobertura ni de liquidación. Faltan: rellenar `cimaExtra` retroactivamente, CEF, y el bloque de siniestro.
 
+### B5. Siniestro: implicados, contrario, figuras y asistencias [M, 20/10/2026]
+**Pregunta (Alberto):** que el CLIENTE vea en el portal los datos del contrario de su siniestro. Solo rutas y recuentos; ningún valor leído.
+
+**Las 146 + 13 rutas SIN, por clase** (`cima_cobertura_campos`, `tipo_objeto='SIN'`, hojas; «apariciones» = `veces_visto` sumado, NO siniestros: un siniestro llega en varios ficheros):
+| Clase | Rutas sin leer | Apariciones (máx. de una ruta) | Qué son (solo rutas) |
+|---|---|---|---|
+| a Identificación del implicado/contrario | 44 | 1.395 (58) | `Asegurado.ImplicadoAutos.Conductor.*` y `ImplicadoDiversos.Domicilio.*`, `Contrarios.Contrario.PersonaContacto.Persona.*` y `ImplicadoDiversos.Domicilio.*`, `Asegurado.PersonaContacto.Persona.*`: id, tipo de identificación, sexo, idioma, nacimiento, estado civil, domicilio, teléfono |
+| b Vehículo | 16 | 58 (22) | `Asegurado.ImplicadoAutos.Vehiculo.*` (clase, uso, bastidor, versión, antigüedad…) |
+| c Aseguradora contraria | 1 | 11 | `Contrarios.Contrario.DatosPoliza.CodigoEntidad.CodigoInterno` |
+| d Salud / asistencias | 23 | 228 (15) | `Asegurado.Asistencias.Asistencia.Asistente.*` (persona/domicilio/id del asistente). **Ninguna ruta de lesión corporal** aparece como sin leer |
+| e Figuras profesionales | 32 | 1.365 (93) | `FigurasSiniestro.Figura.*` (persona física/jurídica, domicilio, id) y `AccionesSiniestro.Accion.FigurasAccion.*` |
+| f Económico | 13 | 189 (57) | `PagosSiniestro.*` (incl. `FormaPago.DatosCuentaCorriente.IBAN`, receptor), `RiesgoRecSin…DatosImportes.Prima*`, `DatosMoneda`, `Convenios`, `Contrarios…DanoSiniestro.*` |
+| g Contexto técnico | 17 | 442 (90) | `NumeroOrden`, `IdAgrupacion`, `IdAplicacion`, `OtrosDatos.Dato.*`, `LugarSiniestro.Pais`, `SituacionesSiniestro…`, `schemaLocation` |
+| **Total sin leer** | **146** | | |
+| Excluidas (`excluido_motivo`) | 13 | | 10 `cabecera técnica` (`Cabecera.*`) + 3 `orden técnico de lista` (`…Expedientes.Expediente.NumeroOrden`, `…Cobertura.NumeroOrden`, `…RiesgoRecSin.NumeroOrden`). **Ninguna es de privacidad real**: no hay motivo «persona/banco/dirección» en SIN |
+Hallazgos [M]: (1) el IBAN del pago de siniestro está SIN LEER y SIN EXCLUIR: si se promueve a lectura hay que cifrarlo o excluirlo antes. (2) Nombre, teléfono, matrícula, marca/modelo y compañía del contrario **sí** se leen ya (113 rutas leídas, 8 de `Contrarios.Contrario`, 8 de `ImplicadoAutos`, 5 de `Figura`, 6 de `Asistencias`): van a columnas (`vehiculo_contrario_cima` 2 de 107, `asistencias_cima` 5, `contacto_nombre_cima` 20) o a `cima_extra.terceros` (cifrado; **0 de 107** lo traen hoy). Lo que falta es sobre todo NIF, domicilio, sexo, idioma, nacimiento.
+
+**Qué guarda hoy `cima_extra`** [M]: 45 de 107 siniestros con `cimaExtra`; la única clave de primer nivel que existe es `cimaExtra`. Es la lista `[{ruta, valor}]` de lo no mapeado **sin PII** («denegada en origen»), así que las rutas de personas (clases a, d, e: ~99) **se descartan** en esa lista, no se guardan. Las rutas de b, c, f, g sí caben en `cimaExtra`.
+**Dónde se decide la exclusión:** NO está en este repo (grep de `cabecera técnica`/`orden técnico` en `apps/` y `packages/`: 0 resultados). La columna `excluido_motivo` es la migración 0106 del repo de la ingesta (adaptador/CRM); aquí solo se lee: `apps/asegura/lib/ingesta.ts:506-513` (`bool_or(excluido_motivo IS NOT NULL) AS excluida`) y `packages/module-seguros/src/ingesta.ts:164` (`rutasDescartadas`). El mapeo de `terceros` cifrado: `packages/module-seguros/src/figuras-cima.ts:303` (`tercerosDeSiniestro`) y `apps/asegura/lib/cartera-siniestros.ts:269-300`. **Primer paso de implementación: localizar la lista de denegación en el repo de la ingesta** [no verificable desde aquí].
+
+**Qué pinta hoy** [M]:
+- *Operador* (`apps/plataforma/app/(usuario)/correduria/Siniestros.tsx:916`): «Terceros (CIMA)» (`tercerosCima`) + `BloqueDetalleCima`; **no** pinta `cima_extra.cimaExtra` del siniestro.
+- *Cliente* (`apps/asegura-portal`): lee por columna (`lib/cartera-lectura.ts:1011-1012,1107-1108`) y pinta en `app/(portal)/boveda/PolizaVista.tsx:713,747` «Vehículo contrario» = solo `marcaModelo` (`packages/module-seguros-portal/src/siniestro-detalle.ts:190,214`), asistencias = descripción + prestador (el nombre de persona física «va cifrado y es de un tercero: ni se lee», l.215), tramitador y perito. Sin matrícula, sin nombre/teléfono del contrario, sin su aseguradora/póliza. `tercerosCima` no llega al portal.
+
+**Propuesta por capas**
+1. *Leer+guardar (todo salvo lo que no se deba):* promover a lectura las clases a, b, c, e y d; cifrar con `PII_ENCRYPTION_KEY` (mismo mecanismo que `terceros`) nombre, NIF/id, domicilio, teléfono, email y nacimiento; en claro solo lo no personal (vehículo, compañía, nº póliza/siniestro contrario). **Excluir a propósito** IBAN y datos bancarios del receptor de pago, sexo/idioma/estado civil (sin uso; ya excluidos como motivo en POL). `cimaExtra` sigue sin PII. Clase d: guardar cifrado y marcar `categoria_especial`.
+2. *Operador:* ve todo (bloque plegado «Más datos de CIMA» del siniestro, reutilizando `vistaCimaExtra`; lista ≤50 + «Ver más»; móvil ≥320 px), con `null` = «aún no leído» ≠ `[]`.
+3. *Cliente (portal), por lista blanca de campos:* **sí** b (matrícula, marca, modelo del contrario), c (aseguradora y nº de póliza/siniestro contrario), e (perito, taller, abogado, tramitador: nombre y teléfono) y del contrario **nombre + teléfono**. **No**: NIF, domicilio completo, nacimiento, email personal, clase d, f (IBAN, reservas internas) y cualquier cosa de testigos o perjudicados. Excepción d: lesiones/asistencias del **propio** cliente (su `IdPersona`), nunca de un tercero.
+4. *Justificación:* minimización (RGPD art. 5.1.c): el parte amistoso ya intercambia nombre, matrícula, aseguradora y póliza, y con eso el cliente puede llamar y reclamar; NIF y domicilio no son necesarios para ello. Salud = categoría especial (art. 9): sin base para mostrarla a un tercero. El aislamiento del portal lo da el CÓDIGO (rol `prisma_asegura_portal` sin BYPASSRLS): por eso la lista blanca va en código y con test, no en confianza en la BD. La opinión de que «no hay problema por ser implicados del mismo siniestro» es válida para nombre/matrícula/aseguradora; **no** para el resto. [I, validar con DPO]
+
+**Cambios concretos**
+- `apps/asegura` (adaptador de ingesta y `lib/cartera-siniestros.ts`): leer las rutas nuevas, cifrarlas y escribirlas en `cima_extra.terceros` (ampliar) o columna nueva `contrario_cima` (SQL + `GRANT` por columnas al rol del portal ANTES de declararla en `apps/asegura-portal/prisma/schema.prisma`, como hace la cabecera del modelo `Siniestro`). Excluir IBAN con `excluido_motivo`.
+- `packages/module-seguros-portal/src/siniestro-detalle.ts`: `contrario` `{nombre, telefono, matricula, marcaModelo, compania, numeroPoliza}` por clave concreta, descifrando solo esos campos; `PolizaVista.tsx` los pinta.
+- **Guardián `test/regression-portal-sin-cimaextra.test.ts`: no borrar.** Mantener los tests 1-4 (el portal sigue sin `cimaExtra`) y añadir lista blanca `CAMPOS_CONTRARIO_PERMITIDOS`: el portal solo puede leer esas claves de `terceros`/`contrario_cima` y ninguna de NIF/domicilio/nacimiento/IBAN; sin spread ni `Object.*` sobre el objeto. Probarlo FALLANDO (añadir `nif` a la lectura y verlo rojo).
+- Tests: `siniestro-detalle.test.ts` (con NIF/domicilio de entrada, no salen), regresión de aislamiento (otro cliente no ve contrarios ajenos), mapper con rutas de PII cifradas, `tsc` de `asegura`, `asegura-portal` y `plataforma`.
+- **Esfuerzo:** M-L (≈3-4 días de agente). **Riesgo: ALTO** (datos de terceros en una pantalla de cliente, RGPD, cifrado, GRANT) → `agente-architect` para implementarlo y `code-review` antes de sacar el PR de draft; Alberto/DPO revisan la lista blanca y el registro de tratamientos (art. 30) antes de publicar. Una parte (leer/guardar + operador) es independiente de la del portal y puede ir primero (S-M, riesgo bajo).
+
 ## Orden propuesto
 
 | Fase | Qué | Esfuerzo | Riesgo |
