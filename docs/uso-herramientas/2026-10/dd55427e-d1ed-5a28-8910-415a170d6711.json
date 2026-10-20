@@ -1,0 +1,63 @@
+{
+ "sesion": "dd55427e-d1ed-5a28-8910-415a170d6711",
+ "inicio": "2026-10-20T10:49:19.096Z",
+ "fin": "2026-10-20T10:49:25.090Z",
+ "llamadas": 7,
+ "categorias": {
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 1183,
+   "chars_out": 1404,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:lector-correo": {
+   "llamadas": 1,
+   "chars_in": 1083,
+   "chars_out": 1323,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 344,
+   "chars_out": 683,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 2,
+   "chars_in": 108,
+   "chars_out": 21455,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 2
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  }
+ }
+}
