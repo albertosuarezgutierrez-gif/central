@@ -17,7 +17,8 @@ export async function listarExpediente(empresaId: string, empleadoId: string, ac
   const visibles = new Set(carpetasVisibles(CARPETAS, actor).map(c => c.id))
   const docs = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT id, carpeta, nombre, tipo, tamano, storage_path, subido_por, caducidad,
-           estado_firma, requiere_firma_empresa, firmado_empresa_at, firmado_empresa_nombre, creada_at
+           estado_firma, requiere_firma_empresa, firmado_empresa_at, firmado_empresa_nombre, creada_at,
+           categoria_doc, resumen, firma_solicitada_at, visto_empleado_at
     FROM rrhh.documentos
     WHERE empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid
     ORDER BY creada_at DESC`)
@@ -29,6 +30,8 @@ export async function listarExpediente(empresaId: string, empleadoId: string, ac
       requiere_firma_empresa: d.requiere_firma_empresa,
       firmado_empresa_at: d.firmado_empresa_at, firmado_empresa_nombre: d.firmado_empresa_nombre,
       creada_at: d.creada_at,
+      categoria_doc: d.categoria_doc ?? null, resumen: d.resumen ?? null,
+      firma_solicitada_at: d.firma_solicitada_at ?? null, visto_empleado_at: d.visto_empleado_at ?? null,
       url: await urlFirmada(d.storage_path),
     }))
   )

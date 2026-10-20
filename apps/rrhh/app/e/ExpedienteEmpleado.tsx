@@ -7,13 +7,17 @@ import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
 
 type Carpeta = { id: string; etiqueta: string }
-type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
+type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null; resumen?: string | null }
+type Aviso = { id: string; tipo: string; titulo: string; cuerpo: string | null; creado_at: string; visto_en: string | null; documento_id: string | null; documento_nombre: string | null; estado_firma: string | null }
+type Avisos = { avisos: Aviso[]; sin_ver: number }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
 
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
 
-export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean }) {
+export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
+  const [avisos, setAvisos] = useState<Avisos | null>(avisosIniciales ?? null)
+  const [verAvisos, setVerAvisos] = useState(false)
   const [carpeta, setCarpeta] = useState(subibles[0]?.id ?? '')
   const [subiendo, setSubiendo] = useState(false)
   const [error, setError] = useState('')
@@ -25,11 +29,28 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   const [firmaError, setFirmaError] = useState('')
   const etiqueta = (id: string) => visibles.find(c => c.id === id)?.etiqueta ?? id
 
+  // Abrir un documento marca sus avisos como vistos (y la primera apertura, que ve RR.HH.).
+  function marcarVisto(docId: string) {
+    const body = JSON.stringify({ documento_id: docId })
+    try {
+      if (!navigator.sendBeacon?.('/api/e/avisos/visto', body)) {
+        fetch('/api/e/avisos/visto', { method: 'POST', body, keepalive: true }).catch(() => {})
+      }
+    } catch { /* no bloquea abrir el documento */ }
+    setAvisos(a => {
+      if (!a) return a
+      const quedan = a.avisos.map(x => x.documento_id === docId && !x.visto_en ? { ...x, visto_en: new Date().toISOString() } : x)
+      const sinVer = new Set(quedan.filter(x => !x.visto_en).map(x => x.documento_id ?? x.id)).size
+      return { avisos: quedan, sin_ver: Math.min(a.sin_ver, sinVer) }
+    })
+  }
+
   async function recargar() {
     const r = await fetch('/api/e/expediente'); if (r.ok) setDocs((await r.json()).documentos)
   }
 
   async function abrirFirma(d: Doc) {
+    marcarVisto(d.id)
     setFirmarDoc(d); setNombreFirma(''); setCodigo(''); setFirmaError(''); setOtp(null)
     // Pide un código OTP por email (refuerzo). Si no hay email/SMTP, se firma sin él.
     const r = await fetch(`/api/e/expediente/${d.id}/firmar/codigo`, { method: 'POST' })
@@ -74,6 +95,39 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
 
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
 
+      {avisos && avisos.avisos.length > 0 && (
+        <section className="my-3 rounded-card border border-line bg-card p-4">
+          <button type="button" onClick={() => setVerAvisos(v => !v)}
+            className="flex min-h-[44px] w-full items-center justify-between gap-2 bg-transparent p-0 text-left text-ink">
+            <span className="text-base font-semibold">Avisos</span>
+            {avisos.sin_ver > 0
+              ? <span className="rounded-full bg-alert px-2.5 py-0.5 text-xs font-bold text-white">{avisos.sin_ver} sin ver</span>
+              : <span className="text-xs text-ink-3">{verAvisos ? 'Ocultar' : 'Ver'}</span>}
+          </button>
+          {(verAvisos || avisos.sin_ver > 0) && (
+            <ul className="mt-2 grid gap-2">
+              {avisos.avisos.filter(a => verAvisos || !a.visto_en).slice(0, verAvisos ? 30 : 5).map(a => {
+                const d = a.documento_id ? docs.find(x => x.id === a.documento_id) : null
+                return (
+                  <li key={a.id} className={`rounded-lg border px-3 py-2 text-sm ${a.visto_en ? 'border-line' : 'border-accent bg-accent-soft'}`}>
+                    <p className="font-medium">{a.titulo}</p>
+                    {a.cuerpo && <p className="text-xs text-ink-2">{a.cuerpo}</p>}
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-3">
+                      <span>{new Date(a.creado_at).toLocaleDateString('es-ES')}</span>
+                      {d?.url && <a href={d.url} target="_blank" rel="noreferrer" onClick={() => marcarVisto(d.id)} className="text-accent no-underline hover:underline">Abrir documento</a>}
+                      {d && d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
+                        <button type="button" onClick={() => abrirFirma(d)} className="ml-auto min-h-[44px] px-3 text-xs">Firmar</button>
+                      )}
+                      {d && d.estado_firma === 'firmado' && <span className="text-ok">✔ Firmado</span>}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </section>
+      )}
+
       {tieneFichaje && <FichajeEmpleado />}
 
       <SolicitudesEmpleado />
@@ -96,7 +150,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
           {docs.map(d => (
             <li key={d.id} className="flex flex-wrap items-center gap-x-2 text-sm">
               {d.url
-                ? <a href={d.url} target="_blank" rel="noreferrer" className="text-accent no-underline hover:underline">{d.nombre}</a>
+                ? <a href={d.url} target="_blank" rel="noreferrer" onClick={() => marcarVisto(d.id)} className="text-accent no-underline hover:underline">{d.nombre}</a>
                 : <span>{d.nombre}</span>}
               <span className="text-ink-3 text-xs">· {etiqueta(d.carpeta)}</span>
               {d.estado_firma === 'pendiente_empresa' && (
@@ -112,6 +166,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
               {d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
                 <button onClick={() => abrirFirma(d)} className="ml-auto px-3 py-1.5 text-xs">Firmar</button>
               )}
+              {d.resumen && <p className="w-full text-xs text-ink-3">{d.resumen}</p>}
             </li>
           ))}
           {docs.length === 0 && <li className="text-ink-3 text-sm">Aún no tienes documentos</li>}

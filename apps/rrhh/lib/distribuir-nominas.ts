@@ -19,7 +19,7 @@ export type ResultadoDistribucion = {
 }
 
 /** Extrae el texto de cada página del PDF usando pdfjs-dist (build legacy, funciona en Node.js). */
-async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[]> {
+export async function extraerTextoPorPagina(bytes: ArrayBuffer): Promise<string[]> {
   const [pdfjsLib, worker] = await Promise.all([
     import('pdfjs-dist/legacy/build/pdf.mjs'),
     import('pdfjs-dist/legacy/build/pdf.worker.mjs'),

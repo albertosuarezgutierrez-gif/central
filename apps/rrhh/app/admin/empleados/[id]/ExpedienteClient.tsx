@@ -124,7 +124,13 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
   async function solicitarFirma(docId: string) {
     setError('')
     const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/solicitar-firma`, { method: 'POST' })
-    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error')
+    const j = await r.json().catch(() => ({}))
+    if (!r.ok) { setError(j.error ?? 'Error'); return }
+    await recargar()
+    // El aviso por email no tumba la solicitud, pero se dice si no salió (queda en Firmas pendientes).
+    const em = j.aviso?.email_estado
+    if (em && em !== 'enviado') setError(`Firma solicitada. Email no enviado (${em === 'sin_email' ? 'el empleado no tiene email' : em === 'sin_transporte' ? 'correo no configurado' : 'falló el envío'}); avisado en su portal.`)
+    else if (!j.aviso) setError('Firma solicitada, pero no se pudo registrar el aviso. Revisa «Firmas pendientes».')
   }
 
   function enlaceAcceso() {

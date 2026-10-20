@@ -2,7 +2,7 @@ import Wordmark from '@/components/Wordmark'
 import { estiloMarca } from '@/lib/branding'
 import CambiadorEmpresa from '@/components/CambiadorEmpresa'
 
-type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas' | 'calendario' | 'fichajes' | 'obras' | 'empresa' | 'prl' | 'informes'
+type NavKey = 'empleados' | 'solicitudes' | 'cuenta' | 'nominas' | 'calendario' | 'fichajes' | 'obras' | 'empresa' | 'prl' | 'informes' | 'firmas' | 'documentos'
 
 /** Marco del panel del responsable: sidebar + contenido. Presentacional puro. */
 export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { activo: NavKey; children: React.ReactNode; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
@@ -28,6 +28,8 @@ export default function AdminShell({ activo, children, logoUrl, nombreEmpresa, c
               quedaba a 0 px — sin menú. min-w-0 deja actuar al overflow-x-auto. */}
           <nav className="order-last flex min-w-0 basis-full flex-row gap-1 overflow-x-auto md:order-none md:w-full md:basis-auto md:flex-col">
             {item('empleados', '/admin/empleados', 'Empleados')}
+            {item('documentos', '/admin/documentos', 'Enviar documentos')}
+            {item('firmas', '/admin/firmas', 'Firmas pendientes')}
             {item('solicitudes', '/admin/solicitudes', 'Solicitudes')}
             {item('calendario', '/admin/calendario', 'Calendario')}
             {item('nominas', '/admin/nominas', 'Nóminas')}
