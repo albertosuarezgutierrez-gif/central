@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { accionGuardarExtra, companiaGuardable, extraEfectivo, valorCampoExtra } from './tarificador-bots-extra.ts'
+import { accionGuardarExtra, companiaGuardable, extraEfectivo, numeroPolizaAGuardar, valorCampoExtra } from './tarificador-bots-extra.ts'
 
 test('valorCampoExtra: lo tecleado (aunque vacío) manda; luego lo precargado; luego el formulario (sexo/compañía); luego el defecto', () => {
   const f = { sexo: 'mujer', companiaAnterior: 'Compañía Uno' }
@@ -84,4 +84,45 @@ test('cuerpoGuardarCompania: con un CÓDIGO ya en el historial o «sin seguro» 
   assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', { companiaActual: 'Aseguradora Beta', tieneSeguroActual: true }), con)
   assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', { companiaActual: null }), con)
   assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', null), con)
+})
+
+test('Allianz moto: fecha de adquisición → datosVehiculo.fechaCompra; póliza y justificante → historialDeclarado (nunca borran, no repiten)', async () => {
+  const { cuerpoGuardarHistorial } = await import('./tarificador-bots-extra.ts')
+  const ctx = { oportunidadId: 'o1' }
+  assert.deepEqual(accionGuardarExtra('fechaAdquisicion', '2023-05-10', { ...ctx, guardado: '' }), { tipo: 'fechaAdquisicion', fecha: '2023-05-10' })
+  assert.equal(accionGuardarExtra('fechaAdquisicion', '2023-05-10', { ...ctx, guardado: '2023-05-10' }), null, 'igual a lo guardado')
+  assert.equal(accionGuardarExtra('fechaAdquisicion', '', { ...ctx, guardado: '2023-05-10' }), null, 'vaciar no borra')
+  assert.equal(accionGuardarExtra('fechaAdquisicion', '2023-02-30', ctx), null, 'fecha inexistente')
+  assert.equal(accionGuardarExtra('fechaAdquisicion', '2023-05-10', { oportunidadId: null }), null)
+  assert.deepEqual(accionGuardarExtra('polizaAnteriorUltimos5', '12345', { ...ctx, guardado: '' }), { tipo: 'poliza', ultimos5: '12345' })
+  assert.deepEqual(accionGuardarExtra('polizaAnteriorUltimos5', 'AB-9912345', { ...ctx, guardado: '' }), { tipo: 'poliza', ultimos5: '12345' })
+  assert.equal(accionGuardarExtra('polizaAnteriorUltimos5', '12345', { ...ctx, guardado: '12345' }), null)
+  assert.equal(accionGuardarExtra('polizaAnteriorUltimos5', '123', ctx), null, 'menos de 5 cifras')
+  assert.deepEqual(accionGuardarExtra('fotocopiaAnterior', 'proximo_anio', ctx), { tipo: 'justificante', valor: 'proximo_anio' })
+  assert.equal(accionGuardarExtra('fotocopiaAnterior', 'proximo_anio', { ...ctx, guardado: 'proximo_anio' }), null)
+  assert.equal(accionGuardarExtra('fotocopiaAnterior', '', { ...ctx, guardado: 'proximo_anio' }), null)
+  assert.equal(accionGuardarExtra('fotocopiaAnterior', 'otro', ctx), null)
+  assert.deepEqual(cuerpoGuardarHistorial('o1', 'numeroPoliza', '12345'), { accion: 'editar', id: 'o1', historialDeclarado: { numeroPoliza: '12345' } })
+  assert.deepEqual(cuerpoGuardarHistorial('o1', 'fotocopiaAnterior', 'dos_ultimos_anios'), { accion: 'editar', id: 'o1', historialDeclarado: { fotocopiaAnterior: 'dos_ultimos_anios' } })
+  // Cableado: PrecioBots guarda cada acción por su vía y el cotizador precarga desde fechaCompra / historial declarado.
+  const bloque = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx', import.meta.url), 'utf8')
+  assert.match(bloque, /datosVehiculo: \{ fechaCompra: a\.fecha \}/)
+  assert.match(bloque, /cuerpoGuardarHistorial\(oportunidadId, 'numeroPoliza', nPoliza \?\? a\.ultimos5\)/)
+  assert.match(bloque, /numeroPolizaAGuardar\(historialDeclarado\?\.numeroPoliza, a\.ultimos5\)/)
+  assert.match(bloque, /cuerpoGuardarHistorial\(oportunidadId, 'fotocopiaAnterior', a\.valor\)/)
+  const moto = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
+  assert.match(moto, /fechaAdquisicion: datosRiesgo\?\.fechaCompra \?\? ''/)
+  assert.match(moto, /historialRiesgo\?\.numeroPoliza/)
+  assert.match(moto, /historialRiesgo\?\.fotocopiaAnterior/)
+})
+
+test('numeroPolizaAGuardar: no pisa un nº completo que ya termina en esas 5 cifras; sin nº o distinto, guarda lo tecleado', () => {
+  assert.equal(numeroPolizaAGuardar('AB-0099912345', '12345'), null, 'termina igual (solo dígitos)')
+  assert.equal(numeroPolizaAGuardar('99912345', '12-345'), null)
+  assert.equal(numeroPolizaAGuardar('12345', '12345'), null)
+  assert.equal(numeroPolizaAGuardar(null, '12345'), '12345')
+  assert.equal(numeroPolizaAGuardar('', '12345'), '12345')
+  assert.equal(numeroPolizaAGuardar(undefined, '12345'), '12345')
+  assert.equal(numeroPolizaAGuardar('99954321', '12345'), '12345', 'termina en otras cifras')
+  assert.equal(numeroPolizaAGuardar('12345999', '12345'), '12345', 'las 5 cifras no al final')
 })

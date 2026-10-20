@@ -62,6 +62,9 @@ const CAMPO_EXTRA_DE_CLAVE: Readonly<Record<string, string>> = {
   'seleccionVehiculo.cilindradaCc': 'cilindrada',
   'conductor.sexo': 'sexo',
   companiaAnterior: 'companiaAnterior',
+  fechaAdquisicion: 'fechaAdquisicion',
+  polizaAnteriorUltimos5: 'polizaAnteriorUltimos5',
+  fotocopiaAnterior: 'fotocopiaAnterior',
 }
 
 const PESO: Record<EstadoPendiente, number> = { ficha: 1, supuesto: 2, falta: 3 }

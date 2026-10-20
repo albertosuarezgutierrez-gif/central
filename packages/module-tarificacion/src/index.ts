@@ -383,8 +383,10 @@ export {
   type ValidacionFormularioAuto,
   USOS_FRECUENCIA,
   TIPOS_GARAJE,
+  JUSTIFICANTES_SEGURO_ANTERIOR,
   type UsoFrecuencia,
   type TipoGaraje,
+  type JustificanteSeguroAnterior,
 } from './formulario-auto.ts'
 // Supuestos de un precio de coche por bot (15/10/2026): el valor «no determinante» de lo que el formulario no trae, DECLARADO.
 export {

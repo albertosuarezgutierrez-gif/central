@@ -18,9 +18,16 @@ const formularioMoto = {
   conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
   tomadorEsConductor: true,
   tomadorEsPropietario: true,
+  // Allianz moto exige el NIF del tomador cuando es conductor o propietario; en producción llega inyectado de la ficha.
+  fichaTomador: { documento: '00000000T' },
   aniosAseguradoAnterior: 5,
   siniestrosUltimos5Anios: 0,
   garajeNoche: true,
+  // Allianz moto 0.7.11: seguro anterior y fecha de adquisición (sintéticos; la red final mira el riesgo crudo).
+  companiaAnterior: 'COMPAÑÍA DE PRUEBA',
+  polizaAnteriorUltimos5: '00000',
+  fotocopiaAnterior: 'proximo_anio',
+  fechaAdquisicion: '2016-01-02',
   seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
 }
 
@@ -58,6 +65,28 @@ test('MOTO con formulario válido llega al adaptador (con seleccionVehiculo inta
   assert.equal(llamadas.length, 1)
   assert.equal(llamadas[0].ramo, 'moto')
   assert.deepEqual(llamadas[0].seleccionVehiculo, { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 })
+})
+
+test('MOTO: el riesgo validado CONSERVA hasta el adaptador póliza anterior, justificante y fecha de adquisición (Allianz moto 0.7.11)', async () => {
+  const { a, llamadas } = adaptadorMotoFalso()
+  const p = prepararTrabajo(a, formularioMoto, HOY)
+  assert.equal(p.ok, true)
+  if (!p.ok) return
+  await p.tarificar(page, ctx)
+  const f = llamadas[0] as FormularioAuto & { fechaAdquisicion?: string; fotocopiaAnterior?: string }
+  assert.equal(f.polizaAnteriorUltimos5, '00000')
+  assert.equal(f.fotocopiaAnterior, 'proximo_anio')
+  assert.equal(f.fechaAdquisicion, '2016-01-02')
+})
+
+test('MOTO: justificante fuera del enum o fecha de adquisición futura NO llegan al adaptador (errores claros)', () => {
+  const { a } = adaptadorMotoFalso()
+  const mala = prepararTrabajo(a, { ...formularioMoto, fotocopiaAnterior: 'otro' }, HOY)
+  assert.equal(mala.ok, false)
+  if (!mala.ok) assert.ok(mala.errores.some((e) => e.startsWith('fotocopiaAnterior:')))
+  const futura = prepararTrabajo(a, { ...formularioMoto, fechaAdquisicion: '2030-01-01' }, HOY)
+  assert.equal(futura.ok, false)
+  if (!futura.ok) assert.ok(futura.errores.some((e) => e.startsWith('fechaAdquisicion:')))
 })
 
 test('MOTO con formulario inválido NO llega al adaptador: errores (→ `datos`) y sin tarificar', () => {

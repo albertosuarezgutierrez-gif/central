@@ -6,14 +6,20 @@
 //   compañía anterior → `aseguradora` de la oportunidad Y `historialDeclarado.companiaActual` (UN solo `editar`, ver
 //                       `cuerpoGuardarCompania`): así «Historial y bonificaciones» y este campo quedan coherentes; si el historial ya
 //                       trae un código o dice «sin seguro», solo `aseguradora`
-import { MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
-import { cilindradaDeTexto } from './tarificador-moto-formulario.ts'
+//   fechaAdquisicion  → `info_riesgo.datosVehiculo.fechaCompra` (mismo PATCH del riesgo; fuente: ese mismo dato, nunca la matriculación)
+//   póliza anterior   → `historialDeclarado.numeroPoliza` de la oportunidad (`editar`; donde ya vive el nº de póliza actual: las 5 últimas cifras)
+//   justificante      → `historialDeclarado.fotocopiaAnterior` (`editar`; valor cerrado `proximo_anio` | `dos_ultimos_anios`)
+import { JUSTIFICANTES_SEGURO_ANTERIOR, MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
+import { cilindradaDeTexto, fechaIsoValida, ultimos5CifrasPoliza } from './tarificador-moto-formulario.ts'
 import { COMPANIA_CAJON, esCodigoCompania } from './compania-anterior.ts'
 
 export type AccionGuardarExtra =
   | { tipo: 'cilindrada'; cc: number }
   | { tipo: 'sexo'; sexo: 'hombre' | 'mujer' }
   | { tipo: 'compania'; texto: string }
+  | { tipo: 'fechaAdquisicion'; fecha: string }
+  | { tipo: 'poliza'; ultimos5: string }
+  | { tipo: 'justificante'; valor: (typeof JUSTIFICANTES_SEGURO_ANTERIOR)[number] }
 
 /** Compañía tecleada → texto guardable, o `null` (vacío, demasiado larga, o valor de cajón como «otro»/«N/A»). */
 export function companiaGuardable(v: string | null | undefined): string | null {
@@ -66,6 +72,18 @@ export function accionGuardarExtra(
     if (!ctx.oportunidadId || t === null) return null
     return t === guardado ? null : { tipo: 'compania', texto: t }
   }
+  if (clave === 'fechaAdquisicion') {
+    const f = fechaIsoValida(valor)
+    return !ctx.oportunidadId || f === null || f === guardado ? null : { tipo: 'fechaAdquisicion', fecha: f }
+  }
+  if (clave === 'polizaAnteriorUltimos5') {
+    const p = ultimos5CifrasPoliza(valor)
+    return !ctx.oportunidadId || p === null || p === ultimos5CifrasPoliza(guardado) ? null : { tipo: 'poliza', ultimos5: p }
+  }
+  if (clave === 'fotocopiaAnterior') {
+    const j = JUSTIFICANTES_SEGURO_ANTERIOR.find((x) => x === valor)
+    return !ctx.oportunidadId || j === undefined || j === guardado ? null : { tipo: 'justificante', valor: j }
+  }
   return null
 }
 
@@ -82,6 +100,25 @@ export function cuerpoGuardarCompania(
   const base = { accion: 'editar', id: oportunidadId, aseguradora: texto }
   if (historial && (esCodigoCompania(historial.companiaActual) || historial.tieneSeguroActual === false)) return base
   return { ...base, historialDeclarado: { companiaActual: texto } }
+}
+
+/**
+ * Cuerpo del `editar` que guarda un dato de «Póliza actual» en el historial declarado (póliza anterior o justificante). Una sola
+ * clave: no toca el resto del historial. Si el historial dice «sin seguro actual» el servidor lo rechaza con 422 y se dice. PURA.
+ */
+export function cuerpoGuardarHistorial(oportunidadId: string, clave: 'numeroPoliza' | 'fotocopiaAnterior', valor: string): Record<string, unknown> {
+  return { accion: 'editar', id: oportunidadId, historialDeclarado: { [clave]: valor } }
+}
+
+/**
+ * Qué guardar como `historialDeclarado.numeroPoliza` al teclear las 5 últimas cifras de la póliza anterior. Si el nº ya guardado
+ * termina en esas 5 cifras (solo dígitos) NO se toca (`null`: no se envía; no se pierde el nº completo). Si no hay nº guardado o
+ * termina en otras cifras, se guarda lo tecleado. PURA.
+ */
+export function numeroPolizaAGuardar(existente: string | null | undefined, ultimos5: string): string | null {
+  const nuevo = ultimos5.replace(/\D/g, '')
+  const actual = (existente ?? '').replace(/\D/g, '')
+  return actual !== '' && actual.endsWith(nuevo) ? null : ultimos5
 }
 
 /**

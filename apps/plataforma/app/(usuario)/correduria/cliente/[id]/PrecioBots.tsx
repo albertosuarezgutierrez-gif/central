@@ -25,7 +25,7 @@ import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 import { clasificarEncolar, MENSAJE_ENCOLAR_INCIERTO, MENSAJE_ENCOLAR_SIN_CONEXION, REINTENTO_INCIERTO_MS, REINTENTOS_INCIERTO } from '@/lib/tarificador-encolar-incierto'
 import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from '@/lib/tarificador-todas'
-import { accionGuardarExtra, cuerpoGuardarCompania, extraEfectivo, opcionesDeCampoExtra, valorCampoExtra, type AccionGuardarExtra } from '@/lib/tarificador-bots-extra'
+import { accionGuardarExtra, cuerpoGuardarCompania, cuerpoGuardarHistorial, extraEfectivo, numeroPolizaAGuardar, opcionesDeCampoExtra, valorCampoExtra, type AccionGuardarExtra } from '@/lib/tarificador-bots-extra'
 import { guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
 import { pendientesPorBloque } from '@/lib/tarificador-pendientes'
 import { pendientesConGenerales, textoErrorGuardado } from '@/lib/tarificador-pendientes-vista'
@@ -79,7 +79,7 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
   /** Compañía → aviso de por qué su bot no puede encolar con esta ficha (p. ej. Mapfre sin nombre del tomador). */
   bloqueosPorCompania?: Record<string, string>
   /** Lo ya declarado en «Historial y bonificaciones» (si se conoce): con un código de compañía o «sin seguro» no se reescribe al guardar la compañía. */
-  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null } | null
+  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null; numeroPoliza?: string | null } | null
 }) {
   const hueco = useContext(HuecoBotsContext)
   const anfitrion = useContext(AnfitrionBotsContext)
@@ -106,7 +106,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   formulario: unknown
   inicialesExtra?: Record<string, string>
   bloqueosPorCompania?: Record<string, string>
-  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null } | null
+  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null; numeroPoliza?: string | null } | null
 }) {
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
   // `extra` = solo lo TECLEADO aquí; lo precargado (`inicialesExtra`, ficha, póliza) se mezcla al leer, así un dato que llega tarde también se ve.
@@ -138,6 +138,21 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
         const r = await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { cilindradaCc: a.cc } })
         ok = r.ok
         if (!ok) motivo = textoErrorGuardado(r.status, r.json)
+      } else if (a.tipo === 'fechaAdquisicion' && oportunidadId) {
+        // Misma vía que la cilindrada: `datosVehiculo.fechaCompra` del riesgo (la fecha de adquisición NO es la de matriculación).
+        const r = await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { fechaCompra: a.fecha } })
+        ok = r.ok
+        if (!ok) motivo = textoErrorGuardado(r.status, r.json)
+      } else if ((a.tipo === 'poliza' || a.tipo === 'justificante') && oportunidadId) {
+        // Póliza: si el nº ya guardado termina en esas 5 cifras no se envía nada (no se pisa el nº completo con 5 cifras).
+        const nPoliza = a.tipo === 'poliza' ? numeroPolizaAGuardar(historialDeclarado?.numeroPoliza, a.ultimos5) : null
+        if (a.tipo === 'poliza' && nPoliza === null) ok = true
+        else {
+          const cuerpo = a.tipo === 'poliza' ? cuerpoGuardarHistorial(oportunidadId, 'numeroPoliza', nPoliza ?? a.ultimos5) : cuerpoGuardarHistorial(oportunidadId, 'fotocopiaAnterior', a.valor)
+          const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) })
+          ok = r.status === 200 && (r.json as { estado?: string } | null)?.estado === 'ok'
+          if (!ok) motivo = textoErrorGuardado(r.status, r.json)
+        }
       } else if (a.tipo === 'sexo') ok = await guardarSexoEnFicha(clienteId, a.sexo)
       else if (a.tipo === 'compania' && oportunidadId) {
         const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpoGuardarCompania(oportunidadId, a.texto, historialDeclarado)) })
@@ -178,7 +193,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
     ? (() => {
         const { pendientes, sueltos } = pendientesConGenerales(pendientesPorBloque({ adaptador, formulario, extra: efectivo, companias: lista.map((i) => i.compania) }), adaptador)
         const campos: CampoPanel[] = adaptador.campos.map((c) => ({
-          clave: c.clave, etiqueta: c.etiqueta, ayuda: c.ayuda, placeholder: c.placeholder, bloque: c.bloque, texto: c.texto, maxLength: c.maxLength,
+          clave: c.clave, etiqueta: c.etiqueta, ayuda: c.ayuda, placeholder: c.placeholder, bloque: c.bloque, texto: c.texto, maxLength: c.maxLength, fecha: c.fecha,
           opciones: c.opciones ? opcionesDeCampoExtra(c.clave, c.opciones, formulario) : undefined,
           valor: valorCampoExtra(c.clave, extra, inicialesExtra, formulario, c.porDefecto),
           guardado: guardados[c.clave] ?? null,

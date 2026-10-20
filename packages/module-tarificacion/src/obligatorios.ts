@@ -171,6 +171,9 @@ const MAPFRE_AUTO_FIGURAS: readonly CampoObligatorio[] = [
   }),
 ]
 
+/** Allianz Moto: «asegurado en otra compañía» = Sí salvo que el riesgo diga `0` años (sin dato: el supuesto favorable es «más de 5»). */
+const estuvoAseguradoMoto = (r: Record<string, unknown>): boolean => r.aniosAseguradoAnterior !== 0
+
 /**
  * Allianz Moto (`planDatosBasicosMoto`, `tarificarMoto`): el portal no tiene «sin dato» en sexo. Antecedentes sin dato →
  * supuesto favorable declarado (`conAntecedentesFavorables`), no bloquean. El sexo, si el formulario no lo trae, lo pone
@@ -188,6 +191,25 @@ const ALLIANZ_MOTO: readonly CampoObligatorio[] = [
     aplica: (r) => r.tomadorEsConductor === true || r.tomadorEsPropietario === true,
     presente: (r) => hay(r.documentoTomador) || hay(obj(r.tomador)?.documentoIdentidad) || hay(obj(r.fichaTomador)?.documento),
   },
+  // Bot 0.7.11 (trabajo real 6cd26c10, 20/10/2026): «Datos básicos» rechazaba sin esto. Si estuvo asegurado (años > 0, o SIN dato:
+  // el supuesto favorable también dice «estuvo asegurado»; solo `0` años = no) Allianz exige compañía de origen, 5 últimas cifras de
+  // la póliza y qué justificante se aporta («No» no vale); la fecha de adquisición (≠ matriculación) se pide siempre.
+  // Mismas reglas que `faltasDatosPortalMoto` (services/tarificador-rpa, adapters/allianz/auto.ts): atadas por su cepo.
+  campo('companiaAnterior', 'compañía anterior (Allianz la exige si estuvo asegurado)', 'poliza', {
+    aplica: estuvoAseguradoMoto,
+    presente: (r) => hay(r.companiaAnterior) || hay(r.companiaActual),
+  }),
+  campo('polizaAnteriorUltimos5', 'número de póliza anterior: últimas 5 cifras (Allianz lo exige si estuvo asegurado)', 'poliza', {
+    aplica: estuvoAseguradoMoto,
+    presente: (r) => /^\d{5}$/.test(texto(r.polizaAnteriorUltimos5)),
+  }),
+  campo('fotocopiaAnterior', 'justificante del seguro anterior: recibo del próximo año/certificado o recibos de los 2 últimos años (Allianz exige indicar cuál se aporta)', 'poliza', {
+    aplica: estuvoAseguradoMoto,
+    presente: (r) => ['proximo_anio', 'dos_ultimos_anios'].includes(texto(r.fotocopiaAnterior)),
+  }),
+  campo('fechaAdquisicion', 'fecha de adquisición de la moto (no la de matriculación)', 'riesgo', {
+    presente: (r) => /^\d{4}-\d{2}-\d{2}$/.test(texto(r.fechaAdquisicion)),
+  }),
 ]
 
 /**

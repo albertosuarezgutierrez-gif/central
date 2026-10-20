@@ -400,6 +400,7 @@ const RIESGO_MOTO = {
   ramo: 'moto', matricula: '0000BBB', codigoPostal: '41003',
   conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
   tomadorEsConductor: true, aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0,
+  fechaAdquisicion: '2016-01-02', // Allianz moto 0.7.11: lo único que pide sin seguro anterior
   seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
 }
 const noLeer = () => { throw new Error('no debería leer la ficha') }
@@ -636,7 +637,24 @@ test('Obligatorios · validarEntradaRamo con compañía: rechaza con la lista le
   // Sin compañía: solo la forma (como antes). NIF y datos del tomador (ficha) no se miran aquí.
   assert.equal(validarEntradaRamo('auto', sinNada).ok, true)
   // Allianz moto: el sexo lo pone asegura del Sr./Sra. de la ficha al encolar → aquí (sin ficha) no se pide.
-  assert.equal(validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz').ok, true)
+  // 0.7.11: Allianz moto pide también el seguro anterior y la fecha de adquisición. Desde el 20/10/2026 `FormularioAuto` lleva
+  // `fotocopiaAnterior` y `fechaAdquisicion` (y `polizaAnteriorUltimos5`): el riesgo validado las CONSERVA y no falta nada.
+  const datosAnt = { companiaAnterior: 'COMPAÑÍA DE PRUEBA', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02' }
+  const conAnt = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null }, ...datosAnt }, 'allianz')
+  assert.ok(conAnt.ok, 'con los cuatro datos Allianz moto ya puede llegar a precio')
+  if (conAnt.ok) {
+    const r = conAnt.entrada.riesgo as unknown as Record<string, unknown>
+    assert.deepEqual([r.polizaAnteriorUltimos5, r.fotocopiaAnterior, r.fechaAdquisicion], ['00000', 'proximo_anio', '2016-01-02'])
+  }
+  // Un justificante fuera del enum o una fecha de adquisición futura se rechazan con la forma, no con «falta».
+  assert.ok(!validarEntradaRamo('moto', { ...MOTO, ...datosAnt, fotocopiaAnterior: 'otro' }, 'allianz').ok)
+  assert.ok(!validarEntradaRamo('moto', { ...MOTO, ...datosAnt, fechaAdquisicion: '2999-01-01' }, 'allianz').ok)
+  const sinAnt = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
+  assert.ok(!sinAnt.ok)
+  if (!sinAnt.ok) assert.deepEqual(sinAnt.faltan?.map((f) => f.clave), ['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion'])
+  // Sin seguro anterior solo falta la fecha de adquisición.
+  const cero = validarEntradaRamo('moto', { ...MOTO, aniosAseguradoAnterior: 0, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
+  assert.ok(!cero.ok && cero.faltan?.map((f) => f.clave).join() === 'fechaAdquisicion')
   // Compañía sin declaración: aquí no se rechaza (lo hace riesgoParaEncolar).
   assert.equal(validarEntradaRamo('moto', MOTO, 'generali').ok, true)
 })
@@ -645,7 +663,7 @@ test('Obligatorios · riesgoParaEncolar: falta algo → 422 `faltan_datos` con l
   // Sin sexo (ni Sr./Sra. en la ficha) falta; los años vacíos ya NO (supuesto favorable, 18/10/2026).
   // La ficha trae NIF (si no, faltaría también `documentoTomador`: caso aparte más abajo), así que aquí solo falta el sexo.
   const fichaConNif = () => ({ tipo: 'fisica' as const, documento: NIF, codigoPostal: null, localidad: null, direccion: null, fechaNacimiento: null, fechaCarnet: null, tipoCarnet: null })
-  const r = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, conductor: { ...RIESGO_MOTO.conductor, sexo: null }, aniosAseguradoAnterior: null }, noLeer, noLeer, undefined, fichaConNif)
+  const r = riesgoParaEncolar('allianz', 'moto', { ...RIESGO_MOTO, conductor: { ...RIESGO_MOTO.conductor, sexo: null }, aniosAseguradoAnterior: null, companiaAnterior: 'COMPAÑÍA DE PRUEBA', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio' }, noLeer, noLeer, undefined, fichaConNif)
   assert.ok(!r.ok && r.status === 422)
   if (!r.ok) {
     assert.equal(r.motivo, 'faltan_datos: Falta: sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha).')

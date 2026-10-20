@@ -43,6 +43,9 @@ export const USOS_FRECUENCIA = ['ocasional', 'diario', 'laboral'] as const
 export type UsoFrecuencia = (typeof USOS_FRECUENCIA)[number]
 export const TIPOS_GARAJE = ['calle', 'colectivo', 'individual'] as const
 export type TipoGaraje = (typeof TIPOS_GARAJE)[number]
+/** Justificante del seguro anterior: recibo del próximo año / certificado · recibos de los 2 últimos años. */
+export const JUSTIFICANTES_SEGURO_ANTERIOR = ['proximo_anio', 'dos_ultimos_anios'] as const
+export type JustificanteSeguroAnterior = (typeof JUSTIFICANTES_SEGURO_ANTERIOR)[number]
 /** Máximo de `companiaAnterior` (el adaptador la ignora por encima de 80). */
 export const MAX_COMPANIA_ANTERIOR = 80
 
@@ -278,6 +281,10 @@ export type FormularioAuto = {
   companiaAnterior?: string | null
   /** Últimos 5 dígitos (solo cifras) de la póliza ACTUAL del cliente (19/10/2026: Allianz Turismos los pide en «Antecedentes»). Texto de 5 cifras exactas; ausente = no consta. Dato sensible: nunca en supuestos, avisos ni logs. */
   polizaAnteriorUltimos5?: string | null
+  /** Fecha de ADQUISICIÓN del vehículo (ISO, no futura, ≥1900, no anterior a la matriculación). Allianz moto la pide (≠ matriculación). Ausente = no consta. */
+  fechaAdquisicion?: string | null
+  /** Justificante del seguro anterior que Allianz exige si estuvo asegurado (`JUSTIFICANTES_SEGURO_ANTERIOR`). Ausente = no consta. */
+  fotocopiaAnterior?: JustificanteSeguroAnterior | null
   // ── 15/10/2026: lo que el bot SUPONE si no viene (`supuestosAuto`), mismos nombres que el riesgo de la oportunidad ──
   /** 1ª matriculación (ISO, no futura), de `datosVehiculo.fechaMatriculacion`. Decide compra nuevo / 2ª mano. Ausente = no consta. */
   fechaMatriculacion?: string | null
@@ -613,6 +620,13 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   // Supuestos de Allianz Turismos (opcionales, sin defecto: lo que no viene lo SUPONE el bot y lo declara).
   const fechaMatriculacion = fechaIso(e.fechaMatriculacion, 'fechaMatriculacion', errores)
   if (fechaMatriculacion !== null && fechaMatriculacion > hoy.toISOString().slice(0, 10)) errores.push('fechaMatriculacion: no puede ser futura')
+  const fechaAdquisicion = fechaIso(e.fechaAdquisicion, 'fechaAdquisicion', errores)
+  if (fechaAdquisicion !== null) {
+    if (fechaAdquisicion > hoy.toISOString().slice(0, 10)) errores.push('fechaAdquisicion: no puede ser futura')
+    else if (fechaAdquisicion < '1900-01-01') errores.push('fechaAdquisicion: no puede ser anterior a 1900')
+    else if (fechaMatriculacion !== null && fechaAdquisicion < fechaMatriculacion) errores.push('fechaAdquisicion: no puede ser anterior a la matriculación')
+  }
+  const fotocopiaAnterior = cerrado(e.fotocopiaAnterior, 'fotocopiaAnterior', JUSTIFICANTES_SEGURO_ANTERIOR, null)
   const fechaVencimiento = fechaIso(e.fechaVencimiento, 'fechaVencimiento', errores)
   const tipoGaraje = cerrado(e.tipoGaraje, 'tipoGaraje', TIPOS_GARAJE, null)
   const usoFrecuencia = cerrado(e.usoFrecuencia, 'usoFrecuencia', USOS_FRECUENCIA, null)
@@ -653,6 +667,8 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
       ...(companiaAnterior !== null ? { companiaAnterior } : {}),
       ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
       ...(fechaMatriculacion !== null ? { fechaMatriculacion } : {}),
+      ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
+      ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
       ...(fechaVencimiento !== null ? { fechaVencimiento } : {}),
       ...(tipoGaraje !== null ? { tipoGaraje } : {}),
       ...(usoFrecuencia !== null ? { usoFrecuencia } : {}),

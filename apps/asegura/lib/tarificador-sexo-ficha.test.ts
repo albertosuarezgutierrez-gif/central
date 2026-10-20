@@ -10,7 +10,9 @@ const moto = (sexo: unknown = null, extra: Record<string, unknown> = {}) => ({
   aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null, garajeNoche: null,
   seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 },
   // Allianz moto exige el NIF del tomador (tomador = conductor): lo da la ficha. Aquí se mira solo el sexo, no el NIF.
-  fichaTomador: { documento: '00000000T' }, ...extra,
+  fichaTomador: { documento: '00000000T' },
+  // Allianz moto 0.7.11: seguro anterior (sin años = estuvo asegurado, supuesto favorable) y fecha de adquisición; aquí no se miran.
+  companiaAnterior: 'COMPAÑÍA DE PRUEBA', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02', ...extra,
 })
 
 test('Sr. → hombre, Sra. → mujer, solo si el formulario no lo trae y el conductor es el cliente', () => {

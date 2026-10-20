@@ -362,10 +362,19 @@ export type HistorialDeclaradoRiesgo = {
   numeroPoliza: string | null
   aniosSinSiniestros: number | null
   siniestrosUltimos5: number | null
+  /** 20/10/2026 (Allianz moto): justificante del seguro anterior que se aporta. `null` = no se sabe. */
+  fotocopiaAnterior: JustificanteSeguroAnteriorDeclarado | null
+}
+
+/** Justificante del seguro anterior (mismos valores que `JUSTIFICANTES_SEGURO_ANTERIOR` de module-tarificacion; este paquete no lo importa). */
+export const JUSTIFICANTES_SEGURO_ANTERIOR_DECLARADO = ['proximo_anio', 'dos_ultimos_anios'] as const
+export type JustificanteSeguroAnteriorDeclarado = (typeof JUSTIFICANTES_SEGURO_ANTERIOR_DECLARADO)[number]
+function justificanteDeclarado(v: unknown): JustificanteSeguroAnteriorDeclarado | null {
+  return typeof v === 'string' && (JUSTIFICANTES_SEGURO_ANTERIOR_DECLARADO as readonly string[]).includes(v.trim()) ? (v.trim() as JustificanteSeguroAnteriorDeclarado) : null
 }
 
 export const CLAVES_HISTORIAL_DECLARADO = [
-  'aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros', 'siniestrosUltimos5', 'tieneSeguroActual', 'companiaActual', 'numeroPoliza',
+  'aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros', 'siniestrosUltimos5', 'tieneSeguroActual', 'companiaActual', 'numeroPoliza', 'fotocopiaAnterior',
 ] as const
 export type ClaveHistorialDeclarado = (typeof CLAVES_HISTORIAL_DECLARADO)[number]
 
@@ -386,8 +395,8 @@ export function incoherenciaHistorialDeclarado(h: Partial<HistorialDeclaradoRies
   if (a !== null && sin !== null && sin > a) return 'Los años sin siniestros no pueden ser más que los años asegurado.'
   if (a !== null && comp !== null && comp > a) return 'Los años en la compañía no pueden ser más que los años asegurado.'
   if (sin !== null && sin >= 5 && s5 !== null && s5 > 0) return 'Con 5 años o más sin siniestros no puede tener siniestros en los últimos 5 años.'
-  if (h.tieneSeguroActual === false && ((h.companiaActual ?? null) !== null || (h.numeroPoliza ?? null) !== null)) {
-    return 'Si no tiene seguro ahora, no puede haber compañía ni nº de póliza actuales: quítalos.'
+  if (h.tieneSeguroActual === false && ((h.companiaActual ?? null) !== null || (h.numeroPoliza ?? null) !== null || (h.fotocopiaAnterior ?? null) !== null)) {
+    return 'Si no tiene seguro ahora, no puede haber compañía, nº de póliza ni justificante del seguro anterior: quítalos.'
   }
   return null
 }
@@ -447,6 +456,7 @@ export function historialDeclaradoDe(v: unknown): HistorialDeclaradoRiesgo {
     numeroPoliza: polizaDeclarada(o.numeroPoliza),
     aniosSinSiniestros: entero(o.aniosSinSiniestros, 100),
     siniestrosUltimos5: entero(o.siniestrosUltimos5, 50),
+    fotocopiaAnterior: justificanteDeclarado(o.fotocopiaAnterior),
   }
 }
 
@@ -478,6 +488,7 @@ const MOTIVO_CLAVE: Record<ClaveHistorialDeclarado, string> = {
   siniestrosUltimos5: 'Los siniestros de los últimos 5 años deben ser un entero de 0 a 50 (vacío = sin dato).',
   tieneSeguroActual: '«Tiene seguro ahora» debe ser sí, no o sin dato.',
   companiaActual: 'La compañía actual no es un texto.',
+  fotocopiaAnterior: 'El justificante del seguro anterior debe ser «recibo del próximo año / certificado» o «recibos de los 2 últimos años» (vacío = sin dato).',
   numeroPoliza: `El nº de póliza necesita al menos los ${MIN_POLIZA} últimos caracteres (es lo que piden las compañías para consultar SINCO).`,
 }
 
@@ -490,6 +501,8 @@ function valorHistorialEditado(k: ClaveHistorialDeclarado, v: unknown): number |
       return vacio(v) ? null : typeof v === 'string' ? texto(v, 120) : 'invalido'
     case 'numeroPoliza':
       return vacio(v) ? null : polizaDeclarada(v) ?? 'invalido'
+    case 'fotocopiaAnterior':
+      return vacio(v) ? null : justificanteDeclarado(v) ?? 'invalido'
     case 'siniestrosUltimos5':
       return aniosEditados(v, 50)
     default:

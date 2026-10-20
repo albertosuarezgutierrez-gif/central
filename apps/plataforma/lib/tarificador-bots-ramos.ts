@@ -6,7 +6,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
 import { MAX_COMPANIA_ANTERIOR, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
-import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
+import { formularioBotMoto, OPCIONES_JUSTIFICANTE_ANTERIOR, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
 import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
 import {
   formularioBotHogar, OPCIONES_MADERA_HOGAR, OPCIONES_REGIMEN_HOGAR, OPCIONES_TIPO_HOGAR, OPCIONES_USO_HOGAR, type DatosViviendaBot,
@@ -24,6 +24,8 @@ export type CampoExtraBot = {
   /** Texto libre (no numérico): sin `opciones`, el campo es numérico salvo que lleve `texto`. `maxLength` limita lo tecleado. */
   texto?: boolean
   maxLength?: number
+  /** Fecha (`<input type="date">`, valor ISO aaaa-mm-dd). */
+  fecha?: boolean
 }
 
 export type ResultadoAdaptadorBot =
@@ -59,12 +61,22 @@ const adaptadorMoto: AdaptadorBot = {
     { clave: 'sexo', bloque: 'personas', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (años asegurado > 0, dato o supuesto). Sin seguro actual / 0 años no se pide.
     { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    // Allianz Moto (bot 0.7.11, 20/10/2026). Fecha de adquisición ≠ matriculación: se guarda en `datosVehiculo.fechaCompra` del riesgo.
+    { clave: 'fechaAdquisicion', bloque: 'riesgo', etiqueta: 'Fecha de adquisición de la moto', ayuda: 'obligatoria en Allianz Moto; no es la de matriculación', fecha: true },
+    // Si estuvo asegurado, Allianz exige las 5 últimas cifras de la póliza anterior y qué justificante se aporta. Se guardan en el
+    // historial declarado de la oportunidad (`numeroPoliza` y `fotocopiaAnterior`).
+    { clave: 'polizaAnteriorUltimos5', bloque: 'poliza', etiqueta: 'Nº de póliza anterior (últimas 5 cifras)', ayuda: 'obligatorio en Allianz Moto si estuvo asegurado', placeholder: 'p. ej. 12345', texto: true, maxLength: 30 },
+    { clave: 'fotocopiaAnterior', bloque: 'poliza', etiqueta: 'Justificante del seguro anterior', ayuda: 'obligatorio en Allianz Moto si estuvo asegurado: cuál se aporta', opciones: OPCIONES_JUSTIFICANTE_ANTERIOR, porDefecto: '' },
   ],
   construir: (formulario, extra) => {
     const f = formulario as FormularioBotsMoto
     // El desplegable arranca en '' («Elegir…»): vacío = no tocado, así que manda el del formulario.
     const sexo = extra.sexo === 'hombre' || extra.sexo === 'mujer' ? extra.sexo : extra.sexo === undefined || extra.sexo === '' ? f.sexo : null
-    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '', companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior })
+    const r = formularioBotMoto({ ...f, sexo, cilindrada: extra.cilindrada ?? '', companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior,
+      // Un campo TOCADO (aunque vacío) manda sobre el del formulario.
+      fechaAdquisicion: extra.fechaAdquisicion !== undefined ? extra.fechaAdquisicion : f.fechaAdquisicion,
+      polizaAnteriorUltimos5: extra.polizaAnteriorUltimos5 !== undefined ? extra.polizaAnteriorUltimos5 : f.polizaAnteriorUltimos5,
+      fotocopiaAnterior: extra.fotocopiaAnterior !== undefined ? extra.fotocopiaAnterior : f.fotocopiaAnterior })
     if (!r.ok) return { ok: false, faltan: r.faltan }
     // Sin sexo tecleado, asegura lo toma del Sr./Sra. de la ficha al encolar; si la ficha no lo permite, el checklist dice «falta».
     const sinDatoEnFicha = sexo === null && f.sexoSinFicha === true ? ['conductor.sexo'] : undefined

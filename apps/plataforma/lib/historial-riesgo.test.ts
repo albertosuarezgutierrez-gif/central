@@ -8,7 +8,7 @@ import { interpretarRiesgo, leerHistorialRiesgo, type HistorialRiesgo } from './
 const HOY = '2026-10-10'
 const SIN_DECLARAR = {
   aniosAsegurado: null, aniosEnCompania: null, tieneSeguroActual: null, companiaActual: null, numeroPoliza: null,
-  aniosSinSiniestros: null, siniestrosUltimos5: null,
+  aniosSinSiniestros: null, siniestrosUltimos5: null, fotocopiaAnterior: null,
 }
 const vacio: HistorialRiesgo = { seguroAnterior: null, historialDeclarado: SIN_DECLARAR, carnet: { fecha: null, conductor: null, legible: true } }
 const sa = (x: Record<string, unknown>) => ({ codigoDgs: null, fechaEfecto: null, aniosSinSiniestros: null, siniestrosUltimos5: null, ...x }) as HistorialRiesgo['seguroAnterior']

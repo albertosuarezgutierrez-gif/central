@@ -48,7 +48,7 @@ test('lo que el adaptador deja a la ficha (completarDesdeFicha) cuenta como «fi
 test('Allianz moto: sin sexo tecleado se toma del Sr./Sra. de la ficha (no bloquea aquí; asegura lo exige al encolar); sin clase, falta', () => {
   const moto = {
     ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: null },
-    aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0, seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
+    aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0, fechaAdquisicion: '2016-01-02', seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
   }
   const x = checklistCompania('allianz', 'moto', moto)
   assert.ok(x.estado === 'evaluado' && !x.bloquea)
@@ -61,7 +61,7 @@ test('Allianz moto: sin sexo tecleado se toma del Sr./Sra. de la ficha (no bloqu
 test('18/10/2026 supuesto favorable: antecedentes vacíos no bloquean y se pintan como «supuesto», nunca como «listo»', () => {
   const moto = {
     ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: 'mujer' },
-    aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null, seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
+    aniosAseguradoAnterior: null, siniestrosUltimos5Anios: null, companiaAnterior: 'Aseguradora Alfa', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02', seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
   }
   const x = checklistCompania('allianz', 'moto', moto)
   assert.ok(x.estado === 'evaluado' && !x.bloquea)
@@ -86,7 +86,7 @@ test('Generali auto: matrícula presente y carné «de la ficha» (completarDesd
 test('Allianz moto: si la ficha NO permite deducir el sexo (Sr./Sra.), conductor.sexo es «falta» y bloquea', () => {
   const moto = {
     ramo: 'moto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01', sexo: null },
-    aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0, seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
+    aniosAseguradoAnterior: 0, siniestrosUltimos5Anios: 0, fechaAdquisicion: '2016-01-02', seleccionVehiculo: { marca: 'Honda', modelo: 'PCX', clase: 1, cilindradaCc: 125 },
   }
   const x = checklistCompania('allianz', 'moto', moto, [], ['conductor.sexo'])
   assert.ok(x.estado === 'evaluado' && x.bloquea)
