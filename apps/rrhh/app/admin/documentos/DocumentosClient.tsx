@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import AdminShell from '@/components/AdminShell'
 import { carpetaAdmiteFirma } from '@/lib/envio-staging'
+import Page from '@/components/ui/Page'
 
 type Opcion = { id: string; etiqueta: string }
 type Categoria = Opcion & { carpeta: string }
@@ -44,9 +44,8 @@ const formVacio = (nombre: string): Form => ({
 function nombreEmp(e: Empleado) { return [e.nombre, e.apellidos].filter(Boolean).join(' ') }
 function norm(s: string) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() }
 
-export default function DocumentosClient({ carpetas, categorias, ...shell }: {
+export default function DocumentosClient({ carpetas, categorias }: {
   carpetas: Opcion[]; categorias: Categoria[]
-  logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean
 }) {
   const [items, setItems] = useState<Item[]>([])
   const [empleados, setEmpleados] = useState<Empleado[] | null>(null)
@@ -165,12 +164,11 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
   const listos = pendientesDeEnvio(items).length
 
   return (
-    <AdminShell activo="documentos" {...shell}>
-      <h1 className="mb-1 text-xl">Enviar documentos</h1>
-      <p className="mb-3 text-sm text-ink-3">
-        Sube uno o varios documentos. La IA propone el tipo, la carpeta, el título, si requiere firma, un resumen para el
-        empleado y a quién va (por DNI o nombre completo). Revisa y corrige: <b>nada se asigna ni se avisa hasta que confirmes</b>.
-      </p>
+    <Page
+      titulo="Enviar documentos"
+      subtitulo={<>Sube uno o varios documentos. La IA propone el tipo, la carpeta, el título, si requiere firma, un resumen para el
+        empleado y a quién va (por DNI o nombre completo). Revisa y corrige: <b>nada se asigna ni se avisa hasta que confirmes</b>.</>}
+    >
 
       <label className="mb-4 block rounded-card border border-dashed border-line bg-card p-4 text-center text-sm">
         <span className="font-medium text-accent">Elegir archivos</span> <span className="text-ink-3">(PDF recomendado, máx. ~4 MB cada uno)</span>
@@ -178,7 +176,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
           onChange={e => { const fs = Array.from(e.target.files ?? []); fs.forEach(procesar); e.currentTarget.value = '' }} />
       </label>
 
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:[&>section:only-child]:col-span-2">
         {items.map(it => (
           <TarjetaDocumento key={it.id} it={it} carpetas={carpetas} categorias={categorias} empleados={activos}
             cargandoEmpleados={empleados === null} ocupado={enviandoTodo}
@@ -194,7 +192,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
           </button>
         </div>
       )}
-    </AdminShell>
+    </Page>
   )
 }
 
@@ -222,7 +220,7 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
   const sinEmail = it.resultado?.resultados.filter(r => r.aviso && r.aviso.email_estado !== 'enviado').length ?? 0
 
   return (
-    <section className="rounded-card border border-line bg-card p-4">
+    <section className="min-w-0 rounded-card border border-line bg-card p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <p className="min-w-0 flex-1 break-all text-sm font-medium">{it.nombre}</p>
         <span className="text-xs text-ink-3">
@@ -322,7 +320,7 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
                 {!bloqueado && (
                   <>
                     <input value={buscar} onChange={e => { setBuscar(e.target.value); setVerN(50) }} placeholder={cargandoEmpleados ? 'Cargando empleados…' : 'Buscar empleado por nombre o DNI'} className="mb-1 w-full text-sm" />
-                    <ul className="max-h-56 overflow-y-auto rounded-lg border border-line">
+                    <ul className="grid max-h-56 grid-cols-1 overflow-y-auto rounded-lg border border-line xl:grid-cols-2 2xl:grid-cols-3">
                       {filtrados.slice(0, verN).map(e => (
                         <li key={e.id}>
                           <button type="button" onClick={() => onForm({ destinatarios: [...f.destinatarios, e.id] })}
@@ -332,9 +330,9 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
                         </li>
                       ))}
                       {filtrados.length > verN && (
-                        <li><button type="button" onClick={() => setVerN(n => n + 50)} className={`${BTN_SEC} w-full text-xs`}>Ver más ({filtrados.length - verN})</button></li>
+                        <li className="col-span-full"><button type="button" onClick={() => setVerN(n => n + 50)} className={`${BTN_SEC} w-full text-xs`}>Ver más ({filtrados.length - verN})</button></li>
                       )}
-                      {filtrados.length === 0 && !cargandoEmpleados && <li className="px-3 py-2 text-xs text-ink-3">Sin resultados</li>}
+                      {filtrados.length === 0 && !cargandoEmpleados && <li className="col-span-full px-3 py-2 text-xs text-ink-3">Sin resultados</li>}
                     </ul>
                   </>
                 )}

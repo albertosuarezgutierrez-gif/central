@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 import { CATEGORIAS, MESES, etiquetaCategoria, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
+import Card from '@/components/ui/Card'
+import Tabla from '@/components/ui/Tabla'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
@@ -125,10 +127,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   }
 
   return (
-    <AdminShell activo="cuenta" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
-      <h1 className="text-2xl">Mi cuenta</h1>
+    <Page titulo="Mi cuenta" ancho="formulario">
 
-      <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3 max-w-sm">
         <h2 className="mb-2 text-base">Identidad corporativa (marca blanca)</h2>
         <form onSubmit={guardarMarca} className="grid grid-cols-1 gap-2.5">
           <label className="text-ink-2 text-sm">Color corporativo</label>
@@ -156,9 +157,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           {brandMsg && <p className="text-ok text-sm">{brandMsg}</p>}
         </form>
         <p className="text-ink-3 mt-2 text-xs">El logo y el color se aplican al <strong>Portal del Empleado</strong> que ven tus trabajadores. Deja el color vacío para usar el de iarrhh.</p>
-      </section>
+      </Card>
 
-      <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3 max-w-sm">
         <h2 className="mb-2 text-base">Convenio colectivo</h2>
         <form onSubmit={guardarConvenio} className="grid grid-cols-1 gap-2.5">
           <input placeholder="Código del convenio (REGCON)" value={cod} onChange={e => setCod(e.target.value)} />
@@ -197,9 +198,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
             </div>
           )}
         </div>
-      </section>
+      </Card>
 
-      <section className="my-3 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3">
         <h2 className="mb-3 text-base">Documentación de empresa</h2>
         <form onSubmit={subirDoc} className="mb-4 grid gap-2">
           <div className="flex min-w-0 flex-wrap gap-2">
@@ -227,23 +228,22 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
         </form>
 
         {docs.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+          <Tabla>
               <thead>
-                <tr className="border-b border-line text-ink-3">
-                  <th className="pb-1 text-left text-xs font-semibold uppercase">Categoría</th>
-                  <th className="pb-1 text-left text-xs font-semibold uppercase">Nombre</th>
-                  <th className="pb-1 text-left text-xs font-semibold uppercase hidden sm:table-cell">Fecha</th>
-                  <th className="pb-1"></th>
+                <tr className="border-b border-line bg-paper-2 text-ink-3">
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Categoría</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Nombre</th>
+                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase">Fecha</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>
                 {docs.map(d => (
                   <tr key={d.id} className="border-b border-line/50 last:border-0 hover:bg-paper-2/50">
-                    <td className="py-1.5 pr-2 text-xs text-ink-3">{etiquetaCategoria(d.categoria)}{d.anio ? ` ${sufijoPeriodo(d.anio, d.mes)}` : ''}</td>
-                    <td className="py-1.5 pr-2">{d.nombre}</td>
-                    <td className="py-1.5 pr-2 text-xs text-ink-3 hidden sm:table-cell">{new Date(d.subido_at).toLocaleDateString('es-ES')}</td>
-                    <td className="py-1.5 text-right">
+                    <td className="px-3 py-2.5 text-xs text-ink-3">{etiquetaCategoria(d.categoria)}{d.anio ? ` ${sufijoPeriodo(d.anio, d.mes)}` : ''}</td>
+                    <td data-label="Nombre" className="px-3 py-2.5">{d.nombre}</td>
+                    <td data-label="Fecha" className="px-3 py-2.5 text-xs tabular-nums text-ink-3">{new Date(d.subido_at).toLocaleDateString('es-ES')}</td>
+                    <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {d.url && <a href={d.url} target="_blank" rel="noopener noreferrer" className="rounded px-2 py-0.5 text-xs bg-paper-2 text-ink-2 hover:bg-line no-underline">Descargar</a>}
                         <button onClick={() => borrarDoc(d.id, d.nombre)} className="px-2 py-0.5 text-xs text-alert bg-paper-2 hover:bg-line">🗑️</button>
@@ -252,14 +252,13 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
+          </Tabla>
         ) : (
           <p className="text-sm text-ink-3">Sin documentos subidos</p>
         )}
-      </section>
+      </Card>
 
-      <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3 max-w-sm">
         <h2 className="mb-2 text-base">Cambiar contraseña</h2>
         <form onSubmit={enviar} className="grid grid-cols-1 gap-2.5">
           <input type="password" placeholder="Contraseña actual" value={actual} onChange={e => setActual(e.target.value)} />
@@ -268,7 +267,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           {msg && <p className="text-ok text-sm">{msg}</p>}
           {error && <p className="text-alert text-sm">{error}</p>}
         </form>
-      </section>
-    </AdminShell>
+      </Card>
+    </Page>
   )
 }

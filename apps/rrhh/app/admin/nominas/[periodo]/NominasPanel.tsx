@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 
 type Incidencia = { id: string; tipo: string; concepto: string; importe: number | null; horas: number | null; dias: number | null }
 type Nomina = {
@@ -27,7 +27,7 @@ const TIPOS_INCIDENCIA = [
 
 const fmt = (n: number) => n?.toFixed(2) + ' €'
 
-export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { periodo: string; inicial: Nomina[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function NominasPanel({ periodo, inicial }: { periodo: string; inicial: Nomina[] }) {
   const [nominas, setNominas] = useState<Nomina[]>(inicial)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -86,16 +86,11 @@ export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa,
   const confirmadas = nominas.filter(n => n.estado === 'confirmada')
 
   return (
-    <AdminShell activo="nominas" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <div className="flex items-center justify-between">
-        <div>
-          <a href="/admin/nominas" className="text-ink-3 text-sm no-underline hover:underline">← Períodos</a>
-          <h1 className="text-2xl mt-1">Nóminas — {periodo}</h1>
-        </div>
-        <button onClick={generar} disabled={generando}>
-          {generando ? 'Generando…' : 'Generar borradores'}
-        </button>
-      </div>
+    <Page
+      titulo={`Nóminas — ${periodo}`}
+      volver={{ href: '/admin/nominas', texto: 'Períodos' }}
+      acciones={<button onClick={generar} disabled={generando}>{generando ? 'Generando…' : 'Generar borradores'}</button>}
+    >
 
       {error && <p className="mt-2 text-alert text-sm">{error}</p>}
 
@@ -179,6 +174,6 @@ export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa,
           </ul>
         </section>
       )}
-    </AdminShell>
+    </Page>
   )
 }

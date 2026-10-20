@@ -77,8 +77,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
   }
 
   return (
-    <main className="mx-auto max-w-[520px]" style={estiloMarca(branding?.color_primario) as React.CSSProperties}>
-      <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white">
+    <main className="mx-auto max-w-[520px] lg:max-w-5xl" style={estiloMarca(branding?.color_primario) as React.CSSProperties}>
+      <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white lg:flex-row lg:justify-between lg:gap-4 lg:px-8 lg:text-left">
         {branding?.logo_url
           ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-20 w-auto max-w-[220px] object-contain" />
           : <Wordmark claro className="text-2xl" />}
@@ -93,6 +93,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
       </header>
       <div className="p-4">
 
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-x-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="contents lg:col-start-1 lg:block">
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
 
       {avisos && avisos.avisos.length > 0 && (
@@ -128,10 +130,15 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
         </section>
       )}
 
+      </div>
+
+      <div className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block">
       {tieneFichaje && <FichajeEmpleado />}
 
       <SolicitudesEmpleado />
+      </div>
 
+      <div className="contents lg:col-start-1 lg:block">
       <section className="my-3 rounded-card border border-line bg-card p-4">
         <h2 className="mb-2 text-base">Enviar un documento</h2>
         <div className="flex flex-wrap items-center gap-2">
@@ -172,6 +179,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
           {docs.length === 0 && <li className="text-ink-3 text-sm">Aún no tienes documentos</li>}
         </ul>
       </section>
+      </div>
+      </div>
 
       {firmarDoc && (
         <div onClick={() => setFirmarDoc(null)} className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4">

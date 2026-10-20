@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
+import Card from '@/components/ui/Card'
 import { tipoEtiqueta } from '@/lib/solicitudes-tipos'
 
 type Ausencia = { id: string; tipo: string; fecha_inicio: string; fecha_fin: string; estado: string; empleado_nombre: string }
@@ -12,7 +13,7 @@ function mesLabel(mes: string) {
   return new Date(anio, m - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
 }
 
-export default function CalendarioClient({ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function CalendarioClient() {
   const hoy = new Date()
   const mesInicial = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   const [mes, setMes] = useState(mesInicial)
@@ -38,19 +39,19 @@ export default function CalendarioClient({ logoUrl, nombreEmpresa, colorPrimario
   }, {})
 
   return (
-    <AdminShell activo="calendario" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <div className="mb-4 flex items-center gap-3">
-        <button onClick={() => navMes(-1)} className="bg-paper-2 text-ink-2 hover:bg-line px-2 py-1 text-sm">‹</button>
-        <h1 className="flex-1 text-center text-xl capitalize">{mesLabel(mes)}</h1>
-        <button onClick={() => navMes(1)} className="bg-paper-2 text-ink-2 hover:bg-line px-2 py-1 text-sm">›</button>
+    <Page titulo="Calendario de ausencias">
+      <div className="mb-4 flex items-center gap-3 lg:max-w-md">
+        <button onClick={() => navMes(-1)} className="min-h-[44px] min-w-[44px] bg-paper-2 text-ink-2 hover:bg-line px-2 py-1 text-sm">‹</button>
+        <h2 className="flex-1 text-center text-xl capitalize">{mesLabel(mes)}</h2>
+        <button onClick={() => navMes(1)} className="min-h-[44px] min-w-[44px] bg-paper-2 text-ink-2 hover:bg-line px-2 py-1 text-sm">›</button>
       </div>
 
       {Object.keys(porEmpleado).length === 0 ? (
         <p className="text-ink-3 text-sm">No hay ausencias registradas para este mes.</p>
       ) : (
-        <ul className="grid gap-2">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-2 md:grid-cols-2 xl:grid-cols-3">
           {Object.entries(porEmpleado).sort(([a], [b]) => a.localeCompare(b)).map(([nombre, items]) => (
-            <li key={nombre} className="rounded-[12px] border border-line bg-card p-3">
+            <li key={nombre} className="min-w-0"><Card className="!p-3">
               <strong className="text-sm">{nombre}</strong>
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {items.map(a => (
@@ -61,10 +62,10 @@ export default function CalendarioClient({ logoUrl, nombreEmpresa, colorPrimario
                   </span>
                 ))}
               </div>
-            </li>
+            </Card></li>
           ))}
         </ul>
       )}
-    </AdminShell>
+    </Page>
   )
 }

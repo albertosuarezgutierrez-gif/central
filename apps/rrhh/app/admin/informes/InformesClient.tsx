@@ -1,10 +1,12 @@
 'use client'
 import { useEffect, useMemo, useRef, useState, Fragment } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 import { CATALOGO, type EntidadDef, type FiltroDef } from '@/lib/informes/catalogo'
 import { formatearMetrica, formatearValor, numeroEs } from '@/lib/informes/formato'
 import type { ResultadoInforme, ResultadoMetrica } from '@/lib/informes/motor'
 import type { CabeceraInforme } from '@/lib/informes/cabecera'
+import Card from '@/components/ui/Card'
+import Tabla from '@/components/ui/Tabla'
 
 type Opcion = { id: string; nombre: string }
 type Rango = { desde?: string; hasta?: string }
@@ -25,7 +27,7 @@ function nombreDeCabecera(cd: string | null, porDefecto: string): string {
   return m ? m[1] : porDefecto
 }
 
-export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function InformesClient({ tieneFichaje }: { tieneFichaje?: boolean }) {
   const entidades = useMemo(() => CATALOGO.filter(e => !e.requiereFichaje || tieneFichaje), [tieneFichaje])
   const [entidadClave, setEntidadClave] = useState(entidades[0]?.clave ?? '')
   const ent = entidades.find(e => e.clave === entidadClave) ?? entidades[0]
@@ -110,19 +112,17 @@ export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, 
   if (!ent) return null
 
   return (
-    <AdminShell activo="informes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <h1 className="mb-1 text-2xl">Informes</h1>
-      <p className="mb-4 text-sm text-ink-3">Elige qué quieres ver, filtra, agrupa y descárgalo en Excel o PDF.</p>
+    <Page titulo="Informes" subtitulo="Elige qué quieres ver, filtra, agrupa y descárgalo en Excel o PDF.">
 
-      <section className="mb-4 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="mb-4">
         <label className="mb-1 block text-xs font-semibold uppercase text-ink-3" htmlFor="inf-entidad">1. ¿De qué?</label>
         <select id="inf-entidad" className="w-full" value={ent.clave} onChange={e => cambiarEntidad(e.target.value)}>
           {entidades.map(e => <option key={e.clave} value={e.clave}>{e.etiqueta}</option>)}
         </select>
         <p className="mt-1 text-xs text-ink-3">{ent.descripcion}</p>
-      </section>
+      </Card>
 
-      <section className="mb-4 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="mb-4">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold uppercase text-ink-3">2. Columnas ({columnas.length})</span>
           <button type="button" className={`ml-auto text-xs ${BTN_SEC}`} onClick={() => setColumnas(ent.columnas.map(c => c.clave))}>Todas</button>
@@ -136,22 +136,22 @@ export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, 
             </label>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="mb-4 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="mb-4">
         <span className="mb-2 block text-xs font-semibold uppercase text-ink-3">3. Filtros</span>
         <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
           {ent.filtros.map(f => <CampoFiltro key={f.clave} def={f} valor={filtros[f.clave]} empleados={empleados} obras={obras} onChange={v => ponerFiltro(f.clave, v)} />)}
         </div>
-      </section>
+      </Card>
 
-      <section className="mb-4 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="mb-4">
         <label className="mb-1 block text-xs font-semibold uppercase text-ink-3" htmlFor="inf-agr">4. Agrupar y totalizar</label>
         <select id="inf-agr" className="w-full" value={agrupacion} onChange={e => setAgrupacion(e.target.value)}>
           <option value="">Sin agrupar (solo total general)</option>
           {ent.agrupaciones.map(a => <option key={a.clave} value={a.clave}>{a.etiqueta}</option>)}
         </select>
-      </section>
+      </Card>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button type="button" className="min-h-[44px] flex-1 sm:flex-none" disabled={cargando} onClick={ver}>{cargando ? 'Calculando…' : 'Ver informe'}</button>
@@ -163,7 +163,7 @@ export default function InformesClient({ logoUrl, nombreEmpresa, colorPrimario, 
       {error && <p className="mb-4 rounded-card border border-alert/40 bg-alert/10 p-3 text-sm text-alert">{error}</p>}
 
       {vista && cabecera && <Resultado vista={vista} cabecera={cabecera} visibles={visibles} onVerMas={() => setVisibles(v => v + PASO)} />}
-    </AdminShell>
+    </Page>
   )
 }
 
@@ -229,14 +229,14 @@ function Resultado({ vista, cabecera, visibles, onVerMas }: { vista: Vista; cabe
 
   return (
     <section>
-      <div className="mb-3 rounded-card border border-line bg-card p-4">
+      <Card className="mb-3">
         <h2 className="text-lg">{cabecera.titulo}</h2>
         <p className="text-xs text-ink-3">{cabecera.filtros.length ? cabecera.filtros.join(' · ') : 'Sin filtros'}{cabecera.agrupacion ? ` · ${cabecera.agrupacion}` : ''} · {cabecera.generado}</p>
         {vista.truncado && (
           <p className="mt-2 text-sm text-alert">⚠ Hay más de {numeroEs(vista.limite, 0)} filas: el informe (y sus totales) se limita a las primeras {numeroEs(vista.limite, 0)}. Filtra más para verlo completo.</p>
         )}
         <div className="mt-3"><Metricas metricas={metricasCab} /></div>
-      </div>
+      </Card>
 
       {vista.grupos && (
         <div className="mb-3 overflow-x-auto rounded-card border border-line bg-card">
@@ -264,8 +264,7 @@ function Resultado({ vista, cabecera, visibles, onVerMas }: { vista: Vista; cabe
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[600px]">
+      <Tabla tablaClassName="md:min-w-[600px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               {cols.map(c => <th key={c.clave} className={`px-3 py-2 text-xs font-semibold uppercase text-ink-3 ${ES_NUM.has(c.tipo) ? 'text-right' : 'text-left'}`}>{c.etiqueta}</th>)}
@@ -295,8 +294,7 @@ function Resultado({ vista, cabecera, visibles, onVerMas }: { vista: Vista; cabe
               <tr><td colSpan={Math.max(cols.length, 1)} className="px-3 py-6 text-center text-ink-3">No hay datos con estos filtros.</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
+      </Tabla>
 
       <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-3">
         <span>Mostrando {numeroEs(mostrar, 0)} de {numeroEs(vista.filasTotales, 0)} filas</span>
