@@ -9,7 +9,7 @@ import { leerVehiculoWorker, type VehiculoEncadenado } from './tarificador-esper
 import { nombreUtil, partirApellidos } from './nombre-ficha.ts'
 import {
   claveCompania, envDeMaquina, esCif, faltanParaTarificar, mensajeFaltan, leerAtascoWorker, esDniNie, esTipoError, normalizarDocumento, esVersionBot, referenciaPresupuestoValida, sanearInventarioDom, sanearRecorrido, faltaCompaniaAnterior, validarFormularioAuto, validarFormularioHogar, validarFormularioHogarSinTomador, validarOfertas, validarOpcionesPoblacion, validarOpcionesVersion, validarRiesgoComunidad, validarTraza,
-  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FormularioAuto, type FormularioHogarSinTomador, type InventarioDom, type TomadorHogar, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
+  type AtascoWorker, type CandidatoVersion, type DatosTomadorFicha, type Faltante, type FichaTomadorAuto, type FormularioAuto, type FormularioHogarSinTomador, type InventarioDom, type TomadorHogar, type OfertaNormalizada, type OpcionPoblacion, type PasoTraza, type Recorrido, type RiesgoComunidad, type TipoError,
 } from '@central/module-tarificacion'
 
 /**
@@ -174,6 +174,12 @@ export function riesgoParaEncolar<T>(
   compania: string, ramo: string, riesgo: T, leer: () => LecturaNifFicha, leerDatos: () => LecturaDatosTomador,
   /** Hogar (19/10/2026): DNI/NIE y nacimiento de la ficha. Sin función = fail-closed (503 ilegible), nunca «no hace falta». */
   leerTomadorHogar: () => LecturaTomadorHogar = () => ({ estado: 'ilegible' }),
+  /**
+   * Allianz auto/moto (20/10/2026): `fichaTomador` de la ficha (NIF, CP, fechas…). Solo se aplica EN MEMORIA para evaluar los obligatorios de
+   * origen ficha (p. ej. `documentoTomador` de Allianz moto); lo guardado sigue sin ella (se inyecta al ENTREGAR). Sin función o `null` =
+   * «no se pudo mirar la ficha» → el obligatorio falta (conservador), nunca se da por cubierto.
+   */
+  leerFichaAuto: () => FichaTomadorAuto | null = () => null,
 ): { ok: true; riesgo: T } | { ok: false; status: 422 | 503; motivo: string; faltan?: Faltante[] } {
   const guardado = riesgoSinNifTomador(riesgo)
   // Compañía anterior (Mapfre auto, 15/10/2026): con años asegurado > 0 el portal pide su NOMBRE en «Figuras». Se corta aquí,
@@ -191,7 +197,12 @@ export function riesgoParaEncolar<T>(
   // Tomador de Hogar (DNI/NIE y nacimiento de la ficha): igual, se COMPRUEBA aquí y se inyecta al entregar; nunca se guarda.
   const h = aplicarTomadorHogar(compania, ramo, d.riesgo, leerTomadorHogar)
   if (!h.ok) return h
-  const faltan = faltanParaTarificar(compania, ramo, h.riesgo)
+  // Ficha del tomador de Allianz auto/moto: también EN MEMORIA, para que un obligatorio de origen ficha (NIF del tomador) se juzgue
+  // contra la ficha que recibirá el worker y no contra el riesgo guardado (que NUNCA lleva el documento).
+  const paraEvaluar = claveCompania(compania) === 'allianz' && (ramo === 'auto' || ramo === 'moto') && esObj(h.riesgo)
+    ? ((f) => (f ? { ...h.riesgo, fichaTomador: f } : h.riesgo))(leerFichaAuto())
+    : h.riesgo
+  const faltan = faltanParaTarificar(compania, ramo, paraEvaluar)
   if (faltan === null) return { ok: false, status: 422, motivo: `sin_obligatorios_declarados: ${claveCompania(compania)}/${ramo} no declara qué datos necesita su bot para tarificar (module-tarificacion obligatorios.ts)` }
   if (faltan.length) return { ok: false, status: 422, motivo: `faltan_datos: ${mensajeFaltan(faltan)}`, faltan }
   // Hogar: el worker valida el formulario ENTERO (edad del tomador 18-110, rangos…). Se corta aquí, antes de gastar máquina.
