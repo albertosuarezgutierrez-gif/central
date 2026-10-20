@@ -1,21 +1,21 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-20T13:02:09.566Z",
- "llamadas": 10022,
+ "fin": "2026-10-20T13:15:32.785Z",
+ "llamadas": 10030,
  "categorias": {
   "otro": {
-   "llamadas": 1071,
-   "chars_in": 144927,
-   "chars_out": 7713108,
+   "llamadas": 1076,
+   "chars_in": 144999,
+   "chars_out": 7787587,
    "errores": 0,
    "archivos_citados": 42,
    "chars_citados": 5899618,
    "tools": {
-    "ToolSearch": 237,
+    "ToolSearch": 238,
     "SubagentHandback": 10,
     "SendMessage": 53,
-    "ReadNotifications": 609,
+    "ReadNotifications": 613,
     "Monitor": 152,
     "AskUserQuestion": 8,
     "TaskStop": 2
@@ -46,16 +46,16 @@
    }
   },
   "mcp:github": {
-   "llamadas": 448,
-   "chars_in": 131059,
-   "chars_out": 1080555,
+   "llamadas": 449,
+   "chars_in": 131199,
+   "chars_out": 1081888,
    "errores": 4,
    "archivos_citados": 7,
    "chars_citados": 3223033,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__actions_run_trigger": 51,
-    "mcp__github__actions_list": 110,
+    "mcp__github__actions_list": 111,
     "mcp__github__create_pull_request": 49,
     "mcp__github__update_pull_request": 38,
     "mcp__github__pull_request_read": 80,
@@ -79,27 +79,27 @@
    }
   },
   "bash": {
-   "llamadas": 5640,
-   "chars_in": 4094651,
-   "chars_out": 17312153,
+   "llamadas": 5641,
+   "chars_in": 4094797,
+   "chars_out": 17312397,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 5640
+    "Bash": 5641
    }
   },
   "mcp:Vercel": {
-   "llamadas": 254,
-   "chars_in": 37064,
-   "chars_out": 350211,
+   "llamadas": 255,
+   "chars_in": 37275,
+   "chars_out": 350713,
    "errores": 5,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Vercel__list_projects": 2,
     "mcp__Vercel__filter_project_envs": 5,
-    "mcp__Vercel__edit_project_env": 65,
+    "mcp__Vercel__edit_project_env": 66,
     "mcp__Vercel__list_deployments": 46,
     "mcp__Vercel__create_deployment": 50,
     "mcp__Vercel__get_deployment": 56,
