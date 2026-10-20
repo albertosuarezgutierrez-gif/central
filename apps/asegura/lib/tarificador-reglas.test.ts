@@ -637,13 +637,18 @@ test('Obligatorios · validarEntradaRamo con compañía: rechaza con la lista le
   // Sin compañía: solo la forma (como antes). NIF y datos del tomador (ficha) no se miran aquí.
   assert.equal(validarEntradaRamo('auto', sinNada).ok, true)
   // Allianz moto: el sexo lo pone asegura del Sr./Sra. de la ficha al encolar → aquí (sin ficha) no se pide.
-  // 0.7.11: Allianz moto pide también el seguro anterior y la fecha de adquisición. `fotocopiaAnterior` y `fechaAdquisicion` AÚN no están en
-  // el modelo `FormularioAuto` (validarFormularioAuto las descarta): hasta entonces el chip las pide y no se pueden aportar. Cuando el modelo
-  // las lleve este cepo se pone rojo y se actualiza (debe pasar a `ok: true`).
+  // 0.7.11: Allianz moto pide también el seguro anterior y la fecha de adquisición. Desde el 20/10/2026 `FormularioAuto` lleva
+  // `fotocopiaAnterior` y `fechaAdquisicion` (y `polizaAnteriorUltimos5`): el riesgo validado las CONSERVA y no falta nada.
   const datosAnt = { companiaAnterior: 'COMPAÑÍA DE PRUEBA', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02' }
   const conAnt = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null }, ...datosAnt }, 'allianz')
-  assert.ok(!conAnt.ok)
-  if (!conAnt.ok) assert.deepEqual(conAnt.faltan?.map((f) => f.clave), ['fotocopiaAnterior', 'fechaAdquisicion'], 'compañía y póliza sí viajan; justificante y fecha de adquisición, aún no')
+  assert.ok(conAnt.ok, 'con los cuatro datos Allianz moto ya puede llegar a precio')
+  if (conAnt.ok) {
+    const r = conAnt.entrada.riesgo as unknown as Record<string, unknown>
+    assert.deepEqual([r.polizaAnteriorUltimos5, r.fotocopiaAnterior, r.fechaAdquisicion], ['00000', 'proximo_anio', '2016-01-02'])
+  }
+  // Un justificante fuera del enum o una fecha de adquisición futura se rechazan con la forma, no con «falta».
+  assert.ok(!validarEntradaRamo('moto', { ...MOTO, ...datosAnt, fotocopiaAnterior: 'otro' }, 'allianz').ok)
+  assert.ok(!validarEntradaRamo('moto', { ...MOTO, ...datosAnt, fechaAdquisicion: '2999-01-01' }, 'allianz').ok)
   const sinAnt = validarEntradaRamo('moto', { ...MOTO, conductor: { ...MOTO.conductor, sexo: null } }, 'allianz')
   assert.ok(!sinAnt.ok)
   if (!sinAnt.ok) assert.deepEqual(sinAnt.faltan?.map((f) => f.clave), ['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion'])

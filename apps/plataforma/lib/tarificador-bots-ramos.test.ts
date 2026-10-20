@@ -12,7 +12,7 @@ test('moto → adaptador con cilindrada editable; sin ella faltan datos y lo dic
   const a = adaptadorDeRamo('moto')
   assert.ok(a)
   assert.equal(a.ramo, 'moto')
-  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo', 'companiaAnterior'])
+  assert.deepEqual(a.campos.map((c) => c.clave), ['cilindrada', 'sexo', 'companiaAnterior', 'fechaAdquisicion', 'polizaAnteriorUltimos5', 'fotocopiaAnterior'])
   assert.ok(ramosConBots().includes('moto'))
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: null, fechaNacimiento: null, fechaCarne: null,

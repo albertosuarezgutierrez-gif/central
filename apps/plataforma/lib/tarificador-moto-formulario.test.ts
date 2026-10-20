@@ -235,3 +235,25 @@ test('poblacion: el municipio elegido viaja en el riesgo; vacío o con caractere
   assert.equal(ok(entrada({ poblacion: '  Villa   Álamo ' })).riesgo.poblacion, 'Villa Álamo')
   for (const p of [null, undefined, '', '   ', 'x'.repeat(81), 'Villa <Álamo>']) assert.equal('poblacion' in ok(entrada({ poblacion: p })).riesgo, false, String(p))
 })
+
+test('Allianz moto (20/10/2026): fecha de adquisición, póliza anterior (5 cifras) y justificante viajan en el riesgo y pasan el validador', () => {
+  const r = ok(entrada({ fechaAdquisicion: '2023-05-10', polizaAnteriorUltimos5: 'ab 12-34567', fotocopiaAnterior: 'dos_ultimos_anios' })).riesgo
+  assert.equal(r.fechaAdquisicion, '2023-05-10')
+  assert.equal(r.polizaAnteriorUltimos5, '34567', 'pegado el número entero: sus 5 últimas cifras')
+  assert.equal(r.fotocopiaAnterior, 'dos_ultimos_anios')
+  // Sin dato no viajan (nada de cajón).
+  const vacio = ok(entrada({})).riesgo
+  for (const k of ['fechaAdquisicion', 'polizaAnteriorUltimos5', 'fotocopiaAnterior']) assert.equal(k in vacio, false, k)
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ polizaAnteriorUltimos5: '1234' })).riesgo, false, 'menos de 5 cifras: no consta')
+  assert.equal('fotocopiaAnterior' in ok(entrada({ fotocopiaAnterior: 'otro' })).riesgo, false, 'fuera del enum: no viaja')
+  // Sin seguro anterior (declarado, o 0 años) no se manda póliza ni justificante; la fecha de adquisición sí.
+  for (const sin of [{ tieneSeguroActual: false }, { aniosAsegurado: '0' }]) {
+    const s = ok(entrada({ ...sin, fechaAdquisicion: '2023-05-10', polizaAnteriorUltimos5: '12345', fotocopiaAnterior: 'proximo_anio' })).riesgo
+    assert.equal(s.fechaAdquisicion, '2023-05-10')
+    assert.equal('polizaAnteriorUltimos5' in s, false)
+    assert.equal('fotocopiaAnterior' in s, false)
+  }
+  // Fecha mal formada: se dice, no se descarta; futura: la rechaza el validador compartido.
+  assert.match(faltan(entrada({ fechaAdquisicion: '10/05/2023' })), /Fecha de adquisición/)
+  assert.match(faltan(entrada({ fechaAdquisicion: '2027-01-01' })), /fechaAdquisicion: no puede ser futura/)
+})

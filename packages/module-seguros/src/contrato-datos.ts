@@ -138,11 +138,11 @@ function vehiculo(moto: boolean): CampoContrato[] {
       cubre: [
         'companiaAnteriorCodigo', 'polizaAnterior', 'aniosAsegurado', 'aniosEnCompania', 'aniosSinSiniestros', 'siniestrosUltimos5',
         'companiaAnterior', 'aniosAseguradoAnterior', 'siniestrosUltimos5Anios',
-        // Bot Allianz moto 0.7.11: últimas 5 cifras de la póliza y justificante que se aporta (aún sin pregunta propia en la petición).
+        // Bot Allianz moto 0.7.11: últimas 5 cifras de la póliza y justificante que se aporta (campos del bloque «Póliza actual» de los bots de moto; sin pregunta propia en la petición de Avant2).
         'polizaAnteriorUltimos5', 'fotocopiaAnterior',
       ],
     }),
-    // `fechaAdquisicion` = fecha de adquisición que pide Allianz moto (bot 0.7.11); el riesgo del bot aún no la recibe de `fechaCompra`.
+    // `fechaAdquisicion` = fecha de adquisición que pide Allianz moto (bot 0.7.11); el cotizador de moto de plataforma la toma de `fechaCompra` (bloque Riesgo de los bots).
     c('fechaCompra', 'fecha de compra', null, 'cliente', 'opcional', { cubre: ['fechaAdquisicion'] }),
     c('remolqueLigero', 'remolque', null, 'cliente', 'opcional'),
     ...(moto

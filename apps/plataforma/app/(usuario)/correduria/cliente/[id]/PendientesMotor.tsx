@@ -21,6 +21,8 @@ export type CampoPanel = {
   clave: string; etiqueta: string; ayuda?: string; placeholder?: string; bloque: BloqueObligatorio
   opciones?: readonly { valor: string; etiqueta: string }[]
   texto?: boolean; maxLength?: number
+  /** Fecha: `<input type="date">` (valor ISO). */
+  fecha?: boolean
   valor: string
   /** Último guardado de ESTE campo: `ok:false` = NO se guardó (se dice el motivo y el campo se marca). `null` = sin intento. */
   guardado: { ok: boolean; texto: string } | null
@@ -80,7 +82,7 @@ function ControlCampo({ campo, acciones, estado }: { campo: CampoPanel; acciones
           {campo.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
         </select>
       ) : (
-        <input inputMode={campo.texto ? 'text' : 'numeric'} maxLength={campo.maxLength} autoComplete="off" value={campo.valor} placeholder={campo.placeholder}
+        <input type={campo.fecha ? 'date' : undefined} inputMode={campo.fecha ? undefined : campo.texto ? 'text' : 'numeric'} maxLength={campo.maxLength} autoComplete="off" value={campo.valor} placeholder={campo.placeholder}
           aria-invalid={mal || undefined} style={estilo}
           onChange={(e) => acciones.cambiar(campo.clave, e.target.value)} onBlur={(e) => acciones.guardar(campo.clave, e.target.value)} />
       )}

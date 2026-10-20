@@ -88,6 +88,8 @@ function EditorHistorial({ oportunidadId, inicial, leido, catalogo, onCerrar }: 
       tieneSeguroActual: tiene === '' ? null : tiene === 'si',
       companiaActual: sinSeguro || compania.trim() === '' ? null : compania.trim(),
       numeroPoliza: pol === '' ? null : pol,
+      // El justificante del seguro anterior se edita en el bloque de bots (Póliza actual); aquí se conserva, salvo «sin seguro» (incoherente).
+      fotocopiaAnterior: sinSeguro ? null : inicial.fotocopiaAnterior,
     }
     const choque = incoherenciaHistorialDeclarado(nuevo)
     if (choque) return setError(choque)

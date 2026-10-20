@@ -52,6 +52,12 @@ export type EntradaBotMoto = {
   siniestrosUltimos5: string
   /** Nombre de la compañía anterior (texto libre, ≤80). Solo viaja con seguro actual y años asegurado ≠ 0. */
   companiaAnterior?: string | null
+  /** Fecha de ADQUISICIÓN (ISO, no la de matriculación): de `datosVehiculo.fechaCompra`. Allianz moto la pide siempre. Vacío/ausente = no consta. */
+  fechaAdquisicion?: string | null
+  /** Últimas 5 cifras de la póliza anterior (texto tecleado; se normaliza a 5 cifras). Solo viaja con seguro actual y años ≠ 0. */
+  polizaAnteriorUltimos5?: string | null
+  /** Justificante del seguro anterior (`proximo_anio` | `dos_ultimos_anios`). Solo viaja con seguro actual y años ≠ 0. */
+  fotocopiaAnterior?: string | null
   /** Municipio elegido entre los del CP (nombre del catálogo): viaja como `poblacion` para que el bot elija la localidad. Vacío = no viaja. */
   poblacion?: string | null
 }
@@ -98,6 +104,27 @@ export function claseMotoPorCilindrada(cc: number | null): 1 | 2 | 3 | 4 | null 
   if (cc === null || !Number.isInteger(cc) || cc <= 50) return null
   return cc <= 125 ? 1 : cc <= 350 ? 2 : cc <= 750 ? 3 : 4
 }
+
+/** Fecha ISO real (aaaa-mm-dd, existente) → la misma; cualquier otra cosa → `null`. */
+export function fechaIsoValida(s: string | null | undefined): string | null {
+  const t = (s ?? '').trim()
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
+  if (!m) return null
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).toISOString().slice(0, 10) === t ? t : null
+}
+
+/** Texto tecleado → últimas 5 cifras de la póliza (si se pega el número entero, sus 5 últimas cifras); menos de 5 cifras → `null`. */
+export function ultimos5CifrasPoliza(s: string | null | undefined): string | null {
+  const cifras = (s ?? '').replace(/\D/g, '')
+  return cifras.length >= 5 ? cifras.slice(-5) : null
+}
+
+/** Justificantes del seguro anterior que acepta Allianz (mismos valores que `JUSTIFICANTES_SEGURO_ANTERIOR`). */
+export const OPCIONES_JUSTIFICANTE_ANTERIOR = [
+  { valor: '', etiqueta: 'Elegir…' },
+  { valor: 'proximo_anio', etiqueta: 'Recibo del próximo año / certificado' },
+  { valor: 'dos_ultimos_anios', etiqueta: 'Recibos de los 2 últimos años' },
+] as const
 
 /** «1.000» / «1000» / «125 cc» → 1000 / 1000 / 125. Lo que no es un número entero inequívoco → `null`. */
 export function cilindradaDeTexto(s: string): number | null {
@@ -149,6 +176,15 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
   const companiaTxt = e.tieneSeguroActual !== false && aniosAseguradoAnterior !== 0 ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
   const companiaAnterior = companiaTxt !== '' && companiaTxt.length <= MAX_COMPANIA_ANTERIOR ? companiaTxt : null
 
+  // Allianz moto (bot 0.7.11): fecha de adquisición (siempre) y, si estuvo asegurado, póliza anterior y justificante. Lo que no consta
+  // NO viaja (nunca un valor de cajón); la fecha mal formada es un hueco que se dice, no se descarta en silencio.
+  const adqTxt = (e.fechaAdquisicion ?? '').trim()
+  const fechaAdquisicion = adqTxt === '' ? null : fechaIsoValida(adqTxt)
+  if (adqTxt !== '' && fechaAdquisicion === null) return { ok: false, faltan: ['Fecha de adquisición: tiene que ser una fecha válida'] }
+  const conSeguroAnterior = e.tieneSeguroActual !== false && aniosAseguradoAnterior !== 0
+  const polizaAnteriorUltimos5 = conSeguroAnterior ? ultimos5CifrasPoliza(e.polizaAnteriorUltimos5) : null
+  const fotocopiaAnterior = conSeguroAnterior && (e.fotocopiaAnterior === 'proximo_anio' || e.fotocopiaAnterior === 'dos_ultimos_anios') ? e.fotocopiaAnterior : null
+
   // Población elegida por el corredor (CP con varias): mismo filtro que `validarFormularioAuto`; inválida = no viaja (el servidor
   // cae a la ciudad de la ficha si el CP casa, `poblacionDesdeFicha`).
   const poblacionTxt = (e.poblacion ?? '').replace(/\s+/g, ' ').trim()
@@ -172,6 +208,9 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
     aniosAseguradoAnterior,
     siniestrosUltimos5Anios,
     ...(companiaAnterior !== null ? { companiaAnterior } : {}),
+    ...(fechaAdquisicion !== null ? { fechaAdquisicion } : {}),
+    ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
+    ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
     // El garaje del cotizador es un SUPUESTO (dato de emisión, no de precio): no se manda como si fuera un dato.
     garajeNoche: null,
     seleccionVehiculo: { marca, modelo, clase: claseMotoPorCilindrada(cc), cilindradaCc: cc, ...(descripcionOk ? { descripcion: version } : {}) },

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { MOTIVO_DESCARTE, aplicarAccion, historialDeclaradoDe, incoherenciaHistorialDeclarado, seguroAnteriorDe, ultimosDigitosPoliza, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
+import { CLAVES_HISTORIAL_DECLARADO, MOTIVO_DESCARTE, aplicarAccion, historialDeclaradoDe, incoherenciaHistorialDeclarado, seguroAnteriorDe, ultimosDigitosPoliza, validarAltaOportunidad, validarEdicionOportunidad } from './oportunidad-seguimiento.ts'
 
 const hoy = new Date(Date.UTC(2026, 8, 24))
 
@@ -105,7 +105,7 @@ test('historial declarado FUERA del seguro anterior: solo años ≠ un seguro an
 
 const NADA = {
   aniosAsegurado: null, aniosEnCompania: null, tieneSeguroActual: null, companiaActual: null, numeroPoliza: null,
-  aniosSinSiniestros: null, siniestrosUltimos5: null,
+  aniosSinSiniestros: null, siniestrosUltimos5: null, fotocopiaAnterior: null,
 }
 
 test('historial declarado (13/10/2026): seguro actual, compañía, póliza y siniestros — tres estados, 0 y false son dato', () => {
@@ -131,6 +131,19 @@ test('edición del historial (13/10/2026): valida cada clave nueva y su coherenc
   assert.match(String(ok({ aniosSinSiniestros: 6, siniestrosUltimos5: 1 })), /5 años o más sin siniestros/)
   assert.match(String(ok({ tieneSeguroActual: false, companiaActual: 'Reale' })), /no tiene seguro ahora/)
   assert.deepEqual(ok({ tieneSeguroActual: false, companiaActual: null, numeroPoliza: null }), { tieneSeguroActual: false, companiaActual: null, numeroPoliza: null })
+})
+
+test('justificante del seguro anterior (20/10/2026, Allianz moto): enum cerrado, vacío = sin dato, incoherente sin seguro', () => {
+  const ok = (hd: unknown) => { const r = validarEdicionOportunidad({ historialDeclarado: hd }); return r.ok ? r.cambios.historial : r.motivo }
+  assert.ok(CLAVES_HISTORIAL_DECLARADO.includes('fotocopiaAnterior'))
+  assert.deepEqual(ok({ fotocopiaAnterior: 'proximo_anio' }), { fotocopiaAnterior: 'proximo_anio' })
+  assert.deepEqual(ok({ fotocopiaAnterior: 'dos_ultimos_anios' }), { fotocopiaAnterior: 'dos_ultimos_anios' })
+  assert.deepEqual(ok({ fotocopiaAnterior: '' }), { fotocopiaAnterior: null }, 'vacío = sin dato')
+  assert.match(String(ok({ fotocopiaAnterior: 'otro' })), /justificante del seguro anterior/)
+  assert.match(String(ok({ fotocopiaAnterior: 7 })), /justificante del seguro anterior/)
+  assert.match(String(ok({ tieneSeguroActual: false, fotocopiaAnterior: 'proximo_anio' })), /no tiene seguro ahora/)
+  assert.equal(historialDeclaradoDe({ fotocopiaAnterior: 'proximo_anio' }).fotocopiaAnterior, 'proximo_anio')
+  assert.equal(historialDeclaradoDe({ fotocopiaAnterior: 'basura' }).fotocopiaAnterior, null, 'basura = null, nunca un valor por defecto')
 })
 
 test('incoherenciaHistorialDeclarado: un null no choca con nada', () => {

@@ -151,3 +151,23 @@ describe('conductor habitual = tomador: supuesto declarado solo si no consta', (
     expect(SUPUESTO_CONDUCTOR_TOMADOR).toBe('conductor habitual: el tomador (supuesto)')
   })
 })
+
+describe('validarFormularioAuto: fechaAdquisicion, fotocopiaAnterior y póliza anterior (Allianz moto)', () => {
+  const base = { ramo: 'auto', matricula: '1234BCD', codigoPostal: '41003', conductor: { fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01' } }
+  it('viajan al formulario validado; ausentes no aparecen', () => {
+    const r = validarFormularioAuto({ ...base, fechaMatriculacion: '2020-01-01', fechaAdquisicion: '2021-03-04', fotocopiaAnterior: 'dos_ultimos_anios', polizaAnteriorUltimos5: '12345' }, hoy)
+    expect(r.ok && [r.formulario.fechaAdquisicion, r.formulario.fotocopiaAnterior, r.formulario.polizaAnteriorUltimos5]).toEqual(['2021-03-04', 'dos_ultimos_anios', '12345'])
+    const sin = validarFormularioAuto(base, hoy)
+    expect(sin.ok && ['fechaAdquisicion', 'fotocopiaAnterior'].some((k) => k in sin.formulario)).toBe(false)
+  })
+  it('fechaAdquisicion: futura, <1900, anterior a la matriculación o mal formada → error; igual a la matriculación vale', () => {
+    for (const extra of [{ fechaAdquisicion: '2030-01-01' }, { fechaAdquisicion: '1899-12-31' }, { fechaAdquisicion: '04/03/2021' }, { fechaMatriculacion: '2020-01-01', fechaAdquisicion: '2019-12-31' }]) {
+      expect(validarFormularioAuto({ ...base, ...extra }, hoy).ok).toBe(false)
+    }
+    expect(validarFormularioAuto({ ...base, fechaMatriculacion: '2020-01-01', fechaAdquisicion: '2020-01-01' }, hoy).ok).toBe(true)
+  })
+  it('fotocopiaAnterior fuera del enum → error', () => {
+    expect(validarFormularioAuto({ ...base, fotocopiaAnterior: 'otro' }, hoy).ok).toBe(false)
+    expect(validarFormularioAuto({ ...base, fotocopiaAnterior: 'proximo_anio' }, hoy).ok).toBe(true)
+  })
+})

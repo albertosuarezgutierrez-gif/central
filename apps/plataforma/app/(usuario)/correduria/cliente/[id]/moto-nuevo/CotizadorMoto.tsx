@@ -77,7 +77,7 @@ import { primaActualParaLista } from '@/lib/correduria/competencia-oportunidad'
 import PackVehiculos from '../PackVehiculos'
 import PrecioBots from '../PrecioBots'
 import { bloqueosAltaTomador } from '@/lib/tarificador-alta-tomador'
-import { datoDePersonaBot, companiaActualParaBots, tieneSeguroParaBots } from '@/lib/tarificador-moto-formulario'
+import { datoDePersonaBot, companiaActualParaBots, tieneSeguroParaBots, ultimos5CifrasPoliza } from '@/lib/tarificador-moto-formulario'
 import PreciosVarianteGuardada, { resumenGuardada } from '../../../oportunidad/[id]/PreciosVarianteGuardada'
 
 const input: React.CSSProperties = {
@@ -1351,7 +1351,15 @@ export default function CotizadorMoto({
           clienteId={clienteId}
           oportunidadId={variante?.oportunidadId ?? null}
           bloqueosPorCompania={bloqueosAltaTomador(faltanInicial, tomadorEmpresa)}
-          inicialesExtra={{ cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '', sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '' }}
+          inicialesExtra={{
+            cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '',
+            sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '',
+            // Allianz Moto (20/10/2026): fecha de adquisición = `fechaCompra` del riesgo (nunca la matriculación); póliza anterior (5 últimas
+            // cifras) y justificante = historial DECLARADO de la oportunidad (`numeroPoliza`, `fotocopiaAnterior`). Sin dato, vacíos.
+            fechaAdquisicion: datosRiesgo?.fechaCompra ?? '',
+            polizaAnteriorUltimos5: ultimos5CifrasPoliza(embebido ? historialRiesgo?.numeroPoliza : null) ?? '',
+            fotocopiaAnterior: embebido ? historialRiesgo?.fotocopiaAnterior ?? '' : '',
+          }}
           formulario={{
             matricula,
             marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
