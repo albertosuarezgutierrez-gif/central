@@ -92,16 +92,16 @@ export default function FichajesClient() {
   return (
     <Page titulo="Fichajes">
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <input type="month" value={mes} onChange={e => setMes(e.target.value)} className="text-sm" />
         <select value={empleadoId} onChange={e => setEmpleadoId(e.target.value)} className="text-sm">
           <option value="">Todos los empleados</option>
           {empleados.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
         </select>
-        {totalHoras > 0 && <span className="text-sm text-ink-3">{totalHoras.toFixed(1)} h totales</span>}
+        <span className="text-sm tabular-nums text-ink-3">{totalHoras > 0 ? `${totalHoras.toFixed(1)} h totales` : ''}</span>
         <button
           onClick={exportarCSV} disabled={exportando || fichajes.length === 0}
-          className="ml-auto bg-paper-2 text-ink-2 text-xs px-3 py-1.5 rounded border border-line"
+          className="min-h-[44px] bg-paper-2 text-ink-2 text-xs px-3 py-1.5 rounded border border-line lg:justify-self-end"
         >
           {exportando ? 'Exportando…' : '⬇ Exportar CSV (ITSS)'}
         </button>
@@ -120,7 +120,7 @@ export default function FichajesClient() {
         </div>
       )}
 
-      <Tabla tablaClassName="md:min-w-[600px]">
+      <Tabla fija>
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Empleado</th>
@@ -162,19 +162,19 @@ export default function FichajesClient() {
                     </td>
                   ) : (
                     <>
-                      <td className="px-3 py-2 font-medium">{f.empleado_nombre ?? '—'}</td>
-                      <td data-label="Fecha" className="px-3 py-2 text-ink-2">{fmtFecha(f.entrada_at)}</td>
-                      <td data-label="Entrada" className="px-3 py-2">{fmt(f.entrada_at)}</td>
-                      <td data-label="Salida" className="px-3 py-2">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
-                      <td data-label="Horas" className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
-                      <td data-label="Obra" className="px-3 py-2 text-xs">
+                      <td className="px-3 py-2.5 font-medium">{f.empleado_nombre ?? '—'}</td>
+                      <td data-label="Fecha" className="px-3 py-2.5 text-ink-2">{fmtFecha(f.entrada_at)}</td>
+                      <td data-label="Entrada" className="px-3 py-2.5 tabular-nums">{fmt(f.entrada_at)}</td>
+                      <td data-label="Salida" className="px-3 py-2.5 tabular-nums">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
+                      <td data-label="Horas" className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
+                      <td data-label="Obra" className="px-3 py-2.5 text-xs">
                         {f.obra_nombre
                           ? <span className="text-ink-2">{f.obra_nombre}</span>
                           : f.lat_entrada != null && f.lng_entrada != null
                             ? <a href={`https://maps.google.com/?q=${f.lat_entrada},${f.lng_entrada}`} target="_blank" rel="noopener noreferrer" className="text-accent no-underline hover:underline">📍 Ver mapa</a>
                             : <span className="text-ink-3">—</span>}
                       </td>
-                      <td className="px-3 py-2 flex gap-1">
+                      <td className="px-3 py-2.5 flex gap-1">
                         <button
                           onClick={() => { setEditId(f.id); setEditSalida(''); setEditObs(f.observaciones ?? ''); setEditMotivo(''); setErrorEdit(''); setAuditId(null) }}
                           className="px-2 py-1.5 text-xs min-h-[36px]" title="Corregir"
@@ -189,7 +189,7 @@ export default function FichajesClient() {
                 </tr>
                 {auditId === f.id && (
                   <tr key={`audit-${f.id}`} className="border-b border-line bg-paper-2/50">
-                    <td colSpan={7} className="px-3 py-2">
+                    <td colSpan={7} className="px-3 py-2.5">
                       {auditoria.length === 0 ? (
                         <p className="text-xs text-ink-3">Sin correcciones registradas</p>
                       ) : (

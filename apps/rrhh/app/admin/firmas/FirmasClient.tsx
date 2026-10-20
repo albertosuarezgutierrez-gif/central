@@ -1,5 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Page from '@/components/ui/Page'
+import Tabla from '@/components/ui/Tabla'
 
 type Fila = {
   documento_id: string; documento: string; carpeta: string; estado_firma: string
@@ -87,13 +89,12 @@ export default function FirmasClient() {
   }
 
   return (
-    <>
-      <h1 className="mb-1 text-xl">Firmas pendientes</h1>
-      <p className="mb-3 text-sm text-ink-3">
-        Recordatorio automático a los 3 y 7 días de la solicitud y luego cada semana. «Reclamar» reenvía email y push ahora.
-      </p>
+    <Page
+      titulo="Firmas pendientes"
+      subtitulo="Recordatorio automático a los 3 y 7 días de la solicitud y luego cada semana. «Reclamar» reenvía email y push ahora."
+    >
 
-      <div className="mb-3 grid grid-cols-1 gap-2 rounded-card border border-line bg-card p-3 sm:grid-cols-2">
+      <div className="mb-3 grid grid-cols-1 gap-2 rounded-card border border-line bg-card p-3 sm:grid-cols-2 lg:grid-cols-4">
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar empleado, DNI o documento" className="text-sm" />
         <select value={estado} onChange={e => setEstado(e.target.value as typeof estado)} className="text-sm">
           <option value="pendiente">Pendiente del empleado</option>
@@ -117,13 +118,12 @@ export default function FirmasClient() {
       {total != null && <p className="mb-2 text-sm text-ink-2">{total} {total === 1 ? 'documento' : 'documentos'}</p>}
       {error && <p className="mb-2 text-sm text-alert">{error}</p>}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[760px]">
+      <Tabla fija>
           <thead>
             <tr className="border-b border-line bg-paper-2 text-left text-xs text-ink-3">
-              <th className="px-3 py-2">Documento</th>
-              <th className="px-3 py-2">Empleado</th>
-              <th className="px-3 py-2">Demora</th>
+              <th className="px-3 py-2 md:w-[26%]">Documento</th>
+              <th className="px-3 py-2 md:w-[16%]">Empleado</th>
+              <th className="px-3 py-2 whitespace-nowrap">Demora</th>
               <th className="px-3 py-2">Abierto</th>
               <th className="px-3 py-2">Último aviso</th>
               <th className="px-3 py-2">Contacto</th>
@@ -133,25 +133,25 @@ export default function FirmasClient() {
           <tbody>
             {filas.map(f => (
               <tr key={f.documento_id} className="border-b border-line align-top">
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">
                   <a href={`/admin/empleados/${f.empleado_id}`} className="font-medium text-ink no-underline hover:text-accent">{f.documento}</a>
                   <div className="text-xs text-ink-3">{f.estado_firma === 'pendiente_empresa' ? 'Falta la firma de la empresa' : 'Falta la firma del empleado'}</div>
                   {msg[f.documento_id] && <div className="text-xs text-accent-ink">{msg[f.documento_id]}</div>}
                 </td>
-                <td className="px-3 py-2" data-label="Empleado">
+                <td className="px-3 py-2.5" data-label="Empleado">
                   <a href={`/admin/empleados/${f.empleado_id}`} className="text-ink no-underline hover:text-accent">{f.empleado}</a>
                   {f.empleado_estado !== 'activo' && <span className="ml-1 text-xs text-warn">({f.empleado_estado})</span>}
                 </td>
-                <td className="px-3 py-2" data-label="Demora">
-                  <span className={f.dias_demora >= 7 ? 'font-semibold text-alert' : f.dias_demora >= 3 ? 'text-warn' : ''}>
+                <td className="px-3 py-2.5" data-label="Demora">
+                  <span className={`tabular-nums ${f.dias_demora >= 7 ? 'font-semibold text-alert' : f.dias_demora >= 3 ? 'text-warn' : ''}`}>
                     {f.dias_demora} {f.dias_demora === 1 ? 'día' : 'días'}
                   </span>
                   {f.demora_aprox && <span className="block text-xs text-ink-3" title="La fecha de solicitud no consta: se cuenta desde la subida">desde la subida</span>}
                 </td>
-                <td className="px-3 py-2" data-label="Abierto">
+                <td className="px-3 py-2.5" data-label="Abierto">
                   {f.visto_empleado_at ? <span className="text-ok">Sí · {fecha(f.visto_empleado_at)}</span> : <span className="text-ink-3">No consta</span>}
                 </td>
-                <td className="px-3 py-2" data-label="Último aviso">
+                <td className="px-3 py-2.5" data-label="Último aviso">
                   {f.ultimo_aviso_at ? (
                     <span>
                       {TIPO[f.ultimo_aviso_tipo ?? ''] ?? f.ultimo_aviso_tipo} · {fecha(f.ultimo_aviso_at)}
@@ -162,13 +162,13 @@ export default function FirmasClient() {
                     </span>
                   ) : <span className="text-ink-3">Ninguno</span>}
                 </td>
-                <td className="px-3 py-2" data-label="Contacto">
+                <td className="px-3 py-2.5" data-label="Contacto">
                   <span className="flex flex-col items-end gap-0.5 md:items-start">
                     {f.telefono ? <a href={`tel:${f.telefono.replace(/\s+/g, '')}`} className="text-accent no-underline">{f.telefono}</a> : <span className="text-ink-3">sin teléfono</span>}
                     {f.email ? <a href={`mailto:${f.email}`} className="break-all text-xs text-accent no-underline">{f.email}</a> : <span className="text-xs text-ink-3">sin email</span>}
                   </span>
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-3 py-2.5">
                   {f.estado_firma === 'pendiente' ? (
                     <button type="button" disabled={reclamando === f.documento_id} onClick={() => reclamar(f)} className="min-h-[44px] px-3 text-xs">
                       {reclamando === f.documento_id ? 'Enviando…' : 'Reclamar'}
@@ -185,12 +185,11 @@ export default function FirmasClient() {
               <tr><td colSpan={7} className="px-3 py-6 text-center text-ink-3">No hay firmas pendientes con estos filtros.</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
+      </Tabla>
       <div className="mt-3 flex items-center gap-3">
         {hayMas && <button type="button" className={BTN_SEC} disabled={cargando} onClick={() => cargar(filas.length)}>Ver más</button>}
         {cargando && <span className="text-sm text-ink-3">Cargando…</span>}
       </div>
-    </>
+    </Page>
   )
 }

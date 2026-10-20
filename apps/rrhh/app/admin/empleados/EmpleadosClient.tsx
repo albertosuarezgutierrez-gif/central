@@ -78,22 +78,22 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
 
       {/* Alta */}
       <form onSubmit={crear} className="mb-4 rounded-[12px] border border-line bg-card p-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <input placeholder="Apellidos *" value={alta.apellidos} onChange={e => setAlta(s => ({ ...s, apellidos: e.target.value }))} />
           <input placeholder="Nombre *" value={alta.nombre} onChange={e => setAlta(s => ({ ...s, nombre: e.target.value }))} />
           <input placeholder="Email * (para firmar)" type="email" value={alta.email} onChange={e => setAlta(s => ({ ...s, email: e.target.value }))} />
           <input placeholder="DNI/NIE" value={alta.dni} onChange={e => setAlta(s => ({ ...s, dni: e.target.value }))} />
           <input placeholder="Teléfono" value={alta.telefono} onChange={e => setAlta(s => ({ ...s, telefono: e.target.value }))} />
           <input placeholder="Puesto" value={alta.puesto} onChange={e => setAlta(s => ({ ...s, puesto: e.target.value }))} />
-          <button type="submit" disabled={busy}>Añadir</button>
+          <button type="submit" disabled={busy} className="min-h-[44px]">Añadir</button>
         </div>
         {altaErr && <p className="text-alert mt-2 text-sm">⚠️ {altaErr}</p>}
       </form>
 
       {/* Buscador + filtro */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <input placeholder="Buscar por nombre, DNI o Nº SS…" value={q} onChange={e => setQ(e.target.value)} className="min-w-[200px] flex-1" />
-        <div className="flex gap-1">
+      <div className="mb-3 grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <input placeholder="Buscar por nombre, DNI o Nº SS…" value={q} onChange={e => setQ(e.target.value)} className="min-w-0 sm:col-span-2 lg:col-span-3" />
+        <div className="flex flex-wrap gap-1 sm:col-span-2 lg:col-span-1 lg:justify-end">
           {(['activos', 'baja', 'todos'] as const).map(f => (
             <button key={f} onClick={() => setFiltro(f)}
               className={filtro === f ? '' : 'bg-paper-2 text-ink-2 hover:bg-line'}>
@@ -103,7 +103,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
         </div>
       </div>
 
-      <Tabla tablaClassName="md:min-w-[560px]">
+      <Tabla fija>
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nombre</th>
@@ -118,7 +118,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
             {visibles.map(e => (
               <tr key={e.id} className="border-b border-line last:border-b-0 hover:bg-paper-2/50">
                 {editId === e.id ? (
-                  <td colSpan={6} className="px-4 py-3">
+                  <td colSpan={6} className="px-4 py-2.5">
                     <div className="flex flex-wrap gap-2">
                       <input placeholder="Apellidos" value={edit.apellidos} onChange={ev => setEdit(s => ({ ...s, apellidos: ev.target.value }))} />
                       <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
@@ -134,20 +134,20 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
                   </td>
                 ) : (
                   <>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">
                         {e.apellidos ? `${e.apellidos}, ${e.nombre}` : e.nombre}
                       </a>
                       {(() => { const d = diasParaCaducarReconocimiento(e.fecha_reconocimiento_medico); return d !== null && d <= 15 ? <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${d < 0 ? 'bg-alert/10 text-alert' : 'bg-warn/10 text-warn'}`} title="Reconocimiento médico">{d < 0 ? `Reconoc. caducado (${Math.abs(d)}d)` : `Reconoc. caduca en ${d}d`}</span> : null })()}
                     </td>
-                    <td data-label="DNI / NIE" className="px-4 py-3 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
-                    <td data-label="Nº SS" className="px-4 py-3 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
-                    <td data-label="Estado" className="px-4 py-3">
+                    <td data-label="DNI / NIE" className="px-4 py-2.5 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
+                    <td data-label="Nº SS" className="px-4 py-2.5 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
+                    <td data-label="Estado" className="px-4 py-2.5">
                       {e.estado === 'baja'
                         ? <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">Baja</span>
                         : <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-2">Activo</span>}
                     </td>
-                    <td data-label="Vacaciones" className="px-4 py-3 text-xs">
+                    <td data-label="Vacaciones" className="px-4 py-2.5 tabular-nums text-xs">
                       {e.vacaciones && e.estado !== 'baja' && (
                         <span title={`Aprobados: ${e.vacaciones.aprobados} · En trámite: ${e.vacaciones.en_tramite}`}>
                           <span className="text-ok">{e.vacaciones.aprobados}</span>
@@ -164,7 +164,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <div className="flex items-center justify-end gap-1">
                         <button className="px-2 py-1.5 text-xs min-h-[36px]" title="Editar" onClick={() => abrirEdicion(e)}>✏️</button>
                         <button className="bg-paper-2 px-2 py-1.5 text-xs text-alert hover:bg-line min-h-[36px]" title="Borrar" onClick={() => borrar(e)}>🗑️</button>
@@ -175,7 +175,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa 
               </tr>
             ))}
             {visibles.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</td></tr>
+              <tr><td colSpan={6} className="px-4 py-2.5 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</td></tr>
             )}
           </tbody>
       </Tabla>

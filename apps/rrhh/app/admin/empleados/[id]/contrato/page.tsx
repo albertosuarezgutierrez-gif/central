@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client'
 import { contratoActivoDeEmpleado } from '@/lib/contratos'
 import ContratoForm from './ContratoForm'
 import UiPage from '@/components/ui/Page'
+import Card from '@/components/ui/Card'
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   let empresa_id: string
@@ -20,7 +21,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
 
   return (
     <UiPage titulo="Contrato laboral" volver={{ href: `/admin/empleados/${id}`, texto: empRows[0].nombre }} ancho="formulario">
-      <ContratoForm empleadoId={id} inicial={contratoSerial} />
+      <Card><ContratoForm empleadoId={id} inicial={contratoSerial} /></Card>
     </UiPage>
   )
 }

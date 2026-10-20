@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
+import Page from '@/components/ui/Page'
+import Card from '@/components/ui/Card'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
@@ -172,32 +174,19 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
     setFicha(s => ({ ...s, [k]: ev.target.value }))
 
   return (
-    <>
-      {/* Nav */}
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
-        <a href={`/admin/empleados/${empleado.id}/contrato`} className="text-sm text-accent no-underline hover:underline">Contrato laboral →</a>
-      </div>
-
+    <Page
+      titulo={ficha.apellidos ? `${ficha.apellidos}, ${ficha.nombre}` : ficha.nombre || '—'}
+      subtitulo={[ficha.puesto, ficha.estado !== 'activo' ? ficha.estado : null].filter(Boolean).join(' · ') || 'Sin puesto'}
+      volver={{ href: '/admin/empleados', texto: 'Empleados' }}
+      acciones={<a href={`/admin/empleados/${empleado.id}/contrato`} className="text-sm text-accent no-underline hover:underline">Contrato laboral →</a>}
+    >
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
       {/* Ficha */}
-      <div className="mb-4 rounded-[12px] border border-line bg-card">
-        {/* Cabecera de ficha */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent-soft text-lg font-bold text-accent-ink">
-            {(ficha.apellidos || ficha.nombre).charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-ink">
-              {ficha.apellidos ? `${ficha.apellidos}, ${ficha.nombre}` : ficha.nombre || '—'}
-            </p>
-            <p className="text-sm text-ink-3">{[ficha.puesto, ficha.estado !== 'activo' ? ficha.estado : null].filter(Boolean).join(' · ') || 'Sin puesto'}</p>
-          </div>
-        </div>
-
+      <Card className="min-w-0 !p-0">
         <div className="p-4">
           {/* Sección: Datos de contacto */}
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos de contacto</h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Apellidos
               <input value={ficha.apellidos} onChange={f('apellidos')} placeholder="Primer apellido Segundo apellido" className="text-sm" />
@@ -230,7 +219,7 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
 
           {/* Sección: Datos personales */}
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos personales</h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               NIF / DNI
               <input value={ficha.dni} onChange={f('dni')} placeholder="12345678A" className="text-sm" />
@@ -258,7 +247,7 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
 
           {/* Sección: Datos laborales */}
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">Datos laborales</h2>
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <label className="flex flex-col gap-1 text-xs text-ink-2">
               Puesto
               <input value={ficha.puesto} onChange={f('puesto')} placeholder="Camarero/a, Recepcionista…" className="text-sm" />
@@ -327,10 +316,11 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
       {/* Acceso al portal */}
-      <div className="mb-4 rounded-[12px] border border-line bg-card p-4">
+      <Card>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-ink-3">Acceso al portal del empleado</h2>
         {enlace && (
           <p className="mb-3 break-all rounded bg-paper-2 px-3 py-2 font-mono text-xs text-ink-2">{enlaceAcceso()}</p>
@@ -355,18 +345,21 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
         {errorEnlace && <p className="mt-2 text-sm text-alert">{errorEnlace}</p>}
         {msgSesiones && <p className={`mt-2 text-sm ${msgSesiones === 'Sesiones cerradas' ? 'text-ok' : 'text-alert'}`}>{msgSesiones}</p>}
         <p className="mt-2 text-xs text-ink-3">Si el empleado tiene email, entra en <strong>/e/entrar</strong> con un código que le llega por correo. Si no, envíale este enlace. Quien lo tenga entra como el empleado: no lo compartas por canales abiertos. Al generar uno nuevo el anterior deja de funcionar y se cierran sus sesiones abiertas.</p>
-      </div>
+      </Card>
 
-      {error && <p className="mb-3 text-sm text-alert">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
 
       {/* Chat */}
       <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
+      </div>
+      </div>
 
-{/* Expediente: carpetas */}
+      {/* Expediente: carpetas */}
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-x-4 lg:grid-cols-2">
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)
         return (
-          <section key={c.id} className="my-3 rounded-[12px] border border-line bg-card p-4">
+          <Card as="section" key={c.id} className="my-3 min-w-0">
             <h2 className="mb-2 text-base">{c.etiqueta} <span className="text-ink-3">({dc.length})</span></h2>
             <ul className="mb-3 grid gap-2">
               {dc.map(d => (
@@ -419,9 +412,10 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
                   onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f, modoFirma[c.id] ?? 'none'); e.currentTarget.value = ''; setModoFirma(s => ({ ...s, [c.id]: 'none' })) }} />
               </label>
             </div>
-          </section>
+          </Card>
         )
       })}
-    </>
+      </div>
+    </Page>
   )
 }
