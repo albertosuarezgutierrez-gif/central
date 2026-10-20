@@ -77,7 +77,7 @@ export function companiaIntrusa(texto: string, comparadas: readonly string[]): s
   for (const re of PATRONES_ASEGURADORA) {
     for (const m of texto.matchAll(re)) {
       const nombre = m[1]!.trim()
-      if (/^grupo asegura$/i.test(normalizarTexto(nombre)) || /\basegura\b/i.test(normalizarTexto(nombre))) continue
+      if (/\basegura\b/i.test(normalizarTexto(nombre))) continue
       if (tokensCompania(nombre).length === 0) continue
       if (!comparada(nombre)) return nombre
     }
