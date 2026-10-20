@@ -10,7 +10,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import type { FormularioAuto } from '@central/module-tarificacion'
-import { describirBloqueHistorial, ErrorMapaIncompleto, planObjetoYFiguras, rellenarCamposTexto, SEL_HISTORIAL, type PlanNsei } from '../src/adapters/mapfre/auto.ts'
+import { describirBloqueHistorial, ErrorMapaIncompleto, planFigurasSinHistorial, planObjetoYFiguras, rellenarCamposTexto, SEL_HISTORIAL, type PlanNsei } from '../src/adapters/mapfre/auto.ts'
 import { atascoDeRespaldoHueco, CLAVE_ATASCO_HUECO_MAPA, type ContextoFormador } from '../src/formador.ts'
 import { clasificarIntento, ErrorTarificador, timeoutDeControl } from '../src/errores.ts'
 
@@ -166,5 +166,37 @@ test('describirBloqueHistorial (v0.8.10, moto): lista etiquetas y controles del 
   assert.match(sin, /no existe app-historial-siniestralidad/)
   assert.match(sin, /«Siniestros»/)
   assert.ok(!sin.includes('Nombre'))
+  await context.close()
+})
+
+// v0.8.11 · MOTO (HTML real del fallo, estructura sintética): «Figuras» = tomador (datos-licencia) SIN app-historial-siniestralidad;
+// «Procedencia/Expuestos/Siniestros» viven en app-info-descuentos (Coberturas), inputs deshabilitados.
+const FIGURAS_MOTO = `<body><app-figuras><app-tomador><datos-licencia><mat-form-field><label><mat-label>Clase</mat-label></label><mat-select></mat-select></mat-form-field>
+<mat-form-field><label><mat-label>Valido desde</mat-label></label><input formcontrolname="fechaCarne"></mat-form-field></datos-licencia></app-tomador></app-figuras>
+<app-coberturas><app-info-descuentos><mat-form-field><label><mat-label>Procedencia Siniestralidad</mat-label></label><input formcontrolname="procedencia" disabled></mat-form-field>
+<mat-form-field><label><mat-label>Siniestros</mat-label></label><input formcontrolname="siniestros" disabled></mat-form-field></app-info-descuentos></app-coberturas></body>`
+
+test('moto sin app-historial-siniestralidad en Figuras (v0.8.11): se quitan compañía anterior y siniestros del plan; sin atasco', async () => {
+  const { context, page } = await preparar(FIGURAS_MOTO)
+  const f = formador()
+  const moto = { ...form, ramo: 'moto', clasePermiso: 'a2' } as FormularioAuto
+  const plan = planObjetoYFiguras(moto)
+  assert.ok(plan.escribibles.some((o) => o.sel === SEL_HISTORIAL.companiaAnterior), 'precondición: el plan pide la compañía anterior')
+  const r = await planFigurasSinHistorial(page, moto, plan, f, 100)
+  assert.equal(r.omitido, true)
+  assert.ok(!r.plan.escribibles.some((o) => o.sel.startsWith('app-historial-siniestralidad')))
+  assert.ok(r.plan.escribibles.some((o) => o.sel === 'datos-licencia' || o.paso === 'figuras'), 'la licencia se conserva')
+  assert.equal(f.atasco ?? null, null)
+  await context.close()
+})
+
+test('moto con siniestros > 0 y sin bloque de historial → ATASCO + hueco; coche sin el bloque no se toca', async () => {
+  const { context, page } = await preparar(FIGURAS_MOTO)
+  const f = formador()
+  const moto = { ...form, ramo: 'moto', clasePermiso: 'a2', siniestrosUltimos5Anios: 2 } as FormularioAuto
+  await assert.rejects(() => planFigurasSinHistorial(page, moto, planObjetoYFiguras(moto), f, 100), (e) => e instanceof ErrorMapaIncompleto)
+  const coche = { ...form } as FormularioAuto
+  const r = await planFigurasSinHistorial(page, coche, planObjetoYFiguras(coche), f, 100)
+  assert.equal(r.omitido, false)
   await context.close()
 })

@@ -50,6 +50,11 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.11 (20/10/2026, HTML del fallo ff13b5d3 leído): en MOTO «Figuras» solo trae `app-tomador` (datos-basicos, datos-direccion,
+//   datos-licencia: clase y «Valido desde») y NO existe `app-historial-siniestralidad`. «Procedencia Siniestralidad», «Expuestos/Años»,
+//   «Siniestros» y «Bonus Malus» son de `app-info-descuentos` (paso Coberturas, ya montado en el DOM), con los inputs DESHABILITADOS:
+//   los calcula el portal. Compañía anterior, nº de póliza y siniestros no se piden en moto → se omiten (`planFigurasSinHistorial`);
+//   moto con siniestros > 0 sin dónde declararlos → atasco + hueco (no se calla). Coche sin el bloque sigue siendo hueco.
 // v0.8.10 (20/10/2026, trabajo real de moto ff13b5d3): en MOTO el paso «Figuras» pinta etiquetas «Procedencia Siniestralidad»,
 //   «Expuestos/Años», «Siniestros» y «Modificación Manual Niveles Bonus Malus» y NINGUNA de «compañía anterior»; el inventario no
 //   trae ni `app-historial-siniestralidad` ni `#companiaAnteriorSlide-input`. Sin evidencia de qué control es el equivalente (no hay
@@ -1329,6 +1334,21 @@ export async function historialAnterior(nsei: Page, f: FormularioAuto, formador:
   }
 }
 
+/**
+ * v0.8.11 · MOTO: si «Figuras» (licencia ya pintada) NO trae `app-historial-siniestralidad` tras una espera corta, el historial no
+ * se pide en ese flujo: se quitan del plan de «Figuras» la compañía anterior y los siniestros (el nº de póliza nunca estuvo). Con
+ * siniestros > 0 no hay dónde declararlos → atasco + hueco. Coche (o con el bloque presente): el plan queda igual.
+ */
+export async function planFigurasSinHistorial(nsei: Page, f: FormularioAuto, plan: PlanNsei, formador: ContextoFormador | undefined, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<{ plan: PlanNsei; omitido: boolean }> {
+  if (f.ramo !== 'moto') return { plan, omitido: false }
+  if ((await nsei.locator('datos-licencia').count().catch(() => 0)) === 0) return { plan, omitido: false }
+  if (await apareceEn(nsei, 'app-historial-siniestralidad', esperaMs)) return { plan, omitido: false }
+  if ((f.siniestrosUltimos5Anios ?? 0) > 0) await huecoPaso(nsei, formador, 'siniestros', 'Figuras', 'el riesgo de moto trae siniestros y «Figuras» no pinta el bloque de historial de siniestralidad donde declararlos')
+  formador?.log('mapfre_historial_ausente_moto', {})
+  const fuera = (o: OperacionNsei) => o.sel.startsWith('app-historial-siniestralidad')
+  return { plan: { escribibles: plan.escribibles.filter((o) => !fuera(o)), pendientes: plan.pendientes.filter((o) => !fuera(o)) }, omitido: true }
+}
+
 const ESPERA_PRIMAS_MS = 60_000
 const SEL_DIALOGO_OCUPADO = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 
@@ -1406,13 +1426,15 @@ export async function precioDesdeObjetoAsegurado(
   await continuar(nsei, ctx, 'objetoAsegurado')
   // Orden de la grabación: licencia (clase y fecha) → compañía anterior → nº de póliza anterior.
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
-  await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  await historialAnterior(nsei, f, ctx.formador)
+  const sinHist = await planFigurasSinHistorial(nsei, f, plan, ctx.formador)
+  const planFig = sinHist.plan
+  await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
+  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
+  if (!sinHist.omitido) await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
-  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
-  exigirPasoCompleto(plan, 'figuras')
+  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
+  exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
@@ -1432,7 +1454,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.10',
+  version: '0.8.11',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
