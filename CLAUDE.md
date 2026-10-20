@@ -12,7 +12,7 @@
 ## Verticales (cada una con su `CLAUDE.md` y su proyecto Vercel)
 - **`apps/ia-rest`** — Voice POS hostelería (`iarest.es`). Consume `core-ai` y `core-fiscal`.
 - **`apps/sivra`** — web pública de pisos turísticos; la gestión interna vive en `plataforma` (`/sivra/*`). NO borrar la app.
-- **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Cliente vivo → ahí sí «preview verde antes de main».
+- **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Sin uso humano desde el 29/08/2026 (comprobado en BD el 20/10/2026: tenants Sique Brilla y Singular Cleaning sin logins), PERO la sincronización iCal/Smoobu → `cleaning_sessions` sigue viva: no la rompas. Preview verde solo si el cambio toca esa sincronización.
 - **`apps/plataforma`** — cuadro de mando (Cuenta → Sociedad → Negocio). BD compartida con sivra+ialimp.
   Es LA pantalla de Alberto, también de la correduría (`/correduria`).
 - **`apps/rrhh`** — Portal del Empleado (schema `rrhh`, rol `rrhh_app`). Alta de empresas por `/api/operador/empresas`.
@@ -87,6 +87,7 @@ y los `module-*` de cada vertical.
 - **Tests con fecha fija contra validaciones con reloj real = bomba de tiempo** (un test de moto tumbó `main` el
   17/10): fechas relativas a hoy o inyecta `hoy`. La web pública no se abre desde el contenedor: SEO por código y GSC.
 - **Los cambios que ROMPEN se hacen AHORA**, mientras no hay clientes en producción.
+- **Direcciones postales (toda app y todo formulario, también los que rellena el cliente y la web pública):** CP primero → provincia automática + desplegable de municipios → calle autocompletada con el callejero del Catastro → número. Nunca municipio/provincia por defecto ni texto libre sin validar. Motivo: la dirección queda lista para consultar el Catastro y tarificar sin reteclear. Referencia: `apps/plataforma/app/(usuario)/correduria/BuscadorDireccionCp.tsx` + `packages/core-catastro`.
 
 ## Agentes y tokens
 - 🧭 **La sesión principal ORDENA y REVISA; los AGENTES EJECUTAN — siempre, en toda sesión** (Alberto, 30/09/2026:

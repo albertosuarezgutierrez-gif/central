@@ -155,7 +155,7 @@ export default async function RetarificarPage({
     )
 
     if (referencia === null && direccion && municipio !== '' && provincia !== '') {
-      const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
+      const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia, via: cadena(sp.via) ? { tipo: cadena(sp.tipoVia) ?? '', nombre: cadena(sp.via)! } : undefined })
       if (r.estado === 'ok') {
         referencia = r.referencia
       } else {

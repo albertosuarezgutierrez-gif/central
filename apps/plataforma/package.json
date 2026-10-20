@@ -13,6 +13,7 @@
     "@anthropic-ai/sdk": "^0.52.0",
     "@central/core-ai": "workspace:*",
     "@central/core-catastro": "workspace:*",
+    "@central/core-direccion": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/core-payments": "workspace:*",

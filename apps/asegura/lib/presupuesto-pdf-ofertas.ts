@@ -5,20 +5,23 @@
 // cobalto #3364ee, logotipo, logos de compañía) y el mismo pie de mediador.
 //
 // 🚨 `null` = «No figura» (el dato no consta en el documento de la compañía), NUNCA «no cubre» ni 0.
-// 🚨 Sin ranking inventado: lo único que se destaca es la oferta que el CORREDOR marcó como recomendada.
+// 🚨 Sin ranking inventado: lo único que se destaca es la oferta que el CORREDOR marcó como recomendada (el orden
+//    por prima de `compararOfertas.ranking` es para el corredor, en plataforma; al cliente no se le enseña).
+// 🏷️ El análisis lleva su etiqueta visible (`etiquetaResumen`): «Resumen preparado con IA y revisado por tu corredor».
 // 🚨 Lleva el nombre de la compañía y las cifras de los documentos que ELLAS emitieron; no lleva la
 //    evidencia literal (páginas/trozos del PDF), ni notas de revisión, ni la ruta de ningún fichero.
 
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import type { CeldaMatriz, FilaMatriz, OfertaNormalizada, ResultadoComparacion, ResumenOferta, ValorGarantia } from '@central/module-seguros'
+import { etiquetaResumen, type CeldaMatriz, type FilaMatriz, type OfertaNormalizada, type ResultadoComparacion, type ResumenOferta, type ValorGarantia } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 import { LOGOS, LOGOTIPO, NUNITO_400, NUNITO_700, QUICKSAND_700 } from './presupuesto-pdf-recursos.ts'
 import { claveLogo, fechaCorta, hex, paraFuente, partir, recortar, textosReferencia } from './presupuesto-pdf.ts'
 
 // ─── Datos ───────────────────────────────────────────────────────────────────
 
-export type NarrativaPdf = { resumen: string; recomendacion: string }
+/** `fuente` decide la etiqueta visible (IA revisada por el corredor / plantilla). Ausente en estudios viejos = plantilla. */
+export type NarrativaPdf = { resumen: string; recomendacion: string; fuente?: string | null }
 
 /** El `estudio` congelado del presupuesto, ya validado de forma. */
 export type EstudioPdf = {
@@ -70,7 +73,7 @@ export function leerEstudio(json: unknown): EstudioPdf | null {
     recomendadaId: esTxt(json.recomendadaId) ? json.recomendadaId : null,
     actualId: esTxt(json.actualId) ? json.actualId : null,
     comparacion: c as unknown as ResultadoComparacion,
-    narrativa: { resumen: n.resumen, recomendacion: n.recomendacion },
+    narrativa: { resumen: n.resumen, recomendacion: n.recomendacion, fuente: esTxt(n.fuente) ? n.fuente : null },
   }
 }
 
@@ -142,9 +145,16 @@ export function textoDelta(r: Pick<ResumenOferta, 'deltaPrimaEur' | 'deltaPrimaP
 }
 
 /** Las líneas de hechos de una oferta frente a la actual (sin adjetivos: lo que cuenta el comparador). */
+const FRACCIONAMIENTO_TXT: Record<string, string> = { anual: 'anual', semestral: 'semestral', trimestral: 'trimestral', mensual: 'mensual' }
+
 export function lineasResumen(r: ResumenOferta, hayActual: boolean): string[] {
   const l: string[] = []
-  l.push(r.franquiciaMaxima === null ? 'Franquicia: no figura en la oferta' : `Franquicia máxima declarada: ${eur(r.franquiciaMaxima)}`)
+  const general = num(r.franquiciaGeneral) ? r.franquiciaGeneral : null
+  if (general !== null) l.push(`Franquicia general: ${eur(general)}`)
+  if (r.franquiciaMaxima !== null) l.push(`Franquicia máxima declarada: ${eur(r.franquiciaMaxima)}`)
+  // Ni general ni por garantía: «no figura», nunca «sin franquicia».
+  if (general === null && r.franquiciaMaxima === null) l.push('Franquicia: no figura en la oferta')
+  if (r.fraccionamiento && FRACCIONAMIENTO_TXT[r.fraccionamiento]) l.push(`Forma de pago: ${FRACCIONAMIENTO_TXT[r.fraccionamiento]}`)
   if (hayActual && r.rol !== 'actual') {
     l.push(`${r.garantiasMejor} ${r.garantiasMejor === 1 ? 'garantía con más cobertura' : 'garantías con más cobertura'} que la actual`)
     l.push(`${r.garantiasPeor} ${r.garantiasPeor === 1 ? 'garantía con menos cobertura' : 'garantías con menos cobertura'} que la actual`)
@@ -448,6 +458,9 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
   if (hayTexto) {
     y -= 6
     titulo('Análisis y recomendación', 14, 60)
+    // Etiqueta SIEMPRE visible: quién redactó el texto (IA revisada por el corredor, o la plantilla del cuadro).
+    parrafo(etiquetaResumen(narrativa.fuente), f.negrita, 8.5, TENUE)
+    y -= 6
     if (narrativa.resumen.trim()) {
       linea('Análisis', M, y - 10, f.titulo, 10.5, PRIMARIO)
       y -= 18

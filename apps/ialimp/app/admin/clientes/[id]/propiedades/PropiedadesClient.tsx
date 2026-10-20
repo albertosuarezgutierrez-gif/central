@@ -1,7 +1,8 @@
 'use client'
 import CaracteristicasApartamento from '@/components/CaracteristicasApartamento'
 import DocumentosPropiedad from '@/components/DocumentosPropiedad'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
+import DireccionCp from '@/components/DireccionCp'
 
 const TIPO_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   piso_turistico: { label: 'Piso turístico', icon: '🏠', color: '#6366f1' },
@@ -74,47 +75,10 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
   // Análisis IA por apartamento
   const [analisisApto, setAnalisisApto]     = useState<Record<string, any>>({})
   const [analizandoApto, setAnalizandoApto] = useState<string | null>(null)
-  // CP autocompletado
-  const [cpLoading, setCpLoading]   = useState(false)
-  const [cpOk, setCpOk]             = useState(false)
-  const [cpError, setCpError]       = useState('')
-  const cpTimerRef                  = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const t  = (tipo: string)   => TIPO_CONFIG[tipo]   || TIPO_CONFIG.otro
   const mp = (modelo: string) => MODELO_CONFIG[modelo] || MODELO_CONFIG.precio_fijo
   const f  = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
-
-  // ── CP → municipio/provincia ──────────────────────────────────────
-  function handleCpChange(cp: string) {
-    f('codigo_postal', cp)
-    setCpOk(false)
-    setCpError('')
-    if (cpTimerRef.current) clearTimeout(cpTimerRef.current)
-    if (cp.length === 5 && /^\d{5}$/.test(cp)) {
-      cpTimerRef.current = setTimeout(() => lookupCP(cp), 500)
-    }
-  }
-
-  async function lookupCP(cp: string) {
-    setCpLoading(true)
-    setCpError('')
-    try {
-      const res = await fetch(`/api/catastro/municipio?cp=${cp}`)
-      const data = await res.json()
-      if (!res.ok || data.error) {
-        setCpError(data.error || 'CP no encontrado')
-        f('municipio', ''); f('provincia', '')
-      } else {
-        f('municipio', data.municipio)
-        f('provincia', data.provincia)
-        setCpOk(true)
-      }
-    } catch {
-      setCpError('Error de conexión')
-    } finally {
-      setCpLoading(false)
-    }
-  }
 
   // ── Construye el campo direccion legacy al guardar ────────────────
   function buildDireccion(fm: typeof form): string {
@@ -129,7 +93,7 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
 
   function abrirNueva() {
     setEditando(null); setForm({ ...EMPTY })
-    setError(''); setCpOk(false); setCpError('')
+    setError('')
     setShowModal(true)
   }
 
@@ -159,7 +123,7 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
       lavanderia_proveedor: p.lavanderia_proveedor || '',
       material_override: p.material_override || {}
     })
-    setCpOk(!!p.municipio); setCpError(''); setError('')
+    setError('')
     setShowModal(true)
   }
 
@@ -559,58 +523,18 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
               <div className="bg-indigo-50 rounded-2xl p-4 space-y-3">
                 <div className="text-sm font-semibold text-indigo-700">📍 Localización</div>
 
-                {/* CP → municipio automático */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
-                    Código postal
-                    {cpLoading && <span className="ml-2 text-indigo-400 font-normal">buscando…</span>}
-                    {cpOk && <span className="ml-2 text-green-600 font-normal">✓ localizado</span>}
-                    {cpError && <span className="ml-2 text-red-500 font-normal">{cpError}</span>}
-                  </label>
-                  <input
-                    value={form.codigo_postal}
-                    onChange={e => handleCpChange(e.target.value.replace(/\D/g,'').slice(0,5))}
-                    placeholder="41003"
-                    maxLength={5}
-                    inputMode="numeric"
-                    className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                      cpOk ? 'border-green-400 bg-green-50' : cpError ? 'border-red-300' : 'border-gray-200'
-                    }`}
-                  />
-                </div>
-
-                {/* Municipio + Provincia — readonly, vienen del CP */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Municipio</label>
-                    <input
-                      value={form.municipio}
-                      onChange={e => f('municipio', e.target.value)}
-                      placeholder="Autocompletado con el CP"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Provincia</label>
-                    <input
-                      value={form.provincia}
-                      onChange={e => f('provincia', e.target.value)}
-                      placeholder="Autocompletado"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Dirección manual desglosada */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Vía y nombre</label>
-                  <input
-                    value={form.via}
-                    onChange={e => f('via', e.target.value)}
-                    placeholder="Ej: Calle Bustos Tavera, Avda. de la Paz…"
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
+                {/* CP primero → provincia + municipio (tabla INE local) → calle del Catastro */}
+                <DireccionCp
+                  cp={form.codigo_postal} municipio={form.municipio} provincia={form.provincia} calle={form.via}
+                  calleLabel="Vía y nombre" callePlaceholder="Ej: Calle Bustos Tavera, Avda. de la Paz…"
+                  onChange={c => setForm(p => ({
+                    ...p,
+                    ...(c.cp !== undefined && { codigo_postal: c.cp }),
+                    ...(c.municipio !== undefined && { municipio: c.municipio }),
+                    ...(c.provincia !== undefined && { provincia: c.provincia }),
+                    ...(c.calle !== undefined && { via: c.calle }),
+                  }))}
+                />
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Número</label>

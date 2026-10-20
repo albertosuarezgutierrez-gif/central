@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { ciudadDelCp, decidirCiudad } from './codigo-postal-auto.ts'
+import { ciudadDelCp, decidirCiudad } from './ciudad-cp.ts'
 
 const TABLA = JSON.parse(readFileSync(new URL('./municipios-por-cp.json', import.meta.url), 'utf8')) as Record<string, string>
 const muni = (cp: string) => TABLA[cp]?.split('|') ?? null

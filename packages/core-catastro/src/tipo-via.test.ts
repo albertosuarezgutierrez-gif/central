@@ -78,3 +78,11 @@ test('resolverTipoViaPorNombre: «Parra» con tres candidatas es ambigua, sin ti
   assert.equal(r.nombre, null)
   assert.equal(r.ambigua, true)
 })
+
+test('autocompletado: con 5 sugerencias en espera, las demás devuelven null sin lanzar', async () => {
+  const { listarViasPorTermino } = await import('./http.ts')
+  const r = await conFetchSimulado(XML_UNA_VIA, () =>
+    Promise.all(Array.from({ length: 8 }, () => listarViasPorTermino('SEVILLA', 'SEVILLA', 'SOCORRO'))))
+  assert.equal(r.filter((x) => x === null).length, 3)
+  assert.equal(r.filter((x) => Array.isArray(x)).length, 5)
+})

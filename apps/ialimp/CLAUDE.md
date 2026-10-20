@@ -9,15 +9,16 @@
 - SaaS **multi-tenant** de limpiezas de pisos turísticos (spin-off de SIVRA). Flujo: salida de huésped (Smoobu) →
   sesión de limpieza → asignación → app móvil de la limpiadora (checklist + fotos) → facturación al propietario.
 - App `app.ialimp.es` (proyecto Vercel `ialimp`; `ialimp.vercel.app`/`ialimp.com` redirigen). Cliente piloto
-  EN VIVO: Sique Brilla SL (Vanessa Cruz). Este repo es SOLO ialimp (no SIVRA, House Sevillana ni ia.rest).
+  Sin uso humano desde el 29/08/2026 (BD 20/10/2026: sin logins); la sincronización iCal/Smoobu sigue viva. Este repo es SOLO ialimp (no SIVRA, House Sevillana ni ia.rest).
 - **Stack:** Next 15 · React 19 · Prisma 5 · **JWT (jose + bcryptjs), SIN NextAuth** · zod · web-push · pdf-lib.
   Install `npm install --legacy-peer-deps`; build `prisma generate && next build`. `next.config.ts` ignora errores
   de TS/lint (NO los de sintaxis). Commits/PR con prefijo `fix:`/`feat:` (Vercel ignora `chore|trigger|rebuild`).
 
-## 🚨 Despliegue: cliente en vivo
+## 🚨 Despliegue: sincronización viva (sin uso humano desde 29/08/2026)
 - Producción = rama `main`; **cada merge se ve al instante**. ialimp **NO lleva `--sin-previews`** en su
-  `ignoreCommand`: **preview verde antes de mergear a `main`**. La preview usa la BD de producción (lo que
-  escribas se guarda de verdad; limpia los datos de prueba). Flujo: rama → PR draft → preview → validar → main.
+  `ignoreCommand`. **Preview verde antes de mergear solo si el cambio toca la sincronización iCal/Smoobu →
+  `cleaning_sessions`** (no romperla). La preview usa la BD de producción (lo que escribas se guarda de verdad;
+  limpia los datos de prueba). Flujo: rama → PR draft → preview → validar → main.
 - `NEXTAUTH_URL=https://app.ialimp.es` fija el dominio canónico (enlaces de emails, portal, Stripe).
 - Rollback = panel de Vercel (Production, rollback candidates).
 
@@ -76,8 +77,9 @@ cambia convención/tabla/bucket/cron · migración `.sql` en `prisma/migrations/
 ## Multi-tenant (CRÍTICO) y middleware
 - **Scoping por `empresa_id` en TODA query y route.** Una fuga entre empresas es fallo grave de RGPD.
 - Middleware: 401 a `/api/*` sin cookie `ialimp_session`. Eximidos: `/api/auth`, `/api/pms`, `/api/leads`,
-  `/api/propietario`, `/api/cotizador`, `/api/catastro`, `/l`, `/api/l`, `/api/m`, `/api/lead-saas`.
+  `/api/propietario`, `/api/cotizador`, `/l`, `/api/l`, `/api/m`, `/api/lead-saas`.
 - Estáticos necesarios antes del login (p.ej. `public/manifest.json`) que el `matcher` no excluya → `PUBLIC_PATHS`.
+- **Direcciones (CP primero):** `components/DireccionCp.tsx` (CP → provincia + desplegable INE `@central/core-direccion` → calle del Catastro) con endpoints `/api/admin/direccion/{cp,vias}`. Úsalo en todo formulario de dirección; nada de municipio/provincia por defecto ni Nominatim. Lógica pura en `lib/direccion-ui.ts`.
 - **Crons y llamadas servidor→servidor a `/api/admin/*` DEBEN enviar `Authorization: Bearer CRON_SECRET`** o dan 401 silencioso.
 - Registro de accesos: tabla `registro_actividad` (`lib/actividad.ts::registrarActividad`, best-effort; el middleware
   emite a `POST /api/interno/actividad`, Bearer `CRON_SECRET`; superadmin NO se registra; purga 90 d). Lo lee el

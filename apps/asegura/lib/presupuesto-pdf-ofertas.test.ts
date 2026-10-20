@@ -135,3 +135,12 @@ test('con muchas ofertas y garantías el PDF pasa de una página', async () => {
   const paginas = (await PDFDocument.load(bytes)).getPageCount()
   assert.ok(paginas >= 2, `páginas: ${paginas}`)
 })
+
+test('franquicia general y forma de pago en el resumen; la etiqueta de la narrativa viaja al PDF', async () => {
+  const { lineasResumen: lr, leerEstudio: le } = await import('./presupuesto-pdf-ofertas.ts')
+  const base = { ofertaId: 'x', rol: 'oferta' as const, deltaPrimaEur: null, deltaPrimaPct: null, garantiasPeor: 0, garantiasMejor: 0, huecos: 0, franquiciaMaxima: null, infraseguroContinente: null }
+  assert.deepEqual(lr({ ...base, franquiciaGeneral: 300, fraccionamiento: 'semestral' }, false), ['Franquicia general: 300,00€', 'Forma de pago: semestral'])
+  assert.deepEqual(lr({ ...base, franquiciaGeneral: null }, false), ['Franquicia: no figura en la oferta'])
+  const e = le({ comparacion: { ofertas: [], filas: [], resumen: [] }, narrativa: { resumen: 'r', recomendacion: 'c', fuente: 'ia' } })
+  assert.equal(e?.narrativa.fuente, 'ia')
+})

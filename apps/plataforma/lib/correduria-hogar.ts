@@ -17,6 +17,7 @@
 
 import {
   paramsDnploc,
+  paramsDnplocConVia,
   precalificarHogar,
   type InmuebleCatastro,
   type PrecalificacionHogar,
@@ -25,7 +26,11 @@ import { bajarCatastro, inmueblesPorDireccion, resolverNombreVia } from '@centra
 
 export type ConsultaHogar =
   | { por: 'referencia'; referencia: string }
-  | { por: 'direccion'; direccion: string; municipio: string; provincia: string }
+  | {
+      por: 'direccion'; direccion: string; municipio: string; provincia: string
+      /** Calle elegida en el autocompletado (nombre OFICIAL del callejero + tipo): la búsqueda ya no es ambigua. */
+      via?: { tipo: string; nombre: string }
+    }
 
 export type RespuestaHogar =
   | { estado: 'ok'; referencia: string; precalificacion: PrecalificacionHogar }
@@ -76,10 +81,12 @@ export async function consultarHogar(c: ConsultaHogar): Promise<RespuestaHogar> 
       return { estado: 'ok', referencia: rc, precalificacion: precalificarHogar(datos) }
     }
 
-    const p = paramsDnploc(c.direccion)
+    // Con calle oficial elegida (y aún vigente en el texto) se parsea solo el portal/interior; si caducó, texto libre.
+    const conVia = c.via?.nombre ? paramsDnplocConVia(c.direccion, c.via) : null
+    const p = conVia ?? paramsDnploc(c.direccion)
     if (p === null) return { estado: 'direccion_ilegible' }
     const lugar = { provincia: c.provincia.trim().toUpperCase(), municipio: c.municipio.trim().toUpperCase() }
-    const r = await inmueblesPorDireccion({ ...p, ...lugar })
+    const r = await inmueblesPorDireccion({ ...p, ...lugar, viaOficial: conVia ? c.via?.nombre : undefined })
     // Sin calle clara (o sin nada en ella), se ofrecen las parecidas del callejero: elige una persona.
     const parecidas = async () => {
       const via = await resolverNombreVia(lugar.provincia, lugar.municipio, p.sigla, p.calle).catch(() => null)

@@ -142,6 +142,14 @@ function clavesDe(ramo: RamoGarantias, nombre: string): string[] {
     .map((g) => g.clave)
 }
 
+/**
+ * Las claves del catálogo que nombra UNA cobertura por su NOMBRE (sin texto ni contexto). Lo usa la taxonomía de
+ * comparación (`normalizarGarantia` de auto/moto) para que un PDF de coche caiga en las MISMAS claves que Avant2.
+ */
+export function clavesCatalogo(ramo: RamoGarantias, nombre: string): string[] {
+  return clavesDe(ramo, nombre)
+}
+
 /** Garantías que una PARTE de otro bloque puede afirmar por sí sola (su nombre no admite otra lectura). */
 const CLAVES_DE_PARTE: readonly string[] = ['colision_animales', 'fenomenos_atmosfericos']
 

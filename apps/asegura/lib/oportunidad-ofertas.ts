@@ -56,7 +56,7 @@ export function comparacionDe(op: OportunidadParaOfertas, filas: readonly FilaOf
   const vivas = filas.filter((f) => f.estado !== 'descartada')
   return compararOfertas({
     ramo: op.ramoOferta,
-    ofertas: vivas.map(ofertaNormalizadaDeFila),
+    ofertas: vivas.map((f) => ofertaNormalizadaDeFila(f, { ramo: op.ramoOferta })),
     superficieM2: superficieM2 ?? op.superficieM2,
   })
 }

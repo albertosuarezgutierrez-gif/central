@@ -2,12 +2,20 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import DireccionCp, { type EstiloDireccion } from '@/components/DireccionCp'
+import { componerDireccion, direccionOkParaPedido } from '@/lib/direccion-cp'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 /* ─── PALETA — idéntica a la app ──────────────────────────────── */
+
+const ESTILO_DIR: EstiloDireccion = {
+  input: { padding:'11px 12px', borderRadius:8, border:`1px solid ${C.rule}`, background:C.bg1, fontFamily:SN, fontSize:16, color:C.ink, outline:'none' },
+  label: { display:'block', fontFamily:SN, fontSize:11, fontWeight:600, color:C.ink3, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 },
+  texto:C.ink, tenue:C.ink3, aviso:C.verm, borde:C.rule, fondo:C.bg1, hover:C.bg2,
+}
 
 /* ─── Tipos ──────────────────────────────────────────────────── */
 interface Producto { id:string; nombre:string; descripcion?:string; precio:number; seccion:string; alergenos?:string[] }
@@ -69,7 +77,9 @@ export default function StorefrontApp({ slug }: { slug:string }) {
 
   const [nombre, setNombre]     = useState('')
   const [telefono, setTelefono] = useState('')
-  const [direccion, setDir]     = useState('')
+  // Dirección con CP primero: viaja al backend como UN texto (`cliente_direccion`), igual que antes.
+  const [dirP, setDirP]         = useState({ calle:'', cp:'', municipio:'' })
+  const direccion = componerDireccion(dirP)
   const [notas, setNotas]       = useState('')
 
   useEffect(() => {
@@ -118,7 +128,7 @@ export default function StorefrontApp({ slug }: { slug:string }) {
 
   const crearPedido = async () => {
     if (!nombre.trim()||!telefono.trim()) return
-    if (tipo==='delivery'&&!direccion.trim()) return
+    if (!direccionOkParaPedido(tipo,dirP)) return
     setCreando(true); setErr('')
     const res = await fetch('/api/storefront/pedido', {
       method:'POST',
@@ -203,7 +213,7 @@ export default function StorefrontApp({ slug }: { slug:string }) {
 
   /* ── Datos cliente ───────────────────────────────────────── */
   if (vista==='datos') {
-    const ok = nombre.trim()&&telefono.trim()&&(tipo!=='delivery'||direccion.trim())
+    const ok = nombre.trim()&&telefono.trim()&&direccionOkParaPedido(tipo,dirP)
     return (
       <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', flexDirection:'column', fontFamily:SN }}>
         <div style={{ padding:'12px 16px', borderBottom:`1px solid ${C.rule}`, background:C.bg1, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
@@ -251,9 +261,9 @@ export default function StorefrontApp({ slug }: { slug:string }) {
             {[
               { label:'Nombre', val:nombre, set:setNombre, ph:'Tu nombre completo', type:'text' },
               { label:'Teléfono', val:telefono, set:setTelefono, ph:'600 000 000', type:'tel' },
-              ...(tipo==='delivery' ? [{ label:'Dirección de entrega', val:direccion, set:setDir, ph:'Calle, número, piso', type:'text' }] : []),
+              ...(tipo==='delivery' ? [{ label:'__dir', val:'', set:(_:string)=>{}, ph:'', type:'text' }] : []),
               { label:'Notas (opcional)', val:notas, set:setNotas, ph:'Sin cebolla, alérgenos…', type:'text' },
-            ].map(f => (
+            ].map(f => f.label==='__dir' ? <div key="__dir"><DireccionCp valor={dirP} onChange={setDirP} estilo={ESTILO_DIR} etiquetaCalle="Dirección de entrega" placeholderCalle="Calle, número, piso" /></div> : (
               <div key={f.label}>
                 <label style={{ display:'block', fontFamily:SN, fontSize:11, fontWeight:600, color:C.ink3, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:6 }}>
                   {f.label}

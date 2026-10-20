@@ -4,8 +4,14 @@
  * compañía no encaja, `normalizarGarantia` devuelve `null` y la fila va a «extras» (nunca se inventa clave).
  */
 import { RAMOS_OPORTUNIDAD } from './oportunidad-seguimiento.ts'
+import { CATALOGO_GARANTIAS, clavesCatalogo } from './catalogo-garantias.ts'
 
-export type RamoOferta = 'comunidades' | 'comercio' | 'hogar' | 'generico'
+/**
+ * Ramos comparables. `auto` y `moto` (20/10/2026, comparativa única): sus claves son las del CATÁLOGO de Avant2
+ * (`catalogo-garantias.ts`), así una cotización de Avant2, un PDF de compañía y la póliza actual caen en las
+ * MISMAS filas. No hay una segunda lista de garantías de vehículo: se DERIVA del catálogo.
+ */
+export type RamoOferta = 'comunidades' | 'comercio' | 'hogar' | 'auto' | 'moto' | 'generico'
 export type GrupoGarantia = 'danos' | 'rc' | 'asistencia' | 'juridica' | 'otros'
 export type TipoValorGarantia = 'capital' | 'limite' | 'incluida'
 
@@ -80,10 +86,26 @@ const GENERICO: GarantiaCanonica[] = [
   g('asistencia', 'Asistencia', 'asistencia', 'incluida', ['asistencia']),
 ]
 
+/** Grupo de una garantía del catálogo de vehículo (solo ordena la lectura del cuadro). */
+function grupoVehiculo(clave: string): GrupoGarantia {
+  if (clave.startsWith('rc_')) return 'rc'
+  if (clave === 'defensa_juridica' || clave === 'defensa_multas' || clave === 'retirada_carnet') return 'juridica'
+  if (clave.startsWith('asistencia') || clave === 'vehiculo_sustitucion') return 'asistencia'
+  if (clave === 'conductor') return 'otros'
+  return 'danos'
+}
+
+/** Taxonomía de vehículo DERIVADA del catálogo (sin sinónimos propios: `normalizarGarantia` usa sus patrones). */
+function deCatalogo(ramo: 'auto' | 'moto'): GarantiaCanonica[] {
+  return CATALOGO_GARANTIAS[ramo].map((x) => g(x.clave, x.etiqueta, grupoVehiculo(x.clave), x.clave.startsWith('rc_') ? 'limite' : 'incluida', []))
+}
+
 export const TAXONOMIA_POR_RAMO: Readonly<Record<RamoOferta, readonly GarantiaCanonica[]>> = {
   comunidades: COMUNIDADES,
   comercio: COMERCIO,
   hogar: HOGAR,
+  auto: deCatalogo('auto'),
+  moto: deCatalogo('moto'),
   generico: GENERICO,
 }
 
@@ -93,11 +115,13 @@ export function ramoOfertaDe(ramoOportunidad: string | null | undefined): RamoOf
   if (r === 'comunidades') return 'comunidades'
   if (r === 'comercio' || r === 'empresas' || r === 'pymes' || r === 'pyme') return 'comercio'
   if (r === 'hogar') return 'hogar'
+  if (r === 'auto' || r === 'coche') return 'auto'
+  if (r === 'moto') return 'moto'
   return 'generico'
 }
 
 /** Ramos de oportunidad que cubre la comparación con taxonomía propia (guardián de alineación con el enum). */
-export const RAMOS_OPORTUNIDAD_CON_TAXONOMIA = RAMOS_OPORTUNIDAD.filter(r => ['comunidades', 'comercio', 'hogar'].includes(r))
+export const RAMOS_OPORTUNIDAD_CON_TAXONOMIA = RAMOS_OPORTUNIDAD.filter(r => ['comunidades', 'comercio', 'hogar', 'auto', 'moto'].includes(r))
 
 export function garantiasDelRamo(ramo: RamoOferta): readonly GarantiaCanonica[] {
   return TAXONOMIA_POR_RAMO[ramo]
@@ -122,6 +146,11 @@ export function normalizarTexto(s: string): string {
  * Coincidencia por palabras completas; gana el sinónimo más largo (así «RC administradores» no cae en «rc»).
  */
 export function normalizarGarantia(ramo: RamoOferta, textoCompania: string): string | null {
+  // Vehículo: los patrones del catálogo de Avant2 (una sola fuente de verdad). Varias claves = ambiguo → extra.
+  if (ramo === 'auto' || ramo === 'moto') {
+    const ks = clavesCatalogo(ramo, textoCompania)
+    return ks.length === 1 ? ks[0]! : null
+  }
   const t = ` ${normalizarTexto(textoCompania)} `
   if (t.trim() === '') return null
   let mejor: { clave: string; len: number } | null = null
@@ -131,4 +160,48 @@ export function normalizarGarantia(ramo: RamoOferta, textoCompania: string): str
     }
   }
   return mejor?.clave ?? null
+}
+
+/**
+ * Claves de la taxonomía GENÉRICA con su hermana exacta en el catálogo de vehículo. Las ofertas de coche/moto
+ * leídas antes del 20/10/2026 se extrajeron con la taxonomía genérica (`rc_general`, `asistencia`…); al LEER se
+ * traducen. Lo que no tiene equivalencia exacta (una «RC» genérica no dice si es la obligatoria o la voluntaria;
+ * «daños materiales» no es «daños propios») NO se adivina.
+ */
+const GENERICO_A_VEHICULO: Readonly<Record<string, string>> = {
+  incendio: 'incendio',
+  robo: 'robo',
+  defensa_juridica: 'defensa_juridica',
+  asistencia: 'asistencia_viaje',
+}
+
+/**
+ * Remapeo de LECTURA de unas garantías guardadas al ramo de hoy (PURO). Solo actúa en auto/moto:
+ *   · clave del ramo → tal cual;
+ *   · clave genérica con hermana exacta → la del catálogo;
+ *   · clave genérica SIN equivalencia → fuera del cuadro (queda «no se sabe»: no crea fila propia ni hueco que
+ *     penalice a otras ofertas) y se devuelve en `sinEquivalencia` para avisarlo;
+ *   · texto literal (extra) → se intenta `normalizarGarantia`; si no casa, sigue como extra.
+ * Si dos entradas caen en la misma clave, gana la que afirma `incluida`.
+ */
+export function remapearGarantiasLectura<V extends { estado: 'incluida' | 'excluida' | null }>(
+  ramo: RamoOferta,
+  garantias: Record<string, V>,
+): { garantias: Record<string, V>; sinEquivalencia: string[] } {
+  if (ramo !== 'auto' && ramo !== 'moto') return { garantias, sinEquivalencia: [] }
+  const propias = new Set(TAXONOMIA_POR_RAMO[ramo].map((x) => x.clave))
+  const genericas = new Set(GENERICO.map((x) => x.clave))
+  const out: Record<string, V> = {}
+  const sinEquivalencia: string[] = []
+  for (const [k, v] of Object.entries(garantias)) {
+    let destino: string | null
+    if (propias.has(k)) destino = k
+    else if (genericas.has(k)) destino = GENERICO_A_VEHICULO[k] ?? null
+    else destino = normalizarGarantia(ramo, k) ?? k
+    if (destino === null) { sinEquivalencia.push(k); continue }
+    const ya = out[destino]
+    if (ya && !(v.estado === 'incluida' && ya.estado !== 'incluida')) continue
+    out[destino] = v
+  }
+  return { garantias: out, sinEquivalencia }
 }

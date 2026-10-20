@@ -58,6 +58,8 @@ export default async function HogarNuevoPage({
   const { id: clienteId } = await params
   const sp = await searchParams
   const direccion = cadena(sp.direccion)
+  // Calle elegida en el autocompletado (nombre oficial del Catastro + tipo): la búsqueda ya no es ambigua.
+  const viaElegida = cadena(sp.via) ? { tipo: cadena(sp.tipoVia) ?? '', nombre: cadena(sp.via)! } : undefined
   // Sin CP/municipio/provincia en la URL, VACÍOS: nunca un municipio de partida (el «SEVILLA» por defecto se leía como dato del cliente).
   const cp = cadena(sp.cp) ?? ''
   const municipio = cadena(sp.municipio) ?? ''
@@ -108,7 +110,7 @@ export default async function HogarNuevoPage({
 
   const faltaLugar = direccion !== null && referencia === null && (municipio === '' || provincia === '')
   if (direccion && referencia === null && !faltaLugar) {
-    const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
+    const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia, via: viaElegida })
 
     if (r.estado === 'elegir') {
       return (

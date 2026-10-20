@@ -55,7 +55,6 @@ const PUBLIC_PATHS = [
   '/api/cotizador',
   '/propuesta',
   '/presentacion',
-  '/api/catastro',
   '/api/m',
   '/api/lead-saas',
 ]
