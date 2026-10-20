@@ -596,8 +596,14 @@ export const SEL_RIESGO_MOTO = {
   buscarPoblacion: '#_cpostalCodeAjaxLocFinderImg',
   tomadorEsConductor: '#takerDriver',
   tomadorEsPropietario: '#takerOwner',
-  /** NIF/CIF del tomador (campo `idDocTaker` del portal): con «tomador = conductor/propietario» el portal lo exige (v0.7.5). */
-  documentoTomador: '#idDocTaker',
+  /**
+   * NIF/CIF del tomador (v0.7.5-0.7.6): con «tomador = conductor/propietario» el portal lo exige. `#idDocTaker` es un
+   * `<input type="hidden">` (no admite `fill`): el control VISIBLE es `#idNifTaker_doc` (widget IdentificationNumber, máscara
+   * `text(0,9)`), cuyo `onchange` copia el valor al hidden con `inputChange('idNifTaker_doc','idDocTaker')`.
+   */
+  documentoTomador: '#idNifTaker_doc',
+  /** Hidden que rellena el portal a partir del visible: se comprueba (sin leer su valor al informe) que queda con valor. */
+  documentoTomadorOculto: '#idDocTaker',
 } as const
 
 /** «Datos básicos» editable. Valores de los desplegables = los del portal (grabación 13/10/2026). */
@@ -867,7 +873,11 @@ export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: Formul
     if ((await campo.count()) === 0) throw new ErrorMapaIncompleto(`el campo del NIF del tomador (${SEL_RIESGO_MOTO.documentoTomador}) en Riesgo municipio`, true)
     await comprobarCampo(campo)
     await campo.fill(nif)
-    await campo.dispatchEvent('change')
+    await campo.dispatchEvent('change') // el `onchange` del portal copia el valor al hidden `#idDocTaker`
+    const oculto = raiz.locator(SEL_RIESGO_MOTO.documentoTomadorOculto).first()
+    if ((await oculto.count()) > 0 && (await oculto.inputValue()).trim() === '') {
+      throw new ErrorTarificador('portal', `allianz/moto: el portal no copió el NIF del tomador a ${SEL_RIESGO_MOTO.documentoTomadorOculto}`)
+    }
   }
   for (const [sel, dato] of [[SEL_RIESGO_MOTO.tomadorEsConductor, f.tomadorEsConductor], [SEL_RIESGO_MOTO.tomadorEsPropietario, f.tomadorEsPropietario]] as const) {
     if (dato !== true) continue // null = no consta: no se toca
@@ -2229,7 +2239,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.5' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.6' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
