@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-20T18:26:36Z",
-  "sha": "8bfd80fb9314cf268f2c29e9191518a3eb4ef0e2",
+  "generadoEn": "2026-10-20T19:37:45Z",
+  "sha": "7a7f3778cf3690254f91654cf20d5ae87ea6a401",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -100716,7 +100716,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onActivo, persona, onPersona, civiles, conCarnet, }: { etiqueta: string activo: boolean onActivo: (v: boolean) => void persona: PersonaForm onPersona: (p: PersonaForm) => void civiles: Opcion[] conCarnet: boolean }",
           "retorno": null,
-          "linea": 2118,
+          "linea": 2121,
           "resumen": "El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador."
         },
         {
@@ -100725,7 +100725,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 2190,
+          "linea": 2193,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -100734,7 +100734,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 2195
+          "linea": 2198
         },
         {
           "nombre": "PapelDelTomador",
@@ -100742,7 +100742,7 @@
           "exportada": false,
           "params": "{ rol, oportunidadId }: { rol: 'propietario' | 'conductor_habitual' | 'conductor_ocasional' oportunidadId: string }",
           "retorno": null,
-          "linea": 2204,
+          "linea": 2207,
           "resumen": "Un papel del RIESGO sin figura propia (10/10/2026): lo ocupa el tomador. Si es otra persona, se asigna en «Intervinientes» de la oportunidad (con «+ Nueva persona»), que es la única fuente: aquí no se"
         },
         {
@@ -100751,7 +100751,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, aviso, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; aviso?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 2224
+          "linea": 2227
         },
         {
           "nombre": "Contador",
@@ -100759,7 +100759,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 2243
+          "linea": 2246
         },
         {
           "nombre": "Precios",
@@ -100767,7 +100767,7 @@
           "exportada": false,
           "params": "{ r, simulacion, clienteId, actual, familiaAllianz }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean clienteId: string /** «Pagas X → te proponemos Y»: lo que paga hoy, anualizado. `null` = sin oportunidad de la que sacarlo. ",
           "retorno": null,
-          "linea": 2262
+          "linea": 2265
         },
         {
           "nombre": "PreciosVarianteAuto",
@@ -100775,7 +100775,7 @@
           "exportada": true,
           "params": "{ clienteId, oportunidadId, tarificacionId, simulado }: { /** El tomador de ESA variante (la tarificación es suya). */ clienteId: string oportunidadId: string tarificacionId: string /** La variante es una simulación: se enseña, nunca se emi",
           "retorno": null,
-          "linea": 2379,
+          "linea": 2382,
           "resumen": "«Presupuestos de este riesgo» → «Ver precios y emitir» (10/10/2026, oportunidad de AUTO; hermano de `PreciosVarianteMoto`): los precios de UNA variante ya pagada, leídos de lo guardado (GRATIS), con e"
         }
       ],
@@ -100785,7 +100785,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "dc866ef32fd5"
+      "hash": "20e74672338f"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/datos-cotizador.ts",
@@ -175210,7 +175210,7 @@
           "exportada": true,
           "params": "v: string | null | undefined, lista: readonly string[], porDefecto: string",
           "retorno": "string | undefined",
-          "linea": 69,
+          "linea": 81,
           "resumen": "Valor del selector → clave cerrada (o el defecto si viene vacío). `undefined` = valor que no está en la lista. PURA."
         },
         {
@@ -175219,7 +175219,7 @@
           "exportada": true,
           "params": "codigo: string | null | undefined",
           "retorno": "boolean | null",
-          "linea": 80,
+          "linea": 92,
           "resumen": "Código de garaje → `garajeNoche` del formulario. Calle / vía pública → `false`; garaje individual, comunitario o «Garaje» → `true`; vacío o un código que no se ha visto → `null` (no se traduce a ojo: "
         },
         {
@@ -175228,7 +175228,7 @@
           "exportada": true,
           "params": "codigo: string | null | undefined",
           "retorno": "'calle' | 'colectivo' | 'individual' | null",
-          "linea": 88,
+          "linea": 100,
           "resumen": "Código de garaje → `tipoGaraje` del formulario (15/10/2026): calle · colectivo (comunitario) · individual. «Garaje» a secas, vacío o un código no visto → `null` (el bot supone «colectivo» y lo DECLARA"
         },
         {
@@ -175237,13 +175237,13 @@
           "exportada": true,
           "params": "e: EntradaBotAuto, hoy: Date = new Date()",
           "retorno": "FormularioBotMoto",
-          "linea": 99,
+          "linea": 111,
           "resumen": "Formulario del cotizador de coche → `riesgo` de auto para asegura, o QUÉ falta (en castellano, sin valores). Lo de la ficha va en `completarDesdeFicha` (lo pone el servidor; si la ficha tampoco lo tie"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ccddcdf2562e"
+      "hash": "149e1cb266ab"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-auto-riesgo.ts",
@@ -175267,7 +175267,7 @@
           "exportada": true,
           "params": "p: PiezasBotsAuto",
           "retorno": "EntradaBotAuto",
-          "linea": 47,
+          "linea": 52,
           "resumen": "Piezas → entrada del adaptador de coche. PURA."
         },
         {
@@ -175276,7 +175276,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'historial'>",
           "retorno": "string | null",
-          "linea": 96,
+          "linea": 103,
           "resumen": "Vencimiento de la póliza ACTUAL para la fecha de efecto del bot (15/10/2026): el más tardío de los que se saben (el de la oportunidad, que se corre al próximo ciclo, y el leído del documento). Sin nin"
         },
         {
@@ -175285,7 +175285,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>, catalogo?: CatalogoCompaniasAnterior",
           "retorno": "string | null",
-          "linea": 111,
+          "linea": 118,
           "resumen": "Compañía anterior que la oportunidad YA sabe (regla única en `compania-anterior.ts`): lo declarado en «Historial y bonificaciones» (`historialDeclarado.companiaActual`) gana; respaldo, la aseguradora "
         },
         {
@@ -175294,7 +175294,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'roles' | 'figuras' | 'conductorOcasional'>",
           "retorno": "boolean | null",
-          "linea": 116,
+          "linea": 123,
           "resumen": "¿Hay conductor ocasional? `true` ficha en el papel · `false` confirmado que no · `null` sin preguntar o no aplica (misma regla que asegura). PURA."
         },
         {
@@ -175303,7 +175303,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 121
+          "linea": 128
         },
         {
           "nombre": "matriculaDeRiesgo",
@@ -175311,7 +175311,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'datosVehiculo'>",
           "retorno": "string",
-          "linea": 124,
+          "linea": 131,
           "resumen": "Matrícula normalizada como la pinta «Datos del vehículo»; sin ella, la de la oportunidad."
         },
         {
@@ -175320,7 +175320,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 'figuras'>",
           "retorno": "string",
-          "linea": 129,
+          "linea": 136,
           "resumen": "Id de la ficha del tomador del riesgo (la figura `tomador`; sin ella, el cliente de la oportunidad)."
         },
         {
@@ -175329,7 +175329,7 @@
           "exportada": true,
           "params": "r: RiesgoParaBotsAuto, porPolizas: CompaniaPorPolizas = { estado: 'pendiente' }, catalogo?: CatalogoCompaniasAnterior",
           "retorno": "EntradaBotAuto",
-          "linea": 134,
+          "linea": 141,
           "resumen": "Riesgo de la oportunidad de coche → formulario que entiende el adaptador de auto (sin Avant2). PURA."
         },
         {
@@ -175338,7 +175338,7 @@
           "exportada": true,
           "params": "r: Pick<RiesgoParaBotsAuto, 'figuras'>",
           "retorno": "string[] | null",
-          "linea": 182,
+          "linea": 192,
           "resumen": "Lo que a la FICHA del tomador le falta para que Mapfre pueda darlo de alta si no lo conoce (nombre, primer apellido y fecha de nacimiento; en empresa, la razón social), en castellano y sin valores. `n"
         },
         {
@@ -175347,13 +175347,13 @@
           "exportada": true,
           "params": "faltan: readonly string[] | null",
           "retorno": "string | null",
-          "linea": 196,
+          "linea": 206,
           "resumen": "«Falta el nombre y la fecha de nacimiento en la ficha del tomador…» o `null` si no falta nada (o no se sabe). PURA."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f11cdbeb74f0"
+      "hash": "fc6c3bc9de6e"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-bandeja.ts",
@@ -175614,6 +175614,7 @@
       "exporta": [
         "adaptadorDeRamo",
         "checklistBot",
+        "conReglasPrevias",
         "ramosConBots"
       ],
       "funciones": [
@@ -175623,7 +175624,7 @@
           "exportada": false,
           "params": "formulario: unknown, extra: Record<string, string>",
           "retorno": "EntradaBotAuto",
-          "linea": 107,
+          "linea": 110,
           "resumen": "Formulario del cotizador + campos extra → entrada del adaptador. Un campo extra TOCADO (aunque vacío) manda sobre el del riesgo."
         },
         {
@@ -175632,17 +175633,26 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "AdaptadorBot | null",
-          "linea": 139,
+          "linea": 144,
           "resumen": "Adaptador del ramo, o `null` si ese ramo aún no tiene bots (ramo ausente, desconocido o de otro tipo → `null`)."
         },
         {
           "nombre": "checklistBot",
           "kind": "function",
           "exportada": true,
-          "params": "adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string",
+          "params": "adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string, hoy: Date = new Date()",
           "retorno": "ChecklistCompania",
-          "linea": 149,
+          "linea": 154,
           "resumen": "Checklist de datos obligatorios de UNA compañía para este formulario (15/10/2026): reemplaza al antiguo `faltaPorCompania`. Construye el riesgo con el adaptador y lo pasa por `faltanParaTarificar` (la"
+        },
+        {
+          "nombre": "conReglasPrevias",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ChecklistCompania, reglas: readonly { clave: string; etiqueta: string }[]",
+          "retorno": "ChecklistCompania",
+          "linea": 165,
+          "resumen": "Añade al checklist las reglas previas incumplidas (`tarificador-reglas-previas.ts`) como filas `falta`: lo que el portal exige y `obligatorios.ts` no declara. Una clave que ya está en el checklist no "
         },
         {
           "nombre": "ramosConBots",
@@ -175650,13 +175660,13 @@
           "exportada": true,
           "params": "",
           "retorno": "string[]",
-          "linea": 156,
+          "linea": 178,
           "resumen": "Ramos con adaptador (para saber qué anfitrión monta el bloque)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "469823ce6782"
+      "hash": "0454d1ae52e2"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-checklist.ts",
@@ -177435,13 +177445,13 @@
           "exportada": true,
           "params": "entrada: EntradaPendientes",
           "retorno": "PendientesPorBloque",
-          "linea": 76,
+          "linea": 77,
           "resumen": "Pendientes por bloque + chips por compañía. PURA. Las filas `ok` no son pendientes; `ficha` se lista (para decir «de la ficha») pero no cuenta en `faltan`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9a6da2f2d1ea"
+      "hash": "56f77cf735af"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-probar.ts",
@@ -177594,6 +177604,162 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0d9d4a6a2cab"
+    },
+    {
+      "ruta": "apps/plataforma/lib/tarificador-reglas-previas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Reglas PREVIAS al bot de motor (20/10/2026): lo que un portal exige (o no cotiza) y `obligatorios.ts` no declara, para que la ficha lo AVISE antes de lanzar y no el bot ya dentro del portal. PURO: sin red ni envs, importable desde 'use client'. Cada regla es una función pura con su test; `reglasPrev",
+      "exporta": [
+        "edadEnFecha",
+        "edadMinimaCarne",
+        "carneDemasiadoJoven",
+        "etiquetaCarneJoven",
+        "huboSeguroAnterior",
+        "reglaPolizaAnterior",
+        "reglaMatriculacionGenerali",
+        "tomadorSinEnFicha",
+        "reglasTomadorAllianzTurismos",
+        "reglaCarne",
+        "reglaSiniestrosMoto",
+        "reglasPrevias"
+      ],
+      "funciones": [
+        {
+          "nombre": "partes",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: unknown",
+          "retorno": "",
+          "linea": 32
+        },
+        {
+          "nombre": "edadEnFecha",
+          "kind": "function",
+          "exportada": true,
+          "params": "nacimiento: unknown, fecha: unknown",
+          "retorno": "number | null",
+          "linea": 44,
+          "resumen": "Años cumplidos en `fecha` por quien nació en `nacimiento` (ISO). Quien nació un 29/02 cumple el 1/03 en los años no bisiestos (el mismo criterio que el bot de Allianz, que compara `nacimiento + 18 año"
+        },
+        {
+          "nombre": "edadMinimaCarne",
+          "kind": "function",
+          "exportada": true,
+          "params": "clasePermiso?: string | null",
+          "retorno": "number",
+          "linea": 54,
+          "resumen": "Edad mínima para sacarse el carné: 18 años; 16 con las clases A1 o AM (motos pequeñas). PURA."
+        },
+        {
+          "nombre": "carneDemasiadoJoven",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { fechaNacimiento: unknown; fechaCarne: unknown; clasePermiso?: string | null }",
+          "retorno": "",
+          "linea": 63,
+          "resumen": "¿El conductor era demasiado joven al sacarse el carné? Solo con las DOS fechas ISO reales; si falta una (o viene «de la ficha»), `null`: no se sabe. Carné anterior al nacimiento → `null` (eso ya lo re"
+        },
+        {
+          "nombre": "etiquetaCarneJoven",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: { edad: number; minima: number }",
+          "retorno": "string",
+          "linea": 71,
+          "resumen": "Texto del aviso (solo la edad y el mínimo, nunca las fechas). PURA."
+        },
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 77
+        },
+        {
+          "nombre": "hay",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "boolean",
+          "linea": 79
+        },
+        {
+          "nombre": "huboSeguroAnterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "riesgo: Record<string, unknown>",
+          "retorno": "boolean",
+          "linea": 82,
+          "resumen": "¿Hubo seguro anterior? Años asegurado con el supuesto favorable aplicado: solo `0` años (o declarado sin seguro) es «no». PURA."
+        },
+        {
+          "nombre": "reglaPolizaAnterior",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, riesgo: Record<string, unknown>, hoy: Date",
+          "retorno": "ReglaPrevia | null",
+          "linea": 92,
+          "resumen": "Huecos 1: Allianz Turismos (v0.6.11, `HUECO_POLIZA_ACTUAL`) pide las 5 últimas cifras de la póliza anterior cuando hubo seguro anterior, solo con «ya lo tenía (cambio de seguro)»; Allianz Moto ya lo d"
+        },
+        {
+          "nombre": "reglaMatriculacionGenerali",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, riesgo: Record<string, unknown>",
+          "retorno": "ReglaPrevia | null",
+          "linea": 107,
+          "resumen": "Hueco 2: Generali auto exige la fecha de 1.ª matriculación (`generali/auto.ts`: sin ella, `datos`). Normalmente viene del vendor por matrícula. PURA."
+        },
+        {
+          "nombre": "tomadorSinEnFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "faltan: readonly string[] | null | undefined",
+          "retorno": "('documento' | 'codigoPostal')[] | undefined",
+          "linea": 114,
+          "resumen": "Qué de la ficha del TOMADOR sabemos que no está (de la precalificación de la ficha: claves `dni` y `cp`). `null` = no se pudo leer → no se afirma nada. PURA."
+        },
+        {
+          "nombre": "reglasTomadorAllianzTurismos",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, riesgo: Record<string, unknown>, sinEnFicha: readonly string[] | undefined",
+          "retorno": "ReglaPrevia[]",
+          "linea": 126,
+          "resumen": "Hueco 4: Allianz Turismos teclea el documento y el CP + localidad del TOMADOR (`planDatosTurismos`). Los pone asegura desde la ficha al entregar, así que solo se avisa cuando la precalificación ya sab"
+        },
+        {
+          "nombre": "reglaCarne",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, riesgo: Record<string, unknown>",
+          "retorno": "ReglaPrevia | null",
+          "linea": 141,
+          "resumen": "Hueco 3: carné con menos de 18 años (16 con A1/AM) en la fecha del carné. Todas las compañías de auto y moto. PURA."
+        },
+        {
+          "nombre": "reglaSiniestrosMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "compania: string, ramo: string, riesgo: Record<string, unknown>",
+          "retorno": "ReglaPrevia | null",
+          "linea": 156,
+          "resumen": "Hueco 7: moto con siniestros en 5 años > 0. Allianz Moto (`planDatosBasicosMoto`) y Mapfre moto sin bloque de historial (`planFigurasSinHistorial`) paran con hueco de mapa: hoy no se cotizan automátic"
+        },
+        {
+          "nombre": "reglasPrevias",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: { compania: string; ramo: string; riesgo: Record<string, unknown>; formulario?: unknown; hoy?: Date }",
+          "retorno": "ReglaPrevia[]",
+          "linea": 169,
+          "resumen": "Todas las reglas previas de una compañía × ramo sobre el riesgo que construyó el adaptador. `formulario` aporta lo que no viaja en el riesgo. PURA."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2d29b3eef924"
     },
     {
       "ruta": "apps/plataforma/lib/tarificador-todas.ts",
@@ -230472,7 +230638,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4866,
-    "funciones": 18467
+    "archivos": 4867,
+    "funciones": 18483
   }
 }
