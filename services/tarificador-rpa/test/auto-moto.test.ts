@@ -30,6 +30,7 @@ import {
   leerVehiculoPortal,
   planDatosBasicosMoto,
   rellenarDatosBasicosMoto,
+  formaTextoLeido,
   rellenarRiesgoMoto,
   resolverVehiculo,
   valorClaseMoto,
@@ -86,7 +87,9 @@ document.getElementById('modelo').addEventListener('change', () => setTimeout(()
 // Catálogo de «Compañía de origen» como el del portal (snapshot del fallo): vacía, «TOP», separador y nombres de registro.
 const CIAS = OPC([['', '---Selección Compañías---'], ['0000', '**************** TOP ****************        '], ['C109', 'ALLIANZ SEGUROS      '], ['C763', 'MAPFRE AUTOMOVILES   '], ['M083', 'MUTUA MADRILEÑA AUTOMOVILISTA'], ['M084', 'MUTUA MADRILEÑA DE TAXIS (MMT)'], ['0000', '************************************'], ['E1', 'MAPFRE ESPAÑA COMPAÑÍA DE SEGUROS'], ['X1', 'COMPAÑÍA PRUEBA'], ['X2', 'ALLIANZ DIRECT VERSICHERUNGS-AG, SUCURSAL EN']])
 
-const DATOS = (revertirAnios = false) => `<body><form>
+// `pierdeNacimiento` (v0.7.13, trabajo real e5bcdb08): 'una' = un recálculo posterior (al marcar «asegurado en otra compañía»)
+// vacía la fecha de nacimiento una vez; 'siempre' = el portal la vacía tras cada cambio.
+const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre' = false) => `<body><form>
 <select id="use"><option value="1" selected>Particular</option><option value="4">Autoescuela</option></select>
 <input id="driverBirthDate" onchange="javascript:menores25();"><input id="driverLicenseDate" onchange="javascript:funcTrue();">
 <select id="driverSex"><option value="V" selected>Hombre</option><option value="H">Mujer</option></select>
@@ -105,6 +108,8 @@ const DATOS = (revertirAnios = false) => `<body><form>
 </form><script>
 document.getElementById('licensePlate').addEventListener('change', () => setTimeout(() => { document.getElementById('fechaMatriculacion').value = '07/08/2015' }, 30))
 ${revertirAnios ? "document.getElementById('aniosSinSiniestros').addEventListener('change', (e) => setTimeout(() => (e.target.value = '00'), 0))" : ''}
+${pierdeNacimiento === 'una' ? "document.getElementById('aseguradoOtraCia').addEventListener('change', () => setTimeout(() => { document.getElementById('driverBirthDate').value = '' }, 0), { once: true })" : ''}
+${pierdeNacimiento === 'siempre' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '' }, 0))" : ''}
 </script></body>`
 
 // Buscador de poblaciones con VARIAS (inventario de estructura 13/10/2026, datos INVENTADOS): la lupa pinta celdas
@@ -330,6 +335,26 @@ test('rellenarDatosBasicosMoto escribe y relee; si el portal revierte un select,
   await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => e instanceof ErrorTarificador && e.tipo === 'portal')
 })
 
+test('v0.7.13: si el portal pierde la fecha de nacimiento tras escribirla, se reescribe una vez; si la vuelve a perder → portal con la FORMA, sin el valor', async () => {
+  await page.setContent(DATOS(false, 'una'))
+  await rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page)
+  assert.equal(await page.locator('#driverBirthDate').inputValue(), '03/02/1990', 'reescrita tras el recálculo del portal')
+  assert.equal(await page.locator('#driverLicenseDate').inputValue(), '05/04/2010')
+  await page.setContent(DATOS(false, 'siempre'))
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'portal')
+    assert.match(e.message, /no dejó escrito #driverBirthDate \(reescrito una vez; quedó vacío\)/)
+    assert.ok(!e.message.includes('1990') && !e.message.includes('03/02'), 'sin el valor')
+    return true
+  })
+})
+
+test('formaTextoLeido: solo la forma, nunca el valor', () => {
+  assert.equal(formaTextoLeido('  '), 'quedó vacío')
+  assert.equal(formaTextoLeido('01/01/2000'), 'quedó otra fecha dd/mm/aaaa')
+  assert.equal(formaTextoLeido('2000-01-01'), 'quedó un texto de 10 caracteres con otro formato')
+})
+
 test('matrícula → 1ª matriculación autorrellenada (ISO); sin respuesta → datos sin la matrícula en el mensaje', async () => {
   await page.setContent(DATOS())
   assert.equal(await consultarMatriculaMoto(page.mainFrame(), form.matricula, page), '2015-08-07')
@@ -498,7 +523,7 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.12')
+  assert.equal(allianzMoto.version, '0.7.13')
 })
 
 // ── 0.7.11 · trabajo real 6cd26c10: el portal rechazaba carné, fecha de adquisición, justificante, compañía y póliza de origen ──
