@@ -1,4 +1,4 @@
--- Avisos al empleado + seguimiento de firmas pendientes (20/10/2026). PENDIENTE de aplicar.
+-- Avisos al empleado + seguimiento de firmas pendientes (20/10/2026). APLICADA en producción el 20/10/2026 (rrhh_0023_avisos_firma).
 -- Aditiva e idempotente. 🚨 Aplicar ANTES de desplegar el código: `listarExpediente` lee las
 -- columnas nuevas de `rrhh.documentos` y sin ellas el expediente (admin y /e) da 500.
 --
