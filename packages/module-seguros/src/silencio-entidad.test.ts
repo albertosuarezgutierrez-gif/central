@@ -163,3 +163,97 @@ test('el ritmo roto sigue alarmando aunque no haya vencidas', () => {
   })
   assert.equal(v.veredicto, 'silencio')
 })
+
+// ── Baremo por hueco TÍPICO (20/10/2026) ─────────────────────────────────────
+// Huecos APROXIMADOS medidos: el máximo de Reale (48) y Allianz (46) lo puso el
+// alta; su ritmo normal es de pocos días. Mapfre tiene 94 d de máximo.
+import {
+  umbralSilencio, ACCION_SILENCIO, DIAS_RENOVACION_RIESGO,
+} from './silencio-entidad.ts'
+
+const REALE: EntidadIngesta = {
+  entidad: 'C0613', diasSinFichero: 21, huecoMaximo: 48, huecoMediano: 6, huecosObservados: 5,
+  vivas: 3, vencidasEnSilencio: 0, vencen90d: 1, vencen30d: 0,
+}
+const ALLIANZ: EntidadIngesta = {
+  entidad: 'C0109', nombre: 'Allianz', diasSinFichero: 16, huecoMaximo: 46, huecoMediano: 4, huecosObservados: 14,
+  vivas: 26, vencidasEnSilencio: 0, vencen90d: 9, vencen30d: 4,
+}
+const GENERALI: EntidadIngesta = {
+  entidad: 'C0735', diasSinFichero: 9, huecoMaximo: 20, huecoMediano: 7, huecosObservados: 10,
+  vivas: 8, vencidasEnSilencio: 0, vencen90d: 2, vencen30d: 1,
+}
+const MAPFRE: EntidadIngesta = {
+  entidad: 'C0058', diasSinFichero: 40, huecoMaximo: 94, huecoMediano: 3, huecosObservados: 9,
+  vivas: 64, vencidasEnSilencio: 0, vencen90d: 12, vencen30d: 5,
+}
+
+test('mediana: Reale y Allianz, cuyo máximo lo puso el alta, SÍ saltan', () => {
+  assert.equal(veredictoEntidad(REALE).veredicto, 'silencio', '21 d > max(14, 2×6)')
+  assert.equal(veredictoEntidad(ALLIANZ).veredicto, 'silencio', '16 d > max(14, 2×4)')
+  // Con el baremo viejo (máximo) ninguna de las dos habría saltado:
+  const viejo = (e: EntidadIngesta) => veredictoEntidad({ ...e, huecoMediano: undefined }).veredicto
+  assert.equal(viejo(REALE), 'ok')
+  assert.equal(viejo(ALLIANZ), 'ok')
+})
+
+test('mediana: Generali dentro de su ritmo no salta; Mapfre con máximo 94 sí', () => {
+  assert.equal(veredictoEntidad(GENERALI).veredicto, 'ok')
+  assert.equal(veredictoEntidad(MAPFRE).veredicto, 'silencio')
+})
+
+test('el umbral es max(SUELO, FACTOR × mediana): el suelo protege un ritmo muy apretado', () => {
+  assert.equal(umbralSilencio({ huecoMaximo: 9, huecoMediano: 1, huecosObservados: 5 }), SUELO_DIAS)
+  assert.equal(umbralSilencio({ huecoMaximo: 99, huecoMediano: 10, huecosObservados: 5 }), 20)
+  // 13 días con mediana 1: puente, no avería.
+  assert.equal(veredictoEntidad({ ...GENERALI, diasSinFichero: 13, huecoMediano: 1 }).veredicto, 'ok')
+})
+
+test('huecoMediano undefined (asegura vieja) o null cae al baremo del máximo', () => {
+  const sinCampo = { ...ALLIANZ } as Partial<EntidadIngesta>
+  delete sinCampo.huecoMediano
+  assert.equal(veredictoEntidad(sinCampo as EntidadIngesta).veredicto, 'ok', 'comportamiento actual: 16 < 2×46')
+  assert.equal(veredictoEntidad({ ...ALLIANZ, huecoMediano: null }).veredicto, 'ok')
+  assert.equal(veredictoEntidad({ ...ALLIANZ, diasSinFichero: 100, huecoMediano: undefined }).veredicto, 'silencio')
+  assert.equal(umbralSilencio({ huecoMaximo: 46, huecosObservados: 5 }), 92, 'undefined ≠ 0')
+  assert.equal(umbralSilencio({ huecoMaximo: 46, huecoMediano: null, huecosObservados: 5 }), 92, 'null ≠ 0')
+  // Con mediana 0 (días pegados) el número 0 SÍ cuenta: no es «ausente».
+  assert.equal(umbralSilencio({ huecoMaximo: 30, huecoMediano: 0, huecosObservados: 3 }), SUELO_DIAS)
+})
+
+test('sin muestra suficiente la mediana no absuelve ni acusa: sin_base', () => {
+  assert.equal(veredictoEntidad({ ...REALE, huecosObservados: 1 }).veredicto, 'sin_base')
+})
+
+test('renovaciones en riesgo: solo con silencio, con recuento y compañía, sin PII', () => {
+  const a = veredictoEntidad(ALLIANZ)
+  assert.equal(a.renovacionesEnRiesgo, 4)
+  assert.match(a.motivos.join(' | '), new RegExp(`Allianz: 4 pólizas vencen en ≤${DIAS_RENOVACION_RIESGO} d y lleva 16 d sin mandar`))
+  // Sin silencio no se informa ni se avisa.
+  const g = veredictoEntidad(GENERALI)
+  assert.equal(g.renovacionesEnRiesgo, undefined)
+  assert.doesNotMatch(g.motivos.join(' '), /vencen? en ≤/)
+  // Con 0 no hay motivo.
+  const r = veredictoEntidad(REALE)
+  assert.equal(r.renovacionesEnRiesgo, 0)
+  assert.doesNotMatch(r.motivos.join(' '), /vencen? en ≤/)
+  // Singular.
+  assert.match(veredictoEntidad({ ...ALLIANZ, vencen30d: 1 }).motivos.join(' '), /1 póliza vence en ≤30 d/)
+})
+
+test('renovaciones en riesgo: undefined ≠ null ≠ 0', () => {
+  const sin = { ...ALLIANZ } as Partial<EntidadIngesta>
+  delete sin.vencen30d
+  assert.equal('renovacionesEnRiesgo' in veredictoEntidad(sin as EntidadIngesta), false)
+  const nulo = veredictoEntidad({ ...ALLIANZ, vencen30d: null })
+  assert.equal(nulo.renovacionesEnRiesgo, null)
+  assert.doesNotMatch(nulo.motivos.join(' '), /vencen? en ≤/)
+})
+
+test('acción sugerida: una sola línea fija por aviso con silencio, y ninguna sin él', () => {
+  const dos = motivosSilencio(silencioPorEntidad([ALLIANZ, REALE])!)
+  assert.equal(dos.filter(m => m === ACCION_SILENCIO).length, 1)
+  assert.match(ACCION_SILENCIO, /^Qué hacer: baja «Ficheros recibidos» del Portal CIMA filtrado por la compañía/)
+  assert.equal(motivosSilencio(silencioPorEntidad([GENERALI])!).includes(ACCION_SILENCIO), false)
+  assert.equal(motivosSilencio(silencioPorEntidad([{ ...GENERALI, huecosObservados: 0, huecoMaximo: null, huecoMediano: null }])!).includes(ACCION_SILENCIO), false)
+})

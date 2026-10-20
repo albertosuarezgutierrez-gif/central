@@ -64,6 +64,13 @@ export type EntidadIngesta = {
   diasSinFichero: number | null
   /** El mayor hueco entre dos ficheros suyos, en días. `null` = no calculable. */
   huecoMaximo: number | null
+  /**
+   * Hueco TÍPICO (mediana de los huecos entre días con fichero). Es el baremo del
+   * ritmo: el máximo lo estropea un alta lenta.
+   * OPCIONAL: una `asegura` anterior no lo manda (`undefined`) y entonces se cae al
+   * baremo del máximo. `undefined` ≠ `null`; ambos caen al máximo, ninguno es 0.
+   */
+  huecoMediano?: number | null
   /** Cuántos huecos se han observado: es el tamaño de la muestra del baremo. */
   huecosObservados: number
   /** Pólizas vivas suyas. `null` = no se ha podido contar, nunca 0 por defecto. */
@@ -76,6 +83,8 @@ export type EntidadIngesta = {
   vencidasEnSilencio: number | null
   /** Pólizas suyas que vencen en los próximos 90 días. `null` = no comprobado. */
   vencen90d?: number | null
+  /** Pólizas vivas suyas que vencen en los próximos 30 días. Ausente/`null` = no comprobado. */
+  vencen30d?: number | null
   /** Nombre común de la compañía (`companias_dgs.nombre_comun`). Ausente/`null` = no consta. */
   nombre?: string | null
   /** Pólizas EN VIGOR (`esCarteraEnVigor`; `vivas` es solo el origen). Ausente/`null` = no se contó. */
@@ -92,6 +101,31 @@ export type SilencioEntidad = EntidadIngesta & {
   veredicto: VeredictoEntidad
   /** Por qué. Vacío cuando no hay nada que decir. */
   motivos: string[]
+  /**
+   * ANTES del vencimiento: pólizas vivas que vencen en ≤30 d de una compañía EN
+   * SILENCIO (solo se informa con veredicto `silencio`). Ausente = no aplica o el puerto no manda `vencen30d`;
+   * `null` = no se pudo contar. Nunca 0 por defecto.
+   */
+  renovacionesEnRiesgo?: number | null
+}
+
+/** Ventana de «renovaciones en riesgo», en días. */
+export const DIAS_RENOVACION_RIESGO = 30
+
+/** Línea fija de acción del aviso de silencio. No envía nada a nadie. */
+export const ACCION_SILENCIO =
+  'Qué hacer: baja «Ficheros recibidos» del Portal CIMA filtrado por la compañía y compáralo; ' +
+  'si CIMA no generó nada, el silencio es de la compañía'
+
+/**
+ * Umbral de silencio en días: `max(SUELO_DIAS, FACTOR × hueco típico)`. Usa la
+ * mediana si la hay y, si no (puerto viejo), el máximo. `null` = sin base.
+ */
+export function umbralSilencio(e: Pick<EntidadIngesta, 'huecoMaximo' | 'huecoMediano' | 'huecosObservados'>): number | null {
+  if (e.huecosObservados < MIN_HUECOS) return null
+  const ref = typeof e.huecoMediano === 'number' ? e.huecoMediano : e.huecoMaximo
+  if (ref === null || ref === undefined) return null
+  return Math.max(SUELO_DIAS, ref * FACTOR_SILENCIO)
 }
 
 /**
@@ -151,12 +185,17 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
   }
 
   // 2. El ritmo roto. Solo se afirma con muestra suficiente.
-  const ritmoRoto =
-    dias !== null && hayBase && dias >= SUELO_DIAS && dias > (e.huecoMaximo as number) * FACTOR_SILENCIO
+  //    Baremo por hueco TÍPICO (mediana): el máximo lo fija a menudo el alta
+  //    y dejaba mudas a compañías con ritmo corto.
+  const umbral = umbralSilencio(e)
+  const usaMediana = typeof e.huecoMediano === 'number'
+  const ritmoRoto = dias !== null && hayBase && umbral !== null && dias >= SUELO_DIAS && dias > FACTOR_SILENCIO * (usaMediana ? (e.huecoMediano as number) : (e.huecoMaximo as number))
 
   if (ritmoRoto) {
     motivos.push(
-      `${e.entidad}: ${dias} días sin mandar nada (su mayor hueco hasta ahora eran ${e.huecoMaximo})`,
+      usaMediana
+        ? `${e.entidad}: ${dias} días sin mandar nada (su hueco habitual son ${e.huecoMediano}; el mayor, ${e.huecoMaximo})`
+        : `${e.entidad}: ${dias} días sin mandar nada (su mayor hueco hasta ahora eran ${e.huecoMaximo})`,
     )
   }
 
@@ -167,7 +206,15 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
     if (e.vencen90d != null && e.vencen90d > 0) {
       motivos.push(`${e.entidad}: ${e.vencen90d} más vencen en 90 días`)
     }
-    return { ...base, veredicto: 'silencio', motivos }
+    // ANTES del vencimiento: renovaciones que caen en ≤30 d con la compañía muda.
+    const riesgo = e.vencen30d === undefined ? undefined : e.vencen30d === null ? null : e.vencen30d
+    if (riesgo != null && riesgo > 0) {
+      motivos.push(
+        `${e.nombre ?? e.entidad}: ${riesgo} ${riesgo === 1 ? 'póliza vence' : 'pólizas vencen'} en ≤${DIAS_RENOVACION_RIESGO} d` +
+        ` y lleva ${dias ?? '?'} d sin mandar`,
+      )
+    }
+    return { ...base, veredicto: 'silencio', motivos, ...(riesgo === undefined ? {} : { renovacionesEnRiesgo: riesgo }) }
   }
 
   // 3. Sin muestra no se absuelve a nadie: se dice que no se puede juzgar.
@@ -209,5 +256,8 @@ function orden(v: VeredictoEntidad): number {
  */
 export function motivosSilencio(lista: SilencioEntidad[] | null): string[] {
   if (lista === null) return ['No se ha podido comprobar si alguna compañía ha dejado de mandar.']
-  return lista.filter(e => e.veredicto !== 'ok').flatMap(e => e.motivos)
+  const m = lista.filter(e => e.veredicto !== 'ok').flatMap(e => e.motivos)
+  // Una sola línea de acción por aviso, no una por compañía.
+  if (lista.some(e => e.veredicto === 'silencio')) m.push(ACCION_SILENCIO)
+  return m
 }

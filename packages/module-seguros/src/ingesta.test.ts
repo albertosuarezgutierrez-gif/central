@@ -1180,3 +1180,28 @@ test('cambioDuplicadasEnFirma: solo mira el tramo de duplicadas', () => {
   assert.equal(cambioDuplicadasEnFirma(null, con), true)
   assert.equal(cambioDuplicadasEnFirma(null, sin), false)
 })
+
+// ── Renovaciones en riesgo en la firma del aviso (20/10/2026) ────────────────
+test('firma: un cambio en las renovaciones en riesgo de una compañía muda hace sonar', () => {
+  const muda = (riesgo: number | undefined) => saludIngesta({
+    cuarentena: [], rechazos: [],
+    silencio: [{
+      entidad: 'C0109', diasSinFichero: 16, huecoMaximo: 46, huecosObservados: 14,
+      vivas: 26, vencidasEnSilencio: 0, vencen90d: 9,
+      veredicto: 'silencio', motivos: ['C0109: 16 días sin mandar nada'],
+      ...(riesgo === undefined ? {} : { renovacionesEnRiesgo: riesgo }),
+    }],
+  })
+  const con4 = firmaAvisoIngesta(muda(4))
+  const con5 = firmaAvisoIngesta(muda(5))
+  assert.notEqual(con4, con5)
+  assert.notEqual(con4, firmaAvisoIngesta(muda(0)))
+  // 0 y ausente dan la firma de siempre.
+  assert.equal(firmaAvisoIngesta(muda(0)), firmaAvisoIngesta(muda(undefined)))
+  const d = decidirAvisoIngesta({
+    firmaAnterior: con4, firmaActual: con5,
+    ultimoAvisoEn: new Date('2026-10-19T06:45:00Z'), hoy: new Date('2026-10-20T06:45:00Z'),
+  })
+  assert.equal(d.avisar, true)
+  assert.equal((d as { motivo?: string }).motivo, 'cambio')
+})

@@ -1155,7 +1155,9 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
   // Ordenadas para que el mismo conjunto produzca siempre la misma cadena.
   const mudas = (salud.silencio ?? [])
     .filter(e => e.veredicto === 'silencio')
-    .map(e => e.entidad)
+    // Las renovaciones en riesgo entran en la firma (`C0109+4`): si el recuento
+    // cambia, suena. Sin riesgo (0/null/undefined) la firma es la de siempre.
+    .map(e => ((e.renovacionesEnRiesgo ?? 0) > 0 ? `${e.entidad}+${e.renovacionesEnRiesgo}` : e.entidad))
     .sort()
     .join(',')
   // `null` (no comprobado) y `[]` (comprobado, ninguna) no pueden dar la misma firma.

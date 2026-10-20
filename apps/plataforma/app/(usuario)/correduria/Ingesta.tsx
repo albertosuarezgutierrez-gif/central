@@ -548,7 +548,14 @@ function Companias({ salud }: { salud: SaludIngesta }) {
                 return (
                   <tr key={e.entidad} title={e.motivos.join(' · ') || undefined}>
                     <td style={celda}>{e.entidad}</td>
-                    <td style={celda}><Badge tono={v.tono}>{v.texto}</Badge></td>
+                    <td style={celda}>
+                      <Badge tono={v.tono}>{v.texto}</Badge>
+                      {(e.renovacionesEnRiesgo ?? 0) > 0 && (
+                        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
+                          {e.renovacionesEnRiesgo} vencen en ≤30 d
+                        </div>
+                      )}
+                    </td>
                     <td style={{ ...celda, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                       {e.diasSinFichero === null ? <Pendiente texto="Ninguno" definitivo /> : e.diasSinFichero}
                     </td>

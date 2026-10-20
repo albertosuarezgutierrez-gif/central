@@ -167,6 +167,18 @@ test('una compañía muda manda en el titular: no se arregla igual que un ficher
   assert.match(s.detalle, /nada atascado que reprocesar/)
 })
 
+test('renovaciones en riesgo: la señal de silencio las nombra solo cuando son > 0', () => {
+  const senal = (vencen30d: number | undefined) => senalesIngesta(saludIngesta({
+    cuarentena: [], huerfanas: 0, rechazos: [],
+    silencio: silencioPorEntidad([
+      { entidad: 'C0109', nombre: 'Allianz', diasSinFichero: 30, huecoMaximo: 46, huecoMediano: 4, huecosObservados: 9, vivas: 26, vencidasEnSilencio: 0, ...(vencen30d === undefined ? {} : { vencen30d }) },
+    ]),
+  })).find(x => x.clave === 'silencio')!
+  assert.match(senal(4).detalle, /Renovaciones en riesgo: Allianz: 4 vencen en ≤30 d/)
+  assert.doesNotMatch(senal(0).detalle, /Renovaciones en riesgo/)
+  assert.doesNotMatch(senal(undefined).detalle, /Renovaciones en riesgo/)
+})
+
 test('saber cuántas huérfanas hay pero no CUÁLES es un estado propio, y se dice', () => {
   const v = interpretarVistaIngesta(200, {
     estado: 'ok',

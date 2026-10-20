@@ -625,6 +625,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'De lunes a viernes a las 07:50, y solo si hay alguna pendiente',
   },
   {
+    id: 'correduria.recordatorio-cima', categoria: 'correduria',
+    titulo: 'Recordatorio mensual: ficheros recibidos de CIMA',
+    que: 'Recuerda bajar del Portal CIMA el export «Ficheros recibidos» del último mes y compararlo con lo recibido; añade por compañía los días sin mandar fichero (o avisa de que no se pudo leer la ingesta).',
+    cuando: 'El día 2 de cada mes a las 08:43 UTC (10:43 en verano, 09:43 en invierno)',
+  },
+  {
     id: 'correduria.red-diaria', categoria: 'correduria',
     titulo: 'Red diaria de la correduría',
     que: 'Lo que se queda parado en silencio: aprobaciones que caducan en menos de 24 h o caducaron en las últimas 24 h, bajas firmadas hace más de 48 h que no han salido (sin carta/firma, propuesta rechazada, esperando tu OK, sin propuesta, Allianz/PUE) y recibos devueltos cuyo aviso caducó.',

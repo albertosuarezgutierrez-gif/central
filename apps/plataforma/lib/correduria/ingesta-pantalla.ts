@@ -239,12 +239,17 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
 
   const mudas = companiasMudas(s.silencio)
   if (mudas.length > 0) {
+    // Solo se pinta cuando > 0; sin PII (compañía y recuento).
+    const riesgo = mudas
+      .filter(m => (m.renovacionesEnRiesgo ?? 0) > 0)
+      .map(m => `${m.nombre ?? m.entidad}: ${m.renovacionesEnRiesgo} vencen en ≤30 d`)
     out.push({
       clave: 'silencio', tipo: 'perdida', n: mudas.length,
       titulo: `${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos`,
       detalle:
         'No hay nada atascado que reprocesar: sencillamente no llega. Compruébalo en ' +
-        'CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.',
+        'CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.' +
+        (riesgo.length > 0 ? ` Renovaciones en riesgo: ${riesgo.join('; ')}.` : ''),
     })
   }
 

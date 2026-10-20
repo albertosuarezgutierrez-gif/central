@@ -59,6 +59,9 @@ export const CRON_JOBS: CronJob[] = [
   // Bajas de ALLIANZ pendientes de tramitar en el PUE (30/09/2026): Allianz no las recibe por correo.
   // Solo avisa por Telegram si hay alguna `firmada` sin tramitar. Ver docs/ALLIANZ-PUE.md.
   { path: '/api/cron/correduria-bajas-pue', schedule: '50 7 * * 1-5' },
+  // Recordatorio mensual (día 2, 08:43 UTC): bajar el export «Ficheros recibidos» del Portal CIMA y compararlo
+  // con lo recibido, con el resumen por compañía de días sin mandar. Un solo Telegram al mes.
+  { path: '/api/cron/correduria-recordatorio-cima', schedule: '43 8 2 * *' },
   // Recaptación por email de leads solo-email (sin teléfono usable): 07:00,
   // antes del vigía de latidos de las 07:45. Manda hasta 25/día por Resend con
   // baja de un clic (LSSI art. 21); a quien tiene teléfono se le sigue

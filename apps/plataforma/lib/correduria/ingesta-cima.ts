@@ -99,7 +99,7 @@ function esEntidad(v: unknown): v is EntidadIngesta {
   return typeof e.entidad === 'string'
     && numONull(e.diasSinFichero) && numONull(e.huecoMaximo)
     && typeof e.huecosObservados === 'number' && Number.isFinite(e.huecosObservados)
-    && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d)
+    && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d) && opcional(e.vencen30d) && opcional(e.huecoMediano)
     && opcional(e.enVigor) && opcional(e.sinN)
     && (e.primerSin === undefined || e.primerSin === null || typeof e.primerSin === 'string')
     && (e.ultimoSin === undefined || e.ultimoSin === null || typeof e.ultimoSin === 'string')

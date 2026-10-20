@@ -37,6 +37,7 @@ import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { esColumnaAusente } from './pg-error'
+import { leerCimaExtraSiniestro } from './cima-extra-siniestro'
 import type { SiniestroFicha, SiniestroIntervinienteFicha } from './cartera-ficha'
 
 /** Columnas que necesita `SiniestroFicha`. Lo usan la ficha de cliente, la de póliza y este módulo. */
@@ -286,6 +287,33 @@ export async function tercerosCimaCrudos(correduriaId: string, ids: string[]): P
   }
 }
 
+// ─── «Más datos de CIMA» (solo operador) ─────────────────────────────────────
+
+/**
+ * `cima_extra -> 'cimaExtra'` (y su marca de truncado) de esos siniestros. SQL aparte por la misma razón
+ * que los terceros (columna fuera del schema de Prisma; puede no existir). Columna ausente o fallo → `null`
+ * (no se sabe, la pantalla no dice «sin datos»). SOLO la ficha del operador: el portal no llama a esto.
+ */
+export async function cimaExtraCrudos(correduriaId: string, ids: string[]): Promise<Map<string, { extra: unknown; truncado: unknown }> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ id: string; extra: unknown; truncado: unknown }[]>`
+      select id::text as id, cima_extra -> 'cimaExtra' as extra, cima_extra -> 'cimaExtraTruncado' as truncado
+      from siniestros
+      where correduria_id = ${correduriaId}::uuid and id = any(${ids}::uuid[])`
+    return new Map(filas.map((f) => [f.id, { extra: f.extra, truncado: f.truncado }]))
+  } catch (e) {
+    if (!esColumnaAusente(e)) console.error('[cartera-siniestros] cimaExtra ilegible:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/** Siniestro de la ficha del operador con «Más datos de CIMA» (campos opcionales: ausentes = no se leyó). */
+export type SiniestroConCimaExtra = SiniestroFicha & {
+  cimaExtra?: Array<{ ruta: string; valor: string }> | null
+  cimaExtraTruncado?: boolean
+}
+
 /** Descifrado de los terceros (puede lanzar; `figuras-cima.ts` lo trata como ilegible, nunca `v1:`). */
 const descifrarTercero = (v: string): string | null => decryptField(v)
 
@@ -294,10 +322,19 @@ export function tercerosCimaDe(crudo: unknown): TerceroFicha[] | null {
   return tercerosDeSiniestro(crudo, descifrarTercero)
 }
 
-/** Añade `tercerosCima` a cada siniestro ya mapeado (una sola consulta para todos). */
-export async function conTercerosCima(correduriaId: string, lista: SiniestroFicha[]): Promise<SiniestroFicha[]> {
-  const crudos = await tercerosCimaCrudos(correduriaId, lista.map((s) => s.id))
-  return lista.map((s) => ({ ...s, tercerosCima: crudos === null ? null : tercerosCimaDe(crudos.get(s.id)) }))
+/** Añade `tercerosCima` y `cimaExtra` a cada siniestro ya mapeado (una consulta por cada uno para todos). */
+export async function conTercerosCima(correduriaId: string, lista: SiniestroFicha[]): Promise<SiniestroConCimaExtra[]> {
+  const ids = lista.map((s) => s.id)
+  const [crudos, extras] = await Promise.all([tercerosCimaCrudos(correduriaId, ids), cimaExtraCrudos(correduriaId, ids)])
+  return lista.map((s) => {
+    const e = extras === null ? undefined : extras.get(s.id)
+    return {
+      ...s,
+      tercerosCima: crudos === null ? null : tercerosCimaDe(crudos.get(s.id)),
+      cimaExtra: e === undefined ? null : leerCimaExtraSiniestro(e.extra),
+      cimaExtraTruncado: e !== undefined && e.truncado === true,
+    }
+  })
 }
 
 // ─── Resultado común ─────────────────────────────────────────────────────────
