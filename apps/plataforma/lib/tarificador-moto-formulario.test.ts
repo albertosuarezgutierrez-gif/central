@@ -230,3 +230,8 @@ test('companiaActualParaBots: la compañía elegida arriba viaja al bot (código
   assert.equal('companiaAnterior' in ok(entrada({ aniosAsegurado: '0', companiaAnterior: nombre })).riesgo, false)
   assert.equal(ok(entrada({ aniosAsegurado: '8', companiaAnterior: nombre })).riesgo.companiaAnterior, 'Aseguradora Beta')
 })
+
+test('poblacion: el municipio elegido viaja en el riesgo; vacío o con caracteres prohibidos no viaja', () => {
+  assert.equal(ok(entrada({ poblacion: '  Villa   Álamo ' })).riesgo.poblacion, 'Villa Álamo')
+  for (const p of [null, undefined, '', '   ', 'x'.repeat(81), 'Villa <Álamo>']) assert.equal('poblacion' in ok(entrada({ poblacion: p })).riesgo, false, String(p))
+})

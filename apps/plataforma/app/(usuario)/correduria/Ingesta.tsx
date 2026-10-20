@@ -4,7 +4,7 @@ import { Antenna, Check, Coins, TriangleAlert } from 'lucide-react'
 import { Badge, Pendiente, TablaScroll } from '@/components/ui'
 import { ConIcono } from './iconos'
 import { eur } from '@/lib/dinero'
-import type { GrupoHuerfanas, SaludIngesta } from '@central/module-seguros'
+import { ACCION_SILENCIO, lineaTipoMudo, type GrupoHuerfanas, type SaludIngesta } from '@central/module-seguros'
 import {
   hayQueEnsenar, senalesIngesta, tituloIngesta, veredictoIngesta,
   type VistaIngesta,
@@ -504,6 +504,7 @@ function Rechazos({ salud }: { salud: SaludIngesta }) {
 const VEREDICTO: Record<string, { texto: string; tono: 'neutral' | 'aviso' | 'negativo' }> = {
   ok: { texto: 'Manda a su ritmo', tono: 'neutral' },
   silencio: { texto: 'Ha dejado de mandar', tono: 'negativo' },
+  tipo_mudo: { texto: 'Un tipo de fichero mudo', tono: 'negativo' },
   sin_base: { texto: 'Sin histórico para juzgar', tono: 'aviso' },
   nunca: { texto: 'No ha mandado nunca', tono: 'aviso' },
   sin_datos: { texto: 'Sin comprobar', tono: 'aviso' },
@@ -548,7 +549,22 @@ function Companias({ salud }: { salud: SaludIngesta }) {
                 return (
                   <tr key={e.entidad} title={e.motivos.join(' · ') || undefined}>
                     <td style={celda}>{e.entidad}</td>
-                    <td style={celda}><Badge tono={v.tono}>{v.texto}</Badge></td>
+                    <td style={celda}>
+                      <Badge tono={v.tono}>{v.texto}</Badge>
+                      {(e.tiposMudos ?? []).map(t => (
+                        <div key={t.tipo} style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
+                          {lineaTipoMudo(t)}
+                        </div>
+                      ))}
+                      {(e.tiposMudos?.length ?? 0) > 0 && (
+                        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>{ACCION_SILENCIO}</div>
+                      )}
+                      {(e.renovacionesEnRiesgo ?? 0) > 0 && (
+                        <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>
+                          {e.renovacionesEnRiesgo} vencen en ≤30 d
+                        </div>
+                      )}
+                    </td>
                     <td style={{ ...celda, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                       {e.diasSinFichero === null ? <Pendiente texto="Ninguno" definitivo /> : e.diasSinFichero}
                     </td>

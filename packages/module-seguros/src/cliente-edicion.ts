@@ -210,12 +210,95 @@ export function sexoDeSaludo(saludo: string | null | undefined): SexoFicha | nul
   return t === SALUDO_POR_SEXO.hombre ? 'hombre' : t === SALUDO_POR_SEXO.mujer ? 'mujer' : null
 }
 
+// ─── Estado civil (20/10/2026) ───────────────────────────────────────────────
+//
+// `clientes.estado_civil` (VARCHAR 40) es TEXTO: el del CRM («Casado») o el NOMBRE de la opción del catálogo de
+// Codeoscopic (`/marital-statuses`). El cotizador lo empareja con ese catálogo por nombre EXACTO normalizado
+// (`emparejar` de asegura): por eso lo que se escribe desde el cotizador es el NOMBRE de la opción, tal cual, y así la
+// próxima vez viene precargado. Nunca un valor de cajón («otro», «N/A»): no se escribe y no pisa lo que hubiera.
+
+/** Una opción de catálogo (misma forma que `Opcion` de asegura/plataforma). */
+export type OpcionEstadoCivil = { id: string; nombre: string }
+export const MAX_ESTADO_CIVIL = 40
+
+/** Valores de cajón: dicen «no se sabe» con forma de dato. Comparados sin tildes, minúsculas y espacios colapsados. */
+const CAJON_ESTADO_CIVIL: ReadonlySet<string> = new Set([
+  'otro', 'otros', 'otra', 'otras', 'other', 'n/a', 'na', 'n.a.', 'n/d', 'nd', 'desconocido', 'desconocida', 'unknown',
+  'no consta', 'sin especificar', 'no especificado', 'not specified', 'sin dato', 'sin datos', 'ninguno', 'null',
+  'undefined', '-', '--', '?',
+])
+
+function claveEstadoCivil(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+}
+
+/** ¿Es un valor de cajón (o vacío)? PURA. */
+export function esEstadoCivilCajon(v: unknown): boolean {
+  if (typeof v !== 'string') return true
+  const k = claveEstadoCivil(v)
+  return k === '' || CAJON_ESTADO_CIVIL.has(k)
+}
+
+/** El texto que se puede guardar en la ficha: no vacío, ≤40 (la columna), y nunca un valor de cajón. PURA. */
+export function estadoCivilGuardable(v: unknown): Revisado<string> {
+  if (typeof v !== 'string' || v.trim() === '') return { ok: false, motivo: 'Falta el estado civil.' }
+  const s = v.replace(/\s+/g, ' ').trim()
+  if (esEstadoCivilCajon(s)) return { ok: false, motivo: `«${s}» no es un estado civil (valor de cajón): no se guarda.` }
+  if (s.length > MAX_ESTADO_CIVIL) return { ok: false, motivo: 'Estado civil demasiado largo.' }
+  return { ok: true, valor: s }
+}
+
+/**
+ * Estado civil que llega (id o nombre de una opción) → el NOMBRE de esa opción del catálogo, que es lo que se guarda.
+ * Busca primero por id exacto y si no por nombre normalizado (único). Rechaza: catálogo sin leer (`null`: no se puede
+ * comprobar, así que no se escribe), fuera de catálogo, opción de cajón, y un nombre que el catálogo repite (el
+ * emparejado exacto no lo volvería a encontrar: guardarlo no serviría para precargar). PURA.
+ */
+export function estadoCivilDeCatalogo(v: unknown, catalogo: readonly OpcionEstadoCivil[] | null | undefined): Revisado<string> {
+  if (!catalogo) return { ok: false, motivo: 'No se ha podido leer el catálogo de estados civiles: no se guarda sin comprobarlo.' }
+  if (typeof v !== 'string' || v.trim() === '') return { ok: false, motivo: 'Falta el estado civil.' }
+  const t = v.trim()
+  const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  const porId = catalogo.filter((o) => o.id === t)
+  const porNombre = catalogo.filter((o) => normal(o.nombre) === normal(t))
+  const hallada = porId.length === 1 ? porId[0] : porId.length === 0 && porNombre.length === 1 ? porNombre[0] : null
+  if (!hallada) return { ok: false, motivo: `Estado civil fuera del catálogo: «${t.slice(0, 60)}».` }
+  const g = estadoCivilGuardable(hallada.nombre)
+  if (!g.ok) return g
+  if (catalogo.filter((o) => normal(o.nombre) === normal(hallada.nombre)).length > 1) {
+    return { ok: false, motivo: `El catálogo repite «${hallada.nombre}»: no se guarda (no se podría volver a emparejar).` }
+  }
+  return g
+}
+
+/**
+ * ¿El estado civil que YA tiene la ficha casa con el catálogo? Misma regla que `emparejar` del cotizador: nombre
+ * normalizado (sin tildes ni mayúsculas) igual a UNA sola opción. Si casa, el cotizador lo precarga y no hay nada que
+ * corregir: un guardado «desde el cotizador» no lo pisa. Vacío/`null` o de cajón = no casa. PURA.
+ */
+export function estadoCivilFichaCasa(actual: string | null | undefined, catalogo: readonly OpcionEstadoCivil[]): boolean {
+  if (typeof actual !== 'string' || esEstadoCivilCajon(actual)) return false
+  const normal = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+  const buscado = normal(actual)
+  return buscado !== '' && catalogo.filter((o) => normal(o.nombre) === buscado).length === 1
+}
+
 /** `null` en un campo = borrarlo; ausente = no tocarlo. */
 export type EdicionCliente = {
   identidad?: Partial<Record<CampoIdentidad, string | null>>
   libre?: Partial<Record<CampoLibre, string | null>>
   /** Sexo (`clientes.saludo`: hombre '1' · mujer '2'). Ausente = no tocarlo; no hay forma de «borrarlo» ni valor por defecto. */
   sexo?: SexoFicha
+  /**
+   * Estado civil (`clientes.estado_civil`), ya traducido al NOMBRE de la opción del catálogo por quien llama
+   * (`estadoCivilDeCatalogo`). Ausente = no tocarlo; no se borra ni admite valores de cajón (`estadoCivilGuardable`).
+   */
+  estadoCivil?: string
+  /**
+   * El guardado viene del COTIZADOR (no de la ficha): el catálogo con el que se validó. Si el estado civil que ya hay en
+   * la ficha casa con él (`estadoCivilFichaCasa`), NO se pisa (el cotizador solo rellena el que falta o no casa).
+   */
+  estadoCivilSoloSiNoCasa?: readonly OpcionEstadoCivil[]
   /** El documento de identidad que acredita el cambio. Obligatorio si se toca identidad (salvo `motivo`). */
   documentoId?: string | null
   /**
@@ -239,13 +322,14 @@ export type EdicionRevisada =
       identidad: IdentidadRevisada
       libre: Partial<Record<CampoLibre, string | null>>
       sexo?: SexoFicha
+      estadoCivil?: string
       tocaIdentidad: boolean
       /** El cambio de identidad va SIN documento, con este motivo (ya validado). */
       motivoCambio?: string
       /** Solo se COMPLETARON los apellidos (sin documento ni motivo): lo que había y lo que queda. */
       apellidosCompletados?: { antes: string; despues: string }
     }
-  | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre | 'sexo' }
+  | { ok: false; motivo: string; campo?: CampoIdentidad | CampoLibre | 'sexo' | 'estadoCivil' }
 
 /** `'documento_requerido'` es el motivo que la pantalla convierte en «pide el DNI». */
 export const MOTIVO_DOCUMENTO_REQUERIDO = 'documento_requerido'
@@ -363,10 +447,16 @@ export function revisarEdicion(e: EdicionCliente, ctx: {
   }
 
   if (e.sexo !== undefined && !SEXOS_FICHA.includes(e.sexo)) return { ok: false, motivo: 'Sexo no válido: hombre o mujer.', campo: 'sexo' }
-  const sexo = e.sexo !== undefined ? { sexo: e.sexo } : {}
+  let estadoCivil: { estadoCivil: string } | Record<string, never> = {}
+  if (e.estadoCivil !== undefined) {
+    const ec = estadoCivilGuardable(e.estadoCivil)
+    if (!ec.ok) return { ok: false, motivo: ec.motivo, campo: 'estadoCivil' }
+    estadoCivil = { estadoCivil: ec.valor }
+  }
+  const extras = { ...(e.sexo !== undefined ? { sexo: e.sexo } : {}), ...estadoCivil }
 
   const tocaIdentidad = Object.keys(identidad).length > 0
-  if (!tocaIdentidad && Object.keys(libre).length === 0 && e.sexo === undefined) return { ok: false, motivo: 'No hay nada que cambiar.' }
+  if (!tocaIdentidad && Object.keys(libre).length === 0 && e.sexo === undefined && e.estadoCivil === undefined) return { ok: false, motivo: 'No hay nada que cambiar.' }
   const soloRellenaNombre = ctx.fichaSinNombre === true && identidad.nombre !== undefined
     && Object.keys(identidad).every((k) => k === 'nombre' || k === 'apellidos')
   // Completar apellidos («Slava» → «Slava Antoli») tampoco es corregir: sin motivo. Si el motivo viene
@@ -376,7 +466,7 @@ export function revisarEdicion(e: EdicionCliente, ctx: {
     && !motivoCambioValido(e.motivo)
   if (tocaIdentidad && !e.documentoId && !soloRellenaNombre && completaSolo) {
     return {
-      ok: true, identidad, libre, ...sexo, tocaIdentidad,
+      ok: true, identidad, libre, ...extras, tocaIdentidad,
       apellidosCompletados: { antes: (ctx.apellidosActuales ?? '').replace(/\s+/g, ' ').trim(), despues: identidad.apellidos ?? '' },
     }
   }
@@ -386,9 +476,9 @@ export function revisarEdicion(e: EdicionCliente, ctx: {
     if (!ctx.permiteMotivo) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
     const motivoCambio = motivoCambioValido(e.motivo)
     if (!motivoCambio) return { ok: false, motivo: MOTIVO_CAMBIO_REQUERIDO }
-    return { ok: true, identidad, libre, ...sexo, tocaIdentidad, motivoCambio }
+    return { ok: true, identidad, libre, ...extras, tocaIdentidad, motivoCambio }
   }
-  return { ok: true, identidad, libre, ...sexo, tocaIdentidad }
+  return { ok: true, identidad, libre, ...extras, tocaIdentidad }
 }
 
 /**
@@ -483,6 +573,7 @@ export function textoHistorialEdicion(
     else partes.push(v === null ? `${ETIQUETA_CAMPO[c]} borrado` : `${ETIQUETA_CAMPO[c]} → ${v}`)
   }
   if (r.sexo) partes.push(`sexo → ${r.sexo}`)
+  if (r.estadoCivil) partes.push(`estado civil → ${r.estadoCivil}`)
   return `Edición desde plataforma por ${ctx.actor}: ${partes.join(' · ')}`
 }
 

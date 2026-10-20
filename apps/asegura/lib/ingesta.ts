@@ -26,6 +26,7 @@ import { esColumnaAusente } from './pg-error'
 import type {
   EntradaRechazada,
   EntidadIngesta,
+  RitmoTipo,
   FicheroEnCuarentena,
   FicheroParcial,
   CampoImportanteSinLeer,
@@ -368,7 +369,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     //    cuatro huecos de cero, y esos ceros hunden el baremo hasta hacerlo
     //    inservible.
     const ritmoRaw = await db.$queryRawUnsafe<
-      Array<{ entidad: string | null; dias: number | null; hueco_max: number | null; huecos: bigint | null }>
+      Array<{ entidad: string | null; dias: number | null; hueco_max: number | null; hueco_med: number | null; huecos: bigint | null }>
     >(`
       WITH dias_con_fichero AS (
         SELECT codigo_entidad AS entidad, descargado_at::date AS dia
@@ -383,16 +384,58 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       SELECT entidad,
              (CURRENT_DATE - MAX(dia)) AS dias,
              MAX(hueco) AS hueco_max,
+             percentile_disc(0.5) WITHIN GROUP (ORDER BY hueco) FILTER (WHERE hueco IS NOT NULL) AS hueco_med,
              COUNT(*) FILTER (WHERE hueco IS NOT NULL) AS huecos
       FROM huecos GROUP BY entidad
     `)
+
+    // `ficheros90`: ficheros de los 90 d ANTERIORES AL ÚLTIMO fichero de ese tipo (no a hoy): un tipo
+    // mudo no puede dejar de ser «habitual» precisamente por estar mudo.
+    // Ritmo por TIPO de fichero dentro de cada compañía (POL/REC/SIN/CEF), calculado igual que el
+    // de la compañía, en UNA consulta agregada. Un fallo de lectura → `null` y `porTipo` queda
+    // AUSENTE (no se sabe), jamás `[]`: el vigía por compañía sigue como antes.
+    const tipoRaw = await db.$queryRawUnsafe<
+      Array<{ entidad: string | null; tipo: string | null; dias: number | null; hueco_med: number | null; huecos: bigint | null; ficheros90: bigint | null }>
+    >(`
+      WITH dias_tipo AS (
+        SELECT codigo_entidad AS entidad, tipo_objeto AS tipo, descargado_at::date AS dia,
+               COUNT(*) AS n
+        FROM cima_ficheros
+        WHERE descargado_at IS NOT NULL AND codigo_entidad IS NOT NULL AND tipo_objeto IS NOT NULL
+        GROUP BY 1, 2, 3
+      ), huecos AS (
+        SELECT entidad, tipo, dia, n,
+               dia - lag(dia) OVER (PARTITION BY entidad, tipo ORDER BY dia) AS hueco,
+               MAX(dia) OVER (PARTITION BY entidad, tipo) AS ultimo
+        FROM dias_tipo
+      )
+      SELECT entidad, tipo,
+             (CURRENT_DATE - MAX(dia)) AS dias,
+             percentile_disc(0.5) WITHIN GROUP (ORDER BY hueco) FILTER (WHERE hueco IS NOT NULL) AS hueco_med,
+             COUNT(*) FILTER (WHERE hueco IS NOT NULL) AS huecos,
+             COALESCE(SUM(n) FILTER (WHERE dia > ultimo - 90), 0) AS ficheros90
+      FROM huecos GROUP BY entidad, tipo
+    `).catch(() => null)
+    const porTipoMap = new Map<string, RitmoTipo[]>()
+    for (const r of tipoRaw ?? []) {
+      const k = r.entidad ?? ''
+      const lista = porTipoMap.get(k) ?? []
+      lista.push({
+        tipo: r.tipo ?? 'desconocido',
+        diasSinFichero: r.dias === null ? null : Math.floor(Number(r.dias)),
+        huecoMediano: r.hueco_med === null || r.hueco_med === undefined ? null : Math.floor(Number(r.hueco_med)),
+        huecosObservados: Number(r.huecos ?? 0),
+        ficheros90d: Number(r.ficheros90 ?? 0),
+      })
+      porTipoMap.set(k, lista)
+    }
 
     //    Y la consecuencia MEDIDA, que es la que no depende de ningún umbral:
     //    pólizas vivas por compañía y renovaciones que vencieron DESDE su
     //    último fichero sin que llegara nada. `esCarteraViva` en SQL:
     //    `import_ref IS NULL OR eiac_xml_hash IS NOT NULL`.
     const carteraRaw = await db.$queryRawUnsafe<
-      Array<{ entidad: string | null; vivas: bigint | null; vencidas: bigint | null; proximas: bigint | null }>
+      Array<{ entidad: string | null; vivas: bigint | null; vencidas: bigint | null; proximas: bigint | null; proximas30: bigint | null }>
     >(`
       WITH ultimo AS (
         SELECT codigo_entidad AS entidad, MAX(descargado_at::date) AS dia
@@ -413,7 +456,11 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
              COUNT(*) FILTER (
                WHERE v.fecha_vencimiento > CURRENT_DATE
                  AND v.fecha_vencimiento <= CURRENT_DATE + 90
-             ) AS proximas
+             ) AS proximas,
+             COUNT(*) FILTER (
+               WHERE v.fecha_vencimiento > CURRENT_DATE
+                 AND v.fecha_vencimiento <= CURRENT_DATE + 30
+             ) AS proximas30
       FROM viva v LEFT JOIN ultimo u ON u.entidad = v.entidad
       GROUP BY v.entidad
     `)
@@ -446,12 +493,16 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         entidad: clave || 'desconocida',
         diasSinFichero: r.dias === null ? null : Math.floor(Number(r.dias)),
         huecoMaximo: r.hueco_max === null ? null : Math.floor(Number(r.hueco_max)),
+        // Hueco TÍPICO (mediana): baremo del silencio. null = sin huecos que medir.
+        huecoMediano: r.hueco_med === null || r.hueco_med === undefined ? null : Math.floor(Number(r.hueco_med)),
         huecosObservados: Number(r.huecos ?? 0),
         // Una compañía con ficheros pero sin fila de cartera tiene 0 vivas
         // MEDIDAS (el LEFT JOIN sale de las vivas), no «no se sabe».
         vivas: c ? Number(c.vivas ?? 0) : 0,
         vencidasEnSilencio: c ? n(c.vencidas) : 0,
         vencen90d: c ? n(c.proximas) : 0,
+        vencen30d: c ? n(c.proximas30) : 0,
+        ...(tipoRaw !== null && porTipoMap.has(clave) ? { porTipo: porTipoMap.get(clave)! } : {}),
         ...(porSin?.has(clave) ? {
           nombre: porSin.get(clave)!.nombre,
           enVigor: n(porSin.get(clave)!.en_vigor),

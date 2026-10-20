@@ -33,6 +33,7 @@
 // auto ya hace.
 
 import { sexoAPersistir, guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
+import { estadoCivilAPersistir, guardarEstadoCivilEnFicha } from '@/lib/correduria/estado-civil-cotizador-ficha'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Flag, FlaskConical } from 'lucide-react'
@@ -397,6 +398,18 @@ export default function AutoNuevo({
   const [fechaEfecto, setFechaEfecto] = useState('')
   const limitesEfecto = limitesFechaEfecto()
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
+  // Estado civil elegido porque la ficha no lo traía o no casaba → a la ficha (20/10/2026), para que la próxima vez venga puesto.
+  const civilGuardado = useRef<string | null>(null)
+  function elegirEstadoCivil(id: string) {
+    setEstadoCivilId(id)
+    const a = estadoCivilAPersistir({
+      precargado: estadoCivilAuto, precalificado: faltanInicial !== null, elegidoId: id, catalogo: civiles,
+      yaGuardadoId: civilGuardado.current, empresa: variante?.empresas.tomador === true,
+    })
+    if (!a) return
+    civilGuardado.current = id
+    void guardarEstadoCivilEnFicha(clienteId, a).then((ok) => { if (!ok && civilGuardado.current === id) civilGuardado.current = null })
+  }
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
@@ -1579,7 +1592,7 @@ export default function AutoNuevo({
             <p style={{ fontSize: 13, margin: 0, alignSelf: 'center' }}>Empresa: va con su CIF y su razón social, sin estado civil. Conduce el conductor habitual del riesgo.</p>
           ) : (
                     <Campo etiqueta="Estado civil" falta={faltaCivil} ayuda={estadoCivilAuto ? `Viene de la ficha («${estadoCivilAuto.nombre}»). Se puede cambiar.` : 'La ficha no lo dice o no casa con el catálogo: elígelo.'}>
-              <select value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)} style={input}>
+              <select value={estadoCivilId} onChange={(e) => elegirEstadoCivil(e.target.value)} style={input}>
                 <option value="">Elige estado civil</option>
                 {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>

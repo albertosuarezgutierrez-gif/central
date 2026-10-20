@@ -23,8 +23,11 @@
 // Todo aquí es puro: decide con la respuesta ya leída, sin red ni BD. La lectura
 // vive en `ingesta-cima.ts` (servidor) y la pinta `Ingesta.tsx` (cliente).
 // ────────────────────────────────────────────────────────────────────────────
-import type { SaludIngesta, SilencioEntidad } from '@central/module-seguros'
 import {
+  ACCION_SILENCIO,
+  lineaTipoMudo,
+  type SaludIngesta,
+  type SilencioEntidad,
   DIAS_AVISO_PURGA,
   DIAS_GRACIA_RENOVACION,
   HORAS_PULL_MUDO,
@@ -178,6 +181,7 @@ export type SenalIngesta = {
     | 'huerfanas'
     | 'rechazos'
     | 'silencio'
+    | 'silencio_tipo'
     | 'backlog'
     | 'cron'
     | 'crudo'
@@ -202,6 +206,11 @@ export type SenalIngesta = {
 
 function companiasMudas(silencio: SilencioEntidad[] | null): SilencioEntidad[] {
   return (silencio ?? []).filter(e => e.veredicto === 'silencio')
+}
+
+/** Compañías que mandan, pero con un tipo de fichero (SIN…) mudo. */
+function companiasConTipoMudo(silencio: SilencioEntidad[] | null): SilencioEntidad[] {
+  return (silencio ?? []).filter(e => e.veredicto === 'tipo_mudo' && (e.tiposMudos?.length ?? 0) > 0)
 }
 
 function rechazosRecientes(s: SaludIngesta) {
@@ -239,12 +248,31 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
 
   const mudas = companiasMudas(s.silencio)
   if (mudas.length > 0) {
+    // Solo se pinta cuando > 0; sin PII (compañía y recuento).
+    const riesgo = mudas
+      .filter(m => (m.renovacionesEnRiesgo ?? 0) > 0)
+      .map(m => `${m.nombre ?? m.entidad}: ${m.renovacionesEnRiesgo} vencen en ≤30 d`)
     out.push({
       clave: 'silencio', tipo: 'perdida', n: mudas.length,
       titulo: `${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos`,
       detalle:
         'No hay nada atascado que reprocesar: sencillamente no llega. Compruébalo en ' +
-        'CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.',
+        'CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.' +
+        (riesgo.length > 0 ? ` Renovaciones en riesgo: ${riesgo.join('; ')}.` : ''),
+    })
+  }
+
+  const conTipoMudo = companiasConTipoMudo(s.silencio)
+  if (conTipoMudo.length > 0) {
+    const partes = conTipoMudo.map(c =>
+      `${c.nombre ?? c.entidad}: ${(c.tiposMudos ?? []).map(lineaTipoMudo).join(', ').toLowerCase()}`,
+    )
+    out.push({
+      clave: 'silencio_tipo', tipo: 'perdida', n: conTipoMudo.length,
+      titulo: `${conTipoMudo.map(c => c.entidad).join(', ')}: un tipo de fichero ha dejado de llegar`,
+      detalle:
+        `${partes.join('; ')}. La compañía sigue mandando el resto, así que no se nota por fuera. ` +
+        ACCION_SILENCIO + '.',
     })
   }
 
@@ -591,6 +619,10 @@ export function tituloIngesta(v: VistaIngesta | null): string {
   const s = (v as Extract<VistaIngesta, { estado: 'ok' }>).salud
   const mudas = companiasMudas(s.silencio)
   if (mudas.length > 0) return `${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos`
+  const conTipoMudo = companiasConTipoMudo(s.silencio)
+  if (conTipoMudo.length > 0 && senalesIngesta(s).filter(x => x.tipo === 'perdida').every(x => x.clave === 'silencio_tipo')) {
+    return `${conTipoMudo.map(c => c.entidad).join(', ')}: un tipo de fichero ha dejado de llegar`
+  }
   if (ver === 'incidencia') {
     // Si lo ÚNICO medido son renovaciones que no llegan, se dice eso: «se están
     // perdiendo datos» mandaría a buscar un fichero atascado que no existe.

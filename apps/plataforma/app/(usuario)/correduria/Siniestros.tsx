@@ -32,6 +32,9 @@ import {
 } from '@/lib/siniestros-asegura'
 import Documentos from './Documentos'
 import { ListaPersonasCima } from './PersonaCima'
+import Plegable from './poliza/[id]/Plegable'
+import MasDatosCima from './poliza/[id]/MasDatosCima'
+import { hayMasDatos } from '@/lib/cima-extra-vista'
 import PartesSinVincular, { type PrecargaDesdeParte } from './PartesSinVincular'
 import type { Compania } from '@/lib/companias-asegura'
 import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar } from '@/lib/compania-contacto-siniestro'
@@ -918,6 +921,13 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
           <div style={etiqueta}>Terceros (CIMA)</div>
           <ListaPersonasCima lista={s.tercerosCima} />
         </div>
+      )}
+
+      {/* «Más datos de CIMA»: solo operador, plegado y solo si hay algo (`null` = aún no leído, `[]` = nada más). */}
+      {hayMasDatos(s.cimaExtra) && (
+        <Plegable titulo="Más datos de CIMA" resumen={`${s.cimaExtra.reduce((n, g) => n + g.filas.length, 0)} campos`}>
+          <MasDatosCima grupos={s.cimaExtra} truncado={s.cimaExtraTruncado} />
+        </Plegable>
       )}
 
       {propio && (
