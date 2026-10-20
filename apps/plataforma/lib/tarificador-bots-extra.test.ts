@@ -57,5 +57,5 @@ test('cableado: el bloque guarda al salir del campo y pinta lo precargado; el co
   assert.match(bloque, /valorCampoExtra\(c\.clave, extra, inicialesExtra, formulario/)
   assert.match(bloque, /adaptador\.construir\(formulario, efectivo\)/)
   const moto = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
-  assert.match(moto, /poblacion: listaMunicipios\.find\(\(m\) => m\.id === municipioId\)\?\.nombre \?\? null/)
+  assert.match(moto, /poblacion: poblacionParaBot\(\{ elegidoId: municipioId, municipios, cpMunicipios, cpCirculacionRiesgo: datosRiesgo\?\.cpCirculacion \}\)/)
 })
