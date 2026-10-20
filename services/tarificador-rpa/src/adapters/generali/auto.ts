@@ -117,8 +117,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * normalizada (varias → atasco `eleccion`; ninguna → «Otros» declarado como supuesto) por las puertas de modelo de guard.ts. Si tras el
  * modelo salen campos NUEVOS sin rellenar, NO se pulsa «Confirmar»: se baja el scroll y se PARA con hueco listando etiquetas y opciones.
  * El hueco ya no dice «SIN CAPTURA» (el runner SÍ guarda la captura/recorrido/inventario en cualquier hueco con `pideInventarioDom`).
+ * 0.2.13 (20/10/2026, prueba real: tras «Confirmar» el selector seguía abierto con «Modelo: Seleccione uno»): ANTES de «Confirmar» se verifica que
+ * el modelo elegido es el del label del SelectOneMenu Y el del `<select>` oculto (si no, un reintento por el select oculto esperando al AJAX; si
+ * sigue sin casar, hueco «el modelo no quedó seleccionado: label=…, input=…» SIN pulsar). TRAS «Confirmar» se espera hasta 25 s: Identificación
+ * del vehículo con el selector cerrado → sigue; selector abierto → hueco con los mensajes de validación visibles (`.ui-messages`, error, growl).
  */
-export const VERSION_GENERALI_AUTO = '0.2.12'
+export const VERSION_GENERALI_AUTO = '0.2.13'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -789,7 +793,7 @@ export async function esperarMenuModelo(page: Page, selector: Raiz, baseMarca: s
  * Elige el modelo en su SelectOneMenu con el criterio de la marca (igualdad EXACTA normalizada). Varias → atasco `eleccion`; ninguna →
  * «Otros» si hay UNA (se declara en `avisos` como supuesto); sin «Otros» → atasco `eleccion` con las cercanas o todas, sin tocar nada.
  */
-export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal, avisos?: string[]): Promise<void> {
+export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal, avisos?: string[]): Promise<{ valor: string; texto: string; indice: number }> {
   const b = buscadoEnNivel(v, 'modelo')
   if (!b) throw new ErrorMapaIncompletoGenerali('el modelo del vehículo de la oportunidad (el selector de Generali lo exige)', false)
   const opciones = await opcionesSelect(menu.select)
@@ -802,6 +806,125 @@ export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v
   }
   if (e.tipo === 'otros') avisos?.push(e.supuesto)
   await ponerOpcionPrimeFaces(raiz, menu, opciones[e.indice]!, e.indice, ctx.abrirDesplegableModeloGenerali, ctx.elegirModeloListaGenerali, ctx, 'el modelo elegido en «Modelo»')
+  return { ...opciones[e.indice]!, indice: e.indice }
+}
+
+// ───────────── v0.2.13: verificación del modelo antes de «Confirmar» y espera clasificada después ─────────────
+
+/** El modelo está de verdad elegido cuando el label del SelectOneMenu Y la opción seleccionada del `<select>` oculto dicen el elegido (normalizado). */
+export function modeloVerificadoGenerali(esperado: string, label: string, input: string): boolean {
+  const e = normalizarCatalogo(esperado)
+  return e !== '' && normalizarCatalogo(label) === e && normalizarCatalogo(input) === e
+}
+
+/** Lo que muestran hoy el label y el `<select>` oculto (texto de la opción seleccionada) del SelectOneMenu. Solo lee. */
+async function leerModeloMostrado(menu: MenuPrimeFaces): Promise<{ label: string; input: string }> {
+  const input = await menu.select.evaluate((el) => {
+    const s = el as HTMLSelectElement
+    return (s.selectedOptions[0]?.textContent ?? '').trim()
+  }).catch(() => '')
+  const label = await menu.select.evaluate((el, b) => (document.getElementById(`${b}_label`)?.textContent ?? '').trim(), menu.base).catch(() => '')
+  return { label, input }
+}
+
+const ESPERA_AJAX_MODELO_MS = 2_500
+
+/**
+ * Antes de «Confirmar»: el modelo elegido debe verse en el label Y en el `<select>` oculto. Si no casa, UN reintento: espera a que el panel AJAX
+ * termine, vuelve a localizar el menú y repone la opción por el select oculto (+ change). Si sigue sin casar → hueco, SIN pulsar «Confirmar».
+ */
+export async function verificarModeloAntesDeConfirmar(page: Page, selector: Raiz, menu: MenuPrimeFaces, baseMarca: string, elegida: { valor: string; texto: string; indice: number }): Promise<void> {
+  let m = await leerModeloMostrado(menu)
+  if (modeloVerificadoGenerali(elegida.texto, m.label, m.input)) return
+  await page.waitForTimeout(ESPERA_AJAX_MODELO_MS)
+  const de = await esperarMenuModelo(page, selector, baseMarca, 6_000)
+  const m2 = de ?? menu
+  const ops = await opcionesSelect(m2.select).catch(() => [])
+  const idx = ops.findIndex((o) => normalizarCatalogo(o.texto) === normalizarCatalogo(elegida.texto))
+  if (idx >= 0) {
+    await comprobarCampo(m2.select)
+    await m2.select.selectOption({ index: idx }, { force: true }).catch(() => undefined)
+    await m2.select.dispatchEvent('change').catch(() => undefined)
+    await page.waitForTimeout(ESPERA_AJAX_MODELO_MS)
+  }
+  m = await leerModeloMostrado(de ?? menu)
+  if (modeloVerificadoGenerali(elegida.texto, m.label, m.input)) return
+  throw new ErrorMapaIncompletoGenerali(`el modelo no quedó seleccionado: label=«${m.label.slice(0, 80)}», input=«${m.input.slice(0, 80)}» (esperado «${elegida.texto.slice(0, 80)}»); NO se pulsa «Confirmar»`)
+}
+
+export type EstadoPostConfirmar = { identificacion: boolean; selectorAbierto: boolean; mensajes: string[]; transcurridoMs: number; esperaMs: number }
+/** Gracia mínima con el selector abierto antes de dar por buenos unos mensajes de validación (el portal puede pintarlos y limpiarlos). */
+const GRACIA_MENSAJES_MS = 4_000
+let ESPERA_POST_CONFIRMAR_MS = 25_000
+/** Solo para pruebas: acorta la espera posterior a «Confirmar» (en producción son 25 s). */
+export function fijarEsperaPostConfirmarGenerali(ms: number): void {
+  ESPERA_POST_CONFIRMAR_MS = ms
+}
+
+/**
+ * Clasifica lo visto tras «Confirmar»: `siguiente` (Identificación del vehículo y el selector cerrado), `validacion` (selector abierto con
+ * mensajes tras la gracia, o agotada la espera con el selector abierto), `desconocida` (agotada la espera, selector cerrado y sin Identificación),
+ * `esperar` (aún dentro del plazo).
+ */
+export function clasificarPostConfirmarGenerali(e: EstadoPostConfirmar): 'siguiente' | 'validacion' | 'desconocida' | 'esperar' {
+  if (e.identificacion && !e.selectorAbierto) return 'siguiente'
+  if (e.selectorAbierto && e.mensajes.length > 0 && e.transcurridoMs >= GRACIA_MENSAJES_MS) return 'validacion'
+  if (e.transcurridoMs < e.esperaMs) return 'esperar'
+  return e.selectorAbierto ? 'validacion' : 'desconocida'
+}
+
+const JS_MENSAJES_VALIDACION = `(() => {
+  const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
+  const out = [];
+  for (const el of Array.from(document.querySelectorAll('.ui-messages-error, .ui-messages-warn, .ui-messages li, .ui-message-error, .ui-growl-message, .ui-growl-item'))) {
+    if (!vis(el)) continue;
+    const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+    if (t && !out.includes(t)) out.push(t.slice(0, 200));
+  }
+  return out;
+})()`
+
+/** ¿Sigue abierto el selector (marco no desprendido y con «Confirmar» visible)? Y los mensajes de validación visibles de TODOS los marcos. Solo lee. */
+async function leerEstadoPostConfirmar(page: Page, selector: Raiz): Promise<{ selectorAbierto: boolean; mensajes: string[] }> {
+  let selectorAbierto = false
+  if (!('isDetached' in selector && selector.isDetached())) {
+    selectorAbierto = (await selector.getByRole('button', { name: 'Confirmar', exact: true }).filter({ visible: true }).count().catch(() => 0)) > 0
+  }
+  const mensajes: string[] = []
+  for (const f of page.frames()) {
+    if (f.isDetached()) continue
+    for (const t of ((await f.evaluate(JS_MENSAJES_VALIDACION).catch(() => [])) as string[])) if (!mensajes.includes(t)) mensajes.push(t)
+  }
+  return { selectorAbierto, mensajes: mensajes.slice(0, 8) }
+}
+
+/** Espera (hasta `esperaMs`) a que el portal cierre el selector o lo valide. `true` = Identificación del vehículo; si no, hueco con el motivo. */
+export async function esperarTrasConfirmarGenerali(page: Page, selector: Raiz, esperaMs?: number): Promise<void> {
+  const ini = Date.now()
+  esperaMs ??= ESPERA_POST_CONFIRMAR_MS
+  for (;;) {
+    const { selectorAbierto, mensajes } = await leerEstadoPostConfirmar(page, selector)
+    const identificacion = (await marcoConTexto(page, 'Identificación del vehículo', 0)) !== null
+    const transcurridoMs = Date.now() - ini
+    const c = clasificarPostConfirmarGenerali({ identificacion, selectorAbierto, mensajes, transcurridoMs, esperaMs })
+    if (c === 'siguiente') return
+    if (c !== 'esperar') {
+      // El inventario de TODOS los marcos lo toma el runner al parar con este hueco: es justo después de esta lectura, al FINAL de la espera.
+      const botones: string[] = []
+      const marcos: string[] = []
+      for (const f of page.frames()) if (!f.isDetached()) {
+        marcos.push(rutaSinQuery(f.url()) || '(vacío)')
+        botones.push(...(await leerPantalla(f).catch(() => ({ botones: [] as string[] }))).botones)
+      }
+      const b = [...new Set(botones)].join(' · ').slice(0, 600) || '(ninguno)'
+      const m = marcos.join(' | ').slice(0, 400)
+      if (c === 'validacion') {
+        throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos: el selector SIGUE ABIERTO tras ${Math.round(transcurridoMs / 1000)} s y el portal no lo validó. Mensajes de validación visibles: ${mensajes.length > 0 ? mensajes.map((x) => `«${x}»`).join(' · ') : '(ninguno visible)'}. Botones vistos: ${b}. Marcos: ${m}`)
+      }
+      throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos (no es «Identificación del vehículo»; el selector se cerró pero no apareció tras ${Math.round(transcurridoMs / 1000)} s; su captura y su inventario los deja el runner). Botones vistos: ${b}. Marcos: ${m}`)
+    }
+    await page.waitForTimeout(500)
+  }
 }
 
 /**
@@ -817,7 +940,7 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
   await elegirMarcaPrimeFaces(selector, menu, v, ctx)
   const modelo = await esperarMenuModelo(page, selector, menu.base)
   if (!modelo) throw new ErrorMapaIncompletoGenerali(`el desplegable «Modelo» del selector de vehículos tras elegir la marca (no apareció en ${Math.round(ESPERA_MODELO_MS / 1000)} s). Campos vistos: ${resumenCamposSelectorGenerali(await leerCamposSelector(selector))}`)
-  await elegirModeloPrimeFaces(selector, modelo, v, ctx, avisos)
+  const elegida = await elegirModeloPrimeFaces(selector, modelo, v, ctx, avisos)
   await page.waitForTimeout(PAUSA_CAMPOS_NUEVOS_MS)
   const nuevos = camposNuevosSelectorGenerali(antes, await leerCamposSelector(selector), [menu.base, modelo.base])
   if (nuevos.length > 0) {
@@ -826,13 +949,10 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
     const p = await leerPantalla(selector)
     throw new ErrorMapaIncompletoGenerali(`los campos nuevos que salen en el selector de vehículos tras elegir marca y modelo (no se pulsa «Confirmar»): ${resumenCamposSelectorGenerali(nuevos)}. Botones vistos: ${p.botones.join(' · ').slice(0, 400) || '(ninguno)'}`)
   }
+  await verificarModeloAntesDeConfirmar(page, selector, modelo, menu.base, elegida)
   await ctx.confirmarVehiculoGenerali()
-  const valoracion = await marcoConTexto(page, 'Identificación del vehículo', 10_000)
-  if (valoracion) return false
-  const botones: string[] = []
-  for (const f of page.frames()) if (!f.isDetached()) botones.push(...(await leerPantalla(f).catch(() => ({ botones: [] as string[] }))).botones)
-  // La captura, el recorrido y el inventario de esta pantalla los guarda el runner al parar con un hueco de mapa.
-  throw new ErrorMapaIncompletoGenerali(`la pantalla que sigue a «Confirmar» en el selector de vehículos (no es «Identificación del vehículo»; su captura y su inventario los deja el runner). Botones vistos: ${[...new Set(botones)].join(' · ').slice(0, 600) || '(ninguno)'}`)
+  await esperarTrasConfirmarGenerali(page, selector)
+  return false
 }
 
 /**

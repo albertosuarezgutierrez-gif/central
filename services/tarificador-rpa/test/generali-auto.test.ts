@@ -30,7 +30,7 @@ import {
   urlConMediador,
   vehiculoBuscadoGenerali,
 } from '../src/adapters/generali/reglas.ts'
-import { ErrorMapaIncompletoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
+import { ErrorMapaIncompletoGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
@@ -153,8 +153,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.12')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.12')
+  assert.equal(generaliAuto.version, '0.2.13')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.13')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -527,6 +527,7 @@ test('v0.2.5 · menú que no se despliega ni con clic → hueco con inventario, 
 
 // ───────────── v0.2.6: «Selector de vehículos» PrimeFaces (marco `selVehiculo`; select OCULTO + div combobox) ─────────────
 
+fijarEsperaPostConfirmarGenerali(1_500) // producción: 25 s
 const SEL_VEHICULOS = 'https://www.generali.es/mot_motorWeb/mvc/selVehiculo'
 
 /** Estructura del inventario real (ids `buscamarca*`, `placaesp:0/1`, `#cancelar`/`#confirmar`); marcas y valores de prueba. */
@@ -917,5 +918,49 @@ test('v0.2.11 · un modelo que casa con el patrón de emisión (BAJAJ ← «baja
     assert.deepEqual(await b.page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['Otros'])
   } finally {
     await b.cerrar()
+  }
+})
+
+// ───────────── v0.2.13: modelo verificado antes de «Confirmar» y espera clasificada después ─────────────
+
+test('v0.2.13 · modeloVerificadoGenerali: label E input deben decir el modelo elegido (normalizado)', () => {
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'Ibiza', 'IBIZA'), true)
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'Seleccione uno', 'IBIZA'), false)
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'IBIZA', 'Seleccione uno'), false)
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'IBIZA ST', 'IBIZA ST'), false)
+  assert.equal(modeloVerificadoGenerali('', '', ''), false)
+})
+
+test('v0.2.13 · clasificarPostConfirmarGenerali: siguiente / validación / desconocida / esperar', () => {
+  const base = { identificacion: false, selectorAbierto: true, mensajes: [] as string[], transcurridoMs: 0, esperaMs: 25_000 }
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, identificacion: true, selectorAbierto: false }), 'siguiente')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, identificacion: true }), 'esperar', 'Identificación con el selector aún abierto: espera')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, transcurridoMs: 10_000 }), 'esperar')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, mensajes: ['Campo obligatorio'], transcurridoMs: 1_000 }), 'esperar', 'gracia mínima')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, mensajes: ['Campo obligatorio'], transcurridoMs: 5_000 }), 'validacion')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, transcurridoMs: 25_000 }), 'validacion')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, selectorAbierto: false, transcurridoMs: 25_000 }), 'desconocida')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, selectorAbierto: false, transcurridoMs: 3_000 }), 'esperar')
+})
+
+test('v0.2.13 · modelo que no queda en el label: reintento y, si sigue sin casar, hueco SIN pulsar «Confirmar»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON']))
+  try {
+    // El portal "revierte" el label del modelo tras cada elección (el select queda bien, el label no).
+    await page.evaluate(() => { const l = document.getElementById('selmodelo_label')!; new MutationObserver(() => { if (l.textContent !== 'Seleccione uno') l.textContent = 'Seleccione uno' }).observe(l, { childList: true, characterData: true, subtree: true }) })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /el modelo no quedó seleccionado: label=«Seleccione uno», input=«IBIZA»/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0, 'no se pulsó «Confirmar»')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.13 · tras «Confirmar» con el selector abierto: hueco que cita los mensajes de validación visibles', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA']) + '<div class="ui-messages ui-messages-error"><ul><li><span class="ui-messages-error-summary">Debe seleccionar un modelo</span></li></ul></div>')
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /SIGUE ABIERTO/.test(e.message) && /«Debe seleccionar un modelo»/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+  } finally {
+    await cerrar()
   }
 })
