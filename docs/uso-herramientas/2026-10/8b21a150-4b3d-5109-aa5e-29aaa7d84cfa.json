@@ -1,31 +1,32 @@
 {
  "sesion": "8b21a150-4b3d-5109-aa5e-29aaa7d84cfa",
  "inicio": "2026-10-20T06:47:40.316Z",
- "fin": "2026-10-20T06:48:50.804Z",
- "llamadas": 16,
+ "fin": "2026-10-20T07:48:40.868Z",
+ "llamadas": 50,
  "categorias": {
   "otro": {
-   "llamadas": 3,
-   "chars_in": 3024,
-   "chars_out": 280,
+   "llamadas": 4,
+   "chars_in": 5738,
+   "chars_out": 341,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
     "ToolSearch": 1,
-    "SubagentHandback": 1
+    "SubagentHandback": 2
    }
   },
   "lectura-directa": {
-   "llamadas": 2,
-   "chars_in": 233,
-   "chars_out": 15006,
+   "llamadas": 34,
+   "chars_in": 5614,
+   "chars_out": 79024,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 2
+    "Grep": 21,
+    "Read": 13
    }
   },
   "mcp:Supabase": {
@@ -64,6 +65,17 @@
   "agente:general-purpose": {
    "llamadas": 1,
    "chars_in": 1887,
+   "chars_out": 148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 875,
    "chars_out": 148,
    "errores": 0,
    "archivos_citados": 0,
