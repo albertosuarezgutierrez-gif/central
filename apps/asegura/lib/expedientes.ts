@@ -19,6 +19,9 @@ import {
   claseOportunidad,
   esExpedienteDeTrabajo,
   esRescateDeRecibo,
+  esTrabajada,
+  ACCIONES_HISTORIAL_CONTACTO,
+  TIPOS_GESTION_CONTACTO,
   estadoVisible,
   hitoDevolucion,
   importeReciboRescate,
@@ -82,6 +85,11 @@ export type Expediente = {
    */
   rescate: { tipo: 'recibo' | 'anulacion'; recibo: ReciboRescate | null } | null
   contacto: ContactoFila | null
+  /**
+   * ¿La ha trabajado Alberto? `false` = renovación automática (fuente renovacion / import_ref / aviso de
+   * vencimiento…) SIN ningún contacto registrado: Mi mesa la manda a «Renovaciones sin tocar». Ver `esTrabajada()`.
+   */
+  trabajada: boolean
 }
 
 /**
@@ -153,6 +161,7 @@ type Fila = {
   fechaFin: string | null
   notas: string | null
   creada: Date
+  contactada: boolean
   proxima: { tareaId: string; texto: string | null; tipo: string; fecha: string | null } | null
   recibo: { reciboId: string; idRecibo: string | null; importe: string | null; efecto: string | null; situacion: string | null } | null
 }
@@ -173,6 +182,13 @@ export async function expedientesDeTrabajo(
            to_char(o.fecha_fin_vigencia, 'YYYY-MM-DD') as "fechaFin",
            (to_jsonb(o)->>'notas') as notas,
            o.created_at as creada,
+           -- Contacto registrado: historial whatsapp/interesado/llamada, o una llamada/WhatsApp ya CERRADA.
+           (exists (select 1 from oportunidad_historial h
+                    where h.oportunidad_id = o.id and h.correduria_id = o.correduria_id
+                      and h.accion in (${Prisma.join([...ACCIONES_HISTORIAL_CONTACTO])}))
+            or exists (select 1 from gestiones gc
+                       where gc.oportunidad_id = o.id and gc.correduria_id = o.correduria_id
+                         and gc.tipo::text in (${Prisma.join([...TIPOS_GESTION_CONTACTO])}) and gc.estado::text = 'cerrada')) as contactada,
            prox.j as proxima,
            rec.j as recibo
     from oportunidades o
@@ -262,6 +278,7 @@ export async function expedientesDeTrabajo(
       creada: f.creada.toISOString(),
       rescate,
       contacto: null,
+      trabajada: esTrabajada({ fuente: f.fuente, origen: f.origen, conImportRef: f.delVolcado, contactada: f.contactada }),
     })
   }
   const [tareasSueltas, perdidas] = await Promise.all([

@@ -70,6 +70,9 @@ export function TareasSueltas({ lectura, truncado, hoy, onCambio }: { lectura: L
               ? <Link href={`/correduria/cliente/${t.clienteId}`} style={{ fontWeight: 700, color: 'var(--primary)', overflowWrap: 'anywhere' }}>{t.cliente ?? 'Cliente sin nombre'}</Link>
               : <span style={{ fontWeight: 700, color: 'var(--muted)' }}>Sin cliente asociado</span>}
             <Badge tono="neutral">{ROTULO_TIPO_TAREA[t.tipo] ?? t.tipo}</Badge>
+            {t.siniestroId && (t.clienteId
+              ? <Link href={`/correduria/cliente/${t.clienteId}`} title="Tarea de un siniestro: abre la ficha del cliente" style={{ textDecoration: 'none' }}><Badge tono="aviso">Siniestro</Badge></Link>
+              : <Badge tono="aviso">Siniestro</Badge>)}
             <AccionesContacto telefono={t.contacto?.telefono} email={t.contacto?.email} quien={t.cliente ?? 'el cliente'} tam="md" />
           </div>
           <div style={{ fontSize: 14, display: 'flex', flexWrap: 'wrap', gap: '2px 10px', minWidth: 0 }}>

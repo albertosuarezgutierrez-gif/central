@@ -18,6 +18,7 @@ import BuscadorCartera from '../BuscadorCartera'
 import BandaAvisos from './BandaAvisos'
 import CorreosCompania from './CorreosCompania'
 import { PerdidasPorRevisar, TareasSueltas } from './BloquesSueltos'
+import NuevaTarea from './NuevaTarea'
 
 const PAGINA = 50
 const AMBIGUO = 'No se ha podido confirmar si se guardó: recarga para verlo antes de repetirlo.'
@@ -58,6 +59,7 @@ export default function MesaClient() {
   const [datos, setDatos] = useState<Expedientes | null>(null)
   const [recargando, setRecargando] = useState(false)
   const [errorRecarga, setErrorRecarga] = useState<string | null>(null)
+  const [nueva, setNueva] = useState(false)
   const peticion = useRef(0)
   const router = useRouter()
 
@@ -93,9 +95,11 @@ export default function MesaClient() {
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
       <h1 className="solo-lectores">Mi mesa</h1>
       {/* Las mismas acciones que `/correduria` (Subir póliza, Vencimientos, «…»): son enlaces, no montan modales. */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
+        <button type="button" onClick={() => setNueva(true)} style={btnStyle('primario')}>+ Tarea</button>
         <AccionesCabecera />
       </div>
+      {nueva && <NuevaTarea hoy={hoy} onCerrar={() => setNueva(false)} onGuardada={cargar} />}
       <BuscadorCartera />
       {/* La misma barra que `/correduria`: «Mi mesa» y «Prospección» son pantallas propias, el resto son secciones. */}
       <Secciones activa="mesa" contadores={{}} onCambiar={s => router.push(`/correduria?s=${s}`)} />
@@ -146,7 +150,7 @@ export default function MesaClient() {
 }
 
 function Bloque({ bloque, filas, hoy, onCambio }: { bloque: BloqueMesa; filas: Expediente[]; hoy: string; onCambio: () => Promise<void> }) {
-  const plegable = bloque === 'aparcadas'
+  const plegable = bloque === 'aparcadas' || bloque === 'sinTocar'
   const [abierto, setAbierto] = useState(!plegable)
   const [limite, setLimite] = useState(PAGINA)
   const visibles = filas.slice(0, limite)
@@ -155,7 +159,7 @@ function Bloque({ bloque, filas, hoy, onCambio }: { bloque: BloqueMesa; filas: E
       {plegable ? (
         <button type="button" aria-expanded={abierto} onClick={() => setAbierto(a => !a)}
           style={{ ...btnStyle('sutil'), justifyContent: 'flex-start', padding: '0 4px', fontFamily: 'var(--font-titulos, inherit)', fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>
-          {abierto ? '▾' : '▸'} {TITULO_BLOQUE[bloque]} · {filas.length}
+          {abierto ? '▾' : '▸'} {TITULO_BLOQUE[bloque]} · ({filas.length})
         </button>
       ) : (
         <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{TITULO_BLOQUE[bloque]} · {filas.length}</h2>
@@ -186,6 +190,26 @@ function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa;
     if (err) { setError(err); setEnviando(false); return }
     setPanel(null)
     await onCambio() // recarga sin desmontar: la fila se queda hasta que llega la lista nueva
+    setEnviando(false)
+  }
+
+  const hecho = async (tareaId: string) => {
+    setEnviando(true)
+    setError(null)
+    try {
+      const r = await fetch('/api/correduria/oportunidad/tarea', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tareaId }) })
+      const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string } | null
+      if (!(r.ok && j?.estado !== 'error' && j?.estado !== 'invalido')) {
+        setError(r.status >= 500 ? AMBIGUO : `No se ha guardado: ${j?.motivo ?? `HTTP ${r.status}`}`)
+        setEnviando(false)
+        return
+      }
+    } catch {
+      setError(AMBIGUO)
+      setEnviando(false)
+      return
+    }
+    await onCambio()
     setEnviando(false)
   }
 
@@ -241,6 +265,7 @@ function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa;
       {e.notas && <div title={e.notas} style={{ fontSize: 13, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.notas}</div>}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {!aparcada && pa && <button type="button" disabled={enviando} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }} onClick={() => void hecho(pa.tareaId)}>Hecho</button>}
         {puedeGanar && <button type="button" disabled={enviando} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }} onClick={() => void ejecutar({ accion: 'ganar' })}>Ganada</button>}
         {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'perder'} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, color: 'var(--negative)' }} onClick={() => setPanel(panel === 'perder' ? null : 'perder')}>Perdida…</button>}
         {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'aparcar'} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} onClick={() => setPanel(panel === 'aparcar' ? null : 'aparcar')}>Aparcar hasta…</button>}

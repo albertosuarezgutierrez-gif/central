@@ -101,6 +101,43 @@ export function esExpedienteDeTrabajo(o: { estado: string; delVolcado: boolean }
   return !(o.delVolcado && o.estado === 'competencia')
 }
 
+// ── «Trabajada» (Mi mesa, 20/10/2026) ───────────────────────────────────────
+
+/** Orígenes (`info_riesgo.origen`) de una renovación/aviso que entra SOLA, sin que Alberto haga nada. */
+const ORIGENES_RENOVACION_AUTO: ReadonlySet<string> = new Set(['renovacion_cartera', 'web:aviso-vencimiento', 'portal:mejorar-precio'])
+
+/** `oportunidad_historial.accion` que cuentan como CONTACTO con el cliente (llamada o WhatsApp registrados, o «interesado»). */
+export const ACCIONES_HISTORIAL_CONTACTO = ['whatsapp', 'interesado', 'llamada'] as const
+/** `gestiones.tipo` cuyo cierre cuenta como contacto (una pendiente NO: es lo que falta por hacer). */
+export const TIPOS_GESTION_CONTACTO = ['llamada', 'whatsapp'] as const
+
+export type EntradaTrabajada = {
+  fuente: string | null
+  origen: string | null
+  /** `oportunidades.import_ref` no nulo. */
+  conImportRef: boolean
+  /**
+   * ¿Hay contacto registrado? (historial `whatsapp|interesado|llamada`, o gestión llamada/whatsapp CERRADA).
+   * `null` = no se pudo comprobar: no se afirma que no lo haya (la oportunidad se trata como trabajada).
+   */
+  contactada: boolean | null
+}
+
+/** ¿Entra sola (renovación automática / aviso de vencimiento / «mejórame el precio»)? */
+export function esRenovacionAutomatica(e: Pick<EntradaTrabajada, 'fuente' | 'origen' | 'conImportRef'>): boolean {
+  return e.fuente === 'renovacion' || e.conImportRef || (e.origen !== null && ORIGENES_RENOVACION_AUTO.has(e.origen))
+}
+
+/**
+ * ¿Es una oportunidad que Alberto ha TRABAJADO? Una renovación automática sin ningún contacto NO lo es
+ * (es ruido del vencimiento: va a «Renovaciones sin tocar»). Todo lo demás (venta nueva, rescate, lo abierto
+ * a mano…) sí. Contacto desconocido (`null`) → trabajada: ante la duda, no se esconde.
+ */
+export function esTrabajada(e: EntradaTrabajada): boolean {
+  if (!esRenovacionAutomatica(e)) return true
+  return e.contactada !== false
+}
+
 // ── Fechas ──────────────────────────────────────────────────────────────────
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/

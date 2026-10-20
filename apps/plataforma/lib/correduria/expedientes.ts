@@ -55,6 +55,11 @@ export type Expediente = {
   /** Solo en un rescate; `recibo: null` = no se ha podido localizar el recibo (no «no hay»). */
   rescate: { tipo: 'recibo' | 'anulacion'; recibo: ReciboRescate | null } | null
   contacto: ContactoFila | null
+  /**
+   * `false` = renovación automática sin ningún contacto registrado (no la ha trabajado Alberto → «Renovaciones
+   * sin tocar»). `null` = asegura no lo manda (versión anterior): no se esconde nada, no se supone.
+   */
+  trabajada: boolean | null
 }
 
 /** Tarea abierta SIN oportunidad (no es expediente, pero no puede perderse). Se cierra por su `tareaId`. */
@@ -181,6 +186,7 @@ function fila(v: unknown): Expediente | null {
     creada,
     rescate: tipoRescate ? { tipo: tipoRescate, recibo: recibo(resc?.recibo) } : null,
     contacto: contacto(r.contacto),
+    trabajada: typeof r.trabajada === 'boolean' ? r.trabajada : null,
   }
 }
 

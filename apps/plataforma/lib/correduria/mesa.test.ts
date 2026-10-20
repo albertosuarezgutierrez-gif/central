@@ -10,7 +10,7 @@ const exp = (o: Partial<Expediente> = {}): Expediente => ({
   id: 'e1', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', clase: 'venta_nueva', estadoVisible: 'abierta', estado: 'en_negociacion',
   delVolcado: false, aparcadaHasta: null, aparcadaMotivo: null,
   proximaAccion: { tareaId: 't1', texto: 'Llamar', tipo: 'llamada', fecha: '2026-10-20' },
-  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, ...o,
+  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, trabajada: true, ...o,
 })
 const con = (p: Partial<NonNullable<Expediente['proximaAccion']>> | null): Partial<Expediente> =>
   ({ proximaAccion: p === null ? null : { tareaId: 't', texto: '', tipo: 'llamada', fecha: '2026-10-20', ...p } })
@@ -29,6 +29,18 @@ test('bloques: sin fecha o sin próxima acción NO es hoy', () => {
 test('bloques: una aparcada nunca sale fuera de Aparcadas, aunque su acción esté vencida', () => {
   const e = exp({ estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10', ...con({ fecha: '2026-09-01' }) })
   assert.equal(bloqueDe(e, HOY), 'aparcadas')
+})
+
+test('bloques: renovación automática sin contacto va a «Renovaciones sin tocar», no a Hoy/Abiertas/Esperando', () => {
+  assert.equal(bloqueDe(exp({ trabajada: false, ...con({ fecha: HOY }) }), HOY), 'sinTocar')
+  assert.equal(bloqueDe(exp({ trabajada: false }), HOY), 'sinTocar')
+  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'esperando_cliente' }), HOY), 'sinTocar')
+  // Trabajada, o sin dato (null: versión vieja de asegura), NO se esconde.
+  assert.equal(bloqueDe(exp({ trabajada: true, ...con({ fecha: HOY }) }), HOY), 'hoy')
+  assert.equal(bloqueDe(exp({ trabajada: null, ...con({ fecha: HOY }) }), HOY), 'hoy')
+  // Un rescate nunca se esconde; una aparcada sigue en Aparcadas.
+  assert.equal(bloqueDe(exp({ trabajada: false, clase: 'rescate' }), HOY), 'rescates')
+  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10' }), HOY), 'aparcadas')
 })
 
 test('bloques: rescate y esperando cliente', () => {
