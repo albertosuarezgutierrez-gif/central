@@ -100,6 +100,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
   }
 
   async function quitar(it: Item) {
+    if (it.fase === 'subiendo') return // la subida en curso dejaría el staging huérfano
     if (it.path && it.fase !== 'enviado') fetch(`/api/admin/documentos/staging?path=${encodeURIComponent(it.path)}`, { method: 'DELETE' }).catch(() => {})
     setItems(xs => xs.filter(x => x.id !== it.id))
   }
@@ -133,8 +134,12 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
         toda_plantilla: toda, empleado_ids: toda ? [] : (soloIds ?? it.form.destinatarios),
       }),
     }).catch(() => null)
-    const j = r ? await r.json().catch(() => ({})) : {}
-    if (!r || (!r.ok && !j.resultados)) { set(it.id, { fase: 'listo', error: j.error ?? 'Error de red' }); return false }
+    const j = r ? await r.json().catch(() => null) : null
+    if (!r || (!r.ok && !j?.resultados)) { set(it.id, { fase: 'listo', error: j?.error ?? 'Error de red' }); return false }
+    // 2xx sin JSON válido: no se sabe si se envió. Nunca «enviado»; reintentar es seguro (idempotente por envio_id).
+    if (!j || typeof j.ok !== 'number' || typeof j.total !== 'number' || !Array.isArray(j.resultados)) {
+      set(it.id, { fase: 'listo', error: 'Respuesta ilegible del servidor: no se sabe si se envió. Pulsa Enviar de nuevo (no duplica).' }); return false
+    }
     const prev = it.resultado
     const resultado: Resultado = prev && soloIds
       ? { total: prev.total, ok: prev.ok + j.ok, resultados: [...prev.resultados.filter(x => x.doc_id), ...j.resultados] }
@@ -223,7 +228,7 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
         <span className="text-xs text-ink-3">
           {it.fase === 'subiendo' ? 'Subiendo…' : it.fase === 'analizando' ? 'La IA está leyendo el documento…' : it.fase === 'enviando' ? 'Enviando…' : it.fase === 'enviado' ? '✔ Enviado' : ''}
         </span>
-        {!bloqueado && <button type="button" onClick={onQuitar} className="min-h-[44px] bg-transparent px-2 text-xs text-ink-3 underline">Quitar</button>}
+        {!bloqueado && it.fase !== 'subiendo' && <button type="button" onClick={onQuitar} className="min-h-[44px] bg-transparent px-2 text-xs text-ink-3 underline">Quitar</button>}
       </div>
       {it.error && <p className="mb-2 text-sm text-alert">{it.error}</p>}
       {a && MOTIVO[a.motivo] && <p className="mb-2 rounded-lg bg-paper-2 px-3 py-2 text-xs text-ink-2">{MOTIVO[a.motivo]}</p>}
@@ -288,7 +293,7 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
                     return (
                       <span key={id} className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-1 text-xs text-accent-ink">
                         {e ? nombreEmp(e) : id.slice(0, 8)}{m && <span className="opacity-70">· IA por {m === 'nif' ? 'DNI' : 'nombre'}</span>}
-                        {!bloqueado && <button type="button" aria-label="Quitar" onClick={() => onForm({ destinatarios: f.destinatarios.filter(x => x !== id) })}
+                        {!bloqueado && it.fase !== 'subiendo' && <button type="button" aria-label="Quitar" onClick={() => onForm({ destinatarios: f.destinatarios.filter(x => x !== id) })}
                           className="min-h-[28px] bg-transparent px-1 text-accent-ink">×</button>}
                       </span>
                     )
