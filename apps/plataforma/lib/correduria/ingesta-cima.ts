@@ -91,6 +91,16 @@ function esRechazo(v: unknown): v is EntradaRechazada {
  * compañía callada» sería justamente la avería que este vigía persigue. Ausente
  * ⇒ `null` ⇒ el parte dice «sin comprobar».
  */
+/** Una fila de `porTipo`: tipo, días (o null), mediana (o null), muestra y ficheros de 90 d. */
+function esRitmoTipo(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const t = v as Record<string, unknown>
+  const numONull = (x: unknown) => x === null || (typeof x === 'number' && Number.isFinite(x))
+  return typeof t.tipo === 'string' && numONull(t.diasSinFichero) && numONull(t.huecoMediano)
+    && typeof t.huecosObservados === 'number' && Number.isFinite(t.huecosObservados)
+    && typeof t.ficheros90d === 'number' && Number.isFinite(t.ficheros90d)
+}
+
 function esEntidad(v: unknown): v is EntidadIngesta {
   if (typeof v !== 'object' || v === null) return false
   const e = v as Record<string, unknown>
@@ -101,6 +111,9 @@ function esEntidad(v: unknown): v is EntidadIngesta {
     && typeof e.huecosObservados === 'number' && Number.isFinite(e.huecosObservados)
     && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d) && opcional(e.vencen30d) && opcional(e.huecoMediano)
     && opcional(e.enVigor) && opcional(e.sinN)
+    // `porTipo` ausente (asegura anterior) = solo se vigila la compañía entera. Presente, ha de ser
+    // una lista legible: una fila rara degrada la lectura entera, como el resto de este validador.
+    && (e.porTipo === undefined || (Array.isArray(e.porTipo) && e.porTipo.every(esRitmoTipo)))
     && (e.primerSin === undefined || e.primerSin === null || typeof e.primerSin === 'string')
     && (e.ultimoSin === undefined || e.ultimoSin === null || typeof e.ultimoSin === 'string')
     && (e.nombre === undefined || e.nombre === null || typeof e.nombre === 'string')

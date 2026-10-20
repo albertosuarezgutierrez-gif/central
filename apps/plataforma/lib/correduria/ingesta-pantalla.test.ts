@@ -516,3 +516,23 @@ test('🪤 el cron manda el aviso INFORMATIVO de duplicadas en `ok` solo cuando 
   // Y en el aviso normal va al final, como informativo.
   assert.match(ruta, /recado \+ duplicadas(?: \+ anulaciones)?,/)
 })
+
+test('tipo mudo: la pantalla lo señala como pérdida con «Qué hacer», y no se llama «compañía muda»', () => {
+  const salud = saludIngesta({
+    cuarentena: [], huerfanas: 0, rechazos: [],
+    silencio: silencioPorEntidad([{
+      entidad: 'C0468', nombre: 'Occident', diasSinFichero: 2, huecoMaximo: 9, huecoMediano: 1, huecosObservados: 40,
+      vivas: 19, vencidasEnSilencio: 0,
+      porTipo: [
+        { tipo: 'POL', diasSinFichero: 2, huecoMediano: 1, huecosObservados: 30, ficheros90d: 40 },
+        { tipo: 'SIN', diasSinFichero: 25, huecoMediano: 3, huecosObservados: 20, ficheros90d: 26 },
+      ],
+    }]),
+  })
+  const s = senalesIngesta(salud).find(x => x.clave === 'silencio_tipo')!
+  assert.equal(s.tipo, 'perdida')
+  assert.match(s.detalle, /Occident: siniestros mudos desde hace 25 d/)
+  assert.match(s.detalle, /Qué hacer/)
+  assert.equal(senalesIngesta(salud).some(x => x.clave === 'silencio'), false)
+  assert.match(tituloIngesta({ estado: 'ok', salud, huerfanasTruncadas: false, huerfanasSinAmbito: 0 }), /^C0468: un tipo de fichero ha dejado de llegar/)
+})

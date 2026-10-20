@@ -257,3 +257,81 @@ test('acción sugerida: una sola línea fija por aviso con silencio, y ninguna s
   assert.equal(motivosSilencio(silencioPorEntidad([GENERALI])!).includes(ACCION_SILENCIO), false)
   assert.equal(motivosSilencio(silencioPorEntidad([{ ...GENERALI, huecosObservados: 0, huecoMaximo: null, huecoMediano: null }])!).includes(ACCION_SILENCIO), false)
 })
+
+// ── Silencio por TIPO de fichero (20/10/2026) ────────────────────────────────
+// Medido hoy en `cima_ficheros`: Occident (C0468) manda POL/REC (último 18/10) y ningún SIN desde
+// el 25/09 (antes ~26 en 90 d). Mientras llegue un recibo, la compañía «manda» y el vigía no lo veía.
+import { tiposMudos, lineaTipoMudo, MIN_FICHEROS_90D_TIPO, type RitmoTipo } from './silencio-entidad.ts'
+
+const tipo = (t: string, dias: number | null, med: number | null, huecos: number, f90: number): RitmoTipo => (
+  { tipo: t, diasSinFichero: dias, huecoMediano: med, huecosObservados: huecos, ficheros90d: f90 }
+)
+const OCCIDENT: EntidadIngesta = {
+  entidad: 'C0468', nombre: 'Occident', diasSinFichero: 2, huecoMaximo: 9, huecoMediano: 1, huecosObservados: 40,
+  vivas: 19, vencidasEnSilencio: 0, vencen90d: 0, vencen30d: 0,
+  porTipo: [tipo('POL', 2, 1, 30, 40), tipo('REC', 2, 1, 30, 40), tipo('SIN', 25, 3, 20, 26)],
+}
+
+test('tipo mudo: Occident manda POL/REC pero ningún SIN desde hace 25 d → avisa, y no como compañía muda', () => {
+  const r = veredictoEntidad(OCCIDENT)
+  assert.equal(r.veredicto, 'tipo_mudo')
+  assert.deepEqual(r.tiposMudos, [{ tipo: 'SIN', dias: 25, huecoMediano: 3 }])
+  assert.equal(r.motivos.length, 1)
+  assert.match(r.motivos[0], /^Occident: no manda siniestros \(SIN\) desde hace 25 d, aunque sí pólizas\/recibos \(su ritmo habitual: cada 3 d\)$/)
+  assert.equal(lineaTipoMudo(r.tiposMudos![0]), 'Siniestros mudos desde hace 25 d')
+  assert.equal(r.renovacionesEnRiesgo, undefined, 'no es silencio de compañía: sin renovaciones en riesgo')
+})
+
+test('tipo mudo: un CEF trimestral con poca muestra NO avisa; un tipo habitual sí', () => {
+  const cef = { ...OCCIDENT, porTipo: [tipo('POL', 2, 1, 30, 40), tipo('CEF', 80, 30, 2, 1)] }
+  assert.equal(veredictoEntidad(cef).veredicto, 'ok')
+  assert.deepEqual(tiposMudos(cef), [])
+  // El umbral de habitualidad: justo por debajo no, justo en él sí.
+  const sin = (f90: number) => ({ ...OCCIDENT, porTipo: [tipo('SIN', 25, 3, 20, f90)] })
+  assert.deepEqual(tiposMudos(sin(MIN_FICHEROS_90D_TIPO - 1)), [])
+  assert.equal(tiposMudos(sin(MIN_FICHEROS_90D_TIPO)).length, 1)
+})
+
+test('tipo mudo: sin muestra de huecos, bajo el suelo o dentro de su ritmo NO avisa', () => {
+  const conTipo = (t: RitmoTipo) => tiposMudos({ ...OCCIDENT, porTipo: [t] })
+  assert.deepEqual(conTipo(tipo('SIN', 25, 3, MIN_HUECOS - 1, 26)), [], 'muestra insuficiente')
+  assert.deepEqual(conTipo(tipo('SIN', SUELO_DIAS - 1, 1, 20, 26)), [], 'bajo el suelo')
+  assert.deepEqual(conTipo(tipo('SIN', 20, 10, 20, 26)), [], 'dentro de 2 × mediana')
+  assert.deepEqual(conTipo(tipo('SIN', 25, null, 20, 26)), [], 'sin mediana no hay baremo')
+  assert.deepEqual(conTipo(tipo('SIN', null, 3, 20, 26)), [], 'nunca mandó: no es silencio')
+})
+
+test('tipo mudo: la compañía ENTERA muda no duplica (manda su motivo general)', () => {
+  const entera: EntidadIngesta = { ...OCCIDENT, diasSinFichero: 30, huecoMediano: 3, huecoMaximo: 9 }
+  const r = veredictoEntidad(entera)
+  assert.equal(r.veredicto, 'silencio')
+  assert.equal(r.tiposMudos, undefined)
+  assert.deepEqual(tiposMudos(entera), [])
+  assert.equal(r.motivos.some(m => /\(SIN\)/.test(m)), false)
+})
+
+test('tipo mudo: porTipo undefined (asegura vieja) ≡ comportamiento de hoy; [] tampoco acusa', () => {
+  const { porTipo: _omit, ...vieja } = OCCIDENT
+  void _omit
+  assert.deepEqual(veredictoEntidad(vieja), { ...vieja, veredicto: 'ok', motivos: [] })
+  assert.equal(veredictoEntidad({ ...OCCIDENT, porTipo: [] }).veredicto, 'ok')
+  assert.equal('tiposMudos' in veredictoEntidad(vieja), false)
+})
+
+test('tipo mudo: orden (tras silencio, antes de nunca) y acción «Qué hacer» solo con tipo mudo o silencio', () => {
+  const lista = silencioPorEntidad([
+    { ...OCCIDENT, entidad: 'C0001', porTipo: [] },
+    OCCIDENT,
+    { ...OCCIDENT, entidad: 'C0002', diasSinFichero: 40, porTipo: undefined },
+  ])!
+  assert.deepEqual(lista.map(e => e.veredicto), ['silencio', 'tipo_mudo', 'ok'])
+  const m = motivosSilencio(lista)
+  assert.equal(m.filter(x => x === ACCION_SILENCIO).length, 1)
+  assert.ok(motivosSilencio(silencioPorEntidad([OCCIDENT])).includes(ACCION_SILENCIO))
+  assert.equal(motivosSilencio(silencioPorEntidad([{ ...OCCIDENT, porTipo: [] }])).length, 0)
+})
+
+test('tipo mudo: no pisa un hueco de conocimiento (sin_base sigue siendo sin_base)', () => {
+  const r = veredictoEntidad({ ...OCCIDENT, huecosObservados: 1 })
+  assert.equal(r.veredicto, 'sin_base')
+})

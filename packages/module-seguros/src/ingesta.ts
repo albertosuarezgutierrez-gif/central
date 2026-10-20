@@ -802,6 +802,8 @@ export function saludIngesta(
     hueco('No se ha podido comprobar si alguna compañía ha dejado de mandar.')
   }
   const mudas = (silencio ?? []).filter(x => x.veredicto === 'silencio')
+  // Un TIPO de fichero mudo (SIN, por ejemplo) en una compañía que sí manda también es pérdida medida.
+  const tiposMudosHay = (silencio ?? []).some(x => x.veredicto === 'tipo_mudo')
 
   // 🚨 La QUINTA cara: el cron que deja de correr. Si no hay pull no hay nada
   // que pueda atascarse, así que las cuatro señales de arriba salen a cero y el
@@ -972,6 +974,7 @@ export function saludIngesta(
     (huerfanas !== null && huerfanas > 0) ||
     rechazosRecientes.length > 0 ||
     mudas.length > 0 ||
+    tiposMudosHay ||
     cronMudo ||
     (crudo !== null && crudo.purgaInminente > 0) ||
     (cajaNegra !== null && cajaNegra.cuerpos > 0) ||
@@ -1154,10 +1157,16 @@ export function decidirRespaldoPull(
 export function firmaAvisoIngesta(salud: SaludIngesta): string {
   // Ordenadas para que el mismo conjunto produzca siempre la misma cadena.
   const mudas = (salud.silencio ?? [])
-    .filter(e => e.veredicto === 'silencio')
-    // Las renovaciones en riesgo entran en la firma (`C0109+4`): si el recuento
-    // cambia, suena. Sin riesgo (0/null/undefined) la firma es la de siempre.
-    .map(e => ((e.renovacionesEnRiesgo ?? 0) > 0 ? `${e.entidad}+${e.renovacionesEnRiesgo}` : e.entidad))
+    .flatMap(e =>
+      e.veredicto === 'silencio'
+        // Las renovaciones en riesgo entran en la firma (`C0109+4`): si el recuento
+        // cambia, suena. Sin riesgo (0/null/undefined) la firma es la de siempre.
+        ? [(e.renovacionesEnRiesgo ?? 0) > 0 ? `${e.entidad}+${e.renovacionesEnRiesgo}` : e.entidad]
+        // Tipos mudos: `C0468=SIN` (nunca `:`, que parte tramos). Aparecer/desaparecer suena.
+        : e.veredicto === 'tipo_mudo'
+          ? (e.tiposMudos ?? []).map(t => `${e.entidad}=${t.tipo}`)
+          : [],
+    )
     .sort()
     .join(',')
   // `null` (no comprobado) y `[]` (comprobado, ninguna) no pueden dar la misma firma.

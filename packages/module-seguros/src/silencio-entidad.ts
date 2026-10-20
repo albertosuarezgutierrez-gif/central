@@ -44,18 +44,43 @@
  * Todo aquí es puro: decide con números, sin BD ni red.
  */
 
-/** Qué se sabe del envío de una compañía. Cinco estados, y ninguno es «bien» por descarte. */
+/** Qué se sabe del envío de una compañía. Seis estados, y ninguno es «bien» por descarte. */
 export type VeredictoEntidad =
   /** Manda dentro de su ritmo de siempre. */
   | 'ok'
   /** Lleva callada mucho más de lo que se ha callado nunca, o se ha perdido una renovación. */
   | 'silencio'
+  /**
+   * La compañía en conjunto manda, pero un TIPO de fichero suyo (SIN, por ejemplo) ha
+   * enmudecido respecto a SU ritmo. No es «ha dejado de mandar» (eso es `silencio`) ni «ok».
+   */
+  | 'tipo_mudo'
   /** No hay muestra para saber cuál es su ritmo. NO es «va bien». */
   | 'sin_base'
   /** No ha mandado NUNCA ni un fichero. Ni silencio ni normalidad: nunca empezó. */
   | 'nunca'
   /** No se ha podido mirar. NO es «va bien». */
   | 'sin_datos'
+
+/**
+ * Ritmo de UN tipo de fichero CIMA (POL/REC/SIN/CEF) dentro de una compañía. Se mide igual
+ * que el de la compañía: días distintos con fichero de ese tipo, mediana de los huecos.
+ */
+export type RitmoTipo = {
+  /** `POL` | `REC` | `SIN` | `CEF` (cadena abierta: un tipo nuevo no rompe la lectura). */
+  tipo: string
+  /** Días desde su último fichero de ESE tipo. `null` = nunca mandó ninguno. */
+  diasSinFichero: number | null
+  /** Hueco típico (mediana) entre días con fichero de este tipo. `null` = sin huecos que medir. */
+  huecoMediano: number | null
+  /** Tamaño de la muestra del baremo. */
+  huecosObservados: number
+  /** Ficheros de este tipo en los últimos 90 días: dice si el tipo es HABITUAL. */
+  ficheros90d: number
+}
+
+/** Un tipo de fichero que ha enmudecido dentro de una compañía que sí manda. */
+export type TipoMudo = { tipo: string; dias: number; huecoMediano: number }
 
 export type EntidadIngesta = {
   /** Código DGS de la entidad (`C0058`). */
@@ -95,6 +120,12 @@ export type EntidadIngesta = {
   sinN?: number | null
   /** `min(created_at)` de sus ficheros SIN (ISO). Ausente/`null` = no se sabe. */
   primerSin?: string | null
+  /**
+   * Ritmo por TIPO de fichero. OPCIONAL: una `asegura` anterior no lo manda (`undefined`) y
+   * entonces solo se vigila la compañía entera, exactamente como antes. `undefined` ≠ `[]`
+   * (se miró y no hay tipos): ninguno de los dos acusa a nadie.
+   */
+  porTipo?: RitmoTipo[]
 }
 
 export type SilencioEntidad = EntidadIngesta & {
@@ -107,6 +138,8 @@ export type SilencioEntidad = EntidadIngesta & {
    * `null` = no se pudo contar. Nunca 0 por defecto.
    */
   renovacionesEnRiesgo?: number | null
+  /** Tipos mudos (solo con veredicto `tipo_mudo`). Ausente = ninguno o no se mide. */
+  tiposMudos?: TipoMudo[]
 }
 
 /** Ventana de «renovaciones en riesgo», en días. */
@@ -154,7 +187,7 @@ export const SUELO_DIAS = 14
  * inferencia estadística. Así una consecuencia real nunca queda tapada por
  * «no tengo muestra para juzgarte».
  */
-export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
+function veredictoCompania(e: EntidadIngesta): SilencioEntidad {
   const base = { ...e, motivos: [] as string[] }
 
   if (e.diasSinFichero === null && e.huecoMaximo === null && e.huecosObservados === 0) {
@@ -233,6 +266,77 @@ export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
   return { ...base, veredicto: 'ok', motivos: [] }
 }
 
+/** Una muestra mínima para que un tipo cuente como «habitual» (un CEF trimestral no lo es). */
+export const MIN_FICHEROS_90D_TIPO = 3
+
+const NOMBRE_TIPO: Record<string, { plural: string; mudo: string }> = {
+  POL: { plural: 'pólizas', mudo: 'mudas' },
+  REC: { plural: 'recibos', mudo: 'mudos' },
+  SIN: { plural: 'siniestros', mudo: 'mudos' },
+  CEF: { plural: 'liquidaciones', mudo: 'mudas' },
+}
+
+/** «siniestros (SIN)»; un tipo desconocido se nombra tal cual. */
+function nombreTipo(t: string): string {
+  const n = NOMBRE_TIPO[t]
+  return n ? `${n.plural} (${t})` : t
+}
+
+/** Línea corta de pantalla: «Siniestros mudos desde hace 25 d». */
+export function lineaTipoMudo(t: TipoMudo): string {
+  const n = NOMBRE_TIPO[t.tipo]
+  const base = n ? `${n.plural.charAt(0).toUpperCase()}${n.plural.slice(1)} ${n.mudo}` : `${t.tipo} mudo`
+  return `${base} desde hace ${t.dias} d`
+}
+
+/**
+ * Tipos de fichero que han enmudecido DENTRO de una compañía que en conjunto sí manda.
+ *
+ * Caso real (20/10/2026): Occident manda POL/REC (último 18/10) pero ningún SIN desde el 25/09
+ * (antes ~26 en 90 d); Allianz, SIN último el 27/09. El vigía por compañía no lo ve porque
+ * mientras llegue un recibo la compañía «manda». Cada tipo se mide contra SU ritmo.
+ *
+ * Reglas: muestra del baremo (`MIN_HUECOS`), tipo habitual (`ficheros90d ≥ 3`: un CEF trimestral
+ * sin muestra no cuenta), suelo de días y `dias > FACTOR × mediana`. Y SOLO si la compañía no
+ * está en silencio entero: si lo está, ya avisa ese motivo y no se duplica. `porTipo` ausente
+ * ⇒ `[]` (no se mide, no se acusa). `huecoMediano` null ⇒ sin baremo ⇒ no acusa.
+ */
+export function tiposMudos(e: EntidadIngesta): TipoMudo[] {
+  if (!Array.isArray(e.porTipo) || e.porTipo.length === 0) return []
+  if (veredictoCompania(e).veredicto === 'silencio') return []
+  const out: TipoMudo[] = []
+  for (const t of e.porTipo) {
+    if (t.diasSinFichero === null || t.huecoMediano === null) continue
+    if (t.huecosObservados < MIN_HUECOS || t.ficheros90d < MIN_FICHEROS_90D_TIPO) continue
+    if (t.diasSinFichero >= SUELO_DIAS && t.diasSinFichero > FACTOR_SILENCIO * t.huecoMediano) {
+      out.push({ tipo: t.tipo, dias: t.diasSinFichero, huecoMediano: t.huecoMediano })
+    }
+  }
+  return out.sort((a, b) => b.dias - a.dias || a.tipo.localeCompare(b.tipo))
+}
+
+/**
+ * Veredicto sobre UNA compañía: el de siempre, y `tipo_mudo` cuando está `ok` por compañía pero
+ * un tipo suyo ha enmudecido. Solo se degrada desde `ok`: `silencio` ya es más grave y
+ * `sin_base`/`nunca`/`sin_datos` son huecos de conocimiento que no se pisan.
+ */
+export function veredictoEntidad(e: EntidadIngesta): SilencioEntidad {
+  const r = veredictoCompania(e)
+  if (r.veredicto !== 'ok') return r
+  const mudos = tiposMudos(e)
+  if (mudos.length === 0) return r
+  const quien = e.nombre ?? e.entidad
+  const vivos = (e.porTipo ?? [])
+    .filter(t => t.diasSinFichero !== null && !mudos.some(m => m.tipo === t.tipo))
+    .map(t => NOMBRE_TIPO[t.tipo]?.plural ?? t.tipo)
+  const motivos = mudos.map(m =>
+    `${quien}: no manda ${nombreTipo(m.tipo)} desde hace ${m.dias} d` +
+    (vivos.length > 0 ? `, aunque sí ${vivos.join('/')}` : '') +
+    ` (su ritmo habitual: cada ${m.huecoMediano} d)`,
+  )
+  return { ...r, veredicto: 'tipo_mudo', motivos, tiposMudos: mudos }
+}
+
 /**
  * Veredicto sobre todas. `null` = no se ha podido leer la lista, y eso NO se
  * sirve como «todas bien»: se devuelve `sin_datos` con su motivo.
@@ -245,7 +349,7 @@ export function silencioPorEntidad(entidades: EntidadIngesta[] | null): Silencio
 }
 
 function orden(v: VeredictoEntidad): number {
-  return v === 'silencio' ? 0 : v === 'nunca' ? 1 : v === 'sin_base' ? 2 : v === 'sin_datos' ? 3 : 4
+  return v === 'silencio' ? 0 : v === 'tipo_mudo' ? 1 : v === 'nunca' ? 2 : v === 'sin_base' ? 3 : v === 'sin_datos' ? 4 : 5
 }
 
 /**
@@ -258,6 +362,6 @@ export function motivosSilencio(lista: SilencioEntidad[] | null): string[] {
   if (lista === null) return ['No se ha podido comprobar si alguna compañía ha dejado de mandar.']
   const m = lista.filter(e => e.veredicto !== 'ok').flatMap(e => e.motivos)
   // Una sola línea de acción por aviso, no una por compañía.
-  if (lista.some(e => e.veredicto === 'silencio')) m.push(ACCION_SILENCIO)
+  if (lista.some(e => e.veredicto === 'silencio' || e.veredicto === 'tipo_mudo')) m.push(ACCION_SILENCIO)
   return m
 }
