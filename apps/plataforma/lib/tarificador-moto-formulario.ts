@@ -58,6 +58,8 @@ export type EntradaBotMoto = {
   fechaMatriculacion?: string | null
   /** Últimas 5 cifras de la póliza anterior (texto tecleado; se normaliza a 5 cifras). Solo viaja con seguro actual y años ≠ 0. */
   polizaAnteriorUltimos5?: string | null
+  /** Nº COMPLETO de la póliza actual/anterior que ya consta (declarado o leído de la póliza subida): si las 5 últimas están vacías, por defecto sus 5 últimas cifras. */
+  numeroPolizaActual?: string | null
   /** Justificante del seguro anterior (`proximo_anio` | `dos_ultimos_anios`). Solo viaja con seguro actual y años ≠ 0. */
   fotocopiaAnterior?: string | null
   /** Municipio elegido entre los del CP (nombre del catálogo): viaja como `poblacion` para que el bot elija la localidad. Vacío = no viaja. */
@@ -71,6 +73,14 @@ export type EntradaBotMoto = {
 export function fechaAdquisicionPorDefecto(fechaMatriculacion: string | null | undefined): string | null {
   const t = (fechaMatriculacion ?? '').trim()
   return t === '' ? null : fechaIsoValida(t)
+}
+
+/**
+ * Últimas 5 cifras de la póliza anterior cuando NO hay una explícita (vacía): las 5 últimas cifras (solo dígitos) del nº completo que
+ * ya consta; con menos de 5 dígitos o sin nº, `null` (sigue faltando). Una explícita siempre gana: esto solo se consulta cuando está vacía. PURA.
+ */
+export function polizaAnteriorUltimos5PorDefecto(numeroCompleto: string | null | undefined): string | null {
+  return ultimos5CifrasPoliza(numeroCompleto)
 }
 
 export type FormularioBotMoto =
@@ -193,7 +203,7 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
   const fechaAdquisicion = adqTxt === '' ? fechaAdquisicionPorDefecto(e.fechaMatriculacion) : fechaIsoValida(adqTxt)
   if (adqTxt !== '' && fechaAdquisicion === null) return { ok: false, faltan: ['Fecha de adquisición: tiene que ser una fecha válida'] }
   const conSeguroAnterior = e.tieneSeguroActual !== false && aniosAseguradoAnterior !== 0
-  const polizaAnteriorUltimos5 = conSeguroAnterior ? ultimos5CifrasPoliza(e.polizaAnteriorUltimos5) : null
+  const polizaAnteriorUltimos5 = conSeguroAnterior ? ((e.polizaAnteriorUltimos5 ?? '').trim() === '' ? polizaAnteriorUltimos5PorDefecto(e.numeroPolizaActual) : ultimos5CifrasPoliza(e.polizaAnteriorUltimos5)) : null
   const fotocopiaAnterior = conSeguroAnterior && (e.fotocopiaAnterior === 'proximo_anio' || e.fotocopiaAnterior === 'dos_ultimos_anios') ? e.fotocopiaAnterior : null
 
   // Población elegida por el corredor (CP con varias): mismo filtro que `validarFormularioAuto`; inválida = no viaja (el servidor

@@ -1,3 +1,4 @@
+// Moto v0.7.13 (20/10/2026, trabajo real e5bcdb08): el portal perdía `#driverBirthDate` tras escribirlo → blur tras cada texto y UNA reescritura tecleada de lo perdido; el error dice la FORMA (vacío/otra fecha), nunca el valor.
 // Moto v0.7.3 (20/10/2026): CP con varias poblaciones → se elige SOLA por la localidad del riesgo (contención de palabras enteras, única; ver poblacion-localidad.ts); varias/ninguna/contradictoria → persona.
 // v0.6.18 / Moto v0.7.2 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»):
 // con varias versiones y sin elección de la bandeja, se elige SOLA si son EQUIVALENTES (`versionAutomaticaAllianz`, regla común de
@@ -1079,9 +1080,39 @@ async function escribirTexto(raiz: Pick<Frame, 'locator'>, sel: string, valor: s
   await comprobarCampo(campo)
   await campo.fill(valor)
   await campo.dispatchEvent('change')
+  await campo.blur().catch(() => undefined)
 }
 
 const alfanumerico = (s: string) => s.replace(/[^0-9A-Za-z]/g, '')
+
+/**
+ * FORMA de lo que el portal dejó en un campo de texto que no casa con lo escrito, para el mensaje de error. Puro. NUNCA el
+ * valor (son fechas de nacimiento, pólizas…): solo «vacío», «otra fecha dd/mm/aaaa» o la longitud.
+ */
+export function formaTextoLeido(leido: string): string {
+  const t = leido.trim()
+  if (t === '') return 'quedó vacío'
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(t)) return 'quedó otra fecha dd/mm/aaaa'
+  return `quedó un texto de ${t.length} caracteres con otro formato`
+}
+
+/**
+ * v0.7.13 (trabajo real e5bcdb08, 20/10/2026): `#driverBirthDate` (onchange `menores25()`) no conservaba lo escrito al
+ * terminar Datos básicos. Con la MISMA ficha, la 0.7.10 llegó a la validación y Allianz dijo «el conductor principal debe ser
+ * mayor de 18 al sacarse el carnet» aunque las fechas de la ficha son coherentes (lo comprueba `exigirCarneCoherente`, que la
+ * 0.7.12 pasó): el portal pierde/cambia la fecha de nacimiento tras escribirla (un recálculo posterior del formulario). Un
+ * reintento: se reescribe TECLEANDO (la máscara de fecha del portal procesa teclas) y se quita el foco para que corran sus
+ * `onchange`/`onblur`; quien relee después decide.
+ */
+async function reescribirTexto(raiz: Pick<Frame, 'locator'>, sel: string, valor: string, page: Pick<Page, 'waitForTimeout'>): Promise<void> {
+  const campo = raiz.locator(sel).first()
+  await comprobarCampo(campo)
+  await campo.fill('')
+  await campo.pressSequentially(valor, { delay: 60, timeout: 15_000 })
+  await campo.dispatchEvent('change')
+  await campo.blur().catch(() => undefined)
+  await page.waitForTimeout(300)
+}
 
 /** Compañía, póliza (5 cifras) y justificante del seguro anterior; solo si estuvo asegurado. Los datos ya se exigieron (`exigirDatosPortalMoto`). */
 async function rellenarSeguroAnteriorMoto(raiz: Pick<Frame, 'locator'>, d: DatosPortalMoto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'>): Promise<void> {
@@ -1101,6 +1132,8 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     if (op.tipo === 'texto') {
       await campo.fill(String(op.valor))
       await campo.dispatchEvent('change')
+      // v0.7.13: quitar el foco AQUÍ (máscara de fecha y `onblur` del portal), no al pasar al campo siguiente.
+      await campo.blur().catch(() => undefined)
     } else if (op.tipo === 'select') {
       await campo.selectOption(String(op.valor))
     } else {
@@ -1111,19 +1144,24 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     if (op.sel === SEL_DATOS_MOTO.aseguradoOtraCia && op.valor === 'S' && ant.estuvoAsegurado) await rellenarSeguroAnteriorMoto(raiz, ant, page, ctx)
   }
   await escribirTexto(raiz, SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, fechaEs(ant.fechaAdquisicionIso as string))
-  // Releer: los selects encadenados (años en la compañía → años sin siniestros) pueden revertirse, y las fechas/póliza tienen
-  // que haber quedado escritas (un campo vacío o reformateado a otra cosa: el portal lo rechazaría con un error engañoso).
-  for (const op of plan.filter((o) => o.tipo === 'select')) {
-    if ((await raiz.locator(op.sel).first().inputValue()) !== op.valor) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó fijado ${op.sel}`)
-  }
   const textos: Array<[string, string]> = [
     ...plan.filter((o) => o.tipo === 'texto').map((o): [string, string] => [o.sel, String(o.valor)]),
     [SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, fechaEs(ant.fechaAdquisicionIso as string)],
     ...(ant.estuvoAsegurado ? ([[SEL_SEGURO_ANTERIOR_MOTO.polizaOrigen, ant.poliza5 as string]] as Array<[string, string]>) : []),
   ]
+  const leerTexto = (sel: string) => raiz.locator(sel).first().inputValue()
+  // v0.7.13: lo que el portal perdió tras escribirlo (p. ej. la fecha de nacimiento, trabajo e5bcdb08) se reescribe UNA vez.
   for (const [sel, esperado] of textos) {
-    const leido = await raiz.locator(sel).first().inputValue()
-    if (alfanumerico(leido) !== alfanumerico(esperado)) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel}`)
+    if (alfanumerico(await leerTexto(sel)) !== alfanumerico(esperado)) await reescribirTexto(raiz, sel, esperado, page)
+  }
+  // Releer TODO al final: los selects encadenados (años en la compañía → años sin siniestros) pueden revertirse, y las
+  // fechas/póliza tienen que haber quedado escritas (un campo vacío o reformateado: el portal lo rechazaría con un error engañoso).
+  for (const op of plan.filter((o) => o.tipo === 'select')) {
+    if ((await raiz.locator(op.sel).first().inputValue()) !== op.valor) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó fijado ${op.sel}`)
+  }
+  for (const [sel, esperado] of textos) {
+    const leido = await leerTexto(sel)
+    if (alfanumerico(leido) !== alfanumerico(esperado)) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${formaTextoLeido(leido)})`)
   }
   if (ant.estuvoAsegurado) {
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen).first().inputValue()) === '') throw new ErrorTarificador('portal', `allianz/moto: el portal vació ${SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen}`)
@@ -2412,7 +2450,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.12' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.13' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

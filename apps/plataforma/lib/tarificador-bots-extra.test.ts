@@ -138,3 +138,11 @@ test('valorCampoExtra: fecha de adquisición vacía muestra la de matriculación
   // Lo mostrado por defecto no se guarda (igual al «guardado» que ve guardarExtra).
   assert.equal(accionGuardarExtra('fechaAdquisicion', '2023-05-10', { oportunidadId: 'op', guardado: valorCampoExtra('fechaAdquisicion', {}, undefined, f) }), null)
 })
+
+test('valorCampoExtra: póliza anterior vacía → 5 últimas del nº completo; lo tecleado/precargado manda; sin cifras suficientes, vacío', () => {
+  const f = { numeroPolizaActual: 'ZZ-0012345678' }
+  assert.equal(valorCampoExtra('polizaAnteriorUltimos5', {}, { polizaAnteriorUltimos5: '' }, f), '45678')
+  assert.equal(valorCampoExtra('polizaAnteriorUltimos5', {}, { polizaAnteriorUltimos5: '11111' }, f), '11111')
+  assert.equal(valorCampoExtra('polizaAnteriorUltimos5', { polizaAnteriorUltimos5: '22222' }, undefined, f), '22222')
+  assert.equal(valorCampoExtra('polizaAnteriorUltimos5', {}, undefined, { numeroPolizaActual: 'AB-12' }), '')
+})
