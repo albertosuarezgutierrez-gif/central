@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
     const correduria = await correduriaUnica()
-    if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
+    if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const r = await comparativaDeOportunidad(correduria.id, oportunidadId)
     if (r.estado === 'no_encontrado') return NextResponse.json(r, { status: 404 })
     return NextResponse.json(r)
