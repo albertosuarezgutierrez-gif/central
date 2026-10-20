@@ -138,8 +138,11 @@ test('todas las compañías no_disponibles (sin declaración): nada evaluado →
 test('evaluado de verdad (formulario válido y ≥1 compañía evaluada): sí hay «Bots: todo listo» en los bloques sin pendientes', () => {
   const r = pendientesPorBloque({ adaptador: adaptadorDeRamo('moto')!, formulario: { ...MOTO, sexo: 'hombre', aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0' }, extra: { cilindrada: '125' }, companias: ['allianz', 'zurich'] })
   assert.equal(r.evaluado, true, 'una no_disponible no impide que la otra cuente')
-  assert.equal(vistaBloque(r.bloques.riesgo, r.evaluado).resumen, 'Bots: todo listo')
-  assert.equal(vistaBloque(r.bloques.riesgo, r.evaluado).plegarCompleto, true)
+  // 20/10/2026 (bot Allianz moto 0.7.11): «riesgo» ya tiene pendiente la fecha de adquisición; el bloque «personas» sigue sin pendientes.
+  assert.equal(r.bloques.personas.some((q) => q.estado !== 'ficha'), false)
+  assert.equal(vistaBloque(r.bloques.personas, r.evaluado).resumen, 'Bots: todo listo')
+  assert.equal(vistaBloque(r.bloques.personas, r.evaluado).plegarCompleto, true)
+  assert.equal(r.bloques.riesgo.some((q) => q.clave === 'fechaAdquisicion'), true)
 })
 
 test('pantalla completa del cotizador: los campos sueltos NO pendientes siguen alcanzables (se pintan en línea), y solo sus bloques', () => {

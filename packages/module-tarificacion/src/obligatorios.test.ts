@@ -35,7 +35,15 @@ const coche = () => ({
   datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1985-03-10' },
   seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', descripcion: 'VERSION 1.0' } as Record<string, unknown>,
 })
-const moto = () => ({ ...coche(), ramo: 'moto', seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 } })
+const moto = () => ({
+  ...coche(),
+  ramo: 'moto',
+  seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 },
+  // Allianz moto 0.7.11: seguro anterior y fecha de adquisición (sintéticos).
+  polizaAnteriorUltimos5: '00000',
+  fotocopiaAnterior: 'proximo_anio',
+  fechaAdquisicion: '2016-01-02',
+})
 const hogar = () => ({
   ramo: 'hogar',
   tomador: { documentoIdentidad: '00000000T', fechaNacimiento: '1980-01-15' },
@@ -237,6 +245,23 @@ describe('obligatorios · propios de cada portal', () => {
     const sinSexo = { ...moto(), conductor: { ...moto().conductor, sexo: null } }
     expect(faltanParaTarificar('allianz', 'moto', sinSexo, { sinFicha: true })).toEqual([])
     expect(faltanParaTarificar('allianz', 'moto', sinSexo)!.map((f) => f.etiqueta)).toEqual(['sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha)'])
+  })
+
+  it('Allianz moto 0.7.11: póliza, justificante y compañía anterior solo si estuvo asegurado; la fecha de adquisición, siempre', () => {
+    const f = (x: Record<string, unknown>) => faltanParaTarificar('allianz', 'moto', x)!.map((q) => q.clave)
+    const { polizaAnteriorUltimos5: _p, fotocopiaAnterior: _f, fechaAdquisicion: _a, companiaAnterior: _c, ...base } = moto()
+    // Con años > 0 (o SIN dato: el supuesto favorable también dice «estuvo asegurado») se piden los cuatro.
+    expect(f({ ...base, aniosAseguradoAnterior: 3 })).toEqual(['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion'])
+    expect(f({ ...base, aniosAseguradoAnterior: null })).toEqual(['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion'])
+    // Con 0 años: sin seguro anterior, solo la fecha de adquisición.
+    expect(f({ ...base, aniosAseguradoAnterior: 0 })).toEqual(['fechaAdquisicion'])
+    // Forma: 5 cifras exactas, justificante de la lista, fecha ISO; la compañía puede venir como `companiaActual`.
+    expect(f({ ...moto(), polizaAnteriorUltimos5: '1234' })).toEqual(['polizaAnteriorUltimos5'])
+    expect(f({ ...moto(), fotocopiaAnterior: 'no' })).toEqual(['fotocopiaAnterior'])
+    expect(f({ ...moto(), fechaAdquisicion: '02/01/2016' })).toEqual(['fechaAdquisicion'])
+    expect(f({ ...moto(), companiaAnterior: undefined, companiaActual: 'COMPAÑÍA DE PRUEBA' })).toEqual([])
+    const bloque = (c: string) => obligatoriosPara('allianz', 'moto')!.find((o) => o.clave === c)?.bloque
+    expect([bloque('companiaAnterior'), bloque('polizaAnteriorUltimos5'), bloque('fotocopiaAnterior'), bloque('fechaAdquisicion')]).toEqual(['poliza', 'poliza', 'poliza', 'riesgo'])
   })
 
   it('Mapfre auto: la compañía anterior solo con años > 0, y con más de 80 caracteres cuenta como falta (no viaja)', () => {

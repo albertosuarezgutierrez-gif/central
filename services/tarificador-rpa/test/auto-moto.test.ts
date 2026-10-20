@@ -12,6 +12,12 @@ import {
   MOTO_ACTIVO,
   avanzarPestanaGuardada,
   buscarPoblacion,
+  casarCompaniaOrigen,
+  datosPortalMoto,
+  elegirCompaniaOrigen,
+  exigirCarneCoherente,
+  exigirDatosPortalMoto,
+  faltasDatosPortalMoto,
   ErrorEleccionPoblacion,
   comprobarTitularesMoto,
   consultarMatriculaMoto,
@@ -49,6 +55,9 @@ const form: FormularioAuto = {
   seleccionVehiculo: { marca: 'Marca Prueba', modelo: 'Modelo X', clase: 1, cilindradaCc: 125 },
 }
 
+// Riesgo completo para Datos básicos (0.7.11): seguro anterior y fecha de adquisición (sintéticos; las dos últimas claves aún no están en el modelo).
+const formCompleto = { ...form, companiaAnterior: 'Compañía Prueba', polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02' } as FormularioAuto
+
 const OPC = (xs: Array<[string, string]>) => xs.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')
 
 // Riesgo municipio: cascada marca → clase → modelo → versión; la lupa rellena la población.
@@ -74,6 +83,9 @@ document.getElementById('clase').addEventListener('change', () => setTimeout(() 
 document.getElementById('modelo').addEventListener('change', () => setTimeout(() => { llenar('version', ${JSON.stringify(versiones)}); if (${versiones.length} === 1) document.getElementById('version').value = ${JSON.stringify(versiones[0]?.[0] ?? '')} }, 30))
 </script></body>`
 
+// Catálogo de «Compañía de origen» como el del portal (snapshot del fallo): vacía, «TOP», separador y nombres de registro.
+const CIAS = OPC([['', '---Selección Compañías---'], ['0000', '**************** TOP ****************        '], ['C109', 'ALLIANZ SEGUROS      '], ['C763', 'MAPFRE AUTOMOVILES   '], ['M083', 'MUTUA MADRILEÑA AUTOMOVILISTA'], ['M084', 'MUTUA MADRILEÑA DE TAXIS (MMT)'], ['0000', '************************************'], ['E1', 'MAPFRE ESPAÑA COMPAÑÍA DE SEGUROS'], ['X1', 'COMPAÑÍA PRUEBA'], ['X2', 'ALLIANZ DIRECT VERSICHERUNGS-AG, SUCURSAL EN']])
+
 const DATOS = (revertirAnios = false) => `<body><form>
 <select id="use"><option value="1" selected>Particular</option><option value="4">Autoescuela</option></select>
 <input id="driverBirthDate" onchange="javascript:menores25();"><input id="driverLicenseDate" onchange="javascript:funcTrue();">
@@ -82,6 +94,10 @@ const DATOS = (revertirAnios = false) => `<body><form>
 <input id="fechaMatriculacion" type="text" disabled>
 <input id="garageNight" type="checkbox" value="S">
 <select id="aseguradoOtraCia"><option value="N" selected>No</option><option value="S">Si</option></select>
+<select id="ciaOrigen" onchange="setLitCia()">${CIAS}</select>
+<input id="polizaOrigen" type="text" maxlength="5">
+<select id="fotocopia"><option value="" selected>No</option><option value="P">recibo próximo año/Certificado</option><option value="U">recibo 2 últimos años</option></select>
+<input id="fechaAdquisicion" type="text">
 <select id="yearsOrigCompany" onchange="setAniosSinisters()">${OPC([['0', '0'], ['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5'], ['6', 'Más de 5']])}</select>
 <select id="aniosSinSiniestros" onchange="setNumSinisters()">${OPC([['00', '0'], ['01', '1'], ['02', '2'], ['03', '3'], ['04', '4'], ['05', '5']])}</select>
 <input id="numDisasters" value="0">
@@ -299,14 +315,19 @@ test('planDatosBasicosMoto: valores del portal; lo que el portal asumiría por d
 
 test('rellenarDatosBasicosMoto escribe y relee; si el portal revierte un select, aborta', async () => {
   await page.setContent(DATOS())
-  await rellenarDatosBasicosMoto(page.mainFrame(), form)
+  await rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page)
   assert.equal(await page.locator('#driverBirthDate').inputValue(), '03/02/1990')
   assert.equal(await page.locator('#driverSex').inputValue(), 'H')
   assert.equal(await page.locator('#yearsOrigCompany').inputValue(), '3')
   assert.equal(await page.locator('#aniosSinSiniestros').inputValue(), '03')
   assert.equal(await page.locator('#garageNight').isChecked(), true)
+  assert.equal(await page.locator('#ciaOrigen').inputValue(), 'X1', 'compañía anterior: texto exacto del riesgo')
+  assert.equal(await page.locator('#polizaOrigen').inputValue(), '00000')
+  assert.equal(await page.locator('#fotocopia').inputValue(), 'P')
+  assert.equal(await page.locator('#fechaAdquisicion').inputValue(), '02/01/2016')
+  assert.equal(await page.locator('#driverLicenseDate').inputValue(), '05/04/2010')
   await page.setContent(DATOS(true))
-  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), form), (e) => e instanceof ErrorTarificador && e.tipo === 'portal')
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => e instanceof ErrorTarificador && e.tipo === 'portal')
 })
 
 test('matrícula → 1ª matriculación autorrellenada (ISO); sin respuesta → datos sin la matrícula en el mensaje', async () => {
@@ -477,5 +498,68 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.10')
+  assert.equal(allianzMoto.version, '0.7.11')
+})
+
+// ── 0.7.11 · trabajo real 6cd26c10: el portal rechazaba carné, fecha de adquisición, justificante, compañía y póliza de origen ──
+
+const esDatos = (e: unknown) => e instanceof ErrorTarificador && e.tipo === 'datos'
+
+test('0.7.11 · carné anterior a los 18 años: `datos` ANTES del login, sin las fechas en el mensaje; el plan lleva el carné en dd/mm/aaaa', () => {
+  assert.doesNotThrow(() => exigirCarneCoherente(form))
+  const justo = { ...form, conductor: { ...form.conductor, fechaNacimiento: '1990-02-03', fechaCarne: '2008-02-03' } }
+  assert.doesNotThrow(() => exigirCarneCoherente(justo), 'el día que cumple 18 vale')
+  const menor = { ...form, conductor: { ...form.conductor, fechaNacimiento: '1990-02-03', fechaCarne: '2008-02-02' } }
+  assert.throws(() => planDatosBasicosMoto(menor), (e) => esDatos(e) && /18 años/.test((e as Error).message) && !/1990|2008|02\/2008/.test((e as Error).message))
+  assert.equal(planDatosBasicosMoto(form).find((o) => o.sel === '#driverLicenseDate')?.valor, '05/04/2010')
+})
+
+test('0.7.11 · sin dato no se inventa: hueco `datos` «Falta: …» con qué pedir; con 0 años solo la fecha de adquisición', async () => {
+  assert.deepEqual(faltasDatosPortalMoto(formCompleto), [])
+  assert.doesNotThrow(() => exigirDatosPortalMoto(formCompleto))
+  const f = faltasDatosPortalMoto(form)
+  assert.equal(f.length, 4)
+  assert.match(f[0]!, /^compañía anterior/)
+  assert.match(f[1]!, /^número de póliza anterior/)
+  assert.match(f[2]!, /^justificante del seguro anterior/)
+  assert.match(f[3]!, /^fecha de adquisición/)
+  assert.throws(() => exigirDatosPortalMoto(form), (e) => esDatos(e) && /Falta: compañía anterior.* · Falta: número de póliza anterior.* · Falta: justificante.* · Falta: fecha de adquisición/.test((e as Error).message))
+  assert.equal(faltasDatosPortalMoto({ ...form, aniosAseguradoAnterior: 0 }).length, 1, 'sin seguro anterior: solo la fecha de adquisición')
+  assert.equal(faltasDatosPortalMoto({ ...form, aniosAseguradoAnterior: null }).length, 4, 'sin dato de años el supuesto favorable también dice «estuvo asegurado»')
+  // Formas inválidas = no consta (nunca se corrige ni se adivina).
+  const malo = { ...formCompleto, polizaAnteriorUltimos5: '12', fotocopiaAnterior: 'no', fechaAdquisicion: '02/01/2016' } as unknown as FormularioAuto
+  assert.equal(faltasDatosPortalMoto(malo).length, 3, 'póliza de 2 cifras, justificante «no» y fecha dd/mm/aaaa: nada de eso consta')
+  assert.equal(datosPortalMoto(formCompleto).fotocopia, 'proximo_anio')
+  // El bot se para en tarificar() ANTES de abrir el portal (page/ctx vacíos: si intentara el login, reventaría con otro error).
+  await assert.rejects(allianzMoto.tarificar({} as never, form, {} as never), (e) => esDatos(e) && /^allianz\/moto: Falta: /.test((e as Error).message))
+})
+
+test('0.7.11 · compañía de origen: texto exacto → nombre/alias; varias o ninguna → no se elige; separadores y «TOP» no son compañías', () => {
+  const o = [
+    { valor: '', etiqueta: '---Selección Compañías---' }, { valor: '0000', etiqueta: '**************** TOP ****************        ' },
+    { valor: 'C109', etiqueta: 'ALLIANZ SEGUROS                              ' }, { valor: 'C763', etiqueta: 'MAPFRE AUTOMOVILES                           ' },
+    { valor: '0000', etiqueta: '************************************         ' }, { valor: 'E1', etiqueta: 'MAPFRE ESPAÑA COMPAÑÍA DE SEGUROS' },
+    { valor: 'A2', etiqueta: 'ALLIANZ DIRECT VERSICHERUNGS-AG, SUCURSAL EN' }, { valor: 'M1', etiqueta: 'LÍNEA DIRECTA/SEGUROS NUEZ' },
+    { valor: 'M2', etiqueta: 'MUTUA MADRILEÑA AUTOMOVILISTA' }, { valor: 'M3', etiqueta: 'MUTUA MADRILEÑA DE TAXIS (MMT)' },
+  ]
+  const unica = (b: string) => { const c = casarCompaniaOrigen(o, b); return c.tipo === 'unica' ? c.opcion.valor : c.tipo }
+  assert.equal(unica('allianz seguros'), 'C109')
+  assert.equal(unica('Allianz'), 'C109', 'Allianz no es Allianz Direct')
+  assert.equal(unica('línea directa'), 'M1')
+  assert.equal(unica('MAPFRE'), 'E1', 'el nombre normalizado de «MAPFRE ESPAÑA COMPAÑÍA DE SEGUROS» es «mapfre» (igual que en Turismos)')
+  assert.equal(unica('mutua madrileña'), 'ambigua', 'prefijo de dos compañías: no se elige')
+  assert.equal(unica('Aseguradora Inexistente'), 'ninguna')
+  assert.equal(unica('TOP'), 'ninguna')
+  assert.equal(unica('***'), 'ninguna')
+})
+
+test('0.7.11 · elegirCompaniaOrigen: la fija elige; sin casar y sin IA → `datos` (con la lista) y no se toca el desplegable; varias → `datos` con las candidatas', async () => {
+  await page.setContent(DATOS())
+  await elegirCompaniaOrigen(page.mainFrame(), 'mutua madrileña automovilista', page, {})
+  assert.equal(await page.locator('#ciaOrigen').inputValue(), 'M083')
+  await page.setContent(DATOS())
+  await assert.rejects(elegirCompaniaOrigen(page.mainFrame(), 'Aseguradora Inexistente', page, {}), (e) => esDatos(e) && /Falta: compañía anterior/.test((e as Error).message) && /no está en la lista de Allianz/.test((e as Error).message))
+  assert.equal(await page.locator('#ciaOrigen').inputValue(), '', 'nada elegido')
+  await assert.rejects(elegirCompaniaOrigen(page.mainFrame(), 'mutua madrileña', page, {}), (e) => esDatos(e) && /casa con 2 opciones/.test((e as Error).message))
+  assert.equal(await page.locator('#ciaOrigen').inputValue(), '', 'ambigua: nada elegido')
 })

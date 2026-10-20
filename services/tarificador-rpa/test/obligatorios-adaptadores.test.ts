@@ -9,7 +9,7 @@ import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { adaptadores } from '../src/adapters/index.ts'
 import { allianzComunidades } from '../src/adapters/allianz/comunidades.ts'
-import { allianzAuto, allianzMoto, elegirVehiculoMoto, ofertasDesdePrimas, planDatosBasicosMoto, SEL_DATOS_MOTO, supuestosDatosBasicosMoto } from '../src/adapters/allianz/auto.ts'
+import { allianzAuto, allianzMoto, elegirVehiculoMoto, exigirDatosPortalMoto, ofertasDesdePrimas, planDatosBasicosMoto, SEL_DATOS_MOTO, supuestosDatosBasicosMoto } from '../src/adapters/allianz/auto.ts'
 import { allianzHogar, planPantallaVivienda } from '../src/adapters/allianz/hogar.ts'
 import { mapfreAuto, mapfreMoto, planAltaTomador, planObjetoYFiguras } from '../src/adapters/mapfre/auto.ts'
 import { exigirDatosHogar, mapfreHogar } from '../src/adapters/mapfre/hogar.ts'
@@ -32,7 +32,9 @@ const coche = () => ({
   documentoTomador: '00000000T',
   datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1985-03-10' },
 })
-const moto = () => ({ ...coche(), ramo: 'moto', seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 } })
+const moto = () => ({ ...coche(), ramo: 'moto', seleccionVehiculo: { marca: 'MARCA', modelo: 'MODELO', clase: 2, cilindradaCc: 250 }, polizaAnteriorUltimos5: '00000', fotocopiaAnterior: 'proximo_anio', fechaAdquisicion: '2016-01-02' })
+// `validarFormularioAuto` aún no conoce `fotocopiaAnterior` ni `fechaAdquisicion` (claves opcionales que lee el bot 0.7.11): se reponen sobre el formulario.
+const conExtrasMoto = (x: Record<string, unknown>): FormularioAuto => ({ ...auto(x), fechaAdquisicion: x.fechaAdquisicion, fotocopiaAnterior: x.fotocopiaAnterior }) as unknown as FormularioAuto
 const hogar = () => ({
   ramo: 'hogar',
   tomador: { documentoIdentidad: '00000000T', fechaNacimiento: '1980-01-15' },
@@ -115,6 +117,17 @@ test('Allianz moto: completo → nada falta y el plan pasa; cada obligatorio pro
     assert.ok(faltan('allianz', 'moto', r).includes(clave), clave)
     assert.ok(lanzaDatos(() => planDatosBasicosMoto(auto(r))), `planDatosBasicosMoto no falla sin ${clave}`)
   }
+  // 0.7.11: cada obligatorio nuevo quitado → faltan lo señala Y el bot falla `datos` antes del portal (y completo, no falla).
+  exigirDatosPortalMoto(conExtrasMoto(moto()))
+  for (const clave of ['companiaAnterior', 'polizaAnteriorUltimos5', 'fotocopiaAnterior', 'fechaAdquisicion']) {
+    const r = sin(moto(), clave)
+    assert.ok(faltan('allianz', 'moto', r).includes(clave), clave)
+    assert.ok(lanzaDatos(() => exigirDatosPortalMoto(conExtrasMoto(r))), `exigirDatosPortalMoto no falla sin ${clave}`)
+  }
+  // Sin seguro anterior (0 años) solo la fecha de adquisición sigue haciendo falta, en la declaración y en el bot.
+  const cero = { ...moto(), aniosAseguradoAnterior: 0 }
+  assert.deepEqual(faltan('allianz', 'moto', sin(sin(sin(cero, 'companiaAnterior'), 'polizaAnteriorUltimos5'), 'fotocopiaAnterior')), [])
+  exigirDatosPortalMoto(conExtrasMoto(sin(sin(sin(cero, 'companiaAnterior'), 'polizaAnteriorUltimos5'), 'fotocopiaAnterior')))
   const sinClase = sin(moto(), 'seleccionVehiculo.clase')
   assert.ok(faltan('allianz', 'moto', sinClase).includes('seleccionVehiculo.clase'))
   await assert.rejects(elegirVehiculoMoto({} as never, auto(sinClase).seleccionVehiculo!, {} as never), (e: unknown) => e instanceof ErrorTarificador && e.tipo === 'datos')

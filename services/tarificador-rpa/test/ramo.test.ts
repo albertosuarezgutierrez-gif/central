@@ -23,6 +23,11 @@ const formularioMoto = {
   aniosAseguradoAnterior: 5,
   siniestrosUltimos5Anios: 0,
   garajeNoche: true,
+  // Allianz moto 0.7.11: seguro anterior y fecha de adquisición (sintéticos; la red final mira el riesgo crudo).
+  companiaAnterior: 'COMPAÑÍA DE PRUEBA',
+  polizaAnteriorUltimos5: '00000',
+  fotocopiaAnterior: 'proximo_anio',
+  fechaAdquisicion: '2016-01-02',
   seleccionVehiculo: { marca: 'MARCA DE PRUEBA', modelo: 'MODELO DE PRUEBA', clase: 2, cilindradaCc: 250 },
 }
 

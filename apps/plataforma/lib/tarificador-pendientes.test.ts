@@ -74,10 +74,11 @@ test('un supuesto es para confirmar: el chip NO es «listo» y cuenta en faltan/
   const r = moto({ ...MOTO, sexo: 'hombre' }, { cilindrada: '125' }, ['allianz'])
   const supuestos = todas(r).filter((p) => p.estado === 'supuesto').map((p) => p.clave).sort()
   assert.deepEqual(supuestos, ['aniosAseguradoAnterior', 'siniestrosUltimos5Anios'])
-  assert.deepEqual(r.companias[0], { compania: 'allianz', estado: 'faltan', faltan: 2, supuestos: 2 })
-  // Confirmados (dato real) → listo.
+  // 20/10/2026 (bot 0.7.11): + compañía anterior, póliza, justificante y fecha de adquisición (el formulario aún no recoge los tres últimos).
+  assert.deepEqual(r.companias[0], { compania: 'allianz', estado: 'faltan', faltan: 6, supuestos: 2 })
+  // Antecedentes confirmados (dato real): ya no son supuestos; siguen faltando los datos del seguro anterior y la fecha de adquisición.
   const ok = moto({ ...MOTO, sexo: 'hombre', aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0' }, { cilindrada: '125' }, ['allianz'])
-  assert.deepEqual(ok.companias[0], { compania: 'allianz', estado: 'listo', faltan: 0, supuestos: 0 })
+  assert.deepEqual(ok.companias[0], { compania: 'allianz', estado: 'faltan', faltan: 4, supuestos: 0 })
 })
 
 test('estado de la clave compartida = el más urgente; formulario incompleto → chip «faltan» y los generales aparte', () => {

@@ -90,6 +90,9 @@ test('compañía sin declaración → no_disponible, también con el formulario 
   assert.equal(checklistBot(a, { ...AUTO_BASE, matricula: '' }, {}, 'zurich').estado, 'no_disponible')
 })
 
+// 20/10/2026 (bot Allianz moto 0.7.11): Allianz moto exige además póliza/justificante del seguro anterior y fecha de adquisición, que este formulario aún no recoge: aquí se mira solo el SEXO.
+const sinFaltaSexo = (c: ReturnType<typeof checklistBot>) => c.estado === 'evaluado' && !c.faltan.some((f) => f.clave === 'conductor.sexo')
+
 test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloquea Allianz Moto; vacío no se inventa', () => {
   const a = adaptadorDeRamo('moto')!
   const F = {
@@ -103,7 +106,7 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
   const r0 = a.construir(F, { cilindrada: '125', sexo: '' })
   assert.ok(r0.ok && (r0.riesgo.conductor as { sexo: unknown }).sexo === null)
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'mujer' }, 'allianz')
-  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+  assert.ok(sinFaltaSexo(con))
   const r = a.construir(F, { cilindrada: '125', sexo: 'mujer' })
   assert.ok(r.ok && (r.riesgo.conductor as { sexo: string }).sexo === 'mujer')
   // Sin tocar el desplegable manda el del formulario.
@@ -181,7 +184,8 @@ test('moto · sexoSinFicha (la ficha no da Sr./Sra.) bloquea Allianz Moto salvo 
   const sin = checklistBot(a, F, { cilindrada: '125', sexo: '' }, 'allianz')
   assert.ok(sin.estado === 'evaluado' && sin.bloquea && sin.filas.find((f) => f.clave === 'conductor.sexo')?.estado === 'falta')
   const con = checklistBot(a, F, { cilindrada: '125', sexo: 'hombre' }, 'allianz')
-  assert.ok(con.estado === 'evaluado' && !con.bloquea)
+  assert.ok(sinFaltaSexo(con))
+  assert.ok(con.estado === 'evaluado' && con.faltan.some((f) => f.clave === 'fechaAdquisicion'), 'Allianz moto pide la fecha de adquisición (0.7.11)')
 })
 
 // ─── Mapfre MOTO y la compañía anterior (19/10/2026, captura de Alberto: BMW sin póliza de moto) ──────────────────────────

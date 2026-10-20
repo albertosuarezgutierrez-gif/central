@@ -349,7 +349,14 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(ayuda![1].includes('valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/'), 'la ayuda admite «$» (PAGEID real `datosBasicos$datosBasicos`) y nada más allá de [A-Za-z0-9_.:$-]')
   assert.match(guard, /export function motivoAjaxRechazado\(/, 'el diagnóstico del AJAX rechazado existe')
   assert.match(guard, /\[motivo: \$\{motivo\}\]/, 'el mensaje del guard lleva el motivo del AJAX rechazado')
-  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.10' : '0\.6\.18'/, 'versión Allianz moto 0.7.10')
+  assert.match(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'), /ramo === 'moto' \? '0\.7\.11' : '0\.6\.18'/, 'versión Allianz moto 0.7.11')
+  // 20/10/2026 (trabajo real 6cd26c10, 0.7.11): Datos básicos de Moto rellena compañía/póliza/justificante del seguro anterior y la fecha de
+  // adquisición, y los huecos de datos paran ANTES del login (nunca se inventa); el carné se comprueba contra los 18 años antes de abrir el portal.
+  const autoMoto = sinComentarios(readFileSync(join(SRV, 'src/adapters/allianz/auto.ts'), 'utf8'))
+  assert.match(autoMoto, /planDatosBasicosMoto\(form\)\s*\n\s*exigirDatosPortalMoto\(form\)[\s\S]*?await login\(page, ctx\)/, 'exigirDatosPortalMoto va ANTES del login en tarificarMoto')
+  assert.match(autoMoto, /await rellenarDatosBasicosMoto\(datos, form, page, ctx\)/, 'Datos básicos recibe page y ctx (capa común de la compañía de origen)')
+  assert.match(autoMoto, /exigirCarneCoherente\(form\)\n\s*const f = conAntecedentesFavorables/, 'el plan de Datos básicos comprueba el carné antes de nada')
+  assert.match(autoMoto, /sugerirOpcion\(ctx\.formador, \{\s*clave: 'elegir_opcion_compania_origen'/, 'la compañía de origen usa la IA solo como ÍNDICE entre opciones visibles')
   const listaNegra = guard.match(/export const AJAX_LISTA_NEGRA_NIF_ALLIANZ: AjaxValidacionAvance = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
   assert.ok(listaNegra, 'falta AJAX_LISTA_NEGRA_NIF_ALLIANZ')
   assert.match(listaNegra![1], /endpoint: 'https:\/\/www\.e-pacallianz\.com\/drpc18\/AJAXServlet',\n\s*resource: 'pt\.allianz\.clientes\.negocio\.BlackListOperationsAjax',/)
