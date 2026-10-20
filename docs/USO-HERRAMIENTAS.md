@@ -171,22 +171,22 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 353 | 55.367 | 46.889.950 | 0 | 0 |
-| `otro` | 348 | 12.934 | 30.328.311 | 18.892.631 | 0 |
-| `lectura-directa` | 300 | 9.047 | 27.135.376 | 0 | 0 |
-| `mcp:github` | 305 | 7.076 | 5.537.974 | 54.603.218 | 100 |
-| `sql` | 221 | 5.325 | 2.675.232 | 2.351.230 | 20 |
-| `escritura` | 223 | 4.948 | 72.742.784 | 0 | 0 |
+| `bash` | 353 | 55.634 | 47.102.476 | 0 | 0 |
+| `otro` | 348 | 13.000 | 30.447.290 | 18.892.631 | 0 |
+| `lectura-directa` | 300 | 9.088 | 27.204.188 | 0 | 0 |
+| `mcp:github` | 305 | 7.099 | 5.548.556 | 54.603.218 | 100 |
+| `sql` | 221 | 5.347 | 2.686.334 | 2.351.230 | 20 |
+| `escritura` | 223 | 4.953 | 72.867.435 | 0 | 0 |
 | `mcp:Claude_Code_Remote` | 143 | 1.482 | 304.929 | 5.301.463 | 14 |
 | `mcp:Gmail` | 53 | 1.256 | 1.356.346 | 0 | 77 |
 | `mcp:Booking-com` | 44 | 1.233 | 5.068.884 | 0 | 0 |
-| `mcp:Vercel` | 72 | 1.021 | 1.072.135 | 204.477 | 30 |
-| `agente:general-purpose` | 115 | 847 | 506.739 | 14.623.797 | 0 |
-| `mcp:claude-code-remote` | 51 | 546 | 52.792 | 20.519 | 0 |
+| `mcp:Vercel` | 72 | 1.030 | 1.074.685 | 204.477 | 30 |
+| `agente:general-purpose` | 115 | 858 | 514.664 | 14.661.233 | 0 |
+| `mcp:claude-code-remote` | 51 | 548 | 52.883 | 20.519 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 10 | 489 | 604.937 | 0 | 0 |
 | `mcp:Google_Drive` | 24 | 405 | 454.467 | 0 | 50 |
 | `mcp:Supabase` | 130 | 392 | 61.652 | 5.123 | 7 |
-| `agente:agente-architect` | 70 | 329 | 229.829 | 8.083.292 | 0 |
+| `agente:agente-architect` | 70 | 333 | 231.947 | 8.086.137 | 0 |
 | `mcp:Google-Drive` | 26 | 146 | 138.346 | 0 | 2 |
 | `agente:agente-mecanico` | 48 | 125 | 75.095 | 7.013.978 | 0 |
 | `agente:rastreador-codigo` | 52 | 95 | 29.519 | 1.258.328 | 0 |
@@ -197,8 +197,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `mcp:posthog` | 5 | 47 | 64.610 | 0 | 1 |
+| `agente:verificador-esceptico` | 13 | 29 | 9.500 | 110.404 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:verificador-esceptico` | 13 | 28 | 9.130 | 107.067 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `agente:general` | 12 | 16 | 10.198 | 592.852 | 0 |
