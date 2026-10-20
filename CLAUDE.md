@@ -87,6 +87,7 @@ y los `module-*` de cada vertical.
 - **Tests con fecha fija contra validaciones con reloj real = bomba de tiempo** (un test de moto tumbó `main` el
   17/10): fechas relativas a hoy o inyecta `hoy`. La web pública no se abre desde el contenedor: SEO por código y GSC.
 - **Los cambios que ROMPEN se hacen AHORA**, mientras no hay clientes en producción.
+- **Direcciones postales (toda app y todo formulario, también los que rellena el cliente y la web pública):** CP primero → provincia automática + desplegable de municipios → calle autocompletada con el callejero del Catastro → número. Nunca municipio/provincia por defecto ni texto libre sin validar. Motivo: la dirección queda lista para consultar el Catastro y tarificar sin reteclear. Referencia: `apps/plataforma/app/(usuario)/correduria/BuscadorDireccionCp.tsx` + `packages/core-catastro`.
 
 ## Agentes y tokens
 - 🧭 **La sesión principal ORDENA y REVISA; los AGENTES EJECUTAN — siempre, en toda sesión** (Alberto, 30/09/2026:

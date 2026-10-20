@@ -72,3 +72,4 @@
 | 15/10/2026 | fix `adaptadorMoto.construir`: sexo `""` (valor inicial del desplegable) usa `f.sexo` en vez de null + test de regresión en `tarificador-bots-ramos.test.ts` (rojo antes, verde después) | agente-mecanico | ok (tsc limpio) |
 | 17/10/2026 | corrección de una frase de la skill agente-correduria | agente-mecanico | ok |
 | 17/10/2026 | asegura-web: textos legales y SEO (PR #4768) | agente-mecanico | ok; hicieron falta 2 tests de seguimiento: `tipografia.test.ts` esperaba Google Fonts por URL y `gestor.test.ts` casaba la frase vieja por casualidad |
+| 20/10/2026 | solo CLAUDE.md: regla permanente «Direcciones postales» (CP → provincia → calle Catastro → número) en Reglas globales | agente-mecanico | ok (sin tsc: solo docs) |
