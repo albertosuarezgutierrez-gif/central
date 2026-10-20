@@ -102,7 +102,7 @@ export function vencimientoActualDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunid
 }
 
 /** Valores de cajón que NO son una compañía (misma lista que `nombreCompaniaUtil` de asegura). */
-const COMPANIA_CAJON = new Set(['otro', 'otra', 'otros', 'n/a', 'na', 'ninguna', 'ninguno', 'desconocida', 'desconocido', 'no consta', 'sin datos', '-', '?'])
+export const COMPANIA_CAJON = new Set(['otro', 'otra', 'otros', 'n/a', 'na', 'ninguna', 'ninguno', 'desconocida', 'desconocido', 'no consta', 'sin datos', '-', '?'])
 
 /**
  * Compañía anterior que la oportunidad YA sabe: la aseguradora de HOY (`poliza_competencia`, `aseguradoraActual === true`); la de

@@ -25,6 +25,9 @@ import { avisoDeChecklist, resumenFilas, type ChecklistCompania, type EstadoFila
 import { describirFalloRed } from '@/lib/tarificador-asegura-reglas'
 import { clasificarEncolar, MENSAJE_ENCOLAR_INCIERTO, MENSAJE_ENCOLAR_SIN_CONEXION, REINTENTO_INCIERTO_MS, REINTENTOS_INCIERTO } from '@/lib/tarificador-encolar-incierto'
 import { loteConOk, loteTerminado, ordenEncolado, resumenLote, type FilaLote } from '@/lib/tarificador-todas'
+import { accionGuardarExtra, extraEfectivo, valorCampoExtra, type AccionGuardarExtra } from '@/lib/tarificador-bots-extra'
+import { guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
+import { llamarDatosRiesgo } from '../../oportunidad/[id]/piezas-riesgo'
 import PrepararPresupuestoBot from '../../oportunidad/[id]/PrepararPresupuestoBot'
 
 /** Elemento donde la carcasa quiere el bloque (encima de Avant2). `null` = pintar en línea. */
@@ -100,7 +103,32 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   bloqueosPorCompania?: Record<string, string>
 }) {
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
-  const [extra, setExtra] = useState<Record<string, string>>(() => ({ ...inicialesExtra }))
+  // `extra` = solo lo TECLEADO aquí; lo precargado (`inicialesExtra`, ficha, póliza) se mezcla al leer, así un dato que llega tarde también se ve.
+  const [extra, setExtra] = useState<Record<string, string>>({})
+  const [guardadoAviso, setGuardadoAviso] = useState<string | null>(null)
+  const efectivo = extraEfectivo(extra, inicialesExtra)
+  // Lo ya guardado por campo (para no repetir el guardado): arranca con lo que se pinta al montar.
+  const guardado = useRef<Record<string, string>>({})
+  const sexoSinFicha = (formulario as { sexoSinFicha?: boolean } | null)?.sexoSinFicha === true
+
+  /** Al terminar de editar un campo (blur / elegir): lo guarda donde ya se guardan los demás datos, para precargarlo la próxima vez. */
+  async function guardarExtra(clave: string, valor: string) {
+    const base = guardado.current[clave] ?? valorCampoExtra(clave, {}, inicialesExtra, formulario)
+    const a: AccionGuardarExtra | null = accionGuardarExtra(clave, valor, { oportunidadId, guardado: base, sexoSinFicha })
+    if (!a) return
+    guardado.current[clave] = valor.replace(/\s+/g, ' ').trim()
+    let ok = false
+    try {
+      if (a.tipo === 'cilindrada' && oportunidadId) ok = (await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { cilindradaCc: a.cc } })).ok
+      else if (a.tipo === 'sexo') ok = await guardarSexoEnFicha(clienteId, a.sexo)
+      else if (a.tipo === 'compania' && oportunidadId) {
+        const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'editar', id: oportunidadId, aseguradora: a.texto }) })
+        ok = r.status === 200 && (r.json as { estado?: string } | null)?.estado === 'ok'
+      }
+    } catch { ok = false }
+    if (!ok) guardado.current[clave] = base
+    setGuardadoAviso(ok ? 'Guardado para la próxima vez.' : 'No se ha podido guardar este dato: tendrás que volver a ponerlo.')
+  }
 
   // Solo la última petición escribe: una respuesta tardía de otro ramo no pisa la lista.
   const peticion = useRef(0)
@@ -118,7 +146,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   // Revisado y sin ninguna compañía: línea discreta, ni campos ni botones.
   if (integ.estado === 'ok' && lista.length === 0) return sinBots(adaptador.sinIntegraciones ?? 'Sin bots para este ramo todavía.', adaptador.estado)
 
-  const resultado = adaptador.construir(formulario, extra)
+  const resultado = adaptador.construir(formulario, efectivo)
   return (
     <div style={cardStyle}>
       <CardHeader title="Bots (gratis)" sub="Pide precio al portal de la compañía con los datos de este formulario. No cuesta 0,50€, tarda un par de minutos y solo da precio: no emite." />
@@ -127,16 +155,17 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
         <label key={c.clave} style={{ display: 'grid', gap: 4, fontSize: 13, maxWidth: 260, marginTop: 8 }}>
           <span>{c.etiqueta}{c.ayuda && <span style={{ color: 'var(--muted)' }}> — {c.ayuda}</span>}</span>
           {c.opciones ? (
-            <select value={extra[c.clave] ?? c.porDefecto ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))}
+            <select value={valorCampoExtra(c.clave, extra, inicialesExtra, formulario, c.porDefecto)} onChange={(e) => { const v = e.target.value; setExtra((x) => ({ ...x, [c.clave]: v })); void guardarExtra(c.clave, v) }}
               style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }}>
               {c.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.etiqueta}</option>)}
             </select>
           ) : (
-            <input inputMode={c.texto ? 'text' : 'numeric'} maxLength={c.maxLength} autoComplete="off" value={extra[c.clave] ?? ''} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} placeholder={c.placeholder}
+            <input inputMode={c.texto ? 'text' : 'numeric'} maxLength={c.maxLength} autoComplete="off" value={valorCampoExtra(c.clave, extra, inicialesExtra, formulario)} onChange={(e) => setExtra((x) => ({ ...x, [c.clave]: e.target.value }))} onBlur={(e) => void guardarExtra(c.clave, e.target.value)} placeholder={c.placeholder}
               style={{ padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, minHeight: 44, background: 'var(--surface)', color: 'var(--text)', width: '100%' }} />
           )}
         </label>
       ))}
+      {guardadoAviso && <p role="status" style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0 0' }}>{guardadoAviso}</p>}
       {!resultado.ok && (
         <div role="status" style={{ fontSize: 13, color: 'var(--warning)', marginTop: 10 }}>
           <strong>Para pedir precio por bot falta:</strong>
@@ -153,7 +182,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
       {lista.length > 0 && (
         <PedirATodas ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId} formulario={resultado}
           companias={lista.map((i) => {
-            const check = checklistBot(adaptador, formulario, extra, i.compania)
+            const check = checklistBot(adaptador, formulario, efectivo, i.compania)
             return { compania: i.compania, bloqueo: bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? avisoDeChecklist(check) : null) }
           })} />
       )}
@@ -161,7 +190,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
         {lista.map((i) => {
           // Aviso fijo de la ficha (bloqueosPorCompania) o, si no hay, lo que falta SOLO para esa compañía según su checklist de
           // datos obligatorios (`faltanParaTarificar`); sin declaración = no disponible. En todos los casos el botón no encola.
-          const check = checklistBot(adaptador, formulario, extra, i.compania)
+          const check = checklistBot(adaptador, formulario, efectivo, i.compania)
           const bloqueo = bloqueosPorCompania?.[i.compania] ?? (resultado.ok ? avisoDeChecklist(check) : null)
           return (
             <FilaBot key={i.clave} integracion={i} ramo={ramo} clienteId={clienteId} oportunidadId={oportunidadId}

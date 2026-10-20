@@ -1327,6 +1327,8 @@ export default function CotizadorMoto({
             fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
             fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
             sexo: correcciones.sexo ?? null,
+            // Municipio elegido entre los del CP → `poblacion` del riesgo (el bot de Allianz Moto elige la localidad por ella).
+            poblacion: listaMunicipios.find((m) => m.id === municipioId)?.nombre ?? null,
             sexoSinFicha: (faltanInicial ?? []).some((f) => f.campo === 'sexo'),
             conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual,
             propietarioEnOtraFicha: !!figs.propietario,
