@@ -44,6 +44,7 @@ const form: FormularioAuto = {
   siniestrosUltimos5Anios: 0,
   garajeNoche: true,
   tomador: null,
+  documentoTomador: '00000000T',
   eleccionVersion: null,
   seleccionVehiculo: { marca: 'Marca Prueba', modelo: 'Modelo X', clase: 1, cilindradaCc: 125 },
 }
@@ -58,6 +59,7 @@ const RIESGO = (versiones: Array<[string, string]> = [['V1', 'Version unica']], 
 <select id="version" disabled><option value=""></option></select>
 <input id="_cpostalCode" type="tel" onkeyup="javascript:if (onEnterEvent(event)){$(document.getElementById('_cpostalCodeAjaxLocFinderImg')).trigger('click');}">
 <input id="_destown" type="text">
+<input id="idDocTaker" type="text">
 <img id="_cpostalCodeAjaxLocFinderImg" src="data:," onclick="sendRequestLocationFinder({'id':'_cpostalCode'});">
 <select id="takerDriver" onchange="displayDriver()"><option value=""></option><option value="S">Si</option><option value="N">No</option></select>
 <select id="takerOwner" onchange="displayOwner()"><option value=""></option><option value="S">Si</option><option value="N">No</option></select>
@@ -185,6 +187,7 @@ test('CP → lupa (con pulsar guardado) → población; sin población = hueco d
   await rellenarRiesgoMoto(page.mainFrame(), form, page, ctxPulsar)
   assert.equal(await page.locator('#_cpostalCode').inputValue(), '00000')
   assert.equal(await page.locator('#_destown').inputValue(), 'POBLACION PRUEBA')
+  assert.equal(await page.locator('#idDocTaker').inputValue(), '00000000T', 'v0.7.5: escribe el NIF del tomador')
   assert.equal(await page.locator('#takerDriver').inputValue(), 'S')
   assert.equal(await page.locator('#takerOwner').inputValue(), 'S')
   assert.equal(await page.evaluate(() => (window as unknown as { archivado?: number }).archivado), undefined, 'no pulsó Archivar')
@@ -193,6 +196,18 @@ test('CP → lupa (con pulsar guardado) → población; sin población = hueco d
   assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: false, tomadorEsPropietario: true }), (e: unknown) => e instanceof ErrorMapaIncompleto && !pideInventarioDom(e))
   assert.throws(() => comprobarTitularesMoto({ tomadorEsConductor: true, tomadorEsPropietario: false }), ErrorMapaIncompleto)
   comprobarTitularesMoto({ tomadorEsConductor: null, tomadorEsPropietario: null })
+})
+
+test('v0.7.5 · tomador = conductor/propietario sin NIF → para con «falta el NIF del tomador» (datos), sin tocar el portal; con NIF de la ficha, pasa', async () => {
+  const sinNif = { ...form, documentoTomador: null }
+  assert.throws(() => comprobarTitularesMoto(sinNif), (e: unknown) => e instanceof ErrorTarificador && e.tipo === 'datos' && /falta el NIF del tomador/.test(e.message))
+  await page.setContent(RIESGO())
+  await assert.rejects(rellenarRiesgoMoto(page.mainFrame(), sinNif, page, ctxPulsar), /falta el NIF del tomador/)
+  assert.equal(await page.locator('#takerDriver').inputValue(), '', 'no marcó nada a ciegas')
+  comprobarTitularesMoto({ tomadorEsConductor: true, tomadorEsPropietario: true, fichaTomador: { documento: '00000000T' } } as never) // el NIF de fichaTomador vale
+  comprobarTitularesMoto({ tomadorEsConductor: null, tomadorEsPropietario: null }) // nada marcado: no hace falta
+  await page.setContent(RIESGO().replace('<input id="idDocTaker" type="text">', ''))
+  await assert.rejects(rellenarRiesgoMoto(page.mainFrame(), form, page, ctxPulsar), (e: unknown) => e instanceof ErrorMapaIncompleto && pideInventarioDom(e))
 })
 
 test('buscador de poblaciones: una celda → la pulsa; varias + poblacion que casa → esa; sin casar → requiere persona con la lista', async () => {
@@ -459,5 +474,5 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.4')
+  assert.equal(allianzMoto.version, '0.7.5')
 })

@@ -37,11 +37,11 @@ test('0 o 1 opciones: no hay nada que elegir', () => {
   assert.equal(eleccionVersionMotoPorSimilitud([], sel({})), null)
 })
 
-test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.4', () => {
+test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.5', () => {
   const f = { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: 0 } as unknown as FormularioAuto
   assert.equal(supuestosMoto('versión elegida por similitud (supuesto, había 2)', f), `${PREFIJO_SUPUESTOS}versión elegida por similitud (supuesto, había 2), ${SUPUESTO_FAVORABLE_ANIOS}.`)
   assert.equal(supuestosMoto(null, { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto), null)
-  assert.equal(allianzMoto.version, '0.7.4')
+  assert.equal(allianzMoto.version, '0.7.5')
 })
 
 test('v0.7.2 · ambigua con candidatas EQUIVALENTES (misma cilindrada) → se elige SOLA la primera y se declara en el aviso de supuestos', () => {

@@ -596,6 +596,8 @@ export const SEL_RIESGO_MOTO = {
   buscarPoblacion: '#_cpostalCodeAjaxLocFinderImg',
   tomadorEsConductor: '#takerDriver',
   tomadorEsPropietario: '#takerOwner',
+  /** NIF/CIF del tomador (campo `idDocTaker` del portal): con «tomador = conductor/propietario» el portal lo exige (v0.7.5). */
+  documentoTomador: '#idDocTaker',
 } as const
 
 /** «Datos básicos» editable. Valores de los desplegables = los del portal (grabación 13/10/2026). */
@@ -839,10 +841,17 @@ export async function buscarPoblacion(
   }
 }
 
-/** ¿Tomador = conductor = propietario? `false` pide el NIF del otro (`#idNifDriver_doc`/`#idNifOwner_doc`): sin mapa → hueco. */
-export function comprobarTitularesMoto(f: Pick<FormularioAuto, 'tomadorEsConductor' | 'tomadorEsPropietario'>): void {
+/**
+ * ¿Tomador = conductor = propietario? `false` pide el NIF del otro (`#idNifDriver_doc`/`#idNifOwner_doc`): sin mapa → hueco.
+ * v0.7.5: marcar «Sí» (tomador conductor/propietario) obliga a informar el NIF/CIF del tomador (`idDocTaker`): sin él se PARA
+ * aquí, con un hueco claro, antes de abrir el portal (nunca marcar a ciegas y esperar el rechazo). PURA.
+ */
+export function comprobarTitularesMoto(f: Pick<FormularioAuto, 'tomadorEsConductor' | 'tomadorEsPropietario' | 'documentoTomador' | 'tomador' | 'fichaTomador'>): void {
   if (f.tomadorEsConductor === false || f.tomadorEsPropietario === false) {
     throw new ErrorMapaIncompleto('el NIF del conductor/propietario distinto del tomador (campos idNifDriver_doc/idNifOwner_doc, sin mapa de qué exige el portal)', false, true)
+  }
+  if ((f.tomadorEsConductor === true || f.tomadorEsPropietario === true) && documentoTomadorDe(f) === null) {
+    throw new ErrorTarificador('datos', 'allianz/moto: falta el NIF del tomador (el portal lo exige si el tomador es el conductor/propietario); complétalo en la ficha del cliente')
   }
 }
 
@@ -851,6 +860,15 @@ export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: Formul
   // La localidad del tomador solo vale si su CP es el del riesgo (si no, es de otro sitio).
   const localidadTomador = codigoPostalTomadorDe(f) === f.codigoPostal.trim() ? localidadTomadorDe(f) : null
   await buscarPoblacion(raiz, f.codigoPostal, page, ctx, undefined, { poblacion: f.poblacion ?? null, eleccionPoblacion: f.eleccionPoblacion ?? null, localidades: [localidadTomador] })
+  // v0.7.5: el NIF del tomador (de la ficha) ANTES de marcar tomador = conductor/propietario. Nunca sale en mensajes ni se relee.
+  const nif = documentoTomadorDe(f)
+  if (nif !== null && (f.tomadorEsConductor === true || f.tomadorEsPropietario === true)) {
+    const campo = raiz.locator(SEL_RIESGO_MOTO.documentoTomador).first()
+    if ((await campo.count()) === 0) throw new ErrorMapaIncompleto(`el campo del NIF del tomador (${SEL_RIESGO_MOTO.documentoTomador}) en Riesgo municipio`, true)
+    await comprobarCampo(campo)
+    await campo.fill(nif)
+    await campo.dispatchEvent('change')
+  }
   for (const [sel, dato] of [[SEL_RIESGO_MOTO.tomadorEsConductor, f.tomadorEsConductor], [SEL_RIESGO_MOTO.tomadorEsPropietario, f.tomadorEsPropietario]] as const) {
     if (dato !== true) continue // null = no consta: no se toca
     await fijarSelect(raiz, sel, 'S')
@@ -2211,7 +2229,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.4' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.5' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
