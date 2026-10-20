@@ -8,9 +8,9 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR. Tres estados: `null` = «no se sabe», nunca un valor por defecto. Lo que falta lo dice
 // `formularioBotAuto` (el adaptador) con QUÉ falta, jamás el valor (dato personal).
+import { COMPANIA_CAJON, companiaAnteriorDe } from './compania-anterior.ts'
 import { estadoOcasional, type RolFigura } from '@central/module-seguros'
 import { datoDePersonaBot, type DatoPersona } from './tarificador-moto-formulario.ts'
-import { MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
 import type { EntradaBotAuto } from './tarificador-auto-formulario.ts'
 import { resolverCompaniaAnterior, type CompaniaPorPolizas } from './tarificador-compania-poliza.ts'
 
@@ -80,7 +80,7 @@ export type RiesgoParaBotsAuto = {
   historial: {
     seguroAnterior: { siniestrosUltimos5: number | null; aniosSinSiniestros: number | null; fechaVencimiento?: string | null } | null
     historialDeclarado: {
-      aniosAsegurado: number | null; aniosSinSiniestros: number | null; siniestrosUltimos5: number | null; tieneSeguroActual: boolean | null
+      aniosAsegurado: number | null; aniosSinSiniestros: number | null; siniestrosUltimos5: number | null; tieneSeguroActual: boolean | null; companiaActual?: string | null
     }
     carnet: { fecha: string | null; legible: boolean } | null
   } | null
@@ -101,19 +101,15 @@ export function vencimientoActualDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunid
   return c.length ? c[c.length - 1]! : null
 }
 
-/** Valores de cajón que NO son una compañía (misma lista que `nombreCompaniaUtil` de asegura). */
-export const COMPANIA_CAJON = new Set(['otro', 'otra', 'otros', 'n/a', 'na', 'ninguna', 'ninguno', 'desconocida', 'desconocido', 'no consta', 'sin datos', '-', '?'])
+export { COMPANIA_CAJON }
 
 /**
- * Compañía anterior que la oportunidad YA sabe: la aseguradora de HOY (`poliza_competencia`, `aseguradoraActual === true`); la de
- * nuestra oferta (`aseguradoraActual` false/null/ausente) NO vale. Vacía, de cajón o más larga que el tope → `null` (no consta). PURA.
+ * Compañía anterior que la oportunidad YA sabe (regla única en `compania-anterior.ts`): lo declarado en «Historial y
+ * bonificaciones» (`historialDeclarado.companiaActual`) gana; respaldo, la aseguradora de HOY (`aseguradoraActual === true`; la de
+ * nuestra oferta no vale). Vacía, de cajón, código DGS o más larga que el tope → `null` (no consta). PURA.
  */
 export function companiaAnteriorDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>): string | null {
-  if (r.oportunidad.aseguradoraActual !== true) return null
-  // Años asegurado declarados = 0: no hay seguro anterior que nombrar (la aseguradora de la oportunidad no es «la anterior»).
-  if (r.historial?.historialDeclarado?.aniosAsegurado === 0) return null
-  const t = (r.oportunidad.aseguradora ?? '').replace(/\s+/g, ' ').trim()
-  return t === '' || t.length > MAX_COMPANIA_ANTERIOR || COMPANIA_CAJON.has(t.toLowerCase()) ? null : t
+  return companiaAnteriorDe({ historialDeclarado: r.historial?.historialDeclarado, aseguradora: r.oportunidad.aseguradora, aseguradoraActual: r.oportunidad.aseguradoraActual })
 }
 
 /** ¿Hay conductor ocasional? `true` ficha en el papel · `false` confirmado que no · `null` sin preguntar o no aplica (misma regla que asegura). PURA. */

@@ -3,10 +3,11 @@
 // se rellenaban de cero cada vez. Dónde se guarda cada uno (siempre donde ya se guardan los demás datos, sin migración):
 //   cilindrada        → `info_riesgo.datosVehiculo.cilindradaCc` de la oportunidad (PATCH del riesgo, el de «Datos del vehículo»)
 //   sexo              → ficha del cliente (`sexo`), SOLO si la ficha no lo tiene (misma regla que el selector del cotizador)
-//   compañía anterior → compañía de la oportunidad (`aseguradora`, acción `editar`), la que ya lee el bot de coche
+//   compañía anterior → `aseguradora` de la oportunidad Y `historialDeclarado.companiaActual` (UN solo `editar`, ver
+//                       `cuerpoGuardarCompania`): así «Historial y bonificaciones» y este campo quedan coherentes
 import { MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
 import { cilindradaDeTexto } from './tarificador-moto-formulario.ts'
-import { COMPANIA_CAJON } from './tarificador-auto-riesgo.ts'
+import { COMPANIA_CAJON } from './compania-anterior.ts'
 
 export type AccionGuardarExtra =
   | { tipo: 'cilindrada'; cc: number }
@@ -65,4 +66,23 @@ export function accionGuardarExtra(
     return t === guardado ? null : { tipo: 'compania', texto: t }
   }
   return null
+}
+
+/**
+ * Cuerpo del `editar` que guarda la compañía anterior: `aseguradora` (lo que ya leía el bot) y, en la MISMA llamada,
+ * `historialDeclarado.companiaActual` (lo que muestra «Historial y bonificaciones»). Una sola fuente, dos sitios coherentes. PURA.
+ */
+export function cuerpoGuardarCompania(oportunidadId: string, texto: string): Record<string, unknown> {
+  return { accion: 'editar', id: oportunidadId, aseguradora: texto, historialDeclarado: { companiaActual: texto } }
+}
+
+/**
+ * Opciones de un campo desplegable. El sexo vacío se llama «Elegir…» solo si la ficha NO lo tiene (`sexoSinFicha !== false`); si
+ * la ficha ya lo tiene (`false`: ya guardado, p. ej. por este mismo campo) el vacío dice «Según la ficha»: el servidor lo toma de
+ * ella al encolar, y el navegador no lo conoce (antes parecía no recordarse). PURA.
+ */
+export function opcionesDeCampoExtra<O extends { valor: string; etiqueta: string }>(clave: string, opciones: readonly O[], formulario: unknown): readonly O[] {
+  const sinFicha = formulario && typeof formulario === 'object' ? (formulario as { sexoSinFicha?: unknown }).sexoSinFicha : undefined
+  if (clave !== 'sexo' || sinFicha !== false) return opciones
+  return opciones.map((o) => (o.valor === '' ? { ...o, etiqueta: 'Según la ficha' } : o))
 }

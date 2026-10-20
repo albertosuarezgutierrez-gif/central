@@ -25,6 +25,7 @@ import { COTIZADOR_EMBEBIDO } from './cotizadores-embebidos'
 import BotsAutoRiesgo from './BotsAutoRiesgo'
 import BotsHogarRiesgo from './BotsHogarRiesgo'
 import { AnfitrionBotsContext } from '../../cliente/[id]/PrecioBots'
+import { BloqueMotor, PendientesMotorProvider } from '../../cliente/[id]/PendientesMotor'
 import { abrirAlCargar, bloqueObjetoDeRamo, ramoCotizadorEmbebido } from './cotizador-embebido'
 import PresupuestosCompanias from './PresupuestosCompanias'
 import PrepararPresupuestoBotSolo from './PrepararPresupuestoBotSolo'
@@ -115,7 +116,12 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           ? textoFaltanCapital(bloqueDatos.faltan as CampoCapital[])
           : null
 
+  // Auto y moto (20/10/2026): tres bloques (Personas · Riesgo · Póliza) con SOLO lo pendiente arriba y lo completo plegado.
+  // Lo que falta lo publica «Bots (gratis)»; mientras no lo haya publicado, los bloques se ven enteros como siempre.
+  const motor = op.ramo === 'auto' || op.ramo === 'moto'
+
   return (
+    <PendientesMotorProvider>
     <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
       <div>
         <Link href={`/correduria/cliente/${encodeURIComponent(op.clienteId)}?tab=oportunidades`} style={{ fontSize: 13, color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>
@@ -154,6 +160,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
       )}
 
       {/* Orden (Alberto, 13/10/2026): intervinientes → objeto del riesgo → historial → verificación + pedir precio. */}
+      <BloqueMotor bloque="personas" activo={motor}>
       <FigurasRiesgo
         riesgo={riesgo}
         ocupado={ocupado}
@@ -161,8 +168,10 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
         onError={(texto) => setAviso({ ok: false, texto })}
         onEditando={alEditarFiguras}
       />
+      </BloqueMotor>
 
       {esVehiculo ? (
+        <BloqueMotor bloque="riesgo" activo={motor}>
         <DatosVehiculo
           riesgo={riesgo}
           ocupado={ocupado}
@@ -170,6 +179,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
           onError={(texto) => setAviso({ ok: false, texto })}
           onEditando={alEditarObjeto}
         />
+        </BloqueMotor>
       ) : (
         <DatosRiesgo
           riesgo={riesgo}
@@ -182,7 +192,9 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
       )}
 
       {/* «Historial y bonificaciones» (10/10/2026): seguro anterior, siniestros y carné, para verlos antes de pedir precio. */}
+      <BloqueMotor bloque="poliza" activo={motor}>
       <HistorialRiesgo riesgo={riesgo} hoy={hoy} />
+      </BloqueMotor>
 
       {/* ÚNICO bloque «Pedir precio» (07/10/2026): el aviso «Falta para pedir precio», el botón principal, el
           secundario (póliza) y el coste de 0,50€ viven aquí y en ningún otro sitio de la página. */}
@@ -316,5 +328,6 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
       {/* Varios presupuestos de este riesgo en UNA propuesta (07/10/2026). Preparar no avisa a nadie. */}
       <PropuestaEscenarios riesgo={riesgo} />
     </div>
+    </PendientesMotorProvider>
   )
 }

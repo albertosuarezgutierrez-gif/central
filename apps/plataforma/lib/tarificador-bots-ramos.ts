@@ -5,7 +5,7 @@
 // ramo todavía» y no pinta botones.
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
-import { MAX_COMPANIA_ANTERIOR, obligatoriosPara } from '@central/module-tarificacion'
+import { MAX_COMPANIA_ANTERIOR, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
 import { formularioBotMoto, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
 import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
 import {
@@ -16,6 +16,8 @@ import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO,
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
 export type CampoExtraBot = {
   clave: string; etiqueta: string; ayuda?: string; placeholder?: string
+  /** Bloque del presupuesto donde se pide (personas / riesgo / poliza). Obligatorio: todo campo suelto tiene bloque. */
+  bloque: BloqueObligatorio
   /** Con `opciones` el campo es un desplegable (valor cerrado) y `porDefecto` es lo que muestra mientras no se toque. */
   opciones?: readonly { valor: string; etiqueta: string }[]
   porDefecto?: string
@@ -51,12 +53,12 @@ const OPCIONES_SEXO = [{ valor: '', etiqueta: 'Elegir…' }, { valor: 'hombre', 
 const adaptadorMoto: AdaptadorBot = {
   ramo: 'moto',
   campos: [
-    { clave: 'cilindrada', etiqueta: 'Cilindrada (cc)', ayuda: 'el bot separa Moto y Ciclomotor', placeholder: 'p. ej. 125' },
+    { clave: 'cilindrada', bloque: 'riesgo', etiqueta: 'Cilindrada (cc)', ayuda: 'el bot separa Moto y Ciclomotor', placeholder: 'p. ej. 125' },
     // Allianz Moto no tiene «sin dato» en sexo (obligatorio, 15/10/2026): se elige aquí si el cotizador no lo trae. Sin valor
     // por defecto: no se inventa. Un valor elegido aquí manda sobre el del formulario.
-    { clave: 'sexo', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
+    { clave: 'sexo', bloque: 'personas', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (años asegurado > 0, dato o supuesto). Sin seguro actual / 0 años no se pide.
-    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
   ],
   construir: (formulario, extra) => {
     const f = formulario as FormularioBotsMoto
@@ -77,11 +79,11 @@ const adaptadorAuto: AdaptadorBot = {
   ramo: 'auto',
   // Mat-select del paso 2 de Mapfre (14/10/2026): el corredor puede cambiarlos antes de pedir precio. Defecto de coche.
   campos: [
-    { clave: 'usoVehiculo', etiqueta: 'Uso del vehículo', opciones: OPCIONES_USO_VEHICULO, porDefecto: 'particular' },
-    { clave: 'ambitoCirculacion', etiqueta: 'Ámbito de circulación', opciones: OPCIONES_AMBITO_CIRCULACION, porDefecto: 'espana' },
-    { clave: 'clasePermiso', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
+    { clave: 'usoVehiculo', bloque: 'riesgo', etiqueta: 'Uso del vehículo', opciones: OPCIONES_USO_VEHICULO, porDefecto: 'particular' },
+    { clave: 'ambitoCirculacion', bloque: 'riesgo', etiqueta: 'Ámbito de circulación', opciones: OPCIONES_AMBITO_CIRCULACION, porDefecto: 'espana' },
+    { clave: 'clasePermiso', bloque: 'personas', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (el riesgo guarda el código DGS, no el nombre): se teclea aquí.
-    { clave: 'companiaAnterior', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre y Allianz si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre y Allianz si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
   ],
   construir: (formulario, extra) => {
     const r = formularioBotAuto(entradaAuto(formulario, extra))
@@ -108,10 +110,10 @@ const adaptadorHogar: AdaptadorBot = {
   // Las cuatro elecciones deciden la tarifa de Allianz y NO tienen valor por defecto: arrancan en «Elegir…» (o precargadas solo si el
   // dato guardado casa exactamente con una opción) y el botón no encola hasta que las hay. El Catastro no sabe ninguna de las cuatro.
   campos: [
-    { clave: 'uso', etiqueta: 'Uso de la vivienda', ayuda: 'decide la tarifa; no lo sabe el Catastro', opciones: OPCIONES_USO_HOGAR, porDefecto: '' },
-    { clave: 'regimen', etiqueta: 'Régimen', ayuda: 'propietario o inquilino', opciones: OPCIONES_REGIMEN_HOGAR, porDefecto: '' },
-    { clave: 'tipoVivienda', etiqueta: 'Tipo de vivienda', opciones: OPCIONES_TIPO_HOGAR, porDefecto: '' },
-    { clave: 'conMadera', etiqueta: 'Construcción con madera', ayuda: 'pregunta explícita de Allianz', opciones: OPCIONES_MADERA_HOGAR, porDefecto: '' },
+    { clave: 'uso', bloque: 'riesgo', etiqueta: 'Uso de la vivienda', ayuda: 'decide la tarifa; no lo sabe el Catastro', opciones: OPCIONES_USO_HOGAR, porDefecto: '' },
+    { clave: 'regimen', bloque: 'riesgo', etiqueta: 'Régimen', ayuda: 'propietario o inquilino', opciones: OPCIONES_REGIMEN_HOGAR, porDefecto: '' },
+    { clave: 'tipoVivienda', bloque: 'riesgo', etiqueta: 'Tipo de vivienda', opciones: OPCIONES_TIPO_HOGAR, porDefecto: '' },
+    { clave: 'conMadera', bloque: 'riesgo', etiqueta: 'Construcción con madera', ayuda: 'pregunta explícita de Allianz', opciones: OPCIONES_MADERA_HOGAR, porDefecto: '' },
   ],
   construir: (formulario, extra) => {
     const r = formularioBotHogar({ ...(formulario as FormularioBotsHogar), uso: extra.uso, regimen: extra.regimen, tipoVivienda: extra.tipoVivienda, conMadera: extra.conMadera })

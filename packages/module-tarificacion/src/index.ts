@@ -113,6 +113,8 @@ export {
   obligatoriosDeRamo,
   capacidadesConObligatorios,
   valorEnRuta,
+  BLOQUES_OBLIGATORIO,
+  type BloqueObligatorio,
   type CampoObligatorio,
   type Faltante,
   type OrigenObligatorio,

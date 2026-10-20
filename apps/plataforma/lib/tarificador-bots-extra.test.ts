@@ -59,3 +59,18 @@ test('cableado: el bloque guarda al salir del campo y pinta lo precargado; el co
   const moto = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
   assert.match(moto, /poblacion: poblacionParaBot\(\{ elegidoId: municipioId, municipios, cpMunicipios, cpCirculacionRiesgo: datosRiesgo\?\.cpCirculacion \}\)/)
 })
+
+test('cuerpoGuardarCompania: una sola llamada escribe aseguradora Y historialDeclarado.companiaActual', async () => {
+  const { cuerpoGuardarCompania } = await import('./tarificador-bots-extra.ts')
+  assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa'), { accion: 'editar', id: 'o1', aseguradora: 'Aseguradora Alfa', historialDeclarado: { companiaActual: 'Aseguradora Alfa' } })
+})
+
+test('opcionesDeCampoExtra: sexo vacío dice «Según la ficha» solo si la ficha ya lo tiene', async () => {
+  const { opcionesDeCampoExtra } = await import('./tarificador-bots-extra.ts')
+  const ops = [{ valor: '', etiqueta: 'Elegir…' }, { valor: 'hombre', etiqueta: 'Hombre' }]
+  assert.equal(opcionesDeCampoExtra('sexo', ops, { sexoSinFicha: false })[0]!.etiqueta, 'Según la ficha')
+  assert.equal(opcionesDeCampoExtra('sexo', ops, { sexoSinFicha: true })[0]!.etiqueta, 'Elegir…')
+  assert.equal(opcionesDeCampoExtra('sexo', ops, null)[0]!.etiqueta, 'Elegir…')
+  assert.equal(opcionesDeCampoExtra('otro', ops, { sexoSinFicha: false })[0]!.etiqueta, 'Elegir…')
+  assert.equal(opcionesDeCampoExtra('sexo', ops, { sexoSinFicha: false })[1]!.etiqueta, 'Hombre')
+})

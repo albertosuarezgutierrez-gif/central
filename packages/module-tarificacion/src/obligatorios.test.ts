@@ -15,6 +15,7 @@ import {
   obligatoriosPara,
   valorEnRuta,
   llegaAPrecio,
+  BLOQUES_OBLIGATORIO,
 } from './obligatorios.ts'
 
 const HOY = new Date('2026-10-15T10:00:00Z')
@@ -294,5 +295,34 @@ describe('llegaAPrecio (bots que dan precio de verdad)', () => {
   it('sin declaración = no llega (no se sabe = no se lanza)', () => {
     expect(llegaAPrecio('axa', 'auto')).toBe(false)
     expect(llegaAPrecio('allianz', 'vida')).toBe(false)
+  })
+})
+
+// 20/10/2026: el presupuesto de motor se pinta en tres bloques. Todo campo declarado (forma del ramo + propios de cada bot)
+// debe llevar uno válido; si no, una pantalla lo perdería sin avisar.
+describe('bloque de cada obligatorio (personas / riesgo / poliza)', () => {
+  const todos = () => {
+    const lista = capacidadesConObligatorios().flatMap((d) => (obligatoriosPara(d.compania, d.ramo) ?? []).map((c) => ({ ...c, donde: `${d.compania}/${d.ramo}` })))
+    for (const ramo of ['auto', 'moto', 'hogar', 'comunidades']) for (const c of obligatoriosDeRamo(ramo) ?? []) lista.push({ ...c, donde: `ramo ${ramo}` })
+    return lista
+  }
+  it('los tres bloques son exactamente personas, riesgo y poliza', () => {
+    expect([...BLOQUES_OBLIGATORIO]).toEqual(['personas', 'riesgo', 'poliza'])
+  })
+  it('TODO campo declarado tiene un bloque válido', () => {
+    const lista = todos()
+    expect(lista.length).toBeGreaterThan(30)
+    for (const c of lista) expect(BLOQUES_OBLIGATORIO as readonly string[], `${c.donde} · ${c.clave}`).toContain(c.bloque)
+  })
+  it('asignación de motor: vehículo → riesgo, conductor/tomador → personas, antecedentes y compañía anterior → poliza', () => {
+    const b = (comp: string, ramo: string, clave: string) => obligatoriosPara(comp, ramo)!.find((c) => c.clave === clave)?.bloque
+    expect(b('mapfre', 'auto', 'matricula')).toBe('riesgo')
+    expect(b('mapfre', 'auto', 'codigoPostal')).toBe('riesgo')
+    expect(b('mapfre', 'auto', 'conductor.fechaCarne')).toBe('personas')
+    expect(b('mapfre', 'auto', 'documentoTomador')).toBe('personas')
+    expect(b('mapfre', 'auto', 'companiaAnterior')).toBe('poliza')
+    expect(b('mapfre', 'auto', 'siniestrosUltimos5Anios')).toBe('poliza')
+    expect(b('allianz', 'moto', 'conductor.sexo')).toBe('personas')
+    expect(b('allianz', 'moto', 'seleccionVehiculo.cilindradaCc')).toBe('riesgo')
   })
 })
