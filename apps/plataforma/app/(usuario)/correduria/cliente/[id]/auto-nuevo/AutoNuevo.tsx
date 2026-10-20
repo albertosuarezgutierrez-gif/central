@@ -2030,6 +2030,9 @@ export default function AutoNuevo({
           siniestrosUltimos5,
           // Compañía anterior que el corredor ya indicó (nombre del catálogo o texto libre); vacío = no consta.
           companiaAnterior: (companias?.find((c) => c.codigoDgs === companiaActualCodigo)?.nombreComun ?? companiaActualLibre).trim() || null,
+          // Póliza anterior (20/10/2026): nº completo que ya consta (tecleado arriba, declarado o leído de su póliza); sus 5 últimas cifras son el defecto del campo de los bots.
+          numeroPolizaActual: polizaActualDigitos.trim() || (embebido ? historialRiesgo?.numeroPoliza?.trim() : null) || anterior?.seguroAnterior?.numeroPoliza?.trim() || anterior?.numeroPoliza?.trim() || null,
+          faltanTomador: faltanInicial?.map((f) => f.campo) ?? null,
         })}
       />
 

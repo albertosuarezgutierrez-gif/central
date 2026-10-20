@@ -12,6 +12,7 @@ import { COMPANIA_CAJON, companiaAnteriorDe, type CatalogoCompaniasAnterior } fr
 import { estadoOcasional, type RolFigura } from '@central/module-seguros'
 import { datoDePersonaBot, type DatoPersona } from './tarificador-moto-formulario.ts'
 import type { EntradaBotAuto } from './tarificador-auto-formulario.ts'
+import { tomadorSinEnFicha } from './tarificador-reglas-previas.ts'
 import { resolverCompaniaAnterior, type CompaniaPorPolizas } from './tarificador-compania-poliza.ts'
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/
@@ -41,6 +42,10 @@ export type PiezasBotsAuto = {
   fechaMatriculacion?: string | null
   fechaVencimiento?: string | null
   conductorOcasional?: boolean | null
+  /** 20/10/2026: nº COMPLETO de la póliza anterior que ya consta (declarado o leído de la póliza subida): las 5 últimas cifras son el valor por defecto. */
+  numeroPolizaActual?: string | null
+  /** 20/10/2026: reparos de la ficha del tomador (claves de `faltanDeFigura`: `dni`, `cp`…); `null`/ausente = no se sabe. */
+  faltanTomador?: readonly string[] | null
 }
 
 /** Piezas → entrada del adaptador de coche. PURA. */
@@ -65,6 +70,8 @@ export function armarFormularioBotsAuto(p: PiezasBotsAuto): EntradaBotAuto {
     ...(p.fechaMatriculacion !== undefined ? { fechaMatriculacion: p.fechaMatriculacion } : {}),
     ...(p.fechaVencimiento !== undefined ? { fechaVencimiento: p.fechaVencimiento } : {}),
     ...(p.conductorOcasional !== undefined ? { conductorOcasional: p.conductorOcasional } : {}),
+    ...(p.numeroPolizaActual !== undefined ? { numeroPolizaActual: p.numeroPolizaActual } : {}),
+    ...(tomadorSinEnFicha(p.faltanTomador) ? { tomadorSinEnFicha: tomadorSinEnFicha(p.faltanTomador) } : {}),
   }
 }
 
@@ -78,9 +85,9 @@ export type RiesgoParaBotsAuto = {
     garaje: string | null; cpCirculacion: string | null; fechaMatriculacion?: string | null
   } | null
   historial: {
-    seguroAnterior: { siniestrosUltimos5: number | null; aniosSinSiniestros: number | null; fechaVencimiento?: string | null } | null
+    seguroAnterior: { siniestrosUltimos5: number | null; aniosSinSiniestros: number | null; fechaVencimiento?: string | null; numeroPoliza?: string | null } | null
     historialDeclarado: {
-      aniosAsegurado: number | null; aniosSinSiniestros: number | null; siniestrosUltimos5: number | null; tieneSeguroActual: boolean | null; companiaActual?: string | null
+      aniosAsegurado: number | null; aniosSinSiniestros: number | null; siniestrosUltimos5: number | null; tieneSeguroActual: boolean | null; companiaActual?: string | null; numeroPoliza?: string | null
     }
     carnet: { fecha: string | null; legible: boolean } | null
   } | null
@@ -168,6 +175,9 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto, porPolizas: Co
     fechaMatriculacion: dv?.fechaMatriculacion ?? null,
     fechaVencimiento: vencimientoActualDeRiesgo(r),
     conductorOcasional: conductorOcasionalDeRiesgo(r),
+    // Nº completo de la póliza anterior: el declarado manda; si no, el leído de la póliza subida (sus 5 últimas cifras son el defecto).
+    numeroPolizaActual: decl?.numeroPoliza?.trim() || ant?.numeroPoliza?.trim() || null,
+    faltanTomador: tomador?.faltan ?? null,
   })
 }
 
