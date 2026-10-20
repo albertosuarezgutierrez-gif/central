@@ -368,3 +368,15 @@ test('sinDatosSensibles retira IBAN, CCC y NIF y deja el resto', () => {
   assert.equal(sinDatosSensibles('pago a ES00 0000 0000 0000 0000 0000 de 00000000T'), 'pago a [retirado] de [retirado]')
   assert.equal(sinDatosSensibles('Daños por agua'), 'Daños por agua')
 })
+
+test('solicitud: un cuerpo larguísimo en mayúsculas sin «*» termina rápido (tope antes de la regex)', () => {
+  const cuerpo = 'PRIMA PROY '.repeat(40_000) // ~440.000 caracteres, sin asterisco
+  const t0 = Date.now()
+  const e = leerCorreoEventoAseguradora({
+    remitente: 'mediadores@occidentinforma.com',
+    asunto: 'Suscripción Hogar - solicitud 123456789',
+    cuerpoTexto: cuerpo,
+  } as Parameters<typeof leerCorreoEventoAseguradora>[0])
+  assert.ok(Date.now() - t0 < 2000, `tardó ${Date.now() - t0} ms`)
+  assert.ok(e === null || e.tipo === 'solicitud')
+})

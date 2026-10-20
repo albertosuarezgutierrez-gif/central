@@ -6,6 +6,7 @@ import {
   esExpedienteDeTrabajo,
   esRenovacionAutomatica,
   esTrabajada,
+  ACCIONES_HISTORIAL_AUTOMATICAS,
   esRescateDeRecibo,
   estadoVisible,
   fechaPospuesta,
@@ -158,7 +159,7 @@ test('importe del recibo de un rescate: 0, negativo o ilegible = «no se sabe» 
 
 // ── «Trabajada» (Mi mesa, 20/10/2026) ────────────────────────────────────────
 
-const ren = (o: Partial<Parameters<typeof esTrabajada>[0]> = {}) => ({ fuente: 'renovacion', origen: null, conImportRef: false, contactada: false, ...o })
+const ren = (o: Partial<Parameters<typeof esTrabajada>[0]> = {}) => ({ fuente: 'renovacion', origen: null, conImportRef: false, estado: 'competencia', contactada: false, ...o })
 
 test('trabajada: una renovación automática SIN contacto NO es trabajada', () => {
   assert.equal(esTrabajada(ren()), false)
@@ -169,12 +170,12 @@ test('trabajada: la misma renovación con contacto registrado SÍ', () => {
 })
 
 test('trabajada: lo que no es renovación automática siempre lo es, haya o no contacto', () => {
-  assert.equal(esTrabajada({ fuente: 'venta_directa', origen: null, conImportRef: false, contactada: false }), true)
-  assert.equal(esTrabajada({ fuente: null, origen: 'rescate_perdido', conImportRef: false, contactada: false }), true)
+  assert.equal(esTrabajada({ fuente: 'venta_directa', origen: null, conImportRef: false, estado: 'competencia', contactada: false }), true)
+  assert.equal(esTrabajada({ fuente: null, origen: 'rescate_perdido', conImportRef: false, estado: 'competencia', contactada: false }), true)
 })
 
 test('trabajada: cada señal de renovación automática la marca (fuente, import_ref, orígenes de aviso)', () => {
-  const base = { fuente: 'otros', origen: null, conImportRef: false, contactada: false }
+  const base = { fuente: 'otros', origen: null, conImportRef: false, estado: 'competencia', contactada: false }
   assert.equal(esTrabajada({ ...base, fuente: 'renovacion' }), false)
   assert.equal(esTrabajada({ ...base, conImportRef: true }), false)
   for (const o of ['renovacion_cartera', 'web:aviso-vencimiento', 'portal:mejorar-precio']) {
@@ -185,4 +186,24 @@ test('trabajada: cada señal de renovación automática la marca (fuente, import
 
 test('trabajada: contacto desconocido (null) no esconde la oportunidad', () => {
   assert.equal(esTrabajada(ren({ contactada: null })), true)
+})
+
+test('trabajada: pendiente_cliente SÍ; en_negociacion o competencia sin historial humano NO', () => {
+  assert.equal(esTrabajada(ren({ estado: 'pendiente_cliente' })), true)
+  assert.equal(esTrabajada(ren({ estado: 'en_negociacion' })), false)
+  assert.equal(esTrabajada(ren({ estado: 'competencia' })), false)
+})
+
+test('trabajada: con nº de solicitud en la compañía SÍ', () => {
+  assert.equal(esTrabajada(ren({ conSolicitud: true })), true)
+  assert.equal(esTrabajada(ren({ conSolicitud: false })), false)
+})
+
+test('trabajada: la lista de acciones automáticas es de exclusión y cubre altas y correos de compañía', () => {
+  for (const a of ['creada_renovacion', 'creada_web', 'correo_compania', 'datos_cliente_correo']) {
+    assert.ok((ACCIONES_HISTORIAL_AUTOMATICAS as readonly string[]).includes(a), a)
+  }
+  for (const a of ['whatsapp', 'llamada', 'interesado', 'presupuestada', 'variante_cotizada', 'pospuesta', 'editada']) {
+    assert.ok(!(ACCIONES_HISTORIAL_AUTOMATICAS as readonly string[]).includes(a), a)
+  }
 })

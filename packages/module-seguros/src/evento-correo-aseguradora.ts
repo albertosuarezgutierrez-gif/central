@@ -566,8 +566,11 @@ const ESTADOS_SOLICITUD_FIJOS: readonly RegExp[] = [/caducidad\s+de\s+solicitud/
 // `<DISPONIBLE> * <ESTADO>`, todo en mayúsculas (el texto que sigue, la nota, ya lleva minúsculas o un enlace).
 const ESTADO_ASTERISCO = /\b([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9.]*(?:\s*\/\s*[A-ZÁÉÍÓÚÑ0-9.]+|\s+[A-ZÁÉÍÓÚÑ0-9.]+)*)\s+\*\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9.]*(?:\s+[A-ZÁÉÍÓÚÑ0-9.]+)*)(?=\s+[A-ZÁÉÍÓÚÑ]?[a-záéíóúñ]|\s+https?:|\s*\||\s*$)/
 
+/** Tope del texto sobre el que se aplica `ESTADO_ASTERISCO` (backtracking cuadrático en un texto largo en mayúsculas). */
+export const MAX_CHARS_ESTADO_ASTERISCO = 20_000
+
 function estadoSolicitud(t: string): string | null {
-  const m = ESTADO_ASTERISCO.exec(t)
+  const m = ESTADO_ASTERISCO.exec(t.slice(0, MAX_CHARS_ESTADO_ASTERISCO))
   if (m) return `${m[1].replace(/\s*\/\s*/g, ' / ').trim()} * ${m[2].trim()}`
   for (const re of ESTADOS_SOLICITUD_FIJOS) {
     const f = re.exec(t)

@@ -34,7 +34,9 @@ test('bloques: una aparcada nunca sale fuera de Aparcadas, aunque su acción est
 test('bloques: renovación automática sin contacto va a «Renovaciones sin tocar», no a Hoy/Abiertas/Esperando', () => {
   assert.equal(bloqueDe(exp({ trabajada: false, ...con({ fecha: HOY }) }), HOY), 'sinTocar')
   assert.equal(bloqueDe(exp({ trabajada: false }), HOY), 'sinTocar')
-  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'esperando_cliente' }), HOY), 'sinTocar')
+  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'abierta' }), HOY), 'sinTocar')
+  // Una renovación pasada a «esperando cliente» la marca asegura como trabajada (estado ≠ competencia): sale en Esperando.
+  assert.equal(bloqueDe(exp({ trabajada: true, estadoVisible: 'esperando_cliente' }), HOY), 'esperando')
   // Trabajada, o sin dato (null: versión vieja de asegura), NO se esconde.
   assert.equal(bloqueDe(exp({ trabajada: true, ...con({ fecha: HOY }) }), HOY), 'hoy')
   assert.equal(bloqueDe(exp({ trabajada: null, ...con({ fecha: HOY }) }), HOY), 'hoy')

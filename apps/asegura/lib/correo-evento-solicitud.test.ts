@@ -73,3 +73,12 @@ test('la nota de la solicitud NO cuenta como contacto (no es whatsapp/llamada/in
   assert.match(fuente, /'correo_compania'/)
   assert.doesNotMatch(fuente.slice(fuente.indexOf('async function aplicarSolicitud')), /'(whatsapp|llamada|interesado)'/)
 })
+
+test('🪤 aplicarSolicitud: el UPDATE exige el mismo nº de solicitud y la tarea de documentación se serializa con candado', async () => {
+  const src = readFileSync(join(import.meta.dirname, 'correo-evento-bd.ts'), 'utf8')
+  assert.match(src, /and compania_solicitud_num = \$\{item\.numeroSolicitud\}/)
+  const lock = src.indexOf("pg_advisory_xact_lock(hashtext(${`solicitud-doc:${op.id}`}))")
+  assert.ok(lock > -1, 'candado por oportunidad')
+  const comprobar = src.indexOf('and observaciones = ${t.observaciones}', lock)
+  assert.ok(comprobar > lock && src.indexOf('crearTarea(correduriaId, op.id, t, ACTOR_CORREO)', comprobar) > comprobar, 'candado → comprobar → crear')
+})

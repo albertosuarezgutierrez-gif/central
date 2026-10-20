@@ -1475,7 +1475,7 @@ export {
 // «Mis expedientes» (13/10/2026): clase, estado visible, vuelta de un rescate perdido, posponer y notas.
 export {
   CLASES_EXPEDIENTE, ESTADOS_VISIBLES, MAX_DIAS_POSPONER, MAX_NOTAS, ORIGEN_BAJA_VERIFICADA, ORIGEN_RESCATE_PERDIDO,
-  PREFIJO_RETOMAR, ROTULO_CLASE, ROTULO_ESTADO_VISIBLE, ACCIONES_HISTORIAL_CONTACTO, TIPOS_GESTION_CONTACTO,
+  PREFIJO_RETOMAR, ROTULO_CLASE, ROTULO_ESTADO_VISIBLE, ACCIONES_HISTORIAL_AUTOMATICAS, TIPOS_GESTION_CONTACTO,
   claseOportunidad, esExpedienteDeTrabajo, esRenovacionAutomatica, esTrabajada, esRescateDeRecibo, estadoVisible, fechaPospuesta, importeReciboRescate, notasEditadas, textoRetomar, vueltaRescatePerdido,
 } from './expedientes.ts'
 export type { ClaseExpediente, EntradaClase, EntradaTrabajada, EstadoVisible, VueltaRescate } from './expedientes.ts'

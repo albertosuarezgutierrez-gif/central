@@ -341,6 +341,7 @@ async function aplicarSolicitud(
         compania_solicitud_at = ${cuando},
         updated_at = now()
       where id = ${op.id}::uuid and correduria_id = ${correduriaId}::uuid
+        and compania_solicitud_num = ${item.numeroSolicitud}
         and (compania_solicitud_at is null or compania_solicitud_at <= ${cuando})`)
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
@@ -352,13 +353,19 @@ async function aplicarSolicitud(
   let resumen = actualizado ? plan.resumen : `${plan.resumen} (correo más antiguo que el último estado: solo nota)`
   const t = plan.tareaDocumentacion
   if (!actualizado || !t) return { gestionId: null, fechaLimite: null, resumen }
-  const [ya] = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
-    select id::text as id from gestiones
-    where correduria_id = ${correduriaId}::uuid and oportunidad_id = ${op.id}::uuid and estado::text <> 'cerrada'
-      and observaciones = ${t.observaciones}
-    limit 1`)
-  if (ya) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de enviar documentación abierta` }
-  const r = await crearTarea(correduriaId, op.id, t, ACTOR_CORREO)
+  // Comprobar + crear bajo un candado por oportunidad: dos correos a la vez no crean la tarea dos veces.
+  // `crearTarea` usa su propia conexión y confirma antes de soltar el candado (se suelta al cerrar esta transacción).
+  const r = await db.$transaction(async (tx) => {
+    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud-doc:${op.id}`}))`)
+    const [ya] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+      select id::text as id from gestiones
+      where correduria_id = ${correduriaId}::uuid and oportunidad_id = ${op.id}::uuid and estado::text <> 'cerrada'
+        and observaciones = ${t.observaciones}
+      limit 1`)
+    if (ya) return null
+    return crearTarea(correduriaId, op.id, t, ACTOR_CORREO)
+  }, { timeout: 20_000 })
+  if (!r) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de enviar documentación abierta` }
   if (!r.ok) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; tarea NO creada (${r.motivo})` }
   resumen = `${resumen}; tarea «enviar documentación» para hoy`
   return { gestionId: r.tareaId, fechaLimite: t.fechaLimite, resumen }

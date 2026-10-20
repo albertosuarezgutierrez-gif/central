@@ -22,7 +22,7 @@ import {
   esTrabajada,
   estaEnCompania,
   urlSolicitudValida,
-  ACCIONES_HISTORIAL_CONTACTO,
+  ACCIONES_HISTORIAL_AUTOMATICAS,
   TIPOS_GESTION_CONTACTO,
   estadoVisible,
   hitoDevolucion,
@@ -201,10 +201,10 @@ export async function expedientesDeTrabajo(
            json_build_object('numero', to_jsonb(o)->>'compania_solicitud_num', 'compania', to_jsonb(o)->>'compania_solicitud_compania',
                              'estado', to_jsonb(o)->>'compania_solicitud_estado', 'url', to_jsonb(o)->>'compania_solicitud_url',
                              'at', to_jsonb(o)->>'compania_solicitud_at') as solicitud,
-           -- Contacto registrado: historial whatsapp/interesado/llamada, o una llamada/WhatsApp ya CERRADA.
+           -- Trabajo registrado: historial con una acción de PERSONA (no alta/automática), o una llamada/WhatsApp ya CERRADA.
            (exists (select 1 from oportunidad_historial h
                     where h.oportunidad_id = o.id and h.correduria_id = o.correduria_id
-                      and h.accion in (${Prisma.join([...ACCIONES_HISTORIAL_CONTACTO])}))
+                      and h.accion not in (${Prisma.join([...ACCIONES_HISTORIAL_AUTOMATICAS])}))
             or exists (select 1 from gestiones gc
                        where gc.oportunidad_id = o.id and gc.correduria_id = o.correduria_id
                          and gc.tipo::text in (${Prisma.join([...TIPOS_GESTION_CONTACTO])}) and gc.estado::text = 'cerrada')) as contactada,
@@ -297,7 +297,7 @@ export async function expedientesDeTrabajo(
       creada: f.creada.toISOString(),
       rescate,
       contacto: null,
-      trabajada: esTrabajada({ fuente: f.fuente, origen: f.origen, conImportRef: f.delVolcado, contactada: f.contactada }),
+      trabajada: esTrabajada({ fuente: f.fuente, origen: f.origen, conImportRef: f.delVolcado, estado: f.estado, conSolicitud: !!f.solicitud?.numero, contactada: f.contactada }),
       solicitudCompania: solicitudDeFila(f),
     })
   }
