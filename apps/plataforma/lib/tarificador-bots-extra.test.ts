@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { accionGuardarExtra, companiaGuardable, extraEfectivo, valorCampoExtra } from './tarificador-bots-extra.ts'
+import { accionGuardarExtra, companiaGuardable, extraEfectivo, numeroPolizaAGuardar, valorCampoExtra } from './tarificador-bots-extra.ts'
 
 test('valorCampoExtra: lo tecleado (aunque vacío) manda; luego lo precargado; luego el formulario (sexo/compañía); luego el defecto', () => {
   const f = { sexo: 'mujer', companiaAnterior: 'Compañía Uno' }
@@ -107,10 +107,22 @@ test('Allianz moto: fecha de adquisición → datosVehiculo.fechaCompra; póliza
   // Cableado: PrecioBots guarda cada acción por su vía y el cotizador precarga desde fechaCompra / historial declarado.
   const bloque = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/PrecioBots.tsx', import.meta.url), 'utf8')
   assert.match(bloque, /datosVehiculo: \{ fechaCompra: a\.fecha \}/)
-  assert.match(bloque, /cuerpoGuardarHistorial\(oportunidadId, 'numeroPoliza', a\.ultimos5\)/)
+  assert.match(bloque, /cuerpoGuardarHistorial\(oportunidadId, 'numeroPoliza', nPoliza \?\? a\.ultimos5\)/)
+  assert.match(bloque, /numeroPolizaAGuardar\(historialDeclarado\?\.numeroPoliza, a\.ultimos5\)/)
   assert.match(bloque, /cuerpoGuardarHistorial\(oportunidadId, 'fotocopiaAnterior', a\.valor\)/)
   const moto = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
   assert.match(moto, /fechaAdquisicion: datosRiesgo\?\.fechaCompra \?\? ''/)
   assert.match(moto, /historialRiesgo\?\.numeroPoliza/)
   assert.match(moto, /historialRiesgo\?\.fotocopiaAnterior/)
+})
+
+test('numeroPolizaAGuardar: no pisa un nº completo que ya termina en esas 5 cifras; sin nº o distinto, guarda lo tecleado', () => {
+  assert.equal(numeroPolizaAGuardar('AB-0099912345', '12345'), null, 'termina igual (solo dígitos)')
+  assert.equal(numeroPolizaAGuardar('99912345', '12-345'), null)
+  assert.equal(numeroPolizaAGuardar('12345', '12345'), null)
+  assert.equal(numeroPolizaAGuardar(null, '12345'), '12345')
+  assert.equal(numeroPolizaAGuardar('', '12345'), '12345')
+  assert.equal(numeroPolizaAGuardar(undefined, '12345'), '12345')
+  assert.equal(numeroPolizaAGuardar('99954321', '12345'), '12345', 'termina en otras cifras')
+  assert.equal(numeroPolizaAGuardar('12345999', '12345'), '12345', 'las 5 cifras no al final')
 })

@@ -818,7 +818,7 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
   // Un diálogo del portal (confirm/alert) durante el avance NO se acepta: se descarta y el trabajo cae con motivo claro.
   let dialogo: { tipo: string; mensaje: string } | null = null
   const alDialogo = (d: Dialog) => {
-    dialogo ??= { tipo: d.type(), mensaje: redactarDatosPersonales(d.message().replace(/\s+/g, ' ').trim()).slice(0, 200) }
+    dialogo ??= { tipo: d.type(), mensaje: textoDialogoPortalSeguro(d.message()) }
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
@@ -847,6 +847,19 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
     page.off('dialog', alDialogo)
     guard.avance.cerrar()
   }
+}
+
+/**
+ * Texto de un diálogo nativo del portal (confirm/alert) apto para un error: el portal puede nombrar a la persona («Juan Pérez García
+ * ya tiene…»), y `redactarDatosPersonales` solo tapa trozos con cifras o @. Antes se tapan las secuencias de 2+ palabras
+ * Capitalizadas (o en MAYÚSCULAS) seguidas, con partículas «de/del/la/los/las/y» entre ellas, como posible nombre propio → «[nombre]».
+ * Las frases normales («La fecha de expedición del carné es anterior…») no tienen dos capitalizadas seguidas y se conservan. Tope 200.
+ */
+export function textoDialogoPortalSeguro(bruto: string): string {
+  const palabra = "\\p{Lu}[\\p{L}'’-]+"
+  const nombre = new RegExp(`${palabra}(?:\\s+(?:(?:de|del|la|las|los|y)\\s+)?${palabra})+`, 'gu')
+  const limpio = bruto.replace(/\s+/g, ' ').trim().replace(nombre, '[nombre]')
+  return redactarDatosPersonales(limpio).slice(0, 200)
 }
 
 /** Filas de ERROR del informe de incidencias del framework legado de ePAC (las de aviso no paran). */

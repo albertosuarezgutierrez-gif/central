@@ -111,6 +111,17 @@ export function cuerpoGuardarHistorial(oportunidadId: string, clave: 'numeroPoli
 }
 
 /**
+ * Qué guardar como `historialDeclarado.numeroPoliza` al teclear las 5 últimas cifras de la póliza anterior. Si el nº ya guardado
+ * termina en esas 5 cifras (solo dígitos) NO se toca (`null`: no se envía; no se pierde el nº completo). Si no hay nº guardado o
+ * termina en otras cifras, se guarda lo tecleado. PURA.
+ */
+export function numeroPolizaAGuardar(existente: string | null | undefined, ultimos5: string): string | null {
+  const nuevo = ultimos5.replace(/\D/g, '')
+  const actual = (existente ?? '').replace(/\D/g, '')
+  return actual !== '' && actual.endsWith(nuevo) ? null : ultimos5
+}
+
+/**
  * Opciones de un campo desplegable. El sexo vacío se llama «Elegir…» solo si la ficha NO lo tiene (`sexoSinFicha !== false`); si
  * la ficha ya lo tiene (`false`: ya guardado, p. ej. por este mismo campo) el vacío dice «Según la ficha»: el servidor lo toma de
  * ella al encolar, y el navegador no lo conoce (antes parecía no recordarse). PURA.
