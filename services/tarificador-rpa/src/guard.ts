@@ -128,7 +128,7 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.free
   parametros: Object.freeze([] as string[]),
   parametrosOpcionales: Object.freeze(['com.ats.webbeans.struts.thread', 'com.ats.webbeans.struts.synch']),
   cuerpo: Object.freeze(['pageId', 'codCia']),
-  valorCuerpo: /^[A-Za-z0-9_.:-]{0,64}$/,
+  valorCuerpo: /^[A-Za-z0-9_.:$-]{0,64}$/,
 })
 
 /**
@@ -137,39 +137,94 @@ export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.free
  */
 export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
 
-/** ¿Es `params` EXACTAMENTE el conjunto `claves` (cada una una vez, ninguna más)? */
-function clavesExactas(params: URLSearchParams, claves: readonly string[]): boolean {
-  const vistas = [...params.keys()]
-  return vistas.length === claves.length && new Set(vistas).size === vistas.length && vistas.every((k) => claves.includes(k))
+/** Nombre de clave apto para un mensaje (las claves de ePAC son identificadores; cualquier otra cosa podría ser un dato). */
+const claveMostrable = (k: string): string => (/^[A-Za-z0-9_.-]{1,60}$/.test(k) ? k : '(clave ilegible)')
+const listaClaves = (ks: readonly string[]): string => [...new Set(ks.map(claveMostrable))].join(',')
+
+/** Forma de un valor SIN revelarlo: longitud y categorías de caracteres presentes (nunca el texto; puede llevar un NIF). */
+function formaValor(v: string): string {
+  const cat: string[] = []
+  if (/[A-Za-z]/.test(v)) cat.push('letras')
+  if (/[0-9]/.test(v)) cat.push('dígitos')
+  if (/\s/.test(v)) cat.push('espacios')
+  if (/[^A-Za-z0-9\s]/.test(v)) cat.push('símbolos')
+  return `longitud ${v.length}, ${cat.join('+') || 'vacío'}`
+}
+
+const VALOR_QUERY = /^[A-Za-z0-9_.-]{0,64}$/
+
+/** Por qué `r` rechaza la petición (solo nombres de claves y categorías, NUNCA valores), o `null` si la admite. */
+function motivoRechazoRegla(r: AjaxValidacionAvance, u: URL, cuerpo: string | null): string | null {
+  const opc = r.parametrosOpcionales ?? []
+  const qk = [...u.searchParams.keys()]
+  if (new Set(qk).size !== qk.length) return `clave de query repetida: ${listaClaves(qk.filter((k, i) => qk.indexOf(k) !== i))}`
+  const sobran = qk.filter((k) => k !== 'resource' && !r.parametros.includes(k) && !opc.includes(k))
+  if (sobran.length) return `clave de query no permitida: ${listaClaves(sobran)}`
+  const faltan = r.parametros.filter((k) => !qk.includes(k))
+  if (faltan.length) return `falta clave de query: ${listaClaves(faltan)}`
+  for (const p of [...r.parametros, ...opc].filter((k) => qk.includes(k))) {
+    if (!VALOR_QUERY.test(u.searchParams.get(p) ?? '\u0000')) return `forma de valor de query no permitida en «${claveMostrable(p)}» (${formaValor(u.searchParams.get(p) ?? '')})`
+  }
+  const texto = cuerpo ?? ''
+  if (texto === '') return 'cuerpo vacío o ilegible (se esperaban claves urlencoded)'
+  if (/^\s*[{[]/.test(texto) || texto.startsWith('--')) return 'cuerpo no urlencoded (JSON o multipart)'
+  const cp = new URLSearchParams(texto)
+  const ck = [...cp.keys()]
+  if (new Set(ck).size !== ck.length) return `clave de cuerpo repetida: ${listaClaves(ck.filter((k, i) => ck.indexOf(k) !== i))}`
+  const extra = ck.filter((k) => !r.cuerpo.includes(k))
+  if (extra.length) return `clave de cuerpo no permitida: ${listaClaves(extra)}`
+  const falta = r.cuerpo.filter((k) => !ck.includes(k))
+  if (falta.length) return `falta clave de cuerpo: ${listaClaves(falta)}`
+  for (const k of r.cuerpo) {
+    if (!r.valorCuerpo.test(cp.get(k) ?? '\u0000')) return `forma de valor de cuerpo no permitida en «${claveMostrable(k)}» (${formaValor(cp.get(k) ?? '')})`
+  }
+  return null
+}
+
+/**
+ * Por qué NO es admisible esta petición como `ajaxValidacion` del avance (o `null` si lo es). PURA. Solo nombres de claves y
+ * categorías: ni valores del cuerpo ni de la query (pueden llevar un NIF). Primero lo grueso (método, esquema, host, ruta,
+ * `resource`) y, si el `resource` casa con una regla, el primer detalle de query/cuerpo que no cuadra con ESA regla.
+ */
+export function motivoAjaxRechazado(metodo: string, url: string, cuerpo: string | null, reglas: readonly AjaxValidacionAvance[]): string | null {
+  if (metodo !== 'POST') return `método ${metodo} (se exige POST)`
+  if (reglas.length === 0) return 'este avance no declara ninguna validación AJAX'
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return 'URL ilegible'
+  }
+  if (u.protocol !== 'https:') return 'protocolo distinto de https'
+  if (u.username || u.password) return 'URL con credenciales'
+  if (u.hash) return 'URL con fragmento'
+  const porRuta = reglas.filter((r) => `${u.origin}${u.pathname}` === r.endpoint)
+  if (porRuta.length === 0) {
+    const e = reglas.map((r) => { try { return new URL(r.endpoint) } catch { return null } }).find((x): x is URL => x !== null)
+    if (e && u.host !== e.host) return `host distinto del esperado (${u.host === `www.${e.host}` || `www.${u.host}` === e.host ? 'difiere solo en «www.»' : 'otro dominio'})`
+    return 'ruta distinta de la esperada'
+  }
+  const resource = u.searchParams.get('resource')
+  if (resource === null) return 'la query no trae «resource»'
+  const rr = porRuta.filter((r) => r.resource === resource)
+  if (rr.length === 0) return 'resource fuera de la lista blanca de lecturas'
+  let primero: string | null = null
+  for (const r of rr) {
+    const m = motivoRechazoRegla(r, u, cuerpo)
+    if (m === null) return null
+    primero ??= m
+  }
+  return primero
 }
 
 /**
  * ¿Es esta petición una de las `ajaxValidacion` del avance vigente? PURA. Exige método POST; https sin credenciales ni
  * fragmento; origen + ruta exactos; query = `resource` (valor exacto) + los `parametros` declarados (cada uno una vez, valor
  * de token corto alfanumérico); cuerpo urlencoded con EXACTAMENTE las claves de `cuerpo` y valor de la forma declarada.
- * Cualquier otra cosa → `false` (y la capa (b) aborta).
+ * Cualquier otra cosa → `false` (y la capa (b) aborta). El porqué de un `false` lo da `motivoAjaxRechazado`.
  */
 export function ajaxValidacionAvancePermitida(metodo: string, url: string, cuerpo: string | null, reglas: readonly AjaxValidacionAvance[]): boolean {
-  if (metodo !== 'POST' || reglas.length === 0) return false
-  let u: URL
-  try {
-    u = new URL(url)
-  } catch {
-    return false
-  }
-  if (u.protocol !== 'https:' || u.username || u.password || u.hash) return false
-  const cuerpoParams = new URLSearchParams(cuerpo ?? '')
-  return reglas.some((r) => {
-    if (`${u.origin}${u.pathname}` !== r.endpoint) return false
-    const opc = r.parametrosOpcionales ?? []
-    const qk = [...u.searchParams.keys()]
-    if (new Set(qk).size !== qk.length || !qk.includes('resource')) return false
-    if (!['resource', ...r.parametros].every((k) => qk.includes(k)) || !qk.every((k) => k === 'resource' || r.parametros.includes(k) || opc.includes(k))) return false
-    if (u.searchParams.get('resource') !== r.resource) return false
-    if (![...r.parametros, ...opc].filter((p) => qk.includes(p)).every((p) => /^[A-Za-z0-9_.-]{0,64}$/.test(u.searchParams.get(p) ?? '\u0000'))) return false
-    if (!clavesExactas(cuerpoParams, r.cuerpo)) return false
-    return r.cuerpo.every((k) => r.valorCuerpo.test(cuerpoParams.get(k) ?? '\u0000'))
-  })
+  return motivoAjaxRechazado(metodo, url, cuerpo, reglas) === null
 }
 
 export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
@@ -302,7 +357,11 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
           const resource = u.searchParams.get('resource')
           destino = `${u.origin}${u.pathname}${resource && /^[A-Za-z0-9_.]{1,120}$/.test(resource) ? ` (resource=${resource})` : ''}`
         } catch {}
-        violacion ??= new EmisionBloqueadaError('fase', `avance de pestaña: ${req.method()} a un destino fuera de la lista blanca: ${destino}`)
+        // Diagnóstico de un AJAX rechazado (0.7.9): QUÉ no cuadró, solo con nombres de claves y categorías, nunca valores.
+        const motivo = destino.includes('AJAXServlet') ? motivoAjaxRechazado(req.method(), url, cuerpoDe(req), av.ajax) : null
+        let pestana = ''
+        try { pestana = ` [pestaña de origen: ${new URL(av.endpoints[0] ?? '').pathname}]` } catch {}
+        violacion ??= new EmisionBloqueadaError('fase', `avance de pestaña: ${req.method()} a un destino fuera de la lista blanca: ${destino}${motivo ? ` [motivo: ${motivo}]` : ''}${pestana}`)
         await route.abort('blockedbyclient')
         return
       }

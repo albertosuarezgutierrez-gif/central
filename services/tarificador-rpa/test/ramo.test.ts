@@ -18,6 +18,8 @@ const formularioMoto = {
   conductor: { fechaNacimiento: '1985-03-10', fechaCarne: '2005-06-01', sexo: 'hombre' },
   tomadorEsConductor: true,
   tomadorEsPropietario: true,
+  // Allianz moto exige el NIF del tomador cuando es conductor o propietario; en producción llega inyectado de la ficha.
+  fichaTomador: { documento: '00000000T' },
   aniosAseguradoAnterior: 5,
   siniestrosUltimos5Anios: 0,
   garajeNoche: true,

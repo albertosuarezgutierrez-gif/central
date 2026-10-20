@@ -17,6 +17,7 @@ import {
   AVANCES_PESTANA_AUTORIZADOS,
   ErrorAvanceSinLlegar,
   ajaxValidacionAvancePermitida,
+  motivoAjaxRechazado,
   destinoAvancePermitido,
   instalarGuardEmision,
   pulsarAvancePestanaAutorizado,
@@ -152,11 +153,14 @@ test('ajaxValidacionAvancePermitida: POST exacto a la lista negra del NIF sí; c
 })
 
 const URL_AYUDA = `${AJAX}?resource=com.ats.sea.visuals.util.AyudaAplicacionesAjax`
-const CUERPO_AYUDA = 'pageId=datosBasicos&codCia=0001'
+// Forma REAL capturada (0.7.9): el PAGEID de ePAC es `<pantalla>$<pantalla>` y lleva «$»; el cuerpo va sin codificar.
+const CUERPO_AYUDA = 'pageId=datosBasicos$datosBasicos&codCia=9'
 
 test('ajaxValidacionAvancePermitida (ayuda de aplicaciones, solo lectura): exacta sí; variaciones y recursos de escritura, no', () => {
   const l = AJAX_LECTURA_ALLIANZ
   assert.equal(ajaxValidacionAvancePermitida('POST', URL_AYUDA, CUERPO_AYUDA, l), true)
+  assert.equal(ajaxValidacionAvancePermitida('POST', URL_AYUDA, 'pageId=riesgoMunicipio%24riesgoMunicipio&codCia=9', l), true, '«$» codificado también')
+  for (const raro of ['pageId=a b&codCia=9', 'pageId=a%20b&codCia=9', 'pageId=a;b&codCia=9', 'pageId=a$$$b%27&codCia=9', 'pageId=a/b&codCia=9', 'pageId=a&codCia=9%0A']) assert.equal(ajaxValidacionAvancePermitida('POST', URL_AYUDA, raro, l), false, raro)
   assert.equal(ajaxValidacionAvancePermitida('POST', `${URL_AYUDA}&${Q_TOKENS}`, CUERPO_AYUDA, l), true, 'tokens opcionales')
   const escritura = ['EmitirPolizaAjax', 'GrabarProyectoAjax', 'ContratarAjax', 'GuardarPresupuestoAjax', 'PagoAjax', 'FirmaAjax', 'AyudaAplicacionesAjax2']
   for (const r of escritura) assert.equal(ajaxValidacionAvancePermitida('POST', `${AJAX}?resource=com.ats.sea.visuals.util.${r}`, CUERPO_AYUDA, l), false, r)
@@ -388,5 +392,48 @@ test('al llegar devuelve el marco del formulario de DESTINO', async () => {
   const { page, guard } = await pantalla({ origen: RIESGO, destino: DATOS, td: TD_DATOS })
   const f = await pulsarAvancePestanaAutorizado(page, guard, 'td#datosBasicos')
   assert.equal(await f.locator('form#formulari').getAttribute('action'), DATOS)
+  await page.context().close()
+})
+
+test('motivoAjaxRechazado: dice QUÉ no cuadró (método/host/ruta/query/cuerpo/forma) y NUNCA un valor', () => {
+  const l = AJAX_LECTURA_ALLIANZ
+  assert.equal(motivoAjaxRechazado('POST', URL_AYUDA, CUERPO_AYUDA, l), null)
+  const casos: Array<[string, string, string | null, RegExp]> = [
+    ['GET', URL_AYUDA, CUERPO_AYUDA, /método GET/],
+    ['POST', URL_AYUDA.replace('www.', ''), CUERPO_AYUDA, /host distinto.*www/],
+    ['POST', URL_AYUDA.replace('e-pacallianz.com', 'otro.example'), CUERPO_AYUDA, /host distinto.*otro dominio/],
+    ['POST', URL_AYUDA.replace('/AJAXServlet', '/Otro'), CUERPO_AYUDA, /ruta distinta/],
+    ['POST', URL_AYUDA.replace('https:', 'http:'), CUERPO_AYUDA, /protocolo/],
+    ['POST', `${AJAX}?resource=pt.allianz.EmitirPolizaAjax`, CUERPO_AYUDA, /resource fuera de la lista blanca/],
+    ['POST', `${URL_AYUDA}&accionSecreta=1`, CUERPO_AYUDA, /clave de query no permitida: accionSecreta/],
+    ['POST', URL_AYUDA, 'pageId=x&codCia=9&nif=00000000T', /clave de cuerpo no permitida: nif/],
+    ['POST', URL_AYUDA, 'pageId=x', /falta clave de cuerpo: codCia/],
+    ['POST', URL_AYUDA, 'pageId=a b c&codCia=9', /forma de valor de cuerpo no permitida en «pageId» \(longitud 5, letras\+espacios\)/],
+    ['POST', URL_AYUDA, '{"pageId":"x","codCia":"9"}', /no urlencoded/],
+    ['POST', URL_AYUDA, '--b\r\nContent-Disposition: form-data; name="pageId"', /no urlencoded/],
+    ['POST', URL_AYUDA, null, /cuerpo vacío/],
+  ]
+  for (const [m, u, c, re] of casos) {
+    const motivo = motivoAjaxRechazado(m, u, c, l)
+    assert.match(motivo ?? '', re, `${m} ${u}`)
+    assert.ok(!/00000000T|a b c|accionSecreta=1|riesgoMunicipio|datosBasicos\$/.test(motivo ?? '') || /accionSecreta/.test(motivo ?? ''), 'ningún valor en el motivo')
+  }
+  assert.doesNotMatch(motivoAjaxRechazado('POST', URL_AYUDA, 'pageId=00000000T x&codCia=9', l) ?? '', /00000000T/)
+})
+
+test('NEGATIVO: el mensaje del guard para un AJAX rechazado lleva el motivo y la pestaña de origen, sin valores', async () => {
+  const { page, guard } = await pantalla({
+    origen: RIESGO,
+    destino: DATOS,
+    td: TD_DATOS,
+    previa: { url: URL_AYUDA, body: 'pageId=00000000T x&codCia=9' },
+    peticion: { url: `${EPAC}${RIESGO}`, body: 'vista=riesgoMunicipio&action=aceptar&aceptar=S' },
+  })
+  await assert.rejects(pulsarAvancePestanaAutorizado(page, guard, 'td#datosBasicos'), EmisionBloqueadaError)
+  const msg = guard.violacion()?.message ?? ''
+  assert.match(msg, /resource=com\.ats\.sea\.visuals\.util\.AyudaAplicacionesAjax\)/)
+  assert.match(msg, /\[motivo: forma de valor de cuerpo no permitida en «pageId» \(longitud 11, letras\+dígitos\+espacios\)\]/)
+  assert.match(msg, /\[pestaña de origen: \/drpc18\/riesgoMunicipio\/control\.do\]/)
+  assert.ok(!/00000000T/.test(msg), 'ni el valor del cuerpo')
   await page.context().close()
 })

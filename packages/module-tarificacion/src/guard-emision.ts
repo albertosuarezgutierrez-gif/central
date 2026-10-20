@@ -91,7 +91,7 @@ export class EmisionBloqueadaError extends Error {
   constructor(donde: 'url' | 'boton' | 'fase', texto: string) {
     super(
       donde === 'fase'
-        ? `guard_emision: fase bloqueada: ${texto.slice(0, 200)}`
+        ? `guard_emision: fase bloqueada: ${texto.slice(0, 500)}`
         : `guard_emision: ${donde} bloqueada (casa con el patrón de emisión): «${texto.slice(0, 200)}»`,
     )
     this.name = 'EmisionBloqueadaError'
