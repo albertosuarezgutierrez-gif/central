@@ -92,6 +92,8 @@ export type AjaxValidacionAvance = Readonly<{
   resource: string
   /** Únicos parámetros de la query además de `resource` (tokens de la sesión del framework), cada uno una vez. */
   parametros: readonly string[]
+  /** Parámetros de query que PUEDEN venir además (p. ej. tokens que añade el framework), cada uno como mucho una vez. */
+  parametrosOpcionales?: readonly string[]
   /** Únicas claves del cuerpo (urlencoded), cada una una vez, y la forma de su valor. */
   cuerpo: readonly string[]
   valorCuerpo: RegExp
@@ -113,6 +115,27 @@ export const AJAX_LISTA_NEGRA_NIF_ALLIANZ: AjaxValidacionAvance = Object.freeze(
   cuerpo: Object.freeze(['idNumberBL']),
   valorCuerpo: /^[A-Za-z0-9]{0,20}$/,
 })
+
+/**
+ * Ayuda contextual de ePAC (`AyudaAplicacionesAjax`, captura del 20/10/2026, incidente 0.7.7): en el `ready` de CADA pantalla del
+ * portal, `AjaxRequest('/drpc18/AJAXServlet?resource=com.ats.sea.visuals.util.AyudaAplicacionesAjax', 'pageId=<PAGEID>&codCia=<cia>')`
+ * pregunta si hay ayuda para esa pantalla y solo muestra u oculta el botón de ayuda (`ret.ayuda`). Es SOLO LECTURA. Se dispara
+ * al cargar la pantalla de destino del avance, es decir DENTRO de la ventana (td#datosBasicos y td#rate).
+ */
+export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.freeze({
+  endpoint: 'https://www.e-pacallianz.com/drpc18/AJAXServlet',
+  resource: 'com.ats.sea.visuals.util.AyudaAplicacionesAjax',
+  parametros: Object.freeze([] as string[]),
+  parametrosOpcionales: Object.freeze(['com.ats.webbeans.struts.thread', 'com.ats.webbeans.struts.synch']),
+  cuerpo: Object.freeze(['pageId', 'codCia']),
+  valorCuerpo: /^[A-Za-z0-9_.:-]{0,64}$/,
+})
+
+/**
+ * LISTA BLANCA de recursos AJAX de SOLO LECTURA (consulta/ayuda/validación) admitidos durante un avance de pestaña. Cada
+ * entrada fija endpoint, `resource`, query y cuerpo. Todo lo demás (Emitir/Grabar/Contratar/Guardar/Pago/Firma…) sigue abortado.
+ */
+export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
 
 /** ¿Es `params` EXACTAMENTE el conjunto `claves` (cada una una vez, ninguna más)? */
 function clavesExactas(params: URLSearchParams, claves: readonly string[]): boolean {
@@ -138,9 +161,12 @@ export function ajaxValidacionAvancePermitida(metodo: string, url: string, cuerp
   const cuerpoParams = new URLSearchParams(cuerpo ?? '')
   return reglas.some((r) => {
     if (`${u.origin}${u.pathname}` !== r.endpoint) return false
-    if (!clavesExactas(u.searchParams, ['resource', ...r.parametros])) return false
+    const opc = r.parametrosOpcionales ?? []
+    const qk = [...u.searchParams.keys()]
+    if (new Set(qk).size !== qk.length || !qk.includes('resource')) return false
+    if (!['resource', ...r.parametros].every((k) => qk.includes(k)) || !qk.every((k) => k === 'resource' || r.parametros.includes(k) || opc.includes(k))) return false
     if (u.searchParams.get('resource') !== r.resource) return false
-    if (!r.parametros.every((p) => /^[A-Za-z0-9_.-]{0,64}$/.test(u.searchParams.get(p) ?? '\u0000'))) return false
+    if (![...r.parametros, ...opc].filter((p) => qk.includes(p)).every((p) => /^[A-Za-z0-9_.-]{0,64}$/.test(u.searchParams.get(p) ?? '\u0000'))) return false
     if (!clavesExactas(cuerpoParams, r.cuerpo)) return false
     return r.cuerpo.every((k) => r.valorCuerpo.test(cuerpoParams.get(k) ?? '\u0000'))
   })
@@ -153,7 +179,7 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
     formOrigen: '/drpc18/riesgoMunicipio/control.do',
     formDestino: '/drpc18/datosBasicos/control.do',
     endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do']),
-    ajaxValidacion: Object.freeze([AJAX_LISTA_NEGRA_NIF_ALLIANZ]),
+    ajaxValidacion: Object.freeze([AJAX_LISTA_NEGRA_NIF_ALLIANZ, ...AJAX_LECTURA_ALLIANZ]),
   }),
   'td#rate': Object.freeze({
     id: 'rate',
@@ -161,7 +187,7 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
     formOrigen: '/drpc18/datosBasicos/control.do',
     formDestino: '/drpc18/tarifa/control.do',
     endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/datosBasicos/control.do']),
-    ajaxValidacion: Object.freeze([] as AjaxValidacionAvance[]),
+    ajaxValidacion: Object.freeze([...AJAX_LECTURA_ALLIANZ]),
   }),
 })
 export type SelectorAvancePestana = keyof typeof AVANCES_PESTANA_AUTORIZADOS

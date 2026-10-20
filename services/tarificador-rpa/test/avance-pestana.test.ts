@@ -12,6 +12,8 @@ import { ErrorTarificador } from '../src/errores.ts'
 import { avanzarPestanaGuardada } from '../src/adapters/allianz/auto.ts'
 import {
   AJAX_LISTA_NEGRA_NIF_ALLIANZ,
+  AJAX_AYUDA_APLICACIONES_ALLIANZ,
+  AJAX_LECTURA_ALLIANZ,
   AVANCES_PESTANA_AUTORIZADOS,
   ErrorAvanceSinLlegar,
   ajaxValidacionAvancePermitida,
@@ -114,9 +116,10 @@ const Q_TOKENS = 'com.ats.webbeans.struts.thread=T1&com.ats.webbeans.struts.sync
 const URL_LISTA_NEGRA = `${AJAX}?resource=pt.allianz.clientes.negocio.BlackListOperationsAjax&${Q_TOKENS}`
 const CUERPO_NIF = 'idNumberBL=00000000T'
 
-test('ajaxValidacion: SOLO td#datosBasicos lleva la lista negra del NIF; td#rate, ninguna', () => {
-  assert.deepEqual(AVANCES_PESTANA_AUTORIZADOS['td#datosBasicos'].ajaxValidacion, [AJAX_LISTA_NEGRA_NIF_ALLIANZ])
-  assert.deepEqual(AVANCES_PESTANA_AUTORIZADOS['td#rate'].ajaxValidacion, [])
+test('ajaxValidacion: SOLO td#datosBasicos lleva la lista negra del NIF; la ayuda (lectura) va en ambos', () => {
+  assert.deepEqual(AVANCES_PESTANA_AUTORIZADOS['td#datosBasicos'].ajaxValidacion, [AJAX_LISTA_NEGRA_NIF_ALLIANZ, AJAX_AYUDA_APLICACIONES_ALLIANZ])
+  assert.deepEqual(AVANCES_PESTANA_AUTORIZADOS['td#rate'].ajaxValidacion, [AJAX_AYUDA_APLICACIONES_ALLIANZ])
+  assert.deepEqual(AJAX_LECTURA_ALLIANZ, [AJAX_AYUDA_APLICACIONES_ALLIANZ])
   assert.ok(Object.isFrozen(AJAX_LISTA_NEGRA_NIF_ALLIANZ) && Object.isFrozen(AVANCES_PESTANA_AUTORIZADOS['td#datosBasicos'].ajaxValidacion))
 })
 
@@ -148,6 +151,44 @@ test('ajaxValidacionAvancePermitida: POST exacto a la lista negra del NIF sí; c
   assert.equal(ajaxValidacionAvancePermitida('POST', URL_LISTA_NEGRA, CUERPO_NIF, []), false, 'sin reglas, nada')
 })
 
+const URL_AYUDA = `${AJAX}?resource=com.ats.sea.visuals.util.AyudaAplicacionesAjax`
+const CUERPO_AYUDA = 'pageId=datosBasicos&codCia=0001'
+
+test('ajaxValidacionAvancePermitida (ayuda de aplicaciones, solo lectura): exacta sí; variaciones y recursos de escritura, no', () => {
+  const l = AJAX_LECTURA_ALLIANZ
+  assert.equal(ajaxValidacionAvancePermitida('POST', URL_AYUDA, CUERPO_AYUDA, l), true)
+  assert.equal(ajaxValidacionAvancePermitida('POST', `${URL_AYUDA}&${Q_TOKENS}`, CUERPO_AYUDA, l), true, 'tokens opcionales')
+  const escritura = ['EmitirPolizaAjax', 'GrabarProyectoAjax', 'ContratarAjax', 'GuardarPresupuestoAjax', 'PagoAjax', 'FirmaAjax', 'AyudaAplicacionesAjax2']
+  for (const r of escritura) assert.equal(ajaxValidacionAvancePermitida('POST', `${AJAX}?resource=com.ats.sea.visuals.util.${r}`, CUERPO_AYUDA, l), false, r)
+  for (const [metodo, url, cuerpo] of [
+    ['GET', URL_AYUDA, CUERPO_AYUDA],
+    ['POST', URL_AYUDA, null],
+    ['POST', URL_AYUDA, `${CUERPO_AYUDA}&action=aceptar`],
+    ['POST', URL_AYUDA, 'pageId=x;store&codCia=1'],
+    ['POST', URL_AYUDA, 'pageId=x'],
+    ['POST', `${URL_AYUDA}&action=store`, CUERPO_AYUDA],
+    ['POST', `${URL_AYUDA}&${Q_TOKENS}&com.ats.webbeans.struts.thread=2`, CUERPO_AYUDA],
+    ['POST', `${AJAX}?${Q_TOKENS}`, CUERPO_AYUDA],
+    ['POST', URL_AYUDA.replace('https:', 'http:'), CUERPO_AYUDA],
+    ['POST', URL_AYUDA.replace('/drpc18/', '/drpc17/'), CUERPO_AYUDA],
+  ] as const) assert.equal(ajaxValidacionAvancePermitida(metodo, url, cuerpo, l), false, `${metodo} ${url} ${cuerpo}`)
+})
+
+test('POSITIVO: la ayuda de aplicaciones que dispara la pantalla de destino pasa dentro de la ventana (td#datosBasicos y td#rate)', async () => {
+  for (const escenario of [
+    { origen: RIESGO, destino: DATOS, td: TD_DATOS, peticion: { url: `${EPAC}${RIESGO}`, body: 'vista=riesgoMunicipio&action=aceptar&aceptar=S' }, sel: 'td#datosBasicos' as const },
+    { origen: DATOS, destino: TARIFA, td: TD_RATE, peticion: { url: `${EPAC}${DATOS}`, body: 'vista=datosBasicos&action=aceptar' }, sel: 'td#rate' as const },
+  ]) {
+    const { sel, ...resto } = escenario
+    const { page, guard, pulsados, fallos } = await pantalla({ ...resto, previa: { url: URL_AYUDA, body: CUERPO_AYUDA } })
+    await pulsarAvancePestanaAutorizado(page, guard, sel)
+    assert.deepEqual(await pulsados(), ['avance'])
+    assert.equal(guard.violacion(), null, sel)
+    assert.ok(await hayFallo(page, fallos, (f) => f.includes('/AJAXServlet') && !/BLOCKED_BY_CLIENT/.test(f)), fallos().join(' | '))
+    await page.context().close()
+  }
+})
+
 test('POSITIVO td#datosBasicos: la consulta de lista negra del NIF al perder el foco pasa dentro de la ventana y se llega', async () => {
   const { page, guard, pulsados, fallos } = await pantalla({
     origen: RIESGO,
@@ -171,6 +212,8 @@ test('NEGATIVO: en el avance, un POST al AJAXServlet que NO es la lista negra de
     { previa: { url: URL_LISTA_NEGRA, body: `${CUERPO_NIF}&action=aceptar` }, td: 'td#datosBasicos' },
     { previa: { url: `${URL_LISTA_NEGRA}&action=store`, body: CUERPO_NIF }, td: 'td#datosBasicos' },
     { previa: { url: URL_LISTA_NEGRA, body: CUERPO_NIF }, td: 'td#rate' },
+    { previa: { url: `${AJAX}?resource=com.ats.sea.visuals.util.GuardarAyudaAjax`, body: CUERPO_AYUDA }, td: 'td#rate' },
+    { previa: { url: URL_AYUDA, body: `${CUERPO_AYUDA}&action=aceptar` }, td: 'td#datosBasicos' },
   ]
   for (const c of casos) {
     const escenario = c.td === 'td#rate'
