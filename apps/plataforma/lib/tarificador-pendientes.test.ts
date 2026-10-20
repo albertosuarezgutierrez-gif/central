@@ -117,6 +117,13 @@ test('Allianz moto: fecha de adquisición (Riesgo), póliza anterior y justifica
   assert.deepEqual(campos.find((c) => c.clave === 'fotocopiaAnterior')?.opciones?.map((o) => o.etiqueta), ['Elegir…', 'Recibo del próximo año / certificado', 'Recibos de los 2 últimos años'])
   const dados = moto(F, { cilindrada: '125', sexo: 'hombre', fechaAdquisicion: '2023-05-10', polizaAnteriorUltimos5: '12345', fotocopiaAnterior: 'proximo_anio' }, ['allianz'])
   for (const k of ['fechaAdquisicion', 'polizaAnteriorUltimos5', 'fotocopiaAnterior']) assert.ok(!todas(dados).some((p) => p.clave === k), `${k} ya no es pendiente`)
+  // Por defecto = matriculación: con ella (y sin fecha explícita) deja de ser pendiente; una explícita manda; sin ninguna, falta.
+  const conMatr = moto({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'hombre' }, ['allianz'])
+  assert.ok(!todas(conMatr).some((p) => p.clave === 'fechaAdquisicion'), 'la matriculación cubre la adquisición')
+  const vacia = moto({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'hombre', fechaAdquisicion: '' }, ['allianz'])
+  assert.ok(!todas(vacia).some((p) => p.clave === 'fechaAdquisicion'), 'vacía + matriculación: no falta')
+  const sinMatr = moto({ ...F, fechaMatriculacion: '' }, { cilindrada: '125', sexo: 'hombre' }, ['allianz'])
+  assert.ok(todas(sinMatr).some((p) => p.clave === 'fechaAdquisicion' && p.estado === 'falta'), 'sin ninguna: falta')
   // Sin seguro anterior (0 años) solo se pide la fecha de adquisición.
   const sin = moto({ ...F, aniosAsegurado: '0' }, { cilindrada: '125', sexo: 'hombre' }, ['allianz'])
   assert.deepEqual(todas(sin).filter((p) => ['fechaAdquisicion', 'polizaAnteriorUltimos5', 'fotocopiaAnterior'].includes(p.clave)).map((p) => p.clave), ['fechaAdquisicion'])

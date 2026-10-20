@@ -61,8 +61,8 @@ const adaptadorMoto: AdaptadorBot = {
     { clave: 'sexo', bloque: 'personas', etiqueta: 'Sexo del conductor', ayuda: 'obligatorio en Allianz Moto', opciones: OPCIONES_SEXO, porDefecto: '' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (años asegurado > 0, dato o supuesto). Sin seguro actual / 0 años no se pide.
     { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
-    // Allianz Moto (bot 0.7.11, 20/10/2026). Fecha de adquisición ≠ matriculación: se guarda en `datosVehiculo.fechaCompra` del riesgo.
-    { clave: 'fechaAdquisicion', bloque: 'riesgo', etiqueta: 'Fecha de adquisición de la moto', ayuda: 'obligatoria en Allianz Moto; no es la de matriculación', fecha: true },
+    // Allianz Moto (bot 0.7.11, 20/10/2026). Por defecto = la de matriculación (el corredor la cambia si es segunda mano); lo editado se guarda en `datosVehiculo.fechaCompra` del riesgo.
+    { clave: 'fechaAdquisicion', bloque: 'riesgo', etiqueta: 'Fecha de adquisición de la moto', ayuda: 'obligatoria en Allianz Moto. Por defecto, la de matriculación; cámbiala si la compró después (segunda mano)', fecha: true },
     // Si estuvo asegurado, Allianz exige las 5 últimas cifras de la póliza anterior y qué justificante se aporta. Se guardan en el
     // historial declarado de la oportunidad (`numeroPoliza` y `fotocopiaAnterior`).
     { clave: 'polizaAnteriorUltimos5', bloque: 'poliza', etiqueta: 'Nº de póliza anterior (últimas 5 cifras)', ayuda: 'obligatorio en Allianz Moto si estuvo asegurado', placeholder: 'p. ej. 12345', texto: true, maxLength: 30 },

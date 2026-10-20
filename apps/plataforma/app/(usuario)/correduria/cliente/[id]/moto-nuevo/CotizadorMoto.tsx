@@ -1354,7 +1354,7 @@ export default function CotizadorMoto({
           inicialesExtra={{
             cilindrada: datosRiesgo?.cilindradaCc != null ? String(datosRiesgo.cilindradaCc) : '',
             sexo: correcciones.sexo === 'hombre' || correcciones.sexo === 'mujer' ? correcciones.sexo : '',
-            // Allianz Moto (20/10/2026): fecha de adquisición = `fechaCompra` del riesgo (nunca la matriculación); póliza anterior (5 últimas
+            // Allianz Moto (20/10/2026): fecha de adquisición = `fechaCompra` del riesgo (sin ella, la matriculación: `formulario.fechaMatriculacion`); póliza anterior (5 últimas
             // cifras) y justificante = historial DECLARADO de la oportunidad (`numeroPoliza`, `fotocopiaAnterior`). Sin dato, vacíos.
             fechaAdquisicion: datosRiesgo?.fechaCompra ?? '',
             polizaAnteriorUltimos5: ultimos5CifrasPoliza(embebido ? historialRiesgo?.numeroPoliza : null) ?? '',
@@ -1362,6 +1362,7 @@ export default function CotizadorMoto({
           }}
           formulario={{
             matricula,
+            fechaMatriculacion: matriculacion || null,
             marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
             modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
             version: embebido ? datosRiesgo?.version ?? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,

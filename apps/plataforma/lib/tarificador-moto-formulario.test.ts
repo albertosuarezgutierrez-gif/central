@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, formularioBotMoto, leerEncoladoBot,
+  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, fechaAdquisicionPorDefecto, formularioBotMoto, leerEncoladoBot,
   mensajeFaltanDeFicha, type EntradaBotMoto, type FichaParaBot,
 } from './tarificador-moto-formulario.ts'
 
@@ -26,6 +26,17 @@ const faltan = (e: EntradaBotMoto) => {
   assert.equal(r.ok, false)
   return (r as Extract<typeof r, { ok: false }>).faltan.join(' | ')
 }
+
+test('fecha de adquisición: la explícita gana; vacía → la de matriculación; sin ninguna, no viaja (sigue faltando)', () => {
+  assert.equal(ok(entrada({ fechaAdquisicion: '2024-03-01', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicion, '2024-03-01')
+  assert.equal(ok(entrada({ fechaAdquisicion: '', fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicion, '2023-05-10')
+  assert.equal(ok(entrada({ fechaMatriculacion: '2023-05-10' })).riesgo.fechaAdquisicion, '2023-05-10')
+  assert.equal('fechaAdquisicion' in ok(entrada({ fechaMatriculacion: '' })).riesgo, false)
+  assert.equal('fechaAdquisicion' in ok(entrada({ fechaMatriculacion: 'no-es-fecha' })).riesgo, false)
+  assert.match(faltan(entrada({ fechaAdquisicion: '10/05/2023', fechaMatriculacion: '2023-05-10' })), /Fecha de adquisición/, 'una explícita mal formada no cae a la matriculación')
+  assert.equal(fechaAdquisicionPorDefecto(' 2023-05-10 '), '2023-05-10')
+  assert.equal(fechaAdquisicionPorDefecto(null), null)
+})
 
 test('completo: riesgo de moto con la forma de FormularioAuto, sin inventar nada', () => {
   const r = ok(entrada())
