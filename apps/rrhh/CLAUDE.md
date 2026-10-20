@@ -107,6 +107,11 @@ El god-panel de plataforma crea empresas vía HTTP:
 - `lib/push.ts` — Web Push vía `@central/core-push` (si se activa).
 - `lib/branding.ts` — personalización (logo, color) por empresa. `color_primario` en `rrhh.empresas` → Mariscos González `#1B3461`.
 - `components/CambiadorEmpresa.tsx` — selector de empresa en sidebar (auto-carga, visible solo si ≥2 empresas). Se auto-incluye en `AdminShell`.
+- **Marco del panel (20/10/2026):** `app/admin/layout.tsx` monta `AdminShell` UNA vez con el branding de la empresa de la
+  sesión; el menú (`components/AdminNav.tsx`, agrupado Personas/Documentos/Tiempo/Empresa) marca la ruta activa con
+  `usePathname`. 🚨 El layout NO es barrera: cada `page.tsx` sigue llamando a `getSesion()` y filtrando por su
+  `empresa_id` (cepo `lib/admin-guardas.test.ts`). Pantallas nuevas: `components/ui/Page` (título/acciones;
+  `ancho="formulario"` = max-w-2xl), `Card` y `Tabla` (envuelve `.tabla-cards`) — no repetir las clases a mano.
 - `lib/plantillas-prl.tsx` — plantillas PDF de PRL (autorización maquinaria, EPIs, riesgos,
   confidencialidad) con `@react-pdf/renderer` (`serverExternalPackages` en `next.config`).
 - `lib/certificado-firma.tsx` — genera la página de certificado de firma (eIDAS art.26) que se

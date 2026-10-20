@@ -1,12 +1,12 @@
 'use client'
 import { useState, useEffect } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 import { CATEGORIAS, MESES, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
+import Card from '@/components/ui/Card'
 
-type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
 type DocEmpresa = { id: string; categoria: string; nombre: string; storage_path: string; anio: number | null; mes: number | null; subido_at: string; url: string | null }
 
-export default function EmpresaClient({ branding }: { branding: Branding }) {
+export default function EmpresaClient() {
   const [docs, setDocs] = useState<DocEmpresa[]>([])
   const [docCategoria, setDocCategoria] = useState('contrato')
   const [docNombre, setDocNombre] = useState('')
@@ -63,10 +63,9 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
   const porCategoria = [...conocidas, ...huerfanas].filter(c => c.items.length > 0)
 
   return (
-    <AdminShell activo="empresa" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
-      <h1 className="mb-4 text-2xl">Documentación de empresa</h1>
+    <Page titulo="Documentación de empresa" ancho="formulario">
 
-      <section className="mb-6 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="mb-6">
         <h2 className="mb-3 text-base font-semibold">Subir documento</h2>
         <form onSubmit={subirDoc} className="grid grid-cols-1 gap-3">
           <div className="flex min-w-0 flex-wrap gap-2">
@@ -93,12 +92,12 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
           </div>
           {docMsg && <p className={`text-sm ${docMsg.startsWith('Error') ? 'text-alert' : 'text-ok'}`}>{docMsg}</p>}
         </form>
-      </section>
+      </Card>
 
       {porCategoria.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
           {porCategoria.map(cat => (
-            <section key={cat.id} className="rounded-card border border-line bg-card p-4">
+            <Card as="section" key={cat.id}>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-3">{cat.label}</h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-sm">
@@ -125,12 +124,12 @@ export default function EmpresaClient({ branding }: { branding: Branding }) {
                   </tbody>
                 </table>
               </div>
-            </section>
+            </Card>
           ))}
         </div>
       ) : (
         <p className="text-sm text-ink-3">Sin documentos. Sube el primero con el formulario de arriba.</p>
       )}
-    </AdminShell>
+    </Page>
   )
 }

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, Fragment } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
+import Tabla from '@/components/ui/Tabla'
 
 type Fichaje = {
   id: string; empleado_nombre: string | null; obra_nombre: string | null
@@ -22,7 +23,7 @@ function fmtISO(iso: string | null) {
   return new Date(iso).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function FichajesClient() {
   const hoy = new Date()
   const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`
   const [mes, setMes] = useState(mesActual)
@@ -89,8 +90,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
   const totalHoras = cerrados.reduce((s, f) => s + Number(f.horas_totales ?? 0), 0)
 
   return (
-    <AdminShell activo="fichajes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <h1 className="mb-4 text-2xl">Fichajes</h1>
+    <Page titulo="Fichajes">
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <input type="month" value={mes} onChange={e => setMes(e.target.value)} className="text-sm" />
@@ -120,8 +120,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[600px]">
+      <Tabla tablaClassName="md:min-w-[600px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Empleado</th>
@@ -220,8 +219,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
               <tr><td colSpan={7} className="px-3 py-3 text-ink-3">Sin fichajes en este período</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
-    </AdminShell>
+      </Tabla>
+    </Page>
   )
 }

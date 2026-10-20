@@ -22,9 +22,6 @@ export default async function Page() {
       inicial={JSON.parse(JSON.stringify(empleados))}
       nombreUsuario={usuarioRows[0]?.nombre ?? ''}
       nombreEmpresa={branding.nombre}
-      logoUrl={branding.logo_url}
-      colorPrimario={branding.color_primario}
-      tieneFichaje={branding.tiene_fichaje}
     />
   )
 }

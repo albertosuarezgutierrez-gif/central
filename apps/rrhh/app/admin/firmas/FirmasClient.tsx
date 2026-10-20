@@ -1,6 +1,5 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import AdminShell from '@/components/AdminShell'
 
 type Fila = {
   documento_id: string; documento: string; carpeta: string; estado_firma: string
@@ -24,7 +23,7 @@ function fecha(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'
 }
 
-export default function FirmasClient(props: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function FirmasClient() {
   const [estado, setEstado] = useState<'pendiente' | 'pendiente_empresa' | 'todos'>('pendiente')
   const [q, setQ] = useState('')
   const [qAplicada, setQAplicada] = useState('')
@@ -88,7 +87,7 @@ export default function FirmasClient(props: { logoUrl?: string | null; nombreEmp
   }
 
   return (
-    <AdminShell activo="firmas" {...props}>
+    <>
       <h1 className="mb-1 text-xl">Firmas pendientes</h1>
       <p className="mb-3 text-sm text-ink-3">
         Recordatorio automático a los 3 y 7 días de la solicitud y luego cada semana. «Reclamar» reenvía email y push ahora.
@@ -192,6 +191,6 @@ export default function FirmasClient(props: { logoUrl?: string | null; nombreEmp
         {hayMas && <button type="button" className={BTN_SEC} disabled={cargando} onClick={() => cargar(filas.length)}>Ver más</button>}
         {cargando && <span className="text-sm text-ink-3">Cargando…</span>}
       </div>
-    </AdminShell>
+    </>
   )
 }

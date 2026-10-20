@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
-import AdminShell from '@/components/AdminShell'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; requiere_firma_empresa: boolean; firmado_empresa_at: string | null; firmado_empresa_nombre: string | null; creada_at: string; url: string | null }
@@ -29,7 +28,7 @@ function toDateInput(iso: string | null) {
   return iso.slice(0, 10)
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[] }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [modoFirma, setModoFirma] = useState<Record<string, string>>({})
@@ -173,7 +172,7 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
     setFicha(s => ({ ...s, [k]: ev.target.value }))
 
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
+    <>
       {/* Nav */}
       <div className="mb-3 flex items-center justify-between gap-2">
         <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
@@ -423,6 +422,6 @@ async function subir(carpeta: string, file: File, modo: string = 'none') {
           </section>
         )
       })}
-    </AdminShell>
+    </>
   )
 }

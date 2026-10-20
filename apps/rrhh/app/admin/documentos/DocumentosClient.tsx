@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import AdminShell from '@/components/AdminShell'
 import { carpetaAdmiteFirma } from '@/lib/envio-staging'
 
 type Opcion = { id: string; etiqueta: string }
@@ -44,9 +43,8 @@ const formVacio = (nombre: string): Form => ({
 function nombreEmp(e: Empleado) { return [e.nombre, e.apellidos].filter(Boolean).join(' ') }
 function norm(s: string) { return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() }
 
-export default function DocumentosClient({ carpetas, categorias, ...shell }: {
+export default function DocumentosClient({ carpetas, categorias }: {
   carpetas: Opcion[]; categorias: Categoria[]
-  logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean
 }) {
   const [items, setItems] = useState<Item[]>([])
   const [empleados, setEmpleados] = useState<Empleado[] | null>(null)
@@ -165,7 +163,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
   const listos = pendientesDeEnvio(items).length
 
   return (
-    <AdminShell activo="documentos" {...shell}>
+    <>
       <h1 className="mb-1 text-xl">Enviar documentos</h1>
       <p className="mb-3 text-sm text-ink-3">
         Sube uno o varios documentos. La IA propone el tipo, la carpeta, el título, si requiere firma, un resumen para el
@@ -194,7 +192,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
           </button>
         </div>
       )}
-    </AdminShell>
+    </>
   )
 }
 

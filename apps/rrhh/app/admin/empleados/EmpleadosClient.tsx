@@ -1,8 +1,9 @@
 'use client'
 import { useState, useMemo } from 'react'
 import ActivarPush from '@/components/ActivarPush'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 import AsistentePanelAdmin from '@/components/AsistentePanelAdmin'
+import Tabla from '@/components/ui/Tabla'
 
 type Vac = { aprobados: number; en_tramite: number; pendientes: number | null }
 type E = { id: string; nombre: string; apellidos: string | null; dni: string | null; nss: string | null; email: string | null; puesto: string | null; estado: string; vacaciones?: Vac; fecha_reconocimiento_medico?: string | null }
@@ -15,7 +16,7 @@ function diasParaCaducarReconocimiento(fecha: string | null | undefined): number
   return Math.floor((expiry.getTime() - hoy.getTime()) / 86400000)
 }
 
-export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa, logoUrl, colorPrimario, tieneFichaje }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string; logoUrl?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa }: { inicial: E[]; nombreUsuario: string; nombreEmpresa: string }) {
   const [lista, setLista] = useState<E[]>(inicial)
   const [alta, setAlta] = useState({ apellidos: '', nombre: '', email: '', dni: '', telefono: '', puesto: '' })
   const [altaErr, setAltaErr] = useState('')
@@ -65,16 +66,13 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
     else setAltaErr((await r.json().catch(() => ({}))).error ?? 'No se pudo borrar')
   }
   return (
-    <AdminShell activo="empleados" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      {(nombreUsuario || nombreEmpresa) && (
-        <p className="mb-4 text-sm text-ink-3">
-          {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}
-        </p>
-      )}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl">Empleados</h1>
-        <ActivarPush endpoint="/api/admin/push/subscribe" />
-      </div>
+    <Page
+      titulo="Empleados"
+      subtitulo={(nombreUsuario || nombreEmpresa)
+        ? <>{nombreUsuario ? `Bienvenida, ${nombreUsuario}` : ''}{nombreUsuario && nombreEmpresa ? ' · ' : ''}{nombreEmpresa}</>
+        : undefined}
+      acciones={<ActivarPush endpoint="/api/admin/push/subscribe" />}
+    >
 
       <AsistentePanelAdmin />
 
@@ -105,8 +103,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-[12px] border border-line bg-card">
-        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[560px]">
+      <Tabla tablaClassName="md:min-w-[560px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nombre</th>
@@ -181,8 +178,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
               <tr><td colSpan={6} className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</td></tr>
             )}
           </tbody>
-        </table>
-      </div>
-    </AdminShell>
+      </Tabla>
+    </Page>
   )
 }

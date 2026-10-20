@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { tipoEtiqueta, tiposPorGrupo } from '@/lib/solicitudes-tipos'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 
 type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string; tiene_justificante?: boolean }
 
@@ -12,7 +12,7 @@ const campo = 'min-h-[44px] w-full rounded-[10px] border border-line bg-paper px
 
 const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
 
-export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, colorPrimario, tieneFichaje }: { inicial: S[]; logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }) {
+export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
   const [lista, setLista] = useState<S[]>(inicial)
   const [aviso, setAviso] = useState<string | null>(null)
   async function recargar() { const r = await fetch('/api/admin/solicitudes'); if (r.ok) setLista((await r.json()).solicitudes) }
@@ -54,8 +54,7 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
   const plegadas = lista.length - lista.filter(s => idsVisibles.has(s.id)).length
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
-    <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
-      <h1 className="text-2xl">Solicitudes</h1>
+    <Page titulo="Solicitudes">
       {aviso && (
         <div className="mt-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
           ⚠️ {aviso}
@@ -122,6 +121,6 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
           {verTodas ? 'Plegar ▴' : `Ver ${plegadas} solicitud${plegadas > 1 ? 'es' : ''} más ▾`}
         </button>
       )}
-    </AdminShell>
+    </Page>
   )
 }

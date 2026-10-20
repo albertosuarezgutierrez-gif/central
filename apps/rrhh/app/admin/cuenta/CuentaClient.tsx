@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import AdminShell from '@/components/AdminShell'
+import Page from '@/components/ui/Page'
 import { CATEGORIAS, MESES, etiquetaCategoria, pideAnio, pideMes, sufijoPeriodo } from '@/lib/categorias-empresa'
+import Card from '@/components/ui/Card'
 
 type Analisis = { resumen?: string; dias_permisos?: Record<string, number | string>; jornada_anual_horas?: number | string | null; vacaciones?: number | string | null; fuente?: string | null; _meta?: { aviso?: string; con_busqueda?: boolean } }
 type Branding = { nombre: string; color_primario: string | null; logo_url: string | null; tiene_fichaje?: boolean }
@@ -125,10 +126,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
   }
 
   return (
-    <AdminShell activo="cuenta" logoUrl={branding.logo_url} nombreEmpresa={branding.nombre} colorPrimario={branding.color_primario} tieneFichaje={branding.tiene_fichaje}>
-      <h1 className="text-2xl">Mi cuenta</h1>
+    <Page titulo="Mi cuenta" ancho="formulario">
 
-      <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3 max-w-sm">
         <h2 className="mb-2 text-base">Identidad corporativa (marca blanca)</h2>
         <form onSubmit={guardarMarca} className="grid grid-cols-1 gap-2.5">
           <label className="text-ink-2 text-sm">Color corporativo</label>
@@ -156,9 +156,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           {brandMsg && <p className="text-ok text-sm">{brandMsg}</p>}
         </form>
         <p className="text-ink-3 mt-2 text-xs">El logo y el color se aplican al <strong>Portal del Empleado</strong> que ven tus trabajadores. Deja el color vacío para usar el de iarrhh.</p>
-      </section>
+      </Card>
 
-      <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3 max-w-sm">
         <h2 className="mb-2 text-base">Convenio colectivo</h2>
         <form onSubmit={guardarConvenio} className="grid grid-cols-1 gap-2.5">
           <input placeholder="Código del convenio (REGCON)" value={cod} onChange={e => setCod(e.target.value)} />
@@ -197,9 +197,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
             </div>
           )}
         </div>
-      </section>
+      </Card>
 
-      <section className="my-3 rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3">
         <h2 className="mb-3 text-base">Documentación de empresa</h2>
         <form onSubmit={subirDoc} className="mb-4 grid gap-2">
           <div className="flex min-w-0 flex-wrap gap-2">
@@ -257,9 +257,9 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
         ) : (
           <p className="text-sm text-ink-3">Sin documentos subidos</p>
         )}
-      </section>
+      </Card>
 
-      <section className="my-3 max-w-sm rounded-card border border-line bg-card p-4">
+      <Card as="section" className="my-3 max-w-sm">
         <h2 className="mb-2 text-base">Cambiar contraseña</h2>
         <form onSubmit={enviar} className="grid grid-cols-1 gap-2.5">
           <input type="password" placeholder="Contraseña actual" value={actual} onChange={e => setActual(e.target.value)} />
@@ -268,7 +268,7 @@ export default function CuentaClient({ convenio, analisis, analisisFecha, brandi
           {msg && <p className="text-ok text-sm">{msg}</p>}
           {error && <p className="text-alert text-sm">{error}</p>}
         </form>
-      </section>
-    </AdminShell>
+      </Card>
+    </Page>
   )
 }
