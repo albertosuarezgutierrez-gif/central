@@ -62,3 +62,13 @@ export async function descargarObjeto(path: string): Promise<ArrayBuffer> {
   if (!r.ok) throw new Error(`Storage download ${r.status}`)
   return r.arrayBuffer()
 }
+
+/** Copia un objeto dentro del bucket privado (service_role), sin bajarlo ni subirlo de nuevo. */
+export async function copiarObjeto(origen: string, destino: string): Promise<void> {
+  const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/copy`, {
+    method: 'POST',
+    headers: { ...cabecerasClave(serviceKey()), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bucketId: BUCKET_DOCS, sourceKey: origen, destinationKey: destino }),
+  })
+  if (!r.ok) throw new Error(`Storage copy ${r.status}: ${await r.text()}`)
+}

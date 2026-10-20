@@ -3,9 +3,9 @@ import { getSesion, AuthError } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { firmarComoEmpresa } from '@/lib/firma-empresa'
-import { pushEmpleado } from '@/lib/push'
+import { avisarSolicitudFirma } from '@/lib/avisos'
 
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string; docId: string }> }) {
   try {
     const { empresa_id, usuario_id } = await getSesion()
     const { id: empleado_id, docId } = await params
@@ -16,14 +16,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
     const { sello_tiempo } = await firmarComoEmpresa(empresa_id, docId, { usuario_id, nombre })
 
-    try {
-      const docs = await prisma.$queryRaw<any[]>(Prisma.sql`
-        SELECT nombre FROM rrhh.documentos WHERE id = ${docId}::uuid LIMIT 1`)
-      const docNombre = docs[0]?.nombre ?? 'documento'
-      await pushEmpleado(empresa_id, empleado_id, 'Documento listo para firmar', `"${docNombre}" ya ha sido firmado por la empresa`)
-    } catch { /* notificaciones no bloquean */ }
+    // Ahora firma el empleado: se le avisa (intranet + email + push). No bloquea si falla.
+    const aviso = await avisarSolicitudFirma(empresa_id, empleado_id, docId, usuario_id, new URL(req.url).origin)
 
-    return NextResponse.json({ ok: true, sello_tiempo })
+    return NextResponse.json({ ok: true, sello_tiempo, aviso })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
     if (e instanceof Error && /no encontrado|no requiere|no está pendiente/.test(e.message))

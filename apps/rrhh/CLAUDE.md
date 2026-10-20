@@ -60,6 +60,7 @@ El god-panel de plataforma crea empresas vía HTTP:
 /api/auth/seleccionar-empresa → elige empresa activa en el flujo de LOGIN (cuando el responsable tiene varias)
 /api/auth/cambiar-empresa  → cambia empresa estando ya autenticado (rota el JWT; usa getSesion())
 /api/admin/mis-empresas    → lista empresas del usuario autenticado (para el cambiador en sidebar)
+/admin/documentos · /admin/firmas → envío asistido/masivo y panel de firmas pendientes (ver sección propia)
 ```
 
 ## Packages consumidos (transpilePackages)
@@ -73,6 +74,19 @@ El god-panel de plataforma crea empresas vía HTTP:
 - `/api/cron/recordatorio-fichaje` — L-V 9h (hora ES): push a empleados que aún no han fichado entrada.
 - `/api/cron/alerta-fichajes-abiertos` — diario 22h (hora ES): Telegram si un fichaje activo lleva
   >10h sin fichar salida.
+- `/api/cron/recordatorio-firmas` — diario 8h UTC: recuerda firmas pendientes a los 3 y 7 días y luego semanal
+  (regla pura `lib/recordatorios-firma.ts`; idempotente por índice único documento+día en `rrhh.avisos`).
+
+## Envío de documentos, avisos y firmas pendientes (20/10/2026, migración `0023_avisos_firma.sql`)
+- `/admin/documentos`: Pilar sube 1..N archivos al staging (`staging/<empresa_id>/…`, validado con `esPathStagingDe`);
+  la IA (`lib/asistente-subida.ts`, catálogo cerrado; a la IA NO se le manda la plantilla) PROPONE tipo/carpeta/título/
+  firma/resumen y los destinatarios se emparejan en código por NIF > nombre completo único (nunca se funden). Nada se
+  asigna ni avisa hasta «Confirmar»: una copia (objeto + fila) por empleado o toda la plantilla (`lib/envio-documentos.ts`).
+- Avisos (`lib/avisos.ts`, tabla `rrhh.avisos`): intranet + email + push con el resultado de cada canal registrado; un
+  fallo de email no tumba la solicitud. Saltan al solicitar firma, al subir con «solo firma el empleado», al firmar la
+  empresa y al «Reclamar». El empleado los ve en `/e` y abrir el documento los marca vistos (`documentos.visto_empleado_at`).
+- `/admin/firmas`: panel paginado (50 + «Ver más») con demora, visto, último aviso y contacto. `firma_solicitada_at` NULL
+  (docs anteriores a 0023) = «no se sabe»: la demora se cuenta desde la subida y el cron NO los reclama hasta un «Reclamar».
 
 ## Patrones clave
 - `lib/auth.ts` — sesión del responsable (JWT firmado, `requireSecret()` para la clave de firma).
