@@ -1,13 +1,13 @@
 {
  "sesion": "7b03f7c2-db2b-54bc-8a4a-e28d208d86c2",
  "inicio": "2026-10-14T17:39:25.975Z",
- "fin": "2026-10-20T06:04:14.005Z",
- "llamadas": 9125,
+ "fin": "2026-10-20T06:35:56.228Z",
+ "llamadas": 9186,
  "categorias": {
   "otro": {
-   "llamadas": 935,
-   "chars_in": 134035,
-   "chars_out": 6842533,
+   "llamadas": 950,
+   "chars_in": 136284,
+   "chars_out": 6907283,
    "errores": 0,
    "archivos_citados": 42,
    "chars_citados": 5899618,
@@ -15,8 +15,8 @@
     "ToolSearch": 218,
     "SubagentHandback": 10,
     "SendMessage": 50,
-    "ReadNotifications": 520,
-    "Monitor": 127,
+    "ReadNotifications": 527,
+    "Monitor": 135,
     "AskUserQuestion": 8,
     "TaskStop": 2
    }
@@ -33,32 +33,32 @@
    }
   },
   "lectura-directa": {
-   "llamadas": 1100,
-   "chars_in": 147394,
-   "chars_out": 9644903,
+   "llamadas": 1107,
+   "chars_in": 148146,
+   "chars_out": 9695263,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Glob": 26,
     "Grep": 488,
-    "Read": 586
+    "Read": 593
    }
   },
   "mcp:github": {
-   "llamadas": 410,
-   "chars_in": 122103,
-   "chars_out": 973237,
+   "llamadas": 412,
+   "chars_in": 122416,
+   "chars_out": 981211,
    "errores": 4,
    "archivos_citados": 7,
    "chars_citados": 3223033,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__actions_run_trigger": 42,
+    "mcp__github__actions_run_trigger": 43,
     "mcp__github__actions_list": 98,
     "mcp__github__create_pull_request": 47,
     "mcp__github__update_pull_request": 36,
-    "mcp__github__pull_request_read": 76,
+    "mcp__github__pull_request_read": 77,
     "mcp__github__merge_pull_request": 48,
     "mcp__github__add_reply_to_pull_request_comment": 19,
     "mcp__github__get_job_logs": 18,
@@ -79,14 +79,14 @@
    }
   },
   "bash": {
-   "llamadas": 5121,
-   "chars_in": 3695648,
-   "chars_out": 15759120,
+   "llamadas": 5158,
+   "chars_in": 3747714,
+   "chars_out": 15870550,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 5121
+    "Bash": 5158
    }
   },
   "mcp:Vercel": {
