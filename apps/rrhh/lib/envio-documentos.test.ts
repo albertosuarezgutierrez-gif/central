@@ -9,6 +9,10 @@ const { queryRaw, copiarObjeto, borrarObjeto, infoObjeto } = vi.hoisted(() => ({
   borrarObjeto: vi.fn(async () => {}),
   infoObjeto: vi.fn(async () => ({ tamano: 1000, tipo: 'application/pdf' }) as { tamano: number | null; tipo: string | null } | null),
 }))
+// CI de la raíz no genera el cliente Prisma: `Prisma.sql` se simula (devuelve {sql, values}).
+vi.mock('@prisma/client', () => ({
+  Prisma: { sql: (s: TemplateStringsArray, ...values: unknown[]) => ({ sql: s.join('?'), values }) },
+}))
 vi.mock('@/lib/prisma', () => ({ prisma: { $queryRaw: queryRaw, $executeRaw: vi.fn() } }))
 vi.mock('@/lib/storage', () => ({
   descargarObjeto: vi.fn(), copiarObjeto, borrarObjeto, infoObjeto, listarObjetos: vi.fn(), borrarObjetos: vi.fn(),
