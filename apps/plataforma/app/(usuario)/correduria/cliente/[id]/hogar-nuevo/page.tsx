@@ -6,10 +6,11 @@ import { precalificarHogarNuevoAsegura } from '@/lib/hogar-nuevo-asegura'
 import { direccionDeFicha } from '@/lib/hogar-direccion-ficha'
 import { Pagina, PageHeader, cardStyle, CardHeader, btnStyle } from '@/components/ui'
 import Formulario from './Formulario'
+import BuscadorDireccionCp from '../../../BuscadorDireccionCp'
 import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
 import { paramTexto, viviendaDeRiesgo } from '../../../oportunidad/[id]/variante'
 import { figurasFrenteAPeticionHogar, propietarioEsTomadorDeRiesgo } from '../../../oportunidad/[id]/cotizador-hogar'
-import { busquedaCatastroDeVivienda, inicialesHogarDeRiesgo } from '@central/module-seguros'
+import { busquedaCatastroDeVivienda, inicialesHogarDeRiesgo, provinciaPorCp } from '@central/module-seguros'
 import { catalogoAsegura } from '@/lib/retarificar-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -57,8 +58,10 @@ export default async function HogarNuevoPage({
   const { id: clienteId } = await params
   const sp = await searchParams
   const direccion = cadena(sp.direccion)
-  const municipio = cadena(sp.municipio) ?? 'SEVILLA'
-  const provincia = cadena(sp.provincia) ?? 'SEVILLA'
+  // Sin CP/municipio/provincia en la URL, VACÍOS: nunca un municipio de partida (el «SEVILLA» por defecto se leía como dato del cliente).
+  const cp = cadena(sp.cp) ?? ''
+  const municipio = cadena(sp.municipio) ?? ''
+  const provincia = cadena(sp.provincia) ?? provinciaPorCp(cp) ?? ''
   const referenciaParam = cadena(sp.referencia)
 
   // Variante de un riesgo (30/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad (regla 9) y
@@ -103,7 +106,8 @@ export default async function HogarNuevoPage({
       ? normalizarReferencia(vivienda.referenciaCatastral)
       : null
 
-  if (direccion && referencia === null) {
+  const faltaLugar = direccion !== null && referencia === null && (municipio === '' || provincia === '')
+  if (direccion && referencia === null && !faltaLugar) {
     const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
 
     if (r.estado === 'elegir') {
@@ -124,7 +128,7 @@ export default async function HogarNuevoPage({
               ))}
             </div>
           </div>
-          <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
+          <FormularioBuscar clienteId={clienteId} direccion={direccion} cp={cp} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
         </Pagina>
       )
     }
@@ -162,7 +166,7 @@ export default async function HogarNuevoPage({
               </div>
             )}
           </div>
-          <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
+          <FormularioBuscar clienteId={clienteId} direccion={direccion} cp={cp} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
         </Pagina>
       )
     }
@@ -187,15 +191,20 @@ export default async function HogarNuevoPage({
             📍 Dirección de su ficha. Confírmala al hablar con él: ¿vive ahí? ¿es propietario o inquilino (entonces es contenido)?
           </p>
         )}
+        {faltaLugar && (
+          <p role="status" style={{ ...cardStyle, fontSize: 13, marginBottom: 14, borderColor: 'var(--warning)' }}>
+            Para buscar por dirección hacen falta el código postal (o la provincia) y el municipio: no se ha consultado el Catastro.
+          </p>
+        )}
         <FormularioBuscar
           clienteId={clienteId}
           oportunidad={oportunidad}
-          // Sin referencia catastral pero con la dirección del riesgo, se parte de ella (mejor que la de la ficha).
-          direccion={busca.direccion ?? deFicha?.direccion ?? ''}
-          // Con dirección de la ficha pero sin municipio, el campo sale VACÍO: el «SEVILLA» por defecto
-          // se leería como dato del cliente junto a su calle.
-          municipio={busca.municipio ?? (deFicha ? (deFicha.municipio ?? '') : municipio)}
-          provincia={busca.provincia ?? (deFicha ? (deFicha.provincia ?? '') : provincia)}
+          // Lo que se acaba de escribir manda; después, la calle del riesgo (mejor que la de la ficha).
+          direccion={direccion ?? busca.direccion ?? deFicha?.direccion ?? ''}
+          cp={cp}
+          // Con dirección de la ficha pero sin municipio, el campo sale VACÍO: un municipio de partida se leería como dato del cliente.
+          municipio={municipio || (busca.municipio ?? (deFicha ? (deFicha.municipio ?? '') : ''))}
+          provincia={provincia || (busca.provincia ?? (deFicha ? (deFicha.provincia ?? '') : ''))}
         />
       </Pagina>
     )
@@ -233,7 +242,7 @@ export default async function HogarNuevoPage({
             ? `No se ha podido precalificar: ${pre.mensaje}`
             : `No se ha podido precalificar la ficha de hogar: ${pre.mensaje}`}
         </div>
-        <FormularioBuscar clienteId={clienteId} direccion="" municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
+        <FormularioBuscar clienteId={clienteId} direccion="" cp={cp} municipio={municipio} provincia={provincia} oportunidad={oportunidad} />
       </Pagina>
     )
   }
@@ -247,16 +256,18 @@ export default async function HogarNuevoPage({
   )
 }
 
-/** El buscador de partida: por dirección o por referencia, en GET puro (sin JS). */
+/** El buscador de partida: por dirección (CP primero) o por referencia, en GET puro. */
 function FormularioBuscar({
   clienteId,
   direccion,
+  cp,
   municipio,
   provincia,
   oportunidad,
 }: {
   clienteId: string
   direccion: string
+  cp: string
   municipio: string
   provincia: string
   /** La oportunidad de la variante: viaja en los dos formularios (GET) para no perderla al buscar. */
@@ -267,13 +278,7 @@ function FormularioBuscar({
     <div style={{ display: 'grid', gap: 14 }}>
       <div style={cardStyle}>
         <CardHeader title="Por dirección" sub="El Catastro da m², año de construcción, uso y CP — gratis y sin preguntar al cliente." />
-        <form method="get" action={accion} style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          {oportunidad && <input type="hidden" name="oportunidad" value={oportunidad} />}
-          <input style={{ ...input, gridColumn: '1 / -1' }} name="direccion" placeholder="Calle San Vicente 40, 2º 14" defaultValue={direccion} autoFocus />
-          <input style={input} name="municipio" placeholder="Municipio" defaultValue={municipio} />
-          <input style={input} name="provincia" placeholder="Provincia" defaultValue={provincia} />
-          <button type="submit" style={{ ...btnStyle('primario'), gridColumn: '1 / -1' }}>Consultar Catastro</button>
-        </form>
+        <BuscadorDireccionCp accion={accion} oportunidad={oportunidad} direccion={direccion} cp={cp} municipio={municipio} provincia={provincia} />
       </div>
       <div style={cardStyle}>
         <CardHeader title="Por referencia catastral" sub="Los 20 caracteres del recibo del IBI (la de 14 es la del edificio: no trae m² ni año)." />

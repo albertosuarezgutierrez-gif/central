@@ -77,9 +77,9 @@ test('🪤 la página de la oportunidad tiene UN solo enlace a rutaVariante (el 
 test('hogar sin referencia: el buscador del Catastro parte de la calle del riesgo, no solo del texto libre', () => {
   const p = activas(leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/page.tsx'))
   assert.match(p, /busquedaCatastroDeVivienda\(vivienda, tipoViaNombre\)/)
-  assert.match(p, /direccion=\{busca\.direccion \?\? deFicha\?\.direccion \?\? ''\}/)
-  assert.match(p, /municipio=\{busca\.municipio \?\?/)
-  assert.match(p, /provincia=\{busca\.provincia \?\?/)
+  assert.match(p, /direccion=\{(direccion \?\? )?busca\.direccion \?\? deFicha\?\.direccion \?\? ''\}/)
+  assert.match(p, /municipio=\{(municipio \|\| \()?busca\.municipio \?\?/)
+  assert.match(p, /provincia=\{(provincia \|\| \()?busca\.provincia \?\?/)
   assert.match(p, /vivienda\?\.referenciaCatastral/, 'con referencia anotada no se pasa por el buscador')
 })
 

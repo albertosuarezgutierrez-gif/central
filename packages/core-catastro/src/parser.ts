@@ -142,7 +142,8 @@ export function caracterizarVivienda(d: DatosCatastro): ViviendaCatastro | null 
         : plantaNum !== null && plantaNum > 0
           ? 'piso'
           : null
-  const sup = viviendas.reduce((s, c) => s + (c.superficie ?? 0), 0)
+  // Una fila de vivienda sin superficie → no se sabe la de la vivienda (nunca una suma parcial).
+  const sup = viviendas.every((c) => c.superficie !== null && c.superficie > 0) ? viviendas.reduce((s, c) => s + (c.superficie as number), 0) : 0
   const anexos = [
     ...new Set(
       construcciones
@@ -354,7 +355,8 @@ const VACIAS = new Set(['DE', 'DEL', 'D', 'LA', 'LAS', 'EL', 'LOS', 'Y', 'A', 'E
 
 /** Tokens con los que se compara un nombre de vía (sin artículos ni Ñ). */
 export function tokensVia(nombre: string): string[] {
-  return norm(nombre)
+  // El sufijo de pedanía «(VENTAS CARRIZA)» no es parte del nombre de la calle; el artículo pospuesto («PARRA LA») ya cae en VACIAS.
+  return norm(nombre.replace(/\([^)]*\)/g, ' '))
     .toUpperCase()
     .split(/[^A-Z0-9Ñ]+/i)
     .filter((t) => t && !VACIAS.has(t))
@@ -407,6 +409,14 @@ export function casaToken(c: string, t: string): boolean {
 }
 
 /**
+ * Singular/plural («PARRA» ~ «PARRAS»). SOLO para OFRECER candidatas (`viasParecidas`, la lista que elige una persona): una vía
+ * que difiere de la buscada por una «S» es otra calle, así que NUNCA gana por esto.
+ */
+function casaParecido(c: string, t: string): boolean {
+  return casaToken(c, t) || (Math.min(c.length, t.length) >= 4 && (c === `${t}S` || t === `${c}S`))
+}
+
+/**
  * Las vías del callejero que se PARECEN a la buscada, para que una persona elija cuando
  * `elegirVia` no puede (ninguna casa entera, o empatan). Ordenadas por cuántas palabras comparten.
  * No elige nada: una calle con un nombre de pila distinto («José» por «Juan») puede ser la misma o
@@ -421,7 +431,7 @@ export function viasParecidas(
   return vias
     .map((v) => {
       const tokens = tokensVia(v.nombre)
-      return { v, comunes: objetivo.filter((t) => tokens.some((c) => casaToken(c, t))).length }
+      return { v, comunes: objetivo.filter((t) => tokens.some((c) => casaParecido(c, t))).length }
     })
     .filter((x) => x.comunes > 0)
     .sort((a, b) => b.comunes - a.comunes)
@@ -459,15 +469,32 @@ export function elegirViaConTipo(
   const objetivo = tokensVia(buscada)
   if (!objetivo.length) return vias.length === 1 ? vias[0] : null
 
-  const candidatas = vias
+  // GANA SOLO LA COINCIDENCIA EXACTA de tokens (tras quitar artículos, artículo pospuesto y sufijo de pedanía). La abreviatura de un
+  // nombre de pila («ANT» por «ANTONIO») vale únicamente si el resto de tokens es exacto y la búsqueda tiene 3 o más palabras: con una
+  // sola («Rosales») «ROSAL» sería otra calle. Una vía con tokens de más («ISABEL PARRA» para «Parra») o con una «S» de diferencia
+  // («PARRAS») NO gana: es ambigüedad y la resuelve una persona con la lista de `viasParecidas`.
+  const exactas = vias
     .map((v) => ({ tipo: v.tipo, nombre: v.nombre, tokens: tokensVia(v.nombre) }))
-    .filter((v) => objetivo.every((t) => v.tokens.some((c) => casaToken(c, t))))
-  if (!candidatas.length) return null
-
-  candidatas.sort((a, b) => a.tokens.length - b.tokens.length)
-  // Dos candidatas igual de ajustadas = ambigüedad real, no se elige a dedo.
-  if (candidatas.length > 1 && candidatas[0].tokens.length === candidatas[1].tokens.length) return null
-  return { tipo: candidatas[0].tipo, nombre: candidatas[0].nombre }
+    .filter((v) => {
+      if (v.tokens.length !== objetivo.length) return false
+      const restantes = [...v.tokens]
+      let abreviados = 0
+      for (const t of objetivo) {
+        const i = restantes.indexOf(t)
+        if (i >= 0) { restantes.splice(i, 1); continue }
+        const j = restantes.findIndex((c) => casaToken(c, t))
+        if (j < 0) return false
+        restantes.splice(j, 1)
+        abreviados++
+      }
+      return abreviados === 0 || (objetivo.length >= 3 && abreviados <= 1)
+    })
+  if (exactas.length !== 1) return null // ninguna exacta, o dos igual de ajustadas (CL/AV «SAN VICENTE»)
+  const g = exactas[0]
+  // Una vía de pedanía «NOMBRE (PEDANÍA)» con otras calles parecidas en la lista no gana en silencio: puede ser otra del mismo nombre.
+  const otras = vias.filter((v) => !(v.nombre === g.nombre && v.tipo === g.tipo))
+  if (/\(/.test(g.nombre) && otras.some((v) => tokensVia(v.nombre).some((c) => objetivo.some((t) => casaParecido(c, t))))) return null
+  return { tipo: g.tipo, nombre: g.nombre }
 }
 
 /**

@@ -141,8 +141,10 @@ export default async function RetarificarPage({
     const refParam = cadena(sp.referencia)
     let referencia = refParam ? normalizarReferencia(refParam) : null
     const direccion = cadena(sp.direccion)
-    const municipio = cadena(sp.municipio) ?? 'SEVILLA'
-    const provincia = cadena(sp.provincia) ?? 'SEVILLA'
+    const cp = cadena(sp.cp) ?? ''
+    // Sin municipio/provincia en la URL, VACÍOS (nunca «Sevilla» de partida): sin ellos no se consulta el Catastro por dirección.
+    const municipio = cadena(sp.municipio) ?? ''
+    const provincia = cadena(sp.provincia) ?? ''
 
     const motivo = (
       <div className="card">
@@ -152,13 +154,13 @@ export default async function RetarificarPage({
       </div>
     )
 
-    if (referencia === null && direccion) {
+    if (referencia === null && direccion && municipio !== '' && provincia !== '') {
       const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
       if (r.estado === 'ok') {
         referencia = r.referencia
       } else {
         const buscador = (
-          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} oportunidadId={oportunidadVariante} />
+          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} cp={cp} deCliente={false} oportunidadId={oportunidadVariante} />
         )
         if (r.estado === 'elegir') {
           return (
@@ -188,10 +190,11 @@ export default async function RetarificarPage({
           {motivo}
           <BuscadorCatastro
             polizaId={p.id}
-            direccion={c?.direccion ?? ''}
-            municipio={c?.ciudad ?? municipio}
-            provincia={c?.provincia ?? provincia}
-            deCliente={Boolean(c?.direccion)}
+            direccion={direccion ?? c?.direccion ?? ''}
+            municipio={municipio || (c?.ciudad ?? '')}
+            provincia={provincia || (c?.provincia ?? '')}
+            cp={cp}
+            deCliente={direccion === null && Boolean(c?.direccion)}
             oportunidadId={oportunidadVariante}
           />
         </Marco>
@@ -206,7 +209,7 @@ export default async function RetarificarPage({
           <div className={`card ${preCat.estado === 'no_encontrado' ? 'muted' : 'err'}`}>
             No se ha podido precalificar el hogar con el Catastro: {preCat.mensaje}
           </div>
-          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} oportunidadId={oportunidadVariante} />
+          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} cp={cp} deCliente={false} oportunidadId={oportunidadVariante} />
         </Marco>
       )
     }

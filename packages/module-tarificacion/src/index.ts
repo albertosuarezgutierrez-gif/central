@@ -159,6 +159,13 @@ export {
   type ValidacionFormularioHogarSinTomador,
 } from './formulario-hogar.ts'
 
+// Ayudas puras de la oportunidad de HOGAR (20/10/2026): capital sugerido, infraseguro, discrepancias Catastro, antigüedad, bots por uso.
+export {
+  COSTE_RECONSTRUCCION_EUR_M2, REGLAS_USO_COMPANIA, UMBRAL_INFRASEGURO, TOLERANCIA_M2, ANTIGUEDAD_PREGUNTAR_REFORMAS, USOS_FILTRO_BOTS,
+  aceptaUso, avisoInfraseguro, capitalContinenteSugerido, discrepanciasCatastro, filtrarBotsPorUso, preguntasPorAntiguedad, zonaCostePorProvincia,
+  type AceptaUso, type AvisoInfraseguro, type CapitalSugerido, type DiscrepanciaCatastro, type FiltroBotsPorUso, type PreguntasAntiguedad, type UsoFiltroBots, type ZonaCoste,
+} from './hogar-asesor.ts'
+
 // Tomador canónico (08/10/2026): bloque reutilizable por los formularios.
 export {
   TIPOS_TOMADOR,
