@@ -34,10 +34,11 @@ import ParrillaPrecios, { trabajosParaParrilla } from './ParrillaPrecios'
 import type { LadoBot } from './parrilla-precios'
 import PropuestaEscenarios from './PropuestaEscenarios'
 import { fechaEs } from './piezas-riesgo'
+import type { PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
 import { accionesPrecio, etiquetaRiesgo, ramoVariante, tomadorDelRiesgo } from './variante'
 import { avisoRamoSinTarifa, companiasDisponibles, type TrabajoCompania } from '@/lib/presupuestos-companias'
 
-export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy: string }) {
+export default function RiesgoPantalla({ inicial, hoy, propuestaCartera = null }: { inicial: Riesgo; hoy: string; propuestaCartera?: PropuestaCarteraHogar | null }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
   // Editar una ficha desde el modal de «Editar datos» refresca la página del servidor (router.refresh):
   // el riesgo que llega de nuevo manda sobre el que había, y el aviso «Falta…» se actualiza solo.
@@ -183,6 +184,7 @@ export default function RiesgoPantalla({ inicial, hoy }: { inicial: Riesgo; hoy:
       ) : (
         <DatosRiesgo
           riesgo={riesgo}
+          propuestaCartera={propuestaCartera}
           // Mientras se paga una cotización embebida (hogar) no se deja editar la vivienda: se cotiza con lo guardado.
           ocupado={ocupado}
           onCambio={(texto) => void recargar(texto)}

@@ -1352,6 +1352,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (20/10/2026) Correduría · oportunidad de HOGAR con Catastro
+- CP primero (fuera default SEVILLA), buscador Catastro en la oportunidad, avisos (capital sugerido, infraseguro, discrepancias, antigüedad >40, uso obligatorio antes del 0,50€, hipoteca, prellenado desde cartera viva). Helpers `module-tarificacion/src/hogar-asesor.ts`.
+- Fix `core-catastro` elegirVia: calles de pedanía («PARRA LA (VENTAS CARRIZA)») ya no se confunden con ISABEL PARRA/PARRAS; solo gana coincidencia exacta.
+- Decisión: a Codeoscopic se envía el TOTAL construido (vivienda+anexos); el desglose solo se muestra.
+- Sin confirmar (Alberto): `REGLAS_USO_COMPANIA` y `COSTE_RECONSTRUCCION_EUR_M2`. Bots de hogar sin precio: la vía real es Avant2.
+- Caso de prueba: Pedro José Moreno Gil (lead), RC 2053408VG1525S0001YW, 228 m², 2011. OK de Alberto a 1 cotización Avant2 (0,50€).
+- Siguiente: motor de comparativa ÚNICO (cualquier fuente/ramo) + resumen IA etiquetado + PDF existente.
+
 ## (20/10/2026) RRHH · fichaje: error de ubicación en iPhone con permiso concedido
 - Captura de Pilar (Global2): «activa la ubicación» con Safari en Permitir. Causa: el catch de getCurrentPosition mapeaba TODO error (timeout/no disponible) a «permiso»; un único intento alta precisión 15 s.
 - Nuevo `apps/rrhh/lib/geolocalizacion-fichaje.ts` (+test): mensaje por código (1 → incluye iOS «Sitios web de Safari»), reintento baja precisión 20 s/maximumAge 60 s. Servidor intacto.

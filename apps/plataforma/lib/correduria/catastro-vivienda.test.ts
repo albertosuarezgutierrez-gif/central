@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { avisoUsoCatastral, consultaCatastroDeForm, partirViaCatastro, precargaCatastroVivienda, type CatastroVivienda } from './catastro-vivienda.ts'
+import { avisoUsoCatastral, consultaCatastroDeForm, metadatosConsultaCatastro, partirViaCatastro, precargaCatastroVivienda, type CatastroVivienda } from './catastro-vivienda.ts'
 
 const cat: CatastroVivienda = {
   metrosCuadrados: 76, anioConstruccion: 1994, direccion: 'CL SAN VICENTE 40 Pl:02 Pt:14', localidad: 'SEVILLA', provincia: 'SEVILLA', codigoPostal: '41002',
@@ -72,4 +72,26 @@ test('uso catastral: solo informa. Residencial no alarma; otro uso o sin uso avi
   assert.match(avisoUsoCatastral(null)!, /no informa el uso/)
   const conUso = precargaCatastroVivienda({}, REF, { ...cat, uso: 'Residencial' })
   assert.ok(!('uso' in conUso.cambios) && !('ocupacion' in conUso.cambios), 'el uso catastral no rellena ningún campo del formulario')
+})
+
+test('metadatosConsultaCatastro: guarda referencia, fecha, uso, m² y año; lo que no trae queda vacío (nunca 0)', () => {
+  const ahora = '2026-10-20T09:00:00.000Z'
+  assert.deepEqual(metadatosConsultaCatastro({ ...cat, uso: 'Residencial' }, REF.toLowerCase(), ahora), {
+    catastroConsultadoAt: ahora, catastroReferencia: REF, usoCatastral: 'Residencial', catastroMetrosCuadrados: '76', catastroMetrosVivienda: '',
+    catastroMetrosAnexos: '', catastroAnexos: '', catastroAnioConstruccion: '1994',
+  })
+  const vacio = metadatosConsultaCatastro({ ...cat, metrosCuadrados: 0, anioConstruccion: null, uso: null }, REF, ahora)
+  assert.equal(vacio.catastroMetrosCuadrados, '')
+  assert.equal(vacio.catastroAnioConstruccion, '')
+  assert.equal(vacio.usoCatastral, '')
+})
+
+test('228 m² construidos = vivienda 143 + anexos 85: se DECLARA el total (228); la vivienda y los anexos solo se guardan para mostrarlos', () => {
+  const c: CatastroVivienda = { ...cat, metrosCuadrados: 228, metrosVivienda: 143, anexos: [{ uso: 'APARCAMIENTO', superficie: 54 }, { uso: 'ALMACEN', superficie: 31 }] }
+  assert.equal(precargaCatastroVivienda({}, REF, c).cambios.metrosCuadrados, '228')
+  const m = metadatosConsultaCatastro(c, REF, 'x')
+  assert.equal(m.catastroMetrosCuadrados, '228')
+  assert.equal(m.catastroMetrosVivienda, '143')
+  assert.equal(m.catastroMetrosAnexos, '85')
+  assert.equal(m.catastroAnexos, 'Aparcamiento 54 m² · Almacen 31 m²')
 })

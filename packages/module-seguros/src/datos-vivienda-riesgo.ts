@@ -55,6 +55,21 @@ export const ESPEC_VIVIENDA = [
   // 19/10/2026: Allianz Hogar (bot) lo pregunta («Sin madera / Con madera») y decide la tarifa. Pregunta EXPLÍCITA, sin valor
   // por defecto: `null` = no contestado (≠ «sin madera»). Codeoscopic no lo pide: no entra en `faltanDatosVivienda`.
   { clave: 'conMadera', etiqueta: 'Construcción con madera', tipo: { t: 'bool' } },
+  // 20/10/2026: hipoteca y reformas (≥40 años). `null` = no contestado (≠ «no»). El banco solo tiene sentido con hipoteca = sí.
+  { clave: 'hipoteca', etiqueta: 'Hay hipoteca', tipo: { t: 'bool' } },
+  { clave: 'bancoHipoteca', etiqueta: 'Banco beneficiario de la hipoteca', tipo: { t: 'texto', max: 80 } },
+  { clave: 'reformaTuberias', etiqueta: 'Tuberías reformadas', tipo: { t: 'bool' } },
+  { clave: 'reformaElectrica', etiqueta: 'Instalación eléctrica reformada', tipo: { t: 'bool' } },
+  // 20/10/2026: la consulta al Catastro (gratis) que rellenó la vivienda: cuándo y qué dijo. NO son datos del seguro: sirven para
+  // avisar de discrepancias con lo declarado (`discrepanciasCatastro`). `catastroConsultadoAt` = ISO; el uso catastral es informativo.
+  { clave: 'catastroConsultadoAt', etiqueta: 'Consulta al Catastro (fecha)', tipo: { t: 'texto', max: 40 } },
+  { clave: 'usoCatastral', etiqueta: 'Uso según el Catastro', tipo: { t: 'texto', max: 60 } },
+  { clave: 'catastroMetrosCuadrados', etiqueta: 'Superficie construida total según el Catastro (m²)', tipo: { t: 'numero', min: 0, max: 100_000, sobreMin: true } },
+  { clave: 'catastroReferencia', etiqueta: 'Referencia consultada al Catastro', tipo: { t: 'referencia' } },
+  { clave: 'catastroMetrosVivienda', etiqueta: 'Superficie de la vivienda sola según el Catastro (m²)', tipo: { t: 'numero', min: 0, max: 100_000, sobreMin: true } },
+  { clave: 'catastroMetrosAnexos', etiqueta: 'Anexos según el Catastro (m²)', tipo: { t: 'numero', min: 0, max: 100_000, sobreMin: true } },
+  { clave: 'catastroAnexos', etiqueta: 'Desglose de anexos según el Catastro', tipo: { t: 'texto', max: 200 } },
+  { clave: 'catastroAnioConstruccion', etiqueta: 'Año de construcción según el Catastro', tipo: { t: 'entero', min: 1500, max: 'anioTope' } },
 ] as const satisfies Espec
 
 export type CampoVivienda =
@@ -63,15 +78,18 @@ export type CampoVivienda =
   | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma' | 'puertasSecundarias'
   | 'asentamiento' | 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador'
   | 'capitalContinente' | 'capitalContenido' | 'joyasEnCajaFuerte' | 'joyasFueraDeCaja' | 'objetosDeValor' | 'perrosPeligrosos'
-  | 'conMadera'
+  | 'conMadera' | 'hipoteca' | 'bancoHipoteca' | 'reformaTuberias' | 'reformaElectrica'
+  | 'catastroConsultadoAt' | 'usoCatastral' | 'catastroMetrosCuadrados' | 'catastroAnioConstruccion'
+  | 'catastroReferencia' | 'catastroMetrosVivienda' | 'catastroMetrosAnexos' | 'catastroAnexos'
 
 export type DatosViviendaRiesgo = {
   [K in CampoVivienda]: K extends
     | 'referenciaCatastral' | 'direccion' | 'cp' | 'municipio' | 'provincia' | 'tipoViaId' | 'nombreVia' | 'numeroVia' | 'planta'
     | 'puertaVivienda' | 'tipoVivienda' | 'uso' | 'ocupacion' | 'ubicacion' | 'material' | 'calidad' | 'alarma'
-    | 'puertasSecundarias' | 'asentamiento'
+    | 'puertasSecundarias' | 'asentamiento' | 'bancoHipoteca' | 'catastroConsultadoAt' | 'usoCatastral' | 'catastroAnexos' | 'catastroReferencia'
     ? string | null
     : K extends 'puertaPrincipalBlindada' | 'ventanasSeguras' | 'urbanizacionCerrada' | 'vigilante' | 'propietarioEsTomador' | 'conMadera'
+      | 'hipoteca' | 'reformaTuberias' | 'reformaElectrica'
       ? boolean | null
       : number | null
 } & { confirmadoAt: string | null }
@@ -274,6 +292,8 @@ export function inicialesHogarDeRiesgo(
   const resueltos: Record<string, unknown> = {}
   const correcciones: Record<string, unknown> = {}
   if (!d) return { resueltos, correcciones }
+  // A Codeoscopic va el TOTAL CONSTRUIDO (vivienda + anexos), como retarificar y los leads: declarar menos m² es riesgo de infraseguro.
+  // El desglose vivienda/anexos que guarda la consulta al Catastro solo se MUESTRA; nunca se siembra aquí.
   const delCatastro = d.referenciaCatastral === null || d.confirmadoAt !== null
   const R = ['municipioId', 'tipoViaId', 'tipoVivienda', 'uso', 'ocupacion', 'ubicacion', 'material', 'calidad', 'alarma', 'puertasSecundarias', 'asentamiento', 'propietarioEsTomador'] as const
   for (const k of R) if (d[k] !== null) resueltos[k] = d[k]

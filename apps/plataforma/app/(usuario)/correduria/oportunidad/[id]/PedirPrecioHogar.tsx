@@ -12,6 +12,7 @@ import Formulario from '../../cliente/[id]/hogar-nuevo/Formulario'
 import { abrirCotizadorHogarDeOportunidad, type AperturaCotizadorHogar } from '../../cliente/[id]/hogar-nuevo/acciones'
 import { figurasFrenteAPeticionHogar } from './cotizador-hogar'
 import { viviendaDeRiesgo } from './variante'
+import { AsesorHogar } from './DatosRiesgo'
 import PedirPrecioEmbebido, { type MontajeEmbebido, type PropsPedirPrecioEmbebido } from './PedirPrecioEmbebido'
 
 type AperturaOk = Extract<AperturaCotizadorHogar, { estado: 'ok' }>
@@ -48,15 +49,22 @@ function Montaje({ apertura, n, bloqueo, onCotizando, onCotizado }: MontajeEmbeb
     tomadorId: clienteId,
     propietarioEsTomador: viviendaDeRiesgo(riesgo)?.propietarioEsTomador ?? null,
   })
+  // Antes del botón de 0,50€: el USO de la vivienda tiene que estar contestado en «Datos de la vivienda» (decide la tarifa; sin él
+  // asegura podría suponer «habitual» y abaratar el precio), y se avisa de infraseguro / discrepancias con el Catastro / reformas.
+  const viv = viviendaDeRiesgo(riesgo)
+  const bloqueoUso = viv === null || viv.ocupacion === null ? 'Falta el uso de la vivienda (habitual, segunda residencia, alquiler…): contéstalo arriba, en «Datos de la vivienda», antes de pedir precio.' : null
+  const texto = viv ? Object.fromEntries(Object.entries(viv).map(([k, x]) => [k, x === null || x === undefined ? '' : String(x)])) : {}
   return (
     <>
+      {bloqueoUso && aviso(bloqueoUso, 'var(--warning)')}
+      <AsesorHogar v={texto} />
       {fig.avisos.map((t) => <div key={t}>{aviso(t, 'var(--muted)')}</div>)}
       <Formulario
         // Cada lectura del riesgo monta un cotizador NUEVO: nada de lo tecleado con el riesgo anterior sobrevive.
         key={n}
         embebido
         // Lo que esté a medias arriba manda; después, una contradicción entre personas y vivienda.
-        bloqueo={bloqueo ?? fig.bloqueo}
+        bloqueo={bloqueo ?? fig.bloqueo ?? bloqueoUso}
         onCotizando={onCotizando}
         onCotizado={onCotizado}
         clienteId={clienteId}

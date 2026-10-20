@@ -19,10 +19,18 @@
 // CONSTRUIDA (con parte proporcional de zonas comunes), no la útil, y las
 // compañías preguntan una u otra según su cuestionario.
 
-import type { DatosCatastro } from './parser.ts'
+import { caracterizarVivienda, type DatosCatastro } from './parser.ts'
+
+/** Un anexo del inmueble (aparcamiento, almacén…) con sus m² construidos. */
+export type AnexoCatastro = { uso: string; superficie: number }
 
 export type DatosHogar = {
+  /** m² CONSTRUIDOS TOTALES del inmueble (vivienda + anexos), como los da el Catastro. Para la vivienda sola, `metrosVivienda`. */
   metrosCuadrados: number | null
+  /** m² de la VIVIENDA propiamente dicha (sin aparcamiento, almacén ni comunes). `null`/ausente = el Catastro no publica el desglose. */
+  metrosVivienda?: number | null
+  /** Desglose de anexos por uso (suma de sus m²). Vacío/ausente = no hay anexos publicados (no es «no tiene»). */
+  anexos?: AnexoCatastro[]
   anioConstruccion: number | null
   /** «Residencial», «Comercial», «Industrial»… tal cual lo da el Catastro. */
   uso: string | null
@@ -68,9 +76,22 @@ function limpiaDireccion(ldt: string | null): string | null {
     .trim() || null
 }
 
+/** Anexos por uso con los m² sumados (aparcamiento, almacén…). Excluye vivienda y elementos comunes. PURA. */
+export function anexosDeConstrucciones(c: DatosCatastro): AnexoCatastro[] {
+  const porUso = new Map<string, number>()
+  for (const k of c.construcciones ?? []) {
+    const uso = (k.uso ?? '').trim()
+    if (uso === '' || /VIVIENDA|COMUN/i.test(uso) || k.superficie === null || k.superficie <= 0) continue
+    porUso.set(uso, (porUso.get(uso) ?? 0) + k.superficie)
+  }
+  return [...porUso].map(([uso, superficie]) => ({ uso, superficie }))
+}
+
 export function precalificarHogar(c: DatosCatastro): PrecalificacionHogar {
   const datos: DatosHogar = {
     metrosCuadrados: c.superficie,
+    metrosVivienda: caracterizarVivienda(c)?.superficieVivienda ?? null,
+    anexos: anexosDeConstrucciones(c),
     anioConstruccion: c.anioConstruccion,
     uso: c.uso,
     direccion: limpiaDireccion(c.direccion),

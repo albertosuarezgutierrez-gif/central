@@ -202,3 +202,46 @@ test('🪤 una casa unifamiliar (un solo inmueble, formato <bico>) se lee, no sa
   assert.equal(r[0].refCompleta, '5519518QB5451N0001IW')
   assert.equal(r[0].codigoPostal, '41807')
 })
+
+const V = (...n: string[]) => n.map((nombre) => ({ tipo: 'CL', nombre }))
+
+test('elegirVia: caso real «la Parra» (ISABEL PARRA, PARRA LA (pedanía), PARRAS) → ambigua; viasParecidas las ofrece las tres', () => {
+  const tres = V('ISABEL PARRA', 'PARRA LA (VENTAS CARRIZA)', 'PARRAS')
+  assert.equal(elegirVia(tres, 'la Parra'), null)
+  assert.equal(elegirVia(tres, 'Parra'), null)
+  assert.equal(viasParecidas(tres, 'Parra').length, 3)
+})
+
+test('elegirVia: [ISABEL PARRA, PARRAS] + «la Parra» → null (PARRAS es otra calle; ISABEL PARRA trae un token de más)', () => {
+  assert.equal(elegirVia(V('ISABEL PARRA', 'PARRAS'), 'la Parra'), null)
+})
+
+test('elegirVia: [ISABEL PARRA] sola + «Parra» → null, no se elige en silencio', () => {
+  assert.equal(elegirVia(V('ISABEL PARRA'), 'Parra'), null)
+})
+
+test('elegirVia: [ROSAS] + «Rosa» → null (el plural no gana) pero se ofrece como parecida', () => {
+  assert.equal(elegirVia(V('ROSAS'), 'Rosa'), null)
+  assert.deepEqual(viasParecidas(V('ROSAS'), 'Rosa'), V('ROSAS'))
+})
+
+test('elegirVia: [ROSA, ROSAS] + «Rosa» → ROSA (la exacta gana siempre)', () => {
+  assert.equal(elegirVia(V('ROSA', 'ROSAS'), 'Rosa'), 'ROSA')
+})
+
+test('elegirVia: [LUIS ROSALES, ROSAL] + «Rosales» → null (ni token de más ni abreviatura de una sola palabra)', () => {
+  assert.equal(elegirVia(V('LUIS ROSALES', 'ROSAL'), 'Rosales'), null)
+})
+
+test('elegirVia: exacta con artículo pospuesto y pedanía sola gana; con otras parecidas, no', () => {
+  assert.equal(elegirVia(V('PARRA LA (VENTAS CARRIZA)'), 'la Parra'), 'PARRA LA (VENTAS CARRIZA)')
+  assert.equal(elegirVia(V('MADRID DE'), 'Avenida de Madrid'.replace('Avenida de ', '')), 'MADRID DE')
+  assert.equal(casaToken('AS', 'A'), false)
+})
+
+test('caracterizarVivienda: si una fila de vivienda no trae superficie, la de la vivienda es null (no una suma parcial)', () => {
+  const base = { direccion: null, superficie: 200, anioConstruccion: null, uso: null, cuotaParticipacion: null, clase: null, provincia: null, municipio: null, codigoPostal: null }
+  const v = (superficie: number | null) => ({ uso: 'VIVIENDA', escalera: null, planta: '01', puerta: null, superficie })
+  assert.equal(caracterizarVivienda({ ...base, construcciones: [v(100), v(null)] })?.superficieVivienda, null)
+  assert.equal(caracterizarVivienda({ ...base, construcciones: [v(100), v(40)] })?.superficieVivienda, 140)
+})

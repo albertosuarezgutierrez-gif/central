@@ -43,3 +43,20 @@ test('uso desconocido no se colapsa con «vivienda»', () => {
   const p = precalificarHogar({ ...SAN_VICENTE, uso: null })
   assert.match(p.avisos.join(' '), /no informa el uso/)
 })
+
+test('precalificarHogar: 228 m² totales = vivienda 143 + aparcamiento 54 + almacén 31, con desglose', async () => {
+  const { parsearCatastro } = await import('./parser.ts')
+  const cons = (uso: string, pt: string, m: number) => `<cons><lcd>${uso}</lcd><dt><lourb><loint><pt>${pt}</pt></loint></lourb></dt><dfcons><stl>${m}</stl></dfcons></cons>`
+  const xml = `<consulta_dnp><bico><bi><ldt>CL PARRA LA 13 23693 CASTILLO DE LOCUBIN (JAEN)</ldt><debi><luso>Residencial</luso><sfc>228</sfc><ant>1980</ant></debi></bi>` +
+    `<lcons>${cons('VIVIENDA', '01', 143)}${cons('APARCAMIENTO', '00', 54)}${cons('ALMACEN', '-1', 31)}</lcons></bico></consulta_dnp>`
+  const { datos } = precalificarHogar(parsearCatastro(xml))
+  assert.equal(datos.metrosCuadrados, 228)
+  assert.equal(datos.metrosVivienda, 143)
+  assert.deepEqual(datos.anexos, [{ uso: 'APARCAMIENTO', superficie: 54 }, { uso: 'ALMACEN', superficie: 31 }])
+})
+
+test('precalificarHogar: sin unidades constructivas no hay desglose (null y vacío, nunca 0)', () => {
+  const { datos } = precalificarHogar({ direccion: null, superficie: 90, anioConstruccion: 1990, uso: 'Residencial', cuotaParticipacion: null, clase: 'UR', provincia: null, municipio: null, codigoPostal: '23693' })
+  assert.equal(datos.metrosVivienda, null)
+  assert.deepEqual(datos.anexos, [])
+})

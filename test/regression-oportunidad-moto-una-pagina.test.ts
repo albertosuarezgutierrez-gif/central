@@ -180,7 +180,7 @@ test('🪤 HOGAR (10/10/2026): PedirPrecioHogar monta el Formulario de hogar-nue
   assert.match(montaje, /\n\s*embebido\n/, 'modo embebido («solo condiciones»)')
   assert.match(montaje, /key=\{n\}/)
   // Lo de arriba a medias manda; después, la contradicción propietario/vivienda: nunca se pierde ninguno de los dos.
-  assert.match(montaje, /bloqueo=\{bloqueo \?\? fig\.bloqueo\}/)
+  assert.match(montaje, /bloqueo=\{bloqueo \?\? fig\.bloqueo( \?\? bloqueoUso)?\}/)
   assert.match(p, /if \(referencia === null \|\| pre === null\) \{/, 'sin referencia catastral no se monta (no se cotiza a ciegas)')
 })
 

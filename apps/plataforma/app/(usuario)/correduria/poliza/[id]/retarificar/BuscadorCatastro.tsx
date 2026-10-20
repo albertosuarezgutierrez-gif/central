@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { InmuebleCatastro } from '@central/core-catastro'
+import BuscadorDireccionCp from '../../../BuscadorDireccionCp'
 
 const input: React.CSSProperties = {
   padding: '10px 12px',
@@ -22,6 +23,7 @@ export function BuscadorCatastro({
   direccion,
   municipio,
   provincia,
+  cp = '',
   deCliente,
   oportunidadId = null,
 }: {
@@ -29,6 +31,8 @@ export function BuscadorCatastro({
   direccion: string
   municipio: string
   provincia: string
+  /** El CP que se acaba de escribir: no se pierde al reintentar. */
+  cp?: string
   /** La dirección viene precargada de la ficha del cliente: puede no ser la del riesgo. */
   deCliente: boolean
   /** Variante del riesgo (`?oportunidad=`): buscar la vivienda no la suelta. */
@@ -44,15 +48,7 @@ export function BuscadorCatastro({
           El Catastro da m², año de construcción y CP, gratis y sin preguntar al cliente.
           {deCliente && ' La dirección de abajo es la del CLIENTE: si la vivienda asegurada es otra (segunda residencia, alquiler), cámbiala.'}
         </p>
-        <form method="get" action={accion} style={rejilla}>
-          {conVariante}
-          <input style={{ ...input, gridColumn: '1 / -1' }} name="direccion" placeholder="Calle San Vicente 40, 2º 14" defaultValue={direccion} />
-          <input style={input} name="municipio" placeholder="Municipio" defaultValue={municipio} />
-          <input style={input} name="provincia" placeholder="Provincia" defaultValue={provincia} />
-          <button type="submit" className="primary" style={{ gridColumn: '1 / -1', minHeight: 44 }}>
-            Consultar Catastro
-          </button>
-        </form>
+        <BuscadorDireccionCp accion={accion} oportunidad={oportunidadId} direccion={direccion} cp={cp} municipio={municipio} provincia={provincia} />
       </div>
       <div className="card">
         <h2>O por referencia catastral</h2>

@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { Pagina, cardStyle } from '@/components/ui'
 import { riesgoAsegura } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo } from '@/lib/riesgo-asegura'
+import { fichaAsegura } from '@/lib/ficha-asegura'
+import { propuestaCarteraHogar, type PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
 import RiesgoPantalla from './RiesgoPantalla'
+import { tomadorDelRiesgo } from './variante'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,9 +31,16 @@ export default async function OportunidadPage({ params }: { params: Promise<{ id
   const r = await riesgoAsegura(id)
   const lectura = interpretarRiesgo(r.status, r.json)
   if (lectura.estado === 'ok') {
+    // Hogar: ¿el cliente ya tiene hogar EN VIGOR en la cartera? Se propone como punto de partida (nada se escribe solo).
+    // Si la ficha no se puede leer es `pendiente` («no se sabe»), nunca «sin póliza».
+    let propuestaCartera: PropuestaCarteraHogar | null = null
+    if (lectura.riesgo.oportunidad.ramo === 'hogar') {
+      const ficha = await fichaAsegura(tomadorDelRiesgo(lectura.riesgo))
+      propuestaCartera = propuestaCarteraHogar(ficha.estado === 'ok' ? ficha.ficha.polizas : null)
+    }
     return (
       <Pagina>
-        <RiesgoPantalla inicial={lectura.riesgo} hoy={hoyMadrid()} />
+        <RiesgoPantalla inicial={lectura.riesgo} hoy={hoyMadrid()} propuestaCartera={propuestaCartera} />
       </Pagina>
     )
   }
