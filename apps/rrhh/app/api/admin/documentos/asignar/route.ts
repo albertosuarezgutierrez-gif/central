@@ -21,19 +21,19 @@ export async function POST(req: Request) {
       path: String(b.path ?? ''),
       nombre_original: String(b.nombre_original ?? ''),
       titulo: String(b.titulo ?? ''),
-      tipo: typeof b.tipo === 'string' ? b.tipo : null,
-      tamano: typeof b.tamano === 'number' ? b.tamano : null,
       carpeta: String(b.carpeta ?? ''),
       categoria: typeof b.categoria === 'string' ? b.categoria : null,
       resumen: typeof b.resumen === 'string' ? b.resumen : null,
       empleado_ids,
       firma: (b.firma ?? 'none') as ModoFirma,
       avisar: b.avisar === true,
+      // Tamaño y tipo NO se aceptan del cliente: salen del objeto real del staging.
+      envio_id: typeof b.envio_id === 'string' ? b.envio_id : null,
     }, new URL(req.url).origin)
     return NextResponse.json(r, { status: r.ok ? 201 : 502 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
-    if (e instanceof Error && /no válida|permiso|obligatorio|máximo|Máximo|desconocid|no encontrado|Elige|No hay/.test(e.message)) {
+    if (e instanceof Error && /no válid|no se pide firma|permiso|obligatorio|máximo|Máximo|desconocid|no encontrado|Elige|No hay/.test(e.message)) {
       return NextResponse.json({ error: e.message }, { status: 400 })
     }
     const msg = e instanceof Error ? e.message : 'Error inesperado'

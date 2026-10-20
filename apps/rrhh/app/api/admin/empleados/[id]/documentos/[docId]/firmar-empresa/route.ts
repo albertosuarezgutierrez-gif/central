@@ -16,8 +16,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     const { sello_tiempo } = await firmarComoEmpresa(empresa_id, docId, { usuario_id, nombre })
 
-    // Ahora firma el empleado: se le avisa (intranet + email + push). No bloquea si falla.
-    const aviso = await avisarSolicitudFirma(empresa_id, empleado_id, docId, usuario_id, new URL(req.url).origin)
+    // Ahora firma el empleado: se le avisa (intranet + email + push), salvo que al enviarlo se
+    // desmarcara «Avisar» (`avisar = false`). NULL = documento anterior a 0023: se avisa como siempre.
+    const pref = await prisma.$queryRaw<{ avisar: boolean | null }[]>(Prisma.sql`
+      SELECT avisar FROM rrhh.documentos
+      WHERE id = ${docId}::uuid AND empresa_id = ${empresa_id}::uuid AND empleado_id = ${empleado_id}::uuid LIMIT 1`)
+    const aviso = pref[0]?.avisar === false
+      ? null
+      : await avisarSolicitudFirma(empresa_id, empleado_id, docId, usuario_id, new URL(req.url).origin)
 
     return NextResponse.json({ ok: true, sello_tiempo, aviso })
   } catch (e) {

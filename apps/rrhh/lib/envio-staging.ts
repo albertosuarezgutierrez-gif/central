@@ -29,3 +29,31 @@ export function nombreConExtension(titulo: string, nombreOriginal: string): stri
   if (!ext || extensionDe(t) === ext) return t
   return `${t}.${ext}`
 }
+
+/**
+ * Carpetas donde NO se pide firma (misma regla que el expediente, `ExpedienteClient`): los datos
+ * personales y la formación los aporta/consulta el empleado, no se le reclama firma sobre ellos.
+ */
+export const CARPETAS_SIN_FIRMA: readonly string[] = ['datos_personales', 'formacion']
+
+export function carpetaAdmiteFirma(carpeta: string): boolean {
+  return !CARPETAS_SIN_FIRMA.includes(carpeta)
+}
+
+export const HORAS_CADUCIDAD_STAGING = 48
+
+/**
+ * Objetos del staging de UNA empresa que llevan más de `horas` sin confirmarse (subidas abandonadas).
+ * Solo devuelve rutas que superan `esPathStagingDe(empresaId, …)`: nada fuera de `staging/<empresa>/`
+ * puede acabar borrado. Sin fecha conocida → no se borra (no se sabe su edad).
+ */
+export function stagingCaducados(
+  empresaId: string, objetos: { path: string; creado_at: string | null }[], ahora: Date, horas = HORAS_CADUCIDAD_STAGING,
+): string[] {
+  const limite = ahora.getTime() - horas * 3_600_000
+  return objetos.filter(o => {
+    if (!esPathStagingDe(empresaId, o.path) || !o.creado_at) return false
+    const t = Date.parse(o.creado_at)
+    return Number.isFinite(t) && t < limite
+  }).map(o => o.path)
+}

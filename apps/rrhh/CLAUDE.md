@@ -82,6 +82,13 @@ El god-panel de plataforma crea empresas vía HTTP:
   la IA (`lib/asistente-subida.ts`, catálogo cerrado; a la IA NO se le manda la plantilla) PROPONE tipo/carpeta/título/
   firma/resumen y los destinatarios se emparejan en código por NIF > nombre completo único (nunca se funden). Nada se
   asigna ni avisa hasta «Confirmar»: una copia (objeto + fila) por empleado o toda la plantilla (`lib/envio-documentos.ts`).
+  - Solo se PRESELECCIONA a quien la IA marca como trabajador en `personas` (`clasificarDestinatarios`); el resto de
+    coincidencias (p. ej. el representante en plantilla) va a «Revisa a mano» sin marcar. Sin IA, nadie preseleccionado.
+  - Idempotente: `envio_id` lo genera el CLIENTE por documento; índice único `(envio_id, empleado_id)` + ON CONFLICT.
+    Tamaño/tipo salen del objeto real del staging (HEAD), nunca del cliente. Sin firma en `formacion`/`datos_personales`
+    (`carpetaAdmiteFirma`). `documentos.avisar=false` → firmar-empresa no avisa (NULL = anterior: avisa).
+  - El cron `recordatorio-firmas` borra el staging de > 48 h (por empresa, solo `staging/<empresa>/`). Un aviso con
+    `email_estado` NULL de > 1 h no cuenta como contacto (`ultimoContactoEfectivo`).
 - Avisos (`lib/avisos.ts`, tabla `rrhh.avisos`): intranet + email + push con el resultado de cada canal registrado; un
   fallo de email no tumba la solicitud. Saltan al solicitar firma, al subir con «solo firma el empleado», al firmar la
   empresa y al «Reclamar». El empleado los ve en `/e` y abrir el documento los marca vistos (`documentos.visto_empleado_at`).

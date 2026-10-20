@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import AdminShell from '@/components/AdminShell'
+import { carpetaAdmiteFirma } from '@/lib/envio-staging'
 
 type Opcion = { id: string; etiqueta: string }
 type Categoria = Opcion & { carpeta: string }
@@ -10,15 +11,18 @@ type Analisis = {
   motivo: 'ok' | 'sin_texto' | 'no_pdf' | 'ia_no_configurada' | 'ia_error'
   propuesta: { categoria: string | null; carpeta: string | null; titulo: string | null; requiere_firma: boolean | null; resumen: string | null }
   destinatarios: { empleado_id: string; motivo: 'nif' | 'nombre'; nombre: string }[]
+  /** Aparecen en el texto pero la IA no los marca como trabajador: NO se preseleccionan. */
+  a_revisar?: { empleado_id: string; motivo: 'nif' | 'nombre'; nombre: string }[]
   sin_emparejar: { nombre: string | null; nif: string | null; motivo: 'no_en_plantilla' | 'ambiguo' }[]
 }
 type Form = {
   titulo: string; categoria: string; carpeta: string; resumen: string; firma: Firma; avisar: boolean
   destinatarios: string[]; toda_plantilla: boolean
 }
-type Resultado = { total: number; ok: number; resultados: { empleado_id: string; doc_id?: string; error?: string; aviso?: { email_estado: string } | null }[] }
+type Resultado = { total: number; ok: number; resultados: { empleado_id: string; doc_id?: string; error?: string; ya_enviado?: boolean; aviso?: { email_estado: string } | null }[] }
 type Item = {
-  id: string; nombre: string; tipo: string | null; tamano: number
+  /** `envio_id`: idempotencia del envío en servidor (reintentar no duplica copias). */
+  id: string; envio_id: string; nombre: string; tipo: string | null; tamano: number
   fase: 'subiendo' | 'analizando' | 'listo' | 'enviando' | 'enviado' | 'error'
   path?: string; analisis?: Analisis; form: Form; error?: string; resultado?: Resultado
 }
@@ -47,6 +51,8 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
   const [items, setItems] = useState<Item[]>([])
   const [empleados, setEmpleados] = useState<Empleado[] | null>(null)
   const [enviandoTodo, setEnviandoTodo] = useState(false)
+  // Documentos con una petición de envío en vuelo: ni doble clic ni tarjeta + «Enviar todo» a la vez.
+  const enVuelo = useRef(new Set<string>())
 
   useEffect(() => {
     fetch('/api/admin/empleados').then(r => r.ok ? r.json() : { empleados: [] })
@@ -60,7 +66,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
 
   async function procesar(file: File) {
     const id = crypto.randomUUID()
-    setItems(xs => [...xs, { id, nombre: file.name, tipo: file.type || null, tamano: file.size, fase: 'subiendo', form: formVacio(file.name) }])
+    setItems(xs => [...xs, { id, envio_id: crypto.randomUUID(), nombre: file.name, tipo: file.type || null, tamano: file.size, fase: 'subiendo', form: formVacio(file.name) }])
     try {
       const fd = new FormData(); fd.append('file', file)
       const r = await fetch('/api/admin/documentos/staging', { method: 'POST', body: fd })
@@ -73,15 +79,18 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
       const a: Analisis | null = ra.ok ? await ra.json().catch(() => null) : null
       if (!a) { set(id, { fase: 'listo', analisis: { motivo: 'ia_error', propuesta: { categoria: null, carpeta: null, titulo: null, requiere_firma: null, resumen: null }, destinatarios: [], sin_emparejar: [] } }); return }
       // Prellenado: solo lo que la IA SÍ propone; lo demás queda vacío para que Pilar lo complete.
+      // Destinatarios: solo los que la IA identifica como trabajador (`destinatarios`); los de
+      // `a_revisar` (p. ej. el representante de la empresa) se muestran sin marcar.
+      const carpeta = a.propuesta.carpeta ?? ''
       setItems(xs => xs.map(x => x.id !== id ? x : {
         ...x, fase: 'listo', analisis: a,
         form: {
           ...x.form,
           titulo: a.propuesta.titulo ?? x.form.titulo,
           categoria: a.propuesta.categoria ?? '',
-          carpeta: a.propuesta.carpeta ?? '',
+          carpeta,
           resumen: a.propuesta.resumen ?? '',
-          firma: a.propuesta.requiere_firma === true ? 'solo_empleado' : 'none',
+          firma: a.propuesta.requiere_firma === true && carpetaAdmiteFirma(carpeta) ? 'solo_empleado' : 'none',
           destinatarios: a.destinatarios.map(d => d.empleado_id),
         },
       }))
@@ -99,19 +108,26 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
     if (!it.path) return 'Falta subir el archivo'
     if (!it.form.titulo.trim()) return 'Pon un título'
     if (!it.form.carpeta) return 'Elige carpeta'
+    if (it.form.firma !== 'none' && !carpetaAdmiteFirma(it.form.carpeta)) return 'En esta carpeta no se pide firma'
     if (!it.form.toda_plantilla && it.form.destinatarios.length === 0) return 'Elige al menos un empleado'
     return null
   }
 
   async function enviar(it: Item, soloIds?: string[]): Promise<boolean> {
+    if (enVuelo.current.has(it.id)) return false
     const err = valido(it)
     if (err) { set(it.id, { error: err }); return false }
+    enVuelo.current.add(it.id)
+    try { return await enviarUna(it, soloIds) } finally { enVuelo.current.delete(it.id) }
+  }
+
+  async function enviarUna(it: Item, soloIds?: string[]): Promise<boolean> {
     set(it.id, { fase: 'enviando', error: undefined })
     const toda = !soloIds && it.form.toda_plantilla
     const r = await fetch('/api/admin/documentos/asignar', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        path: it.path, nombre_original: it.nombre, tipo: it.tipo, tamano: it.tamano,
+        path: it.path, nombre_original: it.nombre, envio_id: it.envio_id,
         titulo: it.form.titulo, categoria: it.form.categoria || null, carpeta: it.form.carpeta, resumen: it.form.resumen || null,
         firma: it.form.firma, avisar: it.form.avisar,
         toda_plantilla: toda, empleado_ids: toda ? [] : (soloIds ?? it.form.destinatarios),
@@ -127,8 +143,13 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
     return resultado.ok === resultado.total
   }
 
+  // «Enviar todo» solo coge lo que NUNCA se ha enviado: lo enviado a medias (con `resultado`) se
+  // reintenta desde su tarjeta («Reintentar los que fallaron»), no se reenvía entero.
+  const pendientesDeEnvio = (xs: Item[]) => xs.filter(i => i.fase === 'listo' && !i.resultado && !enVuelo.current.has(i.id))
+
   async function enviarTodo() {
-    const listos = items.filter(i => i.fase === 'listo')
+    if (enviandoTodo) return
+    const listos = pendientesDeEnvio(items)
     const masivos = listos.filter(i => i.form.toda_plantilla).length
     if (masivos && !confirm(`${masivos === 1 ? 'Un documento irá' : `${masivos} documentos irán`} a TODA la plantilla activa (${activos.length} empleados). ¿Continuar?`)) return
     setEnviandoTodo(true)
@@ -136,7 +157,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
     setEnviandoTodo(false)
   }
 
-  const listos = items.filter(i => i.fase === 'listo').length
+  const listos = pendientesDeEnvio(items).length
 
   return (
     <AdminShell activo="documentos" {...shell}>
@@ -155,7 +176,7 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
       <div className="grid grid-cols-1 gap-3">
         {items.map(it => (
           <TarjetaDocumento key={it.id} it={it} carpetas={carpetas} categorias={categorias} empleados={activos}
-            cargandoEmpleados={empleados === null}
+            cargandoEmpleados={empleados === null} ocupado={enviandoTodo}
             onForm={p => setForm(it.id, p)} onQuitar={() => quitar(it)} onEnviar={() => enviar(it)}
             onReintentar={ids => enviar(it, ids)} />
         ))}
@@ -172,8 +193,10 @@ export default function DocumentosClient({ carpetas, categorias, ...shell }: {
   )
 }
 
-function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmpleados, onForm, onQuitar, onEnviar, onReintentar }: {
+function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmpleados, ocupado, onForm, onQuitar, onEnviar, onReintentar }: {
   it: Item; carpetas: Opcion[]; categorias: Categoria[]; empleados: Empleado[]; cargandoEmpleados: boolean
+  /** Hay un «Enviar todo» en curso: las acciones de la tarjeta quedan bloqueadas. */
+  ocupado: boolean
   onForm: (p: Partial<Form>) => void; onQuitar: () => void; onEnviar: () => void; onReintentar: (ids: string[]) => void
 }) {
   const [buscar, setBuscar] = useState('')
@@ -181,13 +204,15 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
   const f = it.form
   const a = it.analisis
   const porId = useMemo(() => new Map(empleados.map(e => [e.id, e])), [empleados])
-  const motivoDe = useMemo(() => new Map((a?.destinatarios ?? []).map(d => [d.empleado_id, d.motivo])), [a])
+  const motivoDe = useMemo(() => new Map([...(a?.destinatarios ?? []), ...(a?.a_revisar ?? [])].map(d => [d.empleado_id, d.motivo])), [a])
+  const revisar = (a?.a_revisar ?? []).filter(d => !f.destinatarios.includes(d.empleado_id) && porId.has(d.empleado_id))
+  const admiteFirma = carpetaAdmiteFirma(f.carpeta)
   const filtrados = useMemo(() => {
     const q = norm(buscar.trim())
     const base = empleados.filter(e => !f.destinatarios.includes(e.id))
     return q ? base.filter(e => norm(`${nombreEmp(e)} ${e.dni ?? ''}`).includes(q)) : base
   }, [buscar, empleados, f.destinatarios])
-  const bloqueado = it.fase === 'enviando' || it.fase === 'enviado'
+  const bloqueado = ocupado || it.fase === 'enviando' || it.fase === 'enviado'
   const fallidos = it.resultado?.resultados.filter(r => r.error).map(r => r.empleado_id) ?? []
   const sinEmail = it.resultado?.resultados.filter(r => r.aviso && r.aviso.email_estado !== 'enviado').length ?? 0
 
@@ -213,7 +238,8 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
             Tipo de documento {a && !a.propuesta.categoria && <span className="text-warn">(la IA no lo sabe)</span>}
             <select value={f.categoria} disabled={bloqueado} className="text-sm" onChange={e => {
               const c = categorias.find(x => x.id === e.target.value)
-              onForm({ categoria: e.target.value, ...(c && !f.carpeta ? { carpeta: c.carpeta } : {}) })
+              const carpeta = c && !f.carpeta ? c.carpeta : f.carpeta
+              onForm({ categoria: e.target.value, carpeta, ...(!carpetaAdmiteFirma(carpeta) ? { firma: 'none' as Firma } : {}) })
             }}>
               <option value="">— Sin clasificar —</option>
               {categorias.map(c => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
@@ -221,18 +247,23 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-2">
             Carpeta del expediente
-            <select value={f.carpeta} onChange={e => onForm({ carpeta: e.target.value })} disabled={bloqueado} className="text-sm">
+            <select value={f.carpeta} disabled={bloqueado} className="text-sm"
+              onChange={e => onForm({ carpeta: e.target.value, ...(!carpetaAdmiteFirma(e.target.value) ? { firma: 'none' as Firma } : {}) })}>
               <option value="">— Elige carpeta —</option>
               {carpetas.map(c => <option key={c.id} value={c.id}>{c.etiqueta}</option>)}
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-ink-2">
-            Firma {a && a.propuesta.requiere_firma == null && <span className="text-warn">(la IA no sabe si requiere firma)</span>}
-            <select value={f.firma} onChange={e => onForm({ firma: e.target.value as Firma })} disabled={bloqueado} className="text-sm">
-              <option value="none">Sin firma</option>
-              <option value="solo_empleado">Solo firma el empleado</option>
-              <option value="empresa_y_empleado">Firma empresa y empleado</option>
-            </select>
+            Firma {admiteFirma && a && a.propuesta.requiere_firma == null && <span className="text-warn">(la IA no sabe si requiere firma)</span>}
+            {admiteFirma
+              ? (
+                <select value={f.firma} onChange={e => onForm({ firma: e.target.value as Firma })} disabled={bloqueado} className="text-sm">
+                  <option value="none">Sin firma</option>
+                  <option value="solo_empleado">Solo firma el empleado</option>
+                  <option value="empresa_y_empleado">Firma empresa y empleado</option>
+                </select>
+              )
+              : <span className="text-sm text-ink-3">Sin firma (en esta carpeta no se pide firma)</span>}
           </label>
           <label className="flex min-h-[44px] items-center gap-2 text-xs text-ink-2">
             <input type="checkbox" checked={f.avisar} onChange={e => onForm({ avisar: e.target.checked })} disabled={bloqueado} />
@@ -264,6 +295,20 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
                   })}
                   {f.destinatarios.length === 0 && <span className="text-xs text-ink-3">Ninguno elegido{a ? ' (la IA no identificó a nadie con seguridad)' : ''}</span>}
                 </div>
+                {revisar.length > 0 && (
+                  <div className="mb-2 rounded-lg border border-line px-3 py-2 text-xs text-warn">
+                    <p className="mb-1">Revisa a mano: aparecen en el documento pero la IA no los identifica como destinatarios (¿representante de la empresa, testigo…?). No están marcados.</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {revisar.map(d => (
+                        <button key={d.empleado_id} type="button" disabled={bloqueado}
+                          onClick={() => onForm({ destinatarios: [...f.destinatarios, d.empleado_id] })}
+                          className={`${BTN_SEC} px-2 text-xs`}>
+                          + {d.nombre} <span className="opacity-70">· por {d.motivo === 'nif' ? 'DNI' : 'nombre'}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {a && a.sin_emparejar.length > 0 && (
                   <p className="mb-2 text-xs text-warn">
                     Revisa a mano: {a.sin_emparejar.map(s => `${s.nombre ?? s.nif}${s.motivo === 'ambiguo' ? ' (coincide con varias fichas o con otro DNI)' : ' (no está en la plantilla)'}`).join('; ')}
@@ -303,8 +348,8 @@ function TarjetaDocumento({ it, carpetas, categorias, empleados, cargandoEmplead
       {it.fase === 'listo' && (
         <div className="mt-3 flex flex-wrap gap-2">
           {fallidos.length > 0
-            ? <button type="button" onClick={() => onReintentar(fallidos)} className="min-h-[44px] px-4">Reintentar los {fallidos.length} que fallaron</button>
-            : <button type="button" onClick={() => {
+            ? <button type="button" disabled={ocupado} onClick={() => onReintentar(fallidos)} className="min-h-[44px] px-4">Reintentar los {fallidos.length} que fallaron</button>
+            : <button type="button" disabled={ocupado} onClick={() => {
                 if (f.toda_plantilla && !confirm(`Se enviará a TODA la plantilla activa (${empleados.length} empleados). ¿Continuar?`)) return
                 onEnviar()
               }} className="min-h-[44px] px-4">Confirmar y enviar</button>}

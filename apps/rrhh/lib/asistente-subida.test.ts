@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  nifValido, detectarNifs, parsearRespuestaIA, emparejarDestinatarios, carpetaSugerida,
+  nifValido, detectarNifs, parsearRespuestaIA, emparejarDestinatarios, clasificarDestinatarios, carpetaSugerida,
   promptAnalisis, PROPUESTA_VACIA, type EmpleadoMatch,
 } from './asistente-subida'
 
@@ -116,5 +116,46 @@ describe('emparejarDestinatarios (identidad: NIF > nombre, nunca fundir)', () =>
   it('persona que da la IA y no está en la plantilla → sin_emparejar', () => {
     const r = emparejarDestinatarios('Pedro Sánchez Mora', [{ nombre: 'Pedro Sánchez Mora', nif: null }], E)
     expect(r.sin_emparejar).toEqual([{ nombre: 'Pedro Sánchez Mora', nif: null, motivo: 'no_en_plantilla' }])
+  })
+})
+
+describe('clasificarDestinatarios (preseleccionar solo al TRABAJADOR que marca la IA)', () => {
+  const E: EmpleadoMatch[] = [
+    { id: 'trab', nombre: 'Juan', apellidos: 'Pérez García', dni: '12345678Z' },
+    { id: 'rep', nombre: 'Ana', apellidos: 'López', dni: '87654321X' }, // representante de la empresa, en plantilla
+    { id: 'rep2', nombre: 'Marta', apellidos: 'Gil Ruiz', dni: null },
+  ]
+  const contrato = 'Reunidos: Dña. Ana López, DNI 87654321X, en representación de la empresa, y D. Juan Pérez García, DNI 12345678Z, trabajador.'
+
+  it('representante de la empresa que está en plantilla: aparece, pero NO se preselecciona', () => {
+    const em = emparejarDestinatarios(contrato, [{ nombre: 'Juan Pérez García', nif: '12345678Z' }], E)
+    expect(em.destinatarios.map(d => d.empleado_id).sort()).toEqual(['rep', 'trab'])
+    const c = clasificarDestinatarios(em.destinatarios, [{ nombre: 'Juan Pérez García', nif: '12345678Z' }], true, E)
+    expect(c.preseleccionados.map(d => d.empleado_id)).toEqual(['trab'])
+    expect(c.a_revisar.map(d => d.empleado_id)).toEqual(['rep'])
+  })
+  it('la IA marca al trabajador solo por nombre (sin NIF) → se preselecciona por nombre, también al revés', () => {
+    const texto = 'GIL RUIZ, MARTA recibe el documento. Firma por la empresa Ana López.'
+    const ia = [{ nombre: 'Gil Ruiz Marta', nif: null }]
+    const em = emparejarDestinatarios(texto, ia, E)
+    const c = clasificarDestinatarios(em.destinatarios, ia, true, E)
+    expect(c.preseleccionados.map(d => d.empleado_id)).toEqual(['rep2'])
+    expect(c.a_revisar.map(d => d.empleado_id)).toEqual(['rep'])
+  })
+  it('mismo nombre que da la IA pero con OTRO NIF → no se preselecciona (dos identidades)', () => {
+    const d = [{ empleado_id: 'rep', motivo: 'nombre' as const }]
+    const c = clasificarDestinatarios(d, [{ nombre: 'Ana López', nif: '00000000T' }], true, E)
+    expect(c.preseleccionados).toEqual([])
+    expect(c.a_revisar).toEqual(d)
+  })
+  it('sin respuesta válida de la IA → nadie preseleccionado, todo a revisar', () => {
+    const em = emparejarDestinatarios(contrato, [], E)
+    const c = clasificarDestinatarios(em.destinatarios, [], false, E)
+    expect(c.preseleccionados).toEqual([])
+    expect(c.a_revisar.map(d => d.empleado_id).sort()).toEqual(['rep', 'trab'])
+  })
+  it('IA válida pero sin personas → nadie preseleccionado', () => {
+    const em = emparejarDestinatarios(contrato, [], E)
+    expect(clasificarDestinatarios(em.destinatarios, [], true, E).preseleccionados).toEqual([])
   })
 })

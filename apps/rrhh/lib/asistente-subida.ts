@@ -249,3 +249,30 @@ export function emparejarDestinatarios(texto: string, personasIA: PersonaIA[], e
   }
   return { destinatarios, sin_emparejar: sin }
 }
+
+/**
+ * Qué coincidencias se PRESELECCIONAN. Que un NIF o nombre de la plantilla aparezca en el texto no
+ * basta: en un contrato también aparece el representante de la empresa, que puede estar en plantilla.
+ * Solo se marca a quien la IA (respuesta válida, `iaOk`) identifica como TRABAJADOR destinatario en
+ * `personas` (por NIF o por nombre completo). El resto va a «revisa a mano», sin marcar. Sin IA
+ * (no configurada o respuesta inválida) no se preselecciona a nadie: estado conservador.
+ */
+export function clasificarDestinatarios(
+  destinatarios: Destinatario[], personasIA: PersonaIA[], iaOk: boolean, empleados: EmpleadoMatch[],
+): { preseleccionados: Destinatario[]; a_revisar: Destinatario[] } {
+  if (!iaOk) return { preseleccionados: [], a_revisar: [...destinatarios] }
+  const porId = new Map(empleados.map(e => [e.id, e]))
+  const preseleccionados: Destinatario[] = []
+  const a_revisar: Destinatario[] = []
+  for (const d of destinatarios) {
+    const e = porId.get(d.empleado_id)
+    const dni = normalizarNif(e?.dni)
+    const formas = e ? new Set([nombreCompleto(e), normalizarTexto(`${e.apellidos ?? ''} ${e.nombre}`)]) : new Set<string>()
+    // Por NIF; o por nombre completo si no hay dos NIF distintos de por medio (nunca fundir identidades).
+    const trabajador = !!e && personasIA.some(p =>
+      (!!p.nif && !!dni && p.nif === dni)
+      || (!!p.nombre && !(p.nif && dni && p.nif !== dni) && normalizarTexto(p.nombre).split(' ').length >= 2 && formas.has(normalizarTexto(p.nombre))))
+    ;(trabajador ? preseleccionados : a_revisar).push(d)
+  }
+  return { preseleccionados, a_revisar }
+}

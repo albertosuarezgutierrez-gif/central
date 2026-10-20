@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { diaMadrid, diasEntre, hitoVencido, tocaRecordatorioHoy } from './recordatorios-firma'
+import { diaMadrid, diasEntre, hitoVencido, tocaRecordatorioHoy, ultimoContactoEfectivo } from './recordatorios-firma'
 
 // Fechas RELATIVAS a un `hoy` inyectado (regla del monorepo: nada de reloj real en tests).
 const HOY = new Date('2026-10-20T08:00:00Z') // 10:00 en Madrid
@@ -60,5 +60,25 @@ describe('tocaRecordatorioHoy', () => {
   })
   it('sin ningún contacto registrado y hito vencido: toca', () => {
     expect(tocaRecordatorioHoy({ solicitadaAt: haceDias(10), ultimoContactoAt: null, hoy: HOY })).toBe(true)
+  })
+})
+
+describe('ultimoContactoEfectivo (aviso sin resultado de email)', () => {
+  const horas = (h: number) => new Date(HOY.getTime() - h * 3_600_000)
+  it('aviso con email_estado NULL de más de 1 h → no cuenta como contacto', () => {
+    expect(ultimoContactoEfectivo({ ultimoConResultado: null, ultimoSinResultado: horas(2), ahora: HOY })).toBeNull()
+    const antes = haceDias(5)
+    expect(ultimoContactoEfectivo({ ultimoConResultado: antes, ultimoSinResultado: horas(2), ahora: HOY })).toEqual(antes)
+  })
+  it('aviso NULL reciente (< 1 h, puede estar enviándose) → cuenta', () => {
+    expect(ultimoContactoEfectivo({ ultimoConResultado: haceDias(5), ultimoSinResultado: horas(0.5), ahora: HOY })).toEqual(horas(0.5))
+  })
+  it('combinado con el calendario: un recordatorio colgado de ayer no tapa el hito', () => {
+    // Solicitado hace 4 días (hito del día 3 = ayer). El único «contacto» es un aviso NULL de AYER
+    // (hace 20 h): tomado en bruto taparía el hito; como no terminó de enviarse, toca hoy.
+    const colgado = horas(20)
+    expect(tocaRecordatorioHoy({ solicitadaAt: haceDias(4), ultimoContactoAt: colgado, hoy: HOY })).toBe(false)
+    const ultimo = ultimoContactoEfectivo({ ultimoConResultado: null, ultimoSinResultado: colgado, ahora: HOY })
+    expect(tocaRecordatorioHoy({ solicitadaAt: haceDias(4), ultimoContactoAt: ultimo, hoy: HOY })).toBe(true)
   })
 })

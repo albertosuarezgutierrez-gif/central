@@ -2,7 +2,7 @@
 // Todo con el empresa_id de la SESIÓN (panel) o el de cada documento (cron).
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { diasEntre, tocaRecordatorioHoy } from '@/lib/recordatorios-firma'
+import { diasEntre, tocaRecordatorioHoy, ultimoContactoEfectivo } from '@/lib/recordatorios-firma'
 import { avisarDocumento, marcarFirmaSolicitada, type ResultadoAviso } from '@/lib/avisos'
 
 export type FiltrosPanel = {
@@ -71,7 +71,9 @@ export async function listarPendientes(empresaId: string, f: FiltrosPanel): Prom
         ORDER BY a.creado_at DESC LIMIT 1
       ) ua ON true
       WHERE ${where}
-      ORDER BY COALESCE(d.firma_solicitada_at, d.creada_at) ASC, d.id
+      -- Orden por claves INMUTABLES: «Reclamar» rellena firma_solicitada_at y, si ordenáramos por
+      -- ella, la fila saltaría de página entre dos «Ver más» (duplicada u omitida).
+      ORDER BY d.creada_at ASC, d.id ASC
       LIMIT ${f.limit + 1} OFFSET ${f.offset}`),
     prisma.$queryRaw<{ n: number }[]>(Prisma.sql`
       SELECT count(*)::int AS n FROM rrhh.documentos d
@@ -101,18 +103,28 @@ export async function reclamarFirma(empresaId: string, usuarioId: string, docId:
 
 /** Cron: recordatorio automático a 3, 7 y luego cada 7 días. Idempotente por día (índice único). */
 export async function ejecutarRecordatorios(hoy = new Date()): Promise<{ revisados: number; enviados: number; ya_hoy: number; errores: number }> {
-  const rows = await prisma.$queryRaw<{ id: string; empresa_id: string; empleado_id: string; firma_solicitada_at: Date; ultimo: Date | null }[]>(Prisma.sql`
-    SELECT d.id, d.empresa_id, d.empleado_id, d.firma_solicitada_at,
-           (SELECT max(a.creado_at) FROM rrhh.avisos a
-             WHERE a.documento_id = d.id AND a.empleado_id = d.empleado_id AND a.empresa_id = d.empresa_id) AS ultimo
+  const rows = await prisma.$queryRaw<{ id: string; empresa_id: string; empleado_id: string; firma_solicitada_at: Date; ultimo_ok: Date | null; ultimo_sin: Date | null }[]>(Prisma.sql`
+    SELECT d.id, d.empresa_id, d.empleado_id, d.firma_solicitada_at, ua.ultimo_ok, ua.ultimo_sin
     FROM rrhh.documentos d
     JOIN rrhh.empleados e ON e.id = d.empleado_id AND e.empresa_id = d.empresa_id
+    LEFT JOIN LATERAL (
+      SELECT max(a.creado_at) FILTER (WHERE a.email_estado IS NOT NULL) AS ultimo_ok,
+             max(a.creado_at) FILTER (WHERE a.email_estado IS NULL)     AS ultimo_sin
+      FROM rrhh.avisos a
+      WHERE a.documento_id = d.id AND a.empleado_id = d.empleado_id AND a.empresa_id = d.empresa_id
+    ) ua ON true
     WHERE d.estado_firma = 'pendiente' AND d.firma_solicitada_at IS NOT NULL AND e.estado = 'activo'
     ORDER BY d.firma_solicitada_at
     LIMIT 2000`)
   let enviados = 0, ya_hoy = 0, errores = 0
   for (const r of rows) {
-    if (!tocaRecordatorioHoy({ solicitadaAt: new Date(r.firma_solicitada_at), ultimoContactoAt: r.ultimo ? new Date(r.ultimo) : null, hoy })) continue
+    // Un aviso que se quedó sin resultado de email (> 1 h) no cuenta como contacto.
+    const ultimo = ultimoContactoEfectivo({
+      ultimoConResultado: r.ultimo_ok ? new Date(r.ultimo_ok) : null,
+      ultimoSinResultado: r.ultimo_sin ? new Date(r.ultimo_sin) : null,
+      ahora: hoy,
+    })
+    if (!tocaRecordatorioHoy({ solicitadaAt: new Date(r.firma_solicitada_at), ultimoContactoAt: ultimo, hoy })) continue
     try {
       const res = await avisarDocumento({ empresaId: r.empresa_id, empleadoId: r.empleado_id, documentoId: r.id, tipo: 'recordatorio_firma', creadoPor: 'cron' })
       if (res) enviados++; else ya_hoy++

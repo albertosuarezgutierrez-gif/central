@@ -8,7 +8,8 @@
 ALTER TABLE rrhh.documentos
   ADD COLUMN IF NOT EXISTS categoria_doc       text,         -- catálogo cerrado (lib/asistente-subida.ts)
   ADD COLUMN IF NOT EXISTS resumen             text,         -- resumen breve para el empleado
-  ADD COLUMN IF NOT EXISTS envio_id            uuid,         -- agrupa las copias de un envío masivo
+  ADD COLUMN IF NOT EXISTS envio_id            uuid,         -- uuid del CLIENTE por documento: agrupa las copias e idempotencia
+  ADD COLUMN IF NOT EXISTS avisar              boolean,      -- «Avisar al empleado» del envío; NULL = anterior a 0023 (se avisa)
   ADD COLUMN IF NOT EXISTS firma_solicitada_at timestamptz,  -- desde cuándo se le reclama la firma
   ADD COLUMN IF NOT EXISTS visto_empleado_at   timestamptz;  -- primera vez que el empleado lo abrió
 
@@ -19,7 +20,11 @@ ALTER TABLE rrhh.documentos ADD CONSTRAINT documentos_categoria_doc_chk CHECK (
 
 CREATE INDEX IF NOT EXISTS documentos_pendientes_idx
   ON rrhh.documentos (empresa_id, estado_firma) WHERE estado_firma IN ('pendiente', 'pendiente_empresa');
-CREATE INDEX IF NOT EXISTS documentos_envio_idx ON rrhh.documentos (envio_id) WHERE envio_id IS NOT NULL;
+-- Idempotencia del envío: UNA copia por (envio_id, empleado). Un reintento (timeout, doble clic,
+-- «Enviar todo» sobre lo ya enviado) no duplica: `asignarStaging` salta las existentes y el INSERT
+-- lleva ON CONFLICT … DO NOTHING. También sirve de índice para buscar las copias de un envío.
+CREATE UNIQUE INDEX IF NOT EXISTS documentos_envio_empleado_uq
+  ON rrhh.documentos (envio_id, empleado_id) WHERE envio_id IS NOT NULL;
 
 -- 2) Avisos al empleado (intranet + email + push). Una fila por aviso; el resultado de cada canal
 --    queda registrado. `email_estado`/`push_estado` NULL = aún no intentado (no «falló»).

@@ -51,3 +51,21 @@ export function tocaRecordatorioHoy({ solicitadaAt, ultimoContactoAt, hoy }: Ent
   const diaHito = aUtc(diaMadrid(solicitadaAt)) + hito * 86_400_000
   return aUtc(diaMadrid(ultimoContactoAt)) < diaHito
 }
+
+/** Un aviso sin resultado de email (`email_estado` NULL) solo cuenta como contacto durante esta ventana. */
+export const VENTANA_AVISO_EN_CURSO_MS = 3_600_000
+
+/**
+ * Último contacto que CUENTA para el calendario de recordatorios. Un aviso con `email_estado` NULL es
+ * uno que se reservó y nunca terminó de enviarse (el proceso murió entre el INSERT y el UPDATE): si
+ * tiene más de 1 h no consta que se contactara al empleado, así que no cubre el hito. Si es reciente,
+ * puede estar enviándose ahora mismo: cuenta (para no mandar dos).
+ */
+export function ultimoContactoEfectivo(
+  { ultimoConResultado, ultimoSinResultado, ahora }: { ultimoConResultado: Date | null; ultimoSinResultado: Date | null; ahora: Date },
+): Date | null {
+  const enCurso = ultimoSinResultado && ahora.getTime() - ultimoSinResultado.getTime() < VENTANA_AVISO_EN_CURSO_MS ? ultimoSinResultado : null
+  if (!ultimoConResultado) return enCurso
+  if (!enCurso) return ultimoConResultado
+  return enCurso > ultimoConResultado ? enCurso : ultimoConResultado
+}
