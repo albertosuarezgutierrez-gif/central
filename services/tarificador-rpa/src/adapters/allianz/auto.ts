@@ -1,3 +1,4 @@
+// Moto v0.7.14 (20/10/2026, trabajo real 2f90524e): `#driverBirthDate` quedaba con OTRA fecha válida → se dice con cuál coincide (sin el valor); si es la que el portal traía (registro de Allianz) o ninguna del formulario → `datos` «revisa la de la ficha», sin pelearse.
 // Moto v0.7.13 (20/10/2026, trabajo real e5bcdb08): el portal perdía `#driverBirthDate` tras escribirlo → blur tras cada texto y UNA reescritura tecleada de lo perdido; el error dice la FORMA (vacío/otra fecha), nunca el valor.
 // Moto v0.7.3 (20/10/2026): CP con varias poblaciones → se elige SOLA por la localidad del riesgo (contención de palabras enteras, única; ver poblacion-localidad.ts); varias/ninguna/contradictoria → persona.
 // v0.6.18 / Moto v0.7.2 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»):
@@ -1121,10 +1122,52 @@ async function rellenarSeguroAnteriorMoto(raiz: Pick<Frame, 'locator'>, d: Datos
   await fijarSelect(raiz, SEL_SEGURO_ANTERIOR_MOTO.fotocopia, FOTOCOPIA_PORTAL[d.fotocopia as ClaveFotocopia])
 }
 
+/** De dónde parece salir la fecha de nacimiento que el portal dejó en `#driverBirthDate` (v0.7.14, trabajo real 2f90524e). */
+export type OrigenFechaLeida = 'nuestra' | 'vacia' | 'otro_formato' | 'registro' | 'carne' | 'adquisicion' | 'matriculacion' | 'dia_mes_cambiados' | 'distinta'
+
+/** Fechas dd/mm/aaaa conocidas al terminar Datos básicos. `previa` = lo que el portal traía en el campo ANTES de escribir (su registro). */
+export type FechasConocidasMoto = { nuestra: string; previa: string | null; carne: string | null; adquisicion: string | null; matriculacion: string | null }
+
+/**
+ * Compara (por cifras, sin separadores) lo leído con las fechas conocidas. Puro. Solo devuelve una ETIQUETA: el valor nunca sale.
+ * El orden importa: «registro» (lo que el portal traía) antes que las del formulario.
+ */
+export function origenFechaLeida(leido: string, c: FechasConocidasMoto): OrigenFechaLeida {
+  const t = leido.trim()
+  const k = alfanumerico(t)
+  if (k === alfanumerico(c.nuestra)) return 'nuestra'
+  if (t === '') return 'vacia'
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(t)) return 'otro_formato'
+  const igual = (x: string | null) => x !== null && x.trim() !== '' && alfanumerico(x) === k
+  if (igual(c.previa)) return 'registro'
+  if (igual(c.carne)) return 'carne'
+  if (igual(c.adquisicion)) return 'adquisicion'
+  if (igual(c.matriculacion)) return 'matriculacion'
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(c.nuestra.trim())
+  if (m && m[1] !== m[2] && k === `${m[2]}${m[1]}${m[3]}`) return 'dia_mes_cambiados'
+  return 'distinta'
+}
+
+export const MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ =
+  'allianz/moto: Allianz tiene otra fecha de nacimiento para este NIF (el portal pone la de su registro en lugar de la de la ficha); revisa la de la ficha'
+
+/** Error de `#driverBirthDate` según el origen. Puro. Registro de Allianz → `datos` (lo resuelve Alberto en la ficha); fallo nuestro → `portal`. */
+export function errorFechaNacimientoMoto(origen: Exclude<OrigenFechaLeida, 'nuestra'>, leido: string): ErrorTarificador {
+  const sel = SEL_DATOS_MOTO.conductorNacimiento
+  if (origen === 'registro') return new ErrorTarificador('datos', MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ)
+  if (origen === 'distinta') return new ErrorTarificador('datos', `${MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ} (lo que queda en ${sel} es distinta de todas las fechas del formulario: probablemente del registro de Allianz)`)
+  const que = { carne: '= fecha de carné', adquisicion: '= fecha de adquisición', matriculacion: '= fecha de matriculación', dia_mes_cambiados: '= nuestra fecha con día/mes cambiados' } as const
+  const forma = origen === 'vacia' || origen === 'otro_formato' ? formaTextoLeido(leido) : `quedó ${que[origen]}`
+  return new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${forma})`)
+}
+
 export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'> = {}): Promise<void> {
   exigirDatosPortalMoto(f)
   const ant = datosPortalMoto(f)
   const plan = planDatosBasicosMoto(f)
+  // v0.7.14: lo que el portal trae YA en la fecha de nacimiento (con tomador = conductor, la de su registro para ese NIF). Solo se compara.
+  const leerTexto = (sel: string) => raiz.locator(sel).first().inputValue()
+  const nacimientoPrevio = await leerTexto(SEL_DATOS_MOTO.conductorNacimiento).catch(() => null)
   for (const op of plan) {
     const campo = raiz.locator(op.sel).first()
     if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${op.sel} de Datos básicos`)
@@ -1149,10 +1192,21 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
     [SEL_SEGURO_ANTERIOR_MOTO.fechaAdquisicion, fechaEs(ant.fechaAdquisicionIso as string)],
     ...(ant.estuvoAsegurado ? ([[SEL_SEGURO_ANTERIOR_MOTO.polizaOrigen, ant.poliza5 as string]] as Array<[string, string]>) : []),
   ]
-  const leerTexto = (sel: string) => raiz.locator(sel).first().inputValue()
+  const nacimiento = String(plan.find((o) => o.sel === SEL_DATOS_MOTO.conductorNacimiento)?.valor ?? '')
+  const conocidas = async (): Promise<FechasConocidasMoto> => ({
+    nuestra: nacimiento,
+    previa: nacimientoPrevio,
+    carne: String(plan.find((o) => o.sel === SEL_DATOS_MOTO.conductorCarne)?.valor ?? ''),
+    adquisicion: fechaEs(ant.fechaAdquisicionIso as string),
+    matriculacion: await raiz.locator(SEL_DATOS_MOTO.fechaMatriculacion).first().inputValue({ timeout: 1_000 }).catch(() => null),
+  })
   // v0.7.13: lo que el portal perdió tras escribirlo (p. ej. la fecha de nacimiento, trabajo e5bcdb08) se reescribe UNA vez.
+  // v0.7.14: salvo que la fecha de nacimiento sea la que el portal traía de su registro: no se pelea, se para (`datos`).
   for (const [sel, esperado] of textos) {
-    if (alfanumerico(await leerTexto(sel)) !== alfanumerico(esperado)) await reescribirTexto(raiz, sel, esperado, page)
+    const leido = await leerTexto(sel)
+    if (alfanumerico(leido) === alfanumerico(esperado)) continue
+    if (sel === SEL_DATOS_MOTO.conductorNacimiento && origenFechaLeida(leido, await conocidas()) === 'registro') throw errorFechaNacimientoMoto('registro', leido)
+    await reescribirTexto(raiz, sel, esperado, page)
   }
   // Releer TODO al final: los selects encadenados (años en la compañía → años sin siniestros) pueden revertirse, y las
   // fechas/póliza tienen que haber quedado escritas (un campo vacío o reformateado: el portal lo rechazaría con un error engañoso).
@@ -1161,7 +1215,12 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
   }
   for (const [sel, esperado] of textos) {
     const leido = await leerTexto(sel)
-    if (alfanumerico(leido) !== alfanumerico(esperado)) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${formaTextoLeido(leido)})`)
+    if (alfanumerico(leido) === alfanumerico(esperado)) continue
+    if (sel === SEL_DATOS_MOTO.conductorNacimiento) {
+      const origen = origenFechaLeida(leido, await conocidas())
+      if (origen !== 'nuestra') throw errorFechaNacimientoMoto(origen, leido)
+    }
+    throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó escrito ${sel} (reescrito una vez; ${formaTextoLeido(leido)})`)
   }
   if (ant.estuvoAsegurado) {
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen).first().inputValue()) === '') throw new ErrorTarificador('portal', `allianz/moto: el portal vació ${SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen}`)
@@ -2450,7 +2509,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.13' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.14' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

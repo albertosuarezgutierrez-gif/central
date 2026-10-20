@@ -31,6 +31,8 @@ import {
   planDatosBasicosMoto,
   rellenarDatosBasicosMoto,
   formaTextoLeido,
+  origenFechaLeida,
+  MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ,
   rellenarRiesgoMoto,
   resolverVehiculo,
   valorClaseMoto,
@@ -89,7 +91,9 @@ const CIAS = OPC([['', '---Selección Compañías---'], ['0000', '**************
 
 // `pierdeNacimiento` (v0.7.13, trabajo real e5bcdb08): 'una' = un recálculo posterior (al marcar «asegurado en otra compañía»)
 // vacía la fecha de nacimiento una vez; 'siempre' = el portal la vacía tras cada cambio.
-const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre' = false) => `<body><form>
+// v0.7.14 (trabajo real 2f90524e): 'registro' = el portal trae una fecha propia (inventada) y la repone tras cada cambio; 'carne' = la
+// pisa con la de carné; 'ajena' = la pisa con una fecha que no está en el formulario (sin traerla antes).
+const DATOS = (revertirAnios = false, pierdeNacimiento: false | 'una' | 'siempre' | 'registro' | 'carne' | 'ajena' = false) => `<body><form>
 <select id="use"><option value="1" selected>Particular</option><option value="4">Autoescuela</option></select>
 <input id="driverBirthDate" onchange="javascript:menores25();"><input id="driverLicenseDate" onchange="javascript:funcTrue();">
 <select id="driverSex"><option value="V" selected>Hombre</option><option value="H">Mujer</option></select>
@@ -110,6 +114,9 @@ document.getElementById('licensePlate').addEventListener('change', () => setTime
 ${revertirAnios ? "document.getElementById('aniosSinSiniestros').addEventListener('change', (e) => setTimeout(() => (e.target.value = '00'), 0))" : ''}
 ${pierdeNacimiento === 'una' ? "document.getElementById('aseguradoOtraCia').addEventListener('change', () => setTimeout(() => { document.getElementById('driverBirthDate').value = '' }, 0), { once: true })" : ''}
 ${pierdeNacimiento === 'siempre' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '' }, 0))" : ''}
+${pierdeNacimiento === 'registro' ? "window.nInputs = 0; document.getElementById('driverBirthDate').value = '11/11/1977'; document.getElementById('driverBirthDate').addEventListener('input', () => { window.nInputs++ }); document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '11/11/1977' }, 0))" : ''}
+${pierdeNacimiento === 'carne' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '05/04/2010' }, 0))" : ''}
+${pierdeNacimiento === 'ajena' ? "document.getElementById('driverBirthDate').addEventListener('change', (e) => setTimeout(() => { e.target.value = '11/11/1977' }, 0))" : ''}
 </script></body>`
 
 // Buscador de poblaciones con VARIAS (inventario de estructura 13/10/2026, datos INVENTADOS): la lupa pinta celdas
@@ -349,6 +356,46 @@ test('v0.7.13: si el portal pierde la fecha de nacimiento tras escribirla, se re
   })
 })
 
+test('v0.7.14: fecha de nacimiento pisada por el portal → se dice con QUÉ coincide (sin el valor); registro de Allianz → datos sin pelearse', async () => {
+  const sinValor = (m: string) => !m.includes('1990') && !m.includes('1977') && !m.includes('03/02')
+  await page.setContent(DATOS(false, 'registro'))
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
+    assert.equal(e.message, MENSAJE_NACIMIENTO_REGISTRO_ALLIANZ)
+    assert.ok(sinValor(e.message))
+    return true
+  })
+  assert.equal(await page.evaluate(() => (window as unknown as { nInputs: number }).nInputs), 1, 'no se pelea: no reescribe la del registro')
+  await page.setContent(DATOS(false, 'carne'))
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'portal', String(e))
+    assert.match(e.message, /no dejó escrito #driverBirthDate \(reescrito una vez; quedó = fecha de carné\)/)
+    return sinValor(e.message)
+  })
+  await page.setContent(DATOS(false, 'ajena'))
+  await assert.rejects(rellenarDatosBasicosMoto(page.mainFrame(), formCompleto, page), (e) => {
+    assert.ok(e instanceof ErrorTarificador && e.tipo === 'datos', String(e))
+    assert.match(e.message, /Allianz tiene otra fecha de nacimiento para este NIF.*revisa la de la ficha.*distinta de todas/)
+    return sinValor(e.message)
+  })
+})
+
+test('origenFechaLeida: etiqueta pura de cada coincidencia (orden: nuestra, vacía, formato, registro, carné, adquisición, matriculación, día/mes)', () => {
+  const c = { nuestra: '03/02/1990', previa: '11/11/1977', carne: '05/04/2010', adquisicion: '02/01/2016', matriculacion: '07/08/2015' }
+  assert.equal(origenFechaLeida('03/02/1990', c), 'nuestra')
+  assert.equal(origenFechaLeida('03021990', c), 'nuestra', 'se compara por cifras')
+  assert.equal(origenFechaLeida('', c), 'vacia')
+  assert.equal(origenFechaLeida('1990-02-03', c), 'otro_formato')
+  assert.equal(origenFechaLeida('11/11/1977', c), 'registro')
+  assert.equal(origenFechaLeida('05/04/2010', c), 'carne')
+  assert.equal(origenFechaLeida('02/01/2016', c), 'adquisicion')
+  assert.equal(origenFechaLeida('07/08/2015', c), 'matriculacion')
+  assert.equal(origenFechaLeida('02/03/1990', c), 'dia_mes_cambiados')
+  assert.equal(origenFechaLeida('01/01/2001', c), 'distinta')
+  assert.equal(origenFechaLeida('11/11/1977', { ...c, previa: '' }), 'distinta', 'sin fecha previa no hay «registro»')
+  assert.equal(origenFechaLeida('05/05/1990', { ...c, nuestra: '05/05/1990' }), 'nuestra')
+})
+
 test('formaTextoLeido: solo la forma, nunca el valor', () => {
   assert.equal(formaTextoLeido('  '), 'quedó vacío')
   assert.equal(formaTextoLeido('01/01/2000'), 'quedó otra fecha dd/mm/aaaa')
@@ -523,7 +570,7 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.13')
+  assert.equal(allianzMoto.version, '0.7.14')
 })
 
 // ── 0.7.11 · trabajo real 6cd26c10: el portal rechazaba carné, fecha de adquisición, justificante, compañía y póliza de origen ──
