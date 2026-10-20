@@ -10,7 +10,7 @@
 //   póliza anterior   → `historialDeclarado.numeroPoliza` de la oportunidad (`editar`; donde ya vive el nº de póliza actual: las 5 últimas cifras)
 //   justificante      → `historialDeclarado.fotocopiaAnterior` (`editar`; valor cerrado `proximo_anio` | `dos_ultimos_anios`)
 import { JUSTIFICANTES_SEGURO_ANTERIOR, MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
-import { cilindradaDeTexto, fechaAdquisicionPorDefecto, fechaIsoValida, ultimos5CifrasPoliza } from './tarificador-moto-formulario.ts'
+import { cilindradaDeTexto, fechaAdquisicionPorDefecto, fechaIsoValida, polizaAnteriorUltimos5PorDefecto, ultimos5CifrasPoliza } from './tarificador-moto-formulario.ts'
 import { COMPANIA_CAJON, esCodigoCompania } from './compania-anterior.ts'
 
 export type AccionGuardarExtra =
@@ -46,6 +46,11 @@ export function valorCampoExtra(
   if (clave === 'fechaAdquisicion') {
     const m = fechaAdquisicionPorDefecto(formulario && typeof formulario === 'object' ? (formulario as Record<string, unknown>).fechaMatriculacion as string | null | undefined : null)
     if (m !== null) return m
+  }
+  // Póliza anterior vacía → las 5 últimas cifras del nº completo que ya consta (declarado o leído de la póliza subida). Tampoco se guarda.
+  if (clave === 'polizaAnteriorUltimos5') {
+    const n = polizaAnteriorUltimos5PorDefecto(formulario && typeof formulario === 'object' ? (formulario as Record<string, unknown>).numeroPolizaActual as string | null | undefined : null)
+    if (n !== null) return n
   }
   return ini ?? porDefecto
 }

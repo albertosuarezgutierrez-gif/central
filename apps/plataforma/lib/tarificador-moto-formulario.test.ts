@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, fechaAdquisicionPorDefecto, formularioBotMoto, leerEncoladoBot,
+  claseMotoPorCilindrada, claveDeCompania, cilindradaDeTexto, completarRiesgoMotoDesdeFicha, fechaAdquisicionPorDefecto, formularioBotMoto, polizaAnteriorUltimos5PorDefecto, leerEncoladoBot,
   mensajeFaltanDeFicha, type EntradaBotMoto, type FichaParaBot,
 } from './tarificador-moto-formulario.ts'
 
@@ -36,6 +36,17 @@ test('fecha de adquisición: la explícita gana; vacía → la de matriculación
   assert.match(faltan(entrada({ fechaAdquisicion: '10/05/2023', fechaMatriculacion: '2023-05-10' })), /Fecha de adquisición/, 'una explícita mal formada no cae a la matriculación')
   assert.equal(fechaAdquisicionPorDefecto(' 2023-05-10 '), '2023-05-10')
   assert.equal(fechaAdquisicionPorDefecto(null), null)
+})
+
+test('póliza anterior: la explícita gana; vacía → 5 últimas cifras del nº completo; sin cifras suficientes, no viaja (sigue faltando)', () => {
+  assert.equal(ok(entrada({ polizaAnteriorUltimos5: '99999', numeroPolizaActual: 'ZZ-0012345678' })).riesgo.polizaAnteriorUltimos5, '99999')
+  assert.equal(ok(entrada({ polizaAnteriorUltimos5: '', numeroPolizaActual: 'ZZ-0012345678' })).riesgo.polizaAnteriorUltimos5, '45678')
+  assert.equal(ok(entrada({ numeroPolizaActual: 'AB 12-34/567' })).riesgo.polizaAnteriorUltimos5, '34567')
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ numeroPolizaActual: 'AB-123' })).riesgo, false)
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ numeroPolizaActual: null })).riesgo, false)
+  assert.equal('polizaAnteriorUltimos5' in ok(entrada({ tieneSeguroActual: false, numeroPolizaActual: '0012345678' })).riesgo, false, 'sin seguro anterior no viaja')
+  assert.equal(polizaAnteriorUltimos5PorDefecto('0012345678'), '45678')
+  assert.equal(polizaAnteriorUltimos5PorDefecto('1234'), null)
 })
 
 test('completo: riesgo de moto con la forma de FormularioAuto, sin inventar nada', () => {

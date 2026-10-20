@@ -1363,6 +1363,8 @@ export default function CotizadorMoto({
           formulario={{
             matricula,
             fechaMatriculacion: matriculacion || null,
+            // Nº completo que ya consta (declarado arriba o leído de la póliza subida): las 5 últimas cifras, por defecto, de la póliza anterior.
+            numeroPolizaActual: (embebido ? historialRiesgo?.numeroPoliza?.trim() : null) || anterior?.seguroAnterior?.numeroPoliza?.trim() || anterior?.numeroPoliza?.trim() || null,
             marca: embebido ? datosRiesgo?.marca ?? null : marcas.find((m) => m.id === marcaId)?.nombre ?? null,
             modelo: embebido ? datosRiesgo?.modelo ?? null : modelos.find((m) => m.id === modeloId)?.nombre ?? null,
             version: embebido ? datosRiesgo?.version ?? null : versiones.find((x) => x.id === codigoVehiculo)?.nombre ?? null,
