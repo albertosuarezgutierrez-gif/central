@@ -50,6 +50,10 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.10 (20/10/2026, trabajo real de moto ff13b5d3): en MOTO el paso «Figuras» pinta etiquetas «Procedencia Siniestralidad»,
+//   «Expuestos/Años», «Siniestros» y «Modificación Manual Niveles Bonus Malus» y NINGUNA de «compañía anterior»; el inventario no
+//   trae ni `app-historial-siniestralidad` ni `#companiaAnteriorSlide-input`. Sin evidencia de qué control es el equivalente (no hay
+//   grabación de moto) NO se inventa selector ni clic: el hueco de «compañía anterior» ahora LISTA el bloque (`describirBloqueHistorial`).
 // v0.8.9 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»): varias
 //   filas y ninguna casa SOLA → se elige SOLA si son equivalentes (`filaVehiculoPorEquivalencia`, regla común de module-tarificacion:
 //   CV ±10 %, cc ±5 %; la de fecha de inicio más cercana (≤) a la matriculación o la primera) y se DECLARA en el aviso de supuestos.
@@ -893,6 +897,39 @@ async function campoPorEtiquetaPortal(raiz: Pick<Frame, 'locator'>, sel: string,
 }
 
 /**
+ * v0.8.10 · Qué hay en el bloque «historial de siniestralidad» (solo lectura, NUNCA valores): etiquetas y controles (etiqueta,
+ * tag, formcontrolname/name/id, deshabilitado, interruptor). Si `app-historial-siniestralidad` no existe, las etiquetas de la
+ * pantalla que hablan de siniestralidad/compañía. Para que el hueco de «compañía anterior» en MOTO diga qué pinta el portal.
+ */
+export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Promise<string> {
+  const r = await raiz
+    .locator('body')
+    .evaluate((body) => {
+      const limpia = (t: string | null | undefined) => (t ?? '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+      const bloque = body.querySelector('app-historial-siniestralidad')
+      if (!bloque) {
+        const et = [...body.querySelectorAll('label, mat-label, mat-slide-toggle, mat-radio-button, mat-checkbox')]
+          .map((e) => limpia(e.textContent))
+          .filter((t) => /siniestr|compañ|compan|anterior|bonus|proced|expuest/i.test(t))
+        return { bloque: false, etiquetas: [...new Set(et)].slice(0, 12), controles: [] as string[] }
+      }
+      const etiquetas = [...bloque.querySelectorAll('label, mat-label')].map((e) => limpia(e.textContent)).filter((t) => t !== '')
+      const controles = [...bloque.querySelectorAll('input, textarea, mat-select, mat-slide-toggle, mat-radio-button, mat-radio-group, mat-checkbox')].map((e) => {
+        const ff = e.closest('mat-form-field')
+        const et = limpia((ff?.querySelector('mat-label') ?? ff?.querySelector('label') ?? e.closest('label'))?.textContent ?? e.getAttribute('aria-label'))
+        const id = e.getAttribute('formcontrolname') ?? e.getAttribute('name') ?? e.id
+        const off = (e as HTMLInputElement).disabled || e.getAttribute('aria-disabled') === 'true'
+        return `${e.tagName.toLowerCase()}${id ? `[${id.slice(0, 40)}]` : ''}${et ? `«${et}»` : ''}${off ? '(deshabilitado)' : ''}`
+      })
+      return { bloque: true, etiquetas: [...new Set(etiquetas)].slice(0, 12), controles: controles.slice(0, 20) }
+    })
+    .catch(() => null)
+  if (!r) return 'no se pudo leer el bloque'
+  const et = r.etiquetas.length ? ` etiquetas: ${r.etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
+  return r.bloque ? `el bloque app-historial-siniestralidad trae ${r.controles.length} controles (${r.controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
+}
+
+/**
  * Rellena los `mat-select` del plan que ya tienen valor mapeado (`escribibles` de tipo `mat-select`), por la capa común
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
@@ -909,7 +946,8 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
         continue
       }
       await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Desplegable «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: no aparece en la pantalla` }).catch(() => undefined)
-      throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)`, true)
+      const bloque = op.sel === SEL_HISTORIAL.companiaAnterior ? ` — ${redactarDatosPersonales(await describirBloqueHistorial(raiz))}` : ''
+      throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)${bloque}`, true)
     }
     if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
     // Capa común: coincidencia clara por texto → IA solo entre las opciones visibles → si no, ATASCO (Telegram) + hueco.
@@ -1390,7 +1428,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.9',
+  version: '0.8.10',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

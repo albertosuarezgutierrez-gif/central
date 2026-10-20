@@ -10,7 +10,7 @@ import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright'
 import type { FormularioAuto } from '@central/module-tarificacion'
-import { ErrorMapaIncompleto, planObjetoYFiguras, rellenarCamposTexto, SEL_HISTORIAL, type PlanNsei } from '../src/adapters/mapfre/auto.ts'
+import { describirBloqueHistorial, ErrorMapaIncompleto, planObjetoYFiguras, rellenarCamposTexto, SEL_HISTORIAL, type PlanNsei } from '../src/adapters/mapfre/auto.ts'
 import { atascoDeRespaldoHueco, CLAVE_ATASCO_HUECO_MAPA, type ContextoFormador } from '../src/formador.ts'
 import { clasificarIntento, ErrorTarificador, timeoutDeControl } from '../src/errores.ts'
 
@@ -150,5 +150,21 @@ test('B · red de la capa común: un TimeoutError de Playwright sobre un control
   const apagado = { ...formador(), activo: false }
   await atascoDeRespaldoHueco(page, apagado, e)
   assert.equal(apagado.atasco ?? null, null)
+  await context.close()
+})
+
+test('describirBloqueHistorial (v0.8.10, moto): lista etiquetas y controles del bloque sin valores; sin el bloque, solo las etiquetas de siniestralidad', async () => {
+  const { context, page } = await preparar(`<body><app-historial-siniestralidad><mat-form-field><label><mat-label>Expuestos/Años</mat-label></label><input formcontrolname="expuestos" value="VALOR-FICTICIO-77"></mat-form-field>
+<mat-form-field><label><mat-label>Procedencia Siniestralidad *</mat-label></label><mat-select formcontrolname="procedencia"></mat-select></mat-form-field></app-historial-siniestralidad></body>`)
+  const t = await describirBloqueHistorial(page)
+  assert.match(t, /app-historial-siniestralidad trae 2 controles/)
+  assert.match(t, /input\[expuestos\]«Expuestos\/Años»/)
+  assert.match(t, /mat-select\[procedencia\]«Procedencia Siniestralidad»/)
+  assert.ok(!t.includes('VALOR-FICTICIO-77'))
+  await page.setContent('<body><label>Siniestros</label><label>Nombre</label><label>Compañía anterior</label></body>')
+  const sin = await describirBloqueHistorial(page)
+  assert.match(sin, /no existe app-historial-siniestralidad/)
+  assert.match(sin, /«Siniestros»/)
+  assert.ok(!sin.includes('Nombre'))
   await context.close()
 })
