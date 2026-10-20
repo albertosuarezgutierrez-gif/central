@@ -1093,7 +1093,7 @@ export default function CotizadorMoto({
 
       <div id="cotizador-tomador" style={cardStyle}>
         <CardHeader
-          title="2 · El tomador"
+          title={embebido ? 'Tomador' : '2 · El tomador'}
           sub={aMano.length > 0 ? 'Los datos personales NUNCA se suponen: los que falten se teclean aquí.' : 'La ficha trae todo lo personal; solo hay que confirmar estos dos.'}
         />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>

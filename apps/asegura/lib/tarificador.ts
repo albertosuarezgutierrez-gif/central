@@ -200,7 +200,10 @@ export async function encolarTrabajo(e: EntradaEncolar): Promise<ResultadoEncola
   }
   // Tomador de Hogar (19/10/2026, Allianz): DNI/NIE y nacimiento de la ficha; solo se COMPRUEBAN aquí, se inyectan al entregar.
   const fichaHogar = necesitaTomadorHogar(e.compania, e.ramo) ? await leerTomadorFicha(e.correduriaId, clienteId) : null
-  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField))
+  // Allianz auto/moto (20/10/2026): la ficha completa (NIF…) se lee para EVALUAR los obligatorios de origen ficha (NIF del tomador de
+  // Allianz moto); lo guardado sigue sin ella, se inyecta al entregar.
+  const filaFichaAuto = necesitaFichaTomador(e.compania, e.ramo) ? await leerFichaTomadorAuto(e.correduriaId, clienteId) : null
+  const guardar = riesgoParaEncolar(e.compania, e.ramo, riesgoEntrada, () => lecturaNifFicha(dniFicha, decryptField), () => lecturaTomadorFicha(fichaTomador, decryptField), () => lecturaTomadorHogar(fichaHogar, decryptField), () => fichaTomadorAutoDeFicha(filaFichaAuto, decryptField, e.ramo))
   if (!guardar.ok) return { estado: 'rechazado', status: guardar.status, motivo: guardar.motivo }
 
   // Sin duplicados (13/10/2026; `ok` con precio <10 min, 15/10/2026): mismo cliente (ficha) + compañía + ramo + oportunidad/póliza + riesgo

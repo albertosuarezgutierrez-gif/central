@@ -16,6 +16,8 @@ export function IrA({ ancla, alternativa, children }: { ancla: string; alternati
         const el = document.getElementById(ancla) ?? (alternativa ? document.getElementById(alternativa) : null)
         if (!el) return
         e.preventDefault()
+        // Los bloques de motor pliegan lo completo en un <details>: un ancla dentro de uno cerrado se abre antes de ir a ella.
+        for (let d = el.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true
         el.scrollIntoView({ behavior: 'smooth', block: el.tagName === 'BUTTON' ? 'center' : 'start' })
         if (el.tagName === 'BUTTON') (el as HTMLButtonElement).focus({ preventScroll: true })
       }}

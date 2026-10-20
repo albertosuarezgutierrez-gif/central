@@ -79,7 +79,99 @@ export type GuardEmision = {
  * a los que puede ir una petición que no sea GET mientras la ventana está abierta. La grabación NO registra la red: los
  * destinos son el `action` del formulario que envía `aceptar_onclick()`; si en real el portal manda otro POST, el trabajo
  * muere (fail-closed) y se añade aquí tras verlo. Lo vigila `test/regression-tarificador-rpa.test.ts` (romperla → rojo).
+ *
+ * `ajaxValidacion` (20/10/2026, Moto 0.7.7): POST de VALIDACIÓN del propio formulario que el portal dispara al perder el foco
+ * un campo justo cuando se pulsa la pestaña. Solo pasan por la capa (b), nunca relajan la (a) («aceptar» sigue bloqueado en
+ * ellos), y solo si casan EXACTOS: método POST, origen + ruta, `resource` y el resto de parámetros de la query, y las claves
+ * del cuerpo (`ajaxValidacionAvancePermitida`).
  */
+export type AjaxValidacionAvance = Readonly<{
+  /** Origen + ruta exactos. */
+  endpoint: string
+  /** Valor EXACTO del parámetro `resource` (la clase Java que atiende la llamada). */
+  resource: string
+  /** Únicos parámetros de la query además de `resource` (tokens de la sesión del framework), cada uno una vez. */
+  parametros: readonly string[]
+  /** Parámetros de query que PUEDEN venir además (p. ej. tokens que añade el framework), cada uno como mucho una vez. */
+  parametrosOpcionales?: readonly string[]
+  /** Únicas claves del cuerpo (urlencoded), cada una una vez, y la forma de su valor. */
+  cuerpo: readonly string[]
+  valorCuerpo: RegExp
+}>
+
+/**
+ * Comprobación de la LISTA NEGRA del NIF del tomador de ePAC (`validarNifAjaxidNifTaker()` del widget IdentificationNumber
+ * de «Riesgo municipio», captura del 20/10/2026): el `onchange` de `#idNifTaker_doc` hace
+ * `AjaxRequest('/drpc18/AJAXServlet?resource=pt.allianz.clientes.negocio.BlackListOperationsAjax&…thread=…&…synch=…',
+ * 'idNumberBL=<NIF>')` y pinta el texto devuelto como error del campo (vacío = NIF correcto). Es una CONSULTA: no lleva
+ * acción del formulario. El adaptador ya la dispara fuera de cualquier ventana (dispatchEvent('change')) y el guard la deja
+ * pasar; al pulsar `td#datosBasicos` el campo pierde el foco, el navegador repite el `change` y la misma consulta cae dentro
+ * de la ventana del avance (incidente 0.7.6). Esto la admite ahí, y SOLO ahí.
+ */
+export const AJAX_LISTA_NEGRA_NIF_ALLIANZ: AjaxValidacionAvance = Object.freeze({
+  endpoint: 'https://www.e-pacallianz.com/drpc18/AJAXServlet',
+  resource: 'pt.allianz.clientes.negocio.BlackListOperationsAjax',
+  parametros: Object.freeze(['com.ats.webbeans.struts.thread', 'com.ats.webbeans.struts.synch']),
+  cuerpo: Object.freeze(['idNumberBL']),
+  valorCuerpo: /^[A-Za-z0-9]{0,20}$/,
+})
+
+/**
+ * Ayuda contextual de ePAC (`AyudaAplicacionesAjax`, captura del 20/10/2026, incidente 0.7.7): en el `ready` de CADA pantalla del
+ * portal, `AjaxRequest('/drpc18/AJAXServlet?resource=com.ats.sea.visuals.util.AyudaAplicacionesAjax', 'pageId=<PAGEID>&codCia=<cia>')`
+ * pregunta si hay ayuda para esa pantalla y solo muestra u oculta el botón de ayuda (`ret.ayuda`). Es SOLO LECTURA. Se dispara
+ * al cargar la pantalla de destino del avance, es decir DENTRO de la ventana (td#datosBasicos y td#rate).
+ */
+export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object.freeze({
+  endpoint: 'https://www.e-pacallianz.com/drpc18/AJAXServlet',
+  resource: 'com.ats.sea.visuals.util.AyudaAplicacionesAjax',
+  parametros: Object.freeze([] as string[]),
+  parametrosOpcionales: Object.freeze(['com.ats.webbeans.struts.thread', 'com.ats.webbeans.struts.synch']),
+  cuerpo: Object.freeze(['pageId', 'codCia']),
+  valorCuerpo: /^[A-Za-z0-9_.:-]{0,64}$/,
+})
+
+/**
+ * LISTA BLANCA de recursos AJAX de SOLO LECTURA (consulta/ayuda/validación) admitidos durante un avance de pestaña. Cada
+ * entrada fija endpoint, `resource`, query y cuerpo. Todo lo demás (Emitir/Grabar/Contratar/Guardar/Pago/Firma…) sigue abortado.
+ */
+export const AJAX_LECTURA_ALLIANZ: readonly AjaxValidacionAvance[] = Object.freeze([AJAX_AYUDA_APLICACIONES_ALLIANZ])
+
+/** ¿Es `params` EXACTAMENTE el conjunto `claves` (cada una una vez, ninguna más)? */
+function clavesExactas(params: URLSearchParams, claves: readonly string[]): boolean {
+  const vistas = [...params.keys()]
+  return vistas.length === claves.length && new Set(vistas).size === vistas.length && vistas.every((k) => claves.includes(k))
+}
+
+/**
+ * ¿Es esta petición una de las `ajaxValidacion` del avance vigente? PURA. Exige método POST; https sin credenciales ni
+ * fragmento; origen + ruta exactos; query = `resource` (valor exacto) + los `parametros` declarados (cada uno una vez, valor
+ * de token corto alfanumérico); cuerpo urlencoded con EXACTAMENTE las claves de `cuerpo` y valor de la forma declarada.
+ * Cualquier otra cosa → `false` (y la capa (b) aborta).
+ */
+export function ajaxValidacionAvancePermitida(metodo: string, url: string, cuerpo: string | null, reglas: readonly AjaxValidacionAvance[]): boolean {
+  if (metodo !== 'POST' || reglas.length === 0) return false
+  let u: URL
+  try {
+    u = new URL(url)
+  } catch {
+    return false
+  }
+  if (u.protocol !== 'https:' || u.username || u.password || u.hash) return false
+  const cuerpoParams = new URLSearchParams(cuerpo ?? '')
+  return reglas.some((r) => {
+    if (`${u.origin}${u.pathname}` !== r.endpoint) return false
+    const opc = r.parametrosOpcionales ?? []
+    const qk = [...u.searchParams.keys()]
+    if (new Set(qk).size !== qk.length || !qk.includes('resource')) return false
+    if (!['resource', ...r.parametros].every((k) => qk.includes(k)) || !qk.every((k) => k === 'resource' || r.parametros.includes(k) || opc.includes(k))) return false
+    if (u.searchParams.get('resource') !== r.resource) return false
+    if (![...r.parametros, ...opc].filter((p) => qk.includes(p)).every((p) => /^[A-Za-z0-9_.-]{0,64}$/.test(u.searchParams.get(p) ?? '\u0000'))) return false
+    if (!clavesExactas(cuerpoParams, r.cuerpo)) return false
+    return r.cuerpo.every((k) => r.valorCuerpo.test(cuerpoParams.get(k) ?? '\u0000'))
+  })
+}
+
 export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
   'td#datosBasicos': Object.freeze({
     id: 'datosBasicos',
@@ -87,6 +179,7 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
     formOrigen: '/drpc18/riesgoMunicipio/control.do',
     formDestino: '/drpc18/datosBasicos/control.do',
     endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do']),
+    ajaxValidacion: Object.freeze([AJAX_LISTA_NEGRA_NIF_ALLIANZ, ...AJAX_LECTURA_ALLIANZ]),
   }),
   'td#rate': Object.freeze({
     id: 'rate',
@@ -94,6 +187,7 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
     formOrigen: '/drpc18/datosBasicos/control.do',
     formDestino: '/drpc18/tarifa/control.do',
     endpoints: Object.freeze(['https://www.e-pacallianz.com/drpc18/datosBasicos/control.do']),
+    ajaxValidacion: Object.freeze([...AJAX_LECTURA_ALLIANZ]),
   }),
 })
 export type SelectorAvancePestana = keyof typeof AVANCES_PESTANA_AUTORIZADOS
@@ -120,7 +214,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
   const fases = new MaquinaFases()
   let ventanaHasta = 0
   // Ventana del avance de pestaña autorizado: hasta cuándo y a qué destinos (no GET) se puede ir. `null` = cerrada.
-  let avance: { hasta: number; endpoints: readonly string[] } | null = null
+  let avance: { hasta: number; endpoints: readonly string[]; ajax: readonly AjaxValidacionAvance[] } | null = null
   const avanceVigente = () => (avance && Date.now() < avance.hasta ? avance : null)
   // Ventana del guardado de presupuesto: hasta cuándo y desde qué ORIGEN (el del marco del botón). `null` = cerrada.
   let guardado: { hasta: number; origen: string } | null = null
@@ -196,13 +290,17 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
         await route.abort('blockedbyclient')
         return
       }
-      if (av && noGet && !enLista) {
+      // Validación AJAX declarada del avance (p. ej. la lista negra del NIF): solo capa (b); la (a) ya la miró sin «aceptar».
+      const enAjaxValidacion = av !== null && noGet && ajaxValidacionAvancePermitida(req.method(), url, cuerpoDe(req), av.ajax)
+      if (av && noGet && !enLista && !enAjaxValidacion) {
         // Capa (b) del avance: lista blanca de destinos. Un POST/PUT/… a cualquier otro sitio se aborta y el trabajo cae.
-        // Al mensaje solo va origen + ruta (la query de ePAC lleva identificadores de la sesión y del agente).
+        // Al mensaje solo va origen + ruta (la query de ePAC lleva identificadores de la sesión y del agente) y, si lo hay,
+        // el `resource` (nombre de clase del servlet AJAX, sin datos) para saber QUÉ llamada fue.
         let destino = '(url ilegible)'
         try {
           const u = new URL(url)
-          destino = `${u.origin}${u.pathname}`
+          const resource = u.searchParams.get('resource')
+          destino = `${u.origin}${u.pathname}${resource && /^[A-Za-z0-9_.]{1,120}$/.test(resource) ? ` (resource=${resource})` : ''}`
         } catch {}
         violacion ??= new EmisionBloqueadaError('fase', `avance de pestaña: ${req.method()} a un destino fuera de la lista blanca: ${destino}`)
         await route.abort('blockedbyclient')
@@ -231,7 +329,7 @@ export async function instalarGuardEmision(context: BrowserContext): Promise<Gua
     },
   }
   ABRIR_VENTANA.set(g, (ms) => { ventanaHasta = Date.now() + Math.min(ms, VENTANA_RED_EMISION_MS) })
-  ABRIR_AVANCE.set(g, (hasta, endpoints) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints } })
+  ABRIR_AVANCE.set(g, (hasta, endpoints, ajax = []) => { avance = { hasta: Math.min(hasta, Date.now() + VENTANA_RED_AVANCE_MS), endpoints, ajax } })
   ABRIR_GUARDADO.set(g, (origen) => { guardado = { hasta: Date.now() + VENTANA_RED_GUARDADO_MS, origen } })
   ABRIR_TURISMOS_GENERALI.set(g, { abrir: (ms) => { turismosGenerali = Date.now() + Math.min(ms, VENTANA_RED_TURISMOS_GENERALI_MS) }, cerrar: () => { turismosGenerali = 0 }, abierta: () => Date.now() < turismosGenerali })
   VENTANA_LOGIN.set(g, {
@@ -321,7 +419,7 @@ export function urlTurismosGeneraliPermitida(url: string): boolean {
 const ABRIR_GUARDADO = new WeakMap<GuardEmision, (origen: string) => void>()
 
 /** Solo `pulsarAvancePestanaAutorizado` (este fichero) puede abrir la ventana del avance. */
-const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[]) => void>()
+const ABRIR_AVANCE = new WeakMap<GuardEmision, (hasta: number, endpoints: readonly string[], ajax?: readonly AjaxValidacionAvance[]) => void>()
 /** Cada avance autorizado, UNA vez por trabajo (contexto): no hay segundo «Aceptar» de la misma pestaña. */
 const AVANCES_USADOS = new WeakMap<GuardEmision, Set<string>>()
 
@@ -657,7 +755,7 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
     d.dismiss().catch(() => {})
   }
   page.on('dialog', alDialogo)
-  abrir(hasta, regla.endpoints)
+  abrir(hasta, regla.endpoints, regla.ajaxValidacion)
   try {
     await boton.click()
     for (;;) {

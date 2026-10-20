@@ -213,3 +213,24 @@ test('compañía anterior: con 0 años asegurado declarados no hay compañía an
   assert.ok(f.ok)
   assert.equal('companiaAnterior' in (f.riesgo as Record<string, unknown>), false)
 })
+
+test('compañía anterior de riesgo: lo declarado en «Historial» llega al bot aunque la aseguradora no sea la de hoy', () => {
+  const r = riesgo({
+    oportunidad: { clienteId: 'c1', matricula: null, aseguradora: 'Aseguradora Beta', aseguradoraActual: false },
+    historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: 3, aniosSinSiniestros: null, siniestrosUltimos5: null, tieneSeguroActual: true, companiaActual: 'Aseguradora Alfa' }, carnet: null },
+  })
+  assert.equal(companiaAnteriorDeRiesgo(r), 'Aseguradora Alfa')
+  assert.equal(formularioBotsAutoDeRiesgo(r).companiaAnterior, 'Aseguradora Alfa')
+})
+
+test('compañía anterior de riesgo: un CÓDIGO DGS del historial llega al bot como NOMBRE si la lista lo resuelve; si no, queda por pedir', () => {
+  const r = riesgo({
+    oportunidad: { clienteId: 'c1', matricula: null, aseguradora: null, aseguradoraActual: false },
+    historial: { seguroAnterior: null, historialDeclarado: { aniosAsegurado: 3, aniosSinSiniestros: null, siniestrosUltimos5: null, tieneSeguroActual: true, companiaActual: 'C0058' }, carnet: null },
+  })
+  const lista = [{ id: 'C0058', nombre: 'Aseguradora Alfa' }]
+  assert.equal(companiaAnteriorDeRiesgo(r, lista), 'Aseguradora Alfa')
+  assert.equal(formularioBotsAutoDeRiesgo(r, undefined, lista).companiaAnterior, 'Aseguradora Alfa')
+  assert.equal(companiaAnteriorDeRiesgo(r), null)
+  assert.equal(formularioBotsAutoDeRiesgo(r).companiaAnterior, null)
+})

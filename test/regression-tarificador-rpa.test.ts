@@ -336,10 +336,25 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   const endpoints = [...bloque![1].matchAll(/endpoints: Object\.freeze\(\[([^\]]*)\]\)/g)].map((m) => m[1].trim())
   assert.deepEqual(endpoints, ["'https://www.e-pacallianz.com/drpc18/riesgoMunicipio/control.do'", "'https://www.e-pacallianz.com/drpc18/datosBasicos/control.do'"])
   assert.ok(!/tarifa\/control|MotoServlet|contract|store|emit/i.test(endpoints.join(' ')), 'ningún destino de Tarificar/emisión en la lista blanca de red')
+  // 1b. Validaciones AJAX del avance (Moto 0.7.7): SOLO la lista negra del NIF y SOLO en td#datosBasicos.
+  const ajax = [...bloque![1].matchAll(/ajaxValidacion: Object\.freeze\(\[([^\]]*)\]/g)].map((m) => m[1].trim())
+  assert.deepEqual(ajax, ['AJAX_LISTA_NEGRA_NIF_ALLIANZ, ...AJAX_LECTURA_ALLIANZ', '...AJAX_LECTURA_ALLIANZ'], 'ajaxValidacion: lista negra del NIF solo en td#datosBasicos; lecturas (ayuda) en ambos')
+  const lectura = guard.match(/export const AJAX_LECTURA_ALLIANZ[^\n]*Object\.freeze\(\[([^\]]*)\]\)/)
+  assert.ok(lectura, 'falta AJAX_LECTURA_ALLIANZ')
+  assert.equal(lectura![1].trim(), 'AJAX_AYUDA_APLICACIONES_ALLIANZ', 'lista de lectura: solo la ayuda de aplicaciones')
+  const ayuda = guard.match(/export const AJAX_AYUDA_APLICACIONES_ALLIANZ: AjaxValidacionAvance = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
+  assert.ok(ayuda, 'falta AJAX_AYUDA_APLICACIONES_ALLIANZ')
+  assert.match(ayuda![1], /resource: 'com\.ats\.sea\.visuals\.util\.AyudaAplicacionesAjax',/)
+  assert.ok(!/contract|store|emit|grab|aceptar|alta|poliza|pago|firma/i.test(ayuda![1]), 'la ayuda no puede llevar nada de emisión/grabación')
+  const listaNegra = guard.match(/export const AJAX_LISTA_NEGRA_NIF_ALLIANZ: AjaxValidacionAvance = Object\.freeze\(\{([\s\S]*?)\n\}\)/)
+  assert.ok(listaNegra, 'falta AJAX_LISTA_NEGRA_NIF_ALLIANZ')
+  assert.match(listaNegra![1], /endpoint: 'https:\/\/www\.e-pacallianz\.com\/drpc18\/AJAXServlet',\n\s*resource: 'pt\.allianz\.clientes\.negocio\.BlackListOperationsAjax',/)
+  assert.match(listaNegra![1], /cuerpo: Object\.freeze\(\['idNumberBL'\]\)/)
+  assert.ok(!/contract|store|emit|grab|aceptar|alta|poliza/i.test(listaNegra![1]), 'nada de emisión/grabación en la validación AJAX')
   // 2. La función: lista blanca (hasOwn) + comprobarBoton + pantalla de origen ANTES de abrir la ventana; un clic; finally cierra.
   const fn = guard.split(/^export async function /m).find((f) => f.startsWith('pulsarAvancePestanaAutorizado'))
   assert.ok(fn, 'falta pulsarAvancePestanaAutorizado en guard.ts')
-  const abrir = fn!.indexOf('abrir(hasta, regla.endpoints)')
+  const abrir = fn!.indexOf('abrir(hasta, regla.endpoints, regla.ajaxValidacion)')
   const clic = fn!.indexOf('.click(')
   for (const paso of ['guard.comprobar()', 'guard.ventana.abierta()', 'Object.hasOwn(AVANCES_PESTANA_AUTORIZADOS, selector)', 'aceptar_onclick', 'comprobarBoton(desc, { permitirAceptar: true })', 'regla.formOrigen']) {
     const i = fn!.indexOf(paso)
@@ -353,7 +368,8 @@ test('AVANCE DE PESTAÑA Moto (Alberto 13/10/2026): lista blanca EXACTA {td#dato
   assert.ok(!/\.accept\(/.test(fn!) && /d\.dismiss\(\)/.test(fn!), 'los diálogos del portal se descartan, nunca se aceptan')
   // 3. El guard de red: capa (a) patrón de emisión en query y cuerpo; capa (b) destinos no GET en lista blanca.
   assert.match(guard, /const enLista = av !== null && destinoAvancePermitido\(url, av\.endpoints\)\n[\s\S]{0,400}?const op = \{ permitirAceptar: fases\.aceptarEnVuelo\(\) \|\| enLista, permitirGuardarPresupuesto: enGuardado \}/, 'capa (a): «aceptar» permitido SOLO hacia un destino de la lista blanca')
-  assert.match(guard, /if \(av && noGet && !enLista\)/, 'capa (b): todo no-GET fuera de la lista blanca se aborta')
+  assert.match(guard, /const enAjaxValidacion = av !== null && noGet && ajaxValidacionAvancePermitida\(req\.method\(\), url, cuerpoDe\(req\), av\.ajax\)\n\s*if \(av && noGet && !enLista && !enAjaxValidacion\)/, 'capa (b): todo no-GET fuera de la lista blanca (o de la validación AJAX declarada) se aborta')
+  assert.ok(!/permitirAceptar:[^\n]*enAjaxValidacion/.test(guard), 'la validación AJAX nunca relaja la capa (a)')
   assert.match(guard, /&& Date\.now\(\) < ventanaHasta && av === null && gv === null\)/, 'la ventana de emisión no vale con el avance ni con el guardado abiertos')
   // 4. Solo el runner la enchufa y solo auto.ts la usa, con los dos selectores literales; Moto con flag PROPIO y apagado.
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))

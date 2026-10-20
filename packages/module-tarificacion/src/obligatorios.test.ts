@@ -15,6 +15,7 @@ import {
   obligatoriosPara,
   valorEnRuta,
   llegaAPrecio,
+  BLOQUES_OBLIGATORIO,
 } from './obligatorios.ts'
 
 const HOY = new Date('2026-10-15T10:00:00Z')
@@ -148,7 +149,7 @@ describe('obligatorios · propios de cada portal', () => {
 
   it('quitar cada obligatorio propio lo señala (Allianz moto, Mapfre auto/moto/hogar, Allianz comunidades)', () => {
     const casos: [string, string, string[]][] = [
-      ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo']],
+      ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo', 'documentoTomador']],
       ['mapfre', 'auto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['mapfre', 'moto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['mapfre', 'hogar', ['inmueble.referenciaCatastral', 'datosTomador.nombre', 'datosTomador.apellido1']],
@@ -160,6 +161,18 @@ describe('obligatorios · propios de cada portal', () => {
         expect(f.map((x) => x.clave), `${c}/${r} sin ${clave}`).toContain(clave)
       }
     }
+  })
+
+  // Bot allianz/moto 0.7.5+: con tomador = conductor/propietario exige el NIF del tomador (sin él, `datos`): no puede salir «listo».
+  it('Allianz moto: el NIF del tomador se exige si el tomador es conductor o propietario; origen ficha; no si ambos son otra persona', () => {
+    const { documentoTomador: _d, ...sinNif } = moto()
+    expect(faltanParaTarificar('allianz', 'moto', sinNif)!.map((f) => f.clave)).toEqual(['documentoTomador'])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, tomadorEsConductor: false })!.map((f) => f.clave), 'propietario sigue siendo el tomador').toEqual(['documentoTomador'])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, tomadorEsConductor: false, tomadorEsPropietario: false })).toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', sinNif, { sinFicha: true }), 'es de la ficha: sin ficha no se mira').toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, tomador: { documentoIdentidad: '00000000T' } })).toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, fichaTomador: { documento: '00000000T' } })).toEqual([])
+    expect(obligatoriosPara('allianz', 'moto')!.find((o) => o.clave === 'documentoTomador')).toMatchObject({ bloque: 'personas', origen: 'ficha' })
   })
 
   // 19/10/2026: el DNI/NIE y el nacimiento del tomador de HOGAR son de la ficha (no cruzan el puerto): sin ficha no se miran, con ella sí.
@@ -294,5 +307,34 @@ describe('llegaAPrecio (bots que dan precio de verdad)', () => {
   it('sin declaración = no llega (no se sabe = no se lanza)', () => {
     expect(llegaAPrecio('axa', 'auto')).toBe(false)
     expect(llegaAPrecio('allianz', 'vida')).toBe(false)
+  })
+})
+
+// 20/10/2026: el presupuesto de motor se pinta en tres bloques. Todo campo declarado (forma del ramo + propios de cada bot)
+// debe llevar uno válido; si no, una pantalla lo perdería sin avisar.
+describe('bloque de cada obligatorio (personas / riesgo / poliza)', () => {
+  const todos = () => {
+    const lista = capacidadesConObligatorios().flatMap((d) => (obligatoriosPara(d.compania, d.ramo) ?? []).map((c) => ({ ...c, donde: `${d.compania}/${d.ramo}` })))
+    for (const ramo of ['auto', 'moto', 'hogar', 'comunidades']) for (const c of obligatoriosDeRamo(ramo) ?? []) lista.push({ ...c, donde: `ramo ${ramo}` })
+    return lista
+  }
+  it('los tres bloques son exactamente personas, riesgo y poliza', () => {
+    expect([...BLOQUES_OBLIGATORIO]).toEqual(['personas', 'riesgo', 'poliza'])
+  })
+  it('TODO campo declarado tiene un bloque válido', () => {
+    const lista = todos()
+    expect(lista.length).toBeGreaterThan(30)
+    for (const c of lista) expect(BLOQUES_OBLIGATORIO as readonly string[], `${c.donde} · ${c.clave}`).toContain(c.bloque)
+  })
+  it('asignación de motor: vehículo → riesgo, conductor/tomador → personas, antecedentes y compañía anterior → poliza', () => {
+    const b = (comp: string, ramo: string, clave: string) => obligatoriosPara(comp, ramo)!.find((c) => c.clave === clave)?.bloque
+    expect(b('mapfre', 'auto', 'matricula')).toBe('riesgo')
+    expect(b('mapfre', 'auto', 'codigoPostal')).toBe('riesgo')
+    expect(b('mapfre', 'auto', 'conductor.fechaCarne')).toBe('personas')
+    expect(b('mapfre', 'auto', 'documentoTomador')).toBe('personas')
+    expect(b('mapfre', 'auto', 'companiaAnterior')).toBe('poliza')
+    expect(b('mapfre', 'auto', 'siniestrosUltimos5Anios')).toBe('poliza')
+    expect(b('allianz', 'moto', 'conductor.sexo')).toBe('personas')
+    expect(b('allianz', 'moto', 'seleccionVehiculo.cilindradaCc')).toBe('riesgo')
   })
 })

@@ -28,11 +28,21 @@ import { conAntecedentesFavorables, supuestosAuto } from './supuestos-auto.ts'
  */
 export type OrigenObligatorio = 'formulario' | 'ficha'
 
+/**
+ * Bloque del presupuesto de motor donde se pide/confirma el dato (20/10/2026): `personas` (tomador, conductor, propietario),
+ * `riesgo` (el vehículo y dónde circula; en otros ramos, el bien asegurado) y `poliza` (póliza actual y bonificaciones).
+ * Solo ordena la pantalla: NO cambia lo que se exige.
+ */
+export const BLOQUES_OBLIGATORIO = ['personas', 'riesgo', 'poliza'] as const
+export type BloqueObligatorio = (typeof BLOQUES_OBLIGATORIO)[number]
+
 export type CampoObligatorio = {
   /** Ruta con puntos en el riesgo («conductor.fechaCarne»). Es la clave que marcan la ficha y el cuestionario. */
   clave: string
   /** Etiqueta humana en español, sin valores («fecha del carné»). */
   etiqueta: string
+  /** Bloque de la pantalla de presupuesto donde se pide. Obligatorio: todo campo declarado tiene bloque. */
+  bloque: BloqueObligatorio
   origen: OrigenObligatorio
   /** ¿Se exige con ESTE riesgo? (p. ej. la compañía anterior solo con años asegurado > 0). Ausente = siempre. */
   aplica?: (r: Record<string, unknown>) => boolean
@@ -59,25 +69,25 @@ export function valorEnRuta(r: unknown, ruta: string): unknown {
 const hay = (v: unknown): boolean => v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '')
 const texto = (v: unknown): string => (typeof v === 'string' ? v.trim() : '')
 
-const campo = (clave: string, etiqueta: string, extra: Partial<Omit<CampoObligatorio, 'clave' | 'etiqueta'>> = {}): CampoObligatorio =>
-  ({ clave, etiqueta, origen: 'formulario', ...extra })
+const campo = (clave: string, etiqueta: string, bloque: BloqueObligatorio, extra: Partial<Omit<CampoObligatorio, 'clave' | 'etiqueta' | 'bloque'>> = {}): CampoObligatorio =>
+  ({ clave, etiqueta, bloque, origen: 'formulario', ...extra })
 
 // ─── Obligatorios de FORMA por ramo (lo que exige el validador del ramo) ───────────────────────────────────────────
 
 /** `validarFormularioAuto` (coche): matrícula, CP de circulación y las dos fechas del conductor. */
 const BASE_AUTO: readonly CampoObligatorio[] = [
-  campo('matricula', 'matrícula'),
-  campo('codigoPostal', 'CP de circulación'),
-  campo('conductor.fechaNacimiento', 'fecha de nacimiento del conductor'),
-  campo('conductor.fechaCarne', 'fecha del carné'),
+  campo('matricula', 'matrícula', 'riesgo'),
+  campo('codigoPostal', 'CP de circulación', 'riesgo'),
+  campo('conductor.fechaNacimiento', 'fecha de nacimiento del conductor', 'personas'),
+  campo('conductor.fechaCarne', 'fecha del carné', 'personas'),
 ]
 
 /** Moto: lo de coche + marca, modelo y cilindrada (Allianz separa Moto y Ciclomotor; `validarFormularioAuto` la exige). */
 const BASE_MOTO: readonly CampoObligatorio[] = [
   ...BASE_AUTO,
-  campo('seleccionVehiculo.marca', 'marca de la moto'),
-  campo('seleccionVehiculo.modelo', 'modelo de la moto'),
-  campo('seleccionVehiculo.cilindradaCc', 'cilindrada de la moto (cc)'),
+  campo('seleccionVehiculo.marca', 'marca de la moto', 'riesgo'),
+  campo('seleccionVehiculo.modelo', 'modelo de la moto', 'riesgo'),
+  campo('seleccionVehiculo.cilindradaCc', 'cilindrada de la moto (cc)', 'riesgo'),
 ]
 
 /**
@@ -87,31 +97,31 @@ const BASE_MOTO: readonly CampoObligatorio[] = [
  * trabajo (`tarificador-tomador-hogar.ts`). Sin ficha (`sinFicha`) no se miran; con ella aplicada, sí.
  */
 const BASE_HOGAR: readonly CampoObligatorio[] = [
-  campo('tomador.documentoIdentidad', 'DNI/NIE del tomador', { origen: 'ficha' }),
-  campo('tomador.fechaNacimiento', 'fecha de nacimiento del tomador', { origen: 'ficha' }),
-  campo('inmueble.codigoPostal', 'código postal de la vivienda'),
-  campo('inmueble.nombreVia', 'calle de la vivienda'),
-  campo('inmueble.numero', 'número de la calle'),
-  campo('inmueble.anioConstruccion', 'año de construcción'),
-  campo('inmueble.superficieM2', 'superficie construida (m²)'),
-  campo('hogar.uso', 'uso de la vivienda'),
-  campo('hogar.regimen', 'régimen (propietario o inquilino)'),
-  campo('hogar.tipoVivienda', 'tipo de vivienda'),
-  campo('hogar.conMadera', 'si la construcción lleva madera'),
+  campo('tomador.documentoIdentidad', 'DNI/NIE del tomador', 'personas', { origen: 'ficha' }),
+  campo('tomador.fechaNacimiento', 'fecha de nacimiento del tomador', 'personas', { origen: 'ficha' }),
+  campo('inmueble.codigoPostal', 'código postal de la vivienda', 'riesgo'),
+  campo('inmueble.nombreVia', 'calle de la vivienda', 'riesgo'),
+  campo('inmueble.numero', 'número de la calle', 'riesgo'),
+  campo('inmueble.anioConstruccion', 'año de construcción', 'riesgo'),
+  campo('inmueble.superficieM2', 'superficie construida (m²)', 'riesgo'),
+  campo('hogar.uso', 'uso de la vivienda', 'riesgo'),
+  campo('hogar.regimen', 'régimen (propietario o inquilino)', 'riesgo'),
+  campo('hogar.tipoVivienda', 'tipo de vivienda', 'riesgo'),
+  campo('hogar.conMadera', 'si la construcción lleva madera', 'riesgo'),
 ]
 
 /** `validarRiesgoComunidad` sin los desplegables de un portal (`exigirSelectsPortal: false`). */
 const BASE_COMUNIDADES: readonly CampoObligatorio[] = [
-  campo('direccion.codigoPostal', 'código postal del edificio'),
-  campo('fechaEfecto', 'fecha de efecto'),
-  campo('fechaTermino', 'fecha de término'),
-  campo('m2Construidos', 'metros cuadrados construidos'),
-  campo('anioConstruccion', 'año de construcción'),
-  campo('plantas', 'plantas sobre el nivel de la calle'),
-  campo('numEdificios', 'número de edificios'),
+  campo('direccion.codigoPostal', 'código postal del edificio', 'riesgo'),
+  campo('fechaEfecto', 'fecha de efecto', 'riesgo'),
+  campo('fechaTermino', 'fecha de término', 'riesgo'),
+  campo('m2Construidos', 'metros cuadrados construidos', 'riesgo'),
+  campo('anioConstruccion', 'año de construcción', 'riesgo'),
+  campo('plantas', 'plantas sobre el nivel de la calle', 'riesgo'),
+  campo('numEdificios', 'número de edificios', 'riesgo'),
   // Un único campo en ePAC: dado, o la suma de viviendas + locales (solo si vienen los dos).
-  campo('numViviendasYLocales', 'número de viviendas y locales', { presente: (r) => hay(r.numViviendasYLocales) || (hay(r.numViviendas) && hay(r.numLocales)) }),
-  campo('capitalContinente', 'valor de reposición de la edificación (€)'),
+  campo('numViviendasYLocales', 'número de viviendas y locales', 'riesgo', { presente: (r) => hay(r.numViviendasYLocales) || (hay(r.numViviendas) && hay(r.numLocales)) }),
+  campo('capitalContinente', 'valor de reposición de la edificación (€)', 'riesgo'),
 ]
 
 const BASE_POR_RAMO: Readonly<Record<string, readonly CampoObligatorio[]>> = {
@@ -138,24 +148,24 @@ const esJuridica = (r: Record<string, unknown>) => tomadorAlta(r)?.tipo === 'jur
  * `tomador` en el riesgo se usan los de ese bloque.
  */
 const MAPFRE_TOMADOR: readonly CampoObligatorio[] = [
-  { clave: 'documentoTomador', etiqueta: 'NIF/CIF del tomador', origen: 'ficha', presente: (r) => hay(r.documentoTomador) || hay(obj(r.tomador)?.documentoIdentidad) },
-  { clave: 'datosTomador.razonSocial', etiqueta: 'razón social del tomador', origen: 'ficha', aplica: esJuridica, presente: (r) => hay(tomadorAlta(r)?.razonSocial) },
-  { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', origen: 'ficha', aplica: (r) => !esJuridica(r), presente: (r) => hay(tomadorAlta(r)?.nombre) },
-  { clave: 'datosTomador.apellido1', etiqueta: 'primer apellido del tomador', origen: 'ficha', aplica: (r) => !esJuridica(r), presente: (r) => hay(tomadorAlta(r)?.apellido1) },
-  { clave: 'datosTomador.fechaNacimiento', etiqueta: 'fecha de nacimiento del tomador', origen: 'ficha', aplica: (r) => !esJuridica(r), presente: (r) => hay(tomadorAlta(r)?.fechaNacimiento) },
+  { clave: 'documentoTomador', etiqueta: 'NIF/CIF del tomador', bloque: 'personas', origen: 'ficha', presente: (r) => hay(r.documentoTomador) || hay(obj(r.tomador)?.documentoIdentidad) },
+  { clave: 'datosTomador.razonSocial', etiqueta: 'razón social del tomador', bloque: 'personas', origen: 'ficha', aplica: esJuridica, presente: (r) => hay(tomadorAlta(r)?.razonSocial) },
+  { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', bloque: 'personas', origen: 'ficha', aplica: (r) => !esJuridica(r), presente: (r) => hay(tomadorAlta(r)?.nombre) },
+  { clave: 'datosTomador.apellido1', etiqueta: 'primer apellido del tomador', bloque: 'personas', origen: 'ficha', aplica: (r) => !esJuridica(r), presente: (r) => hay(tomadorAlta(r)?.apellido1) },
+  { clave: 'datosTomador.fechaNacimiento', etiqueta: 'fecha de nacimiento del tomador', bloque: 'personas', origen: 'ficha', aplica: (r) => !esJuridica(r), presente: (r) => hay(tomadorAlta(r)?.fechaNacimiento) },
 ]
 
 /** Mapfre auto (`planObjetoYFiguras`, `exigirConductorEsTomador`): historial y licencia en «Figuras». */
 const MAPFRE_AUTO_FIGURAS: readonly CampoObligatorio[] = [
-  campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años'),
-  campo('aniosAseguradoAnterior', 'años asegurado en la compañía anterior'),
-  campo('companiaAnterior', 'nombre de la compañía anterior', {
+  campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años', 'poliza'),
+  campo('aniosAseguradoAnterior', 'años asegurado en la compañía anterior', 'poliza'),
+  campo('companiaAnterior', 'nombre de la compañía anterior', 'poliza', {
     aplica: (r) => typeof r.aniosAseguradoAnterior === 'number' && r.aniosAseguradoAnterior > 0,
     presente: (r) => faltaCompaniaAnterior('mapfre', 'auto', r.aniosAseguradoAnterior as number, typeof r.companiaAnterior === 'string' ? r.companiaAnterior : null) === null,
   }),
   // `true` o `false` es un dato (false = hueco de mapa, no de datos). `null` solo vale si la fecha de nacimiento del tomador
   // (bloque `tomador` o ficha) es la del conductor: así lo decide el adaptador; aquí la misma regla.
-  campo('tomadorEsConductor', 'si el tomador es el conductor habitual', {
+  campo('tomadorEsConductor', 'si el tomador es el conductor habitual', 'personas', {
     aplica: (r) => !esJuridica(r),
     presente: (r) => typeof r.tomadorEsConductor === 'boolean' || (texto(tomadorAlta(r)?.fechaNacimiento) !== '' && texto(tomadorAlta(r)?.fechaNacimiento) === texto(valorEnRuta(r, 'conductor.fechaNacimiento'))),
   }),
@@ -167,10 +177,17 @@ const MAPFRE_AUTO_FIGURAS: readonly CampoObligatorio[] = [
  * ASEGURA desde el tratamiento de la ficha (Sr./Sra., `clientes.saludo`) al encolar; sin él, falta (nunca se inventa).
  */
 const ALLIANZ_MOTO: readonly CampoObligatorio[] = [
-  campo('seleccionVehiculo.clase', 'clase de la moto (tramo de cilindrada 1-4)'),
-  campo('conductor.sexo', 'sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha)', { origen: 'ficha' }),
-  campo('aniosAseguradoAnterior', 'años asegurado en la compañía anterior'),
-  campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años'),
+  campo('seleccionVehiculo.clase', 'clase de la moto (tramo de cilindrada 1-4)', 'riesgo'),
+  campo('conductor.sexo', 'sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha)', 'personas', { origen: 'ficha' }),
+  campo('aniosAseguradoAnterior', 'años asegurado en la compañía anterior', 'poliza'),
+  campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años', 'poliza'),
+  // Bot 0.7.5+ (`comprobarTitularesMoto`): marcar «tomador = conductor/propietario» obliga a informar el NIF/CIF del tomador; sin
+  // él el bot se para con `datos`. Lo pone ASEGURA desde la ficha. Misma lectura que `documentoTomadorDe` (formulario-auto.ts).
+  {
+    clave: 'documentoTomador', etiqueta: 'NIF/CIF del tomador (Allianz lo exige si el tomador es el conductor o el propietario)', bloque: 'personas', origen: 'ficha',
+    aplica: (r) => r.tomadorEsConductor === true || r.tomadorEsPropietario === true,
+    presente: (r) => hay(r.documentoTomador) || hay(obj(r.tomador)?.documentoIdentidad) || hay(obj(r.fichaTomador)?.documento),
+  },
 ]
 
 /**
@@ -180,7 +197,7 @@ const ALLIANZ_MOTO: readonly CampoObligatorio[] = [
  * lo hace el bot (`compania-actual.ts` del worker) y, si no casa o es ambiguo, también falla `datos`, con las candidatas.
  */
 const ALLIANZ_AUTO: readonly CampoObligatorio[] = [
-  campo('companiaAnterior', 'compañía actual del vehículo (Allianz la exige con cambio de seguro)', {
+  campo('companiaAnterior', 'compañía actual del vehículo (Allianz la exige con cambio de seguro)', 'poliza', {
     aplica: (r) => supuestosAuto(r as Parameters<typeof supuestosAuto>[0]).compra.valor === 'ya_lo_tenia',
     presente: (r) => hay(r.companiaAnterior) || hay(r.companiaActual),
   }),
@@ -188,13 +205,13 @@ const ALLIANZ_AUTO: readonly CampoObligatorio[] = [
 
 /** Mapfre Hogar (`exigirDatosHogar`): se tarifica con la referencia catastral del BIEN (20); 14 (parcela) no vale. */
 const MAPFRE_HOGAR: readonly CampoObligatorio[] = [
-  campo('inmueble.referenciaCatastral', 'referencia catastral de la vivienda (20 caracteres)', {
+  campo('inmueble.referenciaCatastral', 'referencia catastral de la vivienda (20 caracteres)', 'riesgo', {
     presente: (r) => /^[0-9A-Z]{14}[0-9A-Z]{4}[A-Z]{2}$/.test(texto(valorEnRuta(r, 'inmueble.referenciaCatastral')).replace(/[\s-]/g, '').toUpperCase()),
   }),
   // `pasoTomador`: si Mapfre no conoce al tomador pide nombre y primer apellido (de `datosTomador`). Hoy asegura no los
   // inyecta en hogar (`necesitaDatosTomador` solo auto/moto): hasta que lo haga, este bot no es tarificable.
-  { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.nombre) },
-  { clave: 'datosTomador.apellido1', etiqueta: 'primer apellido del tomador', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.apellido1) },
+  { clave: 'datosTomador.nombre', etiqueta: 'nombre del tomador', bloque: 'personas', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.nombre) },
+  { clave: 'datosTomador.apellido1', etiqueta: 'primer apellido del tomador', bloque: 'personas', origen: 'ficha', presente: (r) => hay(obj(r.datosTomador)?.apellido1) },
 ]
 
 /**
@@ -209,6 +226,7 @@ const GENERALI_AUTO: readonly CampoObligatorio[] = [
   {
     clave: 'seleccionVehiculo',
     etiqueta: 'marca, modelo y versión confirmados por Allianz o Mapfre en la misma oportunidad',
+    bloque: 'riesgo',
     origen: 'ficha',
     aplica: (r) => r.esperaVehiculo !== true,
     presente: (r) => (hay(obj(r.seleccionVehiculo)?.marca) && hay(obj(r.seleccionVehiculo)?.modelo)) || hay(obj(r.vehiculoConfirmado)?.denominacion),
@@ -217,7 +235,7 @@ const GENERALI_AUTO: readonly CampoObligatorio[] = [
 
 /** Allianz Comunidades: los desplegables obligatorios de ePAC, DERIVADOS de los extras de su capacidad (capacidades.ts). */
 function allianzComunidades(): readonly CampoObligatorio[] {
-  return CAPACIDAD_ALLIANZ_COMUNIDADES.extras.filter((x) => x.obligatorio).map((x) => campo(x.clave, x.etiqueta.toLowerCase()))
+  return CAPACIDAD_ALLIANZ_COMUNIDADES.extras.filter((x) => x.obligatorio).map((x) => campo(x.clave, x.etiqueta.toLowerCase(), 'riesgo'))
 }
 
 /**
