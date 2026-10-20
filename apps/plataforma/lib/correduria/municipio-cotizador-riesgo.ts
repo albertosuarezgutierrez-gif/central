@@ -78,3 +78,22 @@ export function municipioAGuardar(e: {
   if (g && g.municipioCirculacionId === id && cpValido(g.municipioCirculacionCp) === cpLista) return null
   return { municipioCirculacionId: id, municipioCirculacion: nombre, municipioCirculacionCp: cpLista }
 }
+
+/**
+ * `poblacion` que viaja al bot (Allianz Moto elige la localidad por ella), o `null` (20/10/2026). Solo con 2 o más municipios
+ * en el CP y si el CP del que salió la lista casa con el del riesgo (misma regla que `municipioAGuardar`). En otro caso NO viaja
+ * y el servidor sigue con `poblacionDesdeFicha` (p. ej. la pedanía exacta de la ficha).
+ */
+export function poblacionParaBot(e: {
+  elegidoId: string | null | undefined
+  municipios: readonly Opcion[] | null | undefined
+  cpMunicipios: string | null | undefined
+  cpCirculacionRiesgo: string | null | undefined
+}): string | null {
+  const lista = e.municipios ?? []
+  if (lista.length < 2) return null
+  if (!cpCasa(cpValido(e.cpMunicipios), e.cpCirculacionRiesgo)) return null
+  const op = lista.find((m) => m.id === (e.elegidoId ?? '').trim())
+  const nombre = op?.nombre.replace(/\s+/g, ' ').trim() ?? ''
+  return nombre === '' ? null : nombre
+}

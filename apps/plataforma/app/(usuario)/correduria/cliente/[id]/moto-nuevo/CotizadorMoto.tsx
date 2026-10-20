@@ -30,7 +30,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sexoAPersistir, guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
 import { estadoCivilAPersistir, guardarEstadoCivilEnFicha } from '@/lib/correduria/estado-civil-cotizador-ficha'
-import { municipioAGuardar, municipioPrecargado, type MunicipioRiesgoGuardado } from '@/lib/correduria/municipio-cotizador-riesgo'
+import { municipioAGuardar, municipioPrecargado, poblacionParaBot, type MunicipioRiesgoGuardado } from '@/lib/correduria/municipio-cotizador-riesgo'
 import { llamarDatosRiesgo } from '../../../oportunidad/[id]/piezas-riesgo'
 import { Flag, FlaskConical } from 'lucide-react'
 import RecotizarIgualmente from '@/components/RecotizarIgualmente'
@@ -1363,8 +1363,8 @@ export default function CotizadorMoto({
             fechaNacimiento: datoDePersonaBot('fechaNacimiento', faltanInicial, correcciones),
             fechaCarne: datoDePersonaBot('fechaCarnet', faltanInicial, correcciones),
             sexo: correcciones.sexo ?? null,
-            // Municipio elegido entre los del CP → `poblacion` del riesgo (el bot de Allianz Moto elige la localidad por ella).
-            poblacion: listaMunicipios.find((m) => m.id === municipioId)?.nombre ?? null,
+            // Municipio elegido entre VARIOS del CP (y solo si ese CP es el del riesgo) → `poblacion`; si no, el servidor sigue con la ficha.
+            poblacion: poblacionParaBot({ elegidoId: municipioId, municipios, cpMunicipios, cpCirculacionRiesgo: datosRiesgo?.cpCirculacion }),
             sexoSinFicha: (faltanInicial ?? []).some((f) => f.campo === 'sexo'),
             conductorEnOtraFicha: tomadorEmpresa || !!figs.conductor_habitual,
             propietarioEnOtraFicha: !!figs.propietario,

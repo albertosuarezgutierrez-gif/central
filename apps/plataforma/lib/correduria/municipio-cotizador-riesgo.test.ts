@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { municipioAGuardar, municipioPrecargado } from './municipio-cotizador-riesgo.ts'
+import { municipioAGuardar, municipioPrecargado, poblacionParaBot } from './municipio-cotizador-riesgo.ts'
 
 // Datos SINTÉTICOS: CP y municipios inventados.
 const LISTA = [{ id: '11', nombre: 'MUNICIPIO A' }, { id: '12', nombre: 'MUNICIPIO B' }]
@@ -32,4 +32,14 @@ test('guardado: id, nombre y CP ancla en el riesgo; nada si no hay oportunidad, 
   assert.equal(municipioAGuardar({ ...e, elegidoId: '' }), null)
   assert.equal(municipioAGuardar({ ...e, guardado: { ...guardado, municipioCirculacionId: 11 } }), null, 'ya guardado')
   assert.equal(municipioAGuardar({ ...e, municipios: [{ id: '11', nombre: 'Otro' }, LISTA[1]] }), null, 'nombre de cajón')
+})
+
+test('poblacion al bot: solo con 2+ municipios y el CP de la lista = el del riesgo; si no, no viaja (manda la ficha)', () => {
+  const e = { elegidoId: '12', municipios: LISTA, cpMunicipios: CP, cpCirculacionRiesgo: null }
+  assert.equal(poblacionParaBot(e), 'MUNICIPIO B')
+  assert.equal(poblacionParaBot({ ...e, cpCirculacionRiesgo: CP }), 'MUNICIPIO B')
+  assert.equal(poblacionParaBot({ ...e, cpCirculacionRiesgo: '00002' }), null, 'CP del riesgo distinto')
+  assert.equal(poblacionParaBot({ ...e, cpMunicipios: null }), null)
+  assert.equal(poblacionParaBot({ ...e, municipios: [LISTA[1]] }), null, 'un solo municipio: no se manda')
+  assert.equal(poblacionParaBot({ ...e, elegidoId: '' }), null)
 })

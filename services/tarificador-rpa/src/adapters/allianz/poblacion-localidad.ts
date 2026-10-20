@@ -2,7 +2,7 @@
 // Complementa `resolverPoblacion` (exacta y única): cuando el CP da varias poblaciones y la `poblacion` no casa exacta, se
 // prueba con CADA localidad que trae el riesgo (poblacion y localidad del tomador cuando su CP es el mismo) por CONTENCIÓN de
 // palabras enteras (normalizado: mayúsculas, sin tildes). Solo se elige si TODO candidato que casa apunta a la MISMA opción y
-// cada candidato casa con UNA sola. Si casan varias (p. ej. el riesgo solo trae el municipio y el CP tiene varias pedanías), si
+// cada candidato casa con UNA sola. Un candidato que casa con varias (p. ej. solo el municipio y el CP tiene varias pedanías) se descarta y se prueba el siguiente; si
 // los candidatos se contradicen o si ninguno casa → `null` (persona). Los nombres no se escriben en logs.
 import { clavePoblacion, type OpcionPoblacion } from '@central/module-tarificacion'
 
@@ -32,8 +32,9 @@ export function elegirPoblacionPorLocalidades(opciones: readonly OpcionPoblacion
     if (typeof c !== 'string' || c.trim() === '') continue
     const casan = casanCon(opciones, c)
     if (casan.length === 0) continue
-    // Un candidato que casa con VARIAS opciones (municipio con varias pedanías) no se resuelve a ciegas: persona.
-    if (casan.length > 1) return null
+    // Un candidato que casa con VARIAS opciones (municipio con varias pedanías) no se resuelve a ciegas: se DESCARTA y se
+    // sigue con el siguiente (v0.7.4); si ninguno da una sola, persona.
+    if (casan.length > 1) continue
     elegidas.add(casan[0].codigo)
   }
   if (elegidas.size !== 1) return null

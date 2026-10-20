@@ -116,7 +116,8 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
     const base = guardado.current[clave] ?? valorCampoExtra(clave, {}, inicialesExtra, formulario)
     const a: AccionGuardarExtra | null = accionGuardarExtra(clave, valor, { oportunidadId, guardado: base, sexoSinFicha })
     if (!a) return
-    guardado.current[clave] = valor.replace(/\s+/g, ' ').trim()
+    const mio = valor.replace(/\s+/g, ' ').trim()
+    guardado.current[clave] = mio
     let ok = false
     try {
       if (a.tipo === 'cilindrada' && oportunidadId) ok = (await llamarDatosRiesgo({ oportunidadId, datosVehiculo: { cilindradaCc: a.cc } })).ok
@@ -126,7 +127,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
         ok = r.status === 200 && (r.json as { estado?: string } | null)?.estado === 'ok'
       }
     } catch { ok = false }
-    if (!ok) guardado.current[clave] = base
+    if (!ok && guardado.current[clave] === mio) guardado.current[clave] = base
     setGuardadoAviso(ok ? 'Guardado para la próxima vez.' : 'No se ha podido guardar este dato: tendrás que volver a ponerlo.')
   }
 

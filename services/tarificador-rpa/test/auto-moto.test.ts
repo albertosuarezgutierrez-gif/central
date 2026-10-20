@@ -238,6 +238,7 @@ test('v0.7.3 · buscador de poblaciones: la localidad del riesgo por contención
   await ok(['AMBROZ', 'PURCHIL'], { poblacion: null, localidades: ['purchíl'] }, 'PURCHIL') // localidad del tomador
   await ok(['AMBROZ', 'PURCHIL'], { poblacion: 'Granada', localidades: ['Purchil'] }, 'PURCHIL') // un candidato sin casar no estorba
   await persona(['GRANADA ZONA A', 'GRANADA ZONA B'], { poblacion: 'Granada' }) // solo el municipio, varias pedanías: no a ciegas
+  await ok(['GRANADA ZONA A', 'GRANADA ZONA B', 'PURCHIL'], { poblacion: 'Granada', localidades: ['Purchil'] }, 'PURCHIL') // v0.7.4: el candidato ambiguo se descarta y se prueba el siguiente
   await persona(['AMBROZ', 'PURCHIL'], { poblacion: 'Ambroz (Granada)', localidades: ['Purchil'] }) // candidatos contradictorios
   await persona(['AMBROZ', 'PURCHIL'], { poblacion: 'Granada' }) // ninguna casa
   await persona(['VILLA ALAMO', 'PUEBLO NUEVO'], { poblacion: 'Villa', eleccionPoblacion: '00001- OTRA' }) // elección inválida de la bandeja: nunca cae a la localidad
@@ -458,5 +459,5 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.3')
+  assert.equal(allianzMoto.version, '0.7.4')
 })
