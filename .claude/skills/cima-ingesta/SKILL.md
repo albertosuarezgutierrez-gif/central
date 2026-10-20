@@ -230,6 +230,12 @@ En este orden, y **sin saltarse el paso 0**:
   `ProcesosEIAC.` (anteriores al 28/09) hacían mentir la consulta. La cifra real (03/10): **487 de 947 hojas sin
   guardar**, casi todo contexto. Inventario en `docs/CIMA-CAMPOS-HUECOS.md`. El Monitor decía 1016.
 
+## 🆕 EIAC V07.1 en producción el 16/11/2026 (asegura#892, 20/10/2026)
+Hoy llegan ficheros `version_eiac = 6.0`. En V07.1 `CodigoEntidad` pasa de objeto `{CodigoInterno, CodigoDGS}` a TEXTO («C0001»): se lee SIEMPRE con `codigoDgsDe()` (`src/lib/integrations/cima/codigo-entidad.ts` del repo asegura), nunca `.CodigoEntidad.CodigoDGS` a pelo. Formato ilegible ⇒ `codigo_entidad_formato_desconocido` (≠ «falta»). Ejemplos oficiales V07.1 + XSD en la carpeta CIMA de Drive. Sin verificar: que el adaptador Java de Fly acepte `Version 7.1` ⇒ conversor a V06 en el Portal del Corredor antes del 16/11. MEN/LIQ: sin mapper, quedan `deferred` sin confirmar.
+
+## 🛰️ Vigía por compañía Y por tipo (central#4883, 20/10/2026)
+Silencio = `max(14, 2×mediana de huecos)` (antes el máximo, que tapaba a Reale/Allianz). Por tipo (POL/REC/SIN/CEF): tipo «habitual» = ≥3 ficheros en los 90 d ANTERIORES a su último fichero (nunca contra hoy). Renovaciones en riesgo ≤30 d de compañías mudas (en la firma solo la presencia). Recordatorio mensual (día 2) para bajar «Ficheros recibidos» del Portal CIMA: no hay método WS que liste lo ya descargado.
+
 ## 🔑 Claves EIAC (estándar V07.1 §13.3)
 
 Las claves oficiales están en `packages/module-seguros/src/claves-eiac.ts`. Situación de póliza: **AN**
