@@ -57,6 +57,7 @@ import {
   type TipoContacto,
   type TipoHistorial,
   SALUDO_POR_SEXO,
+  estadoCivilFichaCasa,
 } from '@central/module-seguros'
 import { anotarCambio } from './auditoria'
 import {
@@ -131,7 +132,7 @@ function mitadesEmail(valor: string): Mitades {
 async function clienteDe(correduriaId: string, clienteId: string) {
   return prismaAsegura().cliente.findFirst({
     where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
-    select: { id: true, nombre: true, apellidos: true, telefono: true, email: true, activo: true },
+    select: { id: true, nombre: true, apellidos: true, telefono: true, email: true, activo: true, estadoCivil: true },
   })
 }
 
@@ -647,6 +648,16 @@ export async function editarCliente(
     const db = prismaAsegura()
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
+    // Estado civil guardado DESDE EL COTIZADOR (20/10/2026): si la ficha ya trae uno que casa con el catálogo, no se
+    // pisa (lo decide lo que hay en la BD, no quien llama). Si no queda nada más que cambiar, no se escribe nada.
+    if (edicion.estadoCivil !== undefined && edicion.estadoCivilSoloSiNoCasa && estadoCivilFichaCasa(c.estadoCivil, edicion.estadoCivilSoloSiNoCasa)) {
+      const { estadoCivil: _ec, estadoCivilSoloSiNoCasa: _cat, ...resto } = edicion
+      void _ec
+      void _cat
+      edicion = resto
+      const quedaAlgo = Object.keys(edicion.identidad ?? {}).length > 0 || Object.keys(edicion.libre ?? {}).length > 0 || edicion.sexo !== undefined
+      if (!quedaAlgo) return { ok: true }
+    }
     // La excepción «ficha sin nombre» la decide lo que hay en la BD, nunca quien llama.
     const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre), permiteMotivo, apellidosActuales: c.apellidos })
     if (!r.ok) return rechazo(r)
@@ -698,6 +709,8 @@ export async function editarCliente(
     if (r.libre.provincia !== undefined) data.provincia = r.libre.provincia
     if (r.libre.notas !== undefined) data.notas = r.libre.notas
     if (r.sexo !== undefined) data.saludo = SALUDO_POR_SEXO[r.sexo]
+    // Estado civil: ya es el NOMBRE de una opción del catálogo (lo traduce el puerto) y nunca un valor de cajón (`revisarEdicion`).
+    if (r.estadoCivil !== undefined) data.estadoCivil = r.estadoCivil
 
     await db.cliente.update({ where: { id: clienteId }, data })
     // Anotar cambios de auditoria (sin antes/despues)
@@ -723,6 +736,7 @@ export async function editarCliente(
       }
     }
     if (r.sexo !== undefined) anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'saludo' })
+    if (r.estadoCivil !== undefined) anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'estado_civil' })
     const texto = motivoCambio
       ? [
           textoCambioIdentidadConMotivo({
@@ -736,7 +750,7 @@ export async function editarCliente(
               fechaNacimiento: r.identidad.fechaNacimiento,
             },
           }),
-          Object.keys(r.libre).length > 0 || r.sexo !== undefined ? textoHistorialEdicion({ ...r, identidad: {} }, { actor }) : null,
+          Object.keys(r.libre).length > 0 || r.sexo !== undefined || r.estadoCivil !== undefined ? textoHistorialEdicion({ ...r, identidad: {} }, { actor }) : null,
         ].filter(Boolean).join(' ')
       : textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId })
     await anotarHistorial(correduriaId, clienteId, 'gestion', texto)

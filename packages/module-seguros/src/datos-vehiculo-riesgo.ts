@@ -58,6 +58,13 @@ export type DatosVehiculoRiesgo = {
   cpCirculacion: string | null
   municipioCirculacion: string | null
   municipioCirculacionId: number | null
+  /**
+   * CP de la lista de municipios de la que se ELIGIÓ `municipioCirculacionId` (20/10/2026: varios municipios comparten
+   * CP y el corredor elige uno en el cotizador). Es el ancla: si el CP del riesgo ya no es este, el municipio guardado no
+   * se aplica. No es el CP de circulación (`cpCirculacion`), que manda el CP al bot: este no cambia el CP de nada.
+   * Opcional en el tipo: los riesgos guardados antes no lo traen (= `null`, no se sabe).
+   */
+  municipioCirculacionCp?: string | null
   remolqueLigero: boolean | null
   /** coche | moto | furgoneta | camión | otro. `null` = pendiente (no se deduce del ramo: una moto no es «coche»). */
   tipoVehiculo: TipoVehiculo | null
@@ -73,7 +80,7 @@ export type CampoVehiculo = Exclude<keyof DatosVehiculoRiesgo, 'confirmadoAt'>
 export const CAMPOS_VEHICULO: readonly CampoVehiculo[] = [
   'matricula', 'marca', 'modelo', 'version', 'codigoVehiculo', 'marcaId', 'modeloId', 'motorId',
   'fechaMatriculacion', 'fechaCompra', 'kmAnuales', 'garaje', 'cpCirculacion', 'municipioCirculacion',
-  'municipioCirculacionId', 'remolqueLigero', 'tipoVehiculo', 'cilindradaCc',
+  'municipioCirculacionId', 'municipioCirculacionCp', 'remolqueLigero', 'tipoVehiculo', 'cilindradaCc',
 ]
 
 export const ETIQUETA_CAMPO_VEHICULO: Record<CampoVehiculo, string> = {
@@ -92,6 +99,7 @@ export const ETIQUETA_CAMPO_VEHICULO: Record<CampoVehiculo, string> = {
   cpCirculacion: 'Código postal de circulación',
   municipioCirculacion: 'Municipio de circulación',
   municipioCirculacionId: 'Municipio de circulación (catálogo)',
+  municipioCirculacionCp: 'Código postal del municipio elegido',
   remolqueLigero: 'Remolque ligero',
   tipoVehiculo: 'Tipo de vehículo',
   cilindradaCc: 'Cilindrada',
@@ -101,7 +109,7 @@ export function datosVehiculoVacios(): DatosVehiculoRiesgo {
   return {
     matricula: null, marca: null, modelo: null, version: null, codigoVehiculo: null, marcaId: null, modeloId: null,
     motorId: null, fechaMatriculacion: null, fechaCompra: null, kmAnuales: null, garaje: null, cpCirculacion: null,
-    municipioCirculacion: null, municipioCirculacionId: null, remolqueLigero: null, tipoVehiculo: null, cilindradaCc: null, confirmadoAt: null,
+    municipioCirculacion: null, municipioCirculacionId: null, municipioCirculacionCp: null, remolqueLigero: null, tipoVehiculo: null, cilindradaCc: null, confirmadoAt: null,
   }
 }
 
@@ -204,6 +212,11 @@ export function validarDatosVehiculoRiesgo(parcial: unknown, opciones: { hoy?: s
     if (t === 'invalido' || (t !== null && !RE_CP.test(t))) mal('cpCirculacion', 'Código postal: 5 cifras.')
     else valor.cpCirculacion = t
   }
+  if (tiene('municipioCirculacionCp')) {
+    const t = texto(e.municipioCirculacionCp, 10)
+    if (t === 'invalido' || (t !== null && !RE_CP.test(t))) mal('municipioCirculacionCp', 'Código postal del municipio: 5 cifras.')
+    else valor.municipioCirculacionCp = t
+  }
   if (tiene('municipioCirculacionId')) {
     const v = e.municipioCirculacionId
     if (v === null || v === undefined || v === '') valor.municipioCirculacionId = null
@@ -288,6 +301,7 @@ export function leerDatosVehiculo(bruto: unknown): DatosVehiculoRiesgo | null {
     marcaId: s('marcaId'), modeloId: s('modeloId'), motorId: s('motorId'), fechaMatriculacion: s('fechaMatriculacion'),
     fechaCompra: s('fechaCompra'), kmAnuales: n('kmAnuales'), garaje: s('garaje'), cpCirculacion: s('cpCirculacion'),
     municipioCirculacion: s('municipioCirculacion'), municipioCirculacionId: n('municipioCirculacionId'),
+    municipioCirculacionCp: (() => { const c = s('municipioCirculacionCp'); return c !== null && RE_CP.test(c) ? c : null })(),
     remolqueLigero: typeof o.remolqueLigero === 'boolean' ? o.remolqueLigero : null,
     tipoVehiculo: tipoVehiculoDeTexto(o.tipoVehiculo),
     cilindradaCc: (() => { const c = n('cilindradaCc'); return c !== null && Number.isInteger(c) && c > 0 && c <= CILINDRADA_MAXIMA_CC ? c : null })(),
@@ -319,6 +333,9 @@ export function datosVehiculoDeInfoRiesgo(info: unknown): DatosVehiculoRiesgo {
     modelo: base.modelo ?? modeloAntiguo,
   }
 }
+
+/** Lo que el cotizador guarda al elegir municipio entre los de un CP (no quita el sello de confirmación). */
+export const CAMPOS_MUNICIPIO_ELEGIDO: readonly CampoVehiculo[] = ['municipioCirculacion', 'municipioCirculacionId', 'municipioCirculacionCp']
 
 export type CambioVehiculo = { campo: CampoVehiculo; antes: string | number | boolean | null; despues: string | number | boolean | null }
 
@@ -353,20 +370,23 @@ export function aplicarEdicionVehiculo(
   }
   for (const k of CAMPOS_VEHICULO) {
     if (aBorrar.has(k)) {
-      if (previo[k] !== null) {
-        cambios.push({ campo: k, antes: previo[k], despues: null })
+      if ((previo[k] ?? null) !== null) {
+        cambios.push({ campo: k, antes: previo[k] ?? null, despues: null })
         ;(datos as Record<string, unknown>)[k] = null
       }
       continue
     }
     if (!Object.prototype.hasOwnProperty.call(valor, k)) continue
-    const nuevo = (valor[k] ?? null) as DatosVehiculoRiesgo[CampoVehiculo]
-    if (nuevo === previo[k]) continue
-    cambios.push({ campo: k, antes: previo[k], despues: nuevo })
+    const nuevo = (valor[k] ?? null) as NonNullable<DatosVehiculoRiesgo[CampoVehiculo]> | null
+    const antes = previo[k] ?? null
+    if (nuevo === antes) continue
+    cambios.push({ campo: k, antes, despues: nuevo })
     ;(datos as Record<string, unknown>)[k] = nuevo
   }
   if (opciones.confirmar) datos.confirmadoAt = opciones.ahora
-  else if (cambios.length > 0) datos.confirmadoAt = null
+  // El municipio elegido en el cotizador no es un dato que la corredora confirme en «Datos del vehículo» (no se pinta
+  // ahí): guardarlo no le quita el sello. Cualquier otro cambio, sí.
+  else if (cambios.some((c) => !CAMPOS_MUNICIPIO_ELEGIDO.includes(c.campo))) datos.confirmadoAt = null
   return { datos, cambios }
 }
 

@@ -439,6 +439,12 @@ export {
   SEXOS_FICHA,
   SALUDO_POR_SEXO,
   sexoDeSaludo,
+  type OpcionEstadoCivil,
+  MAX_ESTADO_CIVIL,
+  esEstadoCivilCajon,
+  estadoCivilGuardable,
+  estadoCivilDeCatalogo,
+  estadoCivilFichaCasa,
   type IdentidadRevisada,
   type EdicionRevisada,
   type AltaCliente,
@@ -1274,7 +1280,7 @@ export type { AhorroFrenteActual, MotivoPrioritario, ObjetivoPrioritario, PrimaA
 export { costePack, cuadroPack, decidirFamiliaAllianz, tienePolizaAllianzEnVigor } from './pack-vehiculos.ts'
 export type { CuadroPack, DecisionFamiliaAllianz, FilaPack, LadoPack, PolizaParaFamilia, PrecioPack } from './pack-vehiculos.ts'
 export {
-  CAMPOS_VEHICULO, CILINDRADA_MAXIMA_CC, ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
+  CAMPOS_VEHICULO, CAMPOS_MUNICIPIO_ELEGIDO, CILINDRADA_MAXIMA_CC, ETIQUETA_CAMPO_VEHICULO, TIPOS_VEHICULO, admiteDatosVehiculo, aplicarEdicionVehiculo, datosVehiculoDeCotizacion, datosVehiculoDeInfoRiesgo,
   datosVehiculoVacios, faltanDatosVehiculo, fusionarInfoRiesgo, hoyMadridVehiculo, incoherenciaFechasVehiculo,
   leerDatosVehiculo, motivoNoConfirmable, textoFaltanVehiculo, tipoVehiculoDeTexto, validarDatosVehiculoRiesgo,
 } from './datos-vehiculo-riesgo.ts'

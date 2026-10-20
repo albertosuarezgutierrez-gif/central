@@ -9,6 +9,9 @@ import type { EdicionCliente } from '@central/module-seguros'
 import { z } from 'zod'
 import { auditado } from '@/lib/auditoria'
 import { abrirSelloAltaLead } from '@/lib/sello-alta-lead'
+import { estadoCivilParaFicha } from '@/lib/estado-civil-ficha'
+import { resolverConfig } from '@/lib/codeoscopic/config'
+import { estadosCiviles, type Opcion } from '@/lib/codeoscopic/catalogos'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,7 +110,8 @@ export const DELETE = auditado(async (req: Request) => {
 })
 
 // PATCH /api/operador/cliente — EDICIÓN. Lo libre (dirección, CP, ciudad,
-// provincia, notas) entra tal cual; `sexo` ('hombre'|'mujer' → `saludo` 1/2, ausente = no tocar); la identidad (DNI, nombre, apellidos,
+// provincia, notas) entra tal cual; `sexo` ('hombre'|'mujer' → `saludo` 1/2, ausente = no tocar); `estadoCivil` (id o nombre
+// del catálogo de Codeoscopic → se guarda su NOMBRE en `estado_civil`; 422 fuera de catálogo/cajón, 503 sin catálogo); la identidad (DNI, nombre, apellidos,
 // fecha de nacimiento) con `documentoId` de un DNI recibido de este cliente o de
 // una póliza suya cuyo DNI leído es el de la ficha (422 `documento_no_acredita`
 // si no), o SIN documento con un `motivo` de ≥5 caracteres (05/10/2026; si falta,
@@ -124,8 +128,16 @@ export const PATCH = auditado(async (req: Request) => {
     // Sexo: enum estricto; ausente = no tocar (nunca un valor por defecto). Algo que no sea hombre/mujer → 422.
     const sexoLeido = z.enum(['hombre', 'mujer']).optional().safeParse(body.sexo)
     if (!sexoLeido.success) return NextResponse.json({ estado: 'invalido', motivo: 'Sexo no válido: hombre o mujer.', campo: 'sexo' }, { status: 422 })
+    // Estado civil (20/10/2026): id o nombre de una opción del catálogo de Codeoscopic → su NOMBRE; fuera de catálogo o de
+    // cajón → 422; catálogo ilegible → 503 (no se guarda sin comprobar). Ausente = no se toca ni se lee el catálogo.
+    const ec = await estadoCivilParaFicha(body.estadoCivil, leerCatalogoEstadosCiviles)
+    if (!ec.ok) return NextResponse.json({ estado: ec.estado, motivo: ec.motivo, campo: ec.campo }, { status: ec.status })
     const edicion: EdicionCliente = {
       ...(sexoLeido.data !== undefined ? { sexo: sexoLeido.data } : {}),
+      // Desde el cotizador (`estadoCivilSoloSiNoCasa: true`): si la ficha ya trae uno que casa con el catálogo, no se pisa.
+      ...(ec.valor !== undefined
+        ? { estadoCivil: ec.valor, ...(body.estadoCivilSoloSiNoCasa === true ? { estadoCivilSoloSiNoCasa: ec.catalogo } : {}) }
+        : {}),
       identidad: objeto(body.identidad) as EdicionCliente['identidad'],
       libre: objeto(body.libre) as EdicionCliente['libre'],
       documentoId: typeof body.documentoId === 'string' && body.documentoId.trim() !== '' ? body.documentoId.trim() : null,
@@ -155,6 +167,13 @@ function conSello(b: Record<string, unknown>): Record<string, unknown> | null {
     nombre: a.nombre, apellidos: a.apellidos, dni: a.dni ?? undefined, fechaNacimiento: a.fechaNacimiento ?? undefined,
     telefono: b.telefono, email: b.email, fuente: a.fuente, forzar: false,
   }
+}
+
+/** El catálogo de estados civiles de Codeoscopic (GET gratis, cacheado). `null` = config no lista o fallo de lectura. */
+async function leerCatalogoEstadosCiviles(): Promise<Opcion[] | null> {
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return null
+  return estadosCiviles(r.config).catch(() => null)
 }
 
 function actorDe(b: Record<string, unknown>): string {

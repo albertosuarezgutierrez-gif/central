@@ -29,6 +29,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { sexoAPersistir, guardarSexoEnFicha } from '@/lib/correduria/sexo-cotizador-ficha'
+import { estadoCivilAPersistir, guardarEstadoCivilEnFicha } from '@/lib/correduria/estado-civil-cotizador-ficha'
+import { municipioAGuardar, municipioPrecargado, type MunicipioRiesgoGuardado } from '@/lib/correduria/municipio-cotizador-riesgo'
+import { llamarDatosRiesgo } from '../../../oportunidad/[id]/piezas-riesgo'
 import { Flag, FlaskConical } from 'lucide-react'
 import RecotizarIgualmente from '@/components/RecotizarIgualmente'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
@@ -156,6 +159,7 @@ export default function CotizadorMoto({
   civiles,
   municipios,
   municipiosMotivo,
+  cpMunicipios = null,
   estadoCivilMoto,
   consumo,
   simulacion,
@@ -211,6 +215,11 @@ export default function CotizadorMoto({
   civiles: Opcion[]
   municipios: Opcion[] | null
   municipiosMotivo: string | null
+  /**
+   * CP de la FICHA del que salen `municipios` (20/10/2026). Ancla del municipio guardado en el riesgo: si el CP del riesgo ya
+   * no es este, no se precarga. `null` = no se sabe → ni se precarga ni se guarda.
+   */
+  cpMunicipios?: string | null
   estadoCivilMoto: Opcion | null
   consumo: ConsumoPuerto
   simulacion: boolean
@@ -297,7 +306,34 @@ export default function CotizadorMoto({
   })
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
-  const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
+  // Varios municipios en el CP: el que se eligió la última vez en ESTE riesgo, si su CP sigue siendo el del riesgo (20/10/2026).
+  const [municipioId, setMunicipioId] = useState(
+    listaMunicipios.length === 1 ? listaMunicipios[0].id : municipioPrecargado({ guardado: datosRiesgo, municipios, cpMunicipios }) ?? '',
+  )
+  // Lo ya guardado desde esta pantalla (estado civil → ficha; municipio → riesgo), para no repetir el PATCH.
+  const civilGuardado = useRef<string | null>(null)
+  const municipioGuardado = useRef<MunicipioRiesgoGuardado | null>(datosRiesgo)
+  function elegirEstadoCivil(id: string) {
+    setEstadoCivilId(id)
+    const a = estadoCivilAPersistir({
+      precargado: estadoCivilMoto, precalificado: faltanInicial !== null, elegidoId: id, catalogo: civiles,
+      yaGuardadoId: civilGuardado.current, empresa: variante?.empresas.tomador === true,
+    })
+    if (!a) return
+    civilGuardado.current = id
+    void guardarEstadoCivilEnFicha(clienteId, a).then((ok) => { if (!ok && civilGuardado.current === id) civilGuardado.current = null })
+  }
+  function elegirMunicipio(id: string) {
+    setMunicipioId(id)
+    const g = municipioAGuardar({
+      oportunidadId: variante?.oportunidadId ?? null, elegidoId: id, municipios, cpMunicipios,
+      cpCirculacionRiesgo: datosRiesgo?.cpCirculacion ?? null, guardado: municipioGuardado.current,
+    })
+    if (!g || !variante?.oportunidadId) return
+    const previo = municipioGuardado.current
+    municipioGuardado.current = { ...g, cpCirculacion: datosRiesgo?.cpCirculacion ?? null }
+    void llamarDatosRiesgo({ oportunidadId: variante.oportunidadId, datosVehiculo: g }).then((r) => { if (!r.ok) municipioGuardado.current = previo })
+  }
   const [experiencias, setExperiencias] = useState<Opcion[]>([])
   const [experienciaConduccion, setExperienciaConduccion] = useState('')
   const [motoAnteriorCodigo, setMotoAnteriorCodigo] = useState('')
@@ -1065,7 +1101,7 @@ export default function CotizadorMoto({
             <p style={{ fontSize: 13, margin: 0, alignSelf: 'center' }}>Empresa: va con su CIF y su razón social, sin estado civil. Conduce el conductor habitual del riesgo.</p>
           ) : (
                     <Campo etiqueta="Estado civil" falta={faltaCivil} ayuda={estadoCivilMoto ? `Viene de la ficha («${estadoCivilMoto.nombre}»). Se puede cambiar.` : 'La ficha no lo dice o no casa con el catálogo: elígelo.'}>
-              <select value={estadoCivilId} onChange={(e) => setEstadoCivilId(e.target.value)} style={input}>
+              <select value={estadoCivilId} onChange={(e) => elegirEstadoCivil(e.target.value)} style={input}>
                 <option value="">Elige estado civil</option>
                 {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
@@ -1084,7 +1120,7 @@ export default function CotizadorMoto({
                     : 'Varios municipios comparten el código postal: elige uno.'
             }
           >
-            <select value={municipioId} onChange={(e) => setMunicipioId(e.target.value)} style={input}>
+            <select value={municipioId} onChange={(e) => elegirMunicipio(e.target.value)} style={input}>
               <option value="">{listaMunicipios.length === 0 ? 'Sin municipios que elegir' : 'Elige municipio'}</option>
               {listaMunicipios.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </select>
