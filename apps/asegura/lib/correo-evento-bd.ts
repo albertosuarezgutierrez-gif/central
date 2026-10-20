@@ -26,7 +26,7 @@ import { esTablaInexistente } from './correo-avisos-intranet'
 import {
   ACTOR_CORREO, ORIGEN_TAREA_CORREO, campoFechaDedupe, planSolicitud, type OportunidadSolicitud, claveNumero, claveTareaDe, elegirSiniestroAcotado, esCheckTipoEventoCorreo, importeDeItem,
   TOPE_SINIESTROS_CANDIDATOS, decidirReevaluacionEmision, planItem, resolverPolizaEvento,
-  tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
+  estadoTrasErrorSolicitud, tareaValida, type EleccionSiniestro, type EntradaEvento, type EstadoEventoCorreo, type ExpedienteAbierto, type ItemEvento, type Plan,
   type PolizaCandidata,
 } from './correo-evento'
 
@@ -327,10 +327,13 @@ type Tx = Parameters<Parameters<Db['$transaction']>[0]>[0]
 /**
  * Aplica UN estado de solicitud a su oportunidad (nota + estado + tarea). Devuelve la tarea creada (si la hay). La
  * tarea se crea DESPUÉS de la transacción con `crearTarea` (la misma vía que una tarea a mano: su historial y su nota).
+ * `progreso.estadoAplicado` pasa a `true` en cuanto la transacción del estado confirma: si algo revienta después, el
+ * llamante sabe que ya se escribió (→ `procesando`); antes, que no (→ `sin_resolver`, se puede volver a vincular).
  */
 async function aplicarSolicitud(
   db: Db, correduriaId: string, compania: string, item: ItemSolicitud, op: OportunidadSolicitud,
   plan: Extract<ReturnType<typeof planSolicitud>, { estado: 'aplicado' }>, instante: Date | null,
+  progreso: { estadoAplicado: boolean },
 ): Promise<{ gestionId: string | null; fechaLimite: string | null; resumen: string }> {
   const cuando = instante ?? new Date()
   const actualizado = await db.$transaction(async (tx) => {
@@ -350,11 +353,13 @@ async function aplicarSolicitud(
               ${JSON.stringify({ ...plan.detalleHistorial, estadoAplicado: n > 0 })}::jsonb, ${ACTOR_CORREO})`)
     return n > 0
   })
+  progreso.estadoAplicado = true
   let resumen = actualizado ? plan.resumen : `${plan.resumen} (correo más antiguo que el último estado: solo nota)`
   const t = plan.tareaDocumentacion
   if (!actualizado || !t) return { gestionId: null, fechaLimite: null, resumen }
   // Comprobar + crear bajo un candado por oportunidad: dos correos a la vez no crean la tarea dos veces.
-  // `crearTarea` usa su propia conexión y confirma antes de soltar el candado (se suelta al cerrar esta transacción).
+  // `crearTarea` va por ESTA transacción (`tx`): misma conexión (no pide otra al pool con esta ocupada) y la tarea
+  // confirma a la vez que se suelta el candado.
   const r = await db.$transaction(async (tx) => {
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`solicitud-doc:${op.id}`}))`)
     const [ya] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
@@ -363,7 +368,7 @@ async function aplicarSolicitud(
         and observaciones = ${t.observaciones}
       limit 1`)
     if (ya) return null
-    return crearTarea(correduriaId, op.id, t, ACTOR_CORREO)
+    return crearTarea(correduriaId, op.id, t, ACTOR_CORREO, undefined, tx)
   }, { timeout: 20_000 })
   if (!r) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; ya había tarea de enviar documentación abierta` }
   if (!r.ok) return { gestionId: null, fechaLimite: null, resumen: `${resumen}; tarea NO creada (${r.motivo})` }
@@ -379,6 +384,7 @@ async function procesarSolicitud(
     tipo: 'solicitud', clave: item.clave, subtipo: null, numeroPoliza: null, estado, repetido: false, resumen, motivo,
     clienteId: op?.clienteId ?? null, cliente: op?.cliente ?? null, polizaId: null, siniestroId: null, tareaVence: gestion.fechaLimite,
   })
+  const progreso = { estadoAplicado: false }
   try {
     const op = await oportunidadDeSolicitud(db, correduriaId, compania, item.numeroSolicitud)
     const plan = planSolicitud(item, compania, op, { fechaCorreo, hoy })
@@ -388,7 +394,7 @@ async function procesarSolicitud(
         where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`)
       return salida('sin_resolver', plan.resumen, plan.motivo, null, { fechaLimite: null })
     }
-    const r = await aplicarSolicitud(db, correduriaId, compania, item, op, plan, instanteCorreo)
+    const r = await aplicarSolicitud(db, correduriaId, compania, item, op, plan, instanteCorreo, progreso)
     await db.$executeRaw(Prisma.sql`
       update correo_evento_entrante set estado = 'aplicado', motivo = null, resumen = ${r.resumen.slice(0, 300)},
              cliente_id = ${op.clienteId}::uuid, oportunidad_id = ${op.id}::uuid, gestion_id = ${r.gestionId}::uuid,
@@ -398,10 +404,14 @@ async function procesarSolicitud(
   } catch (e) {
     const causa = e instanceof Error ? e.message.slice(0, 200) : 'error'
     console.error('[correo-evento] solicitud a medias:', causa)
+    const estado = estadoTrasErrorSolicitud(progreso.estadoAplicado)
+    const resumen = estado === 'sin_resolver'
+      ? 'error antes de escribir nada: se puede volver a vincular'
+      : 'error a mitad: puede haberse escrito una parte, míralo'
     await db.$executeRaw(Prisma.sql`
-      update correo_evento_entrante set motivo = ${`error a mitad: ${causa}`}, updated_at = now()
+      update correo_evento_entrante set estado = ${estado}, motivo = ${`error a mitad: ${causa}`}, resumen = ${resumen}, updated_at = now()
       where id = ${filaId}::uuid and correduria_id = ${correduriaId}::uuid`).catch(() => undefined)
-    return salida('procesando', 'error a mitad: puede haberse escrito una parte, míralo', causa, null, { fechaLimite: null })
+    return salida(estado, resumen, causa, null, { fechaLimite: null })
   }
 }
 
@@ -433,18 +443,20 @@ export async function vincularSolicitudesPendientes(
       update correo_evento_entrante set estado = 'procesando', updated_at = now()
       where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver'`)
     if (reservada === 0) continue
-    const op = await oportunidadDeSolicitud(db, correduriaId, compania, numero)
-    if (!op || op.id !== oportunidadId) {
-      await db.$executeRaw(Prisma.sql`update correo_evento_entrante set estado = 'sin_resolver', updated_at = now() where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`)
-      continue
-    }
-    const plan = planSolicitud(item, compania, op, { fechaCorreo: f.creado.toISOString().slice(0, 10), hoy })
-    if (plan.estado !== 'aplicado') {
-      await db.$executeRaw(Prisma.sql`update correo_evento_entrante set estado = 'sin_resolver', updated_at = now() where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`)
-      continue
-    }
+    // Desde la reserva, TODO dentro del try: un fallo no puede dejar la fila en `procesando` sin desenlace.
+    const progreso = { estadoAplicado: false }
     try {
-      const r = await aplicarSolicitud(db, correduriaId, compania, item, op, plan, f.creado)
+      const op = await oportunidadDeSolicitud(db, correduriaId, compania, numero)
+      if (!op || op.id !== oportunidadId) {
+        await db.$executeRaw(Prisma.sql`update correo_evento_entrante set estado = 'sin_resolver', updated_at = now() where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+        continue
+      }
+      const plan = planSolicitud(item, compania, op, { fechaCorreo: f.creado.toISOString().slice(0, 10), hoy })
+      if (plan.estado !== 'aplicado') {
+        await db.$executeRaw(Prisma.sql`update correo_evento_entrante set estado = 'sin_resolver', updated_at = now() where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+        continue
+      }
+      const r = await aplicarSolicitud(db, correduriaId, compania, item, op, plan, f.creado, progreso)
       await db.$executeRaw(Prisma.sql`
         update correo_evento_entrante set estado = 'aplicado', motivo = null, resumen = ${`vinculada a mano: ${r.resumen}`.slice(0, 300)},
                cliente_id = ${op.clienteId}::uuid, oportunidad_id = ${op.id}::uuid, gestion_id = ${r.gestionId}::uuid,
@@ -454,7 +466,8 @@ export async function vincularSolicitudesPendientes(
     } catch (e) {
       const causa = e instanceof Error ? e.message.slice(0, 200) : 'error'
       await db.$executeRaw(Prisma.sql`
-        update correo_evento_entrante set motivo = ${`error a mitad al vincular: ${causa}`}, updated_at = now()
+        update correo_evento_entrante set estado = ${estadoTrasErrorSolicitud(progreso.estadoAplicado)},
+               motivo = ${`error a mitad al vincular: ${causa}`}, updated_at = now()
         where id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid`).catch(() => undefined)
     }
   }

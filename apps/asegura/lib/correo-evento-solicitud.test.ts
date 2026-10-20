@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { planSolicitud, validarEntradaEvento, type ItemEvento } from './correo-evento.ts'
+import { estadoTrasErrorSolicitud, planSolicitud, validarEntradaEvento, type ItemEvento } from './correo-evento.ts'
 
 // «En la compañía» (20/10/2026): el estado de una solicitud de Occident se casa con la OPORTUNIDAD por su nº.
 // Datos inventados del mismo formato que los reales.
@@ -80,5 +80,45 @@ test('🪤 aplicarSolicitud: el UPDATE exige el mismo nº de solicitud y la tare
   const lock = src.indexOf("pg_advisory_xact_lock(hashtext(${`solicitud-doc:${op.id}`}))")
   assert.ok(lock > -1, 'candado por oportunidad')
   const comprobar = src.indexOf('and observaciones = ${t.observaciones}', lock)
-  assert.ok(comprobar > lock && src.indexOf('crearTarea(correduriaId, op.id, t, ACTOR_CORREO)', comprobar) > comprobar, 'candado → comprobar → crear')
+  assert.ok(comprobar > lock && src.indexOf('crearTarea(correduriaId, op.id, t, ACTOR_CORREO, undefined, tx)', comprobar) > comprobar, 'candado → comprobar → crear')
+})
+
+test('🪤 la tarea de documentación se crea con la MISMA transacción del candado (sin pedir otra conexión al pool)', () => {
+  const src = readFileSync(join(import.meta.dirname, 'correo-evento-bd.ts'), 'utf8')
+  const lock = src.indexOf('pg_advisory_xact_lock(hashtext(')
+  const fin = src.indexOf('}, { timeout: 20_000 })', lock)
+  const tramo = src.slice(lock, fin)
+  assert.match(tramo, /crearTarea\([^)]*,\s*tx\)/, 'crearTarea recibe el tx de la transacción del candado')
+  const seg = readFileSync(join(import.meta.dirname, 'oportunidad-seguimiento.ts'), 'utf8')
+  const ct = seg.slice(seg.indexOf('export async function crearTarea('), seg.indexOf('\n}\n', seg.indexOf('export async function crearTarea(')))
+  assert.match(ct, /const r = en \? await cuerpo\(en\) : await prismaAsegura\(\)\.\$transaction\(cuerpo\)/, 'con `en` no abre otra transacción')
+  assert.match(ct, /anotarEnFicha\([^;]*, en\)/, 'la nota en la ficha también va por `en`')
+  const af = seg.slice(seg.indexOf('async function anotarEnFicha('))
+  assert.match(af.slice(0, af.indexOf('try {')), /if \(en\) \{ await en\.\$executeRaw\(sql\); return \}/, 'con `en`, la nota va por esa conexión')
+})
+
+test('estadoTrasErrorSolicitud: sin nada escrito vuelve a sin_resolver (re-vinculable); con el estado ya aplicado, procesando', () => {
+  assert.equal(estadoTrasErrorSolicitud(false), 'sin_resolver')
+  assert.equal(estadoTrasErrorSolicitud(true), 'procesando')
+})
+
+test('🪤 un error en una solicitud no deja la fila en procesando para siempre: los dos catch usan el progreso', () => {
+  const src = readFileSync(join(import.meta.dirname, 'correo-evento-bd.ts'), 'utf8')
+  // El progreso se marca justo tras confirmar la transacción del estado y ANTES de la de la tarea.
+  const ap = src.slice(src.indexOf('async function aplicarSolicitud('), src.indexOf('async function procesarSolicitud('))
+  const marca = ap.indexOf('progreso.estadoAplicado = true')
+  assert.ok(marca > ap.indexOf("'correo_compania'") && marca < ap.indexOf('pg_advisory_xact_lock'), 'marca entre el estado y la tarea')
+  // vincularSolicitudesPendientes solo coge sin_resolver: por eso el error previo a escribir debe volver ahí.
+  const vin = src.slice(src.indexOf('export async function vincularSolicitudesPendientes('))
+  assert.match(vin, /tipo = 'solicitud' and estado = 'sin_resolver'/)
+  for (const [nombre, tramo] of [
+    ['procesarSolicitud', src.slice(src.indexOf('async function procesarSolicitud('), src.indexOf('const VENTANA_VINCULAR_DIAS'))],
+    ['vincularSolicitudesPendientes', vin.slice(0, vin.indexOf('return { vinculados }'))],
+  ] as const) {
+    const c = tramo.slice(tramo.lastIndexOf('} catch (e) {'))
+    assert.match(c, /set estado = \$\{estadoTrasErrorSolicitud\(progreso\.estadoAplicado\)\}|const estado = estadoTrasErrorSolicitud\(progreso\.estadoAplicado\)[\s\S]*set estado = \$\{estado\}/, `${nombre}: el catch fija el estado`)
+  }
+  // En la vinculación, la lectura de la oportunidad tras reservar está DENTRO del try.
+  const reserva = vin.indexOf("set estado = 'procesando'")
+  assert.ok(vin.indexOf('try {', reserva) < vin.indexOf('oportunidadDeSolicitud(', reserva), 'lectura tras reservar dentro del try')
 })

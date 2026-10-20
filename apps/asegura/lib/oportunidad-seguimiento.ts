@@ -468,13 +468,17 @@ export async function crearTarea(
   datos: { tipo?: unknown; prioridad?: unknown; observaciones?: unknown; fechaLimite?: unknown },
   actor: string,
   hoy: Date = hoyUtc(),
+  /**
+   * Transacción de quien llama (p. ej. la del candado de `aplicarSolicitud`): todo va por ESA conexión. Abrir otra
+   * mientras la del llamante sigue ocupada agota el pool (`connection_limit` 3) con tres a la vez → P2024.
+   */
+  en?: Tx,
 ): Promise<{ ok: true; tareaId: string } | Fallo> {
   if (!UUID.test(oportunidadId)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
   const v = validarTarea(datos, hoy)
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
   const t = v.tarea
-  const db = prismaAsegura()
-  const r = await db.$transaction(async tx => {
+  const cuerpo = async (tx: Tx) => {
     const [opp] = await tx.$queryRaw<{ clienteId: string; estado: string }[]>(Prisma.sql`
       select cliente_id::text as "clienteId", estado::text as estado from oportunidades
       where id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid`)
@@ -493,10 +497,11 @@ export async function crearTarea(
               cast(${opp.estado} as estado_comercial), cast(${opp.estado} as estado_comercial),
               ${JSON.stringify({ tareaId: nueva.id, tipo: t.tipo, fechaLimite: t.fechaLimite })}::jsonb, ${actor})`)
     return { tareaId: nueva.id, clienteId: opp.clienteId }
-  })
+  }
+  const r = en ? await cuerpo(en) : await prismaAsegura().$transaction(cuerpo)
   if (!r) return { ok: false, estado: 'no_encontrado', motivo: 'Esa oportunidad no es de esta correduría.', status: 404 }
   if (r === 'cerrada') return { ok: false, estado: 'conflicto', motivo: 'Esa oportunidad ya está cerrada: reábrela antes de añadirle tareas.', status: 409 }
-  await anotarEnFicha(correduriaId, r.clienteId, `Tarea (${t.tipo}) para el ${t.fechaLimite}: ${t.observaciones.slice(0, 140)} — por ${actor}`)
+  await anotarEnFicha(correduriaId, r.clienteId, `Tarea (${t.tipo}) para el ${t.fechaLimite}: ${t.observaciones.slice(0, 140)} — por ${actor}`, en)
   return { ok: true, tareaId: r.tareaId }
 }
 
@@ -1382,11 +1387,14 @@ export async function posponerOportunidad(
   return { ok: true, fecha: p.fecha, tarea: r.tarea }
 }
 
-async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string): Promise<void> {
-  try {
-    await prismaAsegura().$executeRaw(Prisma.sql`
+async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string, en?: Tx): Promise<void> {
+  const sql = Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-      values (${correduriaId}::uuid, ${clienteId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`
+  // Dentro de una transacción ajena NO se traga el error: Postgres la deja abortada y lo siguiente fallaría igual.
+  if (en) { await en.$executeRaw(sql); return }
+  try {
+    await prismaAsegura().$executeRaw(sql)
   } catch (e) {
     console.error('[oportunidad-seguimiento] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
   }

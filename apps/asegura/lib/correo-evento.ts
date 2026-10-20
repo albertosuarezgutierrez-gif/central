@@ -580,6 +580,16 @@ export type PlanSolicitud =
 const ABIERTAS_OPORTUNIDAD: ReadonlySet<string> = new Set(['competencia', 'en_negociacion', 'pendiente_cliente'])
 
 /**
+ * Desenlace de una solicitud que revienta a mitad. Si NADA se escribió en la oportunidad (falló la lectura o la
+ * transacción del estado, que es atómica) vuelve a `sin_resolver`: la bandeja la enseña y `vincularSolicitudesPendientes`
+ * la puede volver a enganchar (solo coge `sin_resolver`). Si el estado YA se aplicó, `procesando` con el error, como
+ * el resto de tipos: a mano, para no repetir la nota ni la tarea.
+ */
+export function estadoTrasErrorSolicitud(estadoYaAplicado: boolean): Extract<EstadoEventoCorreo, 'sin_resolver' | 'procesando'> {
+  return estadoYaAplicado ? 'procesando' : 'sin_resolver'
+}
+
+/**
  * Qué se hace con el estado de una solicitud. Sin oportunidad con ese nº → `sin_resolver` (bandeja «Correos de
  * compañía»: Alberto apunta el nº en la oportunidad y el correo se engancha solo). Con ella → nota en su historial
  * y, si la compañía pide documentación y la oportunidad sigue abierta, tarea para HOY.
