@@ -1350,7 +1350,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Aviso «C0072 dejó de mandar»: tubería viva (Mapfre/Occident entran, pulls 6/6 sin error, 0 cuarentena); Generali solo mandó 6 ficheros 14-28/09. Aguas arriba probable; confirmar con export del Portal CIMA. Nada enviado a terceros.
 - Plan en `docs/CIMA-SEGUIMIENTO-Y-DATOS.md`: el vigía usa el hueco MÁXIMO (Reale 48 d, Allianz 46 d no avisan; Allianz 4 pólizas vencen en 30 d con 10 d muda). No hay método WS que liste ficheros ya descargados.
 - Datos: 934 rutas, 568 leídas, 270 sin leer (SIN 146), 96 excluidas. Crudo `purgar_en`≈2032 (NO 30 d: skill desfasada). Siniestro NO pinta `cimaExtra` (solo póliza/recibo).
-- Pendiente de OK de Alberto: fase 1 (baremo por mediana, renovaciones en riesgo, recordatorio export, bloque «Más datos» en siniestro).
+- Fase 1 hecha (central#4883): silencio por mediana de huecos, renovaciones en riesgo ≤30 d, recordatorio mensual del export (día 2), «Más datos de CIMA» en siniestro (operador). asegura#891: más figuras/contrario en `terceros` cifrado. `terceros` vacío = SIN viejos (28/09), hay que reprocesar uno a uno.
+- 🚨 Occident (C0468) y Allianz (C0109) NO mandan SIN desde el 25-27/09 aunque POL/REC siguen: el vigía es por compañía y no lo ve.
 
 ## (19/10/2026) Trading · pasada diaria 20:15 UTC (solo paper)
 NAV 33.590,92€ → /saldo; cartera real (VWCE + CVX) y latido de operaciones (0 nuevas) empujados; /analizar 24 símbolos sin compras paper (CHT/CVX/MSFT por concentración 20%, RBLX ya abierta); /puntuar 268 tesis, 0 cerradas; Telegram enviado. PR draft #4882 (solo bitácora).
