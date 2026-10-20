@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-20T10:08:37Z",
+  "generadoEn": "2026-10-20T11:47:03Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -1479,7 +1479,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 6
       },
       "sivra": {
         "estado": "no",
@@ -2181,7 +2181,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -5600,6 +5600,9 @@
       "/api/admin/cuenta/convenio/analizar",
       "/api/admin/cuenta/documentos",
       "/api/admin/cuenta/documentos/[id]",
+      "/api/admin/documentos/analizar",
+      "/api/admin/documentos/asignar",
+      "/api/admin/documentos/staging",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -5617,6 +5620,8 @@
       "/api/admin/fichajes",
       "/api/admin/fichajes/[id]",
       "/api/admin/fichajes/exportar",
+      "/api/admin/firmas",
+      "/api/admin/firmas/reclamar",
       "/api/admin/informes",
       "/api/admin/informes/exportar",
       "/api/admin/mis-empresas",
@@ -5642,10 +5647,13 @@
       "/api/cron/alerta-jornada-maxima",
       "/api/cron/nominas",
       "/api/cron/recordatorio-fichaje",
+      "/api/cron/recordatorio-firmas",
       "/api/e/acceso/completar",
       "/api/e/acceso/solicitar",
       "/api/e/acceso/verificar",
       "/api/e/asistente",
+      "/api/e/avisos",
+      "/api/e/avisos/visto",
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/expediente/[docId]/firmar",
@@ -6243,6 +6251,7 @@
     ],
     "rrhh": [
       "rrhh.acceso_otps",
+      "rrhh.avisos",
       "rrhh.contratos_laborales",
       "rrhh.documentos",
       "rrhh.empleados",
@@ -6951,7 +6960,7 @@
     "packages": 43,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1735,
+    "apis": 1743,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
