@@ -137,3 +137,31 @@ test('emisión (póliza nueva): «Póliza nueva emitida» con producto, efecto y
   assert.match(t, /Queda 1 en «Correos de compañía»/)
   assert.doesNotMatch(t, /asegura no devolvió/)
 })
+
+// «En la compañía» (20/10/2026): estado de una solicitud de Occident (datos inventados del mismo formato que los reales).
+const solicitud: EventoAseguradora = {
+  tipo: 'solicitud', compania: 'occident', codigoDgs: 'C0468', ilegibles: 0,
+  numeroSolicitud: '170000001', ramo: 'Acc.colec.', tomador: 'ACADEMIA INVENTADA SL', estado: 'PRIMA / PROY * PTE DOCUMENTACION',
+  url: 'https://portaloccident.gco.global/Aplicacion/Paginas/default.aspx?x=1&idSubscripcio=00170000001',
+}
+
+test('solicitud casada: «📨 Occident · Solicitud N · tomador · estado» + a qué oportunidad y la tarea', () => {
+  const t = textoAvisoEvento(solicitud, 'Suscripción Acc.colec. - Solicitud 170000001 - ACADEMIA INVENTADA SL', [{
+    clave: '170000001', estado: 'aplicado', repetido: false, resumen: 'oportunidad accidentes de Academia Inventada SL: «PRIMA / PROY * PTE DOCUMENTACION»; tarea «enviar documentación» para hoy',
+    motivo: null, clienteId: 'c9', cliente: 'Academia Inventada SL', numeroPoliza: null, tareaVence: '2026-10-20',
+  }], url)
+  const primera = t.split('\n')[0]
+  assert.equal(primera, '📨 <b>Occident</b> · Solicitud 170000001 · ACADEMIA INVENTADA SL · <b>PRIMA / PROY * PTE DOCUMENTACION</b>')
+  assert.match(t, /oportunidad accidentes de Academia Inventada SL/)
+  assert.match(t, /abrir en Occident/)
+  assert.match(t, /https:\/\/x\/ficha\/c9/)
+})
+
+test('solicitud SIN casar: lo dice y explica cómo engancharla', () => {
+  const t = textoAvisoEvento(solicitud, 'asunto', [{
+    clave: '170000001', estado: 'sin_resolver', repetido: false, resumen: 'solicitud 170000001 sin oportunidad → bandeja',
+    motivo: 'ninguna oportunidad lleva la solicitud', clienteId: null, cliente: null, numeroPoliza: null, tareaVence: null,
+  }], url)
+  assert.match(t, /Ninguna oportunidad lleva ese nº/)
+  assert.doesNotMatch(t, /asegura no devolvió este elemento/)
+})

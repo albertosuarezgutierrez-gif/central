@@ -1485,8 +1485,15 @@ export {
   leerCorreoEventoAseguradora, eventoNecesitaAdjuntos, sinDatosSensibles, contieneIban, ACCIONES_TRAMITADOR,
   type AccionTramitador,
   type CompaniaEvento, type CorreoEventoAseguradora, type EventoAseguradora, type EventoSiniestro, type EventoPreAnulacion,
-  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type EventoEmision, type PolizaEmitidaCorreo, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
+  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type EventoEmision, type EventoSolicitud, type PolizaEmitidaCorreo, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
 } from './evento-correo-aseguradora.ts'
+
+// «En la compañía» (20/10/2026): nº de solicitud en la compañía sobre una oportunidad abierta (no es un estado del enum).
+export {
+  COMPANIAS_SOLICITUD, ROTULO_COMPANIA_SOLICITUD, estaEnCompania, normalizarNumeroSolicitud, pideDocumentacion,
+  textoTareaDocumentacion, urlSolicitudValida, validarSolicitudCompania,
+  type CambioSolicitud, type CompaniaSolicitud, type PeticionSolicitud,
+} from './solicitud-compania.ts'
 
 // Campaña «presentación de la app» a leads antiguos (14/10/2026). El token `?r=` (node:crypto) va
 // aparte, por la subruta `@central/module-seguros/presentacion-app-ref`.

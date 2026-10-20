@@ -12,7 +12,8 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * Avisos de compañías leídos del correo (14/10/2026). Lo llama el triaje de `apps/plataforma`
+ * Avisos de compañías leídos del correo (14/10/2026; `solicitud` —estado de un proyecto en la compañía, casado con
+ * la OPORTUNIDAD por `compania_solicitud_num`— el 20/10/2026). Lo llama el triaje de `apps/plataforma`
  * cuando `leerCorreoEventoAseguradora` reconoce un correo `correduria`/`correduria-recibo` que NO es
  * una devolución (esas van por `/recibos/devolucion`).
  *
@@ -40,7 +41,9 @@ export const POST = auditado(async (req: Request) => {
     const v = validarEntradaEvento(b)
     if (!v.ok) return NextResponse.json({ estado: 'invalido', motivo: v.motivo }, { status: 422 })
     const fechaCorreo = fechaCorreoMadrid(b?.fechaCorreo)
-    const r = await registrarEventoCorreo(correduria.id, v.entrada, fechaCorreo)
+    // El instante exacto del correo: una solicitud solo pisa su estado con un correo MÁS NUEVO que el último aplicado.
+    const instante = typeof b?.fechaCorreo === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(b.fechaCorreo) ? new Date(b.fechaCorreo) : null
+    const r = await registrarEventoCorreo(correduria.id, v.entrada, fechaCorreo, undefined, instante && !Number.isNaN(instante.getTime()) ? instante : null)
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: 503 })
     return NextResponse.json({ estado: 'ok', ilegibles: v.entrada.ilegibles, resultados: r.resultados })
   } catch (e) {

@@ -86,3 +86,16 @@ test('contacto por fila: dato, «no consta» (campos null) y «no se sabe» (nul
   assert.deepEqual(r.tareasSueltas?.map((t) => t.contacto), [CONTACTO, null])
   assert.deepEqual(r.perdidasPorRevisar?.map((p) => p.contacto), [CONTACTO, null])
 })
+
+test('«En la compañía» (20/10/2026): se lee la solicitud; sin campo = null (asegura antiguo); un enlace no https se cae', () => {
+  const leer = (solicitudCompania: unknown) => {
+    const r = interpretarExpedientes(200, { estado: 'ok', hoy: '2026-10-20', expedientes: [{ ...FILA, solicitudCompania }], truncado: false, descartadas: 0 })
+    assert.equal(r.estado, 'ok')
+    return r.estado === 'ok' ? r.expedientes[0].solicitudCompania : undefined
+  }
+  assert.deepEqual(leer({ numero: '170000001', compania: 'occident', estado: 'PTE', url: 'https://portaloccident.gco.global/x', at: null }),
+    { numero: '170000001', compania: 'occident', estado: 'PTE', url: 'https://portaloccident.gco.global/x', at: null })
+  assert.equal(leer(undefined), null)
+  assert.equal(leer({ numero: '170000001', compania: 'occident', estado: null, url: 'javascript:alert(1)' })?.url, null)
+  assert.equal(leer({ numero: '', compania: 'occident' }), null)
+})

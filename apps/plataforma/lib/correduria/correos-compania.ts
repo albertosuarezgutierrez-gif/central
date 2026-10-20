@@ -97,13 +97,15 @@ export function interpretarCorreosCompania(status: number, json: unknown): Lectu
 
 export const ROTULO_TIPO_CORREO: Record<string, string> = {
   siniestro: 'Siniestro', pre_anulacion: 'Pre-anulación', impago: 'Impago', anulacion: 'Anulación', suplemento: 'Suplemento',
-  emision: 'Póliza nueva',
+  emision: 'Póliza nueva', solicitud: 'Solicitud',
 }
 
 /** El elemento de la fila, en una línea: «Siniestro 43000001 · póliza X», «Póliza nueva emitida: X» o «Póliza X». */
 export function textoElementoCorreo(e: Pick<CorreoCompania, 'tipo' | 'clave' | 'numeroPoliza'>): string {
   if (e.tipo === 'siniestro') return `Siniestro ${e.clave}${e.numeroPoliza ? ` · póliza ${e.numeroPoliza}` : ''}`
   if (e.tipo === 'emision') return `Póliza nueva emitida: ${e.numeroPoliza ?? e.clave}`
+  // Sin póliza aún: se engancha apuntando el nº en la oportunidad (Mi mesa → «Nº solicitud…»).
+  if (e.tipo === 'solicitud') return `Solicitud ${e.clave}`
   return `Póliza ${e.numeroPoliza ?? e.clave}`
 }
 

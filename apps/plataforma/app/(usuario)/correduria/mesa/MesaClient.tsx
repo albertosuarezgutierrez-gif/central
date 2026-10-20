@@ -6,6 +6,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { MOTIVOS_PERDIDA_UI } from '@/lib/seguimiento-asegura'
+import { COMPANIAS_SOLICITUD, ROTULO_COMPANIA_SOLICITUD, type CompaniaSolicitud } from '@central/module-seguros'
 import type { Expediente, Expedientes } from '@/lib/correduria/expedientes'
 import {
   atajosAparcar, BLOQUES_MESA, cuandoRelativo, fechaCorta, masDias, repartirMesaCompleta, soloDia, TITULO_BLOQUE, VACIO_BLOQUE,
@@ -46,7 +47,7 @@ async function enviar(body: Record<string, unknown>): Promise<string | null> {
     const r = await fetch('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     const j = (await r.json().catch(() => null)) as { estado?: string; motivo?: string; causa?: string } | null
     if (r.ok && j?.estado === 'ok') return null
-    if (r.status === 503 && j?.estado === 'sin_migracion') return 'Falta aplicar la migración de notas: todavía no se pueden guardar.'
+    if (r.status === 503 && j?.estado === 'sin_migracion') return j?.motivo ?? 'Falta aplicar una migración en asegura: todavía no se puede guardar.'
     // 502/red: el puerto pudo guardar y cortarse la respuesta. No se invita a repetir a ciegas.
     if (r.status === 502 || j?.motivo === 'red') return AMBIGUO
     return j?.motivo ?? j?.causa ?? `No se ha podido guardar (HTTP ${r.status}).`
@@ -173,7 +174,7 @@ function Bloque({ bloque, filas, hoy, onCambio }: { bloque: BloqueMesa; filas: E
   )
 }
 
-type Panel = null | 'perder' | 'aparcar' | 'notas'
+type Panel = null | 'perder' | 'aparcar' | 'notas' | 'solicitud'
 
 function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa; hoy: string; onCambio: () => Promise<void> }) {
   const [panel, setPanel] = useState<Panel>(null)
@@ -262,6 +263,8 @@ function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa;
         </div>
       )}
 
+      {e.solicitudCompania && <LineaSolicitud s={e.solicitudCompania} />}
+
       {e.notas && <div title={e.notas} style={{ fontSize: 13, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.notas}</div>}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -273,11 +276,13 @@ function Fila({ e, bloque, hoy, onCambio }: { e: Expediente; bloque: BloqueMesa;
         {!aparcada && [3, 7].map(n => (
           <button key={n} type="button" disabled={enviando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} onClick={() => void ejecutar({ accion: 'posponer', dias: n })}>Posponer {n} días</button>
         ))}
+        {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'solicitud'} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }} onClick={() => setPanel(panel === 'solicitud' ? null : 'solicitud')}>{e.solicitudCompania ? 'Cambiar nº solicitud' : 'Nº solicitud…'}</button>}
         <button type="button" disabled={enviando} aria-expanded={panel === 'notas'} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }} onClick={() => setPanel(panel === 'notas' ? null : 'notas')}>{e.notas ? 'Notas' : 'Añadir nota'}</button>
       </div>
 
       {panel === 'perder' && <PanelPerder enviando={enviando} onEnviar={ejecutar} />}
       {panel === 'aparcar' && <PanelAparcar enviando={enviando} hoy={hoy} onEnviar={ejecutar} />}
+      {panel === 'solicitud' && <PanelSolicitud actual={e.solicitudCompania} enviando={enviando} onEnviar={ejecutar} />}
       {panel === 'notas' && <PanelNotas inicial={e.notas ?? ''} enviando={enviando} onEnviar={ejecutar} />}
       {error && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{error}</p>}
     </article>
@@ -349,6 +354,56 @@ function PanelNotas({ inicial, enviando, onEnviar }: { inicial: string; enviando
       <textarea value={t} onChange={ev => setT(ev.target.value)} rows={3} aria-label="Notas del expediente" placeholder="Una nota corta para ti"
         style={{ width: '100%', boxSizing: 'border-box', borderRadius: 10, border: '1px solid var(--border)', padding: 10, fontSize: 14, fontFamily: 'inherit' }} />
       <div><button type="submit" disabled={enviando || t.trim() === inicial.trim()} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>Guardar nota</button></div>
+    </form>
+  )
+}
+
+const rotuloCompania = (c: string): string => ROTULO_COMPANIA_SOLICITUD[c as CompaniaSolicitud] ?? c
+
+/** «En la compañía · Occident · Solicitud N · <último estado> · Abrir en Occident». Sin estado = la compañía aún no ha escrito. */
+function LineaSolicitud({ s }: { s: NonNullable<Expediente['solicitudCompania']> }) {
+  const cia = rotuloCompania(s.compania)
+  return (
+    <div style={{ fontSize: 13, display: 'flex', flexWrap: 'wrap', gap: '2px 8px', alignItems: 'center', minWidth: 0 }}>
+      <Badge tono="info">En la compañía</Badge>
+      <span style={{ overflowWrap: 'anywhere' }}>{cia} · Solicitud {s.numero}</span>
+      <span style={{ fontWeight: 600, overflowWrap: 'anywhere', color: s.estado ? 'var(--text)' : 'var(--muted)' }}>
+        {s.estado ?? 'sin noticias de la compañía todavía'}
+      </span>
+      {s.url && (
+        <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontWeight: 600, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+          Abrir en {cia} ↗
+        </a>
+      )}
+    </div>
+  )
+}
+
+/** Apuntar / cambiar / quitar el nº de solicitud. Al guardarlo, asegura engancha los correos de esa solicitud que llegaron antes. */
+function PanelSolicitud({ actual, enviando, onEnviar }: {
+  actual: Expediente['solicitudCompania']; enviando: boolean; onEnviar: (b: Record<string, unknown>) => Promise<void>
+}) {
+  const [numero, setNumero] = useState(actual?.numero ?? '')
+  const [compania, setCompania] = useState<string>(actual?.compania ?? 'occident')
+  const limpio = numero.replace(/[\s.\-/]/g, '')
+  const valido = /^\d{6,12}$/.test(limpio)
+  return (
+    <form onSubmit={ev => { ev.preventDefault(); if (valido) void onEnviar({ accion: 'solicitud_compania', numero: limpio, compania }) }}
+      style={{ display: 'grid', gap: 8, padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
+      <span style={{ fontSize: 13, fontWeight: 600 }}>Nº de solicitud en la compañía (los correos de estado de esa solicitud se enganchan solos)</span>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <select value={compania} onChange={ev => setCompania(ev.target.value)} aria-label="Compañía"
+          style={{ minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', padding: '0 10px', fontSize: 14 }}>
+          {COMPANIAS_SOLICITUD.map(c => <option key={c} value={c}>{rotuloCompania(c)}</option>)}
+        </select>
+        <input value={numero} onChange={ev => setNumero(ev.target.value)} inputMode="numeric" maxLength={20} aria-label="Nº de solicitud" placeholder="p. ej. 165000000"
+          style={{ flex: '1 1 160px', minWidth: 0, minHeight: 44, borderRadius: 10, border: '1px solid var(--border)', padding: '0 10px', fontSize: 14 }} />
+        <button type="submit" disabled={enviando || !valido} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>Guardar</button>
+        {actual && (
+          <button type="button" disabled={enviando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
+            onClick={() => void onEnviar({ accion: 'solicitud_compania', numero: null })}>Quitar nº</button>
+        )}
+      </div>
     </form>
   )
 }

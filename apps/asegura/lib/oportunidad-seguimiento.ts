@@ -22,6 +22,9 @@
 
 import {
   aplicarAccion,
+  validarSolicitudCompania,
+  ROTULO_COMPANIA_SOLICITUD,
+  type CompaniaSolicitud,
   companiaLegible,
   estadoPresupuesto,
   mismoSeguro,
@@ -50,6 +53,7 @@ import {
   type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
+import { esColumnaAusente } from './pg-error'
 import { puedeEscribirDatosVehiculo } from './oportunidad-vehiculo-previo'
 import { prismaAsegura } from './asegura-db'
 import { comoSeAbrioOportunidad } from './oportunidad-origen'
@@ -1385,5 +1389,75 @@ async function anotarEnFicha(correduriaId: string, clienteId: string, texto: str
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`)
   } catch (e) {
     console.error('[oportunidad-seguimiento] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
+  }
+}
+
+// ── «En la compañía»: nº de solicitud (20/10/2026) ───────────────────────────
+
+/** ¿Choca con el índice único de solicitud (otra oportunidad ya lleva ese nº de esa compañía)? */
+function esSolicitudDuplicada(e: unknown): boolean {
+  const o = e as { code?: unknown; meta?: { code?: unknown; message?: unknown; target?: unknown }; message?: unknown } | null
+  const texto = `${String(o?.message ?? '')} ${String(o?.meta?.message ?? '')} ${String(o?.meta?.target ?? '')}`
+  return (o?.code === 'P2002' || o?.meta?.code === '23505' || /23505|unique/i.test(texto)) && /oportunidades_solicitud_compania_unica/.test(texto)
+}
+
+/**
+ * Apunta, cambia o quita el nº de solicitud en la compañía de UNA oportunidad abierta (`validarSolicitudCompania`).
+ * Con nº, la oportunidad pasa al bloque «En la compañía» de Mi mesa (no cambia de estado del enum; una `competencia`
+ * pasa a `en_negociacion`). Cambiar el nº borra el último estado/enlace leídos (eran de otra solicitud).
+ * Sin la migración 2026-10-20 → 503 `sin_migracion`; otra oportunidad con ese nº → 409.
+ * Quien llama (`POST /api/operador/oportunidad`) engancha después los correos que quedaron sin resolver.
+ */
+export async function fijarSolicitudCompania(
+  correduriaId: string, id: string, datos: { numero?: unknown; compania?: unknown }, actor: string,
+): Promise<{ ok: true; numero: string | null; compania: CompaniaSolicitud | null; estado: string } | Fallo> {
+  if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  try {
+    const r = await prismaAsegura().$transaction(async tx => {
+      const [f] = await tx.$queryRaw<{ clienteId: string; estado: string; ramo: string | null; columnas: boolean; numero: string | null; compania: string | null }[]>(Prisma.sql`
+        select cliente_id::text as "clienteId", estado::text as estado, tipo::text as ramo,
+               (to_jsonb(oportunidades.*) ? 'compania_solicitud_num') as columnas,
+               (to_jsonb(oportunidades.*)->>'compania_solicitud_num') as numero,
+               (to_jsonb(oportunidades.*)->>'compania_solicitud_compania') as compania
+        from oportunidades where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+      if (!f) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+      if (!f.columnas) return { ok: false as const, estado: 'sin_migracion' as const, motivo: 'Falta aplicar prisma/sql/2026-10-20_oportunidad_solicitud_compania.sql: el nº de solicitud aún no se puede guardar.', status: 503 as const }
+      const v = validarSolicitudCompania({ estado: f.estado, numero: f.numero, compania: f.compania }, datos)
+      if (!v.ok) return { ok: false as const, estado: 'invalido' as const, motivo: v.motivo, status: 422 as const }
+      const c = v.cambio
+      if (c.numero !== null) {
+        const [otra] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+          select id::text as id from oportunidades
+          where correduria_id = ${correduriaId}::uuid and id <> ${id}::uuid
+            and compania_solicitud_compania = ${c.compania} and compania_solicitud_num = ${c.numero}
+          limit 1`)
+        if (otra) return { ok: false as const, estado: 'conflicto' as const, motivo: `Otra oportunidad ya lleva la solicitud ${c.numero} de ${ROTULO_COMPANIA_SOLICITUD[c.compania as CompaniaSolicitud]}.`, status: 409 as const }
+      }
+      await tx.$executeRaw(Prisma.sql`
+        update oportunidades set
+          compania_solicitud_num = ${c.numero}, compania_solicitud_compania = ${c.compania},
+          compania_solicitud_estado = case when ${c.reiniciarEstado} then null else compania_solicitud_estado end,
+          compania_solicitud_url = case when ${c.reiniciarEstado} then null else compania_solicitud_url end,
+          compania_solicitud_at = case when ${c.reiniciarEstado} then null else compania_solicitud_at end,
+          estado = cast(${c.estado} as estado_comercial),
+          updated_at = now()
+        where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+      await tx.$executeRaw(Prisma.sql`
+        insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+        values (${correduriaId}::uuid, ${id}::uuid, 'solicitud_compania',
+                cast(${f.estado} as estado_comercial), cast(${c.estado} as estado_comercial),
+                ${JSON.stringify({ antes: f.numero ? { numero: f.numero, compania: f.compania } : null, despues: c.numero ? { numero: c.numero, compania: c.compania } : null })}::jsonb, ${actor})`)
+      return { ok: true as const, numero: c.numero, compania: c.compania, estado: c.estado, clienteId: f.clienteId, ramo: f.ramo }
+    })
+    if (!r.ok) return r
+    const texto = r.numero
+      ? `Oportunidad ${r.ramo ?? 'sin ramo'}: en la compañía (${ROTULO_COMPANIA_SOLICITUD[r.compania as CompaniaSolicitud]}, solicitud ${r.numero}) — por ${actor}`
+      : `Oportunidad ${r.ramo ?? 'sin ramo'}: quitado el nº de solicitud en la compañía — por ${actor}`
+    await anotarEnFicha(correduriaId, r.clienteId, texto)
+    return { ok: true, numero: r.numero, compania: r.compania, estado: r.estado }
+  } catch (e) {
+    if (esSolicitudDuplicada(e)) return { ok: false, estado: 'conflicto', motivo: 'Otra oportunidad ya lleva ese nº de solicitud de esa compañía.', status: 409 }
+    if (esColumnaAusente(e)) return { ok: false, estado: 'sin_migracion', motivo: 'Falta aplicar prisma/sql/2026-10-20_oportunidad_solicitud_compania.sql.', status: 503 }
+    throw e
   }
 }

@@ -60,6 +60,12 @@ export type Expediente = {
    * sin tocar»). `null` = asegura no lo manda (versión anterior): no se esconde nada, no se supone.
    */
   trabajada: boolean | null
+  /**
+   * «En la compañía» (20/10/2026): nº de solicitud en el portal de la compañía. `null` = no lo lleva (o asegura aún no
+   * lo manda). `estado`/`url` `null` = la compañía aún no ha escrito. La `url` ya viene validada de asegura y aquí se
+   * vuelve a exigir `https://` (se pinta como enlace).
+   */
+  solicitudCompania: { numero: string; compania: string; estado: string | null; url: string | null; at: string | null } | null
 }
 
 /** Tarea abierta SIN oportunidad (no es expediente, pero no puede perderse). Se cierra por su `tareaId`. */
@@ -187,7 +193,17 @@ function fila(v: unknown): Expediente | null {
     rescate: tipoRescate ? { tipo: tipoRescate, recibo: recibo(resc?.recibo) } : null,
     contacto: contacto(r.contacto),
     trabajada: typeof r.trabajada === 'boolean' ? r.trabajada : null,
+    solicitudCompania: solicitud(r.solicitudCompania),
   }
+}
+
+function solicitud(v: unknown): Expediente['solicitudCompania'] {
+  const s = objeto(v)
+  const numero = texto(s?.numero)
+  const compania = texto(s?.compania)
+  if (!s || !numero || !compania) return null
+  const url = texto(s.url)
+  return { numero, compania, estado: texto(s.estado), url: url && url.startsWith('https://') ? url : null, at: texto(s.at) }
 }
 
 function tareaSuelta(v: unknown): TareaSuelta | null {
