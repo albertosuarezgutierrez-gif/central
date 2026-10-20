@@ -91,6 +91,29 @@ function esRechazo(v: unknown): v is EntradaRechazada {
  * compañía callada» sería justamente la avería que este vigía persigue. Ausente
  * ⇒ `null` ⇒ el parte dice «sin comprobar».
  */
+/** Una fila de `porTipo`: tipo, días (o null), mediana (o null), muestra y ficheros de 90 d. */
+function esRitmoTipo(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const t = v as Record<string, unknown>
+  const numONull = (x: unknown) => x === null || (typeof x === 'number' && Number.isFinite(x))
+  return typeof t.tipo === 'string' && numONull(t.diasSinFichero) && numONull(t.huecoMediano)
+    && typeof t.huecosObservados === 'number' && Number.isFinite(t.huecosObservados)
+    && typeof t.ficheros90d === 'number' && Number.isFinite(t.ficheros90d)
+}
+
+/**
+ * `porTipo` ausente (asegura anterior) = solo se vigila la compañía entera. Presente pero ilegible
+ * (no es lista, o alguna fila rara) se DESCARTA: queda ausente (el vigía por tipo «no se mide», nunca
+ * «sin tipos mudos») y el resto de la entidad se valida como siempre, sin tumbar la lectura entera.
+ */
+export function sanearPorTipo(v: unknown): unknown {
+  if (typeof v !== 'object' || v === null) return v
+  const e = v as Record<string, unknown>
+  if (e.porTipo === undefined || (Array.isArray(e.porTipo) && e.porTipo.every(esRitmoTipo))) return v
+  const { porTipo: _descartado, ...resto } = e
+  return resto
+}
+
 function esEntidad(v: unknown): v is EntidadIngesta {
   if (typeof v !== 'object' || v === null) return false
   const e = v as Record<string, unknown>
@@ -99,8 +122,9 @@ function esEntidad(v: unknown): v is EntidadIngesta {
   return typeof e.entidad === 'string'
     && numONull(e.diasSinFichero) && numONull(e.huecoMaximo)
     && typeof e.huecosObservados === 'number' && Number.isFinite(e.huecosObservados)
-    && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d)
+    && numONull(e.vivas) && numONull(e.vencidasEnSilencio) && opcional(e.vencen90d) && opcional(e.vencen30d) && opcional(e.huecoMediano)
     && opcional(e.enVigor) && opcional(e.sinN)
+    // `porTipo` NO se valida aquí: lo normaliza `sanearPorTipo` antes (ilegible = se descarta).
     && (e.primerSin === undefined || e.primerSin === null || typeof e.primerSin === 'string')
     && (e.ultimoSin === undefined || e.ultimoSin === null || typeof e.ultimoSin === 'string')
     && (e.nombre === undefined || e.nombre === null || typeof e.nombre === 'string')
@@ -430,8 +454,8 @@ export function interpretarIngesta(
       // degrada ENTERA. Juzgar solo a las compañías que se entienden dejaría
       // sin mirar precisamente a la que viene rara.
       silencio:
-        Array.isArray(r.entidades) && r.entidades.every(esEntidad)
-          ? silencioPorEntidad(r.entidades as EntidadIngesta[])
+        Array.isArray(r.entidades) && r.entidades.map(sanearPorTipo).every(esEntidad)
+          ? silencioPorEntidad(r.entidades.map(sanearPorTipo) as EntidadIngesta[])
           : null,
       // 🚨 `null` cuando no se ha podido listar. Un `[]` aquí diría «se miró y
       // no falta ninguna póliza», que es dar por resuelta una pérdida activa.

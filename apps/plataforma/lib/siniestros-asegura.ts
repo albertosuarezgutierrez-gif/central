@@ -30,6 +30,7 @@ import type { OrigenSiniestro, TerceroFicha, TramitacionCruda } from '@central/m
 import { tercerosDeSiniestro } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 import { leerDetalleCima, type DetalleCima } from './siniestro-detalle-cima.ts'
+import { cimaExtraTruncado, vistaCimaExtra, type GrupoCimaExtra } from './cima-extra-vista.ts'
 
 
 /** Un siniestro tal y como lo sirve el puerto de asegura. */
@@ -105,6 +106,14 @@ export type SiniestroCartera = {
    * tapa). `null` = no consta (anterior a #880, o asegura viejo) ≠ `[]`.
    */
   tercerosCima: TerceroFicha[] | null
+  /**
+   * «Más datos de CIMA» del siniestro (solo intranet del operador; NUNCA el portal del cliente):
+   * lo que CIMA manda y ningún extractor lee, ya agrupado por `vistaCimaExtra`. `null` = aún no
+   * leído, o asegura anterior que no lo manda (campo ausente) — nunca «CIMA no trae más», que es `[]`.
+   */
+  cimaExtra: GrupoCimaExtra[] | null
+  /** `true` solo si asegura lo afirma literalmente (lista cortada al guardarla). Ausente → `false`. */
+  cimaExtraTruncado: boolean
   /**
    * Partes del portal VINCULADOS (lo que contó el cliente), en orden de llegada.
    * `null` = asegura no lo manda (versión anterior) — NUNCA «no hay parte», que es `[]`.
@@ -267,6 +276,8 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     detalleCima: leerDetalleCima(s.detalleCima),
     terceros: terceros(s.terceros),
     tercerosCima: tercerosDeSiniestro(s.tercerosCima),
+    cimaExtra: vistaCimaExtra(s.cimaExtra),
+    cimaExtraTruncado: cimaExtraTruncado(s.cimaExtraTruncado),
     partes: partesVinculadas(s.partes),
   }
 }

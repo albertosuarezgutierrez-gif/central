@@ -233,11 +233,17 @@ export {
   veredictoEntidad,
   silencioPorEntidad,
   motivosSilencio,
+  tiposMudos,
+  ACCION_SILENCIO,
+  lineaTipoMudo,
   MIN_HUECOS,
+  MIN_FICHEROS_90D_TIPO,
   FACTOR_SILENCIO,
   SUELO_DIAS,
   type VeredictoEntidad,
   type EntidadIngesta,
+  type RitmoTipo,
+  type TipoMudo,
   type SilencioEntidad,
 } from './silencio-entidad.ts'
 export {

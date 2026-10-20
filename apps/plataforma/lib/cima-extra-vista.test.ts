@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { hayMasDatos, cimaExtraTruncado, etiquetaCampo, valorCampo, vistaCimaExtra } from './cima-extra-vista.ts'
+import { rutaConPII, hayMasDatos, cimaExtraTruncado, etiquetaCampo, valorCampo, vistaCimaExtra } from './cima-extra-vista.ts'
 
 test('null ≠ []: ausente/no array → null; vacío → []', () => {
   assert.equal(vistaCimaExtra(undefined), null)
@@ -59,4 +59,22 @@ test('hayMasDatos: null y [] no pintan fila; con datos sí', () => {
   assert.equal(hayMasDatos([]), false)
   assert.equal(hayMasDatos([{ titulo: 'x', filas: [] }]), false)
   assert.equal(hayMasDatos([{ titulo: 'x', filas: [{ etiqueta: 'a', valor: 'b' }] }]), true)
+})
+
+test('filtro PII defensivo: rutas con IBAN/CCC/NIF/DNI/teléfono/email/domicilio/nacimiento no se pintan', () => {
+  const sospechosas = [
+    'Poliza.Tomador.IBAN', 'Poliza.Pago.CuentaCorriente', 'Poliza.Pago.ccc', 'Poliza.Tomador.NIF',
+    'Poliza.Tomador.Dni', 'Poliza.Tomador.Telefono1', 'Poliza.Tomador.EMAIL', 'Poliza.Tomador.Domicilio.Calle',
+    'Poliza.Tomador.FechaNacimiento',
+  ]
+  for (const ruta of sospechosas) {
+    assert.equal(rutaConPII(ruta), true, ruta)
+    assert.deepEqual(vistaCimaExtra([{ ruta, valor: 'x' }]), [], ruta)
+  }
+  const g = vistaCimaExtra([
+    ...sospechosas.map((ruta) => ({ ruta, valor: 'secreto' })),
+    { ruta: 'Poliza.Vehiculo.Tara', valor: '1200' },
+  ])
+  assert.deepEqual(g, [{ titulo: 'Vehiculo', filas: [{ etiqueta: 'Tara', valor: '1200' }] }])
+  assert.equal(rutaConPII('Poliza.Vehiculo.Tara'), false)
 })

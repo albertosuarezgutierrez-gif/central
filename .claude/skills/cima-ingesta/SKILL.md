@@ -82,7 +82,7 @@ por `central`. Ese síntoma —fallo instantáneo sin máquina— se diagnostica
 🚨 **Pero el reconcile solo re-saca ficheros SIN confirmar.** Un fichero con
 objetos en cuarentena que ya se confirmó a TIREA (`estado='confirmed'`,
 `error_detalle='review_parcial_*'`) no vuelve por esa vía: sale del crudo
-(`cima_cuarentena_crudo`, guarda el JSON de TODO fichero 30 días, **solo desde el
+(`cima_cuarentena_crudo`, guarda el JSON de TODO fichero ~6 años (`CRUDO_RETENCION_DIAS = 6*366` en el repo asegura; `purgar_en` ≈ 2032), **solo desde el
 17/09/2026**) con `cima-reprocesar-cuarentena.yml`, o —si es anterior— bajando
 el XML del Portal CIMA y metiéndolo por `POST /api/internal/cima/ingerir-manual`.
 Caso: 36 recibos de Occident del 15/09 (dos REC 299) atascados por pólizas
@@ -111,7 +111,7 @@ herramienta para borrar runs: lo hace Alberto a mano (ramas tmp-* y runs con inp
 Carpeta **`asegura/CIMA`** del Drive de Alberto (id `1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1`):
 las descargas del Portal CIMA («Ficheros recibidos», zip de zips EIAC por rango de
 fechas) van **ahí**, y es la copia larga — la nuestra (`cima_cuarentena_crudo`) dura
-30 días. Primer contraste completo (24/09): 154 ficheros 28/03–24/09, **153 ya en
+~6 años (desde el 17/09/2026). Primer contraste completo (24/09): 154 ficheros 28/03–24/09, **153 ya en
 `cima_ficheros`** (el que falta, `28823484E_…_ORIGINAL`, no es EIAC). Para leer
 un zip grande de Drive, que lo descargue un agente: el harness guarda la salida en
 disco y se decodifica con python, sin copiar el base64 a mano.

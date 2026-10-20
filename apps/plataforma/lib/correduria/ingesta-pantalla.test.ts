@@ -167,6 +167,18 @@ test('una compañía muda manda en el titular: no se arregla igual que un ficher
   assert.match(s.detalle, /nada atascado que reprocesar/)
 })
 
+test('renovaciones en riesgo: la señal de silencio las nombra solo cuando son > 0', () => {
+  const senal = (vencen30d: number | undefined) => senalesIngesta(saludIngesta({
+    cuarentena: [], huerfanas: 0, rechazos: [],
+    silencio: silencioPorEntidad([
+      { entidad: 'C0109', nombre: 'Allianz', diasSinFichero: 30, huecoMaximo: 46, huecoMediano: 4, huecosObservados: 9, vivas: 26, vencidasEnSilencio: 0, ...(vencen30d === undefined ? {} : { vencen30d }) },
+    ]),
+  })).find(x => x.clave === 'silencio')!
+  assert.match(senal(4).detalle, /Renovaciones en riesgo: Allianz: 4 vencen en ≤30 d/)
+  assert.doesNotMatch(senal(0).detalle, /Renovaciones en riesgo/)
+  assert.doesNotMatch(senal(undefined).detalle, /Renovaciones en riesgo/)
+})
+
 test('saber cuántas huérfanas hay pero no CUÁLES es un estado propio, y se dice', () => {
   const v = interpretarVistaIngesta(200, {
     estado: 'ok',
@@ -503,4 +515,24 @@ test('🪤 el cron manda el aviso INFORMATIVO de duplicadas en `ok` solo cuando 
   assert.match(ruta, /if \(avisoDuplicadas\) \{\s*const textoDup = textoPolizasDuplicadas\(salud\.polizasDuplicadas\)\s*await tgAviso/)
   // Y en el aviso normal va al final, como informativo.
   assert.match(ruta, /recado \+ duplicadas(?: \+ anulaciones)?,/)
+})
+
+test('tipo mudo: la pantalla lo señala como pérdida con «Qué hacer», y no se llama «compañía muda»', () => {
+  const salud = saludIngesta({
+    cuarentena: [], huerfanas: 0, rechazos: [],
+    silencio: silencioPorEntidad([{
+      entidad: 'C0468', nombre: 'Occident', diasSinFichero: 2, huecoMaximo: 9, huecoMediano: 1, huecosObservados: 40,
+      vivas: 19, vencidasEnSilencio: 0,
+      porTipo: [
+        { tipo: 'POL', diasSinFichero: 2, huecoMediano: 1, huecosObservados: 30, ficheros90d: 40 },
+        { tipo: 'SIN', diasSinFichero: 25, huecoMediano: 3, huecosObservados: 20, ficheros90d: 26 },
+      ],
+    }]),
+  })
+  const s = senalesIngesta(salud).find(x => x.clave === 'silencio_tipo')!
+  assert.equal(s.tipo, 'perdida')
+  assert.match(s.detalle, /Occident: siniestros mudos desde hace 25 d/)
+  assert.match(s.detalle, /Qué hacer/)
+  assert.equal(senalesIngesta(salud).some(x => x.clave === 'silencio'), false)
+  assert.match(tituloIngesta({ estado: 'ok', salud, huerfanasTruncadas: false, huerfanasSinAmbito: 0 }), /^C0468: un tipo de fichero ha dejado de llegar/)
 })

@@ -24,6 +24,7 @@ import {
   type FicheroParcial,
   type RenovacionSinLlegar,
 } from './ingesta.ts'
+import { silencioPorEntidad } from './silencio-entidad.ts'
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
 
@@ -1179,4 +1180,56 @@ test('cambioDuplicadasEnFirma: solo mira el tramo de duplicadas', () => {
   // Nunca avisado: solo si hoy hay algo que contar.
   assert.equal(cambioDuplicadasEnFirma(null, con), true)
   assert.equal(cambioDuplicadasEnFirma(null, sin), false)
+})
+
+// ── Renovaciones en riesgo en la firma del aviso (20/10/2026) ────────────────
+test('firma: las renovaciones en riesgo entran como PRESENCIA (C0109+), no con el número: 4→5 no suena', () => {
+  const muda = (riesgo: number | undefined) => saludIngesta({
+    cuarentena: [], rechazos: [],
+    silencio: [{
+      entidad: 'C0109', diasSinFichero: 16, huecoMaximo: 46, huecosObservados: 14,
+      vivas: 26, vencidasEnSilencio: 0, vencen90d: 9,
+      veredicto: 'silencio', motivos: ['C0109: 16 días sin mandar nada'],
+      ...(riesgo === undefined ? {} : { renovacionesEnRiesgo: riesgo }),
+    }],
+  })
+  const con4 = firmaAvisoIngesta(muda(4))
+  const con5 = firmaAvisoIngesta(muda(5))
+  assert.equal(con4, con5, 'el número exacto no cambia la firma')
+  assert.equal(con4.split(':')[3], 'C0109+')
+  assert.notEqual(con4, firmaAvisoIngesta(muda(0)), 'aparecer/desaparecer sí suena')
+  // 0 y ausente dan la firma de siempre.
+  assert.equal(firmaAvisoIngesta(muda(0)), firmaAvisoIngesta(muda(undefined)))
+  const d = decidirAvisoIngesta({
+    firmaAnterior: firmaAvisoIngesta(muda(0)), firmaActual: con5,
+    ultimoAvisoEn: new Date('2026-10-19T06:45:00Z'), hoy: new Date('2026-10-20T06:45:00Z'),
+  })
+  assert.equal(d.avisar, true)
+  assert.equal((d as { motivo?: string }).motivo, 'cambio')
+})
+
+// ── Tipos de fichero mudos en estado y firma del aviso (20/10/2026) ──────────
+test('tipo mudo: degrada la salud y entra en la firma como C0468=SIN; sin tipos, la firma es la de siempre', () => {
+  const entidad = {
+    entidad: 'C0468', diasSinFichero: 2, huecoMaximo: 9, huecoMediano: 1, huecosObservados: 40,
+    vivas: 19, vencidasEnSilencio: 0,
+  }
+  const salud = (porTipo: Array<{ tipo: string; diasSinFichero: number; huecoMediano: number; huecosObservados: number; ficheros90d: number }>) =>
+    saludIngesta({
+      cuarentena: [], rechazos: [],
+      silencio: silencioPorEntidad([{ ...entidad, porTipo }]),
+    })
+  const sinSIN = salud([{ tipo: 'SIN', diasSinFichero: 25, huecoMediano: 3, huecosObservados: 20, ficheros90d: 26 }])
+  const sano = salud([{ tipo: 'SIN', diasSinFichero: 2, huecoMediano: 3, huecosObservados: 20, ficheros90d: 26 }])
+  assert.equal(sinSIN.estado, 'degradada')
+  assert.ok(sinSIN.motivos.some(m => /no manda siniestros \(SIN\)/.test(m)))
+  const f = firmaAvisoIngesta(sinSIN)
+  assert.equal(f.split(':')[3], 'C0468=SIN')
+  assert.equal(f.split(':').length, firmaAvisoIngesta(sano).split(':').length, 'sigue sin partir tramos')
+  assert.equal(firmaAvisoIngesta(sano).split(':')[3], '-')
+  assert.notEqual(f, firmaAvisoIngesta(sano), 'aparecer/desaparecer suena')
+  // Sin porTipo (asegura vieja): idéntica a la sana.
+  const vieja = saludIngesta({ cuarentena: [], rechazos: [], silencio: silencioPorEntidad([entidad]) })
+  assert.equal(firmaAvisoIngesta(vieja), firmaAvisoIngesta(sano))
+  assert.equal(vieja.estado, 'ok')
 })
