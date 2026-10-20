@@ -2672,7 +2672,7 @@ export async function pulsarSubpestanaGenerali(page: Page, guard: GuardEmision, 
 /** Ruta EXACTA (sin `;jsessionid`) del marco del selector de vehículos de www.generali.es. */
 export const RUTA_SELECTOR_VEHICULOS_GENERALI = '/mot_motorWeb/mvc/selVehiculo'
 /** Botones del selector que el robot puede pulsar: textos EXACTOS. */
-export const BOTONES_SELECTOR_VEHICULOS_GENERALI = Object.freeze(['Confirmar'] as const)
+export const BOTONES_SELECTOR_VEHICULOS_GENERALI = Object.freeze(['Confirmar', 'Siguiente'] as const)
 /** Id del radio «No» de «Placas especiales» (el «Sí» es `placaesp:0` y nunca se marca). */
 const ID_PLACAS_NO_GENERALI = 'placaesp:1'
 
@@ -2768,6 +2768,97 @@ export async function marcarPlacasEspecialesGenerali(page: Page, guard: GuardEmi
   await etiqueta.click()
   guard.comprobar()
 }
+
+// ─────────── v0.2.14: potencia y fila de versión del selector de vehículos ───────────
+// Tras el modelo el selector enseña «Potencia» (grupo de opciones «116.0 CV»…), «Versión» y una tabla Código | Modelo | Versión. Dos puertas
+// nuevas, ambas con marco `selVehiculo` único, una vez por trabajo y `comprobarBoton` sobre el control: la potencia (SOLO un grupo que no es
+// «Placas especiales» y cuya etiqueta es «NNN CV») y la fila de la tabla (texto EXACTO de la celda «Versión», y del «Código» si lo hay).
+// Avanzar (pasar a «Datos de Valoración») es `pulsarConfirmarVehiculoGenerali`: botón de texto exacto «Siguiente» o «Confirmar».
+
+/** Etiqueta de una opción de potencia: «116.0 CV», «131 CV». Nada más. */
+const RE_POTENCIA_GENERALI = /^\d{2,4}(?:[.,]\d+)?\s*CV$/i
+/** Nombre de un grupo de opciones del selector que NO es «Placas especiales» (id/name simple de PrimeFaces, con `:`). */
+const esGrupoPotenciaGenerali = (g: string) => /^[A-Za-z][A-Za-z0-9_:.-]{0,60}$/.test(g) && !/^placaesp/i.test(g)
+
+/** Literal XPath seguro para un texto (con comillas dobles, simples o ambas). */
+function literalXpath(t: string): string {
+  if (!t.includes('"')) return `"${t}"`
+  if (!t.includes("'")) return `'${t}'`
+  return 'concat(' + t.split('"').map((x) => `"${x}"`).join(`, '"', `) + ')'
+}
+
+/** Marca la potencia `texto` («116.0 CV») del grupo `grupo`, UNA vez por trabajo. Ya marcada → no se toca (y no gasta la puerta). */
+export async function elegirPotenciaGenerali(page: Page, guard: GuardEmision, grupo: string, texto: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'la potencia del selector de Generali con una ventana de red abierta')
+  const t = (texto ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (typeof grupo !== 'string' || !esGrupoPotenciaGenerali(grupo)) throw new EmisionBloqueadaError('boton', String(grupo ?? '').slice(0, 80))
+  if (!RE_POTENCIA_GENERALI.test(t)) throw new EmisionBloqueadaError('boton', t.slice(0, 80))
+  const marco = marcoSelectorVehiculosGenerali(page)
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:elegir-potencia')) throw new EmisionBloqueadaError('fase', 'la potencia del selector de Generali ya se eligió en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const radios = marco.locator(`input[type=radio][name="${grupo.replace(/"/g, '')}"]`)
+  const n = await radios.count()
+  if (n === 0 || n > 40) throw new ErrorMapaGuardGenerali(`el grupo de potencias «${grupo.slice(0, 60)}» (${n} opciones; hace falta entre 1 y 40)`)
+  const casan: { id: string; marcada: boolean }[] = []
+  for (let i = 0; i < n; i++) {
+    const r = radios.nth(i)
+    const id = (await r.getAttribute('id').catch(() => null)) ?? ''
+    if (id === '') continue
+    const lab = marco.locator(`label[for="${id.replace(/"/g, '')}"]`)
+    const et = ((await lab.first().innerText().catch(() => '')) ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+    if (et === t) casan.push({ id, marcada: await r.isChecked().catch(() => false) })
+  }
+  if (casan.length !== 1) throw new ErrorMapaGuardGenerali(`la potencia «${t}» del grupo «${grupo.slice(0, 60)}» (${casan.length} opciones con ese texto exacto; hace falta exactamente una)`)
+  if (casan[0]!.marcada) return
+  const etiqueta = marco.locator(`label[for="${casan[0]!.id.replace(/"/g, '')}"]`).filter({ visible: true })
+  if ((await etiqueta.count()) !== 1) throw new ErrorMapaGuardGenerali(`la etiqueta visible de la potencia «${t}»`)
+  const desc = await descripcion(etiqueta)
+  if (textoMenu(desc[0]) !== textoMenu(t)) throw new EmisionBloqueadaError('boton', String(desc[0] ?? '').slice(0, 120))
+  comprobarBoton(desc)
+  usados.add('generali:elegir-potencia')
+  AVANCES_USADOS.set(guard, usados)
+  await etiqueta.click()
+  guard.comprobar()
+}
+
+/**
+ * Pulsa la fila de la tabla Código | Modelo | Versión cuya celda «Versión» es EXACTAMENTE `version` (y la de «Código» `codigo`, si se da),
+ * UNA vez por trabajo. Exactamente una fila visible; el texto de la fila y sus atributos pasan `comprobarBoton`. Ya resaltada → no se toca.
+ */
+export async function elegirFilaVersionGenerali(page: Page, guard: GuardEmision, codigo: string | null, version: string): Promise<void> {
+  guard.comprobar()
+  if (guard.ventana.abierta() || guard.avance.abierta() || guard.guardado.abierta()) throw new EmisionBloqueadaError('fase', 'la fila de versión del selector de Generali con una ventana de red abierta')
+  const v = (version ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  const c = (codigo ?? '').normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (v === '' || v.length > 200 || c.length > 40) throw new EmisionBloqueadaError('boton', v.slice(0, 80))
+  const marco = marcoSelectorVehiculosGenerali(page)
+  const usados = AVANCES_USADOS.get(guard) ?? new Set<string>()
+  if (usados.has('generali:elegir-version')) throw new EmisionBloqueadaError('fase', 'la fila de versión del selector de Generali ya se eligió en este trabajo')
+  await exigirSinCuentaBancaria(page)
+  const xp = `xpath=//tr[td[normalize-space(.)=${literalXpath(v)}]${c !== '' ? `][td[normalize-space(.)=${literalXpath(c)}]` : ''}]`
+  const fila = marco.locator(xp).filter({ visible: true })
+  const n = await fila.count()
+  if (n !== 1) throw new ErrorMapaGuardGenerali(`la fila de la versión «${v.slice(0, 60)}» (${n} filas visibles con ese texto exacto; hace falta exactamente una)`)
+  const seleccionada = await fila.evaluate((el) => el.classList.contains('ui-state-highlight') || el.getAttribute('aria-selected') === 'true').catch(() => false)
+  if (seleccionada) return
+  const desc = await descripcion(fila)
+  comprobarBoton(desc)
+  usados.add('generali:elegir-version')
+  AVANCES_USADOS.set(guard, usados)
+  try {
+    await fila.click({ timeout: MS_CLIC_NORMAL_CONFIRMAR_GENERALI })
+  } catch (e) {
+    if ((e as { name?: string } | null)?.name !== 'TimeoutError') throw e
+    guard.comprobar()
+    await fila.evaluate((el) => (el as HTMLElement).click())
+  }
+  guard.comprobar()
+}
+
+/** Avanza el selector de vehículos (a «Datos de Valoración»): el botón exacto «Siguiente» o «Confirmar» del marco `selVehiculo`, una vez. */
+export const pulsarAvanzarSelectorVehiculosGenerali = (page: Page, guard: GuardEmision): Promise<void> => pulsarConfirmarVehiculoGenerali(page, guard)
 
 // ─────────── Desplegable «Todas las marcas» del selector de vehículos (v0.2.7, 19/10/2026) ───────────
 // Fallo real de la 0.2.6: el bot pulsó `div#buscamarca` por `pulsar()`; su descripción llevaba el innerText de las 630 opciones del

@@ -45,7 +45,7 @@ import { exigirSinCaptcha } from './captcha.ts'
 import { crearTrazaIntento } from './traza-intento.ts'
 import { ErrorCodigoSmsPendiente, ErrorTarificador, ErrorVerificacionHumana, MOTIVO_VERIFICACION_HUMANA, cabeReintento, clasificar, clasificarIntento, esperaReintentoMs, limiteDelTrabajo, pideInventarioDom, type Clasificacion } from './errores.ts'
 import { capturarInventarioDom, marcosDePestanas } from './inventario-dom.ts'
-import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, companiaActualTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
+import { pulsarMediadorGenerali, pulsarEntrarGenerali, entrarTurismosGenerali, cerrarAvisoSabiasQueGenerali, pulsarSubpestanaGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, cerrarAvisoTomadorMapfre, cerrarClubMapfre, companiaActualTurismosAllianz, marcarAntecedenteTurismosAllianz, confirmarVehiculoMapfre, elegirTomadorMapfre, elegirOpcion, pulsarContinuarMapfre, instalarGuardEmision, marcarOpcionRiesgoHogarAllianz, marcarOpcionResueltaHogarAllianz, marcarOpcionTurismosAllianz, marcarTarjetaVehiculoTurismosAllianz, polizaActualTurismosAllianz,
   guardarPresupuestoTurismosAllianz, pulsar, pulsarAvance, pulsarAvancePestanaAutorizado, pulsarEnlaceEntradaAutorizado, pulsarProyecto, esUrlOktaSmsGenerali, type GuardEmision } from './guard.ts'
 import { puertoCodigoHttp, relevarCodigoSmsGenerali, type Relevo } from './relevo-sms.ts'
 import { crearLog } from './log.ts'
@@ -317,6 +317,16 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
       },
       elegirModeloListaGenerali: async (base, texto) => {
         await elegirModeloListaGenerali(page, guard, base, texto)
+        await capturar('avance')
+      },
+      elegirPotenciaGenerali: async (grupo, texto) => {
+        await ctx.pausaAccion()
+        await elegirPotenciaGenerali(page, guard, grupo, texto)
+        await capturar('avance')
+      },
+      elegirFilaVersionGenerali: async (codigo, version) => {
+        await ctx.pausaAccion()
+        await elegirFilaVersionGenerali(page, guard, codigo, version)
         await capturar('avance')
       },
       confirmarVehiculoGenerali: async () => {

@@ -136,6 +136,10 @@ export type ContextoPortal = ContextoTarificacion & {
   abrirDesplegableModeloGenerali?: (base: string) => Promise<void>
   /** Generali (v0.2.11): pulsa el `li` del modelo elegido o «Otros» (`elegirModeloListaGenerali` de guard.ts; texto exacto, una vez). */
   elegirModeloListaGenerali?: (base: string, texto: string) => Promise<void>
+  /** Generali (v0.2.14): marca la potencia («116.0 CV») de su grupo en el selector (`elegirPotenciaGenerali` de guard.ts; solo ese grupo, una vez). */
+  elegirPotenciaGenerali?: (grupo: string, texto: string) => Promise<void>
+  /** Generali (v0.2.14): pulsa la fila de la tabla Código | Modelo | Versión de texto exacto (`elegirFilaVersionGenerali` de guard.ts; una vez). */
+  elegirFilaVersionGenerali?: (codigo: string | null, version: string) => Promise<void>
   /**
    * «Continuar»/«Siguiente» GENÉRICO entre pantallas (pieza 4, 14/10/2026; continuar.ts): fijo → aprendido → IA, siempre por el
    * guard (`pulsar`), y espera a que la pantalla cambie (error tipado si no). `pagina`: por defecto la del trabajo. Para

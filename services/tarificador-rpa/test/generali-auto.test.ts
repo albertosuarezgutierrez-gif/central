@@ -17,6 +17,9 @@ import {
   elegirMarcaExactaGenerali,
   elegirModeloGenerali,
   camposNuevosSelectorGenerali,
+  cvDePotenciaGenerali,
+  grupoPotenciaGenerali,
+  resumenCoincideConFilaGenerali,
   resumenCamposSelectorGenerali,
   elegirOpcionCatalogo,
   elegirUsoGenerali,
@@ -30,9 +33,9 @@ import {
   urlConMediador,
   vehiculoBuscadoGenerali,
 } from '../src/adapters/generali/reglas.ts'
-import { ErrorMapaIncompletoGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
+import { ErrorMapaIncompletoGenerali, decidirFilaVersionGenerali, decidirPotenciaGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
+import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, pulsarAvanzarSelectorVehiculosGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { vehiculoDelResultado } from '../src/api.ts'
@@ -153,8 +156,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.13')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.13')
+  assert.equal(generaliAuto.version, '0.2.14')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.14')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -554,6 +557,8 @@ const ctxPF = (page: Page, guard: GuardEmision) => ({
   pulsar: async (b: Parameters<ContextoPortal['pulsar']>[0]) => { const { pulsar } = await import('../src/guard.ts'); await pulsar(b, guard) },
   marcarPlacasEspecialesGenerali: () => marcarPlacasEspecialesGenerali(page, guard, 'No'),
   confirmarVehiculoGenerali: () => pulsarConfirmarVehiculoGenerali(page, guard),
+  elegirPotenciaGenerali: (g: string, t: string) => elegirPotenciaGenerali(page, guard, g, t),
+  elegirFilaVersionGenerali: (c: string | null, v: string) => elegirFilaVersionGenerali(page, guard, c, v),
   abrirDesplegableMarcaGenerali: (base: string) => abrirDesplegableMarcaGenerali(page, guard, base),
   elegirMarcaListaGenerali: (base: string, texto: string) => elegirMarcaListaGenerali(page, guard, base, texto),
   abrirDesplegableModeloGenerali: (base: string) => abrirDesplegableModeloGenerali(page, guard, base),
@@ -962,5 +967,167 @@ test('v0.2.13 · tras «Confirmar» con el selector abierto: hueco que cita los 
     assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
   } finally {
     await cerrar()
+  }
+})
+
+// ───────────── v0.2.14: Potencia · Versión · tabla · «Resumen» · «Siguiente» ─────────────
+
+type FilaFixture = { codigo: string; modelo: string; version: string; cv: number }
+/** Ficha real del selector tras el modelo (datos de catálogo de prueba): grupo de potencias, tabla Código | Modelo | Versión y «Resumen» que se pinta al elegir la fila (AJAX simulado). */
+const FICHA_PF = (potencias: string[], filas: FilaFixture[], resumenMal = false) => `<span>Potencia</span>
+  <table><tr>${potencias.map((p, i) => `<td><input type="radio" id="pot:${i}" name="pot" style="position:absolute;left:-999px" onchange="window.__pot=(window.__pot||[]).concat('${p}');var cv=${parseFloat(p)};document.querySelectorAll('#tabla tbody tr').forEach(function(r){r.style.display=(Number(r.dataset.cv)===cv)?'':'none'})"><label for="pot:${i}">${p}</label></td>`).join('')}</tr></table>
+  <span>Versión</span>
+  <table id="tabla"><thead><tr><th>Código</th><th>Modelo</th><th>Versión</th></tr></thead><tbody>${filas.map((f) => `<tr data-ri="${f.codigo}" data-cv="${f.cv}" onclick="window.__sel(this,'${f.codigo}','${f.version}')"><td>${f.codigo}</td><td>${f.modelo}</td><td>${f.version}</td></tr>`).join('')}</tbody></table>
+  <div id="resumen"><b>Resumen</b><div>Vehículo: TODO TERRENO</div><div>Código y descripción: <span id="res"></span></div></div>
+  <script>window.__sel=function(tr,c,v){document.querySelectorAll('#tabla tbody tr').forEach(function(r){r.classList.remove('ui-state-highlight')});tr.classList.add('ui-state-highlight');window.__fila=(window.__fila||[]).concat(c);setTimeout(function(){document.getElementById('res').textContent=${resumenMal ? "'99999 OTRO COCHE'" : "c+' HYUNDAI TUCSON '+v+' ...'"}},150)}</script>`
+
+const FILAS_TUCSON: FilaFixture[] = [
+  { codigo: '41001', modelo: 'TUCSON', version: '1.6 GDI BD NLINE LITE 4X2', cv: 116 },
+  { codigo: '41002', modelo: 'TUCSON', version: '1.6 GDI BD KLASS 4X2', cv: 116 },
+  { codigo: '41003', modelo: 'TUCSON', version: '1.6 T-GDI 48V MAXX 4X2', cv: 131 },
+]
+const VC_TUCSON = { origen: 'mapfre' as const, denominacion: 'HYUNDAI TUCSON 1.6 GDI', cv: 116, cc: 1598, puertas: 5, fechaInicio: null, combustible: 'gasolina' as const }
+const POTENCIAS = ['116.0 CV', '131.0 CV', '185.0 CV', '190.0 CV', '265.0 CV', '288.0 CV']
+const contador = (page: Page, k: string) => page.evaluate((n) => (window as unknown as Record<string, unknown>)[n] ?? null, k)
+
+test('v0.2.14 · helpers puros: CV de «116.0 CV», grupo de potencias (no «Placas especiales») y «Resumen» contra la fila elegida', () => {
+  assert.equal(cvDePotenciaGenerali('116.0 CV'), 116)
+  assert.equal(cvDePotenciaGenerali('131 cv'), 131)
+  assert.equal(cvDePotenciaGenerali('Gasolina'), null)
+  const g = (clave: string, opciones: string[], total = opciones.length) => ({ clave, etiqueta: clave, tipo: 'grupo', opciones, total })
+  assert.deepEqual(grupoPotenciaGenerali([g('grupo|placaesp', ['Sí', 'No']), g('grupo|pot', POTENCIAS)]), { grupo: 'pot', opciones: POTENCIAS })
+  assert.equal(grupoPotenciaGenerali([g('grupo|placaesp', ['Sí', 'No'])]), null)
+  assert.equal(grupoPotenciaGenerali([g('grupo|pot', ['116.0 CV', 'otra'])]), null, 'todas las opciones tienen que ser «NNN CV»')
+  assert.equal(grupoPotenciaGenerali([g('grupo|pot', POTENCIAS), g('grupo|pot2', ['120 CV'])]), null, 'dos grupos: ambiguo')
+  const f = { codigo: '41001', version: '1.6 GDI BD NLINE LITE 4X2' }
+  assert.equal(resumenCoincideConFilaGenerali('41001 HYUNDAI TUCSON 1.6 GDI …', f), true, 'por código, aunque la descripción venga recortada')
+  assert.equal(resumenCoincideConFilaGenerali('410010 HYUNDAI TUCSON', f), false, 'el código es palabra entera')
+  assert.equal(resumenCoincideConFilaGenerali('99999 OTRO COCHE', f), false)
+  assert.equal(resumenCoincideConFilaGenerali('', f), false)
+  assert.equal(resumenCoincideConFilaGenerali('HYUNDAI TUCSON 1.6 GDI BD NLINE LITE 4X2', { codigo: '', version: f.version }), true, 'sin código, la versión entera')
+  assert.equal(resumenCoincideConFilaGenerali('HYUNDAI TUCSON 1.6 GDI', { codigo: '', version: f.version }), false)
+})
+
+test('v0.2.14 · potencia: la que casa con el CV del vehículo (±10 %); varias materialmente distintas o sin CV → `eleccion` con todas; equivalentes → la primera, declarada', () => {
+  const form = (cv: number | null) => coche(cv === null ? {} : { vehiculoConfirmado: { ...VC_TUCSON, cv } })
+  const a = decidirPotenciaGenerali(POTENCIAS, form(116))
+  assert.equal(a.texto, '116.0 CV')
+  assert.throws(() => decidirPotenciaGenerali(POTENCIAS, form(120)), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 6, '116 y 131 caben en ±10 % de 120 pero difieren entre sí: se pregunta')
+  assert.throws(() => decidirPotenciaGenerali(POTENCIAS, form(null)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 6)
+  assert.throws(() => decidirPotenciaGenerali(POTENCIAS, form(400)), ErrorEleccionVersion, 'ninguna compatible')
+  const eq = decidirPotenciaGenerali(['116.0 CV', '118.0 CV'], form(null))
+  assert.equal(eq.texto, '116.0 CV')
+  assert.match(eq.supuesto ?? '', /Versión elegida automáticamente/)
+  const humano = coche({ eleccionVersion: { codigo: null, etiqueta: '131.0 CV' } })
+  assert.equal(decidirPotenciaGenerali(POTENCIAS, humano).texto, '131.0 CV', 'la elección de una persona manda')
+})
+
+test('v0.2.14 · versión: equivalentes → una, declarada; diferencia material (combustible) → `eleccion`; el combustible del vehículo confirmado la resuelve; una elección de potencia no cuenta como versión', () => {
+  const eq = decidirFilaVersionGenerali(FILAS_TUCSON.slice(0, 2).map((f) => ({ ...f, seleccionada: false })), coche())
+  assert.equal(eq.fila.codigo, '41001')
+  assert.match(eq.supuesto ?? '', /Versión elegida automáticamente: 1\.6 GDI BD NLINE LITE 4X2/)
+  const mat = [
+    { codigo: '1', modelo: 'X', version: '1.6 GASOLINA 4X2', seleccionada: false },
+    { codigo: '2', modelo: 'X', version: '1.6 DIESEL 4X2', seleccionada: false },
+  ]
+  assert.throws(() => decidirFilaVersionGenerali(mat, coche()), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 2 && e.opcionesVersion[1]!.codigo === '2')
+  assert.equal(decidirFilaVersionGenerali(mat, coche({ vehiculoConfirmado: VC_TUCSON })).fila.codigo, '1', 'combustible exacto del vehículo confirmado')
+  const persona = coche({ eleccionVersion: { codigo: '2', etiqueta: '1.6 DIESEL 4X2' } })
+  assert.equal(decidirFilaVersionGenerali(mat, persona).fila.codigo, '2')
+  const deLaPotencia = coche({ vehiculoConfirmado: VC_TUCSON, eleccionVersion: { codigo: null, etiqueta: '116.0 CV' } })
+  assert.equal(decidirFilaVersionGenerali(mat, deLaPotencia, ['116.0 CV']).fila.codigo, '1', 'una potencia elegida por la persona no se toma por versión')
+})
+
+const NUEVOS_FICHA = (resumenMal = false, filas = FILAS_TUCSON, potencias = POTENCIAS) => FICHA_PF(potencias, filas, resumenMal)
+
+test('v0.2.14 · selector con Potencia + tabla: marca la potencia que casa, elige la fila, verifica el «Resumen» y avanza con «Siguiente» (una vez)', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA', 'LEON'], NUEVOS_FICHA()))
+  try {
+    const avisos: string[] = []
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche({ vehiculoConfirmado: VC_TUCSON }), ctxPF(page, guard), avisos), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message), 'sin «Identificación del vehículo» en la fixture: hueco POSTERIOR a avanzar')
+    assert.deepEqual(await contador(page, '__pot'), ['116.0 CV'])
+    assert.deepEqual(await contador(page, '__fila'), ['41001'], 'las dos versiones de 116 CV son equivalentes: la primera')
+    assert.equal(await contador(page, '__confirmado'), 1, '«Siguiente» pulsado una vez, con el resumen ya verificado')
+    assert.equal(await contador(page, '__cancelar'), null)
+    assert.ok(avisos.some((a) => /Versión elegida automáticamente: 1\.6 GDI BD NLINE LITE 4X2/.test(a)), 'la versión elegida sola se declara')
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.14 · el «Resumen» no coincide con la fila elegida → hueco y NO se pulsa «Siguiente»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA(true)))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche({ vehiculoConfirmado: VC_TUCSON }), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /«Resumen» del selector no coincide/.test(e.message) && /99999/.test(e.message))
+    assert.deepEqual(await contador(page, '__fila'), ['41001'])
+    assert.equal(await contador(page, '__confirmado'), null, 'no se avanzó')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.14 · versiones materialmente distintas: `eleccion` con todas las filas y NI fila NI «Siguiente»; potencias ambiguas: `eleccion` y ni potencia', async () => {
+  const mat: FilaFixture[] = [
+    { codigo: '1', modelo: 'X', version: '1.6 GASOLINA 4X2', cv: 116 },
+    { codigo: '2', modelo: 'X', version: '1.6 DIESEL 4X2', cv: 116 },
+  ]
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA(false, mat, ['116.0 CV'])))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(a.page, a.page, coche(), ctxPF(a.page, a.guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 2)
+    assert.deepEqual(await contador(a.page, '__pot'), ['116.0 CV'], 'la potencia única sí se marcó')
+    assert.equal(await contador(a.page, '__fila'), null)
+    assert.equal(await contador(a.page, '__confirmado'), null)
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA()))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(b.page, b.page, coche(), ctxPF(b.page, b.guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 6)
+    assert.equal(await contador(b.page, '__pot'), null, 'sin CV del vehículo y potencias distintas: no se marca ninguna')
+    assert.equal(await contador(b.page, '__confirmado'), null)
+  } finally {
+    await b.cerrar()
+  }
+})
+
+test('v0.2.14 · puertas del guard: potencia (solo «NNN CV», nunca «Placas especiales», una vez), fila de la tabla (texto exacto, una vez) y «Siguiente»/«Confirmar» exactos', async () => {
+  assert.equal(botonSelectorVehiculosGeneraliPermitido('Siguiente'), true)
+  assert.equal(botonSelectorVehiculosGeneraliPermitido(' siguiente '), true)
+  for (const t of ['Siguiente paso', 'Anterior', 'Cancelar', 'Siguiente y emitir']) assert.equal(botonSelectorVehiculosGeneraliPermitido(t), false, t)
+  const html = PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA())
+  const a = await abrir(SEL_VEHICULOS, html)
+  try {
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'placaesp', 'No'), EmisionBloqueadaError, 'el grupo de «Placas especiales» no es de potencia')
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'pot', 'Sí'), EmisionBloqueadaError, 'solo textos «NNN CV»')
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'pot', '999.0 CV'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'que no existe')
+    await a.page.evaluate(() => { (document.getElementById('bloque_modelo') as HTMLElement).style.display = 'block'; (document.getElementById('nuevos') as HTMLElement).style.display = 'block' })
+    await elegirPotenciaGenerali(a.page, a.guard, 'pot', '131.0 CV')
+    assert.deepEqual(await contador(a.page, '__pot'), ['131.0 CV'])
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'pot', '116.0 CV'), EmisionBloqueadaError, 'una vez por trabajo')
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '41001', '1.6 GDI BD'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'texto exacto, no parcial')
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '99999', '1.6 T-GDI 48V MAXX 4X2'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'el código también tiene que casar')
+    await elegirFilaVersionGenerali(a.page, a.guard, '41003', '1.6 T-GDI 48V MAXX 4X2')
+    assert.deepEqual(await contador(a.page, '__fila'), ['41003'])
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '41003', '1.6 T-GDI 48V MAXX 4X2'), (e: unknown) => e instanceof EmisionBloqueadaError || e instanceof ErrorMapaGuardGenerali, 'una vez por trabajo')
+    await pulsarAvanzarSelectorVehiculosGenerali(a.page, a.guard)
+    assert.equal(await contador(a.page, '__confirmado'), 1)
+    await assert.rejects(pulsarAvanzarSelectorVehiculosGenerali(a.page, a.guard), EmisionBloqueadaError, 'una vez')
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(PORTAL, html)
+  try {
+    await assert.rejects(elegirPotenciaGenerali(b.page, b.guard, 'pot', '116.0 CV'), (e: unknown) => e instanceof ErrorTarificador, 'otra URL: no es el selector')
+    await assert.rejects(elegirFilaVersionGenerali(b.page, b.guard, null, '1.6 GDI BD NLINE LITE 4X2'), (e: unknown) => e instanceof ErrorTarificador)
+  } finally {
+    await b.cerrar()
+  }
+  const c = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente paso', ['IBIZA']))
+  try {
+    await assert.rejects(pulsarAvanzarSelectorVehiculosGenerali(c.page, c.guard), (e: unknown) => e instanceof ErrorMapaGuardGenerali)
+    assert.equal(await contador(c.page, '__confirmado'), null)
+  } finally {
+    await c.cerrar()
   }
 })

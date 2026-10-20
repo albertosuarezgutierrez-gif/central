@@ -61,8 +61,14 @@ import {
   elegirMarcaExactaGenerali,
   elegirModeloGenerali,
   camposNuevosSelectorGenerali,
+  cvDePotenciaGenerali,
+  desplegableVersionGenerali,
+  grupoPotenciaGenerali,
+  resumenCoincideConFilaGenerali,
   resumenCamposSelectorGenerali,
   type CampoSelectorGenerali,
+  type FichaVersionGenerali,
+  type FilaVersionGenerali,
   elegirOpcionCatalogo,
   elegirUsoGenerali,
   esEtiquetaVerificacionMatricula,
@@ -121,8 +127,12 @@ export const GENERALI_AUTO_ACTIVO = true
  * el modelo elegido es el del label del SelectOneMenu Y el del `<select>` oculto (si no, un reintento por el select oculto esperando al AJAX; si
  * sigue sin casar, hueco «el modelo no quedó seleccionado: label=…, input=…» SIN pulsar). TRAS «Confirmar» se espera hasta 25 s: Identificación
  * del vehículo con el selector cerrado → sigue; selector abierto → hueco con los mensajes de validación visibles (`.ui-messages`, error, growl).
+ * 0.2.14 (20/10/2026, flujo REAL enseñado por Alberto): tras el modelo el selector enseña «Potencia» (grupo «116.0 CV»…), «Versión» y la tabla
+ * Código | Modelo | Versión + «Resumen». La potencia y la fila se eligen con la regla de versión automática del monorepo (CV ±10 %, cc ±5 %,
+ * combustible; equivalentes → declarada, material → `eleccion`) por las puertas nuevas de guard.ts; ANTES de avanzar se verifica el «Resumen»
+ * (código/descripción); se avanza con «Siguiente» o «Confirmar». Sin Potencia/Versión (una sola versión) sigue como 0.2.13.
  */
-export const VERSION_GENERALI_AUTO = '0.2.13'
+export const VERSION_GENERALI_AUTO = '0.2.14'
 /** Texto EXACTO de la subpestaña del precio (captura 6). Solo se pulsa por `ctx.pulsarSubpestanaGenerali` (lista blanca del guard). */
 export const SUBPESTANA_PRECIO_GENERALI = 'Garantías y Resultados'
 /** Espera corta tras salir del campo «Matrícula» por si el portal pinta entonces la verificación. */
@@ -315,6 +325,7 @@ const JS_CAMPOS_SELECTOR = `(() => {${JS_COMUN}
       const ops = Array.from(el.options).map((o) => T(o)).filter((t) => t !== '');
       out.push({ clave: pf ? m[1] : (el.id || 'select|' + etiqueta), etiqueta, tipo: pf ? 'desplegable' : 'select', opciones: ops.slice(0, 25), total: el.options.length });
     } else if (tag === 'input' && !TEXTO.includes(ta)) {
+      if (!(VIS(el) || (el.labels && el.labels[0] && VIS(el.labels[0])))) continue;
       const g = el.name || el.id || ta;
       let e = grupos.get(g);
       if (!e) { e = { clave: 'grupo|' + g, etiqueta: g.slice(0, 80), tipo: ta === 'checkbox' ? 'casilla' : 'grupo', opciones: [], total: 0 }; grupos.set(g, e); out.push(e); }
@@ -809,6 +820,139 @@ export async function elegirModeloPrimeFaces(raiz: Raiz, menu: MenuPrimeFaces, v
   return { ...opciones[e.indice]!, indice: e.indice }
 }
 
+// ───────────── v0.2.14: potencia · versión · tabla · «Resumen» ─────────────
+
+/** Tabla Código | Modelo | Versión y bloque «Resumen» del selector (solo lectura; catálogo, sin datos personales). Como TEXTO (tsx y `__name`). */
+const JS_FICHA_VERSION = `(() => {${JS_COMUN}
+  const N = (t) => t.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toUpperCase().replace(/\\s+/g, ' ').trim();
+  const filas = [];
+  for (const tabla of Array.from(document.querySelectorAll('table'))) {
+    const ths = Array.from(tabla.querySelectorAll('thead th, thead td, tr:first-child th')).map((x) => N(T(x)));
+    const ic = ths.findIndex((x) => x === 'CODIGO');
+    const iv = ths.findIndex((x) => x === 'VERSION');
+    const im = ths.findIndex((x) => x === 'MODELO');
+    if (ic < 0 || iv < 0 || !VIS(tabla)) continue;
+    for (const tr of Array.from(tabla.querySelectorAll('tbody tr'))) {
+      const tds = Array.from(tr.children).filter((x) => x.tagName === 'TD');
+      if (tds.length <= Math.max(ic, iv) || !VIS(tr)) continue;
+      const sel = tr.classList.contains('ui-state-highlight') || tr.getAttribute('aria-selected') === 'true';
+      filas.push({ codigo: T(tds[ic]).slice(0, 40), modelo: im >= 0 && tds[im] ? T(tds[im]).slice(0, 80) : '', version: T(tds[iv]).slice(0, 200), seleccionada: sel });
+      if (filas.length >= 200) break;
+    }
+  }
+  let resumen = '';
+  let mejor = Infinity;
+  for (const el of Array.from(document.querySelectorAll('div,fieldset,section,table,td,span,p'))) {
+    const t = T(el);
+    if (!/RESUMEN/.test(N(t))) continue;
+    const m = /C[oó]digo y descripci[oó]n\\s*:?\\s*(.*)$/i.exec(t);
+    if (!m || t.length >= mejor) continue;
+    mejor = t.length;
+    resumen = m[1].trim().slice(0, 300);
+  }
+  return { filas, resumen };
+})()`
+
+/** Lee la ficha de versión del selector. Vacía si no se deja leer. Solo lee. */
+export async function leerFichaVersion(raiz: Raiz): Promise<FichaVersionGenerali> {
+  const r = (await raiz.evaluate(JS_FICHA_VERSION).catch(() => null)) as FichaVersionGenerali | null
+  return { filas: Array.isArray(r?.filas) ? r!.filas : [], resumen: typeof r?.resumen === 'string' ? r!.resumen : '' }
+}
+
+const PAUSA_FICHA_MS = 500
+const ESPERA_FICHA_MS = 8_000
+
+/** Lee la ficha hasta que dos lecturas seguidas coinciden (el AJAX de PrimeFaces repinta la tabla y el resumen) o se agota la espera; con `requiereFilas` espera a que haya filas. */
+export async function leerFichaEstable(page: Page, raiz: Raiz, requiereFilas: boolean, esperaMs = ESPERA_FICHA_MS): Promise<FichaVersionGenerali> {
+  const ini = Date.now()
+  let ant = await leerFichaVersion(raiz)
+  for (;;) {
+    await page.waitForTimeout(PAUSA_FICHA_MS)
+    const ahora = await leerFichaVersion(raiz)
+    const igual = JSON.stringify(ahora) === JSON.stringify(ant)
+    if (igual && (!requiereFilas || ahora.filas.length > 0)) return ahora
+    ant = ahora
+    if (Date.now() - ini >= esperaMs) return ahora
+  }
+}
+
+type FormFichaGenerali = FormVersionGenerali
+
+/**
+ * Potencia por la regla común de versión (CV ±10 % del vehículo confirmado, equivalentes → la primera declarada, material → `ErrorEleccionVersion`
+ * con todas). La elección de una persona sirve solo si es una de las potencias. Devuelve el texto exacto de la opción y el supuesto. PURA salvo el lanzamiento.
+ */
+export function decidirPotenciaGenerali(opciones: readonly string[], form: FormFichaGenerali): { texto: string; supuesto: string | null } {
+  const eleccion = form.eleccionVersion?.etiqueta && opciones.some((o) => normalizarCatalogo(o) === normalizarCatalogo(form.eleccionVersion!.etiqueta!)) ? form.eleccionVersion : null
+  const r = elegirVersionAutomaticamente(
+    opciones.map((o) => ({ etiqueta: o, codigo: null, datos: { cv: cvDePotenciaGenerali(o), cc: null, puertas: null, fechaInicio: null } })),
+    { riesgo: referenciaRiesgoVersion(form), eleccion },
+  )
+  if (r.tipo === 'automatica' || r.tipo === 'unica' || r.tipo === 'bandeja') return { texto: opciones[r.indice]!, supuesto: r.supuesto }
+  throw new ErrorEleccionVersion(opciones.map((o): CandidatoVersion => ({ etiqueta: o, codigo: null })))
+}
+
+/**
+ * Fila de la tabla de versiones por la misma regla (etiqueta = columna «Versión», código = columna «Código»). Elección de la bandeja: exacta,
+ * salvo que sea una potencia. Equivalentes → la de inicio más cercano o la primera, declarada; material → `ErrorEleccionVersion` con todas. PURA salvo el lanzamiento.
+ */
+export function decidirFilaVersionGenerali(filas: readonly FilaVersionGenerali[], form: FormFichaGenerali, potencias: readonly string[] = []): { fila: FilaVersionGenerali; supuesto: string | null } {
+  const e = form.eleccionVersion
+  const esPotencia = !!e?.etiqueta && potencias.some((o) => normalizarCatalogo(o) === normalizarCatalogo(e.etiqueta!))
+  const r = elegirVersionAutomaticamente(
+    filas.map((f) => ({ etiqueta: f.version, codigo: f.codigo || null, datos: datosEquivalenciaDesdeEtiqueta(f.version) })),
+    { riesgo: referenciaRiesgoVersion(form), eleccion: esPotencia ? null : e },
+  )
+  if (r.tipo === 'automatica' || r.tipo === 'unica' || r.tipo === 'bandeja') return { fila: filas[r.indice]!, supuesto: r.supuesto }
+  const op = r.tipo === 'preguntar' ? r.opciones : filas.map((f): CandidatoVersion => ({ etiqueta: f.version, codigo: f.codigo || null }))
+  throw new ErrorEleccionVersion(op)
+}
+
+/**
+ * Tras el modelo: si el selector enseña Potencia / Versión / tabla, los elige (regla automática, supuestos a `avisos`), verifica el «Resumen» y
+ * devuelve `true`. `false` = no hay nada de eso (modelo con una sola versión): se sigue como 0.2.13. Campos que el bot no conoce → hueco.
+ */
+async function resolverFichaVersionGenerali(page: Page, selector: Raiz, campos: readonly CampoSelectorGenerali[], nuevos: readonly CampoSelectorGenerali[], form: FormFichaGenerali, ctx: ContextoPortal, avisos?: string[]): Promise<boolean> {
+  const potencia = grupoPotenciaGenerali(campos)
+  const desplegable = desplegableVersionGenerali(campos)
+  let ficha = await leerFichaEstable(page, selector, false, 1_500)
+  if (!potencia && !desplegable && ficha.filas.length === 0) return false
+  const explicados = new Set([potencia ? `grupo|${potencia.grupo}` : '', desplegable?.clave ?? ''])
+  const ajenos = nuevos.filter((c) => !explicados.has(c.clave))
+  if (ajenos.length > 0) return false
+  if (potencia) {
+    if (!ctx.elegirPotenciaGenerali) throw new ErrorMapaIncompletoGenerali('la puerta guardada de la potencia del selector (`elegirPotenciaGenerali`) en el contexto del runner', false)
+    const p = decidirPotenciaGenerali(potencia.opciones, form)
+    if (p.supuesto) avisos?.push(p.supuesto)
+    await ctx.elegirPotenciaGenerali(potencia.grupo, p.texto)
+    ficha = await leerFichaEstable(page, selector, true)
+  } else if (ficha.filas.length === 0) {
+    ficha = await leerFichaEstable(page, selector, true, 4_000)
+  }
+  if (ficha.filas.length === 0) {
+    // Sin tabla: o el desplegable «Versión» trae UNA sola opción real (nada que elegir) o el bot no sabe elegir ahí → hueco con lo visto.
+    const reales = (desplegable?.opciones ?? []).filter((o) => !esOpcionVaciaCatalogo(o))
+    if (reales.length <= 1 && ficha.resumen !== '') return true
+    await recorrerScroll(page, selector)
+    throw new ErrorMapaIncompletoGenerali(`la tabla de versiones (Código | Modelo | Versión) del selector de vehículos tras elegir la potencia (no hay filas; no se pulsa «Siguiente»). Campos vistos: ${resumenCamposSelectorGenerali(await leerCamposSelector(selector))}`)
+  }
+  if (!ctx.elegirFilaVersionGenerali) throw new ErrorMapaIncompletoGenerali('la puerta guardada de la fila de versión del selector (`elegirFilaVersionGenerali`) en el contexto del runner', false)
+  const v = decidirFilaVersionGenerali(ficha.filas, form, potencia?.opciones ?? [])
+  if (v.supuesto) avisos?.push(v.supuesto)
+  await ctx.elegirFilaVersionGenerali(v.fila.codigo || null, v.fila.version)
+  // «Resumen»: el código/descripción tiene que ser el de la fila elegida ANTES de avanzar (el AJAX tarda; se reintenta con espera).
+  const ini = Date.now()
+  let r = (await leerFichaEstable(page, selector, true, 2_500)).resumen
+  while (!resumenCoincideConFilaGenerali(r, v.fila) && Date.now() - ini < 8_000) {
+    await page.waitForTimeout(PAUSA_FICHA_MS)
+    r = (await leerFichaVersion(selector)).resumen
+  }
+  if (!resumenCoincideConFilaGenerali(r, v.fila)) {
+    throw new ErrorMapaIncompletoGenerali(`el «Resumen» del selector no coincide con la versión elegida (código «${v.fila.codigo.slice(0, 40)}», versión «${v.fila.version.slice(0, 80)}»; el resumen dice «${r.slice(0, 120) || '(vacío)'}»); NO se pulsa «Siguiente»`)
+  }
+  return true
+}
+
 // ───────────── v0.2.13: verificación del modelo antes de «Confirmar» y espera clasificada después ─────────────
 
 /** El modelo está de verdad elegido cuando el label del SelectOneMenu Y la opción seleccionada del `<select>` oculto dicen el elegido (normalizado). */
@@ -888,7 +1032,7 @@ const JS_MENSAJES_VALIDACION = `(() => {
 async function leerEstadoPostConfirmar(page: Page, selector: Raiz): Promise<{ selectorAbierto: boolean; mensajes: string[] }> {
   let selectorAbierto = false
   if (!('isDetached' in selector && selector.isDetached())) {
-    selectorAbierto = (await selector.getByRole('button', { name: 'Confirmar', exact: true }).filter({ visible: true }).count().catch(() => 0)) > 0
+    selectorAbierto = (await selector.getByRole('button', { name: /^(Confirmar|Siguiente)$/ }).filter({ visible: true }).count().catch(() => 0)) > 0
   }
   const mensajes: string[] = []
   for (const f of page.frames()) {
@@ -931,7 +1075,7 @@ export async function esperarTrasConfirmarGenerali(page: Page, selector: Raiz, e
  * Selector PrimeFaces: «Placas especiales» = «No», marca exacta, «Confirmar» (solo confirma el vehículo) y se PARA con hueco
  * `hueco_mapa` si la pantalla siguiente no es «Identificación del vehículo»: su inventario lo captura el modo exploración.
  */
-async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, ctx: ContextoPortal, avisos?: string[]): Promise<boolean> {
+async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: MenuPrimeFaces, v: VehiculoBuscado, form: FormFichaGenerali, ctx: ContextoPortal, avisos?: string[]): Promise<boolean> {
   if (!ctx.marcarPlacasEspecialesGenerali || !ctx.confirmarVehiculoGenerali || !ctx.abrirDesplegableMarcaGenerali || !ctx.elegirMarcaListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del selector de vehículos (placas especiales, desplegable de marcas y «Confirmar») en el contexto del runner', false)
   if (!ctx.abrirDesplegableModeloGenerali || !ctx.elegirModeloListaGenerali) throw new ErrorMapaIncompletoGenerali('las puertas guardadas del desplegable de modelos (disparador y `li`) en el contexto del runner', false)
   await ctx.marcarPlacasEspecialesGenerali()
@@ -943,6 +1087,14 @@ async function seleccionarVehiculoPrimeFaces(page: Page, selector: Raiz, menu: M
   const elegida = await elegirModeloPrimeFaces(selector, modelo, v, ctx, avisos)
   await page.waitForTimeout(PAUSA_CAMPOS_NUEVOS_MS)
   const nuevos = camposNuevosSelectorGenerali(antes, await leerCamposSelector(selector), [menu.base, modelo.base])
+  // v0.2.14: Potencia / Versión / tabla: se eligen y se verifica el «Resumen»; luego se avanza. Si no hay nada de eso (una sola versión) o hay campos ajenos, como antes.
+  const ficha = await resolverFichaVersionGenerali(page, selector, await leerCamposSelector(selector), nuevos, form, ctx, avisos)
+  if (ficha) {
+    await verificarModeloAntesDeConfirmar(page, selector, modelo, menu.base, elegida)
+    await ctx.confirmarVehiculoGenerali()
+    await esperarTrasConfirmarGenerali(page, selector)
+    return false
+  }
   if (nuevos.length > 0) {
     // NO se pulsa «Confirmar»: campos que el bot no conoce. Se baja el scroll del selector (la evidencia del runner sale de ahí) y se PARA.
     await recorrerScroll(page, selector)
@@ -970,7 +1122,7 @@ export async function seleccionarVehiculoGenerali(page: Page, marco: Raiz, form:
   if (!selector) throw new ErrorMapaIncompletoGenerali('la pantalla «Selector de vehículos» tras pulsar «Vehículo» (captura 5)')
   // v0.2.6: el selector real es PrimeFaces (select oculto + div combobox): ese camino NO busca modelo/versión (sin captura).
   const menuMarcas = await menuPrimeFaces(selector, 'Todas las marcas')
-  if (menuMarcas) return seleccionarVehiculoPrimeFaces(page, selector, menuMarcas, v, ctx, avisos)
+  if (menuMarcas) return seleccionarVehiculoPrimeFaces(page, selector, menuMarcas, v, form, ctx, avisos)
   const marcas = await controlJuntoA(selector, 'Todas las marcas', 'select', ctx.formador)
   if (!marcas || !(await esSelectNativo(marcas))) throw new ErrorMapaIncompletoGenerali(`el desplegable «Todas las marcas» del selector (captura 5; ¿no es un <select> nativo?). Desplegables vistos: ${await describirSelects(selector)}`)
   let similitud = await elegirNivel(marcas, 'marca', v, form, ctx)

@@ -344,6 +344,46 @@ export function resumenCamposSelectorGenerali(campos: readonly CampoSelectorGene
   return t.length > max ? `${t.slice(0, max - 1)}…` : t
 }
 
+// ───────────── v0.2.14: ficha de versión del selector (Potencia · Versión · tabla Código | Modelo | Versión · Resumen) ─────────────
+
+/** Una fila de la tabla de versiones (catálogo, sin datos personales). */
+export type FilaVersionGenerali = { codigo: string; modelo: string; version: string; seleccionada: boolean }
+/** Lo que el selector enseña tras el modelo (solo lectura). `resumen` = texto tras «Código y descripción» del bloque «Resumen». */
+export type FichaVersionGenerali = { filas: FilaVersionGenerali[]; resumen: string }
+
+/** «116.0 CV» → 116; `null` si la etiqueta no trae un número seguido de CV. PURA. */
+export function cvDePotenciaGenerali(etiqueta: string): number | null {
+  const m = /(\d{2,4}(?:[.,]\d+)?)\s*CV\b/i.exec(etiqueta)
+  if (!m) return null
+  const n = Number(m[1]!.replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/** El grupo de opciones «Potencia» entre los controles del selector: no es «Placas especiales» y TODAS sus opciones son «NNN CV». `null` si no hay (o hay varios). PURA. */
+export function grupoPotenciaGenerali(campos: readonly CampoSelectorGenerali[]): { grupo: string; opciones: string[] } | null {
+  const hallados = campos.filter((c) => c.tipo === 'grupo' && c.clave.startsWith('grupo|') && !/^placaesp/i.test(c.clave.slice(6)) && c.opciones.length > 0 && c.opciones.length === c.total && c.opciones.every((o) => cvDePotenciaGenerali(o) !== null))
+  return hallados.length === 1 ? { grupo: hallados[0]!.clave.slice(6), opciones: hallados[0]!.opciones } : null
+}
+
+/** El desplegable «Versión» del selector (PrimeFaces o nativo), si lo hay y es único. PURA. */
+export function desplegableVersionGenerali(campos: readonly CampoSelectorGenerali[]): CampoSelectorGenerali | null {
+  const hallados = campos.filter((c) => (c.tipo === 'desplegable' || c.tipo === 'select') && /^versi[oó]n(es)?\s*:?\s*$/i.test(c.etiqueta.trim()))
+  return hallados.length === 1 ? hallados[0]! : null
+}
+
+/**
+ * ¿El «Resumen» corresponde a la fila elegida? Con código: el código tiene que aparecer como palabra entera en el resumen (la descripción
+ * puede venir recortada con «…»). Sin código: la versión entera (normalizada) tiene que estar contenida. Resumen vacío → no. PURA.
+ */
+export function resumenCoincideConFilaGenerali(resumen: string, fila: Pick<FilaVersionGenerali, 'codigo' | 'version'>): boolean {
+  const r = normalizarCatalogo(resumen)
+  if (r === '') return false
+  const c = normalizarCatalogo(fila.codigo)
+  if (c !== '') return ` ${r} `.includes(` ${c} `)
+  const v = normalizarCatalogo(fila.version)
+  return v !== '' && r.includes(v)
+}
+
 // ───────────────────────── «Datos de Valoración» (captura 6) ─────────────────────────
 
 /** Etiquetas EXACTAS de la captura 6 (sección «Identificación del vehículo» y «Roles»). */
