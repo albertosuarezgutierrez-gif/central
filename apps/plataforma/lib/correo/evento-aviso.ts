@@ -9,7 +9,7 @@
 // Sin IBAN ni NIF: el lector ya los quita; aquí solo se pintan números de póliza/recibo/siniestro,
 // importes, fechas y el nombre del tomador que devuelve asegura (como el aviso de devoluciones).
 
-import type { EventoAseguradora } from '@central/module-seguros'
+import { motivoReciboAnulado, type EventoAseguradora } from '@central/module-seguros'
 import { eur } from '../dinero.ts'
 
 export type EstadoEventoPuerto = 'aplicado' | 'duplicado_cima' | 'sin_resolver' | 'procesando'
@@ -79,6 +79,14 @@ function leidos(e: EventoAseguradora): Leido[] {
       linea: `Póliza ${esc(r.numeroPoliza)}${r.idRecibo ? ` · recibo ${esc(r.idRecibo)}` : ''}${r.importe !== null ? ` · ${eur(r.importe)}` : ''}${r.fechaLimite ? ` · ${e.tipo === 'pre_anulacion' ? 'anula' : 'plazo'} ${fechaEs(r.fechaLimite)}` : ''}`,
     }))
   }
+  if (e.tipo === 'anulacion' && e.recibos) {
+    // Resumen de recibos anulados por impago (Occident): una línea por recibo, con la clave de asegura (póliza/recibo).
+    // Sin «efecto»: «Anulado en fecha» es del recibo, no de la baja.
+    return e.recibos.map((r) => ({
+      clave: `${r.numeroPoliza}/${r.idRecibo}`,
+      linea: `Póliza ${esc(r.numeroPoliza)} · ${esc(motivoReciboAnulado(r))}`,
+    }))
+  }
   if (e.tipo === 'anulacion') {
     return [{
       clave: e.numeroPoliza ?? 'sin-poliza',
@@ -107,6 +115,7 @@ function titulo(e: EventoAseguradora): string {
   if (e.tipo === 'siniestro') return e.siniestros.length === 1 ? 'Siniestro' : `${e.siniestros.length} siniestros`
   if (e.tipo === 'pre_anulacion') return e.recibos.length === 1 ? 'Recibo a punto de ANULARSE' : `${e.recibos.length} recibos a punto de ANULARSE`
   if (e.tipo === 'impago') return 'Impago: la compañía DELEGA el cobro'
+  if (e.tipo === 'anulacion' && e.recibos) return e.recibos.length === 1 ? 'Recibo ANULADO por impago' : `${e.recibos.length} recibos ANULADOS por impago`
   if (e.tipo === 'anulacion') return 'Póliza ANULADA por la compañía'
   if (e.tipo === 'emision') return e.polizas.length === 1 ? 'Póliza nueva emitida' : `${e.polizas.length} pólizas nuevas emitidas`
   if (e.tipo === 'solicitud') return 'Solicitud en la compañía'

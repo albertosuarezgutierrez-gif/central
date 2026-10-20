@@ -1494,10 +1494,10 @@ export type { ClaseExpediente, EntradaClase, EntradaTrabajada, EstadoVisible, Vu
 
 // Correos de compañías que no son recibos devueltos → eventos de la correduría (14/10/2026).
 export {
-  leerCorreoEventoAseguradora, eventoNecesitaAdjuntos, sinDatosSensibles, contieneIban, ACCIONES_TRAMITADOR,
+  leerCorreoEventoAseguradora, eventoNecesitaAdjuntos, motivoReciboAnulado, sinDatosSensibles, contieneIban, ACCIONES_TRAMITADOR,
   type AccionTramitador,
   type CompaniaEvento, type CorreoEventoAseguradora, type EventoAseguradora, type EventoSiniestro, type EventoPreAnulacion,
-  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type EventoEmision, type EventoSolicitud, type PolizaEmitidaCorreo, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo,
+  type EventoImpago, type EventoAnulacion, type EventoSuplemento, type EventoEmision, type EventoSolicitud, type PolizaEmitidaCorreo, type SiniestroLeido, type SubtipoSiniestro, type ReciboEnRiesgo, type ReciboAnulado,
 } from './evento-correo-aseguradora.ts'
 
 // «En la compañía» (20/10/2026): nº de solicitud en la compañía sobre una oportunidad abierta (no es un estado del enum).

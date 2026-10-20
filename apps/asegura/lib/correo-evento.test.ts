@@ -363,3 +363,49 @@ test('validarMarcaRevisado: uuid + booleano estricto, nada se coacciona', () => 
   assert.equal(validarMarcaRevisado(null).ok, false)
   assert.equal(validarMarcaRevisado([id]).ok, false)
 })
+
+test('validarEntradaEvento: anulados por impago (Occident) → una anulación por póliza, SIN fecha de efecto, recibo en el motivo', () => {
+  const evento = {
+    tipo: 'anulacion', compania: 'occident', codigoDgs: 'C0468', ilegibles: 0, numeroPoliza: null, fechaEfecto: null,
+    motivo: '3 recibos anulados por impago (anulación automática)',
+    recibos: [
+      { numeroPoliza: 'BIDS000001', idRecibo: '480000001-H', fechaAnulacion: '2026-10-15' },
+      { numeroPoliza: '8-10.000.001-P', idRecibo: '470000001-H', fechaAnulacion: 'no-es-fecha' },
+      { numeroPoliza: 'BIDS000003', idRecibo: '<script>', fechaAnulacion: '2026-10-15' },
+    ],
+  }
+  const v = validarEntradaEvento({ mensajeId: '<m@x>', evento })
+  assert.ok(v.ok)
+  assert.deepEqual(v.entrada.items, [
+    { tipo: 'anulacion', clave: 'BIDS000001/480000001-H', numeroPoliza: 'BIDS000001', idRecibo: '480000001-H', fechaEfecto: null, motivo: 'Recibo 480000001-H anulado por impago el 15/10/2026 (anulación automática)' },
+    { tipo: 'anulacion', clave: '8-10.000.001-P/470000001-H', numeroPoliza: '8-10.000.001-P', idRecibo: '470000001-H', fechaEfecto: null, motivo: 'Recibo 470000001-H anulado por impago (anulación automática)' },
+  ])
+  assert.equal(v.entrada.ilegibles, 1)
+  // Sin `recibos` (Allianz y los eventos de antes) se sigue leyendo la póliza única.
+  const solo = validarEntradaEvento({ mensajeId: '<m@x>', evento: { ...evento, recibos: undefined, numeroPoliza: 'BIDS000001', fechaEfecto: '2026-11-01' } })
+  assert.ok(solo.ok)
+  assert.equal(solo.entrada.items.length, 1)
+  assert.equal(solo.entrada.items[0].clave, 'BIDS000001')
+})
+
+test('planItem: recibo ANULADO por impago → la nota y la tarea hablan del RECIBO, no de la póliza; una tarea por recibo', () => {
+  const item: ItemEvento = {
+    tipo: 'anulacion', clave: 'BIDS000001/480000001-H', numeroPoliza: 'BIDS000001', idRecibo: '480000001-H', fechaEfecto: null,
+    motivo: 'Recibo 480000001-H anulado por impago el 15/10/2026 (anulación automática)',
+  }
+  const p = planItem(item, 'occident', ctx())
+  assert.equal(p.estado, 'aplicado')
+  assert.match(p.nota ?? '', /ANULADO POR IMPAGO el recibo 480000001-H/)
+  assert.match(p.nota ?? '', /no dice que la póliza esté anulada/)
+  assert.doesNotMatch(p.nota ?? '', /ANULACIÓN de la póliza/)
+  assert.match(p.tarea?.observaciones ?? '', /anulado por impago el recibo 480000001-H/)
+  assert.doesNotMatch(p.tarea?.observaciones ?? '', /expediente|baja/)
+  // Otro recibo de la MISMA póliza es otra tarea (y otra nota): la clave lleva el recibo.
+  const otro = claveTareaDe({ ...item, clave: 'BIDS000001/480000002-H', idRecibo: '480000002-H' }, 'p1')
+  assert.notEqual(claveTareaDe(item, 'p1'), otro)
+  // La anulación de PÓLIZA (Allianz) no cambia: misma clave y mismo texto de siempre.
+  assert.equal(claveTareaDe(anulacion, 'p1'), 'anulacion:p1')
+  assert.match(planItem(anulacion, 'allianz', ctx()).nota ?? '', /ANULACIÓN de la póliza/)
+  // Con tarea abierta de ese recibo: solo nota.
+  assert.equal(planItem(item, 'occident', ctx({ tareaAbierta: true })).tarea, null)
+})
