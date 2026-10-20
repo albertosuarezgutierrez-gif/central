@@ -1,7 +1,7 @@
 // Aviso de Telegram para un correo de COMPAÑÍA que no es una devolución (14/10/2026). PURO.
 //
 // El triaje lee el correo (`leerCorreoEventoAseguradora`: siniestro, pre-anulación, impago, anulación,
-// suplemento, emisión), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este aviso dice
+// suplemento, emisión, solicitud), asegura lo aplica a la cartera (`POST /api/operador/correo/evento`) y este aviso dice
 // QUÉ SE HIZO con cada elemento: «siniestro 43000001 abierto en la ficha», «tarea creada, vence
 // 15/10/2026», «póliza no encontrada → bandeja». Si el puerto no contestó, el aviso sale igual con lo
 // leído del correo y lo dice (nunca se da por hecho lo que no consta).
@@ -85,6 +85,14 @@ function leidos(e: EventoAseguradora): Leido[] {
       linea: `Póliza ${e.numeroPoliza ? esc(e.numeroPoliza) : '(sin nº)'}${e.fechaEfecto ? ` · efecto ${fechaEs(e.fechaEfecto)}` : ''}${e.motivo ? ` · ${esc(e.motivo)}` : ''}`,
     }]
   }
+  if (e.tipo === 'solicitud') {
+    // Estado de una solicitud en la compañía: asegura la casa con la OPORTUNIDAD que lleva ese nº (no con una póliza).
+    // La clave es el nº SIN ceros de relleno (la misma que usa asegura).
+    return [{
+      clave: e.numeroSolicitud.replace(/^0+/, ''),
+      linea: `Solicitud ${esc(e.numeroSolicitud)}${e.ramo ? ` · ${esc(e.ramo)}` : ''}${e.url ? ` · <a href="${esc(e.url)}">abrir en ${COMPANIA[e.compania] ?? esc(e.compania)}</a>` : ''}`,
+    }]
+  }
   if (e.tipo === 'emision') {
     // Póliza NUEVA: asegura no la crea (CIMA es la fuente); solo dice si CIMA ya la trae.
     return e.polizas.map((p) => ({
@@ -101,6 +109,7 @@ function titulo(e: EventoAseguradora): string {
   if (e.tipo === 'impago') return 'Impago: la compañía DELEGA el cobro'
   if (e.tipo === 'anulacion') return 'Póliza ANULADA por la compañía'
   if (e.tipo === 'emision') return e.polizas.length === 1 ? 'Póliza nueva emitida' : `${e.polizas.length} pólizas nuevas emitidas`
+  if (e.tipo === 'solicitud') return 'Solicitud en la compañía'
   return 'Suplemento'
 }
 
@@ -125,7 +134,13 @@ export function textoAvisoEvento(
   urlFicha: (clienteId: string) => string,
   fallo: { estado: 'rechazado' | 'sin_respuesta'; motivo: string } | null = null,
 ): string {
-  const lineas: string[] = [`🏢 <b>${titulo(evento)}</b> — ${COMPANIA[evento.compania] ?? esc(evento.compania)}`, esc(asunto.slice(0, 160))]
+  const cia = COMPANIA[evento.compania] ?? esc(evento.compania)
+  // Solicitud (20/10/2026): «📨 Occident · Solicitud N · <tomador> · <estado>». El tomador sale del asunto (que el
+  // aviso ya pinta en los demás tipos) y NO se guarda en asegura.
+  const lineas: string[] = evento.tipo === 'solicitud'
+    ? [[`📨 <b>${cia}</b>`, `Solicitud ${esc(evento.numeroSolicitud)}`, evento.tomador ? esc(evento.tomador) : null, evento.estado ? `<b>${esc(evento.estado)}</b>` : 'estado no reconocido (míralo en el correo)']
+        .filter((x): x is string => x !== null).join(' · ')]
+    : [`🏢 <b>${titulo(evento)}</b> — ${cia}`, esc(asunto.slice(0, 160))]
   const items = leidos(evento)
   for (const i of items) {
     lineas.push(`• ${i.linea}`)
@@ -136,7 +151,11 @@ export function textoAvisoEvento(
   if (items.length === 0) lineas.push('⚠️ No he sabido leer ningún elemento del correo: míralo.')
   if (evento.ilegibles > 0) lineas.push(`⚠️ ${evento.ilegibles} trozo(s) del correo no se han sabido leer: míralo.`)
   const sinResolver = resultados?.filter((r) => r.estado === 'sin_resolver' || r.estado === 'procesando').length ?? 0
-  if (sinResolver > 0) lineas.push(`➡️ ${sinResolver === 1 ? 'Queda 1' : `Quedan ${sinResolver}`} en «Correos de compañía» de Mi mesa.`)
+  if (sinResolver > 0) {
+    lineas.push(evento.tipo === 'solicitud'
+      ? '➡️ Ninguna oportunidad lleva ese nº: apúntalo en la oportunidad (Mi mesa → «Nº solicitud…») y el correo se engancha solo.'
+      : `➡️ ${sinResolver === 1 ? 'Queda 1' : `Quedan ${sinResolver}`} en «Correos de compañía» de Mi mesa.`)
+  }
   if (resultados === null && items.length > 0) {
     lineas.push(fallo?.estado === 'rechazado'
       ? `⚠️ asegura RECHAZÓ el aviso (${esc(fallo.motivo)}): la cartera NO lo sabe. Anótalo a mano.`

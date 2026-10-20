@@ -1861,6 +1861,8 @@ model CorreoEventoEntrante {
   clienteId        String?   @map("cliente_id") @db.Uuid
   siniestroId      String?   @map("siniestro_id") @db.Uuid
   gestionId        String?   @map("gestion_id") @db.Uuid
+  /// Solo `tipo = 'solicitud'` (SQL 2026-10-20): la oportunidad a la que se enganchó por `compania_solicitud_num`.
+  oportunidadId    String?   @map("oportunidad_id") @db.Uuid
   fechaLimite      DateTime? @map("fecha_limite") @db.Date
   importe          Decimal?  @db.Decimal(12, 2)
   detalle          Json?

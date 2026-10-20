@@ -3,9 +3,10 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { ORIGEN_LEAD_CORREO, TOPE_DIARIO_LEADS_CORREO, cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
+import { ORIGEN_LEAD_CORREO, TOPE_DIARIO_LEADS_CORREO, cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, fijarSolicitudCompania, leerOportunidad, oportunidadesDeCliente, posponerOportunidad, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
 import type { AccionOportunidad } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
+import { vincularSolicitudesPendientes } from '@/lib/correo-evento-bd'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,10 @@ export const dynamic = 'force-dynamic'
  *        (`reprogramar: true` con vencimiento nuevo → su próxima tarea va a 45 días antes, o se crea;
  *        `notas`: texto libre, '' o null las borra; sin el SQL 2026-10-13 → 503 `sin_migracion`)
  *   POST { accion:'posponer', id, dias, actor } → su próxima acción pasa a hoy + dias (1-365); si no tenía, se crea
+ *   POST { accion:'solicitud_compania', id, numero, compania, actor } → «En la compañía» (20/10/2026): apunta/cambia
+ *        el nº de solicitud (`numero: null` lo quita) y engancha los correos de esa solicitud que quedaron sin resolver
+ *        → { estado:'ok', numero, compania, estadoOportunidad, vinculados } (`vinculados: null` = no se pudo mirar)
+ *        · 409 otra oportunidad ya lo lleva · 503 `sin_migracion` (SQL 2026-10-20)
  *   POST { id, accion, ..., actor } → cambia su estado:
  *        interesado · propuesta_enviada · ganar {polizaGanadaId?}
  *        perder {motivo, detalle?, competidor?, primaCompetidor?} · aparcar {aparcadaHasta, detalle} · reabrir
@@ -87,6 +92,19 @@ export const POST = auditado(async (req: Request) => {
       const r = await posponerOportunidad(correduria.id, b.id, b.dias, actorDe(b))
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
       return NextResponse.json({ estado: 'ok', fecha: r.fecha, tarea: r.tarea })
+    }
+    if (b?.accion === 'solicitud_compania') {
+      if (typeof b.id !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta id' }, { status: 422 })
+      const r = await fijarSolicitudCompania(correduria.id, b.id, { numero: b.numero, compania: b.compania }, actorDe(b))
+      if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
+      // El nº ya está guardado: un fallo al enganchar los correos no lo deshace (se dice con `vinculados: null`).
+      const v = r.numero && r.compania
+        ? await vincularSolicitudesPendientes(correduria.id, b.id, r.compania, r.numero).catch((e) => {
+            registrarErrorCartera('operador/oportunidad:vincular-solicitud', e)
+            return null
+          })
+        : { vinculados: 0 }
+      return NextResponse.json({ estado: 'ok', numero: r.numero, compania: r.compania, estadoOportunidad: r.estado, vinculados: v?.vinculados ?? null })
     }
     const accion = ACCIONES.find(a => a === b?.accion)
     if (!b || typeof b.id !== 'string' || !accion) {

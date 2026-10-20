@@ -101,6 +101,61 @@ export function esExpedienteDeTrabajo(o: { estado: string; delVolcado: boolean }
   return !(o.delVolcado && o.estado === 'competencia')
 }
 
+// ── «Trabajada» (Mi mesa, 20/10/2026) ───────────────────────────────────────
+
+/** Orígenes (`info_riesgo.origen`) de una renovación/aviso que entra SOLA, sin que Alberto haga nada. */
+const ORIGENES_RENOVACION_AUTO: ReadonlySet<string> = new Set(['renovacion_cartera', 'web:aviso-vencimiento', 'portal:mejorar-precio'])
+
+/**
+ * `oportunidad_historial.accion` que escribe el SISTEMA solo (alta, import, aviso o lectura automática de un correo…),
+ * sin que una persona haga nada: NO cuentan como trabajo. Lista de EXCLUSIÓN a propósito: cualquier acción nueva que
+ * no figure aquí cuenta como trabajada (ante la duda, la renovación no se esconde). Si una acción nueva la escribe el
+ * sistema solo, se añade aquí.
+ */
+export const ACCIONES_HISTORIAL_AUTOMATICAS = [
+  'creada_baja_verificada', 'creada_correo', 'creada_declarada', 'creada_devolucion', 'creada_mano', 'creada_portal',
+  'creada_presupuesto', 'creada_renovacion', 'creada_rescate_perdido', 'creada_retencion', 'creada_sin_id',
+  'creada_sin_vinculo', 'creada_web', 'creada_y_vinculada',
+  'correo_compania', 'datos_cliente_correo', 'tarificacion_bots_lead', 'riesgo_desde_poliza', 'whatsapp_ia',
+  'creada_recaptacion', 'fecha_desde_recaptacion', 'renovacion_resuelta', 'retencion_resuelta', 'devolucion_cobrada',
+  'emitida_en_cartera',
+] as const
+/** `gestiones.tipo` cuyo cierre cuenta como contacto (una pendiente NO: es lo que falta por hacer). */
+export const TIPOS_GESTION_CONTACTO = ['llamada', 'whatsapp'] as const
+
+export type EntradaTrabajada = {
+  fuente: string | null
+  origen: string | null
+  /** `oportunidades.import_ref` no nulo. */
+  conImportRef: boolean
+  /** `oportunidades.estado`. `pendiente_cliente` = Alberto ya está esperando al cliente. Un presupuesto cuenta por su acción de historial. */
+  estado: string
+  /** Tiene `compania_solicitud_num` (ya está en la compañía). */
+  conSolicitud?: boolean
+  /**
+   * ¿Hay contacto registrado? (historial con una acción que NO está en `ACCIONES_HISTORIAL_AUTOMATICAS`, o gestión
+   * llamada/whatsapp CERRADA). `null` = no se pudo comprobar: no se afirma que no lo haya (se trata como trabajada).
+   */
+  contactada: boolean | null
+}
+
+/** ¿Entra sola (renovación automática / aviso de vencimiento / «mejórame el precio»)? */
+export function esRenovacionAutomatica(e: Pick<EntradaTrabajada, 'fuente' | 'origen' | 'conImportRef'>): boolean {
+  return e.fuente === 'renovacion' || e.conImportRef || (e.origen !== null && ORIGENES_RENOVACION_AUTO.has(e.origen))
+}
+
+/**
+ * ¿Es una oportunidad que Alberto ha TRABAJADO? Una renovación automática que no está en `pendiente_cliente`, sin ningún contacto ni nº de solicitud, NO lo es
+ * (es ruido del vencimiento: va a «Renovaciones sin tocar»). Todo lo demás (venta nueva, rescate, lo abierto
+ * a mano…) sí. Contacto desconocido (`null`) → trabajada: ante la duda, no se esconde.
+ */
+export function esTrabajada(e: EntradaTrabajada): boolean {
+  if (!esRenovacionAutomatica(e)) return true
+  if (e.estado === 'pendiente_cliente') return true
+  if (e.conSolicitud === true) return true
+  return e.contactada !== false
+}
+
 // ── Fechas ──────────────────────────────────────────────────────────────────
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/

@@ -102,7 +102,13 @@ test('la migración de emisión existe, es aditiva y su lista de tipos = TIPOS_E
   const lista = /CHECK\s*\(\s*tipo\s+IN\s*\(([^)]*)\)\s*\)/i.exec(sinComentarios)?.[1]
   assert.ok(lista, 'la migración no redefine el CHECK de tipo')
   const tipos = [...lista.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort()
-  assert.deepEqual(tipos, [...TIPOS_EVENTO_CORREO].sort())
+  assert.ok(tipos.includes('emision'))
+  // La ÚLTIMA migración que redefine el CHECK (2026-10-20, `solicitud`) lleva la lista entera de TIPOS_EVENTO_CORREO.
+  const ultima = readFileSync(join(import.meta.dirname, '..', 'prisma', 'sql', '2026-10-20_oportunidad_solicitud_compania.sql'), 'utf8').replace(/--.*$/gm, '')
+  assert.doesNotMatch(ultima, /\b(drop\s+table|delete\s+from|truncate|update\s)/i)
+  const listaUltima = /CHECK\s*\(\s*tipo\s+IN\s*\(([^)]*)\)\s*\)/i.exec(ultima)?.[1]
+  assert.ok(listaUltima, 'la migración 2026-10-20 no redefine el CHECK de tipo')
+  assert.deepEqual([...listaUltima.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort(), [...TIPOS_EVENTO_CORREO].sort())
 })
 
 // Reevaluación (14/10/2026): una emisión sin_resolver pasa a duplicado_cima cuando CIMA ya trae la póliza.

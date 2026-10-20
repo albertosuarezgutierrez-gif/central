@@ -1,8 +1,8 @@
 // packages/module-seguros/src/evento-correo-aseguradora.ts
 //
 // Lee los correos de las compañías que NO son recibos devueltos (eso es `devolucion-correo.ts`) y los
-// convierte en EVENTOS de la correduría: siniestro, pre-anulación/impago, anulación, suplemento y
-// emisión (póliza nueva). PURO.
+// convierte en EVENTOS de la correduría: siniestro, pre-anulación/impago, anulación, suplemento,
+// emisión (póliza nueva) y solicitud (estado de un proyecto en la compañía, 20/10/2026). PURO.
 //
 // Por qué existe (14/10/2026): el triaje guardaba estos correos como una nota de texto. Un «Siniestro
 // Diversos 4300…» o un «Resumen de recibos próximos a la anulación» llevan un nº de siniestro, una
@@ -115,7 +115,28 @@ export type PolizaEmitidaCorreo = {
  */
 export type EventoEmision = Base & { tipo: 'emision'; polizas: PolizaEmitidaCorreo[] }
 
-export type EventoAseguradora = EventoSiniestro | EventoPreAnulacion | EventoImpago | EventoAnulacion | EventoSuplemento | EventoEmision
+/**
+ * La compañía comunica el ESTADO de una solicitud/proyecto de suscripción (Occident «Suscripción <ramo> - Solicitud
+ * <nº> - <tomador>», 20/10/2026). Aún no hay póliza: se engancha a la OPORTUNIDAD por `compania_solicitud_num`.
+ */
+export type EventoSolicitud = Base & {
+  tipo: 'solicitud'
+  /** Nº de solicitud TAL CUAL lo da el asunto (sin los ceros de relleno del enlace). */
+  numeroSolicitud: string
+  /** Ramo abreviado como lo escribe la compañía («Acc.colec.», «RC.constr.»). `null` = no se ha sacado limpio. */
+  ramo: string | null
+  /**
+   * Tomador TRUNCADO (a 40) del asunto. 🚨 Solo para el aviso de Telegram (el asunto ya lo lleva): el puerto NO lo
+   * guarda (`validarEntradaEvento` no lo copia). `null` = el asunto no lo trae.
+   */
+  tomador: string | null
+  /** Estado de la plantilla («PRIMA / PROY * PTE DOCUMENTACION», «Finalización automática»). `null` = no reconocido (cuenta en `ilegibles`). */
+  estado: string | null
+  /** Enlace al proyecto en el portal (requiere SSO; NO se abre). Solo `https://portaloccident.gco.global/…` con el MISMO nº. */
+  url: string | null
+}
+
+export type EventoAseguradora = EventoSiniestro | EventoPreAnulacion | EventoImpago | EventoAnulacion | EventoSuplemento | EventoEmision | EventoSolicitud
 
 // ── utilidades ───────────────────────────────────────────────────────────────
 
@@ -533,12 +554,59 @@ function leerAllianzEmision(c: CorreoEventoAseguradora): EventoEmision | null {
   return out
 }
 
+// ── Occident · «Suscripción <ramo> - Solicitud <nº> - <tomador truncado a 40>» (estado de un proyecto) ────────
+// Contrato mediador: M00000 - <mediador> <ESTADO> <nota libre del suscriptor> https://portaloccident.gco.global/…
+//   …urlTransaccion=FE/SGE.Gestion.Proyectos.FE.AccesoProyecto/?idSubscripcio=00<nº> Aviso de confidencialidad: …
+// Estados vistos (correos reales, jul 2025-oct 2026): «PRIMA / PROY * PTE DOCUMENTACION» (forma `<disponible> *
+// <estado>`, en mayúsculas), «Caducidad de solicitud», «Finalización automática». Otros (p. ej. «RE: SIN FRANQUICIA»,
+// la respuesta de un suscriptor) → `estado: null` + ilegible: se avisa «míralo», no se inventa.
+// La nota libre y el nombre del mediador NO salen (texto de una persona). El tomador solo va al aviso (ver tipo).
+const ASUNTO_SOLICITUD = /^\s*suscripci[oó]n\s+(.+?)\s+-\s+solicitud\s+(\d{6,12})\s*(?:-\s*(.*))?$/i
+const ESTADOS_SOLICITUD_FIJOS: readonly RegExp[] = [/caducidad\s+de\s+solicitud/i, /finalizaci[oó]n\s+autom[aá]tica/i]
+// `<DISPONIBLE> * <ESTADO>`, todo en mayúsculas (el texto que sigue, la nota, ya lleva minúsculas o un enlace).
+const ESTADO_ASTERISCO = /\b([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9.]*(?:\s*\/\s*[A-ZÁÉÍÓÚÑ0-9.]+|\s+[A-ZÁÉÍÓÚÑ0-9.]+)*)\s+\*\s+([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ0-9.]*(?:\s+[A-ZÁÉÍÓÚÑ0-9.]+)*)(?=\s+[A-ZÁÉÍÓÚÑ]?[a-záéíóúñ]|\s+https?:|\s*\||\s*$)/
+
+/** Tope del texto sobre el que se aplica `ESTADO_ASTERISCO` (backtracking cuadrático en un texto largo en mayúsculas). */
+export const MAX_CHARS_ESTADO_ASTERISCO = 20_000
+
+function estadoSolicitud(t: string): string | null {
+  const m = ESTADO_ASTERISCO.exec(t.slice(0, MAX_CHARS_ESTADO_ASTERISCO))
+  if (m) return `${m[1].replace(/\s*\/\s*/g, ' / ').trim()} * ${m[2].trim()}`
+  for (const re of ESTADOS_SOLICITUD_FIJOS) {
+    const f = re.exec(t)
+    if (f) return f[0].charAt(0).toUpperCase() + f[0].slice(1)
+  }
+  return null
+}
+
+function urlSolicitudOccident(t: string, numero: string): string | null {
+  for (const m of t.matchAll(/https:\/\/portaloccident\.gco\.global\/[^\s|<>"')\]]+/gi)) {
+    const id = /[?&]idSubscripcio=0*(\d{6,12})\b/i.exec(m[0])?.[1]
+    if (id === numero.replace(/^0+/, '')) return m[0]
+  }
+  return null
+}
+
+function leerOccidentSolicitud(c: CorreoEventoAseguradora): EventoSolicitud | null {
+  if (!esDe(c.remitente, 'occidentinforma.com')) return null
+  const a = ASUNTO_SOLICITUD.exec(c.asunto)
+  if (!a) return null
+  const t = plano(c.cuerpoTexto)
+  const estado = textoCorto(estadoSolicitud(t), 80)
+  const ramo = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .,/-]{2,40}$/.test(a[1].trim()) ? a[1].trim() : null
+  return {
+    ...base('occident'), tipo: 'solicitud', numeroSolicitud: a[2], ramo,
+    tomador: textoCorto(a[3], 60), estado, url: urlSolicitudOccident(t, a[2]),
+    ilegibles: estado ? 0 : 1,
+  }
+}
+
 /**
  * Segunda red: los campos de TEXTO LIBRE de un evento nunca llevan IBAN ni NIF, aunque un formato nuevo
  * los colara. Los identificadores (póliza, recibo, siniestro) no se tocan: ya salen de una regex estricta
  * y «limpiarlos» podría romper una póliza con forma de CIF.
  */
-const CAMPOS_LIBRES = new Set(['accion', 'descripcion', 'motivo', 'ramo', 'producto'])
+const CAMPOS_LIBRES = new Set(['accion', 'descripcion', 'motivo', 'ramo', 'producto', 'tomador', 'estado'])
 function limpiarEvento<E extends EventoAseguradora>(e: E): E {
   const limpia = (v: unknown, clave = ''): unknown => {
     if (typeof v === 'string') return CAMPOS_LIBRES.has(clave) ? sinDatosSensibles(v) : v
@@ -573,6 +641,7 @@ export function leerCorreoEventoAseguradora(c: CorreoEventoAseguradora): EventoA
     leerOccidentSiniestroResumen(c) ??
     leerOccidentTramitador(c) ??
     leerOccidentPreAnulacion(c) ??
+    leerOccidentSolicitud(c) ??
     leerOccidentSuplemento(c) ??
     leerRealePreAnulacion(c) ??
     leerMapfreDelegacion(c) ??

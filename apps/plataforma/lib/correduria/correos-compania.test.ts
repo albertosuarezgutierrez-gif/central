@@ -75,3 +75,9 @@ test('emisión: la bandeja la rotula «Póliza nueva» y pinta «Póliza nueva e
   const src = readFileSync(join(import.meta.dirname, '..', '..', 'app', '(usuario)', 'correduria', 'mesa', 'CorreosCompania.tsx'), 'utf8')
   assert.match(src, /textoElementoCorreo\(e\)/)
 })
+
+test('solicitud (20/10/2026): la bandeja la rotula «Solicitud» y pinta «Solicitud <nº>» (sin póliza)', async () => {
+  const { ROTULO_TIPO_CORREO, textoElementoCorreo } = await import('./correos-compania.ts')
+  assert.equal(ROTULO_TIPO_CORREO.solicitud, 'Solicitud')
+  assert.equal(textoElementoCorreo({ tipo: 'solicitud', clave: '170000001', numeroPoliza: null }), 'Solicitud 170000001')
+})

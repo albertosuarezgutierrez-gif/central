@@ -1,10 +1,15 @@
 /**
- * «Mi mesa» (13/10/2026): cómo se reparten los expedientes en los cinco bloques fijos. PURO (sin red ni JSX).
+ * «Mi mesa» (13/10/2026): cómo se reparten los expedientes en los bloques fijos. PURO (sin red ni JSX).
  *
  * Cada expediente cae en UN solo bloque. Prioridad de asignación:
  *   1) aparcada (la decide asegura con `estadoVisible`) → «Aparcadas»; NUNCA sale en los demás: una aparcada
  *      con la próxima acción vencida no es trabajo de hoy, vuelve sola el día que toca;
- *   2) próxima acción con fecha ≤ hoy → «Hoy y vencido»;
+ *   1b) renovación automática SIN contacto (`trabajada === false`, y no es rescate) → «Renovaciones sin tocar»
+ *      (20/10/2026: Mi mesa es lo que Alberto ha trabajado; el ruido del vencimiento va plegado al final);
+ *   2) próxima acción con fecha ≤ hoy → «Hoy y vencido» (también la de una «en la compañía»: si la compañía pide
+ *      documentación, la tarea de hoy manda);
+ *   2b) con nº de solicitud en la compañía → «En la compañía» (20/10/2026; esperando a que la compañía la libere.
+ *      Nunca cae en «Renovaciones sin tocar»: apuntar el nº ya es trabajo);
  *   3) clase rescate → «Rescates» (lleva su recibo y su plazo; no se esconde entre las abiertas);
  *   4) esperando al cliente → «Esperando cliente»;
  *   5) el resto → «Abiertas».
@@ -13,24 +18,28 @@
  */
 import type { Expediente, Expedientes, PerdidaPorRevisar, TareaSuelta } from './expedientes.ts'
 
-export type BloqueMesa = 'hoy' | 'abiertas' | 'esperando' | 'rescates' | 'aparcadas'
+export type BloqueMesa = 'hoy' | 'compania' | 'abiertas' | 'esperando' | 'rescates' | 'aparcadas' | 'sinTocar'
 
-export const BLOQUES_MESA: readonly BloqueMesa[] = ['hoy', 'abiertas', 'esperando', 'rescates', 'aparcadas']
+export const BLOQUES_MESA: readonly BloqueMesa[] = ['hoy', 'compania', 'abiertas', 'esperando', 'rescates', 'aparcadas', 'sinTocar']
 
 export const TITULO_BLOQUE: Record<BloqueMesa, string> = {
   hoy: 'Hoy y vencido',
+  compania: 'En la compañía',
   abiertas: 'Abiertas',
   esperando: 'Esperando cliente',
   rescates: 'Rescates',
   aparcadas: 'Aparcadas',
+  sinTocar: 'Renovaciones sin tocar',
 }
 
 export const VACIO_BLOQUE: Record<BloqueMesa, string> = {
   hoy: 'Nada vencido.',
+  compania: 'Nada pendiente de que lo libere una compañía.',
   abiertas: 'Ninguna abierta.',
   esperando: 'Nadie te debe respuesta.',
   rescates: 'Ningún rescate pendiente.',
   aparcadas: 'Nada aparcado.',
+  sinTocar: 'Ninguna renovación sin tocar.',
 }
 
 /** Fecha `aaaa-mm-dd` de una cadena (acepta ISO con hora); `null` si no es una fecha. */
@@ -42,8 +51,12 @@ export function soloDia(v: string | null): string | null {
 
 export function bloqueDe(e: Expediente, hoy: string): BloqueMesa {
   if (e.estadoVisible === 'aparcada') return 'aparcadas'
+  // Con nº de solicitud en la compañía ya está trabajada (aunque entrara sola como renovación): nunca «sin tocar».
+  const enCompania = e.solicitudCompania !== null
+  if (!enCompania && e.trabajada === false && e.clase !== 'rescate') return 'sinTocar'
   const f = soloDia(e.proximaAccion?.fecha ?? null)
   if (f !== null && f <= hoy) return 'hoy'
+  if (enCompania) return 'compania'
   if (e.clase === 'rescate') return 'rescates'
   if (e.estadoVisible === 'esperando_cliente') return 'esperando'
   return 'abiertas'
@@ -78,7 +91,7 @@ function comparaAparcadas(a: Expediente, b: Expediente): number {
 }
 
 export function repartirMesa(expedientes: readonly Expediente[], hoy: string): Record<BloqueMesa, Expediente[]> {
-  const out: Record<BloqueMesa, Expediente[]> = { hoy: [], abiertas: [], esperando: [], rescates: [], aparcadas: [] }
+  const out: Record<BloqueMesa, Expediente[]> = { hoy: [], compania: [], abiertas: [], esperando: [], rescates: [], aparcadas: [], sinTocar: [] }
   for (const e of expedientes) out[bloqueDe(e, hoy)].push(e)
   for (const b of BLOQUES_MESA) out[b].sort(b === 'aparcadas' ? comparaAparcadas : comparar)
   return out

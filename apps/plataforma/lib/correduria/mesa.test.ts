@@ -10,7 +10,7 @@ const exp = (o: Partial<Expediente> = {}): Expediente => ({
   id: 'e1', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', clase: 'venta_nueva', estadoVisible: 'abierta', estado: 'en_negociacion',
   delVolcado: false, aparcadaHasta: null, aparcadaMotivo: null,
   proximaAccion: { tareaId: 't1', texto: 'Llamar', tipo: 'llamada', fecha: '2026-10-20' },
-  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, ...o,
+  prima: 100, fechaFinVigencia: null, notas: null, creada: '2026-10-01', rescate: null, contacto: null, trabajada: true, solicitudCompania: null, ...o,
 })
 const con = (p: Partial<NonNullable<Expediente['proximaAccion']>> | null): Partial<Expediente> =>
   ({ proximaAccion: p === null ? null : { tareaId: 't', texto: '', tipo: 'llamada', fecha: '2026-10-20', ...p } })
@@ -29,6 +29,20 @@ test('bloques: sin fecha o sin próxima acción NO es hoy', () => {
 test('bloques: una aparcada nunca sale fuera de Aparcadas, aunque su acción esté vencida', () => {
   const e = exp({ estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10', ...con({ fecha: '2026-09-01' }) })
   assert.equal(bloqueDe(e, HOY), 'aparcadas')
+})
+
+test('bloques: renovación automática sin contacto va a «Renovaciones sin tocar», no a Hoy/Abiertas/Esperando', () => {
+  assert.equal(bloqueDe(exp({ trabajada: false, ...con({ fecha: HOY }) }), HOY), 'sinTocar')
+  assert.equal(bloqueDe(exp({ trabajada: false }), HOY), 'sinTocar')
+  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'abierta' }), HOY), 'sinTocar')
+  // Una renovación pasada a «esperando cliente» la marca asegura como trabajada (estado ≠ competencia): sale en Esperando.
+  assert.equal(bloqueDe(exp({ trabajada: true, estadoVisible: 'esperando_cliente' }), HOY), 'esperando')
+  // Trabajada, o sin dato (null: versión vieja de asegura), NO se esconde.
+  assert.equal(bloqueDe(exp({ trabajada: true, ...con({ fecha: HOY }) }), HOY), 'hoy')
+  assert.equal(bloqueDe(exp({ trabajada: null, ...con({ fecha: HOY }) }), HOY), 'hoy')
+  // Un rescate nunca se esconde; una aparcada sigue en Aparcadas.
+  assert.equal(bloqueDe(exp({ trabajada: false, clase: 'rescate' }), HOY), 'rescates')
+  assert.equal(bloqueDe(exp({ trabajada: false, estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10' }), HOY), 'aparcadas')
 })
 
 test('bloques: rescate y esperando cliente', () => {
@@ -144,4 +158,23 @@ test('motivoFalloTareaSuelta: 2xx = guardado; 409/404 dicen su motivo; 5xx = amb
   assert.match(m(502, null) ?? '', /No se ha podido confirmar/)
   assert.match(m(422, { estado: 'invalido', motivo: 'Falta tareaId' }) ?? '', /Falta tareaId/)
   assert.notEqual(m(200, { estado: 'error' }), null)
+})
+
+// «En la compañía» (20/10/2026).
+const SOL = { numero: '170000001', compania: 'occident', estado: 'PRIMA / PROY * PTE DOCUMENTACION', url: 'https://portaloccident.gco.global/x?idSubscripcio=00170000001', at: null }
+
+test('bloques: con nº de solicitud en la compañía → «En la compañía», antes de Abiertas', () => {
+  assert.equal(bloqueDe(exp({ solicitudCompania: SOL }), HOY), 'compania')
+  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, estadoVisible: 'esperando_cliente' }), HOY), 'compania')
+  assert.ok(BLOQUES_MESA.indexOf('compania') < BLOQUES_MESA.indexOf('abiertas'))
+})
+
+test('bloques: en la compañía con la tarea de HOY (p. ej. enviar documentación) → Hoy; aparcada → Aparcadas', () => {
+  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, ...con({ fecha: HOY }) }), HOY), 'hoy')
+  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, estadoVisible: 'aparcada', aparcadaHasta: '2027-01-10' }), HOY), 'aparcadas')
+})
+
+test('bloques: una renovación sin contacto pero con nº de solicitud NO va a «sin tocar»', () => {
+  assert.equal(bloqueDe(exp({ solicitudCompania: SOL, trabajada: false }), HOY), 'compania')
+  assert.equal(bloqueDe(exp({ solicitudCompania: null, trabajada: false }), HOY), 'sinTocar')
 })

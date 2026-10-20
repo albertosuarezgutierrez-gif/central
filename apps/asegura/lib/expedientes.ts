@@ -19,6 +19,11 @@ import {
   claseOportunidad,
   esExpedienteDeTrabajo,
   esRescateDeRecibo,
+  esTrabajada,
+  estaEnCompania,
+  urlSolicitudValida,
+  ACCIONES_HISTORIAL_AUTOMATICAS,
+  TIPOS_GESTION_CONTACTO,
   estadoVisible,
   hitoDevolucion,
   importeReciboRescate,
@@ -82,6 +87,17 @@ export type Expediente = {
    */
   rescate: { tipo: 'recibo' | 'anulacion'; recibo: ReciboRescate | null } | null
   contacto: ContactoFila | null
+  /**
+   * ¿La ha trabajado Alberto? `false` = renovación automática (fuente renovacion / import_ref / aviso de
+   * vencimiento…) SIN ningún contacto registrado: Mi mesa la manda a «Renovaciones sin tocar». Ver `esTrabajada()`.
+   */
+  trabajada: boolean
+  /**
+   * «En la compañía» (20/10/2026): la oportunidad lleva nº de solicitud en el portal de la compañía. `null` = no lo
+   * lleva (o la migración 2026-10-20 aún no está). `estado`/`url`/`at` `null` = la compañía aún no ha escrito (no
+   * «sin estado»). La `url` sale ya validada (solo https del portal de esa compañía, mismo nº).
+   */
+  solicitudCompania: { numero: string; compania: string; estado: string | null; url: string | null; at: string | null } | null
 }
 
 /**
@@ -153,8 +169,16 @@ type Fila = {
   fechaFin: string | null
   notas: string | null
   creada: Date
+  contactada: boolean
+  solicitud: { numero: string | null; compania: string | null; estado: string | null; url: string | null; at: string | null }
   proxima: { tareaId: string; texto: string | null; tipo: string; fecha: string | null } | null
   recibo: { reciboId: string; idRecibo: string | null; importe: string | null; efecto: string | null; situacion: string | null } | null
+}
+
+function solicitudDeFila(f: Pick<Fila, 'estado' | 'solicitud'>): Expediente['solicitudCompania'] {
+  const s = f.solicitud
+  if (!s?.numero || !s.compania || !estaEnCompania({ estado: f.estado, companiaSolicitudNum: s.numero })) return null
+  return { numero: s.numero, compania: s.compania, estado: s.estado, url: urlSolicitudValida(s.url, s.compania, s.numero), at: s.at }
 }
 
 export async function expedientesDeTrabajo(
@@ -173,6 +197,17 @@ export async function expedientesDeTrabajo(
            to_char(o.fecha_fin_vigencia, 'YYYY-MM-DD') as "fechaFin",
            (to_jsonb(o)->>'notas') as notas,
            o.created_at as creada,
+           -- «En la compañía» (SQL 2026-10-20): por JSON, sin las columnas da NULL en vez de romper Mi mesa.
+           json_build_object('numero', to_jsonb(o)->>'compania_solicitud_num', 'compania', to_jsonb(o)->>'compania_solicitud_compania',
+                             'estado', to_jsonb(o)->>'compania_solicitud_estado', 'url', to_jsonb(o)->>'compania_solicitud_url',
+                             'at', to_jsonb(o)->>'compania_solicitud_at') as solicitud,
+           -- Trabajo registrado: historial con una acción de PERSONA (no alta/automática), o una llamada/WhatsApp ya CERRADA.
+           (exists (select 1 from oportunidad_historial h
+                    where h.oportunidad_id = o.id and h.correduria_id = o.correduria_id
+                      and h.accion not in (${Prisma.join([...ACCIONES_HISTORIAL_AUTOMATICAS])}))
+            or exists (select 1 from gestiones gc
+                       where gc.oportunidad_id = o.id and gc.correduria_id = o.correduria_id
+                         and gc.tipo::text in (${Prisma.join([...TIPOS_GESTION_CONTACTO])}) and gc.estado::text = 'cerrada')) as contactada,
            prox.j as proxima,
            rec.j as recibo
     from oportunidades o
@@ -262,6 +297,8 @@ export async function expedientesDeTrabajo(
       creada: f.creada.toISOString(),
       rescate,
       contacto: null,
+      trabajada: esTrabajada({ fuente: f.fuente, origen: f.origen, conImportRef: f.delVolcado, estado: f.estado, conSolicitud: !!f.solicitud?.numero, contactada: f.contactada }),
+      solicitudCompania: solicitudDeFila(f),
     })
   }
   const [tareasSueltas, perdidas] = await Promise.all([

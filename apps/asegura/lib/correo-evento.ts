@@ -23,10 +23,10 @@
 // - Sin IBAN ni NIF: el lector ya los quita; aquí se vuelve a pasar `sinDatosSensibles` por todo texto
 //   libre que entra por el puerto (segunda red: el puerto no se fía de quien llama).
 
-import { esCarteraEnVigor, esCarteraViva, sinDatosSensibles, validarTarea } from '@central/module-seguros'
+import { esCarteraEnVigor, esCarteraViva, normalizarNumeroSolicitud, pideDocumentacion, sinDatosSensibles, textoTareaDocumentacion, urlSolicitudValida, validarTarea } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 
-export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento', 'emision'] as const
+export const TIPOS_EVENTO_CORREO = ['siniestro', 'pre_anulacion', 'impago', 'anulacion', 'suplemento', 'emision', 'solicitud'] as const
 export type TipoEventoCorreo = (typeof TIPOS_EVENTO_CORREO)[number]
 
 /** Desenlace guardado por fila. `procesando` = reservada y sin desenlace confirmado (se mira a mano). */
@@ -71,6 +71,16 @@ export type ItemEvento =
       numeroPoliza: string; idRecibo: string | null; producto: string | null; fechaEfecto: string | null
       /** Total del primer recibo. `null` = no se leyó (no es 0€). */
       prima: number | null
+    }
+  | {
+      /** Estado de una solicitud/proyecto en la compañía (20/10/2026). Se casa con la OPORTUNIDAD, no con una póliza. */
+      tipo: 'solicitud'; clave: string
+      /** Nº de solicitud normalizado (sin ceros de relleno). Es también la `clave`. */
+      numeroSolicitud: string; ramo: string | null
+      /** Estado de la plantilla de la compañía. `null` = el lector no lo reconoció (no «sin estado»). */
+      estado: string | null
+      /** Enlace al proyecto, ya validado (`urlSolicitudValida`). El TOMADOR no entra: no se guarda en la tabla. */
+      url: string | null
     }
 
 export type EntradaEvento = {
@@ -178,6 +188,13 @@ export function validarEntradaEvento(b: unknown): { ok: true; entrada: EntradaEv
         fechaEfecto: dia(p?.fechaEfecto), prima: importe(p?.prima),
       } : null)
     }
+  } else if (tipo === 'solicitud') {
+    // El `tomador` que trae el evento NO se copia: la fila guarda `detalle` y en ella no van nombres.
+    const numero = normalizarNumeroSolicitud(e.numeroSolicitud)
+    meter(numero ? {
+      tipo, clave: numero, numeroSolicitud: numero, ramo: libre(e.ramo, 60), estado: libre(e.estado, 200),
+      url: urlSolicitudValida(e.url, compania, numero),
+    } : null)
   } else {
     const poliza = id(e.numeroPoliza)
     meter(poliza ? {
@@ -520,6 +537,7 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
     return { ...base(`${que} emitida, aún no llegada por CIMA → bandeja`), estado: 'sin_resolver', motivo: MOTIVO_EMISION_NO_LLEGADA }
   }
 
+  // `solicitud` no se resuelve por póliza: va por `planSolicitud` (contra la oportunidad).
   if (item.tipo !== 'suplemento') return sinResolver('tipo de aviso desconocido')
   const r = ctx.resolucion
   if (r.estado === 'sin_resolver') return sinResolver(MOTIVO_RESOLUCION[r.motivo])
@@ -533,6 +551,71 @@ export function planItem(item: ItemEvento, compania: string, ctx: ContextoItem):
     nota,
     tarea: { tipo: 'tarea', prioridad: 'media', fechaLimite: fecha, observaciones: `${PREFIJO_TAREA_CORREO} Revisar suplemento ${cia}${item.descripcion ? `: ${item.descripcion}` : ''}${per}.` },
     claveTarea: claveTareaDe(item, r.poliza.id),
+  }
+}
+
+// ── Solicitud en la compañía (20/10/2026) ────────────────────────────────────
+
+/** La oportunidad que lleva ese nº de solicitud de esa compañía (el índice único garantiza una como mucho). */
+export type OportunidadSolicitud = {
+  id: string
+  clienteId: string
+  estado: string
+  ramo: string | null
+  cliente: string | null
+}
+
+export type PlanSolicitud =
+  | { estado: 'sin_resolver'; motivo: string; resumen: string }
+  | {
+      estado: 'aplicado'
+      motivo: null
+      resumen: string
+      /** Línea de `oportunidad_historial` (accion `correo_compania`). */
+      detalleHistorial: { compania: string; numeroSolicitud: string; estado: string | null; url: boolean; fechaCorreo: string | null }
+      /** Texto de la tarea «enviar documentación» si toca crearla (la BD comprueba que no haya una abierta igual). */
+      tareaDocumentacion: TareaPlan | null
+    }
+
+const ABIERTAS_OPORTUNIDAD: ReadonlySet<string> = new Set(['competencia', 'en_negociacion', 'pendiente_cliente'])
+
+/**
+ * Desenlace de una solicitud que revienta a mitad. Si NADA se escribió en la oportunidad (falló la lectura o la
+ * transacción del estado, que es atómica) vuelve a `sin_resolver`: la bandeja la enseña y `vincularSolicitudesPendientes`
+ * la puede volver a enganchar (solo coge `sin_resolver`). Si el estado YA se aplicó, `procesando` con el error, como
+ * el resto de tipos: a mano, para no repetir la nota ni la tarea.
+ */
+export function estadoTrasErrorSolicitud(estadoYaAplicado: boolean): Extract<EstadoEventoCorreo, 'sin_resolver' | 'procesando'> {
+  return estadoYaAplicado ? 'procesando' : 'sin_resolver'
+}
+
+/**
+ * Qué se hace con el estado de una solicitud. Sin oportunidad con ese nº → `sin_resolver` (bandeja «Correos de
+ * compañía»: Alberto apunta el nº en la oportunidad y el correo se engancha solo). Con ella → nota en su historial
+ * y, si la compañía pide documentación y la oportunidad sigue abierta, tarea para HOY.
+ */
+export function planSolicitud(
+  item: Extract<ItemEvento, { tipo: 'solicitud' }>, compania: string, op: OportunidadSolicitud | null, ctx: { fechaCorreo: string | null; hoy: string },
+): PlanSolicitud {
+  const cia = nombreCompania(compania)
+  if (!op) {
+    return {
+      estado: 'sin_resolver',
+      motivo: `ninguna oportunidad lleva la solicitud ${item.numeroSolicitud} de ${cia}: apunta el nº en la oportunidad`,
+      resumen: `solicitud ${item.numeroSolicitud} sin oportunidad → bandeja`,
+    }
+  }
+  const abierta = ABIERTAS_OPORTUNIDAD.has(op.estado)
+  const tarea: TareaPlan | null = abierta && pideDocumentacion(item.estado)
+    ? { tipo: 'tarea', prioridad: 'alta', fechaLimite: ctx.hoy, observaciones: textoTareaDocumentacion(compania, item.numeroSolicitud) }
+    : null
+  const que = item.estado ? `«${item.estado}»` : 'estado no reconocido (míralo en el correo)'
+  return {
+    estado: 'aplicado',
+    motivo: null,
+    resumen: `oportunidad ${op.ramo ?? 'sin ramo'}${op.cliente ? ` de ${op.cliente}` : ''}: ${que}${abierta ? '' : ` (está ${op.estado})`}`,
+    detalleHistorial: { compania, numeroSolicitud: item.numeroSolicitud, estado: item.estado, url: item.url !== null, fechaCorreo: ctx.fechaCorreo },
+    tareaDocumentacion: tarea,
   }
 }
 
