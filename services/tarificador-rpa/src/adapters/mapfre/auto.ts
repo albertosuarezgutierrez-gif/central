@@ -902,31 +902,35 @@ async function campoPorEtiquetaPortal(raiz: Pick<Frame, 'locator'>, sel: string,
  * pantalla que hablan de siniestralidad/compañía. Para que el hueco de «compañía anterior» en MOTO diga qué pinta el portal.
  */
 export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Promise<string> {
-  const r = await raiz
+  // Sin funciones con nombre dentro del `evaluate` (tsx/esbuild las envuelve en `__name`, que no existe en la página): el texto
+  // crudo se limpia aquí, en Node.
+  const crudo = await raiz
     .locator('body')
     .evaluate((body) => {
-      const limpia = (t: string | null | undefined) => (t ?? '').replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
       const bloque = body.querySelector('app-historial-siniestralidad')
       if (!bloque) {
-        const et = [...body.querySelectorAll('label, mat-label, mat-slide-toggle, mat-radio-button, mat-checkbox')]
-          .map((e) => limpia(e.textContent))
-          .filter((t) => /siniestr|compañ|compan|anterior|bonus|proced|expuest/i.test(t))
-        return { bloque: false, etiquetas: [...new Set(et)].slice(0, 12), controles: [] as string[] }
+        const et = [...body.querySelectorAll('label, mat-label, mat-slide-toggle, mat-checkbox')].map((e) => e.textContent ?? '')
+        return { bloque: false, etiquetas: et, controles: [] as { tag: string; id: string; et: string; off: boolean }[] }
       }
-      const etiquetas = [...bloque.querySelectorAll('label, mat-label')].map((e) => limpia(e.textContent)).filter((t) => t !== '')
-      const controles = [...bloque.querySelectorAll('input, textarea, mat-select, mat-slide-toggle, mat-radio-button, mat-radio-group, mat-checkbox')].map((e) => {
+      const etiquetas = [...bloque.querySelectorAll('label, mat-label')].map((e) => e.textContent ?? '')
+      const controles = [...bloque.querySelectorAll('input, textarea, mat-select, mat-slide-toggle, mat-checkbox')].map((e) => {
         const ff = e.closest('mat-form-field')
-        const et = limpia((ff?.querySelector('mat-label') ?? ff?.querySelector('label') ?? e.closest('label'))?.textContent ?? e.getAttribute('aria-label'))
-        const id = e.getAttribute('formcontrolname') ?? e.getAttribute('name') ?? e.id
-        const off = (e as HTMLInputElement).disabled || e.getAttribute('aria-disabled') === 'true'
-        return `${e.tagName.toLowerCase()}${id ? `[${id.slice(0, 40)}]` : ''}${et ? `«${et}»` : ''}${off ? '(deshabilitado)' : ''}`
+        return {
+          tag: e.tagName.toLowerCase(),
+          id: e.getAttribute('formcontrolname') ?? e.getAttribute('name') ?? e.id ?? '',
+          et: (ff?.querySelector('mat-label') ?? ff?.querySelector('label') ?? e.closest('label'))?.textContent ?? e.getAttribute('aria-label') ?? '',
+          off: (e as HTMLInputElement).disabled === true || e.getAttribute('aria-disabled') === 'true',
+        }
       })
-      return { bloque: true, etiquetas: [...new Set(etiquetas)].slice(0, 12), controles: controles.slice(0, 20) }
+      return { bloque: true, etiquetas, controles }
     })
     .catch(() => null)
-  if (!r) return 'no se pudo leer el bloque'
-  const et = r.etiquetas.length ? ` etiquetas: ${r.etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
-  return r.bloque ? `el bloque app-historial-siniestralidad trae ${r.controles.length} controles (${r.controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
+  if (!crudo) return 'no se pudo leer el bloque'
+  const limpia = (t: string) => t.replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+  const etiquetas = [...new Set(crudo.etiquetas.map(limpia).filter((t) => (crudo.bloque ? t !== '' : /siniestr|compañ|compan|anterior|bonus|proced|expuest/i.test(t))))].slice(0, 12)
+  const controles = crudo.controles.slice(0, 20).map((c) => `${c.tag}${c.id ? `[${c.id.slice(0, 40)}]` : ''}${limpia(c.et) ? `«${limpia(c.et)}»` : ''}${c.off ? '(deshabilitado)' : ''}`)
+  const et = etiquetas.length ? ` etiquetas: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
+  return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
 }
 
 /**

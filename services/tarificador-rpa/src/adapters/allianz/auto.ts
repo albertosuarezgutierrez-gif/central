@@ -1,3 +1,4 @@
+// Moto v0.7.3 (20/10/2026): CP con varias poblaciones → se elige SOLA por la localidad del riesgo (contención de palabras enteras, única; ver poblacion-localidad.ts); varias/ninguna/contradictoria → persona.
 // v0.6.18 / Moto v0.7.2 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»):
 // con varias versiones y sin elección de la bandeja, se elige SOLA si son EQUIVALENTES (`versionAutomaticaAllianz`, regla común de
 // module-tarificacion: mismo combustible y CV/kW/cc dentro de tolerancia; lo que la etiqueta no dice no cuenta) y se DECLARA en el aviso de
@@ -115,6 +116,8 @@ import {
   etiquetasSupuestos,
   esOpcionVacia,
   fechaIsoDesdeTexto,
+  codigoPostalTomadorDe,
+  localidadTomadorDe,
   leerCeldaPoblacion,
   importeEs,
   mensajeEleccionPoblacion,
@@ -143,6 +146,7 @@ import {
 } from '@central/module-tarificacion'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
+import { elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
 import { mensajeCompaniaAmbigua } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, type PeticionResolver } from '../../formador.ts'
 import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
@@ -787,7 +791,7 @@ export async function buscarPoblacion(
   page: Page,
   ctx: CtxPoblacion,
   timeoutMs = 10_000,
-  eleccion: Pick<FormularioAuto, 'poblacion' | 'eleccionPoblacion'> = {},
+  eleccion: Pick<FormularioAuto, 'poblacion' | 'eleccionPoblacion'> & { localidades?: ReadonlyArray<string | null | undefined> } = {},
 ): Promise<void> {
   const capaComun = (hueco: string, sinIA = false) => poblacionPorCapaComun(raiz, codigoPostal, page, ctx, eleccion, hueco, timeoutMs, sinIA)
   const cp = raiz.locator(SEL_RIESGO_MOTO.codigoPostal).first()
@@ -816,9 +820,12 @@ export async function buscarPoblacion(
   const opciones = opcionesPoblacionDesdeCeldas(textos)
   if (opciones.length === 0) return capaComun('el formato de las celdas del buscador de poblaciones (no son «CP- NOMBRE»)', true)
   const r = resolverPoblacion(opciones, eleccion)
-  if (r.tipo === 'ambigua') throw new ErrorEleccionPoblacion(r.opciones)
+  // v0.7.3: sin elección de la bandeja, la localidad del riesgo (poblacion / localidad del tomador con el mismo CP) por contención de palabras enteras, si da UNA sola.
+  const porLocalidad = r.tipo === 'ambigua' && (eleccion.eleccionPoblacion ?? '').trim() === '' ? elegirPoblacionPorLocalidades(r.opciones, [eleccion.poblacion, ...(eleccion.localidades ?? [])]) : null
+  if (r.tipo === 'ambigua' && !porLocalidad) throw new ErrorEleccionPoblacion(r.opciones)
   if (r.tipo === 'ninguna') return capaComun('las celdas del buscador de poblaciones', true)
-  const indice = textos.findIndex((t) => t === r.opcion.codigo)
+  const opcionElegida = r.tipo === 'elegida' ? r.opcion : porLocalidad!
+  const indice = textos.findIndex((t) => t === opcionElegida.codigo)
   if (indice < 0) return capaComun('la celda de la población elegida (ya no está en el buscador)')
   await ctx.pulsar(raiz.locator(SEL_CELDA_POBLACION).nth(indice))
   const finPulsar = Date.now() + timeoutMs
@@ -841,7 +848,9 @@ export function comprobarTitularesMoto(f: Pick<FormularioAuto, 'tomadorEsConduct
 
 export async function rellenarRiesgoMoto(raiz: Pick<Frame, 'locator'>, f: FormularioAuto, page: Page, ctx: CtxPoblacion): Promise<void> {
   comprobarTitularesMoto(f)
-  await buscarPoblacion(raiz, f.codigoPostal, page, ctx, undefined, { poblacion: f.poblacion ?? null, eleccionPoblacion: f.eleccionPoblacion ?? null })
+  // La localidad del tomador solo vale si su CP es el del riesgo (si no, es de otro sitio).
+  const localidadTomador = codigoPostalTomadorDe(f) === f.codigoPostal.trim() ? localidadTomadorDe(f) : null
+  await buscarPoblacion(raiz, f.codigoPostal, page, ctx, undefined, { poblacion: f.poblacion ?? null, eleccionPoblacion: f.eleccionPoblacion ?? null, localidades: [localidadTomador] })
   for (const [sel, dato] of [[SEL_RIESGO_MOTO.tomadorEsConductor, f.tomadorEsConductor], [SEL_RIESGO_MOTO.tomadorEsPropietario, f.tomadorEsPropietario]] as const) {
     if (dato !== true) continue // null = no consta: no se toca
     await fijarSelect(raiz, sel, 'S')
@@ -2202,7 +2211,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.2' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.3' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo
