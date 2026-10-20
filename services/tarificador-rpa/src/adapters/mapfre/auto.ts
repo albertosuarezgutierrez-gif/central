@@ -50,6 +50,15 @@
 //   Ahora presente = VISIBLE (`apareceEn`). Regla dura intacta: valor no por defecto + ausente → atasco.
 //   · Coberturas: espera robusta de las tarjetas de prima; se LEE y se PARA. «Ir a generar» / «Generar Proyecto» bloqueados
 //     en el guard común (guard-emision.ts) y nunca nombrados como acción aquí.
+// v0.8.11 (20/10/2026, HTML del fallo ff13b5d3 leído): en MOTO «Figuras» solo trae `app-tomador` (datos-basicos, datos-direccion,
+//   datos-licencia: clase y «Valido desde») y NO existe `app-historial-siniestralidad`. «Procedencia Siniestralidad», «Expuestos/Años»,
+//   «Siniestros» y «Bonus Malus» son de `app-info-descuentos` (paso Coberturas, ya montado en el DOM), con los inputs DESHABILITADOS:
+//   los calcula el portal. Compañía anterior, nº de póliza y siniestros no se piden en moto → se omiten (`planFigurasSinHistorial`);
+//   moto con siniestros > 0 sin dónde declararlos → atasco + hueco (no se calla). Coche sin el bloque sigue siendo hueco.
+// v0.8.10 (20/10/2026, trabajo real de moto ff13b5d3): en MOTO el paso «Figuras» pinta etiquetas «Procedencia Siniestralidad»,
+//   «Expuestos/Años», «Siniestros» y «Modificación Manual Niveles Bonus Malus» y NINGUNA de «compañía anterior»; el inventario no
+//   trae ni `app-historial-siniestralidad` ni `#companiaAnteriorSlide-input`. Sin evidencia de qué control es el equivalente (no hay
+//   grabación de moto) NO se inventa selector ni clic: el hueco de «compañía anterior» ahora LISTA el bloque (`describirBloqueHistorial`).
 // v0.8.9 (19/10/2026, decisión de Alberto: «las diferencias entre acabados no son influyentes; el cliente revisa en la emisión»): varias
 //   filas y ninguna casa SOLA → se elige SOLA si son equivalentes (`filaVehiculoPorEquivalencia`, regla común de module-tarificacion:
 //   CV ±10 %, cc ±5 %; la de fecha de inicio más cercana (≤) a la matriculación o la primera) y se DECLARA en el aviso de supuestos.
@@ -893,6 +902,43 @@ async function campoPorEtiquetaPortal(raiz: Pick<Frame, 'locator'>, sel: string,
 }
 
 /**
+ * v0.8.10 · Qué hay en el bloque «historial de siniestralidad» (solo lectura, NUNCA valores): etiquetas y controles (etiqueta,
+ * tag, formcontrolname/name/id, deshabilitado, interruptor). Si `app-historial-siniestralidad` no existe, las etiquetas de la
+ * pantalla que hablan de siniestralidad/compañía. Para que el hueco de «compañía anterior» en MOTO diga qué pinta el portal.
+ */
+export async function describirBloqueHistorial(raiz: Pick<Frame, 'locator'>): Promise<string> {
+  // Sin funciones con nombre dentro del `evaluate` (tsx/esbuild las envuelve en `__name`, que no existe en la página): el texto
+  // crudo se limpia aquí, en Node.
+  const crudo = await raiz
+    .locator('body')
+    .evaluate((body) => {
+      const bloque = body.querySelector('app-historial-siniestralidad')
+      if (!bloque) {
+        const et = [...body.querySelectorAll('label, mat-label, mat-slide-toggle, mat-checkbox')].map((e) => e.textContent ?? '')
+        return { bloque: false, etiquetas: et, controles: [] as { tag: string; id: string; et: string; off: boolean }[] }
+      }
+      const etiquetas = [...bloque.querySelectorAll('label, mat-label')].map((e) => e.textContent ?? '')
+      const controles = [...bloque.querySelectorAll('input, textarea, mat-select, mat-slide-toggle, mat-checkbox')].map((e) => {
+        const ff = e.closest('mat-form-field')
+        return {
+          tag: e.tagName.toLowerCase(),
+          id: e.getAttribute('formcontrolname') ?? e.getAttribute('name') ?? e.id ?? '',
+          et: (ff?.querySelector('mat-label') ?? ff?.querySelector('label') ?? e.closest('label'))?.textContent ?? e.getAttribute('aria-label') ?? '',
+          off: (e as HTMLInputElement).disabled === true || e.getAttribute('aria-disabled') === 'true',
+        }
+      })
+      return { bloque: true, etiquetas, controles }
+    })
+    .catch(() => null)
+  if (!crudo) return 'no se pudo leer el bloque'
+  const limpia = (t: string) => t.replace(/\*/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+  const etiquetas = [...new Set(crudo.etiquetas.map(limpia).filter((t) => (crudo.bloque ? t !== '' : /siniestr|compañ|compan|anterior|bonus|proced|expuest/i.test(t))))].slice(0, 12)
+  const controles = crudo.controles.slice(0, 20).map((c) => `${c.tag}${c.id ? `[${c.id.slice(0, 40)}]` : ''}${limpia(c.et) ? `«${limpia(c.et)}»` : ''}${c.off ? '(deshabilitado)' : ''}`)
+  const et = etiquetas.length ? ` etiquetas: ${etiquetas.map((t) => `«${t}»`).join(', ')}` : ''
+  return crudo.bloque ? `el bloque app-historial-siniestralidad trae ${controles.length} controles (${controles.join('; ')});${et}` : `no existe app-historial-siniestralidad;${et || ' sin etiquetas de siniestralidad'}`
+}
+
+/**
  * Rellena los `mat-select` del plan que ya tienen valor mapeado (`escribibles` de tipo `mat-select`), por la capa común
  * (`ctx.elegirMatSelect`, mat-select.ts): coincidencia clara → IA → `ErrorOpcionSinResolver` (hueco con la lista de opciones).
  * Sin el desplegable en la pantalla o sin la función guardada → `ErrorMapaIncompleto` con inventario. Devuelve lo elegido.
@@ -909,7 +955,8 @@ export async function rellenarMatSelects(raiz: Pick<Frame, 'locator'>, plan: Pla
         continue
       }
       await registrarAtasco(respaldo.page, respaldo.formador, { clave: claveCampo(op.etiqueta), tipo: 'campo', etiqueta: op.etiqueta, descripcion: `Desplegable «${op.etiqueta}» del paso «${PASOS_NSEI.find((x) => x.id === op.paso)!.nombre}» de Mapfre NSEI: no aparece en la pantalla` }).catch(() => undefined)
-      throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)`, true)
+      const bloque = op.sel === SEL_HISTORIAL.companiaAnterior ? ` — ${redactarDatosPersonales(await describirBloqueHistorial(raiz))}` : ''
+      throw new ErrorMapaIncompleto(`el desplegable «${op.etiqueta}» (${op.sel}; no aparece)${bloque}`, true)
     }
     if (!ctx.elegirMatSelect) throw new ErrorMapaIncompleto('la función guardada «elegir opción de mat-select» en el contexto del runner')
     // Capa común: coincidencia clara por texto → IA solo entre las opciones visibles → si no, ATASCO (Telegram) + hueco.
@@ -1287,6 +1334,21 @@ export async function historialAnterior(nsei: Page, f: FormularioAuto, formador:
   }
 }
 
+/**
+ * v0.8.11 · MOTO: si «Figuras» (licencia ya pintada) NO trae `app-historial-siniestralidad` tras una espera corta, el historial no
+ * se pide en ese flujo: se quitan del plan de «Figuras» la compañía anterior y los siniestros (el nº de póliza nunca estuvo). Con
+ * siniestros > 0 no hay dónde declararlos → atasco + hueco. Coche (o con el bloque presente): el plan queda igual.
+ */
+export async function planFigurasSinHistorial(nsei: Page, f: FormularioAuto, plan: PlanNsei, formador: ContextoFormador | undefined, esperaMs: number = ESPERA_OPCIONAL_MS): Promise<{ plan: PlanNsei; omitido: boolean }> {
+  if (f.ramo !== 'moto') return { plan, omitido: false }
+  if ((await nsei.locator('datos-licencia').count().catch(() => 0)) === 0) return { plan, omitido: false }
+  if (await apareceEn(nsei, 'app-historial-siniestralidad', esperaMs)) return { plan, omitido: false }
+  if ((f.siniestrosUltimos5Anios ?? 0) > 0) await huecoPaso(nsei, formador, 'siniestros', 'Figuras', 'el riesgo de moto trae siniestros y «Figuras» no pinta el bloque de historial de siniestralidad donde declararlos')
+  formador?.log('mapfre_historial_ausente_moto', {})
+  const fuera = (o: OperacionNsei) => o.sel.startsWith('app-historial-siniestralidad')
+  return { plan: { escribibles: plan.escribibles.filter((o) => !fuera(o)), pendientes: plan.pendientes.filter((o) => !fuera(o)) }, omitido: true }
+}
+
 const ESPERA_PRIMAS_MS = 60_000
 const SEL_DIALOGO_OCUPADO = 'mat-dialog-container, [role="dialog"], [role="alertdialog"]'
 
@@ -1364,13 +1426,15 @@ export async function precioDesdeObjetoAsegurado(
   await continuar(nsei, ctx, 'objetoAsegurado')
   // Orden de la grabación: licencia (clase y fecha) → compañía anterior → nº de póliza anterior.
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  await rellenarCamposTexto(nsei, planDelPaso(plan, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
-  await rellenarMatSelects(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  await historialAnterior(nsei, f, ctx.formador)
+  const sinHist = await planFigurasSinHistorial(nsei, f, plan, ctx.formador)
+  const planFig = sinHist.plan
+  await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
+  await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
+  if (!sinHist.omitido) await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
-  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(plan, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
-  exigirPasoCompleto(plan, 'figuras')
+  await rellenarCamposTexto(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
+  exigirPasoCompleto(planFig, 'figuras')
   await continuar(nsei, ctx, 'figuras')
   const primas = await esperarPrimasMapfre(nsei, ctx, esperaPrimasMs)
   // 18/10/2026: lo que Mapfre USÓ, leído del portal: el CP de circulación del paso 2 y la fila de vehículo confirmada (Mapfre da
@@ -1390,7 +1454,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.9',
+  version: '0.8.11',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada

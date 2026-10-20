@@ -21,6 +21,7 @@ import { riesgoAsegura } from '@/lib/seguimiento-asegura'
 import { interpretarRiesgo, type Riesgo } from '@/lib/riesgo-asegura'
 import { tomadorDelRiesgo, varianteDeRiesgo, type VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { datosCotizadorMoto, type DatosCotizadorMoto } from './datos-cotizador'
+import { fichaAsegura } from '@/lib/ficha-asegura'
 
 const SIN_ACCESO = 'No tienes acceso a la correduría.'
 
@@ -95,7 +96,8 @@ export async function pedirTarificacionGuardadaMoto(entrada: {
 
 export type AperturaCotizadorMoto =
   | { estado: 'error'; mensaje: string }
-  | { estado: 'ok'; clienteId: string; riesgo: Riesgo; variante: VarianteNueva; datos: DatosCotizadorMoto }
+  /** `cpMunicipios`: CP de la ficha del tomador (del que salen los municipios); ancla del municipio guardado. `null` = no se sabe. */
+  | { estado: 'ok'; clienteId: string; riesgo: Riesgo; variante: VarianteNueva; datos: DatosCotizadorMoto; cpMunicipios: string | null }
 
 /**
  * El bloque «Pedir precio» de una oportunidad de MOTO (07/10/2026): relee el RIESGO en el servidor (lo que hay en
@@ -117,6 +119,8 @@ export async function abrirCotizadorMotoDeOportunidad(entrada: { oportunidadId: 
   if (l.estado === 'error') return { estado: 'error', mensaje: `No se ha podido leer el riesgo (${l.motivo}).` }
   if (l.riesgo.oportunidad.ramo !== 'moto') return { estado: 'error', mensaje: 'Este riesgo no es de moto.' }
   const clienteId = tomadorDelRiesgo(l.riesgo)
-  const datos = await datosCotizadorMoto(clienteId, id)
-  return { estado: 'ok', clienteId, riesgo: l.riesgo, variante: varianteDeRiesgo(l.riesgo, clienteId, null), datos }
+  // La ficha, en paralelo, solo por su CP (20/10/2026): el municipio guardado en el riesgo solo se precarga si su CP es este.
+  const [datos, ficha] = await Promise.all([datosCotizadorMoto(clienteId, id), fichaAsegura(clienteId).catch(() => null)])
+  const cpMunicipios = ficha?.estado === 'ok' ? ficha.ficha.contacto.codigoPostal : null
+  return { estado: 'ok', clienteId, riesgo: l.riesgo, variante: varianteDeRiesgo(l.riesgo, clienteId, null), datos, cpMunicipios }
 }

@@ -292,6 +292,98 @@ export function elegirMarcaExactaGenerali(opciones: readonly string[], buscado: 
   return { tipo: 'ninguna', cercanas: cerca.map((x) => x.o).slice(0, 25) }
 }
 
+/** Opción de cierre de la lista de modelos del selector de Generali: empieza por «Otros» (real: «Otros modelos ...», v0.2.12). */
+export const OPCION_OTROS_MODELO_GENERALI = 'OTROS'
+
+/** Supuesto declarado cuando el modelo no figura en la lista y se elige «Otros» (el modelo es dato de catálogo, no personal). PURA. */
+export function avisoModeloOtrosGenerali(modelo: string): string {
+  return `modelo «${modelo.replace(/\s+/g, ' ').trim().slice(0, 60)}» no figura en la lista del selector de Generali: se eligió «Otros» (supuesto; revisar en la emisión)`
+}
+
+/**
+ * Modelo del selector (mismo criterio que la marca: SOLO igualdad EXACTA normalizada). Una → esa. Repetida → `varias` (una persona
+ * elige). Ninguna: si el dato es del riesgo (`dato`) y hay UNA opción «Otros» → `otros` con su supuesto; si el buscado es una
+ * denominación completa (no es un modelo suelto) o no hay «Otros» único → `ninguna` con las cercanas. Nunca la primera ni la más
+ * parecida. PURA.
+ */
+export type EleccionModeloGenerali =
+  | { tipo: 'unica'; indice: number }
+  | { tipo: 'otros'; indice: number; supuesto: string }
+  | { tipo: 'ninguna'; cercanas: string[] }
+  | { tipo: 'varias'; cercanas: string[] }
+
+export function elegirModeloGenerali(opciones: readonly string[], buscado: string, modo: 'dato' | 'denominacion' = 'dato'): EleccionModeloGenerali {
+  const e = elegirMarcaExactaGenerali(opciones, buscado)
+  if (e.tipo !== 'ninguna' || normalizarCatalogo(buscado) === '') return e
+  const esOtros = (o: string) => !esOpcionVaciaCatalogo(o) && normalizarCatalogo(o).split(' ')[0] === OPCION_OTROS_MODELO_GENERALI
+  if (modo === 'denominacion') {
+    // v0.2.12: la denominación completa contiene el modelo como palabra entera («… TUCSON 1.6 …»); se queda el más largo («I20 ACTIVE»
+    // gana a «I20»). Uno → ese; varios distintos → una persona elige; ninguno → «Otros» como con un dato suelto.
+    const casan = opciones.map((o, i) => ({ o, i })).filter((x) => !esOpcionVaciaCatalogo(x.o) && !esOtros(x.o) && contieneFrase(buscado, x.o))
+    const maximas = casan.filter((x) => !casan.some((y) => y !== x && normalizarCatalogo(y.o).length > normalizarCatalogo(x.o).length && contieneFrase(y.o, x.o)))
+    if (maximas.length === 1) return { tipo: 'unica', indice: maximas[0]!.i }
+    if (maximas.length > 1) return { tipo: 'varias', cercanas: maximas.map((x) => x.o).slice(0, 25) }
+  }
+  const otros = opciones.flatMap((o, i) => (esOtros(o) ? [i] : []))
+  if (otros.length === 1) return { tipo: 'otros', indice: otros[0]!, supuesto: avisoModeloOtrosGenerali(buscado) }
+  return e
+}
+
+/** Un control del selector de vehículos leído de la página (solo lectura): etiqueta, tipo y sus opciones (catálogo). */
+export type CampoSelectorGenerali = { clave: string; etiqueta: string; tipo: string; opciones: string[]; total: number }
+
+/** Los campos que NO estaban antes de elegir marca/modelo (por `clave`) y que no son los menús que el bot maneja. PURA. */
+export function camposNuevosSelectorGenerali(antes: readonly string[], ahora: readonly CampoSelectorGenerali[], ignorar: readonly string[] = []): CampoSelectorGenerali[] {
+  const vistos = new Set([...antes, ...ignorar])
+  return ahora.filter((c) => !vistos.has(c.clave))
+}
+
+/** «Etiqueta [tipo]: op1 | op2 …» de cada campo nuevo, para el hueco (con tope). PURA. */
+export function resumenCamposSelectorGenerali(campos: readonly CampoSelectorGenerali[], max = 1500): string {
+  const t = campos.map((c) => `«${c.etiqueta || '(sin etiqueta)'}» [${c.tipo}]${c.opciones.length ? ` (${c.total}): ${c.opciones.join(' | ')}` : ''}`).join(' ; ')
+  return t.length > max ? `${t.slice(0, max - 1)}…` : t
+}
+
+// ───────────── v0.2.14: ficha de versión del selector (Potencia · Versión · tabla Código | Modelo | Versión · Resumen) ─────────────
+
+/** Una fila de la tabla de versiones (catálogo, sin datos personales). */
+export type FilaVersionGenerali = { codigo: string; modelo: string; version: string; seleccionada: boolean }
+/** Lo que el selector enseña tras el modelo (solo lectura). `resumen` = texto tras «Código y descripción» del bloque «Resumen». */
+export type FichaVersionGenerali = { filas: FilaVersionGenerali[]; resumen: string }
+
+/** «116.0 CV» → 116; `null` si la etiqueta no trae un número seguido de CV. PURA. */
+export function cvDePotenciaGenerali(etiqueta: string): number | null {
+  const m = /(\d{2,4}(?:[.,]\d+)?)\s*CV\b/i.exec(etiqueta)
+  if (!m) return null
+  const n = Number(m[1]!.replace(',', '.'))
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+/** El grupo de opciones «Potencia» entre los controles del selector: no es «Placas especiales» y TODAS sus opciones son «NNN CV». `null` si no hay (o hay varios). PURA. */
+export function grupoPotenciaGenerali(campos: readonly CampoSelectorGenerali[]): { grupo: string; opciones: string[] } | null {
+  const hallados = campos.filter((c) => c.tipo === 'grupo' && c.clave.startsWith('grupo|') && !/^placaesp/i.test(c.clave.slice(6)) && c.opciones.length > 0 && c.opciones.length === c.total && c.opciones.every((o) => cvDePotenciaGenerali(o) !== null))
+  return hallados.length === 1 ? { grupo: hallados[0]!.clave.slice(6), opciones: hallados[0]!.opciones } : null
+}
+
+/** El desplegable «Versión» del selector (PrimeFaces o nativo), si lo hay y es único. PURA. */
+export function desplegableVersionGenerali(campos: readonly CampoSelectorGenerali[]): CampoSelectorGenerali | null {
+  const hallados = campos.filter((c) => (c.tipo === 'desplegable' || c.tipo === 'select') && /^versi[oó]n(es)?\s*:?\s*$/i.test(c.etiqueta.trim()))
+  return hallados.length === 1 ? hallados[0]! : null
+}
+
+/**
+ * ¿El «Resumen» corresponde a la fila elegida? Con código: el código tiene que aparecer como palabra entera en el resumen (la descripción
+ * puede venir recortada con «…»). Sin código: la versión entera (normalizada) tiene que estar contenida. Resumen vacío → no. PURA.
+ */
+export function resumenCoincideConFilaGenerali(resumen: string, fila: Pick<FilaVersionGenerali, 'codigo' | 'version'>): boolean {
+  const r = normalizarCatalogo(resumen)
+  if (r === '') return false
+  const c = normalizarCatalogo(fila.codigo)
+  if (c !== '') return ` ${r} `.includes(` ${c} `)
+  const v = normalizarCatalogo(fila.version)
+  return v !== '' && r.includes(v)
+}
+
 // ───────────────────────── «Datos de Valoración» (captura 6) ─────────────────────────
 
 /** Etiquetas EXACTAS de la captura 6 (sección «Identificación del vehículo» y «Roles»). */

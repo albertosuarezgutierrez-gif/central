@@ -125,6 +125,8 @@ export default async function MotoNuevoPage({ params, searchParams }: { params: 
         civiles={civiles}
         municipios={pre.pre.municipios}
         municipiosMotivo={pre.pre.municipiosMotivo}
+        // CP de la ficha (del que salen los municipios): ancla del municipio guardado en el riesgo (20/10/2026).
+        cpMunicipios={ficha.estado === 'ok' ? ficha.ficha.contacto.codigoPostal : null}
         estadoCivilMoto={pre.pre.estadoCivil}
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}

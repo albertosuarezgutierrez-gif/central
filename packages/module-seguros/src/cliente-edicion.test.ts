@@ -30,6 +30,10 @@ import {
   tipoHistorialAlta,
   textoHistorialAlta,
   seraPrincipalAlAnadir,
+  esEstadoCivilCajon,
+  estadoCivilGuardable,
+  estadoCivilDeCatalogo,
+  estadoCivilFichaCasa,
 } from './cliente-edicion.ts'
 import type { DocumentoResumen } from './documentos.ts'
 
@@ -373,4 +377,51 @@ test('🪤 FUENTES_ORIGEN = enum FuenteOrigen de asegura.prisma, y cada valor ti
   for (const f of FUENTES_CANAL) {
     assert.ok(new RegExp(`fuente_origen ADD VALUE IF NOT EXISTS '${f}'`).test(sql), `falta el SQL que añade '${f}' a seguros.fuente_origen`)
   }
+})
+
+// ─── Estado civil (20/10/2026): el cotizador lo guarda en la ficha. Catálogo SINTÉTICO. ─────────────────────
+const CIVILES = [
+  { id: 'Single', nombre: 'Soltero' },
+  { id: 'Married', nombre: 'Casado' },
+  { id: 'Other', nombre: 'Otro' },
+]
+
+test('estado civil del catálogo: por id o por nombre → se guarda el NOMBRE de la opción', () => {
+  assert.deepEqual(estadoCivilDeCatalogo('Married', CIVILES), { ok: true, valor: 'Casado' })
+  assert.deepEqual(estadoCivilDeCatalogo(' casado ', CIVILES), { ok: true, valor: 'Casado' })
+})
+
+test('estado civil fuera de catálogo, de cajón, vacío o sin catálogo → rechazo (nunca se escribe)', () => {
+  assert.equal(estadoCivilDeCatalogo('Viudo', CIVILES).ok, false, 'fuera de catálogo')
+  assert.equal(estadoCivilDeCatalogo('Other', CIVILES).ok, false, 'opción de cajón del propio catálogo')
+  assert.equal(estadoCivilDeCatalogo('', CIVILES).ok, false)
+  assert.equal(estadoCivilDeCatalogo(7, CIVILES).ok, false)
+  assert.equal(estadoCivilDeCatalogo('Married', null).ok, false, 'catálogo sin leer: no se puede comprobar')
+  // Nombre repetido en el catálogo: el emparejado exacto no lo volvería a encontrar.
+  assert.equal(estadoCivilDeCatalogo('Married', [...CIVILES, { id: 'Married2', nombre: 'CASADO' }]).ok, false)
+  for (const v of ['otro', 'N/A', ' no consta ', 'Desconocido', '-', '']) assert.equal(esEstadoCivilCajon(v), true, v)
+  assert.equal(esEstadoCivilCajon('Casado'), false)
+  assert.equal(estadoCivilGuardable('x'.repeat(41)).ok, false, 'la columna es VARCHAR(40)')
+})
+
+test('revisarEdicion: estado civil solo, válido sin documento; de cajón → rechazo con campo; historial con el valor', () => {
+  const ok = revisarEdicion({ estadoCivil: 'Casado' })
+  assert.equal(ok.ok, true)
+  if (ok.ok) {
+    assert.equal(ok.estadoCivil, 'Casado')
+    assert.equal(ok.tocaIdentidad, false)
+    assert.match(textoHistorialEdicion(ok, { actor: 'a@b.es' }), /estado civil → Casado/)
+  }
+  const cajon = revisarEdicion({ estadoCivil: 'N/A' })
+  assert.equal(cajon.ok, false)
+  assert.equal(!cajon.ok && cajon.campo, 'estadoCivil')
+  const sin = revisarEdicion({ sexo: 'mujer' })
+  assert.equal(sin.ok && sin.estadoCivil, undefined, 'ausente = no se toca')
+})
+
+test('estadoCivilFichaCasa: la ficha que ya casa con el catálogo no se pisa desde el cotizador', () => {
+  assert.equal(estadoCivilFichaCasa('CASADO', CIVILES), true)
+  assert.equal(estadoCivilFichaCasa('Casada', CIVILES), false, 'no casa exacto: se puede corregir')
+  assert.equal(estadoCivilFichaCasa(null, CIVILES), false)
+  assert.equal(estadoCivilFichaCasa('Otro', CIVILES), false, 'un valor de cajón no cuenta como dato')
 })

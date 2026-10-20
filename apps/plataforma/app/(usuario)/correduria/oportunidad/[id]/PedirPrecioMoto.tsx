@@ -63,6 +63,7 @@ function Montaje({ apertura, n, bloqueo, onCotizando, onCotizado }: MontajeEmbeb
         civiles={datos.civiles}
         municipios={pre.pre.municipios}
         municipiosMotivo={pre.pre.municipiosMotivo}
+        cpMunicipios={apertura.cpMunicipios}
         estadoCivilMoto={pre.pre.estadoCivil}
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}

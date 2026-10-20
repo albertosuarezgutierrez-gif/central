@@ -258,3 +258,26 @@ test('tipoVehiculo y cilindradaCc se guardan, se leen de vuelta y editarlos quit
   assert.equal(viejo?.tipoVehiculo, null)
   assert.deepEqual(faltanDatosVehiculo(viejo), [])
 })
+
+// ─── Municipio elegido en el cotizador (20/10/2026): con su CP ancla, sin quitar el sello. ─────────────────
+test('municipioCirculacionCp: 5 cifras, se lee y se valida; lo antiguo sin él se lee como null', () => {
+  assert.deepEqual(ok({ municipioCirculacionCp: '00001' }), { municipioCirculacionCp: '00001' })
+  assert.equal(validarDatosVehiculoRiesgo({ municipioCirculacionCp: '123' }, { hoy: HOY }).ok, false)
+  assert.equal(leerDatosVehiculo({ municipioCirculacionCp: '00001' })?.municipioCirculacionCp, '00001')
+  assert.equal(leerDatosVehiculo({ municipioCirculacionCp: 'abc' })?.municipioCirculacionCp, null)
+  assert.equal(leerDatosVehiculo({})?.municipioCirculacionCp, null)
+})
+
+test('guardar el municipio elegido NO quita el sello de «confirmado»; otro cambio sí', () => {
+  const sellado = { ...datosVehiculoVacios(), matricula: '0000BBB', confirmadoAt: '2026-10-01T10:00:00.000Z' }
+  const m = aplicarEdicionVehiculo(sellado, { municipioCirculacionId: 7, municipioCirculacion: 'MUNICIPIO A', municipioCirculacionCp: '00001' }, { confirmar: false, ahora: '2026-10-20T10:00:00.000Z' })
+  assert.equal(m.cambios.length, 3)
+  assert.equal(m.datos.confirmadoAt, sellado.confirmadoAt)
+  const otro = aplicarEdicionVehiculo(sellado, { kmAnuales: 9000 }, { confirmar: false, ahora: '2026-10-20T10:00:00.000Z' })
+  assert.equal(otro.datos.confirmadoAt, null)
+  // Un riesgo guardado antes (sin la clave): `undefined` cuenta como null, no como cambio.
+  const viejo = { ...sellado } as Record<string, unknown>
+  delete viejo.municipioCirculacionCp
+  const igual = aplicarEdicionVehiculo(viejo as never, { municipioCirculacionCp: null }, { confirmar: false, ahora: '2026-10-20T10:00:00.000Z' })
+  assert.deepEqual(igual.cambios, [])
+})

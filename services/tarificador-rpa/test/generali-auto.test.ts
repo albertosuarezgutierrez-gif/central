@@ -15,6 +15,12 @@ import {
   contieneFrase,
   elegirGarajeGenerali,
   elegirMarcaExactaGenerali,
+  elegirModeloGenerali,
+  camposNuevosSelectorGenerali,
+  cvDePotenciaGenerali,
+  grupoPotenciaGenerali,
+  resumenCoincideConFilaGenerali,
+  resumenCamposSelectorGenerali,
   elegirOpcionCatalogo,
   elegirUsoGenerali,
   esEtiquetaVerificacionMatricula,
@@ -27,9 +33,9 @@ import {
   urlConMediador,
   vehiculoBuscadoGenerali,
 } from '../src/adapters/generali/reglas.ts'
-import { ErrorMapaIncompletoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
+import { ErrorMapaIncompletoGenerali, decidirFilaVersionGenerali, decidirPotenciaGenerali, clasificarPostConfirmarGenerali, fijarEsperaPostConfirmarGenerali, modeloVerificadoGenerali, GENERALI_AUTO_ACTIVO, VERSION_GENERALI_AUTO, elegirMediadorGenerali, generaliAuto, menuPrimeFaces, rellenarValoracionGenerali, seleccionarVehiculoGenerali } from '../src/adapters/generali/auto.ts'
 import { adaptadores } from '../src/adapters/index.ts'
-import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
+import { ErrorMapaGuardGenerali, abrirDesplegableMarcaGenerali, elegirMarcaListaGenerali, abrirDesplegableModeloGenerali, elegirModeloListaGenerali, botonSelectorVehiculosGeneraliPermitido, cerrarAvisoSabiasQueGenerali, marcarPlacasEspecialesGenerali, pulsarConfirmarVehiculoGenerali, elegirPotenciaGenerali, elegirFilaVersionGenerali, pulsarAvanzarSelectorVehiculosGenerali, urlSelectorVehiculosGenerali, pulsarMediadorGenerali, entrarTurismosGenerali, instalarGuardEmision, MENU_TURISMOS_GENERALI, type GuardEmision } from '../src/guard.ts'
 import { ErrorTarificador } from '../src/errores.ts'
 import { prepararTrabajo, type AdaptadorRegistrado } from '../src/ramo.ts'
 import { vehiculoDelResultado } from '../src/api.ts'
@@ -150,8 +156,8 @@ const coche = (extra: Record<string, unknown> = {}): FormularioAuto => {
 test('flag GENERALI_AUTO_ACTIVO ENCENDIDO (Alberto, 18/10/2026): la imagen registra Generali; la puerta de BD sigue siendo la fila de integración', () => {
   assert.equal(GENERALI_AUTO_ACTIVO, true)
   assert.equal(adaptadores.obtener('generali', 'auto'), generaliAuto)
-  assert.equal(generaliAuto.version, '0.2.10')
-  assert.equal(VERSION_GENERALI_AUTO, '0.2.10')
+  assert.equal(generaliAuto.version, '0.2.14')
+  assert.equal(VERSION_GENERALI_AUTO, '0.2.14')
   assert.equal(generaliAuto.credencial, 'GENERALI_MEDIADORES')
   assert.equal(generaliAuto.ramo, 'auto', 'solo turismos')
 })
@@ -524,27 +530,39 @@ test('v0.2.5 · menú que no se despliega ni con clic → hueco con inventario, 
 
 // ───────────── v0.2.6: «Selector de vehículos» PrimeFaces (marco `selVehiculo`; select OCULTO + div combobox) ─────────────
 
+fijarEsperaPostConfirmarGenerali(1_500) // producción: 25 s
 const SEL_VEHICULOS = 'https://www.generali.es/mot_motorWeb/mvc/selVehiculo'
 
 /** Estructura del inventario real (ids `buscamarca*`, `placaesp:0/1`, `#cancelar`/`#confirmar`); marcas y valores de prueba. */
-const PRIMEFACES_HTML = (marcas: string[], boton = 'Confirmar') => `<button type="button">Vehículo</button><h2>Selector de vehículos</h2>
+const PRIMEFACES_HTML = (marcas: string[], boton = 'Confirmar', modelos?: string[], nuevos = '') => `<button type="button">Vehículo</button><h2>Selector de vehículos</h2>
   <span>Placas especiales</span>
   <table><tr><td><input type="radio" id="placaesp:0" name="placaesp" value="S" style="position:absolute;left:-999px"><label for="placaesp:0">Sí</label></td>
   <td><input type="radio" id="placaesp:1" name="placaesp" value="N" style="position:absolute;left:-999px"><label for="placaesp:1">No</label></td></tr></table>
   <span>Principales marcas</span>
   <span>Todas las marcas</span>
   <div id="buscamarca" role="combobox" tabindex="0" onclick="document.getElementById('buscamarca_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="buscamarca_input" name="buscamarca_input" style="width:0;height:0;border:0;padding:0"><option value="null">Seleccione una</option>${marcas.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><label id="buscamarca_label" class="ui-selectonemenu-label">Seleccione una</label><div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div></div>
-  <div id="buscamarca_panel" style="display:none"><ul id="buscamarca_items">${marcas.map((m) => `<li data-label="${m}" class="ui-selectonemenu-item" onclick="var s=document.getElementById('buscamarca_input');s.selectedIndex=Array.from(s.options).findIndex(o=>o.textContent==='${m}');document.getElementById('buscamarca_label').textContent='${m}';s.dispatchEvent(new Event('change'));window.__cambios=(window.__cambios||0)+1;document.getElementById('buscamarca_panel').style.display='none'">${m}</li>`).join('')}</ul></div>
+  <div id="buscamarca_panel" style="display:none"><ul id="buscamarca_items">${marcas.map((m) => `<li data-label="${m}" class="ui-selectonemenu-item" onclick="var s=document.getElementById('buscamarca_input');s.selectedIndex=Array.from(s.options).findIndex(o=>o.textContent==='${m}');document.getElementById('buscamarca_label').textContent='${m}';s.dispatchEvent(new Event('change'));window.__cambios=(window.__cambios||0)+1;document.getElementById('buscamarca_panel').style.display='none';var bm=document.getElementById('bloque_modelo');if(bm)bm.style.display='block'">${m}</li>`).join('')}</ul></div>
+  ${modelos ? MODELO_PF(modelos, nuevos) : ''}
   <button type="submit" id="cancelar" onclick="window.__cancelar=1">Cancelar</button>
   <button type="submit" id="confirmar" onclick="window.__confirmado=(window.__confirmado||0)+1;return false">${boton}</button>`
+
+/** Bloque «Modelo» (otro SelectOneMenu de PrimeFaces, id de prueba `selmodelo`): oculto hasta elegir la marca; `nuevos` = campos que salen al elegir el modelo. */
+const MODELO_PF = (modelos: string[], nuevos: string) => `<div id="bloque_modelo" style="display:none"><span>Modelo</span>
+  <div id="selmodelo" role="combobox" tabindex="0" onclick="document.getElementById('selmodelo_panel').style.display='block'"><div class="ui-helper-hidden-accessible" style="position:absolute;width:0;height:0;overflow:hidden"><select id="selmodelo_input" name="selmodelo_input" style="width:0;height:0;border:0;padding:0"><option value="null">Seleccione uno</option>${modelos.map((m, i) => `<option value="${i}">${m}</option>`).join('')}</select></div><label id="selmodelo_label" class="ui-selectonemenu-label">Seleccione uno</label><div class="ui-selectonemenu-trigger"><span class="ui-icon ui-icon-triangle-1-s"></span></div></div>
+  <div id="selmodelo_panel" style="display:none"><ul id="selmodelo_items">${modelos.map((m) => `<li data-label="${m}" class="ui-selectonemenu-item" onclick="var s=document.getElementById('selmodelo_input');s.selectedIndex=Array.from(s.options).findIndex(o=>o.textContent==='${m}');document.getElementById('selmodelo_label').textContent='${m}';s.dispatchEvent(new Event('change'));window.__modelo=(window.__modelo||[]).concat('${m}');document.getElementById('selmodelo_panel').style.display='none';var nv=document.getElementById('nuevos');if(nv)nv.style.display='block'">${m}</li>`).join('')}</ul></div>
+  </div><div id="nuevos" style="display:none">${nuevos}</div>`
 
 const ctxPF = (page: Page, guard: GuardEmision) => ({
   pausaAccion: async () => {},
   pulsar: async (b: Parameters<ContextoPortal['pulsar']>[0]) => { const { pulsar } = await import('../src/guard.ts'); await pulsar(b, guard) },
   marcarPlacasEspecialesGenerali: () => marcarPlacasEspecialesGenerali(page, guard, 'No'),
   confirmarVehiculoGenerali: () => pulsarConfirmarVehiculoGenerali(page, guard),
+  elegirPotenciaGenerali: (g: string, t: string) => elegirPotenciaGenerali(page, guard, g, t),
+  elegirFilaVersionGenerali: (c: string | null, v: string) => elegirFilaVersionGenerali(page, guard, c, v),
   abrirDesplegableMarcaGenerali: (base: string) => abrirDesplegableMarcaGenerali(page, guard, base),
   elegirMarcaListaGenerali: (base: string, texto: string) => elegirMarcaListaGenerali(page, guard, base, texto),
+  abrirDesplegableModeloGenerali: (base: string) => abrirDesplegableModeloGenerali(page, guard, base),
+  elegirModeloListaGenerali: (base: string, texto: string) => elegirModeloListaGenerali(page, guard, base, texto),
   log: () => {},
 }) as unknown as ContextoPortal
 
@@ -581,9 +599,11 @@ test('v0.2.6 · marca: igualdad EXACTA normalizada (tildes, mayúsculas, espacio
 })
 
 test('v0.2.6 · selector PrimeFaces: marca exacta por el panel (change disparado), placas «No», «Confirmar» pulsado una vez y hueco con la pantalla siguiente sin mapa', async () => {
-  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'SEAT CUPRA']))
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT', 'SEAT CUPRA'], 'Confirmar', ['IBIZA', 'IBIZA ST', 'LEON']))
   try {
-    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message) && !/SIN CAPTURA/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.locator('#selmodelo_input').inputValue(), '0', 'IBIZA exacto, no «IBIZA ST»')
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['IBIZA'])
     assert.equal(await page.locator('#buscamarca_input').inputValue(), '0', 'SEAT (índice 0 de la fixture), no «SEAT CUPRA»')
     assert.equal(await page.locator('#buscamarca_label').innerText(), 'SEAT')
     assert.equal(await page.evaluate(() => (window as unknown as { __cambios?: number }).__cambios ?? 0), 1, 'por el li del panel de PrimeFaces')
@@ -763,5 +783,351 @@ test('v0.2.7 · sin disparador visible y único (ni trigger ni label) → hueco 
     assert.equal(await cambiosPF(b.page), 0)
   } finally {
     await b.cerrar()
+  }
+})
+
+// ───────────── v0.2.11: «Modelo» tras la marca (SelectOneMenu), «Otros», ambigüedad y campos nuevos antes de «Confirmar» ─────────────
+
+test('v0.2.11 · modelo: igualdad EXACTA normalizada; repetido → varias; sin coincidencia → «Otros» declarado; sin «Otros» → ninguna con cercanas', () => {
+  const ops = ['Seleccione uno', 'IBIZA', 'IBIZA ST', 'LEÓN', 'ARONA', 'Otros']
+  assert.deepEqual(elegirModeloGenerali(ops, ' ibiza '), { tipo: 'unica', indice: 1 })
+  assert.deepEqual(elegirModeloGenerali(ops, 'Leon'), { tipo: 'unica', indice: 3 })
+  const otros = elegirModeloGenerali(ops, 'TARRACO')
+  assert.equal(otros.tipo, 'otros')
+  assert.ok(otros.tipo === 'otros' && otros.indice === 5 && /TARRACO/.test(otros.supuesto) && /Otros/.test(otros.supuesto))
+  // «IBI» no es «IBIZA»: sin contención → «Otros» (no se adivina), nunca «la más parecida».
+  assert.equal(elegirModeloGenerali(ops, 'IBI').tipo, 'otros')
+  // Repetido: una persona elige (aunque haya «Otros»).
+  const rep = elegirModeloGenerali(['Seleccione uno', 'IBIZA', 'IBIZA', 'Otros'], 'ibiza')
+  assert.equal(rep.tipo, 'varias')
+  assert.ok(rep.tipo === 'varias' && rep.cercanas.length === 2)
+  // Sin «Otros»: ninguna, con las cercanas para la bandeja.
+  const sin = elegirModeloGenerali(['Seleccione uno', 'IBIZA', 'IBIZA ST'], 'IBIZA SC')
+  assert.equal(sin.tipo, 'ninguna')
+  assert.ok(sin.tipo === 'ninguna' && sin.cercanas.includes('IBIZA'))
+  // Dos «Otros» (ambiguo) o buscado vacío: tampoco se elige.
+  assert.equal(elegirModeloGenerali(['Otros', 'OTROS', 'IBIZA'], 'TARRACO').tipo, 'ninguna')
+  assert.equal(elegirModeloGenerali(ops, '').tipo, 'ninguna')
+  // v0.2.12 · denominación completa: el modelo como palabra entera, el más largo gana; ninguno → «Otros».
+  assert.deepEqual(elegirModeloGenerali(ops, 'SEAT IBIZA 1.0 TSI STYLE', 'denominacion'), { tipo: 'unica', indice: 1 })
+  assert.equal(elegirModeloGenerali(ops, 'SEAT TARRACO 2.0 TDI', 'denominacion').tipo, 'otros')
+  const largo = elegirModeloGenerali(['I20', 'I20 ACTIVE', 'Otros modelos ...'], 'HYUNDAI I20 ACTIVE 1.0', 'denominacion')
+  assert.deepEqual(largo, { tipo: 'unica', indice: 1 })
+  assert.equal(elegirModeloGenerali(['IBIZA', 'LEON', 'Otros'], 'SEAT IBIZA LEON', 'denominacion').tipo, 'varias')
+})
+
+test('v0.2.12 · la opción real de Generali es «Otros modelos ...»: cuenta como «Otros»', () => {
+  const ops = ['Seleccione uno', 'I10', 'I20', 'TUCSON', 'Otros modelos ...']
+  const e = elegirModeloGenerali(ops, 'TERRACAN')
+  assert.ok(e.tipo === 'otros' && e.indice === 4)
+  // «OTRO» suelto o algo que solo contiene «otros» en medio no es la opción de cierre.
+  assert.equal(elegirModeloGenerali(['I10', 'Modelos otros'], 'TERRACAN').tipo, 'ninguna')
+})
+
+test('v0.2.11 · campos nuevos del selector: lo que no estaba antes y no es un menú del bot; resumen con etiquetas y opciones', () => {
+  const c = (clave: string, etiqueta: string, opciones: string[] = []) => ({ clave, etiqueta, tipo: opciones.length ? 'desplegable' : 'texto', opciones, total: opciones.length })
+  const ahora = [c('buscamarca', 'Todas las marcas', ['SEAT']), c('selmodelo', 'Modelo', ['IBIZA']), c('combustible', 'Combustible', ['Gasolina', 'Diésel']), c('texto|Cilindrada', 'Cilindrada')]
+  const nuevos = camposNuevosSelectorGenerali(['buscamarca'], ahora, ['selmodelo'])
+  assert.deepEqual(nuevos.map((x) => x.clave), ['combustible', 'texto|Cilindrada'])
+  const r = resumenCamposSelectorGenerali(nuevos)
+  assert.match(r, /«Combustible» \[desplegable\] \(2\): Gasolina \| Diésel/)
+  assert.match(r, /«Cilindrada» \[texto\]/)
+  assert.deepEqual(camposNuevosSelectorGenerali(['buscamarca', 'selmodelo'], ahora.slice(0, 2)), [])
+})
+
+test('v0.2.11 · selector: modelo que NO está en la lista → «Otros» (declarado como supuesto) y se sigue a «Confirmar»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['LEON', 'ARONA', 'Otros']))
+  try {
+    const avisos: string[] = []
+    const f = coche({ seleccionVehiculo: { marca: 'SEAT', modelo: 'TARRACO' } })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, f, ctxPF(page, guard), avisos), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message))
+    assert.equal(await page.locator('#selmodelo_label').innerText(), 'Otros')
+    assert.deepEqual(await page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['Otros'])
+    assert.equal(avisos.length, 1)
+    assert.match(avisos[0]!, /TARRACO/)
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.11 · selector: modelo ambiguo o sin «Otros» → atasco `eleccion` con la lista, sin elegir modelo ni pulsar «Confirmar»', async () => {
+  for (const modelos of [['IBIZA', 'IBIZA', 'Otros'], ['LEON', 'ARONA']]) {
+    const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', modelos))
+    try {
+      await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length >= 2)
+      assert.equal(await page.locator('#selmodelo_input').inputValue(), 'null', 'no se eligió ningún modelo')
+      assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0, 'no se confirmó')
+    } finally {
+      await cerrar()
+    }
+  }
+})
+
+test('v0.2.11 · selector: si tras el modelo salen campos NUEVOS, NO se pulsa «Confirmar» y el hueco lista etiquetas y opciones', async () => {
+  const nuevos = '<span>Combustible</span><select id="combustible"><option>Seleccione uno</option><option>Gasolina</option><option>Diésel</option></select><span>Potencia</span><input id="potencia" type="text">'
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON'], nuevos))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && e.pideInventarioDom === true && /campos nuevos/.test(e.message) && /Gasolina \| Diésel/.test(e.message) && /Potencia|combustible/i.test(e.message) && !/SIN CAPTURA/.test(e.message))
+    assert.equal(await page.locator('#selmodelo_input').inputValue(), '0')
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0, 'no se pulsó «Confirmar»')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.11 · las puertas de modelo: URL selVehiculo, id de menú válido (no el de marcas ni sus elementos internos) y UNA vez por trabajo', async () => {
+  const a = await abrir(PORTAL, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA']))
+  try {
+    await assert.rejects(abrirDesplegableModeloGenerali(a.page, a.guard, 'selmodelo'), (e: unknown) => e instanceof ErrorTarificador)
+    await assert.rejects(elegirModeloListaGenerali(a.page, a.guard, 'selmodelo', 'IBIZA'), (e: unknown) => e instanceof ErrorTarificador)
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON']))
+  try {
+    await b.page.evaluate(() => { document.getElementById('bloque_modelo')!.style.display = 'block' })
+    for (const id of ['buscamarca', 'selmodelo_input', 'selmodelo_panel', '', 'a b', '1x']) {
+      await assert.rejects(abrirDesplegableModeloGenerali(b.page, b.guard, id), EmisionBloqueadaError, id)
+      await assert.rejects(elegirModeloListaGenerali(b.page, b.guard, id, 'IBIZA'), EmisionBloqueadaError, id)
+    }
+    // Las puertas de MARCA siguen exigiendo el id exacto `buscamarca`.
+    await assert.rejects(abrirDesplegableMarcaGenerali(b.page, b.guard, 'selmodelo'), EmisionBloqueadaError)
+    await abrirDesplegableModeloGenerali(b.page, b.guard, 'selmodelo')
+    assert.equal(await b.page.locator('#selmodelo_panel').evaluate((el) => (el as HTMLElement).style.display), 'block')
+    await assert.rejects(abrirDesplegableModeloGenerali(b.page, b.guard, 'selmodelo'), EmisionBloqueadaError)
+    await elegirModeloListaGenerali(b.page, b.guard, 'selmodelo', 'IBIZA')
+    assert.deepEqual(await b.page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['IBIZA'])
+    await assert.rejects(elegirModeloListaGenerali(b.page, b.guard, 'selmodelo', 'LEON'), EmisionBloqueadaError)
+    assert.deepEqual(await b.page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['IBIZA'], 'la segunda elección no pulsó nada')
+  } finally {
+    await b.cerrar()
+  }
+})
+
+test('v0.2.11 · un modelo que casa con el patrón de emisión (BAJAJ ← «baja») se BLOQUEA al elegirlo (fail-closed); «Otros» no', async () => {
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['BAJAJ', 'Otros']))
+  try {
+    await a.page.evaluate(() => { document.getElementById('bloque_modelo')!.style.display = 'block' })
+    await abrirDesplegableModeloGenerali(a.page, a.guard, 'selmodelo')
+    await assert.rejects(elegirModeloListaGenerali(a.page, a.guard, 'selmodelo', 'BAJAJ'), EmisionBloqueadaError)
+    assert.equal(await a.page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo ?? []).then((x) => x.length), 0)
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['BAJAJ', 'Otros']))
+  try {
+    await b.page.evaluate(() => { document.getElementById('bloque_modelo')!.style.display = 'block' })
+    await abrirDesplegableModeloGenerali(b.page, b.guard, 'selmodelo')
+    await elegirModeloListaGenerali(b.page, b.guard, 'selmodelo', 'Otros')
+    assert.deepEqual(await b.page.evaluate(() => (window as unknown as { __modelo?: string[] }).__modelo), ['Otros'])
+  } finally {
+    await b.cerrar()
+  }
+})
+
+// ───────────── v0.2.13: modelo verificado antes de «Confirmar» y espera clasificada después ─────────────
+
+test('v0.2.13 · modeloVerificadoGenerali: label E input deben decir el modelo elegido (normalizado)', () => {
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'Ibiza', 'IBIZA'), true)
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'Seleccione uno', 'IBIZA'), false)
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'IBIZA', 'Seleccione uno'), false)
+  assert.equal(modeloVerificadoGenerali('IBIZA', 'IBIZA ST', 'IBIZA ST'), false)
+  assert.equal(modeloVerificadoGenerali('', '', ''), false)
+})
+
+test('v0.2.13 · clasificarPostConfirmarGenerali: siguiente / validación / desconocida / esperar', () => {
+  const base = { identificacion: false, selectorAbierto: true, mensajes: [] as string[], transcurridoMs: 0, esperaMs: 25_000 }
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, identificacion: true, selectorAbierto: false }), 'siguiente')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, identificacion: true }), 'esperar', 'Identificación con el selector aún abierto: espera')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, transcurridoMs: 10_000 }), 'esperar')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, mensajes: ['Campo obligatorio'], transcurridoMs: 1_000 }), 'esperar', 'gracia mínima')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, mensajes: ['Campo obligatorio'], transcurridoMs: 5_000 }), 'validacion')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, transcurridoMs: 25_000 }), 'validacion')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, selectorAbierto: false, transcurridoMs: 25_000 }), 'desconocida')
+  assert.equal(clasificarPostConfirmarGenerali({ ...base, selectorAbierto: false, transcurridoMs: 3_000 }), 'esperar')
+})
+
+test('v0.2.13 · modelo que no queda en el label: reintento y, si sigue sin casar, hueco SIN pulsar «Confirmar»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA', 'LEON']))
+  try {
+    // El portal "revierte" el label del modelo tras cada elección (el select queda bien, el label no).
+    await page.evaluate(() => { const l = document.getElementById('selmodelo_label')!; new MutationObserver(() => { if (l.textContent !== 'Seleccione uno') l.textContent = 'Seleccione uno' }).observe(l, { childList: true, characterData: true, subtree: true }) })
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /el modelo no quedó seleccionado: label=«Seleccione uno», input=«IBIZA»/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 0, 'no se pulsó «Confirmar»')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.13 · tras «Confirmar» con el selector abierto: hueco que cita los mensajes de validación visibles', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Confirmar', ['IBIZA']) + '<div class="ui-messages ui-messages-error"><ul><li><span class="ui-messages-error-summary">Debe seleccionar un modelo</span></li></ul></div>')
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche(), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /SIGUE ABIERTO/.test(e.message) && /«Debe seleccionar un modelo»/.test(e.message) && (e as { pideInventarioDom?: boolean }).pideInventarioDom === true)
+    assert.equal(await page.evaluate(() => (window as unknown as { __confirmado?: number }).__confirmado ?? 0), 1)
+  } finally {
+    await cerrar()
+  }
+})
+
+// ───────────── v0.2.14: Potencia · Versión · tabla · «Resumen» · «Siguiente» ─────────────
+
+type FilaFixture = { codigo: string; modelo: string; version: string; cv: number }
+/** Ficha real del selector tras el modelo (datos de catálogo de prueba): grupo de potencias, tabla Código | Modelo | Versión y «Resumen» que se pinta al elegir la fila (AJAX simulado). */
+const FICHA_PF = (potencias: string[], filas: FilaFixture[], resumenMal = false) => `<span>Potencia</span>
+  <table><tr>${potencias.map((p, i) => `<td><input type="radio" id="pot:${i}" name="pot" style="position:absolute;left:-999px" onchange="window.__pot=(window.__pot||[]).concat('${p}');var cv=${parseFloat(p)};document.querySelectorAll('#tabla tbody tr').forEach(function(r){r.style.display=(Number(r.dataset.cv)===cv)?'':'none'})"><label for="pot:${i}">${p}</label></td>`).join('')}</tr></table>
+  <span>Versión</span>
+  <table id="tabla"><thead><tr><th>Código</th><th>Modelo</th><th>Versión</th></tr></thead><tbody>${filas.map((f) => `<tr data-ri="${f.codigo}" data-cv="${f.cv}" onclick="window.__sel(this,'${f.codigo}','${f.version}')"><td>${f.codigo}</td><td>${f.modelo}</td><td>${f.version}</td></tr>`).join('')}</tbody></table>
+  <div id="resumen"><b>Resumen</b><div>Vehículo: TODO TERRENO</div><div>Código y descripción: <span id="res"></span></div></div>
+  <script>window.__sel=function(tr,c,v){document.querySelectorAll('#tabla tbody tr').forEach(function(r){r.classList.remove('ui-state-highlight')});tr.classList.add('ui-state-highlight');window.__fila=(window.__fila||[]).concat(c);setTimeout(function(){document.getElementById('res').textContent=${resumenMal ? "'99999 OTRO COCHE'" : "c+' HYUNDAI TUCSON '+v+' ...'"}},150)}</script>`
+
+const FILAS_TUCSON: FilaFixture[] = [
+  { codigo: '41001', modelo: 'TUCSON', version: '1.6 GDI BD NLINE LITE 4X2', cv: 116 },
+  { codigo: '41002', modelo: 'TUCSON', version: '1.6 GDI BD KLASS 4X2', cv: 116 },
+  { codigo: '41003', modelo: 'TUCSON', version: '1.6 T-GDI 48V MAXX 4X2', cv: 131 },
+]
+const VC_TUCSON = { origen: 'mapfre' as const, denominacion: 'HYUNDAI TUCSON 1.6 GDI', cv: 116, cc: 1598, puertas: 5, fechaInicio: null, combustible: 'gasolina' as const }
+const POTENCIAS = ['116.0 CV', '131.0 CV', '185.0 CV', '190.0 CV', '265.0 CV', '288.0 CV']
+const contador = (page: Page, k: string) => page.evaluate((n) => (window as unknown as Record<string, unknown>)[n] ?? null, k)
+
+test('v0.2.14 · helpers puros: CV de «116.0 CV», grupo de potencias (no «Placas especiales») y «Resumen» contra la fila elegida', () => {
+  assert.equal(cvDePotenciaGenerali('116.0 CV'), 116)
+  assert.equal(cvDePotenciaGenerali('131 cv'), 131)
+  assert.equal(cvDePotenciaGenerali('Gasolina'), null)
+  const g = (clave: string, opciones: string[], total = opciones.length) => ({ clave, etiqueta: clave, tipo: 'grupo', opciones, total })
+  assert.deepEqual(grupoPotenciaGenerali([g('grupo|placaesp', ['Sí', 'No']), g('grupo|pot', POTENCIAS)]), { grupo: 'pot', opciones: POTENCIAS })
+  assert.equal(grupoPotenciaGenerali([g('grupo|placaesp', ['Sí', 'No'])]), null)
+  assert.equal(grupoPotenciaGenerali([g('grupo|pot', ['116.0 CV', 'otra'])]), null, 'todas las opciones tienen que ser «NNN CV»')
+  assert.equal(grupoPotenciaGenerali([g('grupo|pot', POTENCIAS), g('grupo|pot2', ['120 CV'])]), null, 'dos grupos: ambiguo')
+  const f = { codigo: '41001', version: '1.6 GDI BD NLINE LITE 4X2' }
+  assert.equal(resumenCoincideConFilaGenerali('41001 HYUNDAI TUCSON 1.6 GDI …', f), true, 'por código, aunque la descripción venga recortada')
+  assert.equal(resumenCoincideConFilaGenerali('410010 HYUNDAI TUCSON', f), false, 'el código es palabra entera')
+  assert.equal(resumenCoincideConFilaGenerali('99999 OTRO COCHE', f), false)
+  assert.equal(resumenCoincideConFilaGenerali('', f), false)
+  assert.equal(resumenCoincideConFilaGenerali('HYUNDAI TUCSON 1.6 GDI BD NLINE LITE 4X2', { codigo: '', version: f.version }), true, 'sin código, la versión entera')
+  assert.equal(resumenCoincideConFilaGenerali('HYUNDAI TUCSON 1.6 GDI', { codigo: '', version: f.version }), false)
+})
+
+test('v0.2.14 · potencia: la que casa con el CV del vehículo (±10 %); varias materialmente distintas o sin CV → `eleccion` con todas; equivalentes → la primera, declarada', () => {
+  const form = (cv: number | null) => coche(cv === null ? {} : { vehiculoConfirmado: { ...VC_TUCSON, cv } })
+  const a = decidirPotenciaGenerali(POTENCIAS, form(116))
+  assert.equal(a.texto, '116.0 CV')
+  assert.throws(() => decidirPotenciaGenerali(POTENCIAS, form(120)), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 6, '116 y 131 caben en ±10 % de 120 pero difieren entre sí: se pregunta')
+  assert.throws(() => decidirPotenciaGenerali(POTENCIAS, form(null)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 6)
+  assert.throws(() => decidirPotenciaGenerali(POTENCIAS, form(400)), ErrorEleccionVersion, 'ninguna compatible')
+  const eq = decidirPotenciaGenerali(['116.0 CV', '118.0 CV'], form(null))
+  assert.equal(eq.texto, '116.0 CV')
+  assert.match(eq.supuesto ?? '', /Versión elegida automáticamente/)
+  const humano = coche({ eleccionVersion: { codigo: null, etiqueta: '131.0 CV' } })
+  assert.equal(decidirPotenciaGenerali(POTENCIAS, humano).texto, '131.0 CV', 'la elección de una persona manda')
+})
+
+test('v0.2.14 · versión: equivalentes → una, declarada; diferencia material (combustible) → `eleccion`; el combustible del vehículo confirmado la resuelve; una elección de potencia no cuenta como versión', () => {
+  const eq = decidirFilaVersionGenerali(FILAS_TUCSON.slice(0, 2).map((f) => ({ ...f, seleccionada: false })), coche())
+  assert.equal(eq.fila.codigo, '41001')
+  assert.match(eq.supuesto ?? '', /Versión elegida automáticamente: 1\.6 GDI BD NLINE LITE 4X2/)
+  const mat = [
+    { codigo: '1', modelo: 'X', version: '1.6 GASOLINA 4X2', seleccionada: false },
+    { codigo: '2', modelo: 'X', version: '1.6 DIESEL 4X2', seleccionada: false },
+  ]
+  assert.throws(() => decidirFilaVersionGenerali(mat, coche()), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 2 && e.opcionesVersion[1]!.codigo === '2')
+  assert.equal(decidirFilaVersionGenerali(mat, coche({ vehiculoConfirmado: VC_TUCSON })).fila.codigo, '1', 'combustible exacto del vehículo confirmado')
+  const persona = coche({ eleccionVersion: { codigo: '2', etiqueta: '1.6 DIESEL 4X2' } })
+  assert.equal(decidirFilaVersionGenerali(mat, persona).fila.codigo, '2')
+  const deLaPotencia = coche({ vehiculoConfirmado: VC_TUCSON, eleccionVersion: { codigo: null, etiqueta: '116.0 CV' } })
+  assert.equal(decidirFilaVersionGenerali(mat, deLaPotencia, ['116.0 CV']).fila.codigo, '1', 'una potencia elegida por la persona no se toma por versión')
+})
+
+const NUEVOS_FICHA = (resumenMal = false, filas = FILAS_TUCSON, potencias = POTENCIAS) => FICHA_PF(potencias, filas, resumenMal)
+
+test('v0.2.14 · selector con Potencia + tabla: marca la potencia que casa, elige la fila, verifica el «Resumen» y avanza con «Siguiente» (una vez)', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA', 'LEON'], NUEVOS_FICHA()))
+  try {
+    const avisos: string[] = []
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche({ vehiculoConfirmado: VC_TUCSON }), ctxPF(page, guard), avisos), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /sigue a «Confirmar»/.test(e.message), 'sin «Identificación del vehículo» en la fixture: hueco POSTERIOR a avanzar')
+    assert.deepEqual(await contador(page, '__pot'), ['116.0 CV'])
+    assert.deepEqual(await contador(page, '__fila'), ['41001'], 'las dos versiones de 116 CV son equivalentes: la primera')
+    assert.equal(await contador(page, '__confirmado'), 1, '«Siguiente» pulsado una vez, con el resumen ya verificado')
+    assert.equal(await contador(page, '__cancelar'), null)
+    assert.ok(avisos.some((a) => /Versión elegida automáticamente: 1\.6 GDI BD NLINE LITE 4X2/.test(a)), 'la versión elegida sola se declara')
+    assert.equal(guard.violacion(), null)
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.14 · el «Resumen» no coincide con la fila elegida → hueco y NO se pulsa «Siguiente»', async () => {
+  const { page, guard, cerrar } = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA(true)))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(page, page, coche({ vehiculoConfirmado: VC_TUCSON }), ctxPF(page, guard)), (e: unknown) => e instanceof ErrorMapaIncompletoGenerali && /«Resumen» del selector no coincide/.test(e.message) && /99999/.test(e.message))
+    assert.deepEqual(await contador(page, '__fila'), ['41001'])
+    assert.equal(await contador(page, '__confirmado'), null, 'no se avanzó')
+  } finally {
+    await cerrar()
+  }
+})
+
+test('v0.2.14 · versiones materialmente distintas: `eleccion` con todas las filas y NI fila NI «Siguiente»; potencias ambiguas: `eleccion` y ni potencia', async () => {
+  const mat: FilaFixture[] = [
+    { codigo: '1', modelo: 'X', version: '1.6 GASOLINA 4X2', cv: 116 },
+    { codigo: '2', modelo: 'X', version: '1.6 DIESEL 4X2', cv: 116 },
+  ]
+  const a = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA(false, mat, ['116.0 CV'])))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(a.page, a.page, coche(), ctxPF(a.page, a.guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.tipo === 'eleccion' && e.opcionesVersion.length === 2)
+    assert.deepEqual(await contador(a.page, '__pot'), ['116.0 CV'], 'la potencia única sí se marcó')
+    assert.equal(await contador(a.page, '__fila'), null)
+    assert.equal(await contador(a.page, '__confirmado'), null)
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA()))
+  try {
+    await assert.rejects(seleccionarVehiculoGenerali(b.page, b.page, coche(), ctxPF(b.page, b.guard)), (e: unknown) => e instanceof ErrorEleccionVersion && e.opcionesVersion.length === 6)
+    assert.equal(await contador(b.page, '__pot'), null, 'sin CV del vehículo y potencias distintas: no se marca ninguna')
+    assert.equal(await contador(b.page, '__confirmado'), null)
+  } finally {
+    await b.cerrar()
+  }
+})
+
+test('v0.2.14 · puertas del guard: potencia (solo «NNN CV», nunca «Placas especiales», una vez), fila de la tabla (texto exacto, una vez) y «Siguiente»/«Confirmar» exactos', async () => {
+  assert.equal(botonSelectorVehiculosGeneraliPermitido('Siguiente'), true)
+  assert.equal(botonSelectorVehiculosGeneraliPermitido(' siguiente '), true)
+  for (const t of ['Siguiente paso', 'Anterior', 'Cancelar', 'Siguiente y emitir']) assert.equal(botonSelectorVehiculosGeneraliPermitido(t), false, t)
+  const html = PRIMEFACES_HTML(['SEAT'], 'Siguiente', ['IBIZA'], NUEVOS_FICHA())
+  const a = await abrir(SEL_VEHICULOS, html)
+  try {
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'placaesp', 'No'), EmisionBloqueadaError, 'el grupo de «Placas especiales» no es de potencia')
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'pot', 'Sí'), EmisionBloqueadaError, 'solo textos «NNN CV»')
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'pot', '999.0 CV'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'que no existe')
+    await a.page.evaluate(() => { (document.getElementById('bloque_modelo') as HTMLElement).style.display = 'block'; (document.getElementById('nuevos') as HTMLElement).style.display = 'block' })
+    await elegirPotenciaGenerali(a.page, a.guard, 'pot', '131.0 CV')
+    assert.deepEqual(await contador(a.page, '__pot'), ['131.0 CV'])
+    await assert.rejects(elegirPotenciaGenerali(a.page, a.guard, 'pot', '116.0 CV'), EmisionBloqueadaError, 'una vez por trabajo')
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '41001', '1.6 GDI BD'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'texto exacto, no parcial')
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '99999', '1.6 T-GDI 48V MAXX 4X2'), (e: unknown) => e instanceof ErrorMapaGuardGenerali, 'el código también tiene que casar')
+    await elegirFilaVersionGenerali(a.page, a.guard, '41003', '1.6 T-GDI 48V MAXX 4X2')
+    assert.deepEqual(await contador(a.page, '__fila'), ['41003'])
+    await assert.rejects(elegirFilaVersionGenerali(a.page, a.guard, '41003', '1.6 T-GDI 48V MAXX 4X2'), (e: unknown) => e instanceof EmisionBloqueadaError || e instanceof ErrorMapaGuardGenerali, 'una vez por trabajo')
+    await pulsarAvanzarSelectorVehiculosGenerali(a.page, a.guard)
+    assert.equal(await contador(a.page, '__confirmado'), 1)
+    await assert.rejects(pulsarAvanzarSelectorVehiculosGenerali(a.page, a.guard), EmisionBloqueadaError, 'una vez')
+  } finally {
+    await a.cerrar()
+  }
+  const b = await abrir(PORTAL, html)
+  try {
+    await assert.rejects(elegirPotenciaGenerali(b.page, b.guard, 'pot', '116.0 CV'), (e: unknown) => e instanceof ErrorTarificador, 'otra URL: no es el selector')
+    await assert.rejects(elegirFilaVersionGenerali(b.page, b.guard, null, '1.6 GDI BD NLINE LITE 4X2'), (e: unknown) => e instanceof ErrorTarificador)
+  } finally {
+    await b.cerrar()
+  }
+  const c = await abrir(SEL_VEHICULOS, PRIMEFACES_HTML(['SEAT'], 'Siguiente paso', ['IBIZA']))
+  try {
+    await assert.rejects(pulsarAvanzarSelectorVehiculosGenerali(c.page, c.guard), (e: unknown) => e instanceof ErrorMapaGuardGenerali)
+    assert.equal(await contador(c.page, '__confirmado'), null)
+  } finally {
+    await c.cerrar()
   }
 })

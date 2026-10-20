@@ -4,7 +4,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Dato personal: nunca se escribe en un log ni en un mensaje de error; los avisos
 // dicen QUÉ falta, jamás el valor. Tres estados: `null` = «no consta», nunca 0/false inventados.
-import { MAX_COMPANIA_ANTERIOR, esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto } from '@central/module-tarificacion'
+import { MAX_COMPANIA_ANTERIOR, MAX_POBLACION, tieneCaracteresProhibidos, esMatriculaEspanola, normalizarMatricula, pareceDatoPersonalEnDescripcion, validarFormularioAuto } from '@central/module-tarificacion'
 import { carnetMotoMasAntiguo } from '@central/module-seguros'
 import { leerEncolado } from './tarificador-probar.ts'
 
@@ -52,6 +52,8 @@ export type EntradaBotMoto = {
   siniestrosUltimos5: string
   /** Nombre de la compañía anterior (texto libre, ≤80). Solo viaja con seguro actual y años asegurado ≠ 0. */
   companiaAnterior?: string | null
+  /** Municipio elegido entre los del CP (nombre del catálogo): viaja como `poblacion` para que el bot elija la localidad. Vacío = no viaja. */
+  poblacion?: string | null
 }
 
 export type FormularioBotMoto =
@@ -147,12 +149,18 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
   const companiaTxt = e.tieneSeguroActual !== false && aniosAseguradoAnterior !== 0 ? (e.companiaAnterior ?? '').replace(/\s+/g, ' ').trim() : ''
   const companiaAnterior = companiaTxt !== '' && companiaTxt.length <= MAX_COMPANIA_ANTERIOR ? companiaTxt : null
 
+  // Población elegida por el corredor (CP con varias): mismo filtro que `validarFormularioAuto`; inválida = no viaja (el servidor
+  // cae a la ciudad de la ficha si el CP casa, `poblacionDesdeFicha`).
+  const poblacionTxt = (e.poblacion ?? '').replace(/\s+/g, ' ').trim()
+  const poblacion = poblacionTxt !== '' && poblacionTxt.length <= MAX_POBLACION && !tieneCaracteresProhibidos(poblacionTxt) ? poblacionTxt : null
+
   const version = e.version?.replace(/\s+/g, ' ').trim() ?? ''
   const descripcionOk = version !== '' && version.length <= 200 && !pareceDatoPersonalEnDescripcion(version)
   const riesgo: Record<string, unknown> = {
     ramo: 'moto',
     matricula: normalizarMatricula(matricula),
     ...(codigoPostal ? { codigoPostal } : {}),
+    ...(poblacion !== null ? { poblacion } : {}),
     conductor: {
       ...(fechaNacimiento ? { fechaNacimiento } : {}),
       ...(fechaCarne ? { fechaCarne } : {}),

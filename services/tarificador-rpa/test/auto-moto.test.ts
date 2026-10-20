@@ -209,7 +209,7 @@ test('buscador de poblaciones: una celda → la pulsa; varias + poblacion que ca
   await buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, { poblacion: 'villa alamo' })
   assert.equal(await page.locator('#_destown').inputValue(), 'VILLA ÁLAMO', 'sin tildes ni mayúsculas casa')
 
-  for (const eleccion of [{}, { poblacion: 'VILLA' }, { poblacion: 'Otra' }, { eleccionPoblacion: '00001- OTRA' }]) {
+  for (const eleccion of [{}, { poblacion: 'Otra' }, { poblacion: 'Villa', localidades: ['Pueblo'] }, { poblacion: 'x', localidades: ['PUEBLO NUEVO', 'VILLA ALAMO'] }, { eleccionPoblacion: '00001- OTRA' }]) {
     await page.setContent(POBLACIONES(['VILLA ÁLAMO', 'PUEBLO NUEVO']))
     await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, eleccion), (e: unknown) => {
       assert.ok(e instanceof ErrorEleccionPoblacion)
@@ -220,6 +220,29 @@ test('buscador de poblaciones: una celda → la pulsa; varias + poblacion que ca
     assert.equal(await page.evaluate(() => (window as unknown as { pulsadas?: number }).pulsadas), 0, 'no pulsó ninguna celda')
     assert.equal(await page.locator('#_destown').inputValue(), '')
   }
+})
+
+test('v0.7.3 · buscador de poblaciones: la localidad del riesgo por contención de palabras enteras, si da UNA sola; varias/contradictorias/elección de bandeja inválida → persona', async () => {
+  const ok = async (nombres: string[], eleccion: Parameters<typeof buscarPoblacion>[5], esperado: string) => {
+    await page.setContent(POBLACIONES(nombres))
+    await buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, eleccion)
+    assert.equal(await page.locator('#_destown').inputValue(), esperado)
+  }
+  const persona = async (nombres: string[], eleccion: Parameters<typeof buscarPoblacion>[5]) => {
+    await page.setContent(POBLACIONES(nombres))
+    await assert.rejects(buscarPoblacion(page.mainFrame(), '00001', page, ctxPulsar, 2_000, eleccion), ErrorEleccionPoblacion)
+    assert.equal(await page.locator('#_destown').inputValue(), '')
+  }
+  await ok(['AMBROZ', 'PURCHIL'], { poblacion: 'Purchil (Granada)' }, 'PURCHIL') // la localidad contiene a la población
+  await ok(['LA ZUBIA CENTRO', 'PUEBLO NUEVO'], { poblacion: 'la zubia' }, 'LA ZUBIA CENTRO') // la población contiene a la localidad
+  await ok(['AMBROZ', 'PURCHIL'], { poblacion: null, localidades: ['purchíl'] }, 'PURCHIL') // localidad del tomador
+  await ok(['AMBROZ', 'PURCHIL'], { poblacion: 'Granada', localidades: ['Purchil'] }, 'PURCHIL') // un candidato sin casar no estorba
+  await persona(['GRANADA ZONA A', 'GRANADA ZONA B'], { poblacion: 'Granada' }) // solo el municipio, varias pedanías: no a ciegas
+  await ok(['GRANADA ZONA A', 'GRANADA ZONA B', 'PURCHIL'], { poblacion: 'Granada', localidades: ['Purchil'] }, 'PURCHIL') // v0.7.4: el candidato ambiguo se descarta y se prueba el siguiente
+  await persona(['AMBROZ', 'PURCHIL'], { poblacion: 'Ambroz (Granada)', localidades: ['Purchil'] }) // candidatos contradictorios
+  await persona(['AMBROZ', 'PURCHIL'], { poblacion: 'Granada' }) // ninguna casa
+  await persona(['VILLA ALAMO', 'PUEBLO NUEVO'], { poblacion: 'Villa', eleccionPoblacion: '00001- OTRA' }) // elección inválida de la bandeja: nunca cae a la localidad
+  await persona(['SAN JUAN', 'SAN JUANITO'], { poblacion: 'San Jua' }) // palabra entera, no subcadena
 })
 
 test('buscador de poblaciones: eleccionPoblacion de la bandeja manda; si la celda no rellena la población → hueco con inventario', async () => {
@@ -436,5 +459,5 @@ test('allianzMoto.tarificar: un ErrorMapaIncompleto sin atasco previo (siniestro
 })
 
 test('versión del bot de Allianz Moto', () => {
-  assert.equal(allianzMoto.version, '0.7.2')
+  assert.equal(allianzMoto.version, '0.7.4')
 })
