@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-20T10:08:37Z",
-  "sha": "13355195ed2dd22e5fecd2987ab11c7b4acad3e1",
+  "generadoEn": "2026-10-20T11:47:03Z",
+  "sha": "98afbd23007f061e2b43969ac17f5d74f9dfab3f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -180858,6 +180858,80 @@
       "hash": "f98d7f062e5c"
     },
     {
+      "ruta": "apps/rrhh/app/admin/documentos/DocumentosClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "DocumentosClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "formVacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": "Form",
+          "linea": 39
+        },
+        {
+          "nombre": "nombreEmp",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: Empleado",
+          "retorno": null,
+          "linea": 44
+        },
+        {
+          "nombre": "norm",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 45
+        },
+        {
+          "nombre": "DocumentosClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ carpetas, categorias, ...shell }: { carpetas: Opcion[]; categorias: Categoria[] logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
+          "retorno": null,
+          "linea": 47
+        },
+        {
+          "nombre": "TarjetaDocumento",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ it, carpetas, categorias, empleados, cargandoEmpleados, ocupado, onForm, onQuitar, onEnviar, onReintentar }: { it: Item; carpetas: Opcion[]; categorias: Categoria[]; empleados: Empleado[]; cargandoEmpleados: boolean /** Hay un «Enviar tod",
+          "retorno": null,
+          "linea": 201
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "4104ec8727dd"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/documentos/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "2e2b36fbba94"
+    },
+    {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/contrato/ContratoForm.tsx",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -180938,7 +181012,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "415d62e0ad0b"
+      "hash": "d9546b36f27b"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/page.tsx",
@@ -181123,6 +181197,56 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f3ceddcddb6b"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/firmas/FirmasClient.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "FirmasClient"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string | null",
+          "retorno": null,
+          "linea": 23
+        },
+        {
+          "nombre": "FirmasClient",
+          "kind": "function",
+          "exportada": true,
+          "params": "props: { logoUrl?: string | null; nombreEmpresa?: string | null; colorPrimario?: string | null; tieneFichaje?: boolean }",
+          "retorno": null,
+          "linea": 27
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "62d4414a3562"
+    },
+    {
+      "ruta": "apps/rrhh/app/admin/firmas/page.tsx",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "Page"
+      ],
+      "funciones": [
+        {
+          "nombre": "Page",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6f2d27311714"
     },
     {
       "ruta": "apps/rrhh/app/admin/informes/InformesClient.tsx",
@@ -181640,6 +181764,79 @@
       "hash": "87524f5f98e1"
     },
     {
+      "ruta": "apps/rrhh/app/api/admin/documentos/analizar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "Subida asistida, fase 2: la IA PROPONE (tipo, carpeta, título, firma, resumen, destinatarios). No escribe nada: el responsable confirma después en `/asignar`. Lo que la IA no sabe va a null."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/documentos/analizar",
+      "hash": "ea0622dc402f"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/documentos/asignar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Subida asistida/masiva, fase 3 (CONFIRMACIÓN del responsable): una copia por empleado, cada una con su firma y evidencia, y aviso opcional. Solo empleados de la empresa de la sesión."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/documentos/asignar",
+      "hash": "71dea1ff0698"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/documentos/staging/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST",
+        "DELETE"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "Subida asistida/masiva, fase 1: el archivo se sube UNA vez al staging de la empresa de la sesión (`staging/<empresa_id>/…`). Mismos límites (nombre, tamaño) que la subida normal. Pasa por la función ("
+        },
+        {
+          "nombre": "DELETE",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 33,
+          "resumen": "Descarta un archivo del staging (el responsable lo quita antes de confirmar)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/documentos/staging",
+      "hash": "3daf6f4d38c8"
+    },
+    {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/acceso/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -181752,7 +181949,7 @@
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
-          "params": "_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
+          "params": "req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
           "retorno": null,
           "linea": 8
         }
@@ -181762,7 +181959,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/firmar-empresa",
-      "hash": "95a08c316164"
+      "hash": "b4944ac16f1b"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/[docId]/route.ts",
@@ -181795,15 +181992,15 @@
           "nombre": "POST",
           "kind": "function",
           "exportada": true,
-          "params": "_req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
+          "params": "req: Request, { params }: { params: Promise<{ id: string; docId: string }> }",
           "retorno": null,
           "linea": 7,
-          "resumen": "POST — el responsable solicita la firma de un documento del empleado."
+          "resumen": "POST — el responsable solicita la firma de un documento del empleado y se le avisa (intranet + email + push, resultado registrado en rrhh.avisos). Un fallo del aviso no tumba la solicitud."
         }
       ],
       "tablas": [],
       "rutaApi": "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
-      "hash": "4d10a72bdeae"
+      "hash": "9b709b707ffe"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/confirm/route.ts",
@@ -181818,7 +182015,7 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 9,
+          "linea": 10,
           "resumen": "Fase 2: el cliente ya subió a Storage; registra la fila en BD."
         }
       ],
@@ -181827,7 +182024,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos/confirm",
-      "hash": "1d6edfd3308e"
+      "hash": "737d067dd13f"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/documentos/generar/route.ts",
@@ -181885,7 +182082,7 @@
           "exportada": true,
           "params": "_req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 8
+          "linea": 9
         },
         {
           "nombre": "POST",
@@ -181893,7 +182090,7 @@
           "exportada": true,
           "params": "req: Request, { params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 22
+          "linea": 23
         }
       ],
       "tablas": [
@@ -181901,7 +182098,7 @@
         "rrhh"
       ],
       "rutaApi": "/api/admin/empleados/[id]/documentos",
-      "hash": "4ec25307779a"
+      "hash": "2cce643b76b6"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/empleados/[id]/enlace/route.ts",
@@ -182066,6 +182263,48 @@
       "tablas": [],
       "rutaApi": "/api/admin/fichajes",
       "hash": "39a7194fb331"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/firmas/reclamar/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "«Reclamar»: reenvía email + push al empleado y lo deja registrado en rrhh.avisos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/firmas/reclamar",
+      "hash": "e524024cdd68"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/admin/firmas/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Panel de firmas pendientes de la empresa de la sesión (paginado de 50 en 50)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/admin/firmas",
+      "hash": "9a2a3a479a1b"
     },
     {
       "ruta": "apps/rrhh/app/api/admin/informes/exportar/route.ts",
@@ -182729,6 +182968,34 @@
       "hash": "5cbb09922135"
     },
     {
+      "ruta": "apps/rrhh/app/api/cron/recordatorio-firmas/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "digest",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/recordatorio-firmas",
+      "hash": "01dbef36ff0c"
+    },
+    {
       "ruta": "apps/rrhh/app/api/e/acceso/completar/route.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -182810,6 +183077,48 @@
       "tablas": [],
       "rutaApi": "/api/e/asistente",
       "hash": "010174d7ef87"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/avisos/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 7,
+          "resumen": "Avisos del empleado de la sesión (solo los suyos)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/avisos",
+      "hash": "78b97d670392"
+    },
+    {
+      "ruta": "apps/rrhh/app/api/e/avisos/visto/route.ts",
+      "ambito": "apps/rrhh",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "El empleado abre un documento SUYO → marca sus avisos como vistos (y la primera apertura)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/e/avisos/visto",
+      "hash": "b3e2118020a3"
     },
     {
       "ruta": "apps/rrhh/app/api/e/chat/route.ts",
@@ -183236,16 +183545,16 @@
           "nombre": "ExpedienteEmpleado",
           "kind": "function",
           "exportada": true,
-          "params": "{ visibles, subibles, inicial, branding, tieneFichaje }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean }",
+          "params": "{ visibles, subibles, inicial, branding, tieneFichaje, avisosIniciales }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding; tieneFichaje?: boolean; avisosIniciales?: Avisos | null }",
           "retorno": null,
-          "linea": 15
+          "linea": 17
         }
       ],
       "tablas": [
         "react"
       ],
       "rutaApi": null,
-      "hash": "374b8c93c7e8"
+      "hash": "d16809e5867a"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -183260,12 +183569,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 10
+          "linea": 11
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cd9747151d6d"
+      "hash": "afdcc343eb02"
     },
     {
       "ruta": "apps/rrhh/app/layout.tsx",
@@ -183431,7 +183740,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd646499dc2e"
+      "hash": "080cd9c0e21d"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -183865,6 +184174,140 @@
       "hash": "1bf9a27def84"
     },
     {
+      "ruta": "apps/rrhh/lib/asistente-subida.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "IA de asistencia a la SUBIDA de documentos (admin RR.HH.): reglas PURAS, sin BD ni red. La IA solo PROPONE; el responsable confirma en una pantalla prellenada. Todo lo que la IA no sabe (o devuelve fuera de catálogo / mal formado) queda en `null` — nunca se inventa. Privacidad: a la IA NO se le mand",
+      "exporta": [
+        "esCategoria",
+        "carpetaSugerida",
+        "normalizarNif",
+        "nifValido",
+        "detectarNifs",
+        "normalizarTexto",
+        "promptAnalisis",
+        "parsearRespuestaIA",
+        "emparejarDestinatarios",
+        "clasificarDestinatarios"
+      ],
+      "funciones": [
+        {
+          "nombre": "esCategoria",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is CategoriaDoc",
+          "linea": 41
+        },
+        {
+          "nombre": "carpetaSugerida",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CategoriaDoc | null",
+          "retorno": "string | null",
+          "linea": 45
+        },
+        {
+          "nombre": "normalizarNif",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 54,
+          "resumen": "Normaliza un NIF/NIE: mayúsculas, sin espacios/puntos/guiones. No valida."
+        },
+        {
+          "nombre": "nifValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 61,
+          "resumen": "¿DNI (8 dígitos + letra) o NIE (X/Y/Z + 7 dígitos + letra) con letra de control correcta?"
+        },
+        {
+          "nombre": "detectarNifs",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string[]",
+          "linea": 72,
+          "resumen": "NIF/NIE válidos (letra de control correcta) que aparecen en el texto, sin repetir."
+        },
+        {
+          "nombre": "normalizarTexto",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 85,
+          "resumen": "Minúsculas, sin tildes ni signos, espacios simples."
+        },
+        {
+          "nombre": "nombreCompleto",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: { nombre: string; apellidos: string | null }",
+          "retorno": "string",
+          "linea": 89
+        },
+        {
+          "nombre": "promptAnalisis",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "",
+          "linea": 97
+        },
+        {
+          "nombre": "textoLimpio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 130
+        },
+        {
+          "nombre": "extraerJson",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: string",
+          "retorno": "unknown",
+          "linea": 138,
+          "resumen": "Saca el primer objeto JSON del texto (admite ```json … ``` y prosa alrededor)."
+        },
+        {
+          "nombre": "parsearRespuestaIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | null | undefined",
+          "retorno": "PropuestaIA",
+          "linea": 150,
+          "resumen": "Valida la respuesta de la IA campo a campo. Lo que no encaja → null (o [] en personas cuando la respuesta SÍ se entendió pero no trae personas válidas). Si no hay JSON, `PROPUESTA_VACIA`."
+        },
+        {
+          "nombre": "emparejarDestinatarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, personasIA: PersonaIA[], empleados: EmpleadoMatch[]",
+          "retorno": "ResultadoEmparejo",
+          "linea": 192,
+          "resumen": "Propone destinatarios. NIF del texto (con letra válida, o el que dé la IA SI aparece en el texto) → empleado con ese DNI. Si no hay NIF, nombre completo (≥2 palabras) que aparezca en el texto y sea ÚN"
+        },
+        {
+          "nombre": "clasificarDestinatarios",
+          "kind": "function",
+          "exportada": true,
+          "params": "destinatarios: Destinatario[], personasIA: PersonaIA[], iaOk: boolean, empleados: EmpleadoMatch[],",
+          "retorno": "",
+          "linea": 260,
+          "resumen": "Qué coincidencias se PRESELECCIONAN. Que un NIF o nombre de la plantilla aparezca en el texto no basta: en un contrato también aparece el representante de la empresa, que puede estar en plantilla. Sol"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "778ea1e01d65"
+    },
+    {
       "ruta": "apps/rrhh/lib/asistente.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -183974,6 +184417,131 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5c4005461983"
+    },
+    {
+      "ruta": "apps/rrhh/lib/avisos-reglas.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Textos y reglas PURAS de los avisos al empleado (`rrhh.avisos`). Sin BD ni red.",
+      "exporta": [
+        "basePortal",
+        "enlacePortal",
+        "textoAviso",
+        "estadoEmailPrevio"
+      ],
+      "funciones": [
+        {
+          "nombre": "basePortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "env: string | undefined, origen?: string | null",
+          "retorno": "string",
+          "linea": 21,
+          "resumen": "Base pública del portal: env `RRHH_PUBLIC_URL` > origen de la petición > producción. Sin barra final."
+        },
+        {
+          "nombre": "enlacePortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "base: string",
+          "retorno": "string",
+          "linea": 27,
+          "resumen": "Enlace del aviso: el portal del empleado (si no hay sesión, /e redirige a /e/entrar)."
+        },
+        {
+          "nombre": "textoAviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoAviso, d: DatosAviso",
+          "retorno": "TextoAviso",
+          "linea": 31
+        },
+        {
+          "nombre": "estadoEmailPrevio",
+          "kind": "function",
+          "exportada": true,
+          "params": "email: string | null | undefined, hayTransporte: boolean",
+          "retorno": "'sin_email' | 'sin_transporte' | null",
+          "linea": 70,
+          "resumen": "Resultado del envío por email a partir de lo que hay (pura: el llamante hace el envío)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "68723f8d83fa"
+    },
+    {
+      "ruta": "apps/rrhh/lib/avisos.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Avisos al empleado (`rrhh.avisos`, migración 0023): intranet + email + push, con el resultado de cada canal REGISTRADO. Un fallo de email/push nunca tumba la operación que avisa (solicitar firma, asignar documento…): queda en `email_estado`/`push_estado` y se ve en el panel `/admin/firmas`. Aislamie",
+      "exporta": [
+        "avisarDocumento",
+        "marcarFirmaSolicitada",
+        "avisarSolicitudFirma",
+        "solicitarFirmaYAvisar",
+        "listarAvisosEmpleado",
+        "marcarDocumentoVisto"
+      ],
+      "funciones": [
+        {
+          "nombre": "avisarDocumento",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: Params",
+          "retorno": "Promise<ResultadoAviso | null>",
+          "linea": 34,
+          "resumen": "Crea el aviso y lo envía por email y push. Devuelve null SOLO en el recordatorio automático cuando ya hubo uno hoy para ese documento (idempotencia por índice único: la fila se reserva ANTES de enviar"
+        },
+        {
+          "nombre": "marcarFirmaSolicitada",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, docId: string",
+          "retorno": "Promise<void>",
+          "linea": 89,
+          "resumen": "Marca desde cuándo se reclama la firma (si no estaba ya). Es la base del recordatorio automático."
+        },
+        {
+          "nombre": "avisarSolicitudFirma",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, docId: string, creadoPor: string, origen?: string | null,",
+          "retorno": "Promise<ResultadoAviso | null>",
+          "linea": 99,
+          "resumen": "Avisa de una solicitud de firma YA en estado 'pendiente' (tras solicitarla, subirla con «solo firma el empleado» o tras firmar la empresa). Nunca lanza: si el aviso falla, devuelve null y lo loguea."
+        },
+        {
+          "nombre": "solicitarFirmaYAvisar",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, docId: string, creadoPor: string, origen?: string | null,",
+          "retorno": "Promise<ResultadoAviso | null>",
+          "linea": 112,
+          "resumen": "Solicita la firma (flujo existente de `lib/firma.ts`) y avisa al empleado. Lanza solo si la solicitud falla."
+        },
+        {
+          "nombre": "listarAvisosEmpleado",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string",
+          "retorno": "Promise<",
+          "linea": 127,
+          "resumen": "Avisos del empleado (los 30 últimos) y cuántos documentos tienen avisos sin ver. Solo los SUYOS."
+        },
+        {
+          "nombre": "marcarDocumentoVisto",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, docId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 146,
+          "resumen": "El empleado abre un documento SUYO: marca sus avisos como vistos y la primera apertura del documento."
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "4b3fb1dd8582"
     },
     {
       "ruta": "apps/rrhh/lib/branding.ts",
@@ -184374,13 +184942,14 @@
       "ambito": "apps/rrhh",
       "resumen": "Distribución de nóminas desde PDF mensual. Flujo: PDF → extracción texto por página (pdfjs-dist) → NIM identifica empleado → pdf-lib separa la página → sube a Storage → inserta en documentos. /",
       "exporta": [
+        "extraerTextoPorPagina",
         "distribuirNominasPdf"
       ],
       "funciones": [
         {
           "nombre": "extraerTextoPorPagina",
           "kind": "function",
-          "exportada": false,
+          "exportada": true,
           "params": "bytes: ArrayBuffer",
           "retorno": "Promise<string[]>",
           "linea": 22,
@@ -184419,7 +184988,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "ece2b0c136a4"
+      "hash": "e1926ea60a0a"
     },
     {
       "ruta": "apps/rrhh/lib/documental.ts",
@@ -184456,7 +185025,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }",
           "retorno": null,
-          "linea": 39,
+          "linea": 42,
           "resumen": "Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo)."
         },
         {
@@ -184465,7 +185034,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 60,
+          "linea": 63,
           "resumen": "Fase 1 del flujo de subida directa: valida permisos y devuelve una URL firmada para que el cliente suba el archivo DIRECTAMENTE a Supabase Storage (sin pasar por la función serverless). Devuelve tambi"
         },
         {
@@ -184474,7 +185043,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, actor: Actor, entrada: { path: string; carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null }",
           "retorno": null,
-          "linea": 76,
+          "linea": 79,
           "resumen": "aquí solo registramos la fila en BD."
         },
         {
@@ -184483,7 +185052,7 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, docId: string",
           "retorno": null,
-          "linea": 90,
+          "linea": 93,
           "resumen": "Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage."
         }
       ],
@@ -184491,7 +185060,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "525405bd886b"
+      "hash": "f0e2cede2dba"
     },
     {
       "ruta": "apps/rrhh/lib/empleado-auth.ts",
@@ -184748,6 +185317,126 @@
       "hash": "d339d9f73d3c"
     },
     {
+      "ruta": "apps/rrhh/lib/envio-documentos.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Subida ASISTIDA por IA y envío MASIVO de documentos (admin RR.HH.). 1) `analizarStaging`: lee el PDF del staging, extrae el texto y pide a la IA una PROPUESTA (tipo, carpeta, título, firma, resumen, destinatarios). No escribe nada: solo propone. 2) `asignarStaging`: con lo que el responsable CONFIRM",
+      "exporta": [
+        "analizarStaging",
+        "asignarStaging",
+        "limpiarStagingCaducado"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "function",
+          "exportada": false,
+          "params": "motivo: MotivoAnalisis",
+          "retorno": "Analisis",
+          "linea": 33
+        },
+        {
+          "nombre": "analizarStaging",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, path: string, nombre: string",
+          "retorno": "Promise<Analisis>",
+          "linea": 39,
+          "resumen": "Analiza un documento del staging de la empresa. Nunca lanza por la IA: degrada a campos null."
+        },
+        {
+          "nombre": "asignarStaging",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, usuarioId: string, e: EntradaAsignar, origen?: string | null",
+          "retorno": "Promise<ResultadoAsignar>",
+          "linea": 120,
+          "resumen": "Envío confirmado: una copia por empleado (mismo contenido, firma y evidencia independientes). IDEMPOTENTE por `envio_id` (uuid del cliente por documento) + empleado (índice único parcial `documentos_e"
+        },
+        {
+          "nombre": "limpiarStagingCaducado",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora = new Date()",
+          "retorno": "Promise<",
+          "linea": 225,
+          "resumen": "Cron: borra las subidas al staging abandonadas (> 48 h sin confirmar). Empresa a empresa y SOLO bajo `staging/<empresa_id>/` (cada ruta pasa por `esPathStagingDe`). Un fallo en una empresa no para las"
+        }
+      ],
+      "tablas": [
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "391c031cecfb"
+    },
+    {
+      "ruta": "apps/rrhh/lib/envio-staging.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Rutas de «staging» de la subida asistida/masiva (puras). El PDF se sube UNA vez a `staging/<empresa_id>/<uuid>.<ext>`; al confirmar se copia a cada expediente y se borra. 🚨 Aislamiento: toda ruta que recibe un path del cliente lo valida con `esPathStagingDe` contra el empresa_id de la SESIÓN — si n",
+      "exporta": [
+        "extensionDe",
+        "pathStaging",
+        "esPathStagingDe",
+        "nombreConExtension",
+        "carpetaAdmiteFirma",
+        "stagingCaducados"
+      ],
+      "funciones": [
+        {
+          "nombre": "extensionDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "pathStaging",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, nombre: string, uuid: string",
+          "retorno": "string",
+          "linea": 15
+        },
+        {
+          "nombre": "esPathStagingDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, path: unknown",
+          "retorno": "path is string",
+          "linea": 20
+        },
+        {
+          "nombre": "nombreConExtension",
+          "kind": "function",
+          "exportada": true,
+          "params": "titulo: string, nombreOriginal: string",
+          "retorno": "string",
+          "linea": 26,
+          "resumen": "Título confirmado → nombre de archivo con la extensión del original (si el título no la trae)."
+        },
+        {
+          "nombre": "carpetaAdmiteFirma",
+          "kind": "function",
+          "exportada": true,
+          "params": "carpeta: string",
+          "retorno": "boolean",
+          "linea": 39
+        },
+        {
+          "nombre": "stagingCaducados",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, objetos: { path: string; creado_at: string | null }[], ahora: Date, horas = HORAS_CADUCIDAD_STAGING,",
+          "retorno": "string[]",
+          "linea": 50,
+          "resumen": "Objetos del staging de UNA empresa que llevan más de `horas` sin confirmarse (subidas abandonadas). Solo devuelve rutas que superan `esPathStagingDe(empresaId, …)`: nada fuera de `staging/<empresa>/` "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "78f5472627c3"
+    },
+    {
       "ruta": "apps/rrhh/lib/fichajes.ts",
       "ambito": "apps/rrhh",
       "exporta": [
@@ -184919,6 +185608,59 @@
       ],
       "rutaApi": null,
       "hash": "608f4172c761"
+    },
+    {
+      "ruta": "apps/rrhh/lib/firmas-panel.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Panel global de firmas pendientes (`/admin/firmas`) y recordatorio automático (cron). Todo con el empresa_id de la SESIÓN (panel) o el de cada documento (cron).",
+      "exporta": [
+        "leerFiltros",
+        "listarPendientes",
+        "reclamarFirma",
+        "ejecutarRecordatorios"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerFiltros",
+          "kind": "function",
+          "exportada": true,
+          "params": "sp: URLSearchParams",
+          "retorno": "FiltrosPanel",
+          "linea": 17
+        },
+        {
+          "nombre": "listarPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, f: FiltrosPanel",
+          "retorno": "Promise<",
+          "linea": 47
+        },
+        {
+          "nombre": "reclamarFirma",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, usuarioId: string, docId: string, origen?: string | null",
+          "retorno": "Promise<ResultadoAviso | null>",
+          "linea": 95,
+          "resumen": "«Reclamar»: reenvía email + push y lo registra. Solo documentos pendientes de firma del EMPLEADO y de la empresa de la sesión. Si la fecha de solicitud no constaba, desde ahora sí (entra en el cron)."
+        },
+        {
+          "nombre": "ejecutarRecordatorios",
+          "kind": "function",
+          "exportada": true,
+          "params": "hoy = new Date()",
+          "retorno": "Promise<",
+          "linea": 105,
+          "resumen": "Cron: recordatorio automático a 3, 7 y luego cada 7 días. Idempotente por día (índice único)."
+        }
+      ],
+      "tablas": [
+        "lateral",
+        "rrhh"
+      ],
+      "rutaApi": null,
+      "hash": "a2922a850e28"
     },
     {
       "ruta": "apps/rrhh/lib/informes/cabecera.ts",
@@ -185844,7 +186586,8 @@
       "ambito": "apps/rrhh",
       "exporta": [
         "pushResponsables",
-        "pushEmpleado"
+        "pushEmpleado",
+        "pushEmpleadoResultado"
       ],
       "funciones": [
         {
@@ -185861,8 +186604,8 @@
           "kind": "function",
           "exportada": false,
           "params": "subs: Sub[], titulo: string, cuerpo: string, url: string",
-          "retorno": null,
-          "linea": 15
+          "retorno": "Promise<ResultadoPush>",
+          "linea": 17
         },
         {
           "nombre": "pushResponsables",
@@ -185870,7 +186613,7 @@
           "exportada": true,
           "params": "empresaId: string, titulo: string, cuerpo: string, url = '/admin/empleados'",
           "retorno": null,
-          "linea": 30,
+          "linea": 36,
           "resumen": "Push a los responsables de RR.HH. de una empresa (best-effort, no-op sin VAPID)."
         },
         {
@@ -185879,8 +186622,17 @@
           "exportada": true,
           "params": "empresaId: string, empleadoId: string, titulo: string, cuerpo: string, url = '/e'",
           "retorno": null,
-          "linea": 40,
+          "linea": 46,
           "resumen": "Push a un empleado concreto (best-effort, no-op sin VAPID)."
+        },
+        {
+          "nombre": "pushEmpleadoResultado",
+          "kind": "function",
+          "exportada": true,
+          "params": "empresaId: string, empleadoId: string, titulo: string, cuerpo: string, url = '/e'",
+          "retorno": "Promise<ResultadoPush>",
+          "linea": 56,
+          "resumen": "Igual que `pushEmpleado` pero devuelve el resultado (para registrarlo en `rrhh.avisos`). No lanza."
         }
       ],
       "tablas": [
@@ -185888,7 +186640,7 @@
         "web"
       ],
       "rutaApi": null,
-      "hash": "d9aeab4d6ca4"
+      "hash": "691966a2b219"
     },
     {
       "ruta": "apps/rrhh/lib/rate-limit.ts",
@@ -185931,6 +186683,76 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "2cbaa7523c75"
+    },
+    {
+      "ruta": "apps/rrhh/lib/recordatorios-firma.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Regla PURA de «a quién toca reclamar hoy» la firma de un documento (cron diario `/api/cron/recordatorio-firmas`). Sin BD ni reloj: el llamante inyecta `hoy`. Calendario: a los 3 y a los 7 días de la solicitud, y después cada 7 días (14, 21, 28…). Si el cron no corrió el día del hito (caída, desplieg",
+      "exporta": [
+        "diaMadrid",
+        "diasEntre",
+        "hitoVencido",
+        "tocaRecordatorioHoy",
+        "ultimoContactoEfectivo"
+      ],
+      "funciones": [
+        {
+          "nombre": "diaMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 13,
+          "resumen": "Fecha de calendario (YYYY-MM-DD) en hora de Madrid."
+        },
+        {
+          "nombre": "aUtc",
+          "kind": "function",
+          "exportada": false,
+          "params": "dia: string",
+          "retorno": "number",
+          "linea": 18
+        },
+        {
+          "nombre": "diasEntre",
+          "kind": "function",
+          "exportada": true,
+          "params": "desde: Date, hasta: Date",
+          "retorno": "number",
+          "linea": 24,
+          "resumen": "Días de calendario (hora de Madrid) entre dos instantes: `hasta - desde`."
+        },
+        {
+          "nombre": "hitoVencido",
+          "kind": "function",
+          "exportada": true,
+          "params": "dias: number",
+          "retorno": "number | null",
+          "linea": 29,
+          "resumen": "Último hito vencido (3, 7, 14, 21…) a `dias` de la solicitud, o null si aún no toca ninguno."
+        },
+        {
+          "nombre": "tocaRecordatorioHoy",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ solicitadaAt, ultimoContactoAt, hoy }: EntradaRecordatorio",
+          "retorno": "boolean",
+          "linea": 44,
+          "resumen": "¿Toca enviar hoy el recordatorio automático de este documento?"
+        },
+        {
+          "nombre": "ultimoContactoEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ ultimoConResultado, ultimoSinResultado, ahora }: { ultimoConResultado: Date | null; ultimoSinResultado: Date | null; ahora: Date },",
+          "retorno": "Date | null",
+          "linea": 64,
+          "resumen": "Último contacto que CUENTA para el calendario de recordatorios. Un aviso con `email_estado` NULL es uno que se reservó y nunca terminó de enviarse (el proceso murió entre el INSERT y el UPDATE): si ti"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c8c933a9e10b"
     },
     {
       "ruta": "apps/rrhh/lib/solicitudes-tipos.ts",
@@ -186122,7 +186944,11 @@
         "borrarObjeto",
         "urlFirmada",
         "presignSubida",
-        "descargarObjeto"
+        "descargarObjeto",
+        "copiarObjeto",
+        "infoObjeto",
+        "listarObjetos",
+        "borrarObjetos"
       ],
       "funciones": [
         {
@@ -186185,11 +187011,47 @@
           "retorno": "Promise<ArrayBuffer>",
           "linea": 59,
           "resumen": "Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar."
+        },
+        {
+          "nombre": "copiarObjeto",
+          "kind": "function",
+          "exportada": true,
+          "params": "origen: string, destino: string",
+          "retorno": "Promise<void>",
+          "linea": 67,
+          "resumen": "Copia un objeto dentro del bucket privado (service_role), sin bajarlo ni subirlo de nuevo."
+        },
+        {
+          "nombre": "infoObjeto",
+          "kind": "function",
+          "exportada": true,
+          "params": "path: string",
+          "retorno": "Promise<",
+          "linea": 80,
+          "resumen": "Tamaño y tipo REALES de un objeto (HEAD, service_role). null si no existe o no se pudo leer. `tamano`/`tipo` null = no lo dice Storage (no se sabe), nunca 0."
+        },
+        {
+          "nombre": "listarObjetos",
+          "kind": "function",
+          "exportada": true,
+          "params": "prefijo: string, limit = 1000, offset = 0",
+          "retorno": "Promise<",
+          "linea": 90,
+          "resumen": "Lista los objetos (no carpetas) directamente bajo `prefijo/` (service_role). Lanza si Storage falla."
+        },
+        {
+          "nombre": "borrarObjetos",
+          "kind": "function",
+          "exportada": true,
+          "params": "paths: string[]",
+          "retorno": "Promise<void>",
+          "linea": 103,
+          "resumen": "Borra varios objetos de una vez (service_role). Lanza si Storage falla."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6dd1070e0c55"
+      "hash": "7feca9dc9dcf"
     },
     {
       "ruta": "apps/rrhh/lib/tenant.ts",
@@ -228814,7 +229676,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4834,
-    "funciones": 18332
+    "archivos": 4853,
+    "funciones": 18399
   }
 }
