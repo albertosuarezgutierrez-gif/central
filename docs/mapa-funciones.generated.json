@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-10-20T12:27:58Z",
-  "sha": "4619ca0dbab22233da708988ea0efacab22a900b",
+  "generadoEn": "2026-10-20T14:20:07Z",
+  "sha": "3904b7649fd9f41a2a12900b8e6d24a6b61ee8f0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -184246,7 +184246,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "378af9aeadfe"
+      "hash": "6e7ee4482776"
     },
     {
       "ruta": "apps/rrhh/components/RegisterSW.tsx",
@@ -186111,6 +186111,46 @@
       ],
       "rutaApi": null,
       "hash": "a2922a850e28"
+    },
+    {
+      "ruta": "apps/rrhh/lib/geolocalizacion-fichaje.ts",
+      "ambito": "apps/rrhh",
+      "resumen": "Obtención de la posición para fichar y mensajes por código de error (W3C GeolocationPositionError). Antes TODO error se mostraba como «activa la ubicación»; en iOS un timeout o una posición no disponible hacían creer al empleado que le faltaba un permiso que ya tenía concedido.",
+      "exporta": [
+        "causaUbicacion",
+        "mensajeUbicacion",
+        "obtenerPosicion"
+      ],
+      "funciones": [
+        {
+          "nombre": "causaUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "err: unknown",
+          "retorno": "CausaUbicacion",
+          "linea": 18
+        },
+        {
+          "nombre": "mensajeUbicacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "causa: CausaUbicacion",
+          "retorno": "string",
+          "linea": 27
+        },
+        {
+          "nombre": "obtenerPosicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "geo: Pick<Geolocation, 'getCurrentPosition'> | undefined = typeof navigator !== 'undefined' ? navigator.geolocation : undefined,",
+          "retorno": "Promise<GeolocationPosition>",
+          "linea": 39,
+          "resumen": "Alta precisión primero (15 s); si falla por timeout/no disponible, reintento con baja precisión y caché de 60 s. Un PERMISO denegado no se reintenta. El error final es el del último intento."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ad1f6371068c"
     },
     {
       "ruta": "apps/rrhh/lib/informes/cabecera.ts",
@@ -230126,7 +230166,7 @@
     }
   ],
   "resumen": {
-    "archivos": 4862,
-    "funciones": 18435
+    "archivos": 4863,
+    "funciones": 18438
   }
 }
