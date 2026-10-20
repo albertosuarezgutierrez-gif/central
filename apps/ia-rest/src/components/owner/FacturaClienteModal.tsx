@@ -5,6 +5,8 @@ import { SE, SN, SM } from '@/lib/colors'
 // Autocomplete en tiempo real por NIF o nombre — guarda cliente para reutilizar
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import DireccionCp, { type EstiloDireccion } from '@/components/DireccionCp'
+import { componerDireccion, componerDireccionExtranjera, direccionValida } from '@/lib/direccion-cp'
 
 const C = {
   bg: '#1C1815', bg1: '#242018', bg2: '#2C2820',
@@ -68,6 +70,12 @@ export default function FacturaClienteModal({
     nif: '', razon_social: '', direccion: '', email: '',
   })
   const [clienteSeleccionado, setClienteSeleccionado] = useState(false)
+  // Dirección fiscal con CP primero. `dirTocada` false = texto heredado de un cliente guardado (se respeta tal cual hasta que se edite).
+  const [dirP, setDirP] = useState({ calle: '', cp: '', municipio: '' })
+  const [dirTocada, setDirTocada] = useState(false)
+  // Cliente extranjero/intracomunitario: país + dirección libre, sin CP español ni Catastro.
+  const [fuera, setFuera] = useState(false)
+  const [pais, setPais] = useState('')
   const [motivo, setMotivo] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -121,6 +129,7 @@ export default function FacturaClienteModal({
 
   const seleccionarCliente = useCallback((c: ClienteSugerido) => {
     setCliente({ id: c.id, nif: c.nif, razon_social: c.razon_social, direccion: c.direccion ?? '', email: c.email ?? '' })
+    setDirP({ calle: c.direccion ?? '', cp: '', municipio: '' }); setDirTocada(false)
     setClienteSeleccionado(true)
     setShowSugerencias(false)
     setBusqueda('')
@@ -129,6 +138,7 @@ export default function FacturaClienteModal({
   const limpiarSeleccion = useCallback(() => {
     setBusqueda('')
     setCliente({ nif: '', razon_social: '', direccion: '', email: '' })
+    setDirP({ calle: '', cp: '', municipio: '' }); setDirTocada(false)
     setClienteSeleccionado(false)
     setSugerencias([])
     setTimeout(() => busquedaRef.current?.focus(), 50)
@@ -142,13 +152,19 @@ export default function FacturaClienteModal({
     if (!cliente.nif.trim() || !cliente.razon_social.trim()) {
       setError('NIF y razón social son obligatorios'); setLoading(false); return
     }
+    if (dirTocada && fuera && dirP.calle.trim() && !componerDireccionExtranjera(dirP.calle, pais)) {
+      setError('Dirección fuera de España incompleta: dirección y país (o déjala vacía)'); setLoading(false); return
+    }
+    if (dirTocada && !fuera && !direccionValida(dirP, false)) {
+      setError('Dirección fiscal incompleta: código postal, municipio y calle (o déjala vacía)'); setLoading(false); return
+    }
     try {
       const r = await fetch('/api/factura/cliente', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           comanda_id: comandaId,
-          cliente: { nif: cliente.nif.trim().toUpperCase(), razon_social: cliente.razon_social.trim(), direccion: cliente.direccion.trim() || undefined, email: cliente.email.trim() || undefined },
+          cliente: { nif: cliente.nif.trim().toUpperCase(), razon_social: cliente.razon_social.trim(), direccion: (dirTocada ? (fuera ? componerDireccionExtranjera(dirP.calle, pais) : componerDireccion(dirP)) : cliente.direccion.trim()) || undefined, email: cliente.email.trim() || undefined },
           motivo: motivo || undefined,
         }),
       })
@@ -157,7 +173,7 @@ export default function FacturaClienteModal({
       setEmitida(d.factura); onEmitida(d.factura)
     } catch { setError('Error de red') }
     finally { setLoading(false) }
-  }, [cliente, motivo, comandaId, onEmitida])
+  }, [cliente, motivo, comandaId, onEmitida, dirP, dirTocada, fuera, pais])
 
   const inputSt = (v: boolean): React.CSSProperties => ({
     width: '100%', boxSizing: 'border-box',
@@ -167,6 +183,11 @@ export default function FacturaClienteModal({
     fontFamily: SN, fontSize: 14, color: C.ink, outline: 'none',
   })
   const lbSt: React.CSSProperties = { fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 5, display: 'block' }
+  const ESTILO_DIR: EstiloDireccion = {
+    input: { ...inputSt(true), fontSize: 16 }, label: { ...lbSt },
+    texto: C.ink, tenue: C.ink3, aviso: C.amb, borde: C.rule, fondo: C.bg1, hover: C.bg2,
+  }
+
 
   if (checkingExistente) return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9000, background: 'rgba(10,8,6,.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -290,8 +311,37 @@ export default function FacturaClienteModal({
                 </div>
                 <div>
                   <label style={lbSt}>Dirección fiscal (opcional)</label>
-                  <input type="text" placeholder="Calle Mayor 1, 28001 Madrid" value={cliente.direccion}
-                    onChange={e => setCliente(p => ({ ...p, direccion: e.target.value }))} style={inputSt(!!cliente.direccion)} />
+                  {!dirTocada && cliente.direccion && (
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, marginBottom: 8, overflowWrap: 'anywhere' }}>
+                      Guardada: {cliente.direccion}
+                      <button type="button" onClick={() => { setDirTocada(true); setDirP({ calle: '', cp: '', municipio: '' }) }}
+                        style={{ marginLeft: 8, minHeight: 44, background: 'none', border: 'none', color: C.amb, fontFamily: SN, fontSize: 12, textDecoration: 'underline', cursor: 'pointer' }}>Cambiar</button>
+                    </div>
+                  )}
+                  {(dirTocada || !cliente.direccion) && (
+                    <>
+                      <select value={fuera ? 'fuera' : 'es'} aria-label="Ubicación de la dirección"
+                        onChange={e => { setFuera(e.target.value === 'fuera'); setDirP({ calle: '', cp: '', municipio: '' }); setDirTocada(true) }}
+                        style={{ ...ESTILO_DIR.input, minHeight: 44, marginBottom: 10 }}>
+                        <option value="es">En España</option>
+                        <option value="fuera">Fuera de España</option>
+                      </select>
+                      {fuera ? (
+                        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
+                          <div>
+                            <label style={lbSt}>Dirección completa *</label>
+                            <input type="text" value={dirP.calle} placeholder="Rua Augusta 10, 1100 Lisboa" onChange={e => { setDirP(p => ({ ...p, calle: e.target.value })); setDirTocada(true) }} style={{ ...ESTILO_DIR.input, minHeight: 44 }} />
+                          </div>
+                          <div>
+                            <label style={lbSt}>País *</label>
+                            <input type="text" value={pais} placeholder="Portugal" onChange={e => { setPais(e.target.value); setDirTocada(true) }} style={{ ...ESTILO_DIR.input, minHeight: 44 }} />
+                          </div>
+                        </div>
+                      ) : (
+                        <DireccionCp valor={dirP} onChange={v => { setDirP(v); setDirTocada(true) }} estilo={ESTILO_DIR} etiquetaCalle="Calle y número" />
+                      )}
+                    </>
+                  )}
                 </div>
                 <div>
                   <label style={lbSt}>Email (opcional)</label>

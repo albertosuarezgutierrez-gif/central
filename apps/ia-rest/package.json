@@ -44,7 +44,9 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "resend": "^6.12.3",
-    "vanilla-cookieconsent": "^3.1.0"
+    "vanilla-cookieconsent": "^3.1.0",
+    "@central/core-direccion": "workspace:*",
+    "@central/core-catastro": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

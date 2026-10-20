@@ -2,6 +2,8 @@
 import { SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import DireccionCp from '@/components/DireccionCp'
+import { componerDireccion, direccionValida } from '@/lib/direccion-cp'
 
 /* ── Design tokens ─────────────────────────────────────────── */
 const C = {
@@ -1275,13 +1277,18 @@ function StepPrimerTurno({ session, onComplete }: { session: any; onComplete: ()
 ══════════════════════════════════════════════════════════ */
 function StepFiscal({ session, onNext }: { session: any; onNext: () => void }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
-  const [form, setForm] = useState({ razon_social: '', nif: '', direccion: '', cp: '', municipio: 'España' })
+  // Dirección fiscal con CP primero: nunca un municipio por defecto (antes: «España»).
+  const [form, setForm] = useState({ razon_social: '', nif: '', direccion: '', cp: '', municipio: '' })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
 
   const guardar = async () => {
     if (!form.razon_social.trim() || !form.nif.trim()) {
       setErr('Razón social y NIF son obligatorios para VeriFactu')
+      return
+    }
+    if (!direccionValida({ calle: form.direccion, cp: form.cp, municipio: form.municipio }, true)) {
+      setErr('Falta la dirección fiscal completa (código postal, municipio y calle): es obligatoria porque aparece en cada factura (VeriFactu). Si no la tienes ahora, usa «Configuraré los datos después».')
       return
     }
     setSaving(true)
@@ -1292,9 +1299,9 @@ function StepFiscal({ session, onNext }: { session: any; onNext: () => void }) {
         body: JSON.stringify({
           razon_social: form.razon_social.trim(),
           nif:          form.nif.trim().toUpperCase(),
-          direccion:    form.direccion.trim(),
-          codigo_postal: form.cp.trim(),
-          municipio:    form.municipio.trim(),
+          // La tabla `restaurantes` solo guarda `direccion` y `ciudad`: el CP viaja dentro de la dirección (sin migración).
+          direccion:    componerDireccion({ calle: form.direccion, cp: form.cp, municipio: form.municipio }),
+          ciudad:       form.municipio.trim(),
         }),
       })
       onNext()
@@ -1330,20 +1337,18 @@ function StepFiscal({ session, onNext }: { session: any; onNext: () => void }) {
           <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>NIF / CIF *</p>
           <input value={form.nif} onChange={e => setForm(f => ({ ...f, nif: e.target.value.toUpperCase() }))} placeholder="Ej: B12345678 o 12345678Z" style={inp({ fontFamily: "'JetBrains Mono',monospace", letterSpacing: 1 })} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-          <div>
-            <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Código postal</p>
-            <input value={form.cp} onChange={e => setForm(f => ({ ...f, cp: e.target.value }))} placeholder="41001" style={inp()} />
-          </div>
-          <div>
-            <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Municipio</p>
-            <input value={form.municipio} onChange={e => setForm(f => ({ ...f, municipio: e.target.value }))} placeholder="Sevilla" style={inp()} />
-          </div>
-        </div>
-        <div>
-          <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Dirección fiscal</p>
-          <input value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} placeholder="Calle, número..." style={inp()} />
-        </div>
+        <DireccionCp
+          valor={{ calle: form.direccion, cp: form.cp, municipio: form.municipio }}
+          onChange={v => setForm(f => ({ ...f, direccion: v.calle, cp: v.cp, municipio: v.municipio }))}
+          estilo={{
+            input: inp({ fontSize: 16 }) as React.CSSProperties,
+            label: { display: 'block', fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 },
+            texto: C.fg, tenue: C.fg3, aviso: C.amber, borde: C.rule2, fondo: C.e2, hover: C.e3,
+          }}
+          etiquetaCalle="Dirección fiscal"
+          placeholderCalle="Calle, número..."
+        />
+        <p style={{ fontFamily: SN, fontSize: 12, color: C.fg3, margin: '8px 0 0' }}>La dirección fiscal es obligatoria para guardar estos datos: figura en cada factura.</p>
       </div>
 
       <div style={{ background: 'rgba(63,125,68,.08)', border: '1px solid rgba(63,125,68,.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>

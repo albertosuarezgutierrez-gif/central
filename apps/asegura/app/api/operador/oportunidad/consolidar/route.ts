@@ -21,7 +21,7 @@ const STATUS: Record<string, number> = {
  * `POST /api/operador/oportunidad/consolidar` (05/10/2026, F2) — las ofertas REVISADAS de una
  * oportunidad → UN presupuesto de origen `ofertas` (borrador: no sale nada hacia el cliente).
  *
- *   { oportunidadId, ofertaIds?: string[], superficieM2?: number, actor?, correduriaId? }
+ *   { oportunidadId, ofertaIds?: string[], superficieM2?: number, regenerarResumen?: boolean, actor?, correduriaId? }
  *
  * - Sin `ofertaIds`, van todas las ofertas no descartadas. Todas las que van (y la póliza actual viva)
  *   tienen que estar REVISADAS y con prima total: si no, 409 con el detalle.
@@ -62,7 +62,8 @@ export const POST = auditado(async (req: Request) => {
     if (b.correduriaId !== undefined && b.correduriaId !== correduria.id) {
       return NextResponse.json({ estado: 'error', motivo: 'correduriaId no es el de esta correduría' }, { status: 403 })
     }
-    const r = await prepararPresupuestoDeOfertas(correduria.id, { oportunidadId, ofertaIds, superficieM2, actor })
+    // `regenerarResumen: true` = el corredor pide redactar el resumen otra vez; sin él se reutiliza el de la misma huella.
+    const r = await prepararPresupuestoDeOfertas(correduria.id, { oportunidadId, ofertaIds, superficieM2, actor, regenerarResumen: b.regenerarResumen === true })
     if (r.estado === 'error') return NextResponse.json(r, { status: STATUS[r.motivo] ?? 409 })
     return NextResponse.json(r)
   } catch (e) {

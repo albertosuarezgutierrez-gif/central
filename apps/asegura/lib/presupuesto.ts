@@ -43,6 +43,7 @@ import { opcionesReutilizadas } from './presupuesto-reutilizado'
 import { compararOfertas, type ResultadoComparacion } from '@central/module-seguros'
 import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { generarNarrativa, type Narrativa } from './estudio-ia'
+import { huellaComparativa, narrativaConReutilizacion } from './comparativa-guardada'
 import { AVISO_OPCION_OFERTA, caducidadOfertas, opcionesDeOfertas, seleccionarParaConsolidar } from './ofertas-reglas'
 import { leerOportunidadParaOfertas, ofertasDeOportunidad } from './oportunidad-ofertas'
 import { VIA_PROPUESTA_LEAD, sustituiblePorPropuestaLead } from './presupuesto-rpa-reglas'
@@ -1074,6 +1075,11 @@ export async function prepararPresupuestoDeOfertas(
      * de siempre: se sustituyen todos los borradores de ofertas sin enviar.
      */
     via?: typeof VIA_PROPUESTA_LEAD
+    /**
+     * `true` = el corredor pide redactar el resumen de nuevo. Sin él, si ya hay un estudio de esta oportunidad con la
+     * MISMA huella (mismas ofertas, cifras y recomendada), se reutiliza su resumen (`comparativa-guardada.ts`).
+     */
+    regenerarResumen?: boolean
   },
   ahora: Date = new Date(),
 ): Promise<ResultadoPrepararOfertas> {
@@ -1100,19 +1106,24 @@ export async function prepararPresupuestoDeOfertas(
     : op.superficieM2
   const comparacion: ResultadoComparacion = compararOfertas({
     ramo: op.ramoOferta,
-    ofertas: [...(sel.actual ? [sel.actual] : []), ...sel.ofertas].map(ofertaNormalizadaDeFila),
+    ofertas: [...(sel.actual ? [sel.actual] : []), ...sel.ofertas].map((f) => ofertaNormalizadaDeFila(f, { ramo: op.ramoOferta })),
     superficieM2: superficie,
   })
   const recomendadaId = sel.recomendada?.id ?? null
-  const narrativa = await generarNarrativa(comparacion, recomendadaId)
+  const huella = huellaComparativa({ ramo: op.ramoOferta, ofertas: comparacion.ofertas, superficieM2: superficie, recomendadaId })
+  const { narrativa, reutilizadaDe } = await narrativaConReutilizacion(
+    correduriaId, op.id, huella, entrada.regenerarResumen === true, () => generarNarrativa(comparacion, recomendadaId),
+  )
   const opciones = opcionesDeOfertas(op.ramoOferta, sel.ofertas, ahora)
   const { venceEl, fuente } = calcularVencimiento({ creadoAt: ahora, fechaEfecto: null, expiraOferta: cad.expira })
 
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
   const estudio = {
-    version: 1,
+    version: 2,
     generadoAt: ahora.toISOString(),
+    huella,
+    ...(reutilizadaDe ? { narrativaReutilizadaDe: reutilizadaDe } : {}),
     recomendadaId,
     actualId: sel.actual?.id ?? null,
     comparacion,
@@ -1185,6 +1196,7 @@ export async function prepararPresupuestoDeOfertas(
               ofertas: opciones.map((o) => o.ofertaId),
               recomendada: recomendadaId,
               narrativa: narrativa.fuente,
+              ...(reutilizadaDe ? { narrativaReutilizadaDe: reutilizadaDe } : {}),
               ...(narrativa.descartada ? { narrativaDescartada: narrativa.descartada } : {}),
               ...(previos.length > 0 ? { sustituye: previos.map((p) => p.id) } : {}),
             },

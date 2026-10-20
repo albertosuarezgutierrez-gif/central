@@ -398,9 +398,15 @@ importers:
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
+      '@central/core-catastro':
+        specifier: workspace:*
+        version: link:../../packages/core-catastro
       '@central/core-consent':
         specifier: workspace:*
         version: link:../../packages/core-consent
+      '@central/core-direccion':
+        specifier: workspace:*
+        version: link:../../packages/core-direccion
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
@@ -537,6 +543,12 @@ importers:
       '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
+      '@central/core-catastro':
+        specifier: workspace:*
+        version: link:../../packages/core-catastro
+      '@central/core-direccion':
+        specifier: workspace:*
+        version: link:../../packages/core-direccion
       '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
@@ -740,6 +752,9 @@ importers:
       '@central/core-catastro':
         specifier: workspace:*
         version: link:../../packages/core-catastro
+      '@central/core-direccion':
+        specifier: workspace:*
+        version: link:../../packages/core-direccion
       '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
@@ -1100,6 +1115,12 @@ importers:
 
   apps/transporte:
     dependencies:
+      '@central/core-catastro':
+        specifier: workspace:*
+        version: link:../../packages/core-catastro
+      '@central/core-direccion':
+        specifier: workspace:*
+        version: link:../../packages/core-direccion
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
@@ -1170,6 +1191,12 @@ importers:
       vanilla-cookieconsent:
         specifier: ^3.1.0
         version: 3.1.0
+
+  packages/core-direccion:
+    dependencies:
+      '@central/core-catastro':
+        specifier: workspace:*
+        version: link:../core-catastro
 
   packages/core-email:
     dependencies:

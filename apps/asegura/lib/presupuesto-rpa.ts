@@ -26,6 +26,7 @@ import { prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
 import { iaTexto } from './ia'
 import { generarNarrativa, type Narrativa } from './estudio-ia'
+import { huellaComparativa, narrativaConReutilizacion } from './comparativa-guardada'
 import { ofertaNormalizadaDeFila } from './documentos/oferta-leida'
 import { caducidadOfertas, type FilaOferta } from './ofertas-reglas'
 import { leerOportunidadParaOfertas } from './oportunidad-ofertas'
@@ -171,10 +172,14 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   }
 
   // 2. Comparativa determinista + análisis del recomendador + narrativa (IA con tope).
-  const comparacion: ResultadoComparacion = compararOfertas({ ramo: op.ramoOferta, ofertas: vivas.map(ofertaNormalizadaDeFila), superficieM2: op.superficieM2 })
+  const comparacion: ResultadoComparacion = compararOfertas({ ramo: op.ramoOferta, ofertas: vivas.map((f) => ofertaNormalizadaDeFila(f, { ramo: op.ramoOferta })), superficieM2: op.superficieM2 })
+  const huella = huellaComparativa({ ramo: op.ramoOferta, ofertas: comparacion.ofertas, superficieM2: op.superficieM2, recomendadaId: null })
   const tope = decidirIaAuto(await gastoIaAuto(correduriaId))
-  const narrativa: Narrativa = await generarNarrativa(comparacion, null, tope.usar ? iaTexto : null)
-  const sinIa = !tope.usar ? tope.motivo : narrativa.fuente === 'ia' ? null : narrativa.descartada ?? 'la IA no dio un resumen válido'
+  // Mismas ofertas y cifras que un estudio ya escrito → se reutiliza su resumen (no gasta el tope de IA).
+  const { narrativa, reutilizadaDe } = await narrativaConReutilizacion(
+    correduriaId, op.id, huella, false, (): Promise<Narrativa> => generarNarrativa(comparacion, null, tope.usar ? iaTexto : null),
+  )
+  const sinIa = reutilizadaDe ? null : !tope.usar ? tope.motivo : narrativa.fuente === 'ia' ? null : narrativa.descartada ?? 'la IA no dio un resumen válido'
   const analisis = await analisisRecomendador(correduriaId, op.id, ahora)
 
   const leidaDe = new Map(leidas.map((l) => [l.clave, l]))
@@ -218,8 +223,10 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
   const tarificaciones = [...new Set(leidas.map((l) => l.tarificacionId))].sort()
   const trabajos = [...new Set(leidas.map((l) => l.trabajoId))].sort()
   const estudio = {
-    version: 1,
+    version: 2,
     generadoAt: ahora.toISOString(),
+    huella,
+    ...(reutilizadaDe ? { narrativaReutilizadaDe: reutilizadaDe } : {}),
     recomendadaId: null,
     actualId: null,
     comparacion,
@@ -263,7 +270,8 @@ async function preparar(correduriaId: string, oportunidadId: string, opts: Opcio
             detalle: {
               actor, origen: 'ofertas', via: 'rpa_auto', tarificaciones, trabajos, ofertas: idsOfertas, narrativa: narrativa.fuente,
               // Lo que cuenta para el tope de 24 h: se anota ANTES de saber si la IA respondió (intentarlo ya gasta).
-              iaAuto: tope.usar ? 'intentada' : 'omitida_tope', eurEstimados: tope.usar ? EUR_ESTIMADO_NARRATIVA : 0,
+              iaAuto: reutilizadaDe ? 'reutilizada' : tope.usar ? 'intentada' : 'omitida_tope', eurEstimados: !reutilizadaDe && tope.usar ? EUR_ESTIMADO_NARRATIVA : 0,
+              ...(reutilizadaDe ? { narrativaReutilizadaDe: reutilizadaDe } : {}),
               ...(sinIa ? { sinIa } : {}),
               ...(previos.length > 0 ? { sustituye: previos.map((p) => p.id) } : {}),
             },

@@ -11,7 +11,7 @@
 //   · Un JSON que no parsea o no tiene la forma es «no se ha podido leer», nunca una oferta vacía.
 
 import { z } from 'zod'
-import { normalizarGarantia, normalizarTexto, type OfertaNormalizada, type RamoOferta, type ValorGarantia } from '@central/module-seguros'
+import { fraccionamientoDe, normalizarGarantia, remapearGarantiasLectura, normalizarTexto, type OfertaNormalizada, type RamoOferta, type ValorGarantia } from '@central/module-seguros'
 
 const MAX_GARANTIAS = 80
 const MAX_TEXTO_EVIDENCIA = 300
@@ -226,7 +226,11 @@ export function importeBd(v: unknown): number | null {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null
 }
 
-/** Una fila de `oportunidad_oferta` → la forma que compara `compararOfertas`. */
+/**
+ * Una fila de `oportunidad_oferta` → la forma que compara `compararOfertas` (el ADAPTADOR de PDF y bot de la
+ * comparativa única). `datosExtra` (opcional) da la fuente (`rpaClave` = bot; si no, PDF: el de la póliza actual
+ * es de la competencia), la franquicia general (NULL = no declarada) y el fraccionamiento.
+ */
 export function ofertaNormalizadaDeFila(f: {
   id: string
   rol: string
@@ -235,7 +239,15 @@ export function ofertaNormalizadaDeFila(f: {
   primaNeta: unknown
   primaTotal: unknown
   garantias: unknown
-}): OfertaNormalizada {
+  datosExtra?: unknown
+}, opts?: { ramo?: RamoOferta }): OfertaNormalizada {
+  // `opts` puede llegar como índice si alguien la pasa a `.map()` sin lambda: solo vale un objeto.
+  const ramo = opts && typeof opts === 'object' ? opts.ramo ?? null : null
+  const leidas = garantiasDeJson(f.garantias)
+  const remap = ramo ? remapearGarantiasLectura(ramo, leidas) : { garantias: leidas, sinEquivalencia: [] }
+  const extra = f.datosExtra && typeof f.datosExtra === 'object' && !Array.isArray(f.datosExtra) ? (f.datosExtra as Record<string, unknown>) : {}
+  const esBot = typeof extra.rpaClave === 'string' && extra.rpaClave !== ''
+  const franq = typeof extra.franquiciaGeneral === 'number' && Number.isFinite(extra.franquiciaGeneral) && extra.franquiciaGeneral >= 0 ? extra.franquiciaGeneral : null
   return {
     id: f.id,
     rol: f.rol === 'actual' ? 'actual' : 'oferta',
@@ -243,7 +255,14 @@ export function ofertaNormalizadaDeFila(f: {
     producto: f.producto,
     primaNeta: importeBd(f.primaNeta),
     primaTotal: importeBd(f.primaTotal),
-    garantias: garantiasDeJson(f.garantias),
+    garantias: remap.garantias,
+    ...(remap.sinEquivalencia.length > 0
+      ? { avisos: [`${remap.sinEquivalencia.length === 1 ? 'Una garantía leída' : `${remap.sinEquivalencia.length} garantías leídas`} con claves genéricas sin equivalencia en este ramo (${remap.sinEquivalencia.join(', ')}): no se comparan, revisa la oferta`] }
+      : {}),
+    fuente: esBot ? 'bot' : f.rol === 'actual' ? 'pdf_competencia' : 'pdf_compania',
+    franquiciaGeneral: franq,
+    fraccionamiento: fraccionamientoDe(typeof extra.formaPago === 'string' ? extra.formaPago : typeof extra.fraccionamiento === 'string' ? extra.fraccionamiento : null),
+    referencia: { tipo: 'oportunidad_oferta', id: f.id },
   }
 }
 

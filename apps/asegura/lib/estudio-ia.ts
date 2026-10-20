@@ -9,7 +9,12 @@
 //      ofertas que hay aquí, y la recomendación es la que marcó el CORREDOR, no un cálculo.
 // El cepo de esto vive en `estudio-ia.test.ts` (rómpelo y míralo en rojo).
 
-import { cifrasDeMatriz, type ResultadoComparacion } from '@central/module-seguros'
+//   4. (20/10/2026, comparativa única) Lo mismo con las COMPAÑÍAS: si el texto nombra una aseguradora que no
+//      está entre las comparadas (`companiaIntrusa`), se descarta igual. Y el texto lleva su etiqueta visible
+//      (`etiquetaResumen`: «Resumen preparado con IA y revisado por tu corredor» / plantilla).
+// La IA va por `iaTexto` (pasarela de plataforma → cadena de fallback de @central/core-ai, con tope de gasto).
+
+import { cifrasDeMatriz, companiaIntrusa, type ResultadoComparacion } from '@central/module-seguros'
 import { iaTexto } from './ia.ts'
 
 export type FuenteNarrativa = 'ia' | 'determinista'
@@ -119,15 +124,19 @@ export function narrativaDeterminista(r: ResultadoComparacion, recomendadaId: st
   return { resumen: frases.join(' '), recomendacion, fuente: 'determinista' }
 }
 
-const SYSTEM = `Eres un corredor de seguros español que redacta, para su cliente, el resumen de un estudio comparativo
+const SYSTEM = `Eres el corredor de Grupo ASegura que redacta, para su cliente, el resumen de un estudio comparativo
 de ofertas ya calculado. Te doy el resultado del cálculo en JSON y la lista de CIFRAS PERMITIDAS.
-Devuelve SOLO un JSON {"resumen": string, "recomendacion": string}, en español, tono claro y profesional, sin
-adjetivos comerciales.
+Devuelve SOLO un JSON {"resumen": string, "recomendacion": string}, en español.
+Voz de Grupo ASegura: cercana y clara, de tú, frases cortas, como quien se lo explica en persona; sin tecnicismos
+innecesarios, sin adjetivos comerciales, sin cursivas ni comillas raras. El nombre de la correduría se escribe
+«Grupo ASegura» (A y S mayúsculas).
 Reglas que no se pueden saltar:
 - NO escribas ninguna cifra (importe, porcentaje, número) que no esté LITERALMENTE en CIFRAS PERMITIDAS. Para contar
   cosas, usa palabras («dos ofertas»), no dígitos. No hagas cuentas nuevas.
 - No digas «la más barata del mercado», «la mejor», «ahorro garantizado» ni nada que no se pueda probar con el JSON.
 - "null" en el JSON significa que el dato NO FIGURA en el documento: dilo así, nunca como «no cubre» ni como 0.
+- No nombres ninguna compañía que no esté en "ofertas". El campo "orden" es un orden por prima, NO una
+  recomendación: no lo presentes como «la mejor».
 - "recomendacion" explica la oferta que el CORREDOR ha marcado como recomendada (campo recomendada); si no hay
   ninguna, di que el corredor no ha marcado ninguna. Nunca elijas tú otra.
 - Máximo 120 palabras en "resumen" y 60 en "recomendacion".`
@@ -154,6 +163,7 @@ export async function generarNarrativa(
       recomendada: o.id === recomendadaId,
     })),
     resumen: r.resumen,
+    orden: r.ranking ? { criterio: r.ranking.criterio, puestos: r.ranking.puestos } : null,
     filas: r.filas.map((f) => ({
       garantia: f.etiqueta,
       celdas: f.celdas.map((c) => ({
@@ -183,5 +193,7 @@ export async function generarNarrativa(
   if (resumen === '' || recomendacion === '') return { ...respaldo, descartada: 'la IA devolvió un texto vacío' }
   const intrusa = cifraIntrusa(`${resumen}\n${recomendacion}`, permitidas)
   if (intrusa !== null) return { ...respaldo, descartada: `cifra ausente de la matriz: ${intrusa}` }
+  const compania = companiaIntrusa(`${resumen}\n${recomendacion}`, r.ofertas.map((o) => o.compania))
+  if (compania !== null) return { ...respaldo, descartada: `compañía ausente de la comparativa: ${compania}` }
   return { resumen: resumen.slice(0, 2000), recomendacion: recomendacion.slice(0, 1000), fuente: 'ia', descartada: null }
 }

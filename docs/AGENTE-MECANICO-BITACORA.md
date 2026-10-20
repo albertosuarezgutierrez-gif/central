@@ -73,3 +73,4 @@
 | 17/10/2026 | corrección de una frase de la skill agente-correduria | agente-mecanico | ok |
 | 17/10/2026 | asegura-web: textos legales y SEO (PR #4768) | agente-mecanico | ok; hicieron falta 2 tests de seguimiento: `tipografia.test.ts` esperaba Google Fonts por URL y `gestor.test.ts` casaba la frase vieja por casualidad |
 | 20/10/2026 | solo CLAUDE.md: regla permanente «Direcciones postales» (CP → provincia → calle Catastro → número) en Reglas globales | agente-mecanico | ok (sin tsc: solo docs) |
+| 20/10/2026 | docs: «cliente vivo» de ialimp reajustado en CLAUDE.md raíz y apps/ialimp/CLAUDE.md (sin uso humano desde 29/08/2026; sincronización iCal/Smoobu viva) | agente-mecanico | ok (sin tsc: solo docs) |
