@@ -1,3 +1,4 @@
+// Moto v0.7.15 (20/10/2026, trabajo real 08abe9d5): el confirm «Primer periodo inferior a 355 días…» al pasar a Datos básicos se responde «No» (excepción exacta del guard, nunca se alarga) y el presupuesto avisa de que la prima no es anual.
 // Moto v0.7.14 (20/10/2026, trabajo real 2f90524e): `#driverBirthDate` quedaba con OTRA fecha válida → se dice con cuál coincide (sin el valor); si es la que el portal traía (registro de Allianz) o ninguna del formulario → `datos` «revisa la de la ficha», sin pelearse.
 // Moto v0.7.13 (20/10/2026, trabajo real e5bcdb08): el portal perdía `#driverBirthDate` tras escribirlo → blur tras cada texto y UNA reescritura tecleada de lo perdido; el error dice la FORMA (vacío/otra fecha), nunca el valor.
 // Moto v0.7.3 (20/10/2026): CP con varias poblaciones → se elige SOLA por la localidad del riesgo (contención de palabras enteras, única; ver poblacion-localidad.ts); varias/ninguna/contradictoria → persona.
@@ -169,6 +170,7 @@ import {
   SEL_ZONA_APP_TURISMOS,
   type TarjetaVehiculoTurismos,
   contarOpcionesMarcablesTurismos,
+  supuestosAvanceAceptados,
 } from '../../guard.ts'
 import { abrirNuevaAlta, fechaEs, login, marcoCon, sesionSirve, TARJETA_AUTOS } from './intranet/index.ts'
 
@@ -937,8 +939,9 @@ export function supuestosDatosBasicosMoto(f: FormularioAuto): string | null {
 }
 
 /** Aviso único de supuestos de MOTO: la versión (si se eligió por similitud entre varias) y los antecedentes favorables. Puro. */
-export function supuestosMoto(supuestoVersion: string | null, f: FormularioAuto): string | null {
-  return textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...conAntecedentesFavorables(f).supuestos])
+export function supuestosMoto(supuestoVersion: string | null, f: FormularioAuto, delPortal: readonly string[] = []): string | null {
+  // v0.7.15: `delPortal` = avisos de la excepción exacta del guard (primer periodo < 1 año respondido «No»: prima no anual).
+  return textoSupuestos([...(supuestoVersion ? [supuestoVersion] : []), ...conAntecedentesFavorables(f).supuestos, ...delPortal])
 }
 
 // ── Seguro anterior y fecha de adquisición (v0.7.11, trabajo real 6cd26c10) ──
@@ -1328,7 +1331,7 @@ async function tarificarMoto(page: Page, form: FormularioAuto, ctx: ContextoPort
   const primas = await leerPrimasTarificar(tarifa)
   // 18/10/2026: los antecedentes SUPUESTOS (favorables) viajan con cada oferta («Precio con supuestos: …»).
   return {
-    ofertas: conDatosUsados(ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }, supuestosMoto(supuestoVersion, form)), usados),
+    ofertas: conDatosUsados(ofertasDesdePrimas(primas, 'Moto', { ...vehiculo, fechaMatriculacion: fechaMatriculacion || vehiculo.fechaMatriculacion }, supuestosMoto(supuestoVersion, form, supuestosAvanceAceptados(page))), usados),
     // El vehículo fijado en el `<select>` (resolverVehiculo): asegura solo lo encadena a Generali en ramo auto; viaja igual.
     seleccionVehiculo: seleccionVehiculoConfirmada(usados.vehiculo),
   }
@@ -2509,7 +2512,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.14' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.15' : '0.6.18',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

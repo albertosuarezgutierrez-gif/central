@@ -1,5 +1,6 @@
 // Allianz MOTO v0.7.1/0.7.2 (19/10/2026): regla pura inequívoca → elige; ambigua → `ambigua` y el flujo aplica la EQUIVALENCIA (v0.7.2: equivalentes → elige sola y declara; materiales → ErrorEleccionVersion). Etiquetas con la FORMA del
 // catálogo real (sin datos personales); códigos inventados.
+import { CONFIRMS_AVANCE_ACEPTABLES } from '../src/guard.ts'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { allianzMoto, eleccionVersionMotoPorSimilitud, ErrorEleccionVersion, supuestosMoto, versionAutomaticaAllianz } from '../src/adapters/allianz/auto.ts'
@@ -37,11 +38,14 @@ test('0 o 1 opciones: no hay nada que elegir', () => {
   assert.equal(eleccionVersionMotoPorSimilitud([], sel({})), null)
 })
 
-test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.14', () => {
+test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.15', () => {
   const f = { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: 0 } as unknown as FormularioAuto
   assert.equal(supuestosMoto('versión elegida por similitud (supuesto, había 2)', f), `${PREFIJO_SUPUESTOS}versión elegida por similitud (supuesto, había 2), ${SUPUESTO_FAVORABLE_ANIOS}.`)
   assert.equal(supuestosMoto(null, { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto), null)
-  assert.equal(allianzMoto.version, '0.7.14')
+  assert.equal(allianzMoto.version, '0.7.15')
+  // v0.7.15: el aviso del primer periodo < 1 año (confirm respondido «No» por el guard) viaja en el mismo aviso del presupuesto.
+  const aviso = CONFIRMS_AVANCE_ACEPTABLES['td#datosBasicos']!.supuesto
+  assert.equal(supuestosMoto(null, { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto, [aviso]), `${PREFIJO_SUPUESTOS}${aviso}.`)
 })
 
 test('v0.7.2 · ambigua con candidatas EQUIVALENTES (misma cilindrada) → se elige SOLA la primera y se declara en el aviso de supuestos', () => {

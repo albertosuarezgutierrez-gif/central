@@ -254,6 +254,40 @@ export const AVANCES_PESTANA_AUTORIZADOS = Object.freeze({
   }),
 })
 export type SelectorAvancePestana = keyof typeof AVANCES_PESTANA_AUTORIZADOS
+
+/**
+ * EXCEPCIÓN EXACTA (Alberto, 20/10/2026, trabajo real 08abe9d5): el ÚNICO confirm() que NO tumba un avance. Al pasar de Riesgo
+ * municipio a Datos básicos de Allianz moto, el portal pone por su cuenta un primer periodo de menos de 355 días y pregunta si lo
+ * alarga 1 mes. Decisión de Alberto: se responde SIEMPRE «No» (dismiss; nunca se alarga) y el avance sigue, con un AVISO visible en
+ * el presupuesto (la prima no es anual). Solo ese texto (normalizado), solo en `td#datosBasicos`, una vez por trabajo. Cualquier otro
+ * confirm, o este mismo una segunda vez, sigue tumbando el avance.
+ */
+export const CONFIRMS_AVANCE_ACEPTABLES: Readonly<Partial<Record<SelectorAvancePestana, Readonly<{ texto: string; supuesto: string }>>>> = Object.freeze({
+  'td#datosBasicos': Object.freeze({
+    texto: 'Primer periodo inferior a 355 días. ¿Desea alargar el término 1 mes más?',
+    supuesto: 'Allianz: primer periodo inferior a un año (menos de 355 días; el portal no da la duración exacta); la prima no es anual y no es directamente comparable',
+  }),
+})
+
+/** Texto de un diálogo para compararlo: sin `<br>`, NFC, espacios colapsados. Puro. */
+export function normalizarTextoDialogo(bruto: string): string {
+  return bruto.replace(/<br\s*\/?>/gi, ' ').normalize('NFC').replace(/\s+/g, ' ').trim()
+}
+
+/** ¿Es ESTE diálogo la excepción exacta del avance `selector`? Puro: solo `confirm`, texto normalizado IGUAL y no visto antes en el trabajo. */
+export function confirmAvanceAceptable(selector: string, tipo: string, mensaje: string, yaAceptado: boolean): boolean {
+  if (yaAceptado || tipo !== 'confirm' || !Object.hasOwn(CONFIRMS_AVANCE_ACEPTABLES, selector)) return false
+  const regla = CONFIRMS_AVANCE_ACEPTABLES[selector as SelectorAvancePestana]
+  return regla !== undefined && normalizarTextoDialogo(mensaje) === regla.texto
+}
+
+const CONFIRMS_ACEPTADOS = new WeakMap<GuardEmision, Set<string>>()
+const SUPUESTOS_AVANCE = new WeakMap<Page, string[]>()
+
+/** Avisos que dejó la excepción exacta (confirm respondido «No») para el presupuesto. */
+export function supuestosAvanceAceptados(page: Page): readonly string[] {
+  return [...(SUPUESTOS_AVANCE.get(page) ?? [])]
+}
 /** Tope de la ventana de red del avance: el clic + la carga de la pestaña destino. Se cierra antes en cuanto se llega (finally). */
 export const VENTANA_RED_AVANCE_MS = 20_000
 
@@ -815,9 +849,18 @@ export async function pulsarAvancePestanaAutorizado(page: Page, guard: GuardEmis
   // UN plazo para todo: la ventana de red y la espera de la pantalla de destino vencen en el MISMO instante (`hasta`), y la
   // ventana se cierra antes en cuanto se llega (finally).
   const hasta = Date.now() + VENTANA_RED_AVANCE_MS
-  // Un diálogo del portal (confirm/alert) durante el avance NO se acepta: se descarta y el trabajo cae con motivo claro.
+  // Un diálogo del portal (confirm/alert) durante el avance NUNCA se acepta: se descarta y el trabajo cae (salvo la excepción exacta, que se responde «No» y sigue).
   let dialogo: { tipo: string; mensaje: string } | null = null
   const alDialogo = (d: Dialog) => {
+    // Excepción EXACTA (`CONFIRMS_AVANCE_ACEPTABLES`): solo antes de cualquier otro diálogo y una vez por trabajo.
+    const aceptados = CONFIRMS_ACEPTADOS.get(guard) ?? new Set<string>()
+    if (dialogo === null && confirmAvanceAceptable(selector, d.type(), d.message(), aceptados.has(selector))) {
+      aceptados.add(selector)
+      CONFIRMS_ACEPTADOS.set(guard, aceptados)
+      SUPUESTOS_AVANCE.set(page, [...(SUPUESTOS_AVANCE.get(page) ?? []), CONFIRMS_AVANCE_ACEPTABLES[selector]!.supuesto])
+      d.dismiss().catch(() => {}) // «No»: nunca se alarga el término (decisión de Alberto)
+      return
+    }
     dialogo ??= { tipo: d.type(), mensaje: textoDialogoPortalSeguro(d.message()) }
     d.dismiss().catch(() => {})
   }
