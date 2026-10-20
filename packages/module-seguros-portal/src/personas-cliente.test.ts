@@ -4,6 +4,8 @@ import type { FiguraFicha, TerceroFicha } from '@central/module-seguros'
 import {
   CAMPOS_TERCERO_CLIENTE,
   CAMPOS_TERCERO_PROHIBIDOS,
+  PAPELES_TERCERO_CLIENTE,
+  PAPELES_TERCERO_PROHIBIDOS,
   personasParaCliente,
   terceroParaCliente,
   tercerosParaCliente,
@@ -87,6 +89,42 @@ test('tercero: la compañía solo es la del contrario; un testigo no la enseña'
   // Sin nombre, matrícula ni compañía no hay nada que enseñar.
   assert.equal(terceroParaCliente({ papel: 'testigo', telefono: '600' }), null)
   assert.ok(!JSON.stringify(terceroParaCliente({ ...CONTRARIO, nombre: 'v1:xx' })).includes('v1:'))
+})
+
+// ── Papeles por LISTA BLANCA (B5, 20/10/2026): un brazo por papel. ──
+const conPapel = (papel: unknown) => tercerosParaCliente([{ ...CONTRARIO, papel }])
+for (const papel of ['contrario', 'conductor_contrario', 'perjudicado', 'tercero', 'testigo']) {
+  test(`papel de siempre «${papel}»: sigue pasando`, () => assert.deepEqual(conPapel(papel).map((t) => t.papel), [papel]))
+}
+for (const papel of ['perito', 'taller', 'abogado', 'tramitador', 'conductor_asegurado', 'contacto_asegurado']) {
+  test(`papel nuevo permitido «${papel}»: pasa (solo los campos de la lista blanca)`, () => {
+    const l = conPapel(papel)
+    assert.deepEqual(l.map((t) => t.papel), [papel])
+    assert.deepEqual(Object.keys(l[0]).sort(), [...CAMPOS_TERCERO_CLIENTE].sort())
+    assert.equal(l[0].compania, null)
+  })
+}
+test('🚨 «asistente» (salud) NO llega al cliente', () => {
+  assert.deepEqual(conPapel('asistente'), [])
+  assert.equal(terceroParaCliente({ ...CONTRARIO, papel: 'asistente' }), null)
+})
+test('🚨 «receptor_pago» (pagos a terceros) NO llega al cliente', () => {
+  assert.deepEqual(conPapel('receptor_pago'), [])
+  assert.equal(terceroParaCliente({ ...CONTRARIO, papel: 'receptor_pago' }), null)
+})
+test('🚨 papel desconocido, de cajón, vacío, ausente o con otra grafía: fail-closed', () => {
+  for (const p of ['papel_que_invente_la_ingesta', 'otro', '', '   ', null, undefined, 42, 'PERITO', 'Perito']) {
+    assert.deepEqual(conPapel(p), [], String(p))
+  }
+  const { papel: _sinPapel, ...sinPapel } = CONTRARIO
+  assert.deepEqual(tercerosParaCliente([sinPapel]), [])
+})
+test('papeles: la lista blanca y la de prohibidos no se solapan', () => {
+  for (const p of PAPELES_TERCERO_PROHIBIDOS) assert.ok(!(PAPELES_TERCERO_CLIENTE as readonly string[]).includes(p), p)
+})
+test('papeles: en una lista mezclada solo salen los permitidos, en su orden', () => {
+  const l = tercerosParaCliente(['perito', 'asistente', 'contrario', 'receptor_pago', 'raro'].map((papel) => ({ ...CONTRARIO, papel })))
+  assert.deepEqual(l.map((t) => t.papel), ['perito', 'contrario'])
 })
 
 test('figuras: la suya completa (tomador propio con SU documento, o mismo documento); las demás solo papel y nombre', () => {

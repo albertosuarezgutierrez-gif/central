@@ -1183,7 +1183,7 @@ test('cambioDuplicadasEnFirma: solo mira el tramo de duplicadas', () => {
 })
 
 // ── Renovaciones en riesgo en la firma del aviso (20/10/2026) ────────────────
-test('firma: un cambio en las renovaciones en riesgo de una compañía muda hace sonar', () => {
+test('firma: las renovaciones en riesgo entran como PRESENCIA (C0109+), no con el número: 4→5 no suena', () => {
   const muda = (riesgo: number | undefined) => saludIngesta({
     cuarentena: [], rechazos: [],
     silencio: [{
@@ -1195,12 +1195,13 @@ test('firma: un cambio en las renovaciones en riesgo de una compañía muda hace
   })
   const con4 = firmaAvisoIngesta(muda(4))
   const con5 = firmaAvisoIngesta(muda(5))
-  assert.notEqual(con4, con5)
-  assert.notEqual(con4, firmaAvisoIngesta(muda(0)))
+  assert.equal(con4, con5, 'el número exacto no cambia la firma')
+  assert.equal(con4.split(':')[3], 'C0109+')
+  assert.notEqual(con4, firmaAvisoIngesta(muda(0)), 'aparecer/desaparecer sí suena')
   // 0 y ausente dan la firma de siempre.
   assert.equal(firmaAvisoIngesta(muda(0)), firmaAvisoIngesta(muda(undefined)))
   const d = decidirAvisoIngesta({
-    firmaAnterior: con4, firmaActual: con5,
+    firmaAnterior: firmaAvisoIngesta(muda(0)), firmaActual: con5,
     ultimoAvisoEn: new Date('2026-10-19T06:45:00Z'), hoy: new Date('2026-10-20T06:45:00Z'),
   })
   assert.equal(d.avisar, true)

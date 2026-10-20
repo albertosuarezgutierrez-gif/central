@@ -389,6 +389,8 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       FROM huecos GROUP BY entidad
     `)
 
+    // `ficheros90`: ficheros de los 90 d ANTERIORES AL ÚLTIMO fichero de ese tipo (no a hoy): un tipo
+    // mudo no puede dejar de ser «habitual» precisamente por estar mudo.
     // Ritmo por TIPO de fichero dentro de cada compañía (POL/REC/SIN/CEF), calculado igual que el
     // de la compañía, en UNA consulta agregada. Un fallo de lectura → `null` y `porTipo` queda
     // AUSENTE (no se sabe), jamás `[]`: el vigía por compañía sigue como antes.
@@ -403,14 +405,15 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
         GROUP BY 1, 2, 3
       ), huecos AS (
         SELECT entidad, tipo, dia, n,
-               dia - lag(dia) OVER (PARTITION BY entidad, tipo ORDER BY dia) AS hueco
+               dia - lag(dia) OVER (PARTITION BY entidad, tipo ORDER BY dia) AS hueco,
+               MAX(dia) OVER (PARTITION BY entidad, tipo) AS ultimo
         FROM dias_tipo
       )
       SELECT entidad, tipo,
              (CURRENT_DATE - MAX(dia)) AS dias,
              percentile_disc(0.5) WITHIN GROUP (ORDER BY hueco) FILTER (WHERE hueco IS NOT NULL) AS hueco_med,
              COUNT(*) FILTER (WHERE hueco IS NOT NULL) AS huecos,
-             COALESCE(SUM(n) FILTER (WHERE dia > CURRENT_DATE - 90), 0) AS ficheros90
+             COALESCE(SUM(n) FILTER (WHERE dia > ultimo - 90), 0) AS ficheros90
       FROM huecos GROUP BY entidad, tipo
     `).catch(() => null)
     const porTipoMap = new Map<string, RitmoTipo[]>()

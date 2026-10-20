@@ -55,6 +55,16 @@ export function valorCampo(bruto: string): string | null {
 }
 
 /**
+ * Defensa en profundidad: el `cimaExtra` genérico debe llegar SIN PII por contrato, pero esto pinta
+ * al operador en claro. Una ruta cuyo nombre sugiere dato personal/bancario no se pinta jamás.
+ */
+const RE_RUTA_PII = /iban|cuentacorriente|ccc|nif|dni|telefono|email|domicilio|fechanacimiento/i
+
+export function rutaConPII(ruta: string): boolean {
+  return RE_RUTA_PII.test(ruta)
+}
+
+/**
  * `extra` es lo que haya en `cimaExtra` (cualquier cosa: viene de JSON). `undefined`/`null`/no-array → `null`.
  */
 export function vistaCimaExtra(extra: unknown): GrupoCimaExtra[] | null {
@@ -64,6 +74,7 @@ export function vistaCimaExtra(extra: unknown): GrupoCimaExtra[] | null {
     if (!it || typeof it !== 'object') continue
     const { ruta, valor } = it as { ruta?: unknown; valor?: unknown }
     if (typeof ruta !== 'string' || (typeof valor !== 'string' && typeof valor !== 'number')) continue
+    if (rutaConPII(ruta)) continue
     const segs = ruta.split('.').map((s) => s.trim()).filter(Boolean)
     if (!segs.length) continue
     const v = valorCampo(String(valor))

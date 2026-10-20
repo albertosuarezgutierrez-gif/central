@@ -1159,9 +1159,10 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
   const mudas = (salud.silencio ?? [])
     .flatMap(e =>
       e.veredicto === 'silencio'
-        // Las renovaciones en riesgo entran en la firma (`C0109+4`): si el recuento
-        // cambia, suena. Sin riesgo (0/null/undefined) la firma es la de siempre.
-        ? [(e.renovacionesEnRiesgo ?? 0) > 0 ? `${e.entidad}+${e.renovacionesEnRiesgo}` : e.entidad]
+        // Las renovaciones en riesgo entran en la firma SOLO como presencia (`C0109+`): aparecer/
+        // desaparecer suena; el número exacto cambia casi a diario y solo va en el texto.
+        // Sin riesgo (0/null/undefined) la firma es la de siempre.
+        ? [(e.renovacionesEnRiesgo ?? 0) > 0 ? `${e.entidad}+` : e.entidad]
         // Tipos mudos: `C0468=SIN` (nunca `:`, que parte tramos). Aparecer/desaparecer suena.
         : e.veredicto === 'tipo_mudo'
           ? (e.tiposMudos ?? []).map(t => `${e.entidad}=${t.tipo}`)

@@ -206,6 +206,27 @@ test('una fila de entidad ilegible degrada la lista ENTERA', () => {
   assert.equal(r.salud.silencio, null)
 })
 
+test('un `porTipo` ilegible se DESCARTA (queda ausente) y el resto de la entidad se lee igual', () => {
+  const mapfre = { entidad: 'C0058', diasSinFichero: 74, huecoMaximo: 2, huecosObservados: 2, vivas: 64, vencidasEnSilencio: 7, vencen90d: 12 }
+  const occ = { entidad: 'C0468', diasSinFichero: 2, huecoMaximo: 9, huecoMediano: 1, huecosObservados: 40, vivas: 19, vencidasEnSilencio: 0 }
+  const legible = { tipo: 'SIN', diasSinFichero: 25, huecoMediano: 3, huecosObservados: 20, ficheros90d: 26 }
+  for (const rara of [[{ tipo: 'SIN', diasSinFichero: 'x' }], 'no-lista', [legible, null]]) {
+    const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], rechazos: [], entidades: [mapfre, { ...occ, porTipo: rara }] })
+    assert.equal(r.estado, 'ok')
+    if (r.estado !== 'ok') return
+    assert.notEqual(r.salud.silencio, null, 'la lectura de compañías NO se tumba')
+    const mudas = (r.salud.silencio ?? []).filter(e => e.veredicto === 'silencio').map(e => e.entidad)
+    assert.deepEqual(mudas, ['C0058'])
+    const o = (r.salud.silencio ?? []).find(e => e.entidad === 'C0468')
+    assert.notEqual(o?.veredicto, 'tipo_mudo', 'porTipo descartado: no se mide, no se inventa un tipo mudo')
+  }
+  // Legible: se conserva y vigila.
+  const ok = interpretarIngesta(200, { estado: 'ok', cuarentena: [], rechazos: [], entidades: [{ ...occ, porTipo: [legible] }] })
+  assert.equal(ok.estado, 'ok')
+  if (ok.estado !== 'ok') return
+  assert.equal((ok.salud.silencio ?? [])[0]?.veredicto, 'tipo_mudo')
+})
+
 test('con los datos reales de Mapfre el veredicto llega degradado', () => {
   const r = interpretarIngesta(200, {
     estado: 'ok', cuarentena: [], rechazos: [],

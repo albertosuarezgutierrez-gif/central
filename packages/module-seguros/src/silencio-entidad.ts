@@ -75,7 +75,7 @@ export type RitmoTipo = {
   huecoMediano: number | null
   /** Tamaño de la muestra del baremo. */
   huecosObservados: number
-  /** Ficheros de este tipo en los últimos 90 días: dice si el tipo es HABITUAL. */
+  /** Ficheros de este tipo en los 90 días ANTERIORES a su último fichero (no a hoy: estar mudo no lo hace «no habitual»). */
   ficheros90d: number
 }
 

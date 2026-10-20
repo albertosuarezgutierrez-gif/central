@@ -19,6 +19,10 @@
 //  3. TERCEROS del siniestro: SOLO papel, nombre, matrícula y compañía del contrario. NUNCA
 //     documento, teléfono, email ni domicilio de un tercero (ni responsabilidad, nº de póliza ni
 //     código DGS de su compañía). La compañía solo si es el contrario o su conductor.
+//  4. PAPELES de tercero por LISTA BLANCA (`PAPELES_TERCERO_CLIENTE`, 20/10/2026, plan
+//     `docs/CIMA-SEGUIMIENTO-Y-DATOS.md` B5): el contrario y los profesionales de su siniestro sí; los
+//     papeles que delatan salud o pagos a terceros (`asistente`, `receptor_pago`) NO, y un papel
+//     desconocido, vacío o de cajón (`otro`) tampoco (fail-closed: la ingesta puede inventar papeles).
 
 import type { FiguraFicha, TerceroFicha } from '@central/module-seguros'
 
@@ -36,6 +40,21 @@ export const CAMPOS_TERCERO_PROHIBIDOS = [
   'responsabilidad', 'numeroPoliza', 'codigoEntidadDgs', 'claseFigura', 'tipoPersona', 'orden', 'porcentaje',
 ] as const
 
+/**
+ * Papeles de tercero que el cliente PUEDE ver. Lista blanca: cualquier otro (incluido uno nuevo que
+ * escriba mañana la ingesta) no sale. Añadir uno aquí es una decisión legal, no técnica.
+ */
+export const PAPELES_TERCERO_CLIENTE = [
+  // Los de siempre (catálogo `PAPELES_FIGURA_CIMA` que aparecen como tercero de un siniestro).
+  'contrario', 'conductor_contrario', 'perjudicado', 'tercero', 'testigo',
+  // Asegura#891: profesionales del siniestro y personas del propio asegurado.
+  'perito', 'taller', 'abogado', 'tramitador', 'conductor_asegurado', 'contacto_asegurado',
+] as const
+
+/** Papeles que NUNCA llegan al cliente (salud / pagos a terceros). El cepo los recorre uno a uno. */
+export const PAPELES_TERCERO_PROHIBIDOS = ['asistente', 'receptor_pago'] as const
+
+const PAPELES_PERMITIDOS: ReadonlySet<string> = new Set(PAPELES_TERCERO_CLIENTE)
 const PAPELES_CON_COMPANIA = new Set(['contrario', 'conductor_contrario'])
 
 const texto = (v: unknown, max = 200): string | null => {
@@ -47,7 +66,9 @@ const texto = (v: unknown, max = 200): string | null => {
 /** Un tercero → lo que ve el cliente. Lista blanca: se copia SOLO lo de `CAMPOS_TERCERO_CLIENTE`. */
 export function terceroParaCliente(t: Partial<TerceroFicha> | Record<string, unknown>): TerceroCliente | null {
   const r = t as Record<string, unknown>
-  const papel = texto(r.papel, 60) ?? 'otro'
+  const papel = texto(r.papel, 60)
+  // Fail-closed: sin papel, o con uno fuera de la lista blanca, el tercero no existe para el portal.
+  if (papel === null || !PAPELES_PERMITIDOS.has(papel)) return null
   const salida = {} as Record<CampoTerceroCliente, string | null>
   for (const k of CAMPOS_TERCERO_CLIENTE) salida[k] = texto(r[k])
   salida.papel = papel
