@@ -29,10 +29,11 @@ test('unión Allianz + Mapfre (moto): cada clave UNA vez, con las compañías qu
   assert.equal(anios.length, 1)
   assert.deepEqual(anios[0]!.companias, ['allianz', 'mapfre'])
   assert.equal(anios[0]!.bloque, 'poliza')
-  // Solo Allianz (sexo; el Sr./Sra. de la ficha no lo da aquí → ficha) y solo Mapfre (NIF del tomador, de la ficha).
+  // Solo Allianz (sexo; el Sr./Sra. de la ficha no lo da aquí → ficha). El NIF del tomador (de la ficha) lo piden los DOS bots de moto
+  // (Allianz 0.7.5+ si el tomador es conductor/propietario; Mapfre siempre) y sale una sola vez.
   assert.deepEqual(todas(r).find((p) => p.clave === 'conductor.sexo')?.companias, ['allianz'])
   assert.equal(todas(r).find((p) => p.clave === 'conductor.sexo')?.bloque, 'personas')
-  assert.deepEqual(todas(r).find((p) => p.clave === 'documentoTomador')?.companias, ['mapfre'])
+  assert.deepEqual(todas(r).find((p) => p.clave === 'documentoTomador')?.companias, ['allianz', 'mapfre'])
   assert.deepEqual(r.companias.map((c) => c.compania), ['allianz', 'mapfre'])
   // Una compañía repetida en la entrada no duplica nada.
   const dup = moto(MOTO, { cilindrada: '125' }, ['allianz', 'mapfre', 'allianz'])

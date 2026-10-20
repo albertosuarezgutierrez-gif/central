@@ -181,6 +181,13 @@ const ALLIANZ_MOTO: readonly CampoObligatorio[] = [
   campo('conductor.sexo', 'sexo del conductor (ni en el formulario ni en el tratamiento Sr/Sra de la ficha)', 'personas', { origen: 'ficha' }),
   campo('aniosAseguradoAnterior', 'años asegurado en la compañía anterior', 'poliza'),
   campo('siniestrosUltimos5Anios', 'siniestros con culpa de los últimos 5 años', 'poliza'),
+  // Bot 0.7.5+ (`comprobarTitularesMoto`): marcar «tomador = conductor/propietario» obliga a informar el NIF/CIF del tomador; sin
+  // él el bot se para con `datos`. Lo pone ASEGURA desde la ficha. Misma lectura que `documentoTomadorDe` (formulario-auto.ts).
+  {
+    clave: 'documentoTomador', etiqueta: 'NIF/CIF del tomador (Allianz lo exige si el tomador es el conductor o el propietario)', bloque: 'personas', origen: 'ficha',
+    aplica: (r) => r.tomadorEsConductor === true || r.tomadorEsPropietario === true,
+    presente: (r) => hay(r.documentoTomador) || hay(obj(r.tomador)?.documentoIdentidad) || hay(obj(r.fichaTomador)?.documento),
+  },
 ]
 
 /**

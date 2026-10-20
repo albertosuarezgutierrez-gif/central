@@ -67,21 +67,51 @@ export type VistaBloque = {
   deLaFicha: Pendiente[]
   /** ¿Hay algo que hacer en este bloque? */
   hayPendiente: boolean
-  /** Lo completo va plegado SIEMPRE que se sabe qué falta (con o sin pendientes): arriba solo lo pendiente. */
+  /** Solo si se SABE qué piden los bots (`evaluado`) y no queda nada por pedir ni confirmar en este bloque. Nunca por falta de evaluación. */
+  listo: boolean
+  /** Lo completo va plegado solo cuando se sabe qué falta (`evaluado`): con el formulario incompleto o sin compañías evaluadas, abierto. */
   plegarCompleto: boolean
-  /** Insignia del encabezado: «2 por completar» · «1 por confirmar» · «Todo listo». */
+  /** Insignia del encabezado: «2 por completar» · «1 por confirmar» · «Bots: todo listo» · «Aún sin evaluar». */
   resumen: string
 }
 
-/** Qué pinta un bloque. `pendientes === null` = aún no se sabe qué falta: NO se pliega nada (se ve el bloque entero, como antes). */
-export function vistaBloque(pendientes: readonly Pendiente[] | null): VistaBloque {
-  if (pendientes === null) return { aEditar: [], deLaFicha: [], hayPendiente: false, plegarCompleto: false, resumen: '' }
+/** Insignia del bloque «listo»: solo habla de lo que piden los bots, no de que el presupuesto entero esté completo. */
+export const RESUMEN_LISTO = 'Bots: todo listo'
+export const RESUMEN_SIN_EVALUAR = 'Aún sin evaluar'
+
+/**
+ * Qué pinta un bloque. `pendientes === null` = aún no se sabe qué falta: NO se pliega nada (se ve el bloque entero, como antes).
+ * `evaluado` (de `pendientesPorBloque`): sin él, «sin pendientes» no es «listo» (formulario incompleto o ninguna compañía evaluada). PURA.
+ */
+export function vistaBloque(pendientes: readonly Pendiente[] | null, evaluado: boolean): VistaBloque {
+  if (pendientes === null) return { aEditar: [], deLaFicha: [], hayPendiente: false, listo: false, plegarCompleto: false, resumen: '' }
   const aEditar = pendientes.filter((p) => p.estado !== 'ficha')
   const deLaFicha = pendientes.filter((p) => p.estado === 'ficha')
   const faltan = aEditar.filter((p) => p.estado === 'falta').length
   const confirmar = aEditar.length - faltan
   const partes = [faltan ? `${faltan} por completar` : '', confirmar ? `${confirmar} por confirmar` : ''].filter(Boolean)
-  return { aEditar, deLaFicha, hayPendiente: aEditar.length > 0, plegarCompleto: true, resumen: partes.length ? partes.join(' · ') : 'Todo listo' }
+  const hayPendiente = aEditar.length > 0
+  const listo = evaluado && !hayPendiente
+  return { aEditar, deLaFicha, hayPendiente, listo, plegarCompleto: evaluado, resumen: partes.length ? partes.join(' · ') : listo ? RESUMEN_LISTO : RESUMEN_SIN_EVALUAR }
+}
+
+/**
+ * Campos sueltos del adaptador de un bloque que NO están pendientes (los que se editan en «<Bloque> · completo» o, en la pantalla
+ * completa del cotizador, bajo su bloque): sin ellos, uso/ámbito/clase de permiso o sexo/cilindrada ya completos no se podrían corregir. PURA.
+ */
+export function camposCompletosDeBloque<C extends { clave: string; bloque: BloqueObligatorio }>(
+  pendientes: PendientesPorBloque, campos: readonly C[], bloque: BloqueObligatorio,
+): C[] {
+  const enPendiente = new Set(pendientes.bloques[bloque].filter((p) => p.estado !== 'ficha').map((p) => p.campoExtra))
+  return campos.filter((c) => c.bloque === bloque && !enPendiente.has(c.clave))
+}
+
+/** Bloques que la pantalla completa del cotizador (sin `BloqueMotor`) pinta en línea: con algo por editar, con campos que corregir, o sin evaluar. PURA. */
+export function bloquesEnLinea<C extends { clave: string; bloque: BloqueObligatorio }>(pendientes: PendientesPorBloque, campos: readonly C[]): BloqueObligatorio[] {
+  return BLOQUES_VISTA.filter((b) => {
+    const v = vistaBloque(pendientes.bloques[b], pendientes.evaluado)
+    return v.aEditar.length > 0 || camposCompletosDeBloque(pendientes, campos, b).length > 0 || !v.listo
+  })
 }
 
 /** Rótulo del desplegable de lo completo: «Personas · completo». */

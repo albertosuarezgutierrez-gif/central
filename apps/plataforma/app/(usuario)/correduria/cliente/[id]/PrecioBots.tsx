@@ -68,7 +68,7 @@ const sinBots = (texto: string, estado?: string) => (
   </div>
 )
 
-export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: {
+export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania, historialDeclarado }: {
   ramo: string
   clienteId: string
   oportunidadId: string | null
@@ -78,6 +78,8 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
   inicialesExtra?: Record<string, string>
   /** Compañía → aviso de por qué su bot no puede encolar con esta ficha (p. ej. Mapfre sin nombre del tomador). */
   bloqueosPorCompania?: Record<string, string>
+  /** Lo ya declarado en «Historial y bonificaciones» (si se conoce): con un código de compañía o «sin seguro» no se reescribe al guardar la compañía. */
+  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null } | null
 }) {
   const hueco = useContext(HuecoBotsContext)
   const anfitrion = useContext(AnfitrionBotsContext)
@@ -91,12 +93,12 @@ export default function PrecioBots({ ramo, clienteId, oportunidadId, formulario,
     return () => ocupar(false)
   }, [registrado, ocupar])
   const bloque = adaptador
-    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} bloqueosPorCompania={bloqueosPorCompania} />
+    ? <BloqueBots ramo={ramo} adaptador={adaptador} clienteId={clienteId} oportunidadId={oportunidadId} formulario={formulario} inicialesExtra={inicialesExtra} bloqueosPorCompania={bloqueosPorCompania} historialDeclarado={historialDeclarado} />
     : sinBots('Sin bots para este ramo todavía.')
   return hueco ? createPortal(bloque, hueco) : bloque
 }
 
-function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania }: {
+function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, inicialesExtra, bloqueosPorCompania, historialDeclarado }: {
   ramo: string
   adaptador: NonNullable<ReturnType<typeof adaptadorDeRamo>>
   clienteId: string
@@ -104,6 +106,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
   formulario: unknown
   inicialesExtra?: Record<string, string>
   bloqueosPorCompania?: Record<string, string>
+  historialDeclarado?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null } | null
 }) {
   const [integ, setInteg] = useState<Integraciones>({ estado: 'cargando' })
   // `extra` = solo lo TECLEADO aquí; lo precargado (`inicialesExtra`, ficha, póliza) se mezcla al leer, así un dato que llega tarde también se ve.
@@ -137,7 +140,7 @@ function BloqueBots({ ramo, adaptador, clienteId, oportunidadId, formulario, ini
         if (!ok) motivo = textoErrorGuardado(r.status, r.json)
       } else if (a.tipo === 'sexo') ok = await guardarSexoEnFicha(clienteId, a.sexo)
       else if (a.tipo === 'compania' && oportunidadId) {
-        const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpoGuardarCompania(oportunidadId, a.texto)) })
+        const r = await pedirJson('/api/correduria/oportunidad', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpoGuardarCompania(oportunidadId, a.texto, historialDeclarado)) })
         ok = r.status === 200 && (r.json as { estado?: string } | null)?.estado === 'ok'
         if (!ok) motivo = textoErrorGuardado(r.status, r.json)
       }

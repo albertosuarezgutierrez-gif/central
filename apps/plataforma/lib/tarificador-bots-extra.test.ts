@@ -74,3 +74,14 @@ test('opcionesDeCampoExtra: sexo vacío dice «Según la ficha» solo si la fich
   assert.equal(opcionesDeCampoExtra('otro', ops, { sexoSinFicha: false })[0]!.etiqueta, 'Elegir…')
   assert.equal(opcionesDeCampoExtra('sexo', ops, { sexoSinFicha: false })[1]!.etiqueta, 'Hombre')
 })
+
+test('cuerpoGuardarCompania: con un CÓDIGO ya en el historial o «sin seguro» solo viaja aseguradora (no se pisa ni se provoca el 422)', async () => {
+  const { cuerpoGuardarCompania } = await import('./tarificador-bots-extra.ts')
+  const solo = { accion: 'editar', id: 'o1', aseguradora: 'Aseguradora Alfa' }
+  assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', { companiaActual: 'C0058' }), solo)
+  assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', { companiaActual: null, tieneSeguroActual: false }), solo)
+  const con = { ...solo, historialDeclarado: { companiaActual: 'Aseguradora Alfa' } }
+  assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', { companiaActual: 'Aseguradora Beta', tieneSeguroActual: true }), con)
+  assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', { companiaActual: null }), con)
+  assert.deepEqual(cuerpoGuardarCompania('o1', 'Aseguradora Alfa', null), con)
+})

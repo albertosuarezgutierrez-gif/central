@@ -4,10 +4,11 @@
 //   cilindrada        → `info_riesgo.datosVehiculo.cilindradaCc` de la oportunidad (PATCH del riesgo, el de «Datos del vehículo»)
 //   sexo              → ficha del cliente (`sexo`), SOLO si la ficha no lo tiene (misma regla que el selector del cotizador)
 //   compañía anterior → `aseguradora` de la oportunidad Y `historialDeclarado.companiaActual` (UN solo `editar`, ver
-//                       `cuerpoGuardarCompania`): así «Historial y bonificaciones» y este campo quedan coherentes
+//                       `cuerpoGuardarCompania`): así «Historial y bonificaciones» y este campo quedan coherentes; si el historial ya
+//                       trae un código o dice «sin seguro», solo `aseguradora`
 import { MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
 import { cilindradaDeTexto } from './tarificador-moto-formulario.ts'
-import { COMPANIA_CAJON } from './compania-anterior.ts'
+import { COMPANIA_CAJON, esCodigoCompania } from './compania-anterior.ts'
 
 export type AccionGuardarExtra =
   | { tipo: 'cilindrada'; cc: number }
@@ -70,10 +71,17 @@ export function accionGuardarExtra(
 
 /**
  * Cuerpo del `editar` que guarda la compañía anterior: `aseguradora` (lo que ya leía el bot) y, en la MISMA llamada,
- * `historialDeclarado.companiaActual` (lo que muestra «Historial y bonificaciones»). Una sola fuente, dos sitios coherentes. PURA.
+ * `historialDeclarado.companiaActual` (lo que muestra «Historial y bonificaciones»). Una sola fuente, dos sitios coherentes.
+ * Pero NO se envía el historial si ya trae un CÓDIGO de la lista (no se pisa con texto libre) o dice «sin seguro actual»
+ * (el servidor lo rechaza con 422 y tumbaría también el guardado de `aseguradora`): entonces solo `aseguradora`. PURA.
  */
-export function cuerpoGuardarCompania(oportunidadId: string, texto: string): Record<string, unknown> {
-  return { accion: 'editar', id: oportunidadId, aseguradora: texto, historialDeclarado: { companiaActual: texto } }
+export function cuerpoGuardarCompania(
+  oportunidadId: string, texto: string,
+  historial?: { companiaActual?: string | null; tieneSeguroActual?: boolean | null } | null,
+): Record<string, unknown> {
+  const base = { accion: 'editar', id: oportunidadId, aseguradora: texto }
+  if (historial && (esCodigoCompania(historial.companiaActual) || historial.tieneSeguroActual === false)) return base
+  return { ...base, historialDeclarado: { companiaActual: texto } }
 }
 
 /**

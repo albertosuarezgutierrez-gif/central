@@ -35,3 +35,11 @@ test('PendientesMotor: lo completo plegado, fallido = «No guardado» + campo ma
   assert.match(piezas, /minHeight: 44/)
   assert.match(piezas, /gridTemplateColumns: 'minmax\(0, 1fr\)'/)
 })
+
+test('PendientesMotor: la pantalla completa pinta también los campos completos y «Completar abajo» solo donde existe el destino', () => {
+  assert.match(piezas, /bloquesEnLinea\(panel\.pendientes, panel\.campos\)/, 'PendientesEnLinea decide los bloques con el helper puro')
+  assert.match(piezas, /camposCompletosDeBloque\(panel\.pendientes, panel\.campos, b\)/)
+  assert.match(piezas, /<PendientesBloqueVista bloque=\{b\} panel=\{panel\} acciones=\{acciones\} completarAbajo=\{false\} \/>/, 'en línea no hay destino «abajo»')
+  assert.match(piezas, /\{completarAbajo \? \(/)
+  assert.match(piezas, /vistaBloque\([^)]*evaluado\)/, 'el «listo» depende de que se haya evaluado')
+})

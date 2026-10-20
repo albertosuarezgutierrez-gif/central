@@ -39,6 +39,12 @@ export type PendientesPorBloque = {
   companias: ResumenCompania[]
   /** Datos generales que impiden construir el riesgo (el formulario aún no vale); sin ellos ninguna compañía se evalúa. */
   generales: string[]
+  /**
+   * ¿Se sabe de verdad qué piden los bots? `false` con datos generales por completar (el riesgo no se construye y ninguna compañía
+   * se evalúa) o si NINGUNA compañía está evaluada (todas `no_disponible`): entonces «no hay pendientes» NO significa «listo»
+   * (dato no evaluado ≠ listo) y ningún bloque se declara listo ni se pliega.
+   */
+  evaluado: boolean
 }
 
 export type EntradaPendientes = {
@@ -100,5 +106,6 @@ export function pendientesPorBloque(entrada: EntradaPendientes): PendientesPorBl
     }
     companias.push({ compania, estado: faltan > 0 ? 'faltan' : 'listo', faltan, supuestos })
   }
-  return { bloques, companias, generales }
+  const evaluado = generales.length === 0 && companias.some((c) => c.estado !== 'no_disponible')
+  return { bloques, companias, generales, evaluado }
 }

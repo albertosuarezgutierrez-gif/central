@@ -8,7 +8,7 @@
 //
 // 🚨 TARIFICAR ≠ EMITIR. Tres estados: `null` = «no se sabe», nunca un valor por defecto. Lo que falta lo dice
 // `formularioBotAuto` (el adaptador) con QUÉ falta, jamás el valor (dato personal).
-import { COMPANIA_CAJON, companiaAnteriorDe } from './compania-anterior.ts'
+import { COMPANIA_CAJON, companiaAnteriorDe, type CatalogoCompaniasAnterior } from './compania-anterior.ts'
 import { estadoOcasional, type RolFigura } from '@central/module-seguros'
 import { datoDePersonaBot, type DatoPersona } from './tarificador-moto-formulario.ts'
 import type { EntradaBotAuto } from './tarificador-auto-formulario.ts'
@@ -106,10 +106,10 @@ export { COMPANIA_CAJON }
 /**
  * Compañía anterior que la oportunidad YA sabe (regla única en `compania-anterior.ts`): lo declarado en «Historial y
  * bonificaciones» (`historialDeclarado.companiaActual`) gana; respaldo, la aseguradora de HOY (`aseguradoraActual === true`; la de
- * nuestra oferta no vale). Vacía, de cajón, código DGS o más larga que el tope → `null` (no consta). PURA.
+ * nuestra oferta no vale). Un código DGS se resuelve a nombre con `catalogo`; sin resolver, vacía, de cajón o más larga que el tope → `null`. PURA.
  */
-export function companiaAnteriorDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>): string | null {
-  return companiaAnteriorDe({ historialDeclarado: r.historial?.historialDeclarado, aseguradora: r.oportunidad.aseguradora, aseguradoraActual: r.oportunidad.aseguradoraActual })
+export function companiaAnteriorDeRiesgo(r: Pick<RiesgoParaBotsAuto, 'oportunidad'> & Partial<Pick<RiesgoParaBotsAuto, 'historial'>>, catalogo?: CatalogoCompaniasAnterior): string | null {
+  return companiaAnteriorDe({ historialDeclarado: r.historial?.historialDeclarado, aseguradora: r.oportunidad.aseguradora, aseguradoraActual: r.oportunidad.aseguradoraActual }, catalogo)
 }
 
 /** ¿Hay conductor ocasional? `true` ficha en el papel · `false` confirmado que no · `null` sin preguntar o no aplica (misma regla que asegura). PURA. */
@@ -131,7 +131,7 @@ export function tomadorDeRiesgoBots(r: Pick<RiesgoParaBotsAuto, 'oportunidad' | 
 }
 
 /** Riesgo de la oportunidad de coche → formulario que entiende el adaptador de auto (sin Avant2). PURA. */
-export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto, porPolizas: CompaniaPorPolizas = { estado: 'pendiente' }): EntradaBotAuto {
+export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto, porPolizas: CompaniaPorPolizas = { estado: 'pendiente' }, catalogo?: CatalogoCompaniasAnterior): EntradaBotAuto {
   const dv = r.datosVehiculo
   const tomadorId = tomadorDeRiesgoBots(r)
   const tomador = r.figuras.find((f) => f.rol === 'tomador') ?? null
@@ -144,7 +144,7 @@ export function formularioBotsAutoDeRiesgo(r: RiesgoParaBotsAuto, porPolizas: Co
   const decl = r.historial?.historialDeclarado ?? null
   const ant = r.historial?.seguroAnterior ?? null
   // Compañía anterior: la del riesgo; si no hay, la de la póliza de coche en vigor del cliente (solo si es UNA; años = 0 → ninguna).
-  const compAnt = resolverCompaniaAnterior(companiaAnteriorDeRiesgo(r), decl?.aniosAsegurado, porPolizas)
+  const compAnt = resolverCompaniaAnterior(companiaAnteriorDeRiesgo(r, catalogo), decl?.aniosAsegurado, porPolizas)
   return armarFormularioBotsAuto({
     matricula: matriculaDeRiesgo(r),
     marca: dv?.marca ?? null,

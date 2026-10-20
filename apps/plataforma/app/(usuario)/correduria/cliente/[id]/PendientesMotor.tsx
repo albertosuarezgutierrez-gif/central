@@ -13,7 +13,7 @@ import { cardStyle } from '@/components/ui'
 import type { BloqueObligatorio } from '@central/module-tarificacion'
 import type { PendientesPorBloque, Pendiente } from '@/lib/tarificador-pendientes'
 import {
-  BLOQUES_VISTA, ROTULO_BLOQUE, bloqueDeChip, idBloqueMotor, rotuloCompleto, rotuloEstadoPendiente, textoChip, tituloChip, vistaBloque,
+  ROTULO_BLOQUE, bloqueDeChip, bloquesEnLinea, camposCompletosDeBloque, idBloqueMotor, rotuloCompleto, rotuloEstadoPendiente, textoChip, tituloChip, vistaBloque,
 } from '@/lib/tarificador-pendientes-vista'
 
 /** Un campo suelto del adaptador ya resuelto para pintar (valor visible, opciones, y cómo fue su último guardado). */
@@ -93,10 +93,22 @@ function ControlCampo({ campo, acciones, estado }: { campo: CampoPanel; acciones
   )
 }
 
-/** Lo pendiente de UN bloque (props puras): controles editables, lo de la ficha nombrado, y lo que se completa abajo. */
-export function PendientesBloqueVista({ bloque, panel, acciones }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel }) {
-  const v = vistaBloque(panel.pendientes.bloques[bloque])
-  if (!v.hayPendiente && v.deLaFicha.length === 0) return <p style={{ margin: 0, fontSize: 13, color: 'var(--positive)' }}>Nada pendiente en este bloque.</p>
+/**
+ * Lo pendiente de UN bloque (props puras): controles editables, lo de la ficha nombrado, y lo que se completa abajo.
+ * `completarAbajo`: solo la ficha de la oportunidad tiene el bloque de siempre plegado debajo; en la pantalla completa del
+ * cotizador no existe ese destino, así que no se ofrece «Completar abajo» (se remite al formulario de arriba).
+ */
+export function PendientesBloqueVista({ bloque, panel, acciones, completarAbajo = true }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel; completarAbajo?: boolean }) {
+  const v = vistaBloque(panel.pendientes.bloques[bloque], panel.pendientes.evaluado)
+  if (v.listo && v.deLaFicha.length === 0) return <p style={{ margin: 0, fontSize: 13, color: 'var(--positive)' }}>Bots: nada pendiente en este bloque.</p>
+  if (!v.hayPendiente && v.deLaFicha.length === 0) {
+    // Sin evaluar (formulario incompleto o ninguna compañía evaluada): NO se dice que esté listo; se dice qué falta para saberlo.
+    return (
+      <p role="status" style={{ margin: 0, fontSize: 13, color: 'var(--warning)', overflowWrap: 'anywhere' }}>
+        Aún no se sabe qué piden las compañías{panel.sueltos.length ? `: falta ${panel.sueltos.join(', ')}` : ''}. Completa los datos del formulario.
+      </p>
+    )
+  }
   return (
     <div style={{ display: 'grid', gap: 10, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
       {v.aEditar.map((p) => {
@@ -108,10 +120,12 @@ export function PendientesBloqueVista({ bloque, panel, acciones }: { bloque: Blo
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
                 <span style={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{p.etiqueta}</span>
                 <Insignia estado={p.estado} />
-                <button type="button" onClick={() => irABloque(bloque, true)}
-                  style={{ all: 'unset', cursor: 'pointer', color: 'var(--primary)', textDecoration: 'underline', minHeight: 44, display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
-                  Completar abajo
-                </button>
+                {completarAbajo ? (
+                  <button type="button" onClick={() => irABloque(bloque, true)}
+                    style={{ all: 'unset', cursor: 'pointer', color: 'var(--primary)', textDecoration: 'underline', minHeight: 44, display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
+                    Completar abajo
+                  </button>
+                ) : <span style={{ color: 'var(--muted)', fontSize: 12 }}>Se completa en el formulario de arriba.</span>}
               </div>
             )}
             {quien && <span style={{ fontSize: 12, color: 'var(--muted)' }}>Lo pide: {quien}.</span>}
@@ -129,8 +143,7 @@ export function PendientesBloqueVista({ bloque, panel, acciones }: { bloque: Blo
 
 /** Campos sueltos del bloque que NO están pendientes: se editan en «<Bloque> · completo». */
 function CamposCompletos({ bloque, panel, acciones }: { bloque: BloqueObligatorio; panel: PanelPendientes; acciones: AccionesPanel }) {
-  const pendientes = new Set(panel.pendientes.bloques[bloque].filter((p) => p.estado !== 'ficha').map((p) => p.campoExtra))
-  const campos = panel.campos.filter((c) => c.bloque === bloque && !pendientes.has(c.clave))
+  const campos = camposCompletosDeBloque(panel.pendientes, panel.campos, bloque)
   if (campos.length === 0) return null
   return (
     <div style={{ display: 'grid', gap: 10, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
@@ -148,15 +161,15 @@ export function BloqueMotor({ bloque, activo, children }: { bloque: BloqueObliga
   const ctx = useContext(PendientesMotorContext)
   const pub = activo ? ctx?.publicado ?? null : null
   if (!pub) return <>{children}</>
-  const v = vistaBloque(pub.panel.pendientes.bloques[bloque])
+  const v = vistaBloque(pub.panel.pendientes.bloques[bloque], pub.panel.pendientes.evaluado)
   return (
     <section id={idBloqueMotor(bloque)} aria-labelledby={`${idBloqueMotor(bloque)}-t`} style={{ ...cardStyle, display: 'grid', gap: 12, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)', scrollMarginTop: 8 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <h2 id={`${idBloqueMotor(bloque)}-t`} style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{ROTULO_BLOQUE[bloque]}</h2>
-        <span style={{ fontSize: 13, fontWeight: 600, color: v.hayPendiente ? 'var(--negative)' : 'var(--positive)' }}>{v.resumen}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: v.hayPendiente ? 'var(--negative)' : v.listo ? 'var(--positive)' : 'var(--warning)' }}>{v.resumen}</span>
       </div>
       <PendientesBloqueVista bloque={bloque} panel={pub.panel} acciones={pub.acciones} />
-      <details id={`${idBloqueMotor(bloque)}-completo`} style={{ minWidth: 0 }}>
+      <details id={`${idBloqueMotor(bloque)}-completo`} open={v.plegarCompleto ? undefined : true} style={{ minWidth: 0 }}>
         <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 14, fontWeight: 600 }}>{rotuloCompleto(bloque)}</summary>
         <div style={{ display: 'grid', gap: 12, marginTop: 8, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
           <CamposCompletos bloque={bloque} panel={pub.panel} acciones={pub.acciones} />
@@ -167,18 +180,32 @@ export function BloqueMotor({ bloque, activo, children }: { bloque: BloqueObliga
   )
 }
 
-/** Sin proveedor (pantalla completa del cotizador): los tres bloques de pendientes en línea, solo los que tienen algo. */
+/**
+ * Sin proveedor (pantalla completa del cotizador): los bloques en línea. Pinta lo pendiente Y los campos sueltos ya completos
+ * (uso, ámbito, clase de permiso, sexo, cilindrada…) plegados en «<Bloque> · completo»: si no, un campo no pendiente
+ * desaparecería y no se podría corregir. El formulario del cotizador queda arriba, así que no hay «Completar abajo».
+ */
 export function PendientesEnLinea({ panel, acciones }: { panel: PanelPendientes; acciones: AccionesPanel }) {
-  const con = BLOQUES_VISTA.filter((b) => vistaBloque(panel.pendientes.bloques[b]).aEditar.length > 0)
+  const con = bloquesEnLinea(panel.pendientes, panel.campos)
   if (con.length === 0) return null
   return (
     <div style={{ display: 'grid', gap: 12, marginTop: 12, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      {con.map((b) => (
-        <section key={b} id={idBloqueMotor(b)} style={{ display: 'grid', gap: 8, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)', scrollMarginTop: 8 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{ROTULO_BLOQUE[b]} · {vistaBloque(panel.pendientes.bloques[b]).resumen}</h3>
-          <PendientesBloqueVista bloque={b} panel={panel} acciones={acciones} />
-        </section>
-      ))}
+      {con.map((b) => {
+        const v = vistaBloque(panel.pendientes.bloques[b], panel.pendientes.evaluado)
+        const completos = camposCompletosDeBloque(panel.pendientes, panel.campos, b)
+        return (
+          <section key={b} id={idBloqueMotor(b)} style={{ display: 'grid', gap: 8, minWidth: 0, gridTemplateColumns: 'minmax(0, 1fr)', scrollMarginTop: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{ROTULO_BLOQUE[b]} · {v.resumen}</h3>
+            <PendientesBloqueVista bloque={b} panel={panel} acciones={acciones} completarAbajo={false} />
+            {completos.length > 0 && (
+              <details id={`${idBloqueMotor(b)}-completo`} style={{ minWidth: 0 }}>
+                <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 14, fontWeight: 600 }}>{rotuloCompleto(b)}</summary>
+                <div style={{ marginTop: 8, minWidth: 0 }}><CamposCompletos bloque={b} panel={panel} acciones={acciones} /></div>
+              </details>
+            )}
+          </section>
+        )
+      })}
     </div>
   )
 }

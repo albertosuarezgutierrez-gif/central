@@ -149,7 +149,7 @@ describe('obligatorios · propios de cada portal', () => {
 
   it('quitar cada obligatorio propio lo señala (Allianz moto, Mapfre auto/moto/hogar, Allianz comunidades)', () => {
     const casos: [string, string, string[]][] = [
-      ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo']],
+      ['allianz', 'moto', ['seleccionVehiculo.clase', 'conductor.sexo', 'documentoTomador']],
       ['mapfre', 'auto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['mapfre', 'moto', ['companiaAnterior', 'documentoTomador', 'datosTomador.nombre', 'datosTomador.apellido1']],
       ['mapfre', 'hogar', ['inmueble.referenciaCatastral', 'datosTomador.nombre', 'datosTomador.apellido1']],
@@ -161,6 +161,18 @@ describe('obligatorios · propios de cada portal', () => {
         expect(f.map((x) => x.clave), `${c}/${r} sin ${clave}`).toContain(clave)
       }
     }
+  })
+
+  // Bot allianz/moto 0.7.5+: con tomador = conductor/propietario exige el NIF del tomador (sin él, `datos`): no puede salir «listo».
+  it('Allianz moto: el NIF del tomador se exige si el tomador es conductor o propietario; origen ficha; no si ambos son otra persona', () => {
+    const { documentoTomador: _d, ...sinNif } = moto()
+    expect(faltanParaTarificar('allianz', 'moto', sinNif)!.map((f) => f.clave)).toEqual(['documentoTomador'])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, tomadorEsConductor: false })!.map((f) => f.clave), 'propietario sigue siendo el tomador').toEqual(['documentoTomador'])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, tomadorEsConductor: false, tomadorEsPropietario: false })).toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', sinNif, { sinFicha: true }), 'es de la ficha: sin ficha no se mira').toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, tomador: { documentoIdentidad: '00000000T' } })).toEqual([])
+    expect(faltanParaTarificar('allianz', 'moto', { ...sinNif, fichaTomador: { documento: '00000000T' } })).toEqual([])
+    expect(obligatoriosPara('allianz', 'moto')!.find((o) => o.clave === 'documentoTomador')).toMatchObject({ bloque: 'personas', origen: 'ficha' })
   })
 
   // 19/10/2026: el DNI/NIE y el nacimiento del tomador de HOGAR son de la ficha (no cruzan el puerto): sin ficha no se miran, con ella sí.
