@@ -6,11 +6,11 @@
 //   compañía anterior → `aseguradora` de la oportunidad Y `historialDeclarado.companiaActual` (UN solo `editar`, ver
 //                       `cuerpoGuardarCompania`): así «Historial y bonificaciones» y este campo quedan coherentes; si el historial ya
 //                       trae un código o dice «sin seguro», solo `aseguradora`
-//   fechaAdquisicion  → `info_riesgo.datosVehiculo.fechaCompra` (mismo PATCH del riesgo; fuente: ese mismo dato, nunca la matriculación)
+//   fechaAdquisicion  → `info_riesgo.datosVehiculo.fechaCompra` (mismo PATCH del riesgo). Sin dato, por defecto la de matriculación (se muestra y viaja al bot, pero no se guarda)
 //   póliza anterior   → `historialDeclarado.numeroPoliza` de la oportunidad (`editar`; donde ya vive el nº de póliza actual: las 5 últimas cifras)
 //   justificante      → `historialDeclarado.fotocopiaAnterior` (`editar`; valor cerrado `proximo_anio` | `dos_ultimos_anios`)
 import { JUSTIFICANTES_SEGURO_ANTERIOR, MAX_COMPANIA_ANTERIOR } from '@central/module-tarificacion'
-import { cilindradaDeTexto, fechaIsoValida, ultimos5CifrasPoliza } from './tarificador-moto-formulario.ts'
+import { cilindradaDeTexto, fechaAdquisicionPorDefecto, fechaIsoValida, ultimos5CifrasPoliza } from './tarificador-moto-formulario.ts'
 import { COMPANIA_CAJON, esCodigoCompania } from './compania-anterior.ts'
 
 export type AccionGuardarExtra =
@@ -41,6 +41,11 @@ export function valorCampoExtra(
   if (clave === 'sexo' || clave === 'companiaAnterior') {
     const f = (formulario && typeof formulario === 'object' ? (formulario as Record<string, unknown>)[clave] : undefined)
     if (typeof f === 'string' && f.trim() !== '' && (clave !== 'sexo' || f === 'hombre' || f === 'mujer')) return f.trim()
+  }
+  // Fecha de adquisición vacía → se muestra la de matriculación (por defecto; se puede cambiar). No se guarda: `guardarExtra` ve el mismo valor.
+  if (clave === 'fechaAdquisicion') {
+    const m = fechaAdquisicionPorDefecto(formulario && typeof formulario === 'object' ? (formulario as Record<string, unknown>).fechaMatriculacion as string | null | undefined : null)
+    if (m !== null) return m
   }
   return ini ?? porDefecto
 }

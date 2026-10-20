@@ -54,12 +54,23 @@ export type EntradaBotMoto = {
   companiaAnterior?: string | null
   /** Fecha de ADQUISICIÓN (ISO, no la de matriculación): de `datosVehiculo.fechaCompra`. Allianz moto la pide siempre. Vacío/ausente = no consta. */
   fechaAdquisicion?: string | null
+  /** Fecha de MATRICULACIÓN (ISO) del vehículo: la fecha de adquisición por defecto cuando no hay una explícita. */
+  fechaMatriculacion?: string | null
   /** Últimas 5 cifras de la póliza anterior (texto tecleado; se normaliza a 5 cifras). Solo viaja con seguro actual y años ≠ 0. */
   polizaAnteriorUltimos5?: string | null
   /** Justificante del seguro anterior (`proximo_anio` | `dos_ultimos_anios`). Solo viaja con seguro actual y años ≠ 0. */
   fotocopiaAnterior?: string | null
   /** Municipio elegido entre los del CP (nombre del catálogo): viaja como `poblacion` para que el bot elija la localidad. Vacío = no viaja. */
   poblacion?: string | null
+}
+
+/**
+ * Fecha de adquisición cuando NO hay una explícita (vacía): la de matriculación si es una fecha ISO válida; si tampoco, `null`
+ * (sigue faltando). Una explícita siempre gana: esto solo se consulta cuando está vacía. PURA.
+ */
+export function fechaAdquisicionPorDefecto(fechaMatriculacion: string | null | undefined): string | null {
+  const t = (fechaMatriculacion ?? '').trim()
+  return t === '' ? null : fechaIsoValida(t)
 }
 
 export type FormularioBotMoto =
@@ -179,7 +190,7 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
   // Allianz moto (bot 0.7.11): fecha de adquisición (siempre) y, si estuvo asegurado, póliza anterior y justificante. Lo que no consta
   // NO viaja (nunca un valor de cajón); la fecha mal formada es un hueco que se dice, no se descarta en silencio.
   const adqTxt = (e.fechaAdquisicion ?? '').trim()
-  const fechaAdquisicion = adqTxt === '' ? null : fechaIsoValida(adqTxt)
+  const fechaAdquisicion = adqTxt === '' ? fechaAdquisicionPorDefecto(e.fechaMatriculacion) : fechaIsoValida(adqTxt)
   if (adqTxt !== '' && fechaAdquisicion === null) return { ok: false, faltan: ['Fecha de adquisición: tiene que ser una fecha válida'] }
   const conSeguroAnterior = e.tieneSeguroActual !== false && aniosAseguradoAnterior !== 0
   const polizaAnteriorUltimos5 = conSeguroAnterior ? ultimos5CifrasPoliza(e.polizaAnteriorUltimos5) : null

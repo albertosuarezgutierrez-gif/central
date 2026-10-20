@@ -112,6 +112,7 @@ test('Allianz moto: fecha de adquisición → datosVehiculo.fechaCompra; póliza
   assert.match(bloque, /cuerpoGuardarHistorial\(oportunidadId, 'fotocopiaAnterior', a\.valor\)/)
   const moto = readFileSync(new URL('../app/(usuario)/correduria/cliente/[id]/moto-nuevo/CotizadorMoto.tsx', import.meta.url), 'utf8')
   assert.match(moto, /fechaAdquisicion: datosRiesgo\?\.fechaCompra \?\? ''/)
+  assert.match(moto, /fechaMatriculacion: matriculacion \|\| null/, 'el formulario al bot lleva la matriculación (defecto de la adquisición)')
   assert.match(moto, /historialRiesgo\?\.numeroPoliza/)
   assert.match(moto, /historialRiesgo\?\.fotocopiaAnterior/)
 })
@@ -125,4 +126,15 @@ test('numeroPolizaAGuardar: no pisa un nº completo que ya termina en esas 5 cif
   assert.equal(numeroPolizaAGuardar(undefined, '12345'), '12345')
   assert.equal(numeroPolizaAGuardar('99954321', '12345'), '12345', 'termina en otras cifras')
   assert.equal(numeroPolizaAGuardar('12345999', '12345'), '12345', 'las 5 cifras no al final')
+})
+
+test('valorCampoExtra: fecha de adquisición vacía muestra la de matriculación; lo guardado/tecleado manda', () => {
+  const f = { fechaMatriculacion: '2023-05-10' }
+  assert.equal(valorCampoExtra('fechaAdquisicion', {}, { fechaAdquisicion: '' }, f), '2023-05-10')
+  assert.equal(valorCampoExtra('fechaAdquisicion', {}, { fechaAdquisicion: '2024-03-01' }, f), '2024-03-01')
+  assert.equal(valorCampoExtra('fechaAdquisicion', { fechaAdquisicion: '2024-06-01' }, undefined, f), '2024-06-01')
+  assert.equal(valorCampoExtra('fechaAdquisicion', {}, { fechaAdquisicion: '' }, { fechaMatriculacion: '' }), '')
+  assert.equal(valorCampoExtra('fechaAdquisicion', {}, undefined, null), '')
+  // Lo mostrado por defecto no se guarda (igual al «guardado» que ve guardarExtra).
+  assert.equal(accionGuardarExtra('fechaAdquisicion', '2023-05-10', { oportunidadId: 'op', guardado: valorCampoExtra('fechaAdquisicion', {}, undefined, f) }), null)
 })
