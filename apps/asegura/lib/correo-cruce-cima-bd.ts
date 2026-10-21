@@ -154,13 +154,25 @@ function resolverPolizaPorNumero(candidatas: Awaited<ReturnType<typeof polizasCa
   return casan.length === 1 ? casan[0].clienteId : null
 }
 
+/** Reclamo de un aviso por una pasada: pasado este tiempo sin marcarse avisado, otra pasada puede cogerlo (la primera murió). */
+export const RECLAMO_AVISO_MINUTOS = 15
+
+/**
+ * Los avisos que aún no han salido, RECLAMADOS de forma atómica: dos pasadas solapadas del cron no reciben los mismos
+ * (si no, el Telegram saldría dos veces). Un aviso reclamado y no marcado vuelve a ser reclamable a los 15 min.
+ */
 async function avisosCrucePendientes(db: Db, correduriaId: string): Promise<AvisoCruce[]> {
-  return db.$queryRaw<AvisoCruce[]>(Prisma.sql`
-    select id::text as id, tipo, texto, cliente_id::text as "clienteId",
-           to_char(created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD"T"HH24:MI') as creado
-    from correo_cruce_aviso
-    where correduria_id = ${correduriaId}::uuid and avisado_at is null
-    order by created_at asc limit 50`)
+  const filas = await db.$queryRaw<AvisoCruce[]>(Prisma.sql`
+    update correo_cruce_aviso set reclamado_at = now()
+    where id in (
+      select id from correo_cruce_aviso
+      where correduria_id = ${correduriaId}::uuid and avisado_at is null
+        and (reclamado_at is null or reclamado_at < now() - make_interval(mins => ${RECLAMO_AVISO_MINUTOS}::int))
+      order by created_at asc limit 50
+      for update skip locked)
+    returning id::text as id, tipo, texto, cliente_id::text as "clienteId",
+           to_char(created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD"T"HH24:MI') as creado`)
+  return filas.sort((a, b) => (a.creado < b.creado ? -1 : a.creado > b.creado ? 1 : 0))
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

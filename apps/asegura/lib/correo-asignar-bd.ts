@@ -29,8 +29,8 @@ export type ResultadoAsignacion =
 
 export async function asignarEventoCorreo(correduriaId: string, a: AsignacionEvento, actor: string): Promise<ResultadoAsignacion> {
   const db = prismaAsegura()
-  const [ev] = await db.$queryRaw<{ tipo: string; estado: string; compania: string; clave: string; numeroPoliza: string | null; resumen: string | null; mensajeId: string }[]>(Prisma.sql`
-    select tipo, estado, compania, clave, numero_poliza as "numeroPoliza", resumen, mensaje_id as "mensajeId"
+  const [ev] = await db.$queryRaw<{ tipo: string; estado: string; compania: string; clave: string; numeroPoliza: string | null; resumen: string | null; mensajeId: string; revisadoAt: Date | null }[]>(Prisma.sql`
+    select tipo, estado, compania, clave, numero_poliza as "numeroPoliza", resumen, mensaje_id as "mensajeId", revisado_at as "revisadoAt"
     from correo_evento_entrante where id = ${a.id}::uuid and correduria_id = ${correduriaId}::uuid`)
   const cliente = await resolverDestino(correduriaId, { clienteId: a.clienteId })
   if (!cliente?.clienteId) return { ok: false, status: 422, estado: 'invalido', motivo: 'ese cliente no es de esta correduría' }
@@ -44,12 +44,20 @@ export async function asignarEventoCorreo(correduriaId: string, a: AsignacionEve
   if (!ev) return { ok: false, status: 404, estado: 'no_encontrado', motivo: 'ese aviso no existe en esta correduría' }
 
   if (d.via === 'solicitud' && a.oportunidadId) {
-    const f = await fijarSolicitudCompania(correduriaId, a.oportunidadId, { numero: ev.clave, compania: ev.compania }, actor)
-    if (!f.ok) return { ok: false, status: f.status === 404 ? 404 : f.status === 409 ? 409 : f.status === 503 ? 503 : 422, estado: f.estado, motivo: f.motivo }
-    // «Marcado como mirado» no impide engancharlo: se quita la marca de ESTA fila antes de vincular.
-    await db.$executeRaw(Prisma.sql`
+    // Se RECLAMA la fila antes de tocar nada (la lectura de arriba pudo quedarse vieja): si otra pestaña o una pasada ya
+    // la sacó de `sin_resolver`, 0 filas y ningún efecto lateral. «Marcado como mirado» no impide engancharlo: se quita
+    // la marca de ESTA fila (y se restituye si apuntar la solicitud falla).
+    const reclamada = await db.$executeRaw(Prisma.sql`
       update correo_evento_entrante set revisado_at = null, updated_at = now()
       where id = ${a.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver'`)
+    if (reclamada === 0) return { ok: false, status: 409, estado: 'conflicto', motivo: 'el aviso ya no está sin resolver (otra pestaña o una pasada lo resolvió)' }
+    const f = await fijarSolicitudCompania(correduriaId, a.oportunidadId, { numero: ev.clave, compania: ev.compania }, actor)
+    if (!f.ok) {
+      await db.$executeRaw(Prisma.sql`
+        update correo_evento_entrante set revisado_at = ${ev.revisadoAt}, updated_at = now()
+        where id = ${a.id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'sin_resolver'`).catch(() => undefined)
+      return { ok: false, status: f.status === 404 ? 404 : f.status === 409 ? 409 : f.status === 503 ? 503 : 422, estado: f.estado, motivo: f.motivo }
+    }
     const v = await vincularSolicitudesPendientes(correduriaId, a.oportunidadId, ev.compania, ev.clave)
     const docs = await asignarDocumentosDeMensaje(correduriaId, ev.mensajeId, { clienteId: a.clienteId, polizaId: null }).catch(() => 0)
     return { ok: true, via: 'solicitud', resumen: `solicitud ${ev.clave} apuntada en la oportunidad: ${v.vinculados} correo(s) enganchado(s)`, documentos: docs }

@@ -1927,6 +1927,8 @@ model CorreoCruceAviso {
   texto        String
   clienteId    String?   @map("cliente_id") @db.Uuid
   avisadoAt    DateTime? @map("avisado_at") @db.Timestamptz(6)
+  /// Reclamo atómico de la pasada que lo va a mandar (caduca a los 15 min si no se marca avisado).
+  reclamadoAt  DateTime? @map("reclamado_at") @db.Timestamptz(6)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@unique([correduriaId, clave], map: "correo_cruce_aviso_unico")

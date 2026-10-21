@@ -133,9 +133,14 @@ CREATE TABLE IF NOT EXISTS seguros.correo_cruce_aviso (
   cliente_id    uuid,
   -- NULL = aún no ha salido el Telegram: la pasada siguiente lo vuelve a intentar.
   avisado_at    timestamptz,
+  -- Reclamo atómico de la pasada que va a mandarlo: dos pasadas solapadas no mandan el mismo Telegram. Un reclamo sin
+  -- `avisado_at` caduca a los 15 min (la pasada murió) y otra lo coge.
+  reclamado_at  timestamptz,
   created_at    timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT correo_cruce_aviso_unico UNIQUE (correduria_id, clave)
 );
+
+ALTER TABLE seguros.correo_cruce_aviso ADD COLUMN IF NOT EXISTS reclamado_at timestamptz;
 
 CREATE INDEX IF NOT EXISTS correo_cruce_aviso_pendiente
   ON seguros.correo_cruce_aviso (correduria_id, created_at) WHERE avisado_at IS NULL;
