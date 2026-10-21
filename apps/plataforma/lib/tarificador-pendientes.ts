@@ -9,6 +9,7 @@
 import type { BloqueObligatorio } from '@central/module-tarificacion'
 import { obligatoriosPara } from '@central/module-tarificacion'
 import { checklistBot, type AdaptadorBot } from './tarificador-bots-ramos.ts'
+import { BLOQUE_REGLA_PREVIA } from './tarificador-reglas-previas.ts'
 
 export type EstadoPendiente = 'falta' | 'supuesto' | 'ficha'
 
@@ -100,7 +101,7 @@ export function pendientesPorBloque(entrada: EntradaPendientes): PendientesPorBl
         continue
       }
       // `bloqueDe` siempre lo trae (el cepo de obligatorios.test.ts exige bloque a todo campo declarado).
-      const bloque = bloqueDe.get(fila.clave) ?? 'riesgo'
+      const bloque = bloqueDe.get(fila.clave) ?? BLOQUE_REGLA_PREVIA[fila.clave] ?? 'riesgo'
       const campoExtra = CAMPO_EXTRA_DE_CLAVE[fila.clave]
       const p: Pendiente = { clave: fila.clave, etiqueta: fila.etiqueta, bloque, estado, companias: [compania] }
       if (campoExtra && adaptador.campos.some((x) => x.clave === campoExtra)) p.campoExtra = campoExtra

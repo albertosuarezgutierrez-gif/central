@@ -4337,3 +4337,8 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
 }
 .config-version { font-size: 12px; color: var(--muted); }
 .campana-configurar { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; }
+
+/* ─── Estudio del presupuesto (21/10/2026): la recomendada arriba, con su precio grande ─── */
+.estudio-destacada { margin-top: 12px; }
+.estudio-importe-grande { font-size: 34px; }
+@media (max-width: 380px) { .estudio-importe-grande { font-size: 28px; } }

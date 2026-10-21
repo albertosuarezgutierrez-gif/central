@@ -36,6 +36,8 @@ const ETIQUETA_RAMO: Record<RamoOferta, string> = {
   comunidades: 'comunidad de propietarios',
   comercio: 'comercio / pyme',
   hogar: 'hogar',
+  auto: 'coche',
+  moto: 'moto',
   generico: 'el ramo que sea',
 }
 

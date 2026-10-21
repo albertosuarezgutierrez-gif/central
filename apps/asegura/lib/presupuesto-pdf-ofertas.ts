@@ -5,28 +5,25 @@
 // cobalto #3364ee, logotipo, logos de compañía) y el mismo pie de mediador.
 //
 // 🚨 `null` = «No figura» (el dato no consta en el documento de la compañía), NUNCA «no cubre» ni 0.
-// 🚨 Sin ranking inventado: lo único que se destaca es la oferta que el CORREDOR marcó como recomendada.
+// 🚨 Sin ranking inventado: lo único que se destaca es la oferta que el CORREDOR marcó como recomendada (el orden
+//    por prima de `compararOfertas.ranking` es para el corredor, en plataforma; al cliente no se le enseña).
+// 🏷️ El análisis lleva su etiqueta visible (`etiquetaResumen`): «Resumen preparado con IA y revisado por tu corredor».
 // 🚨 Lleva el nombre de la compañía y las cifras de los documentos que ELLAS emitieron; no lleva la
 //    evidencia literal (páginas/trozos del PDF), ni notas de revisión, ni la ruta de ningún fichero.
 
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import type { CeldaMatriz, FilaMatriz, OfertaNormalizada, ResultadoComparacion, ResumenOferta, ValorGarantia } from '@central/module-seguros'
+import { textoOpcionesComparadas, type FilaMatriz, type OfertaNormalizada, type ResumenOferta } from '@central/module-seguros'
 import { eur } from './dinero.ts'
 import { LOGOS, LOGOTIPO, NUNITO_400, NUNITO_700, QUICKSAND_700 } from './presupuesto-pdf-recursos.ts'
-import { claveLogo, fechaCorta, hex, paraFuente, partir, recortar, textosReferencia } from './presupuesto-pdf.ts'
+import { claveLogo, fechaCorta, hex, paraFuente, partir, recortar, textosReferencia } from './presupuesto-pdf-base.ts'
+import { cabecerasColumnas, NO_FIGURA, pintarAnalisis, pintarCuadroComparativo, pintarLlamadaAccion, textoPrimaOferta, type EstudioPdf, type LienzoPdf } from './presupuesto-pdf-cuadro.ts'
+
+// Lo que se movió al cuadro común (21/10/2026) se re-exporta: los consumidores y tests lo siguen importando de aquí.
+export { filasParaColumnas, leerEstudio, NO_FIGURA, repartirColumnas, textoCelda, textoFuenteCuadro, textoPrimaOferta, cabecerasColumnas } from './presupuesto-pdf-cuadro.ts'
+export type { EstudioPdf, MarcaCeldaPdf, NarrativaPdf } from './presupuesto-pdf-cuadro.ts'
 
 // ─── Datos ───────────────────────────────────────────────────────────────────
-
-export type NarrativaPdf = { resumen: string; recomendacion: string }
-
-/** El `estudio` congelado del presupuesto, ya validado de forma. */
-export type EstudioPdf = {
-  recomendadaId: string | null
-  actualId: string | null
-  comparacion: ResultadoComparacion
-  narrativa: NarrativaPdf
-}
 
 export type DatosPdfOfertas = {
   referencia: string | null
@@ -36,7 +33,7 @@ export type DatosPdfOfertas = {
   venceEl: Date
   necesidades: string | null
   estudio: EstudioPdf
-  mediador: { marca: string; nombre: string; claveDgsfp: string; domicilio: string; email: string | null }
+  mediador: { marca: string; nombre: string; claveDgsfp: string; domicilio: string; email: string | null; telefono?: string | null }
 }
 
 const RAMOS_TXT: Record<string, string> = {
@@ -45,78 +42,11 @@ const RAMOS_TXT: Record<string, string> = {
 }
 const ramoTxt = (ramo: string): string => RAMOS_TXT[ramo] ?? ramo
 
-const GRUPOS_TXT: Record<string, string> = {
-  danos: 'Daños materiales', rc: 'Responsabilidad civil', asistencia: 'Asistencia', juridica: 'Defensa jurídica', otros: 'Otras garantías',
-}
-
-const esObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
-const esTxt = (v: unknown): v is string => typeof v === 'string'
-
-/**
- * El `estudio` de la BD → lo que pinta el PDF. Una forma que no cuadra da `null`: el PDF no se genera a
- * medias con un estudio que no se entiende (la ruta responde 409).
- */
-export function leerEstudio(json: unknown): EstudioPdf | null {
-  if (!esObj(json)) return null
-  const c = json.comparacion
-  const n = json.narrativa
-  if (!esObj(c) || !esObj(n)) return null
-  if (!Array.isArray(c.ofertas) || !Array.isArray(c.filas) || !Array.isArray(c.resumen)) return null
-  if (!esTxt(n.resumen) || !esTxt(n.recomendacion)) return null
-  if (!c.ofertas.every((o) => esObj(o) && esTxt(o.id) && esTxt(o.compania) && esObj(o.garantias))) return null
-  if (!c.filas.every((f) => esObj(f) && esTxt(f.clave) && esTxt(f.etiqueta) && Array.isArray(f.celdas))) return null
-  if (!c.resumen.every((r) => esObj(r) && esTxt(r.ofertaId))) return null
-  return {
-    recomendadaId: esTxt(json.recomendadaId) ? json.recomendadaId : null,
-    actualId: esTxt(json.actualId) ? json.actualId : null,
-    comparacion: c as unknown as ResultadoComparacion,
-    narrativa: { resumen: n.resumen, recomendacion: n.recomendacion },
-  }
-}
-
 // ─── Lógica de vista (pura, con test) ────────────────────────────────────────
 
 const num = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
 const pctEs = (n: number): string => n.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1, useGrouping: 'always' }) + '%'
 const entEs = (n: number): string => n.toLocaleString('es-ES', { maximumFractionDigits: 0, useGrouping: 'always' })
-
-export const NO_FIGURA = 'No figura'
-
-export type MarcaCeldaPdf = 'peor' | 'mejor' | 'hueco' | null
-
-/** Lo que se escribe en una celda del cuadro (`\n` separa líneas). `null`/sin dato = «No figura». */
-export function textoCelda(c: CeldaMatriz | undefined): { texto: string; marca: MarcaCeldaPdf } {
-  if (!c || !c.consta || !c.valor) return { texto: NO_FIGURA, marca: c?.hueco ? 'hueco' : null }
-  const v: ValorGarantia = c.valor
-  const marca: MarcaCeldaPdf = c.hueco ? 'hueco' : c.peorQueActual ? 'peor' : c.mejorQueActual ? 'mejor' : null
-  if (v.estado === 'excluida') return { texto: 'Excluida', marca }
-  const l: string[] = []
-  if (num(v.capital) && num(v.limite)) l.push(eur(v.capital), `Límite ${eur(v.limite)}`)
-  else if (num(v.capital)) l.push(eur(v.capital))
-  else if (num(v.limite)) l.push(`Límite ${eur(v.limite)}`)
-  else if (v.estado === 'incluida') l.push('Incluida')
-  if (num(v.franquicia)) l.push(`Franquicia ${eur(v.franquicia)}`)
-  return { texto: l.length ? l.join('\n') : NO_FIGURA, marca }
-}
-
-/**
- * Las columnas del cuadro por página: la póliza actual (si la hay) en TODAS, para poder comparar sin
- * volver atrás, y las ofertas repartidas hasta `max` columnas por tabla.
- */
-export function repartirColumnas(ofertas: readonly OfertaNormalizada[], max = 4): OfertaNormalizada[][] {
-  const actual = ofertas.find((o) => o.rol === 'actual') ?? null
-  const resto = ofertas.filter((o) => o !== actual)
-  const hueco = Math.max(1, max - (actual ? 1 : 0))
-  if (resto.length === 0) return actual ? [[actual]] : []
-  const trozos: OfertaNormalizada[][] = []
-  for (let i = 0; i < resto.length; i += hueco) trozos.push([...(actual ? [actual] : []), ...resto.slice(i, i + hueco)])
-  return trozos
-}
-
-/** Las filas del cuadro para un trozo de columnas: las que NINGUNA de esas ofertas menciona se omiten. */
-export function filasParaColumnas(filas: readonly FilaMatriz[], ids: readonly string[]): FilaMatriz[] {
-  return filas.filter((f) => f.celdas.some((c) => ids.includes(c.ofertaId) && c.consta))
-}
 
 /** Las garantías que la oferta INCLUYE con cifra o sin ella, en el orden del cuadro y como «Etiqueta: 200.000,00€». */
 export function garantiasClave(filas: readonly FilaMatriz[], ofertaId: string, max: number): string[] {
@@ -142,9 +72,16 @@ export function textoDelta(r: Pick<ResumenOferta, 'deltaPrimaEur' | 'deltaPrimaP
 }
 
 /** Las líneas de hechos de una oferta frente a la actual (sin adjetivos: lo que cuenta el comparador). */
+const FRACCIONAMIENTO_TXT: Record<string, string> = { anual: 'anual', semestral: 'semestral', trimestral: 'trimestral', mensual: 'mensual' }
+
 export function lineasResumen(r: ResumenOferta, hayActual: boolean): string[] {
   const l: string[] = []
-  l.push(r.franquiciaMaxima === null ? 'Franquicia: no figura en la oferta' : `Franquicia máxima declarada: ${eur(r.franquiciaMaxima)}`)
+  const general = num(r.franquiciaGeneral) ? r.franquiciaGeneral : null
+  if (general !== null) l.push(`Franquicia general: ${eur(general)}`)
+  if (r.franquiciaMaxima !== null) l.push(`Franquicia máxima declarada: ${eur(r.franquiciaMaxima)}`)
+  // Ni general ni por garantía: «no figura», nunca «sin franquicia».
+  if (general === null && r.franquiciaMaxima === null) l.push('Franquicia: no figura en la oferta')
+  if (r.fraccionamiento && FRACCIONAMIENTO_TXT[r.fraccionamiento]) l.push(`Forma de pago: ${FRACCIONAMIENTO_TXT[r.fraccionamiento]}`)
   if (hayActual && r.rol !== 'actual') {
     l.push(`${r.garantiasMejor} ${r.garantiasMejor === 1 ? 'garantía con más cobertura' : 'garantías con más cobertura'} que la actual`)
     l.push(`${r.garantiasPeor} ${r.garantiasPeor === 1 ? 'garantía con menos cobertura' : 'garantías con menos cobertura'} que la actual`)
@@ -165,6 +102,32 @@ export const AVISO_LEGAL_OFERTAS =
   'han sido facilitados por las propias compañías en sus documentos y pueden variar al contratar. «No figura» significa que el dato ' +
   'no consta en el documento de la compañía, no que la garantía no esté cubierta. No sustituye a la póliza ni a sus condiciones ' +
   'generales, particulares y especiales, que son las únicas que obligan al asegurador: el seguro empieza cuando la compañía emite la póliza.'
+
+/**
+ * «Resumen por oferta» enseña SOLO lo que difiere (21/10/2026: seis tarjetas repetían «Franquicia: no figura»): lo que
+ * está en TODAS las listas sale una vez como común, y cada oferta se queda con lo suyo. Con una sola oferta no hay
+ * nada «común». Conserva el orden de cada lista. PURO.
+ */
+export function separarComunes(listas: readonly (readonly string[])[]): { comunes: string[]; propias: string[][] } {
+  if (listas.length < 2) return { comunes: [], propias: listas.map((l) => [...l]) }
+  const comunes = [...new Set(listas[0])].filter((x) => listas.every((l) => l.includes(x)))
+  return { comunes, propias: listas.map((l) => l.filter((x) => !comunes.includes(x))) }
+}
+
+/**
+ * El aviso legal según de dónde salen los precios: «facilitados por las propias compañías en sus documentos» no vale
+ * para un precio estimado de Avant2 (lo calcula la compañía con los datos del cliente y puede variar al contratar).
+ */
+export function avisoLegalOfertas(ofertas: readonly Pick<OfertaNormalizada, 'rol' | 'fuente'>[]): string {
+  const candidatas = ofertas.filter((o) => o.rol !== 'actual')
+  const deAvant2 = candidatas.filter((o) => o.fuente === 'avant2').length
+  if (deAvant2 === 0) return AVISO_LEGAL_OFERTAS
+  const datos = deAvant2 === candidatas.length
+    ? 'Los precios son ESTIMADOS: cada compañía los calcula con los datos que nos has dado y los confirma al emitir, así que pueden variar al contratar. Las coberturas son las de la ficha de cada producto. '
+    : 'Los datos de cada oferta los han facilitado las propias compañías en sus documentos, salvo los precios marcados como estimados, que cada compañía calcula con tus datos y confirma al emitir: pueden variar al contratar. '
+  const texto = AVISO_LEGAL_OFERTAS.replace(/\. Los datos de cada oferta[^.]*\. /, '. ' + datos)
+  return deAvant2 === candidatas.length ? texto.replace('no consta en el documento de la compañía', 'la compañía no lo indica') : texto
+}
 
 export function nombreFicheroOfertas(d: Pick<DatosPdfOfertas, 'cliente' | 'ramo' | 'creadoAt' | 'referencia'>): string {
   const limpio = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
@@ -250,7 +213,19 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
   const actual = cmp.ofertas.find((o) => o.id === actualId) ?? cmp.ofertas.find((o) => o.rol === 'actual') ?? null
   const ofertas = cmp.ofertas.filter((o) => o.id !== actual?.id)
   const resumenDe = (id: string) => cmp.resumen.find((r) => r.ofertaId === id) ?? null
-  const marcaDe = (nombre: string, o: OfertaNormalizada) => (o.producto ? `${nombre} · ${o.producto}` : nombre)
+  // El MISMO nombre que las cabeceras del cuadro: compañía y, si hace falta para distinguirla, su nivel.
+  const nombres = cabecerasColumnas(cmp.ofertas)
+  const marcaDe = (o: OfertaNormalizada) => (nombres.get(o.id) ?? o.compania).replace(/ \(tu póliza actual\)$/, '')
+  // El cuadro y el análisis son comunes con el PDF de Avant2 (`presupuesto-pdf-cuadro.ts`): pintan sobre la página y la
+  // `y` vivas de este PDF.
+  const lienzo: LienzoPdf = {
+    f, ancho,
+    get pagina() { return pagina },
+    get y() { return y },
+    set y(v: number) { y = v },
+    nuevaPagina, cabe, linea, chip,
+    parrafo: (t, font, tam, color) => parrafo(t, font, tam, color),
+  }
 
   // ── Portada ──
   const altoLogo = 26
@@ -279,7 +254,7 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
     ['Riesgo', ramoTxt(d.ramo).replace(/^./, (c) => c.toUpperCase()) + (cmp.superficieM2 !== null ? ` · ${entEs(cmp.superficieM2)} m²` : '')],
     ['Fecha del estudio', fechaCorta(d.creadoAt)],
     ['Precios válidos hasta', fechaCorta(d.venceEl)],
-    ['Ofertas comparadas', `${ofertas.length} ${ofertas.length === 1 ? 'compañía' : 'compañías'}${actual ? ' y tu póliza actual' : ''}`],
+    ['Ofertas comparadas', textoOpcionesComparadas(cmp.ofertas)],
   ]
   if (d.referencia) filasFicha.push(['Referencia', d.referencia])
   {
@@ -309,7 +284,7 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
     pagina.drawRectangle({ x: M, y: arriba - alto, width: ancho, height: alto, color: rgb(1, 1, 1), borderColor: BORDE, borderWidth: 0.8 })
     await logoOInicial(actual.compania, M + pad, arriba - pad, 70)
     const x2 = M + pad + 84
-    linea(recortar(f.titulo, marcaDe(actual.compania, actual), 11.5, ancho - pad * 2 - 84 - 110), x2, arriba - pad - 11, f.titulo, 11.5)
+    linea(recortar(f.titulo, marcaDe(actual), 11.5, ancho - pad * 2 - 84 - 110), x2, arriba - pad - 11, f.titulo, 11.5)
     const prima = actual.primaTotal === null ? NO_FIGURA : eur(actual.primaTotal)
     const wp = f.titulo.widthOfTextAtSize(paraFuente(f.titulo, prima), 15)
     linea(prima, A4[0] - M - pad - wp, arriba - pad - 14, f.titulo, 15, PRIMARIO)
@@ -321,97 +296,47 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
   }
 
   // ── Cuadro comparativo ──
-  const trozos = repartirColumnas(cmp.ofertas, 4)
-  if (trozos.length > 0 && cmp.filas.length > 0) {
-    if (y - 200 < M + PIE) nuevaPagina()
-    titulo('Cuadro comparativo de garantías', 14, 90)
-    parrafo('Importes tal como constan en los documentos de cada compañía. «No figura» = el dato no consta en el documento.', f.normal, 8.5, TENUE)
-    y -= 6
-    const wEt = 128
-    const tamC = 7.5
-    for (const [n, cols] of trozos.entries()) {
-      const ids = cols.map((o) => o.id)
-      const filas = filasParaColumnas(cmp.filas, ids)
-      if (filas.length === 0) continue
-      const wC = (ancho - wEt) / cols.length
-      const cabecera = async () => {
-        const nombres = cols.map((o) => partir(f.negrita, paraFuente(f.negrita, o.rol === 'actual' ? `${o.compania} (tu póliza actual)` : o.compania), 8, wC - 8).slice(0, 3))
-        const alto = 14 + Math.max(...nombres.map((l) => l.length)) * 10 + 14
-        cabe(alto + 40)
-        pagina.drawRectangle({ x: M, y: y - alto, width: ancho, height: alto, color: SUAVE })
-        for (const [i, o] of cols.entries()) {
-          const x = M + wEt + i * wC + 4
-          nombres[i].forEach((l, k) => linea(l, x, y - 12 - k * 10, f.negrita, 8, PRIMARIO))
-          const prima = o.primaTotal === null ? NO_FIGURA : `${eur(o.primaTotal)}/año`
-          linea(recortar(f.normal, prima, 8, wC - 8), x, y - alto + 6, f.normal, 8, TEXTO)
-        }
-        linea('Prima total', M + 6, y - alto + 6, f.normal, 8, TENUE)
-        y -= alto
-      }
-      if (trozos.length > 1) {
-        cabe(60)
-        linea(`Tabla ${n + 1} de ${trozos.length}`, M, y - 8, f.normal, 8, TENUE)
-        y -= 14
-      }
-      await cabecera()
-      let grupoActual: string | null = null
-      for (const fila of filas) {
-        const celdas = cols.map((o) => textoCelda(fila.celdas.find((c) => c.ofertaId === o.id)))
-        const lc = celdas.map((c) => partir(f.normal, paraFuente(f.normal, c.texto), tamC, wC - 8))
-        const le = partir(f.negrita, paraFuente(f.negrita, fila.etiqueta), 8, wEt - 12)
-        const nl = Math.max(le.length, ...lc.map((l) => l.length))
-        const alto = 8 + nl * 10
-        const cambiaGrupo = fila.grupo !== grupoActual
-        const altoGrupo = cambiaGrupo ? 16 : 0
-        if (y - (alto + altoGrupo) < M + PIE) { nuevaPagina(); await cabecera(); grupoActual = null }
-        if (fila.grupo !== grupoActual) {
-          grupoActual = fila.grupo
-          linea(GRUPOS_TXT[fila.grupo] ?? 'Otras garantías', M + 6, y - 11, f.titulo, 8.5, PRIMARIO)
-          y -= 16
-        }
-        celdas.forEach((c, i) => {
-          const x = M + wEt + i * wC
-          if (c.marca === 'peor') pagina.drawRectangle({ x, y: y - alto, width: wC, height: alto, color: ROJO_SUAVE })
-          else if (c.marca === 'mejor') pagina.drawRectangle({ x, y: y - alto, width: wC, height: alto, color: VERDE_SUAVE })
-          else if (c.marca === 'hueco') pagina.drawRectangle({ x, y: y - alto, width: wC, height: alto, color: AMBAR_SUAVE })
-          const color = c.texto === NO_FIGURA ? TENUE : c.marca === 'peor' ? ROJO : c.marca === 'mejor' ? VERDE : TEXTO
-          lc[i].forEach((l, k) => linea(l, x + 4, y - 9 - k * 10, f.normal, tamC, color))
-        })
-        le.forEach((l, k) => linea(l, M + 6, y - 9 - k * 10, f.negrita, 8))
-        y -= alto
-        pagina.drawRectangle({ x: M, y, width: ancho, height: 0.5, color: BORDE })
-      }
-      y -= 10
-    }
-    // Leyenda: qué significan los colores (solo si hay póliza actual con la que comparar).
-    if (actual) {
-      cabe(20)
-      let x = M
-      x += chip('Menos cobertura que la actual', x, y - 8, ROJO_SUAVE, ROJO) + 6
-      x += chip('Más cobertura que la actual', x, y - 8, VERDE_SUAVE, VERDE) + 6
-      chip('Figura en la actual y no en la oferta', x, y - 8, AMBAR_SUAVE, AMBAR)
-      y -= 22
-    }
-  }
+  await pintarCuadroComparativo(lienzo, cmp, { recomendadaId })
 
   // ── Resumen por oferta ──
+  // Solo lo que DIFIERE entre ofertas; lo que comparten todas sale una vez arriba («Común a todas las opciones»).
   if (ofertas.length > 0) {
     titulo('Resumen por oferta', 14, 110)
-    for (const o of ofertas) {
+    const hechosDe = ofertas.map((o) => { const r = resumenDe(o.id); return r ? lineasResumen(r, actual !== null) : [] })
+    const claveDe = ofertas.map((o) => garantiasClave(cmp.filas, o.id, 50))
+    const hechos = separarComunes(hechosDe)
+    const claves = separarComunes(claveDe)
+    if (hechos.comunes.length > 0 || claves.comunes.length > 0) {
+      const pad = 12
+      const txt = [...hechos.comunes, ...(claves.comunes.length ? [`Garantías: ${claves.comunes.join(' · ')}`] : [])]
+      const lineas = txt.flatMap((t) => partir(f.normal, paraFuente(f.normal, t), 8.5, ancho - pad * 2))
+      const alto = pad * 2 + 14 + lineas.length * 11
+      cabe(alto + 10)
+      const arriba = y
+      pagina.drawRectangle({ x: M, y: arriba - alto, width: ancho, height: alto, color: SUAVE })
+      linea('Común a todas las opciones', M + pad, arriba - pad - 9, f.titulo, 9.5, PRIMARIO)
+      lineas.forEach((l, k) => linea(l, M + pad, arriba - pad - 25 - k * 11, f.normal, 8.5, TEXTO))
+      y = arriba - alto - 10
+    }
+    for (const [idx, o] of ofertas.entries()) {
       const r = resumenDe(o.id)
       const esRec = o.id === recomendadaId
       const pad = 12
       const colPrecio = 130
       const xTexto = M + pad + 84
       const wTexto = ancho - pad * 2 - 84 - colPrecio
-      const nombre = partir(f.titulo, paraFuente(f.titulo, marcaDe(o.compania, o)), 11.5, wTexto)
+      const nombre = partir(f.titulo, paraFuente(f.titulo, marcaDe(o)), 11.5, wTexto)
       const delta = r ? textoDelta(r) : null
-      const hechos = r ? lineasResumen(r, actual !== null) : []
-      const clave = garantiasClave(cmp.filas, o.id, 6)
-      const lHechos = hechos.flatMap((h) => partir(f.normal, paraFuente(f.normal, h), 8.5, wTexto))
+      const lHechos = hechos.propias[idx].flatMap((h) => partir(f.normal, paraFuente(f.normal, h), 8.5, wTexto))
+      const clave = claves.propias[idx].slice(0, 6)
       const lClave = clave.length ? partir(f.normal, paraFuente(f.normal, clave.join(' · ')), 8, ancho - pad * 2) : []
       const lAlerta = r?.infraseguroContinente ? partir(f.negrita, paraFuente(f.negrita, textoInfraseguro(r.infraseguroContinente)), 8, ancho - pad * 2 - 12) : []
-      const alto = pad * 2 + 13 * nombre.length + (esRec ? 14 : 0) + 11 * lHechos.length + (lClave.length ? 8 + 10.5 * lClave.length : 0) + (lAlerta.length ? 8 + 10 * lAlerta.length + 8 : 0) + 4
+      const prima = o.primaTotal === null ? textoPrimaOferta(o) : eur(o.primaTotal) + (o.firmeza === 'estimado' ? ' *' : '')
+      const tamPrima = o.primaTotal === null ? 10 : 17
+      const lPrima = partir(f.titulo, paraFuente(f.titulo, prima), tamPrima, colPrecio - 6)
+      const ld = delta ? partir(f.normal, paraFuente(f.normal, delta), 7.5, colPrecio - 6) : []
+      const altoPrecio = pad + lPrima.length * (tamPrima + 2) + 12 + ld.length * 9 + pad
+      const alto = Math.max(altoPrecio, pad * 2 + 13 * nombre.length + (esRec ? 14 : 0) + 11 * lHechos.length + (lClave.length ? 8 + 10.5 * lClave.length : 0) + (lAlerta.length ? 8 + 10 * lAlerta.length + 8 : 0) + 4, pad * 2 + 30)
       cabe(alto + 10)
       const arriba = y
       pagina.drawRectangle({ x: M, y: arriba - alto, width: ancho, height: alto, color: rgb(1, 1, 1), borderColor: esRec ? PRIMARIO : BORDE, borderWidth: esRec ? 1.4 : 0.8 })
@@ -421,14 +346,10 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
       if (esRec) { chip('Recomendada por tu corredor', xTexto, yy - 9, SUAVE, PRIMARIO); yy -= 14 }
       lHechos.forEach((l) => { linea(l, xTexto, yy - 9, f.normal, 8.5, TENUE); yy -= 11 })
       // Precio y delta.
-      const prima = o.primaTotal === null ? NO_FIGURA : eur(o.primaTotal)
-      const wp = f.titulo.widthOfTextAtSize(paraFuente(f.titulo, prima), 17)
-      linea(prima, A4[0] - M - pad - wp, arriba - pad - 17, f.titulo, 17, PRIMARIO)
-      if (o.primaTotal !== null) linea('al año', A4[0] - M - pad - f.normal.widthOfTextAtSize('al año', 8), arriba - pad - 29, f.normal, 8, TENUE)
-      if (delta) {
-        const ld = partir(f.normal, paraFuente(f.normal, delta), 7.5, colPrecio - 6)
-        ld.forEach((l, k) => linea(l, A4[0] - M - pad - f.normal.widthOfTextAtSize(paraFuente(f.normal, l), 7.5), arriba - pad - 41 - k * 9, f.normal, 7.5, TENUE))
-      }
+      let yp = arriba - pad - tamPrima
+      lPrima.forEach((l) => { linea(l, A4[0] - M - pad - f.titulo.widthOfTextAtSize(paraFuente(f.titulo, l), tamPrima), yp, f.titulo, tamPrima, PRIMARIO); yp -= tamPrima + 2 })
+      if (o.primaTotal !== null) linea('al año', A4[0] - M - pad - f.normal.widthOfTextAtSize('al año', 8), yp - 8, f.normal, 8, TENUE)
+      ld.forEach((l, k) => linea(l, A4[0] - M - pad - f.normal.widthOfTextAtSize(paraFuente(f.normal, l), 7.5), yp - 20 - k * 9, f.normal, 7.5, TENUE))
       if (lClave.length) {
         yy -= 8
         lClave.forEach((l) => { linea(l, M + pad, yy - 8, f.normal, 8); yy -= 10.5 })
@@ -443,25 +364,10 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
     }
   }
 
-  // ── Análisis y recomendación ──
-  const hayTexto = narrativa.resumen.trim() !== '' || narrativa.recomendacion.trim() !== ''
-  if (hayTexto) {
-    y -= 6
-    titulo('Análisis y recomendación', 14, 60)
-    if (narrativa.resumen.trim()) {
-      linea('Análisis', M, y - 10, f.titulo, 10.5, PRIMARIO)
-      y -= 18
-      parrafo(narrativa.resumen.trim(), f.normal, 9.5)
-      y -= 8
-    }
-    if (narrativa.recomendacion.trim()) {
-      cabe(40)
-      linea('Recomendación', M, y - 10, f.titulo, 10.5, PRIMARIO)
-      y -= 18
-      parrafo(narrativa.recomendacion.trim(), f.normal, 9.5)
-      y -= 8
-    }
-  }
+  // ── Análisis y recomendación ── (con su etiqueta SIEMPRE visible: IA revisada por el corredor, o la plantilla)
+  pintarAnalisis(lienzo, narrativa)
+  // Llamada a la acción: cómo aceptar (con la referencia; nunca un enlace con token).
+  pintarLlamadaAccion(lienzo, { referencia: d.referencia, telefono: d.mediador.telefono ?? null, email: d.mediador.email })
   if (d.necesidades?.trim()) {
     cabe(50)
     linea('Lo que nos has pedido', M, y - 10, f.titulo, 10.5, PRIMARIO)
@@ -475,7 +381,7 @@ export async function pdfEstudioOfertas(d: DatosPdfOfertas): Promise<Uint8Array>
   cabe(120)
   linea('Aviso legal', M, y - 10, f.titulo, 10)
   y -= 16
-  parrafo(AVISO_LEGAL_OFERTAS, f.normal, 8, TENUE)
+  parrafo(avisoLegalOfertas(cmp.ofertas), f.normal, 8, TENUE)
   y -= 8
   cabe(54)
   linea('Tu mediador', M, y - 10, f.titulo, 10)

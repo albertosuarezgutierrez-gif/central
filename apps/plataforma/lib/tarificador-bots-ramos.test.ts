@@ -31,7 +31,7 @@ test('auto → adaptador con 3 desplegables (uso, ámbito, clase del permiso; de
   const a = adaptadorDeRamo('auto')
   assert.ok(a)
   assert.equal(a.ramo, 'auto')
-  assert.deepEqual(a.campos.map((c) => [c.clave, c.porDefecto]), [['usoVehiculo', 'particular'], ['ambitoCirculacion', 'espana'], ['clasePermiso', 'b'], ['companiaAnterior', undefined]])
+  assert.deepEqual(a.campos.map((c) => [c.clave, c.porDefecto]), [['usoVehiculo', 'particular'], ['ambitoCirculacion', 'espana'], ['clasePermiso', 'b'], ['companiaAnterior', undefined], ['polizaAnteriorUltimos5', undefined]])
   assert.ok(a.campos.filter((c) => !c.texto).every((c) => c.opciones?.some((o) => o.valor === c.porDefecto)), 'el defecto es una de las opciones')
   const r = a.construir({
     matricula: '', marca: null, modelo: null, version: null, codigoPostal: 'ficha', fechaNacimiento: 'ficha', fechaCarne: 'ficha',
@@ -50,6 +50,8 @@ const AUTO_BASE = {
   matricula: '1234BCD', marca: null, modelo: null, version: null, codigoPostal: '41003', fechaNacimiento: '1980-05-17', fechaCarne: '2000-06-01',
   sexo: null, garaje: null, conductorEnOtraFicha: false, propietarioEnOtraFicha: false, tieneSeguroActual: true,
   aniosAsegurado: '5', aniosSinSiniestros: '5', siniestrosUltimos5: '0', companiaAnterior: null,
+  // 20/10/2026: con seguro anterior Allianz y Mapfre piden la póliza anterior; aquí consta (sintética) y su defecto son sus 5 últimas cifras.
+  numeroPolizaActual: 'POL-2026-00012345',
 }
 
 test('auto · Mapfre y Allianz: con seguro actual y sin compañía anterior falta (Allianz la exige con cambio de seguro, 19/10/2026)', () => {

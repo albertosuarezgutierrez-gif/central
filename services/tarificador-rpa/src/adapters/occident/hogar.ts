@@ -17,15 +17,16 @@
 //
 // Reglas (las mismas que comunidades.ts): pulsar SOLO con `pulsarSeguro` (guarda de Occident + `ctx.pulsar`), nunca
 // `locator.click()`; ni emitir, contratar, grabar… (lista en guarda.ts); credenciales solo de `ctx.credenciales`.
-// 🚨 `RamoRpa` (module-tarificacion) aún no incluye 'hogar' ni hay validador de riesgo de hogar: por eso el adaptador
-// tiene su tipo propio y NO es un `AdaptadorRegistrado`. Para registrarlo hará falta ese contrato + su rama en ramo.ts.
+// 21/10/2026: `planFormularioHogar` ya lee el `FormularioHogar` canónico (el que valida `ramo.ts`). Sigue SIN registrar a propósito
+// (Occident está APARCADO: SSO sin paso 2 grabado y formulario sin mecánica); para registrarlo: tipar `tarificar` con
+// `FormularioHogar`, pasar los huecos por la capa común (`formador.ts`, lo exige test/regla-respaldo-ia.test.ts) y su línea en index.ts.
 
 import type { Frame, Locator, Page } from 'playwright'
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { exigirSinRechazoCredenciales } from '../../credenciales.ts'
 import { esperarPdf } from '../../descarga-pdf.ts'
-import { importeEs, type OfertaNormalizada } from '@central/module-tarificacion'
+import { fechaDdMmAaaaDeIso, importeEs, type OfertaNormalizada } from '@central/module-tarificacion'
 import { comprobarDescriptorOccident } from './guarda.ts'
 import {
   BOTON_IMPRIMIR_HOGAR,
@@ -266,27 +267,30 @@ const txt = (v: unknown): string | null => (typeof v === 'string' && v.trim() !=
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {})
 
 /**
- * Riesgo de hogar (`{ tomador, inmueble, hogar }`, riesgo-oportunidad.ts) → operaciones del paso 1 con las etiquetas VISTAS.
- * Falta un dato obligatorio → `ErrorTarificador('datos')` (nunca se inventa). «Código del agente» y «Fecha de efecto» NO se
- * tocan (vienen rellenos). Persona: solo «Física» (Jurídica sin ver). Pura.
+ * `FormularioHogar` CANÓNICO (21/10/2026: antes leía `tomador.nif` de la forma de exploración y TODO trabajo caía en `datos`) →
+ * operaciones del paso 1 con las etiquetas VISTAS. Documento = `tomador.documentoIdentidad`; nacimiento ISO → dd/mm/aaaa (como lo
+ * escribe el portal). El tipo de vivienda va con su CLAVE canónica (`piso`, `atico`…): TODO(grabación) la etiqueta exacta de cada
+ * opción del desplegable de Occident (sin ver; no se traduce a ojo). Falta un dato obligatorio → `ErrorTarificador('datos')`
+ * (nunca se inventa). «Código del agente» y «Fecha de efecto» NO se tocan (vienen rellenos). Persona: solo «Física». Pura.
  */
 export function planFormularioHogar(riesgo: unknown): OperacionHogar[] {
   const r = obj(riesgo)
   const t = obj(r.tomador)
   const i = obj(r.inmueble)
   const h = obj(r.hogar)
-  const nif = txt(t.nif)
-  const nac = txt(t.fechaNacimiento) ?? txt(t.fecha_nacimiento)
-  const cp = txt(i.codigoPostal) ?? txt(i.codigo_postal)
-  const via = txt(i.nombreVia) ?? txt(i.nombre_via)
-  const tipo = txt(h.tipoVivienda) ?? txt(h.tipo_vivienda)
-  const faltan = [['tomador.nif', nif], ['tomador.fechaNacimiento', nac], ['inmueble.codigoPostal', cp], ['inmueble.nombreVia', via], ['hogar.tipoVivienda', tipo]].filter(([, v]) => !v).map(([k]) => k)
+  const doc = txt(t.documentoIdentidad)
+  const nacIso = txt(t.fechaNacimiento)
+  const nac = nacIso ? fechaDdMmAaaaDeIso(nacIso) : null
+  const cp = txt(i.codigoPostal)
+  const via = txt(i.nombreVia)
+  const tipo = txt(h.tipoVivienda)
+  const faltan = [['tomador.documentoIdentidad', doc], ['tomador.fechaNacimiento', nac], ['inmueble.codigoPostal', cp], ['inmueble.nombreVia', via], ['hogar.tipoVivienda', tipo]].filter(([, v]) => !v).map(([k]) => k)
   if (faltan.length) throw new ErrorTarificador('datos', `occident/hogar: faltan datos del riesgo: ${faltan.join(', ')}`)
   const E = ETIQUETAS_HOGAR
   const ops: OperacionHogar[] = [
     { seccion: 'Datos del tomador', etiqueta: E.persona, tipo: 'eleccion', valor: E.personaFisica },
     { seccion: 'Datos del tomador', etiqueta: E.documento, tipo: 'desplegable', valor: E.tipoDocumento },
-    { seccion: 'Datos del tomador', etiqueta: E.documento, tipo: 'texto', valor: nif! },
+    { seccion: 'Datos del tomador', etiqueta: E.documento, tipo: 'texto', valor: doc! },
     { seccion: 'Datos del tomador', etiqueta: E.fechaNacimiento, tipo: 'texto', valor: nac! },
     { seccion: 'Tipología', etiqueta: E.tipoVivienda, tipo: 'desplegable', valor: tipo! },
     { seccion: 'Situación', etiqueta: E.busquedaDireccion, tipo: 'eleccion', valor: E.busquedaDireccion },
@@ -477,7 +481,7 @@ export async function imprimirProyecto(page: Page, marco: Frame, ctx: ContextoPo
 
 // ─────────── adaptador (tipo propio: aún no registrable) ───────────
 
-/** Tipo propio: `RamoRpa` aún no tiene 'hogar' ni hay validador de riesgo; no es un `AdaptadorRegistrado`. */
+/** Tipo propio (sin registrar; ver cabecera): aún no es un `AdaptadorRegistrado`. */
 export type AdaptadorOccidentHogar = {
   readonly compania: 'occident'
   readonly ramo: 'hogar'

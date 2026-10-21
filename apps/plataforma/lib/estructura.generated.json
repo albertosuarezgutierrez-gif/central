@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-10-20T18:26:36Z",
+  "generadoEn": "2026-10-21T07:14:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -31,6 +31,11 @@
       "id": "core-consent",
       "tipo": "core",
       "npm": "@central/core-consent"
+    },
+    {
+      "id": "core-direccion",
+      "tipo": "core",
+      "npm": "@central/core-direccion"
     },
     {
       "id": "core-email",
@@ -367,7 +372,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-portal": {
         "estado": "usado",
@@ -436,12 +441,12 @@
         "evidencias": 0
       },
       "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "mariscos": {
         "estado": "no",
@@ -449,7 +454,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 9
       },
       "rrhh": {
         "estado": "no",
@@ -460,8 +465,8 @@
         "evidencias": 0
       },
       "transporte": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       }
     },
     "core-consent": {
@@ -516,6 +521,60 @@
       "transporte": {
         "estado": "no",
         "evidencias": 0
+      }
+    },
+    "core-direccion": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "usado",
+        "evidencias": 4
       }
     },
     "core-email": {
@@ -2203,7 +2262,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 276
+        "evidencias": 284
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2231,7 +2290,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 222
+        "evidencias": 226
       },
       "rrhh": {
         "estado": "no",
@@ -2501,7 +2560,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 34
       },
       "rrhh": {
         "estado": "no",
@@ -3929,6 +3988,9 @@
       "module-subastas"
     ],
     "core-consent": [],
+    "core-direccion": [
+      "core-catastro"
+    ],
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
@@ -4184,6 +4246,7 @@
       "/api/operador/llamada",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/comparar",
+      "/api/operador/oportunidad/comparativa",
       "/api/operador/oportunidad/consolidar",
       "/api/operador/oportunidad/de-poliza",
       "/api/operador/oportunidad/figuras",
@@ -4525,6 +4588,8 @@
       "/api/cuenta-nominal",
       "/api/demo",
       "/api/demo/seed",
+      "/api/direccion/cp",
+      "/api/direccion/vias",
       "/api/edge/mis-cuentas",
       "/api/estado",
       "/api/evento/briefing/[token]",
@@ -4924,6 +4989,8 @@
       "/api/admin/contabilidad/resultado",
       "/api/admin/contabilidad/tesoreria",
       "/api/admin/cotizador-config",
+      "/api/admin/direccion/cp",
+      "/api/admin/direccion/vias",
       "/api/admin/disponibilidad",
       "/api/admin/empresa/branding",
       "/api/admin/escanear",
@@ -5004,7 +5071,6 @@
       "/api/auth/login-usuario",
       "/api/auth/logout",
       "/api/auth/register",
-      "/api/catastro/municipio",
       "/api/cotizador",
       "/api/cron/alertas-pendientes",
       "/api/cron/impagos",
@@ -5210,6 +5276,7 @@
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
+      "/api/correduria/catastro/vias",
       "/api/correduria/cima-sincro",
       "/api/correduria/cliente",
       "/api/correduria/cliente-mote",
@@ -5269,6 +5336,7 @@
       "/api/correduria/linea-base",
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/comparar",
+      "/api/correduria/oportunidad/comparativa",
       "/api/correduria/oportunidad/consolidar",
       "/api/correduria/oportunidad/de-poliza",
       "/api/correduria/oportunidad/figuras",
@@ -5766,6 +5834,8 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/conductor/posicion",
+      "/api/direccion/cp",
+      "/api/direccion/vias",
       "/api/ingest/[formato]",
       "/api/mapa/posiciones",
       "/api/seguir/[token]",
@@ -6957,10 +7027,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 43,
+    "packages": 44,
     "capacidades": 23,
     "skills": 44,
-    "apis": 1743,
+    "apis": 1751,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

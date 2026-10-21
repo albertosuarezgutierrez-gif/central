@@ -56,13 +56,16 @@ test('sinónimos reales de compañía', () => {
 })
 
 test('taxonomía: claves únicas por ramo, mapeo de ramos y alineación con RAMOS_OPORTUNIDAD', () => {
-  for (const r of ['comunidades', 'comercio', 'hogar', 'generico'] as const) {
+  for (const r of ['comunidades', 'comercio', 'hogar', 'auto', 'moto', 'generico'] as const) {
     const ks = garantiasDelRamo(r).map(x => x.clave)
     assert.equal(new Set(ks).size, ks.length, r)
   }
   assert.equal(ramoOfertaDe('pymes'), 'comercio')
   for (const r of ['comunidades', 'comercio', 'hogar']) assert.ok((RAMOS_OPORTUNIDAD as readonly string[]).includes(r))
-  assert.equal(ramoOfertaDe('auto'), 'generico')
+  // 20/10/2026: auto y moto tienen taxonomía (derivada del catálogo de Avant2).
+  assert.equal(ramoOfertaDe('auto'), 'auto')
+  assert.equal(ramoOfertaDe('moto'), 'moto')
+  assert.equal(ramoOfertaDe('flotas'), 'generico')
   assert.equal(ramoOfertaDe(null), 'generico')
 })
 

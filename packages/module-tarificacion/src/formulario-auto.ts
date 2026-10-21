@@ -81,6 +81,43 @@ export type DatosTomadorFicha =
   | { tipo: 'juridica'; razonSocial: string }
 
 /**
+ * `datosTomador` crudo → `DatosTomadorFicha`, o `null` si no viene (21/10/2026: extraído de `validarFormularioAuto` para que Hogar use
+ * la MISMA validación). Los errores van a `errores` y nombran el CAMPO, nunca el valor. PURA.
+ */
+export function validarDatosTomadorFicha(v: unknown, errores: string[]): DatosTomadorFicha | null {
+  const nada = (x: unknown) => x === undefined || x === null || (typeof x === 'string' && x.trim() === '')
+  if (nada(v)) return null
+  const d = typeof v === 'object' && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null
+  const t = (x: unknown, max: number): string | null | false => {
+    if (nada(x)) return null
+    if (typeof x !== 'string' || tieneCaracteresProhibidos(x)) return false
+    const s = x.replace(/\s+/g, ' ').trim()
+    return s.length <= max ? s : false
+  }
+  if (d?.tipo === 'juridica') {
+    const razon = t(d.razonSocial, 200)
+    if (typeof razon === 'string') return { tipo: 'juridica', razonSocial: razon }
+    errores.push('datosTomador.razonSocial: obligatoria en persona jurídica (texto ≤200)')
+    return null
+  }
+  if (d?.tipo === 'fisica') {
+    const nombre = t(d.nombre, 100)
+    const apellido1 = t(d.apellido1, 100)
+    const apellido2 = t(d.apellido2, 100)
+    const fn = typeof d.fechaNacimiento === 'string' ? d.fechaNacimiento.trim() : ''
+    const fnOk = /^\d{4}-\d{2}-\d{2}$/.test(fn) && !Number.isNaN(Date.parse(`${fn}T00:00:00Z`)) && new Date(`${fn}T00:00:00Z`).toISOString().slice(0, 10) === fn
+    if (typeof nombre !== 'string') errores.push('datosTomador.nombre: obligatorio (texto ≤100)')
+    if (typeof apellido1 !== 'string') errores.push('datosTomador.apellido1: obligatorio (texto ≤100)')
+    if (apellido2 === false) errores.push('datosTomador.apellido2: texto ≤100 (o no venir)')
+    if (!fnOk) errores.push('datosTomador.fechaNacimiento: obligatoria, AAAA-MM-DD')
+    if (typeof nombre === 'string' && typeof apellido1 === 'string' && apellido2 !== false && fnOk) return { tipo: 'fisica', nombre, apellido1, apellido2, fechaNacimiento: fn }
+    return null
+  }
+  errores.push('datosTomador.tipo: tiene que ser fisica o juridica')
+  return null
+}
+
+/**
  * Dirección del TOMADOR troceada (17/10/2026), de la ficha. La POBLACIÓN es `FichaTomadorAuto.localidad` (no se repite aquí).
  * Cada pieza `null` = no consta / no se pudo trocear sin adivinar (`partirDireccion` de asegura es conservador).
  */
@@ -563,32 +600,7 @@ export function validarFormularioAuto(entrada: unknown, hoy: Date = new Date()):
   }
 
   // Datos del tomador para el ALTA en el portal (opcional; los pone asegura al entregar). Nunca se repite el valor en el error.
-  let datosTomador: DatosTomadorFicha | null = null
-  if (!vacio(e.datosTomador)) {
-    const d = typeof e.datosTomador === 'object' && e.datosTomador !== null && !Array.isArray(e.datosTomador) ? (e.datosTomador as Record<string, unknown>) : null
-    const t = (v: unknown, max: number): string | null | false => {
-      if (vacio(v)) return null
-      if (typeof v !== 'string' || tieneCaracteresProhibidos(v)) return false
-      const x = v.replace(/\s+/g, ' ').trim()
-      return x.length <= max ? x : false
-    }
-    if (d?.tipo === 'juridica') {
-      const razon = t(d.razonSocial, 200)
-      if (typeof razon === 'string') datosTomador = { tipo: 'juridica', razonSocial: razon }
-      else errores.push('datosTomador.razonSocial: obligatoria en persona jurídica (texto ≤200)')
-    } else if (d?.tipo === 'fisica') {
-      const nombre = t(d.nombre, 100)
-      const apellido1 = t(d.apellido1, 100)
-      const apellido2 = t(d.apellido2, 100)
-      const fn = typeof d.fechaNacimiento === 'string' ? d.fechaNacimiento.trim() : ''
-      const fnOk = /^\d{4}-\d{2}-\d{2}$/.test(fn) && !Number.isNaN(Date.parse(`${fn}T00:00:00Z`)) && new Date(`${fn}T00:00:00Z`).toISOString().slice(0, 10) === fn
-      if (typeof nombre !== 'string') errores.push('datosTomador.nombre: obligatorio (texto ≤100)')
-      if (typeof apellido1 !== 'string') errores.push('datosTomador.apellido1: obligatorio (texto ≤100)')
-      if (apellido2 === false) errores.push('datosTomador.apellido2: texto ≤100 (o no venir)')
-      if (!fnOk) errores.push('datosTomador.fechaNacimiento: obligatoria, AAAA-MM-DD')
-      if (typeof nombre === 'string' && typeof apellido1 === 'string' && apellido2 !== false && fnOk) datosTomador = { tipo: 'fisica', nombre, apellido1, apellido2, fechaNacimiento: fn }
-    } else errores.push('datosTomador.tipo: tiene que ser fisica o juridica')
-  }
+  const datosTomador = validarDatosTomadorFicha(e.datosTomador, errores)
 
   // Tomador de la ficha (opcional; lo pone asegura al entregar, 17/10/2026). Nunca se repite el valor en el error.
   let fichaTomador: FichaTomadorAuto | null = null

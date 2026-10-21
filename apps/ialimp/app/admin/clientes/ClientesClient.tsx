@@ -1,11 +1,15 @@
 'use client'
 import { useState, useMemo } from 'react'
+import DireccionCp from '@/components/DireccionCp'
+import { componerDireccion, localizacionValida } from '@/lib/direccion-ui'
 
 const EMPTY_FORM = {
   nombre: '',
   contacto_nombre: '', contacto_tel: '', contacto_email: '',
   direccion: '', notas: ''
 }
+// Localización validada (solo UI): al guardar se compone en la columna `direccion` (sin cambio de BD).
+const EMPTY_LOC = { cp: '', municipio: '', provincia: '' }
 
 export default function ClientesClient({ clientesIniciales }: { clientesIniciales: any[] }) {
   const [clientes, setClientes]     = useState<any[]>(clientesIniciales)
@@ -13,6 +17,7 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
   const [showModal, setShowModal]   = useState(false)
   const [editando, setEditando]     = useState<any>(null)
   const [form, setForm]             = useState({ ...EMPTY_FORM })
+  const [loc, setLoc]               = useState({ ...EMPTY_LOC })
   const [detalle, setDetalle]       = useState<any>(null)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
@@ -33,6 +38,7 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
   function abrirNuevo() {
     setEditando(null)
     setForm({ ...EMPTY_FORM })
+    setLoc({ ...EMPTY_LOC })
     setError('')
     setShowModal(true)
   }
@@ -45,6 +51,7 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
       contacto_email: c.contacto_email || '', direccion: c.direccion || '',
       notas: c.notas || ''
     })
+    setLoc({ ...EMPTY_LOC }) // dirección guardada: se muestra tal cual y solo se valida si se rellena el CP
     setError('')
     setShowModal(true)
   }
@@ -58,6 +65,12 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
+    const tocaLoc = !!(loc.cp || loc.municipio || loc.provincia)
+    // Dirección OPCIONAL: solo si se rellena algo de localización debe estar completa y válida.
+    if (tocaLoc) {
+      if (!localizacionValida(loc)) { setError('Indica el código postal y elige el municipio (la provincia sale sola).'); return }
+    }
+    const direccion = tocaLoc ? componerDireccion({ calle: form.direccion, ...loc }) : form.direccion
     setLoading(true); setError('')
     try {
       const url = editando ? '/api/admin/clientes/' + editando.id : '/api/admin/clientes'
@@ -65,7 +78,7 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, direccion })
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'No se pudo guardar el cliente'); return }
@@ -329,9 +342,15 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
 
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Dirección</label>
-                <input value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))}
-                  placeholder="C/ Ejemplo 12, Sevilla"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <DireccionCp
+                  cp={loc.cp} municipio={loc.municipio} provincia={loc.provincia} calle={form.direccion}
+                  calleLabel="Calle y número" callePlaceholder="Calle Ejemplo 12"
+                  onChange={c => {
+                    if (c.calle !== undefined) setForm(f => ({ ...f, direccion: c.calle! }))
+                    if (c.cp !== undefined || c.municipio !== undefined || c.provincia !== undefined)
+                      setLoc(l => ({ cp: c.cp ?? l.cp, municipio: c.municipio ?? l.municipio, provincia: c.provincia ?? l.provincia }))
+                  }}
+                />
               </div>
 
               <div>

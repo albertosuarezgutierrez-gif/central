@@ -17,6 +17,10 @@ import fontkit from '@pdf-lib/fontkit'
 import { eur } from './dinero.ts'
 import type { GrupoDatos } from './datos-cotizados.ts'
 import { LOGOS, LOGOTIPO, NUNITO_400, NUNITO_700, QUICKSAND_700 } from './presupuesto-pdf-recursos.ts'
+import { claveLogo, fechaCorta, hex, paraFuente, partir, recortar, textosReferencia } from './presupuesto-pdf-base.ts'
+import { pintarAnalisis, pintarCuadroComparativo, pintarLlamadaAccion, type EstudioPdf, type LienzoPdf } from './presupuesto-pdf-cuadro.ts'
+
+export { claveLogo, fechaCorta, hex, paraFuente, partir, recortar, textosReferencia }
 
 export type OpcionPdf = {
   compania: string
@@ -46,7 +50,12 @@ export type DatosPdfPresupuesto = {
   datosCalculo: GrupoDatos[] | null
   necesidades: string | null
   opciones: OpcionPdf[]
-  mediador: { marca: string; nombre: string; claveDgsfp: string; domicilio: string; email: string | null }
+  /**
+   * El estudio congelado del presupuesto de Avant2 (21/10/2026): cuadro comparativo + resumen con su etiqueta, la MISMA
+   * lógica que el estudio de ofertas. `null`/ausente = presupuesto anterior sin estudio: el PDF sale como siempre.
+   */
+  estudio?: EstudioPdf | null
+  mediador: { marca: string; nombre: string; claveDgsfp: string; domicilio: string; email: string | null; telefono?: string | null }
 }
 
 const RAMOS: Record<string, string> = {
@@ -72,9 +81,6 @@ export function coberturasIncluidas(json: unknown): string[] {
   return salida
 }
 
-export function fechaCorta(d: Date): string {
-  return d.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })
-}
 
 /** El nombre del fichero: sin tildes ni espacios, para que no se rompa en ningún correo. */
 export function nombreFicheroPresupuesto(d: Pick<DatosPdfPresupuesto, 'cliente' | 'ramo' | 'creadoAt'> & { referencia?: string | null }): string {
@@ -84,45 +90,9 @@ export function nombreFicheroPresupuesto(d: Pick<DatosPdfPresupuesto, 'cliente' 
   return `presupuesto-${ref}${limpio(RAMOS[d.ramo] ?? d.ramo)}-${limpio(d.cliente) || 'cliente'}-${f}.pdf`
 }
 
-/** Las dos frases de la referencia: la de la cabecera y la que le pide al cliente que la cite. `null` sin referencia. */
-export function textosReferencia(referencia: string | null): { cabecera: string; cita: string } | null {
-  if (!referencia) return null
-  return {
-    cabecera: `Referencia ${referencia}`,
-    cita: `Para contratar o preguntarnos por este presupuesto, cita la referencia ${referencia}.`,
-  }
-}
 
-/** Lo que la fuente no tiene (un emoji) se cambia por «?» en vez de romper el PDF. */
-export function paraFuente(font: PDFFont, t: string): string {
-  const validos = new Set(font.getCharacterSet())
-  const cabe = (c: string) => c === '\n' || validos.has(c.codePointAt(0)!)
-  // Una letra con un diacrítico que la fuente no trae (ș, ł, č…) cae a su letra base antes que a «?».
-  return Array.from(t.replace(/\r/g, '').replace(/\t/g, ' '))
-    .map((c) => (cabe(c) ? c : (() => { const b = c.normalize('NFD')[0] ?? ''; return b && cabe(b) ? b : '?' })()))
-    .join('')
-}
 
-export function partir(font: PDFFont, texto: string, tam: number, ancho: number): string[] {
-  const salida: string[] = []
-  for (const parrafo of texto.split('\n')) {
-    let linea = ''
-    for (const palabra of parrafo.split(/\s+/).filter(Boolean)) {
-      const prueba = linea ? `${linea} ${palabra}` : palabra
-      if (font.widthOfTextAtSize(prueba, tam) <= ancho) { linea = prueba; continue }
-      if (linea) salida.push(linea)
-      linea = palabra
-    }
-    salida.push(linea)
-  }
-  return salida
-}
 
-/** La clave del logo: la PRIMERA palabra normalizada («Reale Seguros Generales» → reale), como el portal. */
-export function claveLogo(compania: string): string | null {
-  const k = compania.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().split(/[\s,.]+/)[0]
-  return k && LOGOS[k] ? k : null
-}
 
 /** Tarjetas = las recomendadas (con papel); sin ninguna, las 3 primeras. El resto va en tabla. Orden intacto. */
 export function repartirOpciones<T extends { papeles: string[] }>(opciones: T[]): { tarjetas: T[]; resto: T[] } {
@@ -131,17 +101,9 @@ export function repartirOpciones<T extends { papeles: string[] }>(opciones: T[])
   return { tarjetas: opciones.filter(enTarjeta), resto: opciones.filter((o, i) => !enTarjeta(o, i)) }
 }
 
-/** Una sola línea: lo que no cabe se corta con «…». */
-export function recortar(font: PDFFont, t: string, tam: number, w: number): string {
-  let s = paraFuente(font, t)
-  if (font.widthOfTextAtSize(s, tam) <= w) return s
-  while (s.length > 1 && font.widthOfTextAtSize(`${s}…`, tam) > w) s = s.slice(0, -1)
-  return `${s.trimEnd()}…`
-}
 
 const A4: [number, number] = [595.28, 841.89]
 const M = 44
-export const hex = (h: string): RGB => rgb(parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255)
 // Paleta de `MARCA_ASEGURA` (@central/brand): primario #3364ee y acentoSuave #E3EFFF. Neutros sin tinte.
 const PRIMARIO = hex('#3364ee')
 const SUAVE = hex('#E3EFFF')
@@ -374,6 +336,35 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
       y -= 4
       parrafo('* Precio estimado por la compañía.', f.normal, 7.5, TENUE)
     }
+  }
+
+  // ── Cuadro comparativo y análisis (21/10/2026): los mismos que el estudio de ofertas, sobre esta página ──
+  if (d.estudio) {
+    const lienzo: LienzoPdf = {
+      f, ancho,
+      get pagina() { return pagina },
+      get y() { return y },
+      set y(v: number) { y = v },
+      nuevaPagina, cabe, linea, chip, logoDe,
+      parrafo: (t, font, tam, color) => parrafo(t, font, tam, color),
+    }
+    y -= 10
+    await pintarCuadroComparativo(lienzo, d.estudio.comparacion, { titulo: 'Cuadro comparativo' })
+    pintarAnalisis(lienzo, d.estudio.narrativa)
+  }
+
+  // ── Llamada a la acción: cómo aceptar (con la referencia; nunca un enlace con token) ──
+  {
+    const lienzoCta: LienzoPdf = {
+      f, ancho,
+      get pagina() { return pagina },
+      get y() { return y },
+      set y(v: number) { y = v },
+      nuevaPagina, cabe, linea, chip, logoDe,
+      parrafo: (t, font, tam, color) => parrafo(t, font, tam, color),
+    }
+    y -= 6
+    pintarLlamadaAccion(lienzoCta, { referencia: d.referencia, telefono: d.mediador.telefono ?? null, email: d.mediador.email })
   }
 
   // ── Necesidades ──

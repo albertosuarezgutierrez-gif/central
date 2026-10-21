@@ -5,12 +5,13 @@
 // ramo todavía» y no pinta botones.
 //
 // 🚨 TARIFICAR ≠ EMITIR: solo precio. Los avisos dicen QUÉ falta, jamás el valor (dato personal).
-import { MAX_COMPANIA_ANTERIOR, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
+import { MAX_COMPANIA_ANTERIOR, mensajeFaltan, obligatoriosPara, type BloqueObligatorio } from '@central/module-tarificacion'
 import { formularioBotMoto, OPCIONES_JUSTIFICANTE_ANTERIOR, type CampoDeFicha, type EntradaBotMoto } from './tarificador-moto-formulario.ts'
 import { checklistCompania, MOTIVO_SIN_DECLARACION, type ChecklistCompania } from './tarificador-checklist.ts'
 import {
   formularioBotHogar, OPCIONES_MADERA_HOGAR, OPCIONES_REGIMEN_HOGAR, OPCIONES_TIPO_HOGAR, OPCIONES_USO_HOGAR, type DatosViviendaBot,
 } from './tarificador-hogar-formulario.ts'
+import { reglasPrevias } from './tarificador-reglas-previas.ts'
 import { formularioBotAuto, OPCIONES_AMBITO_CIRCULACION, OPCIONES_CLASE_PERMISO, OPCIONES_USO_VEHICULO, type EntradaBotAuto } from './tarificador-auto-formulario.ts'
 
 /** Un dato que el formulario del cotizador no tiene y la persona completa en el bloque (p. ej. la cilindrada de moto). */
@@ -96,6 +97,8 @@ const adaptadorAuto: AdaptadorBot = {
     { clave: 'clasePermiso', bloque: 'personas', etiqueta: 'Clase del permiso del conductor', opciones: OPCIONES_CLASE_PERMISO, porDefecto: 'b' },
     // Mapfre la pide en «Figuras» si hubo seguro anterior (el riesgo guarda el código DGS, no el nombre): se teclea aquí.
     { clave: 'companiaAnterior', bloque: 'poliza', etiqueta: 'Compañía anterior', ayuda: 'obligatoria en Mapfre y Allianz si tuvo seguro anterior', placeholder: 'p. ej. Línea Directa', texto: true, maxLength: MAX_COMPANIA_ANTERIOR },
+    // Allianz Turismos y Mapfre (20/10/2026): 5 últimas cifras de la póliza anterior si hubo seguro anterior. Por defecto las del nº completo que ya consta.
+    { clave: 'polizaAnteriorUltimos5', bloque: 'poliza', etiqueta: 'Nº de póliza anterior (últimas 5 cifras)', ayuda: 'lo piden Allianz y Mapfre si hubo seguro anterior', placeholder: 'p. ej. 12345', texto: true, maxLength: 30 },
   ],
   construir: (formulario, extra) => {
     const r = formularioBotAuto(entradaAuto(formulario, extra))
@@ -109,6 +112,8 @@ function entradaAuto(formulario: unknown, extra: Record<string, string>): Entrad
   return {
     ...f, usoVehiculo: extra.usoVehiculo, ambitoCirculacion: extra.ambitoCirculacion, clasePermiso: extra.clasePermiso,
     companiaAnterior: extra.companiaAnterior !== undefined ? extra.companiaAnterior : f.companiaAnterior,
+    // Un campo TOCADO (aunque vacío) manda sobre el del formulario; vacío → el por defecto sale de `numeroPolizaActual`.
+    polizaAnteriorUltimos5: extra.polizaAnteriorUltimos5 !== undefined ? extra.polizaAnteriorUltimos5 : f.polizaAnteriorUltimos5,
   }
 }
 
@@ -146,10 +151,27 @@ export function adaptadorDeRamo(ramo: string | null | undefined): AdaptadorBot |
  * Formulario aún incompleto → `sin_formulario` (los faltantes generales se listan aparte); compañía sin declaración →
  * `no_disponible`, nunca «todo ok». PURA.
  */
-export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string): ChecklistCompania {
+export function checklistBot(adaptador: AdaptadorBot, formulario: unknown, extra: Record<string, string>, compania: string, hoy: Date = new Date()): ChecklistCompania {
   const r = adaptador.construir(formulario, extra)
   if (!r.ok) return obligatoriosPara(compania, adaptador.ramo) === null ? { estado: 'no_disponible', motivo: MOTIVO_SIN_DECLARACION } : { estado: 'sin_formulario' }
-  return checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
+  const c = checklistCompania(compania, adaptador.ramo, r.riesgo, r.completarDesdeFicha, r.sinDatoEnFicha)
+  return conReglasPrevias(c, reglasPrevias({ compania, ramo: adaptador.ramo, riesgo: r.riesgo, formulario, hoy }))
+}
+
+/**
+ * Añade al checklist las reglas previas incumplidas (`tarificador-reglas-previas.ts`) como filas `falta`: lo que el portal exige y
+ * `obligatorios.ts` no declara. Una clave que ya está en el checklist no se duplica (la de `obligatorios.ts` manda). PURA.
+ */
+export function conReglasPrevias(c: ChecklistCompania, reglas: readonly { clave: string; etiqueta: string }[]): ChecklistCompania {
+  if (c.estado !== 'evaluado' || reglas.length === 0) return c
+  const filas = [...c.filas]
+  const faltan = [...c.faltan]
+  for (const r of reglas) {
+    if (filas.some((f) => f.clave === r.clave)) continue
+    filas.push({ clave: r.clave, etiqueta: r.etiqueta, estado: 'falta' })
+    faltan.push({ clave: r.clave, etiqueta: r.etiqueta })
+  }
+  return { ...c, filas, faltan, deFicha: filas.filter((f) => f.estado === 'ficha').length, bloquea: faltan.length > 0, resumen: mensajeFaltan(faltan) }
 }
 
 /** Ramos con adaptador (para saber qué anfitrión monta el bloque). */

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
   DGS_POR_BOT, DGS_POR_VENDOR_AVANT2, NOMBRE_POR_DGS, UMBRAL_CUADRA_PCT, compararPrimas, construirParrilla, dgsDeBot, dgsDeVendorAvant2,
-  esRamoAvant2, rotuloVeredicto, textoPct, ultimaVariante,
+  esRamoAvant2, ladoBotDeLecturas, rotuloVeredicto, textoPct, ultimaVariante,
   type LadoAvant2, type LadoBot, type TrabajoBotParrilla,
 } from './parrilla-precios.ts'
 
@@ -160,4 +160,20 @@ test('marcaSupuestos: con supuestos se marca con la lista; sin ninguno, nada; si
   assert.equal(marcaSupuestos([]), null)
   assert.equal(marcaSupuestos(null)?.etiqueta, 'Supuestos: no consta')
   assert.equal(marcaSupuestos(undefined)?.etiqueta, 'Supuestos: no consta')
+})
+
+// ─── 21/10/2026: lado bot de los ramos con bloque «Bots (gratis)» propio (moto, coche, hogar) ─────────────────────────
+test('ladoBotDeLecturas: tres estados; los disponibles son las integraciones del ramo; sin nada del ramo, no aplica', () => {
+  const integ = [{ compania: 'allianz', ramo: 'hogar' }, { compania: 'mapfre', ramo: 'auto' }, { compania: 'allianz', ramo: 'hogar' }]
+  const t = [trabajo({ compania: 'allianz', ofertas: [{ producto: 'Hogar', primaAnual: 300 }] })]
+  assert.deepEqual(ladoBotDeLecturas('hogar', integ, t), { estado: 'ok', disponibles: ['allianz'], trabajos: t })
+  assert.equal(ladoBotDeLecturas('hogar', null, t).estado, 'sin_leer', 'integraciones sin leer: no se afirma nada')
+  assert.equal(ladoBotDeLecturas('hogar', integ, null).estado, 'sin_leer', 'trabajos sin leer: no se afirma nada')
+  assert.deepEqual(ladoBotDeLecturas('vida', integ, []), { estado: 'no_aplica' })
+  // Trabajos de un bot ya sin integración activa siguen contando (su precio existe).
+  assert.deepEqual(ladoBotDeLecturas('vida', [], t), { estado: 'ok', disponibles: [], trabajos: t })
+  // Y entra en la parrilla como una fila de bot con precio.
+  const p = construirParrilla({ estado: 'no_aplica' } as LadoAvant2, ladoBotDeLecturas('hogar', integ, t))
+  assert.equal(p.vacia, false)
+  assert.equal(p.filas.find((f) => f.codigoDgs === 'C0109')?.bot.estado, 'precio')
 })

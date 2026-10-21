@@ -1358,6 +1358,24 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - PR #4928: la cola enseña el teléfono en cuestión, enVigor, nº pólizas tomador, enlace a ficha; `nombreFichaLegible` no duplica nombre.
 - Descartado por ahora: poner 🟢 con revisión pendiente (no arregla los casos de 2 fichas). Propuesto y sin hacer: aviso Telegram de cola con clientes en vigor >3 días.
 
+## (21/10/2026) asegura-portal: «Seguros que no nos constan» fallaba
+- Causa: el proyecto Vercel `asegura-portal` no tiene `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` → `/api/huecos-proteccion` 503 `sin_canal` (log prod 21/10 06:19Z). Pendiente: Alberto las añade.
+- Además la reserva se escribía antes de enviar → reintento 409 durante 10 min. PR #4919: comprobar canal antes de reservar + test.
+- Probable que `/api/sugerencia` y el aviso de heridos de `/api/siniestros` estén mudos por lo mismo (no verificado).
+
+## (21/10/2026) Presupuesto Avant2 con comparativa + portal + bots hogar + Allianz hogar ON
+- Presupuesto de origen Avant2 lleva `estudio` (cuadro + resumen IA/plantilla, `estudio-avant2.ts`); PDF rediseñado (logos, compañía+nivel, ✓/✗/?, «Acepta tu presupuesto», #2445B8 en texto pequeño); página del cliente (`EstudioCliente.tsx`) con el mismo estudio; plataforma: `ComparativaOportunidad` + `EnviarAlCliente` (copiar/WhatsApp/correo, confirma antes de rotar código) + «He revisado el resumen IA».
+- Regla: prima solo anual si las fechas de la compañía cubren 1 año exacto; si no, `primaPeriodo` y fuera del ranking.
+- Bots hogar: FormularioHogar con protecciones/objetos; Mapfre tras `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` (SQL 2026-10-15b sin aplicar); Occident aparcado; fix parrilla «no aplica». **ALLIANZ_HOGAR_ACTIVO=true** (OK Alberto): falta imagen Fly + `TARIFICADOR_FLY_IMAGE` + redeploy, y capturar «Valoración de bienes»/«Precio» con la oportunidad de Pedro José (6f3a48f7-…).
+- Auditoría Avant2 hogar: petición idéntica a la del 07/09; primera vía `hogar-nuevo` real aún sin estrenar.
+
+## (20/10/2026) Comparativa única + direcciones CP-primero en todo el monorepo (PR #4911)
+- Motor ÚNICO de comparativa (`module-seguros` comparar-ofertas/ofertas-fuentes/resumen-comparativa): cualquier fuente (Avant2, PDF compañía/competencia, póliza cartera, bot) y ramo; 3 estados por cobertura; IA etiquetada y validada (compañías/cifras), huella para no regenerar; puerto gratis `/api/operador/oportunidad/comparativa`. Pendiente: pintarlo en la pantalla de la oportunidad y en el PDF de origen Codeoscopic.
+- `packages/core-direccion` (CP→provincia, municipios INE en `./servidor`) + calle autocompletada del Catastro (cola de sugerencias con tope). Aplicado en plataforma (hogar), ialimp, ia-rest y transporte (con «Fuera de España»). Regla permanente en CLAUDE.md.
+- Uso real (BD 20/10): rrhh EN USO (Global2); ialimp sin humanos desde 29/08 pero sync iCal/Smoobu viva; ia-rest sin uso.
+- Pedro José Moreno Gil: oportunidad hogar 6f3a48f7-… creada por Claude (capitales supuestos 228.000/40.000€); falta en pantalla: fecha nacimiento (cifrada), catálogos Avant2 y lanzar el 0,50€.
+- Pendiente fases 1-2 restantes: DatosRiesgo, PresupuestosCompanias, HogarCatastro, fichas del tomador, portal y asegura hogar-nuevo; module-seguros debe reexportar provinciaPorCp de core-direccion; quitar supuestos optimistas (habitaciones por m²) de asegura.
+
 ## (20/10/2026) Correduría · oportunidad de HOGAR con Catastro
 - CP primero (fuera default SEVILLA), buscador Catastro en la oportunidad, avisos (capital sugerido, infraseguro, discrepancias, antigüedad >40, uso obligatorio antes del 0,50€, hipoteca, prellenado desde cartera viva). Helpers `module-tarificacion/src/hogar-asesor.ts`.
 - Fix `core-catastro` elegirVia: calles de pedanía («PARRA LA (VENTAS CARRIZA)») ya no se confunden con ISABEL PARRA/PARRAS; solo gana coincidencia exacta.

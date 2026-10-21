@@ -17,7 +17,7 @@ import {
   estadoCodigoWhatsapp, formatoCodigoWhatsapp, formatoTokenVistaValido, hashCodigoWhatsapp, hashTokenVista, intentosQuedan,
   MAX_INTENTOS_WHATSAPP,
 } from '@central/module-seguros-portal'
-import { esMovilWhatsapp } from '@central/module-seguros'
+import { aE164, esMovilWhatsapp } from '@central/module-seguros'
 
 import { prismaAsegura } from './asegura-db'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
@@ -134,4 +134,25 @@ export async function movilDeFicha(correduriaId: string, clienteId: string): Pro
     if (esMovilWhatsapp(descifrarCampo(v))) return 'ok'
   }
   return hayIlegible ? 'ilegible' : 'sin_movil'
+}
+
+/**
+ * El móvil del TOMADOR para abrir su chat (`wa.me/<número>`) en el WhatsApp de Alberto (21/10/2026). Solo dígitos E.164
+ * sin «+». `null` = no hay uno válido (o es ilegible): el enlace sale SIN número y WhatsApp le deja elegir el chat.
+ * 🚨 No envía nada: es el destino del chat que abre Alberto y que manda él. Mismo criterio que `movilDeFicha`.
+ */
+export async function movilParaChat(correduriaId: string, clienteId: string): Promise<string | null> {
+  const c = await prismaAsegura().cliente.findFirst({
+    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+    select: { telefono: true, telefonos: { select: { telefono: true } } },
+  })
+  if (!c) return null
+  for (const v of [c.telefono, ...c.telefonos.map((t) => t.telefono)]) {
+    if (typeof v !== 'string' || v.trim() === '' || campoIlegible(v)) continue
+    const claro = descifrarCampo(v)
+    if (!esMovilWhatsapp(claro)) continue
+    const e164 = aE164(claro)
+    if (e164) return e164.replace(/\D/g, '')
+  }
+  return null
 }

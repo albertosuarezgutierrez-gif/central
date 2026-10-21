@@ -91,6 +91,32 @@ async function bajarCatastroHttp(url: string): Promise<string> {
   }
 }
 
+/**
+ * COLA APARTE para el autocompletado de calle: el tecleo no puede alargar la cola de `bajarCatastroHttp` (consultas reales de hogar,
+ * subastas) ni mover su cerrojo. Espaciado propio, un solo intento y sin pausas de reintento; si el Catastro corta, falla y punto.
+ */
+const ESPERA_SUGERENCIA_MS = 400
+const MAX_SUGERENCIAS_EN_COLA = 5
+let ultimaSugerencia = 0
+let sugerenciasEnCola = 0
+/** `null` = cola llena (no disponible ahora): no se aplaza más ni se lanza error. */
+async function bajarSugerencia(url: string): Promise<string | null> {
+  if (sugerenciasEnCola >= MAX_SUGERENCIAS_EN_COLA) return null
+  sugerenciasEnCola++
+  try {
+    return await turnoYBajarSugerencia(url)
+  } finally {
+    sugerenciasEnCola--
+  }
+}
+async function turnoYBajarSugerencia(url: string): Promise<string> {
+  const ahora = Date.now()
+  const salida = Math.max(ahora, ultimaSugerencia + ESPERA_SUGERENCIA_MS)
+  ultimaSugerencia = salida
+  if (salida > ahora) await new Promise((r) => setTimeout(r, salida - ahora))
+  return bajar(url, 8000)
+}
+
 // ── Diagnóstico SIN identificar la vivienda ─────────────────────────────────
 //
 // 🚨 Una referencia catastral IDENTIFICA UNA VIVIENDA CONCRETA, y en el portal
@@ -197,6 +223,21 @@ export async function resolverNombreVia(
   // llama no puede tirar para adelante con el nombre crudo (ver abajo).
   // `candidatas` son las parecidas, para que ELIJA una persona (nunca el código).
   return { nombre, ambigua: !nombre && vias.length > 0, candidatas: nombre ? [] : viasParecidas(vias, calle) }
+}
+
+/**
+ * El callejero de un municipio filtrado por UNA palabra (subcadena, cualquier tipo de vía), en bruto: para el autocompletado de calle.
+ * Lanza si el Catastro no contesta; devuelve `null` si la cola de sugerencias está llena (máx. 5 en espera). Ver `sugerirVias()` para filtrar y ordenar.
+ */
+export async function listarViasPorTermino(
+  provincia: string,
+  municipio: string,
+  termino: string,
+): Promise<Array<{ tipo: string; nombre: string }> | null> {
+  if (!termino.trim()) return []
+  const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: '', NombreVia: termino })
+  const xml = await bajarSugerencia(`${CATASTRO_VIA}?${q.toString()}`)
+  return xml === null ? null : parsearVias(xml)
 }
 
 /**
@@ -313,10 +354,12 @@ export async function buscarRefPorDireccion(
  * ninguna gana): seguir con el nombre crudo daría los pisos de otra calle.
  */
 export async function inmueblesPorDireccion(
-  p: ParamsDnploc & { provincia: string; municipio: string },
+  p: ParamsDnploc & { provincia: string; municipio: string; /** Nombre OFICIAL ya elegido en el autocompletado: no se vuelve a resolver (ni a poder ser ambiguo). */ viaOficial?: string },
 ): Promise<{ via: string; inmuebles: InmuebleCatastro[] } | null> {
-  const via = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle)
-    .catch(() => ({ nombre: null, ambigua: false, candidatas: [] }))
+  const via = p.viaOficial
+    ? { nombre: p.viaOficial, ambigua: false }
+    : await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle)
+        .catch(() => ({ nombre: null, ambigua: false, candidatas: [] }))
   if (via.ambigua) return null
   const calle = via.nombre ?? p.calle
   const q = new URLSearchParams({

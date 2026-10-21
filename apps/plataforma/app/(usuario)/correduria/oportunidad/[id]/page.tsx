@@ -6,6 +6,7 @@ import { fichaAsegura } from '@/lib/ficha-asegura'
 import { propuestaCarteraHogar, type PropuestaCarteraHogar } from '@/lib/correduria/hogar-cartera'
 import RiesgoPantalla from './RiesgoPantalla'
 import { tomadorDelRiesgo } from './variante'
+import { correoDelTomador } from './enviar-cliente'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,13 +35,15 @@ export default async function OportunidadPage({ params }: { params: Promise<{ id
     // Hogar: ¿el cliente ya tiene hogar EN VIGOR en la cartera? Se propone como punto de partida (nada se escribe solo).
     // Si la ficha no se puede leer es `pendiente` («no se sabe»), nunca «sin póliza».
     let propuestaCartera: PropuestaCarteraHogar | null = null
+    // La ficha del TOMADOR: la propuesta de hogar y si tiene correo («Enviar al cliente» solo ofrece el correo con él).
+    const ficha = await fichaAsegura(tomadorDelRiesgo(lectura.riesgo))
     if (lectura.riesgo.oportunidad.ramo === 'hogar') {
-      const ficha = await fichaAsegura(tomadorDelRiesgo(lectura.riesgo))
       propuestaCartera = propuestaCarteraHogar(ficha.estado === 'ok' ? ficha.ficha.polizas : null)
     }
+    const correoTomador = correoDelTomador(ficha.estado === 'ok' ? ficha.ficha.contacto : null)
     return (
       <Pagina>
-        <RiesgoPantalla inicial={lectura.riesgo} hoy={hoyMadrid()} propuestaCartera={propuestaCartera} />
+        <RiesgoPantalla inicial={lectura.riesgo} hoy={hoyMadrid()} propuestaCartera={propuestaCartera} correoTomador={correoTomador} />
       </Pagina>
     )
   }

@@ -46,7 +46,8 @@ test('«Probar tarificación»: solo integraciones de un ramo con adaptador (Hog
   const lec = trozo('lib/tarificador-lectura.ts', 'export async function leerIntegracionesActivas', 'export async function leerRiesgoParaReencolar')
   assert.match(lec, /ramo = any\(\$\{\[\.\.\.RAMOS_TARIFICABLES_RPA\]\}::text\[\]\)/)
   // 19/10/2026: Hogar entra en la lista, pero la consulta lo limita a las compañías con bot de tarificación de Hogar.
-  assert.match(lec, /and \(ramo <> 'hogar' or compania = any\(\$\{\[\.\.\.COMPANIAS_HOGAR_RPA\]\}::text\[\]\)\)/)
+  // 21/10/2026: la lista sale de `companiasHogarRpa()` (las fijas + las del interruptor, solo de la lista cerrada).
+  assert.match(lec, /and \(ramo <> 'hogar' or compania = any\(\$\{companiasHogarRpa\(\)\}::text\[\]\)\)/)
   assert.deepEqual([...COMPANIAS_HOGAR_RPA], ['allianz'])
   // Lista FIJADA (14/10/2026: + auto, coche de Mapfre NSEI; 19/10/2026: + hogar, solo Allianz). Un ramo nuevo aquí abre «Probar tarificación» e integraciones.
   assert.deepEqual([...RAMOS_TARIFICABLES_RPA], ['comunidades', 'moto', 'auto', 'hogar'])

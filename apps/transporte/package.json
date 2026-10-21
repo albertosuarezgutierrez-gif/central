@@ -20,7 +20,9 @@
     "prisma": "^5.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@central/core-direccion": "workspace:*",
+    "@central/core-catastro": "workspace:*"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

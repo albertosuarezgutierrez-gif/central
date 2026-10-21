@@ -473,7 +473,7 @@ export {
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
 export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
-export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
+export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, enlaceWhatsappPresupuesto, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -1157,6 +1157,7 @@ export {
   garantiasDeOpciones,
   type OpcionProductoLegible,
   claveCobertura,
+  clavesCatalogo,
   clasificarCoberturas,
   esTodoRiesgo,
   type ContextoGarantias,
@@ -1385,13 +1386,27 @@ export { telefonoParaFicha, formasHashTelefono } from './whatsapp-telefono.ts'
 export { redactarPii, type OpcionesRedaccion } from './redactar-pii.ts'
 
 export {
-  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto,
+  TAXONOMIA_POR_RAMO, ramoOfertaDe, garantiasDelRamo, garantiaCanonica, normalizarGarantia, normalizarTexto, remapearGarantiasLectura,
 } from './coberturas-taxonomia.ts'
 export type { RamoOferta, GrupoGarantia, TipoValorGarantia, GarantiaCanonica } from './coberturas-taxonomia.ts'
-export { compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2 } from './comparar-ofertas.ts'
+export {
+  compararOfertas, cifrasDeMatriz, UMBRAL_CONTINENTE_EUR_M2, VERSION_COMPARATIVA, FUENTES_OFERTA, CRITERIO_RANKING, estadoTriple,
+  textoHuellaComparativa,
+} from './comparar-ofertas.ts'
 export type {
   OfertaNormalizada, ValorGarantia, ResultadoComparacion, FilaMatriz, CeldaMatriz, ResumenOferta, AlertaInfraseguro,
+  FuenteOferta, FraccionamientoOferta, ReferenciaOferta, EstadoTriple, PuestoRanking, RankingComparacion,
 } from './comparar-ofertas.ts'
+// Comparativa ÚNICA (20/10/2026): adaptadores por fuente y lo puro del resumen (etiqueta IA, cepo de compañías).
+export {
+  ofertaDeAvant2, ofertaDePolizaActual, ofertaDeBot, seleccionarAvant2, fraccionamientoDe, HOGAR_CATALOGO_A_TAXONOMIA,
+} from './ofertas-fuentes.ts'
+export type { PrecioAvant2, PolizaParaComparar, CoberturaPoliza, OfertaBot } from './ofertas-fuentes.ts'
+export { periodoEnAvisos, periodoDeAvant2 } from './ofertas-fuentes.ts'
+export { etiquetasOfertas, textoOpcionesComparadas } from './etiqueta-oferta.ts'
+export {
+  ETIQUETA_RESUMEN_IA, ETIQUETA_RESUMEN_IA_SIN_REVISAR, ETIQUETA_RESUMEN_PLANTILLA, etiquetaResumen, COMPANIAS_CONOCIDAS, companiaIntrusa, avisoCotizacionGuardada,
+} from './resumen-comparativa.ts'
 
 // Acuerdos con compañías (comisión por ramo, rappel, clave de mediador) — 06/10/2026.
 // Spec: docs/superpowers/specs/2026-10-06-correduria-acuerdos-companias-design.md

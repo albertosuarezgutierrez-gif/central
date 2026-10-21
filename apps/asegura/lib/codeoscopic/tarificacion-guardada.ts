@@ -162,7 +162,8 @@ async function ultimoHistorial(correduriaId: string, clienteId: string, ramo: 'a
   return null
 }
 
-async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown; fallos?: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {
+/** Los precios de UNA cabecera ya filtrada por correduría (la comparativa de la oportunidad también los lee). */
+export async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown; fallos?: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {
   const filasPrecios = await prisma.$queryRaw<
     {
       id: string
