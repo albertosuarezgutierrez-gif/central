@@ -45,6 +45,7 @@ import { ErrorTarificador } from '../../errores.ts'
 import { campoConRespaldo, claveCampo, registrarAtasco, type ContextoFormador } from '../../formador.ts'
 import { comprobarCampo, ErrorEleccionVersion } from '../allianz/auto.ts'
 import { compararFechaEs, esperarCampoAsentado, esperarEditable, ErrorMapaIncompleto as ErrorMapaAuto } from './auto.ts'
+import { cerrarAvisosModales } from './avisos.ts'
 import { ENLACE_TARIFICACION_RAPIDA, enTodosLosMarcos, localizar, pulsablesExactos } from './entrada.ts'
 import { login } from './login.ts'
 
@@ -217,8 +218,9 @@ async function hueco(page: Page | null, formador: ContextoFormador | undefined, 
 }
 
 /** login hecho → «Nueva producción» → «Patrimoniales» → «Tarificación y emisión rápida» → formulario (CP visible). Misma pestaña. */
-export async function abrirTarificacionRapidaHogar(page: Page, ctx: Pick<ContextoPortal, 'pulsar' | 'pausa' | 'pulsarEnlaceEntrada' | 'formador'>): Promise<void> {
+export async function abrirTarificacionRapidaHogar(page: Page, ctx: Pick<ContextoPortal, 'pulsar' | 'pausa' | 'pulsarEnlaceEntrada' | 'formador'> & { log?: (m: string, d?: Record<string, unknown>) => void }): Promise<void> {
   if (!ctx.pulsarEnlaceEntrada) throw new ErrorMapaIncompleto('la función guardada del enlace de entrada en el contexto del runner')
+  await cerrarAvisosModales(page, ctx) // v0.2.1: un modal del portal sobre la home intercepta el clic en «Nueva producción»
   await ctx.pulsar(await localizar(page, ['tab'], PESTANA_NUEVA_PRODUCCION, 'pestaña', ESPERA_MENU_MS))
   await ctx.pausa()
   await ctx.pulsar(await localizar(page, ['menuitem', 'link', 'button'], OPCION_PATRIMONIALES, 'opción del desplegable', ESPERA_MENU_MS))
@@ -341,7 +343,7 @@ export const mapfreHogar = {
   compania: 'mapfre',
   ramo: 'hogar',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.2.0',
+  version: '0.2.1',
   async tarificar(page: Page, f: FormularioHogar, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (!MAPFRE_HOGAR_ACTIVO) throw new ErrorTarificador('datos', `${ADAPTADOR}: adaptador en borrador y apagado (MAPFRE_HOGAR_ACTIVO = false)`)
     const rc = exigirDatosHogar(f)

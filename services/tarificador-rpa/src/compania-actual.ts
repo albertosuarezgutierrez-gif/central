@@ -73,9 +73,43 @@ export function indicesCompaniaActual(opciones: readonly string[], buscada: stri
   return [...new Set([...n3, ...contienen])].sort((x, y) => x - y)
 }
 
+/**
+ * Como `indicesCompaniaActual`, pero si la declarada es COMPUESTA «A / B» (marca / revendedor del catálogo) y el nombre entero no casa,
+ * prueba cada parte por separado: gana la primera que casa con UNA sola opción. Si el entero ya casa (o es ambiguo) decide el entero;
+ * si ninguna parte es única pero alguna es ambigua, devuelve esas candidatas (AMBIGUA: nunca se adivina). Puro.
+ */
+export function indicesCompaniaActualCompuesta(opciones: readonly string[], buscada: string | null | undefined): number[] {
+  const entero = indicesCompaniaActual(opciones, buscada)
+  if (entero.length > 0) return entero
+  const partes = String(buscada ?? '').split(/\s+\/\s+/).map((p) => p.trim()).filter((p) => p !== '')
+  if (partes.length < 2) return entero
+  let ambigua: number[] = []
+  for (const parte of partes) {
+    const r = indicesCompaniaActual(opciones, parte)
+    if (r.length === 1) return r
+    if (r.length > 1 && ambigua.length === 0) ambigua = r
+  }
+  return ambigua
+}
+
+/**
+ * Índice de la ÚNICA opción genérica del desplegable («OTRAS», «OTRA COMPAÑÍA», «RESTO», «VARIAS…»; sin tildes ni mayúsculas), o -1 si
+ * no hay ninguna o hay varias (no se adivina entre genéricas). Puro.
+ */
+export function indiceOpcionGenerica(opciones: readonly string[]): number {
+  const hits = opciones.flatMap((o, i) => (/^(otras?|otra compania|resto|varias)\b/.test(String(o ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()) ? [i] : []))
+  return hits.length === 1 ? hits[0]! : -1
+}
+
+/** Supuesto declarado cuando la compañía anterior no está en la lista y se marca la opción genérica. Puro. */
+export function supuestoCompaniaGenerica(buscada: string, opcion: string): string {
+  return `Compañía anterior «${buscada.replace(/\s+/g, ' ').trim().slice(0, 80)}» no está en la lista de Allianz: se marca «${opcion.replace(/\s+/g, ' ').trim()}»`
+}
+export const PREFIJO_SUPUESTO_COMPANIA_GENERICA = 'Compañía anterior «'
+
 /** Resultado del casado: una, varias (ambigua) o ninguna. Puro. */
 export function casarCompaniaActual(opciones: readonly string[], buscada: string | null | undefined): CasadoCompania {
-  const indices = indicesCompaniaActual(opciones, buscada)
+  const indices = indicesCompaniaActualCompuesta(opciones, buscada)
   if (indices.length === 1) return { estado: 'unica', indice: indices[0], indices }
   return indices.length === 0 ? { estado: 'ninguna', indices } : { estado: 'ambigua', indices }
 }

@@ -399,7 +399,16 @@ test('v0.6.5 compañía actual del riesgo: casa con UNA → elegida (sin supuest
   } finally {
     await dos.context.close()
   }
-  const ninguna = await hastaCompania({}, { ...FORM, companiaAnterior: 'Delta Ficticia' })
+  // v0.6.19: sin casar y con UNA opción genérica («Otras compañías») se marca esa y se DECLARA en el aviso de supuestos.
+  const generica = await hastaCompania({}, { ...FORM, companiaAnterior: 'Delta Ficticia / Epsilon' })
+  try {
+    assert.equal(generica.mostrado, 'Otras compañías')
+    assert.ok(generica.pulsados.includes('compania:elegida'))
+    assert.ok(generica.error instanceof ErrorMapaIncompleto && /Compañía anterior «Delta Ficticia \/ Epsilon» no está en la lista de Allianz: se marca «Otras compañías»/.test(generica.error.message))
+  } finally {
+    await generica.context.close()
+  }
+  const ninguna = await hastaCompania({ companias: COMPANIAS.filter((c) => c !== 'Otras compañías') }, { ...FORM, companiaAnterior: 'Delta Ficticia' })
   try {
     assert.equal(ninguna.mostrado, '')
     // v0.6.15: la compañía del riesgo que no está en la lista ya no sigue «sin indicar»: error de DATOS con la lista leída.

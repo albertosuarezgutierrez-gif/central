@@ -1,3 +1,4 @@
+// Turismos v0.6.19 / Moto v0.7.21 (21/10/2026, trabajo real: «DIVINA PASTORA / CLEVEREA» sin casar): la compañía anterior COMPUESTA «A / B» (marca / revendedor) prueba cada parte por separado (la primera que casa con UNA sola); si nada casa y el desplegable tiene UNA opción genérica («OTRAS», «RESTO», «VARIAS…») se marca y se DECLARA («Compañía anterior «X» no está en la lista de Allianz: se marca «…»»); sin genérica sigue `datos` con la lista COMPLETA (las afines a cada parte, primero; tope por opciones enteras). Ver compania-actual.ts.
 // Moto v0.7.20 (21/10/2026, captura de Alberto de «PRECIOS MODALIDADES»): la prima ANUAL comparable es «Anual sucesivos» del RECIBO BANCARIO (el «Anual 1er Recibo» depende del primer periodo: 182,23 € frente a 275,82 €); el 1er recibo va en avisos y, con sucesivos, se quita el supuesto «primer periodo inferior a un año… no comparable» (sin sucesivos: como antes). Solo LECTURA de lo demás: columnas con ⚠ («Normas de Contratación»), el texto rojo de TIREA y el CUESTIONARIO «Cliente Alto Potencial»/«CAP» (= descuento comercial; Alberto: no se fija aún, «enseñar al bot para el futuro») descritos saneados en avisos; `capAllianz`/`clienteAltoPotencialAllianz` del formulario NO se aplican (aviso). No se pulsa nada nuevo.
 // Moto v0.7.19 (21/10/2026, decisión de Alberto): si la fecha de adquisición es anterior a la 1ª matriculación del portal (`#fechaMatriculacion`), venga de donde venga (por defecto, tecleada o sin marca), se escribe la del portal (setter nativo, 0.7.17) y se declara como supuesto con los días de diferencia (sin fechas); ya no para como `datos`. `fechaAdquisicionPorDefecto` se sigue aceptando pero no decide.
 // Moto v0.7.18 (21/10/2026): Allianz rechazaba «[fechaAdquisicion] … no puede ser anterior a la fecha de primera matriculación» con la adquisición POR DEFECTO (= nuestra matriculación, que puede ser estimada): antes de escribirla se lee la 1ª matriculación del portal (DGT por matrícula); si la adquisición es la de por defecto (marca `fechaAdquisicionPorDefecto` de plataforma, o = nuestra matriculación) y la del portal es posterior, se usa la del portal y se declara como supuesto; si es explícita (o no se sabe), para como `datos` diciendo cuántos días antes (sin fechas).
@@ -155,7 +156,7 @@ import {
 import type { ContextoPortal } from '../../adaptador.ts'
 import { ErrorTarificador } from '../../errores.ts'
 import { elegirPoblacionPorLocalidades } from './poblacion-localidad.ts'
-import { casarCompaniaActual, mensajeCompaniaAmbigua } from '../../compania-actual.ts'
+import { casarCompaniaActual, indiceOpcionGenerica, normalizarCompania, mensajeCompaniaAmbigua, PREFIJO_SUPUESTO_COMPANIA_GENERICA, supuestoCompaniaGenerica } from '../../compania-actual.ts'
 import { conRespaldoIA, registrarAtasco, sugerirOpcion, type PeticionResolver } from '../../formador.ts'
 import { ErrorMapaIncompleto as ErrorLocalizar, localizarControl } from '../../localizar.ts'
 import {
@@ -1272,7 +1273,7 @@ const textoCia = (s: string) => s.replace(/\s+/g, ' ').trim()
  * VISIBLES —las candidatas si hubo varias—, validado en sugerirOpcion); si tampoco, hueco `datos` con la lista. Lo elegido se
  * relee del control. No se aprende (es un `<select>` por valor, no un selector que se pueda reutilizar).
  */
-export async function elegirCompaniaOrigen(raiz: Pick<Frame, 'locator'>, buscada: string, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'>, timeoutMs = 15_000): Promise<void> {
+export async function elegirCompaniaOrigen(raiz: Pick<Frame, 'locator'>, buscada: string, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'>, timeoutMs = 15_000): Promise<string | null> {
   const sel = SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen
   const fin = Date.now() + timeoutMs
   let s = await leerSelect(raiz, sel)
@@ -1295,6 +1296,15 @@ export async function elegirCompaniaOrigen(raiz: Pick<Frame, 'locator'>, buscada
     }).catch(() => null)
     if (i !== null && i >= 0 && i < visibles.length) valor = visibles[i]!.valor
   }
+  // v0.7.21: sin casar (y NO ambigua) y con UNA opción genérica («OTRAS», «RESTO»…), se marca esa y se DECLARA.
+  let supuestoGenerica: string | null = null
+  if (valor === null && c.tipo === 'ninguna') {
+    const g = indiceOpcionGenerica(reales.map((o) => textoCia(o.etiqueta)))
+    if (g >= 0) {
+      valor = reales[g]!.valor
+      supuestoGenerica = supuestoCompaniaGenerica(buscada, textoCia(reales[g]!.etiqueta))
+    }
+  }
   if (valor === null) {
     throw new ErrorTarificador(
       'datos',
@@ -1305,6 +1315,7 @@ export async function elegirCompaniaOrigen(raiz: Pick<Frame, 'locator'>, buscada
   await comprobarCampo(campo)
   if (s.valor !== valor) await campo.selectOption(valor)
   if ((await campo.inputValue()) !== valor) throw new ErrorTarificador('portal', 'allianz/moto: el portal no dejó fijada la compañía de origen')
+  return supuestoGenerica
 }
 
 /** `dd/mm/aaaa` (forma de las fechas que escribimos en los campos con máscara de fecha del portal). Puro. */
@@ -1383,10 +1394,11 @@ async function reescribirTexto(raiz: Pick<Frame, 'locator'>, sel: string, valor:
 }
 
 /** Compañía, póliza (5 cifras) y justificante del seguro anterior; solo si estuvo asegurado. Los datos ya se exigieron (`exigirDatosPortalMoto`). */
-async function rellenarSeguroAnteriorMoto(raiz: Pick<Frame, 'locator'>, d: DatosPortalMoto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'>): Promise<void> {
-  await elegirCompaniaOrigen(raiz, d.compania as string, page, ctx)
+async function rellenarSeguroAnteriorMoto(raiz: Pick<Frame, 'locator'>, d: DatosPortalMoto, page: Pick<Page, 'waitForTimeout'>, ctx: Pick<ContextoPortal, 'formador'>): Promise<string | null> {
+  const supuestoCompania = await elegirCompaniaOrigen(raiz, d.compania as string, page, ctx)
   await escribirTexto(raiz, SEL_SEGURO_ANTERIOR_MOTO.polizaOrigen, d.poliza5 as string)
   await fijarSelect(raiz, SEL_SEGURO_ANTERIOR_MOTO.fotocopia, FOTOCOPIA_PORTAL[d.fotocopia as ClaveFotocopia])
+  return supuestoCompania
 }
 
 /** De dónde parece salir la fecha de nacimiento que el portal dejó en `#driverBirthDate` (v0.7.14, trabajo real 2f90524e). */
@@ -1537,6 +1549,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
   // v0.7.14: lo que el portal trae YA en la fecha de nacimiento (con tomador = conductor, la de su registro para ese NIF). Solo se compara.
   const leerTexto = (sel: string) => raiz.locator(sel).first().inputValue()
   const nacimientoPrevio = await leerTexto(SEL_DATOS_MOTO.conductorNacimiento).catch(() => null)
+  let supuestoCompaniaMoto: string | null = null
   for (const op of plan) {
     const campo = raiz.locator(op.sel).first()
     if ((await campo.count()) === 0) throw new ErrorTarificador('portal', `allianz/moto: no aparece el campo ${op.sel} de Datos básicos`)
@@ -1551,7 +1564,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
       await campo.setChecked(op.valor === true)
     }
     // «Asegurado en otra compañía» = Sí abre compañía de origen, póliza y justificante: antes de los años en la compañía.
-    if (op.sel === SEL_DATOS_MOTO.aseguradoOtraCia && op.valor === 'S' && ant.estuvoAsegurado) await rellenarSeguroAnteriorMoto(raiz, ant, page, ctx)
+    if (op.sel === SEL_DATOS_MOTO.aseguradoOtraCia && op.valor === 'S' && ant.estuvoAsegurado) supuestoCompaniaMoto = await rellenarSeguroAnteriorMoto(raiz, ant, page, ctx)
   }
   // v0.7.18: la adquisición se compara con la 1ª matriculación que el PORTAL ya tiene (la de la matrícula), no con la nuestra.
   // v0.7.19: si es anterior, se escribe la del portal (setter nativo de la 0.7.17) y se declara, venga de donde venga.
@@ -1599,7 +1612,7 @@ export async function rellenarDatosBasicosMoto(raiz: Pick<Frame, 'locator'>, f: 
   if (ant.estuvoAsegurado) {
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen).first().inputValue()) === '') throw new ErrorTarificador('portal', `allianz/moto: el portal vació ${SEL_SEGURO_ANTERIOR_MOTO.companiaOrigen}`)
     if ((await raiz.locator(SEL_SEGURO_ANTERIOR_MOTO.fotocopia).first().inputValue()) !== FOTOCOPIA_PORTAL[ant.fotocopia as ClaveFotocopia]) throw new ErrorTarificador('portal', `allianz/moto: el portal no dejó fijado ${SEL_SEGURO_ANTERIOR_MOTO.fotocopia}`)
-  }  return adquisicion.supuesto ? [adquisicion.supuesto] : []
+  }  return [...(adquisicion.supuesto ? [adquisicion.supuesto] : []), ...(supuestoCompaniaMoto ? [supuestoCompaniaMoto] : [])]
 }
 
 /**
@@ -2099,8 +2112,25 @@ export const MENSAJE_FALTA_COMPANIA_ACTUAL = 'falta la compañía actual del veh
 export function exigirCompaniaActualTurismos(f: FormularioAuto, hoy: Date = new Date()): void {
   if (supuestosAuto(f, hoy).compra.valor === 'ya_lo_tenia' && companiaActualDe(f) === null) throw new ErrorTarificador('datos', MENSAJE_FALTA_COMPANIA_ACTUAL)
 }
+/** Tope del texto de la lista en el mensaje (el runner corta el mensaje a 2.000 caracteres): se corta por opciones enteras, nunca a mitad. */
+const MAX_LISTA_COMPANIAS_MENSAJE = 1_500
+/**
+ * Mensaje de «la compañía no está en la lista». Lista las opciones COMPLETAS (hasta el tope, por opciones enteras con «(+N más)»);
+ * van primero las que empiezan por la primera palabra de cada parte de «A / B», que son las que ayudan a decidir. Puro.
+ */
 export function mensajeCompaniaNoCasa(buscada: string, opciones: readonly string[]): string {
-  const lista = opciones.length > 0 ? `; opciones leídas (${opciones.length}): ${opciones.join(' | ')}`.slice(0, 1_200) : ''
+  const claves = buscada.split(/\s+\/\s+/).map((p) => normalizarCompania(p).split(' ')[0] ?? '').filter((k) => k !== '')
+  const afines = (o: string) => claves.some((k) => normalizarCompania(o).split(' ')[0] === k || normalizarCompania(o).includes(k))
+  const ordenadas = [...opciones.filter(afines), ...opciones.filter((o) => !afines(o))]
+  const dentro: string[] = []
+  let largo = 0
+  for (const o of ordenadas) {
+    largo += o.length + 3
+    if (largo > MAX_LISTA_COMPANIAS_MENSAJE && dentro.length > 0) break
+    dentro.push(o)
+  }
+  const resto = ordenadas.length - dentro.length
+  const lista = opciones.length > 0 ? `; opciones leídas (${opciones.length}): ${dentro.join(' | ')}${resto > 0 ? ` (+${resto} más)` : ''}` : ''
   return `la compañía actual «${buscada.replace(/\s+/g, ' ').trim().slice(0, 80)}» no está en la lista de Allianz y no se elige ninguna${lista}`
 }
 
@@ -2179,7 +2209,7 @@ const declarado = (x: { supuesto: boolean; valor: unknown; etiqueta: string | nu
  */
 export function supuestosAplicadosTurismos(s: SupuestosAuto, aplicados: Iterable<string>): string | null {
   const hechos = new Set(aplicados)
-  return textoSupuestos([...etiquetasSupuestos(s).filter((e) => hechos.has(e)), ...SUPUESTOS_EXTRA_TURISMOS.filter((e) => hechos.has(e)), ...[...hechos].filter((e) => PREFIJOS_ANTECEDENTES_TURISMOS.some((p) => e.startsWith(`${p}: «`)))])
+  return textoSupuestos([...etiquetasSupuestos(s).filter((e) => hechos.has(e)), ...SUPUESTOS_EXTRA_TURISMOS.filter((e) => hechos.has(e)), ...[...hechos].filter((e) => PREFIJOS_ANTECEDENTES_TURISMOS.some((p) => e.startsWith(`${p}: «`)) || e.startsWith(PREFIJO_SUPUESTO_COMPANIA_GENERICA))])
 }
 
 /** Etiquetas de supuesto que lleva el plan (lo que se INTENTARÁ aplicar). Puro. */
@@ -2427,6 +2457,7 @@ export async function rellenarPasoTurismos(page: Page, marco: Frame, ctx: CtxTur
       const r = await puerta(marco, op.valor)
       opcionesCompania = r.opciones
       if (r.estado === 'elegida') {
+        if (r.generica) aplicados.push(supuestoCompaniaGenerica(op.valor ?? '', r.elegida))
         if (plan.paso === PASO_ANTECEDENTES) await esperarPreguntasAntecedentesTurismos(page, marco, opcionesAntes)
         continue
       }
@@ -2892,7 +2923,7 @@ function crearAdaptador(ramo: 'auto' | 'moto') {
     ramo,
     credencial: 'ALLIANZ_EPAC',
     // Moto no cambia en la 0.6.1 … 0.6.14 (solo Turismos): conserva su versión (0.7.0, aún sin publicar, incluye `seleccionVehiculo`).
-    version: ramo === 'moto' ? '0.7.20' : '0.6.18',
+    version: ramo === 'moto' ? '0.7.21' : '0.6.19',
     async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
       if (form.ramo !== ramo) throw new ErrorTarificador('datos', `allianz/${ramo}: el formulario es de ${form.ramo}`)
       if (ramo === 'moto') return tarificarMotoConAtasco(page, form, ctx) // Moto: formulario real (grabación 13/10); Turismos sigue con el mapa SUPUESTO de abajo

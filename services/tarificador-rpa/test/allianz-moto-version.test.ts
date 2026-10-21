@@ -38,11 +38,11 @@ test('0 o 1 opciones: no hay nada que elegir', () => {
   assert.equal(eleccionVersionMotoPorSimilitud([], sel({})), null)
 })
 
-test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.20', () => {
+test('el supuesto de versión y los antecedentes favorables van en UN aviso; la moto es la 0.7.21', () => {
   const f = { aniosAseguradoAnterior: null, siniestrosUltimos5Anios: 0 } as unknown as FormularioAuto
   assert.equal(supuestosMoto('versión elegida por similitud (supuesto, había 2)', f), `${PREFIJO_SUPUESTOS}versión elegida por similitud (supuesto, había 2), ${SUPUESTO_FAVORABLE_ANIOS}.`)
   assert.equal(supuestosMoto(null, { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto), null)
-  assert.equal(allianzMoto.version, '0.7.20')
+  assert.equal(allianzMoto.version, '0.7.21')
   // v0.7.15: el aviso del primer periodo < 1 año (confirm respondido «No» por el guard) viaja en el mismo aviso del presupuesto.
   const aviso = CONFIRMS_AVANCE_ACEPTABLES['td#datosBasicos']!.supuesto
   assert.equal(supuestosMoto(null, { aniosAseguradoAnterior: 3, siniestrosUltimos5Anios: 0 } as FormularioAuto, [aviso]), `${PREFIJO_SUPUESTOS}${aviso}.`)
