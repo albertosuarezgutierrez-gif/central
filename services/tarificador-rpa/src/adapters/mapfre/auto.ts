@@ -355,7 +355,7 @@ async function leerTarjetasPrima(raiz: Pick<Frame, 'locator'>): Promise<TarjetaP
 }
 
 /** Primas → ofertas normalizadas (una por producto). `vehiculo` es opcional: Mapfre no separa marca y modelo (ver `lecturaResumenVehiculo`). */
-export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null): OfertaNormalizada[] {
+export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[], vehiculo: Vehiculo | null, supuestos: string | null = null, diagnostico: string | null = null): OfertaNormalizada[] {
   return primas.map((p) => ({
     compania: 'mapfre',
     producto: `Auto · ${p.producto}`,
@@ -375,6 +375,8 @@ export function ofertasDesdePrimasMapfre(primas: readonly PrimaProductoMapfre[],
       ...(vehiculo ? [`Vehículo según el catálogo de Mapfre: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.version}.`] : []),
       // v0.8.6: lo que el bot SUPUSO (la fila del vehículo), junto al precio, como en Allianz. Asegura lo deja pasar (`supuestosDeAvisos`).
       ...(supuestos ? [supuestos] : []),
+      // v0.8.12: diagnóstico de SOLO LECTURA del formato del «Nº de Póliza» anterior (atributos, nunca el valor). No es un supuesto.
+      ...(diagnostico ? [diagnostico] : []),
     ],
   }))
 }
@@ -1316,22 +1318,81 @@ export async function estadoPolizaAnterior(raiz: Pick<Frame, 'locator'>): Promis
   })
 }
 
+/** Las 5 últimas cifras de la póliza anterior del riesgo: solo si son EXACTAMENTE 5 cifras (ya validadas en module-tarificacion). Dato sensible: nunca a logs. */
+export function polizaAnteriorUltimos5De(f: object): string | null {
+  const v = (f as { polizaAnteriorUltimos5?: unknown }).polizaAnteriorUltimos5
+  return typeof v === 'string' && /^\d{5}$/.test(v.trim()) ? v.trim() : null
+}
+
+const PREFIJO_DIAGNOSTICO_POLIZA = 'Diagnóstico Nº póliza anterior Mapfre'
+
+/**
+ * v0.8.12 · DIAGNÓSTICO de solo lectura del «Nº de Póliza» anterior: atributos del input (maxlength, minlength, pattern, placeholder,
+ * type, inputmode), si es obligatorio y el texto visible de etiqueta/hint/mat-error del `mat-form-field`. NUNCA el valor ni se escribe
+ * nada. Devuelve `null` si el campo no está; si la lectura falla, un texto «no se pudo leer el formato» (no rompe la ejecución).
+ */
+export async function diagnosticoPolizaAnterior(raiz: Pick<Frame, 'locator'>): Promise<string | null> {
+  try {
+    const campo = raiz.locator(SEL_HISTORIAL.numPoliza).first()
+    if ((await campo.count().catch(() => 0)) === 0) return null
+    const d = await campo.evaluate((el) => {
+      const i = el as HTMLInputElement
+      const ff = i.closest('mat-form-field')
+      // Sin funciones auxiliares con nombre: el transpilador inyectaría `__name`, inexistente en el navegador.
+      const obligatorio = i.required || i.getAttribute('aria-required') === 'true' || !!ff?.querySelector('.mat-placeholder-required, .mat-form-field-required-marker') || !!ff?.classList.contains('mat-form-field-required')
+      return {
+        maxlength: i.getAttribute('maxlength'), minlength: i.getAttribute('minlength'), pattern: i.getAttribute('pattern'), placeholder: i.getAttribute('placeholder'), type: i.getAttribute('type'), inputmode: i.getAttribute('inputmode'),
+        obligatorio, deshabilitado: i.disabled,
+        etiqueta: Array.from(ff?.querySelectorAll('mat-label, label') ?? []).map((n) => (n.textContent ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | '),
+        ayuda: Array.from(ff?.querySelectorAll('mat-hint, .mat-hint') ?? []).map((n) => (n.textContent ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | '),
+        error: Array.from(ff?.querySelectorAll('mat-error, .mat-error') ?? []).map((n) => (n.textContent ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean).join(' | '),
+      }
+    })
+    const v = (x: string | null) => (x === null || x === '' ? 'n/d' : x.slice(0, 120))
+    return `${PREFIJO_DIAGNOSTICO_POLIZA}: maxlength=${v(d.maxlength)}, minlength=${v(d.minlength)}, pattern=${v(d.pattern)}, placeholder=${v(d.placeholder)}, type=${v(d.type)}, inputmode=${v(d.inputmode)}, obligatorio=${d.obligatorio}, deshabilitado=${d.deshabilitado}, etiqueta=${v(d.etiqueta)}, ayuda=${v(d.ayuda)}, error=${v(d.error)}`
+  } catch {
+    return `${PREFIJO_DIAGNOSTICO_POLIZA}: no se pudo leer el formato`
+  }
+}
+
 /**
  * Historial del paso 3 tras elegir la compañía anterior (grabación 15/10/2026: el humano NO tocó el interruptor; la lista de
  * compañías estaba ya disponible). Fail-closed: el interruptor (si existe) tiene que estar como dice el riesgo (no se pulsa);
- * el «Nº de Póliza» anterior NO viaja en el riesgo: si el portal lo exige y está vacío → `datos` (no se inventa); si no lo
- * exige o ya viene relleno, no se toca.
+ * el «Nº de Póliza» anterior: si el campo está vacío y el riesgo trae `polizaAnteriorUltimos5` (5 cifras) se escribe y se relee
+ * (`datos` si no se fija); sin ese dato: si el portal lo exige → `datos` (no se inventa); si no lo exige o ya viene relleno, no se toca. v0.8.12: devuelve el diagnóstico de formato del campo (aviso de la oferta); si lanza `datos`,
+ * el diagnóstico va en el mensaje (los errores no llevan avisos).
  */
-export async function historialAnterior(nsei: Page, f: FormularioAuto, formador: ContextoFormador | undefined): Promise<void> {
+export async function historialAnterior(nsei: Page, f: FormularioAuto, formador: ContextoFormador | undefined): Promise<string | null> {
   const anios = f.aniosAseguradoAnterior ?? 0
   const sw = await interruptorCompaniaAnterior(nsei)
   if (anios > 0 && sw === false) await huecoPaso(nsei, formador, 'compania anterior', 'Figuras', 'el interruptor «¿Tiene compañía anterior?» está apagado y el riesgo trae años en la compañía anterior')
   if (anios === 0 && sw === true) await huecoPaso(nsei, formador, 'compania anterior', 'Figuras', 'el interruptor «¿Tiene compañía anterior?» está encendido y el riesgo no trae compañía anterior')
-  if (anios === 0) return
+  if (anios === 0) return null
+  const diagnostico = await diagnosticoPolizaAnterior(nsei)
+  if (diagnostico) formador?.log('mapfre_num_poliza_diagnostico', { diagnostico })
   const p = await estadoPolizaAnterior(nsei)
-  if (p.presente && p.vacio && p.obligatorio) {
-    throw new ErrorTarificador('datos', 'mapfre/auto: Mapfre exige el nº de póliza de la compañía anterior y el riesgo no lo trae (falta ese dato en el formulario de auto; no se inventa)')
+  const ultimos5 = polizaAnteriorUltimos5De(f)
+  if (p.presente && p.vacio && ultimos5 !== null) {
+    // Mapfre acepta las 5 ÚLTIMAS cifras. Mismo ayudante de escritura que el resto de campos de texto (sin pulsaciones nuevas).
+    const campo = nsei.locator(SEL_HISTORIAL.numPoliza).first()
+    if (await esperarEditable(campo)) {
+      const op: OperacionNsei = { sel: SEL_HISTORIAL.numPoliza, etiqueta: 'nº de póliza anterior', tipo: 'texto', valor: ultimos5, paso: 'figuras' }
+      try {
+        await rellenarCamposTexto(nsei, { escribibles: [op], pendientes: [] }, { page: nsei, formador })
+      } catch (e) {
+        if (e instanceof ErrorMapaIncompleto) throw e
+        throw new ErrorTarificador('datos', 'mapfre/auto: no se pudo fijar el nº de póliza de la compañía anterior en el portal (las 5 últimas cifras del riesgo no quedaron escritas)')
+      }
+      if ((await campo.inputValue().catch(() => '')) !== ultimos5) throw new ErrorTarificador('datos', 'mapfre/auto: el portal no dejó fijado el nº de póliza de la compañía anterior (las 5 últimas cifras del riesgo no se mantuvieron)')
+      formador?.log('mapfre_num_poliza_escrito', {})
+      return diagnostico
+    }
+    formador?.log('mapfre_num_poliza_no_editable', {})
   }
+  if (p.presente && p.vacio && p.obligatorio) {
+    throw new ErrorTarificador('datos', `mapfre/auto: Mapfre exige el nº de póliza de la compañía anterior y el riesgo no lo trae (falta ese dato en el formulario de auto; no se inventa)${diagnostico ? `. ${diagnostico}` : ''}`)
+  }
+  return diagnostico
 }
 
 /**
@@ -1430,7 +1491,7 @@ export async function precioDesdeObjetoAsegurado(
   const planFig = sinHist.plan
   await rellenarCamposTexto(nsei, planDelPaso(planFig, 'figuras', [SEL_HISTORIAL.siniestrosRc5]), respaldo)
   await rellenarMatSelects(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel !== SEL_LICENCIA.clasePermiso), pendientes: [] }, ctx, respaldo)
-  if (!sinHist.omitido) await historialAnterior(nsei, f, ctx.formador)
+  const diagnosticoPoliza = sinHist.omitido ? null : await historialAnterior(nsei, f, ctx.formador)
   // v0.8.4: los siniestros, AL FINAL del historial (como la grabación: compañía → nº de póliza → salir). Con 0 y el campo
   // deshabilitado (estado natural del portal) no se tocan; con >0 y deshabilitado → atasco + hueco (no hay forma grabada).
   await rellenarCamposTexto(nsei, { escribibles: planDelPaso(planFig, 'figuras').escribibles.filter((o) => o.sel === SEL_HISTORIAL.siniestrosRc5), pendientes: [] }, respaldo)
@@ -1441,7 +1502,7 @@ export async function precioDesdeObjetoAsegurado(
   // marca + modelo + versión en un solo texto). Localidad: NSEI no la pide para el riesgo → null.
   const cpPortal = await nsei.locator(SEL_OBJETO.cpCirculacion).first().inputValue({ timeout: 2_000 }).catch(() => null)
   const usados = { codigoPostal: cpPortal, localidad: null, vehiculo: { marca: null, modelo: null, version: null, denominacion: vehiculo?.denominacion ?? null } }
-  return { ofertas: conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos), usados), vehiculoConfirmado: vehiculo }
+  return { ofertas: conDatosUsados(ofertasDesdePrimasMapfre(primas, null, supuestos, diagnosticoPoliza), usados), vehiculoConfirmado: vehiculo }
 }
 
 /**
@@ -1454,7 +1515,7 @@ export const mapfreAuto = {
   compania: 'mapfre',
   ramo: 'auto',
   credencial: 'MAPFRE_WMEDIADORES',
-  version: '0.8.11',
+  version: '0.8.12',
   async tarificar(page: Page, form: FormularioAuto, ctx: ContextoPortal): Promise<ResultadoAdaptador> {
     if (form?.ramo !== 'auto' && form?.ramo !== 'moto') throw new ErrorTarificador('datos', 'mapfre/auto: el formulario no es de auto ni de moto')
     const pulsarEnlaceEntrada = ctx?.pulsarEnlaceEntrada
