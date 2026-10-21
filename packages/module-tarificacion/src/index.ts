@@ -775,6 +775,8 @@ export {
   atascoActivo,
   horasAtasco,
   leerAtascoWorker,
+  leerOpcionesAtasco,
+  MAX_OPCIONES_ATASCO,
   candidatosVisibles,
   candidatoAtascoBloqueado,
   elegirCandidatoAtasco,

@@ -736,7 +736,13 @@ test('MAPFRE · el NIF del tomador es SECRETO del trabajo en el worker: redactad
   const runner = sinComentarios(readFileSync(join(SRV, 'src/runner.ts'), 'utf8'))
   assert.match(runner, /const secretosRiesgo = secretosDelRiesgo\(trabajo\.riesgo\)/)
   assert.match(runner, /const secretos = \[\.\.\.secretosDelEntorno\(env\), \.\.\.secretosRiesgo\]/)
-  assert.match(runner, /evidencia\.captura && secretosRiesgo\.length === 0 &&/, 'con NIF en el riesgo no viaja la captura (una imagen no se redacta)')
+  // 21/10/2026 (Alberto): con datos personales SOLO viaja la captura JPEG de un ATASCO/HUECO, marcada `capturaConDatos` (asegura no
+  // la manda a Telegram); el PNG genérico de un fallo sigue sin viajar. La regla vive en `capturaParaCable` (opciones-atasco.ts).
+  assert.match(runner, /capturaParaCable\(\{ png: evidencia\.captura, jpegAtasco: evidencia\.capturaAtasco, hayDatosPersonales: secretosRiesgo\.length > 0,/, 'la captura pasa por capturaParaCable con los secretos del riesgo')
+  assert.match(runner, /cap\.conDatos \? \{ capturaConDatos: true as const \}/, 'la captura con datos viaja MARCADA')
+  const op = sinComentarios(readFileSync(join(SRV, 'src/opciones-atasco.ts'), 'utf8'))
+  assert.match(op, /if \(o\.png && !o\.hayDatosPersonales &&/, 'con NIF en el riesgo no viaja el PNG genérico (una imagen no se redacta)')
+  assert.match(op, /return \{ base64: o\.jpegAtasco\.toString\('base64'\), conDatos: true \}/, 'el JPEG del atasco lleva SIEMPRE la marca de datos (fail-closed)')
   const tras = runner.slice(runner.indexOf('const redactarTrabajo'))
   assert.ok(!/(?<![\w.])redactar\((?!Trabajo)/.test(tras.replace(/ejecutarEmision\([^\n]*\n/, '')), 'tras leer el trabajo, todo pasa por redactarTrabajo')
 })

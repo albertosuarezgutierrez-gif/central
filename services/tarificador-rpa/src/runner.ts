@@ -52,7 +52,8 @@ import { crearLog } from './log.ts'
 import { localizarContinuarConRespaldo, pulsarContinuarSeguro } from './continuar.ts'
 import { elegirOpcionMatSelect } from './mat-select.ts'
 import { capturarEvidencia } from './evidencia.ts'
-import { atascoDeRespaldoHueco, cerrarFormador, prepararFormador, type ContextoFormador } from './formador.ts'
+import { atascoDeRespaldoHueco, cerrarFormador, esPeticionOpcion, prepararFormador, type ContextoFormador } from './formador.ts'
+import { capturaJpegAtasco, capturaParaCable, leerOpcionesVisibles, limpiarOpciones, pideCapturaAtasco } from './opciones-atasco.ts'
 import { enSerie, sesionEpac, type EstadoNavegador } from './sesion.ts'
 import { exigirSinVerificacion } from './verificacion.ts'
 import { textoAvisoSesionManual } from './aviso.ts'
@@ -80,7 +81,7 @@ const MAX_BYTES_EVIDENCIA = 4 * 1024 * 1024
 const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 const azar = (min: number, max: number) => min + Math.random() * (max - min)
 
-type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null }
+type Evidencia = { url: string; captura: Buffer | null; html: string | null; inventarioDom: InventarioDom | null; capturaAtasco: Buffer | null; opcionesAtasco: string[] | null }
 type Intento =
   | { ok: true; ofertas: OfertaNormalizada[]; pdfs: { nombre: string; base64: string }[]; vehiculo: VehiculoDelResultado }
   | { ok: false; c: Clasificacion; evidencia: Evidencia; atasco: AtascoWorker | null }
@@ -431,7 +432,11 @@ async function intentar(browser: Browser, k: Comun, topeMs: number): Promise<Int
     if (c.tipo === 'portal' && !c.transitorio) await atascoDeRespaldoHueco(actual, k.formador, error)
     // ATASCO (F2): solo un hueco del PORTAL no transitorio con checkpoint (nadie resolvió el paso). Lo decide asegura.
     const atasco = c.tipo === 'portal' && !c.transitorio ? (k.formador?.atasco ?? null) : null
-    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom }, atasco }
+    // ATASCO / HUECO (21/10/2026, opciones-atasco.ts): pantallazo JPEG para que Alberto VEA dónde paró (viaja aunque el riesgo
+    // lleve datos personales, marcado `capturaConDatos`) y, si el atasco es de elegir una opción de lista, sus textos visibles.
+    const capturaAtasco = pideCapturaAtasco({ hayAtasco: atasco !== null, huecoMapa: pideInventarioDom(error) }) ? await capturaJpegAtasco(actual) : null
+    const opcionesAtasco = atasco && esPeticionOpcion(atasco) ? await leerOpcionesVisibles(actual).catch(() => null) : null
+    return { ok: false, c, evidencia: { url: actual.url(), captura, html, inventarioDom, capturaAtasco, opcionesAtasco }, atasco }
   } catch (e) {
     ti.cubrir({ ok: false, codigo: 'desconocido' })
     await k.sesion.alFallo(false).catch(() => undefined)
@@ -721,9 +726,15 @@ async function main(): Promise<number> {
           // personales, ≤60 KB). Va en el `error` jsonb existente: sin migración. Un `ok` no tiene dónde guardarlo (ver informe).
           ...(recorridoDelTrabajo.capturas.length > 0 ? { recorrido: recorridoDelTrabajo } : {}),
           // Checkpoint del ATASCO (F2): candidatos ya redactados y numerados; asegura los re-sanea y decide si se atasca.
-          ...(r.atasco ? { atasco: r.atasco } : {}),
+          // Opciones visibles de la lista (solo texto, por el redactor del trabajo): `[]` = se miró y no había ninguna.
+          ...(r.atasco ? { atasco: { ...r.atasco, ...(evidencia.opcionesAtasco ? { opciones: limpiarOpciones(evidencia.opcionesAtasco, redactarTrabajo) } : {}) } } : {}),
         },
-        ...(evidencia.captura && secretosRiesgo.length === 0 && evidencia.captura.length <= MAX_BYTES_EVIDENCIA ? { capturaBase64: evidencia.captura.toString('base64') } : {}),
+        // Captura: el JPEG del atasco/hueco (también con datos personales, marcado) o, si no, el PNG de siempre SOLO sin ellos
+        // (`evidencia.captura && secretosRiesgo.length === 0 &&` vive en `capturaParaCable`).
+        ...(() => {
+          const cap = capturaParaCable({ png: evidencia.captura, jpegAtasco: evidencia.capturaAtasco, hayDatosPersonales: secretosRiesgo.length > 0, maxBytes: MAX_BYTES_EVIDENCIA })
+          return cap ? { capturaBase64: cap.base64, ...(cap.conDatos ? { capturaConDatos: true as const } : {}) } : {}
+        })(),
         ...(htmlRedactado && Buffer.byteLength(htmlRedactado) <= 2 * 1024 * 1024 ? { html: htmlRedactado } : {}),
         ...meta(),
       }
