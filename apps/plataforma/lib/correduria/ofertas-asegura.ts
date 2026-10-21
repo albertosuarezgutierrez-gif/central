@@ -150,3 +150,8 @@ export function editarOfertaAsegura(cuerpo: Record<string, unknown>): Promise<Re
 export function consolidarOfertasAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {
   return puerto('consolidar', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) }, '', 95_000)
 }
+
+/** La comparativa ÚNICA de la oportunidad (21/10/2026): GET gratis, solo lee lo guardado. */
+export function comparativaOportunidadAsegura(oportunidadId: string): Promise<Reenvio> {
+  return puerto('comparativa', { method: 'GET' }, `?oportunidadId=${encodeURIComponent(oportunidadId)}`)
+}

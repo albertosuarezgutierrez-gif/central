@@ -130,3 +130,12 @@ export function correoPresupuesto(d: DatosAvisoPresupuesto): CorreoPresupuesto {
   ].join('')
   return { asunto, texto, html }
 }
+
+/**
+ * El `wa.me` del aviso del presupuesto (21/10/2026): con el móvil del TOMADOR (solo dígitos E.164) si lo hay, para que el
+ * chat de Alberto se abra ya con él; sin uno válido, SIN número (WhatsApp le deja elegir). No envía nada. PURO.
+ */
+export function enlaceWhatsappPresupuesto(mensaje: string, movil: string | null | undefined): string {
+  const n = (movil ?? '').replace(/\D/g, '')
+  return `https://wa.me/${n.length >= 8 ? n : ''}?text=${encodeURIComponent(mensaje)}`
+}

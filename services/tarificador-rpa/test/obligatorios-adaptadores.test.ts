@@ -40,7 +40,7 @@ const hogar = () => ({
   tomador: { documentoIdentidad: '00000000T', fechaNacimiento: '1980-01-15' },
   inmueble: { codigoPostal: '41001', municipio: 'SEVILLA', nombreVia: 'PRUEBA', numero: '1', planta: '2', anioConstruccion: 1990, superficieM2: 90, referenciaCatastral: '1234567AB1234C0001DF' },
   hogar: { uso: 'habitual', regimen: 'propietario', tipoVivienda: 'piso', conMadera: false },
-  datosTomador: { nombre: 'NOMBRE', apellido1: 'APELLIDO' },
+  datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1980-01-15' },
 })
 
 const auto = (x: unknown): FormularioAuto => {
@@ -51,8 +51,8 @@ const auto = (x: unknown): FormularioAuto => {
 const casa = (x: unknown): FormularioHogar => {
   const v = validarFormularioHogar(x, HOY)
   assert.ok(v.ok, v.ok ? '' : v.errores.join('; '))
-  // `datosTomador` no es de la forma de hogar: el adaptador de Mapfre lo lee del riesgo crudo.
-  return { ...v.formulario, ...((x as { datosTomador?: unknown }).datosTomador ? { datosTomador: (x as { datosTomador: unknown }).datosTomador } : {}) } as FormularioHogar
+  // 21/10/2026: `datosTomador` ya es de la forma de hogar (lo valida y conserva `validarFormularioHogar`).
+  return v.formulario
 }
 const lanzaDatos = (fn: () => unknown) => {
   try {
@@ -166,10 +166,9 @@ test('Hogar: Allianz y Occident no piden más que la forma; Mapfre exige la refe
   assert.ok(lanzaDatos(() => exigirDatosHogar(casa(parcela))))
 })
 
-test('Occident hogar (hueco, sin registrar): HOY lee `tomador.nif`, que la forma de hogar no trae → sigue fallando `datos` (deuda conocida)', () => {
-  // Si alguien alinea el adaptador con `tomador.documentoIdentidad`, este cepo se pone rojo: entonces se borra esta prueba.
+test('Occident hogar (hueco, sin registrar): lee la forma CANÓNICA de hogar (21/10/2026; antes `tomador.nif` → siempre `datos`)', () => {
   assert.deepEqual(faltan('occident', 'hogar', hogar()), [])
-  assert.ok(lanzaDatos(() => planFormularioHogar(casa(hogar()))), 'occident/hogar ya no lee tomador.nif: actualiza este cepo')
+  assert.ok(planFormularioHogar(casa(hogar())).length > 0, 'con el formulario validado, el plan del paso 1 sale sin errores de datos')
 })
 
 test('prepararTrabajo (red final): un riesgo con forma válida pero sin lo que pide el bot NO llega al adaptador', () => {

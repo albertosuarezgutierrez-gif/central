@@ -1,11 +1,12 @@
 // Qué plantilla de PDF toca a un presupuesto (05/10/2026, F4): la decide el ORIGEN, y lo lee de la cartera.
 // Todo filtrado por la correduría: con BYPASSRLS un id ajeno no falla, devuelve los datos de otro.
 
-import { MEDIADOR } from '@central/module-seguros'
+import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { datosPdfPresupuesto } from './presupuesto-pdf-datos'
 import { origenPresupuesto } from './presupuesto-origen'
 import { leerEstudio, type DatosPdfOfertas } from './presupuesto-pdf-ofertas'
+import { estudioEnDocumento } from './estudio-cliente'
 import type { DatosPdfPresupuesto } from './presupuesto-pdf'
 
 const MEDIADOR_PDF = () => ({
@@ -14,6 +15,7 @@ const MEDIADOR_PDF = () => ({
   claveDgsfp: MEDIADOR.identidad.claveDgsfp,
   domicilio: MEDIADOR.identidad.domicilio,
   email: MEDIADOR.identidad.email || null,
+  telefono: telefonoLegible(),
 })
 
 export type LecturaPdf =
@@ -33,7 +35,10 @@ export async function leerPdfPresupuesto(correduriaId: string, id: string): Prom
   const db = prismaAsegura()
   const p = await db.presupuesto.findFirst({
     where: { id, correduriaId },
-    select: { origen: true, referencia: true, ramo: true, creadoAt: true, venceEl: true, necesidades: true, clienteId: true, estudio: true },
+    select: {
+      origen: true, referencia: true, ramo: true, creadoAt: true, venceEl: true, necesidades: true, clienteId: true, estudio: true,
+      opciones: { where: { ocultaAt: null }, select: { precioId: true, ofertaId: true } },
+    },
   })
   if (!p) return { estado: 'no_encontrado' }
   const origen = origenPresupuesto(p.origen)
@@ -42,7 +47,10 @@ export async function leerPdfPresupuesto(correduriaId: string, id: string): Prom
     return datos ? { estado: 'ok', origen, datos } : { estado: 'no_encontrado' }
   }
   if (origen !== 'ofertas') return { estado: 'origen_desconocido' }
-  const estudio = leerEstudio(p.estudio)
+  const leido = leerEstudio(p.estudio)
+  if (!leido) return { estado: 'estudio_ilegible' }
+  // Recortado a lo que va EN DOCUMENTO (una opción ocultada no sale). Sin ninguna en documento no hay estudio que pintar.
+  const estudio = estudioEnDocumento(leido, p.opciones.map((o) => ({ precioId: o.precioId ?? null, ofertaId: o.ofertaId ?? null })))
   if (!estudio) return { estado: 'estudio_ilegible' }
   const cliente = await db.cliente.findFirst({ where: { id: p.clienteId, correduriaId }, select: { nombre: true, apellidos: true } })
   return {

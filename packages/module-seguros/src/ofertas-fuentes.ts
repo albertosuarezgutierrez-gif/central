@@ -60,6 +60,62 @@ export type PrecioAvant2 = {
   meses: number | null
   /** `{porClave}` del catálogo. `null` = aún sin leer sus coberturas («no se sabe», nunca «no incluye»). */
   garantias: { porClave: Record<string, 'si' | 'no' | 'no_consta'> } | null
+  /**
+   * Los avisos del vendor tal como se guardaron (`tarificacion_precios.avisos`). Solo se LEEN para el periodo de la
+   * prima cuando `meses` es `null` (`periodoDeAvant2`); no se copian a la oferta (son observaciones internas).
+   */
+  avisos?: readonly string[] | null
+}
+
+/** Una fecha `dd/mm/aaaa` → `[año, mes, día]`, o `null` si no es una fecha real. */
+function fechaEs(d: string, m: string, a: string): [number, number, number] | null {
+  const dia = Number(d), mes = Number(m), anio = Number(a)
+  const f = new Date(Date.UTC(anio, mes - 1, dia))
+  if (f.getUTCFullYear() !== anio || f.getUTCMonth() !== mes - 1 || f.getUTCDate() !== dia) return null
+  return [anio, mes, dia]
+}
+
+/**
+ * El periodo de la prima que la PROPIA compañía escribe en sus observaciones («Prima calculada con fecha de efecto :
+ * 05/12/2026 y fecha de término : 05/12/2027»). PURO.
+ *   · `null` = no lo dice (o lo dice de dos formas distintas: no se elige una).
+ *   · `doceMeses` = el término es el mismo día del año siguiente (o la víspera): un año exacto. Cualquier otra cosa
+ *     (361 días, 6 meses…) NO es un año, aunque se le parezca: la prima sería de otro periodo.
+ */
+export function periodoEnAvisos(avisos: readonly string[] | null | undefined): { efecto: string; termino: string; doceMeses: boolean } | null {
+  const re = /fecha\s+de\s+efecto\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*,?\s*y\s+fecha\s+de\s+t[eé]rmino\s*:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/giu
+  const vistos = new Map<string, { efecto: string; termino: string; doceMeses: boolean }>()
+  for (const a of avisos ?? []) {
+    if (typeof a !== 'string') continue
+    for (const m of a.matchAll(re)) {
+      const ef = fechaEs(m[1]!, m[2]!, m[3]!)
+      const te = fechaEs(m[4]!, m[5]!, m[6]!)
+      if (!ef || !te) continue
+      const t = Date.UTC(te[0], te[1] - 1, te[2])
+      // Mismo día del año siguiente (29/02 → 28/02 o 01/03 lo resuelve Date.UTC) o la víspera.
+      const unAnio = Date.UTC(ef[0] + 1, ef[1] - 1, ef[2])
+      const doceMeses = t === unAnio || t === unAnio - 86_400_000
+      const dd = (x: [number, number, number]) => `${String(x[2]).padStart(2, '0')}/${String(x[1]).padStart(2, '0')}/${x[0]}`
+      const r = { efecto: dd(ef), termino: dd(te), doceMeses }
+      vistos.set(`${r.efecto}|${r.termino}`, r)
+    }
+  }
+  if (vistos.size !== 1) return null
+  return [...vistos.values()][0]!
+}
+
+/**
+ * El periodo de un precio de Avant2, con su origen (PURO):
+ *   · `meses` guardado (desde el 29/09/2026) → manda, tal cual.
+ *   · `meses` NULL (fila anterior) → si las observaciones de la compañía dan efecto y término de UN AÑO exacto, 12
+ *     (`deducido: true`, y se dice); si dan otro periodo, `null` con esas fechas; si no dicen nada, `null`.
+ * Nunca se supone «anual» porque sí.
+ */
+export function periodoDeAvant2(p: Pick<PrecioAvant2, 'meses' | 'avisos'>): { meses: number | null; deducido: boolean; fechas: { efecto: string; termino: string } | null } {
+  if (typeof p.meses === 'number' && Number.isFinite(p.meses)) return { meses: p.meses, deducido: false, fechas: null }
+  const enAvisos = periodoEnAvisos(p.avisos)
+  if (enAvisos?.doceMeses) return { meses: 12, deducido: true, fechas: { efecto: enAvisos.efecto, termino: enAvisos.termino } }
+  return { meses: null, deducido: false, fechas: enAvisos ? { efecto: enAvisos.efecto, termino: enAvisos.termino } : null }
 }
 
 /**
@@ -79,9 +135,15 @@ export function ofertaDeAvant2(p: PrecioAvant2, ramo: RamoOferta, opts: { caduca
   const prima = positivo(p.primaEur)
   // Tres estados del periodo: 12 = anual (se compara) · otro número = otro periodo · null = NO DECLARADO (filas
   // anteriores al 29/09/2026). Ni el segundo ni el tercero se comparan como prima anual: el precio se ve, el orden no.
-  const anual = p.meses === 12
-  if (prima !== null && p.meses === null) avisos.push('Periodo de la prima no declarado por Avant2: no se compara como anual')
-  else if (prima !== null && !anual) avisos.push(`La prima de Avant2 es de un periodo de ${p.meses} meses: no se compara como anual`)
+  // Con `meses` NULL, las fechas de efecto y término que da la propia compañía deciden (`periodoDeAvant2`).
+  const periodo = periodoDeAvant2(p)
+  const anual = periodo.meses === 12
+  if (prima !== null && periodo.deducido && periodo.fechas) {
+    avisos.push(`Periodo anual tomado de las fechas que da la compañía (efecto ${periodo.fechas.efecto}, término ${periodo.fechas.termino})`)
+  } else if (prima !== null && periodo.meses === null && periodo.fechas) {
+    avisos.push(`La compañía calculó la prima del ${periodo.fechas.efecto} al ${periodo.fechas.termino}, que no es un año exacto: no se compara como anual`)
+  } else if (prima !== null && periodo.meses === null) avisos.push('Periodo de la prima no declarado por Avant2: no se compara como anual')
+  else if (prima !== null && !anual) avisos.push(`La prima de Avant2 es de un periodo de ${periodo.meses} meses: no se compara como anual`)
   if (p.garantias === null) avisos.push('Coberturas de Avant2 aún sin leer')
   if (opts.caducada) avisos.push('Cotización de Avant2 con la fecha de efecto ya pasada: para emitir hace falta una consulta nueva')
   const firmeza = p.firmeza === 'firme' || p.firmeza === 'condicionado' || p.firmeza === 'estimado' ? p.firmeza : null
@@ -93,6 +155,8 @@ export function ofertaDeAvant2(p: PrecioAvant2, ramo: RamoOferta, opts: { caduca
     primaTotal: anual ? prima : null,
     primaNeta: null,
     garantias,
+    // El precio que NO es anual comparable se sigue viendo (con su periodo): nunca «No figura» sobre un precio que hay.
+    ...(prima !== null && !anual ? { primaPeriodo: { importe: prima, meses: periodo.meses } } : {}),
     fuente: 'avant2',
     fraccionamiento: fraccionamientoDe(p.frecuenciaPago),
     importeReciboEur: null,
@@ -110,8 +174,8 @@ export function ofertaDeAvant2(p: PrecioAvant2, ramo: RamoOferta, opts: { caduca
  * entra sin prima comparable y con su aviso), y en último lugar el de otro periodo. Así un semestral más barato no
  * tapa al anual. Se ordena por prima de los anuales (los demás al final) y se corta en `max`. Determinista.
  */
-export function seleccionarAvant2<T extends Pick<PrecioAvant2, 'id' | 'compania' | 'categoria' | 'modalidad' | 'primaEur' | 'meses'>>(precios: readonly T[], max = 8): T[] {
-  const rangoPeriodo = (x: T) => (x.meses === 12 ? 0 : x.meses === null ? 1 : 2)
+export function seleccionarAvant2<T extends Pick<PrecioAvant2, 'id' | 'compania' | 'categoria' | 'modalidad' | 'primaEur' | 'meses'> & { avisos?: readonly string[] | null }>(precios: readonly T[], max = 8): T[] {
+  const rangoPeriodo = (x: T) => { const m = periodoDeAvant2(x).meses; return m === 12 ? 0 : m === null ? 1 : 2 }
   const prima = (x: T) => (num(x.primaEur) ? x.primaEur : Number.POSITIVE_INFINITY)
   const antes = (a: T, b: T) => rangoPeriodo(a) - rangoPeriodo(b) || prima(a) - prima(b) || a.id.localeCompare(b.id)
   const mejor = new Map<string, T>()

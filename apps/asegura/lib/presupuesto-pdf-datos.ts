@@ -1,11 +1,13 @@
 // Lee de la cartera lo que pinta `pdfPresupuesto`. Todo filtrado por la correduría: con BYPASSRLS
 // un id ajeno no falla, devuelve los datos de otro.
 
-import { MEDIADOR } from '@central/module-seguros'
+import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { leerDatosCotizados } from './datos-cotizados'
 import { coberturasIncluidas, type DatosPdfPresupuesto } from './presupuesto-pdf'
 import { esDeAvant2 } from './presupuesto-origen'
+import { leerEstudio } from './presupuesto-pdf-cuadro'
+import { estudioEnDocumento } from './estudio-cliente'
 
 function numero(v: unknown): number | null {
   if (v === null || v === undefined) return null
@@ -43,6 +45,10 @@ export async function datosPdfPresupuesto(correduriaId: string, id: string): Pro
     venceEl: p.venceEl,
     datosCalculo: leidos?.estado === 'ok' ? leidos.grupos : null,
     necesidades: p.necesidades,
+    // El estudio (cuadro + resumen con etiqueta) del presupuesto de Avant2, si se preparó con él (desde el 21/10/2026).
+    // Ilegible o ausente → `null`: el PDF sale como siempre, sin cuadro (no a medias).
+    // Recortado a lo que va EN DOCUMENTO: una opción ocultada después no sale en el cuadro ni en el resumen.
+    estudio: (() => { const e = leerEstudio(p.estudio); return e ? estudioEnDocumento(e, p.opciones.map((o) => ({ precioId: o.precioId ?? null, ofertaId: o.ofertaId ?? null }))) : null })(),
     opciones: p.opciones.map((o) => ({
       compania: o.compania,
       producto: o.producto,
@@ -60,6 +66,7 @@ export async function datosPdfPresupuesto(correduriaId: string, id: string): Pro
       claveDgsfp: MEDIADOR.identidad.claveDgsfp,
       domicilio: MEDIADOR.identidad.domicilio,
       email: MEDIADOR.identidad.email || null,
+      telefono: telefonoLegible(),
     },
   }
 }

@@ -125,7 +125,7 @@ Reintento único y solo transitorio (infraestructura); sesión en memoria con TT
 - **Aviso de verificación humana:** cron de plataforma cada 10 min (`/api/cron/tarificador-verificacion`) lee `/api/operador/tarificador/avisos-verificacion` de asegura y avisa por Telegram. Interruptor `correduria.tarificador-verificacion`. **Orden de despliegue: asegura antes que plataforma.**
 
 ## Interruptores y env (Vercel `central-asegura`)
-`TARIFICADOR_RPA_ACTIVO` (=1; apagado por defecto) · emisión (10/10/2026, `docs/TARIFICADOR-EMISION-DISENO.md`): `TARIFICADOR_EMISION_ACTIVA` (también fly secret de la máquina) · `TARIFICADOR_EMISION_TELEGRAM_ID` (asegura) · `TARIFICADOR_EMISION_WEBHOOK_SECRET` (MISMO valor en plataforma y asegura, ≥ 32 caracteres: firma HMAC del botón; sin él nadie autoriza) · `TARIFICADOR_EMISION_SOLICITANTE` (plataforma) · `TARIFICADOR_FORMADOR_ACTIVO` · `TARIFICADOR_RENOVACIONES_ACTIVO` · `TARIFICADOR_GRABADOR_MAX_LLAMADAS` · `TARIFICADOR_WORKER_SECRET` · `FLY_API_TOKEN` · `TARIFICADOR_FLY_APP` · `TARIFICADOR_FLY_IMAGE` · `TARIFICADOR_API_URL`.
+`TARIFICADOR_RPA_ACTIVO` (=1; apagado por defecto) · `TARIFICADOR_HOGAR_COMPANIAS_EXTRA` (21/10/2026; hoy solo admite `mapfre`: abre Mapfre Hogar) · emisión (10/10/2026, `docs/TARIFICADOR-EMISION-DISENO.md`): `TARIFICADOR_EMISION_ACTIVA` (también fly secret de la máquina) · `TARIFICADOR_EMISION_TELEGRAM_ID` (asegura) · `TARIFICADOR_EMISION_WEBHOOK_SECRET` (MISMO valor en plataforma y asegura, ≥ 32 caracteres: firma HMAC del botón; sin él nadie autoriza) · `TARIFICADOR_EMISION_SOLICITANTE` (plataforma) · `TARIFICADOR_FORMADOR_ACTIVO` · `TARIFICADOR_RENOVACIONES_ACTIVO` · `TARIFICADOR_GRABADOR_MAX_LLAMADAS` · `TARIFICADOR_WORKER_SECRET` · `FLY_API_TOKEN` · `TARIFICADOR_FLY_APP` · `TARIFICADOR_FLY_IMAGE` · `TARIFICADOR_API_URL`.
 
 ## SQL aplicados (`apps/asegura/prisma/sql/`)
 `2026-10-05_tarificador_rpa` · `2026-10-06b_tarificador_formador` · `2026-10-06c_tarificador_formador_revoke` · `07b` · `07c` (los dos últimos, de la sesión del 07/10; ver su cabecera). Mira `2026-10-06_tipo_seguro_ramos_ofertas` para los ramos de ofertas.
@@ -160,7 +160,7 @@ el primer precio real de un bot, se pone `true` ahí (con su cepo en `obligatori
   tomador (DNI/NIE + nacimiento), inmueble (CP, vía, número, opcionales, año y m² OBLIGATORIOS), hogar (uso · régimen · tipo ·
   `conMadera`, explícitos y sin valor por defecto; capitales opcionales). El worker valida con él (`src/ramo.ts`, `case 'hogar'`).
   Occident Hogar (`occident/hogar.ts`) sigue con su tipo propio; puede pasar a `AdaptadorHogar` cuando tenga formulario.
-- Adaptador `allianz/hogar.ts` → `allianzHogar` (`ALLIANZ_HOGAR_ACTIVO=false`, sin registrar). Hace: login → Nueva Alta →
+- Adaptador `allianz/hogar.ts` → `allianzHogar` (`ALLIANZ_HOGAR_ACTIVO=true` desde el 21/10/2026, OK de Alberto para la 1.ª prueba real de TARIFICACIÓN; registrado al construir la imagen nueva). Hace: login → Nueva Alta →
   Particulares → «Allianz HOGAR» → iframe de la app `ngx-allianzhogar…` → pantalla 1 «Vivienda» por `formcontrolname` (año/m² los
   últimos; comprueba valor, población/tipo de vía autocompletados e inválidos) → opciones del riesgo SOLO por
   `marcarOpcionRiesgoHogarAllianz` (guard.ts, lista cerrada de 13 etiquetas exactas) → «SIGUIENTE» por `ctx.pulsar`.
@@ -169,10 +169,25 @@ el primer precio real de un bot, se pone `true` ahí (con su cepo en `obligatori
   **todo lo de después de «SIGUIENTE»: «Valoración de bienes» y la pantalla de PRECIO** (para ahí, en la 1.ª prueba real, con el
   inventario). En «Datos/Revisión/Pago/Confirmación» para sin tocar nada (`EmisionBloqueadaError`).
 - **Qué activar para la 1.ª prueba real (lo hace Alberto):** 1) `ALLIANZ_HOGAR_ACTIVO = true` en `allianz/hogar.ts` + imagen
-  nueva; 2) en asegura, rama `'hogar'` en `validarEntradaRamo` y `'hogar'` en `RAMOS_TARIFICABLES_RPA` (`lib/tarificador-reglas.ts`).
-  🚨 Las filas `allianz/hogar` **y** `occident/hogar` de `companias_integracion` ya están ACTIVAS (para explorar): abrir el ramo en
-  asegura habilita encolar tarificaciones de hogar para las DOS; Occident caería en `datos` («sin adaptador») hasta registrarse. La
-  fila `allianz/hogar` no se toca. 3) Lanzar una cotización con riesgo completo y leer `error.inventarioDom` del trabajo.
+  nueva; 2) asegura YA acepta hogar desde el 19/10/2026 (`validarEntradaRamo`, solo `companiasHogarRpa()`: Allianz fija; Occident
+  nunca, su fila está activa solo para explorar). 3) Lanzar una cotización con riesgo completo y leer `error.inventarioDom` del trabajo.
+  **Activación 21/10/2026:** flag en `true` (paso 1 en código). Falta: mergear → lanzar A MANO el workflow `tarificador-rpa-imagen.yml`
+  desde `main` con una etiqueta nueva → `TARIFICADOR_FLY_IMAGE` de `central-asegura` = esa imagen (antes, copiar la vigente a
+  `TARIFICADOR_FLY_IMAGE_ANTERIOR`) → redeploy de producción de asegura (el `ignoreCommand` no reconstruye asegura por un cambio solo en
+  `services/`). ⚠️ El inventario de «Valoración»/«Precio» solo sobrevive si el trabajo acaba `atascado` (`TARIFICADOR_ATASCO_ACTIVO=1` +
+  formador): un `error_definitivo` purga `error.inventarioDom` al cerrarse (`purgarRiesgoTrabajos`); `error.recorrido` se queda 30 días.
+- **21/10/2026 — contrato y cableado de Hogar completos sin portal:** `FormularioHogar` lleva además `hogar.protecciones`
+  (puerta blindada, ventanas de seguridad, urbanización cerrada, vigilancia) y `hogar.objetosValor` (joyas en/fuera de caja fuerte,
+  objetos de valor; el 0 es dato), ambos opcionales de TRES estados y sacados de «Datos de la vivienda» (`datosVivienda`, fuente
+  única; cepo `CAMPOS_VIVIENDA_DEL_BOT` en plataforma). Ningún adaptador los escribe hasta grabar su pantalla. `datosTomador`
+  (nombre/apellidos) es parte del formulario del worker (lo inyecta asegura; plataforma no puede mandarlo). La parrilla Avant2↔bot
+  ya lee el lado bot en moto, coche y hogar (`ladoBotDeLecturas`): antes decía «no aplica» en esos ramos.
+- **Mapfre Hogar** (`mapfre/hogar.ts`, borrador 0.2.0): registrado SOLO con `MAPFRE_HOGAR_ACTIVO` (apagado) y encolable SOLO con
+  `TARIFICADOR_HOGAR_COMPANIAS_EXTRA=mapfre` en asegura (lista cerrada; entonces asegura comprueba al encolar e inyecta al entregar
+  DNI, nacimiento, nombre y apellidos de la ficha). Huecos `TODO(grabación)`: campo de la referencia catastral, clics `#vc`/radio y
+  panel `#protecciones-panel`, y la pantalla de precio. Con el flag encendido cada hueco PARA con inventario DOM (modo grabación).
+- **Occident Hogar**: `planFormularioHogar` lee ya el `FormularioHogar` canónico (antes `tomador.nif`: todo trabajo caía en `datos`).
+  Sigue SIN registrar (aparcado: SSO paso 2 y formulario sin mecánica).
 
 ## Mapfre Auto · NSEI (en construcción, 13/10/2026)
 

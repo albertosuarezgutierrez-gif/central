@@ -26,12 +26,29 @@ export type ValidacionEntradaRamo = { ok: true; entrada: EntradaRamo } | { ok: f
  */
 export const RAMOS_TARIFICABLES_RPA = ['comunidades', 'moto', 'auto', 'hogar'] as const
 
-/** Compañías con bot de TARIFICACIÓN de Hogar. Hoy solo Allianz (Mapfre hogar pide datos del tomador que asegura no inyecta; Occident, sin bot). */
+/** Compañías con bot de TARIFICACIÓN de Hogar SIEMPRE abiertas. Hoy solo Allianz (Occident, aparcado y sin bot registrado). */
 export const COMPANIAS_HOGAR_RPA = ['allianz'] as const
 
-/** ¿Esta compañía puede tarificar este ramo por RPA? Todo ramo salvo Hogar (solo `COMPANIAS_HOGAR_RPA`). PURA. */
-export function companiaAdmiteRamoRpa(compania: string, ramo: string): boolean {
-  return ramo !== 'hogar' || (COMPANIAS_HOGAR_RPA as readonly string[]).includes(claveCompania(compania))
+/**
+ * Compañías de Hogar que se ABREN SOLO con el interruptor (21/10/2026): `TARIFICADOR_HOGAR_COMPANIAS_EXTRA` (Vercel `central-asegura`),
+ * lista separada por comas, filtrada contra esta lista CERRADA (otro valor no abre nada: fail-closed). Mapfre: su bot (`mapfre/hogar.ts`)
+ * va tras `MAPFRE_HOGAR_ACTIVO` en el worker y asegura le inyecta DNI, nacimiento, nombre y apellidos de la ficha al entregar.
+ * Occident NO está a propósito: su fila `occident/hogar` está ACTIVA para explorar y abrirla aquí encolaría tarificaciones sin bot.
+ * Sin el interruptor, la fila `mapfre/hogar` sigue habilitando solo la EXPLORACIÓN (lo de siempre).
+ */
+export const COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR = ['mapfre'] as const
+export const ENV_HOGAR_COMPANIAS_EXTRA = 'TARIFICADOR_HOGAR_COMPANIAS_EXTRA'
+
+/** Compañías que hoy tarifican Hogar por RPA: las fijas + las del interruptor (solo de la lista cerrada). PURA (el entorno entra). */
+export function companiasHogarRpa(env: Record<string, string | undefined> = process.env): string[] {
+  const extra = String(env[ENV_HOGAR_COMPANIAS_EXTRA] ?? '').split(',').map((c) => c.trim().toLowerCase())
+    .filter((c) => (COMPANIAS_HOGAR_RPA_CON_INTERRUPTOR as readonly string[]).includes(c))
+  return [...new Set<string>([...COMPANIAS_HOGAR_RPA, ...extra])]
+}
+
+/** ¿Esta compañía puede tarificar este ramo por RPA? Todo ramo salvo Hogar (solo `companiasHogarRpa()`). PURA (el entorno entra). */
+export function companiaAdmiteRamoRpa(compania: string, ramo: string, env: Record<string, string | undefined> = process.env): boolean {
+  return ramo !== 'hogar' || companiasHogarRpa(env).includes(claveCompania(compania))
 }
 
 /**
@@ -42,7 +59,7 @@ export function companiaAdmiteRamoRpa(compania: string, ramo: string): boolean {
 export function validarEntradaRamo(ramo: unknown, riesgo: unknown, compania?: string): ValidacionEntradaRamo {
   const v = validarFormaRamo(ramo, riesgo)
   if (!v.ok || compania === undefined) return v
-  if (!companiaAdmiteRamoRpa(compania, v.entrada.ramo)) return { ok: false, mensaje: `ramo_no_admitido: el bot de ${claveCompania(compania)} no tarifica ${v.entrada.ramo} (hogar: solo ${COMPANIAS_HOGAR_RPA.join(', ')})` }
+  if (!companiaAdmiteRamoRpa(compania, v.entrada.ramo)) return { ok: false, mensaje: `ramo_no_admitido: el bot de ${claveCompania(compania)} no tarifica ${v.entrada.ramo} (hogar: solo ${companiasHogarRpa().join(', ')})` }
   const faltan = faltanParaTarificar(compania, v.entrada.ramo, v.entrada.riesgo, { sinFicha: true })
   if (faltan && faltan.length) return { ok: false, mensaje: mensajeFaltan(faltan), errores: faltan.map((f) => f.etiqueta), faltan }
   return v
@@ -223,9 +240,9 @@ export function riesgoParaEncolar<T>(
 /** `incompleta` = la ficha se leyó y le falta o tiene mal algo (frases, nunca valores); `ilegible` = el cifrado no abre (no se ha podido mirar). */
 export type LecturaTomadorHogar = { estado: 'ok'; tomador: TomadorHogar } | { estado: 'incompleta'; faltan: string[] } | { estado: 'ilegible' }
 
-/** ¿El bot de este trabajo necesita el tomador de la ficha? Allianz + hogar. PURA. */
-export function necesitaTomadorHogar(compania: string, ramo: string): boolean {
-  return ramo === 'hogar' && (COMPANIAS_HOGAR_RPA as readonly string[]).includes(claveCompania(compania))
+/** ¿El bot de este trabajo necesita el tomador de la ficha? Hogar de una compañía de `companiasHogarRpa()` (todas lo piden). PURA (el entorno entra). */
+export function necesitaTomadorHogar(compania: string, ramo: string, env: Record<string, string | undefined> = process.env): boolean {
+  return ramo === 'hogar' && companiasHogarRpa(env).includes(claveCompania(compania))
 }
 
 /** Ficha → tomador de hogar, con TRES estados por campo. Lo cifrado (`v1:`) se abre con `descifrar`; si lanza → `ilegible`. PURA. */
@@ -333,9 +350,14 @@ export function lecturaTomadorFicha(fila: FilaTomadorFicha | null, descifrar: (v
   return { estado: 'ok', datos: { tipo: 'fisica', nombre, apellido1: primero, apellido2: segundo, fechaNacimiento: fecha } }
 }
 
-/** ¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`. PURA. */
-export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown): boolean {
+/**
+ * ¿Hacen falta los datos del tomador de la ficha? Mapfre + auto/moto + el riesgo no trae su bloque `tomador`; o (21/10/2026) Mapfre +
+ * hogar con el interruptor abierto (`companiasHogarRpa`): su bot da de alta al tomador que no conoce con nombre y apellidos. En hogar el
+ * bloque `tomador` (DNI y nacimiento) no basta: lo pone asegura igual, así que no cuenta. PURA (el entorno entra).
+ */
+export function necesitaDatosTomador(compania: string, ramo: string, riesgo: unknown, env: Record<string, string | undefined> = process.env): boolean {
   if (!(COMPANIAS_CON_NIF_TOMADOR as readonly string[]).includes(claveCompania(compania))) return false
+  if (ramo === 'hogar') return companiasHogarRpa(env).includes(claveCompania(compania))
   if (ramo !== 'auto' && ramo !== 'moto') return false
   return !(esObj(riesgo) && esObj(riesgo.tomador))
 }

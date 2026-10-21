@@ -1,5 +1,5 @@
-// Allianz ePAC · «Allianz HOGAR» — adaptador de TARIFICACIÓN (14/10/2026). APAGADO (`ALLIANZ_HOGAR_ACTIVO = false`):
-// `adapters/index.ts` lo registra SOLO con el flag en `true`, y asegura aún no acepta trabajos de hogar (`validarEntradaRamo`).
+// Allianz ePAC · «Allianz HOGAR» — adaptador de TARIFICACIÓN (14/10/2026). ENCENDIDO por Alberto el 21/10/2026 (1.ª prueba real,
+// solo tarificar): `adapters/index.ts` lo registra SOLO con el flag en `true`. Asegura ya encola hogar de Allianz (19/10/2026; puerta = su fila).
 //
 // Fuente: las 6 exploraciones IA reales de Allianz Hogar (13-14/10/2026, tabla `seguros.tarificador_exploracion_pasos`; la
 // última, 14/10 ~09:33). TODAS se quedaron en la PANTALLA 1; nada de lo que viene después se ha visto. Lo visto (estructura,
@@ -45,10 +45,11 @@ import { login, sesionSirve } from './comunidades.ts'
 import { abrirNuevaAlta, esperarMarcoApp } from './entrada.ts'
 
 /**
- * Flag de registro de Allianz HOGAR. APAGADO: lo enciende Alberto (en código, como `MOTO_ACTIVO`) cuando quiera la 1.ª prueba
- * real. Además hace falta que asegura acepte el ramo (`validarEntradaRamo` / `RAMOS_TARIFICABLES_RPA`, ver docs).
+ * Flag de registro de Allianz HOGAR. ENCENDIDO (Alberto, 21/10/2026: OK para la 1.ª prueba real de TARIFICACIÓN, no emisión).
+ * Asegura acepta el ramo desde el 19/10/2026 (`validarEntradaRamo` / `companiasHogarRpa`); la puerta de BD sigue siendo la fila
+ * `seguros.companias_integracion` allianz/hogar. Tras «Vivienda» el bot PARA con inventario (Valoración/Precio sin mapa).
  */
-export const ALLIANZ_HOGAR_ACTIVO = false
+export const ALLIANZ_HOGAR_ACTIVO = true
 
 export const ADAPTADOR = 'allianz/hogar'
 
@@ -570,6 +571,9 @@ export async function avanzarDesdeVivienda(page: Page, marco: Frame, ctx: CtxViv
 /**
  * Tras «Vivienda»: «Valoración de bienes» y «Precio» NO están vistos. Se para ahí pidiendo el inventario de estructura
  * (lo captura el runner) para mapearlas en la 1.ª prueba real. Nada se rellena ni se pulsa a ciegas.
+ * TODO(grabación) «Valoración de bienes»: capitales (`hogar.capitalContinenteEur/ContenidoEur`), joyas/objetos de valor
+ * (`hogar.objetosValor`) y medidas de seguridad (`hogar.protecciones`) ya viajan en el formulario; falta el DOM.
+ * TODO(grabación) «Precio»: lector de primas por modalidad + referencia → `ofertasDesdePrecios` (ya escrito y probado).
  */
 export function huecoTrasVivienda(paso: PasoHogar): never {
   if (paso === 'Precio') throw new ErrorMapaIncompleto('el lector de la pantalla «Precio» (sin explorar: primas, modalidades y referencia)')

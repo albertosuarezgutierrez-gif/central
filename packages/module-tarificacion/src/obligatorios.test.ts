@@ -49,7 +49,7 @@ const hogar = () => ({
   tomador: { documentoIdentidad: '00000000T', fechaNacimiento: '1980-01-15' },
   inmueble: { codigoPostal: '41001', municipio: 'SEVILLA', nombreVia: 'PRUEBA', numero: '1', planta: '2', anioConstruccion: 1990, superficieM2: 90, referenciaCatastral: '1234567AB1234C0001DF' },
   hogar: { uso: 'habitual', regimen: 'propietario', tipoVivienda: 'piso', conMadera: false },
-  datosTomador: { nombre: 'NOMBRE', apellido1: 'APELLIDO' },
+  datosTomador: { tipo: 'fisica', nombre: 'NOMBRE', apellido1: 'APELLIDO', apellido2: null, fechaNacimiento: '1980-01-15' },
 })
 const comunidad = () => ({
   ramo: 'comunidades',
