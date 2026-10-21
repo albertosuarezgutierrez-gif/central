@@ -17,6 +17,11 @@ import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
+/** Mismas envs que lee `tgSend`: si faltan, enviar devolvería `null` y la reserva ya habría quedado escrita. */
+function canalTelegramConfigurado(): boolean {
+  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID)
+}
+
 /**
  * POST /api/huecos-proteccion — la tarjeta «Seguros que no nos constan» de la bóveda (13/10/2026).
  * Cuerpo: `{ accion: 'cerrar' }` | `{ accion: 'pedir', ramos: [...] }`. Estado en `portal_aviso_leido`
@@ -55,6 +60,12 @@ export async function POST(req: Request) {
 
   const ramos = ramosValidos(parsed.data.ramos)
   if (ramos.length === 0) return NextResponse.json({ estado: 'invalido' }, { status: 400 })
+
+  // Antes de reservar: el rol no tiene DELETE, una reserva sin envío bloquearía el reintento (409 en_curso).
+  if (!canalTelegramConfigurado()) {
+    console.warn('[portal/huecos] sin avisar: falta TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID en este proyecto')
+    return NextResponse.json({ estado: 'sin_canal' }, { status: 503 })
+  }
 
   const yaHoy = await prisma.portalAvisoLeido.count({ where: { identidadId: identidad.id, clave: clavePedido(ahora) } })
   if (yaHoy > 0) return NextResponse.json({ estado: 'ya_pedido' })
