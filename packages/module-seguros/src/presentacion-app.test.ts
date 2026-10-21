@@ -120,9 +120,39 @@ test('variantes: cada una cambia el asunto y la entrada, el resto (enlace, baja,
   assert.equal(correoPresentacionApp(base).variante, 'A')
 })
 
+test('variante C: asunto, botón arriba, 3 viñetas, y mismo ?r=, baja, List-Unsubscribe y pie legal que A/B', () => {
+  const enlace = enlacePresentacion(generarRef())
+  const bajaUrl = 'https://b/baja?t=1'
+  const base = { nombre: 'Ana', enlace, bajaUrl }
+  const c = correoPresentacionApp({ ...base, variante: 'C' })
+  assert.equal(c.variante, 'C')
+  assert.equal(c.asunto, 'Te aviso antes de que caduque tu seguro o tu ITV (gratis)')
+  for (const cuerpo of [c.texto, c.html]) {
+    assert.ok(cuerpo.includes(enlace), 'lleva el ?r=')
+    assert.ok(cuerpo.includes('?r='))
+    assert.ok(cuerpo.includes(bajaUrl), 'lleva la baja')
+    assert.ok(cuerpo.includes('Activar mis avisos gratis'))
+  }
+  // El botón va antes de cualquier viñeta.
+  assert.ok(c.texto.indexOf('Activar mis avisos gratis') < c.texto.indexOf('Todos tus seguros en un sitio'))
+  assert.ok(c.html.indexOf('Activar mis avisos gratis') < c.html.indexOf('<ul'))
+  assert.equal(c.texto.split('\n').filter((l) => l.startsWith('· ')).length, 3)
+  // Pie legal idéntico al de A/B (misma función, mismo texto).
+  const a = correoPresentacionApp({ ...base, variante: 'A' })
+  const pie = (t: string) => t.slice(t.indexOf('—'))
+  assert.equal(pie(c.texto), pie(a.texto))
+  assert.ok(c.html.includes('#3364ee'))
+  // Las cabeceras de baja no dependen de la variante y siguen siendo One-Click.
+  const h = cabecerasBaja(bajaUrl)
+  assert.ok(h['List-Unsubscribe'].includes(`<${bajaUrl}>`))
+  assert.equal(h['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click')
+})
+
 test('variantes activas: env vacía o basura = todas; reparto por turno equilibrado', () => {
   assert.deepEqual(variantesActivas(''), ['A', 'B'])
   assert.deepEqual(variantesActivas('zz, 9'), ['A', 'B'])
+  assert.deepEqual(variantesActivas('c'), ['C'])
+  assert.deepEqual(variantesActivas('A,B,C'), ['A', 'B', 'C'])
   assert.deepEqual(variantesActivas(' b ,B'), ['B'])
   const turnos = [0, 1, 2, 3].map((i) => varianteDeTurno(i, ['A', 'B']))
   assert.deepEqual(turnos, ['A', 'B', 'A', 'B'])

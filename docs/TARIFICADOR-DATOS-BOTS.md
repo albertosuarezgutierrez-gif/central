@@ -86,6 +86,8 @@ Ficha/cotizador hoy: `tarificador-moto-formulario.ts` (`formularioBotMoto`) y ca
 
 Allianz Moto v0.7.19 (Alberto, 21/10/2026): si la fecha de adquisición es anterior a la 1ª matriculación que el portal trae por la matrícula (`#fechaMatriculacion`), venga de donde venga (por defecto, tecleada o sin marca `fechaAdquisicionPorDefecto`), el bot escribe la del portal y lo declara como supuesto con los días de diferencia, sin fechas (`fechaAdquisicionFrentePortal`, `allianz/auto.ts`); ya no para como `datos`. Sin fecha legible del portal, o igual/posterior, se escribe la nuestra.
 
+Allianz Moto v0.7.20 — «Cliente Alto Potencial» (CAP), bajo la tabla «PRECIOS MODALIDADES» del ePAC: desplegable Sí/No. Elegir «Sí» abre una ventana lateral de descuento comercial, hoy **desactivado en la cuenta del broker** (Alberto, 21/10/2026). El bot solo lee CAP como diagnóstico (campos `capAllianz` / `clienteAltoPotencialAllianz` en `module-tarificacion`: validados, no aplicados); en el run 0.7.20 no se encontraron sus selectores (aviso «no se encontró en la pantalla de precios»). **Pendiente:** cuando Alberto active el descuento, verificar con un run real (capturar el HTML de la rejilla y de la ventana lateral) antes de que el bot escriba nada; el bot nunca aplica un descuento sin decisión explícita.
+
 ---
 
 ## 3. HOGAR
