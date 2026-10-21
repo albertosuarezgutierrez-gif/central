@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { adaptadorDeRamo, checklistBot, ramosConBots } from './tarificador-bots-ramos.ts'
+import { extraEfectivo } from './tarificador-bots-extra.ts'
 
 test('ramo sin adaptador (o raro) → null', () => {
   for (const r of ['vida', 'salud', 'decesos', 'comunidades', 'HOGAR', 'AUTO', '', 'toString', '__proto__', null, undefined]) {
@@ -119,6 +120,9 @@ test('moto · sexo del conductor elegido en el bloque llega al riesgo y desbloqu
   assert.ok(d.ok && d.riesgo.fechaAdquisicion === '2023-05-10' && d.riesgo.fechaAdquisicionPorDefecto === true)
   const x = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '2024-01-02' })
   assert.ok(x.ok && x.riesgo.fechaAdquisicion === '2024-01-02' && x.riesgo.fechaAdquisicionPorDefecto === false)
+  // Oportunidad «#pedir-precio» (21/10/2026): el campo llega PRECARGADO con la `fechaCompra` guardada (= la matriculación), nunca vacío.
+  const pre = a.construir({ ...F, fechaMatriculacion: '2023-05-10' }, extraEfectivo({}, { cilindrada: '125', sexo: 'mujer', fechaAdquisicion: '2023-05-10' }))
+  assert.ok(pre.ok && pre.riesgo.fechaAdquisicion === '2023-05-10' && pre.riesgo.fechaAdquisicionPorDefecto === true)
 })
 
 test('moto · desplegable de sexo en su valor inicial («») no pisa el sexo del formulario', () => {

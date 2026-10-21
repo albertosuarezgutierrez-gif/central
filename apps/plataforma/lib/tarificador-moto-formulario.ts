@@ -76,6 +76,18 @@ export function fechaAdquisicionPorDefecto(fechaMatriculacion: string | null | u
 }
 
 /**
+ * ¿La fecha de adquisición que viaja es la de POR DEFECTO? (marca `fechaAdquisicionPorDefecto` del bot Allianz moto 0.7.18). Sí si
+ * el campo va vacío (sale de la matriculación) O si es IGUAL a nuestra fecha de matriculación: el campo del bot se precarga con lo
+ * guardado en `datosVehiculo.fechaCompra` (p. ej. en la oportunidad, «#pedir-precio»), y guardar la matriculación como compra no
+ * la vuelve un dato distinto. No depende de cómo llegó el valor al navegador. Una explícita DISTINTA no es por defecto. PURA.
+ */
+export function adquisicionEsPorDefecto(adquisicionTecleada: string | null | undefined, fechaAdquisicion: string | null, fechaMatriculacion: string | null | undefined): boolean {
+  if ((adquisicionTecleada ?? '').trim() === '') return true
+  const mat = fechaAdquisicionPorDefecto(fechaMatriculacion)
+  return fechaAdquisicion !== null && mat !== null && fechaAdquisicion === mat
+}
+
+/**
  * Últimas 5 cifras de la póliza anterior cuando NO hay una explícita (vacía): las 5 últimas cifras (solo dígitos) del nº completo que
  * ya consta; con menos de 5 dígitos o sin nº, `null` (sigue faltando). Una explícita siempre gana: esto solo se consulta cuando está vacía. PURA.
  */
@@ -231,7 +243,9 @@ export function formularioBotMoto(e: EntradaBotMoto, hoy: Date = new Date()): Fo
     ...(companiaAnterior !== null ? { companiaAnterior } : {}),
     // v0.7.18 del bot: `fechaAdquisicionPorDefecto` = no la tecleó Alberto (salió de `fechaAdquisicionPorDefecto`, la matriculación,
     // que puede ser estimada): Allianz moto la sube a la 1ª matriculación de su portal si es posterior. Mapfre/Generali lo ignoran.
-    ...(fechaAdquisicion !== null ? { fechaAdquisicion, fechaAdquisicionPorDefecto: adqTxt === '' } : {}),
+    // 21/10/2026: también si la tecleada/guardada es IGUAL a la matriculación (`adquisicionEsPorDefecto`): en la oportunidad el campo
+    // llega precargado desde `fechaCompra` y nunca iba vacío, así que la marca no viajaba.
+    ...(fechaAdquisicion !== null ? { fechaAdquisicion, fechaAdquisicionPorDefecto: adquisicionEsPorDefecto(adqTxt, fechaAdquisicion, e.fechaMatriculacion) } : {}),
     ...(polizaAnteriorUltimos5 !== null ? { polizaAnteriorUltimos5 } : {}),
     ...(fotocopiaAnterior !== null ? { fotocopiaAnterior } : {}),
     // El garaje del cotizador es un SUPUESTO (dato de emisión, no de precio): no se manda como si fuera un dato.
