@@ -97,3 +97,20 @@ test('🪤 el triaje guarda el asunto TRUNCADO del excluido y no lee sus eventos
   // El lector de eventos y el de devoluciones solo miran categorías de correduría.
   assert.match(src, /\(c\.categoria === 'correduria' \|\| c\.categoria === 'correduria-recibo'\)\s*\n\s*&& \(evento = leerCorreoEventoAseguradora/)
 })
+
+test('🪤 F1 (21/10/2026): lo excluido por el SOBRE no se descarga; lo excluido por el cuerpo no conserva NINGÚN adjunto', () => {
+  const src = leer('apps/plataforma/lib/correo/imap.ts')
+  const f = src.slice(src.indexOf('async listarNuevos('), src.indexOf('async etiquetar('))
+  // Fase 1: solo sobres. La descarga del mensaje (source) va DESPUÉS de la exclusión por remitente/asunto.
+  assert.match(f, /client\.fetch\(busqueda, \{ uid: true, labels: true, envelope: true \}\)/)
+  assert.doesNotMatch(f, /client\.fetch\(busqueda, \{[^}]*source: true/, 'la búsqueda no puede traer el mensaje entero')
+  const excl = f.indexOf('if (exclusionSeguridad(sobre.from, sobre.subject)) {')
+  const descarga = f.indexOf('client.fetchOne(String(sobre.uid), { uid: true, source: true }')
+  assert.ok(excl > 0 && descarga > excl, 'primero se excluye, luego se descarga')
+  assert.match(f.slice(excl, descarga), /out\.push\(correoExcluidoSinDescargar\(\{ \.\.\.sobre, uidValidity \}\)\)\s+continue/)
+  // Por el cuerpo: ni lead, ni compañía, ni PDF de lectura.
+  assert.match(f, /const excluido = exclusionSeguridad\(from, subject, parsed\.text \|\| ''\) !== null/)
+  assert.match(f, /const adjLead = excluido \? null :/)
+  assert.match(f, /adjuntosDeCompania\(\{ from, excluido \}/)
+  assert.match(f, /pdfs: excluido \? undefined :/)
+})

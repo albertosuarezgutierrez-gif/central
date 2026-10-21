@@ -631,6 +631,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'El día 2 de cada mes a las 08:43 UTC (10:43 en verano, 09:43 en invierno)',
   },
   {
+    id: 'correduria.cruce-cima-correo', categoria: 'correduria',
+    titulo: 'Cruce del correo de compañías con CIMA',
+    que: 'Lo que la compañía dijo por correo y CIMA no refleja: póliza emitida que CIMA no trae a los 5 días hábiles, anulación que CIMA sigue dando en vigor, devolución de un recibo que no consta, y pólizas nuevas que casan con varias oportunidades (no se enlazan solas). Sin datos personales; con enlace a la ficha si se sabe.',
+    cuando: 'De lunes a viernes a las 12:37 UTC (14:37 en verano, 13:37 en invierno), y solo si hay algo nuevo',
+  },
+  {
     id: 'correduria.red-diaria', categoria: 'correduria',
     titulo: 'Red diaria de la correduría',
     que: 'Lo que se queda parado en silencio: aprobaciones que caducan en menos de 24 h o caducaron en las últimas 24 h, bajas firmadas hace más de 48 h que no han salido (sin carta/firma, propuesta rechazada, esperando tu OK, sin propuesta, Allianz/PUE) y recibos devueltos cuyo aviso caducó.',

@@ -222,6 +222,9 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/correduria-seguimiento-presupuestos', schedule: '12 8,13,18 * * *' },
   // Detector de cambios de la cartera (Fase 2 ASegura OS): 45 min después de cada pull de CIMA.
   { path: '/api/cron/correduria-eventos', schedule: '15 6,12 * * *' },
+  // Cruce correo ↔ CIMA (F1 del agente de correo, 21/10/2026): detrás del detector de las 12:15 (que enlaza las pólizas
+  // nuevas con sus oportunidades). Asegura decide y apunta; aquí se avisa y se marca SOLO lo que salió.
+  { path: '/api/cron/correduria-cruce-cima', schedule: '37 12 * * 1-5' },
   // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).
   // Cron no sabe decir «cada 14 días», y una lista de días de mes es lo más cercano
   // que además es ESTABLE: un `*/14` se descuadraría en cada mes de 31 días.

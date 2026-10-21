@@ -34,7 +34,7 @@ export function leerDocumento(v: unknown): DocumentoResumen | null {
     bytes: entero(o.bytes),
     sha256: cadena(o.sha256),
     notas: cadena(o.notas),
-    subidoPor: sub === 'cliente' || sub === 'agente' ? sub : 'corredor',
+    subidoPor: sub === 'cliente' || sub === 'agente' || sub === 'correo' ? sub : 'corredor',
     clienteId: cadena(o.clienteId),
     polizaId: cadena(o.polizaId),
     siniestroId: cadena(o.siniestroId),

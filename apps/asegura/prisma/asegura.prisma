@@ -888,6 +888,10 @@ model Documento {
   /// NULL = no se leyó con IA. SIN PII del tomador (`extraccionSinPii`): de esos campos, solo si se leyeron.
   /// Se escribe por SQL crudo en best-effort (`guardarExtraccion`); toda lectura de `documento` usa `select`.
   extraccion        Json?
+  /// F1 del agente de correo (21/10/2026, `prisma/sql/2026-10-21_correo_agente_f1.sql`): Message-ID del correo de
+  /// compañía del que salió el adjunto (`subido_por = 'correo'`). Con él, el documento puede quedar SIN cliente/póliza
+  /// (pendiente de asignar en la bandeja). Se escribe por SQL crudo en `lib/correo-documento-bd.ts`.
+  mensajeId         String?   @map("mensaje_id")
 
   @@index([correduriaId, clienteId])
   @@index([correduriaId, polizaId])
@@ -1874,6 +1878,8 @@ model CorreoEventoEntrante {
   gestionId        String?   @map("gestion_id") @db.Uuid
   /// Solo `tipo = 'solicitud'` (SQL 2026-10-20): la oportunidad a la que se enganchó por `compania_solicitud_num`.
   oportunidadId    String?   @map("oportunidad_id") @db.Uuid
+  /// F1 (SQL 2026-10-21): la solicitud de `solicitud_compania` de la que este correo es un hito.
+  solicitudId      String?   @map("solicitud_id") @db.Uuid
   fechaLimite      DateTime? @map("fecha_limite") @db.Date
   importe          Decimal?  @db.Decimal(12, 2)
   detalle          Json?
@@ -1884,6 +1890,47 @@ model CorreoEventoEntrante {
   @@unique([correduriaId, mensajeId, tipo, clave], map: "correo_evento_entrante_unico")
   @@index([correduriaId, createdAt(sort: Desc)], map: "correo_evento_entrante_reciente")
   @@map("correo_evento_entrante")
+}
+
+/// Seguimiento de una solicitud en la compañía (F1 del agente de correo, 21/10/2026, `prisma/sql/2026-10-21_correo_agente_f1.sql`):
+/// UNA fila por correduría + compañía (DGS) + nº de solicitud. `estado` normalizado (NULL = no reconocido), `estadoCompania`
+/// el literal (sin datos personales). Los hitos son filas de `correo_evento_entrante` (`solicitud_id`). SQL crudo en
+/// `lib/solicitud-compania-bd.ts`.
+model SolicitudCompania {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  compania         String
+  codigoEntidadDgs String    @map("codigo_entidad_dgs") @db.VarChar(16)
+  numeroSolicitud  String    @map("numero_solicitud")
+  numeroPoliza     String?   @map("numero_poliza")
+  oportunidadId    String?   @map("oportunidad_id") @db.Uuid
+  polizaId         String?   @map("poliza_id") @db.Uuid
+  ramo             String?
+  estado           String?
+  estadoCompania   String?   @map("estado_compania")
+  estadoAt         DateTime? @map("estado_at") @db.Timestamptz(6)
+  cerradaAt        DateTime? @map("cerrada_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([correduriaId, codigoEntidadDgs, numeroSolicitud], map: "solicitud_compania_unica")
+  @@map("solicitud_compania")
+}
+
+/// Avisos de cruce correo ↔ CIMA (F1, 21/10/2026): uno por `clave` (`<tipo>:<id>`); `avisadoAt` solo cuando el Telegram
+/// salió (si no, se reintenta). `texto` ya compuesto y sin datos personales. SQL crudo en `lib/correo-cruce-cima-bd.ts`.
+model CorreoCruceAviso {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  tipo         String
+  clave        String
+  texto        String
+  clienteId    String?   @map("cliente_id") @db.Uuid
+  avisadoAt    DateTime? @map("avisado_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([correduriaId, clave], map: "correo_cruce_aviso_unico")
+  @@map("correo_cruce_aviso")
 }
 
 /// Hilo de correo de un lead ↔ su oportunidad (19/10/2026, SQL `prisma/sql/2026-10-19b_correduria_f1.sql`). Sin email

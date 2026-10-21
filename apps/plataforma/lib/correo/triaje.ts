@@ -33,6 +33,8 @@ import { procesarCorreoFacturaSique } from '@/lib/sivra/factura-cuadre-correo'
 import { fichaPorEmail, procesarLeadCorreo } from './lead-correduria-proceso'
 import { cursorTrasPasada, diferirCorreo, diferirLead } from './lead-correduria'
 import { pasadaSeguimientoLeads } from './lead-correduria-seguimiento-proceso'
+import { archivarAdjuntosCompania, puedeArchivarAdjuntos } from './documentos-compania'
+import { documentoCorreoAsegura } from '@/lib/seguimiento-asegura'
 
 /** F5: el seguimiento de leads solo arranca si la pasada va holgada (la función muere a los 300 s). */
 const SEGUIMIENTO_HASTA_MS = 200_000
@@ -87,7 +89,7 @@ function etiquetaBonita(categoria: string): string {
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0, seguimientoLeads: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0, leadsCorreduria: 0, seguimientoLeads: 0, documentosCompania: 0, documentosSinAsignar: 0, documentosNoGuardados: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -269,6 +271,8 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
               textoAdjuntos: eventoNecesitaAdjuntos({ remitente: correo.from, asunto: correo.subject }) ? await textoPdfs() : null,
               fecha: correo.fecha.toISOString(),
             })) !== null) {
+            // F1 (21/10/2026): los PDF de compañía que se quedaron fuera por tope se DICEN como trozos no leídos del correo.
+            if (correo.adjuntosCompaniaOmitidos) evento = { ...evento, ilegibles: evento.ilegibles + correo.adjuntosCompaniaOmitidos }
             // Aviso de COMPAÑÍA que no es una devolución (14/10/2026): siniestro, pre-anulación, impago,
             // anulación o suplemento — venga la categoría por regla de `correo_reglas`, keyword o IA. asegura
             // lo aplica a la cartera (o lo deja «sin resolver» para la bandeja de Mi mesa) y el aviso dice
@@ -314,6 +318,20 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
             if (enviado !== null) stats.avisados++
           }
+
+          // F1 del agente de correo (21/10/2026): los PDF del correo de compañía, a `seguros.documentos`. DESPUÉS del aviso y
+          // del registro del evento: asegura archiva cada PDF en la ficha a la que casó ESTE correo (o lo deja sin asignar
+          // en la bandeja). Nunca de un correo excluido ni de un cliente. Best-effort: un fallo aquí no toca lo de arriba.
+          if (!clienteRemitente && correo.adjuntosCompania?.length && puedeArchivarAdjuntos(correo, c.categoria)) {
+            const d = await archivarAdjuntosCompania(correo, documentoCorreoAsegura).catch(() => null)
+            if (d) {
+              stats.documentosCompania += d.guardado
+              stats.documentosSinAsignar += d.sin_asignar
+              stats.documentosNoGuardados += d.fallido + d.sin_migracion
+              if (d.fallido || d.sin_migracion) console.error(`[triaje] adjuntos de compañía no guardados: ${d.fallido} fallidos, ${d.sin_migracion} sin migración`)
+            }
+          }
+          if (correo.adjuntosCompaniaOmitidos) console.error(`[triaje] ${correo.adjuntosCompaniaOmitidos} PDF de compañía fuera por tope (5/correo, 3 MB, 40 MB/pasada)`)
 
           // Enlace con la ficha del cliente en asegura (20/09/2026): solo para correos de
           // aseguradora (`correduria` / `correduria-recibo`), y DESPUÉS del aviso de arriba

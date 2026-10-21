@@ -5,9 +5,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
-  admiteMarca, conRevisado, interpretarCorreosCompania, pideMirar, ROTULO_COMPANIA, ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO, textoElementoCorreo,
-  type LecturaCorreosCompania,
+  admiteAsignar, admiteMarca, conAsignado, conRevisado, interpretarCorreosCompania, interpretarDocumentosSinAsignar, pideMirar, ROTULO_COMPANIA,
+  ROTULO_ESTADO_CORREO, ROTULO_TIPO_CORREO, textoElementoCorreo,
+  type LecturaCorreosCompania, type LecturaDocumentosSinAsignar,
 } from '@/lib/correduria/correos-compania'
+import AsignarCorreo from './AsignarCorreo'
+import DocumentosSinAsignar from './DocumentosSinAsignar'
+import HistorialSolicitud from './HistorialSolicitud'
 
 const PAGINA = 50
 const TITULO: React.CSSProperties = { margin: 0, fontSize: 16, fontWeight: 700 }
@@ -27,6 +31,11 @@ export default function CorreosCompania() {
   const [limite, setLimite] = useState(PAGINA)
   const [enCurso, setEnCurso] = useState<ReadonlySet<string>>(new Set())
   const [falloMarca, setFalloMarca] = useState<string | null>(null)
+  // F1 (21/10/2026): adjuntos sin asignar, el panel «Asignar» abierto (uno a la vez) y los historiales desplegados.
+  const [documentos, setDocumentos] = useState<LecturaDocumentosSinAsignar | null>(null)
+  const [versionDocs, setVersionDocs] = useState(0)
+  const [asignando, setAsignando] = useState<string | null>(null)
+  const [historiales, setHistoriales] = useState<ReadonlySet<string>>(new Set())
   const peticion = useRef(0)
 
   const cargar = useCallback(async () => {
@@ -35,9 +44,17 @@ export default function CorreosCompania() {
     try {
       const r = await fetch('/api/correduria/correos-compania', { cache: 'no-store' })
       const j = await r.json().catch(() => null)
-      if (mia === peticion.current) setLectura(interpretarCorreosCompania(r.status, j))
+      if (mia === peticion.current) {
+        setLectura(interpretarCorreosCompania(r.status, j))
+        const docs = (j as Record<string, unknown> | null)?.documentos
+        setDocumentos(docs === undefined ? { estado: 'error', motivo: 'la respuesta no trae los documentos' } : interpretarDocumentosSinAsignar(200, docs))
+        setVersionDocs(v => v + 1)
+      }
     } catch {
-      if (mia === peticion.current) setLectura({ estado: 'error', motivo: 'no se ha podido conectar' })
+      if (mia === peticion.current) {
+        setLectura({ estado: 'error', motivo: 'no se ha podido conectar' })
+        setDocumentos({ estado: 'error', motivo: 'no se ha podido conectar' })
+      }
     } finally {
       if (mia === peticion.current) setCargando(false)
     }
@@ -144,8 +161,35 @@ export default function CorreosCompania() {
               {e.resumen ?? (mirar ? 'Sin desenlace: míralo en el correo.' : '')}
               {e.motivo && e.motivo !== e.resumen ? ` — ${e.motivo}` : ''}
             </div>
+            {e.tipo === 'solicitud' && (
+              <div>
+                <button type="button" aria-expanded={historiales.has(e.id)} onClick={() => setHistoriales(p => { const n = new Set(p); if (n.has(e.id)) n.delete(e.id); else n.add(e.id); return n })}
+                  style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+                  {historiales.has(e.id) ? 'Ocultar historial' : 'Ver historial de la solicitud'}
+                </button>
+                {historiales.has(e.id) && <HistorialSolicitud id={e.id} />}
+              </div>
+            )}
+            {admiteAsignar(e) && asignando === e.id && (
+              <AsignarCorreo
+                fila={e}
+                onCancelar={() => setAsignando(null)}
+                onHecho={(cliente, resumen) => {
+                  setAsignando(null)
+                  setLectura(l => (l && l.estado === 'ok' ? { ...l, filas: conAsignado(l.filas, e.id, cliente, resumen) } : l))
+                  window.dispatchEvent(new Event('correduria:avisos-cambiaron'))
+                  // Los adjuntos de ese correo pueden haber pasado a la ficha: se relee la bandeja sin desmontarla.
+                  void cargar()
+                }}
+              />
+            )}
             {marcable && (
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                {admiteAsignar(e) && asignando !== e.id && (
+                  <button type="button" onClick={() => setAsignando(e.id)} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
+                    Asignar a cliente / oportunidad
+                  </button>
+                )}
                 {e.revisado ? (
                   <>
                     <strong style={{ fontSize: 13 }}>Mirado</strong>
@@ -170,6 +214,7 @@ export default function CorreosCompania() {
           </button>
         </div>
       )}
+      {documentos && <DocumentosSinAsignar key={versionDocs} lectura={documentos} />}
     </section>
   )
 }

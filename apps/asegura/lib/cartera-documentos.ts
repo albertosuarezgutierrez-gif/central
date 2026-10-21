@@ -106,7 +106,7 @@ function aResumen(f: FilaResumen): DocumentoResumen {
     bytes: f.sizeBytes,
     sha256: f.sha256,
     notas: f.notas,
-    subidoPor: f.subidoPor === 'cliente' || f.subidoPor === 'agente' ? f.subidoPor : 'corredor',
+    subidoPor: f.subidoPor === 'cliente' || f.subidoPor === 'agente' || f.subidoPor === 'correo' ? f.subidoPor : 'corredor',
     clienteId: f.clienteId,
     polizaId: f.polizaId,
     siniestroId: f.siniestroId,

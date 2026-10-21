@@ -81,3 +81,43 @@ test('solicitud (20/10/2026): la bandeja la rotula «Solicitud» y pinta «Solic
   assert.equal(ROTULO_TIPO_CORREO.solicitud, 'Solicitud')
   assert.equal(textoElementoCorreo({ tipo: 'solicitud', clave: '170000001', numeroPoliza: null }), 'Solicitud 170000001')
 })
+
+// ── F1 del agente de correo (21/10/2026) ─────────────────────────────────────
+import { admiteAsignar, conAsignado, interpretarDocumentosSinAsignar, interpretarHistorialSolicitud, nombreSugeridoDeAsunto } from './correos-compania.ts'
+
+test('sugerencia por asunto: el nombre del final de la plantilla; sin dígitos, NIF ni palabras genéricas → null', () => {
+  assert.equal(nombreSugeridoDeAsunto('Suscripción Acc.colec. 170000001, ACADEMIA INVENTADA'), 'ACADEMIA INVENTADA')
+  assert.equal(nombreSugeridoDeAsunto('RE: Suscripción Hogar - Solicitud 170000002 - PERSONA INVENTADA'), 'PERSONA INVENTADA')
+  assert.equal(nombreSugeridoDeAsunto('Recibos devueltos de banco 13-10-2026'), null)
+  assert.equal(nombreSugeridoDeAsunto('Siniestro 43000001, póliza 540000001'), null)
+  assert.equal(nombreSugeridoDeAsunto('Aviso, 12345678Z'), null)
+  assert.equal(nombreSugeridoDeAsunto(null), null)
+})
+
+test('la sugerencia viaja en la fila (o null) y asignar la pasa a aplicado SIN recargar', () => {
+  const r = interpretarCorreosCompania(200, { estado: 'ok', filas: [f({ id: 'e9', estado: 'sin_resolver', clienteId: null, cliente: null, sugerencia: 'ACADEMIA INVENTADA' })] })
+  assert.ok(r.estado === 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.filas[0].sugerencia, 'ACADEMIA INVENTADA')
+  assert.equal(admiteAsignar(r.filas[0]), true)
+  const tras = conAsignado(r.filas, 'e9', { clienteId: 'c7', nombre: 'Academia Inventada' }, 'asignado a mano')
+  assert.equal(tras[0].estado, 'aplicado')
+  assert.equal(tras[0].clienteId, 'c7')
+  assert.equal(admiteAsignar(tras[0]), false)
+  assert.equal(pideMirar(tras[0]), false)
+  // Lo que ya tiene desenlace no se reasigna.
+  assert.equal(admiteAsignar({ estado: 'aplicado' }), false)
+  assert.equal(admiteAsignar({ estado: 'procesando' }), false)
+})
+
+test('documentos sin asignar y historial: tres estados; un fallo nunca es «no hay»', () => {
+  assert.equal(interpretarDocumentosSinAsignar(503, { estado: 'sin_migracion' }).estado, 'sin_migracion')
+  assert.equal(interpretarDocumentosSinAsignar(500, null).estado, 'error')
+  const d = interpretarDocumentosSinAsignar(200, { estado: 'ok', filas: [{ id: 'd1', creado: '2026-10-21T10:00', nombre: 'a.pdf', bytes: 1200, compania: 'allianz' }, { id: 'x' }] })
+  assert.ok(d.estado === 'ok')
+  if (d.estado === 'ok') { assert.equal(d.filas.length, 1); assert.equal(d.descartados, 1) }
+  assert.equal(interpretarHistorialSolicitud(503, { estado: 'sin_migracion' }).estado, 'sin_migracion')
+  const h = interpretarHistorialSolicitud(200, { estado: 'ok', solicitud: null, hitos: [{ id: 'h1', creado: '2026-10-21T10:00', tipo: 'solicitud', estado: 'sin_resolver', resumen: null, motivo: null }] })
+  assert.ok(h.estado === 'ok')
+  if (h.estado === 'ok') { assert.equal(h.estadoSolicitud, null); assert.equal(h.hitos.length, 1) }
+})
